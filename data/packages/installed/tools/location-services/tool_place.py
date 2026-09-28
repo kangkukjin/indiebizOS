@@ -10,6 +10,7 @@ handler.py 가 importlib 로 로드해 op 를 넘긴다(tool_stay.py 와 같은 
 좌표 계약: 출력 항목은 항상 {lat,lng} float — 좌표 없는 항목은 드롭한다(cctv/restaurant 와 동일).
 카테고리 코드는 카카오 API 명세(세계의 명사) — 한글 라벨·코드 어느 쪽으로 받아도 코드로 푼다.
 """
+from common.currency import bounded_selection
 import os
 import sys
 
@@ -173,11 +174,9 @@ def place_search(tool_input: dict) -> dict:
         "count": len(items),
         "total": total,
         "total_estimate": getattr(_paged, "estimate", 0),
-        "truncated": isinstance(total, int) and total > len(items),
-        "truncations": ([{"scope": "selection" if len(items) >= limit else "source",
-                           "source": "place.search", "unit": "items", "retained": len(items),
-                           "total": total, "requested": limit}]
-                        if isinstance(total, int) and total > len(items) else []),
+        "truncated": isinstance(total, int) and total > len(items),  # truncation-scope: bounded — 명시 limit과 실효 상한이 같고 충족한 선택만 selection
+        **bounded_selection(tool_input.get("limit"), limit, len(items),
+                            isinstance(total, int) and total > len(items)),
         "query": query,
         "category": code,
         "message": f"'{label}' 장소 {len(items)}곳 (전체 {total})" + (f" · 반경 {params['radius']}m" if "radius" in params else ""),

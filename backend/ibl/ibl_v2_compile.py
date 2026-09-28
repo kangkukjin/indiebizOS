@@ -485,6 +485,9 @@ class Compiler:
             from ibl_v2_adapters import observed_result
             result_type = observed_result(key, spec.contract,
                                           {k: v for k, v in values.items() if v is not UNRESOLVED}, result_type)
+            from ibl_v2_analysis import row_flow_type
+            result_type = row_flow_type(self, node, contract, args, fields, values,
+                                        result_type, env, names, readonly)
             if result_type.kind == "Unknown":
                 self.need(node, UNKNOWN, UNKNOWN)
             return result_type

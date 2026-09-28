@@ -24,6 +24,7 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
 # 크롬 TLS 위장 단일 소스 (감사 ⑥ — 옛 curl_cffi 가드 복붙을 수렴)
+from common.currency import bounded_selection
 from common.http_fetch import chrome_get, has_curl_cffi
 import requests as _plain_requests
 
@@ -154,7 +155,9 @@ def _search_goodchoice(tool_input: dict) -> dict:
     date_txt = f" {params.get('checkIn', '')}~{params.get('checkOut', '')}" if params.get("checkIn") else ""
     out = {
         "success": True, "source": "goodchoice", "count": len(items_out), "total": total,
-        "truncated": isinstance(total, int) and total > len(items_out),   # 봉투 규모 불변식(페이지 표본)
+        "truncated": isinstance(total, int) and total > len(items_out),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+        **bounded_selection(tool_input.get("limit"), limit, len(items_out),
+                            isinstance(total, int) and total > len(items_out)),
         "message": f"여기어때 '{region}' {stay_type}{date_txt} — {len(items_out)}건 (전체 {total}건, 상세는 items)",
         "items": items_out,
     }
@@ -228,7 +231,9 @@ def _search_33m2(tool_input: dict) -> dict:
 
     out = {
         "success": True, "source": "33m2", "count": len(items_out), "total": total,
-        "truncated": isinstance(total, int) and total > len(items_out),   # 봉투 규모 불변식(페이지 표본)
+        "truncated": isinstance(total, int) and total > len(items_out),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+        **bounded_selection(tool_input.get("limit"), limit, len(items_out),
+                            isinstance(total, int) and total > len(items_out)),
         "message": f"삼삼엠투 '{region}' 한 달 살기 — {len(items_out)}건 (전체 {total}건, 주간요금 기준, 상세는 items)",
         "items": items_out,
     }
@@ -295,7 +300,9 @@ def _search_tourapi(tool_input: dict) -> dict:
 
     out = {
         "success": True, "source": "tourapi", "count": len(items_out), "total": total,
-        "truncated": isinstance(total, int) and total > len(items_out),   # 봉투 규모 불변식(페이지 표본)
+        "truncated": isinstance(total, int) and total > len(items_out),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+        **bounded_selection(tool_input.get("limit"), limit, len(items_out),
+                            isinstance(total, int) and total > len(items_out)),
         "message": f"관광공사 숙박 디렉토리 '{region}' — {len(items_out)}건 (전체 {total}건, 가격 없음·공식 목록, 상세는 items)",
         "items": items_out,
     }

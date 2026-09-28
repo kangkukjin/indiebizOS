@@ -1,4 +1,5 @@
 import os
+from common.currency import bounded_selection
 import time
 import json
 import requests
@@ -385,7 +386,9 @@ def _search_nanet(tool_input: dict) -> str:
     return {"success": True, "message": "\n".join([head] + lines_body),
             "items": records, "count": len(records), "total": total,
             # 봉투 규모 불변식: total 은 모집단, 우리가 다 못 뽑았으면 스스로 truncated
-            "truncated": isinstance(total, int) and total > len(records)}
+            "truncated": isinstance(total, int) and total > len(records),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+            **bounded_selection(tool_input.get("limit") or tool_input.get("max_results") or tool_input.get("display"),
+                                want, len(records), isinstance(total, int) and total > len(records))}
 
 
 def execute(tool_input: dict, context):

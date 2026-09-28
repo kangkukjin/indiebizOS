@@ -7,6 +7,7 @@ IBL 밖으로 나갔다. Bash 로 나간 조회는 해마·타입 검사·관용
 계약(읽기 전용, 파괴 불가):
   · 연결은 `mode=ro` URI — 쓰기 SQL 은 엔진이 거절하고, 그 전에 문장 머리 관문과 SQLite authorizer가 조회 연산·읽기 PRAGMA만 허용한다.
   · op=query(기본): path·query(·params 목록·limit 기본 200, 상한 2000) → items(행 dict) + columns + truncated(limit 에 걸렸을 때).
+    명시 유효 limit은 selection, 기본·안전 상한은 source. BLOB은 {$blob:{bytes,hex}} 무손실 JSON 표기.
   · op=tables: path → items(name·rows) — 표 목록과 행 수(빠른 지도).
   · op=schema: path·table → items(cid·name·type·notnull·pk) — 열 목록(PRAGMA table_info).
   · 경로는 `~workspace/`·절대·상대(저장소 루트 기준). 저장소 밖도 읽기는 허용(사용자 파일) — 쓰기가 없으니 위험이 없다.
@@ -15,6 +16,7 @@ IBL 밖으로 나갔다. Bash 로 나간 조회는 해마·타입 검사·관용
 import re
 import sqlite3
 from pathlib import Path
+from common.currency import bounded_selection
 
 from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
@@ -112,10 +114,19 @@ def op_query(tool_input):
                 "hint": "표·열 이름이 불확실하면 op:\"tables\" / op:\"schema\" 로 먼저 보세요."}
     truncated = len(rows) > limit
     rows = rows[:limit]
-    items = [{c: r[i] for i, c in enumerate(cols)} for r in rows]
+    blob_columns = set()
+    def json_value(column, value):
+        if isinstance(value, bytes):
+            blob_columns.add(column)
+            return {"$blob": {"bytes": len(value), "hex": value.hex()}}
+        return value
+    items = [{c: json_value(c, r[i]) for i, c in enumerate(cols)} for r in rows]
     out = {"success": True, "op": "query", "path": str(p), "columns": cols, "count": len(items), "items": items}
+    if blob_columns:
+        out["markers"] = {"blob_columns": sorted(blob_columns), "blob_encoding": "hex"}
     if truncated:
-        out["truncated"] = True
+        out["truncated"] = True  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+        out.update(bounded_selection(tool_input.get("limit"), limit, len(items), True))
         out["note"] = f"limit {limit} 에 걸렸습니다 — 더 보려면 limit 을 올리거나 WHERE 로 좁히세요(상한 {LIMIT_MAX})."
     return out
 

@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: blanket-list-field-type-hint
+    retired: 2026-09-28
+    reason: FIELD_TYPE가 Record 봉투에도 List 전용 처방을 내어 올바른 items 접근을 막았다.
+    instead: 실제 반환 타입을 보고 List 직접 인덱싱과 Record의 행 목록 필드 선택을 구분한다.
+    phrases: ['.items나 .value를 붙이지 말고']
   - id: daily-research-search-quota
     retired: 2026-09-28
     reason: 일일 보고서의 고정 검색 횟수가 조사 목적과 추가 근거의 가치를 대신했다.

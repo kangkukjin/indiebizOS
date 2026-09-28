@@ -883,7 +883,7 @@ def _carry_flags(objs, with_total=True):
     env = {}
     dicts = [o for o in objs if isinstance(o, dict)]
     if any(o.get("truncated") for o in dicts):
-        env["truncated"] = True
+        env["truncated"] = True  # truncation-scope: propagate — 입력 봉투 표지 합성; 생성 상한 없음
     if with_total and dicts:
         totals = [o.get("total") for o in dicts]
         if all(isinstance(t, (int, float)) and not isinstance(t, bool) for t in totals):

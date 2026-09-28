@@ -383,7 +383,7 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None, m
         "total_days": total_days,
         "latest": latest,
         "prices": compact,
-        "truncated": truncated,
+        "truncated": truncated,  # truncation-scope: propagate — 다운샘플 사실; handler._attach_price_table이 원 max_points와 대조
     }
     summary = f"{stock_name}({code}) 현재가: {latest.get('close', 'N/A'):,}원, 기간: {start_date} ~ {end_date}, 총 {total_days}거래일"
     if truncated:

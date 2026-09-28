@@ -1,0 +1,28 @@
+{
+  "live_passed": 24,
+  "live_total": 24,
+  "fault_code_census": 81,
+  "truncated_producer_files": 34,
+  "truncated_producer_sites": 59,
+  "migration": {
+    "candidates": 191,
+    "updated": 191,
+    "skipped": 0,
+    "stores": 2035,
+    "backup": "data/_backups/2026-09-28_round68_completed_journals"
+  },
+  "regression": {
+    "initial": {
+      "passed": 7271,
+      "failed": 21,
+      "skipped": 1
+    },
+    "recheck_passed": 168,
+    "combined": {
+      "passed": 7298,
+      "failed": 0,
+      "skipped": 1
+    },
+    "method": "전체 backend 검사 후 실패 파일 전체와 새 수리 배터리를 최종 수정본에서 재검사"
+  }
+}

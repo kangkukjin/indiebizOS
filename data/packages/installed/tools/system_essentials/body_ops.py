@@ -142,10 +142,13 @@ def _scope_of(tool_input, root):
     return raw.rstrip("/"), None
 
 
-def _selection_scope(total, kept):
+def _selection_scope(total, kept, requested, boundary):
     """요청 limit으로 고른 표본. 원천 수집 실패와 구별한다."""
-    return {"truncations": [{"scope": "selection", "reason": "limit",
-                             "total": total, "kept": kept}]} if total > kept else {}
+    from common.currency import bounded_selection
+    out = bounded_selection(requested, boundary, kept, total > kept)
+    for marker in out.get("truncations", []):
+        marker.update(total=total, kept=kept)
+    return out
 
 
 def op_changes(tool_input):
@@ -193,8 +196,8 @@ def op_changes(tool_input):
         text += f" — {limit}건만 표시 (limit 로 조절)"
     if notes:
         text += " · " + ", ".join(notes)
-    return {"success": True, "items": rows, "total": total, "truncated": truncated,
-            **_selection_scope(total, len(rows)), "text": text}
+    return {"success": True, "items": rows, "total": total, "truncated": truncated,  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
+            **_selection_scope(total, len(rows), tool_input.get("limit"), limit), "text": text}
 
 
 def op_log(tool_input):
@@ -231,8 +234,8 @@ def op_log(tool_input):
     text = f"최근 {days}일 커밋 {total}건" + (f" — {limit}건만 표시 (limit 로 조절, 최대 {_MAX_LIMIT})" if truncated else "")
     if notes:
         text += " · " + ", ".join(notes)
-    return {"success": True, "items": rows, "total": total, "truncated": truncated,
-            **_selection_scope(total, len(rows)), "text": text}
+    return {"success": True, "items": rows, "total": total, "truncated": truncated,  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
+            **_selection_scope(total, len(rows), tool_input.get("limit"), limit), "text": text}
 
 
 def _join_episode_requests(root, rows):
@@ -289,7 +292,7 @@ def op_writes(tool_input):
         except OSError:
             continue
     if not raw:
-        return {"success": True, "items": [], "total": 0, "truncated": False,
+        return {"success": True, "items": [], "total": 0, "truncated": False,  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
                 "text": "쓰기 원장이 비어 있습니다 — 관문(safe_store·[self:write]·개별 저장 관문) 쓰기가 아직 기록되지 않았습니다."}
 
     import json as _json
@@ -326,8 +329,8 @@ def op_writes(tool_input):
         text += f" · {limit}건만 표시"
     if notes:
         text += " · " + ", ".join(notes)
-    return {"success": True, "items": rows, "total": total, "truncated": truncated,
-            **_selection_scope(total, len(rows)), "text": text}
+    return {"success": True, "items": rows, "total": total, "truncated": truncated,  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
+            **_selection_scope(total, len(rows), tool_input.get("limit"), limit), "text": text}
 
 
 def op_trajectory(tool_input):
@@ -383,7 +386,7 @@ def op_trajectory(tool_input):
     else:
         latest = get_episode_journal(1)
         if not latest:
-            return {"success": True, "items": [], "total": 0, "truncated": False,
+            return {"success": True, "items": [], "total": 0, "truncated": False,  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
                     "text": "회상할 최근 실사용 episode가 없습니다."}
         ep = latest[0]
         episode_id = ep.get("id")
@@ -410,7 +413,7 @@ def op_trajectory(tool_input):
     if notes:
         text += " · " + ", ".join(notes)
     return {"success": True, "items": events, "total": total,
-            "truncated": truncated, **_selection_scope(total, len(events)),
+            "truncated": truncated, **_selection_scope(total, len(events), tool_input.get("limit"), limit),  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
             "run_id": run_id, "episode_id": episode_id,
             "task_id": task_id, "text": text}
 
@@ -437,7 +440,7 @@ def op_file(tool_input):
     if not rows:
         exists = os.path.exists(os.path.join(root, scope))
         why = "미추적 파일(아직 커밋된 적 없음)" if exists else "그 경로의 이력이 없습니다(경로 확인)"
-        return {"success": True, "items": [], "total": 0, "truncated": False,
+        return {"success": True, "items": [], "total": 0, "truncated": False,  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
                 "text": f"{scope}: git 이력 없음 — {why}"}
     total = len(rows)
     truncated = total > limit
@@ -453,8 +456,8 @@ def op_file(tool_input):
         text += f" — {limit}건만 표시"
     if notes:
         text += " · " + ", ".join(notes)
-    return {"success": True, "items": rows, "total": total, "truncated": truncated,
-            **_selection_scope(total, len(rows)), "text": text}
+    return {"success": True, "items": rows, "total": total, "truncated": truncated,  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
+            **_selection_scope(total, len(rows), tool_input.get("limit"), limit), "text": text}
 
 
 _DEFAULT_DIFF_LINES = 200   # 파일당 본문 줄 상한(기본) — 넘치면 자르고 신고
@@ -531,8 +534,8 @@ def op_diff(tool_input):
         text += " (바뀐 줄 없음)"
     if notes:
         text += " · " + ", ".join(notes)
-    return {"success": True, "items": rows, "total": total, "truncated": truncated,
-            **_selection_scope(total, len(rows)), "range": label, "text": text}
+    return {"success": True, "items": rows, "total": total, "truncated": truncated,  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
+            **_selection_scope(total, len(rows), tool_input.get("limit"), limit), "range": label, "text": text}
 
 
 # ── 각인 (2026-08-27 신설) ──────────────────────────────────────────────────
@@ -722,7 +725,7 @@ def op_commit(tool_input):
                 note += " · 공유 인덱스 동기화 실패(다른 세션 사용 중?) — git status 가 이 경로를 이중 표시할 수 있습니다"
             text = (f"각인 완료: {row['커밋']} — 파일 {len(staged)}개, "
                     f"관문 {gates}{note}")
-            return {"success": True, "items": [row], "total": 1, "truncated": False, "text": text}
+            return {"success": True, "items": [row], "total": 1, "truncated": False, "text": text}  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
         return {"success": False,
                 "message": "동시 커밋과 두 번 연속 경합해 중단했습니다 — 저장소가 조용해진 뒤 다시 시도하세요 (작업트리는 그대로입니다)."}
     finally:

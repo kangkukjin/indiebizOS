@@ -12,6 +12,7 @@ handler.py 에서 spec-load 로 묶인다 (1500줄 규칙 — vision_read.py 와
 — 행 path 는 **절대 경로**. 인지층 GoalEval 의 시각 산출물 수집기가 결과 문자열에서
 절대 이미지 경로를 긁어 평가자에게 첨부하므로, 절대 경로가 곧 검수 루프 연동이다.
 """
+from common.currency import bounded_selection
 import os
 import json
 import uuid
@@ -346,7 +347,9 @@ def render_op_pdf(tool_input, output_base="."):
                  "width": pix.width, "height": pix.height, "path": out}, facts))
         doc.close()
         return _finish(rows, output_base,
-                       {"total_pages": total_pages, "truncated": truncated})
+                       {"total_pages": total_pages, "truncated": truncated,  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+                        **bounded_selection(tool_input.get("max_pages"), max_pages, len(rows),
+                                            truncated, reason="max_pages")})
     except Exception as e:
         return _err(f"PDF 렌더 실패: {e}")
 

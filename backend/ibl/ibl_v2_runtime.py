@@ -68,7 +68,6 @@ class Runtime(ExpressionEvaluator):
         # 편집한 프로그램이 앞 실행(reuse_run)의 읽기 영수증을 액션·인자·구현 지문으로 재사용한다.
         # 프로그램 지문은 키에 없다 — 함수 하나를 고쳐도 검증된 수집 결과가 살아남는 통로(2026-09-26).
         self.reusable, self.reuse_run, self.reused_calls = dict(reusable or {}), reuse_run, 0
-        self.read_receipts = set()
         self.plan = plan
         self.inputs = copy.deepcopy(inputs or {})
         self.input_evidence = copy.deepcopy(input_evidence or {})
@@ -543,6 +542,7 @@ class Runtime(ExpressionEvaluator):
         read_only = (contract["effects"] == ["read_external"] or
                      (contract["effects"] == ["unknown"] and spec.reusable is not None
                       and spec.reusable(args.value)))
+        reusable_read = read_only and not contract.get('per_run', False)
         # A write/opaque/model call can change the state read by any later
         # external leaf. Reuse remains available before that boundary only.
         if external and not read_only:
@@ -565,7 +565,8 @@ class Runtime(ExpressionEvaluator):
         call_id = digest([getattr(self.local, "route", ()), node.id, self.ordinal(node.id)])
         receipt, source = None, "journal"
         if self.journal and external:
-            receipt = self.journal.begin(call_id, request_hash, getattr(self.local, "cleanup", None) is not None)
+            receipt = self.journal.begin(call_id, request_hash, getattr(self.local, "cleanup", None) is not None,
+                                         reusable=reusable_read, state_change=not read_only)
         if self.replay and external and receipt is None:
             with self.lock:
                 receipt = next((r for r in self.recorded if r["request_hash"] == request_hash), None)
@@ -574,7 +575,7 @@ class Runtime(ExpressionEvaluator):
             if receipt is None:
                 raise Fault("REPLAY_MISSING", "이 입력·정의의 실행 기록이 없습니다. 외부 호출하지 않습니다.", node, kind="protocol")
             source = "replay"
-        if receipt is None and external and self.reusable and read_only and not self.reuse_invalidated:
+        if receipt is None and external and self.reusable and reusable_read and not self.reuse_invalidated:
             # 선언된 읽기 효과, 또는 미상 효과 어휘의 부작용 해소 규칙이 '없음'인 op 만 — 쓰기·모델 호출은 언제나
             # 다시 실행한다. 실패 영수증도 재사용하지 않는다.
             hit = self.reusable.get(reuse_key)
@@ -632,9 +633,6 @@ class Runtime(ExpressionEvaluator):
             eid = self.event(node, "tool_evidence", [eid], **tool_evidence)
         if stateful:
             self.foreign_evidence = frozenset({eid})
-        if external and read_only:
-            with self.lock:
-                self.read_receipts.add(call_id)
         return Binding(value, frozenset({eid}))
 
     def run(self):
@@ -690,11 +688,12 @@ class Runtime(ExpressionEvaluator):
             out["resume"] = {"run_id": self.journal.run_id}
             out["resumed"] = self.journal.resuming
             out["run_status"] = self.journal.complete(out)
-            if self.read_receipts and out["run_status"] not in {"blocked", "uncertain"}:
+            reusable = self.journal.reuse_summary()
+            if (reusable['read_calls'] or reusable['state_change_possible']) and out["run_status"] not in {"blocked", "uncertain"}:
                 out["continuation"] = {
-                    "reuse_args": {"reuse": {"run_id": self.journal.run_id}},
-                    "read_calls": len(self.read_receipts),
+                    **({"reuse_args": {"reuse": {"run_id": self.journal.run_id}}} if reusable['read_calls'] else {}),
+                    **reusable,
                     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. "
-                            "현재 자료를 새로 조회해야 하면 쓰지 마세요. 계약·인자·권한 검사는 유지하며 쓰기·모델 호출은 재사용하지 않습니다. "
+                            "현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. "
                             "동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."}
         return out

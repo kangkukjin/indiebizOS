@@ -11,7 +11,15 @@ HINTS = {
     "INPUTS": 'inputs는 {입력:값}이며 코드는 $입력을 사용합니다. 결과 참조는 inputs:{입력:{"$ref":"결과 id"}}처럼 이름의 값 자리에 둡니다.',
     "UNBOUND": "이 위치 전에 값을 정의하거나 함수의 명시 인자로 전달하세요.",
     "MISSING_FIELD": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요.",
-    "FIELD_TYPE": "List 반환은 값 자체가 목록입니다. .items나 .value를 붙이지 말고 직접 전달·인덱싱하세요. inputs의 $ref는 이미 업무 값으로 해소됩니다. Record의 필드는 반환 계약을 확인하세요.",
+    "FIELD_TYPE": "실제 반환 타입을 확인하세요. List는 직접 인덱싱하고, Record는 행 목록이 있는 필드를 선택한 뒤 인덱싱합니다.",
+    "RESUME_CHANGED": "resume은 원래 소스·입력·의존성·권한이 같은 실행에만 씁니다. 고친 프로그램은 같은 문맥의 reuse를 사용하거나 새로 실행하세요. 외부 쓰기를 반복하기 전 실행 기록을 확인하세요.",
+    "RESUME_NOT_FOUND": "현재 주체·프로젝트에서 반환받은 실행 핸들인지 확인하세요. 없거나 정리된 기록으로는 재개할 수 없습니다.",
+    "REUSE_NOT_FOUND": "현재 주체·프로젝트의 이전 실행 핸들을 사용하세요. 기록이 없으면 reuse를 빼고 새로 조회하세요.",
+    "REUSE_ARGUMENT": "고친 프로그램은 reuse:{run_id:이전_핸들}, 같은 프로그램은 resume:{run_id:핸들} 중 하나만 지정하세요.",
+    "RESUME_ARGUMENT": "resume에는 해당 실행이 반환한 run_id만 지정하세요.",
+    "RESUME_BUSY": "원 실행이 끝날 때까지 기다린 뒤 같은 핸들로 재개하세요. 동시에 실행하지 마세요.",
+    "REUSE_BUSY": "원 실행이 끝난 뒤 읽기 영수증을 재사용하세요.",
+    "JOURNAL_IO": "실행 기록 저장소의 접근·상태를 확인하세요. 영수증을 확인하기 전 외부 쓰기를 반복하지 마세요.",
     "VALUE_PROTOCOL": "값 전송 경계에서 지원하지 않는 타입입니다. 기존 실행 여부는 실행 기록을 확인하세요. 같은 오류가 반복되면 문법을 바꾸며 재시도하지 말고 실행 기반 오류로 보고하세요.",
     "TYPE": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요.",
     "NUMBER_REQUIRED": "숫자로 관측할 수 있는 값인지 확인하세요. 구조·산문은 숫자가 아닙니다.",
@@ -86,7 +94,11 @@ def finish_diagnostics(compiler):
 
 def syntax_report(exc, source):
     diagnostic = exc.view(source)
-    diagnostic.update(rule=exc.code, severity='error', hint=HINTS.get(exc.code, HINTS['SYNTAX']))
+    fallback = {'compile': '호출 인자·타입·해당 위치의 계약을 확인하세요.',
+                'permission': '현재 주체와 프로젝트의 접근 권한 및 기록 범위를 확인하세요.',
+                'protocol': '실행 기록과 요청 프로토콜을 확인하세요. 완료 여부가 불명확한 외부 작업은 반복하지 마세요.'}
+    diagnostic.update(rule=exc.code, severity='error',
+                      hint=HINTS.get(exc.code, fallback.get(exc.kind, '오류 원인과 실행 상태를 확인하세요.')))
     if exc.node:
         diagnostic['location'] = location(source, [{'name': '<program>', 'start': 0, 'end': len(source)}], exc.node)
     return {'edition': 2, 'ok': False, 'success': False, 'executed': False,
@@ -151,8 +163,68 @@ def access_type(compiler, node, base, key, key_type=None):
     if base.kind == 'Unknown':
         compiler.need(node, UNKNOWN, Type('Record') if node.kind == 'field' else UNKNOWN)
     else:
-        compiler.issue(node, 'FIELD_TYPE', f'{base}에 해당 필드 접근을 할 수 없습니다.')
+        hint = HINTS['FIELD_TYPE']
+        if base.kind == 'Record' and 'items' in dict(base.fields):
+            hint = '반환값은 items 행 목록을 가진 Record입니다. 값.items[0]처럼 목록 필드를 먼저 선택하세요.'
+        elif base.kind == 'List':
+            hint = '반환값은 List입니다. .items/.value를 붙이지 말고 값[0]처럼 직접 인덱싱하세요.'
+        compiler.issue(node, 'FIELD_TYPE', f'{base}에 해당 필드 접근을 할 수 없습니다.', hint=hint)
     return UNKNOWN
+
+
+def row_flow_type(compiler, node, contract, args, fields, values, result, env, names, readonly):
+    """Preserve row observations using the vocabulary's existing flow contract."""
+    flow = contract.get('analysis', {}).get('flow', {})
+    source = args.get(contract.get('pipe_input'), UNKNOWN)
+    if source.kind == 'Record':
+        source = dict(source.fields).get('items', UNKNOWN)
+    if source.kind != 'List' or flow.get('accepts') != 'items':
+        return result
+    row = source.item or UNKNOWN
+    projected = None
+    checked = set(flow.get('reads_fields', []))
+    if flow.get('columns_param'):
+        checked.add(flow['columns_param'])
+    for param in sorted(checked):
+        field = fields.get(param)
+        if field is None:
+            continue
+        if field.kind == 'lambda' and len(field.data['params']) == 1:
+            local = {**env, field.data['params'][0]: row if row.observed else UNKNOWN}
+            value = compiler.visit(field.data['body'], local, names, readonly)
+            if param == flow.get('columns_param'):
+                projected = value
+        elif param not in flow.get('row_condition_params', []):
+            value = values.get(param)
+            columns = [value] if isinstance(value, str) else value if isinstance(value, list) else []
+            selected = []
+            for name in columns:
+                if isinstance(name, str):
+                    # Flow observations are advisory. Sparse/declared input rows
+                    # keep the tool's runtime field checks (and catch/?? recovery).
+                    current = (access_type(compiler, field, row, name) if row.observed
+                               else dict(row.fields).get(name, UNKNOWN) if row.kind == 'Record'
+                               else UNKNOWN)
+                    selected.append((name, current))
+            if flow.get('columns') == 'subset' and selected:
+                projected = Type('Record', fields=tuple(selected), open=False)
+    mode = flow.get('columns')
+    if mode == 'keep':
+        output = row
+    elif mode == 'subset' and projected and projected.kind == 'Record':
+        output = projected
+    elif mode == 'add' and projected and projected.kind == 'Record' and row.kind == 'Record':
+        output = Type('Record', fields=tuple({**dict(row.fields), **dict(projected.fields)}.items()),
+                      open=row.open, observed=row.observed)
+    else:
+        return result
+    rows = Type('List', item=output)
+    if result.kind == 'List':
+        return rows
+    if result.kind == 'Record' and flow.get('emits') == 'items':
+        return Type('Record', fields=tuple({**dict(result.fields), 'items': rows}.items()),
+                    open=result.open, observed=result.observed)
+    return result
 
 
 def builtin_type(compiler, node, name, types):

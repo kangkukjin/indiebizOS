@@ -2020,7 +2020,7 @@
   "sense:sqlite": {
    "fields": {
     "description": "e8c3cbfaa258",
-    "target_description": "7fc8163f9ec4",
+    "target_description": "6759da28ee39",
     "implementation": "59254e09ee45",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -2031,7 +2031,7 @@
     "router": "ebbb1532efbc",
     "tool": "4f3c5e5d1dc4"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-28",
    "examples": 10
   },
   "sense:startup": {

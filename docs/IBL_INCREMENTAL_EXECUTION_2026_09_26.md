@@ -29,6 +29,9 @@
 - 재사용한 호출은 **새 실행의 저널에도 완결 영수증**으로 남는다 — 그 실행을 다시 resume/reuse 할 수 있다(사슬).
 - 증거: `receipt_reused{source: reuse|journal|replay, run_id}` 사건, 봉투 `reuse:{run_id, reused_calls, candidates}`.
 - `resume` 과 함께 쓰면 `REUSE_ARGUMENT`. 같은 프로그램=resume, 고친 프로그램=reuse.
+- 68회차 보강: 원 실행의 상태 변경보다 앞서거나 겹친 읽기는 후보에서 제외한다. 변경 이후의 성공 읽기만 남으며 `continuation.state_change_possible`과 `read_calls`가 그 사실을 드러낸다. 순서 정보가 없는 옛 저널은 새 실행에 재사용하지 않는다.
+- `per_run:true`(시계)는 새 실행에서 다시 읽고 같은 실행의 resume에서만 복원한다. check도 핸들 존재·잠금·문맥·동일 실행 지문을 읽기 전용으로 검사한다.
+- 성공 반환은 원천 불완전 여부와 관계없이 completed이며 `source_complete`는 별도 축이다. 정상 반환한 과거 interrupted 기록은 SQLite 백업 후 보수적으로 이주한다.
 - 표면: execute_ibl 스키마(tool_loader)·HTTP(api_ibl.IBLRequest)·MCP(mcp_server, 루트라 다음 MCP 기동에 반영)·회원 화이트리스트(member_runner).
 
 ### ② inputs 값 자리의 `{"$ref": result_ref.id, "path": [...]}`
@@ -39,6 +42,8 @@
 - 여전히 **명시 입력**이다 — 이름·출처를 적은 것만 들어온다. 이전 턴 변수의 자동 주입이 아니다.
 
 ### ③ 관측 반환 필드 → 판본 2 컴파일러 경고 `UNOBSERVED_FIELD`
+
+68회차 보강: 기존 flow 선언으로 행 보존 변환자와 콜백·열 이름 인자를 검사한다. filter/take/sort/dedup은 관측 타입을 보존하고 select/compute는 투영 타입을 전달한다. 선언 밖 관측 필드는 실행을 막는 오류로 바꾸지 않는다.
 - 해소 규칙을 `ibl_typecheck.catalog_entry` 한 벌로 뽑아(node:action · #op · @param=값 · columns_from · fixture op · default op, `more` 기권) 판본 1 `_catalog_cols` 와 판본 2 `ibl_v2_adapters.observed_result` 가 같이 쓴다.
 - 타입: `Type(observed=True)` 인 **열린** Record. ⟨열⟩(items)은 봉투 `items` 원소/List 원소에, ⟨키⟩(scalar)는 봉투 최상위에. `legacy-envelope` 어댑터에만 — 표 변환자의 열은 입력이 정한다.
 - 관측 밖 접근 = `compiler.warn` → `preflight.warnings`(check 보고서 `warnings`, 실행 봉투 `precheck_warnings`). 오류 아님, 상태 불변. `has/get` 은 경고 없음.

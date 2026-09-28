@@ -780,7 +780,7 @@ def execute(tool_input: dict, context) -> str:
                     env.update(start_line=start + 1 if content else None,
                                end_line=end if content else None, total_lines=total)
                 if truncated:
-                    env.update(truncated=True, total_lines=total,
+                    env.update(truncated=True, total_lines=total,  # truncation-scope: bounded — 파일 범위 선택과 자원 상한을 truncations로 구분; 전체 목록은 false
                                warning="처음 1MB만 표시했습니다. offset/limit으로 부분 읽기를 사용하세요.")
                 return json.dumps(env, ensure_ascii=False)
             if ranged:
@@ -954,7 +954,7 @@ def execute(tool_input: dict, context) -> str:
                 # 문자열에만 살면 파이프에서 소멸해 부분 결과가 전량인 척 저장된다.
                 # 변환자(_emit_items/_emit_table)는 봉투를 비파괴 복사하므로 끝까지 생존.
                 return json.dumps({"text": text, "table": table, "items": records,
-                                   "total": total, "truncated": truncated},
+                                   "total": total, "truncated": truncated},  # truncation-scope: bounded — 파일 범위 선택과 자원 상한을 truncations로 구분; 전체 목록은 false
                                   ensure_ascii=False)
 
             # 결과 없을 때 — 힌트는 준 것을 안 준 것처럼 말하지 않는다(2026-08-29 ①:
@@ -974,7 +974,7 @@ def execute(tool_input: dict, context) -> str:
                 )
             # 0건도 통화 봉투로(2026-08-08 ⑯) — 맨 문자열은 ??(폴백)의 빈손 술어가 못 잡는다
             return json.dumps({"success": True, "items": [], "total": 0,
-                               "truncated": False, "text": hint}, ensure_ascii=False)
+                               "truncated": False, "text": hint}, ensure_ascii=False)  # truncation-scope: bounded — 파일 범위 선택과 자원 상한을 truncations로 구분; 전체 목록은 false
 
         elif tool_name == "edit_file":
             file_path = os.path.join(project_path, _get_path(tool_input))

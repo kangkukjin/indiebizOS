@@ -334,7 +334,7 @@ def _finalize_snapshot(elements: list, url: str, title: str) -> dict:
 
     if truncated:
         omitted = total - len(included)
-        result["truncated"] = True
+        result["truncated"] = True  # truncation-scope: source — 접근성 스냅샷 문자 안전 상한; 작성자 선택 아님
         result["truncations"] = [{"scope": "selection", "source": "browser.snapshot",
                                   "unit": "elements", "retained": len(included),
                                   "total": total, "reason": "display_budget"}]

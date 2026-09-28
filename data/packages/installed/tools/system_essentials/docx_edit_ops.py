@@ -1,6 +1,7 @@
 """DOCX 문단 조회·선택 교체. ZIP 파트 보존, Word 변경 추적과 주석."""
 from copy import deepcopy
 from datetime import datetime, timezone
+from common.currency import bounded_selection
 import importlib.util
 from pathlib import Path
 import re
@@ -63,7 +64,9 @@ def op_inspect(params):
     rows = [r for _, _, _, r in _rows(parts)]
     return {'success': True, 'path': str(path), 'sha256': digest,
             'items': rows[offset:offset + limit], 'total': len(rows),
-            'truncated': offset + limit < len(rows), 'offset': offset,
+            'truncated': offset + limit < len(rows), 'offset': offset,  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+            **bounded_selection(params.get('limit'), limit, len(rows[offset:offset + limit]),
+                                offset + limit < len(rows)),
             'note': 'editable=false는 필드·링크·기존 변경/주석·복합 요소가 있어 선택 교체를 지원하지 않는 문단입니다.'}
 
 

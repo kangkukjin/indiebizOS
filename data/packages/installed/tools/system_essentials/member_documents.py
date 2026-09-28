@@ -90,7 +90,7 @@ def read_document(params, command, exchange, workspace):
     if p.get('numbered'):
         text = ''.join(f'{n}\t{line}' for n, line in enumerate(lines[start:end], start + 1))
     if len(text) > 1000000:
-        return {'success': True, 'text': text[:1000000], 'truncated': True, 'total_lines': len(lines)}
+        return {'success': True, 'text': text[:1000000], 'truncated': True, 'total_lines': len(lines)}  # truncation-scope: source — 회원 문서 본문 1백만 자 안전캡; 요청 선택 아님
     return text
 
 

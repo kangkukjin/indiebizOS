@@ -29,6 +29,22 @@ import json
 from typing import Any, Iterable
 
 
+def bounded_selection(requested, boundary, retained, truncated, *, reason="limit"):
+    """Distinguish an explicit, fulfilled selection from a default/resource cap.
+
+    Call at the producer with the raw author argument, effective boundary and
+    retained count. Underfilled results and clamped requests remain incomplete.
+    Other failures must keep their own source markers.
+    """
+    from common.value_semantics import integer_value
+    if not truncated:
+        return {}
+    chosen = integer_value(requested)
+    selected = chosen is not None and chosen > 0 and chosen == boundary and retained >= boundary
+    return {"truncations": [{"scope": "selection" if selected else "source",
+                             "reason": reason, "limit": boundary, "retained": retained}]}
+
+
 def items(rows: Iterable[Any] = (), **wrapper) -> dict:
     """행들을 단일 통화로 감싼다.
 

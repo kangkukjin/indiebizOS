@@ -96,14 +96,14 @@ def _restate_scope(out, prior_len, new_len, *, population=False):
     if population:
         if known:
             if prior_len is not None and tot > prior_len:  # vj-ok: 봉투 계수 비교
-                out["truncated"] = True
+                out["truncated"] = True  # truncation-scope: propagate — 입력 원천 표지를 승계하고 명시 변환 범위만 selection으로 분리
             out["total"] = new_len
     elif known and tot > new_len:  # vj-ok: 봉투 계수 비교
         if not out.get("truncated") and prior_len == tot:
             # 온전한 입력을 요청한 개수로 줄인 표본. 수집 절단과 구분해 증류로 보낸다.
             out["truncations"] = [{"scope": "selection", "unit": "rows",
                                    "retained": new_len, "total": tot}]
-        out["truncated"] = True
+        out["truncated"] = True  # truncation-scope: propagate — 입력 원천 표지를 승계하고 명시 변환 범위만 selection으로 분리
     if (population or (prior_len is not None and prior_len != new_len)) and isinstance(out.get("summary"), (dict, str)):
         out.pop("summary", None)
     return out

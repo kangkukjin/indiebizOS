@@ -197,10 +197,10 @@ def _listen_file(args, context, op):
         for field in ("text", "answer"):
             if len(item.get(field, "")) > 1000:
                 item[field] = item[field][:1000]
-                item["truncated"] = True
+                item["truncated"] = True  # truncation-scope: preview — 미리듣기 전사 표본; 전체 전사 원장은 별도 보존
         if len(preview) >= 20 or size + len(json.dumps(item, ensure_ascii=False)) > 6000:
             break
         preview.append(item)
         size += len(json.dumps(item, ensure_ascii=False))
     return {**result, "items": preview, "total_items": len(rows),
-            "truncated": len(preview) < len(rows) or any(i.get("truncated") for i in preview)}
+            "truncated": len(preview) < len(rows) or any(i.get("truncated") for i in preview)}  # truncation-scope: preview — 미리듣기 전사 표본; 전체 전사 원장은 별도 보존

@@ -8,6 +8,7 @@ Investment Tools Handler
 - [sense:crypto]      → crypto_price (자산군 달라 별도 유지)
 시장(kr/us)은 ticker로 자동판별(005930/한글=kr, 그외=us), market 파라미터로 강제 지정 가능.
 """
+from common.currency import bounded_selection
 import os
 import re
 from common import value_semantics as _vs  # 값 동등 판정 단일 코어
@@ -253,7 +254,7 @@ def _company_news(symbol, ti: dict):
 
 # ── 단일 액션 op 디스패처 ───────────────────────────────
 
-def _attach_price_table(result):
+def _attach_price_table(result, params=None):
     """주가 이력 결과에 단일 통화 items(전 필드) + 표준 table(날짜·종가)을 덧붙인다.
 
     items = 원본 필드 그대로(date/open/high/low/close/volume — 파이프의 sort/filter 재료,
@@ -281,9 +282,12 @@ def _attach_price_table(result):
         # items=다운샘플 표본이므로 표본 위 집계가 "총 N거래일 중 일부" 표찰을 달고 나가고,
         # 에이전트는 표찰을 보고 max_points 를 올려 재호출할 수 있다(기본값은 채팅 경제 유지).
         if prices and "truncated" not in obj:
-            obj["truncated"] = bool(data.get("truncated"))
+            obj["truncated"] = bool(data.get("truncated"))  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
             if obj["truncated"] and isinstance(data.get("total_days"), int) and "total" not in obj:
                 obj["total"] = data["total_days"]
+        if obj.get("truncated") and not obj.get("truncations"):
+            requested = (params or {}).get("max_points")
+            obj.update(bounded_selection(requested, requested or 10, len(prices), True, reason="max_points"))
         return obj
     except Exception:
         return result
@@ -484,7 +488,7 @@ def _stock_history(ti: dict):
             end_date=ti.get("end_date"),
             max_points=ti.get("max_points", 10),
         )
-        return _attach_price_table(_res)
+        return _attach_price_table(_res, ti)
     if market == "kr":
         tool = load_module("tool_krx")
         price_symbol = re.sub(r"\.(KS|KQ)$", "", str(ticker or ""), flags=re.I)  # krx는 bare 6자리 코드
@@ -519,7 +523,7 @@ def _stock_history(ti: dict):
                 _res["fallback_to"] = "yahoo_chart"
                 if isinstance(_res.get("data"), dict):
                     _res["data"]["source"] = "yahoo_chart"
-    return _attach_price_table(_res)
+    return _attach_price_table(_res, ti)
 
 
 def _stock_info(ti: dict):

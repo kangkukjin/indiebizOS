@@ -210,7 +210,7 @@ def op_select(tool_input):
         # 표본은 호출자가 고른 *선택 범위*다 — 범위를 적지 않으면 IBL 봉투 해석기가 원천 절단(PARTIAL_SOURCE)으로
         # 판정해 `limit:2` 가 "도구의 원천 결과가 불완전합니다" 로 거절됐다(2026-09-26 4083 실측, 한메일 4079 와 같은 부류).
         out = {"success": True, "op": "select", "path": str(path), "count": len(rows),
-               "total": total, "truncated": total > len(rows), "items": rows}
+               "total": total, "truncated": total > len(rows), "items": rows}  # truncation-scope: selection — 작성자 limit으로 고른 원장 행; total은 모집단 유지
         if out["truncated"]:
             out["truncations"] = [{"scope": "selection", "unit": "rows", "retained": len(rows),
                                    "total": total, "parameter": "limit"}]

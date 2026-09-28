@@ -33,7 +33,7 @@ def test_edited_program_reuses_read_receipts_and_reruns_writes_and_changed_args(
         out = Runtime(first, journal=journal).run()
     assert out["success"] and calls == [("read", 1), ("write", 1)]
     reusable = reusable_receipts(tmp_path, run_id)
-    assert len(reusable) == 2 and all(r["action"] in ("t:read", "t:write") for r in reusable.values())
+    assert reusable == {}  # 원 실행이 나중에 쓴 상태 이전의 읽기는 빌리지 않는다
 
     edited = compile_program("$a = [t:read]{n:1}\n$w = [t:write]{n:1}\n$b = [t:read]{n:2}\nreturn {a:$a, b:$b}",
                              registry(calls))
@@ -42,10 +42,10 @@ def test_edited_program_reuses_read_receipts_and_reruns_writes_and_changed_args(
         second_id = journal.run_id
         out = Runtime(edited, journal=journal, reusable=reusable, reuse_run=run_id).run()
     assert out["success"]
-    assert calls == [("write", 1), ("read", 2)]  # 읽기 n:1 은 재사용, 쓰기·새 인자는 실행
-    assert out["reuse"] == {"run_id": run_id, "reused_calls": 1, "candidates": 2}
+    assert calls == [("read", 1), ("write", 1), ("read", 2)]
+    assert out["reuse"] == {"run_id": run_id, "reused_calls": 0, "candidates": 0}
     reused = [e for e in out["evidence"] if e["kind"] == "receipt_reused"]
-    assert len(reused) == 1 and reused[0]["source"] == "reuse" and reused[0]["run_id"] == run_id
+    assert reused == []
     assert unpack(out["value_wire"]["data"]) == {"a": {"n": 1, "rows": [1]}, "b": {"n": 2, "rows": [2]}}
     # 재사용한 호출도 새 실행의 저널에 완료 영수증으로 남는다 — 그 실행을 다시 resume 할 수 있다
     state = inspect_run(tmp_path, second_id)
@@ -105,7 +105,7 @@ def test_unknown_effect_vocabulary_reuses_by_side_effect_rule(tmp_path):
     calls.clear()
     edited = compile_program('$a = [t:legacy]{op:"list", n:1}\n$b = [t:legacy]{op:"save", n:1}\nreturn {a:$a, x:1}', reg)
     out = Runtime(edited, reusable=reusable_receipts(tmp_path, run_id), reuse_run=run_id).run()
-    assert out["success"] and calls == [("save", 1)] and out["reuse"]["reused_calls"] == 1
+    assert out["success"] and calls == [("list", 1), ("save", 1)] and out["reuse"]["reused_calls"] == 0
 
 
 def test_entry_rejects_bad_reuse_shape_and_reuse_with_resume():

@@ -10,6 +10,7 @@ photo_db.py - 사진/동영상 메타데이터 DB 관리
   └── ...
 """
 
+from common.currency import bounded_selection
 import os
 import json
 import sqlite3
@@ -369,7 +370,8 @@ def search_media(root_path: str, query: str = "",
 
 def get_gallery(root_path: str, page: int = 1, limit: int = 50,
                 media_type: Optional[str] = None, sort_by: str = "taken_date",
-                start_date: Optional[str] = None, end_date: Optional[str] = None) -> Dict:
+                start_date: Optional[str] = None, end_date: Optional[str] = None,
+                requested_limit=None) -> Dict:
     """갤러리 조회 (페이지네이션, 날짜 필터링 지원)"""
     # macOS NFD -> NFC 정규화
     root_path = _normalize_path(root_path)
@@ -458,7 +460,9 @@ def get_gallery(root_path: str, page: int = 1, limit: int = 50,
     return {
         "success": True,
         "total": total,
-        "truncated": isinstance(total, int) and total > len(items),   # 봉투 규모 불변식(페이지 표본)
+        "truncated": isinstance(total, int) and total > len(items),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+        **bounded_selection(requested_limit, limit, len(items),
+                            isinstance(total, int) and total > len(items)),
         "page": page,
         "limit": limit,
         "items": items

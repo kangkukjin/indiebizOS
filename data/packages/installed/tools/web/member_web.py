@@ -1,4 +1,5 @@
 """외부 클라이언트 공개 웹 조사. 쿠키·주인 브라우저·파일·개인 관점 캐시를 사용하지 않는다."""
+from common.currency import bounded_selection
 import http.client
 import ipaddress
 import json
@@ -114,7 +115,9 @@ def execute(name, args):
                 raise ValueError('본문 한도는 1~60000자입니다')
             return {'success': True, 'url': url, 'title': page.title.get_text() if page.title else '',
                     'items': [{'type': 'paragraph', 'text': content[:limit]}],
-                    'truncated': len(content) > limit, 'total_chars': len(content)}
+                    'truncated': len(content) > limit, 'total_chars': len(content),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+                    **bounded_selection(args.get('max_length'), limit, min(len(content), limit),
+                                        len(content) > limit, reason='max_length')}
         raise ValueError('외부사용자용 웹 기능이 아닙니다')
     except Exception as exc:
         # 원문·세션·시스템 경로가 섞일 수 있는 예외를 반환하거나 기록하지 않는다.

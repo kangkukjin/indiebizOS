@@ -276,7 +276,7 @@ def run(tool_input: dict, project_path: str) -> str:
             msg += f" (해석된 절대경로: {root})"
         msg += " — path 를 확인하세요(파일 위치가 불확실하면 [self:file_find] 로 먼저 찾기)."
         return json.dumps({"success": False, "error": msg, "items": [], "total": 0,
-                           "total_files": 0, "truncated": False, "text": msg},
+                           "total_files": 0, "truncated": False, "text": msg},  # truncation-scope: bounded — 명시 limit 선택과 시간·크기 원천 상한을 별도 truncations로 신고
                           ensure_ascii=False)
     # 정규식이 기본이다(grep/ripgrep·Claude Grep 습관과 동일, src desc도 "정규식"으로 광고).
     # 과거엔 기본이 fixed-string('a|b' 를 리터럴로 취급)이라 alternation·메타문자가
@@ -352,7 +352,7 @@ def run(tool_input: dict, project_path: str) -> str:
         # 0건도 통화 봉투로(2026-08-08 ⑯) — 맨 문자열은 ??(폴백)의 빈손 술어와
         # 변환자가 구조로 인식할 수 없다. 사람용 안내는 text 에 그대로.
         return json.dumps({"success": True, "items": [], "total": 0, "total_files": 0, "excluded": _excl_note,
-                           "truncated": bool(search_done),
+                           "truncated": bool(search_done),  # truncation-scope: bounded — 명시 limit 선택과 시간·크기 원천 상한을 별도 truncations로 신고
                            "truncations": ([{"scope": "source", "reason": "검색 시간·크기 상한"}]
                                            if search_done else []),
                            "total_complete": full_counts is not None or not search_done,
@@ -382,7 +382,7 @@ def run(tool_input: dict, project_path: str) -> str:
         items = [{"파일": fp} for fp in file_order]
         return json.dumps({"text": text, "items": items, "total": grand_total, "excluded": _excl_note,
                            "total_files": n_files,
-                           "truncated": False if full_counts is not None else truncated_flag},
+                           "truncated": False if full_counts is not None else truncated_flag},  # truncation-scope: bounded — 명시 limit 선택과 시간·크기 원천 상한을 별도 truncations로 신고
                           ensure_ascii=False)
 
     if output_mode == "count":
@@ -396,7 +396,7 @@ def run(tool_input: dict, project_path: str) -> str:
         items = [{"파일": fp, "매칭 수": cnt} for fp, cnt in pairs]
         return json.dumps({"text": text, "items": items, "total": grand_total, "excluded": _excl_note,
                            "total_files": n_files,
-                           "truncated": False if full_counts is not None else truncated_flag},
+                           "truncated": False if full_counts is not None else truncated_flag},  # truncation-scope: bounded — 명시 limit 선택과 시간·크기 원천 상한을 별도 truncations로 신고
                           ensure_ascii=False)
 
     # output_mode == "content" (기본): 매칭 라인 (상한 내 표본, 경로순 결정적).
@@ -422,7 +422,9 @@ def run(tool_input: dict, project_path: str) -> str:
     # 판본 2는 selection만 정상 값으로 받으며 source/unknown 절단은 계속 거절한다.
     truncations = []
     if truncated_flag:
-        limited = len(raw_rows) >= max_results and not hit_size_cap
+        from common.value_semantics import integer_value
+        requested = integer_value(tool_input.get("limit", tool_input.get("max_results")))
+        limited = requested == max_results and len(raw_rows) >= max_results and not hit_size_cap
         marker = {"scope": "selection" if limited else "source",
                   "reason": "limit" if limited else "검색 시간·크기 상한",
                   "selected": len(items), "limit": max_results}
@@ -432,6 +434,6 @@ def run(tool_input: dict, project_path: str) -> str:
     if any(len(row[2]) > MAX_LINE_CHARS for row in raw_rows):
         truncations.append({"scope": "source", "reason": "일치 줄 본문 절단"})
     return json.dumps({"text": text, "items": items, "total": grand_total, "excluded": _excl_note,
-                       "total_files": n_files, "truncated": bool(truncations),
+                       "total_files": n_files, "truncated": bool(truncations),  # truncation-scope: bounded — 명시 limit 선택과 시간·크기 원천 상한을 별도 truncations로 신고
                        "truncations": truncations, "total_complete": full_counts is not None or not search_done},
                       ensure_ascii=False)

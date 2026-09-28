@@ -52,3 +52,5 @@ JSON 도구 경계의 Decimal은 십진 표기가 JSON 숫자 왕복 후 동일�
 등록 Script의 `ibl-script-session/1`은 실행 소유 워커에 네이티브 값을 전달하며 JSON 도구 인자 투영을 거치지 않는다.
 ForeignRef는 공통 타입/wire이고 공급자가 실행 소유권을 검사한다. stateful 어댑터의 영수증은
 새 실행에 재생하지 않는다. 세션 스크립트는 제한 없는 주인의 로컬 코드 실행 권한을 별도 검사한다.
+
+새 `truncated` 생산 위치에는 `truncation-scope: 분류 — 사유`를 적는다(정직 표지 관문 C). 명시 상한·실효 상한·충족 건수는 `common.currency.bounded_selection`로 판정한다. 기본·안전 상한·미충족·수집 오류는 selection으로 덮지 않는다. 시계처럼 실행 순간 자체가 값인 읽기 계약은 `per_run:true`로 새 실행의 재사용에서 제외한다. 같은 실행의 resume은 기록을 복원한다.

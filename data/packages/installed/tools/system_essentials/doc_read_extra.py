@@ -8,6 +8,7 @@ pages  = pptx 슬라이드·epub 챕터의 1-기반 범위('1-5,8'), pdf 와 같
 의존: hwp → olefile(순수 파이썬), pptx → python-pptx, hwpx·epub → 표준 라이브러리(zip+xml).
 암호·배포용 hwp 는 정직 거절(복호화 미지원). hwp v3(옛 형식)도 거절.
 """
+from common.currency import bounded_selection
 import html
 import io
 import json
@@ -77,13 +78,15 @@ def _finish(path: Path, blocks: list, tool_input: dict, extra_meta: dict, images
         "total_blocks": total,
         "offset": start,
         "returned_blocks": len(sliced),
-        "truncated": end < total,
+        "truncated": end < total,  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
         **extra_meta,
     }
     if metadata["truncated"]:
         metadata["next_offset"] = end
         metadata["hint"] = f"전체 {total}블록 중 {start}~{end - 1}만 반환됨. 다음 호출에 offset={end}로 이어 읽기."
-    res = {"success": True, "metadata": metadata, "text": text}
+    res = {"success": True, "metadata": metadata, "text": text,
+           **bounded_selection(limit_raw if limit is not None and limit >= 0 else tool_input.get("max_blocks"),
+                               eff, len(sliced), end < total, reason="blocks")}
     if blocks:
         res["blocks"] = blocks
     if images:

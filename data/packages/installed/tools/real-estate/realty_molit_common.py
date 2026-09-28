@@ -9,6 +9,7 @@ apt/house/villa × trade/rent 여섯 도구가 같은 관용구를 공유한다.
 - cap=None → 그 달 전부(HARD_CAP 까지). cap=N → N 건에서 자르고 truncated 로 신고.
 - 401/403 은 올린다(상위가 permission_error 로 안내). 그 외 오류는 부분 결과 + truncated.
 """
+from common.currency import bounded_selection
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -102,11 +103,13 @@ def fetch_month_paged(base_url: str, service_key: str, region_code: str, year_mo
     except Exception as e:  # 네트워크·파싱 오류 = 부분 결과 + error(0건과 구분)
         error = f"{type(e).__name__}: {e}"[:200]
     total = max(total, len(rows))
-    return {"rows": rows, "total": total, "truncated": (len(rows) < total) or bool(error), "error": error}
+    return {"rows": rows, "total": total, "truncated": (len(rows) < total) or bool(error), "error": error,  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+            **bounded_selection(cap if not error else None, limit, len(rows),
+                                (len(rows) < total) or bool(error), reason="count_per_month")}
 
 
 def fetch_range(base_url: str, service_key: str, region_code: str, months: list,
-                cap, parse_item):
+                cap, parse_item, *, truncations=None):
     """여러 달 병렬 수집. 반환 (rows, months_with_data, total, truncated, errors). 월 순서 보존.
     errors = {YYYYMM: 사유} — 비어 있지 않으면 그 달들은 불완전(truncated 도 True)."""
     def one(m):
@@ -116,6 +119,8 @@ def fetch_range(base_url: str, service_key: str, region_code: str, months: list,
         results = list(ex.map(one, months))  # 예외(401/403)는 여기서 다시 올라온다
     rows, months_with_data, total, truncated, errors = [], [], 0, False, {}
     for m, r in zip(months, results):
+        if truncations is not None:
+            truncations.extend({**marker, "month": m} for marker in r.get("truncations", []))
         if r["rows"]:
             rows.extend(r["rows"])
             months_with_data.append(m)

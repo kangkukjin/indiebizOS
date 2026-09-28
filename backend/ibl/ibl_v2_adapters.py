@@ -43,6 +43,8 @@ def validate_contract(contract):
         raise ValueError("올바른 effects가 필요합니다.")
     if "pure" in effects and len(effects) != 1:
         raise ValueError("pure는 다른 효과와 함께 선언할 수 없습니다.")
+    if 'per_run' in contract and type(contract['per_run']) is not bool:
+        raise ValueError('per_run은 실행 시점 값의 재사용 여부를 나타내는 Bool입니다.')
     if contract.get("pipe_input") and contract["pipe_input"] not in contract["params"]:
         raise ValueError("pipe_input은 선언된 인자여야 합니다.")
     if not set(contract.get("required", contract["params"])) <= contract["params"].keys():
@@ -235,7 +237,8 @@ def load_registry(project_path=".", agent_id=None):
                 continue
             contract = copy.deepcopy(validate_contract(contract))
             contract["analysis"] = {"ai_call": action_config.get("ai_call") is True,
-                                    "ai_inspect_param": action_config.get("ai_inspect_param")}
+                                    "ai_inspect_param": action_config.get("ai_inspect_param"),
+                                    "flow": action_config.get("flow", {})}
             adapter = contract["adapter"]
             key = f"{node}:{action}"
             # Capture contract and implementation identities now. A changed

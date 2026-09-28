@@ -27,6 +27,7 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
 # 크롬 TLS 위장 단일 소스 (감사 ⑥ — 옛 curl_cffi 가드 복붙을 수렴)
+from common.currency import bounded_selection
 from common.http_fetch import chrome_get, has_curl_cffi
 
 _API = "https://api.kmong.com/gig-app"
@@ -54,7 +55,7 @@ def _get_json(path: str, params: dict):
 
 # ── type=gigs — 서비스(긱) 검색 ──────────────────────────────
 
-def _search_gigs(query: str, limit: int, sort: str, max_price):
+def _search_gigs(query: str, limit: int, sort: str, max_price, requested=None):
     """크몽 서비스 검색. perPage 최대 40 실측 — limit 초과분은 페이지 자동추적(최대 3p)."""
     sort_type = "SCORE" if sort == "score" else "RANKING"
     items_out = []
@@ -111,13 +112,15 @@ def _search_gigs(query: str, limit: int, sort: str, max_price):
             break
         page += 1
     return {"source": "kmong", "type": "gigs", "total": total,
-            "truncated": isinstance(total, int) and total > len(items_out),   # 봉투 규모 불변식(페이지 표본)
+            "truncated": isinstance(total, int) and total > len(items_out),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+            **bounded_selection(requested, limit, len(items_out),
+                                isinstance(total, int) and total > len(items_out)),
             "items": items_out}
 
 
 # ── type=experts — 전문가(프리랜서) 검색 ─────────────────────
 
-def _search_experts(query: str, limit: int, sort: str):
+def _search_experts(query: str, limit: int, sort: str, requested=None):
     """크몽 전문가 검색. 응답이 긱보다 풍부 — 응답시간·주문수·전문분야·경력까지."""
     sort_type = "SCORE" if sort == "score" else "RANKING"
     items_out = []
@@ -176,7 +179,9 @@ def _search_experts(query: str, limit: int, sort: str):
             break
         page += 1
     return {"source": "kmong", "type": "experts", "total": total,
-            "truncated": isinstance(total, int) and total > len(items_out),   # 봉투 규모 불변식(페이지 표본)
+            "truncated": isinstance(total, int) and total > len(items_out),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+            **bounded_selection(requested, limit, len(items_out),
+                                isinstance(total, int) and total > len(items_out)),
             "items": items_out}
 
 
@@ -198,9 +203,9 @@ def search_freelance(tool_input: dict) -> dict:
 
     try:
         if search_type in ("experts", "expert", "sellers", "seller", "전문가"):
-            return _search_experts(query, limit, sort)
+            return _search_experts(query, limit, sort, tool_input.get("limit"))
         if search_type in ("gigs", "gig", "services", "service", "서비스"):
-            return _search_gigs(query, limit, sort, max_price)
+            return _search_gigs(query, limit, sort, max_price, tool_input.get("limit"))
         return {"success": False, "error": f"type '{search_type}' 미지원 — gigs(서비스)/experts(전문가) 중 선택.",
                 "items": []}
     except Exception as e:

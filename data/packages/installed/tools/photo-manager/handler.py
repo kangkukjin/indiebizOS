@@ -361,7 +361,8 @@ def get_gallery(params: Dict[str, Any]) -> Dict[str, Any]:
     end_date = params.get("end_date")
 
     result = photo_db.get_gallery(path, page, limit, media_type, sort_by,
-                                  start_date=start_date, end_date=end_date)
+                                  start_date=start_date, end_date=end_date,
+                                  requested_limit=params.get("limit"))
 
     if result.get("success"):
         items = result.get("items", [])

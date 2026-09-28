@@ -1,0 +1,27 @@
+[
+  {
+    "task": "t17",
+    "passed": true,
+    "summary": "{\"직접\": [\"UNOBSERVED_FIELD\"], \"each\": [\"UNOBSERVED_FIELD\"], \"함수\": [\"UNOBSERVED_FIELD\"]}"
+  },
+  {
+    "task": "t18",
+    "passed": true,
+    "summary": "{\"filter 콜백\": [\"UNOBSERVED_FIELD\"], \"sort by\": [\"UNOBSERVED_FIELD\"], \"select columns\": [\"UNOBSERVED_FIELD\"], \"take 뒤 each\": [\"UNOBSERVED_FIELD\"]}"
+  },
+  {
+    "task": "t19",
+    "passed": true,
+    "summary": "success=True code=None run_status=completed"
+  },
+  {
+    "task": "t20",
+    "passed": true,
+    "summary": "hint=실제 반환 타입을 확인하세요. List는 직접 인덱싱하고, Record는 행 목록이 있는 필드를 선택한 뒤 인덱싱합니다."
+  },
+  {
+    "task": "t21",
+    "passed": true,
+    "summary": "success=True error=None"
+  }
+]

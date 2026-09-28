@@ -71,6 +71,12 @@ class Journal:
             self.db.executescript("CREATE TABLE IF NOT EXISTS meta(identity TEXT, blocked TEXT);"
                                  "CREATE TABLE IF NOT EXISTS calls(id TEXT PRIMARY KEY, request TEXT, receipt TEXT);"
                                  "CREATE TABLE IF NOT EXISTS lifecycle(created REAL, updated REAL, ended REAL, status TEXT, reason TEXT);")
+            for table, column, declaration in (
+                    ('calls', 'reusable', 'INTEGER NOT NULL DEFAULT 0'),
+                    ('calls', 'state_change', 'INTEGER NOT NULL DEFAULT 1'),
+                    ('lifecycle', 'source_complete', 'INTEGER')):
+                if column not in {r[1] for r in self.db.execute(f'PRAGMA table_info({table})')}:
+                    self.db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {declaration}')
             old = self.db.execute("SELECT identity,blocked FROM meta").fetchone()
             if self.resuming:
                 if old is None or old[0] != self.identity:
@@ -82,9 +88,9 @@ class Journal:
                 self.db.commit()
             now = time.time()
             if not self.db.execute('SELECT 1 FROM lifecycle').fetchone():
-                self.db.execute('INSERT INTO lifecycle VALUES(?,?,NULL,?,NULL)',
+                self.db.execute('INSERT INTO lifecycle(created,updated,ended,status,reason) VALUES(?,?,NULL,?,NULL)',
                                 (path.stat().st_mtime if self.resuming else now, now, 'running'))
-            self.db.execute("UPDATE lifecycle SET updated=?, ended=NULL, status='running', reason=NULL", (now,))
+            self.db.execute("UPDATE lifecycle SET updated=?, ended=NULL, status='running', reason=NULL, source_complete=NULL", (now,))
             self.db.commit()
             self.started = True
             return self
@@ -122,7 +128,7 @@ class Journal:
             pass  # The SQLite receipt remains authoritative.
 
     @durable
-    def begin(self, call_id, request_hash, cleanup=False):
+    def begin(self, call_id, request_hash, cleanup=False, *, reusable=False, state_change=True):
         with self.lock:
             row = self.db.execute("SELECT request,receipt FROM calls WHERE id=?", (call_id,)).fetchone()
             if row:
@@ -134,7 +140,14 @@ class Journal:
                 return json.loads(row[1])
             if cleanup:
                 self.db.execute("UPDATE meta SET blocked=?", ("취소·예산 중단 후 finally가 외부 정리를 시작했습니다. 같은 실행의 재개는 허용하지 않습니다.",))
-            self.db.execute("INSERT INTO calls VALUES(?,?,NULL)", (call_id, request_hash))
+            # Invalidate reads that preceded this mutation, including unfinished
+            # parallel reads. A read overlapping an in-flight mutation is also unsafe.
+            if state_change:
+                self.db.execute('UPDATE calls SET reusable=0')
+            pending_write = self.db.execute(
+                'SELECT 1 FROM calls WHERE state_change=1 AND receipt IS NULL LIMIT 1').fetchone()
+            self.db.execute("INSERT INTO calls(id,request,receipt,reusable,state_change) VALUES(?,?,NULL,?,?)",
+                            (call_id, request_hash, int(reusable and not pending_write), int(state_change)))
             self.db.execute("UPDATE lifecycle SET updated=?", (time.time(),))
             self.db.commit()
             return None
@@ -151,12 +164,20 @@ class Journal:
         with self.lock:
             blocked = self.db.execute("SELECT blocked FROM meta").fetchone()[0]
             uncertain = self.db.execute("SELECT COUNT(*) FROM calls WHERE receipt IS NULL").fetchone()[0]
-            status = "uncertain" if uncertain else "blocked" if blocked else "completed" if result.get("success") and result.get("source_complete") else "interrupted"
-            self.db.execute("UPDATE lifecycle SET updated=?, ended=?, status=?, reason=?",
-                            (time.time(), time.time(), status, blocked or result.get("error")))
+            status = "uncertain" if uncertain else "blocked" if blocked else "completed" if result.get("success") else "interrupted"
+            source = result.get('source_complete')
+            self.db.execute("UPDATE lifecycle SET updated=?, ended=?, status=?, reason=?, source_complete=?",
+                            (time.time(), time.time(), status, blocked or result.get("error"),
+                             int(source) if type(source) is bool else None))
             self.db.commit()
             self.terminal = True
             return status
+
+    def reuse_summary(self):
+        with self.lock:
+            safe = self.db.execute("SELECT COUNT(*) FROM calls WHERE reusable=1 AND receipt IS NOT NULL AND json_type(receipt,'$.value') IS NOT NULL").fetchone()[0]
+            changed = self.db.execute('SELECT 1 FROM calls WHERE state_change=1 LIMIT 1').fetchone()
+        return {'read_calls': safe, 'state_change_possible': bool(changed)}
 
 
 def identity(plan, inputs, project_path, agent_id, *, input_evidence=None):
@@ -196,6 +217,9 @@ def inspect_run(root, run_id):
             counts = db.execute('SELECT COUNT(*),SUM(receipt IS NULL) FROM calls').fetchone()
             last = db.execute('SELECT id FROM calls WHERE receipt IS NOT NULL ORDER BY rowid DESC LIMIT 1').fetchone()
             blocked = db.execute('SELECT blocked FROM meta').fetchone()
+            source = (db.execute('SELECT source_complete FROM lifecycle').fetchone()
+                      if 'lifecycle' in tables and 'source_complete' in
+                      {r[1] for r in db.execute('PRAGMA table_info(lifecycle)')} else None)
         status = life[3] if life else 'interrupted'
         if busy:
             status = 'running'
@@ -206,6 +230,7 @@ def inspect_run(root, run_id):
         elif status == 'running':
             status = 'interrupted'
         return {'run_id': run_id, 'status': status, 'locked': busy,
+                'source_complete': bool(source[0]) if source and source[0] is not None else None,
                 'created_at': life[0] if life else None, 'updated_at': life[1] if life else None,
                 'ended_at': life[2] if life else None, 'calls': counts[0], 'uncertain_calls': counts[1] or 0,
                 'last_checkpoint': last[0] if last else None, 'reason': life[4] if life else None,
@@ -214,6 +239,25 @@ def inspect_run(root, run_id):
     finally:
         if not busy:
             lock.release()
+
+
+@durable
+def validate_resume(root, resume, expected_identity):
+    """Check a resume handle without entering or resetting the journal."""
+    journal = Journal(root, expected_identity, resume)
+    path = Path(root) / (journal.run_id + '.sqlite')
+    if path.is_symlink() or not path.is_file():
+        raise Fault('RESUME_NOT_FOUND', '현재 문맥의 실행 기록이 없습니다.', kind='permission')
+    try:
+        with FileLock(str(path) + '.lock', timeout=0):
+            with sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=10) as db:
+                row = db.execute('SELECT identity,blocked FROM meta').fetchone()
+            if not row or row[0] != expected_identity:
+                raise Fault('RESUME_CHANGED', '원 실행의 소스·입력·의존성·권한과 다릅니다.', kind='protocol')
+            if row[1]:
+                raise Fault('RESUME_CLEANED_UP', row[1], kind='protocol')
+    except Timeout as exc:
+        raise Fault('RESUME_BUSY', '같은 실행이 진행 중입니다.', kind='protocol') from exc
 
 
 def reusable_receipts(root, run_id):
@@ -233,7 +277,10 @@ def reusable_receipts(root, run_id):
         raise Fault('REUSE_BUSY', '같은 실행이 아직 진행 중입니다. 끝난 뒤 재사용하세요.', kind='protocol') from exc
     try:
         with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=10) as db:
-            rows = db.execute('SELECT receipt FROM calls WHERE receipt IS NOT NULL ORDER BY rowid').fetchall()
+            # Old journals lack the mutation ordering evidence: do not guess.
+            if 'reusable' not in {r[1] for r in db.execute('PRAGMA table_info(calls)')}:
+                return {}
+            rows = db.execute('SELECT receipt FROM calls WHERE reusable=1 AND receipt IS NOT NULL ORDER BY rowid').fetchall()
     except sqlite3.Error as exc:
         raise Fault('JOURNAL_IO', '실행 영수증 저장소를 읽을 수 없습니다.', kind='protocol') from exc
     finally:
@@ -247,6 +294,48 @@ def reusable_receipts(root, run_id):
         if isinstance(receipt, dict) and 'value' in receipt and receipt.get('reuse_key'):
             out.setdefault(receipt['reuse_key'], receipt)
     return out
+
+
+def migrate_completed_runs(root, *, backup_dir=None):
+    """Repair old normal returns mislabelled interrupted; default is a dry run.
+
+    Back up each qualifying SQLite under the caller's backup directory before
+    changing metadata. Unknown effects, blocked runs and actual failures stay intact.
+    """
+    result = {'candidates': 0, 'updated': 0, 'skipped': 0}
+    for path in Path(root).glob('*.sqlite'):
+        if path.is_symlink() or not re.fullmatch(r'[0-9a-f]{32}', path.stem):
+            continue
+        try:
+            with FileLock(str(path) + '.lock', timeout=0):
+                with sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=10) as db:
+                    tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                    if not {'lifecycle', 'calls', 'meta'} <= tables:
+                        continue
+                    life = db.execute('SELECT ended,status,reason FROM lifecycle').fetchone()
+                    if not life or life[0] is None or life[1] != 'interrupted' or life[2] is not None:
+                        continue
+                    meta = db.execute('SELECT blocked FROM meta').fetchone()
+                    if (meta is None or meta[0] or
+                            db.execute('SELECT 1 FROM calls WHERE receipt IS NULL LIMIT 1').fetchone()):
+                        continue
+                    result['candidates'] += 1
+                    if backup_dir is None:
+                        continue
+                    saved = Path(backup_dir) / path.name
+                    saved.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+                    fd = os.open(saved, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                    os.close(fd)
+                    with sqlite3.connect(saved, timeout=10) as backup:
+                        db.backup(backup)
+                with sqlite3.connect(path, timeout=10) as db:
+                    if 'source_complete' not in {r[1] for r in db.execute('PRAGMA table_info(lifecycle)')}:
+                        db.execute('ALTER TABLE lifecycle ADD COLUMN source_complete INTEGER')
+                    db.execute("UPDATE lifecycle SET status='completed', source_complete=0 WHERE status='interrupted' AND reason IS NULL AND ended IS NOT NULL")
+                result['updated'] += 1
+        except (Timeout, OSError, sqlite3.Error):
+            result['skipped'] += 1
+    return result
 
 
 def cleanup_runs(root, *, now=None, retention_days=30, max_bytes=512*1024*1024):

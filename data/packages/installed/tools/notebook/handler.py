@@ -440,7 +440,7 @@ def _ask_by_cards(core, name: str, question: str, m: dict) -> str:
         src = by_id[sid]
         body, used, trunc = _read_whole(core, name, src, max(8000, budget // max(1, (len(ids) - len(docs)))))
         budget -= used
-        docs.append({"id": sid, "title": src.get("title"), "kind": src.get("kind"), "chars": int(src.get("char_count") or used), "body": body, "truncated": trunc})
+        docs.append({"id": sid, "title": src.get("title"), "kind": src.get("kind"), "chars": int(src.get("char_count") or used), "body": body, "truncated": trunc})  # truncation-scope: source — 문서 본문·총 읽기 예산 상한; 완전한 원문 주장 금지
         if trunc:
             degraded.append(sid)
         if budget <= 0:
@@ -468,7 +468,7 @@ def _ask_by_cards(core, name: str, question: str, m: dict) -> str:
     return _json({"success": True, "notebook": m["notebook"], "question": question, "mode": "read", "not_in_sources": False,
                   "answer": answer, "blocks": blocks, "citations": cites,
                   "items": [{"title": c["source"], "meta": f"#{c['source_id']} · {c['loc']}", "summary": c["quote"], "source_id": c["source_id"]} for c in cites],
-                  "read": [{"source_id": d["id"], "title": d["title"], "chars": d["chars"], "truncated": d["truncated"]} for d in docs],
+                  "read": [{"source_id": d["id"], "title": d["title"], "chars": d["chars"], "truncated": d["truncated"]} for d in docs],  # truncation-scope: source — 문서 본문·총 읽기 예산 상한; 완전한 원문 주장 금지
                   "selection": sel})
 
 

@@ -527,7 +527,7 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
         # prices는 항상 포함(shape 일관). 50일 이하면 전체, 초과면 다운샘플 + 전체는 file_path.
         compact, truncated = compact_price_series(all_history, max_points)
         base_data["prices"] = compact
-        base_data["truncated"] = truncated
+        base_data["truncated"] = truncated  # truncation-scope: propagate — 다운샘플 사실; handler._attach_price_table이 원 max_points와 대조
         if truncated:
             file_path = save_large_data(all_history, "investment", f"yf_prices_{symbol.upper().replace('=', '_')}")
             base_data["file_path"] = file_path     # 전체 데이터 파일 경로 (시각화 data_file용)

@@ -28,7 +28,11 @@
       ★BOUNDARY_FILES 는 사람이 관리하는 명단이다 — 새 조합 경계를 만들면 등록할 것.
         등록을 잊어도 규칙 [A]는 전역이라 손으로 적은 목록의 탄생은 잡힌다.
 
-통과 조건(둘 중 하나):
+  [C] 패키지 truncated 생산 위치 — 작성자 선택과 원천 절단을 분류한다.
+      각 위치에 `# truncation-scope: 분류 — 사유`를 적고, 수량 선택은
+      common.currency.bounded_selection로 명시 인자·실효 상한·충족량을 대조한다.
+
+[A/B] 통과 조건(둘 중 하나):
   - `ibl_honesty` 의 HONESTY_KEYS / markers_of / merge_into 로 위임한다.
   - 그 줄 또는 바로 윗줄에 `# hp-ok: <사유>`. 사유 없는 억제는 불가.
 
@@ -40,6 +44,7 @@ BASELINE 동결 목록은 두지 않는다 — 파일당 숫자를 얼리면 사
 """
 import argparse
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -93,6 +98,35 @@ def _allowed(lines, lineno) -> bool:
     return False
 
 
+def truncation_sites(tree):
+    """Exported truncated producers, excluding local counters and reads."""
+    sites = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Dict):
+            sites.update(key.lineno for key in node.keys
+                         if isinstance(key, ast.Constant) and key.value == 'truncated')
+        elif (isinstance(node, ast.Subscript) and isinstance(node.ctx, ast.Store)
+              and isinstance(node.slice, ast.Constant) and node.slice.value == 'truncated'):
+            sites.add(node.lineno)
+        elif isinstance(node, ast.keyword) and node.arg == 'truncated':
+            sites.add(node.lineno)
+    return sorted(sites)
+
+
+def unclassified_truncations(src):
+    """Every producer must state its scope rationale at the emitting site.
+
+    Round 68 census: explicit fulfilled limits use bounded_selection; resource
+    caps remain source. A reason at another producer does not exempt a new one.
+    """
+    lines = src.splitlines()
+    pattern = r'# truncation-scope: (selection|source|preview|propagate|metadata|bounded) — \S'
+    return [line for line in truncation_sites(ast.parse(src))
+            if not (re.search(pattern, lines[line - 1]) or
+                    (line > 1 and lines[line - 2].lstrip().startswith('#')
+                     and re.search(pattern, lines[line - 2])))]
+
+
 def scan(markers):
     hits = []
     for path in _iter_py():
@@ -106,6 +140,11 @@ def scan(markers):
             continue
         lines = src.splitlines()
         delegates = OWNER_MODULE in src
+
+        # [C] Selection/source scope must be considered when a producer is born.
+        if rel.startswith('data/packages/installed/tools/'):
+            for line in unclassified_truncations(src):
+                hits.append((rel, line, 'C', 'truncated 생산자에 truncation-scope 분류·사유가 없습니다'))
 
         # [A] 손으로 적은 표지 목록
         for node in ast.walk(tree):

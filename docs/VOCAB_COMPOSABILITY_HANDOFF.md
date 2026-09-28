@@ -1356,3 +1356,16 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - **B67-3** numpy.float64/int64를 "손실 없이 표현 불가"로 거짓 진단(정확 타입 비교). 수리성.
 - **B67-4** NFD 한글(사용자 `projects/` 97건)에서 `==`/contains는 NFC 비교, replace/strip/len/슬라이스는 원시 코드포인트 — replace 조용한 무변경·자모 조각. 수리성.
 - F67-1 리터럴 Decimal→산술 float(19.9×3=59.699…)·F67-2 sorted/table:sort 희소 필드 계약 불일치·F67-3 take.n 정수값 실수 check 통과·실행 거절·G67-1 순수 식 원소별 변환 부재. **판정 요청 2건**(F67-1 산술 Decimal 유지, G67-1 새 내장 함수). B67-1/2·F67-1은 같은 뿌리 → Decimal 경계 census 이관 권고. **미수리 4부류.**
+
+
+### 68회차 — 고친 프로그램의 재실행과 관측 필드 경고 (2026-09-28, 수리 완료)
+
+- 24과제, 11통과·13실패(결함 9·마찰 4). 발신·예약 check만. 축=09-26~27 증분 실행 개정. 재사용 키·쓰기 장벽(함수·병렬·each 안)·사슬·실패 제외·값 충실도는 통과. [보고서](experiments/imagination_round68_2026_09_28/report.md).
+- **B68-3 ★** 원 실행이 읽은 **뒤** 같은 파일을 썼는데 그 읽기 영수증이 재사용 후보 → 읽고 덧붙이는 가계부 원장을 고쳐 reuse 재실행하면 1차가 쓴 줄이 **조용히 소실**(실측, 경고 0, 1차 봉투가 reuse를 권함). 수리성.
+- **B68-1** `??`·try/catch로 복구해 성공 반환한 실행이 `run_status:interrupted`·recover `resumable:true` — `complete()`가 success와 source_complete를 한 칸에 겹침. 실물 183건이 30일 정리에서 영구 제외. 수리성(+이주).
+- **B68-2** 실행 전 거절(RESUME_CHANGED·RESUME/REUSE_NOT_FOUND·REUSE_ARGUMENT)에 "구문 경계를 수정" 안내 — `syntax_report`의 SYNTAX 폴백. 힌트 없는 Fault 코드 71종. 수리성+관문.
+- **B68-4** `self:time`이 재사용돼 61초 전 시각을 "작성 시각"으로 반환. 수리성(계약 데이터 한 칸).
+- **B68-5** `sense:sqlite` 작성자 `limit:3`이 PARTIAL_SOURCE 실패 — 4079·4083(ledger)에 이은 **같은 속 세 번째** → 밭 이관: 도구 limit 선택/절단 census(truncated 도구 39개 중 selection 표기 9개).
+- **B68-6** sqlite BLOB 열 하나에 질의 전체 실패. F68-1 관측 경고가 filter 콜백·sort by·select columns·take 통과 뒤에서 끊김 · F68-2 check가 reuse/resume 핸들 미검사 · F68-3 FIELD_TYPE 안내가 호환 봉투 어휘 71개에 ".items 붙이지 말라"(정답의 반대). **판정 요청 0. 아래 수리로 9부류 해결.**
+
+- 수리: 원 실행 쓰기 전·동시 읽기 제외, per_run 시계, 완료/원천 완전성 분리·191건 백업 이주, 핸들 check와 타입별 처방, SQLite 표본·BLOB, 행 변환 관측 전파. 라이브 24/24 통과. 절단 생산자 34파일·59곳 전수 분류와 기존 정직 표지 관문 C, Fault 81종 힌트 검사. 검증 상세는 68회차 보고서 집행 완료 참조.

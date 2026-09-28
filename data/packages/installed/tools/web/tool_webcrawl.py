@@ -379,7 +379,7 @@ def _extract_pdf_response(response, requested_url: str, pdf_url: str,
             "title": title,
             "text": text,
             "length": original_length,
-            "truncated": truncated,
+            "truncated": truncated,  # truncation-scope: source — 공개 크롤은 전문 저장; 내부 max_length로 자른 원문은 불완전
             "method": method + "_pdf",
             "total_pages": payload.get("total_pages"),
         }
@@ -444,7 +444,7 @@ def _crawl_static(url: str, max_length: int, *, op="content") -> dict:
             "title": title,
             "text": text,
             "length": original_length,
-            "truncated": truncated,
+            "truncated": truncated,  # truncation-scope: source — 공개 크롤은 전문 저장; 내부 max_length로 자른 원문은 불완전
             "method": method,
             "_page_structure": _structure().extract(html, final_url),
         }
@@ -599,7 +599,7 @@ async def _crawl_playwright_async(session, url: str, max_length: int, *, op="con
             "title": title,
             "text": text,
             "length": original_length,
-            "truncated": truncated,
+            "truncated": truncated,  # truncation-scope: source — 공개 크롤은 전문 저장; 내부 max_length로 자른 원문은 불완전
             "method": "playwright",
             "http_status": status,
             "resolved_url": final_url,
@@ -688,7 +688,7 @@ async def _crawl_chrome_async(driver, url: str, max_length: int, *, op="content"
         text, original_length, truncated = _truncate(text, max_length)
         result = {"success": True, "url": url, "resolved_url": final_url,
                   "http_status": status, "title": title, "text": text,
-                  "length": original_length, "truncated": truncated, "method": "chrome_mcp",
+                  "length": original_length, "truncated": truncated, "method": "chrome_mcp",  # truncation-scope: source — 공개 크롤은 전문 저장; 내부 max_length로 자른 원문은 불완전
                   "_page_structure": _structure().combine(structures, structure_errors)}
         if reason:
             result["reason"] = reason

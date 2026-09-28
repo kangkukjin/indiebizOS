@@ -93,7 +93,7 @@ def search_commercial_district(lat: float = None, lng: float = None, radius: int
             "success": True,
             "total_count": total_count or len(stores),
             "count": len(stores),
-            "truncated": len(stores) < (total_count or 0),
+            "truncated": len(stores) < (total_count or 0),  # truncation-scope: source — 호출 경계에서 max_count를 받지 않는 고정 안전캡·페이지 오류
             "data": stores,
         }
 

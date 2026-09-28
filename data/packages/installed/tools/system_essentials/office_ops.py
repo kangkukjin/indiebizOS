@@ -5,6 +5,7 @@ read_xlsx·spreadsheet(xlsx 산출) 분기 몸통 + 전용 헬퍼(_fill_pdf/_fil
 handler 가 real-estate 선례(load_module spec-load)로 붙여 위임한다.
 _get_path 는 여기가 정의처 — handler 가 별칭으로 재수출(다른 분기도 계속 사용).
 """
+from common.currency import bounded_selection
 import os
 import re
 import json
@@ -465,7 +466,7 @@ def read_docx(tool_input: dict, project_path: str) -> str:
             "total_blocks": total_blocks,
             "offset": start,
             "returned_blocks": returned_blocks,
-            "truncated": truncated,
+            "truncated": truncated,  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
         }
         if truncated:
             metadata["next_offset"] = end
@@ -477,6 +478,8 @@ def read_docx(tool_input: dict, project_path: str) -> str:
             "success": True,
             "metadata": metadata,
             "text": text,
+            **bounded_selection(tool_input.get("limit") if limit is not None and limit >= 0 else tool_input.get("max_blocks"),
+                                effective_limit, returned_blocks, truncated, reason="blocks"),
         }
         # 문서 IR blocks 통화 (비파괴 ADD) — 전체 문서 구조.
         # 부분 읽기로 text가 잘려도 blocks 자체는 문서 IR이라 전체 제공.
@@ -670,7 +673,7 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
             "text": "\n\n".join(parts),
         }
         if truncations:
-            res.update(truncated=True, truncations=truncations)
+            res.update(truncated=True, truncations=truncations)  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
         if table is not None:
             res["table"] = table
         if legacy:

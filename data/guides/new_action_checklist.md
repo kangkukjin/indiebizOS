@@ -2,7 +2,7 @@
 
 > **⇢ 먼저 갈래 판별 (앱/계기를 만들거나 고치려는 것이면):** 이 문서는 **IBL 액션(백엔드 능력)** + 그걸 **선언형 `app:` 계기**로 노출하는 절차다(데이터-모양: 목록·지표·폼·차트). **자유 편집 캔버스·그리기·채팅·특수 인터랙션 같은 리치 커스텀 React 계기(빈노트·신문·길찾기류)를 만들거나 수정**하려면 이 문서가 아니라 **`custom_app_instrument.md`** 를 따른다(인라인 `el` 기본·앱모드 `project_id:'앱모드'`·모델 불문 도구).
 
-새 액션은 **아래 절차를 모두 완료**한다. 누락하면 에이전트가 액션을 사용할 수 없다.
+새 액션은 아래 절차를 모두 완료한다.
 
 > 어휘 정본은 각 패키지의 `ibl_actions.yaml`과 코어의 `data/ibl_nodes_src/`다. `scripts/build_ibl_nodes.py`가 합쳐 `data/ibl_nodes.yaml`을 만든다. 패키지의 코드·어휘는 함께 설치·제거하며, 핸들러는 ToolContext SDK의 `execute(tool_input, context)`를 따른다.
 >
@@ -395,4 +395,4 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 공유 업무 확장: [별도 계약](managed_records.md).
 
 
-현재 IBL 사전 어댑터 추가: [ibl_v2_adapter.md](ibl_v2_adapter.md).
+절단·재사용을 포함한 사전 어댑터: [ibl_v2_adapter.md](ibl_v2_adapter.md).

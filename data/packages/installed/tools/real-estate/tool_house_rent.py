@@ -71,8 +71,9 @@ def get_house_rent(region_code: str, start_month: str, end_month: str = None, co
                 "error": "최대 12개월까지만 조회 가능합니다."
             }
 
+        truncations = []
         all_rents, months_with_data, total, truncated, errors = _molit.fetch_range(
-            BASE_URL, SERVICE_KEY, region_code, months, count_per_month, _parse_item)
+            BASE_URL, SERVICE_KEY, region_code, months, count_per_month, _parse_item, truncations=truncations)
 
         # 요약 통계
         if all_rents:
@@ -114,7 +115,8 @@ def get_house_rent(region_code: str, start_month: str, end_month: str = None, co
             "region_code": region_code,
             "period": f"{start_month} ~ {end_month}",
             "total": total,
-            "truncated": truncated,
+            "truncated": truncated,  # truncation-scope: propagate — 월별 수집기가 명시 cap·안전캡·오류를 나눈 truncations 승계
+            "truncations": truncations,
             "errors": errors,  # {YYYYMM: 사유} — 비면 전 월 완전. 타임아웃 달은 0건이 아니라 불완전
             "summary": summary,
             "data": all_rents

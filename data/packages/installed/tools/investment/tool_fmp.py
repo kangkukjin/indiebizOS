@@ -285,7 +285,7 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None, m
         "total_days": total_days,
         "latest": latest,
         "prices": compact,
-        "truncated": truncated,
+        "truncated": truncated,  # truncation-scope: propagate — 다운샘플 사실; handler._attach_price_table이 원 max_points와 대조
     }
     _pct = latest.get('change_percent')   # 첫 행뿐인 창에서는 None (전일이 창 밖)
     summary = (f"{symbol} 현재가: ${latest.get('close', 'N/A')}, "

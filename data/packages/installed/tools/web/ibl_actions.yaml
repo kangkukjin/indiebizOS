@@ -82,7 +82,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-09-28", impl: "57421196eb60c483"}
+        path_audited: {at: "2026-09-28", impl: "85edbb091ff1e9ea"}
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -157,7 +157,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-09-28", impl: "57421196eb60c483"}
+        path_audited: {at: "2026-09-28", impl: "85edbb091ff1e9ea"}
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'

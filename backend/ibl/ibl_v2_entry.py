@@ -33,11 +33,16 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
         from ibl_v2_runtime import Runtime
         from ibl_v2_store import definitions
         plan = compile_program(source, load_registry(project_path, agent_id), inputs, definitions())
+        from ibl_run_journal import Journal, journal_root, identity, reusable_receipts, validate_resume
         if request.get("check"):
+            if reuse:
+                reusable_receipts(journal_root(project_path), reuse['run_id'])
+            if request.get('resume') is not None:
+                validate_resume(journal_root(project_path), request['resume'],
+                                identity(plan, inputs, project_path, agent_id, input_evidence=input_evidence))
             return plan.report()
         if plan.issues:
             return Runtime(plan, inputs).run()
-        from ibl_run_journal import Journal, journal_root, identity, reusable_receipts
         root = journal_root(project_path)
         reusable = reusable_receipts(root, reuse["run_id"]) if reuse else None
         with Journal(root, identity(plan, inputs, project_path, agent_id, input_evidence=input_evidence), request.get("resume")) as journal:

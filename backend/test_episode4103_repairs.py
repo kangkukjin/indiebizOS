@@ -35,8 +35,9 @@ def test_all_candidates_and_late_dates_survive_budget(boundary):
     values, _ = resolve_input_refs(shown['result_ref']['input_args'])
     assert values['입력'] == raw['value']
     change = shown['_preview']['changes'][0]
-    restored = json.loads(read_result(change['read_args'])['text'])
-    assert restored == rows[0]['description']
+    page = read_result(change['read_args'])
+    # 문자열 경로는 원문 글자 페이지(69회차 F69-2)
+    assert page['read_scope']['format'] == 'text' and page['text'] == rows[0]['description']
 
 
 def test_small_values_survive_large_evidence_without_false_preview(boundary):

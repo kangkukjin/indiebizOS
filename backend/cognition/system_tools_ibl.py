@@ -593,6 +593,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
     # inputs 값 자리의 {"$ref": result_ref.id, "path": [...]} — 앞 실행의 저장 결과를 복사 없이 넘긴다(2026-09-26).
     # 증거 저장소는 인지 층에서 풀고, 값과 출처 근거를 실행기에 함께 전달한다.
     _ref_notes = []
+    from model_result_view import input_evidence_by_name
     if isinstance(tool_input.get("inputs"), dict):
         try:
             from model_result_view import resolve_input_refs
@@ -603,7 +604,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         if _ref_notes:
             tool_input = dict(tool_input, inputs=_resolved)
     _v2 = _v2_request(dict(tool_input, code=code), project_path, agent_id, cancel_check,
-                      input_evidence={n["name"]: n for n in _ref_notes})
+                      input_evidence=input_evidence_by_name(_ref_notes))
     if _v2 is not None:
         if _ref_notes and isinstance(_v2, dict):
             _v2["inputs_resolved"] = _ref_notes

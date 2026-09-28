@@ -361,16 +361,15 @@ return $목차
 
 ## 중단 뒤 이어가기와 문서 읽기
 
-결과를 다음 계산에 넘길 때는 반환된 `result_ref.input_args`를 다음 호출의 `inputs`로 넣고
-코드에서 `$입력`을 사용한다. 예: `{"code":"return len($입력)","inputs":{"입력":{"$ref":"앞 결과 id"}}}`.
-이름은 코드에 맞춰 바꿀 수 있다. 일부 필드만 필요하면 값 자리 참조에 `path:["value","rows"]`처럼
-원 봉투의 경로를 더한다. `inputs:{"$ref":...}`는 입력 이름이 없으므로 잘못된 형태다.
-모델이 원문을 판단해야 할 때만 `read_result`로 읽는다. 그 응답의 `input_args`는 표시 페이지가 아닌
-선택 경로의 전체 값을 가리키므로 다음 변환을 위해 긴 본문을 다시 입력할 필요가 없다.
-일부만 필요하면 `result_ref.paths`의 개별 경로를 선택한다. `read_scope`는 이번 응답의 경로·문자 범위다.
-`complete:true`이면 하위 내용까지 전달됐다. 문맥에 남은 본문은 재독하지 않되 소실·재검토 시 조회할 수 있다.
-`next_read:null`은 중간 offset부터 읽은 마지막 페이지일 수도 있다. 이어 읽기는 `next_read`를 쓰고
-미리보기 길이로 원문 offset을 추측하지 않는다.
+결과를 다음 계산에 넘길 때는 `result_ref.input_args`를 `inputs`로 넣고 코드에서 `$입력`을 쓴다.
+예: `{"code":"return len($입력)","inputs":{"입력":{"$ref":"앞 결과 id"}}}`. 이름은 코드에 맞춰 바꿀 수 있고,
+일부 필드는 `path:["value","rows"]`처럼 원 봉투 경로를 더한다. 여러 결과는 `{"반":[{"$ref":a},{"$ref":b}]}`처럼
+목록·레코드 안에 둔다. `inputs:{"$ref":...}`는 이름이 없어 잘못된 형태다. 실패한 실행은 값이 없어 참조가
+거절된다 — 성공 가지는 `partial_reads[].input_args`로 넘긴다. `input_args` 대신 `input_unavailable`이면
+저장 사본이 비밀 후보를 가린 값이므로 원천을 읽는 같은 프로그램 안에서 계산한다.
+원문 판단이 필요할 때만 `read_result`로 읽는다. 그 `input_args`는 표시 페이지가 아닌 선택 경로의 전체 값이다.
+`read_scope`는 이번 응답의 경로·문자 범위이고 `format:"text"`는 문자열 원문, `"json"`은 구조 값의 JSON이다.
+`complete:true`면 하위까지 전달됐으니 재독하지 않는다. `next_read:null`은 중간 offset에서 읽은 끝 페이지일 수도 있다.
 
 실행 응답의 `resume:{run_id}`와 동일 `code`·`inputs`를 다음 execute_ibl 호출에 보낸다.
 완료한 도구 호출은 저장된 값으로 복원한다. 반복의 같은 인자도 서로 다른 호출로 기록한다.

@@ -81,7 +81,7 @@ def invoke(runtime, args, registration, project_path, agent_id, config, node, ac
     with runtime.lock:
         session = runtime.foreign_sessions.get(sid)
         if session is None:
-            session = provider.Session(project_path, agent_id, sid, path)
+            session = provider.Session(project_path, agent_id, sid, path, interpreter=entry.get('interpreter'))
             runtime.foreign_sessions[sid] = session
             runtime.resources.callback(session.close)
     try:

@@ -52,8 +52,8 @@ def test_advertised_path_and_next_read_restore_actual_body(result_view, pipeline
     ref = projected["result_ref"]
     expected_path = (["final_result"] if pipeline else []) + [field]
     assert ref["read_args"]["path"] == expected_path
-    assert ref["paths"] == [{"path": expected_path,
-                              "chars": len(json.dumps(body, ensure_ascii=False, indent=2))}]
+    # 문자열 경로는 원문 글자 좌표로 페이지한다(69회차 F69-2) — paths.chars 도 같은 좌표.
+    assert ref["paths"] == [{"path": expected_path, "chars": len(body)}]
     assert ref["max_limit"] == 60000
     assert ref["read_args"]["limit"] == 60000
     request, chunks = ref["read_args"], []
@@ -61,9 +61,10 @@ def test_advertised_path_and_next_read_restore_actual_body(result_view, pipeline
         assert request["path"] == expected_path
         page = result_view.read_result(request)
         assert len(page["text"]) <= 60000
+        assert page["read_scope"]["format"] == "text"
         chunks.append(page["text"])
         request = page["next_read"]
-    assert json.loads("".join(chunks)) == body
+    assert "".join(chunks) == body
     assert json.dumps(raw) == before
 
 
@@ -93,11 +94,13 @@ def test_complete_parent_read_covers_children_without_blocking_reread(result_vie
     assert json.loads(page["text"]) == raw["value"]
     assert page["read_scope"] == {"path": ["value"], "start": 0,
                                   "end": len(page["text"]),
-                                  "total_chars": len(page["text"]), "complete": True}
+                                  "total_chars": len(page["text"]), "complete": True,
+                                  "format": "json"}
     assert page["next_read"] is None and page["read_hint"]
     # 문맥 소실/재검토 때 같은 원문을 회수할 권한은 그대로 남는다.
     child = result_view.read_result({"id": ref["id"], "path": ["value", 0, "content"]})
-    assert json.loads(child["text"]) == raw["value"][0]["content"]
+    # 문자열 경로는 원문 글자 페이지(69회차 F69-2)
+    assert child["text"] == raw["value"][0]["content"] and child["read_scope"]["format"] == "text"
     assert child["input_args"]["입력"]["path"] == ["value", 0, "content"]
 
 
@@ -113,7 +116,8 @@ def test_last_page_does_not_claim_the_whole_value_was_delivered(result_view, pat
     assert tail["read_scope"]["start"] == 400
     assert tail["read_scope"]["end"] == tail["read_scope"]["total_chars"]
     assert "read_hint" not in tail
-    assert json.loads(first["text"] + tail["text"]) == (raw["text"] if path else raw)
+    joined = first["text"] + tail["text"]
+    assert (joined == raw["text"]) if path else (json.loads(joined) == raw)
 
 
 @pytest.mark.parametrize("edition", [1, 2])
@@ -130,10 +134,10 @@ def test_list_body_paths_keep_original_indices_and_restore_selected_text(result_
     for entry in ref["paths"]:
         page = result_view.read_result({**ref["read_args"], "path": entry["path"]})
         assert page["read_scope"]["complete"]
-        assert json.loads(page["text"]) == rows[entry["path"][1]]["content"]
+        assert page["text"] == rows[entry["path"][1]]["content"]
     # 안내에 싣지 않은 행도 원래 인덱스로 조회할 수 있다.
     last = result_view.read_result({"id": ref["id"], "path": prefix + [8, "content"]})
-    assert json.loads(last["text"]) == rows[8]["content"]
+    assert last["text"] == rows[8]["content"]
     assert json.dumps(raw) == before
 
 
@@ -186,9 +190,8 @@ def test_default_page_survives_real_mcp_and_provider_boundaries(result_view, bod
         request = page["next_read"]
         if request is not None:
             assert len(page["text"]) == 60000 and request["limit"] == 60000
-    assert json.loads("".join(chunks)) == body
-    serialized_length = len(json.dumps(body, ensure_ascii=False))
-    assert len(calls) == (serialized_length + 59999) // 60000
+    assert "".join(chunks) == body
+    assert len(calls) == (len(body) + 59999) // 60000
     if len(body) == 59000:
         assert len(calls) == 1
 

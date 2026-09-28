@@ -24,6 +24,7 @@ def read_result(request):
     if offset < 0 or not 1 <= limit <= MAX_LIMIT:
         raise ValueError(f"offset >= 0, limit 1~{MAX_LIMIT}이 필요합니다")
     path = request.get("path")
+    stored = None
     if path is None:
         page = evidence_store().read_evidence(request.get("id"), offset, limit)
     else:
@@ -31,10 +32,20 @@ def read_result(request):
                 any(type(p) not in (str, int) for p in path)):
             raise ValueError("path는 객체 키·0 이상 배열 인덱스의 배열입니다(최대 16단계)")
         page = evidence_store().read_evidence(request.get("id"), 0, None)
-        value = _walk(json.loads(page["text"]), path)
-        text = json.dumps(value, ensure_ascii=False, indent=2)
+        stored = json.loads(page["text"])
+        value = _walk(stored, path)
+        # 문자열 값은 원문 글자로 페이지한다 — 미리보기의 total·offset과 같은 좌표(69회차 F69-2).
+        text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, indent=2)
         page.update(source_chars=page["chars"], chars=len(text), path=path,
                     offset=offset, text=text[offset:offset + limit])
+    all_masked = page.pop("masked_paths", [])
+    shown = [p for p in all_masked if _overlaps(p, path or [])]
+    if shown:
+        page["masked_paths"] = shown[:20]
+        page["masked_hint"] = ("이 범위의 ****는 저장 시 비밀 후보로 가린 자리이며 원래 값과 다릅니다(69회차 B69-5). "
+                               "원래 값이 필요한 계산은 원천을 읽는 같은 프로그램 안에서 하세요.")
+    # 입력 연결은 참조 해석기와 같은 규칙으로 판정한다 — 판본 2 업무 값은 wire 를 읽는다.
+    input_blocked = _masked_selection(all_masked, _value_source(stored, path or []))
     page["next_offset"] = offset + len(page["text"]) if offset + len(page["text"]) < page["chars"] else None
     page["next_read"] = ({"id": request.get("id"), "offset": page["next_offset"],
                           "limit": limit, **({"path": path} if path is not None else {})}
@@ -43,7 +54,9 @@ def read_result(request):
     complete = offset == 0 and page["next_offset"] is None
     page["read_scope"] = {"path": path if path is not None else [],
                           "start": offset, "end": offset + len(page["text"]),
-                          "total_chars": page["chars"], "complete": complete}
+                          "total_chars": page["chars"], "complete": complete,
+                          # text = 선택한 문자열의 원문 글자, json = 선택 값의 JSON, stored = 저장본 그대로
+                          "format": "stored" if path is None else "text" if isinstance(value, str) else "json"}
     if complete:
         page["read_hint"] = ("선택 경로 전체(하위 내용 포함)를 전달했습니다. 현재 문맥에 이 본문이 "
                              "남아 있으면 하위 경로를 다시 읽지 말고 사용하세요. 가공은 input_args로 연결하세요.")
@@ -51,7 +64,10 @@ def read_result(request):
     # 문서와 같은 표시 계약을 사용해 JSON escaping·다음 조회 인자까지 함께 전달한다.
     page["_display"] = {"max_chars": limit}
     # 읽은 페이지를 재작성하지 않고 선택한 전체 값을 다음 프로그램에 연결한다.
-    page["input_args"] = {"입력": {"$ref": request.get("id"), "path": path if path is not None else []}}
+    if input_blocked:
+        page["input_unavailable"] = _MASKED_INPUT
+    else:
+        page["input_args"] = {"입력": {"$ref": request.get("id"), "path": path if path is not None else []}}
     from episode_logger import record_trajectory_event
     record_trajectory_event("context.result_read", {
         "evidence_id": request.get("id"), "offset": offset, "chars": len(page["text"]),
@@ -83,10 +99,117 @@ def _walk(value, path):
     return _decode_json(value)
 
 
+def _overlaps(a, b):
+    """두 경로 중 하나가 다른 하나의 접두인가 — 선택이 가린 자리를 품거나 그 안에 있다."""
+    n = min(len(a), len(b))
+    return list(a[:n]) == list(b[:n])
+
+
+def _wire(stored, key):
+    wire = stored.get(key) if isinstance(stored, dict) else None
+    return wire if isinstance(wire, dict) and "data" in wire else None
+
+
+def _value_source(stored, selection):
+    """참조가 실제로 읽는 저장본 자리. 판본 2의 업무 값·부분 결과는 손실 없는 wire 위를 걷는다."""
+    if isinstance(stored, dict) and stored.get("edition") == 2:
+        if selection[:1] == ["value"] and _wire(stored, "value_wire"):
+            return ["value_wire"]
+        if selection[:2] == ["diagnostic", "partial"] and _wire(stored, "partial_wire"):
+            return ["partial_wire"]
+    return list(selection)
+
+
+def _masked_selection(masked, source):
+    """선택한 값이 저장 시 가린 자리와 겹치는가. wire 안 위치는 값 경로로 대응하지 않으므로 한 곳이라도 가려지면 전체."""
+    if source[:1] in (["value_wire"], ["partial_wire"]):
+        return any(not p or p[:1] == source[:1] for p in masked)
+    return any(_overlaps(p, source) for p in masked)
+
+
+_MASKED_INPUT = ("저장 사본에서 비밀 후보로 가린 자리(****)가 이 값에 있습니다. 원래 값은 영속 저장하지 않으므로 "
+                 "참조로 넘기면 가려진 문자열이 업무 값이 됩니다. 이 값이 필요한 계산은 원천을 읽는 같은 프로그램 안에서 하세요.")
+
+
+def _walk_typed(value, path, full_path):
+    """wire 를 푼 타입 값 위의 경로. 문자열 값을 JSON 으로 다시 해석하지 않는다."""
+    for part in path:
+        if isinstance(value, dict) and isinstance(part, str) and part in value:
+            value = value[part]
+        elif isinstance(value, (list, tuple)) and type(part) is int and 0 <= part < len(value):
+            value = value[part]
+        else:
+            raise ValueError(f"저장된 결과에 경로 {full_path!r}가 없습니다 (실패: {part!r})")
+    return value
+
+
+def _is_reference(value):
+    return isinstance(value, dict) and isinstance(value.get("$ref"), str) and set(value) <= {"$ref", "path"}
+
+
+def _resolve_reference(name, value, notes, at):
+    """참조 하나를 업무 값으로 — 최상위·목록·레코드 안이 모두 이 한 규칙을 쓴다."""
+    ref_id, path = value["$ref"], value.get("path")
+    where = f"inputs.{name}" + "".join(f"[{p!r}]" for p in at)
+    if path is not None and (not isinstance(path, list) or len(path) > MAX_PATH_DEPTH
+                             or any(type(p) not in (str, int) for p in path)):
+        raise ValueError(f"{where}: path는 객체 키·0 이상 배열 인덱스의 배열입니다(최대 {MAX_PATH_DEPTH}단계)")
+    try:
+        page = evidence_store().read_evidence(ref_id, 0, None)
+    except (ValueError, OSError, TypeError) as exc:
+        raise ValueError(f"{where}: 저장된 결과 {ref_id!r}를 읽을 수 없습니다: {exc}") from exc
+    stored = _decode_json(page["text"])
+    v2 = isinstance(stored, dict) and stored.get("edition") == 2
+    if path is None:
+        if v2 and (_wire(stored, "value_wire") or (stored.get("success") is True and "value" in stored)):
+            selection = ["value"]
+        elif v2:
+            # 실패 봉투 자체는 업무 값이 아니다(69회차 B69-4). 명시 경로는 그대로 허용한다.
+            raise ValueError(f"{where}: 참조한 실행은 실패해 업무 값이 없습니다(success=false). 성공한 가지는 "
+                             "result_ref.partial_reads[].input_args로, 진단이 필요하면 path를 [\"diagnostic\"]로 명시하세요.")
+        elif isinstance(stored, dict) and "final_result" in stored:
+            selection = ["final_result"]
+        else:
+            selection = []
+    else:
+        selection = list(path)
+    source = _value_source(stored, selection)
+    if _masked_selection(page.get("masked_paths", []), source):
+        raise ValueError(f"{where}: {_MASKED_INPUT}")
+    if source == ["value_wire"]:
+        from ibl_v2_ir import unpack
+        resolved = _walk_typed(unpack(stored["value_wire"]["data"]), selection[1:], selection)
+    elif source == ["partial_wire"]:
+        from ibl_v2_ir import unpack
+        resolved = _walk_typed(unpack(stored["partial_wire"]["data"]), selection[2:], selection)
+    elif v2 and selection[:2] == ["diagnostic", "partial"] and stored.get("partial_wire_error"):
+        raise ValueError("부분 결과의 손실 없는 값 전송이 지원되지 않습니다. 원 실행의 진단과 프로토콜을 확인하세요.")
+    else:
+        resolved = _walk(stored, selection)
+    notes.append({"name": name, **({"at": at} if at else {}), "id": ref_id,
+                  "path": source if path is None and source == ["value_wire"] else selection,
+                  "evidence": input_ref_evidence(stored),
+                  "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
+    return resolved
+
+
+def _resolve_nested(name, value, notes, at):
+    """목록·레코드 안의 참조도 같은 규칙으로 푼다(69회차 B69-2). 참조 모양($ref·path만)이 아닌 $ref 객체는 데이터다."""
+    if _is_reference(value):
+        return _resolve_reference(name, value, notes, at)
+    if isinstance(value, dict):
+        return {k: _resolve_nested(name, v, notes, at + [k]) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_resolve_nested(name, v, notes, at + [i]) for i, v in enumerate(value)]
+    return value
+
+
 def resolve_input_refs(inputs):
     """inputs 값 자리의 참조를 저장 결과의 실제 값으로 푼다 — 앞 실행의 결과를 *복사 없이* 다음 프로그램에 넘기는 통로.
 
-    형태: {"$ref": result_ref.id, "path": [키·인덱스…]}. path 생략 = 판본 2 는 value_wire(손실 없는 값),
+    형태: {"$ref": result_ref.id, "path": [키·인덱스…]}. 이름의 값 자리뿐 아니라 그 안의 목록·레코드 원소에도 쓴다.
+    판본 2 봉투의 업무 값(path 생략 또는 ["value", …])과 부분 결과(["diagnostic","partial", …])는 손실 없는 wire 를 풀어
+    걷는다 — 저장 사본의 공개 투영은 표시용이다(69회차 B69-1). 실패 봉투의 기본 참조와 저장 시 가린 자리는 거절한다.
     옛 봉투는 final_result, 둘 다 없으면 저장 본문 전체. 전송 절단 봉투의 스필 참조({"ref": {"path"…}, "_spilled": true})도 푼다.
     값은 여전히 *명시 입력*이다 — 이전 턴 변수의 자동 주입이 아니라 모델이 이름·출처를 적은 것만 들어온다(2026-09-26).
     실패는 ValueError 로 — 호출자가 실행 전 거절 봉투로 돌려준다."""
@@ -103,41 +226,7 @@ def resolve_input_refs(inputs):
         if isinstance(value, dict) and "$ref" in value:
             if set(value) - {"$ref", "path"}:
                 raise ValueError(f"inputs.{name}: $ref 참조에는 path만 함께 씁니다")
-            ref_id, path = value["$ref"], value.get("path")
-            if path is not None and (not isinstance(path, list) or len(path) > MAX_PATH_DEPTH
-                                     or any(type(p) not in (str, int) for p in path)):
-                raise ValueError(f"inputs.{name}: path는 객체 키·0 이상 배열 인덱스의 배열입니다(최대 {MAX_PATH_DEPTH}단계)")
-            try:
-                page = evidence_store().read_evidence(ref_id, 0, None)
-            except (ValueError, OSError, TypeError) as exc:
-                raise ValueError(f"inputs.{name}: 저장된 결과 {ref_id!r}를 읽을 수 없습니다: {exc}") from exc
-            stored = _decode_json(page["text"])
-            if path is None:
-                wire = stored.get("value_wire") if isinstance(stored, dict) else None
-                if isinstance(wire, dict) and "data" in wire:
-                    from ibl_v2_ir import unpack
-                    resolved, path = unpack(wire["data"]), ["value_wire"]
-                elif isinstance(stored, dict) and "final_result" in stored:
-                    resolved, path = _walk(stored, ["final_result"]), ["final_result"]
-                else:
-                    resolved, path = stored, []
-            else:
-                if (isinstance(stored, dict) and stored.get("edition") == 2
-                        and path[:2] == ["diagnostic", "partial"]):
-                    wire = stored.get("partial_wire")
-                    if isinstance(wire, dict) and "data" in wire:
-                        from ibl_v2_ir import unpack
-                        resolved = _walk(unpack(wire["data"]), path[2:])
-                    elif stored.get("partial_wire_error"):
-                        raise ValueError("부분 결과의 손실 없는 값 전송이 지원되지 않습니다. 원 실행의 진단과 프로토콜을 확인하세요.")
-                    else:
-                        resolved = _walk(stored, path)
-                else:
-                    resolved = _walk(stored, path)
-            out[name] = resolved
-            notes.append({"name": name, "id": ref_id, "path": path,
-                          "evidence": input_ref_evidence(stored),
-                          "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
+            out[name] = _resolve_reference(name, value, notes, [])
         elif is_ref(value):
             resolved, err = resolve_ref(value)
             if err:
@@ -147,15 +236,30 @@ def resolve_input_refs(inputs):
                           "evidence": input_ref_evidence(resolved),
                           "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
         else:
-            out[name] = value
+            out[name] = _resolve_nested(name, value, notes, [])
     if notes:
         try:
             from episode_logger import record_trajectory_event
             record_trajectory_event("context.input_ref_resolved", {
-                "inputs": [n["name"] for n in notes], "chars": sum(n["chars"] for n in notes)})
+                "inputs": sorted({n["name"] for n in notes}), "chars": sum(n["chars"] for n in notes)})
         except Exception:
             pass
     return out, notes
+
+
+def input_evidence_by_name(notes):
+    """실행기에 넘길 이름별 입력 근거. 한 이름 안의 여러 참조(목록·레코드 원소)는 불완전 여부를 합친다."""
+    grouped = {}
+    for note in notes:
+        grouped.setdefault(note["name"], []).append(note)
+    out = {}
+    for name, group in grouped.items():
+        if len(group) == 1 and not group[0].get("at"):
+            out[name] = group[0]
+        else:
+            out[name] = {"name": name, "refs": group, "evidence": {
+                "incomplete": any((n.get("evidence") or {}).get("incomplete") is True for n in group)}}
+    return out
 
 
 def input_ref_evidence(stored):
@@ -179,6 +283,12 @@ def input_ref_evidence(stored):
     return out
 
 
+def _selection_chars(item):
+    """read_result 가 그 경로에서 돌려줄 글자 수 — 문자열은 원문 글자, 구조는 JSON 페이지(F69-2와 같은 좌표)."""
+    item = _decode_json(item)
+    return len(item) if isinstance(item, str) else len(json.dumps(item, ensure_ascii=False, indent=2, default=str))
+
+
 def _read_reference(ref, result):
     """표시 사본이 아닌 원 봉투에서 조회 가능한 큰 필드를 찾는다(최대 6개)."""
     typed_value = result.get("edition") == 2 and "value" in result
@@ -191,7 +301,7 @@ def _read_reference(ref, result):
     if isinstance(value, dict):
         for key, item in value.items():
             if isinstance(item, (str, list, dict)):
-                chars = len(json.dumps(_decode_json(item), ensure_ascii=False, indent=2, default=str))
+                chars = _selection_chars(item)
                 if chars >= 400:
                     paths.append({"path": prefix + [key], "chars": chars})
         paths.sort(key=lambda entry: entry["chars"], reverse=True)
@@ -204,7 +314,7 @@ def _read_reference(ref, result):
             fields = item.items() if isinstance(item, dict) else [(None, item)]
             for key, field in fields:
                 if isinstance(field, (str, list, dict)):
-                    chars = len(json.dumps(_decode_json(field), ensure_ascii=False, indent=2, default=str))
+                    chars = _selection_chars(field)
                     if chars >= 400:
                         candidates.append({"path": prefix + [index] + ([] if key is None else [key]),
                                            "chars": chars})
@@ -223,7 +333,10 @@ def _read_reference(ref, result):
                       else paths[0]["path"] if paths else prefix},
         "read": 'execute_ibl(code="", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요',
     }
-    if typed_value:
+    masked = ref.get("masked_paths") or []
+    if typed_value and _masked_selection(masked, _value_source(result, ["value"])):
+        out["input_unavailable"] = _MASKED_INPUT
+    elif typed_value:
         wire = result.get("value_wire")
         value_path = {} if isinstance(wire, dict) and "data" in wire else {"path": ["value"]}
         out["input_args"] = {"입력": {"$ref": ref["id"], **value_path}}
@@ -247,6 +360,9 @@ def _read_reference(ref, result):
                 if result.get("partial_wire_error"):
                     entry.pop("input_args")
                     entry["input_unavailable"] = "원 실행의 partial_wire_error를 확인하세요. 표시 값을 실제 값으로 대체하지 마세요."
+                elif _masked_selection(masked, _value_source(result, path)):
+                    entry.pop("input_args")
+                    entry["input_unavailable"] = _MASKED_INPUT
                 if isinstance(value, dict) and isinstance(value.get("text"), str):
                     entry["text_read_args"] = {**read, "path": path + ["text"]}
                 reads.append(entry)

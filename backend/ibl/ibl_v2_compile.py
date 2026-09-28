@@ -256,7 +256,13 @@ class Compiler:
             return infer(d["value"])
         if kind == "ref":
             if d["name"] not in env:
-                self.issue(node, "UNBOUND", f"정의되지 않은 값: ${d['name']}")
+                extra = {}
+                if self.inputs and d["name"] not in self.inputs:
+                    # 결과 참조의 input_hint 가 이름 변경을 권하므로 흔한 실수다 — 실제 입력 이름을 알린다(69회차 F69-3).
+                    names = ", ".join("$" + n for n in sorted(self.inputs)[:8])
+                    extra["hint"] = (f"이 프로그램에 전달된 inputs 이름은 {names}입니다. 코드의 변수 이름과 inputs 이름을 "
+                                     "맞추세요. 새 값이면 이 위치 전에 정의하세요.")
+                self.issue(node, "UNBOUND", f"정의되지 않은 값: ${d['name']}", **extra)
             return env.get(d["name"], UNKNOWN)
         if kind == "bind":
             name = d["name"]

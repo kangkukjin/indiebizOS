@@ -10,6 +10,36 @@ from logging_utils import mask_secret_data, mask_secrets
 
 EVENT_PAGE_LIMIT = 12000
 RESPONSE_PAGE_LIMIT = 13000
+MASKED_PATHS_CAP = 256
+
+
+class EvidenceNotFound(FileNotFoundError, ValueError):
+    """이 저장소(대화·작업)에 없는 증거 — 기존 OSError 처리와 값 오류 처리가 모두 받는다."""
+
+
+def masked_paths(original, masked):
+    """마스킹 전후 값에서 바뀐 자리의 JSON 경로. 문자열은 JSON이면 구조로 비교한다."""
+    if isinstance(original, str) and isinstance(masked, str):
+        try:
+            original, masked = json.loads(original), json.loads(masked)
+        except ValueError:
+            return [[]]
+    out = []
+
+    def walk(a, b, path):
+        if len(out) > MASKED_PATHS_CAP:
+            return
+        if isinstance(a, dict) and isinstance(b, dict) and a.keys() == b.keys():
+            for key in a:
+                walk(a[key], b[key], path + [key])
+        elif isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)) and len(a) == len(b):
+            for index, (x, y) in enumerate(zip(a, b)):
+                walk(x, y, path + [index])
+        elif a != b and not (isinstance(a, float) and isinstance(b, float) and a != a and b != b):
+            out.append(path)
+
+    walk(original, masked, [])
+    return [[]] if len(out) > MASKED_PATHS_CAP else out
 
 
 def current_evidence_store():
@@ -82,22 +112,56 @@ class TurnStore:
         self.cost = Counter()
 
     def evidence(self, value):
-        value = mask_secrets(value) if isinstance(value, str) else mask_secret_data(value)
-        text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str)
+        masked = mask_secrets(value) if isinstance(value, str) else mask_secret_data(value)
+        text = masked if isinstance(masked, str) else json.dumps(masked, ensure_ascii=False, default=str)
         key = digest(text)
         path = self.directory / (key + ".txt")
         if not path.exists():
             path.write_text(text, encoding="utf-8")
-        return {"id": key, "chars": len(text), "excerpt": text[:1000]}
+        out = {"id": key, "chars": len(text), "excerpt": text[:1000]}
+        # 저장본은 표시·인용 사본이다. 가린 자리를 알려 값 통로(inputs 참조)가 **** 를
+        # 업무 값으로 삼지 않게 한다 — 원문은 남기지 않는다(69회차 B69-5).
+        altered = masked_paths(value, masked) if masked != value else []
+        if altered:
+            out["masked_paths"] = self._record_masked(key, altered)
+        return out
+
+    def _record_masked(self, key, paths):
+        sidecar = self.directory / (key + ".masked.json")
+        known = self.masked_paths(key)
+        merged = known + [p for p in paths if p not in known]
+        if len(merged) > MASKED_PATHS_CAP:
+            merged = [[]]
+        if merged != known:
+            sidecar.write_text(json.dumps(merged, ensure_ascii=False), encoding="utf-8")
+        return merged
+
+    def masked_paths(self, key):
+        """저장 시 비밀 후보로 가린 자리의 경로들. [[]] 는 전체(위치 불명)."""
+        sidecar = self.directory / (key + ".masked.json")
+        try:
+            return json.loads(sidecar.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return []
 
     def read_evidence(self, key, offset=0, limit=12000, *, mark=False):
         if not re.fullmatch(r"[0-9a-f]{64}", key or ""):
             raise ValueError("잘못된 증거 ID")
-        text = (self.directory / (key + ".txt")).read_text(encoding="utf-8")
+        try:
+            text = (self.directory / (key + ".txt")).read_text(encoding="utf-8")
+        except FileNotFoundError:
+            # 저장소는 대화(작업)별 네임스페이스다. 내부 경로·OS 문구 대신 참조의 범위를 알린다.
+            raise EvidenceNotFound(
+                "이 대화(작업)의 저장소에 없는 결과입니다. result_ref는 그 결과를 만든 같은 대화 안에서만 "
+                "유효합니다 — 여기서는 원천을 다시 조회하세요.") from None
         end = offset + limit if limit is not None else None
         if mark:
             self.evidence_coverage.setdefault(key, []).append((offset, min(end or len(text), len(text))))
-        return {"id": key, "offset": offset, "chars": len(text), "text": text[offset:end]}
+        page = {"id": key, "offset": offset, "chars": len(text), "text": text[offset:end]}
+        masked = self.masked_paths(key)
+        if masked:
+            page["masked_paths"] = masked
+        return page
 
     def evidence_fully_read(self, key):
         length = self.read_evidence(key, 0, 0)["chars"]

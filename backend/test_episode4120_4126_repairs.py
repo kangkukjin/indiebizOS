@@ -54,12 +54,14 @@ def view(monkeypatch, tmp_path):
 
 
 def read_all(view, request):
-    chunks = []
+    chunks, fmt = [], None
     while request:
         page = view.read_result(request)
         chunks.append(page['text'])
+        fmt = page['read_scope']['format']
         request = page['next_read']
-    return json.loads(''.join(chunks))
+    # 문자열 경로는 원문 글자, 구조 값은 JSON 페이지(69회차 F69-2).
+    return ''.join(chunks) if fmt == 'text' else json.loads(''.join(chunks))
 
 
 def test_real_parallel_partial_keeps_branch_identity_and_full_value_after_transport(view):

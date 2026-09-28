@@ -5429,7 +5429,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-28'
-          impl: 4b4f2b9640a81c6e
+          impl: 94343beaed00d46b
         target_key: path
         aliases:
           offset:
@@ -5442,7 +5442,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-28'
-          impl: 4b4f2b9640a81c6e
+          impl: 94343beaed00d46b
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6203,7 +6203,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-28'
-          impl: 4b4f2b9640a81c6e
+          impl: 94343beaed00d46b
         pipe_in: true
         lands_on: body
         limb_op:

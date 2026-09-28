@@ -40,6 +40,7 @@
 - 전송 절단 봉투의 스필 참조(`{"ref": {"path"}, "_spilled": true}`)도 푼다.
 - 봉투에 `inputs_resolved[{name, id, path, chars}]`, 궤적 사건 `context.input_ref_resolved`. 실패는 실행 전 거절 봉투.
 - 여전히 **명시 입력**이다 — 이름·출처를 적은 것만 들어온다. 이전 턴 변수의 자동 주입이 아니다.
+- 69회차 보강(값 통로 ≠ 표시 저장본): 판본 2 업무 값 경로(`path` 생략·`["value",…]`)와 부분 결과는 `value_wire`/`partial_wire`를 푼 타입 값 위를 걷는다 — 저장본의 공개 투영(Decimal→실수)은 표시용이다. 목록·레코드 안의 참조 모양(`$ref`·`path`만)도 같은 해석기로 풀고, 이름별 입력 근거는 원소 참조의 불완전을 합친다. 실패 봉투의 기본 참조는 거절(명시 `diagnostic` 경로·`partial_reads`는 허용). 저장소는 비밀 마스킹으로 바뀐 자리의 **경로만** `<id>.masked.json`에 적고(원문 무저장), 해석기·`result_ref`·read_result 는 그 자리와 겹치는 선택을 `input_unavailable`로 거절한다. `/ibl/validate`도 같은 해석기를 통과한다. 다른 대화의 참조는 `EvidenceNotFound`(범위 안내, 내부 경로 무노출). read_result 문자열 경로는 원문 글자 페이지(`read_scope.format`).
 
 ### ③ 관측 반환 필드 → 판본 2 컴파일러 경고 `UNOBSERVED_FIELD`
 

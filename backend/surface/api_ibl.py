@@ -648,6 +648,15 @@ def validate_request_code(code: str, edition=None, inputs=None) -> dict:
     거짓 빨강이 난다(B49-1 `do` 재파싱 · B53-1 `$변수 >>` 파이프 머리 — 같은 속 두 번).
     그 부류는 "실행되는 문장 전수를 검수에 넣어 valid:false 가 0" 인 관문으로만 닫힌다."""
     from ibl_v2_entry import handle_request
+    if isinstance(inputs, dict):
+        # 실행 경로(system_tools_ibl)와 같은 참조 해석기를 통과한다 — 참조 dict 를 업무 값으로
+        # 타입 검사하던 거짓 FIELD_TYPE 의 봉인(69회차 B69-3, B53-1 동형성 부류).
+        try:
+            from model_result_view import resolve_input_refs
+            inputs, _notes = resolve_input_refs(inputs)
+        except ValueError as exc:
+            return {"edition": 2, "mode": "check", "executed": False, "ok": False, "valid": False,
+                    "status": "invalid", "error": str(exc)}
     v2 = handle_request({"code": code, "edition": edition, "inputs": inputs, "check": True})
     if v2 is not None:
         return {**v2, "valid": v2.get("ok", False)}

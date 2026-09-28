@@ -20,8 +20,9 @@ def record(handler_file, sid, ok, error=None):
 
 
 class Session:
-    def __init__(self, project_path, agent_id, sid, script_path):
+    def __init__(self, project_path, agent_id, sid, script_path, interpreter=None):
         self.project = str(Path(project_path).resolve())
+        self.interpreter = interpreter
         self.agent_id = agent_id
         self.sid, self.script_path = sid, Path(script_path)
         self.lock = threading.RLock()
@@ -34,13 +35,20 @@ class Session:
 
     def start(self, runtime):
         from python_environment_lock import environment_lease
-        from runtime_utils import get_python_cmd, get_base_path
+        from runtime_utils import get_base_path
+        from common.pkg_utils import load_singleton
         import boot_paths
+        # 등록 스크립트와 같은 해소기 — 파이썬 가족은 이 몸 자신(sys.executable). PATH 의 python3 는
+        # 다른 환경(라이브러리 없는 시스템 파이썬)일 수 있다(69회차 회귀에서 발견).
+        ops = load_singleton(str(Path(__file__).with_name('handler.py')), 'script_ops')
+        interpreter, _note = ops._resolve_interpreter(self.interpreter or 'python', self.script_path.suffix)
+        if not interpreter:
+            raise Fault('PY_RUNTIME_UNAVAILABLE', '등록 세션의 파이썬 인터프리터를 찾을 수 없습니다.', kind='protocol')
         self.lease = environment_lease(check=runtime.check)
         self.lease.__enter__()
         worker = self.script_path
         try:
-            self.proc = subprocess.Popen([get_python_cmd(), '-I', str(worker), str(Path(boot_paths.__file__).parent), str(get_base_path() / "pylibs")], stdin=subprocess.PIPE,
+            self.proc = subprocess.Popen([interpreter, '-I', str(worker), str(Path(boot_paths.__file__).parent), str(get_base_path() / "pylibs")], stdin=subprocess.PIPE,
                                          stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
                                          cwd=self.project, start_new_session=True, bufsize=1)
         except OSError as exc:

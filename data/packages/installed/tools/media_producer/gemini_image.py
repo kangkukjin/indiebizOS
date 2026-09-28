@@ -147,7 +147,7 @@ def generate_gemini_image(tool_input, output_base):
 
     # output_path가 지정되면 파일명만 추출하여 output_base에 저장
     if output_path:
-        filename = os.path.basename(output_path)
+        filename = output_path
         output_path = os.path.join(output_base, filename)
     else:
         output_path = os.path.join(output_base, f"gemini_image_{uuid.uuid4().hex[:8]}.png")

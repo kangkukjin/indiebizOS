@@ -97,7 +97,10 @@ def _resolve_region(region):
     if not region:
         return None
     region_lower = region.lower() if isinstance(region, str) else region
-    return REGION_CODES.get(region_lower, REGION_CODES.get(region, region))
+    resolved = REGION_CODES.get(region_lower, REGION_CODES.get(region, region))
+    if resolved not in REGION_CODES.values():
+        raise ValueError(f"알 수 없는 지역: {region}. 허용 이름/코드: {REGION_CODES}")
+    return resolved
 
 
 def _resolve_genre(genre):
@@ -105,7 +108,10 @@ def _resolve_genre(genre):
     if not genre:
         return None
     genre_lower = genre.lower() if isinstance(genre, str) else genre
-    return GENRE_CODES.get(genre_lower, GENRE_CODES.get(genre, genre))
+    resolved = GENRE_CODES.get(genre_lower, GENRE_CODES.get(genre, genre))
+    if resolved not in GENRE_CODES.values():
+        raise ValueError(f"알 수 없는 장르: {genre}. 허용 이름/코드: {GENRE_CODES}")
+    return resolved
 
 
 def _resolve_status(status):
@@ -113,7 +119,10 @@ def _resolve_status(status):
     if not status:
         return None
     status_lower = status.lower() if isinstance(status, str) else status
-    return STATUS_CODES.get(status_lower, STATUS_CODES.get(status, status))
+    resolved = STATUS_CODES.get(status_lower, STATUS_CODES.get(status, status))
+    if resolved not in STATUS_CODES.values():
+        raise ValueError(f"알 수 없는 공연상태: {status}. 허용 이름/코드: {STATUS_CODES}")
+    return resolved
 
 
 def xml_to_dict(element):
@@ -392,7 +401,7 @@ def get_region_list():
     }
 
 
-def search_by_keyword(keyword, genre=None, region=None, status="공연중", days=90,
+def search_by_keyword(keyword, genre=None, region=None, status=None, days=90,
                       rows=20, cpage=1):
     """
     키워드로 공연 검색 (편의 함수)

@@ -134,6 +134,7 @@ def execute(tool_input: dict, context) -> str:
 def _lecture_list(tool_input: dict) -> str:
     lectures = lecture_store.list_lectures()
     records = [{
+        **lec,
         "title": lec.get("title") or lec.get("lecture_id") or "(제목 없음)",
         "meta": " · ".join(p for p in [
             lec.get("audience") or None,

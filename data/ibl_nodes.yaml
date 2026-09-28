@@ -814,7 +814,7 @@ nodes:
         fixture: '[sense:performance]{}'
         description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take·table:document 파이프로 추리고 문서화.
         group: culture
-        target_description: search — query(공연명/키워드)·genre·region·status·date_from/date_to(날짜 범위, 둘 함께 입력)·days(날짜 생략 시 오늘부터 N일) 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록). KOPIS 오류 XML이나 점검 HTML은 검색 0건으로 취급하지 않고 명시적 오류로 반환한다.
+        target_description: search — query(공연명/키워드)·genre·region·status·date_from/date_to(날짜 범위, 둘 함께 입력)·days(날짜 생략 시 오늘부터 N일) 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록). status 생략 시 예정 공연도 포함한다. region/genre/status는 알려진 이름이나 코드만 받는다. KOPIS 오류 XML이나 점검 HTML은 검색 0건으로 취급하지 않고 명시적 오류로 반환한다.
         target_key: op
         router: handler
         tool: performance_op
@@ -1699,7 +1699,7 @@ nodes:
         group: travel
         target_description: '숙박·단기임대 검색. source로 플랫폼 선택. region=지역/키워드 필수.
 
-          - source=goodchoice(기본): 여기어때 실시간 할인가·평점·좌표. region=지역(예 "제주", "강남"). type=hotel(기본)/motel/pension/camping/guesthouse. checkin/checkout(YYYY-MM-DD, 날짜별 요금 반영)·personal(인원, 기본2). max_price=1박 상한(원). limit(기본20, 페이지 자동추적 최대100).
+          - source=goodchoice(기본): 여기어때 실시간 할인가·평점·좌표. region=지역(예 "제주", "강남"). type=hotel(기본)/motel/pension/camping/guesthouse. checkin/checkout(YYYY-MM-DD, 날짜별 요금 반영)·personal(인원, 기본2). max_price=1박 평균 상한(원). price/price_total은 숙박 합계, price_per_night는 1박 평균, nights는 박 수. limit(기본20, 페이지 자동추적 최대100).
 
           - source=33m2: 삼삼엠투 한 달 살기 — 주 단위 임대(usingFee)·관리비·평수. region=지역(예 "평택"). max_week_fee/min_week_fee=주간요금 서버필터(원). checkin/checkout=입주 기간. limit(기본20).
 
@@ -2482,7 +2482,7 @@ nodes:
         side_effect: true
         fixture: '[sense:paper]{query: "attention"}'
         description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
-        target_description: "op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
+        target_description: "선택 필터 지원 — openalex(year_from/year_to/sort_by/open_access), semantic(year_from), nanet(year/type/page); arxiv/pubmed는 선택 필터 미지원이며 명시하면 거절. op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
         target_key: op
         group: research
         router: handler
@@ -3584,7 +3584,7 @@ nodes:
 
           - vault: Obsidian vault(진실소스) 운영. mode stats(기본)/export/rebuild/link — rebuild=vault→검색DB 재구축(복구 경로), link=글 간 시맨틱 연결 생성.
 
-          - latest: 가장 최근 글 1개를 고른다. 본문이 아니라 vault .md **경로**(path)를 준다 — 발행은 기존 동사로 잇는다: >> [self:read]{} >> [table:document]{format:"html"} >> [self:copy]{destination:...}
+          - latest: 로컬 수집 사본의 최근 글 1개를 고른다(원격 최신 여부는 보장하지 않음). 본문이 아니라 vault .md **경로**(path)를 준다 — 발행은 기존 동사로 잇는다: $b=[self:blog]{op:"latest"}; [self:read]{path:$b.path}
 
           '
         target_key: op
@@ -5211,7 +5211,7 @@ nodes:
         fixture: '[self:photo]{op: "stats"}'
         runs_on: anywhere
         description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환(기본=실행되는 몸의 미디어, source:usb면 USB로 연결된 안드로이드 폰). 타임라인·통계·중복은 >> table 변환자.
-        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng/taken_at/month/kind/camera/size/source 구조 필드 포함 → groupby·지도와 직결.'
+        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(현지 촬영일 범위, YYYY-MM 또는 YYYY-MM-DD; taken_at은 시간대 포함), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng/taken_at/month/kind/camera/size/source 구조 필드 포함 → groupby·지도와 직결.'
         group: photo
         target_key: query
         router: handler
@@ -7118,6 +7118,12 @@ nodes:
         - 텔레그램
         - 이메일
       publish:
+        open_params: false
+        params:
+          title: 글 제목
+          content: 마크다운 본문
+          slug: 주소 식별자
+          summary: 요약
         returns: effect
         pipe_in: true
         description: 내가 쓴 글(마크다운)을 Nostr 공개 장문(NIP-23, kind:30023)으로 발행하고 공유 링크(njump)를 돌려준다. 신문·리포트를 친구에게 링크 하나로. slug 재발행 = 같은 주소 갱신. 발행물은 사용자/앱이 조립한 것만 그대로(조작·PII 금지).
@@ -7181,6 +7187,20 @@ nodes:
         - 수신
         - 메시지검색
       feed:
+        open_params: false
+        params:
+          op: read 또는 post
+          content: 게시 본문
+          body: 본문 별칭
+          text: 본문 별칭
+          hashtag: 보드
+          board: 보드 별칭
+          author: 저자
+          pubkey: 저자 별칭
+          npub: 저자 별칭
+          following: 팔로우 피드
+          with_boards: 보드 목록
+          limit: 반환 수
         returns: items
         side_effect: true
         fixture: '[others:feed]{op: "read"}'
@@ -7538,8 +7558,8 @@ nodes:
         returns: items
         side_effect: false
         fixture: '[others:messages]{op: "inbox"}'
-        description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와 Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read). inbox items(unread·favorite 필드) — table:filter 로 미독·즐겨찾기만 선별.
-        target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, 파라미터 없음·최근순).
+        description: 메신저 대화 목록(inbox)·메시지 스레드(thread). Gmail/Nostr 통합. unreplied는 미답신 수(unread는 호환 별칭), 읽음 여부가 아니다. 비이웃 DM은 미측정(null). favorite로 즐겨찾기 선별.
+        target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, search(이름)·level(등급) 선택·최근순).
         group: channel
         target_key: op
         router: handler
@@ -8697,9 +8717,9 @@ nodes:
         side_effect: true
         exempt: 실행마다 PNG 파일 생성(부작용) — 정기 합성 실행 부적합. Playwright 엔진 건강은 scripts/ci_playwright_smoke.py, xlsx 재계산 관문은 backend/test_render_xlsx_contract.py 가 담당.
         runs_on: pc_only
-        scope: workspace
-        description: 자기 산출물 지각 — 시각 형식(HTML/PDF/SVG/XLSX 장부)을 PNG 스크린샷으로 결정론 투영 (op 분기, 생략 시 path 확장자로 추론). 행=스크린샷 1장이라 `>> [table:each]` 로 장별 critic 심사 파이프 가능. 판단 없음 — 심사는 image_read{op:"critic"}. 슬라이드는 self:slide.
-        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수, 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(파일명 stem). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: ''$it.prescreen'' 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
+        scope: project
+        description: 자기 산출물 지각 — 시각 형식(HTML/PDF/SVG/XLSX 장부)을 PNG 스크린샷으로 결정론 투영 (op 분기, 생략 시 path 확장자로 추론). 반환 `$r.items >> [table:each]` 로 장별 critic 심사. 판단 없음 — 심사는 image_read{op:"critic"}. 슬라이드는 self:slide.
+        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수, 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(경로 stem, 폴더 보존·기본 프로젝트 outputs). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: $it.prescreen 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
         group: media_produce
         router: handler
         tool: render_artifact
@@ -8740,7 +8760,7 @@ nodes:
         side_effect: false
         exempt: 기어-해소 비전 모델 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합
         runs_on: anywhere
-        scope: workspace
+        scope: project
         description: 이미지 읽기·채점 — 이미지 입력이 가능한 실행 모델 우선, 미지원·미확인 시 비전 대체. read=시각 QA·OCR, critic=의도 정합 채점. criteria로 취향 기준 지정. 전체 목표의 최종 승인은 의식.
         target_description: 'image_path(절대 경로 또는 data URI, path 로도 받음) 필수. read — question(무엇을 읽거나 답할지, 생략 시 전체 묘사. query/intent/prompt 로도 받음). critic — intent(무엇을 표현해야 하는가) 필수 + criteria(취향 파일 이름 예 "web"/"visual_base"/"sheet" 또는 yaml 경로 — data/criteria/, extends 사슬 지원, 지정 시 preset 대신 적용)/preset(general 기본|slide_illustration — 슬라이드 일러스트 기준표는 명시 요청제)/style_preset/checks(추가 체크 배열)/prescreen(render 행의 0층 관측 ''$it.prescreen'' — 차 있으면 비전 호출 없이 즉시 실패 verdict, tier: prescreen. 비용 계층화) 옵션.'
         group: media_produce
@@ -8811,6 +8831,20 @@ nodes:
         group: web_builder
         router: handler
         tool: web_site
+        target_key: op
+        ops:
+          default: list
+          values:
+            list: 등록 사이트 조회
+            register: 사이트 등록
+            remove: 사이트 제거
+            update: 사이트 수정
+          returns:
+            list: items
+          side_effect:
+            list: false
+          fixture:
+            list: '[engines:web_site]{op: "list"}'
         implementation: web-builder 패키지의 sites.json 레지스트리 CRUD. 빈번하지 않은 어드민이라 가이드 web_builder.md 참조 권장.
         keywords:
         - 사이트
@@ -8850,6 +8884,12 @@ nodes:
         tool: web_op
         ops:
           default: preview
+          side_effect:
+            snapshot: false
+          returns:
+            snapshot: scalar
+          exempt:
+            snapshot: 등록된 site_id 필요
           values:
             create: 웹 프로젝트/페이지 생성 (target site|page)
             build: 프로젝트 빌드·선언된 린트 검사

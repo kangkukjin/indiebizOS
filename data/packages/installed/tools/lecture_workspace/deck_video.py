@@ -314,27 +314,25 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
     if opts.get("bgm_path"):
         tool_input["bgm_path"] = opts["bgm_path"]
     result_msg = mh.create_html_video(tool_input, str(video_dir))
-    # 실패는 이제 계약(dict)으로 온다 — B21-1 수리 이후. dict 면 error 를 그대로 올린다
-    # (예전엔 평문이라 str() 이 곧 사유였다. repr 이 사유 자리에 오지 않게 여기서 푼다.)
     if isinstance(result_msg, dict):
-        raise RuntimeError(str(result_msg.get("error") or result_msg)[:500])
-    if not str(result_msg).startswith("HTML 동영상 제작 완료"):
-        raise RuntimeError(str(result_msg)[:500])
-    # "HTML 동영상 제작 완료: <경로> | 씬 전환: fade (0.5초)" → 경로만.
-    # ★" | " 를 안 자르면 output 이 경로가 아니게 된다(2026-08-17 실측 — 전환 정보가 붙어 왔다).
-    # ★" (" 로 자르면 괄호가 든 파일명이 통째로 잘린다(2026-09-01 실측 —
-    #   "…읽고 (새 목소리).mp4" 가 "…읽고" 로 truncate 돼 자막 단계가 원본을 못 찾았다).
-    #   전환 꼬리표는 "(0.5초)" 형태라 그 모양만 정확히 떼어낸다.
-    output = str(result_msg).split(":", 1)[1].strip().split(" | ")[0]
-    output = re.sub(r"\s*\([^()]*초\)\s*$", "", output)
+        if result_msg.get("success") is not True or not result_msg.get("path"):
+            raise RuntimeError(str(result_msg.get("error") or result_msg)[:500])
+        output = result_msg["path"]
+        actual_transition = result_msg.get("transition_duration", 0.0)
+    else:
+        # 이전 렌더러 호출자의 영수증 호환. 새 생성기는 경로·전환시간을 구조 값으로 준다.
+        if not str(result_msg).startswith("HTML 동영상 제작 완료"):
+            raise RuntimeError(str(result_msg)[:500])
+        output = str(result_msg).split(":", 1)[1].strip().split(" | ")[0]
+        output = re.sub(r"\s*\([^()]*초\)\s*$", "", output)
+        transition_match = re.search(r"씬 전환: .*?\(([0-9.]+)초\)", str(result_msg))
+        actual_transition = float(transition_match.group(1)) if transition_match else 0.0
 
     caption_info: dict = {}
     if captions_enabled:
         raw_output = Path(output)
         final_output = video_dir / requested_filename
         sidecar = final_output.with_suffix(".captions.ass")
-        transition_match = re.search(r"씬 전환: .*?\(([0-9.]+)초\)", str(result_msg))
-        actual_transition = float(transition_match.group(1)) if transition_match else 0.0
         scene_durations = [float(scene.get("duration") or 0) for scene in scenes]
         narration_durations = [
             float(scene.get("_narration_duration") or 0) for scene in scenes

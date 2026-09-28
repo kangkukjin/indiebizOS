@@ -195,7 +195,7 @@ class _FakeMediaHandler:
             scene["_narration_duration"] = self.narration_seconds if has_note else 0.0
         target = Path(output_base) / tool_input["output_filename"]
         _make_source(target, seconds=self.narration_seconds * len(tool_input["scenes"]))
-        return f"HTML 동영상 제작 완료: {target} | 씬 전환: fade (0.5초)"
+        return {"success": True, "path": str(target), "transition_duration": 0.5}
 
 
 def _run_build(monkeypatch, tmp_path, notes, opts, narration_seconds=1.0):

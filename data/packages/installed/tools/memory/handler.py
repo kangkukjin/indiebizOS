@@ -257,42 +257,37 @@ def _memories_to_records(memories: list) -> list:
 
 
 def _search_conversations(project_path, query, limit=5):
-    """conversations.db에서 대화 이력 검색"""
-    conv_db_path = os.path.join(project_path, "conversations.db")
-    if not os.path.exists(conv_db_path):
+    """주체의 대화 저장소에서 낱말 AND 검색. DB 오류는 빈 검색으로 숨기지 않는다."""
+    from pathlib import Path
+    project = Path(project_path)
+    system = project / "system_ai_memory.db"
+    path = system if system.exists() else project / "conversations.db"
+    if not path.exists():
         return []
-
+    terms = query.split()
+    if not terms:
+        return []
+    conn = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=5.0)
+    conn.row_factory = sqlite3.Row
     try:
-        conn = sqlite3.connect(conv_db_path, timeout=5.0)
-        conn.row_factory = sqlite3.Row
-
-        rows = conn.execute("""
-            SELECT m.id, a_from.name as from_agent, a_to.name as to_agent,
-                   substr(m.content, 1, 200) as preview,
-                   m.message_time as created_at
-            FROM messages m
-            LEFT JOIN agents a_from ON m.from_agent_id = a_from.id
-            LEFT JOIN agents a_to ON m.to_agent_id = a_to.id
-            WHERE m.content LIKE ?
-            ORDER BY m.message_time DESC
-            LIMIT ?
-        """, (f"%{query}%", limit)).fetchall()
-
+        column = "content" if path == system else "m.content"
+        where = " AND ".join(f"{column} LIKE ?" for _ in terms)
+        if path == system:
+            sql = ("SELECT id, role AS from_agent, NULL AS to_agent, "
+                   "substr(content,1,200) AS preview, timestamp AS created_at "
+                   f"FROM conversations WHERE {where} ORDER BY id DESC LIMIT ?")
+        else:
+            sql = ("SELECT m.id, a_from.name AS from_agent, a_to.name AS to_agent, "
+                   "substr(m.content,1,200) AS preview, m.message_time AS created_at "
+                   "FROM messages m LEFT JOIN agents a_from ON m.from_agent_id=a_from.id "
+                   "LEFT JOIN agents a_to ON m.to_agent_id=a_to.id "
+                   f"WHERE {where} ORDER BY m.message_time DESC LIMIT ?")
+        rows = conn.execute(sql, (*[f"%{term}%" for term in terms], limit)).fetchall()
+        return [{"conversation_id": row["id"], "preview": row["preview"],
+                 "from_agent": row["from_agent"], "to_agent": row["to_agent"],
+                 "created_at": row["created_at"], "source": "conversation"} for row in rows]
+    finally:
         conn.close()
-
-        results = []
-        for r in rows:
-            results.append({
-                "conversation_id": r["id"],
-                "preview": r["preview"],
-                "from_agent": r["from_agent"],
-                "to_agent": r["to_agent"],
-                "created_at": r["created_at"],
-                "source": "conversation"
-            })
-        return results
-    except Exception:
-        return []
 
 
 def _memory_read(db, tool_input, project_path, agent_id):

@@ -22,6 +22,8 @@ def _delegate_unified(params: dict, project_path: str) -> Any:
     """위임 통합 디스패처 — mode(async/sync/workflow) × scope(same/cross/system)."""
     mode = (params.get("mode") or "async").lower()
     scope = (params.get("scope") or "same").lower()
+    if mode not in {"async", "sync", "workflow"} or scope not in {"same", "cross", "system"}:
+        return {"success": False, "error": "mode는 async/sync/workflow, scope는 same/cross/system입니다."}
 
     if scope == "system":
         # 시스템 AI(자율주행 top-level)에게 자연어 의도를 fire-and-forget 위임.

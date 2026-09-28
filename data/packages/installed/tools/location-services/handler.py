@@ -293,7 +293,7 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
                 dup["source"] = "kakao+naver"
                 if r.get("description"):
                     dup["description"] = r["description"]
-            else:
+            elif x is None or y is None:
                 r["source"] = "naver"
                 results["combined"].append(r)
                 if k:
@@ -340,6 +340,10 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
     # 교차 each/join 이 매번 필드명 실측을 요구한다 — 표준 title 을 병기(native name 보존).
     for r in results["combined"]:
         r.setdefault("title", r.get("name", ""))
+        from common.value_semantics import integer_value, numeric_value
+        r["distance"] = integer_value(numeric_value(r.get("distance")))
+        r["blog_measured"] = "blog_count" in r
+        r.setdefault("blog_count", None)
     results["items"] = results.pop("combined")
     results["count"] = len(results["items"])
     return results

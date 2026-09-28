@@ -586,12 +586,13 @@ def _community_feed(params: dict) -> dict:
             "author_full": full,  # 저자 드릴다운·팔로우에 쓰는 전체 npub
             "content": content,
             "time": time_str,
+            "created_at": p.get("created_at"),
+            "tags": p.get("tags") or [],
             "id": ev_id,
             "is_mine": bool(my_npub) and full == my_npub,  # thread 뷰 내/남 말풍선 구분
         })
     board_read = not author and not following
-    if board_read:
-        posts.reverse()  # 보드=채팅방 — 과거→최신(말풍선 스레드 관례). fetch 는 최신순.
+    posts.sort(key=lambda post: post.get("created_at") or 0, reverse=True)
     # 단일 통화 — native 글 dict(author/content/time/id 등)를 items로.
     out = {"items": posts, "count": len(posts),
            "message": "" if posts else "아직 글이 없습니다."}

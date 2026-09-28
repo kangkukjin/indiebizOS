@@ -383,11 +383,11 @@ def _op_sort(prev, params):
         return {"success": False, "error": "sort: 객체가 아닌 items 행이 있습니다. "
                 "행을 객체로 변환한 뒤 정렬하세요. 입력 행은 삭제하지 않았습니다."}
     by_raw = params.get("by")
-    desc = bool(params.get("desc", False))
+    desc = bool(params.get("descending", params.get("desc", False)))
     # F13-3 (2026-08-19 상상훈련 13회차): 자연 동의어 order:"desc"/"asc" 값-해석 —
     # 예전엔 경고만 뜨고 오름차순이 success 로 나가 요청 의미가 반전됐다.
     # 값-해석이라 aliases 블록(이름 별칭)으로는 못 나른다("desc" 문자열은 truthy).
-    if "desc" not in params and "order" in params:
+    if "desc" not in params and "descending" not in params and "order" in params:
         desc = str(params.get("order") or "").strip().lower() in (
             "desc", "descending", "reverse", "내림차순")
     keys, kerr = _key_names(by_raw, "sort", "by")

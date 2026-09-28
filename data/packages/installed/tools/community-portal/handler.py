@@ -43,15 +43,12 @@ def _fail(msg: str) -> str:
 
 
 def _get_portal(core, params: dict):
-    """상태 로드 + portal 해소 (없으면 기본 포털 생성). (state, portal) 반환."""
-    holder = {}
-
-    def _fn(st):
-        core.ensure_default_portal(st)
-        holder["p"] = core.portal_by_ref(st, params.get("portal") or "")
-
-    state = core.mutate_state(_fn)
-    return state, holder["p"]
+    """읽기는 기존 상태만 해소한다. 기본 포털 생성은 생성 경로가 소유한다."""
+    state = core.load_state()
+    portal = core.portal_by_ref(state, params.get("portal") or "")
+    if portal is None and params.get("portal"):
+        raise ValueError(f"포털을 찾을 수 없습니다: {params['portal']}")
+    return state, portal or {}
 
 
 def _member_rows(core, state, portal) -> list:
@@ -295,7 +292,7 @@ def _fn_display(params: dict) -> str:
     universe = core.listable_universe(state)
     by_key = {u["key"]: u for u in universe}
 
-    if key:
+    if key and any(k in params for k in ("toggle", "level_up", "level_down", "enabled", "min_level", "set_level", "guest_daily", "member_daily", "global_daily")):
         if key not in by_key:
             return _fail(f"'{key}' 는 진열 가능 목록 밖입니다 — 사적/몸/발신 계기는 다이얼이 없습니다.")
         pref = portal.get("slug", "")

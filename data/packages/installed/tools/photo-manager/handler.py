@@ -167,6 +167,8 @@ def _query_photos(params: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": True, "count": 1, "items": [_photo_record(item)]}
 
     kind = (params.get("kind") or "media").strip().lower()
+    if kind not in {"photo", "image", "video", "all", "media", ""}:
+        return {"success": False, "error": "kind는 photo/video/all 중 하나여야 합니다."}
     if kind in ("all", ""):
         kind = "media"  # 사진+동영상
 

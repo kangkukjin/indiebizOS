@@ -77,7 +77,8 @@ def strip_trunc_mark(text: str) -> str:
 def _episode_source() -> str:
     try:
         from runtime_utils import in_test_process
-        return "test" if in_test_process() else "usage"
+        from thread_context import get_isolated_origin
+        return "test" if in_test_process() else (get_isolated_origin() or "usage")
     except Exception:
         return "usage"
 

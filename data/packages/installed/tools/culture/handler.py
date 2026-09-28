@@ -52,14 +52,14 @@ def _perf_search(ti: dict):
             eddate=date_to,
             shcate=ti.get("genre"),
             signgucode=ti.get("region"),
-            prfstate=ti.get("status", "공연중"),
+            prfstate=ti.get("status"),
             **common,
         )
     else:
         result = search_by_keyword(
             genre=ti.get("genre"),
             region=ti.get("region"),
-            status=ti.get("status", "공연중"),
+            status=ti.get("status"),
             days=ti.get("days", 90),
             **common,
         )
@@ -141,7 +141,12 @@ def execute(tool_input: dict, context) -> str:
             # 레코드 통화 부착(비파괴) — data 전시/행사목록을 records로.
             if isinstance(result, dict) and isinstance(result.get("data"), list):
                 result["items"] = result.pop("data")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
-                _attach_period(result["items"], "startDate", "endDate")   # 칸 규약 F1 — 공연과 같은 칸
+                _attach_period(result["items"], "startDate", "endDate")   # 칸 규약 F1
+                from common.value_semantics import numeric_value
+                for row in result["items"]:
+                    for key, original in (("lat", "gpsY"), ("lng", "gpsX")):
+                        value = numeric_value(row.get(original))
+                        row[key] = float(value) if value is not None else None
 
         else:
             return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)

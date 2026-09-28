@@ -100,8 +100,16 @@ def _search_goodchoice(tool_input: dict) -> dict:
     if tool_input.get("checkout"):
         params["checkOut"] = tool_input["checkout"]
 
+    from datetime import date
+    nights = 1
+    if params.get("checkIn") and params.get("checkOut"):
+        nights = (date.fromisoformat(params["checkOut"]) - date.fromisoformat(params["checkIn"])).days
+        if nights < 1:
+            return {"success": False, "error": "checkout은 checkin 다음 날 이후여야 합니다."}
     items_out = []
     total = None
+    scanned = 0
+    exhausted = False
     page = 1
     while len(items_out) < limit and page <= 5:  # 최대 5페이지(100건) 안전상한
         params["page"] = page
@@ -117,21 +125,24 @@ def _search_goodchoice(tool_input: dict) -> dict:
         total = page_info.get("totalCount", total)
         rows = (pp.get("domesticList") or {}).get("body", {}).get("items", [])
         if not rows:
+            exhausted = True
             break
         for it in rows:
+            scanned += 1
             meta = it.get("meta") or {}
             stay = (it.get("room") or {}).get("stay") or {}
             price = stay.get("price") or {}
             pay = price.get("discountTotalPrice") or price.get("discountPrice")
-            sold_out = pay is None  # 가격 없음 = 매진(soldOut "다른 날짜 확인") — 실측
-            if max_price is not None and (sold_out or _to_int(pay) > max_price):
+            nightly = _to_int(pay) / nights if _to_int(pay) is not None else None
+            sold_out = nightly is None  # 가격 없음 = 매진(soldOut "다른 날짜 확인") — 실측
+            if max_price is not None and (sold_out or nightly > max_price):
                 continue  # 가격 조건이 있으면 매진(가격불명)도 제외
             review = meta.get("review") or {}
             addr = meta.get("address") or {}
             loc = meta.get("location") or {}
             strike = price.get("strikePrice")
             rate_txt = f"평점 {review['rate']}({review.get('count', 0)})" if review.get("rate") else ""
-            price_txt = "매진 (다른 날짜 확인)" if sold_out else _fmt_won(pay)
+            price_txt = "매진 (다른 날짜 확인)" if sold_out else f"{nights}박 합계 {_fmt_won(pay)} (1박 평균 {_fmt_won(nightly)})"
             if not sold_out and strike and _to_int(strike) and _to_int(strike) > _to_int(pay):
                 price_txt += f" (정가 {_fmt_won(strike)}, {price.get('discountRate') or ''}할인)".replace(", 할인", ")")
             images = meta.get("newImages") or meta.get("images") or []
@@ -143,21 +154,25 @@ def _search_goodchoice(tool_input: dict) -> dict:
                 "image": images[0] if images else None,
                 "lat": loc.get("latitude"),
                 "lng": loc.get("longitude"),
-                "price": _to_int(pay),
+                "price": _to_int(pay), "price_total": _to_int(pay),
+                "price_per_night": nightly, "nights": nights,
                 "rating": review.get("rate"),
             })
             if len(items_out) >= limit:
                 break
         if page >= page_info.get("totalPageCount", 1):
+            exhausted = len(items_out) < limit or scanned >= (total or scanned)
             break
         page += 1
 
     date_txt = f" {params.get('checkIn', '')}~{params.get('checkOut', '')}" if params.get("checkIn") else ""
     out = {
         "success": True, "source": "goodchoice", "count": len(items_out), "total": total,
-        "truncated": isinstance(total, int) and total > len(items_out),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
-        **bounded_selection(tool_input.get("limit"), limit, len(items_out),
-                            isinstance(total, int) and total > len(items_out)),
+        "truncated": not exhausted,  # truncation-scope: bounded — 요청량 충족은 selection, 원천 순회 상한은 source; 후필터로 줄어든 행은 절단 아님
+        "scanned": scanned,
+        "truncations": ([{"scope": "selection" if len(items_out) >= limit else "source",
+                          "reason": "limit" if len(items_out) >= limit else "scan_limit",
+                          "limit": limit, "retained": len(items_out)}] if not exhausted else []),
         "message": f"여기어때 '{region}' {stay_type}{date_txt} — {len(items_out)}건 (전체 {total}건, 상세는 items)",
         "items": items_out,
     }

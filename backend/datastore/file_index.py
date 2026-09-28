@@ -120,7 +120,12 @@ def _iso_bound(date_str: Optional[str], end: bool) -> Optional[str]:
             calendar.monthrange(y, m)[1] if end else 1)
     except (ValueError, IndexError):
         return None
-    return f"{y:04d}-{m:02d}-{d:02d}T{'23:59:59' if end else '00:00:00'}Z"
+    from datetime import timezone
+    try:
+        local = datetime(y, m, d, 23 if end else 0, 59 if end else 0, 59 if end else 0)
+        return local.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    except (ValueError, OverflowError):
+        return None
 
 
 def _safe_stat(path: str, mtime: bool = True):
@@ -240,7 +245,8 @@ def _item_from_meta(path: str, facets: Sequence[str]) -> Dict[str, Any]:
         if val is None:
             continue
         if isinstance(val, datetime):
-            iso = val.isoformat()
+            from datetime import timezone
+            iso = (val.replace(tzinfo=timezone.utc) if val.tzinfo is None else val).astimezone().isoformat()
             item[f] = iso
             if f == "taken_at":
                 item["month"] = iso[:7]
@@ -283,6 +289,10 @@ def _spotlight_query(kind, q, start, end, has_gps, ext, path, limit, sort, facet
               "truncated": total > len(items), "scope": onlyin, "items": items}
     if total > _MAX_CANDIDATES:
         result["warning"] = "색인 후보 상한에 도달해 일부 후보 안에서 정렬했습니다. path/조건을 좁혀 재조회하세요."
+    if result.get("truncated"):
+        result["truncations"] = [{"scope": "source" if result.get("warning") else "selection",
+                                  "reason": "candidate_limit" if result.get("warning") else "limit",
+                                  "limit": limit, "retained": len(items)}]
     _note_date_window(result, sort, limit)
     return result
 
@@ -340,8 +350,8 @@ def _epoch_ms(date_str: Optional[str], end: bool) -> int:
     if not iso:
         return 0
     try:
-        dt = datetime.strptime(iso[:19], "%Y-%m-%dT%H:%M:%S")
-        return int(time.mktime(dt.timetuple()) * 1000)
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        return int(dt.timestamp() * 1000)
     except (ValueError, OverflowError):
         return 0
 
@@ -534,7 +544,7 @@ def _adb_item(row: Dict[str, Optional[str]], kind: str,
     if "taken_at" in facets:
         ts = (taken_ms / 1000) if taken_ms else mtime
         if ts:
-            iso = datetime.fromtimestamp(ts).isoformat()
+            iso = datetime.fromtimestamp(ts).astimezone().isoformat()
             item["taken_at"] = iso
             item["month"] = iso[:7]
     return item
@@ -839,6 +849,10 @@ def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, mi
               "scope": root, "engine": "walk", "items": items}
     if len(found) > _MAX_CANDIDATES:
         result["warning"] = "파일 순회 후보 상한에 도달했습니다. total은 발견한 수이며 전체 수가 아닙니다."
+    if result.get("truncated"):
+        result["truncations"] = [{"scope": "source" if result.get("warning") else "selection",
+                                  "reason": "candidate_limit" if result.get("warning") else "limit",
+                                  "limit": limit, "retained": len(items)}]
     _note_date_window(result, sort, limit)
     return result
 

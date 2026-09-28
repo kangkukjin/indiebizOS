@@ -204,7 +204,7 @@ def critique_image(tool_input, output_base):
             f"의도: {intent[:80]}{'...' if len(intent) > 80 else ''}",
             f"평가 결과: ✗ 실패 (score=0/10, 0층 기계 관측 — 비전 호출 생략)",
             "문제점:", *(f"  - {i}" for i in verdict["issues"]), "",
-            f"verdict_json: {_json.dumps(verdict, ensure_ascii=False)}"]))
+            f"verdict_json: {_json.dumps(verdict, ensure_ascii=False)}"]), **verdict)
 
     image, ierr = _load_image_b64(image_path)
     if ierr:
@@ -339,7 +339,7 @@ def critique_image(tool_input, output_base):
         summary_lines.append(f"메모: {verdict['notes']}")
     summary_lines.append("")
     summary_lines.append(f"verdict_json: {_json.dumps(verdict, ensure_ascii=False)}")
-    return text_result("\n".join(summary_lines))
+    return text_result("\n".join(summary_lines), **verdict)
 
 
 def read_image(tool_input, output_base):
@@ -388,4 +388,4 @@ def read_image(tool_input, output_base):
                            "error": "이미지 읽기 실패 — 조종실 기어 설정의 이미지 읽기·채점 모델과 비전 대체 설정을 확인하세요."},
                           ensure_ascii=False)
     from ibl_edition import text_result
-    return text_result(str(text).strip())
+    return text_result(str(text).strip(), answer=str(text).strip())

@@ -202,17 +202,20 @@ def search_danggeun(query, limit=20, region=None):
 
     # JSON-LD ItemList 추출 (스크립트가 여럿일 수 있어 ItemList인 것만)
     products = []
+    recognized = False
     for m in re.finditer(r'<script type="application/ld\+json">(.*?)</script>', text, re.S):
         try:
             data = json.loads(m.group(1))
         except Exception:
             continue
         if isinstance(data, dict) and data.get("@type") == "ItemList":
+            recognized = isinstance(data.get("itemListElement"), list)
             products = [e.get("item", {}) for e in data.get("itemListElement", [])]
             break
-    if not products:
-        return {"source": "danggeun", "total": 0, "items": [],
-                "note": "결과 없음 또는 페이지 구조 변경(JSON-LD ItemList 미발견)"}
+    if not recognized:
+        return {"success": False, "source": "danggeun", "error_type": "source_changed",
+                "error": "당근 검색 구조를 확인할 수 없습니다(JSON-LD ItemList 미발견). 매물 0건으로 해석하지 마세요.",
+                "items": []}
 
     records = []
     for it in products:

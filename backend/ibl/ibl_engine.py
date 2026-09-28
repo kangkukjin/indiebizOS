@@ -955,14 +955,13 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
         from common.currency import stamp_success
         result = stamp_success(result)
 
-        # 결과에서 성공/실패 판단
-        if isinstance(result, dict):
-            if result.get("success") is False:
-                _action_success = False
-            elif result.get("error"):  # error 키가 있고 값이 비어있지 않은 경우
-                _action_success = False
-            if not _action_success:
-                _action_err = result.get("error") or result.get("message")
+        # 통화 분류기와 같은 판정: JSON 문자열 봉투도 실패를 숨기지 않는다.
+        from ibl_envelope import classify_currency
+        _result_shape, _result_obj, _, _ = classify_currency(result)
+        if _result_shape == "error":
+            _action_success = False
+            _action_err = (_result_obj.get("error") or _result_obj.get("message")
+                           if isinstance(_result_obj, dict) else str(result))
     except Exception as _exc:
         _action_success = False
         _action_err = f"exception: {str(_exc)[:260]}"

@@ -331,7 +331,7 @@ nodes:
         group: travel
         target_description: |
           숙박·단기임대 검색. source로 플랫폼 선택. region=지역/키워드 필수.
-          - source=goodchoice(기본): 여기어때 실시간 할인가·평점·좌표. region=지역(예 "제주", "강남"). type=hotel(기본)/motel/pension/camping/guesthouse. checkin/checkout(YYYY-MM-DD, 날짜별 요금 반영)·personal(인원, 기본2). max_price=1박 상한(원). limit(기본20, 페이지 자동추적 최대100).
+          - source=goodchoice(기본): 여기어때 실시간 할인가·평점·좌표. region=지역(예 "제주", "강남"). type=hotel(기본)/motel/pension/camping/guesthouse. checkin/checkout(YYYY-MM-DD, 날짜별 요금 반영)·personal(인원, 기본2). max_price=1박 평균 상한(원). price/price_total은 숙박 합계, price_per_night는 1박 평균, nights는 박 수. limit(기본20, 페이지 자동추적 최대100).
           - source=33m2: 삼삼엠투 한 달 살기 — 주 단위 임대(usingFee)·관리비·평수. region=지역(예 "평택"). max_week_fee/min_week_fee=주간요금 서버필터(원). checkin/checkout=입주 기간. limit(기본20).
           - source=tourapi: 한국관광공사 공식 숙박 디렉토리 — 가격 없음, 권위 목록·연락처·좌표. region=광역명(서울/제주 등 → 지역목록) 또는 키워드(예 "경주 한옥" → 키워드검색). limit(기본20).
         router: handler

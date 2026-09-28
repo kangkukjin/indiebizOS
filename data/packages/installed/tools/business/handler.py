@@ -353,7 +353,7 @@ def _msg_inbox(bm, tool_input: dict) -> str:
         peer = _int_or(n.get("is_indiebiz_peer", 0), 0)
         convs.append({
             "id": n["id"], "pubkey": "", "name": n.get("name", ""), "channel": channel,
-            "to": to, "preview": preview, "time": time_s, "unread": unread, "_sort": sort,
+            "to": to, "preview": preview, "time": time_s, "unread": unread, "unreplied": unread, "created_at": sort or None, "_sort": sort,
             "info_level": n.get("info_level", 0), "rating": n.get("rating", 0),
             "favorite": n.get("favorite", 0), "is_neighbor": 1,
             "is_indiebiz_peer": peer, "peer_version": n.get("peer_version") or "",
@@ -387,7 +387,7 @@ def _msg_inbox(bm, tool_input: dict) -> str:
                 convs.append({
                     "id": 0, "pubkey": npub, "name": _short_npub(npub), "channel": "nostr",
                     "to": npub, "preview": (last.get("content", "") or "")[:40],
-                    "time": _fmt_unix(ts), "unread": 0, "_sort": float(ts),
+                    "time": _fmt_unix(ts), "unread": None, "unreplied": None, "created_at": ts or None, "_sort": float(ts),
                     "info_level": 0, "rating": 0, "favorite": 0, "is_neighbor": 0,
                     "badge": "쪽지",
                 })
@@ -440,7 +440,7 @@ def _nb_save(bm, ti: dict) -> str:
         nb = r["neighbor"]
         msg = (f"이미 등록된 창고입니다: {nb.get('name', '')}" if r.get("already")
                else f"창고이웃으로 등록했습니다: {nb.get('name', '')} — 이웃 탭 피드에 소식이 흐릅니다.")
-        return _ok({"neighbor": nb, "poll": r.get("poll")}, msg)
+        return _ok({"neighbor": _neighbor_view(nb), "poll": r.get("poll")}, msg)
     nid = _int_or(ti.get("id") or ti.get("neighbor_id"))
     npub = (ti.get("npub") or "").strip()
     fields = {}
@@ -456,7 +456,7 @@ def _nb_save(bm, ti: dict) -> str:
             _ensure_nostr_contact(bm, nid, npub)
         if ti.get("warehouse_score") is not None:
             _set_warehouse_score(bm, nid, _int_or(ti.get("warehouse_score"), 0))
-        return _ok({"neighbor": nb}, "이웃 정보를 저장했습니다.")
+        return _ok({"neighbor": _neighbor_view(nb)}, "이웃 정보를 저장했습니다.")
     # 승격 멱등 가드 — 같은 npub 이 이미 이웃이면 그대로 반환
     if npub:
         existing = bm.find_neighbor_by_contact("nostr", npub)
@@ -468,8 +468,8 @@ def _nb_save(bm, ti: dict) -> str:
     nb = bm.create_neighbor(name=name, **fields)
     if npub:
         _ensure_nostr_contact(bm, nb["id"], npub)
-        return _ok({"neighbor": nb}, "이웃으로 등록하고 nostr 연락처를 연결했습니다.")
-    return _ok({"neighbor": nb}, "이웃을 추가했습니다.")
+        return _ok({"neighbor": _neighbor_view(nb)}, "이웃으로 등록하고 nostr 연락처를 연결했습니다.")
+    return _ok({"neighbor": _neighbor_view(nb)}, "이웃을 추가했습니다.")
 
 
 def _ensure_nostr_contact(bm, neighbor_id: int, npub: str):
@@ -528,7 +528,7 @@ def _nb_merge(bm, ti: dict) -> str:
         nb = bm.merge_neighbors(tid, sid)
     except ValueError as e:
         return _err(str(e))
-    return _ok({"neighbor": nb, "merged_from": sid},
+    return _ok({"neighbor": _neighbor_view(nb), "merged_from": sid},
                f"이웃을 합쳤습니다 — 연락처·대화·가입 자격이 '{(nb or {}).get('name', '')}' 하나로 합류했어요.")
 
 
@@ -543,11 +543,26 @@ def _nb_favorite(bm, ti: dict) -> str:
     return _ok({"id": nid, "favorite": new}, "")
 
 
+_NEIGHBOR_PUBLIC_FIELDS = frozenset({
+    "id", "name", "info_level", "rating", "favorite", "notes", "memo", "description",
+    "created_at", "updated_at", "uuid", "deleted", "warehouse_url", "warehouse_memo",
+    "portal_revoked", "portal_joined_at", "portal_last_used",
+    "additional_info", "business_doc", "info_share", "is_indiebiz_peer", "peer_version",
+})
+
+
+def _neighbor_view(row):
+    if not row:
+        return row
+    return {**{k: v for k, v in row.items() if k in _NEIGHBOR_PUBLIC_FIELDS},
+            "portal_member": bool(row.get("portal_key") or row.get("portal_login_id"))}
+
+
 def _nb_list(bm, ti: dict) -> str:
     """이웃 목록 (search 부분일치 / info_level 0-4 필터)."""
     neighbors = bm.get_neighbors(search=ti.get("search"), info_level=ti.get("info_level"))
     # 단일 통화 items = native 이웃 dict(id/name/info_level/rating/favorite…).
-    return _ok({"items": neighbors}, f"이웃 {len(neighbors)}명")
+    return _ok({"items": [_neighbor_view(n) for n in neighbors]}, f"이웃 {len(neighbors)}명")
 
 
 def _nb_detail(bm, ti: dict) -> str:
@@ -565,7 +580,7 @@ def _nb_detail(bm, ti: dict) -> str:
     if not nb:
         return _err(f"ID {nid}의 이웃을 찾을 수 없습니다.")
     # items = 최근 메시지(주 컬렉션), contacts·neighbor는 보조(thread 선례).
-    return _ok({"neighbor": nb, "contacts": bm.get_contacts(nid),
+    return _ok({"neighbor": _neighbor_view(nb), "contacts": bm.get_contacts(nid),
                 "items": bm.get_messages(neighbor_id=nid, limit=5)}, nb.get("name", ""))
 
 

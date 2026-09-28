@@ -131,6 +131,19 @@ def _download_arxiv_pdf(tool_input: dict, context) -> str:
 def _paper_search(tool_input: dict, context) -> str:
     """[sense:paper]{op:search, source} — 학술 논문 검색."""
     source = (tool_input.get("source") or "openalex").strip().lower()
+    supported = {
+        "openalex": {"year_from", "year_to", "sort_by", "open_access"},
+        "arxiv": set(), "pubmed": set(), "pmc": set(),
+        "semantic": {"year_from"}, "semantic_scholar": {"year_from"}, "s2": {"year_from"},
+        "nanet": {"year", "type", "page"}, "kr": {"year", "type", "page"},
+        "dissertation": {"year", "type", "page"}, "국회도서관": {"year", "type", "page"},
+    }
+    selectors = {"year_from", "year_to", "sort_by", "open_access", "year", "type", "page"}
+    ignored = (set(tool_input) & selectors) - supported.get(source, set())
+    if ignored:
+        return {"success": False, "error_type": "unsupported_parameter", "items": [],
+                "error": f"{source}에서 지원하지 않는 인자: {', '.join(sorted(ignored))}. "
+                         f"지원 필터: {', '.join(sorted(supported.get(source, set()))) or '없음'}"}
     if source == "arxiv":
         return _search_arxiv(tool_input)
     if source in ("pubmed", "pmc"):
@@ -335,6 +348,8 @@ def _search_nanet(tool_input: dict) -> str:
     lines_body, records = [], []
     total = None
     page = int(tool_input.get("page") or 1)
+    exhausted = False
+    scanned = 0
     last_page = page + 19          # 후필터가 걸러도 왕복 상한 20페이지(100행)
     while len(records) < want and page <= last_page:
         j = _nanet_call("searchTotal", {"searchTerm": query, "pageNo": page})
@@ -346,13 +361,18 @@ def _search_nanet(tool_input: dict) -> str:
             r0 = {}
         if r0.get("error"):
             e = (r0["error"] or [{}])[0]
-            return {"success": False, "error": f"국가학술정보 통합검색 실패: [{e.get('code')}] {e.get('message')}", "items": []}
+            if str(e.get("code")) == "201":
+                exhausted = True
+                break
+            return {"success": False, "error": f"국가학술정보 통합검색 실패: [{e.get('code')}] {e.get('message')}", "items": records}
         if total is None:
             total = r0.get("totalCount")
         rows = r0.get("searchList") or []
         if not rows:
+            exhausted = True
             break
         for it in rows:
+            scanned += 1
             if not isinstance(it, dict):
                 continue
             div = str(it.get("divFlag") or "")
@@ -372,6 +392,7 @@ def _search_nanet(tool_input: dict) -> str:
             lines_body.append(f"- {title}" + (f" [{meta}]" if meta else "") + (f"\n  {url}" if url else ""))
             records.append({  # 레코드 통화 — 국내 학술논문·학위논문
                 "title": title,
+                "authors": authors, "year": yr, "journal": journal, "publisher": publisher,
                 "meta": meta,
                 "summary": summary,
                 "url": url,
@@ -379,16 +400,15 @@ def _search_nanet(tool_input: dict) -> str:
             if len(records) >= want:
                 break
         page += 1
-    if not records:
-        filt = " (type/year 후필터 적용)" if (div_want or year_f) else ""
-        return {"items": [], "message": f"'{query}'에 대한 국가학술정보 결과가 없습니다{filt}."}
-    head = f"국가학술정보 통합검색 '{query}' — {len(records)}건" + (f" (전체 {total:,}건)" if isinstance(total, int) else "") + ":"
-    return {"success": True, "message": "\n".join([head] + lines_body),
-            "items": records, "count": len(records), "total": total,
-            # 봉투 규모 불변식: total 은 모집단, 우리가 다 못 뽑았으면 스스로 truncated
-            "truncated": isinstance(total, int) and total > len(records),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
-            **bounded_selection(tool_input.get("limit") or tool_input.get("max_results") or tool_input.get("display"),
-                                want, len(records), isinstance(total, int) and total > len(records))}
+    incomplete = not exhausted and len(records) < want and (total is None or scanned < total)
+    selected = not exhausted and len(records) >= want and (total is None or scanned < total)
+    return {"success": True, "items": records, "count": len(records), "total": total,
+            "scanned": scanned, "truncated": incomplete or selected,  # truncation-scope: bounded — 요청량 충족은 selection, 원천 순회 상한은 source; 후필터로 줄어든 행은 절단 아님
+            "truncations": ([{"scope": "source" if incomplete else "selection",
+                              "reason": "scan_limit" if incomplete else "limit",
+                              "limit": want, "retained": len(records)}] if incomplete or selected else []),
+            "message": f"국가학술정보 통합검색 '{query}' — {len(records)}건"}
+
 
 
 def execute(tool_input: dict, context):

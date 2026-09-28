@@ -29,6 +29,13 @@ actions:
     group: web_builder
     router: handler
     tool: web_site
+    target_key: op
+    ops:
+      default: list
+      values: {list: 등록 사이트 조회, register: 사이트 등록, remove: 사이트 제거, update: 사이트 수정}
+      returns: {list: items}
+      side_effect: {list: false}
+      fixture: {list: '[engines:web_site]{op: "list"}'}
     implementation: web-builder 패키지의 sites.json 레지스트리 CRUD. 빈번하지 않은 어드민이라 가이드 web_builder.md 참조 권장.
     keywords:
     - 사이트
@@ -72,6 +79,9 @@ actions:
     tool: web_op
     ops:
       default: preview
+      side_effect: {snapshot: false}
+      returns: {snapshot: scalar}
+      exempt: {snapshot: 등록된 site_id 필요}
       values:
         create: 웹 프로젝트/페이지 생성 (target site|page)
         build: 프로젝트 빌드·선언된 린트 검사

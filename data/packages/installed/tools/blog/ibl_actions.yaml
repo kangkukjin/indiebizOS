@@ -22,7 +22,7 @@ actions:
 
       - vault: Obsidian vault(진실소스) 운영. mode stats(기본)/export/rebuild/link — rebuild=vault→검색DB 재구축(복구 경로), link=글 간 시맨틱 연결 생성.
 
-      - latest: 가장 최근 글 1개를 고른다. 본문이 아니라 vault .md **경로**(path)를 준다 — 발행은 기존 동사로 잇는다: >> [self:read]{} >> [table:document]{format:"html"} >> [self:copy]{destination:...}
+      - latest: 로컬 수집 사본의 최근 글 1개를 고른다(원격 최신 여부는 보장하지 않음). 본문이 아니라 vault .md **경로**(path)를 준다 — 발행은 기존 동사로 잇는다: $b=[self:blog]{op:"latest"}; [self:read]{path:$b.path}
 
       '
     target_key: op

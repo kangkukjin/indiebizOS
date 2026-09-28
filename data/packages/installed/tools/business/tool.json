@@ -21,6 +21,14 @@
             ],
             "default": "thread"
           },
+          "search": {
+            "type": "string",
+            "description": "inbox 이름 부분일치"
+          },
+          "level": {
+            "type": "string",
+            "description": "inbox 정보 공개 등급(0~4 또는 all)"
+          },
           "neighbor_id": {
             "type": "integer",
             "description": "이웃 ID (op:thread, 이웃 대화)"

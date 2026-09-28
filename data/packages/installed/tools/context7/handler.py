@@ -35,12 +35,17 @@ def _search_library_id(library_name: str, query: str = "") -> dict:
         data = r.json()
         # API는 {"results": [...]} 형태로 반환
         if isinstance(data, dict):
-            results = data.get("results", [])
+            results = data.get("results")
         elif isinstance(data, list):
             results = data
         else:
-            results = []
-        return results if results else []
+            results = None
+        if not isinstance(results, list) or any(
+                not isinstance(row, dict) or not row.get("id")
+                or not (row.get("title") or row.get("name")) for row in results):
+            return {"success": False, "error_type": "source_changed",
+                    "error": "Context7 라이브러리 응답의 id/title 구조를 확인할 수 없습니다."}
+        return results
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -78,10 +83,11 @@ def _resolve(library_name: str) -> str:
         return json.dumps(libs, ensure_ascii=False)
     if not libs:
         return json.dumps({"success": False, "error": f"'{library_name}'을 찾을 수 없습니다."}, ensure_ascii=False)
-    results = [{"id": l.get("id", ""), "name": l.get("name", ""),
+    results = [{"id": l.get("id", ""), "name": l.get("title") or l.get("name", ""),
                 "description": l.get("description", "")[:100]} for l in libs[:5]]
     # 레코드 통화(비파괴) — 라이브러리 목록 >> [table:document/spreadsheet]
     records = [{
+        "id": r["id"],
         "title": r.get("name", ""),
         "meta": r.get("id", ""),
         "summary": r.get("description", "") if r.get("description", "") != r.get("name", "") else "",
@@ -106,7 +112,7 @@ def _search(query: str, library_id: str, library_name: str) -> str:
         if not libs:
             return json.dumps({"success": False, "error": f"'{library_name}' 라이브러리를 찾을 수 없습니다."}, ensure_ascii=False)
         library_id = libs[0].get("id", "")
-        lib_name = libs[0].get("name", library_name)
+        lib_name = libs[0].get("title") or libs[0].get("name", library_name)
         if not library_id:
             return json.dumps({"success": False, "error": "라이브러리 ID를 얻지 못했습니다.", "results": libs[:3]}, ensure_ascii=False)
     docs = _get_docs(library_id, query)

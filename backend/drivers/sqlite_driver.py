@@ -551,7 +551,10 @@ class SqliteDriver(Driver):
             sresult = self._ok(srows, smsg)
             if isinstance(sresult, dict):
                 sresult["truncated"] = bool(n_cut)
+                sresult["truncations"] = ([{"scope": "selection", "reason": "content_preview",
+                                          "limit": 300, "rows": n_cut}] if n_cut else [])
                 sresult["items"] = [{
+                    **r,
                     "title": r.get("role") or "?",
                     "meta": r.get("timestamp") or "",
                     "summary": (r.get("content_preview") or "") + (
@@ -609,6 +612,8 @@ class SqliteDriver(Driver):
         result = self._ok(items, msg)
         if isinstance(result, dict):
             result["truncated"] = bool(n_cut)
+            result["truncations"] = ([{"scope": "selection", "reason": "content_preview",
+                                      "limit": 300, "rows": n_cut}] if n_cut else [])
         return result
 
     def _memory_recent(self, conn, params: dict) -> dict:
@@ -645,7 +650,10 @@ class SqliteDriver(Driver):
         # 단일 통화 items(records-관습 카드 shape) — 대화 로그 >> 파이프/렌더러. native rows는 data에 잔류.
         if isinstance(result, dict):
             result["truncated"] = bool(n_cut)
+            result["truncations"] = ([{"scope": "selection", "reason": "content_preview",
+                                      "limit": 300, "rows": n_cut}] if n_cut else [])
             result["items"] = [{
+                **r,
                 "title": f"{r.get('from_agent') or '?'} → {r.get('to_agent') or '?'}",
                 "meta": r.get("message_time") or "",
                 "summary": (r.get("content_preview") or "") + (

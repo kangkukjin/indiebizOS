@@ -13,7 +13,14 @@
         "properties": {
           "op": {
             "type": "string",
-            "description": "동작 분기 — target_description 참조"
+            "description": "동작 분기 — target_description 참조",
+            "enum": [
+              "list",
+              "register",
+              "remove",
+              "update"
+            ],
+            "default": "list"
           },
           "local_path": {
             "type": "string",

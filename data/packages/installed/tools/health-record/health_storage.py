@@ -256,11 +256,19 @@ def list_persons() -> List[Dict]:
     return [dict(row) for row in rows]
 
 
-def get_person_id(person: str = None) -> int:
+def get_person_id(person: str = None, *, create: bool = False) -> int:
     """사용자 이름으로 ID 조회 (없으면 기본 사용자)"""
     if not person or person == "나":
         person = DEFAULT_PERSON
-    return get_or_create_person(person)
+    if create:
+        return get_or_create_person(person)
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT id FROM persons WHERE name=? AND (deleted IS NULL OR deleted=0)",
+                           (person,)).fetchone()
+        return row["id"] if row else None
+    finally:
+        conn.close()
 
 
 def save_measurement(category: str, value: dict, measured_at: str = None,
@@ -269,7 +277,7 @@ def save_measurement(category: str, value: dict, measured_at: str = None,
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    person_id = get_person_id(person)
+    person_id = get_person_id(person, create=True)
 
     if not measured_at:
         measured_at = datetime.now().isoformat()
@@ -294,7 +302,7 @@ def save_symptom(category: str, description: str = None, severity: str = None,
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    person_id = get_person_id(person)
+    person_id = get_person_id(person, create=True)
 
     if not started_at:
         started_at = datetime.now().strftime('%Y-%m-%d')
@@ -319,7 +327,7 @@ def save_medication(name: str, dosage: str = None, frequency: str = None,
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    person_id = get_person_id(person)
+    person_id = get_person_id(person, create=True)
 
     if not started_at:
         started_at = datetime.now().strftime('%Y-%m-%d')
@@ -346,7 +354,7 @@ def save_document(doc_type: str, image_path: str = None, extracted_data: dict = 
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    person_id = get_person_id(person)
+    person_id = get_person_id(person, create=True)
 
     if not recorded_at:
         recorded_at = datetime.now().strftime('%Y-%m-%d')

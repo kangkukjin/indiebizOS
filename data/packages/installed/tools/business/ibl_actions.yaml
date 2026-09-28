@@ -329,8 +329,8 @@ nodes:
         returns: items
         side_effect: false    # 전 op 읽기 전용
         fixture: '[others:messages]{op: "inbox"}'
-        description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와 Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read). inbox items(unread·favorite 필드) — table:filter 로 미독·즐겨찾기만 선별.
-        target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, 파라미터 없음·최근순).
+        description: 메신저 대화 목록(inbox)·메시지 스레드(thread). Gmail/Nostr 통합. unreplied는 미답신 수(unread는 호환 별칭), 읽음 여부가 아니다. 비이웃 DM은 미측정(null). favorite로 즐겨찾기 선별.
+        target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, search(이름)·level(등급) 선택·최근순).
         group: channel
         target_key: op
         router: handler
@@ -644,6 +644,12 @@ tool_json:
         op:
           type: string
           description: thread=한 대화 스레드(neighbor_id 또는 pubkey) / inbox=대화 목록
+        search:
+          type: string
+          description: inbox 이름 부분일치
+        level:
+          type: string
+          description: inbox 정보 공개 등급(0~4 또는 all)
         neighbor_id:
           type: integer
           description: 이웃 ID (op:thread, 이웃 대화)

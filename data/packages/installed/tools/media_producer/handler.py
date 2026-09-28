@@ -55,7 +55,27 @@ def execute(tool_input: dict, context) -> str:
     output_dir()은 항상 절대경로 + mkdir 자동.
     """
     tool_name = context.tool_name
+    tool_input = dict(tool_input)
+    for key in ("path", "image_path", "base_path"):
+        if (isinstance(tool_input.get(key), str)
+                and not os.path.isabs(tool_input[key])
+                and not tool_input[key].startswith("data:")):
+            tool_input[key] = context.resolve_path(tool_input[key])
+    if tool_input.get("input_image"):
+        images = tool_input["input_image"]
+        tool_input["input_image"] = ([context.resolve_path(p) for p in images]
+                                    if isinstance(images, list) else context.resolve_path(images))
     output_base = context.output_dir()
+    output_key = "output_filename" if tool_name == "create_tts" else "output_path"
+    if tool_input.get(output_key):
+        resolved = context.resolve_output_path(tool_input[output_key])
+        if resolved.get("error"):
+            return _err(resolved["error"])
+        tool_input[output_key] = resolved["path"]
+        if tool_name == "render_artifact":
+            output_base = os.path.dirname(resolved["path"])
+    if tool_name == "render_artifact" and tool_input.get("html"):
+        tool_input.setdefault("base_path", context.project_path)
 
     # html_video 도구 갈래는 2026-08-05 은퇴 — 슬라이드가 HTML 이던 시절의 어휘. 지금 영상은
     # [self:deck]{op:"video"}(덱→나레이션 MP4) 하나. create_html_video/render_html_video 함수는
@@ -754,7 +774,9 @@ def create_html_video(tool_input, output_base):
             actual_td = min(transition_duration, min(scene_durations) * 0.4)
             transition_info = f" | 씬 전환: {transition_type} ({actual_td:.1f}초)"
 
-        return f"HTML 동영상 제작 완료: {os.path.abspath(output_path)}{transition_info}"
+        return {"success": True, "path": os.path.abspath(output_path),
+                "transition_duration": actual_td if use_transition else 0.0,
+                "message": f"HTML 동영상 제작 완료: {os.path.abspath(output_path)}{transition_info}"}
     except subprocess.CalledProcessError as e:
         return _err(f"FFmpeg 오류: {e.stderr.decode() if e.stderr else str(e)}")
     except Exception as e:
@@ -793,7 +815,8 @@ def generate_ai_image(tool_input, output_base):
             with open(output_path, "wb") as f:
                 f.write(response.content)
         # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
-        return f"AI 이미지 생성 완료: {os.path.abspath(output_path)}\n프롬프트: {prompt}"
+        return {"success": True, "path": os.path.abspath(output_path), "prompt": prompt,
+                "message": f"AI 이미지 생성 완료: {os.path.abspath(output_path)}"}
     except Exception as e:
         return _err(f"이미지 생성 중 오류 발생: {str(e)}")
 
@@ -928,7 +951,7 @@ def create_tts(tool_input, output_base):
     output_filename = tool_input.get("output_filename")
 
     if output_filename:
-        output_path = os.path.join(output_base, os.path.basename(output_filename))
+        output_path = os.path.join(output_base, output_filename)
     else:
         output_path = os.path.join(output_base, f"tts_{uuid.uuid4().hex[:8]}.mp3")
 
@@ -953,7 +976,8 @@ def create_tts(tool_input, output_base):
         if meta.get("ignored"):
             # 이 엔진에 없는 축을 받았으면 조용히 먹지 않고 말한다.
             lines.append(f"※ 이 엔진에 없는 축이라 무시됨: {', '.join(meta['ignored'])}")
-        return "\n".join(lines)
+        return {"success": True, "path": abs_path, "duration": duration,
+                **meta, "message": "\n".join(lines)}
     except Exception as e:
         return _err(f"TTS 생성 중 오류 발생: {str(e)}")
 
@@ -1130,7 +1154,8 @@ def render_html_video(tool_input, output_base):
         abs_output = os.path.abspath(output_path)
         scene_count = len(scene_files)
         total_dur = sum(sf.get("duration", default_duration) for sf in scene_files)
-        return f"HTML 동영상 렌더링 완료: {abs_output}\n씬 수: {scene_count}개, 총 길이: {total_dur:.1f}초"
+        return {"success": True, "path": abs_output, "scene_count": scene_count, "duration": total_dur,
+                "message": f"HTML 동영상 렌더링 완료: {abs_output}"}
 
     except Exception as e:
         if os.path.exists(temp_dir):

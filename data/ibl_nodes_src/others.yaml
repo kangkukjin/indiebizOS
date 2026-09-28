@@ -89,6 +89,8 @@
         - 텔레그램
         - 이메일
       publish:
+        open_params: false
+        params: {title: 글 제목, content: 마크다운 본문, slug: 주소 식별자, summary: 요약}
         returns: effect
         pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         description: 내가 쓴 글(마크다운)을 Nostr 공개 장문(NIP-23, kind:30023)으로 발행하고 공유 링크(njump)를 돌려준다. 신문·리포트를 친구에게 링크 하나로. slug 재발행 = 같은 주소 갱신. 발행물은 사용자/앱이 조립한 것만 그대로(조작·PII 금지).
@@ -128,6 +130,8 @@
         - 수신
         - 메시지검색
       feed:
+        open_params: false
+        params: {op: read 또는 post, content: 게시 본문, body: 본문 별칭, text: 본문 별칭, hashtag: 보드, board: 보드 별칭, author: 저자, pubkey: 저자 별칭, npub: 저자 별칭, following: 팔로우 피드, with_boards: 보드 목록, limit: 반환 수}
         returns: items
         side_effect: true    # post 가 커뮤니티에 글을 게시한다
         fixture: '[others:feed]{op: "read"}'

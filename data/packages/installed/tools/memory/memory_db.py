@@ -628,7 +628,9 @@ def search(project_path: str, agent_id: str,
     명시 검색(memory 액션)·증류 dedup 은 기본값(폴백 유지)이라 무영향.
     """
     db_path = _get_db_path(project_path, agent_id)
-    _ensure_schema(db_path)  # 신규 프로젝트(미save) 빈 DB에서 LIKE 폴백이 죽지 않도록 테이블 보장
+    if not os.path.exists(db_path):
+        return []
+    _ensure_schema(db_path)  # 기존 저장소의 스키마 호환
 
     # 관련성 순위(2026-09-17): AI 가 부르는 조회는 자동 주입(<recalled_memory>)과 **같은 엔진**으로 순위를 낸다 —
     #   가지 경로가 실린 항목 벡터 + 의미·글자 역순위 융합(tree_recall). 두 길의 순위가 서로 달라지지 않게.
@@ -725,6 +727,8 @@ def read(project_path: str, agent_id: str, memory_id: int,
     기억이 LRU 가지치기를 영원히 피한다(회상 자석). 명시 읽기([self:memory] read)·
     증류 SAME/UPDATE 만 used_at 을 올린다.
     """
+    if not os.path.exists(_get_db_path(project_path, agent_id)):
+        return None
     conn = get_db(project_path, agent_id)
     try:
         row = conn.execute(

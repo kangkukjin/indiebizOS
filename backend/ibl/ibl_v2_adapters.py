@@ -78,9 +78,11 @@ def table_operation(operation, runtime, args):
     if operation == "select":
         columns = args["columns"]
         if isinstance(columns, list):
-            for row in rows:
-                if not isinstance(row, dict) or any(k not in row for k in columns):
-                    raise Fault("MISSING_FIELD", "select의 열이 입력 행에 없습니다.")
+            for index, row in enumerate(rows):
+                missing = [k for k in columns if not isinstance(row, dict) or k not in row]
+                if missing:
+                    raise Fault("MISSING_FIELD", f"select 입력 {index}번 행에 열이 없습니다: {missing}",
+                                details={"row_index": index, "missing_fields": missing})
             return [{k: row[k] for k in columns} for row in rows]
         return [guard(runtime.callback(columns, [Binding(row)]).value, "Record", "select 콜백") for row in rows]
     if operation == "take":

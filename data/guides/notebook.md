@@ -28,7 +28,7 @@
 
 **계기(📚 노트북, 앱 표면)**: 질문(노트북 select+질문→답+인용 카드) / 노트북(카드→드릴: 소스 목록·빼기 / **관리 탭**=소스 추가 폼+노트북 삭제[danger·confirm]) / 만들기. `phone_render: false`(pc_only — 원격 브라우저=맥 리모컨으로는 사용 가능).
 
-- **ask**(기본 op): 답 + `citations[{n, source, loc, quote}]` + `not_in_sources`. 인용은 결정론 후검증을 거친다 — quote는 모델이 아니라 코드가 청크 원문에서 뽑으므로 인용 환각이 원리적으로 없다. 무효 인용은 제거되고 `citation_dropped`로 집계.
+- **ask**(기본 op): 답 + `citations[{n, source, loc, quote}]` + `not_in_sources`. 인용은 결정론 후검증을 거친다. quote는 실제 읽은 위치의 청크 원문이며 직접 따옴표 인용의 원문 일치를 검사한다. 의역·주장의 의미적 지지까지 보증하지 않는다. 무효 인용은 제거되고 `citation_dropped`로 집계.
 - **search**: 생성 없이 발췌만(LLM 0) — 싼 경로. items 통화라 `>> [table:take]` 등 파이프 직결.
 - **sources**: 소스 목록 + 색인 상태 + **stale**(원본 파일이 변경=`modified`/삭제=`missing`). 재색인 = 같은 path로 add 재호출.
 - 같은 path를 다시 add하면 기존 색인을 갈아엎는다(재색인).

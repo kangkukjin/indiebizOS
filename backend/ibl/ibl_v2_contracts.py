@@ -28,4 +28,14 @@ def handler_contract(node, action, config, schema_keys=None):
         contract["value_validator"] = config["value_validator"]
     if config.get("code_params"):
         contract["code_params"] = config["code_params"]
+    from ibl_ops import op_side_effect, resolve_op
+    def effects(op):
+        effect = "write_external" if op_side_effect(config, op) else "read_external"
+        return [effect, "model"] if config.get("ai_call") is True else [effect]
+    if ops.get("values"):
+        contract["defaults"] = {"op": ops["default"]} if ops.get("default") else {}
+        contract["variants"] = [{"when": {"op": op}, "effects": effects(op)}
+                                for op in ops["values"]]
+    elif "side_effect" in config or config.get("returns") in {"items", "scalar", "effect"}:
+        contract["effects"] = effects(resolve_op(config))
     return contract

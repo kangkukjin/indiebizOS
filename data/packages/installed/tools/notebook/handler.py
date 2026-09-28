@@ -7,7 +7,7 @@ Notebook Handler — [self:notebook] 근거 고정 질의 (op 분기)
 ask의 2층 방어 (설계 §4-3):
   1) 경량 AI 제약 생성 — 발췌만 근거·문장마다 [n] 인용·모름이면 NOT_IN_SOURCES
   2) 인용 후검증(결정론) — 답 속 [n]이 실제 전달한 발췌인지 검사, 무효 인용은 제거·집계.
-     quote는 모델이 아니라 코드가 청크 원문에서 뽑는다 = 인용 환각 원리적 차단.
+     quote는 읽힌 청크의 원문 발췌다. 위치·직접 인용 일치를 검사하며 의미적 지지까지 보증하지 않는다.
 
 설계 정본: docs/NOTEBOOK_GROUNDED_QUERY_DESIGN.md
 """
@@ -179,6 +179,8 @@ def _op_sources(tool_input: dict, context) -> str:
             s["card_gist"] = _card_gist(p) if p.exists() else ""
         out["items"] = [{
             "title": s["title"],
+            "status": s["status"], "stale": s.get("stale") or False,
+            "chunk_count": s["chunk_count"], "kind": s["kind"],
             "meta": " · ".join(x for x in [
                 f"#{s['id']}", s["kind"], f"청크 {s['chunk_count']}", s["status"],
                 s.get("stale") and f"⚠️{s['stale']}", (not s.get("card_gist")) and "카드 없음"] if x),
@@ -215,6 +217,7 @@ def _op_search(tool_input: dict, context) -> str:
         return _json(out)
     items = [{
         "title": r["source"],
+        "loc": r.get("loc"), "score": r.get("score"),
         "meta": " · ".join(x for x in [r.get("loc") or "", f"score {r['score']}"] if x),
         "summary": (r["text"][:300] + ("…" if len(r["text"]) > 300 else "")),
         "source_id": r["source_id"],
@@ -393,19 +396,29 @@ def _verify_document_citations(core, answer, docs):
             start = doc["body"].find(marker + raw[:min(40, len(raw))]) if raw else -1
             if start < 0:
                 continue
-            quote = doc["body"][start + len(marker):start + len(marker) + min(QUOTE_CHARS, len(raw))]
+            quote = doc["body"][start + len(marker):start + len(marker) + len(raw)]
             evidence[(doc["id"], loc.strip("[]"))] = {
                 "source_id": doc["id"], "source": doc["title"],
-                "loc": loc.strip("[]"), "quote": quote,
+                "loc": loc.strip("[]"), "quote": quote, "evidence_kind": "source_chunk",
             }
     citations, seen, invalid = [], set(), []
+    previous_end = 0
     for match in _DOC_CITE_RE.finditer(answer):
+        prefix = answer[previous_end:match.start()]
+        previous_end = match.end()
         key = (int(match.group(1)), match.group(2).strip().strip("[]"))
         if key not in evidence:
             invalid.append(match.group(0))
-        elif key not in seen:
-            seen.add(key)
-            citations.append(evidence[key])
+        else:
+            # 직접 따옴표 인용만 원문 일치를 확인한다. 의역의 의미 검증은 주장하지 않는다.
+            quotes = re.findall(r'[“"]([^”"\n]+)[”"]', prefix)
+            source_text = " ".join(evidence[key]["quote"].split())
+            if quotes and " ".join(quotes[-1].split()) not in source_text:
+                invalid.append(match.group(0))
+                continue
+            if key not in seen:
+                seen.add(key)
+                citations.append(evidence[key])
     return citations, invalid
 
 
@@ -971,6 +984,7 @@ def _citation_items(citations: list) -> list:
 def _excerpt_items(excerpts: list) -> list:
     return [{
         "title": r["source"],
+        "loc": r.get("loc"), "score": r.get("score"),
         "meta": " · ".join(x for x in [r.get("loc") or "", f"score {r.get('score')}"] if x),
         "summary": r["text"][:300],
         "url": "",

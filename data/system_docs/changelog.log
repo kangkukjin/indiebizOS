@@ -2218,3 +2218,5 @@
 [2026-09-28 15:40:43] BUG_FIX: 상상훈련 68회차 — 원 실행 쓰기 전·동시 읽기 재사용 제외, per_run 시계, 실행 완료/원천 완전성 분리(191건 백업 이주), 핸들 check·안내문·행 관측 경고 보강. SQLite 선택 범위·BLOB 무손실 JSON, 절단 생산자 34파일 59곳 census와 정직 표지 관문 C. 라이브 24/24. 상세 docs/experiments/imagination_round68_2026_09_28/report.md.
 
 [2026-09-28 16:16:53] BUG_FIX: 상상훈련 69회차 — 결과 참조(inputs $ref·read_result) 값 통로를 표시 저장본에서 분리: 저장소 마스킹 경로 기록과 가린 값 참조 거절(원문 무저장), 판본 2 값 경로의 wire 해석, 실패 봉투 기본 참조 거절, 목록·레코드 안 참조 재귀 해석, /ibl/validate 동일 해석기, 범위 밖 참조 오류 문구, 문자열 경로 원문 페이지(read_scope.format), UNBOUND 입력 이름 안내. 라이브 13/24→24/24. 상세 docs/experiments/imagination_round69_2026_09_28/report.md.
+
+[2026-09-28 17:30:40] BUG_FIX: 상상훈련 70회차 — 병렬 쓰기 자원을 글자 모양 대신 컴파일 시 Text 값(Type.literal 정제, join이 버림)으로 타입 검사 방문 중 기록해 변수·기본값·함수 인자·본문 &·병렬 each 반복의 같은 경로도 충돌로 판정(별도 보행기 writes() 제거). 코드와 함께 온 describe가 지역 정의를 먼저 해소. 컴파일 진단 23종 전용 안내+AST 가드, else 누락 함수 UNIT_RETURN_PATH 경고, 기본값 식 UNBOUND 안내, 숫자 레코드 키 안내. 탐침 12/24→24/24.

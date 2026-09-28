@@ -1,6 +1,7 @@
 """Structural types shared by edition 2 preflight and boundary guards."""
 from common.foreign_ref import ForeignRef
 from dataclasses import dataclass
+from functools import lru_cache
 from decimal import Decimal
 from ibl_v2_ir import Unit, ResultValue, Fault
 from ibl_v2_expr import Builtin, Closure
@@ -19,6 +20,12 @@ class Type:
     # traces from data/ibl_return_shapes.json. Access outside them is a
     # compile warning, never an error; join drops the marker.
     observed: bool = False
+    # Optional refinement of Text: the value is known at compile time (literal,
+    # a variable bound to one, a default, a specialized argument, a static
+    # f-string). Not a new type — display, fingerprints and compatibility are
+    # unchanged, and join drops it. Consumers that need a statically known
+    # identity (declared write resources) read it via static_text (70회차 B70-2).
+    literal: object = None
 
     def __str__(self):
         if self.kind == "Union":
@@ -43,9 +50,32 @@ def alternatives(typ):
         yield typ
 
 
+def static_text(typ):
+    """The compile-time Text value, or None when it depends on execution."""
+    if typ is not None and typ.kind == "Text" and isinstance(typ.literal, str):
+        return typ.literal
+    return None
+
+
+@lru_cache(maxsize=8192)
+def plain(typ):
+    """The same type without compile-time Text values, at every depth."""
+    if not isinstance(typ, Type):
+        return typ
+    item = tuple(plain(t) for t in typ.item) if isinstance(typ.item, tuple) else plain(typ.item)
+    positions = None if typ.positions is None else tuple(plain(t) for t in typ.positions)
+    return Type(typ.kind, tuple((k, plain(v)) for k, v in typ.fields), item, typ.open, positions, typ.observed)
+
+
 def join(left, right):
     if left == right:
         return left
+    if left.literal is not None or right.literal is not None or left.kind == right.kind:
+        # Paths that meet with different known values only know the type; the
+        # shape (field order, positions) is the one they had without values.
+        left, right = plain(left), plain(right)
+        if left == right:
+            return left
     if left.kind == right.kind == "List":
         positions = None
         if (left.positions is not None and right.positions is not None

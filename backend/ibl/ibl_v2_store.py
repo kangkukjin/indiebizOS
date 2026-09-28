@@ -88,6 +88,34 @@ def action(action_name, params, project_path):
         return {"success": False, "edition": 2, "error": str(exc), "diagnostic": exc.view()}
 
 
+def program_functions(code, allowed_nodes=None):
+    """Contracts of the definitions written in a submitted program (70회차 B70-1).
+
+    `describe` with code must answer the same names the executor resolves: a
+    program's own definition shadows a stored one. The program is compiled,
+    never run; unrelated issues elsewhere in it do not hide its signatures.
+    """
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    from ibl_v2_parser import edition_of
+    if not isinstance(code, str) or '[def:' not in code or edition_of(code, 2) != 2:
+        return {}
+    registry = load_registry()
+    if allowed_nodes is not None:
+        registry = {key: value for key, value in registry.items()
+                    if key.split(':')[0] in allowed_nodes or key.startswith('fn:')}
+    try:
+        plan = compile_program(code, registry, definitions=definitions())
+    except Exception:
+        return {}  # 구문 오류는 실행 경로가 정직하게 보고한다.
+    out = {}
+    for contract in plan.function_contracts.values():
+        if (contract.get('definition') or {}).get('source') == '<program>':
+            out.setdefault(contract['name'], {'callable_contract': contract, 'source': 'program',
+                                              'status': 'invalid' if plan.issues else 'valid'})
+    return out
+
+
 def describe(name, allowed_nodes=None):
     """Expose compiler-owned function signatures without publishing every body."""
     from ibl_v2_adapters import load_registry

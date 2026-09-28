@@ -538,7 +538,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                 described_edition = source_edition(
                     tool_input.get("code") or tool_input.get("pipeline") or "",
                     authoring_request(tool_input).get("edition"))
-                value = describe_actions(tool_input["describe"], allowed, edition=described_edition)
+                value = describe_actions(tool_input["describe"], allowed, edition=described_edition,
+                                         program=tool_input.get("code") or tool_input.get("pipeline"))
             else:
                 value = read_result(tool_input["read_result"])
         except (ValueError, KeyError, TypeError, OSError) as exc:

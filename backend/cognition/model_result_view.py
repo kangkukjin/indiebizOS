@@ -583,7 +583,7 @@ def observed_returns(name):
             if isinstance(v, dict) and (k == name or k.startswith(name + "#") or k.startswith(name + "@"))}
 
 
-def describe_actions(names, allowed_nodes, edition=None):
+def describe_actions(names, allowed_nodes, edition=None, program=None):
     from ibl_access import load_nodes_raw, resolve_allowed_nodes
     from ibl_registry import self_can_run
     if not isinstance(names, list) or not 1 <= len(names) <= 6:
@@ -597,10 +597,17 @@ def describe_actions(names, allowed_nodes, edition=None):
     nodes = load_nodes_raw().get("nodes", {})
     answer = []
     runtime_registry = None
+    local = None
     for name in dict.fromkeys(names):
         node, action = name.split(":", 1)
         if node == "fn" and edition == 2:
-            from ibl_v2_store import describe
+            from ibl_v2_store import describe, program_functions
+            if local is None:
+                # 함께 온 코드의 지역 정의가 저장 함수보다 먼저 — 실행기의 이름 해소 순서와 같다.
+                local = program_functions(program, allowed) if program else {}
+            if action in local:
+                answer.append({"action": name, "definition": local[action]})
+                continue
             definition = describe(action, allowed)
             if definition.get("error"):
                 answer.append({"action": name, **definition})

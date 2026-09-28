@@ -186,6 +186,11 @@ class Parser:
                 entries.append((None, self.expr()))
                 has_spread = True
             else:
+                if self.t.kind == "number":
+                    # 1면·3월처럼 숫자로 시작하는 업무 키는 흔하다 — 고치는 법을 오류가 말한다(70회차 F70-3).
+                    after = self.tokens[self.i + 1]
+                    text = self.t.text + (after.text if after.kind == "name" and after.start == self.t.end else "")
+                    self.fail(f'레코드 키는 이름이나 따옴표 문자열입니다. 숫자로 시작하는 키는 따옴표로 쓰세요: {{"{text}": …}}')
                 key = ast.literal_eval(self.pop().text) if self.t.kind == "string" else self.name()
                 if not isinstance(key, str) or key in fields:
                     self.fail("레코드 키는 중복 없는 문자열이어야 합니다.")

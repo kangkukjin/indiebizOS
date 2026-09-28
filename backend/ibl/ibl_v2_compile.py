@@ -14,7 +14,7 @@ from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
                              assigned_names, location, access_type, HINTS)
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
                           infer, join, declared, compatible, alternatives,
-                          ordered_list, concat_lists)
+                          ordered_list, concat_lists, static_text)
 
 RESERVED = {"it", "i", "error"}
 PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
@@ -76,6 +76,10 @@ class Compiler:
         self.function_contracts = {}
         self.used_actions = set()
         self.call_dependencies = {}
+        # 방문 중 만난 선언 쓰기 자원 — 병렬 가지·each 병렬 본문이 괄호로 묶어 충돌을 본다(70회차 B70-2).
+        self.write_log = set()
+        self.default_scope = frozenset()  # 기본값 식을 검사하는 동안의 인자 이름들
+        self.unit_warned = set()
 
     def issue(self, node, code, message, **details):
         item = {"code": code, "message": message, "source_span": span(self.source, node),
@@ -193,7 +197,7 @@ class Compiler:
     def function(self, sid, args, call=None):
         node = self.functions[sid]
         if sid in self.stack:
-            self.issue(node, "RECURSION", "첫 판본에서는 재귀 함수를 지원하지 않습니다.")
+            self.issue(node, "RECURSION", f"재귀 호출은 지원하지 않습니다: {node.data['name']}")
             return UNKNOWN
         self.stack.append(sid)
         self.call_path.append({"function": node.data["name"],
@@ -210,12 +214,21 @@ class Compiler:
             dtype = UNKNOWN
             if default:
                 self.pure(default)
+                self.default_scope = frozenset(params)
                 dtype = self.visit(default, {}, {}, frozenset(), False)
+                self.default_scope = frozenset()
             env[name] = args.get(name, dtype)
         parameter_types = {k: str(v) for k, v in env.items()}
         result = self.sequence(node.data["body"], env, self.function_scopes[sid])
         for t in self.returns:
             result = t if result == UNIT_T else join(result, t)
+        kinds = {t.kind for t in alternatives(result)}
+        if self.returns and "Unit" in kinds and len(kinds) > 1 and sid not in self.unit_warned:
+            # 값을 돌려주는 경로와 떨어지는 경로가 섞인 함수는 거의 늘 else/return 누락이다(70회차 F70-2).
+            self.unit_warned.add(sid)
+            self.warn(node, "UNIT_RETURN_PATH",
+                      f"함수 {node.data['name']}의 일부 경로가 값을 반환하지 않아 결과에 Unit이 섞입니다: {result}",
+                      function=node.data['name'], result=str(result))
         effects, actions = self.effects, self.used_actions
         self.effects, self.used_actions = outer_effects | effects, outer_actions | actions
         self.returns = old_returns
@@ -253,11 +266,16 @@ class Compiler:
         if kind == "sequence":
             return self.sequence(node, env, names, readonly, final)
         if kind == "literal":
+            if type(d["value"]) is str:
+                return Type("Text", literal=d["value"])
             return infer(d["value"])
         if kind == "ref":
             if d["name"] not in env:
                 extra = {}
-                if self.inputs and d["name"] not in self.inputs:
+                if d["name"] in self.default_scope:
+                    extra["hint"] = ("기본값 식은 호출 전에 따로 평가되어 다른 인자를 볼 수 없습니다. 인자에 따라 정해지는 값은 "
+                                     "기본값 인자로 두지 말고 함수 본문에서 계산하세요(예: $최종 = $가격 * (1 - $율)).")
+                elif self.inputs and d["name"] not in self.inputs:
                     # 결과 참조의 input_hint 가 이름 변경을 권하므로 흔한 실수다 — 실제 입력 이름을 알린다(69회차 F69-3).
                     names = ", ".join("$" + n for n in sorted(self.inputs)[:8])
                     extra["hint"] = (f"이 프로그램에 전달된 inputs 이름은 {names}입니다. 코드의 변수 이름과 inputs 이름을 "
@@ -378,6 +396,7 @@ class Compiler:
             sub(d["body"], local)
             return Type("Callable")
         if kind == "format":
+            known = []
             for part in d["parts"]:
                 if isinstance(part, Node):
                     self.pure(part)
@@ -386,6 +405,11 @@ class Compiler:
                         self.issue(part, "FORMAT_TYPE", "보간에는 Text·Number·Bool만 사용할 수 있습니다.")
                     elif t.kind == "Unknown":
                         self.need(part, t, join(join(TEXT, NUMBER), BOOL))
+                    known.append(static_text(t))
+                else:
+                    known.append(part if isinstance(part, str) else None)
+            if known and all(isinstance(k, str) for k in known):
+                return Type("Text", literal="".join(known))
             return TEXT
         if kind == "pipe":
             left = sub(d["left"])
@@ -406,12 +430,13 @@ class Compiler:
             writes, conflict = set(), set()
             for branch in parallel_branches(node):
                 old_returns, self.returns = self.returns, []
+                outer_writes, self.write_log = self.write_log, set()
                 result = sub(branch, env.copy())
                 for t in self.returns:
                     result = t if result == UNIT_T else join(result, t)
                 self.returns = old_returns
                 types.append(result)
-                branch_writes = self.writes(branch)
+                branch_writes, self.write_log = self.write_log, outer_writes | self.write_log
                 conflict.update(writes & branch_writes)
                 writes.update(branch_writes)
             if conflict:
@@ -487,6 +512,11 @@ class Compiler:
                 if k in params:
                     self.need(node, t, declared(params[k]))
             self.effects.update(contract["effects"])
+            # 자원 정체 = 타입 검사가 아는 컴파일 시 값(리터럴·변수·기본값·특수화 인자·정적 보간). 같은 값이면 같은 자원이다.
+            for realm, param in spec.contract.get("write_resources", {}).items():
+                known = static_text(args.get(param))
+                if known is not None:
+                    self.write_log.add((realm, known))
             result_type = declared(contract["result"])
             from ibl_v2_adapters import observed_result
             result_type = observed_result(key, spec.contract,
@@ -606,43 +636,6 @@ class Compiler:
             return once and recur(d['body'])
         return False
 
-    def writes(self, node, bindings=None, seen=frozenset()):
-        """Only declared, statically known resource identities justify conflicts."""
-        bindings = bindings or {}
-        if not isinstance(node, Node) or node.kind == "def":
-            return set()
-        out = set()
-        if node.kind == "call":
-            fields = record_fields(node.data["params"])
-            values = {k: v.data["value"] if v.kind == "literal" else
-                      bindings.get(v.data["name"]) if v.kind == "ref" else None
-                      for k, v in fields.items()}
-            sid = node.data.get("symbol") if node.data["node"] == "fn" else None
-            if sid in self.functions and sid not in seen:
-                out.update(self.writes(self.functions[sid].data["body"], values, seen | {sid}))
-            key = f"{node.data['node']}:{node.data['action']}"
-            # A resolved definition shadows the adapter of the same name.
-            spec = None if sid in self.functions else self.registry.get(key)
-            if spec:
-                from ibl_callable_contract import normalize
-                values = normalize(spec.contract, values)
-                out.update((realm, values[param]) for realm, param in spec.contract.get("write_resources", {}).items()
-                           if isinstance(values.get(param), str))
-        # Arguments now execute too. An outer read/pure call (or a function)
-        # must not hide a declared write in its nested argument expressions.
-        def visit(value):
-            if isinstance(value, Node):
-                out.update(self.writes(value, bindings, seen))
-            elif isinstance(value, dict):
-                for v in value.values():
-                    visit(v)
-            elif isinstance(value, (list, tuple)):
-                for v in value:
-                    visit(v)
-        for value in node.data.values():
-            visit(value)
-        return out
-
     def arguments(self, node, args, params, receiver, piped):
         if piped is not None:
             if receiver is None or receiver in args:
@@ -677,11 +670,18 @@ class Compiler:
         if type(options["parallel"]) is not int or not 1 <= options["parallel"] <= 8:
             self.issue(node, "CONCURRENCY", "parallel은 1~8 정수입니다.")
         old_returns, self.returns = self.returns, []
+        outer_writes, self.write_log = self.write_log, set()
         local = {**env, "it": items.item or UNKNOWN, "i": NUMBER}
         result = self.visit(node.data["body"], local, names, frozenset(env) | RESERVED)
         for t in self.returns:
             result = t if result == UNIT_T else join(result, t)
         self.returns = old_returns
+        body_writes, self.write_log = self.write_log, outer_writes | self.write_log
+        single = items.positions is not None and len(items.positions) <= 1
+        if type(options["parallel"]) is int and options["parallel"] > 1 and body_writes and not single:
+            # 반복마다 같은 자원 — 병렬 반복들이 서로 덮어쓴다. 원소에 따라 정해지는 자원은 여기 오지 않는다.
+            self.issue(node, "PARALLEL_WRITE_CONFLICT",
+                       f"each 병렬 반복이 모두 같은 선언 자원에 씁니다: {sorted(body_writes)}")
         if options["mode"] == "effect":
             return UNIT_T
         if options["mode"] == "flat_map":

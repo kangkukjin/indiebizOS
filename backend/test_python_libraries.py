@@ -183,9 +183,9 @@ return {shape:$s,rows:$r.items,schema:$r.schema}''', registry)
 
 @pytest.mark.parametrize('module_name', ['pandas', 'pandas.core.frame'])
 def test_dataframe_export_uses_public_type_identity(module_name, monkeypatch):
+    from runpy import run_path
     pandas = pytest.importorskip('pandas')
-    monkeypatch.syspath_prepend(str(ROOT / 'data/scripts/python_library'))
-    from python_bridge_values import export_value
+    export_value = run_path(str(ROOT / 'data/scripts/python_library/python_bridge_values.py'))['export_value']
     from common.expression_ir import Fault
     monkeypatch.setattr(pandas.DataFrame, '__module__', module_name)
     frame = pandas.DataFrame({'a': [1, 2]})

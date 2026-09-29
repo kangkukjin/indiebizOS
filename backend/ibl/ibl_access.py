@@ -160,7 +160,17 @@ def _return_shapes() -> dict:
         except Exception:
             _SHAPES_CACHE["data"] = {}
         _SHAPES_CACHE["mtime"] = mt
-    return _SHAPES_CACHE["data"]
+    # Document content is user data, never a public observation of API fields.
+    nodes = load_nodes_raw().get("nodes", {})
+    return {key: value for key, value in _SHAPES_CACHE["data"].items()
+            if not document_shape(key, nodes)}
+
+
+def document_shape(key, nodes):
+    node, _, action = key.split("#", 1)[0].split("@", 1)[0].partition(":")
+    spec = nodes.get(node, {}).get("actions", {}).get(action, {})
+    return spec.get("callable_contract", {}).get("adapter", {}).get("protocol") == "document-value/1"
+
 
 
 def _variant_shapes(qualified: str) -> list:

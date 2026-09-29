@@ -1002,7 +1002,9 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
                     # keys: 통화가 아닌 성공 봉투(효과·스칼라·message)의 키 — fixture 없는
                     # 액션의 ⟨키⟩ 를 실사용에서 수확(2026-09-06 F55-1, shape 스윕 --from-health).
                     _keys = None
-                    if _action_success and isinstance(_obj, dict) and _shape not in ("items", "error"):
+                    if (_action_success and isinstance(_obj, dict) and _shape not in ("items", "error")
+                            and (action_config.get("callable_contract", {}).get("adapter", {}).get("protocol")
+                                 != "document-value/1")):
                         _keys = [str(k) for k in _obj.keys()
                                  if isinstance(k, str) and not k.startswith("_") and k != "success"][:16]
                 else:

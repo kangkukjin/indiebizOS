@@ -1,0 +1,8 @@
+{"event":"가을 팀 워크숍(1박 없음, 당일)","headcount":50,"budget":2400000,
+ "items":[
+  {"item":"대관","unit":"회","qty_rule":"fixed","qty":1,"required":true},
+  {"item":"점심","unit":"인","qty_rule":"per_head","required":true},
+  {"item":"간식","unit":"인","qty_rule":"per_head","required":false},
+  {"item":"버스","unit":"대","qty_rule":"per_bus45","required":true},
+  {"item":"음향","unit":"식","qty_rule":"fixed","qty":1,"required":true}
+ ]}

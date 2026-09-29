@@ -126,10 +126,15 @@ def harvest_from_health(shapes: dict, root: Path = ROOT) -> int:
             "WHERE success=1 AND keys IS NOT NULL AND keys != '' ORDER BY timestamp DESC").fetchall()
     except Exception:
         return 0
+    from ibl_access import document_shape, load_nodes_raw
+    nodes = load_nodes_raw().get("nodes", {})
     n = 0
     seen = set()
     for node, action, keys_json, shape, ts in rows:
         key = f"{node}:{action}"
+        if document_shape(key, nodes):
+            shapes.pop(key, None)
+            continue
         if key in seen:
             continue
         seen.add(key)

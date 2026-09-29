@@ -34,9 +34,9 @@ def _receive(params, exchange, workspace):
     if len(data) > MAX_BYTES:
         raise ValueError('파일 크기 초과')
     suffix = Path(raw).suffix.lower()
-    if params.get('format') in ('pdf', 'docx', 'xlsx', 'xls', 'xlsm'):
+    if params.get('format') in ('pdf', 'docx', 'xlsx', 'xls', 'xlsm', 'json', 'csv', 'tsv'):
         suffix = '.' + params['format']
-    if suffix not in ('.pdf', '.docx', '.xlsx', '.xls', '.xlsm'):
+    if suffix not in ('.pdf', '.docx', '.xlsx', '.xls', '.xlsm', '.json', '.csv', '.tsv'):
         suffix = '.txt'
     path = workspace / ('input' + suffix)
     path.write_bytes(data)
@@ -64,7 +64,7 @@ def read_document(params, command, exchange, workspace):
     if failure is not None:
         return failure
     fmt = params.get('format') or path.suffix.lstrip('.')
-    if fmt not in ('pdf', 'docx', 'xlsx', 'xls', 'xlsm', 'txt', 'text', 'md', 'json', 'csv'):
+    if fmt not in ('pdf', 'docx', 'xlsx', 'xls', 'xlsm', 'txt', 'text', 'md', 'json', 'csv', 'tsv'):
         raise ValueError('지원하지 않는 형식')
     if fmt in ('pdf', 'docx', 'xlsx', 'xls', 'xlsm'):
         p.update(path=str(path), extract_images=False)
@@ -81,6 +81,14 @@ def read_document(params, command, exchange, workspace):
     lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
     start, end, ranged = ranges.text_read_bounds(p, len(lines))
     text = ''.join(lines[start:end])
+    if len(text) > 1000000:
+        return {'success': True, 'text': text[:1000000], 'blocks': [], 'truncated': True,  # truncation-scope: source — 회원 문서의 안전캡
+                'total_lines': len(lines)}
+    if p.get('blocks') and not ranged and fmt in ('json', 'csv', 'tsv') and (fmt != 'json' or text.strip()):
+        data = (json.loads(text) if fmt == 'json' else
+                _sibling('essentials_file_io').delimited_data(text, '\t' if fmt == 'tsv' else ','))
+        return {'success': True, 'text': text, 'blocks': [], 'structured_data': data,
+                'path': params['path']}
     if p.get('blocks'):
         from doc_ir import markdown_to_blocks
         items = markdown_to_blocks(text)

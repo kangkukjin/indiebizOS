@@ -197,7 +197,7 @@ def decode_envelope(raw, adapter, input_values=None):
         # 원천의 요청 한도(429)는 '잠시 뒤 같은 원천'과 '원천을 바꿔라'를 가를 값이다 — 일반 TOOL 과
         # 같은 코드면 프로그램이 문자열로만 구별했다(상상훈련 77회차 F77-2). 생산자는 공통 봉투
         # common.api_client.rate_limited_failure 로 error_type·retry_after 를 싣는다.
-        code = "RATE_LIMITED" if raw.get("error_type") == "rate_limited" else "TOOL"
+        code = {"rate_limited": "RATE_LIMITED", "not_found": "NOT_FOUND"}.get(raw.get("error_type"), "TOOL")
         raise Fault(code, str(raw.get("error") or raw.get("message") or "도구 실행 실패"), kind=kind,
                     details={key: raw[key] for key in (
                         "error_type", "errno", "path", "base_path", "hint", "stage",

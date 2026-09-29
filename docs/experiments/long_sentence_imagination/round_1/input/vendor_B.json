@@ -1,0 +1,6 @@
+{"vendor":"B","valid_until":"2026-10-31","lines":[
+ {"name":"대관","price":450000},
+ {"name":"점심","price":22000,"memo":"뷔페"},
+ {"name":"버스","price":500000},
+ {"name":"음향","price":null,"memo":"현장 협의"}
+]}

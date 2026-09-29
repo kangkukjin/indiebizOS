@@ -161,7 +161,7 @@ def test_missing_directory_keeps_path_context_through_adapter(tmp_path):
     from ibl_v2_entry import handle_request
     result = handle_request({"edition": 2, "code": '[self:list]{path:"data/missing"}'}, str(tmp_path))
     fault = result["diagnostic"]
-    assert fault["code"] == "TOOL" and fault["details"]["error_type"] == "not_found"
+    assert fault["code"] == "NOT_FOUND" and fault["details"]["error_type"] == "not_found"
     assert fault["details"]["path"] == str(tmp_path / "data/missing")
     assert fault["details"]["base_path"] == str(tmp_path)
     assert "상대경로" in fault["details"]["hint"]

@@ -91,3 +91,19 @@ def read_text_window(path, params, bounds, max_chars=1_000_000):
     if tail is not None and numbered:
         selected = [f'{n}\t{line}' for n, line in enumerate(selected, start + 1)]
     return ''.join(selected), total, start, end, ranged, truncated
+
+
+def delimited_data(content, delimiter):
+    """CSV/TSV preserves quoted delimiters/newlines and missing/zero cells."""
+    import csv
+    import io
+    rows = list(csv.reader(io.StringIO(content.lstrip("\ufeff")), delimiter=delimiter, strict=True))
+    if not rows:
+        return {"items": [], "table": {"columns": [], "rows": []}}
+    columns, values = rows[0], rows[1:]
+    if len(set(columns)) != len(columns) or any(not name for name in columns):
+        raise ValueError("CSV/TSV 헤더는 비어 있지 않은 고유한 이름이어야 합니다.")
+    if any(len(row) != len(columns) for row in values):
+        raise ValueError("CSV/TSV 행의 셀 수가 헤더와 다릅니다.")
+    return {"items": [dict(zip(columns, row)) for row in values],
+            "table": {"columns": columns, "rows": values}}

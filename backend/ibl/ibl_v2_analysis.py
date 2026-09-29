@@ -7,6 +7,7 @@ from ibl_v2_expr import number
 
 
 HINTS = {
+    "NOT_FOUND": "요청한 파일·디렉토리가 없습니다. 경로를 확인하거나 원천을 다시 요청하세요. 선택 자료라면 catch로 부재를 명시하세요.",
     "LITERAL_DOLLAR": "일반 문자열은 치환하지 않습니다. 값 참조 또는 f 문자열의 ${표현식}으로 옮기거나, 문자 그대로 의도했다면 경고를 무시하세요.",
     "RECORD_LENGTH": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
     "INPUTS": 'inputs는 {입력:값}이며 코드는 $입력을 사용합니다. 결과 참조는 inputs:{입력:{"$ref":"결과 id"}}처럼 이름의 값 자리에 둡니다.',
@@ -163,6 +164,29 @@ def syntax_report(exc, source):
             'guards': [], 'source_hash': digest(source)}
 
 
+def compact_check(plan):
+    """Keep error diagnostics inline and preserve information guards for inspection."""
+    import json
+    from supervision_store import current_evidence_store
+    from result_read_contract import DEFAULT_LIMIT
+
+    report = plan.report()
+    if plan.issues or not plan.guards:
+        return report
+    useful = [g for g in plan.guards
+              if g.get('expected') != 'Unknown' or g.get('actual') != 'Unknown']
+    try:
+        ref = current_evidence_store().evidence(json.dumps({'guards': plan.guards}, ensure_ascii=False))
+    except (OSError, ValueError, TypeError):
+        return report
+    report.update(guards=[], guards_omitted=len(plan.guards),
+                  runtime_checks={'total': len(plan.guards), 'informative': len(useful)},
+                  guards_ref={'id': ref['id'], 'chars': ref['chars'],
+                              'read_args': {'id': ref['id'], 'path': ['guards'],
+                                            'offset': 0, 'limit': DEFAULT_LIMIT}})
+    return report
+
+
 def numeric_operand(compiler, node, typ):
     """Use exactly the runtime number observation for literal operands."""
     if node.kind == 'literal':
@@ -266,6 +290,13 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
     mode = flow.get('columns')
     if mode == 'keep':
         output = row
+        from ibl_v2_narrow import narrow
+        for param in flow.get('row_condition_params', []):
+            predicate = fields.get(param)
+            if predicate is not None and predicate.kind == 'lambda' and len(predicate.data['params']) == 1:
+                name = predicate.data['params'][0]
+                output = narrow({name: row}, predicate.data['body'])[name]
+                break
     elif mode == 'subset' and projected and projected.kind == 'Record':
         output = projected
     elif mode == 'add' and projected and projected.kind == 'Record' and row.kind == 'Record':

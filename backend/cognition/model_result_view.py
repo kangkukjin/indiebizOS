@@ -647,7 +647,7 @@ def describe_actions(names, allowed_nodes, edition=None, program=None):
                             if k not in {"analysis", "implementation_fingerprint"}}
                 spec = {**{k: spec[k] for k in ("description", "guides", "group", "runs_on") if k in spec},
                         **({"target_description": spec["target_description"]}
-                           if adapter.contract.get("adapter", {}).get("protocol") == "legacy-envelope"
+                           if adapter.contract.get("adapter", {}).get("protocol") in {"legacy-envelope", "document-value/1"}
                            and spec.get("target_description_edition", 2) == edition
                            and spec.get("target_description") else {}),
                         "callable_contract": contract,

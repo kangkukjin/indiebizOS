@@ -5457,7 +5457,7 @@ nodes:
             backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
             backend/common/expression_ops.py: c87f7dc7c141c246ad78fa2be15dea432dac30d20478fc564cea7b3278cec30b
-            backend/common/expression_parser.py: b683d2fb8ea4daff73d11deaa5185794c8ec827fe3124f58331211557ac7fba1
+            backend/common/expression_parser.py: bcdb64b3aa4df6014a2271192c75dc4bf4a1bdc195a4c6e95965485d9571dba0
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
             backend/base/runtime_utils.py: ee8f08ebd8889224e85458645b3f60386fcdb1c732772c4657d2d173fee8e0ff
             backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
@@ -5629,7 +5629,7 @@ nodes:
           result:
             text: Text
             blocks: List<Record>
-            data: Record
+            data: Unknown
           effects:
           - read_external
           adapter:
@@ -5690,7 +5690,7 @@ nodes:
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용; offset은 0 이상, limit은 0 이상 정수이며 0은 빈 본문, 생략은 전체 읽기) 또는 start_line/end_line(1-기반 양끝 포함, 역전·비정수·충돌 범위는 오류) 또는 tail(끝에서 N줄, 1 이상 정수; offset/start/start_line/end/end_line/limit와 동시 지정은 오류). blocks=true는 선택한 범위를 문단 items로 변환하며 같은 물리 줄번호를 사용한다. 빈 문단 범위의 start_line/end_line은 null이다. pdf — pages는 1-기반 양끝 포함 범위(예 '2', '1-5,8'; 잘못된 범위는 오류), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx/xls — sheet(특정 시트명)/max_rows 옵션 — 첫 행을 헤더로 items(행 dict)+table 통화, text 는 TSV 병기(>> filter/reduce/sheet append 로 흐름; 셀 "92,000" 은 숫자로 정규화 — [self:sheet] find 와 같은 눈). hwp(v5)/hwpx — 문단·표를 docx 와 같은 text+blocks 로(offset/limit/max_blocks, extract_images); 암호·배포용 hwp 는 정직 거절. pptx — 슬라이드마다 heading+본문·표·[노트], pages 로 슬라이드 범위(그림만 있는 슬라이드는 본문 없음 — 이미지는 extract_images). epub — 챕터(spine) 순 heading+문단, pages 로 챕터 범위. 판본 2 JSON 전체 읽기는 Document.data에 구조를 보존한다(객체=$문서.data, 배열=$문서.data.items). 빈 파일은 빈 text이며 절단·범위 읽기는 텍스트로 남는다. 그림 추출은 extract_images:true로 요청하며 원본 폴더 대신 임시 캐시에 저장한다. 스캔 PDF는 별도 OCR 필요.
+        target_description: path는 읽을 파일 경로. format(text/json/csv/tsv/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub)은 생략 시 확장자로 정한다. 판본 2 반환은 Document{text,blocks,data}. text — offset/limit(0-기반 행 범위, limit:0은 빈 본문), start_line/end_line(1-기반 양끝 포함), tail(끝 N줄, 다른 범위와 병용 금지), numbered(줄번호). 역전·비정수·충돌 범위는 오류. docx/hwp/hwpx — offset/limit/max_blocks는 블록 단위. pdf — pages는 1-기반 범위(예 "1-5,8"), tables:true는 .data.table로 표 추출. xlsx/xls — sheet/max_rows, 첫 행은 헤더, .data.items와 .data.table 및 TSV text. pptx/epub — pages로 슬라이드/챕터 선택. extract_images:true는 임시 캐시에 그림을 추출한다(스캔 PDF OCR은 별도). JSON 전체 읽기는 .data에 파싱 값을 보존한다(배열은 .data.items). CSV/TSV 전체 읽기는 .data.items(헤더→문자열 셀)와 .data.table{columns,rows}; 인용된 구분자·줄바꿈을 보존하며 빈 셀은 빈 문자열, 0은 문자열 "0"이다. 텍스트 범위·절단 읽기는 구조 파싱 없이 .text로 남는다. 빈 파일은 빈 text. .data에는 일반 본문·구판 실행 봉투를 중복하지 않는다. 파일 부재는 NOT_FOUND, 원인·경로는 오류 details에 보존한다.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx/read_xlsx(office_ops)·read_hwp/hwpx/pptx/epub(doc_read_extra)에 위임. 읽기 예외는 JSON 실패 봉투로 반환하며 파일 부재(not_found)·권한(permission)·I/O(io)의 error_type과 errno를 보존한다. 선택 파일은 self:list의 빈 목록으로 부재를 먼저 확인하고 필수 파일의 실패는 전파한다.
@@ -5701,7 +5701,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-29'
-          impl: 81cc8d04c3f9025b
+          impl: 7e10ebd55be56927
         target_key: path
         aliases:
           offset:
@@ -5714,7 +5714,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-29'
-          impl: 81cc8d04c3f9025b
+          impl: 7e10ebd55be56927
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6471,7 +6471,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-29'
-          impl: 81cc8d04c3f9025b
+          impl: 7e10ebd55be56927
         pipe_in: true
         lands_on: body
         limb_op:

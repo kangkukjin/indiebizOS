@@ -40,7 +40,8 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
             if request.get('resume') is not None:
                 validate_resume(journal_root(project_path), request['resume'],
                                 identity(plan, inputs, project_path, agent_id, input_evidence=input_evidence))
-            return plan.report()
+            from ibl_v2_analysis import compact_check
+            return compact_check(plan)
         if plan.issues:
             return Runtime(plan, inputs).run()
         root = journal_root(project_path)

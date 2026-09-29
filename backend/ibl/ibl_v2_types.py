@@ -20,7 +20,7 @@ class Type:
     # traces from data/ibl_return_shapes.json. Access outside them is a
     # compile warning, never an error; join drops the marker.
     observed: bool = False
-    # Optional refinement of Text: the value is known at compile time (literal,
+    # Optional refinement of Text/Bool: the value is known at compile time (literal,
     # a variable bound to one, a default, a specialized argument, a static
     # f-string). Not a new type — display, fingerprints and compatibility are
     # unchanged, and join drops it. Consumers that need a statically known
@@ -59,7 +59,7 @@ def static_text(typ):
 
 @lru_cache(maxsize=8192)
 def plain(typ):
-    """The same type without compile-time Text values, at every depth."""
+    """The same type without compile-time literal values, at every depth."""
     if not isinstance(typ, Type):
         return typ
     item = tuple(plain(t) for t in typ.item) if isinstance(typ.item, tuple) else plain(typ.item)
@@ -70,7 +70,14 @@ def plain(typ):
 def join(left, right):
     if left == right:
         return left
-    if left.literal is not None or right.literal is not None or left.kind == right.kind:
+    if left.kind == right.kind == "Record" and not left.open and not right.open:
+        a, b = dict(left.fields), dict(right.fields)
+        discriminated = any(a[k].kind == b[k].kind == "Bool"
+                            and a[k].literal is not None and b[k].literal is not None
+                            and a[k].literal != b[k].literal for k in a.keys() & b.keys())
+        if discriminated:
+            return Type("Union", item=tuple(sorted({left, right}, key=repr)))
+    if left.kind == right.kind and left.kind not in {"Record", "List", "Union"}:
         # Paths that meet with different known values only know the type; the
         # shape (field order, positions) is the one they had without values.
         left, right = plain(left), plain(right)
@@ -84,7 +91,8 @@ def join(left, right):
         return Type("List", item=join(left.item, right.item), positions=positions)
     if left.kind == right.kind == "Record":
         a, b = dict(left.fields), dict(right.fields)
-        return Type("Record", tuple((k, join(a[k], b[k])) for k in sorted(a.keys() & b.keys())), open=left.open or right.open)
+        keys = a if tuple(a) == tuple(b) else sorted(a.keys() & b.keys())
+        return Type("Record", tuple((k, join(a[k], b[k])) for k in keys), open=left.open or right.open)
     if "Unknown" in (left.kind, right.kind):
         return UNKNOWN
     members = set(alternatives(left)) | set(alternatives(right))
@@ -115,7 +123,7 @@ def infer(value):
     if value is None:
         return NULL
     if type(value) is bool:
-        return BOOL
+        return Type("Bool", literal=value)
     if isinstance(value, (int, float, Decimal)):
         return NUMBER
     if isinstance(value, str):

@@ -1,0 +1,2 @@
+#!ibl edition=2
+[try] { [self:read]{path:f"${폴더}/nope.csv"} } [catch] { return {code:$error.code, message:$error.message} }

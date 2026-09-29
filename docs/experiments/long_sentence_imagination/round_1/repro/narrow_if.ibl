@@ -1,0 +1,3 @@
+#!ibl edition=2
+$rows = [{a:null},{a:3}]
+$rows >> [table:each] { [if:$it.a == null] { return "-" }; return text($it.a) }

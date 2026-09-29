@@ -790,6 +790,11 @@ def _execute(tool_input: dict, context) -> str:
                 return json.dumps({"success": True, "text": content, "blocks": [],
                                    "structured_data": parsed, "path": path}, ensure_ascii=False,
                                   default=str)
+            data_format = (tool_input.get("format") or os.path.splitext(path)[1].lstrip(".")).lower()
+            if tool_input.get("blocks") and data_format in {"csv", "tsv"} and not ranged and not truncated:
+                data = _file_io.delimited_data(content, "\t" if data_format == "tsv" else ",")
+                return json.dumps({"success": True, "text": content, "blocks": [],
+                                   "structured_data": data, "path": path}, ensure_ascii=False)
             if tool_input.get("blocks"):
                 from doc_ir import markdown_to_blocks
                 parts = markdown_to_blocks(content)
@@ -1442,7 +1447,8 @@ def _execute(tool_input: dict, context) -> str:
             failure = {"success": False, "error": str(e), "error_type": error_type,
                        "errno": getattr(e, "errno", None)}
             if isinstance(e, FileNotFoundError):
-                failure.update(path=getattr(e, "filename", None), base_path=str(project_path),
+                failure.update(error=f"파일을 찾을 수 없습니다: {getattr(e, 'filename', None)}",
+                               path=getattr(e, "filename", None), base_path=str(project_path),
                                hint="상대경로는 base_path 기준입니다. 도구가 반환한 절대경로를 그대로 사용하고 경로 접두사를 덧붙이지 마세요.")
             return json.dumps(failure, ensure_ascii=False)
         return f"Error: {str(e)}"

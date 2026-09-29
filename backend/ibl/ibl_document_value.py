@@ -1,6 +1,6 @@
 """Explicit document adapter shared by owner and member file boundaries.
 
-Text and blocks are stable fields; data retains the entire reader payload,
+Text and blocks are stable fields; data retains format-specific values,
 including tables, sheets, images, ranges and extraction metadata.
 """
 from ibl_v2_ir import Fault
@@ -18,7 +18,11 @@ def document_value(raw):
         raise Fault("DOCUMENT_SHAPE", "문서 읽기의 text/blocks 계약이 맞지 않습니다.", kind="protocol")
     if not all(isinstance(v, dict) for v in blocks):
         raise Fault("DOCUMENT_SHAPE", "문서 블록은 Record 목록이어야 합니다.", kind="protocol")
-    data = raw.get("structured_data", raw)
+    data = (raw["structured_data"] if "structured_data" in raw else
+            {k: v for k, v in raw.items()
+             if k not in {"success", "text", "message", "blocks", "items", "count", "path"}})
+    if "structured_data" not in raw and raw.get("items") and not blocks:
+        data["items"] = raw["items"]
     if isinstance(data, list):
         data = {"items": data, "count": len(data)}
     return {"text": text, "blocks": blocks, "data": data}

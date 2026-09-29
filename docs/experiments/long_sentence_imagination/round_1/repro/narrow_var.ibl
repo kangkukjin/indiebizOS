@@ -1,0 +1,3 @@
+#!ibl edition=2
+$rows = [{a:null},{a:3}]
+$rows >> [table:each] { $v = $it.a; return $v == null ? "-" : f"${v}원" }

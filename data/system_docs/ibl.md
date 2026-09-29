@@ -47,7 +47,7 @@ return $결과
 `check.functions`와 함수 `describe`의 계약은 같은 컴파일러가 만든다. 입력·반환·필수 인자 외에
 `pipe_input`·`default_expressions`·`effects`·`actions`·`source_hash`를 제공한다.
 효과와 도구 목록은 함수별 전이적 가능 범위이며, 다른 함수의 효과를 섞지 않는다.
-실행 시 타입 검사 수는 표시한 일부 진단 수와 구분해 `guards_total`로 전달한다.
+실행 시 타입 검사 수는 `guards_total`로 전달한다. 성공한 `check`의 정보 진단은 `runtime_checks`에 요약하며, 전체 위치·호출 경로는 `guards_ref.read_args`를 `read_result`로 조회한다. 확정 오류는 계속 본문에 표시한다.
 
 ## 값·식
 
@@ -100,7 +100,7 @@ Callable은 실행 내부 값이며 일반 JSON이나 외부 결과 값으로 �
 ### 공통 값 연산 (2026-09-27)
 
 식은 같은 함수 계약과 평가기를 사용한다. 문자열 함수는 Text를 받으며 숫자·Bool의
-변환은 `text()`, 구조의 문자열화는 `json()`으로 명시한다. null을 몰래 문자열로 바꾸지 않는다.
+변환은 `text()`, 구조의 문자열화는 `json()`으로 명시한다. null을 몰래 문자열로 바꾸지 않는다. `== null`·`!= null` 뒤 삼항·if·조기 반환과 논리식은 해당 경로의 타입을 좁힌다. Bool 판별 필드가 있는 성공·실패 레코드도 filter의 람다 조건 뒤 해당 가지로 좁힌다. 보간 안에서는 `len(row.items)`와 `len($row.items)` 모두 같은 변수 참조다.
 기존 저장 compute/reduce 식은 호환 입력 변환 뒤 같은 평가기를 쓰며 옛 변환 의미를 보존한다.
 
 | 함수 | 인자와 결과 |

@@ -9,6 +9,7 @@ from pathlib import Path
 import copy
 from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches, record_fields
 from ibl_v2_parser import parse
+from ibl_v2_narrow import narrow
 from ibl_v2_expr import BUILTINS
 from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
                              assigned_names, location, access_type, HINTS)
@@ -364,7 +365,10 @@ class Compiler:
         if kind in ("binary", "unary"):
             self.pure(node)
             op = d["op"]
-            values = [sub(d["value"])] if kind == "unary" else [sub(d["left"]), sub(d["right"])]
+            right_env = (narrow(env, d["left"], op in ("and", "&&"))
+                         if kind == "binary" and op in ("and", "&&", "or", "||") else env)
+            values = ([sub(d["value"])] if kind == "unary"
+                      else [sub(d["left"]), sub(d["right"], right_env)])
             if op in ("and", "or", "&&", "||", "!", "not"):
                 for t in values:
                     self.need(node, t, BOOL)
@@ -395,7 +399,8 @@ class Compiler:
             # 결과 타입은 두 가지의 합이다(73회차 G73-1 언어 개정).
             self.pure(node)
             self.need(d["condition"], sub(d["condition"]), BOOL)
-            return join(sub(d["yes"]), sub(d["no"]))
+            return join(sub(d["yes"], narrow(env, d["condition"])),
+                        sub(d["no"], narrow(env, d["condition"], False)))
         if kind == "builtin":
             if d["name"] not in BUILTINS:
                 from common.expression_ops import unknown_builtin_message
@@ -565,7 +570,7 @@ class Compiler:
         if kind == "if":
             self.pure(d["value"])
             self.need(node, sub(d["value"]), BOOL)
-            a, b = env.copy(), env.copy()
+            a, b = narrow(env, d["value"]), narrow(env, d["value"], False)
             ta, tb = sub(d["body"], a), sub(d["otherwise"], b)
             self.merge_continuations(env, [(d["body"], a), (d["otherwise"], b)])
             return join(ta, tb)

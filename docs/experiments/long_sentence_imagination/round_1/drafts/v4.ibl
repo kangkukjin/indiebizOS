@@ -1,0 +1,100 @@
+#!ibl edition=2
+# 긴문장 상상훈련 1회차 — 워크숍 견적 3곳 비교 보고서 (수정 3: 견적 읽기 실패 수집·합계 표 추가 — 변형 대응)
+# 입력(inputs): 폴더, 업체([{vendor,file,format}]), 요구파일, 출력
+
+[def:수량]($요구,$인원) {
+  return $요구.qty_rule == "per_head" ? $인원 : $요구.qty_rule == "per_bus45" ? ($인원 + 44) // 45 : $요구.qty
+}
+
+[def:CSV행]($본문) {
+  $줄 = split(strip($본문), "\n")
+  $줄[1:] >> [table:each] {
+    $칸 = split($it, ",")
+    return {item:$칸[0], price:($칸[1] == "" ? null : number($칸[1])), note:(len($칸) > 2 ? $칸[2] : "")}
+  }
+}
+
+[def:견적읽기]($업체,$폴더) {
+  $문서 = [self:read]{path:f"${폴더}/${업체.file}"}
+  [if:$업체.format == "csv"] { return {vendor:$업체.vendor, ok:true, lines:[fn:CSV행]{본문:$문서.text}} }
+  [else] {
+    $행 = $문서.data.lines >> [table:each] {
+      return {item:$it.name, price:get($it,"price",null), note:get($it,"memo","")}
+    }
+    return {vendor:$업체.vendor, ok:true, lines:$행}
+  }
+}
+
+[def:업체평가]($견적,$요구목록,$인원) {
+  $행 = $요구목록 >> [table:each] {
+    $요구 = $it
+    $수 = [fn:수량]{요구:$요구,인원:$인원}
+    $맞음 = $견적.lines >> [table:filter]{where:($l)=>$l.item == $요구.item}
+    [if:len($맞음) == 0] {
+      return {item:$요구.item, required:$요구.required, qty:$수, status:"미제시", amount:null, note:""}
+    }
+    $l = $맞음[0]
+    [if:$l.price == null] {
+      return {item:$요구.item, required:$요구.required, qty:$수, status:"가격 없음", amount:null, note:$l.note}
+    }
+    return {item:$요구.item, required:$요구.required, qty:$수, status:"가격 있음", amount:$l.price * $수, note:$l.note}
+  }
+  $필수 = $행 >> [table:filter]{where:($r)=>$r.required}
+  $필수빈칸 = $필수 >> [table:filter]{where:($r)=>$r.amount == null}
+  $필수합 = reduce($필수, 0, ($s,$r)=>$s + ($r.amount == null ? 0 : $r.amount))
+  $전체합 = reduce($행, 0, ($s,$r)=>$s + ($r.amount == null ? 0 : $r.amount))
+  return {vendor:$견적.vendor, lines:$행, required_total:$필수합, total_with_optional:$전체합,
+          complete:len($필수빈칸) == 0, missing:$필수빈칸 >> [table:each]{ return $it.item }}
+}
+
+[def:추천]($평가,$예산) {
+  $후보 = $평가 >> [table:filter]{where:($e)=>$e.complete and $e.required_total <= $예산}
+  [if:len($후보) == 0] { return {pick:null, label:"없음", reason:"필수 항목 가격이 모두 있고 예산 안인 업체 없음"} }
+  $정렬 = $후보 >> [table:sort]{by:"required_total"}
+  return {pick:$정렬[0].vendor, label:$정렬[0].vendor, reason:f"필수 합계 ${정렬[0].required_total}원, 예산 ${예산}원 이내"}
+}
+
+[def:보고서]($평가,$추천,$요구,$인원,$실패) {
+  $표 = $평가 >> [table:each] {
+    $e = $it
+    $칸 = $e.lines >> [table:each] {
+      $금액 = $it.amount == null ? "-" : json($it.amount)
+      return f"| ${e.vendor} | ${it.item} | ${it.qty} | ${it.status} | ${금액} | ${it.note} |"
+    }
+    return join("\n", $칸)
+  }
+  $합계 = $평가 >> [table:each] {
+    $상태 = $it.complete ? "필수 전부 가격 있음" : "필수 가격 빠짐"
+    return f"| ${it.vendor} | ${it.required_total} | ${it.total_with_optional} | ${상태} |"
+  }
+  $실패줄 = $실패 >> [table:each] { return f"- ${it.vendor}: 견적서를 읽지 못함 — 비교에서 제외, 재송부 요청" }
+  $질문 = $평가 >> [table:filter]{where:($e)=>not $e.complete} >> [table:each] {
+    $빠짐 = join(", ", $it.missing)
+    return f"- ${it.vendor}: ${빠짐} 가격 확인 필요"
+  }
+  return join("\n", [
+    f"# ${요구.event} 견적 비교 (인원 ${인원}명, 예산 ${요구.budget}원)",
+    "", "| 업체 | 항목 | 수량 | 상태 | 금액 | 비고 |", "|---|---|---|---|---|---|",
+    join("\n", $표), "", "## 업체별 합계(필수만 / 선택 포함, 가격 빠진 항목은 합계에 없음)",
+    "| 업체 | 필수 합계 | 선택 포함 | 상태 |", "|---|---|---|---|", join("\n", $합계), "",
+    f"추천: ${추천.label} — ${추천.reason}", "", "## 확인할 질문", join("\n", $질문 + $실패줄)
+  ])
+}
+
+$요구 = [self:read]{path:f"${폴더}/${요구파일}"}
+$요구값 = $요구.data
+$인원 = $요구값.headcount
+$읽기 = $업체 >> [table:each]{parallel:3,on_error:"collect"} { [fn:견적읽기]{업체:$it,폴더:$폴더} }
+$견적들 = $업체 >> [table:each] {
+  [if:is_ok($읽기[$i])] { return unwrap($읽기[$i]) }
+  [else] { return {vendor:$it.vendor, ok:false, error:error_of($읽기[$i]).message, lines:[]} }
+}
+$읽힘 = $견적들 >> [table:filter]{where:($v)=>$v.ok}
+$실패 = $견적들 >> [table:filter]{where:($v)=>not $v.ok} >> [table:each] { return {vendor:$it.vendor, error:$it.error} }
+$평가 = $읽힘 >> [table:each] { [fn:업체평가]{견적:$it,요구목록:$요구값.items,인원:$인원} }
+$추천 = [fn:추천]{평가:$평가,예산:$요구값.budget}
+$본문 = [fn:보고서]{평가:$평가,추천:$추천,요구:$요구값,인원:$인원,실패:$실패}
+$저장 = [self:write]{path:$출력,content:$본문}
+$확인 = [self:read]{path:$출력}
+return {pick:$추천.pick, totals:$평가 >> [table:each]{ return {vendor:$it.vendor,required_total:$it.required_total,complete:$it.complete} },
+        saved:$저장.path, verified:$확인.text == $본문, unread:$실패, all_sources_read:len($실패) == 0}

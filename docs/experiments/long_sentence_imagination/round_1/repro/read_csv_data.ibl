@@ -1,0 +1,3 @@
+#!ibl edition=2
+$c = [self:read]{path:f"${폴더}/vendor_A.csv"}
+return {data:$c.data, blocks:len($c.blocks)}

@@ -42,7 +42,8 @@ CONTINUATION = {"&", ">>", "??", "?"}
 
 
 class Parser:
-    def __init__(self, source, offset=0):
+    def __init__(self, source, offset=0, *, interpolation=False):
+        self.interpolation = interpolation
         self.source = source
         raw = [Token(m[0], m.start() + offset, m.end() + offset, m.lastgroup)
                for m in TOKEN.finditer(source) if m.lastgroup not in ("space", "comment")]
@@ -281,7 +282,7 @@ class Parser:
             return value
         if token.kind == "name":
             self.pop()
-            return self.node("builtin", start, name=text)
+            return self.node("ref" if self.interpolation and self.t.text != "(" else "builtin", start, name=text)
         self.fail(f"식을 읽을 수 없습니다: {text}")
 
     def format_text(self, token):
@@ -322,12 +323,9 @@ class Parser:
                     depth -= 1
                 cursor += 1
             if depth:
-                self.fail("보간의 닫는 }가 없습니다.")
+                self.fail("보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.")
             source = raw[begin:cursor - 1]
-            # `${name.field}` is the one documented shorthand for a Ref.
-            if re.match(r"^[^\W\d]\w*(?:\.|\[|$)", source) and source not in ("true", "false", "null"):
-                source = "$" + source
-            parser = Parser(source, token.start + prefix + begin)
+            parser = Parser(source, token.start + prefix + begin, interpolation=True)
             value = parser.expr()
             parser.pop("<eof>")
             parts.append(value)

@@ -260,6 +260,7 @@
     "ibl/ibl_v2_expr",
     "ibl/ibl_v2_ir",
     "ibl/ibl_v2_learning",
+    "ibl/ibl_v2_narrow",
     "ibl/ibl_v2_parser",
     "ibl/ibl_v2_preflight",
     "ibl/ibl_v2_runtime",
@@ -496,8 +497,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 421,
-    "engine": 395,
+    "total": 422,
+    "engine": 396,
     "blocklist": 26
   }
 }

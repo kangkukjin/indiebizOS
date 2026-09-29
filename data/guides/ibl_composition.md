@@ -11,7 +11,7 @@
 기존 관용구가 적합하면 그 자리에 연결한다. 저장은 실행 후 반복 사용 가치가 확인된 정의를 남기는 선택이다.
 이 순서는 코드 설계 절차이며 매번 장문 설명이나 단계별 모델 호출을 요구하지 않는다.
 
-1. 입력·반환·출처·완료 조건을 정한다. 실제 액션 계약은 `execute_ibl(code="",describe=["node:action"])`으로 조회한다. 이미 작성한 코드와 `describe`를 함께 주면 계약 조회가 성공한 뒤 코드를 한 번 실행하고 `descriptions`를 덧붙인다. `check:true`이면 검사만 한다. 기존 결과 조회인 `read_result`는 실행·계약 조회와 섞지 않는다.
+1. 입력·반환·출처·완료 조건을 정한다. 실제 액션 계약은 `execute_ibl(code="",describe=["node:action"])`으로 조회한다(한 번에 1~6개). `describe`와 코드를 함께 주면 조회 성공 후 한 번 실행하고 `descriptions`를 덧붙인다. `check:true`는 검사만, `read_result`는 단독 조회다.
 2. 변수는 값이다. 목록은 `.items/.count`로 감싸지 않고 그대로 전달하며 길이는 `len`으로 구한다.
    Record를 반환하는 도구에만 계약에 맞게 `.items/.text` 등을 사용한다.
 3. 독립 실행은 `A & B`, 값 전달은 `A >> B`, 여러 곳에서 쓸 값은 `$이름=A`다. `&`·`>>`·`??`로 시작하는 줄은 앞 식의 계속이다.
@@ -407,9 +407,9 @@ return {complete:len($미완료)==0,checked:len($확인),missing:$미완료,chec
 실행 봉투의 `success:true`와 이 프로그램의 `value.complete:false`는 동시에 성립할 수 있다.
 앞은 검사 프로그램의 실행, 뒤는 명시 조건의 달성 여부다. 실행 종료·응답 생성만으로 사용자 목표 달성을 주장하지 않는다.
 
-`self:read`는 확장자로 텍스트·PDF·Office를 구분하며 `.text`, `.blocks`, `.data`를 반환한다.
-PDF의 `pages`·`tables`, XLSX의 `sheet`·`max_rows`를 현재 문법에서 지정한다.
-표와 시트 등 형식별 결과는 `.data.table`, `.data.sheets`처럼 읽고 부분 추출 표지도 확인한다.
+`self:read`는 확장자/`format`에 따라 `.text`·`.blocks`·`.data`를 반환한다.
+JSON 전체 읽기는 `.data`(배열은 `.data.items`), CSV/TSV는 `.data.items`·`.data.table`(문자열 셀)을 쓴다.
+표·시트는 `.data.table`·`.data.sheets`로 읽는다. 범위·절단 읽기는 텍스트이며 부분 추출 표지를 확인한다. 파일 부재는 `NOT_FOUND`다.
 회원 AI도 같은 문법을 사용하며, 회원 기기에서 받은 자료와 정의만 사용한다.
 
 최종 응답을 받기 전에 연결이 끊겼다면 기존 HTTP 티켓 recover의 `progress.resume` 또는

@@ -27,7 +27,7 @@ def test_missing_file_is_tool_failure_with_original_cause(tmp_path):
     result = handle_request({"edition": 2, "code": '[self:read]{path:"missing.txt"}'}, str(tmp_path))
     assert not result["success"]
     fault = result["diagnostic"]
-    assert (fault["code"], fault["kind"]) == ("TOOL", "runtime")
+    assert (fault["code"], fault["kind"]) == ("NOT_FOUND", "runtime")
     assert fault["details"]["error_type"] == "not_found"
     assert fault["details"]["errno"] == errno.ENOENT
     assert fault["details"]["base_path"] == str(tmp_path)
@@ -40,7 +40,7 @@ def test_parallel_missing_read_preserves_other_branch(tmp_path):
         '[self:read]{path:"present.txt"} & [self:read]{path:"missing.txt"}'}, str(tmp_path))
     assert not result["success"] and not result["source_complete"]
     assert result["diagnostic"]["partial"][0]["text"] == "실제 자료"
-    assert result["diagnostic"]["code"] == "TOOL"
+    assert result["diagnostic"]["code"] == "NOT_FOUND"
 
 
 def test_permission_read_cannot_be_swallowed_as_empty(tmp_path, monkeypatch):
@@ -121,7 +121,7 @@ def test_check_with_describe_never_executes_and_failure_is_preserved(tmp_path):
     assert result["ok"] and result["executed"] is False
     assert not (tmp_path / "outputs/no.txt").exists()
     failed = request(tmp_path, code='[self:read]{path:"missing.txt"}', describe=["self:read"])
-    assert failed["success"] is False and failed["diagnostic"]["code"] == "TOOL"
+    assert failed["success"] is False and failed["diagnostic"]["code"] == "NOT_FOUND"
     assert failed["descriptions"][0]["action"] == "self:read"
     assert request(tmp_path, code="", describe=["self:read"])["executed"] is False
 

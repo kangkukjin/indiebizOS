@@ -58,7 +58,9 @@ def test_legacy_function_reuses_original_semantics_and_returns_envelope(memory):
     assert result['success'] and result['value'] == [{'id': '007'}], result
     checked = handle_request({'edition': 2, 'code': '[fn:예전앞부분]{목록:[],개수:1}', 'check': True})
     assert checked['status'] == 'incomplete'
-    assert any(g.get('boundary') == 'legacy-function/1' for g in checked['guards'])
+    from model_result_view import read_result
+    guards = json.loads(read_result(checked['guards_ref']['read_args'])['text'])
+    assert any(g.get('boundary') == 'legacy-function/1' for g in guards)
 
 
 def test_legacy_pipe_receiver_survives_bridge_and_rejects_collision(memory):

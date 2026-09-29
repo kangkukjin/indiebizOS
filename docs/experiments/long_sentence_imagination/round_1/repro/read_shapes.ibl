@@ -1,0 +1,4 @@
+#!ibl edition=2
+$c = [self:read]{path:f"${폴더}/vendor_A.csv"}
+$j = [self:read]{path:f"${폴더}/vendor_B.json"}
+return {csv_keys:keys($c), csv_data_keys:keys($c.data), json_data_keys:keys($j.data), json_text_len:len($j.text)}

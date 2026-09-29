@@ -781,6 +781,22 @@
             "type": "string",
             "description": "self:body 파라미터"
           },
+          "view": {
+            "type": "string",
+            "description": "self:body 파라미터"
+          },
+          "source_ref": {
+            "type": "string",
+            "description": "self:body 파라미터"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "self:body 파라미터"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "self:body 파라미터"
+          },
           "commit": {
             "type": "string",
             "description": "self:body 파라미터"

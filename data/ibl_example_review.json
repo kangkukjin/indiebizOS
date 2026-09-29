@@ -770,19 +770,19 @@
   },
   "self:body": {
    "fields": {
-    "description": "4e0ae43e9438",
-    "target_description": "5295714129c9",
+    "description": "3f0facd9c544",
+    "target_description": "c1d465367999",
     "implementation": "aa3d0cf24c77",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "ce52d0d0db64",
-    "ops": "ae6f4491e5cc",
+    "params": "a075bd15031b",
+    "ops": "ff032f73c4f7",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "194a8e43b8b4"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-30",
    "examples": 27
   },
   "self:business": {

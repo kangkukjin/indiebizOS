@@ -478,3 +478,23 @@ def inspect_trace_document(root, store_id, name):
                 raise ReadFault("forbidden", "response_not_approved")
         return result("supervision", status="ok", bytes=size)
     return guarded("supervision", read)
+
+
+def read_trace_response_link(root, store_id):
+    """응답 원문 위치만 읽는다. 사건 전 페이지를 모델이 읽어야 찾는 우회를 없앤다."""
+    from trace_read import ReadFault, guarded, result, safe_child
+
+    def read():
+        path = safe_child(trace_directory(root, store_id), "response.json")
+        if path.stat().st_size > 128 * 1024:
+            raise ReadFault("malformed", "invalid_response_manifest")
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        version = manifest.get("version") if isinstance(manifest, dict) else None
+        if type(version) is not int or version < 1:
+            raise ReadFault("malformed", "invalid_response_manifest")
+        name = f"response-v{version}.txt"
+        availability = inspect_trace_document(root, store_id, name)
+        return result("supervision_response", [{"name": name, "status": availability["status"],
+                                                "reason": availability.get("reason")}])
+
+    return guarded("supervision_response", read)

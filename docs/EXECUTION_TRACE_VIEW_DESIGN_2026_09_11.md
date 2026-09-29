@@ -137,7 +137,7 @@ trajectory와 write JSONL의 명시적 run/event_seq가 같으면 한 사건의 
 
 ## 10. 다른 세션에 넘길 요청
 
-> 정본 `/Users/kangkukjin/Desktop/AI/indiebizOS`의 AGENTS.md와 이 문서를 읽고 L0→L1→L2 순서로 구현하라. 원장을 물리적으로 합치거나 새 이벤트 DB를 만들지 말고, 기존 trajectory와 출처별 원장을 한 작업 기준으로 연결하는 읽기 서비스를 만들어라. 실패/빈 값/부분성/권한/비용 중복을 구분하고 원문·검수·CAS·복구 계약을 보존하라. 실제 코드의 최신 소비처를 재확인하고, 새 브랜치/clone 없이 정본 main에 검토 가능한 묶음별로 커밋하라. 이 문서에 검증과 남은 조건을 기록하라.
+> 정본 `indiebizOS` 저장소의 AGENTS.md와 이 문서를 읽고 L0→L1→L2 순서로 구현하라. 원장을 물리적으로 합치거나 새 이벤트 DB를 만들지 말고, 기존 trajectory와 출처별 원장을 한 작업 기준으로 연결하는 읽기 서비스를 만들어라. 실패/빈 값/부분성/권한/비용 중복을 구분하고 원문·검수·CAS·복구 계약을 보존하라. 실제 코드의 최신 소비처를 재확인하고, 새 브랜치/clone 없이 정본 main에 검토 가능한 묶음별로 커밋하라. 이 문서에 검증과 남은 조건을 기록하라.
 
 ## 11. L0 — 확인된 reader·신원 지도 (2026-09-11)
 
@@ -181,7 +181,7 @@ trajectory와 write JSONL의 명시적 run/event_seq가 같으면 한 사건의 
 
 ## 14. 최종 검증 결과 (2026-09-11)
 
-정본 `/Users/kangkukjin/Desktop/AI/indiebizOS` main 반영:
+정본 `indiebizOS` 저장소 main 반영:
 
 | 묶음 | 확인한 커밋 | 결과 |
 |---|---|---|
@@ -196,3 +196,29 @@ trajectory와 write JSONL의 명시적 run/event_seq가 같으면 한 사건의 
 - `build_ibl_nodes.py`/Android 몸 번들을 재생성했고, 커밋 관문의 파생물·층·1500줄·모듈 그림자·이벤트 루프·동시성·단일 시험 러너·값 의미론 검사가 전부 통과했다. `git diff --check`도 통과했다.
 - 기존 IBL `[self:body]{op:"trajectory"}`의 `items/total/truncated` 및 앞뒤 사건 추출 계약을 확인했다(`system_essentials/body_ops.py:324`). 이 호환 표면을 유지하고, scope·cursor·원문 권한을 받는 새 읽기 계약은 같은 주행기록의 HTTP 하위 경로로 제공한다. 새 IBL 낱말/파라미터를 추가하지 않았다.
 - 복제본·새 브랜치를 만들지 않았고 원장 스키마/물리 저장 구조를 바꾸지 않았다. 기존 다른 작업의 `docs/SYSTEM_REFLECTION_2026_09_11.md` 미추적 파일은 건드리지 않았다.
+
+
+## 15. IBL 조회 연결 (2026-09-30, 에피소드 4169)
+
+최근 실행을 분석하는 턴이 자기 자신을 선택하고 DB 파일·스키마를 찾아 돌아가던 경로를
+기존 `[self:body]{op:"trajectory"}` 안에서 닫았다. 식별자 없는 events/trace는 최근 시작
+순서의 **종료된 실사용 실행**을 선택한다. 주행기록 UI는 진행 중 기록을 계속 표시하며,
+진행 중 실행의 명시 ID 조회도 유지한다. 종료는 목표 달성 판정이 아니다.
+
+`view:"episodes"`의 작은 목록에서 ID를 고르고 `view:"trace"`로 기존 ExecutionTrace의
+상태·사용량·근거를 읽는다. 사건은 items로 반환한다. 첫 페이지에 에피소드 로그와 저장된
+검수 응답의 문서 참조를 제공해, 응답 위치를 찾기 위한 전 사건 재열람을 없앴다.
+`view:"document"`는 같은 ID와 발급된 참조로 기존 원문 읽기를 호출한다. 원문 승인·해시,
+참조의 실행 귀속, 커서 만료·범위, 기록 누락·부분성 계약을 유지한다.
+별도 DB·기억·새 IBL 액션은 추가하지 않는다. 회원 사전에는 self:body를 공개하지 않는다.
+
+생산자/소유자: episode_logger의 종료 필터, supervision_store의 응답 위치 조회,
+execution_trace의 문서 링크. 소비자: system_essentials/body_ops와 기존 주행기록 표면.
+교재: body.md·가이드 색인·패키지 어휘 계약. 기존 self:body 용례 27건은 git 조회·각인
+문형이어서 변경된 기본 실행 선택의 영향을 받지 않음을 확인했다.
+종료 목록과 최근 종료 실행 조회 문형 2건을 `add_examples_batch`로 해마에 시딩했다.
+
+검증은 `test_episode4169_recall.py`와 기존 trajectory·통합 조회·회원/어휘 경계를 사용한다.
+실제 4168 원장에서 첫 페이지의 참조로 로그 20,205자와 응답 5,470자의 원문 위치·읽기를
+확인했다. 실제 에이전트의 새 분석 턴에서 시간·전체 토큰이 얼마나 줄었는지는 미측정이며,
+17라운드를 특정 횟수로 줄였다는 효과 수치로 환산하지 않는다. 검사 결과는 changelog에 남긴다.

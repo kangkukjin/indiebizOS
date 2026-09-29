@@ -1141,16 +1141,21 @@ def get_episode_list(limit: int = 20, include_test: bool = False):
         return []
 
 
-def get_episode_journal(limit: int = 30, include_test: bool = False):
+def get_episode_journal(limit: int = 30, include_test: bool = False, *,
+                        completed_only: bool = False):
     """주행기록계 — 분석 가능한(전체 로그 보존) 에피소드를 요약 지표와 함께 반환.
 
     episode_log(전체 로그, 최근 MAX_EPISODES 개 cap) LEFT JOIN episode_summary(지표, 영구)로
     각 주행의 시간·에이전트·요청·해마점수·판단·평가결과·라운드·소요를 한 줄에 담는다.
     분석 스위치가 쓰는 목록이라 log 가 남아있는 episode_log 기준(요약만 남은 옛 주행 제외).
+    completed_only는 LIMIT 전에 종료 행만 고른다. 종료는 목표 달성 판정이 아니다.
     """
     conn = None
     try:
         conn = _get_db()
+        filters = [] if include_test else [USAGE_ONLY.replace('source', 'e.source')]
+        if completed_only:
+            filters.append("e.ended_at IS NOT NULL")
         rows = conn.execute(
             f"""SELECT e.id, e.run_id, e.started_at, e.ended_at, e.agent,
                       SUBSTR(e.user_message, 1, 120) as user_message,
@@ -1159,7 +1164,7 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
                       s.execution_rounds, s.evaluation_result
                FROM episode_log e
                LEFT JOIN episode_summary s ON s.episode_id = e.id
-               {'' if include_test else 'WHERE ' + USAGE_ONLY.replace('source', 'e.source')}
+               {'WHERE ' + ' AND '.join(filters) if filters else ''}
                ORDER BY e.id DESC LIMIT ?""",
             (limit,)
         ).fetchall()

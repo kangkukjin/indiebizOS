@@ -130,7 +130,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: '2026-09-29', impl: "7e10ebd55be56927"}
+        path_audited: {at: '2026-09-30', impl: "89163937206e6165"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -142,7 +142,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: '2026-09-29', impl: "7e10ebd55be56927"}
+        path_audited: {at: '2026-09-30', impl: "89163937206e6165"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -659,9 +659,9 @@ nodes:
         # 낱말이 없다(push 부재 = 원격 URL 이 몸 코드에 존재할 자리 자체가 없음 — 이식성 계명).
         side_effect: true    # 각인 op 보유 — 통화(returns)와 안전은 다른 축 (others:board 선례)
         fixture: '[self:body]{days: 7, limit: 10}'
-        description: 내 몸의 변화·실행 이력 회상 + 각인(commit). git 변화, 런타임 쓰기, 한 run의 요청→IBL→검증→부작용 trajectory(hash/ref)를 읽고, 수리를 마친 경로를 원장에 기록한다. 집계는 table:groupby.
+        description: 내 몸의 변화·실행 이력 회상 + 각인(commit). 최근 에피소드 분석은 trajectory의 view=episodes로 종료 목록, trace로 통합 기록, document로 로그·응답 근거를 읽는다. git 변화·런타임 쓰기와 수리 각인도 담당한다.
         group: system
-        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 포함) / log: 커밋 단위 이력 / file: 한 파일의 일생(path 필수) / writes: 런타임 쓰기 원장(관문 통과분만) / trajectory: 한 실행의 request·model·IBL·validation·side-effect 순번 원장(run_id·episode_id·task_id 중 하나, 없으면 최근 episode; 원문 대신 hash/ref) / diff: 실제 바뀐 줄 / commit: 각인 — message·paths 필수(전부-커밋 굴절 없음), 임시 인덱스로 공유 인덱스 불가침, pre-commit 관문 통과 필요, 저자=클론의 git config. limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
+        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 포함) / log: 커밋 단위 이력 / file: 한 파일의 일생(path 필수) / writes: 런타임 쓰기 원장(관문 통과분만) / trajectory: view=events(기본)는 핵심 사건(hash/ref), 식별자(run_id·episode_id·task_id 중 하나) 없으면 최근 종료된 실사용 실행. view=episodes는 종료 목록(limit 기본 10·상한 100). view=trace는 episode_id의 통합 기록과 원문 source_ref(limit 기본 5·상한 100, next_cursor로 계속). view=document는 같은 episode_id와 source_ref로 로그·응답 근거 읽기(offset 기본 0, limit 문자 기본·상한 12000). 페이지/원문 재조회에는 반환된 episode_id를 고정. 종료는 달성 판정이 아니다 / diff: 실제 바뀐 줄 / commit: 각인 — message·paths 필수, 임시 인덱스로 공유 인덱스 불가침, pre-commit 관문 통과 필요. events와 git 조회 limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
         target_key: op
         router: handler
         tool: body_op
@@ -674,6 +674,10 @@ nodes:
           run_id: string     # trajectory 전용 — 셋 중 하나만 (2026-08-29 구현-읽기 감사 상환).
           episode_id: integer  # trajectory 전용.
           task_id: string    # trajectory 전용.
+          view: string      # trajectory: events / episodes / trace / document.
+          source_ref: string # trajectory document: 통합 조회가 발급한 원문 참조.
+          cursor: string    # trajectory trace/document: 이전 페이지의 next_cursor.
+          offset: integer   # trajectory document: 문자 오프셋.
           commit: string     # diff 전용 — 한 커밋의 변경.
           ref: string        # diff 전용 — ref..HEAD 구간.
         ops:
@@ -697,7 +701,7 @@ nodes:
             log: 커밋 단위 이력 — 커밋·시각·요지·파일수
             file: 한 파일의 일생 — 생성·수정·이동 이력 (path 필수, --follow)
             writes: 런타임 쓰기 원장 — 관문 통과 쓰기의 행위자·작업 (전수 아님)
-            trajectory: 한 실행의 핵심 사건 — request·model·IBL·validation·side-effect 순서(hash/ref, 원문 아님)
+            trajectory: 실행 기록 — events 핵심 사건, episodes 종료 목록, trace 통합 기록·원문 참조, document 원문 읽기
             diff: 실제 바뀐 줄 — 미커밋 작업분(기본)·commit·ref..HEAD, 파일별 본문
             commit: 각인 — 지정한 경로만 원장에 기록 (message·paths 필수, 관문 통과 필요)
         keywords:
@@ -708,6 +712,8 @@ nodes:
         - 파일 이력
         - 커밋
         - body
+        - 에피소드
+        - 실행 기록
         - history
         guides:
         - body.md
@@ -823,7 +829,7 @@ nodes:
             value_path: /value
           nondeterministic: true
         member_transform: script_ops:member_script
-        path_audited: {at: '2026-09-29', impl: "7e10ebd55be56927"}
+        path_audited: {at: '2026-09-30', impl: "89163937206e6165"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

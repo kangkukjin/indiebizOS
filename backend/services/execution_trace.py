@@ -13,7 +13,8 @@ from conversation_db import read_task_trace, read_task_result
 from episode_logger import read_trajectory_page, read_episode_text, read_trace_store_links
 from execution_trace_scope import ScopeResolver, TraceAccess, observe_runtime
 from pursuit_ledger import read_trace_events as read_pursuit_events, read_trace_text as read_pursuit_text
-from supervision_store import read_trace_events as read_supervision_events, read_trace_document, inspect_trace_document
+from supervision_store import (read_trace_events as read_supervision_events, read_trace_document,
+                               inspect_trace_document, read_trace_response_link)
 from trace_read import ReadFault, fingerprint, guarded, result, safe_child, stamp
 from write_ledger import read_trace_page as read_writes
 
@@ -303,6 +304,13 @@ class ExecutionTrace:
                 if ep.get("parent_run_id"):
                     links["parents"].append({"run_id": ep["parent_run_id"], "relationship": "explicit"})
                 links["documents"].append({"label": f"episode {ep['id']} log", "source_ref": reference("episode", ep["id"])})
+            for store_id in stores:
+                response_link = read_trace_response_link(self.resolver.supervision, store_id)
+                # 응답 없는 EXECUTE 작업은 정상이다. 원문 읽기의 승인·해시 검사는 그대로 유지한다.
+                for row in response_link["rows"]:
+                    links["documents"].append({"label": "supervision response", "status": row["status"],
+                        "reason": row.get("reason"),
+                        "source_ref": reference("supervision", row["name"], store_id=store_id)})
             links["children"] = [{**r, "relationship": "explicit"} for r in task_source["rows"] if r.get("parent_task_id") == ident["task_id"]]
             for binding in resolved["bindings"]:
                 for field in ("input", "response"):

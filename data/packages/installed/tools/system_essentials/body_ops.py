@@ -333,13 +333,86 @@ def op_writes(tool_input):
             **_selection_scope(total, len(rows), tool_input.get("limit"), limit), "text": text}
 
 
+def _trace_failure(message):
+    return {"success": False, "message": message}
+
+
+def _read_trajectory_view(params, root):
+    """종료 목록에서 ID를 고른 뒤 같은 ID에 묶인 통합 기록·원문을 읽는다."""
+    import sqlite3
+    from episode_logger import get_episode_journal
+
+    view = params.get("view")
+    if view not in {"episodes", "trace", "document"}:
+        return _trace_failure("view는 events(기본)·episodes(종료 목록)·trace(통합 기록)·document(원문)입니다.")
+    if params.get("run_id") or params.get("task_id"):
+        return _trace_failure("이 view는 episode_id로 지정하세요. run_id/task_id 사건 조회는 view: events입니다.")
+    if view == "episodes" and any(params.get(k) is not None for k in ("episode_id", "cursor", "source_ref", "offset")):
+        return _trace_failure("view: episodes는 식별자·cursor·source_ref·offset 없이 최근 종료 목록을 조회합니다.")
+    if view == "trace" and (params.get("source_ref") is not None or params.get("offset") is not None):
+        return _trace_failure("원문 source_ref·offset은 view: document에서 사용하세요.")
+    default, maximum = (10, 100) if view == "episodes" else (5, 100) if view == "trace" else (12000, 12000)
+    limit = params.get("limit", default)
+    if type(limit) is not int or not 1 <= limit <= maximum:
+        return _trace_failure(f"{view}의 limit은 1~{maximum} 정수입니다.")
+    episode_id = params.get("episode_id")
+    if episode_id is not None and (type(episode_id) is not int or episode_id < 1):
+        return _trace_failure("episode_id는 1 이상의 정수입니다.")
+    # 최신 행은 다음 호출 사이에 바뀔 수 있다. 커서/원문 참조는 처음 고른 ID에 고정한다.
+    if (view == "document" or params.get("cursor")) and episode_id is None:
+        return _trace_failure("원문·다음 페이지는 처음 반환된 episode_id를 명시하세요.")
+    if view == "document" and not params.get("source_ref"):
+        return _trace_failure("trace의 links.documents 또는 links.evidence에 있는 source_ref를 지정하세요.")
+    try:
+        if view == "episodes":
+            rows = get_episode_journal(limit + 1, completed_only=True)
+            more = len(rows) > limit
+            rows = [{**row, "episode_id": row["id"],
+                     "trace_args": {"op": "trajectory", "view": "trace", "episode_id": row["id"]}}
+                    for row in rows[:limit]]
+            from common.currency import bounded_selection
+            return {"success": True, "items": rows, "count": len(rows), "has_more": more,
+                    **bounded_selection(params.get("limit"), limit, len(rows), more),
+                    "text": "최근 시작 순서의 종료된 실사용 실행. 종료와 목표 달성은 별개이며 평가값을 확인하세요."}
+        if episode_id is None:
+            latest = get_episode_journal(1, completed_only=True)
+            if not latest:
+                return {"success": True, "items": [], "count": 0,
+                        "text": "회상할 종료된 실사용 episode가 없습니다."}
+            episode_id = latest[0]["id"]
+        if not root:
+            return _trace_failure("이 몸의 저장소 경로를 찾을 수 없습니다.")
+        from execution_trace import ExecutionTrace
+        from execution_trace_scope import TraceAccess
+        service = ExecutionTrace(root)
+        # self:body는 로컬 몸 원장 권한이다. 기존 서비스의 경로·참조·신원 검증을 유지한다.
+        access = TraceAccess(None, True)
+        if view == "trace":
+            result = service.query(access, episode_id=episode_id, limit=limit, cursor=params.get("cursor"))
+            items = result.pop("events", [])
+        else:
+            result = service.document(access, params["source_ref"], episode_id=episode_id,
+                                      offset=params.get("offset", 0), limit=limit, cursor=params.get("cursor"))
+            items = [{"episode_id": episode_id, "text": result["text"],
+                      "chars": result.get("chars"), "offset": result.get("offset"),
+                      "next_offset": result.get("next_offset")}] if "text" in result else []
+        success = result.get("status") in {"ok", "empty"}
+        return {**result, "success": success, "episode_id": episode_id, "items": items}
+    except (OSError, ValueError, TypeError, KeyError, sqlite3.Error) as exc:
+        return _trace_failure(f"실행 기록을 조회할 수 없습니다: {exc}")
+
+
 def op_trajectory(tool_input):
     """한 실행의 기계용 핵심 사건을 회상한다.
 
-    식별자는 run_id / episode_id / task_id 중 하나. 없으면 최근 실사용 episode 한 건을
-    고른다. episode memory 를 대체하지 않으며 request·IBL·검증 원문도 복제하지 않는다 —
-    data 에는 hash/ref/길이와 부작용 경로만 있다.
+    기본 events는 핵심 사건, episodes는 종료 목록, trace/document는 기존 통합 조회와
+    원문 읽기다. 식별자가 없으면 최근 종료된 실사용 episode를 고른다.
+    events의 data에는 hash/ref/길이와 부작용 경로만 있다.
     """
+    if tool_input.get("view", "events") != "events":
+        return _read_trajectory_view(tool_input, _repo_root())
+    if tool_input.get("cursor") or tool_input.get("source_ref"):
+        return {"success": False, "message": "cursor/source_ref는 view: trace/document에서 사용하세요."}
     notes = []
     limit = _clamp(tool_input, "limit", _DEFAULT_LIMIT, _MAX_LIMIT, notes)
     run_id = str(tool_input.get("run_id") or "").strip()
@@ -384,10 +457,10 @@ def op_trajectory(tool_input):
         events = get_trajectory(run_id=run_id)
         selected = run_id
     else:
-        latest = get_episode_journal(1)
+        latest = get_episode_journal(1, completed_only=True)
         if not latest:
             return {"success": True, "items": [], "total": 0, "truncated": False,  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
-                    "text": "회상할 최근 실사용 episode가 없습니다."}
+                    "text": "회상할 종료된 실사용 episode가 없습니다. 진행 중 실행은 식별자로 지정하세요."}
         ep = latest[0]
         episode_id = ep.get("id")
         run_id = ep.get("run_id") or ""
@@ -396,7 +469,8 @@ def op_trajectory(tool_input):
             task_id = detail.get("task_id") or ""
             run_id = trajectory_run_id(task_id) if task_id else ""
         events = get_trajectory(episode_id=episode_id)
-        selected = f"최근 episode {episode_id}"
+        task_id = ep.get("task_id") or task_id
+        selected = f"최근 종료 episode {episode_id}"
 
     total = len(events)
     truncated = total > limit
@@ -415,7 +489,9 @@ def op_trajectory(tool_input):
     return {"success": True, "items": events, "total": total,
             "truncated": truncated, **_selection_scope(total, len(events), tool_input.get("limit"), limit),  # truncation-scope: bounded — _selection_scope가 명시 limit·기본 상한을 구분
             "run_id": run_id, "episode_id": episode_id,
-            "task_id": task_id, "text": text}
+            "task_id": task_id, "text": text,
+            "trace_args": {"op": "trajectory", "view": "trace", "episode_id": episode_id}
+            if episode_id is not None else None}
 
 
 def op_file(tool_input):

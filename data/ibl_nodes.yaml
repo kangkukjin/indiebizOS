@@ -5702,8 +5702,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-09-29'
-          impl: 7e10ebd55be56927
+          at: '2026-09-30'
+          impl: 89163937206e6165
         target_key: path
         aliases:
           offset:
@@ -5715,8 +5715,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-09-29'
-          impl: 7e10ebd55be56927
+          at: '2026-09-30'
+          impl: 89163937206e6165
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6300,9 +6300,9 @@ nodes:
         returns: items
         side_effect: true
         fixture: '[self:body]{days: 7, limit: 10}'
-        description: 내 몸의 변화·실행 이력 회상 + 각인(commit). git 변화, 런타임 쓰기, 한 run의 요청→IBL→검증→부작용 trajectory(hash/ref)를 읽고, 수리를 마친 경로를 원장에 기록한다. 집계는 table:groupby.
+        description: 내 몸의 변화·실행 이력 회상 + 각인(commit). 최근 에피소드 분석은 trajectory의 view=episodes로 종료 목록, trace로 통합 기록, document로 로그·응답 근거를 읽는다. git 변화·런타임 쓰기와 수리 각인도 담당한다.
         group: system
-        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 포함) / log: 커밋 단위 이력 / file: 한 파일의 일생(path 필수) / writes: 런타임 쓰기 원장(관문 통과분만) / trajectory: 한 실행의 request·model·IBL·validation·side-effect 순번 원장(run_id·episode_id·task_id 중 하나, 없으면 최근 episode; 원문 대신 hash/ref) / diff: 실제 바뀐 줄 / commit: 각인 — message·paths 필수(전부-커밋 굴절 없음), 임시 인덱스로 공유 인덱스 불가침, pre-commit 관문 통과 필요, 저자=클론의 git config. limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
+        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 포함) / log: 커밋 단위 이력 / file: 한 파일의 일생(path 필수) / writes: 런타임 쓰기 원장(관문 통과분만) / trajectory: view=events(기본)는 핵심 사건(hash/ref), 식별자(run_id·episode_id·task_id 중 하나) 없으면 최근 종료된 실사용 실행. view=episodes는 종료 목록(limit 기본 10·상한 100). view=trace는 episode_id의 통합 기록과 원문 source_ref(limit 기본 5·상한 100, next_cursor로 계속). view=document는 같은 episode_id와 source_ref로 로그·응답 근거 읽기(offset 기본 0, limit 문자 기본·상한 12000). 페이지/원문 재조회에는 반환된 episode_id를 고정. 종료는 달성 판정이 아니다 / diff: 실제 바뀐 줄 / commit: 각인 — message·paths 필수, 임시 인덱스로 공유 인덱스 불가침, pre-commit 관문 통과 필요. events와 git 조회 limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
         target_key: op
         router: handler
         tool: body_op
@@ -6315,6 +6315,10 @@ nodes:
           run_id: string
           episode_id: integer
           task_id: string
+          view: string
+          source_ref: string
+          cursor: string
+          offset: integer
           commit: string
           ref: string
         ops:
@@ -6337,7 +6341,7 @@ nodes:
             log: 커밋 단위 이력 — 커밋·시각·요지·파일수
             file: 한 파일의 일생 — 생성·수정·이동 이력 (path 필수, --follow)
             writes: 런타임 쓰기 원장 — 관문 통과 쓰기의 행위자·작업 (전수 아님)
-            trajectory: 한 실행의 핵심 사건 — request·model·IBL·validation·side-effect 순서(hash/ref, 원문 아님)
+            trajectory: 실행 기록 — events 핵심 사건, episodes 종료 목록, trace 통합 기록·원문 참조, document 원문 읽기
             diff: 실제 바뀐 줄 — 미커밋 작업분(기본)·commit·ref..HEAD, 파일별 본문
             commit: 각인 — 지정한 경로만 원장에 기록 (message·paths 필수, 관문 통과 필요)
         keywords:
@@ -6348,6 +6352,8 @@ nodes:
         - 파일 이력
         - 커밋
         - body
+        - 에피소드
+        - 실행 기록
         - history
         guides:
         - body.md
@@ -6472,8 +6478,8 @@ nodes:
           nondeterministic: true
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-09-29'
-          impl: 7e10ebd55be56927
+          at: '2026-09-30'
+          impl: 89163937206e6165
         pipe_in: true
         lands_on: body
         limb_op:

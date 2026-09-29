@@ -1707,7 +1707,7 @@
     {
       "id": "body",
       "name": "몸 변화 회상([self:body]) 가이드",
-      "description": "내 몸(저장소) 파일이 언제 생기고 바뀌고 옮겨졌는지 git 원장에서 회상. changes/log/file 3 op, table 조합, 미추적·limit 신고 함정.",
+      "description": "최근 에피소드의 종료 목록·실행 로그·응답을 분석하거나, 몸의 git 변화·런타임 쓰기를 회상하고 수리를 각인할 때.",
       "keywords": [
         "몸",
         "변화 이력",
@@ -1718,6 +1718,8 @@
         "이동",
         "body",
         "history",
+        "에피소드",
+        "실행 기록",
         "git"
       ],
       "file": "body.md",

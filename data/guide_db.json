@@ -1622,8 +1622,6 @@
       "keywords": [
         "긴문장",
         "긴 문장",
-        "문장",
-        "IBL",
         "긴문장 상상훈련",
         "긴 문장 상상훈련",
         "긴문장 상상 훈련",
@@ -1635,7 +1633,13 @@
         "long program training"
       ],
       "file": "long_sentence_imagination.md",
-      "topic": "상상훈련"
+      "topic": "상상훈련",
+      "aliases": [
+        "긴문장 상상훈련",
+        "긴 문장 상상훈련",
+        "긴문장 상상 훈련",
+        "긴 IBL 상상훈련"
+      ]
     },
     {
       "id": "imagination_action",

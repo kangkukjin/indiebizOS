@@ -251,7 +251,18 @@
     "self:finance@query_type=거래": "[self:finance]{op: \"query\", query_type: \"거래\", days: 90}",
     "self:finance@query_type=수입": "[self:finance]{op: \"query\", query_type: \"수입\", days: 90}",
     "self:finance@query_type=지출": "[self:finance]{op: \"query\", query_type: \"지출\", days: 90}",
+    "sense:paper@source=arxiv": "[sense:paper]{op: \"search\", query: \"attention\", source: \"arxiv\", limit: 3}",
+    "sense:paper@source=nanet": "[sense:paper]{op: \"search\", query: \"인공지능\", source: \"nanet\", limit: 3}",
+    "sense:paper@source=pubmed": "[sense:paper]{op: \"search\", query: \"sleep\", source: \"pubmed\", limit: 3}",
+    "sense:paper@source=semantic": "[sense:paper]{op: \"search\", query: \"attention\", source: \"semantic\", limit: 3}",
     "sense:realty@source=naver": "[sense:realty]{op: \"query\", source: \"naver\", region: \"평택 비전동\", limit: 5}",
-    "sense:realty@source=zigbang": "[sense:realty]{op: \"query\", source: \"zigbang\", region: \"평택 죽백동\", limit: 5}"
+    "sense:realty@source=zigbang": "[sense:realty]{op: \"query\", source: \"zigbang\", region: \"평택 죽백동\", limit: 5}",
+    "sense:search@source=gnews": "[sense:search]{query: \"climate policy\", source: \"gnews\", limit: 3}",
+    "sense:search@source=guardian": "[sense:search]{query: \"climate policy\", source: \"guardian\", limit: 3}",
+    "sense:search@source=hn": "[sense:search]{query: \"rust\", source: \"hn\", limit: 3}",
+    "sense:search@source=naver": "[sense:search]{query: \"기후 정책\", source: \"naver\", limit: 3}",
+    "sense:used@source=danggeun": "[sense:used]{source: \"danggeun\", query: \"자전거\", region: \"역삼동\", limit: 5}",
+    "sense:used@source=joongna": "[sense:used]{source: \"joongna\", query: \"자전거\", limit: 5}",
+    "sense:used@source=naver": "[sense:used]{source: \"naver\", query: \"자전거\", limit: 5}"
   }
 }

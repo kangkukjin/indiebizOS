@@ -70,7 +70,7 @@ def fetch_month_paged(base_url: str, service_key: str, region_code: str, year_mo
     except (TypeError, ValueError):
         limit = HARD_CAP_PER_MONTH
     limit = max(1, limit)
-    page_size = min(PAGE_SIZE, limit)
+    page_size = min(PAGE_SIZE, limit)  # clamp-ok: 쪽 크기일 뿐 — 달 전체는 totalCount 까지 페이징하고 상한은 truncated 로 신고
     rows, total, page, error = [], 0, 1, None
     try:
         while True:
@@ -119,7 +119,7 @@ def fetch_range(base_url: str, service_key: str, region_code: str, months: list,
     errors = {YYYYMM: 사유} — 비어 있지 않으면 그 달들은 불완전(truncated 도 True)."""
     def one(m):
         return fetch_month_paged(base_url, service_key, region_code, m, cap, parse_item)
-    workers = max(1, min(MAX_WORKERS, len(months)))
+    workers = max(1, min(MAX_WORKERS, len(months)))  # clamp-ok: 병렬 작업자 수 — 모든 달을 수집한다(요청량 아님)
     with ThreadPoolExecutor(max_workers=workers) as ex:
         results = list(ex.map(one, months))  # 예외(401/403)는 여기서 다시 올라온다
     rows, months_with_data, total, truncated, errors = [], [], 0, False, {}

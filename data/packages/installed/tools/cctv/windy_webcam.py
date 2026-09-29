@@ -118,6 +118,29 @@ def _format_webcam(webcam: dict, ref_lat: float = None, ref_lon: float = None) -
     return result
 
 
+WINDY_MAX_RADIUS_KM = 250   # Windy Webcams API nearby 반경 스펙 상한
+
+
+def _radius(radius_km):
+    try:
+        v = max(1.0, min(float(radius_km), WINDY_MAX_RADIUS_KM))  # clamp-ok: 호출자가 _radius_clamp 로 신고
+    except (TypeError, ValueError):
+        return 50
+    return int(v) if v.is_integer() else v
+
+
+def _radius_clamp(requested, used) -> dict:
+    """반경 상한 조정의 봉투 표지(clamped·requested·applied)."""
+    try:
+        changed = float(requested) != float(used)
+    except (TypeError, ValueError):
+        changed = True
+    if not changed:
+        return {}
+    return {"clamped": True, "requested": {"radius_km": requested}, "applied": {"radius_km": used},
+            "clamp_message": f"반경 {requested}km → Windy 상한 {used}km 로 조정했습니다."}
+
+
 def search_webcam(lat: float = None, lon: float = None, radius_km: float = 50,
                   category: str = None, country: str = None, limit: int = 10) -> str:
     """전세계 웹캠 검색"""
@@ -126,9 +149,10 @@ def search_webcam(lat: float = None, lon: float = None, radius_km: float = 50,
             "limit": min(limit, 50)  # clamp-ok: Windy Webcams API 스펙 상한(limit 50)
         }
 
-        # 위치 기반 검색
+        # 위치 기반 검색 — 반경은 Windy 스펙 상한(250km)까지, 넘으면 봉투에 신고(침묵 클램프 관문)
+        radius_used = _radius(radius_km)
         if lat is not None and lon is not None:
-            params["nearby"] = f"{lat},{lon},{min(radius_km, 250)}"
+            params["nearby"] = f"{lat},{lon},{radius_used}"
 
         # 카테고리 필터
         if category:
@@ -155,7 +179,8 @@ def search_webcam(lat: float = None, lon: float = None, radius_km: float = 50,
             source="windy_webcams",
             count=len(formatted),
             total=data.get("total", len(formatted)),
-            webcams=formatted
+            webcams=formatted,
+            **(_radius_clamp(radius_km, radius_used) if lat is not None and lon is not None else {})
         )
     except Exception as e:
         if hasattr(e, "failure"):   # 요청 한도 = RATE_LIMITED(77회차 F77-2)
@@ -166,8 +191,9 @@ def search_webcam(lat: float = None, lon: float = None, radius_km: float = 50,
 def get_nearby_webcam(lat: float, lon: float, radius_km: float = 50, count: int = 3) -> str:
     """특정 좌표에서 가장 가까운 웹캠 찾기"""
     try:
+        radius_used = _radius(radius_km)
         params = {
-            "nearby": f"{lat},{lon},{min(radius_km, 250)}",
+            "nearby": f"{lat},{lon},{radius_used}",
             "limit": min(count, 50)  # clamp-ok: Windy Webcams API 스펙 상한(limit 50)
         }
 
@@ -183,7 +209,8 @@ def get_nearby_webcam(lat: float, lon: float, radius_km: float = 50, count: int 
             source="windy_webcams",
             count=len(formatted),
             search_location={"lat": lat, "lon": lon},
-            items=formatted  # 단일 통화 = native 웹캠 dict([sense:cctv]{op:webcam})
+            items=formatted,  # 단일 통화 = native 웹캠 dict([sense:cctv]{op:webcam})
+            **_radius_clamp(radius_km, radius_used)
         )
     except Exception as e:
         if hasattr(e, "failure"):   # 요청 한도 = RATE_LIMITED(77회차 F77-2)

@@ -57,7 +57,7 @@ nodes:
         target_description: 검색어 (강남 파스타 등). x(경도)/y(위도)/radius로 좌표 주변 검색, limit(기본 30, 최대 45), enrich:false면 블로그 근거 생략(빠름).
         router: handler
         tool: search_restaurants
-        implementation: Kakao(페이지네이션 15×3=45) + Naver Local 듀얼 검색, 가게명 정규화로 중복 병합. 상위 12곳은 네이버 블로그 검색(/v1/search/blog.json)으로 blog_count·reason(가게명 등장 글 제목만) 병렬 부착 후 언급순 정렬. url=카카오 place.map.kakao.com(평점/리뷰 페이지).
+        implementation: Kakao(페이지네이션 15×3=45) + Naver Local 듀얼 검색, 가게명 정규화로 중복 병합. 상위 12곳은 네이버 블로그 검색(/v1/search/blog.json, 검색어 = 행 주소의 시·군·구 + 가게명 — 주소 없는 행은 검색 좌표의 역지오코딩 시·군·구)으로 blog_count·reason(가게명 등장 글 제목만) 병렬 부착 후 언급순 정렬. url=카카오 place.map.kakao.com(평점/리뷰 페이지).
         target_key: query
         app:
           icon: 🍴
@@ -457,7 +457,7 @@ tool_json:
 
       - lat=37.26, lon=127.03
 
-      - days=3 (예보 일수, 기본 3, 최대 7)'
+      - days=3 (예보 일수, 기본 3, 최대 16 — 넘기면 16일로 조정하고 clamped·requested 로 신고)'
     input_schema:
       type: object
       properties:
@@ -472,7 +472,7 @@ tool_json:
           description: 경도
         days:
           type: integer
-          description: 예보 일수 (기본 3, 최대 7)
+          description: 예보 일수 (기본 3, 최대 16 — 넘기면 16일로 조정하고 clamped·requested 로 신고)
   - name: search_restaurants
     description: '한국 맛집/음식점을 검색합니다 (카카오+네이버 통합, 블로그 후기 추천 근거 포함).
 
@@ -625,7 +625,7 @@ tool_json:
           description: 회피 옵션 (toll, motorway 등)
         alternatives:
           type: boolean
-          description: 대안 경로 제공
+          description: 대안 경로 제공 (driving — 응답 alternatives 에 대안별 distance_km·duration_min·toll·priority 요약, 지도 경로선은 첫 경로)
         summary:
           type: boolean
           description: 요약만 반환 (지도 생략)
@@ -652,8 +652,8 @@ tool_json:
 
       - 한 곳: query로 장소명 검색 (또는 lat, lng로 직접 좌표 지정)
 
-      - 여러 곳: markers에 나열 — {name, lat, lng} 또는 장소명 문자열/{name}만 넣어도 자동
-      좌표 변환된다
+      - 여러 곳: markers에 나열 — {name, lat, lng}(별칭 gpsY/gpsX·latitude/longitude·y/x 도 좌표) 또는
+      장소명 문자열/{name}만 넣어도 자동 좌표 변환된다(좌표가 없을 때만)
 
       - 지도 제목은 title (좌표로 풀지 않는다). markers가 있으면 query는 제목으로만 쓰인다
       — ''광교 코스'' 같은 이름표를 query에 넣으면 엉뚱한 상점으로 검색되던 사고 방지'
@@ -674,8 +674,9 @@ tool_json:
           description: 줌 레벨 (기본 15, 1-18)
         markers:
           type: array
-          description: 마커 목록 [{name, lat, lng}, ...]. 좌표 없이 장소명 문자열이나 {name}만
-            넣어도 자동 좌표 변환된다
+          description: 마커 목록 [{name, lat, lng}, ...]. 좌표 칸 별칭(lat/lon·latitude/longitude·gpsY/gpsX·y/x)도
+            좌표로 읽는다 — 다른 액션의 items 를 그대로 넘기면 된다. 유효한 좌표가 없을 때만 장소명 문자열이나
+            {name}을 카카오 검색으로 좌표 변환한다
         title:
           type: string
           description: '지도 제목 (예: ''광교 코스''). 좌표로 풀지 않는 순수 이름표'

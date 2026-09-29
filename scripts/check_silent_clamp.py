@@ -47,6 +47,12 @@ BASELINE(동결 목록)은 2026-08-24 에 비웠다 — 예외 0. 새 침묵 클
   통과: 함수 본문이 신고한다(`truncated`·`has_more`·`total_count`·`clamped`·`next_offset`) 또는
   그 줄(def 줄 포함)·윗줄에 `# clamp-ok: <사유>`(순위 상위 N·렌더 상한·미라우팅 등).
   대상: data/packages/installed/tools + backend/drivers (IBL 결과를 내는 층).
+
+규칙 1 확장 — 기간·반경과 이름 붙은 상한 (2026-09-29, 상상훈련 79회차 재탐침):
+  `[sense:weather]{days: 10}` 이 `min(days, 7)` 로 7일만 내고 봉투에 표지가 없었다. 형제
+  `[sense:place]` 는 `min(radius, _MAX_RADIUS)` 를 message 문자열에만 적었다. 개수 어휘만 보던
+  규칙이 **기간·반경**(RANGE_NAMES)을 못 봤고, 리터럴만 보던 규칙이 **모듈 상수**(`_MAX_RADIUS = 20000`)를
+  못 봤다. 이제 둘 다 잡는다 — 같은 모듈에서 정수 리터럴로 묶인 이름은 리터럴로 읽는다.
 """
 import ast
 import re
@@ -65,6 +71,13 @@ REQUEST_NAMES = {
     "limit", "count", "num", "top_k", "topk", "max_results", "maxresults",
     "display", "per_page", "page_size", "pagesize", "rows", "max_items",
     "maxitems", "numofrows", "resultcount", "photo_limit", "n_results",
+}
+
+# 기간·반경 어휘 — 개수는 아니지만 "요청한 범위"를 깎으면 같은 틀린 충만함이 된다(79회차).
+# SQL 기본 상한 규칙(규칙 2)에는 넣지 않는다 — 기간 기본값(days=30)은 조회 범위이지 절단이 아니다.
+RANGE_NAMES = {
+    "days", "forecast_days", "max_days", "n_days", "hours", "weeks", "months", "nights",
+    "radius", "radius_m", "radius_km",
 }
 
 # 깎였다는 사실을 알리는 신호 — 이 중 하나가 함수 본문에 있으면 침묵이 아니다.
@@ -129,6 +142,19 @@ def scan_file(path: Path):
     allowed = _allowed_lines(src)
     lines = src.splitlines()
 
+    # 모듈 상수 — `_MAX_RADIUS = 20000` 처럼 정수 리터럴로 묶인 이름은 리터럴과 같다(규칙 1 확장).
+    consts = {}
+    for stmt in tree.body:
+        if (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1
+                and isinstance(stmt.targets[0], ast.Name) and _int_literal(stmt.value) is not None):
+            consts[stmt.targets[0].id] = stmt.value.value
+
+    def _cap(node):
+        lit = _int_literal(node)
+        if lit is None and isinstance(node, ast.Name):
+            lit = consts.get(node.id)
+        return lit
+
     # 함수 범위 → 그 함수가 깎임을 신고하는지
     reporting_ranges = []
     for node in ast.walk(tree):
@@ -147,10 +173,10 @@ def scan_file(path: Path):
                 and node.func.id == "min" and len(node.args) == 2):
             continue
         a, b = node.args
-        lit, other = (_int_literal(a), b) if _int_literal(a) is not None else (_int_literal(b), a)
+        lit, other = (_cap(a), b) if _cap(a) is not None else (_cap(b), a)
         if lit is None or lit < 1:
             continue
-        hit = _names_in(other) & REQUEST_NAMES
+        hit = _names_in(other) & (REQUEST_NAMES | RANGE_NAMES)
         if not hit:
             continue
         if node.lineno in allowed or _reports(node.lineno):

@@ -92,37 +92,69 @@ def _format_date(date_str):
     return date_str
 
 
+class KopisValueError(ValueError):
+    """코드표 밖 값 — 거절 사유·허용 이름·다음 걸음(hint)을 구조로 나른다.
+
+    옛 메시지는 파이썬 dict 를 통째로 덤프했다("허용 이름/코드: {'서울': '11', 'seoul': …}") —
+    별칭·코드가 뒤섞인 60여 항목이라 사람도 모델도 무엇을 넣어야 할지 못 읽었다(79회차 B79-2 재탐침).
+    """
+
+    def __init__(self, message, allowed, hint=None):
+        super().__init__(message)
+        self.allowed = allowed
+        self.hint = hint
+
+
+# 코드표 안내의 단일 소스 — region·genre·status 가 같은 함수로 거절한다(따로 번역하지 않는다).
+_CODE_TABLES = {
+    "region": ("지역", lambda: REGION_CODES,
+               "시·군·구 이름(예 수원·전주)은 KOPIS 지역 코드가 아닙니다 — 시도(예 충북·경기)로 검색한 뒤 "
+               "제목(prfnm)·장소(fcltynm)로 거르세요."),
+    "genre": ("장르", lambda: GENRE_CODES,
+              "세부 장르(예 어린이극)는 코드가 아닙니다 — 상위 장르(예 연극)로 검색한 뒤 제목으로 거르세요."),
+    "status": ("공연상태", lambda: STATUS_CODES, "status 를 생략하면 모든 상태를 포함합니다."),
+}
+
+
+def _names_of(table):
+    """허용 이름 — 코드마다 첫 이름(한글 정본)만. 영문 별칭·숫자 코드는 '별칭' 한 줄로 접는다."""
+    seen, names = set(), []
+    for name, code in table.items():
+        if code not in seen:
+            seen.add(code)
+            names.append(name)
+    return names
+
+
+def _resolve_code(kind, value):
+    """이름·영문 별칭·코드 → KOPIS 코드. 모르는 값은 KopisValueError(허용 이름 목록 + hint)."""
+    if not value:
+        return None
+    label, table_of, hint = _CODE_TABLES[kind]
+    table = table_of()
+    key = value.strip() if isinstance(value, str) else value
+    resolved = table.get(key.lower() if isinstance(key, str) else key, table.get(key, key))
+    if resolved not in table.values():
+        names = _names_of(table)
+        raise KopisValueError(
+            f"알 수 없는 {label}: {value}. 허용 {label}: {', '.join(names)} "
+            f"(영문 별칭·KOPIS 코드도 받음). {hint}", names, hint)
+    return resolved
+
+
 def _resolve_region(region):
     """지역명을 코드로 변환"""
-    if not region:
-        return None
-    region_lower = region.lower() if isinstance(region, str) else region
-    resolved = REGION_CODES.get(region_lower, REGION_CODES.get(region, region))
-    if resolved not in REGION_CODES.values():
-        raise ValueError(f"알 수 없는 지역: {region}. 허용 이름/코드: {REGION_CODES}")
-    return resolved
+    return _resolve_code("region", region)
 
 
 def _resolve_genre(genre):
     """장르명을 코드로 변환"""
-    if not genre:
-        return None
-    genre_lower = genre.lower() if isinstance(genre, str) else genre
-    resolved = GENRE_CODES.get(genre_lower, GENRE_CODES.get(genre, genre))
-    if resolved not in GENRE_CODES.values():
-        raise ValueError(f"알 수 없는 장르: {genre}. 허용 이름/코드: {GENRE_CODES}")
-    return resolved
+    return _resolve_code("genre", genre)
 
 
 def _resolve_status(status):
     """공연상태를 코드로 변환"""
-    if not status:
-        return None
-    status_lower = status.lower() if isinstance(status, str) else status
-    resolved = STATUS_CODES.get(status_lower, STATUS_CODES.get(status, status))
-    if resolved not in STATUS_CODES.values():
-        raise ValueError(f"알 수 없는 공연상태: {status}. 허용 이름/코드: {STATUS_CODES}")
-    return resolved
+    return _resolve_code("status", status)
 
 
 def xml_to_dict(element):

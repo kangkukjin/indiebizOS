@@ -376,7 +376,7 @@ def _naver_index_daily(symbol: str, period: str = "5d", start_date=None, end_dat
                 "volume": int(v),
             })
         return bars
-    except Exception:
+    except Exception:  # empty-ok: 빈 목록 = 호출자 get_stock_price 가 Yahoo 차트로 폴백하고, 둘 다 비면 실패로 올린다
         return []
 
 

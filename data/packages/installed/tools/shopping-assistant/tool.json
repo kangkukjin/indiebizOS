@@ -58,7 +58,7 @@
           },
           "region": {
             "type": "string",
-            "description": "지역 필터 — bunjang=위치 substring(예 \"청주\"), danggeun=동이름(예 \"죽백동\", 그 동네+인근 동 스코프)"
+            "description": "지역 필터 — bunjang=위치 substring 후필터(예 \"청주\", 전국 최신 최대 200행 표본), danggeun=동이름(예 \"죽백동\", 필수 — 그 동네+인근 동 스코프)"
           },
           "limit": {
             "type": "integer",

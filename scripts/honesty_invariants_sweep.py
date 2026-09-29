@@ -14,6 +14,14 @@
      `items: null` 도 위반(빈손은 `[]`). V13-1·F16-2·B19-2 부류. 실패 봉투는 면제(오류 채널이 정본).
   C. 0행 거짓 — ①items:[] 인 성공 봉투의 message 가 오류문으로 시작(0행=성공 계약, `Error:` 금지)
      ②items:[] 인데 success:false 이면서 error 채널이 비어 있음(0행을 실패로 접음). F17·P14 부류.
+  F. 좌표 칸 계약 — 성공 봉투의 items 행이 좌표류 칸(gpsX/gpsY·latitude/longitude·lon·x/y)을 값으로
+     가지면 정본 lat/lng(숫자)도 있어야 한다. location-services 안에서만 지키던 "lat/lng 보장"이 패키지
+     경계에서 끊겨, 전시(culture)의 gpsX/gpsY 를 지도(show_map)가 못 읽고 이름으로 찾다 2/5 를 떨어뜨렸다
+     (79회차 B79-7). 규약이 패키지 주석이 아니라 여기서 모든 생산자에 걸린다. 우주 = fixture + shape_variants.
+  G. 원천 변이 0건 — shape_variants(원천별 실행 예시, 키 node:action@source=값)가 성공 0행을 냈다. 예시는
+     결과가 있어야 하는 입력이라 0행은 원천 드리프트 의심이다(79회차 B79-3: 당근 페이지가 바뀌어 0건 성공).
+     일일 건강 점검은 액션 fixture 만 돌리므로(외부 API 를 매일 더 두드리지 않게) 변이 축의 0건 경보는
+     이 주간 스윕이 맡는다. `empty_notes` 로 미확인을 스스로 말한 봉투도 여기선 경보다 — 사람이 볼 일이다.
   D. (정적·정보) 패키지 핸들러가 실패를 `Error:` **접두 문자열**로 return 하는 자리 수.
      ★부채가 아니다 — system_essentials 계열은 execute()->str 인 **텍스트 계약** 핸들러라
      접두가 곧 실패 규약이고(P1~P19 회귀가 `startswith("Error:")` 를 단언, copy_ops 주석이
@@ -91,6 +99,36 @@ def has_table_shape(env) -> bool:
         isinstance(env.get("rows"), list) and isinstance(env.get("columns"), list))
 
 
+# 좌표 칸 별칭 — show_map(_marker_coords)이 읽는 쌍과 같다. 정본은 lat/lng.
+COORD_ALIAS_PAIRS = (("latitude", "longitude"), ("gpsY", "gpsX"), ("lat", "lon"), ("y", "x"))
+
+
+def _num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def coord_contract_violations(rows) -> list:
+    """좌표류 칸을 값으로 가진 행 중 lat/lng 숫자가 없는 행 번호."""
+    bad = []
+    for i, row in enumerate(rows or []):
+        if not isinstance(row, dict):
+            continue
+        has_alias = any(row.get(a) not in (None, "") and row.get(b) not in (None, "")
+                        for a, b in COORD_ALIAS_PAIRS)
+        if has_alias and not (_num(row.get("lat")) and _num(row.get("lng"))):
+            bad.append(i)
+    return bad
+
+
+def check_variant_empty(name: str, env) -> list:
+    """G. 원천 변이(shape_variants, 키에 `@`) 예시의 성공 0행 = 드리프트 의심."""
+    if "@" not in name or not isinstance(env, dict) or not success_claimed(env) or env.get("items") != []:
+        return []
+    notes = env.get("empty_notes") or []
+    return [("G", "원천 변이 예시가 0행 — 원천 구조·동작 변경 의심"
+             + (f" (empty_notes: {str(notes[0])[:60]})" if notes else ""))]
+
+
 def check_envelope(name: str, declared: str, env) -> list:
     """(불변식, 사유) 목록. 빈 목록 = 정직."""
     out = []
@@ -111,6 +149,11 @@ def check_envelope(name: str, declared: str, env) -> list:
         if not isinstance(env.get("items"), list) and not has_table_shape(env):
             why = "items: null (빈손은 [] 로)" if "items" in env else f"items 키 없음 (키: {sorted(env)[:8]})"
             out.append(("B", f"선언 {declared} 인데 {why}"))
+    # F. 좌표 칸 계약
+    if claimed and isinstance(env, dict) and isinstance(env.get("items"), list):
+        bad = coord_contract_violations(env["items"])
+        if bad:
+            out.append(("F", f"좌표류 칸이 있는데 lat/lng 숫자 없음 — 행 {bad[:5]}"))
     # C. 0행 거짓
     if isinstance(env, dict) and env.get("items") == []:
         if claimed and looks_like_error_text(env.get("message")):
@@ -183,8 +226,9 @@ def main(argv) -> int:
     if not static_only:
         decl, decl_op, default_op, _ = _load_declarations()
         fx = json.load(open(ROOT / "data" / "ibl_fixtures.json", encoding="utf-8"))
-        for name, code in sorted(fx["fixtures"].items()):
-            declared, _lvl = _declared_of(name, decl, decl_op, default_op, code)
+        universe = {**fx["fixtures"], **(fx.get("shape_variants") or {})}   # 변이 축도 같은 불변식
+        for name, code in sorted(universe.items()):
+            declared, _lvl = _declared_of(name.split("@", 1)[0], decl, decl_op, default_op, code)
             resp, err = _try(code)
             probs = [] if err else check_envelope(name, declared, final_of(resp))
             if err is not None or probs:
@@ -198,6 +242,7 @@ def main(argv) -> int:
                 failed.append((name, str(err)[:80]))
                 continue
             checked += 1
+            probs = probs + check_variant_empty(name, final_of(resp))
             for inv, why in probs:
                 violations.append({"name": name, "inv": inv, "why": why})
         # E. 병렬 봉투 — fixture 우주(단일 액션) 밖이라 따로 돈다 (B24-1)
@@ -218,6 +263,8 @@ def main(argv) -> int:
         for inv, label in (("A", "거짓 성공(오류문이 success 봉투에)"),
                            ("B", "통화 부재(선언 items/table 인데 items 없음)"),
                            ("C", "0행 거짓(0행=성공 계약 위반)"),
+                           ("F", "좌표 칸 계약(좌표류 칸이 있으면 lat/lng 숫자)"),
+                           ("G", "원천 변이 0건(shape_variants 예시의 0행 = 드리프트 의심)"),
                            ("E", "병렬 봉투(분기 실패 미신고·전 가지 실패를 성공으로)")):
             rows = [v for v in violations if v["inv"] == inv]
             print(f"\n[{inv}] {label} — {len(rows)}건")

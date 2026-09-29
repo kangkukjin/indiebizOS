@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "get_weather",
-      "description": "날씨 조회 (Open-Meteo, 무료/키불필요). 도시명(한글/영문) 또는 좌표로 현재 날씨 + 예보 조회.\n\n## 사용 예시\n- city='수원' 또는 city='Seoul'\n- lat=37.26, lon=127.03\n- days=3 (예보 일수, 기본 3, 최대 7)",
+      "description": "날씨 조회 (Open-Meteo, 무료/키불필요). 도시명(한글/영문) 또는 좌표로 현재 날씨 + 예보 조회.\n\n## 사용 예시\n- city='수원' 또는 city='Seoul'\n- lat=37.26, lon=127.03\n- days=3 (예보 일수, 기본 3, 최대 16 — 넘기면 16일로 조정하고 clamped·requested 로 신고)",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -25,7 +25,7 @@
           },
           "days": {
             "type": "integer",
-            "description": "예보 일수 (기본 3, 최대 7)"
+            "description": "예보 일수 (기본 3, 최대 16 — 넘기면 16일로 조정하고 clamped·requested 로 신고)"
           }
         }
       }
@@ -153,7 +153,7 @@
           },
           "alternatives": {
             "type": "boolean",
-            "description": "대안 경로 제공"
+            "description": "대안 경로 제공 (driving — 응답 alternatives 에 대안별 distance_km·duration_min·toll·priority 요약, 지도 경로선은 첫 경로)"
           },
           "summary": {
             "type": "boolean",
@@ -176,7 +176,7 @@
     },
     {
       "name": "show_location_map",
-      "description": "특정 위치의 지도를 대화창에 표시합니다.\n\n## 사용 시점\n- 장소 검색 결과 시각화\n- 위치 안내\n- 여러 장소 비교 (markers 사용)\n\n## 사용법\n- 한 곳: query로 장소명 검색 (또는 lat, lng로 직접 좌표 지정)\n- 여러 곳: markers에 나열 — {name, lat, lng} 또는 장소명 문자열/{name}만 넣어도 자동 좌표 변환된다\n- 지도 제목은 title (좌표로 풀지 않는다). markers가 있으면 query는 제목으로만 쓰인다 — '광교 코스' 같은 이름표를 query에 넣으면 엉뚱한 상점으로 검색되던 사고 방지",
+      "description": "특정 위치의 지도를 대화창에 표시합니다.\n\n## 사용 시점\n- 장소 검색 결과 시각화\n- 위치 안내\n- 여러 장소 비교 (markers 사용)\n\n## 사용법\n- 한 곳: query로 장소명 검색 (또는 lat, lng로 직접 좌표 지정)\n- 여러 곳: markers에 나열 — {name, lat, lng}(별칭 gpsY/gpsX·latitude/longitude·y/x 도 좌표) 또는 장소명 문자열/{name}만 넣어도 자동 좌표 변환된다(좌표가 없을 때만)\n- 지도 제목은 title (좌표로 풀지 않는다). markers가 있으면 query는 제목으로만 쓰인다 — '광교 코스' 같은 이름표를 query에 넣으면 엉뚱한 상점으로 검색되던 사고 방지",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -198,7 +198,7 @@
           },
           "markers": {
             "type": "array",
-            "description": "마커 목록 [{name, lat, lng}, ...]. 좌표 없이 장소명 문자열이나 {name}만 넣어도 자동 좌표 변환된다"
+            "description": "마커 목록 [{name, lat, lng}, ...]. 좌표 칸 별칭(lat/lon·latitude/longitude·gpsY/gpsX·y/x)도 좌표로 읽는다 — 다른 액션의 items 를 그대로 넘기면 된다. 유효한 좌표가 없을 때만 장소명 문자열이나 {name}을 카카오 검색으로 좌표 변환한다"
           },
           "title": {
             "type": "string",

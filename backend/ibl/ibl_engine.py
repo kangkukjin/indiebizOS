@@ -603,7 +603,8 @@ def _attach_param_warning(result: Any, warning: Optional[dict]) -> Any:
         try:
             obj = _json.loads(result)
         except Exception:
-            return f"[param_warning] {msg}\n\n" + result
+            from common.currency import decorate_param_warning
+            return decorate_param_warning(result, msg)
         if isinstance(obj, dict) and "param_warning" not in obj:
             obj = {"param_warning": msg, **obj}
             return _json.dumps(obj, ensure_ascii=False)

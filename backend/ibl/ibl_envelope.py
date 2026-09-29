@@ -121,6 +121,10 @@ def classify_currency(raw: Any):
         return ("effect" if obj.get("success") is True else "dict"), obj, None, False
     if isinstance(obj, list):
         return "list", obj, None, False
+    from common.currency import is_plain_failure
+    if is_plain_failure(obj):
+        # 파이프 판정기(is_error_result)와 같은 평문 실패 규약 — 한 벌이어야 건강 기록이 맞다
+        return "error", obj, None, False
     return "text", obj, None, False
 
 

@@ -44,9 +44,10 @@ def is_error_result(result) -> bool:
             return True
         return ("error" in result) and not result.get("success")
     if isinstance(result, str):
-        s = result.lstrip()
-        if s.startswith("Error:") or s.startswith("오류:"):
+        from common.currency import is_plain_failure
+        if is_plain_failure(result):
             return True
+        s = result.lstrip()
         # handler 라우터의 JSON 문자열 — 최상위만 파싱해 dict 규칙 재사용
         if s.startswith("{"):
             try:

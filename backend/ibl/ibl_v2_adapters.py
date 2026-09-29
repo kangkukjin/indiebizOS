@@ -180,9 +180,10 @@ def decode_envelope(raw, adapter, input_values=None):
             prefix = adapter.get("text_success_prefix")
             error_prefixes = tuple(adapter.get("text_error_prefixes", [])) + (
                 _LEGACY_TEXT_ERROR_PREFIXES if adapter.get("protocol") == "legacy-envelope" else ())
-            if prefix and raw.startswith(prefix):
+            from common.currency import is_plain_failure, plain_body
+            if prefix and plain_body(raw).startswith(prefix):
                 raw = {"success": True, "message": raw}
-            elif raw.startswith(error_prefixes):
+            elif error_prefixes and is_plain_failure(raw, error_prefixes):
                 raise Fault("TOOL", raw) from exc
             else:
                 raise Fault("ADAPTER_SHAPE", f"선언된 JSON 실행 봉투가 아닙니다: {raw[:1000]}") from exc

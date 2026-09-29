@@ -29,6 +29,37 @@ import json
 from typing import Any, Iterable
 
 
+# ── 평문 결과의 실패 판정과 머리 장식 — 한 벌 (78·79회차 잔여, 2026-09-29) ──────────
+# 평문 실패 규약(`"Error: …"`·`"오류: …"`)을 파이프 판정기(workflow_verdict)·통화 분류기
+# (ibl_envelope.classify_currency → action_health)·판본 2 어댑터가 제각각 적어 갈라졌다:
+# 분류기는 평문 실패를 "text" 성공으로 적었고, 엔진이 미인식 인자 경고를 평문 **머리**에
+# 붙이면(`_attach_param_warning`) 접두 판정이 전부 성공으로 샜다. 장식을 붙이는 쪽과
+# 읽는 쪽이 같은 함수를 쓴다.
+PLAIN_FAILURE_PREFIXES = ("Error:", "오류:")
+PARAM_WARNING_HEADER = "[param_warning] "
+
+
+def decorate_param_warning(text: str, message: str) -> str:
+    """평문 결과 머리에 인자 경고를 붙인다 — 긴 본문 뒤 경고는 죽은 경고(ep1014)."""
+    return f"{PARAM_WARNING_HEADER}{message}\n\n{text}"
+
+
+def plain_body(text: str) -> str:
+    """엔진이 붙인 머리 장식을 걷은 평문 본문. 장식이 없으면 그대로."""
+    if isinstance(text, str) and text.startswith(PARAM_WARNING_HEADER):
+        head, sep, body = text.partition("\n\n")
+        if sep:
+            return body
+    return text
+
+
+def is_plain_failure(text: Any, prefixes=PLAIN_FAILURE_PREFIXES) -> bool:
+    """평문 실패 규약 판정 — 장식을 걷고 본문 접두로 본다(★휴리스틱, 최상위 평문에만)."""
+    if not isinstance(text, str):
+        return False
+    return plain_body(text).lstrip().startswith(tuple(prefixes))
+
+
 def bounded_selection(requested, boundary, retained, truncated, *, reason="limit"):
     """Distinguish an explicit, fulfilled selection from a default/resource cap.
 

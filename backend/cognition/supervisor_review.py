@@ -30,7 +30,8 @@ def missing_read_observation(name, payload, result):
             try:
                 return errors(json.loads(value))
             except (ValueError, TypeError):
-                return [value] if value.startswith("Error:") else []
+                from common.currency import is_plain_failure
+                return [value] if is_plain_failure(value) else []
         if isinstance(value, list):
             return [e for item in value for e in errors(item)]
         if isinstance(value, dict):

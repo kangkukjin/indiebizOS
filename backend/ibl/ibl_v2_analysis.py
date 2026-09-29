@@ -70,6 +70,12 @@ def constant_value(node, depth=0):
     if node.kind == 'list':
         values = [constant_value(v, depth + 1) for v in node.data['values']]
         return UNRESOLVED if any(v is UNRESOLVED for v in values) else values
+    if node.kind == 'record':
+        # 레코드 리터럴도 관측한다(75회차 후속): 옛 판은 `config:{repeat:"매일"}` 을 미상으로 봐 check 가
+        # 값 검사를 건너뛰었다 — 등록 런타임은 같은 값을 거절했다. 모르는 전개(...$x)가 섞이면 미상.
+        from ibl_v2_ir import record_fields
+        fields = {k: constant_value(v, depth + 1) for k, v in record_fields(node).items()}
+        return UNRESOLVED if any(v is UNRESOLVED for v in fields.values()) else fields
     return UNRESOLVED
 
 

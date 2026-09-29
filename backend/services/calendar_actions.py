@@ -16,6 +16,19 @@ class CalendarActionsMixin:
     """캘린더 액션 실행 메서드를 모아놓은 Mixin 클래스."""
 
     @staticmethod
+    def _failure_signature(message: str) -> str:
+        """같은 실패인지 가르는 서명 — 실행마다 바뀌는 조각(실행 id·로그 파일명·시각·소요 시간)을 지운다.
+
+        75회차 후속: 옛 판은 오류 원문을 그대로 비교했는데, 스크립트 실패 원문에 매번 새 로그 파일명
+        (`…-<uuid>.log`)과 `duration_ms` 가 들어 있어 같은 영구 실패가 매시 "새 실패"로 알림됐다(수리 뒤에도 273통 계속)."""
+        import re
+        sig = re.sub(r"\b[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}\b|\b[0-9a-f]{12,}\b", "<id>", message)
+        sig = re.sub(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?", "<time>", sig)
+        sig = re.sub(r'("?(duration_ms|elapsed(_ms)?|took)"?\s*[:=]\s*)[\d.]+', r"\1<n>", sig)
+        sig = re.sub(r"\b\d+(\.\d+)?\s*(ms|초|s)\b", "<n>", sig)
+        return sig
+
+    @staticmethod
     def _should_notify_result(task, result, now=None):
         """Notify a changed failure immediately; summarize unchanged failures daily."""
         import time
@@ -23,7 +36,7 @@ class CalendarActionsMixin:
         if result.get("success"):
             task.pop("failure_notice", None)
             return True
-        message = str(result.get("error") or "알 수 없는 오류")
+        message = CalendarActionsMixin._failure_signature(str(result.get("error") or "알 수 없는 오류"))
         previous = task.get("failure_notice") or {}
         same = previous.get("error") == message
         repeated = previous.get("repeated", 0) + 1 if same else 1

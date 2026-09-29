@@ -76,7 +76,10 @@ def boolean(value):
 def number(value):
     result = numeric_value(value, preserve_decimal=True)
     if result is None:
-        raise Fault("NUMBER_REQUIRED", "산술에는 관측 가능한 유한 숫자가 필요합니다.")
+        from common.value_semantics import datetime_value
+        hint = (" 날짜 계산은 date_add(날짜, 일수)·date_diff(a, b)·month_end(날짜)로 하세요."
+                if isinstance(value, str) and datetime_value(value) is not None else "")
+        raise Fault("NUMBER_REQUIRED", "산술에는 관측 가능한 유한 숫자가 필요합니다." + hint)
     return result
 
 

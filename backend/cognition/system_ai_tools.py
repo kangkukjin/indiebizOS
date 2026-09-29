@@ -421,7 +421,6 @@ def _execute_manage_events(tool_input: dict, project_path: str = None) -> str:
             if not title:
                 return json.dumps({"success": False, "error": "title은 필수입니다."}, ensure_ascii=False)
 
-            event_date, event_time = _split_date_time(tool_input.get("date"), tool_input.get("time"))
             event_action = tool_input.get("event_action")
             action_params = tool_input.get("action_params")
             repeat = tool_input.get("repeat", "none")
@@ -447,40 +446,33 @@ def _execute_manage_events(tool_input: dict, project_path: str = None) -> str:
                                              "IBL 문장을 실행하려면 do 에 문장을 주세요.")},
                                   ensure_ascii=False)
 
-            # start_time 호환: "2026-03-09T17:44:00" → date + time 자동 분리
-            start_time = tool_input.get("start_time")
-            if start_time and (not event_date or not event_time):
-                try:
-                    from datetime import datetime as _dt
-                    parsed = _dt.fromisoformat(start_time)
-                    if not event_date:
-                        event_date = parsed.strftime("%Y-%m-%d")
-                    if not event_time:
-                        event_time = parsed.strftime("%H:%M")
-                except (ValueError, TypeError):
-                    pass
-
-            # 실행 이벤트 (스케줄)인 경우 date 없이도 허용 (daily, interval 등)
-            if not event_date and not event_action:
-                return json.dumps({"success": False, "error": "date는 필수입니다. (YYYY-MM-DD)"}, ensure_ascii=False)
+            # 인자 → 이벤트 필드는 판본 2 check 와 같은 함수가 판정한다(75회차 후속, calendar_rules).
+            #   start_time·합친 날짜시각 분리, 실행 이벤트의 시각 필수, 지난 1회 실행 거절이 여기 한 곳.
+            from calendar_rules import calendar_request
+            request = calendar_request(tool_input, executable=bool(event_action))
+            if request.get("error"):
+                return json.dumps({"success": False, "error": request["error"]}, ensure_ascii=False)
+            fields = request["fields"]
 
             event = cm.add_event(
                 title=title,
-                event_date=event_date,
+                event_date=fields.get("date"),
                 event_type=tool_input.get("type", "schedule" if event_action else "other"),
-                repeat=repeat,
+                repeat=fields.get("repeat", repeat),
                 description=tool_input.get("description", ""),
-                event_time=event_time,
+                event_time=fields.get("time"),
                 action=event_action,
                 action_params=action_params,
                 enabled=tool_input.get("enabled", True),
-                weekdays=tool_input.get("weekdays"),
-                month=tool_input.get("month"),
-                day=tool_input.get("day"),
-                interval_hours=tool_input.get("interval_hours"),
+                weekdays=fields.get("weekdays"),
+                month=fields.get("month"),
+                day=fields.get("day"),
+                interval_hours=fields.get("interval_hours"),
                 owner_project_id=owner_project_id,
             )
-            return json.dumps({"success": True, "event": event, "message": f"이벤트 '{title}' 추가됨"}, ensure_ascii=False)
+            return json.dumps({"success": True, "event": event, "message": f"이벤트 '{title}' 추가됨",
+                               **({"notice": request["notice"]} if request.get("notice") else {})},
+                              ensure_ascii=False)
 
         elif action == "update":
             event_id = tool_input.get("event_id")
@@ -519,7 +511,11 @@ def _execute_manage_events(tool_input: dict, project_path: str = None) -> str:
                     updates["action"] = _ea
 
             if cm.update_event(event_id, **updates):
-                return json.dumps({"success": True, "message": f"이벤트 '{event_id}' 수정됨"}, ensure_ascii=False)
+                from calendar_rules import recurrence_notice
+                stored = next((e for e in cm.config.get("events", []) if e.get("id") == event_id), {})
+                notice = recurrence_notice(stored)
+                return json.dumps({"success": True, "message": f"이벤트 '{event_id}' 수정됨",
+                                   **({"notice": notice} if notice else {})}, ensure_ascii=False)
             return json.dumps({"success": False, "error": f"이벤트 '{event_id}'를 찾을 수 없습니다."}, ensure_ascii=False)
 
         elif action == "delete":

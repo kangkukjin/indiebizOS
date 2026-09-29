@@ -304,4 +304,37 @@
 
 ## 집행 완료
 
-(수리 턴이 채운다.)
+### 1차 — `1b9a4932`(2026-09-29, 72~76회차 묶음 수리)
+
+B75-1~6·F75-1~4 개별 자리를 닫았다(`calendar_rules` 정규화, 지연 예약 단일 실행기, 판본 2 check 의 `value_validator`·`code_params`,
+since 성공 시 확정·빈 첫 관측 표지, 트리거별 이력 상한, 같은 실패 하루 요약, 교재·시간대). 보고서 끝 **밭 이관 관문 두 개는 세우지 않았다.**
+
+### 2차 — 재탐침·누출 수리·밭 이관 관문 (2026-09-29 후속)
+
+재탐침(격리 저장소에 실제 입구 함수 → 저장 레코드 → `_should_run_task`, 판본 2 compile, 라이브 check·스크래치 등록)으로
+1차 수리 뒤에도 샌 자리를 찾았다. 같은 속의 세 번째가 안 나오도록 판정을 **한 함수**로 모으고 관문으로 묶었다.
+
+| 누출 | 실측 | 뿌리 | 수리 |
+| --- | --- | --- | --- |
+| L1 트리거 cron 좀비 | `0 9 31 2 *`·`0 9 32 * *`·`0 25 * * *`·`70 9 * * *`·`0 9 1 13 *` → "생성 완료"+warning, 캘린더 이벤트 없음(영원히 안 돎) | cron 경로가 `normalize_schedule_config` 를 비켜 감, 트리거를 먼저 저장하고 동기화 실패를 warning 으로 | cron 결과도 정본 검사 · 동기화 실패 시 트리거 되돌림(오류) |
+| L2 시각 없는 실행 예약 | `schedule{repeat:"daily"}`·`manage_events{repeat:"daily", do}`·`interval` 시각 없음 → success, 발화 판정 영원히 False | 정규화가 "실행 이벤트엔 시각 필수"를 몰랐다 | `normalize_schedule_config(executable=)` — action 있는 이벤트는 time 필수 |
+| L3 check↔등록 불일치(B75-4 잔여) | `config:{repeat:"매일"}` check 이슈 0 / 등록 거절. schedule·manage_events 는 입구가 인자를 따로 해석 | ①레코드 리터럴이 `constant_value` 에서 미상 ②check 와 등록이 서로 다른 해석 코드 | `constant_value` 레코드 관측 · `calendar_rules.schedule_request`·`calendar_request` 를 **등록 런타임과 check 가 같이 호출** |
+| L4 같은 실패 매시 알림(F75-2 잔여) | 수리 뒤에도 `스케줄 실행 실패 — 홍보/` 매시 1~3통(09-29 01~14시) | 실패 원문에 실행마다 새 로그 파일명(uuid)·`duration_ms` → 늘 "다른 실패" | `_failure_signature` — 실행 id·시각·소요 시간 지운 서명으로 비교(실이력 5건 → 서명 1) |
+| L5 짧은 달 침묵 건너뜀 | `day:31` 등록이 11-30·2-28 을 건너뛴다는 말 없음 | 보고서 제안 3 미집행 | 등록 응답 `notice`(schedule·manage_events·trigger) |
+| L6 입구 밖 쓰기 | `world_pulse` 가 `evt["enabled"]` 직접 + `cm._save_config()`(잠금 밖), REST add/update 의 ValueError → 500 | 쓰기 입구가 하나라는 규칙이 코드에 없었다 | `update_event` 로 · REST 400 · `remove_goal_schedule` 잠금 |
+| F75-2 뿌리 | 트리거 `AI시대_보고서출처_뉴스갱신` 이 새 일 없이 매시 실패 | `ai_era_news.py` 가 `## 출처` 한 표기·`_verified_rows_` 한 이름만 인정(실제 `## 출처와 조사 한계`·`_verified_날짜.json`) | 판독을 실제 표기로(사용자 승인: 밀린 출처 뉴스 게시) · 가이드 §3-0 에 검증 원장 파일명 명시 |
+
+**밭 이관 관문** `scripts/iblbuild_schedule_rules.py`(build `--check` 배선):
+- 규칙 A(B75-3): 캘린더 이벤트 반복 규칙 키를 쓰는 함수는 `normalized_event` 를 부르는 관리자 입구뿐, 관리자 밖은 이벤트 목록·dict 수정과 `_save_config()` 금지.
+  **수리 이전 트리(`1b9a4932^`)에 대 보니 add_event·update_event(원형)·world_pulse 를 잡았다.** 현재 HEAD 에선 world_pulse 2건.
+- 규칙 B(B75-4): 어휘가 선언한 `value_validator` 마다 check(`_validator_problem`)와 등록 런타임 입구가 같은 공유 함수를 부르고,
+  공유 함수가 읽는 인자 ⊆ check 의 `VALIDATOR_READS`(빠지면 변수 값을 없는 값으로 봐 거짓 빨강). 시각 의존 판정(이미 지난 시각)은 check 에서 뺀다 — 실행 순간의 사실이다.
+
+**G75-1 언어 개정(사용자 채택)**: `date_add(날짜, 일수)`·`date_diff(a, b)`·`month_end(날짜)` — 공통 값 함수 표(`expression_functions.CONTRACTS`) 한 곳 선언,
+ISO 8601 만(수선 없음), 날짜 텍스트 산술(`$d - 1`)은 이 함수를 안내하며 거절. ibl.md·교재 표·compact·trigger.md 갱신. 회원 개방 `self:record` 의존 지문 재감사(순수 계산 — 파일·네트워크 없음).
+V75-1(말일·공휴일)은 후보로 남긴다 — 말일은 `month_end` 로 날짜를 구해 1회 예약하거나 notice 를 보고 판단한다.
+
+**검증**: 신규 회귀 `backend/test_imagination_round75_followup.py`(누출 재현 — 수리 전 HEAD 에서 14 실패, 수리 후 전부 통과 · 입구×규칙 발화 대조 · check↔등록 19쌍 · 날짜 함수).
+관련 회귀 91파일은 HEAD 와 같은 실패 집합(MCP 환경 실패만). 전체 backend 실행의 실패 2건(내장 함수 전수 표에 새 날짜 함수 예시 누락·새 시험 파일 `__main__` 누락)은 둘 다 이 수리의 추가분이 기존 전수 관문에 잡힌 것 — 고친 뒤 재실행 통과. 코퍼스 schedule·trigger·manage_events 127문장 check 판정 불변.
+build `--check`·파일 크기·validate-parity·층·동시성·문서 드리프트·폰 번들 통과. 라이브: check 가 `config:{repeat:"매일"}`·`0 9 31 2 *`·시각 없는 반복을 등록과 같은 문구로 거절,
+`day:31` 등록 notice, **20초 지연 예약을 지우면 발화 0**(scheduler 채널 건강 행·알림 0). 스크래치 `IT75R_*` 이벤트·since 행 삭제, 캘린더 54건 기준선 그대로.

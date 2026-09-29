@@ -336,6 +336,20 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             print(f"[build_ibl_nodes] 사용자 경로 효과 관문 통과 ✓ (읽기 op 의 사용자 위치 쓰기 0 · "
                   f"사유 없는 사용자 위치 삭제 0 · 시작점 미상 {len(uunresolved)})")
 
+        # --- 예약 규칙 관문 (2026-09-29, 75회차 B75-3·B75-4 밭 이관) ---
+        # ① 캘린더 이벤트의 반복 규칙은 normalized_event 를 부르는 관리자 입구에서만 쓴다(B54-8→B75-3 같은 속:
+        #    입구마다 따로 정규화해 "영원히 안 도는 예약"이 성공으로 저장됐다). ② value_validator 마다 판본 2 check 와
+        #    등록 런타임이 같은 공유 판정 함수를 부른다(F54-1→B75-4: check 초록·등록 거절, 등록 성공·발화 0).
+        from iblbuild_schedule_rules import validate_schedule_rules
+        sissues = validate_schedule_rules(data, root)
+        if sissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 예약 규칙 관문 실패: {len(sissues)}건", file=sys.stderr)
+            for issue in sissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 예약 규칙 관문 통과 ✓ (캘린더 규칙 쓰기 = 정규화 입구뿐 · check↔등록 같은 판정 함수)")
+
         # --- 선언 내부 모순 관문 (2026-09-07) ---
         # 산문은 모델이 읽고 타입은 관문이 읽는다. 09-05 수리가 memory keywords 의
         # 저장소·산문만 고치고 타입을 두어, 낱말이 "배열도 받습니다"라고 적어 놓은 채

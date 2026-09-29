@@ -121,20 +121,23 @@ async def create_task(task: TaskCreate):
     if task.repeat not in valid_repeats:
         raise HTTPException(status_code=400, detail=f"반복 유형이 잘못되었습니다. {valid_repeats} 중 하나를 선택하세요.")
 
-    new_task = cm.add_task(
-        name=task.name,
-        description=task.description,
-        time_str=task.time,
-        action=task.action,
-        enabled=task.enabled,
-        repeat=task.repeat,
-        weekdays=task.weekdays,
-        date=task.date,
-        month=task.month,
-        day=task.day,
-        interval_hours=task.interval_hours,
-        action_params=task.action_params
-    )
+    try:
+        new_task = cm.add_task(
+            name=task.name,
+            description=task.description,
+            time_str=task.time,
+            action=task.action,
+            enabled=task.enabled,
+            repeat=task.repeat,
+            weekdays=task.weekdays,
+            date=task.date,
+            month=task.month,
+            day=task.day,
+            interval_hours=task.interval_hours,
+            action_params=task.action_params
+        )
+    except ValueError as exc:  # 반복 규칙 정본 검사(calendar_rules) — 영원히 안 도는 작업은 등록하지 않는다
+        raise HTTPException(status_code=400, detail=str(exc))
     return {"task": new_task}
 
 
@@ -169,7 +172,11 @@ async def update_task(task_id: str, task: TaskUpdate):
     if task.action_params is not None:
         updates["action_params"] = task.action_params
 
-    if cm.update_task(task_id, **updates):
+    try:
+        updated = cm.update_task(task_id, **updates)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if updated:
         return {"status": "updated"}
     raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다.")
 

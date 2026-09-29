@@ -374,6 +374,7 @@ class CalendarManagerBase:
             return value * 24 * 7
         return None
 
+    @_locked
     def remove_goal_schedule(self, goal_id: str) -> bool:
         """특정 goal의 스케줄 이벤트 제거"""
         events = self.config.get("events", [])

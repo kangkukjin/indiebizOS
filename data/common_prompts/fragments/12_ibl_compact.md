@@ -40,7 +40,7 @@ if/try는 반환 프레임을 만들지 않는다. 빈 목록은 정상 값이�
 [if:len($목록)==0]{...}[else]{...}로 빈값을 다룬다. [try]{...}[catch]{...}는 잡을 수 있는 실패를 처리한다.
 문자열 가공: split/replace/strip/upper/lower/contains/join(Text 입력; 변환은 text/json으로 명시).
 목록: unique/union/intersection/difference(순서 보존·기존 동등성), zip/enumerate, any/all(Bool 목록),
-sorted($목록,"키",true), keys/values/entries. 슬라이스 $목록[1:3], 펼침 {**$기본,k:값}(뒤 필드 우선).
+sorted($목록,"키",true), keys/values/entries. 날짜: date_add(날짜,일수)·date_diff(a,b)·month_end(날짜)(ISO 표기). 슬라이스 $목록[1:3], 펼침 {**$기본,k:값}(뒤 필드 우선).
 실제 여러 줄은 삼중 따옴표. assert 조건,"메시지",{상세:값}은 실패 시 ASSERTION_FAILED와 근거를 남긴다.
 각 값의 필드는 has/get으로 확인한다. 필드가 없으면 null로 추측하지 않는다.
 

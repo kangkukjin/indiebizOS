@@ -174,7 +174,9 @@ def arithmetic_numbers(values):
     """IBL 산술은 십진 입력을 유지하고 혼합 float를 그 십진 표기로 맞춘다."""
     numbers = [numeric_value(value, preserve_decimal=True) for value in values]
     if any(number is None for number in numbers):
-        raise ValueError("산술에는 관측 가능한 유한 숫자가 필요합니다.")
+        dated = any(isinstance(v, str) and datetime_value(v) is not None for v in values)
+        raise ValueError("산술에는 관측 가능한 유한 숫자가 필요합니다."
+                         + (" 날짜 계산은 date_add(날짜, 일수)·date_diff(a, b)·month_end(날짜)로 하세요." if dated else ""))
     if any(isinstance(number, Decimal) for number in numbers):
         numbers = [Decimal(str(number)) if isinstance(number, float) else number
                    for number in numbers]

@@ -173,7 +173,7 @@ return {events:$행,new_count:len($행),publish:len($행)>0}
 
 판본 2의 Callable `filter`는 목록을 반환하지만, 기존 `dedup`은 그 목록을 `items`에 담은 Record로 반환한다. **`len($묶음)`은 필드 수**이므로
 행이 0개여도 양수가 될 수 있다. 행 목록을 명시적으로 꺼내서 세고, 보고서·저장 원장·커버리지도
-동일한 `events`에서 만든다. 원장은 `{items:events,count:new_count}`로 저장한다. 도중에 검증
+동일한 `events`에서 만든다. 원장은 `~workspace/outputs/ai_trend_reports/_verified_rows_YYYY-MM-DD.json`에 `{items:events,count:new_count}`로 저장한다(AI시대 뉴스 동기화가 이 이름을 읽는다). 도중에 검증
 판정이나 행을 바꾸면 다시 집계한다. 정상 계수 결과를 단순 재확인하기 위한 별도 호출은 필요 없다.
 
 - `publish:false` → §4-1의 점검 로그를 쓰고 전체 보고서 작성을 종료한다. CHANGED만 있으면 제목을 로그의 `changed`에 남긴다. 다음 전체 보고서의 기준선은 마지막 전체 보고서다.

@@ -49,7 +49,7 @@ def problems(contract, values):
             errors.append(f'{key}: 최소 {contract["minimum"][key]}입니다')
         if key in contract.get('maximum', {}) and not order_matches(compare_order(value, contract['maximum'][key]), '<='):
             errors.append(f'{key}: 최대 {contract["maximum"][key]}입니다')
-        if key in contract.get('nonempty', []) and (not isinstance(value, (str, list)) or not value):
+        if key in contract.get('nonempty', []) and (not isinstance(value, (str, list, dict)) or not value):
             errors.append(f'{key}: 빈 값은 허용하지 않습니다')
     return errors
 

@@ -139,27 +139,13 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
     if not checked.get('runnable'):
         return json.dumps({'success': False, 'error': f"등록할 문장 오류: {checked.get('problem')}"}, ensure_ascii=False)
 
-    # 'at' 통합 파라미터: "2026-03-10 09:00" 또는 "09:00" 또는 "2026-03-10T09:00:00"
-    # date/time을 각각 지정하지 않아도 at 하나로 처리
-    at_param = params.get("at", "")
-    if at_param and not params.get("date") and not params.get("time"):
-        try:
-            at_str = at_param.replace("T", " ")
-            if " " in at_str:
-                parsed = datetime.fromisoformat(at_param.replace(" ", "T"))
-                params["date"] = parsed.strftime("%Y-%m-%d")
-                params["time"] = parsed.strftime("%H:%M")
-            else:
-                # 시간만 지정된 경우: "09:00" → 오늘 날짜
-                params["time"] = at_str[:5]
-        except (ValueError, TypeError):
-            pass
-
-    minutes = params.get("minutes", 0)
-    seconds = params.get("seconds", 0)
-    repeat = str(params.get("repeat", "none")).strip().lower()
-    if repeat == "once":
-        repeat = "none"
+    # 인자 → 이벤트 필드는 판본 2 check 와 같은 함수(calendar_rules.schedule_request)가 판정한다
+    # (75회차 후속: 입구가 따로 해석하면 check 는 초록인데 등록이 거절하거나, 등록은 성공인데 안 돈다).
+    from calendar_rules import schedule_request
+    request = schedule_request(params)
+    if request.get("error"):
+        return json.dumps({"success": False, "error": request["error"]}, ensure_ascii=False)
+    fields = request["fields"]
     title = params.get("title", pipeline[:40])
     cm = get_calendar_manager()
 
@@ -215,23 +201,10 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
             project_id = "__system_ai__"
             owner_agent = agent_id
 
-    try:
-        total_seconds = float(minutes) * 60 + float(seconds)
-    except (ValueError, TypeError):
-        total_seconds = 0
-
-    # ── 모드 판별 ──
-    is_delay = total_seconds > 0
-    is_recurring = repeat and repeat != "none"
-
-    if is_delay:
+    if "delay" in request:
         # ── 지연 모드: N분/초 후 실행 ──
-        if total_seconds > 86400:
-            return json.dumps({"success": False, "error": "지연은 24시간 이내만 가능합니다."}, ensure_ascii=False)
-
-        execute_at = datetime.now() + timedelta(seconds=total_seconds)
-        execute_date = execute_at.strftime("%Y-%m-%d")
-        execute_time_hm = execute_at.strftime("%H:%M")
+        total_seconds = request["delay"]
+        execute_at = request["execute_at"]
         execute_at_str = execute_at.strftime("%H:%M:%S")
 
         # 캘린더 이벤트 등록 (영속성)
@@ -239,10 +212,10 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
         try:
             event = cm.add_event(
                 title=title,
-                event_date=execute_date,
+                event_date=fields["date"],
                 event_type="schedule",
                 repeat="none",
-                event_time=execute_time_hm,
+                event_time=fields["time"],
                 execute_at=execute_at.isoformat(),
                 action="run_pipeline",
                 action_params={"pipeline": pipeline, "inputs": params.get("inputs", {})},
@@ -261,10 +234,9 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
         timer.daemon = True
         timer.start()
 
-        if minutes >= 1:
-            display = f"{int(minutes)}분" + (f" {int(seconds)}초" if seconds else "")
-        else:
-            display = f"{int(total_seconds)}초"
+        minutes = int(total_seconds // 60)
+        seconds = int(total_seconds % 60)
+        display = (f"{minutes}분" + (f" {seconds}초" if seconds else "")) if minutes else f"{int(total_seconds)}초"
 
         print(f"[Schedule] {display} 후 ({execute_at_str}) 실행 예정 — {pipeline[:60]}")
 
@@ -275,100 +247,35 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
             "event_id": event_id
         }, ensure_ascii=False)
 
+    # ── 특정 시각 / 반복 모드 ──
+    repeat = fields["repeat"]
+    try:
+        event = cm.add_event(
+            title=title,
+            event_date=fields.get("date"),
+            event_type="schedule",
+            repeat=repeat,
+            event_time=fields.get("time"),
+            action="run_pipeline",
+            action_params={"pipeline": pipeline, "inputs": params.get("inputs", {})},
+            owner_project_id=project_id,
+            owner_agent_id=owner_agent or ("system_ai" if project_id == "__system_ai__" else ""),
+            weekdays=fields.get("weekdays"),
+            month=fields.get("month"),
+            day=fields.get("day"),
+            interval_hours=fields.get("interval_hours"),
+        )
+    except Exception as e:
+        return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
+    event_id = event.get("id")
+    if repeat != "none":
+        msg = f"반복 스케줄 등록됨 ({repeat}, {fields.get('time')})"
     else:
-        # ── 특정 시각 / 반복 모드 ──
-        event_date = params.get("date")
-        event_time = params.get("time")
-
-        # start_time 호환: "2026-03-09T17:44:00" 형태 자동 파싱
-        start_time = params.get("start_time")
-        if start_time and (not event_date or not event_time):
-            try:
-                parsed = datetime.fromisoformat(start_time)
-                if not event_date:
-                    event_date = parsed.strftime("%Y-%m-%d")
-                if not event_time:
-                    event_time = parsed.strftime("%H:%M")
-            except (ValueError, TypeError):
-                pass
-
-        # time 파라미터에 full datetime이 들어온 경우 정규화
-        # "2026-03-10 09:00:00" → date="2026-03-10", time="09:00"
-        if event_time and " " in event_time:
-            try:
-                parsed = datetime.fromisoformat(event_time.replace(" ", "T"))
-                if not event_date:
-                    event_date = parsed.strftime("%Y-%m-%d")
-                event_time = parsed.strftime("%H:%M")
-            except (ValueError, TypeError):
-                # 공백 뒤만 추출 (fallback)
-                event_time = event_time.split()[-1][:5]
-        elif event_time and "T" in event_time:
-            try:
-                parsed = datetime.fromisoformat(event_time)
-                if not event_date:
-                    event_date = parsed.strftime("%Y-%m-%d")
-                event_time = parsed.strftime("%H:%M")
-            except (ValueError, TypeError):
-                pass
-        # HH:MM:SS → HH:MM 정규화
-        elif event_time and len(event_time) == 8 and event_time.count(":") == 2:
-            event_time = event_time[:5]
-
-        if not event_time and not is_recurring:
-            return json.dumps({"success": False, "error": "time(HH:MM) 또는 minutes가 필요합니다."}, ensure_ascii=False)
-
-        if not event_date and not is_recurring:
-            event_date = datetime.now().strftime("%Y-%m-%d")
-
-        # ★F54-2 (54회차): 날짜 없는 `at:"00:01"` 이 "오늘 00:01"로 등록돼 따라잡기로 **다음 틱에
-        #   즉시** 돌았다(A5). 1회 예약의 예정 시각이 이미 지났으면 정직 거절 — 내일이면 date 를,
-        #   잠깐 뒤면 minutes/seconds 를.
-        if not is_recurring:
-            try:
-                _target = datetime.strptime(f"{event_date} {event_time}", "%Y-%m-%d %H:%M")
-            except (ValueError, TypeError):
-                return json.dumps({"success": False,
-                                   "error": f"date/time 을 읽을 수 없습니다: {event_date} {event_time} (YYYY-MM-DD, HH:MM)"},
-                                  ensure_ascii=False)
-            if _target <= datetime.now():
-                return json.dumps({"success": False,
-                                   "error": (f"예정 시각 {event_date} {event_time} 이(가) 이미 지났습니다. "
-                                             "내일이면 date 를 명시하고, 잠깐 뒤면 minutes/seconds 지연을 쓰세요.")},
-                                  ensure_ascii=False)
-
-        try:
-            event = cm.add_event(
-                title=title,
-                event_date=event_date,
-                event_type="schedule",
-                repeat=repeat,
-                event_time=event_time,
-                action="run_pipeline",
-                action_params={"pipeline": pipeline, "inputs": params.get("inputs", {})},
-                owner_project_id=project_id,
-                owner_agent_id=owner_agent or ("system_ai" if project_id == "__system_ai__" else ""),
-                weekdays=params.get("weekdays"),
-                month=params.get("month"),
-                day=params.get("day"),
-                interval_hours=params.get("interval_hours"),
-            )
-            event_id = event.get("id")
-
-            if is_recurring:
-                msg = f"반복 스케줄 등록됨 ({repeat}, {event_time or '설정됨'})"
-            else:
-                msg = f"{event_date} {event_time}에 실행 예약됨"
-
-            print(f"[Schedule] 이벤트 등록: {event_id} — {msg}")
-
-            return json.dumps({
-                "success": True,
-                "message": msg,
-                "event_id": event_id
-            }, ensure_ascii=False)
-        except Exception as e:
-            return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
+        msg = f"{fields['date']} {fields['time']}에 실행 예약됨"
+    print(f"[Schedule] 이벤트 등록: {event_id} — {msg}")
+    return json.dumps({"success": True, "message": msg, "event_id": event_id,
+                       **({"notice": request["notice"]} if request.get("notice") else {})},
+                      ensure_ascii=False)
 
 
 def _execute_create_plan(params: dict, agent_id: str = None, project_path: str = None) -> str:

@@ -29,6 +29,10 @@ CONTRACTS = {
     'keys': (1, 1, ('Record',), 'List<Text>'),
     'values': (1, 1, ('Record',), 'List'),
     'entries': (1, 1, ('Record',), 'List<List>'),
+    # 날짜 산술(2026-09-29 언어 개정, 상상훈련 75회차 G75-1·사용자 판정): ISO 8601 표기를 받는 순수 함수.
+    'date_add': (2, 2, ('Text', 'Number'), 'Text'),
+    'date_diff': (2, 2, ('Text', 'Text'), 'Number'),
+    'month_end': (1, 1, ('Text',), 'Text'),
 }
 
 
@@ -64,8 +68,42 @@ def _unordered_key_hint(left, right):
     return '키는 모두 Number, Text 또는 같은 종류의 시각이어야 합니다.'
 
 
+def _moment(value, name):
+    """날짜 함수의 입력 — 선언된 ISO 8601 표기만(수선·추측 없음, value_semantics 와 같은 판독)."""
+    from common.value_semantics import datetime_value
+    moment = datetime_value(value) if isinstance(value, str) else None
+    if moment is None:
+        raise Fault('DATE_REQUIRED', f'{name}에는 ISO 8601 날짜(YYYY-MM-DD) 또는 시각 텍스트가 필요합니다: {str(value)[:40]!r}')
+    return moment, len(value.strip()) == 10
+
+
+def _date_call(name, args):
+    from datetime import timedelta
+    import calendar
+    moment, date_only = _moment(args[0], name)
+    if name == 'date_add':
+        days = integer(args[1])
+        shifted = moment + timedelta(days=days)
+        if date_only:
+            return shifted.strftime('%Y-%m-%d')
+        text_form = args[0].strip()
+        # 입력의 구분자(T/공백)와 정밀도를 보존한다 — 결과가 같은 표기 계약 안에 머문다.
+        out = shifted.isoformat(sep='T' if 'T' in text_form else ' ',
+                                timespec='microseconds' if shifted.microsecond else
+                                ('seconds' if text_form.count(':') >= 2 else 'minutes'))
+        return out.replace('+00:00', 'Z') if text_form.endswith('Z') else out
+    if name == 'date_diff':
+        other, _ = _moment(args[1], name)
+        # 달력 날짜의 차이(a − b, 일). 각 값이 적힌 날짜로 센다 — 시간대를 지어내지 않는다.
+        return (moment.date() - other.date()).days
+    last = calendar.monthrange(moment.year, moment.month)[1]
+    return moment.date().replace(day=last).strftime('%Y-%m-%d')
+
+
 def call(name, args, tick, callback=None):
     first = args[0]
+    if name in ('date_add', 'date_diff', 'month_end'):
+        return _date_call(name, args)
     if name in ('split', 'replace', 'strip', 'upper', 'lower', 'contains', 'join'):
         s = text(first)
         if name == 'split':

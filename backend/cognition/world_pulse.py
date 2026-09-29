@@ -426,11 +426,8 @@ def register_pulse_tasks():
 
         # 기존 self_check 이벤트가 있으면 비활성화 (하위 호환)
         if "[WorldPulse] 자가점검" in existing:
-            for evt in cm.config.get("events", []):
-                if evt.get("title") == "[WorldPulse] 자가점검":
-                    evt["enabled"] = False
-                    break
-            cm._save_config()
+            # 캘린더 쓰기는 calendar_manager 입구로만(잠금·정규화 — iblbuild_schedule_rules 관문).
+            cm.update_event(existing["[WorldPulse] 자가점검"]["id"], enabled=False)
 
         # DB 초기화
         _init_pulse_db()

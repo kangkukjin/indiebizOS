@@ -95,6 +95,16 @@
 - F74-1 안내가 판본 2 에서 거절되는 두 형태를 권하던 것 → 되는 형태(뒤 키부터 두 번·조건 값 키)만.
 - **사용자 경로 효과 관문**(`scripts/iblbuild_user_path_effects.py`, build `--check`) — 수리 이전 트리의 74회차 원형 7자리를 잡는다.
 
+## 75회차 후속 — 판정 한 벌과 밭 이관 관문 (같은 날)
+
+1차 수리가 남긴 누출을 닫았다 — 정본 기록은 `docs/experiments/imagination_round75_2026_09_28/report.md` 의 "집행 완료" 2차.
+- **판정이 입구마다 따로였다.** cron 경로는 정본 검사를 비켜 좀비 트리거를 남겼고, 시각 없는 실행 예약은 성공·발화 0, 판본 2 check 는
+  레코드 리터럴을 미상으로 봐 등록과 다른 답을 냈다 → `calendar_rules.schedule_request`·`calendar_request` 를 등록과 check 가 같이 부르고,
+  cron 도 같은 정규화, 실행 이벤트는 시각 필수, `constant_value` 가 레코드를 관측한다.
+- **같은 실패 요약이 실측 사례에서 작동하지 않았다** — 실패 원문의 실행 id·소요 시간 때문에. 서명 비교로. 뿌리였던 뉴스 동기화 스크립트의 표기 판독도 수리.
+- **예약 규칙 관문**(`scripts/iblbuild_schedule_rules.py`, build `--check`) — 수리 이전 트리의 원형(add_event·update_event 무정규화)과 world_pulse 우회 쓰기를 잡는다.
+- G75-1 날짜 산술 순수 함수 3종 언어 개정(사용자 채택).
+
 ## 기존 원장 보정과 남은 제약
 
 - SQLite 온라인 백업 후, 기존 원문 메모 또는 명백한 인센티브 꼬리 문구를 근거로 **가맹점 27행만** 보정했다. 거래 건수·유형별 금액 합계 불변을 확인했다. 백업과 변경 영수증은 `data/_backups/2026-09-29_imagination72_76/`에 있으며 git에 넣지 않는다.

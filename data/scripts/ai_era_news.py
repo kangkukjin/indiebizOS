@@ -89,6 +89,8 @@ def rows_of(value):
         return value
     if isinstance(value, dict) and isinstance(value.get("items"), list):
         return value["items"]
+    if isinstance(value, dict) and isinstance(value.get("events"), list):
+        return value["events"]   # 발행 게이트 결과를 그대로 저장한 날({events,new_count,…})
     raise ValueError("items 목록 필요")
 
 def report_fingerprint(report, rows):
@@ -105,14 +107,18 @@ def prepare():
             if not m or m[1] < START:
                 continue
             report = REPORTS / filename
-            verified = REPORTS / ("_verified_rows_" + m[1] + ".json")
+            # 정본 이름은 가이드(ai_trend_report.md §3-0)의 `_verified_rows_날짜.json`. 옛 날의 `_verified_날짜.json` 도
+            # 같은 행 원장이다 — 한 이름만 찾아 09-23·26·27 을 매시 "누락"으로 올렸다(75회차 후속).
+            verified = next((REPORTS / (prefix + m[1] + ".json") for prefix in ("_verified_rows_", "_verified_")
+                             if (REPORTS / (prefix + m[1] + ".json")).exists()), REPORTS / ("_verified_rows_" + m[1] + ".json"))
             if not report.exists() or not verified.exists():
                 issues.append({"report_date": m[1], "reason": "완료 보고서 또는 검증 출처 목록 누락"})
                 continue
             if time.time() - max(report.stat().st_mtime, verified.stat().st_mtime) < 120:
                 continue
             text = report.read_text()
-            if not re.search(r"^## 출처\s*$", text, re.M):
+            # 출처 절 = 제목에 '출처'가 든 2단 절('## 출처와 조사 한계'·'## 조사 범위·한계와 출처' 포함).
+            if not re.search(r"^##\s+[^\n]*출처", text, re.M):
                 issues.append({"report_date": m[1], "reason": "출처 절 누락"})
                 continue
             version = report_fingerprint(report, verified)

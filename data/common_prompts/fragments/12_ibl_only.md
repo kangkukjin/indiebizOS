@@ -132,6 +132,7 @@ Callable은 실행 내부 값이며 일반 JSON이나 외부 결과 값으로 �
 | any / all | List<Bool> → Bool. 빈 목록은 각각 false/true. 입력 전체의 Bool 타입을 검사 |
 | sorted | `sorted(list,key=null,reverse=false)` → 안정 정렬 목록. key는 필드 이름 또는 단일 인자 콜백, null이면 값 자체. 비교 불가능한 키는 실패 |
 | keys / values / entries | Record의 키·값·`[키,값]` 목록. 레코드의 필드 순서 보존 |
+| date_add / date_diff / month_end | `date_add(날짜, 일수)` → 같은 표기의 Text, `date_diff(a, b)` → 달력 날짜 차 a − b(일), `month_end(날짜)` → 그 달 말일. 입력은 ISO 8601(`YYYY-MM-DD`·시각)만 |
 
 위 표의 `=`는 기본값 설명이다. 호출은 위치 인자로 쓴다: `sorted($행,"점수",true)`.
 목록 집합 연산은 `values_equal`로 비교하며 처음 나온 대표 값과 순서를 보존한다.

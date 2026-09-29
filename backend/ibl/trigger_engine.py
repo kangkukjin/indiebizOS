@@ -191,7 +191,13 @@ def _resolve_schedule_config(params: dict) -> dict:
         parsed = _cron_to_config(cron)
         if "error" in parsed:
             return {"error": parsed["error"]}
-        return {"config": parsed}
+        # cron 이 만든 규칙도 config 직접 지정과 같은 정본 검사를 거친다(75회차 후속): 옛 판은 형식만 보고
+        # 값 범위를 안 봐 `0 9 31 2 *`·`0 25 * * *` 가 "생성 완료"로 저장된 뒤 캘린더 동기화에서 떨어졌다
+        # (트리거만 남고 이벤트 없음 = 영원히 안 도는 좀비).
+        checked = normalize_schedule_config(parsed)
+        if checked.get("error"):
+            return {"error": f"cron '{cron}': {checked['error']}"}
+        return {"config": checked["config"]}
     return {"config": {}}
 
 
@@ -469,15 +475,22 @@ def _create_trigger(target: str, params: dict, project_path: str = None) -> dict
         data.setdefault("triggers", []).append(trigger)
         _save_triggers(data)
 
-    # 타입별 연동
+    # 타입별 연동 — 캘린더에 못 올리면 트리거도 남기지 않는다(성공 봉투 + warning 은 안 도는 좀비였다).
     if trigger_type == "schedule":
         sync_result = _sync_schedule_trigger(trigger, "add")
         if isinstance(sync_result, dict) and sync_result.get("error"):
-            return {"trigger": trigger, "warning": sync_result["error"]}
+            with _TRIGGERS_LOCK:
+                data = load_triggers()
+                data["triggers"] = [t for t in data.get("triggers", []) if t.get("id") != trigger_id]
+                _save_triggers(data)
+            return {"error": f"트리거를 등록하지 않았습니다 — {sync_result['error']}"}
 
+    from calendar_rules import recurrence_notice
+    notice = recurrence_notice(config) if trigger_type == "schedule" else None
     return {
         "trigger": trigger,
-        "message": f"트리거 '{target}' 생성 완료 (ID: {trigger_id})"
+        "message": f"트리거 '{target}' 생성 완료 (ID: {trigger_id})",
+        **({"notice": notice} if notice else {}),
     }
 
 

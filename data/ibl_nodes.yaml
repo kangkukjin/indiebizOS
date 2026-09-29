@@ -5301,10 +5301,10 @@ nodes:
           impl: 3c31b0566918933b
           dependencies:
             backend/common/expression_eval.py: ef54b93159bea1bb8727f4e56a887d54940409c06ac0115db204ede691242fd0
-            backend/common/expression_functions.py: 34bb2bee5baef17829c4d4014ce1af9c82647d79cbecc46da1488118ab8f56b2
+            backend/common/expression_functions.py: c65342ec657b39b2ff64f4377b50cec809415a15ddc3a795a7376ca1000950ae
             backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
-            backend/common/expression_ops.py: e215c90db04dfa6e8a37dfefc214a82f8aee27f35bc0d231a86d671aba7ef96f
+            backend/common/expression_ops.py: 4bd8017a7d61d4372a38d7318898852e1cea3547d4817214bfbc07065df09a8b
             backend/common/expression_parser.py: 05989dd0bb214197a00d987865e1f91c4410697b1eb3d7e4220f866bb67b69ad
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
             backend/base/runtime_utils.py: ee8f08ebd8889224e85458645b3f60386fcdb1c732772c4657d2d173fee8e0ff
@@ -5313,7 +5313,7 @@ nodes:
             backend/common/record_contract.py: ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5
             backend/common/row_conditions.py: 154e8ad5edd447ac46996d174a7cb94e6bb1cfa7f4472cf1b6389d227ae9b9ce
             backend/common/safe_expr.py: 393baf8c10b1d7d25fe5ecbf40f5b44b8a1e9e12149e1be6bcda36db8c2cc360
-            backend/common/value_semantics.py: 9de267f61961ea21933b60e3f8f3a74cbecf388a9e9c64638f4e1879e8005446
+            backend/common/value_semantics.py: c1794ea4f0c1da284c6c08fd27dd3f3dd6fac373f9dc627fc2c31d90486a3897
             backend/datastore/record_admin.py: 26d13e5e73c42d56a8d6ed2119a81e0a7738c897c535ca3281311f05fcaa9dab
             backend/datastore/record_assets.py: a9119891401cab4d11d80091d07d7bf545abb1c34fdabf79cd96bb95016df267
             backend/datastore/record_commands.py: e58a57308b625a7e485b4cf85357ae9d07464293229f7ef3b795dfcb786aaffb

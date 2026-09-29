@@ -1616,6 +1616,28 @@
       "topic": "오디오 브리핑·TTS"
     },
     {
+      "id": "long_sentence_imagination",
+      "name": "긴문장 상상 훈련 가이드",
+      "description": "긴문장 상상훈련을 하자는 요청에 읽는다. 복잡한 가상 과제를 연결된 IBL 프로그램으로 작성·실행하고, 최초 초안·변형·산출물에서 작성 용이성·조합·완료·복구의 공백을 기록한다.",
+      "keywords": [
+        "긴문장",
+        "긴 문장",
+        "문장",
+        "IBL",
+        "긴문장 상상훈련",
+        "긴 문장 상상훈련",
+        "긴문장 상상 훈련",
+        "긴 IBL 상상훈련",
+        "긴문장 훈련 해줘",
+        "복잡한 과제 훈련",
+        "IBL 프로그램 훈련",
+        "long sentence imagination",
+        "long program training"
+      ],
+      "file": "long_sentence_imagination.md",
+      "topic": "상상훈련"
+    },
+    {
       "id": "imagination_action",
       "name": "상상행동훈련 가이드",
       "description": "상상행동훈련을 하자는 요청에 읽는다. 사람이 AI에게 부탁할 자연어 과제를 상상·수집해 실제 IndieBiz OS 경로로 수행하고, 경험으로 어휘·문법·구현의 공백을 찾아 개선과 새로운 과제의 재검증으로 잇는다.",

@@ -68,6 +68,8 @@ IBL과 주변 시스템의 개선·설계·평가를 시작할 때는 `data/syst
 
 ## 5. 훈련 요청
 
+- **긴문장 상상훈련 / 긴 문장 상상훈련** 요청은 `data/guides/long_sentence_imagination.md`를 먼저 읽는다.
+  복잡한 가상 과제를 전체 IBL 프로그램으로 작성·실행해 작성 용이성·조합·완료·복구를 확인한다.
 - **상상행동 / 상상행동훈련** 요청은 `data/guides/imagination_action.md`를 먼저 읽는다.
   자연어 사용자 요구를 상상·수집해 실제 수행하고 어휘·문법의 공백을 찾는 훈련이다.
   기존 IBL 조합 중심 상상훈련(`imagination_training.md`)과 구분한다.

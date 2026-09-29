@@ -176,6 +176,12 @@ _RE_REWARD_RECEIPT = re.compile(
 _RE_REWARD_NOTICE = re.compile(
     r"(?:인센티브|캐시백|리워드|포인트)[^.!?\n]*(?:지급|적립|입금)"
 )
+# 청구·결제 **예정** 안내 — 미래 금액의 통지이지 돈이 움직인 사건이 아니다(인센티브 "지급 예정"과 같은 원칙).
+# 2026-09-29 포획소 원문 실측: 하나카드 "09월 15일 결제예정금액은 545,408원 입니다." 가 `결제` 낱말 덕에
+# 결제 관문을 통과해 545,408원 지출로 적혔다(72회차 B72-1 #102 — 9월 지출의 49%).
+_RE_BILLING_NOTICE = re.compile(
+    r"(?:결제|청구|납부|출금)\s*예정(?:\s*금액)?|예정\s*금액|결제하실\s*금액|이용\s*대금\s*명세"
+)
 _RE_PAYMENT_EVENT = re.compile(
     r"[0-9][0-9,]*\s*원(?:이|을)?\s*(?:승인|결제|사용|취소|환불)"
     r"|(?:승인|결제|사용|취소|환불)\s*(?:금액\s*[:：]?\s*)?"
@@ -190,6 +196,9 @@ def _parse_payment(title: str, body: str) -> dict:
         out["type"] = "transfer"
         amount = _RE_AMOUNT.search(text)
         out["amount"] = int(amount.group(1).replace(",", "")) if amount else 0
+        return out
+    if _RE_BILLING_NOTICE.search(text):
+        out["type"] = "notice"
         return out
     # 결제 알림에 붙은 인센티브 안내는 별도 수령 거래로 바꾸지 않는다.
     receipt = _RE_REWARD_RECEIPT.search(body or title)

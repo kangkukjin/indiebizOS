@@ -143,6 +143,28 @@ def inner_diagnostics(raw, limit=5):
     return out
 
 
+
+# 수량 인자로 풀 수 있는 절단 사유 — bounded_selection 의 reason 은 생산자가 쓴 인자 이름이다.
+_COUNT_REASONS = {"limit", "count", "top_k", "max_results", "max_points", "max_length", "count_per_month"}
+
+
+def _partial_message(raw, truncation):
+    """불완전 원천의 거절이 고칠 방향을 말하게 한다(72회차 후속: 기본 상한 절단이 이제 여기로 온다).
+
+    기본 상한으로 잘린 원천은 선택(selection)이 아니라 불완전(source)이다. 상한 인자를 명시하면
+    그만큼의 선택으로 받는다 — 그 길을 말하지 않으면 모델은 같은 호출을 되풀이한다."""
+    message = "도구의 원천 결과가 불완전합니다."
+    cut = [t for t in (truncation or {}).get("truncations", []) if t.get("scope") != "selection"]
+    if cut and cut[0].get("reason"):
+        first = cut[0]
+        message += f" 절단 사유 `{first['reason']}`" + (f"(상한 {first['limit']})" if first.get("limit") is not None else "") + "."
+        if first["reason"] in _COUNT_REASONS:
+            message += f" `{first['reason']}` 를 명시하면 그만큼의 선택으로 받고, 전부가 필요하면 값을 올리세요."
+    note = raw.get("message") if isinstance(raw, dict) else None
+    if isinstance(note, str) and note.strip():
+        message += f" 원천 안내: {note.strip()[:200]}"
+    return message
+
 def decode_envelope(raw, adapter, input_values=None):
     from ibl_honesty import completion_evidence, truncation_evidence, markers_of
     if isinstance(raw, str):
@@ -196,7 +218,7 @@ def decode_envelope(raw, adapter, input_values=None):
     truncation = truncation_evidence(boundaries if sources else raw)
     markers = markers_of(raw)
     if incomplete or any(t.get("scope") != "selection" for t in truncation.get("truncations", [])) or any(b.get("rows_dropped") for b in boundaries):
-        raise Fault("PARTIAL_SOURCE", "도구의 원천 결과가 불완전합니다.", kind="partial", partial=value,
+        raise Fault("PARTIAL_SOURCE", _partial_message(raw, truncation), kind="partial", partial=value,
                     details={"completion": incomplete, "truncation": truncation, "markers": markers})
     from ibl_v2_ir import pack, unpack
     value = unpack(pack(value))

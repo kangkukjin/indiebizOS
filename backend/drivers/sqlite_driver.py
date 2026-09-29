@@ -103,6 +103,7 @@ class SqliteDriver(Driver):
         finally:
             conn.close()
 
+    # clamp-ok: 미라우팅 — driver_node 가 photo/health/blog/contact 인 액션 없음(recent_chats=memory 만, 2026-09-29 분류)
     def _photo_search(self, conn, query: str, params: dict) -> dict:
         media_type = params.get("media_type", "all")
         limit = params.get("limit", 20)
@@ -202,6 +203,7 @@ class SqliteDriver(Driver):
         row = conn.execute("SELECT id FROM persons WHERE name = ?", (name,)).fetchone()
         return row["id"] if row else None
 
+    # clamp-ok: 미라우팅 — driver_node 가 photo/health/blog/contact 인 액션 없음(recent_chats=memory 만, 2026-09-29 분류)
     def _health_query(self, conn, category: str, params: dict, person_id: int) -> dict:
         if not person_id:
             return self._err("등록된 사용자가 없습니다")
@@ -353,6 +355,7 @@ class SqliteDriver(Driver):
         finally:
             conn.close()
 
+    # clamp-ok: 미라우팅 — driver_node 가 photo/health/blog/contact 인 액션 없음(recent_chats=memory 만, 2026-09-29 분류)
     def _blog_search(self, conn, query: str, params: dict) -> dict:
         limit = params.get("limit", 10)
 
@@ -394,6 +397,7 @@ class SqliteDriver(Driver):
             return self._err(f"포스트 '{post_id}'를 찾을 수 없습니다")
         return self._ok(dict(row))
 
+    # clamp-ok: 미라우팅 — driver_node 가 photo/health/blog/contact 인 액션 없음(recent_chats=memory 만, 2026-09-29 분류)
     def _blog_list(self, conn, params: dict) -> dict:
         limit = params.get("limit", 20)
         category = params.get("category")
@@ -447,6 +451,7 @@ class SqliteDriver(Driver):
         finally:
             conn.close()
 
+    # clamp-ok: 미라우팅 — driver_node 가 photo/health/blog/contact 인 액션 없음(recent_chats=memory 만, 2026-09-29 분류)
     def _contact_search(self, conn, query: str, params: dict) -> dict:
         limit = params.get("limit", 20)
         rows = conn.execute("""
@@ -480,6 +485,7 @@ class SqliteDriver(Driver):
         result["contacts"] = [dict(c) for c in contacts]
         return self._ok(result)
 
+    # clamp-ok: 미라우팅 — driver_node 가 photo/health/blog/contact 인 액션 없음(recent_chats=memory 만, 2026-09-29 분류)
     def _contact_list(self, conn, params: dict) -> dict:
         limit = params.get("limit", 50)
         favorite_only = params.get("favorite", False)
@@ -500,6 +506,7 @@ class SqliteDriver(Driver):
         items = [dict(r) for r in rows]
         return self._ok(items, f"연락처 {len(items)}명")
 
+    # clamp-ok: 미라우팅 — driver_node 가 photo/health/blog/contact 인 액션 없음(recent_chats=memory 만, 2026-09-29 분류)
     def _contact_messages(self, conn, neighbor_id: str, params: dict) -> dict:
         limit = params.get("limit", 20)
         rows = conn.execute("""
@@ -536,8 +543,10 @@ class SqliteDriver(Driver):
                     "SELECT id, timestamp, role, substr(content, 1, 300) AS content_preview, "
                     "length(content) AS content_len "
                     "FROM conversations ORDER BY id DESC LIMIT ?",
-                    (params.get("limit", 10),)
+                    (int(params.get("limit", 10)) + 1,)  # clamp-ok: "최근 N" 창 — 하나 더 떠 has_more 로 창 밖을 신고
                 ).fetchall()]
+                s_more = len(srows) > int(params.get("limit", 10))
+                srows = srows[:int(params.get("limit", 10))]
             except Exception as e:
                 return self._err(f"시스템 AI 대화 조회 실패: {e}")
             finally:
@@ -550,6 +559,7 @@ class SqliteDriver(Driver):
                 smsg += f" — {n_cut}건은 300자 절단(전문은 content_len 참조, DB 직접 조회로 복구 가능)"
             sresult = self._ok(srows, smsg)
             if isinstance(sresult, dict):
+                sresult["has_more"] = s_more
                 sresult["truncated"] = bool(n_cut)
                 sresult["truncations"] = ([{"scope": "selection", "reason": "content_preview",
                                           "limit": 300, "rows": n_cut}] if n_cut else [])
@@ -617,7 +627,7 @@ class SqliteDriver(Driver):
         return result
 
     def _memory_recent(self, conn, params: dict) -> dict:
-        limit = params.get("limit", 10)
+        limit = int(params.get("limit", 10))  # clamp-ok: "최근 N" 창 — 하나 더 떠 has_more 로 창 밖을 신고
         agent = params.get("agent")
 
         sql = """
@@ -635,10 +645,11 @@ class SqliteDriver(Driver):
             args.extend([agent, agent])
 
         sql += " ORDER BY m.message_time DESC LIMIT ?"
-        args.append(limit)
+        args.append(limit + 1)
 
         rows = conn.execute(sql, args).fetchall()
-        items = [dict(r) for r in rows]
+        has_more = len(rows) > limit
+        items = [dict(r) for r in rows[:limit]]
         # 절단 신고 — recent_chats 시스템 AI 분기와 같은 규약(2026-08-30 수리)
         for r in items:
             r["truncated"] = (r.get("content_len") or 0) > 300
@@ -647,6 +658,8 @@ class SqliteDriver(Driver):
         if n_cut:
             msg += f" — {n_cut}건은 300자 절단(전문은 content_len 참조)"
         result = self._ok(items, msg)
+        if isinstance(result, dict):
+            result["has_more"] = has_more
         # 단일 통화 items(records-관습 카드 shape) — 대화 로그 >> 파이프/렌더러. native rows는 data에 잔류.
         if isinstance(result, dict):
             result["truncated"] = bool(n_cut)

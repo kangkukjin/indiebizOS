@@ -374,9 +374,12 @@ def save_document(doc_type: str, image_path: str = None, extracted_data: dict = 
     return record_id
 
 
-def get_measurements(category: str = None, days: int = 30, limit: int = 50,
+def get_measurements(category: str = None, days: int = 30, limit: int = None,
                      person: str = None) -> List[Dict]:
-    """측정값 조회"""
+    """측정값 조회 — 기간(days) 안 전량. limit 은 호출자가 명시할 때만 건다.
+
+    옛 판은 기본 50행으로 자르고 요약이 그 위에서 분류별 "총 N회"를 셌다(혈압 하루 2회면
+    한 달도 못 담는다) — 72회차 B72-3(가계부 200행 절단)의 형제. 기간이 이미 범위다."""
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -389,14 +392,14 @@ def get_measurements(category: str = None, days: int = 30, limit: int = 50,
             WHERE person_id = ? AND category = ? AND measured_at >= ?
               AND (deleted IS NULL OR deleted = 0)
             ORDER BY measured_at DESC LIMIT ?
-        ''', (person_id, category, since_date, limit))
+        ''', (person_id, category, since_date, -1 if limit is None else int(limit)))
     else:
         cursor.execute('''
             SELECT * FROM measurements
             WHERE person_id = ? AND measured_at >= ?
               AND (deleted IS NULL OR deleted = 0)
             ORDER BY measured_at DESC LIMIT ?
-        ''', (person_id, since_date, limit))
+        ''', (person_id, since_date, -1 if limit is None else int(limit)))
 
     rows = cursor.fetchall()
     conn.close()
@@ -516,7 +519,7 @@ def get_documents(doc_type: str = None, days: int = 90, person: str = None) -> L
 
 
 def search_records(keyword: str, person: str = None) -> Dict[str, List[Dict]]:
-    """키워드로 전체 기록 검색"""
+    """키워드로 전체 기록 검색 — 일치 전량(사용자 원장; 옛 판은 부문마다 말없이 20건에서 잘랐다)."""
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -528,7 +531,7 @@ def search_records(keyword: str, person: str = None) -> Dict[str, List[Dict]]:
     cursor.execute('''
         SELECT * FROM measurements WHERE person_id = ? AND (category LIKE ? OR note LIKE ?)
           AND (deleted IS NULL OR deleted = 0)
-        ORDER BY measured_at DESC LIMIT 20
+        ORDER BY measured_at DESC
     ''', (person_id, keyword_pattern, keyword_pattern))
     for row in cursor.fetchall():
         r = dict(row)
@@ -540,7 +543,7 @@ def search_records(keyword: str, person: str = None) -> Dict[str, List[Dict]]:
     cursor.execute('''
         SELECT * FROM symptoms WHERE person_id = ? AND (category LIKE ? OR description LIKE ? OR note LIKE ?)
           AND (deleted IS NULL OR deleted = 0)
-        ORDER BY started_at DESC LIMIT 20
+        ORDER BY started_at DESC
     ''', (person_id, keyword_pattern, keyword_pattern, keyword_pattern))
     results['symptoms'] = [dict(row) for row in cursor.fetchall()]
 
@@ -548,7 +551,7 @@ def search_records(keyword: str, person: str = None) -> Dict[str, List[Dict]]:
     cursor.execute('''
         SELECT * FROM medications WHERE person_id = ? AND (name LIKE ? OR reason LIKE ? OR note LIKE ?)
           AND (deleted IS NULL OR deleted = 0)
-        ORDER BY started_at DESC LIMIT 20
+        ORDER BY started_at DESC
     ''', (person_id, keyword_pattern, keyword_pattern, keyword_pattern))
     results['medications'] = [dict(row) for row in cursor.fetchall()]
 
@@ -556,7 +559,7 @@ def search_records(keyword: str, person: str = None) -> Dict[str, List[Dict]]:
     cursor.execute('''
         SELECT * FROM documents WHERE person_id = ? AND (doc_type LIKE ? OR description LIKE ? OR note LIKE ?)
           AND (deleted IS NULL OR deleted = 0)
-        ORDER BY recorded_at DESC LIMIT 20
+        ORDER BY recorded_at DESC
     ''', (person_id, keyword_pattern, keyword_pattern, keyword_pattern))
     for row in cursor.fetchall():
         r = dict(row)

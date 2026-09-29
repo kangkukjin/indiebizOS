@@ -351,6 +351,8 @@ def cleanup():
         path.unlink()
     con = sqlite3.connect(SINCE_DB)
     con.execute("delete from since_seen where stream like 'IT72_%'")
+    # 75회차 B75-6 수리 뒤 빈 첫 관측도 초기화 표지(since_streams)를 남긴다 — 표지까지 지워야 다음 탐침이 첫 검침이다.
+    con.execute("delete from since_streams where stream like 'IT72_%'")
     con.commit()
     con.close()
 

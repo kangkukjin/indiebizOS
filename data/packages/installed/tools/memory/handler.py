@@ -256,6 +256,7 @@ def _memories_to_records(memories: list) -> list:
     return records
 
 
+# clamp-ok: 순위 상위 N — 대화 검색(5 초과 요청은 호출자가 clamped/requested 로 신고)라 모집단이 의미 없음
 def _search_conversations(project_path, query, limit=5):
     """주체의 대화 저장소에서 낱말 AND 검색. DB 오류는 빈 검색으로 숨기지 않는다."""
     from pathlib import Path

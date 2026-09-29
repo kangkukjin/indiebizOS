@@ -248,6 +248,7 @@ def _delete_vec(db_path: str, mem_id: int):
         conn.close()
 
 
+# clamp-ok: 순위 상위 N — 임베딩 KNN라 모집단이 의미 없음
 def _search_semantic(db_path: str, query: str, top_k: int = 10,
                      category: str = None, node: str = None) -> List[Tuple[int, float]]:
     """시맨틱 검색 — (memory_id, similarity) 리스트.
@@ -569,6 +570,7 @@ def _search_scope(category=None, node=None):
     return " AND ".join(clauses), args
 
 
+# clamp-ok: 순위 상위 N — 키워드 일치 검색라 모집단이 의미 없음
 def _search_like(db_path: str, query: str, category: str = None,
                  limit: int = 20, node: str = None) -> List[Dict]:
     """기존 LIKE 키워드 검색"""
@@ -611,6 +613,7 @@ def _search_like(db_path: str, query: str, category: str = None,
         conn.close()
 
 
+# clamp-ok: 순위 상위 N — 기억 검색 진입점(semantic→like 폴백)라 모집단이 의미 없음
 def search(project_path: str, agent_id: str,
            query: str, category: str = None, limit: int = 10,
            semantic_only: bool = False, min_score: float = 0.0,

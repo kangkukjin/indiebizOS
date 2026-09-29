@@ -488,7 +488,7 @@ def _nb_delete(bm, ti: dict) -> str:
     재시작마다 '쪽지'로 부활). id 없이 pubkey(npub)만 오면 = 비이웃 쪽지 상대 → 대화 숨김."""
     nid = _int_or(ti.get("id") or ti.get("neighbor_id"))
     if not nid:
-        pk = (ti.get("pubkey") or "").strip()
+        pk = (ti.get("npub") or ti.get("pubkey") or "").strip()   # 정본 npub, pubkey=별칭
         if pk.startswith("npub"):
             _hide_dm_peer(pk)
             return _ok({}, "쪽지 상대의 대화를 숨겼습니다 — 새 메시지가 오면 다시 보입니다.")

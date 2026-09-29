@@ -156,9 +156,10 @@ _LANDMARKS = {
 }
 
 
-def cctv_search(query: str, lat: float = None, lon: float = None,
-                category: str = None, limit: int = 10, **kwargs) -> str:
-    """통합 CCTV/웹캠 검색"""
+def cctv_search(query: str, lat: float = None, lng: float = None,
+                category: str = None, limit: int = 10, lon: float = None, **kwargs) -> str:
+    """통합 CCTV/웹캠 검색. 경도의 정본은 lng(선언·nearby·webcam 과 같은 이름), lon 은 옛 표기."""
+    lon = lon if lon is not None else lng
     common = load_module("cctv_common")
     all_results = []
 
@@ -362,7 +363,7 @@ def nearby(lat: float, lng: float, radius_km: float = 5.0, count: int = 5,
     )
 
 
-def cctv_open(url: str = None, name: str = None, lat: float = None, lng: float = None) -> str:
+def cctv_open(url: str = None, name: str = None) -> str:
     """CCTV 열기"""
     if url:
         import webbrowser
@@ -535,7 +536,10 @@ def _cctv_query(op: str = None, **kwargs) -> str:
     # IBL은 count 별칭을 limit으로 정규화한다. 공급자 count로 되돌린다.
     if op in ("nearby", "webcam") and "limit" in kwargs:
         kwargs["count"] = kwargs.pop("limit")
-    if op == "nearby" and "lng" not in kwargs and "lon" in kwargs:
+    # 경도 정본=lng. 옛 표기 lon 은 선언 별칭(lng: [lon])이 IBL 경로에서 복사하지만, 이 디스패처는
+    # 별칭을 거치지 않는 호출도 받으므로 전 op 에 같은 규칙을 둔다(옛 판은 nearby 에만 있어
+    # search 가 lng 를 시그니처 필터에서 말없이 버렸다 — 2026-09-29 72회차 후속 관문이 발견).
+    if "lng" not in kwargs and "lon" in kwargs:
         kwargs["lng"] = kwargs.pop("lon")
     valid = {k: v for k, v in kwargs.items() if k in inspect.signature(func).parameters}
     return func(**valid)

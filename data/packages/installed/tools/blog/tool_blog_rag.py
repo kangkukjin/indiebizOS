@@ -419,6 +419,7 @@ class BlogHybridSearch:
         finally:
             conn.close()
 
+    # clamp-ok: 순위 상위 N — BM25 관련도 순위라 모집단이 의미 없음
     def search_fts5(
         self, query: str, top_k: int = 10, category=None
     ) -> List[Tuple[int, float]]:
@@ -482,6 +483,7 @@ class BlogHybridSearch:
             key=lambda x: x[1], reverse=True
         )
 
+    # clamp-ok: 순위 상위 N — 하이브리드 관련도 순위라 모집단이 의미 없음
     def search_hybrid(
         self, query: str, top_k: int = 5, alpha: Optional[float] = None,
         category=None

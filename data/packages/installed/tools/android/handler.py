@@ -152,7 +152,10 @@ def _phone_notifications(tool_input: dict) -> dict:
         return f"{mins // 1440}일 전"
 
     pkg = tool_input.get("pkg") or tool_input.get("package_name")
-    rows = _pn.recent(limit=limit, pkg=pkg)
+    # 하나 더 떠서 창 밖이 있는지 안다 — count 가 "온 알림 전부"로 읽히지 않게(72회차 B72-3 부류).
+    rows = _pn.recent(limit=limit + 1, pkg=pkg)
+    has_more = len(rows) > limit
+    rows = rows[:limit]
     items = []
     for r in rows:
         ts = r.get("posted_at") or r.get("received_at") or 0
@@ -178,6 +181,7 @@ def _phone_notifications(tool_input: dict) -> dict:
     out = {
         "success": True,
         "count": len(items),
+        "has_more": has_more,
         "latest_ago": latest_ago,
         "stale": stale,
         "notifications": items,

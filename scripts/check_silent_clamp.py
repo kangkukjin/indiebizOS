@@ -33,6 +33,20 @@ BASELINE(동결 목록)은 2026-08-24 에 비웠다 — 예외 0. 새 침묵 클
 고치거나 그 줄에 `# clamp-ok: <사유>` 를 달아 사유를 코드에 남긴다.
 
 대상: backend/ + data/packages/installed/. pre-commit 훅에서 호출된다.
+
+규칙 2 — 로컬 저장소의 기본 상한 (2026-09-29, 상상훈련 72회차 B72-3 밭 이관):
+  `[self:finance]` 지출 조회가 SQL 기본 `LIMIT 200` 으로 자르고 그 부분 합계를 `total` 로 냈다.
+  위 규칙(`min(리터럴, 요청량)`)도 68회차 절단 census(truncated 를 *내는* 생산자)도 이 형태를
+  못 봤다 — **아무것도 신고하지 않는 기본값**이라서다. 같은 날 형제 `[self:health]` 가 기본 50행
+  위에서 "총 N회"를 세고 있었다.
+  판별선: 사용자 자신의 로컬 저장소(SQL)는 모집단을 알 수 있다 — 외부 API 검색의 "상위 N"
+  과 달리 자른 목록이 전부로 읽히면 틀린 충만함이다. 그래서 SQL `LIMIT` 이 있는 함수에서
+    · 요청량 인자의 양의 정수 기본값(`limit=50`)·`x.get("limit", N)`·`x.get("limit") or N`
+    · SQL 문자열 안의 리터럴 `LIMIT N`(N>1)
+  과, 같은 패키지의 그런 함수를 부르며 기본 상한을 거는 호출자를 잡는다.
+  통과: 함수 본문이 신고한다(`truncated`·`has_more`·`total_count`·`clamped`·`next_offset`) 또는
+  그 줄(def 줄 포함)·윗줄에 `# clamp-ok: <사유>`(순위 상위 N·렌더 상한·미라우팅 등).
+  대상: data/packages/installed/tools + backend/drivers (IBL 결과를 내는 층).
 """
 import ast
 import re
@@ -145,7 +159,128 @@ def scan_file(path: Path):
     return out
 
 
+SQL_ROOTS = [ROOT / "data" / "packages" / "installed" / "tools", ROOT / "backend" / "drivers"]
+SQL_REPORT_MARKERS = ("truncated", "has_more", "total_count", "clamped", "next_offset")
+_SQL_LIMIT_LITERAL = re.compile(r"\bLIMIT\s+(\d+)\b")
+
+
+def _positive(node) -> bool:
+    return (isinstance(node, ast.Constant) and type(node.value) is int and node.value > 1)
+
+
+def _default_caps(func) -> list:
+    """(줄, 이름, 기본값) — 요청량 인자의 정수 기본값·.get(요청량, N)·.get(요청량) or N."""
+    caps = []
+    a = func.args
+    pos = list(a.posonlyargs) + list(a.args)
+    pairs = list(zip(pos[len(pos) - len(a.defaults):], a.defaults))
+    pairs += [(x, d) for x, d in zip(a.kwonlyargs, a.kw_defaults) if d is not None]
+    for arg, d in pairs:
+        if arg.arg.lower() in REQUEST_NAMES and _positive(d):
+            caps.append((func.lineno, arg.arg, d.value))
+    for n in ast.walk(func):
+        get = None
+        if isinstance(n, ast.Call) and len(n.args) > 1 and _positive(n.args[1]):
+            get, val = n, n.args[1].value
+        elif (isinstance(n, ast.BoolOp) and isinstance(n.op, ast.Or) and len(n.values) == 2
+              and _positive(n.values[1]) and isinstance(n.values[0], ast.Call)):
+            get, val = n.values[0], n.values[1].value
+        if (get is not None and isinstance(get.func, ast.Attribute) and get.func.attr == "get"
+                and get.args and isinstance(get.args[0], ast.Constant)
+                and str(get.args[0].value).lower() in REQUEST_NAMES):
+            caps.append((n.lineno, get.args[0].value, val))
+    return caps
+
+
+def _sql_limit_literals(func) -> list:
+    out = []
+    for n in ast.walk(func):
+        if isinstance(n, ast.Constant) and isinstance(n.value, str):
+            for m in _SQL_LIMIT_LITERAL.finditer(n.value):
+                if int(m.group(1)) > 1:
+                    out.append((n.lineno, "LIMIT", int(m.group(1))))
+    return out
+
+
+def _has_sql_limit(func) -> bool:
+    return any(isinstance(n, ast.Constant) and isinstance(n.value, str) and "LIMIT" in n.value
+               for n in ast.walk(func))
+
+
+def scan_sql_defaults(pkg_files) -> list:
+    """한 패키지(또는 드라이버 폴더)의 파일들 → [(rel, 줄, 이름, 값)]."""
+    parsed = []
+    for path in pkg_files:
+        try:
+            src = path.read_text(encoding="utf-8")
+            parsed.append((path, src, ast.parse(src)))
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+    sql_funcs = set()                         # 신고하지 않는 로컬 저장소 조회(신고하는 것은 호출자를 면제)
+    for _, src, tree in parsed:
+        lines = src.splitlines()
+        for f in ast.walk(tree):
+            if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) and _has_sql_limit(f):
+                body = "\n".join(lines[f.lineno - 1:getattr(f, "end_lineno", f.lineno)])
+                if not any(m in body for m in SQL_REPORT_MARKERS):
+                    sql_funcs.add(f.name)
+    out = []
+    for path, src, tree in parsed:
+        allowed = _allowed_lines(src)
+        lines = src.splitlines()
+        for f in ast.walk(tree):
+            if not isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            body = "\n".join(lines[f.lineno - 1:getattr(f, "end_lineno", f.lineno)])
+            if any(m in body for m in SQL_REPORT_MARKERS):
+                continue
+            if _has_sql_limit(f):
+                hits = _default_caps(f) + _sql_limit_literals(f)
+            elif any(isinstance(n, ast.Call) and (getattr(n.func, "id", None) in sql_funcs
+                                                  or getattr(n.func, "attr", None) in sql_funcs)
+                     for n in ast.walk(f)):
+                hits = _default_caps(f)       # 기본 상한을 걸어 로컬 저장소 조회를 부르는 호출자
+            else:
+                continue
+            for lineno, name, val in hits:
+                if lineno in allowed or f.lineno in allowed:
+                    continue
+                rel = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+                out.append((str(rel), lineno, name, val, f.name))
+    return out
+
+
+def main_sql() -> list:
+    found = []
+    for root in SQL_ROOTS:
+        if not root.exists():
+            continue
+        groups = [root] if root.name == "drivers" else sorted(p for p in root.iterdir() if p.is_dir())
+        for g in groups:
+            files = [p for p in sorted(g.rglob("*.py"))
+                     if not any(part in SKIP_DIRS for part in p.parts) and not p.name.startswith("test_")]
+            found += scan_sql_defaults(files)
+    return found
+
+
 def main() -> int:
+    sql_hits = main_sql()
+    if sql_hits:
+        print(f"[FAIL] 로컬 저장소 기본 상한 {len(sql_hits)}건 — 자르고 알리지 않습니다(72회차 B72-3 부류):")
+        for rel, lineno, name, val, fname in sql_hits:
+            print(f"  {rel}:{lineno}  {fname}: {name}={val}")
+        print()
+        print("고치는 법:")
+        print("  · 사용자 원장 조회는 숨은 기본 상한을 두지 말 것(limit=None — 기간·조건이 범위)")
+        print("  · 화면·쪽 상한이 필요하면 같은 조건으로 모집단을 세어 total_count·truncated(·next_offset)를 실을 것")
+        print("  · '최근 N' 창은 하나 더 떠 has_more 로 창 밖을 알릴 것")
+        print("  · 순위 상위 N·렌더 상한·미라우팅처럼 정당하면 그 줄에 `# clamp-ok: <사유>`")
+        return 1
+    print("✓ 로컬 저장소 기본 상한 OK — 전부 신고하거나 사유를 남김")
+    return _main_min()
+
+
+def _main_min() -> int:
     per_file = {}
     for root in SCAN_ROOTS:
         if not root.exists():

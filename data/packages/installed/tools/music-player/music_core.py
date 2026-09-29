@@ -600,12 +600,8 @@ def track_row(r) -> dict:
     }
 
 
-def query_tracks(q: str = "", path: str = "", folder: str = "", limit: int = 300) -> list:
-    """곡 질의 — q(부분검색) · folder(폴더 단위) · path(단일 곡).
-
-    artist/album/albumartist 정확 필터는 2026-07-28 은퇴 — 앨범·아티스트 목록 뷰의
-    드릴다운 전용이었고 그 축이 사라졌다. 아티스트·앨범명 검색은 q 가 그대로 덮는다.
-    """
+def _track_select(head: str, q: str = "", path: str = "", folder: str = "") -> tuple:
+    """곡 질의의 WHERE 한 벌 — 행 조회와 모집단 세기가 같은 조건을 쓴다."""
     where, args = [], []
     if path:
         where.append("path = ?"); args.append(norm_path(path))
@@ -615,9 +611,23 @@ def query_tracks(q: str = "", path: str = "", folder: str = "", limit: int = 300
     if q:
         where.append("(title LIKE ? OR artist LIKE ? OR album LIKE ? OR filename LIKE ?)")
         args += [f"%{q}%"] * 4
-    sql = "SELECT * FROM tracks"
-    if where:
-        sql += " WHERE " + " AND ".join(where)
+    return (head + (" WHERE " + " AND ".join(where) if where else "")), args
+
+
+def count_tracks(q: str = "", path: str = "", folder: str = "") -> int:
+    """query_tracks 와 같은 조건의 모집단 곡 수 — 상한으로 자른 목록이 전부인 척하지 않게."""
+    sql, args = _track_select("SELECT COUNT(*) FROM tracks", q, path, folder)
+    with _conn() as conn:
+        return int(conn.execute(sql, args).fetchone()[0])
+
+
+def query_tracks(q: str = "", path: str = "", folder: str = "", limit: int = 300) -> list:  # clamp-ok: 화면 상한 — 호출자(handler._library)가 count_tracks 로 모집단·truncated 를 싣는다
+    """곡 질의 — q(부분검색) · folder(폴더 단위) · path(단일 곡).
+
+    artist/album/albumartist 정확 필터는 2026-07-28 은퇴 — 앨범·아티스트 목록 뷰의
+    드릴다운 전용이었고 그 축이 사라졌다. 아티스트·앨범명 검색은 q 가 그대로 덮는다.
+    """
+    sql, args = _track_select("SELECT * FROM tracks", q, path, folder)
     sql += " ORDER BY album, disc_no, track_no, title LIMIT ?"
     args.append(max(1, min(int(limit or 300), 2000)))  # clamp-ok: SQL LIMIT 안전 난간 2000 — 요청량이 아니라 폭주 방지
     with _conn() as conn:
@@ -664,7 +674,17 @@ def count_folders() -> int:
     return len(_track_dirs())
 
 
-def direct_tracks(folder: str, limit: int = 500) -> list:
+def direct_count(folder: str) -> int:
+    """direct_tracks 와 같은 조건의 곡 수."""
+    f = norm_path(folder)
+    if not f:
+        return 0
+    with _conn() as conn:
+        return int(conn.execute("SELECT COUNT(*) FROM tracks WHERE path LIKE ? AND path NOT LIKE ?",
+                                (f + os.sep + "%", f + os.sep + "%" + os.sep + "%")).fetchone()[0])
+
+
+def direct_tracks(folder: str, limit: int = 500) -> list:  # clamp-ok: 표면이 곡마다 <audio> 를 그리는 렌더 상한 — 호출자가 direct_count 로 절단을 싣는다
     """그 폴더에 **직접** 든 곡만 (하위 폴더 제외) — 파인더의 '이 폴더 안 파일'.
 
     query_tracks(folder=…) 는 하위까지 훑으므로 여기선 부모 디렉토리가 정확히 일치하는

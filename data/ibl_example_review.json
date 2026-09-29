@@ -429,11 +429,12 @@
     "implementation": "1d21b495ffcb",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
+    "params": "5e32beccd24b",
     "ops": "03f87dd69056",
     "router": "ebbb1532efbc",
     "tool": "43a3ee5a2f67"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 26
   },
   "limbs:radio_favorite": {
@@ -656,13 +657,13 @@
     "implementation": "4102e54a5e54",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "aliases": "1381eb6ca139",
+    "aliases": "0c0e3b7ea2d5",
     "ops": "837421504c91",
     "side_effect": "b5bea41b6c62",
     "router": "ebbb1532efbc",
     "tool": "0717c4d61138"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 37
   },
   "others:nostr": {
@@ -1536,13 +1537,13 @@
     "implementation": "1491d015abbb",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "aliases": "6447534e114b",
+    "aliases": "dbabb7eee40f",
     "ops": "8d558aebc5d9",
     "side_effect": "fcbcf165908d",
     "router": "ebbb1532efbc",
     "tool": "90c3144637e1"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 72
   },
   "sense:classic": {

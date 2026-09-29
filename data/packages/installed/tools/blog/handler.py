@@ -137,9 +137,16 @@ def _op_posts(tool_input: dict, context) -> str:
     # 레코드 통화 부착(비파괴) — posts 목록을 records로.
     if isinstance(result, dict) and isinstance(result.get("posts"), list):
         result["items"] = _posts_to_records(result["posts"])
+    # 명시한 쪽 크기면 선택, 기본 20·상한 100 에 걸린 것이면 원천 절단 — 원 인자를 아는 이 층에서 가른다.
+    if isinstance(result, dict) and result.get("truncated"):
+        from common.currency import bounded_selection
+        requested = tool_input.get("limit", tool_input.get("count"))
+        boundary = min(int(requested or 20), 100)  # clamp-ok: 저장소와 같은 쪽 상한 — 깎이면 저장소가 clamped/requested 로 신고
+        result.update(bounded_selection(requested, boundary, result.get("count", 0), True))
     return format_json(result)
 
 
+# clamp-ok: 미라우팅 — 옛 _TOOL_FNS 도구 이름(tool.json 은 blog_op 뿐)이라 IBL 액션이 닿지 않음(2026-09-29 분류)
 def _tool_blog_get_summaries(tool_input: dict, context) -> str:
     from tool_blog_insight import blog_get_summaries
     result = blog_get_summaries(
@@ -160,6 +167,7 @@ def _tool_blog_save_summary(tool_input: dict, context) -> str:
     return format_json(result)
 
 
+# clamp-ok: 미라우팅 — 옛 _TOOL_FNS 도구 이름(tool.json 은 blog_op 뿐)이라 IBL 액션이 닿지 않음(2026-09-29 분류)
 def _tool_blog_search(tool_input: dict, context) -> str:
     from tool_blog_insight import blog_search
     result = blog_search(
@@ -176,6 +184,7 @@ def _op_stats(tool_input: dict, context) -> str:
     return format_json(result)
 
 
+# clamp-ok: 미라우팅 — 옛 _TOOL_FNS 도구 이름(tool.json 은 blog_op 뿐)이라 IBL 액션이 닿지 않음(2026-09-29 분류)
 def _tool_blog_insight_report(tool_input: dict, context) -> str:
     from tool_blog_insight import blog_insight_report
     # project_path 전달 필수

@@ -535,6 +535,7 @@ nodes:
       neighbor:
         aliases:
           from: [from_id, from_name]   # _nb_merge 의 `from or from_id or from_name`
+          npub: [pubkey]               # _nb_delete 의 옛 이름(비이웃 쪽지 상대 숨김)
         returns: items
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[others:neighbor]{op: "list"}'

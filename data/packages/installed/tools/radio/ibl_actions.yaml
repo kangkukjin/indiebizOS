@@ -109,6 +109,8 @@ nodes:
     actions:
       radio:
         lands_on: body
+        params:
+          name: string    # stream_url 재생 시 표시할 채널명(검색 결과의 name) — play_radio 가 읽는다
         limb_op: {op: media, action: $op, url: $stream_url, volume: $volume}
         member_transform: radio_member:control
         path_audited: {at: "2026-09-29", impl: "9ca93936cd0d76e7"}

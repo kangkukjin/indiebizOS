@@ -93,6 +93,17 @@ def location(source, source_map, node):
             'offset_encoding': 'unicode-codepoints'}
 
 
+def pipe_collision_message(callee, receiver):
+    """PIPE_COLLISION 은 처방이 다른 두 경우다 — 받는 자리가 없는 호출, 받는 자리를 명시로도 채운 호출.
+    어느 자리인지 말하지 않으면 고칠 방향이 안 읽힌다(72회차 후속: 예약 do 의 notify_user message)."""
+    if receiver is None:
+        return (f"{callee or '이 호출'}은(는) 파이프 입력을 받지 않습니다. 앞 단계 값은 $x = … 로 받아 "
+                f"필요한 인자에 넘기세요(예: {{인자: $x.text}}).")
+    where = f"{callee}의 " if callee else ""
+    return (f"파이프 값은 {where}`{receiver}` 자리로 들어가는데 `{receiver}` 를 명시로도 주었습니다. "
+            f"명시 `{receiver}` 를 빼거나, 파이프를 끊고 $x = … 로 받아 필드로 넘기세요.")
+
+
 def rejection_message(prefix, issues):
     """거절 봉투의 error 는 스스로 설명한다 — 문자열만 읽는 소비자(알림·이력·예약 결과·
     중첩 실행의 바깥)가 많다 (71회차 B71-3). 첫 진단과 남은 수."""

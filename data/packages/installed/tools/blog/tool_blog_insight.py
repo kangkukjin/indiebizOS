@@ -420,7 +420,8 @@ def blog_check_new_posts() -> Dict[str, Any]:
 def blog_get_posts(count: int = 20, offset: int = 0, category: Optional[str] = None, with_summary: bool = False, only_without_summary: bool = False) -> Dict[str, Any]:
     try:
         conn = get_db()
-        count = min(count, 100)  # clamp-ok: 내부 분석 표본 상한 100 — 사용자 요청 개수가 아니라 통계 표본
+        requested = count
+        count = min(count, 100)  # clamp-ok: 한 쪽 상한 100 — 깎이면 아래에서 clamped/requested 로 신고
         
         if only_without_summary:
             query = "SELECT p.* FROM posts p LEFT JOIN summaries s ON p.post_id = s.post_id WHERE s.post_id IS NULL"
@@ -437,6 +438,8 @@ def blog_get_posts(count: int = 20, offset: int = 0, category: Optional[str] = N
                 query += " AND " + where_cat
                 params.extend(cat_params)
         
+        # 모집단 — 같은 조건으로 센다(쪽으로 자른 목록이 블로그 전체로 읽히지 않게, 72회차 B72-3 부류).
+        total = conn.execute("SELECT COUNT(*) FROM (" + query + ")", params).fetchone()[0]
         query += " ORDER BY p.pub_date DESC LIMIT ? OFFSET ?"
         params.extend([count, offset])
         
@@ -450,7 +453,15 @@ def blog_get_posts(count: int = 20, offset: int = 0, category: Optional[str] = N
             posts.append(post)
         
         conn.close()
-        return {'success': True, 'count': len(posts), 'posts': posts}
+        more = offset + len(posts) < total
+        out = {'success': True, 'count': len(posts), 'posts': posts, 'total_count': total,
+               'returned_total': len(posts),
+               'truncated': more,  # truncation-scope: bounded — 호출자(handler._op_posts)가 bounded_selection 으로 원 요청·실효 상한·반환 건수를 대조; 기본값은 source
+               'next_offset': offset + len(posts) if more else None}
+        if requested != count:
+            out.update(clamped=True, requested=requested,
+                       message=f'요청 {requested}건 → 한 쪽 상한 {count}건. 나머지는 offset={offset + len(posts)} 로 이어 읽으세요.')
+        return out
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
@@ -466,6 +477,7 @@ def blog_get_post(post_id: str) -> Dict[str, Any]:
         return {'success': False, 'error': str(e)}
 
 
+# clamp-ok: 미라우팅 — 옛 _TOOL_FNS 도구 이름(tool.json 은 blog_op 뿐)이라 IBL 액션이 닿지 않음(2026-09-29 분류)
 def blog_get_summaries(count: int = 20, offset: int = 0, category: Optional[str] = None) -> Dict[str, Any]:
     try:
         conn = get_db()
@@ -500,6 +512,7 @@ def blog_save_summary(post_id: str, summary: str, keywords: str = "") -> Dict[st
         return {'success': False, 'error': str(e)}
 
 
+# clamp-ok: 미라우팅 — 옛 _TOOL_FNS 도구 이름(tool.json 은 blog_op 뿐)이라 IBL 액션이 닿지 않음(2026-09-29 분류)
 def blog_search(query: str, count: int = 20, search_in: str = "all") -> Dict[str, Any]:
     try:
         conn = get_db()
@@ -551,6 +564,7 @@ def _fetch_rss(url: str, limit: int = 5) -> List[Dict]:
     except: return []
 
 
+# clamp-ok: 미라우팅 — 옛 _TOOL_FNS 도구 이름(tool.json 은 blog_op 뿐)이라 IBL 액션이 닿지 않음(2026-09-29 분류)
 def blog_insight_report(count: int = 50, category: Optional[str] = None, project_path: str = ".") -> Dict[str, Any]:
     """블로그 인사이트 통합 보고서 생성 (동기화 포함)"""
     try:

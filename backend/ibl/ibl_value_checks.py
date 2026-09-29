@@ -47,7 +47,12 @@ def value_problems(contract, values, registry=None, definitions=None):
                 inputs = known.get("inputs", {})
                 plan = compile_program(code, registry if registry is not None else load_registry(),
                                        inputs if isinstance(inputs, dict) else {}, definitions or {})
-                errors.extend(f"{name}: {issue['message']} ({issue['code']})" for issue in plan.issues[:5])
+                # 안쪽 진단의 처방을 함께 싣는다 — 바깥 ARGUMENT_CONTRACT 의 범용 안내("인자 관계를 확인")가
+                # 중첩 문장의 고칠 방향을 가리지 않게(72회차 후속).
+                from ibl_v2_analysis import HINTS
+                errors.extend(f"{name}: {issue['message']} ({issue['code']})"
+                              + (f" — {HINTS[issue['code']]}" if issue['code'] in HINTS else "")
+                              for issue in plan.issues[:5])
             else:
                 from workflow_engine import preflight_sentence
                 result = preflight_sentence(code, known.get("inputs"))

@@ -308,6 +308,7 @@ def list_scans() -> Dict:
     return {"success": True, "scans": result}
 
 
+# clamp-ok: 미라우팅 — photo_op 은 file_index.query 로 간다(2026-09-29 분류)
 def search_media(root_path: str, query: str = "",
                  media_type: str = "all",
                  start_date: Optional[str] = None,
@@ -652,6 +653,7 @@ def get_duplicates(root_path: str) -> Dict:
     }
 
 
+# clamp-ok: 순위 상위 N — 카메라 기종 빈도 상위 10 통계라 모집단이 의미 없음
 def get_stats(root_path: str) -> Dict:
     """통계 조회"""
     # macOS NFD -> NFC 정규화

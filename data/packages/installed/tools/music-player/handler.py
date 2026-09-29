@@ -17,7 +17,7 @@ _ROOT = Path(__file__).resolve().parents[5]
 _BACKEND = str(_ROOT / "backend")
 if _BACKEND not in sys.path:
     sys.path.insert(0, _BACKEND)
-from common.currency import items  # IBL 단일 통화 생성자
+from common.currency import items, bounded_selection  # IBL 단일 통화 생성자
 
 _CORE = None
 
@@ -47,15 +47,21 @@ _EMPTY_HINT = "라이브러리가 비어 있습니다. 보관함 탭에서 음�
 
 def _library(params: dict) -> dict:
     c = _core()
-    rows = c.query_tracks(
-        q=(params.get("query") or params.get("q") or "").strip(),
-        path=(params.get("path") or "").strip(),
-        folder=(params.get("folder") or "").strip(),
-        limit=params.get("limit") or 300,
-    )
+    cond = dict(q=(params.get("query") or params.get("q") or "").strip(),
+                path=(params.get("path") or "").strip(),
+                folder=(params.get("folder") or "").strip())
+    requested = params.get("limit")
+    boundary = max(1, min(int(requested or 300), 2000))  # clamp-ok: 화면 기본 300·폭주 난간 2000 — 아래에서 모집단·truncated 를 싣는다
+    rows = c.query_tracks(**cond, limit=boundary)
     if not rows:
         return items([], message=_EMPTY_HINT if not c.load_sources() else "조건에 맞는 곡이 없습니다.")
-    return items(rows, count=len(rows))
+    # 모집단을 센다 — 상한으로 자른 목록이 전체 분포(groupby·차트)로 읽히지 않게(72회차 B72-3 부류).
+    total = c.count_tracks(**cond)
+    cut = len(rows) < total
+    return items(rows, count=len(rows), total_count=total, returned_total=len(rows),
+                 truncated=cut,  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
+                 **bounded_selection(requested, boundary, len(rows), cut),
+                 **({"message": f"{total}곡 중 앞 {len(rows)}곡 — 전부 보려면 limit 를 올리세요(최대 2000)."} if cut else {}))
 
 
 def _track(params: dict) -> dict:
@@ -99,6 +105,8 @@ def _folders(params: dict) -> dict:
         # (폴더만 있는 곳엔 안 보이고, 곡이 든 곳엔 그 자리에서 바로 재생).
         direct = c.direct_tracks(br["folder"])
         out["direct"] = direct
+        out["direct_total"] = c.direct_count(br["folder"])
+        out["direct_truncated"] = len(direct) < out["direct_total"]  # truncation-scope: source — 곡마다 <audio> 를 그리는 렌더 상한 500
         out["direct_note"] = "" if direct else "이 폴더에 직접 든 곡은 없습니다."
         # tracks — 하위 폴더까지 포함한 전체(별도 탭에서 '다 골랐을 때' 재생).
         tracks = c.query_tracks(folder=br["folder"], limit=_PLAY_CAP)

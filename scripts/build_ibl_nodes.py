@@ -291,6 +291,22 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 구현-읽기 감사 통과 ✓ (죽은 컨테이너 자리 0 · 신규 미선언 0)")
 
+        # --- 액션별 구현-읽기 관문 (2026-09-29, 72회차 B72-2 밭 이관) ---
+        # 위 감사는 입력을 변수 이름(tool_input/ti)으로 알아보고 패키지 합집합으로 판정해,
+        # finance(input_data)·params 규약 핸들러와 "같은 패키지 다른 도구의 선언" 덕에 통과하는
+        # 자리를 못 봤다. 디스패처에서 입력 dict 의 흐름을 따라가 모은 읽기 키를 실행 관문과
+        # 같은 함수(allowed_param_keys)가 계산한 액션별 허용 집합과 대조한다.
+        from iblbuild_action_reads import validate_action_reads
+        from iblbuild_params_check import IMPL_READ_ALLOW
+        aissues = validate_action_reads(data, root, IMPL_READ_ALLOW)
+        if aissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 액션별 구현-읽기 관문 실패: {len(aissues)}건", file=sys.stderr)
+            for issue in aissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 액션별 구현-읽기 관문 통과 ✓ (디스패처 op 가 읽는 인자 ⊆ 판본 2 허용 집합)")
+
         # --- 선언 내부 모순 관문 (2026-09-07) ---
         # 산문은 모델이 읽고 타입은 관문이 읽는다. 09-05 수리가 memory keywords 의
         # 저장소·산문만 고치고 타입을 두어, 낱말이 "배열도 받습니다"라고 적어 놓은 채

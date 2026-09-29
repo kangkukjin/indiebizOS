@@ -331,7 +331,10 @@ class Runtime(ExpressionEvaluator):
         if piped is None:
             return args
         if receiver is None or receiver in args.value:
-            raise Fault("PIPE_COLLISION", "파이프 입력 자리가 없거나 중복입니다.", node)
+            from ibl_v2_analysis import pipe_collision_message
+            d = node.data
+            callee = f"[{d['node']}:{d['action']}]" if d.get("node") and d.get("action") else ""
+            raise Fault("PIPE_COLLISION", pipe_collision_message(callee, receiver), node)
         return Binding({**args.value, receiver: piped.value}, args.evidence | piped.evidence)
 
     def expression_tick(self):

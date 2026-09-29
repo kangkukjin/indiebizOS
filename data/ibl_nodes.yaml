@@ -641,6 +641,8 @@ nodes:
         aliases:
           limit:
           - count
+          lng:
+          - lon
         returns: items
         side_effect: false
         fixture: '[sense:cctv]{op: "search", query: "해운대"}'
@@ -6845,6 +6847,8 @@ nodes:
         target_key: query
       radio:
         lands_on: body
+        params:
+          name: string
         limb_op:
           op: media
           action: $op
@@ -7762,6 +7766,8 @@ nodes:
           from:
           - from_id
           - from_name
+          npub:
+          - pubkey
         returns: items
         side_effect: true
         fixture: '[others:neighbor]{op: "list"}'

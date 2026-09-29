@@ -243,6 +243,7 @@ def _photos_to_records(items: list) -> list:
     return records
 
 
+# clamp-ok: 미라우팅 — photo_op 은 file_index.query 로 간다(2026-09-29 분류)
 def _photo_search(params: Dict[str, Any]) -> Dict[str, Any]:
     """파일명/카메라 모델 키워드 검색."""
     root_path = _resolve_scan_path(params)

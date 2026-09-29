@@ -669,7 +669,10 @@ class Compiler:
     def arguments(self, node, args, params, receiver, piped):
         if piped is not None:
             if receiver is None or receiver in args:
-                self.issue(node, "PIPE_COLLISION", "파이프 입력 자리가 없거나 명시 인자와 충돌합니다.")
+                from ibl_v2_analysis import pipe_collision_message
+                d = node.data
+                callee = f"[{d['node']}:{d['action']}]" if d.get("node") and d.get("action") else ""
+                self.issue(node, "PIPE_COLLISION", pipe_collision_message(callee, receiver))
             else:
                 args[receiver] = piped
         for name, default in params.items():

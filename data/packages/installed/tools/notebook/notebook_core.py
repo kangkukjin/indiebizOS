@@ -840,6 +840,7 @@ def _combine(sem: List[Tuple[int, float]], fts: List[Tuple[int, float]], alpha: 
     return sorted(combined.items(), key=lambda x: x[1], reverse=True)
 
 
+# clamp-ok: 순위 상위 N — 근거 청크 관련도 순위라 모집단이 의미 없음
 def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_ALPHA,
                   source: Any = None) -> Dict[str, Any]:
     """노트북 스코프 하이브리드 검색 → 청크 목록 (LLM 0 — search op 및 ask의 재료).

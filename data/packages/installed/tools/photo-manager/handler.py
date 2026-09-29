@@ -105,17 +105,6 @@ def execute(tool_input: Dict[str, Any], context) -> Dict[str, Any]:
 _PHOTO_FACETS = ("taken_at", "lat", "lng", "camera", "width", "height")
 
 
-def _output_roots():
-    """기본 갤러리에서만 제외하는 몸의 산출 범위. 파일의 기종 유무와 무관하다."""
-    from runtime_utils import get_base_path
-    root = get_base_path()
-    projects = root / "projects"
-    roots = [str(root / "outputs"), str(root / "data")]
-    if projects.is_dir():
-        roots.extend(str(p / "outputs") for p in projects.iterdir() if p.is_dir())
-    return roots
-
-
 def _photo_record(it: Dict[str, Any]) -> Dict[str, Any]:
     """file_index 보편 item → records 통화 + 사진 특수(썸네일·지도) 포장."""
     path = it.get("path") or ""
@@ -188,6 +177,10 @@ def _query_photos(params: Dict[str, Any]) -> Dict[str, Any]:
     if one and not path:
         path = one
 
+    explicit_path = bool(path)
+    if not path and source == "self" and file_index.detect_body().get("profile") != "phone":
+        path = expand_body_path("~/Pictures")
+
     res = file_index.query(
         kind=kind,
         q=params.get("q") or params.get("query"),
@@ -199,13 +192,14 @@ def _query_photos(params: Dict[str, Any]) -> Dict[str, Any]:
         sort="date",  # 촬영일 내림차순
         facets=_PHOTO_FACETS,
         source=source,
-        exclude_paths=_output_roots() if not path and source == "self" else (),
     )
     if not res.get("success"):
         return res
     # 단일 통화 items = 카드 shape(_photo_record: title/meta/url=path/image=썸네일). raw items를 카드로 덮어씀.
     res["items"] = [_photo_record(it) for it in res.get("items", [])]
-    res["selection_policy"] = "explicit_path" if path else "personal_media"
+    res["selection_policy"] = "explicit_path" if explicit_path else "personal_media"
+    if path:
+        res["search_path"] = path
     return res
 
 

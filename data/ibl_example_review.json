@@ -325,14 +325,15 @@
   "limbs:cloudflare_api": {
    "fields": {
     "description": "cfefc43fd6d3",
-    "target_description": "3124a56d6093",
+    "target_description": "6cf44a30b6ea",
     "implementation": "2aa19b398d28",
-    "returns": "9a5e13f69efc",
+    "returns": "3c22349f8d0b",
     "target_key": "a2883e3744bc",
+    "side_effect": "b5bea41b6c62",
     "router": "ebbb1532efbc",
     "tool": "23b375480f42"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 6
   },
   "limbs:guestpc": {
@@ -1292,7 +1293,7 @@
   "self:photo": {
    "fields": {
     "description": "b21f2d57359d",
-    "target_description": "8bbcef731cf3",
+    "target_description": "682372ad6bf6",
     "implementation": "acab82ced2e5",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",

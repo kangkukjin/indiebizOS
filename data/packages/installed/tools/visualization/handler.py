@@ -45,7 +45,7 @@ def _extract_table_from_prev(prev):
 
     prev는 문자열(JSON) 또는 dict. {table:{columns,rows}} 형태면 그 table 반환.
     """
-    if not prev:
+    if prev is None:
         return None
     obj = prev
     if isinstance(prev, str):
@@ -57,12 +57,12 @@ def _extract_table_from_prev(prev):
         obj = {"items": obj}
     if isinstance(obj, dict):
         t = obj.get("table")
-        if isinstance(t, dict) and t.get("rows"):
+        if isinstance(t, dict) and isinstance(t.get("rows"), list):
             return t
         # 단일 통화 items(행 dict) → table 재구성: 첫 dict의 키 순서=열(첫 열=x축 라벨, 나머지=수치 시리즈).
         items = obj.get("items")
-        if isinstance(items, list) and items and all(isinstance(x, dict) for x in items):
-            cols = list(items[0].keys())
+        if isinstance(items, list) and all(isinstance(x, dict) for x in items):
+            cols = list(dict.fromkeys(k for row in items for k in row))
             return {"columns": cols, "rows": [[d.get(c) for c in cols] for d in items]}
     return None
 
@@ -153,7 +153,7 @@ def _table_to_chart_data(table: dict, chart_type: str) -> dict:
     """
     cols = table.get("columns") or []
     rows = table.get("rows") or []
-    if not rows:
+    if not rows or len(cols) < 2:
         return {}
     out: dict = {}
     if chart_type == "heatmap":
@@ -356,10 +356,26 @@ def _execute(tool_input: dict, context):
             # (아래 통화/데이터 정규화 후, chart_type → 렌더러 함수 직접-return)
             # 모델이 table 통화를 data: 키에 {columns,rows} 로 넣는 흔한 실수 → table 로 인식.
             # (안 그러면 하위 렌더러가 dict 를 행 리스트로 오인 → KeyError(0)='도구 실행 중 오류 발생: 0')
+            # Inspect the actual input before a conversion can erase its shape or cardinality.
+            incoming = tool_input.get("items", tool_input.get("_prev_result"))
+            if incoming is not None and not tool_input.get("table") and tool_input.get("data") is None:
+                table = _extract_table_from_prev(incoming)
+                if table is None:
+                    return {"success": False, "rows_in": len(incoming) if isinstance(incoming, list) else 0,
+                            "error": "차트 입력은 행 객체 목록이어야 합니다. 스칼라 또는 비레코드 입력입니다."}
+                tool_input["table"] = table
             _maybe = tool_input.get("data")
-            if isinstance(_maybe, dict) and _maybe.get("rows") and _maybe.get("columns"):
+            if isinstance(_maybe, dict) and isinstance(_maybe.get("rows"), list) and "columns" in _maybe:
                 tool_input["table"] = _maybe
                 tool_input["data"] = None
+            table = tool_input.get("table")
+            if isinstance(table, dict) and (not table.get("rows") or (
+                    len(table.get("columns") or []) < 2 and not (tool_input.get("x") and tool_input.get("y")))):
+                return _diagnose_no_data(tool_input, chart_type)
+            if isinstance(_maybe, (int, float, bool, str)):
+                return {"success": False, "rows_in": 0, "error": "차트 data는 스칼라가 아닌 행 목록이어야 합니다."}
+            if _maybe == []:
+                return {"success": False, "rows_in": 0, "error": "입력 0행 — 그릴 내용이 없습니다."}
             if tool_input.get("x") is not None or tool_input.get("y") is not None:
                 from common.currency import coerce_items_payload
                 rows = coerce_items_payload(tool_input.get("data") if tool_input.get("data") is not None else tool_input.get("items", tool_input.get("_prev_result")))

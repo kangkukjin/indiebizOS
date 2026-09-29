@@ -291,6 +291,7 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
     # 분기에 넘어가 "모든 조건 불일치"라는 *정상 메시지*로 끝났다 — 조건이 거짓이어서
     # 안 걸린 건지 평가가 터진 건지 호출자가 구별할 수 없었다(침묵 실패 계열).
     cond_errors = []
+    left_value = None
 
     for branch in branches:
         condition = branch.get("condition")
@@ -311,7 +312,7 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
             if action:
                 return _attach_branch_meta(
                     _run_branch(action, tool_input, project_path, agent_id),
-                    matched="else", matched_value=None, tool_input=tool_input)
+                    matched="else", matched_value=left_value, tool_input=tool_input)
             return {"message": "else 분기 실행 (action 없음)", "matched": "else"}
 
         # 조건 평가: 소스 참조 실행 + $변수(앞 문장 결과, _var_values) 술어

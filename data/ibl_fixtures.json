@@ -166,6 +166,7 @@
     "limbs:browser#find": "라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패",
     "limbs:browser#logs": "라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패",
     "limbs:browser#snapshot": "라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패",
+    "limbs:cloudflare_api": "계정별 API 토큰 권한·endpoint 자원에 의존. 정기 무인 호출 대신 test_imagination_audit_repairs.py에서 HTTP 응답 대역으로 URL·items·쓰기 효과 계약 검증.",
     "limbs:guestpc#info": "USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)",
     "limbs:guestpc#list": "USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)",
     "limbs:guestpc#read": "USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)",

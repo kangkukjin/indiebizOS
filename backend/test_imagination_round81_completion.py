@@ -38,10 +38,10 @@ def test_photo_exclusion_precedes_candidate_cap_and_limit(tmp_path, monkeypatch,
     assert 'warning' not in result
 
 
-def test_photo_preset_only_excludes_default_local_scope(monkeypatch):
+def test_photo_default_scope_preserves_explicit_path_and_phone(monkeypatch):
     mod = module('photo-manager')
     calls = []
-    monkeypatch.setattr(mod, '_output_roots', lambda: ['/body/outputs'])
+    monkeypatch.setattr(mod.file_index, 'detect_body', lambda: {'profile': 'pc'})
     def query(**args):
         calls.append(args)
         return {'success': True, 'items': []}
@@ -49,7 +49,10 @@ def test_photo_preset_only_excludes_default_local_scope(monkeypatch):
     mod._query_photos({})
     mod._query_photos({'path': '/body/outputs'})
     mod._query_photos({'source': 'usb'})
-    assert [c['exclude_paths'] for c in calls] == [['/body/outputs'], (), ()]
+    assert [c['path'] for c in calls] == [str(Path.home() / 'Pictures'), '/body/outputs', None]
+    monkeypatch.setattr(mod.file_index, 'detect_body', lambda: {'profile': 'phone'})
+    mod._query_photos({})
+    assert calls[-1]['path'] is None
 
 
 def test_camera_absence_does_not_claim_generated_origin():

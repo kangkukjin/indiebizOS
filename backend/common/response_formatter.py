@@ -144,7 +144,7 @@ def compact_price_series(prices: list, max_points: int = 10, threshold: int = 50
     ★{date, close} 투영 은퇴(2026-08-07) — 거래량 등이 파이프에서 죽는 원인이었다.
     """
     total = len(prices or [])
-    if total <= threshold:
+    if max_points is None or total <= threshold:
         return [dict(p) for p in (prices or [])], False
     compact = downsample_prices(prices, max_points)
     return compact, len(compact) < total

@@ -46,13 +46,13 @@ def run(tool_input: dict, creds: dict) -> dict:
         }
 
     # {account_id} 플레이스홀더 치환
-    endpoint = endpoint.replace("{account_id}", account_id)
+    endpoint = endpoint.replace("{account_id}", account_id or "")
 
     # 전체 URL 구성
     if endpoint.startswith("http"):
         url = endpoint
     else:
-        url = f"{CLOUDFLARE_API_BASE}{endpoint}"
+        url = f"{CLOUDFLARE_API_BASE}/{endpoint.lstrip('/')}"
 
     headers = {
         "Authorization": f"Bearer {api_token}",
@@ -105,12 +105,15 @@ def run(tool_input: dict, creds: dict) -> dict:
                     out["items"] = r
                 elif isinstance(r, dict):
                     out["items"] = [r]
+                else:
+                    out["items"] = [] if r is None else [{"value": r}]
             return out
         else:
             return {
                 "success": response.ok,
                 "status_code": response.status_code,
-                "data": data
+                "data": data,
+                "items": data if isinstance(data, list) else ([] if data is None else [{"value": data}])
             }
 
     except requests.exceptions.Timeout:

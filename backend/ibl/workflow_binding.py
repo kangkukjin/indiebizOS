@@ -180,15 +180,15 @@ def _v4_var_payload(raw: str) -> str:
     msg = obj.get("message")
     has_msg = isinstance(msg, str) and bool(msg.strip())
     items = obj.get("items")
-    items_nonempty = isinstance(items, list) and bool(items)
+    has_items = isinstance(items, list)
     _same_face = ("items", "message", "table", "columns", "rows", "summary", "count", "success")
     other_payload = any(isinstance(v, (dict, list)) and v
                         for k, v in obj.items() if k not in _same_face)
     if has_msg and not other_payload:
         doc_shaped = ("\n" in msg.strip()) or (len(msg) >= 200)
-        if doc_shaped or not items_nonempty:
+        if doc_shaped or not has_items:
             return msg
-    if items_nonempty and not other_payload:
+    if has_items and not other_payload:
         return json.dumps(items, ensure_ascii=False)
     return raw
 

@@ -284,6 +284,11 @@ def execute(tool_input: dict, context):
         result = tool.search_commercial_district(lat=lat, lng=lng, radius=radius, region_code=region_code, indsLclsCd=indsLclsCd)
         if isinstance(result, dict) and _resolved_place:
             result["조회지역"] = _resolved_place
+            result["query_interpretation"] = {"query": q, "place": _resolved_place,
+                                                "industry_code": indsLclsCd}
+            result["notes"] = list(result.get("notes") or []) + [
+                "query는 지명으로만 해석합니다. 업종 낱말은 필터가 아닙니다. "
+                "indsLclsCd로 업종을 지정하거나 결과 category를 필터링하세요."]
         # 단일 통화 items = native 점포 dict(name/category/address/lat/lng — markers가 좌표 직독).
         if isinstance(result, dict) and isinstance(result.get("data"), list):
             result["items"] = result.pop("data")

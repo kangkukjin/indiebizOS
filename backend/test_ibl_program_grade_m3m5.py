@@ -362,7 +362,14 @@ def test_s1b_mixed_spill_envelope_preserves_sibling_metadata(tmp_spill):
     assert seen["file_path"] == mixed["file_path"]
 
 
-def test_s2_resume(tmp_spill):
+def test_s2_resume(tmp_spill, monkeypatch):
+    # The executor stub needs matching static vocabulary; missing actions are now rejected.
+    import ibl_typecheck
+    original_definition = ibl_typecheck._action_def
+    fake_names = {'sense:rows', 'sense:take', 'sense:bad', 'sense:x', 'self:sink', 'self:fixed'}
+    monkeypatch.setattr(ibl_typecheck, '_action_def', lambda node, action:
+                        {'returns': 'items', 'pipe_in': True} if f'{node}:{action}' in fake_names
+                        else original_definition(node, action))
     from system_tools_ibl import _execute_ibl_unified
     calls, state = [], {}
     orig = ibl_engine.execute_ibl

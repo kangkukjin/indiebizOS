@@ -26,6 +26,8 @@ class CalendarActionsMixin:
         sig = re.sub(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?", "<time>", sig)
         sig = re.sub(r'("?(duration_ms|elapsed(_ms)?|took)"?\s*[:=]\s*)[\d.]+', r"\1<n>", sig)
         sig = re.sub(r"\b\d+(\.\d+)?\s*(ms|초|s)\b", "<n>", sig)
+        # Only timestamp-labelled fields are volatile; amounts and other numbers remain evidence.
+        sig = re.sub(r'(["\']?(?:time|timestamp|started_at|finished_at)["\']?\s*[:=]\s*)\d{10,13}(?:\.\d+)?', r"\1<time>", sig)
         return sig
 
     @staticmethod
@@ -38,7 +40,7 @@ class CalendarActionsMixin:
             return True
         message = CalendarActionsMixin._failure_signature(str(result.get("error") or "알 수 없는 오류"))
         previous = task.get("failure_notice") or {}
-        same = previous.get("error") == message
+        same = CalendarActionsMixin._failure_signature(str(previous.get("error") or "")) == message
         repeated = previous.get("repeated", 0) + 1 if same else 1
         notify = not same or now - previous.get("notified_at", 0) >= 86400
         task["failure_notice"] = {"error": message, "repeated": repeated,

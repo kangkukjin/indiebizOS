@@ -5364,7 +5364,7 @@ nodes:
         fixture: '[self:photo]{op: "stats"}'
         runs_on: anywhere
         description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환(기본=실행되는 몸의 미디어, source:usb면 USB로 연결된 안드로이드 폰). 타임라인·통계·중복은 >> table 변환자.
-        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(현지 촬영일 범위, YYYY-MM 또는 YYYY-MM-DD; taken_at은 시간대 포함), has_gps(true면 위치 보유만), path(검색 루트; 생략 시 홈에서 시스템 outputs·data·프로젝트 outputs 제외, 명시하면 해당 범위 포함), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng(미상이면 null)/taken_at/month/kind/camera/size/source/origin(camera 또는 unknown) 구조 필드 포함 → groupby·지도와 직결.'
+        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(현지 촬영일 범위, YYYY-MM 또는 YYYY-MM-DD; taken_at은 시간대 포함), has_gps(true면 위치 보유만), path(검색 루트; 생략 시 PC는 ~/Pictures 사진 보관 폴더, 폰은 MediaStore; 다른 폴더는 path로 명시), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng(미상이면 null)/taken_at/month/kind/camera/size/source/origin(camera 또는 unknown) 구조 필드 포함 → groupby·지도와 직결.'
         group: photo
         target_key: query
         router: handler
@@ -6849,9 +6849,11 @@ nodes:
         - 스크린샷
         - 찍어
       cloudflare_api:
-        returns: effect
+        returns: items
+        exempt: 계정별 API 토큰 권한·endpoint 자원에 의존. 정기 무인 호출 대신 test_imagination_audit_repairs.py에서 HTTP 응답 대역으로 URL·items·쓰기 효과 계약 검증.
+        side_effect: true
         description: Cloudflare API 호출 (Pages/Workers/R2/D1/Tunnel 모든 서비스 통합).
-        target_description: API endpoint 경로 (예 'zones/abc/dns_records'). method/body/params 옵션으로 요청 구성. 성공 result 는 items 통화로도 방출(list=행들, dict=1행 — each·변환자에 물린다), 실패는 error 에 사유(errors[] 합침). 사용량·무료 한도 대비(R2 저장/작업·Workers 요청)는 REST 가 아니라 등록 스크립트 [self:script]{op:"run", id:"Cloudflare사용량"} — GraphQL 분석은 여기서 부르지 않는다.
+        target_description: API endpoint 경로 (예 '/zones/abc/dns_records'). method/body/params 옵션으로 요청 구성. 성공 result 는 items 통화로도 방출(list=행들, dict=1행 — each·변환자에 물린다), 실패는 error 에 사유(errors[] 합침). 사용량·무료 한도 대비(R2 저장/작업·Workers 요청)는 REST 가 아니라 등록 스크립트 [self:script]{op:"run", id:"Cloudflare사용량"} — GraphQL 분석은 여기서 부르지 않는다.
         group: cloudflare
         router: handler
         tool: cf_api

@@ -184,8 +184,8 @@ def cron_to_config(cron: str) -> dict:
 def _resolve_schedule_config(params: dict) -> dict:
     """params 에서 schedule config 산출. cron 우선 파싱, 없으면 config 직접 사용(정규화·검증).
     반환: config dict, 또는 파싱 실패 시 {"error":...} 포함 dict."""
-    if params.get("config"):
-        return normalize_schedule_config(params["config"])
+    if "config" in params:
+        return normalize_schedule_config(params["config"], executable=True)
     cron = params.get("cron")
     if cron:
         parsed = _cron_to_config(cron)
@@ -194,11 +194,11 @@ def _resolve_schedule_config(params: dict) -> dict:
         # cron 이 만든 규칙도 config 직접 지정과 같은 정본 검사를 거친다(75회차 후속): 옛 판은 형식만 보고
         # 값 범위를 안 봐 `0 9 31 2 *`·`0 25 * * *` 가 "생성 완료"로 저장된 뒤 캘린더 동기화에서 떨어졌다
         # (트리거만 남고 이벤트 없음 = 영원히 안 도는 좀비).
-        checked = normalize_schedule_config(parsed)
+        checked = normalize_schedule_config(parsed, executable=True)
         if checked.get("error"):
             return {"error": f"cron '{cron}': {checked['error']}"}
         return {"config": checked["config"]}
-    return {"config": {}}
+    return normalize_schedule_config({}, executable=True)
 
 
 def resolve_trigger_config(params: dict, trigger_type: str = None) -> dict:
@@ -250,7 +250,7 @@ def _sync_schedule_trigger(trigger: dict, action: str = "add"):
                 title=f"[IBL] {trigger['name']}",
                 event_type="schedule",
                 repeat=config.get("repeat", "daily"),
-                event_time=config.get("time", "09:00"),
+                event_time=config.get("time"),
                 event_date=config.get("date"),
                 weekdays=config.get("weekdays"),
                 month=config.get("month"),

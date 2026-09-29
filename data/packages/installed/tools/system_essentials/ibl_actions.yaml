@@ -1555,6 +1555,11 @@ tool_json:
         source:
           type: string
           description: 원본 파일 또는 폴더 경로 (생략 시 파이프로 받은 items 를 복사)
+        items:
+          type: array
+          items:
+            type: object
+          description: 복사할 파일 레코드 목록 (path 또는 url). 빈 목록은 0개 복사.
         destination:
           type: string
           description: 복사 대상 경로 (파이프 저장이면 대상 폴더)

@@ -357,7 +357,7 @@ tool_json:
           description: '[search] 검색 유형 (기본 quotes)'
         max_points:
           type: integer
-          description: '[quote/history] 반환 데이터 포인트 수 (기본 10)'
+          description: '[quote/history] 반환 데이터 포인트 수 (quote 기본 10, history 생략 시 조회 이력 전량)'
       required: []
   - name: company_op
     description: '기업 펀더멘털 조회 (op 분기) — [sense:company]. 시장(kr/us)은 ticker로 자동판별(삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC), market

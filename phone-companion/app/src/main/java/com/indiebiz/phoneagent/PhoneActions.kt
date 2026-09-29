@@ -272,6 +272,12 @@ object PhoneActions {
         if (!fine && !coarse) {
             return """{"error":"위치 권한 없음 — 설정에서 IndieBiz 위치 권한을 허용하세요"}"""
         }
+        val manager = ctx.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+        if (!manager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) &&
+            !manager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)) {
+            return JSONObject().put("error", "위치 서비스가 꺼져 있습니다. 기기 설정에서 위치를 켜세요.")
+                .put("code", "LOCATION_DISABLED").toString()
+        }
         val fused = LocationServices.getFusedLocationProviderClient(ctx)
         val latch = CountDownLatch(1)
         val holder = arrayOfNulls<android.location.Location>(1)
@@ -287,7 +293,9 @@ object PhoneActions {
             return """{"error":"위치 조회 시간초과(15초)"}"""
         }
         val loc = holder[0]
-            ?: return """{"error":"위치 null${if (errMsg[0] != null) " — ${errMsg[0]}" else ""}"}"""
+            ?: return JSONObject().put("error", errMsg[0] ?: "위치 서비스는 켜져 있으나 현재 좌표를 얻지 못했습니다. 수신 가능한 곳에서 다시 조회하세요.")
+                .put("code", if (errMsg[0] != null) "LOCATION_PROVIDER_ERROR" else "LOCATION_UNAVAILABLE")
+                .put("permission", if (fine) "fine" else "coarse").toString()
         val out = JSONObject()
             .put("lat", loc.latitude)
             .put("lng", loc.longitude)

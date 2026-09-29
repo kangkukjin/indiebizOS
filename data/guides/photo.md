@@ -16,7 +16,7 @@
 | `kind` | `photo` / `video` / `all`(기본) |
 | `start`·`end` | 촬영일 범위 — `YYYY-MM` 또는 `YYYY-MM-DD` |
 | `has_gps` | true 면 위치 정보를 가진 것만 |
-| `path` | 검색 루트 (생략 시 홈 전체) |
+| `path` | 검색 루트 (PC에서 생략 시 `~/Pictures`, 폰은 MediaStore) |
 | `file` | 단일 파일 절대경로 상세 |
 | `limit` | 개수 (기본 50) |
 | `source` | `self`(기본)=실행되는 몸 / `usb`=USB 로 연결된 안드로이드 폰 |

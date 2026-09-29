@@ -2,7 +2,7 @@
 
 ## 현재 사진 조회
 
-`[self:photo]`는 OS 미디어 색인(맥 Spotlight·폰 MediaStore)을 조회합니다.
+`[self:photo]`는 OS 미디어 색인(맥 Spotlight·폰 MediaStore)을 조회합니다. PC 기본 범위는 `~/Pictures`이며 홈 전체의 개발용 이미지를 개인 사진으로 간주하지 않습니다. 다른 보관 폴더는 `path`로 지정합니다. 폰·USB는 기존 MediaStore 범위를 사용합니다.
 먼저 스캔하거나 SQLite DB를 직접 조회할 필요가 없습니다.
 
 ```ibl

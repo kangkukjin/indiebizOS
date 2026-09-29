@@ -533,6 +533,44 @@ def _apply_when(blocks):
     return kept, omitted
 
 
+def _normalize_render_blocks(blocks):
+    """All renderers receive the same lossless, renderable table/card shape."""
+    from common.currency import coerce_json_param
+    out = []
+    for index, raw in enumerate(blocks):
+        if not isinstance(raw, dict):
+            raise ValueError(f"blocks[{index}]: 블록은 객체여야 합니다.")
+        b = dict(raw)
+        kind = str(b.get("type") or "paragraph").lower()
+        b["type"] = kind
+        if kind in ("table", "cards"):
+            for key in ("items", "columns", "rows"):
+                if key in b:
+                    b[key] = coerce_json_param(b[key])
+            items = b.get("items")
+            if kind == "table" and "items" in b and "rows" in b:
+                raise ValueError(f"blocks[{index}]: table의 items와 rows는 함께 지정할 수 없습니다.")
+            if kind == "table" and "items" in b:
+                if not isinstance(items, list) or not all(isinstance(r, dict) for r in items):
+                    raise ValueError(f"blocks[{index}]: table.items는 행 객체 목록이어야 합니다.")
+                columns = b.get("columns") or list(dict.fromkeys(k for r in items for k in r))
+                b.update(columns=columns, rows=[[r.get(k, "") for k in columns] for r in items])
+            if kind == "cards":
+                if not isinstance(items, list) or not items or not all(isinstance(r, dict) for r in items):
+                    raise ValueError(f"blocks[{index}]: cards.items는 비어 있지 않은 행 객체 목록이어야 합니다.")
+                if any(not r.get("title") for r in items):
+                    columns = list(dict.fromkeys(k for r in items for k in r))
+                    b.update(type="table", columns=columns, rows=[[r.get(k, "") for k in columns] for r in items])
+            if b["type"] == "table":
+                columns, rows = b.get("columns"), b.get("rows")
+                if not isinstance(columns, list) or not columns or not isinstance(rows, list) or not rows:
+                    raise ValueError(f"blocks[{index}]: table에는 열과 1행 이상의 데이터가 필요합니다.")
+                if any(not isinstance(r, (list, tuple)) or len(r) != len(columns) for r in rows):
+                    raise ValueError(f"blocks[{index}]: table의 각 행 길이는 열 수와 같아야 합니다.")
+        out.append(b)
+    return out
+
+
 def render_document(tool_input, output_base=".", context=None):
     """[table:document] 진입점. 경로 거절만 여기서 봉투로 바꾸고 나머지는 본체가 한다."""
     import json as _json
@@ -695,6 +733,11 @@ def _render_document(tool_input, output_base=".", context=None):
                             "message": f"when 조건으로 전 블록({_omitted_when})이 생략돼 "
                                        "렌더할 내용이 없습니다 — 파일을 만들지 않았습니다."},
                            ensure_ascii=False)
+
+    try:
+        blocks = _normalize_render_blocks(blocks)
+    except ValueError as exc:
+        return _json.dumps({"success": False, "error": str(exc)}, ensure_ascii=False)
 
     # 봉투 공통 신고층(모든 emitter 분기가 같은 것을 싣는다): when 생략 수 + images 사상 결과.
     _extra: dict = {}

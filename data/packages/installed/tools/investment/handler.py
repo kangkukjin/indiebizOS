@@ -490,7 +490,7 @@ def _stock_history(ti: dict):
             interval=ti.get("interval", "1d"),
             start_date=ti.get("start_date"),
             end_date=ti.get("end_date"),
-            max_points=ti.get("max_points", 10),
+            max_points=ti.get("max_points"),
         )
         return _attach_price_table(_res, ti)
     if market == "kr":
@@ -500,7 +500,7 @@ def _stock_history(ti: dict):
             symbol=price_symbol,
             start_date=ti.get("start_date"),
             end_date=ti.get("end_date"),
-            max_points=ti.get("max_points", 10),
+            max_points=ti.get("max_points"),
         )
     else:
         tool = load_module("tool_fmp")
@@ -508,7 +508,7 @@ def _stock_history(ti: dict):
             symbol=ticker,
             start_date=ti.get("start_date"),
             end_date=ti.get("end_date"),
-            max_points=ti.get("max_points", 10),
+            max_points=ti.get("max_points"),
         )
         error = _res.get("error", "") if isinstance(_res, dict) else ""
         if not _res.get("success") and "HTTP 402" in error:
@@ -519,7 +519,7 @@ def _stock_history(ti: dict):
                 interval=ti.get("interval", "1d"),
                 start_date=ti.get("start_date"),
                 end_date=ti.get("end_date"),
-                max_points=ti.get("max_points", 10),
+                max_points=ti.get("max_points"),
             )
             if isinstance(_res, dict) and _res.get("success"):
                 _res["_fallback_used"] = True

@@ -89,7 +89,7 @@ def test_단일step_프로그램도_자기_좌표를_신고한다():
         tc.set_surface_ticket(t)
         tc.set_progress_ticket(None)
         code = ('[table:each]{items: [{"id": "A"}, {"id": "B"}], '
-                'do: "[self:datetime]{} >> [self:datetime]{}", on_error: "continue"}')
+                'do: "[table:take]{items:[{value:1}],n:1} >> [table:take]{n:1}", on_error: "continue"}')
         _execute_ibl_unified_impl({"code": code}, _ROOT)
         p = _progress(t)
         # 좌표 = 프로그램의 것 (하위 파이프의 step 2/2 가 아니다)

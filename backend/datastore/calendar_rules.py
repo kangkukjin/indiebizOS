@@ -62,6 +62,11 @@ def normalize_schedule_config(config, *, require_date=True, executable=False) ->
     if repeat not in _REPEATS:
         return {"error": f"repeat '{cfg.get('repeat')}' 는 지원하지 않습니다. 가능: {', '.join(_REPEATS)} (1회는 none)."}
     cfg["repeat"] = repeat
+    # Recurrence fields must not silently disappear under a different repeat mode.
+    for key, modes in {"interval_hours": {"interval"}, "weekdays": {"weekly"},
+                       "month": {"yearly"}, "day": {"monthly", "yearly"}}.items():
+        if cfg.get(key) not in (None, []) and repeat not in modes:
+            return {"error": f"{key}는 repeat {', '.join(sorted(modes))}에서만 사용할 수 있습니다."}
     t = cfg.get("time")
     if t is not None:
         t = str(t).strip()

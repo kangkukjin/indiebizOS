@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: photo-home-default-and-history-sampling
+    retired: 2026-09-29
+    reason: 사진 기본 조회에 개발 자산이 섞이고 주가 이력의 숨은 10점 선택이 원천 불완전으로 실패했다.
+    instead: 사진 기본은 PC ~/Pictures·폰 MediaStore이며 다른 폴더는 path로 지정한다. history는 max_points 생략 시 조회 이력 전량이다.
+    phrases: ['검색 루트 (생략 시 홈 전체)', '[quote/history] 반환 데이터 포인트 수 (기본 10)']
   - id: blog-latest-hidden-materialization
     retired: 2026-09-29
     reason: 읽기인 latest가 vault 파일을 쓰고 수집 시각 없이 원격 최신으로 오인됐다.

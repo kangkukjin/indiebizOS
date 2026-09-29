@@ -311,21 +311,23 @@ class _Checker:
         if st.get("_branch_steps"):
             return self._type_sub(st.get("_branch_steps") or [], prev)
         if st.get("_condition"):
-            outs = [self._type_body((b or {}).get("action"), prev) for b in (st.get("branches") or [])]
-            if not any(b.get("condition") is None for b in (st.get("branches") or [])):
-                # 불일치 때 파이프의 직전 통화를 그대로 통과시킨다.
+            bodies = [(b or {}).get("action") for b in st.get("branches") or []]
+            exhaustive = any(b.get("condition") is None for b in st.get("branches") or [])
+            outs = self._type_alternatives(st, bodies, prev, exhaustive)
+            if not exhaustive:
                 outs.append(prev if prev is not None else T("prose"))
             return join(outs)
         if st.get("_case"):
-            outs = [self._type_body((b or {}).get("action") if isinstance(b, dict) else b, prev)
-                    for b in (st.get("branches") or [])]
+            bodies = [(b or {}).get("action") if isinstance(b, dict) else b
+                      for b in st.get("branches") or []]
             if st.get("default") is not None:
-                outs.append(self._type_body(st.get("default"), prev))
-            return join(outs)
+                bodies.append(st["default"])
+            return join(self._type_alternatives(st, bodies, prev, st.get("default") is not None))
         if st.get("_try"):
-            outs = [self._type_body(st.get("body"), prev)]
+            bodies = [st.get("body")]
             if st.get("catch") is not None:
-                outs.append(self._type_body(st.get("catch"), prev))
+                bodies.append(st["catch"])
+            outs = self._type_alternatives(st, bodies, prev, True)
             if st.get("finally") is not None:
                 self._type_body(st.get("finally"), prev)
             return join(outs)
@@ -345,6 +347,20 @@ class _Checker:
         if not node or not action:
             return unknown()
         return self._type_action(st, node, action, prev, idx)
+
+    def _type_alternatives(self, st, bodies, prev, exhaustive):
+        """A binding is definite only when every reachable exit assigns it."""
+        paths, outs = [], []
+        for body in bodies:
+            bindings = {}
+            outs.append(self._type_body(body, prev, bindings))
+            paths.append(bindings)
+        for name, slot in (st.get("_born_vars") or {}).items():
+            values = [path[name] for path in paths if name in path]
+            definite = exhaustive and paths and len(values) == len(paths)
+            value = join(values) if values else unknown()
+            self.env[int(slot)] = value.copy(conditional=not definite or any(v.conditional for v in values))
+        return outs
 
     def _type_assign(self, st, idx):
         """값 구성과 통짜 참조의 모양을 읽는다. 임의 식의 결과는 추측하지 않는다."""
@@ -633,6 +649,7 @@ class _Checker:
         self._check_param_refs(params, idx, at)
         ad = _action_def(node, action)
         if not ad:
+            self._issue("error", idx, at, f"존재하지 않거나 비활성인 액션: [{at}]")
             return unknown()
         try:                                              # 없는 op 은 실행기가 확정 거절한다 — 같은 판정을 실행 전에(2026-09-18)
             from ibl_param_vocab import unknown_op_message

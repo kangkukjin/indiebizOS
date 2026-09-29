@@ -137,11 +137,16 @@ def test_t9_unknown_is_never_error():
     for code in ('[self:script]{op: "run", id: "x"} >> [table:take]{n: 3}',
                  '[self:read]{path: "a.json"} >> [table:filter]{where: {cat: "카페"}}',
                  SEARCH + ' >> [table:select]{columns: "$열"}',
-                 '[sense:nosuchaction]{} >> [table:take]{n: 1}',
                  '[self:time] & [sense:host]{op: "status"} >> [table:take]{n: 1}',
                  '[table:since]{items: [{"title": "a", "url": "u"}], key: "공지검침"}'):
         r = _tc(code)
         assert r.get("ok", True), (code, r["issues"])
+
+
+def test_t9_absent_action_is_a_known_error():
+    r = _tc('[sense:nosuchaction]{} >> [table:take]{n: 1}')
+    assert not r['ok']
+    assert any(i['severity'] == 'error' and 'nosuchaction' in i['message'] for i in r['issues'])
 
 
 # ---------------------------------------------------------------- T10 열

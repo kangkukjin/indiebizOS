@@ -60,7 +60,11 @@ def _search_arxiv(tool_input: dict) -> str:
     # 연도 범위 = 제출일 범위 질의, 최신순 = submittedDate 정렬(77회차 B77-1 — 예전엔 둘 다 조용히 버렸다).
     # open_access 는 arXiv 전부가 공개라 거를 것이 없다.
     lo, hi = _year_range(tool_input)
-    search = f"all:{query}"
+    if re.search(r"\b(?:ti|au|abs|co|jr|cat|rn|id|all):|\b(?:AND|OR|ANDNOT)\b", query):
+        search = f"({query})"
+    else:
+        terms = re.findall(r'"[^"\n]+"|\S+', query)
+        search = " AND ".join(f"all:{term}" for term in terms)
     if lo is not None or hi is not None:
         search += f" AND submittedDate:[{lo or 1991}01010000 TO {hi or 9999}12312359]"
     sort = "submittedDate" if tool_input.get("sort_by") == "recent" else "relevance"

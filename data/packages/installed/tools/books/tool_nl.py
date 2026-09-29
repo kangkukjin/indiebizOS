@@ -66,6 +66,12 @@ def search_nl(keyword, category="도서", page=1, page_size=20):
         author = _deplus(d.get("A1") or "")
         publisher = _deplus(d.get("PB") or "")
         year = _deplus(d.get("YR") or "")
+        raw_year, raw_publisher = year, publisher
+        match = re.fullmatch(r"(\d{4})(?:\d{4})?", year)
+        year = match.group(1) if match else None
+        # NL PB is an imprint (place : publisher, date), not always a publisher name.
+        publisher = re.sub(r"^.+?\s+:\s+", "", publisher)
+        publisher = re.sub(r",\s*\d{4}(?:\d{4})?\s*$", "", publisher).strip()
         form = _deplus(d.get("FD") or "")
         isbn = _deplus(d.get("SN") or "")
         m_call = re.search(r"청구기호\s*:\s*([^<]+)", chunk)
@@ -84,6 +90,8 @@ def search_nl(keyword, category="도서", page=1, page_size=20):
             "authors": author or None,
             "publisher": publisher or None,
             "publication_year": year or None,
+            "publication_year_raw": raw_year or None,
+            "publisher_raw": raw_publisher or None,
             "form": form or None,              # 자료형태(FD)
             "call_number": callno or None,     # 청구기호
             "location": room or None,          # 자료이용(자료실)

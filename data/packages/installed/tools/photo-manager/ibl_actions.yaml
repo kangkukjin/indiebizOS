@@ -15,7 +15,7 @@ nodes:
         fixture: '[self:photo]{op: "stats"}'
         runs_on: anywhere
         description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환(기본=실행되는 몸의 미디어, source:usb면 USB로 연결된 안드로이드 폰). 타임라인·통계·중복은 >> table 변환자.
-        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(현지 촬영일 범위, YYYY-MM 또는 YYYY-MM-DD; taken_at은 시간대 포함), has_gps(true면 위치 보유만), path(검색 루트; 생략 시 홈에서 시스템 outputs·data·프로젝트 outputs 제외, 명시하면 해당 범위 포함), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng(미상이면 null)/taken_at/month/kind/camera/size/source/origin(camera 또는 unknown) 구조 필드 포함 → groupby·지도와 직결.'
+        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(현지 촬영일 범위, YYYY-MM 또는 YYYY-MM-DD; taken_at은 시간대 포함), has_gps(true면 위치 보유만), path(검색 루트; 생략 시 PC는 ~/Pictures 사진 보관 폴더, 폰은 MediaStore; 다른 폴더는 path로 명시), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng(미상이면 null)/taken_at/month/kind/camera/size/source/origin(camera 또는 unknown) 구조 필드 포함 → groupby·지도와 직결.'
         group: photo
         target_key: query   # 정본(2026-08-24 #repair B5) — q 는 aliases 로 수용
         router: handler
@@ -121,7 +121,7 @@ tool_json:
 
 
       파라미터: q(파일명·기종 키워드, 선택), kind(photo/video/all 기본 all), start·end(현지 촬영일 범위, YYYY-MM 또는 YYYY-MM-DD; taken_at은 시간대 포함), has_gps(true면 위치 보유
-      사진만), path(검색 루트; 생략 시 홈에서 시스템 outputs·data·프로젝트 outputs 제외, 명시하면 해당 범위 포함), file(단일 파일 절대경로 상세), limit(기본 50).
+      사진만), path(검색 루트; 생략 시 PC는 ~/Pictures 사진 보관 폴더, 폰은 MediaStore; 다른 폴더는 path로 명시), file(단일 파일 절대경로 상세), limit(기본 50).
 
 
       반환 records[]에 표시 필드(title/meta/image/url)와 구조 필드(path/taken_at/month/kind/size/camera/lat/lng)가 함께 실림 → 타임라인=records→[table:groupby]{by:month},
@@ -150,7 +150,7 @@ tool_json:
           description: true면 위치(GPS) 보유 사진만
         path:
           type: string
-          description: 검색 루트 (생략 시 홈 전체)
+          description: 검색 루트 (PC 생략 시 ~/Pictures, 폰은 MediaStore)
         file:
           type: string
           description: 단일 파일 절대경로 상세 조회

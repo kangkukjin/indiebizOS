@@ -1,0 +1,37 @@
+{
+  "commit": "2e096a831f3bfb1d3e2fa593f58fafb223895210",
+  "non_python_sources": 5,
+  "packages": 52,
+  "python_files": 281,
+  "parse_errors": 0,
+  "functions": 3254,
+  "text_return_candidates": 385,
+  "path_sites": {
+    "file_sink": 339,
+    "path_transform": 163,
+    "resolver": 15
+  },
+  "example_surfaces": 717,
+  "captured_snippets": 431,
+  "snippet_statuses": {
+    "parse_error": 106,
+    "incomplete": 298,
+    "invalid": 18,
+    "valid": 9
+  },
+  "exclusions": [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "node_modules",
+    "venv"
+  ],
+  "actions_executed": 0,
+  "limitations": [
+    "Call graph is a same-name over-approximation, not semantic reachability.",
+    "Dynamic subprocess/JS/native/remote writes and unknown return expressions need manual review.",
+    "Captured quoted/standalone snippets include fragments and templates; statuses are not defect counts."
+  ]
+}

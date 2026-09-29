@@ -1,0 +1,90 @@
+[
+  {
+    "id": "R1",
+    "case": "memory read success text",
+    "actual": "ADAPTER_SHAPE",
+    "synthetic_input": true,
+    "package_dispatch_executed": false
+  },
+  {
+    "id": "R2",
+    "case": "file_find filesystem failure classified as envelope failure",
+    "actual": "ADAPTER_SHAPE"
+  },
+  {
+    "id": "P1",
+    "case": "browser PDF explicit path",
+    "requested": "/audit/project/reports/requested.pdf",
+    "actual": "/audit/project/outputs/pdfs/page_20260929_111953.pdf",
+    "file_writes": 0
+  },
+  {
+    "id": "P2",
+    "case": "browser screenshot path dialect",
+    "actual": "/audit/project/~workspace/reports/a.png",
+    "file_writes": 0
+  },
+  {
+    "id": "P3",
+    "case": "CCTV project argument lost before capture engine",
+    "actual": "/audit/workspace/outputs/cctv_captures/reports/a.jpg",
+    "file_writes": 0,
+    "network_calls": 0
+  },
+  {
+    "id": "D1_play",
+    "case": "compiler only",
+    "status": "invalid",
+    "errors": [
+      {
+        "code": "ARGUMENT_CONTRACT",
+        "message": "mode: 허용 값 ['audio', 'video']"
+      }
+    ],
+    "executed": false
+  },
+  {
+    "id": "D1_download",
+    "case": "compiler only",
+    "status": "invalid",
+    "errors": [
+      {
+        "code": "ARGUMENT_CONTRACT",
+        "message": "mode: 허용 값 ['audio', 'video']"
+      }
+    ],
+    "executed": false
+  },
+  {
+    "id": "D2_resolved_during_audit_positive_control",
+    "case": "compiler only",
+    "status": "incomplete",
+    "errors": [],
+    "executed": false
+  },
+  {
+    "id": "D3",
+    "case": "compiler only",
+    "status": "invalid",
+    "errors": [
+      {
+        "code": "TYPE",
+        "message": "Callable가 필요하지만 Text입니다."
+      }
+    ],
+    "executed": false
+  },
+  {
+    "id": "D4_positive_control",
+    "case": "compiler only",
+    "status": "incomplete",
+    "errors": [],
+    "executed": false
+  },
+  {
+    "id": "N1",
+    "case": "context7 helper text is wrapped",
+    "actual": "TOOL",
+    "network_calls": 0
+  }
+]

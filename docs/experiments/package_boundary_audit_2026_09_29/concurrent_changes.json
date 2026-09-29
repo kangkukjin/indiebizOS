@@ -1,0 +1,62 @@
+{
+  "observed_at": "2026-09-29T11:23:06.260659+09:00",
+  "note": "Changes by other work; this audit neither modified nor staged these paths. Product source did not drift after final package scan.",
+  "paths": [
+    {
+      "path": "backend/ibl/ibl_v2_analysis.py",
+      "sha256": "4072b68b2f83ca8a8cab00c2806cc14acf56d1b35980be028783901576451f90"
+    },
+    {
+      "path": "backend/ibl/ibl_v2_compile.py",
+      "sha256": "56d7e52c30a1ddf2c2940d54700935f649d5309c2ed28aea96ffda0fa85cbcf7"
+    },
+    {
+      "path": "backend/ibl/ibl_v2_runtime.py",
+      "sha256": "64746a8302e487a071aa9a090300341e43ab96a35f8256b880b695e039180f02"
+    },
+    {
+      "path": "backend/ibl/ibl_value_checks.py",
+      "sha256": "8725e05bfd83fcd3e0c7cb280c2f728fa3fbabe7d1a389c209888b90605fdf38"
+    },
+    {
+      "path": "data/ibl_example_review.json",
+      "sha256": "881874f6d15fa07bf5e85c6ced5ae6981fce0001a220205f63ba9cc08b3cb63d"
+    },
+    {
+      "path": "data/ibl_nodes.yaml",
+      "sha256": "c8f2a349f25c2813145a6fa3e9491f6c16c53d4a6a4b3a07f9f2be99ebc0f4c3"
+    },
+    {
+      "path": "data/packages/installed/tools/business/handler.py",
+      "sha256": "e629ece53a63abc02c2d5776212e96d4ee0d4dc1b81c8f57630858bdde854f4b"
+    },
+    {
+      "path": "data/packages/installed/tools/business/ibl_actions.yaml",
+      "sha256": "0760da0f8bcb3e250e8b0e4d099f94ee28e83d41af3520f509bfbb2d59a7e2b3"
+    },
+    {
+      "path": "data/packages/installed/tools/cctv/handler.py",
+      "sha256": "ffef3dd9ec01ee370e394e029e9b08eae4b82af38c6e0a086e9b0ce57acf0215"
+    },
+    {
+      "path": "data/packages/installed/tools/cctv/ibl_actions.yaml",
+      "sha256": "02f73ce4273ba00cfc879cff6cb973a3e02ad8d22153ee59a28fd5c3ffa0de1e"
+    },
+    {
+      "path": "data/packages/installed/tools/radio/ibl_actions.yaml",
+      "sha256": "3f2e7fbc5133c6d6664c0ccc75b9c1eb88b4f0ad24c3af532256d6bfcf416433"
+    },
+    {
+      "path": "data/packages/installed/tools/radio/tool.json",
+      "sha256": "31a9d8ac5cf7966b177b247e526dbc26e18fe284b1e5e0df355c93da8be383cb"
+    },
+    {
+      "path": "scripts/build_ibl_nodes.py",
+      "sha256": "031d6d34c44d9805861e046ab34a29474b65cf5e539a9d2eb81e083f366713a7"
+    },
+    {
+      "path": "scripts/iblbuild_params_check.py",
+      "sha256": "1ff58232cdc27f8c6e530561354c44030fe7672c7cc4696da105473d9ffc9e6d"
+    }
+  ]
+}

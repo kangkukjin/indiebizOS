@@ -28,6 +28,9 @@ import json, sys, time, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+import sys
+sys.path.insert(0, str(ROOT / "backend"))
+import boot_paths  # noqa: F401
 API = "http://127.0.0.1:8765"
 OUT = ROOT / "data" / "ibl_return_shapes.json"
 # 관측 열 상한 — 표시용 절단이 아니다(카탈로그 줄의 표시 상한은 ibl_access 렌더러가 따로 가진다).

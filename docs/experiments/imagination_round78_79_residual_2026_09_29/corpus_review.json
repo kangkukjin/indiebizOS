@@ -1,0 +1,114 @@
+[
+  {
+    "id": 2799,
+    "intent_before": "그 폴더에 대한 기억은 틀렸으니 잊어버려",
+    "intent": "그 폴더에 대한 기억은 틀렸으니 잊어버려",
+    "before": "[self:forage]{op:\"forget\", id:1, table:\"forage_map\"}",
+    "after": "#!ibl edition=2\n[self:forage]{op:\"forget\", id:1}",
+    "reason": "F78-3: 은퇴 인자 table 제거"
+  },
+  {
+    "id": 2800,
+    "intent_before": "이 폴더는 백업용이라고 기억해둬",
+    "intent": "이 폴더는 백업용이라고 기억해둬",
+    "before": "[self:forage]{op:\"note\", layer:\"map\", locus:\"/Volumes/MyDrive/backup\", kind:\"identity\", claim:\"백업 보관용\"}",
+    "after": "#!ibl edition=2\n[self:forage]{op:\"note\", locus:\"/Volumes/MyDrive/backup\", kind:\"identity\", claim:\"백업 보관용\"}",
+    "reason": "F78-3: 은퇴 인자 layer 제거"
+  },
+  {
+    "id": 3701,
+    "intent_before": "중고 자전거 10만원 아래로 나온 거 하나씩 알려줘",
+    "intent": "중고 자전거 10만원 아래로 나온 거 하나씩 알려줘",
+    "before": "[sense:used]{q: \"자전거\", source: \"danggeun\"} >> [table:filter]{where: {field: \"price\", op: \"lt\", value: 100000}} >> [table:each] {\n  [self:notify_user]{message: '$it.title ${it.price}원'}\n}",
+    "after": "#!ibl edition=2\n$u = [sense:used]{source:\"danggeun\", query:\"자전거\", region:\"역삼동\"}\n$싼것 = $u.items >> [table:filter]{where:($m)=>$m.price != null and $m.price < 100000}\n$싼것 >> [table:each]{ [self:notify_user]{message:f\"${it.title} ${it.price}원\"} }",
+    "reason": "B79-3: 당근은 region 필수(없으면 IP 추정 동네로 조용히 스코프), 판본 2 콜백 필터"
+  },
+  {
+    "id": 3906,
+    "intent_before": "당근에 자전거 새 매물만 보여줘",
+    "intent": "당근에 자전거 새 매물만 보여줘",
+    "before": "[sense:used]{source: \"danggeun\", q: \"자전거\"} >> [table:since]{key: \"자전거중고\"}",
+    "after": "#!ibl edition=2\n$u = [sense:used]{source:\"danggeun\", query:\"자전거\", region:\"역삼동\"}\nreturn $u.items >> [table:since]{key:\"자전거중고\"}",
+    "reason": "B79-3: region 필수"
+  },
+  {
+    "id": 4094,
+    "intent_before": "당근에 자전거 매물이 있는데 가격이 10만원 넘지 않으면 알려줘",
+    "intent": "당근에 자전거 매물이 있는데 가격이 10만원 넘지 않으면 알려줘",
+    "before": "$u = [sense:used]{source: \"danggeun\", q: \"자전거\"}\n[if: not empty($u) and ($u.items.0.price < 100000 or $u.items.0.price == null)]{[self:notify_user]{message: \"$u.items.0.title\"}}",
+    "after": "#!ibl edition=2\n$u = [sense:used]{source:\"danggeun\", query:\"자전거\", region:\"역삼동\"}\n[if: len($u.items) > 0 and ($u.items[0].price == null or $u.items[0].price < 100000)] { [self:notify_user]{message:$u.items[0].title} }",
+    "reason": "B79-3: region 필수, 빈 목록 판정"
+  },
+  {
+    "id": 3825,
+    "intent_before": "청주 공연·전시 최신 시작일 순으로 중복 빼고 5건",
+    "intent": "청주 공연·전시 최신 시작일 순으로 중복 빼고 5건",
+    "before": "([sense:performance]{query:\"청주\"} >> [table:rename]{map:{prfnm:\"title\",fcltynm:\"venue\",prfpdfrom:\"start_date\",prfpdto:\"end_date\"}}) & [sense:exhibit]{keyword: \"청주\"} >> [table:union] >> [table:dedup]{by: \"title\"} >> [table:sort]{by: \"start_date\", desc: true} >> [table:take]{n: 5}",
+    "after": "#!ibl edition=2\n$p = [sense:performance]{query:\"청주\"}\n$e = [sense:exhibit]{query:\"청주\"}\n$u = [table:union]{inputs:[$p.items, $e.items]}\n$d = [table:dedup]{items:$u.items, by:[\"title_key\", \"place_key\"]}\nreturn $d.items >> [table:sort]{by:\"start_date\", descending:true} >> [table:take]{n:5}",
+    "reason": "F79-1: 원천 간 dedup 은 title_key+place_key, rename 불필요"
+  },
+  {
+    "id": 3878,
+    "intent_before": "공연이랑 전시 한 표로 정리해줘, 중복은 빼고",
+    "intent": "공연이랑 전시 한 표로 정리해줘, 중복은 빼고",
+    "before": "[sense:performance]{query: \"뮤지컬\"} & [sense:exhibit]{query: \"미술\"} >> [table:union]{} >> [table:dedup]{by: \"title\"} >> [table:take]{n: 5}",
+    "after": "#!ibl edition=2\n$p = [sense:performance]{query:\"뮤지컬\"}\n$e = [sense:exhibit]{query:\"미술\"}\n$u = [table:union]{inputs:[$p.items, $e.items]}\n$d = [table:dedup]{items:$u.items, by:[\"title_key\", \"place_key\"]}\nreturn $d.items >> [table:take]{n:5}",
+    "reason": "F79-1: title_key+place_key dedup"
+  },
+  {
+    "id": 4755,
+    "intent_before": "공모전 중에 디자인 관련만 골라서 보여줘",
+    "intent": "국내 디자인 공모전 찾아줘",
+    "before": "[sense:contest]{} >> [table:filter]{where: {field: \"title\", op: \"contains\", value: \"디자인\"}}",
+    "after": "#!ibl edition=2\nreturn [sense:search]{query:\"디자인 공모전 모집\"}",
+    "reason": "F79-2: 국내 공모전은 sense:search — Kaggle 목록을 일반 공모전으로 가르치지 않음"
+  },
+  {
+    "id": 4756,
+    "intent_before": "공모전 목록 문서로 정리해줘",
+    "intent": "Kaggle 진행 중인 대회 목록을 문서로 정리해줘",
+    "before": "[sense:contest]{} >> [table:take]{n: 10} >> [table:document]{title: \"진행 중인 공모전\"}",
+    "after": "#!ibl edition=2\n$c = [sense:contest]{}\nreturn $c.items >> [table:take]{n:10} >> [table:document]{title:\"Kaggle 진행 중 대회\"}",
+    "reason": "F79-2: 의도를 Kaggle 대회로 정정"
+  },
+  {
+    "id": 294,
+    "intent_before": "정보수집팀에 뉴스 워크플로우 넘겨",
+    "intent": "정보수집팀에 뉴스 워크플로우 넘겨",
+    "before": "[others:delegate]{mode: \"workflow\", agent_id: \"정보센터/정보수집\", do: \"뉴스수집\"}",
+    "after": "#!ibl edition=2\n[others:delegate]{mode:\"workflow\", agent_id:\"정보센터/정보수집\", do:\"[sense:search]{source:\\\"gnews\\\", query:\\\"AI\\\"} >> [table:take]{n:10}\"}",
+    "reason": "F78-2: delegate workflow 의 do 는 IBL 문장(이름을 주면 문장으로 실행됨)"
+  },
+  {
+    "id": 1257,
+    "intent_before": "워크플로우 실행을 다른 팀에 맡겨",
+    "intent": "워크플로우 실행을 다른 팀에 맡겨",
+    "before": "[others:delegate]{mode: \"workflow\", agent_id: \"정보센터/정보수집\", do: \"뉴스수집\"}",
+    "after": "#!ibl edition=2\n[others:delegate]{mode:\"workflow\", agent_id:\"정보센터/정보수집\", do:\"[sense:search]{source:\\\"gnews\\\", query:\\\"AI\\\"} >> [table:take]{n:10}\"}",
+    "reason": "F78-2 동일"
+  },
+  {
+    "id": 1349,
+    "intent_before": "다른 에이전트한테 파이프라인 위임해",
+    "intent": "다른 에이전트한테 파이프라인 위임해",
+    "before": "[others:delegate]{mode: \"workflow\", agent_id: \"정보센터/정보수집\", do: \"뉴스수집\"}",
+    "after": "#!ibl edition=2\n[others:delegate]{mode:\"workflow\", agent_id:\"정보센터/정보수집\", do:\"[sense:search]{source:\\\"gnews\\\", query:\\\"AI\\\"} >> [table:take]{n:10}\"}",
+    "reason": "F78-2 동일"
+  },
+  {
+    "id": 1373,
+    "intent_before": "다른 에이전트한테 자동화 넘겨",
+    "intent": "다른 에이전트한테 자동화 넘겨",
+    "before": "[others:delegate]{mode: \"workflow\", agent_id: \"정보센터/정보수집\", do: \"뉴스수집\"}",
+    "after": "#!ibl edition=2\n[others:delegate]{mode:\"workflow\", agent_id:\"정보센터/정보수집\", do:\"[sense:search]{source:\\\"gnews\\\", query:\\\"AI\\\"} >> [table:take]{n:10}\"}",
+    "reason": "F78-2 동일"
+  },
+  {
+    "id": 1566,
+    "intent_before": "정보수집팀에 뉴스수집 워크플로우 맡겨",
+    "intent": "정보수집팀에 뉴스수집 워크플로우 맡겨",
+    "before": "[others:delegate]{mode: \"workflow\", agent_id: \"정보센터/정보수집\", do: \"뉴스수집\"}",
+    "after": "#!ibl edition=2\n[others:delegate]{mode:\"workflow\", agent_id:\"정보센터/정보수집\", do:\"[sense:search]{source:\\\"gnews\\\", query:\\\"AI\\\"} >> [table:take]{n:10}\"}",
+    "reason": "F78-2 동일"
+  }
+]

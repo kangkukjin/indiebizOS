@@ -351,4 +351,15 @@ B78-1~8·F78-1~5는 모두 수리성이다.
 
 ## 집행 완료
 
-(수리 턴이 채운다.)
+(1차) `747d5103` — B78-1·2·3·7·8 수리([77~81 공통 경계 수리](../../IMAGINATION_77_81_REPAIRS_2026_09_29.md)).
+
+(2차 · 2026-09-29) 라이브 재탐침으로 샌 것을 골라 수리 — 정본 [78·79 잔여 수리](../../IMAGINATION_78_79_RESIDUAL_REPAIRS_2026_09_29.md).
+- F78-1·B78-4: 장소 존재 확인기 한 벌(`place_exists`) → recall `locus_exists`·`own_count`·`doc_is_ancestor`, root_missing·freshness·reconcile 공유. notebook delete 가 그 몸 기억을 `_gone` 유예로 접음. 수리 전 고아는 표식만(판정 요청 1 대기).
+- B78-5: 책·노트북 몸 정규형 한 벌을 입구·회상이 공유, own-space locus 관문, 옛 괄호·주제 이름 행도 읽기에서 찾아짐(places→locus ≥1 가드). 증류 프롬프트 자리표 교체. 같은 책 두 몸의 병합은 판정 요청 1 대기.
+- B78-6: 정보나루 `<request>` 날 에코를 경계에서 처리 + `source_parse` 구분. 형제: 고전종합DB 검색어 무시 수리.
+- F78-2: 열린 인자 계약 전수 관문(`iblbuild_open_params.py`) — 20개 중 18개 닫음, recent_chats 미지 인자는 table:filter 안내와 함께 거절.
+- F78-3: health 평탄 키 선언(구현-읽기 관문이 튜플 루프를 봄)·측정 조회 table 선언, forage 판본 1 문구·은퇴 인자(`retired_contracts.yaml`).
+- F78-4: 도달 가능 셈을 `self_can_run` 으로(139→126). F78-5: ledger 쓰기가 쓰기 원장에.
+- B72-3 재확인: 대화 가지 미리보기 행 표지.
+- 부수: 평문 실패 판정 한 벌(`common.currency.is_plain_failure`) — 인자 경고 머리 장식이 실패를 성공으로 바꾸던 누수와 통화 분류기의 평문 실패 성공 기록.
+- 교재: 2799·2800·294·1257·1349·1373·1566 개별 교정(영수증은 잔여 수리 문서).

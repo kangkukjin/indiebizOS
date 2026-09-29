@@ -165,6 +165,7 @@ def fill_op(tool_input: dict, project_path: str) -> str:
     # 출력 경로 — data 있을 때만 필요. 생략 시 원본 옆 _filled.
     out_raw = tool_input.get("output") or tool_input.get("output_path")
     if out_raw:
+        out_raw = expand_body_path(out_raw)   # 템플릿(_get_path)과 같은 해소점(73회차 B73-6 밭)
         out = out_raw if os.path.isabs(out_raw) else os.path.join(project_path, out_raw)
     else:
         out = str(tpl.with_name(f"{tpl.stem}_filled{tpl.suffix}"))

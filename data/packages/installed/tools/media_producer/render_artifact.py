@@ -196,6 +196,13 @@ def _parse_viewports(tool_input):
     return out, None
 
 
+def _src_path(tool_input):
+    """입력 파일 경로 — `~workspace/…` 토큰은 단일 해소점으로 펼친다(73회차 B73-6 밭: 만든 이름 그대로 되읽기)."""
+    from runtime_utils import expand_body_path
+    raw = tool_input.get("path")
+    return expand_body_path(raw) if raw else raw
+
+
 def _out_stem(tool_input, src_path=None):
     op = tool_input.get("output_path")
     if op:
@@ -221,7 +228,7 @@ def _finish(rows, output_base, extra=None):
 
 def render_op_html(tool_input, output_base="."):
     """HTML(파일 path 또는 문자열 html, 생략 시 파이프 통화)→ 뷰포트별 PNG 1행."""
-    src_path = tool_input.get("path")
+    src_path = _src_path(tool_input)
     html = tool_input.get("html")
     if src_path:
         src_path = os.path.abspath(src_path)
@@ -317,7 +324,7 @@ def render_op_pdf(tool_input, output_base="."):
     except ImportError:
         return _err("PyMuPDF(fitz)가 없습니다 — requirements-core 의존성 확인.")
 
-    src_path = tool_input.get("path")
+    src_path = _src_path(tool_input)
     if not src_path:
         return _err("path(PDF 파일 절대 경로)가 필요합니다.")
     src_path = os.path.abspath(src_path)
@@ -440,7 +447,7 @@ def render_op_xlsx(tool_input, output_base="."):
     import shutil
     import subprocess
 
-    src_path = tool_input.get("path")
+    src_path = _src_path(tool_input)
     if not src_path:
         return _err("path(xlsx/xlsm 파일 경로)가 필요합니다.")
     src_path = os.path.abspath(src_path)
@@ -531,7 +538,7 @@ def render_op_svg(tool_input, output_base="."):
     """SVG(파일 path 또는 문자열 svg)→ PNG 1행 (svg 요소 경계로 캡처)."""
     from playwright.sync_api import sync_playwright
 
-    src_path = tool_input.get("path")
+    src_path = _src_path(tool_input)
     svg = tool_input.get("svg")
     if src_path:
         src_path = os.path.abspath(src_path)

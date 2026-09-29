@@ -30,9 +30,15 @@ def edition_of(source, requested=None):
         raise Fault(code, message, kind="compile") from exc
 
 
+# 조건 값 `조건 ? 값1 : 값2`(언어 개정 2026-09-29, 사용자 판정 — 상상훈련 73회차 G73-1). `or`(4)와 같은
+# 층에서 오른쪽으로 묶는다: `a or b ? x : y` = `(a or b) ? x : y`, `c1 ? "A" : c2 ? "B" : "C"` 는 가지 사슬.
+# `>>`·`&`·`??` 보다 강하게 묶어 `c ? $a : $b >> [t:x]` 는 고른 값을 파이프로 넘긴다.
+TERNARY = 4
+
 # 줄 머리에 오면 앞 식의 계속으로 읽는 연산자(언어 개정 2026-09-26, 사용자 판정). 4083 실측: 여러 줄 병렬
 # `A\n& B\n& C` 가 SYNTAX 로 거절됐다 — 문장을 시작할 수 없는 연산자이므로 줄바꿈이 분리자일 수 없다.
-CONTINUATION = {"&", ">>", "??"}
+# `?` 도 문장을 시작할 수 없다(조건 값의 여러 줄 표기, 2026-09-29).
+CONTINUATION = {"&", ">>", "??", "?"}
 
 
 class Parser:
@@ -158,6 +164,18 @@ class Parser:
                 self.pop()
                 args = self.arguments(")")
                 left = self.node("pure_call", left.start, fn=left, args=args)
+                continue
+            if op == "?" and minimum <= TERNARY:
+                self.pop()
+                self.nl()
+                yes = self.expr(TERNARY)
+                self.nl()
+                if self.t.text != ":":
+                    self.fail("조건 값은 `조건 ? 참일 때 값 : 거짓일 때 값` 형태입니다. ':'가 필요합니다.")
+                self.pop()
+                self.nl()
+                no = self.expr(TERNARY)
+                left = self.node("conditional", left.start, condition=left, yes=yes, no=no)
                 continue
             priority = PRECEDENCE.get(op, -1)
             if priority < minimum:

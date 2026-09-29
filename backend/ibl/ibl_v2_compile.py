@@ -18,7 +18,7 @@ from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
 
 RESERVED = {"it", "i", "error"}
 PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
-              "index", "slice", "builtin", "pure_call", "lambda", "format"}
+              "index", "slice", "builtin", "pure_call", "lambda", "format", "conditional"}
 
 
 @dataclass
@@ -390,6 +390,12 @@ class Compiler:
             for operand, typ in zip(operands, values):
                 numeric_operand(self, operand, typ)
             return NUMBER
+        if kind == "conditional":
+            # `조건 ? 값1 : 값2` — 조건은 Bool 만(참거짓 흉내 없음), 고르지 않은 가지는 실행하지 않는다.
+            # 결과 타입은 두 가지의 합이다(73회차 G73-1 언어 개정).
+            self.pure(node)
+            self.need(d["condition"], sub(d["condition"]), BOOL)
+            return join(sub(d["yes"]), sub(d["no"]))
         if kind == "builtin":
             if d["name"] not in BUILTINS:
                 self.issue(node, "BUILTIN", f"알 수 없는 내장 함수: {d['name']}")

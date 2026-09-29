@@ -307,6 +307,20 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 액션별 구현-읽기 관문 통과 ✓ (디스패처 op 가 읽는 인자 ⊆ 판본 2 허용 집합)")
 
+        # --- 선언-읽기 관문 (2026-09-29, 73회차 B73-2 밭 이관) — 위 관문의 반대 방향 ---
+        # 선언된 인자를 구현이 한 번도 읽지 않으면 판본 2 가 받아 주고 결과는 그 인자를 무시한 채 성공한다
+        # (chart x·y 쓰레기 차트, finance category 무시). 흐름을 끝까지 본 액션만 판정한다.
+        from iblbuild_declared_reads import validate_declared_reads
+        dissues, dstats = validate_declared_reads(data, root)
+        if dissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 선언-읽기 관문 실패: {len(dissues)}건", file=sys.stderr)
+            for issue in dissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print(f"[build_ibl_nodes] 선언-읽기 관문 통과 ✓ (판정 {dstats['checked']} · "
+                  f"흐름 미관측 판정 불가 {dstats['undecidable']})")
+
         # --- 선언 내부 모순 관문 (2026-09-07) ---
         # 산문은 모델이 읽고 타입은 관문이 읽는다. 09-05 수리가 memory keywords 의
         # 저장소·산문만 고치고 타입을 두어, 낱말이 "배열도 받습니다"라고 적어 놓은 채

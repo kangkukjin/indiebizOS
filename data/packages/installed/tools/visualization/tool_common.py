@@ -2,6 +2,7 @@
 시각화 공통 유틸리티
 """
 import os
+import re
 import json
 import base64
 from pathlib import Path
@@ -183,8 +184,40 @@ def save_figure(fig, output_path: str = None, output_format: str = "png"):
         return {"success": False, "format": output_format, "error": f"지원하지 않는 형식: {output_format}"}
 
 
+# 날짜 축의 Plotly 기본 눈금은 영어 약어(`Sep 6`)에 연도 둘째 줄이다 — 한국어 사용자의 월·일 표기로
+# (73회차 F73-3). 눈금 간격에 따라 시각 → 월/일 → 연-월 → 연. 렌더러가 축 형식을 이미 정했으면 둔다.
+_KO_DATE_TICKS = [
+    dict(dtickrange=[None, 86400000], value="%-m/%-d %H:%M"),
+    dict(dtickrange=[86400000, "M1"], value="%-m/%-d"),
+    dict(dtickrange=["M1", "M12"], value="%Y-%m"),
+    dict(dtickrange=["M12", None], value="%Y"),
+]
+_DATE_VALUE = re.compile(r"^\d{4}-\d{2}-\d{2}")
+
+
+def apply_korean_date_ticks(fig):
+    axes = set()
+    for trace in fig.data:
+        xs = getattr(trace, "x", None)
+        if xs is None:
+            continue
+        sample = [v for v in list(xs)[:5] if v is not None]
+        if sample and all(_DATE_VALUE.match(str(v)) for v in sample) and not any(
+                isinstance(v, (int, float)) for v in sample):
+            axes.add(getattr(trace, "xaxis", None) or "x")
+    for ref in axes:
+        try:
+            axis = fig.layout["xaxis" + ref[1:]]
+        except (KeyError, ValueError):
+            continue
+        if axis.type == "category" or axis.tickformat or axis.tickformatstops:
+            continue
+        axis.update(tickformatstops=_KO_DATE_TICKS)
+
+
 def save_plotly_figure(fig, output_path: str = None, output_format: str = "png"):
     """Plotly figure 저장"""
+    apply_korean_date_ticks(fig)
     if output_format == "html":
         if not output_path:
             output_path = generate_output_path("chart", "html")

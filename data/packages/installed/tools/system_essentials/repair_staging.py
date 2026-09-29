@@ -1163,7 +1163,7 @@ def op_propose(ti):
                 "변경 내용이 필요합니다: content(전체 내용) 또는 old_string+new_string(부분 교체)."}
 
     abs_target = os.path.realpath(raw_path if os.path.isabs(raw_path)
-                                  else os.path.join(repo, raw_path))
+                                  else os.path.join(repo, raw_path))  # path-ok: 저장소 상대 경로(RED 개조 대상) — 몸 토큰의 자리가 아니다
     # ★구역 소속과 위반 여부를 가른다(2026-08-31 ep2461): _red_check(위반 판정)는
     # 수리 그랜트가 활성이면 RED 경로에도 None 을 주는데, 옛 코드는 그 None 을
     # '비-RED'로 읽어 backend/ 경로의 propose 를 "RED 전용"이라며 5연속 오거절했고,

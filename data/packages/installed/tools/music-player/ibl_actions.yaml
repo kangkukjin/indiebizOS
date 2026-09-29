@@ -2,11 +2,8 @@ nodes:
   self:
     actions:
       music:
-        # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
-        #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
-        #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
-        params:
-          artist: string
+        # artist 정확 필터는 2026-07-28 은퇴했는데 선언만 남아 조용히 무시됐다(전곡 반환 — 73회차 B73-2
+        # 선언-읽기 관문이 잡음). 은퇴 결정문대로 아티스트 검색은 query(부분검색)가 덮는다 → 별칭.
         returns: items
         side_effect: true    # playlist_*·add_source·remove_source·scan 이 라이브러리를 쓴다
         fixture: '[self:music]{op: "sources"}'
@@ -18,7 +15,7 @@ nodes:
         router: handler
         tool: music_library_op
         aliases:
-          query: [q, keyword]
+          query: [q, keyword, artist]
           path: [file]
         ops:
           default: library

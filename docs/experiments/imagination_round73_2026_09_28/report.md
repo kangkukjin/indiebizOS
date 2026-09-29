@@ -167,4 +167,36 @@ T02(groupby → each 행 → 차트 `table:{columns,rows}`) · T05(월간 보고
 
 ## 집행 완료
 
-(수리 턴이 채운다.)
+**1차 — `1b9a4932`(2026-09-29, 72~76회차 일괄 수리)**: B73-1~6·F73-1·F73-2(교재 교정)·F73-3 월 범주축·F73-4 슬라이드
+이어 붙임·F73-5 개별 자리. 상세 `docs/IMAGINATION_72_76_REPAIRS.md`. 탐침 재실행 14/24 → 23/24.
+밭 이관 ①(파이프 자리 빌드 관문)은 `iblbuild_v2.py` 로 섰고, ②·③은 서지 않았다.
+
+**2차 — 잔여 수리(2026-09-29, 사용자 지시 "삼항 채택하고 남은 73회차 항목까지 수리")**
+- **G73-1 언어 개정(사용자 판정: 채택)** — 순수 식의 조건 값 `조건 ? 값1 : 값2`. 조건은 Bool 만, 고르지 않은 가지는
+  평가 안 함, 결과 타입 = 두 가지의 합, `or` 층에서 오른쪽 결합, 가지 안 호출은 PURE_EXPRESSION, 줄 머리 `?` 계속.
+  파서(`common/expression_parser.py`)·타입 검사(`ibl_v2_compile.py`)만 바꿨다 — 평가기는 옛 판본 호환용
+  `conditional` 노드(지연 평가·Bool 강제)를 이미 갖고 있어 그대로 공유. 명세 `ibl.md`·주 교재 `ibl_composition.md` 갱신.
+  라이브: 성적 등급 한 줄 `compute{set:($r)=>{등급:$r.총점 >= 90 ? "A" : …}}` 가 A/B/C.
+- **B73-2 ② ③ 선언-읽기 관문**(`scripts/iblbuild_declared_reads.py`, build `--check`) — 72회차 액션별 구현-읽기 관문의
+  반대 방향. 역방향은 "읽기 전부"를 알아야 성립하므로 입력 dict 의 흐름을 끝까지 본 액션만 판정하고(패키지 밖 함수·
+  동적 키·반복·반환으로 새면 판정 불가로 셈), 디스패치 표·형제 모듈 적재(`load_sibling`)·함수 별칭·상수 튜플 반복 키·
+  별칭 도우미 상수를 따라간다. **수리 이전 트리(`1b9a4932^`)에 대면 `table:chart x·y`·`self:finance items` 를 잡는다.**
+  현재 트리에서 새로 잡은 것: `self:music artist` — 07-28 은퇴한 정확 필터의 선언만 남아 `artist:"아이유"` 가 조용히
+  무시되고 전곡이 나왔다 → 은퇴 결정문대로 `query` 별칭. `self:memory keywords` 는 save 가 정책상 본문째 버리고
+  `saved:false` 로 정직하게 답하므로 사유를 적어 `DECLARED_UNREAD_ALLOW`. 판정 21 · 판정 불가 42(하한 — 관문 출력에 병기).
+- **B73-6 ② 경로 관문 규칙 2**(`check_body_path_expansion.py`) — 입력 경로 키를 해소점 없이 `Path`·`os.path.join`·
+  `abspath`·`exists`·`open` 에 넣는 형태. 수리 이전 트리의 `read_pdf`·`read_docx`·`sheet_ops._resolve`·`fill_op` 를 잡는다.
+  현재 트리에서 새로 잡은 같은 부류: `engines:render` 4 op 의 `path`(문서→렌더 흐름이 `~workspace` 에서 끊김 — 라이브
+  확인), `fill_op` 출력, Gemini/AI 이미지 `output_path`, 사이트 등록 `local_path`(레지스트리엔 해소된 경로 저장),
+  폰 클립보드 `image_path`. 수리 자장 저장소 상대 경로 한 곳은 `path-ok` 사유.
+- **F73-3 후반** — 날짜 축 기본 눈금을 한국어 표기로(`tool_common.apply_korean_date_ticks`: 간격별 `9/6`·`2026-09`·`2026`,
+  렌더러가 형식을 정한 축·월 범주축은 그대로). T21 캔들 `Sep 6` → `9/6` 육안 확인.
+- **F73-4** — 그림·표가 들어간 제목 슬라이드의 빈 본문 자리표 제거. pptx 한글 관찰(미확정)은 **결함 아님으로 판정**:
+  이 맥의 LibreOffice 는 한글 **평문 txt 조차** 한글 글꼴 없이 렌더(샌드박스 밖에서도 동일), 맥 Quick Look 은 정상.
+- 회원 개방 감사: system_essentials(`self:read/fill/script`) 지문과 record-ops 의존 지문(`expression_parser.py`) 재감사 —
+  회원 `fill_document` 는 허브가 정한 절대 작업 경로를 넘기므로 펼침이 표면을 바꾸지 않고, 조건 값은 호출 없는 순수 식.
+- 남긴 것: T24 는 설계대로 FAIL(교재에서 은퇴한 `series`·`hole`·`trendline`·`ma` 를 판정식이 그대로 씀). `hole` 의 최근접
+  제안이 `donut` 이 아닌 것은 문자열 거리의 한계. 가맹점 이름 꼬리(`( ,2*9*) / / 이용금액` 등)는 72회차 F72-1 영역.
+
+검증: 신규 회귀 `backend/test_imagination_round73_residual.py` 27개. build `--check`·경로 관문·파일 크기 통과. 라이브 탐침
+23/24(T24 위), 조건 값·`artist`·`~workspace` 렌더 HTTP 확인. 산출 스크래치 정리 완료.

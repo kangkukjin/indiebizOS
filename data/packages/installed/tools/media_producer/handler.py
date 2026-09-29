@@ -797,10 +797,12 @@ def generate_ai_image(tool_input, output_base):
     height = min(tool_input.get("height", 1024), 2048)
     model = tool_input.get("model", "flux")
     seed = tool_input.get("seed")
-    # output_path가 지정되면 파일명만 추출하여 output_base에 저장
+    # output_path: `~workspace/…`·절대 경로는 그 자리, 상대 경로는 파일명만 output_base 에(73회차 B73-6 밭 —
+    # 토큰이 파일명으로 잘려 조용히 다른 곳에 쓰이던 자리)
     if output_path:
-        filename = os.path.basename(output_path)
-        output_path = os.path.join(output_base, filename)
+        from runtime_utils import expand_body_path
+        expanded = expand_body_path(output_path)
+        output_path = expanded if os.path.isabs(expanded) else os.path.join(output_base, os.path.basename(expanded))
     else:
         output_path = os.path.join(output_base, f"ai_image_{uuid.uuid4().hex[:8]}.png")
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)

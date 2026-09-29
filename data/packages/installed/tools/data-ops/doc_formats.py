@@ -495,7 +495,13 @@ def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str, meta: str = "")
         heading = state["slide"].shapes.title.text if state["slide"] is not None else ""
         if state["slide"] is None or (state["body"] is not None and state["body"].text.strip()):
             new_content_slide(heading)
-        return state["slide"]
+        s = state["slide"]
+        # 그림·표가 본문 자리를 대신한다 — 빈 본문 자리표("텍스트를 입력하십시오")를 남기지 않는다(73회차 F73-4)
+        for ph in list(s.placeholders):
+            if ph.placeholder_format.idx == 1 and not ph.text_frame.text.strip():
+                ph._element.getparent().remove(ph._element)
+        state["body"] = None
+        return s
 
     def add_bullet(text, level=0, italic=False, mono=False):
         if state["body"] is None:

@@ -4627,8 +4627,6 @@ nodes:
         - 메모리 삭제
         - 메모리 읽기
       music:
-        params:
-          artist: string
         returns: items
         side_effect: true
         fixture: '[self:music]{op: "sources"}'
@@ -4643,6 +4641,7 @@ nodes:
           query:
           - q
           - keyword
+          - artist
           path:
           - file
         ops:
@@ -5298,7 +5297,7 @@ nodes:
         lands_on: hub
         resource_scope: app_shared
         path_audited:
-          at: '2026-09-28'
+          at: '2026-09-29'
           impl: 3c31b0566918933b
           dependencies:
             backend/common/expression_eval.py: ef54b93159bea1bb8727f4e56a887d54940409c06ac0115db204ede691242fd0
@@ -5306,7 +5305,7 @@ nodes:
             backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
             backend/common/expression_ops.py: e215c90db04dfa6e8a37dfefc214a82f8aee27f35bc0d231a86d671aba7ef96f
-            backend/common/expression_parser.py: 97d8ea1bae258c2da471eae3682349d139dbb38033079a6110dc7ab52a366ad8
+            backend/common/expression_parser.py: 05989dd0bb214197a00d987865e1f91c4410697b1eb3d7e4220f866bb67b69ad
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
             backend/base/runtime_utils.py: ee8f08ebd8889224e85458645b3f60386fcdb1c732772c4657d2d173fee8e0ff
             backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
@@ -5550,7 +5549,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-29'
-          impl: eafd05c84123840f
+          impl: 57339c7a570f9fa1
         target_key: path
         aliases:
           offset:
@@ -5563,7 +5562,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-29'
-          impl: eafd05c84123840f
+          impl: 57339c7a570f9fa1
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6324,7 +6323,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-29'
-          impl: eafd05c84123840f
+          impl: 57339c7a570f9fa1
         pipe_in: true
         lands_on: body
         limb_op:

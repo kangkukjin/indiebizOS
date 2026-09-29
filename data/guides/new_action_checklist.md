@@ -177,20 +177,21 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         #   tables: boolean       #   input_schema.properties 로 옮긴다(검증 아닌 구조로 정합).
         #   where: [string, object, array]   # 유니온은 목록. 컨테이너 자리는 array/object 로
         #                         #   선언해야 통과한다(미선언 자리의 목록·사전은 관문이 거절).
-        #   ★`--check` 의 'param 선언 완전성' 이 코퍼스가 쓰는 자리의 미선언을
-        #     빌드 실패로 만든다 — 타입은 짐작하지 말고 핸들러·코퍼스 값을 보고 적을 것.
-        #   ★★산문과 타입은 한 벌(2026-09-07): 설명이 "배열도 받는다"면 타입도 넓혀라 —
-        #     산문은 모델이, 타입은 관문이 읽어 어긋나면 문서대로 쓸수록 죽는다.
+        #   ★`--check` 'param 선언 완전성'이 코퍼스가 쓰는 자리의 미선언을 빌드 실패로
+        #     만든다 — 타입은 짐작 말고 핸들러·코퍼스 값을 보고 적을 것.
+        #   ★★산문과 타입은 한 벌(09-07): 설명이 "배열도 받는다"면 타입도 넓혀라 —
+        #     산문은 모델이, 타입은 관문이 읽어 어긋나면 문서대로 쓸수록 죽음.
         #     `--check` 의 '선언 내부 모순'·'구현-읽기'(패키지·액션별)가 잡는다.
+        #   ★선언한 키는 구현이 읽을 것 — 아니면 받고 무시한 채 성공('선언-읽기' 관문).
         keywords: [한글키워드, english_keyword]
         # aliases: {정규키: [별칭1, 별칭2]}   # (선택) 자연스러운 인자명 → 정규키 자동 매핑
         # open_params: true       # (선택) 자유 키를 정당하게 받는 액션만 — 인자 층 검사 면제.
         #   기본은 검사 대상: 선언 안 된 키·없는 op 값은 실행 결과에 param_warning 으로 경고된다
-        #   (ibl_param_vocab.check_params — 허용=input_schema∪aliases. 읽는 키는 params 에 선언).
-        # ai_call: true          # (선택) 원샷 AI 낱말(실행마다 모델 호출)이면 — dry-run 비용 고지
+        #   (ibl_param_vocab.check_params: 허용=input_schema∪aliases. 읽는 키는 params 에 선언).
+        # ai_call: true          # (선택) 원샷 AI 낱말(실행마다 모델 호출) — dry-run 비용 고지
         #   +포털 대여 기본 거부. fixture 는 exempt 로 별도 면제. src README '선택 필드: ai_call' 참조.
         # runs_on: pc_only       # (선택) 폰 네이티브: 데스크톱(맥·리눅스·윈도우) 전용이면. 기본 anywhere.
-        #   데스크톱 하드웨어/무거운 의존/미검증 패키지=pc_only · 폰 센서=phone_only.
+        #   데스크톱 하드웨어/무거운 의존/미검증=pc_only · 폰 센서=phone_only.
         #   build 가 data/phone_manifest.json 파생(폰 번들/계기필터/엔진가드 SSOT).
         # op 분기 액션이면:
         ops:

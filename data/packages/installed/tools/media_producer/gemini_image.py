@@ -145,10 +145,10 @@ def generate_gemini_image(tool_input, output_base):
     }
     model = tool_input.get("model") or quality_map.get(quality, "gemini-3.1-flash-image-preview")
 
-    # output_path가 지정되면 파일명만 추출하여 output_base에 저장
+    # output_path가 지정되면 output_base 기준으로 저장 — `~workspace/…`·절대 경로는 그 자리 그대로(73회차 B73-6 밭)
     if output_path:
-        filename = output_path
-        output_path = os.path.join(output_base, filename)
+        from runtime_utils import expand_body_path
+        output_path = os.path.join(output_base, expand_body_path(output_path))
     else:
         output_path = os.path.join(output_base, f"gemini_image_{uuid.uuid4().hex[:8]}.png")
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)

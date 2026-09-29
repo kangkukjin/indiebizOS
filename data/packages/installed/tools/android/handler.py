@@ -257,6 +257,9 @@ def _act_clipboard(tool_input: dict) -> dict:
     # 이미지 클립보드(ClipData.newUri): image_path(로컬 경로)·image_b64/b64·image(data URI) 중
     # 하나가 있으면 이미지로 얹는다 — 카카오톡 등 입력창에서 붙여넣기. 없으면 텍스트 경로.
     image_path = tool_input.get("image_path") or tool_input.get("path")
+    if image_path:
+        from runtime_utils import expand_body_path
+        image_path = expand_body_path(image_path)   # `~workspace/…` 토큰(73회차 B73-6 밭)
     img_b64 = tool_input.get("image_b64") or tool_input.get("b64") or tool_input.get("image")
     if image_path or img_b64:
         import base64 as _b64

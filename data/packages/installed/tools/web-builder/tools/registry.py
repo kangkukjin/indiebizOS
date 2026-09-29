@@ -31,7 +31,8 @@ def make_id(name: str) -> str:
 
 def detect_tech_stack(local_path: str) -> list:
     """로컬 경로에서 기술 스택 자동 감지"""
-    path = Path(local_path)
+    from runtime_utils import expand_body_path
+    path = Path(expand_body_path(local_path))   # `~workspace/…` 토큰도 받는다(73회차 B73-6 밭)
     if not path.exists():
         return []
 
@@ -102,9 +103,11 @@ def register_site(tool_input: dict, package_dir: Path) -> dict:
     if not local_path:
         return {"success": False, "error": "local_path는 필수입니다"}
 
-    path = Path(local_path)
+    from runtime_utils import expand_body_path
+    path = Path(expand_body_path(local_path))   # `~workspace/…` 토큰도 받는다(73회차 B73-6 밭)
     if not path.exists():
         return {"success": False, "error": f"경로가 존재하지 않습니다: {local_path}"}
+    local_path = str(path)   # 레지스트리엔 해소된 경로 — 이후 편집·빌드가 토큰을 다시 풀지 않는다
 
     sites = load_sites(package_dir)
 
@@ -192,6 +195,9 @@ def update_site(tool_input: dict, package_dir: Path) -> dict:
     for field in updatable:
         if field in tool_input and tool_input[field] is not None:
             target[field] = tool_input[field]
+            if field == "local_path":
+                from runtime_utils import expand_body_path
+                target[field] = expand_body_path(target[field])
             updated.append(field)
 
     if "local_path" in updated:

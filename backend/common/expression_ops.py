@@ -59,9 +59,25 @@ def free_names(node, bound=frozenset()):
     return result
 
 
+# 다른 언어의 관용 이름 → 이 언어의 내장 함수. 가까운 철자(difflib)로는 못 잇는 짝만 적는다
+# (count→len 을 모르는 모델이 BUILTIN 거절을 받고 같은 이름을 다시 쓰던 자리 — 76회차 T24·F72-2 재확인).
+_BUILTIN_SYNONYMS = {"count": "len", "length": "len", "size": "len", "str": "text", "string": "text",
+                     "int": "number", "float": "number", "includes": "contains", "has_text": "contains",
+                     "distinct": "unique", "sort": "sorted", "concat": "join", "lowercase": "lower",
+                     "uppercase": "upper", "trim": "strip", "items": "entries"}
+
+
+def unknown_builtin_message(name):
+    """알 수 없는 내장 함수 이름의 진단 문장 — 컴파일·실행 두 자리가 같은 문장을 쓴다."""
+    from difflib import get_close_matches
+    near = [_BUILTIN_SYNONYMS[name]] if name in _BUILTIN_SYNONYMS else []
+    near += [c for c in get_close_matches(name, BUILTINS, n=3, cutoff=0.6) if c not in near]
+    return f"알 수 없는 내장 함수: {name}" + (f". 비슷한 내장 함수: {', '.join(near)}" if near else "")
+
+
 def check_arity(name, count):
     if name not in BUILTINS:
-        raise Fault("BUILTIN", f"알 수 없는 내장 함수: {name}")
+        raise Fault("BUILTIN", unknown_builtin_message(name))
     lower, upper = BUILTINS[name]
     if not lower <= count <= upper:
         raise Fault("ARITY", f"{name}의 인자 수는 {lower}~{upper}개입니다.")

@@ -1820,7 +1820,7 @@
   "sense:paper": {
    "fields": {
     "description": "dd61b705db2b",
-    "target_description": "dc28ee0bca7c",
+    "target_description": "5add34303517",
     "implementation": "1d198fa1690a",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1903,7 +1903,7 @@
   "sense:realty": {
    "fields": {
     "description": "a9073339c3b5",
-    "target_description": "9924cbb7beac",
+    "target_description": "277081503e14",
     "implementation": "a8433f754fca",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1914,7 +1914,7 @@
     "router": "ebbb1532efbc",
     "tool": "f02e45b2db1c"
    },
-   "reviewed": "2026-09-27",
+   "reviewed": "2026-09-29",
    "examples": 97
   },
   "sense:researcher": {
@@ -2064,7 +2064,7 @@
   "sense:stay": {
    "fields": {
     "description": "7c6c4219711f",
-    "target_description": "8411597e8779",
+    "target_description": "b5e43be7ed1c",
     "implementation": "4b633299ddb1",
     "returns": "3c22349f8d0b",
     "aliases": "8bdd002a1a15",

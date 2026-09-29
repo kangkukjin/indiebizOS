@@ -15,7 +15,9 @@ CONTRACTS = {
     'strip': (1, 2, ('Text', 'Text|Null'), 'Text'),
     'upper': (1, 1, ('Text',), 'Text'),
     'lower': (1, 1, ('Text',), 'Text'),
-    'contains': (2, 2, ('Text', 'Text'), 'Bool'),
+    # 세 번째 인자 exact(기본 false): true 면 대소문자를 가리는 부분 문자열 판정(NFC 만) — 약어(AI·LLM·fMRI)
+    # 필터가 'pAInting' 을 AI 로 읽던 거짓 양성(2026-09-29 언어 개정, 상상훈련 77회차 G77-1·사용자 판정).
+    'contains': (2, 3, ('Text', 'Text', 'Bool'), 'Bool'),
     'join': (2, 2, ('Text', 'List<Text>'), 'Text'),
     'unique': (1, 1, ('List',), 'List'),
     'union': (2, 1000, ('List',), 'List'),
@@ -120,6 +122,11 @@ def call(name, args, tick, callback=None):
         if name in ('upper', 'lower'):
             return normalized_text(getattr(s, name)())
         if name == 'contains':
+            if len(args) == 3:
+                if type(args[2]) is not bool:
+                    raise Fault('BOOL_REQUIRED', 'contains의 세 번째 인자 exact는 true/false입니다.')
+                if args[2]:
+                    return text(args[1]) in s
             return text_match('contains', s, text(args[1]))
         parts = listing(args[1])
         for part in parts:

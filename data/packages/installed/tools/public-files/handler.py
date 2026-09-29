@@ -126,8 +126,7 @@ def _folder_row(state: dict, f: dict) -> dict:
     baskets = _baskets_with_folder(state, f["id"])
     if baskets:
         names = ", ".join(b.get("title") or "이름없음" for b in baskets[:3])
-        extra = " 외" if len(baskets) > 3 else ""
-        meta = f"🌐 공개 중: {names}{extra}"
+        meta = f"🌐 공개 중: {names}{' 외' if len(baskets) > 3 else ''}"
     else:
         meta = "⚪ 아직 어느 주소에도 없음 — '바스켓' 탭에서 담아 공개"
     return {
@@ -136,6 +135,11 @@ def _folder_row(state: dict, f: dict) -> dict:
         "path": f.get("path", ""),
         "id": f.get("id", ""),
         "mode": f.get("mode", "media"),
+        # 구조 칸(R7) — meta 에 접힌 값의 정본 (이 폴더를 노출하는 바스켓 전부)
+        "public": bool(baskets),
+        "basket_count": len(baskets),
+        "basket_ids": [b.get("id", "") for b in baskets],
+        "baskets": [b.get("title") or "" for b in baskets],
     }
 
 
@@ -181,6 +185,9 @@ def _basket_row(settings: dict, state: dict, b: dict) -> dict:
         "id": b.get("id", ""),
         "slug": b.get("slug", ""),
         "all_folders": bool(b.get("all_folders")),
+        # 구조 칸(R7) — meta 에 접힌 폴더 수의 정본
+        "folder_count": len(state['folders']) if b.get("all_folders") else len(b.get('folder_ids', [])),
+        "folder_ids": list(b.get("folder_ids", [])),
     }
 
 

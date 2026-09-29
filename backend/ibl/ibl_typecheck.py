@@ -109,9 +109,9 @@ def catalog_entry(node: str, action: str, params: Dict[str, Any], *,
         if isinstance(op, str) and not _dynamic(op):
             return shapes.get(f"{q}#{op}")
         return None
-    # A baseline observation is valid only for its declared shape coordinates.
-    changed_axes = {k for k, default in ad.get("shape_axes", {}).items()
-                    if k in params and params[k] != default}
+    # A baseline observation is valid only for its shape coordinates.
+    changed_axes = {k for k, default in shape_axes(ad).items()
+                    if k in params and params[k] is not None and str(params[k]) != str(default)}
     # 변이 축(F20-1): param 리터럴이 변이 키와 맞으면 그 열이 정본
     for k, v in shapes.items():
         if not k.startswith(q + "@"):
@@ -131,6 +131,10 @@ def catalog_entry(node: str, action: str, params: Dict[str, Any], *,
         if ent:
             return ent
     ent = shapes.get(q)
+    if ent and ent.get("source") == "usage" and ad.get("ops"):
+        # 실사용 원장 수확은 어느 op 가 낸 봉투인지 모른다 — op 가 있는 액션에 빌려주면 add 봉투의 키로
+        # list 결과를 판정해 `.items` 에 거짓 경고를 냈다(77회차 T24 self:material·F76-2 재확인). 미상이 맞다.
+        ent = None
     if ent:
         # 액션 레벨 관측은 액션 fixture 의 op 하나가 낸 열이다 — 다른 op 로 부른 문장에 그 열을 빌려주지 않는다
         # (2026-09-05 ep2858: `[self:lecture]{op:"load"}` 가 list fixture 의 title·meta·summary·url 을 받았다). 미상이 맞다.
@@ -154,6 +158,40 @@ def _catalog_cols(node: str, action: str, params: Dict[str, Any]) -> Optional[Li
 
 
 _FIXTURE_OP_RE = re.compile(r'\bop\s*:\s*["\']([\w-]+)["\']')
+
+
+def shape_axes(action_def: Dict[str, Any]) -> Dict[str, Any]:
+    """기준 관측(fixture)의 좌표 — 결과 모양을 가르는 인자와 fixture 가 쓴 값.
+
+    손 선언(`shape_axes`)만 보호하면 선언 없는 액션의 다른 원천 호출이 기본 원천의 열로 판정돼 거짓
+    `UNOBSERVED_FIELD` 가 났다([sense:book]{source:"nl"} 의 meta — 77회차·F76-2 재확인). 축은 이미 있는
+    선언에서 유도한다: shape_axes · shape_variants 라벨의 인자 · param_support 축 · 스키마의 유한 값 영역(enum 2개 이상).
+    좌표 값 = 손 선언 > fixture 리터럴 > 스키마 기본값 > 미지정(None)."""
+    ad = action_def or {}
+    fixture = ad.get("fixture") if isinstance(ad.get("fixture"), str) else ""
+
+    def at_fixture(name, fallback=None):
+        m = re.search(rf'\b{re.escape(name)}\s*:\s*["\']([^"\']*)["\']', fixture)
+        return m.group(1) if m else fallback
+
+    axes = dict(ad.get("shape_axes") or {})
+    for label in ad.get("shape_variants") or {}:
+        name = str(label).split("=", 1)[0]
+        axes.setdefault(name, at_fixture(name))
+    support = ad.get("param_support")
+    if isinstance(support, dict) and support.get("axis"):
+        axes.setdefault(support["axis"], at_fixture(support["axis"], support.get("default")))
+    tool = ad.get("tool")
+    if tool:
+        try:
+            from tool_loader import load_tool_schema
+            props = ((load_tool_schema(tool) or {}).get("input_schema") or {}).get("properties") or {}
+        except Exception:
+            props = {}
+        for name, spec in props.items():
+            if name != "op" and isinstance(spec, dict) and len(spec.get("enum") or ()) > 1:
+                axes.setdefault(name, at_fixture(name, spec.get("default")))
+    return axes
 
 
 def _fixture_op(action_def: Dict[str, Any]) -> Optional[str]:

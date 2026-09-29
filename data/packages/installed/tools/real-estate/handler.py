@@ -246,11 +246,14 @@ def execute(tool_input: dict, context):
     tool_name = context.tool_name
 
     # [sense:realty]{op: query|codes} — op=codes는 지역코드 조회(옛 district_codes), op=query는 실거래가(기본).
-    # 기존 체인엔 unknown-op 응답이 없었고 codes 외 모든 op 가 query 로 흘렀으므로
-    # 동작 보존을 위해 .get(op, _op_query) 폴백 유지.
+    # ★모르는 op 은 거절한다(2026-09-29, 상상훈련 76회차 T19): 옛 .get(op, _op_query) 폴백은
+    #   `op:"registry"`(등기부) 를 실거래 825행 성공으로 바꿔 답이 다른 질문의 답이 됐다.
     if tool_name == "realty_op":
         _op = (tool_input.get("op") or _OP_DEFAULTS["realty_op"]).strip()
-        fn = _OP_DISPATCHERS["realty_op"].get(_op, _op_query)
+        fn = _OP_DISPATCHERS["realty_op"].get(_op)
+        if fn is None:
+            return {"success": False, "error_type": "unsupported_parameter",
+                    "error": f"알 수 없는 op '{_op}'. 사용 가능: {sorted(_OP_DISPATCHERS['realty_op'])}"}
         return fn(tool_input, context)
 
     if tool_name in ("realty_price", "apt_trade_price", "apt_rent_price", "house_trade_price", "house_rent_price"):

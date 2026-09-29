@@ -300,4 +300,34 @@ B77-1~4·F77-1~3은 모두 수리성이다.
 
 ## 집행 완료
 
-(수리 턴이 채운다.)
+### 1차 — `747d5103`·`2e096a83`(2026-09-29)
+
+B77-2·B77-3·B77-4 와 F77-1 일부(강의 lecture_id·노트북 status/stale/loc/score·Context7 id). B77-1 은 핸들러 안 거절만. 요약은 `docs/IMAGINATION_77_81_REPAIRS_2026_09_29.md`.
+
+### 2차 — 76·77 잔여 재탐침·수리(2026-09-29)
+
+라이브 재탐침: B77-2·B77-3·B77-4 는 살아 있었다(국회도서관 0건 = 성공 빈 목록). 아래가 남아 있었다.
+
+- **B77-1 — 원천별 인자가 check 에 안 보였고, 요구 자체(arXiv 최신순·연도)는 구현이 없었다.** 같은 문장이 check `incomplete`·경고 0 → 실행에서야 거절. 표는 핸들러 안 사본뿐이었다.
+  - 수리: 선언 `param_support`(study/ibl_actions.yaml)를 단일 소스로. 판본 2 계약 생성기(`project_param_support`)가 source 조건부 계약의 `forbidden`(새 변이 필드)·`enums` 로 투영해 check 가 거절하고, 핸들러도 같은 표를 읽는다. 모르는 source 도 거절(기본 원천인 척 삼키지 않음).
+  - 요구 구현: arXiv `sortBy=submittedDate`·`submittedDate:[…]` 범위, PubMed `pdat` 범위·`pub_date` 정렬·`free full text[sb]`, Semantic `year=lo-hi`·`openAccessPdf`, 국회도서관 연도 범위 후필터, `year`(정확)는 전 원천. 남은 거절은 원천이 못 하는 것뿐(arXiv·PubMed 인용순, Semantic 정렬, nanet 정렬·오픈액세스).
+  - 라이브: T02 문장이 2026-09-28 제출 5편(최신순) · `sort_by:"cited"`+arxiv·`open_access`+nanet·`source:"scholar"` 는 check `ARGUMENT_CONTRACT`.
+- **F77-1 ★밭 이관 — 표시 칸 접기 관문과 전수 병기.** `scripts/iblbuild_meta_fields.py`(build --check 편입): 기록 행(title 칸)의 meta·summary 가 여러 값을 합성하면 각 조각의 데이터 뿌리(키 경로)가 같은 행의 구조 칸에도 있어야 한다. 펼침(`**it`)은 덮은 것으로 본다. 수리 이전 트리에서 60자리를 적발했고 전부 병기해 0.
+  - 논문 5원천: authors(전원)·year(정수, nanet 포함)·journal/venue·citations·doi·arxiv_id·pmid/pmcid·openalex_id·open_access/oa_url · nanet `type`.
+  - 도서 nl: authors·publisher·publication_year·form·call_number·location(형제 원천 이름 그대로) · DART 공시·위키데이터 description.
+  - 외부 목록(web·쇼핑·중고·부동산 naver/zigbang·숙박·크몽·창업·공모전)과 개인 기록(건강·가계부·가족신문·포털 감사·게시판·공개 창고·폰 알림·스크립트·사진·노트북·강의) — 세 하위 작업이 패키지를 나눠 병기, 표시 문자열·기존 키 불변.
+  - 반환 모양 스윕 재관측으로 새 칸이 카탈로그 ⟨열⟩에 올랐다(예 `sense:paper` + authors·year·journal·citations·doi…).
+- **F77-2 — 429 = `RATE_LIMITED`.** 공통 봉투 `common.api_client.rate_limited_failure`/`RateLimitedError`(error_type·retry_after·service)를 판본 2 어댑터가 `RATE_LIMITED` 로 올리고 `details.retry_after` 를 싣는다. Semantic·OpenAlex·Google Books·네이버부동산·Windy·api_client 공용 경로. 관문 `scripts/iblbuild_rate_limits.py`: 429 를 알아보는 파일은 공통 봉투를 쓴다(웹 크롤의 봇 차단 분류는 사유와 예외).
+- **F77-3 — structure 원문 보존.** 프롬프트에 원문 보존 규칙. 결정론 대조 `_restore_verbatim`: 짧은 출력 문자열(제목·표 칸·목록·heading)이 원문 구간과 낱말 수 같고 1~2 낱말만 가깝게 다르거나 대소문자만 다르면 원문으로 되돌리고 `verbatim_restored` 로 신고. 의역·요약은 건드리지 않는다.
+- **G77-1 — 언어 개정(사용자 채택 (a), 2026-09-29).** `contains(text, part, exact)` — 기본 false(기존 문장 불변), true 면 대소문자를 가리는 부분 문자열(NFC 만). ibl.md 내장 함수 표·조합 교재 갱신. 라이브 `contains("painting…","AI",true)=false`.
+- 재확인 항목: F76-2(material `.items` 거짓 경고)·F72-2(INDEX details)·B75-4(미지 op)는 76회차 집행 절에 적었다.
+
+### 검증(76·77 공통)
+
+- 신규 회귀 `backend/test_imagination_round76_77_residual.py` 25건 + 77~81 회귀(arXiv 연도 거절 단언을 인용순 거절로 개정) = 50 통과.
+- 빌드 `--check` 전 관문 통과(새 관문 둘 포함). 파일 크기·층·맨 문자열 가드 통과. 용례 재검토: sense:paper 55·realty 97·stay 23 건 검토 후 ack(새 거절 조합 사용 0, #4108 교정).
+- 지문 재감사: 식 평가기 4파일(self:record 의존 지문)·web·system_essentials(회원 경로 감사 지문) — 변경은 선택 인자·진단 문구·공개 행 칸뿐.
+- 일상 종합(`-m "not system"`) 실패 3: 신규 시험의 `__main__` 누락·doc_build 철자 대조 줄의 `vj-ok` 표시 누락(둘 다 이번 변경의 관례 위반, 수정)·교재 예산 초과 시점의 예산 단언(압축 후 통과). 세 파일 재실행 78 통과. 관련 시스템 묶음(어휘 보관·번들) 23 통과. 전수 재실행은 하지 않았다.
+- 기존 실패(무관): `test_episode4064_repairs::test_member_combined_call_keeps_member_execution_context` 가 단독 실행에서 "현재 회원 턴에서 해당 계약/결과를 조회할 수 없습니다"(이번 변경 설치 전 원본 트리에서도 같음, 전수 안에서는 통과).
+- 라이브: 위 재현 문장 전부. 외부 발신·유료 AI 호출 없음(structure 는 오프라인 시험).
+- 운영 함정: 하위 작업 셋이 패키지 .py 를 동시에 고쳐 재기동이 `FAILED(boot_artifact_changed)`(17:37) — 제어자는 `data/packages/installed` 도 감시한다. 편집을 모두 끝낸 뒤 `api.py start` 한 번으로 복구(ACTIVE).

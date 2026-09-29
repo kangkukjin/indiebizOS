@@ -126,19 +126,25 @@ def _fetch_feed(tool_input: dict) -> dict:
             link = entry.get("link", "")
             pub_date = entry.get("published", entry.get("updated", ""))
             summary = re.sub(r"<[^<]+?>", "", entry.get("summary", entry.get("description", "")))
-            summary = clean_html(summary).strip() if summary else ""
-            if len(summary) > 200:
-                summary = summary[:200] + "..."
+            summary = _clip(clean_html(summary).strip() if summary else "", 200)
             lines.append(f"- {title} ({pub_date})\n  {link}")
             records.append({
                 "title": title,
                 "meta": " · ".join(x for x in [source_name, pub_date] if x),
                 "summary": summary,
                 "url": link,
+                # R7 칸 규약 — meta 에 접힌 값의 구조 칸(피드 이름·원문 발행 문자열)
+                "source": source_name,
+                "published": pub_date,
             })
         return {"success": True, "message": "\n".join(lines), "items": records, "count": len(records)}
     except Exception as e:
         return {"success": False, "error": f"피드 읽기 오류 ({url}): {e}", "items": []}
+
+
+def _clip(text: str, limit: int) -> str:
+    """한 값의 표시용 자르기(limit 초과 시 말줄임) — 여러 값을 합성하는 접기가 아니다."""
+    return text[:limit] + "..." if len(text) > limit else text
 
 
 def _text_to_blocks(title, text):
@@ -178,6 +184,8 @@ def _gnews_item(r: dict, tag: str) -> dict:
         "summary": summary,
         "url": r.get("url", ""), "link_label": "기사 보기",
         "query": tag,
+        "source": r.get("source"),          # R7 — meta 에 접힌 매체 이름의 구조 칸
+        "published": r.get("published"),    # 원천 발행 문자열(RFC 2822; ISO 정규화본은 date)
         **_rfc2822_iso(r.get("published", "")),
     }
 
@@ -256,6 +264,8 @@ def search_gnews(query: str = "", count: int = 10, language: str = "ko", region:
                 "summary": r.get("summary", ""),
                 "url": r.get("url", ""),
                 "query": query,
+                "source": r.get("source", ""),  # R7 — meta 에 접힌 매체 이름의 구조 칸
+                "published": r.get("published", ""),  # 원천 발행 문자열(ISO 정규화본은 date)
                 **_rfc2822_iso(r.get("published", "")),
             } for r in results],
         }
@@ -376,6 +386,8 @@ def _search_guardian(tool_input: dict) -> dict:
                 "meta": " · ".join(x for x in [date, section] if x),
                 "summary": trail_text if trail_text != "요약 없음" else "",
                 "url": a_url,
+                "section": section,          # R7 — meta 에 접힌 섹션의 구조 칸
+                "published": published,      # 원천 발행 문자열(meta 의 날짜 = 앞 10자)
                 **_iso_date_field(published),
             })
 
@@ -391,11 +403,17 @@ def _guardian_items(query: str, count: int = 30) -> list:
     try:
         res = _search_guardian({"query": query, "count": min(count, 50)})  # clamp-ok: Guardian Open Platform page-size 상한 50
         if isinstance(res, dict) and res.get("items"):
+            # meta 는 원천 행의 표시 문자열을 다시 접지 않고 구조 칸(published·section)에서 조립한다
+            # — 표시 결과는 옛 "The Guardian · {날짜} · {섹션}" 그대로(R7 칸 규약).
             return [{
                 "title": r.get("title", ""),
-                "meta": " · ".join(x for x in ["The Guardian", r.get("meta", "")] if x),
+                "meta": " · ".join(x for x in ["The Guardian", (r.get("published") or "")[:10],
+                                               r.get("section", "")] if x),
                 "summary": r.get("summary", ""),
                 "url": r.get("url", ""), "link_label": "기사 보기",
+                "source": "The Guardian",
+                "section": r.get("section", ""),
+                "published": r.get("published", ""),
                 **_iso_date_field(r.get("date")),
             } for r in res["items"]]
     except Exception as e:
@@ -459,6 +477,8 @@ def _hn_items(query: str = "", count: int = 30, front_page: bool = False, days: 
             "hn_url": disc,          # HN 토론(댓글) 항상 보존
             "link_label": "기사 보기",
             "points": pts,           # 편집장 hot 신호(gnews 의 ×N매체 대응)
+            "comments": nc,          # R7 — meta 의 💬 댓글 수 구조 칸
+            "domain": dom or "news.ycombinator.com",  # R7 — meta 의 기사 도메인 구조 칸
         })
     return items
 

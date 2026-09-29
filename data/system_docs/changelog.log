@@ -2247,3 +2247,5 @@
 2026-09-29 DOCUMENTATION: 긴문장 상상훈련 가이드 신설(data/guides/long_sentence_imagination.md). 복잡한 가상 과제의 전체 IBL 작성·실행, 최초 초안과 수정 이력, 완료 조건·변형·부분 재개, 작성 마찰·품질·시간·토큰 관측, 보고서와 후속 수리 경계를 정의. AGENTS·해부도·기존 훈련 가이드에서 연결하고 guide_db의 상상훈련 주제에 등록. 로컬 실행기억 가지의 guide 목록도 연결. 훈련 실시는 별도 요청이며 이번 변경은 지침 작성·등록.
 
 2026-09-29 DOCUMENTATION: 긴문장 상상훈련 리뷰 반영. docs/LONG_SENTENCE_IMAGINATION_LEDGER.md를 회차·갭의 git 정본으로 신설하고 L<회차>-<순번> ID, 비민감 최소 재현 보존, 중단 회차 기록을 정의. 에이전트가 조회하는 자료만으로 작성하는 기본 조건과 내부 구현 열람 뒤 시도를 분리. 임시 상한 60분·오류 수정 3회, 종료·회수·증거 보존과 1회차 후 가이드 재검토를 명시. 넓은 문장/IBL 키워드를 제거하고 훈련 명칭의 정확 별칭으로 연결. 조회 8형태와 문서 링크·가이드 배선 확인. 실제 훈련 미실시.
+
+2026-09-29 REPAIR: 상상훈련 76·77회차 잔여 수리. ①손으로 쓴 callable_contract 도 ops 투영(project_ops)을 받아 미지 op 거절, realty 폴백 제거·디스패처 폴백 관문 ②param_support 선언→source 조건부 계약(forbidden·enums): check 가 원천별 미지원 인자를 거절, arXiv 최신순·연도·PubMed 날짜/정렬·Semantic 연도/OA·nanet 연도 범위 구현 ③표시 칸 접기 관문(scripts/iblbuild_meta_fields.py)+전 패키지 구조 칸 병기(60자리) ④429 공통 봉투→판본 2 RATE_LIMITED + 관문 ⑤structure 원문 보존 복원 ⑥관측 좌표 축 유도·op 모르는 실사용 관측 비대여 ⑦진단: count→len·숫자 필드·INDEX details ⑧이력 total 상시·직방 매매 price. 언어 개정: contains(text, part, exact)(G77-1, 사용자 채택).

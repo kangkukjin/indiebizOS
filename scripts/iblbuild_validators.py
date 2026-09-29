@@ -93,6 +93,28 @@ def _stub_ops(table_node) -> list[str]:
     )
 
 
+def _dispatcher_fallbacks(handler_text: str) -> list[int]:
+    """`_OP_DISPATCHERS[…].get(op, 폴백함수)` — 모르는 op 을 다른 op 으로 실행하는 자리의 줄 번호.
+
+    76회차 T19: realty 의 `.get(_op, _op_query)` 가 `op:"registry"`(등기부)를 실거래 825행 성공으로 바꿨다.
+    모르는 op 은 거절이 계약이다(선언 밖 op 은 판본 2 계약의 op 허용값도 거절한다)."""
+    try:
+        tree = ast.parse(handler_text)
+    except SyntaxError:
+        return []
+    lines = []
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "get"
+                and len(node.args) == 2
+                and not (isinstance(node.args[1], ast.Constant) and node.args[1].value is None)):
+            base = node.func.value
+            while isinstance(base, ast.Subscript):
+                base = base.value
+            if isinstance(base, ast.Name) and base.id == "_OP_DISPATCHERS":
+                lines.append(node.lineno)
+    return lines
+
+
 def _extract_op_defaults(handler_text: str) -> dict[str, str] | None:
     """handler.py 본문에서 _OP_DEFAULTS dict 를 AST 로 파싱.
 
@@ -429,6 +451,11 @@ def _check_action(
                     # if/elif 체인에 살아 있으면, 체인에서 분기 하나가 사라져도 이 가드가
                     # 못 본다. 값은 함수 참조(또는 browser-action/computer-use 식 문자열
                     # 디스패치 키)여야 한다.
+                    fallback_lines = _dispatcher_fallbacks(src_text)
+                    if fallback_lines:
+                        issues.append(
+                            f"{qualified}: handler.py _OP_DISPATCHERS 폴백 조회({pkg_name}:{fallback_lines}) — "
+                            f"모르는 op 을 다른 op 으로 실행한다. `.get(op)` 후 None 이면 거절하세요")
                     stub_ops = _stub_ops(table_node)
                     if stub_ops:
                         issues.append(

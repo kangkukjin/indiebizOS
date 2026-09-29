@@ -78,9 +78,17 @@ def search_nl(keyword, category="도서", page=1, page_size=20):
             "summary": " · ".join(x for x in [
                 (f"청구기호 {callno}" if callno else ""), room] if x),
             "url": _BASE + "?" + urllib.parse.urlencode({"kwd": title, "srchTarget": "total"}),
+            # F77-1 (R7 칸 규약): meta·summary 에 접은 값을 같은 행의 구조 칸에도 —
+            # 칸 이름은 형제 소스(정보나루·google)와 같게(authors/publisher/publication_year),
+            # 없으면 None 으로 칸 유지(교차 소스 병합 표의 열 일관성).
+            "authors": author or None,
+            "publisher": publisher or None,
+            "publication_year": year or None,
+            "form": form or None,              # 자료형태(FD)
+            "call_number": callno or None,     # 청구기호
+            "location": room or None,          # 자료이용(자료실)
+            "isbn13": isbn or None,
         }
-        if isbn:
-            rec["isbn13"] = isbn
         items.append(rec)
 
     if not items:

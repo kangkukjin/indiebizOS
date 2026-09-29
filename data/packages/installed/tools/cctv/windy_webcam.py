@@ -47,7 +47,8 @@ def _call_windy_api(params: dict) -> dict:
         if response.status_code == 401:
             raise ValueError("WINDY_API_KEY가 유효하지 않습니다.")
         elif response.status_code == 429:
-            raise ValueError("Windy API 요청 한도 초과. 잠시 후 다시 시도하세요.")
+            from common.api_client import RateLimitedError
+            raise RateLimitedError("Windy API", response)
         raise ValueError(f"Windy API 오류: {response.status_code}")
     except requests.exceptions.Timeout:
         raise ValueError("Windy API 응답 시간 초과 (15초)")
@@ -157,6 +158,8 @@ def search_webcam(lat: float = None, lon: float = None, radius_km: float = 50,
             webcams=formatted
         )
     except Exception as e:
+        if hasattr(e, "failure"):   # 요청 한도 = RATE_LIMITED(77회차 F77-2)
+            return json.dumps(e.failure(), ensure_ascii=False)
         return error_response(str(e))
 
 
@@ -183,6 +186,8 @@ def get_nearby_webcam(lat: float, lon: float, radius_km: float = 50, count: int 
             items=formatted  # 단일 통화 = native 웹캠 dict([sense:cctv]{op:webcam})
         )
     except Exception as e:
+        if hasattr(e, "failure"):   # 요청 한도 = RATE_LIMITED(77회차 F77-2)
+            return json.dumps(e.failure(), ensure_ascii=False)
         return error_response(str(e))
 
 

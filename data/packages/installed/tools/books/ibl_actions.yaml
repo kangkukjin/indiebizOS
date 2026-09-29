@@ -12,6 +12,9 @@ actions:
       query: string
       page: integer  # 기존 도서 검색·인기대출 페이지 인자(옛 공연 선언에 가려져 있던 타입).
     returns: items
+    # 기준 관측(fixture)은 source 생략=정보나루의 열이다 — nl·google 호출에 그 열을 빌려주면 meta 등에
+    # 거짓 UNOBSERVED_FIELD 가 났다(77회차 T05·F76-2 재확인). 좌표를 밝혀 다른 원천은 미상으로 둔다.
+    shape_axes: {source: null}
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:book]{query: "역사"}'
     description: 도서 조회 (op 분기). 기본=한국 도서관정보나루, source="nl"=국립중앙도서관 납본, source="google"=글로벌·원서(Google Books). 고전 원문은 classic. items(loan_count·publication_year 포함) — table 파이프로 대출순·연도 선별.

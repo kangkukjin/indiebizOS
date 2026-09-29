@@ -185,6 +185,12 @@ def sync_finance_from_phone(input_data: dict) -> str:
                 + datetime.fromtimestamp((r.get('ts') or 0) / 1000).strftime('%m/%d %H:%M'),
         "summary": (r.get('body') or r.get('title') or '')[:120],
         "url": "",
+        # 구조 칸(R7) — title/meta 에 접힌 값의 정본 (ts = epoch ms 원값)
+        "source": r.get('source'),
+        "ts": r.get('ts'),
+        "type": r.get('type'),
+        "merchant": r.get('merchant'),
+        "amount": _num(r.get('amount')) if r.get('amount') else None,
     } for r in new_rows[:20]]
     return json.dumps({"success": True, "message": msg, "fetched": len(rows),
                        "new": len(new_rows), "unparsed": unparsed,
@@ -516,7 +522,13 @@ def ingest_finance_info(input_data: dict) -> str:
                                            occurred_at=date, note=r.get('note'), owner=owner)
             saved_items.append({"title": f"{r.get('counterparty') or r.get('category') or _TX_KO[tx_type]} · {_won(amount)}",
                                 "meta": f"{_TX_KO[tx_type]} · {date or today} (#{rid})",
-                                "summary": r.get('note') or '', "url": ""})
+                                "summary": r.get('note') or '', "url": "",
+                                # 구조 칸(R7) — _tx_items 와 같은 이름
+                                "record_id": rid, "record_type": "transaction",
+                                "kind": _TX_KO[tx_type], "date": date or today,
+                                "category": r.get('category') or '',
+                                "counterparty": r.get('counterparty') or '',
+                                "amount": _num(amount)})
         elif hold_kind:
             name = str(r.get('name') or '').strip()
             value = _to_number(r.get('value'))
@@ -530,7 +542,13 @@ def ingest_finance_info(input_data: dict) -> str:
                                        asset_type=r.get('asset_type'), as_of=date, owner=owner)
             saved_items.append({"title": name,
                                 "meta": f"{_HOLD_KIND_KO[hold_kind]} · {date or today} (#{rid})",
-                                "summary": _won(value) if value is not None else '', "url": ""})
+                                "summary": _won(value) if value is not None else '', "url": "",
+                                # 구조 칸(R7) — _hold_items 와 같은 이름
+                                "record_id": rid, "record_type": "holding",
+                                "kind": _HOLD_KIND_KO[hold_kind], "name": name,
+                                "value": _num(value) if value is not None else None,
+                                "asset_type": r.get('asset_type') or '',
+                                "as_of": date or today})
         else:
             skipped.append(f"kind 불명: {str(r)[:80]}")
 

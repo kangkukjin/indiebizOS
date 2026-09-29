@@ -10,18 +10,32 @@ actions:
     params:
       arxiv_id: string
       pmcid: string
-      year: [string, integer]    # search source=nanet — 발행연도 후필터(정확 일치)
+      year: [string, integer]    # search — 발행연도 정확(= year_from·year_to 같은 값)
       type: string               # search source=nanet — 자료유형 후필터(학위논문|학술논문|단행본 또는 divFlag 값)
       page: integer              # search source=nanet — 시작 페이지(pageNo, 기본 1·페이지당 5건 고정)
-      year_from: integer         # search source=openalex·semantic — 발행연도 하한
-      year_to: integer           # search source=openalex — 발행연도 상한
-      open_access: boolean       # search source=openalex — true=오픈액세스만
-      sort_by: string            # search source=openalex — relevance(기본)|cited|recent 정렬
+      year_from: integer         # search — 발행연도 하한(원천별 지원은 param_support)
+      year_to: integer           # search — 발행연도 상한
+      open_access: boolean       # search — true=오픈액세스만(arXiv 는 전부 공개)
+      sort_by: string            # search — relevance(기본)|cited|recent, 원천별 허용 값은 param_support
+    # ★77회차 B77-1(2026-09-29): 원천마다 읽는 선택 인자가 달라 arXiv 최신순·연도 하한이 조용히 버려졌다.
+    #   이 표가 단일 소스 — 판본 2 계약 생성기가 source 조건부 계약(금지 인자·허용 값)으로 투영해 check 가
+    #   거절하고, 핸들러도 같은 표로 거절한다. 모르는 source 도 거절(기본 원천인 척 삼키지 않는다).
+    param_support:
+      axis: source
+      default: openalex
+      params: [year, year_from, year_to, sort_by, open_access, type, page]
+      aliases: {pmc: pubmed, semantic_scholar: semantic, s2: semantic, kr: nanet, dissertation: nanet, 국회도서관: nanet}
+      values:
+        openalex: {year: any, year_from: any, year_to: any, open_access: any, sort_by: [relevance, cited, recent]}
+        arxiv: {year: any, year_from: any, year_to: any, open_access: any, sort_by: [relevance, recent]}
+        pubmed: {year: any, year_from: any, year_to: any, open_access: any, sort_by: [relevance, recent]}
+        semantic: {year: any, year_from: any, year_to: any, open_access: any, sort_by: [relevance]}
+        nanet: {year: any, year_from: any, year_to: any, type: any, page: any}
     returns: items
     side_effect: true    # download 가 PDF 를 로컬에 저장한다
     fixture: '[sense:paper]{query: "attention"}'
     description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
-    target_description: "선택 필터 지원 — openalex(year_from/year_to/sort_by/open_access), semantic(year_from), nanet(year/type/page); arxiv/pubmed는 선택 필터 미지원이며 명시하면 거절. op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
+    target_description: "선택 필터(원천별 지원 밖이면 check·실행이 거절) — 연도 year·year_from·year_to=전 원천, open_access=nanet 외, sort_by=openalex(relevance|cited|recent)·arxiv/pubmed(relevance|recent)·semantic(relevance), type·page=nanet. 반환 열: title·authors(전원)·year·journal/venue·citations·doi·arxiv_id/pmid 등 구조 칸 + 표시용 meta·summary·url. op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
     target_key: op
     group: research
     router: handler

@@ -283,7 +283,9 @@ def _attach_price_table(result, params=None):
         # 에이전트는 표찰을 보고 max_points 를 올려 재호출할 수 있다(기본값은 채팅 경제 유지).
         if prices and "truncated" not in obj:
             obj["truncated"] = bool(data.get("truncated"))  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
-            if obj["truncated"] and isinstance(data.get("total_days"), int) and "total" not in obj:
+            # total = 모집단(기간의 거래일 수) — 절단일 때만 실으면 전량 요청의 봉투에서 `$h.total` 이
+            # "필드가 없습니다"로 죽었다(76회차 B76-4 재탐침). 봉투 모양은 절단 여부로 바뀌지 않는다.
+            if isinstance(data.get("total_days"), int) and "total" not in obj:
                 obj["total"] = data["total_days"]
         if obj.get("truncated") and not obj.get("truncations"):
             requested = (params or {}).get("max_points")

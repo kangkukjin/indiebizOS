@@ -88,6 +88,9 @@ def _api_get(path, params=None, _retried=False):
     if r.status_code in (401, 403, 429) and not _retried:
         _get_token(force=True)
         return _api_get(path, params, _retried=True)
+    if r.status_code == 429:
+        from common.api_client import RateLimitedError
+        raise RateLimitedError("네이버부동산", r, hint="급하면 source: zigbang 을 쓰세요.")
     if r.status_code != 200:
         raise RuntimeError(f"네이버부동산 API {r.status_code}: {path}")
     return r.json()
@@ -180,6 +183,20 @@ def _prc_to_man(prc):
     return int(m.group(1) or 0) * 10000 + int(m.group(2) or 0)
 
 
+def _float_or_none(v):
+    try:
+        return float(v) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _int_or_none(v):
+    try:
+        return int(v) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _article_to_item(a):
     name = a.get("articleName") or a.get("articleRealEstateTypeName") or "매물"
     bld = a.get("buildingName") or ""
@@ -228,6 +245,13 @@ def _article_to_item(a):
         "area_m2": float(a["area2"]) if a.get("area2") not in (None, "") else None,
         "floor": a.get("floorInfo"),
         "currency": "KRW",
+        # R7 칸 규약 — meta·summary 에 접힌 나머지 값의 구조 칸
+        "supply_area_m2": _float_or_none(a.get("area1")),  # 공급면적(meta 의 앞쪽 ㎡)
+        "direction": a.get("direction"),                   # 향(남향 등)
+        "confirmed_at": a.get("articleConfirmYmd"),        # 매물 확인일(원천 YYYYMMDD)
+        "realtor": a.get("realtorName"),                   # 중개사무소
+        "same_listing_count": _int_or_none(same),          # 동일 주소 매물 수
+        "tags": list(tags),                                # summary 뒤에 붙는 태그(전체)
     }
     if deposit_man is not None:
         out["price"] = deposit_man * 10000  # 칸 규약 2: 원 단위 정수 (매매가·보증금)
@@ -273,6 +297,8 @@ def get_naver_listings(tool_input: dict):
     try:
         loc = _resolve_keyword(str(region).strip())
     except Exception as e:
+        if hasattr(e, "failure"):
+            return e.failure()
         return {"success": False, "error": f"네이버부동산 지역 해소 실패: {e}"}
     if not loc:
         return {"success": False,
@@ -303,6 +329,8 @@ def get_naver_listings(tool_input: dict):
                 break
             page += 1
     except Exception as e:
+        if hasattr(e, "failure"):   # common.api_client.RateLimitedError — 요청 한도는 원천 장애와 가른다(77회차 F77-2)
+            return e.failure()
         return {"success": False, "error": f"네이버부동산 매물 조회 실패: {e}"}
 
     # 월세 rent_max 후필터 (rentPrc는 서버필터 파라미터가 없어 클라이언트 필터)

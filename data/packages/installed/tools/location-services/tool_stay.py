@@ -157,6 +157,14 @@ def _search_goodchoice(tool_input: dict) -> dict:
                 "price": _to_int(pay), "price_total": _to_int(pay),
                 "price_per_night": nightly, "nights": nights,
                 "rating": review.get("rate"),
+                # R7 칸 규약 — meta·summary 에 접힌 나머지 값의 구조 칸
+                "grade": meta.get("grade"),                 # 숙소 등급/유형 표기
+                "address": addr.get("address"),
+                "review_count": _to_int(review.get("count")),
+                "traffic": addr.get("traffic"),             # 교통 안내 문구
+                "list_price": _to_int(strike),              # 정가(할인 전 합계, 원)
+                "discount_rate": price.get("discountRate"),  # 원천 할인율 표기
+                "sold_out": sold_out,
             })
             if len(items_out) >= limit:
                 break
@@ -233,6 +241,14 @@ def _search_33m2(tool_input: dict) -> dict:
             "lat": rm.get("lat"),
             "lng": rm.get("lng"),
             "week_fee": _to_int(fee),
+            # R7 칸 규약 — meta·summary 에 접힌 나머지 값의 구조 칸
+            "property_type": rm.get("propertyType"),
+            "province": rm.get("province"),
+            "town": rm.get("town"),
+            "pyeong": rm.get("pyeongSize"),
+            "super_host": bool(rm.get("isSuperHost")),
+            "mgmt_fee": _to_int(mgmt),                  # 관리비(원)
+            "longterm_discount_pct": disc,             # 장기 할인율(%)
         })
 
     # 전체 건수 (별도 count 엔드포인트)
@@ -311,6 +327,9 @@ def _search_tourapi(tool_input: dict) -> dict:
             "image": it.get("firstimage") or None,
             "lat": float(it["mapy"]) if it.get("mapy") else None,
             "lng": float(it["mapx"]) if it.get("mapx") else None,
+            # R7 칸 규약 — meta 에 접힌 주소·전화의 구조 칸
+            "address": it.get("addr1") or None,
+            "tel": it.get("tel") or None,
         })
 
     out = {

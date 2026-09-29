@@ -142,6 +142,9 @@ def _lecture_list(tool_input: dict) -> str:
         ] if p),
         "summary": None,
         "url": None,
+        # 구조 칸(R7) — meta 에 접힌 값의 정본 (**lec 에 없던 강의도 같은 열을 갖도록)
+        "audience": lec.get("audience"),
+        "slide_count": lec.get("slide_count"),
     } for lec in lectures]
     return _ok({
         "lectures": lectures,

@@ -234,6 +234,13 @@ def _photos_to_records(items: list) -> list:
             "meta": " · ".join(str(x) for x in meta if x),
             "summary": "",
             "url": path,
+            # 구조 칸(R7) — meta 에 접힌 값의 정본 (_photo_record 와 같은 이름)
+            "path": path,
+            "taken_at": it.get("taken_date") or it.get("mtime") or "",
+            "camera": str(camera) if camera else "",
+            "kind": it.get("media_type"),
+            "lat": it.get("gps_lat"),
+            "lng": it.get("gps_lon"),
         }
         if path:
             # 동영상은 PIL이 못 여는 컨테이너라 ffmpeg 프레임 썸네일 엔드포인트로 분기.

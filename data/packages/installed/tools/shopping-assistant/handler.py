@@ -40,11 +40,18 @@ def _products_to_records(items):
             except (ValueError, TypeError):
                 price_str = str(price)
         meta_parts = [price_str, it.get("mall")]
+        try:
+            price_num = int(str(price).replace(",", "").replace("원", "").strip())
+        except (ValueError, TypeError):
+            price_num = None
         rec = {
             "title": it.get("name", ""),
             "meta": " · ".join(p for p in meta_parts if p),
             "summary": "",
             "url": it.get("link", ""),
+            # R7 칸 규약 — meta 에 접힌 가격(정수 원)·쇼핑몰의 구조 칸
+            "price": price_num,
+            "mall": it.get("mall"),
         }
         image = it.get("image")
         if image:

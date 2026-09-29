@@ -57,9 +57,16 @@ def _search_arxiv(tool_input: dict) -> str:
     import urllib.parse
     query = tool_input.get("query", "")
     max_results = tool_input.get("limit", tool_input.get("max_results", 5))
+    # 연도 범위 = 제출일 범위 질의, 최신순 = submittedDate 정렬(77회차 B77-1 — 예전엔 둘 다 조용히 버렸다).
+    # open_access 는 arXiv 전부가 공개라 거를 것이 없다.
+    lo, hi = _year_range(tool_input)
+    search = f"all:{query}"
+    if lo is not None or hi is not None:
+        search += f" AND submittedDate:[{lo or 1991}01010000 TO {hi or 9999}12312359]"
+    sort = "submittedDate" if tool_input.get("sort_by") == "recent" else "relevance"
     url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode({
-        "search_query": f"all:{query}", "start": 0, "max_results": max_results,
-        "sortBy": "relevance", "sortOrder": "descending"})
+        "search_query": search, "start": 0, "max_results": max_results,
+        "sortBy": sort, "sortOrder": "descending"})
     r = _arxiv_get(url)
     r.raise_for_status()
     feed = feedparser.parse(r.text)
@@ -87,6 +94,10 @@ def _search_arxiv(tool_input: dict) -> str:
             "summary": summary,
             "url": f"https://arxiv.org/abs/{aid}",
             "link_label": "논문 보기",
+            # 표시 칸에 접은 값의 구조 칸(R7, 77회차 F77-1) — 연도순·저자 필터가 meta 쪼개기가 되지 않게
+            "authors": authors, "published": published or None,
+            "year": int(published[:4]) if published[:4].isdigit() else None,
+            "arxiv_id": aid or None,
         })
     if not items:
         return {"items": [], "message": "No papers found for the given query."}
@@ -128,33 +139,65 @@ def _download_arxiv_pdf(tool_input: dict, context) -> str:
     return {"success": True, "message": f"Paper '{title}' downloaded successfully to: {path}", "path": path}
 
 
+def _param_support() -> dict:
+    """[sense:paper] 원천별 선택 인자 표 — ibl_actions.yaml `param_support` 한 벌.
+
+    같은 표를 판본 2 계약 생성기가 조건부 계약(금지 인자·허용 값)으로 투영하므로 check 와 실행이
+    한 판정을 쓴다(상상훈련 77회차 B77-1 — 핸들러 안 사본 표는 check 가 몰라 침묵했다)."""
+    import yaml
+    from pathlib import Path
+    data = yaml.safe_load((Path(__file__).with_name("ibl_actions.yaml")).read_text(encoding="utf-8"))
+    return data["actions"]["paper"]["param_support"]
+
+
+def _year_range(tool_input: dict):
+    """year(정확)·year_from·year_to → (하한, 상한) 정수. 없으면 None. 숫자가 아니면 ValueError."""
+    def as_year(key):
+        v = tool_input.get(key)
+        if v in (None, ""):
+            return None
+        if isinstance(v, bool) or not str(v).strip().isdigit():
+            raise ValueError(f"{key} 는 연도 정수입니다: {v!r}")
+        return int(str(v).strip())
+    exact, lo, hi = as_year("year"), as_year("year_from"), as_year("year_to")
+    if exact is not None:
+        lo, hi = max(lo or exact, exact), min(hi or exact, exact)
+    if lo is not None and hi is not None and lo > hi:
+        raise ValueError(f"연도 범위가 비었습니다: {lo} > {hi}")
+    return lo, hi
+
+
 def _paper_search(tool_input: dict, context) -> str:
     """[sense:paper]{op:search, source} — 학술 논문 검색."""
-    source = (tool_input.get("source") or "openalex").strip().lower()
-    supported = {
-        "openalex": {"year_from", "year_to", "sort_by", "open_access"},
-        "arxiv": set(), "pubmed": set(), "pmc": set(),
-        "semantic": {"year_from"}, "semantic_scholar": {"year_from"}, "s2": {"year_from"},
-        "nanet": {"year", "type", "page"}, "kr": {"year", "type", "page"},
-        "dissertation": {"year", "type", "page"}, "국회도서관": {"year", "type", "page"},
-    }
-    selectors = {"year_from", "year_to", "sort_by", "open_access", "year", "type", "page"}
-    ignored = (set(tool_input) & selectors) - supported.get(source, set())
-    if ignored:
+    support = _param_support()
+    source = str(tool_input.get("source") or support["default"]).strip().lower()
+    canon = (support.get("aliases") or {}).get(source, source)
+    accepted = (support.get("values") or {}).get(canon)
+    if accepted is None:
+        names = sorted(set(support["values"]) | set(support.get("aliases") or {}))
+        return {"success": False, "items": [], "error_type": "unsupported_parameter",
+                "error": f"지원하지 않는 논문 source: {source}. 사용 가능: {', '.join(names)}"}
+    given = [k for k in support["params"] if tool_input.get(k) not in (None, "")]
+    ignored = [k for k in given if k not in accepted]
+    bad_values = [f"{k}={tool_input[k]!r}(허용 {', '.join(v)})" for k, v in accepted.items()
+                  if isinstance(v, list) and k in given and str(tool_input[k]) not in v]
+    if ignored or bad_values:
         return {"success": False, "error_type": "unsupported_parameter", "items": [],
-                "error": f"{source}에서 지원하지 않는 인자: {', '.join(sorted(ignored))}. "
-                         f"지원 필터: {', '.join(sorted(supported.get(source, set()))) or '없음'}"}
-    if source == "arxiv":
+                "error": f"{source}에서 지원하지 않는 인자·값: {', '.join(ignored + bad_values)}. "
+                         f"지원 필터: {', '.join(sorted(accepted)) or '없음'}"}
+    try:
+        _year_range(tool_input)
+    except ValueError as e:
+        return {"success": False, "items": [], "error_type": "unsupported_parameter", "error": str(e)}
+    if canon == "arxiv":
         return _search_arxiv(tool_input)
-    if source in ("pubmed", "pmc"):
+    if canon == "pubmed":
         return _search_pubmed(tool_input)
-    if source in ("semantic", "semantic_scholar", "s2"):
+    if canon == "semantic":
         return _search_semantic_scholar(tool_input)
-    if source in ("nanet", "kr", "dissertation", "국회도서관"):
+    if canon == "nanet":
         return _search_nanet(tool_input)  # 국내 학술논문·학위논문(국회도서관)
-    if source == "openalex":
-        return _search_openalex(tool_input)
-    return {"success": False, "items": [], "error": f"지원하지 않는 논문 source: {source}"}
+    return _search_openalex(tool_input)
 
 
 def _paper_download(tool_input: dict, context) -> str:
@@ -337,7 +380,8 @@ def _search_nanet(tool_input: dict) -> str:
     if not query:
         return {"success": False, "error": "검색어(query)가 필요합니다.", "items": []}
     want = int(tool_input.get("limit") or tool_input.get("max_results") or tool_input.get("display") or 10)
-    year_f = str(tool_input.get("year") or "").strip()
+    year_lo, year_hi = _year_range(tool_input)   # year(정확)·year_from·year_to — 후필터(77회차 B77-1)
+    year_f = year_lo is not None or year_hi is not None
     type_f = str(tool_input.get("type") or "").strip()
     # 자료유형 후필터 — divFlag 값으로 정규화(모르는 값은 대문자 부분일치)
     # divFlag 실측 분포(2026-08-04): ARTICLE(학술논문)·THESIS(학위논문)·BOOK(단행본)
@@ -379,7 +423,7 @@ def _search_nanet(tool_input: dict) -> str:
             yr = str(it.get("pubYear") or "")
             if div_want and div_want not in div.upper():
                 continue
-            if year_f and yr != year_f:
+            if year_f and not (yr.isdigit() and (year_lo or 0) <= int(yr) <= (year_hi or 9999)):
                 continue
             title = it.get("title") or "(제목없음)"
             authors = ", ".join(a.get("name", "") for a in (it.get("authorList") or [])
@@ -392,7 +436,7 @@ def _search_nanet(tool_input: dict) -> str:
             lines_body.append(f"- {title}" + (f" [{meta}]" if meta else "") + (f"\n  {url}" if url else ""))
             records.append({  # 레코드 통화 — 국내 학술논문·학위논문
                 "title": title,
-                "authors": authors, "year": yr, "journal": journal, "publisher": publisher,
+                "authors": authors, "year": int(yr) if yr.isdigit() else None, "journal": journal, "publisher": publisher, "type": div,
                 "meta": meta,
                 "summary": summary,
                 "url": url,
@@ -433,17 +477,19 @@ def _search_semantic_scholar(tool_input: dict) -> str:
 
     query = tool_input.get("query")
     max_results = tool_input.get("limit", tool_input.get("max_results", 5))
-    year_from = tool_input.get("year_from")
+    lo, hi = _year_range(tool_input)
 
     url = "https://api.semanticscholar.org/graph/v1/paper/search"
     params = {
         "query": query,
         "limit": max_results,
-        "fields": "title,authors,year,citationCount,abstract,url,openAccessPdf"
+        "fields": "title,authors,year,citationCount,abstract,url,openAccessPdf,venue,externalIds"
     }
 
-    if year_from:
-        params["year"] = f"{year_from}-"
+    if lo is not None or hi is not None:
+        params["year"] = f"{lo or ''}-{hi or ''}"
+    if tool_input.get("open_access"):
+        params["openAccessPdf"] = ""   # 값 없는 존재 필터 — 공개 PDF 가 있는 논문만
 
     # Rate limit 대응: 최대 3번 재시도
     max_retries = 3
@@ -459,7 +505,9 @@ def _search_semantic_scholar(tool_input: dict) -> str:
                     time.sleep(retry_delay * (attempt + 1))  # 점진적 대기
                     continue
                 else:
-                    return {"success": False, "error": "Semantic Scholar API 요청 한도 초과. 잠시 후 다시 시도하거나, OpenAlex 또는 arXiv를 사용해주세요.", "items": []}
+                    from common.api_client import rate_limited_failure
+                    return rate_limited_failure("Semantic Scholar", response,
+                                                hint="급하면 source: openalex 또는 arxiv 를 쓰세요.", items=[])
 
             response.raise_for_status()
             data = response.json()
@@ -502,6 +550,7 @@ def _search_semantic_scholar(tool_input: dict) -> str:
                     f"{separator}"
                 )
                 results.append(paper_info)
+                ext = paper.get("externalIds") or {}
                 records.append({  # 레코드 통화
                     "title": title,
                     "meta": " · ".join(x for x in [
@@ -511,6 +560,12 @@ def _search_semantic_scholar(tool_input: dict) -> str:
                     ] if x),
                     "summary": raw_abstract,
                     "url": paper_url or "",
+                    # 구조 칸(R7, 77회차 F77-1) — 저자는 전원(표시는 앞 3명)
+                    "authors": ", ".join(a.get("name", "") for a in paper.get("authors", []) if a.get("name")),
+                    "year": year if isinstance(year, int) else None,
+                    "citations": citations if isinstance(citations, int) else None,
+                    "venue": paper.get("venue") or None,
+                    "doi": ext.get("DOI"), "arxiv_id": ext.get("ArXiv"),
                 })
 
             return {"success": True, "message": "\n".join(results), "items": records, "count": len(records)}
@@ -533,10 +588,14 @@ def _search_pubmed(tool_input: dict) -> str:
     search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     search_params = {
         "db": "pubmed",
-        "term": query,
+        "term": query + (" AND free full text[sb]" if tool_input.get("open_access") else ""),
         "retmax": max_results,
-        "retmode": "json"
+        "retmode": "json",
+        "sort": "pub_date" if tool_input.get("sort_by") == "recent" else "relevance",
     }
+    lo, hi = _year_range(tool_input)
+    if lo is not None or hi is not None:   # 발행일 범위(77회차 B77-1 — 예전엔 조용히 버렸다)
+        search_params.update(datetype="pdat", mindate=f"{lo or 1800}/01/01", maxdate=f"{hi or 3000}/12/31")
 
     try:
         search_response = requests.get(search_url, params=search_params, timeout=15)
@@ -608,6 +667,13 @@ def _search_pubmed(tool_input: dict) -> str:
                 ] if x),
                 "summary": "",
                 "url": paper_url,
+                # 구조 칸(R7, 77회차 F77-1)
+                "authors": ", ".join(a.get("name", "") for a in authors_list if a.get("name")),
+                "journal": journal if journal != "Unknown" else None,
+                "pubdate": pub_date if pub_date != "Unknown" else None,
+                "year": int(pub_date[:4]) if str(pub_date)[:4].isdigit() else None,
+                "pmid": pmid, "pmcid": pmcid or None,
+                "doi": next((a.get("value") for a in paper.get("articleids", []) if a.get("idtype") == "doi"), None),
             })
 
         if not results:
@@ -769,8 +835,7 @@ def _search_openalex(tool_input: dict) -> str:
     """
     query = tool_input.get("query")
     max_results = min(tool_input.get("limit", tool_input.get("max_results", 10)), 200)  # 최대 200개  # clamp-ok: arXiv API 안전 난간 200
-    year_from = tool_input.get("year_from")
-    year_to = tool_input.get("year_to")
+    year_from, year_to = _year_range(tool_input)
     open_access = tool_input.get("open_access", False)
     sort_by = tool_input.get("sort_by", "relevance")
 
@@ -820,11 +885,10 @@ def _search_openalex(tool_input: dict) -> str:
         # 호출이면 그 창 안의 호가 통째로 죽는다. arXiv 와 같은 백오프로 창을 넘긴다(대기 합 ≤19s).
         response = _polite_get(url, params=params, timeout=30, tries=4)
         if getattr(response, "status_code", 200) == 429:
+            from common.api_client import rate_limited_failure
             body = (getattr(response, "text", "") or "").strip().replace("\n", " ")[:200]
-            return {"success": False, "items": [],
-                    "error": ("OpenAlex 요청 한도 초과(429, 외부 일시 제한 — 4회 백오프 후에도 거절). "
-                              f"Retry-After={response.headers.get('Retry-After', '-')} 본문: {body} "
-                              "— 잠시 후 재시도하거나 source: arxiv 를 쓰세요.")}
+            return rate_limited_failure("OpenAlex", response, items=[],
+                                        hint=f"4회 백오프 후에도 거절. 본문: {body} — 급하면 source: arxiv 를 쓰세요.")
         response.raise_for_status()
         data = response.json()
 
@@ -906,6 +970,14 @@ def _search_openalex(tool_input: dict) -> str:
                 ] if x),
                 "summary": full_abstract,
                 "url": record_url or "",
+                # 구조 칸(R7, 77회차 F77-1) — 저자는 전원(표시는 앞 3명)
+                "authors": ", ".join((a.get("author") or {}).get("display_name", "") for a in authorships
+                                     if (a.get("author") or {}).get("display_name")),
+                "year": year if isinstance(year, int) else None,
+                "journal": journal or None,
+                "citations": citations if isinstance(citations, int) else None,
+                "doi": doi or None, "openalex_id": work_id or None,
+                "open_access": bool(oa_info.get("is_oa")), "oa_url": oa_url or None,
             })
 
         return {"success": True, "message": "\n".join(results), "items": records, "count": len(records)}

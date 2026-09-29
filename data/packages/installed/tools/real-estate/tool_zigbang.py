@@ -195,6 +195,11 @@ def _detail_to_row(item, cat, center, dist_m):
         "rent": (item.get("price") or {}).get("rent"),
         "area_m2": m2,
         "floor": fl,
+        # R7 칸 규약 — meta·summary 에 접힌 나머지 값의 구조 칸
+        "total_floors": int(allfl) if str(allfl).isdigit() else allfl,  # 건물 전체 층수(meta 의 "층/전체층")
+        "sales_price": (item.get("price") or {}).get("sales") or (item.get("price") or {}).get("salesPrice"),  # 매매가(만원, deposit 과 같은 단위)
+        "room_type": item.get("roomType"),
+        "description": item.get("description"),    # 원문 설명(summary 는 제목+설명 90자 표시본)
         "address": addr,
         "lat": loc.get("lat"),
         "lng": loc.get("lng"),
@@ -329,7 +334,15 @@ def get_zigbang_listings(tool_input: dict):
                     row[canonical] = int(float(str(raw).replace(",", "")) * 10000)
                 except (ValueError, TypeError):
                     pass
-        if "deposit_won" in row:
+        # 칸 규약 2(원 단위 price) — 매매는 매매가, 임대는 보증금. 옛 코드는 매매에도 보증금을 넣어
+        # 매매가가 sales 에만 있는 매물의 price 가 비거나 보증금이 됐다(표시는 sales 우선이라 둘이 어긋남).
+        if row.get("salesType") == "매매":
+            sale = row.get("sales_price") or row.get("deposit")
+            try:
+                row["price"] = int(float(str(sale).replace(",", "")) * 10000) if sale not in (None, "") else None
+            except (TypeError, ValueError):
+                row["price"] = None
+        elif "deposit_won" in row:
             row["price"] = row["deposit_won"]
     lease_label = "/".join(sales_types)
     message = f"직방 '{matched or region}' 반경 {radius}m · {cat} {lease_label} — {len(rows)}건 (상세는 items)"

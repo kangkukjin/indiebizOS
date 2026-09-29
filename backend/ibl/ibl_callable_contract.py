@@ -37,6 +37,10 @@ def problems(contract, values):
     for group in contract.get('exclusive', []):
         if sum(key in values for key in group) > 1:
             errors.append('함께 지정할 수 없는 인자입니다: ' + ', '.join(group))
+    forbidden = [key for key in contract.get('forbidden', []) if key in values]
+    if forbidden:
+        # 조건부 계약(param_support 투영)이 이 조합에서 받지 않는 인자 — 조용히 버리지 않는다(77회차 B77-1).
+        errors.append('이 조합에서 지원하지 않는 인자: ' + ', '.join(forbidden))
     for key, value in values.items():
         if value is UNRESOLVED:
             continue
@@ -62,7 +66,7 @@ def validate_extensions(contract):
     for key in ('enums', 'minimum', 'maximum', 'defaults'):
         if not isinstance(contract.get(key, {}), dict) or set(contract.get(key, {})) - params.keys():
             raise ValueError(f'{key}는 선언 인자만 참조합니다')
-    for key in ('integers', 'nonempty'):
+    for key in ('integers', 'nonempty', 'forbidden'):
         if not isinstance(contract.get(key, []), list) or set(contract.get(key, [])) - params.keys():
             raise ValueError(f'{key}는 선언 인자 목록입니다')
     for group in contract.get('required_any', []):
@@ -85,7 +89,7 @@ def validate_extensions(contract):
     for variant in contract.get('variants', []):
         if not isinstance(variant.get('when'), dict) or not variant['when'] or set(variant['when']) - params.keys():
             raise ValueError('variants.when은 선언 인자의 리터럴 값입니다')
-        if set(variant) - {'when', 'result', 'effects', 'required', 'required_any', 'enums', 'integers', 'minimum', 'maximum', 'nonempty'}:
+        if set(variant) - {'when', 'result', 'effects', 'required', 'required_any', 'enums', 'integers', 'minimum', 'maximum', 'nonempty', 'forbidden'}:
             raise ValueError('조건부 계약의 변경 가능 필드가 아닙니다')
         from ibl_v2_adapters import validate_contract
         validate_contract({**{k:v for k,v in contract.items() if k!='variants'},

@@ -457,6 +457,13 @@ def get_disclosures(corp_code: str = None, corp_name: str = None,
         "meta": " · ".join(x for x in [d.get("corp_name"), d.get("rcept_dt"), d.get("flr_nm")] if x),
         "summary": "",
         "url": d.get("url") or "",
+        # F77-1 (R7 칸 규약): meta 에 접은 값을 구조 칸에도 — 이름은 위 disclosures 행과 같게.
+        "corp_name": d.get("corp_name"),
+        "corp_code": d.get("corp_code"),
+        "stock_code": d.get("stock_code"),
+        "rcept_no": d.get("rcept_no"),      # 접수번호
+        "rcept_dt": d.get("rcept_dt"),      # 접수일자(YYYYMMDD)
+        "flr_nm": d.get("flr_nm"),          # 공시 제출인
     } for d in disclosures]
     return {
         "success": True,

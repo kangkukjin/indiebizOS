@@ -378,6 +378,14 @@ def _fn_audit(params: dict) -> str:
         "meta": e.get("at", "") + (f" · 포털 {e.get('portal')}" if e.get("portal") else "")
                 + (f" · {e.get('note')}" if e.get("note") else ""),
         "summary": e.get("code", ""),
+        # 구조 칸(R7) — title/meta 에 접힌 값의 정본
+        "at": e.get("at") or None,
+        "portal": e.get("portal") or None,
+        "note": e.get("note") or None,
+        "who": e.get("who") or None,
+        "instrument": e.get("instrument") or None,
+        "ok": bool(e.get("ok")),
+        "code": e.get("code") or None,
     } for e in core.audit_tail(limit, portal=slug)]
     return _ok(rows, message="" if rows else "아직 기록이 없습니다.")
 

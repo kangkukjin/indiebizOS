@@ -205,6 +205,8 @@ nodes:
           query: string
           page: integer
         returns: items
+        shape_axes:
+          source: null
         side_effect: false
         fixture: '[sense:book]{query: "역사"}'
         description: 도서 조회 (op 분기). 기본=한국 도서관정보나루, source="nl"=국립중앙도서관 납본, source="google"=글로벌·원서(Google Books). 고전 원문은 classic. items(loan_count·publication_year 포함) — table 파이프로 대출순·연도 선별.
@@ -1701,9 +1703,9 @@ nodes:
         group: travel
         target_description: '숙박·단기임대 검색. source로 플랫폼 선택. region=지역/키워드 필수.
 
-          - source=goodchoice(기본): 여기어때 실시간 할인가·평점·좌표. region=지역(예 "제주", "강남"). type=hotel(기본)/motel/pension/camping/guesthouse. checkin/checkout(YYYY-MM-DD, 날짜별 요금 반영)·personal(인원, 기본2). max_price=1박 평균 상한(원). price/price_total은 숙박 합계, price_per_night는 1박 평균, nights는 박 수. limit(기본20, 페이지 자동추적 최대100).
+          - source=goodchoice(기본): 여기어때 실시간 할인가·평점·좌표. region=지역(예 "제주", "강남"). type=hotel(기본)/motel/pension/camping/guesthouse. checkin/checkout(YYYY-MM-DD, 날짜별 요금 반영)·personal(인원, 기본2). max_price=1박 평균 상한(원). price/price_total은 숙박 합계, price_per_night는 1박 평균, nights는 박 수. grade·address·review_count·traffic·list_price(정가)·discount_rate·sold_out 칸도 싣는다. limit(기본20, 페이지 자동추적 최대100).
 
-          - source=33m2: 삼삼엠투 한 달 살기 — 주 단위 임대(usingFee)·관리비·평수. region=지역(예 "평택"). max_week_fee/min_week_fee=주간요금 서버필터(원). checkin/checkout=입주 기간. limit(기본20).
+          - source=33m2: 삼삼엠투 한 달 살기 — 주 단위 임대(usingFee)·관리비·평수 — week_fee·mgmt_fee·longterm_discount_pct·property_type·province·town·pyeong·super_host 칸. region=지역(예 "평택"). max_week_fee/min_week_fee=주간요금 서버필터(원). checkin/checkout=입주 기간. limit(기본20).
 
           - source=tourapi: 한국관광공사 공식 숙박 디렉토리 — 가격 없음, 권위 목록·연락처·좌표. region=광역명(서울/제주 등 → 지역목록) 또는 키워드(예 "경주 한옥" → 키워드검색). limit(기본20).
 
@@ -2198,7 +2200,7 @@ nodes:
           source=zigbang: '[sense:realty]{op: "query", source: "zigbang", region: "평택 죽백동", limit: 5}'
         description: 부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산 현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.
         group: real_estate
-        target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit(1~50, 기본30). 반환 items의 deposit/rent는 만원, area_m2·floor·itemId도 보존. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n  · source=naver: 네이버부동산 현재 매물 — 중개사 등록 매물 전국 최다 풀(아파트 강함). region=동 이름(예 \"평택 비전동\") 또는 *아파트 단지명*(예 \"우미린센트럴파크\" → 단지 매물 직조회). type=apt(기본)/officetel/villa/house(단독다가구)/oneroom. deal=trade/rent + lease=전세|월세. deposit_min/deposit_max(만원, 서버필터)·rent_max(만원). limit(기본30). 동일매물 자동 묶음. 지역은 주소 성분이 맞는 유일 후보만 조회하며 불일치·동명이면 후보와 오류를 반환. 아파트·단지 검색은 naver, 빌라·원룸 개별호실은 zigbang이 유리.\n- codes: city=시/도명(서울·경기 등) → items=[{지역, 코드}] (>> take/filter/each 로 흐름). city 생략=시/도 목록. (region 자동변환이 있어 보통 불필요한 보조.) 응답의 catalog 가 카탈로그 출처·생성시각·나이를 말한다 — refresh=true 면 현행 행정구역(네이버 지역 트리)으로 카탈로그를 갱신한 뒤 조회한다. ★행정구역이 재편되면 폐지된 코드는 molit 에서 오류가 아니라 **조용히 0건**이므로, 시 단위 조회가 0건이면 refresh 로 하위 구 재편을 먼저 의심할 것(2024 부천·화성 구 부활, 인천 개편, 군위 대구 편입).\n"
+        target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit(1~50, 기본30). 반환 items의 deposit/rent는 만원, area_m2·floor·total_floors·room_type·sales_price(매매가, 만원)·description·itemId도 보존. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n  · source=naver: 네이버부동산 현재 매물 — 중개사 등록 매물 전국 최다 풀(아파트 강함). region=동 이름(예 \"평택 비전동\") 또는 *아파트 단지명*(예 \"우미린센트럴파크\" → 단지 매물 직조회). type=apt(기본)/officetel/villa/house(단독다가구)/oneroom. deal=trade/rent + lease=전세|월세. deposit_min/deposit_max(만원, 서버필터)·rent_max(만원). limit(기본30). 동일매물 자동 묶음. 지역은 주소 성분이 맞는 유일 후보만 조회하며 불일치·동명이면 후보와 오류를 반환. 아파트·단지 검색은 naver, 빌라·원룸 개별호실은 zigbang이 유리.\n- codes: city=시/도명(서울·경기 등) → items=[{지역, 코드}] (>> take/filter/each 로 흐름). city 생략=시/도 목록. (region 자동변환이 있어 보통 불필요한 보조.) 응답의 catalog 가 카탈로그 출처·생성시각·나이를 말한다 — refresh=true 면 현행 행정구역(네이버 지역 트리)으로 카탈로그를 갱신한 뒤 조회한다. ★행정구역이 재편되면 폐지된 코드는 molit 에서 오류가 아니라 **조용히 0건**이므로, 시 단위 조회가 0건이면 refresh 로 하위 구 재편을 먼저 의심할 것(2024 부천·화성 구 부활, 인천 개편, 군위 대구 편입).\n"
         target_key: op
         router: handler
         tool: realty_op
@@ -2480,11 +2482,68 @@ nodes:
           year_to: integer
           open_access: boolean
           sort_by: string
+        param_support:
+          axis: source
+          default: openalex
+          params:
+          - year
+          - year_from
+          - year_to
+          - sort_by
+          - open_access
+          - type
+          - page
+          aliases:
+            pmc: pubmed
+            semantic_scholar: semantic
+            s2: semantic
+            kr: nanet
+            dissertation: nanet
+            국회도서관: nanet
+          values:
+            openalex:
+              year: any
+              year_from: any
+              year_to: any
+              open_access: any
+              sort_by:
+              - relevance
+              - cited
+              - recent
+            arxiv:
+              year: any
+              year_from: any
+              year_to: any
+              open_access: any
+              sort_by:
+              - relevance
+              - recent
+            pubmed:
+              year: any
+              year_from: any
+              year_to: any
+              open_access: any
+              sort_by:
+              - relevance
+              - recent
+            semantic:
+              year: any
+              year_from: any
+              year_to: any
+              open_access: any
+              sort_by:
+              - relevance
+            nanet:
+              year: any
+              year_from: any
+              year_to: any
+              type: any
+              page: any
         returns: items
         side_effect: true
         fixture: '[sense:paper]{query: "attention"}'
         description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
-        target_description: "선택 필터 지원 — openalex(year_from/year_to/sort_by/open_access), semantic(year_from), nanet(year/type/page); arxiv/pubmed는 선택 필터 미지원이며 명시하면 거절. op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
+        target_description: "선택 필터(원천별 지원 밖이면 check·실행이 거절) — 연도 year·year_from·year_to=전 원천, open_access=nanet 외, sort_by=openalex(relevance|cited|recent)·arxiv/pubmed(relevance|recent)·semantic(relevance), type·page=nanet. 반환 열: title·authors(전원)·year·journal/venue·citations·doi·arxiv_id/pmid 등 구조 칸 + 표시용 meta·summary·url. op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
         target_key: op
         group: research
         router: handler
@@ -2674,8 +2733,8 @@ nodes:
               - queries
         lands_on: hub
         path_audited:
-          at: '2026-09-28'
-          impl: 85edbb091ff1e9ea
+          at: '2026-09-29'
+          impl: b954ffa6768970e3
         aliases:
           limit:
           - count
@@ -2781,8 +2840,8 @@ nodes:
               items: List<Record>
         lands_on: hub
         path_audited:
-          at: '2026-09-28'
-          impl: 85edbb091ff1e9ea
+          at: '2026-09-29'
+          impl: b954ffa6768970e3
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -5301,12 +5360,12 @@ nodes:
           at: '2026-09-29'
           impl: 3c31b0566918933b
           dependencies:
-            backend/common/expression_eval.py: ef54b93159bea1bb8727f4e56a887d54940409c06ac0115db204ede691242fd0
-            backend/common/expression_functions.py: c65342ec657b39b2ff64f4377b50cec809415a15ddc3a795a7376ca1000950ae
+            backend/common/expression_eval.py: f8bcbe6c7ffead340157bb771c44c57a3a74fdd4f4b5ed2a60d22aca32fdc211
+            backend/common/expression_functions.py: 06242617ac4f3c12919fbf35dc13b2effb3c9052ce0957e64561bc932ac19408
             backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
-            backend/common/expression_ops.py: 4bd8017a7d61d4372a38d7318898852e1cea3547d4817214bfbc07065df09a8b
-            backend/common/expression_parser.py: 05989dd0bb214197a00d987865e1f91c4410697b1eb3d7e4220f866bb67b69ad
+            backend/common/expression_ops.py: e00b314317913d68ce01309bbb3879b7439a98436ee113ab9364f7ec2573064e
+            backend/common/expression_parser.py: b683d2fb8ea4daff73d11deaa5185794c8ec827fe3124f58331211557ac7fba1
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
             backend/base/runtime_utils.py: ee8f08ebd8889224e85458645b3f60386fcdb1c732772c4657d2d173fee8e0ff
             backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
@@ -5550,7 +5609,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-29'
-          impl: 01c640f50472f6f0
+          impl: 3beb05e15714d23c
         target_key: path
         aliases:
           offset:
@@ -5563,7 +5622,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-29'
-          impl: 01c640f50472f6f0
+          impl: 3beb05e15714d23c
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6324,7 +6383,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-29'
-          impl: 01c640f50472f6f0
+          impl: 3beb05e15714d23c
         pipe_in: true
         lands_on: body
         limb_op:

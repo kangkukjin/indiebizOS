@@ -40,6 +40,52 @@ _BASE_URLS: Dict[str, str] = {
     "kaggle": "https://www.kaggle.com/api/v1",
 }
 
+def retry_after_seconds(response) -> Optional[float]:
+    """HTTP Retry-After(초 또는 HTTP 날짜) → 초. 없거나 못 읽으면 None."""
+    raw = None
+    try:
+        raw = (response.headers or {}).get("Retry-After")
+    except Exception:
+        return None
+    if raw in (None, ""):
+        return None
+    try:
+        return max(0.0, float(raw))
+    except (TypeError, ValueError):
+        pass
+    try:
+        from email.utils import parsedate_to_datetime
+        from datetime import datetime, timezone
+        return max(0.0, (parsedate_to_datetime(raw) - datetime.now(timezone.utc)).total_seconds())
+    except Exception:
+        return None
+
+
+def rate_limited_failure(service: str, response=None, *, retry_after: Optional[float] = None,
+                         hint: str = "", **extra) -> dict:
+    """원천 요청 한도(429) 실패 봉투의 한 벌 — 판본 2 는 이것을 RATE_LIMITED 로 올린다.
+
+    일반 실패와 같은 모양이면 프로그램이 '잠시 뒤 같은 원천'과 '원천을 바꿔라'를 문자열로만
+    가를 수 있었다(상상훈련 77회차 F77-2). retry_after 는 원천이 준 대기(초), 모르면 None."""
+    if retry_after is None and response is not None:
+        retry_after = retry_after_seconds(response)
+    wait = f" {int(retry_after)}초 뒤" if retry_after is not None else " 잠시 뒤"
+    msg = f"{service} 요청 한도 초과(HTTP 429) —{wait} 다시 시도하세요." + (f" {hint}" if hint else "")
+    return {"success": False, "error": msg, "error_type": "rate_limited",
+            "retry_after": retry_after, "service": service, **extra}
+
+
+class RateLimitedError(RuntimeError):
+    """깊은 호출에서 429 를 만난 생산자가 던지고, 봉투를 만드는 자리에서 `failure()` 로 바꾼다."""
+
+    def __init__(self, service: str, response=None, retry_after: Optional[float] = None, hint: str = ""):
+        self.envelope = rate_limited_failure(service, response, retry_after=retry_after, hint=hint)
+        super().__init__(self.envelope["error"])
+
+    def failure(self, **extra) -> dict:
+        return {**self.envelope, **extra}
+
+
 # 기본 설정
 DEFAULT_TIMEOUT = 10
 DEFAULT_MAX_RETRIES = 0
@@ -188,7 +234,7 @@ def _do_request(
         elif response.status_code == 404:
             return {"error": f"리소스를 찾을 수 없습니다 (HTTP 404)"}
         elif response.status_code == 429:
-            return {"error": f"API 요청 한도 초과. 잠시 후 다시 시도하세요. (HTTP 429)"}
+            return rate_limited_failure(service or "API", response)
         elif response.status_code >= 500:
             return {"error": f"서버 오류 (HTTP {response.status_code})"}
         elif response.status_code != 200:

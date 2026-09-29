@@ -173,6 +173,10 @@ def _phone_notifications(tool_input: dict) -> dict:
         "meta": " · ".join(x for x in [it.get("pkg"), it.get("ago")] if x),
         "summary": it.get("body") or "",
         "url": None,
+        # 구조 칸(R7) — meta 에 접힌 값의 정본 (posted_at = epoch ms 원값)
+        "pkg": it.get("pkg"),
+        "ago": it.get("ago"),
+        "posted_at": it.get("posted_at"),
     } for it in items]
     # ★얼어붙은 피드 방어: 가장 최근이 이틀보다 오래면 '현재 상태'로 읽히면 안 된다.
     # (2026-08-17 실측 — 수집기가 폐기된 뒤에도 success=true 로 72일 전 데이터를 냈다.)

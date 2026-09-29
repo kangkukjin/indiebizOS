@@ -45,6 +45,12 @@ def _to_records(items: list) -> list:
             "summary": it.get("description", "") or "",
             "url": it.get("url") or it.get("ref", "") or "",
             "image": it.get("thumbnailImageUrl", "") or "",
+            # R7 칸 규약 — meta 에 접힌 값의 구조 칸(원천 값 그대로)
+            "reward": it.get("reward"),
+            "organizer": it.get("organizationName"),
+            "category": it.get("category"),
+            "deadline": deadline or None,             # 원천 ISO 시각(meta 는 앞 10자)
+            "team_count": it.get("teamCount"),
         })
     return records
 

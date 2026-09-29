@@ -104,6 +104,9 @@ def search_bunjang(query, limit=20, region=None):
             # 수치 칸 병기 (F1, 2026-08-16 상상훈련): 가격이 meta 텍스트("80만원")에만 있으면
             # sort/filter/비교 파이프가 원리적으로 막힌다 — 표시용 meta 와 별개로 수치를 나른다.
             "price": _num_or_none(it.get("price")),
+            # R7 — meta 에 접힌 거래 지역·거래완료 여부의 구조 칸
+            "location": loc or None,
+            "sold": status == "판매완료",
         })
         if len(records) >= limit:
             break
@@ -239,6 +242,9 @@ def search_danggeun(query, limit=20, region=None):
             "url": it.get("url") or "",
             "image": it.get("image") or "",
             "price": _num_or_none(price),
+            # R7 — meta 에 접힌 검색 동네(해소된 전체 이름)·거래완료 여부의 구조 칸
+            "region": region_full,
+            "sold": sold,
         })
         if len(records) >= limit:
             break

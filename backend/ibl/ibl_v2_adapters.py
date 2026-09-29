@@ -193,11 +193,15 @@ def decode_envelope(raw, adapter, input_values=None):
         kind = "permission" if raw.get("blocked") or raw.get("denied") or raw.get("permission_denied") or raw.get("error_type") == "permission" else "runtime"
         if raw.get("error_type") in {"capability", "result_unknown"}:
             kind = "protocol"
-        raise Fault("TOOL", str(raw.get("error") or raw.get("message") or "도구 실행 실패"), kind=kind,
+        # 원천의 요청 한도(429)는 '잠시 뒤 같은 원천'과 '원천을 바꿔라'를 가를 값이다 — 일반 TOOL 과
+        # 같은 코드면 프로그램이 문자열로만 구별했다(상상훈련 77회차 F77-2). 생산자는 공통 봉투
+        # common.api_client.rate_limited_failure 로 error_type·retry_after 를 싣는다.
+        code = "RATE_LIMITED" if raw.get("error_type") == "rate_limited" else "TOOL"
+        raise Fault(code, str(raw.get("error") or raw.get("message") or "도구 실행 실패"), kind=kind,
                     details={key: raw[key] for key in (
                         "error_type", "errno", "path", "base_path", "hint", "stage",
                         "usage", "supported_channels", "available_actions", "error_code", "recovery",
-                        "input_contract", "failure_origin", "execution_ref", "def",
+                        "input_contract", "failure_origin", "execution_ref", "def", "retry_after",
                     ) if key in raw} | ({"inner_diagnostics": inner} if (inner := inner_diagnostics(raw)) else {}))
     if adapter.get("protocol") == "document-value/1":
         from ibl_document_value import document_value
@@ -296,11 +300,11 @@ def load_registry(project_path=".", agent_id=None):
             schemas[tool.get("name")] = (tool.get("input_schema") or {}).get("properties", {})
     allowed = get_allowed_nodes()
     result, file_hashes = {}, {}
-    from ibl_v2_contracts import handler_contract
+    from ibl_v2_contracts import handler_contract, declared_contract
     from ibl_v2_compat import plain_arguments
     for node, config in catalog.get("nodes", {}).items():
         for action, action_config in config.get("actions", {}).items():
-            contract = action_config.get("callable_contract") or handler_contract(node, action, action_config, schemas.get(action_config.get("tool")))
+            contract = declared_contract(action_config) or handler_contract(node, action, action_config, schemas.get(action_config.get("tool")))
             if not contract or (allowed is not None and not check_node_access(node, allowed)):
                 continue
             contract = copy.deepcopy(validate_contract(contract))

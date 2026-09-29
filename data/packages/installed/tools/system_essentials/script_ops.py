@@ -379,6 +379,7 @@ def _entry_item(sid, e, state):
     return {"id": sid, "title": sid, "meta": f"{e.get('interpreter', '')} · data/scripts/{e.get('file', '')}",
             "summary": f"{e.get('description', '')} — {status}".strip(" —"),
             "description": e.get("description", ""), "path": f"data/scripts/{e.get('file', '')}",
+            "interpreter": e.get("interpreter", ""),
             "registered_at": e.get("registered_at", ""),
             "last_status": ("ok" if lr.get("ok") else "error") if lr else "none",
             "last_run": str(lr.get("at", "")) if lr else "",

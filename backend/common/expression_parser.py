@@ -145,6 +145,10 @@ class Parser:
             if op in (".", "["):
                 if op == ".":
                     self.pop()
+                    if self.t.kind != "name":
+                        # `$x.9월` — 숫자로 시작하거나 기호가 든 필드 이름은 점 접근의 이름이 아니다(76회차 T04·F72-2).
+                        self.fail(f"필드 이름이 필요합니다: '{self.t.text}'. 목록 위치는 $값[0], 숫자로 시작하거나 "
+                                  f"기호가 든 필드는 get($값, \"필드\", null) 또는 $값[\"필드\"]로 읽으세요.")
                     left = self.node("field", left.start, base=left, key=self.name())
                 else:
                     self.pop()

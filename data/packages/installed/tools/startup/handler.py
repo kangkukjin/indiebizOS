@@ -38,6 +38,12 @@ def _biz_to_records(data: list) -> list:
             "meta": " · ".join(x for x in meta_parts if x),
             "summary": "",
             "url": it.get("상세URL") or "",
+            # R7 칸 규약 — meta 에 접힌 값의 구조 칸(원천 값 그대로)
+            "business_type": it.get("사업유형"),
+            "organizer": it.get("주관기관"),
+            "department": it.get("담당부서"),
+            "deadline": deadline,                     # 원천 접수마감일(정규화본은 end_date)
+            "status": status,                         # 공고상태
         }
         # 칸 규약 3(날짜, F1-date 2026-08-16 5회차): 마감일이 meta 텍스트에만 있으면
         # "마감 임박순" 정렬 불가(legal 시행일 동형) — end_date 병기(YYYY-MM-DD).

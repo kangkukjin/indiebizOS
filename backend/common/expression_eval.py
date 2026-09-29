@@ -113,7 +113,11 @@ class ExpressionEvaluator:
                                 details={"missing_fields": [key.value], "available_fields": list(base.value)[:20]})
             elif kind == "index" and isinstance(base.value, (str, list, tuple)):
                 if type(key.value) is not int or not -len(base.value) <= key.value < len(base.value):
-                    raise Fault("INDEX", "인덱스가 범위를 벗어났거나 정수가 아닙니다.", node)
+                    # 어느 값의 몇 번째를 몇 개짜리에서 찾았는지 — 위치만으론 빈 결과인지 오타인지 모른다(77회차 T10·F72-2).
+                    target = d["base"].data.get("name") if d["base"].kind == "ref" else None
+                    raise Fault("INDEX", "인덱스가 범위를 벗어났거나 정수가 아닙니다.", node,
+                                details={"index": key.value if isinstance(key.value, (int, float, str)) else type(key.value).__name__,
+                                         "length": len(base.value), **({"variable": target} if target else {})})
             else:
                 raise Fault("FIELD_TYPE", "이 값에는 해당 필드/인덱스 접근을 할 수 없습니다.", node,
                             details={"field": key.value, "actual_type": type(base.value).__name__})

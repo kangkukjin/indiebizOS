@@ -31,7 +31,76 @@ _STRUCTURE_PROMPT = """당신은 콘텐츠를 깔끔한 문서 구조로 정리�
 - {"type":"code","text":"...","lang":"..."}
 - {"type":"divider"}
 
-원칙: 내용을 지어내지 말고 주어진 것에서만. title=핵심을 담은 명제. 긴 글은 heading으로 섹션화, 나열은 list, 비교·수치는 table. JSON 외 텍스트 금지."""
+원칙: 내용을 지어내지 말고 주어진 것에서만. title=핵심을 담은 명제. 긴 글은 heading으로 섹션화, 나열은 list, 비교·수치는 table. JSON 외 텍스트 금지.
+원문 보존: 논문·책 제목, 고유명, 인용문, 수치·날짜, DOI·URL·식별자는 원문 글자 그대로 옮긴다(철자·어형·대소문자를 바꾸지 않는다)."""
+
+
+# 원문 보존 대조(상상훈련 77회차 F77-3): 편집자가 제목 "…incentivizes…" 를 "…incentives…" 로 옮겨 적었다.
+# 서지 문자열 변형은 인용 오류다 — 짧은 출력 문자열이 원문의 한 구간과 **거의 같지만 다르면**(낱말 수 같고
+# 1~2 낱말만 철자가 가까운 다른 형태) 옮겨 적기 실수로 보고 원문 구간으로 되돌린 뒤 신고한다.
+# 의역(낱말이 많이 다름)·요약(낱말 수 다름)은 건드리지 않는다.
+_VERBATIM_MAX_WORDS = 40
+
+
+def _near_verbatim(out_text: str, source_words: list, index: dict):
+    """출력 문자열과 낱말 수가 같고 1~2 낱말만 가깝게 다른 원문 구간 → 그 구간 문자열, 없으면 None."""
+    from difflib import SequenceMatcher
+    words = out_text.split()
+    n = len(words)
+    if not 3 <= n <= _VERBATIM_MAX_WORDS:
+        return None
+    candidates = set()
+    for i, w in enumerate(words[:3]):          # 앞 세 낱말 중 하나가 원문에 그대로 있어야 한다
+        for pos in index.get(w, ()):
+            if pos - i >= 0:
+                candidates.add(pos - i)
+    for start in sorted(candidates):
+        window = source_words[start:start + n]
+        if len(window) != n:
+            continue
+        # 문장 끝 구두점은 원문 문맥의 것 — 출력 마지막 낱말에 없으면 떼고 비교한다
+        if window[-1].rstrip(".,;:") != window[-1] and words[-1] == words[-1].rstrip(".,;:"):
+            window = window[:-1] + [window[-1].rstrip(".,;:")]
+        diff = [(a, b) for a, b in zip(words, window) if a != b]
+        spelled = [(a, b) for a, b in diff if a.lower() != b.lower()]  # vj-ok: 값 판정이 아니라 옮겨 적기 철자 대조(대소문자만 다른 낱말=표기 변형)
+        if not diff or len(spelled) > 2:
+            continue
+        if all(SequenceMatcher(None, a.lower(), b.lower()).ratio() >= 0.6 for a, b in spelled):
+            return " ".join(window)
+    return None
+
+
+def _restore_verbatim(ir: dict, content: str) -> list:
+    """IR 의 짧은 문자열(제목·표 칸·목록 항목·heading)을 원문과 대조해 옮겨 적기 변형을 되돌린다. 반환=되돌린 목록."""
+    source_words = content.split()
+    index = {}
+    for i, w in enumerate(source_words):
+        index.setdefault(w, []).append(i)
+    restored = []
+
+    def fix(text):
+        if not isinstance(text, str) or text in content:
+            return text
+        found = _near_verbatim(text, source_words, index)
+        if found and found != text:
+            restored.append({"from": text, "to": found})
+            return found
+        return text
+
+    ir["title"] = fix(ir.get("title"))
+    for b in ir.get("blocks") or []:
+        if not isinstance(b, dict):
+            continue
+        if b.get("type") in ("heading", "quote"):
+            b["text"] = fix(b.get("text"))
+        elif b.get("type") == "list" and isinstance(b.get("items"), list):
+            b["items"] = [fix(x) for x in b["items"]]
+        elif b.get("type") == "table":
+            if isinstance(b.get("columns"), list):
+                b["columns"] = [fix(x) for x in b["columns"]]
+            if isinstance(b.get("rows"), list):
+                b["rows"] = [[fix(c) for c in r] if isinstance(r, list) else r for r in b["rows"]]
+    return restored
 
 
 def structure_document(tool_input, output_base="."):
@@ -79,9 +148,15 @@ def structure_document(tool_input, output_base="."):
         return _json.dumps({"success": False, "error": "blocks가 없습니다.",
                             "raw": _json.dumps(ir, ensure_ascii=False)[:300]},
                            ensure_ascii=False)
-    return _json.dumps({"success": True, "title": ir.get("title", ""), "blocks": blocks,
-                        "block_count": len(blocks),
-                        "message": f"{len(blocks)}블록 문서 IR로 구조화."}, ensure_ascii=False)
+    restored = _restore_verbatim(ir, content)
+    blocks = ir.get("blocks")
+    out = {"success": True, "title": ir.get("title", ""), "blocks": blocks,
+           "block_count": len(blocks),
+           "message": f"{len(blocks)}블록 문서 IR로 구조화."
+                      + (f" 원문과 어긋나게 옮긴 문자열 {len(restored)}개를 원문대로 되돌렸습니다." if restored else "")}
+    if restored:
+        out["verbatim_restored"] = restored
+    return _json.dumps(out, ensure_ascii=False)
 
 
 # records-관습 카드의 표시용 키 — office_ops._RECORDS_ONLY_KEYS 와 동일 판별(2026-08-08 ⑭).

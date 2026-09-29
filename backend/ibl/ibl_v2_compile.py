@@ -398,7 +398,8 @@ class Compiler:
             return join(sub(d["yes"]), sub(d["no"]))
         if kind == "builtin":
             if d["name"] not in BUILTINS:
-                self.issue(node, "BUILTIN", f"알 수 없는 내장 함수: {d['name']}")
+                from common.expression_ops import unknown_builtin_message
+                self.issue(node, "BUILTIN", unknown_builtin_message(d["name"]))
             return Type("Callable")
         if kind == "pure_call":
             self.pure(node)

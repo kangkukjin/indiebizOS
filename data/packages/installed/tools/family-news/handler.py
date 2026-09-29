@@ -366,6 +366,11 @@ def _edition_row(state: dict, ed: dict) -> dict:
         "is_draft": not pub,
         "places": ", ".join(ed.get("places", [])[:4]) or "(위치 정보 없음)",
         "preview_url": _preview_url(ed["id"]),
+        # 구조 칸(R7) — meta 에 접힌 값의 정본
+        "range_from": ed.get("range_from") or None,
+        "range_to": ed.get("range_to") or None,
+        "photo_count": ed.get("photo_count", 0),
+        "published_at": ed.get("published_at") or None,
     }
 
 
@@ -956,7 +961,9 @@ def _fn_comments(params: dict) -> str:
         entries = [e for e in entries if e.get("edition") == eid]
     rows = [{"title": e.get("name", ""), "meta": f"{e.get('at', '')}"
              + (f" · {e.get('edition')}" if e.get("edition") else ""),
-             "summary": e.get("msg", "")}
+             "summary": e.get("msg", ""),
+             # 구조 칸(R7) — meta 에 접힌 값의 정본
+             "at": e.get("at") or None, "edition": e.get("edition") or None}
             for e in reversed(entries[-200:])]
     msg = "" if rows else "아직 방명록 글이 없습니다."
     return _ok(rows, message=msg)
@@ -976,6 +983,11 @@ def _fn_uploads(params: dict) -> str:
             "meta": f"{u.get('at', '')} · {status}",
             "image": f"/photo/thumbnail?path={p}",
             "path": str(p),
+            # 구조 칸(R7) — meta 에 접힌 값의 정본 (status = used|rejected|candidate)
+            "at": u.get("at") or None,
+            "used_in": u.get("used_in") or None,
+            "rejected": bool(u.get("rejected")),
+            "status": ("used" if u.get("used_in") else "rejected" if u.get("rejected") else "candidate"),
         })
     msg = "" if rows else "가족이 보낸 사진이 아직 없습니다. 신문 맨 아래 '사진 보내기'로 보낼 수 있어요."
     return _ok(rows, message=msg)

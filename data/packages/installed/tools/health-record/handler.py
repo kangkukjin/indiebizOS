@@ -375,6 +375,10 @@ def get_health_context(input_data: dict) -> str:
                 "meta": " · ".join(x for x in [str(s.get("severity") or ""), s.get("started_at", "")] if x),
                 "summary": s.get("description", ""),
                 "url": "",
+                # 구조 칸(R7) — meta 에 접힌 값의 정본
+                "category": s.get("category"),
+                "severity": s.get("severity"),
+                "started_at": s.get("started_at"),
             } for s in symptoms]
             return json.dumps({"text": text, "items": records}, ensure_ascii=False)
 
@@ -391,6 +395,10 @@ def get_health_context(input_data: dict) -> str:
                 "meta": " · ".join(x for x in [m.get("dosage", ""), m.get("frequency", "")] if x),
                 "summary": m.get("reason", ""),
                 "url": "",
+                # 구조 칸(R7) — meta 에 접힌 값의 정본
+                "dosage": m.get("dosage"),
+                "frequency": m.get("frequency"),
+                "started_at": m.get("started_at"),
             } for m in medications]
             return json.dumps({"text": text, "items": records}, ensure_ascii=False)
 
@@ -599,7 +607,8 @@ def ingest_health_info(input_data: dict) -> str:
             summary = result.get('message', '')
             saved_items.append({'title': title or _INGEST_KIND_KO[kind],
                                 'meta': f"{_INGEST_KIND_KO[kind]} · {measured_at or today}",
-                                'summary': summary.split(': ', 1)[-1], 'url': ''})
+                                'summary': summary.split(': ', 1)[-1], 'url': '',
+                                'kind': kind, 'date': measured_at or today})
         else:
             skipped.append(result.get('error', '저장 실패'))
 
@@ -891,6 +900,9 @@ def _search_to_records(results: dict) -> list:
             "meta": f"측정 · {m['measured_at'][:10]}",
             "summary": format_measurement_value(m['category'], m['value']),
             "url": "",
+            # 구조 칸(R7) — 종류가 섞인 행이라 kind·date 는 모든 행에 같은 이름으로
+            "kind": "measurement", "date": m.get('measured_at'),
+            "dosage": None, "frequency": None,
         })
     for s in results.get('symptoms', []):
         records.append({
@@ -898,6 +910,8 @@ def _search_to_records(results: dict) -> list:
             "meta": f"증상 · {s['started_at']}",
             "summary": s.get('description') or '',
             "url": "",
+            "kind": "symptom", "date": s.get('started_at'),
+            "dosage": None, "frequency": None,
         })
     for m in results.get('medications', []):
         records.append({
@@ -905,6 +919,8 @@ def _search_to_records(results: dict) -> list:
             "meta": f"투약 · {m['started_at']}",
             "summary": " ".join(x for x in [m.get('dosage') or '', m.get('frequency') or ''] if x),
             "url": "",
+            "kind": "medication", "date": m.get('started_at'),
+            "dosage": m.get('dosage'), "frequency": m.get('frequency'),
         })
     for d in results.get('documents', []):
         records.append({
@@ -912,6 +928,8 @@ def _search_to_records(results: dict) -> list:
             "meta": f"문서 · {d['recorded_at']}",
             "summary": d.get('description') or '',
             "url": "",
+            "kind": "document", "date": d.get('recorded_at'),
+            "dosage": None, "frequency": None,
         })
     return records
 

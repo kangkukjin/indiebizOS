@@ -105,6 +105,7 @@ def _wikidata_resolve(tool_input: dict) -> str:
             "summary": desc,
             "url": f"https://www.wikidata.org/wiki/{qid}",
             "qid": qid,
+            "description": h.get("description"),  # F77-1 (R7 칸 규약): meta 에 접은 설명을 구조 칸에도
         })
     lines.append("→ QID를 [sense:entity]{op:\"detail\", id:\"<QID>\"}에 넣어 구조화된 사실 조회.")
     return {"success": True, "message": "\n".join(lines), "items": records, "count": len(records)}

@@ -298,4 +298,26 @@
 
 ## 집행 완료
 
-(수리 턴이 채운다.)
+### 1차 — `1b9a4932`(2026-09-29)
+
+B76-1~5·F76-1~4 개별 자리. 요약은 `docs/IMAGINATION_72_76_REPAIRS.md` 76회차 절.
+
+### 2차 — 76·77 잔여 재탐침·수리(2026-09-29)
+
+보고서 재현 문장을 라이브로 다시 대 보았다. B76-1(numpy)·B76-2(JSON 읽기)·B76-3(lease)·B76-5(통화 칸)·F76-1(molit·naver 칸)·F76-3(교재)·F76-4(LITERAL_DOLLAR)는 살아 있었다. 아래가 샜다.
+
+- **B75-4 재확인(T19) — 미지 op 이 여전히 실거래 성공이었다.** `[sense:realty]{op:"registry"}` 가 check `incomplete`·이슈 0, 실행 842행 success.
+  - 뿌리: 손으로 쓴 `callable_contract` 는 `ops` 선언의 투영(op 허용값·기본값·op별 효과)을 받지 못했다. 유도 계약만 받았다. 같은 처지가 `self:script`.
+  - 수리: `ibl_v2_contracts.project_ops` 한 벌을 유도·선언 계약이 함께 쓴다(`declared_contract`). realty 핸들러의 `.get(op, _op_query)` 폴백을 거절로 바꿨다.
+  - 관문: 빌드가 `_OP_DISPATCHERS[…].get(op, 폴백)` 을 금지한다(`iblbuild_validators._dispatcher_fallbacks`). 선언 계약의 `enums.op` 가 `ops.values` 와 어긋나면 신고한다(`iblbuild_v2`).
+  - 라이브: check `ARGUMENT_CONTRACT "op: 허용 값 ['query','codes']"`, 실행도 같은 거절.
+- **B76-4 잔여 — 전량 요청 봉투에 `total` 이 없었다.** `max_points:1500` 성공 봉투에서 `$h.total` 이 MISSING_FIELD. 절단일 때만 모집단을 실었다. 봉투 모양이 절단 여부로 바뀌지 않게 `total` 을 상시 싣는다(라이브 `{n:1223, t:1223, tr:false}`).
+- **F76-2 재확인 — 관측 좌표 축이 손 선언(realty)에만 있었다.** `[sense:book]{source:"nl"}` 의 `meta` 에 거짓 UNOBSERVED_FIELD(정보나루 fixture 열로 판정). `self:material{op:"list"}` 의 `.items` 경고는 op 를 모르는 실사용 관측(add 봉투)을 빌려준 탓.
+  - 수리: `ibl_typecheck.shape_axes` 가 좌표 축을 기존 선언에서 유도한다(shape_axes · shape_variants 라벨 · param_support 축 · 스키마 enum 2값 이상). 좌표가 다른 호출은 미상으로 기권한다. op 있는 액션에는 실사용 관측을 빌려주지 않는다. book 에 `shape_axes: {source: null}` 을 선언했다.
+  - 라이브: 원천 변이는 경고 0, 기본 원천의 진짜 오타(`nosuchcol`)는 여전히 경고.
+- **F72-2 재확인(T04·T24).** `count` → "비슷한 내장 함수: len, …"(다른 언어 관용 이름 표 + 철자 근접, 컴파일·실행 한 문장). `$x.9월` → "목록 위치는 $값[0], 숫자로 시작하거나 기호가 든 필드는 get(…) 또는 $값[\"필드\"]". INDEX 진단 details 에 index·length·variable.
+- **직방 매매 `price`(F76-1 형제, 수리 중 발견).** 매매 매물의 `price` 가 보증금으로 채워졌다(표시는 매매가 우선이라 둘이 어긋남). 매매는 매매가, 임대는 보증금.
+- **용례 #4108 교정.** 직방 `price`(원)를 만원 30000 과 비교해 3억 경고가 항상 켜지던 교재. 300000000 으로 고치고 벡터를 재색인했다(백업·영수증 `data/_backups/2026-09-29_imagination76_77_corpus/`, git 밖).
+- 밭 이관 2 — 가격·면적·거래유형 격자는 77회차 F77-1 표시 칸 접기 관문(`scripts/iblbuild_meta_fields.py`)이 전 패키지에서 집행한다(77회차 보고서 집행 절).
+
+검증은 77회차 보고서 집행 절과 같다.

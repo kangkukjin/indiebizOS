@@ -350,6 +350,30 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 예약 규칙 관문 통과 ✓ (캘린더 규칙 쓰기 = 정규화 입구뿐 · check↔등록 같은 판정 함수)")
 
+        # --- 표시 칸 접기 관문 (2026-09-29, 76회차 F76-1·77회차 F77-1 밭 이관) ---
+        # 행의 meta·summary 에 접은 값은 같은 행의 구조 칸에도 있어야 한다(R7 칸 규약). 논문 연도·저자,
+        # 도서 출판사, 강의 id, 노트북 stale 이 표시 문자열에만 있어 정렬·필터·연결이 문자열 쪼개기가 됐다.
+        from iblbuild_meta_fields import validate_meta_fields
+        missues, _ = validate_meta_fields(root)
+        if missues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 표시 칸 접기 관문 실패: {len(missues)}건", file=sys.stderr)
+            for issue in missues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 표시 칸 접기 관문 통과 ✓ (meta·summary 에 접은 값 = 같은 행 구조 칸에도)")
+
+        # --- 원천 요청 한도 관문 (2026-09-29, 77회차 F77-2 밭 이관) ---
+        from iblbuild_rate_limits import validate_rate_limits
+        rissues = validate_rate_limits(root)
+        if rissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 원천 요청 한도 관문 실패: {len(rissues)}건", file=sys.stderr)
+            for issue in rissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 원천 요청 한도 관문 통과 ✓ (429 = 공통 봉투 → 판본 2 RATE_LIMITED)")
+
         # --- 선언 내부 모순 관문 (2026-09-07) ---
         # 산문은 모델이 읽고 타입은 관문이 읽는다. 09-05 수리가 memory keywords 의
         # 저장소·산문만 고치고 타입을 두어, 낱말이 "배열도 받습니다"라고 적어 놓은 채

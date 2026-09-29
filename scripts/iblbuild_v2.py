@@ -53,6 +53,46 @@ def validate_v2_contracts(data):
                     validate_contract(entry["callable_contract"])
                 except (ValueError, KeyError, TypeError) as exc:
                     issues.append(f"{name}:{action} callable_contract: {exc}")
+                # 손으로 쓴 계약이 op 허용값을 따로 적었다면 ops 선언과 같아야 한다 — 투영(project_ops)은
+                # 선언 계약의 값을 덮지 않으므로, 어긋나면 한쪽이 조용히 이긴다(76회차 T19).
+                declared_ops = ((entry["callable_contract"] or {}).get("enums") or {}).get("op")
+                op_values = list(((entry.get("ops") or {}).get("values") or {}))
+                if declared_ops is not None and op_values and sorted(declared_ops) != sorted(op_values):
+                    issues.append(f"{name}:{action} callable_contract.enums.op {sorted(declared_ops)} ≠ ops.values {sorted(op_values)}")
+            support = entry.get("param_support") if isinstance(entry, dict) else None
+            if support is not None:
+                issues.extend(f"{name}:{action} param_support: {p}" for p in _param_support_problems(support, entry))
+    return issues
+
+
+def _param_support_problems(support, entry):
+    """param_support 선언 검사 — 축·선택 인자는 선언 인자, 값 표의 인자는 선택 인자, 별칭은 있는 값을 가리킨다."""
+    if not isinstance(support, dict):
+        return ["매핑이어야 합니다"]
+    axis, params, table = support.get("axis"), support.get("params") or [], support.get("values") or {}
+    declared = set((entry.get("params") or {})) | set((entry.get("aliases") or {}))
+    problems = []
+    if not axis or not table:
+        problems.append("axis·values 가 필요합니다")
+    for key in params:
+        if key not in declared:
+            problems.append(f"선택 인자 {key} 가 params 선언에 없습니다")
+    for value, accepted in table.items():
+        if not isinstance(accepted, dict):
+            problems.append(f"{value}: 받는 인자 매핑이어야 합니다")
+            continue
+        for key, choices in accepted.items():
+            if key not in params:
+                problems.append(f"{value}.{key} 가 params 목록에 없습니다")
+            if not (choices == "any" or (isinstance(choices, list) and choices)):
+                problems.append(f"{value}.{key}: any 또는 허용 값 목록")
+    for alias, target in (support.get("aliases") or {}).items():
+        if target not in table:
+            problems.append(f"별칭 {alias} → 없는 값 {target}")
+    if support.get("default") and support["default"] not in table:
+        problems.append(f"기본값 {support['default']} 가 values 에 없습니다")
+    return problems
+
     return issues
 
 

@@ -107,7 +107,7 @@ Callable은 실행 내부 값이며 일반 JSON이나 외부 결과 값으로 �
 | --- | --- |
 | split | `split(text, sep=null, maxsplit=-1)` → List<Text>; null 구분자는 공백 분리 |
 | replace / strip | `replace(text, old, new, count=-1)`, `strip(text, chars=null)` → Text |
-| upper / lower / contains / join | `upper(text)`, `lower(text)`, `contains(text, part)` → Bool, `join(sep, List<Text>)` → Text. contains는 기존 부분일치 정책(NFC·대소문자 정규화)을 공유 |
+| upper / lower / contains / join | `upper(text)`, `lower(text)`, `contains(text, part, exact=false)` → Bool, `join(sep, List<Text>)` → Text. contains는 기존 부분일치 정책(NFC·대소문자 정규화)을 공유하고, `exact:true`(세 번째 인자)면 대소문자를 가리는 부분 문자열 판정(NFC만)이다 — 약어(AI·LLM)가 'painting'에 걸리지 않게(2026-09-29 개정, 77회차 G77-1) |
 | unique / union / intersection / difference | `unique(list)`, `union(a,b,...)`, `intersection(a,b)`, `difference(a,b)` → List |
 | zip / enumerate | `zip(a,b,...)`은 가장 짧은 입력 길이의 행 목록, `enumerate(list,start=0)`은 `[번호,값]` 목록 |
 | any / all | List<Bool> → Bool. 빈 목록은 각각 false/true. 입력 전체의 Bool 타입을 검사 |

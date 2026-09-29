@@ -101,6 +101,12 @@ def _search_gigs(query: str, limit: int, sort: str, max_price, requested=None):
                 # "평점순" sort 파이프가 원리적으로 막힌다.
                 "rating": review.get("reviewAverage"),
                 "reviews": review.get("reviewCount"),
+                # R7 칸 규약 — meta·summary 에 접힌 나머지 값의 구조 칸
+                "seller": seller.get("nickname"),
+                "seller_grade": seller.get("grade"),        # 원천 등급(표시는 NEW 생략)
+                "tax_invoice": bool(seller.get("isAvailableTax")),
+                "category": cat.get("rootCategoryName"),
+                "subcategory": cat.get("subCategoryName"),
             }
             images = g.get("images") or []
             if images:
@@ -166,6 +172,14 @@ def _search_experts(query: str, limit: int, sort: str, requested=None):
                 "rating": (round(review["reviewAverage"], 2)
                            if review.get("reviewAverage") else None),
                 "reviews": review.get("reviewCount"),
+                # R7 칸 규약 — meta·summary 에 접힌 나머지 값의 구조 칸
+                "grade": s.get("grade"),                    # 원천 등급(표시는 NEW 생략)
+                "career_years": career.get("totalCareerYear"),
+                "orders_count": s.get("ordersCount"),
+                "response_minutes": resp_min,              # 평균 응답 시간(분)
+                "satisfaction": s.get("satisfactionPoint"),  # 만족도(%)
+                "specialties": specialties,                # 전문분야 전체(summary 는 앞 4개)
+                "description": desc,                       # 소개 전문(summary 는 앞 120자)
             }
             if s.get("thumbnail"):
                 item["image"] = s["thumbnail"]

@@ -73,7 +73,8 @@ def test_nanet_end_page_preserves_rows(monkeypatch, existing):
 def test_unsupported_source_filter_refused_before_network(monkeypatch):
     mod = module('study')
     monkeypatch.setattr(mod, '_search_arxiv', lambda _: pytest.fail('network must not run'))
-    assert mod._paper_search({'source': 'arxiv', 'year_from': 2024}, None)['success'] is False
+    # 76·77 잔여 수리 뒤 arXiv 는 연도 범위·최신순을 실제로 구현한다 — 지원 밖은 인용순 정렬.
+    assert mod._paper_search({'source': 'arxiv', 'sort_by': 'cited'}, None)['success'] is False
 
 
 def test_local_calendar_and_spotlight_utc_match(monkeypatch):

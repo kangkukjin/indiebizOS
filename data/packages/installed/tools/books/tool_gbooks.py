@@ -32,6 +32,10 @@ def search_google_books(query: str, max_results: int = 5, order_by: str = "relev
                 time.sleep(1.5 * (_attempt + 1))
                 continue
             break
+        if response.status_code == 429:
+            from common.api_client import rate_limited_failure
+            return rate_limited_failure("Google Books", response, items=[],
+                                        hint="급하면 source 를 바꾸세요(정보나루·nl).")
         response.raise_for_status()
         data = response.json()
 

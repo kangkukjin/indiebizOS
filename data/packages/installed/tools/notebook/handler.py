@@ -164,6 +164,10 @@ def _op_list(tool_input: dict, context) -> str:
         "meta": f"소스 {b['source_count']} · 청크 {b['chunk_count']} · {str(b.get('updated_at') or '')[:16]}",
         "summary": b.get("note") or "",
         "url": "",
+        # 구조 칸(R7) — meta 에 접힌 값의 정본
+        "source_count": b["source_count"],
+        "chunk_count": b["chunk_count"],
+        "updated_at": b.get("updated_at"),
     } for b in books]
     return _json({"success": True, "count": len(books), "notebooks": books, "items": items,
                   "semantic": core.semantic_available(),
@@ -181,6 +185,7 @@ def _op_sources(tool_input: dict, context) -> str:
             "title": s["title"],
             "status": s["status"], "stale": s.get("stale") or False,
             "chunk_count": s["chunk_count"], "kind": s["kind"],
+            "has_card": bool(s.get("card_gist")),
             "meta": " · ".join(x for x in [
                 f"#{s['id']}", s["kind"], f"청크 {s['chunk_count']}", s["status"],
                 s.get("stale") and f"⚠️{s['stale']}", (not s.get("card_gist")) and "카드 없음"] if x),
@@ -222,6 +227,7 @@ def _op_search(tool_input: dict, context) -> str:
         "summary": (r["text"][:300] + ("…" if len(r["text"]) > 300 else "")),
         "source_id": r["source_id"],
         "chunk_id": r["id"],
+        "text": r["text"],  # 구조 칸(R7) — summary 는 300자 표시, 청크 원문은 여기
         "url": "",
     } for r in out["results"]]
     return _json({"success": True, "notebook": out["notebook"], "search_type": out["search_type"],
@@ -480,7 +486,7 @@ def _ask_by_cards(core, name: str, question: str, m: dict) -> str:
         blocks.append({"type": "paragraph", "text": "⚠ 예산으로 앞부분만 읽은 문서: " + ", ".join(f"#{i}" for i in degraded)})
     return _json({"success": True, "notebook": m["notebook"], "question": question, "mode": "read", "not_in_sources": False,
                   "answer": answer, "blocks": blocks, "citations": cites,
-                  "items": [{"title": c["source"], "meta": f"#{c['source_id']} · {c['loc']}", "summary": c["quote"], "source_id": c["source_id"]} for c in cites],
+                  "items": [{"title": c["source"], "meta": f"#{c['source_id']} · {c['loc']}", "summary": c["quote"], "source_id": c["source_id"], "loc": c["loc"]} for c in cites],
                   "read": [{"source_id": d["id"], "title": d["title"], "chars": d["chars"], "truncated": d["truncated"]} for d in docs],  # truncation-scope: source — 문서 본문·총 읽기 예산 상한; 완전한 원문 주장 금지
                   "selection": sel})
 
@@ -708,7 +714,10 @@ def _op_card(tool_input: dict, context) -> str:
         else:
             failed += 1
         items.append({"title": s.get("title"), "source_id": s["id"], "summary": r.get("gist") or r.get("error") or "",
-                      "meta": " · ".join(x for x in [f"#{s['id']}", s.get("kind"), r.get("via"), r.get("skipped") and "기존", (not r.get("success")) and "실패"] if x)})
+                      "meta": " · ".join(x for x in [f"#{s['id']}", s.get("kind"), r.get("via"), r.get("skipped") and "기존", (not r.get("success")) and "실패"] if x),
+                      # 구조 칸(R7) — meta 에 접힌 값의 정본
+                      "kind": s.get("kind"), "via": r.get("via"),
+                      "skipped": bool(r.get("skipped")), "failed": not r.get("success")})
     return _json({"success": failed == 0, "notebook": name, "written": written, "skipped": skipped, "failed": failed,
                   "items": items, "message": f"카드 {written}건 작성, {skipped}건 기존, {failed}건 실패 — 지도는 op:map"})
 

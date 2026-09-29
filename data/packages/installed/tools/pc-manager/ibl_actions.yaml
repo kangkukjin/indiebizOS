@@ -155,7 +155,7 @@ nodes:
         fixture: '[self:storage]{op: "volumes"}'
         description: 디스크 용량 분석 (op 분기) — summary·volumes 는 items 병기(>> table 파이프 접속 가능). ★파일 검색은 file_find·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
-        target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
+        target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — root_path 는 스캔 루트 또는 그 아래 어느 폴더든(그 경로를 품은 가장 깊은 스캔에서 집계), items=확장자별 행 전부, folders=그 경로 바로 아래 폴더별 행('.'=그 경로 자신의 파일). 접근 못 한 항목이 있거나 완전성 기록 이전의 옛 스캔이면 원천 불완전으로 알린다(다시 scan). volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
         target_key: op
         router: handler
         tool: storage_op
@@ -186,7 +186,7 @@ nodes:
         fixture: '[self:folder_note]{op: "detail"}'
         description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/detail(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file
-        target_description: set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. detail — root_path/volume_name 생략 시 전체 볼륨 주석 통합 조회.
+        target_description: set — folder_path(메모 달 폴더, 실존·스캔 범위 안) + note 필수. root_path 는 그 폴더를 품은 스캔 볼륨이며, path 하나만 주면 그 폴더에 달고 품은 가장 깊은 스캔을 찾는다. 같은 폴더를 다시 set 하면 메모를 바꾼다. detail — root_path/volume_name 을 주면 그 경로 아래 주석만, 생략 시 전체 볼륨 주석 통합 조회.
         target_key: op
         router: handler
         tool: folder_note_op
@@ -251,9 +251,9 @@ tool_json:
 
       - op=volumes (기본): 스캔된 볼륨 목록 (파라미터 없음).
 
-      - op=scan: 디스크·볼륨 스캔 후 SQLite 인덱스 구축 (path 필수). 이후 query_storage로 검색.
+      - op=scan: 디스크·볼륨 스캔 후 SQLite 인덱스 구축 (path 필수). 접근 못 한 항목은 건너뛰고 errors 로 신고.
 
-      - op=summary: 저장소 사용량 요약 (volume_name 필수, 총 파일 수/용량/확장자별 통계).
+      - op=summary: 저장소 사용량 요약 (root_path=스캔 루트 또는 그 아래 폴더, 또는 volume_name. 생략 시 전체 통합. 확장자별 items + 바로 아래 폴더별 folders).
 
 
       ## 예시
@@ -278,27 +278,27 @@ tool_json:
   - name: folder_note_op
     description: '폴더 주석 관리 (op 분기) — [self:folder_note].
 
-      - op=detail (기본): 저장된 폴더 주석 조회 (root_path 필수).
+      - op=detail (기본): 저장된 폴더 주석 조회 (root_path 를 주면 그 경로 아래만, 생략 시 전체).
 
-      - op=set: 폴더에 메모·주석 추가 (root_path + folder_path + note 필수).
+      - op=set: 폴더에 메모 달기 (folder_path + note 필수, 같은 폴더 재set = 메모 교체).
 
-      root_path는 storage_op(op=''scan'')으로 스캔한 볼륨 경로.
+      root_path는 그 폴더를 품은, storage_op(op=''scan'')으로 스캔한 볼륨 경로.
 
 
       ## 예시
 
       - folder_note_op(op=''set'', root_path=''/Volumes/MyDrive'', folder_path=''/Volumes/MyDrive/backup'', note=''2023 백업'')
 
-      - folder_note_op(op=''get'', root_path=''/Volumes/MyDrive'')'
+      - folder_note_op(op=''detail'', root_path=''/Volumes/MyDrive'')'
     input_schema:
       type: object
       properties:
         op:
           type: string
-          description: get=주석 조회(기본), set=주석 추가
+          description: detail=주석 조회(기본), set=주석 달기·교체
         root_path:
           type: string
-          description: 스캔된 볼륨 경로 (set/get 모두 필수). volume_name으로도 받음
+          description: 폴더를 품은 스캔 볼륨 경로(생략 시 folder_path 를 품은 가장 깊은 스캔). volume_name으로도 받음
         folder_path:
           type: string
           description: '[set] 주석 달 폴더 경로'

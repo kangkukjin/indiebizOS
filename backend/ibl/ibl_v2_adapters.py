@@ -160,10 +160,16 @@ def _partial_message(raw, truncation):
         message += f" 절단 사유 `{first['reason']}`" + (f"(상한 {first['limit']})" if first.get("limit") is not None else "") + "."
         if first["reason"] in _COUNT_REASONS:
             message += f" `{first['reason']}` 를 명시하면 그만큼의 선택으로 받고, 전부가 필요하면 값을 올리세요."
-    note = raw.get("message") if isinstance(raw, dict) else None
+    note = (raw.get("message") or raw.get("warning")) if isinstance(raw, dict) else None
     if isinstance(note, str) and note.strip():
         message += f" 원천 안내: {note.strip()[:200]}"
     return message
+
+# 판본 1 도구의 평문 실패 규약(`return f"Error: …"`)은 legacy-envelope 프로토콜의 성질이다 — 도구별
+# 선언으로 전개하면 선언을 잊은 도구의 파일 부재·권한 실패가 ADAPTER_SHAPE(봉투 파손)로 오분류된다
+# (74회차 B74-5, 56회차 B56-3 과 같은 속). 선언된 text_error_prefixes 는 이 위에 더해진다.
+_LEGACY_TEXT_ERROR_PREFIXES = ("Error:",)
+
 
 def decode_envelope(raw, adapter, input_values=None):
     from ibl_honesty import completion_evidence, truncation_evidence, markers_of
@@ -172,9 +178,11 @@ def decode_envelope(raw, adapter, input_values=None):
             raw = json.loads(raw)
         except ValueError as exc:
             prefix = adapter.get("text_success_prefix")
+            error_prefixes = tuple(adapter.get("text_error_prefixes", [])) + (
+                _LEGACY_TEXT_ERROR_PREFIXES if adapter.get("protocol") == "legacy-envelope" else ())
             if prefix and raw.startswith(prefix):
                 raw = {"success": True, "message": raw}
-            elif any(raw.startswith(p) for p in adapter.get("text_error_prefixes", [])):
+            elif raw.startswith(error_prefixes):
                 raise Fault("TOOL", raw) from exc
             else:
                 raise Fault("ADAPTER_SHAPE", f"선언된 JSON 실행 봉투가 아닙니다: {raw[:1000]}") from exc
@@ -213,6 +221,12 @@ def decode_envelope(raw, adapter, input_values=None):
             sources.append(source)
     boundaries = [raw, *sources]
     incomplete = completion_evidence(boundaries if sources else raw)
+    # 도구가 봉투 최상위에서 스스로 "원천 불완전"(source_complete:false)을 말하면 그 말이 경계 증거다.
+    # 74회차 후속: 접근 실패가 있던 스캔의 요약·76회차 시세 이력 실패가 이 표지를 싣고도 완전한 성공으로
+    # 통과했다. 최상위 봉투만 읽는다 — 사용자 값 속 같은 이름의 필드는 데이터로 남는다.
+    incomplete.extend({"at": "result" if boundary is raw else "input", "source_complete": False,
+                       **({"errors": len(boundary["errors"])} if isinstance(boundary.get("errors"), list) else {})}
+                      for boundary in boundaries if boundary.get("source_complete") is False)
     incomplete.extend({"at": "input", "error": source.get("error") or source.get("message")}
                       for source in sources if source.get("success") is False or source.get("error"))
     truncation = truncation_evidence(boundaries if sources else raw)

@@ -664,9 +664,16 @@ _OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list", "l
 _file_views = _fs_find.file_views
 
 
+# 출구에서 평문 실패를 공통 실패 봉투로 감싸도 되는 도구 — 성공 본문이 외부 텍스트가 아니라 접두가 모호하지 않다.
+# read_file(원문 그대로)·run_command(셸 출력 그대로)는 정상 본문이 `Error:` 로 시작할 수 있어 제외된다.
+# 판본 2 경계에서는 어댑터가 평문 `Error:` 를 프로토콜 규약으로 TOOL 로 읽는다(ibl_v2_adapters, 74회차 후속);
+# 이 봉투는 판본 1 파이프(workflow_verdict)·조종실이 읽는 모양이다.
+_ENVELOPED_FAILURE_TOOLS = ("copy_path", "move_path", "delete_path")
+
+
 def execute(tool_input: dict, context) -> str:
     result = _execute(tool_input, context)
-    if context.tool_name in ("copy_path", "move_path", "delete_path") and isinstance(result, str) and result.startswith("Error:"):
+    if context.tool_name in _ENVELOPED_FAILURE_TOOLS and isinstance(result, str) and result.startswith("Error:"):
         return json.dumps({"success": False, "error": result.removeprefix("Error:").strip()}, ensure_ascii=False)
     return result
 

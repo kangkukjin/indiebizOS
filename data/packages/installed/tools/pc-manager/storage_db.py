@@ -44,6 +44,15 @@ def _normalize_path(path: str) -> str:
     return unicodedata.normalize('NFC', path)
 
 
+def _abs(path: str, base: Optional[str] = None) -> str:
+    """몸 토큰을 풀고 상대 경로는 호출한 프로젝트(base) 기준으로 — 프로세스 현재 폴더 기준이면
+    `path:"."`·`"여행사진"` 메모가 백엔드 폴더 같은 엉뚱한 곳을 가리킨다(74회차 후속)."""
+    expanded = expand_body_path(path)
+    if base and not os.path.isabs(expanded):
+        expanded = os.path.join(base, expanded)
+    return _normalize_path(os.path.abspath(expanded))
+
+
 def _ensure_scans_dir():
     """스캔 디렉토리 생성"""
     os.makedirs(SCANS_DIR, exist_ok=True)
@@ -312,15 +321,17 @@ def update_scan_stats(scan_id: int, file_count: int, total_size: int):
         _save_scans_json(scans)
 
 
-def scan_directory(path: str, scan_name: Optional[str] = None, progress_callback=None) -> Dict:
+def scan_directory(path: str, scan_name: Optional[str] = None, progress_callback=None,
+                   base: Optional[str] = None) -> Dict:
     """스캔과 원장 갱신을 직렬화해 뒤늦은 통계가 새 색인을 덮지 않게 한다."""
     with _scans_lock:
-        return _scan_directory(path, scan_name, progress_callback)
+        return _scan_directory(path, scan_name, progress_callback, base)
 
 
-def _scan_directory(path: str, scan_name: Optional[str] = None, progress_callback=None) -> Dict:
+def _scan_directory(path: str, scan_name: Optional[str] = None, progress_callback=None,
+                    base: Optional[str] = None) -> Dict:
     """전체 순회가 성공한 파일 색인만 교체한다. 주석과 실패 전 색인은 보존한다."""
-    path = _normalize_path(os.path.abspath(expand_body_path(path)))
+    path = _abs(path, base)
     if not os.path.isdir(path):
         return {"success": False, "error": f"디렉토리가 아닙니다: {path}"}
     result = create_scan(path, scan_name)
@@ -347,7 +358,9 @@ def _scan_directory(path: str, scan_name: Optional[str] = None, progress_callbac
                         continue
                     filepath = os.path.join(root, filename)
                     try:
-                        stat = os.stat(filepath)
+                        # lstat — 링크는 링크 자체로 센다. 대상 추종은 깨진 링크를 접근 실패로,
+                        # 살아 있는 링크를 대상 크기의 이중 계상으로 만든다(74회차 B74-3 ③).
+                        stat = os.lstat(filepath)
                     except OSError as exc:
                         walk_error(exc)
                         continue
@@ -405,10 +418,13 @@ def get_summary_all() -> Dict:
             "last_scan": s.get('last_scan'),
         })
 
+    states = [_scan_completeness(s) for s in scans]
+    errors = [e for _, errs in states for e in errs]
     return {
         "success": True,
-        "source_complete": all(s.get("source_complete", True) for s in scans),
-        "errors": [e for s in scans for e in s.get("scan_errors", [])],
+        "source_complete": all(ok for ok, _ in states),
+        "errors": errors,
+        **({"message": _incomplete_note(errors)} if errors else {}),
         "volume_count": len(scans),
         "total_file_count": total_files,
         "total_size_mb": round(total_size / (1024 * 1024), 2),
@@ -420,33 +436,55 @@ def get_summary_all() -> Dict:
     }
 
 
-def _resolve_scan(root_path):
+_LEGACY_SCAN_NOTE = ("이 스캔은 접근 실패 기록(2026-09-29) 이전에 만들어져 누락 여부를 알 수 없습니다 "
+                     "(보호 폴더를 건너뛰고도 완전하다고 기록됐을 수 있음). 같은 경로를 다시 스캔하세요.")
+
+
+def _scan_completeness(scan):
+    """(완전 여부, 오류 표본). 완전성을 기록하지 않은 옛 스캔은 '완전'이 아니라 '미상'이다 —
+    `/` 스캔이 보호 폴더(~/Downloads)를 통째로 빠뜨리고도 그 아래 요약을 0건·완전으로 답했다."""
+    if "source_complete" not in scan:
+        return False, [{"path": scan.get("root_path"), "error": _LEGACY_SCAN_NOTE}]
+    return bool(scan["source_complete"]), list(scan.get("scan_errors") or [])
+
+
+def _incomplete_note(errors):
+    return f"스캔이 접근하지 못한 항목 {len(errors)}건 — 집계는 읽은 파일만 셉니다. 첫 사유: {errors[0].get('error')}"
+
+
+def _under(path, root):
+    """NFC 기준 포함 관계. 색인 경로는 파일시스템 원형(NFD 한글 폴더 포함)으로 저장돼 있다."""
+    path = _normalize_path(path)
+    return path == root or path.startswith(root.rstrip(os.sep) + os.sep)
+
+
+def _resolve_scan(root_path, base=None):
     """Resolve a name, path token, or subtree to the most specific scan."""
     scans = _load_scans_json()
     named = [x for x in scans if x['name'] == root_path]
     if len(named) > 1:
         raise ValueError("같은 이름의 스캔이 여러 개입니다. root_path를 지정하세요.")
-    path = named[0]['root_path'] if named else _normalize_path(os.path.abspath(expand_body_path(root_path)))
+    path = named[0]['root_path'] if named else _abs(root_path, base)
     enclosing = [x for x in scans if os.path.commonpath([x['root_path'], path]) == x['root_path']]
     return (max(enclosing, key=lambda x: len(x['root_path'])) if enclosing else None), path
 
 
-def get_summary(root_path: str) -> Dict:
+def get_summary(root_path: str, base: Optional[str] = None) -> Dict:
     """Complete extension and immediate-folder totals, including subtree queries."""
-    scan, path = _resolve_scan(root_path)
+    scan, path = _resolve_scan(root_path, base)
     if not scan:
         return {"success": False, "error": "이 경로를 품은 스캔이 없습니다. 먼저 상위 폴더를 스캔하세요."}
     conn = _get_connection(scan['id'])
     try:
         # Prefix matching in Python avoids SQL LIKE metacharacter surprises.
         rows = [dict(row) for row in conn.execute('SELECT path, extension, size FROM files')
-                if os.path.commonpath([row['path'], path]) == path]
+                if _under(row['path'], path)]
     finally:
         conn.close()
     extensions, folders = {}, {}
     for row in rows:
         ext = row['extension'] or '(없음)'
-        relative = os.path.relpath(row['path'], path)
+        relative = os.path.relpath(_normalize_path(row['path']), path)
         folder = relative.split(os.sep)[0] if os.sep in relative else '.'
         for groups, key in ((extensions, ext), (folders, folder)):
             item = groups.setdefault(key, {'count': 0, 'total_size': 0})
@@ -456,19 +494,27 @@ def get_summary(root_path: str) -> Dict:
         return [{field: k, **v, 'total_size_mb': round(v['total_size'] / 1048576, 2)}
                 for k, v in sorted(groups.items(), key=lambda kv: (-kv[1]['total_size'], kv[0]))]
     ext_stats, folder_stats = totals(extensions, 'extension'), totals(folders, 'folder')
+    complete, errors = _scan_completeness(scan)
+    if errors and path != scan['root_path']:
+        # 하위 경로 요약은 그 아래에서 난 실패만 불완전으로 센다(옛 스캔의 '미상'은 루트 표지라 늘 남는다).
+        # 실패 경로가 조회 경로의 안쪽이거나 조상(잠긴 폴더의 안쪽을 물은 경우)이면 불완전이다.
+        errors = [e for e in errors if not e.get('path') or e['path'] == scan['root_path']
+                  or _under(e['path'], path) or _under(path, _normalize_path(e['path']))]
+        complete = not errors
     return {'success': True, 'scan_id': scan['id'], 'name': scan['name'], 'root_path': path,
             'last_scan': scan.get('last_scan'), 'file_count': len(rows),
             'total_size_mb': round(sum(x['size'] for x in rows) / 1048576, 2),
             'top_extensions': ext_stats, 'folders': folder_stats, 'items': ext_stats,
             'count': len(ext_stats), 'truncated': False,  # truncation-scope: selection — 실제 반환 행 수와 전체 수 비교; 상한이 없으면 전량
-            'source_complete': scan.get('source_complete', True), 'errors': scan.get('scan_errors', [])}
+            'source_complete': complete, 'errors': errors,
+            **({'message': _incomplete_note(errors)} if errors else {})}
 
 
-def add_annotation(root_path: str, folder_path: str, note: str) -> Dict:
+def add_annotation(root_path: str, folder_path: str, note: str, base: Optional[str] = None) -> Dict:
     """Set one current note per existing folder, inside the selected scan."""
     with _scans_lock:
-        scan, _ = _resolve_scan(root_path)
-        folder_path = _normalize_path(os.path.abspath(expand_body_path(folder_path)))
+        scan, _ = _resolve_scan(root_path, base)
+        folder_path = _abs(folder_path, base)
         if not scan or os.path.commonpath([scan['root_path'], folder_path]) != scan['root_path']:
             return {'success': False, 'error': '주석 폴더는 선택한 스캔 안에 있어야 합니다.'}
         if not os.path.isdir(folder_path):
@@ -478,7 +524,7 @@ def add_annotation(root_path: str, folder_path: str, note: str) -> Dict:
             with conn:
                 # Also consolidate historical duplicates after path normalization.
                 for row in conn.execute('SELECT id, folder_path FROM annotations').fetchall():
-                    old = _normalize_path(os.path.abspath(expand_body_path(row['folder_path'])))
+                    old = _abs(row['folder_path'])
                     if old == folder_path:
                         conn.execute('DELETE FROM annotations WHERE id = ?', (row['id'],))
                 conn.execute('INSERT INTO annotations (folder_path, note) VALUES (?, ?)', (folder_path, note))
@@ -517,9 +563,9 @@ def get_annotations_all() -> Dict:
     return {"success": True, "annotations": annotations, "items": annotations, "count": len(annotations)}
 
 
-def get_annotations(root_path: str) -> Dict:
-    """폴더 주석 조회"""
-    scan, root_path = _resolve_scan(root_path)
+def get_annotations(root_path: str, base: Optional[str] = None) -> Dict:
+    """폴더 주석 조회 — 준 경로 아래의 주석만. 하위 폴더로 물으면 품은 스캔의 전부가 아니라 그 폴더 아래."""
+    scan, root_path = _resolve_scan(root_path, base)
 
     if not scan:
         return {"success": False, "error": "스캔 데이터가 없습니다.", "annotations": []}
@@ -534,8 +580,12 @@ def get_annotations(root_path: str) -> Dict:
 
     annotations = []
     for row in cursor.fetchall():
+        # 옛 행은 받은 토큰 원문(~workspace/…)으로 저장돼 있다 — 보여 줄 때도 한 해소점으로 푼다.
+        folder = _abs(row['folder_path'])
+        if not _under(folder, root_path):
+            continue
         annotations.append({
-            "folder_path": row['folder_path'],
+            "folder_path": folder,
             "note": row['note'],
             "created_at": row['created_at']
         })

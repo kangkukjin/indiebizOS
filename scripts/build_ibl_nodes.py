@@ -321,6 +321,21 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             print(f"[build_ibl_nodes] 선언-읽기 관문 통과 ✓ (판정 {dstats['checked']} · "
                   f"흐름 미관측 판정 불가 {dstats['undecidable']})")
 
+        # --- 사용자 경로 효과 관문 (2026-09-29, 74회차 B74-1·B74-2 밭 이관) ---
+        # 입력 경로 값의 흐름을 따라가 ① 판본 2 가 읽기로 계약한 op 가 사용자 위치에 쓰거나 지우는 자리
+        # (read 가 원본 옆에 _images/ 를 만듦) ② delete 밖에서 사용자 위치를 지우는 자리(copy/move 가
+        # 대상부터 rmtree)를 막는다. 읽기/쓰기 판정은 판본 2 효과 계약과 같은 함수(op_side_effect).
+        from iblbuild_user_path_effects import validate_user_path_effects
+        uissues, uunresolved = validate_user_path_effects(data, root)
+        if uissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 사용자 경로 효과 관문 실패: {len(uissues)}건", file=sys.stderr)
+            for issue in uissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print(f"[build_ibl_nodes] 사용자 경로 효과 관문 통과 ✓ (읽기 op 의 사용자 위치 쓰기 0 · "
+                  f"사유 없는 사용자 위치 삭제 0 · 시작점 미상 {len(uunresolved)})")
+
         # --- 선언 내부 모순 관문 (2026-09-07) ---
         # 산문은 모델이 읽고 타입은 관문이 읽는다. 09-05 수리가 memory keywords 의
         # 저장소·산문만 고치고 타입을 두어, 낱말이 "배열도 받습니다"라고 적어 놓은 채

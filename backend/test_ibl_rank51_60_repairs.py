@@ -243,7 +243,7 @@ def test_storage_volume_name_resolves(monkeypatch):
     mod = load('pc-manager')
     monkeypatch.setitem(sys.modules, 'storage_db', NS(
         list_scans=lambda: {'scans': [{'name': 'Photos', 'root_path': '/photos'}]},
-        get_summary=lambda p: {'resolved': p}))
+        get_summary=lambda p, base=None: {'resolved': p}))
     assert json.loads(mod._get_storage_summary({'volume_name': 'photos'}))['resolved'] == '/photos'
 
 

@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "storage_op",
-      "description": "저장소 인덱스 조작 (op 분기) — [self:storage].\n- op=volumes (기본): 스캔된 볼륨 목록 (파라미터 없음).\n- op=scan: 디스크·볼륨 스캔 후 SQLite 인덱스 구축 (path 필수). 이후 query_storage로 검색.\n- op=summary: 저장소 사용량 요약 (volume_name 필수, 총 파일 수/용량/확장자별 통계).\n\n## 예시\n- storage_op()                                  # 기본 volumes\n- storage_op(op='scan', path='/Volumes/MyDrive')\n- storage_op(op='summary', volume_name='MyDrive')",
+      "description": "저장소 인덱스 조작 (op 분기) — [self:storage].\n- op=volumes (기본): 스캔된 볼륨 목록 (파라미터 없음).\n- op=scan: 디스크·볼륨 스캔 후 SQLite 인덱스 구축 (path 필수). 접근 못 한 항목은 건너뛰고 errors 로 신고.\n- op=summary: 저장소 사용량 요약 (root_path=스캔 루트 또는 그 아래 폴더, 또는 volume_name. 생략 시 전체 통합. 확장자별 items + 바로 아래 폴더별 folders).\n\n## 예시\n- storage_op()                                  # 기본 volumes\n- storage_op(op='scan', path='/Volumes/MyDrive')\n- storage_op(op='summary', volume_name='MyDrive')",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -38,13 +38,13 @@
     },
     {
       "name": "folder_note_op",
-      "description": "폴더 주석 관리 (op 분기) — [self:folder_note].\n- op=detail (기본): 저장된 폴더 주석 조회 (root_path 필수).\n- op=set: 폴더에 메모·주석 추가 (root_path + folder_path + note 필수).\nroot_path는 storage_op(op='scan')으로 스캔한 볼륨 경로.\n\n## 예시\n- folder_note_op(op='set', root_path='/Volumes/MyDrive', folder_path='/Volumes/MyDrive/backup', note='2023 백업')\n- folder_note_op(op='get', root_path='/Volumes/MyDrive')",
+      "description": "폴더 주석 관리 (op 분기) — [self:folder_note].\n- op=detail (기본): 저장된 폴더 주석 조회 (root_path 를 주면 그 경로 아래만, 생략 시 전체).\n- op=set: 폴더에 메모 달기 (folder_path + note 필수, 같은 폴더 재set = 메모 교체).\nroot_path는 그 폴더를 품은, storage_op(op='scan')으로 스캔한 볼륨 경로.\n\n## 예시\n- folder_note_op(op='set', root_path='/Volumes/MyDrive', folder_path='/Volumes/MyDrive/backup', note='2023 백업')\n- folder_note_op(op='detail', root_path='/Volumes/MyDrive')",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "get=주석 조회(기본), set=주석 추가",
+            "description": "detail=주석 조회(기본), set=주석 달기·교체",
             "enum": [
               "set",
               "detail"
@@ -53,7 +53,7 @@
           },
           "root_path": {
             "type": "string",
-            "description": "스캔된 볼륨 경로 (set/get 모두 필수). volume_name으로도 받음"
+            "description": "폴더를 품은 스캔 볼륨 경로(생략 시 folder_path 를 품은 가장 깊은 스캔). volume_name으로도 받음"
           },
           "folder_path": {
             "type": "string",

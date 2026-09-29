@@ -5117,7 +5117,7 @@ nodes:
         fixture: '[self:storage]{op: "volumes"}'
         description: 디스크 용량 분석 (op 분기) — summary·volumes 는 items 병기(>> table 파이프 접속 가능). ★파일 검색은 file_find·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
-        target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
+        target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — root_path 는 스캔 루트 또는 그 아래 어느 폴더든(그 경로를 품은 가장 깊은 스캔에서 집계), items=확장자별 행 전부, folders=그 경로 바로 아래 폴더별 행('.'=그 경로 자신의 파일). 접근 못 한 항목이 있거나 완전성 기록 이전의 옛 스캔이면 원천 불완전으로 알린다(다시 scan). volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
         target_key: op
         router: handler
         tool: storage_op
@@ -5148,7 +5148,7 @@ nodes:
         fixture: '[self:folder_note]{op: "detail"}'
         description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/detail(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file
-        target_description: set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. detail — root_path/volume_name 생략 시 전체 볼륨 주석 통합 조회.
+        target_description: set — folder_path(메모 달 폴더, 실존·스캔 범위 안) + note 필수. root_path 는 그 폴더를 품은 스캔 볼륨이며, path 하나만 주면 그 폴더에 달고 품은 가장 깊은 스캔을 찾는다. 같은 폴더를 다시 set 하면 메모를 바꾼다. detail — root_path/volume_name 을 주면 그 경로 아래 주석만, 생략 시 전체 볼륨 주석 통합 조회.
         target_key: op
         router: handler
         tool: folder_note_op
@@ -5301,7 +5301,7 @@ nodes:
           impl: 3c31b0566918933b
           dependencies:
             backend/common/expression_eval.py: ef54b93159bea1bb8727f4e56a887d54940409c06ac0115db204ede691242fd0
-            backend/common/expression_functions.py: 2bb5513d5b7d82887213c3f14b40ad962cd1df0795d80f846bdfb33a458f805e
+            backend/common/expression_functions.py: 34bb2bee5baef17829c4d4014ce1af9c82647d79cbecc46da1488118ab8f56b2
             backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
             backend/common/expression_ops.py: e215c90db04dfa6e8a37dfefc214a82f8aee27f35bc0d231a86d671aba7ef96f
@@ -5549,7 +5549,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-29'
-          impl: 57339c7a570f9fa1
+          impl: d941b0c974b863e4
         target_key: path
         aliases:
           offset:
@@ -5562,7 +5562,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-29'
-          impl: 57339c7a570f9fa1
+          impl: d941b0c974b863e4
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6323,7 +6323,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-29'
-          impl: 57339c7a570f9fa1
+          impl: d941b0c974b863e4
         pipe_in: true
         lands_on: body
         limb_op:

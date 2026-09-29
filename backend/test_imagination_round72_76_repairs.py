@@ -335,8 +335,14 @@ def test_storage_scan_reports_inaccessible_file_and_retains_other_results(tmp_pa
     monkeypatch.setattr(mod, 'SCANS_JSON', str(tmp_path / 'index/scans.json'))
     root = tmp_path / 'source'; root.mkdir()
     (root / 'good.txt').write_text('good')
-    (root / 'broken.txt').symlink_to(root / 'missing.txt')
-    result = mod.scan_directory(str(root))
+    (root / 'locked').mkdir(); (root / 'locked' / 'x.txt').write_text('x')
+    # 접근 실패의 예 = 잠긴 폴더(74회차 후속: 깨진 링크는 lstat 로 링크 하나로 센다 — 실패가 아니다).
+    import os
+    os.chmod(root / 'locked', 0o000)
+    try:
+        result = mod.scan_directory(str(root))
+    finally:
+        os.chmod(root / 'locked', 0o755)
     assert result['success'] and result['file_count'] == 1
     assert result['error_count'] == 1 and result['source_complete'] is False
     assert mod.get_summary(str(root))['source_complete'] is False

@@ -31,7 +31,8 @@ def execute(tool_input: dict, context) -> str:
             fn = _OP_DISPATCHERS[tool_name].get(op)
             if fn is None:
                 return _unknown_op(tool_name, op)
-            return fn(tool_input)
+            # 상대 경로의 기준 = 호출한 프로젝트(system_essentials 의 _project_path 배관과 같은 규약).
+            return fn({**tool_input, "_project_path": getattr(context, "project_path", None)})
 
         return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
 
@@ -60,7 +61,7 @@ def _scan_storage(tool_input: dict) -> str:
                           ensure_ascii=False)
 
     volume_name = tool_input.get("volume_name")
-    result = storage_db.scan_directory(path, volume_name)
+    result = storage_db.scan_directory(path, volume_name, base=tool_input.get("_project_path"))
 
     if result["success"]:
         # scan_directory 반환 키: name/file_count/total_size_mb/error_count
@@ -81,22 +82,25 @@ def _annotate_folder(tool_input: dict) -> str:
     """폴더 주석 추가"""
     import storage_db
 
-    # add_annotation(root_path, folder_path, note) — root_path로 스캔된 볼륨 DB를 찾는다.
-    root_path = tool_input.get("root_path") or tool_input.get("volume_name")
+    # add_annotation(root_path, folder_path, note) — root_path 를 품은 가장 깊은 스캔 볼륨 DB 를 찾는다.
+    # root_path 생략 = 폴더 자신으로 찾는다(storage_db._resolve_scan 이 하위 경로를 품은 스캔으로 해소).
     folder_path = tool_input.get("folder_path")
+    root_path = tool_input.get("root_path") or tool_input.get("volume_name") or folder_path
     note = tool_input.get("note")
 
-    if not root_path or not folder_path or not note:
+    if not folder_path or not note:
         return json.dumps({"success": False,
-                           "error": "root_path(스캔된 볼륨 경로), folder_path, note가 모두 필요합니다"},
+                           "error": "folder_path(메모 달 폴더)와 note가 필요합니다"},
                           ensure_ascii=False)
 
-    result = storage_db.add_annotation(root_path, folder_path, note)
+    result = storage_db.add_annotation(root_path, folder_path, note, base=tool_input.get("_project_path"))
 
     if result["success"]:
+        # 응답은 저장된(해소된) 경로를 말한다 — 받은 토큰 원문을 되풀이하면 저장 키를 오해한다.
         return json.dumps({
             "success": True,
-            "message": f"주석 추가됨: {folder_path}",
+            "message": f"주석 추가됨: {result['folder_path']}",
+            "folder_path": result["folder_path"],
             "note": note
         }, ensure_ascii=False)
     else:
@@ -135,7 +139,7 @@ def _get_storage_summary(tool_input: dict) -> str:
     if not root_path:
         result = storage_db.get_summary_all()
     else:
-        result = storage_db.get_summary(root_path)
+        result = storage_db.get_summary(root_path, base=tool_input.get("_project_path"))
 
     return json.dumps(result, ensure_ascii=False)
 
@@ -165,7 +169,7 @@ def _get_folder_annotations(tool_input: dict) -> str:
     if not root_path:
         result = storage_db.get_annotations_all()
     else:
-        result = storage_db.get_annotations(root_path)
+        result = storage_db.get_annotations(root_path, base=tool_input.get("_project_path"))
 
     return json.dumps(result, ensure_ascii=False)
 

@@ -938,7 +938,7 @@
   "self:folder_note": {
    "fields": {
     "description": "b1639aef82c4",
-    "target_description": "b7620f97ada5",
+    "target_description": "746215636fec",
     "implementation": "25ee69f1881e",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
@@ -948,7 +948,7 @@
     "router": "ebbb1532efbc",
     "tool": "7099152721fd"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 22
   },
   "self:forage": {
@@ -1396,7 +1396,7 @@
   "self:storage": {
    "fields": {
     "description": "c13de1237fa6",
-    "target_description": "a3340e2d8be6",
+    "target_description": "6cc98e4e6ad2",
     "implementation": "c85b2d7f9542",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
@@ -1406,7 +1406,7 @@
     "router": "ebbb1532efbc",
     "tool": "f207f76bc6d5"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 12
   },
   "self:struct": {

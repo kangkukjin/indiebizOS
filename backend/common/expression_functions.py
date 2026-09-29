@@ -50,6 +50,20 @@ def listing(value):
     return value
 
 
+# 판본 2 에서 실제로 서는 다중 키 정렬만 안내한다(74회차 F74-1 후속: 옛 안내가 권한 목록 키 콜백과
+# table:sort 의 by 목록은 둘 다 판본 2 에서 거절된다 — 안내가 실패하는 형태를 가르치던 자리).
+_MULTI_KEY_HINT = ('여러 키로 정렬하려면 뒤 키부터 차례로 정렬하세요(정렬은 안정적): '
+                   'sorted(sorted($목록, "b"), "a") 또는 >> [table:sort]{by:"b"} >> [table:sort]{by:"a"}.')
+
+
+def _unordered_key_hint(left, right):
+    if isinstance(left, (list, tuple, dict)) or isinstance(right, (list, tuple, dict)):
+        return '목록·레코드 키는 순서가 없습니다. ' + _MULTI_KEY_HINT
+    if isinstance(left, bool) or isinstance(right, bool):
+        return 'Bool 키는 순서가 없습니다. 조건 값으로 숫자 키를 만드세요: ($r) => $r.조건 ? 0 : 1.'
+    return '키는 모두 Number, Text 또는 같은 종류의 시각이어야 합니다.'
+
+
 def call(name, args, tick, callback=None):
     first = args[0]
     if name in ('split', 'replace', 'strip', 'upper', 'lower', 'contains', 'join'):
@@ -123,13 +137,13 @@ def call(name, args, tick, callback=None):
             elif callback is not None:
                 k = callback(key, row)
             else:
-                raise Fault('CALLABLE', 'sorted의 key는 Text, Callable 또는 null입니다. 다중 키는 (행) => [행.a, 행.b] 콜백이나 table:sort의 by 목록을 사용하세요.')
+                raise Fault('CALLABLE', 'sorted의 key는 Text, Callable 또는 null입니다. ' + _MULTI_KEY_HINT)
             decorated.append((k, row))
         def compare(a, b):
             tick()
             order = compare_order(a[0], b[0])
             if order is None:
-                raise Fault('UNORDERED', 'sorted의 키를 서로 비교할 수 없습니다.')
+                raise Fault('UNORDERED', 'sorted의 키를 서로 비교할 수 없습니다. ' + _unordered_key_hint(a[0], b[0]))
             return order
         return [row for _, row in sorted(decorated, key=cmp_to_key(compare), reverse=reverse)]
     if name in ('unique', 'union', 'intersection', 'difference'):

@@ -363,6 +363,18 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 표시 칸 접기 관문 통과 ✓ (meta·summary 에 접은 값 = 같은 행 구조 칸에도)")
 
+        # --- 원천 정직 관문 (2026-09-29, 79회차 B79-3 밭 이관) ---
+        # ① 구조 미발견·원천 실패를 0건 성공으로 내는 생산자 ② source enum 원천마다 실행 예시(변이 축).
+        from iblbuild_source_honesty import validate_source_miss, validate_source_axes
+        hissues = validate_source_miss(root) + validate_source_axes(data, root)
+        if hissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 원천 정직 관문 실패: {len(hissues)}건", file=sys.stderr)
+            for issue in hissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 원천 정직 관문 통과 ✓ (구조 미발견 ≠ 0건 · source 원천마다 실행 예시)")
+
         # --- 원천 요청 한도 관문 (2026-09-29, 77회차 F77-2 밭 이관) ---
         from iblbuild_rate_limits import validate_rate_limits
         rissues = validate_rate_limits(root)

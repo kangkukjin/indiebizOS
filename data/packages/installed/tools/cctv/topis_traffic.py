@@ -55,7 +55,9 @@ def _fetch_list(keyword: str = "") -> List[Dict]:
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode("utf-8"))
 
-        rows = data.get("rows", [])
+        rows = data.get("rows") if isinstance(data, dict) else None
+        if not isinstance(rows, list):
+            raise ValueError("TOPIS 응답에 rows 목록이 없습니다(원천 구조 변경)")
 
         if not keyword and rows:
             _list_cache = rows
@@ -65,8 +67,10 @@ def _fetch_list(keyword: str = "") -> List[Dict]:
         return rows
 
     except Exception as e:
+        # 조회 실패를 빈 목록으로 삼키면 "주변 CCTV 0대"가 사실처럼 나간다(79회차 B79-3 census —
+        # 구조 미발견·원천 실패 ≠ 0건). 호출자가 error_response 로 올린다.
         print(f"[TOPIS] 목록 조회 실패: {e}")
-        return []
+        raise RuntimeError(f"TOPIS CCTV 목록 조회 실패: {e}") from e
 
 
 def _get_hls_url(cam_id: str) -> Optional[str]:
@@ -170,7 +174,10 @@ def get_nearby_cctv(lat: float, lng: float, radius: float = 5.0,
 
 def get_data_stats() -> str:
     """TOPIS 데이터 통계"""
-    all_cams = _fetch_list("")
+    try:
+        all_cams = _fetch_list("")
+    except Exception as e:
+        return error_response(str(e))
     return success_response(
         total_cctv=len(all_cams),
         data_source="TOPIS 서울교통정보시스템",

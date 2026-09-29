@@ -169,7 +169,18 @@ def place_search(tool_input: dict) -> dict:
     items, total, err = _paged(endpoint, params, limit)
     if err:
         return err
+    # 상한 조정(결과 45건·반경 20km — 카카오 스펙)은 봉투가 말한다(침묵 클램프 관문, 79회차 재탐침:
+    # 반경 조정이 message 문자열에만 있었다).
+    requested, applied = {}, {}
+    if _i(tool_input.get("limit"), 15) > limit:
+        requested["limit"], applied["limit"] = tool_input.get("limit"), limit
+    if has_coord and radius is not None and _i(radius, 5000) != params.get("radius"):
+        requested["radius"], applied["radius"] = radius, params.get("radius")
+    clamp = ({"clamped": True, "requested": requested, "applied": applied,
+              "clamp_message": "카카오 상한으로 조정: " + ", ".join(
+                  f"{k} {requested[k]}→{applied[k]}" for k in requested)} if requested else {})
     return {
+        **clamp,
         "items": items,
         "count": len(items),
         "total": total,

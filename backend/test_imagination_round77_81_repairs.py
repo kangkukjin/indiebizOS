@@ -291,12 +291,16 @@ def test_engine_health_agrees_with_string_failure(monkeypatch):
     assert kwargs.get('success', args[2] if len(args) > 2 else None) is False
 
 
-@pytest.mark.parametrize('html,success', [('<html>changed</html>', False),
-    ('<script type="application/ld+json">{"@type":"ItemList","itemListElement":[]}</script>', True)])
-def test_danggeun_schema_drift_is_not_empty_result(monkeypatch, html, success):
+# 79회차 재탐침 후속(2026-09-29): 당근 검색은 JSON-LD 가 아니라 검색 로더 JSON(buySellArticles)을 읽는다.
+# 구조 미발견(옛 JSON-LD HTML 포함) = source_changed, 정상 빈 로더 = 성공 0건(+empty_notes).
+@pytest.mark.parametrize('body,success', [('<html>changed</html>', False),
+    ('<script type="application/ld+json">{"@type":"ItemList","itemListElement":[]}</script>', False),
+    ('{"buySellArticles": [], "currentFilters": {"regionId": "1"}}', True)])
+def test_danggeun_schema_drift_is_not_empty_result(monkeypatch, body, success):
     mod = module('shopping-assistant', 'tool_used')
-    monkeypatch.setattr(mod, '_get', lambda *a, **k: (html, 200))
-    value = mod.search_danggeun('fixture')
+    monkeypatch.setattr(mod, '_resolve_danggeun_region', lambda r: (1, 'fixture'))
+    monkeypatch.setattr(mod, '_get', lambda *a, **k: (body, 200))
+    value = mod.search_danggeun('fixture', region='fixture')
     assert value.get('success', True) is success
     if not success:
         assert value['error_type'] == 'source_changed'

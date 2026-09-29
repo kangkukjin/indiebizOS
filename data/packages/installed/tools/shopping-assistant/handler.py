@@ -102,8 +102,8 @@ async def search_danawa_shopping_async(query: str, display: int = 5):
         _td = _ilu.module_from_spec(_spec)
         _spec.loader.exec_module(_td)
         res = _td.search_danawa(query, display)
-        if res.get("items"):
-            return res
+        if res.get("items") or res.get("empty_reason") == "no_results":
+            return res   # 정상 결과·정상 0건 — 폴백은 HTTP 실패·구조 변경일 때만
     except Exception:
         pass  # 아래 Playwright 폴백으로
 
@@ -123,9 +123,12 @@ async def search_danawa_shopping_async(query: str, display: int = 5):
 
             try:
                 await page.wait_for_selector(".product_list .prod_main_info", timeout=5000)
-            except:
+            except Exception:
                 await browser.close()
-                return {"total": 0, "items": []}
+                # 목록 요소를 못 찾은 것은 0건이 아니다 — 구조 변경과 결과 없음을 여기선 가를 수 없다.
+                return {"success": False, "error_type": "source_changed", "total": 0, "items": [],
+                        "error": "다나와 브라우저 폴백에서 상품 목록 요소를 찾지 못했습니다(구조 변경 의심). "
+                                 "0건으로 해석하지 마세요."}
 
             items_els = await page.query_selector_all(".product_list .prod_main_info")
             items = []
@@ -225,7 +228,8 @@ def _handle_used(tool_input: dict) -> str:
     elif source == "naver":
         res = _search_naver_used(query, limit)
     elif source == "danggeun":
-        res = _tu.search_danggeun(query, limit=limit, region=region)
+        res = _tu.search_danggeun(query, limit=limit, region=region,
+                                  requested_limit=tool_input.get("limit"))
     else:
         return format_json({
             "success": False,

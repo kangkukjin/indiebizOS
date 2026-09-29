@@ -827,7 +827,7 @@ nodes:
         fixture: '[sense:performance]{}'
         description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take·table:document 파이프로 추리고 문서화.
         group: culture
-        target_description: search — query(공연명/키워드)·genre·region·status·date_from/date_to(날짜 범위, 둘 함께 입력)·days(날짜 생략 시 오늘부터 N일) 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록). status 생략 시 예정 공연도 포함한다. region/genre/status는 알려진 이름이나 코드만 받는다. KOPIS 오류 XML이나 점검 HTML은 검색 0건으로 취급하지 않고 명시적 오류로 반환한다.
+        target_description: search — query(공연명/키워드)·genre·region·status·date_from/date_to(날짜 범위, 둘 함께 입력)·days(날짜 생략 시 오늘부터 N일) 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록). status 생략 시 예정 공연도 포함한다. region/genre/status는 알려진 이름이나 코드만 받는다(시·군 이름은 거절 — 시도로 검색한 뒤 제목·장소로 거를 것). 행에 title_key(대괄호 지역 태그·공백·구두점을 걷은 비교용 제목) — 전시(exhibit)와 union 하면 같은 공연이 다른 제목으로 두 번 오므로 dedup{by:["title_key","place_key"]} (place_key=장소를 같은 규칙으로 정규화 — 공연 fcltynm·전시 place). KOPIS 오류 XML이나 점검 HTML은 검색 0건으로 취급하지 않고 명시적 오류로 반환한다.
         target_key: op
         router: handler
         tool: performance_op
@@ -892,7 +892,7 @@ nodes:
         fixture: '[sense:exhibit]{query: "미술"}'
         description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance. items 통화 — table 파이프·& 병렬(공연과 동시 검색) 조합.
         group: culture
-        target_description: 검색어 또는 키워드 (예 '국립중앙박물관', '미디어아트').
+        target_description: 검색어 또는 키워드 (예 '국립중앙박물관', '미디어아트'). 행에 lat/lng(원천 gpsY/gpsX 숫자 병기)·start_date/end_date·title_key(대괄호 지역 태그·공백·구두점을 걷은 비교용 제목). KCISA 는 연극·뮤지컬·축제도 함께 주므로 공연(performance)과 union 하면 같은 공연이 두 번 온다 — dedup{by:["title_key","place_key"]} (place_key=장소를 같은 규칙으로 정규화 — 공연 fcltynm·전시 place).
         router: handler
         tool: kcisa_quick_search
         implementation: 한국문화정보원(KCISA) API로 전시/문화행사 검색
@@ -1416,7 +1416,7 @@ nodes:
         target_description: 검색어 (강남 파스타 등). x(경도)/y(위도)/radius로 좌표 주변 검색, limit(기본 30, 최대 45), enrich:false면 블로그 근거 생략(빠름).
         router: handler
         tool: search_restaurants
-        implementation: Kakao(페이지네이션 15×3=45) + Naver Local 듀얼 검색, 가게명 정규화로 중복 병합. 상위 12곳은 네이버 블로그 검색(/v1/search/blog.json)으로 blog_count·reason(가게명 등장 글 제목만) 병렬 부착 후 언급순 정렬. url=카카오 place.map.kakao.com(평점/리뷰 페이지).
+        implementation: Kakao(페이지네이션 15×3=45) + Naver Local 듀얼 검색, 가게명 정규화로 중복 병합. 상위 12곳은 네이버 블로그 검색(/v1/search/blog.json, 검색어 = 행 주소의 시·군·구 + 가게명 — 주소 없는 행은 검색 좌표의 역지오코딩 시·군·구)으로 blog_count·reason(가게명 등장 글 제목만) 병렬 부착 후 언급순 정렬. url=카카오 place.map.kakao.com(평점/리뷰 페이지).
         target_key: query
         app:
           icon: 🍴
@@ -2385,24 +2385,28 @@ nodes:
           - q
         returns: items
         fixture: '[sense:used]{source: "bunjang", query: "맥미니 m4 pro"}'
+        shape_variants:
+          source=danggeun: '[sense:used]{source: "danggeun", query: "자전거", region: "역삼동", limit: 5}'
+          source=joongna: '[sense:used]{source: "joongna", query: "자전거", limit: 5}'
+          source=naver: '[sense:used]{source: "naver", query: "자전거", limit: 5}'
         description: 중고 C2C 매물 검색 (source 분기). 당근·번개장터·중고나라·네이버카페 중고 매물을 items 통화로. 자주 하는 중고 검색을 어휘화.
         group: research
         target_description: '중고 거래 매물 검색. source로 플랫폼 선택.
 
-          - source=bunjang(기본): 번개장터 내부 API — 제목·가격·위치·링크가 담긴 깨끗한 매물. region=지역이름(예 "청주") 주면 위치 substring 후필터(반경 아님).
+          - source=bunjang(기본): 번개장터 내부 API — 제목·가격·위치·링크가 담긴 깨끗한 매물. region=지역이름(예 "청주") 주면 위치 substring 후필터(반경 아님). ★번개장터엔 지역 검색 인자가 없어 전국 최신순을 최대 200행까지 훑어 거른다 — 위치 미표기 매물(대다수)은 판정 불가로 빠진다(unlocated). 봉투의 scanned=훑은 행 수, 상한에 닿아 limit 을 못 채우면 truncations(reason scan_limit). 0건은 ''그 지역 매물 없음''이 아니라 ''최신 표본에 없음''이다.
 
-          - source=danggeun: 당근 — region=동이름(예 "죽백동") 주면 그 동네+인근 동으로 스코프(''내동네'' 검색, 지역ID 자동 해소). ★동네 매물 검색엔 이걸 우선. 제목·가격·설명·사진·링크.
+          - source=danggeun: 당근 — region=동이름(예 "죽백동", 필수) 그 동네+인근 동으로 스코프(''내동네'' 검색, 지역ID 자동 해소). ★동네 매물 검색엔 이걸 우선. 제목·가격·설명·사진·링크·매물 동(region)·상태. 당근 검색 서버가 느릴 때 0건을 주는 현상이 있어 0건이면 empty_notes 로 미확인임을 말한다.
 
           - source=joongna: 중고나라 web 검색(제목·가격·링크, best-effort 파싱).
 
           - source=naver: 네이버 카페 통합검색(중고나라 카페 등 게시글).
 
-          query=검색어(필수). limit=개수(기본15). region=지역 필터(bunjang=위치 substring / danggeun=동네 스코프).'
+          query=검색어(필수). limit=개수(기본15). region=지역 필터(bunjang=위치 substring 후필터 / danggeun=동네 스코프, 필수).'
         target_key: query
         router: handler
         tool: used_search
         scope: workspace
-        implementation: source 분기 — bunjang=api.bunjang.co.kr find_v2.json(위치 후필터) / danggeun=regions/keyword 지역해소→/kr/buy-sell JSON-LD ItemList(전체결과 한방) / joongna=web RSC 파싱 / naver=api_call cafearticle. tool_used.py.
+        implementation: source 분기 — bunjang=api.bunjang.co.kr find_v2.json(region 이면 40행×최대 5쪽 훑어 위치 후필터, scanned·unlocated·scan_limit 신고) / danggeun=regions/keyword 지역해소→/kr/search/buy-sell Remix 로더 JSON(_data=routes/kr.search.buy-sell._index)의 buySellArticles(구조 미발견=source_changed, 0건=1회 재시도 후 empty_notes) / joongna=web RSC 파싱 / naver=api_call cafearticle. tool_used.py.
         keywords:
         - 중고
         - 중고거래
@@ -2551,6 +2555,11 @@ nodes:
         returns: items
         side_effect: true
         fixture: '[sense:paper]{query: "attention"}'
+        shape_variants:
+          source=arxiv: '[sense:paper]{op: "search", query: "attention", source: "arxiv", limit: 3}'
+          source=pubmed: '[sense:paper]{op: "search", query: "sleep", source: "pubmed", limit: 3}'
+          source=semantic: '[sense:paper]{op: "search", query: "attention", source: "semantic", limit: 3}'
+          source=nanet: '[sense:paper]{op: "search", query: "인공지능", source: "nanet", limit: 3}'
         description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
         target_description: "선택 필터(원천별 지원 밖이면 check·실행이 거절) — 연도 year·year_from·year_to=전 원천, open_access=nanet 외, sort_by=openalex(relevance|cited|recent)·arxiv/pubmed(relevance|recent)·semantic(relevance), type·page=nanet. 반환 열: title·authors(전원)·year·journal/venue·citations·doi·arxiv_id/pmid 등 구조 칸 + 표시용 meta·summary·url. op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
         target_key: op
@@ -2782,6 +2791,11 @@ nodes:
             closed: true
         side_effect: false
         fixture: '[sense:search]{query: "climate policy"}'
+        shape_variants:
+          source=naver: '[sense:search]{query: "기후 정책", source: "naver", limit: 3}'
+          source=gnews: '[sense:search]{query: "climate policy", source: "gnews", limit: 3}'
+          source=hn: '[sense:search]{query: "rust", source: "hn", limit: 3}'
+          source=guardian: '[sense:search]{query: "climate policy", source: "guardian", limit: 3}'
         description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
         group: research
         target_description: 검색어. gnews/hn 정상 0건은 성공한 빈 items이며 HTTP·파싱·시간 초과 오류와 구별한다. 배치 실패는 errors에 남기고 성공한 행은 보존한다. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). ★검색어가 여럿이면 한 호출에 — queries:["…","…"](모든 source 공통 배치 — 병렬로 돌려 행마다 query 태그, sections 에 검색어별 건수, 실패한 검색어만 errors). 소스가 다르면 & 로 잇는다. naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·curate(경량 편집장) 지원. ★hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days(최근 N일) 를 줄 것. hn·gnews·guardian·naver(news) 결과의 date 필드가 ISO8601 aware 게시일, naver(blog)는 날짜만(YYYY-MM-DD) — 발행일 파싱 불능 행은 date 없음. 신선도 술어는 우변도 aware 로 쓸 것 — 예 where "date >= 2026-08-07T00:00:00Z" (날짜만 리터럴은 naive 라 aware 값과 혼합 판정 불능 — ISO 시간 의미론 2026-08-27 판정).

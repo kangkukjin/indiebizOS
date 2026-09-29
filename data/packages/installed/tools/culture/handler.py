@@ -1,6 +1,7 @@
 """공연·전시: KOPIS 공연·공연장과 KCISA 문화행사 조회."""
 import json
 import os
+import re
 import sys
 from common.response_formatter import normalize_api_display as _normalize
 
@@ -31,6 +32,32 @@ def _attach_period(items, from_key: str, to_key: str):
             it["start_date"] = sd
         if ed and "end_date" not in it:
             it["end_date"] = ed
+
+
+_BRACKET_TAG = re.compile(r"\[[^\]]*\]|【[^】]*】")
+_NON_WORD = re.compile(r"[^0-9a-z가-힣]+")
+
+
+def _title_key(title) -> str:
+    """교차 식별용 정규 제목 — 대괄호 태그([지역]·【앵콜】)·공백·구두점을 걷고 소문자로.
+
+    같은 공연이 KOPIS "제목 [지역]" 와 KCISA "[지역] 제목 "(끝 공백)로 와서
+    `dedup{by:"title"}` 가 둘 다 남겼다(79회차 F79-1). 표시 제목(title)은 원문 그대로 두고
+    비교용 칸만 병기한다 — 공연∪전시는 title_key + 장소로 dedup."""
+    base = _BRACKET_TAG.sub(" ", str(title or ""))
+    return _NON_WORD.sub("", base.lower())
+
+
+def _attach_title_key(items):
+    """title_key·place_key 병기. 대괄호 지역 태그를 걷은 title_key 만으로는 순회 공연([지역A]·[지역B])이
+    한 줄로 접히므로 장소도 같은 정규화로 싣는다 — 교차 dedup 키 = [title_key, place_key]."""
+    for it in items or []:
+        if not isinstance(it, dict):
+            continue
+        if "title_key" not in it:
+            it["title_key"] = _title_key(it.get("title") or it.get("prfnm"))
+        if "place_key" not in it:
+            it["place_key"] = _title_key(it.get("place") or it.get("fcltynm"))
 
 
 def _perf_search(ti: dict):
@@ -72,6 +99,10 @@ def _perf_search(ti: dict):
         for _it in result["items"]:
             if isinstance(_it, dict) and _it.get("prfnm") and "title" not in _it:
                 _it["title"] = _it["prfnm"]
+            # 장소 칸 병기(F79-1) — 전시(KCISA)는 place, 공연(KOPIS)은 fcltynm. 교차 dedup 키를 한 이름으로.
+            if isinstance(_it, dict) and _it.get("fcltynm") and "place" not in _it:
+                _it["place"] = _it["fcltynm"]
+        _attach_title_key(result["items"])   # F79-1 — 전시와 교차 dedup 용 비교 칸
     return result
 
 
@@ -147,12 +178,22 @@ def execute(tool_input: dict, context) -> str:
                     for key, original in (("lat", "gpsY"), ("lng", "gpsX")):
                         value = numeric_value(row.get(original))
                         row[key] = float(value) if value is not None else None
+                _attach_title_key(result["items"])   # F79-1 — 공연과 교차 dedup 용 비교 칸
 
         else:
             return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
 
         return json.dumps(_normalize(result), ensure_ascii=False, indent=2)
 
+    except ValueError as e:
+        # 코드표 밖 값(region·genre·status) — 허용 이름·다음 걸음을 구조로(79회차 B79-2).
+        allowed = getattr(e, "allowed", None)
+        if allowed is None:
+            return json.dumps({"success": False, "error": f"도구 실행 중 오류 발생: {str(e)}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": str(e), "error_type": "invalid_value",
+                           **({"allowed": allowed} if allowed else {}),
+                           **({"hint": e.hint} if getattr(e, "hint", None) else {})},
+                          ensure_ascii=False)
     except ImportError as e:
         return json.dumps({"success": False, "error": f"모듈 임포트 오류: {str(e)}"}, ensure_ascii=False)
     except Exception as e:

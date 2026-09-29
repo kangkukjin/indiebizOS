@@ -1693,7 +1693,7 @@
   "sense:exhibit": {
    "fields": {
     "description": "6734dbd6f690",
-    "target_description": "3f5077c2704e",
+    "target_description": "b2fec97c0b1a",
     "implementation": "80729cfec4ab",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
@@ -1701,7 +1701,7 @@
     "router": "ebbb1532efbc",
     "tool": "d7e9aa417e0b"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 14
   },
   "sense:feed": {
@@ -1859,7 +1859,7 @@
   "sense:performance": {
    "fields": {
     "description": "052649e50f22",
-    "target_description": "f7aad0ca5efd",
+    "target_description": "a37232b2f870",
     "implementation": "f7ffc8492374",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1959,13 +1959,13 @@
    "fields": {
     "description": "43e1731d4cdd",
     "target_description": "fcfc1bf13bce",
-    "implementation": "adfb82f3692d",
+    "implementation": "2f20addd9ee6",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
     "router": "ebbb1532efbc",
     "tool": "c8ba926b197c"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 23
   },
   "sense:reverse_geocode": {
@@ -2117,15 +2117,15 @@
   "sense:used": {
    "fields": {
     "description": "706f004318bc",
-    "target_description": "260ca64a890a",
-    "implementation": "4ef6cb3f9cfa",
+    "target_description": "20d2af732cac",
+    "implementation": "5289919e39b3",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
     "aliases": "96cc7b816c74",
     "router": "ebbb1532efbc",
     "tool": "86d9404c5eca"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 31
   },
   "sense:video": {

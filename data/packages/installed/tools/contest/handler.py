@@ -13,6 +13,15 @@ if _backend_dir not in sys.path:
 from common.api_client import api_call
 from common.auth_manager import check_api_key
 
+# 원천 범위 안내 — ibl_actions.yaml description 의 같은 문장과 한 소스(시험이 둘의 일치를 단언한다).
+# 한글 질의("어린이 그림 공모전")가 Kaggle 영문 대회 목록에서 0건으로 끝나며 길을 말하지 않았다(79회차 F79-2).
+DOMESTIC_HINT = "국내 공모전·대회는 [sense:search] 웹 검색이 정직한 경로"
+
+
+def _needs_domestic_hint(query: str, count: int) -> bool:
+    return count == 0 or any("가" <= ch <= "힣" for ch in (query or ""))
+
+
 # Kaggle competitions/list 가 허용하는 정렬값
 _VALID_SORTS = {
     "grouped", "prize", "earliestDeadline", "latestDeadline",
@@ -85,13 +94,18 @@ def search_kaggle(query: str = "", sort: str = "recentlyCreated",
         items = items[:max(1, count)]
 
         records = _to_records(items)
-        return {
+        out = {
             "success": True,
             "source": "Kaggle Competitions",
             "keyword": query if query else "전체",
             "count": len(records),
             "items": records,
         }
+        if _needs_domestic_hint(query, len(records)):
+            out["hint"] = f"이 원천은 Kaggle 국제 AI/데이터 경진대회뿐입니다. {DOMESTIC_HINT}입니다."
+            if not records:
+                out["empty_notes"] = [f"Kaggle 대회 목록에 '{query}' 0건 — {DOMESTIC_HINT}"]
+        return out
     except Exception as e:
         return {"success": False, "error": str(e)}
 

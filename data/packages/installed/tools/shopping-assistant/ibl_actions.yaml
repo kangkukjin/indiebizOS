@@ -29,14 +29,20 @@ actions:
       query: [q]          # ★정본은 query(check_param_canon) — 관습어 q 는 별칭으로 수용
     returns: items
     fixture: '[sense:used]{source: "bunjang", query: "맥미니 m4 pro"}'
+    # 원천별 변이 축(79회차 B79-3): fixture 하나(bunjang)로는 당근 경로 드리프트가 자가점검에 안 닿았다.
+    # 원천마다 한 줄 — 주간 관측 스윕·정직성 스윕이 돌린다(0행 = 불변식 G 경보).
+    shape_variants:
+      source=danggeun: '[sense:used]{source: "danggeun", query: "자전거", region: "역삼동", limit: 5}'
+      source=joongna: '[sense:used]{source: "joongna", query: "자전거", limit: 5}'
+      source=naver: '[sense:used]{source: "naver", query: "자전거", limit: 5}'
     description: 중고 C2C 매물 검색 (source 분기). 당근·번개장터·중고나라·네이버카페 중고 매물을 items 통화로. 자주 하는 중고 검색을 어휘화.
     group: research
-    target_description: "중고 거래 매물 검색. source로 플랫폼 선택.\n- source=bunjang(기본): 번개장터 내부 API — 제목·가격·위치·링크가 담긴 깨끗한 매물. region=지역이름(예 \"청주\") 주면 위치 substring 후필터(반경 아님).\n- source=danggeun: 당근 — region=동이름(예 \"죽백동\") 주면 그 동네+인근 동으로 스코프('내동네' 검색, 지역ID 자동 해소). ★동네 매물 검색엔 이걸 우선. 제목·가격·설명·사진·링크.\n- source=joongna: 중고나라 web 검색(제목·가격·링크, best-effort 파싱).\n- source=naver: 네이버 카페 통합검색(중고나라 카페 등 게시글).\nquery=검색어(필수). limit=개수(기본15). region=지역 필터(bunjang=위치 substring / danggeun=동네 스코프)."
+    target_description: "중고 거래 매물 검색. source로 플랫폼 선택.\n- source=bunjang(기본): 번개장터 내부 API — 제목·가격·위치·링크가 담긴 깨끗한 매물. region=지역이름(예 \"청주\") 주면 위치 substring 후필터(반경 아님). ★번개장터엔 지역 검색 인자가 없어 전국 최신순을 최대 200행까지 훑어 거른다 — 위치 미표기 매물(대다수)은 판정 불가로 빠진다(unlocated). 봉투의 scanned=훑은 행 수, 상한에 닿아 limit 을 못 채우면 truncations(reason scan_limit). 0건은 '그 지역 매물 없음'이 아니라 '최신 표본에 없음'이다.\n- source=danggeun: 당근 — region=동이름(예 \"죽백동\", 필수) 그 동네+인근 동으로 스코프('내동네' 검색, 지역ID 자동 해소). ★동네 매물 검색엔 이걸 우선. 제목·가격·설명·사진·링크·매물 동(region)·상태. 당근 검색 서버가 느릴 때 0건을 주는 현상이 있어 0건이면 empty_notes 로 미확인임을 말한다.\n- source=joongna: 중고나라 web 검색(제목·가격·링크, best-effort 파싱).\n- source=naver: 네이버 카페 통합검색(중고나라 카페 등 게시글).\nquery=검색어(필수). limit=개수(기본15). region=지역 필터(bunjang=위치 substring 후필터 / danggeun=동네 스코프, 필수)."
     target_key: query
     router: handler
     tool: used_search
     scope: workspace
-    implementation: source 분기 — bunjang=api.bunjang.co.kr find_v2.json(위치 후필터) / danggeun=regions/keyword 지역해소→/kr/buy-sell JSON-LD ItemList(전체결과 한방) / joongna=web RSC 파싱 / naver=api_call cafearticle. tool_used.py.
+    implementation: source 분기 — bunjang=api.bunjang.co.kr find_v2.json(region 이면 40행×최대 5쪽 훑어 위치 후필터, scanned·unlocated·scan_limit 신고) / danggeun=regions/keyword 지역해소→/kr/search/buy-sell Remix 로더 JSON(_data=routes/kr.search.buy-sell._index)의 buySellArticles(구조 미발견=source_changed, 0건=1회 재시도 후 empty_notes) / joongna=web RSC 파싱 / naver=api_call cafearticle. tool_used.py.
     keywords:
     - 중고
     - 중고거래
@@ -107,7 +113,7 @@ tool_json:
           default: bunjang
         region:
           type: string
-          description: 지역 필터 — bunjang=위치 substring(예 "청주"), danggeun=동이름(예 "죽백동", 그 동네+인근 동 스코프)
+          description: 지역 필터 — bunjang=위치 substring 후필터(예 "청주", 전국 최신 최대 200행 표본), danggeun=동이름(예 "죽백동", 필수 — 그 동네+인근 동 스코프)
         limit:
           type: integer
           description: 결과 개수 (기본 15)

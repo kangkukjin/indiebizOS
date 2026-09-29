@@ -44,6 +44,10 @@ def build_route_map(origin: dict, destination: dict, path: list, summary: dict) 
             "path": path, "summary": summary}
 
 
+KAKAO_MAX_RADIUS = 20000   # 카카오 로컬 검색 반경 스펙 상한(m)
+KAKAO_MAX_RESULTS = 45     # 카카오 키워드 검색 15건×3쪽 스펙 상한
+
+
 def search_kakao_restaurants(query: str, x: str = None, y: str = None,
                              radius: int = 5000, size: int = 10, sort: str = "accuracy"):
     """
@@ -61,8 +65,14 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
     if not key_ok:
         return {"success": False, "error": f"{key_error} https://developers.kakao.com 에서 발급받으세요."}
 
-    size = min(size, 45)
+    size = min(size, KAKAO_MAX_RESULTS)  # clamp-ok: 호출자 search_restaurants_combined 가 요청 limit 과 대조해 clamped 로 신고
     restaurants = []
+    radius_requested = radius
+    try:
+        radius = int(float(radius))
+    except (TypeError, ValueError):
+        radius = 5000
+    radius_used = max(0, min(radius, KAKAO_MAX_RADIUS))
     total = 0
     page = 1
     page_error = None
@@ -78,7 +88,7 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
         if x is not None and y is not None:
             params["x"] = x
             params["y"] = y
-            params["radius"] = min(radius, 20000)
+            params["radius"] = radius_used
 
         data = api_call("kakao", "/v2/local/search/keyword.json", params=params, timeout=10)
         if (not isinstance(data, dict) or not isinstance(data.get("documents"), list)
@@ -110,7 +120,13 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
         page += 1
 
     restaurants = restaurants[:size]
+    clamp = {}
+    if x is not None and y is not None and radius_used != radius:
+        # 반경 상한(카카오 스펙 20km)을 넘긴 요청 — 깎았다는 사실을 봉투가 말한다(침묵 클램프 관문).
+        clamp = {"clamped": True, "requested": {"radius": radius_requested}, "applied": {"radius": radius_used},
+                 "clamp_message": f"반경 {radius_requested}m → 카카오 상한 {radius_used}m 로 조정했습니다."}
     return {
+        **clamp,
         "total": total,
         **({"success": False, "error": page_error, "partial": bool(restaurants)} if page_error else {}),
         "restaurants": restaurants,
@@ -216,13 +232,36 @@ def _blog_evidence(region: str, name: str):
     return {"blog_count": data.get("total", 0), "blog_titles": titles[:2]}
 
 
-def _enrich_with_blogs(items: list, region: str, top_n: int = 12):
-    """상위 top_n개 가게에 블로그 언급 수·후기 제목을 병렬로 붙임 (in-place)."""
+_REGION_SUFFIXES = ("특별자치시", "특별자치도", "특별시", "광역시", "시", "군", "구")
+
+
+def _blog_region_term(address: str) -> str:
+    """행 주소 → 블로그 검색 지역어(시·군·구 단, 접미 제거: '충북 ○○시 ○○구 …' → '○○').
+
+    옛 판은 질의 첫 낱말(`query.split()[0]`)을 지역어로 썼다 — "돈까스"·"맛집" 질의에서 지역어가
+    음식 이름이 되어 '돈까스 ○○가게'로 블로그를 셌다(79회차 B79-5). 지역은 행이 스스로 말한다."""
+    parts = (address or "").split()
+    if not parts:
+        return ""
+    # 첫 토큰은 시도('충북'·'서울특별시'). 둘째 토큰이 시·군·구면 그것, 없으면 시도.
+    token = parts[1] if len(parts) > 1 else parts[0]
+    for suf in _REGION_SUFFIXES:
+        if token.endswith(suf) and len(token) - len(suf) >= 2:
+            return token[: -len(suf)]
+    return token
+
+
+def _enrich_with_blogs(items: list, region: str = "", top_n: int = 12):
+    """상위 top_n개 가게에 블로그 언급 수·후기 제목을 병렬로 붙임 (in-place).
+
+    지역어는 행 주소에서 뽑는다(_blog_region_term). 주소가 없는 행만 region(좌표의 역지오코딩
+    시·군·구)을 쓴다 — 질의 낱말은 지역어가 아니다."""
     from concurrent.futures import ThreadPoolExecutor
 
     def work(r):
         try:
-            ev = _blog_evidence(region, r.get("name", ""))
+            term = _blog_region_term(r.get("address", "")) or region
+            ev = _blog_evidence(term, r.get("name", ""))
         except Exception:
             return
         if ev:
@@ -263,6 +302,18 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
 
     # 카카오 검색
     kakao_result = search_kakao_restaurants(query, x, y, radius, kakao_size, "accuracy")
+    # 상한 조정(반경 20km·결과 45건)은 결합 봉투까지 싣는다(침묵 클램프 관문).
+    requested, applied, notes = {}, {}, []
+    if kakao_result.get("clamped"):
+        requested.update(kakao_result["requested"])
+        applied.update(kakao_result["applied"])
+        notes.append(kakao_result["clamp_message"])
+    if kakao_size > KAKAO_MAX_RESULTS:
+        requested["limit"], applied["limit"] = kakao_size, KAKAO_MAX_RESULTS
+        notes.append(f"결과 {kakao_size}건 → 카카오 상한 {KAKAO_MAX_RESULTS}건으로 조정했습니다.")
+    if requested:
+        results.update({"clamped": True, "requested": requested, "applied": applied,
+                        "clamp_message": " ".join(notes)})
     if kakao_result.get("restaurants") or "error" not in kakao_result:
         results["kakao"] = {
             "restaurants": kakao_result.get("restaurants", []),
@@ -310,13 +361,19 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
 
     # 추천 근거: 네이버 블로그 검색 — 언급 수(blog_count) + 후기 제목(reason)
     if enrich and results["combined"]:
-        region = query.split()[0] if query.split() else ""
+        region = ""
+        if x is not None and y is not None and any(not r.get("address") for r in results["combined"]):
+            try:   # 주소 없는 행의 대체 지역어 = 검색 중심 좌표의 시·군·구(역지오코딩 1회)
+                rg = reverse_geocode_kakao(x=float(x), y=float(y))
+                region = _blog_region_term(rg.get("address", "")) if isinstance(rg, dict) else ""
+            except (TypeError, ValueError):
+                region = ""
         _enrich_with_blogs(results["combined"], region)
         # 블로그 언급 많은 순으로 정렬 (안정 정렬 — 동률은 API 정확도순 유지)
         results["combined"].sort(key=lambda r: -(r.get("blog_count") or 0))
 
     results["combined"] = [r for r in results["combined"]
-                           if r.get("lat") is not None and r.get("lng") is not None][:min(kakao_size, 45)]
+                           if r.get("lat") is not None and r.get("lng") is not None][:min(kakao_size, KAKAO_MAX_RESULTS)]
     kakao_count = len(results["kakao"]["restaurants"])
     naver_count = len(results["naver"]["restaurants"])
     results["message"] = (f"'{query}' 검색 결과 {len(results['combined'])}개 "
@@ -548,7 +605,7 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
         # 경로 좌표 수집 (지도 생성용)
         all_path_coords = []
 
-        for route in routes:
+        for route_index, route in enumerate(routes):
             route_info = {
                 "result_code": route.get("result_code"),
                 "result_msg": route.get("result_msg")
@@ -575,7 +632,9 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
                 for section in sections:
                     # 경로 좌표 수집 (roads의 vertexes)
                     roads = section.get("roads", [])
-                    for road in roads:
+                    for road in roads if route_index == 0 else ():
+                        # 지도 경로선 = 첫(추천) 경로만. 대안 경로의 꼭짓점까지 한 줄에 이으면
+                        # 두 경로가 한 선으로 엉킨다 — 대안은 요약(alternatives)으로 싣는다.
                         vertexes = road.get("vertexes", [])
                         for i in range(0, len(vertexes), 2):
                             if i + 1 < len(vertexes):
@@ -660,6 +719,23 @@ def _marker_place_term(mk: dict) -> str:
     return _marker_label(mk)
 
 
+# 좌표 칸 별칭 — (위도 칸, 경도 칸). 정본 lat/lng 가 먼저, 원천 원명은 그다음(79회차 B79-7:
+# 전시 KCISA 의 gpsY/gpsX 를 버리고 이름으로 지오코딩해 5곳 중 2곳을 떨어뜨렸다).
+# 네이버 mapx/mapy 는 도 단위가 아니라(정수 배율) 넣지 않는다 — 범위 검사가 거르겠지만 뜻이 다르다.
+COORD_FIELD_PAIRS = (("lat", "lng"), ("lat", "lon"), ("latitude", "longitude"),
+                     ("gpsY", "gpsX"), ("y", "x"))
+
+
+def _marker_coords(mk: dict):
+    """마커 dict 의 좌표 — 별칭 쌍을 차례로 읽어 첫 유효 쌍({lat,lng}) 또는 None."""
+    for lat_key, lng_key in COORD_FIELD_PAIRS:
+        if mk.get(lat_key) is not None and mk.get(lng_key) is not None:
+            coords = _normalize_coords(mk.get(lat_key), mk.get(lng_key))
+            if coords:
+                return coords
+    return None
+
+
 def _normalize_markers(markers) -> tuple:
     """마커 정규화. 좌표가 없으면 장소명으로 지오코딩해서 살린다.
 
@@ -675,9 +751,10 @@ def _normalize_markers(markers) -> tuple:
             failed.append(str(raw)[:40])
             continue
         label, note = _marker_label(mk), None
-        try:
-            entry = {"name": label, "lat": float(mk["lat"]), "lng": float(mk["lng"])}
-        except (KeyError, TypeError, ValueError):
+        coords = _marker_coords(mk)
+        if coords:
+            entry = {"name": label, **coords}
+        else:   # 지오코딩은 유효한 좌표 칸(별칭 포함)이 없을 때만
             term = _marker_place_term(mk)
             hit = _geocode_place(term) if term else None
             if not hit:
@@ -961,9 +1038,20 @@ def _resolve_city_coords(city: str):
     return None, None, None, mismatch
 
 
+OPENMETEO_MAX_DAYS = 16   # Open-Meteo forecast_days 스펙 상한(옛 코드는 자체 상한 7로 조용히 깎았다)
+
+
 def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None,
                           days: int = 3) -> dict:
     """Open-Meteo로 날씨 조회 (무료, API 키 불필요)"""
+    requested_days = days
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        return {"success": False, "error": f"days 는 1~{OPENMETEO_MAX_DAYS} 정수여야 합니다(받은 값 {days!r})."}
+    if days < 1:
+        return {"success": False, "error": f"days 는 1~{OPENMETEO_MAX_DAYS} 정수여야 합니다(받은 값 {days})."}
+    applied_days = min(days, OPENMETEO_MAX_DAYS)
     # 좌표 결정
     _resolved_name = None
     if lat is not None and lon is not None:
@@ -988,7 +1076,7 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
                 "daily": "temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum,sunrise,sunset",
                 "timezone": "auto",
                 "wind_speed_unit": "ms",
-                "forecast_days": min(days, 7),
+                "forecast_days": applied_days,
             },
             timeout=10
         )
@@ -1015,6 +1103,11 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
             },
             "items": []
         }
+        if applied_days != days:
+            # 기간 상한 조정은 봉투가 말한다 — 10일을 물었는데 7일만 오고 표지가 없던 자리(79회차 재탐침).
+            result.update({"clamped": True, "requested": {"days": requested_days},
+                           "applied": {"days": applied_days},
+                           "message": f"요청 {days}일 → Open-Meteo 예보 상한 {applied_days}일로 조정했습니다."})
 
         # 일별 예보 = 단일 통화 items (풍부 dict: date/max_temp/min_temp/condition/precipitation_mm)
         # chart/spreadsheet 소비자는 items에서 수치 칸을 직접 찾음(table 봉투 불필요).
@@ -1206,6 +1299,19 @@ def execute(tool_input: dict, context) -> str:
                     "duration_min": s.get("duration_min", 0),
                     "toll": s.get("fare", {}).get("toll", 0)
                 }
+            # 대안 경로 — alternatives:true 로 받은 나머지 경로를 버리지 않는다(79회차 잠재 결함:
+            # 압축이 routes[0] 만 실어 대안 요청이 효과 없는 인자가 됐다).
+            alts = []
+            for r in (result.get("routes") or [])[1:]:
+                rs = r.get("summary") or {}
+                alts.append({"distance_km": rs.get("distance_km", 0),
+                             "duration_min": rs.get("duration_min", 0),
+                             "toll": (rs.get("fare") or {}).get("toll", 0),
+                             "priority": rs.get("priority")})
+            if alts:
+                compact["alternatives"] = alts
+            if result.get("warning"):   # 일부 대안 경로 탐색 실패 — 압축이 지우지 않는다
+                compact["warning"] = result["warning"]
             # 주요 안내 (최대 10개)
             if result.get("routes") and result["routes"][0].get("key_guides"):
                 compact["key_guides"] = result["routes"][0]["key_guides"][:10]

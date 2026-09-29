@@ -259,12 +259,12 @@ python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
             detail: id 필요(list 결과의 id) — 고정 fixture 부적합
 ```
 
-  선언하기 전에 **한 번 실행해 보고** 통화를 확인할 것 — 실측하면 "items 라 선언했는데 통화를 안 다는" 경로가 드러난다(⑤에서 `sense:performance` venue/genres/regions·`sense:book` recommended 4곳이 그렇게 잡혔다). 통화가 없는 읽기 op 이면 `ops.returns: {<op>: scalar}` 로 정직하게 선언한다.
+  선언 전 **한 번 실행해** 통화를 확인할 것 — "items 선언인데 통화 없음" 경로가 드러난다(⑤에서 `sense:performance` venue/genres/regions·`sense:book` recommended 4곳이 그렇게 잡혔다). 통화가 없는 읽기 op 이면 `ops.returns: {<op>: scalar}` 로 정직하게 선언한다.
 - **effect(부작용)·transform(변환자)은 필드 없음** — effect 는 실행 불가(구조검사만), transform 은 골든 파이프(`ibl_health_check.py` §1C)로 흐름 검증.
 - **파생**: `data/ibl_fixtures.json` 은 build 산출물이다(**직접 편집 금지** — 소스는 액션 필드). fixture 가 액션과 한 몸이라 **설치/제거를 자동으로 따라가고 고아 fixture 가 생기지 않는다**(2026-07-02 자기완결화). 패키지 능력이면 그 패키지 `ibl_actions.yaml`, 코어 노드면 `ibl_nodes_src` 에 필드를 둔다.
 - ★**셸 명령의 자리를 대신하면 `shell_shadow: {heads, argmap}` 를 단다** — 파생 `data/shell_shadow.json`, 관문이 거절하며 옮긴 IBL 문장을 돌려준다(`docs/SHELL_SHADOW_GATE_HANDOFF.md`).
-- **인자 이름은 선언하지 않는다 — 쓰인 뒤 관측된다**(2026-08-23). 카탈로그의 `⟨인자: a·b·(c)⟩` 는 교재(코퍼스)·실행(episode_log)에서 실제 쓰인 키의 빈도 실측(`scripts/ibl_param_sweep.py` → `data/ibl_param_shapes.json`, 주간 순찰이 재관측)이라 새 액션은 시드·첫 실행 전까지 ⟨인자⟩ 가 비어 있다. 그러니 **시드는 그 액션의 인자 모양을 가르치는 교재**다 — 별칭(`ticker`/`symbol`)을 섞어 시드하면 카탈로그가 둘을 같이 광고한다. 시드 뒤 `python3 scripts/ibl_param_sweep.py` 한 번.
-- **이웃도 선언하지 않는다 — 이어진 뒤 관측된다**(2026-08-30). 카탈로그의 `⟨동반: >>a · &b⟩` 는 교재·실행에서 실제로 이어진 낱말의 실측(`scripts/ibl_partner_sweep.py` → `data/ibl_partners.json`)이라 새 액션은 첫 조합이 관측될 때까지 비어 있다. 그러니 **시드는 인자뿐 아니라 이웃도 가르치는 교재**다 — 단일 호출만 시드하면 그 낱말은 카탈로그에서 계속 섬으로 보인다. 시드 뒤 `python3 scripts/ibl_partner_sweep.py` 한 번.
+- **인자 이름은 선언하지 않는다 — 쓰인 뒤 관측된다**(2026-08-23). 카탈로그의 `⟨인자: a·b·(c)⟩` 는 교재(코퍼스)·실행(episode_log)에서 실제 쓰인 키의 빈도 실측(`scripts/ibl_param_sweep.py` → `data/ibl_param_shapes.json`, 주간 순찰이 재관측)이라 시드·첫 실행 전엔 비어 있다. 그러니 **시드는 그 액션의 인자 모양을 가르치는 교재**다 — 별칭(`ticker`/`symbol`)을 섞어 시드하면 카탈로그가 둘을 같이 광고한다. 시드 뒤 `python3 scripts/ibl_param_sweep.py` 한 번.
+- **이웃도 선언하지 않는다 — 이어진 뒤 관측된다**(2026-08-30). 카탈로그의 `⟨동반: >>a · &b⟩` 는 교재·실행에서 실제로 이어진 낱말의 실측(`scripts/ibl_partner_sweep.py` → `data/ibl_partners.json`)이라 첫 조합 관측 전엔 비어 있다. 그러니 **시드는 인자뿐 아니라 이웃도 가르치는 교재**다 — 단일 호출만 시드하면 그 낱말은 카탈로그에서 계속 섬으로 보인다. 시드 뒤 `python3 scripts/ibl_partner_sweep.py` 한 번.
 - ★**별칭을 핸들러 코드 안에서 풀지 말 것 — `aliases:` 블록으로 선언한다**(2026-08-23). 핸들러가 `_arg(ti, "ticker", "symbol")` 처럼 사적으로 풀면 **카탈로그는 그 사실을 볼 수 없어 두 이름을 다 광고**하고, 언어가 한 자리에 두 이름을 가르친다. 선언하면 호출은 둘 다 통과하고(`ibl_routing._normalize_param_aliases`) 카탈로그만 정규 키를 말한다. 분열 후보(상호배타 빈출 키 쌍)는 `ibl_param_sweep` 이 주간 신고만 한다 — 어느 쪽이 정규인지는 추측이 아니라 코드·문서가 아는 사실이라 자동으로 접지 않는다. ★**한 op 의 정규 키를 다른 op 의 별칭으로 접지 말 것**(`image_read` 의 `intent` 는 op:critic 의 정규 키라 `question` 별칭에서 제외).
 - ★**반환 열이 파라미터로 갈리면 `shape_variants:` 를 단다**(2026-08-22 F20-1 판정). 카탈로그의 `⟨열: …⟩` 은 fixture 실측이고 색인 키가 `node:action[#op]` 다 — 그래서 반환 열이 **op 이 아니라 param 으로** 갈리는 액션은 *한 변이의 열을 전부인 양* 말하고, 모델이 뒷문장(`>> [table:compute]`)에서 없는 필드를 골라 죽는다. 그럴 땐 열 이름을 하나로 **정규화하지 말고**(열 이름은 세계의 명사=관측 데이터 — 몸이 이름을 붙이면 외부 API 가 바뀔 때 몸이 조용히 거짓말한다) 변이를 선언해 각각 관측한다:
 
@@ -274,7 +274,7 @@ python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
           source=zigbang: '[sense:realty]{op: "query", source: "zigbang", region: "평택 죽백동", limit: 5}'
 ```
 
-  카탈로그 줄은 `⟨열: 아파트명·법정동·… | source=naver: title·name·price | …⟩` 이 된다(라벨 없는 앞자리=기본값의 열). 선언 후 `.venv/bin/python scripts/ibl_shape_sweep.py --only <node:action>` 로 한 번 관측한다(주간 순찰이 이후 재관측). **변이 fixture 는 건강검진 우주를 넓히지 않는다** — `ibl_fixtures.json` 의 별도 `shape_variants` 섹션에 파생되고 읽는 쪽은 관측 스윕 하나다(외부 API 를 매일 더 두드리지 않게). 읽기·items/table 액션만, 라벨의 param 을 코드가 실제로 골라야 한다(`--check` 가 강제).
+  카탈로그 줄은 `⟨열: 아파트명·법정동·… | source=naver: title·name·price | …⟩` 이 된다(라벨 없는 앞자리=기본값의 열). 선언 후 `.venv/bin/python scripts/ibl_shape_sweep.py --only <node:action>` 로 한 번 관측한다(주간 순찰이 이후 재관측). **변이는 일일 건강검진 밖이다** — `ibl_fixtures.json` 의 `shape_variants` 섹션에 파생되고 주간 관측·정직성 스윕만 돌린다(외부 API 를 매일 더 두드리지 않게, 0행=경보 G). 읽기·items/table 액션만, 라벨의 param 을 코드가 실제로 골라야 한다. ★스키마 `source` enum 이 둘 이상이면 **원천마다 변이 한 줄 필수**(79회차 — 둘 다 `--check` 강제).
 - **검증**: `python scripts/ibl_health_check.py` 로 자기 액션이 **GREEN** 인지 확인. RED 면 통화 계약 위반 — 고치기 전엔 미완성. 자세히 `docs/IBL_MAINTENANCE_MANUAL.md`.
 
 ---

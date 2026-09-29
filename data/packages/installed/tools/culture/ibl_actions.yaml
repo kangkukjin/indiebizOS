@@ -15,7 +15,7 @@ actions:
     fixture: '[sense:performance]{}'
     description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take·table:document 파이프로 추리고 문서화.
     group: culture
-    target_description: search — query(공연명/키워드)·genre·region·status·date_from/date_to(날짜 범위, 둘 함께 입력)·days(날짜 생략 시 오늘부터 N일) 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록). status 생략 시 예정 공연도 포함한다. region/genre/status는 알려진 이름이나 코드만 받는다. KOPIS 오류 XML이나 점검 HTML은 검색 0건으로 취급하지 않고 명시적 오류로 반환한다.
+    target_description: search — query(공연명/키워드)·genre·region·status·date_from/date_to(날짜 범위, 둘 함께 입력)·days(날짜 생략 시 오늘부터 N일) 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록). status 생략 시 예정 공연도 포함한다. region/genre/status는 알려진 이름이나 코드만 받는다(시·군 이름은 거절 — 시도로 검색한 뒤 제목·장소로 거를 것). 행에 title_key(대괄호 지역 태그·공백·구두점을 걷은 비교용 제목) — 전시(exhibit)와 union 하면 같은 공연이 다른 제목으로 두 번 오므로 dedup{by:["title_key","place_key"]} (place_key=장소를 같은 규칙으로 정규화 — 공연 fcltynm·전시 place). KOPIS 오류 XML이나 점검 HTML은 검색 0건으로 취급하지 않고 명시적 오류로 반환한다.
     target_key: op
     router: handler
     tool: performance_op
@@ -79,7 +79,7 @@ actions:
     fixture: '[sense:exhibit]{query: "미술"}'
     description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance. items 통화 — table 파이프·& 병렬(공연과 동시 검색) 조합.
     group: culture
-    target_description: 검색어 또는 키워드 (예 '국립중앙박물관', '미디어아트').
+    target_description: 검색어 또는 키워드 (예 '국립중앙박물관', '미디어아트'). 행에 lat/lng(원천 gpsY/gpsX 숫자 병기)·start_date/end_date·title_key(대괄호 지역 태그·공백·구두점을 걷은 비교용 제목). KCISA 는 연극·뮤지컬·축제도 함께 주므로 공연(performance)과 union 하면 같은 공연이 두 번 온다 — dedup{by:["title_key","place_key"]} (place_key=장소를 같은 규칙으로 정규화 — 공연 fcltynm·전시 place).
     router: handler
     tool: kcisa_quick_search
     implementation: 한국문화정보원(KCISA) API로 전시/문화행사 검색

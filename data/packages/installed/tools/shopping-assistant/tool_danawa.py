@@ -106,4 +106,12 @@ def search_danawa(query: str, limit: int = 5) -> dict:
             "spec": spec,
         })
 
+    if not items:
+        # 구조 미발견 ≠ 0건(79회차 B79-3 census): 다나와의 정상 0건 페이지는 `id="nosearchArea"` 를
+        # 싣는다(2026-09-29 실측). 그것도 상품 카드도 없으면 페이지 구조가 바뀐 것이다.
+        if 'id="nosearchArea"' in html:
+            return {"total": 0, "items": [], "empty_reason": "no_results"}
+        return {"success": False, "error_type": "source_changed", "total": 0, "items": [],
+                "error": "다나와 검색 구조를 확인할 수 없습니다(상품 카드·결과 없음 표지 모두 미발견). "
+                         "0건으로 해석하지 마세요."}
     return {"total": len(items), "items": items}

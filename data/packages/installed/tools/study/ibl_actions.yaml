@@ -34,6 +34,13 @@ actions:
     returns: items
     side_effect: true    # download 가 PDF 를 로컬에 저장한다
     fixture: '[sense:paper]{query: "attention"}'
+    # 원천별 변이 축(79회차 B79-3 census — iblbuild_source_honesty): fixture 하나로는 나머지 원천의
+    # 드리프트가 자가점검에 안 닿는다. 주간 관측 스윕·정직성 스윕이 돌린다(0행 = 불변식 G 경보).
+    shape_variants:
+      source=arxiv: '[sense:paper]{op: "search", query: "attention", source: "arxiv", limit: 3}'
+      source=pubmed: '[sense:paper]{op: "search", query: "sleep", source: "pubmed", limit: 3}'
+      source=semantic: '[sense:paper]{op: "search", query: "attention", source: "semantic", limit: 3}'
+      source=nanet: '[sense:paper]{op: "search", query: "인공지능", source: "nanet", limit: 3}'
     description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
     target_description: "선택 필터(원천별 지원 밖이면 check·실행이 거절) — 연도 year·year_from·year_to=전 원천, open_access=nanet 외, sort_by=openalex(relevance|cited|recent)·arxiv/pubmed(relevance|recent)·semantic(relevance), type·page=nanet. 반환 열: title·authors(전원)·year·journal/venue·citations·doi·arxiv_id/pmid 등 구조 칸 + 표시용 meta·summary·url. op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
     target_key: op

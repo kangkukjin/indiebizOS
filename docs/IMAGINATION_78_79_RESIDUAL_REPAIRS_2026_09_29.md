@@ -27,7 +27,7 @@
 | B78-6 | 정보나루가 요청 값을 `<request>` 에 이스케이프 없이 되실음(실측) | 모든 엔드포인트의 경계 `call_library_api` 에서 에코만 이스케이프 → 빗나가면 에코 구간 제외 재파싱 → 그래도 깨지면 `error_type:"source_parse"`. 형제 원천 결함(고전종합DB 가 `keyword` 대신 `query=` 를 보내 모든 질의에 같은 문서) 동시 수리 + 되실린 검색어 불일치는 `source_changed` |
 | B79-8 잔여 | 판본 1 `aliases` 와 판본 2 손 별칭이 두 벌, 경고 생성기의 제안 어휘 ⊄ 허용 키 | `alias_projection` 으로 액션 aliases 를 판본 2 계약에 투영(손 별칭 표 2개 제거). sort 는 `descending` 정본 + `desc` 별칭(두 판본 공통). 관문(`iblbuild_v2`): 별칭 두 벌·모순·`vocab_outside_allowed` |
 | F79-3 | Number 를 파이썬 `type is int` 로 인덱스 판정 | 인덱스·슬라이스·round 자릿수가 `integer_value`(67회차 take 와 같은 판정). INDEX 진단이 "정수 아님"/"범위 밖"을 가르고 `index_type` 을 싣는다. 교재에 산술 연산자 표 |
-| B79-3 | 당근이 Remix 앱으로 이사 — 목록은 로더 JSON 에 있음(실측) | 로더 JSON 파서. 구조 미발견·응답 동네 불일치 = `source_changed`, 0건은 1회 재질의 후 `empty_notes`. region 없는 호출은 IP 추정 동네로 조용히 스코프되므로 거절. 관문 `scripts/iblbuild_source_honesty.py`(구조 미발견 0건 성공·원천 함수의 except 빈 반환) → 다나와·TOPIS 형제 수리. source enum 액션은 원천마다 실행 예시(shape_variants) 필수, 변이 0행 경보는 주간 정직성 스윕 |
+| B79-3 | 당근이 Remix 앱으로 이사 — 목록은 로더 JSON 에 있음(실측) | 로더 JSON 파서. 구조 미발견·응답 동네 불일치 = `source_changed`, 0건은 간격을 두고 최대 3회 재질의 후 `empty_notes`(아래 "당근 간헐 빈 목록"). region 없는 호출은 IP 추정 동네로 조용히 스코프되므로 거절. 관문 `scripts/iblbuild_source_honesty.py`(구조 미발견 0건 성공·원천 함수의 except 빈 반환) → 다나와·TOPIS 형제 수리. source enum 액션은 원천마다 실행 예시(shape_variants) 필수, 변이 0행 경보는 주간 정직성 스윕 |
 | B79-4 | 원천에 지역 인자가 없는데 한 쪽만 훑음 | 40행×최대 5쪽, `scanned`·`unlocated`·`total_estimate`, 상한이면 `scan_limit` source 절단 |
 | B79-5 잔여 | 블로그 지역어 = 질의 첫 낱말 | 행 주소의 시·군·구(없으면 검색 좌표 역지오코딩) |
 | B79-7 잔여 | show_map 이 `lat/lng` 만 좌표로 읽음 | 좌표 별칭 먼저, 지오코딩은 좌표 없을 때만. 패키지 경계 넘는 좌표 계약은 주간 정직성 스윕 불변식 F |
@@ -42,6 +42,26 @@
 - 계약이 바뀐 액션의 용례 재검토 원장(`data/ibl_example_review.json`)은 각 묶음이 라이브 코퍼스를 읽기 전용으로 대조해 갱신했다.
 - `[table:sort]{desc:…}` 47행은 이제 두 판본에서 유효해(별칭) 고치지 않았다.
 - 틀린 것을 가르치는 용례는 개별 재검토 후 판본 2 문장으로 교정했다(아래 "집행" 절의 영수증). 판본 1 문장이 판본 2 에서 봉투 `.items` 등 구조 차이로만 실패하는 행(약 42)은 판본 1 에서 유효하므로 이번 범위 밖이다.
+
+## 당근 간헐 빈 목록 (배포 후 실측)
+
+배포 직후 당근이 첫 호출에서 282건을 준 뒤 연속 0건을 주었다. 원인을 가르려고 같은 로더 요청을 대조했다.
+- 같은 요청·같은 UA 연속 10회 중 1회만 282건, 나머지 0건(광고 목록도 0, 전부 CloudFront Miss).
+- UA 판본(Chrome/120~140), 검색 페이지 선방문 쿠키 세션, TLS 위장(curl_cffi) 어느 것도 규칙적으로 가르지 못했다(위장 세션에서 연속 적중이 한 번 있었지만 재현되지 않음).
+- 결론: 원인은 원천 쪽이고 몸이 고칠 수 없다. 처음 가설("서버가 느릴 때")은 근거가 없어 문구를 "같은 요청에 간헐적으로 빈 목록"으로 바로잡았다. 몸의 몫은 정직이다 — 0건이면 간격을 두고 최대 3회 더 묻고, 그래도 0건이면 `empty_notes` 로 "매물 없음으로 단정할 수 없다"를 싣는다.
+
+## 검증
+
+- 통합 워크트리 전체 백엔드 시험: 7,697 통과·41 실패. 41건은 수리 전 기준 워크트리에서도 똑같이 실패(워크트리에 DB·playwright·mcp_server 부재). 라이브 트리에서 그 10개 파일을 다시 돌려 232건 전부 통과.
+- 신규 회귀: `test_imagination_round78_79_{forage,memory,books,place,plain_failure}.py`.
+- `build_ibl_nodes.py --check` 전 관문 통과(새 관문: 열린 인자 계약·원천 정직·별칭 투영, 확장: 침묵 클램프·구현-읽기).
+- 배포: fast-forward 한 번. 재기동 제어자가 쓰기 도중을 한 번 감지해 `check_failed` 후 재요청으로 새 세대 ACTIVE(백엔드 다운 없음).
+- 라이브 재현(새 코드): recent_chats `days/query` → UNKNOWN_ARGUMENT+안내 · 오타 폴더 `locus_exists:false, own_count:0` · `book:<…>` locus map_count 0→1 · 정보나루 `R&D 전략` 22건·`<하네스>` 8건 · health 평탄형 check 통과 · 공연 `청주` 거절 문구(이름 목록+hint) · 번개장터 `청주` `scanned 200·unlocated 129·scan_limit` · 판본 2 `sort{desc}` valid · 공모전 hint · 날씨 `days:10` 10일·`days:20` 16일+clamped · 대화 미리보기 `preview_truncated`·`content_chars` · 공연 `title_key`·`place_key` · show_map gpsX/gpsY 좌표 그대로.
+
+## 교재 교정 영수증
+
+- [개별 검토](experiments/imagination_round78_79_residual_2026_09_29/corpus_review.json) 14행(2799·2800 은퇴 인자, 3701·3906·4094 당근 region, 3825·3878 title_key+place_key dedup, 4755·4756 Kaggle≠공모전, 294·1257·1349·1373·1566 delegate workflow 의 `do` 는 문장). 판본 2 컴파일러 정적 판정 invalid 0 확인 후 적용.
+- [적용 영수증](experiments/imagination_round78_79_residual_2026_09_29/corpus_application.json): DB 14행, 훈련 JSON 사본 11행. 옛 문장·통계는 provenance 에 보존하고 새 본문에 과거 실적을 승계하지 않았다. 벡터 14·FTS 무결성 확인. 백업 `data/_backups/2026-09-29_imagination78_79_residual_202020/`.
 
 ## 판정 대기 (파괴적 변경 — 78회차 판정 요청 1)
 

@@ -87,11 +87,13 @@ def test_danggeun_structure_miss_is_source_changed(monkeypatch):
 
 def test_danggeun_empty_retries_then_says_unverified(monkeypatch):
     mod, calls = _danggeun(monkeypatch, [_loader([]), _loader([])])
+    monkeypatch.setattr(mod, "DANGGEUN_RETRY_GAP_S", 0)
     out = mod.search_danggeun("자전거", limit=5, region="동A")
-    assert len(calls) == 2                                    # 0건이면 한 번 더 묻는다
+    assert len(calls) == 1 + mod.DANGGEUN_EMPTY_RETRIES       # 0건이면 간격을 두고 더 묻는다(상한)
     assert out["items"] == [] and out.get("success") is not False
     assert out["empty_notes"] and "단정" in out["empty_notes"][0]
     mod, calls = _danggeun(monkeypatch, [_loader([]), _loader([_article(1)])])
+    monkeypatch.setattr(mod, "DANGGEUN_RETRY_GAP_S", 0)
     out = mod.search_danggeun("자전거", limit=5, region="동A")
     assert len(out["items"]) == 1 and out["retried"] == 1 and "empty_notes" not in out
 

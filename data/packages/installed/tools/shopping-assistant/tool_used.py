@@ -19,6 +19,7 @@ tool_used.py — 중고 C2C 매물 검색 어댑터 ([sense:used] 결정화)
 
 import re
 import json
+import time
 
 try:
     import requests
@@ -226,11 +227,13 @@ def search_joongna(query, limit=20):
 # `routes/kr.search.buy-sell._index` 로더 데이터에 buySellArticles 가 있다 — 다만 그 목록은
 # 비어 오고 브라우저가 같은 로더를 `_data=` JSON 으로 다시 부른다(실측). 그래서 로더 JSON 을 직접 읽는다.
 # ★함정 1: in= 슬러그의 한글 이름은 장식이고 숫자 ID만 유효 — 반드시 regions/keyword 로 해소할 것.
-# ★함정 2(2026-09-29 실측): 같은 요청이 한 번은 283건, 몇 분 뒤엔 0건(광고 목록도 0, upstream 3.3초)을
-#   돌려줬다 — 당근 검색 서버가 느릴 때 빈 목록으로 떨어진다. 구조는 멀쩡하므로 source_changed 가
-#   아니지만 "매물 없음"으로 단정할 수도 없다 → 0건이면 한 번 다시 묻고, 그래도 0건이면 empty_notes 로
-#   미확인임을 말한다(0행=성공 계약은 지키되 해석을 싣는다).
+# ★함정 2(2026-09-29 실측): 같은 로더 요청이 간헐적으로 빈 목록을 준다(광고 목록도 0). 연속 10회 중 1회만
+#   282건, 나머지 0건 — UA 판본·쿠키 세션·TLS 위장으로 가려 봤지만 규칙이 없었다(원인 미상, 원천 쪽).
+#   구조는 멀쩡하므로 source_changed 가 아니지만 "매물 없음"으로 단정할 수도 없다 → 0건이면 간격을 두고
+#   몇 번 다시 묻고, 그래도 0건이면 empty_notes 로 미확인임을 말한다(0행=성공 계약은 지키되 해석을 싣는다).
 DANGGEUN_LOADER = "routes/kr.search.buy-sell._index"
+DANGGEUN_EMPTY_RETRIES = 3        # 0건일 때 더 묻는 횟수(원천 간헐 빈 목록 대응 — 호출 상한)
+DANGGEUN_RETRY_GAP_S = 1.0
 DANGGEUN_STATUS = {"Ongoing": "판매중", "Reserved": "예약중", "Closed": "거래완료", "Completed": "거래완료"}
 
 
@@ -298,9 +301,10 @@ def search_danggeun(query, limit=20, region=None, requested_limit=None):
     data, fail = _danggeun_loader(query, region_id)
     if fail:
         return fail
-    retried = False
-    if not data["buySellArticles"]:
-        retried = True
+    retried = 0
+    while not data["buySellArticles"] and retried < DANGGEUN_EMPTY_RETRIES:
+        retried += 1
+        time.sleep(DANGGEUN_RETRY_GAP_S)
         data2, fail2 = _danggeun_loader(query, region_id)
         if fail2:
             return fail2
@@ -349,8 +353,8 @@ def search_danggeun(query, limit=20, region=None, requested_limit=None):
            **bounded_selection(requested_limit, limit, len(records), truncated)}
     if not articles:
         res["empty_notes"] = [
-            "당근 검색이 0건을 돌려줬습니다(재시도 1회 포함). 당근 검색 서버가 느릴 때 빈 목록을 주는 현상이 "
-            "실측돼 '매물 없음'으로 단정할 수 없습니다 — 잠시 뒤 다시 확인하세요."]
+            f"당근 검색이 0건을 돌려줬습니다(재시도 {retried}회 포함). 당근 검색이 같은 요청에 간헐적으로 빈 목록을 "
+            "주는 현상이 실측돼 '매물 없음'으로 단정할 수 없습니다 — 잠시 뒤 다시 확인하세요."]
     elif retried:
-        res["retried"] = 1
+        res["retried"] = retried
     return res

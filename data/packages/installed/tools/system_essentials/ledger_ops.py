@@ -134,6 +134,14 @@ def _atomic_json(path, data):
             os.unlink(tmp_name)
         except FileNotFoundError:
             pass
+    # 쓰기 관문 원장 — [self:write]·safe_store 와 같은 공통 훅(행위자 agent·task·origin 동반, 관측일 뿐 본 쓰기 무영향).
+    # 원자 쓰기 관문을 가진 1급 쓰기 어휘인데 몸의 쓰기 원장에 없어 [self:body]{op:"writes"} 가 이 쓰기를 못 봤다
+    # (상상훈련 78회차 F78-5). 쓰기가 성공한 뒤에만 기록한다(replace 실패는 위에서 예외로 빠진다).
+    try:
+        from write_ledger import log_write
+        log_write(path, event="write", gate="self_ledger", size=path.stat().st_size)
+    except Exception:
+        pass
 
 
 def _load_root(path, target, op):

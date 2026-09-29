@@ -64,12 +64,26 @@ def project_param_support(contract, config):
     return out
 
 
+def project_unknown_param_hint(contract, config):
+    """`unknown_param_hint` 선언(받지 않는 인자에 대한 안내 한 줄)을 계약에 싣는다.
+
+    닫힌 계약은 모르는 인자를 UNKNOWN_ARGUMENT 로 거절하지만, "그 필터는 어디서 하나"는 액션만 안다
+    (상상훈련 78회차 F78-2: `[self:recent_chats]{days:7, query:"전세"}` 가 조용히 무시돼 전체가 돌아왔다).
+    문구는 어휘 선언 데이터다 — 컴파일러는 액션 이름을 모른 채 그대로 덧붙인다."""
+    hint = (config or {}).get("unknown_param_hint")
+    if not isinstance(hint, str) or not hint.strip() or contract is None:
+        return contract
+    out = copy.deepcopy(contract)
+    out["unknown_param_hint"] = hint.strip()
+    return out
+
+
 def declared_contract(config):
     """손으로 쓴 계약에 선언 투영을 입힌다 — 레지스트리가 쓰는 한 입구."""
     contract = (config or {}).get("callable_contract")
     if not contract:
         return None
-    return project_param_support(project_ops(contract, config), config)
+    return project_unknown_param_hint(project_param_support(project_ops(contract, config), config), config)
 
 
 def handler_contract(node, action, config, schema_keys=None):
@@ -109,4 +123,4 @@ def handler_contract(node, action, config, schema_keys=None):
     elif "side_effect" in config or config.get("returns") in {"items", "scalar", "effect"}:
         from ibl_ops import resolve_op
         contract["effects"] = _op_effects(config, resolve_op(config))
-    return project_param_support(contract, config)
+    return project_unknown_param_hint(project_param_support(contract, config), config)

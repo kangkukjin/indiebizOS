@@ -91,6 +91,41 @@ class _Reads:
                     out.add(n.args[0].value)
         return {k for k in out if not k.startswith("_")}
 
+    @staticmethod
+    def _keys_of(expr: ast.expr, loops: dict[str, set[str]]) -> set[str]:
+        """키 자리의 식 → 문자열 키들: 리터럴이면 그 하나, 리터럴 튜플을 도는 루프 변수면 튜플 전부."""
+        if isinstance(expr, ast.Constant) and isinstance(expr.value, str):
+            return {expr.value}
+        if isinstance(expr, ast.Name):
+            return loops.get(expr.id, set())
+        return set()
+
+    def _key_loops(self, mod: str, f: ast.AST) -> dict[str, set[str]]:
+        """`for k in ("a", "b"): … d[k]` 규약 — 루프 변수 → 도는 문자열 리터럴 집합 (2026-09-29, 78회차 F78-3).
+
+        건강 save 가 최상위 평탄 키(systolic·diastolic …)를 튜플을 돌며 읽어, 리터럴 키만 보던 이 관문이
+        그 읽기를 못 봤다 — 가이드가 가르치는 `systolic` 이 판본 2 에서 UNKNOWN_ARGUMENT 였다.
+        튜플은 루프 자리의 리터럴이거나, 같은 함수·모듈에서 리터럴로 한 번 묶인 이름이다."""
+        def literal(node):
+            if isinstance(node, (ast.Tuple, ast.List, ast.Set)) and node.elts and all(
+                    isinstance(e, ast.Constant) and isinstance(e.value, str) for e in node.elts):
+                return {e.value for e in node.elts}
+            return None
+        named: dict[str, set[str]] = {}
+        for scope in (self.mods[mod], f):
+            for n in ast.walk(scope):
+                if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name):
+                    keys = literal(n.value)
+                    if keys:
+                        named[n.targets[0].id] = keys
+        loops: dict[str, set[str]] = {}
+        for n in ast.walk(f):
+            if isinstance(n, (ast.For, ast.comprehension)) and isinstance(n.target, ast.Name):
+                keys = literal(n.iter) or (named.get(n.iter.id) if isinstance(n.iter, ast.Name) else None)
+                if keys:
+                    loops[n.target.id] = loops.get(n.target.id, set()) | keys
+        return loops
+
     def of(self, mod: str, fname: str, index: int) -> set[str]:
         key = (mod, fname, index)
         if key in self.memo:
@@ -102,20 +137,18 @@ class _Reads:
             return set()
         name = params[index].arg
         out: set[str] = set()
+        loops = self._key_loops(mod, f)
         for n in ast.walk(f):
             if (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
                     and n.func.attr in ("get", "pop") and isinstance(n.func.value, ast.Name)
-                    and n.func.value.id == name and n.args and isinstance(n.args[0], ast.Constant)
-                    and isinstance(n.args[0].value, str)):
-                out.add(n.args[0].value)
+                    and n.func.value.id == name and n.args):
+                out |= self._keys_of(n.args[0], loops)
             elif (isinstance(n, ast.Subscript) and isinstance(n.value, ast.Name) and n.value.id == name
-                    and isinstance(n.ctx, ast.Load) and isinstance(n.slice, ast.Constant)
-                    and isinstance(n.slice.value, str)):
-                out.add(n.slice.value)
+                    and isinstance(n.ctx, ast.Load)):
+                out |= self._keys_of(n.slice, loops)
             elif (isinstance(n, ast.Compare) and len(n.ops) == 1 and isinstance(n.ops[0], ast.In)
-                    and isinstance(n.left, ast.Constant) and isinstance(n.left.value, str)
                     and isinstance(n.comparators[0], ast.Name) and n.comparators[0].id == name):
-                out.add(n.left.value)
+                out |= self._keys_of(n.left, loops)
             if isinstance(n, ast.Call):
                 target = self._resolve(mod, n.func)
                 if target is None:

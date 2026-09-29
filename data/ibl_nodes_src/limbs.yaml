@@ -1,6 +1,9 @@
   limbs:
     actions:
       os_open:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        open_params: false
+        params: {path: string}
         returns: effect
         pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
@@ -16,6 +19,11 @@
         - URL
         - 브라우저
       open_window:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        open_params: false
+        # 런처 창 명령은 params 를 통째로 Electron 에 넘긴다 — 받는 쪽(frontend/electron/main.js handleLauncherCommand)이 읽는 키.
+        params: {app: string, command: string, path: string, project_id: string, project_name: string,
+                 agent_name: string, room_id: string, room_name: string, folder_id: string, folder_name: string}
         returns: effect
         description: indiebizOS 작업창 열기 — app 분기 project/system_ai/messenger/community/business/multichat/folder/files(파일 탐색)/photos(사진). ★OS Finder 아님(그건 os_open). 진입 시나리오는 가이드(open_window.md).
         target_description: 'app 종류: project | system_ai | messenger | community | business | multichat | folder | files | photos. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). files/photos 추가 — path(옵션, 열 폴더). system_ai/messenger/community/business는 파라미터 없음. (indienet=community 레거시 별칭. files/photos 는 구 limbs:explorer·limbs:photo_manager 의 흡수 — 2026-08-15)'

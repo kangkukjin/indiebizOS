@@ -387,10 +387,11 @@
     "implementation": "17301a254043",
     "returns": "9a5e13f69efc",
     "target_key": "4e5ef144c51c",
+    "params": "ee5ad4bfe7e6",
     "runs_on": "54d3f8d78a8b",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 59
   },
   "limbs:os_open": {
@@ -400,10 +401,11 @@
     "implementation": "6015293cb8e4",
     "returns": "9a5e13f69efc",
     "target_key": "d070c7ecb482",
+    "params": "93ae7c89580f",
     "runs_on": "54d3f8d78a8b",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 16
   },
   "limbs:phone": {
@@ -489,9 +491,10 @@
     "implementation": "9bbceb3e40f2",
     "returns": "3c22349f8d0b",
     "target_key": "4423a660687c",
+    "params": "c1d1ba152c34",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 24
   },
   "others:ask": {
@@ -501,9 +504,11 @@
     "implementation": "12a194942821",
     "returns": "3c22349f8d0b",
     "target_key": "46e6a5e95667",
+    "params": "ef0d0156ed22",
+    "aliases": "2e67c186cbf7",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 10
   },
   "others:auto_response": {
@@ -528,11 +533,13 @@
     "implementation": "d8e0af14d429",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
+    "params": "5251d39831e6",
+    "aliases": "b461ecf7ae5e",
     "ops": "802b43a2d4cf",
     "side_effect": "b5bea41b6c62",
     "router": "d1a4b431b2c1"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 6
   },
   "others:bulletin": {
@@ -583,10 +590,11 @@
     "implementation": "d1ebab6a582e",
     "returns": "9a5e13f69efc",
     "target_key": "4423a660687c",
-    "aliases": "bcf5db2b278b",
+    "params": "42df4f591185",
+    "aliases": "d84e35f4f510",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 55
   },
   "others:family_news": {
@@ -627,11 +635,13 @@
     "implementation": "4e032e1a389e",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
+    "params": "01e04327e304",
+    "aliases": "374c9ad2793b",
     "ops": "0b23f94dcb77",
     "side_effect": "b5bea41b6c62",
     "router": "d1a4b431b2c1"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 7
   },
   "others:messages": {
@@ -673,10 +683,12 @@
     "implementation": "d4dba312e938",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
+    "params": "90b11b0db6ba",
+    "aliases": "d2206fb5fc95",
     "ops": "a2b38a47ea2d",
     "router": "d1a4b431b2c1"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 1
   },
   "others:portal": {
@@ -866,13 +878,14 @@
   "self:download": {
    "fields": {
     "description": "a8a2f75a4dec",
-    "target_description": "17830db441a6",
+    "target_description": "f6e09fa450d3",
     "implementation": "1edcb7aa8aeb",
     "returns": "9a5e13f69efc",
     "target_key": "a8aefc374937",
+    "params": "93131280aed2",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 7
   },
   "self:edit": {
@@ -975,11 +988,13 @@
     "implementation": "02d20b4d1c2a",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
+    "params": "25c61f16d31e",
+    "aliases": "6e134c236554",
     "ops": "b4ce5815b6e7",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 27
   },
   "self:grep": {
@@ -999,12 +1014,12 @@
   },
   "self:health": {
    "fields": {
-    "description": "d7a29d0994bf",
-    "target_description": "c288cf7a79cc",
+    "description": "db930be85635",
+    "target_description": "23d1e03d5538",
     "implementation": "30cbea2b1a77",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "3c7c0f307208",
+    "params": "a073e3a7fe01",
     "aliases": "3f399e157530",
     "ops": "2784fa9f17b3",
     "side_effect": "b5bea41b6c62",
@@ -1019,9 +1034,11 @@
     "description": "f7f3530ce887",
     "target_description": "40961e10609d",
     "returns": "9a5e13f69efc",
+    "params": "beac01a6c0f4",
+    "aliases": "ddc8b67cfb00",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 12
   },
   "self:lecture": {
@@ -1220,11 +1237,12 @@
     "implementation": "c506821395b4",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
+    "params": "cb67230be919",
     "aliases": "2a875e395a34",
     "ops": "a942c37d13b6",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 9
   },
   "self:package": {
@@ -1234,11 +1252,13 @@
     "implementation": "418fb07a0dae",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
+    "params": "b2dc5c6192b2",
+    "aliases": "11b65feaf5b0",
     "ops": "6df2f950ce3c",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 31
   },
   "self:patch": {
@@ -1304,12 +1324,13 @@
   "self:recent_chats": {
    "fields": {
     "description": "df023be3d254",
-    "target_description": "cd68cbaef67b",
+    "target_description": "a449b42d201f",
     "implementation": "e7e0b9b2cdbf",
     "returns": "3c22349f8d0b",
+    "params": "13c2e970d238",
     "router": "ff9f3c84cdb9"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 6
   },
   "self:record": {
@@ -1431,11 +1452,12 @@
     "implementation": "f46969a9fe96",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
+    "params": "770eb272054c",
     "ops": "b9968b53f13c",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 11
   },
   "self:time": {
@@ -2023,10 +2045,11 @@
     "implementation": "8dc8b22ee684",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
+    "params": "fbefec1c2a25",
     "ops": "fbea4733c011",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 25
   },
   "sense:sqlite": {
@@ -2142,11 +2165,12 @@
     "implementation": "270d9573af56",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
+    "params": "65b8ade9330a",
     "ops": "495ddfb2a3a6",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 24
   },
   "sense:world_bank": {

@@ -60,6 +60,9 @@ def problems(contract, values):
 
 def validate_extensions(contract):
     params = contract['params']
+    hint = contract.get('unknown_param_hint')
+    if hint is not None and (not isinstance(hint, str) or not hint.strip()):
+        raise ValueError('unknown_param_hint는 받지 않는 인자에 대한 안내 문장입니다')
     for alias, key in contract.get('aliases', {}).items():
         if key not in params or alias in params or not isinstance(alias, str):
             raise ValueError('aliases는 별칭→정본 인자 이름입니다')

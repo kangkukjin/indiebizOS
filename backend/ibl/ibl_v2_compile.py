@@ -540,7 +540,8 @@ class Compiler:
             allowed = {k: None if k in required else UNIT for k in params}
             if contract.get("open_params"):
                 allowed.update({k: UNIT for k in args if not k.startswith("_")})
-            self.arguments(node, args, allowed, contract.get("pipe_input"), piped)
+            self.arguments(node, args, allowed, contract.get("pipe_input"), piped,
+                           hint=contract.get("unknown_param_hint"))
             for k, t in args.items():
                 if k in params:
                     self.need(node, t, declared(params[k]))
@@ -673,7 +674,7 @@ class Compiler:
             return once and recur(d['body'])
         return False
 
-    def arguments(self, node, args, params, receiver, piped):
+    def arguments(self, node, args, params, receiver, piped, hint=None):
         if piped is not None:
             if receiver is None or receiver in args:
                 from ibl_v2_analysis import pipe_collision_message
@@ -690,8 +691,10 @@ class Compiler:
         for name in args.keys() - params.keys():
             from difflib import get_close_matches
             candidates = get_close_matches(name, params, n=3, cutoff=0.45)
-            hint = f" 비슷한 인자: {', '.join(candidates)}." if candidates else ""
-            self.issue(node, "UNKNOWN_ARGUMENT", f"알 수 없는 인자: {name}.{hint} 사용 가능한 인자: {', '.join(sorted(params))}")
+            near = f" 비슷한 인자: {', '.join(candidates)}." if candidates else ""
+            # 계약의 안내(선언 데이터)가 있으면 덧붙인다 — 받지 않는 필터를 어디서 하는지(예: 받은 행을 거르는 자리).
+            note = f". {hint}" if hint else ""
+            self.issue(node, "UNKNOWN_ARGUMENT", f"알 수 없는 인자: {name}.{near} 사용 가능한 인자: {', '.join(sorted(params))}{note}")
 
     def each(self, node, args, env, names, piped):
         self.arguments(node, args, {"items": None, "mode": UNIT, "on_error": UNIT, "parallel": UNIT}, "items", piped)

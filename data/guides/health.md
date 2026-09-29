@@ -7,7 +7,8 @@
 
 - **save**: 건강 정보 저장.
   - 측정값(권장 평탄형): `[self:health]{op: "save", category: "혈압", value: "128/85"}`
-    — 혈압은 `"수축기/이완기"` 문자열 또는 `systolic`/`diastolic` 필드, 그 외는 수치 하나.
+    — 혈압은 `value:"수축기/이완기"` 문자열 · `value:{systolic, diastolic}` · 최상위 `systolic`/`diastolic` 수치
+    중 하나(셋 다 선언된 형태), 그 외는 수치 하나.
     카테고리는 한국어(혈압/혈당/체중/심박수/체온/산소포화도)·영어(blood_pressure 등) 모두 수용.
   - 증상: `{op: "save", info_type: "symptom", data: {category: "두통", severity: "mild", description: "..."}}`
   - 투약: `{op: "save", info_type: "medication", data: {name: "약이름", dosage: "5mg", frequency: "1일 1회"}}`
@@ -19,8 +20,9 @@
   - 옵션: `keyword`(search 필수), `days`(기본 365), `person`, `category`(측정 필터).
     대상자·기간 지정 예: `[self:health]{op:"query",query_type:"summary",person:"가족",days:365}`.
     `include_images`와 투약 조회의 `active_only`는 불리언 옵션이다.
-  - 측정 조회는 `{text, table, blocks, points}` 통화 — table 은 날짜 피벗(혈압=수축기/이완기 2열)이라
-    `>> [table:chart]` / `>> [table:spreadsheet]` 파이프 직결.
+  - 측정 조회는 `{text, count, table, blocks, points, series_label}` — **items 가 아니라 table 통화**다. table 은
+    날짜 피벗(혈압=수축기/이완기 2열)이라 `>> [table:chart]` / `>> [table:spreadsheet]` 파이프 직결. 기록이 없어도
+    같은 모양(count 0·빈 rows)이다. 증상·투약·문서·검색·목록은 items, summary 는 text+blocks.
 - **ingest**: 다형 입력 일괄 적재 — `file`(이미지·PDF·엑셀·txt/md/csv 경로) 또는 `text`(자유 텍스트/붙여넣기)를
   AI가 구조화해 저장. 계기 '올리기' 탭이 이 op(파일은 `/launcher/upload` 로 올라와 경로가 됨).
   - 파이프라인 = **공용 ingest 엔진**(`backend/services/ingest_engine.py`): 원문 추출(PDF 텍스트층+스캔 정직 거부,

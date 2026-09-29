@@ -1,6 +1,9 @@
   sense:
     actions:
       world:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        open_params: false
+        params: {op: string, days: integer}
         returns: scalar
         side_effect: true    # refresh 가 save_snapshot() 으로 pulse DB 를 쓴다
         fixture: '[sense:world]{op: "snapshot"}'
@@ -45,6 +48,9 @@
         - 재수집
         - 갱신
       self_check:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        open_params: false
+        params: {op: string, limit: integer, source: string}
         returns: effect
         description: 전수 자가점검 (op 분기). run=부작용 없는 전 IBL 액션 실행 점검 / results=최근 점검 결과 조회(items — 실패만 골라 알림 등 파이프 접속).
         target_description: |

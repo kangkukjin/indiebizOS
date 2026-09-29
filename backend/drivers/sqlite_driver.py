@@ -532,6 +532,11 @@ class SqliteDriver(Driver):
         # 프로젝트 폴더엔 이 파일이 없으므로 분기는 시스템 AI 에만 걸린다.
         sysai_db = os.path.join(project_path, "system_ai_memory.db")
         if action == "recent_chats" and os.path.exists(sysai_db):
+            # 선언된 agent 축은 에이전트 사이 메시지(conversations.db)의 것이다. 시스템 AI 자기 대화는 role 뿐이라
+            # 걸 대상이 없다 — 받아 놓고 무시하면 "그 상대와의 대화"가 전체 대화로 돌아온다(78회차 F78-2 부류).
+            if params.get("agent"):
+                return self._err("시스템 AI 자기 대화에는 대화 상대(agent) 축이 없습니다 — agent 없이 조회한 뒤 "
+                                 "role 열을 [table:filter] 로 거르세요.")
             sconn = self._get_db(sysai_db)
             if not sconn:
                 return self._err(f"시스템 AI 대화 DB를 열 수 없습니다: {sysai_db}")

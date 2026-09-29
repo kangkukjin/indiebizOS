@@ -343,23 +343,28 @@ def get_health_context(input_data: dict) -> str:
         elif query_type == 'measurements':
             # 측정값 조회
             measurements = storage.get_measurements(category=category, days=days, person=person)
-            if not measurements:
-                cat_str = category_to_korean(category) if category else "측정"
-                person_str = f"{person}의 " if person and person != "나" else ""
-                return _ok(f"{person_str}최근 {days}일간 {cat_str} 기록이 없습니다.", items=[])
-            text = format_measurements(measurements, category, person)
             # 표준 테이블 통화 — 시계열 측정값을 table로 (>> chart/spreadsheet/document)
             # 사람용 텍스트는 text 키로 보존하고 table만 ADD (world_bank 선례).
             # blocks/points 는 🩺 계기 렌더용 (blocks=표 IR, points=첫 시리즈 sparkline).
-            table = _measurements_to_table(measurements)
-            payload = {"text": text, "count": len(measurements)}
-            if table:
-                payload["table"] = table
-                payload["blocks"] = [{"type": "table",
-                                      "columns": table["columns"], "rows": table["rows"]}]
-                payload["points"] = _table_to_points(table)
-                if payload["points"]:
-                    payload["series_label"] = table["columns"][1]
+            # ★기록 0건도 같은 모양(count 0·빈 rows) — 옛 판은 빈 결과만 items:[] 로 돌려줘 같은 조회가
+            #   결과 유무에 따라 통화가 바뀌었다(78회차 F78-3: 선언 "items 통화" ↔ 실제 table).
+            table = _measurements_to_table(measurements) if measurements else None
+            if not table:
+                table = {"columns": ["날짜"], "rows": []}
+            if measurements:
+                text = format_measurements(measurements, category, person)
+            else:
+                cat_str = category_to_korean(category) if category else "측정"
+                person_str = f"{person}의 " if person and person != "나" else ""
+                text = f"{person_str}최근 {days}일간 {cat_str} 기록이 없습니다."
+            payload = {"text": text, "count": len(measurements), "table": table,
+                       "blocks": [{"type": "table", "columns": table["columns"], "rows": table["rows"]}]
+                       if table["rows"] else [],
+                       "points": _table_to_points(table)}
+            if not measurements:
+                payload["message"] = text   # 계기 '측정' 탭의 empty_from: message
+            if payload["points"]:
+                payload["series_label"] = table["columns"][1]
             return json.dumps(payload, ensure_ascii=False)
 
         elif query_type == 'symptoms':

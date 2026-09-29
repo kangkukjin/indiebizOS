@@ -9,6 +9,10 @@ nodes:
   sense:
     actions:
       world:
+        open_params: false
+        params:
+          op: string
+          days: integer
         returns: scalar
         side_effect: true
         fixture: '[sense:world]{op: "snapshot"}'
@@ -54,6 +58,11 @@ nodes:
         - 재수집
         - 갱신
       self_check:
+        open_params: false
+        params:
+          op: string
+          limit: integer
+          source: string
         returns: effect
         description: 전수 자가점검 (op 분기). run=부작용 없는 전 IBL 액션 실행 점검 / results=최근 점검 결과 조회(items — 실패만 골라 알림 등 파이프 접속).
         target_description: "op로 분기 (기본 run).\n- run: 전수 자가점검 실행 (파라미터 없음, 수 분 소요). 결과는 world_pulse.db에 기록.\n- results: 최근 점검 결과 조회. limit 옵션(기본 50). items 행 = title(node:action)·\n  success(true/false)·response_ms·error·quality·checked_at·source — [table:filter]{where: \"success == false\"} 로 실패만.\n  source 옵션 — 건강 원장은 둘이다: self_check(기본, 자가점검 원장) / usage(실사용 원장 —\n  \"만성 실패\" 경보가 세는 곳) / all(둘 다). 기본 조회가 0건이어도 실사용 실패가 있으면 message 가 가리킨다.\n"
@@ -3147,10 +3156,15 @@ nodes:
   self:
     actions:
       recent_chats:
+        open_params: false
+        params:
+          limit: integer
+          agent: string
+        unknown_param_hint: 이 액션은 최근 N건(limit)과 대화 상대(agent)만 고른다 — 기간·낱말 조건은 받은 행을 [table:filter] 로 거르세요(시각 열 message_time — 시스템 AI 자기 대화는 timestamp, 본문 열 content_preview). 낱말로 과거 대화를 찾으려면 [self:memory]{op:"search", query:…}.
         returns: items
         fixture: '[self:recent_chats]{}'
         description: '최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). 본문은 300자 미리보기 — 절단은 truncated/content_len 으로 신고. 다른 프로젝트를 보려면 {project_id: "투자"} — ★project_path 는 무시된다(조용히 자기 대화가 나옴). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.'
-        target_description: 'limit 건수 제한 (기본 10). project_id 로 대상 프로젝트 지정 — 예 {project_id: "투자"}(id 또는 절대경로). ★project_path 는 라우팅에 안 먹힌다: 호출자 정체성 경로가 이겨(ibl_routing.resolve_project_path 2번 우선순위) 조용히 무시되고 자기 대화가 정상 형태로 반환된다 — 오답을 참으로 믿게 되니 쓰지 말 것. 본문 300자 초과분은 행 truncated=true·content_len(전체 길이)과 봉투 truncated·summary 집계로 신고(2026-08-30) — 전문이 필요하면 해당 DB 직접 조회.'
+        target_description: 'limit 건수 제한 (기본 10). agent 로 대화 상대(보낸 쪽 또는 받는 쪽 에이전트 이름) 한정 — 시스템 AI 자기 대화에는 상대 축이 없어 거절. 기간·낱말 조건 인자는 없다 — 받은 행을 [table:filter] 로 거른다. project_id 로 대상 프로젝트 지정 — 예 {project_id: "투자"}(id 또는 절대경로). ★project_path 는 라우팅에 안 먹힌다: 호출자 정체성 경로가 이겨(ibl_routing.resolve_project_path 2번 우선순위) 조용히 무시되고 자기 대화가 정상 형태로 반환된다 — 오답을 참으로 믿게 되니 쓰지 말 것. 본문 300자 초과분은 행 truncated=true·content_len(전체 길이)과 봉투 truncated·summary 집계로 신고(2026-08-30) — 전문이 필요하면 해당 DB 직접 조회.'
         group: conversation
         router: driver
         driver: sqlite
@@ -3264,6 +3278,10 @@ nodes:
                 type: text
                 placeholder: 메모
       switch:
+        open_params: false
+        params:
+          op: string
+          switch_id: string
         returns: items
         side_effect: true
         fixture: '[self:switch]{op: "list"}'
@@ -3329,6 +3347,21 @@ nodes:
         - 지연실행
         - 반복
       goal:
+        open_params: false
+        params:
+          op: string
+          goal_id: string
+          status: string
+          reason: string
+          task_id: string
+          approach_category: string
+          description: string
+          result: string
+          lesson: string
+          limit: integer
+        aliases:
+          approach_category:
+          - category
         returns: scalar
         side_effect: true
         fixture: '[self:goal]{op: "list"}'
@@ -3388,6 +3421,8 @@ nodes:
         - 통지
         - 메시지
       workflow:
+        open_params: true
+        open_params_reason: 판본 1 호환 입구 — 저장 형식(steps·pipeline·문장 키·params_default·description)과 run 의 호출 인자(params Record)가 op·판본마다 갈라져 한 인자 집합으로 닫을 수 없다. 판본 2 의 정본 계약은 code 의 [def:이름](명시 인자)와 [fn:이름]{인자} 호출이 진다.
         params:
           edition: integer
           code: string
@@ -3498,6 +3533,15 @@ nodes:
         - 트리거 상태
         - 자동 실행
       output:
+        open_params: false
+        params:
+          op: string
+          content:
+          - string
+          - object
+          - array
+          format: string
+          title: string
         aliases:
           content:
           - data
@@ -3524,9 +3568,15 @@ nodes:
         - 복사
         - UI
       download:
+        open_params: false
+        params:
+          url: string
+          path: string
+          filename: string
+          save_dir: string
         returns: effect
         description: URL에서 파일 다운로드해 로컬 저장. HTML 페이지 텍스트 추출은 sense:crawl.
-        target_description: 다운로드 URL. output 옵션으로 저장 경로 지정.
+        target_description: url=다운로드 URL. path=저장 전체 경로(상대면 프로젝트 기준, 최우선) 또는 filename(파일 이름)+save_dir(폴더, 생략 시 저장소 outputs/).
         group: output
         target_key: url
         router: system
@@ -3536,6 +3586,13 @@ nodes:
         - 다운로드
         - 파일받기
       package:
+        open_params: false
+        params:
+          op: string
+          package_id: string
+        aliases:
+          package_id:
+          - name
         returns: items
         side_effect: true
         fixture: '[self:package]{op: "list"}'
@@ -3585,6 +3642,15 @@ nodes:
         - reload
         - 확장
       install_lib:
+        open_params: false
+        params:
+          package: string
+          check: boolean
+          reason: string
+        aliases:
+          package:
+          - name
+          - lib
         returns: effect
         description: 파이썬 라이브러리(pip) 확인·승인 설치. 이미 있으면 installed 즉답, check:true=확인만(부작용 0, installed/approved/pending/missing). ★사람 승인 게이트 — 미승인은 대기열+알림(approval_required), 사용자가 도구 관리 창에서 승인한 뒤 같은 호출을 다시 하면 설치.
         target_description: 'package(필수) — pip 패키지명(세상의 도구 지도 world_tools.md 의 이름 그대로). check(선택, bool) — 확인만. reason(선택) — 왜 필요한지 한 줄(승인 화면에 보임). 설치 위치=쓰기가능 pylibs, 재기동 불요. package="playwright"면 chromium 바이너리도 함께. 예: {package: "duckdb", check: true}.'
@@ -4342,15 +4408,32 @@ nodes:
           active_only: boolean
           measured_at: string
           note: string
+          systolic:
+          - number
+          - string
+          diastolic:
+          - number
+          - string
+          unit: string
+          type: string
+          name: string
+          description: string
+          severity: string
+          started_at: string
+          ended_at: string
+          dosage: string
+          frequency: string
+          image_path: string
+          extracted_data: object
         aliases:
           query:
           - keyword
         returns: items
         side_effect: true
         fixture: '[self:health]{op: "query", query_type: "medications"}'
-        description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션. query 결과는 items 통화 — table:chart(추이 그래프)·table:spreadsheet(엑셀) 파이프로.
+        description: 건강 기록 관리 (op 분기). 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션. query 결과 — 측정 추이는 table 통화(날짜 피벗)+points 라 table:chart·spreadsheet 직결, 증상·투약·문서·검색은 items, summary 는 text+blocks.
         group: health
-        target_description: 'save — 평탄형 권장: category(혈압/혈당/체중/심박수/체온/산소포화도 등)+value 를 최상위에(혈압은 value:"128/85" 또는 systolic/diastolic). 증상·투약·문서는 info_type(symptom/medication/document)+data. query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당 같은 카테고리명) + keyword/days/person 옵션(category 파라미터로 넘겨도 수용). delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호). ingest — file(이미지/PDF/엑셀/텍스트 파일 경로) 또는 text(자유 텍스트)를 AI가 구조화해 일괄 저장(검사지 사진·검진 결과 등, 원본은 문서로 보존).'
+        target_description: 'save — 평탄형 권장: category(혈압/혈당/체중/심박수/체온/산소포화도 등)+value 를 최상위에(혈압은 value:"128/85" · value:{systolic,diastolic} · 최상위 systolic/diastolic 수치 중 하나). 증상·투약·문서는 info_type(symptom/medication/document)+data. query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당 같은 카테고리명) + keyword/days/person 옵션(category 파라미터로 넘겨도 수용). delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호). ingest — file(이미지/PDF/엑셀/텍스트 파일 경로) 또는 text(자유 텍스트)를 AI가 구조화해 일괄 저장(검사지 사진·검진 결과 등, 원본은 문서로 보존).'
         target_key: op
         router: handler
         tool: health_op
@@ -5609,7 +5692,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-29'
-          impl: 3beb05e15714d23c
+          impl: 791d44cd62b97dca
         target_key: path
         aliases:
           offset:
@@ -5622,7 +5705,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-29'
-          impl: 3beb05e15714d23c
+          impl: 791d44cd62b97dca
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6383,7 +6466,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-29'
-          impl: 3beb05e15714d23c
+          impl: 791d44cd62b97dca
         pipe_in: true
         lands_on: body
         limb_op:
@@ -6508,6 +6591,9 @@ nodes:
   limbs:
     actions:
       os_open:
+        open_params: false
+        params:
+          path: string
         returns: effect
         pipe_in: true
         description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
@@ -6523,6 +6609,18 @@ nodes:
         - URL
         - 브라우저
       open_window:
+        open_params: false
+        params:
+          app: string
+          command: string
+          path: string
+          project_id: string
+          project_name: string
+          agent_name: string
+          room_id: string
+          room_name: string
+          folder_id: string
+          folder_name: string
         returns: effect
         description: indiebizOS 작업창 열기 — app 분기 project/system_ai/messenger/community/business/multichat/folder/files(파일 탐색)/photos(사진). ★OS Finder 아님(그건 os_open). 진입 시나리오는 가이드(open_window.md).
         target_description: 'app 종류: project | system_ai | messenger | community | business | multichat | folder | files | photos. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). files/photos 추가 — path(옵션, 열 폴더). system_ai/messenger/community/business는 파라미터 없음. (indienet=community 레거시 별칭. files/photos 는 구 limbs:explorer·limbs:photo_manager 의 흡수 — 2026-08-15)'
@@ -7086,10 +7184,23 @@ nodes:
   others:
     actions:
       delegate:
+        open_params: false
+        params:
+          agent_id: string
+          message: string
+          mode: string
+          scope: string
+          workflow: string
+          steps:
+          - array
+          - string
+          from_agent: string
         aliases:
           steps:
           - do
           - pipeline
+          message:
+          - query
         returns: effect
         pipe_in: true
         description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기.
@@ -7113,6 +7224,15 @@ nodes:
         - 프로젝트위임
         - 다른프로젝트
       ask:
+        open_params: false
+        params:
+          to: string
+          message: string
+          payload: object
+          dry_run: boolean
+        aliases:
+          message:
+          - query
         returns: items
         exempt: 상대 몸 프레즌스 의존(폰 꺼짐=일상, dry_run 도 상대가 컴파일) + 런타임 등록 별칭 하드코딩 부적합 — 헤드리스 점검이 폰 꺼진 날마다 거짓 실패 (limbs:player_status 동류)
         description: 이웃 몸(다른 indiebizOS 기기)에 자연어로 부탁. 상대가 자기 사전으로 컴파일·실행해 결과(items 통화)를 돌려준다. 내 어휘에 없는 상대 능력(이웃 몸 명함의 냄새)은 이 액션으로 — 상대 액션 이름을 흉내내지 말 것. 내 몸의 경량 원샷 질문은 [self:ask].
@@ -7138,6 +7258,9 @@ nodes:
         - 명함
         - 다른기기
       agents:
+        open_params: false
+        params:
+          agent_id: string
         returns: items
         fixture: '[others:agents]{}'
         description: 프로젝트·에이전트 조회. agent_id 없으면 전체 프로젝트별 에이전트 트리(명부), 있으면 단건 상세. (구 [self:agents] 흡수 2026-08-05.)
@@ -7355,6 +7478,18 @@ nodes:
         - 글쓰기
         - 인디넷
       nostr:
+        open_params: false
+        params:
+          op: string
+          name: string
+          set: array
+          restore_defaults: boolean
+          nsec: string
+        aliases:
+          name:
+          - display_name
+          set:
+          - relays
         returns: effect
         description: IndieNet/Nostr 계정 — op:profile(신원·릴레이 조회)/rename(표시이름)/relays(릴레이 조회·설정)/import_key(nsec 가져오기)/reset_identity(새 신원).
         target_description: op:profile(기본) / rename(name 필수) / relays(set 또는 restore_defaults 로 변경, 없으면 조회) / import_key(nsec 필수 — 기존 신원 대체) / reset_identity(새 키 생성 — 기존 신원 대체, 주의).
@@ -7382,6 +7517,16 @@ nodes:
         - 릴레이
         - 닉네임
       board:
+        open_params: false
+        params:
+          op: string
+          hashtag: string
+          name: string
+        aliases:
+          hashtag:
+          - tag
+          name:
+          - board_name
         returns: items
         side_effect: true
         fixture: '[others:board]{op: "list"}'
@@ -7409,6 +7554,15 @@ nodes:
         - 게시판
         - 커뮤니티
       follow:
+        open_params: false
+        params:
+          op: string
+          pubkey: string
+          name: string
+        aliases:
+          pubkey:
+          - npub
+          - author
         returns: items
         side_effect: true
         fixture: '[others:follow]{op: "list"}'
@@ -9061,6 +9215,8 @@ nodes:
   table:
     actions:
       each:
+        open_params: true
+        open_params_reason: 판본 2 컴파일러가 each 의 인자(items·mode·on_error·parallel + 코드 블록)를 직접 소유한다(ibl_v2_compile.each) — 레지스트리 계약은 판본 1 저장본(do·collect·keep·as·limit) 호환 입구일 뿐이다.
         target_description_edition: 1
         returns: transform
         flow:
@@ -9090,7 +9246,11 @@ nodes:
           version: 1
           params:
             items: List|Record|Text
-          open_params: true
+            step: Text
+            init: Unknown
+            as: Text
+          aliases:
+            expr: step
           required: []
           result: Record
           effects:

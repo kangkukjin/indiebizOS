@@ -62,7 +62,7 @@ actions:
         screenshot: 페이지 스크린샷 PNG 저장 (path, full_page)
         vision: 스크린샷 base64 반환 (AI 시각 인식용)
         evaluate: JavaScript 표현식 실행 (expression)
-        pdf: 페이지를 PDF로 저장 (path)
+        pdf: 페이지를 PDF로 저장 (path, driver:playwright 전용; Chrome은 미지원 오류)
         find: 자연어로 요소 검색 (query; Chrome MCP 전용)
         logs: 브라우저 로그 (mode console|network)
         dialog_info: Alert/Confirm/Prompt 팝업 정보
@@ -153,7 +153,7 @@ tool_json:
           description: 자연어 요소 검색어 (find)
         path:
           type: string
-          description: 저장 경로 (screenshot/pdf/upload_file)
+          description: 'screenshot/pdf 저장 경로, upload_file 입력 파일. 저장은 ~workspace/·~·절대경로·프로젝트 상대경로를 지원하며 파일명만 주면 outputs에 저장.'
         full_page:
           type: boolean
           description: 전체 페이지 스크린샷 여부

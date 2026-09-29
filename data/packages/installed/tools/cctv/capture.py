@@ -26,6 +26,9 @@ from typing import Optional
 
 import requests
 
+from tool_context import ToolContext
+from runtime_utils import get_base_path
+
 from cctv_common import success_response, error_response, get_output_dir, HEADERS
 
 
@@ -299,16 +302,17 @@ def capture_cctv(url: str, source_type: str = "auto", filename: str = None,
         if not url:
             return error_response("url이 필요합니다.")
 
-        # 출력 디렉토리 및 파일명
-        output_dir = get_output_dir(project_path)
+        # 확장자 보정 뒤 공통 해소기로 쓰기 범위와 프로젝트 기준을 함께 적용한다.
         if not filename:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"cctv_capture_{timestamp}.jpg"
-
+            filename = f"outputs/cctv_captures/cctv_capture_{timestamp}.jpg"
         if not filename.lower().endswith(('.jpg', '.jpeg', '.png')):
             filename += ".jpg"
-
-        output_path = os.path.join(output_dir, filename)
+        context = ToolContext(str(project_path or get_base_path()), "cctv_op")
+        resolved = context.resolve_output_path(filename)
+        if resolved.get("error"):
+            return error_response(resolved["error"])
+        output_path = resolved["path"]
 
         # 소스 타입 결정
         if source_type == "auto":

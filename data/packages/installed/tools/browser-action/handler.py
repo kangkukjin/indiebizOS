@@ -36,6 +36,8 @@ def _load(module_name):
     if module_name != "browser_session" and "browser_session" not in _module_cache:
         _load("browser_session")
 
+    if module_name in {"browser_content", "browser_chrome"}:
+        _load("browser_paths")
     module = load_singleton(__file__, module_name)
     _module_cache[module_name] = module
     return module

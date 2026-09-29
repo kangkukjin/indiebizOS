@@ -20,6 +20,7 @@ actions:
     ops:
       returns:
         save: scalar
+        read: scalar
         delete: effect
         move: effect
       side_effect:
@@ -36,7 +37,7 @@ actions:
       values:
         save: 자동 선별 안내 (content 필수, saved:false; 본문 저장 없음, 최종 응답 후 사용자 원문에서 선별)
         search: 키워드·자연어 검색 (FTS+시맨틱 통합, node 필터 옵션)
-        read: 전문 조회 (memory_id)
+        read: 전문 조회 (memory_id; content·source·text·메타데이터 Record)
         delete: 삭제 (memory_id)
         recall: 가지 열기 (node — 문서 전문+기억+하위 가지; 생략=지도; store 실행=IBL 함수 서명·용례, 본문은 expand)
         move: 가지 이동 (memory_id + node; store 실행=용례)
@@ -67,7 +68,7 @@ tool_json:
 
       - op=search: query 필수(자연어/키워드, FTS+시맨틱 통합) + category 필터 옵션, top_k 옵션
 
-      - op=read: 장기기억 memory_id 필수(대화 conversation_id 사용 불가)
+      - op=read: 장기기억 memory_id 필수(대화 conversation_id 사용 불가). content(전문), source(출처·범위), text(표시용 전문+출처), 메타데이터를 JSON Record로 반환
 
       - op=delete: 장기기억 memory_id 필수(대화 conversation_id 사용 불가)
 

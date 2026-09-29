@@ -4597,6 +4597,7 @@ nodes:
         ops:
           returns:
             save: scalar
+            read: scalar
             delete: effect
             move: effect
           side_effect:
@@ -4613,7 +4614,7 @@ nodes:
           values:
             save: 자동 선별 안내 (content 필수, saved:false; 본문 저장 없음, 최종 응답 후 사용자 원문에서 선별)
             search: 키워드·자연어 검색 (FTS+시맨틱 통합, node 필터 옵션)
-            read: 전문 조회 (memory_id)
+            read: 전문 조회 (memory_id; content·source·text·메타데이터 Record)
             delete: 삭제 (memory_id)
             recall: 가지 열기 (node — 문서 전문+기억+하위 가지; 생략=지도; store 실행=IBL 함수 서명·용례, 본문은 expand)
             move: 가지 이동 (memory_id + node; store 실행=용례)
@@ -5549,7 +5550,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-29'
-          impl: d941b0c974b863e4
+          impl: 01c640f50472f6f0
         target_key: path
         aliases:
           offset:
@@ -5562,7 +5563,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-29'
-          impl: d941b0c974b863e4
+          impl: 01c640f50472f6f0
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6323,7 +6324,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-29'
-          impl: d941b0c974b863e4
+          impl: 01c640f50472f6f0
         pipe_in: true
         lands_on: body
         limb_op:
@@ -6649,7 +6650,7 @@ nodes:
             screenshot: 페이지 스크린샷 PNG 저장 (path, full_page)
             vision: 스크린샷 base64 반환 (AI 시각 인식용)
             evaluate: JavaScript 표현식 실행 (expression)
-            pdf: 페이지를 PDF로 저장 (path)
+            pdf: 페이지를 PDF로 저장 (path, driver:playwright 전용; Chrome은 미지원 오류)
             find: 자연어로 요소 검색 (query; Chrome MCP 전용)
             logs: 브라우저 로그 (mode console|network)
             dialog_info: Alert/Confirm/Prompt 팝업 정보

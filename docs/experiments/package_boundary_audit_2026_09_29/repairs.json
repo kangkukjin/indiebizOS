@@ -1,0 +1,39 @@
+{
+  "date": "2026-09-29",
+  "fixed_groups": [
+    "R1",
+    "R2",
+    "P1",
+    "P2",
+    "P3",
+    "D1",
+    "D3",
+    "D4"
+  ],
+  "full_suite": {
+    "passed": 7633,
+    "failed": 2,
+    "skipped": 1,
+    "seconds": 747.74,
+    "note": "검사 지적 두 건은 실행 도중/이후 수정, 아래 영향 범위 시험으로 재검증. 전체 재실행은 하지 않음."
+  },
+  "final_targeted_suite": {
+    "passed": 87,
+    "failed": 0,
+    "seconds": 15.09,
+    "includes_real_chromium_pdf_png": true
+  },
+  "runtime": {
+    "phase": "ACTIVE",
+    "readiness": "ready",
+    "accepting": true,
+    "errors": [],
+    "generation": "5ae8945cf3b00c756eb48d52e8c235af",
+    "code_digest": "ab2e9f7b0b3d3dd15b39d4d1fbacc9b36ab2b7ccd16c395e25cedd822cdcee2a",
+    "current_code_digest": "ab2e9f7b0b3d3dd15b39d4d1fbacc9b36ab2b7ccd16c395e25cedd822cdcee2a"
+  },
+  "limitations": [
+    "Chrome PDF 파일 저장은 미지원 오류로 명시; Playwright에서 저장 지원",
+    "Chrome MCP·CCTV·유튜브 외부 서비스 호출은 대역으로 검증; 사용자 기억은 읽지 않음"
+  ]
+}

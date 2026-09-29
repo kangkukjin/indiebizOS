@@ -7,8 +7,8 @@
 계약(초크포인트 `_with_success`, op 마다 손으로 넣지 않는다):
   · 딕셔너리 봉투는 성공이면 success:true, error 를 담았으면 success:false
   · 이미 success 가 있으면 손대지 않는다(recall·move 는 제 값을 갖고 있다)
-  · **산문 반환(read 의 전문)은 감싸지 않는다** — 통화가 문자열이라 봉투로 바꾸면
-    통화 모양이 바뀐다
+  · read는 전문·출처를 JSON 봉투로 반환한다(2026-09-29 패키지 경계 감사 수리).
+    공통 stamp_success는 임의 문자열을 추측하여 감싸지 않는다.
   · delete 는 못 지웠으면 success:false — 초크포인트가 거짓을 물들이면 안 된다
 
 실행: .venv/bin/python -m pytest -q backend/test_memory_success_envelope_2026_09_07.py
@@ -78,12 +78,16 @@ def test_recall_keeps_its_own_success(mem, ctx):
     #   초크포인트가 success:false 로는 감싸지만 진단은 여전히 sqlite 속말이다(별건).
 
 
-def test_read_stays_prose_not_wrapped(mem, ctx):
-    """산문 통화를 봉투로 감싸면 하류(브리핑·문서)가 받는 모양이 바뀐다."""
-    mid = _seed(ctx, "산문으로 돌아와야 하는 본문")
+def test_read_preserves_full_text_in_declared_envelope(mem, ctx):
+    """실제 임시 기억 DB의 전문·출처를 판본 2 실행 봉투로 읽을 수 있다."""
+    from ibl_v2_adapters import decode_envelope, load_registry
+    mid = _seed(ctx, "전문으로 돌아와야 하는 본문")
     raw = mem.execute({"op": "read", "memory_id": mid}, ctx)
-    assert isinstance(raw, str) and not raw.lstrip().startswith("{"), raw[:80]
-    assert "산문으로 돌아와야 하는 본문" in raw
+    result = json.loads(raw)
+    assert result["success"] is True and result["memory_id"] == mid
+    assert result["content"] == "전문으로 돌아와야 하는 본문"
+    assert result["content"] in result["text"] and result["source"]
+    decode_envelope(raw, load_registry()["self:memory"].contract["adapter"])
 
 
 def test_delete_reports_truthfully(mem, ctx):

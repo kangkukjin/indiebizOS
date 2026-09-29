@@ -239,7 +239,9 @@ tool_json:
           enum:
           - audio
           - video
-          description: 재생 모드 (op=play 시, 기본 audio)
+          - client
+          - server
+          description: 'play는 audio/video/client(기본 audio), download는 server/client(기본 server). client는 폰·원격 클라이언트에 재생 URL 또는 다운로드 데이터를 반환. relay는 media 사용(audio/video).'
         media:
           type: string
           enum:

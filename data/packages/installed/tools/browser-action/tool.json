@@ -78,7 +78,7 @@
           },
           "path": {
             "type": "string",
-            "description": "저장 경로 (screenshot/pdf/upload_file)"
+            "description": "screenshot/pdf 저장 경로, upload_file 입력 파일. 저장은 ~workspace/·~·절대경로·프로젝트 상대경로를 지원하며 파일명만 주면 outputs에 저장."
           },
           "full_page": {
             "type": "boolean",

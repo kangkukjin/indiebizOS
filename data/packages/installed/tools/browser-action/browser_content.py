@@ -19,6 +19,8 @@ import base64
 from datetime import datetime
 from pathlib import Path
 
+from browser_paths import output_path
+
 from browser_session import (
     BrowserSession, ensure_active, get_output_dir,
     WAIT_DEFAULT_TIMEOUT, ACTION_TIMEOUT,
@@ -147,20 +149,8 @@ async def browser_screenshot(params: dict, project_path: str = ".") -> dict:
     selector = params.get("selector")
 
     try:
-        # 호출자가 path 를 주면 그대로 존중(tool.json 계약). 없으면 자동 이름으로 폴백.
-        req_path = (params.get("path") or "").strip()
-        if req_path:
-            p = Path(req_path)
-            if not p.is_absolute():
-                p = Path(project_path) / p
-            if p.suffix.lower() != ".png":
-                p = p.with_suffix(".png")
-            p.parent.mkdir(parents=True, exist_ok=True)
-            filepath = p
-        else:
-            out_dir = get_output_dir(project_path, "screenshots")
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filepath = out_dir / f"screenshot_{timestamp}.png"
+        filepath = output_path(params, project_path, folder="screenshots",
+                               stem="screenshot", ext=".png")
 
         if selector:
             element = page.locator(selector).first
@@ -487,10 +477,8 @@ async def browser_save_pdf(params: dict, project_path: str = ".") -> dict:
     print_background = params.get("print_background", True)
 
     try:
-        out_dir = get_output_dir(project_path, "pdfs")
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"page_{timestamp}.pdf"
-        filepath = out_dir / filename
+        filepath = output_path(params, project_path, folder="pdfs",
+                               stem="page", ext=".pdf")
 
         await page.pdf(
             path=str(filepath),

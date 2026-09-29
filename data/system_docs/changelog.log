@@ -2239,3 +2239,5 @@
   검증: 신규 회귀 16. 전체 backend 7551 passed·실패 0. build --check·경로·파일 크기·층·침묵 클램프 통과. 라이브 격리 I1~I12 수리 확인. 상세 docs/experiments/imagination_round74_2026_09_28/report.md "집행 완료" 2차.
 
 2026-09-29 DEVELOPMENT: 회귀 검증 절차를 관련 검사·실패 항목 재확인·영향이 넓은 변경의 최종 전수로 구분(docs/REGRESSION_TESTING.md, AGENTS.md). 작은 수정마다 전수를 반복하지 않고 전수의 실패들은 항목별 수리 후 함께 재검증한다. pytest 기본 출력에 느린 setup/call/teardown 상위 15개를 추가하고 중복 -q를 피하도록 안내. 테스트 선택·순서·assertion·CI 전수 범위는 변경하지 않음. 검증: 관련 회귀 27 passed in 4.69s, 빈 실패 캐시의 --lf --lfnf=none은 4 deselected·종료 5로 전수 폴백 없음 확인. 이번 변경의 전수는 미실행이며 전수 실행시간 단축은 미측정.
+
+[2026-09-29] 설치 패키지 1회성 감사 후속 수리 — 확정 8부류 완료. memory read JSON Record·glob 실패 봉투, 브라우저 PDF 지정 경로·공통 스크린샷 경로·Chrome PDF 정직한 미지원, CCTV 프로젝트 배관·공통 저장 경로, 유튜브 client/server 선언·op별 모드 검증, 부동산·사진 교재 수정. 상시 전수 감사 추가 없음. 전체 backend 7633 passed/2 failed/1 skipped 뒤 두 관문 지적 수정, 영향 범위 최종 87 passed. 실제 Chromium PDF/PNG·백엔드 healthy 확인. 증거 docs/experiments/package_boundary_audit_2026_09_29/report.md 후속 수리 및 repairs.json.

@@ -51,3 +51,31 @@
 - 조사 시작 HEAD는 `2e096a83`. 조사 중 다른 작업이 business/cctv 등의 소스·어휘를 수정했고 이를 [concurrent_changes.json](concurrent_changes.json)에 따로 기록했다. 최초 예제 판정은 initial_example_checks.jsonl에 보존했다. 별도 작업의 수정·커밋은 이 감사에 포함하지 않는다.
 
 결론적으로 **1회성 전수 조사는 유효했다.** 범용 자동 관문부터 만드는 대신, 성공 반환·저장 경로·현재 예제의 확인된 결함부터 수리하고 각각의 회귀 사례를 추가하는 편이 적절하다.
+
+## 후속 수리 — 2026-09-29
+
+위 본문과 JSONL은 **수리 전 감사 증거**다. 이후 사용자의 수리 요청으로 확정 8부류를 다음처럼 수정했다. `verify_findings.py`는 당시 결함을 재현하는 시험이므로 수리 후의 통과 기준으로 사용하지 않는다. 현재 회귀는 `backend/test_package_boundary_repairs.py`에 있다.
+
+| ID | 반영 내용 | 수리 검증 |
+|---|---|---|
+| R1 | 기억 read가 content·source·text·메타데이터 Record를 반환한다. 표시용 전문과 출처를 보존하고 read의 반환 선언도 scalar로 바로잡았다. | 합성 DB와 실제 임시 기억 DB → 공개 execute → 판본 2 디코더 통과. 기존 평문 강제 시험도 새 계약으로 교체. |
+| R2 | glob 실패를 success:false/error 봉투로 반환한다. | 공개 execute에 파일시스템 오류 주입 → ADAPTER_SHAPE가 아닌 TOOL 진단. |
+| P1 | Playwright PDF가 지정 경로와 인쇄 옵션을 지킨다. Chrome PDF는 부작용 없이 명시적 미지원 오류를 반환한다. | 실제 로컬 Chromium에서 지정 경로 PDF 생성. Chrome은 인쇄 대화상자를 열지 않고 TOOL 실패·Playwright 사용 안내. |
+| P2 | 두 브라우저 드라이버가 같은 browser_paths → ToolContext.resolve_output_path를 사용한다. Chrome도 file_path를 제공하며 이미지가 없으면 실패한다. | ~workspace·프로젝트 상대경로·파일명·거부 경로 대역 회귀, 실제 PNG 생성 확인. |
+| P3 | CCTV 공개 진입점부터 내부 캡처까지 project_path를 전달하고 공통 쓰기 경로 해소기를 사용한다. | 대역 캡처로 중첩 경로·~workspace·파일명·기본 저장 위치·거부 경로 확인. 외부 CCTV 네트워크 호출 없음. |
+| D1 | 스키마에 client/server를 반영했다. play(audio/video/client), download(server/client), relay(audio/video)는 실행 전에 모드를 검증한다. | client 재생·다운로드와 server 다운로드의 실제 컴파일·핸들러 전달 통과. 잘못된 op/mode는 부작용 전에 거절. |
+| D3 | 부동산 필터를 items 명시·콜백 문법으로 교체했다. 만원 단위 설명은 유지한다. | README의 문장을 추출해 합성 데이터로 실행, 보증금 20,000만원 기준 행을 선택. |
+| D4 | 사진 가이드를 현재 라이브 색인·날짜+GPS 필터·구조 필드·제한 사항으로 다시 작성했다. | 가이드 코드 블록을 현재 컴파일러로 검사. 기존 스캔 DB는 별도 REST 풍부창 자료라고 구분. |
+
+- 공통 경로 규약을 재사용했으며 상시 전 패키지 자동 감사는 새로 추가하지 않았다.
+- 브라우저 PDF 관련 용례 5개, 기억 read 관련 용례 6개는 결과를 그대로 반환하는 문장이라 본문 변경 없이 유지했다. 브라우저 자동 선택이 Chrome이면 이제 정직하게 실패하며, PDF는 Playwright로 열어 둔 페이지에서 실행해야 한다. 관련 계약 검토 원장을 갱신했다.
+- system_essentials의 변경은 glob 실패 봉투 한 곳이다. read/fill/script의 경로 처리 변경이 없음을 대조한 뒤 공유 구현 지문을 갱신했다.
+- 신규 회귀 26개와 기존 경로 회귀 12개 통과. 실제 임시 기억 DB를 포함한 추가 묶음 32개 통과(Chromium 시험 1개는 앞 묶음에서 통과).
+
+### 최종 검증
+
+- 전체 backend: **7,633 passed / 2 failed / 1 skipped**, 747.74초. 실패는 CCTV 내부 project_path의 사용자 인자 오인과 새 확장자 비교의 근거 주석 누락이었다. 각각 `_project_path` 배관 표기와 파일 형식 비교의 정당한 예외 주석으로 수정했다.
+- 수정 후 영향 범위 전체(신규 수리·기존 경로·기억 봉투·Chrome 연결 진단·액션 인자 관문·값 판정 관문): **87 passed / 실패 0**, 15.09초. 실제 Chromium PDF·PNG 생성도 포함한다. 전체 12분 시험은 수정 후 다시 돌리지 않았으며, 전체 초록으로 기록하지 않는다.
+- 어휘 빌드/`--check`, Android 번들, 경로·문자열 반환·은퇴 계약·층 관문 통과.
+- 백엔드 공식 재시작 및 후속 자동 갱신 완료. ACTIVE / ready / accepting, 오류 없음. `/health` healthy, 정본 base_path 확인. 실행 코드 지문은 [repairs.json](repairs.json)에 기록한다.
+- Chrome MCP·CCTV·유튜브 외부 서비스는 대역 검증이다. 실제 브라우저 산출 검증은 로컬 Chromium으로 수행했고, 개인 기억 조회나 실제 재생·다운로드는 실행하지 않았다.

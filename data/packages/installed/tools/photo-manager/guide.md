@@ -1,106 +1,44 @@
 # Photo Manager 가이드
 
-## 스캔 DB 구조
+## 현재 사진 조회
 
-스캔 데이터는 `data/packages/photo_scans/` 폴더에 저장됩니다.
-- `scans.json` — 스캔 목록 (id, name, root_path, photo_count 등)
-- `scan_{id}.db` — 각 스캔별 SQLite DB
+`[self:photo]`는 OS 미디어 색인(맥 Spotlight·폰 MediaStore)을 조회합니다.
+먼저 스캔하거나 SQLite DB를 직접 조회할 필요가 없습니다.
 
-### media_files 테이블 주요 컬럼
-
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| path | TEXT | 파일 절대경로 |
-| filename | TEXT | 파일명 |
-| taken_date | TEXT | 촬영일 (ISO8601, 예: 2021-04-15T14:30:00) |
-| gps_lat | REAL | 위도 (예: 37.5665) |
-| gps_lon | REAL | 경도 (예: 126.9780) |
-| media_type | TEXT | "photo" 또는 "video" |
-| camera_model | TEXT | 카메라 모델명 |
-| size | INTEGER | 파일 크기 (바이트) |
-
-## 워크플로우
-
-### 1. 특정 기간/장소 사진 조회
-
-도구만으로는 기간+위치 조건 검색이 불가능합니다. **반드시 Python으로 DB를 직접 쿼리하세요.**
-
-**순서:**
-1. `list_scans`로 스캔 목록 및 DB 경로 확인
-2. Python으로 해당 DB에 SQL 쿼리
-
-```python
-import sqlite3
-conn = sqlite3.connect("DB경로")  # list_scans 결과의 DB 경로
-cur = conn.cursor()
-
-# 2021년 4월 GPS 있는 사진
-cur.execute("""
-    SELECT filename, taken_date, gps_lat, gps_lon, path
-    FROM media_files
-    WHERE taken_date LIKE '2021-04%'
-      AND gps_lat IS NOT NULL AND gps_lon IS NOT NULL
-      AND gps_lat != 0 AND gps_lon != 0
-    ORDER BY taken_date
-""")
-rows = cur.fetchall()
+```ibl
+[self:photo]{start:"2021-04-01",end:"2021-04-30",has_gps:true,limit:100}
 ```
 
-3. GPS 좌표를 지역명으로 변환 — `[sense:reverse_geocode]` 사용:
-```
-[sense:reverse_geocode] {lat: 35.32, lon: 129.27}
-→ {"address": "경상남도 울산광역시 울주군 ...", "region_1depth": "울산광역시", ...}
-```
+기간과 GPS 보유 조건을 함께 적용합니다. `start`·`end`는 현지 촬영일 기준으로
+`YYYY-MM` 또는 `YYYY-MM-DD`를 받습니다. `taken_at`에는 시간대가 포함됩니다.
+결과 `items`에는 `path`, `taken_at`, `month`, `lat`, `lng`, `camera`, `kind`,
+`size`, `source`, `origin` 등이 담깁니다. 날짜·좌표가 미상이면 그 사실을 유지합니다.
+`origin:unknown`은 생성 이미지라는 뜻이 아닙니다. 위도·경도 0도는 유효한 좌표입니다.
 
-Python에서 클러스터링 후 좌표별 장소 확인:
-```python
-from collections import defaultdict
-clusters = defaultdict(list)
-for row in rows:
-    key = (round(row[2], 1), round(row[3], 1))
-    clusters[key].append(row)
+경로 생략 시 홈에서 시스템 outputs·data·프로젝트 outputs를 제외합니다.
+특정 폴더의 산출물까지 보려면 `path`를 명시합니다. 단일 파일 상세는 `file`을 사용합니다.
+`limit`로 제한된 결과를 전체 사진 수로 보고하지 말고 결과의 잘림·경고 표지를 확인합니다.
 
-# 주요 위치별 사진 수 → reverse_geocode로 도시명 확인
-for (lat, lon), photos in sorted(clusters.items(), key=lambda x: -len(x[1])):
-    print(f"위치 ({lat}, {lon}): {len(photos)}장")
-```
+## 날짜·장소별 조합
 
-### 2. 월별 촬영 현황 (타임라인)
+조회 결과를 `$photos`로 받은 뒤 `$photos.items`를 표 변환자의 `items`에 전달합니다.
+월별 집계는 `month`를 기준으로 그룹화할 수 있습니다.
+`has_gps:true`는 위치 정보의 존재만 확인하므로 특정 도시나 반경 검색과 다릅니다.
+좌표 범위는 콜백으로 걸러냅니다. 다음은 제주 일대 사각 범위의 예입니다.
 
-`get_timeline` 도구를 사용하거나 Python으로 직접 조회:
-
-```python
-cur.execute("""
-    SELECT substr(taken_date, 1, 7) as month,
-           COUNT(*) as cnt,
-           SUM(CASE WHEN gps_lat IS NOT NULL THEN 1 ELSE 0 END) as gps_cnt
-    FROM media_files
-    WHERE media_type = 'photo'
-    GROUP BY month ORDER BY month
-""")
+```ibl
+$photos = [self:photo]{start:"2021-04",end:"2021-04",has_gps:true,limit:100};
+[table:filter]{items:$photos.items,where:($r)=>$r.lat >= 33.2 && $r.lat <= 33.6 && $r.lng >= 126.1 && $r.lng <= 126.9}
 ```
 
-### 3. 특정 지역 사진 검색
+좌표의 주소 확인에는 `[sense:reverse_geocode]{lat:33.4,lon:126.5}`를 사용합니다.
+GPS 없는 사진은 위치 필터에서 빠집니다. PC에서 USB 안드로이드 사진을 조회하는
+`source:"usb"`는 GPS 필터를 지원하지 않습니다.
 
-대한민국 주요 도시 좌표 범위:
-- 서울: lat 37.4~37.7, lon 126.8~127.2
-- 부산: lat 35.0~35.3, lon 128.9~129.2
-- 제주: lat 33.2~33.6, lon 126.1~126.9
+## 기존 스캔 자료
 
-```python
-cur.execute("""
-    SELECT filename, taken_date, gps_lat, gps_lon
-    FROM media_files
-    WHERE gps_lat BETWEEN 33.2 AND 33.6
-      AND gps_lon BETWEEN 126.1 AND 126.9
-    ORDER BY taken_date
-""")
-# → 제주도에서 찍은 사진
-```
-
-## 주의사항
-
-- `get_gallery`, `get_stats`, `get_timeline`은 경로 없이 호출하면 가장 큰 스캔을 자동 선택합니다.
-- GPS 좌표 → 도시명 변환은 `[sense:reverse_geocode] {lat: 위도, lon: 경도}` 사용 (카카오 API).
-- GPS 정보가 없는 사진도 많습니다. GPS 검색 시 결과가 적을 수 있습니다.
-- 여러 스캔 DB가 있을 수 있습니다. 필요하면 모든 DB를 순회하세요.
+사진 관리 풍부창(REST)의 기존 스캔은 `data/packages/photo_scans/`의
+`scans.json`과 `scan_{id}.db`에 남아 있습니다. 해당 화면의 스캔·타임라인 기능은
+이 자료를 사용하며 현재 `[self:photo]`의 라이브 조회와 구분합니다.
+기존 스캔의 날짜·GPS·촬영 기종이 없으면 미상이며, 현재 파일 상태나 전체 사진의
+완전한 목록으로 간주하지 않습니다.

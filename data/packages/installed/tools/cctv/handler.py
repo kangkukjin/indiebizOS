@@ -380,7 +380,8 @@ def cctv_open(url: str = None, name: str = None) -> str:
     return json.dumps({"success": False, "error": "CCTV를 찾을 수 없습니다."})
 
 
-def cctv_capture(url: str, save_path: str = None, name: str = None, **kwargs) -> str:
+def cctv_capture(url: str = None, save_path: str = None, name: str = None,
+                 _project_path: str = None, **kwargs) -> str:
     """CCTV 화면 캡처.
 
     URL이 UTIC JSP이면 m3u8 URL을 추출하여 ffmpeg으로 캡처한다.
@@ -414,10 +415,7 @@ def cctv_capture(url: str, save_path: str = None, name: str = None, **kwargs) ->
             print(f"[CCTV 캡처] JSP m3u8 추출 실패: {e}")
 
     capture = load_module("capture")
-    # save_path가 지정되면 capture_cctv의 filename으로 전달 (이전엔 무시됨).
-    if save_path:
-        return capture.capture_cctv(url, filename=save_path)
-    return capture.capture_cctv(url)
+    return capture.capture_cctv(url, filename=save_path, project_path=_project_path)
 
 
 def cctv_sources() -> str:
@@ -571,6 +569,9 @@ def execute(tool_input: dict, context) -> str:
     if func is None:
         return json.dumps({"success": False, "error": f"미구현 도구: {tool_name}"}, ensure_ascii=False)
 
+    tool_input = dict(tool_input)
+    if tool_name == "cctv_op" and (tool_input.get("op") or "").strip() == "capture":
+        tool_input["_project_path"] = context.project_path
     try:
         return func(**tool_input)
     except TypeError:

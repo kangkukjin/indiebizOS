@@ -942,7 +942,7 @@ def _execute(tool_input: dict, context) -> str:
                     try:
                         _m = glob.glob(os.path.join(root, search_pattern), recursive=True)
                     except Exception as e:
-                        return f"검색 오류: {e}"
+                        return json.dumps({"success": False, "error": f"검색 오류: {e}"}, ensure_ascii=False)
                 matches.extend(_m)
             matches = list(dict.fromkeys(matches))
 

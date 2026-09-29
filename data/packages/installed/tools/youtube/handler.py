@@ -53,6 +53,8 @@ def _resolve_languages(tool_input, default):
 
 
 def _op_download(tool_input, yt):
+    if tool_input.get('mode', 'server') not in ('server', 'client'):
+        return {"success": False, "error": "download의 mode는 server 또는 client여야 합니다."}
     # AI가 다양한 이름으로 파일명을 전달할 수 있으므로 유연하게 처리
     # ('output'은 가장 자연스러운 키 — 의식 에이전트가 자주 사용)
     fname = (tool_input.get('output_path')
@@ -150,6 +152,8 @@ def _op_summarize(tool_input, yt):
 
 
 def _op_play(tool_input, yt):
+    if tool_input.get('mode', 'audio') not in ('audio', 'video', 'client'):
+        return {"success": False, "error": "play의 mode는 audio, video 또는 client여야 합니다."}
     return yt.play_youtube(
         query=tool_input.get('query', ''),
         mode=tool_input.get('mode', 'audio'),
@@ -188,11 +192,10 @@ def _op_channel(tool_input, yt):
 
 def _op_relay(tool_input, yt):
     # 검색어/URL → 맥 경유 릴레이 스트림 목록(items.stream=/yt/relay/…).
-    # 재생 축은 mode(audio|video) 재사용 — client 값이 오면 릴레이의 취지(직접 접속 없음)와
-    # 어긋나므로 audio 로 접는다.
+    # mode 별칭도 audio/video만 수용하며 다른 모드를 조용히 바꾸지 않는다.
     media = tool_input.get('media') or tool_input.get('mode', 'audio')
     if media not in ('audio', 'video'):
-        media = 'audio'
+        return {"success": False, "error": "relay의 media/mode는 audio 또는 video여야 합니다."}
     return yt.relay_youtube(
         query=tool_input.get('query') or tool_input.get('url', ''),
         media=media,

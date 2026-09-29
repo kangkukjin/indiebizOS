@@ -101,7 +101,7 @@ def _with_success(payload: str) -> str:
 
     엔진 경계에도 같은 계약이 있지만(모든 라우터 공유) 여기에도 두는 이유: 이 핸들러는
     엔진 밖에서도 불린다(직접 호출·시험). **두 벌이 아니라 같은 함수**를 부른다.
-    산문 반환(read 의 전문)은 그 함수가 통화 모양 그대로 흘린다.
+    read도 전문·출처·메타데이터를 JSON 봉투에 담는다.
     """
     from common.currency import stamp_success
     return stamp_success(payload)
@@ -317,7 +317,14 @@ def _memory_read(db, tool_input, project_path, agent_id):
     if meta:
         parts.append(f"[{' | '.join(meta)}]")
 
-    return "\n".join(parts)
+    return json.dumps({
+        "success": True, "memory_id": memory_id,
+        "content": memory["content"],
+        "source": source_summary(memory.get("source_ref")),
+        "category": memory.get("category"), "keywords": memory.get("keywords"),
+        "created_at": memory.get("created_at"), "used_at": memory.get("used_at"),
+        "text": "\n".join(parts),
+    }, ensure_ascii=False)
 
 
 def _memory_delete(db, tool_input, project_path, agent_id):

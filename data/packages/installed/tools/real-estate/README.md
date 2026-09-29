@@ -13,7 +13,7 @@
 ## 현재 매물의 반환 규약
 
 - `source:naver`의 지역 검색은 주소 성분이 일치하는 후보가 하나일 때만 조회합니다. 부분 문자열 검색의 첫 결과를 쓰지 않습니다. 여러 지역이 맞거나 정확한 지역이 없으면 검색 후보를 보고 시·군·구와 동을 함께 지정합니다.
-- `source:zigbang`의 `items`에는 화면용 `title/meta/url`과 함께 `itemId`, `salesType`, `deposit`, `rent`, `area_m2`, `floor`, `address`, 좌표가 들어 있습니다. 보증금·월세는 **만원**입니다. 예: `>> [table:filter]{where:"deposit >= 20000"}`. 네이버의 `price/rent`는 **원**이므로 소스별 열과 단위를 확인합니다.
+- `source:zigbang`의 `items`에는 화면용 `title/meta/url`과 함께 `itemId`, `salesType`, `deposit`, `rent`, `area_m2`, `floor`, `address`, 좌표가 들어 있습니다. 보증금·월세는 **만원**입니다. 예: `[table:filter]{items:$result.items,where:($r)=>$r.deposit >= 20000}` (`$result`는 조회 결과). 네이버의 `price/rent`는 **원**이므로 소스별 열과 단위를 확인합니다.
 
 ## 적합한 에이전트
 - 부동산 분석 에이전트

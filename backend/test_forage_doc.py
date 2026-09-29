@@ -251,7 +251,8 @@ def test_host_like_locus_in_non_web_body_stays_in_body_doc(env):
     FM.note_map(body="book:x", locus="irepublic.brain", kind="identity", claim="책 속 상표", confidence=0.9)
     assert not os.path.isdir(os.path.join(FD.DOC_DIR, "web"))
     assert "### README.md" in open(FD.doc_path_at("code:site", "code:site"), encoding="utf-8").read()
-    assert "### irepublic.brain" in open(FD.doc_path_at("book:x", "book:x"), encoding="utf-8").read()
+    # 책 몸 안의 이름은 `<몸>/<하위>` 로 적힌다(2026-09-29, 78회차 B78-5) — 여전히 몸 문서에, 웹 트리가 아니라
+    assert "### book:x/irepublic.brain" in open(FD.doc_path_at("book:x", "book:x"), encoding="utf-8").read()
 
 
 def test_web_recall_walks_ancestor_chain_and_child_skeleton(env):

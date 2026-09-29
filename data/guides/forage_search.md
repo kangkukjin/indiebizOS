@@ -52,4 +52,4 @@
 
 ## 관련 어휘 동작 확인
 
-`[self:forage]{op:"note"}`의 locus 는 주소(절대 경로·웹 host/path)여야 한다 — 주제 이름은 거절된다(주인모델 layer 는 2026-09-18 은퇴). `op:"reconcile", apply:false`는 대조만 하며 문자열 false도 거짓으로 처리한다. generalizes·surface_flag·territory에도 같은 불리언 규칙을 적용한다.
+`[self:forage]{op:"note"}`의 locus 는 주소(절대 경로·웹 host/path, 책·노트북은 그 몸 `book:<제목>` 또는 몸/하위)여야 한다 — 주제 이름·다른 몸의 주소는 거절된다(`layer`·`table` 인자는 은퇴). 장소를 지명한 `recall`은 `own_count`가 0이면 그 장소의 기억이 없다는 뜻이다(`via:"inherit"` 줄은 조상의 기억). `locus_exists:false`면 그 장소 자체가 지금 없다(오타·삭제·이사). 회상 응답의 `map`은 행 목록이라 `$f.map >> [table:groupby]{by:"kind"}`처럼 흐른다. `op:"reconcile", apply:false`는 대조만 하며 문자열 false도 거짓으로 처리한다. generalizes·surface_flag·territory에도 같은 불리언 규칙을 적용한다.

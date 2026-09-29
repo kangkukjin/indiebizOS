@@ -953,20 +953,20 @@
   },
   "self:forage": {
    "fields": {
-    "description": "b39738150e35",
-    "target_description": "b7166a5e9aa4",
+    "description": "71bd5bdb4d41",
+    "target_description": "bc825d72f8ea",
     "implementation": "0ec8e657ab50",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
     "params": "f53312a2a7c7",
     "aliases": "96cc7b816c74",
-    "ops": "a57f30d25e1f",
+    "ops": "ee9db657b255",
     "side_effect": "b5bea41b6c62",
     "router": "ebbb1532efbc",
     "tool": "19acb74ca01c"
    },
    "reviewed": "2026-09-29",
-   "examples": 4
+   "examples": 0
   },
   "self:goal": {
    "fields": {
@@ -1191,14 +1191,14 @@
     "target_key": "0cacf69ab63c",
     "params": "2b9d8c564e20",
     "aliases": "6a8150287dd5",
-    "ops": "c066e87c1dce",
+    "ops": "3457f5b5d5d8",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "a38f142fa92b"
    },
-   "reviewed": "2026-09-18",
-   "examples": 14
+   "reviewed": "2026-09-29",
+   "examples": 0
   },
   "self:notify_user": {
    "fields": {

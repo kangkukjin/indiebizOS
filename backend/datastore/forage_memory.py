@@ -22,6 +22,8 @@ import os
 import re
 import json
 import sqlite3
+import unicodedata
+from urllib.parse import quote as _url_quote
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -201,15 +203,82 @@ _OWN_SPACE_BODIES = ("book:", "notebook:")
 # 호스트처럼 보이지만 파일 이름인 꼬리(handler.py 가 호스트로 통과하지 않게)
 _FILE_TAILS = (".py", ".js", ".ts", ".tsx", ".json", ".yaml", ".yml", ".md", ".txt", ".sh", ".html", ".css", ".db", ".log")
 _HOST_RE = re.compile(r"[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?")
+_PLACEHOLDER_RE = re.compile(r"^<\s*([^<>]*?)\s*>$")   # 자리표 괄호를 베낀 이름 `<제목>` (78회차 B78-5)
+
+
+def _own_prefix(text: Optional[str]) -> Optional[str]:
+    low = (text or "").lstrip().lower()
+    return next((p for p in _OWN_SPACE_BODIES if low.startswith(p)), None)
+
+
+def is_own_space(text: Optional[str]) -> bool:
+    """자체 주소 공간의 몸 표기·주소인가(`book:…`·`notebook:…`)."""
+    return _own_prefix(text) is not None
+
+
+def _label_seg(seg: str) -> str:
+    s = re.sub(r"\s+", " ", unicodedata.normalize("NFC", seg or "")).strip()
+    m = _PLACEHOLDER_RE.match(s)
+    return m.group(1).strip() if m else s
+
+
+def own_space_label(text: Optional[str]) -> str:
+    """자체 주소 공간 주소의 정규형 — `book:<하네스>/ 3장 ` → `book:하네스/3장`.
+    자리표 괄호 제거·공백 정규형·NFC. 쓰기 입구(note_map)와 회상(locus 해석·장소 이름)이 **이 함수 하나**를 쓴다 —
+    옛 행(괄호 이름)은 데이터 개명 없이 읽기에서 같은 정규형으로 찾아진다(2026-09-29, 78회차 B78-5)."""
+    t = (text or "").strip()
+    p = _own_prefix(t)
+    if not p:
+        return t
+    rest = _label_seg(t[len(p):])
+    segs = [x for x in (_label_seg(s) for s in rest.split("/")) if x]
+    return p + "/".join(segs)
+
+
+def own_space_body(text: Optional[str]) -> str:
+    """주소의 몸(첫 단) — `notebook:독서/서론.pdf` → `notebook:독서`. 자체 주소 공간이 아니면 빈 문자열."""
+    lab = own_space_label(text)
+    p = _own_prefix(lab)
+    return (p + lab[len(p):].split("/", 1)[0]) if p else ""
+
+
+def own_space_address(body: Optional[str], locus: Optional[str]) -> Optional[str]:
+    """자체 주소 공간 몸의 단언 주소 — `<몸>` 또는 `<몸>/<하위>`(정규형). 주소가 못 되면 None.
+
+    쓰기 관문(locus_is_address·note_map)과 회상의 행 주소(_addr)가 같은 함수다:
+      - `book:하네스` · `book:<하네스>` · 몸 이름만(`하네스`) → `book:하네스`
+      - 몸 안의 하위 이름(`3장`) → `book:하네스/3장` — 옛 행의 맨 하위 이름도 읽기에서 이렇게 몸 아래로 들어온다
+      - 다른 몸의 주소(`book:다른책/…`) → None(거절)
+    절대 경로·스킴 URL locus 는 그 자체가 주소라 여기서 다루지 않는다(None)."""
+    root = own_space_body(body)
+    p = _own_prefix(root)
+    if not p or root == p:
+        return None
+    loc = (locus or "").strip()
+    if loc.startswith(("/", "~")) or _URL_SCHEME_RE.match(loc):
+        return None
+    if not loc:
+        return root
+    if is_own_space(loc):
+        la = own_space_label(loc)
+        return la if (la == root or la.startswith(root + "/")) else None
+    sub = own_space_label(p + loc)[len(p):]
+    name = root[len(p):]
+    if not sub or sub == name:
+        return root
+    if sub.startswith(name + "/"):   # 몸 접두 없이 제목부터 적은 꼴
+        return p + sub
+    return root + "/" + sub
 
 
 def locus_is_address(body: str, locus: str) -> bool:
     """포식 기억의 계약 = "장소를 주면 그 장소의 기억 전부". 그래서 locus 는 다시 짚을 수 있는 **주소**여야 한다 —
-    절대 경로 · 웹 host[/path] · 자체 주소 공간의 몸. 주제 이름·상대 경로·`<몸>/unknown` 같은 별명은 어느 장소의
-    "전부"에도 들지 못한다(2026-09-18 재고 감사: 702건 중 주소 없는 239건, docs/FORAGE_MEMORY_AUDIT_2026_09_18.md)."""
-    if (body or "").startswith(_OWN_SPACE_BODIES):
-        return True
+    절대 경로 · 웹 host[/path] · 자체 주소 공간의 `<몸>`·`<몸>/<하위>`. 주제 이름·상대 경로·`<몸>/unknown` 같은 별명은 어느 장소의
+    "전부"에도 들지 못한다(2026-09-18 재고 감사: 702건 중 주소 없는 239건, docs/FORAGE_MEMORY_AUDIT_2026_09_18.md).
+    자체 주소 공간 몸도 면제가 아니다(2026-09-29, 78회차 B78-5): 다른 몸의 주소는 거절, 몸 안의 이름은 `<몸>/<하위>` 로 정규화."""
     loc = (locus or "").strip()
+    if is_own_space(body) and not (loc.startswith(("/", "~")) or _URL_SCHEME_RE.match(loc)):
+        return own_space_address(body, loc) is not None
     if loc.startswith("~"):
         loc = os.path.expanduser(loc)
     if loc.startswith("/"):
@@ -224,9 +293,10 @@ TREE_BODY = "mac"   # 절대 경로 단언이 사는 트리의 몸 표기(forage
 def canonical_body(body: str, locus: str) -> str:
     """주소가 곧 열쇠다 — 절대 경로·URL 단언의 몸 표기는 주소에서 정해진다(2026-09-18).
     옛 판은 증류기가 지은 이름(`code:indiebizOS`·`code:IndieBiz OS`·`disk:Expansion`…)을 그대로 키로 써서
-    같은 저장소의 기억이 네 몸으로 갈렸다. 자체 주소 공간의 몸(book:·notebook:)만 제 이름을 지킨다."""
-    if (body or "").startswith(_OWN_SPACE_BODIES):
-        return body
+    같은 저장소의 기억이 네 몸으로 갈렸다. 자체 주소 공간의 몸(book:·notebook:)은 제 이름을 지키되
+    정규형(own_space_label — 자리표 괄호·공백)으로 적는다(2026-09-29, 78회차 B78-5: `book:<제목>` 이 몸 이름이 됐다)."""
+    if is_own_space(body):
+        return own_space_body(body)
     loc = os.path.expanduser((locus or "").strip())
     if loc.startswith("/"):
         return TREE_BODY
@@ -259,6 +329,7 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
                          "주제 이름·상대 경로는 어느 장소의 기억도 되지 못합니다. 장소가 없는 지식은 포식 기억의 몫이 아닙니다"
                          "(방법=가이드, 주인에 대한 사실=심층기억)."}
     body = canonical_body(body, locus)
+    locus = own_space_address(body, locus) or locus   # 자체 주소 공간: `<몸>`·`<몸>/<하위>` 정규형으로 적는다(회상이 같은 함수로 연다)
     if prior_class not in _PRIOR_CLASSES:
         prior_class = "structural"
     claim = mask_secrets(claim)
@@ -453,14 +524,16 @@ def _web_norm(locus: str) -> str:
 
 
 def _norm_locus(locus: str, body: Optional[str] = None) -> str:
+    if is_own_space(locus):
+        return own_space_label(locus)   # 자체 주소 공간 주소 — 쓰기 입구와 같은 정규형
     loc = (locus or "").rstrip("/")
     loc = loc[:-2] if loc.endswith("/*") else loc
     return _web_norm(loc) if (not _is_path(loc) and _is_url(loc, body)) else loc
 
 
 def _is_tree(locus: str) -> bool:
-    """위계(조상/자식)를 가진 locus — 절대 경로 또는 URL."""
-    return _is_path(locus) or _is_url(locus)
+    """위계(조상/자식)를 가진 locus — 절대 경로 · URL · 자체 주소 공간(`<몸>/<하위>`)."""
+    return _is_path(locus) or _is_url(locus) or is_own_space(locus)
 
 
 def _depth(locus: str) -> int:
@@ -474,7 +547,19 @@ def _is_ancestor(a: str, b: str) -> bool:
         return b.startswith(a + "/")
     if _is_url(a) and _is_url(b):
         return b.startswith(a + "/")
+    if is_own_space(a) and is_own_space(b):
+        return b.startswith(a + "/")
     return False
+
+
+def _addr(r) -> str:
+    """행의 주소(정규형). 자체 주소 공간 몸의 행은 own_space_address 로 — 옛 행(괄호 몸·맨 하위 이름 locus)도
+    데이터 개명 없이 `<몸>`·`<몸>/<하위>` 로 읽혀 몸 이름을 지명하면 그 몸 전체가 열린다(78회차 B78-5)."""
+    if is_own_space(r["body"]):
+        a = own_space_address(r["body"], r["locus"])
+        if a:
+            return a
+    return _norm_locus(r["locus"])
 
 
 def _is_child(parent: str, child: str) -> bool:
@@ -499,13 +584,16 @@ def _doc_lazy_sync(locus: str, body: Optional[str]) -> None:
         print(f"[포식기억] 문서 동기화 실패(무시): {e}")
 
 
-def _stale_of(locus: str, stored_mtime: float) -> str:
+def _stale_of(locus: str, stored_mtime: float, body: Optional[str] = None) -> str:
     """lazy 부패 판정 — 삭제하지 않고 노출만(판단은 AI). '' | 'stale' | 'missing'.
 
     freshness(mtime 부패)는 *파일시스템* 개념 — 절대경로 locus(디스크·코드)에만 적용.
-    웹 map(예: "arXiv", "NYU Scholars")·추상 locus 는 부패 없음(빈 문자열).
+    자체 주소 공간 몸은 존재만 본다(place_exists — 지운 노트북의 기억은 'missing', 78회차 B78-4).
+    웹 map(예: "arXiv", "NYU Scholars")·책·추상 locus 는 확인 대상이 아니다(빈 문자열).
     """
     if not locus or not (locus.startswith("/") or locus.startswith("~")):
+        if is_own_space(body) or is_own_space(locus):
+            return "missing" if place_exists(body, locus) is False else ""
         return ""
     p = os.path.expanduser(locus)
     if not os.path.exists(p):
@@ -517,6 +605,74 @@ def _stale_of(locus: str, stored_mtime: float) -> str:
     if stored_mtime and abs(cur - stored_mtime) > _STALE_TOL:
         return "stale"
     return ""
+
+
+# ---------------------------------------------------------------------------
+# 장소 존재 확인기 — 몸별 하나(2026-09-29, 78회차 B78-4·F78-1). 회상의 정직 칸(locus_exists·root_missing·freshness)과
+# 대조(forage_doc.reconcile)가 이 함수 하나를 쓴다: 같은 사실을 층마다 따로 번역하지 않는다.
+#   경로 몸 = 디스크(꽂히지 않은 볼륨은 확인 불가) · notebook: = 노트북 저장소 · book:·웹 = 바깥 세계라 확인 대상 아님(None)
+# ---------------------------------------------------------------------------
+# 노트북 저장소 — notebook 패키지의 notebook_core.DB_PATH 와 같은 파일(시험이 두 값의 일치를 지킨다). 읽기 전용으로만 연다.
+_NOTEBOOK_DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "data", "notebook", "notebooks.db")
+_nb_cache: Dict[str, Any] = {}
+
+
+def _mounted(path: str) -> bool:
+    """볼륨이 안 꽂힌 것은 '사라짐'이 아니다."""
+    m = re.match(r"^(/Volumes/[^/]+)", path)
+    return os.path.isdir(m.group(1)) if m else True
+
+
+def _notebook_labels() -> Optional[set]:
+    """노트북 저장소에 지금 있는 노트북들의 몸 정규형. 저장소를 읽을 수 없으면 None(확인 불가)."""
+    db = os.path.abspath(_NOTEBOOK_DB)
+    try:
+        sig = (db, os.path.getmtime(db), os.path.getmtime(db + "-wal") if os.path.exists(db + "-wal") else 0)
+    except OSError:
+        return None
+    if _nb_cache.get("sig") == sig:
+        return _nb_cache["labels"]
+    try:
+        conn = sqlite3.connect(f"file:{_url_quote(db)}?mode=ro", uri=True, timeout=5)
+        try:
+            names = [r[0] for r in conn.execute("SELECT name FROM notebooks").fetchall()]
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return None
+    labels = {own_space_body("notebook:" + str(n)) for n in names}
+    _nb_cache.update(sig=sig, labels=labels)
+    return labels
+
+
+def _notebook_exists(root: str) -> Optional[bool]:
+    labels = _notebook_labels()
+    return None if labels is None else (root in labels)
+
+
+# 자체 주소 공간 몸의 존재 확인기(몸 접두 → 확인 함수). 여기 없는 몸(book: 등)은 바깥 세계 — 확인 대상 아님.
+_OWN_SPACE_EXISTS = {"notebook:": _notebook_exists}
+
+
+def place_exists(body: Optional[str], locus: Optional[str]) -> Optional[bool]:
+    """그 장소가 지금 실재하나 — True · False(없다고 확인됨) · None(확인 대상 아님·확인 불가).
+    자체 주소 공간의 하위 장소(`notebook:X/소스`)는 몸이 없으면 False, 몸이 있으면 하위까지는 모른다(None)."""
+    loc = (locus or "").strip()
+    own = (own_space_address(body, loc) if is_own_space(body) else None) or (own_space_label(loc) if is_own_space(loc) else None)
+    if own:
+        root = own_space_body(own)
+        fn = _OWN_SPACE_EXISTS.get(_own_prefix(root) or "")
+        ex = fn(root) if fn else None
+        if ex is False:
+            return False
+        return True if (ex and own == root) else None
+    p = os.path.expanduser(loc)
+    if _is_path(p):
+        p = p.rstrip("/") or "/"
+        if not _mounted(p):
+            return None
+        return os.path.exists(p)
+    return None
 
 
 def _fair_by_body(rows: List) -> List:
@@ -561,8 +717,9 @@ _PLACE_REST_ROWS = 4      # 둘째·셋째 후보 장소는 정체부터 이만�
 
 
 def place_id(body: str, locus: str) -> str:
-    """장소의 이름. 자체 주소 공간의 몸(book:·notebook:)은 몸 이름이 곧 장소, 그 밖은 주소(정규형)."""
-    return body if (body or "").startswith(_OWN_SPACE_BODIES) else _norm_locus(locus, body)
+    """장소의 이름. 자체 주소 공간의 몸(book:·notebook:)은 몸 이름(정규형)이 곧 장소, 그 밖은 주소(정규형).
+    places 가 준 이름을 locus 로 다시 부르면 그 장소가 열려야 한다 — recall 의 locus 해석과 같은 정규형(78회차 B78-5)."""
+    return own_space_body(body) if is_own_space(body) else _norm_locus(locus, body)
 
 
 def _place_order(query: Optional[str]) -> List[str]:
@@ -629,16 +786,18 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     if body and loc:
         body = None   # 장소를 지명했으면 몸 표기는 거르지 않는다 — 주소가 열쇠다
     elif body:
-        body = canonical_body(body, "/") if body.startswith(("code:", "disk:")) else body
+        body = canonical_body(body, "/") if body.startswith(("code:", "disk:")) or is_own_space(body) else body
     conn = _connect()
     try:
-        if body:
+        if body and not is_own_space(body):
             map_rows = conn.execute(
                 "SELECT * FROM forage_map WHERE body=? ORDER BY confidence DESC, last_seen DESC",
                 (body,)).fetchall()
         else:
             map_rows = conn.execute(
                 "SELECT * FROM forage_map ORDER BY confidence DESC, last_seen DESC").fetchall()
+            if body:   # 자체 주소 공간 몸 — 옛 괄호 표기 행도 같은 정규형으로 찾는다
+                map_rows = [r for r in map_rows if own_space_body(r["body"]) == body]
     finally:
         conn.close()
 
@@ -650,7 +809,7 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     territory_items: List[Dict[str, Any]] = []
     for r in terr_cands[:_TERRITORY_CAP]:  # 하드 상한 — 무한정 증가 차단
         d = dict(r)
-        d["freshness"] = _stale_of(r["locus"], r["locus_mtime"])
+        d["freshness"] = _stale_of(r["locus"], r["locus_mtime"], r["body"])
         d["short"] = _short(r["claim"])
         territory_items.append(d)
 
@@ -677,17 +836,28 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
                     docs_below = []
         except Exception:
             doc_path = None
+        # 정직 칸(2026-09-29, 78회차 F78-1·B78-4) — 같은 존재 확인기(place_exists) 하나로 계산한다.
+        #   locus_exists: 지명한 장소가 지금 실재하나(True/False/None=확인 대상 아님·불가)
+        #   own_count: 그 장소(와 그 아래)에 붙은 자기 단언 수 — 0 이면 "그 장소의 기억 없음"(inherit 는 조상의 기억이다)
+        #   doc_is_ancestor: doc 가 그 장소 자신이 아니라 조상(몸)의 문서인가
+        #   root_missing: doc 가 덮는 뿌리(폴더·노트북)가 없어졌나
+        own_count = sum(1 for r in map_rows if _addr(r) == loc or _is_ancestor(loc, _addr(r)))
+        locus_exists = place_exists(None, loc)
         root_missing = False
+        doc_is_ancestor = False
         try:
             if doc_path:
                 _mk = forage_doc._read_marker(doc_path)
-                _r = forage_doc._norm(_mk[1]) if _mk else ""
-                root_missing = bool(_r and forage_doc._is_path(_r) and forage_doc._mounted(_r) and not os.path.isdir(os.path.expanduser(_r)))
+                if _mk:
+                    _root = _norm_locus(forage_doc._norm(_mk[1]))
+                    root_missing = place_exists(_mk[0], _root) is False
+                    doc_is_ancestor = _root != loc
         except Exception:
             root_missing = False
         _trail("open", locus=loc)
         return {"success": True, "map": map_items,
                 "territory": territory_items, "locus": loc, "doc": doc_path, "docs_below": docs_below,
+                "locus_exists": locus_exists, "own_count": own_count, "doc_is_ancestor": doc_is_ancestor,
                 "root_missing": root_missing,
                 "map_count": len(map_items), "territory_count": 0}
     terr_ids = {t["id"] for t in territory_items}
@@ -729,19 +899,19 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
         rows = _fair_by_body(pool) if fair else pool
         out = []
         for r in rows[:limit]:
-            d = dict(r); d["via"] = "all"; d["freshness"] = _stale_of(r["locus"], r["locus_mtime"]); out.append(d)
+            d = dict(r); d["via"] = "all"; d["freshness"] = _stale_of(r["locus"], r["locus_mtime"], r["body"]); out.append(d)
         return out
     if focus_override:
         L0 = focus_override[0]
-        pool_q = [r for r in pool if _norm_locus(r["locus"]) == L0 or _is_ancestor(L0, r["locus"])]
+        pool_q = [r for r in pool if _addr(r) == L0 or _is_ancestor(L0, _addr(r))]
     else:
         pool_q = pool
     scored = [] if no_query else [(hit(r), r) for r in pool_q]
     matched = sorted([(sc, r) for sc, r in scored if sc > 0],
-                     key=lambda x: (-x[0], -_depth(x[1]["locus"]), -x[1]["confidence"]))
+                     key=lambda x: (-x[0], -_depth(_addr(x[1])), -x[1]["confidence"]))
     by_locus: Dict[str, List] = {}
     for r in pool:
-        by_locus.setdefault(_norm_locus(r["locus"]), []).append(r)
+        by_locus.setdefault(_addr(r), []).append(r)
     included: Dict[int, Dict[str, Any]] = {}
     order: List[Dict[str, Any]] = []
 
@@ -750,7 +920,7 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
             return
         d = dict(r)
         d["via"], d["score"] = via, score
-        d["freshness"] = _stale_of(r["locus"], r["locus_mtime"])
+        d["freshness"] = _stale_of(r["locus"], r["locus_mtime"], r["body"])
         if short:
             d["short"] = _short(r["claim"])
         included[r["id"]] = d
@@ -767,10 +937,15 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
             add(r, "place", _FOCUS_CAP - n)
     for sc, r in matched:
         add(r, "match", sc)
+    if focus_override and is_own_space(focus_override[0]):
+        # 자체 주소 공간(책·노트북)은 작고 닫힌 장소 — 지명하면 몸 아래 전부를 전문으로(자식 골격이 아니라).
+        # 옛 행의 하위 이름에 `/` 가 섞여 중간 단 없는 손자가 되어도 빠지지 않는다(78회차 B78-5).
+        for r in sorted(pool_q, key=lambda r: (_depth(_addr(r)), _addr(r), kind_rank.get(r["kind"], 9), -r["confidence"])):
+            add(r, "own")
     focus: List[str] = list(focus_override or []) + [p for p in (place_order or [])[:_FOCUS_CAP] if _is_tree(p)]
     child_cap = limit if focus_override else _CHILD_CAP
     for _sc, r in matched:
-        L = _norm_locus(r["locus"])
+        L = _addr(r)
         if _is_tree(L) and L not in focus:
             focus.append(L)
         if len(focus) >= _FOCUS_CAP:
@@ -822,7 +997,7 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
                limit: int = 12, locus: Optional[str] = None) -> str:
     """<forage_memory> XML — `[self:forage]{op:"recall"}` 의 읽기 좋은 꼴(자동 주입은 2026-09-03 폐지)."""
     res = recall(body=body, query=query, limit=limit, locus=locus)
-    if not res["map"] and not res.get("territory") and not res.get("places"):
+    if not res["map"] and not res.get("territory") and not res.get("places") and not res.get("locus"):
         return ""
     if res["map"]:
         note = ('과거 포식에서 누적한 냄새지도입니다. 참고용이며 폐기가능(defeasible) — '
@@ -831,9 +1006,21 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
                 'surface=1은 이 라벨이 이질 내용으로 흔들린 표식입니다. '
                 'via=place 장소 찾기가 짚은 후보 장소의 단언 · match 글자 일치 · own 그 폴더의 나머지 단언 · inherit 상위 폴더에서 물려받은 관습·기질 · '
                 'child 하위 폴더 한 줄 골격(자세한 건 그 폴더를 지명해 recall).')
+    elif res.get("locus"):
+        note = '지명한 장소에 붙은 기억이 없습니다(조상에서 물려받을 것도 없음).'
     else:
         note = '내 영토의 거친 윤곽입니다 — 질의에 맞는 상세 단언은 없습니다.'
     lines = [f'<forage_memory note="{note}">']
+    if res.get("locus"):
+        # 지명한 장소의 정직 칸 — own 0 이면 그 장소의 기억은 없다(inherit 는 조상의 것). 78회차 F78-1
+        ex = res.get("locus_exists")
+        ex_s = "true" if ex is True else ("false" if ex is False else "unknown")
+        what = ("그 장소의 기억은 없습니다 — 아래 inherit 는 조상의 것입니다" if not res.get("own_count")
+                else "그 장소의 기억이 있습니다")
+        if ex is False:
+            what += " · 그 장소는 지금 없습니다(오타·삭제·이사)"
+        lines.append(f'  <locus_status at="{res["locus"]}" exists="{ex_s}" own_count="{res.get("own_count", 0)}" '
+                     f'doc_is_ancestor="{str(bool(res.get("doc_is_ancestor"))).lower()}" root_missing="{str(bool(res.get("root_missing"))).lower()}">{what}</locus_status>')
     if res.get("places"):
         lines.append('  <places note="질문에 맞을 법한 장소 후보(주소) — 기억이 아니라 주소다. 맞는 곳을 locus 로 지명해 다시 부르면 그 장소의 기억 전부가 온다.">')
         for pl in res["places"]:

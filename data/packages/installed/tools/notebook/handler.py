@@ -203,8 +203,21 @@ def _op_remove(tool_input: dict, context) -> str:
 
 
 def _op_delete(tool_input: dict, context) -> str:
+    """노트북 삭제 — 그 몸의 포식 기억도 접는다(2026-09-29, 78회차 B78-4). 등록이 기억을 자동으로 낳으므로(create·add →
+    조사 위임) 삭제가 기억을 두고 가면 지운 노트북이 살아 있는 장소로 남는다. 접기 = 폴더가 사라졌을 때와 같은 정책
+    (문서를 `_gone/` 으로, 단언은 '장소 사라짐' 표식, 일주일 뒤 주간 정리가 삭제)이고 같은 대조(reconcile)를 지명해 부른다."""
     import notebook_core as core
-    return _json(core.delete_notebook(tool_input.get("name", "")))
+    name = tool_input.get("name", "")
+    out = core.delete_notebook(name)
+    if isinstance(out, dict) and out.get("success"):
+        try:
+            import forage_doc
+            folded = forage_doc.reconcile(locus=_memory_body(name))
+            out["forage_memory"] = {"folded": [g.get("archived") for g in folded.get("gone", [])],
+                                    "missing": folded.get("missing", [])}
+        except Exception as e:   # 기억 접기 실패는 삭제를 되돌리지 않는다 — 회상이 locus_exists:false 로 계속 알린다
+            out["forage_memory"] = {"error": f"포식 기억 접기 실패: {e}"}
+    return _json(out)
 
 
 def _query_of(tool_input: dict) -> str:

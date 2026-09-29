@@ -56,6 +56,10 @@ IMPL_READ_ALLOW: dict[str, set[str]] = {
     # nearby 의 radius = 판본 1 옛 입력(도 단위, km 로 환산). radius_km 와 단위가 달라 별칭이
     # 될 수 없고, 판본 2 는 radius_km 만 받는다(2026-09-29 액션별 읽기 관문 도입 때 분류).
     "cctv": {"radius"},
+    # forage 의 layer(주인모델 층)·table(주인모델 표) = 2026-09-18 은퇴한 옛 입력. 2026-09-29 계약에서 걷어 판본 2 는
+    # UNKNOWN_ARGUMENT, 핸들러의 읽기는 판본 1 직행 호출의 옛 층(owner)을 조용히 지도에 쓰지 않고 거절하는 이행 관문이다
+    # (data/retired_contracts.yaml forage-owner-era-args-and-no-pipe).
+    "pc-manager": {"layer", "table"},
 }
 
 # 스칼라 미선언 읽기의 동결 대장 — 런타임 관문은 스칼라를 통과시키므로(모르면 통과)

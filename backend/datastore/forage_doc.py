@@ -533,6 +533,15 @@ def _covering_docs(locus: str, body: Optional[str]) -> List[str]:
     if t:
         return _ancestor_chain(t[0], t[1])   # 트리 locus(경로·URL)는 몸 표기와 무관하게 그 트리 사슬만
     all_bodies = sorted({b for _p, b, _r in _scan_docs()})
+    if FM.is_own_space(loc):
+        # 자체 주소 공간 — 몸 정규형이 같은 문서만(옛 괄호 표기 문서 포함). 맞는 몸이 없으면 없다:
+        # 아무 몸 문서나 주면 지운 노트북·오타 이름이 남의 문서를 제 것처럼 받는다(78회차 B78-5).
+        root = FM.own_space_body(loc)
+        out: List[str] = []
+        for b in all_bodies:
+            if FM.own_space_body(b) == root:
+                out.extend(_ancestor_chain(b, loc))
+        return out
     if body:
         bodies = [body]
     else:
@@ -676,9 +685,8 @@ GONE_PURGE_DAYS = 7
 
 
 def _mounted(path: str) -> bool:
-    """볼륨이 안 꽂힌 것은 '사라짐'이 아니다."""
-    m = re.match(r"^(/Volumes/[^/]+)", path)
-    return os.path.isdir(m.group(1)) if m else True
+    """볼륨이 안 꽂힌 것은 '사라짐'이 아니다(판정 한 벌 = forage_memory._mounted)."""
+    return FM._mounted(path)
 
 
 def _append_record(doc_path: str, line: str) -> None:
@@ -696,25 +704,44 @@ def _parent_doc(body: str, root: str) -> Optional[str]:
     return (_ancestor_chain(body, parent) or [None])[0] if parent and parent != r else None
 
 
+def _restart_grace(path: str) -> None:
+    """접은 문서의 시각을 지금으로 — purge_gone 의 일주일 유예는 '접은 날'부터 센다(옮기기는 옛 편집 시각을 지켜
+    오래된 문서가 다음 주간 정리에 바로 지워지던 구멍)."""
+    for cur, _dirs, files in os.walk(path):
+        if DOC_NAME in files:
+            try:
+                os.utime(os.path.join(cur, DOC_NAME), None)
+            except OSError:
+                pass
+
+
 def tombstone_node(body: str, root: str) -> Dict[str, Any]:
-    """사라진 폴더: 노드 문서(와 그 밑 전부)를 `_gone/` 으로 접고 부모 문서에 한 줄. 단언은 지우지 않고 '폴더 사라짐' 표식."""
-    r = _norm(root)
+    """사라진 장소: 노드 문서(와 그 밑 전부)를 `_gone/` 으로 접고 부모 문서에 한 줄. 단언은 지우지 않고 '사라짐' 표식.
+    자체 주소 공간 몸(노트북)은 몸 문서 폴더 통째를 `_gone/<몸>` 으로 — 같은 정규형의 옛 표기 행도 함께 표식한다."""
     today = FM._now()[:10]
+    own = FM.is_own_space(body)
+    r = FM.own_space_body(body) if own else _norm(root)
     conn = FM._connect()
     try:
-        conn.execute("UPDATE forage_map SET surface_flag=1, prune_reason=COALESCE(prune_reason, ?) WHERE locus=? OR locus LIKE ?",
-                     (f"폴더 사라짐 {today}", r, r + "/%"))
+        if own:
+            ids = [x["id"] for x in conn.execute("SELECT id, body FROM forage_map").fetchall() if FM.own_space_body(x["body"]) == r]
+            conn.executemany("UPDATE forage_map SET surface_flag=1, prune_reason=COALESCE(prune_reason, ?) WHERE id=?",
+                             [(f"장소 사라짐 {today}", i) for i in ids])
+        else:
+            conn.execute("UPDATE forage_map SET surface_flag=1, prune_reason=COALESCE(prune_reason, ?) WHERE locus=? OR locus LIKE ?",
+                         (f"폴더 사라짐 {today}", r, r + "/%"))
         conn.commit()
     finally:
         conn.close()
-    src = node_dir(body, r)
-    gone = os.path.join(DOC_DIR, slug(body), GONE_DIR, *[p for p in r.split("/") if p])
+    src = node_dir(body, r) if not own else os.path.join(DOC_DIR, slug(body))
+    gone = (os.path.join(DOC_DIR, GONE_DIR, slug(body)) if own
+            else os.path.join(DOC_DIR, slug(body), GONE_DIR, *[p for p in r.split("/") if p]))
     if os.path.isdir(src):
         if os.path.exists(gone):
-            os.renames(src, gone + f".{today}.bak")
-        else:
-            os.renames(src, gone)
-    parent = _parent_doc(body, r)
+            gone = gone + f".{today}.bak"
+        os.renames(src, gone)
+        _restart_grace(gone)
+    parent = None if own else _parent_doc(body, r)
     if parent:
         _append_record(parent, f"- {today} `{os.path.basename(r)}` 사라짐 — 기억은 `{os.path.relpath(gone, DOC_DIR)}` 에 접어 둠(일주일 뒤 삭제). 옮긴 것이면 새 자리에서 다시 조사")
         refresh_doc(parent, body, root_of_doc(parent))
@@ -722,25 +749,45 @@ def tombstone_node(body: str, root: str) -> Dict[str, Any]:
 
 
 def reconcile(body: Optional[str] = None, locus: Optional[str] = None, *, apply: bool = True) -> Dict[str, Any]:
-    """실제 트리 ↔ 기억 트리 대조. 문서 노드(디스크 몸·경로 뿌리)마다 존재를 보고, 없으면 `_gone/` 으로 접는다."""
+    """실제 세계 ↔ 기억 트리 대조. 문서 노드(경로 뿌리·자체 주소 공간 몸)마다 존재를 보고(FM.place_exists — 회상의
+    정직 칸과 같은 확인기), 없으면 `_gone/` 으로 접는다.
+    자체 주소 공간 몸(노트북)은 **그 장소를 지명한 대조**(locus — 노트북 삭제가 부른다)에서만 접는다. 전체 대조는
+    없어진 몸을 `held` 로 알리기만 한다 — 수리 전에 쌓인 고아 기억의 처분은 주인의 판정이다(78회차 판정 요청 1)."""
     loc = _norm(os.path.expanduser(locus)) if locus else None
-    nodes = [(p, b, _norm(r)) for p, b, r in _scan_docs() if _is_path(_norm(r))]
-    if loc:
+    own_loc = FM.own_space_body(loc) if loc and FM.is_own_space(loc) else None
+    nodes = []
+    for p, b, r in _scan_docs():
+        if FM.is_own_space(b):
+            if not loc or own_loc == FM.own_space_body(b):
+                nodes.append((p, b, FM.own_space_body(b)))
+        elif _is_path(_norm(r)) and not own_loc:
+            nodes.append((p, b, _norm(r)))
+    if loc and not own_loc:
         nodes = [x for x in nodes if x[2] == loc or x[2].startswith(loc + "/") or loc.startswith(x[2] + "/")]
     nodes.sort(key=lambda x: x[2].count("/"))   # 얕은 것부터 — 조상이 사라졌으면 그 밑은 통째로 접힌다
-    report = {"checked": 0, "unmounted": [], "missing": [], "gone": []}
+    report = {"checked": 0, "unmounted": [], "missing": [], "gone": [], "held": []}
     handled: List[str] = []
     for p, b, r in nodes:
         if any(r == h or r.startswith(h + "/") for h in handled):
             continue
-        if not _mounted(r):
-            report["unmounted"].append(r); continue
+        ex = FM.place_exists(b, r)
+        if ex is None:
+            if _is_path(r):
+                report["unmounted"].append(r)
+            continue   # 책 등 바깥 세계 — 확인 대상 아님
         report["checked"] += 1
-        if os.path.isdir(os.path.expanduser(r)):
+        if ex:
             continue
         report["missing"].append(r)
+        if FM.is_own_space(b) and not own_loc:
+            report["held"].append(r); continue
         if apply:
-            report["gone"].append(tombstone_node(b, r)); handled.append(r)
+            report["gone"].append(tombstone_node(b, r))
+            if _is_path(r):
+                handled.append(r)   # 경로 가지는 밑이 통째로 접혔다. 자체 주소 공간은 같은 몸의 옛 표기 문서도 저마다 접는다
+    if report["held"]:
+        report["held_note"] = ("없어진 자체 주소 공간 몸의 기억은 전체 대조가 접지 않는다 — 접으려면 그 몸을 locus 로 지명해 "
+                               "reconcile 한다(회상은 그동안 locus_exists:false·freshness:missing 으로 알린다).")
     return {"success": True, **report}
 
 
@@ -770,8 +817,8 @@ def purge_gone(days: int = GONE_PURGE_DAYS) -> Dict[str, Any]:
     removed = []
     if not os.path.isdir(DOC_DIR):
         return {"success": True, "removed": removed}
-    for body_dir in os.listdir(DOC_DIR):
-        gone = os.path.join(DOC_DIR, body_dir, GONE_DIR)
+    # 몸 폴더 아래의 `_gone`(경로 트리) + 맨 위 `_gone`(자체 주소 공간 몸 — 몸 문서 폴더 통째를 접는 자리)
+    for gone in [os.path.join(DOC_DIR, GONE_DIR)] + [os.path.join(DOC_DIR, d, GONE_DIR) for d in os.listdir(DOC_DIR) if d != GONE_DIR]:
         if not os.path.isdir(gone):
             continue
         targets = []

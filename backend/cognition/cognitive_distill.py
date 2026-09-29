@@ -535,7 +535,8 @@ JSON 배열로만 응답.
 미래의 탐색을 싸게 만들 **일반화 가능한 공간 지식**만 추출하라. 이번에 찾은 특정 항목·날 내용은 제외하고, *다음에도 쓸* 지도만:
 
 먼저 **space**(무엇을 포식했나)를 명명하라:
-- "mac"=내 홈 디스크 / "code:<레포명>"=코드레포 / "web"=웹 / "book:<제목>"=책 / "disk:<라벨>"=외장볼륨
+- "mac"=내 홈 디스크 / "code:indiebizOS"처럼 code:+레포 이름=코드레포 / "web"=웹 / "book:코스모스"처럼 book:+그 책의 제목=책 / "disk:Expansion"처럼 disk:+볼륨 이름=외장볼륨
+  (예시의 이름은 바꿔 쓸 자리다 — 실제로 포식한 레포·책·볼륨의 이름을 괄호·따옴표 없이 적는다)
 
 그다음 지도(공간 종류에 맞게 자연히 채워라):
 - map.identity: "이 위치 = X"(폴더/모듈/1차출처의 정체 — 예 "발표자료 폴더", "backend/=라우터", "내 논문=NYU Scholars")
@@ -560,8 +561,8 @@ JSON 배열로만 응답.
 AI 답변: {ai_response[:1400]}
 
 응답 형식(빈 배열 허용):
-{{"space":"mac|code:<repo>|web|book:<title>|disk:<label>",
- "map":[{{"locus":"위치(파일시스템이면 절대경로, 웹이면 URL host/path — 주제 이름이 아니라 자리)","kind":"identity|convention|dead_branch|substrate","claim":"...","prior_class":"structural|semantic","prune_reason":"(dead_branch면)","generalizes":true}}],
+{{"space":"mac 또는 code:레포이름 또는 web 또는 book:책제목 또는 disk:볼륨이름",
+ "map":[{{"locus":"위치(파일시스템이면 절대경로, 웹이면 URL host/path, 책이면 space 와 같은 book:책제목 또는 book:책제목/장 — 주제 이름이 아니라 자리)","kind":"identity|convention|dead_branch|substrate","claim":"...","prior_class":"structural|semantic","prune_reason":"(dead_branch면)","generalizes":true}}],
  "surface":[{{"locus":"(있으면)","why":"..."}}]}}"""
 
             resp = oneshot_ai_call(

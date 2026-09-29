@@ -220,7 +220,9 @@ def _forage_flag(raw, default=False):
 
 
 def _forage_note(tool_input: dict) -> str:
-    """[self:forage]{op:note} — 지도(map) 단언 누적. 주인모델(layer=owner)은 2026-09-18 은퇴."""
+    """[self:forage]{op:note} — 지도(map) 단언 누적. 주인모델(layer=owner)은 2026-09-18 은퇴.
+    layer·table 은 2026-09-29 계약에서 걷었다(판본 2 check = UNKNOWN_ARGUMENT). 여기 남은 읽기는 판본 1 직행 호출이
+    옛 층을 적어 보낼 때 조용히 지도에 쓰지 않고 거절하는 이행 관문이다(IMPL_READ_ALLOW 사유)."""
     import forage_memory as FM
     layer = (tool_input.get("layer") or "map").strip().lower()
     if layer != "map":

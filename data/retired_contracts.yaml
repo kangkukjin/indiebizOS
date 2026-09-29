@@ -686,3 +686,16 @@ retired:
     reason: 교재의 옵션 이름과 실행 서명이 달랐음
     instead: 'series_names, donut, show_trendline, ma_periods'
     phrases: ['다중 시리즈는 series 배열', 'hole 옵션', 'ma 옵션(이동평균)']
+  - id: forage-owner-era-args-and-no-pipe
+    retired: 2026-09-29
+    reason: 주인모델 은퇴(2026-09-18) 뒤에도 forage 계약에 layer·table 인자가 남아 check 가 경고 0으로 통과시켰고, 판본 1 시절 "table 파이프 대상 아님" 판정 문구가 교재에 남아 판본 2의 실제($f.map >> [table:groupby] 동작)를 부정했다(78회차 F78-3).
+    instead: forage note·forget 은 layer·table 없이 호출한다(계약에서 제거 — 판본 2 check 가 UNKNOWN_ARGUMENT 로 알린다). 회상 응답의 map 은 행 목록이라 table 파이프로 흐른다.
+    phrases:
+      - 'items 통화 밖이라 table 파이프 대상 아님'
+      - "layer=''map''"
+      - "layer='map'"
+      - 'layer: "map"'
+      - 'layer:"map"'
+      - "table=''forage_map''"
+      - "table='forage_map'"
+      - 'table:"forage_map"'

@@ -219,7 +219,8 @@
         }
       },
       "params": [
-        "op"
+        "op",
+        "package_id"
       ]
     },
     "self:read": {

@@ -20,14 +20,30 @@ actions:
       active_only: boolean
       measured_at: string
       note: string
+      # 평탄형 save 가 최상위에서 받는 키(handler.save_health_info _TOPLEVEL_DATA_KEYS — data 에 없으면 끌어올림).
+      # 가이드·target_description 이 가르치는 `systolic`/`diastolic` 최상위형이 선언 밖이라 판본 2 에서
+      # UNKNOWN_ARGUMENT 였다(78회차 F78-3·T20). 선언과 동작을 한 벌로 맞춘다 — 관문: iblbuild_action_reads 의 튜플 루프 읽기.
+      systolic: [number, string]
+      diastolic: [number, string]
+      unit: string
+      type: string
+      name: string
+      description: string
+      severity: string
+      started_at: string
+      ended_at: string
+      dosage: string
+      frequency: string
+      image_path: string
+      extracted_data: object
     aliases:
       query: [keyword]    # ★정본은 query(check_param_canon) — 관습어 keyword 는 별칭
     returns: items
     side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
     fixture: '[self:health]{op: "query", query_type: "medications"}'
-    description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션. query 결과는 items 통화 — table:chart(추이 그래프)·table:spreadsheet(엑셀) 파이프로.
+    description: 건강 기록 관리 (op 분기). 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션. query 결과 — 측정 추이는 table 통화(날짜 피벗)+points 라 table:chart·spreadsheet 직결, 증상·투약·문서·검색은 items, summary 는 text+blocks.
     group: health
-    target_description: 'save — 평탄형 권장: category(혈압/혈당/체중/심박수/체온/산소포화도 등)+value 를 최상위에(혈압은 value:"128/85" 또는 systolic/diastolic). 증상·투약·문서는 info_type(symptom/medication/document)+data. query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당 같은 카테고리명) + keyword/days/person 옵션(category 파라미터로 넘겨도 수용). delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호). ingest — file(이미지/PDF/엑셀/텍스트 파일 경로) 또는 text(자유 텍스트)를 AI가 구조화해 일괄 저장(검사지 사진·검진 결과 등, 원본은 문서로 보존).'
+    target_description: 'save — 평탄형 권장: category(혈압/혈당/체중/심박수/체온/산소포화도 등)+value 를 최상위에(혈압은 value:"128/85" · value:{systolic,diastolic} · 최상위 systolic/diastolic 수치 중 하나). 증상·투약·문서는 info_type(symptom/medication/document)+data. query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당 같은 카테고리명) + keyword/days/person 옵션(category 파라미터로 넘겨도 수용). delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호). ingest — file(이미지/PDF/엑셀/텍스트 파일 경로) 또는 text(자유 텍스트)를 AI가 구조화해 일괄 저장(검사지 사진·검진 결과 등, 원본은 문서로 보존).'
     target_key: op
     router: handler
     tool: health_op
@@ -175,7 +191,7 @@ tool_json:
     description: '건강 기록 관리 (op 분기). save/query/delete/ingest 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
 
 
-      파라미터: op: save | query | delete | ingest. save — 평탄형 권장: category(혈압/혈당/체중/심박수/체온/산소포화도 등)+value 최상위(혈압은 value:"128/85" 또는 systolic/diastolic).
+      파라미터: op: save | query | delete | ingest. save — 평탄형 권장: category(혈압/혈당/체중/심박수/체온/산소포화도 등)+value 최상위(혈압은 value:"128/85" · value:{systolic,diastolic} · 최상위 systolic/diastolic 중 하나).
       증상·투약·문서는 info_type(symptom/medication/document)+data. query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당 같은 카테고리명) + keyword/days/person
       옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호, soft-delete). ingest — file(이미지/PDF/엑셀/텍스트 경로) 또는 text 를 AI가
       구조화해 일괄 저장(검사지·검진 결과, 원본은 문서로 보존).'

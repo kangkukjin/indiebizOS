@@ -209,12 +209,20 @@ def _memory_search(db, tool_input, project_path, agent_id):
                "message": f"대화 이력은 상한 {_conv_lim}건까지만 함께 봅니다(요청 {_conv_req})."}
               if _conv_req > _conv_lim and not (_cat or tool_input.get("node")) else {})
 
+    # 미리보기 절단의 봉투 집계 — recent_chats 와 같은 규약(행 표지 + 선택 범위 truncations). 미리보기는
+    # 호출자가 고른 표시 범위이지 원천 절단이 아니다(전문은 memory_id 로 read, 대화는 DB) → scope: selection.
+    _cut = sum(1 for r in results if r.get("preview_truncated"))
+    _trunc = ({"truncated": True,  # truncation-scope: selection — 표시 미리보기 창(행 preview_truncated·content_chars); 원문은 read·DB 에 그대로
+               "truncations": [{"scope": "selection", "reason": "content_preview", "rows": _cut,
+                                "unit": "chars", "field": "preview", "total_field": "content_chars"}]}
+              if _cut else {})
     # 레코드 통화 부착(비파괴) — memories 목록을 records로. >> [table:document/spreadsheet] 파이프용.
     return json.dumps({
         "count": len(results),
         "memories": results,
         "items": _memories_to_records(results),
         **_clamp,
+        **_trunc,
     }, ensure_ascii=False, indent=2)
 
 
@@ -256,6 +264,9 @@ def _memories_to_records(memories: list) -> list:
     return records
 
 
+CONVERSATION_PREVIEW_CHARS = 200   # 대화 미리보기 길이 — 넘으면 행의 preview_truncated 로 신고
+
+
 # clamp-ok: 순위 상위 N — 대화 검색(5 초과 요청은 호출자가 clamped/requested 로 신고)라 모집단이 의미 없음
 def _search_conversations(project_path, query, limit=5):
     """주체의 대화 저장소에서 낱말 AND 검색. DB 오류는 빈 검색으로 숨기지 않는다."""
@@ -273,18 +284,25 @@ def _search_conversations(project_path, query, limit=5):
     try:
         column = "content" if path == system else "m.content"
         where = " AND ".join(f"{column} LIKE ?" for _ in terms)
+        # ★미리보기 절단은 행이 스스로 말한다 — 장기기억 가지(memory_provenance.search_view)와 같은 표지
+        #   preview_truncated·content_chars·preview_offset. 옛 판은 200자 substr 만 떠 *잘림*을 *전부*로 보였다
+        #   (상상훈련 72회차 B72-3 → 78회차 T04 재확인: 길이 전부 200).
         if path == system:
             sql = ("SELECT id, role AS from_agent, NULL AS to_agent, "
-                   "substr(content,1,200) AS preview, timestamp AS created_at "
+                   f"substr(content,1,{CONVERSATION_PREVIEW_CHARS}) AS preview, length(content) AS content_chars, "
+                   "timestamp AS created_at "
                    f"FROM conversations WHERE {where} ORDER BY id DESC LIMIT ?")
         else:
             sql = ("SELECT m.id, a_from.name AS from_agent, a_to.name AS to_agent, "
-                   "substr(m.content,1,200) AS preview, m.message_time AS created_at "
+                   f"substr(m.content,1,{CONVERSATION_PREVIEW_CHARS}) AS preview, length(m.content) AS content_chars, "
+                   "m.message_time AS created_at "
                    "FROM messages m LEFT JOIN agents a_from ON m.from_agent_id=a_from.id "
                    "LEFT JOIN agents a_to ON m.to_agent_id=a_to.id "
                    f"WHERE {where} ORDER BY m.message_time DESC LIMIT ?")
         rows = conn.execute(sql, (*[f"%{term}%" for term in terms], limit)).fetchall()
         return [{"conversation_id": row["id"], "preview": row["preview"],
+                 "preview_truncated": (row["content_chars"] or 0) > CONVERSATION_PREVIEW_CHARS,
+                 "preview_offset": 0, "content_chars": row["content_chars"] or 0,
                  "from_agent": row["from_agent"], "to_agent": row["to_agent"],
                  "created_at": row["created_at"], "source": "conversation"} for row in rows]
     finally:

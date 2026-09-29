@@ -374,6 +374,20 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 원천 요청 한도 관문 통과 ✓ (429 = 공통 봉투 → 판본 2 RATE_LIMITED)")
 
+        # --- 열린 인자 계약 전수 관문 (2026-09-29, 78회차 F78-2 밭 이관) ---
+        # 인자 선언이 비면 계약이 열려 check·실행이 모르는 인자를 조용히 받는다(recent_chats days·query 무시).
+        # 열린 계약을 계약 생성 함수로 기계 열거해, 사유(open_params_reason) 없는 개방을 막는다.
+        from iblbuild_open_params import validate_open_params
+        oissues, oreasoned = validate_open_params(data, root)
+        if oissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 열린 인자 계약 관문 실패: {len(oissues)}건", file=sys.stderr)
+            for issue in oissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print(f"[build_ibl_nodes] 열린 인자 계약 관문 통과 ✓ (사유 있는 개방 {len(oreasoned)}: "
+                  f"{', '.join(oreasoned)})")
+
         # --- 선언 내부 모순 관문 (2026-09-07) ---
         # 산문은 모델이 읽고 타입은 관문이 읽는다. 09-05 수리가 memory keywords 의
         # 저장소·산문만 고치고 타입을 두어, 낱말이 "배열도 받습니다"라고 적어 놓은 채

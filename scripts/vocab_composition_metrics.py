@@ -18,7 +18,7 @@
   python3 scripts/vocab_composition_metrics.py --compare /tmp/before.json
 
 정본 설계: docs/HIGHER_ORDER_SENTENCE_DESIGN.md §6
-stdlib 전용(yaml 제외 — 레지스트리 파싱에만 사용).
+stdlib + yaml + 도달 판정만 backend 정본 함수(ibl_registry.self_can_run — 데이터만 읽음, 서버 불요).
 """
 import argparse
 import json
@@ -102,26 +102,47 @@ def load_registry_actions():
     return out
 
 
-def load_prompt_hidden_actions():
-    """프롬프트 카탈로그에 안 나오는 어휘(`prompt_hidden` — 앱 계기 전용 등).
+def load_unreachable_actions():
+    """훈련자가 **도달할 수 없는** 어휘 {node:action: 사유} — describe 가 "사용 가능한 액션이 아닙니다"라
+    답하는 것과 같은 집합.
 
-    훈련 메뉴에 이것이 섞이면 훈련자는 **볼 수 없는 어휘를 상상해야** 하므로 매 회차
-    영원히 미조합으로 남는다 — 지표의 도달 불가능한 바닥(F18-3, 2026-08-22 18회차 실측:
-    115건 중 engines:icon·engines:newspaper 2건). 분모(레지스트리_액션)와 미조합 수
-    자체는 건드리지 않는다 — 건드리면 회차 간 비교선이 끊긴다. 메뉴에서 빼고, 몇 건을
-    왜 뺐는지 함께 인쇄한다(침묵 필터 금지).
+    훈련 메뉴에 이것이 섞이면 훈련자는 **쓸 수 없는 어휘를 상상해야** 하므로 매 회차 영원히 미조합으로
+    남는다 — 지표의 도달 불가능한 바닥(F18-3, 2026-08-22). 옛 판은 `prompt_hidden` 만 뺐는데, 잠든 묶음
+    (self:record·engines:arch_* …)·남의 몸 어휘(limbs:phone)도 describe 가 거절한다 — 78회차 F78-4 에서
+    "도달 가능 139" 중 14액션이 실제로 도달 불가였다. 그래서 판정을 사본으로 두지 않고 **실행기·describe 가
+    쓰는 정본 함수**(`ibl_registry.self_can_run` — 잠든 묶음·stub·prompt_hidden·실행 몸)를 그대로 부른다.
+    데이터(활성 원장 data/vocabulary/activation.json + 사전)만 읽으므로 백엔드가 떠 있을 필요는 없다.
+
+    분모(레지스트리_액션)와 미조합 수 자체는 건드리지 않는다 — 건드리면 회차 간 비교선이 끊긴다.
+    메뉴에서 빼고, 몇 건을 왜 뺐는지 함께 인쇄한다(침묵 필터 금지).
     """
     import yaml
+    backend = os.path.join(ROOT, "backend")
+    if backend not in sys.path:
+        sys.path.insert(0, backend)
+    import boot_paths  # noqa: F401  — 층 디렉토리 sys.path
+    from ibl_registry import self_can_run
+    from vocabulary_state import action_reason
     with open(REG, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     nodes = data.get("nodes", data)
-    out = set()
+    out = {}
     for node, body in nodes.items():
         if not isinstance(body, dict):
             continue
         for a, spec in (body.get("actions") or {}).items():
-            if isinstance(spec, dict) and spec.get("prompt_hidden"):
-                out.add(f"{node}:{a}")
+            if not isinstance(spec, dict) or self_can_run(node, a, spec):
+                continue
+            # 사유는 표시용 꼬리표일 뿐 — 포함 여부는 위 정본 판정이 정한다.
+            if spec.get("prompt_hidden"):
+                why = "프롬프트 비노출(prompt_hidden: 앱 계기 전용)"
+            elif action_reason(node, a, spec):
+                why = "잠든 묶음"
+            elif spec.get("router") == "stub":
+                why = "stub"
+            else:
+                why = f"이 몸에서 실행 불가(runs_on: {spec.get('runs_on') or '?'})"
+            out[f"{node}:{a}"] = why
     return out
 
 
@@ -149,7 +170,7 @@ def measure():
             con.execute("select source, ibl_code from ibl_examples") if r[1]]
     con.close()
     allacts = load_registry_actions()
-    hidden = load_prompt_hidden_actions()
+    hidden = load_unreachable_actions()
     return {
         "행동": _measure_codes([c for s, c in rows if s in BEHAVIOR_SOURCES], allacts, hidden),
         "교재": _measure_codes([c for _, c in rows], allacts, hidden),
@@ -157,7 +178,8 @@ def measure():
     }
 
 
-def _measure_codes(codes, allacts, hidden=frozenset()):
+def _measure_codes(codes, allacts, hidden=None):
+    hidden = hidden or {}
     pipe_lengths = []
     in_pipe = set()
     partners = defaultdict(set)
@@ -224,11 +246,12 @@ def _measure_codes(codes, allacts, hidden=frozenset()):
         "미조합_액션": len(never),
         "미조합_노드별": dict(never_by_node.most_common()),
         "미조합_목록": never,
-        # F18-3: 훈련자가 카탈로그에서 볼 수 없는 어휘는 상상 대상이 될 수 없다.
-        # 분모·미조합 수는 그대로 두고(회차 비교선 보존) 도달 가능분을 병기한다.
+        # F18-3·F78-4: 훈련자가 쓸 수 없는 어휘(describe 거절 — 비노출·잠든 묶음·남의 몸)는 상상 대상이
+        # 될 수 없다. 분모·미조합 수는 그대로 두고(회차 비교선 보존) 도달 가능분을 병기한다.
         "미조합_도달가능": len([a for a in never if a not in hidden]),
         "미조합_목록_도달가능": [a for a in never if a not in hidden],
-        "미조합_비노출제외": sorted(a for a in never if a in hidden),
+        "미조합_비노출제외": sorted(a for a in never if a in hidden),   # 키 이름은 회차 비교 호환(내용=도달 불가 전부)
+        "미조합_도달불가_사유": {a: hidden[a] for a in sorted(never) if a in hidden},
         "문형_분포": dict(form_counter.most_common()),        # 파이프 문장 기준
         "문형_수": len(form_counter),
         "문형_분포_단발": dict(solo_form_counter.most_common()),  # 참고: 조합 안 된 단발 문장
@@ -284,7 +307,7 @@ def _render_one(m, before=None):
     _hidden = m.get("미조합_비노출제외") or []
     if _hidden:
         print(f"     ↳ 훈련 도달 가능 {m['미조합_도달가능']}"
-              f"  (프롬프트 비노출 {len(_hidden)}건 제외: {', '.join(_hidden)})")
+              f"  (도달 불가 {len(_hidden)}건 제외 — describe 거절: 비노출·잠든 묶음·남의 몸)")
     for node, n in m["미조합_노드별"].items():
         print(f"     {node:8s} {n}")
     print(f"③ 문형 수 (파이프 안)  {m['문형_수']}{delta('문형_수')}")
@@ -325,12 +348,12 @@ def main():
             mark = "" if a in m["교재"]["미조합_목록"] else "   (교재에는 조합 있음 = 가르쳤으나 안 씀)"
             print("  ", a + mark)
         # 훈련 메뉴에서 뺀 것을 밝힌다 — 조용히 거르면 지표가 줄어든 것처럼 보인다(F18-3).
-        _hidden = m["행동"].get("미조합_비노출제외") or []
-        if _hidden:
-            print(f"\n  ※ 메뉴에서 제외 {len(_hidden)}건 — 프롬프트 카탈로그 비노출"
-                  "(prompt_hidden: 앱 계기 전용). 훈련자가 볼 수 없어 상상 대상이 아니다:")
-            for a in _hidden:
-                print("     ", a)
+        _why = m["행동"].get("미조합_도달불가_사유") or {}
+        if _why:
+            print(f"\n  ※ 메뉴에서 제외 {len(_why)}건 — 이 몸의 활성 어휘가 아니다(describe 가 '사용 가능한 "
+                  "액션이 아닙니다'로 거절, 판정=ibl_registry.self_can_run). 훈련자가 쓸 수 없어 상상 대상이 아니다:")
+            for a, why in _why.items():
+                print("     ", a, f"— {why}")
 
 
 if __name__ == "__main__":

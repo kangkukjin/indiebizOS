@@ -1,10 +1,16 @@
   self:
     actions:
       recent_chats:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2) — 드라이버(sqlite_driver._handle_memory)가 읽는 키는 limit·agent 뿐이다.
+        # 옛 선언은 params 가 비어 계약이 열렸고, days·query·since 가 경고 0으로 무시돼 "지난 7일 중 전세 얘기만"이
+        # 전체 최근 대화로 돌아왔다(T03). 기간·낱말 필터는 이 액션의 일이 아니다 — 받은 행을 거르는 자리를 안내한다.
+        open_params: false
+        params: {limit: integer, agent: string}
+        unknown_param_hint: '이 액션은 최근 N건(limit)과 대화 상대(agent)만 고른다 — 기간·낱말 조건은 받은 행을 [table:filter] 로 거르세요(시각 열 message_time — 시스템 AI 자기 대화는 timestamp, 본문 열 content_preview). 낱말로 과거 대화를 찾으려면 [self:memory]{op:"search", query:…}.'
         returns: items
         fixture: '[self:recent_chats]{}'
         description: '최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). 본문은 300자 미리보기 — 절단은 truncated/content_len 으로 신고. 다른 프로젝트를 보려면 {project_id: "투자"} — ★project_path 는 무시된다(조용히 자기 대화가 나옴). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.'
-        target_description: 'limit 건수 제한 (기본 10). project_id 로 대상 프로젝트 지정 — 예 {project_id: "투자"}(id 또는 절대경로). ★project_path 는 라우팅에 안 먹힌다: 호출자 정체성 경로가 이겨(ibl_routing.resolve_project_path 2번 우선순위) 조용히 무시되고 자기 대화가 정상 형태로 반환된다 — 오답을 참으로 믿게 되니 쓰지 말 것. 본문 300자 초과분은 행 truncated=true·content_len(전체 길이)과 봉투 truncated·summary 집계로 신고(2026-08-30) — 전문이 필요하면 해당 DB 직접 조회.'
+        target_description: 'limit 건수 제한 (기본 10). agent 로 대화 상대(보낸 쪽 또는 받는 쪽 에이전트 이름) 한정 — 시스템 AI 자기 대화에는 상대 축이 없어 거절. 기간·낱말 조건 인자는 없다 — 받은 행을 [table:filter] 로 거른다. project_id 로 대상 프로젝트 지정 — 예 {project_id: "투자"}(id 또는 절대경로). ★project_path 는 라우팅에 안 먹힌다: 호출자 정체성 경로가 이겨(ibl_routing.resolve_project_path 2번 우선순위) 조용히 무시되고 자기 대화가 정상 형태로 반환된다 — 오답을 참으로 믿게 되니 쓰지 말 것. 본문 300자 초과분은 행 truncated=true·content_len(전체 길이)과 봉투 truncated·summary 집계로 신고(2026-08-30) — 전문이 필요하면 해당 DB 직접 조회.'
         group: conversation
         router: driver
         driver: sqlite
@@ -96,6 +102,9 @@
               - {key: type, type: select, placeholder: 종류, options: [{value: other, label: 기타}, {value: meeting, label: 회의/약속}, {value: task, label: 할 일}, {value: birthday, label: 생일}, {value: anniversary, label: 기념일}, {value: holiday, label: 휴일}]}
               - {key: description, type: text, placeholder: 메모}
       switch:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        open_params: false
+        params: {op: string, switch_id: string}
         # list op 가 목록을 내므로 items — 설명이 약속한 것을 통화 선언이 부정하고 있었다
         # (주간 설명 감사가 짚은 건, self:agents 와 같은 부류. 실측: `>> [table:take]` 가
         #  "items 통화를 찾지 못했습니다"로 끊겼다).
@@ -169,6 +178,12 @@
         - 지연실행
         - 반복
       goal:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        open_params: false
+        params: {op: string, goal_id: string, status: string, reason: string, task_id: string,
+                 approach_category: string, description: string, result: string, lesson: string, limit: integer}
+        aliases:
+          approach_category: [category]   # _log_attempt 폴백 키
         returns: scalar
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:goal]{op: "list"}'
@@ -229,6 +244,8 @@
         - 통지
         - 메시지
       workflow:
+        open_params: true
+        open_params_reason: '판본 1 호환 입구 — 저장 형식(steps·pipeline·문장 키·params_default·description)과 run 의 호출 인자(params Record)가 op·판본마다 갈라져 한 인자 집합으로 닫을 수 없다. 판본 2 의 정본 계약은 code 의 [def:이름](명시 인자)와 [fn:이름]{인자} 호출이 진다.'
         params:
           edition: integer  # 원문 의미 명시용. code 저장과 저장본 run은 자동 해소.
           code: string      # edition:2 저장은 하나의 [def:이름](명시 인자){몸통}.
@@ -342,6 +359,9 @@
         - 트리거 상태
         - 자동 실행
       output:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        open_params: false
+        params: {op: string, content: [string, object, array], format: string, title: string}
         aliases:
           content: [data]
           format: [type]
@@ -366,9 +386,12 @@
         - 복사
         - UI
       download:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        open_params: false
+        params: {url: string, path: string, filename: string, save_dir: string}
         returns: effect
         description: URL에서 파일 다운로드해 로컬 저장. HTML 페이지 텍스트 추출은 sense:crawl.
-        target_description: 다운로드 URL. output 옵션으로 저장 경로 지정.
+        target_description: 'url=다운로드 URL. path=저장 전체 경로(상대면 프로젝트 기준, 최우선) 또는 filename(파일 이름)+save_dir(폴더, 생략 시 저장소 outputs/).'
         group: output
         target_key: url
         router: system
@@ -378,6 +401,11 @@
         - 다운로드
         - 파일받기
       package:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        open_params: false
+        params: {op: string, package_id: string}
+        aliases:
+          package_id: [name]   # _package_op 폴백 키
         # list op 가 목록을 낸다 — self:switch·self:trigger 와 같은 부류.
         returns: items
         # 활성 선택은 사람의 조종실 동작. IBL install/remove는 변경 제안만 반환한다.
@@ -425,6 +453,11 @@
         - reload
         - 확장
       install_lib:
+        # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        open_params: false
+        params: {package: string, check: boolean, reason: string}
+        aliases:
+          package: [name, lib]   # _install_lib 폴백 키
         returns: effect
         description: 파이썬 라이브러리(pip) 확인·승인 설치. 이미 있으면 installed 즉답, check:true=확인만(부작용 0, installed/approved/pending/missing). ★사람 승인 게이트 — 미승인은 대기열+알림(approval_required), 사용자가 도구 관리 창에서 승인한 뒤 같은 호출을 다시 하면 설치.
         target_description: 'package(필수) — pip 패키지명(세상의 도구 지도 world_tools.md 의 이름 그대로). check(선택, bool) — 확인만. reason(선택) — 왜 필요한지 한 줄(승인 화면에 보임). 설치 위치=쓰기가능 pylibs, 재기동 불요. package="playwright"면 chromium 바이너리도 함께. 예: {package: "duckdb", check: true}.'

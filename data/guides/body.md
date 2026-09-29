@@ -58,7 +58,7 @@ items 행: changes=`{파일, 상태, 영역, 시각, 요지, 커밋}` (이동이
 
 ## 함정·경계
 
-- **★`writes`=부분 기록**: 쓰기 관문(safe_store·`[self:write]`)을 지난 쓰기만 원장(`data/write_ledger.jsonl`)에 남는다 — 핸들러가 직접 open() 으로 쓰면 원리적으로 미기록. 결과 text 가 이 부분성을 항상 광고한다. 코드 층 전수는 `changes`(git)가 정답. `작업`(task_id)과 `run`(run_id) → 주행기록·`trajectory_event`와 조인하면 "어떤 요청의 몇 번째 사건이 이 파일을 바꿨나"까지 추정 없이 닫힌다.
+- **★`writes`=부분 기록**: 쓰기 관문(safe_store·`[self:write]`·`[self:ledger]` 원자 쓰기 — 관문 이름은 `gate` 열, 원장 쓰기는 `self_ledger`)을 지난 쓰기만 원장(`data/write_ledger.jsonl`)에 남는다 — 핸들러가 직접 open() 으로 쓰면 원리적으로 미기록. 결과 text 가 이 부분성을 항상 광고한다. 코드 층 전수는 `changes`(git)가 정답. `작업`(task_id)과 `run`(run_id) → 주행기록·`trajectory_event`와 조인하면 "어떤 요청의 몇 번째 사건이 이 파일을 바꿨나"까지 추정 없이 닫힌다.
 - **`trajectory` 식별자**: `run_id`·`episode_id`·`task_id` 중 하나만 준다. 아무것도 안 주면 최근 실사용 episode. 여러 개를 섞으면 서로 다른 실행을 합치지 않고 거절한다. `limit` 절단 시 시작과 끝을 반씩 보존해 원인·결말을 함께 나른다.
 - **pc_only** — 폰 몸엔 git 이 없다. git 저장소 밖이면 정직 거절(빈 결과 아님).
 - `file` op 의 미추적 파일=이력 0 이 정상("아직 커밋된 적 없음"으로 구분 보고). 경로 오타와 구분됨.

@@ -153,6 +153,10 @@ def _schema_props(tool_name: str) -> Set[str]:
 def documented_vocab(action_config: dict, tool_name: str) -> Set[str]:
     """제안(did-you-mean)용 문서화 어휘 — 허용집합보다 좁은, 사람이 쓰라고 만든 키."""
     vocab = _schema_props(tool_name) | _alias_keys(action_config) | {"op"}
+    # 비핸들러 라우터의 닫힌 선언(open_params:false + params)은 tool.json 이 없다 — 선언 자체가 문서화 어휘다
+    # (2026-09-29 78회차 F78-2 census: 빠지면 선언한 scope 가 '문서화 밖' 소프트 경고를 받았다).
+    if isinstance(action_config.get("params"), dict):
+        vocab.update(action_config["params"])
     contract = action_config.get("callable_contract") or {}
     vocab.update(contract.get("params", {}))
     vocab.update(contract.get("aliases", {}))

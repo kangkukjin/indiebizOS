@@ -185,9 +185,9 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         #   ★선언한 키는 구현이 읽을 것 — 아니면 받고 무시한 채 성공('선언-읽기' 관문).
         keywords: [한글키워드, english_keyword]
         # aliases: {정규키: [별칭1, 별칭2]}   # (선택) 자연스러운 인자명 → 정규키 자동 매핑
-        # open_params: true       # (선택) 자유 키를 정당하게 받는 액션만 — 인자 층 검사 면제.
-        #   기본은 검사 대상: 선언 안 된 키·없는 op 값은 실행 결과에 param_warning 으로 경고된다
-        #   (ibl_param_vocab.check_params: 허용=input_schema∪aliases. 읽는 키는 params 에 선언).
+        # open_params: true + open_params_reason: 왜  # 자유 키가 본질인 액션만(검사 면제).
+        #   사유 없는 개방=빌드 실패('열린 인자 계약'). 비핸들러 라우터는 open_params:false+params 로 닫음.
+        #   unknown_param_hint: 문장 # (선택) UNKNOWN_ARGUMENT 안내(안 받는 필터는 어디서).
         # ai_call: true          # (선택) 원샷 AI 낱말(실행마다 모델 호출) — dry-run 비용 고지
         #   +포털 대여 기본 거부. fixture 는 exempt 로 별도 면제. src README '선택 필드: ai_call' 참조.
         # runs_on: pc_only       # (선택) 폰 네이티브: 데스크톱(맥·리눅스·윈도우) 전용이면. 기본 anywhere.

@@ -1,0 +1,194 @@
+{
+  "self:blog#posts": {
+    "kind": "items",
+    "keys": [
+      "title",
+      "pub_date",
+      "category",
+      "meta",
+      "summary",
+      "url",
+      "post_id"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "self:blog#latest": {
+    "kind": "items",
+    "keys": [
+      "title",
+      "meta",
+      "path",
+      "url",
+      "post_id",
+      "pub_date",
+      "category"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "others:bulletin#status": {
+    "kind": "items",
+    "keys": [
+      "title",
+      "meta",
+      "url",
+      "id",
+      "slug",
+      "allow_images",
+      "post_count"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "others:bulletin#detail": {
+    "kind": "items",
+    "keys": [
+      "id",
+      "title",
+      "display_title",
+      "meta",
+      "board_id",
+      "at",
+      "name",
+      "body",
+      "has_image"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "others:family_news#status": {
+    "kind": "items",
+    "keys": [
+      "title",
+      "meta",
+      "url",
+      "id",
+      "no",
+      "is_draft",
+      "places",
+      "preview_url",
+      "range_from",
+      "range_to",
+      "photo_count",
+      "published_at"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "others:family_news#comments": {
+    "kind": "items",
+    "keys": [
+      "title",
+      "meta",
+      "summary",
+      "at",
+      "edition"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "others:family_news#uploads": {
+    "kind": "items",
+    "keys": [
+      "title",
+      "meta",
+      "image",
+      "path",
+      "at",
+      "used_in",
+      "rejected",
+      "status"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "others:neighbor#list": {
+    "kind": "items",
+    "keys": [
+      "id",
+      "name",
+      "info_level",
+      "rating",
+      "additional_info",
+      "business_doc",
+      "info_share",
+      "created_at",
+      "updated_at",
+      "favorite",
+      "uuid",
+      "deleted",
+      "is_indiebiz_peer",
+      "peer_version",
+      "portal_revoked",
+      "portal_joined_at",
+      "portal_last_used",
+      "warehouse_url",
+      "warehouse_memo",
+      "portal_member"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "others:messages#inbox": {
+    "kind": "items",
+    "keys": [
+      "id",
+      "pubkey",
+      "name",
+      "channel",
+      "to",
+      "preview",
+      "time",
+      "unread",
+      "unreplied",
+      "created_at",
+      "info_level",
+      "rating",
+      "favorite",
+      "is_neighbor",
+      "is_indiebiz_peer",
+      "peer_version",
+      "badge"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "others:messages#thread": {
+    "kind": "items",
+    "keys": [
+      "content",
+      "is_from_user",
+      "contact_type",
+      "time",
+      "status",
+      "processed",
+      "replied",
+      "subject",
+      "sent_at",
+      "attachment_path",
+      "created_at"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "self:webapp#status": {
+    "kind": "items",
+    "keys": [
+      "title",
+      "url",
+      "kind",
+      "source",
+      "memo",
+      "meta",
+      "summary",
+      "alive",
+      "state",
+      "http",
+      "ms",
+      "status_line"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  }
+}

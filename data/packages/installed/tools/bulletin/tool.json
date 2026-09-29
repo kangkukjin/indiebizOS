@@ -8,7 +8,7 @@
   "tools": [
     {
       "name": "bulletin_op",
-      "description": "로그인 없는 자유게시판 관리 — 게시판 CRUD + 글 모더레이션 + 포털 붙임 대상 조회.\n\n## op 분기\n- status (기본): 게시판 목록 반환. items[] 각 게시판에 title/meta/url(주소)/id/slug/post_count, 최상위 settings{public_base, allow_images}.\n- create: title 로 새 게시판 생성 — 공개 주소(/b/5자) 발급. allow_images(기본 true) 사진 첨부 허용.\n- config: board_id 있으면 게시판 설정(title 개명·allow_images), 없으면 전역(public_base).\n- delete: board_id 게시판 삭제 — 주소·글·사진 동반 제거.\n- detail: board_id → 게시판 + 최근 글 200개(posts[], 모더레이션용 앱 드릴).\n- post_delete: board_id + post_id 글 하나 삭제.\n- portals: board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태(읽기). 실제 붙임/떼기는 [others:portal]{op:\"display\"}.",
+      "description": "로그인 없는 자유게시판 관리 — 게시판 CRUD + 글 모더레이션 + 포털 붙임 대상 조회.\n\n## op 분기\n- status (기본): 게시판 목록 반환. items[] 각 게시판에 title/meta/url(주소)/id/slug/post_count, 최상위 settings{public_base, allow_images}.\n- create: title 로 새 게시판 생성 — 공개 주소(/b/5자) 발급. allow_images(기본 true) 사진 첨부 허용.\n- config: board_id 있으면 게시판 설정(title 개명·allow_images), 없으면 전역(public_base).\n- delete: board_id 게시판 삭제 — 주소·글·사진 동반 제거.\n- detail: board_id → board에 게시판, items와 호환 posts에 최근 글 200개(posts[], 모더레이션용 앱 드릴).\n- post_delete: board_id + post_id 글 하나 삭제.\n- portals: board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태(읽기). 실제 붙임/떼기는 [others:portal]{op:\"display\"}.",
       "input_schema": {
         "type": "object",
         "properties": {

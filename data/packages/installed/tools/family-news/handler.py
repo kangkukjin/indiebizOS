@@ -305,8 +305,11 @@ def _make_web_photo(src: Path, dst: Path) -> bool:
 
 def _load_uploads() -> list:
     try:
-        return json.loads(_UPLOADS_META.read_text(encoding="utf-8"))
-    except Exception:
+        entries = json.loads(_UPLOADS_META.read_text(encoding="utf-8"))
+        if not isinstance(entries, list) or any(not isinstance(e, dict) for e in entries):
+            raise ValueError("가족 사진 목록 형식 오류")
+        return entries
+    except FileNotFoundError:
         return []
 
 
@@ -954,7 +957,9 @@ def _fn_comments(params: dict) -> str:
     gb_path = _DATA / "guestbook.json"
     try:
         entries = json.loads(gb_path.read_text(encoding="utf-8"))
-    except Exception:
+        if not isinstance(entries, list) or any(not isinstance(e, dict) for e in entries):
+            raise ValueError("방명록 목록 형식 오류")
+    except FileNotFoundError:
         entries = []
     eid = (params.get("edition_id") or "").strip()
     if eid:

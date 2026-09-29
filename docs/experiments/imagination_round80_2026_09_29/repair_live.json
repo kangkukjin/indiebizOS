@@ -1,0 +1,47 @@
+{
+  "checks": [
+    {
+      "case": "blog_snapshot",
+      "passed": true
+    },
+    {
+      "case": "feed_zero",
+      "passed": true
+    },
+    {
+      "case": "neighbor_projection",
+      "passed": true
+    },
+    {
+      "case": "bulletin_posts",
+      "passed": true
+    },
+    {
+      "case": "unknown_category",
+      "passed": true
+    },
+    {
+      "case": "unsupported_argument",
+      "passed": true,
+      "codes": [
+        "UNKNOWN_ARGUMENT"
+      ]
+    },
+    {
+      "case": "unsupported_argument",
+      "passed": true,
+      "codes": [
+        "UNKNOWN_ARGUMENT"
+      ]
+    },
+    {
+      "case": "unsupported_argument",
+      "passed": true,
+      "codes": [
+        "ARGUMENT_CONTRACT"
+      ]
+    }
+  ],
+  "external_publications": 0,
+  "paid_model_calls": 0
+}

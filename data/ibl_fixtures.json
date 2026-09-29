@@ -190,7 +190,7 @@
     "others:showcase#detail": "폴더 id 필요(status 결과) — 고정 fixture 부적합",
     "self:ask": "LLM 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합",
     "self:blog#check_new": "수집 쓰기(posts INSERT + vault .md) + RSS 네트워크 의존 — 무인 정기 점검이 수집 시점을 소유하게 됨",
-    "self:blog#latest": "지연 물질화(vault .md 부재 시 write_post_md) — 부작용 op 라 fixture 금지 가드 대상",
+    "self:blog#latest": "vault 파일 준비 여부에 의존 — 격리 fixture로 존재·부재와 읽기 무변경 검증",
     "self:business#add_image": "item_id + 실파일 경로 필요 — 고정 fixture 부적합",
     "self:business#delete": "삭제 대상 필요 — 고정 fixture 부적합",
     "self:business#detail": "store 별 id/level 필요(list 결과) — 고정 fixture 부적합",

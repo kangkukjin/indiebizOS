@@ -111,8 +111,13 @@ def get_report_ai() -> Any:
     return prov
 
 
-def get_db() -> sqlite3.Connection:
-    """DB 연결 및 테이블 생성"""
+def get_db(*, read_only=False) -> sqlite3.Connection:
+    """조회는 파일 생성·스키마/색인 수정을 하지 않는다."""
+    if read_only:
+        from pathlib import Path
+        conn = sqlite3.connect(Path(DB_PATH).resolve().as_uri() + "?mode=ro", uri=True, timeout=10)
+        conn.row_factory = sqlite3.Row
+        return conn
     os.makedirs(DATA_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
@@ -336,6 +341,8 @@ def fetch_rss_feed() -> List[Dict[str, Any]]:
     response.raise_for_status()
     
     soup = BeautifulSoup(response.content, 'xml')
+    if soup.find('rss') is None or soup.find('channel') is None:
+        raise ValueError('블로그 RSS 형식이 아닙니다. 수집 시각을 갱신하지 않습니다.')
     items = soup.find_all('item')
     
     posts = []
@@ -372,6 +379,7 @@ def fetch_rss_feed() -> List[Dict[str, Any]]:
 # =============================================================================
 
 def blog_check_new_posts() -> Dict[str, Any]:
+    conn = None
     try:
         conn = get_db()
         existing = set(row[0] for row in conn.execute("SELECT post_id FROM posts").fetchall())
@@ -397,6 +405,8 @@ def blog_check_new_posts() -> Dict[str, Any]:
                 except Exception as e:
                     print(f"[Blog] vault .md 기록 실패({post['post_id']}): {e}")
 
+        from blog_snapshot import record_collection
+        record_collection(conn)
         conn.commit()
         total = conn.execute("SELECT COUNT(*) FROM posts").fetchone()[0]
         conn.close()
@@ -416,10 +426,14 @@ def blog_check_new_posts() -> Dict[str, Any]:
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 def blog_get_posts(count: int = 20, offset: int = 0, category: Optional[str] = None, with_summary: bool = False, only_without_summary: bool = False) -> Dict[str, Any]:
     try:
-        conn = get_db()
+        conn = get_db(read_only=True)
         requested = count
         count = min(count, 100)  # clamp-ok: 한 쪽 상한 100 — 깎이면 아래에서 clamped/requested 로 신고
         
@@ -468,7 +482,7 @@ def blog_get_posts(count: int = 20, offset: int = 0, category: Optional[str] = N
 
 def blog_get_post(post_id: str) -> Dict[str, Any]:
     try:
-        conn = get_db()
+        conn = get_db(read_only=True)
         row = conn.execute("SELECT p.*, s.summary, s.keywords FROM posts p LEFT JOIN summaries s ON p.post_id = s.post_id WHERE p.post_id = ?", (post_id,)).fetchone()
         conn.close()
         if not row: return {'success': False, 'error': f'Post not found: {post_id}'}
@@ -531,7 +545,7 @@ def blog_search(query: str, count: int = 20, search_in: str = "all") -> Dict[str
 
 def blog_stats() -> Dict[str, Any]:
     try:
-        conn = get_db()
+        conn = get_db(read_only=True)
         total_posts = conn.execute("SELECT COUNT(*) FROM posts").fetchone()[0]
         total_summaries = conn.execute("SELECT COUNT(*) FROM summaries").fetchone()[0]
         without_summary = conn.execute("SELECT COUNT(*) FROM posts p LEFT JOIN summaries s ON p.post_id = s.post_id WHERE s.post_id IS NULL").fetchone()[0]

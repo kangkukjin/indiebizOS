@@ -1,0 +1,1068 @@
+{
+  "lessons": 59,
+  "checks": [
+    {
+      "id": 119,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 119,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 119,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 190,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 190,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 190,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 440,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 440,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 440,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 993,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 993,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 993,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 1057,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 1057,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 1057,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 1134,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 1134,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 1134,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 1382,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 1382,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 1382,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3215,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 5
+    },
+    {
+      "id": 3215,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 5
+    },
+    {
+      "id": 3215,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3216,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 5
+    },
+    {
+      "id": 3216,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 5
+    },
+    {
+      "id": 3216,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3217,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 4
+    },
+    {
+      "id": 3217,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 4
+    },
+    {
+      "id": 3217,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3337,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3337,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3337,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3648,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3648,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3648,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3686,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3686,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3686,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3688,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3688,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3688,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3690,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3690,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3690,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3691,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3691,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3691,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3693,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3693,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3693,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3696,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3696,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3696,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3698,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3698,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3698,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3702,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3702,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 3702,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3704,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3704,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 3704,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3706,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 3706,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 3706,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3711,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3711,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3711,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3827,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3827,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 5
+    },
+    {
+      "id": 3827,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3828,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3828,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3828,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3834,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3834,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3834,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3847,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3847,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3847,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3849,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3849,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 3849,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3850,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3850,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3850,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 3854,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3854,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3854,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3862,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3862,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3862,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3874,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3874,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3874,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3875,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3875,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3875,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3881,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3881,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3881,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3882,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3882,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3882,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3910,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 3910,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 5
+    },
+    {
+      "id": 3910,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 3980,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 3980,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 5
+    },
+    {
+      "id": 3980,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4004,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4004,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4004,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4016,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4016,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 4016,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4087,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4087,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 4087,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4092,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 4092,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 4092,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4104,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 5
+    },
+    {
+      "id": 4104,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 5
+    },
+    {
+      "id": 4104,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4105,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4105,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 4
+    },
+    {
+      "id": 4105,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4111,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 4111,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 6
+    },
+    {
+      "id": 4111,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4119,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 6
+    },
+    {
+      "id": 4119,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 6
+    },
+    {
+      "id": 4119,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4182,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4182,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 4182,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4189,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4189,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4189,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4190,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 4
+    },
+    {
+      "id": 4190,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4190,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4191,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4191,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4191,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4198,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4198,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4198,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 3
+    },
+    {
+      "id": 4364,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4364,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4364,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4784,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4784,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4784,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4797,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4797,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4797,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4798,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4798,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4798,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4800,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4800,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4800,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4804,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4804,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4804,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4805,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4805,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 2
+    },
+    {
+      "id": 4805,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4806,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4806,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4806,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    },
+    {
+      "id": 4821,
+      "scenario": "empty",
+      "passed": true,
+      "calls": 9
+    },
+    {
+      "id": 4821,
+      "scenario": "rows",
+      "passed": true,
+      "calls": 9
+    },
+    {
+      "id": 4821,
+      "scenario": "first_failure",
+      "passed": true,
+      "calls": 1
+    }
+  ],
+  "external_calls": 0
+}

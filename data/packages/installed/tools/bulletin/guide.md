@@ -10,7 +10,7 @@
 | `create` | `title` 로 새 게시판 + 주소 발급 (`allow_images` 사진 허용, 기본 true) |
 | `config` | `board_id` 있으면 게시판 설정(`title` 개명·`allow_images`), 없으면 전역 `public_base` |
 | `delete` | `board_id` 게시판 삭제 — 주소·글·사진 동반 제거 |
-| `detail` | `board_id` → 게시판 + 최근 글 200개 (모더레이션용) |
+| `detail` | `board_id` → board에 게시판, items에 최근 글 200개(posts는 호환 별칭, 모더레이션용) |
 | `post_delete` | `board_id` + `post_id` 글 하나 삭제 |
 | `portals` | `board_id` → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태 (읽기) |
 

@@ -126,7 +126,8 @@ def _detail(params: dict) -> str:
         img = " 🖼" if p.get("image") else ""
         post_rows.append({
             "id": p.get("id"),
-            "title": f"{p.get('name', '')}{img}",
+            "title": p.get("name", ""),
+            "display_title": f"{p.get('name', '')}{img}",
             "meta": f"{p.get('at', '')} · {body}",
             "board_id": b["id"],
             # 구조 칸(R7) — meta 에 접힌 값의 정본 (body 는 자르지 않은 원문)
@@ -136,7 +137,7 @@ def _detail(params: dict) -> str:
             "has_image": bool(p.get("image")),
         })
     note = "주소를 아는 사람은 로그인 없이 글을 씁니다. 부적절한 글은 아래에서 삭제하세요."
-    return json.dumps(items([row], board=row, posts=post_rows, note=note, settings=state["settings"]),
+    return json.dumps(items(post_rows, board=row, posts=post_rows, note=note, settings=state["settings"]),
                       ensure_ascii=False)
 
 

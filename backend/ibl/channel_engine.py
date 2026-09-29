@@ -548,7 +548,12 @@ def _community_feed(params: dict) -> dict:
             return {"success": False, "error": str(e)}
 
     # read — 4갈래: author(특정인) > following(팔로우 타임라인) > hashtag(보드) > 기본 피드
-    limit = int(params.get("limit") or 50)
+    limit = int(params.get("limit", 50))
+    if limit < 0:
+        return {"success": False, "error": "limit은 0 이상이어야 합니다."}
+    if limit == 0:
+        return {"items": [], "count": 0}
+    since_args = {"since": params["since"]} if params.get("since") is not None else {}
     author = params.get("author") or params.get("pubkey") or params.get("npub")
     following = str(params.get("following") or "").lower() in ("true", "1", "yes")
     hashtag = params.get("hashtag") or params.get("board")
@@ -560,17 +565,19 @@ def _community_feed(params: dict) -> dict:
         if author:
             from execution_workers import create_executor
             _ex = create_executor("channel-author", max_workers=2)
-            f_posts = _ex.submit(indienet.fetch_author_posts, pubkey=author, limit=limit)
+            f_posts = _ex.submit(indienet.fetch_author_posts, pubkey=author, limit=limit, **since_args)
             f_profile = _ex.submit(indienet.fetch_author_profile, author)
             author_futures = (_ex, f_profile)
             raw = f_posts.result()
         elif following:
-            raw = indienet.fetch_following_feed(limit=limit)
+            raw = indienet.fetch_following_feed(limit=limit, **since_args)
         else:
             # 보드 읽기 — hashtag 없으면 fetch_board_posts 가 활성 보드/기본 indienet 으로 해소.
             # (#태그=주소 은유: 게시판 계기의 주소창이 이 경로를 탄다.)
-            raw = indienet.fetch_board_posts(hashtag=hashtag, limit=limit)
+            raw = indienet.fetch_board_posts(hashtag=hashtag, limit=limit, **since_args)
     except Exception as e:
+        if author_futures:
+            author_futures[0].shutdown(wait=False, cancel_futures=True)
         return {"success": False, "error": str(e)}
 
     my_npub = getattr(getattr(indienet, "identity", None), "npub", None) or ""

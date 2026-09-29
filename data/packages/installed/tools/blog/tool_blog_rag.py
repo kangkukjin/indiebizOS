@@ -20,6 +20,7 @@ import hashlib
 import logging
 import sqlite3
 import time
+from pathlib import Path
 from typing import List, Dict, Tuple, Optional, Any
 from dataclasses import dataclass, asdict
 
@@ -197,13 +198,14 @@ class BlogHybridSearch:
     # DB 연결
     # =========================================================================
 
-    def _get_vec_connection(self) -> Optional[sqlite3.Connection]:
+    def _get_vec_connection(self, *, read_only=False) -> Optional[sqlite3.Connection]:
         """sqlite-vec 로드된 연결 반환, 불가능하면 None"""
         if not self._check_sqlite_vec():
             return None
         try:
             import sqlite_vec
-            conn = sqlite3.connect(DB_PATH, timeout=10)
+            conn = (self._get_plain_connection() if read_only
+                    else sqlite3.connect(DB_PATH, timeout=10))
             conn.enable_load_extension(True)
             sqlite_vec.load(conn)
             conn.enable_load_extension(False)
@@ -214,8 +216,8 @@ class BlogHybridSearch:
             return None
 
     def _get_plain_connection(self) -> sqlite3.Connection:
-        """일반 SQLite 연결 반환"""
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        """조회 전용 연결. DB·스키마 생성은 명시적 수집/색인 작업이 소유한다."""
+        conn = sqlite3.connect(Path(DB_PATH).resolve().as_uri() + '?mode=ro', uri=True, timeout=10)
         conn.row_factory = sqlite3.Row
         return conn
 
@@ -392,11 +394,12 @@ class BlogHybridSearch:
         emb = self.generate_embedding(query)
         if emb is None:
             return []
-        conn = self._get_vec_connection()
+        conn = self._get_vec_connection(read_only=True)
         if conn is None:
             return []
         try:
-            self._ensure_vec_table(conn)
+            if not conn.execute("SELECT 1 FROM sqlite_master WHERE name='posts_vec'").fetchone():
+                return []  # 아직 색인이 없으면 기존 키워드 검색으로 폴백한다.
             where_cat, cat_params = category_clause(category)
             sql = "SELECT rowid, distance FROM posts_vec WHERE embedding MATCH ? AND k = ?"
             params: list = [emb, top_k]
@@ -778,7 +781,7 @@ def get_post_content(post_id: str) -> dict:
                 'message': 'post_id 또는 query(제목 검색어)가 필요합니다. mode:"content"는 특정 포스트 하나를 여는 모드입니다.'}
     post_id = str(post_id).strip()
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = BlogHybridSearch()._get_plain_connection()
         conn.row_factory = sqlite3.Row
 
         # 숫자면 post_id로, 아니면 제목으로 검색

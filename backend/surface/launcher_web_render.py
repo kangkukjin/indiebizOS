@@ -372,18 +372,20 @@ function renderPrim(p,vi,data){
     }).join('')+'</div>';
   }
   if(p.type==='thread'){
-    const arr=viewList(data,p.from);
+    const rows=viewList(data,p.from);
+    const arr=p.reverse===true?[...rows].reverse():rows;
     if(!arr.length) return emptyMsg(p,data);
     // 항목 버튼(item_button) — 본문이 match(정규식, i)와 일치하는 항목에만 붙는 선언형 버튼
     // (2026-08-31 뷰 어휘 개정). 계약(정규식·라벨·액션)은 매니페스트 데이터 — 렌더러는 내용어를 모른다.
     let ibRe=null;
     if(p.item_button&&p.item_button.action&&p.item_button.match){ try{ ibRe=new RegExp(p.item_button.match,'i'); }catch(e){} }
     return '<div class="thread">'+arr.map((it,ri)=>{
+      const sourceIndex=p.reverse===true?arr.length-1-ri:ri;
       const mine=p.mine?!!jget(it,p.mine):false;
       const st=p.status?statusGlyph(jget(it,p.status)||''):'';
       const foot=[p.meta?tpl(p.meta,it):'', p.time?tpl(p.time,it):'', st].filter(Boolean).join(' · ');
       const txt=tpl(p.text,it);
-      const ibtn=(ibRe&&ibRe.test(txt))?'<div><button class="btn2" style="margin-top:4px" onclick="threadIbBtn('+vi+','+ri+',this)">'+esc(p.item_button.label||'실행')+'</button></div>':'';
+      const ibtn=(ibRe&&ibRe.test(txt))?'<div><button class="btn2" style="margin-top:4px" onclick="threadIbBtn('+vi+','+sourceIndex+',this)">'+esc(p.item_button.label||'실행')+'</button></div>':'';
       return '<div class="tmsg'+(mine?' me':'')+'"><div class="tbub">'+txt+'</div>'+ibtn+(foot?'<div class="tfoot">'+foot+'</div>':'')+'</div>';
     }).join('')+'</div>';
   }

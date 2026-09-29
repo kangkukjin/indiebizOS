@@ -76,6 +76,14 @@ check('sparkline 점 1개면 안 그림', R([{type:'sparkline', from:'items', y:
 
 const thread = R([{type:'thread', from:'items', text:'{t}', mine:'me', status:'st'}], {items:[{t:'안녕', me:true, st:'sent'}]});
 check('thread 버블 + 상태 글리프', thread.includes('안녕') && thread.includes('✓'), thread);
+const feedRows = {items:[{t:'newest'}, {t:'oldest'}]};
+const reversedThread = R([{type:'thread', from:'items', reverse:true, text:'{t}',
+  item_button:{match:'.*', action:'[self:time]{}', label:'open'}}], feedRows);
+check('thread 표시만 역순, 원본 순서 보존', reversedThread.indexOf('oldest') < reversedThread.indexOf('newest')
+  && feedRows.items[0].t === 'newest', reversedThread);
+check('thread 역순 버튼은 원래 행 인덱스 유지', reversedThread.indexOf('threadIbBtn(0,1,this)')
+  < reversedThread.indexOf('threadIbBtn(0,0,this)'), reversedThread);
+
 
 const media = R([{type:'media_player', from:'items', src:'{u}', title:'{t}', lazy:true}], {items:[{u:'/music/stream?p=1', t:'곡'}]});
 check('media_player lazy preload=none', media.includes('preload="none"') && media.includes('/music/stream?p=1'), media);

@@ -214,7 +214,7 @@ class IndieNetPublishMixin:
             게시글 리스트
         """
         if not self._initialized:
-            return []
+            raise RuntimeError("IndieNet이 초기화되지 않았습니다")
 
         # 해시태그 결정
         if hashtag:
@@ -256,7 +256,7 @@ class IndieNetPublishMixin:
                     'tags': tags
                 }
 
-            relay_posts = self._query_relays(req_filter, accept)
+            relay_posts = self._query_relays(req_filter, accept, require_success=True)
 
             # 릴레이에서 새로 본 글을 영구 캐시에 적재 → prune돼도 보존
             try:
@@ -273,7 +273,7 @@ class IndieNetPublishMixin:
 
         except Exception as e:
             print(f"✗ IndieNet: 보드 글 조회 실패 - {e}")
-            return []
+            raise RuntimeError("보드 글 조회 실패") from e
 
     def post(self, content: str, extra_tags: List[str] = None) -> Optional[str]:
         """

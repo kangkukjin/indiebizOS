@@ -1,0 +1,38 @@
+{
+  "reviewed": 59,
+  "fixture_checks": 177,
+  "pending": 0,
+  "applied": true,
+  "db_rows": 5,
+  "training_mirrors": 8,
+  "backup": "data/_backups/2026-09-29_imagination80_remaining_204422",
+  "vector_content_verified": 5,
+  "fts_integrity": "ok",
+  "applications": [
+    {
+      "reviewed": 54,
+      "fixture_checks": 162,
+      "pending": 0,
+      "applied": true,
+      "db_rows": 54,
+      "training_mirrors": 46,
+      "backup": "data/_backups/2026-09-29_imagination80_remaining_204117",
+      "vector_content_verified": 54,
+      "fts_integrity": "ok"
+    },
+    {
+      "reviewed": 59,
+      "fixture_checks": 177,
+      "pending": 0,
+      "applied": true,
+      "db_rows": 5,
+      "training_mirrors": 8,
+      "backup": "data/_backups/2026-09-29_imagination80_remaining_204422",
+      "vector_content_verified": 5,
+      "fts_integrity": "ok"
+    }
+  ],
+  "total_db_rows": 59,
+  "db_revision_operations": 59,
+  "total_training_mirrors": 54
+}

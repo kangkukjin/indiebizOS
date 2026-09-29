@@ -253,6 +253,9 @@ def test_weather_requests_display_unit(monkeypatch):
 def test_blog_content_title_and_unknown_op(monkeypatch):
     mod = load('blog')
     calls = []
+    monkeypatch.setitem(sys.modules, 'blog_snapshot', SimpleNamespace(
+        validate_category=lambda category: None,
+        snapshot_metadata=lambda: {'source': 'local_snapshot', 'as_of': None, 'stale': True}))
     monkeypatch.setitem(sys.modules, 'tool_blog_rag', SimpleNamespace(get_post_content=lambda **k: calls.append(k) or {'success': True}))
     monkeypatch.setattr(mod, '_op_posts', lambda *a: pytest.fail('unknown op must not list posts'))
     ctx = SimpleNamespace(tool_name='blog_op')

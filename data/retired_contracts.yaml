@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: blog-latest-hidden-materialization
+    retired: 2026-09-29
+    reason: 읽기인 latest가 vault 파일을 쓰고 수집 시각 없이 원격 최신으로 오인됐다.
+    instead: latest는 읽기 전용이며 as_of·stale을 반환하고 파일 부재 시 명시적 vault export를 안내한다.
+    phrases: ['vault .md 부재 시 write_post_md', 'latest 는 안 푼다']
   - id: memory-read-prose-envelope
     retired: 2026-09-29
     reason: 전문을 평문으로 반환하면 판본 2 legacy-envelope에서 ADAPTER_SHAPE로 거절된다.

@@ -545,7 +545,7 @@
   "others:bulletin": {
    "fields": {
     "description": "10d41c8ba54d",
-    "target_description": "d36cf2bae6c7",
+    "target_description": "a6fb13843fda",
     "implementation": "a91eed686fc1",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -555,7 +555,7 @@
     "router": "ebbb1532efbc",
     "tool": "2330f57c3a43"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 15
   },
   "others:channel_read": {
@@ -590,7 +590,7 @@
     "implementation": "d1ebab6a582e",
     "returns": "9a5e13f69efc",
     "target_key": "4423a660687c",
-    "params": "42df4f591185",
+    "params": "4e9a3f1baa8b",
     "aliases": "d84e35f4f510",
     "router": "0dc8cd0a9228"
    },
@@ -616,11 +616,11 @@
   "others:feed": {
    "fields": {
     "description": "2603df621dcd",
-    "target_description": "15d47ea120f9",
+    "target_description": "9a553c3e4c5c",
     "implementation": "638638bcb68a",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "eae5fb330777",
+    "params": "7829ca752a5d",
     "ops": "b5ae919a3d53",
     "side_effect": "b5bea41b6c62",
     "router": "d1a4b431b2c1"
@@ -753,12 +753,12 @@
   "self:blog": {
    "fields": {
     "description": "3ab38cee996f",
-    "target_description": "b650b160de1b",
+    "target_description": "e23f39caf45a",
     "implementation": "e9cee7e68f4a",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
     "aliases": "6447534e114b",
-    "ops": "0b8bf8e49ff7",
+    "ops": "958e6e10f495",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
@@ -1491,7 +1491,7 @@
   "self:webapp": {
    "fields": {
     "description": "53440e2be8a4",
-    "target_description": "2cbc955ee590",
+    "target_description": "bb96751532d2",
     "implementation": "df5f0a72d3e5",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1500,7 +1500,7 @@
     "router": "ebbb1532efbc",
     "tool": "9b430cf8b012"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 15
   },
   "self:workflow": {

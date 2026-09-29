@@ -190,8 +190,10 @@ def test_blog_posts_page_carries_total_and_next_offset(tmp_path, monkeypatch):
     con.execute('CREATE TABLE posts (post_id TEXT, title TEXT, category TEXT, pub_date TEXT, content TEXT)')
     con.executemany('INSERT INTO posts VALUES (?,?,?,?,?)', [(str(i), f't{i}', 'c', f'2026-09-{i % 28 + 1:02d}', 'x') for i in range(130)])
     con.commit(); con.close()
-    def get_db():
-        c = sqlite3.connect(db); c.row_factory = sqlite3.Row
+    def get_db(*, read_only=False):
+        assert read_only
+        c = sqlite3.connect(db.resolve().as_uri() + '?mode=ro', uri=True)
+        c.row_factory = sqlite3.Row
         return c
     monkeypatch.setattr(ins, 'get_db', get_db)
     out = ins.blog_get_posts(count=20)

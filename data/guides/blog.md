@@ -35,3 +35,13 @@
 ## 관련 어휘 동작 확인
 
 `[self:blog]{op:"search", mode:"content", title:"글 제목"}`은 제목으로 본문을 조회한다. post_id가 있으면 우선하며 query도 제목 입력으로 사용할 수 있다. 알 수 없는 op는 오류다.
+
+## 로컬 사본과 수집 시각
+
+posts·search·latest·stats는 로컬 사본을 읽는다. `as_of`는 마지막 성공 RSS 수집 시각이며
+기존 DB에서 확인할 수 없으면 null이다. 글 발행일이나 파일 수정 시각으로 추정하지 않는다.
+`stale:true`는 수집 시각 미상 또는 24시간 경과를 뜻한다. false도 실시간 원격 최신 보장은 아니다.
+최신 원천이 필요하면 `[self:blog]{op:"check_new"}`로 명시적으로 수집한다(DB·vault 쓰기).
+`latest`는 파일을 만들지 않는다. vault 파일이 없으면 오류를 반환하고 `op:"vault",mode:"export"`를 안내한다.
+목록과 검색의 category는 없는 폴더가 하나라도 있으면 오류다. 정상 폴더의 검색 결과 0건과 구별한다.
+stats는 수집 글·요약 건수이며 방문자 수나 조회수를 측정하지 않는다.

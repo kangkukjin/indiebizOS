@@ -1,0 +1,533 @@
+[
+  {
+    "id": 119,
+    "intent_before": "미팅 일정 잡은 거 어디있지",
+    "intent": "이메일에서 미팅 관련 메시지를 찾아줘",
+    "before": "[others:channel_read]{query: \"미팅\"}",
+    "after": "#!ibl edition=2\nreturn [others:channel_read]{channel_type:\"email\",query:\"미팅\"}",
+    "status": "valid",
+    "issues": []
+  },
+  {
+    "id": 190,
+    "intent_before": "블로그 조회수 현황",
+    "intent": "로컬에 수집한 블로그 글 수와 요약 작성 현황을 보여줘",
+    "before": "[self:blog]{op: \"stats\"}",
+    "after": "#!ibl edition=2\nreturn [self:blog]{op:\"stats\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 440,
+    "intent_before": "미팅 약속 관련 메시지",
+    "intent": "이메일에서 미팅 관련 메시지를 찾아줘",
+    "before": "#!ibl edition=2\nreturn [others:channel_read]{\"query\":\"미팅\"}",
+    "after": "#!ibl edition=2\nreturn [others:channel_read]{channel_type:\"email\",query:\"미팅\"}",
+    "status": "valid",
+    "issues": []
+  },
+  {
+    "id": 993,
+    "intent_before": "미팅 메시지 좀 찾아",
+    "intent": "이메일에서 미팅 관련 메시지를 찾아줘",
+    "before": "#!ibl edition=2\nreturn [others:channel_read]{\"query\":\"미팅\"}",
+    "after": "#!ibl edition=2\nreturn [others:channel_read]{channel_type:\"email\",query:\"미팅\"}",
+    "status": "valid",
+    "issues": []
+  },
+  {
+    "id": 1057,
+    "intent_before": "블로그 방문자 수 어때",
+    "intent": "로컬에 수집한 블로그 글 수와 요약 작성 현황을 보여줘",
+    "before": "[self:blog]{op: \"stats\"}",
+    "after": "#!ibl edition=2\nreturn [self:blog]{op:\"stats\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 1134,
+    "intent_before": "회의 관련 대화 내역",
+    "intent": "이메일에서 미팅 관련 메시지를 찾아줘",
+    "before": "[others:channel_read]{query: \"미팅\"}",
+    "after": "#!ibl edition=2\nreturn [others:channel_read]{channel_type:\"email\",query:\"미팅\"}",
+    "status": "valid",
+    "issues": []
+  },
+  {
+    "id": 1382,
+    "intent_before": "미팅 관련해서 주고받은 거 있어?",
+    "intent": "이메일에서 미팅 관련 메시지를 찾아줘",
+    "before": "#!ibl edition=2\nreturn [others:channel_read]{\"query\":\"미팅\"}",
+    "after": "#!ibl edition=2\nreturn [others:channel_read]{channel_type:\"email\",query:\"미팅\"}",
+    "status": "valid",
+    "issues": []
+  },
+  {
+    "id": 3215,
+    "intent_before": "블로그 새 글 받아오고 최신글 창고에 발행해줘",
+    "intent": "블로그 새 글 받아오고 최신글 창고에 발행해줘",
+    "before": "[self:blog]{op: \"check_new\"} ; $글 = [self:blog]{op: \"latest\"} ; [self:read]{path: \"$글.path\"} >> [table:document]{format: \"html\"} >> [self:copy]{destination: \"공유창고/0/최신 블로그 글.html\"}",
+    "after": "#!ibl edition=2\n[self:blog]{op:\"check_new\"}\n$글=[self:blog]{op:\"latest\"}\n$본문=[self:read]{path:$글.path}\n$문서=[table:document]{markdown:$본문.text,format:\"html\"}\nreturn [self:copy]{src:$문서.path,dest:\"공유창고/0/최신 블로그 글.html\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3216,
+    "intent_before": "최신 블로그 글을 공유창고에 올려줘",
+    "intent": "최신 블로그 글을 공유창고에 올려줘",
+    "before": "$글 = [self:blog]{op: \"latest\"} ; [self:read]{path: \"$글.path\"} >> [table:document]{format: \"html\"} >> [self:copy]{destination: \"공유창고/0/최신 블로그 글.html\"}",
+    "after": "#!ibl edition=2\n[self:blog]{op:\"check_new\"}\n$글=[self:blog]{op:\"latest\"}\n$본문=[self:read]{path:$글.path}\n$문서=[table:document]{markdown:$본문.text,format:\"html\"}\nreturn [self:copy]{src:$문서.path,dest:\"공유창고/0/최신 블로그 글.html\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3217,
+    "intent_before": "블로그 최신글 html로 만들어줘",
+    "intent": "블로그 최신글 html로 만들어줘",
+    "before": "$글 = [self:blog]{op: \"latest\"} ; [self:read]{path: \"$글.path\"} >> [table:document]{format: \"html\"}",
+    "after": "#!ibl edition=2\n[self:blog]{op:\"check_new\"}\n$글=[self:blog]{op:\"latest\"}\n$본문=[self:read]{path:$글.path}\n$문서=[table:document]{markdown:$본문.text,format:\"html\"}\nreturn $문서",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3337,
+    "intent_before": "웹앱 중에 안 살아있는 것만 골라줘",
+    "intent": "웹앱 중에 안 살아있는 것만 골라줘",
+    "before": "[self:webapp]{op: \"status\"} >> [table:filter]{field: \"alive\", value: false}",
+    "after": "#!ibl edition=2\n$r=[self:webapp]{op:\"status\"}\nreturn $r.items >> [table:filter]{where:($r)=>$r.alive == false}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3648,
+    "intent_before": "퓨리서치 피드에서 AI 관련 글만 추려줘",
+    "intent": "퓨리서치 피드에서 AI 관련 글만 추려줘",
+    "before": "[sense:feed]{url: \"https://www.pewresearch.org/feed/\"} >> [table:filter]{where:{field:\"title\",op:\"contains\",value:\"AI\"}}",
+    "after": "#!ibl edition=2\n$r=[sense:feed]{url:\"https://www.pewresearch.org/feed/\"}\nreturn $r.items >> [table:filter]{where:($r)=>contains($r.title,\"AI\")}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3686,
+    "intent_before": "내 웹앱들 생존 확인해서 죽은 것만 알려줘",
+    "intent": "내 웹앱들 생존 확인해서 죽은 것만 알려줘",
+    "before": "[self:webapp]{op: \"status\"} >> [table:filter]{where: {field: \"alive\", op: \"eq\", value: false}}",
+    "after": "#!ibl edition=2\n$r=[self:webapp]{op:\"status\"}\nreturn $r.items >> [table:filter]{where:($r)=>$r.alive == false}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3688,
+    "intent_before": "공개한 폴더 중에 미디어 모드만 보여줘",
+    "intent": "공개한 폴더 중에 미디어 모드만 보여줘",
+    "before": "[others:showcase]{op: \"status\"} >> [table:filter]{where: {field: \"mode\", op: \"eq\", value: \"media\"}}",
+    "after": "#!ibl edition=2\n$r=[others:showcase]{op:\"status\"}\nreturn $r.items >> [table:filter]{where:($r)=>$r.mode == \"media\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3690,
+    "intent_before": "미답신 메시지가 있는 대화만 보여줘",
+    "intent": "미답신 메시지가 있는 대화만 보여줘",
+    "before": "[others:messages]{op: \"inbox\"} >> [table:filter]{where: {field: \"unreplied\", op: \"gt\", value: 0}}",
+    "after": "#!ibl edition=2\n$r=[others:messages]{op:\"inbox\"}\nreturn $r.items >> [table:filter]{where:($r)=>$r.unreplied != null and $r.unreplied > 0}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3691,
+    "intent_before": "즐겨찾는 이웃들 대화만 추려줘",
+    "intent": "즐겨찾는 이웃들 대화만 추려줘",
+    "before": "[others:messages]{op: \"inbox\"} >> [table:filter]{where: {field: \"favorite\", op: \"gt\", value: 0}}",
+    "after": "#!ibl edition=2\n$r=[others:messages]{op:\"inbox\"}\nreturn $r.items >> [table:filter]{where:($r)=>$r.favorite > 0}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3693,
+    "intent_before": "포털 사용 기록 최근 20건만 보여줘",
+    "intent": "포털 사용 기록 최근 20건만 보여줘",
+    "before": "[others:portal]{op: \"audit\"} >> [table:take]{n: 20}",
+    "after": "#!ibl edition=2\n$r=[others:portal]{op:\"audit\"}\nreturn $r.items >> [table:take]{n:20}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3696,
+    "intent_before": "게시판들 글 많은 순으로 보여줘",
+    "intent": "게시판들 글 많은 순으로 보여줘",
+    "before": "[others:bulletin]{op: \"status\"} >> [table:sort]{by: \"post_count\", desc: true}",
+    "after": "#!ibl edition=2\n$r=[others:bulletin]{op:\"status\"}\nreturn $r.items >> [table:sort]{by:\"post_count\",descending:true}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3698,
+    "intent_before": "신문 판 목록에서 초안만 보여줘",
+    "intent": "신문 판 목록에서 초안만 보여줘",
+    "before": "[others:family_news]{op: \"status\"} >> [table:filter]{where: {field: \"is_draft\", op: \"eq\", value: true}}",
+    "after": "#!ibl edition=2\n$r=[others:family_news]{op:\"status\"}\nreturn $r.items >> [table:filter]{where:($r)=>$r.is_draft == true}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3702,
+    "intent_before": "오늘 뉴스 피드에서 다섯 개만 추려서 각각 메일로 보내줘",
+    "intent": "오늘 뉴스 피드에서 다섯 개만 추려서 각각 메일로 보내줘",
+    "before": "[sense:feed]{url: \"https://news.hada.io/rss/news\"} >> [table:take]{n: 5} >> [table:each] {\n  [others:channel_send]{channel_type: 'email', to: 'me', body: '$it.title $it.url'}\n}",
+    "after": "#!ibl edition=2\n$r=[sense:feed]{url:\"https://news.hada.io/rss/news\",limit:5}\nreturn $r.items >> [table:each] { return [others:channel_send]{channel_type:\"email\",to:\"me\",body:f\"${it.title} ${it.url}\"} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3704,
+    "intent_before": "미답신 메시지 보낸 사람마다 확인했다는 답장 보내줘",
+    "intent": "미답신 메시지 보낸 사람마다 확인했다는 답장 보내줘",
+    "before": "[others:messages]{op: \"inbox\"} >> [table:filter]{where: {field: \"unreplied\", op: \"gt\", value: 0}} >> [table:each]{limit: 10} { [others:channel_send]{to: '$it.name', body: '확인했습니다'} }",
+    "after": "#!ibl edition=2\n$r=[others:messages]{op:\"inbox\"}\n$r.items >> [table:filter]{where:($r)=>$r.unreplied != null and $r.unreplied > 0} >> [table:each] { return [others:channel_send]{channel_type:$it.channel,to:$it.to,body:\"확인했습니다\"} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3706,
+    "intent_before": "피드 항목마다 메모로 저장해줘",
+    "intent": "피드 항목을 data/피드메모.json 원장에 메모로 저장해줘",
+    "before": "[sense:feed]{url: \"https://news.hada.io/rss/news\"} >> [table:take]{n: 5} >> [table:each] {\n  [self:memory]{op: 'save', content: '$it.title'}\n}",
+    "after": "#!ibl edition=2\n$r=[sense:feed]{url:\"https://news.hada.io/rss/news\",limit:5}\nreturn [self:ledger]{op:\"append\",path:\"data/피드메모.json\",target:\"items\",items:$r.items}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3711,
+    "intent_before": "웹앱 목록 각각 살아있는지 확인해줘",
+    "intent": "웹앱 목록 각각 살아있는지 확인해줘",
+    "before": "[self:webapp]{op: \"list\"} >> [table:each]{limit: 30} {\n  [self:webapp]{op: 'status', name: '$it.title'}\n}",
+    "after": "#!ibl edition=2\nreturn [self:webapp]{op:\"status\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3827,
+    "intent_before": "이 뉴스 기사 본문을 핵심만 구조화해줘",
+    "intent": "이 뉴스 기사 본문을 핵심만 구조화해줘",
+    "before": "[sense:feed]{url: \"https://www.hani.co.kr/rss/\"} >> [table:take]{n: 1} >> [table:each] {\n  [sense:crawl]{url: '$it.url'}\n} >> [table:structure]{instruction: \"핵심만 3개 불릿\"}",
+    "after": "#!ibl edition=2\n$r=[sense:feed]{url:\"https://www.hani.co.kr/rss/\",limit:1}\nreturn $r.items >> [table:each] { $본문=[sense:crawl]{url:$it.url}; return [table:structure]{items:$본문,instruction:\"핵심만 3개 불릿\"} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3828,
+    "intent_before": "한겨레 RSS 최근 기사 3건 보여줘",
+    "intent": "한겨레 RSS 최근 기사 3건 보여줘",
+    "before": "[sense:feed]{url: \"https://www.hani.co.kr/rss/\"} >> [table:take]{n: 3}",
+    "after": "#!ibl edition=2\n$r=[sense:feed]{url:\"https://www.hani.co.kr/rss/\"}\nreturn $r.items >> [table:take]{n:3}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3834,
+    "intent_before": "이웃 목록 3명만 보여줘",
+    "intent": "이웃 목록 3명만 보여줘",
+    "before": "[others:neighbor]{op: \"list\"} >> [table:take]{n: 3}",
+    "after": "#!ibl edition=2\n$r=[others:neighbor]{op:\"list\"}\nreturn $r.items >> [table:take]{n:3}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3847,
+    "intent_before": "에이전트 누구누구 있는지 프로젝트랑 이름만 보여줘",
+    "intent": "에이전트 누구누구 있는지 프로젝트랑 이름만 보여줘",
+    "before": "[others:agents] >> [table:take]{n: 5} >> [table:select]{columns: [\"project\", \"name\"]}",
+    "after": "#!ibl edition=2\n$r=[others:agents]{}\nreturn $r.items >> [table:take]{n:5} >> [table:select]{columns:[\"project\",\"name\"]}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3849,
+    "intent_before": "긱뉴스 피드 최신 기사 파일로 받아둬",
+    "intent": "긱뉴스 피드 최신 기사 파일로 받아둬",
+    "before": "[sense:feed]{url: \"https://news.hada.io/rss/news\"} >> [table:take]{n: 1} >> [table:each] {\n  [self:download]{url: '$it.url'}\n}",
+    "after": "#!ibl edition=2\n$r=[sense:feed]{url:\"https://news.hada.io/rss/news\",limit:1}\nreturn $r.items >> [table:each] { return [self:download]{url:$it.url} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3850,
+    "intent_before": "긱뉴스 피드 안 되면 BBC 피드로라도 3개 보여줘",
+    "intent": "긱뉴스 피드 안 되면 BBC 피드로라도 3개 보여줘",
+    "before": "[sense:feed]{url: \"https://news.hada.io/rss/news\"} ?? [sense:feed]{url: \"https://feeds.bbci.co.uk/news/rss.xml\"} >> [table:take]{n: 3}",
+    "after": "#!ibl edition=2\n$r=[sense:feed]{url:\"https://news.hada.io/rss/news\"} ?? [sense:feed]{url:\"https://feeds.bbci.co.uk/news/rss.xml\"}\nreturn $r.items >> [table:take]{n:3}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3854,
+    "intent_before": "공개 중인 폴더 뭐 있어?",
+    "intent": "공개 중인 폴더 뭐 있어?",
+    "before": "[others:showcase]{op: \"status\"} >> [table:take]{n: 5}",
+    "after": "#!ibl edition=2\n$r=[others:showcase]{op:\"status\"}\nreturn $r.items >> [table:take]{n:5}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3862,
+    "intent_before": "내 블로그에서 기억에 관한 글 찾아줘",
+    "intent": "내 블로그에서 기억에 관한 글 찾아줘",
+    "before": "[self:blog]{op: \"search\", mode: \"semantic\", query: \"기억\"} >> [table:take]{n: 3}",
+    "after": "#!ibl edition=2\n$r=[self:blog]{op:\"search\",mode:\"semantic\",query:\"기억\"}\nreturn $r.items >> [table:take]{n:3}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3874,
+    "intent_before": "커뮤니티 피드 최근 글 3개 보여줘",
+    "intent": "커뮤니티 피드 최근 글 3개 보여줘",
+    "before": "[others:feed]{op: \"read\"} >> [table:take]{n: 3}",
+    "after": "#!ibl edition=2\n$r=[others:feed]{op:\"read\"}\nreturn $r.items >> [table:take]{n:3}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3875,
+    "intent_before": "내 에이전트 명부 보여줘",
+    "intent": "내 에이전트 명부 보여줘",
+    "before": "[others:agents]{} >> [table:take]{n: 5}",
+    "after": "#!ibl edition=2\n$r=[others:agents]{}\nreturn $r.items >> [table:take]{n:5}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3881,
+    "intent_before": "받은 메시지 최근 3개 보여줘",
+    "intent": "받은 메시지 최근 3개 보여줘",
+    "before": "[others:messages]{op: \"inbox\"} >> [table:take]{n: 3}",
+    "after": "#!ibl edition=2\n$r=[others:messages]{op:\"inbox\"}\nreturn $r.items >> [table:take]{n:3}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3882,
+    "intent_before": "이웃 목록 보여줘",
+    "intent": "이웃 목록 보여줘",
+    "before": "[others:neighbor]{op: \"list\"} >> [table:take]{n: 5}",
+    "after": "#!ibl edition=2\n$r=[others:neighbor]{op:\"list\"}\nreturn $r.items >> [table:take]{n:5}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3910,
+    "intent_before": "매일 아침 9시에 긱뉴스 새 글 있으면 알려줘",
+    "intent": "매일 아침 9시에 긱뉴스 새 글 있으면 알려줘",
+    "before": "[self:trigger]{op: \"create\", name: \"하다 새 글 감시\", cron: \"0 9 * * *\", do: \"[sense:feed]{url: 'https://news.hada.io/rss/news'} >> [table:since]{key: '하다뉴스'} >> [table:each] {\\n  [self:notify_user]{message: $it.title}\\n}\"}",
+    "after": "#!ibl edition=2\nreturn [self:trigger]{op:\"create\",name:\"하다 새 글 감시\",cron:\"0 9 * * *\",do:\"#!ibl edition=2\\n$r=[sense:feed]{url:\\\"https://news.hada.io/rss/news\\\"} >> [table:since]{key:\\\"하다뉴스\\\"}; $r.items >> [table:each] { [self:notify_user]{message:$it.title} }\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3980,
+    "intent_before": "매일 아침 8시에 긱뉴스 새 글 있으면 알려줘",
+    "intent": "매일 아침 8시에 긱뉴스 새 글 있으면 알려줘",
+    "before": "[self:trigger]{op: \"create\", name: \"긱뉴스 아침 검침\", cron: \"0 8 * * *\", do: \"[sense:feed]{url: 'https://news.hada.io/rss/news'} >> [table:since]{key: '긱뉴스'} >> [self:notify_user]{message: '긱뉴스 새 글'}\"}",
+    "after": "#!ibl edition=2\nreturn [self:trigger]{op:\"create\",name:\"긱뉴스 아침 검침\",cron:\"0 8 * * *\",do:\"#!ibl edition=2\\n$r=[sense:feed]{url:\\\"https://news.hada.io/rss/news\\\"} >> [table:since]{key:\\\"긱뉴스\\\"}; $r.items >> [table:each] { [self:notify_user]{message:$it.title} }\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4004,
+    "intent_before": "내 웹앱 중 죽은 것만 골라줘",
+    "intent": "내 웹앱 중 죽은 것만 골라줘",
+    "before": "[self:webapp]{op: \"status\"} >> [table:filter]{where: \"alive == false\"}",
+    "after": "#!ibl edition=2\n$r=[self:webapp]{op:\"status\"}\nreturn $r.items >> [table:filter]{where:($r)=>$r.alive == false}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4016,
+    "intent_before": "매주 월요일 아침 9시에 웹앱들 살아있는지 점검해서 죽은 것만 알려줘",
+    "intent": "매주 월요일 아침 9시에 웹앱들 살아있는지 점검해서 죽은 것만 알려줘",
+    "before": "[self:trigger]{op: \"create\", name: \"웹앱 검침\", cron: \"0 9 * * 1\", do: \"[self:webapp]{op: 'status'} >> [table:filter]{where: 'alive == false'} >> [self:notify_user]{message: '죽은 웹앱 발견', title: '웹앱 검침'}\"}",
+    "after": "#!ibl edition=2\nreturn [self:trigger]{op:\"create\",name:\"웹앱 검침\",cron:\"0 9 * * 1\",do:\"#!ibl edition=2\\n$r=[self:webapp]{op:\\\"status\\\"}; $죽음=$r.items >> [table:filter]{where:($r)=>$r.alive == false}; [if:len($죽음)>0] { [self:notify_user]{message:json($죽음),title:\\\"웹앱 검침\\\"} }\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4087,
+    "intent_before": "긱뉴스 새 글 중에 제목에 AI나 LLM 들어간 게 있으면 노스트르으로 보내줘",
+    "intent": "긱뉴스 새 글 중에 제목에 AI나 LLM 들어간 게 있으면 노스트르으로 보내줘",
+    "before": "[sense:feed]{url:\"https://news.hada.io/rss/news\"} >> [table:since]{key:\"하다뉴스\"} >> [table:each]{limit:100} {\n [if: $it.title matches \"AI|LLM\"] { [others:channel_send]{channel_type:\"nostr\",body:\"${it.title}\"} }\n}",
+    "after": "#!ibl edition=2\n$새글=[sense:feed]{url:\"https://news.hada.io/rss/news\"} >> [table:since]{key:\"하다뉴스\"}\nreturn $새글.items >> [table:filter]{where:($r)=>contains($r.title,\"AI\") or contains($r.title,\"LLM\")} >> [table:each] { return [others:channel_send]{channel_type:\"nostr\",to:\"me\",body:$it.title} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4092,
+    "intent_before": "이 메일이 결제 관련이면 재무 장부에 넣어줘",
+    "intent": "이 메일이 결제 관련이면 재무 장부에 넣어줘",
+    "before": "$mail = [others:channel_read]{channel_type: \"email\", limit: 1}\n[if: [table:brief]{items: \"$mail\", instruction: \"결제·청구·영수증 메일이면 yes 아니면 no\"} == \"yes\"]{[self:finance]{op: \"ingest\", items: \"$mail\"}}",
+    "after": "#!ibl edition=2\n$mail=[others:channel_read]{channel_type:\"email\",limit:1}\n$판정=[table:brief]{items:$mail.items,instruction:\"결제·청구·영수증 메일이면 yes 아니면 no\"}\n[if:$판정.message == \"yes\"] { return [self:finance]{op:\"ingest\",items:$mail.items} }\n[else] { return {ingested:false} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4104,
+    "intent_before": "AI 뉴스 3페이지까지 모아서 중복 빼고 저장해줘",
+    "intent": "AI 뉴스 3페이지까지 모아서 중복 빼고 저장해줘",
+    "before": "[table:each]{items: [{page: 1}, {page: 2}, {page: 3}], collect: true} {\n  [sense:feed]{url: 'https://news.hada.io/rss/news?page=$it.page'}\n} >> [table:dedup]{by: \"title\"} >> [self:write]{path: \"AI뉴스_3페이지.json\"}",
+    "after": "#!ibl edition=2\n$모음=[{page:1},{page:2},{page:3}] >> [table:each]{mode:\"flat_map\"} { $r=[sense:feed]{url:f\"https://news.hada.io/rss/news?page=${it.page}\"}; return $r.items }\n$중복제거=$모음 >> [table:dedup]{by:\"title\"}\nreturn [self:write]{content:json($중복제거.items),path:\"AI뉴스_3페이지.json\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4105,
+    "intent_before": "새 글이 없어질 때까지 피드 검침 반복해서 전부 모아줘",
+    "intent": "새 글이 없어질 때까지 피드 검침 반복해서 전부 모아줘 (최대 5회, 상한 도달 여부도 반환)",
+    "before": "$계속 = true\n[repeat: while $계속, max:5, collect:true] {\n $f = [sense:feed]{url:\"https://news.hada.io/rss/news\"} >> [table:since]{key:\"하다뉴스\"}\n $계속 = len($f.items) > 0\n $f\n}",
+    "after": "#!ibl edition=2\n$계속=true\n$모음=[]\n[repeat:while $계속 and $i < 5] {\n $f=[sense:feed]{url:\"https://news.hada.io/rss/news\"} >> [table:since]{key:\"하다뉴스\"}\n $계속=len($f.items)>0\n $모음=$모음+$f.items\n}\nreturn {items:$모음,stopped_on_empty:not $계속,limit_reached:$계속}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4111,
+    "intent_before": "AI 뉴스 새 글이 더 안 나올 때까지 페이지 넘기며 전부 저장해줘",
+    "intent": "AI 뉴스 새 글이 더 안 나올 때까지 페이지 넘기며 전부 저장해줘 (최대 10페이지, 상한 도달 여부도 반환)",
+    "before": "$n=0\n$계속=true\n[repeat: while $계속, max:10] {\n $n=$n+1\n $새글=[sense:feed]{url:\"https://news.hada.io/rss/news?page=${n}\"} >> [table:since]{key:\"AI뉴스\"}\n $계속=len($새글.items)>0\n [if: $계속] { $새글 >> [self:write]{path:\"ai_news_${n}.json\",format:\"json\"} }\n [else] { [self:notify_user]{message:\"${n} 페이지에서 새 글 끝\"} }\n}",
+    "after": "#!ibl edition=2\n$계속=true\n$n=0\n[repeat:while $계속 and $i < 10] {\n $n=$i+1\n $새글=[sense:feed]{url:f\"https://news.hada.io/rss/news?page=${n}\"} >> [table:since]{key:\"AI뉴스\"}\n $계속=len($새글.items)>0\n [if:$계속] { [self:write]{content:json($새글.items),path:f\"ai_news_${n}.json\"} }\n [else] { [self:notify_user]{message:f\"${n} 페이지에서 새 글 끝\"} }\n}\nreturn {pages:$n,limit_reached:$계속}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4119,
+    "intent_before": "페이지 3장 모아 중복 빼고 제목만 알려줘",
+    "intent": "페이지 3장 모아 중복 빼고 제목만 알려줘",
+    "before": "$요약 = [repeat: 3, collect: true]{[sense:feed]{url: \"https://news.hada.io/rss/news?page=$i\"}} >> [table:dedup]{by: \"title\"} >> [table:select]{columns: [\"title\"]} >> [table:brief]{instruction: \"제목만 한 줄씩\"}\n[self:notify_user]{message: \"$요약.message\"}",
+    "after": "#!ibl edition=2\n$모음=[]\n[repeat:3] { $n=$i+1; $r=[sense:feed]{url:f\"https://news.hada.io/rss/news?page=${n}\"}; $모음=$모음+$r.items }\n$중복제거=$모음 >> [table:dedup]{by:\"title\"}\n$제목=$중복제거.items >> [table:select]{columns:[\"title\"]}\n$요약=[table:brief]{items:$제목,instruction:\"제목만 한 줄씩\"}\nreturn [self:notify_user]{message:$요약.message}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4182,
+    "intent_before": "즐겨찾기한 보드마다 최근 글을 한 표로 모아줘",
+    "intent": "즐겨찾기한 보드마다 최근 글을 한 표로 모아줘",
+    "before": "[others:board]{op: \"list\"} >> [table:take]{n: 2} >> [table:each] {\n  [others:feed]{op: 'read', hashtag: '$it.hashtag'}\n}",
+    "after": "#!ibl edition=2\n$보드=[others:board]{op:\"list\"}\nreturn $보드.items >> [table:take]{n:2} >> [table:each]{mode:\"flat_map\"} { $r=[others:feed]{op:\"read\",hashtag:$it.hashtag}; return $r.items }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4189,
+    "intent_before": "중간이 죽더라도 있는 데까지는 보여줘",
+    "intent": "중간이 죽더라도 있는 데까지는 보여줘",
+    "before": "[on_error: skip] [sense:feed]{url: \"https://news.hada.io/rss/news\", limit: 5} >> [table:groupby]{by: \"meta\"} >> [table:take]{n: 2}",
+    "after": "#!ibl edition=2\n$r=([sense:feed]{url:\"https://news.hada.io/rss/news\",limit:5} ?? {items:[]})\n$g=[table:groupby]{items:$r.items,by:\"meta\"}\nreturn $g.items >> [table:take]{n:2}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4190,
+    "intent_before": "새 글 나올 때까지 지켜봐줘",
+    "intent": "새 글이 있는지 최대 두 번 확인하고 결과를 알려줘",
+    "before": "$새것=0\n[repeat: until $새것 > 0, max:2, every:\"1s\"] {\n $글=[sense:feed]{url:\"https://news.hada.io/rss/news\",limit:3} >> [table:since]{key:\"하다뉴스\"}\n $새것=len($글.items)\n $글\n}",
+    "after": "#!ibl edition=2\n$새것=0\n$글={items:[]}\n[repeat:while $새것 == 0 and $i < 2] {\n $글=[sense:feed]{url:\"https://news.hada.io/rss/news\",limit:3} >> [table:since]{key:\"하다뉴스\"}\n $새것=len($글.items)\n}\nreturn {items:$글.items,limit_reached:$새것 == 0}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4191,
+    "intent_before": "여러 곳 훑되 한 곳이 막혀도 나머지는 살려줘",
+    "intent": "여러 곳 훑되 한 곳이 막혀도 나머지는 살려줘",
+    "before": "[table:each]{items: [{\"url\": \"https://news.hada.io/rss/news\"}, {\"url\": \"https://www.pewresearch.org/feed/\"}], on_error: \"skip\"} {\n  [sense:feed]{url: '$it.url', limit: 2}\n}",
+    "after": "#!ibl edition=2\nreturn [{url:\"https://news.hada.io/rss/news\"},{url:\"https://www.pewresearch.org/feed/\"}] >> [table:each]{on_error:\"collect\"} { return [sense:feed]{url:$it.url,limit:2} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4198,
+    "intent_before": "두 곳을 같이 보되 통째로 안 되면 검색으로",
+    "intent": "두 곳을 같이 보되 통째로 안 되면 검색으로",
+    "before": "[try]{[sense:feed]{url: \"https://news.hada.io/rss/news\", limit: 3} & [sense:feed]{url: \"https://www.pewresearch.org/feed/\", limit: 3}}\n[catch]{[sense:search]{source: \"ddg\", query: \"기술 뉴스\"} >> [table:take]{n: 2}}",
+    "after": "#!ibl edition=2\n[try] { return [sense:feed]{url:\"https://news.hada.io/rss/news\",limit:3} & [sense:feed]{url:\"https://www.pewresearch.org/feed/\",limit:3} }\n[catch] { $r=[sense:search]{source:\"ddg\",query:\"기술 뉴스\"}; return $r.items >> [table:take]{n:2} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4364,
+    "intent_before": "본 글 원장에 없는 긱뉴스 새 글만 골라줘",
+    "intent": "data/본글원장.json 원장에 없는 긱뉴스 새 글만 골라줘",
+    "before": "$본 = [self:read]{path: \"본글원장.json\"}\n[sense:feed]{url: \"https://news.hada.io/rss/news\", limit: 8} >> [table:filter]{where: {field: \"url\", op: \"not_in\", value: \"${본.items.*.url}\"}}",
+    "after": "#!ibl edition=2\n$본=[self:ledger]{op:\"select\",path:\"data/본글원장.json\",target:\"items\"}\n$새글=[sense:feed]{url:\"https://news.hada.io/rss/news\",limit:8}\nreturn [table:join]{left:$새글.items,right:$본.items,on:\"url\",how:\"anti\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4784,
+    "intent_before": "피드 두 개 합쳐서 제목 중복 빼줘",
+    "intent": "피드 두 개 합쳐서 제목 중복 빼줘",
+    "before": "[sense:feed]{url: \"https://news.hada.io/rss/news\"} & [sense:feed]{url: \"https://feeds.bbci.co.uk/news/rss.xml\"} >> [table:merge]{by: \"title\"} >> [table:take]{n: 10}",
+    "after": "#!ibl edition=2\n$모음=([sense:feed]{url:\"https://news.hada.io/rss/news\"} & [sense:feed]{url:\"https://feeds.bbci.co.uk/news/rss.xml\"}) >> [table:merge]{by:\"title\"}\nreturn $모음.items >> [table:take]{n:10}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4797,
+    "intent_before": "이웃 중에 즐겨찾기 한 사람만 보여줘",
+    "intent": "이웃 중에 즐겨찾기 한 사람만 보여줘",
+    "before": "[others:neighbor]{op: \"list\"} >> [table:filter]{where: {field: \"favorite\", op: \"eq\", value: true}} >> [table:select]{columns: [\"name\", \"rating\"]}",
+    "after": "#!ibl edition=2\n$r=[others:neighbor]{op:\"list\"}\nreturn $r.items >> [table:filter]{where:($r)=>$r.favorite > 0} >> [table:select]{columns:[\"name\",\"rating\"]}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4798,
+    "intent_before": "이웃을 평점 높은 순으로 정렬해줘",
+    "intent": "이웃을 평점 높은 순으로 정렬해줘",
+    "before": "[others:neighbor]{op: \"list\"} >> [table:sort]{by: \"rating\", desc: true} >> [table:select]{columns: [\"name\", \"rating\", \"info_level\"]}",
+    "after": "#!ibl edition=2\n$r=[others:neighbor]{op:\"list\"}\nreturn $r.items >> [table:sort]{by:\"rating\",descending:true} >> [table:select]{columns:[\"name\",\"rating\",\"info_level\"]}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4800,
+    "intent_before": "에이전트 목록에서 이름이랑 역할만 표로",
+    "intent": "에이전트 목록에서 이름이랑 역할만 표로",
+    "before": "[others:agents]{} >> [table:select]{columns: [\"project\", \"name\", \"role_description\"]}",
+    "after": "#!ibl edition=2\n$r=[others:agents]{}\nreturn $r.items >> [table:select]{columns:[\"project\",\"name\",\"role_description\"]}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4804,
+    "intent_before": "커뮤니티 피드에서 내가 쓴 글만 보여줘",
+    "intent": "커뮤니티 피드에서 내가 쓴 글만 보여줘",
+    "before": "[others:feed]{op: \"read\"} >> [table:filter]{where: {field: \"is_mine\", op: \"eq\", value: true}}",
+    "after": "#!ibl edition=2\n$r=[others:feed]{op:\"read\"}\nreturn $r.items >> [table:filter]{where:($r)=>$r.is_mine == true}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4805,
+    "intent_before": "커뮤니티 피드 최근 글 요약해줘",
+    "intent": "커뮤니티 피드 최근 글 요약해줘",
+    "before": "[others:feed]{op: \"read\"} >> [table:take]{n: 10} >> [table:brief]{instruction: \"무슨 이야기가 오가는지 3문장\"}",
+    "after": "#!ibl edition=2\n$r=[others:feed]{op:\"read\",limit:10}\nreturn [table:brief]{items:$r.items,instruction:\"무슨 이야기가 오가는지 3문장\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4806,
+    "intent_before": "가족신문 중에 아직 초안인 것만",
+    "intent": "가족신문 중에 아직 초안인 것만",
+    "before": "[others:family_news]{op: \"status\"} >> [table:filter]{where: {field: \"is_draft\", op: \"eq\", value: true}}",
+    "after": "#!ibl edition=2\n$r=[others:family_news]{op:\"status\"}\nreturn $r.items >> [table:filter]{where:($r)=>$r.is_draft == true}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4821,
+    "intent_before": "블로그에서 '진리'에 대해 쓴 글을 검색하고, 노트북 질의와 본문 검색 및 표 선택을 통해 저자가 진리를 직접 논한 글을 찾아 정리한다.",
+    "intent": "블로그에서 '진리'에 대해 쓴 글을 검색하고, 노트북 질의와 본문 검색 및 표 선택을 통해 저자가 진리를 직접 논한 글을 찾아 정리한다.",
+    "before": "$진리검색 = [self:blog]{op:\"search\",query:\"진리\",limit:12}\n$진리검색\n[self:notebook]{op:\"list\"} & [self:blog]{op:\"search\",mode:\"content\",post_id:\"7888875\"} & [self:blog]{op:\"search\",mode:\"content\",post_id:\"7889045\"}\n[self:notebook]{op:\"ask\",name:\"블로그항법\",query:\"저자가 진리의 의미, 절대적 진리, 진리와 언어 및 삶의 관계를 직접 논한 글은 어느 폴더에서 어떤 판별어로 찾아야 하나?\"} & [self:blog]{op:\"search\",mode:\"content\",post_id:\"7891062\"} & [fn:열추려보기]{목록:$진리검색,열:[\"title\",\"meta\",\"url\"],개수:12}\n$철학진리 = [self:blog]{op:\"search\",query:\"진리\",category:[\"이해하기\",\"철학하는 기계\",\"철학이 있는 집\"],limit:8}\n$철학진리 >> [table:select]{fields:[\"title\",\"meta\",\"summary\",\"url\"]}\n[self:blog]{op:\"search\",mode:\"content\",post_id:\"7890803\"} & [self:blog]{op:\"search\",mode:\"content\",post_id:\"7890829\"}",
+    "after": "#!ibl edition=2\n$진리검색 = [self:blog]{op:\"search\",query:\"진리\",limit:12}\n$진리검색\n[self:notebook]{op:\"list\"} & [self:blog]{op:\"search\",mode:\"content\",post_id:\"7888875\"} & [self:blog]{op:\"search\",mode:\"content\",post_id:\"7889045\"}\n[self:notebook]{op:\"ask\",name:\"블로그항법\",query:\"저자가 진리의 의미, 절대적 진리, 진리와 언어 및 삶의 관계를 직접 논한 글은 어느 폴더에서 어떤 판별어로 찾아야 하나?\"} & [self:blog]{op:\"search\",mode:\"content\",post_id:\"7891062\"} & ($진리검색.items >> [table:take]{n:12} >> [table:select]{columns:[\"title\",\"meta\",\"url\"]})\n$철학진리 = [self:blog]{op:\"search\",query:\"진리\",category:[\"이해하기\",\"철학하는 기계\",\"철학이 있는 집\"],limit:8}\n$철학진리.items >> [table:select]{columns:[\"title\",\"meta\",\"summary\",\"url\"]}\n[self:blog]{op:\"search\",mode:\"content\",post_id:\"7890803\"} & [self:blog]{op:\"search\",mode:\"content\",post_id:\"7890829\"}",
+    "status": "incomplete",
+    "issues": []
+  }
+]

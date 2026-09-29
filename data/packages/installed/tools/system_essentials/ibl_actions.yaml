@@ -129,7 +129,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: '2026-09-29', impl: "791d44cd62b97dca"}
+        path_audited: {at: '2026-09-29', impl: "81cc8d04c3f9025b"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -141,7 +141,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: '2026-09-29', impl: "791d44cd62b97dca"}
+        path_audited: {at: '2026-09-29', impl: "81cc8d04c3f9025b"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -563,7 +563,7 @@ nodes:
         fixture: '[self:webapp]{}'
         description: 내 웹앱 등기부 — 몸 공개면(런처·NAS·포털·게시판·가족신문·공개파일·보고서)과 외부 배포(web-builder 사이트·Worker)를 한 목록으로 보고 생존을 실측한다. 목록은 진실 소스에서 파생(등록 불필요), 파생 밖 수제 배포만 register. status items 의 alive 필드 — table:filter 로 죽은 것만 추출.
         group: system
-        target_description: 'op — list(기본): 전체 목록(파생+수동) / status: 전 웹앱 HTTP 생존 실측(timeout 기본 5초) / register: 수동 등록(name+url 필수, kind·memo 선택 — 몸 공개면·web-builder 사이트는 자동 파생이라 거부) / remove: 수동 등록 제거(url 또는 name — register 가 준 이름 그대로. 파생 항목은 각자의 진실 소스에서 지운다). 수동 등록·삭제는 같은 파일의 갱신을 직렬화한다. status의 alive는 2xx/3xx 또는 인증 요구 401/403이면 true이며, 404/410/5xx 등은 false다.'
+        target_description: 'op — list(기본): 전체 목록(파생+수동) / status: 전 웹앱 HTTP 생존 실측(timeout 기본 5초) / register: 수동 등록(name+url 필수, kind·memo 선택 — 몸 공개면·web-builder 사이트는 자동 파생이라 거부) / remove: 수동 등록 제거(url 또는 name — register 가 준 이름 그대로. 파생 항목은 각자의 진실 소스에서 지운다). 수동 등록·삭제는 같은 파일의 갱신을 직렬화한다. status의 alive는 2xx/3xx 또는 인증 요구 401/403이면 true이며, 404/410/5xx 등은 false다. 주소 미상·검사 미완료는 alive:null, state:unknown이다. state는 alive/dead/unknown이며 죽은 것만 고를 때 $r.alive == false를 쓴다.'
         target_key: op
         router: handler
         tool: webapp_op
@@ -822,7 +822,7 @@ nodes:
             value_path: /value
           nondeterministic: true
         member_transform: script_ops:member_script
-        path_audited: {at: '2026-09-29', impl: "791d44cd62b97dca"}
+        path_audited: {at: '2026-09-29', impl: "81cc8d04c3f9025b"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

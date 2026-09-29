@@ -112,16 +112,15 @@ class IndieNetSocialMixin:
         get_user_info(kind:0)·fetch_dm_relays(kind:10050)와 같은 authors 필터
         프리미티브를 kind:1 로 재사용 — 새 릴레이 로직 없음."""
         if not self._initialized:
-            return []
+            raise RuntimeError("IndieNet이 초기화되지 않았습니다")
         author_hex = self._pubkey_to_hex(pubkey)
         if not author_hex:
-            print(f"⚠️  IndieNet: 저자 pubkey 변환 실패 - {pubkey}")
-            return []
+            raise ValueError("저자 pubkey를 해석할 수 없습니다")
         try:
             req_filter = {"kinds": [1], "authors": [author_hex], "limit": limit}
             if since:
                 req_filter["since"] = since
-            posts = self._query_relays(req_filter, self._author_accept)
+            posts = self._query_relays(req_filter, self._author_accept, require_success=True)
             try:
                 self._cache_posts(posts)
             except Exception:
@@ -129,14 +128,13 @@ class IndieNetSocialMixin:
             posts.sort(key=lambda x: x.get("created_at", 0), reverse=True)
             return posts[:limit]
         except Exception as e:
-            print(f"✗ IndieNet: 저자 글 조회 실패 - {e}")
-            return []
+            raise RuntimeError("저자 글 조회 실패") from e
 
     def fetch_following_feed(self, limit: int = 50,
                              since: int = None) -> List[dict]:
         """팔로우한 사람 전체의 최신 글(kind:1) 타임라인. authors 목록 필터 1회 질의."""
         if not self._initialized:
-            return []
+            raise RuntimeError("IndieNet이 초기화되지 않았습니다")
         hexes = [self._pubkey_to_hex(f.get("pubkey", "")) for f in self.settings.follows]
         hexes = [h for h in hexes if h]
         if not hexes:
@@ -145,7 +143,7 @@ class IndieNetSocialMixin:
             req_filter = {"kinds": [1], "authors": hexes, "limit": limit}
             if since:
                 req_filter["since"] = since
-            posts = self._query_relays(req_filter, self._author_accept)
+            posts = self._query_relays(req_filter, self._author_accept, require_success=True)
             try:
                 self._cache_posts(posts)
             except Exception:
@@ -153,8 +151,7 @@ class IndieNetSocialMixin:
             posts.sort(key=lambda x: x.get("created_at", 0), reverse=True)
             return posts[:limit]
         except Exception as e:
-            print(f"✗ IndieNet: 팔로잉 피드 조회 실패 - {e}")
-            return []
+            raise RuntimeError("팔로잉 피드 조회 실패") from e
 
     def _article_accept(self, event: dict) -> Optional[dict]:
         """kind:30023(NIP-23) 이벤트 → 표준 글 dict. 태그에서 title/summary 추출."""

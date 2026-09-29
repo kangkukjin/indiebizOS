@@ -82,7 +82,7 @@ def table_operation(operation, runtime, args):
             error.details.setdefault("operation", operation)
             raise
     if operation == "filter":
-        return [row for index, row in enumerate(rows) if boolean(at_row(args["where"], row, index))]
+        return [row for index, row in enumerate(rows) if at_row(args["where"], row, index, "Bool")]
     if operation == "select":
         columns = args["columns"]
         if isinstance(columns, list):

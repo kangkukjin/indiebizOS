@@ -200,7 +200,7 @@ def op_status(tool_input: dict):
     def probe(i, e):
         url = e.get("url")
         if not url:
-            results[i] = {**e, "alive": None, "status_line": "주소 미상 — register 로 보충"}
+            results[i] = {**e, "alive": None, "state": "unknown", "status_line": "주소 미상 — register 로 보충"}
             return
         t0 = time.time()
         try:
@@ -210,10 +210,10 @@ def op_status(tool_input: dict):
             r.close()
             # 인증이 필요한 앱도 존재하지만 404/410 등은 살아 있는 앱이 아니다.
             ok = 200 <= r.status_code < 400 or r.status_code in (401, 403)
-            results[i] = {**e, "alive": ok, "http": r.status_code, "ms": ms,
+            results[i] = {**e, "alive": ok, "state": "alive" if ok else "dead", "http": r.status_code, "ms": ms,
                           "status_line": f"{'🟢' if ok else '🔴'} HTTP {r.status_code} · {ms}ms"}
         except Exception as ex:
-            results[i] = {**e, "alive": False, "http": 0,
+            results[i] = {**e, "alive": False, "state": "dead", "http": 0,
                           "status_line": f"🔴 접속 실패 ({type(ex).__name__})"}
 
     threads = [threading.Thread(target=probe, args=(i, e), daemon=True)  # cc-ok: 병렬 프로브 — 바로 아래 join 으로 수명을 호출 안에 봉인
@@ -222,7 +222,8 @@ def op_status(tool_input: dict):
         t.start()
     for t in threads:
         t.join(timeout + 2)
-    done = [r for r in results if r]
+    done = [r if r is not None else {**ents[i], "alive": None, "state": "unknown",
+            "status_line": "응답 대기 상한 초과"} for i, r in enumerate(results)]
     dead = [r for r in done if r.get("alive") is False]
     return items(done, success=True,
                  message=f"웹앱 {len(done)}개 중 응답 불능 {len(dead)}개"

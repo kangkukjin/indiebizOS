@@ -1,0 +1,10 @@
+{
+  "receipt": "data/ibl_runs/632d48f3277f4d5613513090cfe780ff273c256fbbc94a835e592fdcb6a51308/1437703f0c2047a8809faf1240c4cb54.sqlite",
+  "backup": "data/_backups/2026-09-29_imagination80_receipt_204213",
+  "backup_directory_mode": "0700",
+  "backup_file_mode": "0600",
+  "redacted_fields": 40,
+  "resumable": false,
+  "portal_keys_rotated": false,
+  "remaining_known_authentication_values": 0
+}

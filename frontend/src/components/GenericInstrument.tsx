@@ -240,7 +240,8 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
   }
 
   if (p.type === 'thread') {
-    const arr = asList(data, p.from);
+    const rows = asList(data, p.from);
+    const arr = p.reverse === true ? [...rows].reverse() : rows;
     if (!arr.length) return <EmptyMsg p={p} data={data} />;
     // 항목 버튼(item_button) — 본문이 match(정규식, i 플래그)와 일치하는 항목에만 붙는
     // 선언형 버튼 (2026-08-31 뷰 어휘 개정). 캡처 그룹은 {match1}..{matchN} 필드로 액션

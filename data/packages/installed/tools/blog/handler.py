@@ -85,7 +85,7 @@ def _op_latest(tool_input: dict, context) -> str:
     # ★전용 발행 기계를 만들지 않는 이유: 그건 self:copy·table:document 재구현이다
     #   (2026-07-18 warehouse_publish.py 를 같은 이유로 폐기했다).
     from tool_blog_insight import get_db, BLOG_URL
-    conn = get_db()
+    conn = get_db(read_only=True)
     row = conn.execute(
         "SELECT post_id, title, category, pub_date FROM posts "
         "ORDER BY pub_date DESC LIMIT 1"
@@ -95,21 +95,12 @@ def _op_latest(tool_input: dict, context) -> str:
         return format_json({"success": False, "error": "블로그 글이 없습니다. 먼저 op:check_new 로 수집하세요."})
 
     post_id = str(row["post_id"])
-    from tool_blog_vault import find_post_md, write_post_md
+    from tool_blog_vault import find_post_md
     path = find_post_md(post_id)
     if not path or not os.path.exists(path):
-        # vault(진실소스)에 아직 .md 가 없으면 지금 만든다 — 옛 글은 vault 이관 전일 수 있다.
-        conn2 = get_db()
-        full = conn2.execute(
-            "SELECT post_id, title, category, pub_date, content FROM posts WHERE post_id = ?",
-            (post_id,)).fetchone()
-        conn2.close()
-        if not full:
-            return format_json({"success": False, "error": f"글을 찾을 수 없습니다: {post_id}"})
-        path = write_post_md({
-            "post_id": post_id, "title": full["title"], "category": full["category"],
-            "pub_date": full["pub_date"], "content": full["content"],
-        })
+        from blog_snapshot import snapshot_metadata
+        return format_json({"success": False, "error": "로컬 글의 vault 파일이 없습니다. op:vault, mode:export로 명시적으로 생성하세요.",
+                            "post_id": post_id, "path": None, **snapshot_metadata()})
 
     title = row["title"]
     meta = f"{row['pub_date']} · {row['category']}"
@@ -119,8 +110,9 @@ def _op_latest(tool_input: dict, context) -> str:
         "category": row["category"], "pub_date": row["pub_date"],
         "path": path, "url": url,
         # 단일 통화 — 목록 소비자(앱·카드 뷰)도 이 op 을 읽을 수 있게.
-        "items": [{"title": title, "meta": meta, "path": path, "url": url}],
-        "message": f"최근 글: {title} ({row['pub_date']})",
+        "items": [{"title": title, "meta": meta, "path": path, "url": url,
+                   "post_id": post_id, "pub_date": row["pub_date"], "category": row["category"]}],
+        "message": f"로컬 사본의 최근 글: {title} ({row['pub_date']})",
     })
 
 
@@ -322,7 +314,16 @@ def execute(tool_input: dict, context) -> str:
     try:
         if fn is None:
             return format_json({"success": False, "error": f"Unknown tool: {tool_name}"})
-        return fn(tool_input, context)
+        from blog_snapshot import snapshot_metadata, validate_category
+        if tool_name == "blog_op" and op in {"posts", "search"}:
+            validate_category(tool_input.get("category"))
+        result = fn(tool_input, context)
+        if tool_name == "blog_op" and op in {"posts", "search", "latest", "stats"}:
+            import json
+            value = json.loads(result)
+            value.update(snapshot_metadata())
+            result = format_json(value)
+        return result
 
     except ImportError as e:
         return format_json({"success": False, "error": f"Import error: {str(e)}"})

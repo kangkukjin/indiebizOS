@@ -288,7 +288,7 @@ def _msg_thread(bm, tool_input: dict) -> str:
 
     items.sort(key=lambda x: x["_ts"])
     for it in items:
-        it.pop("_ts", None)
+        it["created_at"] = it.pop("_ts", None)
     # 단일 통화 items = native 메시지 dict(content/is_from_user/time/status…). thread 뷰 직독.
     # contacts(연락처)는 정보 탭 editable_list용 보조 컬렉션 — items와 공존(주=스레드).
     return json.dumps({

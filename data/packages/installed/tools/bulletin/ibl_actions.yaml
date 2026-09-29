@@ -7,7 +7,7 @@ nodes:
         fixture: '[others:bulletin]{op: "status"}'
         runs_on: pc_only
         description: '로그인 없는 자유게시판 (op 분기) — 게시판을 만들면 공개 주소(/b/<5자>)가 생기고, 주소를 아는 사람은 로그인 없이 들어가 글·사진을 남긴다. 게시판 여러 개=각각 다른 주소, 포털에 붙이면([others:portal]{op:display}) 포털 홈에서 진입. 커뮤니티 릴레이 보드([others:board])와 달리 익명 로컬 웹 게시판.'
-        target_description: 'op:status(게시판 목록 — 각 게시판의 title·주소·글 수 + 전역 설정) / create(title 로 새 게시판+주소 발급, allow_images 사진 허용 여부) / config(board_id 게시판 설정 — title 개명·allow_images, board_id 없으면 전역 public_base) / delete(board_id 게시판 삭제 — 주소·글·사진 동반 제거) / detail(board_id → 게시판 + 최근 글 200개, 모더레이션용) / post_delete(board_id+post_id 글 삭제) / portals(board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태). 실제 붙임/떼기는 [others:portal]{op:"display"} 로.'
+        target_description: 'op:status(게시판 목록 — 각 게시판의 title·주소·글 수 + 전역 설정) / create(title 로 새 게시판+주소 발급, allow_images 사진 허용 여부) / config(board_id 게시판 설정 — title 개명·allow_images, board_id 없으면 전역 public_base) / delete(board_id 게시판 삭제 — 주소·글·사진 동반 제거) / detail(board_id → board에 게시판, items와 호환 posts에 최근 글 200개, 모더레이션용) / post_delete(board_id+post_id 글 삭제) / portals(board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태). 실제 붙임/떼기는 [others:portal]{op:"display"} 로.'
         target_key: op
         group: bulletin
         router: handler
@@ -104,7 +104,7 @@ nodes:
                     back: true
                 - type: list_action
                   from: posts
-                  title: '{title}'
+                  title: '{display_title}'
                   sub: '{meta}'
                   button:
                     label: 삭제
@@ -219,7 +219,7 @@ tool_json:
 
       - delete: board_id 게시판 삭제 — 주소·글·사진 동반 제거.
 
-      - detail: board_id → 게시판 + 최근 글 200개(posts[], 모더레이션용 앱 드릴).
+      - detail: board_id → board에 게시판, items와 호환 posts에 최근 글 200개(posts[], 모더레이션용 앱 드릴).
 
       - post_delete: board_id + post_id 글 하나 삭제.
 

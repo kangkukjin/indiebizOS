@@ -328,7 +328,7 @@ class IndieNetRelayMixin:
 
     def _query_relays(self, req_filter: dict, accept, timeout: int = 10,
                       relays: List[str] = None,
-                      grace_after_first: float = None) -> List[dict]:
+                      grace_after_first: float = None, *, require_success: bool = False) -> List[dict]:
         """릴레이에 동일 REQ를 병렬 전송하고 이벤트를 수집·dedup한다.
 
         쓰기(_publish_event)가 전 릴레이에 fan-out 하는 것과 대칭으로, 읽기도
@@ -362,10 +362,13 @@ class IndieNetRelayMixin:
                             collected_p[eid] = item
                 return list(collected_p.values())
             except Exception as e:
+                if require_success:
+                    raise RuntimeError("릴레이 조회 실패") from e
                 print(f"  폰 릴레이 조회 실패: {e}")
                 return []
 
         collected: Dict[str, dict] = {}
+        parse_errors = []
         lock = threading.Lock()
         total = len(relays)
         all_done = threading.Event()          # 모든 릴레이가 EOSE/에러/종료
@@ -401,8 +404,10 @@ class IndieNetRelayMixin:
                             if first_eose_at[0] is None:
                                 first_eose_at[0] = time.monotonic()
                         done.set()
-                except:
-                    pass
+                except Exception as error:
+                    with lock:
+                        parse_errors.append(type(error).__name__)
+                    done.set()
 
             def on_error(ws, error):
                 done.set()
@@ -446,7 +451,10 @@ class IndieNetRelayMixin:
                 break
             all_done.wait(timeout=0.1)
 
-        return list(collected.values())
+        with lock:
+            if require_success and (first_eose_at[0] is None or parse_errors):
+                raise RuntimeError("릴레이 조회 실패: 완료 응답 없음 또는 응답 파싱 오류")
+            return list(collected.values())
 
     def fetch_posts(self, limit: int = 50, since: int = None) -> List[dict]:
         """

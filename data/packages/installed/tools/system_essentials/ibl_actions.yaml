@@ -317,10 +317,6 @@ nodes:
             value_path: ''
           required:
           - pattern
-          aliases:
-            root_path: path
-            query: pattern
-            max_results: limit
           integers:
           - limit
           - context

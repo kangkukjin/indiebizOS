@@ -173,9 +173,13 @@ def pure_call(name, args, *, tick=lambda: None, callback=None):
     if name == "abs":
         return abs(number(first))
     if name == "round":
-        if len(args) == 2 and type(args[1]) is not int:
-            raise Fault("INTEGER_REQUIRED", "round의 자릿수는 정수입니다.")
-        return round(number(first), args[1]) if len(args) == 2 else round(number(first))
+        if len(args) == 2:
+            from common.value_semantics import integer_value
+            digits = integer_value(args[1])   # 값이 정수인 Number(2.0·4/2)는 자릿수로 받는다 — 인덱스와 같은 판정
+            if digits is None:
+                raise Fault("INTEGER_REQUIRED", "round의 자릿수는 정수입니다.")
+            return round(number(first), digits)
+        return round(number(first))
     if name in ("min", "max", "sum"):
         values = first if len(args) == 1 and isinstance(first, list) else args
         numbers = []

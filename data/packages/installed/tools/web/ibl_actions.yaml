@@ -28,12 +28,6 @@ nodes:
             protocol: legacy-envelope
             value_path: ''
           required: []
-          aliases:
-            count: limit
-            display: limit
-            page_size: limit
-            max_results: limit
-            front_page: headlines
           integers:
           - limit
           - days

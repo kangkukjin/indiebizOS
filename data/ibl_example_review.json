@@ -2226,7 +2226,7 @@
   "table:compute": {
    "fields": {
     "description": "1530729d73e2",
-    "target_description": "434a1e9fac55",
+    "target_description": "ff93637d543a",
     "implementation": "90c6935ec8b7",
     "returns": "5450ffb2cf8a",
     "target_key": "c7f5814b92ec",
@@ -2234,8 +2234,8 @@
     "router": "ebbb1532efbc",
     "tool": "0790ec1a626f"
    },
-   "reviewed": "2026-09-18",
-   "examples": 3
+   "reviewed": "2026-09-29",
+   "examples": 0
   },
   "table:dedup": {
    "fields": {
@@ -2432,17 +2432,18 @@
   "table:sort": {
    "fields": {
     "description": "b3e6d9619d40",
-    "target_description": "ccb730c31138",
+    "target_description": "491651ff802f",
     "implementation": "94233058bda4",
     "returns": "5450ffb2cf8a",
     "target_key": "26c0fb4158e9",
     "params": "baebca88b38d",
+    "aliases": "14065be6c58a",
     "runs_on": "519dd933e8a2",
     "router": "ebbb1532efbc",
     "tool": "193f54b07478"
    },
    "reviewed": "2026-09-29",
-   "examples": 92
+   "examples": 0
   },
   "table:spreadsheet": {
    "fields": {

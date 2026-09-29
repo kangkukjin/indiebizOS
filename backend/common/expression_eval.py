@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 import copy
 from common.expression_ir import Fault, UNIT
-from common.value_semantics import normalized_text
+from common.value_semantics import integer_value, normalized_text
 from common.expression_ops import (Builtin, Closure, binary, boolean, number,
                                    scalar_text, pure_call, check_arity, free_names)
 
@@ -93,12 +93,18 @@ class ExpressionEvaluator:
             bounds = [sub(d[k]) if d[k] is not None else Binding(None) for k in ("lower", "upper", "stride")]
             if not isinstance(base.value, (list, str)):
                 raise Fault("SLICE_TYPE", "슬라이싱에는 List 또는 Text가 필요합니다.", node)
-            if any(b.value is not None and type(b.value) is not int for b in bounds):
-                raise Fault("INTEGER_REQUIRED", "슬라이스 경계는 정수 또는 null입니다.", node)
-            if bounds[2].value == 0:
+            # 정수 판정은 Number 의 정수값 관점 하나(integer_value — take 의 n 과 같은 판정, 67회차): 4/2·round(x, 0)
+            # 처럼 값이 정수인 Number 는 받고, 소수 부분·Bool·문자열은 거절한다(79회차 F79-3).
+            edges = [None if b.value is None else integer_value(b.value) for b in bounds]
+            bad = [b.value for b, e in zip(bounds, edges) if b.value is not None and e is None]
+            if bad:
+                raise Fault("INTEGER_REQUIRED", "슬라이스 경계는 정수 또는 null입니다.", node,
+                            details={"bounds": [_index_repr(v) for v in bad],
+                                     "types": [_value_type(v) for v in bad]})
+            if edges[2] == 0:
                 raise Fault("SLICE_STEP", "슬라이스 간격은 0일 수 없습니다.", node)
             source = normalized_text(base.value) if isinstance(base.value, str) else base.value
-            result = source[slice(*(b.value for b in bounds))]
+            result = source[slice(*edges)]
             for _ in result:
                 self.expression_tick()
             return Binding(result, self.parents([base, *bounds]))
@@ -112,12 +118,21 @@ class ExpressionEvaluator:
                     raise Fault("MISSING_FIELD", f"필드가 없습니다: {key.value}", node,
                                 details={"missing_fields": [key.value], "available_fields": list(base.value)[:20]})
             elif kind == "index" and isinstance(base.value, (str, list, tuple)):
-                if type(key.value) is not int or not -len(base.value) <= key.value < len(base.value):
+                position = integer_value(key.value)
+                length = len(base.value)
+                if position is None or not -length <= position < length:
                     # 어느 값의 몇 번째를 몇 개짜리에서 찾았는지 — 위치만으론 빈 결과인지 오타인지 모른다(77회차 T10·F72-2).
+                    # 정수가 아님과 범위 밖을 가른다: 문구·세부가 둘 중 무엇인지 말해야 고칠 방향이 선다(79회차 F79-3).
                     target = d["base"].data.get("name") if d["base"].kind == "ref" else None
-                    raise Fault("INDEX", "인덱스가 범위를 벗어났거나 정수가 아닙니다.", node,
-                                details={"index": key.value if isinstance(key.value, (int, float, str)) else type(key.value).__name__,
-                                         "length": len(base.value), **({"variable": target} if target else {})})
+                    details = {"index": _index_repr(key.value), "index_type": _value_type(key.value),
+                               "length": length, **({"variable": target} if target else {})}
+                    if position is None:
+                        raise Fault("INDEX", f"인덱스는 정수여야 합니다(받은 값 {details['index']}, {details['index_type']}) — "
+                                             "round(x) 또는 // 로 정수를 만드세요.", node, details=details)
+                    span = f"허용 {-length}..{length - 1}" if length else "빈 값"
+                    raise Fault("INDEX", f"인덱스 {position} 가 범위를 벗어났습니다(길이 {length}, {span}).",
+                                node, details=details)
+                key = Binding(position, key.evidence)
             else:
                 raise Fault("FIELD_TYPE", "이 값에는 해당 필드/인덱스 접근을 할 수 없습니다.", node,
                             details={"field": key.value, "actual_type": type(base.value).__name__})
@@ -209,3 +224,22 @@ class ValueEvaluator(ExpressionEvaluator):
         if result is NotImplemented:
             raise Fault("PURE_EXPRESSION", "순수 값 식만 사용할 수 있습니다.", node)
         return result
+
+
+def _value_type(value):
+    """진단용 IBL 값 타입 이름 — 파이썬 표현(Decimal·float)을 드러내지 않는다."""
+    if isinstance(value, bool):
+        return "Bool"
+    if isinstance(value, (int, float)) or type(value).__name__ == "Decimal":
+        return "Number"
+    return {str: "Text", list: "List", tuple: "List", dict: "Record", type(None): "Null"}.get(type(value), type(value).__name__)
+
+
+def _index_repr(value):
+    """진단 세부에 실을 인덱스 값 — JSON 으로 나를 수 있는 스칼라만 원형, 나머지는 타입 이름."""
+    if isinstance(value, (bool, int, float, str)) or value is None:
+        return value
+    if type(value).__name__ == "Decimal":
+        whole = integer_value(value)
+        return whole if whole is not None else str(value)
+    return _value_type(value)

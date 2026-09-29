@@ -486,7 +486,7 @@ registry로 *위치*를 잡고(파일을 ls로 다시 찾지 말 것), 프로젝
    # Gemini Vision으로 스크린샷을 실제로 '읽어' 눈으로 확인 (시각 QA·OCR)
 ```
 - 스크린샷은 **반드시 `image_read`로 판독**한다. 캡처만 하고 넘어가지 않는다.
-- ★**2와 3은 파이프(`>>`)로 이어지지 않는다** — `check` 의 반환이 `shape: "effect"` 라 스크린샷 경로가 통화로 흐르지 않아 `"image_path(또는 path)가 필요합니다"` 로 거절된다(2026-08-29 실측). **2의 결과 봉투에 있는 `screenshot.path` 를 눈으로 읽어 3에 그대로 넣어라.** 경로를 놓쳤으면 `[self:file_find]{path: ".../outputs/web-builder", pattern: "screenshot-<site_id>*.png"} >> [table:sort]{by: "수정일", desc: true}` 로 최신본을 되찾는다(열 이름이 한글임에 주의).
+- ★**2와 3은 파이프(`>>`)로 이어지지 않는다** — `check` 의 반환이 `shape: "effect"` 라 스크린샷 경로가 통화로 흐르지 않아 `"image_path(또는 path)가 필요합니다"` 로 거절된다(2026-08-29 실측). **2의 결과 봉투에 있는 `screenshot.path` 를 눈으로 읽어 3에 그대로 넣어라.** 경로를 놓쳤으면 `[self:file_find]{path: ".../outputs/web-builder", pattern: "screenshot-<site_id>*.png"} >> [table:sort]{by: "수정일", descending: true}` 로 최신본을 되찾는다(열 이름이 한글임에 주의).
 - ★**`op: "critic"` 을 쓸 거면 `criteria: "web"` 을 반드시 붙여라.** 생략하면 슬라이드 일러스트 기준표로 웹 스크린샷을 심사해 "한글이 렌더링됨 → 무조건 실패" 같은 무관한 판정이 나온다(2026-08-29 실측). 자유 질의로 볼 때는 `op` 없이 `question:` 을 쓰는 편이 낫다.
 - ★**전체 페이지 캡처(`full_page: true`)의 검은 타일은 결함이 아닐 수 있다** — `loading="lazy"` 썸네일이 스크롤되지 않아 안 불러온 것이다. 하단 영역을 봐야 하면 `[limbs:browser]{op: "evaluate", expression: "window.scrollTo(0, N)"}` 를 써도 이어지는 `screenshot` 에 반영되지 않으니(실측), 이미지 URL 의 HTTP 상태를 직접 재는 편이 확실하다. ★그때 HTML 에서 뽑은 URL 은 **`&amp;` 를 `&` 로 디코딩**하고 재야 한다 — 안 하면 멀쩡한 이미지가 403 으로 오탐된다.
 - 수치·날짜·가격처럼 자주 바뀌는 값은 배포 전 `self:grep` 색출 + 배포 후 `image_read` 판독, 이중으로 확인한다.

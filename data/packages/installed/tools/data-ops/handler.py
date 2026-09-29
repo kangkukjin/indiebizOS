@@ -383,6 +383,8 @@ def _op_sort(prev, params):
         return {"success": False, "error": "sort: 객체가 아닌 items 행이 있습니다. "
                 "행을 객체로 변환한 뒤 정렬하세요. 입력 행은 삭제하지 않았습니다."}
     by_raw = params.get("by")
+    # 정본은 descending, desc 는 액션 aliases(두 판본 공통 별칭 표)가 나른다. 여기서 desc 도 읽는 것은
+    # 정규화를 거치지 않는 직접 호출(실험 작업자·단위 시험)의 호환일 뿐 — 별칭의 단일 소스는 aliases 다.
     desc = bool(params.get("descending", params.get("desc", False)))
     # F13-3 (2026-08-19 상상훈련 13회차): 자연 동의어 order:"desc"/"asc" 값-해석 —
     # 예전엔 경고만 뜨고 오름차순이 success 로 나가 요청 의미가 반전됐다.

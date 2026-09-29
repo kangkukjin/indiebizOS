@@ -166,6 +166,21 @@ def documented_vocab(action_config: dict, tool_name: str) -> Set[str]:
     return vocab
 
 
+def vocab_outside_allowed(node: str, action: str, action_config: dict) -> Set[str]:
+    """문서화 어휘(제안·계약 인자·계약 별칭) 가운데 판본 1 검사가 받지 않는 키 — 빌드 관문용.
+
+    이 집합이 비어 있지 않으면 같은 키를 한쪽은 "선언된 인자"로, 다른 쪽은 "미인식"으로 말한다(79회차 B79-8
+    자기모순 경고의 뿌리: 판본 2 계약엔 descending, 판본 1 스키마·핸들러엔 desc 만 있었다)."""
+    allowed = allowed_param_keys(node, action, action_config)
+    if allowed is None:
+        return set()
+    from ibl_v2_contracts import declared_contract
+    vocab = documented_vocab(action_config, action_config.get("tool", ""))
+    projected = declared_contract(action_config) or {}
+    vocab.update(projected.get("aliases", {}))
+    return {k for k in vocab if not k.startswith("_")} - allowed
+
+
 def allowed_param_keys(node: str, action: str,
                        action_config: dict, *, schema_keys=None) -> Optional[Set[str]]:
     """액션의 허용 파라미터 키 집합. 계산 불가/검사 부적합이면 None (= 검사 스킵).
@@ -352,7 +367,10 @@ def _check_param_keys(node: str, action: str, params: Any,
                  and k not in _CONTEXT_KEYS}
     unknown = sorted(user_keys - allowed)
 
-    vocab = documented_vocab(action_config, action_config.get("tool", ""))
+    # 제안·"주요 키" 는 이 판정이 받는 키(allowed) 안에서만 고른다(79회차 B79-8). 옛 판은 판본 2 계약 인자를
+    # 따로 섞어 "미인식 ['descending'] … 비슷한 키: descending→descending · 주요 키: [… 'descending' …]" 처럼
+    # 모른다는 키를 스스로 권했다. 두 목록이 어긋나는 것 자체는 빌드 관문(vocab_outside_allowed)이 막는다.
+    vocab = documented_vocab(action_config, action_config.get("tool", "")) & allowed
 
     # 소프트 층 (2026-08-16 상상훈련 F2): 패키지 AST 합집합(allowed)은 내부 파이썬
     # 식별자까지 품는 과대 허용이라, [self:notebook]{notebook: ...} 같은 오타가 침묵
@@ -376,7 +394,7 @@ def _check_param_keys(node: str, action: str, params: Any,
 
     suggest: Dict[str, str] = {}
     for k in unknown:
-        close = difflib.get_close_matches(k, sorted(vocab), n=1, cutoff=0.55)
+        close = difflib.get_close_matches(k, sorted(vocab - {k}), n=1, cutoff=0.55)
         if close:
             suggest[k] = close[0]
 

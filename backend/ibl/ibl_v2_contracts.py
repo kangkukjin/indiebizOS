@@ -78,12 +78,54 @@ def project_unknown_param_hint(contract, config):
     return out
 
 
+def alias_projection(contract, config):
+    """액션 `aliases`(판본 1 정규화 표)를 판본 2 계약 별칭(별칭→정본)으로 옮긴 표와 문제 목록.
+
+    한 별칭 무리({정본} ∪ 별칭들) 가운데 계약 params 에 **하나만** 있으면 그것이 판본 2 정본이고
+    나머지가 그 별칭이다(판본 2 가 이름을 바꾼 경우 — self:grep root_path→path — 도 같은 규칙).
+    무리 전체가 params 밖이면 판본 1 전용 인자라 옮기지 않고, 둘 이상 있으면 계약이 두 이름을 이미
+    따로 받는 것이라 옮기지 않는다. 계약이 손으로 적은 별칭이 투영과 겹치면 두 벌 표, 다르면 모순이다.
+    (79회차 B79-8: 판본 1 은 desc, 판본 2 는 descending 만 알아 같은 문장이 판본마다 달랐다.)"""
+    params = set(((contract or {}).get("params") or {}))
+    written = dict(((contract or {}).get("aliases") or {}))
+    projected, problems = {}, []
+    for canonical, alts in (((config or {}).get("aliases") or {}).items()):
+        group = [str(canonical)] + [str(a) for a in (alts or [])]
+        inside = [name for name in group if name in params]
+        if len(inside) != 1:
+            continue
+        target = inside[0]
+        for name in group:
+            if name == target:
+                continue
+            if name in written:
+                problems.append(f"계약 별칭 {name}→{written[name]} 은 액션 aliases 와 두 벌입니다"
+                                + ("" if written[name] == target else f"(투영은 {name}→{target})")
+                                + " — 액션 aliases 한 곳에만 적으세요")
+                continue
+            projected[name] = target
+    return projected, problems
+
+
+def project_aliases(contract, config):
+    """액션 aliases 를 계약 별칭으로 투영한다(손으로 쓴 별칭은 덮지 않는다 — 어긋남은 빌드 관문)."""
+    projected, _ = alias_projection(contract, config)
+    if not projected:
+        return contract
+    out = copy.deepcopy(contract)
+    out.setdefault("aliases", {})
+    for alias, target in projected.items():
+        out["aliases"].setdefault(alias, target)
+    return out
+
+
 def declared_contract(config):
     """손으로 쓴 계약에 선언 투영을 입힌다 — 레지스트리가 쓰는 한 입구."""
     contract = (config or {}).get("callable_contract")
     if not contract:
         return None
-    return project_unknown_param_hint(project_param_support(project_ops(contract, config), config), config)
+    return project_unknown_param_hint(
+        project_param_support(project_aliases(project_ops(contract, config), config), config), config)
 
 
 def handler_contract(node, action, config, schema_keys=None):

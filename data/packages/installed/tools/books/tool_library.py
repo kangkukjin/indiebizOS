@@ -19,8 +19,10 @@ API 키: DATA4LIBRARY_API_KEY 환경변수 사용
 """
 
 import os
+import re
 import sys
 import xml.etree.ElementTree as ET
+from xml.sax.saxutils import escape as _xml_escape
 from datetime import datetime, timedelta
 
 # common 유틸리티 사용
@@ -32,8 +34,43 @@ from common.api_client import api_call
 from common.auth_manager import check_api_key
 
 
-def parse_xml_response(xml_text):
-    """XML 응답을 파싱하여 딕셔너리로 변환"""
+_XML_SPECIAL = ("&", "<", ">")
+
+
+def _escape_request_echo(xml_text, sent_params):
+    """정보나루가 이스케이프 없이 되싣는 요청 에코를 우리가 보낸 값 그대로 이스케이프한다.
+
+    B78-6(2026-09-29 실측): srchBooks 응답은 `<request><title>R&D 전략</title>…</request>` 처럼
+    요청 파라미터를 날 문자로 되싣는다(본문 doc 칸은 CDATA 라 멀쩡). 그래서 `&`·`<` 가 든
+    검색어는 원천 쪽 결함 하나로 "XML 파싱 실패"가 됐다. 에코에 실린 값은 우리가 보낸 값이므로
+    정확히 그 값만(`>값</` 첫 자리, 즉 `<request>` 구간) 이스케이프한다 — 본문 CDATA 는 `]]></` 로
+    끝나 이 꼴과 겹치지 않는다. 모든 엔드포인트가 이 한 경계(call_library_api)를 지난다.
+    """
+    if not sent_params or not isinstance(xml_text, str):
+        return xml_text
+    start = xml_text.find("<request>")
+    if start < 0:
+        return xml_text
+    head, tail = xml_text[:start], xml_text[start:]
+    for value in sent_params.values():
+        if not isinstance(value, str) or not any(ch in value for ch in _XML_SPECIAL):
+            continue
+        tail = tail.replace(f">{value}</", f">{_xml_escape(value)}</", 1)
+    return head + tail
+
+
+def _drop_request_echo(xml_text):
+    """에코 구간을 통째로 뺀다 — 원천이 값을 변형해 되실어 정확 이스케이프가 빗나갔을 때의 후퇴.
+    에코는 어디서도 읽지 않는다(numFound·docs·detail 만 읽는다)."""
+    return re.sub(r"<request>.*?</request>", "", xml_text, count=1, flags=re.S)
+
+
+def parse_xml_response(xml_text, sent_params=None):
+    """XML 응답을 파싱하여 딕셔너리로 변환.
+
+    sent_params: 요청에 실은 파라미터 — 원천의 날 요청 에코를 이스케이프하는 데 쓴다(B78-6).
+    그래도 깨진 XML 은 입력이 아니라 원천의 결함이므로 error_type="source_parse" 로 싣는다.
+    """
     # JSON 응답인 경우 처리
     if xml_text.strip().startswith('{'):
         try:
@@ -50,23 +87,34 @@ def parse_xml_response(xml_text):
         except json.JSONDecodeError:
             pass
 
-    try:
-        root = ET.fromstring(xml_text)
+    escaped = _escape_request_echo(xml_text, sent_params)
+    root = None
+    parse_error = None
+    for candidate in (escaped, _drop_request_echo(escaped)):
+        try:
+            root = ET.fromstring(candidate)
+            break
+        except ET.ParseError as e:
+            parse_error = e
+    if root is None:
+        return {
+            "success": False,
+            "error_type": "source_parse",
+            "error": (f"정보나루 응답 XML 이 깨져 읽지 못했습니다(원천 응답 결함 — 입력 형식 문제 아님): "
+                      f"{parse_error}"),
+            "raw": xml_text[:500] if isinstance(xml_text, str) else "",
+        }
 
-        # 에러 체크
-        err_code = root.find('.//errCode')
-        err_msg = root.find('.//errMsg')
-
-        if err_code is not None and err_code.text:
-            return {
-                "success": False,
-                "error": f"API 오류: {err_msg.text if err_msg is not None else '알 수 없는 오류'}",
-                "code": err_code.text
-            }
-
-        return root
-    except ET.ParseError as e:
-        return {"success": False, "error": f"XML 파싱 실패: {str(e)}", "raw": xml_text[:500]}
+    # 에러 체크
+    err_code = root.find('.//errCode')
+    err_msg = root.find('.//errMsg')
+    if err_code is not None and err_code.text:
+        return {
+            "success": False,
+            "error": f"API 오류: {err_msg.text if err_msg is not None else '알 수 없는 오류'}",
+            "code": err_code.text
+        }
+    return root
 
 
 def call_library_api(endpoint, params):
@@ -106,7 +154,7 @@ def call_library_api(endpoint, params):
     if isinstance(response_text, dict) and "error" in response_text:
         return response_text
 
-    return parse_xml_response(response_text)
+    return parse_xml_response(response_text, sent_params=params)
 
 
 def extract_books_from_xml(root, item_tag="doc"):

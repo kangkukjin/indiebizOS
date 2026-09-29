@@ -1,0 +1,4 @@
+#!ibl edition=2
+$a = [self:read]{path:f"${폴더}/venues.json"}
+$w = [self:write]{path:$출력, content:"x"}
+return {n:len($a.data.venues)}

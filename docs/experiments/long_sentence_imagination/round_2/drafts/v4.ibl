@@ -1,0 +1,114 @@
+#!ibl edition=2
+# 2회차 최초 초안 — 송년회 장소·날짜 제안서
+# inputs: 폴더, 출력, 미정비율(1 = 미정 전원 반영)
+
+# 응답 행 → 날짜별 한 행씩 펼침 (attend Y/미정만)
+[def:날짜펼침]($응답) {
+  $응답 >> [table:filter]{where:($r)=>$r.attend != "N"} >> [table:each]{mode:"flat_map"} {
+    $r = $it
+    split($r.dates, ";") >> [table:each] { return {id:$r.id, date:$it, attend:$r.attend, diet:$r.diet} }
+  }
+}
+
+# 날짜별 확정·미정·식단 집계
+[def:날짜집계]($펼침, $날짜들, $미정비율) {
+  $날짜들 >> [table:each] {
+    $d = $it
+    $그날 = $펼침 >> [table:filter]{where:($p)=>$p.date == $d}
+    $확정 = $그날 >> [table:filter]{where:($p)=>$p.attend == "Y"}
+    $미정 = len($그날) - len($확정)
+    $채식 = $확정 >> [table:filter]{where:($p)=>$p.diet == "채식"}
+    $알레르기 = $확정 >> [table:filter]{where:($p)=>$p.diet == "견과류 알레르기"}
+    # 올림 = -((-x)//1)
+    $미정반영 = round(0 - ((0 - $미정 * $미정비율) // 1))
+    return {date:$d, 확정:len($확정), 미정:$미정, 필요:len($확정) + $미정반영,
+            채식:len($채식), 알레르기:len($알레르기)}
+  }
+}
+
+# 날짜×장소 판정
+[def:안판정]($장소, $집계, $예산) {
+  $장소.dates >> [table:each] {
+    $d = $it
+    $n = ($집계 >> [table:filter]{where:($a)=>$a.date == $d})[0]
+    $비용 = $장소.rental_fee + $장소.price_per_head * $n.확정
+    $사유 = []
+    [if:$장소.capacity < $n.필요] { $사유 = $사유 + [f"수용 부족(${n.필요}명 > ${장소.capacity}석)"] }
+    [if:$비용 > $예산] { $사유 = $사유 + [f"예산 초과(${비용}원)"] }
+    [if:$n.채식 > 0 and $장소.vegetarian == false] { $사유 = $사유 + ["채식 불가"] }
+    return {venue:$장소.id, name:$장소.name, date:$d, 확정:$n.확정, 필요:$n.필요, capacity:$장소.capacity,
+            cost:$비용, ok:len($사유) == 0, reasons:$사유, veg_unknown:$장소.vegetarian == null,
+            채식:$n.채식, 알레르기:$n.알레르기}
+  }
+}
+
+# 후기 읽기 (장소 하나) — 실패는 호출자가 collect
+[def:후기읽기]($장소, $폴더) {
+  $문서 = [self:read]{path:f"${폴더}/${장소.review_file}"}
+  $줄 = split($문서.text, "\n") >> [table:each]{mode:"flat_map"} { [if:len(strip($it)) > 0] { return [strip($it)] }; return [] }
+  return {venue:$장소.id, name:$장소.name, reviews:join("\n", $줄)}
+}
+
+# 모델: 장점·우려 요약
+[def:후기요약]($후기들) {
+  [if:len($후기들) == 0] { return [] }
+  $r = $후기들 >> [table:ai]{instruction:"각 행의 reviews(한 줄에 후기 하나)를 읽고 장점과 우려를 짧은 구절 목록으로 정리하라. 후기에 없는 내용을 지어내지 말 것.",
+                             schema:"pros(문자열 목록), cons(문자열 목록)", input_fields:["venue","reviews"], preserve_rows:true}
+  return $r.items
+}
+
+[def:제안서]($이벤트, $예산, $집계, $안들, $추천, $요약, $후기실패) {
+  # 추천 1안보다 확정 인원이 많은데 가능한 안이 없는 날 — 왜 빠졌는지 밝힌다
+  $기준 = len($추천) > 0 ? $추천[0].확정 : 0
+  $빠진날 = $집계 >> [table:filter]{where:($g)=>$g.확정 > $기준} >> [table:each] {
+    $g = $it
+    $그날안 = $안들 >> [table:filter]{where:($a)=>$a.date == $g.date}
+    $사유들 = $그날안 >> [table:each] { return f"${it.venue} ${join(', ', $it.reasons)}" }
+    return f"- ${g.date}(확정 ${g.확정}명): 가능한 장소 없음 — ${join('; ', $사유들)}"
+  }
+  $집계표 = $집계 >> [table:each] { return f"| ${it.date} | ${it.확정} | ${it.미정} | ${it.필요} | ${it.채식} | ${it.알레르기} |" }
+  $안표 = $안들 >> [table:each] {
+    $판정 = $it.ok ? "가능" : join(", ", $it.reasons)
+    return f"| ${it.venue} ${it.name} | ${it.date} | ${it.필요}/${it.capacity} | ${it.cost} | ${판정} |"
+  }
+  $추천절 = $추천 >> [table:each] {
+    $a = $it
+    $s = $요약 >> [table:filter]{where:($x)=>$x.venue == $a.venue}
+    $장점 = len($s) > 0 ? join("; ", $s[0].pros) : "후기 읽지 못함"
+    $우려 = len($s) > 0 ? join("; ", $s[0].cons) : "후기 읽지 못함"
+    $질문 = ($a.veg_unknown ? [f"채식 메뉴 가능 여부 (채식 ${a.채식}명)"] : []) + ($a.알레르기 > 0 ? [f"견과류 알레르기 ${a.알레르기}명 대응 가능 여부"] : [])
+    $질문2 = []
+    [if:len($s) > 0] { $질문2 = $s[0].cons >> [table:each] { return f"후기 우려 확인: ${it}" } }
+    $질문줄 = ($질문 + $질문2) >> [table:each]{ return f"  - ${it}" }
+    return join("\n", [f"### ${$i + 1}안: ${a.name} (${a.date})", f"- 확정 ${a.확정}명, 필요 좌석 ${a.필요}/${a.capacity}, 비용 ${a.cost}원",
+                       f"- 장점: ${장점}", f"- 우려: ${우려}", "- 업체 질문:", join("\n", $질문줄)])
+  }
+  $실패줄 = $후기실패 >> [table:each] { return f"- ${it.venue}: 후기 파일을 읽지 못함(${it.error})" }
+  return join("\n", [f"# ${이벤트} 장소·날짜 제안서 (예산 ${예산}원)", "", "## 날짜별 인원", "| 날짜 | 확정 | 미정 | 필요 좌석 | 채식 | 알레르기 |", "|---|---|---|---|---|---|", join("\n", $집계표),
+                     "", "## 날짜×장소 판정", "| 장소 | 날짜 | 필요/수용 | 비용 | 판정 |", "|---|---|---|---|---|", join("\n", $안표),
+                     "", "## 추천", len($빠진날) > 0 ? "확정 인원이 더 많은 날 중 조건을 만족하는 장소가 없는 날:\n" + join("\n", $빠진날) + "\n" : "", len($추천) == 0 ? "조건을 만족하는 안이 없습니다." : join("\n\n", $추천절), "", "## 후기 읽기 실패", len($실패줄) > 0 ? join("\n", $실패줄) : "- 없음"])
+}
+
+# ── 최상위 ──
+$원천 = [self:read]{path:f"${폴더}/responses.csv"} & [self:read]{path:f"${폴더}/venues.json"}
+$응답 = $원천[0].data.items
+$설정 = $원천[1].data
+$펼침 = [fn:날짜펼침]{응답:$응답}
+$날짜값 = $펼침 >> [table:each] { return $it.date }
+$날짜들 = sorted(unique($날짜값))
+$집계 = [fn:날짜집계]{펼침:$펼침, 날짜들:$날짜들, 미정비율:$미정비율}
+$안들 = $설정.venues >> [table:each]{mode:"flat_map"} { [fn:안판정]{장소:$it, 집계:$집계, 예산:$설정.budget} }
+$가능 = $안들 >> [table:filter]{where:($a)=>$a.ok}
+$추천 = sorted(sorted($가능, "cost"), "확정", true)[:2]
+
+$읽기 = $설정.venues >> [table:each]{parallel:4, on_error:"collect"} { [fn:후기읽기]{장소:$it, 폴더:$폴더} }
+$후기들 = $설정.venues >> [table:each]{mode:"flat_map"} { [if:is_ok($읽기[$i])] { return [unwrap($읽기[$i])] }; return [] }
+$후기실패 = $설정.venues >> [table:each]{mode:"flat_map"} { [if:is_ok($읽기[$i])] { return [] }; return [{venue:$it.id, error:error_of($읽기[$i]).message}] }
+$요약 = [fn:후기요약]{후기들:$후기들}
+
+$본문 = [fn:제안서]{이벤트:$설정.event, 예산:$설정.budget, 집계:$집계, 안들:$안들, 추천:$추천, 요약:$요약, 후기실패:$후기실패}
+$저장 = [self:write]{path:$출력, content:$본문}
+$확인 = [self:read]{path:$출력}
+return {집계:$집계, 추천:$추천 >> [table:each]{ return {venue:$it.venue, date:$it.date, cost:$it.cost} },
+        가능안수:len($가능), 요약:$요약, 후기실패:$후기실패, saved:$저장.path, verified:$확인.text == $본문,
+        rows_read:len($응답)}

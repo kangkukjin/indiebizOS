@@ -177,9 +177,9 @@ def arithmetic_numbers(values):
         dated = any(isinstance(v, str) and datetime_value(v) is not None for v in values)
         raise ValueError("산술에는 관측 가능한 유한 숫자가 필요합니다."
                          + (" 날짜 계산은 date_add(날짜, 일수)·date_diff(a, b)·month_end(날짜)로 하세요." if dated else ""))
-    if any(isinstance(number, Decimal) for number in numbers):
-        numbers = [Decimal(str(number)) if isinstance(number, float) else number
-                   for number in numbers]
+    # JSON inputs and source literals must use the same decimal arithmetic.
+    numbers = [Decimal(str(number)) if isinstance(number, float) else number
+               for number in numbers]
     return numbers
 
 

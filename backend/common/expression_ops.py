@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 import json
 import operator
-from common.value_semantics import (numeric_value, values_equal, compare_order,
+from common.value_semantics import (values_equal, compare_order,
                                     order_matches, list_membership, public_result,
                                     normalized_text, arithmetic_numbers)
 from common.expression_functions import CONTRACTS, call as value_call
@@ -90,18 +90,19 @@ def boolean(value):
 
 
 def number(value):
-    result = numeric_value(value, preserve_decimal=True)
-    if result is None:
-        from common.value_semantics import datetime_value
-        hint = (" 날짜 계산은 date_add(날짜, 일수)·date_diff(a, b)·month_end(날짜)로 하세요."
-                if isinstance(value, str) and datetime_value(value) is not None else "")
-        raise Fault("NUMBER_REQUIRED", "산술에는 관측 가능한 유한 숫자가 필요합니다." + hint)
-    return result
+    try:
+        return arithmetic_numbers([value])[0]
+    except ValueError as exc:
+        raise Fault("NUMBER_REQUIRED", str(exc)) from exc
 
 
 def scalar_text(value):
     if isinstance(value, bool):
         return "true" if value else "false"
+    from common.value_semantics import integer_value
+    integer = integer_value(value)
+    if integer is not None:
+        return str(integer)
     if isinstance(value, (str, int, float, Decimal)):
         return normalized_text(str(value))
     raise Fault("TEXT_REQUIRED", "Text·Number·Bool만 문자열로 바꿀 수 있습니다. 구조에는 json()을 쓰세요.")
@@ -142,8 +143,9 @@ def binary(op, left, right, *, legacy=False):
         if remainder and (a < 0) != (b < 0):
             quotient -= 1
             remainder += b
-        return quotient if op == "//" else remainder
-    return operation(a, b)
+        return int(quotient) if op == "//" else remainder
+    result = operation(a, b)
+    return int(result) if op == "//" else result
 
 
 def pure_call(name, args, *, tick=lambda: None, callback=None):

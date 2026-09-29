@@ -1,0 +1,564 @@
+{
+  "original": {
+    "success": true,
+    "source_complete": true,
+    "usage": {
+      "steps": 13807,
+      "rows": 592,
+      "elapsed_ms": 16272,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 16038,
+        "output": 215,
+        "cache_read": 0,
+        "cache_create": 0,
+        "reasoning": null,
+        "calls": [
+          {
+            "call_id": "a00b0b9a7b184d389df7e60609c85056",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "Codex",
+            "model": "gpt-6-astra:high",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 14535,
+            "input": 16038,
+            "output": 215,
+            "cache_read": 0,
+            "cache_create": 0
+          }
+        ]
+      }
+    },
+    "continuation": {
+      "reuse_args": {
+        "reuse": {
+          "run_id": "3d0b04b8f5f04c6493fe60e5f091cdd6"
+        }
+      },
+      "read_calls": 7,
+      "state_change_possible": true,
+      "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "reuse": null,
+    "chars": 306005,
+    "events": 1230,
+    "value": {
+      "집계": [
+        {
+          "date": "12-12",
+          "확정": 61,
+          "미정": 12,
+          "필요": 73,
+          "채식": 9,
+          "알레르기": 5
+        },
+        {
+          "date": "12-13",
+          "확정": 55,
+          "미정": 12,
+          "필요": 67,
+          "채식": 6,
+          "알레르기": 3
+        },
+        {
+          "date": "12-19",
+          "확정": 52,
+          "미정": 10,
+          "필요": 62,
+          "채식": 3,
+          "알레르기": 2
+        }
+      ],
+      "추천": [
+        {
+          "venue": "V2",
+          "date": "12-13",
+          "cost": 2590000
+        },
+        {
+          "venue": "V3",
+          "date": "12-13",
+          "cost": 2860000
+        }
+      ],
+      "가능안수": 5,
+      "요약": [
+        {
+          "venue": "V1",
+          "name": "한강 루프탑홀",
+          "reviews": "야경이 정말 좋고 직원이 친절했어요.\n음향 장비가 자주 끊겨서 사회자가 고생했습니다.\n엘리베이터가 하나라 입장에 20분 걸렸어요.\n채식 코스가 따로 있어서 좋았습니다.",
+          "pros": [
+            "좋은 야경",
+            "친절한 직원",
+            "별도 채식 코스"
+          ],
+          "cons": [
+            "잦은 음향 장비 끊김",
+            "엘리베이터가 하나라 입장에 20분 소요"
+          ],
+          "_ai": true
+        },
+        {
+          "venue": "V2",
+          "name": "성수 창고 라운지",
+          "reviews": "분위기 힙하고 넓어요.\n난방이 약해서 12월엔 추웠습니다. 담요 요청 필요.\n주차 공간이 거의 없어요.\n케이터링 양이 부족했다는 말이 많았습니다.\n대관 시간 초과 요금이 비쌉니다.",
+          "pros": [
+            "힙한 분위기",
+            "넓은 공간"
+          ],
+          "cons": [
+            "약한 난방으로 12월에 추움",
+            "담요 요청 필요",
+            "주차 공간이 거의 없음",
+            "케이터링 양 부족 의견 다수",
+            "비싼 대관 시간 초과 요금"
+          ],
+          "_ai": true
+        },
+        {
+          "venue": "V3",
+          "name": "광화문 연회장",
+          "reviews": "격식 있는 행사에 좋고 음향 완벽.\n가격이 다소 비싸지만 서비스가 확실함.\n분위기가 딱딱하다는 의견이 있었어요.",
+          "pros": [
+            "격식 있는 행사에 적합",
+            "완벽한 음향",
+            "확실한 서비스"
+          ],
+          "cons": [
+            "다소 비싼 가격",
+            "딱딱한 분위기라는 의견"
+          ],
+          "_ai": true
+        },
+        {
+          "venue": "V4",
+          "name": "을지로 비스트로",
+          "reviews": "음식 맛이 최고.\n60명 꽉 채우니 너무 좁았어요.\n채식 메뉴 요청했는데 준비가 안 된다고 했어요.",
+          "pros": [
+            "뛰어난 음식 맛"
+          ],
+          "cons": [
+            "60명 수용 시 매우 좁음",
+            "채식 메뉴 준비 불가"
+          ],
+          "_ai": true
+        }
+      ],
+      "후기실패": [],
+      "saved": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_round2_repair/original.md",
+      "verified": true,
+      "rows_read": 120
+    }
+  },
+  "changed": {
+    "success": true,
+    "source_complete": true,
+    "usage": {
+      "steps": 13816,
+      "rows": 595,
+      "elapsed_ms": 11149,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 16038,
+        "output": 211,
+        "cache_read": 0,
+        "cache_create": 0,
+        "reasoning": null,
+        "calls": [
+          {
+            "call_id": "a8f77055f10c462090a4c3de0dbf3bf0",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "Codex",
+            "model": "gpt-6-astra:high",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 9799,
+            "input": 16038,
+            "output": 211,
+            "cache_read": 0,
+            "cache_create": 0
+          }
+        ]
+      }
+    },
+    "continuation": {
+      "reuse_args": {
+        "reuse": {
+          "run_id": "6353f9e794bb4059a57a3f3d2ed692dc"
+        }
+      },
+      "read_calls": 7,
+      "state_change_possible": true,
+      "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "reuse": {
+      "run_id": "3d0b04b8f5f04c6493fe60e5f091cdd6",
+      "reused_calls": 6,
+      "candidates": 7
+    },
+    "chars": 305797,
+    "events": 1217,
+    "value": {
+      "집계": [
+        {
+          "date": "12-12",
+          "확정": 61,
+          "미정": 12,
+          "필요": 67,
+          "채식": 9,
+          "알레르기": 5
+        },
+        {
+          "date": "12-13",
+          "확정": 55,
+          "미정": 12,
+          "필요": 61,
+          "채식": 6,
+          "알레르기": 3
+        },
+        {
+          "date": "12-19",
+          "확정": 52,
+          "미정": 10,
+          "필요": 57,
+          "채식": 3,
+          "알레르기": 2
+        }
+      ],
+      "추천": [
+        {
+          "venue": "V2",
+          "date": "12-12",
+          "cost": 2818000
+        },
+        {
+          "venue": "V2",
+          "date": "12-13",
+          "cost": 2590000
+        }
+      ],
+      "가능안수": 6,
+      "요약": [
+        {
+          "venue": "V1",
+          "name": "한강 루프탑홀",
+          "reviews": "야경이 정말 좋고 직원이 친절했어요.\n음향 장비가 자주 끊겨서 사회자가 고생했습니다.\n엘리베이터가 하나라 입장에 20분 걸렸어요.\n채식 코스가 따로 있어서 좋았습니다.",
+          "pros": [
+            "좋은 야경",
+            "친절한 직원",
+            "별도 채식 코스"
+          ],
+          "cons": [
+            "잦은 음향 장비 끊김",
+            "엘리베이터가 하나라 입장에 20분 소요"
+          ],
+          "_ai": true
+        },
+        {
+          "venue": "V2",
+          "name": "성수 창고 라운지",
+          "reviews": "분위기 힙하고 넓어요.\n난방이 약해서 12월엔 추웠습니다. 담요 요청 필요.\n주차 공간이 거의 없어요.\n케이터링 양이 부족했다는 말이 많았습니다.\n대관 시간 초과 요금이 비쌉니다.",
+          "pros": [
+            "힙한 분위기",
+            "넓은 공간"
+          ],
+          "cons": [
+            "약한 난방으로 12월에 추움·담요 요청 필요",
+            "주차 공간이 거의 없음",
+            "케이터링 양 부족 의견 다수",
+            "비싼 대관 시간 초과 요금"
+          ],
+          "_ai": true
+        },
+        {
+          "venue": "V3",
+          "name": "광화문 연회장",
+          "reviews": "격식 있는 행사에 좋고 음향 완벽.\n가격이 다소 비싸지만 서비스가 확실함.\n분위기가 딱딱하다는 의견이 있었어요.",
+          "pros": [
+            "격식 있는 행사에 적합",
+            "완벽한 음향",
+            "확실한 서비스"
+          ],
+          "cons": [
+            "다소 비싼 가격",
+            "딱딱한 분위기라는 의견"
+          ],
+          "_ai": true
+        },
+        {
+          "venue": "V4",
+          "name": "을지로 비스트로",
+          "reviews": "음식 맛이 최고.\n60명 꽉 채우니 너무 좁았어요.\n채식 메뉴 요청했는데 준비가 안 된다고 했어요.",
+          "pros": [
+            "뛰어난 음식 맛"
+          ],
+          "cons": [
+            "60명 수용 시 매우 좁음",
+            "요청한 채식 메뉴 준비 불가"
+          ],
+          "_ai": true
+        }
+      ],
+      "후기실패": [],
+      "saved": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_round2_repair/changed.md",
+      "verified": true,
+      "rows_read": 120
+    }
+  },
+  "missing": {
+    "success": true,
+    "source_complete": false,
+    "usage": {
+      "steps": 13755,
+      "rows": 581,
+      "elapsed_ms": 9150,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 15954,
+        "output": 143,
+        "cache_read": 0,
+        "cache_create": 0,
+        "reasoning": null,
+        "calls": [
+          {
+            "call_id": "e1d468e7908b4deeb45eafcd8e4f8d98",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "Codex",
+            "model": "gpt-6-astra:high",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 7727,
+            "input": 15954,
+            "output": 143,
+            "cache_read": 0,
+            "cache_create": 0
+          }
+        ]
+      }
+    },
+    "continuation": {
+      "reuse_args": {
+        "reuse": {
+          "run_id": "25992844fdf54a14b25f6c474ad4b1a3"
+        }
+      },
+      "read_calls": 6,
+      "state_change_possible": true,
+      "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "reuse": null,
+    "chars": 330470,
+    "events": 1303,
+    "value": {
+      "집계": [
+        {
+          "date": "12-12",
+          "확정": 61,
+          "미정": 12,
+          "필요": 73,
+          "채식": 9,
+          "알레르기": 5
+        },
+        {
+          "date": "12-13",
+          "확정": 55,
+          "미정": 12,
+          "필요": 67,
+          "채식": 6,
+          "알레르기": 3
+        },
+        {
+          "date": "12-19",
+          "확정": 52,
+          "미정": 10,
+          "필요": 62,
+          "채식": 3,
+          "알레르기": 2
+        }
+      ],
+      "추천": [
+        {
+          "venue": "V2",
+          "date": "12-13",
+          "cost": 2590000
+        },
+        {
+          "venue": "V3",
+          "date": "12-13",
+          "cost": 2860000
+        }
+      ],
+      "가능안수": 5,
+      "요약": [
+        {
+          "venue": "V1",
+          "name": "한강 루프탑홀",
+          "reviews": "야경이 정말 좋고 직원이 친절했어요.\n음향 장비가 자주 끊겨서 사회자가 고생했습니다.\n엘리베이터가 하나라 입장에 20분 걸렸어요.\n채식 코스가 따로 있어서 좋았습니다.",
+          "pros": [
+            "좋은 야경",
+            "친절한 직원",
+            "별도 채식 코스"
+          ],
+          "cons": [
+            "음향 장비의 잦은 끊김",
+            "엘리베이터가 하나라 입장에 20분 소요"
+          ],
+          "_ai": true
+        },
+        {
+          "venue": "V3",
+          "name": "광화문 연회장",
+          "reviews": "격식 있는 행사에 좋고 음향 완벽.\n가격이 다소 비싸지만 서비스가 확실함.\n분위기가 딱딱하다는 의견이 있었어요.",
+          "pros": [
+            "격식 있는 행사에 적합",
+            "완벽한 음향",
+            "확실한 서비스"
+          ],
+          "cons": [
+            "다소 비싼 가격",
+            "딱딱한 분위기라는 의견"
+          ],
+          "_ai": true
+        },
+        {
+          "venue": "V4",
+          "name": "을지로 비스트로",
+          "reviews": "음식 맛이 최고.\n60명 꽉 채우니 너무 좁았어요.\n채식 메뉴 요청했는데 준비가 안 된다고 했어요.",
+          "pros": [
+            "뛰어난 음식 맛"
+          ],
+          "cons": [
+            "60명 수용 시 비좁음",
+            "채식 메뉴 준비 불가"
+          ],
+          "_ai": true
+        }
+      ],
+      "후기실패": [
+        {
+          "venue": "V2",
+          "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_2/input_variant/reviews/V2.txt"
+        }
+      ],
+      "saved": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_round2_repair/missing.md",
+      "verified": true,
+      "rows_read": 120
+    }
+  },
+  "scale_100": {
+    "chars": 8373,
+    "events": 32,
+    "value": 49,
+    "usage": {
+      "steps": 1817,
+      "rows": 100,
+      "elapsed_ms": 9
+    }
+  },
+  "scale_1000": {
+    "chars": 8395,
+    "events": 32,
+    "value": 499,
+    "usage": {
+      "steps": 18017,
+      "rows": 1000,
+      "elapsed_ms": 78
+    }
+  },
+  "invalid_check": {
+    "chars": 25960,
+    "issues": 12,
+    "guards": 0,
+    "guards_total": 80,
+    "has_ref": true
+  },
+  "note": "초기 수리의 실제 모델 실행 실측. 이후 영수증의 과거 모델 비용 보존·JSON 반올림·필드명 정렬 호환 보강은 별도 회귀로 검증.",
+  "live_model": {
+    "success": true,
+    "usage": {
+      "steps": 11,
+      "rows": 0,
+      "elapsed_ms": 5895,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 15739,
+        "output": 30,
+        "cache_read": 0,
+        "cache_create": 0,
+        "reasoning": null,
+        "calls": [
+          {
+            "call_id": "37ebf6c8f4e14cd4bee9540e5ab1f602",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "Codex",
+            "model": "gpt-6-astra:high",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 4782,
+            "input": 15739,
+            "output": 30,
+            "cache_read": 0,
+            "cache_create": 0
+          }
+        ]
+      }
+    },
+    "value": {
+      "items": [
+        {
+          "text": "방이 조용하지만 주차가 좁다",
+          "pros": [
+            "방이 조용하다"
+          ],
+          "cons": [
+            "주차가 좁다"
+          ],
+          "_ai": true
+        }
+      ],
+      "rows_in": 1,
+      "rows_out": 1,
+      "_merge": "index",
+      "success": true
+    },
+    "resume_preserved_value_without_model_billing": true
+  },
+  "validation": {
+    "non_system": {
+      "passed": 7775,
+      "skipped": 1,
+      "deselected": 95,
+      "seconds": 516.6
+    },
+    "related_system": {
+      "passed": 71,
+      "seconds": 97.54
+    },
+    "other_system_not_rerun": 24
+  }
+}

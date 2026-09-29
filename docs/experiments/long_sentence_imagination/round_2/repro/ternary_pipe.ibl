@@ -1,0 +1,4 @@
+#!ibl edition=2
+$s = [1,2]
+$q = len($s) > 0 ? $s >> [table:each] { return $it * 2 } : []
+return $q

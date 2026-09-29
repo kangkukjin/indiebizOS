@@ -1,0 +1,59 @@
+{
+ "event": "2026 송년회",
+ "budget": 3500000,
+ "venues": [
+  {
+   "id": "V1",
+   "name": "한강 루프탑홀",
+   "capacity": 90,
+   "dates": [
+    "12-12",
+    "12-19"
+   ],
+   "price_per_head": 45000,
+   "rental_fee": 800000,
+   "vegetarian": true,
+   "review_file": "reviews/V1.txt"
+  },
+  {
+   "id": "V2",
+   "name": "성수 창고 라운지",
+   "capacity": 70,
+   "dates": [
+    "12-12",
+    "12-13",
+    "12-19"
+   ],
+   "price_per_head": 38000,
+   "rental_fee": 500000,
+   "vegetarian": null,
+   "review_file": "reviews/V2.txt"
+  },
+  {
+   "id": "V3",
+   "name": "광화문 연회장",
+   "capacity": 150,
+   "dates": [
+    "12-13",
+    "12-19"
+   ],
+   "price_per_head": 52000,
+   "rental_fee": 0,
+   "vegetarian": true,
+   "review_file": "reviews/V3.txt"
+  },
+  {
+   "id": "V4",
+   "name": "을지로 비스트로",
+   "capacity": 60,
+   "dates": [
+    "12-12",
+    "12-13"
+   ],
+   "price_per_head": 35000,
+   "rental_fee": 300000,
+   "vegetarian": false,
+   "review_file": "reviews/V4.txt"
+  }
+ ]
+}

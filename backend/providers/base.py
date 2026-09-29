@@ -275,6 +275,8 @@ class ProviderMetrics:
         usage 가 None/미인식이면 지연만 적고 토큰은 미기록(None) — 0 으로 오보하지 않는다.
         label 이 있으면 표준 한 줄을 찍는다(프로바이더가 제 로그를 찍으려면 label="" 로)."""
         n = normalize_usage(usage)
+        from model_call_context import record_captured_usage
+        record_captured_usage(n, latency_ms, label)
         if n is None:
             self.record_request(latency_ms)
             if label:

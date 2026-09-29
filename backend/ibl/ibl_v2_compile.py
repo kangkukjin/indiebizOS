@@ -416,7 +416,7 @@ class Compiler:
                 low, high = BUILTINS[name]
                 if not low <= len(types) <= high:
                     self.issue(node, "ARITY", f"{name}은 {low}~{high}개 인자를 받습니다.")
-                return builtin_type(self, node, name, types)
+                return builtin_type(self, node, name, types, env, names, readonly)
             return UNKNOWN
         if kind == "lambda":
             params = d["params"]

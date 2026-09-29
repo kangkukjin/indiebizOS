@@ -37,6 +37,55 @@ def journal_root(project_path):
     return get_base_path() / "data/ibl_runs" / digest([p.key(), str(Path(project_path).resolve())])
 
 
+def call_resources(spec, contract, args, mode):
+    """Resolve a complete declared footprint; None means an unknown resource set."""
+    declaration = contract.get(mode + '_resources')
+    if not declaration:
+        return None
+    resources = []
+    for realm, param in declaration.items():
+        value = args.get(param)
+        if not isinstance(value, str) or not value.strip():
+            return None
+        # Bare output names can be redirected by the output-path policy.
+        # Until the adapter declares that resolution, retain the broad barrier.
+        if mode == 'write' and realm == 'file' and '/' not in value:
+            return None
+        identity = spec.resource_identity(realm, value) if spec.resource_identity else value
+        if not isinstance(identity, str) or not identity:
+            return None
+        inode = None
+        if realm == 'file':
+            import member_runtime
+            if member_runtime.is_member():
+                return None  # A remote body's paths are not the hub's inode namespace.
+            from runtime_utils import file_resource_identity
+            identity = file_resource_identity(identity)
+            try:
+                stat = os.stat(identity)
+                inode = [stat.st_dev, stat.st_ino]
+            except OSError:
+                pass
+        resources.append([realm, identity, inode])
+    return resources
+
+
+def resources_overlap(reads, writes):
+    """Unknown footprints conflict; file ancestors and hard links also overlap."""
+    if reads is None or writes is None:
+        return True
+    for realm, path, inode in reads:
+        for other_realm, other_path, other_inode in writes:
+            if realm != other_realm:
+                continue
+            if path == other_path or inode is not None and inode == other_inode:
+                return True
+            if realm == 'file' and (path.startswith(other_path.rstrip('/') + '/')
+                                    or other_path.startswith(path.rstrip('/') + '/')):
+                return True
+    return False
+
+
 class Journal:
     def __init__(self, root, identity, resume=None):
         if resume is not None and (not isinstance(resume, dict) or set(resume) != {"run_id"}):
@@ -74,6 +123,7 @@ class Journal:
             for table, column, declaration in (
                     ('calls', 'reusable', 'INTEGER NOT NULL DEFAULT 0'),
                     ('calls', 'state_change', 'INTEGER NOT NULL DEFAULT 1'),
+                    ('calls', 'resources', 'TEXT'),
                     ('lifecycle', 'source_complete', 'INTEGER')):
                 if column not in {r[1] for r in self.db.execute(f'PRAGMA table_info({table})')}:
                     self.db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {declaration}')
@@ -128,7 +178,7 @@ class Journal:
             pass  # The SQLite receipt remains authoritative.
 
     @durable
-    def begin(self, call_id, request_hash, cleanup=False, *, reusable=False, state_change=True):
+    def begin(self, call_id, request_hash, cleanup=False, *, reusable=False, state_change=True, resources=None):
         with self.lock:
             row = self.db.execute("SELECT request,receipt FROM calls WHERE id=?", (call_id,)).fetchone()
             if row:
@@ -143,11 +193,14 @@ class Journal:
             # Invalidate reads that preceded this mutation, including unfinished
             # parallel reads. A read overlapping an in-flight mutation is also unsafe.
             if state_change:
-                self.db.execute('UPDATE calls SET reusable=0')
-            pending_write = self.db.execute(
-                'SELECT 1 FROM calls WHERE state_change=1 AND receipt IS NULL LIMIT 1').fetchone()
-            self.db.execute("INSERT INTO calls(id,request,receipt,reusable,state_change) VALUES(?,?,NULL,?,?)",
-                            (call_id, request_hash, int(reusable and not pending_write), int(state_change)))
+                for old_id, footprint in self.db.execute('SELECT id,resources FROM calls WHERE reusable=1').fetchall():
+                    if resources_overlap(json.loads(footprint) if footprint else None, resources):
+                        self.db.execute('UPDATE calls SET reusable=0 WHERE id=?', (old_id,))
+            pending_write = any(resources_overlap(resources, json.loads(row[0]) if row[0] else None)
+                                for row in self.db.execute('SELECT resources FROM calls WHERE state_change=1 AND receipt IS NULL'))
+            self.db.execute("INSERT INTO calls(id,request,receipt,reusable,state_change,resources) VALUES(?,?,NULL,?,?,?)",
+                            (call_id, request_hash, int(reusable and not pending_write), int(state_change),
+                             json.dumps(resources)))
             self.db.execute("UPDATE lifecycle SET updated=?", (time.time(),))
             self.db.commit()
             return None

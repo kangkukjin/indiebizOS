@@ -25,6 +25,16 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: ibl-global-reuse-write-barrier
+    retired: 2026-09-30
+    reason: 관계없는 출력 저장과 모델 변환이 이전 입력 읽기까지 무효화했다.
+    instead: 원 실행과 새 실행 모두 선언된 읽기·쓰기 자원 충돌로 제외한다. 자원 미상은 전체 제외하며 model 단독 효과는 상태 변경이 아니다.
+    phrases: ['원 실행의 쓰기 전·동시 읽기는 제외한다', '상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다', '상태 변경 가능 효과 뒤의 읽기는 과거 영수증을 사용하지 않는다']
+  - id: ibl-host-float-arithmetic
+    retired: 2026-09-30
+    reason: 같은 숫자가 소스 리터럴과 JSON 입력에서 다른 계산·문자열 결과를 냈다.
+    instead: 공통 값 의미가 float를 십진 산술로 정규화하고 정수값은 text·보간에서 소수점 없이 표시한다.
+    phrases: ['Decimal이 없는 기존 float 연산은 유지한다']
   - id: photo-home-default-and-history-sampling
     retired: 2026-09-29
     reason: 사진 기본 조회에 개발 자산이 섞이고 주가 이력의 숨은 10점 선택이 원천 불완전으로 실패했다.

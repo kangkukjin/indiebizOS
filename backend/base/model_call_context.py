@@ -12,6 +12,42 @@ _call = contextvars.ContextVar("model_call", default=None)
 _registry = {}
 _lock = threading.RLock()
 _purpose = contextvars.ContextVar("model_call_purpose", default="")
+_usage_captures = contextvars.ContextVar("model_usage_captures", default=())
+
+
+@contextmanager
+def capture_usage():
+    """Execution-local billable observations, inherited by existing worker contexts."""
+    rows = []
+    token = _usage_captures.set((*_usage_captures.get(), rows))
+    try:
+        yield rows
+    finally:
+        _usage_captures.reset(token)
+
+
+def record_captured_usage(usage, latency_ms, provider=''):
+    if not _usage_captures.get():
+        return
+    row = {**fields(), 'measured': usage is not None, 'elapsed_ms': round(latency_ms)}
+    if not row.get('provider') and provider:
+        row['provider'] = provider
+    if usage is not None:
+        row.update(usage)
+    with _lock:
+        for capture in _usage_captures.get():
+            capture.append(dict(row))
+
+
+def summarize_usage(rows):
+    """Cache/reasoning are reported separately as subsets, never added to totals."""
+    measured = [row for row in rows if row.get('measured')]
+    return {'requests': len(rows), 'measured_requests': len(measured),
+            'unmeasured_requests': len(rows) - len(measured),
+            **{key: sum(row[key] for row in measured if row.get(key) is not None)
+               if any(row.get(key) is not None for row in measured) else None
+               for key in ('input', 'output', 'cache_read', 'cache_create', 'reasoning')},
+            'calls': rows}
 
 
 def observe_usage(usage, *, snapshot=False, response_id=None):
@@ -113,6 +149,8 @@ def call_scope(provider):
              "provider": type(provider).__name__.removesuffix("Provider"),
              "model": getattr(provider, "model", ""), "round_index": 0,
              "_provider": id(provider)}
+    descriptor = getattr(provider, 'distill_descriptor', {}) or {}
+    value.update({key: descriptor[key] for key in ('tier', 'source') if key in descriptor})
     from thread_context import execution_key
     key = execution_key()
     with _lock:
@@ -134,6 +172,8 @@ def call_scope(provider):
                 "output_tokens": usage["output"], "cache_read_input_tokens": usage["cache_read"],
                 "cache_creation_input_tokens": usage["cache_create"],
                 "output_tokens_details": {"reasoning_tokens": usage["reasoning"]}})
+        if provider.metrics.total_requests == requests_before:
+            record_captured_usage(None, (time.monotonic() - started) * 1000)
         record_trajectory_event("model.call_finished", {**fields(), "elapsed_ms": round((time.monotonic() - started) * 1000),
                                 "accounting": "boundary_only"})
         if value.get("_last_usage"):

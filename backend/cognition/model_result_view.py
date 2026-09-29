@@ -485,6 +485,8 @@ def project_v2_result(result):
             if preview:
                 out["partial_preview"] = preview
     out["result_ref"] = _read_reference(ref, result)
+    if 'value' in result:
+        out['result_ref']['value_chars'] = len(json.dumps(result['value'], ensure_ascii=False, default=str))
     out["_hint"] = ("판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. "
                     + ("다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. "
                        if "input_args" in out["result_ref"] else "진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. ")

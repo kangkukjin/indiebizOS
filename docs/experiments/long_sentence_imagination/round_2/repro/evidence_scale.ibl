@@ -1,0 +1,4 @@
+#!ibl edition=2
+$행 = $n >> [table:each] { return {i:$it, v:$it * 3} }
+$걸러 = $행 >> [table:filter]{where:($r)=>$r.v % 2 == 0 and $r.i > 0}
+return len($걸러)

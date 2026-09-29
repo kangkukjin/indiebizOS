@@ -1,0 +1,3 @@
+#!ibl edition=2
+$r = [{a:1,b:2},{a:1,b:1}]
+return sorted($r, ($x)=>[$x.a, $x.b])

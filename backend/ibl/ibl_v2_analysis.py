@@ -12,6 +12,7 @@ HINTS = {
     "RECORD_LENGTH": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
     "INPUTS": 'inputs는 {입력:값}이며 코드는 $입력을 사용합니다. 결과 참조는 inputs:{입력:{"$ref":"결과 id"}}처럼 이름의 값 자리에 둡니다.',
     "UNBOUND": "이 위치 전에 값을 정의하거나 함수의 명시 인자로 전달하세요.",
+    "UNORDERED": "정렬 콜백은 Number·Text처럼 순서가 있는 값을 반환해야 합니다. 여러 키는 뒤 키부터 안정 정렬하고 Bool은 조건 값으로 0/1로 바꾸세요.",
     "MISSING_FIELD": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요.",
     "FIELD_TYPE": "실제 반환 타입을 확인하세요. List는 직접 인덱싱하고, Record는 행 목록이 있는 필드를 선택한 뒤 인덱싱합니다.",
     "RESUME_CHANGED": "resume은 원래 소스·입력·의존성·권한이 같은 실행에만 씁니다. 고친 프로그램은 같은 문맥의 reuse를 사용하거나 새로 실행하세요. 외부 쓰기를 반복하기 전 실행 기록을 확인하세요.",
@@ -132,7 +133,8 @@ def finish_diagnostics(compiler):
             entry.setdefault('code', 'RUNTIME_GUARD')
             entry.setdefault('rule', entry['code'])
             entry.setdefault('severity', severity)
-            entry.setdefault('message', entry.get('expected', '실행 중 계약 확인이 필요합니다.'))
+            entry.setdefault('message', f"실행 중 {entry.get('expected', '값')} 계약을 확인합니다."
+                             if severity == 'information' else entry.get('expected', '계약 확인이 필요합니다.'))
             entry.setdefault('hint', HINTS.get(entry['code'], '해당 위치의 계약과 호출 인자를 확인하세요.'))
             if (entry['code'] == 'TYPE' and entry.get('expected') == 'List<Record>'
                     and str(entry.get('actual', '')).startswith('List<')):
@@ -171,13 +173,14 @@ def compact_check(plan):
     from result_read_contract import DEFAULT_LIMIT
 
     report = plan.report()
-    if plan.issues or not plan.guards:
+    if not plan.guards:
         return report
     useful = [g for g in plan.guards
               if g.get('expected') != 'Unknown' or g.get('actual') != 'Unknown']
     try:
         ref = current_evidence_store().evidence(json.dumps({'guards': plan.guards}, ensure_ascii=False))
     except (OSError, ValueError, TypeError):
+        report.update(guards=plan.guards, guards_omitted=0)
         return report
     report.update(guards=[], guards_omitted=len(plan.guards),
                   runtime_checks={'total': len(plan.guards), 'informative': len(useful)},
@@ -257,6 +260,31 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
     source = args.get(contract.get('pipe_input'), UNKNOWN)
     if source.kind == 'Record':
         source = dict(source.fields).get('items', UNKNOWN)
+    schema_param = flow.get('schema_param') or contract.get('analysis', {}).get('schema_param')
+    if schema_param:
+        from common.record_schema import schema_fields
+        from ibl_callable_contract import UNRESOLVED
+        inspect_param = contract.get('analysis', {}).get('ai_inspect_param')
+        inspecting = values.get(inspect_param) if inspect_param else None
+        if inspecting is not None:
+            # Inspection returns the original rows, or is dynamic at runtime.
+            if inspecting is not UNRESOLVED and source.kind == 'List':
+                return Type('Record', fields=(('items', source),), open=True)
+            return result
+        try:
+            columns = schema_fields(values.get(schema_param))
+        except ValueError as exc:
+            compiler.issue(node, 'ARGUMENT_CONTRACT', str(exc))
+            return result
+        projection = values.get(flow.get('columns_param'))
+        if columns or isinstance(projection, list) and projection:
+            # The schema declares names, not types; unknown values may be null.
+            # Models can replace visible input fields, so never retain their types.
+            known = dict(source.item.fields) if source.kind == 'List' and source.item.kind == 'Record' else {}
+            keys = list(projection) if isinstance(projection, list) and projection else list(dict.fromkeys([*known, *(columns or [])]))
+            if all(isinstance(k, str) for k in keys):
+                row = Type('Record', fields=tuple((k, UNKNOWN) for k in keys), open=False)
+                return Type('Record', fields=tuple({**dict(result.fields), 'items': Type('List', item=row)}.items()), open=True)
     if source.kind != 'List' or flow.get('accepts') != 'items':
         return result
     row = source.item or UNKNOWN
@@ -313,7 +341,7 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
     return result
 
 
-def builtin_type(compiler, node, name, types):
+def builtin_type(compiler, node, name, types, env=None, names=None, readonly=None):
     """Structural obligations only; never invoke a callback or external tool."""
     from common.expression_functions import CONTRACTS
     from ibl_v2_types import declared
@@ -326,6 +354,23 @@ def builtin_type(compiler, node, name, types):
             for issue in compiler.issues[before:]:
                 issue['hint'] = f"{name}({', '.join(spec[2])})의 인자 순서를 확인하세요. {i + 1}번째는 {expected}입니다."
         result = declared(spec[3])
+        if name == 'sorted' and types and types[0].kind == 'List':
+            key_type = types[0].item or UNKNOWN
+            key_node = node.data['args'][0]
+            if len(types) > 1:
+                key_node = node.data['args'][1]
+                if key_node.kind == 'lambda' and len(key_node.data['params']) == 1:
+                    local = {**(env or {}), key_node.data['params'][0]: key_type}
+                    key_type = compiler.visit(key_node.data['body'], local, names, readonly)
+                elif key_node.kind == 'literal' and isinstance(key_node.data['value'], str):
+                    # Field-name sorting uses the table's heterogeneous buckets,
+                    # including textual fallback for structures and booleans.
+                    key_type = UNKNOWN
+                elif types[1].kind != 'Null':
+                    key_type = UNKNOWN
+            if any(t.kind in ('List', 'Record', 'Bool', 'Unit', 'Callable', 'Result') for t in alternatives(key_type)):
+                from common.expression_functions import _MULTI_KEY_HINT
+                compiler.issue(key_node, 'UNORDERED', 'sorted의 키는 순서 비교 가능한 값이어야 합니다. ' + _MULTI_KEY_HINT)
         if name in ('unique', 'intersection', 'difference', 'sorted') and types and types[0].kind == 'List':
             return Type('List', item=types[0].item or UNKNOWN)
         if name == 'union' and types:

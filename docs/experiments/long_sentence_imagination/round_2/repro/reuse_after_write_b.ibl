@@ -1,0 +1,5 @@
+#!ibl edition=2
+# 수정본: 반환만 바뀜 — 앞 읽기(쓰기와 다른 경로)는 재사용 후보여야 하는가
+$a = [self:read]{path:f"${폴더}/venues.json"}
+$w = [self:write]{path:$출력, content:"x"}
+return {n:len($a.data.venues), budget:$a.data.budget}

@@ -135,8 +135,9 @@ def test_changed_dependency_invalidates_read_reuse_without_contract_change(tmp_p
     assert out["reuse"]["reused_calls"] == 0
 
 
-@pytest.mark.parametrize("effects", [["write_external"], ["model"], ["unknown"]])
+@pytest.mark.parametrize("effects", [["write_external"], ["model", "write_external"], ["unknown"]])
 def test_effect_barrier_invalidates_later_reads_even_through_functions(tmp_path, effects):
+    # A model that mutates external state must declare that effect as well.
     state = {"n": 1}
     calls = []
     def read(*_):

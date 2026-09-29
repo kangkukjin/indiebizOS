@@ -1,0 +1,5 @@
+#!ibl edition=2
+# schema 에 pros/cons 를 선언했는데 오타 필드 conz 를 읽는다 — check 가 잡는가
+$r = [{venue:"V1", reviews:"좋아요\n추워요"}] >> [table:ai]{instruction:"장점 pros, 우려 cons 목록", schema:"pros(문자열 목록), cons(문자열 목록)", preserve_rows:true}
+$x = $r.items >> [table:each] { return {v:$it.venue, c:$it.conz} }
+return $x

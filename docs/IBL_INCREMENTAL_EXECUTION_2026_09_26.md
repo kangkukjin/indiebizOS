@@ -29,7 +29,7 @@
 - 재사용한 호출은 **새 실행의 저널에도 완결 영수증**으로 남는다 — 그 실행을 다시 resume/reuse 할 수 있다(사슬).
 - 증거: `receipt_reused{source: reuse|journal|replay, run_id}` 사건, 봉투 `reuse:{run_id, reused_calls, candidates}`.
 - `resume` 과 함께 쓰면 `REUSE_ARGUMENT`. 같은 프로그램=resume, 고친 프로그램=reuse.
-- 68회차 보강: 원 실행의 상태 변경보다 앞서거나 겹친 읽기는 후보에서 제외한다. 변경 이후의 성공 읽기만 남으며 `continuation.state_change_possible`과 `read_calls`가 그 사실을 드러낸다. 순서 정보가 없는 옛 저널은 새 실행에 재사용하지 않는다.
+- 68회차의 쓰기 순서 장벽은 2026-09-30 긴문장 2회차 수리에서 자원 충돌 판정으로 좁혔다. 원 실행의 쓰기 자원과 겹치는 이전·동시 읽기만 후보에서 제외하고, 현재 실행의 쓰기도 같은 규칙을 쓴다. 자원이 미상이면 전체 제외하며 `model` 단독 효과는 읽기를 무효화하지 않는다(모델 출력 자체의 reuse는 미지원). `continuation.state_change_possible`과 `read_calls`가 상태 변경 여부·안전한 읽기 수를 드러낸다. 순서 정보가 없는 옛 저널은 새 실행에 재사용하지 않는다.
 - `per_run:true`(시계)는 새 실행에서 다시 읽고 같은 실행의 resume에서만 복원한다. check도 핸들 존재·잠금·문맥·동일 실행 지문을 읽기 전용으로 검사한다.
 - 성공 반환은 원천 불완전 여부와 관계없이 completed이며 `source_complete`는 별도 축이다. 정상 반환한 과거 interrupted 기록은 SQLite 백업 후 보수적으로 이주한다.
 - 표면: execute_ibl 스키마(tool_loader)·HTTP(api_ibl.IBLRequest)·MCP(mcp_server, 루트라 다음 MCP 기동에 반영)·회원 화이트리스트(member_runner).

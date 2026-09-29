@@ -1,0 +1,8 @@
+#!ibl edition=2
+[def:계산]($n) { return {필요:61 + (0 - ((0 - $n * 0.5) // 1))} }
+$직접 = [fn:계산]{n:12}
+$목록 = [12] >> [table:each] { [fn:계산]{n:$it} }
+$표시 = $목록 >> [table:each] { return f"${it.필요}" }
+$걸러 = $목록 >> [table:filter]{where:($r)=>$r.필요 > 0}
+$표시2 = $걸러 >> [table:each] { return f"${it.필요}" }
+return {직접:f"${직접.필요}", each:$표시, filter뒤:$표시2}

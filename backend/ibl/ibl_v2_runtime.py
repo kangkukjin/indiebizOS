@@ -71,10 +71,12 @@ class Runtime(ExpressionEvaluator):
         self.plan = plan
         self.inputs = copy.deepcopy(inputs or {})
         self.input_evidence = copy.deepcopy(input_evidence or {})
-        self.reuse_invalidated = False
+        self.reuse_writes = []
         self.cancel_check = cancel_check
         self.budget = budget or Budget()
         self.trace, self.recordings = [], []
+        self.model_usage = []
+        self.expression_events = {}
         self.source_map = {}
         self.replay, self.recorded = replay, list(recordings or [])
         self.lock = threading.RLock()
@@ -83,14 +85,24 @@ class Runtime(ExpressionEvaluator):
         self.commit_scope = current_scope() or CommitScope()
         self.owns_commit_scope = current_scope() is None
 
-    def event(self, node, kind, parents=(), **extra):
+    def event(self, node, kind, parents=(), *, coalesce=False, **extra):
         with self.lock:
+            key = (node.id, kind, tuple(sorted(parents)))
+            if coalesce and key in self.expression_events:
+                eid = self.expression_events[key]
+                self.trace[eid - 1]['evaluations'] = self.trace[eid - 1].get('evaluations', 1) + 1
+                dependencies = getattr(self.local, 'dependencies', None)
+                if dependencies is not None:
+                    dependencies.add(eid)
+                return eid
             eid = len(self.trace) + 1
             if node.id not in self.source_map:
                 self.source_map[node.id] = span(self.plan.source, node)
             self.trace.append({"id": eid, "node_id": node.id, "invocation_id": eid,
                                "kind": kind, "parents": sorted(parents),
                                **extra})
+            if coalesce:
+                self.expression_events[key] = eid
             dependencies = getattr(self.local, "dependencies", None)
             if dependencies is not None:
                 dependencies.add(eid)
@@ -147,7 +159,7 @@ class Runtime(ExpressionEvaluator):
                 if isinstance(exc, Fault):
                     raise
                 raise Fault("VALUE", str(exc), node) from exc
-            eid = self.event(node, node.kind, result.evidence | dependencies)
+            eid = self.event(node, node.kind, result.evidence | dependencies, coalesce=True)
             roots = frozenset({eid})
             return Binding(result.value, roots)
         except Returned as returned:
@@ -550,11 +562,12 @@ class Runtime(ExpressionEvaluator):
                      (contract["effects"] == ["unknown"] and spec.reusable is not None
                       and spec.reusable(args.value)))
         reusable_read = read_only and not contract.get('per_run', False)
-        # A write/opaque/model call can change the state read by any later
-        # external leaf. Reuse remains available before that boundary only.
-        if external and not read_only:
+        from ibl_run_journal import call_resources, resources_overlap
+        state_change = external and not read_only and contract['effects'] != ['model']
+        footprint = call_resources(spec, contract, args.value, 'write' if state_change else 'read')
+        if state_change:
             with self.lock:
-                self.reuse_invalidated = True
+                self.reuse_writes.append(footprint)
 
         def failed(error):
             # A failed external leaf is a missing source even when a surrounding
@@ -573,7 +586,7 @@ class Runtime(ExpressionEvaluator):
         receipt, source = None, "journal"
         if self.journal and external:
             receipt = self.journal.begin(call_id, request_hash, getattr(self.local, "cleanup", None) is not None,
-                                         reusable=reusable_read, state_change=not read_only)
+                                         reusable=reusable_read, state_change=state_change, resources=footprint)
         if self.replay and external and receipt is None:
             with self.lock:
                 receipt = next((r for r in self.recorded if r["request_hash"] == request_hash), None)
@@ -582,7 +595,9 @@ class Runtime(ExpressionEvaluator):
             if receipt is None:
                 raise Fault("REPLAY_MISSING", "이 입력·정의의 실행 기록이 없습니다. 외부 호출하지 않습니다.", node, kind="protocol")
             source = "replay"
-        if receipt is None and external and self.reusable and reusable_read and not self.reuse_invalidated:
+        with self.lock:
+            invalidated = any(resources_overlap(footprint, writes) for writes in self.reuse_writes)
+        if receipt is None and external and self.reusable and reusable_read and not invalidated:
             # 선언된 읽기 효과, 또는 미상 효과 어휘의 부작용 해소 규칙이 '없음'인 op 만 — 쓰기·모델 호출은 언제나
             # 다시 실행한다. 실패 영수증도 재사용하지 않는다.
             hit = self.reusable.get(reuse_key)
@@ -625,16 +640,27 @@ class Runtime(ExpressionEvaluator):
             guard(value, contract["result"], f"{key} 반환")
             tool_evidence = receipt.get("evidence", {})
         else:
+            usage = []
             try:
                 self.local.invocation_id = call_id
                 from execution_commit import bind_scope
                 from datetime import datetime
                 observed_at = datetime.now().isoformat()
-                with bind_scope(self.commit_scope, observed_at):
-                    value = spec.run(self, copy.deepcopy(args.value))
+                from model_call_context import capture_usage
+                with capture_usage() as usage:
+                    try:
+                        with bind_scope(self.commit_scope, observed_at):
+                            value = spec.run(self, copy.deepcopy(args.value))
+                    finally:
+                        with self.lock:
+                            self.model_usage.extend(usage)
+                        if usage:
+                            self.event(node, 'model_usage', [eid], calls=copy.deepcopy(usage))
                 from ibl_v2_adapters import Adapted
                 if isinstance(value, Adapted):
                     tool_evidence, value = value.evidence, value.value
+                if usage:
+                    tool_evidence = {**tool_evidence, 'model_usage': copy.deepcopy(usage)}
                 guard(value, contract["result"], f"{key} 반환")
                 if external:
                     receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence,
@@ -648,7 +674,8 @@ class Runtime(ExpressionEvaluator):
             except Exception as error:
                 exc = failed(error)
                 receipt = {"request_hash": request_hash, "action": key, "reuse_key": reuse_key,
-                           "error": projection(exc.view(self.plan.source)), "partial": pack(exc.partial)}
+                           "error": projection(exc.view(self.plan.source)), "partial": pack(exc.partial),
+                           **({'evidence': {'model_usage': copy.deepcopy(usage)}} if usage else {})}
                 if self.journal and external:
                     self.journal.finish(call_id, receipt)
                 with self.lock:
@@ -666,8 +693,8 @@ class Runtime(ExpressionEvaluator):
 
     def _run(self):
         if self.plan.issues:
-            from ibl_v2_analysis import rejection_message
-            return {**self.plan.report(), "success": False,
+            from ibl_v2_analysis import rejection_message, compact_check
+            return {**compact_check(self.plan), "success": False,
                     "error": rejection_message("실행 전 검사에서 거절했습니다", self.plan.issues)}
         if set(self.inputs) != set(self.plan.input_types):
             return {"edition": 2, "success": False, "error": "컴파일 시 입력 서명과 실행 입력이 다릅니다.", "executed": False}
@@ -707,6 +734,9 @@ class Runtime(ExpressionEvaluator):
                     "evidence": self.trace, "source_map": self.source_map, "recordings": self.recordings,
                     "usage": {"steps": self.budget.used_steps, "rows": self.budget.used_rows,
                               "elapsed_ms": round((time.monotonic() - self.budget.started) * 1000)}})
+        if self.model_usage:
+            from model_call_context import summarize_usage
+            out['usage']['model'] = summarize_usage(self.model_usage)
         if self.owns_commit_scope and out.get("success") and out.get("source_complete"):
             try:
                 self.commit_scope.commit()
@@ -726,6 +756,6 @@ class Runtime(ExpressionEvaluator):
                     **({"reuse_args": {"reuse": {"run_id": self.journal.run_id}}} if reusable['read_calls'] else {}),
                     **reusable,
                     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. "
-                            "현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. "
+                            "현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. "
                             "동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."}
         return out

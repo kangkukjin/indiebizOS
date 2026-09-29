@@ -50,9 +50,10 @@ def validate_contract(contract):
         raise ValueError("pipe_input은 선언된 인자여야 합니다.")
     if not set(contract.get("required", contract["params"])) <= contract["params"].keys():
         raise ValueError("required는 params에 포함되어야 합니다.")
-    writes = contract.get("write_resources", {})
-    if not isinstance(writes, dict) or any(v not in contract["params"] for v in writes.values()):
-        raise ValueError("write_resources는 자원 종류→선언 인자 이름입니다.")
+    for name in ('read_resources', 'write_resources'):
+        resources = contract.get(name, {})
+        if not isinstance(resources, dict) or any(v not in contract["params"] for v in resources.values()):
+            raise ValueError(f"{name}는 자원 종류→선언 인자 이름입니다.")
     adapter = contract.get("adapter", {})
     envelopes = adapter.get("input_envelopes", [])
     if (not isinstance(envelopes, list)
@@ -311,6 +312,7 @@ def load_registry(project_path=".", agent_id=None):
             contract = copy.deepcopy(validate_contract(contract))
             contract["analysis"] = {"ai_call": action_config.get("ai_call") is True,
                                     "ai_inspect_param": action_config.get("ai_inspect_param"),
+                                    "schema_param": action_config.get("schema_param"),
                                     "flow": action_config.get("flow", {})}
             adapter = contract["adapter"]
             key = f"{node}:{action}"

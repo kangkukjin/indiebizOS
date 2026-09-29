@@ -1,0 +1,5 @@
+#!ibl edition=2
+$b = (0 - 3.0) // 1
+$plus = 61 + (0 - $b)
+$L = [10,20,30,40]
+return {b:$b, b_text:f"${b}", plus:$plus, plus_text:f"${plus}", plus_textfn:text($plus), idx:$L[(7.5 // 2)], cmp:$plus == 64, json:json([$plus])}

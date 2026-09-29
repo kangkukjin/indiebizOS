@@ -1,0 +1,4 @@
+#!ibl edition=2
+$g = [{k:"a",v:1},{k:"a",v:2}] >> [table:groupby]{by:"k",agg:{합:["sum","v"]}}
+$a = [self:read]{path:f"${폴더}/venues.json"}
+return {n:len($a.data.venues), g:$g.items, b:$a.data.budget}

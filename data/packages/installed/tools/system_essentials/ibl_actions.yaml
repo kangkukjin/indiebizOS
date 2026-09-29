@@ -39,6 +39,7 @@ nodes:
       read:
         callable_contract:
           version: 1
+          read_resources: {file: path}
           params:
             path: Text
             offset: Number

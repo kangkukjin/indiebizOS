@@ -1,0 +1,6 @@
+#!ibl edition=2
+[def:행]($d) { return [{venue:"V1", date:$d, cost:10}, {venue:"V2", date:$d, cost:5}] }
+$펼침 = ["a","b"] >> [table:each]{mode:"flat_map"} { [fn:행]{d:$it} }
+$정렬 = sorted($펼침, "cost")
+$걸러 = $펼침 >> [table:filter]{where:($r)=>$r.cost > 0}
+return {펼침:$펼침 >> [table:each]{ return {v:$it.venue} }, 정렬:$정렬 >> [table:each]{ return {v:$it.venue} }, 걸러:$걸러 >> [table:each]{ return {v:$it.venue} }, 잘라:$정렬[:1] >> [table:each]{ return {v:$it.venue} }}

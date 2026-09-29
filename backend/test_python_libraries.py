@@ -12,6 +12,10 @@ from ibl_v2_runtime import Runtime, Budget
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# 작업자 프로세스·참조 수명·실제 라이브러리 연동. 빠른 계약 검사와 같은 파일에서
+# 검증 순서를 유지하고, IBL 실행/스크립트/권한 변경 때 이 묶음을 함께 실행한다.
+pytestmark = pytest.mark.system
+
 
 @pytest.fixture(scope='module')
 def registry():

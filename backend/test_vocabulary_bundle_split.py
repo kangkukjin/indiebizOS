@@ -14,6 +14,8 @@ from vocabulary_archive import export_directory, unpack
 from test_vocabulary_archive import runtime  # noqa: F401 — 임시 사전·시딩 DB
 
 ROOT = Path(__file__).resolve().parents[1]
+
+pytestmark = pytest.mark.system
 PACKAGES = ROOT / "data/packages/installed/tools"
 SPLITS = {
     "entity-lookup": ("study", ["sense:entity"]),

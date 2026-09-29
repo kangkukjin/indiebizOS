@@ -14,6 +14,7 @@ def snapshot():
     return catalog.load_snapshot(ROOT)
 
 
+@pytest.mark.system
 def test_atlas_names_reach_the_selected_excerpt(snapshot):
     entries = [e for e in snapshot.entries if e.id.startswith(("atlas.", "foundation.", "basics."))]
     assert len(entries) >= 1000

@@ -14,6 +14,8 @@ from ibl_routing import invalidate_runtime_caches as REAL_RESET
 
 REPO = Path(__file__).resolve().parents[1]
 
+pytestmark = pytest.mark.system
+
 
 def packet():
     fragment = {'node': 'sense', 'actions': {'lego_probe': {

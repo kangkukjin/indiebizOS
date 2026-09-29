@@ -14,6 +14,8 @@ import pytest
 from restart_process import ProcessAdapter, alive, identity, signal_owned, tree
 from restart_protocol import atomic_json, code_manifest, control_dir, read_json, request
 
+pytestmark = pytest.mark.system
+
 ROOT = Path(__file__).resolve().parents[1]
 SERVER = '''
 import asyncio, os, time

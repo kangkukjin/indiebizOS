@@ -44,7 +44,7 @@
     },
     {
       "name": "data_sort",
-      "description": "records|table → 정렬. by(필드/열명, 필수), desc(bool, 기본 false). 수치 인식 정렬. >> 앞 통화를 받음.",
+      "description": "records|table → 정렬. by(필드/열명, 필수), descending(bool, 기본 false). 판본 1의 desc도 호환. 수치 인식 정렬.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -66,6 +66,10 @@
           "order": {
             "type": "string",
             "description": "desc 의 값-해석 별칭 — \"desc\"=내림차순, \"asc\"=오름차순 (desc 키가 우선)."
+          },
+          "descending": {
+            "type": "boolean",
+            "description": "table:sort 파라미터"
           }
         },
         "required": [

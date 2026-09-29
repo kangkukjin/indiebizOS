@@ -1,0 +1,497 @@
+[
+  {
+    "id": 232,
+    "intent_before": "홈페이지에 컴포넌트 추가하고 빌드해서 배포",
+    "intent": "홈페이지에 컴포넌트 추가하고 빌드해서 배포",
+    "before": "[engines:web_component]{op: \"add\", component: \"card\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}",
+    "after": "#!ibl edition=2\n[engines:web_component]{op: \"add\", component: \"card\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 910,
+    "intent_before": "내 홈페이지들 상태 점검",
+    "intent": "내 홈페이지들 상태 점검",
+    "before": "$사이트=[engines:web_site]{op:\"list\"}\n$사이트.sites >> [table:each]{limit:$사이트.count,collect:true} { [engines:web]{op:\"check\",site_id:$it.id} }",
+    "after": "#!ibl edition=2\n$sites=[engines:web_site]{op:\"list\"}\n$sites.sites >> [table:each] { [engines:web]{op:\"check\",site_id:$it.id} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 1258,
+    "intent_before": "새 페이지 만들고 미리보기로 확인",
+    "intent": "새 페이지 만들고 미리보기로 확인",
+    "before": "[engines:web]{op: \"create\", target: \"page\", site_id: \"indiebiz-os-홈페이지\", sections: [\"hero\", \"features\"]} >> [engines:web]{op: \"preview\", site_id: \"indiebiz-os-홈페이지\", action: \"start\"}",
+    "after": "#!ibl edition=2\n[engines:web]{op: \"create\", target: \"page\", site_id: \"indiebiz-os-홈페이지\", page_name:\"example\", sections: [\"hero\", \"features\"]}\n[engines:web]{op: \"preview\", site_id: \"indiebiz-os-홈페이지\", action: \"start\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 1338,
+    "intent_before": "홈페이지 스크린샷 찍고 스타일 수정 후 재배포",
+    "intent": "홈페이지 상태를 읽고 기본 테마 적용 후 빌드·배포",
+    "before": "[engines:web]{op: \"snapshot\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"styles\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}",
+    "after": "#!ibl edition=2\n[engines:web]{op: \"snapshot\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"styles\", theme:\"default\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 1548,
+    "intent_before": "사이트 배포하고 정상 동작하는지까지 확인",
+    "intent": "사이트 배포하고 정상 동작하는지까지 확인",
+    "before": "[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "after": "#!ibl edition=2\n[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 1816,
+    "intent_before": "홈페이지 빌드하고 배포해줘",
+    "intent": "홈페이지 빌드하고 배포해줘",
+    "before": "[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}",
+    "after": "#!ibl edition=2\n[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 1824,
+    "intent_before": "홈페이지를 빌드, 배포, 상태 확인까지 한번에",
+    "intent": "홈페이지를 빌드, 배포, 상태 확인까지 한번에",
+    "before": "[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "after": "#!ibl edition=2\n[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3290,
+    "intent_before": "내 라이브러리 곡들 제목순으로 정렬해줘",
+    "intent": "내 라이브러리 곡들 제목순으로 정렬해줘",
+    "before": "[self:music]{op: \"library\"} >> [table:sort]{by: \"title\"}",
+    "after": "#!ibl edition=2\n$r = [self:music]{op: \"library\"}\n$r.items >> [table:sort]{by: \"title\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3357,
+    "intent_before": "위치 있는 사진 20장 따로 모아줘",
+    "intent": "위치 있는 사진 20장 따로 모아줘",
+    "before": "[self:photo]{has_gps: true} >> [table:take]{n: 20} >> [self:copy]{dest: \"~/Desktop/위치사진\"}",
+    "after": "#!ibl edition=2\n$p=[self:photo]{has_gps:true,limit:20}\n[self:copy]{items:$p.items,dest:\"~/Desktop/위치사진\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3406,
+    "intent_before": "특정 도서의 구매 링크를 포함한 홍보 배너 컴포넌트를 생성하여 웹사이트의 특정 섹션에 통합 및 검증하기",
+    "intent": "특정 도서의 구매 링크를 포함한 홍보 배너 컴포넌트를 생성하여 웹사이트의 특정 섹션에 통합 및 검증하기",
+    "before": "[sense:search]{source: \"naver\", query: \"<도서명> <저자명> 교보문고\"} >> [self:write]{path: \"<경로>/book-banner-section.tsx\", content: \"<컴포넌트_템플릿>\"} >> [self:edit]{path: \"<경로>/page.tsx\", old_string: \"<위치>\", new_string: \"<컴포넌트_삽입>\"} >> [engines:web]{op: \"build\", project_path: \"<경로>\"} >> [limbs:browser]{op: \"evaluate\", expression: \"document.querySelector('#book a[href*=\\\"kyobobook\\\"]')?.href\"}",
+    "after": "#!ibl edition=2\n[sense:search]{source: \"naver\", query: \"<도서명> <저자명> 교보문고\"}\n[self:write]{path: \"<경로>/book-banner-section.tsx\", content: \"<컴포넌트_템플릿>\"}\n[self:edit]{path: \"<경로>/page.tsx\", old_string: \"<위치>\", new_string: \"<컴포넌트_삽입>\"}\n[engines:web]{op: \"build\", project_path: \"<경로>\"}\n[limbs:browser]{op: \"evaluate\", expression: \"document.querySelector('#book a[href*=\\\"kyobobook\\\"]')?.href\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3671,
+    "intent_before": "재즈 라디오 찾아서 첫 채널 틀어줘",
+    "intent": "재즈 라디오 찾아서 첫 채널 틀어줘",
+    "before": "[sense:radio]{op: \"search\", tag: \"jazz\"} >> [table:take]{n: 1} >> [table:each] {\n  [limbs:radio]{op: \"play\", stream_url: '$it.stream_url'}\n}",
+    "after": "#!ibl edition=2\n$r = [sense:radio]{op: \"search\", tag: \"jazz\"}\n$r.items >> [table:take]{n: 1} >> [table:each] {\n  [limbs:radio]{op: \"play\", stream_url: $it.stream_url}\n}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3672,
+    "intent_before": "KBS 라디오 중에 클래식 채널 찾아서 틀어",
+    "intent": "KBS 라디오 중에 클래식 채널 찾아서 틀어",
+    "before": "[sense:radio]{op: \"korean\", broadcaster: \"KBS\"} >> [table:filter]{where: {field: \"name\", op: \"contains\", value: \"클래식\"}} >> [table:take]{n: 1} >> [table:each] {\n  [limbs:radio]{op: \"play\", station_id: '$it.station_id'}\n}",
+    "after": "#!ibl edition=2\n$r=[sense:radio]{op:\"korean\",broadcaster:\"KBS\"}\n$r.items >> [table:filter]{where:($s)=>$s.station_id==\"kbs_classicfm\"} >> [table:each]{ [limbs:radio]{op:\"play\",station_id:$it.station_id} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3673,
+    "intent_before": "프랑스 라디오 방송국 다섯 개만 골라줘",
+    "intent": "프랑스 라디오 방송국 다섯 개만 골라줘",
+    "before": "[sense:radio]{op: \"search\", country: \"France\"} >> [table:take]{n: 5}",
+    "after": "#!ibl edition=2\n$r = [sense:radio]{op: \"search\", country: \"France\"}\n$r.items >> [table:take]{n: 5}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3675,
+    "intent_before": "CBS 라디오 채널 하나 즐겨찾기 해놔",
+    "intent": "CBS 라디오 채널 하나 즐겨찾기 해놔",
+    "before": "[sense:radio]{op: \"korean\", broadcaster: \"CBS\"} >> [table:take]{n: 1} >> [table:each] {\n  [limbs:radio_favorite]{op: \"add\", station_id: '$it.station_id'}\n}",
+    "after": "#!ibl edition=2\n$r = [sense:radio]{op: \"korean\", broadcaster: \"CBS\"}\n$r.items >> [table:take]{n: 1} >> [table:each] {\n  [limbs:radio_favorite]{op: \"add\", station_id: $it.station_id}\n}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3676,
+    "intent_before": "브람스 곡 찾아서 연주 시간 긴 순으로 보여줘",
+    "intent": "브람스 곡 찾아서 연주 시간 긴 순으로 보여줘",
+    "before": "[self:music]{op: \"library\", q: \"브람스\"} >> [table:sort]{by: \"duration\", desc: true}",
+    "after": "#!ibl edition=2\n$r = [self:music]{op: \"library\", q: \"브람스\"}\n$r.items >> [table:sort]{by: \"duration\", descending: true}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3677,
+    "intent_before": "내 음악 중에 90년대 노래만 추려줘",
+    "intent": "내 음악 중에 90년대 노래만 추려줘",
+    "before": "[self:music]{op: \"library\", limit: 500} >> [table:filter]{where: {field: \"year\", op: \"ge\", value: 1990}} >> [table:filter]{where: {field: \"year\", op: \"lt\", value: 2000}}",
+    "after": "#!ibl edition=2\n$r = [self:music]{op: \"library\", limit: 500}\n$r.items >> [table:filter]{where:($r)=>$r.year != null and $r.year >= 1990} >> [table:filter]{where:($r)=>$r.year < 2000}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3682,
+    "intent_before": "동영상만 찾아서 용량 큰 순으로 10개",
+    "intent": "동영상만 찾아서 용량 큰 순으로 10개",
+    "before": "[self:photo]{kind: \"video\", limit: 200} >> [table:sort]{by: \"size\", desc: true} >> [table:take]{n: 10}",
+    "after": "#!ibl edition=2\n$r = [self:photo]{kind: \"video\", limit: 200}\n$r.items >> [table:sort]{by: \"size\", descending: true} >> [table:take]{n: 10}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3708,
+    "intent_before": "즐겨찾기 라디오 방송국 상태 하나씩 확인해줘",
+    "intent": "즐겨찾기 라디오 방송국 이름으로 하나씩 검색",
+    "before": "[limbs:radio_favorite]{op: \"list\"} >> [table:each]{limit: 5} { [sense:radio]{query: '$it.name'} }",
+    "after": "#!ibl edition=2\n$r=[limbs:radio_favorite]{op:\"list\"}\n$r.items >> [table:each]{ [sense:radio]{op:\"search\",name:$it.name} }",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3807,
+    "intent_before": "내 음악에서 김광석 곡 5개만 제목이랑 앨범으로 보여줘",
+    "intent": "내 음악에서 김광석 곡 5개만 제목이랑 앨범으로 보여줘",
+    "before": "[self:music]{op: \"library\", q: \"김광석\"} >> [table:take]{n: 5} >> [table:select]{columns: [\"title\", \"album\"]}",
+    "after": "#!ibl edition=2\n$r = [self:music]{op: \"library\", q: \"김광석\"}\n$r.items >> [table:take]{n: 5} >> [table:select]{columns: [\"title\", \"album\"]}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3820,
+    "intent_before": "김광석 곡 5개 제목만 파일로 저장해줘",
+    "intent": "김광석 곡 5개 제목만 파일로 저장해줘",
+    "before": "$곡 = [self:music]{op: \"library\", q: \"김광석\"} >> [table:take]{n: 5}\n[self:write]{path:\"김광석.txt\",content:\"${곡.items.*.title}\"}",
+    "after": "#!ibl edition=2\n$r=[self:music]{op:\"library\",q:\"김광석\",limit:5}\n$titles=$r.items >> [table:each]{return $it.title}\n[self:write]{path:\"김광석.txt\",content:join(\"\\n\",$titles)}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3833,
+    "intent_before": "재즈 라디오 방송국 3곳 찾아줘",
+    "intent": "재즈 라디오 방송국 3곳 찾아줘",
+    "before": "[sense:radio]{op: \"search\", name: \"jazz\", limit: 10} >> [table:take]{n: 3}",
+    "after": "#!ibl edition=2\n$r = [sense:radio]{op: \"search\", name: \"jazz\", limit: 10}\n$r.items >> [table:take]{n: 3}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3841,
+    "intent_before": "GPS 있는 내 사진 3장 지도에 찍어줘",
+    "intent": "GPS 있는 내 사진 3장 지도에 찍어줘",
+    "before": "[self:photo]{has_gps: true, limit: 20} >> [table:take]{n: 3} >> [limbs:show_map]{markers: \"$items\"}",
+    "after": "#!ibl edition=2\n$r=[self:photo]{has_gps:true,limit:3}\n[limbs:show_map]{markers:$r.items}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3917,
+    "intent_before": "홈페이지 업데이트해줘. 많은 것이 바뀌었으니까",
+    "intent": "이미 수정한 홈페이지를 빌드·배포하고 품질 검사",
+    "before": "[engines:web_site]{op: \"list\"} >> [engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "after": "#!ibl edition=2\n[engines:web_site]{op: \"list\"}\n[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3918,
+    "intent_before": "홈페이지 많이 바뀐 내용 반영해서 갱신해줘",
+    "intent": "이미 수정한 홈페이지를 빌드·배포하고 품질 검사",
+    "before": "[engines:web_site]{op: \"list\"} >> [engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "after": "#!ibl edition=2\n[engines:web_site]{op: \"list\"}\n[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3919,
+    "intent_before": "홈페이지 현행화하고 배포까지 해줘",
+    "intent": "이미 수정한 홈페이지를 빌드·배포하고 품질 검사",
+    "before": "[engines:web_site]{op: \"list\"} >> [engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "after": "#!ibl edition=2\n[engines:web_site]{op: \"list\"}\n[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3920,
+    "intent_before": "홈페이지 고쳐서 올리고 완성되면 브라우저에 띄워줘",
+    "intent": "이미 수정한 홈페이지를 빌드·배포하고 품질 검사 후 브라우저로 열기",
+    "before": "[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"} >> [limbs:os_open]{target: \"https://indiebiz-homepage.vercel.app/\"}",
+    "after": "#!ibl edition=2\n[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}\n[limbs:os_open]{target: \"https://indiebiz-homepage.vercel.app/\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3921,
+    "intent_before": "홈페이지 내용 최신 상태로 맞춰줘",
+    "intent": "이미 수정한 홈페이지를 빌드·배포하고 품질 검사",
+    "before": "[engines:web_site]{op: \"list\"} >> [engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"} >> [engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "after": "#!ibl edition=2\n[engines:web_site]{op: \"list\"}\n[engines:web]{op: \"build\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"deploy\", site_id: \"indiebiz-os-홈페이지\"}\n[engines:web]{op: \"check\", site_id: \"indiebiz-os-홈페이지\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3973,
+    "intent_before": "KBS 클래식 FM 즐겨찾기에 추가해줘",
+    "intent": "KBS 클래식 FM 즐겨찾기에 추가해줘",
+    "before": "$st = [sense:radio]{op: \"korean\", query: \"클래식\"} >> [table:take]{n: 1}; [limbs:radio_favorite]{op: \"add\", station_id: \"$st.items.0.station_id\", name: \"$st.items.0.name\"}",
+    "after": "#!ibl edition=2\n[limbs:radio_favorite]{op:\"add\",station_id:\"kbs_classicfm\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3974,
+    "intent_before": "MBC 라디오 찾아서 즐겨찾기에 넣어줘",
+    "intent": "MBC 라디오 찾아서 즐겨찾기에 넣어줘",
+    "before": "$st = [sense:radio]{op: \"korean\", query: \"MBC\"} >> [table:take]{n: 1}; [limbs:radio_favorite]{op: \"add\", station_id: \"$st.items.0.station_id\", name: \"$st.items.0.name\"}",
+    "after": "#!ibl edition=2\n$r=[sense:radio]{op:\"korean\",broadcaster:\"MBC\"}\n$r.items >> [table:take]{n:1} >> [table:each]{[limbs:radio_favorite]{op:\"add\",station_id:$it.station_id,name:$it.name}}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3975,
+    "intent_before": "전세계 라디오에서 BBC 월드서비스 찾아 즐겨찾기 추가",
+    "intent": "전세계 라디오에서 BBC 월드서비스 찾아 즐겨찾기 추가",
+    "before": "$st = [sense:radio]{op: \"search\", query: \"BBC World Service\"} >> [table:take]{n: 1}; [limbs:radio_favorite]{op: \"add\", url: \"$st.items.0.stream_url\", title: \"$st.items.0.name\"}",
+    "after": "#!ibl edition=2\n$r=[sense:radio]{op:\"search\",name:\"BBC World Service\",limit:1}\n$r.items >> [table:each]{[limbs:radio_favorite]{op:\"add\",stream_url:$it.stream_url,name:$it.name}}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4222,
+    "intent_before": "김광석 곡 목록을 파일로 한 번에 저장해줘",
+    "intent": "김광석 곡 목록을 파일로 한 번에 저장해줘",
+    "before": "$곡 = [self:music]{op: \"library\", q: \"김광석\"} >> [table:take]{n: 3}\n[self:write]{path:\"김광석.txt\",content:\"${곡.items.*.title}\"}",
+    "after": "#!ibl edition=2\n$r=[self:music]{op:\"library\",q:\"김광석\",limit:3}\n$titles=$r.items >> [table:each]{return $it.title}\n[self:write]{path:\"김광석.txt\",content:join(\"\\n\",$titles)}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4277,
+    "intent_before": "index.html 두 뷰포트로 찍어서 웹 기준으로 심사해줘",
+    "intent": "index.html 두 뷰포트로 찍어서 웹 기준으로 심사해줘",
+    "before": "[engines:render]{path: \"index.html\", viewports: [\"1280x800\", \"390x844\"]} >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: '$it.path', intent: '랜딩 페이지가 $it.label 폭에서 성립하고 위계가 읽히는가', criteria: 'web'}\n}",
+    "after": "#!ibl edition=2\n$r = [engines:render]{path: \"index.html\", viewports: [\"1280x800\", \"390x844\"]}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: $it.path, intent: f\"랜딩 페이지가 ${it.label} 폭에서 성립하고 위계가 읽히는가\", criteria: 'web'}\n}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4278,
+    "intent_before": "슬라이드 PDF 를 쪽마다 심사해서 문제 있는 쪽 알려줘",
+    "intent": "슬라이드 PDF 를 쪽마다 심사해서 문제 있는 쪽 알려줘",
+    "before": "[engines:render]{op: \"pdf\", path: \"슬라이드.pdf\"} >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: '$it.path', intent: '슬라이드 $it.page 쪽이 깨짐 없이 읽히는가', criteria: 'visual_base'}\n}",
+    "after": "#!ibl edition=2\n$r = [engines:render]{op: \"pdf\", path: \"슬라이드.pdf\"}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: $it.path, intent: f\"슬라이드 ${it.page} 쪽이 깨짐 없이 읽히는가\", criteria: 'visual_base'}\n}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4279,
+    "intent_before": "만든 차트 HTML 이 제대로 보이는지 눈으로 확인해봐",
+    "intent": "만든 차트 HTML 이 제대로 보이는지 눈으로 확인해봐",
+    "before": "[engines:render]{path: \"chart.html\"} >> [table:each] {\n  [engines:image_read]{op: 'read', image_path: '$it.path', question: '차트 축과 데이터가 정상적으로 그려져 있는가'}\n}",
+    "after": "#!ibl edition=2\n$r = [engines:render]{path: \"chart.html\"}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'read', image_path: $it.path, question: '차트 축과 데이터가 정상적으로 그려져 있는가'}\n}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4282,
+    "intent_before": "렌더가 실패하면 한 번 더 시도하고 그래도 안 되면 알려줘",
+    "intent": "렌더가 실패하면 한 번 더 시도하고 그래도 안 되면 알려줘",
+    "before": "$tries = 0\n$ok = 0\n[repeat: while $ok == 0 and $tries < 2, max: 2]{$tries = $tries + 1\n[try]{[engines:render]{path: \"index.html\"}\n$ok = 1} [catch]{[self:notify_user]{message: \"$tries 번째 렌더 실패: $error.summary\"}}}",
+    "after": "#!ibl edition=2\n$tries=0\n$ok=false\n$message=\"\"\n[repeat:while not $ok and $tries < 2] {\n $tries=$tries+1\n [try]{[engines:render]{path:\"index.html\"};$ok=true} [catch]{$message=$error.message}\n}\n[if:not $ok]{[self:notify_user]{message:f\"두 번의 렌더 실패: ${message}\"}}\nreturn {success:$ok,attempts:$tries}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4288,
+    "intent_before": "이 장부 렌더해서 장부 기준으로 쪽마다 심사해줘",
+    "intent": "이 장부 렌더해서 장부 기준으로 쪽마다 심사해줘",
+    "before": "[engines:render]{op: \"xlsx\", path: \"거래장부.xlsx\"} >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: '$it.path', intent: '장부 $it.page 쪽이 잘림·수식 오류 없이 읽히는가', criteria: 'sheet'}\n}",
+    "after": "#!ibl edition=2\n$r = [engines:render]{op: \"xlsx\", path: \"거래장부.xlsx\"}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: $it.path, intent: f\"장부 ${it.page} 쪽이 잘림·수식 오류 없이 읽히는가\", criteria: 'sheet'}\n}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4289,
+    "intent_before": "재고장에 오늘 입고 추가하고 장부가 멀쩡한지 눈으로 확인해줘",
+    "intent": "재고장에 오늘 입고 추가하고 장부가 멀쩡한지 눈으로 확인해줘",
+    "before": "[self:sheet]{op: \"append\", path: \"재고장.xlsx\", items: [{\"품목\": \"C형 부품\", \"수량\": 30}]} >> [engines:render]{op: \"xlsx\", path: \"재고장.xlsx\"} >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: '$it.path', intent: '새 행이 표에 맞게 들어가고 합계가 성립하는가', criteria: 'sheet'}\n}",
+    "after": "#!ibl edition=2\n[self:sheet]{op: \"append\", path: \"재고장.xlsx\", items: [{\"품목\": \"C형 부품\", \"수량\": 30}]}\n$r = [engines:render]{op: \"xlsx\", path: \"재고장.xlsx\"}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: $it.path, intent: f\"새 행이 표에 맞게 들어가고 합계가 성립하는가\", criteria: 'sheet'}\n}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4292,
+    "intent_before": "장부 렌더가 실패하면 한 번 더 시도하고 그래도 안 되면 알려줘",
+    "intent": "장부 렌더가 실패하면 한 번 더 시도하고 그래도 안 되면 알려줘",
+    "before": "$tries = 0\n$ok = 0\n[repeat: while $ok == 0 and $tries < 2, max: 2]{$tries = $tries + 1\n[try]{[engines:render]{op: \"xlsx\", path: \"재고장.xlsx\"}\n$ok = 1} [catch]{[self:notify_user]{message: \"$tries 번째 장부 렌더 실패: $error.summary\"}}}",
+    "after": "#!ibl edition=2\n$tries=0\n$ok=false\n$message=\"\"\n[repeat:while not $ok and $tries < 2] {\n $tries=$tries+1\n [try]{[engines:render]{op:\"xlsx\",path:\"재고장.xlsx\"};$ok=true} [catch]{$message=$error.message}\n}\n[if:not $ok]{[self:notify_user]{message:f\"두 번의 렌더 실패: ${message}\"}}\nreturn {success:$ok,attempts:$tries}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4293,
+    "intent_before": "이 페이지 검수하되 기계 관문에 걸린 화면은 비전 심사 없이 바로 실패 처리해줘",
+    "intent": "이 페이지 검수하되 기계 관문에 걸린 화면은 비전 심사 없이 바로 실패 처리해줘",
+    "before": "[engines:render]{path: \"index.html\", viewports: [\"1280x800\", \"390x844\"]} >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: '$it.path', intent: '페이지가 $it.label 폭에서 성립하는가', criteria: 'web', prescreen: '$it.prescreen'}\n}",
+    "after": "#!ibl edition=2\n$r = [engines:render]{path: \"index.html\", viewports: [\"1280x800\", \"390x844\"]}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: $it.path, intent: f\"페이지가 ${it.label} 폭에서 성립하는가\", criteria: 'web', prescreen: $it.prescreen}\n}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4294,
+    "intent_before": "Inspect this page but skip the paid vision check for screens that already failed the machine gate",
+    "intent": "Inspect this page but skip the paid vision check for screens that already failed the machine gate",
+    "before": "[engines:render]{path: \"landing.html\", viewports: [\"1440x900\", \"390x844\"]} >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: '$it.path', intent: 'landing page quality at $it.label', criteria: 'web', prescreen: '$it.prescreen'}\n}",
+    "after": "#!ibl edition=2\n$r = [engines:render]{path: \"landing.html\", viewports: [\"1440x900\", \"390x844\"]}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: $it.path, intent: f\"landing page quality at ${it.label}\", criteria: 'web', prescreen: $it.prescreen}\n}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4295,
+    "intent_before": "장부 렌더해서 쪽마다 심사하되 수식 오류나 빈 쪽은 비전 없이 걸러줘",
+    "intent": "장부 렌더해서 쪽마다 심사하되 수식 오류나 빈 쪽은 비전 없이 걸러줘",
+    "before": "[engines:render]{op: \"xlsx\", path: \"거래장부.xlsx\"} >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: '$it.path', intent: '장부 $it.page 쪽이 온전히 읽히는가', criteria: 'sheet', prescreen: '$it.prescreen'}\n}",
+    "after": "#!ibl edition=2\n$r = [engines:render]{op: \"xlsx\", path: \"거래장부.xlsx\"}\n$r.items >> [table:each] {\n  [engines:image_read]{op: 'critic', image_path: $it.path, intent: f\"장부 ${it.page} 쪽이 온전히 읽히는가\", criteria: 'sheet', prescreen: $it.prescreen}\n}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4802,
+    "intent_before": "강의 목록 제목만 뽑아서 문서로",
+    "intent": "강의 목록 제목만 뽑아서 문서로",
+    "before": "[self:lecture]{op: \"list\"} >> [table:select]{columns: [\"title\", \"meta\"]} >> [table:document]{title: \"강의 목록\"}",
+    "after": "#!ibl edition=2\n$r = [self:lecture]{op: \"list\"}\n$r.items >> [table:select]{columns: [\"title\", \"meta\"]} >> [table:document]{title: \"강의 목록\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 307,
+    "intent_before": "KBS 방송 채널 리스트",
+    "intent": "KBS 방송 채널 리스트",
+    "before": "#!ibl edition=2\nreturn [sense:radio]{op: \"korean\", query: \"KBS\"}",
+    "after": "#!ibl edition=2\n[sense:radio]{op:\"korean\",broadcaster:\"KBS\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 822,
+    "intent_before": "FM 라디오 채널 알려줘",
+    "intent": "FM 라디오 채널 알려줘",
+    "before": "[sense:radio]{op: \"korean\", query: \"KBS\"}",
+    "after": "#!ibl edition=2\n[sense:radio]{op:\"korean\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 875,
+    "intent_before": "국내 라디오 채널 뭐 있지",
+    "intent": "국내 라디오 채널 뭐 있지",
+    "before": "[sense:radio]{op: \"korean\", query: \"KBS\"}",
+    "after": "#!ibl edition=2\n[sense:radio]{op:\"korean\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 1395,
+    "intent_before": "라디오 실시간 방송 목록",
+    "intent": "라디오 실시간 방송 목록",
+    "before": "[sense:radio]{op: \"korean\", query: \"KBS\"}",
+    "after": "#!ibl edition=2\n[sense:radio]{op:\"korean\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 1626,
+    "intent_before": "한국 라디오 방송 목록 좀",
+    "intent": "한국 라디오 방송 목록 좀",
+    "before": "[sense:radio]{op: \"korean\", query: \"KBS\"}",
+    "after": "#!ibl edition=2\n[sense:radio]{op:\"korean\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 3282,
+    "intent_before": "김광석 곡만 골라줘 내 라이브러리에서",
+    "intent": "김광석 곡만 골라줘 내 라이브러리에서",
+    "before": "#!ibl edition=2\nreturn [self:music]{\"op\":\"library\",\"artist\":\"김광석\"}",
+    "after": "#!ibl edition=2\n[self:music]{op:\"library\",q:\"김광석\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4007,
+    "intent_before": "이 주제 조사해서 핵심 카드 이미지 한 장으로 만들어줘",
+    "intent": "이 주제 조사해서 핵심 카드 이미지 한 장으로 만들어줘",
+    "before": "$카드 = [sense:search]{source: \"naver\", query: \"오송 반도체 소부장\", count: 5} >> [table:brief]{instruction: \"핵심 3가지를 담은 HTML 카드 한 장 — <div> 마크업만\"} ; [engines:render]{html: \"$카드.message\", output_path: \"카드.png\"}",
+    "after": "#!ibl edition=2\n$r=[sense:search]{source:\"naver\",query:\"오송 반도체 소부장\",count:5}\n$card=$r >> [table:brief]{instruction:\"핵심 3가지를 담은 HTML 카드 한 장 — <div> 마크업만\"}\n[engines:render]{html:$card.message,output_path:\"카드.png\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 4287,
+    "intent_before": "정산표 수식이 실제로 계산된 값을 텍스트로 확인해줘",
+    "intent": "정산표 수식이 실제로 계산된 값을 텍스트로 확인해줘",
+    "before": "$r = [engines:render]{op: \"xlsx\", path: \"정산표.xlsx\"}\n[self:read]{path: \"${r.pdf_path}\"}",
+    "after": "#!ibl edition=2\n$r=[engines:render]{op:\"xlsx\",path:\"정산표.xlsx\"}\n[self:read]{path:$r.pdf_path}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 97,
+    "intent_before": "홈페이지 색상 테마를 다크 모드로 변경",
+    "intent": "홈페이지 색상 테마를 다크 모드로 변경",
+    "before": "[engines:web]{op: \"styles\", site_id: \"indiebiz-os-홈페이지\", theme: \"dark\"}",
+    "after": "#!ibl edition=2\n[engines:web]{op:\"styles\",site_id:\"indiebiz-os-홈페이지\",theme:\"custom\",custom_colors:{background:\"222.2 84% 4.9%\",foreground:\"210 40% 98%\"}}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 2789,
+    "intent_before": "사진 월별 타임라인",
+    "intent": "사진 월별 타임라인",
+    "before": "[self:photo]{kind: \"media\", limit: 500} >> [table:groupby]{by: \"month\"}",
+    "after": "#!ibl edition=2\n$p=[self:photo]{kind:\"all\",limit:500}\n$p.items >> [table:groupby]{by:\"month\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 2790,
+    "intent_before": "사진 종류별 개수 통계",
+    "intent": "사진 종류별 개수 통계",
+    "before": "[self:photo]{kind: \"media\", limit: 500} >> [table:groupby]{by: \"kind\"}",
+    "after": "#!ibl edition=2\n$p=[self:photo]{kind:\"all\",limit:500}\n$p.items >> [table:groupby]{by:\"kind\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 1354,
+    "intent_before": "사이트 관리 화면",
+    "intent": "즐겨찾기 사이트 대시보드 열기",
+    "before": "#!ibl edition=2\nreturn [limbs:launch]{\"action\":\"manage\"}",
+    "after": "#!ibl edition=2\n[limbs:launch]{action:\"open_ui\"}",
+    "status": "incomplete",
+    "issues": []
+  },
+  {
+    "id": 1490,
+    "intent_before": "사이트 등록 패널 열기",
+    "intent": "즐겨찾기 사이트 대시보드 열기",
+    "before": "#!ibl edition=2\nreturn [limbs:launch]{\"action\":\"register\"}",
+    "after": "#!ibl edition=2\n[limbs:launch]{action:\"open_ui\"}",
+    "status": "incomplete",
+    "issues": []
+  }
+]

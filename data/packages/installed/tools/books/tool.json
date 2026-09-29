@@ -41,10 +41,7 @@
           },
           "source": {
             "type": "string",
-            "description": "[search] \"nl\"=국립중앙도서관 납본 소장 검색 (기본=도서관정보나루 공공도서관 대출분석)",
-            "enum": [
-              "nl"
-            ]
+            "description": "[search] nl/national/국립/국립중앙도서관=국립중앙도서관, google/gbooks/구글=Google Books. 생략·그 밖의 값은 정보나루(기존 호환)."
           },
           "category": {
             "type": "string",

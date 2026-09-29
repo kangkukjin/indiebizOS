@@ -100,7 +100,7 @@ nodes:
         runs_on: pc_only
         scope: project
         description: 자기 산출물 지각 — 시각 형식(HTML/PDF/SVG/XLSX 장부)을 PNG 스크린샷으로 결정론 투영 (op 분기, 생략 시 path 확장자로 추론). 반환 `$r.items >> [table:each]` 로 장별 critic 심사. 판단 없음 — 심사는 image_read{op:"critic"}. 슬라이드는 self:slide.
-        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수, 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(경로 stem, 폴더 보존·기본 프로젝트 outputs). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: $it.prescreen 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
+        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수, 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(경로 stem, 폴더 보존·기본 프로젝트 outputs). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·깨진 이미지·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: $it.prescreen 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
         group: media_produce
         router: handler
         tool: render_artifact
@@ -206,7 +206,7 @@ tool_json:
             type: [string, object]
         output_path:
           type: string
-          description: '저장 파일명 stem (예: page.png → page_모바일.png 등). 경로는 프로젝트 outputs 폴더 자동'
+          description: '저장 파일명 stem (예: page.png → page_모바일.png 등). 명시한 폴더는 보존하고 bare 이름만 프로젝트 outputs에 저장'
         base_path:
           type: string
           description: (html 문자열 전용) 상대 경로 이미지·배경의 기준 디렉토리 — base64 인라인

@@ -20,10 +20,16 @@ def handler_contract(node, action, config, schema_keys=None):
         receiver = config["pipe_text"]
         contract["params"][receiver] = "Text"
         contract["pipe_input"] = receiver
+    # 스키마의 유한 값 영역을 정적 검사에도 전달한다. 별도의 도구별 목록은 두지 않는다.
+    if isinstance(schema_keys, dict):
+        enums = {key: list(spec["enum"]) for key, spec in schema_keys.items()
+                 if key in contract["params"] and isinstance(spec, dict) and spec.get("enum")}
+        if enums:
+            contract["enums"] = enums
     ops = config.get("ops") or {}
     if ops.get("values"):
         contract["params"].setdefault("op", "Unknown")
-        contract["enums"] = {"op": list(ops["values"])}
+        contract.setdefault("enums", {})["op"] = list(ops["values"])
     if config.get("value_validator"):
         contract["value_validator"] = config["value_validator"]
     if config.get("code_params"):

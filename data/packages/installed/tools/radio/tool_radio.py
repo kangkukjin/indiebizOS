@@ -336,6 +336,7 @@ def get_korean_radio(broadcaster=None):
             "name": info["name"],
             "broadcaster": info["broadcaster"],
             "description": info["description"],
+            "stream_url": _static_stream_url(sid),
         })
 
     return json.dumps({
@@ -624,13 +625,35 @@ def _save_favorites(favs):
         json.dump(favs, f, ensure_ascii=False, indent=2)
 
 
+def _static_stream_url(station_id):
+    station = KOREAN_STATIONS.get(station_id, {})
+    urls = {"tbs": TBS_URLS, "cbs": CBS_URLS, "ebs": EBS_URLS}
+    return urls.get(station.get("api"), {}).get(station.get("channel_code"))
+
+
+def _favorite_record(row):
+    """확인 가능한 정적 URL/정식 이름만 역연결. 외부 방송을 억지로 국내 목록에 붙이지 않는다."""
+    from common.value_semantics import normalized_text
+    def name_key(value):
+        return " ".join(normalized_text(str(value or "")).casefold().split())
+    sid = row.get("station_id")
+    if not sid:
+        candidates = [key for key, station in KOREAN_STATIONS.items()
+                      if (row.get("stream_url") and row["stream_url"] == _static_stream_url(key))
+                      or name_key(row.get("name")) == name_key(station["name"])]
+        sid = candidates[0] if len(candidates) == 1 else None
+    station = KOREAN_STATIONS.get(sid, {})
+    return {**row, "station_id": sid, "broadcaster": station.get("broadcaster"),
+            "stream_url": row.get("stream_url") or _static_stream_url(sid)}
+
+
 def get_radio_favorites():
     """즐겨찾기 목록"""
     favs = _load_favorites()
     return json.dumps({
         "success": True,
         "count": len(favs),
-        "items": favs,  # 단일 통화 — native 즐겨찾기 dict 직접
+        "items": [_favorite_record(f) for f in favs],
     }, ensure_ascii=False)
 
 
@@ -670,7 +693,7 @@ def save_radio_favorite(station_id=None, name=None, stream_url=None):
     if stream_url:
         entry["stream_url"] = stream_url
 
-    favs.append(entry)
+    favs.append(_favorite_record(entry))
     _save_favorites(favs)
 
     return json.dumps({

@@ -583,11 +583,15 @@ def track_row(r) -> dict:
     dur = fmt_duration(d.get("duration"))
     meta = " · ".join(x for x in (artist, album, dur) if x)
     q = quote(d["path"])
+    from common.value_semantics import integer_value, numeric_value
+    year = integer_value(numeric_value(d.get("year")))
+    year = year if year is not None and 1 <= year <= 9999 else None
     return {
         "title": d.get("title") or d.get("filename") or "",
         "meta": meta,
         "artist": artist, "album": album, "albumartist": d.get("albumartist") or "",
-        "genre": d.get("genre") or "", "year": d.get("year") or "",
+        "genre": d.get("genre") or "", "year": year,
+        "year_raw": d.get("year") or "",
         "track_no": d.get("track_no"), "duration": d.get("duration"),
         "duration_str": dur, "ext": d.get("ext") or "",
         "path": d["path"], "url": d["path"],

@@ -109,12 +109,14 @@ class ExpressionEvaluator:
             key = Binding(d["key"]) if kind == "field" else sub(d["key"])
             if isinstance(base.value, dict) and isinstance(key.value, str):
                 if key.value not in base.value:
-                    raise Fault("MISSING_FIELD", f"필드가 없습니다: {key.value}", node)
+                    raise Fault("MISSING_FIELD", f"필드가 없습니다: {key.value}", node,
+                                details={"missing_fields": [key.value], "available_fields": list(base.value)[:20]})
             elif kind == "index" and isinstance(base.value, (str, list, tuple)):
                 if type(key.value) is not int or not -len(base.value) <= key.value < len(base.value):
                     raise Fault("INDEX", "인덱스가 범위를 벗어났거나 정수가 아닙니다.", node)
             else:
-                raise Fault("FIELD_TYPE", "이 값에는 해당 필드/인덱스 접근을 할 수 없습니다.", node)
+                raise Fault("FIELD_TYPE", "이 값에는 해당 필드/인덱스 접근을 할 수 없습니다.", node,
+                            details={"field": key.value, "actual_type": type(base.value).__name__})
             if d["base"].kind == "ref" and d["base"].data["name"] == "error" and key.value == "partial":
                 self.event(node, "handled_partial", base.evidence)
             return Binding(base.value[key.value], self.parents([base, key]))

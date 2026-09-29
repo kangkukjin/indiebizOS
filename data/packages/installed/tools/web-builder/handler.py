@@ -52,7 +52,11 @@ def _require_module(tool_name: str):
 # (내부 tool명은 여전히 load_tool_module 의 모듈 파일 식별자로만 쓰임.)
 
 def _h_site_list(ti, ctx):
-    return _require_module("site_list").list_sites(PACKAGE_DIR)
+    result = _require_module("site_list").list_sites(PACKAGE_DIR)
+    if result.get("success"):
+        result["items"] = result.get("sites", [])
+        result["count"] = len(result["items"])
+    return result
 
 
 def _h_site_register(ti, ctx):
@@ -169,7 +173,19 @@ def _h_web_create(ti, ctx):
 def _h_web_catalog(ti, ctx):
     # kind: sections → list_sections, 그 외 → list_components
     kind = (ti.get("kind") or "components").lower()
-    return _h_list_sections(ti, ctx) if kind == "sections" else _h_list_components(ti, ctx)
+    result = _h_list_sections(ti, ctx) if kind == "sections" else _h_list_components(ti, ctx)
+    if result.get("success"):
+        collection = "sections" if kind == "sections" else "components"
+        if "categories" in result:
+            rows = [{**row, "category": category}
+                    for category, group in result["categories"].items()
+                    for row in group.get(collection, [])]
+        else:
+            rows = [{**row, "category": result.get("category", ti.get("category"))}
+                    for row in result.get(collection, [])]
+        result["items"] = rows
+        result["count"] = len(rows)
+    return result
 
 
 # 2026-06-03 dispatcher 표준화 — 단일 액션 op 키 메타데이터 겸 디스패치 테이블.

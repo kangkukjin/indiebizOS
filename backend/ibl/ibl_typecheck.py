@@ -142,7 +142,7 @@ def catalog_entry(node: str, action: str, params: Dict[str, Any], *,
         d = default_op(ad)
     except Exception:
         d = None
-    if d:
+    if d and (op is None or op == d):
         return shapes.get(f"{q}#{d}")
     return None
 

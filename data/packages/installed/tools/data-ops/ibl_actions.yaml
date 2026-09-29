@@ -72,12 +72,13 @@ actions:
       reads_fields: [by]
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, desc 옵션).
-    target_description: 'by(정렬 기준 필드/열명, 필수 — 목록이면 다단계 정렬: 앞 키 우선, 동점을 뒤 키가 가른다) · desc(내림차순 bool, 기본 false — 전 키에 같이 걸린다. 방향을 섞으려면 덜 중요한 키부터 sort 를 두 번). items에 객체 아닌 행이 있으면 삭제하지 않고 오류를 반환한다. 숫자는 수치로, ISO 8601 날짜는 시각으로(시간대 정합), 아니면 문자열로 비교. 예: [...] >> [table:sort]{by: price, desc: true}.'
+    description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, descending 옵션).
+    target_description: 'by(기준 필드 이름, 필수) · descending(내림차순 bool, 기본 false). 숫자는 수치로, ISO 8601 날짜는 시각으로, 아니면 문자열로 비교한다. 예: [{price:2},{price:1}] >> [table:sort]{by:"price",descending:true}. 기존 판본 1 저장 원문은 desc 및 by 목록의 다단계 정렬을 계속 지원한다.'
     group: transform
     router: handler
     params:
-      by: ["string", "array"]   # 키 자리 = 속성 집합(다단계 정렬)
+      by: ["string", "array"]   # 판본 1 다단계 정렬 호환
+      descending: boolean
     tool: data_sort
     implementation: data-ops handler.py — records|table을 by 키로 정렬(_sort_key 수치 우선). 비파괴.
     target_key: by
@@ -743,7 +744,7 @@ tool_json:
           type: [string, object, array]
           description: 필터 조건. 문자열("필드 op 값" — 기호 또는 워드 contains/in/matches/startswith/endswith · 연산자 없으면 전 필드 부분일치)·{field,op,value}·{열:값}·배열(AND). 비교 필드의 결측은 !=/ne·순서 비교에서도 불일치.
   - name: data_sort
-    description: records|table → 정렬. by(필드/열명, 필수), desc(bool, 기본 false). 수치 인식 정렬. >> 앞 통화를 받음.
+    description: records|table → 정렬. by(필드/열명, 필수), descending(bool, 기본 false). 판본 1의 desc도 호환. 수치 인식 정렬.
     input_schema:
       type: object
       properties:

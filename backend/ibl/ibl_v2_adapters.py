@@ -73,8 +73,16 @@ def table_operation(operation, runtime, args):
     from ibl_v2_runtime import Binding
     from common.value_semantics import sort_records, integer_value
     rows = args["items"]
+    def at_row(fn, row, index, result_type=None):
+        try:
+            value = runtime.callback(fn, [Binding(row)]).value
+            return guard(value, result_type, operation + " 콜백") if result_type else value
+        except Fault as error:
+            error.details.setdefault("row_index", index)
+            error.details.setdefault("operation", operation)
+            raise
     if operation == "filter":
-        return [row for row in rows if boolean(runtime.callback(args["where"], [Binding(row)]).value)]
+        return [row for index, row in enumerate(rows) if boolean(at_row(args["where"], row, index))]
     if operation == "select":
         columns = args["columns"]
         if isinstance(columns, list):
@@ -84,7 +92,7 @@ def table_operation(operation, runtime, args):
                     raise Fault("MISSING_FIELD", f"select 입력 {index}번 행에 열이 없습니다: {missing}",
                                 details={"row_index": index, "missing_fields": missing})
             return [{k: row[k] for k in columns} for row in rows]
-        return [guard(runtime.callback(columns, [Binding(row)]).value, "Record", "select 콜백") for row in rows]
+        return [at_row(columns, row, index, "Record") for index, row in enumerate(rows)]
     if operation == "take":
         count = integer_value(args["n"])
         if count is None or count < 0:
@@ -100,8 +108,8 @@ def table_operation(operation, runtime, args):
                         f"입력 필드 예: {available}")
         return sort_records(rows, args["by"], descending=args.get("descending", False))
     if operation == "compute":
-        return [{**row, **guard(runtime.callback(args["set"], [Binding(row)]).value, "Record", "compute.set")}
-                for row in rows]
+        return [{**row, **at_row(args["set"], row, index, "Record")}
+                for index, row in enumerate(rows)]
     raise Fault("ADAPTER", f"지원하지 않는 표 어댑터: {operation}", kind="protocol")
 
 
@@ -249,7 +257,7 @@ def load_registry(project_path=".", agent_id=None):
     for root in package_roots.values():
         schema = json.loads((root / "tool.json").read_text())
         for tool in schema.get("tools", [schema]):
-            schemas[tool.get("name")] = set((tool.get("input_schema") or {}).get("properties", {}))
+            schemas[tool.get("name")] = (tool.get("input_schema") or {}).get("properties", {})
     allowed = get_allowed_nodes()
     result, file_hashes = {}, {}
     from ibl_v2_contracts import handler_contract

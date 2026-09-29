@@ -1,0 +1,171 @@
+[
+  {
+    "case": "default_photo_actual_candidate_cap",
+    "result": {
+      "success": false,
+      "diagnostic": {
+        "code": "PARTIAL_SOURCE",
+        "kind": "partial",
+        "message": "도구의 원천 결과가 불완전합니다.",
+        "frames": [],
+        "has_partial": true,
+        "evidence": [
+          7
+        ],
+        "details": {
+          "completion": [],
+          "truncation": {
+            "truncations": [
+              {
+                "scope": "source",
+                "reason": "candidate_limit",
+                "limit": 5,
+                "retained": 5
+              }
+            ]
+          },
+          "markers": {
+            "truncations": [
+              {
+                "scope": "source",
+                "reason": "candidate_limit",
+                "limit": 5,
+                "retained": 5
+              }
+            ],
+            "truncated": true
+          }
+        },
+        "source_span": {
+          "source_hash": "3c95d80703891520e0af8c39b7df5277dde65c266267bc9ed6936f58ae846e99",
+          "start": 19,
+          "end": 40,
+          "line": 2,
+          "column": 4
+        },
+        "partial_summary": {
+          "count": 22636,
+          "total": 22636,
+          "shown": 5,
+          "truncated": true,
+          "warning": "색인 후보 상한에 도달해 일부 후보 안에서 정렬했습니다. path/조건을 좁혀 재조회하세요. / 촬영일 정렬은 최근 수정된 limit개 후보 안에서 적용됩니다. 전체 촬영일 순위가 아닙니다.",
+          "truncations": [
+            {
+              "scope": "source",
+              "reason": "candidate_limit",
+              "limit": 5,
+              "retained": 5
+            }
+          ],
+          "selection_policy": "personal_media",
+          "excluded_root_rows": 0
+        }
+      }
+    }
+  },
+  {
+    "case": "photo",
+    "result": {
+      "success": true,
+      "value": {
+        "count": 5,
+        "policy": "personal_media"
+      }
+    }
+  },
+  {
+    "case": "web_items",
+    "result": {
+      "success": true,
+      "value": {
+        "count": 6
+      }
+    }
+  },
+  {
+    "case": "radio_identity",
+    "result": {
+      "success": true,
+      "value": [
+        {
+          "known": false
+        },
+        {
+          "known": true
+        },
+        {
+          "known": false
+        },
+        {
+          "known": false
+        },
+        {
+          "known": false
+        },
+        {
+          "known": false
+        },
+        {
+          "known": false
+        },
+        {
+          "known": false
+        }
+      ]
+    }
+  },
+  {
+    "case": "missing_field",
+    "result": {
+      "success": false,
+      "diagnostic": {
+        "code": "MISSING_FIELD",
+        "kind": "runtime",
+        "message": "필드가 없습니다: x",
+        "details": {
+          "missing_fields": [
+            "x"
+          ],
+          "available_fields": [],
+          "row_index": 1,
+          "operation": "filter"
+        }
+      }
+    }
+  },
+  {
+    "case": "enum",
+    "result": {
+      "status": "invalid",
+      "issues": [
+        {
+          "code": "ARGUMENT_CONTRACT",
+          "message": "engine: 허용 값 ['gemini', 'edge']",
+          "source_span": {
+            "source_hash": "dee4452bdf5fe48a2e739a8ebbb0275c26058c88eb0d5a0a3fc1e79ef451e70d",
+            "start": 16,
+            "end": 60,
+            "line": 2,
+            "column": 1
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "dee4452bdf5fe48a2e739a8ebbb0275c26058c88eb0d5a0a3fc1e79ef451e70d",
+            "start": 16,
+            "end": 60,
+            "line": 2,
+            "column": 1,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 2,
+            "end_column": 45,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "ARGUMENT_CONTRACT",
+          "severity": "error",
+          "hint": "describe로 이 액션의 인자 관계(함께 필요한 인자·택일·범위)를 확인하고 호출 인자를 맞추세요."
+        }
+      ]
+    }
+  }
+]

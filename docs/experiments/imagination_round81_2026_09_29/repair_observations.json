@@ -1,0 +1,150 @@
+{
+  "self:lecture#list": {
+    "kind": "items",
+    "keys": [
+      "lecture_id",
+      "title",
+      "audience",
+      "slide_count",
+      "updated_at",
+      "meta",
+      "summary",
+      "url"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "self:lecture#load": {
+    "kind": "items",
+    "keys": [
+      "순번",
+      "slide_id",
+      "제목",
+      "layout",
+      "speaker_note",
+      "png_file",
+      "spec_file",
+      "updated_at"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "self:photo": {
+    "kind": "items",
+    "keys": [
+      "title",
+      "meta",
+      "summary",
+      "url",
+      "image",
+      "path",
+      "taken_at",
+      "month",
+      "kind",
+      "size",
+      "camera",
+      "source",
+      "origin",
+      "lat",
+      "lng"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "sense:radio#korean": {
+    "kind": "items",
+    "keys": [
+      "station_id",
+      "name",
+      "broadcaster",
+      "description",
+      "stream_url"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "limbs:radio_favorite#list": {
+    "kind": "items",
+    "keys": [
+      "name",
+      "added_at",
+      "stream_url",
+      "station_id",
+      "broadcaster"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "self:music#library": {
+    "kind": "items",
+    "keys": [
+      "title",
+      "meta",
+      "artist",
+      "album",
+      "albumartist",
+      "genre",
+      "year",
+      "year_raw",
+      "track_no",
+      "duration",
+      "duration_str",
+      "ext",
+      "path",
+      "url",
+      "stream",
+      "image"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "engines:web_site#list": {
+    "kind": "items",
+    "keys": [
+      "id",
+      "name",
+      "local_path",
+      "deploy_url",
+      "tech_stack",
+      "last_checked"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "engines:web_component@kind=components": {
+    "kind": "items",
+    "keys": [
+      "name",
+      "description",
+      "installed",
+      "category"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "engines:web_component@kind=sections": {
+    "kind": "items",
+    "keys": [
+      "id",
+      "name",
+      "description",
+      "params",
+      "category"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  },
+  "engines:image_read#critic": {
+    "kind": "scalar",
+    "keys": [
+      "passed",
+      "score",
+      "issues",
+      "notes",
+      "tier",
+      "message"
+    ],
+    "observed": "2026-09-29",
+    "source": "fixture"
+  }
+}

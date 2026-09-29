@@ -279,7 +279,9 @@ def render_op_html(tool_input, output_base="."):
                       scroll_width:e.scrollWidth, overflow_x:getComputedStyle(e).overflowX}));
                   return {page_width:document.documentElement.scrollWidth,
                     viewport_width:innerWidth, overflow_count:overflow.length,
-                    overflow:overflow.slice(0,20)};
+                    overflow:overflow.slice(0,20),
+                    broken_images:[...document.images].filter(e =>
+                      !e.complete || e.naturalWidth === 0).map(e => e.getAttribute('src') || '').slice(0,20)};
                 }""")
                 suffix = f"_{vp['label']}" if len(viewports) > 1 else ""
                 out = os.path.abspath(os.path.join(output_base, f"{stem}{suffix}.png"))
@@ -293,6 +295,9 @@ def render_op_html(tool_input, output_base="."):
                     page.screenshot(path=out, full_page=bool(full_page))
                 page.close()
                 facts = _web_prescreen_facts(events) + [_blank_fact(_ink_ratio_png(out))]
+                if layout.get("broken_images"):
+                    facts.append(f"이미지 로드 실패 {len(layout['broken_images'])}건: "
+                                 + _clip(layout["broken_images"][0]))
                 from PIL import Image
                 with Image.open(out) as screenshot:
                     width, height = screenshot.size

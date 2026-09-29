@@ -400,7 +400,7 @@ def create_html_video(tool_input, output_base):
 
     if not scenes:
         if tool_input.get("topic"):
-            return (
+            return _err(
                 "오류: topic만으로는 영상을 만들 수 없습니다. 이 액션은 완성된 HTML 씬을 합성합니다 — "
                 "scenes(각 {html, duration} 배열) 또는 scene_dir(저장된 씬 디렉토리)을 주세요. "
                 "주제→슬라이드 자동 생성은 [self:slide]{op:\"create\"} 또는 [self:lecture] 워크스페이스를 사용하세요."
@@ -411,7 +411,7 @@ def create_html_video(tool_input, output_base):
     missing_html = [i for i, s in enumerate(scenes) if isinstance(s, dict) and "html" not in s]
     if missing_html:
         wrong_keys = list(scenes[missing_html[0]].keys()) if missing_html else []
-        return (
+        return _err(
             f"오류: scenes[{missing_html[0]}]에 'html' 키가 없습니다. "
             f"(현재 키: {wrong_keys})\n"
             f"각 씬은 완전한 HTML 문서가 필요합니다.\n"

@@ -7,7 +7,7 @@ actions:
     runs_on: pc_only
     description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
     group: lecture
-    target_description: create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면) — load 는 슬라이드를 items 로 내므로 `>> [table:take]`·`[table:select]` 가 바로 붙는다. delete는 confirm=true 추가.
+    target_description: create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면) — load 결과의 .items가 슬라이드 목록이며 이를 table:take/select에 전달한다. delete는 confirm=true 추가.
     target_key: op
     router: handler
     tool: lecture_op
@@ -20,7 +20,7 @@ actions:
         list: false
         load: false
       exempt:
-        load: lecture_id 필요 — 고정 fixture 부적합
+        load: lecture_id 필요 — 실사용 또는 격리된 읽기로 op별 모양 관측
       values:
         list: 강의 목록 조회
         create: 새 강의 생성 (title 필수)

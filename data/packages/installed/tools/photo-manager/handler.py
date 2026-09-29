@@ -105,6 +105,17 @@ def execute(tool_input: Dict[str, Any], context) -> Dict[str, Any]:
 _PHOTO_FACETS = ("taken_at", "lat", "lng", "camera", "width", "height")
 
 
+def _output_roots():
+    """기본 갤러리에서만 제외하는 몸의 산출 범위. 파일의 기종 유무와 무관하다."""
+    from runtime_utils import get_base_path
+    root = get_base_path()
+    projects = root / "projects"
+    roots = [str(root / "outputs"), str(root / "data")]
+    if projects.is_dir():
+        roots.extend(str(p / "outputs") for p in projects.iterdir() if p.is_dir())
+    return roots
+
+
 def _photo_record(it: Dict[str, Any]) -> Dict[str, Any]:
     """file_index 보편 item → records 통화 + 사진 특수(썸네일·지도) 포장."""
     path = it.get("path") or ""
@@ -146,10 +157,10 @@ def _photo_record(it: Dict[str, Any]) -> Dict[str, Any]:
         "size": it.get("size") or 0,
         "camera": str(camera) if camera else "",
         "source": "usb" if is_usb else "self",
+        "origin": "camera" if camera else "unknown",
+        "lat": float(lat) if lat is not None else None,
+        "lng": float(lng) if lng is not None else None,
     }
-    if lat is not None and lng is not None:
-        rec["lat"] = float(lat)
-        rec["lng"] = float(lng)
     return rec
 
 
@@ -188,11 +199,13 @@ def _query_photos(params: Dict[str, Any]) -> Dict[str, Any]:
         sort="date",  # 촬영일 내림차순
         facets=_PHOTO_FACETS,
         source=source,
+        exclude_paths=_output_roots() if not path and source == "self" else (),
     )
     if not res.get("success"):
         return res
     # 단일 통화 items = 카드 shape(_photo_record: title/meta/url=path/image=썸네일). raw items를 카드로 덮어씀.
     res["items"] = [_photo_record(it) for it in res.get("items", [])]
+    res["selection_policy"] = "explicit_path" if path else "personal_media"
     return res
 
 

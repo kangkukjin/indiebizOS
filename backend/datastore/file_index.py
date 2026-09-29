@@ -264,16 +264,26 @@ def _item_from_meta(path: str, facets: Sequence[str]) -> Dict[str, Any]:
     return item
 
 
-def _spotlight_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, min_size=None):
+def _excluded_path(path, exclude_paths):
+    """호출자가 제외한 루트의 경계 안인지 확인. limit/후보 상한 적용 전에 사용한다."""
+    if not exclude_paths:
+        return False
+    actual = os.path.realpath(path)
+    return any(actual == root or actual.startswith(root + os.sep) for root in exclude_paths)
+
+
+def _spotlight_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, min_size=None,
+                     exclude_paths=()):
     onlyin = os.path.abspath(os.path.expanduser(path)) if path else os.path.expanduser("~")
     query = _build_mdfind_query(kind, q, start, end, has_gps, ext, min_size)
     failure = None
     try:
-        paths = _drop_pseudo_media(_run_mdfind(query, onlyin), kind)
+        paths = [p for p in _drop_pseudo_media(_run_mdfind(query, onlyin), kind)
+                 if not _excluded_path(p, exclude_paths)]
     except RuntimeError as exc:
         paths, failure = [], str(exc)
 
-    if not paths and path and os.path.isdir(onlyin):
+    if not paths and path and os.path.isdir(onlyin) and not exclude_paths:
         result = _walk_fallback(onlyin, kind, limit, sort, facets,
                                 q=q, start=start, end=end, has_gps=has_gps,
                                 ext=ext, min_size=min_size)
@@ -793,7 +803,8 @@ def disk_skeleton(roots: Sequence[str], *, maxdepth: int = 3,
     return "\n".join(blocks)
 
 
-def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, min_size=None):
+def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, min_size=None,
+                exclude_paths=()):
     """비-맥(윈도우/리눅스) 파일 질의 — Spotlight(mdfind) 없이 os.walk 로 사용자 roots 순회.
 
     맥의 _spotlight_query 와 같은 필터 의미를 stdlib 만으로 재현:
@@ -818,10 +829,11 @@ def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, mi
     if os.path.isdir(root):
         for dp, dirs, files in os.walk(root):
             dirs[:] = [d for d in dirs
-                       if d not in _SKELETON_NOISE_DIRS and not d.startswith(".")]
+                       if d not in _SKELETON_NOISE_DIRS and not d.startswith(".")
+                       and not _excluded_path(os.path.join(dp, d), exclude_paths)]
             for name in files:
                 fp = os.path.join(dp, name)
-                if any(n in fp for n in _NOISE_SUBSTR):
+                if is_dead_path(fp) or _excluded_path(fp, exclude_paths):
                     continue
                 dot_ext = os.path.splitext(name)[1].lower()
                 ek = _EXT_KIND.get(dot_ext)
@@ -863,7 +875,7 @@ def query(*, kind: str = "any", q: Optional[str] = None,
           path: Optional[str] = None, limit: int = 50,
           sort: str = "mtime", facets: Sequence[str] = (),
           min_size: Optional[int] = None,
-          source: str = "self") -> Dict[str, Any]:
+          source: str = "self", exclude_paths: Sequence[str] = ()) -> Dict[str, Any]:
     """OS 파일/미디어 색인 라이브 질의 (선스캔 불필요).
 
     보편 필드(path/name/ext/size/mtime/kind) + 요청 facet 만 담은 순수 데이터.
@@ -884,6 +896,7 @@ def query(*, kind: str = "any", q: Optional[str] = None,
         return _adb_query(**args)
     if body == "phone":
         return _mediastore_query(**args)
+    args["exclude_paths"] = tuple(os.path.realpath(p) for p in exclude_paths)
     if _IS_MAC:
         return _spotlight_query(**args)
     return _walk_query(**args)  # 윈도우/리눅스 — Spotlight 없이 os.walk

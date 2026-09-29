@@ -3,7 +3,7 @@ nodes:
     actions:
       radio:
         lands_on: hub
-        path_audited: {at: "2026-09-15", impl: "5e75393fac9cd838"}
+        path_audited: {at: "2026-09-29", impl: "9ca93936cd0d76e7"}
         # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
         #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
         #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -18,7 +18,7 @@ nodes:
 
           - search: name(방송국 이름)·tag·country·language·limit 등. Radio Browser 전세계.
 
-          - korean: broadcaster(KBS/MBC/SBS/TBS/CBS/EBS, 비우면 전체) 한국 방송사 채널.
+          - korean: broadcaster(KBS/MBC/SBS/TBS/CBS/EBS, 비우면 전체) 한국 방송사 채널. items는 station_id/broadcaster/stream_url을 제공하며 동적 스트림 URL은 null이다.
 
           '
         target_key: op
@@ -111,7 +111,7 @@ nodes:
         lands_on: body
         limb_op: {op: media, action: $op, url: $stream_url, volume: $volume}
         member_transform: radio_member:control
-        path_audited: {at: "2026-09-15", impl: "5e75393fac9cd838"}
+        path_audited: {at: "2026-09-29", impl: "9ca93936cd0d76e7"}
         returns: effect
         description: 인터넷 라디오 재생 제어 (op 분기). play/stop/status/volume. 방송국 검색은 [sense:radio].
         target_description: 'play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio
@@ -158,7 +158,7 @@ nodes:
           name: [title]
         returns: effect
         description: 라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.
-        target_description: list — 파라미터 없음, 전체 즐겨찾기 목록. add — station_id(권장) 또는 stream_url 중 하나 + name 옵션. 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — [limbs:radio] play 로 재생 중 마음에 들면 바로 add 호출.
+        target_description: list — 파라미터 없음, 전체 즐겨찾기 목록. station_id/broadcaster는 정식 이름·정적 URL로 확인된 것만 연결하며 미확인은 null. add — station_id(권장) 또는 stream_url 중 하나 + name 옵션. 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — [limbs:radio] play 로 재생 중 마음에 들면 바로 add 호출.
         group: media
         target_key: op
         router: handler

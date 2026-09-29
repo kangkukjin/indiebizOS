@@ -50,7 +50,7 @@
           },
           "output_path": {
             "type": "string",
-            "description": "저장 파일명 stem (예: page.png → page_모바일.png 등). 경로는 프로젝트 outputs 폴더 자동"
+            "description": "저장 파일명 stem (예: page.png → page_모바일.png 등). 명시한 폴더는 보존하고 bare 이름만 프로젝트 outputs에 저장"
           },
           "base_path": {
             "type": "string",

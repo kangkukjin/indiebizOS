@@ -297,7 +297,7 @@ nodes:
         returns: effect
         description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
         group: open
-        target_description: (미지정 시 대시보드 표시). action으로 register/add/list/remove 등 사이트 관리.
+        target_description: (미지정 시 대시보드 표시). action으로 open_ui(대시보드)/add/list/remove 사이트 관리. 등록은 add + name + url.
         router: handler
         tool: launch_sites
         scope: workspace

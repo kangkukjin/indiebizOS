@@ -1933,8 +1933,8 @@ nodes:
       radio:
         lands_on: hub
         path_audited:
-          at: '2026-09-15'
-          impl: 5e75393fac9cd838
+          at: '2026-09-29'
+          impl: 9ca93936cd0d76e7
         params:
           name: string
           query: string
@@ -1946,7 +1946,7 @@ nodes:
 
           - search: name(방송국 이름)·tag·country·language·limit 등. Radio Browser 전세계.
 
-          - korean: broadcaster(KBS/MBC/SBS/TBS/CBS/EBS, 비우면 전체) 한국 방송사 채널.
+          - korean: broadcaster(KBS/MBC/SBS/TBS/CBS/EBS, 비우면 전체) 한국 방송사 채널. items는 station_id/broadcaster/stream_url을 제공하며 동적 스트림 URL은 null이다.
 
           '
         target_key: op
@@ -4457,7 +4457,7 @@ nodes:
         runs_on: pc_only
         description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
         group: lecture
-        target_description: create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면) — load 는 슬라이드를 items 로 내므로 `>> [table:take]`·`[table:select]` 가 바로 붙는다. delete는 confirm=true 추가.
+        target_description: create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면) — load 결과의 .items가 슬라이드 목록이며 이를 table:take/select에 전달한다. delete는 confirm=true 추가.
         target_key: op
         router: handler
         tool: lecture_op
@@ -4470,7 +4470,7 @@ nodes:
             list: false
             load: false
           exempt:
-            load: lecture_id 필요 — 고정 fixture 부적합
+            load: lecture_id 필요 — 실사용 또는 격리된 읽기로 op별 모양 관측
           values:
             list: 강의 목록 조회
             create: 새 강의 생성 (title 필수)
@@ -4632,7 +4632,7 @@ nodes:
         fixture: '[self:music]{op: "sources"}'
         runs_on: pc_only
         description: '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리한다. 보는 축은 폴더(폴더 구조=사용자의 의미 단위)와 검색·플레이리스트. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
-        target_description: 'op 별 입력: library(q 검색어, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / folders(folder 절대경로 — 생략하면 최상위. 결과 items=바로 아래 폴더[맨 앞은 ⬆️ 상위 행], tracks=그 폴더 아래 전체 곡[상한 500]) / track(path) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/year/genre/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프(연대·장르 filter, groupby+chart 분포)·media_player 직결.'
+        target_description: 'op 별 입력: library(q 검색어, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / folders(folder 절대경로 — 생략하면 최상위. 결과 items=바로 아래 폴더[맨 앞은 ⬆️ 상위 행], tracks=그 폴더 아래 전체 곡[상한 500]) / track(path) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/year(정수 또는 null)/year_raw(원 태그)/genre(원 태그)/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프(연대·장르 filter, groupby+chart 분포)·media_player 직결.'
         target_key: op
         group: music
         router: handler
@@ -5211,7 +5211,7 @@ nodes:
         fixture: '[self:photo]{op: "stats"}'
         runs_on: anywhere
         description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환(기본=실행되는 몸의 미디어, source:usb면 USB로 연결된 안드로이드 폰). 타임라인·통계·중복은 >> table 변환자.
-        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(현지 촬영일 범위, YYYY-MM 또는 YYYY-MM-DD; taken_at은 시간대 포함), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng/taken_at/month/kind/camera/size/source 구조 필드 포함 → groupby·지도와 직결.'
+        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(현지 촬영일 범위, YYYY-MM 또는 YYYY-MM-DD; taken_at은 시간대 포함), has_gps(true면 위치 보유만), path(검색 루트; 생략 시 홈에서 시스템 outputs·data·프로젝트 outputs 제외, 명시하면 해당 범위 포함), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng(미상이면 null)/taken_at/month/kind/camera/size/source/origin(camera 또는 unknown) 구조 필드 포함 → groupby·지도와 직결.'
         group: photo
         target_key: query
         router: handler
@@ -5299,7 +5299,7 @@ nodes:
           at: '2026-09-28'
           impl: 3c31b0566918933b
           dependencies:
-            backend/common/expression_eval.py: efdcd90e266bd3ac4bd50138dd8c5272f9c3099c71fe56454c37b4b873b73283
+            backend/common/expression_eval.py: ef54b93159bea1bb8727f4e56a887d54940409c06ac0115db204ede691242fd0
             backend/common/expression_functions.py: 2bb5513d5b7d82887213c3f14b40ad962cd1df0795d80f846bdfb33a458f805e
             backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
@@ -6852,8 +6852,8 @@ nodes:
           volume: $volume
         member_transform: radio_member:control
         path_audited:
-          at: '2026-09-15'
-          impl: 5e75393fac9cd838
+          at: '2026-09-29'
+          impl: 9ca93936cd0d76e7
         returns: effect
         description: 인터넷 라디오 재생 제어 (op 분기). play/stop/status/volume. 방송국 검색은 [sense:radio].
         target_description: play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. mode 옵션으로 출력지 지정 — client(보고 있는 기기에서) / host(이 PC 스피커에서). 생략하면 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC). stop — 파라미터 없음. status — 파라미터 없음, 재생 중 채널·경과 시간. volume — volume(0~100). ★status·volume 은 재생 중일 때만 의미가 있다(라디오 전용).
@@ -6891,7 +6891,7 @@ nodes:
           - title
         returns: effect
         description: 라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.
-        target_description: list — 파라미터 없음, 전체 즐겨찾기 목록. add — station_id(권장) 또는 stream_url 중 하나 + name 옵션. 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — [limbs:radio] play 로 재생 중 마음에 들면 바로 add 호출.
+        target_description: list — 파라미터 없음, 전체 즐겨찾기 목록. station_id/broadcaster는 정식 이름·정적 URL로 확인된 것만 연결하며 미확인은 null. add — station_id(권장) 또는 stream_url 중 하나 + name 옵션. 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — [limbs:radio] play 로 재생 중 마음에 들면 바로 add 호출.
         group: media
         target_key: op
         router: handler
@@ -6918,7 +6918,7 @@ nodes:
         returns: effect
         description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
         group: open
-        target_description: (미지정 시 대시보드 표시). action으로 register/add/list/remove 등 사이트 관리.
+        target_description: (미지정 시 대시보드 표시). action으로 open_ui(대시보드)/add/list/remove 사이트 관리. 등록은 add + name + url.
         router: handler
         tool: launch_sites
         scope: workspace
@@ -8719,7 +8719,7 @@ nodes:
         runs_on: pc_only
         scope: project
         description: 자기 산출물 지각 — 시각 형식(HTML/PDF/SVG/XLSX 장부)을 PNG 스크린샷으로 결정론 투영 (op 분기, 생략 시 path 확장자로 추론). 반환 `$r.items >> [table:each]` 로 장별 critic 심사. 판단 없음 — 심사는 image_read{op:"critic"}. 슬라이드는 self:slide.
-        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수, 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(경로 stem, 폴더 보존·기본 프로젝트 outputs). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: $it.prescreen 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
+        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수, 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(경로 stem, 폴더 보존·기본 프로젝트 outputs). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·깨진 이미지·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: $it.prescreen 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
         group: media_produce
         router: handler
         tool: render_artifact
@@ -9298,14 +9298,15 @@ nodes:
           - by
         runs_on: anywhere
         scope: workspace
-        description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, desc 옵션).
-        target_description: 'by(정렬 기준 필드/열명, 필수 — 목록이면 다단계 정렬: 앞 키 우선, 동점을 뒤 키가 가른다) · desc(내림차순 bool, 기본 false — 전 키에 같이 걸린다. 방향을 섞으려면 덜 중요한 키부터 sort 를 두 번). items에 객체 아닌 행이 있으면 삭제하지 않고 오류를 반환한다. 숫자는 수치로, ISO 8601 날짜는 시각으로(시간대 정합), 아니면 문자열로 비교. 예: [...] >> [table:sort]{by: price, desc: true}.'
+        description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, descending 옵션).
+        target_description: 'by(기준 필드 이름, 필수) · descending(내림차순 bool, 기본 false). 숫자는 수치로, ISO 8601 날짜는 시각으로, 아니면 문자열로 비교한다. 예: [{price:2},{price:1}] >> [table:sort]{by:"price",descending:true}. 기존 판본 1 저장 원문은 desc 및 by 목록의 다단계 정렬을 계속 지원한다.'
         group: transform
         router: handler
         params:
           by:
           - string
           - array
+          descending: boolean
         tool: data_sort
         implementation: data-ops handler.py — records|table을 by 키로 정렬(_sort_key 수치 우선). 비파괴.
         target_key: by

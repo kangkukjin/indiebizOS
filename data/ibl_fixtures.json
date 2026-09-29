@@ -206,7 +206,7 @@
     "self:goal#delete": "goal_id 필요 + 종결 상태 전제 — 고정 fixture 부적합",
     "self:goal#status": "goal_id 필요(list 결과의 id) — 고정 fixture 부적합",
     "self:health#ingest": "AI 구조화 호출(비용·편차) + 원장 쓰기 — 정기 실행 부적합",
-    "self:lecture#load": "lecture_id 필요 — 고정 fixture 부적합",
+    "self:lecture#load": "lecture_id 필요 — 실사용 또는 격리된 읽기로 op별 모양 관측",
     "self:material#list": "lecture_id 필요 — 고정 fixture 부적합",
     "self:memory#move": "memory_id 필요(search/recall 결과의 id) — 고정 fixture 부적합",
     "self:memory#read": "memory_id 필요(search 장기기억 결과의 memory_id) — 고정 fixture 부적합",

@@ -5,6 +5,8 @@
 통화 보존 스위치)·스필 싱크가 이 한 함수에 산다 — 싱크의 규약이 한 자리에 있어야 다음 변경이 갈라지지 않는다.
 """
 import json
+import csv
+import io
 import os
 import importlib.util
 from pathlib import Path
@@ -13,6 +15,25 @@ _spec = importlib.util.spec_from_file_location(
     "essentials_file_io", Path(__file__).with_name("essentials_file_io.py"))
 _file_io = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_file_io)
+
+
+def csv_text(content, columns=None):
+    """Pure CSV serialization shared by local and member file sinks."""
+    rows = content.get('items') if isinstance(content, dict) else content
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise ValueError('format:csv는 content에 객체 행 목록을 받습니다.')
+    if columns is None:
+        columns = list(dict.fromkeys(key for row in rows for key in row))
+    if (not isinstance(columns, list) or not columns
+            or any(not isinstance(key, str) for key in columns) or len(set(columns)) != len(columns)):
+        raise ValueError('CSV columns는 중복 없는 문자열 목록입니다. 빈 입력에는 columns가 필요합니다.')
+    if any(isinstance(row.get(key), (dict, list)) for row in rows for key in columns):
+        raise ValueError('CSV 셀은 스칼라입니다. 중첩 값은 앞에서 json() 등으로 명시 변환하세요.')
+    stream = io.StringIO(newline='')
+    writer = csv.DictWriter(stream, fieldnames=columns, extrasaction='ignore', lineterminator='\r\n')
+    writer.writeheader()
+    writer.writerows(rows)
+    return stream.getvalue()
 
 
 def write_sink(tool_input: dict, path: str, _live_target: str, redirected: bool, *,
@@ -112,6 +133,11 @@ def write_sink(tool_input: dict, path: str, _live_target: str, redirected: bool,
     if piped and extracted is None and isinstance(probe, dict):
         _c = content if isinstance(content, dict) else dict(probe)
         content, excluded_meta = _strip_envelope_meta(_c)
+    if _fmt == 'csv':
+        try:
+            content = csv_text(content, tool_input.get('columns'))
+        except ValueError as exc:
+            return json.dumps({'success': False, 'error': str(exc)}, ensure_ascii=False)
     if _json_mode:
         if isinstance(content, str):
             try:

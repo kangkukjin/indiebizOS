@@ -1,0 +1,4 @@
+#!ibl edition=2
+$r = [{설명:"가게1",분류:"a"}]
+$j = [table:join]{left:$입력,right:$r,on:"설명",how:"left",defaults:{분류:"x"}}
+return len($j.items)

@@ -1,0 +1,34 @@
+#!ibl edition=2
+# 6회차 P3 v2 렌더·저장 (변형 B; v1 은 설명문 안 쉼표로 CSV 재읽기 실패 → 큰따옴표 인용) — inputs: 분석={$ref P2}, 파일상태·AI분류={$ref P1 path}, 행수·가게수(숫자), 보고서(md 경로), 목록(json 경로)
+$월들 = $분석.월별 >> [table:each] { return $it.월 }
+$구분칸 = $월들 >> [table:each] { return "---" }
+$표머리 = f"| 분류 | ${join(' | ',$월들)} | 연간 |"
+$표구분 = f"| --- | ${join(' | ',$구분칸)} | --- |"
+$표줄 = $분석.분류합 >> [table:each] {
+  $c = $it.분류
+  $내 = $분석.월분류 >> [table:filter]{where:($x)=>$x.분류 == $c}
+  $칸 = $월들 >> [table:each] {
+    $m = $it
+    $셀 = $내 >> [table:filter]{where:($x)=>$x.월 == $m}
+    return len($셀) == 0 ? "0" : text($셀[0].합계)
+  }
+  return f"| ${$c} | ${join(' | ',$칸)} | ${$it.합계} |"
+}
+$월합줄 = $분석.월별 >> [table:each] { return text($it.합계) }
+$상위줄 = $분석.분류합 >> [table:each] {
+  $c = $it.분류
+  $내가게 = $분석.가게합 >> [table:filter]{where:($g)=>$g.분류 == $c} >> [table:take]{n:3}
+  $칸 = $내가게 >> [table:each] { return f"${$it.설명} ${$it.합계}원(${$it.건수}건)" }
+  return f"| ${$c} | ${join(' / ',$칸)} |"
+}
+$CSV줄 = $분석.이상 >> [table:each] { $q = replace($it.설명문,'"','""')
+  return f"${$it.종류},\"${$q}\"" }
+$CSV본 = f"종류,설명\n${join('\n',$CSV줄)}\n"
+$AI줄 = $AI분류 >> [table:each] { return f"- ${$it.설명} → ${$it.분류} (AI)" }
+$이상줄 = $분석.이상 >> [table:each] { return f"- [${$it.종류}] ${$it.설명문}" }
+$파일줄 = $파일상태 >> [table:each] { return f"- ${$it.파일}: ${$it.상태} ${$it.행수}행" }
+$보고 = f"# 2025년 가계부 연간 결산\n\n- 거래 ${$행수}건(파일 ${len($파일상태)}개), 지출 ${$분석.지출건수}건 합계 ${$분석.총지출}원, 환불 ${$분석.환불건수}건 ${$분석.환불합}원\n- 가게 ${$가게수}곳 중 AI 분류 ${len($AI분류)}곳\n\n## 월별·분류별 지출\n${$표머리}\n${$표구분}\n${join('\n',$표줄)}\n| **월 합계** | ${join(' | ',$월합줄)} | ${$분석.총지출} |\n\n## 분류별 상위 3 가게\n| 분류 | 상위 가게 |\n| --- | --- |\n${join('\n',$상위줄)}\n\n## 이상 항목 (${len($분석.이상)}건)\n${len($이상줄) == 0 ? '- 없음' : join('\n',$이상줄)}\n\n## AI 가 붙인 분류 (${len($AI분류)}곳)\n${join('\n',$AI줄)}\n\n## 읽은 파일\n${join('\n',$파일줄)}\n"
+$목록본 = json({총지출:$분석.총지출,환불합:$분석.환불합,이상:$분석.이상})
+$쓰기 = [self:write]{path:$보고서,content:$보고} & [self:write]{path:$목록,content:$목록본} & [self:write]{path:$CSV,content:$CSV본}
+$재읽기 = [self:read]{path:$보고서} & [self:read]{path:$목록} & [self:read]{path:$CSV}
+return {보고일치:$재읽기[0].text == $보고,목록일치:$재읽기[1].text == $목록본,CSV일치:$재읽기[2].text == $CSV본,보고글자:len($보고),이상수:len($분석.이상),종류별:$분석.종류별}

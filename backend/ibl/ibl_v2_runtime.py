@@ -35,12 +35,25 @@ class Budget:
     started: float = field(default_factory=time.monotonic)
     used_steps: int = 0
     used_rows: int = 0
+    by_node: dict = field(default_factory=dict)
     lock: object = field(default_factory=threading.RLock)
 
-    def tick(self, row=False, depth=0):
+    @classmethod
+    def from_request(cls, value):
+        if value is None:
+            return cls()
+        limits = {"steps": 1000000, "rows": 100000}
+        if (not isinstance(value, dict) or set(value) - limits.keys()
+                or any(type(v) is not int or not 1 <= v <= limits[k] for k, v in value.items())):
+            raise Fault("BUDGET_ARGUMENT", "budget은 steps(1~1000000), rows(1~100000) 정수만 지정합니다.", kind="compile")
+        return cls(**value)
+
+    def tick(self, row=False, depth=0, node_id=None):
         with self.lock:
             self.used_steps += 1
             self.used_rows += int(row)
+            if node_id is not None:
+                self.by_node[node_id] = self.by_node.get(node_id, 0) + 1
             elapsed = time.monotonic() - self.started if self.seconds is not None else None
             if (self.used_steps <= self.steps and self.used_rows <= self.rows
                     and depth <= self.depth and (elapsed is None or elapsed <= self.seconds)):
@@ -54,7 +67,8 @@ class Budget:
                         if limit is not None and used > limit}
             if exceeded:
                 hint = ("도구의 필터·검색으로 입력을 좁히거나 전건을 여러 실행으로 나누세요. "
-                        "전건 처리가 필요하면 take로 조용히 잘라내지 마세요.")
+                        "요청 budget:{steps:...,rows:...}로 한도를 명시할 수도 있습니다. "
+                        "usage.steps_by_span에서 비용 위치를 확인하세요. 전건 처리가 필요하면 take로 조용히 잘라내지 마세요.")
                 dimensions = ", ".join(f"{k} {v['used']:g}/{v['limit']:g}" for k, v in exceeded.items())
                 raise Fault("BUDGET", f"공유 실행 예산을 초과했습니다: {dimensions}. {hint}",
                             kind="budget", details={"exceeded": exceeded, "hint": hint})
@@ -82,6 +96,7 @@ class Runtime(ExpressionEvaluator):
         # 편집한 프로그램이 앞 실행(reuse_run)의 읽기·모델 영수증을 액션·인자·구현 지문으로 재사용한다.
         # 프로그램 지문은 키에 없다 — 함수 하나를 고쳐도 검증된 수집 결과가 살아남는 통로(2026-09-26).
         self.reusable, self.reuse_run, self.reused_calls = dict(reusable or {}), reuse_run, 0
+        self.reuse_skipped, self.reuse_skipped_total = [], 0
         self.plan = plan
         self.inputs = copy.deepcopy(inputs or {})
         self.input_evidence = copy.deepcopy(input_evidence or {})
@@ -148,7 +163,7 @@ class Runtime(ExpressionEvaluator):
             return
         if self.cancel_check and self.cancel_check():
             raise Fault("CANCELLED", "실행이 취소되었습니다.", kind="cancelled")
-        self.budget.tick(depth=getattr(self.local, "depth", 0))
+        self.budget.tick(depth=getattr(self.local, "depth", 0), node_id=getattr(self.local, "node_id", None))
 
     def frame(self, body, env):
         try:
@@ -164,6 +179,10 @@ class Runtime(ExpressionEvaluator):
         # failed conditions, and finally. Keep scopes local to each worker;
         # fanout explicitly joins their roots after all started work settles.
         previous = getattr(self.local, "dependencies", None)
+        previous_node = getattr(self.local, "node_id", None)
+        self.local.node_id = node.id
+        if node.id not in self.source_map:
+            self.source_map[node.id] = span(self.plan.source, node)
         previous_control = getattr(self.local, "control", frozenset())
         self.local.control = previous_control | frozenset(control)
         dependencies, roots = set(self.local.control), frozenset()
@@ -192,6 +211,7 @@ class Runtime(ExpressionEvaluator):
             exc.evidence = [eid]
             raise
         finally:
+            self.local.node_id = previous_node
             self.local.dependencies = previous
             self.local.control = previous_control
             if previous is not None:
@@ -567,12 +587,14 @@ class Runtime(ExpressionEvaluator):
         request_hash = digest(request)
         # The whole program may change, but the selected call contract and its
         # dependency snapshot must still describe the same value/effect boundary.
-        reuse_key = digest({"action": key, "args": request["args"],
+        reuse_identity = {"action": key, "args": request["args"],
                             "contract": contract,
                             "model_identity": model_identity,
                             "dependency": node.data.get("dependency_snapshot"),
                             "semantics": {k: self.plan.dependencies[k]
-                                          for k in ("core", "edition", "semantics", "expressions")}})
+                                          for k in ("core", "edition", "semantics", "expressions")}}
+        reuse_key = digest(reuse_identity)
+        reuse_parts = {name: digest(value) for name, value in reuse_identity.items()}
         stateful = bool(spec.stateful and spec.stateful(args.value))
         parents = args.evidence | (self.foreign_evidence if stateful else frozenset())
         eid = self.event(node, "invoke", parents, action=key,
@@ -633,6 +655,28 @@ class Runtime(ExpressionEvaluator):
                     receipt, source = hit, "reuse"
                     if model_only:
                         self.consumed_model_receipts.add(reuse_key)
+        if receipt is None and self.reuse_run and reusable_read:
+            if invalidated:
+                reason = "overlapping_write"
+            elif model_only and not self.reuse_models:
+                reason = "fresh_model_requested"
+            elif model_only and reuse_key in self.consumed_model_receipts:
+                reason = "model_receipt_consumed"
+            else:
+                reason = "no_matching_receipt"
+            candidates = [r for r in self.reusable.values() if r.get('action') == key]
+            differences = []
+            for old in candidates:
+                parts = old.get('reuse_parts')
+                changed = ([name for name in reuse_parts if parts.get(name) != reuse_parts[name]]
+                           if parts else ['identity_changed_or_legacy_receipt'])
+                differences.append({'receipt': old.get('reuse_key'), 'changed': changed})
+            with self.lock:
+                self.reuse_skipped_total += 1
+                if len(self.reuse_skipped) < 20:
+                    self.reuse_skipped.append({'action': key, 'location': span(self.plan.source, node),
+                                              'reason': reason, 'candidates': differences[:5],
+                                              'candidates_total': len(differences)})
         if (receipt is not None and "value" in receipt and source == "journal"
                 and contract.get("deferred_observation") and not self.replay):
             # Restore the staged local checkpoint, but preserve the original
@@ -697,7 +741,7 @@ class Runtime(ExpressionEvaluator):
                 guard(value, contract["result"], f"{key} 반환")
                 if external:
                     receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence,
-                               "action": key, "reuse_key": reuse_key}
+                               "action": key, "reuse_key": reuse_key, "reuse_parts": reuse_parts}
                     if model_only:
                         receipt['model_identity'] = model_identity
                         receipt['reuse_disabled'] = spec.model_identity() != model_identity
@@ -780,6 +824,18 @@ class Runtime(ExpressionEvaluator):
         if self.model_usage:
             from model_call_context import summarize_usage
             out['usage']['model'] = summarize_usage(self.model_usage)
+        costs = sorted(self.budget.by_node.items(), key=lambda item: (-item[1], item[0]))
+        out['usage']['limits'] = {"steps": self.budget.steps, "rows": self.budget.rows}
+        out['usage']['steps_by_span'] = [
+            {"node_id": key, "steps": count, "location": self.source_map.get(key, {})}
+            for key, count in costs[:20]]
+        out['usage']['steps_other'] = self.budget.used_steps - sum(n for _, n in costs[:20])
+        notes = [{'event_id': event['id'], 'location': self.source_map.get(event['node_id'], {}),
+                  'warning': event['warning'][:1000]}
+                 for event in self.trace if event.get('warning')]
+        if notes:
+            out['execution_notes'] = notes[:20]
+            out['execution_notes_omitted'] = max(0, len(notes) - 20)
         if self.owns_commit_scope and out.get("success") and out.get("source_complete"):
             try:
                 self.commit_scope.commit()
@@ -789,6 +845,8 @@ class Runtime(ExpressionEvaluator):
             out['precheck_warnings'] = self.plan.preflight['warnings']
         if self.reuse_run:
             out["reuse"] = {"run_id": self.reuse_run, "reused_calls": self.reused_calls, "candidates": len(self.reusable)}
+            if self.reuse_skipped_total:
+                out['reuse'].update(skipped=self.reuse_skipped, skipped_total=self.reuse_skipped_total)
         if self.reused_model_calls:
             out['reuse']['model_calls'] = self.reused_model_calls
         if self.journal:

@@ -1,0 +1,2 @@
+#!ibl edition=2
+$입력 >> [table:compute]{set:{금액수:"number(금액)"}}

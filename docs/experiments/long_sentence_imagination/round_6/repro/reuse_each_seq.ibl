@@ -1,0 +1,5 @@
+#!ibl edition=2
+$파일들 = [self:list]{path:$폴더,pattern:"tx_2025-0[1-3].csv"} >> [table:sort]{by:"name"}
+$읽기 = $파일들 >> [table:each] { $문 = [self:read]{path:$it.path}
+ return len($문.data.items) }
+return $읽기

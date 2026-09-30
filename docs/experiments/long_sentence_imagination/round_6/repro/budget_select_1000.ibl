@@ -1,0 +1,2 @@
+#!ibl edition=2
+$입력 >> [table:select]{columns:["일자","설명","금액"]}

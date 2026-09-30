@@ -1,0 +1,4 @@
+#!ibl edition=2
+$a = [self:read]{path:f"${$폴더}/tx_2025-01.csv"}
+$b = [self:read]{path:f"${$폴더}/tx_2025-02.csv"}
+return [len($a.data.items),len($b.data.items)]

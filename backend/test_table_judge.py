@@ -56,6 +56,8 @@ def test_mixed_questions_batch_preserves_rows(mocked):
     assert rows == before
     assert result["rows_in"] == result["rows_out"] == 2
     assert result["questions_evaluated"] == 6
+    assert result['judgment_context'] == {'mode': 'batch', 'rows': 2,
+                                          'questions_per_row': 3, 'row_independent': False}
     assert result["usage"] == {"input_tokens": 40, "output_tokens": 20}
     for i, row in enumerate(result["items"]):
         assert {k: v for k, v in row.items() if not k.startswith("judgment_")} == rows[i]

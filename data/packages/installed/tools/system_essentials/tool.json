@@ -17,8 +17,11 @@
             "description": "파일 경로"
           },
           "content": {
-            "type": "string",
-            "description": "기록할 전체 내용. 생략 시 파이프의 직전 step 결과(_prev_result)를 저장"
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "기록할 전체 내용. format:csv는 객체 행 목록을 받아 인용해 저장한다. 생략 시 파이프의 직전 step 결과(_prev_result)를 저장"
           },
           "path": {
             "type": "string",
@@ -26,6 +29,10 @@
           },
           "spill": {
             "type": "boolean",
+            "description": "self:write 파라미터"
+          },
+          "columns": {
+            "type": "array",
             "description": "self:write 파라미터"
           },
           "format": {

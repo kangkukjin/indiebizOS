@@ -43,7 +43,9 @@ def test_edited_program_reuses_read_receipts_and_reruns_writes_and_changed_args(
         out = Runtime(edited, journal=journal, reusable=reusable, reuse_run=run_id).run()
     assert out["success"]
     assert calls == [("read", 1), ("write", 1), ("read", 2)]
-    assert out["reuse"] == {"run_id": run_id, "reused_calls": 0, "candidates": 0}
+    assert {k: out['reuse'][k] for k in ('run_id', 'reused_calls', 'candidates')} == {
+        "run_id": run_id, "reused_calls": 0, "candidates": 0}
+    assert out['reuse']['skipped_total'] == 2
     reused = [e for e in out["evidence"] if e["kind"] == "receipt_reused"]
     assert reused == []
     assert unpack(out["value_wire"]["data"]) == {"a": {"n": 1, "rows": [1]}, "b": {"n": 2, "rows": [2]}}

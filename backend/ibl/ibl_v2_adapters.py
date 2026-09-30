@@ -254,7 +254,10 @@ def decode_envelope(raw, adapter, input_values=None):
                     details={"completion": incomplete, "truncation": truncation, "markers": markers})
     from ibl_v2_ir import pack, unpack
     value = unpack(pack(value))
-    return value, {"markers": markers, "attachments": {k: raw[k] for k in adapter.get("attachments", []) if k in raw}}
+    evidence = {"markers": markers, "attachments": {k: raw[k] for k in adapter.get("attachments", []) if k in raw}}
+    if isinstance(raw.get('warning'), str) and raw['warning']:
+        evidence['warning'] = raw['warning']
+    return value, evidence
 
 
 def observed_result(key, contract, params, result_type):
@@ -325,6 +328,7 @@ def load_registry(project_path=".", agent_id=None):
             contract = copy.deepcopy(validate_contract(contract))
             contract["analysis"] = {"ai_call": action_config.get("ai_call") is True,
                                     "ai_inspect_param": action_config.get("ai_inspect_param"),
+                                    "schema_input_fields_param": action_config.get("schema_input_fields_param"),
                                     "schema_param": action_config.get("schema_param"),
                                     "flow": action_config.get("flow", {})}
             adapter = contract["adapter"]

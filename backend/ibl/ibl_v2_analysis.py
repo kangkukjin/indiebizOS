@@ -277,6 +277,17 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
             return result
         try:
             columns = schema_fields(values.get(schema_param))
+            from common.record_schema import hidden_schema_fields, hidden_schema_message
+            input_param = contract.get('analysis', {}).get('schema_input_fields_param')
+            known_fields = set()
+            from ibl_v2_types import alternatives
+            for variant in alternatives(source):
+                if variant.kind == 'List':
+                    for row_variant in alternatives(variant.item):
+                        known_fields.update(dict(row_variant.fields))
+            collisions = hidden_schema_fields(values.get(schema_param), values.get(input_param), known_fields)
+            if collisions:
+                compiler.issue(node, 'ARGUMENT_CONTRACT', hidden_schema_message(collisions))
         except ValueError as exc:
             compiler.issue(node, 'ARGUMENT_CONTRACT', str(exc))
             return result

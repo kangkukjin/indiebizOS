@@ -245,6 +245,8 @@ def judge(ti):
         return {"success": False, "error": str(error), "error_type": "response",
                 "api_calls": 1, "usage": data.get("usage") if isinstance(data, dict) else None}
     return {"success": True, "items": output, "rows_in": len(rows), "rows_out": len(output),
+            "judgment_context": {"mode": "batch", "rows": len(rows), "questions_per_row": len(questions),
+                                 "row_independent": False},
             "questions_evaluated": len(expanded), "unknown_count": unknown,
             "provider": "typesafe", "model": data.get("model", _MODEL), "ai_call": True,
             "api_calls": 1, "usage": data.get("usage"), "latency_ms": result["latency_ms"]}

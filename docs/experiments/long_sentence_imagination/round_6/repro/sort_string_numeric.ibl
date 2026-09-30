@@ -1,0 +1,2 @@
+#!ibl edition=2
+$입력 >> [table:sort]{by:"금액",descending:true}

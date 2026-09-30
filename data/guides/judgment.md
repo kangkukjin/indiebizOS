@@ -105,3 +105,9 @@ $r = [table:judge]{items:[{text:"검토 중입니다."}], instruction:"승인을
 공식 계약: https://docs.typesafe.ai/api · https://docs.typesafe.ai/confidence
 
 효과는 `model`이다. 다른 파일에 결과를 저장해도 무관한 입력 읽기의 reuse 후보를 지운 것으로 보지 않는다. 판정 성공 결과는 `reuse:{run_id}`에서 입력·질문·모델 설정이 같으면 자동 재사용된다. `reuse:{run_id,models:false}`는 새로 판정한다. 재사용한 원래 사용량은 `original_model_usage`이며 이번 실행 비용에 합산하지 않는다. 사용량은 공통 호출 원장에 model·call_id·role·source=fixed_provider를 기록한다. 생성형 기어로 선택하지 않으므로 tier는 null이다. 실패 시 토큰 미측정은 0으로 취급하지 않는다.
+
+## 배치 문맥과 미결정
+
+같은 행도 배치 구성·순서·질문 표현에 따라 판정이 달라질 수 있다. `judgment_context`는 배치 행 수·행당 질문 수·row_independent:false를 기록한다. 확률은 배치와 무관한 확정 사실이 아니다.
+행별 문맥을 분리해야 하면 `$행 >> [table:each]{parallel:4}{return [table:judge]{items:[$it],instruction:"같은 종류의 콘텐츠를 제공하는가?"}}`처럼 한 행씩 보낸다. 다른 행의 문맥은 제거되지만 모델 변동까지 없애지는 않으며 요청 수·비용이 증가한다.
+"같은 종류인가"와 "해지해도 되는가"는 다른 판단이다. 후자는 사용자 필요가 없으면 확정할 수 없으므로 질문을 나누고 unknown을 확인 필요로 남긴다.

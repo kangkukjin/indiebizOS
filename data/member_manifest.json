@@ -49,7 +49,7 @@
       },
       "path_audited": {
         "at": "2026-09-30",
-        "impl": "7b174e3fd1761ad8"
+        "impl": "b0695a7627a037d7"
       }
     },
     "self:list": {
@@ -91,7 +91,7 @@
       },
       "path_audited": {
         "at": "2026-09-30",
-        "impl": "7b174e3fd1761ad8"
+        "impl": "b0695a7627a037d7"
       }
     },
     "self:record": {
@@ -150,17 +150,22 @@
       },
       "path_audited": {
         "at": "2026-09-30",
-        "impl": "7b174e3fd1761ad8"
+        "impl": "b0695a7627a037d7"
       }
     },
     "self:write": {
       "lands_on": "body",
       "package": "system_essentials",
       "side_effect": true,
+      "member_transform": "member_documents:write",
       "limb_op": {
         "op": "write",
         "path": "$path",
         "content": "$content"
+      },
+      "path_audited": {
+        "at": "2026-09-30",
+        "impl": "b0695a7627a037d7"
       }
     },
     "sense:crawl": {

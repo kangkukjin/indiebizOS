@@ -1,0 +1,3 @@
+#!ibl edition=2
+$g = $입력 >> [table:groupby]{by:["일자","설명"],agg:{건수:["count"]}}
+return len($g.items)

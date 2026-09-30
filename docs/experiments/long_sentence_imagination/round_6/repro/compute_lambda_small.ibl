@@ -1,0 +1,2 @@
+#!ibl edition=2
+$입력 >> [table:compute]{set:($r)=>{금액수:number($r.금액),월:split($r.일자,"-")[1],환불:number($r.금액) < 0}}

@@ -70,6 +70,19 @@ def test_docx_fill_receipt_and_file_reference(member, monkeypatch):
     assert bad['error_type'] == 'input'
 
 
+def test_csv_write_serializes_before_member_delivery(member, monkeypatch):
+    import csv
+    sent = []
+    monkeypatch.setattr(bridge, 'request', lambda command: sent.append(command) or {'success': True})
+    params = {'path': 'ledger.csv', 'format': 'csv', 'content': [{'x': 'a,b', 'y': '"q"\nline'}]}
+    result = bridge.execute(profile.entry('self', 'write'), params)
+    assert result['success'] and len(sent) == 1
+    assert sent[0]['op'] == 'write' and sent[0]['path'] == 'ledger.csv'
+    assert list(csv.DictReader(io.StringIO(sent[0]['content']))) == params['content']
+    bad = bridge.execute(profile.entry('self', 'write'), {**params, 'content': [{'x': {'nested': 1}}]})
+    assert not bad['success'] and len(sent) == 1
+
+
 def test_fill_denied_does_not_claim_delivery(member, monkeypatch):
     files = {'template.docx': docx_bytes()}; exchange(monkeypatch, files, reject=True)
     result = bridge.execute(profile.entry('self', 'fill'), {'path': 'template.docx', 'data': {'name': 'x'}})

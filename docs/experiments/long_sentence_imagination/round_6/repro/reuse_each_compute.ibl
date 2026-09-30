@@ -1,0 +1,8 @@
+#!ibl edition=2
+[def:셈]($행들) { $x = $행들 >> [table:compute]{set:($r)=>{월:split($r.일자,"-")[1]}}
+ return len($x) }
+$파일들 = [self:list]{path:$폴더,pattern:"tx_2025-0[1-3].csv"} >> [table:sort]{by:"name"}
+$읽기 = $파일들 >> [table:each]{parallel:4,on_error:"collect"} { $문 = [self:read]{path:$it.path}
+ $n = [fn:셈]{행들:$문.data.items}
+ return {파일:$it.name,n:$n} }
+return $읽기

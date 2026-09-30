@@ -133,3 +133,18 @@ def fill_document(params, command, exchange, workspace):
     result['files'] = [{'path': result['path'], 'bytes': output.stat().st_size, 'on': 'body'}]
     result['saved'] = True
     return result
+
+
+def write(params, command, exchange, workspace):
+    """Serialize values only; the existing member write command owns file scope."""
+    content = params.get('content', params.get('_prev_result'))
+    if content is None:
+        return {'success': False, 'error_type': 'input', 'error': 'content 또는 직전 파이프 결과가 필요합니다'}
+    try:
+        if params.get('format') == 'csv':
+            content = _sibling('sink_ops').csv_text(content, params.get('columns'))
+        elif not isinstance(content, str):
+            content = json.dumps(content, ensure_ascii=False)
+    except ValueError as exc:
+        return {'success': False, 'error_type': 'input', 'error': str(exc)}
+    return exchange({**command, 'content': content})

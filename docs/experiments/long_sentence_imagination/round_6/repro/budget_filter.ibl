@@ -1,0 +1,2 @@
+#!ibl edition=2
+$입력 >> [table:filter]{where:($r)=>$r.금액 != "5"}

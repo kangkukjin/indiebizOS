@@ -1,0 +1,4 @@
+#!ibl edition=2
+$읽기 = ["tx_2025-01.csv","tx_2025-02.csv","tx_2025-03.csv"] >> [table:each] { $문 = [self:read]{path:f"${$폴더}/${$it}"}
+ return len($문.data.items) }
+return $읽기

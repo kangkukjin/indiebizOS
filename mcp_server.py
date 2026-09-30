@@ -262,6 +262,7 @@ def _execute_until_complete(payload, ticket, cancel_check):
 async def execute_ibl(code: str, project_path: str = "",
                       resume: Optional[dict] = None,
                       reuse: Optional[dict] = None,
+                      budget: Optional[dict] = None,
                       files: Optional[List[str]] = None,
                       files_from: Optional[List[str]] = None,
                       recover: Optional[str] = None,
@@ -320,6 +321,8 @@ async def execute_ibl(code: str, project_path: str = "",
     from ibl_edition import authoring_request
     if value_protocols is not None:
         payload["value_protocols"] = value_protocols
+    if budget is not None:
+        payload["budget"] = budget
     if edition is not None:
         payload["edition"] = edition
     payload = authoring_request(payload)

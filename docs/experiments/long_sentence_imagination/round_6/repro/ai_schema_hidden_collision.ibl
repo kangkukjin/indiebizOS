@@ -1,0 +1,4 @@
+#!ibl edition=2
+# L6-2: schema 필드 "분류" 가 input_fields 밖의 기존 열(분류:null)과 같은 이름 → check 통과, 모델 호출 뒤 TOOL "input_fields 밖의 원본 필드를 변경". 어느 필드인지 없음.
+$행 = [{설명:"HAIRSHOP BLUE",분류:null,출처:"규칙"},{설명:"KTX 코레일",분류:null,출처:"규칙"}]
+$행 >> [table:ai]{instruction:"설명의 지출 분류를 정한다(식비·교통·미용 중 하나).",schema:"분류(문자열)",input_fields:["설명"],preserve_rows:true}

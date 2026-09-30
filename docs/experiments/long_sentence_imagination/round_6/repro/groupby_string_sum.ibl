@@ -1,0 +1,3 @@
+#!ibl edition=2
+$g = $입력 >> [table:groupby]{by:"설명",agg:{합계:["sum","금액"],건수:["count"]}}
+return $g.items

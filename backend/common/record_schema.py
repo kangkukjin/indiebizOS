@@ -2,6 +2,27 @@
 import re
 
 
+def hidden_schema_fields(schema, input_fields, row_fields):
+    """Detect declared writes to hidden columns, including an unambiguous single name.
+
+    A single free-form schema stays backward compatible; only a name matching
+    an existing hidden column is actionable here.
+    """
+    if not isinstance(input_fields, list) or not input_fields:
+        return []
+    names = schema_fields(schema)
+    if not names and isinstance(schema, str):
+        match = re.fullmatch(r'\s*([\w]+)\s*\([^()]*\)\s*', schema)
+        names = [match[1]] if match else []
+    return sorted(set(names or []) & (set(row_fields) - set(input_fields)))
+
+
+def hidden_schema_message(fields):
+    return (f"schema가 input_fields 밖의 원본 필드를 덮어씁니다: {fields}. "
+            "앞에서 select로 해당 열을 제거하거나, 출력 필드를 다른 이름으로 지정하거나, "
+            "수정할 원본 열을 input_fields에 포함하세요.")
+
+
 def schema_fields(schema):
     """`name(설명), other(설명)` → 필드 목록. 모호한 자유 라벨은 None."""
     if not isinstance(schema, str) or not schema.strip():

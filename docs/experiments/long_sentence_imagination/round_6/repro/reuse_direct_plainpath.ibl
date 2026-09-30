@@ -1,0 +1,4 @@
+#!ibl edition=2
+$a = [self:read]{path:$p1}
+$b = [self:read]{path:$p2}
+return [len($a.data.items),len($b.data.items)]

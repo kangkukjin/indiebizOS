@@ -1,0 +1,2 @@
+#!ibl edition=2
+$입력 >> [table:compute]{set:{환불:"금액 < 0"}}

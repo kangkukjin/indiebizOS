@@ -1,0 +1,3 @@
+#!ibl edition=2
+$입력 >> [table:each] { $금 = number($it.금액)
+ return {일자:$it.일자,월:split($it.일자,"-")[1],설명:$it.설명,금액:$금,환불:$금 < 0,금액원문:$it.금액,금액오류:null} }

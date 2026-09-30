@@ -1,0 +1,2 @@
+#!ibl edition=2
+$입력 >> [table:each] { return {설명:$it.설명} }

@@ -248,6 +248,7 @@ actions:
     - select
     - 골라
   compute:
+    authoring_hint: 'set은 행을 받아 추가·수정 열 Record를 반환하는 람다입니다. 예: $행 >> [table:compute]{set:($r)=>{금액:number($r.금액),월:$r.일자[5:7]}}. 원본의 다른 열은 보존합니다. 람다 안 식도 실행 단계 예산을 소비합니다.'
     callable_contract:
       version: 1
       params:

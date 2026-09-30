@@ -7,6 +7,8 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
     source = request.get("code") or request.get("pipeline") or ""
     try:
         if edition_of(source, request.get("edition")) != 2:
+            if request.get('budget') is not None:
+                raise Fault("EDITION_ARGUMENT", "budget은 판본 2에서만 사용할 수 있습니다.", kind="compile")
             if request.get("inputs") is not None:
                 raise Fault("EDITION_ARGUMENT", "inputs는 판본 2에서만 사용할 수 있습니다.", kind="compile")
             return None
@@ -31,7 +33,8 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
                 raise Fault("REUSE_ARGUMENT", "reuse에는 이전 run_id와 선택 models(Bool)를 지정하세요.", kind="compile")
         from ibl_v2_adapters import load_registry
         from ibl_v2_compile import compile_program
-        from ibl_v2_runtime import Runtime
+        from ibl_v2_runtime import Runtime, Budget
+        budget = Budget.from_request(request.get("budget"))
         from ibl_v2_store import definitions
         plan = compile_program(source, load_registry(project_path, agent_id), inputs, definitions())
         from ibl_run_journal import Journal, journal_root, identity, reusable_receipts, validate_resume
@@ -42,7 +45,9 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
                 validate_resume(journal_root(project_path), request['resume'],
                                 identity(plan, inputs, project_path, agent_id, input_evidence=input_evidence))
             from ibl_v2_analysis import compact_check
-            return compact_check(plan)
+            checked = compact_check(plan)
+            checked['budget'] = {'steps': budget.steps, 'rows': budget.rows}
+            return checked
         if plan.issues:
             return Runtime(plan, inputs).run()
         root = journal_root(project_path)
@@ -52,6 +57,7 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
             from ibl_edition import source_context
             with source_context(2):
                 result = Runtime(plan, inputs, cancel_check=cancel_check, journal=journal,
+                                 budget=budget,
                                  reusable=reusable, reuse_run=reuse["run_id"] if reuse else None,
                                  input_evidence=input_evidence, value_protocols=protocols,
                                  reuse_models=reuse.get("models", True) if reuse else True).run()
@@ -73,4 +79,5 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
 def capabilities():
     return {"editions": [1, 2], "default_edition": 1, "model_authoring_edition": 2, "value_protocols": ["ibl-value/1", "ibl-value/2"],
             "v2_resume": True, "resume_protocols": ["ibl-resume/1"], "v2_remote_script": True, "call_protocols": ["ibl-script-call/1"],
-            "v2_budget": {"steps": 100000, "rows": 10000, "seconds": None, "depth": 64}}
+            "v2_budget": {"steps": 100000, "rows": 10000, "seconds": None, "depth": 64,
+                          "request_max": {"steps": 1000000, "rows": 100000}}}

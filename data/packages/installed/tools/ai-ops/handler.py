@@ -489,6 +489,11 @@ def _transform(tool_input: dict) -> str:
     preserve = tool_input.get("preserve_rows", False)
     if type(preserve) is not bool:
         return _fail("preserve_rows는 boolean이어야 합니다.")
+    from common.record_schema import hidden_schema_fields, hidden_schema_message
+    collisions = hidden_schema_fields(schema, input_fields,
+                                      {key for row in items if isinstance(row, dict) for key in row})
+    if collisions and tool_input.get('inspect') is None:
+        return _fail(hidden_schema_message(collisions), error_type='schema', fields=collisions)
     from common.item_contract import ContractError, validate_contract, check_inputs, check_outputs
     from common.ai_input_inspection import inspect_inputs, indexed_payload
     contract = tool_input.get("contract")
@@ -583,7 +588,7 @@ def _transform(tool_input: dict) -> str:
                 if input_fields is not None:
                     hidden = set(dict_items[i]) - set(input_fields) - {"_i"}
                     if hidden.intersection(row):
-                        raise ValueError("모델이 input_fields 밖의 원본 필드를 변경했습니다.")
+                        raise ValueError(hidden_schema_message(sorted(hidden.intersection(row))))
             if preserve:
                 if sorted(indices) != list(range(len(dict_items))):
                     raise ValueError("preserve_rows: 입력 행 누락 또는 중복입니다.")

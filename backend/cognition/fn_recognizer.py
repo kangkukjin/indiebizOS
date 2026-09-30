@@ -104,7 +104,7 @@ def corpus_stats(code: str) -> Optional[Dict[str, int]]:
         con = sqlite3.connect(str(get_base_path() / "data" / "world_pulse.db"), timeout=2)
         try:
             row = con.execute("SELECT seen_count, success_count FROM ibl_code_corpus "
-                              "WHERE code_sha256=? AND COALESCE(source, 'usage') <> 'test'",
+                              "WHERE code_sha256=? AND COALESCE(source, 'usage') NOT IN ('test', 'training')",
                               (sha,)).fetchone()
         finally:
             con.close()

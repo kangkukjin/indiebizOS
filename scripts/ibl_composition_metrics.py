@@ -135,11 +135,11 @@ con = sqlite3.connect(DB)
 # 시험 유래 주행 제외(B18-2) — 지표는 실사용 파이프만 센다.
 if SINCE:
     rows = con.execute("SELECT id, started_at, agent, user_message, log FROM episode_log "
-                       "WHERE COALESCE(source, 'usage') <> 'test' AND started_at >= ? "
+                       "WHERE COALESCE(source, 'usage') NOT IN ('test', 'training') AND started_at >= ? "
                        "ORDER BY id DESC", (SINCE,)).fetchall()
 else:
     rows = con.execute("SELECT id, started_at, agent, user_message, log FROM episode_log "
-                       "WHERE COALESCE(source, 'usage') <> 'test' ORDER BY id DESC LIMIT ?",
+                       "WHERE COALESCE(source, 'usage') NOT IN ('test', 'training') ORDER BY id DESC LIMIT ?",
                        (N,)).fetchall()
 
 REF_ATTR = re.compile(r"<ref\s+intent=\"(?:.*?)\"\s+code='(.*)'\s+score=")     # 수리 전 형식

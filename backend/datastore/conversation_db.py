@@ -394,7 +394,7 @@ class ConversationDB:
 
         # 하드캡 요약 체크포인트 갱신 예약 (fail-soft — 선판정 SQL 만이라 대부분 no-op,
         # LLM 은 캡 밖에 새 턴이 쌓였을 때만 백그라운드 스레드로. history_checkpoint 참조)
-        if _ckpt_schedule:
+        if _ckpt_schedule and contact_type != 'rehearsal':
             try:
                 _ckpt_schedule(self.db_path, from_agent_id, to_agent_id)
             except Exception:
@@ -453,7 +453,8 @@ class ConversationDB:
             cursor.execute("""
                 SELECT id, from_agent_id, to_agent_id, content, message_time
                 FROM messages
-                WHERE from_agent_id = ? OR to_agent_id = ?
+                WHERE (from_agent_id = ? OR to_agent_id = ?)
+                  AND COALESCE(contact_type, 'gui') != 'rehearsal'
                 ORDER BY message_time DESC
                 LIMIT ? OFFSET ?
             """, (agent_id, agent_id, limit, offset))
@@ -499,7 +500,8 @@ class ConversationDB:
         except (TypeError, ValueError):
             return ""
 
-    def get_history_for_ai(self, agent_id: int, user_id: int = 1, limit: int = None) -> list:
+    def get_history_for_ai(self, agent_id: int, user_id: int = 1, limit: int = None,
+                           *, rehearsal: bool = False) -> list:
         """AI용 대화 히스토리 (최신 순, Observation Masking 적용)
 
         최근 N턴은 원본 유지, 오래된 긴 턴은 결과 쪽을 더 넓게 남기는 원문 발췌
@@ -514,11 +516,12 @@ class ConversationDB:
             cursor.execute("""
                 SELECT from_agent_id, content, message_time, images
                 FROM messages
-                WHERE (from_agent_id = ? AND to_agent_id = ?)
-                   OR (from_agent_id = ? AND to_agent_id = ?)
+                WHERE ((from_agent_id = ? AND to_agent_id = ?)
+                   OR (from_agent_id = ? AND to_agent_id = ?))
+                  AND (COALESCE(contact_type, 'gui') = 'rehearsal') = ?
                 ORDER BY message_time DESC
                 LIMIT ?
-            """, (agent_id, user_id, user_id, agent_id, limit))
+            """, (agent_id, user_id, user_id, agent_id, int(rehearsal), limit))
 
             messages = []
             rows = cursor.fetchall()
@@ -552,7 +555,7 @@ class ConversationDB:
         history = list(reversed(messages))
 
         # 하드캡 요약 체크포인트를 머리에 주입 (history_checkpoint — 없으면 무변화, fail-soft)
-        if _ckpt_apply:
+        if _ckpt_apply and not rehearsal:
             try:
                 history = _ckpt_apply(self.db_path, agent_id, user_id, history)
             except Exception:

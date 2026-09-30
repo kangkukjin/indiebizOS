@@ -71,7 +71,8 @@ def _resolve_conv_agent_id(project_id: str, agent_id: str, db) -> Optional[int]:
 
 
 @router.get("/conversations/{project_id}/{agent_id}/messages")
-async def get_messages(project_id: str, agent_id: str, limit: int = 50, offset: int = 0):
+async def get_messages(project_id: str, agent_id: str, limit: int = 50, offset: int = 0,
+                       rehearsal: bool = False):
     """에이전트와의 대화 메시지 조회.
     agent_id 는 숫자 대화 id(데스크탑) 또는 yaml id 'agent_001'(원격 런처) 둘 다 허용."""
     try:
@@ -91,10 +92,11 @@ async def get_messages(project_id: str, agent_id: str, limit: int = 50, offset: 
             cursor.execute("""
                 SELECT id, from_agent_id, to_agent_id, content, message_time
                 FROM messages
-                WHERE from_agent_id = ? OR to_agent_id = ?
+                WHERE (from_agent_id = ? OR to_agent_id = ?)
+                  AND (COALESCE(contact_type, 'gui') = 'rehearsal') = ?
                 ORDER BY message_time DESC
                 LIMIT ? OFFSET ?
-            """, (num_id, num_id, limit, offset))
+            """, (num_id, num_id, int(rehearsal), limit, offset))
 
             messages = []
             for row in cursor.fetchall():
@@ -142,7 +144,8 @@ async def get_conversation_partners(project_id: str, agent_id: int):
                     END as partner_id,
                     message_time
                     FROM messages
-                    WHERE from_agent_id = ? OR to_agent_id = ?
+                    WHERE (from_agent_id = ? OR to_agent_id = ?)
+                      AND COALESCE(contact_type, 'gui') != 'rehearsal'
                 ) m ON a.id = m.partner_id
                 GROUP BY a.id, a.name, a.type
                 ORDER BY last_message_time DESC
@@ -215,8 +218,9 @@ async def get_messages_between(project_id: str, agent1_id: int, agent2_id: int, 
             cursor.execute("""
                 SELECT id, from_agent_id, to_agent_id, content, message_time
                 FROM messages
-                WHERE (from_agent_id = ? AND to_agent_id = ?)
-                   OR (from_agent_id = ? AND to_agent_id = ?)
+                WHERE ((from_agent_id = ? AND to_agent_id = ?)
+                   OR (from_agent_id = ? AND to_agent_id = ?))
+                  AND COALESCE(contact_type, 'gui') != 'rehearsal'
                 ORDER BY message_time DESC
                 LIMIT ? OFFSET ?
             """, (agent1_id, agent2_id, agent2_id, agent1_id, limit, offset))

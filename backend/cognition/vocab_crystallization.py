@@ -202,7 +202,7 @@ def scan(days: int = _WINDOW_DAYS) -> Dict[str, Any]:
         rows = conn.execute(
             "SELECT id, started_at, user_message, log FROM episode_log "
             # 시험 유래 주행 제외(B18-2) — 결정화는 *사람이 실제로 겪은 마찰*만 세야 한다.
-            "WHERE started_at >= ? AND COALESCE(source, 'usage') <> 'test' ORDER BY id",
+            "WHERE started_at >= ? AND COALESCE(source, 'usage') NOT IN ('test', 'training') ORDER BY id",
             (cutoff,),
         ).fetchall()
     finally:

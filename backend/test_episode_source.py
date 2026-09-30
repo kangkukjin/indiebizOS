@@ -106,19 +106,22 @@ def test_readers_hide_test_rows_by_default(tmp_path):
         conn = EL._get_db()
         u = _row(conn, "episode_log", "usage", "데이터")
         t = _row(conn, "episode_log", "test", "test_role_tags")
+        training = _row(conn, "episode_log", "training", "rehearsal_agent")
         legacy = _row(conn, "episode_log", None, "옛행")   # 칸 생기기 전 = 실사용
         _row(conn, "episode_summary", "usage", "데이터", eid=u)
         _row(conn, "episode_summary", "test", "test_role_tags", eid=t)
+        _row(conn, "episode_summary", "training", "rehearsal_agent", eid=training)
         conn.commit()
         conn.close()
 
         ids = {r["id"] for r in EL.get_episode_list(50)}
-        assert u in ids and legacy in ids and t not in ids, ids
+        assert u in ids and legacy in ids and t not in ids and training not in ids, ids
+        assert training in {r['id'] for r in EL.get_episode_list(50, include_test=True)}
         assert t in {r["id"] for r in EL.get_episode_list(50, include_test=True)}
         jids = {r["id"] for r in EL.get_episode_journal(50)}
-        assert u in jids and t not in jids, jids
+        assert u in jids and t not in jids and training not in jids, jids
         agents = {r["agent"] for r in EL.get_episode_summaries(50)}
-        assert "데이터" in agents and "test_role_tags" not in agents, agents
+        assert "데이터" in agents and "test_role_tags" not in agents and "rehearsal_agent" not in agents, agents
         assert "test_role_tags" in {r["agent"] for r in EL.get_episode_summaries(50, include_test=True)}
         print("OK 읽기 기본값=실사용만 (NULL=실사용, include_test 로 열림)")
     finally:
@@ -135,6 +138,7 @@ def test_cap_evicts_test_rows_first(tmp_path):
         old_usage = _row(conn, "episode_log", "usage", "데이터")      # 가장 오래된 실사용
         t1 = _row(conn, "episode_log", "test", "test_a")
         t2 = _row(conn, "episode_log", "test", "test_b")
+        _row(conn, "episode_log", "training", "rehearsal_agent")
         new_usage = _row(conn, "episode_log", "usage", "여행")
         conn.commit()
         conn.close()
@@ -147,6 +151,40 @@ def test_cap_evicts_test_rows_first(tmp_path):
         print("OK 상한 축출 순서: 시험분 먼저, 그 다음 오래된 것")
     finally:
         EL.MAX_EPISODES = orig_max
+        EL._get_db = orig
+
+
+def test_training_does_not_change_trends_or_default_trajectory(tmp_path, monkeypatch):
+    import episode_logger as EL
+    from datetime import datetime, timedelta
+    _, orig = _tmp_db(tmp_path)
+    try:
+        with EL._get_db() as conn:
+            for source, ms, decision in [('usage', 100, 'EXECUTE'), ('training', 99999, 'THINK')]:
+                eid = _row(conn, 'episode_log', source, source)
+                _row(conn, 'episode_summary', source, source, eid=eid)
+                conn.execute('UPDATE episode_summary SET started_at=?, total_ms=?, '
+                             'unconscious_decision=?, evaluation_result=? WHERE episode_id=?',
+                             ((datetime.now() - timedelta(hours=1)).isoformat(), ms, decision,
+                              'ACHIEVED' if source == 'usage' else 'FAILED', eid))
+                conn.execute('UPDATE episode_log SET started_at=? WHERE id=?',
+                             ((datetime.now() - timedelta(hours=1)).isoformat(), eid))
+                conn.execute('INSERT INTO trajectory_event(run_id,event_seq,episode_id,ts,kind,data,source) '
+                             'VALUES(?,1,?,0,?, ?,?)', (source, eid, 'probe', '{}', source))
+        recent = EL.get_cognitive_trends()['recent']
+        assert recent['episode_count'] == 1 and recent['avg_total_ms'] == 100
+        assert recent['execute_ratio'] == recent['evaluation_achieved_ratio'] == 1
+        assert EL.get_trajectory(run_id='training') == []
+        assert len(EL.get_trajectory(run_id='training', include_test=True)) == 1
+        assert len(EL.get_trajectory(run_id='usage')) == 1
+        import vocab_crystallization as vc
+        import api_xray
+        monkeypatch.setattr(vc, '_PULSE_DB', tmp_path / 'world_pulse.db')
+        monkeypatch.setattr(api_xray, 'DATA_PATH', tmp_path)
+        assert vc.scan()['episodes_scanned'] == 1
+        distribution = api_xray._collect_cognition()['distribution']
+        assert distribution['sample'] == 1 and distribution['decision'] == {'EXECUTE': 1}
+    finally:
         EL._get_db = orig
 
 
@@ -225,10 +263,10 @@ def test_analysis_readers_exclude_test(tmp_path):
     """결정화 감지기·조합 지표는 *사람이 겪은 마찰*만 센다 (질의문 가드)."""
     import vocab_crystallization as VC
     src = open(VC.__file__, encoding="utf-8").read()
-    assert "COALESCE(source, 'usage') <> 'test'" in src, "결정화 스캔이 시험분을 다시 센다"
+    assert "COALESCE(source, 'usage') NOT IN ('test', 'training')" in src, "결정화 스캔이 시험분을 다시 센다"
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     m = open(os.path.join(root, "scripts", "ibl_composition_metrics.py"), encoding="utf-8").read()
-    assert "COALESCE(source, 'usage') <> 'test'" in m, "조합 지표가 시험분을 다시 센다"
+    assert "COALESCE(source, 'usage') NOT IN ('test', 'training')" in m, "조합 지표가 시험분을 다시 센다"
     print("OK 분석 독자(결정화·조합지표) 시험분 제외")
 
 

@@ -280,8 +280,9 @@ def _fetch_pair(a: int, b: int) -> Callable:
             pass
         rows = conn.execute("""
             SELECT id, from_agent_id, content FROM messages
-            WHERE (from_agent_id = ? AND to_agent_id = ?)
-               OR (from_agent_id = ? AND to_agent_id = ?)
+            WHERE ((from_agent_id = ? AND to_agent_id = ?)
+               OR (from_agent_id = ? AND to_agent_id = ?))
+              AND COALESCE(contact_type, 'gui') != 'rehearsal'
             ORDER BY id ASC
         """, (a, b, b, a)).fetchall()
         return [(r[0], names.get(r[1], f"발화자{r[1]}"), r[2] or "") for r in rows]

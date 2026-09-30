@@ -2,7 +2,7 @@
 IBL은 도구를 어휘로 사용하는 언어다. execute_ibl은 현재 명시 값·함수 문법으로 실행한다.
 주 조합 교재: read_guide(query="ibl_composition.md"). 문법 전문은 [self:read]{path:"data/common_prompts/fragments/12_ibl_only.md"}의 text다.
 액션·op·입출력은 execute_ibl(code="",describe=["node:action"])으로 1~6개씩 조회한다.
-과거 업무 가이드에서는 목적·도구·품질 조건을 가져오고 프로그램은 현재 문법으로 구성한다.
+과거 가이드의 목적·품질 조건은 보존하고 현재 문법으로 작성한다.
 
 <!-- MEMBER_GRAMMAR:START -->
 현재 명시 값 IBL이 작성 기본값이다. inputs로 값을 전달하고 check:true로 검사한다.
@@ -17,11 +17,10 @@ IBL은 도구를 어휘로 사용하는 언어다. execute_ibl은 현재 명시 
 큰 본문은 self:read로 읽은 .text를 전달한다. 파일 수정은 필요한 범위만 바꾸고 전체를 다시 생성하지 않는다.
 
 복잡한 새 일은 사용자 요구 → 분해 이유 → 함수별 계약 → 구현 → 최상위 조합 순으로 작성한다.
-의식의 분해 스케치가 있으면 실제 도구 계약으로 구체화하고, 없으면 직접 나눈다.
-탐색에 맞게 스케치를 다듬되 목표·달성 기준은 유지하고, 전제가 깨지면 reframe을 쓴다.
+분해 스케치를 실제 계약으로 구체화하되 목표·달성 기준을 유지한다.
 각 부분의 입력·반환·실패·효과를 정하고, 기존 관용구가 없으면 그 자리에서 def로 정의해 fn으로 조합한다.
-저장 없이 정의·호출할 수 있다. 반복 사용 가치가 검증된 정의만 이후 저장한다. 단순 일은 억지로 나누지 않는다.
-장문 계획·별도 모델 호출은 필요 없다. 정해진 흐름은 한 프로그램으로 연결하고 새 판단의 경계에서 확인한다.
+검증된 재사용 정의만 저장한다. 단순 일은 나누지 않는다.
+정해진 흐름은 한 프로그램으로 연결하고 새 판단의 경계에서 확인한다.
 다음 판단에 필요한 값·근거·미확인점을 반환하고 상세는 실제 참조로 보존한다. 요청 산출물·필수 근거·실패를 누락하지 않는다.
 
 ```ibl
@@ -42,9 +41,13 @@ if/try는 반환 프레임을 만들지 않는다. 빈 목록은 정상 값이�
 목록: unique/union/intersection/difference(순서 보존·기존 동등성), zip/enumerate, any/all(Bool 목록),
 sorted($목록,"키",true), keys/values/entries. 날짜: date_add(날짜,일수)·date_diff(a,b)·month_end(날짜)(ISO 표기). 슬라이스 $목록[1:3], 펼침 {**$기본,k:값}(뒤 필드 우선).
 실제 여러 줄은 삼중 따옴표. assert 조건,"메시지",{상세:값}은 실패 시 ASSERTION_FAILED와 근거를 남긴다.
-각 값의 필드는 has/get으로 확인한다. 필드가 없으면 null로 추측하지 않는다.
+각 값의 필드는 has/get으로 확인한다. get(객체,키)는 누락 시 null, 셋째 인자는 기본값이다.
+호출은 연산·내장 함수 인자·보간에도 쓴다. 조건·람다·?:·and/or·기본값에는 효과 없는 지역 함수만 호출한다.
+값의 분기는 조건 ? 참값 : 거짓값. 제어 블록 뒤 다음 문장은 같은 줄에도 쓴다. 줄 머리 +는 계속이 아니므로 괄호로 묶는다.
 
 표 계산은 filter{where:($r)=>Bool}, compute{set:($r)=>Record}, select{columns:[...]}, sort{by,descending}, take{n}이다.
+행 목록 자리는 목록 또는 items 목록을 가진 Record를 받는다. sort.by는 키 목록도 받으며 앞 키부터 정렬한다.
+join에 right를 명시하면 파이프는 left다. 동일 의미의 문자열은 한 번 분류해 매핑하되 배치 judge는 다른 행의 영향을 받을 수 있다.
 each는 목록의 모든 입력을 처리하고 각 결과 하나를 모은다. 반환 목록을 한 겹 펼칠 때만 mode:"flat_map"을 쓴다.
 parallel:1~8은 출력 순서를 보존한다. 기본 실패는 stop이며 on_error:"collect"는 List<Result>를 반환한다.
 is_ok/unwrap/error_of로 성공·실패를 나눈다. Unit을 원 행으로 대체하거나 실패를 빈 목록으로 숨기지 않는다.
@@ -56,9 +59,11 @@ self:script{id,args}는 기존 등록 스크립트도 직접 호출한다. JSON 
 새 저장 함수는 명시 인자와 #!ibl edition=2 헤더로 의미를 고정한다. 구형 원문을 실행할 때만 저장된 판본을 따른다.
 
 긴 프로그램은 check:true로 먼저 검사한다. invalid는 실행하지 않고 incomplete는 실행 중 검사할 경계가 남았다는 뜻이다.
+실행 요청 budget:{steps,rows}로 상한을 조절한다(최대 100만/10만). 사용 비용은 usage.steps_by_line으로 확인한다.
 결과는 value이며 success/source_complete/diagnostic/evidence도 확인한다. 도구 내부 실패·부분 원천은 성공으로 덮지 않는다.
 result_ref.read_args를 code="",read_result=...로 보내 저장된 원문을 읽는다. 다음 페이지는 next_read를 따른다.
 원문의 실제 경로를 사용하고 상세 열람을 위해 실행을 반복하지 않는다. 이미지 블록은 호스트 이미지 출력으로 전달한다.
+반복·압축 뒤 프로그램이 없으면 read_result:{calls:true}로 호출 목록→input.id의 path:["code"]를 읽어 입력을 바꿔 쓴다. 실패·저장 결과도 확인한다. 문맥에 있으면 재독하지 않는다.
 느린 작업은 반환된 ID·티켓으로 status/recover와 유한 wait를 사용한다. 이미 시작한 작업을 중복 시작하지 않는다.
 재개는 반환된 resume:{run_id}와 동일 code·inputs로 요청한다. 완료 호출은 영수증으로 복원한다.
 고친 프로그램에서 이전 읽기를 이어 쓸 때는 continuation.reuse_args를 요청에 합친다. 최신 조회는 새로 실행한다. 앞 결과는 inputs:result_ref.input_args와 $입력으로 연결한다(직접 쓰면 inputs:{입력:{"$ref":"결과 id"}}). $ref를 inputs 자체에 넣지 않는다.

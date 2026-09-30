@@ -51,6 +51,7 @@ from agent_registry import agent_runners, get_agent_runners  # noqa: F401
 
 class AgentCommand(BaseModel):
     command: str
+    origin: str | None = None
     # True면 즉시 반환(fire-and-forget) — 영상 생성 등 수 분짜리 작업이 터널 타임아웃(524)에
     # 걸리지 않도록. 응답은 평소처럼 conversations.db에 저장되니 호출 측이 메시지를 폴링해서 받는다.
     background: bool = False
@@ -298,7 +299,14 @@ async def stop_all_agents(project_id: str):
 
 # ============ 에이전트 명령 ============
 
-def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
+def _command_origin(origin):
+    from thread_context import REHEARSAL_ORIGINS
+    if origin is not None and origin not in REHEARSAL_ORIGINS:
+        raise HTTPException(status_code=400, detail="origin은 'training'만 지정할 수 있습니다.")
+    return origin or "user"
+
+
+def _run_agent_command(project_id: str, agent_id: str, runner, command: str, origin=None):
     """에이전트 명령 처리 코어 — 동기/백그라운드 양쪽이 공유.
 
     응답 텍스트를 반환하고, 사용자/AI 메시지를 conversations.db에 저장한다.
@@ -310,6 +318,9 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
                                 set_current_task_id, clear_called_agent, clear_all_context)
     from uuid import uuid4
 
+    task_origin = _command_origin(origin)
+    rehearsal = task_origin == "training"
+    contact_type = "rehearsal" if rehearsal else "gui"
     task_id = f"task_{uuid4().hex}"
     db = None
     user_id = target_agent_id = None
@@ -322,7 +333,10 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         set_current_agent_id(agent_id)
         set_current_agent_name(agent_name)
         set_current_project_id(project_id)
-        set_task_origin("user")  # 원격 런처 에이전트 명령 HTTP = 사람의 직접 명령
+        if rehearsal:
+            set_task_origin(task_origin)
+        else:
+            set_task_origin("user")
         set_user_input(command)  # 쓰기 관문 원장·episode 조인이 읽는 행위자 칸 (WS 경로와 대칭)
         set_current_task_id(task_id)
         clear_called_agent()
@@ -340,17 +354,17 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
 
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
-        db.create_task(task_id, "user@gui", "gui", command, agent_name)
+        db.create_task(task_id, "user@gui", contact_type, command, agent_name)
 
         # 사용자 및 에이전트 ID
         user_id = db.get_or_create_agent("user", "human")
         target_agent_id = db.get_or_create_agent(agent_name, "ai_agent")
 
         # 히스토리 로드
-        history = db.get_history_for_ai(target_agent_id, user_id)
+        history = db.get_history_for_ai(target_agent_id, user_id, rehearsal=rehearsal)
 
         # 사용자 메시지 저장
-        db.save_message(user_id, target_agent_id, command)
+        db.save_message(user_id, target_agent_id, command, contact_type=contact_type)
 
         # AI 응답 생성 — 인지 파이프라인 제너레이터를 drain 하는 블로킹 어댑터.
         #
@@ -371,7 +385,7 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         response = result.get("final") or result.get("error") or ""
 
         # AI 응답 저장
-        db.save_message(target_agent_id, user_id, response)
+        db.save_message(target_agent_id, user_id, response, contact_type=contact_type)
         response_saved = True
         task = db.get_task(task_id) or {}
         if result.get("error") or result.get("cancelled"):
@@ -393,9 +407,9 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
                 # 실패 상태와 사용자에게 보일 응답을 같은 트랜잭션에 남긴다.
                 if user_id is not None and target_agent_id is not None and not response_saved:
                     conn.execute("INSERT INTO messages (from_agent_id, to_agent_id, content, contact_type) "
-                                 "VALUES (?, ?, ?, 'gui')",
+                                 "VALUES (?, ?, ?, ?)",
                                  (target_agent_id, user_id,
-                                  "요청 처리 중 오류가 발생해 작업이 중단되었습니다.\n" + error))
+                                  "요청 처리 중 오류가 발생해 작업이 중단되었습니다.\n" + error, contact_type))
                 conn.commit()
         raise
     finally:
@@ -420,6 +434,7 @@ def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
     수 분짜리 작업이 Cloudflare 터널 100초 타임아웃에 걸려 524가 뜨던 문제 해결). 응답은
     평소처럼 conversations.db에 저장되므로 호출 측이 메시지를 폴링해서 받아간다.
     """
+    _command_origin(cmd.origin)  # 백그라운드 접수 전에 거절한다.
     # 에이전트 실행 중인지 확인 — 두 경로 모두 즉시 검증해서 빠른 피드백을 준다
     if project_id not in agent_runners or agent_id not in agent_runners[project_id]:
         raise HTTPException(status_code=400, detail="에이전트가 실행 중이 아닙니다.")
@@ -433,7 +448,7 @@ def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
     if cmd.background:
         def _worker():
             try:
-                _run_agent_command(project_id, agent_id, runner, cmd.command)
+                _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin)
             except Exception:
                 import traceback
                 traceback.print_exc()
@@ -441,7 +456,7 @@ def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
         return {"status": "started"}
 
     try:
-        response = _run_agent_command(project_id, agent_id, runner, cmd.command)
+        response = _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin)
         return {"response": response}
     except Exception as e:
         import traceback

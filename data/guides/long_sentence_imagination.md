@@ -220,6 +220,7 @@ RED 수리 그랜트와 증류는 없다(리허설은 삶이 아니다). 따라�
 그 혼입(실사용 에피소드·대화 기록·경험 저장 가능성)을 보고서에 적는다. 표식은 외부 행동을 막지 않는다 — 읽기와 회차 폴더
 쓰기만 있는 과제로 제한하고, 발송·구매·공개·예약이 낀 과제는 상상행동 가이드 §3의 격리가 확인될 때만 한다.
 후속 요청은 앞 턴의 result_ref를 그대로 이어 쓸 수 있다(같은 에이전트·주체의 최근 8턴).
+프로젝트 에이전트의 `POST /projects/{project_id}/agents/{agent_id}/command`도 `origin:"training"`을 받는다. 동기·background 모두 리허설 이력과 CLI 세션을 사용한다. background 결과는 기존 메시지 조회에 `rehearsal=true`를 붙여 회수한다. 기본 메시지·주행기록 조회와 자동 대화 요약은 훈련을 제외하며, 주행 조회의 `include_test=true`는 훈련도 포함한다.
 
 **무엇을 회수하나.** `data/world_pulse.db`(읽기 전용)의 `episode_log.total_ms`와 그 에피소드의
 `trajectory_event`: `supervision.tool.started/finished`(작성한 IBL·거절·오류), `model.usage`

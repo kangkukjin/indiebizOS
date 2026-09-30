@@ -904,7 +904,7 @@ def _collect_cognition() -> Dict:
             SELECT unconscious_decision, evaluation_result, consciousness_ms,
                    execution_rounds, hippocampus_score
             FROM episode_summary
-            WHERE COALESCE(source, 'usage') <> 'test'   -- 시험 유래 주행 제외(B18-2)
+            WHERE COALESCE(source, 'usage') NOT IN ('test', 'training')   -- 시험 유래 주행 제외(B18-2)
             ORDER BY id DESC LIMIT 100
         """).fetchall()
         conn.close()

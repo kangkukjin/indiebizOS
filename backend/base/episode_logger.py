@@ -1096,14 +1096,14 @@ def _cleanup_old_episodes(keep_id=None):
             delete_count = count - MAX_EPISODES
             doomed = conn.execute(
                 "SELECT id FROM episode_log WHERE ? IS NULL OR id <> ? "
-                "ORDER BY CASE WHEN COALESCE(source, 'usage') = 'test' THEN 0 ELSE 1 END, id ASC "
+                "ORDER BY CASE WHEN COALESCE(source, 'usage') IN ('test', 'training') THEN 0 ELSE 1 END, id ASC "
                 "LIMIT ?", (keep_id, keep_id, delete_count)).fetchall()
             doomed_ids = [r[0] for r in doomed]
             conn.execute(
                 "DELETE FROM episode_log WHERE id IN ("
                 "  SELECT id FROM episode_log"
                 "  WHERE ? IS NULL OR id <> ?"
-                "  ORDER BY CASE WHEN COALESCE(source, 'usage') = 'test' THEN 0 ELSE 1 END, id ASC"
+                "  ORDER BY CASE WHEN COALESCE(source, 'usage') IN ('test', 'training') THEN 0 ELSE 1 END, id ASC"
                 "  LIMIT ?)",
                 (keep_id, keep_id, delete_count)
             )
@@ -1120,7 +1120,7 @@ def _cleanup_old_episodes(keep_id=None):
 # ============ 조회 함수 ============
 
 # 읽는 쪽의 기본값 — 실사용 주행만. NULL(칸 생기기 전 행)은 실사용으로 읽는다.
-USAGE_ONLY = "COALESCE(source, 'usage') <> 'test'"
+USAGE_ONLY = "COALESCE(source, 'usage') NOT IN ('test', 'training')"
 
 
 def get_episode_list(limit: int = 20, include_test: bool = False):
@@ -1181,7 +1181,7 @@ def get_episode_journal(limit: int = 30, include_test: bool = False, *,
                     SUM(CASE WHEN kind='ibl.started' THEN COALESCE(json_extract(data, '$.action_count'), 0) END) actions
                     FROM trajectory_event WHERE episode_id IN ({marks})
                     AND kind IN ('supervision.tool.started', 'ibl.started') AND json_valid(data)
-                    {'' if include_test else "AND COALESCE(source, 'usage') <> 'test'"}
+                    {'' if include_test else "AND COALESCE(source, 'usage') NOT IN ('test', 'training')"}
                     GROUP BY episode_id""", [item["id"] for item in items]).fetchall()
             # IBL 실행 = 코드를 실은 호출(설명 조회·결과 읽기 제외) + 엔진 진입 전 거절된 시도. 액션 = 쓴 어휘 수.
             counts = {r["episode_id"]: r["coded"] + max(r["attempts"] - r["starts"], 0) for r in calls}
@@ -1190,7 +1190,7 @@ def get_episode_journal(limit: int = 30, include_test: bool = False, *,
             for row in conn.execute(
                 f"SELECT episode_id,data FROM trajectory_event WHERE episode_id IN ({marks}) "
                 "AND kind='model.round' "
-                + ("" if include_test else "AND COALESCE(source,'usage') <> 'test' ")
+                + ("" if include_test else "AND COALESCE(source,'usage') NOT IN ('test', 'training') ")
                 + "ORDER BY rowid", [item["id"] for item in items]):
                 try:
                     step = json.loads(row["data"])
@@ -1236,13 +1236,13 @@ def get_trajectory(run_id: str = "", episode_id: int = None,
         if run_id:
             rows = conn.execute(
                 "SELECT * FROM trajectory_event WHERE run_id=?"
-                + ("" if include_test else " AND COALESCE(source, 'usage') <> 'test'")
+                + ("" if include_test else " AND COALESCE(source, 'usage') NOT IN ('test', 'training')")
                 + " ORDER BY event_seq",
                 (run_id,)).fetchall()
         else:
             rows = conn.execute(
                 "SELECT * FROM trajectory_event WHERE episode_id=?"
-                + ("" if include_test else " AND COALESCE(source, 'usage') <> 'test'")
+                + ("" if include_test else " AND COALESCE(source, 'usage') NOT IN ('test', 'training')")
                 + " ORDER BY event_seq",
                 (episode_id,)).fetchall()
         conn.close()
@@ -1301,7 +1301,7 @@ def get_cognitive_trends(days: int = 7) -> dict:
                 AVG(total_ms) as avg_ms
             FROM episode_summary
             WHERE started_at >= ? AND started_at < ?
-              AND COALESCE(source, 'usage') <> 'test'
+              AND COALESCE(source, 'usage') NOT IN ('test', 'training')
         """, (start, end)).fetchone()
 
         # EXECUTE 비율
@@ -1311,7 +1311,7 @@ def get_cognitive_trends(days: int = 7) -> dict:
                 SUM(CASE WHEN unconscious_decision = 'EXECUTE' THEN 1 ELSE 0 END) as exec_count
             FROM episode_summary
             WHERE started_at >= ? AND started_at < ?
-              AND COALESCE(source, 'usage') <> 'test'
+              AND COALESCE(source, 'usage') NOT IN ('test', 'training')
               AND unconscious_decision IS NOT NULL
         """, (start, end)).fetchone()
 
@@ -1322,7 +1322,7 @@ def get_cognitive_trends(days: int = 7) -> dict:
                 SUM(CASE WHEN evaluation_result = 'ACHIEVED' THEN 1 ELSE 0 END) as achieved
             FROM episode_summary
             WHERE started_at >= ? AND started_at < ?
-              AND COALESCE(source, 'usage') <> 'test'
+              AND COALESCE(source, 'usage') NOT IN ('test', 'training')
               AND evaluation_result IS NOT NULL
         """, (start, end)).fetchone()
 

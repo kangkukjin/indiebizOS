@@ -82,7 +82,8 @@ def assemble(snapshot, candidates, *, max_seeds=4, max_nodes=16, max_edges=20,
         refs = {eid for e in new_edges.values() for eid in e["evidence_ids"]}
         trial = dict(context, nodes=list(new_nodes.values()), edges=list(new_edges.values()),
                      evidence_refs=[asdict(evidence[eid]) for eid in sorted(refs)],
-                     seeds=context["seeds"] + [{"id": entry.id, "score": score, "reason": "lexical"}])
+                     seeds=context["seeds"] + [{"id": entry.id, "score": score,
+                                                "reason": "lexical" if query_kind == "primary" else query_kind}])
         snippet = render_context(trial)
         if len(new_nodes) > max_nodes or len(new_edges) > max_edges:
             reason = reason or "structure_budget"

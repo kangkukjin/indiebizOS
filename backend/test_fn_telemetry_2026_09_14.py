@@ -75,7 +75,8 @@ def test_default_test_store_receives_corpus(isolated_episode_store, tmp_path):
     assert list(tmp_path.iterdir()) == [], "계측 DB가 테스트 대상 파일 목록을 오염시키면 안 된다"
 
 
-def test_fn_recognizer_ignores_test_only_corpus(tmp_path, monkeypatch):
+@pytest.mark.parametrize('source', ['test', 'training'])
+def test_fn_recognizer_ignores_test_only_corpus(tmp_path, monkeypatch, source):
     import runtime_utils
     import fn_recognizer
 
@@ -86,7 +87,7 @@ def test_fn_recognizer_ignores_test_only_corpus(tmp_path, monkeypatch):
     with sqlite3.connect(tmp_path / 'data/world_pulse.db') as conn:
         conn.execute('CREATE TABLE ibl_code_corpus '
                      '(code_sha256 TEXT, seen_count INTEGER, success_count INTEGER, source TEXT)')
-        conn.execute('INSERT INTO ibl_code_corpus VALUES (?, 8, 7, ?)', (sha, 'test'))
+        conn.execute('INSERT INTO ibl_code_corpus VALUES (?, 8, 7, ?)', (sha, source))
     assert fn_recognizer.corpus_stats(code) is None
     with sqlite3.connect(tmp_path / 'data/world_pulse.db') as conn:
         conn.execute("UPDATE ibl_code_corpus SET source='usage'")

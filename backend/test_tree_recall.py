@@ -208,8 +208,9 @@ def test_world_memory_block_dedupes_and_can_be_turned_off(TR, monkeypatch):
     monkeypatch.setattr(TR, "INLINE_SYNC_MAX", 10 ** 9)          # 가짜 인코더라 첫 색인을 그 자리에서 만든다
     xml = C.world_memory_for_turn("직원 근무표를 제약을 지키며 짜야 한다")
     assert xml.startswith("<world_map ") and "<world_memory " in xml and "고른 가지:" in xml
-    body = xml.split("<world_memory", 1)[1]
-    names = [l.split(": ", 1)[1] for l in body.split("\n") if ": " in l and not l.startswith(("고른 가지", " note"))][:3]
+    from knowledge_catalog import load_snapshot
+    by_id = {e.id: e.name for e in load_snapshot(C.get_base_path()).entries}
+    names = [by_id[s['id']] for s in events[-1]['seeds']]
     assert 1 <= len(names) <= 3 and events[-1]["channel"] == "world_memory" and events[-1]["status"] == "ok"
     again = C.world_memory_for_turn("직원 근무표를 제약을 지키며 짜야 한다", lexical_snippet=" ".join(names))
     assert all(n not in again.split("<world_memory", 1)[-1] for n in names) or "<world_memory" not in again

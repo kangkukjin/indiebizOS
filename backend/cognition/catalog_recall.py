@@ -191,19 +191,34 @@ def world_memory_detail(message, lexical_snippet="", *, budget=None):
         parts = ['<world_map note="세계 지도의 최상위 분야 (어휘 수). 아래 분류와 어휘는 '
                  '[self:script]{op:\\"run\\", id:\\"세계지도\\", args:{op:\\"browse\\", path:[\\"<분야>\\"]}} 로 내려가며 본다.">\n'
                  + store.map_text() + "\n</world_map>"]
-        if picked and r["status"] == "ok":
-            branches = ", ".join("/".join(b) for b in r["branches"])
-            parts.append('<world_memory note="이 질문에 맞춰 기계가 고른 세계의 기억 후보 — 분류 경로: 이름. 이름은 당신이 아는 지식을 '
-                         '떠올리는 입구다. 관련 없으면 무시한다. 모자라면 위 지도에서 분야를 골라 직접 찾는다.">\n'
-                         f"고른 가지: {escape(branches)}\n" + "\n".join(escape(it.label) for it in picked) + "\n</world_memory>")
-        snippet = "\n".join(parts)
-        shown = picked if (picked and r["status"] == "ok") else []
         by_id = {e.id: e for e in store.snapshot.entries}
-        names.update({it.id: ([by_id[it.id].name, *by_id[it.id].aliases] if it.id in by_id else [it.label.split(": ", 1)[-1]])
-                      for it in shown})
-        event.update(status=r["status"], ids=[it.id for it in shown], branches=["/".join(b) for b in r["branches"]],
+        shown_ids = []
+        if picked and r["status"] in {"ok", "lexical_only"}:
+            context, structured = assemble(
+                store.snapshot, [(by_id[it.id], 1.0) for it in picked if it.id in by_id],
+                max_seeds=MAX_ITEMS,
+                max_chars=max(0, min(12000, int(config.get("structure_max_chars", 6000)))),
+                max_tokens=max(0, min(6000, int(config.get("max_tokens", 1800)))),
+                query_kind="semantic" if r["status"] == "ok" else "lexical")
+            shown_ids = [node["id"] for node in context["nodes"]]
+            event.update(seeds=context["seeds"], omitted=context["omitted"],
+                         edge_ids=[edge["id"] for edge in context["edges"]],
+                         context_digest=context["digest"],
+                         token_estimate=estimate_tokens(structured),
+                         token_estimator=context["token_estimator"])
+            branches = ", ".join("/".join(b) for b in r["branches"])
+            if structured:
+                parts.append('<world_memory note="이 질문의 방법 후보와 관계. 적합·필수 조건을 확인하고, '
+                             '설치·권한·실행 가능성은 describe로 확인한다. 관련 없으면 무시하고 위 지도에서 직접 찾는다.">\n'
+                             f"고른 가지: {escape(branches)}\n" + structured + "\n</world_memory>")
+        snippet = "\n".join(parts)
+        names.update({i: [by_id[i].name, *by_id[i].aliases] for i in shown_ids})
+        event.update(status=r["status"], ids=shown_ids, branches=["/".join(b) for b in r["branches"]],
                      chars=len(snippet), outside_beats_inside=r.get("outside_beats_inside", False),
                      revision=store.snapshot.revision)
+        if picked and not shown_ids and event.get("omitted"):
+            event["status"] = ("withheld" if any(o["reason"] == "unreviewed_required_relation"
+                                               for o in event["omitted"]) else "budget_empty")
         return snippet, event, names
     except Exception as exc:
         event.update(status="error", error=type(exc).__name__)
@@ -211,4 +226,3 @@ def world_memory_detail(message, lexical_snippet="", *, budget=None):
     finally:
         event["elapsed_ms"] = round((time.monotonic() - started) * 1000, 3)
         _record(dict(event, channel="world_memory"))
-

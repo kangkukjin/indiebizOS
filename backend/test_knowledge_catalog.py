@@ -248,6 +248,11 @@ def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, is
         "knowledge_catalog": {"enabled": True, "mode": presentation}}))
     plan_inputs, execution_inputs, searches, builds = [], [], [], []
     runner_info, _events = enabled
+    # 의미 채널도 실제 관계를 조립하되 인코더 적재/앞 시험의 캐시 상태와 독립적으로 고른다.
+    import tree_recall
+    monkeypatch.setattr(tree_recall, "recall", lambda store, *a, **kw: {
+        "status": "lexical_only", "items": [it for it in store.items() if it.id == "method.cp_sat"],
+        "outside": [], "branches": []})
     real_search = recall.search
     def search(*args):
         searches.append(1)
@@ -282,16 +287,21 @@ def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, is
     assert not [e for e in events if e["type"] == "error"], events
     assert len(searches) == 1 and len(execution_inputs) == 1
     memory = builds[0]
-    assert "original memory" in memory and memory.count("<method_map>") == 1
-    assert ("<world_data" in memory) == (presentation == "structure")
+    lexical = memory.split("<world_map", 1)[0]
+    assert "original memory" in memory and lexical.count("<method_map>") == 1
+    assert ("<world_data" in lexical) == (presentation == "structure")
+    # 이름 모드의 글자 후보에 없던 의미 seed는 별도 관계 묶음으로 온다.
+    # 구조 모드에서는 글자 후보의 관계가 같은 seed를 이미 담으므로 중복 주입하지 않는다.
+    assert memory.count("<method_map>") == (2 if presentation == "names" else 1)
+    assert ("<world_memory" in memory) == (presentation == "names")
     if route in {"THINK", "REPAIR"}:
         assert plan_inputs[0]["associative_memory"] == memory
     else:
         assert plan_inputs == []
-    assert memory in execution_inputs[0]["message_content"]
+    assert execution_inputs[0]["message_content"].count(memory) == 1
     # 같은 조각으로 프롬프트를 재조립해도 다시 검색하거나 안정 prefix에 넣지 않는다.
     again = runner._refresh_execution_prompt("근무표", execution_memory=memory)
-    assert again.count("<method_map>") == 1 and len(searches) == 1
+    assert again.count(memory) == 1 and len(searches) == 1
     assert "method_map" not in runner.ai.system_prompt
 
 

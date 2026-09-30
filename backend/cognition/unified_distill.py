@@ -33,6 +33,7 @@ REPLACE=사용자의 명시적 정정. REPLACE는 정정 원문 ID와 기존 버
 다른 사건/날짜/대상은 과거 사실을 덮어쓸 근거가 아니다. 부족한 관계 비교는 생략한다.
 실행은 제공된 source_ids를 선택하며 코드를 작성하지 않는다. 실제 실행하지 않은 검사,
 미완료/부분 실패/원천 잘림은 전체 성공이 아니다. 미평가 실행은 scope=component만 가능하다.
+partial_selection=true는 일부 원문만 검토했으므로 scope=component로 한정한다.
 판본 2는 한 프로그램 전체가 한 source_id다. 다른 호출이나 판본과 이어 붙이지 않는다.
 선택은 실행 순서대로 하며 필요한 변수 생산자도 함께 선택한다. 함수는 본문으로 풀지 않는다.
 새 함수·별칭·액션·합성·인자를 만들지 마라. intent는 선택 원문이 실제 완수하는 부분으로 한정한다.
@@ -104,7 +105,7 @@ def prepare(job):
     makers = {
         'execution': lambda: prepare_experience(job['user_message'], [{**tc, 'success': False} if isinstance(tc, dict)
             and (tc.get('result') is None or '_t0' in tc) else tc for tc in job.get('tool_calls') or []],
-            job.get('hippo_score'), job.get('top_code'), job.get('turn_tokens'), job.get('turn_cost')),
+            job.get('hippo_score'), job.get('top_code'), job.get('turn_tokens'), job.get('turn_cost'), unified=True),
         'deep': lambda: prepare_deep(job), 'forage': lambda: prepare_forage(job),
     }
     gates = {'execution': job.get('write_experience', True) and job.get('tool_calls')
@@ -140,10 +141,14 @@ def model_input(prepared):
     for kind, section in prepared['sections'].items():
         if kind == 'execution':
             import ibl_distill_value as value
-            compared = value.comparison_examples(section.get('source_calls', []), section.get('known', []))
-            known = {r['id']: r for r in section.get('known', [])}
+            compared = section.get('comparison_examples')
+            if compared is None:  # 이미 대기 중인 이전 판본 봉투도 재배달할 수 있다.
+                compared = value.full_comparisons(section.get('source_calls', []), section.get('known', []))
             visible[kind] = {'source_rows': section.get('rows', []),
-                             'comparison_examples': [known[r['id']] for r in compared],
+                             'user_message': section.get('user_message', ''),
+                             'comparison_examples': compared,
+                             'partial_selection': section.get('partial_selection', False),
+                             'omitted_source_ids': section.get('omitted_source_ids', []),
                              'outcome': section.get('outcome'), 'topic_map': section.get('topic_map', ''),
                              'retry_notes': section.get('retry_notes', '')}
 
@@ -179,8 +184,14 @@ def fit_input(prepared):
         if size(trial) > MAX_INPUT_BYTES:
             trial['omitted_context'] = [f'{section}.{field}' for section, field in (
                 ('execution', 'topic_map'), ('deep', 'tree')) if section in trial['sections']]
+        if kind == 'execution' and size(trial) > MAX_INPUT_BYTES:
+            from ibl_distill_value import fit_execution
+            fitted = fit_execution(prepared['sections'][kind], lambda section: size({
+                **trial, 'sections': {**selected, kind: section}}) <= MAX_INPUT_BYTES)
+            if fitted:
+                trial['sections'][kind] = fitted
         if size(trial) <= MAX_INPUT_BYTES:
-            selected[kind] = prepared['sections'][kind]
+            selected[kind] = trial['sections'][kind]
             prepared['omitted_context'] = trial.get('omitted_context', [])
         else:
             prepared['skip_reasons'][kind] = 'complete_section_exceeds_input_budget'

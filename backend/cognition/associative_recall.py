@@ -437,7 +437,8 @@ def _ibl_codes(tool_calls) -> List[str]:
         if isinstance(tc, dict) and tc.get("tool_name") == "execute_ibl":
             code = (tc.get("input") or {}).get("code", "")
             if code:
-                out.append(code)
+                from ibl_edition import explicit_source
+                out.append(explicit_source(code, (tc.get('input') or {}).get('edition')))
     return out
 
 

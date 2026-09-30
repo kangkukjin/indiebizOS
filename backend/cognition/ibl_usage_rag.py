@@ -824,7 +824,8 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
         ibl_success = s if ibl_success is None else (ibl_success and s)
         code = (tc.get("input") or {}).get("code", "")
         if code:
-            ibl_codes.append(code)
+            from ibl_edition import explicit_source
+            ibl_codes.append(explicit_source(code, (tc.get('input') or {}).get('edition')))
 
     # 관용구 귀속(2026-09-04): 이 턴에 올린 관용구가 실행 궤적에 순서대로 절반 이상 등장했으면
     # 그 관용구에 성공/실패(+시간·토큰)를 기록한다. 낱말 top-1 귀속과 독립. 학습은 이 귀속으로 잰다.
@@ -1046,7 +1047,8 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         return False
 
 
-def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_tokens=None, turn_cost=None):
+def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_tokens=None, turn_cost=None,
+                       *, unified=False):
     """기존 실행·중복 관문과 원문 선택 자료. 모델·저장 호출 없음."""
     if not _principal_allows_recall():
         return False   # 주체 관문 — 주인 해마에 남의 경험을 쓰지 않는다(쓰기 격리, 2026-09-14)
@@ -1164,11 +1166,13 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
         except Exception:
             _topic_map = ""
         prompt = _build_distill_prompt(user_message, tool_log, retry_block, _topic_map)
-        if len(prompt) > value.MAX_INPUT_CHARS:
+        if not unified and len(prompt) > value.MAX_INPUT_CHARS:
             print("[경험증류] 입력 예산 초과 — 원문은 실행 원장에 보존, 증류 생략")
             return False
 
-        return {"prompt": prompt, "rows": rows, "known": known, "source_calls": source_calls,
+        return {**({"user_message": user_message,
+                    "comparison_examples": value.full_comparisons(source_calls, known)} if unified
+                   else {"prompt": prompt, "known": known}), "rows": rows, "source_calls": source_calls,
                 "topic_map": _topic_map, "retry_notes": retry_block,
                 "outcome": json.loads(value.outcome_evidence(accepted_calls, _ge)),
                 "ibl_calls": ibl_calls, "evaluation": _ge, "tool_calls": tool_calls,
@@ -1181,7 +1185,8 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     from ibl_usage_db import IBLUsageDB
     db = IBLUsageDB()
     committed = db.find_distilled_candidate(candidate_key) if candidate_key else None
-    rows, known = prepared["rows"], prepared["known"]
+    rows = prepared["rows"]
+    known = value.known_examples(db)  # 저장 직전 최신 코퍼스로 재검사; 전체 사본을 원장에 쌓지 않는다.
     source_calls, ibl_calls = prepared["source_calls"], prepared["ibl_calls"]
     _ge, tool_calls = prepared["evaluation"], prepared["tool_calls"]
     turn_cost, turn_tokens = prepared["turn_cost"], prepared["turn_tokens"]
@@ -1191,7 +1196,7 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
         print(f"[경험증류] 저장 생략: {why}")
         return False
     intent = distilled.get("intent", "").strip()
-    component = distilled.get("scope") != "task" or _ge is None
+    component = distilled.get("scope") != "task" or _ge is None or prepared.get('partial_selection', False)
     code, selection_note = select_distill_source({"call_ids": distilled["source_ids"]}, source_calls)
     code = code or ""
     print(f"[경험증류] 원문 선택: {selection_note}")

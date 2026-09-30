@@ -68,6 +68,10 @@ def recall_used(reference, calls):
     from ibl_parser import parse, IBLSyntaxError
 
     def signatures(code, strict=False):
+        from ibl_edition import source_edition
+        if source_edition(code or '') == 2:
+            from ibl_v2_experience import recall_signatures
+            return recall_signatures(code, strict)
         try:
             steps = parse(code or "")
         except (IBLSyntaxError, ValueError, TypeError, KeyError):
@@ -258,37 +262,40 @@ def _close_source_dependencies(ids: list, ibl_calls: list):
     from workflow_contract import call_signature
     import hippo_tree
 
-    contracts = []
-    try:
-        for call in ibl_calls:
-            from ibl_edition import source_edition
-            if source_edition(call) == 2:
-                from ibl_v2_learning import check_source
-                why = check_source(call)
-                if why:
-                    return None, why
-                contracts.append((set(), set()))
-                continue
+    contracts = {}
+
+    def contract(index):
+        if index in contracts:
+            return contracts[index]
+        call = ibl_calls[index - 1]
+        from ibl_edition import source_edition
+        if source_edition(call) == 2:
+            from ibl_v2_learning import check_source
+            why = check_source(call)
+            if why:
+                raise ValueError(why)
+            result = (set(), set())
+        else:
             exports, required = set(), set()
             for stmt in hippo_tree.split_sentences(call):
                 free = set(call_signature(stmt))
                 assignment = ASSIGN_RE.match(stmt.strip())
                 name = (assignment.group(1) or assignment.group(2)) if assignment else None
                 if name and name in find_names(assignment.group(3)):
-                    free.add(name)  # $x = $x ...는 이전 판본을 읽는다.
+                    free.add(name)
                 required.update(free - exports)
                 if name:
                     exports.add(name)
-            contracts.append((exports, required))
-    except Exception as exc:
-        return None, f"원문 의존성 해석 실패: {exc}"
+            result = (exports, required)
+        contracts[index] = result
+        return result
 
     selected = set(ids)
 
     def include(i):
-        for name in contracts[i - 1][1]:
+        for name in contract(i)[1]:
             producer = next((j for j in range(i - 1, 0, -1)
-                             if name in contracts[j - 1][0]), None)
+                             if name in contract(j)[0]), None)
             if producer is None:
                 raise ValueError(f"외부 변수 ${name}의 앞선 생산자가 없습니다")
             if producer not in selected:
@@ -298,8 +305,8 @@ def _close_source_dependencies(ids: list, ibl_calls: list):
     try:
         for i in ids:
             include(i)
-    except ValueError as exc:
-        return None, str(exc)
+    except Exception as exc:
+        return None, f'원문 의존성 해석 실패: {exc}'
     return sorted(selected), None
 
 

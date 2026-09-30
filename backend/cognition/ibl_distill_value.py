@@ -17,6 +17,10 @@ def known_examples(db):
 def url_only_head(code):
     """주소만 바뀐 원시 호출. 옵션·합성·질의·instruction의 차이는 지우지 않는다."""
     from ibl_parser import parse
+    from ibl_edition import source_edition
+    if source_edition(code) == 2:
+        from ibl_v2_experience import url_only_head as v2_head
+        return v2_head(code)
     try:
         steps = parse(code)
         if len(steps) != 1:
@@ -79,6 +83,46 @@ def comparison_examples(codes, known):
             for row in rows]
 
 
+def fit_execution(section, fits):
+    """예산 안의 닫힌 원문 묶음만 선택한다. 코드를 자르거나 다시 만들지 않는다."""
+    from ibl_distill_gates import _close_source_dependencies, _actions_of
+    rows = section.get('rows', [])
+    codes = [r['code'] for r in rows]
+    selected, best = set(), None
+
+    def subset(ids):
+        chosen = [r for i, r in enumerate(rows, 1) if i in ids]
+        indices = {r['tool_call_index'] for r in chosen}
+        outcome = section.get('outcome') or {}
+        return {**section, 'partial_selection': True,
+                'selection_policy': 'closed_sources_composition_then_recent',
+                'omitted_source_ids': [r.get('original_id', r['id']) for i, r in enumerate(rows, 1) if i not in ids],
+                'rows': [{**r, 'original_id': r.get('original_id', r['id']), 'id': i}
+                         for i, r in enumerate(chosen, 1)],
+                'source_calls': [r['code'] for r in chosen],
+                'outcome': {**outcome, 'call_results': [r for r in outcome.get('call_results', [])
+                                                      if r['tool_call_index'] in indices]}}
+
+    # 합성·입력 함수를 먼저, 같은 부류에서는 최종 성공에 가까운 원문부터.
+    order = sorted(range(1, len(rows) + 1),
+                   key=lambda i: (bool(rows[i - 1].get('abstraction')) or
+                                  len(_actions_of(codes[i - 1])) > 1, i), reverse=True)
+    for index in order:
+        closed, error = _close_source_dependencies([index], codes)
+        if error:
+            continue
+        candidate_ids = selected | set(closed)
+        trial = subset(candidate_ids)
+        if fits(trial):
+            selected, best = candidate_ids, trial
+    return best
+
+
+def full_comparisons(codes, known):
+    by_id = {row['id']: row for row in known}
+    return [by_id[row['id']] for row in comparison_examples(codes, known)]
+
+
 def value_reason(reply):
     """0건을 정상 응답으로 둔다. 효용 판단은 기존 반성 모델 한 번이 소유한다."""
     if reply.get('decision') != 'keep':
@@ -136,6 +180,7 @@ def provenance(reply, rows, code, outcome, turn_cost):
             'code_sha256': hashlib.sha256(code.encode()).hexdigest(),
             'sources': [{k: row[k] for k in ('id', 'tool_call_index', 'statement_index')} |
                        {'sha256': hashlib.sha256(row['code'].encode()).hexdigest(),
+                        **({'original_id': row['original_id']} if 'original_id' in row else {}),
                         **({'abstraction': row['abstraction']} if row.get('abstraction') else {})}
                        for row in rows if row['id'] in selected]}
 

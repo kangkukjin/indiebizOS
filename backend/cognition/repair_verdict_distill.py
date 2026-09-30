@@ -16,7 +16,7 @@
 - 판정 추출만 경량 AI(role=background) — 커밋당 1회, 수리 단서 없는 커밋은
   LLM 호출 없이 스킵
 - run_maintenance_bundle 합류, 상태=forage_meta("repair_verdict_last_commit")
-  (커밋 하나 처리할 때마다 전진 — 중단돼도 다음 사이클이 이어받는다)
+  (최근 우선 완료 영수증 + 연속 완료 지점 — 미처리 backlog는 유지)
 - ★locus 는 그 파일의 **절대 경로**다(2026-09-18 개정). 옛 판은 상대경로#슬러그였는데, 그러면 그
   파일·폴더를 열어도 교훈이 나오지 않고 낱말이 맞을 때만 걸렸다 — 포식 기억은 "장소를 주면 그 장소의
   전부"다. 이후 편집으로 붙는 stale 표식은 감수한다("그 뒤 파일이 바뀌었다"는 교훈에도 참인 정보다).
@@ -44,6 +44,7 @@ MAX_ITEMS_PER_COMMIT = 6
 _GENERAL_LESSON_GUIDE = "repair_lessons"
 
 _META_KEY = "repair_verdict_last_commit"
+_DONE_KEY = "repair_verdict_completed_ahead"
 
 # 싼 게이트: 수리 판정 냄새가 나는 커밋만 LLM 으로. (기능 신설 커밋 오포함은
 # LLM 단계가 빈 배열로 거른다 — 이 게이트의 일은 명백한 비수리를 공짜로 버리는 것.)
@@ -209,47 +210,62 @@ def run_repair_verdict_distill(limit: int = MAX_COMMITS_PER_RUN) -> Dict[str, An
     repo_name = os.path.basename(root)
     body = f"code:{repo_name}"
 
+    if limit <= 0:
+        return {"skipped": "zero_budget"}
     last = FM.get_meta(_META_KEY)
     pending = _pending_commits(root, last)
-    if not pending:
-        return {"scanned": 0, "distilled": 0, "noted": 0, "remaining": 0}
-
+    # 최신부터 처리해도 앞선 미처리 커밋을 건너뛴 완료로 표시하지 않는다.
+    # 각 커밋 완료를 먼저 영속화하고 연속 완료 구간만 기존 watermark로 접는다.
+    try:
+        done = set(json.loads(FM.get_meta(_DONE_KEY) or '[]')) & set(pending)
+    except (ValueError, TypeError):
+        done = set()
+    remaining = [h for h in pending if h not in done]
+    order = list(reversed(remaining))
+    if len(order) > limit and limit > 1:
+        order.insert(limit - 1, order.pop())  # 오래된 backlog도 매 사이클 한 자리 확보
     stats = {"scanned": 0, "skipped_no_cue": 0, "distilled": 0, "noted": 0,
-             "remaining": 0, "llm_unavailable": False}
-    known_text = _known_map_text(body)
-    halted_at = None
-    for h in pending[:limit]:
+             "remaining": len(remaining), "llm_unavailable": False,
+             "priority": "recent_first_with_backlog_slot"}
+    known_text = None
+    for h in order:
+        if stats['distilled'] >= limit:
+            break
         msg, files = _commit_detail(root, h)
-        stats["scanned"] += 1
-        advance = True
+        stats['scanned'] += 1
+        if not msg:
+            stats['error'] = 'commit_detail_unavailable'
+            break
         try:
-            if msg and _has_repair_cue(msg):
+            if _has_repair_cue(msg):
+                if known_text is None:
+                    known_text = _known_map_text(body)
                 n = _distill_commit(body, repo_name, h, msg, files, known_text)
                 if n is None:
-                    # ★판정 불가(LLM 키 부재·응답 불가독) ≠ 판정 없음 — 상태를 전진시키면
-                    # 이 커밋의 판정이 조용히 유실된다. 사이클 중단, 다음 사이클이 재시도.
-                    stats["llm_unavailable"] = True
-                    advance = False
-                    halted_at = h
-                else:
-                    stats["distilled"] += 1
-                    stats["noted"] += n
+                    stats['llm_unavailable'] = True
+                    break
+                stats['distilled'] += 1
+                stats['noted'] += n
             else:
-                stats["skipped_no_cue"] += 1
-        except Exception as e:
-            # 커밋 고유의 예외(추출 오류 등)는 전진 — 한 커밋이 사이클을 영구 볼모로 잡지 않게.
-            print(f"[수리판정] 커밋 {h[:10]} 증류 실패 (건너뜀): {e}")
-        if not advance:
+                stats['skipped_no_cue'] += 1
+        except Exception as exc:
+            # 예외는 완료가 아니다. 원문과 미처리 상태를 남겨 다음 사이클에 재시도한다.
+            stats['error'] = type(exc).__name__
             break
-        FM.set_meta(_META_KEY, h)
+        done.add(h)
+        FM.set_meta(_DONE_KEY, json.dumps(sorted(done)))
 
-    if halted_at:
-        print(f"[수리판정] LLM 판정 불가 — 커밋 {halted_at[:10]} 에서 중단, 다음 사이클에 재시도")
-    stats["remaining"] = max(0, len(pending) - stats["scanned"] + (1 if halted_at else 0))
-    if stats["remaining"]:
-        print(f"[수리판정] 상한 {limit} 도달 — 남은 커밋 {stats['remaining']}건은 다음 사이클에")
-    if stats["noted"]:
-        print(f"[수리판정] 커밋 {stats['distilled']}건에서 판정 {stats['noted']}건 적재")
+    contiguous = []
+    for h in pending:
+        if h not in done:
+            break
+        contiguous.append(h)
+    if contiguous:
+        FM.set_meta(_META_KEY, contiguous[-1])
+        done.difference_update(contiguous)
+        FM.set_meta(_DONE_KEY, json.dumps(sorted(done)))
+    stats['remaining'] = len(pending) - len(contiguous) - len(done)
+
     return stats
 
 

@@ -105,3 +105,39 @@ def once(key, name, action):
         result = {"status": "failed", "reason": str(exc)}
     receipt(key, name, result)
     return result
+
+
+def compact_finished(comparison_selector):
+    """종결 원장의 코퍼스 중복 사본만 제거한다. 원문·판정·영수증·작업 키는 보존한다."""
+    from hashlib import sha256
+    stats = {'compacted': 0, 'bytes_saved': 0}
+    conn = _conn()
+    try:
+        # JSON 비교 조건으로 동시 갱신을 덮어쓰지 않는다. 진행/재시도 행은 제외한다.
+        rows = conn.execute("SELECT job_key,prepared FROM distill_jobs WHERE status IN "
+                            "('completed','completed_empty','completed_with_rejections','skipped','failed') "
+                            "AND prepared IS NOT NULL").fetchall()
+        for key, raw in rows:
+            prepared = json.loads(raw)
+            section = (prepared.get('sections') or {}).get('execution')
+            if not section or 'known' not in section:
+                continue
+            # 실제 모델에 보인 비교 4건은 전문 보존. 코퍼스 전체는 판단 입력이 아니었다.
+            known = section.pop('known')
+            section['comparison_examples'] = comparison_selector(section.get('source_calls', []), known)
+            section['corpus_snapshot'] = {'count': len(known), 'sha256': sha256(
+                json.dumps(known, ensure_ascii=False, sort_keys=True).encode()).hexdigest()}
+            # 통합 경로에서 사용하지 않은 구형 별도 증류 프롬프트만 제거한다.
+            prompt = section.pop('prompt', None)
+            if prompt is not None:
+                section['unused_prompt_sha256'] = sha256(prompt.encode()).hexdigest()
+            compact = json.dumps(prepared, ensure_ascii=False)
+            updated = conn.execute("UPDATE distill_jobs SET prepared=? WHERE job_key=? AND prepared=? "
+                                   "AND status IN ('completed','completed_empty','completed_with_rejections',"
+                                   "'skipped','failed')", (compact, key, raw)).rowcount
+            stats['compacted'] += updated
+            stats['bytes_saved'] += updated * (len(raw.encode()) - len(compact.encode()))
+        conn.commit()
+        return stats
+    finally:
+        conn.close()

@@ -99,7 +99,10 @@ def _append_durable_unit(units, part, quoted, uncertain, addressed=False, doc_ba
     part = part.strip()
     if part:
         has_content = any(char.isalnum() for char in part)
-        request = bool(re.search(r"[?？]|(?:해줘|해주세요|해\s*주세요|알려줘|봐줘|할까|있나|되나)[.!]?$", part))
+        request = bool(re.search(
+            r"[?？]|(?:해줘|해주세요|해\s*주세요|알려줘|봐줘|할까|있나|되나|"
+            r"[해어아여워춰쳐켜려펴꿔]봐|[해어아여워춰쳐켜려펴꿔]\s+봐|"
+            r"[해어아여워춰쳐켜려펴꿔]\s*보세요)[.!]?$", part))
         if quoted:
             attribution, basis = "quoted", "quoted_block"
         elif addressed:

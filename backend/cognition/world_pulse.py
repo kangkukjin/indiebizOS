@@ -82,6 +82,11 @@ def _cleanup_old_data() -> Dict[str, int]:
                 "AND COALESCE(updated_at, created_at) < ?", (cutoff,)).rowcount
         conn.commit()
         conn.close()
+        from distill_ledger import compact_finished
+        from ibl_distill_value import full_comparisons
+        compacted = compact_finished(full_comparisons)
+        if compacted['compacted']:
+            logger.info(f"[WorldPulse] 증류 원장 중복 사본 정리: {compacted}")
         if any(deleted.values()):
             logger.info(f"[WorldPulse] 보존기간({retention}일) 밖 정리: {deleted}")
     except Exception as e:

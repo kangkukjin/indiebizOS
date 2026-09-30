@@ -4,6 +4,73 @@ from ibl_edition import explicit_source, source_edition
 from ibl_v2_ir import Fault, Node, digest
 
 
+def straight_calls(source, strict=False):
+    """정적으로 확실한 호출만 읽는다. 분기·정의·지연 본문을 실행으로 세지 않는다."""
+    from ibl_v2_parser import parse
+    calls = []
+
+    def visit(node):
+        if node is None:
+            return
+        if node.kind == 'sequence':
+            for statement in node.data['statements']:
+                visit(statement)
+                if statement.kind == 'return':
+                    break
+        elif node.kind in {'bind', 'return'}:
+            visit(node.data['value'])
+        elif node.kind in {'pipe', 'parallel'}:
+            visit(node.data['left'])
+            visit(node.data['right'])
+        elif node.kind == 'call' and node.data.get('body') is None:
+            calls.append(node)
+        elif node.kind == 'def' and not strict:
+            return
+        elif node.kind not in {'literal', 'ref'}:
+            raise ValueError('conditional_or_delayed_execution')
+
+    try:
+        visit(parse(source))
+        return calls
+    except (Fault, ValueError, TypeError, KeyError):
+        return []
+
+
+def recall_signatures(source, strict=False):
+    """판본 1과 같은 동작 선택 인자. 동적 선택 인자는 추측해서 귀속하지 않는다."""
+    result = []
+    for call in straight_calls(source, strict):
+        params = {}
+        for key, value in call.data['params'].data['fields'].items():
+            if key in {'op', 'mode', 'source', 'store', 'format', 'do'}:
+                if value.kind != 'literal':
+                    return []
+                params[key] = value.data['value']
+        result.append((call.data['node'], call.data['action'], params))
+    return result
+
+
+def url_only_head(source):
+    from ibl_v2_parser import parse
+    try:
+        statements = parse(source).data['statements']
+        if len(statements) != 1:
+            return None
+        node = statements[0]
+        if node.kind in {'return', 'bind'}:
+            node = node.data['value']
+        if node.kind != 'call' or node.data.get('body') is not None:
+            return None
+        fields = node.data['params'].data['fields']
+        if set(fields) == {'url'} and fields['url'].kind == 'literal':
+            url = fields['url'].data['value']
+            if isinstance(url, str) and url.startswith(('https://', 'http://')) and '$' not in url:
+                return node.data['node'], node.data['action']
+    except (Fault, ValueError, TypeError, KeyError, AttributeError):
+        pass
+    return None
+
+
 def closed_call(tc):
     request = tc.get("input") or {}
     source = request.get("code", "")

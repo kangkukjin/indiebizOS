@@ -11,6 +11,12 @@
 [sense:listen]{path:"편집본.mp3", op:"inspect", start:120, end:140}
 ```
 
+`question`의 “처음·마지막 30초”는 파일 범위를 선택하지 않는다. 파일 길이 `D`를
+제작 결과나 inspect의 `metadata.duration`에서 얻고 `ranges:[{start:0,end:30},{start:D-30,end:D}]`로
+전달한다(30초보다 짧은 파일은 길이에 맞춰 구간을 줄인다). 외부 셸로 자른 사본은 필요 없다.
+각 클립의 모델 시간은 0부터 실제 클립 길이까지의 상대 초이며 원본 시각은 도구가 변환한다.
+범위를 벗어난 시각은 실패로 남기고 완료한 구간은 같은 호출의 재개에서 재사용한다.
+
 - **transcribe**: 전사문을 파일에 저장. `transcript_path`로 전문, `result_path`로 구조화된 원문을 읽는다. 기본 시간 입도는 chunk, `timestamps:true`면 전사 모델에 단어 시각을 요청한다.
 - **analyze**: 소리에 질문한다. question을 지정하면 기본 transcribe도 analyze로 해석된다. `speech/singing/music/silence/mixed/unknown`, 답변과 `uncertain`을 반환한다. 모델의 시각은 추정값이다.
 - **inspect**: 모델 호출 없이 원본 채널별 peak/RMS·최대 인접 샘플 차이·무음 구간을 측정한다. 무음은 -50dBFS/0.3초 임계값이다. 대화 유무·음악의 자연스러움·클릭 발생 여부를 측정값 하나만으로 확정하지 않는다.

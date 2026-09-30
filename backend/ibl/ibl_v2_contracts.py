@@ -20,7 +20,9 @@ def project_ops(contract, config):
         return contract
     out = copy.deepcopy(contract)
     out.setdefault("enums", {}).setdefault("op", values)
-    if ops.get("default"):
+    # This protocol resolves an omitted op from the presence of id (run/list).
+    # Do not infer a list result for an implicit run; the adapter owns that default.
+    if ops.get("default") and (out.get("adapter") or {}).get("protocol") != "ibl-script/2":
         out.setdefault("defaults", {}).setdefault("op", ops["default"])
     op_variant_effects = any("effects" in v and "op" in v.get("when", {}) for v in out.get("variants", []))
     if (out.get("effects") == ["unknown"] and not op_variant_effects

@@ -3,6 +3,44 @@ import difflib
 import json
 
 
+def ibl_shape_repair_key(name, payload):
+    """Recognize projection repairs on the same straight-line program and inputs.
+
+    Source arguments and control flow are never erased. Unrelated successful
+    lookups, evidence paging, and conditional programs cannot retire an issue.
+    """
+    if not str(name).endswith("execute_ibl") or not payload.get("code"):
+        return None
+    from ibl_v2_parser import parse
+    from ibl_v2_ir import Node, pack, Fault
+    from supervision_store import digest
+
+    def canonical(value, projections=True):
+        if isinstance(value, Node):
+            if projections and value.kind not in {"sequence", "bind", "return", "field", "ref", "literal",
+                                                 "record", "list", "pipe", "call"}:
+                raise ValueError("not a straight-line projection repair")
+            if projections and value.kind == "call" and value.data.get("body") is not None:
+                raise ValueError("control body")
+            if projections and value.kind == "pipe" and value.data.get("op") != ">>":
+                raise ValueError("conditional or parallel execution")
+            if value.kind == "field" and projections:
+                return canonical(value.data["base"])
+            return [value.kind, {k: canonical(v, projections and value.kind != "call")
+                                 for k, v in value.data.items()}]
+        if isinstance(value, dict):
+            return {k: canonical(v, projections) for k, v in value.items()}
+        if isinstance(value, (tuple, list)):
+            return [canonical(v, projections) for v in value]
+        return pack(value)
+
+    try:
+        key = [canonical(parse(payload["code"])), pack(payload.get("inputs", {}))]
+        return digest(json.dumps(key, sort_keys=True, ensure_ascii=False))
+    except (Fault, ValueError, TypeError, RecursionError):
+        return None
+
+
 def missing_read_observation(name, payload, result):
     """순수 파일 조회의 ENOENT만 탐색 결과로 취급한다. 쓰기·권한·네트워크 실패는 제외."""
     if (not str(name or "").endswith("execute_ibl") or not isinstance(payload, dict)

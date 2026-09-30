@@ -362,12 +362,13 @@ return $목차
 
 ## 중단 뒤 이어가기와 문서 읽기
 
-결과를 다음 계산에 넘길 때는 `result_ref.input_args`를 `inputs`로 넣고 코드에서 `$입력`을 쓴다.
-예: `{"code":"return len($입력)","inputs":{"입력":{"$ref":"앞 결과 id"}}}`. 이름은 코드에 맞춰 바꿀 수 있고,
-일부 필드는 `path:["value","rows"]`처럼 원 봉투 경로를 더한다. 여러 결과는 `{"반":[{"$ref":a},{"$ref":b}]}`처럼
-목록·레코드 안에 둔다. `inputs:{"$ref":...}`는 이름이 없어 잘못된 형태다. 실패한 실행은 값이 없어 참조가
-거절된다. 성공 가지는 `partial_reads`, 실패 가지의 불완전 자료는 `failed_partial_reads`를 쓴다.
+`result_ref.input_args`를 `inputs`에 넣으면 코드에서 `$입력`으로 쓴다(이름 변경 가능).
+일부 값은 `path:["value","rows"]`로 선택한다. 여러 참조는 `{"반":[{"$ref":a},{"$ref":b}]}`처럼
+목록·레코드에 둔다. `inputs:{"$ref":...}`는 이름이 없어 거절된다. 실패 실행 전체 대신
+성공 가지는 `partial_reads`, 실패 가지의 불완전 자료는 `failed_partial_reads`를 쓴다.
 각 `read_args`·`input_args`로 조회·재사용한다. `input_unavailable`이면 명시된 제한을 따른다.
+순차 실패의 완료 호출은 `result_ref.completed_calls[].input_args`, 거절된 입력은
+`request_inputs.input_args`로 재사용한다. 가려진 값은 제외하며 전체 성공을 뜻하지 않는다.
 원문 판단이 필요할 때만 `read_result`로 읽는다. 그 `input_args`는 표시 페이지가 아닌 선택 경로의 전체 값이다.
 `read_scope`는 이번 응답의 경로·문자 범위이고 `format:"text"`는 문자열 원문, `"json"`은 구조 값의 JSON이다.
 `complete:true`면 하위까지 전달됐으니 재독하지 않는다. `next_read:null`은 중간 offset에서 읽은 끝 페이지일 수도 있다.

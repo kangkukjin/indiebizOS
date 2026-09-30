@@ -95,10 +95,10 @@ def test_status_가_running_행에_progress_를_싣는다(tmp_path, monkeypatch)
     assert res["success"] and res["status"] == "running"
     assert res["items"][0]["progress"] == ["[   12s] 콜랩 세션 여는 중", "[  300s] [gen] 40/165 …"]
     assert res["text"].endswith("[  300s] [gen] 40/165 …")
-    # 로그가 아직 없으면 progress 키 자체가 없다(빈 배열로 속이지 않는다)
+    # 관측한 줄이 없으면 빈 목록. 상태 전환으로 접근 경로가 사라지지 않는다.
     log.unlink()
     res = S.op_status({"job_id": "slow-20260910_000000"})
-    assert "progress" not in res["items"][0]
+    assert res["items"][0]["progress"] == []
 
 
 def _remote_code():

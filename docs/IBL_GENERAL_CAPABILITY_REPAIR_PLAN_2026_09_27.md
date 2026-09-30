@@ -344,6 +344,14 @@ recovery:{op:snapshot,...}`를 [decode_envelope](../backend/ibl/ibl_v2_adapters.
 **완료 조건:** 같은 턴 참조 왕복, 권한 있는 과거 증거 읽기, 다른 주체 거절, 만료/누락 진단,
 표본 정상 반환, 원천 실패 보존, 복구 필드의 핸들러→IBL→모델 전달이 같은 시험 묶음에서 통과한다.
 
+**추가 구현(2026-09-30, 4179):** 순차 실행의 후반 실패도 앞서 완료한 호출을
+`result_ref.completed_calls`의 읽기·입력 참조로 노출한다. 거절된 명시 입력은
+`request_inputs.input_args`로 다시 연결한다. wire 타입과 비밀 마스킹을 유지하고,
+완료 호출에 들어간 자료의 불완전성도 근거 부모를 따라 보존한다. 서로 독립된 완료 호출은
+다른 호출의 실패 때문에 불완전한 자료로 바뀌지 않는다. 기존 모델 영수증 reuse·설정 지문·
+`reuse.models:false`는 유지한다. 이는 F3의 과거 턴 참조 소유 범위를 해결한 것이 아니며,
+계약 회귀·실제 오류 코드 대조까지 확인했다. 수리 이후 실제 업무의 시간·토큰 효과는 미측정이다.
+
 **다음 한 커밋(F3):** `model_result_view._read_reference`가 현재 턴 결과임을 안내하고,
 과거 trajectory 문서의 기존 `source_ref`에는 `ExecutionTraceService.document`의 읽기 인자를
 안내한다. 발급·소유 검사는 기존 저장소를 사용한다. 현재 저장소에 없는 ID만 보고

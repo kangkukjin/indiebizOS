@@ -102,7 +102,7 @@ def preflight(args):
     manifest = {"recipe": recipe, "lecture_id": lecture_id, "order": deck["slide_order"],
                 "voice": voice, "voice_text": voice_text, "voice_file": str(Path(voice_file)), "source": str(source),
                 "files": {str(p): file_hash(p) for p in files},
-                "narration": args.get("narration", {}), "render": args.get("render", {}),
+                "narration": args.get("narration", {}), "render": {"captions": True, **args.get("render", {})},
                 "normalize": args.get("normalize"), "bookends": str(bookends)}
     return directory, manifest, prepared
 

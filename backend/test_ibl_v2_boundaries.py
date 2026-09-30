@@ -278,7 +278,7 @@ def test_script_management_contract_uses_same_current_call_surface(monkeypatch):
     observed = []
     def leaf(ti, *args, **kwargs):
         observed.append(ti['params'])
-        return {'success': True, 'items': [], 'count': 0}
+        return {'success': True, 'items': [], 'count': 0, 'running': [], 'text': '작업 0건'}
     monkeypatch.setattr(ibl_engine, 'execute_ibl', leaf)
     from ibl_v2_adapters import load_registry
     registry = load_registry()

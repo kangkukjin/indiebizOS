@@ -609,6 +609,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
     if _v2 is not None:
         if _ref_notes and isinstance(_v2, dict):
             _v2["inputs_resolved"] = _ref_notes
+        from model_result_view import retain_failed_inputs
+        retain_failed_inputs(_v2, tool_input.get("inputs"), _ref_notes)
         return json.dumps(_v2 if tool_input.get("check") else _preview_boundary(_v2, tool_input), ensure_ascii=False)
 
     # --- files 파라미터: $file:N 참조 정보 보관 (파싱 후 치환) ---

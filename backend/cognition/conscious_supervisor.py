@@ -392,12 +392,20 @@ class Supervisor:
             self.last_signature, self.last_result = sig, result_signature
             if not observation:
                 self.failures = self.failures + 1 if error else 0
+            from supervisor_review import ibl_shape_repair_key
+            repair_key = ibl_shape_repair_key(call.get("name", ""), payload)
             if (error and not observation) or self.repeats >= 3:
                 prior = self.issues.get(sig, {})
                 self.issues[sig] = {"open": True, "generation": prior.get("generation", 0),
-                                    "kind": "failure" if error and not observation else "repeat"}
+                                    "kind": "failure" if error and not observation else "repeat",
+                                    "repair_key": repair_key}
             elif sig in self.issues and self.issues[sig]["open"]:
                 self.issues[sig] = {"open": False, "generation": self.issues[sig]["generation"] + 1}
+            if (not error and repair_key and detail.get("executed") is not False
+                    and detail.get("mode") != "check"):
+                for issue_sig, issue in list(self.issues.items()):
+                    if issue["open"] and issue.get("kind") == "failure" and issue.get("repair_key") == repair_key:
+                        self.issues[issue_sig] = {"open": False, "generation": issue["generation"] + 1}
             if self.repeats == 1 and not error and not job_observation:
                 self.last_progress = time.monotonic()
                 self.exec_revision += 1  # 시작 예고·실패·같은 status 반복은 진척이 아니다.
@@ -537,7 +545,10 @@ class Supervisor:
                         self.trigger = "job_failed"
                 elif observed["stalled_s"] >= observed.get("stall_after_s", self.config["stall_s"]) and observed["phase"] != "complete":
                     self.trigger = "job_stalled"
-            if self.active and now - self.last_progress >= self.config["stall_s"]:
+            # 모델의 긴 작성 시간은 방금 시작한 도구의 정체 시간이 아니다.
+            # 병렬로 새 호출이 시작돼도 오래 멈춘 기존 호출의 시계는 유지한다.
+            active_since = min((call["started"] for call in self.active.values()), default=now)
+            if self.active and now - max(self.last_progress, active_since) >= self.config["stall_s"]:
                 self.trigger = self.trigger or "tool_stalled"
             waiting_on_job = any(j.phase != "complete" for j in self.jobs.values())
             if (now - self.last_review >= self.config["long_task_s"] and self.recent

@@ -394,6 +394,8 @@ def test_video_recipe_reuses_stages_and_regenerates_only_changed_notes(tmp_path,
     args = {"lecture_id": "deck1", "lecture_dir": str(directory), "source": str(source), "bookends": str(books)}
     inspected = recipe.execute(args)
     assert calls == []
+    assert recipe.execute({**args, "render": {"captions": True}})["manifest_hash"] == inspected["manifest_hash"]
+    assert recipe.execute({**args, "render": {"captions": False}})["manifest_hash"] != inspected["manifest_hash"]
     run_args = {**args, "mode": "run", "manifest_hash": inspected["manifest_hash"]}
     assert recipe.execute(run_args)["success"]
     assert len(calls) == 3

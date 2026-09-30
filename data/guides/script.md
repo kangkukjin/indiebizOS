@@ -72,6 +72,9 @@ $r.items >> [table:sort]{by:"mb",descending:true} >> [table:take]{n:5}
 본문·등록을 이 프로토콜로 바꾸지 않아도 현재 IBL에서 호출할 수 있다.
 list/register/remove/status는 관리 결과 Record를 반환한다. 기존 등록의 background 실행은
 job_id 영수증을 반환한다. 새 wire 스크립트의 background는 아직 지원하지 않으며 실행 전에 거절한다.
+list의 등록 목록과 status의 작업 목록은 `.items`로 꺼내 table에 전달한다.
+status의 `.items`는 완료 뒤에도 작업 행이며 스크립트 업무 값은 `.result` 또는 `.items[0].result`다.
+목록·상태는 수정 실행에서도 새로 관측한다.
 
 ```python
 import sys, json
@@ -169,8 +172,9 @@ last_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 
 ```
 - 러너는 별도 프로세스(`_bg_runner.py`)라 백엔드 리로드·워커 교체에 살아남는다. `running` 인데 러너 pid 가 죽었으면 `lost` 로 정직 표시.
 - 상태 파일 `data/script_runs/jobs/<job_id>.json`, 로그 `data/script_runs/<job_id>.log`.
-- **진행 가시성(2026-09-10)**: 러너가 스크립트의 **stderr 를 로그에 실시간**으로 흘리고, `status` 는 running
-  행에 `progress`(마지막 줄들)를 싣는다. 긴 스크립트는 진행을 stderr 에 쓰면 된다(stdout 은 통화 자리).
+- **진행 가시성**: 러너가 스크립트의 **stderr 를 로그에 실시간**으로 흘리고, `status`의 모든 작업
+  행에 `progress`(마지막 줄들, 관측한 줄이 없으면 빈 목록)를 싣는다. 완료 뒤에도 보존하며
+  stdout 결과는 진행 줄에 섞지 않는다. 긴 스크립트는 진행을 stderr 에 쓰면 된다(stdout 은 통화 자리).
   실사고: 55분짜리 나레이션 생성이 26라운드 내내 'running' 만 돌려줬다 — 로그가 끝난 뒤에야 생겼기 때문.
 - wait 상한 240초(초과 요청은 신고 후 상한). 더 긴 작업은 status 를 다시 부르거나 트리거에 맡긴다.
 

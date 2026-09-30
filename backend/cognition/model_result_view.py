@@ -542,6 +542,77 @@ def _bound(value, cap=1000):
     return clip(value)
 
 
+def retained_value_reference(value, *, complete=True, origin=None):
+    """Reuse the existing typed, secret-masked evidence channel for repair values."""
+    from ibl_v2_ir import pack, projection
+    stored = {"edition": 2, "success": True, "source_complete": complete,
+              "value": projection(value),
+              "value_wire": {"protocol": "ibl-value/2", "data": pack(value)}}
+    if origin:
+        stored["origin"] = origin
+    ref = evidence_store().evidence(json.dumps(stored, ensure_ascii=False))
+    return _read_reference(ref, stored)
+
+
+def retain_failed_inputs(result, inputs, notes=()):
+    """A rejected program can change code without retyping its large arguments."""
+    if (not isinstance(result, dict) or result.get("success") is True
+            or result.get("ok") is True or not isinstance(inputs, dict) or not inputs):
+        return
+    args, unavailable = {}, {}
+    for name, value in inputs.items():
+        if not isinstance(name, str) or not name.isidentifier() or name in {"it", "i", "error"}:
+            continue
+        origins = [n for n in notes if n.get("name") == name]
+        from ibl_v2_ir import Fault
+        try:
+            ref = retained_value_reference(value, complete=not any(
+                n.get("evidence", {}).get("incomplete") for n in origins), origin=origins)
+        except Fault:
+            unavailable[name] = "입력값의 손실 없는 전송을 지원하지 않습니다. 원래 입력 오류를 먼저 수정하세요."
+            continue
+        if ref.get("input_args"):
+            args[name] = ref["input_args"]["입력"]
+        else:
+            unavailable[name] = ref.get("input_unavailable", "원형 보존 미확인")
+    result["request_inputs"] = {"input_args": args, "unavailable": unavailable,
+        "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."}
+
+
+def completed_call_references(result):
+    """A later failure must not hide already completed sequential work."""
+    from ibl_v2_ir import unpack
+    completed = [r for r in result.get("recordings", []) if "value" in r and "error" not in r]
+    events = {event['id']: event for event in result.get('evidence', [])}
+
+    def incomplete(receipt):
+        pending = [event['id'] for event in events.values()
+                   if event.get('kind') == 'invoke' and event.get('request_hash') == receipt.get('request_hash')]
+        seen = set()
+        while pending:
+            eid = pending.pop()
+            if eid in seen:
+                continue
+            seen.add(eid)
+            event = events.get(eid, {})
+            if event.get('incomplete'):
+                return True
+            pending.extend(event.get('parents', []))
+        return bool((receipt.get('evidence') or {}).get('incomplete'))
+
+    entries = []
+    for index, receipt in enumerate(completed[:6]):
+        evidence = receipt.get("evidence") or {}
+        complete = not incomplete(receipt)
+        ref = retained_value_reference(unpack(receipt["value"]),
+            complete=complete,
+            origin={"run_id": (result.get("resume") or {}).get("run_id"),
+                    "request_hash": receipt.get("request_hash"), "evidence": evidence})
+        entries.append({"index": index, "action": receipt.get("action"), "source_complete": complete,
+                        **{k: ref[k] for k in ("read_args", "input_args", "input_unavailable") if k in ref}})
+    return {"completed_calls": entries, "completed_calls_omitted": max(0, len(completed) - 6)} if entries else {}
+
+
 def project_v2_result(result):
     """Typed values keep their meaning; verbose execution evidence stays on disk."""
     raw = json.dumps(result, ensure_ascii=False, default=str)
@@ -587,6 +658,8 @@ def project_v2_result(result):
                 out["diagnostic"] = {**out["diagnostic"], "details": shown}
                 out["diagnostic_details_preview"] = preview
     out["result_ref"] = _read_reference(ref, result)
+    if result.get("success") is False:
+        out["result_ref"].update(completed_call_references(result))
     if 'value' in result:
         out['result_ref']['value_chars'] = len(json.dumps(result['value'], ensure_ascii=False, default=str))
     out["_hint"] = ("판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. "

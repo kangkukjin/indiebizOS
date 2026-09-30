@@ -1367,7 +1367,7 @@
   "self:script": {
    "fields": {
     "description": "66b2123ce383",
-    "target_description": "9a7171317867",
+    "target_description": "8f32498bc7f1",
     "implementation": "3f68ee7a7d84",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1378,7 +1378,7 @@
     "router": "ebbb1532efbc",
     "tool": "5bf697e1053f"
    },
-   "reviewed": "2026-09-27",
+   "reviewed": "2026-09-30",
    "examples": 72
   },
   "self:sheet": {
@@ -1810,7 +1810,7 @@
   "sense:listen": {
    "fields": {
     "description": "a4e356899809",
-    "target_description": "4edc732d4992",
+    "target_description": "8d131a3b9fcb",
     "implementation": "3d2a89586dee",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1820,7 +1820,7 @@
     "router": "ebbb1532efbc",
     "tool": "6abb0e2d6bd4"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-30",
    "examples": 32
   },
   "sense:navigate_route": {

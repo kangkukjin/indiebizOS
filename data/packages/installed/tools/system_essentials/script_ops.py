@@ -633,14 +633,15 @@ _PROGRESS_LINES = 3
 
 
 def _progress_tail(log_path, n=_PROGRESS_LINES):
-    """실행 중 로그의 마지막 진행 줄 n개 — 러너의 실시간 stderr 구간에서 읽는다. 없으면 []."""
+    """실행 중·종료 로그의 stderr 꼬리. stdout 결과를 진행 줄로 섞지 않는다."""
     if not log_path:
         return []
     try:
         raw = Path(log_path).read_text(encoding="utf-8", errors="replace")
     except OSError:
         return []
-    body = raw.split("---", 2)[-1] if "---" in raw else raw
+    body = (raw.split("--- stderr ---", 1)[1] if "--- stderr ---" in raw
+            else raw.split("---", 2)[-1] if "---" in raw else raw)
     lines = [ln.rstrip() for ln in body.splitlines() if ln.strip() and not ln.startswith("---")]
     return lines[-n:]
 
@@ -720,16 +721,12 @@ def op_status(tool_input):
     items = []
     for j in rows[:50]:
         row = {k: j.get(k) for k in ("job_id", "id", "status", "started_at", "ended_at", "exit_code", "duration_ms", "log")}
+        # 시작 전·실행 중·종료 후 모두 같은 목록 계약. 빈 목록은 관측한 진행 줄 없음.
+        row["progress"] = _progress_tail(j.get("log")) or []
         if j.get("error"):
             row["error"] = j["error"]
         if j.get("status") in ("done", "failed") and j.get("result") is not None:
             row["result"] = j["result"]
-        if j.get("status") in ("starting", "running"):
-            # 러너가 stderr 를 로그에 실시간으로 흘리므로(2026-09-10) '어디까지'를 같이 말한다 —
-            # 'running' 만 40분 돌려받던 폴링의 처방. 진행 줄은 스크립트가 stderr 에 쓴 마지막 몇 줄.
-            prog = _progress_tail(j.get("log"))
-            if prog:
-                row["progress"] = prog
         items.append(row)
     still = [r["job_id"] for r in items if r.get("status") in ("starting", "running")]
     text = f"작업 {len(items)}건" + (f" · 진행 중 {len(still)}" if still else "") + (" · " + ", ".join(notes) if notes else "")
@@ -745,7 +742,8 @@ def op_status(tool_input):
             res["result"] = items[0]["result"]
             r = items[0]["result"]
             if isinstance(r, dict):
-                for k in ("items", "table", "stdout"):
+                # items는 항상 작업 행이다. 스크립트의 업무 행은 result.items에 둔다.
+                for k in ("table", "stdout"):
                     if k in r:
                         res[k] = r[k]
     return res

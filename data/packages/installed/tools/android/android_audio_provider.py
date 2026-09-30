@@ -80,9 +80,24 @@ def _parse_generation(data, duration):
     return {**result, "events": validate_events(result.get("events"), duration), "timing": "estimated"}
 
 
+class GeminiAudioProvider:
+    """오디오 원샷도 상위 실행과 별개의 모델 신원·비용을 기록한다."""
+    def __init__(self, model):
+        from providers.base import ProviderMetrics
+        self.model, self.agent_role = model, "execution"
+        self.metrics = ProviderMetrics()
+
+
 def analyze_clip(path, duration, op, chosen, question="", instruction="", timestamps=False, timeout=90):
+    from model_call_context import call_scope
+    provider = GeminiAudioProvider(chosen["model"])
+    with call_scope(provider):
+        return _analyze_clip(path, duration, op, chosen, question, instruction, timestamps,
+                             timeout, provider.metrics)
+
+
+def _analyze_clip(path, duration, op, chosen, question, instruction, timestamps, timeout, metrics):
     from model_resolver import env_key_for_provider
-    from providers.base import ProviderMetrics
     from episode_logger import record_trajectory_event
 
     key = env_key_for_provider(chosen["provider"])
@@ -105,6 +120,8 @@ def analyze_clip(path, duration, op, chosen, question="", instruction="", timest
                   "대화와 노래를 구분하고, 추측하지 말고 불확실하면 uncertain=true로 표시하세요. "
                   "이 클립 밖이나 원본 전체를 검사했다고 주장하지 마세요. "
                   "events의 start/end는 이 클립 시작을 0으로 하는 초 단위 수입니다. "
+                  f"이 클립의 실제 길이는 {duration:.6f}초입니다. 반드시 0 <= start <= end <= {duration:.6f}를 지키세요. "
+                  "원본 파일의 절대 시각을 쓰지 마세요. 시간을 판단할 수 없으면 events를 비우고 uncertain=true로 답하세요. "
                   "정밀한 절단점이나 스테레오 품질을 보장하지 마세요. "
                   "text는 요청한 전사문(전사 불필요시 빈 문자열), answer는 짧은 답입니다.\n요청: " + purpose)
         event_schema = {"type": "OBJECT", "properties": {
@@ -136,7 +153,7 @@ def analyze_clip(path, duration, op, chosen, question="", instruction="", timest
                          "output_tokens": usage["total_output_tokens"],
                          "input_tokens_details": {"cached_tokens": usage.get("total_cached_tokens", 0)}}
     elapsed = time.monotonic() - started
-    usage = ProviderMetrics().record_usage(elapsed * 1000, raw_usage, label="Gemini audio")
+    usage = metrics.record_usage(elapsed * 1000, raw_usage, label="Gemini audio")
     record_trajectory_event("audio.model.finished", {"model": chosen["model"], "op": op,
                             "audio_seconds": duration, "elapsed_s": round(elapsed, 3), "usage": usage})
     result = (_parse_interaction(data, duration, timestamps) if chosen["api"] == "interactions"

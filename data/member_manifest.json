@@ -49,7 +49,7 @@
       },
       "path_audited": {
         "at": "2026-09-30",
-        "impl": "6168fe3da8bf7718"
+        "impl": "7b174e3fd1761ad8"
       }
     },
     "self:list": {
@@ -91,7 +91,7 @@
       },
       "path_audited": {
         "at": "2026-09-30",
-        "impl": "6168fe3da8bf7718"
+        "impl": "7b174e3fd1761ad8"
       }
     },
     "self:record": {
@@ -150,7 +150,7 @@
       },
       "path_audited": {
         "at": "2026-09-30",
-        "impl": "6168fe3da8bf7718"
+        "impl": "7b174e3fd1761ad8"
       }
     },
     "self:write": {

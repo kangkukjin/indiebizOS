@@ -158,6 +158,9 @@ until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2
 계약 조회를 곁들인 실행은 한 번만 수행하며 실행 권한·수명 관문을 유지한다.
 [4064 경계 수리](../../docs/EPISODE_4064_REPAIRS_2026_09_26.md).
 설치된 Python 라이브러리는 등록 Script `python_libraries`로 호출하고, 같은 실행 안에서 객체·메서드를 조합한다.
+새 계산 절차는 inputs Text와 write/edit로 작성한 현재 턴 파일을 Script path로 실행한다.
+독립 파일 실행부·별도 결과 통로·일반 파일 증거·CLI 재현으로 디버깅하면서 IBL 조합을 유지한다.
+[파일 Script 가이드](../guides/script.md).
 [Python 호출 가이드](../guides/python_libraries.md) · [구조 수렴 §6.8](../../docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 

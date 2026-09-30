@@ -70,6 +70,12 @@ def _cleanup_old_data() -> Dict[str, int]:
 
     deleted: Dict[str, int] = {}
     try:
+        from file_script import prune
+        from script_workspace import storage_root
+        deleted['file_script_records'] = prune(storage_root())
+    except Exception as exc:
+        logger.warning('임시 Script 보존기간 정리 실패: %s', exc)
+    try:
         conn = _get_pulse_db()
         for table in ("pulse_log", "self_checks", "action_health"):
             deleted[table] = conn.execute(

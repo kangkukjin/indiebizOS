@@ -327,9 +327,11 @@ $합계.items >> [table:sort]{by:"합계",descending:true}
 
 `$r=[sense:search]{query:"..."}; $r.items >> ...`처럼 반환 계약에 맞게 명시적으로 연결한다.
 `[self:script]{id:"등록이름",args:{...}}`는 기존 등록 스크립트도 직접 실행한다.
-기존 JSON stdin을 유지하며 JSON stdout 전체가 값이다. `{items:[...],run:...}`이면 `$r.items`와
+등록 id는 기존 JSON stdin을 유지하며 JSON stdout 전체가 값이다. `{items:[...],run:...}`이면 `$r.items`와
 `$r.run`을 직접 읽는다. 문자열 JSON을 겹겹이 감싸는 workflow 우회는 필요 없다.
 실패·부분 결과는 실행 경계에서 전파하고 원천 누락을 목록 길이로 추측하지 않는다.
+미등록 계산: inputs→write/edit→`[self:script]{path:"~turn/분석.py",args:$자료}`.
+stdout은 진단, 결과 파일은 값이다. 수정·재현·권한은 [Script 계약](script.md).
 
 신규 관용구는 명시 `[def:이름](...){...}` 전체를 검사한 뒤 기존 workflow 저장 창구에
 `edition:2,code:...`로 등록한다. 구형 저장 원문 자체를 조사할 때만
@@ -441,7 +443,7 @@ grep과 search/crawl의 결과는 Record이므로 목록 조합에는 `.items`, 
 ## 10. 값 가공과 완료 조건을 한 프로그램으로
 
 이미 얻은 값의 분리·정렬·제외·합성에는 식 함수를 쓴다. 레코드의 열/키 관계 연산은
-기존 table 어휘를 사용한다. 어느 경로에서도 같은 값 관측과 실행 근거가 이어진다.
+기존 table 어휘를 사용한다. 값 의미와 근거는 공유한다.
 아래는 새 항목 제외·정렬·인자 재사용·명시 검증을 묶은 분야 중립 예제다.
 
 <!-- example:value_revision -->
@@ -465,11 +467,12 @@ return {목록:$결과,앞쪽:$결과[:1],표시:join(", ",$결과)}
 문자열 변환·길이·슬라이싱은 NFC를 사용해 맥의 NFD 한글도 음절 단위로 다룬다.
 파일 접근에는 목록이 반환한 원래 `path`를 사용한다.
 
-순수 콜백 안의 목록별 변환은 기존 `reduce`로 표현할 수 있다.
+`map`은 각 원소를 변환하고 `filter`는 Bool 조건으로 거른다. 콜백은 순수식이며 공통 예산을 쓴다.
 <!-- example:pure_list_transform -->
 ```ibl
 [{t:" 강의 , 음악 "}] >> [table:compute]{set:($r)=>{
-  tags:reduce(split($r.t,","),[],($acc,$tag)=>$acc+[strip($tag)])
+  tags:map(filter(split($r.t,","),($tag)=>len(strip($tag))>0),($tag)=>strip($tag)),
+  amount:format_number(1234.5,",.2f")
 }}
 ```
 조건에 따른 값은 `조건 ? 값1 : 값2`다(조건은 Bool, 고르지 않은 가지는 실행 안 함):
@@ -478,10 +481,8 @@ return {목록:$결과,앞쪽:$결과[:1],표시:join(", ",$결과)}
 `json([{면적:72.5}])`는 실제 숫자가 담긴 JSON을 만든다.
 JSON 숫자로 바꾸며 정밀도가 줄면 오류로 멈춘다. 숫자 원문을 문자열로 저장할 때만
 `text()`를 명시한다.
-`table:filter`는 레코드 행을 받는다. 문자열·목록 원소를 그대로 거르려면
-`table:each`의 `mode:"flat_map"`에서 조건에 따라 `[$it]` 또는 `[]`를 반환한다.
-예: `enumerate(["첫 줄","찾을 줄"]) >> [table:each]{mode:"flat_map"}{[if:contains($it[1],"찾을")]{return [$it]}; return []}`.
-행 번호와 본문을 계속 가공할 때는 `table:each`에서 `{번호:$i,내용:$it}`로 변환한 뒤 필터한다.
+`table:filter`는 레코드 행, `filter`는 문자열·숫자·목록도 받는다.
+`format_number`는 f/%·선택 쉼표·소수 0~28자리이며 중간값은 짝수 반올림이다.
 `keys/values/entries`로 레코드를 열거한다. `**` 펼침은 뒤 필드 우선이고 중복 명시 키는 오류다.
 assert는 작성한 조건을 실제 결과에 대해 검사하며 조건 자체의 충분성은 별도 판단이다.
 메시지와 상세 값은 실패 때만 평가한다. 큰 본문은 삼중 따옴표로 쓰되,

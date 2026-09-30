@@ -37,6 +37,23 @@ def journal_root(project_path):
     return get_base_path() / "data/ibl_runs" / digest([p.key(), str(Path(project_path).resolve())])
 
 
+def recorded_file_scope(root, resume):
+    """Read only an owned journal's workspace key; ordinary resume validates identity."""
+    if not isinstance(resume, dict) or not re.fullmatch('[0-9a-f]{32}', str(resume.get('run_id', ''))):
+        return None
+    path = Path(root) / (resume['run_id'] + '.sqlite')
+    if path.is_symlink() or not path.is_file():
+        return None
+    try:
+        with sqlite3.connect(path.absolute().as_uri() + '?mode=ro', uri=True, timeout=10) as db:
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE name='file_workspace'").fetchone():
+                return None
+            row = db.execute('SELECT scope FROM file_workspace').fetchone()
+            return row[0] if row and isinstance(row[0], str) and re.fullmatch('[0-9a-f]{64}', row[0]) else None
+    except sqlite3.Error:
+        return None
+
+
 def model_reuse_identity(declaration):
     """Configuration and provider code identity; persist hashes, never credentials.
 

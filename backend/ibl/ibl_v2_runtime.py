@@ -586,6 +586,10 @@ class Runtime(ExpressionEvaluator):
                 return [request_value(v) for v in value]
             return value
         request = {"action": key, "args": pack(request_value(args.value)), "plan": self.plan.fingerprint}
+        invocation_dependency = spec.invocation_dependency(args.value) if spec.invocation_dependency else None
+        if invocation_dependency is not None:
+            request['invocation_dependency'] = invocation_dependency
+        self.local.invocation_dependency = invocation_dependency
         model_identity = spec.model_identity() if spec.model_identity else None
         if model_identity is not None:
             request['model_identity'] = model_identity

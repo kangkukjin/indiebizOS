@@ -1,17 +1,94 @@
-# 등록 스크립트 실행기 — [self:script]
+# 파일 Script 실행과 등록 — [self:script]
 
 > 2026-08-07 신설. **결정화 사다리의 가운데 가로대** — 자율주행이 write+run_command 로 만들어
 > 검증까지 끝낸 스크립트를 "몸의 일부"로 승격시키는 관문. 이게 없던 시절엔 완성 스크립트가
 > /tmp 고아가 되거나, 트리거가 자연어 위임([others:delegate])으로 매번 본격 모델을 깨워야 했다.
 
-## 설계선 (역사적 이유 — 어기지 말 것)
+## 설계선 — 파일 실행과 IBL 연결 (2026-10-01 개정)
 
-**어휘는 코드가 아니라 코드에 대한 참조만 나른다.** 옛날 셸 실행이 IBL 어휘였다가 은퇴한 이유
-= 코드 문자열이 IBL 파라미터 층을 통과하며 이스케이프·traceback 이 부서짐(디버깅 불가).
-그래서 지금도:
-- **저작·디버깅 = 도구층**: `[self:write]` + `run_command` (traceback 원문). 여기엔 `code:` 파라미터가 없다.
-- **완성본 반복 실행 = 어휘층**: `[self:script]{op:"run", id}` — id 만 나른다.
-- 실행은 argv 리스트(셸 미경유 — 인젝션·따옴표 지옥 원리적 차단), args 는 JSON stdin.
+**실행은 파일을 기준으로 하고, IBL은 입력과 결과를 연결한다.** 코드 문자열을 실행기에
+끼워 넣어 traceback을 재작성하지 않는다. Python 실행부(`backend/base/file_script.py`)는
+IBL 파서·값·오류 객체에 의존하지 않는다. IBL 어댑터와 재현 CLI가 같은 실행부를 쓴다.
+
+- 저작: `execute_ibl.inputs`의 Text를 `self:write.content`에 전달한다. 따옴표·역슬래시·탭·한글을
+  IBL 코드 안에 다시 이스케이프할 필요가 없다. 삼중 따옴표는 기존 문자열 이스케이프를
+  해석하므로 raw 코드 통로가 아니다. 코드 저작·수정은 inputs를 기본으로 쓴다.
+- 수정: **기존 `self:edit`**의 `old_string/new_string` 또는 줄 범위를 사용한다. 수정 문자열도
+  inputs로 전달한다. 전체 파일 재전송이나 셸 heredoc은 필요하지 않다.
+- 실행: 등록 `id` 또는 **현재 턴의 `~turn/*.py` 경로** 중 하나를 참조한다. 임시 실행은 등록 원장을
+  바꾸지 않는다. Python은 현재 몸의 인터프리터로 argv 실행하며 셸을 거치지 않는다.
+
+## 미등록 Python 파일을 조합하기
+
+다음 프로그램의 `inputs`에 `본문`(Python Text)과 `자료`(Record)를 넣는다.
+
+```ibl
+#!ibl edition=2
+$f=[self:write]{path:"~turn/분석.py",content:$본문}
+$r=[self:script]{path:$f.path,args:$자료}
+return $r.items >> [table:filter]{where:($행)=>$행.n>2}
+```
+
+Python 본문 예시:
+
+```python
+import json, os, sys
+from pathlib import Path
+args = json.load(sys.stdin)
+print("분석 중")  # stdout과 stderr는 모두 진단용
+result = {"items": args["items"]}
+path = Path(os.environ["INDIEBIZ_SCRIPT_RESULT"])
+tmp = path.with_suffix(".tmp")
+tmp.write_text(json.dumps(result, ensure_ascii=False, allow_nan=False), encoding="utf-8")
+tmp.replace(path)
+```
+
+`args`는 JSON 객체 하나다. 결과 파일에는 JSON 값 하나를 쓴다. `null`도 값이다.
+**종료 코드 0 + 결과 파일 없음은 `RESULT_MISSING`**, 잘못된 JSON은 `RESULT_INVALID`다.
+stdout으로 되돌아가 값을 찾지 않는다. 종료 코드 비0·시간 초과는 실패이며 결과를 이미 썼다면
+부분 값으로 보존한다. 오류 원문은 stderr 파일, 표시되는 꼬리는 비밀값 마스킹을 거친다.
+
+권한은 이미 임의 로컬 코드 실행을 허용받은 **제한 없는 주인 실행 문맥**이다. 회원·이웃·포털·
+노드가 제한된 에이전트는 거절한다. 리허설 출처 표시는 기존 Script의 자식 환경을 승계한다.
+폴더 제한은 코드의 소속을 정할 뿐 **Python의 파일·네트워크 접근을 가두지 않는다**.
+로컬 동기 실행만 지원하며 `timeout` 기본 300초, 최대 3600초다. `id`, `args_file`,
+`interpreter`, `target`, `callable_contract`, `background:true`를 함께 주지 않는다.
+코드 묶음은 작업 폴더의 Python 파일들(총 8MiB 이하), 결과는 32MiB 이하이며 코드 링크는 거절한다.
+비-Python 자료는 원래 작업 디렉터리에서 읽는다. 외부 자료·환경까지 동결하는 재현은 아니다.
+
+### 실패 → 부분 수정 → 새 시도
+
+```ibl
+#!ibl edition=2
+[self:edit]{path:"~turn/분석.py",old_string:$수정전,new_string:$수정후}
+$r=[self:script]{path:"~turn/분석.py",args:$확정입력}
+return $r.items
+```
+
+`수정전/수정후`는 inputs Text다. 앞 실행의 확정 값은 반환된
+`result_ref.completed_calls`의 `input_args` 또는 기존 `$ref`로 `확정입력`에 연결한다.
+읽기 재사용은 기존 `reuse:{run_id}` 규칙을 따른다. Script 효과는 **unknown**이며 자동 결과
+재사용·자동 재시도 대상이 아니다. 실패에도 외부 효과가 남았을 수 있으므로 수정 후 실행은
+**새 시도**다. 같은 코드·입력의 `resume`은 확인된 성공/실패 영수증만 복원한다. 코드/환경 변경은
+`RESUME_DIVERGED`, 미완료 영수증은 `EFFECT_UNCERTAIN`으로 막고 Python을 다시 돌리지 않는다.
+
+실제 작업 문맥의 `~turn`은 그 작업의 도구 호출 사이에 유지된다. 작업 ID가 없는 독립 API 호출은
+요청마다 다른 폴더를 받으며 같은 요청의 resume은 원래 폴더를 쓴다. 코드 사본·stdin 원문·
+stdout/stderr·결과·실행 메타는 `data/script_runs/transient/`의 비공개 실행 폴더에 남는다.
+파일 지문과 실행 증거 경로는 IBL 증거에 연결된다. **7일 보존 후 정기 정리**하며 작업 파일도
+마지막 실행/작성 후 7일 지나면 정리한다. 실행 중 잠금이 있으면 건드리지 않는다.
+
+기록 폴더는 일반 파일 읽기로 조사한다. 명시 재현은 저장소에서 다음처럼 실행한다.
+
+```bash
+.venv/bin/python backend/file_script_cli.py <실행 증거의 record 경로>
+```
+
+CLI는 코드·stdin 지문, 보존 기간을 확인한 뒤 동일 인터프리터·cwd·결과 통로로 **새 시도**를 만든다.
+진행 중·중단되어 효과가 불명인 기록은 재현하지 않는다. 만료/삭제된 원문을 마스킹본으로 대체하지
+않는다. 결과 JSON만 수리해 조사할 때는 저장된 파일을 읽으며 계산을 자동 재실행하지 않는다.
+정기 승격 검토는 보존 중의 코드·입력·오류 증거를 이용할 수 있고, 검증된 코드를 나중에 등록하는
+것은 허용한다. 승격 자체를 자동 실행하지 않는다.
 
 ## 몸의 되풀이 명령은 등록돼 있다 (2026-09-05)
 관문 배터리·시험 실행처럼 매 수리 주행이 같은 명령을 치는 일은 이미 등록 스크립트다 — 셸로 다시 치지 말고 `[self:script]{op: "list"}` 로 id 를 보고 `run` 한다. 고치기 뒤 검증이 같은 프로그램에 든다: `$r=[self:script]{id:"<시험 스크립트>",args:{files:["<시험 파일>"]}}; $r.items >> [table:select]{columns:["file","passed","failed","failures"]}`. 결과 객체의 items 목록을 명시적으로 선택한 뒤 표 연산에 전달한다.
@@ -31,7 +108,7 @@
   id 생략 시 파일명. **interpreter 는 생략하는 게 정답**(아래 "어디서나 도는 원장").
   같은 id 재등록 = 갱신(수리 후 재등록이 유지보수 루프). timeout 기본 300초 —
   **재등록 시 생략하면 기존 값을 승계**한다(안 그러면 2400초짜리가 조용히 300으로 깎인다).
-- **run**: **등록된 id 만** — 임의 경로·코드 문자열 실행 불가. cwd = 스크립트의 폴더.
+- **run**: 등록 `id` 또는 위의 임시 `path` 중 하나. 아래 stdin 두 통로는 **등록 id 실행**의 계약이다. cwd = 스크립트의 폴더.
   stdin payload 는 두 통로 중 **하나**다 — 작은 리터럴은 `args`,
   큰 payload(원장 배치 등)는 **`args_file`(그 JSON 객체가 담긴 파일 경로)**.
   둘을 함께 주면 거절한다(stdin 은 하나다).
@@ -54,7 +131,7 @@
 - **경로는 저장소 상대**로 적힌다(본문=파일명, 저장소 안 인터프리터=`.venv/bin/python3`).
   옛 절대경로(`/Users/…`)는 클론한 다른 기기에서 원리적으로 못 돌았다.
 
-## 값 반환 계약
+## 등록 id의 값 반환 계약
 
 현재 IBL에서는 기존 스크립트도 직접 호출한다. 기존 스크립트의 JSON stdin 형식은 그대로다.
 JSON stdout은 객체·목록·스칼라 전체가 값이고, 평문 stdout은 완전한 문자열이다.
@@ -163,7 +240,7 @@ last_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 
 3. 긴 작업은 timeout 을 넉넉히 — 초과 시 프로세스가 중단된다(부분 실행 상태 주의).
 
 
-## 긴 작업 — background + status (2026-08-21)
+## 등록 id의 긴 작업 — background + status (2026-08-21)
 타임아웃(기본 300초)을 넘길 스크립트(나레이션 생성·렌더·대량 수집)는 **동기로 부르지 말 것**. 동기 호출이 타임아웃으로 죽으면 결과도 잃고, 그 뒤 셸 `sleep`/`ps` 폴링 한 번이 모델 왕복 한 번이다.
 ```
 [self:script]{op: "run", id: "나레이션생성", args: {lecture_id: "x"}, background: true}   # → job_id 즉시

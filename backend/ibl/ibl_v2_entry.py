@@ -4,6 +4,17 @@ from ibl_v2_parser import edition_of
 
 
 def handle_request(request, project_path=".", agent_id=None, cancel_check=None, *, input_evidence=None):
+    from script_workspace import request_scope
+    from ibl_run_journal import journal_root, recorded_file_scope
+    resume = request.get('resume')
+    stored_scope = (recorded_file_scope(journal_root(project_path), resume)
+                    if isinstance(resume, dict) and 'run_id' in resume else None)
+    with request_scope(project_path, agent_id, request.get('resume'), stored_scope):
+        return _handle_request(request, project_path, agent_id, cancel_check,
+                               input_evidence=input_evidence)
+
+
+def _handle_request(request, project_path=".", agent_id=None, cancel_check=None, *, input_evidence=None):
     source = request.get("code") or request.get("pipeline") or ""
     try:
         if edition_of(source, request.get("edition")) != 2:
@@ -53,6 +64,11 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
         root = journal_root(project_path)
         reusable = reusable_receipts(root, reuse["run_id"]) if reuse else None
         with Journal(root, identity(plan, inputs, project_path, agent_id, input_evidence=input_evidence), request.get("resume")) as journal:
+            from script_workspace import current_scope
+            journal.db.execute('CREATE TABLE IF NOT EXISTS file_workspace(scope TEXT)')
+            if not request.get('resume'):
+                journal.db.execute('INSERT INTO file_workspace VALUES(?)', (current_scope(),))
+                journal.db.commit()
             journal.announce(plan.fingerprint)
             from ibl_edition import source_context
             with source_context(2):

@@ -1366,20 +1366,20 @@
   },
   "self:script": {
    "fields": {
-    "description": "66b2123ce383",
-    "target_description": "8f32498bc7f1",
-    "implementation": "3f68ee7a7d84",
+    "description": "43e64ceb9207",
+    "target_description": "078f7a66e773",
+    "implementation": "ec321adab984",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
     "params": "9aa4044afddf",
-    "ops": "847d6b34c3c6",
+    "ops": "553aa20ee719",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "5bf697e1053f"
    },
-   "reviewed": "2026-09-30",
-   "examples": 72
+   "reviewed": "2026-10-01",
+   "examples": 75
   },
   "self:sheet": {
    "fields": {

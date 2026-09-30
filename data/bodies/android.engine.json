@@ -17,6 +17,7 @@
     "base/episode_trace_reader",
     "base/execution_commit",
     "base/execution_workers",
+    "base/file_script",
     "base/history_excerpt",
     "base/ibl_code_corpus",
     "base/ibl_edition",
@@ -44,6 +45,8 @@
     "base/runtime_work",
     "base/runtime_worker_adapters",
     "base/safe_store",
+    "base/script_process",
+    "base/script_workspace",
     "base/seam_metrics",
     "base/selfbuild_gate",
     "base/shell_shadow_gate",
@@ -204,6 +207,7 @@
     "datastore/websocket_manager",
     "datastore/world_recall_store",
     "datastore/xray_stream",
+    "file_script_cli",
     "ibl/api_engine",
     "ibl/api_pipeline",
     "ibl/api_transforms",
@@ -224,6 +228,7 @@
     "ibl/ibl_exec_output",
     "ibl/ibl_exec_sense",
     "ibl/ibl_executors",
+    "ibl/ibl_file_script",
     "ibl/ibl_function_result",
     "ibl/ibl_honesty",
     "ibl/ibl_member_library",
@@ -497,8 +502,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 422,
-    "engine": 396,
+    "total": 427,
+    "engine": 401,
     "blocklist": 26
   }
 }

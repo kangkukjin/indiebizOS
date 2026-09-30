@@ -6,6 +6,9 @@ from ibl_v2_ir import digest
 
 
 def script_snapshot(args, root=None):
+    if 'path' in args and args.get('op', 'run') == 'run':
+        # A preceding write may create this file. Pin bytes in the receipt at invocation.
+        return {'scope': 'invocation-file', 'protocol': 'file-script/1'}
     from runtime_utils import get_base_path
     root = Path(root) if root else get_base_path() / 'data/scripts'
     registry_path = root / 'registry.yaml'

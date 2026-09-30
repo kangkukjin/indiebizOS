@@ -24,6 +24,7 @@ class Adapter:
     stateful: object = None
     resource_identity: object = None
     model_identity: object = None
+    invocation_dependency: object = None
 
 
 @dataclass(frozen=True)
@@ -367,13 +368,16 @@ def load_registry(project_path=".", agent_id=None):
                         raise Fault("MEMBER_ACCESS", "회원의 어휘 권한이 없습니다.", kind="permission")
                     return table_operation(c["adapter"]["operation"], runtime, args)
                 if protocol == "ibl-script/2":
+                    from ibl_file_script import is_file_call, invoke as invoke_file
+                    if is_file_call(args):
+                        return invoke_file(runtime, args, ac, node, action)
                     from ibl_script_session import registration, invoke
                     session_registration = registration(args)
                     if session_registration:
                         return invoke(runtime, args, session_registration, project_path, agent_id, ac, node, action)
                 params = {**plain_arguments(args), **c["adapter"].get("fixed_params", {})}
                 if protocol == "ibl-script/2":
-                    params.setdefault("op", "run" if params.get("id") else "list")
+                    params.setdefault("op", "run" if params.get("id") or params.get('path') else "list")
                     params["_ibl_edition"] = 2
                 pipe_key = c["adapter"].get("legacy_pipe_input")
                 if pipe_key and pipe_key in params:
@@ -400,15 +404,24 @@ def load_registry(project_path=".", agent_id=None):
             dependency = script_snapshot if adapter['protocol'] == 'ibl-script/2' else None
             def resource_identity(realm, value, base=project_path):
                 from runtime_utils import file_resource_identity
+                # Offline definition checks have no turn directory. Keep a symbolic
+                # identity; actual invocation always resolves an authorized scope.
+                if realm == 'file' and (value == '~turn' or value.startswith(('~turn/', '~turn\\'))):
+                    from script_workspace import current_scope
+                    if current_scope() is None:
+                        import posixpath
+                        return posixpath.normpath(value.replace('\\', '/'))
                 return file_resource_identity(value, base) if realm == 'file' else value
             from ibl_script_session import is_stateful
+            from ibl_file_script import invocation_identity
             result[key] = Adapter(contract, run, authorize,
                                   dependency,
                                   None if contract["effects"] != ["unknown"] else reusable,
                                   is_stateful if adapter['protocol'] == 'ibl-script/2' else None,
                                   resource_identity,
                                   (lambda c=contract: model_reuse_identity(c['model_reuse']))
-                                  if contract.get('model_reuse') else None)
+                                  if contract.get('model_reuse') else None,
+                                  invocation_identity if adapter['protocol'] == 'ibl-script/2' else None)
     from ibl_v2_compat import function_adapters
     result.update(function_adapters(project_path, agent_id))
     return result

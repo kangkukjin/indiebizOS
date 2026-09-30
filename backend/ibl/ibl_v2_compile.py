@@ -816,7 +816,8 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
     from ibl_v2_adapters import Adapter
     registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize, v.dependency,
                           getattr(v, "reusable", None), getattr(v, "stateful", None),
-                          getattr(v, "resource_identity", None), getattr(v, "model_identity", None))
+                          getattr(v, "resource_identity", None), getattr(v, "model_identity", None),
+                          getattr(v, 'invocation_dependency', None))
                 for k, v in (registry or {}).items()}
     inputs = copy.deepcopy(inputs or {})
     compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}))
@@ -837,8 +838,9 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
                     "semantics": digest((Path(__file__).parents[1] / "common/value_semantics.py").read_text()),
                     "expressions": digest({p.name: digest(p.read_text()) for p in sorted(set((Path(__file__).parents[1] / "common").glob("expression_*.py")) | {Path(__file__).parents[1] / "common/foreign_ref.py"})}),
                     "core": digest({p.name: digest(p.read_text()) for p in sorted(set(Path(__file__).parent.glob("ibl_v2_*.py")) |
-                              {Path(__file__).parent / name for name in ("ibl_script_session.py", "ibl_document_value.py", "ibl_member_library.py",
-                                                                        "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")})})}
+                              {Path(__file__).parent / name for name in ("ibl_script_session.py", "ibl_file_script.py", "ibl_document_value.py", "ibl_member_library.py",
+                                                                        "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")} |
+                              {Path(__file__).parents[1] / 'base' / name for name in ('file_script.py', 'script_process.py', 'script_workspace.py')})})}
     for call in compiler.pure_calls:
         effects = compiler.call_effects.get(call.id)
         if effects is not None and effects - {"pure"}:

@@ -28,6 +28,9 @@ CONTRACTS = {
     'any': (1, 1, ('List<Bool>',), 'Bool'),
     'all': (1, 1, ('List<Bool>',), 'Bool'),
     'sorted': (1, 3, ('List', 'Text|Callable|Null', 'Bool'), 'List'),
+    'map': (2, 2, ('List', 'Callable'), 'List'),
+    'filter': (2, 2, ('List', 'Callable'), 'List'),
+    'format_number': (2, 2, ('Number', 'Text'), 'Text'),
     'keys': (1, 1, ('Record',), 'List<Text>'),
     'values': (1, 1, ('Record',), 'List'),
     'entries': (1, 1, ('Record',), 'List<List>'),
@@ -104,6 +107,20 @@ def _date_call(name, args):
 
 def call(name, args, tick, callback=None):
     first = args[0]
+    if name == 'format_number':
+        import re
+        from decimal import Decimal
+        from common.value_semantics import numeric_value
+        spec = text(args[1])
+        if not re.fullmatch(r',?(?:\.(?:[0-9]|1[0-9]|2[0-8]))?[f%]', spec):
+            raise Fault('NUMBER_FORMAT', '숫자 서식은 f 또는 %, 선택 쉼표와 소수 0~28자리입니다. 예: ",.2f", ".1%".')
+        value = numeric_value(first, preserve_decimal=True)
+        if isinstance(first, (bool, str)) or value is None:
+            raise Fault('NUMBER_REQUIRED', 'format_number의 첫 인자는 유한 Number입니다.')
+        value = value if isinstance(value, Decimal) else Decimal(str(value))
+        if abs(value.adjusted()) > 10000:
+            raise Fault('NUMBER_FORMAT', '숫자 표시 크기가 한도를 넘습니다.')
+        return format(value, spec)
     if name in ('date_add', 'date_diff', 'month_end'):
         return _date_call(name, args)
     if name in ('split', 'replace', 'strip', 'upper', 'lower', 'contains', 'join'):
@@ -140,6 +157,25 @@ def call(name, args, tick, callback=None):
             tick()
         return list(first) if name == 'keys' else list(first.values()) if name == 'values' else [list(x) for x in first.items()]
     rows = listing(first)
+    if name in ('map', 'filter'):
+        from common.expression_ops import Builtin, Closure
+        if callback is None or not isinstance(args[1], (Builtin, Closure)):
+            raise Fault('CALLABLE', f'{name}의 두 번째 인자는 함수입니다.')
+        out = []
+        for index, row in enumerate(rows):
+            tick()
+            try:
+                value = callback(args[1], row)
+                if name == 'filter' and type(value) is not bool:
+                    raise Fault('BOOL_REQUIRED', 'filter 조건은 Bool이어야 합니다.')
+            except Fault as exc:
+                exc.details.setdefault('list_index', index)
+                raise
+            if name == 'map':
+                out.append(value)
+            elif value:
+                out.append(row)
+        return out
     if name in ('any', 'all'):
         # Validate the complete input even when the boolean result is known.
         for row in rows:

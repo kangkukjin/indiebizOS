@@ -838,6 +838,8 @@ def _execute(tool_input: dict, context) -> str:
             if _res.get("error"):
                 return _res["error"]
             path = _res["path"]
+            from script_workspace import prepare_path
+            prepare_path(path)
             redirected = _res["redirected"]
             _live_target = path                 # 신고용 — 실제 쓰기는 격리 사본에 갈 수 있다
             path = _red_stage(path, for_write=True)

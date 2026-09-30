@@ -167,7 +167,12 @@ def test_script_runner_passes_private_workbench_to_child_process(supervisor, tmp
     def child(*args, **kwargs):
         observed.append((kwargs.get("env") or {}).get(STAGING_ENV))
         return SimpleNamespace(returncode=0, stdout='{"items": []}', stderr="", pid=123)
-    monkeypatch.setattr(S.subprocess, "run", child)
+    import script_process
+    def foreground(*args, **kwargs):
+        result = child(*args, **kwargs)
+        return {'exit_code': result.returncode, 'stdout': result.stdout,
+                'stderr': result.stderr, 'timed_out': False}
+    monkeypatch.setattr(script_process, "run_process", foreground)
     monkeypatch.setattr(S.platform_utils, "spawn_detached", child)
     assert S.op_run({"id": "fixture", "background": background})["success"]
     assert observed == [str(supervisor.delivery.directory) if conscious is True else None]

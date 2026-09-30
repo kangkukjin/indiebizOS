@@ -48,6 +48,7 @@ LAYERS = {
         "phone_jobs", "principal", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
         "selfbuild_gate", "shell_shadow_gate", "supervision_bus", "supervision_watch", "supervision_hook",
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
+        "file_script", "script_process", "script_workspace",
     },
     "data": {
         "distill_ledger",
@@ -67,7 +68,7 @@ LAYERS = {
         "websocket_manager", "xray_stream",
     },
     "ibl": {
-        "ibl_script_session", "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",
+        "ibl_script_session", "ibl_file_script", "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",
         "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies",
         "member_bridge", "member_profile", "member_files",
         # ★api_engine·api_pipeline·api_transforms 는 이름만 api_* — FastAPI 라우터가
@@ -125,7 +126,7 @@ LAYERS = {
     "surface": {"record_app_page", "api_external_users", "member_shell", "member_workspace_ui", "member_browser", "member_app_frame", "member_app_actions", "member_entry", "member_apps", "public_face", "face_provision", "warehouse_likes", "launcher_react"},
 }
 SURFACE_PREFIX = ("api_", "launcher_", "portal_")
-ASSEMBLY = {"api", "boot_common"}
+ASSEMBLY = {"api", "boot_common", "file_script_cli"}
 #: 층 배정 밖 — 시험과 **원장 일회성 유지보수 스크립트**(migrate_/retire_). 폰 번들의
 #: _force_exclude_glob 과 같은 부류를 가리킨다(data/bodies/android.json) — 두 자리가 갈리면
 #: 한쪽만 통과하는 모듈이 생긴다. 부류는 파일별로 전개하지 않는다(2026-09-07 retire_ 추가).

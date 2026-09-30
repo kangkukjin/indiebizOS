@@ -5457,13 +5457,13 @@ nodes:
           impl: 3c31b0566918933b
           dependencies:
             backend/common/expression_eval.py: 539142b9eb7f27ca915f5be9a47ba995516d1ed7302b4a1e737e1145b0473c89
-            backend/common/expression_functions.py: 06242617ac4f3c12919fbf35dc13b2effb3c9052ce0957e64561bc932ac19408
+            backend/common/expression_functions.py: 4bdd3a130c760a3e1a0c89b96e634ec22a96b82167c02374727fd6f19efa275e
             backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
             backend/common/expression_ops.py: 2f0dfa9c8e1787379d26e4f8190ca39d4ecd0ed8c3289882f668ab01b3fe1517
             backend/common/expression_parser.py: 414904117be6a1fb37dbea6af484503b410e53089df0a974e248d55216ba240c
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
-            backend/base/runtime_utils.py: ee8f08ebd8889224e85458645b3f60386fcdb1c732772c4657d2d173fee8e0ff
+            backend/base/runtime_utils.py: 99c3070b0597124416b86d7eb5e00e2a6bf245814a4e3fc766bed2c77d47d6e4
             backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
             backend/common/ibl_vars.py: c34c6be2bd233867b0a2cd9e675249d0a5f49459831cd2abcdb4ef1ea6b9944e
             backend/common/record_contract.py: ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5
@@ -5708,8 +5708,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-09-30'
-          impl: 538f8c8ae5d01c70
+          at: '2026-10-01'
+          impl: 4077fe77566682ae
         target_key: path
         aliases:
           offset:
@@ -5721,8 +5721,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-09-30'
-          impl: 538f8c8ae5d01c70
+          at: '2026-10-01'
+          impl: 4077fe77566682ae
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5798,8 +5798,8 @@ nodes:
           content: $content
         member_transform: member_documents:write
         path_audited:
-          at: '2026-09-30'
-          impl: 538f8c8ae5d01c70
+          at: '2026-10-01'
+          impl: 4077fe77566682ae
         target_key: path
       list:
         callable_contract:
@@ -6515,8 +6515,8 @@ nodes:
             - read_external
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-09-30'
-          impl: 538f8c8ae5d01c70
+          at: '2026-10-01'
+          impl: 4077fe77566682ae
         pipe_in: true
         lands_on: body
         limb_op:
@@ -6532,12 +6532,12 @@ nodes:
         columns_from: data
         side_effect: true
         fixture: '[self:script]{}'
-        description: 등록 스크립트 실행기 — 완성·검증된 스크립트를 등록하면 워크플로우·트리거·앱이 id 한 단어로 결정론 실행. 코드가 아니라 참조만 나른다(저작·디버깅은 write+run_command).
+        description: 파일 Script 실행 — 등록 id 또는 현재 턴의 Python path. 코드는 inputs Text로 write/edit하며 실행은 파일 참조만 받는다. path는 미등록 로컬 실행, 결과 파일의 값이 다음 문장으로 이어진다.
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태, 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태, 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 또는 path 중 하나. path는 제한 없는 주인의 ~turn/ 안 Python 파일이며 원장에 등록하지 않는다. inputs Text로 write/edit, args JSON stdin, INDIEBIZ_SCRIPT_RESULT 환경변수의 경로에 JSON 값을 쓴다(원자 교체 권장). stdout/stderr는 진단. 결과 누락=RESULT_MISSING, 잘못된 JSON=RESULT_INVALID, 자동 재시도 없음. timeout ≤3600, 로컬 동기만, id·args_file·interpreter·target·background 병용 불가. 코드/입력/진단 원문은 비공개 7일 보존, 실행 증거의 record로 조회하며 backend/file_script_cli.py로 명시 재현. id 실행은 기존 계약을 유지: args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 self:edit 또는 run_command, 같은 파일이면 재등록 불필요); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
         router: handler
         tool: script_op
-        implementation: system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).
+        implementation: path는 backend/base/file_script.py와 ibl_file_script 어댑터, id는 system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).
         target_key: op
         runs_on: pc_only
         ops:
@@ -6555,7 +6555,7 @@ nodes:
           values:
             list: 등록 목록 + 마지막 실행 상태
             register: 스크립트 등록/갱신 — path 필수, 완성본만
-            run: 등록 id 결정론 실행 — stdout JSON 은 통화로, 실패는 정직하게
+            run: 등록 id 또는 턴 Python path 실행 — id는 기존 stdout, path는 별도 JSON 결과 파일
             status: 백그라운드 작업 상태·결과 — job_id|id, wait(≤240초 유한 대기)
             remove: 등록 해제 — 파일은 보존
         keywords:

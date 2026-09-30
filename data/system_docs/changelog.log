@@ -2300,3 +2300,5 @@
 [2026-09-30] 긴문장 13회차: 센서 보정·중복 JSON 변형·독립 AI 후 원천 읽기 경계에 공통 검증 연결. 파일 경로와 read 실패 귀속 보존. 전체/새 변형·178검사 통과. round_13/report.md.
 
 [2026-09-30] 긴문장 14회차: 설정 원문 점검에서 JSON 확장자가 명시 format:text를 무시하던 결함 수정. 6파일·7표식 전건 및 부재/대문자/빈파일 변형 달성. 12~14회차 관련 최종 226검사 통과. round_14/report.md.
+
+[2026-10-01] Script 조합 경계 개정: inputs Text→write/edit→현재 턴 Python path 실행, 별도 JSON 결과 통로, 독립 실행부/CLI 재현, 7일 원문 보존과 정리. 제한 없는 로컬 주인 문맥만 허용하며 unknown 효과의 자동 재사용/재시도를 막고 코드 변경·완료 불명 재개를 거절. 작은 값 가공 map/filter/format_number 추가. 계약·시험: data/guides/script.md, backend/test_file_script.py, backend/test_list_value_composition.py. 일반 회귀 8,138 통과·1 건너뜀, 관련 시스템 94 통과. 라이브 AI 과제의 품질·시간·토큰 개선은 아직 재측정하지 않음.

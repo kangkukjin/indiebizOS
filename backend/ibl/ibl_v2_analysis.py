@@ -388,6 +388,19 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
             for issue in compiler.issues[before:]:
                 issue['hint'] = f"{name}({', '.join(spec[2])})의 인자 순서를 확인하세요. {i + 1}번째는 {expected}입니다."
         result = declared(spec[3])
+        if name in ('map', 'filter') and types and types[0].kind == 'List':
+            item = types[0].item or UNKNOWN
+            callback = node.data['args'][1]
+            mapped = UNKNOWN
+            if callback.kind == 'lambda':
+                if len(callback.data['params']) != 1:
+                    compiler.issue(callback, 'ARITY', f'{name} 콜백은 인자 하나를 받습니다.')
+                else:
+                    local = {**(env or {}), callback.data['params'][0]: item}
+                    mapped = compiler.visit(callback.data['body'], local, names, readonly)
+                    if name == 'filter':
+                        compiler.need(callback.data['body'], mapped, BOOL)
+            return Type('List', item=item if name == 'filter' else mapped)
         if name == 'sorted' and types and types[0].kind == 'List':
             key_type = types[0].item or UNKNOWN
             key_node = node.data['args'][0]

@@ -111,6 +111,8 @@ Callable은 실행 내부 값이며 일반 JSON이나 외부 결과 값으로 �
 
 | 함수 | 인자와 결과 |
 | --- | --- |
+| map / filter | `map(list,($값)=>식)` → 변환한 목록, `filter(list,($값)=>Bool)` → 조건을 만족하는 원래 원소. 문자열·숫자·레코드 모두 지원, 콜백은 순수식이며 공통 실행 예산 적용 |
+| format_number | `format_number(number, spec)` → Text. `",.2f"`는 천 단위 쉼표·소수 2자리, `".1%"`는 백분율. f/%·선택 쉼표·소수 0~28자리만 지원, 중간값은 짝수 반올림 |
 | split | `split(text, sep=null, maxsplit=-1)` → List<Text>; null 구분자는 공백 분리 |
 | replace / strip | `replace(text, old, new, count=-1)`, `strip(text, chars=null)` → Text |
 | upper / lower / contains / join | `upper(text)`, `lower(text)`, `contains(text, part, exact=false)` → Bool, `join(sep, List<Text>)` → Text. contains는 기존 부분일치 정책(NFC·대소문자 정규화)을 공유하고, `exact:true`(세 번째 인자)면 대소문자를 가리는 부분 문자열 판정(NFC만)이다 — 약어(AI·LLM)가 'painting'에 걸리지 않게(2026-09-29 개정, 77회차 G77-1) |
@@ -898,3 +900,10 @@ Unit/Result는 인자 경로와 함께 거절하며 문자열이 필요한 경�
 비유한 수는 전송할 수 없다.
 
 등록 스크립트 `python_libraries`의 직접 라이브러리 호출은 [가이드](../guides/python_libraries.md)를 따른다. 새 어휘는 추가하지 않는다.
+
+### 미등록 파일 Script (2026-10-01)
+
+`[self:script]{path:"~turn/분석.py",args:$자료}`는 제한 없는 로컬 주인 문맥에서 등록 없이
+파일을 실행하고 결과 파일의 JSON 값을 이어 준다. 작성·부분 수정은 inputs Text와 기존 write/edit,
+디버깅은 독립 실행부·일반 증거 파일·재현 CLI로 한다. stdout은 진단이며 값 누락은 실패다.
+unknown 효과는 자동 재사용/재시도하지 않는다. 권한·재개·보존 계약은 [Script 가이드](../guides/script.md).

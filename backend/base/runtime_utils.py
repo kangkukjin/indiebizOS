@@ -41,6 +41,9 @@ def expand_body_path(raw) -> str:
     루트(projects/system)로는 <repo>/outputs/ 에 닿을 수 없어 계정명 없는 표기가 없었다.
     """
     s = str(raw or "")
+    if s == '~turn' or s.startswith(('~turn/', '~turn\\')):
+        from script_workspace import expand
+        return expand(s)
     if s == WORKSPACE_TOKEN or s.startswith(WORKSPACE_TOKEN + "/") or s.startswith(WORKSPACE_TOKEN + "\\"):
         rest = s[len(WORKSPACE_TOKEN):].lstrip("/\\")
         base = get_base_path()

@@ -1,13 +1,10 @@
 """[self:script] — 등록 스크립트 실행기 (결정화 사다리의 가운데 가로대).
 
-설계선(2026-08-07 결정): **어휘는 코드가 아니라 코드에 대한 참조만 나른다.**
-- 저작·디버깅은 도구층(write + run_command — traceback 원문) 그대로. 여기엔 code: 파라미터가 없다.
-- 완성·검증된 스크립트를 register 로 원장에 올리면, 워크플로우 step·트리거·앱 버튼·조종실이
-  `[self:script]{op:"run", id}` 한 단어로 결정론 실행한다. 옛 shell-IBL 이 죽은 지점
-  (코드 문자열이 IBL 파라미터 층을 통과하며 이스케이프·traceback 손실)이 원리적으로 없다.
-- 실행=argv 리스트(셸 미경유 — 인젝션·따옴표 지옥 없음), args=JSON stdin.
-- 실패는 정직한 통화(exit_code·stderr 꼬리·로그 경로) + 원장 last_error — 신고는 어휘층,
-  수리는 도구층(에이전트가 로그 보고 고쳐 재등록).
+실행 입구는 파일 참조다. 이 모듈은 등록 id·원장·background를 맡는다.
+미등록 path는 판본 2 ibl_file_script 어댑터가 독립 file_script 실행부로 전달한다.
+저작과 부분 수정은 inputs Text와 기존 write/edit를 사용한다. 여기엔 code: 파라미터가 없다.
+공통 프로세스 수명은 script_process가 소유한다. 등록 id는 기존 JSON stdin/stdout 계약,
+미등록 path는 별도 결과 파일과 원문 진단을 쓰며 같은 실행부를 CLI로 재현한다.
 
 **등록 스크립트는 어휘처럼 다룬다** (2026-08-16 개정 — 사용자 판정):
 - 본문은 `data/scripts/<파일>` 에만 산다. 여기 아니면 register 가 거절한다.
@@ -487,12 +484,14 @@ def op_remove(tool_input):
 
 def op_run(tool_input):
     """등록 id 실행 — argv 리스트(셸 미경유), args=JSON stdin. 실패=exit_code·stderr 정직 반환."""
+    if 'path' in tool_input:
+        return {'success': False, 'error': 'path 실행은 현재 IBL의 로컬 파일 실행 경로를 사용하세요. id와 함께 지정할 수 없습니다.'}
     sid = _sanitize_id(tool_input.get("id") or "")
     registry = _read_registry()
     entry = registry.get(sid) if sid else None
     if entry is None:
         return {"success": False,
-                "error": f"등록되지 않은 id: {sid or '(비어 있음)'} — 임의 경로·코드 실행은 불가, op:register 로 먼저 등록. "
+                "error": f"등록되지 않은 id: {sid or '(비어 있음)'} — 반복 실행은 register, 임시 실행은 현재 IBL에서 path를 사용하세요. "
                          f"등록: {', '.join(sorted(registry)) or '없음'}"}
     v2 = tool_input.get("_ibl_edition") == 2
     wire_v2 = bool(entry.get("callable_contract"))
@@ -534,14 +533,15 @@ def op_run(tool_input):
         return {**job, "value": job} if v2 else job
     started = time.time()
     try:
-        proc = subprocess.run(
+        from script_process import run_process
+        proc = run_process(
             [interp, str(p)],
-            input=stdin_data, capture_output=True, text=True,
+            (stdin_data or '').encode('utf-8'),
             timeout=timeout, cwd=str(p.parent),
             env=_child_env("foreground"),
         )
-        exit_code, stdout, stderr = proc.returncode, proc.stdout or "", proc.stderr or ""
-        timed_out = False
+        exit_code, stdout, stderr = proc['exit_code'], proc['stdout'], proc['stderr']
+        timed_out = proc['timed_out']
     except subprocess.TimeoutExpired as te:
         exit_code, timed_out = -1, True
         stdout = (te.stdout or b"").decode("utf-8", "replace") if isinstance(te.stdout, bytes) else (te.stdout or "")
@@ -585,7 +585,7 @@ def op_run(tool_input):
             details["result"] = script_value
         return {**details, "success": False, "id": sid, "exit_code": exit_code, "duration_ms": duration_ms,
                 **({"timed_out": True, "error": f"타임아웃 {timeout}초 초과 — 스크립트 중단."} if timed_out
-                   else {"error": result_error or f"스크립트 실패 (exit {exit_code}) — 로그를 보고 도구층(run_command)에서 고친 뒤 재등록."}),
+                   else {"error": result_error or f"스크립트 실패 (exit {exit_code}) — 로그를 보고 self:edit 또는 run_command로 수정하세요. 같은 파일이면 재등록은 필요하지 않습니다."}),
                 "stderr_tail": stderr[-_STDERR_TAIL:], "log": str(log_path),
                 **({"result": parsed} if parsed is not None else {}),
                 **({"interpreter_note": interp_note} if interp_note else {})}

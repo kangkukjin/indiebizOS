@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: script-registered-only
+    retired: 2026-10-01
+    reason: 임시 계산을 등록하거나 IBL 밖에서 실행해야 하던 조합 단절을 해소.
+    instead: 등록 id 또는 허가된 현재 턴 path를 실행하며 코드 저작과 부분 수정은 inputs와 write/edit.
+    phrases: ["run: id 필수(임의 경로·코드 문자열 실행 불가", "**등록된 id 만** — 임의 경로·코드 문자열 실행 불가"]
   - id: script-status-variable-items-progress
     retired: 2026-09-30
     reason: 종료 뒤 진행 필드 소실과 업무 행의 작업 목록 덮어쓰기가 후속 조합을 깨뜨림.

@@ -132,7 +132,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: '2026-09-30', impl: "538f8c8ae5d01c70"}
+        path_audited: {at: '2026-10-01', impl: "4077fe77566682ae"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -144,7 +144,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: '2026-09-30', impl: "538f8c8ae5d01c70"}
+        path_audited: {at: '2026-10-01', impl: "4077fe77566682ae"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -222,7 +222,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: '2026-09-30', impl: "538f8c8ae5d01c70"}
+        path_audited: {at: '2026-10-01', impl: "4077fe77566682ae"}
         target_key: path
       list:
         callable_contract:
@@ -856,7 +856,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: '2026-09-30', impl: "538f8c8ae5d01c70"}
+        path_audited: {at: '2026-10-01', impl: "4077fe77566682ae"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -865,12 +865,12 @@ nodes:
         # register/run/remove 가 원장·세상을 쓴다 — op 하나라도 쓰기면 true (webapp 선례).
         side_effect: true
         fixture: '[self:script]{}'
-        description: 등록 스크립트 실행기 — 완성·검증된 스크립트를 등록하면 워크플로우·트리거·앱이 id 한 단어로 결정론 실행. 코드가 아니라 참조만 나른다(저작·디버깅은 write+run_command).
+        description: 파일 Script 실행 — 등록 id 또는 현재 턴의 Python path. 코드는 inputs Text로 write/edit하며 실행은 파일 참조만 받는다. path는 미등록 로컬 실행, 결과 파일의 값이 다음 문장으로 이어진다.
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태, 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태, 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 또는 path 중 하나. path는 제한 없는 주인의 ~turn/ 안 Python 파일이며 원장에 등록하지 않는다. inputs Text로 write/edit, args JSON stdin, INDIEBIZ_SCRIPT_RESULT 환경변수의 경로에 JSON 값을 쓴다(원자 교체 권장). stdout/stderr는 진단. 결과 누락=RESULT_MISSING, 잘못된 JSON=RESULT_INVALID, 자동 재시도 없음. timeout ≤3600, 로컬 동기만, id·args_file·interpreter·target·background 병용 불가. 코드/입력/진단 원문은 비공개 7일 보존, 실행 증거의 record로 조회하며 backend/file_script_cli.py로 명시 재현. id 실행은 기존 계약을 유지: args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 self:edit 또는 run_command, 같은 파일이면 재등록 불필요); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
         router: handler
         tool: script_op
-        implementation: system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).
+        implementation: path는 backend/base/file_script.py와 ibl_file_script 어댑터, id는 system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).
         target_key: op
         runs_on: pc_only
         ops:
@@ -892,7 +892,7 @@ nodes:
           values:
             list: 등록 목록 + 마지막 실행 상태
             register: 스크립트 등록/갱신 — path 필수, 완성본만
-            run: 등록 id 결정론 실행 — stdout JSON 은 통화로, 실패는 정직하게
+            run: 등록 id 또는 턴 Python path 실행 — id는 기존 stdout, path는 별도 JSON 결과 파일
             status: 백그라운드 작업 상태·결과 — job_id|id, wait(≤240초 유한 대기)
             remove: 등록 해제 — 파일은 보존
         keywords:
@@ -1960,7 +1960,7 @@ tool_json:
       required: [path]
       additionalProperties: true
   - name: script_op
-    description: 등록 스크립트 실행기 — list/register/run/status/remove. 코드가 아니라 등록 id 만 나른다. 셸 미경유 argv 실행, stdout JSON 은 통화로. run{background:true}→job_id, status{job_id, wait}.
+    description: 파일 Script — list/register/run/status/remove. 등록 id 또는 IBL 현재 턴 path 참조. path는 inputs와 write/edit로 작성하며 별도 결과 파일 JSON이 값, stdout/stderr는 진단. 등록 id는 기존 stdout 계약, background:true→job_id와 status 지원.
     input_schema:
       type: object
       properties:
@@ -1969,7 +1969,7 @@ tool_json:
           description: list(기본)/register/run/status/remove
         background:
           type: boolean
-          description: 'run 선택 — true 면 별도 프로세스로 실행하고 즉시 job_id 반환(긴 작업)'
+          description: '등록 id run 선택 — true 면 별도 프로세스로 실행하고 즉시 job_id 반환(긴 작업)'
         job_id:
           type: string
           description: 'status 선택 — 조회할 작업 id (run background 가 돌려준 값)'
@@ -1981,7 +1981,7 @@ tool_json:
           description: 스크립트 id (register 생략 시 파일명에서 유도)
         path:
           type: string
-          description: register 전용 — 등록할 스크립트 파일 경로 (실존 필수)
+          description: register 파일 또는 판본 2 run의 현재 ~turn Python 경로(실존 필수, 미등록 로컬 실행)
         interpreter:
           type: string
           description: register 선택 — 생략 시 확장자 추론 (.py/.sh/.js)
@@ -1990,7 +1990,7 @@ tool_json:
           description: register 선택 — 스크립트 설명 (목록에 표시)
         args:
           type: [object, string]
-          description: 'run 선택 — JSON 객체 또는 그 JSON 문자열(둘 다 stdin 으로 전달). 큰 payload 는 args_file 로 가리킬 것(나르지 말고)'
+          description: 'run의 JSON stdin 객체. path 실행은 객체만, 등록 id는 JSON 문자열도 허용하며 큰 payload는 args_file 지원'
         input_as:
           type: string
           minLength: 1

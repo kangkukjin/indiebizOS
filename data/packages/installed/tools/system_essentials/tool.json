@@ -1078,7 +1078,7 @@
     },
     {
       "name": "script_op",
-      "description": "등록 스크립트 실행기 — list/register/run/status/remove. 코드가 아니라 등록 id 만 나른다. 셸 미경유 argv 실행, stdout JSON 은 통화로. run{background:true}→job_id, status{job_id, wait}.",
+      "description": "파일 Script — list/register/run/status/remove. 등록 id 또는 IBL 현재 턴 path 참조. path는 inputs와 write/edit로 작성하며 별도 결과 파일 JSON이 값, stdout/stderr는 진단. 등록 id는 기존 stdout 계약, background:true→job_id와 status 지원.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1096,7 +1096,7 @@
           },
           "background": {
             "type": "boolean",
-            "description": "run 선택 — true 면 별도 프로세스로 실행하고 즉시 job_id 반환(긴 작업)"
+            "description": "등록 id run 선택 — true 면 별도 프로세스로 실행하고 즉시 job_id 반환(긴 작업)"
           },
           "job_id": {
             "type": "string",
@@ -1112,7 +1112,7 @@
           },
           "path": {
             "type": "string",
-            "description": "register 전용 — 등록할 스크립트 파일 경로 (실존 필수)"
+            "description": "register 파일 또는 판본 2 run의 현재 ~turn Python 경로(실존 필수, 미등록 로컬 실행)"
           },
           "interpreter": {
             "type": "string",
@@ -1127,7 +1127,7 @@
               "object",
               "string"
             ],
-            "description": "run 선택 — JSON 객체 또는 그 JSON 문자열(둘 다 stdin 으로 전달). 큰 payload 는 args_file 로 가리킬 것(나르지 말고)"
+            "description": "run의 JSON stdin 객체. path 실행은 객체만, 등록 id는 JSON 문자열도 허용하며 큰 payload는 args_file 지원"
           },
           "input_as": {
             "type": "string",

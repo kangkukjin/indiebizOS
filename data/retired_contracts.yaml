@@ -25,6 +25,16 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: blanket-model-reuse-exclusion
+    retired: 2026-09-30
+    reason: 입력값만 쓰는 모델 성공 영수증을 수정 실행에서 재사용해 중복 호출 제거.
+    instead: model_reuse 선언 모델은 같은 입력·설정이면 reuse, models:false로 새 판단.
+    phrases: ['쓰기·모델 호출은 재사용하지 않습니다.', '모델 출력 자체의 reuse는 미지원', '판정 자체는 reuse되지 않으므로']
+  - id: pdf-manual-ocr-only
+    retired: 2026-09-30
+    reason: 텍스트 없는 선택 PDF 페이지에 로컬 OCR 자동 연결.
+    instead: OCR 자동 적용, ocr:false로 해제, 실패·낮은 신뢰도는 부분 Document.
+    phrases: ['스캔 PDF는 별도 OCR 필요.', 'OCR 자동 실행 없음']
   - id: pdf-synthetic-page-body
     retired: 2026-09-30
     reason: 페이지 표지가 글자 없는 PDF를 정상 본문처럼 보이게 했다.

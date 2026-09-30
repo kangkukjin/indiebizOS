@@ -221,6 +221,9 @@ def allowed_param_keys(node: str, action: str,
             return None
 
     qualified = f"{node}:{action}"
+    # Source declarations must be accepted before tool.json is regenerated.
+    if isinstance(action_config.get("params"), dict):
+        keys.update(action_config["params"])
     keys |= _alias_keys(action_config)
     keys |= UNIVERSAL_PARAM_KEYS | RUNTIME_META_KEYS
     keys |= CORPUS_PARAM_ALLOW.get(qualified, set())

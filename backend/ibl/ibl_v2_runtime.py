@@ -72,14 +72,14 @@ def returned_shape(value):
 class Runtime(ExpressionEvaluator):
     def __init__(self, plan, inputs=None, *, cancel_check=None, budget=None,
                  recordings=None, replay=False, journal=None, reusable=None, reuse_run=None,
-                 input_evidence=None, value_protocols=None):
+                 input_evidence=None, value_protocols=None, reuse_models=True):
         self.value_protocols = set(value_protocols or ("ibl-value/1", "ibl-value/2"))
         self.resources = ExitStack()
         self.foreign_sessions = {}
         self.foreign_evidence = frozenset()
         self.foreign_lock = threading.RLock()
         self.journal = journal
-        # 편집한 프로그램이 앞 실행(reuse_run)의 읽기 영수증을 액션·인자·구현 지문으로 재사용한다.
+        # 편집한 프로그램이 앞 실행(reuse_run)의 읽기·모델 영수증을 액션·인자·구현 지문으로 재사용한다.
         # 프로그램 지문은 키에 없다 — 함수 하나를 고쳐도 검증된 수집 결과가 살아남는 통로(2026-09-26).
         self.reusable, self.reuse_run, self.reused_calls = dict(reusable or {}), reuse_run, 0
         self.plan = plan
@@ -90,6 +90,9 @@ class Runtime(ExpressionEvaluator):
         self.budget = budget or Budget()
         self.trace, self.recordings = [], []
         self.model_usage = []
+        self.reuse_models = reuse_models
+        self.reused_model_calls = 0
+        self.consumed_model_receipts = set()
         self.expression_events = {}
         self.source_map = {}
         self.replay, self.recorded = replay, list(recordings or [])
@@ -558,11 +561,15 @@ class Runtime(ExpressionEvaluator):
                 return [request_value(v) for v in value]
             return value
         request = {"action": key, "args": pack(request_value(args.value)), "plan": self.plan.fingerprint}
+        model_identity = spec.model_identity() if spec.model_identity else None
+        if model_identity is not None:
+            request['model_identity'] = model_identity
         request_hash = digest(request)
         # The whole program may change, but the selected call contract and its
         # dependency snapshot must still describe the same value/effect boundary.
         reuse_key = digest({"action": key, "args": request["args"],
                             "contract": contract,
+                            "model_identity": model_identity,
                             "dependency": node.data.get("dependency_snapshot"),
                             "semantics": {k: self.plan.dependencies[k]
                                           for k in ("core", "edition", "semantics", "expressions")}})
@@ -575,10 +582,13 @@ class Runtime(ExpressionEvaluator):
         read_only = (contract["effects"] == ["read_external"] or
                      (contract["effects"] == ["unknown"] and spec.reusable is not None
                       and spec.reusable(args.value)))
-        reusable_read = read_only and not contract.get('per_run', False)
+        model_only = contract['effects'] == ['model'] and model_identity is not None
+        reusable_read = (read_only or model_only) and not contract.get('per_run', False)
         from ibl_run_journal import call_resources, resources_overlap
         state_change = external and not read_only and contract['effects'] != ['model']
         footprint = call_resources(spec, contract, args.value, 'write' if state_change else 'read')
+        if model_only:
+            footprint = []  # All source values are arguments; no hidden external reads.
         if state_change:
             with self.lock:
                 self.reuse_writes.append(footprint)
@@ -611,12 +621,18 @@ class Runtime(ExpressionEvaluator):
             source = "replay"
         with self.lock:
             invalidated = any(resources_overlap(footprint, writes) for writes in self.reuse_writes)
-        if receipt is None and external and self.reusable and reusable_read and not invalidated:
-            # 선언된 읽기 효과, 또는 미상 효과 어휘의 부작용 해소 규칙이 '없음'인 op 만 — 쓰기·모델 호출은 언제나
-            # 다시 실행한다. 실패 영수증도 재사용하지 않는다.
-            hit = self.reusable.get(reuse_key)
-            if hit is not None and "value" in hit:
-                receipt, source = hit, "reuse"
+        if (receipt is None and external and self.reusable and reusable_read and not invalidated
+                and (not model_only or self.reuse_models)):
+            # Explicit value-only model contracts share successful receipt reuse.
+            # Failed or configuration-changing calls never become candidates.
+            with self.lock:
+                hit = self.reusable.get(reuse_key)
+                if model_only and reuse_key in self.consumed_model_receipts:
+                    hit = None
+                if hit is not None and "value" in hit and not hit.get("reuse_disabled"):
+                    receipt, source = hit, "reuse"
+                    if model_only:
+                        self.consumed_model_receipts.add(reuse_key)
         if (receipt is not None and "value" in receipt and source == "journal"
                 and contract.get("deferred_observation") and not self.replay):
             # Restore the staged local checkpoint, but preserve the original
@@ -641,6 +657,7 @@ class Runtime(ExpressionEvaluator):
                 receipt = {**receipt, "request_hash": request_hash}
                 with self.lock:
                     self.reused_calls += 1
+                    self.reused_model_calls += int(model_only)
                 if self.journal:
                     self.journal.finish(call_id, receipt)  # 새 실행의 저널도 완결 — 이 실행을 다시 resume/reuse 할 수 있다
             with self.lock:
@@ -652,7 +669,9 @@ class Runtime(ExpressionEvaluator):
                 raise failed(restored)
             value = unpack(receipt["value"])
             guard(value, contract["result"], f"{key} 반환")
-            tool_evidence = receipt.get("evidence", {})
+            tool_evidence = copy.deepcopy(receipt.get("evidence", {}))
+            if 'model_usage' in tool_evidence:
+                tool_evidence['original_model_usage'] = tool_evidence.pop('model_usage')
         else:
             usage = []
             try:
@@ -679,6 +698,9 @@ class Runtime(ExpressionEvaluator):
                 if external:
                     receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence,
                                "action": key, "reuse_key": reuse_key}
+                    if model_only:
+                        receipt['model_identity'] = model_identity
+                        receipt['reuse_disabled'] = spec.model_identity() != model_identity
                     if contract.get("deferred_observation"):
                         receipt["observed_at"] = observed_at
                     if self.journal:
@@ -767,16 +789,18 @@ class Runtime(ExpressionEvaluator):
             out['precheck_warnings'] = self.plan.preflight['warnings']
         if self.reuse_run:
             out["reuse"] = {"run_id": self.reuse_run, "reused_calls": self.reused_calls, "candidates": len(self.reusable)}
+        if self.reused_model_calls:
+            out['reuse']['model_calls'] = self.reused_model_calls
         if self.journal:
             out["resume"] = {"run_id": self.journal.run_id}
             out["resumed"] = self.journal.resuming
             out["run_status"] = self.journal.complete(out)
             reusable = self.journal.reuse_summary()
-            if (reusable['read_calls'] or reusable['state_change_possible']) and out["run_status"] not in {"blocked", "uncertain"}:
+            if (reusable['read_calls'] or reusable.get('model_calls') or reusable['state_change_possible']) and out["run_status"] not in {"blocked", "uncertain"}:
                 out["continuation"] = {
-                    **({"reuse_args": {"reuse": {"run_id": self.journal.run_id}}} if reusable['read_calls'] else {}),
+                    **({"reuse_args": {"reuse": {"run_id": self.journal.run_id}}} if reusable['read_calls'] or reusable.get('model_calls') else {}),
                     **reusable,
-                    "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. "
-                            "현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. "
+                    "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. "
+                            "현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. "
                             "동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."}
         return out

@@ -104,4 +104,4 @@ $r = [table:judge]{items:[{text:"검토 중입니다."}], instruction:"승인을
 설계와 검증: `docs/JEV_JUDGMENT_2026_09_21.md`.
 공식 계약: https://docs.typesafe.ai/api · https://docs.typesafe.ai/confidence
 
-효과는 `model`이다. 다른 파일에 결과를 저장해도 무관한 입력 읽기의 reuse 후보를 지운 것으로 보지 않는다. 판정 자체는 reuse되지 않으므로 조건·표현만 바꿀 때는 판정 결과를 반환한 뒤 `$ref`로 전달한다. 사용량은 공통 호출 원장에 model·call_id·role·source=fixed_provider를 기록한다. 생성형 기어로 선택하지 않으므로 tier는 null이다. 실패 시 토큰 미측정은 0으로 취급하지 않는다.
+효과는 `model`이다. 다른 파일에 결과를 저장해도 무관한 입력 읽기의 reuse 후보를 지운 것으로 보지 않는다. 판정 성공 결과는 `reuse:{run_id}`에서 입력·질문·모델 설정이 같으면 자동 재사용된다. `reuse:{run_id,models:false}`는 새로 판정한다. 재사용한 원래 사용량은 `original_model_usage`이며 이번 실행 비용에 합산하지 않는다. 사용량은 공통 호출 원장에 model·call_id·role·source=fixed_provider를 기록한다. 생성형 기어로 선택하지 않으므로 tier는 null이다. 실패 시 토큰 미측정은 0으로 취급하지 않는다.

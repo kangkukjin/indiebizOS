@@ -5620,6 +5620,7 @@ nodes:
             limit: Number
             format: Text
             pages: Text
+            ocr: Bool
             tables: Bool
             sheet: Text
             max_rows: Number
@@ -5657,6 +5658,7 @@ nodes:
           end: integer
           client: boolean
           mime: string
+          ocr: boolean
           pages: string
           extract_images: boolean
           max_blocks: integer
@@ -5696,7 +5698,7 @@ nodes:
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: path는 읽을 파일 경로. format(text/json/csv/tsv/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub)은 생략 시 확장자로 정한다. 판본 2 반환은 Document{text,blocks,data}. text — offset/limit(0-기반 행 범위, limit:0은 빈 본문), start_line/end_line(1-기반 양끝 포함), tail(끝 N줄, 다른 범위와 병용 금지), numbered(줄번호). 역전·비정수·충돌 범위는 오류. docx/hwp/hwpx — offset/limit/max_blocks는 블록 단위. pdf — pages는 1-기반 범위(예 "1-5,8"), tables:true는 .data.table로 표 추출. PDF text는 페이지 표지 없는 추출 본문이며 blocks.page는 1-기반이다. .data.page_text_chars와 .data.no_text_pages로 선택 페이지별 글자 수·추출 불가 페이지를 알린다. 글자 없는 페이지는 빈 페이지/스캔 여부 미확인이므로 PARTIAL_SOURCE로 .partial에 읽은 Document를 보존한다(OCR 자동 실행 없음). 0쪽·파싱 손상은 TOOL 오류의 details.error_type=corrupt다. xlsx/xls — sheet/max_rows, 첫 행은 헤더, .data.items와 .data.table 및 TSV text. pptx/epub — pages로 슬라이드/챕터 선택. extract_images:true는 임시 캐시에 그림을 추출한다(스캔 PDF OCR은 별도). JSON 전체 읽기는 .data에 파싱 값을 보존한다(배열은 .data.items). CSV/TSV 전체 읽기는 .data.items(헤더→문자열 셀)와 .data.table{columns,rows}; 인용된 구분자·줄바꿈을 보존하며 빈 셀은 빈 문자열, 0은 문자열 "0"이다. 텍스트 범위·절단 읽기는 구조 파싱 없이 .text로 남는다. 빈 파일은 빈 text. .data에는 일반 본문·구판 실행 봉투를 중복하지 않는다. 파일 부재는 NOT_FOUND, 원인·경로는 오류 details에 보존한다.
+        target_description: path는 읽을 파일 경로. format(text/json/csv/tsv/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub)은 생략 시 확장자로 정한다. 판본 2 반환은 Document{text,blocks,data}. text — offset/limit(0-기반 행 범위, limit:0은 빈 본문), start_line/end_line(1-기반 양끝 포함), tail(끝 N줄, 다른 범위와 병용 금지), numbered(줄번호). 역전·비정수·충돌 범위는 오류. docx/hwp/hwpx — offset/limit/max_blocks는 블록 단위. pdf — pages는 1-기반 범위(예 "1-5,8"), tables:true는 .data.table로 표 추출. PDF text는 페이지 표지 없는 추출 본문이며 blocks.page는 1-기반이다. .data.page_text_chars와 .data.no_text_pages로 선택 페이지별 글자 수·추출 불가 페이지를 알린다. 글자 없는 선택 페이지는 로컬 Tesseract OCR을 자동 실행한다(ocr:false로 해제). .data.ocr_pages에 엔진·언어·상태·단어 신뢰도를, blocks.source에 native/ocr 출처를 남긴다. OCR 미설치·실패·빈 결과·낮은 신뢰도는 PARTIAL_SOURCE로 .partial에 읽은 Document를 보존한다. .data.incomplete_pages는 미완료 페이지다. OCR은 글자 인식이며 정확성 보증·표 구조 추출은 아니다. 0쪽·파싱 손상은 TOOL 오류의 details.error_type=corrupt다. xlsx/xls — sheet/max_rows, 첫 행은 헤더, .data.items와 .data.table 및 TSV text. pptx/epub — pages로 슬라이드/챕터 선택. extract_images:true는 임시 캐시에 그림을 추출한다(OCR과 별개). JSON 전체 읽기는 .data에 파싱 값을 보존한다(배열은 .data.items). CSV/TSV 전체 읽기는 .data.items(헤더→문자열 셀)와 .data.table{columns,rows}; 인용된 구분자·줄바꿈을 보존하며 빈 셀은 빈 문자열, 0은 문자열 "0"이다. 텍스트 범위·절단 읽기는 구조 파싱 없이 .text로 남는다. 빈 파일은 빈 text. .data에는 일반 본문·구판 실행 봉투를 중복하지 않는다. 파일 부재는 NOT_FOUND, 원인·경로는 오류 details에 보존한다.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx/read_xlsx(office_ops)·read_hwp/hwpx/pptx/epub(doc_read_extra)에 위임. 읽기 예외는 JSON 실패 봉투로 반환하며 파일 부재(not_found)·권한(permission)·I/O(io)의 error_type과 errno를 보존한다. 선택 파일은 self:list의 빈 목록으로 부재를 먼저 확인하고 필수 파일의 실패는 전파한다.
@@ -5707,7 +5709,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-30'
-          impl: 54b9d5cdc5cdc07c
+          impl: 6168fe3da8bf7718
         target_key: path
         aliases:
           offset:
@@ -5720,7 +5722,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-30'
-          impl: 54b9d5cdc5cdc07c
+          impl: 6168fe3da8bf7718
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6483,7 +6485,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-30'
-          impl: 54b9d5cdc5cdc07c
+          impl: 6168fe3da8bf7718
         pipe_in: true
         lands_on: body
         limb_op:
@@ -9402,6 +9404,9 @@ nodes:
           result: Record
           effects:
           - model
+          model_reuse:
+            provider: Jev
+            model: jev-latest
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope
@@ -9420,7 +9425,7 @@ nodes:
         scope: workspace
         group: transform
         description: 판정 전용 변환자 — 각 행의 참/거짓·선택·점수를 Jev로 일괄 판정. 원 행과 순서를 보존하고 judgment_ 접두 열 추가. 의미 판정은 judge, 규칙 비교는 filter, 글 생성은 ai/brief.
-        target_description: 'instruction(단일 질문, 결과 이름 result) · type(boolean 기본 / choice / score) · criteria(choice는 선택지→설명 맵, score는 낮은 순 2~10개 등급 목록, 점수 0~N-1) 또는 questions({이름:{instruction,type,criteria?}} 여러 독립 질문. items(직접 입력) 또는 >> 파이프. as(판정 열 접두사, 기본 judgment, 기존 열과 충돌 시 오류). threshold(0.5 초과~1, 기본 0.8): boolean 참 확률≥threshold면 true, ≤1-threshold면 false, 중간은 null; choice/score는 confidence≥threshold일 때만 value 확정. 결과 열 judgment_<질문>_value·judgment_<질문>_status(decided/unknown), 같은 접두사의 probability 또는 choice/score·confidence·probabilities. unknown은 false가 아니다. 행×질문≤100, 요청≤60000자; 빈 입력은 호출 0, 나머지는 한 요청. 통신/형식 오류는 실패, LLM 자동 폴백 없음. 인증 TYPESAFE_API_KEY(.env), 생성형 기어와 독립된 Jev API 비용·usage 신고. 상세 guides/judgment.md.'
+        target_description: 'instruction(단일 질문, 결과 이름 result) · type(boolean 기본 / choice / score) · criteria(choice는 선택지→설명 맵, score는 낮은 순 2~10개 등급 목록, 점수 0~N-1) 또는 questions({이름:{instruction,type,criteria?}} 여러 독립 질문. items(직접 입력) 또는 >> 파이프. as(판정 열 접두사, 기본 judgment, 기존 열과 충돌 시 오류). threshold(0.5 초과~1, 기본 0.8): boolean 참 확률≥threshold면 true, ≤1-threshold면 false, 중간은 null; choice/score는 confidence≥threshold일 때만 value 확정. 결과 열 judgment_<질문>_value·judgment_<질문>_status(decided/unknown), 같은 접두사의 probability 또는 choice/score·confidence·probabilities. unknown은 false가 아니다. 행×질문≤100, 요청≤60000자; 빈 입력은 호출 0, 나머지는 한 요청. 통신/형식 오류는 실패, LLM 자동 폴백 없음. 인증 TYPESAFE_API_KEY(.env), 생성형 기어와 독립된 Jev API 비용·usage 신고. 상세 guides/judgment.md. reuse에서 같은 입력·설정의 성공 결과를 재사용하며 models:false로 새 판단.'
         router: handler
         tool: ai_judge
         target_key: instruction
@@ -9459,6 +9464,8 @@ nodes:
           result: Record
           effects:
           - model
+          model_reuse:
+            role: execution
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope
@@ -9479,7 +9486,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(AI) — items 를 자연어 지시(instruction)대로 의미 변환(선별·주석·재구성). 참/거짓·선택·점수만 필요하면 [table:judge], 규칙으로 적을 수 있으면 filter/sort 먼저.
-        target_description: instruction(필수 — 자연어 지시, 예 "광고성 행 제거"·"각 행에 한 줄 요약 summary 필드 추가"·"조건에 맞는 것만") · schema(선택 — 새 필드 명세 "selected(불리언), reason(사유)". 정적 검사·출력 지시·필드 존재 검사 공용) · input_fields(선택 — 모델에 보낼 최상위 열 배열, 생략=전체; 숨긴 원본 열은 모델이 수정할 수 없음) · preserve_rows(선택 boolean, 기본 false — 모든 _i 정확히 한 번, 입력 순서 복원; 누락·중복·추가 거절) · fields(선택 — 병합 뒤 남길 필드 배열, 생략=입력 필드 보존+추가 허용; 입력 필드를 나열해도 모델이 되쓰지 않는다 — 코드가 원 행에서 가져온다). 모델 출력=행마다 새/바뀐 필드만(색인 병합, 2026-09-06) — 큰 입력이라도 출력은 새 정보 크기. 집합 전체를 한 호출로 처리(행별 독립 처리는 [table:each] 안에서). 반환에 rows_in/rows_out(+rows_dropped) 동반 — 조용한 깎기 금지. 입력 상한 초과=정직 거절(take/filter 로 줄이기). >> 파이프로 앞 통화 자동 수용. contract(선택 — 중첩 배열의 입력 ID 전수 응답·필수 필드·허용값, 응답 직후 검사; 행 보존 자동 적용) · inspect:batch|each(선택 — 실제 투영 입력의 요청 크기·반복 배열 점검, 모델 호출 0, 원본 items+inspection 반환; criteria와 충돌). 상세 guides/ibl_composition.md. 일반 실행은 모델 비용(기어 실행 축).
+        target_description: instruction(필수 — 자연어 지시, 예 "광고성 행 제거"·"각 행에 한 줄 요약 summary 필드 추가"·"조건에 맞는 것만") · schema(선택 — 새 필드 명세 "selected(불리언), reason(사유)". 정적 검사·출력 지시·필드 존재 검사 공용) · input_fields(선택 — 모델에 보낼 최상위 열 배열, 생략=전체; 숨긴 원본 열은 모델이 수정할 수 없음) · preserve_rows(선택 boolean, 기본 false — 모든 _i 정확히 한 번, 입력 순서 복원; 누락·중복·추가 거절) · fields(선택 — 병합 뒤 남길 필드 배열, 생략=입력 필드 보존+추가 허용; 입력 필드를 나열해도 모델이 되쓰지 않는다 — 코드가 원 행에서 가져온다). 모델 출력=행마다 새/바뀐 필드만(색인 병합, 2026-09-06) — 큰 입력이라도 출력은 새 정보 크기. 집합 전체를 한 호출로 처리(행별 독립 처리는 [table:each] 안에서). 반환에 rows_in/rows_out(+rows_dropped) 동반 — 조용한 깎기 금지. 입력 상한 초과=정직 거절(take/filter 로 줄이기). >> 파이프로 앞 통화 자동 수용. contract(선택 — 중첩 배열의 입력 ID 전수 응답·필수 필드·허용값, 응답 직후 검사; 행 보존 자동 적용) · inspect:batch|each(선택 — 실제 투영 입력의 요청 크기·반복 배열 점검, 모델 호출 0, 원본 items+inspection 반환; criteria와 충돌). 상세 guides/ibl_composition.md. 일반 실행은 모델 비용(기어 실행 축). reuse에서 같은 입력·설정의 성공 결과를 재사용하며 models:false로 새 판단.
         group: transform
         router: handler
         tool: ai_transform
@@ -9514,6 +9521,8 @@ nodes:
           result: Record
           effects:
           - model
+          model_reuse:
+            role: execution
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope
@@ -9530,7 +9539,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 emitter(AI 종합, 출구) — items 를 근거로 짧은 산문(요약·판정 이유·작명)을 낸다. 분기용 참/거짓·선택·점수는 [table:judge]. [table:document](결정론 조판)·[table:structure](문서 IR)의 형제 — 출력이 '글'일 때. 평문 텍스트 요약은 [self:ask].
-        target_description: 'instruction(필수 — 산문 지시, 예 "급변 종목 중심 3문장 보고"·"어느 매물이 조건에 최적인지 판정과 이유"). 입력 = >> 파이프 items(통화 없음=거절 / 0행=빈손 성공: message 없이 note+rows_in:0, AI 호출 생략). 반환 message=산문 정본(>> [self:write] 가 산문으로 저장, notify 등으로 연결). 지어내기 금지 — items 에 있는 것만. 실행마다 모델 비용(기어 실행 축).'
+        target_description: 'instruction(필수 — 산문 지시, 예 "급변 종목 중심 3문장 보고"·"어느 매물이 조건에 최적인지 판정과 이유"). 입력 = >> 파이프 items(통화 없음=거절 / 0행=빈손 성공: message 없이 note+rows_in:0, AI 호출 생략). 반환 message=산문 정본(>> [self:write] 가 산문으로 저장, notify 등으로 연결). 지어내기 금지 — items 에 있는 것만. 새 호출은 모델 비용(기어 실행 축). reuse에서 같은 입력·설정의 성공 결과를 재사용하며 models:false로 새 판단.'
         group: ai
         router: handler
         tool: ai_brief

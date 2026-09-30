@@ -206,5 +206,122 @@
     "same_failure_on_attempt": 7,
     "row": 1,
     "row_label": "A"
+  },
+  "automatic_ocr_model_reuse": {
+    "date": "2026-09-30",
+    "first": {
+      "success": true,
+      "source_complete": true,
+      "resume": {
+        "run_id": "2d916f003d76467ab3aff1eef0248925"
+      },
+      "usage": {
+        "steps": 23,
+        "rows": 0,
+        "elapsed_ms": 677,
+        "model": {
+          "requests": 1,
+          "measured_requests": 1,
+          "unmeasured_requests": 0,
+          "input": 383,
+          "output": 23,
+          "cache_read": 0,
+          "cache_create": 0,
+          "reasoning": null,
+          "calls": [
+            {
+              "call_id": "fa8314844ad64639ae93d1ad57b933f9",
+              "parent_call_id": null,
+              "role": "execution",
+              "phase": "execute",
+              "provider": "Jev",
+              "model": "jev-latest",
+              "round_index": 0,
+              "tier": null,
+              "source": "fixed_provider",
+              "measured": true,
+              "elapsed_ms": 280,
+              "input": 383,
+              "output": 23,
+              "cache_read": 0,
+              "cache_create": 0
+            }
+          ]
+        }
+      },
+      "continuation": {
+        "reuse_args": {
+          "reuse": {
+            "run_id": "2d916f003d76467ab3aff1eef0248925"
+          }
+        },
+        "read_calls": 1,
+        "model_calls": 1,
+        "state_change_possible": false,
+        "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+      }
+    },
+    "revised": {
+      "success": true,
+      "source_complete": true,
+      "resume": {
+        "run_id": "cc4debf3d4f54ccdaea671d72f3b80e8"
+      },
+      "reuse": {
+        "run_id": "2d916f003d76467ab3aff1eef0248925",
+        "reused_calls": 2,
+        "candidates": 2,
+        "model_calls": 1
+      },
+      "usage": {
+        "steps": 24,
+        "rows": 0,
+        "elapsed_ms": 4
+      }
+    },
+    "ocr": [
+      {
+        "page": 1,
+        "engine": "tesseract",
+        "status": "recognized",
+        "languages": [
+          "kor",
+          "eng"
+        ],
+        "segmentation": "single_block",
+        "confidence_min": 61.96505,
+        "confidence_mean": 86.45
+      }
+    ],
+    "ocr_text": "김 밥 천국 역삼\n거 래 일 시 2026-09-15 12:11\n라면 x3 @5, 0 00 원\n합계 금액 15, 0 0 0 원\n카드 승인",
+    "same_result": true,
+    "billing_evidence_preserved": true,
+    "test_note": "모델 회귀는 대역, OCR은 실제 Tesseract. 라이브 검증만 실제 Jev 1회 사용.",
+    "final_backend": {
+      "phase": "ACTIVE",
+      "generation": "c8a6f6e4b7fc3ec3a8da8d3d6048669a",
+      "readiness": "ready"
+    },
+    "tests": {
+      "full": {
+        "passed": 7931,
+        "failed": 0,
+        "skipped": 1,
+        "deselected": 95,
+        "seconds": 556.62
+      },
+      "related_system": {
+        "passed": 71,
+        "seconds": 102.92
+      },
+      "final_model_ocr_related": {
+        "passed": 97,
+        "seconds": 24.33
+      },
+      "original_related_with_office": {
+        "passed": 226,
+        "seconds": 31.08
+      }
+    }
   }
 }

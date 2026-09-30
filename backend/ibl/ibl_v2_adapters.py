@@ -23,6 +23,7 @@ class Adapter:
     reusable: object = None
     stateful: object = None
     resource_identity: object = None
+    model_identity: object = None
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,14 @@ def validate_contract(contract):
         raise ValueError("올바른 effects가 필요합니다.")
     if "pure" in effects and len(effects) != 1:
         raise ValueError("pure는 다른 효과와 함께 선언할 수 없습니다.")
+    reuse_model = contract.get('model_reuse')
+    if reuse_model is not None:
+        if effects != ['model'] or not isinstance(reuse_model, dict):
+            raise ValueError('model_reuse는 입력값만 쓰는 model 단독 효과의 설정 선언입니다.')
+        if not ((set(reuse_model) == {'role'} and isinstance(reuse_model['role'], str) and reuse_model['role'])
+                or (set(reuse_model) == {'provider', 'model'}
+                    and all(isinstance(v, str) and v for v in reuse_model.values()))):
+            raise ValueError('model_reuse는 {role} 또는 {provider,model}입니다.')
     if 'per_run' in contract and type(contract['per_run']) is not bool:
         raise ValueError('per_run은 실행 시점 값의 재사용 여부를 나타내는 Bool입니다.')
     if contract.get("pipe_input") and contract["pipe_input"] not in contract["params"]:
@@ -306,6 +315,7 @@ def load_registry(project_path=".", agent_id=None):
     allowed = get_allowed_nodes()
     result, file_hashes = {}, {}
     from ibl_v2_contracts import handler_contract, declared_contract
+    from ibl_run_journal import model_reuse_identity
     from ibl_v2_compat import plain_arguments
     for node, config in catalog.get("nodes", {}).items():
         for action, action_config in config.get("actions", {}).items():
@@ -385,7 +395,9 @@ def load_registry(project_path=".", agent_id=None):
                                   dependency,
                                   None if contract["effects"] != ["unknown"] else reusable,
                                   is_stateful if adapter['protocol'] == 'ibl-script/2' else None,
-                                  resource_identity)
+                                  resource_identity,
+                                  (lambda c=contract: model_reuse_identity(c['model_reuse']))
+                                  if contract.get('model_reuse') else None)
     from ibl_v2_compat import function_adapters
     result.update(function_adapters(project_path, agent_id))
     return result

@@ -37,6 +37,32 @@ def journal_root(project_path):
     return get_base_path() / "data/ibl_runs" / digest([p.key(), str(Path(project_path).resolve())])
 
 
+def model_reuse_identity(declaration):
+    """Configuration and provider code identity; persist hashes, never credentials.
+
+    The declaration guarantees that all prompt/source data are in call arguments.
+    Opaque models and tools with hidden file/session inputs must not opt in.
+    Include fallback configuration because oneshot can select a fallback provider.
+    """
+    from runtime_utils import get_base_path
+    descriptors = dict(declaration)
+    if 'role' in declaration:
+        from model_resolver import resolve, resolve_compat_model
+        try:
+            descriptors['resolved'] = resolve(declaration['role'])
+            descriptors['quality'] = resolve('evaluate')
+            descriptors['fallbacks'] = [resolve_compat_model(k) for k in ('lightweight', 'system')]
+        except (OSError, ValueError):
+            return None  # Unknown configuration disables reuse, not the actual model call.
+    root = get_base_path() / 'backend'
+    paths = [root/'base/model_resolver.py', root/'services/oneshot_facade.py',
+             root/'cognition/consciousness_agent.py', root/'ibl/ibl_quality.py']
+    paths += sorted((root/'providers').rglob('*.py'))
+    return digest({'configuration': descriptors,
+                   'code': {str(p.relative_to(root)): digest(p.read_bytes().hex())
+                            for p in paths if p.is_file()}})
+
+
 def call_resources(spec, contract, args, mode):
     """Resolve a complete declared footprint; None means an unknown resource set."""
     declaration = contract.get(mode + '_resources')
@@ -72,6 +98,8 @@ def call_resources(spec, contract, args, mode):
 
 def resources_overlap(reads, writes):
     """Unknown footprints conflict; file ancestors and hard links also overlap."""
+    if reads == [] or writes == []:
+        return False
     if reads is None or writes is None:
         return True
     for realm, path, inode in reads:
@@ -228,9 +256,18 @@ class Journal:
 
     def reuse_summary(self):
         with self.lock:
-            safe = self.db.execute("SELECT COUNT(*) FROM calls WHERE reusable=1 AND receipt IS NOT NULL AND json_type(receipt,'$.value') IS NOT NULL").fetchone()[0]
+            safe = self.db.execute("SELECT COUNT(*) FROM calls WHERE reusable=1 AND receipt IS NOT NULL AND json_type(receipt,'$.value') IS NOT NULL AND COALESCE(json_extract(receipt,'$.reuse_disabled'),0)=0").fetchone()[0]
             changed = self.db.execute('SELECT 1 FROM calls WHERE state_change=1 LIMIT 1').fetchone()
-        return {'read_calls': safe, 'state_change_possible': bool(changed)}
+            groups = self.db.execute(
+                "SELECT COUNT(*) FROM calls WHERE reusable=1 AND receipt IS NOT NULL "
+                "AND json_type(receipt,'$.value') IS NOT NULL "
+                "AND json_type(receipt,'$.model_identity') IS NOT NULL "
+                "AND COALESCE(json_extract(receipt,'$.reuse_disabled'),0)=0 "
+                "GROUP BY json_extract(receipt,'$.reuse_key')").fetchall()
+        models = sum(count == 1 for (count,) in groups)
+        return {'read_calls': safe - sum(count for (count,) in groups),
+                **({'model_calls': models} if models else {}),
+                'state_change_possible': bool(changed)}
 
 
 def identity(plan, inputs, project_path, agent_id, *, input_evidence=None):
@@ -316,7 +353,7 @@ def validate_resume(root, resume, expected_identity):
 def reusable_receipts(root, run_id):
     """편집한 프로그램이 재사용할 후보: 이 문맥(주체·프로젝트)의 지난 실행이 남긴 완료 영수증, reuse_key 별.
 
-    값을 돌려주지 않는다 — 실행기가 액션·인자·구현 지문이 맞고 읽기 효과인 호출에서만 꺼내 쓴다.
+    값을 돌려주지 않는다 — 실행기가 액션·인자·구현 지문이 맞고 읽기 또는 명시된 모델 효과인 호출에서만 꺼내 쓴다.
     진행 중(잠금)인 실행은 반쯤 쓴 상태를 빌려주지 않도록 거절한다. 옛 영수증(reuse_key 없음)은 후보가 아니다."""
     if not isinstance(run_id, str) or not re.fullmatch(r'[0-9a-f]{32}', run_id):
         raise Fault('REUSE_ARGUMENT', '올바른 run_id가 필요합니다.', kind='compile')
@@ -338,15 +375,18 @@ def reusable_receipts(root, run_id):
         raise Fault('JOURNAL_IO', '실행 영수증 저장소를 읽을 수 없습니다.', kind='protocol') from exc
     finally:
         lock.release()
-    out = {}
+    out, ambiguous_models = {}, set()
     for (raw,) in rows:
         try:
             receipt = json.loads(raw)
         except ValueError:
             continue
-        if isinstance(receipt, dict) and 'value' in receipt and receipt.get('reuse_key'):
-            out.setdefault(receipt['reuse_key'], receipt)
-    return out
+        if isinstance(receipt, dict) and 'value' in receipt and receipt.get('reuse_key') and not receipt.get('reuse_disabled'):
+            key = receipt['reuse_key']
+            if key in out and receipt.get('model_identity'):
+                ambiguous_models.add(key)
+            out.setdefault(key, receipt)
+    return {key: value for key, value in out.items() if key not in ambiguous_models}
 
 
 def migrate_completed_runs(root, *, backup_dir=None):

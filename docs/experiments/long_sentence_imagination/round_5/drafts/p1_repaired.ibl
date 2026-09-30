@@ -7,11 +7,11 @@
   $id = replace($파일.name,".pdf","")
   [try] {
     $d = [self:read]{path:$파일.path}
-    [if:len(strip($d.text)) == 0] { return {id:$id,파일:$파일.path,상태:"글자 없음",이유:"PDF 에 글자 층이 없음(스캔 추정)",원문:""} }
+    [if:len(strip($d.text)) == 0] { return {id:$id,파일:$파일.path,상태:"글자 없음",이유:"텍스트 추출·OCR 결과 없음",원문:""} }
     return {id:$id,파일:$파일.path,상태:"읽음",이유:null,원문:$d.text}
   } [catch] {
     [if:$error.code == "PARTIAL_SOURCE"] {
-      return {id:$id,파일:$파일.path,상태:"글자 없음",이유:"PDF 선택 페이지에 추출 가능한 글자 없음 — 빈 페이지/스캔 확인 필요",원문:""}
+      return {id:$id,파일:$파일.path,상태:len(strip($error.partial.text)) == 0 ? "글자 없음" : "부분 읽음",이유:$error.message,원문:$error.partial.text}
     }
     return {id:$id,파일:$파일.path,상태:"읽기 실패",이유:f"${$error.code}: ${$error.message}",원문:""}
   }

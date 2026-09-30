@@ -210,7 +210,7 @@ def test_full_report_and_six_source_reuse(registry, tmp_path, monkeypatch, varia
         crawls.append(args['url'])
         return {'url': args['url'], 'title': 'fixture', 'text': 'fixture',
                 'items': [{'url': args['url'], 'paragraph_index': 1,
-                           'text': '8,848.86 m, 2020. length 길이 Amazon 아마존'}]}
+                           'text': f"8,848.86 m, 2020. length 길이 Amazon 아마존 {args['url']}"}]}
 
     # Preserve read effects, but use deterministic web/model fixtures. No live calls.
     reg = {**registry, 'sense:crawl': replace(registry['sense:crawl'], run=crawl)}
@@ -232,8 +232,10 @@ def test_full_report_and_six_source_reuse(registry, tmp_path, monkeypatch, varia
     second = execute(other, reg, {**inputs, '출력': str(tmp_path / 'changed.md')},
                      reusable=reusable_receipts(tmp_path / 'runs', run_id), reuse_run=run_id)
     assert second['success'] and second['value']['저장일치'], second
-    assert second['reuse']['reused_calls'] == 6 and len(crawls) == 6
-    assert len(requests) == 14  # The existing model reuse policy remains explicit.
+    assert second['reuse']['reused_calls'] == 13 and len(crawls) == 6
+    assert second['reuse']['model_calls'] == 7
+    assert len(requests) == 7  # Formatting/quiz changes preserve all seven model results.
+    assert 'model' not in second['usage']
 
 
 def test_repaired_stages_keep_model_work_out_of_render_repairs(registry, tmp_path, monkeypatch):

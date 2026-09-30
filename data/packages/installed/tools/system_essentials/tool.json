@@ -531,7 +531,7 @@
     },
     {
       "name": "read_op",
-      "description": "파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).\n\n파라미터: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub) — 생략 시 확장자 자동. text — offset/limit (라인) 또는 start_line/end_line (1-기반 양끝 포함, 구간 발췌). pdf — pages 옵션 (예 '1-5'), tables:true 면 표를 table 통화로 추출. docx — offset/limit/max_blocks (블록 단위). xlsx/xls — sheet(특정 시트명)/max_rows 옵션. 스캔 PDF는 별도 OCR 필요.",
+      "description": "파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).\n\n파라미터: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub) — 생략 시 확장자 자동. text — offset/limit (라인) 또는 start_line/end_line (1-기반 양끝 포함, 구간 발췌). pdf — pages 옵션 (예 '1-5'), tables:true 면 표를 table 통화로 추출. docx — offset/limit/max_blocks (블록 단위). xlsx/xls — sheet(특정 시트명)/max_rows 옵션. 텍스트 없는 PDF 페이지는 로컬 OCR 자동 적용(ocr:false로 해제), 실패·낮은 신뢰도는 부분 결과로 신고.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -577,6 +577,10 @@
           },
           "mime": {
             "type": "string",
+            "description": "self:read 파라미터"
+          },
+          "ocr": {
+            "type": "boolean",
             "description": "self:read 파라미터"
           },
           "pages": {

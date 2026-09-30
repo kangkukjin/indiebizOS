@@ -263,6 +263,7 @@
         "end",
         "client",
         "mime",
+        "ocr",
         "pages",
         "extract_images",
         "max_blocks",

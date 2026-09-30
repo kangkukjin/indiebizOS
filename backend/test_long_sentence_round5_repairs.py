@@ -57,7 +57,7 @@ def test_format_type_explains_nullable_value(registry):
 
 @pytest.mark.parametrize('name', ['R11', 'R12'])
 def test_pdf_failure_is_preserved_after_catch(registry, name):
-    result = run('[try]{return [self:read]{path:$p}}[catch]{return $error}', registry,
+    result = run('[try]{return [self:read]{path:$p,ocr:false}}[catch]{return $error}', registry,
                  {'p': str(FIXTURE / f'input/receipts/{name}.pdf')})
     assert result['success'] and not result['source_complete']
     error = result['value']
@@ -115,9 +115,11 @@ def test_judge_keeps_read_reuse_and_records_own_call(registry, tmp_path, judge_t
     second = run((FIXTURE / 'repro/judge_reuse_b.ibl').read_text(), registry, inputs,
                  reusable=reusable_receipts(tmp_path, original), reuse_run=original)
     assert first['success'] and second['success']
-    assert second['reuse']['reused_calls'] == 1
-    assert len(judge_transport) == 2  # Model outputs are not reuse candidates.
-    usage = second['usage']['model']
+    assert second['reuse']['reused_calls'] == 2
+    assert second['reuse']['model_calls'] == 1
+    assert len(judge_transport) == 1
+    assert 'model' not in second['usage']
+    usage = first['usage']['model']
     assert usage['requests'] == 1 and usage['input'] == 20
     call = usage['calls'][0]
     assert call['model'] == 'jev-latest' and call['source'] == 'fixed_provider'
@@ -153,6 +155,10 @@ def test_judge_unmeasured_failures_have_model_identity(monkeypatch, response_kin
 @pytest.mark.parametrize('variant,unknown', [(False, False), (True, False), (False, True)])
 def test_full_original_task_and_copy_variant(tmp_path, monkeypatch, judge_transport, variant, unknown):
     import oneshot_facade
+    # Preserve the no-engine recovery case; real automatic OCR has its own tests.
+    import shutil
+    which = shutil.which
+    monkeypatch.setattr(shutil, 'which', lambda name, *a, **kw: None if name == 'tesseract' else which(name, *a, **kw))
     model_calls = []
 
     def model(prompt, system):
@@ -209,7 +215,7 @@ def test_full_original_task_and_copy_variant(tmp_path, monkeypatch, judge_transp
     assert len(model_calls) == 1
 
 
-def test_brief_keeps_read_reuse_but_runs_model_again(tmp_path, monkeypatch):
+def test_brief_reuses_read_and_successful_model(tmp_path, monkeypatch):
     import oneshot_facade
     calls = []
     monkeypatch.setattr(oneshot_facade, 'execution_oneshot',
@@ -224,7 +230,7 @@ def test_brief_keeps_read_reuse_but_runs_model_again(tmp_path, monkeypatch):
     second = run(code + '+1', registry, inputs,
                  reusable=reusable_receipts(tmp_path / 'runs', original), reuse_run=original)
     assert first['success'] and second['success']
-    assert second['reuse']['reused_calls'] == 1 and calls == [1, 1]
+    assert second['reuse']['reused_calls'] == 2 and calls == [1]
     assert second['value'] == first['value'] + 1
 
 

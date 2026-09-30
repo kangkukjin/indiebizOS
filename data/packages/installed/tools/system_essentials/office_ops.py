@@ -217,9 +217,24 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
         target_pages = ranges.pdf_page_indices(pages, total_pages)
 
         page_texts, page_text_chars, no_text_pages, pdf_blocks = [], [], [], []
+        ocr_pages, incomplete_pages = [], []
+        ocr_enabled = _truthy(tool_input.get('ocr', True))
+        ocr_spec = spec_from_file_location('essentials_pdf_ocr', Path(__file__).with_name('essentials_pdf_ocr.py'))
+        ocr = module_from_spec(ocr_spec)
+        ocr_spec.loader.exec_module(ocr)
         for pno in target_pages:
             page = doc.load_page(pno)
             text = page.get_text()
+            source = 'native'
+            if not text.strip() and ocr_enabled:
+                recognition = ocr.recognize_page(page)
+                text = recognition['text']
+                source = 'ocr'
+                ocr_pages.append({'page': pno + 1, **{k: v for k, v in recognition.items() if k != 'text'}})
+                if recognition['status'] != 'recognized':
+                    incomplete_pages.append(pno + 1)
+            elif not text.strip():
+                incomplete_pages.append(pno + 1)
             page_texts.append(text)
             chars = len(text.strip())
             page_text_chars.append({"page": pno + 1, "chars": chars})
@@ -227,7 +242,7 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
                 no_text_pages.append(pno + 1)
             for para in text.split("\n\n"):
                 if para.strip():
-                    pdf_blocks.append({"type": "paragraph", "text": para.strip(), "page": pno + 1})
+                    pdf_blocks.append({"type": "paragraph", "text": para.strip(), "page": pno + 1, "source": source})
         extracted_text = "\n".join(page_texts)
 
         # tables: true — 표 추출(ep951 실증: "PDF를 수기로 엑셀에 옮기는" 노동의 어휘화).
@@ -260,12 +275,13 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
             "blocks": pdf_blocks,
             "page_text_chars": page_text_chars,
             "no_text_pages": no_text_pages,
-            "source_complete": not no_text_pages,
+            "source_complete": not incomplete_pages,
+            "ocr_pages": ocr_pages,
+            "incomplete_pages": incomplete_pages,
         }
-        if no_text_pages:
-            res["warning"] = ("선택한 PDF 페이지에서 추출 가능한 글자가 없습니다: "
-                              + ", ".join(map(str, no_text_pages))
-                              + ". 빈 페이지인지 스캔인지 확인하고 필요하면 OCR을 사용하세요.")
+        if incomplete_pages:
+            res['warning'] = ("PDF 추출 미완료 페이지: " + ', '.join(map(str, incomplete_pages))
+                              + ". OCR 상태·신뢰도는 ocr_pages를 확인하세요. 빈 페이지 여부는 미확인입니다.")
         if _truthy(tool_input.get("tables")):
             res["tables_found"] = len(pdf_tables)
             if pdf_tables:
@@ -274,7 +290,7 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
                 res["table"] = {"columns": main["columns"], "rows": main["rows"]}
                 res["tables"] = pdf_tables
             else:
-                res["note"] = "표를 찾지 못했습니다 — 실선 없는 표나 스캔 이미지 PDF 일 수 있습니다(OCR 별도)."
+                res["note"] = "표를 찾지 못했습니다 — 실선 없는 표나 스캔 이미지 PDF 일 수 있습니다. OCR 본문에서 표 구조는 추출하지 않습니다."
         return json.dumps(res, ensure_ascii=False)
 
     except (fitz.FileDataError, fitz.EmptyFileError) as e:

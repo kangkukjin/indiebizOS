@@ -239,14 +239,16 @@ def test_full_program_original_change_reuse_and_missing_review(tmp_path, monkeyp
     assert first['continuation']['read_calls'] == 7
     second = run(code, reg, {**inputs, '미정비율': 0.5},
                  reusable=reusable_receipts(tmp_path / 'runs', original), reuse_run=original)
-    assert second['reuse']['reused_calls'] == 6
+    assert second['reuse']['reused_calls'] == 7
+    assert second['reuse']['model_calls'] == 1
     assert second['value']['추천'][0] == {'venue': 'V2', 'date': '12-12', 'cost': 2818000}
     assert '67/70' in Path(inputs['출력']).read_text()
     assert '67.0' not in Path(inputs['출력']).read_text()
     missing = run(code, reg, {**inputs, '폴더': str(FIXTURE / 'input_variant')})
     assert missing['value']['verified'] and not missing['source_complete']
     assert missing['value']['후기실패'][0]['venue'] == 'V2'
-    assert len(requests) == 3  # Model calls remain fresh under reuse.
+    assert len(requests) == 2  # Only the initial and changed-source model calls are billed.
+    assert 'model' not in second['usage']
     assert missing['usage']['model']['input'] == 100
 
 

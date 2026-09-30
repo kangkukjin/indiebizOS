@@ -2,7 +2,7 @@
 
 감사 범위: office_ops의 읽기·fill 함수, fs_read_range, doc_ir. 모델이 준
 허브 경로/출력 경로/컨텍스트는 기존 핸들러에 전달하지 않는다. ZIP은 크기와
-외부 relationship을 검사하고 DOCX 이미지 추출은 끈다. 코드 실행/셸 없음.
+외부 relationship을 검사하고 DOCX 이미지 추출은 끈다. 임의 코드/셸 없음. 텍스트 없는 PDF는 고정 argv 로컬 Tesseract에 렌더 바이트만 전달한다.
 """
 import base64
 import importlib.util
@@ -59,7 +59,7 @@ def read_document(params, command, exchange, workspace):
     ranges = _sibling('fs_read_range')
     p = ranges.normalize_read_range({k: v for k, v in params.items() if k in (
         'offset', 'start', 'limit', 'tail', 'start_line', 'end_line', 'end', 'numbered',
-        'blocks', 'tables', 'sheet', 'max_rows', 'max_blocks', 'pages')})
+        'blocks', 'tables', 'sheet', 'max_rows', 'max_blocks', 'pages', 'ocr')})
     path, failure = _receive(params, exchange, workspace)
     if failure is not None:
         return failure

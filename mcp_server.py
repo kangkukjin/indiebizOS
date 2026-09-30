@@ -297,7 +297,8 @@ async def execute_ibl(code: str, project_path: str = "",
     project_path를 비우면 현재 프로젝트를 사용합니다. edition은 저장 코드의 호환
     메타데이터입니다. 생략하면 현재 문법(2), 기존 원문 재실행에만 1을 명시합니다.
     files/files_from/resume은 명시적으로 지정한 기존 실행의 호환 인자입니다.
-    reuse={run_id}는 고친 프로그램에서 이전 실행의 같은 읽기 호출(액션·인자·구현 동일) 영수증을 재사용합니다.
+    reuse={run_id}는 고친 프로그램에서 이전 실행의 같은 읽기·선언 모델 호출(액션·인자·구현·모델 설정 동일)의 성공 영수증을 재사용합니다.
+    reuse={run_id,models:false}면 모델만 새로 판단합니다.
     inputs 값 자리의 {"$ref": result_ref.id, "path": [...]}는 저장된 결과를 복사 없이 전달합니다.
     새 프로그램에서는 inputs·명시 값·저장된 실행 영수증을 사용합니다.
     """

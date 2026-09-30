@@ -26,8 +26,9 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
         if reuse is not None:
             if request.get("resume") is not None:
                 raise Fault("REUSE_ARGUMENT", "resume과 reuse는 함께 쓸 수 없습니다. 같은 프로그램은 resume, 고친 프로그램은 reuse입니다.", kind="compile")
-            if not isinstance(reuse, dict) or set(reuse) != {"run_id"}:
-                raise Fault("REUSE_ARGUMENT", "reuse에는 이전 실행이 반환한 run_id만 지정하세요.", kind="compile")
+            if (not isinstance(reuse, dict) or "run_id" not in reuse or set(reuse) - {"run_id", "models"}
+                    or ("models" in reuse and type(reuse["models"]) is not bool)):
+                raise Fault("REUSE_ARGUMENT", "reuse에는 이전 run_id와 선택 models(Bool)를 지정하세요.", kind="compile")
         from ibl_v2_adapters import load_registry
         from ibl_v2_compile import compile_program
         from ibl_v2_runtime import Runtime
@@ -52,7 +53,8 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
             with source_context(2):
                 result = Runtime(plan, inputs, cancel_check=cancel_check, journal=journal,
                                  reusable=reusable, reuse_run=reuse["run_id"] if reuse else None,
-                                 input_evidence=input_evidence, value_protocols=protocols).run()
+                                 input_evidence=input_evidence, value_protocols=protocols,
+                                 reuse_models=reuse.get("models", True) if reuse else True).run()
         try:
             from ibl_v2_learning import record_functions
             record_functions(plan, result)

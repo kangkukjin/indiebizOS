@@ -1,0 +1,78 @@
+{
+  "id": 4196,
+  "started_at": "2026-09-30T23:14:23.005892",
+  "ended_at": "2026-09-30T23:20:56.152887",
+  "total_ms": 393146,
+  "source": "training",
+  "run_id": "run_dd389e06d54f10c368f0",
+  "usage": {
+    "input": 934115,
+    "output": 10498,
+    "cache_read": 846848,
+    "cache_create": 0
+  },
+  "models": [
+    "gpt-6-astra:high"
+  ],
+  "event_counts": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 8,
+    "supervision.recall.finished": 8,
+    "knowledge_catalog.selected": 2,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "supervision.framing": 1,
+    "model.call_started": 1,
+    "model.input": 1,
+    "supervision.tool.started": 10,
+    "ibl.started": 9,
+    "ibl.checkpoint": 4,
+    "ibl.finished": 9,
+    "supervision.tool.finished": 10,
+    "model.round": 12,
+    "model.response_observed": 12,
+    "context.input_ref_resolved": 6,
+    "side_effect.write": 4,
+    "model.usage": 1,
+    "model.call_finished": 1,
+    "cognition.evaluation": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+  },
+  "cost": {
+    "check_rejections": 2,
+    "execution_calls": 10,
+    "execution_failures": 2,
+    "execution_tool_s": 6.03,
+    "internal_tool_failures": 1,
+    "request_intent": "task",
+    "source_failures": 1,
+    "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+    "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+    "wall_s": 391.962
+  },
+  "errors": [
+    {
+      "tool_name": null,
+      "check_rejected": false,
+      "is_error": true,
+      "elapsed_s": 0.678
+    },
+    {
+      "tool_name": null,
+      "check_rejected": true,
+      "is_error": true,
+      "elapsed_s": 0.302
+    },
+    {
+      "tool_name": null,
+      "check_rejected": true,
+      "is_error": false,
+      "elapsed_s": 0.33
+    }
+  ],
+  "token_scope": "billable_usage events only; cache is part of input; author tokens unmeasured"
+}

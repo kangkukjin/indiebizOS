@@ -786,7 +786,14 @@ def _execute(tool_input: dict, context) -> str:
             content, total, start, end, ranged, truncated = _file_io.read_text_window(
                 path, tool_input, _text_read_bounds)
             if tool_input.get("blocks") and (str(path).lower().endswith(".json") or tool_input.get("format") == "json") and not ranged and not truncated and content.strip():
-                parsed = json.loads(content)
+                try:
+                    # 원천의 중복 키·비유한 수를 출력 계약 위반으로 오진하지 않는다.
+                    # 값의 검증은 바깥 반환 경계와 같은 정본을 쓴다.
+                    from common.value_semantics import public_result
+                    public_result(content, strict=True)
+                    parsed = json.loads(content)
+                except ValueError as exc:
+                    raise ValueError(f"{path}: JSON 원문 오류: {exc}") from exc
                 return json.dumps({"success": True, "text": content, "blocks": [],
                                    "structured_data": parsed, "path": path}, ensure_ascii=False,
                                   default=str)

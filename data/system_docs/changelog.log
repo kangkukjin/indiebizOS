@@ -2296,3 +2296,5 @@
 2026-09-30 REPAIR: 긴문장 11회차 후속 L11-4~6. 훈련 가이드·실행자/계획자 수리 프롬프트에 모든 독립 실행/변형 작업·티켓 종료 확인과 증거 회수 후 라이브 변경·reload·apply 순서를 명시(timeout은 종료 아님; 런타임 전역 잠금은 추가하지 않음). grep 회귀 13건을 docs에서 기본 pytest 경로 backend로 이동, 함수·입력·판정 보존. MCP execute_ibl에 호출별 origin=training을 공개하고 HTTP 요청으로 운반, 생략 시 기존 HTTP 헤더/stdio 출처 상속 및 작업·에피소드 연결 유지, 명시 user/test 등은 거절. 다음/동시 일반 호출·recover 출처 불변을 검사. 관련 93건, 종합 8,070 passed·1 skipped·95 deselected(641.41초), Python 시스템+보강 MCP 궤적 검사 60건(43.08초) 통과. 라이브 MCP return 1 성공과 시작/중간/완료 source=training 확인. 어휘 정합·폰 번들·층 가드 통과. 독립 훈련 재실행·새 절차 준수·시간/토큰 절감은 미측정, 최초 관측 보존.
 
 [2026-09-30] 긴문장 12회차: 창고 CSV 대사·변형·독립 AI 완료 후 읽기 오류에 파일/레코드/물리 줄/셀 수 진단 추가. 정상 전건과 새 변형, 관련 85검사 통과. docs/experiments/long_sentence_imagination/round_12/report.md
+
+[2026-09-30] 긴문장 13회차: 센서 보정·중복 JSON 변형·독립 AI 후 원천 읽기 경계에 공통 검증 연결. 파일 경로와 read 실패 귀속 보존. 전체/새 변형·178검사 통과. round_13/report.md.

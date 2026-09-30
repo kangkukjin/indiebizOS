@@ -1,0 +1,30 @@
+#!ibl edition=2
+[def:분석]($folder) {
+  $docs=[self:read]{path:$folder+"/readings.json"} & [self:read]{path:$folder+"/calibration.json"}
+  $joined=[table:join]{left:$docs[0].data.rows,right:$docs[1].data.rows,on:"sensor",how:"left"}
+  $limit=$docs[1].data.limit
+  $rows=$joined.items >> [table:each] {
+    $value=$it.raw*$it.slope+$it.offset
+    return {sensor:$it.sensor,sample:$it.sample,value:$value,exceeded:$value>$limit}
+  }
+  $for_summary=$rows >> [table:compute]{set:($r)=>{over:$r.exceeded ? 1 : 0}}
+  $groups=$for_summary >> [table:groupby]{by:"sensor",agg:{count:["count"],sum:["sum","value"],mean:["avg","value"],exceeded:["sum","over"]}}
+  return {status:"ok",rows:$rows,summary:$groups.items,total:sum($rows >> [table:each]{return $it.value}),exceeded:sum($for_summary >> [table:each]{return $it.over})}
+}
+[def:시도]($folder) {
+  [try] { return [fn:분석]{folder:$folder} }
+  [catch] { return {status:"blocked",error:$error.message,details:$error.details} }
+}
+[def:저장]($result,$out) {
+  $body=json($result)
+  return ["result.json","report.txt"] >> [table:each] {
+    $path=$out+"/"+$it
+    [self:write]{path:$path,content:$body}
+    $saved=[self:read]{path:$path,format:"text"}
+    assert $saved.text==$body,"저장 불일치"
+    return {path:$path,verified:true}
+  }
+}
+$result=[fn:시도]{folder:$folder}
+$files=[fn:저장]{result:$result,out:$out}
+return {result:$result,files:$files}

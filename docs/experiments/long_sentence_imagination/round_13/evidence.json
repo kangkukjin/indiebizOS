@@ -1,0 +1,73 @@
+{
+  "checks": {
+    "before_main": "120 rows, 12 sensor summaries and both files exact",
+    "after_main": "120 rows, 12 sensor summaries and both files exact",
+    "after_variant": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_13회차/variant/calibration.json: JSON 원문 오류: $<json>: JSON 문자열 객체에 중복 키 'slope'가 있습니다",
+    "after_nested": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_13회차/nested/readings.json: JSON 원문 오류: $<json>: JSON 문자열 객체에 중복 키 'raw'가 있습니다"
+  },
+  "receipts": [
+    {
+      "label": "after_main",
+      "elapsed_seconds": 0.903148889541626,
+      "success": true,
+      "check_ok": null,
+      "run_id": "4ec8424c609d46808b49f0755b54768f",
+      "source_complete": true,
+      "sha256": "132db9c4bb69aaf96d8dca0f2efd179bd0a9f3242487f5f2f8d4b6d39d764b5d"
+    },
+    {
+      "label": "after_nested",
+      "elapsed_seconds": 0.5843827724456787,
+      "success": true,
+      "check_ok": null,
+      "run_id": "9ae5850b36344bfa8b7bf27296338661",
+      "source_complete": false,
+      "sha256": "5b9509a40f9fdbb0422e8e2dab89411041e4b6796014d42e5019ad418fe55f11"
+    },
+    {
+      "label": "after_variant",
+      "elapsed_seconds": 0.6278700828552246,
+      "success": true,
+      "check_ok": null,
+      "run_id": "691074ee1356424e86a255e0313ee8b3",
+      "source_complete": false,
+      "sha256": "0fbc8214c413ed6bceb76daca6e84a3deed25c6eab8b9af6e1424a4b71a6ce9e"
+    },
+    {
+      "label": "before_main",
+      "elapsed_seconds": 1.174980878829956,
+      "success": true,
+      "check_ok": null,
+      "run_id": "d156cbae688f4729978327c5bb6dccdf",
+      "source_complete": true,
+      "sha256": "df60d11cebf452292df94f9cb841f7b54f72386ac579c08359505943c2173130"
+    },
+    {
+      "label": "before_variant",
+      "elapsed_seconds": 0.59051513671875,
+      "success": true,
+      "check_ok": null,
+      "run_id": "49c90861403e48f69071c2aec6a2b950",
+      "source_complete": false,
+      "sha256": "ac6527ec7b9003884ded698f9c115063a1e8dfa8c5d1af080b9b92d794b6ecd8"
+    },
+    {
+      "label": "initial_check",
+      "elapsed_seconds": 0.4494748115539551,
+      "success": null,
+      "check_ok": true,
+      "run_id": null,
+      "source_complete": null,
+      "sha256": "155050d23c5298ed850f4f550bdc70ef3e94a90f408eeaa38c6305922e302c48"
+    },
+    {
+      "label": "system_response",
+      "elapsed_seconds": 393.34328031539917,
+      "success": null,
+      "check_ok": null,
+      "run_id": null,
+      "source_complete": null,
+      "sha256": "8888459c85e6c5447f8ca5fd092982fff0c79170d22be377f10b41c477faf38a"
+    }
+  ]
+}

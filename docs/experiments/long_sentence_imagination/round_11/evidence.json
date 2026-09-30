@@ -1,0 +1,261 @@
+{
+  "verification": [
+    {
+      "mode": "trainer_main_fixed",
+      "passed": true,
+      "intervals": 2872,
+      "anomalies": 17,
+      "by_meter": 96,
+      "errors": []
+    },
+    {
+      "mode": "trainer_variant_fixed",
+      "passed": true,
+      "intervals": 2872,
+      "anomalies": 17,
+      "by_meter": 96,
+      "errors": []
+    },
+    {
+      "mode": "system_main",
+      "passed": false,
+      "intervals": 2872,
+      "anomalies": 17,
+      "by_meter": 96,
+      "errors": [
+        {
+          "key": "by_meter",
+          "differences": [
+            {
+              "meter": "M095",
+              "expected": {
+                "meter": "M095",
+                "usage": 420,
+                "known_charge": null,
+                "unpriced_intervals": 30
+              },
+              "actual": {
+                "meter": "M095",
+                "usage": 420,
+                "known_charge": 0,
+                "unpriced_intervals": 30
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "system_variant",
+      "passed": false,
+      "intervals": 2872,
+      "anomalies": 17,
+      "by_meter": 96,
+      "errors": [
+        {
+          "key": "by_meter",
+          "differences": [
+            {
+              "meter": "M095",
+              "expected": {
+                "meter": "M095",
+                "usage": 420,
+                "known_charge": null,
+                "unpriced_intervals": 30
+              },
+              "actual": {
+                "meter": "M095",
+                "usage": 420,
+                "known_charge": 0,
+                "unpriced_intervals": 30
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "mode": "trainer_main_fixed",
+      "file": "anomalies.json",
+      "bytes": 1386,
+      "sha256": "b6b1dd8d455844eee18b8e46a778d7428a7e6624f5977f7c160a8d1920bcdd2c"
+    },
+    {
+      "mode": "trainer_main_fixed",
+      "file": "intervals.json",
+      "bytes": 428544,
+      "sha256": "b58f615de8d4853c7c36e2ed56233012c698a55c418ad68e62f2d193adc7b535"
+    },
+    {
+      "mode": "trainer_main_fixed",
+      "file": "report.md",
+      "bytes": 611,
+      "sha256": "2930a9017b590503380b825e441054079c3bd332b1762893cef72629faf35965"
+    },
+    {
+      "mode": "trainer_main_fixed",
+      "file": "summary.json",
+      "bytes": 8078,
+      "sha256": "947a16f2205d6e27bda85af9a3854be3f3690242a4c21ee51616acf76c0e48f6"
+    },
+    {
+      "mode": "trainer_variant_fixed",
+      "file": "anomalies.json",
+      "bytes": 1386,
+      "sha256": "b6b1dd8d455844eee18b8e46a778d7428a7e6624f5977f7c160a8d1920bcdd2c"
+    },
+    {
+      "mode": "trainer_variant_fixed",
+      "file": "intervals.json",
+      "bytes": 428544,
+      "sha256": "cf94e6cda73af4267e1ad0af26047d3441492d2599bf31e7ccb21a3b1404c3fd"
+    },
+    {
+      "mode": "trainer_variant_fixed",
+      "file": "report.md",
+      "bytes": 611,
+      "sha256": "17bd74081647b3c1c104717891b533b1a91b3ded70928b78c66eaf61fb7a0330"
+    },
+    {
+      "mode": "trainer_variant_fixed",
+      "file": "summary.json",
+      "bytes": 8088,
+      "sha256": "9b4f63aa8c82c7692d432a6e5be59a218e9b5944af3a9056f74cd5bdaa12572c"
+    },
+    {
+      "mode": "system_main",
+      "file": "anomalies.json",
+      "bytes": 2544,
+      "sha256": "ea31acb96e58f09dcdbe3feac9aa753c23b7745e8e6dcabe8cfdfb4caee523a3"
+    },
+    {
+      "mode": "system_main",
+      "file": "intervals.json",
+      "bytes": 428544,
+      "sha256": "b58f615de8d4853c7c36e2ed56233012c698a55c418ad68e62f2d193adc7b535"
+    },
+    {
+      "mode": "system_main",
+      "file": "report.md",
+      "bytes": 7327,
+      "sha256": "fb2b0acdb1848abd391c21e32c620578af7c0a573a6d07b9362d292a30c22093"
+    },
+    {
+      "mode": "system_main",
+      "file": "summary.json",
+      "bytes": 15046,
+      "sha256": "982923188601d5cf96b3bec452e195759c0ee9910ba871a532d2b562df23993c"
+    },
+    {
+      "mode": "system_variant",
+      "file": "anomalies.json",
+      "bytes": 2544,
+      "sha256": "ea31acb96e58f09dcdbe3feac9aa753c23b7745e8e6dcabe8cfdfb4caee523a3"
+    },
+    {
+      "mode": "system_variant",
+      "file": "intervals.json",
+      "bytes": 428544,
+      "sha256": "cf94e6cda73af4267e1ad0af26047d3441492d2599bf31e7ccb21a3b1404c3fd"
+    },
+    {
+      "mode": "system_variant",
+      "file": "report.md",
+      "bytes": 8374,
+      "sha256": "44c6252ffad918b0a26282c3b413a93de165be2f258e206b51d3c77361ee1942"
+    },
+    {
+      "mode": "system_variant",
+      "file": "summary.json",
+      "bytes": 15323,
+      "sha256": "f29b51a3d527733c36f246a8d74ef20320756becabb3156d215b17a2583d894c"
+    },
+    {
+      "mode": "inputs",
+      "file": "meters.json",
+      "bytes": 7414,
+      "sha256": "da043eff04aac4c5a690cb9fb4c6e7a69deab5ca4fd59ba2cbdb9a8b8fbb4d1a",
+      "system_copy_identical": true
+    },
+    {
+      "mode": "inputs",
+      "file": "readings_a.json",
+      "bytes": 178390,
+      "sha256": "b59244d3cb07ccc2c8258f9c0b6242b279dded8428f8a949d56c348bd4c280f8",
+      "system_copy_identical": true
+    },
+    {
+      "mode": "inputs",
+      "file": "readings_b.json",
+      "bytes": 178387,
+      "sha256": "63c6943d770f92e8d59f301b1b2440415ca16893b67faceb25fdc8a7321d877d",
+      "system_copy_identical": true
+    },
+    {
+      "mode": "inputs",
+      "file": "tariffs.json",
+      "bytes": 162,
+      "sha256": "b5ec00a9e08378a0fe6df06ff25e91bc6caf45328b9809342677c303d9af97f9",
+      "system_copy_identical": true
+    }
+  ],
+  "tool_failures": [
+    {
+      "episode": 4193,
+      "seq": 63,
+      "evidence": {
+        "chars": 8060,
+        "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"PURE_EXPRESSION\", \"message\": \"이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.\", \"source_span\": {\"source_hash\": \"99789de8aaba10251032cdfc1bb62b958e76da9e171388de107dc74fba892248\", \"start\": 807, \"end\": 850, \"line\": 14, \"column\": 19}, \"call_path\": [], \"hint\": \"파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.\", \"location\": {\"source_hash\": \"99789de8aaba10251032cdfc1bb62b958e76da9e171388de107dc74fba892248\", \"start\": 807, \"end\": 850, \"line\": 14, \"column\": 19, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 14, \"end_column\": 62, \"offset_encoding\": \"unicode-codepoints\"}, \"rule\": \"PURE_EXPRESSION\", \"severity\": \"error\"}, {\"code\": \"PURE_EXPRESSION\", \"message\": \"이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.\", \"source_span\": {\"source_hash\": \"99789de8aaba10251032cdfc1bb62b958e76da9e171388de107dc74fba892248\", \"start\": ",
+        "id": "7ac44b6507422eafdd036e518e327be9044a041faed11d8ccd2937f71b19635e",
+        "integrity": "verified"
+      },
+      "source_failures": 0
+    },
+    {
+      "episode": 4193,
+      "seq": 85,
+      "evidence": {
+        "chars": 2787,
+        "excerpt": "{\"edition\": 2, \"ok\": false, \"success\": false, \"executed\": false, \"status\": \"invalid\", \"error\": \"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.\", \"diagnostic\": {\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [], \"details\": {}, \"source_span\": {\"source_hash\": \"616dc850d49c55dd5d45125d6f4539179cd62b6ef1e59ffaea4ea30ba97f6839\", \"start\": 2764, \"end\": 2765, \"line\": 18, \"column\": 109}, \"rule\": \"SYNTAX\", \"severity\": \"error\", \"hint\": \"표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.\", \"location\": {\"source_hash\": \"616dc850d49c55dd5d45125d6f4539179cd62b6ef1e59ffaea4ea30ba97f6839\", \"start\": 2764, \"end\": 2765, \"line\": 18, \"column\": 109, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 18, \"end_column\": 110, \"offset_encoding\": \"unicode-codepoints\"}}, \"issues\": [{\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"보간의 닫는 }가 없거나 안쪽",
+        "id": "eb3f57ad62339536e59a6e0d3fee32d6b1c681332854a33586669576ac5e295e",
+        "integrity": "verified"
+      },
+      "source_failures": 0
+    },
+    {
+      "episode": 4193,
+      "seq": 109,
+      "evidence": {
+        "chars": 4855,
+        "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"READONLY\", \"message\": \"읽기 전용 바인딩: $i\", \"source_span\": {\"source_hash\": \"10a0fd5f48b02df083d204bba6baa363c7de3cb9542607f546f26384bef3c442\", \"start\": 764, \"end\": 782, \"line\": 13, \"column\": 1}, \"call_path\": [], \"location\": {\"source_hash\": \"10a0fd5f48b02df083d204bba6baa363c7de3cb9542607f546f26384bef3c442\", \"start\": 764, \"end\": 782, \"line\": 13, \"column\": 1, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 13, \"end_column\": 19, \"offset_encoding\": \"unicode-codepoints\"}, \"rule\": \"READONLY\", \"severity\": \"error\", \"hint\": \"$it·$i·$error와, each 본문에서 본 바깥 변수는 다시 대입하지 않습니다. 새 이름에 받거나 결과를 each의 반환으로 모으세요.\"}], \"guards\": [], \"guards_total\": 31, \"guards_inner\": 0, \"guards_omitted\": 31, \"result_type\": \"{files_read: Number, round_trip_equal: Bool, totals_verified: Bool, summary: Unknown, intervals: Unknown, anomalies: Unknown, report: Text}\", \"effects\": [\"read_external\", \"write_external\"], \"f",
+        "id": "8fe435eaea71ef9b727a2793c93d5ddab11836df1789603f185ada93ea063556",
+        "integrity": "verified"
+      },
+      "source_failures": 0
+    },
+    {
+      "episode": 4194,
+      "seq": 30,
+      "evidence": {
+        "chars": 100,
+        "excerpt": "{\"success\": false, \"executed\": false, \"error\": \"read_result는 code·pipeline·describe와 함께 사용할 수 없습니다\"}",
+        "id": "a72bcb36804005d937c825c8ed081ef33111def17f625159180a48908d3eb9dc",
+        "integrity": "verified"
+      },
+      "source_failures": 0
+    },
+    {
+      "episode": 4194,
+      "seq": 88,
+      "evidence": {
+        "chars": 12254,
+        "excerpt": "{\"success\": false, \"error\": \"컴파일 이후 어휘 구현이 바뀌었습니다. 새 계획으로 검사하세요.\", \"diagnostic\": {\"code\": \"DEFINITION_CHANGED\", \"kind\": \"protocol\", \"message\": \"컴파일 이후 어휘 구현이 바뀌었습니다. 새 계획으로 검사하세요.\", \"frames\": [], \"has_partial\": true, \"partial\": [], \"evidence\": [18121], \"details\": {\"coverage\": [\"failed\", \"failed\", \"failed\", \"failed\"], \"successful_indices\": [], \"errors\": {\"2\": {\"code\": \"DEFINITION_CHANGED\", \"kind\": \"protocol\", \"message\": \"컴파일 이후 어휘 구현이 바뀌었습니다. 새 계획으로 검사하세요.\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [18112], \"details\": {}, \"source_span\": {\"source_hash\": \"9cbb916b2440cb710c5cd2c816e329bdcd4aa8aa479cab8659faa84b7d9911f0\", \"start\": 2478, \"end\": 2515, \"line\": 27, \"column\": 88}}, \"1\": {\"code\": \"DEFINITION_CHANGED\", \"kind\": \"protocol\", \"message\": \"컴파일 이후 어휘 구현이 바뀌었습니다. 새 계획으로 검사하세요.\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [18114], \"details\": {}, \"source_span\": {\"source_hash\": \"9cbb916b2440cb710c5cd2c816e329bdcd4aa8aa479cab8659faa84b7d9911f0\", ",
+        "id": "ffa197d2f9e30661b45ff9e9a230d4cfa24c4511dc3d61d3e5e3712d59b1b1c3",
+        "integrity": "verified"
+      },
+      "source_failures": 4
+    }
+  ]
+}

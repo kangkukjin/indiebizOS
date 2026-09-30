@@ -146,7 +146,7 @@ def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
 
 
 def _rg_count(pattern, root, file_pattern, use_regex, include_logs=False, ignore_case=False):
-    """rg --count-matches 전수 계수(2026-08-08, ⑥′ 수리의 핵).
+    """rg --count 전수 계수(2026-08-08, ⑥′ 수리의 핵).
 
     내용을 반환하지 않으므로 토큰 상한이 필요 없다 — 표본이 아니라 **전수**.
     count/files_with_matches 모드의 정답 소스이자, content 모드의 진짜 total 공급원.
@@ -155,7 +155,7 @@ def _rg_count(pattern, root, file_pattern, use_regex, include_logs=False, ignore
     # --with-filename: 단일 파일 대상이면 rg 가 "path:N" 대신 "N" 만 내 아래 파싱이 빈 dict 를
     # 만들고, {} 는 None(미가용) 이 아니라 "전수 0건" 으로 읽혀 "매칭 0건 중 2건만 표시"
     # 같은 거짓 신고가 났다(2026-08-21 라이브 실측). 항상 파일명 접두를 강제.
-    cmd = [_RG_BIN, "--count-matches", "--with-filename", "--no-messages"]
+    cmd = [_RG_BIN, "--count", "--with-filename", "--no-messages"]
     if not use_regex:
         cmd.append("-F")
     if ignore_case:

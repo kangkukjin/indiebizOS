@@ -1,0 +1,64 @@
+#!ibl edition=2
+[def:구간]($a,$b) {
+  [if:$a.meter != $b.meter] { return [] }
+  $status = date_diff($b.date,$a.date) != 1 ? "gap" : ($a.slot_status == "conflict" or $b.slot_status == "conflict") ? "conflict" : ($a.slot_status == "unreadable" or $b.slot_status == "unreadable") ? "unreadable" : "ok"
+  $usage = null; $roll = false
+  [if:$status == "ok"] {
+    $usage = $b.lo - $a.lo
+    [if:$usage < 0] {
+      [if:$a.modulus == null] { $status = "decrease"; $usage = null }
+      [else] { $usage = $usage + $a.modulus; $roll = true }
+    }
+  }
+  return [{meter:$a.meter,start:$a.date,end:$b.date,zone:$a.zone,status:$status,usage:$usage,rollover:$roll}]
+}
+[def:검침준비]($folder) {
+  $docs = [self:read]{path:$folder+"/readings_a.json"} & [self:read]{path:$folder+"/readings_b.json"} & [self:read]{path:$folder+"/meters.json"}
+  $raw = $docs[0].data.rows + $docs[1].data.rows
+  $meters = $docs[2].data.rows
+  $g = $raw >> [table:groupby]{by:["meter","date"],agg:{n:["count"],observed:["count","reading"],lo:["min","reading"],hi:["max","reading"]}}
+  $slots = $g.items >> [table:compute]{set:($r)=>{slot_status:$r.observed == 0 ? "unreadable" : $r.lo != $r.hi ? "conflict" : "ok"}}
+  $bad = $slots >> [table:filter]{where:($r)=>$r.slot_status != "ok"}
+  $anomalies = [table:join]{left:$raw,right:$bad,on:["meter","date"],how:"semi"}
+  $numbers = $raw >> [table:filter]{where:($r)=>$r.reading != null}
+  $unique = $numbers >> [table:dedup]{by:["meter","date","reading"]}
+  $j = [table:join]{left:$slots,right:$meters,on:"meter",how:"left"}
+  $ordered = $j.items >> [table:sort]{by:["meter","date"]}
+  $intervals = zip($ordered[:-1],$ordered[1:]) >> [table:each]{mode:"flat_map"} { [fn:구간]{a:$it[0],b:$it[1]} }
+  $conflicts = $slots >> [table:filter]{where:($r)=>$r.slot_status == "conflict"}
+  $unreadable = $slots >> [table:filter]{where:($r)=>$r.slot_status == "unreadable"}
+  return {intervals:$intervals,anomalies:$anomalies.items,meters:$meters,stats:{input_rows:len($raw),canonical_slots:len($slots),extra_rows:len($numbers)-len($unique.items),conflict_slots:len($conflicts),unreadable_slots:len($unreadable)}}
+}
+[def:정산]($base,$tariffs) {
+  $j = [table:join]{left:$base.intervals,right:$tariffs,on:"zone",how:"left",defaults:{rate:null}}
+  $priced = $j.items >> [table:compute]{set:($r)=>{charge:($r.usage == null or $r.rate == null) ? null : $r.usage*$r.rate,unpriced:($r.usage != null and $r.rate == null) ? 1 : 0,roll_count:$r.rollover ? 1 : 0}}
+  $by = $priced >> [table:groupby]{by:"meter",agg:{usage:["sum","usage"],known_charge:["sum","charge"],unpriced_intervals:["sum","unpriced"],rollover_intervals:["sum","roll_count"]}}
+  $complete = [table:join]{left:$base.meters,right:$by.items,on:"meter",how:"left",defaults:{usage:null,known_charge:null,unpriced_intervals:0,rollover_intervals:0}}
+  $by_meter = $complete.items >> [table:select]{columns:["meter","usage","known_charge","unpriced_intervals"]} >> [table:sort]{by:"meter"}
+  $counts = $priced >> [table:groupby]{by:"status",agg:{count:["count"]}}
+  $total_usage = reduce($by_meter,0,($a,$r)=>$a+($r.usage == null ? 0 : $r.usage))
+  $known_charge = reduce($by_meter,0,($a,$r)=>$a+($r.known_charge == null ? 0 : $r.known_charge))
+  $unpriced = reduce($by_meter,0,($a,$r)=>$a+$r.unpriced_intervals)
+  $rolls = reduce($by.items,0,($a,$r)=>$a+$r.rollover_intervals)
+  assert reduce($counts.items,0,($a,$r)=>$a+$r.count)==len($priced), "구간 계수 불일치"
+  assert len($by_meter)==len($base.meters), "계량기 누락"
+  $summary = {**$base.stats,interval_count:len($priced),status_counts:$counts.items,rollover_intervals:$rolls,unpriced_intervals:$unpriced,total_usage:$total_usage,known_charge:$known_charge,by_meter:$by_meter}
+  $intervals = $priced >> [table:select]{columns:["meter","start","end","zone","status","usage","rollover","rate","charge"]}
+  return {summary:$summary,intervals:$intervals,anomalies:$base.anomalies}
+}
+[def:저장확인]($result,$out) {
+  $files = [{name:"intervals.json",body:json({rows:$result.intervals})},{name:"anomalies.json",body:json({rows:$result.anomalies})},{name:"summary.json",body:json($result.summary)},{name:"report.md",body:f"# 검침 정산\n\n입력 ${$result.summary.input_rows}행, 날짜별 ${$result.summary.canonical_slots}건, 동일값 중복 ${$result.summary.extra_rows}행.\n전체 구간 ${$result.summary.interval_count}개. 상태별: ${json($result.summary.status_counts)}.\n확인된 사용량 ${$result.summary.total_usage}, 확인된 요금 ${$result.summary.known_charge}. 요율 미확인 ${$result.summary.unpriced_intervals}구간은 요금 null이며 총 청구액을 확정하지 않습니다.\n충돌 날짜 ${$result.summary.conflict_slots}건, 판독불가 날짜 ${$result.summary.unreadable_slots}건. 원본 source_id는 anomalies.json, 날짜별 구간은 intervals.json, 모든 계량기별 집계는 summary.json에 있습니다.\n"}]
+  $checked = $files >> [table:each] {
+    $p=$out+"/"+$it.name
+    [self:write]{path:$p,content:$it.body}
+    $r=[self:read]{path:$p,format:"text"}
+    assert $r.text==$it.body, "저장 내용 불일치", {path:$p}
+    return {path:$p,verified:true}
+  }
+  return $checked
+}
+$base=$cached
+$tariff_doc=[self:read]{path:$tariff_path}
+$result=[fn:정산]{base:$base,tariffs:$tariff_doc.data.rows}
+$files=[fn:저장확인]{result:$result,out:$out}
+return {summary:$result.summary,files:$files,base:$base}

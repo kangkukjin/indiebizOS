@@ -8,7 +8,7 @@ import os
 import re
 import sys
 import urllib.request
-from typing import Annotated, Optional, List
+from typing import Annotated, Optional, List, Literal
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend"))
 import boot_paths  # noqa: E402,F401
@@ -273,7 +273,8 @@ async def execute_ibl(code: str, project_path: str = "",
                       edition: Optional[int] = None,
                       value_protocols: Optional[List[str]] = None,
                       inputs: Optional[dict] = None,
-                      ctx: Context = None):
+                      ctx: Context = None,
+                      origin: Optional[Literal["training"]] = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
     # 이미지 블록 리스트와 실패의 CallToolResult 반환을 거부한다.
     """현재 IBL로 코드를 작성·검사·실행합니다. 기본은 명시 값·함수 문법입니다.
@@ -295,6 +296,10 @@ async def execute_ibl(code: str, project_path: str = "",
     실행 중인 작업을 다시 시작하지 말고 반환된 작업 ID·티켓을 사용합니다.
     이미지 블록은 호스트의 이미지 출력으로 전달하며 base64로 쪼개 읽지 않습니다.
 
+    origin="training"은 이번 실행과 하위 실행을 훈련 출처로 기록합니다. 생략하면 부모
+    요청의 출처를 상속합니다. 출처 표식은 외부 효과 격리나 수리 권한을 부여하지 않습니다.
+    recover는 기존 실행을 조회하므로 그 실행의 출처를 변경하지 않습니다.
+
     project_path를 비우면 현재 프로젝트를 사용합니다. edition은 저장 코드의 호환
     메타데이터입니다. 생략하면 현재 문법(2), 기존 원문 재실행에만 1을 명시합니다.
     files/files_from/resume은 명시적으로 지정한 기존 실행의 호환 인자입니다.
@@ -304,11 +309,13 @@ async def execute_ibl(code: str, project_path: str = "",
     새 프로그램에서는 inputs·명시 값·저장된 실행 영수증을 사용합니다.
     """
     # ctx 는 FastMCP 가 자동 주입(모델에 노출 안 됨). HTTP 경로면 헤더에서 신원을 꺼낸다.
+    if origin is not None and origin != "training":
+        raise ValueError('origin은 "training" 또는 생략만 허용합니다.')
     h_agent, h_project, h_task, h_origin = _http_identity(ctx)
     effective_path = project_path or h_project or DEFAULT_PROJECT_PATH
     agent_id = h_agent or DEFAULT_AGENT_ID
     task_id = h_task or DEFAULT_TASK_ID
-    origin = h_origin or DEFAULT_TASK_ORIGIN
+    effective_origin = origin or h_origin or DEFAULT_TASK_ORIGIN
     payload = {"code": code, "project_path": effective_path}
     try:
         request_context = ctx.request_context if ctx is not None else None
@@ -347,8 +354,8 @@ async def execute_ibl(code: str, project_path: str = "",
         payload["agent_id"] = agent_id  # 신원이 있을 때만 전달 (없으면 현 동작 그대로)
     if task_id:
         payload["task_id"] = task_id  # 태스크 컨텍스트 복원 (시스템 AI cross 위임 체인)
-    if origin:
-        payload["origin"] = origin  # 태스크 출처 복원 — 원장 행위자·자기수정 게이트 축
+    if effective_origin:
+        payload["origin"] = effective_origin  # 태스크 출처 복원 — 원장 행위자·자기수정 게이트 축
     # 궤적 신원 복원(2026-08-29 척추) — 이 실행을 부모 에피소드의 자식 run 으로 잇는다
     h_epi, h_prun = _http_trajectory(ctx)
     episode_id = h_epi or DEFAULT_EPISODE_ID

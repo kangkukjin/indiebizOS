@@ -47,7 +47,7 @@
 
 원인 사슬: rg 내용 조회는 매칭 행 → _rg_count는 --count-matches로 부분 문자열 출현 수 → 서로 다른 단위 비교 → 거짓 truncated 및 부분 원천 실패. 소유 위치는 data/packages/installed/tools/system_essentials/fs_grep.py::_rg_count다. --count로 바꾸어 내용·count·files 모드와 Python 폴백의 행 단위를 맞췄다. 누락 표시를 가리거나 호출부 재시도로 우회하지 않았다.
 
-신규 13개 회귀는 rg/Python × regex/literal × content/count/files와 실제 선택 제한·긴 줄 절단을 다룬다. 수정 전 7실패/6통과, 수정 후 기존 39건 포함 52통과. 등록 시험 스크립트로 실행했고 test_before.json/test_after.json에 영수증을 보존했다. 범위: 이 폴더 test_grep_counts.py, backend/test_grep_glob_dialect.py, backend/test_grep_edit_topic_gate_2026_09_05.py, backend/test_exposed_idiom_boundaries.py. 전수 회귀는 실행하지 않았다.
+신규 13개 회귀는 rg/Python × regex/literal × content/count/files와 실제 선택 제한·긴 줄 절단을 다룬다. 수정 전 7실패/6통과, 수정 후 기존 39건 포함 52통과. 등록 시험 스크립트로 실행했고 test_before.json/test_after.json에 영수증을 보존했다. 당시 범위: 이 폴더 test_grep_counts.py(후속 수리에서 [backend/test_grep_counts.py](../../../../backend/test_grep_counts.py)로 이동), backend/test_grep_glob_dialect.py, backend/test_grep_edit_topic_gate_2026_09_05.py, backend/test_exposed_idiom_boundaries.py. 전수 회귀는 실행하지 않았다.
 
 패키지 reload 뒤 실제 MCP 재현은 total=1/items=1/truncated=false/source_complete=true였다(run 1f6e637559a84ad7ad33ce60e88519b0, grep_after.json). 코드 수정 직후에는 캐시가 옛 모듈을 잡고 있어 reload가 필요했다. grep_before.json과 후 결과가 최소 증거다. 원래 전체 주 과제와 새 요율 변형도 수정된 환경에서 다시 실행·검증했다. 이 결함은 발견 경로의 문제이며 정산 수치 오류의 원인은 아니다. 커밋 관문에서 패키지 전체 지문을 쓰는 path_audited 4곳이 갱신을 요구했다. HEAD 대비 실행 코드 차이가 fs_grep의 계수 옵션·독스트링 두 줄뿐임을 재감사했다. read/fill/write/script의 회원 기기 경로·변환기·권한 선언은 그대로이며, 이들의 패키지 감사 지문만 31fa6d8c436f1f48로 갱신하고 정본 빌더로 파생물을 재생성했다.
 
@@ -84,3 +84,39 @@
 개발 파일 변경을 감지한 재기동 제어자가 DRAINING 상태가 되어 HTTP 새 실행을 503/executed:false로 거절했다. 기존 외부 턴이 끝나기를 기다리는 상태였으며 강제 재기동하지 않았다. 수정본은 실행 중인 주체의 MCP로 완료했다. 이 MCP 스키마에는 origin이 없어 훈련 출처를 지정하지 못했으며, 호스트 에피소드/실행 경험에 섞일 가능성을 한계로 남긴다. 최초 HTTP 훈련과 시스템 AI 비교에는 training 표식이 있다.
 
 손대지 않은 것: MCP origin 확장·재기동 정책·시스템 AI 문법 학습은 이번 grep 원인 사슬 밖이다. 추가 빈 수집원 견고성, 전수 회귀, 증류 품질, 전체 비용 개선은 미검증이다. 기존 판정을 뒤집는 언어 개정이나 파괴적 변경은 하지 않았다.
+
+
+## 후속 수리 — 실행 경계·기본 회귀·MCP 출처 (2026-09-30)
+
+최초 관측·비용·판정은 위 기록 그대로 보존한다. 다음 세 건은 그 실행 뒤의 개선이며,
+오염된 기준선을 깨끗한 훈련 성능으로 다시 분류하지 않는다.
+
+- **L11-4, 훈련과 수리의 중첩:** 긴문장 가이드와 실행자·계획자 수리 프롬프트에 모든
+  주 과제·변형·독립 실행의 작업 ID·티켓 종료 확인 및 증거 회수 → 라이브 수정·reload·apply
+  → 별도 재검증 순서를 명시했다. timeout을 종료로 취급하지 않는다. 패키지 파일도 대상이다.
+  이는 에이전트 작업 절차의 보완이며 런타임의 전역 편집 잠금은 아니다. 다음 독립 훈련에서
+  실제 준수·비용 개선을 관측해야 한다.
+- **L11-5, 기본 회귀 누락:** 당시 회차 폴더에만 있던 grep 시험 13개를
+  [기본 수집 경로](../../../../backend/test_grep_counts.py)로 옮겼다. 시험 입력·assertion은
+  보존하고 저장소 경로 계산·직접 실행 진입점만 조정했다. 기존 영수증의 옛 실행 경로는 역사다.
+- **L11-6, MCP 훈련 출처:** `execute_ibl(..., origin="training")`을 공개 스키마와
+  HTTP 운반 경계에 연결했다. 생략 시 부모 HTTP 헤더/stdio 환경의 출처를 유지한다.
+  호출 한정 표식으로 다음 호출·동시 일반 호출을 바꾸지 않는다. 명시값은 training만 허용하며,
+  부모 작업·에피소드 연결은 보존한다. recover는 기존 실행의 출처를 바꾸지 않는다.
+  [회귀시험](../../../../backend/test_mcp_training_origin.py)은 공개 스키마, 부적합값 거절,
+  두 전송 경로 상속, 동시 호출의 실제 HTTP 문맥·건강 원장·궤적 출처, 회수 경계를 확인한다.
+
+과거 에피소드의 출처를 소급 변경하지 않았고 훈련 전체를 새로 실행하지 않았다.
+
+라이브 MCP의 공개 스키마에 origin이 로드된 것을 확인하고 `return 1`을 training으로 실행했다.
+실행 영수증 `b7b082b699bd4494b9ee9596ec8ea4b1`은 completed/value=1이며,
+대응 궤적 `run_ec3faa974e21441da5569cf45d06b027`의 ibl.started/checkpoint/finished가
+모두 source=training이었다. 시작 사건의 코드 지문도 해당 프로그램과 일치했다.
+이는 MCP 운반·출처 기록의 검증이며 독립 시스템 AI 훈련 재실행은 아니다.
+
+검증: 변경·소비 경계 93건 통과. 기본 종합 회귀(`backend/ -m "not system"`)는
+8,070 passed · 1 skipped · 95 deselected, 641.41초였다. 관련 시스템 묶음
+`test_python_libraries.py`와 궤적 출처 단언을 보강한 `test_mcp_training_origin.py`는
+60건 모두 통과(43.08초). 시험 수에는 범위 중복이 있으며 별도 시스템 95개 전체를
+실행한 것은 아니다. grep 시험 함수의 AST를 비교해 입력·판정 무변경도 확인했다.
+어휘/파생물 정합, Android 번들 재생성, 백엔드 층 가드, diff 공백 검사도 통과했다.

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'backend'))
 import boot_paths  # noqa: E402,F401
 
@@ -50,3 +50,7 @@ def test_real_selection_and_source_truncation_remain(tmp_path):
     clipped = json.loads(GREP.run({'path': str(path), 'pattern': 'needle'}, str(tmp_path)))
     assert clipped['total'] == 1
     assert clipped['truncations'] == [{'scope': 'source', 'reason': '일치 줄 본문 절단'}]
+
+
+if __name__ == "__main__":
+    raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

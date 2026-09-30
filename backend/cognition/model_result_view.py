@@ -183,7 +183,7 @@ def _is_reference(value):
     return isinstance(value, dict) and isinstance(value.get("$ref"), str) and set(value) <= {"$ref", "path"}
 
 
-def _resolve_reference(name, value, notes, at):
+def _resolve_reference(name, value, notes, at, store=None):
     """참조 하나를 업무 값으로 — 최상위·목록·레코드 안이 모두 이 한 규칙을 쓴다."""
     ref_id, path = value["$ref"], value.get("path")
     where = f"inputs.{name}" + "".join(f"[{p!r}]" for p in at)
@@ -191,7 +191,7 @@ def _resolve_reference(name, value, notes, at):
                              or any(type(p) not in (str, int) for p in path)):
         raise ValueError(f"{where}: path는 객체 키·0 이상 배열 인덱스의 배열입니다(최대 {MAX_PATH_DEPTH}단계)")
     try:
-        page = evidence_store().read_evidence(ref_id, 0, None)
+        page = (store or evidence_store()).read_evidence(ref_id, 0, None)
     except (ValueError, OSError, TypeError) as exc:
         raise ValueError(f"{where}: 저장된 결과 {ref_id!r}를 읽을 수 없습니다: {exc}") from exc
     stored = _decode_json(page["text"])
@@ -231,18 +231,18 @@ def _resolve_reference(name, value, notes, at):
     return resolved
 
 
-def _resolve_nested(name, value, notes, at):
+def _resolve_nested(name, value, notes, at, store=None):
     """목록·레코드 안의 참조도 같은 규칙으로 푼다(69회차 B69-2). 참조 모양($ref·path만)이 아닌 $ref 객체는 데이터다."""
     if _is_reference(value):
-        return _resolve_reference(name, value, notes, at)
+        return _resolve_reference(name, value, notes, at, store)
     if isinstance(value, dict):
-        return {k: _resolve_nested(name, v, notes, at + [k]) for k, v in value.items()}
+        return {k: _resolve_nested(name, v, notes, at + [k], store) for k, v in value.items()}
     if isinstance(value, list):
-        return [_resolve_nested(name, v, notes, at + [i]) for i, v in enumerate(value)]
+        return [_resolve_nested(name, v, notes, at + [i], store) for i, v in enumerate(value)]
     return value
 
 
-def resolve_input_refs(inputs):
+def resolve_input_refs(inputs, *, store=None):
     """inputs 값 자리의 참조를 저장 결과의 실제 값으로 푼다 — 앞 실행의 결과를 *복사 없이* 다음 프로그램에 넘기는 통로.
 
     형태: {"$ref": result_ref.id, "path": [키·인덱스…]}. 이름의 값 자리뿐 아니라 그 안의 목록·레코드 원소에도 쓴다.
@@ -264,7 +264,7 @@ def resolve_input_refs(inputs):
         if isinstance(value, dict) and "$ref" in value:
             if set(value) - {"$ref", "path"}:
                 raise ValueError(f"inputs.{name}: $ref 참조에는 path만 함께 씁니다")
-            out[name] = _resolve_reference(name, value, notes, [])
+            out[name] = _resolve_reference(name, value, notes, [], store)
         elif is_ref(value):
             resolved, err = resolve_ref(value)
             if err:
@@ -274,7 +274,7 @@ def resolve_input_refs(inputs):
                           "evidence": input_ref_evidence(resolved),
                           "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
         else:
-            out[name] = _resolve_nested(name, value, notes, [])
+            out[name] = _resolve_nested(name, value, notes, [], store)
     if notes:
         try:
             from episode_logger import record_trajectory_event

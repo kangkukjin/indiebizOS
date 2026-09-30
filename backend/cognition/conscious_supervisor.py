@@ -381,7 +381,9 @@ class Supervisor:
                                         is_error=error, observation="missing_read" if observation else "",
                                         internal_tool_failures=evidence_summary.get('tool_failures', 0),
                                         source_failures=evidence_summary.get('source_failures', 0),
-                                        check_rejected=detail.get('mode') == 'check' and detail.get('ok') is False,
+                                        check_rejected=detail.get('ok') is False and (
+                                            detail.get('mode') == 'check' or
+                                            (detail.get('executed') is False and detail.get('status') == 'invalid')),
                                         elapsed_s=round(time.monotonic() - call.get("started", time.monotonic()), 3)))
             payload = call.get("_payload") or {}
             if (not error and str(call.get("name", "")).endswith("execute_ibl") and not payload.get("code")

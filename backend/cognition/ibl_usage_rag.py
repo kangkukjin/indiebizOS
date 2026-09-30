@@ -1088,7 +1088,7 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
         if not isinstance(inputs, dict) or inputs.get("check"):
             continue  # 검사 통과는 실행 성공이 아니다 — 접지·주행 기록에서도 제외
         from ibl_v2_experience import closed_call
-        tc = closed_call(tc)
+        tc = closed_call(tc, turn_cost=turn_cost)
         if tc is None:
             continue
         inputs = tc.get("input") or {}

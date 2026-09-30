@@ -71,7 +71,7 @@ def url_only_head(source):
     return None
 
 
-def closed_call(tc):
+def closed_call(tc, *, turn_cost=None):
     request = tc.get("input") or {}
     source = request.get("code", "")
     if source_edition(source, request.get("edition")) != 2:
@@ -88,7 +88,7 @@ def closed_call(tc):
         return None
     if request.get("inputs"):
         try:
-            return abstract_call(tc, request, result)
+            return abstract_call(tc, request, result, turn_cost=turn_cost)
         except (ValueError, Fault) as exc:
             tc["reuse_excluded"] = str(exc)
             from episode_logger import record_trajectory_event
@@ -123,7 +123,27 @@ def structure(value):
     return value
 
 
-def abstract_call(tc, request, result):
+def _learning_store(turn_cost):
+    """Restarted distillation reads only the recorded turn's existing evidence directory."""
+    from pathlib import Path
+    from runtime_utils import get_base_path
+    from supervision_store import TurnStore, trace_directory
+    from trace_read import ReadFault
+    path = (turn_cost or {}).get('events_path')
+    if not path:
+        return None
+    root = get_base_path() / 'data' / 'spill' / 'supervision'
+    path = Path(path)
+    try:
+        directory = trace_directory(root, path.parent.name)
+        if path != directory / 'events.jsonl' or not directory.is_dir():
+            raise ValueError('원 실행 증거 저장소 경로를 확인할 수 없습니다.')
+    except ReadFault as exc:
+        raise ValueError('원 실행 증거 저장소 경로를 확인할 수 없습니다.') from exc
+    return TurnStore(directory)
+
+
+def abstract_call(tc, request, result, *, turn_cost=None):
     from ibl_v2_parser import parse
     from ibl_v2_compile import compile_program
     from ibl_v2_adapters import load_registry
@@ -133,6 +153,12 @@ def abstract_call(tc, request, result):
     inputs = request['inputs']
     if not isinstance(inputs, dict):
         raise ValueError('inputs must be a record')
+    from model_result_view import resolve_input_refs
+    store = _learning_store(turn_cost) if result.get('inputs_resolved') else None
+    inputs, notes = resolve_input_refs(inputs, store=store)
+    if notes or result.get('inputs_resolved'):
+        if not result.get('plan_hash') or digest(notes) != digest(result.get('inputs_resolved')):
+            raise ValueError('원 실행 입력 참조의 근거가 없거나 변경되었습니다.')
     used = set()
     def visit(value):
         if isinstance(value, Node):

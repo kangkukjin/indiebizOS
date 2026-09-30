@@ -1,5 +1,6 @@
 """가치 있는 기억만 선별하는 0/1회 통합 증류. 빈 결과가 정상이다."""
 import json
+import re
 import time
 import uuid
 from datetime import datetime
@@ -203,6 +204,10 @@ def fit_input(prepared):
 def parse_decision(raw):
     if not isinstance(raw, str) or len(raw) > MAX_OUTPUT_CHARS:
         raise PermanentDistillError('output_missing_or_exceeds_budget')
+    # One whole JSON fence is presentation, not a second model repair attempt.
+    fenced = re.fullmatch(r'\s*```(?:json)?[ \t]*\r?\n(.*?)\r?\n```\s*', raw, re.DOTALL)
+    if fenced:
+        raw = fenced.group(1)
     try:
         decision = json.loads(raw)
     except (ValueError, TypeError) as exc:

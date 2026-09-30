@@ -173,6 +173,10 @@ def compact_check(plan):
     from result_read_contract import DEFAULT_LIMIT
 
     report = plan.report()
+    report['execution_note'] = '검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.'
+    report['next_action'] = ('진단 위치를 수정한 뒤 다시 검사하세요.' if plan.issues else
+                             '실행하려면 같은 code·inputs·budget으로 check를 제거하거나 false로 호출하세요. '
+                             '실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.')
     if not plan.guards:
         return report
     useful = [g for g in plan.guards

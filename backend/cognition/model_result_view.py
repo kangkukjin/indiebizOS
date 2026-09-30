@@ -47,6 +47,7 @@ def read_result(request):
                                "원래 값이 필요한 계산은 원천을 읽는 같은 프로그램 안에서 하세요.")
     # 입력 연결은 참조 해석기와 같은 규칙으로 판정한다 — 판본 2 업무 값은 wire 를 읽는다.
     input_blocked = _masked_selection(all_masked, _value_source(stored, path or []))
+    partial_problem = _partial_input_problem(stored, path or [])
     page["next_offset"] = offset + len(page["text"]) if offset + len(page["text"]) < page["chars"] else None
     page["next_read"] = ({"id": request.get("id"), "offset": page["next_offset"],
                           "limit": limit, **({"path": path} if path is not None else {})}
@@ -67,6 +68,8 @@ def read_result(request):
     # 읽은 페이지를 재작성하지 않고 선택한 전체 값을 다음 프로그램에 연결한다.
     if input_blocked:
         page["input_unavailable"] = _MASKED_INPUT
+    elif partial_problem:
+        page["input_unavailable"] = partial_problem
     else:
         page["input_args"] = {"입력": {"$ref": request.get("id"), "path": path if path is not None else []}}
     from episode_logger import record_trajectory_event
@@ -111,20 +114,52 @@ def _wire(stored, key):
     return wire if isinstance(wire, dict) and "data" in wire else None
 
 
+def _partial_source(stored, selection):
+    """Walk only runtime-owned diagnostic edges, never similarly named user data."""
+    if not isinstance(stored, dict) or stored.get("edition") != 2:
+        return None
+    node, prefix = stored.get("diagnostic"), ["diagnostic"]
+    while isinstance(node, dict):
+        partial_path = prefix + ["partial"]
+        if selection[:len(partial_path)] == partial_path:
+            owner = stored if len(prefix) == 1 else node
+            wire_path = ["partial_wire"] if len(prefix) == 1 else prefix + ["partial_wire"]
+            return owner, wire_path, selection[len(partial_path):]
+        edge = selection[len(prefix):len(prefix) + 3]
+        if selection[:len(prefix)] != prefix or len(edge) != 3 or edge[:2] != ["details", "errors"]:
+            break
+        details = node.get("details")
+        errors = details.get("errors") if isinstance(details, dict) else None
+        if not isinstance(errors, dict) or not isinstance(edge[2], str) or edge[2] not in errors:
+            break
+        node, prefix = errors[edge[2]], prefix + edge
+    return None
+
+
+def _partial_input_problem(stored, selection):
+    partial = _partial_source(stored, selection)
+    if partial:
+        owner, wire_path, _ = partial
+        if owner.get("partial_wire_error"):
+            return "부분 결과의 손실 없는 값 전송이 지원되지 않습니다. 원 실행의 진단과 프로토콜을 확인하세요."
+        if len(wire_path) > 1 and not _wire(owner, "partial_wire"):
+            return "이 실패 가지에는 손실 없는 부분 값이 없습니다. 원문 읽기는 가능하며 표시값을 실제 값으로 대체하지 마세요."
+    return None
+
+
 def _value_source(stored, selection):
     """참조가 실제로 읽는 저장본 자리. 판본 2의 업무 값·부분 결과는 손실 없는 wire 위를 걷는다."""
     if isinstance(stored, dict) and stored.get("edition") == 2:
         if selection[:1] == ["value"] and _wire(stored, "value_wire"):
             return ["value_wire"]
-        if selection[:2] == ["diagnostic", "partial"] and _wire(stored, "partial_wire"):
-            return ["partial_wire"]
+        partial = _partial_source(stored, selection)
+        if partial and _wire(partial[0], "partial_wire"):
+            return partial[1]
     return list(selection)
 
 
 def _masked_selection(masked, source):
     """선택한 값이 저장 시 가린 자리와 겹치는가. wire 안 위치는 값 경로로 대응하지 않으므로 한 곳이라도 가려지면 전체."""
-    if source[:1] in (["value_wire"], ["partial_wire"]):
-        return any(not p or p[:1] == source[:1] for p in masked)
     return any(_overlaps(p, source) for p in masked)
 
 
@@ -175,16 +210,18 @@ def _resolve_reference(name, value, notes, at):
     else:
         selection = list(path)
     source = _value_source(stored, selection)
+    partial = _partial_source(stored, selection)
     if _masked_selection(page.get("masked_paths", []), source):
         raise ValueError(f"{where}: {_MASKED_INPUT}")
+    partial_problem = _partial_input_problem(stored, selection)
+    if partial_problem:
+        raise ValueError(f"{where}: {partial_problem}")
     if source == ["value_wire"]:
         from ibl_v2_ir import unpack
         resolved = _walk_typed(unpack(stored["value_wire"]["data"]), selection[1:], selection)
-    elif source == ["partial_wire"]:
+    elif partial and _wire(partial[0], "partial_wire"):
         from ibl_v2_ir import unpack
-        resolved = _walk_typed(unpack(stored["partial_wire"]["data"]), selection[2:], selection)
-    elif v2 and selection[:2] == ["diagnostic", "partial"] and stored.get("partial_wire_error"):
-        raise ValueError("부분 결과의 손실 없는 값 전송이 지원되지 않습니다. 원 실행의 진단과 프로토콜을 확인하세요.")
+        resolved = _walk_typed(unpack(partial[0]["partial_wire"]["data"]), partial[2], selection)
     else:
         resolved = _walk(stored, selection)
     notes.append({"name": name, **({"at": at} if at else {}), "id": ref_id,
@@ -290,6 +327,64 @@ def _selection_chars(item, *, typed=False):
     return len(item) if isinstance(item, str) else len(json.dumps(item, ensure_ascii=False, indent=2, default=str))
 
 
+def _failed_partial_references(ref, result):
+    """Bounded references to partial data inside failed parallel branches.
+
+    These are not successful branches. Keep their failure and original envelope
+    reachable even when the useful row list is selected for the default read.
+    """
+    pending = [(result.get("diagnostic"), ["diagnostic"], [])]
+    reads, found, visited, limited = [], 0, 0, False
+    while pending and visited < 64:
+        fault, prefix, branches = pending.pop(0)
+        visited += 1
+        if not isinstance(fault, dict):
+            continue
+        details = fault.get("details")
+        errors = details.get("errors") if isinstance(details, dict) else None
+        if isinstance(errors, dict):
+            for index, child in errors.items():
+                if not isinstance(index, str) or not index.isascii() or not index.isdecimal():
+                    continue
+                if len(index) > 10 or str(int(index)) != index:
+                    continue
+                child_path = prefix + ["details", "errors", index]
+                if len(child_path) + 2 > MAX_PATH_DEPTH or visited + len(pending) >= 64:
+                    limited = True
+                    continue
+                pending.append((child, child_path, branches + [int(index)]))
+        # Root partial success mappings already have partial_reads. This list
+        # specifically exposes data hidden in the failed branches' diagnostics.
+        if not branches or fault.get("has_partial") is not True:
+            continue
+        found += 1
+        if len(reads) == 6:
+            continue
+        path = prefix + ["partial"]
+        value = fault.get("partial")
+        if isinstance(value, dict) and isinstance(value.get("items"), list):
+            path += ["items"]
+        def request(at):
+            return {"id": ref["id"], "path": at, "offset": 0, "limit": DEFAULT_LIMIT}
+        entry = {"branch_path": branches, "source_complete": False,
+                 "code": fault.get("code"), "kind": fault.get("kind"),
+                 "read_args": request(path), "diagnostic_read_args": request(prefix),
+                 "partial_read_args": request(prefix + ["partial"])}
+        problem = _partial_input_problem(result, path)
+        if problem:
+            entry["input_unavailable"] = problem
+        elif _masked_selection(ref.get("masked_paths") or [], _value_source(result, path)):
+            entry["input_unavailable"] = _MASKED_INPUT
+        else:
+            entry["input_args"] = {"입력": {"$ref": ref["id"], "path": path}}
+        reads.append(entry)
+    if not reads and not limited:
+        return {}
+    return {"failed_partial_reads": reads, "failed_partial_reads_omitted": found - len(reads),
+            "failed_partial_scan_incomplete": limited or bool(pending),
+            "failed_partial_hint": "실패 가지에서 회수한 불완전 자료입니다. 오류 행·누락을 확인하고 필요한 부분만 읽거나 가공하세요. 진단 전문은 diagnostic_read_args로 조회합니다."}
+
+
 def _read_reference(ref, result):
     """표시 사본이 아닌 원 봉투에서 조회 가능한 큰 필드를 찾는다(최대 6개)."""
     typed_value = result.get("edition") == 2 and "value" in result
@@ -346,6 +441,7 @@ def _read_reference(ref, result):
         out["input_hint"] = "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
     diagnostic = result.get("diagnostic") or {}
     if result.get("edition") == 2 and isinstance(diagnostic, dict):
+        out.update(_failed_partial_references(ref, result))
         partial = diagnostic.get("partial")
         details = diagnostic.get("details") or {}
         indices = details.get("successful_indices") if isinstance(details, dict) else None
@@ -484,6 +580,12 @@ def project_v2_result(result):
             out["diagnostic"] = {**diagnostic, "partial": shown}
             if preview:
                 out["partial_preview"] = preview
+        if isinstance(diagnostic, dict) and isinstance(diagnostic.get("details"), dict):
+            shown, preview = preview_value(diagnostic["details"], policy["issues_chars"],
+                                          ref["id"], path=["diagnostic", "details"])
+            if preview:
+                out["diagnostic"] = {**out["diagnostic"], "details": shown}
+                out["diagnostic_details_preview"] = preview
     out["result_ref"] = _read_reference(ref, result)
     if 'value' in result:
         out['result_ref']['value_chars'] = len(json.dumps(result['value'], ensure_ascii=False, default=str))

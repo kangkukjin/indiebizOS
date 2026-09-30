@@ -456,7 +456,7 @@ class Runtime(ExpressionEvaluator):
                           kind=first.kind if not first.catchable else "partial",
                           partial=[results[i].value for i in sorted(results)],
                           details={"coverage": states, "successful_indices": sorted(results),
-                                   "errors": {str(i): projection(e.view(self.plan.source)) for i, e in errors.items()}})
+                                   "errors": {str(i): self._fault_view(e) for i, e in errors.items()}})
             error.evidence = [eid]
             raise error
         return [results[i] for i in range(count)]
@@ -705,6 +705,20 @@ class Runtime(ExpressionEvaluator):
         with self.resources:
             return self._run()
 
+    def _partial_transport(self, value):
+        """Nested failures use the same lossless partial protocol as the root."""
+        if value is UNIT:
+            return {}
+        protocol = wire_protocol(value)
+        if protocol in self.value_protocols:
+            return {"partial_wire": {"protocol": protocol, "data": pack(value)}}
+        return {"partial_wire_error": {
+            "code": "VALUE_PROTOCOL_UNSUPPORTED", "required_protocol": protocol,
+            "value_preview": projection(value)}}
+
+    def _fault_view(self, exc):
+        return {**projection(exc.view(self.plan.source)), **self._partial_transport(exc.partial)}
+
     def _run(self):
         if self.plan.issues:
             from ibl_v2_analysis import rejection_message, compact_check
@@ -735,14 +749,7 @@ class Runtime(ExpressionEvaluator):
                    "value_wire": {"protocol": wire_protocol(result.value), "data": wire}}
         except Fault as exc:
             out = {"success": False, "error": str(exc), "diagnostic": projection(exc.view(self.plan.source))}
-            if exc.partial is not UNIT:
-                protocol = wire_protocol(exc.partial)
-                if protocol in self.value_protocols:
-                    out["partial_wire"] = {"protocol": protocol, "data": pack(exc.partial)}
-                else:
-                    out["partial_wire_error"] = {
-                        "code": "VALUE_PROTOCOL_UNSUPPORTED", "required_protocol": protocol,
-                        "value_preview": projection(exc.partial)}
+            out.update(self._partial_transport(exc.partial))
         out.update({"edition": 2, "executed": True, "plan_hash": self.plan.fingerprint,
                     "source_complete": not any(e.get("incomplete") for e in self.trace),
                     "evidence": self.trace, "source_map": self.source_map, "recordings": self.recordings,

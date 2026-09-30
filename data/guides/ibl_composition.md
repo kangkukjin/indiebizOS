@@ -365,8 +365,8 @@ return $목차
 예: `{"code":"return len($입력)","inputs":{"입력":{"$ref":"앞 결과 id"}}}`. 이름은 코드에 맞춰 바꿀 수 있고,
 일부 필드는 `path:["value","rows"]`처럼 원 봉투 경로를 더한다. 여러 결과는 `{"반":[{"$ref":a},{"$ref":b}]}`처럼
 목록·레코드 안에 둔다. `inputs:{"$ref":...}`는 이름이 없어 잘못된 형태다. 실패한 실행은 값이 없어 참조가
-거절된다 — 성공 가지는 `partial_reads[].input_args`로 넘긴다. `input_args` 대신 `input_unavailable`이면
-저장 사본이 비밀 후보를 가린 값이므로 원천을 읽는 같은 프로그램 안에서 계산한다.
+거절된다. 성공 가지는 `partial_reads`, 실패 가지의 불완전 자료는 `failed_partial_reads`를 쓴다.
+각 `read_args`·`input_args`로 조회·재사용한다. `input_unavailable`이면 명시된 제한을 따른다.
 원문 판단이 필요할 때만 `read_result`로 읽는다. 그 `input_args`는 표시 페이지가 아닌 선택 경로의 전체 값이다.
 `read_scope`는 이번 응답의 경로·문자 범위이고 `format:"text"`는 문자열 원문, `"json"`은 구조 값의 JSON이다.
 `complete:true`면 하위까지 전달됐으니 재독하지 않는다. `next_read:null`은 중간 offset에서 읽은 끝 페이지일 수도 있다.

@@ -246,6 +246,14 @@ ForeignRef를 포함한 값은 `ibl-value/2`로 전송한다. 외부 참조는 �
 개별로 보존한다. 이는 값별·행별 실행 이력이 아니라 보수적 근거 연결이며 `evidence()`도 같은 DAG를 읽는다.
 모델 표면은 요약과 result_ref를 받고, 앱/직접 HTTP는 전체 결과를 받는다. 전체 증거와 값은 기존 read_result로 회수한다.
 `result_ref.value_chars`는 업무 값의 JSON 문자 수로, 증거를 포함한 `chars`와 구분한다.
+병렬 실패의 성공 가지는 `partial_reads`, 실패 가지 안에 남은 자료는 `failed_partial_reads`로
+직접 조회한다. 후자는 원래 가지 경로·불완전 상태·부분 봉투와 진단의 읽기 참조를 함께 제공한다.
+`branch_path`는 바깥부터의 가지 번호다. 기본 `read_args`가 `items`를 선택해도 오류 행은 남는다.
+부분 봉투 전체는 `partial_read_args`, 실패 원인은 `diagnostic_read_args`로 읽는다.
+`failed_partial_reads_omitted`는 생략한 참조 수이며 `failed_partial_scan_incomplete:true`면 탐색도 일부다.
+새 실행은 중첩된 실패에도 `partial_wire`를 보존하며 입력 참조는 그 타입 값을 사용한다.
+과거 중첩 기록에 wire가 없거나 마스킹·프로토콜 제한이 있으면 읽기는 유지하되 입력 재사용은 거절한다.
+큰 `diagnostic.details`는 모델 표시 사본에서만 접고 원본은 `diagnostic_details_preview.read_args`로 보존한다.
 `usage.model`은 현재 실행에서 관측한 모델 요청의 입력·출력·캐시 토큰과 호출별 모델·역할·선택 출처를 담는다.
 캐시·추론은 입력·출력의 부분집합이며 총토큰에 다시 더하지 않는다. 미관측 요청·항목은 미상으로 남기고,
 resume에서 영수증을 복원한 호출은 현재 비용으로 다시 합산하지 않는다. 전체 호출자의 작성·감독 비용은 별도다.

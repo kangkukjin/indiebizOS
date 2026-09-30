@@ -14,7 +14,7 @@ IBL은 도구를 어휘로 사용하는 언어다. 새 프로그램은 이 문�
 
 `[node:action]{이름:값}`으로 호출한다. 액션·op·필드는 추측하지 않고
 `execute_ibl(code="",describe=["node:action"])`으로 이번 작업에 필요한 계약을 조회한다.
-함수 계약은 `describe:["fn:이름"]`으로 조회한다(코드와 함께 주면 그 코드의 지역 정의를 먼저 찾는다). 반환이 List이면 값 자체를 표 연산에 전달하고 `.items`를 붙이지 않는다.
+함수 계약은 `describe:["fn:이름"]`으로 조회한다(코드와 함께 주면 그 코드의 지역 정의를 먼저 찾는다). 반환이 List이면 값 자체를 표 연산에 전달하고 `.items`를 붙이지 않는다. 표 연산·each 의 행 목록 자리는 `items` 목록을 가진 Record 봉투도 그대로 받는다(`$묶음 >> [table:sort]{…}`).
 문자열의 큰따옴표는 바깥을 작은따옴표로 감싼다: `{query:'"정확한 구절" 추가어'}`.
 문자열 안의 줄바꿈은 `\n` 또는 삼중 따옴표로 쓴다. 큰 외부 본문은 `inputs:{본문:"…"}`로 전달해 `$본문`을 사용하며, 기존 본문은 파일·결과 참조로 연결한다.
 도구가 반환한 경로를 그대로 사용한다. 상대경로는 실행 작업 폴더 기준이며 저장소 기준이라고 가정해 `data/` 등을 덧붙이지 않는다.
@@ -48,7 +48,7 @@ IBL은 도구를 어휘로 사용하는 언어다. 새 프로그램은 이 문�
 <!-- GRAMMAR_OPERATORS:END -->
 
 할당은 즉시 실행한다. `$a=A; $b=B; $a & $b`는 A와 B를 병렬 실행하지 않는다.
-독립 실행은 `A & B`, 성공 결과 전달은 `A >> B`로 표현한다. `&`·`>>`·`??`로 시작하는 줄은 앞 식의 계속이다.
+독립 실행은 `A & B`, 성공 결과 전달은 `A >> B`로 표현한다. `&`·`>>`·`??`로 시작하는 줄은 앞 식의 계속이다. `}`로 끝난 제어 블록 뒤에는 같은 줄에 다음 문장을 쓸 수 있다.
 
 ## 작성과 검사
 
@@ -120,7 +120,7 @@ return $결과
 예: `return {result:[fn:계산]{입력:$x}}`. 작성 순서대로 평가하고 중첩 인자 완료 후 바깥 호출을 실행한다.
 자동 병렬·롤백은 없고 실패 시 뒤의 값은 실행하지 않는다. 기존 권한·예산·근거·resume 규칙을 유지한다.
 연산 피연산자·내장 함수 인자·보간·슬라이스에는 호출·`>>` 조합을 그대로 쓴다(원문 순서로 한 번씩 평가): `sum($행 >> [table:each]{return $it.금액})`.
-조건·조건 값(`?:`)·`and`/`or`·람다 본문·기본값은 순수 식만 받는다. 그 안의 호출은 먼저 변수에 받는다.
+조건·조건 값(`?:`)·`and`/`or`·람다 본문·기본값은 순수 식만 받는다. 효과 없는 `[fn:이름]`은 여기서도 부를 수 있고, 도구 호출·효과 있는 함수는 먼저 변수에 받는다. 값을 고르는 분기는 `조건 ? 값1 : 값2`다(값 자리에 `[if:]` 블록을 넣지 않는다).
 객체·목록 안의 직접 제어 블록은 금지하며 앞 문장이나 명시 함수 본문에 둔다.
 `len`, `has`, `get`, `json`, `number`, `text`, `abs`, `round`, `min`, `max`, `sum`,
 `reduce(목록,초깃값,($누적,$행)=>식)`, `is_ok`, `unwrap`, `error_of`, `evidence`가 내장 함수다.
@@ -214,7 +214,7 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 | table:filter | items와 `where:($r)=>Bool` → List<Record> |
 | table:select | items와 columns(열 목록 또는 Record 반환 콜백) → List<Record> |
 | table:compute | items와 `set:($r)=>Record` → 새 필드를 합친 List<Record> |
-| table:sort | items, by(Text), descending(Bool, 선택) → List<Record> |
+| table:sort | items, by(Text 또는 목록 — 다단계), descending(Bool, 선택) → List<Record> |
 | table:take | items, n(0 이상 정수) → List |
 | self:read | path → `{text:Text,blocks:List<Record>,data:Record}`. 확장자로 텍스트/PDF/Office를 해소한다. pages/tables/sheet/max_rows 등은 조회한 계약대로 지정하며 표·시트·이미지·범위 원문은 data에 보존한다. |
 | self:write | path, content(Text; 파이프 자리) → 파일 영수증 Record. 기존 쓰기 보호·outputs 경로 규칙 적용. |
@@ -272,6 +272,7 @@ API를 직접 사용하는 새 프로그램은 `#!ibl edition=2` 헤더를 넣�
 `success`, `source_complete`, `diagnostic`, `evidence`를 함께 본다. 실행 성공은 품질 판정이 아니다.
 `result_ref.read_args`를 `execute_ibl(code="",read_result=...)`로 보내 필요한 값과 원문을 읽는다.
 앞 턴의 result_ref도 같은 방식으로 읽고 `$ref` 입력으로 이어 쓴다(같은 대화의 최근 8턴, 그때 조회한 값). 최신 상태가 필요하면 원천을 다시 조회한다.
+같은 일을 다른 자료로 반복하거나 앞서 쓴 프로그램이 문맥에 없으면, 새로 쓰기 전에 `read_result:{calls:true}`로 앞 턴의 호출 목록을 보고 통과한 프로그램(`input.id`, path `["code"]`)을 읽어 경로·입력만 바꿔 실행한다.
 목록은 `path:["value"]`, 객체의 행은 `path:["value","items"]`처럼 실제 반환 경로를 사용한다.
 다음 페이지는 `next_read` 그대로 요청한다. 결과를 더 보려고 수집·생성·쓰기를 재실행하지 않는다.
 이미지 블록은 호스트 이미지 출력으로 전달하며 base64를 텍스트로 나눠 읽지 않는다.

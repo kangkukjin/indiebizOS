@@ -139,8 +139,10 @@ def analyze(compiler, root, inputs):
             return Facts()
         values = {k: v.data['value'] if v.kind == 'literal' else UNRESOLVED for k, v in fields.items()}
         contract = selected(spec.contract, values)
-        if piped is not None and contract.get('pipe_input'):
-            args[contract['pipe_input']] = piped
+        from ibl_callable_contract import pipe_receiver
+        receiver = pipe_receiver(contract, args)
+        if piped is not None and receiver:
+            args[receiver] = piped
         effects = contract.get('effects', [])
         analysis = spec.contract.get('analysis', {})
         inspect_param = analysis.get('ai_inspect_param')

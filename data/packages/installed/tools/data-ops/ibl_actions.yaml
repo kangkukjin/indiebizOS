@@ -75,7 +75,7 @@ actions:
       version: 1
       params:
         items: List<Record>
-        by: Text
+        by: Text|List<Text>
         descending: Bool
       required:
       - items
@@ -97,7 +97,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, descending 옵션).
-    target_description: 'by(기준 필드 이름, 필수) · descending(내림차순 bool, 기본 false). 숫자는 수치로, ISO 8601 날짜는 시각으로, 아니면 문자열로 비교한다. 예: [{price:2},{price:1}] >> [table:sort]{by:"price",descending:true}. desc 는 descending 의 별칭(두 판본 공통 — 정본은 descending). 판본 1 저장 원문의 by 목록 다단계 정렬도 계속 지원한다.'
+    target_description: 'by(기준 필드 이름, 필수) · descending(내림차순 bool, 기본 false). 숫자는 수치로, ISO 8601 날짜는 시각으로, 아니면 문자열로 비교한다. 예: [{price:2},{price:1}] >> [table:sort]{by:"price",descending:true}. desc 는 descending 의 별칭(두 판본 공통 — 정본은 descending). by 에 목록을 주면 다단계 정렬이다(앞의 키가 먼저, 예 by:["학번","일자"]). 행 목록 자리에는 {items:[…]} 봉투도 그대로 넘길 수 있다.'
     group: transform
     router: handler
     params:
@@ -550,6 +550,7 @@ actions:
       exclusive: &pair_exclusive [[inputs, left], [inputs, right]]
       aliases: &pair_aliases {table1: left, table2: right, a: left, b: right}
       pipe_input: inputs
+      pipe_input_with: {right: left}   # right 를 명시하면 파이프 값이 left — $왼쪽 >> [table:join]{right:$오른쪽,on:…}
       result: Record
       effects: [pure]
       nondeterministic: false

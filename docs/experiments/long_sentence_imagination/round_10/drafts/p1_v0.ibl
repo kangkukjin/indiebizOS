@@ -1,0 +1,57 @@
+#!ibl edition=2
+# 10회차 P1 v0 수집·정규화·메모 유형화 — inputs: 폴더. 요청 budget {steps:600000,rows:60000}
+# 반환: 학생, 출결(학번·일자·상태), 성적, 수납(금액수), 메모(유형), 기준, 파일상태, 오류행
+
+[def:파일읽기]($경로,$이름) {
+  [try] { $문 = [self:read]{path:$경로}
+    return {파일:$이름,상태:"읽음",자료:$문.data,오류:null} }
+  [catch] { return {파일:$이름,상태:"실패",자료:null,오류:$error.message} }
+}
+# CSV 한 파일: 필요한 열이 다 있는지 확인하고 행을 돌려준다. 열이 다르면 읽지 못한 것으로 보고한다.
+[def:표읽기]($경로,$이름,$열들) {
+  $f = [fn:파일읽기]{경로:$경로,이름:$이름}
+  [if:$f.상태 != "읽음"] { return {파일:$이름,상태:"실패",행:[],오류:$f.오류} }
+  $행 = $f.자료.items
+  [if:len($행) == 0] { return {파일:$이름,상태:"읽음",행:[],오류:null} }
+  $없는열 = $열들 >> [table:each]{mode:"flat_map"} { return has($행[0],$it) ? [] : [$it] }
+  [if:len($없는열) > 0] { return {파일:$이름,상태:"형식 다름",행:[],오류:"없는 열: " + join(", ",$없는열) + " / 있는 열: " + join(", ",keys($행[0]))} }
+  return {파일:$이름,상태:"읽음",행:$행,오류:null}
+}
+
+$학생f = [fn:표읽기]{경로:$폴더 + "/students.csv",이름:"students.csv",열들:["학번","이름","반","수강료","상태"]}
+$학생 = $학생f.행 >> [table:compute]{set:($r)=>{수강료수:number($r.수강료)}}
+
+$출결파일 = [self:list]{path:$폴더 + "/attendance",pattern:"week*.csv"} >> [table:sort]{by:"name"}
+$출결읽기 = $출결파일 >> [table:each]{parallel:4} { return [fn:표읽기]{경로:$it.path,이름:$it.name,열들:["학번","일자","상태"]} }
+$출결 = $출결읽기 >> [table:each]{mode:"flat_map"} { return $it.행 }
+
+$성적f = [fn:파일읽기]{경로:$폴더 + "/scores.json",이름:"scores.json"}
+$성적 = $성적f.상태 == "읽음" ? $성적f.자료.scores : []
+
+$수납f = [fn:표읽기]{경로:$폴더 + "/payments.csv",이름:"payments.csv",열들:["학번","납부일","금액"]}
+$수납오류 = []
+$수납 = []
+[try] { $수납 = $수납f.행 >> [table:compute]{set:($r)=>{금액수:number($r.금액)}} }
+[catch] {
+  $느 = $수납f.행 >> [table:each] {
+    [try] { return {**$it,금액수:number($it.금액),금액오류:null} }
+    [catch] { return {**$it,금액수:null,금액오류:$error.message} }
+  }
+  $수납 = $느
+  $수납오류 = $느 >> [table:filter]{where:($r)=>$r.금액오류 != null}
+}
+
+$메모f = [fn:표읽기]{경로:$폴더 + "/notes.csv",이름:"notes.csv",열들:["학번","일자","메모"]}
+$문장 = ($메모f.행 >> [table:dedup]{by:"메모"}).items >> [table:select]{columns:["메모"]}
+$판정 = $문장 >> [table:judge]{instruction:"학원 학부모 상담 메모를 가장 알맞은 유형 하나로 나눈다.",type:"choice",criteria:{"조치 필요":"불만·문제 제기·처리 요청처럼 학원이 확인하고 조치해야 하는 내용","문의":"일정·범위·비용 등 정보를 묻는 질문","감사·칭찬":"고마움이나 긍정적 평가","단순 전달":"결석·연락처 변경 같은 사실 통보"}}
+$유형표 = $판정.items >> [table:each] { return {메모:$it.메모,유형:$it.judgment_result_value == null ? "확인 필요" : $it.judgment_result_value,확신:$it.judgment_result_confidence} }
+$메모 = [table:join]{left:$메모f.행,right:$유형표,on:"메모",how:"left",defaults:{유형:"확인 필요",확신:null}}
+
+$기준f = [fn:파일읽기]{경로:$폴더 + "/policy.json",이름:"policy.json"}
+$출결상태 = $출결읽기 >> [table:each] { return {파일:$it.파일,상태:$it.상태,행수:len($it.행),오류:$it.오류} }
+$파일상태 = [{파일:"students.csv",상태:$학생f.상태,행수:len($학생),오류:$학생f.오류}] + $출결상태 + [
+  {파일:"scores.json",상태:$성적f.상태,행수:len($성적),오류:$성적f.오류},
+  {파일:"payments.csv",상태:$수납f.상태,행수:len($수납),오류:$수납f.오류},
+  {파일:"notes.csv",상태:$메모f.상태,행수:len($메모f.행),오류:$메모f.오류},
+  {파일:"policy.json",상태:$기준f.상태,행수:0,오류:$기준f.오류}]
+return {학생:$학생,출결:$출결,성적:$성적,수납:$수납,메모:$메모.items,유형표:$유형표,기준:$기준f.자료,파일상태:$파일상태,오류행:$수납오류}

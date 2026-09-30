@@ -51,7 +51,7 @@ HINTS = {
     "PARALLEL_WRITE_CONFLICT": "병렬 가지·each 병렬 반복이 같은 자원에 쓰면 최종 내용이 실행마다 달라집니다. 순차로 쓰거나(;·기본 each) 가지마다 다른 파일에 쓴 뒤 합치세요.",
     "PARAMETERS": "람다 인자 이름은 서로 다르고 예약 이름($it·$i·$error)이 아니어야 합니다.",
     "PIPE_TARGET": "파이프 오른쪽에는 앞 값을 첫 입력으로 받는 호출 하나를 둡니다. 식으로 가공하려면 앞 값을 $이름에 받은 뒤 쓰세요.",
-    "PURE_EXPRESSION": "조건·조건 값(?:)·and/or·람다 본문·기본값에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.",
+    "PURE_EXPRESSION": "조건·조건 값(?:)·and/or·람다 본문·기본값에는 효과 있는 호출을 넣지 않습니다(효과 없는 [fn:이름]은 가능). 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.",
     "READONLY": "$it·$i·$error와, each 본문에서 본 바깥 변수는 다시 대입하지 않습니다. 새 이름에 받거나 결과를 each의 반환으로 모으세요.",
     "RECURSION": "재귀 대신 반복을 쓰세요: 횟수는 [repeat:n]{...}, 누적은 reduce(목록,초기값,($acc,$x)=>...), 원소별 처리는 [table:each]입니다.",
     "RESERVED": "함수 인자 이름에 $it·$i·$error를 쓰지 마세요. 다른 이름으로 받으세요.",
@@ -271,7 +271,8 @@ def access_type(compiler, node, base, key, key_type=None):
         if base.kind == 'Record' and 'items' in dict(base.fields):
             hint = '반환값은 items 행 목록을 가진 Record입니다. 값.items[0]처럼 목록 필드를 먼저 선택하세요.'
         elif base.kind == 'List':
-            hint = '반환값은 List입니다. .items/.value를 붙이지 말고 값[0]처럼 직접 인덱싱하세요.'
+            hint = ('반환값은 List입니다. .items/.value를 붙이지 말고 값[0]처럼 직접 인덱싱하세요. '
+                    '표 연산·each 에는 목록이든 {items:[…]} 봉투든 그대로 넘기면 됩니다.')
         compiler.issue(node, 'FIELD_TYPE', f'{base}에 해당 필드 접근을 할 수 없습니다.', hint=hint)
     return UNKNOWN
 

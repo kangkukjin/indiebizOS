@@ -76,10 +76,11 @@ def test_one_diagnostic_per_impure_expression(registry):
 
 
 def test_function_diagnostic_and_executable_predicate_hint(registry):
+    # 10회차 개정: 효과 없는 [fn:이름]은 람다에서도 부를 수 있다 — 원래 재현은 이제 실행된다.
     code = (FIXTURE / 'repro/pure_fn_in_lambda.ibl').read_text()
-    issues = compile_program(code, registry).issues
-    assert len(issues) == 1 and '순수 효과여도' in issues[0]['message']
-    assert '람다를 반환' in issues[0]['hint']
+    plan = compile_program(code, registry)
+    assert not plan.issues, plan.issues
+    assert Runtime(plan).run()['success']
     code = ('[def:큰가]($기준){return ($r)=>$r.n > $기준};'
             '$술어=[fn:큰가]{기준:2};'
             'return [{n:1},{n:5}] >> [table:filter]{where:$술어}')

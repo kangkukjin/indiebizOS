@@ -112,11 +112,18 @@ def table_operation(operation, runtime, args):
         # The shared ordering primitive tolerates missing cells. The adapter
         # must distinguish those from an entirely absent ranking criterion;
         # otherwise sort -> take certifies the original order as a ranking.
-        if rows and not any(args["by"] in row for row in rows):
-            available = list(dict.fromkeys(key for row in rows[:20] for key in row))[:12]
-            raise Fault("MISSING_FIELD", f"sort의 기준 필드가 입력 행에 없습니다: {args['by']}. "
-                        f"입력 필드 예: {available}")
-        return sort_records(rows, args["by"], descending=args.get("descending", False))
+        keys = [args["by"]] if isinstance(args["by"], str) else args["by"]
+        if not isinstance(keys, list) or not keys or any(not isinstance(k, str) or not k for k in keys):
+            raise Fault("ARGUMENT_CONTRACT", "sort.by는 필드 이름 또는 필드 이름 목록입니다(앞의 키가 먼저).")
+        for key in keys:
+            if rows and not any(key in row for row in rows):
+                available = list(dict.fromkeys(k for row in rows[:20] for k in row))[:12]
+                raise Fault("MISSING_FIELD", f"sort의 기준 필드가 입력 행에 없습니다: {key}. "
+                            f"입력 필드 예: {available}")
+        # 안정 정렬을 뒤 키부터 쌓는다 — 앞 키가 같은 행끼리 다음 키 순서가 남는다.
+        for key in reversed(keys):
+            rows = sort_records(rows, key, descending=args.get("descending", False))
+        return rows
     if operation == "compute":
         return [{**row, **at_row(args["set"], row, index, "Record")}
                 for index, row in enumerate(rows)]

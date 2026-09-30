@@ -13,7 +13,7 @@ from ibl_v2_narrow import narrow
 from ibl_v2_expr import BUILTINS
 from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
                              assigned_names, location, access_type, HINTS)
-from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
+from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL, rows_type,
                           infer, join, declared, compatible, alternatives,
                           ordered_list, concat_lists, static_text)
 
@@ -83,6 +83,7 @@ class Compiler:
         self.default_scope = frozenset()  # 기본값 식을 검사하는 동안의 인자 이름들
         self.unit_warned = set()
         self.impure_spans = []
+        self.pure_calls, self.call_effects = [], {}
 
     def issue(self, node, code, message, **details):
         item = {"code": code, "message": message, "source_span": span(self.source, node),
@@ -113,19 +114,23 @@ class Compiler:
             return
         if any(start <= node.start and node.end <= end for start, end in self.impure_spans):
             return
+        if node.kind == "call" and node.data.get("node") == "fn" and node.data.get("body") is None:
+            # 순수 자리의 기준은 호출 문법이 아니라 효과다. 효과 없는 함수는 식과 같다 — 효과는 방문 뒤에 확인한다.
+            if all(node is not seen for seen in self.pure_calls):
+                self.pure_calls.append(node)
+            self.check_children(node.data.get("params"), self.pure)
+            return
         if node.kind not in PURE_KINDS:
             self.impure_spans.append((node.start, node.end))
             hint = HINTS["PURE_EXPRESSION"]
             message = "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요."
-            if node.kind == "pipe":
+            if node.kind in ("if", "case"):
+                message = "이 자리에는 순수 식만 쓸 수 있습니다. 제어 블록 대신 조건 값을 쓰세요."
+                hint = "값을 고르는 분기는 `조건 ? 값1 : 값2`입니다. 예: ($a,$r)=>$r.n > $a ? $r.n : $a"
+            elif node.kind == "pipe":
                 hint = ("파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 "
                         "현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 "
                         "reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.")
-            elif node.kind == "call" and node.data.get("node") == "fn":
-                message = "지역·저장 함수의 [fn:이름] 호출은 순수 효과여도 순수 식 자리에 넣을 수 없습니다."
-                hint = ("행마다 함수가 필요하면 table:each 본문에서 호출하세요. 술어를 재사용하려면 "
-                        "함수가 람다를 반환하게 하고 먼저 $술어=[fn:함수]{...}로 받은 뒤 "
-                        "where:$술어 또는 ($행)=>$술어($행)를 쓰세요.")
             self.issue(node, "PURE_EXPRESSION", message, hint=hint)
             return
         for value in node.data.values():
@@ -143,9 +148,12 @@ class Compiler:
         if node.kind in ("call", "lambda"):
             return
         if node.kind not in PURE_KINDS | {"pipe", "parallel", "fallback"}:
+            hint = ("값을 고르는 분기는 조건 값 `조건 ? 값1 : 값2`로 씁니다(가지가 여럿이면 사슬로). "
+                    "문장이 필요한 분기만 앞 문장의 [if:]나 함수 본문에 두세요."
+                    if node.kind in ("if", "case") else HINTS.get("VALUE_EXPRESSION"))
             self.issue(node, "VALUE_EXPRESSION",
                        "값 자리(객체·목록·연산·내장 함수 인자·보간)에는 식·호출·조합을 쓰세요. "
-                       "제어 블록은 앞 문장이나 함수 본문에 두세요.")
+                       "제어 블록은 앞 문장이나 함수 본문에 두세요.", **({"hint": hint} if hint else {}))
             return
         for value in node.data.values():
             self.check_children(value, self.container_value)
@@ -260,6 +268,8 @@ class Compiler:
                       f"함수 {node.data['name']}의 일부 경로가 값을 반환하지 않아 결과에 Unit이 섞입니다: {result}",
                       function=node.data['name'], result=str(result))
         effects, actions = self.effects, self.used_actions
+        if call is not None:
+            self.call_effects.setdefault(call.id, set()).update(effects)
         self.effects, self.used_actions = outer_effects | effects, outer_actions | actions
         self.returns = old_returns
         self.stack.pop()
@@ -391,6 +401,11 @@ class Compiler:
                          if kind == "binary" and op in ("and", "&&", "or", "||") else env)
             values = ([sub(d["value"])] if kind == "unary"
                       else [sub(d["left"]), sub(d["right"], right_env)])
+            never = next((t for t in values if t.kind == "Never"), None)
+            if never is not None:
+                # 도달할 수 없는 값이 낀 연산은 통째로 도달 불가다. 남은 피연산자를 숫자로 검사하면
+                # 이어 붙이기의 문자열 리터럴이 거짓 NUMBER_REQUIRED 가 된다(긴문장 10회차 L10-3).
+                return never
             if op in ("and", "or", "&&", "||", "!", "not"):
                 for t in values:
                     self.need(node, t, BOOL)
@@ -545,7 +560,8 @@ class Compiler:
                     values.setdefault(arg, UNRESOLVED)
             # Argument relationships see the same receiver as runtime.invoke.
             # The value is not known here, but its presence is statically known.
-            receiver = spec.contract.get('pipe_input')
+            from ibl_callable_contract import pipe_receiver
+            receiver = pipe_receiver(spec.contract, values)
             if piped is not None and receiver and receiver not in values:
                 values[receiver] = UNRESOLVED
             self.used_actions.add(key)
@@ -569,12 +585,16 @@ class Compiler:
             allowed = {k: None if k in required else UNIT for k in params}
             if contract.get("open_params"):
                 allowed.update({k: UNIT for k in args if not k.startswith("_")})
-            self.arguments(node, args, allowed, contract.get("pipe_input"), piped,
+            self.arguments(node, args, allowed, pipe_receiver(contract, args), piped,
                            hint=contract.get("unknown_param_hint"))
+            if contract.get("adapter", {}).get("protocol") == "core-table/2" and "items" in args:
+                # 행 목록 자리의 봉투는 그 행 목록이다 — join·groupby·dedup 의 결과를 그대로 이어 받는다.
+                args["items"] = rows_type(args["items"])
             for k, t in args.items():
                 if k in params:
                     self.need(node, t, declared(params[k]))
             self.effects.update(contract["effects"])
+            self.call_effects.setdefault(node.id, set()).update(contract["effects"])
             # 자원 정체 = 타입 검사가 아는 컴파일 시 값(리터럴·변수·기본값·특수화 인자·정적 보간). 같은 값이면 같은 자원이다.
             for realm, param in spec.contract.get("write_resources", {}).items():
                 known = static_text(args.get(param))
@@ -589,6 +609,13 @@ class Compiler:
             from ibl_v2_analysis import row_flow_type
             result_type = row_flow_type(self, node, contract, args, fields, values,
                                         result_type, env, names, readonly)
+            if (result_type.kind == "Record" and "items" not in dict(result_type.fields)
+                    and contract.get("analysis", {}).get("flow", {}).get("emits") == "items"
+                    and "items" in contract.get("adapter", {}).get("input_envelopes", [])):
+                # 행 봉투를 받아 행 봉투를 내는 변환자(선언: input_envelopes + flow.emits)의 결과는 items 행 목록을
+                # 가진다 — 행 목록 자리가 그대로 받는다. 문서·건수처럼 행이 아닌 Record 는 해당하지 않는다.
+                result_type = Type("Record", (*result_type.fields, ("items", Type("List", item=UNKNOWN))),
+                                   open=result_type.open, observed=result_type.observed)
             if result_type.kind == "Unknown":
                 self.need(node, UNKNOWN, UNKNOWN)
             return result_type
@@ -728,7 +755,7 @@ class Compiler:
 
     def each(self, node, args, env, names, piped):
         self.arguments(node, args, {"items": None, "mode": UNIT, "on_error": UNIT, "parallel": UNIT}, "items", piped)
-        items = args.get("items", UNKNOWN)
+        items = rows_type(args.get("items", UNKNOWN))
         self.need(node, items, Type("List", item=UNKNOWN))
         fields = record_fields(node.data["params"])
         options = {}
@@ -812,6 +839,13 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
                     "core": digest({p.name: digest(p.read_text()) for p in sorted(set(Path(__file__).parent.glob("ibl_v2_*.py")) |
                               {Path(__file__).parent / name for name in ("ibl_script_session.py", "ibl_document_value.py", "ibl_member_library.py",
                                                                         "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")})})}
+    for call in compiler.pure_calls:
+        effects = compiler.call_effects.get(call.id)
+        if effects is not None and effects - {"pure"}:
+            compiler.issue(call, "PURE_EXPRESSION",
+                           f"이 자리의 [fn:{call.data['action']}] 호출은 효과가 없어야 합니다(이 함수의 효과: "
+                           f"{', '.join(sorted(effects - {'pure'}))}). 조건·조건 값·and/or·람다 본문·기본값은 실행 여부나 횟수가 갈리는 자리입니다.",
+                           hint="효과가 있는 호출은 앞 문장에서 $이름=[fn:…]{…}으로 받거나, 행마다 필요하면 table:each 본문에서 호출하세요.")
     finish_diagnostics(compiler)
     for entry in compiler.warnings:
         old = entry['source_span']

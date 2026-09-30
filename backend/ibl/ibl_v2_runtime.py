@@ -67,7 +67,7 @@ class Budget:
                         if limit is not None and used > limit}
             if exceeded:
                 hint = ("도구의 필터·검색으로 입력을 좁히거나 전건을 여러 실행으로 나누세요. "
-                        "요청 budget:{steps:...,rows:...}로 한도를 명시할 수도 있습니다. "
+                        "요청 budget:{steps:...,rows:...}로 한도를 명시할 수도 있습니다(최대 steps 1000000·rows 100000). "
                         "usage.steps_by_span에서 비용 위치를 확인하세요. 전건 처리가 필요하면 take로 조용히 잘라내지 마세요.")
                 dimensions = ", ".join(f"{k} {v['used']:g}/{v['limit']:g}" for k, v in exceeded.items())
                 raise Fault("BUDGET", f"공유 실행 예산을 초과했습니다: {dimensions}. {hint}",
@@ -398,7 +398,8 @@ class Runtime(ExpressionEvaluator):
     def each(self, node, env, args, piped):
         args = self.inject(node, args, "items", piped)
         options = args.value
-        items = guard(options["items"], "List", "each.items")
+        from ibl_v2_types import rows_value
+        items = guard(rows_value(options["items"]), "List", "each.items")
         mode, collect = options.get("mode", "map"), options.get("on_error", "stop") == "collect"
         def row(index):
             self.budget.tick(row=True)
@@ -553,7 +554,11 @@ class Runtime(ExpressionEvaluator):
         spec = self.plan.registry[key]
         from ibl_callable_contract import normalize, selected, problems
         args = Binding(normalize(spec.contract, args.value), args.evidence)
-        args = self.inject(node, args, spec.contract.get("pipe_input"), piped)
+        from ibl_callable_contract import pipe_receiver
+        args = self.inject(node, args, pipe_receiver(spec.contract, args.value), piped)
+        if spec.contract.get("adapter", {}).get("protocol") == "core-table/2" and "items" in args.value:
+            from ibl_v2_types import rows_value
+            args = Binding({**args.value, "items": rows_value(args.value["items"])}, args.evidence)
         if spec.dependency and spec.dependency(node.data['dependency_args']) != node.data['dependency_snapshot']:
             raise Fault('DEFINITION_CHANGED', '참조한 실행 자산이 검사 이후 변경되었습니다.', node, kind='protocol')
         contract = selected(spec.contract, args.value)

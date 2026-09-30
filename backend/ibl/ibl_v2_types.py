@@ -44,6 +44,21 @@ NUMBER, TEXT, NULL = Type("Number"), Type("Text"), Type("Null")
 NEVER = Type("Never")
 
 
+def rows_type(typ):
+    """행 목록이 필요한 자리에서 레코드 봉투({items:[…]})는 그 행 목록으로 읽는다(값 쪽은 rows_value)."""
+    if typ.kind == "Record":
+        items = dict(typ.fields).get("items")
+        if items is not None and items.kind == "List":
+            return items
+    return typ
+
+
+def rows_value(value):
+    if isinstance(value, dict) and isinstance(value.get("items"), list):
+        return value["items"]
+    return value
+
+
 def alternatives(typ):
     """Leaf alternatives, including older nested union representations."""
     if typ.kind == "Union":

@@ -159,9 +159,12 @@ def test_script_list_shape_is_checked_before_execution():
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     reg = load_registry(str(ROOT))
-    bad = compile_program('$s=[self:script]{op:"list"};return $s >> [table:select]{columns:["id"]}', reg)
+    # 긴문장 10회차: 행 목록을 가진 것으로 알려진 봉투는 행 목록 자리가 그대로 받는다. 모양은 여전히 실행 전에 검사한다.
+    enveloped = compile_program('$s=[self:script]{op:"list"};return $s >> [table:select]{columns:["id"]}', reg)
     good = compile_program('$s=[self:script]{op:"list"};return $s.items >> [table:select]{columns:["id"]}', reg)
-    assert bad.issues and any('.items' in issue['message'] for issue in bad.issues)
+    bad = compile_program('$s=[self:script]{op:"list"};return $s.count >> [table:select]{columns:["id"]}', reg)
+    assert not enveloped.issues, enveloped.issues
+    assert bad.issues
     assert not good.issues, good.issues
     # Status changes over time: it must not become a reusable frozen read.
     assert reg['self:script'].contract['per_run'] is True

@@ -20,6 +20,14 @@ def evidence_store():
 
 
 def read_result(request):
+    if request.get("calls"):
+        turns = evidence_store().call_history()
+        return {"turns": turns,
+                "hint": "input.id 를 read_result:{id, path:[\"code\"]}로 읽으면 그때 실행한 프로그램 원문입니다. "
+                        "같은 일을 다른 자료로 반복할 때는 통과한 프로그램(is_error 없는 마지막 호출들)을 읽어 "
+                        "경로·입력만 바꿔 다시 실행하세요. result.id 는 그 결과이며 $ref 입력으로 이어 쓸 수 있습니다."}
+    if not request.get("id"):
+        raise ValueError("read_result에는 id 또는 calls:true가 필요합니다")
     offset, limit = int(request.get("offset", 0)), int(request.get("limit", DEFAULT_LIMIT))
     if offset < 0 or not 1 <= limit <= MAX_LIMIT:
         raise ValueError(f"offset >= 0, limit 1~{MAX_LIMIT}이 필요합니다")

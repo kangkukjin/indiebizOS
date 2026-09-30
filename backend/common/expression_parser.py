@@ -39,6 +39,8 @@ TERNARY = 4
 # `A\n& B\n& C` 가 SYNTAX 로 거절됐다 — 문장을 시작할 수 없는 연산자이므로 줄바꿈이 분리자일 수 없다.
 # `?` 도 문장을 시작할 수 없다(조건 값의 여러 줄 표기, 2026-09-29).
 CONTINUATION = {"&", ">>", "??", "?"}
+# 끝이 `}`로 닫히는 제어 블록 문장 — 뒤에 구분자 없이 다음 문장이 올 수 있다.
+BLOCK_STATEMENTS = {"if", "case", "repeat", "def", "try"}
 
 
 class Parser:
@@ -104,12 +106,15 @@ class Parser:
                 self.fail("줄 첫 산술 연산자는 앞 식의 계속이 아닙니다. "
                           "연산자를 앞줄 끝에 두세요($합 = 1 +\\n  2). "
                           "독립된 부호 값은 return -2 또는 ; -2처럼 명시하세요.")
-            statements.append(self.statement())
+            statement = self.statement()
+            statements.append(statement)
             if self.t.text in ("else", "elif", "catch", "finally"):
                 # 다른 언어의 맨 낱말 가지는 예측 가능한 실수다 — 고치는 형태를 말한다 (71회차 T13).
                 fix = "[else] { [if:조건] {...} }" if self.t.text == "elif" else f"[{self.t.text}] {{ ... }}"
                 self.fail(f"'{self.t.text}' 가지는 대괄호 표지로 씁니다: {fix}")
-            if self.t.text not in ("\n", ";", close):
+            # 제어 블록은 `}`에서 끝난다 — 같은 줄의 다음 문장과 헷갈릴 것이 없다(긴문장 9·10회차 SYNTAX 3회).
+            block_end = statement.kind in BLOCK_STATEMENTS and self.tokens[self.i - 1].text == "}"
+            if self.t.text not in ("\n", ";", close) and not block_end:
                 self.fail("문장 사이에는 줄바꿈 또는 ;이 필요합니다.")
             while self.t.text in ("\n", ";"):
                 self.pop()
@@ -150,6 +155,8 @@ class Parser:
         left = self.primary()
         while True:
             op = self.t.text
+            if op in (".", "[") and left.kind in BLOCK_STATEMENTS:
+                break  # 제어 블록 뒤의 `[`는 그 값의 인덱싱이 아니라 다음 문장이다.
             if op in (".", "["):
                 if op == ".":
                     self.pop()
@@ -295,6 +302,9 @@ class Parser:
         if token.kind == "name":
             self.pop()
             return self.node("ref" if self.interpolation and self.t.text != "(" else "builtin", start, name=text)
+        if text in ("**", "*"):
+            self.fail(f"식을 읽을 수 없습니다: {text}. 목록 펼침은 없습니다 — 목록은 $a + [값]으로 잇고, "
+                      "레코드는 {**$r, 키:값}으로 펼칩니다.")
         self.fail(f"식을 읽을 수 없습니다: {text}")
 
     def format_text(self, token):

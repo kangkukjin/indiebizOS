@@ -20,7 +20,7 @@ def registry():
     '[sense:search]{source:"ddg"}',
     '[sense:crawl]{url:3}',
     '[sense:crawl]{url:"https://example.org",op:"invented"}',
-    '[sense:crawl]{url:"https://example.org"} >> [table:take]{n:2}',
+    '[sense:crawl]{url:"https://example.org"} >> [table:sort]{by:3}',
 ])
 def test_known_contract_error_precedes_effect(source, registry):
     plan = compile_program(source, registry)
@@ -29,8 +29,10 @@ def test_known_contract_error_precedes_effect(source, registry):
 
 
 def test_variants_and_aliases_share_compile_runtime(registry):
-    plan = compile_program('[self:grep]{query:"x",output_mode:"count"} >> [table:each]{return $it}', registry)
-    assert plan.issues  # Record is not automatically converted into a list.
+    # 통화는 {items:[…]} 하나다 — 행 목록을 가진 봉투는 행 목록 자리가 그대로 받는다(긴문장 10회차).
+    assert not compile_program('[self:grep]{query:"x",output_mode:"count"} >> [table:each]{return $it}', registry).issues
+    # items 행 목록이 없는 Record 는 여전히 목록으로 바뀌지 않는다.
+    assert compile_program('$r={a:1}; return $r >> [table:each]{return $it}', registry).issues
     assert not compile_program('[self:edit]{file_path:"a",old_string:"x",new_string:"y"}', registry).issues
     assert compile_program('[self:edit]{path:"a",old_string:"x",new_string:"y"} & [self:edit]{file_path:"a",old_string:"x",new_string:"z"}',registry).issues
     assert not compile_program('[sense:search]{source:"gnews",headlines:true}',registry).issues

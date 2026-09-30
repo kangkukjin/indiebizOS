@@ -19,6 +19,9 @@ def read_result_schema():
         "type": "object",
         "properties": {
             "id": {"type": "string"},
+            "calls": {"type": "boolean",
+                      "description": "true면 id 없이 이 대화의 현재 턴과 바로 앞 턴들이 실행한 호출 목록(프로그램 input.id·결과 result.id·실패 여부)을 돌려줌. "
+                                     "같은 일을 다른 자료로 반복하거나 문맥이 압축돼 앞 프로그램을 잊었을 때, 새로 쓰기 전에 먼저 조회."},
             "offset": {"type": "integer", "minimum": 0, "default": 0},
             "limit": {"type": "integer", "minimum": 1, "maximum": MAX_LIMIT,
                       "default": DEFAULT_LIMIT, "description": "문자 수(토큰 수 아님)"},
@@ -27,6 +30,6 @@ def read_result_schema():
                                           {"type": "integer", "minimum": 0}]},
                      "description": "result_ref.paths의 실제 키/인덱스 경로. 중첩 JSON을 해제한 값의 문자 페이지(문자열은 원문 글자, 구조는 JSON — read_scope.format). 생략=원 봉투."},
         },
-        "required": ["id"],
-        "description": "code를 비우고 result_ref.read_args로 원문 조회. 필요한 path만 선택하고 다음 페이지는 next_read 그대로. read_scope.complete=true는 선택 경로 전체가 이 응답에 있음을 뜻함. 문맥에 남은 본문은 재독하지 않음. 재실행 없음.",
+        "required": [],
+        "description": "code를 비우고 result_ref.read_args로 원문 조회(앞 턴 결과도 가능). calls:true는 앞서 실행한 프로그램 목록. 필요한 path만 선택하고 다음 페이지는 next_read 그대로. read_scope.complete=true는 선택 경로 전체가 이 응답에 있음을 뜻함. 문맥에 남은 본문은 재독하지 않음. 재실행 없음.",
     }

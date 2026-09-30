@@ -15,6 +15,15 @@ def normalize(contract, args):
     return out
 
 
+def pipe_receiver(contract, present):
+    """파이프 값이 들어갈 인자. `pipe_input_with:{명시 인자: 받는 자리}` 선언이 있고 그 인자가 명시됐으면
+    그 자리가 받는다 — 예: join 은 right 를 명시하면 파이프 값이 left 다($왼쪽 >> [table:join]{right:…})."""
+    for given, receiver in contract.get('pipe_input_with', {}).items():
+        if given in present and receiver not in present:
+            return receiver
+    return contract.get('pipe_input')
+
+
 def selected(contract, values):
     """Unknown selectors retain the conservative base contract."""
     result = dict(contract)
@@ -66,6 +75,9 @@ def validate_extensions(contract):
     for alias, key in contract.get('aliases', {}).items():
         if key not in params or alias in params or not isinstance(alias, str):
             raise ValueError('aliases는 별칭→정본 인자 이름입니다')
+    with_pipe = contract.get('pipe_input_with', {})
+    if not isinstance(with_pipe, dict) or set(with_pipe) - params.keys() or set(with_pipe.values()) - params.keys():
+        raise ValueError('pipe_input_with는 명시 인자→파이프가 받을 인자(둘 다 선언 인자)입니다')
     for key in ('enums', 'minimum', 'maximum', 'defaults'):
         if not isinstance(contract.get(key, {}), dict) or set(contract.get(key, {})) - params.keys():
             raise ValueError(f'{key}는 선언 인자만 참조합니다')

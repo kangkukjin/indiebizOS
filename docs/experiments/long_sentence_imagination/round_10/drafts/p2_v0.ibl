@@ -1,0 +1,66 @@
+#!ibl edition=2
+# 10회차 P2 v0 분석 — inputs: 자료={$ref P1}. 요청 budget {steps:900000,rows:90000}
+$학생 = $자료.학생
+$출결 = $자료.출결
+$기준 = $자료.기준
+$재원 = $학생 >> [table:filter]{where:($s)=>$s.상태 == "재원"}
+$퇴원 = $학생 >> [table:filter]{where:($s)=>$s.상태 == "퇴원"}
+$학생반 = $학생 >> [table:select]{columns:["학번","이름","반","수강료수","상태"]}
+
+# 읽기 문제
+$파일문제 = $자료.파일상태 >> [table:filter]{where:($f)=>$f.상태 != "읽음"} >> [table:each] { return {종류:"파일 읽지 못함",대상:$it.파일,근거:$it.상태 + " — " + get($it,"오류","")} }
+$출결완전 = len($자료.파일상태 >> [table:filter]{where:($f)=>$f.상태 != "읽음" and contains($f.파일,"week")}) == 0
+$출결단서 = $출결완전 ? null : "출결 파일 일부를 읽지 못해 출석률·연속 결석은 읽은 주만으로 계산"
+$줄문제 = $자료.오류행 >> [table:each] { return {종류:"해석 못 한 줄",대상:$it.학번,근거:"금액 원문 '" + $it.금액 + "'"} }
+
+# 출석률(지각은 출석) — 재원생
+$출결수 = $출결 >> [table:compute]{set:($r)=>{온:$r.상태 == "결석" ? 0 : 1}}
+$학생출결 = ($출결수 >> [table:groupby]{by:"학번",agg:{수업:["count"],출석:["sum","온"]}}).items
+$재원출결 = ([table:join]{left:$학생출결,right:$학생반,on:"학번",how:"inner"}).items >> [table:filter]{where:($r)=>$r.상태 == "재원"}
+$미달 = $재원출결 >> [table:filter]{where:($r)=>$r.출석 / $r.수업 < $기준.출석률_기준} >> [table:sort]{by:"학번"}
+$미달이상 = $미달 >> [table:each] { return {종류:"출석률 미달",대상:$it.학번,반:$it.반,단서:$출결단서,근거:$it.이름 + " 출석 " + text($it.출석) + "/" + text($it.수업) + " (" + text(round(100 * $it.출석 / $it.수업, 1)) + "%)"} }
+
+# 연속 결석 — 학번·일자 순으로 한 번 훑으며 학생별 연속 결석 길이를 센다
+$순서 = $출결 >> [table:sort]{by:["학번","일자"]}
+$n = $기준.연속결석_기준
+$훑기 = reduce($순서, {cur:"",run:0,hit:[]}, ($a,$r)=>{
+  cur:$r.학번,
+  run:$r.상태 == "결석" ? ($r.학번 == $a.cur ? $a.run + 1 : 1) : 0,
+  hit:($r.상태 == "결석" and ($r.학번 == $a.cur ? $a.run + 1 : 1) == $n) ? $a.hit + [$r.학번] : $a.hit})
+$연속명단 = unique($훑기.hit)
+$재원번호 = $재원 >> [table:each] { return $it.학번 }
+$연속이상 = $연속명단 >> [table:each]{mode:"flat_map"} { return $it in $재원번호 ? [{종류:"연속 결석",대상:$it,단서:$출결단서,근거:text($n) + "회 이상 연속 결석"}] : [] }
+
+# 퇴원생 출석
+$퇴원출석 = ([table:join]{left:$학생출결,right:$퇴원 >> [table:select]{columns:["학번","이름","반"]},on:"학번",how:"inner"}).items >> [table:sort]{by:"학번"}
+$퇴원이상 = $퇴원출석 >> [table:each] { return {종류:"퇴원생 출석",대상:$it.학번,반:$it.반,근거:$it.이름 + " 퇴원 상태인데 출결 기록 " + text($it.수업) + "건"} }
+
+# 성적
+$성적 = $자료.성적 >> [table:compute]{set:($e)=>{학번:$e.id,하락:$e.cur == null ? null : $e.prev - $e.cur}}
+$하락 = $성적 >> [table:filter]{where:($e)=>$e.하락 != null and $e.하락 >= $기준.성적하락_기준} >> [table:sort]{by:"학번"}
+$하락이상 = $하락 >> [table:each] { return {종류:"성적 하락",대상:$it.학번,근거:text($it.prev) + "점 → " + text($it.cur) + "점 (" + text($it.하락) + "점 하락)"} }
+$미응시 = $성적 >> [table:filter]{where:($e)=>$e.cur == null} >> [table:sort]{by:"학번"}
+$미응시이상 = $미응시 >> [table:each] { return {종류:"미응시",대상:$it.학번,근거:"이번 달 월말평가 점수 없음(지난달 " + text($it.prev) + "점)"} }
+
+# 수납
+$납부 = ($자료.수납 >> [table:groupby]{by:"학번",agg:{건수:["count"],합계:["sum","금액수"]}}).items
+$미납 = ([table:join]{left:$재원,right:$납부,on:"학번",how:"anti"}).items >> [table:sort]{by:"학번"}
+$미납이상 = $미납 >> [table:each] { return {종류:"미납",대상:$it.학번,반:$it.반,근거:$it.이름 + " 이번 달 납부 없음(수강료 " + text($it.수강료수) + "원)"} }
+$납부학생 = ([table:join]{left:$납부,right:$학생반,on:"학번",how:"left",defaults:{이름:"(명단에 없음)",반:"",수강료수:null,상태:""}}).items >> [table:sort]{by:"학번"}
+$중복이상 = $납부학생 >> [table:filter]{where:($p)=>$p.건수 > 1} >> [table:each] { return {종류:"중복 납부",대상:$it.학번,반:$it.반,근거:$it.이름 + " " + text($it.건수) + "회 납부 합계 " + text($it.합계) + "원"} }
+$부족이상 = $납부학생 >> [table:filter]{where:($p)=>$p.건수 == 1 and $p.수강료수 != null and $p.합계 < $p.수강료수} >> [table:each] { return {종류:"금액 부족",대상:$it.학번,반:$it.반,근거:$it.이름 + " " + text($it.합계) + "원 납부(수강료 " + text($it.수강료수) + "원)"} }
+
+# 반별 표
+$반출결 = ($재원출결 >> [table:groupby]{by:"반",agg:{학생수:["count"],출석:["sum","출석"],수업:["sum","수업"]}}).items
+$성적반 = ([table:join]{left:$성적,right:$학생반,on:"학번",how:"inner"}).items >> [table:filter]{where:($e)=>$e.상태 == "재원"}
+$반성적 = ($성적반 >> [table:groupby]{by:"반",agg:{평균점수:["avg","cur"]}}).items
+$반표 = ([table:join]{left:$반출결,right:$반성적,on:"반",how:"left",defaults:{평균점수:null}}).items >> [table:sort]{by:"반"} >> [table:each] { return {반:$it.반,학생수:$it.학생수,출석률:round(100 * $it.출석 / $it.수업, 1),평균점수:$it.평균점수 == null ? null : round($it.평균점수, 1)} }
+
+# 메모
+$유형별 = ($자료.메모 >> [table:groupby]{by:"유형",agg:{건수:["count"]}}).items >> [table:sort]{by:"건수",descending:true}
+$조치 = $자료.메모 >> [table:filter]{where:($m)=>$m.유형 == "조치 필요" or $m.유형 == "확인 필요"} >> [table:sort]{by:"일자"}
+
+$문제 = $파일문제 + $줄문제 + $미달이상 + $연속이상 + $하락이상 + $미응시이상 + $미납이상 + $중복이상 + $부족이상 + $퇴원이상
+$종류별 = ($문제 >> [table:groupby]{by:"종류",agg:{건수:["count"]}}).items
+return {문제:$문제,종류별:$종류별,반표:$반표,유형별:$유형별,조치메모:$조치,유형표:$자료.유형표,파일상태:$자료.파일상태,출결단서:$출결단서,
+        재원수:len($재원),퇴원수:len($퇴원),출결행수:len($출결),수납합계:sum($납부 >> [table:each]{ return $it.합계 })}

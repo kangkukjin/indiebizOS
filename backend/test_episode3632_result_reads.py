@@ -149,7 +149,7 @@ def test_mcp_and_native_advertise_the_same_read_contract():
     remote = next(option for option in tool.inputSchema["properties"]["read_result"]["anyOf"]
                   if option.get("type") == "object")
     assert remote["properties"] == native["properties"]
-    assert remote["required"] == native["required"] == ["id"]
+    assert remote["required"] == native["required"] == []   # id 또는 calls:true (긴문장 10회차)
     assert remote["properties"]["limit"]["maximum"] == 60000
     assert remote["properties"]["limit"]["default"] == 60000
     assert remote["properties"]["offset"]["minimum"] == 0

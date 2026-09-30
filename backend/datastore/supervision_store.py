@@ -136,6 +136,32 @@ def patch_text(text, patch):
     return text
 
 
+def tool_index_at(directory, limit=40):
+    pending, rows = {}, []
+    path = Path(directory) / "events.jsonl"
+    if not path.exists():
+        return rows
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for line in lines:
+        event = json.loads(line)
+        if event["kind"] == "tool.started":
+            pending[event.get("id")] = event
+        elif event["kind"] in {"tool.finished", "tool.supervisor"}:
+            if event["kind"] == "tool.supervisor" and event.get("operation") != "execute":
+                continue
+            start = pending.pop(event.get("id"), event)
+            inp = start.get("input", {})
+            result = event.get("result") or event.get("evidence", {})
+            if not result.get("id"):
+                continue
+            rows.append({"seq": event["seq"], "name": start.get("name", event.get("operation", "")),
+                         "input": {"id": inp.get("id"), "excerpt": inp.get("excerpt", "")[:240]},
+                         "result": {"id": result["id"], "chars": result.get("chars")},
+                         "is_error": bool(event.get("is_error")),
+                         **({"check_rejected": True} if event.get("check_rejected") else {})})
+    return rows[-limit:]
+
+
 class TurnStore:
     def __init__(self, directory):
         self.directory = Path(directory)
@@ -304,29 +330,18 @@ class TurnStore:
 
     def tool_index(self, limit=40):
         """Small, chronological handles for repair. Does not claim the manager read them."""
-        pending, rows = {}, []
-        path = self.directory / "events.jsonl"
-        if not path.exists():
-            return rows
         with self.lock:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        for line in lines:
-            event = json.loads(line)
-            if event["kind"] == "tool.started":
-                pending[event.get("id")] = event
-            elif event["kind"] in {"tool.finished", "tool.supervisor"}:
-                if event["kind"] == "tool.supervisor" and event.get("operation") != "execute":
-                    continue
-                start = pending.pop(event.get("id"), event)
-                inp = start.get("input", {})
-                result = event.get("result") or event.get("evidence", {})
-                if not result.get("id"):
-                    continue
-                rows.append({"seq": event["seq"], "name": start.get("name", event.get("operation", "")),
-                             "input": {"id": inp.get("id"), "excerpt": inp.get("excerpt", "")[:240]},
-                             "result": {"id": result["id"], "chars": result.get("chars")},
-                             "is_error": bool(event.get("is_error"))})
-        return rows[-limit:]
+            return tool_index_at(self.directory, limit)
+
+    def call_history(self, turns=3, limit=30):
+        """이 턴과 같은 행위자의 바로 앞 턴들이 실행한 호출 목록 — 프로그램 원문과 결과를 다시 읽는 손잡이.
+
+        같은 일을 다른 자료로 반복할 때 앞서 통한 프로그램을 새로 쓰지 않게 한다(긴문장 10회차 L10-6).
+        본문은 싣지 않는다 — input.id·result.id 를 read_result 로 읽는다."""
+        out = [{"turn": self.directory.name, "current": True, "calls": self.tool_index(limit)}]
+        for directory in self.earlier_turns()[:max(0, turns - 1)]:
+            out.append({"turn": directory.name, "current": False, "calls": tool_index_at(directory, limit)})
+        return out
 
     def log(self, kind, **fields):
         with self.lock:

@@ -1,0 +1,4 @@
+#!ibl edition=2
+$a = [{k:"x",n:null,m:1}]
+$b = [{k:"y",n:"s",m:null}]
+return $a + $b

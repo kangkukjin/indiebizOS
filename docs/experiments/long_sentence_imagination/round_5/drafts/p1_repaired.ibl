@@ -1,0 +1,41 @@
+#!ibl edition=2
+# 5회차 P1 추출 — 영수증 PDF 전부 읽고 글자 있는 것만 모델로 구조화 (수리 후: 부분 PDF 별도 표시)
+# inputs: 폴더(receipts 폴더 절대경로)
+# 반환: {영수증:[{id,파일,상태,이유}], 추출:[{id,가맹점,날짜,합계,합계표기,원문확인,원문}]}
+
+[def:영수증읽기]($파일) {
+  $id = replace($파일.name,".pdf","")
+  [try] {
+    $d = [self:read]{path:$파일.path}
+    [if:len(strip($d.text)) == 0] { return {id:$id,파일:$파일.path,상태:"글자 없음",이유:"PDF 에 글자 층이 없음(스캔 추정)",원문:""} }
+    return {id:$id,파일:$파일.path,상태:"읽음",이유:null,원문:$d.text}
+  } [catch] {
+    [if:$error.code == "PARTIAL_SOURCE"] {
+      return {id:$id,파일:$파일.path,상태:"글자 없음",이유:"PDF 선택 페이지에 추출 가능한 글자 없음 — 빈 페이지/스캔 확인 필요",원문:""}
+    }
+    return {id:$id,파일:$파일.path,상태:"읽기 실패",이유:f"${$error.code}: ${$error.message}",원문:""}
+  }
+}
+
+[def:금액]($표기) {
+  [try] { return number(replace(replace($표기,",",""),"원","")) } [catch] { return null }
+}
+
+# ── 최상위 ──
+$파일 = [self:list]{path:$폴더,pattern:"*.pdf"}
+$읽기 = $파일 >> [table:each]{parallel:6} { [fn:영수증읽기]{파일:$it} }
+$영수증 = sorted($읽기,"id")
+$읽음 = $영수증 >> [table:filter]{where:($r)=>$r.상태 == "읽음"}
+$추출 = $읽음 >> [table:ai]{
+  instruction:"각 행의 원문은 영수증 한 장이다. 가맹점명(원문 첫 줄 표기 그대로), 거래 날짜(YYYY-MM-DD), 최종 합계 금액(원문 표기 그대로, 예 '24,500')을 적어라. 원문에 없으면 null.",
+  schema:"가맹점(문자열), 날짜(문자열), 합계(문자열)",
+  input_fields:["id","원문"],
+  preserve_rows:true
+}
+$행 = $추출.items >> [table:each] {
+  $표기 = $it.합계 == null ? "" : $it.합계
+  $날 = $it.날짜 == null ? "" : $it.날짜
+  return {id:$it.id,가맹점:$it.가맹점,날짜:$it.날짜,합계:[fn:금액]{표기:$표기},합계표기:$it.합계,
+          원문확인:len($표기) > 0 and contains($it.원문,$표기) and len($날) > 0 and contains($it.원문,$날),원문:$it.원문}
+}
+return {영수증:$영수증 >> [table:select]{columns:["id","파일","상태","이유"]},추출:$행}

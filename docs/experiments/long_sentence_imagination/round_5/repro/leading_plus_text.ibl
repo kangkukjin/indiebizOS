@@ -1,0 +1,4 @@
+#!ibl edition=2
+$문장 = "가"
+  + "나"
+return $문장

@@ -1,0 +1,4 @@
+#!ibl edition=2
+$쌍 = [{a:"스타벅스 강남대로점",b:"STARBUCKS 강남대로"},{a:"교보문고 광화문",b:"교보문고"},{a:"본죽 삼성점",b:"우버 택시"}]
+$j = $쌍 >> [table:judge]{instruction:"a 와 b 가 같은 가게를 가리키는가?",type:"boolean"}
+return {keys:keys($j),rows:$j.items}

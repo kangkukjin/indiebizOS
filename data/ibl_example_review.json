@@ -1309,7 +1309,7 @@
   "self:read": {
    "fields": {
     "description": "81bf640209e9",
-    "target_description": "114699fa1d15",
+    "target_description": "87f00c142999",
     "implementation": "5adeccd74a33",
     "returns": "1cf2462dbf78",
     "returns_variants": "fefe30ac0f4e",
@@ -1319,7 +1319,7 @@
     "router": "ebbb1532efbc",
     "tool": "533e886121eb"
    },
-   "reviewed": "2026-09-29",
+   "reviewed": "2026-09-30",
    "examples": 133
   },
   "self:recent_chats": {

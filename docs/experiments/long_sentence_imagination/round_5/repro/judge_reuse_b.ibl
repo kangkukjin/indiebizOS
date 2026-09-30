@@ -1,0 +1,5 @@
+#!ibl edition=2
+# inputs: p (파일 경로)
+$d = [self:read]{path:$p}
+$j = [{a:"스타벅스 강남대로점",b:"STARBUCKS 강남대로"}] >> [table:judge]{instruction:"a 와 b 가 같은 가게인가?",type:"boolean"}
+return {n:len($d.text),changed:true}

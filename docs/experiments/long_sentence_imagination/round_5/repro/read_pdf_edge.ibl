@@ -1,0 +1,5 @@
+#!ibl edition=2
+# inputs: 스캔(글자 층 없는 PDF), 손상(깨진 PDF)
+$a = [self:read]{path:$스캔}
+[try] { $b = [self:read]{path:$손상} } [catch] { return {스캔:{text:$a.text,blocks:len($a.blocks),data:json($a.data)},손상:{code:$error.code,message:$error.message}} }
+return {스캔:{text:$a.text,blocks:len($a.blocks),data:json($a.data)},손상:{text:$b.text,blocks:len($b.blocks),data:json($b.data)}}

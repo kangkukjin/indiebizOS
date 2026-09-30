@@ -97,6 +97,13 @@ class Parser:
         while self.t.text != close:
             if self.t.text == "<eof>":
                 self.fail(f"닫는 {close}가 없습니다.")
+            # A signed value on a new statement used to be silently discarded
+            # after a binding, although it looked like a continued sum.
+            if (statements and self.t.text in {"+", "-", "*", "/", "//", "%", "**"}
+                    and self.tokens[self.i - 1].text == "\n"):
+                self.fail("줄 첫 산술 연산자는 앞 식의 계속이 아닙니다. "
+                          "연산자를 앞줄 끝에 두세요($합 = 1 +\\n  2). "
+                          "독립된 부호 값은 return -2 또는 ; -2처럼 명시하세요.")
             statements.append(self.statement())
             if self.t.text in ("else", "elif", "catch", "finally"):
                 # 다른 언어의 맨 낱말 가지는 예측 가능한 실수다 — 고치는 형태를 말한다 (71회차 T13).

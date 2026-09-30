@@ -1,0 +1,101 @@
+#!ibl edition=2
+# 5회차 P2 대조 — P1($ref) 영수증과 카드 명세서를 맞추고 이상 항목을 md·json 으로 (v1: 식 자리 파이프를 변수로)
+# inputs: 추출={$ref P1}, 카드(csv 경로), 정책(json 경로), 보고서(md 경로), 목록(json 경로)
+
+# 1) 같은 원문 영수증 — 먼저 나온 것만 쓰고 뒤의 것은 중복 영수증
+[def:중복영수증]($행) {
+  $행 >> [table:each] {
+    $me = $it
+    $앞 = $행[:$i] >> [table:filter]{where:($r)=>$r.원문 == $me.원문}
+    return {**$me,같은영수증:len($앞) > 0 ? $앞[0].id : null}
+  }
+}
+
+# 2) 날짜+금액이 같은 카드 행과 짝짓기 — 이미 쓴 승인번호는 다시 쓰지 않는다
+[def:정확짝]($영수증,$카드) {
+  $사용 = []
+  $짝 = []
+  [repeat:while $i < len($영수증)] {
+    $r = $영수증[$i]
+    $후보 = $카드 >> [table:filter]{where:($c)=>$c.승인일 == $r.날짜 and $c.금액 == $r.합계 and not ($c.승인번호 in $사용)}
+    [if:len($후보) > 0] {
+      $사용 = $사용 + [$후보[0].승인번호]
+      $짝 = $짝 + [{영수증:$r.id,승인번호:$후보[0].승인번호,영수증가맹점:$r.가맹점,카드가맹점:$후보[0].가맹점,영수증금액:$r.합계,카드금액:$후보[0].금액,날짜:$r.날짜}]
+    }
+  }
+  return {짝:$짝,사용:$사용}
+}
+
+# ── 최상위 ──
+$문서 = [self:read]{path:$카드} & [self:read]{path:$정책}
+$카드행 = $문서[0].data.items >> [table:each] { return {승인일:$it.승인일,가맹점:$it.가맹점,금액:number($it.금액),승인번호:$it.승인번호} }
+$기준 = $문서[1].data.정책.결재필요_금액
+$못읽음 = $추출.영수증 >> [table:filter]{where:($r)=>$r.상태 != "읽음"}
+$검사됨 = $추출.추출 >> [table:filter]{where:($r)=>$r.원문확인}
+$미검증 = $추출.추출 >> [table:filter]{where:($r)=>not $r.원문확인}
+$표시 = [fn:중복영수증]{행:$검사됨}
+$중복영 = $표시 >> [table:filter]{where:($r)=>$r.같은영수증 != null}
+$유효 = $표시 >> [table:filter]{where:($r)=>$r.같은영수증 == null}
+
+$정확 = [fn:정확짝]{영수증:$유효,카드:$카드행}
+$짝영 = $정확.짝 >> [table:each] { return $it.영수증 }
+$남은영 = $유효 >> [table:filter]{where:($r)=>not ($r.id in $짝영)}
+$남은카 = $카드행 >> [table:filter]{where:($c)=>not ($c.승인번호 in $정확.사용)}
+
+# 3) 같은 날 금액이 다른 짝 후보 → 가맹점 동일성 판정(정확 짝도 함께 확인)
+$후보쌍 = $남은영 >> [table:each]{mode:"flat_map"} {
+  $r = $it
+  $남은카 >> [table:each]{mode:"flat_map"} {
+    [if:$it.승인일 == $r.날짜] { return [{영수증:$r.id,승인번호:$it.승인번호,영수증가맹점:$r.가맹점,카드가맹점:$it.가맹점,영수증금액:$r.합계,카드금액:$it.금액,날짜:$r.날짜}] }
+    return []
+  }
+}
+$판정입력 = $정확.짝 + $후보쌍
+$판정 = $판정입력 >> [table:judge]{instruction:"영수증의 가맹점명(영수증가맹점)과 카드사 명세서의 가맹점 표기(카드가맹점)가 같은 가게를 가리키는가? 영문·축약·지점명 차이는 같은 가게로 본다.",type:"boolean"}
+$판정행 = $판정.items
+$불일치 = $판정행 >> [table:filter]{where:($p)=>$p.영수증금액 != $p.카드금액 and $p.judgment_result_value == true}
+$불일치영 = $불일치 >> [table:each] { return $it.영수증 }
+$불일치카 = $불일치 >> [table:each] { return $it.승인번호 }
+$정확확인필요 = $판정행 >> [table:filter]{where:($p)=>$p.영수증금액 == $p.카드금액 and $p.judgment_result_value != true}
+
+$카드없음 = $남은영 >> [table:filter]{where:($r)=>not ($r.id in $불일치영)}
+$카드만 = $남은카 >> [table:filter]{where:($c)=>not ($c.승인번호 in $불일치카)}
+# 카드만 있는 행 중 이미 짝지어진 결제와 날짜·가맹점·금액이 같으면 중복 청구
+$짝열쇠 = $정확.짝 >> [table:each] { return f"${$it.날짜}|${$it.카드가맹점}|${$it.카드금액}" }
+$중복청구 = $카드만 >> [table:filter]{where:($c)=>f"${$c.승인일}|${$c.가맹점}|${$c.금액}" in $짝열쇠}
+$중복번호 = $중복청구 >> [table:each] { return $it.승인번호 }
+$영수증없음 = $카드만 >> [table:filter]{where:($c)=>not ($c.승인번호 in $중복번호)}
+
+# 4) 결재 필요 — 영수증 금액 기준, 영수증을 못 읽은 카드 결제는 카드 금액
+$결재1 = $유효 >> [table:filter]{where:($r)=>$r.합계 >= $기준} >> [table:each] { return {대상:$it.id,금액:$it.합계,근거:"영수증"} }
+$결재2 = $영수증없음 >> [table:filter]{where:($c)=>$c.금액 >= $기준} >> [table:each] { return {대상:$it.승인번호,금액:$it.금액,근거:"카드(영수증 없음)"} }
+$결재 = $결재1 + $결재2
+
+# 5) 이상 목록(json)
+$못읽음ids = $못읽음 >> [table:each] { return $it.id }
+$못읽음id = join(", ",$못읽음ids)
+$e1 = $불일치 >> [table:each] { return {종류:"금액 불일치",승인번호:$it.승인번호,영수증:$it.영수증,금액:$it.카드금액,설명:f"영수증 ${$it.영수증금액} / 카드 ${$it.카드금액}"} }
+$e2 = $카드없음 >> [table:each] { return {종류:"카드 내역 없음",승인번호:null,영수증:$it.id,금액:$it.합계,설명:f"${$it.가맹점} ${$it.날짜}"} }
+$e3 = $중복청구 >> [table:each] { return {종류:"중복 청구 의심",승인번호:$it.승인번호,영수증:null,금액:$it.금액,설명:f"${$it.가맹점} ${$it.승인일} 같은 금액 결제가 이미 영수증과 짝지어짐"} }
+$e4 = $영수증없음 >> [table:each] { return {종류:"영수증 없음",승인번호:$it.승인번호,영수증:null,금액:$it.금액,설명:len($못읽음) > 0 ? f"${$it.가맹점} ${$it.승인일} — 읽지 못한 영수증(${$못읽음id}) 중 하나일 수 있음" : f"${$it.가맹점} ${$it.승인일}"} }
+$e5 = $중복영 >> [table:each] { return {종류:"중복 영수증",승인번호:null,영수증:$it.id,금액:$it.합계,설명:f"${$it.같은영수증} 과 같은 영수증 — 대조에서 제외"} }
+$e6 = $못읽음 >> [table:each] { return {종류:"영수증 읽지 못함",승인번호:null,영수증:$it.id,금액:null,설명:$it.이유} }
+$e7 = $미검증 >> [table:each] { return {종류:"추출값 원문 불일치",승인번호:null,영수증:$it.id,금액:null,설명:"모델 추출 합계·날짜가 원문에 없음"} }
+$e8 = $정확확인필요 >> [table:each] { return {종류:"가맹점 확인 필요",승인번호:$it.승인번호,영수증:$it.영수증,금액:$it.카드금액,설명:f"${$it.영수증가맹점} ↔ ${$it.카드가맹점} 동일성 판정 ${text($it.judgment_result_value)}"} }
+$이상 = $e1 + $e2 + $e3 + $e4 + $e5 + $e6 + $e7 + $e8
+
+# 6) 보고서(md)
+$카드금액들 = $카드행 >> [table:each] { return $it.금액 }
+$영금액들 = $유효 >> [table:each] { return $it.합계 }
+$카드합 = sum($카드금액들)
+$영합 = sum($영금액들)
+$짝줄 = $정확.짝 >> [table:each] { return f"| ${$it.영수증} | ${$it.영수증가맹점} | ${$it.승인번호} | ${$it.카드가맹점} | ${$it.카드금액} |" }
+$이상줄 = $이상 >> [table:each] { return f"| ${$it.종류} | ${$it.영수증 == null ? '-' : $it.영수증} | ${$it.승인번호 == null ? '-' : $it.승인번호} | ${$it.금액 == null ? '-' : text($it.금액)} | ${$it.설명} |" }
+$결재줄 = $결재 >> [table:each] { return f"- ${$it.대상} ${$it.금액}원 (${$it.근거})" }
+$보고 = f"# 9월 법인카드 경비 정산\n\n- 카드 결제 ${len($카드행)}건 합계 ${$카드합}원 / 대조에 쓴 영수증 ${len($유효)}장 합계 ${$영합}원\n- 영수증 파일 ${len($추출.영수증)}개 중 읽지 못함 ${len($못읽음)}개\n\n## 이상 항목\n| 종류 | 영수증 | 승인번호 | 금액 | 설명 |\n| --- | --- | --- | --- | --- |\n${join('\n',$이상줄)}\n\n## 결재 필요(${$기준}원 이상)\n${len($결재줄) == 0 ? '- 없음' : join('\n',$결재줄)}\n\n## 정상 짝\n| 영수증 | 영수증 가맹점 | 승인번호 | 카드 가맹점 | 금액 |\n| --- | --- | --- | --- | --- |\n${join('\n',$짝줄)}\n"
+$목록본 = json({결재기준:$기준,이상:$이상,결재필요:$결재})
+$쓰기 = [self:write]{path:$보고서,content:$보고} & [self:write]{path:$목록,content:$목록본}
+$재읽기 = [self:read]{path:$보고서} & [self:read]{path:$목록}
+return {보고일치:$재읽기[0].text == $보고,목록일치:$재읽기[1].text == $목록본,
+        이상수:len($이상),종류:$이상 >> [table:each] { return f"${$it.종류}:${$it.영수증 == null ? $it.승인번호 : $it.영수증}" },
+        결재:$결재,카드합:$카드합,영합:$영합}

@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: pdf-synthetic-page-body
+    retired: 2026-09-30
+    reason: 페이지 표지가 글자 없는 PDF를 정상 본문처럼 보이게 했다.
+    instead: 페이지 번호는 blocks.page, 추출 불가 페이지는 no_text_pages와 PARTIAL_SOURCE로 보존한다.
+    phrases: ['PDF 본문 앞에 페이지 표지를 자동 삽입한다']
   - id: ibl-global-reuse-write-barrier
     retired: 2026-09-30
     reason: 관계없는 출력 저장과 모델 변환이 이전 입력 읽기까지 무효화했다.

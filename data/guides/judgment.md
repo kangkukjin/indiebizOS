@@ -75,10 +75,10 @@ choice/score는 제공자 confidence가 threshold 이상일 때만 value를 확�
 
 ```ibl
 $r = [table:judge]{items:[{text:"검토 중입니다."}], instruction:"승인을 명시했는가?"}
-[if: $r.items.0.judgment_result_status == "unknown"] {
-  $return = {status:"추가 확인 필요"}
+[if: $r.items[0].judgment_result_status == "unknown"] {
+  return {status:"추가 확인 필요"}
 } [else] {
-  $return = {approved:$r.items.0.judgment_result_value}
+  return {approved:$r.items[0].judgment_result_value}
 }
 ```
 
@@ -103,3 +103,5 @@ $r = [table:judge]{items:[{text:"검토 중입니다."}], instruction:"승인을
 실행 가능한 용례: `data/packages/installed/tools/ai-ops/judge_examples.json`.
 설계와 검증: `docs/JEV_JUDGMENT_2026_09_21.md`.
 공식 계약: https://docs.typesafe.ai/api · https://docs.typesafe.ai/confidence
+
+효과는 `model`이다. 다른 파일에 결과를 저장해도 무관한 입력 읽기의 reuse 후보를 지운 것으로 보지 않는다. 판정 자체는 reuse되지 않으므로 조건·표현만 바꿀 때는 판정 결과를 반환한 뒤 `$ref`로 전달한다. 사용량은 공통 호출 원장에 model·call_id·role·source=fixed_provider를 기록한다. 생성형 기어로 선택하지 않으므로 tier는 null이다. 실패 시 토큰 미측정은 0으로 취급하지 않는다.

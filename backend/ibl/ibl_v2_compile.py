@@ -449,7 +449,8 @@ class Compiler:
                     self.pure(part)
                     t = sub(part)
                     if not compatible(t, join(join(TEXT, NUMBER), BOOL)):
-                        self.issue(part, "FORMAT_TYPE", "보간에는 Text·Number·Bool만 사용할 수 있습니다.")
+                        self.issue(part, "FORMAT_TYPE", f"보간에는 Text·Number·Bool이 필요하지만 {t}입니다.",
+                                   expected=str(join(join(TEXT, NUMBER), BOOL)), actual=str(t))
                     elif t.kind == "Unknown":
                         self.need(part, t, join(join(TEXT, NUMBER), BOOL))
                     known.append(static_text(t))

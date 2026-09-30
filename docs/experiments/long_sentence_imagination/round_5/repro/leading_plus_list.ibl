@@ -1,0 +1,4 @@
+#!ibl edition=2
+$목록 = ["a"]
+  + ["b"]
+return $목록

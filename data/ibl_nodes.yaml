@@ -5461,7 +5461,7 @@ nodes:
             backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
             backend/common/expression_ops.py: b1c79919267d1b07f1159c406cb9a2e59274dae39f2171fd7ed0e457ef9e0d03
-            backend/common/expression_parser.py: 662b1d044a34423e671271317e7130ed3490aa348fc3a9d802739efba1550b71
+            backend/common/expression_parser.py: 498d4c994557f051f07c479d409b9c49aa8af0581ffa506ea4b4954909f026f3
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
             backend/base/runtime_utils.py: ee8f08ebd8889224e85458645b3f60386fcdb1c732772c4657d2d173fee8e0ff
             backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
@@ -5696,7 +5696,7 @@ nodes:
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: path는 읽을 파일 경로. format(text/json/csv/tsv/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub)은 생략 시 확장자로 정한다. 판본 2 반환은 Document{text,blocks,data}. text — offset/limit(0-기반 행 범위, limit:0은 빈 본문), start_line/end_line(1-기반 양끝 포함), tail(끝 N줄, 다른 범위와 병용 금지), numbered(줄번호). 역전·비정수·충돌 범위는 오류. docx/hwp/hwpx — offset/limit/max_blocks는 블록 단위. pdf — pages는 1-기반 범위(예 "1-5,8"), tables:true는 .data.table로 표 추출. xlsx/xls — sheet/max_rows, 첫 행은 헤더, .data.items와 .data.table 및 TSV text. pptx/epub — pages로 슬라이드/챕터 선택. extract_images:true는 임시 캐시에 그림을 추출한다(스캔 PDF OCR은 별도). JSON 전체 읽기는 .data에 파싱 값을 보존한다(배열은 .data.items). CSV/TSV 전체 읽기는 .data.items(헤더→문자열 셀)와 .data.table{columns,rows}; 인용된 구분자·줄바꿈을 보존하며 빈 셀은 빈 문자열, 0은 문자열 "0"이다. 텍스트 범위·절단 읽기는 구조 파싱 없이 .text로 남는다. 빈 파일은 빈 text. .data에는 일반 본문·구판 실행 봉투를 중복하지 않는다. 파일 부재는 NOT_FOUND, 원인·경로는 오류 details에 보존한다.
+        target_description: path는 읽을 파일 경로. format(text/json/csv/tsv/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub)은 생략 시 확장자로 정한다. 판본 2 반환은 Document{text,blocks,data}. text — offset/limit(0-기반 행 범위, limit:0은 빈 본문), start_line/end_line(1-기반 양끝 포함), tail(끝 N줄, 다른 범위와 병용 금지), numbered(줄번호). 역전·비정수·충돌 범위는 오류. docx/hwp/hwpx — offset/limit/max_blocks는 블록 단위. pdf — pages는 1-기반 범위(예 "1-5,8"), tables:true는 .data.table로 표 추출. PDF text는 페이지 표지 없는 추출 본문이며 blocks.page는 1-기반이다. .data.page_text_chars와 .data.no_text_pages로 선택 페이지별 글자 수·추출 불가 페이지를 알린다. 글자 없는 페이지는 빈 페이지/스캔 여부 미확인이므로 PARTIAL_SOURCE로 .partial에 읽은 Document를 보존한다(OCR 자동 실행 없음). 0쪽·파싱 손상은 TOOL 오류의 details.error_type=corrupt다. xlsx/xls — sheet/max_rows, 첫 행은 헤더, .data.items와 .data.table 및 TSV text. pptx/epub — pages로 슬라이드/챕터 선택. extract_images:true는 임시 캐시에 그림을 추출한다(스캔 PDF OCR은 별도). JSON 전체 읽기는 .data에 파싱 값을 보존한다(배열은 .data.items). CSV/TSV 전체 읽기는 .data.items(헤더→문자열 셀)와 .data.table{columns,rows}; 인용된 구분자·줄바꿈을 보존하며 빈 셀은 빈 문자열, 0은 문자열 "0"이다. 텍스트 범위·절단 읽기는 구조 파싱 없이 .text로 남는다. 빈 파일은 빈 text. .data에는 일반 본문·구판 실행 봉투를 중복하지 않는다. 파일 부재는 NOT_FOUND, 원인·경로는 오류 details에 보존한다.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx/read_xlsx(office_ops)·read_hwp/hwpx/pptx/epub(doc_read_extra)에 위임. 읽기 예외는 JSON 실패 봉투로 반환하며 파일 부재(not_found)·권한(permission)·I/O(io)의 error_type과 errno를 보존한다. 선택 파일은 self:list의 빈 목록으로 부재를 먼저 확인하고 필수 파일의 실패는 전파한다.
@@ -5707,7 +5707,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-30'
-          impl: 89163937206e6165
+          impl: 54b9d5cdc5cdc07c
         target_key: path
         aliases:
           offset:
@@ -5720,7 +5720,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-30'
-          impl: 89163937206e6165
+          impl: 54b9d5cdc5cdc07c
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6483,7 +6483,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-30'
-          impl: 89163937206e6165
+          impl: 54b9d5cdc5cdc07c
         pipe_in: true
         lands_on: body
         limb_op:
@@ -9401,7 +9401,7 @@ nodes:
           required: []
           result: Record
           effects:
-          - unknown
+          - model
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope
@@ -9513,7 +9513,7 @@ nodes:
           required: []
           result: Record
           effects:
-          - unknown
+          - model
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope

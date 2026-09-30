@@ -1,0 +1,3 @@
+#!ibl edition=2
+# inputs: r = [{이유:null},{이유:"x"}]
+return $r >> [table:each] { return f"사유 ${$it.이유}" }

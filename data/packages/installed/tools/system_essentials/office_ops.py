@@ -205,6 +205,10 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
         doc = fitz.open(str(path))
         metadata = doc.metadata
         total_pages = doc.page_count
+        if total_pages == 0:
+            return json.dumps({"success": False, "error_type": "corrupt", "path": str(path),
+                               "error": "PDF에 읽을 페이지가 없습니다(0쪽). 손상 여부를 확인하세요."},
+                              ensure_ascii=False)
 
         from importlib.util import spec_from_file_location, module_from_spec
         spec = spec_from_file_location("fs_read_range", Path(__file__).with_name("fs_read_range.py"))
@@ -212,11 +216,19 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
         spec.loader.exec_module(ranges)
         target_pages = ranges.pdf_page_indices(pages, total_pages)
 
-        extracted_text = ""
+        page_texts, page_text_chars, no_text_pages, pdf_blocks = [], [], [], []
         for pno in target_pages:
             page = doc.load_page(pno)
-            extracted_text += f"\n--- Page {pno + 1} ---\n"
-            extracted_text += page.get_text()
+            text = page.get_text()
+            page_texts.append(text)
+            chars = len(text.strip())
+            page_text_chars.append({"page": pno + 1, "chars": chars})
+            if not chars:
+                no_text_pages.append(pno + 1)
+            for para in text.split("\n\n"):
+                if para.strip():
+                    pdf_blocks.append({"type": "paragraph", "text": para.strip(), "page": pno + 1})
+        extracted_text = "\n".join(page_texts)
 
         # tables: true — 표 추출(ep951 실증: "PDF를 수기로 엑셀에 옮기는" 노동의 어휘화).
         # PyMuPDF find_tables 로 전 대상 페이지의 표를 뽑아, 가장 큰 표를 table{columns,rows}
@@ -239,20 +251,21 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
 
         doc.close()
 
-        # 문서 IR blocks(비파괴) — pdf 텍스트를 문단 블록으로. read(x.pdf) >> document.
-        pdf_blocks = []
-        for para in extracted_text.split("\n\n"):
-            para = para.strip()
-            if para:
-                pdf_blocks.append({"type": "paragraph", "text": para})
         res = {
             "success": True,
             "metadata": metadata,
             "total_pages": total_pages,
             "extracted_pages_count": len(list(target_pages)),
             "text": extracted_text,
-            "blocks": pdf_blocks or [{"type": "paragraph", "text": extracted_text}],
+            "blocks": pdf_blocks,
+            "page_text_chars": page_text_chars,
+            "no_text_pages": no_text_pages,
+            "source_complete": not no_text_pages,
         }
+        if no_text_pages:
+            res["warning"] = ("선택한 PDF 페이지에서 추출 가능한 글자가 없습니다: "
+                              + ", ".join(map(str, no_text_pages))
+                              + ". 빈 페이지인지 스캔인지 확인하고 필요하면 OCR을 사용하세요.")
         if _truthy(tool_input.get("tables")):
             res["tables_found"] = len(pdf_tables)
             if pdf_tables:
@@ -264,6 +277,9 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
                 res["note"] = "표를 찾지 못했습니다 — 실선 없는 표나 스캔 이미지 PDF 일 수 있습니다(OCR 별도)."
         return json.dumps(res, ensure_ascii=False)
 
+    except (fitz.FileDataError, fitz.EmptyFileError) as e:
+        return json.dumps({"success": False, "error_type": "corrupt", "path": str(path),
+                           "error": f"PDF 파싱 실패: {str(e)}"}, ensure_ascii=False)
     except Exception as e:
         return json.dumps({"success": False, "error": f"PDF를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
     finally:

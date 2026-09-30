@@ -51,7 +51,7 @@ nodes:
           required: []
           result: Record
           effects:
-          - unknown
+          - model
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope
@@ -152,7 +152,7 @@ nodes:
           required: []
           result: Record
           effects:
-          - unknown
+          - model
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope

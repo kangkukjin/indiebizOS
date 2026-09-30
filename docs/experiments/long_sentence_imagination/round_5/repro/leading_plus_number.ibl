@@ -1,0 +1,4 @@
+#!ibl edition=2
+$합 = 1
+  + 2
+return $합

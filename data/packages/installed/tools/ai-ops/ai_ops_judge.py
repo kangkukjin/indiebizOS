@@ -93,12 +93,30 @@ def _key():
     return key
 
 
+class JevProvider:
+    """The fixed judge shares the model call/usage boundary, without a gear choice."""
+
+    def __init__(self):
+        from providers.base import ProviderMetrics
+        self.metrics = ProviderMetrics()
+        self.model = _MODEL
+        self.agent_role = "execution"
+        self.distill_descriptor = {"tier": None, "source": "fixed_provider"}
+
+
 def _request(payload):
-    import requests
     key = _key()
     if not key:
         return {"success": False, "error": ".env에 TYPESAFE_API_KEY를 설정하세요.",
                 "error_type": "configuration", "api_calls": 0}
+    from model_call_context import call_scope
+    provider = JevProvider()
+    with call_scope(provider):
+        return _request_scoped(payload, key, provider)
+
+
+def _request_scoped(payload, key, provider):
+    import requests
     started = time.monotonic()
     try:
         response = requests.post(
@@ -124,8 +142,7 @@ def _request(payload):
         return {"success": False, "error": "Jev 응답이 JSON이 아닙니다.",
                 "error_type": "response", "api_calls": 1}
     usage = data.get("usage") if isinstance(data, dict) else None
-    from providers.base import ProviderMetrics
-    ProviderMetrics().record_usage(latency_ms, usage, label="TypeSafe Jev")
+    provider.metrics.record_usage(latency_ms, usage, label="TypeSafe Jev")
     return {"success": True, "data": data, "latency_ms": latency_ms, "api_calls": 1}
 
 

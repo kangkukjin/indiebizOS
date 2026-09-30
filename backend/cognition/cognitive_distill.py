@@ -806,6 +806,11 @@ AI 답변: {ai_response[:1400]}
             payload["turn_cost"]["request_intent"] = supervisor.request_intent
             supervisor.log("cost.summary", role="harness", cost=payload["turn_cost"])
             print("[감독비용] " + json.dumps(payload["turn_cost"], ensure_ascii=False))
+        from thread_context import in_rehearsal
+        if in_rehearsal():
+            # 리허설은 삶이 아니다 — 비용 요약까지만 남기고 경험·심층·포식 기억에는 올리지 않는다.
+            (getattr(self, "_log", None) or print)("[기억] 리허설 턴 — 증류 큐에 적재하지 않음")
+            return
         ctx = contextvars.copy_context()
         ep = EpisodeLogger.current()
         from unified_distill import snapshot

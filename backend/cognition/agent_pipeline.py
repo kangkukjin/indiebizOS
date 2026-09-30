@@ -838,8 +838,10 @@ class CognitivePipelineMixin:
                 except Exception:
                     pass
             try:
-                from thread_context import clear_task_origin
-                clear_task_origin()
+                from thread_context import clear_task_origin, in_rehearsal
+                # 리허설 출처는 에피소드 마감·증류 판정까지 남긴다 — 진입점이 턴 끝에서 걷는다.
+                if not in_rehearsal():
+                    clear_task_origin()
             except Exception:
                 pass
             from unified_distill import capture_model

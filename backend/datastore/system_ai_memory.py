@@ -339,6 +339,17 @@ def get_conversation_image_paths(conversation_id: int) -> List[str]:
     return out
 
 
+# 본 대화와 섞이지 않는 전용 스레드(source 컬럼 값). rehearsal = 훈련이 시스템 AI에 맡긴 리허설 턴.
+SEPARATE_THREADS = ("appmaker", "rehearsal")
+
+
+def _thread_clause(thread: str, lead: str) -> str:
+    """thread 는 코드-제어 상수만(사용자 입력 아님) → 고정 절로 매핑."""
+    if thread in SEPARATE_THREADS:
+        return f"{lead} source = '{thread}'"
+    return f"{lead} (source IS NULL OR source NOT IN ('appmaker', 'rehearsal'))"
+
+
 def get_recent_conversations(limit: int = 10, thread: str = "system_ai") -> List[Dict[str, Any]]:
     """최근 대화 조회.
 
@@ -351,8 +362,7 @@ def get_recent_conversations(limit: int = 10, thread: str = "system_ai") -> List
     cursor = conn.cursor()
 
     # thread 는 코드-제어 상수만(사용자 입력 아님) → 고정 절로 매핑.
-    src_clause = "WHERE source = 'appmaker'" if thread == "appmaker" \
-        else "WHERE (source IS NULL OR source != 'appmaker')"
+    src_clause = _thread_clause(thread, "WHERE")
     cursor.execute(f"""
         SELECT id, timestamp, role, content, summary, importance, images
         FROM conversations
@@ -416,8 +426,7 @@ def get_history_for_ai(limit: int = 7, thread: str = "system_ai") -> List[Dict[s
     cursor = conn.cursor()
 
     # thread 는 코드-제어 상수만(사용자 입력 아님) → 고정 절로 매핑.
-    src_clause = "AND source = 'appmaker'" if thread == "appmaker" \
-        else "AND (source IS NULL OR source != 'appmaker')"
+    src_clause = _thread_clause(thread, "AND")
     cursor.execute(f"""
         SELECT id, timestamp, role, content, summary, importance, images
         FROM conversations

@@ -51,7 +51,7 @@ HINTS = {
     "PARALLEL_WRITE_CONFLICT": "병렬 가지·each 병렬 반복이 같은 자원에 쓰면 최종 내용이 실행마다 달라집니다. 순차로 쓰거나(;·기본 each) 가지마다 다른 파일에 쓴 뒤 합치세요.",
     "PARAMETERS": "람다 인자 이름은 서로 다르고 예약 이름($it·$i·$error)이 아니어야 합니다.",
     "PIPE_TARGET": "파이프 오른쪽에는 앞 값을 첫 입력으로 받는 호출 하나를 둡니다. 식으로 가공하려면 앞 값을 $이름에 받은 뒤 쓰세요.",
-    "PURE_EXPRESSION": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요.",
+    "PURE_EXPRESSION": "조건·조건 값(?:)·and/or·람다 본문·기본값에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.",
     "READONLY": "$it·$i·$error와, each 본문에서 본 바깥 변수는 다시 대입하지 않습니다. 새 이름에 받거나 결과를 each의 반환으로 모으세요.",
     "RECURSION": "재귀 대신 반복을 쓰세요: 횟수는 [repeat:n]{...}, 누적은 reduce(목록,초기값,($acc,$x)=>...), 원소별 처리는 [table:each]입니다.",
     "RESERVED": "함수 인자 이름에 $it·$i·$error를 쓰지 마세요. 다른 이름으로 받으세요.",
@@ -124,6 +124,15 @@ def rejection_message(prefix, issues):
 
 
 def finish_diagnostics(compiler):
+    # 함수 정의와 그 호출을 각각 검사하면 같은 자리의 같은 오류가 호출 경로만 달리 두 번 쌓인다(긴문장 L9-3).
+    seen, unique = set(), []
+    for entry in compiler.issues:
+        where = entry.get('source_span') or {}
+        key = (entry.get('code'), entry.get('message'), where.get('start'), where.get('end'))
+        if key not in seen:
+            seen.add(key)
+            unique.append(entry)
+    compiler.issues[:] = unique
     for entries, severity in ((compiler.issues, 'error'), (compiler.guards, 'information')):
         for entry in entries:
             old = entry['source_span']
@@ -137,6 +146,11 @@ def finish_diagnostics(compiler):
                              if severity == 'information' else entry.get('expected', '계약 확인이 필요합니다.'))
             entry.setdefault('hint', HINTS.get(entry['code'], '해당 위치의 계약과 호출 인자를 확인하세요.'))
             if (entry['code'] == 'TYPE' and entry.get('expected') == 'List<Record>'
+                    and str(entry.get('actual', '')).startswith('List<Result<')):
+                entry['hint'] = ('on_error:"collect"의 결과는 성공·실패를 담은 Result 목록입니다. 각 원소를 is_ok($r)로 가르고 '
+                                 'unwrap($r)·error_of($r)로 풀어 레코드 목록을 만든 뒤 넘기세요. 성공만 이을 때는 '
+                                 'table:each mode:"flat_map" 안에서 성공이면 [unwrap($it)], 실패면 []를 반환합니다.')
+            elif (entry['code'] == 'TYPE' and entry.get('expected') == 'List<Record>'
                     and str(entry.get('actual', '')).startswith('List<')):
                 entry['hint'] = ('이 입력은 객체 행 목록을 요구합니다. zip/enumerate의 행은 목록입니다. '
                                  '각 원소를 table:each로 명시적 필드의 레코드로 변환하거나, '

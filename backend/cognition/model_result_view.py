@@ -26,12 +26,12 @@ def read_result(request):
     path = request.get("path")
     stored = None
     if path is None:
-        page = evidence_store().read_evidence(request.get("id"), offset, limit)
+        page = evidence_store().read_evidence_across_turns(request.get("id"), offset, limit)
     else:
         if (not isinstance(path, list) or len(path) > MAX_PATH_DEPTH or
                 any(type(p) not in (str, int) for p in path)):
             raise ValueError("path는 객체 키·0 이상 배열 인덱스의 배열입니다(최대 16단계)")
-        page = evidence_store().read_evidence(request.get("id"), 0, None)
+        page = evidence_store().read_evidence_across_turns(request.get("id"), 0, None)
         stored = json.loads(page["text"])
         value = (_walk_typed(stored, path, path) if isinstance(stored, dict) and stored.get("edition") == 2
                  else _walk(stored, path))
@@ -191,7 +191,7 @@ def _resolve_reference(name, value, notes, at, store=None):
                              or any(type(p) not in (str, int) for p in path)):
         raise ValueError(f"{where}: path는 객체 키·0 이상 배열 인덱스의 배열입니다(최대 {MAX_PATH_DEPTH}단계)")
     try:
-        page = (store or evidence_store()).read_evidence(ref_id, 0, None)
+        page = (store or evidence_store()).read_evidence_across_turns(ref_id, 0, None)
     except (ValueError, OSError, TypeError) as exc:
         raise ValueError(f"{where}: 저장된 결과 {ref_id!r}를 읽을 수 없습니다: {exc}") from exc
     stored = _decode_json(page["text"])
@@ -227,6 +227,8 @@ def _resolve_reference(name, value, notes, at, store=None):
     notes.append({"name": name, **({"at": at} if at else {}), "id": ref_id,
                   "path": source if path is None and source == ["value_wire"] else selection,
                   "evidence": input_ref_evidence(stored),
+                  # 앞 턴이 저장한 값이면 그 턴을 밝힌다 — 그때 조회한 값이지 지금 원천의 상태가 아니다.
+                  **({"from_turn": page["from_turn"]} if page.get("from_turn") else {}),
                   "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
     return resolved
 

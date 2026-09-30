@@ -9,14 +9,14 @@ actions:
     lands_on: hub
     resource_scope: app_shared
     path_audited:
-      at: '2026-09-29'
+      at: '2026-09-30'
       impl: 3c31b0566918933b
       dependencies:
         backend/common/expression_eval.py: 539142b9eb7f27ca915f5be9a47ba995516d1ed7302b4a1e737e1145b0473c89
         backend/common/expression_functions.py: 06242617ac4f3c12919fbf35dc13b2effb3c9052ce0957e64561bc932ac19408
         backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
         backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
-        backend/common/expression_ops.py: b1c79919267d1b07f1159c406cb9a2e59274dae39f2171fd7ed0e457ef9e0d03
+        backend/common/expression_ops.py: 2f0dfa9c8e1787379d26e4f8190ca39d4ecd0ed8c3289882f668ab01b3fe1517
         backend/common/expression_parser.py: 498d4c994557f051f07c479d409b9c49aa8af0581ffa506ea4b4954909f026f3
         backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
         backend/base/runtime_utils.py: ee8f08ebd8889224e85458645b3f60386fcdb1c732772c4657d2d173fee8e0ff

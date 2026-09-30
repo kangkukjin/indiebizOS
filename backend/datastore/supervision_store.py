@@ -63,6 +63,24 @@ def current_evidence_store():
     return TurnStore(root / key)
 
 
+LINEAGE_DEPTH = 8      # 이어 읽을 수 있는 앞 턴 수
+LINEAGE_KEEP = 64      # 행위자별 턴 원장에 남기는 줄 수
+_LINEAGE_LOCK = threading.Lock()
+
+
+def _lineage_ledger(directory, key):
+    # 턴 저장소 뿌리 옆 — 회원은 자기 사적 경로 안이라 주인·다른 회원의 원장과 섞이지 않는다.
+    return Path(directory).parent.parent / "supervision_lineage" / (key + ".jsonl")
+
+
+def _ledger_turns(ledger):
+    try:
+        rows = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except (OSError, ValueError):
+        return []
+    return [r["turn"] for r in rows if isinstance(r, dict) and isinstance(r.get("turn"), str)]
+
+
 def response_parts(text):
     """Preserve bytes and paragraph boundaries; bound unusually long paragraphs too."""
     parts = []
@@ -180,8 +198,8 @@ class TurnStore:
         except FileNotFoundError:
             # 저장소는 대화(작업)별 네임스페이스다. 내부 경로·OS 문구 대신 참조의 범위를 알린다.
             raise EvidenceNotFound(
-                "이 대화(작업)의 저장소에 없는 결과입니다. result_ref는 그 결과를 만든 같은 대화 안에서만 "
-                "유효합니다 — 여기서는 원천을 다시 조회하세요.") from None
+                "이 대화(작업)의 저장소에 없는 결과입니다. result_ref는 같은 대화의 그 턴과 바로 앞 턴들"
+                f"(같은 에이전트·요청 주체, 최근 {LINEAGE_DEPTH}개)에서만 유효합니다 — 여기서는 원천을 다시 조회하세요.") from None
         end = offset + limit if limit is not None else None
         if mark:
             self.evidence_coverage.setdefault(key, []).append((offset, min(end or len(text), len(text))))
@@ -190,6 +208,68 @@ class TurnStore:
         if masked:
             page["masked_paths"] = masked
         return page
+
+    def join_lineage(self, agent, project, principal_key):
+        """이 턴을 같은 행위자(에이전트·프로젝트·요청 주체)의 턴 원장에 올린다.
+
+        다음 턴이 앞 턴의 result_ref 를 이어 쓰는 범위다(긴문장 9회차 L9-1). 발급하는 쪽이 범위를
+        적고, 읽는 쪽은 자기 턴과 같은 키의 턴만 본다 — 다른 저장소를 훑지 않는다."""
+        key = digest(json.dumps([str(agent or ""), str(project or ""), str(principal_key or "")], ensure_ascii=False))
+        ledger = _lineage_ledger(self.directory, key)
+        ledger.parent.mkdir(parents=True, exist_ok=True)
+        name = self.directory.name
+        with _LINEAGE_LOCK:
+            turns = [t for t in _ledger_turns(ledger) if t != name][-(LINEAGE_KEEP - 1):] + [name]
+            temp = ledger.with_suffix(".jsonl.tmp")
+            temp.write_text("".join(json.dumps({"turn": t}) + "\n" for t in turns), encoding="utf-8")
+            os.replace(temp, ledger)
+        (self.directory / "lineage.json").write_text(json.dumps({"key": key}), encoding="utf-8")
+
+    def earlier_turns(self):
+        """같은 행위자의 바로 앞 턴 저장소들(가까운 것부터). 원장과 각 턴의 자기 표기가 모두 맞아야 한다."""
+        try:
+            key = json.loads((self.directory / "lineage.json").read_text(encoding="utf-8")).get("key")
+        except (OSError, ValueError, AttributeError):
+            return []
+        if not re.fullmatch(r"[0-9a-f]{64}", key or ""):
+            return []
+        turns, name = _ledger_turns(_lineage_ledger(self.directory, key)), self.directory.name
+        if name not in turns:
+            return []
+        out = []
+        for turn in reversed(turns[:turns.index(name)][-LINEAGE_DEPTH:]):
+            directory = self.directory.parent / turn
+            if not re.fullmatch(r"[0-9a-f]{32}", turn) or directory.is_symlink() or not directory.is_dir():
+                continue
+            try:
+                other = json.loads((directory / "lineage.json").read_text(encoding="utf-8")).get("key")
+            except (OSError, ValueError, AttributeError):
+                continue
+            if other == key:
+                out.append(directory)
+        return out
+
+    def read_evidence_across_turns(self, key, offset=0, limit=12000):
+        """현재 턴에 없으면 같은 행위자의 앞 턴에서 읽는다. 앞 턴 값은 인증된 원문만 넘기고 출처 턴을 표시한다."""
+        try:
+            return self.read_evidence(key, offset, limit)
+        except EvidenceNotFound:
+            for directory in self.earlier_turns():
+                path = directory / (key + ".txt")
+                if path.is_symlink() or not path.is_file():
+                    continue
+                text = path.read_text(encoding="utf-8")
+                integrity, masked = evidence_integrity(directory, key, text)
+                if integrity != "verified":
+                    raise EvidenceNotFound("앞 턴에 저장된 결과이지만 원문 인증을 확인할 수 없어 이어 쓸 수 없습니다 — "
+                                           "원천을 다시 조회하세요.") from None
+                end = offset + limit if limit is not None else None
+                page = {"id": key, "offset": offset, "chars": len(text), "text": text[offset:end],
+                        "integrity": integrity, "from_turn": directory.name}
+                if masked:
+                    page["masked_paths"] = masked
+                return page
+            raise
 
     def evidence_fully_read(self, key):
         length = self.read_evidence(key, 0, 0)["chars"]

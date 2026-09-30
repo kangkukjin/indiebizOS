@@ -55,6 +55,11 @@ class Supervisor:
         if is_member():
             directory = private_path("supervision/" + self.turn_id)
         self.store = TurnStore(directory or (get_base_path() / "data" / "spill" / "supervision" / self.turn_id))
+        try:
+            import principal
+            self.store.join_lineage(agent, self.project_path, principal.cache_key())
+        except Exception:
+            pass  # 원장에 못 올리면 앞 턴 결과를 이어 쓰지 못할 뿐이다 — 턴은 그대로 진행한다.
         from supervision_delivery import DeliveryQueue
         self.delivery = DeliveryQueue(self.store.directory / "delivery", (self.store.directory / "published") if is_member() else get_base_path() / "공유창고", self.log)
         self.history_ref = self.store.evidence(self.history)

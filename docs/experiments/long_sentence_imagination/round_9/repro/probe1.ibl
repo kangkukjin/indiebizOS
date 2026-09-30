@@ -1,0 +1,6 @@
+$a = [self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_9/input/shipments/carrier_A.csv"}
+$b = [self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_9/input/shipments/carrier_B.json"}
+$s = [self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_9/input/sla.json"}
+$빈 = $a.data.items >> [table:filter]{where:($r)=>$r.도착일 == null or $r.도착일 == ""} >> [table:take]{n:2}
+$허 = $s.data.허용배송일수
+return {a0:$a.data.items[0],빈:$빈,bkeys:keys($b.data),b0:$b.data.shipments[0],s:$s.data,dd:date_diff("2025-07-10","2025-06-20"),g:get($허,"제주",0),rep:replace("2025/05/15","/","-")}

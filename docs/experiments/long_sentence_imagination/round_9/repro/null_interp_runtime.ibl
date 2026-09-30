@@ -1,0 +1,2 @@
+$행 = $입력 >> [table:each] { return {글:f"${$it.a}원"} }
+return $행

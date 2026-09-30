@@ -1,0 +1,95 @@
+#!ibl edition=2
+# 9회차 P2 v3 (변형 B: 고객표 추가; v1: 변형 A 에서 금액수 null 보간 TEXT_REQUIRED — 훈련자 견고성 누락; v0: sum(파이프) PURE_EXPRESSION 2곳 — 훈련자) 대사·분석 — inputs: 자료={$ref P1}, 기대파일(이름 목록). 요청 budget {steps:900000,rows:90000}. 렌더·저장은 P3.
+$주문 = $자료.주문
+$배송 = $자료.배송
+$반품 = $자료.반품
+$환불 = $자료.환불
+$허용 = $자료.기준.허용배송일수
+$기준일 = $자료.기준.기준일
+$분실일수 = $자료.기준.분실의심일수
+
+# 읽기 문제
+$읽은파일 = $자료.파일상태 >> [table:filter]{where:($f)=>$f.상태 == "읽음"} >> [table:each] { return $it.파일 }
+$파일문제 = $기대파일 >> [table:each]{mode:"flat_map"} {
+  [if:$it in $읽은파일] { return [] }
+  return [{종류:"파일 읽지 못함",파일:$it,근거:f"${$it} 을 읽지 못함 — 이 원천에 기대는 판정은 확인 불가로 표시"}]
+}
+$B없음 = not ("carrier_B.json" in $읽은파일)
+$A없음 = not ("carrier_A.csv" in $읽은파일)
+$배송단서 = $B없음 or $A없음 ? "택배사 기록 일부를 읽지 못해 단정할 수 없음" : null
+$줄문제 = $자료.오류행 >> [table:each] { return {종류:"해석 못 한 줄",주문번호:$it.주문번호,근거:f"금액 원문 '${get($it,'금액',get($it,'환불금액',''))}' — 합계에서 제외"} }
+
+# 주문 상태별
+$유효 = $주문 >> [table:filter]{where:($o)=>$o.상태 != "취소"}
+$취소 = $주문 >> [table:filter]{where:($o)=>$o.상태 == "취소"}
+
+# 1) 배송 기록 없는 주문(취소 아님)
+$무배송 = [table:join]{left:$유효,right:$배송,on:"주문번호",how:"anti"}
+$무배송이상 = $무배송.items >> [table:each] { return {종류:"배송 기록 없음",주문번호:$it.주문번호,단서:$배송단서,근거:f"${$it.주문일} 주문 ${$it.금액수 == null ? '금액 미상' : text($it.금액수) + '원'} ${$it.지역}, 배송 기록 없음"} }
+
+# 2) 같은 주문 두 번 배송
+$배송수 = $배송 >> [table:groupby]{by:"주문번호",agg:{건수:["count"]}}
+$중복 = $배송수.items >> [table:filter]{where:($g)=>$g.건수 > 1} >> [table:sort]{by:"주문번호"}
+$중복이상 = $중복 >> [table:each] {
+  $id = $it.주문번호
+  $내 = $배송 >> [table:filter]{where:($s)=>$s.주문번호 == $id}
+  $글 = $내 >> [table:each] { return f"${$it.택배사} ${$it.발송일}→${$it.도착 == null ? '도착 없음' : $it.도착}" }
+  return {종류:"중복 배송",주문번호:$id,근거:join(" / ",$글)}
+}
+
+# 3) 취소인데 배송
+$취소배송 = [table:join]{left:$취소,right:$배송,on:"주문번호",how:"semi"}
+$취소배송이상 = $취소배송.items >> [table:each] { return {종류:"취소 주문 배송",주문번호:$it.주문번호,근거:f"${$it.주문일} 취소 주문에 배송 기록 있음"} }
+
+# 4) 지연·분실 의심 — 완전히 같은 기록은 한 번만, 주문의 지역으로 기준 적용
+$배송유일 = $배송 >> [table:dedup]{by:["택배사","주문번호","발송일"]}
+$주문지역 = $주문 >> [table:select]{columns:["주문번호","지역"]}
+$배송지역 = [table:join]{left:$배송유일.items,right:$주문지역,on:"주문번호",how:"inner"}
+$도착 = $배송지역.items >> [table:filter]{where:($s)=>$s.도착 != null} >> [table:compute]{set:($s)=>{지연:date_diff($s.도착,$s.발송일) > get($허용,$s.지역,99) ? 1 : 0}}
+$택배사별 = $도착 >> [table:groupby]{by:"택배사",agg:{도착:["count"],지연:["sum","지연"]}}
+$지역별 = $도착 >> [table:groupby]{by:"지역",agg:{도착:["count"],지연:["sum","지연"]}}
+$택배사표 = $택배사별.items >> [table:sort]{by:"택배사"} >> [table:each] { return {**$it,지연율:round(100 * $it.지연 / $it.도착, 1)} }
+$지역표 = $지역별.items >> [table:sort]{by:"지역"} >> [table:each] { return {**$it,지연율:round(100 * $it.지연 / $it.도착, 1)} }
+$지연들 = $택배사표 >> [table:each] { return $it.지연 }
+$지연건수 = sum($지연들)
+$미도착 = $배송지역.items >> [table:filter]{where:($s)=>$s.도착 == null}
+$분실 = $미도착 >> [table:filter]{where:($s)=>date_diff($기준일,$s.발송일) > $분실일수} >> [table:sort]{by:"주문번호"}
+$분실이상 = $분실 >> [table:each] { return {종류:"분실 의심",주문번호:$it.주문번호,근거:f"택배사 ${$it.택배사} ${$it.발송일} 발송, 기준일 ${$기준일}까지 ${date_diff($기준일,$it.발송일)}일 도착 기록 없음"} }
+
+# 5) 반품·환불 대사
+$환불없음 = [table:join]{left:$반품,right:$환불,on:"주문번호",how:"anti"}
+$환불없음이상 = $환불없음.items >> [table:sort]{by:"주문번호"} >> [table:each] { return {종류:"반품 후 환불 없음",주문번호:$it.주문번호,근거:f"${$it.반품일} 반품(${$it.유형}), 환불 기록 없음"} }
+$유령환불 = [table:join]{left:$환불,right:$반품,on:"주문번호",how:"anti"}
+$유령환불이상 = $유령환불.items >> [table:sort]{by:"주문번호"} >> [table:each] { return {종류:"반품 없이 환불",주문번호:$it.주문번호,근거:f"${$it.환불일} ${$it.금액수}원 환불, 반품 기록 없음"} }
+$주문금액 = $주문 >> [table:compute]{set:($o)=>{주문금액:$o.금액수}} >> [table:select]{columns:["주문번호","주문금액"]}
+$환불주문 = [table:join]{left:$환불,right:$주문금액,on:"주문번호",how:"left",defaults:{주문금액:null}}
+$금액다름 = $환불주문.items >> [table:filter]{where:($r)=>$r.주문금액 != null and $r.금액수 != null and $r.금액수 != $r.주문금액} >> [table:sort]{by:"주문번호"}
+$금액다름이상 = $금액다름 >> [table:each] { return {종류:"환불 금액 다름",주문번호:$it.주문번호,근거:f"주문 ${$it.주문금액}원, 환불 ${$it.금액수}원(차이 ${$it.주문금액 - $it.금액수}원)"} }
+$주문없는환불 = $환불주문.items >> [table:filter]{where:($r)=>$r.주문금액 == null} >> [table:each] { return {종류:"주문 없는 환불",주문번호:$it.주문번호,근거:"환불 기록의 주문번호가 주문 내역에 없음"} }
+
+# 6) 반품 사유 유형(AI)·월별
+$유형별 = $반품 >> [table:groupby]{by:"유형",agg:{건수:["count"]}}
+$유형표 = $유형별.items >> [table:sort]{by:"건수",descending:true}
+$월주문 = $주문 >> [table:groupby]{by:"월",agg:{주문수:["count"]}}
+$월매출 = $유효 >> [table:groupby]{by:"월",agg:{매출:["sum","금액수"],유효주문:["count"]}}
+$주문월 = $주문 >> [table:select]{columns:["주문번호","월"]}
+$반품월 = [table:join]{left:$반품,right:$주문월,on:"주문번호",how:"inner"}
+$월반품 = $반품월.items >> [table:groupby]{by:"월",agg:{반품:["count"]}}
+$월1 = [table:join]{left:$월주문.items,right:$월매출.items,on:"월",how:"left",defaults:{매출:0,유효주문:0}}
+$월2 = [table:join]{left:$월1.items,right:$월반품.items,on:"월",how:"left",defaults:{반품:0}}
+$월표 = $월2.items >> [table:sort]{by:"월"} >> [table:each] { return {**$it,반품률:$it.유효주문 == 0 ? null : round(100 * $it.반품 / $it.유효주문, 1)} }
+$매출들 = $월표 >> [table:each] { return $it.매출 }
+$총매출 = sum($매출들)
+
+# 변형 B: 반품 많은 고객 상위 10
+$주문고객 = $주문 >> [table:select]{columns:["주문번호","고객"]}
+$반품고객 = [table:join]{left:$반품,right:$주문고객,on:"주문번호",how:"inner"}
+$고객반품 = $반품고객.items >> [table:groupby]{by:"고객",agg:{반품:["count"]}}
+$고객주문 = $유효 >> [table:groupby]{by:"고객",agg:{주문:["count"]}}
+$고객표원 = [table:join]{left:$고객반품.items,right:$고객주문.items,on:"고객",how:"left",defaults:{주문:0}}
+$고객표 = $고객표원.items >> [table:sort]{by:"반품",descending:true} >> [table:take]{n:10} >> [table:each] { return {**$it,반품률:$it.주문 == 0 ? null : round(100 * $it.반품 / $it.주문, 1)} }
+
+$문제 = $파일문제 + $줄문제 + $무배송이상 + $중복이상 + $취소배송이상 + $분실이상 + $환불없음이상 + $금액다름이상 + $유령환불이상 + $주문없는환불
+$종류별 = $문제 >> [table:groupby]{by:"종류",agg:{건수:["count"]}}
+return {고객표:$고객표,문제:$문제,종류별:$종류별.items,택배사표:$택배사표,지역표:$지역표,지연건수:$지연건수,도착수:len($도착),미도착수:len($미도착),
+        유형표:$유형표,월표:$월표,총매출:$총매출,주문수:len($주문),취소수:len($취소),배송단서:$배송단서,파일상태:$자료.파일상태,사유유형:$자료.사유유형}

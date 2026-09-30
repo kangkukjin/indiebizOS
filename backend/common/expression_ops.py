@@ -11,7 +11,7 @@ from common.expression_ir import Fault, Node, ResultValue, Unit, projection
 
 
 # (minimum, maximum) argument counts; shared by compiler and evaluator.
-BUILTINS = {"len": (1, 1), "has": (2, 2), "get": (3, 3), "json": (1, 1),
+BUILTINS = {"len": (1, 1), "has": (2, 2), "get": (2, 3), "json": (1, 1),
             "number": (1, 1), "text": (1, 1), "abs": (1, 1), "round": (1, 2),
             "min": (1, 1000), "max": (1, 1000), "sum": (1, 1),
             "is_ok": (1, 1), "unwrap": (1, 1), "error_of": (1, 1),
@@ -109,7 +109,12 @@ def scalar_text(value):
         return str(integer)
     if isinstance(value, (str, int, float, Decimal)):
         return normalized_text(str(value))
-    raise Fault("TEXT_REQUIRED", "Text·Number·Bool만 문자열로 바꿀 수 있습니다. 구조에는 json()을 쓰세요.")
+    if value is None:
+        raise Fault("TEXT_REQUIRED", "Text·Number·Bool만 문자열로 바꿀 수 있습니다. 이 값은 null입니다 — "
+                    "보간·text() 앞에서 `$x == null ? '없음' : text($x)`처럼 가르세요.",
+                    details={"actual": "Null", "expected": "Bool | Number | Text"})
+    raise Fault("TEXT_REQUIRED", "Text·Number·Bool만 문자열로 바꿀 수 있습니다. 구조에는 json()을 쓰세요.",
+                details={"actual": type(value).__name__, "expected": "Bool | Number | Text"})
 
 
 def binary(op, left, right, *, legacy=False):
@@ -165,7 +170,8 @@ def pure_call(name, args, *, tick=lambda: None, callback=None):
     if name in ("has", "get"):
         if not isinstance(first, dict) or not isinstance(args[1], str):
             raise Fault("RECORD_REQUIRED", "has/get은 Record와 Text 키를 받습니다.")
-        return args[1] in first if name == "has" else first.get(args[1], args[2])
+        # get 의 기본값은 생략하면 null 이다(2026-09-30 개정).
+        return args[1] in first if name == "has" else first.get(args[1], args[2] if len(args) > 2 else None)
     if name == "json":
         # Unit/Result/Callable are not silently serialized as business JSON.
         try:

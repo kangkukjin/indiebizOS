@@ -118,6 +118,9 @@ class ChatMessage(BaseModel):
     # True면 즉시 반환(fire-and-forget) — 수 분짜리 작업이 터널 타임아웃(524)에 걸리지 않도록.
     # 응답/위임결과는 평소처럼 대화 로그에 저장되니 호출 측이 메시지를 폴링해서 받는다.
     background: bool = False
+    # "training" = 리허설(상상행동·긴문장 훈련의 시스템 AI 실행). 에피소드·건강 원장에서 실사용과 갈리고,
+    # 대화는 rehearsal 스레드·별도 CLI 세션에 남으며 증류와 RED 수리 그랜트는 없다. 생략 = 주인의 직접 명령.
+    origin: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -222,6 +225,13 @@ def chat_with_system_ai(chat: ChatMessage):
 
     global _docs_initialized
 
+    from thread_context import REHEARSAL_ORIGINS
+    if chat.origin is not None and chat.origin not in REHEARSAL_ORIGINS:
+        raise HTTPException(status_code=400, detail="origin은 'training'만 지정할 수 있습니다(생략 = 주인의 직접 명령).")
+    rehearsal = chat.origin is not None
+    conv_thread = "rehearsal" if rehearsal else "system_ai"
+    conv_source = "rehearsal" if rehearsal else None
+
     config = load_system_ai_config()
 
     if not config.get("enabled", True):
@@ -260,8 +270,8 @@ def chat_with_system_ai(chat: ChatMessage):
         set_current_task_id(task_id)
         clear_called_agent()
         # 원격 런처 자율주행 탭 채팅 = 사람의 직접 명령 (RED 수리 그랜트 전제조건)
-        from thread_context import set_task_origin
-        set_task_origin("user")
+        from thread_context import set_task_origin, clear_task_origin
+        set_task_origin(chat.origin if rehearsal else "user")
         # 에피소드 로깅 — /system-ai/chat 는 원격 런처 자율주행 탭이 타는 HTTP 경로인데,
         # 그동안 start/end 가 WebSocket 핸들러(api_websocket)에만 배선돼 있어 주행기록
         # 사각지대였다(forage_chat 선례와 같은 한 쌍). 동기·백그라운드 모두 _process()
@@ -272,7 +282,7 @@ def chat_with_system_ai(chat: ChatMessage):
             pass
         try:
             # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
-            history = get_history_for_ai(limit=7)
+            history = get_history_for_ai(limit=7, thread=conv_thread)
 
             # 이미지 데이터 변환
             images_data = None
@@ -280,7 +290,7 @@ def chat_with_system_ai(chat: ChatMessage):
                 images_data = [{"base64": img.base64, "media_type": img.media_type} for img in chat.images]
 
             # 사용자 메시지 저장 (이미지 포함)
-            user_conv_id = save_conversation("user", chat.message, images=images_data)
+            user_conv_id = save_conversation("user", chat.message, source=conv_source, images=images_data)
 
             # 첨부 사진의 파일 경로를 메시지에 동봉 — 비전(blob)으로는 '보이지만',
             # 편집·변형 핸들러([engines:image_gemini] input_image 등)에 넘기려면 경로가
@@ -329,7 +339,7 @@ def chat_with_system_ai(chat: ChatMessage):
             # 위임 없음 → 즉시 응답, 태스크 완료
             from system_ai_memory import complete_task as complete_system_ai_task
             complete_system_ai_task(task_id, response_text[:500])
-            save_conversation("assistant", response_text, images=tool_images)
+            save_conversation("assistant", response_text, source=conv_source, images=tool_images)
             return response_text
         finally:
             clear_current_task_id()
@@ -338,6 +348,9 @@ def chat_with_system_ai(chat: ChatMessage):
                 EpisodeLogger.end_episode()
             except Exception:
                 pass
+            if rehearsal:
+                # 파이프라인은 리허설 출처를 턴 끝까지 남긴다(에피소드 마감·증류 판정이 읽는다) — 여기서 걷는다.
+                clear_task_origin()
 
     if chat.background:
         def _worker():

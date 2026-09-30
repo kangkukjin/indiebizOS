@@ -228,15 +228,49 @@ def test_local_function_shadows_registered_write_resources_but_keeps_argument_wr
     '[if:{x:[test:leaf]{}}.x]{return 1}',
     '[def:f]($x={n:[test:leaf]{}}){return $x};[fn:f]{}',
     'return ($r)=>{n:[test:leaf]{}}',
-    'return f"${{n:[test:leaf]{}}.n}"',
-    'return len([[test:leaf]{}])',
-    'return {n:([test:leaf]{} + 1)}',
+    'return ($r)=>([test:leaf]{} + 1)',
+    'return ($r)=>len([[test:leaf]{}])',
+    'return true and ([test:leaf]{} == 1)',
+    'return {n:(false or ([test:leaf]{} == 1))}',
+    '[if:len([[test:leaf]{}]) > 0]{return 1}',
 ])
 def test_pure_slots_remain_pure_even_through_a_container(source):
     reg = {"test:leaf": adapter(lambda rt, a: pytest.fail("pure slot must not execute"))}
     plan = compile_program(source, reg)
     assert "PURE_EXPRESSION" in {issue["code"] for issue in plan.issues}
     assert not Runtime(plan).run()["executed"]
+
+
+@pytest.mark.parametrize("source,expected", [
+    ('return f"${{n:[test:leaf]{}}.n}"', "2"),
+    ('return len([[test:leaf]{}])', 1),
+    ('return {n:([test:leaf]{} + 1)}', {"n": 3}),
+    ('return [test:leaf]{} * 10 + [test:leaf]{}', 22),
+    ('return [test:leaf]{} == 2', True),
+    ('return f"값 ${[test:leaf]{}}개"', "값 2개"),
+    ('return join("-", [text([test:leaf]{}), "끝"])', "2-끝"),
+    ('return [1, 2, 3][0:[test:leaf]{}]', [1, 2]),
+])
+def test_value_slots_evaluate_calls_in_place(source, expected):
+    """2026-09-30 개정: 연산·내장 함수 인자·보간·슬라이스는 값 자리다 — 호출을 원문 순서로 한 번씩 평가한다."""
+    seen = []
+    reg = {"test:leaf": adapter(lambda rt, a: seen.append(1) or 2, effects=["pure"])}
+    plan = compile_program(source, reg)
+    assert not plan.issues, plan.issues
+    assert Runtime(plan).run()["value"] == expected
+    assert len(seen) == source.count("[test:leaf]")
+
+
+def test_value_slot_calls_keep_static_effect_checks():
+    reg = {"test:write": adapter(lambda rt, a: pytest.fail("static conflict"), {"path": "Text"},
+                                 effects=["write_external"], write_resources={"file": "path"}),
+           "test:ai": adapter(lambda rt, a: pytest.fail("check must not execute"), effects=["model"])}
+    plan = compile_program('(1 + [test:write]{path:"same"}) & [test:write]{path:"same"}', reg)
+    assert "PARALLEL_WRITE_CONFLICT" in {issue["code"] for issue in plan.issues}
+    plan = checked('return [table:each]{items:[1,2,3]}{return len([[test:ai]{}])}', reg)
+    assert "model" in plan.effects and plan.preflight["declared_ai_visits_upper_bound"] == 3
+    blocked = compile_program('return 1 + [if:true]{return 2}', reg)
+    assert {issue["code"] for issue in blocked.issues} & {"VALUE_EXPRESSION", "SYNTAX", "PURE_EXPRESSION"}
 
 
 @pytest.mark.parametrize("body", [

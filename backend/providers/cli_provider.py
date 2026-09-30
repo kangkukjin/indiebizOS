@@ -1198,14 +1198,17 @@ class CliSubprocessProvider(BaseProvider):
 
     def _get_session_key(self) -> str:
         """세션 매핑의 키. thread_context의 registry_key 우선, 없으면 agent_id/이름 폴백."""
+        # 리허설 턴은 자기 세션을 쓴다 — 주인의 실제 대화 세션을 이어받거나 지우지 않는다.
+        suffix = ""
         try:
-            from thread_context import get_current_registry_key
+            from thread_context import get_current_registry_key, in_rehearsal
+            suffix = "@rehearsal" if in_rehearsal() else ""
             key = get_current_registry_key()
             if key:
-                return key
+                return key + suffix
         except ImportError:
             pass
-        return self.agent_id or self.agent_name or "default"
+        return (self.agent_id or self.agent_name or "default") + suffix
 
     def _write_system_prompt_file(self) -> Optional[str]:
         """시스템 프롬프트+도구정책을 (에이전트, 스레드)별 고정 임시 파일에 쓰고 경로를 반환.

@@ -830,6 +830,15 @@ class Runtime(ExpressionEvaluator):
             {"node_id": key, "steps": count, "location": self.source_map.get(key, {})}
             for key, count in costs[:20]]
         out['usage']['steps_other'] = self.budget.used_steps - sum(n for _, n in costs[:20])
+        # 한 줄의 람다는 하위 노드 여러 칸으로 흩어진다 — 줄로 모으면 비싼 문장이 바로 보인다(긴문장 L9-4).
+        lines = {}
+        for key, count in costs:
+            where = self.source_map.get(key, {})
+            if where.get('line') is not None:
+                place = (where.get('source_hash'), where['line'])
+                lines[place] = lines.get(place, 0) + count
+        top = sorted(lines.items(), key=lambda item: (-item[1], item[0][1]))[:10]
+        out['usage']['steps_by_line'] = [{"line": line, "steps": count, "source_hash": source} for (source, line), count in top]
         notes = [{'event_id': event['id'], 'location': self.source_map.get(event['node_id'], {}),
                   'warning': event['warning'][:1000]}
                  for event in self.trace if event.get('warning')]

@@ -45,7 +45,7 @@ see_also: [architecture.md, ibl.md]
 ### 시스템 AI
 - `GET /system-ai` - 시스템 AI 설정 조회
 - `PUT /system-ai` - 시스템 AI 설정 업데이트
-- `POST /system-ai/chat` - 시스템 AI와 대화
+- `POST /system-ai/chat` - 시스템 AI와 대화. 본문 `origin:"training"` = 리허설 턴(에피소드·궤적 source `training`, 대화는 `rehearsal` 스레드, CLI 세션 `…@rehearsal`, 증류·RED 그랜트 없음). 다른 값은 400
 - `GET /system-ai/prompts/config` - 프롬프트 설정 조회
 - `PUT /system-ai/prompts/config` - 프롬프트 설정 업데이트 (역할 프롬프트 토글)
 - `GET /system-ai/prompts/role` - 역할 프롬프트 조회

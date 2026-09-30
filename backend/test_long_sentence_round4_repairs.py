@@ -60,11 +60,18 @@ def test_bottom_join_and_nested_discrimination(registry):
 
 
 def test_one_diagnostic_per_impure_expression(registry):
+    # 2026-09-30 개정: 내장 함수 인자는 값 자리라 원래 재현은 이제 그대로 실행된다.
     code = (FIXTURE / 'repro/pure_expr_triple.ibl').read_text()
-    issues = compile_program(code, registry).issues
+    plan = compile_program(code, registry)
+    assert not plan.issues, plan.issues
+    assert Runtime(plan).run()['value'] == ['a', 'b']
+    # 람다 본문은 여전히 순수 자리다 — 위반 하나에 진단 하나, 처방은 그대로.
+    impure = 'return [{n:1}] >> [table:filter]{where:($r)=>len([2] >> [table:each]{return $it}) > 0}'
+    issues = compile_program(impure, registry).issues
     assert len(issues) == 1 and issues[0]['code'] == 'PURE_EXPRESSION'
     assert 'reduce(' in issues[0]['hint'] and '$변환' in issues[0]['hint']
-    two = 'return [unique([1] >> [table:each]{return $it}),len([2] >> [table:each]{return $it})]'
+    two = ('return [($r)=>unique([1] >> [table:each]{return $it}),'
+           '($r)=>len([2] >> [table:each]{return $it})]')
     assert len(compile_program(two, registry).issues) == 2
 
 

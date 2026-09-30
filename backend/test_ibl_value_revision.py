@@ -203,8 +203,10 @@ def test_new_expression_core_is_in_reuse_identity(tmp_path):
     reg={'x:read':Adapter({'version':1,'params':{},'result':'List','effects':['read_external']},
                          lambda rt,a:calls.append(1) or [1,1,2])}
     plan=compile_program('return unique([x:read]{})',reg)
-    # Tool calls are deliberately not pure builtin arguments: bind first.
-    assert plan.issues
+    # 2026-09-30 개정: 내장 함수 인자는 값 자리다 — 호출을 그 자리에서 한 번 평가한다.
+    assert not plan.issues, plan.issues
+    assert Runtime(plan).run()['value']==[1,2] and calls==[1]
+    calls.clear()
     plan=compile_program('$rows=[x:read]{};return unique($rows)',reg)
     assert 'expressions' in plan.dependencies
     with Journal(tmp_path,'values') as journal:

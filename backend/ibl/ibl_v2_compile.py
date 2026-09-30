@@ -134,15 +134,18 @@ class Compiler:
     def container_value(self, node):
         """Construct values with calls, without adding a statement/return scope.
 
-        Calls own their argument checks and each/function return frames. Pure
-        slots (operators, lambdas, defaults, conditions) still check recursively
-        in visit; a nested record cannot smuggle effects into those slots.
+        Calls own their argument checks and each/function return frames.
+        값을 만드는 자리 — 객체·목록 값, 그리고 2026-09-30 개정으로 연산 피연산자·내장 함수 인자·
+        보간·슬라이스 — 는 호출·조합을 원문 순서로 그 자리에서 평가한다. 실행 여부나 횟수가 갈리는
+        자리(조건·조건 값·and/or·람다 본문·기본값)는 각자의 방문에서 pure()가 재귀로 지키므로,
+        값 자리로 감싸도 그 안에 효과를 숨길 수 없다.
         """
         if node.kind in ("call", "lambda"):
             return
         if node.kind not in PURE_KINDS | {"pipe", "parallel", "fallback"}:
             self.issue(node, "VALUE_EXPRESSION",
-                       "객체·목록의 값에는 식·호출·조합을 쓰세요. 제어 블록은 앞 문장이나 함수 본문에 두세요.")
+                       "값 자리(객체·목록·연산·내장 함수 인자·보간)에는 식·호출·조합을 쓰세요. "
+                       "제어 블록은 앞 문장이나 함수 본문에 두세요.")
             return
         for value in node.data.values():
             self.check_children(value, self.container_value)
@@ -359,7 +362,7 @@ class Compiler:
                     fields[key] = typ
             return Type("Record", tuple(fields.items()), open=opened)
         if kind == "slice":
-            self.pure(node)
+            self.container_value(node)
             base = sub(d["base"])
             self.need(node, base, join(TEXT, Type("List", item=UNKNOWN)))
             for key in ("lower", "upper", "stride"):
@@ -379,8 +382,11 @@ class Compiler:
                 key = key.data["value"] if key.kind == "literal" else None
             return access_type(self, node, base, key, key_type)
         if kind in ("binary", "unary"):
-            self.pure(node)
             op = d["op"]
+            if kind == "binary" and op in ("and", "&&", "or", "||"):
+                self.pure(node)  # 오른쪽은 평가되지 않을 수 있다 — 효과의 실행 여부를 식에 숨기지 않는다.
+            else:
+                self.container_value(node)
             right_env = (narrow(env, d["left"], op in ("and", "&&"))
                          if kind == "binary" and op in ("and", "&&", "or", "||") else env)
             values = ([sub(d["value"])] if kind == "unary"
@@ -423,7 +429,7 @@ class Compiler:
                 self.issue(node, "BUILTIN", unknown_builtin_message(d["name"]))
             return Type("Callable")
         if kind == "pure_call":
-            self.pure(node)
+            self.container_value(node)
             fn = d["fn"]
             self.need(fn, sub(fn), Type("Callable"))
             types = [sub(a) for a in d["args"]]
@@ -431,7 +437,8 @@ class Compiler:
                 name = fn.data["name"]
                 low, high = BUILTINS[name]
                 if not low <= len(types) <= high:
-                    self.issue(node, "ARITY", f"{name}은 {low}~{high}개 인자를 받습니다.")
+                    wanted = f"{low}개" if low == high else f"{low}~{high}개"
+                    self.issue(node, "ARITY", f"{name}은 인자 {wanted}를 받습니다(받은 인자 {len(types)}개).")
                 return builtin_type(self, node, name, types, env, names, readonly)
             return UNKNOWN
         if kind == "lambda":
@@ -446,7 +453,7 @@ class Compiler:
             known = []
             for part in d["parts"]:
                 if isinstance(part, Node):
-                    self.pure(part)
+                    self.container_value(part)
                     t = sub(part)
                     if not compatible(t, join(join(TEXT, NUMBER), BOOL)):
                         self.issue(part, "FORMAT_TYPE", f"보간에는 Text·Number·Bool이 필요하지만 {t}입니다.",

@@ -197,6 +197,9 @@ def compatible(actual, expected):
 
 def guard(value, spec, label):
     expected = declared(spec)
-    if not compatible(infer(value), expected):
-        raise Fault("TYPE_CONTRACT", f"{label}: {expected}가 필요하지만 {infer(value)}입니다.")
+    actual = infer(value)
+    if not compatible(actual, expected):
+        # 정적 검사(TYPE)와 같은 처방 — 값으로만 타입이 정해지는 입력은 실행에서 처음 드러난다.
+        hint = " 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요." if expected.kind == "List" and actual.kind == "Record" else ""
+        raise Fault("TYPE_CONTRACT", f"{label}: {expected}가 필요하지만 {actual}입니다.{hint}")
     return value

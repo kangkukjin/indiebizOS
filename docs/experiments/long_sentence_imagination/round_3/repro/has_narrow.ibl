@@ -1,0 +1,9 @@
+#!ibl edition=2
+# inputs: bad (Bool)
+[def:하나]($bad) {
+  [if:$bad] { return {id:1,실패:"x"} }
+  return {id:2}
+}
+$행 = [[fn:하나]{bad:$bad},[fn:하나]{bad:false}]
+$실패 = $행 >> [table:filter]{where:($r)=>has($r,"실패")}
+return $실패 >> [table:each] { return $it.실패 }

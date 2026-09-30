@@ -277,6 +277,7 @@ class Parser:
                 if not self.accept(","):
                     break
             if self.accept(")") and self.accept("=>"):
+                self.nl()
                 return self.node("lambda", start, params=params, body=self.expr())
             self.i = saved + 1
             self.nl()

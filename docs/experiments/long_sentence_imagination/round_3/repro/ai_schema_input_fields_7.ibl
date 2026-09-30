@@ -1,0 +1,3 @@
+#!ibl edition=2
+$r = [{a:1,t:"가"}] >> [table:ai]{instruction:"t 를 보고 채워라", schema:"주장(목록, 각 원소 {값:원문 표기 숫자 문자열, 단위:m|km|ft|mi, 대상:무엇의 수치인지 짧게, 측정:측정 연도·기관 또는 null}), 논쟁(질문 주제에 대한 이견·반론·최장 여부 논쟁을 문단이 서술하면 한 문장 요약, 없으면 null)", preserve_rows:true}
+return $r.items >> [table:each] { return {a:$it.a,t:$it.t} }

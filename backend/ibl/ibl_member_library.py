@@ -53,6 +53,8 @@ def adapters(project_path, agent_id):
                     "compatibility": "legacy-function/1", "implementation_fingerprint": digest(source),
                     "adapter": {"protocol": "legacy-envelope", "value_path": ""}}
         receiver = pipe_input_param(s.get("body"))
+        from ibl_v2_compat import forwarding_contract, promote_return_fields
+        contract.update(forwarding_contract(s.get("body", []), contract["params"], receiver))
         if receiver in contract["params"]:
             contract["pipe_input"] = receiver
         def run(runtime, args, name=name, contract=contract):
@@ -63,6 +65,6 @@ def adapters(project_path, agent_id):
             raw = execute_ibl(call, project_path, agent_id=agent_id)
             value, evidence = decode_envelope(raw, contract["adapter"])
             evidence["compatibility"] = "legacy-function/1"
-            return Adapted(value, evidence)
+            return Adapted(promote_return_fields(value, contract), evidence)
         result["fn:" + name] = Adapter(contract, run)
     return result

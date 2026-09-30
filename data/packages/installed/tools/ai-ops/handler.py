@@ -595,9 +595,33 @@ def _transform(tool_input: dict) -> str:
     except ContractError as exc:
         return _fail(str(exc), error_type="contract", **exc.details)
     except ValueError as exc:
-        if contract is not None:
-            return _fail(f"변환 실패: {exc}", error_type="contract", phase="output")
-        return _fail(f"변환 실패: {exc}")
+        from collections import Counter
+        normalized, invalid = [], []
+        for pos, row in enumerate(out):
+            index = row.get("_i")
+            if isinstance(index, str) and re.fullmatch(r"[+-]?\d+", index.strip()):
+                index = int(index)
+            if type(index) is int and 0 <= index < len(dict_items):
+                normalized.append(index)
+            else:
+                invalid.append({"row": pos, "index": index})
+        counts = Counter(normalized)
+        diagnostic = {"phase": "output", "expected_rows": len(dict_items),
+                      "returned_rows": len(out),
+                      "missing_indices": sorted(set(range(len(dict_items))) - set(counts)),
+                      "duplicate_indices": sorted(i for i, n in counts.items() if n > 1),
+                      "invalid_indices": invalid}
+        # Keep the parsed, unmerged response once. The normal error remains
+        # compact and read_result can retrieve it without another model call.
+        try:
+            from supervision_store import current_evidence_store
+            ref = current_evidence_store().evidence({"model_output": parsed})
+            diagnostic["model_output_ref"] = {"id": ref["id"],
+                "read_args": {"id": ref["id"], "path": ["model_output"], "offset": 0, "limit": 6000}}
+        except (OSError, ValueError, TypeError):
+            diagnostic["model_output_preview"] = json.dumps(parsed, ensure_ascii=False)[:2000]
+        return _fail(f"변환 실패: {exc}", error_type="contract" if contract is not None else "row_preservation",
+                     **diagnostic)
     schema_error = records_schema_error(out, schema)
     if schema_error:
         return _fail(schema_error, error_type="schema", fields=declared)

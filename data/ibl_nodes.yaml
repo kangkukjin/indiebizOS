@@ -2745,8 +2745,8 @@ nodes:
               - queries
         lands_on: hub
         path_audited:
-          at: '2026-09-29'
-          impl: b954ffa6768970e3
+          at: '2026-09-30'
+          impl: b536e06743f20e6f
         aliases:
           limit:
           - count
@@ -2818,6 +2818,8 @@ nodes:
           result:
             items: List<Record>
             url: Text
+          read_resources:
+            url: url
           effects:
           - read_external
           adapter:
@@ -2857,8 +2859,8 @@ nodes:
               items: List<Record>
         lands_on: hub
         path_audited:
-          at: '2026-09-29'
-          impl: b954ffa6768970e3
+          at: '2026-09-30'
+          impl: b536e06743f20e6f
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -5456,8 +5458,8 @@ nodes:
             backend/common/expression_functions.py: 06242617ac4f3c12919fbf35dc13b2effb3c9052ce0957e64561bc932ac19408
             backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
-            backend/common/expression_ops.py: fe8a4da20e4b3617e14ce30b46be46fb5a822e331b38ac36ed6ab43c892d3352
-            backend/common/expression_parser.py: 3219754d2daca3236d72cc9e9017f2a3dd06c19ce79e5e220aaab60271bdee69
+            backend/common/expression_ops.py: b1c79919267d1b07f1159c406cb9a2e59274dae39f2171fd7ed0e457ef9e0d03
+            backend/common/expression_parser.py: 662b1d044a34423e671271317e7130ed3490aa348fc3a9d802739efba1550b71
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
             backend/base/runtime_utils.py: ee8f08ebd8889224e85458645b3f60386fcdb1c732772c4657d2d173fee8e0ff
             backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
@@ -9544,6 +9546,33 @@ nodes:
         - 한줄로
         - brief
       filter:
+        legacy_callable_contract:
+          version: 1
+          params:
+            items: Unknown
+            where:
+              value: Text
+            context:
+              before: Number
+              after: Number
+              limit: Number
+          required:
+          - items
+          - where
+          - context
+          pipe_input: items
+          effects:
+          - pure
+          result:
+            items: List<Record>
+            count: Number
+            match_info:
+              total_matches: Number
+              selected_matches: Number
+              omitted_matches: Number
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
         callable_contract:
           version: 1
           params:

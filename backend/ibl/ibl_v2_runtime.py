@@ -41,9 +41,23 @@ class Budget:
         with self.lock:
             self.used_steps += 1
             self.used_rows += int(row)
-            if (self.used_steps > self.steps or self.used_rows > self.rows or
-                    (self.seconds is not None and time.monotonic() - self.started > self.seconds) or depth > self.depth):
-                raise Fault("BUDGET", "공유 실행 예산을 초과했습니다.", kind="budget")
+            elapsed = time.monotonic() - self.started if self.seconds is not None else None
+            if (self.used_steps <= self.steps and self.used_rows <= self.rows
+                    and depth <= self.depth and (elapsed is None or elapsed <= self.seconds)):
+                return
+            measurements = {"steps": (self.used_steps, self.steps),
+                            "rows": (self.used_rows, self.rows),
+                            "seconds": (elapsed, self.seconds),
+                            "depth": (depth, self.depth)}
+            exceeded = {key: {"used": used, "limit": limit}
+                        for key, (used, limit) in measurements.items()
+                        if limit is not None and used > limit}
+            if exceeded:
+                hint = ("도구의 필터·검색으로 입력을 좁히거나 전건을 여러 실행으로 나누세요. "
+                        "전건 처리가 필요하면 take로 조용히 잘라내지 마세요.")
+                dimensions = ", ".join(f"{k} {v['used']:g}/{v['limit']:g}" for k, v in exceeded.items())
+                raise Fault("BUDGET", f"공유 실행 예산을 초과했습니다: {dimensions}. {hint}",
+                            kind="budget", details={"exceeded": exceeded, "hint": hint})
 
 
 def returned_shape(value):

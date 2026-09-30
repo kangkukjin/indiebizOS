@@ -154,7 +154,12 @@ def analyze(compiler, root, inputs):
             for loop_id, count in loops:
                 if count is None or count <= 1 or multiplier == 0:
                     continue
+                # Only the payload is repeated work. Column/schema/contract
+                # lists configure a call; they are not batch input data.
+                payload = contract.get('pipe_input')
                 for name, fact in args.items():
+                    if name != payload:
+                        continue
                     if fact.count is not None and fact.count > 1 and loop_id not in fact.dependencies:
                         entry = {'rule': 'repeated_ai_batch', 'code': 'repeated_ai_batch',
                                  'severity': 'warning', 'location': where(node),

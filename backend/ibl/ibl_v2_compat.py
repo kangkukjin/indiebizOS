@@ -64,6 +64,66 @@ def legacy_functions():
     return dict(sorted(assets.items()))
 
 
+
+def forwarding_contract(steps, params, receiver):
+    """Recognize only a direct input → explicitly contracted legacy leaf return.
+
+    Dynamic calls, nested control, criteria and extra steps remain unknown.
+    Internal spill/evidence files are execution bookkeeping, not world writes.
+    No function name or task domain participates in this proof.
+    """
+    if not isinstance(steps, list) or len(steps) != 2 or not receiver:
+        return {}
+    emit, call = steps
+    if (set(emit) - {"_var_emit", "name", "path", "_free"}
+            or not emit.get("_var_emit") or emit.get("name") != receiver or emit.get("path")
+            or set(call) - {"_node", "action", "target", "params", "_assign_name"}
+            or call.get("target") or call.get("_assign_name") != "return"):
+        return {}
+    from ibl_registry import load_nodes_installed
+    from ibl_v2_adapters import validate_contract
+    config = (load_nodes_installed().get("nodes", {}).get(call.get("_node"), {})
+              .get("actions", {}).get(call.get("action"), {}))
+    leaf = config.get("legacy_callable_contract")
+    if not leaf:
+        return {}
+    try:
+        validate_contract(leaf)
+    except (ValueError, TypeError):
+        return {}
+    # Until resource substitution is represented here, prove pure wrappers only.
+    if leaf["effects"] != ["pure"]:
+        return {}
+    arguments = call.get("params") or {}
+    if set(arguments) - set(leaf["params"]) or leaf.get("pipe_input") in arguments:
+        return {}
+    if set(leaf.get("required", [])) - set(arguments) - {leaf.get("pipe_input")}:
+        return {}
+    inferred = {p: "Unknown" for p in params}
+    inferred[receiver] = leaf["params"][leaf["pipe_input"]]
+
+    def infer_argument(value, spec):
+        if isinstance(value, str) and value.startswith("$") and value[1:] in inferred:
+            inferred[value[1:]] = spec
+        elif isinstance(value, dict) and isinstance(spec, dict):
+            for key in value.keys() & spec.keys():
+                infer_argument(value[key], spec[key])
+    for key, value in arguments.items():
+        infer_argument(value, leaf["params"][key])
+    return {"params": inferred, "effects": leaf["effects"], "result": leaf["result"]}
+
+
+def promote_return_fields(value, contract):
+    """Keep the complete legacy envelope, exposing only declared leaf metadata."""
+    from common.currency import coerce_json_param
+    if not isinstance(contract.get("result"), dict) or not isinstance(value, dict):
+        return value
+    leaf = coerce_json_param(value.get("final_result"))
+    if isinstance(leaf, dict):
+        return {**{k: leaf[k] for k in contract["result"] if k in leaf}, **value}
+    return value
+
+
 def function_adapters(project_path, agent_id):
     from member_runtime import is_member
     if is_member():
@@ -101,6 +161,7 @@ def function_adapters(project_path, agent_id):
                     "result": "Record", "effects": ["unknown"],
                     "compatibility": "legacy-function/1", "implementation_fingerprint": digest([snapshot, implementation]),
                     "adapter": {"protocol": "legacy-envelope", "value_path": ""}}
+        contract.update(forwarding_contract(steps, contract["params"], receiver))
         if receiver in params:
             contract["pipe_input"] = receiver
         def run(runtime, args, *, name=name, contract=contract, snapshot=snapshot):
@@ -112,6 +173,6 @@ def function_adapters(project_path, agent_id):
                                   project_path, agent_id=agent_id)
             value, evidence = decode_envelope(raw, contract["adapter"])
             evidence["compatibility"] = "legacy-function/1"
-            return Adapted(value, evidence)
+            return Adapted(promote_return_fields(value, contract), evidence)
         result[f"fn:{name}"] = Adapter(contract, run)
     return result

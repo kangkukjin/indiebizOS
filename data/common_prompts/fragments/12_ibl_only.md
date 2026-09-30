@@ -122,6 +122,9 @@ return $결과
 객체·목록 안의 직접 제어 블록은 금지하며 앞 문장이나 명시 함수 본문에 둔다.
 `len`, `has`, `get`, `json`, `number`, `text`, `abs`, `round`, `min`, `max`, `sum`,
 `reduce(목록,초깃값,($누적,$행)=>식)`, `is_ok`, `unwrap`, `error_of`, `evidence`가 내장 함수다.
+`number()`는 해석 불가·범위 표기·비유한 값을 NUMBER_REQUIRED로 실패시킨다(null 반환 아님).
+필요하면 `[try]{return number($표기)}[catch]{return null}`로 처리한다. 람다 `=>` 뒤 줄바꿈도 허용한다.
+`has($행,"필드")`가 참인 분기·filter 뒤에는 필드의 존재를 인정한다(비null 보장은 아님).
 
 내장 함수도 Callable 값으로 전달한다. `$f=abs; return $f(-2)`와 함수 인자·기본값·콜백 자리는
 같은 실행 계약을 사용한다. `[true]`, `[null]`, `[abs]`도 한 원소 목록이다.

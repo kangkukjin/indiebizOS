@@ -1,0 +1,4 @@
+#!ibl edition=2
+# 원천마다 다른 문단 목록을 넘기는데, input_fields 리터럴 목록을 "반복 전달되는 목록 전체"로 경고하는지
+$원천 = [[{i:1,t:"가"}],[{i:2,t:"나"}]]
+$원천 >> [table:each] { $it >> [table:ai]{instruction:"t 요약", schema:"s(문자열)", input_fields:["i","t"]} }

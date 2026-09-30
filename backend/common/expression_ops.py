@@ -93,7 +93,11 @@ def number(value):
     try:
         return arithmetic_numbers([value])[0]
     except ValueError as exc:
-        raise Fault("NUMBER_REQUIRED", str(exc)) from exc
+        preview = repr(value)[:240]
+        raise Fault("NUMBER_REQUIRED", f"number(): 유한 숫자로 해석할 수 없습니다: {preview}. "
+                    "해석 실패는 null이 아니라 오류입니다. [try]/[catch]로 처리하세요.",
+                    details={"operation": "number", "input_preview": preview,
+                             "input_type": type(value).__name__, "expected": "finite number"}) from exc
 
 
 def scalar_text(value):

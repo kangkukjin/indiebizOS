@@ -958,6 +958,15 @@ def _crawl_website_impl(url: str, max_length: int | None = None, *, op="content"
         "methods_tried": [a.get("method") for a in attempts if a.get("method")],
         "stages": stages,
     }
+    observed = next((a for a in reversed(attempts)
+                     if a.get("reason") == reason and a.get("http_status") is not None), None)
+    if observed:
+        result["http_status"] = observed["http_status"]
+        result["resolved_url"] = observed.get("resolved_url", url)
+        if observed["http_status"] >= 400:
+            result["error"] = f"HTTP {observed['http_status']}: {hint}"
+            if observed["http_status"] == 404:
+                result["error_type"] = "not_found"
     if static.get("error"):
         result["detail"] = static["error"]
     return result

@@ -1,0 +1,579 @@
+{
+  "check_v5": {
+    "elapsed_s": 0.534,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "check_v8b": {
+    "elapsed_s": 0.364,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "check_varB_v1": {
+    "elapsed_s": 0.354,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_1": {
+    "elapsed_s": 0.268,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_2": {
+    "elapsed_s": 0.27,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_3": {
+    "elapsed_s": 0.264,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_4": {
+    "elapsed_s": 0.272,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_5": {
+    "elapsed_s": 0.262,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_6": {
+    "elapsed_s": 0.296,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_7": {
+    "elapsed_s": 0.416,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_8": {
+    "elapsed_s": 0.301,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_9": {
+    "elapsed_s": 0.261,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_10": {
+    "elapsed_s": 0.268,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_11": {
+    "elapsed_s": 0.266,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "schema_12": {
+    "elapsed_s": 0.265,
+    "success": null,
+    "reuse": null,
+    "continuation": null,
+    "usage": null,
+    "run_id": null,
+    "diagnostic": null,
+    "value": null
+  },
+  "crawl_first": {
+    "elapsed_s": 7.264,
+    "success": true,
+    "reuse": null,
+    "continuation": {
+      "reuse_args": {
+        "reuse": {
+          "run_id": "3d0c158e39c3405aaf23cdc192b0f5c3"
+        }
+      },
+      "read_calls": 6,
+      "state_change_possible": true,
+      "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "usage": {
+      "steps": 464,
+      "rows": 6,
+      "elapsed_ms": 6700
+    },
+    "run_id": "3d0c158e39c3405aaf23cdc192b0f5c3",
+    "diagnostic": null,
+    "value": [
+      {
+        "주제": "T1 에베레스트",
+        "언어": "ko",
+        "ok": true,
+        "적중": 6,
+        "사용": 6
+      },
+      {
+        "주제": "T1 에베레스트",
+        "언어": "en",
+        "ok": true,
+        "적중": 9,
+        "사용": 9
+      },
+      {
+        "주제": "T2 만리장성",
+        "언어": "ko",
+        "ok": true,
+        "적중": 5,
+        "사용": 5
+      },
+      {
+        "주제": "T2 만리장성",
+        "언어": "en",
+        "ok": true,
+        "적중": 19,
+        "사용": 15
+      },
+      {
+        "주제": "T3 나일강",
+        "언어": "ko",
+        "ok": true,
+        "적중": 5,
+        "사용": 5
+      },
+      {
+        "주제": "T3 나일강",
+        "언어": "en",
+        "ok": true,
+        "적중": 22,
+        "사용": 15
+      }
+    ]
+  },
+  "crawl_reuse": {
+    "elapsed_s": 2.236,
+    "success": true,
+    "reuse": {
+      "run_id": "3d0c158e39c3405aaf23cdc192b0f5c3",
+      "reused_calls": 6,
+      "candidates": 6
+    },
+    "continuation": {
+      "reuse_args": {
+        "reuse": {
+          "run_id": "2f23b7a2c4124d918f6555825fb3fde2"
+        }
+      },
+      "read_calls": 6,
+      "state_change_possible": true,
+      "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "usage": {
+      "steps": 454,
+      "rows": 6,
+      "elapsed_ms": 1436
+    },
+    "run_id": "2f23b7a2c4124d918f6555825fb3fde2",
+    "diagnostic": null,
+    "value": [
+      {
+        "주제": "T1 에베레스트",
+        "언어": "ko",
+        "ok": true,
+        "적중": 6,
+        "사용": 6
+      },
+      {
+        "주제": "T1 에베레스트",
+        "언어": "en",
+        "ok": true,
+        "적중": 9,
+        "사용": 9
+      },
+      {
+        "주제": "T2 만리장성",
+        "언어": "ko",
+        "ok": true,
+        "적중": 5,
+        "사용": 5
+      },
+      {
+        "주제": "T2 만리장성",
+        "언어": "en",
+        "ok": true,
+        "적중": 19,
+        "사용": 10
+      },
+      {
+        "주제": "T3 나일강",
+        "언어": "ko",
+        "ok": true,
+        "적중": 5,
+        "사용": 5
+      },
+      {
+        "주제": "T3 나일강",
+        "언어": "en",
+        "ok": true,
+        "적중": 22,
+        "사용": 10
+      }
+    ]
+  },
+  "number": {
+    "elapsed_s": 0.435,
+    "success": false,
+    "reuse": null,
+    "continuation": null,
+    "usage": {
+      "steps": 6,
+      "rows": 0,
+      "elapsed_ms": 0
+    },
+    "run_id": "dbcb0de6f03f4230bc70e75d8b3d2361",
+    "diagnostic": {
+      "code": "NUMBER_REQUIRED",
+      "kind": "runtime",
+      "message": "number(): 유한 숫자로 해석할 수 없습니다: '5,000~6,000'. 해석 실패는 null이 아니라 오류입니다. [try]/[catch]로 처리하세요.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        5
+      ],
+      "details": {
+        "operation": "number",
+        "input_preview": "'5,000~6,000'",
+        "input_type": "str",
+        "expected": "finite number"
+      },
+      "source_span": {
+        "source_hash": "4f1caabc73df135ff6eb29a73628251b480b71303f574af2c6f76842d42b9771",
+        "start": 7,
+        "end": 17,
+        "line": 1,
+        "column": 8
+      }
+    },
+    "value": null
+  },
+  "multiline": {
+    "elapsed_s": 0.289,
+    "success": true,
+    "reuse": null,
+    "continuation": null,
+    "usage": {
+      "steps": 28,
+      "rows": 3,
+      "elapsed_ms": 0
+    },
+    "run_id": "292a83d9b0524cccbda2958aaff93f84",
+    "diagnostic": null,
+    "value": 6
+  },
+  "budget": {
+    "elapsed_s": 0.753,
+    "success": false,
+    "reuse": null,
+    "continuation": null,
+    "usage": {
+      "steps": 99025,
+      "rows": 10001,
+      "elapsed_ms": 479
+    },
+    "run_id": "1884c6c0c8fc4c0299a695c370c53048",
+    "diagnostic": {
+      "code": "BUDGET",
+      "kind": "budget",
+      "message": "공유 실행 예산을 초과했습니다: rows 10001/10000. 도구의 필터·검색으로 입력을 좁히거나 전건을 여러 실행으로 나누세요. 전건 처리가 필요하면 take로 조용히 잘라내지 마세요.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        42
+      ],
+      "details": {
+        "exceeded": {
+          "rows": {
+            "used": 10001,
+            "limit": 10000
+          }
+        },
+        "hint": "도구의 필터·검색으로 입력을 좁히거나 전건을 여러 실행으로 나누세요. 전건 처리가 필요하면 take로 조용히 잘라내지 마세요.",
+        "row_index": 1000,
+        "operation": "filter"
+      },
+      "source_span": {
+        "source_hash": "77383b8bdef1f1b465adc17cf023783a8c1c8ebcb327b7e086a82a54842ae54b",
+        "start": 184,
+        "end": 234,
+        "line": 4,
+        "column": 45
+      }
+    },
+    "value": null
+  },
+  "http404": {
+    "elapsed_s": 9.392,
+    "success": true,
+    "reuse": null,
+    "continuation": null,
+    "usage": {
+      "steps": 16,
+      "rows": 0,
+      "elapsed_ms": 9079
+    },
+    "run_id": "22f8f2ab387a441eaecfe27c8e4e53a4",
+    "diagnostic": null,
+    "value": {
+      "code": "NOT_FOUND",
+      "message": "HTTP 404: 서버가 HTTP 오류를 반환했습니다.",
+      "details": {
+        "error_type": "not_found",
+        "http_status": 404,
+        "url": "https://ko.wikipedia.org/wiki/만리장성_LSI3_없는문서",
+        "resolved_url": "https://ko.wikipedia.org/wiki/%EB%A7%8C%EB%A6%AC%EC%9E%A5%EC%84%B1_LSI3_%EC%97%86%EB%8A%94%EB%AC%B8%EC%84%9C",
+        "reason": "http_error",
+        "stages": [
+          {
+            "stage": "정적(curl_cffi)",
+            "ran": true,
+            "detail": "HTTP 에러: 404"
+          },
+          {
+            "stage": "Chrome MCP",
+            "ran": false,
+            "detail": "건너뜀 — 크롬이 연결돼 있지 않음(자동 연결하지 않는다)"
+          },
+          {
+            "stage": "Playwright",
+            "ran": true,
+            "detail": "Playwright HTTP 상태: 404"
+          }
+        ]
+      }
+    }
+  },
+  "model_stage": {
+    "elapsed_s": 3.955,
+    "success": true,
+    "reuse": null,
+    "continuation": null,
+    "usage": {
+      "steps": 17,
+      "rows": 0,
+      "elapsed_ms": 3570,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 5529,
+        "output": 36,
+        "cache_read": 540,
+        "cache_create": 4987,
+        "reasoning": 0,
+        "calls": [
+          {
+            "call_id": "25d6b7ba07ec48f68ef6883ac9353635",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 2654,
+            "input": 5529,
+            "output": 36,
+            "cache_read": 540,
+            "cache_create": 4987,
+            "reasoning": 0
+          }
+        ]
+      }
+    },
+    "run_id": "fe095cb7bc5248f391c43ad768069b40",
+    "diagnostic": null,
+    "value": {
+      "rows": [
+        {
+          "text": "12",
+          "value": "12",
+          "_ai": true
+        },
+        {
+          "text": "범위",
+          "value": "범위",
+          "_ai": true
+        }
+      ]
+    }
+  },
+  "downstream_failure": {
+    "elapsed_s": 0.367,
+    "success": false,
+    "reuse": null,
+    "continuation": null,
+    "usage": {
+      "steps": 24,
+      "rows": 2,
+      "elapsed_ms": 0
+    },
+    "run_id": "010a8c30fce4432d836fcffabee38d35",
+    "diagnostic": {
+      "code": "NUMBER_REQUIRED",
+      "kind": "partial",
+      "message": "number(): 유한 숫자로 해석할 수 없습니다: '범위'. 해석 실패는 null이 아니라 오류입니다. [try]/[catch]로 처리하세요.",
+      "frames": [],
+      "has_partial": true,
+      "partial": [
+        12
+      ],
+      "evidence": [
+        15
+      ],
+      "details": {
+        "coverage": [
+          "ok",
+          "failed"
+        ],
+        "successful_indices": [
+          0
+        ],
+        "errors": {
+          "1": {
+            "code": "NUMBER_REQUIRED",
+            "kind": "runtime",
+            "message": "number(): 유한 숫자로 해석할 수 없습니다: '범위'. 해석 실패는 null이 아니라 오류입니다. [try]/[catch]로 처리하세요.",
+            "frames": [],
+            "has_partial": false,
+            "partial": null,
+            "evidence": [
+              11
+            ],
+            "details": {
+              "operation": "number",
+              "input_preview": "'범위'",
+              "input_type": "str",
+              "expected": "finite number"
+            },
+            "source_span": {
+              "source_hash": "be113d4df5a69d3b7d746b414ad5b35c26e5820f499e101b95a5e80e61a93806",
+              "start": 32,
+              "end": 49,
+              "line": 1,
+              "column": 33
+            }
+          }
+        }
+      },
+      "source_span": {
+        "source_hash": "be113d4df5a69d3b7d746b414ad5b35c26e5820f499e101b95a5e80e61a93806",
+        "start": 32,
+        "end": 49,
+        "line": 1,
+        "column": 33
+      }
+    },
+    "value": null
+  },
+  "downstream_repaired": {
+    "elapsed_s": 0.324,
+    "success": true,
+    "reuse": null,
+    "continuation": null,
+    "usage": {
+      "steps": 31,
+      "rows": 2,
+      "elapsed_ms": 0
+    },
+    "run_id": "791b6e4d94834e18b5b3c66eed3e4dfb",
+    "diagnostic": null,
+    "value": [
+      12,
+      null
+    ]
+  },
+  "validation": {
+    "related_initial_passed": 210,
+    "related_final_passed": 159,
+    "regression": {
+      "passed": 7849,
+      "skipped": 1,
+      "deselected": 95,
+      "seconds": 530.31
+    },
+    "related_system": {
+      "passed": 71,
+      "seconds": 97.27
+    },
+    "preexisting_progress_test": "Failed initially and with HEAD Python modules; passed on final regression. Not repaired here."
+  }
+}

@@ -204,6 +204,9 @@ def decode_envelope(raw, adapter, input_values=None):
                         "error_type", "errno", "path", "base_path", "hint", "stage",
                         "usage", "supported_channels", "available_actions", "error_code", "recovery",
                         "input_contract", "failure_origin", "execution_ref", "def", "retry_after",
+                        "http_status", "url", "resolved_url", "reason", "stages",
+                        "expected_rows", "returned_rows", "missing_indices", "duplicate_indices",
+                        "invalid_indices", "model_output_ref", "model_output_preview", "phase",
                     ) if key in raw} | ({"inner_diagnostics": inner} if (inner := inner_diagnostics(raw)) else {}))
     if adapter.get("protocol") == "document-value/1":
         from ibl_document_value import document_value

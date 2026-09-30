@@ -1,0 +1,9 @@
+#!ibl edition=2
+# inputs: ok (Bool)
+[def:읽기]($ok) {
+  [if:$ok] { return {문단:[{a:1,t:"가"}]} }
+  return {문단:[]}
+}
+$d = [fn:읽기]{ok:$ok}
+$r = $d.문단 >> [table:ai]{instruction:"t 를 보고 채워라", schema:"x(목록, 각 원소 {p:숫자})", preserve_rows:true}
+return $r.items >> [table:each] { return {a:$it.a,t:$it.t} }

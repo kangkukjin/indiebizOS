@@ -76,7 +76,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: '2026-09-29', impl: "b954ffa6768970e3"}
+        path_audited: {at: '2026-09-30', impl: "b536e06743f20e6f"}
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -123,6 +123,7 @@ nodes:
           result:
             items: List<Record>
             url: Text
+          read_resources: {url: url}
           effects:
           - read_external
           adapter:
@@ -157,7 +158,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: '2026-09-29', impl: "b954ffa6768970e3"}
+        path_audited: {at: '2026-09-30', impl: "b536e06743f20e6f"}
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'

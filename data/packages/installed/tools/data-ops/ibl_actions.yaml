@@ -1,6 +1,30 @@
 node: table
 actions:
   filter:
+    # 판본 1 저장 함수의 단순 전달 경계를 검사하는 계약. 판본 2 콜백 계약과 구분한다.
+    legacy_callable_contract:
+      version: 1
+      params:
+        items: Unknown
+        where:
+          value: Text
+        context:
+          before: Number
+          after: Number
+          limit: Number
+      required: [items, where, context]
+      pipe_input: items
+      effects: [pure]
+      result:
+        items: List<Record>
+        count: Number
+        match_info:
+          total_matches: Number
+          selected_matches: Number
+          omitted_matches: Number
+      adapter:
+        protocol: legacy-envelope
+        value_path: ""
     callable_contract:
       version: 1
       params:

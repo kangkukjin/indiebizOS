@@ -1,0 +1,5 @@
+#!ibl edition=2
+# inputs: 본문(6,000줄 텍스트), 키워드[4] — 위키 6쪽 규모 키워드 문단 거르기, 모델·웹 없음
+$문단 = split($본문,"\n") >> [table:each] { return {text:$it} }
+$적중 = $문단 >> [table:filter]{where:($p)=>any(reduce($키워드,[],($a,$k)=>$a+[contains($p.text,$k)]))}
+return len($적중)

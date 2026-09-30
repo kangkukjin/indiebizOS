@@ -1,0 +1,127 @@
+#!ibl edition=2
+# 긴문장 3회차 — 세계 지리 수치 논쟁 학습 자료 (v5b: v5 + has 좁힘 없음 우회 get)
+# inputs: 원천[{주제,언어,url,키워드[]}], 주제[{주제,질문}], 문단상한, 출력
+
+# 원천 하나를 읽어 키워드 문단만 남긴다. 실패는 원천 행에 남긴다(빈 성공으로 숨기지 않음).
+[def:원천읽기]($원천,$상한) {
+  [try] {
+    $문서 = [sense:crawl]{url:$원천.url}
+    $찾음 = $문서.items >> [fn:본문에서찾기]{패턴:join("|",$원천.키워드),문맥:0,개수:1000}
+    $적중 = $찾음.items
+    $사용 = $적중[:$상한]
+    return {주제:$원천.주제,언어:$원천.언어,url:$원천.url,ok:true,적중:len($적중),사용:len($사용),
+            문단:$사용 >> [table:select]{columns:["paragraph_index","text"]}}
+  } [catch] {
+    return {주제:$원천.주제,언어:$원천.언어,url:$원천.url,ok:false,이유:$error.message,적중:0,사용:0,문단:[]}
+  }
+}
+
+# 한 원천의 문단들에서 모델로 수치 주장을 뽑는다. 원문에 없는 값은 버리고 따로 센다.
+[def:주장추출]($읽음,$질문) {
+  [if:not $읽음.ok or len($읽음.문단)==0] { return {주제:$읽음.주제,언어:$읽음.언어,주장:[],버림:[]} }
+  $추출 = $읽음.문단 >> [table:ai]{
+    instruction:f"각 문단에서 '${질문}'에 해당하는 수치 주장만 찾아라. 다른 대상의 수치는 무시. 값은 문단 원문 표기 그대로(쉼표 포함) 옮긴다. 없으면 빈 목록.",
+    schema:"주장(목록, 각 원소 {값:원문 표기 숫자 문자열, 단위:m|km|ft|mi, 대상:무엇의 수치인지 짧게, 측정:측정 연도·기관 또는 null})",
+    input_fields:["paragraph_index","text"],
+    preserve_rows:true
+  }
+  $행 = $추출.items >> [table:each]{mode:"flat_map"} {
+    $p = $it
+    $p.주장 >> [table:each] {
+      return {주제:$읽음.주제,언어:$읽음.언어,url:$읽음.url,문단:$p.paragraph_index,
+              값:$it.값,단위:$it.단위,대상:$it.대상,측정:$it.측정,원문있음:contains($p.text,$it.값)}
+    }
+  }
+  return {주제:$읽음.주제,언어:$읽음.언어,주장:$행 >> [table:filter]{where:($r)=>$r.원문있음},
+          버림:$행 >> [table:filter]{where:($r)=>not $r.원문있음}}
+}
+
+# 표기 숫자를 미터로. 해석 불가는 null.
+[def:미터로]($값,$단위) {
+  $수 = number(replace($값,",",""))
+  $배 = $단위 == "km" ? 1000 : $단위 == "mi" ? 1609.344 : $단위 == "ft" ? 0.3048 : 1
+  return $수 * $배
+}
+
+# 주제 안의 값들을 0.1% 이내면 같은 값으로 묶는다.
+[def:값묶기]($주장들) {
+  $정렬 = sorted($주장들,"미터")
+  return reduce($정렬,[],($묶음,$r)=>len($묶음) > 0 and abs($r.미터 - $묶음[-1].대표) <= $묶음[-1].대표 * 0.001 ? $묶음[:-1] + [{대표:$묶음[-1].대표,근거:$묶음[-1].근거 + [$r]}] : $묶음 + [{대표:$r.미터,근거:[$r]}])
+}
+
+[def:주제정리]($주제,$읽음목록,$주장목록) {
+  $원천들 = $읽음목록 >> [table:filter]{where:($r)=>$r.주제 == $주제.주제}
+  $내주장 = $주장목록 >> [table:filter]{where:($r)=>$r.주제 == $주제.주제}
+  $수치 = $내주장 >> [table:each] { return {**$it,미터:[fn:미터로]{값:$it.값,단위:$it.단위}} }
+  $묶음 = [fn:값묶기]{주장들:$수치}
+  $읽은것 = $원천들 >> [table:filter]{where:($r)=>$r.ok}
+  return {주제:$주제.주제,질문:$주제.질문,
+          원천수:len($읽은것),원천전체:len($원천들),
+          묶음:$묶음,상충후보:len($묶음) > 1}
+}
+
+[def:묶음표]($묶음) {
+  $줄 = $묶음 >> [table:each] {
+    $g = $it
+    $출처 = $g.근거 >> [table:each] { return f"${$it.언어} ¶${$it.문단} `${$it.값} ${$it.단위}` (${$it.대상}${$it.측정 == null ? '' : ', ' + $it.측정})" }
+    return f"| ${round($g.대표)} m | ${join('<br>',$출처)} |"
+  }
+  return "| 값(미터 환산) | 근거(언어·문단·원문 표기) |\n| --- | --- |\n" + join("\n",$줄)
+}
+
+[def:문서]($정리,$해설,$읽음,$버림,$추출실패) {
+  $절 = $정리 >> [table:each] {
+    $t = $it
+    $hs = $해설 >> [table:filter]{where:($r)=>$r.주제 == $t.주제}
+    $h = $hs[0]
+    $표 = [fn:묶음표]{묶음:$t.묶음}
+    return f"## ${$t.주제}\n질문: ${$t.질문} · 원천 ${$t.원천수}/${$t.원천전체}\n\n${$표}\n\n**판정: ${$h.판정}** — ${$h.해설}\n"
+  }
+  $실패 = $읽음 >> [table:filter]{where:($r)=>not $r.ok}
+  $자름 = $읽음 >> [table:filter]{where:($r)=>$r.ok and $r.적중 > $r.사용}
+  $m1 = $실패 >> [table:each] { return f"- 읽지 못함: ${$it.주제} ${$it.언어} ${$it.url} — ${$it.이유}" }
+  $m2 = $자름 >> [table:each] { return f"- 문단 상한: ${$it.주제} ${$it.언어} 적중 ${$it.적중} 중 ${$it.사용}만 사용" }
+  $m3 = $버림 >> [table:each] { return f"- 원문 불일치로 버린 모델 추출: ${$it.주제} ${$it.언어} ¶${$it.문단} `${$it.값}`" }
+  $m4 = $추출실패 >> [table:each] { return f"- 모델 추출 실패: ${$it.주제} ${$it.언어} — ${get($it,'추출실패','')}" }
+  $미확인 = $m1 + $m4 + $m2 + $m3
+  $원천표 = $읽음 >> [table:each] { return f"- ${$it.주제} ${$it.언어}: ${$it.url} (${$it.ok ? '읽음' : '실패'})" }
+  return f"# 세계 지리 수치 논쟁 학습 자료\n\n${join('\n',$절)}\n## 확인 못 한 부분\n${len($미확인)==0 ? '- 없음' : join('\n',$미확인)}\n\n## 원천\n${join('\n',$원천표)}\n"
+}
+
+# ── 최상위 ──
+$읽음 = $원천 >> [table:each]{parallel:6} { [fn:원천읽기]{원천:$it,상한:$문단상한} }
+$질문들 = $읽음 >> [table:each] {
+  $qs = $주제 >> [table:filter]{where:($t)=>$t.주제 == $it.주제}
+  return $qs[0].질문
+}
+$첫추출 = $읽음 >> [table:each]{parallel:6,on_error:"collect"} { [fn:주장추출]{읽음:$it,질문:$질문들[$i]} }
+$추출 = $읽음 >> [table:each] {
+  [if:is_ok($첫추출[$i])] { return unwrap($첫추출[$i]) }
+  [else] {
+    [try] { return [fn:주장추출]{읽음:$it,질문:$질문들[$i]} }
+    [catch] { return {주제:$it.주제,언어:$it.언어,주장:[],버림:[],추출실패:f"1차: ${error_of($첫추출[$i]).message} / 재시도: ${$error.message}"} }
+  }
+}
+$추출실패 = $추출 >> [table:filter]{where:($r)=>has($r,"추출실패")}
+$주장 = $추출 >> [table:each]{mode:"flat_map"} { return $it.주장 }
+$버림 = $추출 >> [table:each]{mode:"flat_map"} { return $it.버림 }
+$정리 = $주제 >> [table:each] { [fn:주제정리]{주제:$it,읽음목록:$읽음,주장목록:$주장} }
+$해설입력 = $정리 >> [table:each] {
+  $t = $it
+  return {주제:$t.주제,질문:$t.질문,값목록:$t.묶음 >> [table:each] { return {미터:round($it.대표),근거:$it.근거 >> [table:select]{columns:["언어","값","단위","대상","측정"]}} }}
+}
+$해설 = $해설입력 >> [table:ai]{
+  instruction:"각 주제의 값목록(서로 다른 값 묶음)을 보고 판정하라. 값이 하나면 '일치'. 여럿이면 대상·측정 설명을 근거로 '정의 차이'(재는 대상·범위가 다름)/'측정 시기 차이'/'진짜 불일치'/'혼합' 중 하나. 해설은 2~3문장, 주어진 값만 인용하고 새 수치를 만들지 마라.",
+  schema:"판정(일치|정의 차이|측정 시기 차이|진짜 불일치|혼합), 해설(문자열)",
+  preserve_rows:true
+}
+$본문 = [fn:문서]{정리:$정리,해설:$해설.items,읽음:$읽음,버림:$버림,추출실패:$추출실패}
+$저장 = [self:write]{path:$출력,content:$본문}
+$확인 = [self:read]{path:$출력}
+return {
+  저장일치:$확인.text == $본문,
+  원천:$읽음 >> [table:select]{columns:["주제","언어","ok","적중","사용"]},
+  주장수:len($주장),버림수:len($버림),추출실패:$추출실패 >> [table:select]{columns:["주제","언어","추출실패"]},
+  주제:$정리 >> [table:each] { return {주제:$it.주제,묶음수:len($it.묶음),원천:f"${$it.원천수}/${$it.원천전체}"} },
+  판정:$해설.items >> [table:select]{columns:["주제","판정"]}
+}

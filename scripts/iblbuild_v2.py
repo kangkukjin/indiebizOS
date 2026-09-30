@@ -48,6 +48,11 @@ def validate_v2_contracts(data):
                         issues.append(f'{qualified}: 결합 입력 {key}에 컨테이너 타입(array/object)을 선언하세요')
                     if key not in contract.get('params', {}):
                         issues.append(f'{qualified}: 결합 입력 {key}가 callable_contract.params에 없습니다')
+            if isinstance(entry, dict) and "legacy_callable_contract" in entry:
+                try:
+                    validate_contract(entry["legacy_callable_contract"])
+                except (ValueError, TypeError) as exc:
+                    issues.append(f"{name}:{action} legacy_callable_contract: {exc}")
             if isinstance(entry, dict) and "callable_contract" in entry:
                 try:
                     validate_contract(entry["callable_contract"])

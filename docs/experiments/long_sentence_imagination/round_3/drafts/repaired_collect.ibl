@@ -1,0 +1,56 @@
+#!ibl edition=2
+# 3회차 수리: collect — 앞 단계 성공값을 inputs.자료의 $ref로 전달
+[def:원천읽기]($원천,$상한) {
+  [try] {
+    $문서 = [sense:crawl]{url:$원천.url}
+    $찾음 = $문서.items >> [fn:본문에서찾기]{패턴:join("|",$원천.키워드),문맥:0,개수:$상한}
+    $적중 = $찾음.items
+    $사용 = $적중
+    return {주제:$원천.주제,언어:$원천.언어,url:$원천.url,ok:true,적중:$찾음.match_info.total_matches,사용:len($사용),
+            문단:$사용 >> [table:select]{columns:["paragraph_index","text"]}}
+  } [catch] {
+    return {주제:$원천.주제,언어:$원천.언어,url:$원천.url,ok:false,이유:$error.message,적중:0,사용:0,문단:[]}
+  }
+}
+
+[def:주장추출]($읽음,$질문) {
+  [if:not $읽음.ok or len($읽음.문단)==0] { return {주제:$읽음.주제,언어:$읽음.언어,논쟁:[],주장:[],버림:[]} }
+  $추출 = $읽음.문단 >> [table:ai]{
+    instruction:f"각 문단에서 '${질문}'에 해당하는 수치 주장만 찾아라. 다른 대상의 수치는 무시. 값은 문단 원문 표기 그대로(쉼표 포함) 옮긴다. 없으면 빈 목록.",
+    schema:"주장(목록, 각 원소 {값:원문 표기 숫자 문자열, 단위:m|km|ft|mi, 대상:무엇의 수치인지 짧게, 측정:측정 연도·기관 또는 null}), 논쟁(질문 주제에 대한 이견·반론·최장 여부 논쟁을 문단이 서술하면 한 문장 요약, 없으면 null)",
+    input_fields:["paragraph_index","text"],
+    preserve_rows:true
+  }
+  $행 = $추출.items >> [table:each]{mode:"flat_map"} {
+    $p = $it
+    $p.주장 >> [table:each] {
+      return {주제:$읽음.주제,언어:$읽음.언어,url:$읽음.url,문단:$p.paragraph_index,
+              값:$it.값,단위:$it.단위,대상:$it.대상,측정:$it.측정,원문있음:contains($p.text,$it.값)}
+    }
+  }
+  $논쟁 = $추출.items >> [table:each]{mode:"flat_map"} {
+    [if:$it.논쟁 == null] { return [] }
+    return [{주제:$읽음.주제,언어:$읽음.언어,문단:$it.paragraph_index,논쟁:$it.논쟁}]
+  }
+  return {주제:$읽음.주제,언어:$읽음.언어,논쟁:$논쟁,주장:$행 >> [table:filter]{where:($r)=>$r.원문있음},
+          버림:$행 >> [table:filter]{where:($r)=>not $r.원문있음}}
+}
+
+$읽음 = $원천 >> [table:each]{parallel:6} { [fn:원천읽기]{원천:$it,상한:$문단상한} }
+
+$질문들 = $읽음 >> [table:each] {
+  $qs = $주제 >> [table:filter]{where:($t)=>$t.주제 == $it.주제}
+  return $qs[0].질문
+}
+
+$첫추출 = $읽음 >> [table:each]{parallel:6,on_error:"collect"} { [fn:주장추출]{읽음:$it,질문:$질문들[$i]} }
+
+$추출 = $읽음 >> [table:each] {
+  [if:is_ok($첫추출[$i])] { return unwrap($첫추출[$i]) }
+  [else] {
+    [try] { return [fn:주장추출]{읽음:$it,질문:$질문들[$i]} }
+    [catch] { return {주제:$it.주제,언어:$it.언어,논쟁:[],주장:[],버림:[],추출실패:f"1차: ${error_of($첫추출[$i]).message} / 재시도: ${$error.message}"} }
+  }
+}
+
+return {읽음:$읽음,추출:$추출}

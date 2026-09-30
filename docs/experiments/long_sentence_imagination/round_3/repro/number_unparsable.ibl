@@ -1,0 +1,4 @@
+#!ibl edition=2
+$v = "5,000~6,000"
+$n = number(replace($v,",",""))
+return $n

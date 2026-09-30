@@ -51,6 +51,25 @@ def narrow(env, condition, truth=True):
         a = narrow(env, d["left"], truth)
         b = narrow(narrow(env, d["left"], not truth), d["right"], truth)
         return {k: join(a[k], b[k]) for k in env}
+    if condition.kind == "pure_call" and d["fn"].kind == "builtin" and d["fn"].data["name"] == "has":
+        args = d["args"]
+        if len(args) == 2 and args[1].kind == "literal" and isinstance(args[1].data["value"], str):
+            keys, key = path(args[0]), args[1].data["value"]
+            if keys and keys[0] in env:
+                def present(typ):
+                    if typ.kind == "Unknown":
+                        return Type("Record", fields=((key, UNKNOWN),)) if truth else typ
+                    if typ.kind != "Record":
+                        return typ
+                    fields = dict(typ.fields)
+                    if truth:
+                        # join may have discarded optional fields. has proves
+                        # existence, but does not invent a type or non-nullness.
+                        fields.setdefault(key, UNKNOWN)
+                        return replace(typ, fields=tuple(fields.items()))
+                    return None if key in fields else typ
+                refined = refine(env[keys[0]], keys[1:], present)
+                return {**env, keys[0]: refined} if refined is not None else env.copy()
     target, literal = condition, truth
     equal = True
     if condition.kind == "binary" and d["op"] in ("==", "!="):

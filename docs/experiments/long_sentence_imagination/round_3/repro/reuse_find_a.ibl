@@ -1,0 +1,4 @@
+#!ibl edition=2
+$d = [sense:crawl]{url:"https://en.wikipedia.org/wiki/Mount_Everest"}
+$h = $d.items >> [fn:본문에서찾기]{패턴:"8,848.86",문맥:0,개수:50}
+return len($d.items)

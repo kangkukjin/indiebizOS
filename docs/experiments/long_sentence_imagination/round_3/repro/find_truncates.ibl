@@ -1,0 +1,6 @@
+#!ibl edition=2
+$d = [sense:crawl]{url:"https://en.wikipedia.org/wiki/Mount_Everest"}
+$원 = $d.items >> [table:filter]{where:($p)=>$p.paragraph_index == 420}
+$f = $d.items >> [fn:본문에서찾기]{패턴:"8,844.43",문맥:0,개수:5}
+$찾음 = $f.items >> [table:filter]{where:($p)=>$p.paragraph_index == 420}
+return {원문길이:len($원[0].text),찾기길이:len($찾음[0].text),끝:$찾음[0].text[-20:],요약표지:$f._results_summarized}

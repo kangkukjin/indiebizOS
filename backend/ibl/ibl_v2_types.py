@@ -84,6 +84,11 @@ def join(left, right):
         if left == right:
             return left
     if left.kind == right.kind == "List":
+        # An empty branch contributes no element, not an unknown element.
+        if left.positions == () and right.positions != ():
+            return Type("List", item=right.item)
+        if right.positions == () and left.positions != ():
+            return Type("List", item=left.item)
         positions = None
         if (left.positions is not None and right.positions is not None
                 and len(left.positions) == len(right.positions)):

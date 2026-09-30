@@ -1,0 +1,4 @@
+#!ibl edition=2
+# inputs: v = "5000~6000"
+[try] { $n = number($v) } [catch] { return {code:$error.code,msg:$error.message,details:$error.details} }
+return $n

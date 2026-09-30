@@ -1,0 +1,32 @@
+#!ibl edition=2
+[def:점검]($entry,$folder) {
+  $path=$folder+"/"+$entry.name
+  [try] {
+    $doc=[self:read]{path:$path,format:"text"}
+    $findings=enumerate(split($doc.text,"\n")) >> [table:each]{mode:"flat_map"} {
+      $line=$it[0]+1
+      $text=$it[1]
+      return [{id:$entry.id,line:$line,marker:"TODO",text:$text},{id:$entry.id,line:$line,marker:"FIXME",text:$text}]
+        >> [table:filter]{where:($r)=>contains($r.text,$r.marker,true)}
+    }
+    return {id:$entry.id,path:$path,read:true,error:null,findings:$findings}
+  } [catch] { return {id:$entry.id,path:$path,read:false,error:$error.message,findings:[]} }
+}
+[def:취합]($folder) {
+  $manifest=[self:read]{path:$folder+"/manifest.json"}
+  $files=$manifest.data.files >> [table:each]{parallel:3} { [fn:점검]{entry:$it,folder:$folder} }
+  $findings=$files >> [table:each]{mode:"flat_map"} { return $it.findings }
+  $groups=$findings >> [table:groupby]{by:"marker",agg:{count:["count"]}}
+  $failed=$files >> [table:filter]{where:($r)=>not $r.read}
+  return {status:len($failed)==0 ? "complete" : "partial",files:$files,findings:$findings,summary:$groups.items,failed:len($failed),read:len($files)-len($failed)}
+}
+$result=[fn:취합]{folder:$folder}
+$body=json($result)
+$saved=["report.json","report.txt"] >> [table:each] {
+  $path=$out+"/"+$it
+  [self:write]{path:$path,content:$body}
+  $doc=[self:read]{path:$path,format:"text"}
+  assert $doc.text==$body,"산출물 재독 불일치"
+  return {path:$path,verified:true}
+}
+return {result:$result,files:$saved}

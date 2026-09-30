@@ -1,0 +1,81 @@
+{
+  "checks": {
+    "after_main": {
+      "read": 6,
+      "failed": 0,
+      "markers": 7,
+      "status": "complete",
+      "all_lines_exact": true
+    },
+    "after_variant": {
+      "read": 5,
+      "failed": 1,
+      "markers": 6,
+      "status": "partial",
+      "all_lines_exact": true
+    },
+    "after_uppercase": {
+      "read": 6,
+      "failed": 0,
+      "markers": 7,
+      "status": "complete",
+      "all_lines_exact": true
+    }
+  },
+  "receipts": [
+    {
+      "label": "after_main",
+      "elapsed_seconds": 1.2893092632293701,
+      "success": true,
+      "check_ok": null,
+      "run_id": "c648ca6476e046ca86250b7fefe7bda7",
+      "source_complete": true,
+      "sha256": "37a7b1519351f3895b1808c1552b225080501df5bc2330bcee8d4048953d0c10"
+    },
+    {
+      "label": "after_uppercase",
+      "elapsed_seconds": 0.896683931350708,
+      "success": true,
+      "check_ok": null,
+      "run_id": "d04a8839f05848ae946333cf72e30bb8",
+      "source_complete": true,
+      "sha256": "7be46c3956477f653b8626bfba176d6c632ce327fb77ff3932d3643abedd928d"
+    },
+    {
+      "label": "after_variant",
+      "elapsed_seconds": 0.9150998592376709,
+      "success": true,
+      "check_ok": null,
+      "run_id": "a75574cf1ac24c269b307a7281827fb4",
+      "source_complete": false,
+      "sha256": "82822eafc6d56d85100698169611264d64c78a6a3e8c6b7c6d8e0a5eb2bcdb77"
+    },
+    {
+      "label": "before_main",
+      "elapsed_seconds": 0.7764191627502441,
+      "success": true,
+      "check_ok": null,
+      "run_id": "b96e138aa5a945fabc96b984e9e40b5d",
+      "source_complete": false,
+      "sha256": "5e49b52da9a32658e3bfa4e4fca2a84ca9c755659f4c693d17811ca4db8560f2"
+    },
+    {
+      "label": "before_variant",
+      "elapsed_seconds": 0.7853477001190186,
+      "success": true,
+      "check_ok": null,
+      "run_id": "8ae721eb58204a74864a5fe665e8226e",
+      "source_complete": false,
+      "sha256": "04888982a599b87c467ffe17b1e6c7593b14590a5b6397e68ce8ae1efc27f5ea"
+    },
+    {
+      "label": "initial_check",
+      "elapsed_seconds": 0.2776460647583008,
+      "success": null,
+      "check_ok": true,
+      "run_id": null,
+      "source_complete": null,
+      "sha256": "20bdfec1b094252736786a2680601de845bc7d3f022ec5a16ae150d75fa42fef"
+    }
+  ]
+}

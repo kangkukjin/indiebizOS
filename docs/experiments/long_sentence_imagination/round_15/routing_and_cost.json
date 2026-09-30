@@ -1,0 +1,172 @@
+[
+  {
+    "kind": "recall.presented",
+    "data": {
+      "blocks": [
+        {
+          "chars": 1483,
+          "ids": [
+            "2096",
+            "3481"
+          ],
+          "meta": {
+            "refs": 2,
+            "top_code": ""
+          },
+          "ms": 553.9,
+          "source": "hippocampus",
+          "status": "ok",
+          "tag": "execution_memory"
+        },
+        {
+          "chars": 883,
+          "ids": [],
+          "meta": {
+            "branches": 10
+          },
+          "ms": 13.6,
+          "source": "memory_map",
+          "status": "ok",
+          "tag": "memory_map"
+        },
+        {
+          "chars": 887,
+          "ids": [
+            "480",
+            "520",
+            "464"
+          ],
+          "meta": {
+            "branches": [
+              "보고서",
+              "indiebizOS",
+              "보고서/AI 동향",
+              "보고서/부동산 발굴"
+            ],
+            "outside_beats_inside": false
+          },
+          "ms": 51.1,
+          "source": "recalled_memory",
+          "status": "ok",
+          "tag": "recalled_memory"
+        },
+        {
+          "chars": 2224,
+          "ids": [],
+          "meta": {
+            "branches": 42
+          },
+          "ms": 58.3,
+          "source": "guide_map",
+          "status": "ok",
+          "tag": "guide_map"
+        },
+        {
+          "chars": 1067,
+          "ids": [],
+          "ms": 2.2,
+          "source": "decision_ledger",
+          "status": "ok",
+          "tag": "decision_ledger"
+        },
+        {
+          "chars": 797,
+          "ids": [],
+          "ms": 0.0,
+          "source": "pursuit",
+          "status": "ok",
+          "tag": "pursuit"
+        },
+        {
+          "chars": 201,
+          "ids": [
+            "basics.04.3537f0cc3ec9",
+            "basics.10.7cebddfbc69e",
+            "duckdb",
+            "condition.file_schema",
+            "method.file_sql",
+            "problem.multifile"
+          ],
+          "ms": 57.0,
+          "source": "method_map",
+          "status": "selected",
+          "tag": "method_map"
+        },
+        {
+          "chars": 623,
+          "ids": [
+            "atlas.education.learning_analytics",
+            "basics.06.af90f5c05b02"
+          ],
+          "meta": {
+            "picked": 2
+          },
+          "ms": 75.9,
+          "source": "world_memory",
+          "status": "ok",
+          "tag": "world_map"
+        }
+      ],
+      "channel": "pipeline",
+      "reflex": {
+        "code": "",
+        "score": 0.6893
+      },
+      "request_type": "REPAIR"
+    }
+  },
+  {
+    "kind": "cognition.route",
+    "data": {
+      "force_role": "",
+      "intent": "task",
+      "reflex": false,
+      "request_type": "REPAIR"
+    }
+  },
+  {
+    "kind": "cognition.route",
+    "data": {
+      "force_role": "",
+      "intent": "task",
+      "previous_request_type": "REPAIR",
+      "reason": "consciousness_rejected_core_repair",
+      "reflex": false,
+      "request_type": "THINK"
+    }
+  },
+  {
+    "kind": "supervision.cost.summary",
+    "data": {
+      "cost": {
+        "check_rejections": 4,
+        "evaluation_calls": 1,
+        "evaluation_model_s": 16.213,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/6a8b602c02844d2bb4f80f3509bae586/events.jsonl",
+        "execution_calls": 31,
+        "execution_failures": 3,
+        "execution_tool_s": 255.689,
+        "internal_tool_failures": 1,
+        "request_intent": "task",
+        "source_failures": 0,
+        "supervisor_cache_read": 177664,
+        "supervisor_calls": 2,
+        "supervisor_input": 279244,
+        "supervisor_model_s": 108.79400000000001,
+        "supervisor_output": 2752,
+        "supervisor_tool_failures": 0,
+        "supervisor_tools": 4,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 1559.578
+      },
+      "kind": "cost.summary",
+      "phase": "final",
+      "role": "harness",
+      "seq": 96,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/6a8b602c02844d2bb4f80f3509bae586",
+      "task_id": "task_sysai_3577918e",
+      "time": 1790811161.581184
+    }
+  }
+]

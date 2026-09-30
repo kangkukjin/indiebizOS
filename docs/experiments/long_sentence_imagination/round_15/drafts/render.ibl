@@ -1,0 +1,7 @@
+#!ibl edition=2
+$조판=[self:script]{path:"~turn/조판.py",args:{분석:$분석,금액표시:format_number($분석.수납합계,",.0f"),태그:map(filter(split($태그,","),($t)=>len(strip($t))>0),($t)=>strip($t))}}
+$문서=[self:write]{path:$출력+"/report.md",content:$조판.markdown}
+$자료=[self:write]{path:$출력+"/issues.json",content:$조판.issues_json}
+$문서확인=[self:read]{path:$문서.path,format:"text"}
+$자료확인=[self:read]{path:$자료.path,format:"json"}
+return {문서:$문서.path,자료:$자료.path,문서같음:$문서확인.text==$조판.markdown,자료같음:$자료확인.data==$분석,문제수:len($분석.문제),분류건수:sum(map($분석.유형별,($t)=>$t.건수))}

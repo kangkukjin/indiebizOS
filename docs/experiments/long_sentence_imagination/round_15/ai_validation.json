@@ -1,0 +1,302 @@
+{
+  "checks": {
+    "low_attendance": true,
+    "consecutive_absences": true,
+    "score_drop": true,
+    "untested": true,
+    "no_payment": true,
+    "multiple_payments": true,
+    "underpayment": true,
+    "withdrawn_attendance": true,
+    "classes": true,
+    "notes_count": true,
+    "notes_originals": true,
+    "notes_classified": true,
+    "actions": true,
+    "source_rows": true,
+    "source_errors": true,
+    "md_names": true,
+    "md_classes": true,
+    "md_ai_label": true
+  },
+  "details": {
+    "low_attendance": {
+      "got": [
+        "S0085",
+        "S0091",
+        "S0119",
+        "S0169",
+        "S0172",
+        "S0196",
+        "S0208",
+        "S0224",
+        "S0301",
+        "S0317"
+      ],
+      "expected": [
+        "S0085",
+        "S0091",
+        "S0119",
+        "S0169",
+        "S0172",
+        "S0196",
+        "S0208",
+        "S0224",
+        "S0301",
+        "S0317"
+      ],
+      "records": 10
+    },
+    "consecutive_absences": {
+      "got": [
+        "S0075",
+        "S0091",
+        "S0115",
+        "S0119",
+        "S0122",
+        "S0139",
+        "S0146",
+        "S0172",
+        "S0175",
+        "S0185",
+        "S0196",
+        "S0272",
+        "S0282",
+        "S0301",
+        "S0317"
+      ],
+      "expected": [
+        "S0075",
+        "S0091",
+        "S0115",
+        "S0119",
+        "S0122",
+        "S0139",
+        "S0146",
+        "S0172",
+        "S0175",
+        "S0185",
+        "S0196",
+        "S0272",
+        "S0282",
+        "S0301",
+        "S0317"
+      ],
+      "records": 16
+    },
+    "score_drop": {
+      "got": [
+        "S0070",
+        "S0092",
+        "S0131",
+        "S0153",
+        "S0229",
+        "S0231",
+        "S0240",
+        "S0267",
+        "S0289",
+        "S0298",
+        "S0303"
+      ],
+      "expected": [
+        "S0070",
+        "S0092",
+        "S0131",
+        "S0153",
+        "S0229",
+        "S0231",
+        "S0240",
+        "S0267",
+        "S0289",
+        "S0298",
+        "S0303"
+      ],
+      "records": 11
+    },
+    "untested": {
+      "got": [
+        "S0007",
+        "S0031",
+        "S0043",
+        "S0080",
+        "S0083",
+        "S0105",
+        "S0137",
+        "S0145",
+        "S0169",
+        "S0258"
+      ],
+      "expected": [
+        "S0007",
+        "S0031",
+        "S0043",
+        "S0080",
+        "S0083",
+        "S0105",
+        "S0137",
+        "S0145",
+        "S0169",
+        "S0258"
+      ],
+      "records": 10
+    },
+    "no_payment": {
+      "got": [
+        "S0012",
+        "S0049",
+        "S0114",
+        "S0129",
+        "S0146",
+        "S0198",
+        "S0221",
+        "S0239",
+        "S0273",
+        "S0289",
+        "S0305",
+        "S0306",
+        "S0320"
+      ],
+      "expected": [
+        "S0012",
+        "S0049",
+        "S0114",
+        "S0129",
+        "S0146",
+        "S0198",
+        "S0221",
+        "S0239",
+        "S0273",
+        "S0289",
+        "S0305",
+        "S0306",
+        "S0320"
+      ],
+      "records": 13
+    },
+    "multiple_payments": {
+      "got": [
+        "S0185",
+        "S0209",
+        "S0231",
+        "S0284",
+        "S0318"
+      ],
+      "expected": [
+        "S0185",
+        "S0209",
+        "S0231",
+        "S0284",
+        "S0318"
+      ],
+      "records": 5
+    },
+    "underpayment": {
+      "got": [
+        "S0045",
+        "S0155",
+        "S0157",
+        "S0182",
+        "S0216",
+        "S0279"
+      ],
+      "expected": [
+        "S0045",
+        "S0155",
+        "S0157",
+        "S0182",
+        "S0216",
+        "S0279"
+      ],
+      "records": 6
+    },
+    "withdrawn_attendance": {
+      "got": [
+        "S0077",
+        "S0093",
+        "S0266",
+        "S0295"
+      ],
+      "expected": [
+        "S0077",
+        "S0093",
+        "S0266",
+        "S0295"
+      ],
+      "records": 4
+    }
+  },
+  "note_counts": {
+    "감사·칭찬": 12,
+    "조치 필요": 17,
+    "단순 전달": 9,
+    "문의": 22
+  },
+  "class_expected": {
+    "중등영어A": {
+      "students": 45,
+      "active": 43,
+      "sessions": 946,
+      "present": 887,
+      "score_n": 41,
+      "score_sum": 3184
+    },
+    "논술A": {
+      "students": 35,
+      "active": 31,
+      "sessions": 682,
+      "present": 648,
+      "score_n": 29,
+      "score_sum": 2043
+    },
+    "초등수학B": {
+      "students": 43,
+      "active": 40,
+      "sessions": 880,
+      "present": 850,
+      "score_n": 38,
+      "score_sum": 2598
+    },
+    "고등영어A": {
+      "students": 40,
+      "active": 39,
+      "sessions": 858,
+      "present": 812,
+      "score_n": 38,
+      "score_sum": 2750
+    },
+    "중등수학A": {
+      "students": 42,
+      "active": 39,
+      "sessions": 858,
+      "present": 797,
+      "score_n": 39,
+      "score_sum": 2825
+    },
+    "고등수학A": {
+      "students": 40,
+      "active": 40,
+      "sessions": 880,
+      "present": 839,
+      "score_n": 39,
+      "score_sum": 2821
+    },
+    "초등수학A": {
+      "students": 45,
+      "active": 40,
+      "sessions": 880,
+      "present": 840,
+      "score_n": 39,
+      "score_sum": 2787
+    },
+    "중등수학B": {
+      "students": 30,
+      "active": 30,
+      "sessions": 660,
+      "present": 607,
+      "score_n": 29,
+      "score_sum": 2294
+    }
+  },
+  "all_deterministic_checks": true,
+  "note": "Artifact readback by AI itself must also be checked from its tool trace; this verifier is the trainer check."
+}

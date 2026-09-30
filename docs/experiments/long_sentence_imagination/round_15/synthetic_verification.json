@@ -1,0 +1,9 @@
+{
+  "generator": "round_10/gen.py: seeded random synthetic data",
+  "all_inputs_byte_identical_to_synthetic_fixture": true,
+  "students_all_generated_names_and_ids": true,
+  "notes_all_from_literal_synthetic_templates": true,
+  "judge_sends_only_distinct_memo_text": true,
+  "students": 320,
+  "notes": 60
+}

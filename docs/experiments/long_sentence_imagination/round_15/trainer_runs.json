@@ -1,0 +1,409 @@
+{
+  "repair_typo": {
+    "elapsed_s": 0.848,
+    "success": true,
+    "ok": null,
+    "run_id": "0f5d0e0194c7404894a22882e649f2bd",
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": false,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "render_repaired": {
+    "elapsed_s": 2.699,
+    "success": true,
+    "ok": null,
+    "run_id": "f2aad662499049fe8740f0ac7262d541",
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": false,
+    "value": {
+      "문서": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_15회차/out_repair/report.md",
+      "자료": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_15회차/out_repair/issues.json",
+      "문서같음": true,
+      "자료같음": true,
+      "문제수": 74,
+      "분류건수": 60
+    },
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "render_failure_resume": {
+    "elapsed_s": 2.124,
+    "success": false,
+    "ok": null,
+    "run_id": "157f50e41a2d46bda9466731e9d0ed5e",
+    "diagnostic": "SCRIPT_EXIT",
+    "error": "Script 종료 코드 1. stderr 원문을 확인하세요.",
+    "reuse": null,
+    "resumed": true,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "inject_typo": {
+    "elapsed_s": 0.878,
+    "success": true,
+    "ok": null,
+    "run_id": "7810cd7b53884ff088e32d6a1ed2c7e4",
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": false,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "missing_result": {
+    "elapsed_s": 1.308,
+    "success": false,
+    "ok": null,
+    "run_id": "b8bb3cc312a84de4b61586bd8db3d7fb",
+    "diagnostic": "RESULT_MISSING",
+    "error": "종료했지만 결과 파일을 쓰지 않았습니다. stdout은 진단이며 값으로 해석하지 않습니다.",
+    "reuse": null,
+    "resumed": false,
+    "value": null,
+    "completed_actions": [
+      "self:write"
+    ],
+    "completed_omitted": 0
+  },
+  "full_success": {
+    "elapsed_s": 8.033,
+    "success": true,
+    "ok": null,
+    "run_id": "6e4120558a534f0183eb64755bb6f6d8",
+    "diagnostic": null,
+    "error": null,
+    "reuse": {
+      "run_id": "567ca65f0e9b48f6a2f624ca40839144",
+      "reused_calls": 19,
+      "candidates": 19,
+      "skipped": [
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "ba7cefd334430f0d46ddbce21d997019849211a58f4c77cfe5e590c5f82af07f",
+            "start": 8705,
+            "end": 8745,
+            "line": 145,
+            "column": 7
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "fbb474891731cf856ea3a500b5d4a5db253ee8cb0fec8045c118dcb497a24baf",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "ed10132d8c055fb4ad3c659eebd3751497e054d126e7d3c85d4f0b7b2276ae62",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "30fce95483d3ab6843ca6a3b061d5699e12401befa5ed1373f07d8d89127e551",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "44eb23a4897ab723ed64aab5daa1d62833c796b87031674a51803a889414a914",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "7763590fb65caa4ecac3483719e4dd5082db9b0be37cc06b2a929fd42d9ddd06",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 10
+        },
+        {
+          "action": "self:read",
+          "location": {
+            "source_hash": "ba7cefd334430f0d46ddbce21d997019849211a58f4c77cfe5e590c5f82af07f",
+            "start": 8752,
+            "end": 8792,
+            "line": 146,
+            "column": 7
+          },
+          "reason": "overlapping_write",
+          "candidates": [
+            {
+              "receipt": "fbb474891731cf856ea3a500b5d4a5db253ee8cb0fec8045c118dcb497a24baf",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "ed10132d8c055fb4ad3c659eebd3751497e054d126e7d3c85d4f0b7b2276ae62",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "30fce95483d3ab6843ca6a3b061d5699e12401befa5ed1373f07d8d89127e551",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "44eb23a4897ab723ed64aab5daa1d62833c796b87031674a51803a889414a914",
+              "changed": [
+                "args"
+              ]
+            },
+            {
+              "receipt": "7763590fb65caa4ecac3483719e4dd5082db9b0be37cc06b2a929fd42d9ddd06",
+              "changed": [
+                "args"
+              ]
+            }
+          ],
+          "candidates_total": 10
+        }
+      ],
+      "skipped_total": 2,
+      "model_calls": 1
+    },
+    "resumed": false,
+    "value": {
+      "문서": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_15회차/out_full_success/report.md",
+      "자료": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_15회차/out_full_success/issues.json",
+      "문서같음": true,
+      "자료같음": true,
+      "문제수": 74,
+      "분류건수": 60
+    },
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "analysis_check": {
+    "elapsed_s": 0.473,
+    "success": null,
+    "ok": true,
+    "run_id": null,
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": null,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "full_evidence_list": {
+    "elapsed_s": 0.355,
+    "success": true,
+    "ok": null,
+    "run_id": "24a5498f3657429692b6210c4aa4bd45",
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": false,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "render_quality_fix": {
+    "elapsed_s": 2.074,
+    "success": true,
+    "ok": null,
+    "run_id": "8c6acbd4b5e54ea0bc645385f6f96457",
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": false,
+    "value": {
+      "문서": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_15회차/out_trainer_final/report.md",
+      "자료": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_15회차/out_trainer_final/issues.json",
+      "문서같음": true,
+      "자료같음": true,
+      "문제수": 74,
+      "분류건수": 60
+    },
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "render_main": {
+    "elapsed_s": 2.094,
+    "success": true,
+    "ok": null,
+    "run_id": "1584129c9d3844a8a4c819dc5d34b375",
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": false,
+    "value": {
+      "문서": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_15회차/out_trainer/report.md",
+      "자료": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_15회차/out_trainer/issues.json",
+      "문서같음": true,
+      "자료같음": true,
+      "문제수": 74,
+      "분류건수": 60
+    },
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "full_failure": {
+    "elapsed_s": 8.941,
+    "success": false,
+    "ok": null,
+    "run_id": "a05fc3458b444defbc12add9691bc3d7",
+    "diagnostic": "SCRIPT_EXIT",
+    "error": "Script 종료 코드 1. stderr 원문을 확인하세요.",
+    "reuse": {
+      "run_id": "567ca65f0e9b48f6a2f624ca40839144",
+      "reused_calls": 19,
+      "candidates": 19,
+      "model_calls": 1
+    },
+    "resumed": false,
+    "value": null,
+    "completed_actions": [
+      "self:read",
+      "self:list",
+      "self:read",
+      "self:read",
+      "self:read",
+      "self:read"
+    ],
+    "completed_omitted": 14
+  },
+  "describe": {
+    "elapsed_s": 0.285,
+    "success": null,
+    "ok": null,
+    "run_id": null,
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": null,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "cli_reproduction": {
+    "elapsed_s": 0.304,
+    "success": null,
+    "ok": null,
+    "run_id": null,
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": null,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "render_check": {
+    "elapsed_s": 1.88,
+    "success": null,
+    "ok": true,
+    "run_id": null,
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": null,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "full_recovery": {
+    "elapsed_s": 0.953,
+    "success": true,
+    "ok": null,
+    "run_id": "9840fa0d7cd54e9385fc5191967d2438",
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": false,
+    "value": {
+      "문서": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_15회차/out_full_repair/report.md",
+      "자료": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_15회차/out_full_repair/issues.json",
+      "문서같음": true,
+      "자료같음": true,
+      "문제수": 74,
+      "분류건수": 60
+    },
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "analysis_main": {
+    "elapsed_s": 9.805,
+    "success": true,
+    "ok": null,
+    "run_id": "567ca65f0e9b48f6a2f624ca40839144",
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": false,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "full_check": {
+    "elapsed_s": 0.671,
+    "success": null,
+    "ok": true,
+    "run_id": null,
+    "diagnostic": null,
+    "error": null,
+    "reuse": null,
+    "resumed": null,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "repro_failed_arguments": {
+    "elapsed_s": 0.716,
+    "success": false,
+    "ok": null,
+    "run_id": "75a65e95aefd4261a53efc4bb25812c5",
+    "diagnostic": "SCRIPT_EXIT",
+    "error": "Script 종료 코드 1. stderr 원문을 확인하세요.",
+    "reuse": null,
+    "resumed": false,
+    "value": null,
+    "completed_actions": [
+      "self:write"
+    ],
+    "completed_omitted": 0
+  },
+  "render_changed_resume": {
+    "elapsed_s": 2.034,
+    "success": false,
+    "ok": null,
+    "run_id": "157f50e41a2d46bda9466731e9d0ed5e",
+    "diagnostic": "RESUME_DIVERGED",
+    "error": "기록된 호출의 입력이 달라졌습니다.",
+    "reuse": null,
+    "resumed": true,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  },
+  "render_failure": {
+    "elapsed_s": 2.438,
+    "success": false,
+    "ok": null,
+    "run_id": "157f50e41a2d46bda9466731e9d0ed5e",
+    "diagnostic": "SCRIPT_EXIT",
+    "error": "Script 종료 코드 1. stderr 원문을 확인하세요.",
+    "reuse": null,
+    "resumed": false,
+    "value": null,
+    "completed_actions": [],
+    "completed_omitted": null
+  }
+}

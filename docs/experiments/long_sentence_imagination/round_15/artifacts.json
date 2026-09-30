@@ -1,0 +1,18 @@
+{
+  "outputs/long_sentence_imagination/2026-10-01_15회차/out_trainer_final/report.md": {
+    "bytes": 10675,
+    "sha256": "5d98a2bab3f73d13a55d4874ba66ea03e4d2fcff0f09be37b3ea3cff356da2e0"
+  },
+  "outputs/long_sentence_imagination/2026-10-01_15회차/out_trainer_final/issues.json": {
+    "bytes": 21036,
+    "sha256": "0c4603dd859c211333dad5a24175d5cc3e7a4cf10064632e94f86c8d72e02b55"
+  },
+  "outputs/long_sentence_imagination/2026-10-01_15회차/out_ai/report.md": {
+    "bytes": 25380,
+    "sha256": "7069ceeb91df4960a82417d52a84ef5d8ec1913eb5a7a5cdf52fbc98171c0616"
+  },
+  "outputs/long_sentence_imagination/2026-10-01_15회차/out_ai/issues.json": {
+    "bytes": 110219,
+    "sha256": "050f0a10550e28ce62eaaa6c8c784383b5bd63a1ba99989a1d70f865e5085e7b"
+  }
+}

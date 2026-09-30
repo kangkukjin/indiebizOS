@@ -1,0 +1,23 @@
+{
+  "source": "backend/cognition/cognitive_consciousness.py",
+  "method": "CognitiveConsciousnessMixin._is_repair_cue",
+  "isolation": "원본 AST에서 상수와 메서드만 추출, AI 호출·시스템 변경 없음",
+  "cases": [
+    {
+      "message": "학원 운영 보고서를 만들어 줘.",
+      "repair_cue": false
+    },
+    {
+      "message": "학원 운영 보고서를 만들어 줘. 외부 발송이나 시스템 수정은 요청하지 않습니다.",
+      "repair_cue": true
+    },
+    {
+      "message": "백엔드는 수정하지 말고 자료만 분석해 줘.",
+      "repair_cue": true
+    },
+    {
+      "message": "백엔드를 수정해 줘.",
+      "repair_cue": true
+    }
+  ]
+}

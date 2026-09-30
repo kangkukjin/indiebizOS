@@ -1,0 +1,15 @@
+{
+  "code": "#!ibl edition=2\n$확정={합계:sum(map($행,($r)=>$r.n)),건수:len($행)}\n$f=[self:write]{path:\"~turn/실패인자.py\",content:$본문}\nreturn [self:script]{path:$f.path,args:{분석:$확정}}",
+  "inputs": {
+    "행": [
+      {
+        "n": 2
+      },
+      {
+        "n": 3
+      }
+    ],
+    "본문": "import json, sys\nargs = json.load(sys.stdin)\nraise ValueError(\"의도한 조판 실패\")\n"
+  },
+  "origin": "training"
+}

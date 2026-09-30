@@ -792,7 +792,10 @@ def _execute(tool_input: dict, context) -> str:
                                   default=str)
             data_format = (tool_input.get("format") or os.path.splitext(path)[1].lstrip(".")).lower()
             if tool_input.get("blocks") and data_format in {"csv", "tsv"} and not ranged and not truncated:
-                data = _file_io.delimited_data(content, "\t" if data_format == "tsv" else ",")
+                try:
+                    data = _file_io.delimited_data(content, "\t" if data_format == "tsv" else ",")
+                except ValueError as exc:
+                    raise ValueError(f"{path}: {exc}") from exc
                 return json.dumps({"success": True, "text": content, "blocks": [],
                                    "structured_data": data, "path": path}, ensure_ascii=False)
             if tool_input.get("blocks"):

@@ -1,0 +1,35 @@
+#!ibl edition=2
+[def:수량]($path,$field) {
+  $d=[self:read]{path:$path}
+  return $d.data.items >> [table:each] { return {depot:$it.depot,sku:$it.sku,qty:number($it.qty)} }
+}
+[def:대사]($folder) {
+  $sources=[fn:수량]{path:$folder+"/opening.csv",field:"opening"} & [fn:수량]{path:$folder+"/received.csv",field:"received"} & [fn:수량]{path:$folder+"/shipped.csv",field:"shipped"}
+  $a=$sources[0] >> [table:groupby]{by:["depot","sku"],agg:{opening:["sum","qty"]}}
+  $b=$sources[1] >> [table:groupby]{by:["depot","sku"],agg:{received:["sum","qty"]}}
+  $c=$sources[2] >> [table:groupby]{by:["depot","sku"],agg:{shipped:["sum","qty"]}}
+  $ab=[table:join]{left:$a,right:$b,on:["depot","sku"],how:"left",defaults:{received:0}}
+  $abc=$ab >> [table:join]{right:$c,on:["depot","sku"],how:"left",defaults:{shipped:0}}
+  $minimum=[self:read]{path:$folder+"/minimum.json"}
+  $full=$abc >> [table:join]{right:$minimum.data.rows,on:"sku",how:"left"}
+  $rows=$full.items >> [table:each] {
+    $closing=$it.opening+$it.received-$it.shipped
+    return {depot:$it.depot,sku:$it.sku,closing:$closing,shortage:max([0,$it.minimum-$closing])}
+  } >> [table:sort]{by:["depot","sku"]}
+  $summary=$rows >> [table:groupby]{by:"depot",agg:{closing:["sum","closing"],shortage:["sum","shortage"],count:["count"]}}
+  return {status:"ok",rows:$rows,summary:$summary.items}
+}
+[def:시도]($folder) {
+  [try] { return [fn:대사]{folder:$folder} }
+  [catch] { return {status:"blocked",error:$error.message,details:$error.details} }
+}
+[def:작업]($folder,$out) {
+  $result=[fn:시도]{folder:$folder}
+  $body=json($result)
+  [self:write]{path:$out+"/result.json",content:$body}
+  [self:write]{path:$out+"/report.txt",content:$body}
+  $saved=[self:read]{path:$out+"/result.json",format:"text"}
+  assert $saved.text==$body,"저장 불일치"
+  return $result
+}
+return [fn:작업]{folder:$folder,out:$out}

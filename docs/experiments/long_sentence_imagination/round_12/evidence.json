@@ -1,0 +1,92 @@
+{
+  "checks": {
+    "before_main": "144 rows and depot totals exact",
+    "after_main": "144 rows and depot totals exact",
+    "after_variant": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_12회차/variant/received.csv: CSV/TSV 레코드 146 (물리 줄 146)의 셀 수가 헤더와 다릅니다: 기대 3, 실제 4.",
+    "after_short": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_12회차/short/received.csv: CSV/TSV 레코드 146 (물리 줄 146)의 셀 수가 헤더와 다릅니다: 기대 3, 실제 2.",
+    "after_duplicate": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_12회차/duplicate/received.csv: CSV/TSV 헤더 열 3: 열 2와 중복. 비어 있지 않은 고유한 이름이어야 합니다."
+  },
+  "receipts": [
+    {
+      "label": "after_duplicate",
+      "elapsed_seconds": 0.6339550018310547,
+      "success": true,
+      "check_ok": null,
+      "run_id": "8fea4bbcef734bfa8d84b73f9b6633d1",
+      "source_complete": false,
+      "sha256": "d5e0e3c208e93f47acb64f62634fe68b4c85aa2d123debf72364c4ac8eebbfda"
+    },
+    {
+      "label": "after_main",
+      "elapsed_seconds": 1.2583608627319336,
+      "success": true,
+      "check_ok": null,
+      "run_id": "b31d72a0c2d7482bab35409155ae747e",
+      "source_complete": true,
+      "sha256": "bad613867594b8c805b30999270bfd860dcfb7645400bcac24f5c9ce16a21c8b"
+    },
+    {
+      "label": "after_short",
+      "elapsed_seconds": 0.6374549865722656,
+      "success": true,
+      "check_ok": null,
+      "run_id": "fcf5e9a99b7e44b992cde94e17ef90d3",
+      "source_complete": false,
+      "sha256": "818272b95b4cbc0af7a0435018415dcebfc1a2337317b8cbd6708aa205a6d6ae"
+    },
+    {
+      "label": "after_variant",
+      "elapsed_seconds": 0.6417951583862305,
+      "success": true,
+      "check_ok": null,
+      "run_id": "db0fdc2e1e5e452690a7a7522bcc039b",
+      "source_complete": false,
+      "sha256": "82e3933aea877adf78da99a580abf2783dbbb1c533fbea09622b17140a7cdf4e"
+    },
+    {
+      "label": "author_fixed",
+      "elapsed_seconds": 0.6440730094909668,
+      "success": true,
+      "check_ok": null,
+      "run_id": "c06e47388af44d89b2d212c0334b9ea6",
+      "source_complete": false,
+      "sha256": "a4c37bb633d5debb0e6583dee1c0ab395b1a88a4305edafb29534ac6655711fc"
+    },
+    {
+      "label": "before_main",
+      "elapsed_seconds": 1.6433639526367188,
+      "success": true,
+      "check_ok": null,
+      "run_id": "a5cb44b997964704b850ba0d78b644d9",
+      "source_complete": true,
+      "sha256": "dd44dfe23e0ddef1d072584a060d6fa189711173f212fbe1dd9371feb4a0ba4e"
+    },
+    {
+      "label": "before_variant",
+      "elapsed_seconds": 1.2275347709655762,
+      "success": true,
+      "check_ok": null,
+      "run_id": "b1e9139df1af42eebfe72af3083ffefb",
+      "source_complete": false,
+      "sha256": "74ab5418d354eb1df880a29ff774645d4579a302ca990b2c9a328c11c433198f"
+    },
+    {
+      "label": "initial_check",
+      "elapsed_seconds": 0.48966407775878906,
+      "success": null,
+      "check_ok": true,
+      "run_id": null,
+      "source_complete": null,
+      "sha256": "399f09faed005aab0dd214f36431ec07702efc2b692e71386d0880fa19465932"
+    },
+    {
+      "label": "system_response",
+      "elapsed_seconds": 345.45844292640686,
+      "success": null,
+      "check_ok": null,
+      "run_id": null,
+      "source_complete": null,
+      "sha256": "1140507380e680a00e4bbac07977c5b7b23598269354063f19d21e4e4672b3d1"
+    }
+  ]
+}

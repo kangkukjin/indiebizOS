@@ -97,13 +97,22 @@ def delimited_data(content, delimiter):
     """CSV/TSV preserves quoted delimiters/newlines and missing/zero cells."""
     import csv
     import io
-    rows = list(csv.reader(io.StringIO(content.lstrip("\ufeff")), delimiter=delimiter, strict=True))
-    if not rows:
+    reader = csv.reader(io.StringIO(content.lstrip("\ufeff")), delimiter=delimiter, strict=True)
+    columns = next(reader, None)
+    if columns is None:
         return {"items": [], "table": {"columns": [], "rows": []}}
-    columns, values = rows[0], rows[1:]
-    if len(set(columns)) != len(columns) or any(not name for name in columns):
-        raise ValueError("CSV/TSV 헤더는 비어 있지 않은 고유한 이름이어야 합니다.")
-    if any(len(row) != len(columns) for row in values):
-        raise ValueError("CSV/TSV 행의 셀 수가 헤더와 다릅니다.")
+    seen = {}
+    for index, name in enumerate(columns, 1):
+        if not name or name in seen:
+            reason = f"열 {seen[name]}와 중복" if name in seen else "빈 이름"
+            raise ValueError(f"CSV/TSV 헤더 열 {index}: {reason}. 비어 있지 않은 고유한 이름이어야 합니다.")
+        seen[name] = index
+    values = []
+    for record, row in enumerate(reader, 2):
+        if len(row) != len(columns):
+            raise ValueError(
+                f"CSV/TSV 레코드 {record} (물리 줄 {reader.line_num})의 셀 수가 헤더와 다릅니다: "
+                f"기대 {len(columns)}, 실제 {len(row)}.")
+        values.append(row)
     return {"items": [dict(zip(columns, row)) for row in values],
             "table": {"columns": columns, "rows": values}}

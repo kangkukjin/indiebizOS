@@ -1,0 +1,67 @@
+{
+  "id": 4195,
+  "started_at": "2026-09-30T23:00:01.347168",
+  "ended_at": "2026-09-30T23:05:46.596241",
+  "total_ms": 345248,
+  "source": "training",
+  "run_id": "run_05bd25751d0448649e73",
+  "usage": {
+    "input": 1247616,
+    "output": 9052,
+    "cache_read": 1126912,
+    "cache_create": 0
+  },
+  "models": [
+    "gpt-6-astra:high"
+  ],
+  "event_counts": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 8,
+    "supervision.recall.finished": 8,
+    "knowledge_catalog.selected": 2,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "supervision.framing": 1,
+    "model.call_started": 1,
+    "model.input": 1,
+    "supervision.tool.started": 13,
+    "ibl.started": 12,
+    "ibl.finished": 12,
+    "supervision.tool.finished": 13,
+    "model.round": 15,
+    "model.response_observed": 15,
+    "ibl.checkpoint": 6,
+    "context.result_read": 1,
+    "context.input_ref_resolved": 5,
+    "side_effect.write": 4,
+    "model.usage": 1,
+    "model.call_finished": 1,
+    "cognition.evaluation": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+  },
+  "cost": {
+    "check_rejections": 1,
+    "execution_calls": 13,
+    "execution_failures": 0,
+    "execution_tool_s": 9.659,
+    "internal_tool_failures": 0,
+    "request_intent": "task",
+    "source_failures": 0,
+    "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+    "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+    "wall_s": 344.71
+  },
+  "errors": [
+    {
+      "tool_name": null,
+      "check_rejected": true,
+      "is_error": false,
+      "elapsed_s": 0.367
+    }
+  ],
+  "token_scope": "billable_usage events only; cache is part of input; author tokens unmeasured"
+}

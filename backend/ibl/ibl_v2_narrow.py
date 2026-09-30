@@ -1,7 +1,7 @@
 """Conservative path refinements shared by branches and row predicates."""
 from dataclasses import replace
 
-from ibl_v2_types import Type, UNKNOWN, NULL, alternatives, join
+from ibl_v2_types import Type, UNKNOWN, NULL, NEVER, alternatives, join
 
 
 def path(node):
@@ -23,6 +23,8 @@ def combine(types):
 def refine(typ, keys, test):
     candidates = []
     for member in alternatives(typ):
+        if member == NEVER:
+            continue
         if not keys:
             value = test(member)
         elif member.kind == "Record":
@@ -69,7 +71,7 @@ def narrow(env, condition, truth=True):
                         return replace(typ, fields=tuple(fields.items()))
                     return None if key in fields else typ
                 refined = refine(env[keys[0]], keys[1:], present)
-                return {**env, keys[0]: refined} if refined is not None else env.copy()
+                return {**env, keys[0]: refined if refined is not None else NEVER}
     target, literal = condition, truth
     equal = True
     if condition.kind == "binary" and d["op"] in ("==", "!="):
@@ -96,7 +98,8 @@ def narrow(env, condition, truth=True):
 
     result = env.copy()
     refined = refine(env[keys[0]], keys[1:], test)
-    # An impossible branch is still checked with its original types.
-    if refined is not None:
-        result[keys[0]] = refined
+    # Preserve the contradiction instead of restoring the pre-guard type.
+    # Source validation still runs; only accesses to this impossible value
+    # receive bottom, so unrelated mistakes are not hidden.
+    result[keys[0]] = refined if refined is not None else NEVER
     return result

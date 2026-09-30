@@ -2791,6 +2791,8 @@ nodes:
             closed: true
         side_effect: false
         fixture: '[sense:search]{query: "climate policy"}'
+        shape_axes:
+          queries: null
         shape_variants:
           source=naver: '[sense:search]{query: "기후 정책", source: "naver", limit: 3}'
           source=gnews: '[sense:search]{query: "climate policy", source: "gnews", limit: 3}'

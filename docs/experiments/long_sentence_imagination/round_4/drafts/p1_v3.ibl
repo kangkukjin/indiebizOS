@@ -1,0 +1,49 @@
+#!ibl edition=2
+# 4회차 P1 수집 — 검색으로 공식 What's New 문서를 찾아 PEP 문단을 모은다 (v3: 공식 주소는 앞부분 일치 — contains 가 북마크 사이트를 공식으로 오인)
+# inputs: 버전[Text], 문단상한(모델 입력 보호가 아니라 표시 없음 — 전건 사용, 생략은 match_info 로 신고)
+# 반환: {검색:[{query,title,url}], 원천:[{버전,ok,url,찾은경로,이유?,문단:[{paragraph_index,text}],적중,생략}]}
+
+[def:공식인가]($버전) {
+  return ($행)=>$행.url[:24] == "https://docs.python.org/" and contains($행.url,f"whatsnew/${$버전}.html")
+}
+
+[def:버전문서찾기]($버전,$검색행) {
+  $공식 = [fn:공식인가]{버전:$버전}
+  $직접 = $검색행 >> [table:filter]{where:$공식}
+  [if:len($직접) > 0] { return {버전:$버전,url:$직접[0].url,찾은경로:f"검색 '${$직접[0].query}' 결과"} }
+  # 검색에 나온 공식 색인·해당 버전 릴리스 페이지의 링크에서 찾는다
+  $릴리스 = "python-" + replace($버전,".","") + "0/"
+  $경유 = $검색행 >> [table:filter]{where:($r)=>($r.url[:24] == "https://docs.python.org/" and contains($r.url,"whatsnew/index.html")) or ($r.url[:40] == "https://www.python.org/downloads/release" and contains($r.url,$릴리스))}
+  $시도 = $경유 >> [table:each]{on_error:"collect"} {
+    $링크 = [sense:crawl]{url:$it.url,op:"links"}
+    $맞음 = $링크.items >> [table:filter]{where:$공식}
+    return {경유:$it.url,맞음:$맞음}
+  }
+  $성공 = $시도 >> [table:each]{mode:"flat_map"} {
+    [if:is_ok($it)] { $x = unwrap($it); [if:len($x.맞음) > 0] { return [{url:$x.맞음[0].url,경유:$x.경유}] } }
+    return []
+  }
+  [if:len($성공) > 0] { return {버전:$버전,url:$성공[0].url,찾은경로:f"검색으로 찾은 공식 페이지의 링크: ${$성공[0].경유}"} }
+  return {버전:$버전,url:null,찾은경로:null,경유수:len($경유)}
+}
+
+[def:PEP문단]($찾음) {
+  [if:$찾음.url == null] { return {버전:$찾음.버전,ok:false,url:null,찾은경로:null,이유:f"검색어 2개의 결과와 공식 경유 페이지 ${get($찾음,'경유수',0)}곳의 링크에서 공식 문서를 찾지 못함",문단:[],적중:0,생략:0} }
+  [try] {
+    $문서 = [sense:crawl]{url:$찾음.url}
+    $찾기 = $문서.items >> [fn:본문에서찾기]{패턴:"PEP \\d+",문맥:0,개수:1000}
+    return {버전:$찾음.버전,ok:true,url:$찾음.url,찾은경로:$찾음.찾은경로,
+            문단:$찾기.items >> [table:select]{columns:["paragraph_index","text"]},
+            적중:$찾기.match_info.total_matches,생략:$찾기.match_info.omitted_matches}
+  } [catch] {
+    return {버전:$찾음.버전,ok:false,url:$찾음.url,찾은경로:$찾음.찾은경로,이유:$error.message,문단:[],적중:0,생략:0}
+  }
+}
+
+# ── 최상위 ──
+$검색어 = $버전 >> [table:each]{mode:"flat_map"} { return [f"What's New In Python ${$it}",f"docs.python.org whatsnew ${$it}"] }
+$검색 = [sense:search]{queries:$검색어,limit:8}
+$검색행 = $검색.items
+$찾음 = $버전 >> [table:each] { [fn:버전문서찾기]{버전:$it,검색행:$검색행} }
+$원천 = $찾음 >> [table:each]{parallel:4} { [fn:PEP문단]{찾음:$it} }
+return {검색어:$검색어,검색:$검색행 >> [table:select]{columns:["query","title","url"]},원천:$원천}

@@ -1,0 +1,140 @@
+{
+  "diagnostics": {
+    "before_issues": 22,
+    "after_issues": 9,
+    "before_pure": 18,
+    "after_pure": 6,
+    "before_issue_chars": 25212,
+    "after_issue_chars": 10175
+  },
+  "real_input_original": {
+    "success": true,
+    "value": {
+      "저장일치": true,
+      "버전": [
+        {
+          "버전": "3.13",
+          "pep수": 11
+        },
+        {
+          "버전": "3.14",
+          "pep수": 16
+        }
+      ],
+      "걸침": [
+        "- **PEP 703** 자유 스레드 모드(GIL 비활성화): 3.13 실험적 → 3.14 정식 (근거 3.13 ¶9,16 / 3.14 ¶116,936)"
+      ]
+    },
+    "usage": {
+      "steps": 11511,
+      "rows": 463,
+      "elapsed_ms": 399
+    },
+    "output_chars": 2920,
+    "explicit_missing_source": false
+  },
+  "real_input_variant": {
+    "success": true,
+    "value": {
+      "저장일치": true,
+      "버전": [
+        {
+          "버전": "3.13",
+          "pep수": 11
+        },
+        {
+          "버전": "3.14",
+          "pep수": 16
+        },
+        {
+          "버전": "3.99",
+          "pep수": 0
+        }
+      ],
+      "걸침": [
+        "- **PEP 703** 자유 스레드 모드(GIL 비활성화): 3.13 실험적 → 3.14 정식 (근거 3.13 ¶9,16 / 3.14 ¶116,936)"
+      ]
+    },
+    "usage": {
+      "steps": 11749,
+      "rows": 474,
+      "elapsed_ms": 276
+    },
+    "output_chars": 3135,
+    "explicit_missing_source": true
+  },
+  "live_api": {
+    "null": {
+      "success": true,
+      "value": [
+        "사유 없음",
+        "사유 없음"
+      ],
+      "run_status": "completed",
+      "plan_hash": "9532b260f150ffe16280107ec1fe776bf11020e54c169f96891b692658f76c48",
+      "issues": [],
+      "warnings": []
+    },
+    "early": {
+      "success": true,
+      "value": [
+        "사유 없음",
+        "404"
+      ],
+      "run_status": "completed",
+      "plan_hash": "562020382a7adb7e8fa9d0618b17ca71943449956a769719caa3e7baa6e9fe33",
+      "issues": [],
+      "warnings": []
+    },
+    "pure": {
+      "ok": false,
+      "plan_hash": "98f183c87f8f91f1330d8ea80d26ecbceb01f47c8a46bfa67f4b9945073d20bd",
+      "issues": [
+        "PURE_EXPRESSION"
+      ],
+      "warnings": []
+    },
+    "search": {
+      "ok": true,
+      "plan_hash": "6f4b4a05749ba4a101bad7dfd9eb391341e3940a8ce8bd4c950c9d5812873ea8",
+      "issues": [],
+      "warnings": []
+    }
+  },
+  "regression": {
+    "tests": "7888",
+    "failures": "1",
+    "errors": "0",
+    "skipped": "1",
+    "time": "525.792",
+    "failed": [
+      "backend.test_each_progress_visibility::test_단일step_프로그램도_자기_좌표를_신고한다"
+    ]
+  },
+  "system": {
+    "tests": "71",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "96.076",
+    "failed": []
+  },
+  "progress_baseline": {
+    "tests": "13",
+    "failures": "1",
+    "errors": "0",
+    "skipped": "0",
+    "time": "3.177",
+    "failed": [
+      "backend.test_each_progress_visibility::test_단일step_프로그램도_자기_좌표를_신고한다"
+    ]
+  },
+  "progress_current": {
+    "tests": "13",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "3.209",
+    "failed": []
+  }
+}

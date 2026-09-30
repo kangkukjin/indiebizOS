@@ -1,0 +1,4 @@
+#!ibl edition=2
+[def:큰가]($r,$기준) { return $r.n > $기준 }
+$행 = [{n:1},{n:5}]
+return $행 >> [table:filter]{where:($r)=>[fn:큰가]{r:$r,기준:2}}

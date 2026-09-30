@@ -192,6 +192,8 @@ def compact_check(plan):
 
 def numeric_operand(compiler, node, typ):
     """Use exactly the runtime number observation for literal operands."""
+    if typ.kind == 'Never':
+        return
     if node.kind == 'literal':
         try:
             number(node.data['value'])
@@ -210,6 +212,8 @@ def numeric_operand(compiler, node, typ):
 
 def access_type(compiler, node, base, key, key_type=None):
     """Check each possible receiver shape, retaining its projected type."""
+    if base.kind == 'Never':
+        return base
     if base.kind == 'Union':
         values = [access_type(compiler, node, member, key, key_type)
                   for member in alternatives(base)]

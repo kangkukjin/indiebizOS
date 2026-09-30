@@ -82,6 +82,7 @@ class Compiler:
         self.reachable = True
         self.default_scope = frozenset()  # 기본값 식을 검사하는 동안의 인자 이름들
         self.unit_warned = set()
+        self.impure_spans = []
 
     def issue(self, node, code, message, **details):
         item = {"code": code, "message": message, "source_span": span(self.source, node),
@@ -110,8 +111,23 @@ class Compiler:
     def pure(self, node):
         if node is None:
             return
+        if any(start <= node.start and node.end <= end for start, end in self.impure_spans):
+            return
         if node.kind not in PURE_KINDS:
-            self.issue(node, "PURE_EXPRESSION", "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.")
+            self.impure_spans.append((node.start, node.end))
+            hint = HINTS["PURE_EXPRESSION"]
+            message = "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요."
+            if node.kind == "pipe":
+                hint = ("파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 "
+                        "현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 "
+                        "reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.")
+            elif node.kind == "call" and node.data.get("node") == "fn":
+                message = "지역·저장 함수의 [fn:이름] 호출은 순수 효과여도 순수 식 자리에 넣을 수 없습니다."
+                hint = ("행마다 함수가 필요하면 table:each 본문에서 호출하세요. 술어를 재사용하려면 "
+                        "함수가 람다를 반환하게 하고 먼저 $술어=[fn:함수]{...}로 받은 뒤 "
+                        "where:$술어 또는 ($행)=>$술어($행)를 쓰세요.")
+            self.issue(node, "PURE_EXPRESSION", message, hint=hint)
+            return
         for value in node.data.values():
             self.check_children(value, self.pure)
 
@@ -559,8 +575,9 @@ class Compiler:
                     self.write_log.add((realm, identity))
             result_type = declared(contract["result"])
             from ibl_v2_adapters import observed_result
-            result_type = observed_result(key, spec.contract,
-                                          {k: v for k, v in values.items() if v is not UNRESOLVED}, result_type)
+            # A dynamic shape selector is present, not absent. Keep its marker
+            # so observations from the default shape cannot leak into it.
+            result_type = observed_result(key, spec.contract, values, result_type)
             from ibl_v2_analysis import row_flow_type
             result_type = row_flow_type(self, node, contract, args, fields, values,
                                         result_type, env, names, readonly)

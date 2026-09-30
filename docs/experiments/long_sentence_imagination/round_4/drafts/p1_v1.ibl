@@ -1,0 +1,53 @@
+#!ibl edition=2
+# 4회차 P1 수집 — 검색으로 공식 What's New 문서를 찾아 PEP 문단을 모은다 (v1: 람다 안 지역 함수 호출 → 술어를 돌려주는 함수)
+# inputs: 버전[Text], 문단상한(모델 입력 보호가 아니라 표시 없음 — 전건 사용, 생략은 match_info 로 신고)
+# 반환: {검색:[{query,title,url}], 원천:[{버전,ok,url,찾은경로,이유?,문단:[{paragraph_index,text}],적중,생략}]}
+
+[def:공식인가]($버전) {
+  return ($행)=>contains($행.url,"docs.python.org") and contains($행.url,f"whatsnew/${$버전}.html")
+}
+
+[def:버전문서찾기]($버전,$검색행,$색인링크) {
+  $공식 = [fn:공식인가]{버전:$버전}
+  $직접 = $검색행 >> [table:filter]{where:$공식}
+  [if:len($직접) > 0] { return {버전:$버전,url:$직접[0].url,찾은경로:f"검색: ${$직접[0].query}"} }
+  $링크 = $색인링크 >> [table:filter]{where:$공식}
+  [if:len($링크) > 0] { return {버전:$버전,url:$링크[0].url,찾은경로:f"검색으로 찾은 공식 색인의 링크: ${$링크[0].source_url}"} }
+  return {버전:$버전,url:null,찾은경로:null}
+}
+
+[def:PEP문단]($찾음) {
+  [if:$찾음.url == null] { return {버전:$찾음.버전,ok:false,url:null,찾은경로:null,이유:"검색·공식 색인 어디에서도 공식 문서를 찾지 못함",문단:[],적중:0,생략:0} }
+  [try] {
+    $문서 = [sense:crawl]{url:$찾음.url}
+    $찾기 = $문서.items >> [fn:본문에서찾기]{패턴:"PEP \\d+",문맥:0,개수:1000}
+    return {버전:$찾음.버전,ok:true,url:$찾음.url,찾은경로:$찾음.찾은경로,
+            문단:$찾기.items >> [table:select]{columns:["paragraph_index","text"]},
+            적중:$찾기.match_info.total_matches,생략:$찾기.match_info.omitted_matches}
+  } [catch] {
+    return {버전:$찾음.버전,ok:false,url:$찾음.url,찾은경로:$찾음.찾은경로,이유:$error.message,문단:[],적중:0,생략:0}
+  }
+}
+
+# ── 최상위 ──
+$검색어 = $버전 >> [table:each] { return f"What's New In Python ${$it}" }
+$검색 = [sense:search]{queries:$검색어,limit:8}
+$검색행 = $검색.items
+$직접있음 = $버전 >> [table:each] {
+  $v = $it
+  $공식 = [fn:공식인가]{버전:$v}
+  $hit = $검색행 >> [table:filter]{where:$공식}
+  return len($hit) > 0
+}
+# 직접 못 찾은 버전이 있을 때만 공식 색인(검색 결과에 있는 것)을 한 번 읽어 링크를 본다
+$색인링크 = []
+[if:not all($직접있음)] {
+  $색인 = $검색행 >> [table:filter]{where:($r)=>contains($r.url,"docs.python.org") and contains($r.url,"whatsnew/index.html")}
+  [if:len($색인) > 0] {
+    $링크 = [sense:crawl]{url:$색인[0].url,op:"links"}
+    $색인링크 = $링크.items
+  }
+}
+$찾음 = $버전 >> [table:each] { [fn:버전문서찾기]{버전:$it,검색행:$검색행,색인링크:$색인링크} }
+$원천 = $찾음 >> [table:each]{parallel:4} { [fn:PEP문단]{찾음:$it} }
+return {검색:$검색행 >> [table:select]{columns:["query","title","url"]},원천:$원천}

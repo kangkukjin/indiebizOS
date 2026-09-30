@@ -39,6 +39,9 @@ class Type:
 
 UNKNOWN, UNIT_T, BOOL = Type("Unknown"), Type("Unit"), Type("Bool")
 NUMBER, TEXT, NULL = Type("Number"), Type("Text"), Type("Null")
+# Internal bottom: a refinement proved that no value can reach this path.
+# This is neither Unknown nor a runtime/declarable value type.
+NEVER = Type("Never")
 
 
 def alternatives(typ):
@@ -68,6 +71,10 @@ def plain(typ):
 
 
 def join(left, right):
+    if left == NEVER:
+        return right
+    if right == NEVER:
+        return left
     if left == right:
         return left
     if left.kind == right.kind == "Record" and not left.open and not right.open:
@@ -168,6 +175,8 @@ def declared(spec):
 
 
 def compatible(actual, expected):
+    if actual == NEVER:
+        return True
     if "Unknown" in (actual.kind, expected.kind):
         return True
     if actual.kind == "Union":

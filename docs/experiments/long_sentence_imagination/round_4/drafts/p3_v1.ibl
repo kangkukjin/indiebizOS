@@ -1,0 +1,86 @@
+#!ibl edition=2
+# 4회차 P3 렌더 — P2 결과($ref)를 PEP 로 묶어 공부 노트를 쓴다 (v1: 식 자리 파이프를 변수로·함수 안 목록·join 문자열화·이유 null)
+# inputs: 추출 = {"$ref": P2 result_ref.id}, 출력
+# 모델 호출 없음 — 계산·표현만
+
+
+# 한 버전의 추출 행을 PEP 하나당 한 항목으로 묶는다. 모델 분류·상태가 행마다 다르면 표시한다.
+[def:PEP묶기]($행) {
+  $번호원 = $행 >> [table:each] { return $it.pep }
+  $번호들 = unique($번호원)
+  $번호들 >> [table:each] {
+    $n = $it
+    $같은 = $행 >> [table:filter]{where:($r)=>$r.pep == $n}
+    $분류원 = $같은 >> [table:each] { return $it.분류 }
+    $상태원 = $같은 >> [table:each] { return $it.상태 }
+    $문단원 = $같은 >> [table:each] { return $it.문단 }
+    $분류들 = unique($분류원)
+    $상태들 = unique($상태원)
+    return {pep:$n,제목:$같은[0].제목,분류:$같은[0].분류,상태:$같은[0].상태,
+            문단:unique($문단원),
+            분류불일치:len($분류들) > 1,상태불일치:len($상태들) > 1,분류들:$분류들,상태들:$상태들}
+  }
+}
+
+[def:항목줄]($h,$버전) {
+  $근거줄 = $h.문단 >> [table:each] { return f"¶${$it}" }
+  $근거 = join(", ",$근거줄)
+  $주의 = ($h.분류불일치 or $h.상태불일치) ? f" ⚠ 문단별 모델 판단이 다름(분류 ${join('/',$h.분류들)}, 상태 ${join('/',$h.상태들)})" : ""
+  return f"| ${$h.pep} | ${$h.제목} | ${$h.상태} | ${$버전} ${$근거} |${$주의}"
+}
+
+[def:버전절]($버전,$항목) {
+  $분류목록 = ["언어 문법","인터프리터·성능","표준 라이브러리","제거·비권장"]
+  $절 = $분류목록 >> [table:each] {
+    $c = $it
+    $속한 = $항목 >> [table:filter]{where:($h)=>$h.분류 == $c}
+    [if:len($속한) == 0] { return f"### ${$c}\n- (해당 PEP 없음)\n" }
+    $줄 = $속한 >> [table:each] { [fn:항목줄]{h:$it,버전:$버전} }
+    return f"### ${$c}\n| PEP | 제목 | 상태 | 근거 |\n| --- | --- | --- | --- |\n${join('\n',$줄)}\n"
+  }
+  return f"## Python ${$버전} (PEP ${len($항목)}개)\n\n${join('\n',$절)}"
+}
+
+# ── 최상위 ──
+$버전별 = $추출.추출 >> [table:each] { return {버전:$it.버전,항목:[fn:PEP묶기]{행:$it.변경}} }
+$본절 = $버전별 >> [table:each] { [fn:버전절]{버전:$it.버전,항목:$it.항목} }
+
+# 두 버전에 걸친 PEP (앞 버전 → 뒤 버전 순서, 입력 버전 순)
+$걸침 = []
+[if:len($버전별) >= 2] {
+  $앞 = $버전별[0]
+  $뒤 = $버전별[1]
+  $앞번호 = $앞.항목 >> [table:each] { return $it.pep }
+  $뒤번호 = $뒤.항목 >> [table:each] { return $it.pep }
+  $공통 = intersection($앞번호,$뒤번호)
+  $걸침 = $공통 >> [table:each] {
+    $n = $it
+    $as = $앞.항목 >> [table:filter]{where:($h)=>$h.pep == $n}
+    $bs = $뒤.항목 >> [table:filter]{where:($h)=>$h.pep == $n}
+    $a = $as[0]
+    $b = $bs[0]
+    $a문단 = $a.문단 >> [table:each] { return text($it) }
+    $b문단 = $b.문단 >> [table:each] { return text($it) }
+    return f"- **${$n}** ${$a.제목}: ${$앞.버전} ${$a.상태} → ${$뒤.버전} ${$b.상태} (근거 ${$앞.버전} ¶${join(',',$a문단)} / ${$뒤.버전} ¶${join(',',$b문단)})"
+  }
+}
+
+$m1 = $추출.원천 >> [table:each]{mode:"flat_map"} {
+  [if:not $it.ok] { $이유 = $it.이유 == null ? "사유 없음" : text($it.이유); return [f"- 찾지 못함/읽지 못함: Python ${$it.버전} — ${$이유}"] }
+  [if:$it.생략 > 0] { return [f"- 문단 생략: Python ${$it.버전} PEP 문단 ${$it.적중}개 중 ${$it.생략}개 생략"] }
+  return []
+}
+$m2 = $추출.추출 >> [table:each]{mode:"flat_map"} {
+  $e = $it
+  $f = $e.실패 >> [table:each] { return f"- 모델 추출 실패: Python ${$e.버전} 덩이 ${$it.덩이} — ${$it.이유}" }
+  $b = $e.버림 >> [table:each] { return f"- 원문에 없는 PEP 라서 버림: Python ${$e.버전} ¶${$it.문단} ${$it.pep}" }
+  return $f + $b
+}
+$미확인 = $m1 + $m2 + ["- PEP 번호가 없는 변경(예: 새 대화형 인터프리터)은 이 노트의 추출 대상이 아님"]
+$원천줄 = $추출.원천 >> [table:each] { return f"- Python ${$it.버전}: ${$it.ok ? $it.url : '없음'} (${$it.찾은경로 == null ? '검색 실패' : $it.찾은경로}, PEP 문단 ${$it.문단수}개)" }
+
+$버전들 = $버전별 >> [table:each] { return $it.버전 }
+$본문 = f"# Python ${join(' · ',$버전들)} 변경점 공부 노트\n\n${join('\n',$본절)}\n## 두 버전에 걸친 변화\n${len($걸침) == 0 ? '- 없음' : join('\n',$걸침)}\n\n## 확인 못 한 부분\n${join('\n',$미확인)}\n\n## 원천\n검색어: ${join(' / ',$추출.검색어)}\n${join('\n',$원천줄)}\n"
+$저장 = [self:write]{path:$출력,content:$본문}
+$확인 = [self:read]{path:$출력}
+return {저장일치:$확인.text == $본문,버전:$버전별 >> [table:each] { return {버전:$it.버전,pep수:len($it.항목)} },걸침:$걸침}

@@ -1,0 +1,3 @@
+#!ibl edition=2
+# inputs: x = 행 목록. 이번 값에서 이유가 전부 null 이지만 다른 입력에선 문자열일 수 있다
+return $x >> [table:each] { return $it.이유 == null ? "사유 없음" : text($it.이유) }

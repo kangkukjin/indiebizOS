@@ -1,0 +1,48 @@
+#!ibl edition=2
+# 4회차 P2 추출 — P1 결과($ref)의 PEP 문단에서 모델로 변경 항목을 뽑는다 (최초 초안)
+# inputs: 수집 = {"$ref": P1 result_ref.id}, 덩이크기
+# 반환: {검색어, 원천:[메타], 추출:[{버전,변경,버림,실패}]}
+
+[def:덩이로]($목록,$크기) {
+  $덩이 = []
+  [repeat:while $i * $크기 < len($목록)] { $덩이 = $덩이 + [$목록[$i * $크기:($i + 1) * $크기]] }
+  return $덩이
+}
+
+[def:변경추출]($원천,$크기) {
+  [if:not $원천.ok] { return {버전:$원천.버전,변경:[],버림:[],실패:[]} }
+  $덩이 = [fn:덩이로]{목록:$원천.문단,크기:$크기}
+  $결과 = $덩이 >> [table:each]{parallel:4,on_error:"collect"} {
+    $r = $it >> [table:ai]{
+      instruction:f"파이썬 ${$원천.버전} What's New 문서의 문단들이다. 각 문단이 이 버전의 변경으로 설명하는 항목마다 PEP 번호를 문단 원문 표기 그대로('PEP 703' 형식) 적고, 한국어 짧은 제목·분류·상태를 붙여라. 다른 버전 이야기나 단순 참고 링크뿐이면 빈 목록.",
+      schema:"변경(목록, 각 원소 {pep:PEP 번호 문자열, 제목:한국어 짧은 이름, 분류:언어 문법|인터프리터·성능|표준 라이브러리|제거·비권장, 상태:정식|실험적|비권장|제거})",
+      input_fields:["paragraph_index","text"],
+      preserve_rows:true
+    }
+    return $r.items
+  }
+  $행 = $결과 >> [table:each]{mode:"flat_map"} {
+    [if:is_ok($it)] { return unwrap($it) }
+    return []
+  }
+  $실패 = $결과 >> [table:each]{mode:"flat_map"} {
+    [if:is_ok($it)] { return [] }
+    return [{버전:$원천.버전,덩이:$i,이유:error_of($it).message}]
+  }
+  $전부 = $행 >> [table:each]{mode:"flat_map"} {
+    $p = $it
+    $p.변경 >> [table:each] {
+      return {버전:$원천.버전,pep:$it.pep,제목:$it.제목,분류:$it.분류,상태:$it.상태,문단:$p.paragraph_index,원문있음:contains($p.text,$it.pep)}
+    }
+  }
+  return {버전:$원천.버전,변경:$전부 >> [table:filter]{where:($r)=>$r.원문있음},
+          버림:$전부 >> [table:filter]{where:($r)=>not $r.원문있음},실패:$실패}
+}
+
+# ── 최상위 ──
+$원천 = $수집.원천
+$추출 = $원천 >> [table:each] { [fn:변경추출]{원천:$it,크기:$덩이크기} }
+$메타 = $원천 >> [table:each] {
+  return {버전:$it.버전,ok:$it.ok,url:$it.url,찾은경로:$it.찾은경로,적중:$it.적중,생략:$it.생략,이유:get($it,"이유",null),문단수:len($it.문단)}
+}
+return {검색어:$수집.검색어,원천:$메타,추출:$추출}

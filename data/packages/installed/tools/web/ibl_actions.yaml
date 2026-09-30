@@ -95,6 +95,8 @@ nodes:
               closed: true
         side_effect: false   # 브라우저 프로필·사이트 설정 캐시만 쓴다(부작용-정직성 관문 2026-09-06)
         fixture: '[sense:search]{query: "climate policy"}'
+        # 단일 검색 관측을 query 태그가 추가되는 배치 행에 적용하지 않는다.
+        shape_axes: {queries: null}
         # 원천별 변이 축(79회차 B79-3 census — iblbuild_source_honesty). 주간 관측·정직성 스윕이 돌린다.
         shape_variants:
           source=naver: '[sense:search]{query: "기후 정책", source: "naver", limit: 3}'

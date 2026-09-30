@@ -1,0 +1,3 @@
+#!ibl edition=2
+$r = [sense:search]{queries:["What's New In Python 3.13","What's New In Python 3.14"],limit:8}
+return {keys:keys($r),rows:$r.items >> [table:select]{columns:["query","title","url"]}}

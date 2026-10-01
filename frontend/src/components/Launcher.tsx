@@ -3,6 +3,7 @@ import { openSystemAI, openPromptComposition, openGuides, openVocabulary, openEx
  * 런처 - 데스크탑 스타일 프로젝트/폴더/스위치 관리
  */
 import { BACKEND_ORIGIN, IS_WEB_SURFACE } from '../lib/backend-origin';
+import { LanguagePicker, UiText, uiMessage } from '../i18n/ui';
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Zap, Boxes, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone, Layers, FileText } from 'lucide-react';
@@ -42,10 +43,10 @@ import type {
 const LAUNCHER_MODES = ['warehouse', 'autopilot', 'manual', 'app'] as const;
 type LauncherMode = typeof LAUNCHER_MODES[number];
 const MODE_META: Record<LauncherMode, { label: string; icon: typeof Search }> = {
-  warehouse: { label: '공유창고', icon: Package },
-  autopilot: { label: '자율주행', icon: Compass },
-  manual: { label: '조종실', icon: Gauge },
-  app: { label: '앱', icon: LayoutGrid },
+  warehouse: { label: uiMessage('launcher.mode', '공유창고'), icon: Package },
+  autopilot: { label: uiMessage('launcher.mode', '자율주행'), icon: Compass },
+  manual: { label: uiMessage('launcher.mode', '조종실'), icon: Gauge },
+  app: { label: uiMessage('launcher.mode', '앱'), icon: LayoutGrid },
 };
 
 export function Launcher() {
@@ -626,26 +627,27 @@ export function Launcher() {
   return (
     <div className="launcher-root h-full flex flex-col bg-[#F5F1EB]">
       {IS_WEB_SURFACE && <div className="remote-mobile-only mobile-launcher-heading">
-        <span className="font-semibold text-stone-800">{showingApp ? activeMeta!.label : MODE_META[launcherTab].label}</span>
+        <span className="font-semibold text-stone-800">{showingApp ? activeMeta!.label : <UiText id={MODE_META[launcherTab].label} />}</span>
         <button onClick={openSystemAI} className="ml-auto rounded-xl bg-amber-600 text-white px-3 flex items-center gap-2"><Bot size={18} /> 시스템 AI</button>
         <button onClick={() => setMobileToolsOpen(v => !v)} aria-expanded={mobileToolsOpen} aria-controls="launcher-tools" className="rounded-xl border border-stone-300 px-3">{mobileToolsOpen ? '접기' : '더보기'}</button>
       </div>}
       {/* 상단 툴바 */}
       <div id="launcher-tools" className={`launcher-toolbar ${mobileToolsOpen ? 'mobile-tools-open' : ''} min-h-11 shrink-0 flex items-center justify-end px-4 drag bg-gradient-to-b from-[#F7F3ED] to-[#F5F1EB] border-b border-[#E5DFD5]`}>
         <div className="flex flex-wrap justify-end items-center gap-1.5 no-drag whitespace-nowrap">
+          <LanguagePicker />
           {/* 모드 선택기 — 네 표면(자율주행/조종실/앱/공유창고)을 오간다. X-Ray 앞. */}
           <div className="relative" ref={modeMenuRef}>
             <button
               onClick={() => setShowModeMenu((v) => { if (!v) loadPromoted().catch(() => {}); return !v; })}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors text-[#6B5B4F] ${showModeMenu ? 'bg-[#EAE4DA]' : 'hover:bg-[#EAE4DA] active:bg-[#E0D9CC]'}`}
-              title="모드 전환"
+              title="화면 모드 선택"
               aria-haspopup="true"
               aria-expanded={showModeMenu}
             >
               {showingApp
                 ? <span className="text-[15px] leading-none">{activeMeta!.icon}</span>
                 : <ActiveModeIcon size={15} />}
-              <span className="text-[13px] font-medium">{showingApp ? activeMeta!.label : MODE_META[launcherTab].label}</span>
+              <span className="text-[13px] font-medium">{showingApp ? activeMeta!.label : <UiText id={MODE_META[launcherTab].label} />}</span>
               <ChevronDown size={12} className={`transition-transform ${showModeMenu ? 'rotate-180' : ''}`} />
             </button>
             {showModeMenu && (
@@ -660,7 +662,7 @@ export function Launcher() {
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${active ? 'bg-amber-50 text-amber-900' : 'text-[#4A4035] hover:bg-amber-50'}`}
                     >
                       <Icon size={16} className={active ? 'text-amber-600' : 'text-stone-500'} />
-                      <span className="text-sm">{MODE_META[m].label}</span>
+                      <span className="text-sm"><UiText id={MODE_META[m].label} /></span>
                     </button>
                   );
                 })}
@@ -1106,7 +1108,7 @@ export function Launcher() {
           const Icon = MODE_META[mode].icon;
           return <button key={mode} aria-current={launcherTab === mode ? 'page' : undefined}
             onClick={() => { selectMode(mode); setMobileToolsOpen(false); setBrowserOpen(false); }}>
-            <Icon size={21} /><span>{MODE_META[mode].label}</span>
+            <Icon size={21} /><span><UiText id={MODE_META[mode].label} /></span>
           </button>;
         })}
       </nav>}

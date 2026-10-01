@@ -6,7 +6,7 @@
 ## 작성 순서
 
 복잡한 새 일의 기본은 **사용자 요구 → 분해 이유 → 함수별 계약 → 구현 → 최상위 조합**이다.
-지역 함수·기존 관용구를 조합하고, 반복할 정의만 저장한다. 이 설계 순서는 장문 설명·단계별 모델 호출을 요구하지 않는다.
+지역 함수·관용구를 조합하고 반복할 정의만 저장한다. 장문 설명·단계별 모델 호출은 필요 없다.
 
 1. 입력·반환·출처·완료 조건을 정한다. 실제 액션 계약은 `execute_ibl(code="",describe=["node:action"])`으로 조회한다(한 번에 1~6개). `describe`와 코드를 함께 주면 조회 성공 후 한 번 실행하고 `descriptions`를 덧붙인다. `check:true`는 검사만, `read_result`는 단독 조회다.
 2. 변수는 값이다. 목록은 `.items/.count`로 감싸지 않고 그대로 전달하며 길이는 `len`으로 구한다.
@@ -295,8 +295,8 @@ inner 결합의 희소 객체에서 없는 필드는 그대로 없고, 표형 �
 
 `join`의 두 입력과 `table:reduce`의 입력은 객체 행이어야 한다. 잘못된 행이 섞이면
 0 기반 위치를 알려주며 계산 전에 거절한다. 행을 몰래 버린 합계·결합 결과를 만들지 않는다.
-`table:reduce`의 빈 입력은 `init`을 그대로 돌려준다. 스칼라 목록의 누적은
-내장 `reduce($목록,$초깃값,($누적,$값)=>식)`으로 표현한다.
+`table:reduce`의 빈 입력은 `init`을 반환한다. 전체 합계는 `reduce($행,0,($합,$r)=>$합+$r.금액)`으로 쓴다.
+`groupby`의 키는 필수다(`by:[]` 불가).
 
 `groupby/dedup/rename/flatten/since/reduce/chunk/ai/brief/judge`도 파이프 입력을 받는다.
 이 도구들은 기존 Record 반환을 유지한다. 예를 들어 집계 뒤 정렬은 다음처럼 연결한다:
@@ -458,7 +458,7 @@ assert len($결과)==2, "처리 결과 수가 다릅니다", {actual:len($결과
 return {목록:$결과,앞쪽:$결과[:1],표시:join(", ",$결과)}
 ```
 
-`split/replace/strip/upper/lower/contains/join`은 Text 입력을 요구한다.
+`split/replace/strip/upper/lower/contains`는 Text를 받는다. `join(구분자,문자열목록)`으로 합친다.
 `unique/union/intersection/difference`는 순서 보존 목록 연산이며 집합 타입을 만들지 않는다.
 `zip/enumerate`의 각 행도 목록이다. `any/all`은 Bool 목록을 받으며,
 `sorted($행,"점수",true)` 또는 `sorted($행,($r)=>$r.점수)`로 키를 지정한다.

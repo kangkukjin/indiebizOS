@@ -387,6 +387,12 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
             compiler.need(node.data['args'][i], typ, declared(expected))
             for issue in compiler.issues[before:]:
                 issue['hint'] = f"{name}({', '.join(spec[2])})의 인자 순서를 확인하세요. {i + 1}번째는 {expected}입니다."
+                if name == 'contains' and i == 0 and typ.kind == 'List':
+                    issue['hint'] = ('contains는 문자열의 부분 검색입니다. 목록의 값 일치는 '
+                                     '$찾는값 in $목록으로 표현하세요.')
+                elif name == 'join':
+                    issue['hint'] += (' join(구분자, 문자열목록) 순서입니다. '
+                                      '예: join(", ", ["가", "나"]).')
         result = declared(spec[3])
         if name in ('map', 'filter') and types and types[0].kind == 'List':
             item = types[0].item or UNKNOWN

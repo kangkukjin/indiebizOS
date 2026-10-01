@@ -278,9 +278,18 @@ def execute(tool_input: dict, context):
             q = tool_input.get("query") or tool_input.get("region") or tool_input.get("area")
             if q:
                 geo = _geocode_query_to_latlng(q)
-                if geo:
-                    lat, lng = geo["lat"], geo["lng"]
-                    _resolved_place = geo["matched"]
+                if not geo:
+                    return {
+                        "success": False,
+                        "error_type": "location_unresolved",
+                        "query": q,
+                        "error": f"지명을 좌표로 해소하지 못했습니다: {q}",
+                        "hint": "시·군·구를 포함한 주소로 query를 구체화하거나 "
+                                "[sense:place]로 장소를 확인한 뒤 lat·lng를 전달하세요. "
+                                "행정동 코드(region_code)로도 조회할 수 있습니다.",
+                    }
+                lat, lng = geo["lat"], geo["lng"]
+                _resolved_place = geo["matched"]
         result = tool.search_commercial_district(lat=lat, lng=lng, radius=radius, region_code=region_code, indsLclsCd=indsLclsCd)
         if isinstance(result, dict) and _resolved_place:
             result["조회지역"] = _resolved_place

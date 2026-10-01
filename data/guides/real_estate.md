@@ -193,12 +193,15 @@
 5. **매물 웹 URL**: `https://www.zigbang.com/home/{cat}/items/{itemId}` (예 `…/home/villa/items/49460021`)
 
 ## 부록 B. search_commercial_district (상권 분석)
-- 위경도(`lat`/`lng`+`radius`m) 또는 행정동코드로 주변 상가 조회. 업종 `indsLclsCd`: I 음식·Q 숙박·R 학문/교육·S 소매·T 생활서비스·U 의료·V 부동산·W 관광/여가/오락.
-- 결과 `data[]`(좌표 포함)를 `show_location_map`(location-services)의 `markers`로 넘기면 지도 시각화. 매물 입지의 상권 활성도 수치화에.
+- 지명(`query`), 위경도(`lat`/`lng`+`radius`m) 또는 행정동코드(`region_code`)로 주변 상가 조회. 업종 `indsLclsCd`: I 음식·Q 숙박·R 학문/교육·S 소매·T 생활서비스·U 의료·V 부동산·W 관광/여가/오락.
+- 지명을 찾지 못하면 `location_unresolved`와 원래 `query`를 반환한다. 상위 지역을 포함한 주소로 구체화하거나 `[sense:place]`에서 확인한 좌표를 전달한다. 좌표·행정동 코드를 직접 주면 지명 해소를 거치지 않는다.
+- 결과 `items[]`에 점포 이름·업종·주소·좌표가 있다. `count`는 받은 행수, `total_count`는 원천 전체 건수이며 `truncated`로 잘림을 확인한다. 업종별 집계는 `[table:groupby]`로 이어 쓴다.
 
 ---
 
 ## 부록 C. 네이버부동산 내부 API 레퍼런스 (확장·디버깅용) — 2026-07-12 실측
+
+지역 검색은 요청한 마지막 행정구역까지 일치하는 후보를 선택한다. 예를 들어 구 단위 검색에 하위 동을 섞지 않는다. 시·도의 약칭과 주소의 공백·쉼표 표기는 허용하지만, 동명이 같은 서로 다른 지역은 상위 주소로 구별하기 전까지 거절한다.
 
 비공식(new.land.naver.com/api). **키 불필요** — 공식 오픈API(developers.naver.com)엔 부동산 카테고리가 아예 없음(SE05, 종료됨)이라 NAVER_CLIENT_ID와 무관. `tool_naver.py`가 이 흐름을 구현. 두 가지 진입 장벽:
 

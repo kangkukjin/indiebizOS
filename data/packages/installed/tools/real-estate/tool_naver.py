@@ -100,6 +100,7 @@ def _region_matches(keyword, address):
     """검색은 부분 문자열을 반환하므로 주소 성분으로 재검증한다(장동 ≠ 색장동).
 
     시·군·구·도의 약칭은 허용하되 동·읍·면·리는 정확한 이름으로 맞춘다.
+    마지막 검색 성분은 주소의 끝이어야 한다(구 검색에 하위 동을 섞지 않는다).
     지명 목록을 코드에 넣지 않고 API가 준 주소만 대조한다.
     """
     from common.pkg_utils import load_singleton
@@ -120,7 +121,7 @@ def _region_matches(keyword, address):
                 break
         else:
             return False
-    return bool(terms)
+    return bool(terms) and not parts
 
 
 def _resolve_keyword(keyword):
@@ -134,7 +135,8 @@ def _resolve_keyword(keyword):
             candidates = list(matches.values()) if matches else regions
             names = ", ".join(r.get("cortarName", "") for r in candidates)
             reason = "여러 지역과 일치합니다" if matches else "주소 성분과 정확히 일치하는 지역이 없습니다"
-            raise ValueError(f"'{keyword}'은(는) {reason}. 검색 후보: {names}. 시·군·구와 동 이름을 함께 지정하세요.")
+            raise ValueError(f"'{keyword}'은(는) {reason}. 검색 후보: {names}. "
+                             "원하는 행정구역 이름에 상위 시·군·구·도를 함께 지정하세요.")
         r0 = next(iter(matches.values()))
         return {"mode": "region", "cortarNo": r0["cortarNo"],
                 "matched": r0.get("cortarName") or keyword,

@@ -206,16 +206,100 @@ def test_partial_source_message_prefers_the_warning_over_file_body():
     assert "절단 사유를 밝히지 않았습니다" in bare and "본문 본문" not in bare
 
 
-def test_precision_failure_carries_a_round_hint(tmp_path):
+def _run(tmp_path, code):
     from ibl_v2_entry import handle_request
-    code = ('$t = [{k:"a", n:54, d:934}] >> [table:groupby]{by:"k", agg:{n:["sum","n"], d:["sum","d"]}}\n'
+    return handle_request({"code": code, "edition": 2}, str(tmp_path), "audit_test")
+
+
+@pytest.mark.parametrize("code, expected", [
+    ("return json({a: 54/934*100})", '{"a": 5.781584582441114}'),          # 이전: 정밀도 오류
+    ("return json({a: 50/976*100})", '{"a": 5.122950819672131}'),          # 이전에도 통과 — 값에 따라 갈렸다
+    ("return json({a: (54/934)+(50/976)})", '{"a": 0.10904535402113244}'),
+    ("return json({a: sum([1/3, 1/3, 1/3])})", '{"a": 1.0}'),
+    ("return json({a: 12.345*100/7})", '{"a": 176.35714285714286}'),
+])
+def test_quotients_are_floats_and_always_cross_the_json_boundary(tmp_path, code, expected):
+    out = _run(tmp_path, code)
+    assert out["success"], out.get("error")
+    assert out["value"] == expected
+
+
+def test_group_sums_divided_then_scaled_no_longer_fail_by_value(tmp_path):
+    code = ('$t = [{k:"a", n:54, d:934}, {k:"b", n:50, d:976}] >> '
+            '[table:groupby]{by:"k", agg:{n:["sum","n"], d:["sum","d"]}}\n'
             'return json(map($t.items, ($r)=>{rate: $r.n / $r.d * 100}))')
-    failed = handle_request({"code": code, "edition": 2}, str(tmp_path), "audit_test")
+    out = _run(tmp_path, code)
+    assert out["success"], out.get("error")
+    assert json.loads(out["value"]) == [{"rate": 5.781584582441114}, {"rate": 5.122950819672131}]
+
+
+@pytest.mark.parametrize("code, wire", [
+    ("return 0.1+0.2", ["decimal", "0.3"]),            # 적힌 소수는 십진 계산 그대로
+    ("return 19.9*3", ["decimal", "59.7"]),
+    ("return 0.3/0.1", ["decimal", "3"]),              # 정확히 떨어지는 몫은 십진수
+    ("return round(2.675, 2)", ["decimal", "2.68"]),
+    ("return 1/4", ["scalar", 0.25]),
+    ("return 1/3", ["scalar", 0.3333333333333333]),
+    ("return 1.1/3", ["scalar", 0.36666666666666664]),  # 떨어지지 않는 십진 몫 = 근사 실수
+    ("return round(54/934*100, 2)", ["scalar", 5.78]),
+])
+def test_written_decimals_stay_exact_and_only_inexact_results_become_floats(tmp_path, code, wire):
+    out = _run(tmp_path, code)
+    assert out["success"], out.get("error")
+    assert out["value_wire"]["data"] == wire
+
+
+def test_long_exact_decimal_still_refuses_json_number_with_a_round_hint(tmp_path):
+    failed = _run(tmp_path, "return json({a: 123456789.123456789*2})")
     assert failed["success"] is False and failed["diagnostic"]["code"] == "NON_JSON_RESULT"
     assert "round(" in failed["diagnostic"]["hint"]
-    fixed = handle_request({"code": code.replace("$r.n / $r.d * 100", "round($r.n / $r.d * 100, 2)"), "edition": 2},
-                           str(tmp_path), "audit_test")
-    assert fixed["success"] and json.loads(fixed["value"]) == [{"rate": 5.78}]
+    assert _run(tmp_path, "return json({a: round(123456789.123456789*2, 3)})")["success"]
+
+
+def test_negative_base_fractional_power_is_an_error_not_a_complex_number(tmp_path):
+    out = _run(tmp_path, "return (0-8)**(1/3)")
+    assert out["success"] is False and out["diagnostic"]["code"] == "NUMBER_REQUIRED"
+
+
+def test_declared_mirror_rows_are_folded_in_the_model_copy():
+    from model_result_view import _fold_twin_fields
+    page = {"url": "https://example.com", "text": "본문 " * 40,
+            "items": [{"type": "paragraph", "text": "본문", "url": "https://example.com", "paragraph_index": i}
+                      for i in range(40)],
+            "_display": {"max_chars": 5000, "mirror_fields": ["text"], "limit_rows": False}}
+    notes = []
+    shown = _fold_twin_fields([page, dict(page)], ["value"], notes)
+    assert shown[0]["text"] == page["text"]
+    assert shown[0]["items"] == {"$model_mirror_of": "text", "rows": 40}
+    assert notes[0] == {"path": ["value", 0, "items"], "mirror_of": ["value", 0, "text"]}
+    # 선언이 없거나 본문이 없으면 목록을 그대로 둔다.
+    plain = {"items": page["items"], "text": page["text"]}
+    assert _fold_twin_fields(plain, ["value"], [])["items"] == page["items"]
+    no_text = {"items": page["items"], "_display": page["_display"]}
+    assert _fold_twin_fields(no_text, ["value"], [])["items"] == page["items"]
+
+
+def test_resume_card_is_attached_once_after_compaction():
+    import threading
+    from conscious_supervisor import Supervisor
+
+    class Store:
+        def tool_index(self, limit=40):
+            return [{"seq": 7, "name": "mcp__indiebizos__execute_ibl",
+                     "input": {"id": "a" * 64, "excerpt": '{"code": "[self:write]{path:\\"/out/a.py\\"…'},
+                     "result": {"id": "b" * 64, "chars": 300}, "is_error": False}]
+
+    supervisor = object.__new__(Supervisor)
+    supervisor.lock, supervisor.store, logged = threading.RLock(), Store(), []
+    supervisor.log = lambda kind, **fields: logged.append(kind)
+    assert supervisor._take_resume_card() is None
+    supervisor.note_compaction()
+    card = supervisor._take_resume_card()
+    assert logged == ["context.compacted"]
+    assert card["calls"] == [{"seq": 7, "name": "execute_ibl", "input": '{"code": "[self:write]{path:\\"/out/a.py\\"…',
+                              "input_id": "a" * 64, "result_id": "b" * 64}]
+    assert "calls" in card["recover"] and "압축" in card["note"]
+    assert supervisor._take_resume_card() is None      # 한 번만
 
 
 def test_fstring_bare_dollar_name_warns():

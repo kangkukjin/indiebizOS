@@ -466,7 +466,40 @@ class Supervisor:
                 if notice:
                     return json.dumps({"result": result, "supervisor_instruction": notice,
                                        "already_executed": True}, ensure_ascii=False)
+        card = self._take_resume_card()
+        if card:
+            return json.dumps({"result": result, "context_resume": card, "already_executed": True},
+                              ensure_ascii=False)
         return result
+
+    def note_compaction(self):
+        """실행자 CLI 가 턴 안에서 문맥을 압축했다 — 다음 도구 결과에 재개 카드를 한 번 붙인다."""
+        with self.lock:
+            self._resume_card_due = True
+        self.log("context.compacted", role="harness")
+
+    def _take_resume_card(self):
+        """압축 직후 한 번: 이 턴에서 이미 실행한 호출의 손잡이. 본문은 싣지 않는다."""
+        with self.lock:
+            due, self._resume_card_due = getattr(self, "_resume_card_due", False), False
+        if not due:
+            return None
+        try:
+            calls = self.store.tool_index(limit=12)
+        except Exception:
+            calls = []
+        return {
+            "note": ("문맥이 방금 압축됐습니다. 아래는 이 턴에서 이미 실행한 최근 호출입니다. 같은 일을 다시 하거나 "
+                     "자기가 쓴 파일·프로그램을 다시 읽기 전에 이 목록으로 확인하세요."),
+            "calls": [{"seq": row.get("seq"), "name": str(row.get("name", "")).rsplit("__", 1)[-1],
+                       "input": (row.get("input") or {}).get("excerpt", "")[:200],
+                       "input_id": (row.get("input") or {}).get("id"),
+                       "result_id": (row.get("result") or {}).get("id"),
+                       **({"is_error": True} if row.get("is_error") else {})} for row in calls],
+            "recover": ('전체 목록은 execute_ibl(code="", read_result={"calls": true}). 그때의 프로그램 원문은 '
+                        'read_result={"id": input_id, "path": ["code"]}, 결과는 read_result={"id": result_id} 로 읽고 '
+                        'inputs 에 {"$ref": result_id} 로 이어 씁니다.'),
+        }
 
     def observe_native(self, event):
         name = event.get("name") or event.get("tool") or ""

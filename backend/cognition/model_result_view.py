@@ -678,6 +678,17 @@ def model_usage(usage):
     return out
 
 
+def _mirrored_rows(value):
+    """생산자가 본문의 미러라고 선언한 문단 목록 필드 이름. 선언·본문·목록이 다 있을 때만."""
+    display = value.get("_display")
+    mirrors = display.get("mirror_fields") if isinstance(display, dict) else None
+    if (isinstance(mirrors, list) and mirrors and isinstance(mirrors[0], str)
+            and isinstance(value.get(mirrors[0]), str) and value[mirrors[0]]
+            and isinstance(value.get("items"), list) and value["items"]):
+        return "items"
+    return None
+
+
 def _fold_twin_fields(value, where, notes, depth=0):
     """같은 큰 값을 두 이름으로 실은 형제 필드는 표시 사본에서 한 벌만 보인다(ep4214: 자막 segments·items).
 
@@ -691,7 +702,15 @@ def _fold_twin_fields(value, where, notes, depth=0):
     if not isinstance(value, dict):
         return value
     seen, out = {}, {}
+    mirrored = _mirrored_rows(value)
     for key, item in value.items():
+        if key == mirrored:
+            # 생산자가 "text 는 items 의 미러"라고 선언했다(_display.mirror_fields). 옛 판본 표시는 이 선언으로
+            # 한쪽을 접었는데 판본 2 표시는 둘 다 실었다(ep4212: 본문 372자에 문단 목록 4.2K자).
+            # 모델에는 본문을 보이고 문단 목록은 가리킨다 — 실행기 안의 값과 저장본은 그대로다.
+            out[key] = {"$model_mirror_of": value["_display"]["mirror_fields"][0], "rows": len(item)}
+            notes.append({"path": where + [key], "mirror_of": where + [value["_display"]["mirror_fields"][0]]})
+            continue
         if isinstance(item, (list, dict)) and item:
             raw = json.dumps(item, ensure_ascii=False, sort_keys=True, default=str)
             if len(raw) >= 400:
@@ -739,7 +758,7 @@ def project_v2_result(result):
             out["value"] = _fold_twin_fields(out["value"], ["value"], twins)
             if twins:
                 out["_model_shared"] = {"fields": twins[:8], "omitted": max(0, len(twins) - 8),
-                                        "note": "같은 값이 두 이름으로 실려 표시 사본에서 한 벌만 보였습니다. 어느 경로로든 읽고 참조할 수 있습니다."}
+                                        "note": "같은 내용이 두 필드로 실려 표시 사본에서 한 벌만 보였습니다(같은 값, 또는 본문과 그 문단 목록). 접힌 필드도 그 경로로 읽고 inputs $ref 로 참조할 수 있습니다."}
             out["value"], preview = preview_value(out["value"], policy["prose_chars"], ref["id"])
             if preview:
                 out["_preview"] = preview

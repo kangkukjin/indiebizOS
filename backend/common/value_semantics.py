@@ -170,13 +170,35 @@ def comparison_number(value):
     return Decimal(str(number)) if isinstance(number, float) else number
 
 
+#: 실수가 십진 표기를 왕복으로 보장하는 유효 자릿수. 최단 표기가 이보다 긴 실수는
+#: 누가 적은 십진수가 아니라 계산이 만든 근사값이다(1/3 → 0.3333333333333333).
+EXACT_FLOAT_DIGITS = 15
+
+
+def approximate_float(number) -> bool:
+    """계산이 만든 근사 실수인가 — 최단 십진 표기의 유효 자릿수가 15를 넘는다."""
+    if not isinstance(number, float) or not math.isfinite(number):
+        return False
+    return len(Decimal(repr(number)).normalize().as_tuple().digits) > EXACT_FLOAT_DIGITS
+
+
 def arithmetic_numbers(values):
-    """IBL 산술은 십진 입력을 유지하고 혼합 float를 그 십진 표기로 맞춘다."""
+    """IBL 산술은 적힌 십진 입력을 십진수로 유지하고, 근사 실수가 끼면 실수로 계산한다.
+
+    적힌 소수(리터럴·JSON 입력)는 그 십진 표기로 정확히 계산한다 — `0.1+0.2`는 0.3이다.
+    나눗셈 몫 같은 근사 실수를 그 표기의 정확한 십진수로 다루면, 곱·합이 실수가 담지 못하는
+    자릿수를 만들어 JSON 경계에서 값에 따라 실패했다(ep4213: `54/934*100`은 실패, `50/976*100`은 통과).
+    근사값이 하나라도 있으면 전부 실수로 맞춘다 — 결과는 실수이고 언제나 JSON 숫자로 나간다."""
     numbers = [numeric_value(value, preserve_decimal=True) for value in values]
     if any(number is None for number in numbers):
         dated = any(isinstance(v, str) and datetime_value(v) is not None for v in values)
         raise ValueError("산술에는 관측 가능한 유한 숫자가 필요합니다."
                          + (" 날짜 계산은 date_add(날짜, 일수)·date_diff(a, b)·month_end(날짜)로 하세요." if dated else ""))
+    if any(approximate_float(number) for number in numbers):
+        try:
+            return [float(number) for number in numbers]
+        except OverflowError as error:
+            raise ValueError("근사값과 함께 계산하기에는 수가 너무 큽니다.") from error
     # JSON inputs and source literals must use the same decimal arithmetic.
     numbers = [Decimal(str(number)) if isinstance(number, float) else number
                for number in numbers]

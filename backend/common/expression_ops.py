@@ -153,7 +153,18 @@ def binary(op, left, right, *, legacy=False):
             quotient -= 1
             remainder += b
         return int(quotient) if op == "//" else remainder
+    if op in ("/", "**") and any(isinstance(n, Decimal) for n in (a, b)):
+        # 십진 계산이 반올림됐으면(끝없는 몫·분수 거듭제곱) 그 값은 근사값이다 — 28자리 십진수로 들고
+        # 다니지 않고 실수로 돌려준다. 정확히 떨어진 결과(0.3/0.1 = 3)는 십진수 그대로다.
+        from decimal import Inexact, localcontext
+        with localcontext() as context:
+            context.clear_flags()
+            result = operation(a, b)
+            inexact = context.flags[Inexact]
+        return float(result) if inexact and isinstance(result, Decimal) else result
     result = operation(a, b)
+    if isinstance(result, complex):
+        raise Fault("NUMBER_REQUIRED", "음수의 분수 거듭제곱은 실수가 아닙니다.")
     return int(result) if op == "//" else result
 
 

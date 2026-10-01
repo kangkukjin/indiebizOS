@@ -8,8 +8,8 @@ from ibl_v2_expr import number
 
 #: 실행 중 실패에 붙이는 안내. 검사 진단의 HINTS 와 달리 실행 봉투의 diagnostic.hint 로 나간다.
 RUNTIME_HINTS = {
-    # ep4213: 합계끼리 나눈 몫을 json()에 넣어 실패했고 안내가 text() 뿐이라 비율이 20자리 문자열로 저장됐다.
-    "NON_JSON_RESULT": "합계끼리 나눈 몫 같은 긴 소수는 round(값, 자릿수)로 자릿수를 정하면 JSON 숫자로 전달됩니다. 원값 그대로가 필요할 때만 text()를 쓰세요.",
+    # 근사값(몫)은 실수로 계산돼 여기 오지 않는다. 남는 것은 자릿수가 긴 정확한 십진수다.
+    "NON_JSON_RESULT": "자릿수가 긴 정확한 소수는 JSON 숫자로 전달하면 정밀도를 잃습니다. round(값, 자릿수)로 자릿수를 정하세요. 원값 그대로가 필요할 때만 text()를 씁니다.",
 }
 
 HINTS = {

@@ -628,6 +628,16 @@ class CliSubprocessProvider(BaseProvider):
         except Exception:
             pass
         self._log(f"문맥 압축(auto-compact) — 문턱 {int(self.SESSION_RESET_TOKEN_THRESHOLD):,} 토큰 {detail or ''}")
+        # 압축 뒤 실행자는 방금 쓴 프로그램과 직전 호출의 성패를 잃는다(긴문장 L8-3, ep4213: 자기가 쓴 코드와
+        # 입력 머리를 다시 읽었다). 요약은 CLI 것이라 고칠 수 없으니, 감독이 다음 도구 결과에 이 턴의 호출 목록을 붙인다.
+        try:
+            from supervision_bus import current as supervisor_current
+            controller = (supervisor_current(self.agent_id, self._current_task_id())
+                          if getattr(self, "agent_role", "execution") != "consciousness" else None)
+            if controller is not None and hasattr(controller, "note_compaction"):
+                controller.note_compaction()
+        except Exception:
+            pass
 
     def _log(self, msg: str):
         print(f"[{self.CLI_LABEL}/{self.agent_name}] {msg}")

@@ -415,26 +415,9 @@ class CliSubprocessProvider(BaseProvider):
     OVERLOADED_BASE_DELAY_SEC = 2.0
     OVERLOADED_MAX_DELAY_SEC = 30.0
 
-    # --resume 은 CLI 가 디스크의 전체 트랜스크립트를 재생하므로 세션이 무한 성장한다.
-    # (indiebizOS 가 넘기는 5턴/요약 트림은 resume 경로에서 버려짐.) 의미 있는 장기
-    # 연속성은 이미 indiebizOS 기억층(연상·심층메모리·의식 요약·포식)이 주입하므로,
-    # raw 트랜스크립트가 임계 토큰을 넘으면 다음 턴에 fresh 세션으로 끊고 트림 히스토리로
-    # 재시드한다. 턴 수가 아니라 *실측 토큰*(in+cache_read+cache_create)에 거는 이유:
-    # 턴 크기가 비균일하다 — 이미지/긴 산출물 한 턴이 폭발 주범이지 턴 수가 아니다.
-    # ★임계값은 truncation 방어가 아니다: 모델의 컨텍스트 윈도우는 1M 이라 이 값이
-    # 조절하는 건 천장이 아니라 비용/지연/품질(낡은 tool_result 희석)이다. 옛 150K(윈도우 15%)는
-    # goal-eval 재실행 3라운드를 태스크 도중에 끊어 탈선시켰다(episode 718) → 300K(30%).
-    # 2026-07-28 사용자 결정으로 500K(50%, 여유 500K)로 재상향 — 리셋 빈도 축소가 목적.
-    # 2026-09-06 사용자 결정으로 300K 로 되돌림 — 16일 실측: Claude Code 876턴이 캐시 읽기
-    # 13.99억 토큰, 시스템 AI 라운드당 컨텍스트 29만(일반 코딩 세션의 3~5배). fresh 리셋
-    # 7회 직후 턴에 품질 저하 신호 없음(평가된 3건 전부 ACHIEVED). 대신 리셋이 **작업
-    # 경계**를 존중하도록 판정을 _should_reset_session 으로 옮겼다 — ep718 부류(재실행
-    # 도중 절단)는 임계값이 아니라 타이밍 문제였다.
-    # 트레이드: 세션이 길수록 턴당 캐시 읽기 비용과 낡은 tool_result 희석은 커진다.
-    # 되돌릴 때 "200K 벽" 가정 금지 — 옛 200K 기억은 stale, 현 모델은 1M.
-    # 턴 *안*의 tool_result 는 CLI 가 트랜스크립트를 소유해 여기서 못 비운다 — 그 비용은
-    # 결과를 처음부터 작게(파일 스필·라운드 축소) 만드는 쪽의 몫이다.
-    SESSION_RESET_TOKEN_THRESHOLD = 300_000
+    # CLI의 자체 압축이 문맥 상한을 관리한다. 별도 저수위 세션 리셋은 하지 않는다.
+    # 명시적 새 대화/권한 지문 변경/유실 세션 복구는 기존 경로를 유지한다.
+    SESSION_RESET_TOKEN_THRESHOLD = None
     # 작업 경계 유예의 상한 — 유예는 한 턴뿐이고 이 배수를 넘으면 무조건 끊는다
     # (유예가 무한 성장의 뒷문이 되지 않도록).
     SESSION_RESET_GRACE_MULTIPLIER = 2
@@ -539,7 +522,7 @@ class CliSubprocessProvider(BaseProvider):
         return None
 
     def _should_reset_session(self, prev_size: int) -> tuple:
-        """크기 임계를 넘은 세션을 이번 호출에서 끊을지 — (끊는가, 로그 사유 또는 "").
+        """명시적 커스텀 크기 리셋의 호환 경로. 기본(None)은 CLI 자체 압축만 사용한다.
 
         임계 이하면 (False, "") 로 침묵. 임계 초과면 원칙은 fresh 리셋이되 **작업 경계**를
         존중한다(2026-09-06 사용자 결정, 임계 500K→300K 와 함께):
@@ -549,6 +532,8 @@ class CliSubprocessProvider(BaseProvider):
            요청일 공산이 크다("마저 완성해") — 한 턴 유예. 단 유예는 임계의
            SESSION_RESET_GRACE_MULTIPLIER 배까지만(무한 성장 뒷문 금지).
         리셋을 미룬 이유는 로그에 남긴다 — 침묵하면 '왜 안 끊겼나'를 못 되짚는다."""
+        if self.SESSION_RESET_TOKEN_THRESHOLD is None:
+            return False, ""
         thr = int(self.SESSION_RESET_TOKEN_THRESHOLD)
         if prev_size <= thr:
             return False, ""
@@ -610,24 +595,17 @@ class CliSubprocessProvider(BaseProvider):
     # ================= 공통 몸통 =================
 
     def _note_compaction(self, detail: Optional[Dict] = None) -> None:
-        """CLI 가 **턴 안에서** 문맥을 압축했다는 사건 — 압축이 실제로 도는지 세는 유일한 자리.
-
-        2026-09-18 실측(09-15~18 실행 60회): 압축 0회. 한 턴이 76라운드 동안 문맥을 창 끝까지 키우며
-        라운드마다 통째 재전송했다(입력 1,224만 토큰 중 70% 가 누적분 재전송). `base.py` 의 롤링 압축은
-        in-process 프로바이더 것이라 CLI 경로엔 닿지 않았고, 세션 리셋 관문은 다음 턴 시작에만 걸린다.
-        그래서 두 CLI 의 자체 auto-compact 문턱을 세션 리셋과 같은 잣대(SESSION_RESET_TOKEN_THRESHOLD)로
-        내렸다 — codex 는 `-c model_auto_compact_token_limit`, claude_code 는 env
-        `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. 사건은 `context.compacted`(trajectory_event) 로 남는다."""
+        """CLI의 실제 압축 사건. 별도 세션 리셋값을 압축 문턱으로 기록하지 않는다."""
         try:
             from model_call_context import fields
             record_trajectory_event("context.compacted", {
                 **fields(), "provider": self.CLI_LABEL,
-                "threshold_tokens": int(self.SESSION_RESET_TOKEN_THRESHOLD),
+                "compaction_policy": "model_capacity",
                 **{k: v for k, v in (detail or {}).items() if isinstance(v, (int, float, str, bool))},
             })
         except Exception:
             pass
-        self._log(f"문맥 압축(auto-compact) — 문턱 {int(self.SESSION_RESET_TOKEN_THRESHOLD):,} 토큰 {detail or ''}")
+        self._log(f"문맥 압축(auto-compact) — 모델 최대 문맥 정책 {detail or ''}")
         # 압축 뒤 실행자는 방금 쓴 프로그램과 직전 호출의 성패를 잃는다(긴문장 L8-3, ep4213: 자기가 쓴 코드와
         # 입력 머리를 다시 읽었다). 요약은 CLI 것이라 고칠 수 없으니, 감독이 다음 도구 결과에 이 턴의 호출 목록을 붙인다.
         try:

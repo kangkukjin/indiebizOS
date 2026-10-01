@@ -182,8 +182,9 @@ def test_http_reasoning_400_falls_back_to_non_thinking_once():
 
 
 def test_v4_compaction_threshold_uses_one_million_context():
-    assert DeepSeekProvider.COMPACTION_CHAR_THRESHOLD == 1_600_000
-    assert DeepSeekHTTPProvider.COMPACTION_CHAR_THRESHOLD == 1_600_000
+    for cls in (DeepSeekProvider, DeepSeekHTTPProvider):
+        p = cls(api_key="", model="deepseek-v4-flash", system_prompt="")
+        assert p.COMPACTION_CHAR_THRESHOLD == 1_900_000
 
 
 if __name__ == "__main__":

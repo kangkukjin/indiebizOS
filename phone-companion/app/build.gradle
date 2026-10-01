@@ -164,6 +164,7 @@ tasks.register('bundleIndiebizBase', Zip) {
         rename { 'ibl_nodes.yaml' }
     }
     from("${_ROOT}/data/vocabulary_policy.yaml") { into 'data' }
+    from("${_ROOT}/data/model_context_windows.yaml") { into 'data' }
     from("${_ROOT}/data/phone_manifest.json") { into 'data' }
     // 세계 어휘·관계와 참조 자료: 카탈로그로부터 자동 파생, 개인 설정·기억은 포함하지 않는다.
     _WORLD_CATALOG_FILES.each { p ->

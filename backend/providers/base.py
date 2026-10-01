@@ -439,8 +439,10 @@ class BaseProvider(ABC):
         project_path: str = ".",
         agent_name: str = "에이전트",
         agent_id: str = None,
-        thinking_budget: int = 0
+        thinking_budget: int = 0,
+        context_window_tokens: int = None
     ):
+        self.context_window_tokens = context_window_tokens
         self.api_key = api_key
         self.model = model
         self.system_prompt = system_prompt
@@ -652,22 +654,15 @@ class BaseProvider(ABC):
     KEEP_RECENT_TOOL_ROUNDS = 3  # 최근 N 라운드의 도구 호출-결과 쌍을 전체 유지
     KEEP_RECENT_TOOL_RESULTS = KEEP_RECENT_TOOL_ROUNDS  # 하위 호환 alias
 
-    # ========== Rolling Compaction 설정 ==========
-    # Claude Code 참고: 컨텍스트의 80%에서 compaction 트리거
-    #
-    # ★자↔토큰 환산은 **2자 = 1토큰** (2026-08-17 실측으로 교정).
-    #   옛 임계값들은 영문 기준 4자=1토큰으로 잡혀 있었으나, 이 시스템이 실제로 나르는
-    #   내용(한국어 문서·한글 주석 섞인 코드)을 재보니 한국어 1.97자/토큰·파이썬 2.63자/토큰
-    #   이었다 = 임계값이 약 2배 헐거웠다. 프루닝이 매 라운드 무조건 돌던 시절엔 페이로드가
-    #   임계값 근처에도 못 가서 이 오차가 드러나지 않았지만, 프루닝을 압력 게이트 뒤로
-    #   옮긴 지금은 이 숫자가 곧 컨텍스트 초과 방어선이다 → 전 프로바이더 절반으로 교정.
-    COMPACTION_CHAR_THRESHOLD = 320000  # 기본값: ~160K 토큰 (Claude 200K의 80%)
-    COMPACTION_MIN_ROUNDS = 5  # 최소 이 라운드 이후에만 compaction 수행
-
-    # 프루닝(삭제) 임계값 — None 이면 COMPACTION_CHAR_THRESHOLD 를 따른다.
-    # 같은 값을 쓰므로 순서가 곧 정책이 된다: 압력이 오면 compaction 이 먼저 요약해
-    # 크기를 낮추고, 그래도 임계값 위면(요약 실패 등) 그때 프루닝이 최후 수단으로 지운다.
+    # 압축은 모델 창 근처에서만. 모델 한도와 출력 여유의 정본은 model_context.
+    CONTEXT_PROVIDER = "openai"
+    COMPACTION_MIN_ROUNDS = 5
     PRUNE_CHAR_THRESHOLD = None
+
+    @property
+    def COMPACTION_CHAR_THRESHOLD(self):
+        from model_context import input_budget
+        return input_budget(self) * 2  # 기존 한글 혼합 텍스트 추정: 2자/토큰
 
     COMPACTION_PROMPT = """아래는 사용자의 요청을 처리하기 위해 지금까지 진행한 작업 기록입니다.
 이 기록을 요약해주세요. 요약의 목적은 이후 작업을 이어갈 때 핵심 정보를 유지하는 것입니다.
@@ -1051,7 +1046,7 @@ class BaseProvider(ABC):
                         total += 100  # 이미지 등 기타
         return total
 
-    def _should_compact(self, messages_or_contents, iteration: int) -> bool:
+    def _should_compact(self, messages_or_contents, iteration: int, output_tokens=None) -> bool:
         """Compaction이 필요한지 판단
 
         조건:
@@ -1061,10 +1056,12 @@ class BaseProvider(ABC):
         if iteration < self.COMPACTION_MIN_ROUNDS:
             return False
 
-        content_size = self._estimate_content_size(messages_or_contents)
-        should = content_size >= self.COMPACTION_CHAR_THRESHOLD
+        from model_context import input_budget, request_chars
+        content_size = request_chars(self, messages_or_contents)
+        threshold = input_budget(self, output_tokens) * 2
+        should = content_size >= threshold
         if should:
-            print(f"[Compaction] 임계값 도달: {content_size:,}자 >= {self.COMPACTION_CHAR_THRESHOLD:,}자 (iteration={iteration})")
+            print(f"[Compaction] 모델 창 근접: {content_size:,}자 >= {threshold:,}자 (iteration={iteration})")
         return should
 
     # ── 공유 compaction 절차 (프로바이더는 '요약 1회 호출'만 채운다) ──────
@@ -1195,7 +1192,7 @@ class BaseProvider(ABC):
             print(f"[Compaction][{label}] 요약 생성 예외: {e}, 프루닝으로 대체")
             return contents
 
-    def _should_prune(self, messages_or_contents, iteration: int = None) -> bool:
+    def _should_prune(self, messages_or_contents, iteration: int = None, output_tokens=None) -> bool:
         """프루닝(삭제)이 필요한지 판단 — 컨텍스트 압력이 있을 때만 True.
 
         압력이 없으면 지우지 않는다. 도구 결과는 이미 실행 시점에
@@ -1207,8 +1204,9 @@ class BaseProvider(ABC):
         (ep1176 실측 — 라운드 5 에서 프루닝이 먼저 삭제했고 요약은 9라운드에야 돌았다)."""
         if iteration is not None and iteration < self.COMPACTION_MIN_ROUNDS:
             return False
-        threshold = self.PRUNE_CHAR_THRESHOLD or self.COMPACTION_CHAR_THRESHOLD
-        content_size = self._estimate_content_size(messages_or_contents)
+        from model_context import input_budget, request_chars
+        threshold = self.PRUNE_CHAR_THRESHOLD or input_budget(self, output_tokens) * 2
+        content_size = request_chars(self, messages_or_contents)
         should = content_size >= threshold
         if should:
             print(f"[Pruning] 압력 도달: {content_size:,}자 >= {threshold:,}자 → 오래된 도구 결과 마스킹")

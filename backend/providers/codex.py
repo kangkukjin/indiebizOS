@@ -266,21 +266,8 @@ class CodexProvider(CliSubprocessProvider):
     # (모델명 하드코딩이 은퇴로 죽는 것과 같은 부류).
     REASONING_EFFORTS = ("minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 
-    # 리셋 임계는 **모델 창에서 파생**한다. 상속받는 300K(2026-09-06, 옛 500K)는 창 1M 짜리 Claude 기준이라
-    # Codex(창 272K, 실효 95% = 258.4K)에서는 창보다 커서 관문이 영영 안 걸린다 — 실측
-    # 2026-08-31 스토리텔러 스레드는 한 턴에 229,322/258,400(89%)까지 찼는데도 조용했다.
-    # 창의 절반에서 끊는 이유는 claude_code 와 같다(비용·지연·낡은 tool_result 희석).
-    # 창 값의 정본은 우리가 아니라 `~/.codex/models_cache.json` 이다(모델명 하드코딩 금지).
-    WINDOW_RESET_RATIO = 0.5
-    FALLBACK_CONTEXT_WINDOW = 272_000
-
-    @property
-    def SESSION_RESET_TOKEN_THRESHOLD(self) -> int:      # noqa: N802 (상속 상수 자리)
-        window = self._observed_window or self._catalog_context_window()
-        return int(window * self.WINDOW_RESET_RATIO)
-
-    def _catalog_context_window(self) -> int:
-        """models_cache.json 에서 현재 슬러그의 실효 컨텍스트 창을 읽는다."""
+    def _catalog_context_limits(self):
+        """CLI가 공시한 최대 창과 실효 입력 예산. 캐시가 없으면 CLI 기본값에 맡긴다."""
         try:
             slug, _ = self._model_and_effort()
             cache = json.loads(
@@ -288,13 +275,13 @@ class CodexProvider(CliSubprocessProvider):
             for entry in cache.get("models") or []:
                 if entry.get("slug") != slug:
                     continue
-                window = int(entry.get("context_window") or 0)
-                pct = int(entry.get("effective_context_window_percent") or 100)
-                if window:
-                    return window * pct // 100
+                window = int(entry.get("max_context_window") or entry.get("context_window") or 0)
+                pct = int(entry.get("effective_context_window_percent") or 95)
+                if window > 0 and 0 < pct <= 100:
+                    return window, window * pct // 100
         except (OSError, ValueError, TypeError):
             pass
-        return self.FALLBACK_CONTEXT_WINDOW
+        return None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -611,11 +598,12 @@ class CodexProvider(CliSubprocessProvider):
             # 바꾸는 값이라, 재현 가능한 비용·품질을 원하면 티어에 적어 둘 것.
             cmd += ["-c", f"model_reasoning_effort={_toml_str(effort)}"]
 
-        # ★턴 안 문맥 압축(2026-09-18): Codex 자체 auto-compact 문턱을 **창의 절반**(세션 리셋과 같은
-        #   잣대, SESSION_RESET_TOKEN_THRESHOLD)으로 내린다. 기본값은 모델 창 근처라 실측 60회에서 한 번도
-        #   돌지 않았고, 76라운드 턴이 문맥을 창 끝까지 키우며 라운드마다 통째 재전송했다(입력의 70%).
-        #   압축 사건은 item.type=context_compaction → _note_compaction 이 센다.
-        cmd += ["-c", f"model_auto_compact_token_limit={int(self.SESSION_RESET_TOKEN_THRESHOLD)}"]
+        # 공시된 최대 창을 사용한다. 실효 예산을 다시 절반으로 줄이지 않는다.
+        limits = self._catalog_context_limits()
+        if limits:
+            window, threshold = limits
+            cmd += ["-c", f"model_context_window={window}",
+                    "-c", f"model_auto_compact_token_limit={threshold}"]
 
         # 세션 이어가기 — 옵션 뒤, 프롬프트 앞
         if resume_session_id:

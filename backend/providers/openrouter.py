@@ -21,6 +21,8 @@ class OpenRouterProvider(OpenAIProvider):
     그대로 사용하며, base_url만 OpenRouter로 변경합니다.
     """
 
+    CONTEXT_PROVIDER = "openrouter"
+
     def _thinking_off_params(self):
         """원샷 계약용 추론 차단 — OpenRouter 통합 reasoning 파라미터.
         게이트웨이가 모델별로 정규화하고 미지원 모델에선 무시하므로 안전.
@@ -39,6 +41,8 @@ class OpenRouterProvider(OpenAIProvider):
                 api_key=self.api_key,
                 base_url=OPENROUTER_BASE_URL,
             )
+            from model_context import discover_context_window
+            discover_context_window(self)
             print(f"[OpenRouter] {self.agent_name}: 초기화 완료 (도구 {len(self.tools)}개)")
             return True
         except ImportError:

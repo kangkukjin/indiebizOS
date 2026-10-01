@@ -88,19 +88,18 @@ def test_unreadable_rollout_measures_nothing(tmp_path, monkeypatch):
     assert _provider()._measure_context_size("없는스레드") is None
 
 
-def test_reset_threshold_derives_from_model_window(tmp_path, monkeypatch):
-    """임계는 상속받은 300K(창 1M Claude 기준, 옛 500K)가 아니라 Codex 창에서 파생된다."""
+def test_compaction_uses_catalog_maximum_not_half_default(tmp_path, monkeypatch):
     monkeypatch.setenv("CODEX_HOME", str(tmp_path))
     (tmp_path / "models_cache.json").write_text(json.dumps({"models": [
-        {"slug": "gpt-5.6-sol", "context_window": 272_000,
+        {"slug": "gpt-5.6-sol", "context_window": 272_000, "max_context_window": 872_000,
          "effective_context_window_percent": 95}]}), encoding="utf-8")
-
     p = _provider()
-    assert p.SESSION_RESET_TOKEN_THRESHOLD == 129_200      # 258,400 의 절반
-    # 롤아웃이 보고한 창이 있으면 그쪽이 이긴다 (카탈로그가 낡아도 실측이 산다)
+    assert p._catalog_context_limits() == (872_000, 828_400)
+    # 옛 세션에서 관측한 작은 창이 새 실행의 최대 창 설정을 되돌리지 않는다.
     _rollout(tmp_path, "thread-c", [(1_000, 1_000)], window=100_000)
     p._measure_context_size("thread-c")
-    assert p.SESSION_RESET_TOKEN_THRESHOLD == 50_000
+    assert p._catalog_context_limits() == (872_000, 828_400)
+    assert p._should_reset_session(800_000) == (False, "")
 
 
 def test_measured_size_beats_stored_size(monkeypatch):

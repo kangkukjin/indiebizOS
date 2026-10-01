@@ -25,9 +25,7 @@ class DeepSeekProvider(OpenAIProvider):
     그대로 사용하며, base_url만 DeepSeek로 변경합니다.
     """
 
-    # V4 공식 1M 컨텍스트의 80% × 이 시스템 실측 2자/토큰 = 1.6M자.
-    # 옛 205K자는 128K 모델 시절 값이라 정상 장기 작업을 너무 일찍 압축했다.
-    COMPACTION_CHAR_THRESHOLD = 1_600_000
+    CONTEXT_PROVIDER = "deepseek"
 
     # thinking 모드에서 tools를 실은 요청은 후속 assistant 턴의 reasoning_content를
     # 그대로 되돌려 보내야 한다(누락 시 DeepSeek API 400).

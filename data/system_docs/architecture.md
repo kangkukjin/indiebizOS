@@ -118,6 +118,10 @@ base → datastore → ibl → cognition → services → surface
 IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md** 참조.
 
 ### 프롬프트 빌더 (prompt_builder.py)
+문맥 압축은 모델 한도 근처에서만 수행한다. Codex는 카탈로그의 최대 창,
+Claude Code는 CLI 기본 정책, API는 모델별 입력 예산을 사용한다.
+별도 저수위 CLI 세션 리셋은 기본 해제했다. [정책·한도·검증](../../docs/MODEL_CONTEXT_POLICY.md).
+
 시스템 AI와 프로젝트 에이전트는 같은 빌더로 조립되며, 프롬프트 캐시 prefix 를 지키기 위해 두 층으로 나뉜다:
 
 - **안정부(system_prompt)** — 현재 날짜(일 단위) → `base_prompt_v6.md` → `<system_structure>` 정체성 코어 → 조건부 프래그먼트(`06_git`·`09_delegation`·`10_system_ai_delegation`) → IBL 환경(`ibl_access.build_environment`: 압축 문법서 + 허용 노드의 액션 카탈로그 + 상시 관용구) → 프로젝트 에이전트만 `<project_memory>`(폴더 포식 문서) → `# Role`(`system_ai_role.txt` / `agent_<이름>_role.txt`) → `# Notes` / `# 시스템 메모`.
@@ -495,7 +499,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 168 액션** (sense 43·self 52·limbs 14·others 17·engines 19·table 23)
-- backend **.py 494개**(test 제외, git 추적 기준) — 층 디렉토리 `base 66 · datastore 69 · ibl 85 · cognition 79 · services 39 · surface 81`(+ common 31·providers 13·channels 4·drivers 3). 가이드 **89개**(guide_db 등록 **85**)
+- backend **.py 495개**(test 제외, git 추적 기준) — 층 디렉토리 `base 67 · datastore 69 · ibl 85 · cognition 79 · services 39 · surface 81`(+ common 31·providers 13·channels 4·drivers 3). 가이드 **89개**(guide_db 등록 **85**)
 - op 분기 액션 **78개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 47·false 25·미선언 96)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

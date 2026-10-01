@@ -38,11 +38,6 @@ MAX_TOOL_RESULT_LENGTH = 16000
 # 최대 도구 호출 깊이
 MAX_TOOL_DEPTH = MAX_TOOL_ROUNDS  # 전 프로바이더 공통값(base.MAX_TOOL_ROUNDS)
 
-# 로컬 모델은 컨텍스트가 제각각(흔히 8K~32K)이라 base 기본값(Claude 200K 기준)을 물려받으면
-# 위험하다 — 32K × 80% × 2자/토큰 ≈ 51,200자로 보수적으로 잡는다. ★쓰는 로컬 모델의 컨텍스트가
-# 더 크면 이 값을 올릴 것(여기서 과하게 요약하는 건 손해일 뿐이지만, 모자라면 호출이 깨진다).
-OLLAMA_COMPACTION_CHAR_THRESHOLD = 51200
-
 # Tool calling 지원 모델 패턴
 TOOL_SUPPORTED_MODELS = [
     'llama3.1', 'llama3.2', 'llama3.3',
@@ -64,7 +59,8 @@ class OllamaProvider(BaseProvider):
     3. 도구 결과는 role="tool"로 전달
     """
 
-    COMPACTION_CHAR_THRESHOLD = OLLAMA_COMPACTION_CHAR_THRESHOLD
+    CONTEXT_PROVIDER = "ollama"
+    DEFAULT_MAX_TOKENS = 0  # 출력 상한 미지정: 서버가 남은 창을 사용(공통 여유 1024는 유지)
 
     def __init__(self, **kwargs):
         # Ollama는 API 키 불필요
@@ -346,6 +342,10 @@ class OllamaProvider(BaseProvider):
 
         try:
             # Session Pruning: 오래된 도구 결과 마스킹 — ★압력이 있을 때만(최후 수단)
+            if depth == 1 and not self.context_window_tokens:
+                # 첫 생성 뒤에는 모델이 실제로 로드되어 /api/ps의 할당 창을 읽을 수 있다.
+                from model_context import discover_context_window
+                discover_context_window(self)
             if depth > 0 and self._should_prune(messages, depth):
                 messages = self._prune_messages_openai(messages)
 

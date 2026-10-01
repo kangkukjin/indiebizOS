@@ -36,9 +36,7 @@ class GeminiHTTPProvider(BaseProvider):
 
     MAX_TOOL_ITERATIONS = MAX_TOOL_ROUNDS  # 전 프로바이더 공통값(base.MAX_TOOL_ROUNDS)
 
-    # Gemini 2.5: 1M 토큰 컨텍스트 → 80% = 800K 토큰 → ~1,600,000자 (2자=1토큰 실측).
-    # ★base 기본값(Claude 200K 기준)을 물려받아 자기 컨텍스트의 1/5 에서 요약하고 있었다.
-    COMPACTION_CHAR_THRESHOLD = 1600000
+    CONTEXT_PROVIDER = "gemini"
 
     def __init__(self, **kwargs):
         # base_url: 직접 google REST(기본) 또는 맥 게이트웨이 프록시

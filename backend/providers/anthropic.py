@@ -46,6 +46,8 @@ class AnthropicProvider(BaseProvider):
     3. 도구 결과는 단일 user 메시지에 모두 포함 (병렬 처리 지원)
     """
 
+    CONTEXT_PROVIDER = "anthropic"
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._compaction_summary = None  # Rolling Compaction 요약 저장
@@ -254,12 +256,12 @@ class AnthropicProvider(BaseProvider):
             system_with_cache = self._build_system_with_cache()
 
             # Rolling Compaction: 컨텍스트가 임계값을 넘으면 요약으로 압축
-            if depth > 0 and self._should_compact(messages, depth):
+            if depth > 0 and self._should_compact(messages, depth, max_tokens):
                 messages = self._compact_anthropic(messages)
 
             # Session Pruning: 오래된 도구 결과 마스킹 — ★압력이 있을 때만(최후 수단).
             # 위 compaction 이 이미 요약으로 크기를 낮췄다면 여기는 통과한다.
-            if depth > 0 and self._should_prune(messages, depth):
+            if depth > 0 and self._should_prune(messages, depth, max_tokens):
                 messages = self._prune_messages_anthropic(messages)
 
             create_params = {

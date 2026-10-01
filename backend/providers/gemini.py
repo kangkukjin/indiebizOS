@@ -36,8 +36,7 @@ class GeminiProvider(BaseProvider):
     MAX_TOOL_ITERATIONS = MAX_TOOL_ROUNDS  # 최대 도구 호출 라운드 (전 프로바이더 공통값)
     MAX_CONSECUTIVE_TOOL_ONLY = 70  # 텍스트 없이 도구만 연속 호출 허용 횟수
 
-    # Gemini 2.5: 1M 토큰 컨텍스트 → 80% = 800K 토큰 → ~1,600,000자 (2자=1토큰 실측)
-    COMPACTION_CHAR_THRESHOLD = 1600000
+    CONTEXT_PROVIDER = "gemini"
 
     # IBL 텍스트 출력 감지 패턴
     # 강제 프롬프트 (설정 가능)

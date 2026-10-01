@@ -56,9 +56,11 @@ def test_execution_call_ordinal_counts_within_turn():
 
 # ── 리셋 판정 ──
 
-def test_threshold_is_300k():
+def test_native_compaction_owns_context_limit():
     p = _provider()
-    assert p.SESSION_RESET_TOKEN_THRESHOLD == 300_000
+    assert p.SESSION_RESET_TOKEN_THRESHOLD is None
+    for size in (300_001, 950_000, 1_100_000):
+        assert p._should_reset_session(size) == (False, "")
 
 
 def test_under_threshold_is_silent():
@@ -69,6 +71,7 @@ def test_under_threshold_is_silent():
 
 def test_first_call_over_threshold_resets():
     p = _provider()
+    p.SESSION_RESET_TOKEN_THRESHOLD = 300_000
     p._execution_call_ordinal, p._prev_turn_incomplete = 0, False
     do, why = p._should_reset_session(300_001)
     assert do and "fresh" in why
@@ -77,6 +80,7 @@ def test_first_call_over_threshold_resets():
 def test_rerun_in_same_turn_never_resets():
     """goal 재실행·자기반성·약속 재시도(서수≥1) — 크기와 무관하게 끊지 않는다(ep718 부류)."""
     p = _provider()
+    p.SESSION_RESET_TOKEN_THRESHOLD = 300_000
     p._execution_call_ordinal, p._prev_turn_incomplete = 1, False
     for size in (300_001, 5_000_000):
         do, why = p._should_reset_session(size)
@@ -86,6 +90,7 @@ def test_rerun_in_same_turn_never_resets():
 def test_incomplete_previous_turn_gets_one_turn_grace_until_cap():
     """직전 턴 절단·마감 실패 → 한 턴 유예. 단 임계×배수를 넘으면 무조건 끊는다."""
     p = _provider()
+    p.SESSION_RESET_TOKEN_THRESHOLD = 300_000
     p._execution_call_ordinal, p._prev_turn_incomplete = 0, True
     do, why = p._should_reset_session(450_000)
     assert not do and "유예" in why

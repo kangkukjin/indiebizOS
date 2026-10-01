@@ -31,6 +31,7 @@
     "base/memory_provenance",
     "base/mime_compat",
     "base/model_call_context",
+    "base/model_context",
     "base/model_resolver",
     "base/phone_jobs",
     "base/principal",
@@ -504,8 +505,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 429,
-    "engine": 403,
+    "total": 430,
+    "engine": 404,
     "blocklist": 26
   }
 }

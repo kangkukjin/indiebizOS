@@ -34,8 +34,7 @@ class DeepSeekHTTPProvider(BaseProvider):
 
     MAX_TOOL_ITERATIONS = MAX_TOOL_ROUNDS  # 전 프로바이더 공통값(base.MAX_TOOL_ROUNDS)
 
-    # V4 공식 1M 컨텍스트의 80% × 이 시스템 실측 2자/토큰 = 1.6M자.
-    COMPACTION_CHAR_THRESHOLD = 1_600_000
+    CONTEXT_PROVIDER = "deepseek"
     DEFAULT_MAX_TOKENS = 16384  # v4 하이브리드 thinking 예산 (deepseek.py 와 동일 근거)
 
     def __init__(self, **kwargs):

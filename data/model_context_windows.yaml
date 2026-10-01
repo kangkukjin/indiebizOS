@@ -1,0 +1,42 @@
+# 모델 창과 출처. 정책은 backend/base/model_context.py. 2026-10-01 확인.
+# API 한도와 Codex 구독 카탈로그 한도는 서로 다르다. CLI는 이 표를 쓰지 않는다.
+# 미확인 모델은 보수적 fallback; 실제 한도는 provider.context_window_tokens로 우선 지정.
+router_vendors: {openai: openai, anthropic: anthropic, google: gemini, deepseek: deepseek}
+fallback_tokens: {openai: 128000, openrouter: 128000, anthropic: 200000, gemini: 1048576, deepseek: 128000, ollama: 4096}
+rules:
+  - providers: [openai]
+    models: [gpt-6-astra]
+    tokens: 1050000
+    source: https://developers.openai.com/api/docs/models/gpt-6-astra
+  - providers: [openai]
+    models: [gpt-5.6, gpt-5.6-sol]
+    tokens: 1050000
+    source: https://developers.openai.com/api/docs/models/gpt-5.6-sol
+  - providers: [openai]
+    models: ['gpt-4.1*']
+    tokens: 1047576
+    source: https://developers.openai.com/api/docs/models/gpt-4.1
+  - providers: [openai]
+    models: [gpt-5, 'gpt-5-2025*', gpt-5-mini, gpt-5-nano]
+    tokens: 400000
+    source: https://developers.openai.com/api/docs/models/gpt-5
+  - providers: [openai]
+    models: ['gpt-4o*', 'gpt-4-turbo*']
+    tokens: 128000
+    source: https://developers.openai.com/api/docs/models/gpt-4o
+  - providers: [anthropic]
+    models: ['claude-opus-4-6*', 'claude-opus-4-7*', 'claude-opus-4-8*', 'claude-opus-5*', 'claude-sonnet-4-6*', 'claude-sonnet-5*', 'claude-fable-5*', 'claude-mythos-5*']
+    tokens: 1000000
+    source: https://platform.claude.com/docs/en/build-with-claude/context-windows
+  - providers: [anthropic]
+    models: ['claude-3*', 'claude-haiku-4*', 'claude-sonnet-4*', 'claude-opus-4*']
+    tokens: 200000
+    source: https://platform.claude.com/docs/en/build-with-claude/context-windows
+  - providers: [gemini]
+    models: ['gemini-2.5-*', 'gemini-3*']
+    tokens: 1048576
+    source: https://ai.google.dev/gemini-api/docs/models
+  - providers: [deepseek]
+    models: ['deepseek-v4-*']
+    tokens: 1000000
+    source: https://api-docs.deepseek.com/news/news260424/

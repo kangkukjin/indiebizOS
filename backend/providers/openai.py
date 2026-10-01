@@ -45,8 +45,7 @@ class OpenAIProvider(BaseProvider):
     3. 도구 결과는 role="tool"로 전달
     """
 
-    # GPT-4o/DeepSeek: 128K 토큰 컨텍스트 → 80% = 102K 토큰 → ~205,000자 (2자=1토큰 실측)
-    COMPACTION_CHAR_THRESHOLD = 205000
+    CONTEXT_PROVIDER = "openai"
 
     # 에이전틱 루프 기본 출력 예산. 하이브리드 thinking 모델(DeepSeek 등)은
     # 추론+본문이 이 예산을 나눠 쓰므로 해당 프로바이더가 오버라이드로 키운다.
@@ -285,12 +284,12 @@ class OpenAIProvider(BaseProvider):
 
         try:
             # Rolling Compaction: 컨텍스트가 임계값을 넘으면 요약으로 압축
-            if depth > 0 and self._should_compact(messages, depth):
+            if depth > 0 and self._should_compact(messages, depth, max_tokens):
                 messages = self._compact_openai(messages)
 
             # Session Pruning: 오래된 도구 결과 마스킹 — ★압력이 있을 때만(최후 수단).
             # 위 compaction 이 이미 요약으로 크기를 낮췄다면 여기는 통과한다.
-            if depth > 0 and self._should_prune(messages, depth):
+            if depth > 0 and self._should_prune(messages, depth, max_tokens):
                 messages = self._prune_messages_openai(messages)
 
             # API 호출 파라미터 구성

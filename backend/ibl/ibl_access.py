@@ -117,6 +117,12 @@ CATALOG_LEGEND = (
     "(dormant: 키이름) = API 키가 없어 휴면 중."
 )
 
+COMPACT_CATALOG_LEGEND = (
+    '# 목록은 [노드:액션]과 용도다. 생략된 상세 설명·op·인자·반환·제약은 '
+    'execute_ibl(code="", describe=["노드:액션"])으로 1~6개씩 조회한다. '
+    '현재 문맥에 계약이 없으면 사용 전에 조회하라. ↳는 관련 관용구다.'
+)
+
 # R3: 이름이 자명한 op 는 설명을 방출하지 않는다(이름만) — 데이터(ops.values)는 그대로,
 # 방출만 억제(마법책 UI 등은 계속 전체 설명을 봄). 판정 3조건: 자명 동사 어간 + 60자 이하
 # + 파라미터 신호('='·'필수') 없음 — realty.query 처럼 source 열거를 실은 설명은 자동 보존.
@@ -370,12 +376,41 @@ def render_action_line(node_name: str, action_name: str, action_config, indent: 
     return "\n".join(lines)
 
 
+def _action_purpose(description):
+    """소개 첫 문장만 노출. 코드·인용·괄호 안의 마침표는 경계가 아니다.
+
+    문장 경계가 없으면 원문을 유지한다. 글자 수로 자르면 용도나 부정 조건이
+    반쪽이 되므로 자르지 않는다. 원 설명·계약은 describe가 그대로 제공한다.
+    """
+    text = " ".join(str(description).split())
+    pairs = {"(": ")", "[": "]", "{": "}"}
+    quotes = {'"': '"', "'": "'", "`": "`", "“": "”", "‘": "’"}
+    stack, quote, escaped = [], None, False
+    for i, char in enumerate(text):
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        # 영어 소유격의 apostrophe를 인용 시작으로 오인하지 않는다.
+        if char in quotes and not (char == "'" and i and text[i - 1].isalnum()):
+            quote = quotes[char]
+        elif char in pairs:
+            stack.append(pairs[char])
+        elif stack and char == stack[-1]:
+            stack.pop()
+        elif not stack and char in ".!?。" and (i + 1 == len(text) or text[i + 1].isspace()):
+            return text[:i + 1]
+    return text
+
+
 def render_action_brief(node, action, config):
-    """능력 이름과 용도는 상시 노출, 긴 인자 계약은 필요할 때 조회한다."""
-    if not isinstance(config, dict):
-        return f"[{node}:{action}] {str(config)[:180]}"
-    description = " ".join(str(config.get("description", "")).split())
-    return f"[{node}:{action}] {description[:220]}" + ("… (describe로 상세 조회)" if len(description) > 220 else "")
+    """전체 능력 이름과 용도만 상시 노출하고 상세는 describe로 잇는다."""
+    description = config.get("description", "") if isinstance(config, dict) else config
+    return f"[{node}:{action}] {_action_purpose(description)}"
 
 
 def build_environment(
@@ -439,7 +474,7 @@ def build_environment(
     # 환경 선언
     node_names = sorted(visible.keys())
     constraint = nodes_data.get("meta", {}).get("constraint", "")
-    parts.append(CATALOG_LEGEND)
+    parts.append(COMPACT_CATALOG_LEGEND if compact else CATALOG_LEGEND)
     parts.append(f"# 사용 가능 노드: {', '.join(node_names)}")
     if constraint:
         parts.append(f"# 제약: {constraint}")

@@ -178,11 +178,74 @@ def test_display_policy_controls_model_copy_and_keeps_structured_diagnostics(tmp
 
 
 def test_compact_environment_preserves_available_capabilities():
+    import re
     from ibl_access import build_environment
     full = build_environment(expose_idioms=False)
     compact = build_environment(expose_idioms=False, compact=True)
     assert len(compact) < len(full) * .65
     assert "sense:listen" in compact and "describe" in compact
+    full_names = set(re.findall(r"^\s*([a-z]+:[a-z_0-9]+) ::", full, re.M))
+    brief_names = re.findall(r"^\[([a-z]+:[a-z_0-9]+)\] ", compact, re.M)
+    assert full_names and set(brief_names) == full_names
+    assert len(brief_names) == len(full_names)
+    assert "⟨인자:" not in compact  # 압축 목록에 없는 표기를 가르치지 않는다.
+    assert 'describe=["노드:액션"]' in compact
+
+
+@pytest.mark.parametrize("purpose", [
+    "파일을 읽는다.",
+    "사진·영상 검색 (선스캔 불필요. OS 색인으로 조회).",
+    '텍스트 `obj.name`과 `"a. b"`를 읽는다.',
+    '문장 "첫째. 둘째"를 처리한다.',
+    '입력 {"text": "a. b", "value": 1.25}를 처리한다.',
+    "문서 https://example.com/v1.2 를 읽는다.",
+    "사용자의 ‘첫째. 둘째’ 인용을 처리한다.",
+    "Read user's files.",
+    "문장을 처리한다。",
+    "단일 목적 " + "긴 설명 " * 60 + "완료.",
+])
+def test_compact_purpose_preserves_complete_sentence(purpose):
+    from ibl_access import render_action_brief
+    full = purpose + "\n추가 계약: path 필수, 원본은 수정하지 않는다."
+    result = render_action_brief("self", "sample", {"description": full})
+    assert result == "[self:sample] " + " ".join(purpose.split())
+
+
+def test_compact_purpose_keeps_unpunctuated_or_unclosed_description():
+    from ibl_access import render_action_brief
+    for description in ("소리 듣기 — 파일 또는 마이크", "처리 (조건. 아직 닫히지 않음", ""):
+        assert render_action_brief("sense", "sample", {"description": description}) == (
+            "[sense:sample] " + description)
+
+
+def test_compact_omitted_contract_is_available_without_execution():
+    """카탈로그에서 뺀 제약도 원래 describe의 설명과 실제 호출 계약에 남는다."""
+    from ibl_access import load_nodes_raw, render_action_brief
+    from model_result_view import describe_actions
+    names = ["self:script", "self:write", "sense:search", "sense:here", "table:each", "table:ai"]
+    result = describe_actions(names, None, edition=2)
+    assert result["executed"] is False
+    nodes = load_nodes_raw()["nodes"]
+    for entry in result["actions"]:
+        node, action = entry["action"].split(":")
+        spec = nodes[node]["actions"][action]
+        definition = entry["definition"]
+        assert definition["description"] == spec["description"]
+        assert definition["callable_contract"]
+        assert len(render_action_brief(node, action, spec)) < len(spec["description"])
+
+
+def test_compact_catalog_keeps_permission_filter(monkeypatch):
+    import re
+    from ibl_access import build_environment
+    import ibl_registry
+    original = ibl_registry.self_can_run
+    monkeypatch.setattr(ibl_registry, "self_can_run", lambda n, a, c: (
+        False if (n, a) == ("sense", "listen") else original(n, a, c)))
+    compact = build_environment(allowed_set={"sense"}, compact=True, expose_idioms=False)
+    names = re.findall(r"^\[([a-z]+:[a-z_0-9]+)\] ", compact, re.M)
+    assert names and all(name.startswith("sense:") for name in names)
+    assert "sense:listen" not in names and "sense:search" in names
 
 
 def test_research_quota_requires_user_provenance():

@@ -140,6 +140,28 @@ def test_batch_marks_requested_selection_without_silently_dropping_rows():
     assert out["value"]["queries"][0]["shown"] == 2
 
 
+def test_batch_forwards_optional_type_and_sort_only_when_given():
+    """질의의 type·sort 를 검색에 넘긴다 — 빠지면 네이버가 웹 문서(날짜 없는 위키)를 돌려준다(10-01 실측)."""
+    seen = {}
+
+    def search(rt, args):
+        seen[args["query"]] = dict(args)
+        return {"items": [{"title": "t", "url": "u"}]}
+
+    queries = [dict(section="한국", source="naver", query="뉴스", type="news", sort="date"),
+               dict(section="한국", source="naver", query="종류만", type="news"),
+               dict(section="기술", source="gnews", query="없음"),
+               dict(section="한국", source="naver", query="틀림", type=7)]
+    out = run("search_batch_view.ibl", '[fn:검색묶음추리기]{질의들:$queries,기간:3,개수:2}',
+              {"queries": queries}, {"sense:search": search})
+    assert out["success"], out
+    assert seen["뉴스"]["type"] == "news" and seen["뉴스"]["sort"] == "date"
+    assert seen["종류만"]["type"] == "news" and "sort" not in seen["종류만"]
+    assert "type" not in seen["없음"] and "sort" not in seen["없음"]
+    assert "틀림" not in seen and out["value"]["failed"] == 1
+    assert out["value"]["queries"][3]["error"]["code"] == "TYPE_CONTRACT"
+
+
 def test_seeds_are_current_and_not_always_on():
     seeds = json.loads((ROOT / "data/idioms/ai_trend_seeds.json").read_text())
     names = {"AI동향준비읽기": "ai_trend_prepare.ibl", "검색묶음추리기": "search_batch_view.ibl"}
@@ -161,14 +183,22 @@ def test_guide_calls_compile_and_run_with_fixed_sources():
         registry[key] = Adapter(registry[key].contract, fn)
     guide = (ROOT / "data/guides/ai_trend_report.md").read_text()
     blocks = re.findall(r"```ibl\n(.*?)```", guide, re.S)
-    assert len(blocks) == 2
+    assert len(blocks) == 3
+    event = {"event_id": "e1", "label": "NEW", "verified": True, "date": "2026-09-30"}
+    gate = {"사건들": [event, dict(event), dict(event, event_id="e2", date="2026-09-01"),
+                    dict(event, event_id="e3", verified=False)],
+            "하한": "2026-09-17", "오늘": "2026-10-01"}
     for code in blocks:
-        plan = compile_program(code, registry, definitions=library)
+        inputs = gate if "$사건들" in code else {}
+        plan = compile_program(code, registry, inputs, definitions=library)
         assert not plan.issues, plan.report()
-        out = Runtime(plan, {}).run()
+        out = Runtime(plan, inputs).run()
         assert out["success"], out
         if "검색묶음추리기" in code:
             assert out["value"]["ok"] and len(out["value"]["queries"]) == 2
+            assert 'source:"naver",type:"news"' in code
+        if inputs:
+            assert out["value"]["new_count"] == 1 and out["value"]["publish"] is True
 
 
 if __name__ == "__main__":

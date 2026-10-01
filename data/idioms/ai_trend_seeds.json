@@ -29,7 +29,7 @@
     "topic": "보고서/AI 동향",
     "always_on": false,
     "alias": "검색묶음추리기",
-    "ibl_code": "#!ibl edition=2\n[def:검색묶음추리기]($질의들,$기간=7,$개수=6) {\n  [if:$기간<1 or $개수<1] { return {ok:false,error:\"기간과 개수는 1 이상이어야 합니다\",items:[],queries:[],failed:0} }\n  $결과 = $질의들 >> [table:each]{parallel:4} {\n    $질의 = $it\n    [try] {\n      $원본 = [sense:search]{source:$질의.source,query:$질의.query,days:$기간,limit:$개수}\n      $행들 = $원본.items >> [table:take]{n:$개수} >> [table:select]{columns:($행)=>{\n        section:get($질의,\"section\",\"\"),source:$질의.source,query:$질의.query,\n        title:get($행,\"title\",\"\"),url:get($행,\"url\",\"\"),summary:get($행,\"summary\",\"\"),meta:get($행,\"meta\",\"\"),\n        dates:{date:get($행,\"date\",null),published_at:get($행,\"published_at\",null),pubDate:get($행,\"pubDate\",null),published:get($행,\"published\",null)}\n      }}\n      return {ok:true,query:$질의,received:len($원본.items),shown:len($행들),items:$행들}\n    } [catch] { return {ok:false,query:$질의,received:null,shown:0,items:[],error:$error} }\n  }\n  $항목 = $결과 >> [table:each]{mode:\"flat_map\"} { return $it.items }\n  $관측 = $결과 >> [table:select]{columns:($행)=>{query:$행.query,ok:$행.ok,received:$행.received,shown:$행.shown,error:get($행,\"error\",null)}}\n  $실패 = $결과 >> [table:filter]{where:($행)=>$행.ok==false}\n  return {ok:len($실패)==0,items:$항목,queries:$관측,failed:len($실패)}\n}",
+    "ibl_code": "#!ibl edition=2\n[def:검색묶음추리기]($질의들,$기간=7,$개수=6) {\n  [if:$기간<1 or $개수<1] { return {ok:false,error:\"기간과 개수는 1 이상이어야 합니다\",items:[],queries:[],failed:0} }\n  $결과 = $질의들 >> [table:each]{parallel:4} {\n    $질의 = $it\n    [try] {\n      $종류 = get($질의,\"type\",null)\n      $정렬 = get($질의,\"sort\",null)\n      $부가 = {**($종류==null ? {} : {type:$종류}),**($정렬==null ? {} : {sort:$정렬})}\n      $원본 = [sense:search]{source:$질의.source,query:$질의.query,days:$기간,limit:$개수,**$부가}\n      $행들 = $원본.items >> [table:take]{n:$개수} >> [table:select]{columns:($행)=>{\n        section:get($질의,\"section\",\"\"),source:$질의.source,query:$질의.query,\n        title:get($행,\"title\",\"\"),url:get($행,\"url\",\"\"),summary:get($행,\"summary\",\"\"),meta:get($행,\"meta\",\"\"),\n        dates:{date:get($행,\"date\",null),published_at:get($행,\"published_at\",null),pubDate:get($행,\"pubDate\",null),published:get($행,\"published\",null)}\n      }}\n      return {ok:true,query:$질의,received:len($원본.items),shown:len($행들),items:$행들}\n    } [catch] { return {ok:false,query:$질의,received:null,shown:0,items:[],error:$error} }\n  }\n  $항목 = $결과 >> [table:each]{mode:\"flat_map\"} { return $it.items }\n  $관측 = $결과 >> [table:select]{columns:($행)=>{query:$행.query,ok:$행.ok,received:$행.received,shown:$행.shown,error:get($행,\"error\",null)}}\n  $실패 = $결과 >> [table:filter]{where:($행)=>$행.ok==false}\n  return {ok:len($실패)==0,items:$항목,queries:$관측,failed:len($실패)}\n}",
     "category": "phrase",
     "returns": "Record"
   },
@@ -40,7 +40,7 @@
     "tags": "manual,ai_trend",
     "topic": "보고서/AI 동향",
     "always_on": false,
-    "ibl_code": "#!ibl edition=2\n[fn:검색묶음추리기]{질의들:[{section:\"기술\",source:\"gnews\",query:\"AI agent research\"},{section:\"투자\",source:\"naver\",query:\"AI 반도체 투자\"}],기간:7,개수:6}",
+    "ibl_code": "#!ibl edition=2\n[fn:검색묶음추리기]{질의들:[{section:\"기술\",source:\"gnews\",query:\"AI agent research\"},{section:\"투자\",source:\"naver\",type:\"news\",query:\"AI 반도체 투자\"}],기간:7,개수:6}",
     "category": "composition"
   }
 ]

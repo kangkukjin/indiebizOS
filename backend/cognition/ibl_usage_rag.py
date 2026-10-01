@@ -19,6 +19,9 @@ from typing import List, Optional, Set
 logger = logging.getLogger(__name__)
 
 
+from legacy_example_projection import current_form_of_legacy_call  # noqa: E402,F401
+
+
 def _top_for_execution(results):
     """본문을 숨긴 과거 자료는 유사도만으로 반사 실행하거나 현재 증거로 쓰지 않는다."""
     if not results:
@@ -326,7 +329,7 @@ class IBLUsageRAG:
                      "본문은 여기 없다(베끼라고 주는 것이 아니다): 이번 일에 안 맞는 문장이 있을 때만 "
                      "[self:memory]{op: \"recall\", store: \"실행\", expand: \"이름\"} 으로 정의를 열어 [def:이름]($인자){...} 로 고쳐 부른다. "
                      "여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
-        note += " edition은 저장 원문의 실행 의미다. 과거 용례에서는 목적·도구·품질 조건을 참고하고 새 프로그램은 주 교재 ibl_composition.md의 명시 인자·값 반환으로 작성하라. 기존 관용구는 이름으로 호출하라. 회상 줄의 `→ 반환`이 반환 계약이고 `⟨관측: …⟩`은 실제 실행이 돌려준 필드다. 그 줄에 반환이 없을 때만 describe로 확인하라."
+        note += " edition은 저장 원문의 실행 의미다. projected_from=1 표시는 옛 판본의 호출 한 줄을 현재 검사기로 확인해 현재 문장으로 옮긴 용례다(인자 값은 예시). 과거 용례에서는 목적·도구·품질 조건을 참고하고 새 프로그램은 주 교재 ibl_composition.md의 명시 인자·값 반환으로 작성하라. 기존 관용구는 이름으로 호출하라. 회상 줄의 `→ 반환`이 반환 계약이고 `⟨관측: …⟩`은 실제 실행이 돌려준 필드다. 그 줄에 반환이 없을 때만 describe로 확인하라."
         from ibl_edition import source_edition
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
@@ -338,7 +341,13 @@ class IBLUsageRAG:
             condition = applicability_note(getattr(ex, 'provenance', '{}'))
             if condition:
                 attrs += f' applicability="{_xml_attr(condition)}"'
-            attrs += f' edition="{source_edition(ex.ibl_code)}"'
+            from corpus_policy import exclusion_reason
+            reason = exclusion_reason(ex)
+            projected = current_form_of_legacy_call(ex.ibl_code) if reason == 'legacy_source' else None
+            if projected:
+                attrs += ' edition="2" projected_from="1"'
+            else:
+                attrs += f' edition="{source_edition(ex.ibl_code)}"'
             if getattr(ex, 'source', '') == 'distilled_component':
                 attrs += ' scope="component"'
             # success_rate >= 0 이면 시도 이력 있음(0.0=전부 실패 포함) → 표시.
@@ -353,10 +362,8 @@ class IBLUsageRAG:
             if getattr(ex, "topic", ""):
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
             from hippo_tree import reference_needs_expansion
-            from corpus_policy import exclusion_reason
-            body = ex.ibl_code
-            reason = exclusion_reason(ex)
-            if reason or reference_needs_expansion(body):
+            body = projected or ex.ibl_code
+            if not projected and (reason or reference_needs_expansion(body)):
                 attrs += f' id="{ex.id}" body_omitted="true"'
                 if reason:
                     attrs += f' authoring_excluded="{_xml_attr(reason)}"'
@@ -1076,6 +1083,8 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
     evidence_notes = []
     import json
     from ibl_honesty import truncation_evidence, completion_evidence
+    from legacy_example_projection import checked_program_sources
+    checked_sources = checked_program_sources(tool_calls)
     for tool_index, tc in enumerate(tool_calls, 1):
         if not isinstance(tc, dict):
             continue
@@ -1087,6 +1096,13 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
         inputs = tc.get("input") or {}
         if not isinstance(inputs, dict) or inputs.get("check"):
             continue  # 검사 통과는 실행 성공이 아니다 — 접지·주행 기록에서도 제외
+        handle = inputs.get("code")
+        if isinstance(handle, str) and handle.strip().startswith("$checked:"):
+            # 검사 통과분 참조로 실행한 호출은 그 검사 호출의 원문으로 배운다. 원문을 못 찾으면 배우지 않는다.
+            original = checked_sources.get(handle.strip())
+            if not original:
+                continue
+            tc = {**tc, "input": {**inputs, "code": original}}
         from ibl_v2_experience import closed_call
         tc = closed_call(tc, turn_cost=turn_cost)
         if tc is None:

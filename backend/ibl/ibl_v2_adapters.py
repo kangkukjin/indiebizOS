@@ -178,9 +178,20 @@ def _partial_message(raw, truncation):
         message += f" 절단 사유 `{first['reason']}`" + (f"(상한 {first['limit']})" if first.get("limit") is not None else "") + "."
         if first["reason"] in _COUNT_REASONS:
             message += f" `{first['reason']}` 를 명시하면 그만큼의 선택으로 받고, 전부가 필요하면 값을 올리세요."
-    note = (raw.get("message") or raw.get("warning")) if isinstance(raw, dict) else None
-    if isinstance(note, str) and note.strip():
-        message += f" 원천 안내: {note.strip()[:200]}"
+    # 안내문은 warning 이 먼저다. message 는 도구에 따라 본문 전문이다 — self:read 는 파일 내용을 싣는데
+    # 그것을 '원천 안내'로 붙이면 사유 대신 자료 앞머리가 나간다(ep4213: 3.5MB JSON, 1MB 상한 안내가 가려졌다).
+    note = None
+    if isinstance(raw, dict):
+        for key in ("warning", "message"):
+            candidate = raw.get(key)
+            if (isinstance(candidate, str) and candidate.strip() and len(candidate) <= 400
+                    and not candidate.lstrip().startswith(("{", "["))):
+                note = candidate.strip()
+                break
+    if note:
+        message += f" 원천 안내: {note[:200]}"
+    elif cut and not cut[0].get("reason"):
+        message += " 원천이 절단 사유를 밝히지 않았습니다. 범위 인자(offset·limit 등)가 있으면 나눠 읽으세요 — 인자는 describe 로 확인합니다."
     return message
 
 # 판본 1 도구의 평문 실패 규약(`return f"Error: …"`)은 legacy-envelope 프로토콜의 성질이다 — 도구별

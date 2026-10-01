@@ -44,7 +44,7 @@ def read_result(request):
         value = (_walk_typed(stored, path, path) if isinstance(stored, dict) and stored.get("edition") == 2
                  else _walk(stored, path))
         # 문자열 값은 원문 글자로 페이지한다 — 미리보기의 total·offset과 같은 좌표(69회차 F69-2).
-        text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, indent=2)
+        text = value if isinstance(value, str) else page_json(value)
         page.update(source_chars=page["chars"], chars=len(text), path=path,
                     offset=offset, text=text[offset:offset + limit])
     all_masked = page.pop("masked_paths", [])
@@ -87,6 +87,20 @@ def read_result(request):
         "path": path if path is not None else [], "complete": complete,
     })
     return page
+
+
+def page_json(value):
+    """read_result 가 구조 값을 넘기는 글자 표기 — 목록은 행마다, 레코드는 필드마다 한 줄.
+
+    들여쓰기 JSON 은 같은 내용을 1.3배로 불렸다(ep4214: 자막 480행 32K자 → 41K자). 줄 단위 페이지는
+    지키되 키마다 붙던 들여쓰기·줄바꿈을 없앤다. 글자 수 좌표(_selection_chars)도 이 표기를 쓴다."""
+    def one(item):
+        return json.dumps(item, ensure_ascii=False, default=str)
+    if isinstance(value, (list, tuple)) and value:
+        return "[\n" + ",\n".join(one(item) for item in value) + "\n]"
+    if isinstance(value, dict) and value:
+        return "{\n" + ",\n".join(f"{one(str(key))}: {one(item)}" for key, item in value.items()) + "\n}"
+    return one(value)
 
 
 def _decode_json(value):
@@ -334,7 +348,7 @@ def input_ref_evidence(stored):
 def _selection_chars(item, *, typed=False):
     """read_result 가 그 경로에서 돌려줄 글자 수 — 문자열은 원문 글자, 구조는 JSON 페이지(F69-2와 같은 좌표)."""
     item = item if typed else _decode_json(item)
-    return len(item) if isinstance(item, str) else len(json.dumps(item, ensure_ascii=False, indent=2, default=str))
+    return len(item) if isinstance(item, str) else len(page_json(item))
 
 
 def _failed_partial_references(ref, result):
@@ -639,12 +653,66 @@ def completed_call_references(result):
     return out if entries or failed else {}
 
 
+#: 예산의 이 비율 이상을 쓴 실행에만 비싼 줄을 모델 사본에 싣는다.
+_USAGE_DETAIL_SHARE = 0.2
+
+
+def model_usage(usage):
+    """모델 사본의 비용 표시 — 합계는 늘, 비싼 줄은 예산을 눈에 띄게 쓴 실행에만.
+
+    노드별 걸음 수 목록이 업무 값보다 컸다(ep4213 실행 20회: 값 30%·usage 31%, 쓰기 한 번의 150자 결과에 1.2K자).
+    전문은 저장본에 그대로 있고 read_result path ["usage"] 로 읽는다."""
+    if not isinstance(usage, dict):
+        return usage
+    out = {k: usage[k] for k in ("steps", "rows", "elapsed_ms", "model") if k in usage}
+    limits = usage.get("limits") if isinstance(usage.get("limits"), dict) else {}
+    heavy = any(type(limits.get(k)) is int and limits[k] > 0 and type(usage.get(k)) is int
+                and usage[k] >= limits[k] * _USAGE_DETAIL_SHARE for k in ("steps", "rows"))
+    if heavy:
+        lines = [row for row in usage.get("steps_by_line") or [] if isinstance(row, dict)][:3]
+        sources = {row.get("source_hash") for row in lines}
+        out["limits"] = limits
+        out["steps_by_line"] = [{k: v for k, v in row.items() if k != "source_hash" or len(sources) > 1}
+                                for row in lines]
+        out["detail"] = 'read_result path ["usage"]'
+    return out
+
+
+def _fold_twin_fields(value, where, notes, depth=0):
+    """같은 큰 값을 두 이름으로 실은 형제 필드는 표시 사본에서 한 벌만 보인다(ep4214: 자막 segments·items).
+
+    어휘 이름을 고르지 않는다 — 값이 같은지만 본다. 저장본·wire 는 그대로라 어느 이름으로도 읽고 참조한다."""
+    import hashlib
+    if depth > 3:
+        return value
+    if isinstance(value, list):
+        return [_fold_twin_fields(item, where + [i], notes, depth + 1) if i < 20 else item
+                for i, item in enumerate(value)]
+    if not isinstance(value, dict):
+        return value
+    seen, out = {}, {}
+    for key, item in value.items():
+        if isinstance(item, (list, dict)) and item:
+            raw = json.dumps(item, ensure_ascii=False, sort_keys=True, default=str)
+            if len(raw) >= 400:
+                mark = (type(item).__name__, len(raw), hashlib.sha256(raw.encode("utf-8")).hexdigest())
+                if mark in seen:
+                    out[key] = {"$model_same_as": seen[mark]}
+                    notes.append({"path": where + [key], "same_as": where + [seen[mark]]})
+                    continue
+                seen[mark] = key
+        out[key] = _fold_twin_fields(item, where + [key], notes, depth + 1)
+    return out
+
+
 def project_v2_result(result):
     """Typed values keep their meaning; verbose execution evidence stays on disk."""
     raw = json.dumps(result, ensure_ascii=False, default=str)
     ref = evidence_store().evidence(raw)
     policy = display_policy()
     out = {k: v for k, v in result.items() if k not in {"evidence", "recordings", "source_map"}}
+    if "usage" in out:
+        out["usage"] = model_usage(out["usage"])
     out["evidence_summary"] = {"events": len(result.get("evidence", [])),
                                "source_complete": result.get("source_complete")}
     failures = [e for e in result.get('evidence', []) if e.get('kind') == 'tool_failure']
@@ -667,6 +735,11 @@ def project_v2_result(result):
         out.pop("partial_wire", None)
         from model_value_preview import preview_value
         if "value" in out:
+            twins = []
+            out["value"] = _fold_twin_fields(out["value"], ["value"], twins)
+            if twins:
+                out["_model_shared"] = {"fields": twins[:8], "omitted": max(0, len(twins) - 8),
+                                        "note": "같은 값이 두 이름으로 실려 표시 사본에서 한 벌만 보였습니다. 어느 경로로든 읽고 참조할 수 있습니다."}
             out["value"], preview = preview_value(out["value"], policy["prose_chars"], ref["id"])
             if preview:
                 out["_preview"] = preview

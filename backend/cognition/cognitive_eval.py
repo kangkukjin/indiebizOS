@@ -79,6 +79,43 @@ def parse_criterion_defects(feedback, contract):
     return [{key: row[key] for key in ("criterion_id", "evidence", "repair")} for row in defects]
 
 
+#: 평가 첨부 한 파일의 글자 상한. 넘으면 앞·뒤 발췌와 하네스가 확인한 구조 요약을 싣는다.
+EVALUATION_FILE_CHARS = 60000
+
+
+def _json_outline(data, depth=0):
+    """큰 JSON 산출물의 뼈대 — 평가자가 전문 없이 필수 항목·건수를 확인한다."""
+    if isinstance(data, dict):
+        if depth >= 2:
+            return f"object({len(data)}키)"
+        parts = [f"{key}: {_json_outline(value, depth + 1)}" for key, value in list(data.items())[:40]]
+        more = f", …외 {len(data) - 40}키" if len(data) > 40 else ""
+        return "{" + ", ".join(parts) + more + "}"
+    if isinstance(data, list):
+        first = f" · 첫 행 {_json_outline(data[0], depth + 1)}" if data and isinstance(data[0], dict) and depth < 2 else ""
+        return f"list({len(data)}행{first})"
+    return type(data).__name__
+
+
+def bounded_attachment(path: str, content: str, cap: int = EVALUATION_FILE_CHARS) -> str:
+    """평가자에게 붙이는 산출물 본문의 크기 상한(ep4211).
+
+    후속 처리용 JSON 828K자가 통째로 실려 평가 한 번이 40만 토큰이었다(메시지의 93%, 두 번 모두 캐시 0).
+    전문 대신 앞·뒤 발췌와, JSON 이면 하네스가 직접 파싱해 확인한 구조를 싣는다. 판정에 필요한 것은
+    '파싱되는가·필수 항목이 있는가·건수가 맞는가'이지 2,698행 전부가 아니다."""
+    if not isinstance(content, str) or len(content) <= cap:
+        return content
+    head, tail = content[:cap * 2 // 3], content[-(cap // 6):]
+    outline = ""
+    if str(path).lower().endswith(".json"):
+        try:
+            outline = " 하네스 확인: JSON 파싱 성공, 구조 " + _json_outline(json.loads(content)) + "."
+        except ValueError as exc:
+            outline = f" 하네스 확인: JSON 파싱 실패 — {exc}."
+    return (f"[전체 {len(content):,}자 중 앞 {len(head):,}자·뒤 {len(tail):,}자만 첨부.{outline} "
+            f"발췌 밖 내용의 부재를 단정하지 말 것]\n{head}\n…(중략)…\n{tail}")
+
+
 class CognitiveEvalMixin:
     """Goal 평가 루프 — 의식 에이전트의 달성 기준 기반 자동 평가 메서드 모음."""
 
@@ -171,6 +208,8 @@ class CognitiveEvalMixin:
                         snapshots[path] = digest(content)
                     if not full_content and len(content) > 10000:
                         content = content[:10000] + "\n\n... (10000자 초과, 생략됨)"
+                    elif full_content:
+                        content = bounded_attachment(path, content)
                     files_content.append(f"### {os.path.basename(path)} ({path})\n```\n{content}\n```")
                 except Exception:
                     pass
@@ -416,7 +455,8 @@ class CognitiveEvalMixin:
                 "도구 호출 로그에서 추출한 사실. 달성 기준이 특정 액션을 요구하면(예: 특정 파일 읽기, "
                 "grep/검색, 특정 도구 실행), **그 액션이 이 목록에 실제로 있는지로 판정하라.** "
                 "목록에 없으면 그 단계는 *수행되지 않은 것*이다 — 에이전트 응답이 '했다'고 말해도 "
-                "이 원장에 없으면 안 한 것으로 간주하라.\n"
+                "이 원장에 없으면 안 한 것으로 간주하라. 화살표(→) 뒤는 그 액션에 실제로 넘어간 대상이다. "
+                "대상 표시에 '생략'이 있으면 보이지 않는 대상의 부재를 단정하지 말고 도구 실행 결과와 함께 판단하라.\n"
                 f"{action_ledger}\n\n"
             )
 

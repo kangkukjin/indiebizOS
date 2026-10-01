@@ -10,7 +10,7 @@ Version: 5.0.0
 import asyncio
 from browser_session import (
     BrowserSession, ensure_active,
-    NAVIGATE_TIMEOUT, BLOCKED_URL_SCHEMES,
+    NAVIGATE_TIMEOUT, BLOCKED_URL_SCHEMES, normalize_url,
 )
 
 # 동적 콘텐츠 대기 관련 상수
@@ -75,8 +75,7 @@ async def browser_navigate(params: dict, project_path: str = ".") -> dict:
         if url_lower.startswith(scheme):
             return {"success": False, "error": f"보안상 허용되지 않는 URL 스킴입니다: {scheme}"}
 
-    if not url.startswith(('http://', 'https://')):
-        url = 'https://' + url
+    url = normalize_url(url)
 
     try:
         session = BrowserSession.get_instance()

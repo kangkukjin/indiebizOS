@@ -136,7 +136,7 @@ async def browser_tab_close(params: dict) -> dict:
             result["active_tab"] = session.active_tab_id
             result["remaining_tabs"] = len(session.tab_ids)
         else:
-            result["message"] = "모든 탭이 닫혔습니다. 새 탭을 열려면 browser_tab_new 또는 browser_navigate를 사용하세요."
+            result["message"] = '모든 탭이 닫혔습니다. 새 탭은 [limbs:browser]{op: "tab", mode: "new"} 또는 {op: "navigate", url: "…"} 로 여세요.'
 
         return result
     else:

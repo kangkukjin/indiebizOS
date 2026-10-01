@@ -237,7 +237,8 @@ async def browser_navigate(params: dict, project_path: str = None) -> dict:
     if not url:
         return {"success": False, "error": "url 파라미터 필요"}
 
-    if not url.startswith(("http://", "https://")):
+    # 빈 페이지는 그대로(ep4214) — Playwright 쪽 browser_session.normalize_url 과 같은 규칙.
+    if not url.lower().startswith(("http://", "https://")) and url.strip().lower() != "about:blank":
         url = f"https://{url}"
 
     try:

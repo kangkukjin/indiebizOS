@@ -65,6 +65,8 @@ def _normalize_tool_entry(entry: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
             "input": entry.get("input") or {},
             "result": entry.get("result", ""),
             "is_error": bool(entry.get("is_error", False)),
+            # 실행 증거에서 읽은 실제 호출(액션·대상). 없으면 None — 원장이 코드 글자로 물러난다.
+            "runtime_calls": entry.get("runtime_calls"),
         }
     # 문자열 — name·input 불명, 결과만 보존 (backward-compat)
     return {"name": "", "input": {}, "result": str(entry), "is_error": False}
@@ -279,6 +281,23 @@ def build_action_ledger(items: List[Union[str, Dict[str, Any]]]) -> str:
             if not code and (inp.get("describe") is not None or inp.get("read_result") is not None):
                 _slot("execute_ibl(메타데이터 조회)")["count"] += 1
                 continue
+            runtime = ent.get("runtime_calls")
+            if inp.get("check") or runtime == []:
+                # 검사만 했거나 실행 전에 거절된 호출의 액션은 '실행된 액션'이 아니다
+                # (ep4211: 검사 호출까지 세어 table:each ×69 가 됐다).
+                _slot("execute_ibl(검사만·실행 전 거절 — 액션 실행 없음)")["count"] += 1
+                continue
+            if runtime:
+                # 실행 증거가 있으면 그것이 원장이다 — 코드 글자가 아니라 실제로 넘어간 인자를 적는다.
+                fallback = _IBL_TARGET_RE.findall(code) if not any(c.get("targets") for c in runtime) else []
+                for call in runtime:
+                    slot = _slot(call["action"])
+                    slot["count"] += 1
+                    for value in (call.get("targets") or {}).values():
+                        _add_target(slot, value)
+                    for t in fallback:
+                        _add_target(slot, t)
+                continue
             acts = _IBL_ACTION_RE.findall(code)
             targets = _IBL_TARGET_RE.findall(code)
             if not acts:
@@ -305,11 +324,13 @@ def build_action_ledger(items: List[Union[str, Dict[str, Any]]]) -> str:
     for key, slot in ledger.items():
         tgt = ""
         if slot["targets"]:
-            shown = slot["targets"][:8]
+            # 앞과 뒤를 함께 보인다 — 마지막 검증 대상이 앞쪽 수집 대상에 밀려 사라지지 않게.
+            all_targets = slot["targets"]
+            if len(all_targets) > 12:
+                shown = all_targets[:6] + [f"…(가운데 {len(all_targets) - 12}개 생략)…"] + all_targets[-6:]
+            else:
+                shown = all_targets
             tgt = "  → " + " | ".join(shown)
-            extra = len(slot["targets"]) - len(shown)
-            if extra > 0:
-                tgt += f" (외 {extra}개)"
         lines.append(f"- {key} (×{slot['count']}){tgt}")
     return "\n".join(lines)
 

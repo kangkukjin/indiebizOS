@@ -6,7 +6,7 @@ import time
 from collections import defaultdict, deque
 from pathlib import Path
 
-from cognitive_eval import CognitiveEvalMixin, parse_criterion_defects
+from cognitive_eval import CognitiveEvalMixin, parse_criterion_defects, EVALUATION_FILE_CHARS
 from cognitive_trace import build_action_ledger, serialize_tool_trace
 from supervision_store import digest
 
@@ -31,6 +31,32 @@ REPAIR_BLOCK_IDS: ["블록 id"]도 적고, DEFECTS 한 줄 JSON 배열에 기준
 class Evaluator(CognitiveEvalMixin):
     def _log(self, message):
         print(message)
+
+
+def runtime_calls(store, shown_result):
+    """실행 결과의 원 증거에서 실제로 호출된 액션과 넘어간 대상을 읽는다(ep4211).
+
+    코드 글자에서 뽑은 원장은 계산된 경로(`path:$out+"/report.md"`)를 못 봐서, 한 재독을 '안 했다'로
+    판정하게 했다. None = 판본 2 실행 증거가 없다(원장이 코드 글자로 물러난다), [] = 검사·실행 전 거절."""
+    try:
+        shown = json.loads(shown_result) if isinstance(shown_result, str) else shown_result
+        if not isinstance(shown, dict) or shown.get("edition") != 2:
+            return None
+        if shown.get("executed") is False:
+            return []
+        ref = (shown.get("result_ref") or {}).get("id")
+        if not ref:
+            return None
+        raw = json.loads(store.read_evidence(ref, 0, None)["text"])
+    except (ValueError, OSError, TypeError, KeyError):
+        return None
+    events = raw.get("evidence") if isinstance(raw, dict) else None
+    if not isinstance(events, list):
+        return None
+    calls = [{"action": e["action"], "targets": e.get("targets") if isinstance(e.get("targets"), dict) else {}}
+             for e in events if isinstance(e, dict) and e.get("kind") == "invoke" and isinstance(e.get("action"), str)]
+    # 실행은 했지만 액션 호출이 없는 계산은 '검사만'([])과 구별한다.
+    return calls or [{"action": "execute_ibl(액션 호출 없는 계산)", "targets": {}}]
 
 
 def execution_trace(controller, tool_calls):
@@ -75,6 +101,8 @@ def execution_trace(controller, tool_calls):
         entry = {"name": row["name"], "input": payload,
                  "result": controller.store.read_evidence(row["result"]["id"], 0, None)["text"],
                  "is_error": row["is_error"]}
+        if "execute_ibl" in row["name"]:
+            entry["runtime_calls"] = runtime_calls(controller.store, entry["result"])
         matches = pending[signature(row["name"], payload)]
         identity = result_identity(entry["result"])
         # 병렬 반복 호출은 종료 순서가 다를 수 있다. 공통 결과 참조로 먼저
@@ -111,7 +139,8 @@ def prepare(controller, tool_calls=None):
     for artifact in controller.content_artifacts:
         path = artifact["path"]
         text = controller.store.read_evidence(artifact["evidence_id"], 0, None)["text"]
-        files.append(f"### {path}\n{text}")
+        from cognitive_eval import bounded_attachment
+        files.append(f"### {path}\n{bounded_attachment(path, text, 2 * EVALUATION_FILE_CHARS)}")
         snapshots[path] = {"hash": digest(text), "mode": "text"}
     evaluator = Evaluator()
     images = evaluator._collect_visual_artifacts(artifact_response, tool_calls=calls)

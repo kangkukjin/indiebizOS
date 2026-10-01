@@ -11,6 +11,9 @@ from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches, record
 from ibl_v2_parser import parse
 from ibl_v2_narrow import narrow
 from ibl_v2_expr import BUILTINS
+import re
+# f-문자열의 글자 부분에 남은 `$이름` — `$(`·`$5` 같은 다른 쓰임은 잡지 않는다.
+_BARE_DOLLAR_NAME = re.compile(r"\$[A-Za-z_\uac00-\ud7a3][\w\uac00-\ud7a3]*")
 from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
                              assigned_names, location, access_type, HINTS)
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL, rows_type,
@@ -478,6 +481,11 @@ class Compiler:
                     known.append(static_text(t))
                 else:
                     known.append(part if isinstance(part, str) else None)
+                    if isinstance(part, str) and _BARE_DOLLAR_NAME.search(part):
+                        # ep4214: f"…{json($html)}…" 가 문자 그대로 나갔다 — 보간은 ${식} 뿐이다.
+                        self.warn(node, "FORMAT_UNINTERPOLATED",
+                                  "f-문자열 안의 $이름 이 ${…} 밖에 있어 보간되지 않고 문자 그대로 남습니다.",
+                                  text=_BARE_DOLLAR_NAME.search(part)[0])
             if known and all(isinstance(k, str) for k in known):
                 return Type("Text", literal="".join(known))
             return TEXT

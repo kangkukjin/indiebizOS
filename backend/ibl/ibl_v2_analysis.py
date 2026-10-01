@@ -6,7 +6,14 @@ from ibl_v2_types import Type, UNKNOWN, NUMBER, TEXT, BOOL, join, alternatives
 from ibl_v2_expr import number
 
 
+#: 실행 중 실패에 붙이는 안내. 검사 진단의 HINTS 와 달리 실행 봉투의 diagnostic.hint 로 나간다.
+RUNTIME_HINTS = {
+    # ep4213: 합계끼리 나눈 몫을 json()에 넣어 실패했고 안내가 text() 뿐이라 비율이 20자리 문자열로 저장됐다.
+    "NON_JSON_RESULT": "합계끼리 나눈 몫 같은 긴 소수는 round(값, 자릿수)로 자릿수를 정하면 JSON 숫자로 전달됩니다. 원값 그대로가 필요할 때만 text()를 쓰세요.",
+}
+
 HINTS = {
+    "FORMAT_UNINTERPOLATED": "값을 넣으려면 ${$이름} 또는 ${식} 으로 쓰세요. 구조 값은 ${json($이름)}. 글자 그대로가 맞으면 f 를 떼세요.",
     "NOT_FOUND": "요청한 파일·디렉토리가 없습니다. 경로를 확인하거나 원천을 다시 요청하세요. 선택 자료라면 catch로 부재를 명시하세요.",
     "LITERAL_DOLLAR": "일반 문자열은 치환하지 않습니다. 값 참조 또는 f 문자열의 ${표현식}으로 옮기거나, 문자 그대로 의도했다면 경고를 무시하세요.",
     "RECORD_LENGTH": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",

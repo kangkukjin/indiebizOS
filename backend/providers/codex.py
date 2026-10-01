@@ -459,6 +459,11 @@ class CodexProvider(CliSubprocessProvider):
 
     # ================= 도구 정책 =================
 
+    #: 우리 서브프로세스에서만 끄는 Codex 기능(사용자 config.toml 은 건드리지 않는다).
+    #: plugins = 플러그인 스킬 목록 주입, 나머지 = IBL 과 겹치는 네이티브 도구 스키마.
+    CODEX_DISABLED_FEATURES = ("plugins", "apps", "goals", "image_generation",
+                               "browser_use", "computer_use", "in_app_browser")
+
     # ★Claude Code 의 DISALLOWED_TOOLS 에 해당하는 하드 차단이 Codex 엔 거의 없다.
     #   Codex 의 파일 읽기·검색·편집은 전부 shell/apply_patch 로 들어오고, 그 둘을 끄면
     #   Codex 는 아무 일도 못 한다. 설정으로 끌 수 있는 건 web_search 하나 —
@@ -584,6 +589,14 @@ class CodexProvider(CliSubprocessProvider):
         #   무시한다 — 그래서 09-12~13 네 에피소드에서 네이티브 web_search 가 되살아났다. 모르는 키는
         #   양쪽 버전 다 무시하므로 두 벌을 함께 보낸다. 그래도 새면 아래 _warn_if_blocked_native 가 운다.
         cmd += ["-c", "tools.web_search=false", "-c", 'web_search="disabled"']
+        # ★Codex 자체 기능의 누출 차단(2026-10-01, ep4211·4213·4214 실측). 플러그인이 켜져 있으면
+        #   플러그인 스킬 목록이 developer 메시지로 실려 시스템 AI 가 Codex 의 스프레드시트 SKILL.md
+        #   64K자를 [self:read] 로 읽고 20여 라운드 끌고 다녔다(가계부·주문 대조 두 주행 모두).
+        #   나머지는 IBL 어휘와 겹치는 네이티브 도구 스키마다. 끄면 호출당 고정 입력이
+        #   13.9K → 10.7K 토큰(원샷 기준, `codex exec --json` 실측). MCP 브리지 도구 호출은 그대로 된다.
+        #   모르는 키는 CLI 가 무시한다 — 동봉 CLI 갱신으로 키가 바뀌면 `codex features list` 로 다시 확인.
+        for feature in self.CODEX_DISABLED_FEATURES:
+            cmd += ["-c", f"features.{feature}=false"]
 
         # 원샷은 도구 브리지를 안 세운다(프로세스 기동 비용) — 그 외 다이어트 수단은 없다.
         if not tools_mode:

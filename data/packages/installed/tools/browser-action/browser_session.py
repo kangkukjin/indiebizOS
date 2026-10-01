@@ -32,6 +32,17 @@ MAX_CONSOLE_LOGS = 1000
 MAX_NETWORK_LOGS = 500
 BLOCKED_URL_SCHEMES = {"javascript:", "data:", "file:", "vbscript:"}
 
+
+def normalize_url(url: str) -> str:
+    """스킴 없는 주소에만 https:// 를 붙인다. 빈 페이지(about:blank)는 그대로 둔다.
+
+    ep4214: about:blank 에 https:// 를 붙여 `https://about:blank` 로 보내 다섯 번 연속 실패했다.
+    세 진입점(navigate·새 탭·Chrome 드라이버)이 각자 같은 줄을 들고 있던 것을 한 벌로 모은다."""
+    stripped = (url or "").strip()
+    if stripped.lower().startswith(("http://", "https://")) or stripped.lower() == "about:blank":
+        return stripped
+    return "https://" + stripped
+
 # 로그인 상태(쿠키+localStorage) 자동 영속 파일 — 시작 시 복원, 종료 시 저장.
 # 사람이 headless:false로 한 번 로그인해 두면 이후 headless 크롤도 같은 세션으로
 # 로그인 벽(네이버 카페 등)을 통과한다. launch_persistent_context 대신 storage_state를
@@ -420,8 +431,7 @@ class BrowserSession:
                 for scheme in BLOCKED_URL_SCHEMES:
                     if url_lower.startswith(scheme):
                         return tab_id
-                if not url.startswith(('http://', 'https://')):
-                    url = 'https://' + url
+                url = normalize_url(url)
                 await page.goto(url, wait_until="domcontentloaded", timeout=NAVIGATE_TIMEOUT)
             return tab_id
         except BaseException:
@@ -564,7 +574,10 @@ def ensure_active():
     """브라우저 활성 확인. 비활성이면 에러 dict 반환."""
     session = BrowserSession.get_instance()
     if not session.is_active:
-        return {"success": False, "error": "브라우저가 열려있지 않습니다. browser_navigate를 먼저 호출하세요."}
+        return {"success": False,
+                "error": ("브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, "
+                          f"{AUTO_CLOSE_SECONDS}초 비활성으로 자동 종료). "
+                          '[limbs:browser]{op: "navigate", url: "…"} 로 먼저 여세요.')}
     session._reset_timer()
     return None
 

@@ -513,6 +513,51 @@ def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint
     result["turn_vars"] = tv
 
 
+_CHECKED_CODE_RE = re.compile(r"\s*\$checked:([0-9a-f]{64})\s*")
+
+
+def _offer_checked_code(checked, code) -> None:
+    """검사를 통과한 프로그램에 실행 손잡이를 붙인다 — 같은 원문을 다시 적지 않게(ep4211).
+
+    check 뒤 실행은 같은 프로그램을 통째로 다시 생성했다(다섯 쌍 약 195초, 7K자 한 편에 100초).
+    원문을 증거 저장소에 두고 `code: "$checked:<id>"` 로 부르게 한다. 새 인자가 아니라 `$초안` 과 같은
+    code 자리의 참조다. 비밀 후보로 가려진 원문은 손잡이를 주지 않는다(가려진 문자열이 실행되면 안 된다)."""
+    if not isinstance(checked, dict) or checked.get("ok") is not True or checked.get("executed") is not False:
+        return
+    if not isinstance(code, str) or not code.strip():
+        return
+    try:
+        from model_result_view import evidence_store
+        ref = evidence_store().evidence(json.dumps({"kind": "checked_program", "code": code}, ensure_ascii=False))
+    except (OSError, ValueError, TypeError):
+        return
+    if ref.get("masked_paths"):
+        return
+    checked["execute_args"] = {"code": f"$checked:{ref['id']}"}
+    checked["next_action"] = ('실행하려면 execute_args.code 를 그대로 code 에 넣고 같은 inputs·budget 으로 check 없이 호출하세요 — '
+                              '프로그램 원문을 다시 적지 않습니다. 고칠 때만 code 를 새로 보냅니다. '
+                              '실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.')
+
+
+def _resolve_checked_code(tool_input):
+    """`code: "$checked:<id>"` 를 검사 때 저장한 원문으로 바꾼다. (요청, 오류문) — 참조가 아니면 그대로."""
+    code = (tool_input or {}).get("code")
+    match = _CHECKED_CODE_RE.fullmatch(code) if isinstance(code, str) else None
+    if not match:
+        return tool_input, None
+    again = " 프로그램 원문을 code 로 다시 보내세요."
+    try:
+        from model_result_view import evidence_store
+        page = evidence_store().read_evidence_across_turns(match[1], 0, None)
+        record = json.loads(page["text"])
+    except (ValueError, OSError, TypeError, KeyError) as exc:
+        return tool_input, f"$checked 참조를 읽을 수 없습니다: {exc}.{again}"
+    if (page.get("masked_paths") or not isinstance(record, dict)
+            or record.get("kind") != "checked_program" or not isinstance(record.get("code"), str)):
+        return tool_input, f"$checked 참조가 검사를 통과한 프로그램이 아닙니다.{again}"
+    return {**tool_input, "code": record["code"]}, None
+
+
 def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str = None,
                               cancel_check=None) -> str:
     """execute_ibl 통합 실행기 — IBL 코드 기반
@@ -529,9 +574,20 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
     if tool_input.get("describe") is not None or tool_input.get("read_result") is not None:
         from model_result_view import describe_actions, read_result
         has_code = bool(tool_input.get("code") or tool_input.get("pipeline"))
-        if tool_input.get("read_result") is not None and (has_code or tool_input.get("describe") is not None):
+        if tool_input.get("read_result") is not None and has_code:
             return json.dumps({"success": False, "executed": False,
-                               "error": "read_result는 code·pipeline·describe와 함께 사용할 수 없습니다"}, ensure_ascii=False)
+                               "error": "read_result는 code·pipeline과 함께 사용할 수 없습니다"}, ensure_ascii=False)
+        if tool_input.get("read_result") is not None and tool_input.get("describe") is not None:
+            # 둘 다 효과 없는 조회다 — 한 번에 받게 한다(ep4211: 함께 보냈다가 거절돼 한 라운드를 잃었다).
+            try:
+                page = read_result(tool_input["read_result"])
+                from ibl_edition import authoring_request
+                page["descriptions"] = describe_actions(
+                    tool_input["describe"], allowed,
+                    edition=authoring_request(tool_input).get("edition"))["actions"]
+            except (ValueError, KeyError, TypeError, OSError) as exc:
+                return json.dumps({"success": False, "executed": False, "error": str(exc)}, ensure_ascii=False)
+            return json.dumps(page, ensure_ascii=False)
         try:
             if tool_input.get("describe") is not None:
                 from ibl_edition import authoring_request, source_edition
@@ -611,6 +667,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             _v2["inputs_resolved"] = _ref_notes
         from model_result_view import retain_failed_inputs
         retain_failed_inputs(_v2, tool_input.get("inputs"), _ref_notes)
+        if tool_input.get("check"):
+            _offer_checked_code(_v2, code)
         return json.dumps(_v2 if tool_input.get("check") else _preview_boundary(_v2, tool_input), ensure_ascii=False)
 
     # --- files 파라미터: $file:N 참조 정보 보관 (파싱 후 치환) ---
@@ -1071,6 +1129,10 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     """
     from episode_logger import trajectory_scope, record_trajectory_event, record_ibl_code
 
+    # 검사 통과분 참조는 초크포인트에서 원문으로 바꾼다 — 궤적·코퍼스·관문이 모두 실제 프로그램을 본다.
+    tool_input, _checked_error = _resolve_checked_code(tool_input)
+    if _checked_error:
+        return json.dumps({"success": False, "executed": False, "error": _checked_error}, ensure_ascii=False)
     code = str((tool_input or {}).get("code") or (tool_input or {}).get("pipeline") or "")
     from ibl_scanner import source_heads
     actions = [f"{n}:{a}" for n, a in source_heads(code)]

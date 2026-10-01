@@ -20,6 +20,9 @@ from ibl_v2_types import guard
 
 from common.expression_eval import Binding, ExpressionEvaluator
 
+#: 취소 확인 간격(초). 확인 함수가 파일·프로세스를 보는 경로가 있어 걸음마다 부르지 않는다.
+_CANCEL_CHECK_INTERVAL_S = 0.02
+
 
 class Returned(BaseException):
     def __init__(self, binding):
@@ -68,7 +71,7 @@ class Budget:
             if exceeded:
                 hint = ("도구의 필터·검색으로 입력을 좁히거나 전건을 여러 실행으로 나누세요. "
                         "요청 budget:{steps:...,rows:...}로 한도를 명시할 수도 있습니다(최대 steps 1000000·rows 100000). "
-                        "usage.steps_by_span에서 비용 위치를 확인하세요. 전건 처리가 필요하면 take로 조용히 잘라내지 마세요.")
+                        "usage.steps_by_line에서 비싼 줄을 확인하세요. 전건 처리가 필요하면 take로 조용히 잘라내지 마세요.")
                 dimensions = ", ".join(f"{k} {v['used']:g}/{v['limit']:g}" for k, v in exceeded.items())
                 raise Fault("BUDGET", f"공유 실행 예산을 초과했습니다: {dimensions}. {hint}",
                             kind="budget", details={"exceeded": exceeded, "hint": hint})
@@ -102,6 +105,7 @@ class Runtime(ExpressionEvaluator):
         self.input_evidence = copy.deepcopy(input_evidence or {})
         self.reuse_writes = []
         self.cancel_check = cancel_check
+        self._next_cancel_check = 0.0   # 첫 걸음에서는 바로 확인한다
         self.budget = budget or Budget()
         self.trace, self.recordings = [], []
         self.model_usage = []
@@ -161,8 +165,15 @@ class Runtime(ExpressionEvaluator):
             if cleanup[0] < 0 or time.monotonic() > cleanup[1]:
                 raise Fault("CLEANUP_BUDGET", "정리 예산(100단계·1초)을 초과했습니다.", kind="budget")
             return
-        if self.cancel_check and self.cancel_check():
-            raise Fault("CANCELLED", "실행이 취소되었습니다.", kind="cancelled")
+        if self.cancel_check:
+            # 취소 확인은 걸음마다가 아니라 짧은 간격으로 한다. MCP 경로의 확인은 파일 두 번·프로세스 조회라
+            # 30만 걸음짜리 문장이 3초 대신 35초 걸렸다(ep4211, 초당 9천 걸음). 순수 계산 구간의 취소 반응은
+            # 최대 20ms 늦고, 액션 호출 직후에는 간격과 무관하게 바로 확인한다.
+            now = time.monotonic()
+            if now >= self._next_cancel_check:
+                self._next_cancel_check = now + _CANCEL_CHECK_INTERVAL_S
+                if self.cancel_check():
+                    raise Fault("CANCELLED", "실행이 취소되었습니다.", kind="cancelled")
         self.budget.tick(depth=getattr(self.local, "depth", 0), node_id=getattr(self.local, "node_id", None))
 
     def frame(self, body, env):
@@ -606,8 +617,15 @@ class Runtime(ExpressionEvaluator):
         reuse_parts = {name: digest(value) for name, value in reuse_identity.items()}
         stateful = bool(spec.stateful and spec.stateful(args.value))
         parents = args.evidence | (self.foreign_evidence if stateful else frozenset())
+        # 실행 시점에 실제로 넘어간 짧은 글자 인자 — 평가 원장이 계산된 경로·주소를 본다(ep4211:
+        # `path:$out+"/report.md"` 는 코드 글자에 없어 재독이 '안 한 일'로 판정됐다). 이름을 고르지 않고
+        # 길이로만 가른다: 긴 글자는 본문이지 대상이 아니다. 순수 계산 호출은 싣지 않는다.
+        targets = ({name: value for name, value in list(args.value.items())[:24]
+                    if isinstance(value, str) and value and len(value) <= 300}
+                   if contract["effects"] != ["pure"] else {})
         eid = self.event(node, "invoke", parents, action=key,
-                         effects=contract["effects"], request_hash=request_hash)
+                         effects=contract["effects"], request_hash=request_hash,
+                         **({"targets": dict(list(targets.items())[:8])} if targets else {}))
         tool_evidence = {}
         external = contract["effects"] != ["pure"]
         read_only = (contract["effects"] == ["read_external"] or
@@ -739,6 +757,9 @@ class Runtime(ExpressionEvaluator):
                         with bind_scope(self.commit_scope, observed_at):
                             value = spec.run(self, copy.deepcopy(args.value))
                     finally:
+                        # 호출 뒤 첫 걸음은 바로 취소를 확인한다 — 호출 도중 들어온 취소가
+                        # 간격에 가려 성공으로 끝나지 않게(걸음 간격 확인은 순수 계산 구간에만 적용된다).
+                        self._next_cancel_check = 0.0
                         with self.lock:
                             self.model_usage.extend(usage)
                         if usage:
@@ -846,6 +867,9 @@ class Runtime(ExpressionEvaluator):
                    "value_wire": {"protocol": wire_protocol(result.value), "data": wire}}
         except Fault as exc:
             out = {"success": False, "error": str(exc), "diagnostic": projection(exc.view(self.plan.source))}
+            from ibl_v2_analysis import RUNTIME_HINTS
+            if exc.code in RUNTIME_HINTS and isinstance(out["diagnostic"], dict):
+                out["diagnostic"].setdefault("hint", RUNTIME_HINTS[exc.code])
             out.update(self._partial_transport(exc.partial))
         out.update({"edition": 2, "executed": True, "plan_hash": self.plan.fingerprint,
                     "source_complete": not any(e.get("incomplete") for e in self.trace),

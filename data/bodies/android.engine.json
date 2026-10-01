@@ -104,6 +104,7 @@
     "cognition/ibl_usage_generator",
     "cognition/ibl_usage_rag",
     "cognition/ibl_v2_experience",
+    "cognition/legacy_example_projection",
     "cognition/member_runner",
     "cognition/member_session",
     "cognition/memory_consolidation",
@@ -502,8 +503,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 427,
-    "engine": 401,
+    "total": 428,
+    "engine": 402,
     "blocklist": 26
   }
 }

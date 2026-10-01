@@ -284,6 +284,7 @@ async def execute_ibl(code: str, project_path: str = "",
     결과는 value이며 목록은 목록 그대로입니다. 필요한 도구 계약은 code="",
     describe=["node:action"] 또는 ["fn:이름"]으로 조회합니다. code와 describe를 함께 주면
     계약 조회 성공 후 코드를 한 번 실행하고 descriptions를 덧붙입니다. 긴 프로그램은 check=True로 먼저 검사합니다.
+    검사를 통과하면 반환된 execute_args.code("$checked:…")를 code에 그대로 넣어 원문을 다시 적지 않고 실행합니다.
     issues의 location/call_path/hint로 오류를 모아 고친 뒤 전체를 재검사합니다.
     warnings는 의도를 확인하며 incomplete는 실행 중 검사할 경계가 있다는 뜻입니다.
 

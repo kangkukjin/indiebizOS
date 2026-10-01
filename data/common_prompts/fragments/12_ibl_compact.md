@@ -58,8 +58,8 @@ is_ok/unwrap/error_of로 성공·실패를 나눈다. Unit을 원 행으로 대�
 self:script{id,args}는 기존 등록 스크립트도 직접 호출한다. JSON stdout 전체가 값이고 .items를 자동 추출하지 않는다.
 새 저장 함수는 명시 인자와 #!ibl edition=2 헤더로 의미를 고정한다. 구형 원문을 실행할 때만 저장된 판본을 따른다.
 
-긴 프로그램은 check:true로 먼저 검사한다. invalid는 실행하지 않고 incomplete는 실행 중 검사할 경계가 남았다는 뜻이다.
-실행 요청 budget:{steps,rows}로 상한을 조절한다(최대 100만/10만). 사용 비용은 usage.steps_by_line으로 확인한다.
+긴 프로그램은 check:true로 검사하고 통과하면 execute_args.code로 실행한다. invalid는 실행하지 않고 incomplete는 실행 중 검사할 경계가 남은 것이다.
+실행 요청 budget:{steps,rows}로 상한을 조절한다(최대 100만/10만). 비싼 줄은 usage.steps_by_line에 실린다.
 결과는 value이며 success/source_complete/diagnostic/evidence도 확인한다. 도구 내부 실패·부분 원천은 성공으로 덮지 않는다.
 result_ref.read_args를 code="",read_result=...로 보내 저장된 원문을 읽는다. 다음 페이지는 next_read를 따른다.
 원문의 실제 경로를 사용하고 상세 열람을 위해 실행을 반복하지 않는다. 이미지 블록은 호스트 이미지 출력으로 전달한다.

@@ -367,9 +367,10 @@ return $목차
 일부 값은 `path:["value","rows"]`로 선택한다. 여러 참조는 `{"반":[{"$ref":a},{"$ref":b}]}`처럼
 목록·레코드에 둔다. `inputs:{"$ref":...}`는 이름이 없어 거절된다. 실패 실행 전체 대신
 성공 가지는 `partial_reads`, 실패 가지의 불완전 자료는 `failed_partial_reads`를 쓴다.
-각 `read_args`·`input_args`로 조회·재사용한다. `input_unavailable`이면 명시된 제한을 따른다.
+`read_args`·`input_args`로 조회·재사용한다. `input_unavailable`이면 제한을 따른다.
 순차 실패의 완료 호출은 `result_ref.completed_calls[].input_args`, 거절된 입력은
-`request_inputs.input_args`로 재사용한다. 가려진 값은 제외하며 전체 성공을 뜻하지 않는다.
+`request_inputs.input_args`로 재사용한다. 실패 호출 인자는 `result_ref.failed_calls[].input_args`,
+생략된 참조 목록은 `calls_read_args`로 회수한다([Script 예제](script.md)). 마스킹·불완전성은 유지한다.
 원문 판단이 필요할 때만 `read_result`로 읽는다. 그 `input_args`는 표시 페이지가 아닌 선택 경로의 전체 값이다.
 `read_scope`는 이번 응답의 경로·문자 범위이고 `format:"text"`는 문자열 원문, `"json"`은 구조 값의 JSON이다.
 `complete:true`면 하위까지 전달됐으니 재독하지 않는다. `next_read:null`은 중간 offset에서 읽은 끝 페이지일 수도 있다.
@@ -377,6 +378,7 @@ return $목차
 실행 응답의 `resume:{run_id}`와 동일 `code`·`inputs`를 다음 execute_ibl 호출에 보낸다.
 완료한 도구 호출은 저장된 값으로 복원한다. 반복의 같은 인자도 서로 다른 호출로 기록한다.
 코드·입력·도구 구현이 달라지거나 외부 작업의 완료를 확인하지 못하면 재개하지 않는다.
+`RESUME_DIVERGED`의 `details.changed/fingerprints`는 변경 차원의 지문이다. 옛 기록은 `dimensions_known:false`다.
 취소 후 finally가 외부 정리를 수행한 경우도 새 작업 계획이 필요하다. 확인된 실패를 몰래 재시도하지 않는다.
 회원 기록은 사적 세션의 수명을 따르고, 주인 기록은 백엔드 재기동 후에도 남는다.
 코드를 고쳤고 이전 읽기를 이어 쓸 의도라면 `continuation.reuse_args`를 요청에 합친다.
@@ -497,7 +499,7 @@ assert는 작성한 조건을 실제 결과에 대해 검사하며 조건 자체
 전체 값을 유지한다. 후보의 조건 필터·필드 선택은 이 전체 값에 적용하고 결과만 반환한다.
 날짜·이름 등 중요한 필드가 압축되면 해당 경로만 더 읽는다. 작은 완결 결과는 그대로 온다.
 
-결과 참조 `inputs:{자료:{"$ref":"id"}}`는 `$자료` 자체가 업무 값이다. `.value`를 다시 붙이지 않는다. 오류의 `result_ref.read_args`는 진단을 우선 열고, `evidence_summary`는 내부 도구·원천 실패를 상위 실행 성공과 구분한다. 원문 가공은 참조로 수행하고 판단에 필요한 필드만 읽는다. 가이드 본문이 현재 문맥에 남아 있으면 재독하지 않는다. 변경 확인은 `read_guide`의 `if_hash`, 특정 절만 재확인할 때는 `section`을 쓴다. 본문이 문맥에서 사라졌으면 전문을 다시 읽는다.
+`evidence_summary`는 내부 도구·원천 실패를 상위 실행 성공과 구분한다. 오류의 `result_ref.read_args`는 진단을 먼저 연다. 가이드 재독 대신 변경 확인은 `read_guide`의 `if_hash`, 특정 절만 재확인할 때는 `section`을 쓴다. 본문이 문맥에서 사라졌으면 전문을 다시 읽는다.
 일반 파일에서 특정 문단을 찾을 때는 `self:grep`의 `pattern`·`context` 또는
 `self:read`의 줄 범위를 사용한다. 이미 받은 본문은 다시 읽지 않고 참조 입력으로 가공한다.
 액션의 인자가 불명확하면 `describe`의 `callable_contract`와 `target_description`을 함께 본다.

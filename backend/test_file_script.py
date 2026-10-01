@@ -202,6 +202,7 @@ def test_completed_script_receipt_is_restored_and_changed_source_is_rejected(ibl
     with Journal(tmp_path / 'journal', 'test', {'run_id': run_id}) as journal:
         changed = ibl(code, journal=journal)
     assert not changed['success'] and changed['diagnostic']['code'] == 'RESUME_DIVERGED', changed
+    assert changed['diagnostic']['details']['changed'] == ['invocation_dependency.source_hashes']
     assert len(list((workspace().parent / 'executions').iterdir())) == before
 
 

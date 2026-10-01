@@ -131,6 +131,21 @@ def resources_overlap(reads, writes):
     return False
 
 
+def request_fingerprints(request):
+    """Diagnostic dimensions only: persist hashes, never source, arguments or secrets."""
+    parts = {key: digest(value) for key, value in request.items()
+             if key != 'invocation_dependency'}
+    dependency = request.get('invocation_dependency')
+    if isinstance(dependency, dict):
+        parts.update({f'invocation_dependency.{key}': digest(value)
+                      for key, value in dependency.items()
+                      if not (key == 'environment_fingerprint' and
+                              'environment_metadata_fingerprint' in dependency)})
+    elif dependency is not None:
+        parts['invocation_dependency'] = digest(dependency)
+    return parts
+
+
 class Journal:
     def __init__(self, root, identity, resume=None):
         if resume is not None and (not isinstance(resume, dict) or set(resume) != {"run_id"}):
@@ -169,6 +184,7 @@ class Journal:
                     ('calls', 'reusable', 'INTEGER NOT NULL DEFAULT 0'),
                     ('calls', 'state_change', 'INTEGER NOT NULL DEFAULT 1'),
                     ('calls', 'resources', 'TEXT'),
+                    ('calls', 'request_parts', 'TEXT'),
                     ('lifecycle', 'source_complete', 'INTEGER')):
                 if column not in {r[1] for r in self.db.execute(f'PRAGMA table_info({table})')}:
                     self.db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {declaration}')
@@ -223,12 +239,24 @@ class Journal:
             pass  # The SQLite receipt remains authoritative.
 
     @durable
-    def begin(self, call_id, request_hash, cleanup=False, *, reusable=False, state_change=True, resources=None):
+    def begin(self, call_id, request_hash, cleanup=False, *, reusable=False, state_change=True,
+              resources=None, request_parts=None):
         with self.lock:
-            row = self.db.execute("SELECT request,receipt FROM calls WHERE id=?", (call_id,)).fetchone()
+            row = self.db.execute("SELECT request,receipt,request_parts FROM calls WHERE id=?", (call_id,)).fetchone()
             if row:
                 if row[0] != request_hash:
-                    raise Fault("RESUME_DIVERGED", "기록된 호출의 입력이 달라졌습니다.", kind="protocol")
+                    before = json.loads(row[2]) if row[2] else None
+                    changes = ({key: {'before': before.get(key), 'after': request_parts.get(key)}
+                                for key in sorted(set(before) | set(request_parts))
+                                if before.get(key) != request_parts.get(key)}
+                               if before is not None and request_parts is not None else {})
+                    raise Fault("RESUME_DIVERGED", "기록된 호출의 인자·코드·실행 환경 지문이 달라졌습니다.",
+                                kind="protocol", details={
+                                    'run_id': self.run_id, 'call_id': call_id,
+                                    'changed': list(changes), 'fingerprints': changes,
+                                    'dimensions_known': before is not None and request_parts is not None,
+                                    'hint': '이 실행은 재개하지 않습니다. 완료된 결과나 실패 인자 참조를 회수해 '
+                                            '필요한 부분만 새 실행으로 요청하세요. 효과 불명 호출은 먼저 확인하세요.'})
                 if row[1] is None:
                     raise Fault("EFFECT_UNCERTAIN", "외부 작업의 완료를 확인할 수 없습니다. 영수증을 확인하기 전에는 재실행하지 않습니다.",
                                 kind="protocol", details={"run_id": self.run_id, "call_id": call_id})
@@ -243,9 +271,9 @@ class Journal:
                         self.db.execute('UPDATE calls SET reusable=0 WHERE id=?', (old_id,))
             pending_write = any(resources_overlap(resources, json.loads(row[0]) if row[0] else None)
                                 for row in self.db.execute('SELECT resources FROM calls WHERE state_change=1 AND receipt IS NULL'))
-            self.db.execute("INSERT INTO calls(id,request,receipt,reusable,state_change,resources) VALUES(?,?,NULL,?,?,?)",
+            self.db.execute("INSERT INTO calls(id,request,receipt,reusable,state_change,resources,request_parts) VALUES(?,?,NULL,?,?,?,?)",
                             (call_id, request_hash, int(reusable and not pending_write), int(state_change),
-                             json.dumps(resources)))
+                             json.dumps(resources), json.dumps(request_parts) if request_parts is not None else None))
             self.db.execute("UPDATE lifecycle SET updated=?", (time.time(),))
             self.db.commit()
             return None

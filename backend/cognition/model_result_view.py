@@ -590,14 +590,17 @@ def retain_failed_inputs(result, inputs, notes=()):
 
 
 def completed_call_references(result):
-    """A later failure must not hide already completed sequential work."""
+    """Bound the display, not access to completed values and resolved failure inputs."""
     from ibl_v2_ir import unpack
     completed = [r for r in result.get("recordings", []) if "value" in r and "error" not in r]
     events = {event['id']: event for event in result.get('evidence', [])}
 
-    def incomplete(receipt):
-        pending = [event['id'] for event in events.values()
-                   if event.get('kind') == 'invoke' and event.get('request_hash') == receipt.get('request_hash')]
+    def incomplete(receipt, arguments=False):
+        if arguments and 'argument_incomplete' in receipt:
+            return bool(receipt['argument_incomplete'])
+        pending = (list(receipt.get('argument_evidence', [])) if arguments else
+                   [event['id'] for event in events.values()
+                    if event.get('kind') == 'invoke' and event.get('request_hash') == receipt.get('request_hash')])
         seen = set()
         while pending:
             eid = pending.pop()
@@ -605,22 +608,35 @@ def completed_call_references(result):
                 continue
             seen.add(eid)
             event = events.get(eid, {})
-            if event.get('incomplete'):
+            if event.get('incomplete') or arguments and not event:
                 return True
             pending.extend(event.get('parents', []))
-        return bool((receipt.get('evidence') or {}).get('incomplete'))
+        return not arguments and bool((receipt.get('evidence') or {}).get('incomplete'))
 
-    entries = []
-    for index, receipt in enumerate(completed[:6]):
+    def entry(index, receipt, arguments=False):
         evidence = receipt.get("evidence") or {}
-        complete = not incomplete(receipt)
-        ref = retained_value_reference(unpack(receipt["value"]),
+        complete = not incomplete(receipt, arguments)
+        ref = retained_value_reference(unpack(receipt['arguments' if arguments else 'value']),
             complete=complete,
             origin={"run_id": (result.get("resume") or {}).get("run_id"),
-                    "request_hash": receipt.get("request_hash"), "evidence": evidence})
-        entries.append({"index": index, "action": receipt.get("action"), "source_complete": complete,
-                        **{k: ref[k] for k in ("read_args", "input_args", "input_unavailable") if k in ref}})
-    return {"completed_calls": entries, "completed_calls_omitted": max(0, len(completed) - 6)} if entries else {}
+                    "request_hash": receipt.get("request_hash"), "evidence": evidence,
+                    'kind': 'resolved_arguments' if arguments else 'completed_value'})
+        return {"index": index, "action": receipt.get("action"), "source_complete": complete,
+                **{k: ref[k] for k in ("read_args", "input_args", "input_unavailable") if k in ref}}
+
+    entries = [entry(i, r) for i, r in enumerate(completed)]
+    failed = [entry(i, r, True) for i, r in enumerate(result.get('recordings', []))
+              if 'error' in r and 'arguments' in r]
+    out = {'completed_calls': entries[:6], 'completed_calls_omitted': max(0, len(entries) - 6),
+           'failed_calls': failed[:6], 'failed_calls_omitted': max(0, len(failed) - 6)}
+    if len(entries) > 6 or len(failed) > 6:
+        index = evidence_store().evidence({'completed_calls': entries, 'failed_calls': failed})
+        out['calls_read_args'] = {'id': index['id'], 'offset': 0, 'limit': DEFAULT_LIMIT}
+    if failed:
+        out['failed_calls_hint'] = ('실패 호출에 전달된 해석 완료 인자입니다. input_args로 회수한 $입력은 '
+                                    '도구 인자 Record입니다. 실패 원인을 수정하고 필요한 호출만 새로 실행하세요. '
+                                    '참조 회수는 재시도 승인이나 외부 효과의 취소를 뜻하지 않습니다.')
+    return out if entries or failed else {}
 
 
 def project_v2_result(result):

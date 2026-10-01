@@ -43,7 +43,7 @@ import sys
 from urllib.parse import unquote, urlparse
 
 
-def fingerprint(source_root):
+def fingerprint(source_root, *, details=False):
     h = hashlib.sha256(sys.version.encode())
     for dist in sorted(metadata.distributions(), key=lambda d: d.metadata.get('Name', '')):
         h.update((dist.metadata.get('Name', '') + '=' + dist.version).encode())
@@ -61,7 +61,8 @@ def fingerprint(source_root):
                 for path in sorted(root.rglob('*.py')):
                     if '.venv' not in path.parts and '.git' not in path.parts:
                         h.update(str(path).encode()); h.update(path.read_bytes())
+    environment = h.hexdigest()
     for path in sorted(Path(source_root).glob('*.py')):
         h.update(path.read_bytes())
-    return h.hexdigest()
-
+    combined = h.hexdigest()
+    return {'combined': combined, 'environment': environment} if details else combined

@@ -615,7 +615,7 @@ class Runtime(ExpressionEvaluator):
                       and spec.reusable(args.value)))
         model_only = contract['effects'] == ['model'] and model_identity is not None
         reusable_read = (read_only or model_only) and not contract.get('per_run', False)
-        from ibl_run_journal import call_resources, resources_overlap
+        from ibl_run_journal import call_resources, resources_overlap, request_fingerprints
         state_change = external and not read_only and contract['effects'] != ['model']
         footprint = call_resources(spec, contract, args.value, 'write' if state_change else 'read')
         if model_only:
@@ -641,7 +641,8 @@ class Runtime(ExpressionEvaluator):
         receipt, source = None, "journal"
         if self.journal and external:
             receipt = self.journal.begin(call_id, request_hash, getattr(self.local, "cleanup", None) is not None,
-                                         reusable=reusable_read, state_change=state_change, resources=footprint)
+                                         reusable=reusable_read, state_change=state_change, resources=footprint,
+                                         request_parts=request_fingerprints(request))
         if self.replay and external and receipt is None:
             with self.lock:
                 receipt = next((r for r in self.recorded if r["request_hash"] == request_hash), None)
@@ -765,6 +766,27 @@ class Runtime(ExpressionEvaluator):
                 receipt = {"request_hash": request_hash, "action": key, "reuse_key": reuse_key,
                            "error": projection(exc.view(self.plan.source)), "partial": pack(exc.partial),
                            **({'evidence': {'model_usage': copy.deepcopy(usage)}} if usage else {})}
+                # Keep resolved values, including pure calculations made before the failed leaf.
+                # Callables are not portable values; never turn their display form into input.
+                try:
+                    receipt['arguments'] = pack(args.value)
+                    receipt['argument_evidence'] = list(args.evidence)
+                    # Persist the input status as well: original event ids are not
+                    # necessarily present in the trace of a later journal replay.
+                    with self.lock:
+                        ancestors = {event['id']: event for event in self.trace}
+                    pending, seen = list(args.evidence), set()
+                    receipt['argument_incomplete'] = False
+                    while pending:
+                        parent = pending.pop()
+                        if parent in seen:
+                            continue
+                        seen.add(parent)
+                        event = ancestors.get(parent, {})
+                        receipt['argument_incomplete'] |= bool(event.get('incomplete')) or not event
+                        pending.extend(event.get('parents', []))
+                except Fault:
+                    receipt['arguments_unavailable'] = '호출 인자의 손실 없는 값 전송을 지원하지 않습니다.'
                 if self.journal and external:
                     self.journal.finish(call_id, receipt)
                 with self.lock:

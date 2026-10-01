@@ -67,10 +67,14 @@ return $r.items
 
 `수정전/수정후`는 inputs Text다. 앞 실행의 확정 값은 반환된
 `result_ref.completed_calls`의 `input_args` 또는 기존 `$ref`로 `확정입력`에 연결한다.
+단일 프로그램 후반 실패의 순수 계산값도 `result_ref.failed_calls[].input_args`로 회수할 수 있다.
+회수한 `$입력`은 도구 인자 Record이므로 `args:$입력.args`로 연결한다. 생략된 완료 호출 목록은
+`result_ref.calls_read_args`로 읽는다. 비밀값 마스킹·원천 불완전성과 기존 참조 권한은 유지된다.
 읽기 재사용은 기존 `reuse:{run_id}` 규칙을 따른다. Script 효과는 **unknown**이며 자동 결과
 재사용·자동 재시도 대상이 아니다. 실패에도 외부 효과가 남았을 수 있으므로 수정 후 실행은
 **새 시도**다. 같은 코드·입력의 `resume`은 확인된 성공/실패 영수증만 복원한다. 코드/환경 변경은
-`RESUME_DIVERGED`, 미완료 영수증은 `EFFECT_UNCERTAIN`으로 막고 Python을 다시 돌리지 않는다.
+`RESUME_DIVERGED`로 거절하며 `details.changed`에 `invocation_dependency.source_hashes`(코드),
+`environment_metadata_fingerprint`(환경), `interpreter` 등의 변경 지문을 표시한다. 미완료 영수증은 `EFFECT_UNCERTAIN`으로 막고 Python을 다시 돌리지 않는다.
 
 실제 작업 문맥의 `~turn`은 그 작업의 도구 호출 사이에 유지된다. 작업 ID가 없는 독립 API 호출은
 요청마다 다른 폴더를 받으며 같은 요청의 resume은 원래 폴더를 쓴다. 코드 사본·stdin 원문·

@@ -22,9 +22,11 @@ def invocation_identity(args):
         root = workspace().resolve()
         hashes = {p.relative_to(root).as_posix(): digest(p.read_bytes())
                   for p in sorted(root.rglob('*.py')) if '__pycache__' not in p.parts}
+        environment = fingerprint(root, details=True)
         return {'entry': path.relative_to(root).as_posix(), 'source_hashes': hashes,
                 'workspace': str(root), 'interpreter': sys.executable,
-                'python_version': sys.version, 'environment_fingerprint': fingerprint(root)}
+                'python_version': sys.version, 'environment_fingerprint': environment['combined'],
+                'environment_metadata_fingerprint': environment['environment']}
     except (PermissionError, OSError, ValueError) as exc:
         raise Fault('SCRIPT_PATH', str(exc), kind='permission') from exc
 

@@ -236,10 +236,33 @@ class CognitiveConsciousnessMixin:
     )
 
     def _is_repair_cue(self, message: str) -> bool:
-        """비-LLM 결정론 REPAIR 탐지(토큰 0) — 구역어+수리동사 동시 출현."""
+        """직접 수리 단서만 강제한다. 인용·금지·가정은 일반 의도 판정에 남긴다."""
         low = (message or "").lower()
-        return (any(z in low for z in self._REPAIR_ZONE_WORDS)
-                and any(v in low for v in self._REPAIR_VERB_WORDS))
+        # 인용된 요청/코드가 현재 사용자의 수리 요청이 되는 것을 막는다.
+        low = re.sub(r'```[\s\S]*?```', ' ', low)
+        def quoted(match):
+            text = match.group()[1:-1]
+            # 따옴표 친 파일/구역 이름은 직접 요청의 목적어일 수 있다.
+            return (' ' if any(z in text for z in self._REPAIR_ZONE_WORDS)
+                    and any(v in text for v in self._REPAIR_VERB_WORDS) else text)
+        low = re.sub(r'`[^`]*`|"[^"\n]*"|“[^”]*”|‘[^’]*’|(?<!\w)\'[^\'\n]*\'(?!\w)', quoted, low)
+        low = re.sub(r'(?m)^\s*>.*$', ' ', low)
+        clauses = re.split(r'[;\n,]|[.!?。](?=\s|$)|(?<=말고)|(?<=않고)|(?<=지만)|\bbut\b', low)
+        for clause in clauses:
+            if not (any(z in clause for z in self._REPAIR_ZONE_WORDS)
+                    and any(v in clause for v in self._REPAIR_VERB_WORDS)):
+                continue
+            if re.search(r'(?:하지|고치지)\s*(?:마|말|않)|안\s*(?:수리|수정|고치|고쳐|패치)|'
+                         r'(?:수리|수정|패치)(?:은|는|을|를)?\s*안\s*|'
+                         r'(?:수리|수정|패치)\s*(?:금지|불필요)|'
+                         r'(?:요청|원하|필요로\s*하)지\s*않|필요(?:가|는)?\s*없|'
+                         r'\b(?:do\s+not|don[’\x27]t|never|without|no\s+(?:fix|repair))\b', clause):
+                continue
+            if re.search(r'(?:수리|수정|패치)(?:한다면|하면|했다고\s*가정|할\s*경우)|고치면|'
+                         r'\b(?:suppose|hypothetically|what\s+if)\b', clause):
+                continue
+            return True
+        return False
 
     # 되돌리기 어렵거나 오래 걸리는 op — 회상된 코드 자체에서 읽는다(세계의 명사 아님).
     # 키의 따옴표·공백 표기(`op: "deploy"` / `"op":"deploy"` / `op:'build'`)에 무관하게 잡는다(2026-09-26 —
@@ -301,7 +324,7 @@ class CognitiveConsciousnessMixin:
         # 경량 반사에 흘러가면 안 된다(수리=고급 모델+의식 각성 전용, 헌법 2026-08-05).
         # 의식 OFF 경로(분류기 스킵)에서도 이 결정론 검사가 REPAIR 를 잡는다.
         if self._is_repair_cue(message):
-            print("[무의식] 분류: REPAIR (결정론 단서 — 구역어+수리동사)")
+            print("[무의식] 분류: REPAIR (결정론 단서 — 직접 수리 요청)")
             return "REPAIR", None
         if (hippocampus_score or 0) >= self.REFLEX_SCORE_THRESHOLD and top_code:
             # 안전핀 — 점수가 높아도 '한 방에 내보낼 답'이 아니면 반사를 포기하고

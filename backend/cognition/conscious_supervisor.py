@@ -266,6 +266,10 @@ class Supervisor:
         binding = pursuit_current()
         self.pursuit = binding
         self.repair_granted = repair
+        if (framing or {}).get("_framing_source") == "repair_continuation":
+            from repair_continuation import current as repair_current
+            prior = repair_current() or {}
+            self.verifications.records = list(prior.get("verification_records", []))
         if binding and binding.row:
             self.original_pursuit = {k: binding.row[k] for k in ("id", "version", "goal_criteria")}
         self.log("framing", role="consciousness" if self.enabled else "harness",
@@ -800,13 +804,14 @@ class Supervisor:
         set_goal_eval_outcome(False, 0, status="UNKNOWN", reason="검수 진행 중")
         self.finalizing = True
         self.review_cursor = 0  # 증거는 턴 전체에서 수집하되 평가는 의식이 정한 기준으로 한정한다.
-        self.store.put_response(response)
+        if not getattr(self, "_resume_evaluation", False):
+            self.store.put_response(response)
         decision = {"status": "UNKNOWN", "reason": "검수가 완료되지 않았습니다"}
         with self.review_lock:
             self.executor_paused = True
             # 예전 설정에 2 이상이 남아 있어도 최종 보완은 한 번으로 제한한다.
             max_repairs = min(1, max(0, self.config["max_repairs"]))
-            repairs_used = evidence_reads = 0
+            repairs_used, evidence_reads = getattr(self, "_final_repair_counts", (0, 0))
             # 기존 증거 회수는 실제 결함 수리 기회를 소모하지 않는다.
             for attempt in range(max_repairs + 2):
                 if self.cancelled():
@@ -815,7 +820,17 @@ class Supervisor:
                 self.call_stop = None
                 yield {"type": "thinking", "content": "평가자가 의식이 정한 달성 기준의 충족 여부를 확인하고 있습니다."}
                 try:
-                    prepare(self, tool_calls)
+                    if getattr(self, "_resume_evaluation", False):
+                        self._resume_evaluation = False
+                        changed = snapshot_error(self)
+                        if changed:
+                            decision = {"status": "UNKNOWN", "reason": changed + " — 보존된 검수 증거 재사용 불가"}
+                            break
+                    else:
+                        prepare(self, tool_calls)
+                    from repair_continuation import review_checkpoint
+                    self._final_repair_counts = [repairs_used, evidence_reads]
+                    review_checkpoint(self, self._evaluation_packet, self._evaluation_snapshot)
                     raw = invoke(self, "", phase="final")
                     decision = ({"status": "UNKNOWN", **self.call_stop} if self.call_stop
                                 else parse_decision(raw))
@@ -891,6 +906,15 @@ class Supervisor:
                             yield event
                 self.log("ownership.handoff", role="harness", to="evaluate")
                 self.executor_paused = True
+                pending = defer(self, self.store.text)
+                if pending:
+                    reason = "검수 보완에서 예약한 변경을 적용한 뒤 같은 완료 기준으로 이어갑니다."
+                    set_goal_eval_outcome(False, 0, status="PENDING_APPLY", reason=reason)
+                    print("[GoalEval] 최종 판정: PENDING_APPLY")
+                    final = self.store.text + "\n\n[적용 대기] " + reason
+                    yield {"type": "text", "content": final}
+                    yield {"type": "final", "content": final}
+                    return final
                 if self.store.version == before_version and not self.repair_kept:
                     decision = {"status": "UNKNOWN", "reason": "실행자의 보완 결과가 patch/keep로 확정되지 않았습니다"}
                     self.log("repair.unconfirmed", role="harness", decision=decision)
@@ -927,6 +951,9 @@ class Supervisor:
                 approved = False
                 decision = {"status": "UNKNOWN", "reason": "검수 중 전체 과제가 변경되어 완료 승인을 적용하지 못했습니다"}
         status = "ACHIEVED" if approved else "NOT_ACHIEVED" if decision["status"] == "REWORK" else "UNKNOWN"
+        from repair_continuation import finish_review
+        if finish_review(self, decision):
+            status = "PENDING_REVIEW"
         set_goal_eval_outcome(approved, 2 if status == "NOT_ACHIEVED" else 0,
                               status=status, reason=decision.get("reason", ""))
         # 과거 원문·승인 지문과 실패 범주를 보존해 다음 요청에서 재검수할 수 있다.
@@ -939,7 +966,11 @@ class Supervisor:
         }, ensure_ascii=False), encoding="utf-8")
         print(f"[GoalEval] 최종 판정: {status}")
         final = self.store.text
-        if not approved:
+        if status == "PENDING_REVIEW":
+            final += "\n\n[평가 대기] 구현과 검사 결과를 보존했습니다. 평가만 재개하며 구현은 반복하지 않습니다."
+            if (getattr(self, "_review_row", {}) or {}).get("review_failures", 0) >= 3:
+                final += " 평가 서비스가 계속 실패해 자동 호출을 멈췄습니다. 평가 재개가 필요합니다."
+        elif not approved:
             final += "\n\n[평가 검수 미승인] " + str(decision.get("reason", "검수 미완료"))
         self.log("response.delivered", role="harness", status=decision["status"], response=self.store.manifest())
         yield {"type": "text", "content": final}

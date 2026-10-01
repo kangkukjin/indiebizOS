@@ -5709,7 +5709,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-02'
-          impl: fe953160342b6770
+          impl: 53b146a3824d2f0c
         target_key: path
         aliases:
           offset:
@@ -5722,7 +5722,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-02'
-          impl: fe953160342b6770
+          impl: 53b146a3824d2f0c
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5799,7 +5799,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-02'
-          impl: fe953160342b6770
+          impl: 53b146a3824d2f0c
         target_key: path
       list:
         callable_contract:
@@ -6194,7 +6194,7 @@ nodes:
             apply: 격리 변경을 검증 후 통과분만 라이브 적용. proposal_id 로 제안 적용. backend 는 턴 종료 후 적용
             status: 스테이징 세션 + 적용 대기 제안 현황 — 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔나
             discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
-        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 적용 후 확인 명령은 verify_cmd 로 위탁 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 적용 후 파생물 검증 실패는 applied:true와 success:false·verified:false로 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
+        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 활성화 후 기능 검사·커밋은 active_verify_cmd 로 위탁 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 적용 후 파생물 검증 실패는 applied:true와 success:false·verified:false로 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
         aliases:
           old_string:
           - old
@@ -6516,7 +6516,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-02'
-          impl: fe953160342b6770
+          impl: 53b146a3824d2f0c
         pipe_in: true
         lands_on: body
         limb_op:

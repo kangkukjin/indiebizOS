@@ -480,6 +480,7 @@ class CognitiveEvalMixin:
             eval_response = system_ai_call(prompt, system_prompt=evaluator_system_prompt,
                                            images=eval_images, role="evaluate")
             if eval_response is None or not eval_response.strip():
+                self.evaluation_retryable = True
                 self._log("[GoalEval] AI 응답 없음 — 검수 미완료")
                 return None, "평가 모델의 응답이 없어 검수를 마치지 못했습니다", 0
 
@@ -488,6 +489,7 @@ class CognitiveEvalMixin:
             # 관용 파서 — 서두 문장·마크다운 장식 뒤로 밀린 판정도 흡수 (모듈 함수 참조)
             achieved, severity = parse_eval_verdict(eval_response)
             if achieved is None:
+                self.evaluation_retryable = not bool(_VERDICT_WORD_RE.search(eval_response))
                 return None, "평가 응답에 달성 여부 판정이 없습니다: " + eval_response, 0
             if achieved is False:
                 defects = parse_criterion_defects(eval_response, contract)
@@ -501,6 +503,7 @@ class CognitiveEvalMixin:
 
         except Exception as e:
             self._log(f"[GoalEval] 평가 오류: {e}")
+            self.evaluation_retryable = True
             return None, f"평가 오류로 검수를 마치지 못했습니다: {e}", 0
 
     def _run_goal_evaluation_stream(self, user_message: str, criteria: str,

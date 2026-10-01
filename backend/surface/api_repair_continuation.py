@@ -16,6 +16,24 @@ _lock = threading.Lock()
 _last_scan = 0.0
 
 
+def active_check(row, base=None):
+    """ACTIVE에서만 소비자가 호출한다. 부수효과의 불확실한 실행은 자동 반복하지 않는다."""
+    result = row.get("result") or {}
+    command = result.get("active_verify_cmd")
+    if result.get("outcome") != "healthy" or not command:
+        row["phase"] = "verify_remaining" if result.get("outcome") == "healthy" else "repair_apply"
+        return save(row, base)
+    if not row.get("active_verify"):
+        row.update(phase="active_verify", active_verify={"state": "running", "command": command})
+        save(row, base)  # 실행 뒤 영수증 전에 죽었으면 재실행하지 않고 실행자가 확인한다.
+        from red_apply import _run_post_verify
+        checked = _run_post_verify(str(base or get_base_path()), command)
+        row["active_verify"] = {"state": "passed" if checked.get("exit_code") == 0 else "failed",
+                                "receipt": checked}
+    row["phase"] = "verify_remaining" if row["active_verify"]["state"] == "passed" else "repair_active"
+    return save(row, base)
+
+
 def _project_runner(row):
     from api_agents import start_agent
     from agent_registry import agent_runners
@@ -89,6 +107,7 @@ def _settle(row, status, response, base):
             # 새 적용 예약을 방금 만든 자식은 호출자가 여기로 오지 않는다.
             save({**item, "status": status}, base)
             tasks.update((item["task_id"], item.get("resume_task_id")))
+            tasks.update(item.get("review_task_ids", []))
     with db.get_connection() as conn:
         for task in tasks - {None}:
             conn.execute("UPDATE tasks SET status=?, result=?, completed_at=CURRENT_TIMESTAMP WHERE task_id=?",
@@ -115,14 +134,21 @@ def process_pending(base, generation, execute=_execute):
                    for p in directory(base).glob("*.json")):
                 save({**row, "status": "continued"}, base)
                 continue
-            result = outcome(row, base)
-            if result is None:
-                continue
-            row = claim(row, generation, result, base)
+            if row.get("phase") == "review":
+                if row.get("retry_at") is None or row["retry_at"] > time.time():
+                    continue
+                row = save({**row, "status": "running", "generation": generation}, base)
+            else:
+                result = outcome(row, base)
+                if result is None:
+                    continue
+                row = claim(row, generation, result, base)
             if row["status"] == "blocked":
                 _deliver_blocked(row)
                 _settle(row, "blocked", row["reason"], base)
                 continue
+            if row.get("phase") != "review":
+                row = active_check(row, base)
             with resuming(row):
                 answer = execute(row)
             current = read(row["task_id"], base) or row
@@ -132,6 +158,9 @@ def process_pending(base, generation, execute=_execute):
             if current.get("status") == "continued":
                 continue
             evaluation = answer.get("evaluation") or {}
+            if current.get("status") == "waiting_review":
+                # 구현은 이미 끝났다. 저장된 검수 단계만 다음 스캔에서 재개한다.
+                continue
             status = "completed" if evaluation.get("achieved") else "blocked"
             if answer.get("cancelled"):
                 status = "cancelled"
@@ -169,7 +198,11 @@ def kick():
         return
     try:
         _last_scan = time.monotonic()
-        if not any((read_json(p) or {}).get("status") not in TERMINAL for p in directory(base).glob("*.json")):
+        candidates = [read_json(p) or {} for p in directory(base).glob("*.json")]
+        if not any(r.get("status") not in TERMINAL and
+                   (r.get("phase") != "review" or cancelled(r, base) or
+                    r.get("retry_at") is not None and r["retry_at"] <= time.time())
+                   for r in candidates if r.get("authorized_origin") == "user"):
             _lock.release()
             return
         snapshot = work.snapshot()

@@ -175,7 +175,34 @@ def read_session(repo: str, key: str):
 def load_session(repo: str, key: str):
     """지금 쌓는 중인 세션 — staging 이 아니면 None. (존재 판정엔 read_session 을 쓸 것.)"""
     s = read_session(repo, key)
+    if s is None:
+        s = _resume_staging(repo, key)
     return s if s and s.get("status") == "staging" else None
+
+
+def _resume_staging(repo: str, key: str):
+    """롤백된 동일 작업의 격리본 소유권을 후속 구간으로 넘긴다. 파일 복제는 하지 않는다."""
+    from repair_continuation import current
+    from principal import is_owner
+    from thread_context import get_current_task_id, get_task_origin
+    row = current()
+    if (not row or not is_owner() or get_task_origin() != "user"
+            or row.get("resume_task_id") != get_current_task_id()
+            or task_key(row.get("resume_task_id")) != key
+            or (row.get("result") or {}).get("outcome") != "rolled_back"):
+        return None
+    prior = read_session(repo, task_key(row["task_id"]))
+    if not prior or prior.get("reused_by") or prior.get("owner") != _repair_owner():
+        return None
+    wt = os.path.realpath(os.path.join(repo, prior.get("worktree") or ""))
+    if not wt.startswith(os.path.realpath(os.path.join(repo, ".worktrees")) + os.sep) or not os.path.isdir(wt):
+        return None
+    resumed = {**prior, "key": key, "status": "staging", "resumed_from": prior["key"]}
+    for field in ("applied_at", "scheduled_at", "discarded_at"):
+        resumed.pop(field, None)
+    _save_session(repo, resumed)
+    _save_session(repo, {**prior, "reused_by": key})
+    return resumed
 
 
 PROPOSAL_KEY_PREFIX = "proposal-"
@@ -668,7 +695,7 @@ def _quiesce_cap_s() -> int:
         return 600
 
 
-def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: str = ""):
+def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: str = "", active_verify_cmd: str = ""):
     """지연 적용 예약 — 라이브 쓰기를 '이 턴이 닫힌 뒤'로 미뤄 분리 수행자에 맡긴다.
 
     반환: 응답 dict / None(예약 불능 → 호출자가 즉시 적용으로 폴백).
@@ -691,6 +718,7 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
            "task_id": task_id or key, "agent_id": agent_id or "system_ai",
            "reason": reason, "scheduled_at": datetime.now().isoformat(),
            "verify_cmd": (verify_cmd or "").strip(),
+           "active_verify_cmd": (active_verify_cmd or "").strip(),
            "handler_path": os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                         "handler.py")}
     try:
@@ -723,11 +751,11 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
     _cap = _turn_cap_s()
     _who = f"지금 이 턴(주행기록 {eid})" if eid else "지금 이 턴"
     _verify_note = (
-        f"위탁한 검증 명령(`{job['verify_cmd'][:120]}`)도 적용 뒤 수행자가 대신 돌려 "
-        f"결과를 같은 보고에 실어 보냅니다."
+        f"활성화 전 읽기·부팅 검증(`{job['verify_cmd'][:120]}`)은 수행자가 돌리고 결과를 보존합니다. "
+        f"기능 선택·저장·커밋은 ACTIVE 이후 active_verify_cmd 또는 재개 실행에서 수행합니다."
         if job.get("verify_cmd") else
-        "적용 뒤 확인할 것이 있으면 apply 에 verify_cmd 로 명령을 함께 맡기세요 — "
-        "수행자가 적용 후 돌려 다음 턴에 보고합니다. 이 턴에서 기다려서는 볼 수 없습니다.")
+        "부팅·읽기 검사는 verify_cmd, 활성화 후 기능 검사·커밋은 active_verify_cmd로 맡기세요. "
+        "이 턴에서 기다려서는 결과를 볼 수 없습니다.")
     return {
         "success": True, "applied": False, "scheduled": True, "verified": True,
         "checks": [{"gate": c["gate"], "passed": c.get("passed", True)} for c in checks],
@@ -850,7 +878,7 @@ def op_apply(ti):
     else:
         # ★staging 뿐 아니라 apply_scheduled 도 받는다 — 예약이 좌초하면(수행자 사망)
         #   다시 apply 가 재검증 후 재예약한다(수행자 중복은 perform 쪽 멱등으로 안전).
-        sess = read_session(repo, key)
+        sess = read_session(repo, key) or _resume_staging(repo, key)
         if sess and sess.get("status") not in ("staging", "apply_scheduled"):
             sess = None
         if sess and not os.path.isdir(os.path.join(repo, sess.get("worktree") or "")):
@@ -898,12 +926,13 @@ def op_apply(ti):
     # 그 워커 안에 산다. 검증은 방금 끝났으니 쓰기만 '턴이 닫힌 뒤'로 미뤄 분리 수행자에
     # 맡긴다. frontend/scripts 만이면 리로드가 없으므로 지금 그대로 적용한다.
     verify_cmd = (ti.get("verify_cmd") or "").strip()
-    if len(verify_cmd) > 2000:
+    active_verify_cmd = (ti.get("active_verify_cmd") or "").strip()
+    if max(len(verify_cmd), len(active_verify_cmd)) > 2000:
         return {"success": False, "applied": False,
-                "error": "verify_cmd 가 너무 깁니다(2000자 상한) — 스크립트로 만들어 그 경로를 주세요."}
+                "error": "검증 명령이 너무 깁니다(2000자 상한) — 스크립트 경로를 주세요."}
 
     if _reload_triggering(sess):
-        out = _schedule_deferred_apply(repo, sess, checks, verify_cmd)
+        out = _schedule_deferred_apply(repo, sess, checks, verify_cmd, active_verify_cmd)
         if out is not None:
             return out
         print("[수리 스테이징] 지연 적용 예약 불능 — 즉시 적용 폴백(이 턴은 리로드에 끊길 수 있음)")
@@ -915,6 +944,9 @@ def op_apply(ti):
         out["message"] = (out.get("message") or "") + (
             f" ★verify_cmd 는 돌리지 않았습니다 — 리로드 없는 즉시 적용이라 이 턴이 살아 "
             f"있습니다. 지금 직접 확인하세요: {verify_cmd[:160]}")
+    if active_verify_cmd and out.get("applied"):
+        out["active_verify_cmd_deferred"] = False
+        out["message"] = (out.get("message") or "") + f" 활성화 후 명령도 이 턴에서 직접 수행하세요: {active_verify_cmd[:160]}"
     return out
 
 
@@ -1098,6 +1130,8 @@ def op_discard(ti):
 
 
 def _remove_worktree(repo: str, sess: dict):
+    if sess.get("reused_by"):
+        return  # 후속 구간이 같은 격리본을 소유한다.
     wt = os.path.join(repo, sess.get("worktree") or "")
     if sess.get("worktree") and os.path.isdir(wt):
         r = _git(["worktree", "remove", "--force", wt], repo)

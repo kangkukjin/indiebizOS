@@ -36,7 +36,8 @@ def _py_files():
     for root, dirs, files in os.walk(BACKEND):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         for f in files:
-            if f.endswith(".py"):
+            # 테스트의 사용자 출처 fixture는 실제 요청 진입점이 아니다.
+            if f.endswith(".py") and not f.startswith("test_"):
                 yield os.path.join(root, f)
 
 

@@ -1265,7 +1265,7 @@
   "self:patch": {
    "fields": {
     "description": "543ef8b97a38",
-    "target_description": "f2040ca2a0e1",
+    "target_description": "e72cb001e486",
     "implementation": "79621998804f",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
@@ -1274,7 +1274,7 @@
     "router": "ebbb1532efbc",
     "tool": "81a5a9cfe344"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-10-02",
    "examples": 10
   },
   "self:phone_sync": {

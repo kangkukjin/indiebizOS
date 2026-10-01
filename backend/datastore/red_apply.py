@@ -304,9 +304,19 @@ def _run_post_verify(repo: str, cmd: str) -> dict:
         r = subprocess.run(cmd, shell=True, cwd=repo, capture_output=True,
                            text=True, timeout=VERIFY_TIMEOUT_S)
         out = ((r.stdout or "") + (("\n[stderr] " + r.stderr) if r.stderr else ""))
+        from logging_utils import mask_secrets
+        from restart_protocol import atomic_json
+        import uuid
+        full = mask_secrets(out.strip())
+        receipt = Path(repo) / "data/system_ai_state/repair_check_outputs" / (uuid.uuid4().hex + ".json")
+        atomic_json(receipt, {"cmd": mask_secrets(cmd), "exit_code": r.returncode, "output": full})
+        marker = "\n… 원문은 output_path …\n"
+        head = (VERIFY_OUTPUT_CAP - len(marker)) // 2
+        excerpt = full if len(full) <= VERIFY_OUTPUT_CAP else (
+            full[:head] + marker + full[-(VERIFY_OUTPUT_CAP - len(marker) - head):])
         return {"ran": True, "cmd": cmd, "exit_code": r.returncode,
-                "output": out.strip()[:VERIFY_OUTPUT_CAP],
-                "truncated": len(out) > VERIFY_OUTPUT_CAP}
+                "output": excerpt, "output_path": str(receipt),
+                "truncated": len(full) > VERIFY_OUTPUT_CAP}
     except subprocess.TimeoutExpired:
         return {"ran": True, "cmd": cmd, "exit_code": None,
                 "output": f"검증 명령이 상한({VERIFY_TIMEOUT_S:.0f}초)을 넘겨 중단됐습니다.",

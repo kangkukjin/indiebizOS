@@ -119,6 +119,7 @@
     "cognition/pursuit_maintenance",
     "cognition/pursuit_tools",
     "cognition/reframe",
+    "cognition/repair_resume",
     "cognition/routing_system",
     "cognition/supervisor_content",
     "cognition/supervisor_handoff",
@@ -507,8 +508,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 432,
-    "engine": 406,
+    "total": 433,
+    "engine": 407,
     "blocklist": 26
   }
 }

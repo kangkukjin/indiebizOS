@@ -49,7 +49,13 @@ class CognitiveConsciousnessMixin:
     def _run_consciousness_or_reuse(self, user_message: str, history: list,
                                     execution_memory: str = "",
                                     repair: bool = False) -> Optional[dict]:
-        """호환 진입점. 영속 기억을 참고하되 THINK/REPAIR는 현재 문제를 새로 규정한다."""
+        """새 요청은 규정하고, 승인된 자기수리의 재개는 기존 규정을 계승한다."""
+        from repair_continuation import inherited_framing
+        inherited = inherited_framing(user_message) if repair else None
+        if inherited:
+            from repair_resume import bind_pursuit
+            bind_pursuit()
+            return inherited
         from pursuit_bind import run_consciousness
         return run_consciousness(self, user_message, history, execution_memory, repair)
 

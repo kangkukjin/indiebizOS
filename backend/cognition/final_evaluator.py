@@ -212,6 +212,10 @@ def snapshot_error(controller):
     for name, fingerprint in snapshot["files"].items():
         try:
             path = Path(name)
+            if fingerprint["mode"] == "missing":
+                if path.exists():
+                    return "평가 중 삭제된 구현 파일이 다시 생성됐습니다"
+                continue
             if fingerprint["mode"] == "text":
                 actual = digest(path.read_text(encoding="utf-8"))
             else:
@@ -232,7 +236,8 @@ def invoke(controller, prompt="", *, phase="final"):
     if controller.cancelled():
         return json.dumps({"status": "UNKNOWN", "reason": "사용자가 취소했습니다"})
     controller.log("evaluation.started", role="evaluate", tools=0)
-    achieved, feedback, severity = Evaluator()._evaluate_achievement(
+    evaluator = Evaluator()
+    achieved, feedback, severity = evaluator._evaluate_achievement(
         controller.message, packet["criteria"], packet["response"], packet["files"],
         consciousness_output=controller.framing,
         tool_results_str=serialize_tool_trace(packet["calls"], total_budget=24000,
@@ -245,6 +250,8 @@ def invoke(controller, prompt="", *, phase="final"):
     result = {"status": "APPROVED" if achieved is True else "REWORK" if achieved is False else "UNKNOWN",
               "reason": feedback, "severity": severity, "response_version": manifest["version"],
               "response_hash": manifest["hash"], "instruction": "", "pursuit_status": "UNKNOWN"}
+    if getattr(evaluator, "evaluation_retryable", False):
+        result["retryable"] = True
     if controller.cancelled():
         result.update(status="UNKNOWN", reason="평가 중 사용자가 취소했습니다")
     if result["status"] == "APPROVED":

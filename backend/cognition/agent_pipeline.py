@@ -343,7 +343,13 @@ class CognitivePipelineMixin:
                 else:
                     from episode_logger import record_trajectory_event
                     record_trajectory_event("cognition.supervisor_selected", {"reason": "force_role", "enabled": False})
-                for event in self._cognitive_stream_body(message, history, **kwargs):
+                from repair_continuation import current as repair_current
+                from repair_resume import review_stream
+                continuation = repair_current()
+                stream = (review_stream(self, _supervisor, continuation, kwargs.get("cancel_check"))
+                          if continuation and continuation.get("phase") == "review"
+                          else self._cognitive_stream_body(message, history, **kwargs))
+                for event in stream:
                     observe(event)
                     yield event
             finally:
@@ -385,14 +391,20 @@ class CognitivePipelineMixin:
 
         # 1. 연상 1상 — 공통 흐름(associative_recall): 실행기억·심층 지도/선택·가이드 목차·손발·수리 결말·판정 원장.
         #    사용자 디스크 탐색은 도구 실행에서만. ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 필터버블 드리프트 방지.
-        recall = self._associate(message, history=history, action_hint=action_hint, deep=(force_role != "forage"))
-        hippo_score, top_code = recall.reflex.score, recall.reflex.code
+        from repair_continuation import current as current_repair_continuation
+        continuation = current_repair_continuation() if not force_role else None
+        # 인계에는 이미 목표·규정·증거가 있다. 재개마다 새 연상/분류를 하지 않는다.
+        recall = None if continuation else self._associate(
+            message, history=history, action_hint=action_hint, deep=(force_role != "forage"))
+        hippo_score, top_code = (recall.reflex.score, recall.reflex.code) if recall else (0, "")
         if cancel_check and cancel_check():
             yield {"type": "error", "content": "작업이 취소되었습니다."}
             return
 
         # 2. 분류 — 명시 태그(#think/#execute) → Reflex(해마 고확신) → 무의식 분류
-        if force_role:
+        if continuation:
+            request_type, reflex_hint = "REPAIR", None
+        elif force_role:
             # 표면 강제 EXECUTE(포식 등): 무의식 분류기(경량 LLM 1회)를 건너뛴다.
             request_type, reflex_hint = "EXECUTE", None
             print(f"[무의식] 분류: EXECUTE (force_role={force_role} — 분류기 건너뜀)")
@@ -416,7 +428,8 @@ class CognitivePipelineMixin:
 
         # 후보 목차만 제공한다. 현재 의식/실행 모델이 연결하며 별도 호출·THINK 승격은 없다.
         from pursuit_bind import prepare as _p_prepare
-        recall.attach("pursuit", _p_prepare())
+        if recall:
+            recall.attach("pursuit", _p_prepare())
         context_update = request_type == "CONTEXT_UPDATE"
         if context_update:
             from turn_scope import CONTEXT_UPDATE
@@ -424,11 +437,12 @@ class CognitivePipelineMixin:
             request_type = "EXECUTE"
 
         # 연상 2상 — 세계 지도(글자 채널)·세계의 기억(의미 채널). 어느 채널이 도는지는 associative_recall.SOURCES 가 정한다.
-        recall.route(request_type, reflex_hint=reflex_hint, force_role=force_role, context_update=context_update)
+        if recall:
+            recall.route(request_type, reflex_hint=reflex_hint, force_role=force_role, context_update=context_update)
         if cancel_check and cancel_check():
             yield {"type": "error", "content": "작업이 취소되었습니다."}
             return
-        execution_memory = recall.text()
+        execution_memory = recall.text() if recall else ""
 
         # 3. 의식(THINK) / reflex·force_role 모델 스왑
         from episode_logger import record_trajectory_event
@@ -911,7 +925,7 @@ class CognitivePipelineMixin:
                         message, final_content,
                         tool_calls=tool_calls_log, hippo_score=hippo_score, top_code=top_code,
                         turn_tokens=turn_tokens, **({"pursuit_packet": _packet} if _packet else {}),
-                        presented=recall.usage_payload(),   # 제시→사용 결합(2026-09-18) — 값으로 큐를 넘는다
+                        presented=recall.usage_payload() if recall else {},
                         # 이 턴의 메시지를 누가 썼나 — 진입점이 선언한다. "owner"(주인이 직접 친 말)만
                         # 심층기억 증류의 재료다. 에이전트 위임문·보고 회수·예약 주입문·미선언은 닫힌다.
                         write_deep=(utterance_author == "owner"),

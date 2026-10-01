@@ -111,11 +111,12 @@ def _load_model():
             from runtime_work import service_scope
         except Exception:                                   # 독립 실행(스크립트·시험)
             from contextlib import nullcontext as service_scope
+        import embedding_guard
         with service_scope():
             try:
-                _model = SentenceTransformer(MODEL_NAME, local_files_only=True)
+                _model = embedding_guard.load(lambda: SentenceTransformer(MODEL_NAME, local_files_only=True))
             except Exception:
-                _model = SentenceTransformer(MODEL_NAME)
+                _model = embedding_guard.load(lambda: SentenceTransformer(MODEL_NAME))
         _model_state = "ready"
         print(f"[tree_recall] 인코더 적재 완료: {MODEL_NAME}")
     except Exception as e:                                  # noqa: BLE001

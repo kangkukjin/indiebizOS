@@ -28,5 +28,13 @@ def test_long_instruction_containing_the_phrase_is_not_a_reset():
     assert not _is_reset(message)
 
 
+def test_start_over_resets_only_as_a_whole_message():
+    for message in ("처음부터 다시", "처음부터 다시 하자", "자, 처음부터 다시 시작하자!"):
+        assert _is_reset(message), message
+    for message in ("처음부터 다시 써줘", "그 보고서 처음부터 다시 만들어줘", "처음부터 다시 해줘",
+                    "이 분석은 처음부터 다시 하자", "처음부터 다시 읽어보고 요약해"):
+        assert not _is_reset(message), message
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

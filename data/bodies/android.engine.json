@@ -12,6 +12,7 @@
     "base/distill_receipts",
     "base/doc_ir",
     "base/document_converter",
+    "base/embedding_guard",
     "base/episode_logger",
     "base/episode_orphans",
     "base/episode_trace_reader",
@@ -503,8 +504,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 428,
-    "engine": 402,
+    "total": 429,
+    "engine": 403,
     "blocklist": 26
   }
 }

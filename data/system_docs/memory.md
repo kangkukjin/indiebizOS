@@ -544,7 +544,7 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 | **실행기억** (`<execution_memory>`) | 해마 — IBL Usage DB | 과거 IBL 코드 사례 + 도구 implementation |
 | **기억 지도** (`<memory_map>`) | 심층메모리 — 에이전트별 SQLite + 가지별 memory.md | 가지 이름·건수·한 줄 요약 (내용 없음 — `[self:memory]{op:"recall", node}` 로 연다) |
 
-해마는 fine-tuned 임베딩 모델로 검색된다(backend 에서 한 번만 로드). 심층메모리는 별도의 기본 인코더를 쓰고(아래 §심층메모리 구조), 자동 주입은 지도 + 선택된 기억 3건이다(2026-09-17).
+해마는 fine-tuned 임베딩 모델로 검색된다(backend 에서 한 번만 로드). 심층메모리는 별도의 기본 인코더를 쓰고(아래 §심층메모리 구조), 자동 주입은 지도 + 선택된 기억 3건이다(2026-09-17). **임베딩 추론은 프로세스에서 한 줄로 선다**(2026-10-01, `backend/base/embedding_guard.py`): 해마·기본 인코더·블로그·노트북 모델은 모두 `embedding_guard.load` 로 적재돼 `encode` 가 하나의 잠금을 지난다 — PyTorch MPS 는 여러 스레드의 동시 연산에 안전하지 않아, 예약 위임 세 건이 재기동 직후 같은 순간에 첫 인코딩을 돌린 09-28·09-30 에 백엔드가 죽었다(셰이더 캐시 경합, 격리 재현 5회 중 4회 충돌). 새 적재 자리는 `test_embedding_guard_2026_10_01.py` 의 전수 관문이 잡는다.
 
 ### 왜 연상기억인가
 

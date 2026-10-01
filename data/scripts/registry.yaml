@@ -350,11 +350,12 @@ python_libraries:
     경로는 작업공간 기준)·exclude(glob 목록, 기본 제외 DB·캐시에 더함)·name(같은 폴더를 다른 목적으로 따로 볼 때)·op(check
     기본|ack)·commit(기본 true=지금 모습을 새 기준으로 저장, false=기준은 두고 ''확인 대기''로만 적어 받는 쪽의 op:ack
     를 기다린다 — 확인 전 재대조는 같은 변화를 다시 낸다)·since(기준이 없을 때만: ISO 시각 또는 파일 경로의 수정 시각; 없으면
-    첫 대조는 기준만 세우고 0건)·limit(기본 60). items(path·change:added|modified|removed·size·modified_at)+count·omitted·by_dir·baseline_at·first_check·awaiting_ack.
+    첫 대조는 기준만 세우고 0건)·limit(기본 60). 폴더의 .watchignore(한 줄 glob, # 주석)는 그 폴더를 아는 쪽이
+    ''알릴 필요 없다''고 판단한 것을 적는 자리로 exclude 처럼 적용된다. items(path·change:added|modified|removed·size·modified_at)+count·omitted·by_dir·baseline_at·first_check·awaiting_ack·ignore_patterns·ignored.
     측정만 한다 — 무엇이 기억할 만한지는 받는 쪽 판단. 예약 과제가 AI 를 깨우기 전의 변화 관문(2026-10-01)'
   file: 폴더변화.py
   interpreter: python
-  registered_at: '2026-10-01T20:33:01'
+  registered_at: '2026-10-01T21:31:14'
   timeout: 120
 폴더용량:
   description: outputs 폴더 용량 요약 (items)

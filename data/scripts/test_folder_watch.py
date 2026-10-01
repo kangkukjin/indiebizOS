@@ -83,5 +83,19 @@ def test_since_bounds_the_first_check(fw):
     assert "outputs/new.md" in {r["path"] for r in fw.main({"path": str(fw.root), "commit": False})["items"]}
 
 
+def test_watchignore_in_the_folder_silences_declared_routine_additions(fw):
+    args = {"path": str(fw.root), "commit": False}
+    fw.main(args)
+    _touch(fw.root / "outputs" / "chart_20260926_093505.png", "c1")
+    assert fw.main(args)["count"] == 1
+    (fw.root / ".watchignore").write_text("# 매일 쌓이는 차트 — 이름 규칙은 문서에 있다\noutputs/chart_*.png\n")
+    out = fw.main(args)
+    assert out["count"] == 0 and out["ignore_patterns"] == ["outputs/chart_*.png"] and out["ignored"] == 1
+    _touch(fw.root / "outputs" / "chart_20260927_090000.png", "c2")
+    _touch(fw.root / "outputs" / "report.md", "r")
+    out = fw.main(args)
+    assert [r["path"] for r in out["items"]] == ["outputs/report.md"] and out["ignored"] == 2
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

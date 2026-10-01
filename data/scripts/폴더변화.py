@@ -16,6 +16,11 @@ args:
           받는 쪽이 중간에 죽어도 변화를 잃지 않는 길(2026-10-01 실측: 위임 턴 45회 중 5회가 흔적 없이 끊김).
   op      check(기본) | ack — ack 는 path·name 으로 '확인 대기'를 기준으로 올린다(대기가 없으면 acked:false).
   limit   items 상한(기본 60). 넘치면 omitted 와 by_dir(1단 폴더별 건수)로 접는다.
+
+폴더의 `.watchignore`: 그 폴더를 아는 쪽(주인·그 폴더의 에이전트)이 "이건 알릴 필요 없다"고 판단한 것을 적는 자리다.
+한 줄에 glob 하나, `#` 은 주석(왜 빼는지). exclude 와 똑같이 적용되고 결과의 ignore_patterns·ignored 로 드러난다.
+같은 이름 규칙으로 쌓이기만 하는 산출물이 매번 변화로 잡혀 같은 판단("문서가 이미 옳다")을 되풀이하게 하지 않으려는 것 —
+판단은 한 번 하고 데이터로 남긴다. 폴더와 함께 있으므로 사람이 읽고 고친다.
 """
 import fnmatch
 import hashlib
@@ -29,7 +34,8 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parents[2]
 STATE_DIR = BASE / "data" / "folder_watch"
 # 내용이 아니라 실행의 부산물로 바뀌는 것들 — 보는 것만으로도 수정 시각이 움직인다.
-ALWAYS_EXCLUDE = ["*.db", "*.db-shm", "*.db-wal", "*.db-journal", "*.sqlite", "*.sqlite-*",
+IGNORE_FILE = ".watchignore"
+ALWAYS_EXCLUDE = [IGNORE_FILE, "*.db", "*.db-shm", "*.db-wal", "*.db-journal", "*.sqlite", "*.sqlite-*",
                   ".DS_Store", "__pycache__/*", "*.pyc", ".git/*"]
 
 
@@ -48,6 +54,18 @@ def _excluded(rel: str, patterns) -> bool:
         if pat.endswith("/*") and any(fnmatch.fnmatch(part, pat[:-2]) for part in parts[:-1]):
             return True
     return False
+
+
+def _ignore_patterns(root: Path) -> list:
+    path = root / IGNORE_FILE
+    if not path.is_file():
+        return []
+    out = []
+    for line in path.read_text(errors="ignore").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            out.append(line)
+    return out
 
 
 def _snapshot(root: Path, patterns) -> dict:
@@ -102,7 +120,9 @@ def main(args: dict) -> dict:
     root = _resolve(args["path"])
     if not root.is_dir():
         raise ValueError(f"폴더가 없다: {root}")
-    patterns = ALWAYS_EXCLUDE + [str(x) for x in (args.get("exclude") or [])]
+    ignore = _ignore_patterns(root)
+    declared = ALWAYS_EXCLUDE + [str(x) for x in (args.get("exclude") or [])]
+    patterns = declared + ignore
     limit = int(args.get("limit") or 60)
     commit = args.get("commit", True) is not False
 
@@ -122,6 +142,7 @@ def main(args: dict) -> dict:
 
     now = datetime.now().timestamp()
     files = _snapshot(root, patterns)
+    ignored = (len(_snapshot(root, declared)) - len(files)) if ignore else 0
 
     rows = []
     first = state is None
@@ -169,7 +190,8 @@ def main(args: dict) -> dict:
     return {"items": rows[:limit], "count": len(rows), "omitted": max(0, len(rows) - limit),
             "by_dir": by_dir, "path": str(root), "watched_files": len(files),
             "baseline_at": baseline_at, "checked_at": _iso(now), "first_check": first, "committed": commit,
-            "awaiting_ack": bool(rows) and not commit}
+            "awaiting_ack": bool(rows) and not commit,
+            "ignore_patterns": ignore, "ignored": ignored}
 
 
 if __name__ == "__main__":

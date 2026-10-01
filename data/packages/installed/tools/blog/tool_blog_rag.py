@@ -159,7 +159,8 @@ class BlogHybridSearch:
         try:
             from sentence_transformers import SentenceTransformer
             logger.info(f"[Blog RAG] 임베딩 모델 로딩: {cls.EMBEDDING_MODEL}")
-            cls._model = SentenceTransformer(cls.EMBEDDING_MODEL)
+            import embedding_guard   # 임베딩 추론은 프로세스에서 한 줄로(MPS 동시 연산 충돌)
+            cls._model = embedding_guard.load(lambda: SentenceTransformer(cls.EMBEDDING_MODEL))
             logger.info("[Blog RAG] 모델 로딩 완료")
             return True
         except ImportError:

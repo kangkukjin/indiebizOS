@@ -151,7 +151,8 @@ def _load_model() -> bool:
     try:
         from sentence_transformers import SentenceTransformer
         logger.info(f"[notebook] 임베딩 모델 로딩: {EMBEDDING_MODEL}")
-        _model = SentenceTransformer(EMBEDDING_MODEL)
+        import embedding_guard   # 임베딩 추론은 프로세스에서 한 줄로(MPS 동시 연산 충돌)
+        _model = embedding_guard.load(lambda: SentenceTransformer(EMBEDDING_MODEL))
         return True
     except ImportError:
         logger.warning("[notebook] sentence-transformers 미설치 → FTS5 검색만")

@@ -51,7 +51,7 @@ LAYERS = {
         "file_script", "script_process", "script_workspace",
     },
     "data": {
-        "distill_ledger",
+        "distill_ledger", "repair_continuation",
         "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
         "record_admin", "record_assets", "record_facade",
         "knowledge_catalog", "knowledge_graph", "tree_recall", "tree_doc", "world_recall_store", "forage_recall_store",

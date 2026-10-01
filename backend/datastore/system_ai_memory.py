@@ -670,6 +670,14 @@ def get_task(task_id: str) -> Optional[Dict]:
 
 def complete_task(task_id: str, result: str = None) -> bool:
     """작업 완료 처리 — status 업데이트 + 도구 이력 저장"""
+    from repair_continuation import task_state
+    pending = task_state(task_id)
+    if pending and pending != "completed":
+        init_memory_db()
+        with _get_exclusive_connection() as conn:
+            cursor = conn.execute("UPDATE tasks SET status=?, result=?, completed_at=NULL WHERE task_id=?",
+                                  (pending, result[:500] if result else None, task_id))
+            return cursor.rowcount > 0
     import json as _json
     init_memory_db()
 

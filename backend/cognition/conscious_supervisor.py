@@ -769,7 +769,20 @@ class Supervisor:
             return response
         from supervisor_runtime import parse_decision, repair_message
         from final_evaluator import invoke, prepare, snapshot_error
+        from repair_continuation import defer
         from thread_context import set_goal_eval_outcome
+        pending = defer(self, response)
+        if pending:
+            self.store.put_response(response)
+            reason = "적용·재기동 후 원래 작업을 자동으로 이어서 검증합니다. 현재는 적용 대기 상태입니다."
+            set_goal_eval_outcome(False, 0, status="PENDING_APPLY", reason=reason)
+            print("[GoalEval] 최종 판정: PENDING_APPLY")
+            self.log("repair.deferred", role="harness", task_id=self.task,
+                     continuation=pending["task_id"])
+            final = response + "\n\n[적용 대기] " + reason
+            yield {"type": "text", "content": final}
+            yield {"type": "final", "content": final}
+            return final
         if not self.evaluation_enabled:
             # 의식이 실행 중 기준을 거둔 경우에도 이미 대기 중인 전달을 남겨 두지 않는다.
             if not self.cancelled():
@@ -793,7 +806,9 @@ class Supervisor:
             self.executor_paused = True
             # 예전 설정에 2 이상이 남아 있어도 최종 보완은 한 번으로 제한한다.
             max_repairs = min(1, max(0, self.config["max_repairs"]))
-            for attempt in range(max_repairs + 1):
+            repairs_used = evidence_reads = 0
+            # 기존 증거 회수는 실제 결함 수리 기회를 소모하지 않는다.
+            for attempt in range(max_repairs + 2):
                 if self.cancelled():
                     break
                 self.phase = "final"
@@ -832,7 +847,16 @@ class Supervisor:
                     "feedback_text": decision.get("reason", ""), "response_hash": manifest["hash"],
                     "response_version": manifest["version"], "store": str(self.store.directory),
                 })
-                if decision["status"] != "REWORK" or attempt >= max_repairs:
+                evidence_missing = decision["status"] == "UNKNOWN" and decision.get("recoverable")
+                if evidence_missing:
+                    if evidence_reads:
+                        break
+                    evidence_reads += 1
+                elif decision["status"] == "REWORK":
+                    if repairs_used >= max_repairs:
+                        break
+                    repairs_used += 1
+                else:
                     break
                 expected = max(self.config["final_input_reserve"],
                                self.phase_usage.get("final", {}).get("last_input", 0))
@@ -849,6 +873,8 @@ class Supervisor:
                 self.log("repair.admitted", role="harness", expected_recheck_input=expected,
                          allocation_extension=max(0, expected - remaining), budget_policy=self.config["budget_mode"])
                 self.last_decision = decision
+                if not hasattr(self, "_repair_evidence_since"):
+                    self._repair_evidence_since = self.store.sequence
                 self.phase = "repair"
                 self.executor_paused = False
                 self.repair_kept = False

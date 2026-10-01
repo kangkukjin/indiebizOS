@@ -5708,8 +5708,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-10-01'
-          impl: 4077fe77566682ae
+          at: '2026-10-02'
+          impl: fe953160342b6770
         target_key: path
         aliases:
           offset:
@@ -5721,8 +5721,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-10-01'
-          impl: 4077fe77566682ae
+          at: '2026-10-02'
+          impl: fe953160342b6770
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5798,8 +5798,8 @@ nodes:
           content: $content
         member_transform: member_documents:write
         path_audited:
-          at: '2026-10-01'
-          impl: 4077fe77566682ae
+          at: '2026-10-02'
+          impl: fe953160342b6770
         target_key: path
       list:
         callable_contract:
@@ -6515,8 +6515,8 @@ nodes:
             - read_external
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-10-01'
-          impl: 4077fe77566682ae
+          at: '2026-10-02'
+          impl: fe953160342b6770
         pipe_in: true
         lands_on: body
         limb_op:

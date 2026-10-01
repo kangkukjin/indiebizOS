@@ -398,6 +398,11 @@ class CognitivePipelineMixin:
             print(f"[무의식] 분류: EXECUTE (force_role={force_role} — 분류기 건너뜀)")
         else:
             request_type, reflex_hint = self._decide_request_type(message, hippo_score, top_code)
+        from repair_continuation import current as current_repair_continuation
+        if current_repair_continuation() and not force_role:
+            # 사용자 출처는 영속 인계의 소비자가 복원한다. 분류기가 이미 승인된
+            # 자기수리의 후반부를 단순 응답으로 낮춰 그랜트를 잃게 하지 않는다.
+            request_type, reflex_hint = "REPAIR", None
 
         # SESSION_RESET — Claude Code 세션 매핑만 제거하고 표준 응답 (AI 호출 없음)
         if request_type == "SESSION_RESET":

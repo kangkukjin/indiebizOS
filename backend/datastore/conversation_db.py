@@ -635,6 +635,14 @@ class ConversationDB:
 
     def complete_task(self, task_id: str, result: str) -> bool:
         """작업 완료 처리 — status 업데이트 + 도구 이력 저장 (세션 내 조회용)"""
+        from repair_continuation import task_state
+        pending = task_state(task_id)
+        if pending and pending != "completed":
+            with self.get_connection() as conn:
+                cursor = conn.execute("UPDATE tasks SET status=?, result=?, completed_at=NULL WHERE task_id=?",
+                                      (pending, result[:500] if result else None, task_id))
+                conn.commit()
+                return cursor.rowcount > 0
         # 현재 스레드의 도구 호출 이력 수집
         tool_history_json = None
         try:

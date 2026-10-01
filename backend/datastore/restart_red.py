@@ -103,7 +103,8 @@ def recover_code(base, state):
                 finally:
                     if os.path.exists(temp):
                         os.unlink(temp)
-        atomic_json(path.with_name("result.json"), {
+        previous = read_json(path.with_name("result.json")) or {}
+        atomic_json(path.with_name("result.json"), {**previous,
             "outcome": "rolled_back", "recovered": False, "owner": manifest.get("owner", "system_ai"),
             "note": "코드 복원 완료; 새 현역 준비 확인 전", "generation": state.get("generation")})
         return True
@@ -137,14 +138,20 @@ def verify_after_boot(base, state):
                 error=applied.get("error"), checks=applied.get("checks", [])))
             return False
         cmd = job.get("verify_cmd", "").strip()
-        post = _run_post_verify(str(base), cmd) if cmd and not state.get("rollback_attempted") else None
+        # 롤백은 검증 실패를 없애지 않는다. 복구 부팅 때 None으로 덮어쓰면
+        # 이어받은 실행자가 실패 원인을 읽을 수 없고 같은 수리를 반복하게 된다.
+        post = (job.get("post_verify") if state.get("rollback_attempted") else
+                _run_post_verify(str(base), cmd) if cmd else None)
+        result["post_verify"] = post
+        result["checks"] = applied.get("checks", [])
+        result["error"] = applied.get("error")
         staging = _load_handler(job)._staging_mod()
         staging.write_followup(str(base), staging.task_key(job["key"]), {
             "wait_outcome": "controller_drained", "quiesce_outcome": "observed",
             "post_verify": post, "generation": state["generation"]})
         job.update(done_at=state.get("updated_at"), post_verify=post)
         atomic_json(req["payload"]["job_path"], job)
-        if post is not None and post.get("exit_code") != 0:
+        if post is not None and post.get("exit_code") != 0 and not state.get("rollback_attempted"):
             atomic_json(path.with_name("result.json"), dict(
                 result, outcome="verification_failed", recovered=False, post_verify=post))
             return False

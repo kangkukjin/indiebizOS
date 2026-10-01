@@ -67,6 +67,9 @@ async def control(action: str, request: Request):
         raise HTTPException(409, "실행 준비가 완료되지 않았습니다")
     before = work.phase
     result = work.gate("DRAINING" if action == "drain" else "ACTIVE")
+    if action == "activate":
+        from api_repair_continuation import kick
+        kick()
     if action == "activate" and before == "STARTING":
         import sys
         import threading

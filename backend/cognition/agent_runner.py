@@ -155,6 +155,8 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
         상주 스레드가 조용히 죽는 좀비를 만들었다(5라운드 감사 (B)). 이제 루프 수명은
         running 만이 결정하고, 이 이벤트는 대기 깨움 후 루프가 clear 한다. 도는 채팅 턴의
         취소는 WS cancel_flags(cancel_check) 경로가 담당한다."""
+        from repair_continuation import cancel_pending
+        cancel_pending(self.project_id, self.config.get("id"))
         self.cancel_event.set()
 
     # ============ 클래스 메서드: 에이전트 검색 ============

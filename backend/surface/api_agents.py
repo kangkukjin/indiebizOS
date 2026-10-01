@@ -252,6 +252,8 @@ async def cancel_all_agents(project_id: str):
     """프로젝트의 모든 에이전트 작업 중단 (에이전트는 유지, 현재 작업만 취소)"""
     try:
         cancelled = []
+        from repair_continuation import cancel_pending
+        cancel_pending(project_id)
 
         if project_id in agent_runners:
             for agent_id, runner_info in list(agent_runners[project_id].items()):
@@ -306,7 +308,7 @@ def _command_origin(origin):
     return origin or "user"
 
 
-def _run_agent_command(project_id: str, agent_id: str, runner, command: str, origin=None):
+def _run_agent_command(project_id: str, agent_id: str, runner, command: str, origin=None, *, continuation=None):
     """에이전트 명령 처리 코어 — 동기/백그라운드 양쪽이 공유.
 
     응답 텍스트를 반환하고, 사용자/AI 메시지를 conversations.db에 저장한다.
@@ -321,7 +323,7 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
     task_origin = _command_origin(origin)
     rehearsal = task_origin == "training"
     contact_type = "rehearsal" if rehearsal else "gui"
-    task_id = f"task_{uuid4().hex}"
+    task_id = continuation["resume_task_id"] if continuation else f"task_{uuid4().hex}"
     db = None
     user_id = target_agent_id = None
     response_saved = False
@@ -354,7 +356,9 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
 
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
-        db.create_task(task_id, "user@gui", contact_type, command, agent_name)
+        if not continuation or not db.get_task(task_id):
+            db.create_task(task_id, "user@gui", contact_type, command, agent_name,
+                           parent_task_id=continuation["task_id"] if continuation else None)
 
         # 사용자 및 에이전트 ID
         user_id = db.get_or_create_agent("user", "human")
@@ -364,7 +368,8 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
         history = db.get_history_for_ai(target_agent_id, user_id, rehearsal=rehearsal)
 
         # 사용자 메시지 저장
-        db.save_message(user_id, target_agent_id, command, contact_type=contact_type)
+        if not continuation:
+            db.save_message(user_id, target_agent_id, command, contact_type=contact_type)
 
         # AI 응답 생성 — 인지 파이프라인 제너레이터를 drain 하는 블로킹 어댑터.
         #
@@ -380,7 +385,10 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
         # 표면이다("에이전트 명령 HTTP"). WS×2·/system-ai/chat 과 같은 드라이버로 합류시킨다.
         # 기어 동기화도 파이프라인 0단계라 여기서 따로 부르지 않는다.
         from agent_pipeline import drain_stream
+        from repair_continuation import resume_context, cancelled as repair_cancelled
         result = drain_stream(runner.cognitive_stream(command, history, agent_name=agent_name,
+                                                      extra_role=resume_context(continuation) if continuation else "",
+                                                      cancel_check=(lambda: repair_cancelled(continuation)) if continuation else None,
                                                       utterance_author="owner"))
         response = result.get("final") or result.get("error") or ""
 
@@ -395,6 +403,10 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
                 conn.commit()
         elif not task.get("pending_delegations"):
             db.complete_task(task_id, response)
+        if continuation:
+            from thread_context import get_goal_eval_outcome
+            return {"response": response, "evaluation": get_goal_eval_outcome(),
+                    "cancelled": result.get("cancelled"), "error": result.get("error")}
         return response
     except Exception as exc:
         if db is not None:

@@ -21,6 +21,9 @@ POLICY = """이번 호출은 도구 없는 최종 평가다. 의식이 명시한
 완료 요청의 전체 과제 기준이 제공되면 이번 응답과 함께 그 기준도 충족해야 ACHIEVED다.
 pending_delivery의 초안 내용·알림도 결과물이다. 공개/알림은 승인 뒤 하네스가 수행한다.
 응답 형식: ACHIEVED면 한 줄로 끝낸다. UNKNOWN이면 이유 한 줄을 덧붙인다.
+UNKNOWN에는 UNKNOWN_REASON: evidence|criteria|blocked를 적는다. 발췌·누락 증거는 evidence,
+기준과 요청의 충돌은 criteria, 권한·외부 조건 때문에 진행할 수 없으면 blocked다.
+evidence이면 부족한 기준 id와 기존 evidence_index에서 확인할 증거 id를 함께 적는다.
 NOT_ACHIEVED면 SEVERITY: 1|2|3 다음에 REPAIR_SCOPE: local|research를 적는다.
 기존 증거로 문구·수치만 고칠 수 있으면 local, 새 조사·실행이 필요하면 research다.
 REPAIR_BLOCK_IDS: ["블록 id"]도 적고, DEFECTS 한 줄 JSON 배열에 기준 id·구체적 증거·최소 보완을 적는다.
@@ -165,6 +168,23 @@ def prepare(controller, tool_calls=None):
                "quantity_checks": {"durations": duration_table(response), "issues": arithmetic_issues(response)},
                "evidence_index": controller.store.tool_index(),
                "jobs": list(controller.job_states.values())}
+    # 보완 실행자가 원문을 회수했는데 재검수 때 다시 같은 발췌에서 사라지는
+    # 순환을 막는다. 작업대가 실제 반환한 증거 페이지만 별도 첨부한다.
+    cursor = getattr(controller, "_repair_evidence_since", None)
+    recovered = []
+    if cursor is not None:
+        while True:
+            page = controller.store.read_events(cursor)
+            for event in page["events"]:
+                if event.get("kind") == "response.operation" and event.get("operation") == "evidence":
+                    ref = event.get("result", {}).get("id")
+                    if ref and not event.get("is_error"):
+                        recovered.append(controller.store.read_evidence(ref, 0, None)["text"])
+            if page["next_offset"] is None:
+                break
+            cursor = page["next_offset"]
+    if recovered:
+        context["recovered_evidence"] = recovered
     # 공개 텍스트 초안은 위에서 읽는다. 그 밖의 생성 파일도 기존 평가 수집 경로를 유지한다.
     extra_snapshots = {}
     # 이미 공개된 옛 파일 대신 이번 턴의 비공개 초안을 평가한다.
@@ -246,6 +266,14 @@ def invoke(controller, prompt="", *, phase="final"):
             result["repair_block_ids"] = []
         result["instruction"] = ("아래에서 지적한 결함과 의존 주장만 한 번 보완하세요. 기존 조사·산출물을 재사용하고 "
                                  "전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\n" + feedback)
+    elif (result["status"] == "UNKNOWN" and not controller.cancelled()
+          and re.search(r"UNKNOWN_REASON:\s*evidence\b", feedback)):
+        # 판정 실패/전송 예외와 증거 부족을 구별한다. 기존 실행 문맥에서 필요한
+        # 증거만 회수하고 재검수한다. 응답만 고치는 local 사본에는 실행 도구가 없다.
+        result.update(repair_scope="evidence", repair_block_ids=[], recoverable=True,
+                      instruction="판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 "
+                      "출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. "
+                      "확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n" + feedback)
     controller.log("evaluation.finished", role="evaluate", elapsed_s=round(time.monotonic() - started, 3),
                    decision=result)
     return json.dumps(result, ensure_ascii=False)

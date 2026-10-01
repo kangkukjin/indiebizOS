@@ -191,6 +191,7 @@
     "datastore/red_grant",
     "datastore/red_report",
     "datastore/red_watchdog",
+    "datastore/repair_continuation",
     "datastore/schema_migrations",
     "datastore/service_status",
     "datastore/store_waste_audit",
@@ -365,6 +366,7 @@
     "surface/api_prompt_composition",
     "surface/api_pursuits",
     "surface/api_records",
+    "surface/api_repair_continuation",
     "surface/api_report",
     "surface/api_scheduler",
     "surface/api_supervision",
@@ -505,8 +507,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 430,
-    "engine": 404,
+    "total": 432,
+    "engine": 406,
     "blocklist": 26
   }
 }

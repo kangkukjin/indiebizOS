@@ -1,0 +1,27 @@
+{
+  "cold_store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/7bbbb3520faa4a52a4a4eb8bf2ba80d4",
+  "seed_ref": "403abb0292084876332c1d8bb096b1e46712eda1e9e58488151fdf72b209ba7f",
+  "earlier_turns": [
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/9389d2adea2d40eea22b3c6d71176f00"
+  ],
+  "read": {
+    "id": "403abb0292084876332c1d8bb096b1e46712eda1e9e58488151fdf72b209ba7f",
+    "offset": 0,
+    "chars": 2036741,
+    "integrity": "verified",
+    "from_turn": "9389d2adea2d40eea22b3c6d71176f00"
+  },
+  "note": "하네스의 읽기 전용 권한/보존 확인. 이 참조나 내용은 cold 모델에 전달하지 않았다.",
+  "call_history": [
+    {
+      "turn": "7bbbb3520faa4a52a4a4eb8bf2ba80d4",
+      "current": true,
+      "calls": 4
+    },
+    {
+      "turn": "9389d2adea2d40eea22b3c6d71176f00",
+      "current": false,
+      "calls": 17
+    }
+  ]
+}

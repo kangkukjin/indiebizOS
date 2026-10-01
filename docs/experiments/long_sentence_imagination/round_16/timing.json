@@ -1,0 +1,9 @@
+{
+  "started_at": "2026-10-01T07:08:43.460577+00:00",
+  "started_epoch": 1790838523.4606369,
+  "limit_seconds": 3600,
+  "experiment_ended_at": "2026-10-01T08:05:00.743540+00:00",
+  "experiment_ended_epoch": 1790841900.743621,
+  "experiment_elapsed_s": 3377.2829842567444,
+  "report_prepared_at": "2026-10-01T08:11:40.937934+00:00"
+}

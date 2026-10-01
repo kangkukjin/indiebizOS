@@ -1,0 +1,56 @@
+#!ibl edition=2
+[def:수집]($root) {
+ $opening=[self:read]{path:$root+"/opening.json"}
+ $catalog=[self:read]{path:$root+"/catalog.json"}
+ $batches=[1,2,3,4] >> [table:each] {
+  $d=[self:read]{path:$root+"/movements_"+text($it)+".csv"}
+  return $d.data.items
+ }
+ $raw=reduce($batches,[],($a,$rows)=>$a+$rows)
+ $unique=$raw >> [table:dedup]{by:"id"}
+ $moves=map($unique.items,($r)=>{warehouse:$r.warehouse,sku:$r.sku,delta:number($r.delta)})
+ $net=$moves >> [table:groupby]{by:["warehouse","sku"],agg:{net:["sum","delta"]}}
+ $reservation=[self:read]{path:$root+"/reservations.csv"}
+ $active=filter($reservation.data.items,($r)=>$r.status=="active")
+ $res=map($active,($r)=>{warehouse:$r.warehouse,sku:$r.sku,qty:number($r.qty)})
+ $reserved=$res >> [table:groupby]{by:["warehouse","sku"],agg:{reserved:["sum","qty"]}}
+ $j1=[table:join]{left:$opening.data.items,right:$catalog.data.items,on:"sku"}
+ $j2=[table:join]{left:$j1.items,right:$net.items,on:["warehouse","sku"]}
+ $j3=[table:join]{left:$j2.items,right:$reserved.items,on:["warehouse","sku"],how:"left",defaults:{reserved:0}}
+ assert len($j3.items)==len($opening.data.items),"연결 후 기초 재고 행수 손실"
+ return {base:$j3.items,counts:{catalog:len($catalog.data.items),opening:len($opening.data.items),movements_raw:len($raw),movements_unique:len($unique.items),duplicate_movements:len($raw)-len($unique.items),reservations:len($reservation.data.items),active_reservations:len($active),cancelled_reservations:len(filter($reservation.data.items,($r)=>$r.status=="cancelled"))}}
+}
+[def:계산]($saved,$offset) {
+ $computed=$saved.base >> [table:each] {
+  $r=$it
+  $available=$r.opening+$r.net-$r.reserved
+  $target=$r.threshold+$offset
+  $deficit=max(0,$target-$available)
+  $reorder=($deficit-($deficit % $r.pack))+(($deficit % $r.pack)>0 ? $r.pack : 0)
+  return {warehouse:$r.warehouse,sku:$r.sku,opening:$r.opening,net:$r.net,reserved:$r.reserved,pack:$r.pack,target:$target,available:$available,deficit:$deficit,reorder:$reorder}
+ }
+ $items=$computed >> [table:sort]{by:["warehouse","sku"]}
+ $groups=$items >> [table:groupby]{by:"warehouse",agg:{available:["sum","available"],deficit:["sum","deficit"],reorder:["sum","reorder"]}}
+ $warehouses=$groups.items >> [table:sort]{by:"warehouse"}
+ $ranked=$items >> [table:sort]{by:"deficit",descending:true}
+ return {offset:$offset,items:$items,warehouses:$warehouses,top10:$ranked[0:10],counts:$saved.counts}
+}
+[def:표]($rows,$columns) {
+ return "| "+join(" | ",$columns)+" |\n| "+join(" | ",map($columns,($x)=>"---"))+" |\n"+join("\n",map($rows,($r)=>"| "+join(" | ",map($columns,($k)=>text(get($r,$k))))+" |"))+"\n"
+}
+[def:저장]($data,$out) {
+ $totals=[fn:표]{rows:$data.warehouses,columns:["warehouse","available","deficit","reorder"]}
+ $top=[fn:표]{rows:$data.top10,columns:["warehouse","sku","available","target","deficit","pack","reorder"]}
+ $md="# 월말 재고 보충 보고서\n\n합성 자료 분석. 가용=기초+중복 제거 입출고-활성 예약. 음수 가용은 보존한다. 목표=상품 기준+"+text($data.offset)+". 부족=max(0,목표-가용), 발주=부족 이상인 최소 포장 단위 배수.\n\n## 창고별 합계\n\n"+$totals+"\n## 부족량 상위 10쌍\n\n부족량 내림차순, 동률은 창고·상품 오름차순.\n\n"+$top+"\n## 원천과 처리 범위\n\n입력: 상품·기초 JSON과 입출고 CSV 4개, 예약 CSV 1개. 건수: "+json($data.counts)+"\n\n동일 입출고 id 중복은 첫 행만 계산하고 cancelled 예약은 제외했다. 모든 320개 창고·상품 조합을 연결했다. 읽기/연결 실패는 실행에서 중단한다. 이 자료 안에서 미확인 행은 없으며 실물 재고·외부 거래의 정확성은 확인하지 않았다.\n"
+ $j=[self:write]{path:$out+"/inventory.json",content:json($data)}
+ $m=[self:write]{path:$out+"/report.md",content:$md}
+ $jr=[self:read]{path:$out+"/inventory.json"}
+ $mr=[self:read]{path:$out+"/report.md"}
+ assert $jr.data==$data,"JSON 재읽기 불일치"
+ assert $mr.text==$md,"MD 재읽기 불일치"
+ assert sum(map($data.items,($r)=>$r.reorder))==sum(map($data.warehouses,($r)=>$r.reorder)),"창고 합계 불일치"
+ return {files:[$j,$m],verified:true}
+}
+$data=[fn:계산]{saved:$previous.saved,offset:$offset}
+$written=[fn:저장]{data:$data,out:$out}
+return {data:$data,written:$written}

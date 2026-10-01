@@ -1,0 +1,41 @@
+{
+  "episode": 4215,
+  "input_chars": 99209,
+  "history_headers": [
+    "[1] execute_ibl(+code,inputs,project_path,check)",
+    "[2] execute_ibl(+code,inputs,project_path)",
+    "[3] execute_ibl(+code,describe)",
+    "[4] execute_ibl(+code,read_result)",
+    "[5] execute_ibl(+code,inputs,budget,check)",
+    "[6] execute_ibl(+code,inputs,budget,check)",
+    "[7] execute_ibl(+code,inputs,budget)",
+    "[8] execute_ibl(+code,inputs,budget,check)",
+    "[9] execute_ibl(+code,inputs,budget)",
+    "[10] execute_ibl(+code,inputs,budget,check)",
+    "[11] execute_ibl(+code,inputs,budget)",
+    "[12] execute_ibl(+code,edition,inputs,check)",
+    "[13] execute_ibl(+code,edition,inputs)",
+    "[14] execute_ibl(+code,edition,describe)",
+    "[15] execute_ibl(+code,edition,read_result)",
+    "[16] execute_ibl(+code,edition,inputs,budget,check)",
+    "[17] execute_ibl(+code,edition,inputs,budget,check)",
+    "[18] execute_ibl(+code,edition,inputs,budget)",
+    "[19] execute_ibl(+code,edition,inputs,budget,check)",
+    "[20] execute_ibl(+code,edition,inputs,budget)",
+    "[21] execute_ibl(+code,edition,inputs,budget,check)",
+    "[22] execute_ibl(+code,edition,inputs,budget)"
+  ],
+  "omission_excerpt": ", \"opening\": 151, \"net\": -70}, {\"warehouse\": \"W1\", \"sku\": \"S043\", \"opening\": 54, \"net\": -62}, {\"warehouse\": \"W1\", \"sku\": \"S044\", \"opening\": 67, \"net\": -54}, {\"warehouse\": \"W1\", \"sku\": \"S045\", \"opening\": 80, \"net\": -46}, {\"warehouse\": \"W1\", \"sku\": \"S046\", \"opening\": 93, \"net\": -38}, {\"warehouse\": \"W…\n[10] execute_ibl(+code,inputs,budget,check)\n[11] execute_ibl(+code,inputs,budget)\n[12] execute_ibl(+code,edition,inputs,check)\n[13] execute_ibl(+code,edition,inputs)\n[14] execute_ibl(+code,edition,describe)\n[15] execute_ibl(+code,edition,read_result)\n[16] execute_ibl(+code,edition,inputs,budget,check)\n[17] execute_ibl(+code,edition,inputs,budget,check)\n[18] execute_ibl(+code,edition,inputs,budget)\n[19] execute_ibl(+code,edition,inputs,budget,check)\n[20] execute_ibl(+code,edition,inputs,budget)\n[21] execute_ibl(+code,edition,inputs,budget,check)\n[22] execute_ibl(+code,edition,inputs,budget)\n  (총 길이 budget 24000자 초과 — 일부 결과 본문 생략됨)\n\n## 에이전트 응답\n<block id=\"0\">320쌍 계산과 두 파일의 저장 후 재독 검증을 완료했습니다. ",
+  "verified_present_in_evaluation_input": false,
+  "final_tool_value": {
+    "verified": true,
+    "rows": 320,
+    "source_complete": true
+  },
+  "evaluation": "UNKNOWN; C1 원천 중복/예약 처리와 C5 저장 후 재독 검증 근거가 생략됨",
+  "note": "최종 실제 영수증과 평가 입력의 차이. 미승인 판단 자체를 오판으로 단정하지 않음.",
+  "product_gap_ids": [
+    "L16-1",
+    "L16-2"
+  ]
+}

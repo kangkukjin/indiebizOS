@@ -1,0 +1,71 @@
+{
+  "scope": "pursuit",
+  "detach_pursuit": false,
+  "pursuit_id": "pursuit_e677f854e3345beeab0f7972cffc802e",
+  "pursuit_reason": "같은 입력과 재고 계산 계약의 후속 요청이며, 이번에는 목표 가산값을 0에서 20으로, 출력 폴더를 seed에서 warm으로 변경했다. 기존 목표의 관련 계산·검증 조건을 유지하고 변경사항을 기록한다.",
+  "title": "",
+  "goal_criteria": "",
+  "task_framing": "문제: 지정된 합성 원자료로 창고·상품 320쌍을 다시 계산하여 목표 재고 threshold+20에 맞는 inventory.json과 report.md를 warm 폴더에 작성한다. 이전 결과의 완료 보고는 이번 계산이나 파일 검증의 증거가 아니다.\n제약: 입력은 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_16회차/input의 지정된 7개 파일뿐이다. self:read의 전체 JSON은 .data, 배열과 CSV 행은 .data.items에 있으며 CSV 수량은 문자열이므로 검증 후 숫자로 변환한다.\n세상의 방식: 재고 대사 절차에 따라 원천별 행수·키 무결성을 확인하고, 입출고 중복 제거와 active 예약 집계를 끝낸 뒤 기초 재고에 결합한다. 같은 id의 상충 행은 완전 동일 중복으로 처리하지 않고 자료 오류로 드러낸다.\n무게·멈춤선: 명세가 닫힌 계산 작업이다. 320쌍 전체와 집계·순위·건수를 계산하고 저장된 두 파일의 본문을 다시 읽어 원자료 및 명세와 대조하면 완료다.\n위해: 원자료·시스템·seed 결과·다른 작업 폴더를 수정하거나 탐색하지 않는다. 파일 쓰기는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_16회차/warm 안으로 제한하고 외부 발송은 하지 않는다.",
+  "expert_choice": "재고 대사는 입출고 id의 완전 동일 중복과 상충 기록을 먼저 구분하여 조인으로 인한 행 증식이나 거래 소실을 막는다.",
+  "needs_clarification": false,
+  "clarification_question": "",
+  "needs_repair": false,
+  "assumptions": [
+    "지정된 입력 폴더에서 catalog.json, opening.json, movements_1.csv부터 movements_4.csv, reservations.csv를 읽을 수 있다.",
+    "catalog의 sku와 opening의 warehouse·sku가 각각 유일하며 opening에 계산 대상 320쌍이 있다.",
+    "pack은 양수이고 수량 필드는 유효한 숫자이며 입출고·예약의 연결 키는 지정 원자료에서 해소된다."
+  ],
+  "achievement_criteria": "warm/inventory.json과 warm/report.md를 작성하고 저장 후 두 본문을 다시 읽어 검증한다. JSON 최상위 키는 offset,items,warehouses,top10,counts이며 offset은 숫자 20이다. items는 320쌍을 warehouse,sku 오름차순으로 담고 각 행은 warehouse,sku,opening,net,reserved,pack,target,available,deficit,reorder만 포함하며 수량은 숫자다. 완전 동일 입출고만 중복 제거하고 active 예약만 차감한다. target=threshold+20, available=opening+net-reserved, deficit=max(0,target-available), reorder는 deficit 이상인 최소 pack 배수이며 음수 available을 보존한다. warehouses는 warehouse 오름차순으로 warehouse,available,deficit,reorder 합계만 담는다. top10은 items와 같은 행 구조로 deficit 내림차순, warehouse·sku 오름차순의 첫 10쌍이다. counts에는 catalog,opening,movements_raw,movements_unique,duplicate_movements,reservations,active_reservations,cancelled_reservations의 실제 행수를 기록한다. 보고서는 공식·정책, 창고별 표, 상위 10쌍 표, 원천별 처리·중복·제외 수, 미확인 사항을 포함하고 JSON과 일치해야 한다. 자료·연결·저장·검증 실패는 위치와 원인을 밝히고 미충족으로 남긴다.",
+  "criteria": [
+    {
+      "text": "320쌍 전체에 가산값 20과 지정 계산·중복·예약 정책을 적용하고 음수 가용 재고를 보존한다.",
+      "user_quote": "목표 재고는 상품별 threshold에 20을 더한 값입니다.",
+      "fallback": "자료 오류로 계산할 수 없는 쌍은 원인과 위치를 명시하고 전체 계산 완료로 판정하지 않는다."
+    },
+    {
+      "text": "지정 JSON 스키마·수치형·정렬·창고 합계·상위 10쌍·8개 실제 행수 항목을 충족한다.",
+      "user_quote": "JSON 최상위 키는 offset,items,warehouses,top10,counts입니다.",
+      "fallback": ""
+    },
+    {
+      "text": "보고서의 공식·정책·두 표·원천별 건수와 미확인 사항을 JSON 및 원자료와 대조한다.",
+      "user_quote": "report.md에는 적용 공식·정책, 창고별 표, 상위 10쌍 표, 원천별 처리/중복/제외 수와 미확인 사항을 간결하게 담으세요.",
+      "fallback": ""
+    },
+    {
+      "text": "warm에 두 결과 파일을 저장하고 실제 저장 본문을 재독하여 전체 계산·집계·순위를 검증한다.",
+      "user_quote": "저장 뒤 다시 읽어 내용과 집계를 검증하세요.",
+      "fallback": "저장이나 재독이 실패하면 해당 파일과 오류를 보고하며 검증 완료라고 하지 않는다."
+    },
+    {
+      "text": "지정 원자료만 사용하고 쓰기는 warm으로 제한하며 원자료·시스템 수정과 외부 발송을 하지 않는다.",
+      "user_quote": "원자료는 바꾸지 말고, 시스템은 수정하지 말고, 지정 출력 폴더 외에는 파일을 쓰거나 외부로 발송하지 마세요.",
+      "fallback": ""
+    }
+  ],
+  "history_summary": "이전 요청은 같은 입력으로 threshold+0을 적용해 seed/inventory.json과 seed/report.md를 만드는 일이었고, assistant는 완료와 재독 검증을 보고했다. 이번 명시적 변경은 threshold+20과 출력 폴더 warm이다. 이전 산출물을 읽거나 재사용하지 않고 지정 원자료와 이번 실행 기록으로 계산·검증한다.",
+  "capability_focus": {
+    "highlight_actions": [
+      "self:read",
+      "table:union",
+      "table:dedup",
+      "table:filter",
+      "table:groupby",
+      "table:join",
+      "table:compute",
+      "table:sort",
+      "table:take",
+      "table:select",
+      "self:mkdir",
+      "self:write"
+    ],
+    "hint": "입력 7개 파일의 전체 구조 읽기는 독립 진행 → 원천별 실제 행수·필드·수치 유효성·키 오류를 반환한다. 범위 제한 읽기는 구조 파싱을 하지 않으므로 전체 읽기 계약을 사용한다. 원천 위치는 별도 추적하여 출처 열 때문에 동일 거래가 서로 다른 행으로 간주되지 않게 한다. 네 입출고 파일을 합쳐 id 상충을 검사하고 완전 동일 행만 dedup하며, 예약은 status별 실제 행수와 active 수량 합계를 구한다 → 정제 행·원천별 중복/제외 건수·오류 반환. opening을 기준으로 catalog와 두 집계를 결합하고 정상적으로 거래·예약이 없는 쌍만 합계를 0으로 둔다. table:compute의 판본 2 계약은 items와 set 람다이며 파생 열 의존 순서를 지킨다. 계산·집계·결합·정렬은 table 변환자로 조립하고 실제 계약을 describe로 확인한다. 상위 10쌍은 혼합 방향 다중 정렬이 필요하므로 단일 기준인 정렬해추리기 관용구를 억지로 적용하지 않는다. 결과와 보고서 작성 → 지정 두 파일 저장 → self:read로 저장 본문 재독 → 원자료 기준 320행 공식, pack 배수와 최소성, 스키마, 합계, 순위, 행수 및 보고서 일치를 검증한다. 수량의 차이·합계도 table 계산으로 확인하고 최종 응답에는 파일과 실제 검증 결과 및 미충족 사항만 간결히 남긴다. 기존 과제 연결 후 가산값 20과 warm 경로 변경을 goal/why에 기록한다.",
+    "imagined_ibl": ""
+  },
+  "imagined_ibl": "",
+  "guide_files": [
+    "ibl_composition.md",
+    "sheet.md"
+  ],
+  "_framing_source": "fresh_consciousness"
+}

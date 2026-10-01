@@ -1,0 +1,1336 @@
+[
+  {
+    "id": 4215,
+    "started_at": "2026-10-01T16:11:03.370681",
+    "ended_at": "2026-10-01T16:21:15.192811",
+    "agent": "LSI16_baseline",
+    "task_id": "task_5b335abb712a4e53a207b608bc501ca5",
+    "run_id": "run_294a3e974811074b6b9b",
+    "total_ms": 611821,
+    "case": "baseline",
+    "usage": [
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 2560,
+        "call_id": "f6f6afff492645d8920b2595671031c9",
+        "event": "usage",
+        "input": 3298,
+        "latency_ms": 649,
+        "model": "deepseek-flash",
+        "output": 2,
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "OpenAI",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 75136,
+        "call_id": "4fcc18f3241d4cd3a58673ca36233fcb",
+        "event": "usage",
+        "input": 114387,
+        "latency_ms": 83606,
+        "model": "gpt-6-astra:high",
+        "output": 2319,
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 3,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 84224,
+        "call_id": "dfd7580d9e904efdb86a49ee8974b2e7",
+        "event": "usage",
+        "input": 129455,
+        "latency_ms": 23411,
+        "model": "gpt-6-astra:high",
+        "output": 461,
+        "parent_call_id": null,
+        "phase": "review",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 3,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 1090816,
+        "call_id": "b7225f8ce8714c20ab656fc046147afa",
+        "event": "usage",
+        "input": 1220140,
+        "latency_ms": 507097,
+        "model": "gpt-6-astra:high",
+        "output": 12760,
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 13,
+        "source": "gear:최대|실행→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 12928,
+        "call_id": "d5bfef79c2c245e48c9fc4c77ef7098c",
+        "event": "usage",
+        "input": 55665,
+        "latency_ms": 12355,
+        "model": "gpt-6-astra:high",
+        "output": 207,
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 1,
+        "source": "gear:최대|평가→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 384,
+        "call_id": "7414fef33f774c29a60c4944c88935e2",
+        "event": "usage",
+        "input": 3907,
+        "latency_ms": 848,
+        "model": "deepseek-flash",
+        "output": 80,
+        "parent_call_id": null,
+        "phase": "capability_guard",
+        "provider": "DeepSeekProvider",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      }
+    ],
+    "totals": {
+      "input": 1526852,
+      "output": 15829,
+      "cache_read": 1266048,
+      "cache_create": 0
+    },
+    "route": [
+      {
+        "force_role": "",
+        "intent": "task",
+        "reflex": false,
+        "request_type": "THINK"
+      }
+    ],
+    "evaluation": [
+      {
+        "decision": {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nC1의 원천 중복·예약 처리 정확성과 C5의 저장 후 재독·검증 성공 여부는 해당 실행 내용과 결과가 생략되어 제공된 증거만으로 확정할 수 없습니다.",
+          "response_hash": "b9786e515695186fd1aac15a10fbd50d455ba26f712213067cba2340a5d4ca5f",
+          "response_version": 1,
+          "severity": 0,
+          "status": "UNKNOWN"
+        },
+        "elapsed_s": 13.827,
+        "kind": "evaluation.finished",
+        "phase": "final",
+        "role": "evaluate",
+        "seq": 51,
+        "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/9681acfb38374a44ba676296699d0e3f",
+        "task_id": "task_5b335abb712a4e53a207b608bc501ca5",
+        "time": 1790839273.858892
+      }
+    ],
+    "input_shapes": [
+      {
+        "accounting": "input_shape_only",
+        "call_id": "f6f6afff492645d8920b2595671031c9",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 1402,
+        "model": "deepseek-flash",
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "DeepSeek",
+        "role": "oneshot:classify",
+        "round_index": 0,
+        "source": "gear:최대|분류→경량",
+        "system_chars": 4095,
+        "tier": "경량",
+        "tool_schema_chars": 2
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "4fcc18f3241d4cd3a58673ca36233fcb",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 15957,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 0,
+        "source": "execution_instance",
+        "system_chars": 28454,
+        "tier": "고급",
+        "tool_schema_chars": 1664
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "b7225f8ce8714c20ab656fc046147afa",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 45392,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 0,
+        "source": "gear:최대|실행→고급",
+        "system_chars": 46894,
+        "tier": "고급",
+        "tool_schema_chars": 12346
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "dfd7580d9e904efdb86a49ee8974b2e7",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 62762,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "review",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 0,
+        "source": "execution_instance",
+        "system_chars": 2204,
+        "tier": "고급",
+        "tool_schema_chars": 1664
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "d5bfef79c2c245e48c9fc4c77ef7098c",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 96528,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 0,
+        "source": "gear:최대|평가→고급",
+        "system_chars": 2674,
+        "tier": "고급",
+        "tool_schema_chars": 2
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "7414fef33f774c29a60c4944c88935e2",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 8708,
+        "model": "deepseek-flash",
+        "parent_call_id": null,
+        "phase": "capability_guard",
+        "provider": "DeepSeek",
+        "role": "oneshot:classify",
+        "round_index": 0,
+        "source": "gear:최대|분류→경량",
+        "system_chars": 1065,
+        "tier": "경량",
+        "tool_schema_chars": 2
+      }
+    ],
+    "recall": [
+      {
+        "blocks": [
+          {
+            "chars": 1365,
+            "ids": [
+              "3496",
+              "4289"
+            ],
+            "meta": {
+              "refs": 2,
+              "top_code": ""
+            },
+            "ms": 218.3,
+            "source": "hippocampus",
+            "status": "ok",
+            "tag": "execution_memory"
+          },
+          {
+            "chars": 0,
+            "ids": [],
+            "ms": 2.3,
+            "source": "memory_map",
+            "status": "empty",
+            "tag": "memory_map"
+          },
+          {
+            "chars": 0,
+            "ids": [],
+            "ms": 1.8,
+            "source": "recalled_memory",
+            "status": "empty",
+            "tag": "recalled_memory"
+          },
+          {
+            "chars": 2224,
+            "ids": [],
+            "meta": {
+              "branches": 42
+            },
+            "ms": 45.7,
+            "source": "guide_map",
+            "status": "ok",
+            "tag": "guide_map"
+          },
+          {
+            "chars": 1067,
+            "ids": [],
+            "ms": 2.0,
+            "source": "decision_ledger",
+            "status": "ok",
+            "tag": "decision_ledger"
+          },
+          {
+            "chars": 181,
+            "ids": [
+              "basics.02.6c0b9dd710ab",
+              "basics.08.6e1b9aecaabc",
+              "basics.06.3182dd7d3d31",
+              "basics.01.45ec909f3017"
+            ],
+            "ms": 74.5,
+            "source": "method_map",
+            "status": "selected",
+            "tag": "method_map"
+          },
+          {
+            "chars": 605,
+            "ids": [
+              "basics.14.38f4467f701d"
+            ],
+            "meta": {
+              "picked": 1
+            },
+            "ms": 107.7,
+            "source": "world_memory",
+            "status": "ok",
+            "tag": "world_map"
+          }
+        ],
+        "channel": "pipeline",
+        "reflex": {
+          "code": "",
+          "score": 0.7122
+        },
+        "request_type": "THINK"
+      }
+    ],
+    "tool_calls": 11,
+    "tool_errors": 0
+  },
+  {
+    "id": 4216,
+    "started_at": "2026-10-01T16:22:15.135614",
+    "ended_at": "2026-10-01T16:36:53.679162",
+    "agent": "LSI16_seed",
+    "task_id": "task_cf8b36d73c0547098185681e75f2ce46",
+    "run_id": "run_5d49f92717c3b9489a6c",
+    "total_ms": 878543,
+    "case": "seed",
+    "usage": [
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 2560,
+        "call_id": "d69bc9ebc9d84fda9164f489ff260ed7",
+        "event": "usage",
+        "input": 3297,
+        "latency_ms": 655,
+        "model": "deepseek-flash",
+        "output": 2,
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "OpenAI",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 88704,
+        "call_id": "b4427246de204367994be6ffc6d38e92",
+        "event": "usage",
+        "input": 115451,
+        "latency_ms": 74485,
+        "model": "gpt-6-astra:high",
+        "output": 2185,
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 3,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 182656,
+        "call_id": "9b383965af3549068b6b0810769f5732",
+        "event": "usage",
+        "input": 233942,
+        "latency_ms": 35620,
+        "model": "gpt-6-astra:high",
+        "output": 534,
+        "parent_call_id": null,
+        "phase": "review",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 5,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 1659648,
+        "call_id": "b88575adb6844ceeb2d0a601b0d93e07",
+        "event": "usage",
+        "input": 1821865,
+        "latency_ms": 785924,
+        "model": "gpt-6-astra:high",
+        "output": 20992,
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 20,
+        "source": "gear:최대|실행→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 12928,
+        "call_id": "9ad37181a79149d491769dfbf607d360",
+        "event": "usage",
+        "input": 55994,
+        "latency_ms": 11688,
+        "model": "gpt-6-astra:high",
+        "output": 234,
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 1,
+        "source": "gear:최대|평가→고급",
+        "tier": "고급"
+      }
+    ],
+    "totals": {
+      "input": 2230549,
+      "output": 23947,
+      "cache_read": 1946496,
+      "cache_create": 0
+    },
+    "route": [
+      {
+        "force_role": "",
+        "intent": "task",
+        "reflex": false,
+        "request_type": "THINK"
+      }
+    ],
+    "evaluation": [
+      {
+        "decision": {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "ACHIEVED",
+          "response_hash": "28495e550fa18aec872cf0a9f2b167efb30f3d323a9e1e3afac184314cfac235",
+          "response_version": 1,
+          "severity": 0,
+          "status": "APPROVED"
+        },
+        "elapsed_s": 13.035,
+        "kind": "evaluation.finished",
+        "phase": "final",
+        "role": "evaluate",
+        "seq": 65,
+        "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/9389d2adea2d40eea22b3c6d71176f00",
+        "task_id": "task_cf8b36d73c0547098185681e75f2ce46",
+        "time": 1790840213.6632268
+      }
+    ],
+    "input_shapes": [
+      {
+        "accounting": "input_shape_only",
+        "call_id": "d69bc9ebc9d84fda9164f489ff260ed7",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 1397,
+        "model": "deepseek-flash",
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "DeepSeek",
+        "role": "oneshot:classify",
+        "round_index": 0,
+        "source": "gear:최대|분류→경량",
+        "system_chars": 4095,
+        "tier": "경량",
+        "tool_schema_chars": 2
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "b4427246de204367994be6ffc6d38e92",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 15948,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 0,
+        "source": "execution_instance",
+        "system_chars": 28454,
+        "tier": "고급",
+        "tool_schema_chars": 1664
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "b88575adb6844ceeb2d0a601b0d93e07",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 43668,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 0,
+        "source": "gear:최대|실행→고급",
+        "system_chars": 46898,
+        "tier": "고급",
+        "tool_schema_chars": 12346
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "9b383965af3549068b6b0810769f5732",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 67019,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "review",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 0,
+        "source": "execution_instance",
+        "system_chars": 2204,
+        "tier": "고급",
+        "tool_schema_chars": 1664
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "9ad37181a79149d491769dfbf607d360",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 96920,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 0,
+        "source": "gear:최대|평가→고급",
+        "system_chars": 2674,
+        "tier": "고급",
+        "tool_schema_chars": 2
+      }
+    ],
+    "recall": [
+      {
+        "blocks": [
+          {
+            "chars": 1365,
+            "ids": [
+              "3496",
+              "4289"
+            ],
+            "meta": {
+              "refs": 2,
+              "top_code": ""
+            },
+            "ms": 99.5,
+            "source": "hippocampus",
+            "status": "ok",
+            "tag": "execution_memory"
+          },
+          {
+            "chars": 0,
+            "ids": [],
+            "ms": 1.8,
+            "source": "memory_map",
+            "status": "empty",
+            "tag": "memory_map"
+          },
+          {
+            "chars": 0,
+            "ids": [],
+            "ms": 1.6,
+            "source": "recalled_memory",
+            "status": "empty",
+            "tag": "recalled_memory"
+          },
+          {
+            "chars": 2224,
+            "ids": [],
+            "meta": {
+              "branches": 42
+            },
+            "ms": 55.1,
+            "source": "guide_map",
+            "status": "ok",
+            "tag": "guide_map"
+          },
+          {
+            "chars": 1067,
+            "ids": [],
+            "ms": 3.5,
+            "source": "decision_ledger",
+            "status": "ok",
+            "tag": "decision_ledger"
+          },
+          {
+            "chars": 181,
+            "ids": [
+              "basics.02.6c0b9dd710ab",
+              "basics.08.6e1b9aecaabc",
+              "basics.06.3182dd7d3d31",
+              "basics.01.45ec909f3017"
+            ],
+            "ms": 73.1,
+            "source": "method_map",
+            "status": "selected",
+            "tag": "method_map"
+          },
+          {
+            "chars": 605,
+            "ids": [
+              "basics.14.38f4467f701d"
+            ],
+            "meta": {
+              "picked": 1
+            },
+            "ms": 97.8,
+            "source": "world_memory",
+            "status": "ok",
+            "tag": "world_map"
+          }
+        ],
+        "channel": "pipeline",
+        "reflex": {
+          "code": "",
+          "score": 0.7122
+        },
+        "request_type": "THINK"
+      }
+    ],
+    "tool_calls": 17,
+    "tool_errors": 0
+  },
+  {
+    "id": 4217,
+    "started_at": "2026-10-01T16:37:59.224896",
+    "ended_at": "2026-10-01T16:51:22.941959",
+    "agent": "LSI16_seed",
+    "task_id": "task_f8a4d523f7ea48c39991ed0555cb20ec",
+    "run_id": "run_7f41ebf983fd8aafae71",
+    "total_ms": 803716,
+    "case": "cold",
+    "usage": [
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 3072,
+        "call_id": "88f6618015bf4e2985b400c3065bdced",
+        "event": "usage",
+        "input": 3297,
+        "latency_ms": 421,
+        "model": "deepseek-flash",
+        "output": 2,
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "OpenAI",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 37248,
+        "call_id": "183a80d3081c4e6cb3d06508fcefc6ce",
+        "event": "usage",
+        "input": 76200,
+        "latency_ms": 68884,
+        "model": "gpt-6-astra:high",
+        "output": 2085,
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 2,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 128768,
+        "call_id": "d6c31bdde9304ca8b5223018010e3a90",
+        "event": "usage",
+        "input": 170744,
+        "latency_ms": 46978,
+        "model": "gpt-6-astra:high",
+        "output": 784,
+        "parent_call_id": null,
+        "phase": "review",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 4,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 1375616,
+        "call_id": "7716e3b4586c4be285dabb0efa662dc8",
+        "event": "usage",
+        "input": 1501715,
+        "latency_ms": 719423,
+        "model": "gpt-6-astra:high",
+        "output": 19147,
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 16,
+        "source": "gear:최대|실행→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 0,
+        "call_id": "a9e45361e6c54fcb9e6e421162b6501c",
+        "event": "usage",
+        "input": 55603,
+        "latency_ms": 9649,
+        "model": "gpt-6-astra:high",
+        "output": 179,
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 1,
+        "source": "gear:최대|평가→고급",
+        "tier": "고급"
+      }
+    ],
+    "totals": {
+      "input": 1807559,
+      "output": 22197,
+      "cache_read": 1544704,
+      "cache_create": 0
+    },
+    "route": [
+      {
+        "force_role": "",
+        "intent": "task",
+        "reflex": false,
+        "request_type": "THINK"
+      }
+    ],
+    "evaluation": [
+      {
+        "decision": {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nC2·C5: 원천 중복·예약 처리 검증과 저장 후 재독 검증의 결과 본문이 생략되어, 실제 처리의 정확성과 필수 검증 항목의 통과 여부를 확인할 근거가 부족합니다.",
+          "response_hash": "4d483a8946460d744134eec84eafe727c95389cfa4d1f88fd668834a0c3419f2",
+          "response_version": 1,
+          "severity": 0,
+          "status": "UNKNOWN"
+        },
+        "elapsed_s": 10.739,
+        "kind": "evaluation.finished",
+        "phase": "final",
+        "role": "evaluate",
+        "seq": 56,
+        "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/7bbbb3520faa4a52a4a4eb8bf2ba80d4",
+        "task_id": "task_f8a4d523f7ea48c39991ed0555cb20ec",
+        "time": 1790841082.8605509
+      }
+    ],
+    "input_shapes": [
+      {
+        "accounting": "input_shape_only",
+        "call_id": "88f6618015bf4e2985b400c3065bdced",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 1398,
+        "model": "deepseek-flash",
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "DeepSeek",
+        "role": "oneshot:classify",
+        "round_index": 0,
+        "source": "gear:최대|분류→경량",
+        "system_chars": 4095,
+        "tier": "경량",
+        "tool_schema_chars": 2
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "183a80d3081c4e6cb3d06508fcefc6ce",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 15949,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 0,
+        "source": "execution_instance",
+        "system_chars": 28454,
+        "tier": "고급",
+        "tool_schema_chars": 1664
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "7716e3b4586c4be285dabb0efa662dc8",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 43839,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 0,
+        "source": "gear:최대|실행→고급",
+        "system_chars": 46898,
+        "tier": "고급",
+        "tool_schema_chars": 12346
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "d6c31bdde9304ca8b5223018010e3a90",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 56764,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "review",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 0,
+        "source": "execution_instance",
+        "system_chars": 2204,
+        "tier": "고급",
+        "tool_schema_chars": 1664
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "a9e45361e6c54fcb9e6e421162b6501c",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 94041,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 0,
+        "source": "gear:최대|평가→고급",
+        "system_chars": 2674,
+        "tier": "고급",
+        "tool_schema_chars": 2
+      }
+    ],
+    "recall": [
+      {
+        "blocks": [
+          {
+            "chars": 1365,
+            "ids": [
+              "3496",
+              "4289"
+            ],
+            "meta": {
+              "refs": 2,
+              "top_code": ""
+            },
+            "ms": 201.5,
+            "source": "hippocampus",
+            "status": "ok",
+            "tag": "execution_memory"
+          },
+          {
+            "chars": 0,
+            "ids": [],
+            "ms": 2.2,
+            "source": "memory_map",
+            "status": "empty",
+            "tag": "memory_map"
+          },
+          {
+            "chars": 0,
+            "ids": [],
+            "ms": 1.6,
+            "source": "recalled_memory",
+            "status": "empty",
+            "tag": "recalled_memory"
+          },
+          {
+            "chars": 2224,
+            "ids": [],
+            "meta": {
+              "branches": 42
+            },
+            "ms": 68.3,
+            "source": "guide_map",
+            "status": "ok",
+            "tag": "guide_map"
+          },
+          {
+            "chars": 1067,
+            "ids": [],
+            "ms": 2.3,
+            "source": "decision_ledger",
+            "status": "ok",
+            "tag": "decision_ledger"
+          },
+          {
+            "chars": 181,
+            "ids": [
+              "basics.02.6c0b9dd710ab",
+              "basics.08.6e1b9aecaabc",
+              "basics.06.3182dd7d3d31",
+              "basics.01.45ec909f3017"
+            ],
+            "ms": 76.9,
+            "source": "method_map",
+            "status": "selected",
+            "tag": "method_map"
+          },
+          {
+            "chars": 605,
+            "ids": [
+              "basics.14.38f4467f701d"
+            ],
+            "meta": {
+              "picked": 1
+            },
+            "ms": 91.3,
+            "source": "world_memory",
+            "status": "ok",
+            "tag": "world_map"
+          }
+        ],
+        "channel": "pipeline",
+        "reflex": {
+          "code": "",
+          "score": 0.7122
+        },
+        "request_type": "THINK"
+      }
+    ],
+    "tool_calls": 13,
+    "tool_errors": 0
+  },
+  {
+    "id": 4218,
+    "started_at": "2026-10-01T16:52:30.483884",
+    "ended_at": "2026-10-01T17:03:00.092211",
+    "agent": "LSI16_seed",
+    "task_id": "task_4ea1892c8f4c4577a3cdc0bbd814f122",
+    "run_id": "run_f5ec58b5085fa7d69ba3",
+    "total_ms": 629608,
+    "case": "warm",
+    "usage": [
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 3072,
+        "call_id": "0a7051e0403e4ce698eaa08bac6c8073",
+        "event": "usage",
+        "input": 3297,
+        "latency_ms": 660,
+        "model": "deepseek-flash",
+        "output": 2,
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "OpenAI",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 77568,
+        "call_id": "fba336d4b8b84c4fab6be0ef34b5d4fd",
+        "event": "usage",
+        "input": 118643,
+        "latency_ms": 81834,
+        "model": "gpt-6-astra:high",
+        "output": 2392,
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 3,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 146176,
+        "call_id": "a4267837e351459297ec33042067d922",
+        "event": "usage",
+        "input": 194188,
+        "latency_ms": 31579,
+        "model": "gpt-6-astra:high",
+        "output": 464,
+        "parent_call_id": null,
+        "phase": "review",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 4,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 1411200,
+        "call_id": "bd4e77f377e04e58b2f257733be3d776",
+        "event": "usage",
+        "input": 1535479,
+        "latency_ms": 528942,
+        "model": "gpt-6-astra:high",
+        "output": 13880,
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 17,
+        "source": "gear:최대|실행→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 0,
+        "call_id": "6236eae4f58a454791ace6c4a7350c41",
+        "event": "usage",
+        "input": 58376,
+        "latency_ms": 12582,
+        "model": "gpt-6-astra:high",
+        "output": 232,
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 1,
+        "source": "gear:최대|평가→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 1024,
+        "call_id": "2235a6ca2b854bd1bc7e5855897f8573",
+        "event": "usage",
+        "input": 3445,
+        "latency_ms": 844,
+        "model": "deepseek-flash",
+        "output": 65,
+        "parent_call_id": null,
+        "phase": "capability_guard",
+        "provider": "DeepSeekProvider",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      }
+    ],
+    "totals": {
+      "input": 1913428,
+      "output": 17035,
+      "cache_read": 1639040,
+      "cache_create": 0
+    },
+    "route": [
+      {
+        "force_role": "",
+        "intent": "task",
+        "reflex": false,
+        "request_type": "THINK"
+      }
+    ],
+    "evaluation": [
+      {
+        "decision": {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nC1·C3·C4·G1: 원자료의 중복·예약 처리 대사와 저장 후 재독 검증의 실제 결과 본문이 생략되어, 제공된 파일 내용과 완료 서술만으로 전체 계산 및 검증의 충족 여부를 확정할 수 없습니다.",
+          "response_hash": "c243358e7eae2c683faad6d7248b2b24081886688a29c325c9e5a8593863448a",
+          "response_version": 1,
+          "severity": 0,
+          "status": "UNKNOWN"
+        },
+        "elapsed_s": 13.938,
+        "kind": "evaluation.finished",
+        "phase": "final",
+        "role": "evaluate",
+        "seq": 61,
+        "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/10f2a380d59f4fce90b3c62168ec135c",
+        "task_id": "task_4ea1892c8f4c4577a3cdc0bbd814f122",
+        "time": 1790841779.172588
+      }
+    ],
+    "input_shapes": [
+      {
+        "accounting": "input_shape_only",
+        "call_id": "0a7051e0403e4ce698eaa08bac6c8073",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 1398,
+        "model": "deepseek-flash",
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "DeepSeek",
+        "role": "oneshot:classify",
+        "round_index": 0,
+        "source": "gear:최대|분류→경량",
+        "system_chars": 4095,
+        "tier": "경량",
+        "tool_schema_chars": 2
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "fba336d4b8b84c4fab6be0ef34b5d4fd",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 18380,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 0,
+        "source": "execution_instance",
+        "system_chars": 28454,
+        "tier": "고급",
+        "tool_schema_chars": 1664
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "bd4e77f377e04e58b2f257733be3d776",
+        "history_chars": 206,
+        "images": 0,
+        "message_chars": 46398,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 0,
+        "source": "gear:최대|실행→고급",
+        "system_chars": 46898,
+        "tier": "고급",
+        "tool_schema_chars": 12346
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "a4267837e351459297ec33042067d922",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 68676,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "review",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 0,
+        "source": "execution_instance",
+        "system_chars": 2204,
+        "tier": "고급",
+        "tool_schema_chars": 1664
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "6236eae4f58a454791ace6c4a7350c41",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 98118,
+        "model": "gpt-6-astra:high",
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 0,
+        "source": "gear:최대|평가→고급",
+        "system_chars": 2674,
+        "tier": "고급",
+        "tool_schema_chars": 2
+      },
+      {
+        "accounting": "input_shape_only",
+        "call_id": "2235a6ca2b854bd1bc7e5855897f8573",
+        "history_chars": 0,
+        "images": 0,
+        "message_chars": 6324,
+        "model": "deepseek-flash",
+        "parent_call_id": null,
+        "phase": "capability_guard",
+        "provider": "DeepSeek",
+        "role": "oneshot:classify",
+        "round_index": 0,
+        "source": "gear:최대|분류→경량",
+        "system_chars": 1065,
+        "tier": "경량",
+        "tool_schema_chars": 2
+      }
+    ],
+    "recall": [
+      {
+        "blocks": [
+          {
+            "chars": 1365,
+            "ids": [
+              "3496",
+              "4289"
+            ],
+            "meta": {
+              "refs": 2,
+              "top_code": ""
+            },
+            "ms": 221.4,
+            "source": "hippocampus",
+            "status": "ok",
+            "tag": "execution_memory"
+          },
+          {
+            "chars": 0,
+            "ids": [],
+            "ms": 2.1,
+            "source": "memory_map",
+            "status": "empty",
+            "tag": "memory_map"
+          },
+          {
+            "chars": 0,
+            "ids": [],
+            "ms": 1.9,
+            "source": "recalled_memory",
+            "status": "empty",
+            "tag": "recalled_memory"
+          },
+          {
+            "chars": 2224,
+            "ids": [],
+            "meta": {
+              "branches": 42
+            },
+            "ms": 58.6,
+            "source": "guide_map",
+            "status": "ok",
+            "tag": "guide_map"
+          },
+          {
+            "chars": 1067,
+            "ids": [],
+            "ms": 2.3,
+            "source": "decision_ledger",
+            "status": "ok",
+            "tag": "decision_ledger"
+          },
+          {
+            "chars": 505,
+            "ids": [],
+            "ms": 0.0,
+            "source": "pursuit",
+            "status": "ok",
+            "tag": "pursuit"
+          },
+          {
+            "chars": 181,
+            "ids": [
+              "basics.02.6c0b9dd710ab",
+              "basics.08.6e1b9aecaabc",
+              "basics.06.3182dd7d3d31",
+              "basics.01.45ec909f3017"
+            ],
+            "ms": 64.4,
+            "source": "method_map",
+            "status": "selected",
+            "tag": "method_map"
+          },
+          {
+            "chars": 605,
+            "ids": [
+              "basics.14.38f4467f701d"
+            ],
+            "meta": {
+              "picked": 1
+            },
+            "ms": 98.3,
+            "source": "world_memory",
+            "status": "ok",
+            "tag": "world_map"
+          }
+        ],
+        "channel": "pipeline",
+        "reflex": {
+          "code": "",
+          "score": 0.7122
+        },
+        "request_type": "THINK"
+      }
+    ],
+    "tool_calls": 15,
+    "tool_errors": 0
+  }
+]

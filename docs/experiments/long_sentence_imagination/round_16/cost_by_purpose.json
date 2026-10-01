@@ -1,0 +1,450 @@
+[
+  {
+    "episode": 4215,
+    "purpose": "요구 분류",
+    "rounds": 1,
+    "input": 3298,
+    "output": 2,
+    "cache_read": 2560
+  },
+  {
+    "episode": 4215,
+    "purpose": "계획·계약 탐색",
+    "rounds": 3,
+    "input": 114387,
+    "output": 2319,
+    "cache_read": 75136
+  },
+  {
+    "episode": 4215,
+    "purpose": "실행 전 검사",
+    "rounds": 3,
+    "input": 287569,
+    "output": 3430,
+    "cache_read": 207872
+  },
+  {
+    "episode": 4215,
+    "purpose": "원자료 수집",
+    "rounds": 1,
+    "input": 63223,
+    "output": 181,
+    "cache_read": 62080
+  },
+  {
+    "episode": 4215,
+    "purpose": "계약·교재 탐색",
+    "rounds": 1,
+    "input": 68925,
+    "output": 222,
+    "cache_read": 63104
+  },
+  {
+    "episode": 4215,
+    "purpose": "저장 본문 확인",
+    "rounds": 1,
+    "input": 76167,
+    "output": 109,
+    "cache_read": 68736
+  },
+  {
+    "episode": 4215,
+    "purpose": "추론·응답 정리(독립 도구 호출 없음)",
+    "rounds": 2,
+    "input": 213790,
+    "output": 628,
+    "cache_read": 197760
+  },
+  {
+    "episode": 4215,
+    "purpose": "검사 거절을 받은 작성",
+    "rounds": 1,
+    "input": 86955,
+    "output": 1644,
+    "cache_read": 86272
+  },
+  {
+    "episode": 4215,
+    "purpose": "거절 후 재작성·검사",
+    "rounds": 1,
+    "input": 93339,
+    "output": 1956,
+    "cache_read": 86784
+  },
+  {
+    "episode": 4215,
+    "purpose": "계산·보고서 구성",
+    "rounds": 2,
+    "input": 208246,
+    "output": 2510,
+    "cache_read": 200704
+  },
+  {
+    "episode": 4215,
+    "purpose": "중간 감독 검수",
+    "rounds": 3,
+    "input": 129455,
+    "output": 461,
+    "cache_read": 84224
+  },
+  {
+    "episode": 4215,
+    "purpose": "파일 저장·재읽기",
+    "rounds": 1,
+    "input": 121926,
+    "output": 2080,
+    "cache_read": 117504
+  },
+  {
+    "episode": 4215,
+    "purpose": "최종 평가",
+    "rounds": 1,
+    "input": 55665,
+    "output": 207,
+    "cache_read": 12928
+  },
+  {
+    "episode": 4215,
+    "purpose": "완료 후 응답 점검",
+    "rounds": 1,
+    "input": 3907,
+    "output": 80,
+    "cache_read": 384
+  },
+  {
+    "episode": 4216,
+    "purpose": "요구 분류",
+    "rounds": 1,
+    "input": 3297,
+    "output": 2,
+    "cache_read": 2560
+  },
+  {
+    "episode": 4216,
+    "purpose": "계획·계약 탐색",
+    "rounds": 3,
+    "input": 115451,
+    "output": 2185,
+    "cache_read": 88704
+  },
+  {
+    "episode": 4216,
+    "purpose": "계약·교재 탐색",
+    "rounds": 2,
+    "input": 135599,
+    "output": 340,
+    "cache_read": 65920
+  },
+  {
+    "episode": 4216,
+    "purpose": "실행 전 검사",
+    "rounds": 3,
+    "input": 263021,
+    "output": 3535,
+    "cache_read": 247168
+  },
+  {
+    "episode": 4216,
+    "purpose": "원자료 수집",
+    "rounds": 1,
+    "input": 66044,
+    "output": 230,
+    "cache_read": 64768
+  },
+  {
+    "episode": 4216,
+    "purpose": "저장 본문 확인",
+    "rounds": 2,
+    "input": 149499,
+    "output": 208,
+    "cache_read": 138240
+  },
+  {
+    "episode": 4216,
+    "purpose": "추론·응답 정리(독립 도구 호출 없음)",
+    "rounds": 4,
+    "input": 407848,
+    "output": 4610,
+    "cache_read": 374528
+  },
+  {
+    "episode": 4216,
+    "purpose": "검사 거절을 받은 작성",
+    "rounds": 3,
+    "input": 263895,
+    "output": 5668,
+    "cache_read": 252160
+  },
+  {
+    "episode": 4216,
+    "purpose": "거절 후 재작성·검사 + 계산·보고서 구성",
+    "rounds": 1,
+    "input": 100757,
+    "output": 1247,
+    "cache_read": 96896
+  },
+  {
+    "episode": 4216,
+    "purpose": "거절 후 재작성·검사",
+    "rounds": 1,
+    "input": 113795,
+    "output": 1112,
+    "cache_read": 108544
+  },
+  {
+    "episode": 4216,
+    "purpose": "계산·보고서 구성",
+    "rounds": 1,
+    "input": 116613,
+    "output": 1046,
+    "cache_read": 113664
+  },
+  {
+    "episode": 4216,
+    "purpose": "중간 감독 검수",
+    "rounds": 5,
+    "input": 233942,
+    "output": 534,
+    "cache_read": 182656
+  },
+  {
+    "episode": 4216,
+    "purpose": "파일 저장·재읽기",
+    "rounds": 1,
+    "input": 127727,
+    "output": 1282,
+    "cache_read": 124800
+  },
+  {
+    "episode": 4216,
+    "purpose": "결과·원천 대조 검증",
+    "rounds": 1,
+    "input": 77067,
+    "output": 1714,
+    "cache_read": 72960
+  },
+  {
+    "episode": 4216,
+    "purpose": "최종 평가",
+    "rounds": 1,
+    "input": 55994,
+    "output": 234,
+    "cache_read": 12928
+  },
+  {
+    "episode": 4217,
+    "purpose": "요구 분류",
+    "rounds": 1,
+    "input": 3297,
+    "output": 2,
+    "cache_read": 3072
+  },
+  {
+    "episode": 4217,
+    "purpose": "계획·계약 탐색",
+    "rounds": 2,
+    "input": 76200,
+    "output": 2085,
+    "cache_read": 37248
+  },
+  {
+    "episode": 4217,
+    "purpose": "실행 전 검사",
+    "rounds": 2,
+    "input": 182554,
+    "output": 2086,
+    "cache_read": 119552
+  },
+  {
+    "episode": 4217,
+    "purpose": "원자료 수집",
+    "rounds": 1,
+    "input": 62676,
+    "output": 215,
+    "cache_read": 61568
+  },
+  {
+    "episode": 4217,
+    "purpose": "계약·교재 탐색",
+    "rounds": 1,
+    "input": 70706,
+    "output": 559,
+    "cache_read": 62464
+  },
+  {
+    "episode": 4217,
+    "purpose": "추론·응답 정리(독립 도구 호출 없음)",
+    "rounds": 4,
+    "input": 414560,
+    "output": 2983,
+    "cache_read": 393600
+  },
+  {
+    "episode": 4217,
+    "purpose": "검사 거절을 받은 작성",
+    "rounds": 2,
+    "input": 166831,
+    "output": 3961,
+    "cache_read": 158976
+  },
+  {
+    "episode": 4217,
+    "purpose": "거절 후 재작성·검사",
+    "rounds": 2,
+    "input": 178351,
+    "output": 3809,
+    "cache_read": 166400
+  },
+  {
+    "episode": 4217,
+    "purpose": "계산·보고서 구성",
+    "rounds": 2,
+    "input": 187896,
+    "output": 3566,
+    "cache_read": 181120
+  },
+  {
+    "episode": 4217,
+    "purpose": "중간 감독 검수",
+    "rounds": 4,
+    "input": 170744,
+    "output": 784,
+    "cache_read": 128768
+  },
+  {
+    "episode": 4217,
+    "purpose": "실행 전 검사 + 파일 저장·재읽기",
+    "rounds": 1,
+    "input": 113264,
+    "output": 282,
+    "cache_read": 111232
+  },
+  {
+    "episode": 4217,
+    "purpose": "결과·원천 대조 검증",
+    "rounds": 1,
+    "input": 124877,
+    "output": 1686,
+    "cache_read": 120704
+  },
+  {
+    "episode": 4217,
+    "purpose": "최종 평가",
+    "rounds": 1,
+    "input": 55603,
+    "output": 179,
+    "cache_read": 0
+  },
+  {
+    "episode": 4218,
+    "purpose": "요구 분류",
+    "rounds": 1,
+    "input": 3297,
+    "output": 2,
+    "cache_read": 3072
+  },
+  {
+    "episode": 4218,
+    "purpose": "계획·계약 탐색",
+    "rounds": 3,
+    "input": 118643,
+    "output": 2392,
+    "cache_read": 77568
+  },
+  {
+    "episode": 4218,
+    "purpose": "과제 원장 연결",
+    "rounds": 1,
+    "input": 62955,
+    "output": 150,
+    "cache_read": 0
+  },
+  {
+    "episode": 4218,
+    "purpose": "계산·보고서 구성",
+    "rounds": 6,
+    "input": 558118,
+    "output": 3632,
+    "cache_read": 540032
+  },
+  {
+    "episode": 4218,
+    "purpose": "원자료 수집",
+    "rounds": 1,
+    "input": 67941,
+    "output": 205,
+    "cache_read": 65792
+  },
+  {
+    "episode": 4218,
+    "purpose": "계약·교재 탐색",
+    "rounds": 1,
+    "input": 73921,
+    "output": 239,
+    "cache_read": 67712
+  },
+  {
+    "episode": 4218,
+    "purpose": "추론·응답 정리(독립 도구 호출 없음)",
+    "rounds": 2,
+    "input": 198083,
+    "output": 280,
+    "cache_read": 194688
+  },
+  {
+    "episode": 4218,
+    "purpose": "검사 거절을 받은 작성",
+    "rounds": 2,
+    "input": 169987,
+    "output": 3204,
+    "cache_read": 162688
+  },
+  {
+    "episode": 4218,
+    "purpose": "거절 후 재작성·검사",
+    "rounds": 2,
+    "input": 180471,
+    "output": 2857,
+    "cache_read": 169728
+  },
+  {
+    "episode": 4218,
+    "purpose": "중간 감독 검수",
+    "rounds": 4,
+    "input": 194188,
+    "output": 464,
+    "cache_read": 146176
+  },
+  {
+    "episode": 4218,
+    "purpose": "실행 전 검사",
+    "rounds": 1,
+    "input": 110218,
+    "output": 1733,
+    "cache_read": 100480
+  },
+  {
+    "episode": 4218,
+    "purpose": "파일 저장·재읽기",
+    "rounds": 1,
+    "input": 113785,
+    "output": 1580,
+    "cache_read": 110080
+  },
+  {
+    "episode": 4218,
+    "purpose": "최종 평가",
+    "rounds": 1,
+    "input": 58376,
+    "output": 232,
+    "cache_read": 0
+  },
+  {
+    "episode": 4218,
+    "purpose": "완료 후 응답 점검",
+    "rounds": 1,
+    "input": 3445,
+    "output": 65,
+    "cache_read": 1024
+  }
+]

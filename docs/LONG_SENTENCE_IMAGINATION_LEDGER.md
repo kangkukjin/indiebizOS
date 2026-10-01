@@ -37,6 +37,7 @@
 | 13 · 2026-09-30 | 측정 120행·센서 12개 보정, 중복 JSON 키 | 훈련자+AI ep4196 | 정상·변형 달성. 종료 뒤 수리 | AI 393.146초. 절감률 미측정 | L13-1, 아래 13회차 절·[보고서](experiments/long_sentence_imagination/round_13/report.md) |
 | 14 · 2026-09-30 | 미완성 설정 6개 원문·표식 조사 | 훈련자, 작은 과제로 AI 생략 | 수리 후 6읽기/0실패·7표식, 누락/빈 파일 변형 확인 | 관련 226검사. 절감률 미측정 | L14-1, 아래 14회차 절·[보고서](experiments/long_sentence_imagination/round_14/report.md) |
 | 15 · 2026-10-01 (완료, 훈련자+시스템 AI·수리 없음) | 10회차 9월 동일 자료, 임시 Script 조판·오타·부분 수정·새 시도·CLI 재현 | 60분. HEAD `202b6a7e`, origin:training. 기존 outputs11~14 번호를 재사용하지 않음 | 훈련자 최종9/9·단일 IBL/복구/결과누락 계약 통과. 시스템 AI ep4201 **9/9**, Script 사용0·새 내장3종 사용 | AI1,559.611초·실행도구31+감독조회4·고유실패6·전체입력3,795,382/출력39,549. 이전Opus→astra:high로 모델이 달라 인과비교 아님. 시간개선 미입증 | **L15-1~3**: 실패 인자 참조, 재개 변경차원 진단, 부정 수리문 라우팅. [보고서](experiments/long_sentence_imagination/round_15/report.md) |
+| 16 · 2026-10-01 (훈련 완료·문맥 유지 비교 무효) | 합성 재고·입출고·예약 4,096행, 정책 +20 변경 | L15 수리 `6a4fd95a` 뒤 동일 astra:high, origin:training | 훈련자 2·AI 4 산출물 모두 9검증 축 통과. cold는 앞 결과 조회 가능하지만 원자료 7개 재수집. warm은 훈련자의 pursuit 복원 누락으로 비교 제외 | 56.29분. B 기준 611.821초 / cold 803.716초. AI 전체 입력 7,478,388·출력 79,008(준비·무효 실행 포함) | L16-1·2 평가 증거 결함 미수리, L16-3 시험 설계 오류. [보고서](experiments/long_sentence_imagination/round_16/report.md) |
 
 10회차 상세: [round_10/report.md](experiments/long_sentence_imagination/round_10/report.md) — 같은 요청·다른 자료 반복, 거절 부류, §7 수리와 11월 재측정.
 
@@ -137,9 +138,13 @@
 | L12-2 | 작성 오류 — fallback이 원인을 소실 | 아래 12회차 절과 보고서 | 훈련자 try/catch 수정 | 엔진 결함 아님 |
 | L13-1 | 구현 결함 — JSON 중복 키의 원천 귀속·경로 누락 | 아래 13회차 절과 보고서 | 수리됨 | 관련 178검사·전체/새 변형 확인 |
 | L14-1 | 구현 결함 — 명시 text 형식보다 JSON 확장자 우선 | 아래 14회차 절과 보고서 | 수리됨 | 관련 226검사·전체/새 변형 확인 |
-| L15-1 | 계약/발견 마찰 — 단일 문장 후반 Script 실패의 해석 완료 인자에 바로 쓸 참조 없음 | 순수 계산값은 completed_calls 밖, 성공도구20 중 앞6만 표시. record의 stdin 읽기로 복구 성공. [최소 재현](experiments/long_sentence_imagination/round_15/repro_failed_arguments.json) | 확인됨 — 기존 값 저장소로 실패 args read_args/input_args 연결, R2·R4 | 2026-10-01 수리: failed_calls 인자 참조·전체 호출 참조 목록. 검증은 15회차 보고서 후속 절 |
-| L15-2 | 진단 마찰 — 코드만 수정한 resume을 입력 변경으로만 안내 | RESUME_DIVERGED, details={} (동일 IBL/inputs). [보고서](experiments/long_sentence_imagination/round_15/report.md) | 확인됨 — 코드/인자/환경 변경 차원·지문과 새 시도 안내, R2·R4 | 2026-10-01 수리: 차원별 지문 진단, 거절 안전성 유지 |
-| L15-3 | 구현 결함 — 부정한 시스템 수리 지시도 REPAIR 단서로 탐지 | ep4201 REPAIR→의식이 THINK로 정정. “백엔드는 수정하지 말고…” cue=true [재현](experiments/long_sentence_imagination/round_15/repair_cue_repro.json) | 확인됨 — 금지·인용·가정과 긍정 실행 의도 구별, R3·R4 | 2026-10-01 수리: 부정·인용·가정 단서 제외, 명시 태그·긍정 요청 유지 |
+| L15-1 | 계약/발견 마찰 — 단일 문장 후반 Script 실패의 해석 완료 인자에 바로 쓸 참조 없음 | 순수 계산값은 completed_calls 밖, 성공도구20 중 앞6만 표시. record의 stdin 읽기로 복구 성공. [최소 재현](experiments/long_sentence_imagination/round_15/repro_failed_arguments.json) | 수리됨 — 기존 값 저장소로 실패 args read_args/input_args 연결, R2·R4 | `6a4fd95a` (2026-10-01): failed_calls 인자 참조·전체 호출 참조 목록. 검증은 15회차 보고서 후속 절 |
+| L15-2 | 진단 마찰 — 코드만 수정한 resume을 입력 변경으로만 안내 | RESUME_DIVERGED, details={} (동일 IBL/inputs). [보고서](experiments/long_sentence_imagination/round_15/report.md) | 수리됨 — 코드/인자/환경 변경 차원·지문과 새 시도 안내, R2·R4 | `6a4fd95a` (2026-10-01): 차원별 지문 진단, 거절 안전성 유지 |
+| L15-3 | 구현 결함 — 부정한 시스템 수리 지시도 REPAIR 단서로 탐지 | ep4201 REPAIR→의식이 THINK로 정정. “백엔드는 수정하지 말고…” cue=true [재현](experiments/long_sentence_imagination/round_15/repair_cue_repro.json) | 수리됨 — 금지·인용·가정과 긍정 실행 의도 구별, R3·R4 | `6a4fd95a` (2026-10-01): 부정·인용·가정 단서 제외, 명시 태그·긍정 요청 유지 |
+
+| L16-1 | 구현 결함 — 최종 평가의 네이티브/작업대 호출 병합에서 같은 호출을 중복 계수 | ep4215 실제 11회→평가 22회, 전송 project_path/정규화 edition 차이. 최소 1+1→2 [재현](experiments/long_sentence_imagination/round_16/repro_evaluation_result.json) | 확인됨·미수리 — 공통 호출 상관 ID로 병합할 후보 | 훈련 중 라이브 수리 없음. 실제 이중 실행 아님 |
+| L16-2 | 증거 전달 결함 — 최종 예산에서 뒤쪽 실행·저장 검증 결과 본문 소실 | 실제 verified:true/320행/건수·합계가 평가 입력에서 누락, C1/C5 UNKNOWN. [근거](experiments/long_sentence_imagination/round_16/evaluation_gap.json) | 확인됨·미수리 — 마지막 검증 근거를 보존할 후보 | 앞/뒤 선택 뒤 예산 적용 최소 재현. 근거 없이 APPROVED로 바꿀 문제가 아님 |
+| L16-3 | 훈련자 실험 설계 오류 — warm 복원에서 pursuit 과제 원장 누락 | cold 과제에 warm 연결, native도 seed와 달라짐. [상태 대조](experiments/long_sentence_imagination/round_16/pursuit_snapshot_comparison.json) | 수용된 한계 — 문맥 유지 비교 무효, 다음 실행 전 상태 관문 필요 | 정상 제품 결함·언어 개정으로 세지 않음. 60분 안의 재실행은 미실시 |
 
 상태는 미확정 / 확인됨 / 수리 중 / 수리됨 / 수용된 한계로 구분한다.
 원래 과제나 변형이 미검증이면 그 범위를 남기며 전체 수리 완료로 쓰지 않는다.
@@ -228,3 +233,23 @@ JSON 확장자가 우선하여 미완성 4파일을 실패시키던 구현 결�
 파일 부재 변형은 5읽기/1실패·6표식·partial, 새 대문자/빈 파일 변형은 6읽기·7표식 유지.
 주 과제·변형 종료 후 적용, 최종 관련 226검사 통과. 전수·절감률 미측정.
 일회성 작은 과제로 독립 AI는 규모 기준에 따라 생략. [보고서](experiments/long_sentence_imagination/round_14/report.md).
+
+## 16회차 — 재고 정책 변경과 문맥 단절 뒤 재사용 (2026-10-01)
+
+L15-1~3 수리 `6a4fd95a` 뒤 합성 4,096행·7파일을 처리했다. 훈련자 원래/변형과
+독립 AI ep4215~4218의 총 6산출물은 JSON 전수·MD 표 수치 등 9검증 축을 모두 통과했다.
+훈련자 첫 초안의 없는 slice()는 슬라이스로 수정(1주기); 변형은 앞 계산 참조를 써 원자료 읽기 0회.
+훈련자 런타임 3.091→1.019초는 AI의 작성·검수 포함 완료 시간과 직접 비교하지 않는다.
+
+B 처음부터 611.821초, seed A 878.543초, B 문맥 초기화 803.716초, B 복원 시도 629.608초.
+문맥 초기화에서도 저장 참조·17호출 조회는 가능했으나 앞 프로그램·결과를 선택하지 않고
+원자료 7개를 다시 읽었다. 저장의 접근 가능성과 자발적인 재사용 선택을 구분한 관측이다.
+문맥 유지 비교는 훈련자가 pursuit 상태를 복원하지 않아 무효이며 성능 비교에서 제외한다.
+네 실행 전체 입력 7,478,388·출력 79,008, 캐시 적중 6,396,288은 입력의 부분집합이다.
+준비·무효 실행 비용도 포함하며 응답별 용도·당시 입력 위치를 보존했다. origin:training으로
+증류는 꺼졌으므로 장기기억 축적 전체·일반 효율 향상은 미입증이다.
+
+준비·실험·검증 56.29분, 이후 증거 정리만 수행했다. 모든 실행 종료, 시험 에이전트 중지,
+임시 프로젝트 휴지통 이동과 시험 pursuit 종료, SQLite 백업을 완료했다.
+새 언어 개정 0건. L16-1·2 제품 결함은 최소 재현을 남겼으며 미수리다.
+[보고서](experiments/long_sentence_imagination/round_16/report.md)와 같은 폴더의 코드·요구·정량 증거 참조.

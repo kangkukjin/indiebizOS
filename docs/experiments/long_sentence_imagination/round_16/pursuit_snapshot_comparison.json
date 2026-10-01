@@ -1,0 +1,62 @@
+{
+  "seed_snapshot": {
+    "pursuits": [
+      [
+        "pursuit_0bde41f43f92595ea78789f40a107a27",
+        "agent_02f522fa",
+        1,
+        "active"
+      ]
+    ],
+    "turns": [
+      [
+        "pursuit_0bde41f43f92595ea78789f40a107a27",
+        "task_5b335abb712a4e53a207b608bc501ca5",
+        "pending"
+      ]
+    ]
+  },
+  "final": {
+    "pursuits": [
+      [
+        "pursuit_0bde41f43f92595ea78789f40a107a27",
+        "agent_02f522fa",
+        2,
+        "abandoned"
+      ],
+      [
+        "pursuit_e677f854e3345beeab0f7972cffc802e",
+        "agent_001f6363",
+        5,
+        "abandoned"
+      ]
+    ],
+    "turns": [
+      [
+        "pursuit_0bde41f43f92595ea78789f40a107a27",
+        "task_5b335abb712a4e53a207b608bc501ca5",
+        "pending"
+      ],
+      [
+        "pursuit_e677f854e3345beeab0f7972cffc802e",
+        "task_f8a4d523f7ea48c39991ed0555cb20ec",
+        "pending"
+      ],
+      [
+        "pursuit_e677f854e3345beeab0f7972cffc802e",
+        "task_4ea1892c8f4c4577a3cdc0bbd814f122",
+        "pending"
+      ],
+      [
+        "pursuit_e677f854e3345beeab0f7972cffc802e",
+        "panel:0dabc3d122134f0daf7c213791dfcedd",
+        "applied"
+      ],
+      [
+        "pursuit_0bde41f43f92595ea78789f40a107a27",
+        "panel:0a1abc3e64224bf69afad3d1203c6a1e",
+        "applied"
+      ]
+    ]
+  }
+}

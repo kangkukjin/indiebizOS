@@ -1,0 +1,409 @@
+{
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+    {
+      "code": "BUILTIN",
+      "message": "알 수 없는 내장 함수: slice. 비슷한 내장 함수: split",
+      "source_span": {
+        "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+        "start": 2356,
+        "end": 2361,
+        "line": 36,
+        "column": 67
+      },
+      "call_path": [
+        {
+          "function": "계산",
+          "call": {
+            "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+            "start": 3741,
+            "end": 3777,
+            "line": 55,
+            "column": 7,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 55,
+            "end_column": 43,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "definition": {
+            "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+            "start": 1520,
+            "end": 2399,
+            "line": 23,
+            "column": 1,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 37,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          }
+        }
+      ],
+      "location": {
+        "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+        "start": 2356,
+        "end": 2361,
+        "line": 36,
+        "column": 67,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 36,
+        "end_column": 72,
+        "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "BUILTIN",
+      "severity": "error",
+      "hint": "문법 전문의 내장 함수 이름을 쓰세요. 지역·저장 함수는 값으로 넘기지 않고 [fn:이름]{인자:값}으로 부르며, 목록의 원소마다 부를 때는 [table:each]{ [fn:이름]{인자:$it} }입니다."
+    }
+  ],
+  "guards": [],
+  "guards_total": 75,
+  "guards_inner": 0,
+  "guards_omitted": 75,
+  "result_type": "{saved: {base: Unknown, counts: {catalog: Number, opening: Number, movements_raw: Number, movements_unique: Number, duplicate_movements: Number, reservations: Number, active_reservations: Number, cancelled_reservations: Number}}, data: {offset: Number, items: List<{warehouse: Unknown, sku: Unknown, opening: Unknown, net: Unknown, reserved: Unknown, pack: Unknown, target: Unknown, available: Number, deficit: Unknown, reorder: Unknown}>, warehouses: List<Unknown>, top10: Unknown, counts: {catalog: Number, opening: Number, movements_raw: Number, movements_unique: Number, duplicate_movements: Number, reservations: Number, active_reservations: Number, cancelled_reservations: Number}}, written: {files: List<Record⟨관측: path·size·chars⟩>, verified: Bool}}",
+  "effects": [
+    "pure",
+    "read_external",
+    "unknown",
+    "write_external"
+  ],
+  "functions": {
+    "def:16:1519": {
+      "name": "수집",
+      "params": {
+        "root": "Text"
+      },
+      "required": [
+        "root"
+      ],
+      "pipe_input": "root",
+      "default_expressions": {},
+      "effects": [
+        "read_external",
+        "unknown"
+      ],
+      "actions": [
+        "self:read",
+        "table:dedup",
+        "table:groupby",
+        "table:join"
+      ],
+      "source_hash": "aa2add3b63018e73ba50c3865ba354091f0c095953cdf17884dafb4aa086a100",
+      "result": "{base: Unknown, counts: {catalog: Number, opening: Number, movements_raw: Number, movements_unique: Number, duplicate_movements: Number, reservations: Number, active_reservations: Number, cancelled_reservations: Number}}",
+      "specializations": [
+        {
+          "params": {
+            "root": "Text"
+          },
+          "result": "{base: Unknown, counts: {catalog: Number, opening: Number, movements_raw: Number, movements_unique: Number, duplicate_movements: Number, reservations: Number, active_reservations: Number, cancelled_reservations: Number}}"
+        }
+      ],
+      "specializations_omitted": 0,
+      "definition": {
+        "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+        "start": 16,
+        "end": 1519,
+        "line": 2,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 22,
+        "end_column": 2,
+        "offset_encoding": "unicode-codepoints"
+      }
+    },
+    "def:1520:2399": {
+      "name": "계산",
+      "params": {
+        "saved": "{base: Unknown, counts: {catalog: Number, opening: Number, movements_raw: Number, movements_unique: Number, duplicate_movements: Number, reservations: Number, active_reservations: Number, cancelled_reservations: Number}}",
+        "offset": "Number"
+      },
+      "required": [
+        "saved",
+        "offset"
+      ],
+      "pipe_input": "saved",
+      "default_expressions": {},
+      "effects": [
+        "unknown"
+      ],
+      "actions": [
+        "table:groupby",
+        "table:sort"
+      ],
+      "source_hash": "958bd26f99b04d93cd9921632497fba40a1db89b3089283ced3326b9c2707c1c",
+      "result": "{offset: Number, items: List<{warehouse: Unknown, sku: Unknown, opening: Unknown, net: Unknown, reserved: Unknown, pack: Unknown, target: Unknown, available: Number, deficit: Unknown, reorder: Unknown}>, warehouses: List<Unknown>, top10: Unknown, counts: {catalog: Number, opening: Number, movements_raw: Number, movements_unique: Number, duplicate_movements: Number, reservations: Number, active_reservations: Number, cancelled_reservations: Number}}",
+      "specializations": [
+        {
+          "params": {
+            "saved": "{base: Unknown, counts: {catalog: Number, opening: Number, movements_raw: Number, movements_unique: Number, duplicate_movements: Number, reservations: Number, active_reservations: Number, cancelled_reservations: Number}}",
+            "offset": "Number"
+          },
+          "result": "{offset: Number, items: List<{warehouse: Unknown, sku: Unknown, opening: Unknown, net: Unknown, reserved: Unknown, pack: Unknown, target: Unknown, available: Number, deficit: Unknown, reorder: Unknown}>, warehouses: List<Unknown>, top10: Unknown, counts: {catalog: Number, opening: Number, movements_raw: Number, movements_unique: Number, duplicate_movements: Number, reservations: Number, active_reservations: Number, cancelled_reservations: Number}}"
+        }
+      ],
+      "specializations_omitted": 0,
+      "definition": {
+        "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+        "start": 1520,
+        "end": 2399,
+        "line": 23,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 37,
+        "end_column": 2,
+        "offset_encoding": "unicode-codepoints"
+      }
+    },
+    "def:2400:2607": {
+      "name": "표",
+      "params": {
+        "rows": "Unknown",
+        "columns": "List<Text>"
+      },
+      "required": [
+        "rows",
+        "columns"
+      ],
+      "pipe_input": "rows",
+      "default_expressions": {},
+      "effects": [
+        "pure"
+      ],
+      "actions": [],
+      "source_hash": "95d311ba5f264226e0052f16aadb74f8913f232533af17c32945a2598d79fa6b",
+      "result": "Text",
+      "specializations": [
+        {
+          "params": {
+            "rows": "List<Unknown>",
+            "columns": "List<Text>"
+          },
+          "result": "Text"
+        },
+        {
+          "params": {
+            "rows": "Unknown",
+            "columns": "List<Text>"
+          },
+          "result": "Text"
+        }
+      ],
+      "specializations_omitted": 0,
+      "definition": {
+        "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+        "start": 2400,
+        "end": 2607,
+        "line": 38,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 40,
+        "end_column": 2,
+        "offset_encoding": "unicode-codepoints"
+      }
+    },
+    "def:2608:3707": {
+      "name": "저장",
+      "params": {
+        "data": "{offset: Number, items: List<{warehouse: Unknown, sku: Unknown, opening: Unknown, net: Unknown, reserved: Unknown, pack: Unknown, target: Unknown, available: Number, deficit: Unknown, reorder: Unknown}>, warehouses: List<Unknown>, top10: Unknown, counts: {catalog: Number, opening: Number, movements_raw: Number, movements_unique: Number, duplicate_movements: Number, reservations: Number, active_reservations: Number, cancelled_reservations: Number}}",
+        "out": "Text"
+      },
+      "required": [
+        "data",
+        "out"
+      ],
+      "pipe_input": "data",
+      "default_expressions": {},
+      "effects": [
+        "read_external",
+        "write_external"
+      ],
+      "actions": [
+        "self:read",
+        "self:write"
+      ],
+      "source_hash": "b635090cf4efaa064fc4a2e3a28e59110c34e811dac61c4d4a16b1a765b55e30",
+      "result": "{files: List<Record⟨관측: path·size·chars⟩>, verified: Bool}",
+      "specializations": [
+        {
+          "params": {
+            "data": "{offset: Number, items: List<{warehouse: Unknown, sku: Unknown, opening: Unknown, net: Unknown, reserved: Unknown, pack: Unknown, target: Unknown, available: Number, deficit: Unknown, reorder: Unknown}>, warehouses: List<Unknown>, top10: Unknown, counts: {catalog: Number, opening: Number, movements_raw: Number, movements_unique: Number, duplicate_movements: Number, reservations: Number, active_reservations: Number, cancelled_reservations: Number}}",
+            "out": "Text"
+          },
+          "result": "{files: List<Record⟨관측: path·size·chars⟩>, verified: Bool}"
+        }
+      ],
+      "specializations_omitted": 0,
+      "definition": {
+        "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+        "start": 2608,
+        "end": 3707,
+        "line": 41,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 53,
+        "end_column": 2,
+        "offset_encoding": "unicode-codepoints"
+      }
+    }
+  },
+  "plan_hash": "036ad4c3f7d5ded2342b1ddf97a978c593fdca53d729b6098df3b3ceaac14715",
+  "dependencies": {
+    "source": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+    "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+    "calls": {},
+    "input_types": {
+      "root": "Text",
+      "out": "Text",
+      "offset": "Number"
+    },
+    "source_map": [
+      {
+        "name": "<program>",
+        "start": 0,
+        "end": 3866
+      }
+    ],
+    "contracts": "a70905744a79a1c5818154fa90d0b4db65d31d97e66fe386dae8db810dbeacb6",
+    "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+    "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+    "expressions": "63543f4525c3676f28e7ad8e52f4c631aba38c79afc22868fb5925af10751047",
+    "core": "a08968bbf5beefefeb8dee1afc57b12f232277c85c22682eb45127f198f106c9"
+  },
+  "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+  "capabilities": [
+    "ibl-edition/2",
+    "ibl-value/1"
+  ],
+  "preflight": {
+    "status": "partial",
+    "declared_ai_visits_upper_bound": null,
+    "unknowns": [
+      {
+        "location": {
+          "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+          "start": 322,
+          "end": 344,
+          "line": 10,
+          "column": 18,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 10,
+          "end_column": 40,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      },
+      {
+        "location": {
+          "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+          "start": 453,
+          "end": 518,
+          "line": 12,
+          "column": 17,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 12,
+          "end_column": 82,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      },
+      {
+        "location": {
+          "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+          "start": 743,
+          "end": 811,
+          "line": 16,
+          "column": 20,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 16,
+          "end_column": 88,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      },
+      {
+        "location": {
+          "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+          "start": 1573,
+          "end": 1971,
+          "line": 24,
+          "column": 27,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 31,
+          "end_column": 3,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "reason": "each 입력 건수 미상"
+      },
+      {
+        "location": {
+          "source_hash": "7e43cdc94c2793c02af828222ed6668b2dff624746cd0b1d53a453020b4d397e",
+          "start": 2049,
+          "end": 2168,
+          "line": 33,
+          "column": 20,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 33,
+          "end_column": 139,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+    ],
+    "warnings": [],
+    "warnings_omitted": 0,
+    "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "진단 위치를 수정한 뒤 다시 검사하세요.",
+  "runtime_checks": {
+    "total": 75,
+    "informative": 67
+  },
+  "guards_ref": {
+    "id": "7aa06beee5cee33e6e81511664e9c917688786e261c232f9dfdb8fae5904dca7",
+    "chars": 92345,
+    "read_args": {
+      "id": "7aa06beee5cee33e6e81511664e9c917688786e261c232f9dfdb8fae5904dca7",
+      "path": [
+        "guards"
+      ],
+      "offset": 0,
+      "limit": 60000
+    }
+  },
+  "budget": {
+    "steps": 1000000,
+    "rows": 100000
+  },
+  "request_inputs": {
+    "input_args": {
+      "root": {
+        "$ref": "d56a916a868cedd218d2af56175df316f9e31488fda375cf411aae80119e1c7f"
+      },
+      "out": {
+        "$ref": "76681568f90431bc4a2222869464dcc469c610fc71e2a4871ea7928b77e033d5"
+      },
+      "offset": {
+        "$ref": "034d0da67018a2017d6220099ad7b57d0f8a93bcbf362180f079f42d04033b55"
+      }
+    },
+    "unavailable": {},
+    "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  }
+}

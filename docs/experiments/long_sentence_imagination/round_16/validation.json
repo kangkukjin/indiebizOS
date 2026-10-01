@@ -1,0 +1,98 @@
+{
+  "trainer": {
+    "folder": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_16회차/trainer",
+    "offset": 0,
+    "checks": {
+      "offset": true,
+      "items": true,
+      "warehouses": true,
+      "top10": true,
+      "counts": true,
+      "report_tables": true,
+      "report_nonempty": true,
+      "report_warehouse_values": true,
+      "report_top10_values": true
+    },
+    "passed": true
+  },
+  "trainer_variant": {
+    "folder": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_16회차/trainer_variant",
+    "offset": 20,
+    "checks": {
+      "offset": true,
+      "items": true,
+      "warehouses": true,
+      "top10": true,
+      "counts": true,
+      "report_tables": true,
+      "report_nonempty": true,
+      "report_warehouse_values": true,
+      "report_top10_values": true
+    },
+    "passed": true
+  },
+  "baseline": {
+    "folder": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_16회차/baseline",
+    "offset": 20,
+    "checks": {
+      "offset": true,
+      "items": true,
+      "warehouses": true,
+      "top10": true,
+      "counts": true,
+      "report_tables": true,
+      "report_nonempty": true,
+      "report_warehouse_values": true,
+      "report_top10_values": true
+    },
+    "passed": true
+  },
+  "seed": {
+    "folder": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_16회차/seed",
+    "offset": 0,
+    "checks": {
+      "offset": true,
+      "items": true,
+      "warehouses": true,
+      "top10": true,
+      "counts": true,
+      "report_tables": true,
+      "report_nonempty": true,
+      "report_warehouse_values": true,
+      "report_top10_values": true
+    },
+    "passed": true
+  },
+  "cold": {
+    "folder": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_16회차/cold",
+    "offset": 20,
+    "checks": {
+      "offset": true,
+      "items": true,
+      "warehouses": true,
+      "top10": true,
+      "counts": true,
+      "report_tables": true,
+      "report_nonempty": true,
+      "report_warehouse_values": true,
+      "report_top10_values": true
+    },
+    "passed": true
+  },
+  "warm": {
+    "folder": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-01_16회차/warm",
+    "offset": 20,
+    "checks": {
+      "offset": true,
+      "items": true,
+      "warehouses": true,
+      "top10": true,
+      "counts": true,
+      "report_tables": true,
+      "report_nonempty": true,
+      "report_warehouse_values": true,
+      "report_top10_values": true
+    },
+    "passed": true
+  }
+}

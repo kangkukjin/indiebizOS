@@ -1,0 +1,18 @@
+{
+  "native_calls": 1,
+  "store_calls": 1,
+  "merged_calls": 2,
+  "same_invocation_payload_shapes": [
+    {
+      "code": "return 1",
+      "project_path": "."
+    },
+    {
+      "code": "return 1",
+      "edition": 2
+    }
+  ],
+  "tail_header_kept": true,
+  "tail_verification_kept": false,
+  "omission_declared": true
+}

@@ -1,0 +1,44 @@
+{
+  "baseline": {
+    "status": "stopped",
+    "agent_id": "agent_02f522fa"
+  },
+  "seed": {
+    "status": "stopped",
+    "agent_id": "agent_001f6363"
+  },
+  "project_trash": {
+    "status": "trashed",
+    "item": {
+      "id": "긴문장16_재고_격리시험",
+      "name": "긴문장16_재고_격리시험",
+      "type": "project",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/긴문장16_재고_격리시험",
+      "created_at": "2026-10-01T16:09:55.166418",
+      "icon_position": [
+        100,
+        100
+      ],
+      "parent_folder": null,
+      "last_opened": null,
+      "in_trash": true,
+      "trashed_at": "2026-10-01T17:05:46.462206",
+      "original_parent_folder": null
+    }
+  },
+  "codex_sessions.json": {
+    "긴문장16_재고_격리시험:agent_02f522fa@rehearsal#27383e2d": "01a0f64e-c152-7f22-a07b-304e5ce290bc",
+    "긴문장16_재고_격리시험:agent_001f6363@rehearsal#ba1e112c": "01a0f674-a7f0-7d73-b492-017ba6d95e27"
+  },
+  "codex_session_sizes.json": {},
+  "pursuits": [
+    {
+      "id": "pursuit_e677f854e3345beeab0f7972cffc802e",
+      "status": "abandoned"
+    },
+    {
+      "id": "pursuit_0bde41f43f92595ea78789f40a107a27",
+      "status": "abandoned"
+    }
+  ]
+}

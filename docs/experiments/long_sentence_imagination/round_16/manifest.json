@@ -1,0 +1,27 @@
+{
+  "repair_commit": "6a4fd95a5ac129816b9e9afe1af1beaf6150d7c0",
+  "inputs": {
+    "catalog.json": "b537aebf045e62ac4a83cea9399a20002f7d1d148d713e423175c1c2f370244b",
+    "movements_1.csv": "290983873f72b291f58136a1b4fb49aac653ef9b0a755bebbb3aa066bb6d8725",
+    "movements_2.csv": "496896bef5a5b86aba2b66e68949d92f9ec4a6953fe616be6ac814b4d088ee6a",
+    "movements_3.csv": "f22ce77aae6a8c0b17c20d324c096072b045c88a493430e36264c37a0eeea645",
+    "movements_4.csv": "6e8a5f4fe58b80bd000a27dffcfa912cbab8fca18837721aec48c85628751f64",
+    "opening.json": "5874a242f841970db9b9b7d5f42b8b3c503ee2d172f490310e89956c055ac716",
+    "reservations.csv": "35190d3e1dedf6673730e627e259a58afd706f62e2b16feec2ba8ec416036992"
+  },
+  "inputs_unchanged": true,
+  "artifacts": {
+    "trainer/inventory.json": "93a01e0c524002f818d337a00c65dc53d3a2ec427d24eb629caca8596a4816af",
+    "trainer/report.md": "2d15e054d73c5d2bf3291d1d63c6f0001278cc96511157c3ff57ae89480d2fef",
+    "trainer_variant/inventory.json": "f7ab197930276db45b8dab1d8074b080069ca9528df20d977bc2a58164a92c01",
+    "trainer_variant/report.md": "62764f3d08e23d0a41b14d344cb424c28fb9f691108547943e8dc5c3300cf7ff",
+    "baseline/inventory.json": "f7ab197930276db45b8dab1d8074b080069ca9528df20d977bc2a58164a92c01",
+    "baseline/report.md": "c03a7d6bd98cc8fdc50c153f50a5a7e5f0eab2058034f21d219bd4acc526ec97",
+    "seed/inventory.json": "93a01e0c524002f818d337a00c65dc53d3a2ec427d24eb629caca8596a4816af",
+    "seed/report.md": "1af089f82f073fb67396880ab501935b9e16e53986c3b0bb4d5f4bf71089efa3",
+    "cold/inventory.json": "f7ab197930276db45b8dab1d8074b080069ca9528df20d977bc2a58164a92c01",
+    "cold/report.md": "a8d7fee0071c9bbb419870bed6e565cc2a3d296314ef87127c298c46ef178a39",
+    "warm/inventory.json": "f7ab197930276db45b8dab1d8074b080069ca9528df20d977bc2a58164a92c01",
+    "warm/report.md": "c050f8c068dca27e115b356efdf7d428ebfd367cd67c717d3fa1016681d3ab9a"
+  }
+}

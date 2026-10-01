@@ -1,0 +1,20 @@
+{
+  "restored_native_seed": {
+    "긴문장16_재고_격리시험:agent_001f6363@rehearsal#ba1e112c": "01a0f658-d9e5-7fc1-b060-42f67afe8cfc"
+  },
+  "seed_thread": "01a0f658-d9e5-7fc1-b060-42f67afe8cfc",
+  "cold_thread": "01a0f667-2a1d-7991-ad8c-8d172542c417",
+  "restored_condition_actual_thread": "01a0f674-a7f0-7d73-b492-017ba6d95e27",
+  "warm_realized": false,
+  "reason": "fresh consciousness가 history_summary를 교체하고 이전 산출물 열람/재사용 금지를 추가. 원래 native session으로 resume하지 않음.",
+  "restored_state_scope": [
+    "fixture actor conversation messages",
+    "native session map/sizes",
+    "same actor turn lineage",
+    "cold output isolation"
+  ],
+  "not_claimed": "전체 서버 상태의 VM snapshot 또는 장기기억 증류 격리",
+  "controlled_comparison_valid": false,
+  "harness_fault": "pursuit 원장을 seed snapshot으로 복원하지 않음. seed snapshot에는 해당 행위자 pursuit가 없고, cold task_f8a4d523f7ea48c39991ed0555cb20ec가 만든 pursuit_e677f854e3345beeab0f7972cffc802e에 warm이 bind했다.",
+  "interpretation": "warm의 추가 금지·fresh 전환은 혼합 상태에서 나온 탐색 관측이다. 정상 후속 실행의 제품 결함 또는 따뜻한 문맥의 효율로 일반화하지 않는다."
+}

@@ -1,0 +1,208 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$d = [sense:crawl]{url:\"https://en.wikipedia.org/wiki/Mount_Everest\"}\n$hit = $d.items >> [table:filter]{where:($p)=>contains($p.text,\"8,848\")}\nreturn {title:$d.title,n:len($d.items),chars:len($d.text),hits:len($hit),first:$hit[:2]}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task"
+ },
+ "elapsed_s": 3.23,
+ "response": {
+  "success": true,
+  "value": {
+   "title": "Mount Everest - Wikipedia",
+   "n": 1348,
+   "chars": 164117,
+   "hits": 5,
+   "first": [
+    {
+     "type": "paragraph",
+     "text": "8,848.86 m (29,031.7 ft)[note 2]",
+     "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+     "paragraph_index": 230
+    },
+    {
+     "type": "paragraph",
+     "text": "Mount Everest (known in Nepali as Sagarmāthā[a], in Sherpa as Chamolangma[4], and in Tibetan as Jomolangma/Čhomolangma[b] is the highest mountain on Earth above sea level. It lies in the Mahalangur Himal sub-range of the Himalayas and marks part of the China–Nepal border at its summit.[5] Its height was most recently measured in 2020 through a joint survey by Nepalese and Chinese authorities as 8,848.86 m (29,031 ft 8+1⁄2 in).[6][7]",
+     "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+     "paragraph_index": 386
+    }
+   ]
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "title",
+      [
+       "scalar",
+       "Mount Everest - Wikipedia"
+      ]
+     ],
+     [
+      "n",
+      [
+       "scalar",
+       1348
+      ]
+     ],
+     [
+      "chars",
+      [
+       "scalar",
+       164117
+      ]
+     ],
+     [
+      "hits",
+      [
+       "scalar",
+       5
+      ]
+     ],
+     [
+      "first",
+      [
+       "list",
+       [
+        [
+         "record",
+         [
+          [
+           "type",
+           [
+            "scalar",
+            "paragraph"
+           ]
+          ],
+          [
+           "text",
+           [
+            "scalar",
+            "8,848.86 m (29,031.7 ft)[note 2]"
+           ]
+          ],
+          [
+           "url",
+           [
+            "scalar",
+            "https://en.wikipedia.org/wiki/Mount_Everest"
+           ]
+          ],
+          [
+           "paragraph_index",
+           [
+            "scalar",
+            230
+           ]
+          ]
+         ]
+        ],
+        [
+         "record",
+         [
+          [
+           "type",
+           [
+            "scalar",
+            "paragraph"
+           ]
+          ],
+          [
+           "text",
+           [
+            "scalar",
+            "Mount Everest (known in Nepali as Sagarmāthā[a], in Sherpa as Chamolangma[4], and in Tibetan as Jomolangma/Čhomolangma[b] is the highest mountain on Earth above sea level. It lies in the Mahalangur Himal sub-range of the Himalayas and marks part of the China–Nepal border at its summit.[5] Its height was most recently measured in 2020 through a joint survey by Nepalese and Chinese authorities as 8,848.86 m (29,031 ft 8+1⁄2 in).[6][7]"
+           ]
+          ],
+          [
+           "url",
+           [
+            "scalar",
+            "https://en.wikipedia.org/wiki/Mount_Everest"
+           ]
+          ],
+          [
+           "paragraph_index",
+           [
+            "scalar",
+            386
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "5ab6c92f3fc701941208bcd256df90b387140cbb74e8913ec6e0b3ee4ddb11f2",
+  "source_complete": true,
+  "usage": {
+   "steps": 8123,
+   "rows": 0,
+   "elapsed_ms": 2720
+  },
+  "resume": {
+   "run_id": "effa9238d35a4274af498048bccf5958"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "effa9238d35a4274af498048bccf5958"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 36,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "532682f5799736e5a434440bc4a0a16a2f4986291f0c291024b8cb59b71830a8",
+   "chars": 587149,
+   "max_limit": 60000,
+   "paths": [
+    {
+     "path": [
+      "value",
+      "first"
+     ],
+     "chars": 740
+    }
+   ],
+   "read_args": {
+    "id": "532682f5799736e5a434440bc4a0a16a2f4986291f0c291024b8cb59b71830a8",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "value"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "input_args": {
+    "입력": {
+     "$ref": "532682f5799736e5a434440bc4a0a16a2f4986291f0c291024b8cb59b71830a8"
+    }
+   },
+   "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+   "value_chars": 782
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

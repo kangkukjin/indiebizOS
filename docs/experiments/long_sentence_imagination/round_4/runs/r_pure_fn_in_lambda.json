@@ -1,0 +1,149 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n[def:큰가]($r,$기준) { return $r.n > $기준 }\n$행 = [{n:1},{n:5}]\nreturn $행 >> [table:filter]{where:($r)=>[fn:큰가]{r:$r,기준:2}}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "check": true
+ },
+ "elapsed_s": 0.25,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "fb335a63606cfbdef2d12ee164f82437a71cba24dec7362408a6d86f40d72f62",
+     "start": 114,
+     "end": 132,
+     "line": 4,
+     "column": 41
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "fb335a63606cfbdef2d12ee164f82437a71cba24dec7362408a6d86f40d72f62",
+     "start": 114,
+     "end": 132,
+     "line": 4,
+     "column": 41,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 4,
+     "end_column": 59,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 1,
+  "guards_inner": 0,
+  "guards_omitted": 1,
+  "result_type": "List<{n: Number}>",
+  "effects": [
+   "pure"
+  ],
+  "functions": {
+   "def:16:54": {
+    "name": "큰가",
+    "params": {
+     "r": "Unknown",
+     "기준": "Number"
+    },
+    "required": [
+     "r",
+     "기준"
+    ],
+    "pipe_input": "r",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "a7488649b5c2dd06b07011bdd7be00a915a7382c026836992fe1711d27989e34",
+    "result": "Bool",
+    "specializations": [
+     {
+      "params": {
+       "r": "Unknown",
+       "기준": "Number"
+      },
+      "result": "Bool"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "fb335a63606cfbdef2d12ee164f82437a71cba24dec7362408a6d86f40d72f62",
+     "start": 16,
+     "end": 54,
+     "line": 2,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 2,
+     "end_column": 39,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "970eb87b17401f6ae9a515dbb1feef3d5984c31dc50762af7bc5bc088112fe4b",
+  "dependencies": {
+   "source": "fb335a63606cfbdef2d12ee164f82437a71cba24dec7362408a6d86f40d72f62",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 134
+    }
+   ],
+   "contracts": "f47cbcad4861d86f8aa517ba4dc8e5506eb0dec55142ca37620cf1e58b93d3ab",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "b8cba6f27e39735b3c9966ca55ce032775ce63e8fbae8e972be9a7390cac651c"
+  },
+  "source_hash": "fb335a63606cfbdef2d12ee164f82437a71cba24dec7362408a6d86f40d72f62",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 1,
+   "informative": 1
+  },
+  "guards_ref": {
+   "id": "85a2e87df19beb2231af057db02e809242823161c8f7a504143bc3f001a3605b",
+   "chars": 1191,
+   "read_args": {
+    "id": "85a2e87df19beb2231af057db02e809242823161c8f7a504143bc3f001a3605b",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

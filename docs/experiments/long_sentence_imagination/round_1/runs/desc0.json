@@ -1,0 +1,24 @@
+{
+ "request": {
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI1_trainer",
+  "task_id": "LSI1_task",
+  "describe": [
+   "self:read",
+   "self:write",
+   "self:list",
+   "table:join",
+   "table:ai",
+   "table:groupby",
+   "table:compute"
+  ]
+ },
+ "code_file": null,
+ "elapsed_s": 0.01,
+ "response": {
+  "success": false,
+  "error": "describe는 node:action 또는 fn:이름 1~6개 배열입니다"
+ }
+}

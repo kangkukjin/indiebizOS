@@ -1,0 +1,426 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 4회차 P1 수집 — 검색으로 공식 What's New 문서를 찾아 PEP 문단을 모은다 (v2: 버전별 검색어 2개 + 공식 릴리스/색인 페이지 링크 경유)\n# inputs: 버전[Text], 문단상한(모델 입력 보호가 아니라 표시 없음 — 전건 사용, 생략은 match_info 로 신고)\n# 반환: {검색:[{query,title,url}], 원천:[{버전,ok,url,찾은경로,이유?,문단:[{paragraph_index,text}],적중,생략}]}\n\n[def:공식인가]($버전) {\n  return ($행)=>contains($행.url,\"docs.python.org\") and contains($행.url,f\"whatsnew/${$버전}.html\")\n}\n\n[def:버전문서찾기]($버전,$검색행) {\n  $공식 = [fn:공식인가]{버전:$버전}\n  $직접 = $검색행 >> [table:filter]{where:$공식}\n  [if:len($직접) > 0] { return {버전:$버전,url:$직접[0].url,찾은경로:f\"검색 '${$직접[0].query}' 결과\"} }\n  # 검색에 나온 공식 색인·해당 버전 릴리스 페이지의 링크에서 찾는다\n  $릴리스 = \"python-\" + replace($버전,\".\",\"\") + \"0/\"\n  $경유 = $검색행 >> [table:filter]{where:($r)=>(contains($r.url,\"docs.python.org\") and contains($r.url,\"whatsnew/index.html\")) or (contains($r.url,\"python.org/downloads/release/\") and contains($r.url,$릴리스))}\n  $시도 = $경유 >> [table:each]{on_error:\"collect\"} {\n    $링크 = [sense:crawl]{url:$it.url,op:\"links\"}\n    $맞음 = $링크.items >> [table:filter]{where:$공식}\n    return {경유:$it.url,맞음:$맞음}\n  }\n  $성공 = $시도 >> [table:each]{mode:\"flat_map\"} {\n    [if:is_ok($it)] { $x = unwrap($it); [if:len($x.맞음) > 0] { return [{url:$x.맞음[0].url,경유:$x.경유}] } }\n    return []\n  }\n  [if:len($성공) > 0] { return {버전:$버전,url:$성공[0].url,찾은경로:f\"검색으로 찾은 공식 페이지의 링크: ${$성공[0].경유}\"} }\n  return {버전:$버전,url:null,찾은경로:null,경유수:len($경유)}\n}\n\n[def:PEP문단]($찾음) {\n  [if:$찾음.url == null] { return {버전:$찾음.버전,ok:false,url:null,찾은경로:null,이유:f\"검색어 2개의 결과와 공식 경유 페이지 ${get($찾음,'경유수',0)}곳의 링크에서 공식 문서를 찾지 못함\",문단:[],적중:0,생략:0} }\n  [try] {\n    $문서 = [sense:crawl]{url:$찾음.url}\n    $찾기 = $문서.items >> [fn:본문에서찾기]{패턴:\"PEP \\\\d+\",문맥:0,개수:1000}\n    return {버전:$찾음.버전,ok:true,url:$찾음.url,찾은경로:$찾음.찾은경로,\n            문단:$찾기.items >> [table:select]{columns:[\"paragraph_index\",\"text\"]},\n            적중:$찾기.match_info.total_matches,생략:$찾기.match_info.omitted_matches}\n  } [catch] {\n    return {버전:$찾음.버전,ok:false,url:$찾음.url,찾은경로:$찾음.찾은경로,이유:$error.message,문단:[],적중:0,생략:0}\n  }\n}\n\n# ── 최상위 ──\n$검색어 = $버전 >> [table:each]{mode:\"flat_map\"} { return [f\"What's New In Python ${$it}\",f\"docs.python.org whatsnew ${$it}\"] }\n$검색 = [sense:search]{queries:$검색어,limit:8}\n$검색행 = $검색.items\n$찾음 = $버전 >> [table:each] { [fn:버전문서찾기]{버전:$it,검색행:$검색행} }\n$원천 = $찾음 >> [table:each]{parallel:4} { [fn:PEP문단]{찾음:$it} }\nreturn {검색어:$검색어,검색:$검색행 >> [table:select]{columns:[\"query\",\"title\",\"url\"]},원천:$원천}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "check": true,
+  "inputs": {
+   "버전": [
+    "3.13",
+    "3.14"
+   ]
+  }
+ },
+ "elapsed_s": 0.28,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 21,
+  "guards_inner": 0,
+  "guards_omitted": 21,
+  "result_type": "{검색어: List<Text>, 검색: List<{query: Unknown, title: Unknown, url: Unknown}>, 원천: List<{버전: Text, ok: Bool, url: Null, 찾은경로: Null, 이유: Text, 문단: List<Unknown>, 적중: Number, 생략: Number} | {버전: Text, ok: Bool, url: Unknown, 찾은경로: Null | Text, 문단: List<{paragraph_index: Unknown, text: Unknown}>, 적중: Number, 생략: Number} | {버전: Text, ok: Bool, url: Unknown, 찾은경로: Null | Text, 이유: Unknown, 문단: List<Unknown>, 적중: Number, 생략: Number}>}",
+  "effects": [
+   "pure",
+   "read_external"
+  ],
+  "functions": {
+   "def:275:389": {
+    "name": "공식인가",
+    "params": {
+     "버전": "Text"
+    },
+    "required": [
+     "버전"
+    ],
+    "pipe_input": "버전",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "a0939c5033e4ea70cec87d4aa1261d0c97abda7fda75fa4e29be55efcf879ec0",
+    "result": "Callable",
+    "specializations": [
+     {
+      "params": {
+       "버전": "Text"
+      },
+      "result": "Callable"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+     "start": 275,
+     "end": 389,
+     "line": 6,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 8,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:391:1361": {
+    "name": "버전문서찾기",
+    "params": {
+     "버전": "Text",
+     "검색행": "List<Record⟨관측: title·meta·summary·url⟩>"
+    },
+    "required": [
+     "버전",
+     "검색행"
+    ],
+    "pipe_input": "버전",
+    "default_expressions": {},
+    "effects": [
+     "read_external"
+    ],
+    "actions": [
+     "sense:crawl",
+     "table:filter"
+    ],
+    "source_hash": "13a9f31487a0c6240ecf57a515b0edf40a5bb444711ef5c1f132e550d23a2932",
+    "result": "{url: Unknown, 버전: Text, 찾은경로: Null | Text}",
+    "specializations": [
+     {
+      "params": {
+       "버전": "Text",
+       "검색행": "List<Record⟨관측: title·meta·summary·url⟩>"
+      },
+      "result": "{url: Unknown, 버전: Text, 찾은경로: Null | Text}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+     "start": 391,
+     "end": 1361,
+     "line": 10,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 28,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1363:1977": {
+    "name": "PEP문단",
+    "params": {
+     "찾음": "{url: Unknown, 버전: Text, 찾은경로: Null | Text}"
+    },
+    "required": [
+     "찾음"
+    ],
+    "pipe_input": "찾음",
+    "default_expressions": {},
+    "effects": [
+     "read_external"
+    ],
+    "actions": [
+     "fn:본문에서찾기",
+     "sense:crawl",
+     "table:select"
+    ],
+    "source_hash": "66c2d14171211fdade2a0a75418e774c3db37b99f3d36cabfe8249ccfa6a1081",
+    "result": "{버전: Text, ok: Bool, url: Null, 찾은경로: Null, 이유: Text, 문단: List<Unknown>, 적중: Number, 생략: Number} | {버전: Text, ok: Bool, url: Unknown, 찾은경로: Null | Text, 문단: List<{paragraph_index: Unknown, text: Unknown}>, 적중: Number, 생략: Number} | {버전: Text, ok: Bool, url: Unknown, 찾은경로: Null | Text, 이유: Unknown, 문단: List<Unknown>, 적중: Number, 생략: Number}",
+    "specializations": [
+     {
+      "params": {
+       "찾음": "{url: Unknown, 버전: Text, 찾은경로: Null | Text}"
+      },
+      "result": "{버전: Text, ok: Bool, url: Null, 찾은경로: Null, 이유: Text, 문단: List<Unknown>, 적중: Number, 생략: Number} | {버전: Text, ok: Bool, url: Unknown, 찾은경로: Null | Text, 문단: List<{paragraph_index: Unknown, text: Unknown}>, 적중: Number, 생략: Number} | {버전: Text, ok: Bool, url: Unknown, 찾은경로: Null | Text, 이유: Unknown, 문단: List<Unknown>, 적중: Number, 생략: Number}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+     "start": 1363,
+     "end": 1977,
+     "line": 30,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 41,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "c4abe3cdac08f66ae4393a1b2555d2699f154dafd947730bb4d6591da857618c",
+  "dependencies": {
+   "source": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "버전": "List<Text>"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 2378
+    }
+   ],
+   "contracts": "2e070237184e6c15c2842899711297288aa4dd2fef92d460431691d6634ddedc",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "b8cba6f27e39735b3c9966ca55ce032775ce63e8fbae8e972be9a7390cac651c"
+  },
+  "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+      "start": 879,
+      "end": 1045,
+      "line": 17,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 21,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+      "start": 1061,
+      "end": 1213,
+      "line": 22,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 25,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [
+    {
+     "code": "UNOBSERVED_FIELD",
+     "rule": "UNOBSERVED_FIELD",
+     "severity": "warning",
+     "message": "관측된 반환 필드에 없는 이름입니다: query. 관측 필드: title, meta, summary, url",
+     "source_span": {
+      "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+      "start": 549,
+      "end": 561,
+      "line": 13,
+      "column": 66
+     },
+     "call_path": [
+      {
+       "function": "버전문서찾기",
+       "call": {
+        "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+        "start": 2202,
+        "end": 2230,
+        "line": 47,
+        "column": 29
+       },
+       "definition": {
+        "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+        "start": 391,
+        "end": 1361,
+        "line": 10,
+        "column": 1
+       }
+      }
+     ],
+     "facts": {
+      "field": "query",
+      "observed": [
+       "title",
+       "meta",
+       "summary",
+       "url"
+      ]
+     },
+     "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+     "location": {
+      "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+      "start": 549,
+      "end": 561,
+      "line": 13,
+      "column": 66,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 13,
+      "end_column": 78,
+      "offset_encoding": "unicode-codepoints"
+     }
+    },
+    {
+     "code": "UNOBSERVED_FIELD",
+     "rule": "UNOBSERVED_FIELD",
+     "severity": "warning",
+     "message": "관측된 반환 필드에 없는 이름입니다: query. 관측 필드: title, meta, summary, url",
+     "source_span": {
+      "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+      "start": 2345,
+      "end": 2368,
+      "line": 49,
+      "column": 52
+     },
+     "call_path": [],
+     "facts": {
+      "field": "query",
+      "observed": [
+       "title",
+       "meta",
+       "summary",
+       "url"
+      ]
+     },
+     "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+     "location": {
+      "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+      "start": 2345,
+      "end": 2368,
+      "line": 49,
+      "column": 52,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 49,
+      "end_column": 75,
+      "offset_encoding": "unicode-codepoints"
+     }
+    }
+   ],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: query. 관측 필드: title, meta, summary, url",
+    "source_span": {
+     "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+     "start": 549,
+     "end": 561,
+     "line": 13,
+     "column": 66
+    },
+    "call_path": [
+     {
+      "function": "버전문서찾기",
+      "call": {
+       "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+       "start": 2202,
+       "end": 2230,
+       "line": 47,
+       "column": 29
+      },
+      "definition": {
+       "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+       "start": 391,
+       "end": 1361,
+       "line": 10,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {
+     "field": "query",
+     "observed": [
+      "title",
+      "meta",
+      "summary",
+      "url"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+     "start": 549,
+     "end": 561,
+     "line": 13,
+     "column": 66,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 13,
+     "end_column": 78,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: query. 관측 필드: title, meta, summary, url",
+    "source_span": {
+     "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+     "start": 2345,
+     "end": 2368,
+     "line": 49,
+     "column": 52
+    },
+    "call_path": [],
+    "facts": {
+     "field": "query",
+     "observed": [
+      "title",
+      "meta",
+      "summary",
+      "url"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "174618808c4797df6c3bf7198d4262f9440dcc57d5259879c0f25b90967a2bd0",
+     "start": 2345,
+     "end": 2368,
+     "line": 49,
+     "column": 52,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 49,
+     "end_column": 75,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 21,
+   "informative": 18
+  },
+  "guards_ref": {
+   "id": "ada3892eddefed4a255a56cb771569024cfac9654b3ee552f3dd02d5c8cfe59d",
+   "chars": 26437,
+   "read_args": {
+    "id": "ada3892eddefed4a255a56cb771569024cfac9654b3ee552f3dd02d5c8cfe59d",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

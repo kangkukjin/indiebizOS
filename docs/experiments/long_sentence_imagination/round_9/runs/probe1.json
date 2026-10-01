@@ -1,0 +1,495 @@
+{
+ "request": {
+  "code": "$a = [self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_9/input/shipments/carrier_A.csv\"}\n$b = [self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_9/input/shipments/carrier_B.json\"}\n$s = [self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_9/input/sla.json\"}\n$빈 = $a.data.items >> [table:filter]{where:($r)=>$r.도착일 == null or $r.도착일 == \"\"} >> [table:take]{n:2}\n$허 = $s.data.허용배송일수\nreturn {a0:$a.data.items[0],빈:$빈,bkeys:keys($b.data),b0:$b.data.shipments[0],s:$s.data,dd:date_diff(\"2025-07-10\",\"2025-06-20\"),g:get($허,\"제주\",0),rep:replace(\"2025/05/15\",\"/\",\"-\")}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI9_trainer",
+  "task_id": "LSI9_task"
+ },
+ "elapsed_s": 1.4,
+ "response": {
+  "success": true,
+  "value": {
+   "a0": {
+    "주문번호": "O0100453",
+    "발송일": "2025-01-06",
+    "도착일": "2025-01-11"
+   },
+   "빈": [],
+   "bkeys": [
+    "carrier",
+    "shipments"
+   ],
+   "b0": {
+    "order_id": "O0500038",
+    "shipped": "2025/05/15",
+    "delivered": "2025/05/17",
+    "tracking": "B4297175092"
+   },
+   "s": {
+    "허용배송일수": {
+     "수도권": 2,
+     "지방": 3,
+     "제주": 5
+    },
+    "기준일": "2025-07-10",
+    "분실의심일수": 14
+   },
+   "dd": 20,
+   "g": 5,
+   "rep": "2025-05-15"
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "a0",
+      [
+       "record",
+       [
+        [
+         "주문번호",
+         [
+          "scalar",
+          "O0100453"
+         ]
+        ],
+        [
+         "발송일",
+         [
+          "scalar",
+          "2025-01-06"
+         ]
+        ],
+        [
+         "도착일",
+         [
+          "scalar",
+          "2025-01-11"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "빈",
+      [
+       "list",
+       []
+      ]
+     ],
+     [
+      "bkeys",
+      [
+       "list",
+       [
+        [
+         "scalar",
+         "carrier"
+        ],
+        [
+         "scalar",
+         "shipments"
+        ]
+       ]
+      ]
+     ],
+     [
+      "b0",
+      [
+       "record",
+       [
+        [
+         "order_id",
+         [
+          "scalar",
+          "O0500038"
+         ]
+        ],
+        [
+         "shipped",
+         [
+          "scalar",
+          "2025/05/15"
+         ]
+        ],
+        [
+         "delivered",
+         [
+          "scalar",
+          "2025/05/17"
+         ]
+        ],
+        [
+         "tracking",
+         [
+          "scalar",
+          "B4297175092"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "s",
+      [
+       "record",
+       [
+        [
+         "허용배송일수",
+         [
+          "record",
+          [
+           [
+            "수도권",
+            [
+             "scalar",
+             2
+            ]
+           ],
+           [
+            "지방",
+            [
+             "scalar",
+             3
+            ]
+           ],
+           [
+            "제주",
+            [
+             "scalar",
+             5
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "기준일",
+         [
+          "scalar",
+          "2025-07-10"
+         ]
+        ],
+        [
+         "분실의심일수",
+         [
+          "scalar",
+          14
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "dd",
+      [
+       "scalar",
+       20
+      ]
+     ],
+     [
+      "g",
+      [
+       "scalar",
+       5
+      ]
+     ],
+     [
+      "rep",
+      [
+       "scalar",
+       "2025-05-15"
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "dab9490db979f3eb6fb240fc6e9ddd3b93956098f9ce08e9d14f698202eb467c",
+  "source_complete": true,
+  "usage": {
+   "steps": 28985,
+   "rows": 0,
+   "elapsed_ms": 1120,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "binary:473:487",
+     "steps": 3213,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 473,
+      "end": 487,
+      "line": 4,
+      "column": 50
+     }
+    },
+    {
+     "node_id": "binary:473:503",
+     "steps": 3213,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 473,
+      "end": 503,
+      "line": 4,
+      "column": 50
+     }
+    },
+    {
+     "node_id": "binary:491:503",
+     "steps": 3213,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 491,
+      "end": 503,
+      "line": 4,
+      "column": 68
+     }
+    },
+    {
+     "node_id": "field:473:479",
+     "steps": 3213,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 473,
+      "end": 479,
+      "line": 4,
+      "column": 50
+     }
+    },
+    {
+     "node_id": "field:491:497",
+     "steps": 3213,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 491,
+      "end": 497,
+      "line": 4,
+      "column": 68
+     }
+    },
+    {
+     "node_id": "literal:483:487",
+     "steps": 3213,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 483,
+      "end": 487,
+      "line": 4,
+      "column": 60
+     }
+    },
+    {
+     "node_id": "literal:501:503",
+     "steps": 3213,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 501,
+      "end": 503,
+      "line": 4,
+      "column": 78
+     }
+    },
+    {
+     "node_id": "ref:473:475",
+     "steps": 3213,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 473,
+      "end": 475,
+      "line": 4,
+      "column": 50
+     }
+    },
+    {
+     "node_id": "ref:491:493",
+     "steps": 3213,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 491,
+      "end": 493,
+      "line": 4,
+      "column": 68
+     }
+    },
+    {
+     "node_id": "pure_call:585:598",
+     "steps": 4,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 585,
+      "end": 598,
+      "line": 6,
+      "column": 40
+     }
+    },
+    {
+     "node_id": "pure_call:636:672",
+     "steps": 2,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 636,
+      "end": 672,
+      "line": 6,
+      "column": 91
+     }
+    },
+    {
+     "node_id": "pure_call:675:689",
+     "steps": 2,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 675,
+      "end": 689,
+      "line": 6,
+      "column": 130
+     }
+    },
+    {
+     "node_id": "pure_call:694:723",
+     "steps": 2,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 694,
+      "end": 723,
+      "line": 6,
+      "column": 149
+     }
+    },
+    {
+     "node_id": "bind:0:145",
+     "steps": 1,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 0,
+      "end": 145,
+      "line": 1,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:146:292",
+     "steps": 1,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 146,
+      "end": 292,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:293:423",
+     "steps": 1,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 293,
+      "end": 423,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:424:525",
+     "steps": 1,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 424,
+      "end": 525,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:526:545",
+     "steps": 1,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 526,
+      "end": 545,
+      "line": 5,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "builtin:585:589",
+     "steps": 1,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 585,
+      "end": 589,
+      "line": 6,
+      "column": 40
+     }
+    },
+    {
+     "node_id": "builtin:636:645",
+     "steps": 1,
+     "location": {
+      "source_hash": "299e3ef1d29fb4f1fee5ebf382d8c1fb745916804c7b0336eceddb00f0d1bec8",
+      "start": 636,
+      "end": 645,
+      "line": 6,
+      "column": 91
+     }
+    }
+   ],
+   "steps_other": 51
+  },
+  "resume": {
+   "run_id": "896a936061dc47fb85b0d8af7337d779"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "896a936061dc47fb85b0d8af7337d779"
+    }
+   },
+   "read_calls": 3,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 77,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "7bc8f8f9bb2266c6b2fef86a983b9c8ac1300d84d275e93b851dfb9a5a7e9b50",
+   "chars": 1587372,
+   "max_limit": 60000,
+   "paths": [],
+   "read_args": {
+    "id": "7bc8f8f9bb2266c6b2fef86a983b9c8ac1300d84d275e93b851dfb9a5a7e9b50",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "value"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "input_args": {
+    "입력": {
+     "$ref": "7bc8f8f9bb2266c6b2fef86a983b9c8ac1300d84d275e93b851dfb9a5a7e9b50"
+    }
+   },
+   "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+   "value_chars": 346
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

@@ -1,0 +1,50 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task",
+  "describe": [
+   "fn:본문에서찾기"
+  ]
+ },
+ "elapsed_s": 0.33,
+ "response": {
+  "actions": [
+   {
+    "action": "fn:본문에서찾기",
+    "definition": {
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "목록": "Unknown",
+       "패턴": "Unknown",
+       "문맥": "Unknown",
+       "개수": "Unknown"
+      },
+      "required": [
+       "목록",
+       "패턴",
+       "문맥",
+       "개수"
+      ],
+      "result": "Record",
+      "effects": [
+       "unknown"
+      ],
+      "compatibility": "legacy-function/1",
+      "implementation_fingerprint": "bcefdf9c3b0cbb57d930c833a4d8e0305ce89e4329c7408dc09e0dbd43f34608",
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": ""
+      },
+      "pipe_input": "목록"
+     }
+    }
+   }
+  ],
+  "executed": false
+ }
+}

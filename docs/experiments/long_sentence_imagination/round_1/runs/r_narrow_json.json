@@ -1,0 +1,35 @@
+{
+ "request": {
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI1_trainer",
+  "task_id": "LSI1_task"
+ },
+ "code_file": null,
+ "elapsed_s": 0.3,
+ "response": {
+  "success": true,
+  "run_status": "completed",
+  "source_complete": true,
+  "value": [
+   "-",
+   "3",
+   "1500000"
+  ],
+  "evidence_summary": {
+   "events": 37,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "usage": {
+   "steps": 51,
+   "rows": 3,
+   "elapsed_ms": 1
+  },
+  "resume": {
+   "run_id": "bd4d1e5927bc4ab68d3c41d5b3ec422d"
+  }
+ }
+}

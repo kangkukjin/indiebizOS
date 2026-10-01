@@ -1,0 +1,167 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI10_trainer",
+  "task_id": "LSI10_task",
+  "describe": [
+   "self:script"
+  ]
+ },
+ "elapsed_s": 0.27,
+ "response": {
+  "actions": [
+   {
+    "action": "self:script",
+    "definition": {
+     "description": "등록 스크립트 실행기 — 완성·검증된 스크립트를 등록하면 워크플로우·트리거·앱이 id 한 단어로 결정론 실행. 코드가 아니라 참조만 나른다(저작·디버깅은 write+run_command).",
+     "guides": [
+      "script.md",
+      "python_libraries.md"
+     ],
+     "group": "system",
+     "runs_on": "pc_only",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "op": "Text",
+       "id": "Text",
+       "args": "Record",
+       "args_file": "Text",
+       "path": "Text",
+       "description": "Text",
+       "interpreter": "Text",
+       "timeout": "Number",
+       "background": "Bool",
+       "job_id": "Text",
+       "wait": "Number",
+       "callable_contract": "Record"
+      },
+      "required": [],
+      "pipe_input": "args",
+      "result": "Unknown",
+      "effects": [
+       "unknown"
+      ],
+      "adapter": {
+       "protocol": "ibl-script/2",
+       "value_path": "/value"
+      },
+      "nondeterministic": true,
+      "per_run": true,
+      "variants": [
+       {
+        "when": {
+         "op": "list"
+        },
+        "result": {
+         "success": "Bool",
+         "count": "Number",
+         "items": "List<Record>"
+        },
+        "effects": [
+         "read_external"
+        ]
+       },
+       {
+        "when": {
+         "op": "status"
+        },
+        "result": {
+         "success": "Bool",
+         "count": "Number",
+         "items": {
+          "$list": {
+           "job_id": "Text",
+           "status": "Text",
+           "progress": "List<Text>"
+          }
+         },
+         "running": "List<Text>",
+         "text": "Text"
+        },
+        "effects": [
+         "read_external"
+        ]
+       }
+      ],
+      "enums": {
+       "op": [
+        "list",
+        "register",
+        "run",
+        "status",
+        "remove"
+       ]
+      }
+     },
+     "operations": {
+      "list": "등록 목록 + 마지막 실행 상태",
+      "register": "스크립트 등록/갱신 — path 필수, 완성본만",
+      "run": "등록 id 결정론 실행 — stdout JSON 은 통화로, 실패는 정직하게",
+      "status": "백그라운드 작업 상태·결과 — job_id|id, wait(≤240초 유한 대기)",
+      "remove": "등록 해제 — 파일은 보존"
+     },
+     "observed_returns": {
+      "self:script": {
+       "kind": "items",
+       "keys": [
+        "id",
+        "title",
+        "meta",
+        "summary",
+        "description",
+        "path",
+        "interpreter",
+        "registered_at",
+        "last_status",
+        "last_run",
+        "runnable"
+       ],
+       "observed": "2026-09-29",
+       "source": "fixture"
+      },
+      "self:script#status": {
+       "kind": "items",
+       "keys": [
+        "job_id",
+        "id",
+        "status",
+        "started_at",
+        "ended_at",
+        "exit_code",
+        "duration_ms",
+        "log",
+        "result"
+       ],
+       "observed": "2026-09-29",
+       "source": "fixture"
+      },
+      "self:script#list": {
+       "kind": "items",
+       "keys": [
+        "id",
+        "title",
+        "meta",
+        "summary",
+        "description",
+        "path",
+        "interpreter",
+        "registered_at",
+        "last_status",
+        "last_run",
+        "runnable"
+       ],
+       "observed": "2026-09-29",
+       "source": "fixture"
+      }
+     },
+     "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."
+    }
+   }
+  ],
+  "executed": false
+ }
+}

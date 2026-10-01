@@ -1,0 +1,43 @@
+{
+ "request": {
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI1_trainer",
+  "task_id": "LSI1_task",
+  "check": true,
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_1회차/input_variant",
+   "요구파일": "requirements.json",
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_1회차/out/variant_report.md",
+   "업체": [
+    {
+     "vendor": "A",
+     "file": "vendor_A.csv",
+     "format": "csv"
+    },
+    {
+     "vendor": "B",
+     "file": "vendor_B.json",
+     "format": "json"
+    },
+    {
+     "vendor": "C",
+     "file": "vendor_C.csv",
+     "format": "csv"
+    }
+   ]
+  }
+ },
+ "code_file": null,
+ "elapsed_s": 0.29,
+ "response": {
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "warnings": [],
+  "guards_count": 24,
+  "response_chars": 39896,
+  "guards_chars": 28349
+ }
+}

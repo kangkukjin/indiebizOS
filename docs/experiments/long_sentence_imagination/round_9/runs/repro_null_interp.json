@@ -1,0 +1,137 @@
+{
+ "request": {
+  "code": "$행 = $입력 >> [table:each] { return {글:f\"${$it.a}원\"} }\nreturn $행\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI9_trainer",
+  "task_id": "LSI9_task",
+  "inputs": {
+   "입력": [
+    {
+     "a": 1
+    },
+    {
+     "a": null
+    }
+   ]
+  }
+ },
+ "elapsed_s": 0.31,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Number입니다.",
+    "source_span": {
+     "source_hash": "28e3d67e2e4c1d7bc98766aaee4f495ac7c95eaacdba89e1e3ce5d1f2fe7b6d9",
+     "start": 41,
+     "end": 46,
+     "line": 1,
+     "column": 42
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null | Number",
+    "location": {
+     "source_hash": "28e3d67e2e4c1d7bc98766aaee4f495ac7c95eaacdba89e1e3ce5d1f2fe7b6d9",
+     "start": 41,
+     "end": 46,
+     "line": 1,
+     "column": 42,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 1,
+     "end_column": 47,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 0,
+  "guards_inner": 0,
+  "guards_omitted": 0,
+  "result_type": "List<{글: Text}>",
+  "effects": [],
+  "functions": {},
+  "plan_hash": "37afc1498400a8f35540bc4f3d5a3e6cacfb553ba565637313b8e4107e9fa229",
+  "dependencies": {
+   "source": "28e3d67e2e4c1d7bc98766aaee4f495ac7c95eaacdba89e1e3ce5d1f2fe7b6d9",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "입력": "List<{a: Null | Number}>"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 63
+    }
+   ],
+   "contracts": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "4043ed08260cb693dc9460438ba61fa46506ddf922a12230d21e7f27218b0c3d",
+   "core": "90ee835e38d72afe6eb65a540f6d92db92f41012bac1477e005f0de0efa35132"
+  },
+  "source_hash": "28e3d67e2e4c1d7bc98766aaee4f495ac7c95eaacdba89e1e3ce5d1f2fe7b6d9",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "진단 위치를 수정한 뒤 다시 검사하세요.",
+  "success": false,
+  "error": "실행 전 검사에서 거절했습니다: 보간에는 Text·Number·Bool이 필요하지만 Null | Number입니다. (FORMAT_TYPE)",
+  "request_inputs": {
+   "input_args": {
+    "입력": {
+     "$ref": "35a8f6c57354a685672cb71db3924ec93641058c8b8f7f8ed255c72c273ecd3f"
+    }
+   },
+   "unavailable": {},
+   "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  },
+  "evidence_summary": {
+   "events": 0,
+   "source_complete": null,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "e1fcae96dd0be0378178c3c994dfab0f248990aea34045635d77040d43ca5f33",
+   "chars": 2641,
+   "max_limit": 60000,
+   "paths": [],
+   "read_args": {
+    "id": "e1fcae96dd0be0378178c3c994dfab0f248990aea34045635d77040d43ca5f33",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "issues"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+ }
+}

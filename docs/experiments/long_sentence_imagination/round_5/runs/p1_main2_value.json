@@ -1,0 +1,168 @@
+{
+ "영수증": [
+  {
+   "id": "R01",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R01.pdf",
+   "상태": "읽음",
+   "이유": null
+  },
+  {
+   "id": "R02",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R02.pdf",
+   "상태": "읽음",
+   "이유": null
+  },
+  {
+   "id": "R03",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R03.pdf",
+   "상태": "읽음",
+   "이유": null
+  },
+  {
+   "id": "R04",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R04.pdf",
+   "상태": "읽음",
+   "이유": null
+  },
+  {
+   "id": "R05",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R05.pdf",
+   "상태": "읽음",
+   "이유": null
+  },
+  {
+   "id": "R06",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R06.pdf",
+   "상태": "읽음",
+   "이유": null
+  },
+  {
+   "id": "R07",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R07.pdf",
+   "상태": "읽음",
+   "이유": null
+  },
+  {
+   "id": "R08",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R08.pdf",
+   "상태": "읽음",
+   "이유": null
+  },
+  {
+   "id": "R09",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R09.pdf",
+   "상태": "읽음",
+   "이유": null
+  },
+  {
+   "id": "R10",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R10.pdf",
+   "상태": "읽음",
+   "이유": null
+  },
+  {
+   "id": "R11",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R11.pdf",
+   "상태": "글자 없음",
+   "이유": "PDF 에 글자 층이 없음(스캔 추정, 페이지 표지만 반환)"
+  },
+  {
+   "id": "R12",
+   "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R12.pdf",
+   "상태": "읽기 실패",
+   "이유": "PDF 페이지 0 — 손상 추정(읽기 도구는 오류 없이 빈 본문 반환)"
+  }
+ ],
+ "추출": [
+  {
+   "id": "R01",
+   "가맹점": "스타벅스 강남대로점",
+   "날짜": "2026-09-01",
+   "합계": 23500,
+   "합계표기": "23,500",
+   "원문확인": true,
+   "원문": "\n--- Page 1 ---\n스타벅스 강남대로점\n거래일시 2026-09-01 12:01\n----------------------------\n아메리카노 x3 @4,500원\n카페라떼 x2 @5,000원\n----------------------------\n합계 금액 23,500원\n카드 승인\n"
+  },
+  {
+   "id": "R02",
+   "가맹점": "(주)한솥 역삼점",
+   "날짜": "2026-09-02",
+   "합계": 24500,
+   "합계표기": "24,500",
+   "원문확인": true,
+   "원문": "\n--- Page 1 ---\n(주)한솥 역삼점\n거래일시 2026-09-02 12:02\n----------------------------\n품목        수량     금액\n치킨마요         5    24,500\n----------------------------\n합계 금액 24,500원\n카드 승인\n"
+  },
+  {
+   "id": "R03",
+   "가맹점": "교보문고 광화문",
+   "날짜": "2026-09-03",
+   "합계": 45000,
+   "합계표기": "45,000",
+   "원문확인": true,
+   "원문": "\n--- Page 1 ---\n교보문고 광화문\n거래일시 2026-09-03 12:03\n----------------------------\n파이썬 책 x1 @36,000원\n노트 x3 @3,000원\n----------------------------\n합계 금액 45,000원\n카드 승인\n"
+  },
+  {
+   "id": "R04",
+   "가맹점": "카카오T 택시",
+   "날짜": "2026-09-04",
+   "합계": 18700,
+   "합계표기": "18,700",
+   "원문확인": true,
+   "원문": "\n--- Page 1 ---\n카카오T 택시\n거래일시 2026-09-04 12:04\n----------------------------\n운임 x1 @18,700원\n----------------------------\n합계 금액 18,700원\n카드 승인\n"
+  },
+  {
+   "id": "R05",
+   "가맹점": "오피스디포 선릉",
+   "날짜": "2026-09-05",
+   "합계": 111000,
+   "합계표기": "111,000",
+   "원문확인": true,
+   "원문": "\n--- Page 1 ---\n오피스디포 선릉\n거래일시 2026-09-05 12:05\n----------------------------\n품목        수량     금액\nA4 용지        4    22,000\n토너           1    89,000\n----------------------------\n합계 금액 111,000원\n카드 승인\n"
+  },
+  {
+   "id": "R06",
+   "가맹점": "본죽 삼성점",
+   "날짜": "2026-09-08",
+   "합계": 26000,
+   "합계표기": "26,000",
+   "원문확인": true,
+   "원문": "\n--- Page 1 ---\n본죽 삼성점\n거래일시 2026-09-08 12:06\n----------------------------\n전복죽 x2 @13,000원\n----------------------------\n합계 금액 26,000원\n카드 승인\n"
+  },
+  {
+   "id": "R07",
+   "가맹점": "동네 문구점",
+   "날짜": "2026-09-09",
+   "합계": 5000,
+   "합계표기": "5,000",
+   "원문확인": true,
+   "원문": "\n--- Page 1 ---\n동네 문구점\n거래일시 2026-09-09 12:07\n----------------------------\n포스트잇 x2 @2,500원\n----------------------------\n합계 금액 5,000원\n카드 승인\n"
+  },
+  {
+   "id": "R08",
+   "가맹점": "코레일 KTX",
+   "날짜": "2026-09-10",
+   "합계": 119600,
+   "합계표기": "119,600",
+   "원문확인": true,
+   "원문": "\n--- Page 1 ---\n코레일 KTX\n거래일시 2026-09-10 12:08\n----------------------------\n품목        수량     금액\n서울-부산        2   119,600\n----------------------------\n합계 금액 119,600원\n카드 승인\n"
+  },
+  {
+   "id": "R09",
+   "가맹점": "이디야 선릉역점",
+   "날짜": "2026-09-11",
+   "합계": 19200,
+   "합계표기": "19,200",
+   "원문확인": true,
+   "원문": "\n--- Page 1 ---\n이디야 선릉역점\n거래일시 2026-09-11 12:09\n----------------------------\n아메리카노 x6 @3,200원\n----------------------------\n합계 금액 19,200원\n카드 승인\n"
+  },
+  {
+   "id": "R10",
+   "가맹점": "쿠팡",
+   "날짜": "2026-09-12",
+   "합계": 42900,
+   "합계표기": "42,900",
+   "원문확인": true,
+   "원문": "\n--- Page 1 ---\n쿠팡\n거래일시 2026-09-12 12:10\n----------------------------\n모니터암 x1 @42,900원\n----------------------------\n합계 금액 42,900원\n카드 승인\n"
+  }
+ ]
+}

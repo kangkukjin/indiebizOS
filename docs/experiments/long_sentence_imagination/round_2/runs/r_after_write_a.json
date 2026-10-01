@@ -1,0 +1,86 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$a = [self:read]{path:f\"${폴더}/venues.json\"}\n$w = [self:write]{path:$출력, content:\"x\"}\nreturn {n:len($a.data.venues)}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/input",
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/out/scratch.txt"
+  }
+ },
+ "elapsed_s": 0.38,
+ "response": {
+  "success": true,
+  "value": {
+   "n": 4
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "n",
+      [
+       "scalar",
+       4
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "f199fc294c9369902ea134e699c641ded85b69c2208019672c2b80f32b1059a2",
+  "source_complete": true,
+  "usage": {
+   "steps": 19,
+   "rows": 0,
+   "elapsed_ms": 81
+  },
+  "resume": {
+   "run_id": "f9b5e192d70448289adbbb0538e479eb"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 20,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "55de62cd18bc1f2ff7285a0e730db7801646a7e0225917522dbe2b8b1304c1e3",
+   "chars": 8941,
+   "max_limit": 60000,
+   "paths": [],
+   "read_args": {
+    "id": "55de62cd18bc1f2ff7285a0e730db7801646a7e0225917522dbe2b8b1304c1e3",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "value"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "input_args": {
+    "입력": {
+     "$ref": "55de62cd18bc1f2ff7285a0e730db7801646a7e0225917522dbe2b8b1304c1e3"
+    }
+   },
+   "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

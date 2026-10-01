@@ -1,0 +1,103 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# inputs: x = 행 목록. 이번 값에서 이유가 전부 null 이지만 다른 입력에선 문자열일 수 있다\nreturn $x >> [table:each] { return $it.이유 == null ? \"사유 없음\" : text($it.이유) }\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "check": true,
+  "inputs": {
+   "x": [
+    {
+     "이유": null
+    },
+    {
+     "이유": null
+    }
+   ]
+  }
+ },
+ "elapsed_s": 0.25,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "TYPE",
+    "message": "Bool | Number | Text가 필요하지만 Null입니다.",
+    "source_span": {
+     "source_hash": "8cd665fb21d96be77fa5e0adb48820ec51a3c32294c19961e62f3ffa014ddb1a",
+     "start": 144,
+     "end": 150,
+     "line": 3,
+     "column": 68
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null",
+    "location": {
+     "source_hash": "8cd665fb21d96be77fa5e0adb48820ec51a3c32294c19961e62f3ffa014ddb1a",
+     "start": 144,
+     "end": 150,
+     "line": 3,
+     "column": 68,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 74,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "TYPE",
+    "severity": "error",
+    "hint": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 0,
+  "guards_inner": 0,
+  "guards_omitted": 0,
+  "result_type": "List<Text>",
+  "effects": [],
+  "functions": {},
+  "plan_hash": "6e1c4f0cc3382eb56e38427e285cf636f99fa5e8380b4a06f55a6853adf2b4d6",
+  "dependencies": {
+   "source": "8cd665fb21d96be77fa5e0adb48820ec51a3c32294c19961e62f3ffa014ddb1a",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "x": "List<{이유: Null}>"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 154
+    }
+   ],
+   "contracts": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "b8cba6f27e39735b3c9966ca55ce032775ce63e8fbae8e972be9a7390cac651c"
+  },
+  "source_hash": "8cd665fb21d96be77fa5e0adb48820ec51a3c32294c19961e62f3ffa014ddb1a",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+ }
+}

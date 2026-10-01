@@ -1,0 +1,60 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task",
+  "read_result": {
+   "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+   "path": [
+    "usage"
+   ],
+   "offset": 0,
+   "limit": 200
+  }
+ },
+ "elapsed_s": 0.03,
+ "response": {
+  "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+  "offset": 0,
+  "chars": 731,
+  "text": "{\n  \"steps\": 95778,\n  \"rows\": 1686,\n  \"elapsed_ms\": 4945,\n  \"model\": {\n    \"requests\": 1,\n    \"measured_requests\": 1,\n    \"unmeasured_requests\": 0,\n    \"input\": 2537,\n    \"output\": 414,\n    \"cache_rea",
+  "integrity": "verified",
+  "source_chars": 995843,
+  "path": [
+   "usage"
+  ],
+  "next_offset": 200,
+  "next_read": {
+   "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+   "offset": 200,
+   "limit": 200,
+   "path": [
+    "usage"
+   ]
+  },
+  "read_scope": {
+   "path": [
+    "usage"
+   ],
+   "start": 0,
+   "end": 200,
+   "total_chars": 731,
+   "complete": false,
+   "format": "json"
+  },
+  "_display": {
+   "max_chars": 200
+  },
+  "input_args": {
+   "입력": {
+    "$ref": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+    "path": [
+     "usage"
+    ]
+   }
+  }
+ }
+}

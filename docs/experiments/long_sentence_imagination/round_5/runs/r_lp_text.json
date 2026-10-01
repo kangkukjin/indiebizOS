@@ -1,0 +1,91 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$문장 = \"가\"\n  + \"나\"\nreturn $문장\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI5_trainer",
+  "task_id": "LSI5_task",
+  "check": true
+ },
+ "elapsed_s": 0.27,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "NUMBER_REQUIRED",
+    "message": "number(): 유한 숫자로 해석할 수 없습니다: '나'. 해석 실패는 null이 아니라 오류입니다. [try]/[catch]로 처리하세요.",
+    "source_span": {
+     "source_hash": "5ea1a101674b2317dbac43b0fcce1d4bf54b228a692bf3f4a54136deeece47ad",
+     "start": 30,
+     "end": 33,
+     "line": 3,
+     "column": 5
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "Text",
+    "location": {
+     "source_hash": "5ea1a101674b2317dbac43b0fcce1d4bf54b228a692bf3f4a54136deeece47ad",
+     "start": 30,
+     "end": 33,
+     "line": 3,
+     "column": 5,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 8,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "NUMBER_REQUIRED",
+    "severity": "error",
+    "hint": "숫자로 관측할 수 있는 값인지 확인하세요. 구조·산문은 숫자가 아닙니다."
+   }
+  ],
+  "guards": [],
+  "guards_total": 0,
+  "guards_inner": 0,
+  "guards_omitted": 0,
+  "result_type": "Text",
+  "effects": [],
+  "functions": {},
+  "plan_hash": "ed34649d3e60b22d62b765c4d71dfb16130560eed5d4be07e64b1e48e01387fa",
+  "dependencies": {
+   "source": "5ea1a101674b2317dbac43b0fcce1d4bf54b228a692bf3f4a54136deeece47ad",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 45
+    }
+   ],
+   "contracts": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "cece9404f75d401bd766689f258ec312f2d8628cdce0c53c1585fb766a0242d8"
+  },
+  "source_hash": "5ea1a101674b2317dbac43b0fcce1d4bf54b228a692bf3f4a54136deeece47ad",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+ }
+}

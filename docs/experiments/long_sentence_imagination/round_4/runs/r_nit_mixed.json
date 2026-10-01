@@ -1,0 +1,73 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# inputs: x = 행 목록. 이번 값에서 이유가 전부 null 이지만 다른 입력에선 문자열일 수 있다\nreturn $x >> [table:each] { return $it.이유 == null ? \"사유 없음\" : text($it.이유) }\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "check": true,
+  "inputs": {
+   "x": [
+    {
+     "이유": null
+    },
+    {
+     "이유": "404"
+    }
+   ]
+  }
+ },
+ "elapsed_s": 0.26,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "valid",
+  "issues": [],
+  "guards": [],
+  "guards_total": 0,
+  "guards_inner": 0,
+  "guards_omitted": 0,
+  "result_type": "List<Text>",
+  "effects": [],
+  "functions": {},
+  "plan_hash": "b587570adacea4714265db26fa78c95d926fce0fba911100ad0ed6029a301c63",
+  "dependencies": {
+   "source": "8cd665fb21d96be77fa5e0adb48820ec51a3c32294c19961e62f3ffa014ddb1a",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "x": "List<{이유: Null | Text}>"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 154
+    }
+   ],
+   "contracts": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "b8cba6f27e39735b3c9966ca55ce032775ce63e8fbae8e972be9a7390cac651c"
+  },
+  "source_hash": "8cd665fb21d96be77fa5e0adb48820ec51a3c32294c19961e62f3ffa014ddb1a",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+ }
+}

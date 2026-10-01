@@ -1,0 +1,95 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# schema 에 pros/cons 를 선언했는데 오타 필드 conz 를 읽는다 — check 가 잡는가\n$r = [{venue:\"V1\", reviews:\"좋아요\\n추워요\"}] >> [table:ai]{instruction:\"장점 pros, 우려 cons 목록\", schema:\"pros(문자열 목록), cons(문자열 목록)\", preserve_rows:true}\n$x = $r.items >> [table:each] { return {v:$it.venue, c:$it.conz} }\nreturn $x\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "check": true
+ },
+ "elapsed_s": 0.3,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 5,
+  "guards_inner": 0,
+  "guards_omitted": 5,
+  "result_type": "List<{v: Unknown, c: Unknown}>",
+  "effects": [
+   "unknown"
+  ],
+  "functions": {},
+  "plan_hash": "ecf71142645037a1c0a2e06d48e1cbab96b34e10458590e77e5ee4a6cb2012fa",
+  "dependencies": {
+   "source": "c460ba19b72ea92856115d056f831ebaed1768a9699ca7facec205fee1d25833",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 299
+    }
+   ],
+   "contracts": "ee0997db33a93d9fa347b130d3606bef0767b13630226946c7d996d594945114",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "c1794ea4f0c1da284c6c08fd27dd3f3dd6fac373f9dc627fc2c31d90486a3897",
+   "expressions": "8d08f157bcfb3c7db9e8da2fdb89205d54121034a929a4e110ca50844bc8ca91",
+   "core": "53edf2c6feeb307b4ba9aecb8e482e3ad02d310f8d88f1ce8fa0ff382311ccc0"
+  },
+  "source_hash": "c460ba19b72ea92856115d056f831ebaed1768a9699ca7facec205fee1d25833",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "c460ba19b72ea92856115d056f831ebaed1768a9699ca7facec205fee1d25833",
+      "start": 239,
+      "end": 288,
+      "line": 4,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 4,
+      "end_column": 67,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 5,
+   "informative": 4
+  },
+  "guards_ref": {
+   "id": "3824761c7f97ca04546c9d479cb6d698c4f45b4cbacb1b17311ca93382e214cc",
+   "chars": 3186,
+   "read_args": {
+    "id": "3824761c7f97ca04546c9d479cb6d698c4f45b4cbacb1b17311ca93382e214cc",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

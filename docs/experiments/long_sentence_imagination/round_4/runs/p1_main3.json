@@ -1,0 +1,1053 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 4회차 P1 수집 — 검색으로 공식 What's New 문서를 찾아 PEP 문단을 모은다 (v3: 공식 주소는 앞부분 일치 — contains 가 북마크 사이트를 공식으로 오인)\n# inputs: 버전[Text], 문단상한(모델 입력 보호가 아니라 표시 없음 — 전건 사용, 생략은 match_info 로 신고)\n# 반환: {검색:[{query,title,url}], 원천:[{버전,ok,url,찾은경로,이유?,문단:[{paragraph_index,text}],적중,생략}]}\n\n[def:공식인가]($버전) {\n  return ($행)=>$행.url[:24] == \"https://docs.python.org/\" and contains($행.url,f\"whatsnew/${$버전}.html\")\n}\n\n[def:버전문서찾기]($버전,$검색행) {\n  $공식 = [fn:공식인가]{버전:$버전}\n  $직접 = $검색행 >> [table:filter]{where:$공식}\n  [if:len($직접) > 0] { return {버전:$버전,url:$직접[0].url,찾은경로:f\"검색 '${$직접[0].query}' 결과\"} }\n  # 검색에 나온 공식 색인·해당 버전 릴리스 페이지의 링크에서 찾는다\n  $릴리스 = \"python-\" + replace($버전,\".\",\"\") + \"0/\"\n  $경유 = $검색행 >> [table:filter]{where:($r)=>($r.url[:24] == \"https://docs.python.org/\" and contains($r.url,\"whatsnew/index.html\")) or ($r.url[:40] == \"https://www.python.org/downloads/release\" and contains($r.url,$릴리스))}\n  $시도 = $경유 >> [table:each]{on_error:\"collect\"} {\n    $링크 = [sense:crawl]{url:$it.url,op:\"links\"}\n    $맞음 = $링크.items >> [table:filter]{where:$공식}\n    return {경유:$it.url,맞음:$맞음}\n  }\n  $성공 = $시도 >> [table:each]{mode:\"flat_map\"} {\n    [if:is_ok($it)] { $x = unwrap($it); [if:len($x.맞음) > 0] { return [{url:$x.맞음[0].url,경유:$x.경유}] } }\n    return []\n  }\n  [if:len($성공) > 0] { return {버전:$버전,url:$성공[0].url,찾은경로:f\"검색으로 찾은 공식 페이지의 링크: ${$성공[0].경유}\"} }\n  return {버전:$버전,url:null,찾은경로:null,경유수:len($경유)}\n}\n\n[def:PEP문단]($찾음) {\n  [if:$찾음.url == null] { return {버전:$찾음.버전,ok:false,url:null,찾은경로:null,이유:f\"검색어 2개의 결과와 공식 경유 페이지 ${get($찾음,'경유수',0)}곳의 링크에서 공식 문서를 찾지 못함\",문단:[],적중:0,생략:0} }\n  [try] {\n    $문서 = [sense:crawl]{url:$찾음.url}\n    $찾기 = $문서.items >> [fn:본문에서찾기]{패턴:\"PEP \\\\d+\",문맥:0,개수:1000}\n    return {버전:$찾음.버전,ok:true,url:$찾음.url,찾은경로:$찾음.찾은경로,\n            문단:$찾기.items >> [table:select]{columns:[\"paragraph_index\",\"text\"]},\n            적중:$찾기.match_info.total_matches,생략:$찾기.match_info.omitted_matches}\n  } [catch] {\n    return {버전:$찾음.버전,ok:false,url:$찾음.url,찾은경로:$찾음.찾은경로,이유:$error.message,문단:[],적중:0,생략:0}\n  }\n}\n\n# ── 최상위 ──\n$검색어 = $버전 >> [table:each]{mode:\"flat_map\"} { return [f\"What's New In Python ${$it}\",f\"docs.python.org whatsnew ${$it}\"] }\n$검색 = [sense:search]{queries:$검색어,limit:8}\n$검색행 = $검색.items\n$찾음 = $버전 >> [table:each] { [fn:버전문서찾기]{버전:$it,검색행:$검색행} }\n$원천 = $찾음 >> [table:each]{parallel:4} { [fn:PEP문단]{찾음:$it} }\nreturn {검색어:$검색어,검색:$검색행 >> [table:select]{columns:[\"query\",\"title\",\"url\"]},원천:$원천}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "inputs": {
+   "버전": [
+    "3.13",
+    "3.14"
+   ]
+  }
+ },
+ "elapsed_s": 7.17,
+ "response": {
+  "success": true,
+  "value": {
+   "검색어": [
+    "What's New In Python 3.13",
+    "docs.python.org whatsnew 3.13",
+    "What's New In Python 3.14",
+    "docs.python.org whatsnew 3.14"
+   ],
+   "검색": [
+    {
+     "query": "What's New In Python 3.13",
+     "title": "What’s New In Python 3.13 — Python 3.14.7 documentation",
+     "url": "https://docs.python.org/3/whatsnew/3.13.html"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "What’s New in Python — Python 3.13.15 documentation",
+     "url": "https://docs.python.org/3.13/whatsnew/"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "Python Release Python 3.13.0 | Python.org",
+     "url": "https://www.python.org/downloads/release/python-3130/"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "Python Release Python 3.13.15 | Python.org",
+     "url": "https://www.python.org/downloads/release/python-31315/"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "Python 3.13 New Features - GeeksforGeeks",
+     "url": "https://www.geeksforgeeks.org/python/python-3-13-new-features/"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "Python 3.13's best new features - Python Morsels",
+     "url": "https://www.pythonmorsels.com/python-313-whats-new/"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "What's New in Python 3.13 Explained | helloandy",
+     "url": "https://helloandy.net/whats-new-python-313/"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "Python Release Python 3.13.13 | Python.org",
+     "url": "https://www.python.org/downloads/release/python-31313/"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.13",
+     "title": "What’s New In Python 3.13",
+     "url": "https://docs.python.org/3/whatsnew/3.13.html"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.13",
+     "title": "What's New In Python 3.12 — Python 3.14.7 documentation",
+     "url": "https://docs.python.org/3/whatsnew/3.12.html"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.13",
+     "title": "What’s New in Python — Python 3.13.14 documentation",
+     "url": "https://docs.python.org/3.13/whatsnew/"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.13",
+     "title": "What’s New in Python — Python 3.12.13 documentation",
+     "url": "https://docs.python.org/3.12/whatsnew/index.html"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.13",
+     "title": "Changelog — Python 3.12.13 documentation",
+     "url": "https://docs.python.org/release/3.12.13/whatsnew/changelog.html"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.13",
+     "title": "#047 - Python 3.13: What’s New and What’s Relevant for Engineers?",
+     "url": "https://flocode.substack.com/p/047-python-313-whats-new-and-whats"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.13",
+     "title": "cpython/Doc/whatsnew/3.13.rst at main · python/cpython",
+     "url": "https://github.com/python/cpython/blob/main/Doc/whatsnew/3.13.rst"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.13",
+     "title": "https://docs.python.org/release/3.9.13/whatsnew/ch...",
+     "url": "https://docs.python.org/release/3.9.13/whatsnew/changelog.html"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "History of Python - Wikipedia",
+     "url": "https://en.wikipedia.org/wiki/History_of_Python"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "Python Release Python 3.14.0 | Python.org",
+     "url": "https://www.python.org/downloads/release/python-3140/"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "The best new features and fixes in Python 3.14 feature | by Mohd Azhar",
+     "url": "https://python.plainenglish.io/the-best-new-features-and-fixes-in-python-3-14-feature-d300bcc63c9a"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "New Python Trick Learned! Did you know that in Python, when you...",
+     "url": "https://www.linkedin.com/posts/mukesh-maurya_new-python-trick-learned-did-you-know-activity-7279124864173555712-gO9S"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "Python - Download - Softpedia",
+     "url": "https://www.softpedia.com/get/Programming/Coding-languages-Compilers/Python.shtml"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "Python 3.14 `DeprecationWarning: codecs.open() is deprecated.",
+     "url": "https://blog.path-finder.jp/troubleshooting/python-314-deprecationwarning-codecsopen-is-deprec/"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "How to Install Python on Your System: A Guide – Real Python",
+     "url": "https://realpython.com/installing-python/"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "Python Tutorial - GeeksforGeeks",
+     "url": "https://www.geeksforgeeks.org/python/python-programming-language-tutorial/"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.14",
+     "title": "What's new in Python 3.14 — Python 3.14.7 documentation",
+     "url": "https://docs.python.org/3/whatsnew/3.14.html"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.14",
+     "title": "What’s New in Python — Python 3.14.7 documentation",
+     "url": "https://docs.python.org/3/whatsnew/index.html"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.14",
+     "title": "What’s new in Python 3.14",
+     "url": "https://docs.python.org/dev/whatsnew/3.14.html"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.14",
+     "title": "What’s New in Python — Python 3.14.2 documentation",
+     "url": "https://docs.python.org/3.14/whatsnew/"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.14",
+     "title": "Changelog — Python 3.14.7 documentation",
+     "url": "https://docs.python.org/3/whatsnew/changelog.html"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.14",
+     "title": "https://docs.python.org/release/3.11.14/whatsnew/c...",
+     "url": "https://docs.python.org/release/3.11.14/whatsnew/changelog.html"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.14",
+     "title": "What’s New In Python 3.12 — Python 3.14.7 documentation",
+     "url": "https://docs.python.org/3/whatsnew/3.12.html"
+    },
+    {
+     "query": "docs.python.org whatsnew 3.14",
+     "title": "What’s New In Python 3.7 — Python 3.14.7 documentation",
+     "url": "https://docs.python.org/3/whatsnew/3.7.html"
+    }
+   ],
+   "원천": [
+    {
+     "버전": "3.13",
+     "ok": true,
+     "url": "https://docs.python.org/3/whatsnew/3.13.html",
+     "찾은경로": "검색 'What's New In Python 3.13' 결과",
+     "문단": [
+      {
+       "paragraph_index": 7,
+       "text": "PEP 719 – Python 3.13 Release Schedule"
+      },
+      {
+       "paragraph_index": 9,
+       "text": "Python 3.13 is a stable release of the Python programming langu…"
+      },
+      {
+       "paragraph_index": 11,
+       "text": "The library changes contain removal of deprecated APIs and mod…"
+      },
+      {
+       "paragraph_index": 15,
+       "text": "PEP 667: The locals() builtin now has defined semantics when m…"
+      },
+      {
+       "paragraph_index": 16,
+       "text": "PEP 703: CPython 3.13 has experimental support for running wit…"
+      },
+      {
+       "paragraph_index": 17,
+       "text": "PEP 744: A basic JIT compiler was added. It is currently disab…"
+      },
+      {
+       "paragraph_index": 36,
+       "text": "There is a new suite of functions for generating PEP 669 monit…"
+      },
+      {
+       "paragraph_index": 38,
+       "text": "PEP 696: Type parameters (typing.TypeVar, typing.ParamSpec, an…"
+      },
+      {
+       "paragraph_index": 39,
+       "text": "PEP 702: The new warnings.deprecated() decorator adds support …"
+      },
+      {
+       "paragraph_index": 40,
+       "text": "PEP 705: typing.ReadOnly can be used to mark an item of a typi…"
+      },
+      {
+       "paragraph_index": 41,
+       "text": "PEP 742: typing.TypeIs provides more intuitive type narrowing …"
+      },
+      {
+       "paragraph_index": 43,
+       "text": "PEP 730: Apple’s iOS is now an officially supported platform, …"
+      },
+      {
+       "paragraph_index": 44,
+       "text": "PEP 738: Android is now an officially supported platform, at t…"
+      },
+      {
+       "paragraph_index": 48,
+       "text": "PEP 594: The remaining 19 “dead batteries” (legacy stdlib modu…"
+      },
+      {
+       "paragraph_index": 55,
+       "text": "PEP 602 (“Annual Release Cycle for Python”) has been updated t…"
+      },
+      {
+       "paragraph_index": 86,
+       "text": "PEP 703 “Making the Global Interpreter Lock Optional in CPytho…"
+      },
+      {
+       "paragraph_index": 104,
+       "text": "PEP 744"
+      },
+      {
+       "paragraph_index": 107,
+       "text": "Historically, the expected result of mutating the return valu…"
+      },
+      {
+       "paragraph_index": 110,
+       "text": "See PEP 667 for more details, including related C API changes…"
+      },
+      {
+       "paragraph_index": 113,
+       "text": "PEP 730: iOS is now a PEP 11 supported platform, with the arm…"
+      },
+      {
+       "paragraph_index": 114,
+       "text": "PEP 738: Android is now a PEP 11 supported platform, with the…"
+      },
+      {
+       "paragraph_index": 116,
+       "text": "PEP 730, PEP 738"
+      },
+      {
+       "paragraph_index": 320,
+       "text": "PEP 705: Add ReadOnly, a special typing construct to mark a T…"
+      },
+      {
+       "paragraph_index": 321,
+       "text": "PEP 742: Add TypeIs, a typing construct that can be used to i…"
+      },
+      {
+       "paragraph_index": 331,
+       "text": "PEP 702: The new warnings.deprecated() decorator provides a w…"
+      },
+      {
+       "paragraph_index": 348,
+       "text": "PEP 594: Remove “dead batteries” from the standard library¶"
+      },
+      {
+       "paragraph_index": 349,
+       "text": "PEP 594 proposed removing 19 modules from the standard librar…"
+      },
+      {
+       "paragraph_index": 535,
+       "text": "types.CodeType: Accessing co_lnotab was deprecated in PEP 626…"
+      },
+      {
+       "paragraph_index": 587,
+       "text": "See PEP 688 for more details. (Contributed by Shantanu Jain i…"
+      },
+      {
+       "paragraph_index": 593,
+       "text": "See PEP 688 for more details. (Contributed by Shantanu Jain i…"
+      },
+      {
+       "paragraph_index": 674,
+       "text": "Add the PyMonitoring C API for generating PEP 669 monitoring …"
+      }
+     ],
+     "적중": 46,
+     "생략": 0
+    },
+    {
+     "버전": "3.14",
+     "ok": true,
+     "url": "https://docs.python.org/3/whatsnew/3.14.html",
+     "찾은경로": "검색 'docs.python.org whatsnew 3.14' 결과",
+     "문단": [
+      {
+       "paragraph_index": 7,
+       "text": "PEP 745 – Python 3.14 release schedule"
+      },
+      {
+       "paragraph_index": 13,
+       "text": "PEP 649 and PEP 749: Deferred evaluation of annotations"
+      },
+      {
+       "paragraph_index": 14,
+       "text": "PEP 734: Multiple interpreters in the standard library"
+      },
+      {
+       "paragraph_index": 15,
+       "text": "PEP 750: Template strings"
+      },
+      {
+       "paragraph_index": 16,
+       "text": "PEP 758: Allow except and except* expressions without brackets"
+      },
+      {
+       "paragraph_index": 17,
+       "text": "PEP 765: Control flow in finally blocks"
+      },
+      {
+       "paragraph_index": 18,
+       "text": "PEP 768: Safe external debugger interface for CPython"
+      },
+      {
+       "paragraph_index": 24,
+       "text": "PEP 784: Zstandard support in the standard library"
+      },
+      {
+       "paragraph_index": 29,
+       "text": "PEP 741: Python configuration C API"
+      },
+      {
+       "paragraph_index": 31,
+       "text": "PEP 776: Emscripten is now an officially supported platform, at tier 3."
+      },
+      {
+       "paragraph_index": 33,
+       "text": "PEP 779: Free-threaded Python is officially supported"
+      },
+      {
+       "paragraph_index": 34,
+       "text": "PEP 761: PGP signatures have been discontinued for official releases"
+      },
+      {
+       "paragraph_index": 38,
+       "text": "PEP 649 & PEP 749: Deferred evaluation of annotations¶"
+      },
+      {
+       "paragraph_index": 45,
+       "text": "(Contributed by Jelle Zijlstra in PEP 749 and gh-119180; PEP 649 was written by Larry Hastings.)"
+      },
+      {
+       "paragraph_index": 47,
+       "text": "PEP 649"
+      },
+      {
+       "paragraph_index": 49,
+       "text": "PEP 749"
+      },
+      {
+       "paragraph_index": 50,
+       "text": "Implementing PEP 649"
+      },
+      {
+       "paragraph_index": 51,
+       "text": "PEP 734: Multiple interpreters in the standard library¶"
+      },
+      {
+       "paragraph_index": 59,
+       "text": "Regarding multi-core parallelism: as of Python 3.12, interpreters are now sufficiently isolated from one another to be used in parallel (see PEP 684). This unlocks a variety of CPU-intensive use cases for Python that were limited by the GIL."
+      },
+      {
+       "paragraph_index": 74,
+       "text": "PEP 734"
+      },
+      {
+       "paragraph_index": 75,
+       "text": "PEP 750: Template string literals¶"
+      },
+      {
+       "paragraph_index": 91,
+       "text": "PEP 750."
+      },
+      {
+       "paragraph_index": 92,
+       "text": "PEP 768: Safe external debugger interface¶"
+      },
+      {
+       "paragraph_index": 106,
+       "text": "PEP 768."
+      },
+      {
+       "paragraph_index": 116,
+       "text": "CPython’s free-threaded mode (PEP 703), initially added in 3.13, has been significantly improved in Python 3.14. The implementation described in PEP 703 has been finished, including C API changes, and temporary workarounds in the interpreter were replaced with more permanent solutions. The specializi…"
+      },
+      {
+       "paragraph_index": 143,
+       "text": "PEP 784: Zstandard support in the standard library¶"
+      },
+      {
+       "paragraph_index": 152,
+       "text": "PEP 784."
+      },
+      {
+       "paragraph_index": 198,
+       "text": "PEP 758: Allow except and except* expressions without brackets¶"
+      },
+      {
+       "paragraph_index": 201,
+       "text": "(Contributed by Pablo Galindo and Brett Cannon in PEP 758 and gh-131831.)"
+      },
+      {
+       "paragraph_index": 202,
+       "text": "PEP 765: Control flow in finally blocks¶"
+      },
+      {
+       "paragraph_index": 203,
+       "text": "The compiler now emits a SyntaxWarning when a return, break, or continue statement have the effect of leaving a finally block. This change is specified in PEP 765."
+      }
+     ],
+     "적중": 63,
+     "생략": 0
+    }
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "ef0f11342a2271ee4359e8d31d900f17ab0920032b94a7efca4809f4a41fc8d8",
+  "source_complete": true,
+  "usage": {
+   "steps": 2451,
+   "rows": 6,
+   "elapsed_ms": 6706
+  },
+  "precheck_warnings": [
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: query. 관측 필드: title, meta, summary, url",
+    "source_span": {
+     "source_hash": "242a4361b01105d365047051f1dd2560305502da674dbe89bf7fb6d1dafed7a0",
+     "start": 567,
+     "end": 579,
+     "line": 13,
+     "column": 66
+    },
+    "call_path": [
+     {
+      "function": "버전문서찾기",
+      "call": {
+       "source_hash": "242a4361b01105d365047051f1dd2560305502da674dbe89bf7fb6d1dafed7a0",
+       "start": 2236,
+       "end": 2264,
+       "line": 47,
+       "column": 29
+      },
+      "definition": {
+       "source_hash": "242a4361b01105d365047051f1dd2560305502da674dbe89bf7fb6d1dafed7a0",
+       "start": 409,
+       "end": 1395,
+       "line": 10,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {
+     "field": "query",
+     "observed": [
+      "title",
+      "meta",
+      "summary",
+      "url"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "242a4361b01105d365047051f1dd2560305502da674dbe89bf7fb6d1dafed7a0",
+     "start": 567,
+     "end": 579,
+     "line": 13,
+     "column": 66,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 13,
+     "end_column": 78,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: query. 관측 필드: title, meta, summary, url",
+    "source_span": {
+     "source_hash": "242a4361b01105d365047051f1dd2560305502da674dbe89bf7fb6d1dafed7a0",
+     "start": 2379,
+     "end": 2402,
+     "line": 49,
+     "column": 52
+    },
+    "call_path": [],
+    "facts": {
+     "field": "query",
+     "observed": [
+      "title",
+      "meta",
+      "summary",
+      "url"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "242a4361b01105d365047051f1dd2560305502da674dbe89bf7fb6d1dafed7a0",
+     "start": 2379,
+     "end": 2402,
+     "line": 49,
+     "column": 52,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 49,
+     "end_column": 75,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "resume": {
+   "run_id": "e828b44fce9c44d48199e98fba423044"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "e828b44fce9c44d48199e98fba423044"
+    }
+   },
+   "read_calls": 3,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 199,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "_preview": {
+   "scope": "display",
+   "value_chars": 25652,
+   "shown_chars": 11913,
+   "changes": [
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단"
+     ],
+     "kind": "list",
+     "shown": 31,
+     "total": 46,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      1,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 63,
+     "total": 317,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       1,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      2,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 255,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       2,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      3,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 230,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       3,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      4,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 145,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       4,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      5,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 202,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       5,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      6,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 88,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       6,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      7,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 106,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       7,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      8,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 121,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       8,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      9,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 106,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       9,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      10,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 110,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       10,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      11,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 72,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       11,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      12,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 68,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       12,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      13,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 258,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       13,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      14,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 168,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       14,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    {
+     "path": [
+      "value",
+      "원천",
+      0,
+      "문단",
+      15,
+      "text"
+     ],
+     "kind": "text",
+     "shown": 62,
+     "total": 122,
+     "read_args": {
+      "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+      "path": [
+       "value",
+       "원천",
+       0,
+       "문단",
+       15,
+       "text"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    }
+   ],
+   "changes_total": 30,
+   "changes_omitted": 14,
+   "read_args": {
+    "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+    "path": [
+     "value"
+    ],
+    "offset": 0,
+    "limit": 60000
+   },
+   "note": "표시용 사본입니다. 생략된 후보·필드는 미검토입니다. 조건 적용은 원문 inputs 참조로, 추가 읽기는 각 read_args로 수행하세요."
+  },
+  "result_ref": {
+   "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+   "chars": 987039,
+   "max_limit": 60000,
+   "paths": [
+    {
+     "path": [
+      "value",
+      "원천"
+     ],
+     "chars": 23411
+    },
+    {
+     "path": [
+      "value",
+      "검색"
+     ],
+     "chars": 6022
+    }
+   ],
+   "read_args": {
+    "id": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "value"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "input_args": {
+    "입력": {
+     "$ref": "cfa12525e82e5726836c1338767f75c69836de8efc0ba6879274bf3d2da83a4b"
+    }
+   },
+   "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+   "value_chars": 25652
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

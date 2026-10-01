@@ -1,0 +1,60 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task",
+  "read_result": {
+   "id": "7fced616ac01c9cc0700de0e6a65219112d8b1eb2196fedf0ebeb20069889266",
+   "path": [
+    "evidence"
+   ],
+   "offset": 0,
+   "limit": 3000
+  }
+ },
+ "elapsed_s": 0.03,
+ "response": {
+  "id": "7fced616ac01c9cc0700de0e6a65219112d8b1eb2196fedf0ebeb20069889266",
+  "offset": 0,
+  "chars": 116817,
+  "text": "[\n  {\n    \"id\": 1,\n    \"node_id\": \"def:204:641\",\n    \"invocation_id\": 1,\n    \"kind\": \"def\",\n    \"parents\": []\n  },\n  {\n    \"id\": 2,\n    \"node_id\": \"def:694:1452\",\n    \"invocation_id\": 2,\n    \"kind\": \"def\",\n    \"parents\": []\n  },\n  {\n    \"id\": 3,\n    \"node_id\": \"def:1481:1631\",\n    \"invocation_id\": 3,\n    \"kind\": \"def\",\n    \"parents\": []\n  },\n  {\n    \"id\": 4,\n    \"node_id\": \"def:1666:1889\",\n    \"invocation_id\": 4,\n    \"kind\": \"def\",\n    \"parents\": []\n  },\n  {\n    \"id\": 5,\n    \"node_id\": \"def:1891:2309\",\n    \"invocation_id\": 5,\n    \"kind\": \"def\",\n    \"parents\": []\n  },\n  {\n    \"id\": 6,\n    \"node_id\": \"def:2311:2646\",\n    \"invocation_id\": 6,\n    \"kind\": \"def\",\n    \"parents\": []\n  },\n  {\n    \"id\": 7,\n    \"node_id\": \"def:2648:3622\",\n    \"invocation_id\": 7,\n    \"kind\": \"def\",\n    \"parents\": []\n  },\n  {\n    \"id\": 8,\n    \"node_id\": \"ref:3642:3645\",\n    \"invocation_id\": 8,\n    \"kind\": \"ref\",\n    \"parents\": []\n  },\n  {\n    \"id\": 9,\n    \"node_id\": \"literal:3671:3672\",\n    \"invocation_id\": 9,\n    \"kind\": \"literal\",\n    \"parents\": []\n  },\n  {\n    \"id\": 10,\n    \"node_id\": \"record:3661:3673\",\n    \"invocation_id\": 10,\n    \"kind\": \"record\",\n    \"parents\": [\n      9\n    ]\n  },\n  {\n    \"id\": 11,\n    \"node_id\": \"ref:3689:3692\",\n    \"invocation_id\": 11,\n    \"kind\": \"ref\",\n    \"parents\": [\n      8,\n      10\n    ],\n    \"evaluations\": 6\n  },\n  {\n    \"id\": 12,\n    \"node_id\": \"ref:3696:3701\",\n    \"invocation_id\": 12,\n    \"kind\": \"ref\",\n    \"parents\": [],\n    \"evaluations\": 6\n  },\n  {\n    \"id\": 13,\n    \"node_id\": \"record:3685:3702\",\n    \"invocation_id\": 13,\n    \"kind\": \"record\",\n    \"parents\": [\n      11,\n      12\n    ],\n    \"evaluations\": 6\n  },\n  {\n    \"id\": 14,\n    \"node_id\": \"ref:264:267\",\n    \"invocation_id\": 14,\n    \"kind\": \"ref\",\n    \"parents\": [\n      13\n    ],\n    \"evaluations\": 6\n  },\n  {\n    \"id\": 15,\n    \"node_id\": \"field:264:271\",\n    \"invocation_id\": 15,\n    \"kind\": \"field\",\n    \"parents\": [\n      14\n    ],\n    \"evaluations\": 6\n  },\n  {\n    \"id\": 16,\n    \"node_id\": \"record:259:272\",\n    \"invocation_id\": 16,\n    \"kind\": \"record\",\n    \"parents\": [\n      15\n    ],\n    \"evaluations\": 6\n  },\n  {\n    \"id\": 17,\n    \"node_id\": \"call:246:272\",\n    \"invocation_id\": 17,\n    \"kind\": \"invoke\",\n    \"parents\": [\n      16\n    ],\n    \"action\": \"sense:crawl\",\n    \"effects\": [\n      \"read_external\"\n    ],\n    \"request_hash\": \"2b1a749179a45522f79dee8641df16dd663f54f5312e7647112863ad40a12568\"\n  },\n  {\n    \"id\": 18,\n    \"node_id\": \"call:246:272\",\n    \"invocation_id\": 18,\n    \"kind\": \"invoke\",\n    \"parents\": [\n      16\n    ],\n    \"action\": \"sense:crawl\",\n    \"effects\": [\n      \"read_external\"\n    ],\n    \"request_hash\": \"5d1470a66b578441c04bb144e34daef5d996366db7fe5a8f28dbac270a684d48\"\n  },\n  {\n    \"id\": 19,\n    \"node_id\": \"call:246:272\",\n    \"invocation_id\": 19,\n    \"kind\": \"invoke\",\n    \"parents\": [\n      16\n    ],\n    \"action\": \"sense:crawl\",\n    \"effects\": [\n      \"read_external\"\n    ],\n    \"request_hash\": \"f12433960842a12ce9ebeda6d2967c6a7be808675ff1b3b46cdaa1971a90c87b\"\n  },\n ",
+  "integrity": "verified",
+  "source_chars": 1850289,
+  "path": [
+   "evidence"
+  ],
+  "next_offset": 3000,
+  "next_read": {
+   "id": "7fced616ac01c9cc0700de0e6a65219112d8b1eb2196fedf0ebeb20069889266",
+   "offset": 3000,
+   "limit": 3000,
+   "path": [
+    "evidence"
+   ]
+  },
+  "read_scope": {
+   "path": [
+    "evidence"
+   ],
+   "start": 0,
+   "end": 3000,
+   "total_chars": 116817,
+   "complete": false,
+   "format": "json"
+  },
+  "_display": {
+   "max_chars": 3000
+  },
+  "input_args": {
+   "입력": {
+    "$ref": "7fced616ac01c9cc0700de0e6a65219112d8b1eb2196fedf0ebeb20069889266",
+    "path": [
+     "evidence"
+    ]
+   }
+  }
+ }
+}

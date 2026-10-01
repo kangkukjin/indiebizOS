@@ -1,0 +1,60 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task",
+  "read_result": {
+   "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+   "path": [
+    "value"
+   ],
+   "offset": 0,
+   "limit": 200
+  }
+ },
+ "elapsed_s": 0.03,
+ "response": {
+  "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+  "offset": 0,
+  "chars": 22254,
+  "text": "{\n  \"총지출\": 49259480,\n  \"환불합\": -82000,\n  \"지출건수\": 2695,\n  \"환불건수\": 3,\n  \"월별\": [\n    {\n      \"월\": \"01\",\n      \"합계\": 3719690,\n      \"건수\": 219\n    },\n    {\n      \"월\": \"02\",\n      \"합계\": 4658490,\n      \"건수\": ",
+  "integrity": "verified",
+  "source_chars": 995843,
+  "path": [
+   "value"
+  ],
+  "next_offset": 200,
+  "next_read": {
+   "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+   "offset": 200,
+   "limit": 200,
+   "path": [
+    "value"
+   ]
+  },
+  "read_scope": {
+   "path": [
+    "value"
+   ],
+   "start": 0,
+   "end": 200,
+   "total_chars": 22254,
+   "complete": false,
+   "format": "json"
+  },
+  "_display": {
+   "max_chars": 200
+  },
+  "input_args": {
+   "입력": {
+    "$ref": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+    "path": [
+     "value"
+    ]
+   }
+  }
+ }
+}

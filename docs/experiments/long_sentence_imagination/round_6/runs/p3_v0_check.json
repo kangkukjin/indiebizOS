@@ -1,0 +1,249 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 6회차 P3 v0 렌더·저장 — inputs: 분석={$ref P2}, 파일상태·AI분류={$ref P1 path}, 행수·가게수(숫자), 보고서(md 경로), 목록(json 경로)\n$월들 = $분석.월별 >> [table:each] { return $it.월 }\n$구분칸 = $월들 >> [table:each] { return \"---\" }\n$표머리 = f\"| 분류 | ${join(' | ',$월들)} | 연간 |\"\n$표구분 = f\"| --- | ${join(' | ',$구분칸)} | --- |\"\n$표줄 = $분석.분류합 >> [table:each] {\n  $c = $it.분류\n  $내 = $분석.월분류 >> [table:filter]{where:($x)=>$x.분류 == $c}\n  $칸 = $월들 >> [table:each] {\n    $m = $it\n    $셀 = $내 >> [table:filter]{where:($x)=>$x.월 == $m}\n    return len($셀) == 0 ? \"0\" : text($셀[0].합계)\n  }\n  return f\"| ${$c} | ${join(' | ',$칸)} | ${$it.합계} |\"\n}\n$월합줄 = $분석.월별 >> [table:each] { return text($it.합계) }\n$AI줄 = $AI분류 >> [table:each] { return f\"- ${$it.설명} → ${$it.분류} (AI)\" }\n$이상줄 = $분석.이상 >> [table:each] { return f\"- [${$it.종류}] ${$it.설명문}\" }\n$파일줄 = $파일상태 >> [table:each] { return f\"- ${$it.파일}: ${$it.상태} ${$it.행수}행\" }\n$보고 = f\"# 2025년 가계부 연간 결산\\n\\n- 거래 ${$행수}건(파일 ${len($파일상태)}개), 지출 ${$분석.지출건수}건 합계 ${$분석.총지출}원, 환불 ${$분석.환불건수}건 ${$분석.환불합}원\\n- 가게 ${$가게수}곳 중 AI 분류 ${len($AI분류)}곳\\n\\n## 월별·분류별 지출\\n${$표머리}\\n${$표구분}\\n${join('\\n',$표줄)}\\n| **월 합계** | ${join(' | ',$월합줄)} | ${$분석.총지출} |\\n\\n## 이상 항목 (${len($분석.이상)}건)\\n${len($이상줄) == 0 ? '- 없음' : join('\\n',$이상줄)}\\n\\n## AI 가 붙인 분류 (${len($AI분류)}곳)\\n${join('\\n',$AI줄)}\\n\\n## 읽은 파일\\n${join('\\n',$파일줄)}\\n\"\n$목록본 = json({총지출:$분석.총지출,환불합:$분석.환불합,이상:$분석.이상})\n$쓰기 = [self:write]{path:$보고서,content:$보고} & [self:write]{path:$목록,content:$목록본}\n$재읽기 = [self:read]{path:$보고서} & [self:read]{path:$목록}\nreturn {보고일치:$재읽기[0].text == $보고,목록일치:$재읽기[1].text == $목록본,보고글자:len($보고),이상수:len($분석.이상),종류별:$분석.종류별}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task",
+  "check": true,
+  "inputs": {
+   "분석": {
+    "$ref": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519"
+   },
+   "파일상태": {
+    "$ref": "87cee360f886722bcb7489ea4f1434e53d5633fec95fe43412fbf5f486d23655",
+    "path": [
+     "value",
+     "파일상태"
+    ]
+   },
+   "AI분류": {
+    "$ref": "87cee360f886722bcb7489ea4f1434e53d5633fec95fe43412fbf5f486d23655",
+    "path": [
+     "value",
+     "AI분류"
+    ]
+   },
+   "행수": 2698,
+   "가게수": 49,
+   "보고서": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_6/out/report.md",
+   "목록": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_6/out/anomalies.json"
+  }
+ },
+ "elapsed_s": 1.44,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 2,
+  "guards_inner": 0,
+  "guards_omitted": 2,
+  "result_type": "{보고일치: Bool, 목록일치: Bool, 보고글자: Number, 이상수: Number, 종류별: List<{종류: Text, 건수: Number}>}",
+  "effects": [
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "functions": {},
+  "plan_hash": "6131e12630a555c564b0f3539b6ee9413e5f253c7491396a148434ca7cb13df5",
+  "dependencies": {
+   "source": "7adee5f61a6aa659f0dcec1f503e96609c23f0f46db8398e1b32a45026f96616",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "분석": "{총지출: Number, 환불합: Number, 지출건수: Number, 환불건수: Number, 월별: List<{월: Text, 합계: Number, 건수: Number}>, 월분류: List<{월: Text, 분류: Text, 합계: Number, 건수: Number}>, 분류합: List<{분류: Text, 합계: Number, 건수: Number}>, 이상: List<{설명문: Text, 종류: Text}>, 종류별: List<{종류: Text, 건수: Number}>, 판정원본: List<{서비스1: Text, 서비스2: Text, judgment_result_type: Text, judgment_result_probability: Number, judgment_result_value: Bool | Null, judgment_result_status: Text}>, 쌍수: Number}",
+    "파일상태": "List<{파일: Text, 상태: Text, 행수: Number, 경로: Text, 오류: Null}>",
+    "AI분류": "List<{설명: Text, 분류: Text, 출처: Text}>",
+    "행수": "Number",
+    "가게수": "Number",
+    "보고서": "Text",
+    "목록": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 1590
+    }
+   ],
+   "contracts": "cdf0989729cba57f646b797993f1d2048be1dda1bab1baf6756a7b63e6a9154a",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "4043ed08260cb693dc9460438ba61fa46506ddf922a12230d21e7f27218b0c3d",
+   "core": "d25f7384c2a4b9ddf94f4a9e894b074cbaf3055174caabf2e1ccbbd8e7520a32"
+  },
+  "source_hash": "7adee5f61a6aa659f0dcec1f503e96609c23f0f46db8398e1b32a45026f96616",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "7adee5f61a6aa659f0dcec1f503e96609c23f0f46db8398e1b32a45026f96616",
+      "start": 136,
+      "end": 165,
+      "line": 3,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 3,
+      "end_column": 46,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7adee5f61a6aa659f0dcec1f503e96609c23f0f46db8398e1b32a45026f96616",
+      "start": 180,
+      "end": 209,
+      "line": 4,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 4,
+      "end_column": 44,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7adee5f61a6aa659f0dcec1f503e96609c23f0f46db8398e1b32a45026f96616",
+      "start": 316,
+      "end": 605,
+      "line": 7,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 16,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7adee5f61a6aa659f0dcec1f503e96609c23f0f46db8398e1b32a45026f96616",
+      "start": 417,
+      "end": 549,
+      "line": 10,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 14,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7adee5f61a6aa659f0dcec1f503e96609c23f0f46db8398e1b32a45026f96616",
+      "start": 623,
+      "end": 659,
+      "line": 17,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 17,
+      "end_column": 54,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7adee5f61a6aa659f0dcec1f503e96609c23f0f46db8398e1b32a45026f96616",
+      "start": 749,
+      "end": 800,
+      "line": 19,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 19,
+      "end_column": 69,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 2,
+   "informative": 2
+  },
+  "guards_ref": {
+   "id": "a3bd278176d912c18c63e1e46398fabcfb64803779a29cbf06a504bee7a8fef4",
+   "chars": 1279,
+   "read_args": {
+    "id": "a3bd278176d912c18c63e1e46398fabcfb64803779a29cbf06a504bee7a8fef4",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "inputs_resolved": [
+   {
+    "name": "분석",
+    "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+    "path": [
+     "value_wire"
+    ],
+    "evidence": {
+     "fingerprint": "f3ac80efbd3f0e46f2fd7cd31a6ac5c358178e9e5fc2b0f6f197157dbe209175",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "717f985365004b4f8966d821edc2c450"
+    },
+    "chars": 14870
+   },
+   {
+    "name": "파일상태",
+    "id": "87cee360f886722bcb7489ea4f1434e53d5633fec95fe43412fbf5f486d23655",
+    "path": [
+     "value",
+     "파일상태"
+    ],
+    "evidence": {
+     "fingerprint": "c014e5d7313acc03371bab202e6c852cf705e151db36a51c675b3526c4780d2a",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "f116f12ac8ba44a49cefda861e442448"
+    },
+    "chars": 876
+   },
+   {
+    "name": "AI분류",
+    "id": "87cee360f886722bcb7489ea4f1434e53d5633fec95fe43412fbf5f486d23655",
+    "path": [
+     "value",
+     "AI분류"
+    ],
+    "evidence": {
+     "fingerprint": "c014e5d7313acc03371bab202e6c852cf705e151db36a51c675b3526c4780d2a",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "f116f12ac8ba44a49cefda861e442448"
+    },
+    "chars": 804
+   }
+  ]
+ }
+}

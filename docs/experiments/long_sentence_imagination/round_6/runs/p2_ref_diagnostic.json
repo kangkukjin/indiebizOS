@@ -1,0 +1,24 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task",
+  "read_result": {
+   "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+   "path": [
+    "diagnostic"
+   ],
+   "offset": 0,
+   "limit": 200
+  }
+ },
+ "elapsed_s": 0.03,
+ "response": {
+  "success": false,
+  "executed": false,
+  "error": "저장된 결과에 경로 ['diagnostic']가 없습니다 (실패: 'diagnostic')"
+ }
+}

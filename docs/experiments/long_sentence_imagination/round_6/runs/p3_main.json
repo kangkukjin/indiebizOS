@@ -1,0 +1,306 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 6회차 P3 v0 렌더·저장 — inputs: 분석={$ref P2}, 파일상태·AI분류={$ref P1 path}, 행수·가게수(숫자), 보고서(md 경로), 목록(json 경로)\n$월들 = $분석.월별 >> [table:each] { return $it.월 }\n$구분칸 = $월들 >> [table:each] { return \"---\" }\n$표머리 = f\"| 분류 | ${join(' | ',$월들)} | 연간 |\"\n$표구분 = f\"| --- | ${join(' | ',$구분칸)} | --- |\"\n$표줄 = $분석.분류합 >> [table:each] {\n  $c = $it.분류\n  $내 = $분석.월분류 >> [table:filter]{where:($x)=>$x.분류 == $c}\n  $칸 = $월들 >> [table:each] {\n    $m = $it\n    $셀 = $내 >> [table:filter]{where:($x)=>$x.월 == $m}\n    return len($셀) == 0 ? \"0\" : text($셀[0].합계)\n  }\n  return f\"| ${$c} | ${join(' | ',$칸)} | ${$it.합계} |\"\n}\n$월합줄 = $분석.월별 >> [table:each] { return text($it.합계) }\n$AI줄 = $AI분류 >> [table:each] { return f\"- ${$it.설명} → ${$it.분류} (AI)\" }\n$이상줄 = $분석.이상 >> [table:each] { return f\"- [${$it.종류}] ${$it.설명문}\" }\n$파일줄 = $파일상태 >> [table:each] { return f\"- ${$it.파일}: ${$it.상태} ${$it.행수}행\" }\n$보고 = f\"# 2025년 가계부 연간 결산\\n\\n- 거래 ${$행수}건(파일 ${len($파일상태)}개), 지출 ${$분석.지출건수}건 합계 ${$분석.총지출}원, 환불 ${$분석.환불건수}건 ${$분석.환불합}원\\n- 가게 ${$가게수}곳 중 AI 분류 ${len($AI분류)}곳\\n\\n## 월별·분류별 지출\\n${$표머리}\\n${$표구분}\\n${join('\\n',$표줄)}\\n| **월 합계** | ${join(' | ',$월합줄)} | ${$분석.총지출} |\\n\\n## 이상 항목 (${len($분석.이상)}건)\\n${len($이상줄) == 0 ? '- 없음' : join('\\n',$이상줄)}\\n\\n## AI 가 붙인 분류 (${len($AI분류)}곳)\\n${join('\\n',$AI줄)}\\n\\n## 읽은 파일\\n${join('\\n',$파일줄)}\\n\"\n$목록본 = json({총지출:$분석.총지출,환불합:$분석.환불합,이상:$분석.이상})\n$쓰기 = [self:write]{path:$보고서,content:$보고} & [self:write]{path:$목록,content:$목록본}\n$재읽기 = [self:read]{path:$보고서} & [self:read]{path:$목록}\nreturn {보고일치:$재읽기[0].text == $보고,목록일치:$재읽기[1].text == $목록본,보고글자:len($보고),이상수:len($분석.이상),종류별:$분석.종류별}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task",
+  "inputs": {
+   "분석": {
+    "$ref": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519"
+   },
+   "파일상태": {
+    "$ref": "87cee360f886722bcb7489ea4f1434e53d5633fec95fe43412fbf5f486d23655",
+    "path": [
+     "value",
+     "파일상태"
+    ]
+   },
+   "AI분류": {
+    "$ref": "87cee360f886722bcb7489ea4f1434e53d5633fec95fe43412fbf5f486d23655",
+    "path": [
+     "value",
+     "AI분류"
+    ]
+   },
+   "행수": 2698,
+   "가게수": 49,
+   "보고서": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_6/out/report.md",
+   "목록": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_6/out/anomalies.json"
+  }
+ },
+ "elapsed_s": 1.89,
+ "response": {
+  "success": true,
+  "value": {
+   "보고일치": true,
+   "목록일치": true,
+   "보고글자": 4017,
+   "이상수": 40,
+   "종류별": [
+    {
+     "종류": "중복 결제 의심",
+     "건수": 23
+    },
+    {
+     "종류": "고정지출 빠짐",
+     "건수": 2
+    },
+    {
+     "종류": "고정지출 금액 다름",
+     "건수": 1
+    },
+    {
+     "종류": "지출 급증",
+     "건수": 4
+    },
+    {
+     "종류": "구독 겹침 확인 필요",
+     "건수": 10
+    }
+   ]
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "보고일치",
+      [
+       "scalar",
+       true
+      ]
+     ],
+     [
+      "목록일치",
+      [
+       "scalar",
+       true
+      ]
+     ],
+     [
+      "보고글자",
+      [
+       "scalar",
+       4017
+      ]
+     ],
+     [
+      "이상수",
+      [
+       "scalar",
+       40
+      ]
+     ],
+     [
+      "종류별",
+      [
+       "list",
+       [
+        [
+         "record",
+         [
+          [
+           "종류",
+           [
+            "scalar",
+            "중복 결제 의심"
+           ]
+          ],
+          [
+           "건수",
+           [
+            "scalar",
+            23
+           ]
+          ]
+         ]
+        ],
+        [
+         "record",
+         [
+          [
+           "종류",
+           [
+            "scalar",
+            "고정지출 빠짐"
+           ]
+          ],
+          [
+           "건수",
+           [
+            "scalar",
+            2
+           ]
+          ]
+         ]
+        ],
+        [
+         "record",
+         [
+          [
+           "종류",
+           [
+            "scalar",
+            "고정지출 금액 다름"
+           ]
+          ],
+          [
+           "건수",
+           [
+            "scalar",
+            1
+           ]
+          ]
+         ]
+        ],
+        [
+         "record",
+         [
+          [
+           "종류",
+           [
+            "scalar",
+            "지출 급증"
+           ]
+          ],
+          [
+           "건수",
+           [
+            "scalar",
+            4
+           ]
+          ]
+         ]
+        ],
+        [
+         "record",
+         [
+          [
+           "종류",
+           [
+            "scalar",
+            "구독 겹침 확인 필요"
+           ]
+          ],
+          [
+           "건수",
+           [
+            "scalar",
+            10
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "6131e12630a555c564b0f3539b6ee9413e5f253c7491396a148434ca7cb13df5",
+  "source_complete": true,
+  "usage": {
+   "steps": 14703,
+   "rows": 236,
+   "elapsed_ms": 503
+  },
+  "resume": {
+   "run_id": "98efea6aebd8401f895ac3e2f64dcc8d"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "98efea6aebd8401f895ac3e2f64dcc8d"
+    }
+   },
+   "read_calls": 2,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "inputs_resolved": [
+   {
+    "name": "분석",
+    "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+    "path": [
+     "value_wire"
+    ],
+    "evidence": {
+     "fingerprint": "f3ac80efbd3f0e46f2fd7cd31a6ac5c358178e9e5fc2b0f6f197157dbe209175",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "717f985365004b4f8966d821edc2c450"
+    },
+    "chars": 14870
+   },
+   {
+    "name": "파일상태",
+    "id": "87cee360f886722bcb7489ea4f1434e53d5633fec95fe43412fbf5f486d23655",
+    "path": [
+     "value",
+     "파일상태"
+    ],
+    "evidence": {
+     "fingerprint": "c014e5d7313acc03371bab202e6c852cf705e151db36a51c675b3526c4780d2a",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "f116f12ac8ba44a49cefda861e442448"
+    },
+    "chars": 876
+   },
+   {
+    "name": "AI분류",
+    "id": "87cee360f886722bcb7489ea4f1434e53d5633fec95fe43412fbf5f486d23655",
+    "path": [
+     "value",
+     "AI분류"
+    ],
+    "evidence": {
+     "fingerprint": "c014e5d7313acc03371bab202e6c852cf705e151db36a51c675b3526c4780d2a",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "f116f12ac8ba44a49cefda861e442448"
+    },
+    "chars": 804
+   }
+  ],
+  "evidence_summary": {
+   "events": 1748,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "5787fcab5ca1b20248584e04dc8e4b30ed6c4657f6a2f2cd8e282caef0947da7",
+   "chars": 268826,
+   "max_limit": 60000,
+   "paths": [],
+   "read_args": {
+    "id": "5787fcab5ca1b20248584e04dc8e4b30ed6c4657f6a2f2cd8e282caef0947da7",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "value"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "input_args": {
+    "입력": {
+     "$ref": "5787fcab5ca1b20248584e04dc8e4b30ed6c4657f6a2f2cd8e282caef0947da7"
+    }
+   },
+   "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+   "value_chars": 210
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

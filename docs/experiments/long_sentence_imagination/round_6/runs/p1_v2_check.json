@@ -1,0 +1,373 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 6회차 P1 v2 — v1 은 (a) 단계 89,750/100,000 로 아슬(compute 4필드 ≈ 30단계/행) (b) table:ai schema 필드 \"분류\" 가 input_fields 밖의 기존 열과 충돌해 실행 뒤 TOOL 실패.\n# v2: compute 2필드(월·금액수)만, 오류행은 느린 경로 파일에서만 수집, ai 앞에 select 로 설명만 남김. inputs: 폴더, 규칙\n\n[def:빠른정규화]($행들) {\n  $행들 >> [table:compute]{set:($r)=>{월:split($r.일자,\"-\")[1],금액수:number($r.금액)}}\n}\n[def:느린정규화]($행들) {\n  $행들 >> [table:each] {\n    [try] { $금 = number($it.금액)\n      return {**$it,월:split($it.일자,\"-\")[1],금액수:$금,금액오류:null} }\n    [catch] { return {**$it,월:split($it.일자,\"-\")[1],금액수:null,금액오류:$error.message} }\n  }\n}\n[def:파일정규화]($행들) {\n  [try] { return {행:[fn:빠른정규화]{행들:$행들},오류행:[],경로:\"빠름\"} }\n  [catch] {\n    $느 = [fn:느린정규화]{행들:$행들}\n    $오 = $느 >> [table:filter]{where:($r)=>$r.금액오류 != null}\n    return {행:$느,오류행:$오,경로:\"느림\"}\n  }\n}\n[def:규칙분류]($설명,$규칙들) {\n  $맞음 = $규칙들 >> [table:filter]{where:($r)=>contains($설명,$r.키워드)}\n  return len($맞음) > 0 ? $맞음[0].분류 : null\n}\n\n# ── 최상위 ──\n$파일들 = [self:list]{path:$폴더,pattern:\"tx_2025-*.csv\"} >> [table:sort]{by:\"name\"}\n$읽기 = $파일들 >> [table:each]{parallel:4,on_error:\"collect\"} {\n  $문 = [self:read]{path:$it.path}\n  $정 = [fn:파일정규화]{행들:$문.data.items}\n  return {파일:$it.name,행:$정.행,오류행:$정.오류행,경로:$정.경로}\n}\n$파일상태 = $파일들 >> [table:each] {\n  [if:is_ok($읽기[$i])] { $f = unwrap($읽기[$i]); return {파일:$it.name,상태:\"읽음\",행수:len($f.행),경로:$f.경로,오류:null} }\n  [else] { return {파일:$it.name,상태:\"실패\",행수:0,경로:null,오류:error_of($읽기[$i]).message} }\n}\n$정규 = $읽기 >> [table:each]{mode:\"flat_map\"} { [if:is_ok($it)] { return unwrap($it).행 } [else] { return [] } }\n$금액오류행 = $읽기 >> [table:each]{mode:\"flat_map\"} { [if:is_ok($it)] { return unwrap($it).오류행 } [else] { return [] } }\n$규칙문 = [self:read]{path:$규칙}\n$규칙들 = $규칙문.data.items\n$가게들 = $정규 >> [table:dedup]{by:\"설명\"}\n$가게분류 = $가게들.items >> [table:each] { return {설명:$it.설명,분류:[fn:규칙분류]{설명:$it.설명,규칙들:$규칙들},출처:\"규칙\"} }\n$규칙분류됨 = $가게분류 >> [table:filter]{where:($g)=>$g.분류 != null}\n$미분류 = $가게분류 >> [table:filter]{where:($g)=>$g.분류 == null} >> [table:select]{columns:[\"설명\"]}\n$AI = $미분류 >> [table:ai]{instruction:\"각 행의 설명(카드 명세서의 가게 표기)이 어떤 지출 분류인지 정한다. 분류는 식비·교통·의료·쇼핑·문화·구독·주거·미용·여행·생활 중 하나만 쓴다.\",schema:\"분류(문자열)\",preserve_rows:true}\n$AI분류 = $AI.items >> [table:each] { return {설명:$it.설명,분류:$it.분류,출처:\"AI\"} }\n$전체분류 = $규칙분류됨 + $AI분류\n$행 = [table:join]{left:$정규,right:$전체분류,on:\"설명\",how:\"left\",defaults:{분류:\"미분류\",출처:\"없음\"}}\nreturn {행:$행.items,파일상태:$파일상태,행수:len($정규),금액오류행:$금액오류행,가게분류:$전체분류,AI분류:$AI분류,가게수:len($가게들.items),미분류가게수:len($미분류)}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task",
+  "check": true,
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_6/input/ledger",
+   "규칙": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_6/input/rules.json"
+  }
+ },
+ "elapsed_s": 1.04,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 36,
+  "guards_inner": 0,
+  "guards_omitted": 36,
+  "result_type": "{행: Unknown, 파일상태: List<{파일: Unknown, 상태: Text, 행수: Number, 경로: Null | Text, 오류: Unknown}>, 행수: Number, 금액오류행: List<{월: Text, 금액수: Null | Number, 금액오류: Unknown}>, 가게분류: List<{설명: Unknown, 분류: Unknown, 출처: Text}>, AI분류: List<{설명: Unknown, 분류: Unknown, 출처: Text}>, 가게수: Number, 미분류가게수: Number}",
+  "effects": [
+   "model",
+   "pure",
+   "read_external",
+   "unknown"
+  ],
+  "functions": {
+   "def:241:339": {
+    "name": "빠른정규화",
+    "params": {
+     "행들": "Unknown"
+    },
+    "required": [
+     "행들"
+    ],
+    "pipe_input": "행들",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:compute"
+    ],
+    "source_hash": "973c9ae0c839b582f1122721f1939c452a6b030efccfd17ca44d51b15f55a5a0",
+    "result": "List<Record>",
+    "specializations": [
+     {
+      "params": {
+       "행들": "Unknown"
+      },
+      "result": "List<Record>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+     "start": 241,
+     "end": 339,
+     "line": 5,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 7,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:340:566": {
+    "name": "느린정규화",
+    "params": {
+     "행들": "Unknown"
+    },
+    "required": [
+     "행들"
+    ],
+    "pipe_input": "행들",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "177722c9735d355084ef3b1826bc976b32b5ef92120fd8a78ff16c839fd55db1",
+    "result": "List<{월: Text, 금액수: Null | Number, 금액오류: Unknown}>",
+    "specializations": [
+     {
+      "params": {
+       "행들": "Unknown"
+      },
+      "result": "List<{월: Text, 금액수: Null | Number, 금액오류: Unknown}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+     "start": 340,
+     "end": 566,
+     "line": 8,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 14,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:567:780": {
+    "name": "파일정규화",
+    "params": {
+     "행들": "Unknown"
+    },
+    "required": [
+     "행들"
+    ],
+    "pipe_input": "행들",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:compute",
+     "table:filter"
+    ],
+    "source_hash": "16320b9c9803e7df3d7675ae8a096024404eedd780d9061b45beec5aa85f56e5",
+    "result": "{행: List<Record>, 오류행: List<{월: Text, 금액수: Null | Number, 금액오류: Unknown}>, 경로: Text}",
+    "specializations": [
+     {
+      "params": {
+       "행들": "Unknown"
+      },
+      "result": "{행: List<Record>, 오류행: List<{월: Text, 금액수: Null | Number, 금액오류: Unknown}>, 경로: Text}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+     "start": 567,
+     "end": 780,
+     "line": 15,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 22,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:781:911": {
+    "name": "규칙분류",
+    "params": {
+     "설명": "Unknown",
+     "규칙들": "Unknown"
+    },
+    "required": [
+     "설명",
+     "규칙들"
+    ],
+    "pipe_input": "설명",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "62f4684d01260db3f30f03f258a5a7a6d044a64190da2b6056910943ba87ddcd",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "설명": "Unknown",
+       "규칙들": "Unknown"
+      },
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+     "start": 781,
+     "end": 911,
+     "line": 23,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 26,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "4a7c42ef0fe7b093f477758b9ddb5fe3a9164df78a337f8929e782eaa2fd0e31",
+  "dependencies": {
+   "source": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "폴더": "Text",
+    "규칙": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 2434
+    }
+   ],
+   "contracts": "9495707ab6013ab53d815c0c8d70894cef19984d3af62c4492492dbe31e04a2d",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "4043ed08260cb693dc9460438ba61fa46506ddf922a12230d21e7f27218b0c3d",
+   "core": "d25f7384c2a4b9ddf94f4a9e894b074cbaf3055174caabf2e1ccbbd8e7520a32"
+  },
+  "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+      "start": 1019,
+      "end": 1186,
+      "line": 30,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 34,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+      "start": 368,
+      "end": 564,
+      "line": 9,
+      "column": 10,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 13,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+      "start": 1203,
+      "end": 1410,
+      "line": 35,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 38,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+      "start": 1424,
+      "end": 1519,
+      "line": 39,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 39,
+      "end_column": 109,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+      "start": 1536,
+      "end": 1633,
+      "line": 40,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 40,
+      "end_column": 114,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+      "start": 1700,
+      "end": 1722,
+      "line": 43,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 43,
+      "end_column": 37,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+      "start": 1745,
+      "end": 1821,
+      "line": 44,
+      "column": 23,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 44,
+      "end_column": 99,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "baf38c9b6979d8495a8d3f2fb665c55b77797962b4e39adbd132df0c01e1b1bb",
+      "start": 2155,
+      "end": 2208,
+      "line": 48,
+      "column": 22,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 48,
+      "end_column": 75,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 36,
+   "informative": 30
+  },
+  "guards_ref": {
+   "id": "80b1b7157084dc626b2e82f34c05bdce7ee8e11be8553c69d626a2c635071ad8",
+   "chars": 43265,
+   "read_args": {
+    "id": "80b1b7157084dc626b2e82f34c05bdce7ee8e11be8553c69d626a2c635071ad8",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

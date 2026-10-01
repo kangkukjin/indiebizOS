@@ -1,0 +1,81 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$x = 12 * $비율\n$올림 = 0 - ((0 - $x) // 1)\n$L = [10,20,30,40,50,60,70]\nreturn {x:f\"${x}\", 올림:f\"${올림}\", 합:f\"${61 + $올림}\", 리터럴:f\"${12 * 0.5}\", 인덱스:$L[$올림]}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "inputs": {
+   "비율": 1
+  }
+ },
+ "elapsed_s": 0.29,
+ "response": {
+  "success": false,
+  "error": "인덱스 12 가 범위를 벗어났습니다(길이 7, 허용 -7..6).",
+  "diagnostic": {
+   "code": "INDEX",
+   "kind": "runtime",
+   "message": "인덱스 12 가 범위를 벗어났습니다(길이 7, 허용 -7..6).",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [
+    39
+   ],
+   "details": {
+    "index": 12,
+    "index_type": "Number",
+    "length": 7,
+    "variable": "L"
+   },
+   "source_span": {
+    "source_hash": "46db3301a914877d606652614cb31357c9df7d6fbcf46d19a13e1b15f19004f4",
+    "start": 158,
+    "end": 165,
+    "line": 5,
+    "column": 75
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "50f81f102ca004abf23857fc6d70722d66a8f81de01f4cfebce6d43e9eb556e2",
+  "source_complete": true,
+  "usage": {
+   "steps": 39,
+   "rows": 0,
+   "elapsed_ms": 0
+  },
+  "resume": {
+   "run_id": "d0a64fcf249449bf830ed898cead9faa"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "evidence_summary": {
+   "events": 39,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "ac2f54d2860c7796f0a6e1b1f96173e6f49b58781ad3468a6c4177f42973dde5",
+   "chars": 10691,
+   "max_limit": 60000,
+   "paths": [],
+   "read_args": {
+    "id": "ac2f54d2860c7796f0a6e1b1f96173e6f49b58781ad3468a6c4177f42973dde5",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "diagnostic"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

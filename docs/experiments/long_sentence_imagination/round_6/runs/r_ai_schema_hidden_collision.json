@@ -1,0 +1,140 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# L6-2: schema 필드 \"분류\" 가 input_fields 밖의 기존 열(분류:null)과 같은 이름 → check 통과, 모델 호출 뒤 TOOL \"input_fields 밖의 원본 필드를 변경\". 어느 필드인지 없음.\n$행 = [{설명:\"HAIRSHOP BLUE\",분류:null,출처:\"규칙\"},{설명:\"KTX 코레일\",분류:null,출처:\"규칙\"}]\n$행 >> [table:ai]{instruction:\"설명의 지출 분류를 정한다(식비·교통·미용 중 하나).\",schema:\"분류(문자열)\",input_fields:[\"설명\"],preserve_rows:true}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task"
+ },
+ "elapsed_s": 3.62,
+ "response": {
+  "success": false,
+  "error": "변환 실패: 모델이 input_fields 밖의 원본 필드를 변경했습니다.",
+  "diagnostic": {
+   "code": "TOOL",
+   "kind": "runtime",
+   "message": "변환 실패: 모델이 input_fields 밖의 원본 필드를 변경했습니다.",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [
+    23
+   ],
+   "details": {
+    "error_type": "row_preservation",
+    "expected_rows": 2,
+    "returned_rows": 2,
+    "missing_indices": [],
+    "duplicate_indices": [],
+    "invalid_indices": [],
+    "model_output_ref": {
+     "id": "5670679a3d0a6402f2e46f1c2b928a7a3449560629800854513507d4d7fb12db",
+     "read_args": {
+      "id": "5670679a3d0a6402f2e46f1c2b928a7a3449560629800854513507d4d7fb12db",
+      "path": [
+       "model_output"
+      ],
+      "offset": 0,
+      "limit": 6000
+     }
+    },
+    "phase": "output"
+   },
+   "source_span": {
+    "source_hash": "7ddea976ce58c11e74293d3d0d6ccf1a69c06c8442fa8e6aecf18d05c269da64",
+    "start": 225,
+    "end": 337,
+    "line": 4,
+    "column": 7
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "c865d97be48df4f2dd14c88e69f81d9a12d281f1a72cca28f923cca889f69e40",
+  "source_complete": false,
+  "usage": {
+   "steps": 20,
+   "rows": 0,
+   "elapsed_ms": 3297,
+   "model": {
+    "requests": 1,
+    "measured_requests": 1,
+    "unmeasured_requests": 0,
+    "input": 5615,
+    "output": 39,
+    "cache_read": 2593,
+    "cache_create": 3020,
+    "reasoning": 0,
+    "calls": [
+     {
+      "call_id": "8a2404b4b77a40e6a7d6b5ac52100879",
+      "parent_call_id": null,
+      "role": "oneshot:execution",
+      "phase": "execution",
+      "provider": "ClaudeCode",
+      "model": "opus",
+      "round_index": 1,
+      "tier": "고급",
+      "source": "gear:최대|실행→고급",
+      "measured": true,
+      "elapsed_ms": 2482,
+      "input": 5615,
+      "output": 39,
+      "cache_read": 2593,
+      "cache_create": 3020,
+      "reasoning": 0
+     }
+    ]
+   }
+  },
+  "resume": {
+   "run_id": "c7eff75e8fb5454a823d15f2e5fc6818"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "evidence_summary": {
+   "events": 23,
+   "source_complete": false,
+   "tool_failures": 1,
+   "source_failures": 1,
+   "failures": [
+    {
+     "id": 20,
+     "action": "table:ai",
+     "code": "TOOL",
+     "failure_kind": "runtime",
+     "incomplete": true
+    }
+   ],
+   "failures_omitted": 0
+  },
+  "result_ref": {
+   "id": "0a7971e471ad2c514989242b1453ac8b6bd3e19ac867c5be4756b453767e0bf7",
+   "chars": 8952,
+   "max_limit": 60000,
+   "paths": [
+    {
+     "path": [
+      "diagnostic",
+      "details"
+     ],
+     "chars": 479
+    }
+   ],
+   "read_args": {
+    "id": "0a7971e471ad2c514989242b1453ac8b6bd3e19ac867c5be4756b453767e0bf7",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "diagnostic"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

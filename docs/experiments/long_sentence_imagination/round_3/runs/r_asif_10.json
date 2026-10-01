@@ -1,0 +1,194 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# inputs: ok (Bool)\n[def:읽기]($ok) {\n  [if:$ok] { return {문단:[{a:1,t:\"가\"}]} }\n  return {문단:[]}\n}\n$d = [fn:읽기]{ok:$ok}\n$r = $d.문단 >> [table:ai]{instruction:\"t 를 보고 채워라\", schema:\"x(문자열), y(문자열)\", preserve_rows:true}\nreturn $r.items >> [table:each] { return {a:$it.a,t:$it.t} }\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task",
+  "check": true,
+  "inputs": {
+   "ok": true
+  }
+ },
+ "elapsed_s": 0.36,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: a. 선택 필드는 has/get을 쓰세요.",
+    "source_span": {
+     "source_hash": "2793519a3d738b3570d1addcabd47d0d24276c2782b230067b559bfc2e9ba3e5",
+     "start": 273,
+     "end": 278,
+     "line": 9,
+     "column": 45
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "2793519a3d738b3570d1addcabd47d0d24276c2782b230067b559bfc2e9ba3e5",
+     "start": 273,
+     "end": 278,
+     "line": 9,
+     "column": 45,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 50,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "MISSING_FIELD",
+    "severity": "error",
+    "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+   },
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: t. 선택 필드는 has/get을 쓰세요.",
+    "source_span": {
+     "source_hash": "2793519a3d738b3570d1addcabd47d0d24276c2782b230067b559bfc2e9ba3e5",
+     "start": 281,
+     "end": 286,
+     "line": 9,
+     "column": 53
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "2793519a3d738b3570d1addcabd47d0d24276c2782b230067b559bfc2e9ba3e5",
+     "start": 281,
+     "end": 286,
+     "line": 9,
+     "column": 53,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 58,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "MISSING_FIELD",
+    "severity": "error",
+    "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 1,
+  "guards_inner": 0,
+  "guards_omitted": 1,
+  "result_type": "List<{a: Unknown, t: Unknown}>",
+  "effects": [
+   "model"
+  ],
+  "functions": {
+   "def:36:111": {
+    "name": "읽기",
+    "params": {
+     "ok": "Bool"
+    },
+    "required": [
+     "ok"
+    ],
+    "pipe_input": "ok",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "6cafd73eaef238702d59eceb1172e8497156b34637dea21024d56a7abceddff5",
+    "result": "{문단: List<Unknown>}",
+    "specializations": [
+     {
+      "params": {
+       "ok": "Bool"
+      },
+      "result": "{문단: List<Unknown>}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "2793519a3d738b3570d1addcabd47d0d24276c2782b230067b559bfc2e9ba3e5",
+     "start": 36,
+     "end": 111,
+     "line": 3,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 6,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "67033b2bba9e6fd6f6520e97d434391c8ae0207555e2efffaf94625c8d9aa04e",
+  "dependencies": {
+   "source": "2793519a3d738b3570d1addcabd47d0d24276c2782b230067b559bfc2e9ba3e5",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "ok": "Bool"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 290
+    }
+   ],
+   "contracts": "f57916e0d431fd2436749b49b652124d2c54ef511bf9c3ea750d1deb0c91159e",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "739fb256d4c1cd624d348cfd60cdbd0894014fc5ed49ce5a12409a466f5bd6e9",
+   "core": "4a416e63dec7848249623d7e48af7ee81077e9411f596b7a53b4f8f4e4cedfd0"
+  },
+  "source_hash": "2793519a3d738b3570d1addcabd47d0d24276c2782b230067b559bfc2e9ba3e5",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "2793519a3d738b3570d1addcabd47d0d24276c2782b230067b559bfc2e9ba3e5",
+      "start": 248,
+      "end": 289,
+      "line": 9,
+      "column": 20,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 9,
+      "end_column": 61,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 1,
+   "informative": 1
+  },
+  "guards_ref": {
+   "id": "0fe5a990c82a84500b76231a149fafba0e6a23cba022b30da8c89bc9082c4948",
+   "chars": 723,
+   "read_args": {
+    "id": "0fe5a990c82a84500b76231a149fafba0e6a23cba022b30da8c89bc9082c4948",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

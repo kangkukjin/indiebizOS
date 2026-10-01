@@ -1,0 +1,1660 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 4회차 P3 렌더 — P2 결과($ref)를 PEP 로 묶어 공부 노트를 쓴다 (최초 초안)\n# inputs: 추출 = {\"$ref\": P2 result_ref.id}, 출력\n# 모델 호출 없음 — 계산·표현만\n\n$분류목록 = [\"언어 문법\",\"인터프리터·성능\",\"표준 라이브러리\",\"제거·비권장\"]\n\n# 한 버전의 추출 행을 PEP 하나당 한 항목으로 묶는다. 모델 분류·상태가 행마다 다르면 표시한다.\n[def:PEP묶기]($행) {\n  $번호들 = unique($행 >> [table:each] { return $it.pep })\n  $번호들 >> [table:each] {\n    $n = $it\n    $같은 = $행 >> [table:filter]{where:($r)=>$r.pep == $n}\n    $분류들 = unique($같은 >> [table:each] { return $it.분류 })\n    $상태들 = unique($같은 >> [table:each] { return $it.상태 })\n    return {pep:$n,제목:$같은[0].제목,분류:$같은[0].분류,상태:$같은[0].상태,\n            문단:unique($같은 >> [table:each] { return $it.문단 }),\n            분류불일치:len($분류들) > 1,상태불일치:len($상태들) > 1,분류들:$분류들,상태들:$상태들}\n  }\n}\n\n[def:항목줄]($h,$버전) {\n  $근거 = join(\", \",$h.문단 >> [table:each] { return f\"¶${$it}\" })\n  $주의 = ($h.분류불일치 or $h.상태불일치) ? f\" ⚠ 문단별 모델 판단이 다름(분류 ${join('/',$h.분류들)}, 상태 ${join('/',$h.상태들)})\" : \"\"\n  return f\"| ${$h.pep} | ${$h.제목} | ${$h.상태} | ${$버전} ${$근거} |${$주의}\"\n}\n\n[def:버전절]($버전,$항목) {\n  $절 = $분류목록 >> [table:each] {\n    $c = $it\n    $속한 = $항목 >> [table:filter]{where:($h)=>$h.분류 == $c}\n    [if:len($속한) == 0] { return f\"### ${$c}\\n- (해당 PEP 없음)\\n\" }\n    $줄 = $속한 >> [table:each] { [fn:항목줄]{h:$it,버전:$버전} }\n    return f\"### ${$c}\\n| PEP | 제목 | 상태 | 근거 |\\n| --- | --- | --- | --- |\\n${join('\\n',$줄)}\\n\"\n  }\n  return f\"## Python ${$버전} (PEP ${len($항목)}개)\\n\\n${join('\\n',$절)}\"\n}\n\n# ── 최상위 ──\n$버전별 = $추출.추출 >> [table:each] { return {버전:$it.버전,항목:[fn:PEP묶기]{행:$it.변경}} }\n$본절 = $버전별 >> [table:each] { [fn:버전절]{버전:$it.버전,항목:$it.항목} }\n\n# 두 버전에 걸친 PEP (앞 버전 → 뒤 버전 순서, 입력 버전 순)\n$걸침 = []\n[if:len($버전별) >= 2] {\n  $앞 = $버전별[0]\n  $뒤 = $버전별[1]\n  $앞번호 = $앞.항목 >> [table:each] { return $it.pep }\n  $뒤번호 = $뒤.항목 >> [table:each] { return $it.pep }\n  $공통 = intersection($앞번호,$뒤번호)\n  $걸침 = $공통 >> [table:each] {\n    $n = $it\n    $a = ($앞.항목 >> [table:filter]{where:($h)=>$h.pep == $n})[0]\n    $b = ($뒤.항목 >> [table:filter]{where:($h)=>$h.pep == $n})[0]\n    return f\"- **${$n}** ${$a.제목}: ${$앞.버전} ${$a.상태} → ${$뒤.버전} ${$b.상태} (근거 ${$앞.버전} ¶${join(',',$a.문단)} / ${$뒤.버전} ¶${join(',',$b.문단)})\"\n  }\n}\n\n$m1 = $추출.원천 >> [table:each]{mode:\"flat_map\"} {\n  [if:not $it.ok] { return [f\"- 찾지 못함/읽지 못함: Python ${$it.버전} — ${$it.이유}\"] }\n  [if:$it.생략 > 0] { return [f\"- 문단 생략: Python ${$it.버전} PEP 문단 ${$it.적중}개 중 ${$it.생략}개 생략\"] }\n  return []\n}\n$m2 = $추출.추출 >> [table:each]{mode:\"flat_map\"} {\n  $e = $it\n  $f = $e.실패 >> [table:each] { return f\"- 모델 추출 실패: Python ${$e.버전} 덩이 ${$it.덩이} — ${$it.이유}\" }\n  $b = $e.버림 >> [table:each] { return f\"- 원문에 없는 PEP 라서 버림: Python ${$e.버전} ¶${$it.문단} ${$it.pep}\" }\n  return $f + $b\n}\n$미확인 = $m1 + $m2 + [\"- PEP 번호가 없는 변경(예: 새 대화형 인터프리터)은 이 노트의 추출 대상이 아님\"]\n$원천줄 = $추출.원천 >> [table:each] { return f\"- Python ${$it.버전}: ${$it.ok ? $it.url : '없음'} (${$it.찾은경로 == null ? '검색 실패' : $it.찾은경로}, PEP 문단 ${$it.문단수}개)\" }\n\n$본문 = f\"# Python ${join(' · ',$버전별 >> [table:each] { return $it.버전 })} 변경점 공부 노트\\n\\n${join('\\n',$본절)}\\n## 두 버전에 걸친 변화\\n${len($걸침) == 0 ? '- 없음' : join('\\n',$걸침)}\\n\\n## 확인 못 한 부분\\n${join('\\n',$미확인)}\\n\\n## 원천\\n검색어: ${join(' / ',$추출.검색어)}\\n${join('\\n',$원천줄)}\\n\"\n$저장 = [self:write]{path:$출력,content:$본문}\n$확인 = [self:read]{path:$출력}\nreturn {저장일치:$확인.text == $본문,버전:$버전별 >> [table:each] { return {버전:$it.버전,pep수:len($it.항목)} },걸침:$걸침}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "check": true,
+  "inputs": {
+   "추출": {
+    "$ref": "bb69188418fd61b160d875596666e819f68e5628e65a8940fdd48db65e231324"
+   },
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_4회차/out/python_notes.md"
+  }
+ },
+ "elapsed_s": 0.28,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 279,
+     "end": 316,
+     "line": 10,
+     "column": 17
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 279,
+     "end": 316,
+     "line": 10,
+     "column": 17,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 10,
+     "end_column": 54,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 285,
+     "end": 316,
+     "line": 10,
+     "column": 23
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 285,
+     "end": 316,
+     "line": 10,
+     "column": 23,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 10,
+     "end_column": 54,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 300,
+     "end": 314,
+     "line": 10,
+     "column": 38
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 300,
+     "end": 314,
+     "line": 10,
+     "column": 38,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 10,
+     "end_column": 52,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 431,
+     "end": 468,
+     "line": 14,
+     "column": 19
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 431,
+     "end": 468,
+     "line": 14,
+     "column": 19,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 14,
+     "end_column": 56,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 438,
+     "end": 468,
+     "line": 14,
+     "column": 26
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 438,
+     "end": 468,
+     "line": 14,
+     "column": 26,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 14,
+     "end_column": 56,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 453,
+     "end": 466,
+     "line": 14,
+     "column": 41
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 453,
+     "end": 466,
+     "line": 14,
+     "column": 41,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 14,
+     "end_column": 54,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 488,
+     "end": 525,
+     "line": 15,
+     "column": 19
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 488,
+     "end": 525,
+     "line": 15,
+     "column": 19,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 15,
+     "end_column": 56,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 495,
+     "end": 525,
+     "line": 15,
+     "column": 26
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 495,
+     "end": 525,
+     "line": 15,
+     "column": 26,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 15,
+     "end_column": 56,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 510,
+     "end": 523,
+     "line": 15,
+     "column": 41
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 510,
+     "end": 523,
+     "line": 15,
+     "column": 41,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 15,
+     "end_column": 54,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 608,
+     "end": 645,
+     "line": 17,
+     "column": 23
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 608,
+     "end": 645,
+     "line": 17,
+     "column": 23,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 17,
+     "end_column": 60,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 615,
+     "end": 645,
+     "line": 17,
+     "column": 30
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 615,
+     "end": 645,
+     "line": 17,
+     "column": 30,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 17,
+     "end_column": 60,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 630,
+     "end": 643,
+     "line": 17,
+     "column": 45
+    },
+    "call_path": [
+     {
+      "function": "PEP묶기",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1465,
+       "end": 1485,
+       "line": 40,
+       "column": 54,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 40,
+       "end_column": 74,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 245,
+       "end": 724,
+       "line": 9,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 20,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 630,
+     "end": 643,
+     "line": 17,
+     "column": 45,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 17,
+     "end_column": 58,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "UNBOUND",
+    "message": "정의되지 않은 값: $분류목록",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 1016,
+     "end": 1021,
+     "line": 29,
+     "column": 8
+    },
+    "call_path": [
+     {
+      "function": "버전절",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1518,
+       "end": 1547,
+       "line": 41,
+       "column": 30,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 59,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 988,
+       "end": 1398,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 37,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "hint": "이 프로그램에 전달된 inputs 이름은 $추출, $출력입니다. 코드의 변수 이름과 inputs 이름을 맞추세요. 새 값이면 이 위치 전에 정의하세요.",
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 1016,
+     "end": 1021,
+     "line": 29,
+     "column": 8,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 29,
+     "end_column": 13,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "UNBOUND",
+    "severity": "error"
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 764,
+     "end": 807,
+     "line": 23,
+     "column": 19
+    },
+    "call_path": [
+     {
+      "function": "버전절",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1518,
+       "end": 1547,
+       "line": 41,
+       "column": 30,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 59,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 988,
+       "end": 1398,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 37,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     },
+     {
+      "function": "항목줄",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1205,
+       "end": 1227,
+       "line": 33,
+       "column": 32,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 33,
+       "end_column": 54,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 726,
+       "end": 986,
+       "line": 22,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 26,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 764,
+     "end": 807,
+     "line": 23,
+     "column": 19,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 23,
+     "end_column": 62,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 773,
+     "end": 807,
+     "line": 23,
+     "column": 28
+    },
+    "call_path": [
+     {
+      "function": "버전절",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1518,
+       "end": 1547,
+       "line": 41,
+       "column": 30,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 59,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 988,
+       "end": 1398,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 37,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     },
+     {
+      "function": "항목줄",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1205,
+       "end": 1227,
+       "line": 33,
+       "column": 32,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 33,
+       "end_column": 54,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 726,
+       "end": 986,
+       "line": 22,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 26,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 773,
+     "end": 807,
+     "line": 23,
+     "column": 28,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 23,
+     "end_column": 62,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 788,
+     "end": 805,
+     "line": 23,
+     "column": 43
+    },
+    "call_path": [
+     {
+      "function": "버전절",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1518,
+       "end": 1547,
+       "line": 41,
+       "column": 30,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 59,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 988,
+       "end": 1398,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 37,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     },
+     {
+      "function": "항목줄",
+      "call": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 1205,
+       "end": 1227,
+       "line": 33,
+       "column": 32,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 33,
+       "end_column": 54,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+       "start": 726,
+       "end": 986,
+       "line": 22,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 26,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 788,
+     "end": 805,
+     "line": 23,
+     "column": 43,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 23,
+     "end_column": 60,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "TYPE",
+    "message": "List<Text>가 필요하지만 List<Number>입니다.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2054,
+     "end": 2059,
+     "line": 55,
+     "column": 99
+    },
+    "call_path": [],
+    "expected": "List<Text>",
+    "actual": "List<Number>",
+    "hint": "join(Text, List<Text>)의 인자 순서를 확인하세요. 2번째는 List<Text>입니다.",
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2054,
+     "end": 2059,
+     "line": 55,
+     "column": 99,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 55,
+     "end_column": 104,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "TYPE",
+    "severity": "error"
+   },
+   {
+    "code": "TYPE",
+    "message": "List<Text>가 필요하지만 List<Number>입니다.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2085,
+     "end": 2090,
+     "line": 55,
+     "column": 130
+    },
+    "call_path": [],
+    "expected": "List<Text>",
+    "actual": "List<Number>",
+    "hint": "join(Text, List<Text>)의 인자 순서를 확인하세요. 2번째는 List<Text>입니다.",
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2085,
+     "end": 2090,
+     "line": 55,
+     "column": 130,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 55,
+     "end_column": 135,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "TYPE",
+    "severity": "error"
+   },
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool만 사용할 수 있습니다.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2216,
+     "end": 2222,
+     "line": 60,
+     "column": 67
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2216,
+     "end": 2222,
+     "line": 60,
+     "column": 67,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 60,
+     "end_column": 73,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2868,
+     "end": 2906,
+     "line": 73,
+     "column": 31
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2868,
+     "end": 2906,
+     "line": 73,
+     "column": 31,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 73,
+     "end_column": 69,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2876,
+     "end": 2906,
+     "line": 73,
+     "column": 39
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2876,
+     "end": 2906,
+     "line": 73,
+     "column": 39,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 73,
+     "end_column": 69,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2891,
+     "end": 2904,
+     "line": 73,
+     "column": 54
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 2891,
+     "end": 2904,
+     "line": 73,
+     "column": 54,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 73,
+     "end_column": 67,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 15,
+  "guards_inner": 0,
+  "guards_omitted": 15,
+  "result_type": "{저장일치: Bool, 버전: List<{버전: Text, pep수: Number}>, 걸침: List<Text>}",
+  "effects": [
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "functions": {
+   "def:245:724": {
+    "name": "PEP묶기",
+    "params": {
+     "행": "List<{버전: Text, pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: Number, 원문있음: Bool}>"
+    },
+    "required": [
+     "행"
+    ],
+    "pipe_input": "행",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "6fb98f4022c00282d283c94386958458caa286e6b118b643640cfd2bfbb7423c",
+    "result": "List<{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}>",
+    "specializations": [
+     {
+      "params": {
+       "행": "List<{버전: Text, pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: Number, 원문있음: Bool}>"
+      },
+      "result": "List<{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 245,
+     "end": 724,
+     "line": 9,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 20,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:726:986": {
+    "name": "항목줄",
+    "params": {
+     "h": "{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}",
+     "버전": "Text"
+    },
+    "required": [
+     "h",
+     "버전"
+    ],
+    "pipe_input": "h",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "641509a480d7b5593c066f5169e8bf82c5e8b1084cd225d8b0312f0258eef873",
+    "result": "Text",
+    "specializations": [
+     {
+      "params": {
+       "h": "{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}",
+       "버전": "Text"
+      },
+      "result": "Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 726,
+     "end": 986,
+     "line": 22,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 26,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:988:1398": {
+    "name": "버전절",
+    "params": {
+     "버전": "Text",
+     "항목": "List<{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}>"
+    },
+    "required": [
+     "버전",
+     "항목"
+    ],
+    "pipe_input": "버전",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "aa282864cd2fac1fe60725bfffbac7f2dd13c72bf0fcbcf84e1cdc4f9fa5fc95",
+    "result": "Text",
+    "specializations": [
+     {
+      "params": {
+       "버전": "Text",
+       "항목": "List<{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}>"
+      },
+      "result": "Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+     "start": 988,
+     "end": 1398,
+     "line": 28,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 37,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "a788ef23099f1dfb730092f18e77a7662aa5d3b836baed8ac9459e7f94b60793",
+  "dependencies": {
+   "source": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "추출": "{검색어: List<Text>, 원천: List<{버전: Text, ok: Bool, url: Text, 찾은경로: Text, 적중: Number, 생략: Number, 이유: Null, 문단수: Number}>, 추출: List<{버전: Text, 변경: List<{버전: Text, pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: Number, 원문있음: Bool}>, 버림: List<Unknown>, 실패: List<Unknown>}>}",
+    "출력": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 3267
+    }
+   ],
+   "contracts": "2e3f3532c0f91fa5bb25befab2783ceedd07d07a430c1513781ad32dbfd14fa7",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "b8cba6f27e39735b3c9966ca55ce032775ce63e8fbae8e972be9a7390cac651c"
+  },
+  "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 1429,
+      "end": 1488,
+      "line": 40,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 40,
+      "end_column": 77,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 285,
+      "end": 316,
+      "line": 10,
+      "column": 23,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 10,
+      "end_column": 54,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 328,
+      "end": 722,
+      "line": 11,
+      "column": 11,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 19,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 438,
+      "end": 468,
+      "line": 14,
+      "column": 26,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 14,
+      "end_column": 56,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 495,
+      "end": 525,
+      "line": 15,
+      "column": 26,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 15,
+      "end_column": 56,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 615,
+      "end": 645,
+      "line": 17,
+      "column": 30,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 17,
+      "end_column": 60,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 1503,
+      "end": 1549,
+      "line": 41,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 41,
+      "end_column": 61,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 1025,
+      "end": 1328,
+      "line": 29,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 35,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 1190,
+      "end": 1229,
+      "line": 33,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 33,
+      "end_column": 56,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 773,
+      "end": 807,
+      "line": 23,
+      "column": 28,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 23,
+      "end_column": 62,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 1671,
+      "end": 1702,
+      "line": 48,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 48,
+      "end_column": 50,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 1721,
+      "end": 1752,
+      "line": 49,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 49,
+      "end_column": 50,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 1800,
+      "end": 2098,
+      "line": 51,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 56,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 2118,
+      "end": 2335,
+      "line": 59,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 63,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 2352,
+      "end": 2610,
+      "line": 64,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 69,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 2411,
+      "end": 2490,
+      "line": 66,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 66,
+      "end_column": 96,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 2507,
+      "end": 2591,
+      "line": 67,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 67,
+      "end_column": 101,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 2700,
+      "end": 2836,
+      "line": 71,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 71,
+      "end_column": 154,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 2876,
+      "end": 2906,
+      "line": 73,
+      "column": 39,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 73,
+      "end_column": 69,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7d18b0dfd1912c658001700d72cdd66a500fe869b010a5f11e787edba814a7ba",
+      "start": 3206,
+      "end": 3258,
+      "line": 76,
+      "column": 41,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 76,
+      "end_column": 93,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 15,
+   "informative": 15
+  },
+  "guards_ref": {
+   "id": "d29cf7a548c5c6227d3e01abe22e4440ea7a66384c87b41a6f35019cc559a8b1",
+   "chars": 12574,
+   "read_args": {
+    "id": "d29cf7a548c5c6227d3e01abe22e4440ea7a66384c87b41a6f35019cc559a8b1",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "inputs_resolved": [
+   {
+    "name": "추출",
+    "id": "bb69188418fd61b160d875596666e819f68e5628e65a8940fdd48db65e231324",
+    "path": [
+     "value_wire"
+    ],
+    "evidence": {
+     "fingerprint": "31906f5fd4f8faf7202ebad339627763041710c4cf3d50953f8da26b4a273b68",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "7325c1443ba54332a14715cbde1a4ca4"
+    },
+    "chars": 8746
+   }
+  ]
+ }
+}

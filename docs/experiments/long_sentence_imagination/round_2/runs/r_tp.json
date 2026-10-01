@@ -1,0 +1,88 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$s = [1,2]\n$q = len($s) > 0 ? $s >> [table:each] { return $it * 2 } : []\nreturn $q\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "check": true
+ },
+ "elapsed_s": 0.32,
+ "response": {
+  "edition": 2,
+  "ok": false,
+  "success": false,
+  "executed": false,
+  "status": "invalid",
+  "error": "조건 값은 `조건 ? 참일 때 값 : 거짓일 때 값` 형태입니다. ':'가 필요합니다.",
+  "diagnostic": {
+   "code": "SYNTAX",
+   "kind": "compile",
+   "message": "조건 값은 `조건 ? 참일 때 값 : 거짓일 때 값` 형태입니다. ':'가 필요합니다.",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [],
+   "details": {},
+   "source_span": {
+    "source_hash": "5c843c6f13a6fb9bffbf2a5a5501b084eb53b5ab3fd00e8dd04137b64a739be0",
+    "start": 49,
+    "end": 51,
+    "line": 3,
+    "column": 23
+   },
+   "rule": "SYNTAX",
+   "severity": "error",
+   "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+   "location": {
+    "source_hash": "5c843c6f13a6fb9bffbf2a5a5501b084eb53b5ab3fd00e8dd04137b64a739be0",
+    "start": 49,
+    "end": 51,
+    "line": 3,
+    "column": 23,
+    "source": "<program>",
+    "uri": "ibl://program",
+    "end_line": 3,
+    "end_column": 25,
+    "offset_encoding": "unicode-codepoints"
+   }
+  },
+  "issues": [
+   {
+    "code": "SYNTAX",
+    "kind": "compile",
+    "message": "조건 값은 `조건 ? 참일 때 값 : 거짓일 때 값` 형태입니다. ':'가 필요합니다.",
+    "frames": [],
+    "has_partial": false,
+    "partial": null,
+    "evidence": [],
+    "details": {},
+    "source_span": {
+     "source_hash": "5c843c6f13a6fb9bffbf2a5a5501b084eb53b5ab3fd00e8dd04137b64a739be0",
+     "start": 49,
+     "end": 51,
+     "line": 3,
+     "column": 23
+    },
+    "rule": "SYNTAX",
+    "severity": "error",
+    "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+    "location": {
+     "source_hash": "5c843c6f13a6fb9bffbf2a5a5501b084eb53b5ab3fd00e8dd04137b64a739be0",
+     "start": 49,
+     "end": 51,
+     "line": 3,
+     "column": 23,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 25,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "guards": [],
+  "source_hash": "5c843c6f13a6fb9bffbf2a5a5501b084eb53b5ab3fd00e8dd04137b64a739be0"
+ }
+}

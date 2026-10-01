@@ -1,0 +1,196 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 5회차 P1 추출 — 영수증 PDF 전부 읽고 글자 있는 것만 모델로 구조화 (최초 초안)\n# inputs: 폴더(receipts 폴더 절대경로)\n# 반환: {영수증:[{id,파일,상태,이유}], 추출:[{id,가맹점,날짜,합계,합계표기,원문확인,원문}]}\n\n[def:영수증읽기]($파일) {\n  $id = replace($파일.name,\".pdf\",\"\")\n  [try] {\n    $d = [self:read]{path:$파일.path}\n    [if:len(strip($d.text)) == 0] { return {id:$id,파일:$파일.path,상태:\"글자 없음\",이유:\"PDF 에 글자 층이 없음(스캔 추정)\",원문:\"\"} }\n    return {id:$id,파일:$파일.path,상태:\"읽음\",이유:null,원문:$d.text}\n  } [catch] {\n    return {id:$id,파일:$파일.path,상태:\"읽기 실패\",이유:f\"${$error.code}: ${$error.message}\",원문:\"\"}\n  }\n}\n\n[def:금액]($표기) {\n  [try] { return number(replace(replace($표기,\",\",\"\"),\"원\",\"\")) } [catch] { return null }\n}\n\n# ── 최상위 ──\n$파일 = [self:list]{path:$폴더,pattern:\"*.pdf\"}\n$읽기 = $파일 >> [table:each]{parallel:6} { [fn:영수증읽기]{파일:$it} }\n$영수증 = sorted($읽기,\"id\")\n$읽음 = $영수증 >> [table:filter]{where:($r)=>$r.상태 == \"읽음\"}\n$추출 = $읽음 >> [table:ai]{\n  instruction:\"각 행의 원문은 영수증 한 장이다. 가맹점명(원문 첫 줄 표기 그대로), 거래 날짜(YYYY-MM-DD), 최종 합계 금액(원문 표기 그대로, 예 '24,500')을 적어라. 원문에 없으면 null.\",\n  schema:\"가맹점(문자열), 날짜(문자열), 합계(문자열)\",\n  input_fields:[\"id\",\"원문\"],\n  preserve_rows:true\n}\n$행 = $추출.items >> [table:each] {\n  $표기 = $it.합계 == null ? \"\" : $it.합계\n  $날 = $it.날짜 == null ? \"\" : $it.날짜\n  return {id:$it.id,가맹점:$it.가맹점,날짜:$it.날짜,합계:[fn:금액]{표기:$표기},합계표기:$it.합계,\n          원문확인:len($표기) > 0 and contains($it.원문,$표기) and len($날) > 0 and contains($it.원문,$날),원문:$it.원문}\n}\nreturn {영수증:$영수증 >> [table:select]{columns:[\"id\",\"파일\",\"상태\",\"이유\"]},추출:$행}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI5_trainer",
+  "task_id": "LSI5_task",
+  "check": true,
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts"
+  }
+ },
+ "elapsed_s": 0.3,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 16,
+  "guards_inner": 0,
+  "guards_omitted": 16,
+  "result_type": "{영수증: List<{id: Text, 파일: Unknown, 상태: Text, 이유: Null | Text | Text}>, 추출: List<{id: Unknown, 가맹점: Unknown, 날짜: Unknown, 합계: Null | Number, 합계표기: Unknown, 원문확인: Bool, 원문: Unknown}>}",
+  "effects": [
+   "model",
+   "pure",
+   "read_external"
+  ],
+  "functions": {
+   "def:163:541": {
+    "name": "영수증읽기",
+    "params": {
+     "파일": "Record⟨관측: title·meta·summary·url·name·size·mtime·path·dir·is_dir⟩"
+    },
+    "required": [
+     "파일"
+    ],
+    "pipe_input": "파일",
+    "default_expressions": {},
+    "effects": [
+     "read_external"
+    ],
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "3f7801fb80f0ed672d6d2a582895812f9a13836fcf6501163b3199ebef19d5a6",
+    "result": "{id: Text, 파일: Unknown, 상태: Text, 이유: Null | Text | Text, 원문: Text}",
+    "specializations": [
+     {
+      "params": {
+       "파일": "Record⟨관측: title·meta·summary·url·name·size·mtime·path·dir·is_dir⟩"
+      },
+      "result": "{id: Text, 파일: Unknown, 상태: Text, 이유: Null | Text | Text, 원문: Text}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "5dac1c8ad9846c395067fd8fb21d36f4c2f969a99117d55d43fa59f6d47f6d0f",
+     "start": 163,
+     "end": 541,
+     "line": 6,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 15,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:543:647": {
+    "name": "금액",
+    "params": {
+     "표기": "Unknown"
+    },
+    "required": [
+     "표기"
+    ],
+    "pipe_input": "표기",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "b5cf6c9871bc6e92fc70123ed9b0e54752d27122cf41e407670627cceca88371",
+    "result": "Null | Number",
+    "specializations": [
+     {
+      "params": {
+       "표기": "Unknown"
+      },
+      "result": "Null | Number"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "5dac1c8ad9846c395067fd8fb21d36f4c2f969a99117d55d43fa59f6d47f6d0f",
+     "start": 543,
+     "end": 647,
+     "line": 17,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 19,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "e561c1c09308eae5fc4b6719a49cd3ecef04f69ef0f749c4d4d600c80bc93ac1",
+  "dependencies": {
+   "source": "5dac1c8ad9846c395067fd8fb21d36f4c2f969a99117d55d43fa59f6d47f6d0f",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "폴더": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 1449
+    }
+   ],
+   "contracts": "761e2fbc64f895518e8e2dfe5c604c45507c76d30138f719c77fb29caedbe095",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "cece9404f75d401bd766689f258ec312f2d8628cdce0c53c1585fb766a0242d8"
+  },
+  "source_hash": "5dac1c8ad9846c395067fd8fb21d36f4c2f969a99117d55d43fa59f6d47f6d0f",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "5dac1c8ad9846c395067fd8fb21d36f4c2f969a99117d55d43fa59f6d47f6d0f",
+      "start": 718,
+      "end": 765,
+      "line": 23,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 23,
+      "end_column": 61,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "5dac1c8ad9846c395067fd8fb21d36f4c2f969a99117d55d43fa59f6d47f6d0f",
+      "start": 1108,
+      "end": 1375,
+      "line": 32,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 37,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 16,
+   "informative": 14
+  },
+  "guards_ref": {
+   "id": "e237c32fdec45a1874264af047057c17a3c326a3b211ca977aacb59ee0263960",
+   "chars": 14858,
+   "read_args": {
+    "id": "e237c32fdec45a1874264af047057c17a3c326a3b211ca977aacb59ee0263960",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

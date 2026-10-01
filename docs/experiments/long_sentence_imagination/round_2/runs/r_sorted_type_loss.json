@@ -1,0 +1,179 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n[def:행]($d) { return [{venue:\"V1\", date:$d, cost:10}, {venue:\"V2\", date:$d, cost:5}] }\n$펼침 = [\"a\",\"b\"] >> [table:each]{mode:\"flat_map\"} { [fn:행]{d:$it} }\n$정렬 = sorted($펼침, \"cost\")\n$걸러 = $펼침 >> [table:filter]{where:($r)=>$r.cost > 0}\nreturn {펼침:$펼침 >> [table:each]{ return {v:$it.venue} }, 정렬:$정렬 >> [table:each]{ return {v:$it.venue} }, 걸러:$걸러 >> [table:each]{ return {v:$it.venue} }, 잘라:$정렬[:1] >> [table:each]{ return {v:$it.venue} }}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "check": true
+ },
+ "elapsed_s": 0.32,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 1,
+  "guards_inner": 0,
+  "guards_omitted": 1,
+  "result_type": "{펼침: List<{v: Text}>, 정렬: List<{v: Text}>, 걸러: List<{v: Text}>, 잘라: List<{v: Text}>}",
+  "effects": [
+   "pure"
+  ],
+  "functions": {
+   "def:16:102": {
+    "name": "행",
+    "params": {
+     "d": "Text"
+    },
+    "required": [
+     "d"
+    ],
+    "pipe_input": "d",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "c277c2e65db4d96889edff9f8cbd50654fcbeb9ffe454e6faa2370bafcf6b2c3",
+    "result": "List<{venue: Text, date: Text, cost: Number}>",
+    "specializations": [
+     {
+      "params": {
+       "d": "Text"
+      },
+      "result": "List<{venue: Text, date: Text, cost: Number}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "d17a2ed327741b942a5e6039d967086b4f934ff01168c4ea24228e7482fbb62c",
+     "start": 16,
+     "end": 102,
+     "line": 2,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 2,
+     "end_column": 87,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "ffd431a94c3631472575040316ef93092d93e21b9899b9c84816654f624423a5",
+  "dependencies": {
+   "source": "d17a2ed327741b942a5e6039d967086b4f934ff01168c4ea24228e7482fbb62c",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 453
+    }
+   ],
+   "contracts": "d6811a4a214f86223842bbf3aafd118d9aa29512966ecc2f80b2effc094686cf",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "c1794ea4f0c1da284c6c08fd27dd3f3dd6fac373f9dc627fc2c31d90486a3897",
+   "expressions": "8d08f157bcfb3c7db9e8da2fdb89205d54121034a929a4e110ca50844bc8ca91",
+   "core": "53edf2c6feeb307b4ba9aecb8e482e3ad02d310f8d88f1ce8fa0ff382311ccc0"
+  },
+  "source_hash": "d17a2ed327741b942a5e6039d967086b4f934ff01168c4ea24228e7482fbb62c",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "d17a2ed327741b942a5e6039d967086b4f934ff01168c4ea24228e7482fbb62c",
+      "start": 267,
+      "end": 303,
+      "line": 6,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 6,
+      "end_column": 55,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d17a2ed327741b942a5e6039d967086b4f934ff01168c4ea24228e7482fbb62c",
+      "start": 315,
+      "end": 351,
+      "line": 6,
+      "column": 67,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 6,
+      "end_column": 103,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d17a2ed327741b942a5e6039d967086b4f934ff01168c4ea24228e7482fbb62c",
+      "start": 363,
+      "end": 399,
+      "line": 6,
+      "column": 115,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 6,
+      "end_column": 151,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d17a2ed327741b942a5e6039d967086b4f934ff01168c4ea24228e7482fbb62c",
+      "start": 415,
+      "end": 451,
+      "line": 6,
+      "column": 167,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 6,
+      "end_column": 203,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 1,
+   "informative": 1
+  },
+  "guards_ref": {
+   "id": "d4a282a940f2980c65396ba3352539b0dbb3a1fda96bcdbd26e91d4823142e09",
+   "chars": 628,
+   "read_args": {
+    "id": "d4a282a940f2980c65396ba3352539b0dbb3a1fda96bcdbd26e91d4823142e09",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

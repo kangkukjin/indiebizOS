@@ -1,0 +1,18 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# inputs: ok (Bool)\n[def:읽기]($ok) {\n  [if:$ok] { return {문단:[{a:1,t:\"가\"}]} }\n  return {문단:[]}\n}\n$d = [fn:읽기]{ok:$ok}\n$r = $d.문단 >> [table:ai]{instruction:\"t 를 보고 채워라\", schema:\"x(목록, 각 원소 {p:숫자}), y(문자열)\", preserve_rows:true}\nreturn $r.items >> [table:each] { return {a:$it.a,t:$it.t} }\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task",
+  "inputs": {
+   "ok": true
+  }
+ },
+ "elapsed_s": 0.03,
+ "response": {
+  "detail": "재기동을 위해 새 작업 접수를 잠시 중단했습니다. 이 작업은 실행되지 않았습니다. 잠시 후 다시 요청해 주세요.",
+  "executed": false
+ }
+}

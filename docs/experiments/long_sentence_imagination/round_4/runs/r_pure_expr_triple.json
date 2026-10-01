@@ -1,0 +1,143 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$행 = [{p:\"a\"},{p:\"b\"}]\nreturn unique($행 >> [table:each] { return $it.p })\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "check": true
+ },
+ "elapsed_s": 0.25,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "6501f378221e95cca4136efc9d4a9541e90a4c0a50cdeb125159fba40ef62ca2",
+     "start": 53,
+     "end": 88,
+     "line": 3,
+     "column": 15
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "6501f378221e95cca4136efc9d4a9541e90a4c0a50cdeb125159fba40ef62ca2",
+     "start": 53,
+     "end": 88,
+     "line": 3,
+     "column": 15,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 50,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "6501f378221e95cca4136efc9d4a9541e90a4c0a50cdeb125159fba40ef62ca2",
+     "start": 59,
+     "end": 88,
+     "line": 3,
+     "column": 21
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "6501f378221e95cca4136efc9d4a9541e90a4c0a50cdeb125159fba40ef62ca2",
+     "start": 59,
+     "end": 88,
+     "line": 3,
+     "column": 21,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 50,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "6501f378221e95cca4136efc9d4a9541e90a4c0a50cdeb125159fba40ef62ca2",
+     "start": 74,
+     "end": 86,
+     "line": 3,
+     "column": 36
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "6501f378221e95cca4136efc9d4a9541e90a4c0a50cdeb125159fba40ef62ca2",
+     "start": 74,
+     "end": 86,
+     "line": 3,
+     "column": 36,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 48,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 0,
+  "guards_inner": 0,
+  "guards_omitted": 0,
+  "result_type": "List<Text>",
+  "effects": [],
+  "functions": {},
+  "plan_hash": "9fab1fa6b9ca0a5f541751be6b2d806dc94c59e76b5a8e4dac631ed37177d152",
+  "dependencies": {
+   "source": "6501f378221e95cca4136efc9d4a9541e90a4c0a50cdeb125159fba40ef62ca2",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 90
+    }
+   ],
+   "contracts": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "b8cba6f27e39735b3c9966ca55ce032775ce63e8fbae8e972be9a7390cac651c"
+  },
+  "source_hash": "6501f378221e95cca4136efc9d4a9541e90a4c0a50cdeb125159fba40ef62ca2",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+ }
+}

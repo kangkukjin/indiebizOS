@@ -1,0 +1,666 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 2회차 최초 초안 — 송년회 장소·날짜 제안서\n# inputs: 폴더, 출력, 미정비율(1 = 미정 전원 반영)\n\n# 응답 행 → 날짜별 한 행씩 펼침 (attend Y/미정만)\n[def:날짜펼침]($응답) {\n  $응답 >> [table:filter]{where:($r)=>$r.attend != \"N\"} >> [table:each]{mode:\"flat_map\"} {\n    $r = $it\n    split($r.dates, \";\") >> [table:each] { return {id:$r.id, date:$it, attend:$r.attend, diet:$r.diet} }\n  }\n}\n\n# 날짜별 확정·미정·식단 집계\n[def:날짜집계]($펼침, $날짜들, $미정비율) {\n  $날짜들 >> [table:each] {\n    $d = $it\n    $그날 = $펼침 >> [table:filter]{where:($p)=>$p.date == $d}\n    $확정 = $그날 >> [table:filter]{where:($p)=>$p.attend == \"Y\"}\n    $미정 = len($그날) - len($확정)\n    $채식 = $확정 >> [table:filter]{where:($p)=>$p.diet == \"채식\"}\n    $알레르기 = $확정 >> [table:filter]{where:($p)=>$p.diet == \"견과류 알레르기\"}\n    # 올림 = -((-x)//1)\n    $미정반영 = 0 - ((0 - $미정 * $미정비율) // 1)\n    return {date:$d, 확정:len($확정), 미정:$미정, 필요:len($확정) + $미정반영,\n            채식:len($채식), 알레르기:len($알레르기)}\n  }\n}\n\n# 날짜×장소 판정\n[def:안판정]($장소, $집계, $예산) {\n  $장소.dates >> [table:each] {\n    $d = $it\n    $n = ($집계 >> [table:filter]{where:($a)=>$a.date == $d})[0]\n    $비용 = $장소.rental_fee + $장소.price_per_head * $n.확정\n    $사유 = []\n    [if:$장소.capacity < $n.필요] { $사유 = $사유 + [f\"수용 부족(${n.필요}명 > ${장소.capacity}석)\"] }\n    [if:$비용 > $예산] { $사유 = $사유 + [f\"예산 초과(${비용}원)\"] }\n    [if:$n.채식 > 0 and $장소.vegetarian == false] { $사유 = $사유 + [\"채식 불가\"] }\n    return {venue:$장소.id, name:$장소.name, date:$d, 확정:$n.확정, 필요:$n.필요, capacity:$장소.capacity,\n            cost:$비용, ok:len($사유) == 0, reasons:$사유, veg_unknown:$장소.vegetarian == null,\n            채식:$n.채식, 알레르기:$n.알레르기}\n  }\n}\n\n# 후기 읽기 (장소 하나) — 실패는 호출자가 collect\n[def:후기읽기]($장소, $폴더) {\n  $문서 = [self:read]{path:f\"${폴더}/${장소.review_file}\"}\n  $줄 = split($문서.text, \"\\n\") >> [table:each]{mode:\"flat_map\"} { [if:len(strip($it)) > 0] { return [strip($it)] }; return [] }\n  return {venue:$장소.id, name:$장소.name, reviews:join(\"\\n\", $줄)}\n}\n\n# 모델: 장점·우려 요약\n[def:후기요약]($후기들) {\n  [if:len($후기들) == 0] { return [] }\n  $r = $후기들 >> [table:ai]{instruction:\"각 행의 reviews(한 줄에 후기 하나)를 읽고 장점과 우려를 짧은 구절 목록으로 정리하라. 후기에 없는 내용을 지어내지 말 것.\",\n                             schema:\"pros(문자열 목록), cons(문자열 목록)\", input_fields:[\"venue\",\"reviews\"], preserve_rows:true}\n  return $r.items\n}\n\n[def:제안서]($이벤트, $예산, $집계, $안들, $추천, $요약, $후기실패) {\n  $집계표 = $집계 >> [table:each] { return f\"| ${it.date} | ${it.확정} | ${it.미정} | ${it.필요} | ${it.채식} | ${it.알레르기} |\" }\n  $안표 = $안들 >> [table:each] {\n    $판정 = $it.ok ? \"가능\" : join(\", \", $it.reasons)\n    return f\"| ${it.venue} ${it.name} | ${it.date} | ${it.필요}/${it.capacity} | ${it.cost} | ${판정} |\"\n  }\n  $추천절 = $추천 >> [table:each] {\n    $a = $it\n    $s = $요약 >> [table:filter]{where:($x)=>$x.venue == $a.venue}\n    $장점 = len($s) > 0 ? join(\"; \", $s[0].pros) : \"후기 읽지 못함\"\n    $우려 = len($s) > 0 ? join(\"; \", $s[0].cons) : \"후기 읽지 못함\"\n    $질문 = ($a.veg_unknown ? [f\"채식 메뉴 가능 여부 (채식 ${a.채식}명)\"] : []) + ($a.알레르기 > 0 ? [f\"견과류 알레르기 ${a.알레르기}명 대응 가능 여부\"] : [])\n    $질문2 = []\n    [if:len($s) > 0] { $질문2 = $s[0].cons >> [table:each] { return f\"후기 우려 확인: ${it}\" } }\n    $질문줄 = ($질문 + $질문2) >> [table:each]{ return f\"  - ${it}\" }\n    return join(\"\\n\", [f\"### ${$i + 1}안: ${a.name} (${a.date})\", f\"- 확정 ${a.확정}명, 필요 좌석 ${a.필요}/${a.capacity}, 비용 ${a.cost}원\",\n                       f\"- 장점: ${장점}\", f\"- 우려: ${우려}\", \"- 업체 질문:\", join(\"\\n\", $질문줄)])\n  }\n  $실패줄 = $후기실패 >> [table:each] { return f\"- ${it.venue}: 후기 파일을 읽지 못함(${it.error})\" }\n  return join(\"\\n\", [f\"# ${이벤트} 장소·날짜 제안서 (예산 ${예산}원)\", \"\", \"## 날짜별 인원\", \"| 날짜 | 확정 | 미정 | 필요 좌석 | 채식 | 알레르기 |\", \"|---|---|---|---|---|---|\", join(\"\\n\", $집계표),\n                     \"\", \"## 날짜×장소 판정\", \"| 장소 | 날짜 | 필요/수용 | 비용 | 판정 |\", \"|---|---|---|---|---|\", join(\"\\n\", $안표),\n                     \"\", \"## 추천\", join(\"\\n\\n\", $추천절), \"\", \"## 후기 읽기 실패\", len($실패줄) > 0 ? join(\"\\n\", $실패줄) : \"- 없음\"])\n}\n\n# ── 최상위 ──\n$원천 = [self:read]{path:f\"${폴더}/responses.csv\"} & [self:read]{path:f\"${폴더}/venues.json\"}\n$응답 = $원천[0].data.items\n$설정 = $원천[1].data\n$펼침 = [fn:날짜펼침]{응답:$응답}\n$날짜값 = $펼침 >> [table:each] { return $it.date }\n$날짜들 = sorted(unique($날짜값))\n$집계 = [fn:날짜집계]{펼침:$펼침, 날짜들:$날짜들, 미정비율:$미정비율}\n$안들 = $설정.venues >> [table:each]{mode:\"flat_map\"} { [fn:안판정]{장소:$it, 집계:$집계, 예산:$설정.budget} }\n$가능 = $안들 >> [table:filter]{where:($a)=>$a.ok}\n$추천 = sorted(sorted($가능, \"cost\"), \"확정\", true)[:2]\n\n$읽기 = $설정.venues >> [table:each]{parallel:4, on_error:\"collect\"} { [fn:후기읽기]{장소:$it, 폴더:$폴더} }\n$후기들 = $설정.venues >> [table:each]{mode:\"flat_map\"} { [if:is_ok($읽기[$i])] { return [unwrap($읽기[$i])] }; return [] }\n$후기실패 = $설정.venues >> [table:each]{mode:\"flat_map\"} { [if:is_ok($읽기[$i])] { return [] }; return [{venue:$it.id, error:error_of($읽기[$i]).message}] }\n$요약 = [fn:후기요약]{후기들:$후기들}\n\n$본문 = [fn:제안서]{이벤트:$설정.event, 예산:$설정.budget, 집계:$집계, 안들:$안들, 추천:$추천, 요약:$요약, 후기실패:$후기실패}\n$저장 = [self:write]{path:$출력, content:$본문}\n$확인 = [self:read]{path:$출력}\nreturn {집계:$집계, 추천:$추천 >> [table:each]{ return {venue:$it.venue, date:$it.date, cost:$it.cost} },\n        가능안수:len($가능), 요약:$요약, 후기실패:$후기실패, saved:$저장.path, verified:$확인.text == $본문,\n        rows_read:len($응답)}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/input_variant",
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/out/proposal_variantA.md",
+   "미정비율": 1
+  }
+ },
+ "elapsed_s": 11.51,
+ "response": {
+  "success": true,
+  "value": {
+   "집계": [
+    {
+     "date": "12-12",
+     "확정": 61,
+     "미정": 12,
+     "필요": 73,
+     "채식": 9,
+     "알레르기": 5
+    },
+    {
+     "date": "12-13",
+     "확정": 55,
+     "미정": 12,
+     "필요": 67,
+     "채식": 6,
+     "알레르기": 3
+    },
+    {
+     "date": "12-19",
+     "확정": 52,
+     "미정": 10,
+     "필요": 62,
+     "채식": 3,
+     "알레르기": 2
+    }
+   ],
+   "추천": [
+    {
+     "venue": "V2",
+     "date": "12-13",
+     "cost": 2590000
+    },
+    {
+     "venue": "V3",
+     "date": "12-13",
+     "cost": 2860000
+    }
+   ],
+   "가능안수": 5,
+   "요약": [
+    {
+     "venue": "V1",
+     "name": "한강 루프탑홀",
+     "reviews": "야경이 정말 좋고 직원이 친절했어요.\n음향 장비가 자주 끊겨서 사회자가 고생했습니다.\n엘리베이터가 하나라 입장에 20분 걸렸어요.\n채식 코스가 따로 있어서 좋았습니다.",
+     "pros": [
+      "좋은 야경",
+      "친절한 직원",
+      "별도 채식 코스"
+     ],
+     "cons": [
+      "음향 장비의 잦은 끊김",
+      "엘리베이터가 하나라 입장에 20분 소요"
+     ],
+     "_ai": true
+    },
+    {
+     "venue": "V3",
+     "name": "광화문 연회장",
+     "reviews": "격식 있는 행사에 좋고 음향 완벽.\n가격이 다소 비싸지만 서비스가 확실함.\n분위기가 딱딱하다는 의견이 있었어요.",
+     "pros": [
+      "격식 있는 행사에 적합",
+      "완벽한 음향",
+      "확실한 서비스"
+     ],
+     "cons": [
+      "다소 비싼 가격",
+      "딱딱한 분위기라는 의견"
+     ],
+     "_ai": true
+    },
+    {
+     "venue": "V4",
+     "name": "을지로 비스트로",
+     "reviews": "음식 맛이 최고.\n60명 꽉 채우니 너무 좁았어요.\n채식 메뉴 요청했는데 준비가 안 된다고 했어요.",
+     "pros": [
+      "뛰어난 음식 맛"
+     ],
+     "cons": [
+      "60명 수용 시 공간이 너무 좁음",
+      "채식 메뉴 준비 불가"
+     ],
+     "_ai": true
+    }
+   ],
+   "후기실패": [
+    {
+     "venue": "V2",
+     "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/input_variant/reviews/V2.txt"
+    }
+   ],
+   "saved": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/out/proposal_variantA.md",
+   "verified": true,
+   "rows_read": 120
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "집계",
+      [
+       "list",
+       [
+        [
+         "record",
+         [
+          [
+           "date",
+           [
+            "scalar",
+            "12-12"
+           ]
+          ],
+          [
+           "확정",
+           [
+            "scalar",
+            61
+           ]
+          ],
+          [
+           "미정",
+           [
+            "scalar",
+            12
+           ]
+          ],
+          [
+           "필요",
+           [
+            "scalar",
+            73
+           ]
+          ],
+          [
+           "채식",
+           [
+            "scalar",
+            9
+           ]
+          ],
+          [
+           "알레르기",
+           [
+            "scalar",
+            5
+           ]
+          ]
+         ]
+        ],
+        [
+         "record",
+         [
+          [
+           "date",
+           [
+            "scalar",
+            "12-13"
+           ]
+          ],
+          [
+           "확정",
+           [
+            "scalar",
+            55
+           ]
+          ],
+          [
+           "미정",
+           [
+            "scalar",
+            12
+           ]
+          ],
+          [
+           "필요",
+           [
+            "scalar",
+            67
+           ]
+          ],
+          [
+           "채식",
+           [
+            "scalar",
+            6
+           ]
+          ],
+          [
+           "알레르기",
+           [
+            "scalar",
+            3
+           ]
+          ]
+         ]
+        ],
+        [
+         "record",
+         [
+          [
+           "date",
+           [
+            "scalar",
+            "12-19"
+           ]
+          ],
+          [
+           "확정",
+           [
+            "scalar",
+            52
+           ]
+          ],
+          [
+           "미정",
+           [
+            "scalar",
+            10
+           ]
+          ],
+          [
+           "필요",
+           [
+            "scalar",
+            62
+           ]
+          ],
+          [
+           "채식",
+           [
+            "scalar",
+            3
+           ]
+          ],
+          [
+           "알레르기",
+           [
+            "scalar",
+            2
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "추천",
+      [
+       "list",
+       [
+        [
+         "record",
+         [
+          [
+           "venue",
+           [
+            "scalar",
+            "V2"
+           ]
+          ],
+          [
+           "date",
+           [
+            "scalar",
+            "12-13"
+           ]
+          ],
+          [
+           "cost",
+           [
+            "scalar",
+            2590000
+           ]
+          ]
+         ]
+        ],
+        [
+         "record",
+         [
+          [
+           "venue",
+           [
+            "scalar",
+            "V3"
+           ]
+          ],
+          [
+           "date",
+           [
+            "scalar",
+            "12-13"
+           ]
+          ],
+          [
+           "cost",
+           [
+            "scalar",
+            2860000
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "가능안수",
+      [
+       "scalar",
+       5
+      ]
+     ],
+     [
+      "요약",
+      [
+       "list",
+       [
+        [
+         "record",
+         [
+          [
+           "venue",
+           [
+            "scalar",
+            "V1"
+           ]
+          ],
+          [
+           "name",
+           [
+            "scalar",
+            "한강 루프탑홀"
+           ]
+          ],
+          [
+           "reviews",
+           [
+            "scalar",
+            "야경이 정말 좋고 직원이 친절했어요.\n음향 장비가 자주 끊겨서 사회자가 고생했습니다.\n엘리베이터가 하나라 입장에 20분 걸렸어요.\n채식 코스가 따로 있어서 좋았습니다."
+           ]
+          ],
+          [
+           "pros",
+           [
+            "list",
+            [
+             [
+              "scalar",
+              "좋은 야경"
+             ],
+             [
+              "scalar",
+              "친절한 직원"
+             ],
+             [
+              "scalar",
+              "별도 채식 코스"
+             ]
+            ]
+           ]
+          ],
+          [
+           "cons",
+           [
+            "list",
+            [
+             [
+              "scalar",
+              "음향 장비의 잦은 끊김"
+             ],
+             [
+              "scalar",
+              "엘리베이터가 하나라 입장에 20분 소요"
+             ]
+            ]
+           ]
+          ],
+          [
+           "_ai",
+           [
+            "scalar",
+            true
+           ]
+          ]
+         ]
+        ],
+        [
+         "record",
+         [
+          [
+           "venue",
+           [
+            "scalar",
+            "V3"
+           ]
+          ],
+          [
+           "name",
+           [
+            "scalar",
+            "광화문 연회장"
+           ]
+          ],
+          [
+           "reviews",
+           [
+            "scalar",
+            "격식 있는 행사에 좋고 음향 완벽.\n가격이 다소 비싸지만 서비스가 확실함.\n분위기가 딱딱하다는 의견이 있었어요."
+           ]
+          ],
+          [
+           "pros",
+           [
+            "list",
+            [
+             [
+              "scalar",
+              "격식 있는 행사에 적합"
+             ],
+             [
+              "scalar",
+              "완벽한 음향"
+             ],
+             [
+              "scalar",
+              "확실한 서비스"
+             ]
+            ]
+           ]
+          ],
+          [
+           "cons",
+           [
+            "list",
+            [
+             [
+              "scalar",
+              "다소 비싼 가격"
+             ],
+             [
+              "scalar",
+              "딱딱한 분위기라는 의견"
+             ]
+            ]
+           ]
+          ],
+          [
+           "_ai",
+           [
+            "scalar",
+            true
+           ]
+          ]
+         ]
+        ],
+        [
+         "record",
+         [
+          [
+           "venue",
+           [
+            "scalar",
+            "V4"
+           ]
+          ],
+          [
+           "name",
+           [
+            "scalar",
+            "을지로 비스트로"
+           ]
+          ],
+          [
+           "reviews",
+           [
+            "scalar",
+            "음식 맛이 최고.\n60명 꽉 채우니 너무 좁았어요.\n채식 메뉴 요청했는데 준비가 안 된다고 했어요."
+           ]
+          ],
+          [
+           "pros",
+           [
+            "list",
+            [
+             [
+              "scalar",
+              "뛰어난 음식 맛"
+             ]
+            ]
+           ]
+          ],
+          [
+           "cons",
+           [
+            "list",
+            [
+             [
+              "scalar",
+              "60명 수용 시 공간이 너무 좁음"
+             ],
+             [
+              "scalar",
+              "채식 메뉴 준비 불가"
+             ]
+            ]
+           ]
+          ],
+          [
+           "_ai",
+           [
+            "scalar",
+            true
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "후기실패",
+      [
+       "list",
+       [
+        [
+         "record",
+         [
+          [
+           "venue",
+           [
+            "scalar",
+            "V2"
+           ]
+          ],
+          [
+           "error",
+           [
+            "scalar",
+            "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/input_variant/reviews/V2.txt"
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "saved",
+      [
+       "scalar",
+       "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/out/proposal_variantA.md"
+      ]
+     ],
+     [
+      "verified",
+      [
+       "scalar",
+       true
+      ]
+     ],
+     [
+      "rows_read",
+      [
+       "scalar",
+       120
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "5a23718d982d5513a4609b4f4aa919388d61a3230b43fabeb79b7e4e4111a1ca",
+  "source_complete": false,
+  "usage": {
+   "steps": 13570,
+   "rows": 577,
+   "elapsed_ms": 11007
+  },
+  "resume": {
+   "run_id": "f7b8f5b9a9274fe9a4a0f0c8c5dc0077"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "f7b8f5b9a9274fe9a4a0f0c8c5dc0077"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 10374,
+   "source_complete": false,
+   "tool_failures": 1,
+   "source_failures": 1,
+   "failures": [
+    {
+     "id": 9593,
+     "action": "self:read",
+     "code": "NOT_FOUND",
+     "failure_kind": "runtime",
+     "incomplete": true
+    }
+   ],
+   "failures_omitted": 0
+  },
+  "result_ref": {
+   "id": "360775aadda1db1b490541dbf6740e15f34c1b596bd0d587c22caad7135ebd62",
+   "chars": 1246004,
+   "max_limit": 60000,
+   "paths": [
+    {
+     "path": [
+      "value",
+      "요약"
+     ],
+     "chars": 862
+    }
+   ],
+   "read_args": {
+    "id": "360775aadda1db1b490541dbf6740e15f34c1b596bd0d587c22caad7135ebd62",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "value"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "input_args": {
+    "입력": {
+     "$ref": "360775aadda1db1b490541dbf6740e15f34c1b596bd0d587c22caad7135ebd62"
+    }
+   },
+   "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

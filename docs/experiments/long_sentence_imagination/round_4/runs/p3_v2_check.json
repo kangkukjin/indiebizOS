@@ -1,0 +1,547 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 4회차 P3 렌더 — P2 결과($ref)를 PEP 로 묶어 공부 노트를 쓴다 (v2: 전부-null 입력의 Null 타입 거절 우회 json())\n# inputs: 추출 = {\"$ref\": P2 result_ref.id}, 출력\n# 모델 호출 없음 — 계산·표현만\n\n\n# 한 버전의 추출 행을 PEP 하나당 한 항목으로 묶는다. 모델 분류·상태가 행마다 다르면 표시한다.\n[def:PEP묶기]($행) {\n  $번호원 = $행 >> [table:each] { return $it.pep }\n  $번호들 = unique($번호원)\n  $번호들 >> [table:each] {\n    $n = $it\n    $같은 = $행 >> [table:filter]{where:($r)=>$r.pep == $n}\n    $분류원 = $같은 >> [table:each] { return $it.분류 }\n    $상태원 = $같은 >> [table:each] { return $it.상태 }\n    $문단원 = $같은 >> [table:each] { return $it.문단 }\n    $분류들 = unique($분류원)\n    $상태들 = unique($상태원)\n    return {pep:$n,제목:$같은[0].제목,분류:$같은[0].분류,상태:$같은[0].상태,\n            문단:unique($문단원),\n            분류불일치:len($분류들) > 1,상태불일치:len($상태들) > 1,분류들:$분류들,상태들:$상태들}\n  }\n}\n\n[def:항목줄]($h,$버전) {\n  $근거줄 = $h.문단 >> [table:each] { return f\"¶${$it}\" }\n  $근거 = join(\", \",$근거줄)\n  $주의 = ($h.분류불일치 or $h.상태불일치) ? f\" ⚠ 문단별 모델 판단이 다름(분류 ${join('/',$h.분류들)}, 상태 ${join('/',$h.상태들)})\" : \"\"\n  return f\"| ${$h.pep} | ${$h.제목} | ${$h.상태} | ${$버전} ${$근거} |${$주의}\"\n}\n\n[def:버전절]($버전,$항목) {\n  $분류목록 = [\"언어 문법\",\"인터프리터·성능\",\"표준 라이브러리\",\"제거·비권장\"]\n  $절 = $분류목록 >> [table:each] {\n    $c = $it\n    $속한 = $항목 >> [table:filter]{where:($h)=>$h.분류 == $c}\n    [if:len($속한) == 0] { return f\"### ${$c}\\n- (해당 PEP 없음)\\n\" }\n    $줄 = $속한 >> [table:each] { [fn:항목줄]{h:$it,버전:$버전} }\n    return f\"### ${$c}\\n| PEP | 제목 | 상태 | 근거 |\\n| --- | --- | --- | --- |\\n${join('\\n',$줄)}\\n\"\n  }\n  return f\"## Python ${$버전} (PEP ${len($항목)}개)\\n\\n${join('\\n',$절)}\"\n}\n\n# ── 최상위 ──\n$버전별 = $추출.추출 >> [table:each] { return {버전:$it.버전,항목:[fn:PEP묶기]{행:$it.변경}} }\n$본절 = $버전별 >> [table:each] { [fn:버전절]{버전:$it.버전,항목:$it.항목} }\n\n# 두 버전에 걸친 PEP (앞 버전 → 뒤 버전 순서, 입력 버전 순)\n$걸침 = []\n[if:len($버전별) >= 2] {\n  $앞 = $버전별[0]\n  $뒤 = $버전별[1]\n  $앞번호 = $앞.항목 >> [table:each] { return $it.pep }\n  $뒤번호 = $뒤.항목 >> [table:each] { return $it.pep }\n  $공통 = intersection($앞번호,$뒤번호)\n  $걸침 = $공통 >> [table:each] {\n    $n = $it\n    $as = $앞.항목 >> [table:filter]{where:($h)=>$h.pep == $n}\n    $bs = $뒤.항목 >> [table:filter]{where:($h)=>$h.pep == $n}\n    $a = $as[0]\n    $b = $bs[0]\n    $a문단 = $a.문단 >> [table:each] { return text($it) }\n    $b문단 = $b.문단 >> [table:each] { return text($it) }\n    return f\"- **${$n}** ${$a.제목}: ${$앞.버전} ${$a.상태} → ${$뒤.버전} ${$b.상태} (근거 ${$앞.버전} ¶${join(',',$a문단)} / ${$뒤.버전} ¶${join(',',$b문단)})\"\n  }\n}\n\n$m1 = $추출.원천 >> [table:each]{mode:\"flat_map\"} {\n  [if:not $it.ok] { $이유 = json($it.이유); return [f\"- 찾지 못함/읽지 못함: Python ${$it.버전} — ${$이유}\"] }\n  [if:$it.생략 > 0] { return [f\"- 문단 생략: Python ${$it.버전} PEP 문단 ${$it.적중}개 중 ${$it.생략}개 생략\"] }\n  return []\n}\n$m2 = $추출.추출 >> [table:each]{mode:\"flat_map\"} {\n  $e = $it\n  $f = $e.실패 >> [table:each] { return f\"- 모델 추출 실패: Python ${$e.버전} 덩이 ${$it.덩이} — ${$it.이유}\" }\n  $b = $e.버림 >> [table:each] { return f\"- 원문에 없는 PEP 라서 버림: Python ${$e.버전} ¶${$it.문단} ${$it.pep}\" }\n  return $f + $b\n}\n$미확인 = $m1 + $m2 + [\"- PEP 번호가 없는 변경(예: 새 대화형 인터프리터)은 이 노트의 추출 대상이 아님\"]\n$원천줄 = $추출.원천 >> [table:each] { return f\"- Python ${$it.버전}: ${$it.ok ? $it.url : '없음'} (${$it.찾은경로 == null ? '검색 실패' : $it.찾은경로}, PEP 문단 ${$it.문단수}개)\" }\n\n$버전들 = $버전별 >> [table:each] { return $it.버전 }\n$본문 = f\"# Python ${join(' · ',$버전들)} 변경점 공부 노트\\n\\n${join('\\n',$본절)}\\n## 두 버전에 걸친 변화\\n${len($걸침) == 0 ? '- 없음' : join('\\n',$걸침)}\\n\\n## 확인 못 한 부분\\n${join('\\n',$미확인)}\\n\\n## 원천\\n검색어: ${join(' / ',$추출.검색어)}\\n${join('\\n',$원천줄)}\\n\"\n$저장 = [self:write]{path:$출력,content:$본문}\n$확인 = [self:read]{path:$출력}\nreturn {저장일치:$확인.text == $본문,버전:$버전별 >> [table:each] { return {버전:$it.버전,pep수:len($it.항목)} },걸침:$걸침}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "check": true,
+  "inputs": {
+   "추출": {
+    "$ref": "bb69188418fd61b160d875596666e819f68e5628e65a8940fdd48db65e231324"
+   },
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_4회차/out/python_notes.md"
+  }
+ },
+ "elapsed_s": 0.28,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 12,
+  "guards_inner": 0,
+  "guards_omitted": 12,
+  "result_type": "{저장일치: Bool, 버전: List<{버전: Text, pep수: Number}>, 걸침: List<Text>}",
+  "effects": [
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "functions": {
+   "def:227:768": {
+    "name": "PEP묶기",
+    "params": {
+     "행": "List<{버전: Text, pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: Number, 원문있음: Bool}>"
+    },
+    "required": [
+     "행"
+    ],
+    "pipe_input": "행",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "ebf3d4c8d83fcf9e8339631e7221051dbface929177842da1b1ce7548fcc5491",
+    "result": "List<{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}>",
+    "specializations": [
+     {
+      "params": {
+       "행": "List<{버전: Text, pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: Number, 원문있음: Bool}>"
+      },
+      "result": "List<{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+     "start": 227,
+     "end": 768,
+     "line": 8,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 23,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:770:1044": {
+    "name": "항목줄",
+    "params": {
+     "h": "{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}",
+     "버전": "Text"
+    },
+    "required": [
+     "h",
+     "버전"
+    ],
+    "pipe_input": "h",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "7021f912e9fa52f993d8912e52e5e70afa865006010919751c76254ee6041bb2",
+    "result": "Text",
+    "specializations": [
+     {
+      "params": {
+       "h": "{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}",
+       "버전": "Text"
+      },
+      "result": "Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+     "start": 770,
+     "end": 1044,
+     "line": 25,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 30,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1046:1507": {
+    "name": "버전절",
+    "params": {
+     "버전": "Text",
+     "항목": "List<{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}>"
+    },
+    "required": [
+     "버전",
+     "항목"
+    ],
+    "pipe_input": "버전",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "299cc7a0d8479417223fe7430082cfbd83eefd308fc390251e513282dcf72911",
+    "result": "Text",
+    "specializations": [
+     {
+      "params": {
+       "버전": "Text",
+       "항목": "List<{pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: List<Number>, 분류불일치: Bool, 상태불일치: Bool, 분류들: List<Text>, 상태들: List<Text>}>"
+      },
+      "result": "Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+     "start": 1046,
+     "end": 1507,
+     "line": 32,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 42,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "168dfffef1104f776ef052dcbe3131ba72ddc8a26b256fffcbffadb7874a1777",
+  "dependencies": {
+   "source": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "추출": "{검색어: List<Text>, 원천: List<{버전: Text, ok: Bool, url: Text, 찾은경로: Text, 적중: Number, 생략: Number, 이유: Null, 문단수: Number}>, 추출: List<{버전: Text, 변경: List<{버전: Text, pep: Text, 제목: Text, 분류: Text, 상태: Text, 문단: Number, 원문있음: Bool}>, 버림: List<Unknown>, 실패: List<Unknown>}>}",
+    "출력": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 3535
+    }
+   ],
+   "contracts": "2e3f3532c0f91fa5bb25befab2783ceedd07d07a430c1513781ad32dbfd14fa7",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "b8cba6f27e39735b3c9966ca55ce032775ce63e8fbae8e972be9a7390cac651c"
+  },
+  "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 1538,
+      "end": 1597,
+      "line": 45,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 45,
+      "end_column": 77,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 260,
+      "end": 291,
+      "line": 9,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 9,
+      "end_column": 47,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 324,
+      "end": 766,
+      "line": 11,
+      "column": 11,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 22,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 427,
+      "end": 457,
+      "line": 14,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 14,
+      "end_column": 49,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 476,
+      "end": 506,
+      "line": 15,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 15,
+      "end_column": 49,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 525,
+      "end": 555,
+      "line": 16,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 16,
+      "end_column": 49,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 1612,
+      "end": 1658,
+      "line": 46,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 46,
+      "end_column": 61,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 1299,
+      "end": 1338,
+      "line": 38,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 38,
+      "end_column": 56,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 808,
+      "end": 842,
+      "line": 26,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 26,
+      "end_column": 53,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 1780,
+      "end": 1811,
+      "line": 53,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 53,
+      "end_column": 50,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 1830,
+      "end": 1861,
+      "line": 54,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 54,
+      "end_column": 50,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 1909,
+      "end": 2337,
+      "line": 56,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 65,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 2109,
+      "end": 2142,
+      "line": 62,
+      "column": 21,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 62,
+      "end_column": 54,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 2163,
+      "end": 2196,
+      "line": 63,
+      "column": 21,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 63,
+      "end_column": 54,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 2357,
+      "end": 2591,
+      "line": 68,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 72,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 2608,
+      "end": 2866,
+      "line": 73,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 78,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 2667,
+      "end": 2746,
+      "line": 75,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 75,
+      "end_column": 96,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 2763,
+      "end": 2847,
+      "line": 76,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 76,
+      "end_column": 101,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 2956,
+      "end": 3092,
+      "line": 80,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 80,
+      "end_column": 154,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 3109,
+      "end": 3139,
+      "line": 82,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 82,
+      "end_column": 46,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3139da7cb67b8b72f3ef119e87ccf1f16a77670affd73338cb15cbd28127d32c",
+      "start": 3474,
+      "end": 3526,
+      "line": 86,
+      "column": 41,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 86,
+      "end_column": 93,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 12,
+   "informative": 12
+  },
+  "guards_ref": {
+   "id": "84777e590541df966eff30f142597791396fbe5a26c75095108db2b1c3a4afe6",
+   "chars": 8909,
+   "read_args": {
+    "id": "84777e590541df966eff30f142597791396fbe5a26c75095108db2b1c3a4afe6",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "inputs_resolved": [
+   {
+    "name": "추출",
+    "id": "bb69188418fd61b160d875596666e819f68e5628e65a8940fdd48db65e231324",
+    "path": [
+     "value_wire"
+    ],
+    "evidence": {
+     "fingerprint": "31906f5fd4f8faf7202ebad339627763041710c4cf3d50953f8da26b4a273b68",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "7325c1443ba54332a14715cbde1a4ca4"
+    },
+    "chars": 8746
+   }
+  ]
+ }
+}

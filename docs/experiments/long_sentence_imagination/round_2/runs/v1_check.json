@@ -1,0 +1,2384 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 2회차 최초 초안 — 송년회 장소·날짜 제안서\n# inputs: 폴더, 출력, 미정비율(1 = 미정 전원 반영)\n\n# 응답 행 → 날짜별 한 행씩 펼침 (attend Y/미정만)\n[def:날짜펼침]($응답) {\n  $응답 >> [table:filter]{where:($r)=>$r.attend != \"N\"} >> [table:each]{mode:\"flat_map\"} {\n    $r = $it\n    split($r.dates, \";\") >> [table:each] { return {id:$r.id, date:$it, attend:$r.attend, diet:$r.diet} }\n  }\n}\n\n# 날짜별 확정·미정·식단 집계\n[def:날짜집계]($펼침, $날짜들, $미정비율) {\n  $날짜들 >> [table:each] {\n    $d = $it\n    $그날 = $펼침 >> [table:filter]{where:($p)=>$p.date == $d}\n    $확정 = $그날 >> [table:filter]{where:($p)=>$p.attend == \"Y\"}\n    $미정 = len($그날) - len($확정)\n    return {date:$d, 확정:len($확정), 미정:$미정,\n            필요:len($확정) + ceil($미정 * $미정비율),\n            채식:len($확정 >> [table:filter]{where:($p)=>$p.diet == \"채식\"}),\n            알레르기:len($확정 >> [table:filter]{where:($p)=>$p.diet == \"견과류 알레르기\"})}\n  }\n}\n\n# 날짜×장소 판정\n[def:안판정]($장소, $집계, $예산) {\n  $장소.dates >> [table:each] {\n    $d = $it\n    $n = ($집계 >> [table:filter]{where:($a)=>$a.date == $d})[0]\n    $비용 = $장소.rental_fee + $장소.price_per_head * $n.확정\n    $사유 = []\n    [if:$장소.capacity < $n.필요] { $사유 = $사유 + [f\"수용 부족(${n.필요}명 > ${장소.capacity}석)\"] }\n    [if:$비용 > $예산] { $사유 = $사유 + [f\"예산 초과(${비용}원)\"] }\n    [if:$n.채식 > 0 and $장소.vegetarian == false] { $사유 = $사유 + [\"채식 불가\"] }\n    return {venue:$장소.id, name:$장소.name, date:$d, 확정:$n.확정, 필요:$n.필요, capacity:$장소.capacity,\n            cost:$비용, ok:len($사유) == 0, reasons:$사유, veg_unknown:$장소.vegetarian == null,\n            채식:$n.채식, 알레르기:$n.알레르기}\n  }\n}\n\n# 후기 읽기 (장소 하나) — 실패는 호출자가 collect\n[def:후기읽기]($장소, $폴더) {\n  $문서 = [self:read]{path:f\"${폴더}/${장소.review_file}\"}\n  $줄 = split($문서.text, \"\\n\") >> [table:each]{mode:\"flat_map\"} { [if:len(strip($it)) > 0] { return [strip($it)] }; return [] }\n  return {venue:$장소.id, name:$장소.name, reviews:join(\"\\n\", $줄)}\n}\n\n# 모델: 장점·우려 요약\n[def:후기요약]($후기들) {\n  [if:len($후기들) == 0] { return [] }\n  $r = $후기들 >> [table:ai]{instruction:\"각 행의 reviews(한 줄에 후기 하나)를 읽고 장점과 우려를 짧은 구절 목록으로 정리하라. 후기에 없는 내용을 지어내지 말 것.\",\n                             schema:\"pros(문자열 목록), cons(문자열 목록)\", input_fields:[\"venue\",\"reviews\"], preserve_rows:true}\n  return $r.items\n}\n\n[def:제안서]($이벤트, $예산, $집계, $안들, $추천, $요약, $후기실패) {\n  $집계표 = $집계 >> [table:each] { return f\"| ${it.date} | ${it.확정} | ${it.미정} | ${it.필요} | ${it.채식} | ${it.알레르기} |\" }\n  $안표 = $안들 >> [table:each] {\n    $판정 = $it.ok ? \"가능\" : join(\", \", $it.reasons)\n    return f\"| ${it.venue} ${it.name} | ${it.date} | ${it.필요}/${it.capacity} | ${it.cost} | ${판정} |\"\n  }\n  $추천절 = $추천 >> [table:each] {\n    $a = $it\n    $s = $요약 >> [table:filter]{where:($x)=>$x.venue == $a.venue}\n    $장점 = len($s) > 0 ? join(\"; \", $s[0].pros) : \"후기 읽지 못함\"\n    $우려 = len($s) > 0 ? join(\"; \", $s[0].cons) : \"후기 읽지 못함\"\n    $질문 = ($a.veg_unknown ? [f\"채식 메뉴 가능 여부 (채식 ${a.채식}명)\"] : []) + ($a.알레르기 > 0 ? [f\"견과류 알레르기 ${a.알레르기}명 대응 가능 여부\"] : [])\n    $질문2 = []\n    [if:len($s) > 0] { $질문2 = $s[0].cons >> [table:each] { return f\"후기 우려 확인: ${it}\" } }\n    return join(\"\\n\", [f\"### ${$i + 1}안: ${a.name} (${a.date})\", f\"- 확정 ${a.확정}명, 필요 좌석 ${a.필요}/${a.capacity}, 비용 ${a.cost}원\",\n                       f\"- 장점: ${장점}\", f\"- 우려: ${우려}\", \"- 업체 질문:\", join(\"\\n\", ($질문 + $질문2) >> [table:each]{ return f\"  - ${it}\" })])\n  }\n  $실패줄 = $후기실패 >> [table:each] { return f\"- ${it.venue}: 후기 파일을 읽지 못함(${it.error})\" }\n  return join(\"\\n\", [f\"# ${이벤트} 장소·날짜 제안서 (예산 ${예산}원)\", \"\", \"## 날짜별 인원\", \"| 날짜 | 확정 | 미정 | 필요 좌석 | 채식 | 알레르기 |\", \"|---|---|---|---|---|---|\", join(\"\\n\", $집계표),\n                     \"\", \"## 날짜×장소 판정\", \"| 장소 | 날짜 | 필요/수용 | 비용 | 판정 |\", \"|---|---|---|---|---|\", join(\"\\n\", $안표),\n                     \"\", \"## 추천\", join(\"\\n\\n\", $추천절), \"\", \"## 후기 읽기 실패\", len($실패줄) > 0 ? join(\"\\n\", $실패줄) : \"- 없음\"])\n}\n\n# ── 최상위 ──\n$원천 = [self:read]{path:f\"${폴더}/responses.csv\"} & [self:read]{path:f\"${폴더}/venues.json\"}\n$응답 = $원천[0].data.items\n$설정 = $원천[1].data\n$펼침 = [fn:날짜펼침]{응답:$응답}\n$날짜들 = sorted(unique($펼침 >> [table:each] { return $it.date }))\n$집계 = [fn:날짜집계]{펼침:$펼침, 날짜들:$날짜들, 미정비율:$미정비율}\n$안들 = $설정.venues >> [table:each]{mode:\"flat_map\"} { [fn:안판정]{장소:$it, 집계:$집계, 예산:$설정.budget} }\n$가능 = $안들 >> [table:filter]{where:($a)=>$a.ok}\n$추천 = sorted($가능, ($a)=>[0 - $a.확정, $a.cost])[:2]\n\n$읽기 = $설정.venues >> [table:each]{parallel:4, on_error:\"collect\"} { [fn:후기읽기]{장소:$it, 폴더:$폴더} }\n$후기들 = $설정.venues >> [table:each]{mode:\"flat_map\"} { [if:is_ok($읽기[$i])] { return [unwrap($읽기[$i])] }; return [] }\n$후기실패 = $설정.venues >> [table:each]{mode:\"flat_map\"} { [if:is_ok($읽기[$i])] { return [] }; return [{venue:$it.id, error:error_of($읽기[$i]).message}] }\n$요약 = [fn:후기요약]{후기들:$후기들}\n\n$본문 = [fn:제안서]{이벤트:$설정.event, 예산:$설정.budget, 집계:$집계, 안들:$안들, 추천:$추천, 요약:$요약, 후기실패:$후기실패}\n$저장 = [self:write]{path:$출력, content:$본문}\n$확인 = [self:read]{path:$출력}\nreturn {집계:$집계, 추천:$추천 >> [table:each]{ return {venue:$it.venue, date:$it.date, cost:$it.cost} },\n        가능안수:len($가능), 요약:$요약, 후기실패:$후기실패, saved:$저장.path, verified:$확인.text == $본문,\n        rows_read:len($응답)}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "check": true,
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/input",
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/out/proposal.md",
+   "미정비율": 1
+  }
+ },
+ "elapsed_s": 0.33,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3848,
+     "end": 3887,
+     "line": 86,
+     "column": 22
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3848,
+     "end": 3887,
+     "line": 86,
+     "column": 22,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 86,
+     "end_column": 61,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3855,
+     "end": 3887,
+     "line": 86,
+     "column": 29
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3855,
+     "end": 3887,
+     "line": 86,
+     "column": 29,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 86,
+     "end_column": 61,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3870,
+     "end": 3885,
+     "line": 86,
+     "column": 44
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3870,
+     "end": 3885,
+     "line": 86,
+     "column": 44,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 86,
+     "end_column": 59,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "BUILTIN",
+    "message": "알 수 없는 내장 함수: ceil",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 656,
+     "end": 660,
+     "line": 21,
+     "column": 27
+    },
+    "call_path": [
+     {
+      "function": "날짜집계",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3896,
+       "end": 3935,
+       "line": 87,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 87,
+       "end_column": 46,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 368,
+       "end": 832,
+       "line": 14,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 25,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 656,
+     "end": 660,
+     "line": 21,
+     "column": 27,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 21,
+     "end_column": 31,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "BUILTIN",
+    "severity": "error",
+    "hint": "문법 전문의 내장 함수 이름을 쓰세요. 지역·저장 함수는 값으로 넘기지 않고 [fn:이름]{인자:값}으로 부르며, 목록의 원소마다 부를 때는 [table:each]{ [fn:이름]{인자:$it} }입니다."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 694,
+     "end": 744,
+     "line": 22,
+     "column": 20
+    },
+    "call_path": [
+     {
+      "function": "날짜집계",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3896,
+       "end": 3935,
+       "line": 87,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 87,
+       "end_column": 46,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 368,
+       "end": 832,
+       "line": 14,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 25,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 694,
+     "end": 744,
+     "line": 22,
+     "column": 20,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 22,
+     "end_column": 70,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 701,
+     "end": 744,
+     "line": 22,
+     "column": 27
+    },
+    "call_path": [
+     {
+      "function": "날짜집계",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3896,
+       "end": 3935,
+       "line": 87,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 87,
+       "end_column": 46,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 368,
+       "end": 832,
+       "line": 14,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 25,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 701,
+     "end": 744,
+     "line": 22,
+     "column": 27,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 22,
+     "end_column": 70,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 768,
+     "end": 824,
+     "line": 23,
+     "column": 22
+    },
+    "call_path": [
+     {
+      "function": "날짜집계",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3896,
+       "end": 3935,
+       "line": 87,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 87,
+       "end_column": 46,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 368,
+       "end": 832,
+       "line": 14,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 25,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 768,
+     "end": 824,
+     "line": 23,
+     "column": 22,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 23,
+     "end_column": 78,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 775,
+     "end": 824,
+     "line": 23,
+     "column": 29
+    },
+    "call_path": [
+     {
+      "function": "날짜집계",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3896,
+       "end": 3935,
+       "line": 87,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 87,
+       "end_column": 46,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 368,
+       "end": 832,
+       "line": 14,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 25,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 775,
+     "end": 824,
+     "line": 23,
+     "column": 29,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 23,
+     "end_column": 78,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3122,
+     "end": 3172,
+     "line": 73,
+     "column": 80
+    },
+    "call_path": [
+     {
+      "function": "제안서",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 4519,
+       "end": 4601,
+       "line": 97,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 97,
+       "end_column": 89,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 2112,
+       "end": 3659,
+       "line": 58,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 79,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3122,
+     "end": 3172,
+     "line": 73,
+     "column": 80,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 73,
+     "end_column": 130,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3137,
+     "end": 3172,
+     "line": 73,
+     "column": 95
+    },
+    "call_path": [
+     {
+      "function": "제안서",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 4519,
+       "end": 4601,
+       "line": 97,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 97,
+       "end_column": 89,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 2112,
+       "end": 3659,
+       "line": 58,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 79,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3137,
+     "end": 3172,
+     "line": 73,
+     "column": 95,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 73,
+     "end_column": 130,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3151,
+     "end": 3170,
+     "line": 73,
+     "column": 109
+    },
+    "call_path": [
+     {
+      "function": "제안서",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 4519,
+       "end": 4601,
+       "line": 97,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 97,
+       "end_column": 89,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 2112,
+       "end": 3659,
+       "line": 58,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 79,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3151,
+     "end": 3170,
+     "line": 73,
+     "column": 109,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 73,
+     "end_column": 128,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error",
+    "hint": "산술·비교·조건·람다·보간·기본값·내장 함수 인자에는 호출을 넣지 않습니다. 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요."
+   }
+  ],
+  "guards": [
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3767,
+     "end": 3784,
+     "line": 83,
+     "column": 7
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3767,
+     "end": 3784,
+     "line": 83,
+     "column": 7,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 83,
+     "end_column": 24,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 172,
+     "end": 181,
+     "line": 7,
+     "column": 37
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜펼침",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3809,
+       "end": 3826,
+       "line": 85,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 85,
+       "end_column": 24,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 118,
+       "end": 348,
+       "line": 6,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 11,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 172,
+     "end": 181,
+     "line": 7,
+     "column": 37,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 7,
+     "end_column": 46,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 145,
+     "end": 189,
+     "line": 7,
+     "column": 10
+    },
+    "expected": "List<Record>",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜펼침",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3809,
+       "end": 3826,
+       "line": 85,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 85,
+       "end_column": 24,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 118,
+       "end": 348,
+       "line": 6,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 11,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 145,
+     "end": 189,
+     "line": 7,
+     "column": 10,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 7,
+     "end_column": 54,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "List<Record>",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 248,
+     "end": 256,
+     "line": 9,
+     "column": 11
+    },
+    "expected": "Unknown",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜펼침",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3809,
+       "end": 3826,
+       "line": 85,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 85,
+       "end_column": 24,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 118,
+       "end": 348,
+       "line": 6,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 11,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 248,
+     "end": 256,
+     "line": 9,
+     "column": 11,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 19,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Unknown",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 248,
+     "end": 256,
+     "line": 9,
+     "column": 11
+    },
+    "expected": "Text",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜펼침",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3809,
+       "end": 3826,
+       "line": 85,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 85,
+       "end_column": 24,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 118,
+       "end": 348,
+       "line": 6,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 11,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 248,
+     "end": 256,
+     "line": 9,
+     "column": 11,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 19,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Text",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 292,
+     "end": 297,
+     "line": 9,
+     "column": 55
+    },
+    "expected": "Unknown",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜펼침",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3809,
+       "end": 3826,
+       "line": 85,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 85,
+       "end_column": 24,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 118,
+       "end": 348,
+       "line": 6,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 11,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 292,
+     "end": 297,
+     "line": 9,
+     "column": 55,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 60,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Unknown",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 316,
+     "end": 325,
+     "line": 9,
+     "column": 79
+    },
+    "expected": "Unknown",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜펼침",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3809,
+       "end": 3826,
+       "line": 85,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 85,
+       "end_column": 24,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 118,
+       "end": 348,
+       "line": 6,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 11,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 316,
+     "end": 325,
+     "line": 9,
+     "column": 79,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 88,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Unknown",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 332,
+     "end": 339,
+     "line": 9,
+     "column": 95
+    },
+    "expected": "Unknown",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜펼침",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3809,
+       "end": 3826,
+       "line": 85,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 85,
+       "end_column": 24,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 118,
+       "end": 348,
+       "line": 6,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 11,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 332,
+     "end": 339,
+     "line": 9,
+     "column": 95,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 102,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Unknown",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 481,
+     "end": 488,
+     "line": 17,
+     "column": 45
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜집계",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3896,
+       "end": 3935,
+       "line": 87,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 87,
+       "end_column": 46,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 368,
+       "end": 832,
+       "line": 14,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 25,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 481,
+     "end": 488,
+     "line": 17,
+     "column": 45,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 17,
+     "end_column": 52,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 540,
+     "end": 549,
+     "line": 18,
+     "column": 45
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜집계",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3896,
+       "end": 3935,
+       "line": 87,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 87,
+       "end_column": 46,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 368,
+       "end": 832,
+       "line": 14,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 25,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 540,
+     "end": 549,
+     "line": 18,
+     "column": 45,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 18,
+     "end_column": 54,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 645,
+     "end": 673,
+     "line": 21,
+     "column": 16
+    },
+    "expected": "Unknown",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜집계",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3896,
+       "end": 3935,
+       "line": 87,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 87,
+       "end_column": 46,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 368,
+       "end": 832,
+       "line": 14,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 25,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 645,
+     "end": 673,
+     "line": 21,
+     "column": 16,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 21,
+     "end_column": 44,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Unknown",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 728,
+     "end": 735,
+     "line": 22,
+     "column": 54
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜집계",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3896,
+       "end": 3935,
+       "line": 87,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 87,
+       "end_column": 46,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 368,
+       "end": 832,
+       "line": 14,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 25,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 728,
+     "end": 735,
+     "line": 22,
+     "column": 54,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 22,
+     "end_column": 61,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 802,
+     "end": 809,
+     "line": 23,
+     "column": 56
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "날짜집계",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3896,
+       "end": 3935,
+       "line": 87,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 87,
+       "end_column": 46,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 368,
+       "end": 832,
+       "line": 14,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 25,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 802,
+     "end": 809,
+     "line": 23,
+     "column": 56,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 23,
+     "end_column": 63,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3942,
+     "end": 3952,
+     "line": 88,
+     "column": 7
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3942,
+     "end": 3952,
+     "line": 88,
+     "column": 7,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 88,
+     "end_column": 17,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3956,
+     "end": 4029,
+     "line": 88,
+     "column": 21
+    },
+    "expected": "List<Unknown>",
+    "actual": "Unknown",
+    "call_path": [],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 3956,
+     "end": 4029,
+     "line": 88,
+     "column": 21,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 88,
+     "end_column": 94,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "List<Unknown>",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 4016,
+     "end": 4026,
+     "line": 88,
+     "column": 81
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 4016,
+     "end": 4026,
+     "line": 88,
+     "column": 81,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 88,
+     "end_column": 91,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 874,
+     "end": 883,
+     "line": 29,
+     "column": 3
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "안판정",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3988,
+       "end": 4027,
+       "line": 88,
+       "column": 53,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 88,
+       "end_column": 92,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 845,
+       "end": 1480,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 874,
+     "end": 883,
+     "line": 29,
+     "column": 3,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 29,
+     "end_column": 12,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 887,
+     "end": 1478,
+     "line": 29,
+     "column": 16
+    },
+    "expected": "List<Unknown>",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "안판정",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3988,
+       "end": 4027,
+       "line": 88,
+       "column": 53,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 88,
+       "end_column": 92,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 845,
+       "end": 1480,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 887,
+     "end": 1478,
+     "line": 29,
+     "column": 16,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 40,
+     "end_column": 4,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "List<Unknown>",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 959,
+     "end": 966,
+     "line": 31,
+     "column": 45
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "안판정",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3988,
+       "end": 4027,
+       "line": 88,
+       "column": 53,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 88,
+       "end_column": 92,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 845,
+       "end": 1480,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 959,
+     "end": 966,
+     "line": 31,
+     "column": 45,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 31,
+     "end_column": 52,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 988,
+     "end": 1002,
+     "line": 32,
+     "column": 11
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "안판정",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3988,
+       "end": 4027,
+       "line": 88,
+       "column": 53,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 88,
+       "end_column": 92,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 845,
+       "end": 1480,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 988,
+     "end": 1002,
+     "line": 32,
+     "column": 11,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 32,
+     "end_column": 25,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 1005,
+     "end": 1023,
+     "line": 32,
+     "column": 28
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "안판정",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3988,
+       "end": 4027,
+       "line": 88,
+       "column": 53,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 88,
+       "end_column": 92,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 845,
+       "end": 1480,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 1005,
+     "end": 1023,
+     "line": 32,
+     "column": 28,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 32,
+     "end_column": 46,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 1005,
+     "end": 1023,
+     "line": 32,
+     "column": 28
+    },
+    "expected": "Number",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "안판정",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3988,
+       "end": 4027,
+       "line": 88,
+       "column": 53,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 88,
+       "end_column": 92,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 845,
+       "end": 1480,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 1005,
+     "end": 1023,
+     "line": 32,
+     "column": 28,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 32,
+     "end_column": 46,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Number",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 988,
+     "end": 1031,
+     "line": 32,
+     "column": 11
+    },
+    "expected": "Unknown",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "안판정",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3988,
+       "end": 4027,
+       "line": 88,
+       "column": 53,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 88,
+       "end_column": 92,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 845,
+       "end": 1480,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 988,
+     "end": 1031,
+     "line": 32,
+     "column": 11,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 32,
+     "end_column": 54,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Unknown",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   },
+   {
+    "source_span": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 1053,
+     "end": 1065,
+     "line": 34,
+     "column": 9
+    },
+    "expected": "Record",
+    "actual": "Unknown",
+    "call_path": [
+     {
+      "function": "안판정",
+      "call": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 3988,
+       "end": 4027,
+       "line": 88,
+       "column": 53,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 88,
+       "end_column": 92,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+       "start": 845,
+       "end": 1480,
+       "line": 28,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 41,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 1053,
+     "end": 1065,
+     "line": 34,
+     "column": 9,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 34,
+     "end_column": 21,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "code": "RUNTIME_GUARD",
+    "rule": "RUNTIME_GUARD",
+    "severity": "information",
+    "message": "Record",
+    "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+   }
+  ],
+  "guards_total": 82,
+  "guards_inner": 0,
+  "guards_omitted": 58,
+  "result_type": "{집계: List<{date: Text, 확정: Number, 미정: Number, 필요: Unknown, 채식: Number, 알레르기: Number}>, 추천: List<{venue: Unknown, date: Unknown, cost: Unknown}>, 가능안수: Number, 요약: Unknown, 후기실패: List<Unknown>, saved: Unknown, verified: Bool, rows_read: Number}",
+  "effects": [
+   "pure",
+   "read_external",
+   "unknown",
+   "write_external"
+  ],
+  "functions": {
+   "def:118:348": {
+    "name": "날짜펼침",
+    "params": {
+     "응답": "Unknown"
+    },
+    "required": [
+     "응답"
+    ],
+    "pipe_input": "응답",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "da86dcf5ec988eb5c5d9c118f2b8485344a8c96ac2169ab1b6eb24d351de7ace",
+    "result": "List<{id: Unknown, date: Text, attend: Unknown, diet: Unknown}>",
+    "specializations": [
+     {
+      "params": {
+       "응답": "Unknown"
+      },
+      "result": "List<{id: Unknown, date: Text, attend: Unknown, diet: Unknown}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 118,
+     "end": 348,
+     "line": 6,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 11,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:368:832": {
+    "name": "날짜집계",
+    "params": {
+     "펼침": "List<{id: Unknown, date: Text, attend: Unknown, diet: Unknown}>",
+     "날짜들": "List<Text>",
+     "미정비율": "Number"
+    },
+    "required": [
+     "펼침",
+     "날짜들",
+     "미정비율"
+    ],
+    "pipe_input": "펼침",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "239d7bd914b11cd13c9ed651605650f5ab1b2587534ecb791be39c4dc7694745",
+    "result": "List<{date: Text, 확정: Number, 미정: Number, 필요: Unknown, 채식: Number, 알레르기: Number}>",
+    "specializations": [
+     {
+      "params": {
+       "펼침": "List<{id: Unknown, date: Text, attend: Unknown, diet: Unknown}>",
+       "날짜들": "List<Text>",
+       "미정비율": "Number"
+      },
+      "result": "List<{date: Text, 확정: Number, 미정: Number, 필요: Unknown, 채식: Number, 알레르기: Number}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 368,
+     "end": 832,
+     "line": 14,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 25,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:845:1480": {
+    "name": "안판정",
+    "params": {
+     "장소": "Unknown",
+     "집계": "List<{date: Text, 확정: Number, 미정: Number, 필요: Unknown, 채식: Number, 알레르기: Number}>",
+     "예산": "Unknown"
+    },
+    "required": [
+     "장소",
+     "집계",
+     "예산"
+    ],
+    "pipe_input": "장소",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "468119a6955701d9989ce7493c2b68903f2f58904b7dab442099a5a289739014",
+    "result": "List<{venue: Unknown, name: Unknown, date: Unknown, 확정: Number, 필요: Unknown, capacity: Unknown, cost: Unknown, ok: Bool, reasons: List<Unknown>, veg_unknown: Bool, 채식: Number, 알레르기: Number}>",
+    "specializations": [
+     {
+      "params": {
+       "장소": "Unknown",
+       "집계": "List<{date: Text, 확정: Number, 미정: Number, 필요: Unknown, 채식: Number, 알레르기: Number}>",
+       "예산": "Unknown"
+      },
+      "result": "List<{venue: Unknown, name: Unknown, date: Unknown, 확정: Number, 필요: Unknown, capacity: Unknown, cost: Unknown, ok: Bool, reasons: List<Unknown>, veg_unknown: Bool, 채식: Number, 알레르기: Number}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 845,
+     "end": 1480,
+     "line": 28,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 41,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1517:1783": {
+    "name": "후기읽기",
+    "params": {
+     "장소": "Unknown",
+     "폴더": "Text"
+    },
+    "required": [
+     "장소",
+     "폴더"
+    ],
+    "pipe_input": "장소",
+    "default_expressions": {},
+    "effects": [
+     "read_external"
+    ],
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "e4c6701cea5642626522dafaa154e0c327f0202035f40ff3d15107e7d3ea7d48",
+    "result": "{venue: Unknown, name: Unknown, reviews: Text}",
+    "specializations": [
+     {
+      "params": {
+       "장소": "Unknown",
+       "폴더": "Text"
+      },
+      "result": "{venue: Unknown, name: Unknown, reviews: Text}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 1517,
+     "end": 1783,
+     "line": 44,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 48,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1800:2110": {
+    "name": "후기요약",
+    "params": {
+     "후기들": "List<Unknown>"
+    },
+    "required": [
+     "후기들"
+    ],
+    "pipe_input": "후기들",
+    "default_expressions": {},
+    "effects": [
+     "unknown"
+    ],
+    "actions": [
+     "table:ai"
+    ],
+    "source_hash": "58d92da953c2df734d2f42baab78cb276971b560500dc6fa3cd5b381f70e26c6",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "후기들": "List<Unknown>"
+      },
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 1800,
+     "end": 2110,
+     "line": 51,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 56,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:2112:3659": {
+    "name": "제안서",
+    "params": {
+     "이벤트": "Unknown",
+     "예산": "Unknown",
+     "집계": "List<{date: Text, 확정: Number, 미정: Number, 필요: Unknown, 채식: Number, 알레르기: Number}>",
+     "안들": "List<{venue: Unknown, name: Unknown, date: Unknown, 확정: Number, 필요: Unknown, capacity: Unknown, cost: Unknown, ok: Bool, reasons: List<Unknown>, veg_unknown: Bool, 채식: Number, 알레르기: Number}>",
+     "추천": "List<{venue: Unknown, name: Unknown, date: Unknown, 확정: Number, 필요: Unknown, capacity: Unknown, cost: Unknown, ok: Bool, reasons: List<Unknown>, veg_unknown: Bool, 채식: Number, 알레르기: Number}>",
+     "요약": "Unknown",
+     "후기실패": "List<Unknown>"
+    },
+    "required": [
+     "이벤트",
+     "예산",
+     "집계",
+     "안들",
+     "추천",
+     "요약",
+     "후기실패"
+    ],
+    "pipe_input": "이벤트",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "d738b6da99f61b1d6cac135b29b08a751e56a14482446162cdc2af56589d2392",
+    "result": "Text",
+    "specializations": [
+     {
+      "params": {
+       "이벤트": "Unknown",
+       "예산": "Unknown",
+       "집계": "List<{date: Text, 확정: Number, 미정: Number, 필요: Unknown, 채식: Number, 알레르기: Number}>",
+       "안들": "List<{venue: Unknown, name: Unknown, date: Unknown, 확정: Number, 필요: Unknown, capacity: Unknown, cost: Unknown, ok: Bool, reasons: List<Unknown>, veg_unknown: Bool, 채식: Number, 알레르기: Number}>",
+       "추천": "List<{venue: Unknown, name: Unknown, date: Unknown, 확정: Number, 필요: Unknown, capacity: Unknown, cost: Unknown, ok: Bool, reasons: List<Unknown>, veg_unknown: Bool, 채식: Number, 알레르기: Number}>",
+       "요약": "Unknown",
+       "후기실패": "List<Unknown>"
+      },
+      "result": "Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+     "start": 2112,
+     "end": 3659,
+     "line": 58,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 79,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "9f4c998146af0ff9194d3b6c1350106840ba205624aa81eeb23a43208a0d5c50",
+  "dependencies": {
+   "source": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "폴더": "Text",
+    "출력": "Text",
+    "미정비율": "Number"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 4883
+    }
+   ],
+   "contracts": "a24c85c4f42b693a00ebabc6904e8e7bbc24b1918070f09ee9c82dcbd0bc602d",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "c1794ea4f0c1da284c6c08fd27dd3f3dd6fac373f9dc627fc2c31d90486a3897",
+   "expressions": "8d08f157bcfb3c7db9e8da2fdb89205d54121034a929a4e110ca50844bc8ca91",
+   "core": "53edf2c6feeb307b4ba9aecb8e482e3ad02d310f8d88f1ce8fa0ff382311ccc0"
+  },
+  "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 193,
+      "end": 346,
+      "line": 7,
+      "column": 58,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 10,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 266,
+      "end": 342,
+      "line": 9,
+      "column": 29,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 9,
+      "end_column": 105,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 3855,
+      "end": 3887,
+      "line": 86,
+      "column": 29,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 86,
+      "end_column": 61,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 409,
+      "end": 830,
+      "line": 15,
+      "column": 11,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 24,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 3956,
+      "end": 4029,
+      "line": 88,
+      "column": 21,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 88,
+      "end_column": 94,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 887,
+      "end": 1478,
+      "line": 29,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 40,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 4148,
+      "end": 4222,
+      "line": 92,
+      "column": 21,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 92,
+      "end_column": 95,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 1625,
+      "end": 1718,
+      "line": 46,
+      "column": 33,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 46,
+      "end_column": 126,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 4244,
+      "end": 4337,
+      "line": 93,
+      "column": 22,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 93,
+      "end_column": 115,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 4360,
+      "end": 4485,
+      "line": 94,
+      "column": 23,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 94,
+      "end_column": 148,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 2178,
+      "end": 2276,
+      "line": 59,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 59,
+      "end_column": 115,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 2292,
+      "end": 2461,
+      "line": 60,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 63,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 2478,
+      "end": 3179,
+      "line": 64,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 74,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 2871,
+      "end": 2913,
+      "line": 71,
+      "column": 45,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 71,
+      "end_column": 87,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 3137,
+      "end": 3172,
+      "line": 73,
+      "column": 95,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 73,
+      "end_column": 130,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 3198,
+      "end": 3265,
+      "line": 75,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 75,
+      "end_column": 86,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "dd90b44065a939297605ed38ec4e196cbcfe3cf3e38656d67af5c9530463526e",
+      "start": 4698,
+      "end": 4768,
+      "line": 100,
+      "column": 27,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 100,
+      "end_column": 97,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+ }
+}

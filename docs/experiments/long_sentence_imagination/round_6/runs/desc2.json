@@ -1,0 +1,263 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task",
+  "describe": [
+   "table:each",
+   "table:filter",
+   "table:merge",
+   "table:dedup",
+   "self:write",
+   "table:sort"
+  ]
+ },
+ "elapsed_s": 0.3,
+ "response": {
+  "actions": [
+   {
+    "action": "table:each",
+    "definition": {
+     "description": "통화 변환자(고차) — items의 각 행에 IBL 문장(do)을 적용한다. 목록을 항목 단위 행동으로 잇는 유일한 어휘. 앞 통화 없이 items 를 직접 주면 리터럴 팬아웃(같은 액션 N번 대신).",
+     "group": "transform",
+     "runs_on": "anywhere",
+     "callable_contract": {
+      "version": 1,
+      "params": {},
+      "open_params": true,
+      "required": [],
+      "result": "Record",
+      "effects": [
+       "write_external"
+      ],
+      "compatibility": "legacy-envelope/1",
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": ""
+      }
+     },
+     "operations": {}
+    }
+   },
+   {
+    "action": "table:filter",
+    "definition": {
+     "description": "조건(where) 부분집합. context:{before,after,by,limit}으로 같은 그룹의 앞뒤 행·실패·일치 계수를 보존한다. 본문 발췌는 [fn:본문에서찾기]. where 왼쪽은 필드명, 길이는 먼저 compute. 기존 total 갱신·상류 절단 보존.",
+     "group": "transform",
+     "runs_on": "anywhere",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "items": "List<Record>",
+       "where": "Callable"
+      },
+      "required": [
+       "items",
+       "where"
+      ],
+      "pipe_input": "items",
+      "result": "List<Record>",
+      "effects": [
+       "pure"
+      ],
+      "nondeterministic": false,
+      "adapter": {
+       "protocol": "core-table/2",
+       "operation": "filter"
+      }
+     },
+     "operations": {}
+    }
+   },
+   {
+    "action": "table:merge",
+    "definition": {
+     "description": "통화 변환자(이항) — 두 입력을 합치되 by 키로 중복 제거. & 병렬로 공급. (단순 이어붙이기는 union.) 중복 제거 시 기존 total을 결과 행수로 갱신하며, 상류의 실제 truncated는 보존한다.",
+     "group": "transform",
+     "runs_on": "anywhere",
+     "target_description": "by(선택, 중복 제거 키 필드 — 목록이면 복합키; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:\"skip\"), on_error:\"stop\"=하나라도 실패면 전체 실패. 표형 결합은 table:union. 예: [sense:search]{source: \"gnews\", ...} & [sense:search]{...} >> [table:merge]{by: title}.",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "inputs": "List<List<Record>|Record|Text>",
+       "left": "List<Record>|Record|Text",
+       "right": "List<Record>|Record|Text",
+       "on_error": "Text",
+       "by": "Text|List<Text>"
+      },
+      "required": [],
+      "required_any": [
+       [
+        "inputs",
+        "left"
+       ]
+      ],
+      "requires": {
+       "left": [
+        "right"
+       ],
+       "right": [
+        "left"
+       ]
+      },
+      "exclusive": [
+       [
+        "inputs",
+        "left"
+       ],
+       [
+        "inputs",
+        "right"
+       ]
+      ],
+      "aliases": {
+       "table1": "left",
+       "table2": "right",
+       "a": "left",
+       "b": "right"
+      },
+      "pipe_input": "inputs",
+      "result": "Record",
+      "effects": [
+       "pure"
+      ],
+      "nondeterministic": false,
+      "enums": {
+       "on_error": [
+        "skip",
+        "stop"
+       ]
+      },
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": ""
+      }
+     },
+     "operations": {}
+    }
+   },
+   {
+    "action": "table:dedup",
+    "definition": {
+     "description": "통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교). 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다.",
+     "group": "transform",
+     "runs_on": "anywhere",
+     "target_description": "by(별칭 key; 중복 판정 키 필드/열 — 목록이면 그 열들의 조합이 같은 행을 중복으로 본다(복합키의 부분이 비면 그 행은 중복 판정 밖); 미지정 시 items=title, 표형 table 입력=첫 열). 공백·대소문자 정규화 후 동등 비교. 객체가 아닌 행이 섞이면 삭제하지 않고 오류를 반환한다. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "by": "Unknown",
+       "criteria": "Unknown",
+       "items": "List|Record|Text",
+       "key": "Unknown",
+       "op": "Unknown",
+       "project_id": "Unknown",
+       "scope": "Unknown",
+       "target": "Unknown"
+      },
+      "open_params": false,
+      "required": [],
+      "result": "Record",
+      "effects": [
+       "unknown"
+      ],
+      "compatibility": "legacy-envelope/1",
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "input_envelopes": [
+        "items"
+       ],
+       "value_path": ""
+      },
+      "pipe_input": "items"
+     },
+     "operations": {}
+    }
+   },
+   {
+    "action": "self:write",
+    "definition": {
+     "description": "텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(message 있으면 산문, 없으면 JSON). format:\"json\" 이면 items와 명시된 원문 본문을 함께 JSON으로 보존. spill:true 면 봉투에 참조(ref)만.",
+     "group": "file",
+     "target_description": "쓸 파일 경로 + content. 상대경로는 현재 프로젝트 기준(시스템 AI는 data/일 수 있음). 원장과 공유할 파일은 ~workspace/ 접두 또는 반환된 절대경로를 쓴다. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. 파이프 싱크의 모양 — 통화에 message(산문)가 있으면 그 산문을, 없으면 JSON 을 쓴다(정직 표지·_메타는 파일에서 빼고 excluded_meta 로 신고). format:\"json\" = 통화 보존 스위치 — items/count와 명시된 원문(transcript/text/content), 출처·언어·시간 정보를 함께 저장한다. saved_to_file 원문은 전문을 읽어 넣으므로 저장 뒤 캐시가 삭제돼도 다시 struct에 전달할 수 있다. 원문 파일이 없으면 실패한다. 실행 진단은 제외한다(원장 누적 관용구 `$본 = [self:read]{path}` → `$본.items & (새 조회 >> …) >> [table:union] >> [table:dedup]{by} >> [self:write]{path, format:\"json\"}` 의 첫 저장이 이것으로 선다). spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "path": "Text",
+       "content": "Text"
+      },
+      "required": [
+       "path",
+       "content"
+      ],
+      "pipe_input": "content",
+      "write_resources": {
+       "file": "path"
+      },
+      "result": "Record",
+      "effects": [
+       "write_external"
+      ],
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": ""
+      },
+      "nondeterministic": true
+     },
+     "operations": {},
+     "observed_returns": {
+      "self:write": {
+       "kind": "scalar",
+       "keys": [
+        "path",
+        "size",
+        "chars"
+       ],
+       "observed": "2026-09-28",
+       "source": "usage"
+      }
+     },
+     "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."
+    }
+   },
+   {
+    "action": "table:sort",
+    "definition": {
+     "description": "통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, descending 옵션).",
+     "group": "transform",
+     "runs_on": "anywhere",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "items": "List<Record>",
+       "by": "Text",
+       "descending": "Bool"
+      },
+      "required": [
+       "items",
+       "by"
+      ],
+      "pipe_input": "items",
+      "result": "List<Record>",
+      "effects": [
+       "pure"
+      ],
+      "nondeterministic": false,
+      "adapter": {
+       "protocol": "core-table/2",
+       "operation": "sort"
+      },
+      "aliases": {
+       "desc": "descending"
+      }
+     },
+     "operations": {}
+    }
+   }
+  ],
+  "executed": false
+ }
+}

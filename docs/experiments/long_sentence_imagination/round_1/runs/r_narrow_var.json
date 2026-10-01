@@ -1,0 +1,56 @@
+{
+ "request": {
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI1_trainer",
+  "task_id": "LSI1_task"
+ },
+ "code_file": null,
+ "elapsed_s": 0.27,
+ "response": {
+  "success": false,
+  "ok": false,
+  "status": "invalid",
+  "error": "실행 전 검사에서 거절했습니다: 보간에는 Text·Number·Bool만 사용할 수 있습니다. (FORMAT_TYPE)",
+  "issues": [
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool만 사용할 수 있습니다.",
+    "source_span": {
+     "source_hash": "fdb06b8dcd90d7174fa25e52e7c4fd8b691be2a8f9ab19281d6b7906b8a64823",
+     "start": 107,
+     "end": 109,
+     "line": 3,
+     "column": 67
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "fdb06b8dcd90d7174fa25e52e7c4fd8b691be2a8f9ab19281d6b7906b8a64823",
+     "start": 107,
+     "end": 109,
+     "line": 3,
+     "column": 67,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 69,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   }
+  ],
+  "warnings": [],
+  "evidence_summary": {
+   "events": 0,
+   "source_complete": null,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "guards_count": 0,
+  "response_chars": 2874,
+  "guards_chars": 2
+ }
+}

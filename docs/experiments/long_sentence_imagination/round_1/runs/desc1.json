@@ -1,0 +1,197 @@
+{
+ "request": {
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI1_trainer",
+  "task_id": "LSI1_task",
+  "describe": [
+   "self:read",
+   "self:write",
+   "self:list"
+  ]
+ },
+ "code_file": null,
+ "elapsed_s": 0.27,
+ "response": {
+  "actions": [
+   {
+    "action": "self:read",
+    "definition": {
+     "description": "파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).",
+     "group": "file",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "path": "Text",
+       "offset": "Number",
+       "limit": "Number",
+       "format": "Text",
+       "pages": "Text",
+       "tables": "Bool",
+       "sheet": "Text",
+       "max_rows": "Number",
+       "max_blocks": "Number",
+       "extract_images": "Bool",
+       "numbered": "Bool",
+       "tail": "Number",
+       "start_line": "Number",
+       "end_line": "Number"
+      },
+      "required": [
+       "path"
+      ],
+      "pipe_input": "path",
+      "result": {
+       "text": "Text",
+       "blocks": "List<Record>",
+       "data": "Record"
+      },
+      "effects": [
+       "read_external"
+      ],
+      "adapter": {
+       "protocol": "document-value/1",
+       "fixed_params": {
+        "blocks": true
+       },
+       "value_path": "/value",
+       "attachments": [
+        "path",
+        "total_lines",
+        "start_line",
+        "end_line"
+       ]
+      },
+      "nondeterministic": true,
+      "aliases": {
+       "start": "offset"
+      }
+     },
+     "operations": {},
+     "observed_returns": {
+      "self:read": {
+       "kind": "scalar",
+       "keys": [
+        "version",
+        "run",
+        "config",
+        "root",
+        "snapshot",
+        "snapshot_hash",
+        "phase",
+        "start_output",
+        "receipts",
+        "queries",
+        "search",
+        "metadata"
+       ],
+       "observed": "2026-09-23",
+       "source": "usage"
+      }
+     },
+     "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."
+    }
+   },
+   {
+    "action": "self:write",
+    "definition": {
+     "description": "텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(message 있으면 산문, 없으면 JSON). format:\"json\" 이면 items와 명시된 원문 본문을 함께 JSON으로 보존. spill:true 면 봉투에 참조(ref)만.",
+     "group": "file",
+     "target_description": "쓸 파일 경로 + content. 상대경로는 현재 프로젝트 기준(시스템 AI는 data/일 수 있음). 원장과 공유할 파일은 ~workspace/ 접두 또는 반환된 절대경로를 쓴다. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. 파이프 싱크의 모양 — 통화에 message(산문)가 있으면 그 산문을, 없으면 JSON 을 쓴다(정직 표지·_메타는 파일에서 빼고 excluded_meta 로 신고). format:\"json\" = 통화 보존 스위치 — items/count와 명시된 원문(transcript/text/content), 출처·언어·시간 정보를 함께 저장한다. saved_to_file 원문은 전문을 읽어 넣으므로 저장 뒤 캐시가 삭제돼도 다시 struct에 전달할 수 있다. 원문 파일이 없으면 실패한다. 실행 진단은 제외한다(원장 누적 관용구 `$본 = [self:read]{path}` → `$본.items & (새 조회 >> …) >> [table:union] >> [table:dedup]{by} >> [self:write]{path, format:\"json\"}` 의 첫 저장이 이것으로 선다). spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "path": "Text",
+       "content": "Text"
+      },
+      "required": [
+       "path",
+       "content"
+      ],
+      "pipe_input": "content",
+      "write_resources": {
+       "file": "path"
+      },
+      "result": "Record",
+      "effects": [
+       "write_external"
+      ],
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": ""
+      },
+      "nondeterministic": true
+     },
+     "operations": {},
+     "observed_returns": {
+      "self:write": {
+       "kind": "scalar",
+       "keys": [
+        "path",
+        "size",
+        "chars"
+       ],
+       "observed": "2026-09-28",
+       "source": "usage"
+      }
+     },
+     "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."
+    }
+   },
+   {
+    "action": "self:list",
+    "definition": {
+     "description": "디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).",
+     "group": "file",
+     "target_description": "조회할 디렉토리 경로. pattern으로 이름 선별(한글 NFC/NFD 정규화·대소문자 무시, 원래 경로 보존). items 필드는 file_find와 같은 name/path/size/mtime/dir/is_dir이며 title/meta/url도 유지한다. 하위 폴더까지 찾으려면 file_find를 쓴다.",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "path": "Text",
+       "pattern": "Text"
+      },
+      "required": [
+       "path"
+      ],
+      "pipe_input": "path",
+      "result": "List<Record>",
+      "effects": [
+       "read_external"
+      ],
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": "/items",
+       "attachments": [
+        "total",
+        "pattern"
+       ]
+      },
+      "nondeterministic": true
+     },
+     "operations": {},
+     "observed_returns": {
+      "self:list": {
+       "kind": "items",
+       "keys": [
+        "title",
+        "meta",
+        "summary",
+        "url",
+        "name",
+        "size",
+        "mtime",
+        "path",
+        "dir",
+        "is_dir"
+       ],
+       "observed": "2026-09-29",
+       "source": "fixture"
+      }
+     },
+     "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."
+    }
+   }
+  ]
+ }
+}

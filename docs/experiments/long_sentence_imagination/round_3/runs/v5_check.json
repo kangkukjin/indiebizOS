@@ -1,0 +1,797 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 긴문장 3회차 — 세계 지리 수치 논쟁 학습 자료 (v5: 모델 추출 collect+1회 재시도, 실패 원천 명시)\n# inputs: 원천[{주제,언어,url,키워드[]}], 주제[{주제,질문}], 문단상한, 출력\n\n# 원천 하나를 읽어 키워드 문단만 남긴다. 실패는 원천 행에 남긴다(빈 성공으로 숨기지 않음).\n[def:원천읽기]($원천,$상한) {\n  [try] {\n    $문서 = [sense:crawl]{url:$원천.url}\n    $찾음 = $문서.items >> [fn:본문에서찾기]{패턴:join(\"|\",$원천.키워드),문맥:0,개수:1000}\n    $적중 = $찾음.items\n    $사용 = $적중[:$상한]\n    return {주제:$원천.주제,언어:$원천.언어,url:$원천.url,ok:true,적중:len($적중),사용:len($사용),\n            문단:$사용 >> [table:select]{columns:[\"paragraph_index\",\"text\"]}}\n  } [catch] {\n    return {주제:$원천.주제,언어:$원천.언어,url:$원천.url,ok:false,이유:$error.message,적중:0,사용:0,문단:[]}\n  }\n}\n\n# 한 원천의 문단들에서 모델로 수치 주장을 뽑는다. 원문에 없는 값은 버리고 따로 센다.\n[def:주장추출]($읽음,$질문) {\n  [if:not $읽음.ok or len($읽음.문단)==0] { return {주제:$읽음.주제,언어:$읽음.언어,주장:[],버림:[]} }\n  $추출 = $읽음.문단 >> [table:ai]{\n    instruction:f\"각 문단에서 '${질문}'에 해당하는 수치 주장만 찾아라. 다른 대상의 수치는 무시. 값은 문단 원문 표기 그대로(쉼표 포함) 옮긴다. 없으면 빈 목록.\",\n    schema:\"주장(목록, 각 원소 {값:원문 표기 숫자 문자열, 단위:m|km|ft|mi, 대상:무엇의 수치인지 짧게, 측정:측정 연도·기관 또는 null})\",\n    input_fields:[\"paragraph_index\",\"text\"],\n    preserve_rows:true\n  }\n  $행 = $추출.items >> [table:each]{mode:\"flat_map\"} {\n    $p = $it\n    $p.주장 >> [table:each] {\n      return {주제:$읽음.주제,언어:$읽음.언어,url:$읽음.url,문단:$p.paragraph_index,\n              값:$it.값,단위:$it.단위,대상:$it.대상,측정:$it.측정,원문있음:contains($p.text,$it.값)}\n    }\n  }\n  return {주제:$읽음.주제,언어:$읽음.언어,주장:$행 >> [table:filter]{where:($r)=>$r.원문있음},\n          버림:$행 >> [table:filter]{where:($r)=>not $r.원문있음}}\n}\n\n# 표기 숫자를 미터로. 해석 불가는 null.\n[def:미터로]($값,$단위) {\n  $수 = number(replace($값,\",\",\"\"))\n  $배 = $단위 == \"km\" ? 1000 : $단위 == \"mi\" ? 1609.344 : $단위 == \"ft\" ? 0.3048 : 1\n  return $수 * $배\n}\n\n# 주제 안의 값들을 0.1% 이내면 같은 값으로 묶는다.\n[def:값묶기]($주장들) {\n  $정렬 = sorted($주장들,\"미터\")\n  return reduce($정렬,[],($묶음,$r)=>len($묶음) > 0 and abs($r.미터 - $묶음[-1].대표) <= $묶음[-1].대표 * 0.001 ? $묶음[:-1] + [{대표:$묶음[-1].대표,근거:$묶음[-1].근거 + [$r]}] : $묶음 + [{대표:$r.미터,근거:[$r]}])\n}\n\n[def:주제정리]($주제,$읽음목록,$주장목록) {\n  $원천들 = $읽음목록 >> [table:filter]{where:($r)=>$r.주제 == $주제.주제}\n  $내주장 = $주장목록 >> [table:filter]{where:($r)=>$r.주제 == $주제.주제}\n  $수치 = $내주장 >> [table:each] { return {**$it,미터:[fn:미터로]{값:$it.값,단위:$it.단위}} }\n  $묶음 = [fn:값묶기]{주장들:$수치}\n  $읽은것 = $원천들 >> [table:filter]{where:($r)=>$r.ok}\n  return {주제:$주제.주제,질문:$주제.질문,\n          원천수:len($읽은것),원천전체:len($원천들),\n          묶음:$묶음,상충후보:len($묶음) > 1}\n}\n\n[def:묶음표]($묶음) {\n  $줄 = $묶음 >> [table:each] {\n    $g = $it\n    $출처 = $g.근거 >> [table:each] { return f\"${$it.언어} ¶${$it.문단} `${$it.값} ${$it.단위}` (${$it.대상}${$it.측정 == null ? '' : ', ' + $it.측정})\" }\n    return f\"| ${round($g.대표)} m | ${join('<br>',$출처)} |\"\n  }\n  return \"| 값(미터 환산) | 근거(언어·문단·원문 표기) |\\n| --- | --- |\\n\" + join(\"\\n\",$줄)\n}\n\n[def:문서]($정리,$해설,$읽음,$버림,$추출실패) {\n  $절 = $정리 >> [table:each] {\n    $t = $it\n    $hs = $해설 >> [table:filter]{where:($r)=>$r.주제 == $t.주제}\n    $h = $hs[0]\n    $표 = [fn:묶음표]{묶음:$t.묶음}\n    return f\"## ${$t.주제}\\n질문: ${$t.질문} · 원천 ${$t.원천수}/${$t.원천전체}\\n\\n${$표}\\n\\n**판정: ${$h.판정}** — ${$h.해설}\\n\"\n  }\n  $실패 = $읽음 >> [table:filter]{where:($r)=>not $r.ok}\n  $자름 = $읽음 >> [table:filter]{where:($r)=>$r.ok and $r.적중 > $r.사용}\n  $m1 = $실패 >> [table:each] { return f\"- 읽지 못함: ${$it.주제} ${$it.언어} ${$it.url} — ${$it.이유}\" }\n  $m2 = $자름 >> [table:each] { return f\"- 문단 상한: ${$it.주제} ${$it.언어} 적중 ${$it.적중} 중 ${$it.사용}만 사용\" }\n  $m3 = $버림 >> [table:each] { return f\"- 원문 불일치로 버린 모델 추출: ${$it.주제} ${$it.언어} ¶${$it.문단} `${$it.값}`\" }\n  $m4 = $추출실패 >> [table:each] { return f\"- 모델 추출 실패: ${$it.주제} ${$it.언어} — ${$it.추출실패}\" }\n  $미확인 = $m1 + $m4 + $m2 + $m3\n  $원천표 = $읽음 >> [table:each] { return f\"- ${$it.주제} ${$it.언어}: ${$it.url} (${$it.ok ? '읽음' : '실패'})\" }\n  return f\"# 세계 지리 수치 논쟁 학습 자료\\n\\n${join('\\n',$절)}\\n## 확인 못 한 부분\\n${len($미확인)==0 ? '- 없음' : join('\\n',$미확인)}\\n\\n## 원천\\n${join('\\n',$원천표)}\\n\"\n}\n\n# ── 최상위 ──\n$읽음 = $원천 >> [table:each]{parallel:6} { [fn:원천읽기]{원천:$it,상한:$문단상한} }\n$질문들 = $읽음 >> [table:each] {\n  $qs = $주제 >> [table:filter]{where:($t)=>$t.주제 == $it.주제}\n  return $qs[0].질문\n}\n$첫추출 = $읽음 >> [table:each]{parallel:6,on_error:\"collect\"} { [fn:주장추출]{읽음:$it,질문:$질문들[$i]} }\n$추출 = $읽음 >> [table:each] {\n  [if:is_ok($첫추출[$i])] { return unwrap($첫추출[$i]) }\n  [else] {\n    [try] { return [fn:주장추출]{읽음:$it,질문:$질문들[$i]} }\n    [catch] { return {주제:$it.주제,언어:$it.언어,주장:[],버림:[],추출실패:f\"1차: ${error_of($첫추출[$i]).message} / 재시도: ${$error.message}\"} }\n  }\n}\n$추출실패 = $추출 >> [table:filter]{where:($r)=>has($r,\"추출실패\")}\n$주장 = $추출 >> [table:each]{mode:\"flat_map\"} { return $it.주장 }\n$버림 = $추출 >> [table:each]{mode:\"flat_map\"} { return $it.버림 }\n$정리 = $주제 >> [table:each] { [fn:주제정리]{주제:$it,읽음목록:$읽음,주장목록:$주장} }\n$해설입력 = $정리 >> [table:each] {\n  $t = $it\n  return {주제:$t.주제,질문:$t.질문,값목록:$t.묶음 >> [table:each] { return {미터:round($it.대표),근거:$it.근거 >> [table:select]{columns:[\"언어\",\"값\",\"단위\",\"대상\",\"측정\"]}} }}\n}\n$해설 = $해설입력 >> [table:ai]{\n  instruction:\"각 주제의 값목록(서로 다른 값 묶음)을 보고 판정하라. 값이 하나면 '일치'. 여럿이면 대상·측정 설명을 근거로 '정의 차이'(재는 대상·범위가 다름)/'측정 시기 차이'/'진짜 불일치'/'혼합' 중 하나. 해설은 2~3문장, 주어진 값만 인용하고 새 수치를 만들지 마라.\",\n  schema:\"판정(일치|정의 차이|측정 시기 차이|진짜 불일치|혼합), 해설(문자열)\",\n  preserve_rows:true\n}\n$본문 = [fn:문서]{정리:$정리,해설:$해설.items,읽음:$읽음,버림:$버림,추출실패:$추출실패}\n$저장 = [self:write]{path:$출력,content:$본문}\n$확인 = [self:read]{path:$출력}\nreturn {\n  저장일치:$확인.text == $본문,\n  원천:$읽음 >> [table:select]{columns:[\"주제\",\"언어\",\"ok\",\"적중\",\"사용\"]},\n  주장수:len($주장),버림수:len($버림),추출실패:$추출실패 >> [table:select]{columns:[\"주제\",\"언어\",\"추출실패\"]},\n  주제:$정리 >> [table:each] { return {주제:$it.주제,묶음수:len($it.묶음),원천:f\"${$it.원천수}/${$it.원천전체}\"} },\n  판정:$해설.items >> [table:select]{columns:[\"주제\",\"판정\"]}\n}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task",
+  "check": true,
+  "inputs": {
+   "원천": [
+    {
+     "주제": "T1 에베레스트",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+     "키워드": [
+      "8,84",
+      "8,85",
+      "8848",
+      "8850"
+     ]
+    },
+    {
+     "주제": "T1 에베레스트",
+     "언어": "en",
+     "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+     "키워드": [
+      "8,84",
+      "8,85"
+     ]
+    },
+    {
+     "주제": "T2 만리장성",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/만리장성",
+     "키워드": [
+      "길이",
+      "\\d ?km",
+      "킬로미터"
+     ]
+    },
+    {
+     "주제": "T2 만리장성",
+     "언어": "en",
+     "url": "https://en.wikipedia.org/wiki/Great_Wall_of_China",
+     "키워드": [
+      "length",
+      "\\d ?km"
+     ]
+    },
+    {
+     "주제": "T3 나일강",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/나일강",
+     "키워드": [
+      "\\d ?km",
+      "길이",
+      "아마존"
+     ]
+    },
+    {
+     "주제": "T3 나일강",
+     "언어": "en",
+     "url": "https://en.wikipedia.org/wiki/Nile",
+     "키워드": [
+      "\\d ?km",
+      "longest",
+      "Amazon"
+     ]
+    }
+   ],
+   "주제": [
+    {
+     "주제": "T1 에베레스트",
+     "질문": "에베레스트 산 정상의 해발 높이"
+    },
+    {
+     "주제": "T2 만리장성",
+     "질문": "만리장성(성벽)의 전체 길이 또는 특정 왕조 성벽의 길이"
+    },
+    {
+     "주제": "T3 나일강",
+     "질문": "나일강의 길이 및 아마존강 길이와의 최장 비교"
+    }
+   ],
+   "문단상한": 15,
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_3회차/out/study_notes.md"
+  }
+ },
+ "elapsed_s": 0.35,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: 추출실패. 선택 필드는 has/get을 쓰세요.",
+    "source_span": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 3465,
+     "end": 3473,
+     "line": 85,
+     "column": 78
+    },
+    "call_path": [
+     {
+      "function": "문서",
+      "call": {
+       "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+       "start": 5026,
+       "end": 5079,
+       "line": 118,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 118,
+       "end_column": 60,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+       "start": 2678,
+       "end": 3754,
+       "line": 72,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 89,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 3465,
+     "end": 3473,
+     "line": 85,
+     "column": 78,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 85,
+     "end_column": 86,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "MISSING_FIELD",
+    "severity": "error",
+    "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 119,
+  "guards_inner": 0,
+  "guards_omitted": 119,
+  "result_type": "{저장일치: Bool, 원천: List<{주제: Unknown, 언어: Unknown, ok: Unknown, 적중: Unknown, 사용: Unknown}>, 주장수: Number, 버림수: Number, 추출실패: List<{주제: Text, 언어: Text, 추출실패: Unknown}>, 주제: List<{주제: Text, 묶음수: Number, 원천: Text}>, 판정: List<{주제: Unknown, 판정: Unknown}>}",
+  "effects": [
+   "model",
+   "pure",
+   "read_external",
+   "unknown",
+   "write_external"
+  ],
+  "functions": {
+   "def:194:631": {
+    "name": "원천읽기",
+    "params": {
+     "원천": "{주제: Text, 언어: Text, url: Text, 키워드: List<Text>}",
+     "상한": "Number"
+    },
+    "required": [
+     "원천",
+     "상한"
+    ],
+    "pipe_input": "원천",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "unknown"
+    ],
+    "actions": [
+     "fn:본문에서찾기",
+     "sense:crawl",
+     "table:select"
+    ],
+    "source_hash": "dd7626211e7f58598062d7bf83f5748a2b8e8bc927fa1157d39cd2ecb83ae64c",
+    "result": "{주제: Text, 언어: Text, url: Text, ok: Bool, 이유: Unknown, 적중: Number, 사용: Number, 문단: List<Unknown>} | {주제: Text, 언어: Text, url: Text, ok: Bool, 적중: Number, 사용: Number, 문단: List<Record>}",
+    "specializations": [
+     {
+      "params": {
+       "원천": "{주제: Text, 언어: Text, url: Text, 키워드: List<Text>}",
+       "상한": "Number"
+      },
+      "result": "{주제: Text, 언어: Text, url: Text, ok: Bool, 이유: Unknown, 적중: Number, 사용: Number, 문단: List<Unknown>} | {주제: Text, 언어: Text, url: Text, ok: Bool, 적중: Number, 사용: Number, 문단: List<Record>}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 194,
+     "end": 631,
+     "line": 6,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 17,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:684:1482": {
+    "name": "주장추출",
+    "params": {
+     "읽음": "{주제: Text, 언어: Text, url: Text, ok: Bool, 이유: Unknown, 적중: Number, 사용: Number, 문단: List<Unknown>} | {주제: Text, 언어: Text, url: Text, ok: Bool, 적중: Number, 사용: Number, 문단: List<Record>}",
+     "질문": "Text"
+    },
+    "required": [
+     "읽음",
+     "질문"
+    ],
+    "pipe_input": "읽음",
+    "default_expressions": {},
+    "effects": [
+     "model"
+    ],
+    "actions": [
+     "table:ai",
+     "table:filter"
+    ],
+    "source_hash": "55c2c4c5c8df2a7abc731e7427876cbb666b289b3760ceccb87d148a1bb27211",
+    "result": "{주제: Text, 언어: Text, 주장: List<Unknown>, 버림: List<Unknown>}",
+    "specializations": [
+     {
+      "params": {
+       "읽음": "{주제: Text, 언어: Text, url: Text, ok: Bool, 이유: Unknown, 적중: Number, 사용: Number, 문단: List<Unknown>} | {주제: Text, 언어: Text, url: Text, ok: Bool, 적중: Number, 사용: Number, 문단: List<Record>}",
+       "질문": "Text"
+      },
+      "result": "{주제: Text, 언어: Text, 주장: List<Unknown>, 버림: List<Unknown>}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 684,
+     "end": 1482,
+     "line": 20,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 37,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1511:1661": {
+    "name": "미터로",
+    "params": {
+     "값": "Unknown",
+     "단위": "Unknown"
+    },
+    "required": [
+     "값",
+     "단위"
+    ],
+    "pipe_input": "값",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "c7efe41c9fb840dcedc7e55f35aeae3ba9caa436a822a2a7b19a1aa1d6fcc59b",
+    "result": "Number",
+    "specializations": [
+     {
+      "params": {
+       "값": "Unknown",
+       "단위": "Unknown"
+      },
+      "result": "Number"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 1511,
+     "end": 1661,
+     "line": 40,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 44,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1696:1919": {
+    "name": "값묶기",
+    "params": {
+     "주장들": "List<{미터: Number}>"
+    },
+    "required": [
+     "주장들"
+    ],
+    "pipe_input": "주장들",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "bded6500f209592b6915080cc8792767e461439165ea41c06812dcfd0ac4de15",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "주장들": "List<{미터: Number}>"
+      },
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 1696,
+     "end": 1919,
+     "line": 47,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 50,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1921:2339": {
+    "name": "주제정리",
+    "params": {
+     "주제": "{주제: Text, 질문: Text}",
+     "읽음목록": "List<{주제: Text, 언어: Text, url: Text, ok: Bool, 이유: Unknown, 적중: Number, 사용: Number, 문단: List<Unknown>} | {주제: Text, 언어: Text, url: Text, ok: Bool, 적중: Number, 사용: Number, 문단: List<Record>}>",
+     "주장목록": "List<Unknown>"
+    },
+    "required": [
+     "주제",
+     "읽음목록",
+     "주장목록"
+    ],
+    "pipe_input": "주제",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "b779a15e843e26a266688422118ebaf1a7c397720bac9904b68073c3ee88881a",
+    "result": "{주제: Text, 질문: Text, 원천수: Number, 원천전체: Number, 묶음: Unknown, 상충후보: Bool}",
+    "specializations": [
+     {
+      "params": {
+       "주제": "{주제: Text, 질문: Text}",
+       "읽음목록": "List<{주제: Text, 언어: Text, url: Text, ok: Bool, 이유: Unknown, 적중: Number, 사용: Number, 문단: List<Unknown>} | {주제: Text, 언어: Text, url: Text, ok: Bool, 적중: Number, 사용: Number, 문단: List<Record>}>",
+       "주장목록": "List<Unknown>"
+      },
+      "result": "{주제: Text, 질문: Text, 원천수: Number, 원천전체: Number, 묶음: Unknown, 상충후보: Bool}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 1921,
+     "end": 2339,
+     "line": 52,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 61,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:2341:2676": {
+    "name": "묶음표",
+    "params": {
+     "묶음": "Unknown"
+    },
+    "required": [
+     "묶음"
+    ],
+    "pipe_input": "묶음",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "201088b8cf8adb51a63b91936284e9fabd79711d9f6bc1152bae25f13602f9fb",
+    "result": "Text",
+    "specializations": [
+     {
+      "params": {
+       "묶음": "Unknown"
+      },
+      "result": "Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 2341,
+     "end": 2676,
+     "line": 63,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 70,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:2678:3754": {
+    "name": "문서",
+    "params": {
+     "정리": "List<{주제: Text, 질문: Text, 원천수: Number, 원천전체: Number, 묶음: Unknown, 상충후보: Bool}>",
+     "해설": "List<{주제: Unknown, 질문: Unknown, 값목록: Unknown, 판정: Unknown, 해설: Unknown}>",
+     "읽음": "List<{주제: Text, 언어: Text, url: Text, ok: Bool, 이유: Unknown, 적중: Number, 사용: Number, 문단: List<Unknown>} | {주제: Text, 언어: Text, url: Text, ok: Bool, 적중: Number, 사용: Number, 문단: List<Record>}>",
+     "버림": "List<Unknown>",
+     "추출실패": "List<{버림: List<Unknown>, 언어: Text, 주장: List<Unknown>, 주제: Text}>"
+    },
+    "required": [
+     "정리",
+     "해설",
+     "읽음",
+     "버림",
+     "추출실패"
+    ],
+    "pipe_input": "정리",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "fac46eea4bb0dbd377f596c78b5aac56ba9f4024237e9597814f9c2f93efa687",
+    "result": "Text",
+    "specializations": [
+     {
+      "params": {
+       "정리": "List<{주제: Text, 질문: Text, 원천수: Number, 원천전체: Number, 묶음: Unknown, 상충후보: Bool}>",
+       "해설": "List<{주제: Unknown, 질문: Unknown, 값목록: Unknown, 판정: Unknown, 해설: Unknown}>",
+       "읽음": "List<{주제: Text, 언어: Text, url: Text, ok: Bool, 이유: Unknown, 적중: Number, 사용: Number, 문단: List<Unknown>} | {주제: Text, 언어: Text, url: Text, ok: Bool, 적중: Number, 사용: Number, 문단: List<Record>}>",
+       "버림": "List<Unknown>",
+       "추출실패": "List<{버림: List<Unknown>, 언어: Text, 주장: List<Unknown>, 주제: Text}>"
+      },
+      "result": "Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 2678,
+     "end": 3754,
+     "line": 72,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 89,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "c4f84b461903aad38d3a59b206746ba739b332487c2aa00549d987e5c01412c1",
+  "dependencies": {
+   "source": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "원천": "List<{주제: Text, 언어: Text, url: Text, 키워드: List<Text>}>",
+    "주제": "List<{주제: Text, 질문: Text}>",
+    "문단상한": "Number",
+    "출력": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 5482
+    }
+   ],
+   "contracts": "cb23508e1cbaac1876e7b7c83bec714c45a47a790366a2869b2fab184907e075",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "739fb256d4c1cd624d348cfd60cdbd0894014fc5ed49ce5a12409a466f5bd6e9",
+   "core": "4a416e63dec7848249623d7e48af7ee81077e9411f596b7a53b4f8f4e4cedfd0"
+  },
+  "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 286,
+      "end": 332,
+      "line": 9,
+      "column": 24,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 9,
+      "end_column": 70,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 1111,
+      "end": 1344,
+      "line": 28,
+      "column": 21,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 34,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 1169,
+      "end": 1340,
+      "line": 30,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 33,
+      "end_column": 6,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 2091,
+      "end": 2153,
+      "line": 55,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 55,
+      "end_column": 79,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 4637,
+      "end": 4742,
+      "line": 111,
+      "column": 42,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 111,
+      "end_column": 147,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 2372,
+      "end": 2599,
+      "line": 64,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 68,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 2419,
+      "end": 2537,
+      "line": 66,
+      "column": 20,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 66,
+      "end_column": 138,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 3105,
+      "end": 3183,
+      "line": 82,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 82,
+      "end_column": 94,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 3199,
+      "end": 3283,
+      "line": 83,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 83,
+      "end_column": 100,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 3299,
+      "end": 3387,
+      "line": 84,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 84,
+      "end_column": 104,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 3405,
+      "end": 3477,
+      "line": 85,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 85,
+      "end_column": 90,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [
+    {
+     "rule": "repeated_ai_batch",
+     "code": "repeated_ai_batch",
+     "severity": "warning",
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 805,
+      "end": 1090,
+      "line": 22,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 27,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "message": "반복 행에 의존하지 않는 목록 전체를 AI 호출에 반복 전달합니다.",
+     "hint": "행별 판단이면 현재 행을 전달하고, 전체 비교 의도라면 이 경고를 수용하세요.",
+     "facts": {
+      "argument": "input_fields",
+      "input_count": 2,
+      "repeat_count": 6,
+      "loop": "call:3960:4037"
+     }
+    },
+    {
+     "rule": "repeated_ai_batch",
+     "code": "repeated_ai_batch",
+     "severity": "warning",
+     "location": {
+      "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+      "start": 805,
+      "end": 1090,
+      "line": 22,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 27,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "message": "반복 행에 의존하지 않는 목록 전체를 AI 호출에 반복 전달합니다.",
+     "hint": "행별 판단이면 현재 행을 전달하고, 전체 비교 의도라면 이 경고를 수용하세요.",
+     "facts": {
+      "argument": "input_fields",
+      "input_count": 2,
+      "repeat_count": 6,
+      "loop": "call:4051:4308"
+     }
+    }
+   ],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [
+   {
+    "rule": "repeated_ai_batch",
+    "code": "repeated_ai_batch",
+    "severity": "warning",
+    "location": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 805,
+     "end": 1090,
+     "line": 22,
+     "column": 19,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 27,
+     "end_column": 4,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "message": "반복 행에 의존하지 않는 목록 전체를 AI 호출에 반복 전달합니다.",
+    "hint": "행별 판단이면 현재 행을 전달하고, 전체 비교 의도라면 이 경고를 수용하세요.",
+    "facts": {
+     "argument": "input_fields",
+     "input_count": 2,
+     "repeat_count": 6,
+     "loop": "call:3960:4037"
+    }
+   },
+   {
+    "rule": "repeated_ai_batch",
+    "code": "repeated_ai_batch",
+    "severity": "warning",
+    "location": {
+     "source_hash": "d63124312080bd0766e2c01f66c116d21a3d6507941a1d3c54b31ed5af22bdd7",
+     "start": 805,
+     "end": 1090,
+     "line": 22,
+     "column": 19,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 27,
+     "end_column": 4,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "message": "반복 행에 의존하지 않는 목록 전체를 AI 호출에 반복 전달합니다.",
+    "hint": "행별 판단이면 현재 행을 전달하고, 전체 비교 의도라면 이 경고를 수용하세요.",
+    "facts": {
+     "argument": "input_fields",
+     "input_count": 2,
+     "repeat_count": 6,
+     "loop": "call:4051:4308"
+    }
+   }
+  ],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 119,
+   "informative": 106
+  },
+  "guards_ref": {
+   "id": "d04cf788605e1e85085c40af245c9f7f99e25766701d2941a262f868bd456b76",
+   "chars": 157065,
+   "read_args": {
+    "id": "d04cf788605e1e85085c40af245c9f7f99e25766701d2941a262f868bd456b76",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

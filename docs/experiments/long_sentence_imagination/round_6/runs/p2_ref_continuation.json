@@ -1,0 +1,60 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task",
+  "read_result": {
+   "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+   "path": [
+    "continuation"
+   ],
+   "offset": 0,
+   "limit": 200
+  }
+ },
+ "elapsed_s": 0.03,
+ "response": {
+  "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+  "offset": 0,
+  "chars": 445,
+  "text": "{\n  \"reuse_args\": {\n    \"reuse\": {\n      \"run_id\": \"717f985365004b4f8966d821edc2c450\"\n    }\n  },\n  \"read_calls\": 8,\n  \"model_calls\": 1,\n  \"state_change_possible\": false,\n  \"hint\": \"프로그램 수정 뒤 이전 읽기·모델 ",
+  "integrity": "verified",
+  "source_chars": 995843,
+  "path": [
+   "continuation"
+  ],
+  "next_offset": 200,
+  "next_read": {
+   "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+   "offset": 200,
+   "limit": 200,
+   "path": [
+    "continuation"
+   ]
+  },
+  "read_scope": {
+   "path": [
+    "continuation"
+   ],
+   "start": 0,
+   "end": 200,
+   "total_chars": 445,
+   "complete": false,
+   "format": "json"
+  },
+  "_display": {
+   "max_chars": 200
+  },
+  "input_args": {
+   "입력": {
+    "$ref": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+    "path": [
+     "continuation"
+    ]
+   }
+  }
+ }
+}

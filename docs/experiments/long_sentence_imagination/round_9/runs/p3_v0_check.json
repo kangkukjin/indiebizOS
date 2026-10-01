@@ -1,0 +1,232 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 9회차 P3 v0 렌더·저장 — inputs: 분석={$ref P2}, 보고서(md 경로), 목록(json 경로)\n$파일줄 = $분석.파일상태 >> [table:each] { return f\"| ${$it.파일} | ${$it.상태} | ${$it.행수} | ${$it.오류 == null ? '' : $it.오류} |\" }\n$종류줄 = $분석.종류별 >> [table:each] { return f\"| ${$it.종류} | ${$it.건수} |\" }\n$택배줄 = $분석.택배사표 >> [table:each] { return f\"| ${$it.택배사} | ${$it.도착} | ${$it.지연} | ${$it.지연율}% |\" }\n$지역줄 = $분석.지역표 >> [table:each] { return f\"| ${$it.지역} | ${$it.도착} | ${$it.지연} | ${$it.지연율}% |\" }\n$유형줄 = $분석.유형표 >> [table:each] { return f\"| ${$it.유형} | ${$it.건수} |\" }\n$사유줄 = $분석.사유유형 >> [table:each] { return f\"- ${$it.사유} → ${$it.유형} (AI)\" }\n$월줄 = $분석.월표 >> [table:each] { return f\"| ${$it.월} | ${$it.주문수} | ${$it.매출} | ${$it.반품} | ${$it.반품률 == null ? '-' : text($it.반품률)}% |\" }\n$문제줄 = $분석.문제 >> [table:each] { return f\"- [${$it.종류}] ${get($it,'주문번호',get($it,'파일',''))} — ${$it.근거}${get($it,'단서',null) == null ? '' : ' (' + get($it,'단서','') + ')'}\" }\n$단서문 = $분석.배송단서 == null ? \"\" : f\"\\n> 주의: ${$분석.배송단서}. '배송 기록 없음'·지연율·분실 의심은 읽은 택배사 기록만으로 계산했다.\\n\"\n$보고 = f\"# 2025년 상반기 주문·배송·반품 대사 보고서\\n\\n- 주문 ${$분석.주문수}건(취소 ${$분석.취소수}건), 매출(취소 제외) ${$분석.총매출}원\\n- 도착한 배송 ${$분석.도착수}건 중 지연 ${$분석.지연건수}건, 도착 기록 없는 배송 ${$분석.미도착수}건\\n- 문제 ${len($분석.문제)}건\\n${$단서문}\\n## 읽은 파일\\n| 파일 | 상태 | 행수 | 오류 |\\n| --- | --- | --- | --- |\\n${join('\\n',$파일줄)}\\n\\n## 문제 요약\\n| 종류 | 건수 |\\n| --- | --- |\\n${join('\\n',$종류줄)}\\n\\n## 배송 지연율 — 택배사별\\n| 택배사 | 도착 | 지연 | 지연율 |\\n| --- | --- | --- | --- |\\n${join('\\n',$택배줄)}\\n\\n## 배송 지연율 — 지역별\\n| 지역 | 도착 | 지연 | 지연율 |\\n| --- | --- | --- | --- |\\n${join('\\n',$지역줄)}\\n\\n## 월별 주문·매출·반품률\\n| 월 | 주문 수 | 매출(취소 제외) | 반품 | 반품률 |\\n| --- | --- | --- | --- | --- |\\n${join('\\n',$월줄)}\\n\\n## 반품 사유 유형 (AI 가 묶음)\\n| 유형 | 건수 |\\n| --- | --- |\\n${join('\\n',$유형줄)}\\n\\n문장별 AI 판정:\\n${join('\\n',$사유줄)}\\n\\n## 문제 목록\\n${len($문제줄) == 0 ? '- 없음' : join('\\n',$문제줄)}\\n\"\n$목록본 = json({문제수:len($분석.문제),종류별:$분석.종류별,단서:$분석.배송단서,문제:$분석.문제})\n$쓰기 = [self:write]{path:$보고서,content:$보고} & [self:write]{path:$목록,content:$목록본}\n$재읽기 = [self:read]{path:$보고서} & [self:read]{path:$목록}\nreturn {보고일치:$재읽기[0].text == $보고,목록일치:$재읽기[1].text == $목록본,보고글자:len($보고),문제수:len($분석.문제)}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI9_trainer",
+  "task_id": "LSI9_task",
+  "check": true,
+  "inputs": {
+   "분석": {
+    "$ref": "e8800a174eeeb78196a5dc60f19dda10655891f1a0ebdb3c5e1f158a54852b19"
+   },
+   "보고서": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_9/out/report.md",
+   "목록": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_9/out/issues.json"
+  }
+ },
+ "elapsed_s": 0.85,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 4,
+  "guards_inner": 0,
+  "guards_omitted": 4,
+  "result_type": "{보고일치: Bool, 목록일치: Bool, 보고글자: Number, 문제수: Number}",
+  "effects": [
+   "read_external",
+   "write_external"
+  ],
+  "functions": {},
+  "plan_hash": "bf58e92c8d6b2fba41b20a5785bb37449bc12ca228ed974792b235622b38f959",
+  "dependencies": {
+   "source": "db65a4ee918187f0fb44a4cc5ed73b1378e2462290b966ffaaa570db497c0f7a",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "분석": "{문제: List<{근거: Text, 종류: Text, 주문번호: Text}>, 종류별: List<{종류: Text, 건수: Number}>, 택배사표: List<{택배사: Text, 도착: Number, 지연: Number, 지연율: Number}>, 지역표: List<{지역: Text, 도착: Number, 지연: Number, 지연율: Number}>, 지연건수: Number, 도착수: Number, 미도착수: Number, 유형표: List<{유형: Text, 건수: Number}>, 월표: List<{월: Text, 주문수: Number, 매출: Number, 유효주문: Number, 반품: Number, 반품률: Number}>, 총매출: Number, 주문수: Number, 취소수: Number, 배송단서: Null, 파일상태: List<{파일: Text, 상태: Text, 행수: Number, 오류: Null}>, 사유유형: List<{사유: Text, 유형: Text, _ai: Bool}>}",
+    "보고서": "Text",
+    "목록": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 2099
+    }
+   ],
+   "contracts": "6769e84aaa5b136302a11ac12288f3527e75faaef36cd86c73727546c115302e",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "4043ed08260cb693dc9460438ba61fa46506ddf922a12230d21e7f27218b0c3d",
+   "core": "8a571d05ab34b82eb8d144e69a8ed3ed9c85f5f5589197e7244a0651393256d1"
+  },
+  "source_hash": "db65a4ee918187f0fb44a4cc5ed73b1378e2462290b966ffaaa570db497c0f7a",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "db65a4ee918187f0fb44a4cc5ed73b1378e2462290b966ffaaa570db497c0f7a",
+      "start": 101,
+      "end": 199,
+      "line": 3,
+      "column": 20,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 3,
+      "end_column": 118,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "db65a4ee918187f0fb44a4cc5ed73b1378e2462290b966ffaaa570db497c0f7a",
+      "start": 218,
+      "end": 270,
+      "line": 4,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 4,
+      "end_column": 71,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "db65a4ee918187f0fb44a4cc5ed73b1378e2462290b966ffaaa570db497c0f7a",
+      "start": 290,
+      "end": 369,
+      "line": 5,
+      "column": 20,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 5,
+      "end_column": 99,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "db65a4ee918187f0fb44a4cc5ed73b1378e2462290b966ffaaa570db497c0f7a",
+      "start": 388,
+      "end": 466,
+      "line": 6,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 6,
+      "end_column": 97,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "db65a4ee918187f0fb44a4cc5ed73b1378e2462290b966ffaaa570db497c0f7a",
+      "start": 485,
+      "end": 537,
+      "line": 7,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 7,
+      "end_column": 71,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "db65a4ee918187f0fb44a4cc5ed73b1378e2462290b966ffaaa570db497c0f7a",
+      "start": 557,
+      "end": 612,
+      "line": 8,
+      "column": 20,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 8,
+      "end_column": 75,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "db65a4ee918187f0fb44a4cc5ed73b1378e2462290b966ffaaa570db497c0f7a",
+      "start": 629,
+      "end": 749,
+      "line": 9,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 9,
+      "end_column": 137,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "db65a4ee918187f0fb44a4cc5ed73b1378e2462290b966ffaaa570db497c0f7a",
+      "start": 767,
+      "end": 921,
+      "line": 10,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 10,
+      "end_column": 172,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 4,
+   "informative": 2
+  },
+  "guards_ref": {
+   "id": "bf4306d50c764b1b34c309a1b061c92aae1d718168b28050acdf631595018d37",
+   "chars": 2621,
+   "read_args": {
+    "id": "bf4306d50c764b1b34c309a1b061c92aae1d718168b28050acdf631595018d37",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 100000,
+   "rows": 10000
+  },
+  "inputs_resolved": [
+   {
+    "name": "분석",
+    "id": "e8800a174eeeb78196a5dc60f19dda10655891f1a0ebdb3c5e1f158a54852b19",
+    "path": [
+     "value_wire"
+    ],
+    "evidence": {
+     "fingerprint": "572b8e068287befe8cfb50cd1884317668761e29a5e4c24b9ff5d65d204c34b5",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "f38a6d3a0dd9435e809d0368ddb45983"
+    },
+    "chars": 8201
+   }
+  ]
+ }
+}

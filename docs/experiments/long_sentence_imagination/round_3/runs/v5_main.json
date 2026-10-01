@@ -1,0 +1,1114 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 긴문장 3회차 — 세계 지리 수치 논쟁 학습 자료 (v5b: v5 + has 좁힘 없음 우회 get)\n# inputs: 원천[{주제,언어,url,키워드[]}], 주제[{주제,질문}], 문단상한, 출력\n\n# 원천 하나를 읽어 키워드 문단만 남긴다. 실패는 원천 행에 남긴다(빈 성공으로 숨기지 않음).\n[def:원천읽기]($원천,$상한) {\n  [try] {\n    $문서 = [sense:crawl]{url:$원천.url}\n    $찾음 = $문서.items >> [fn:본문에서찾기]{패턴:join(\"|\",$원천.키워드),문맥:0,개수:1000}\n    $적중 = $찾음.items\n    $사용 = $적중[:$상한]\n    return {주제:$원천.주제,언어:$원천.언어,url:$원천.url,ok:true,적중:len($적중),사용:len($사용),\n            문단:$사용 >> [table:select]{columns:[\"paragraph_index\",\"text\"]}}\n  } [catch] {\n    return {주제:$원천.주제,언어:$원천.언어,url:$원천.url,ok:false,이유:$error.message,적중:0,사용:0,문단:[]}\n  }\n}\n\n# 한 원천의 문단들에서 모델로 수치 주장을 뽑는다. 원문에 없는 값은 버리고 따로 센다.\n[def:주장추출]($읽음,$질문) {\n  [if:not $읽음.ok or len($읽음.문단)==0] { return {주제:$읽음.주제,언어:$읽음.언어,주장:[],버림:[]} }\n  $추출 = $읽음.문단 >> [table:ai]{\n    instruction:f\"각 문단에서 '${질문}'에 해당하는 수치 주장만 찾아라. 다른 대상의 수치는 무시. 값은 문단 원문 표기 그대로(쉼표 포함) 옮긴다. 없으면 빈 목록.\",\n    schema:\"주장(목록, 각 원소 {값:원문 표기 숫자 문자열, 단위:m|km|ft|mi, 대상:무엇의 수치인지 짧게, 측정:측정 연도·기관 또는 null})\",\n    input_fields:[\"paragraph_index\",\"text\"],\n    preserve_rows:true\n  }\n  $행 = $추출.items >> [table:each]{mode:\"flat_map\"} {\n    $p = $it\n    $p.주장 >> [table:each] {\n      return {주제:$읽음.주제,언어:$읽음.언어,url:$읽음.url,문단:$p.paragraph_index,\n              값:$it.값,단위:$it.단위,대상:$it.대상,측정:$it.측정,원문있음:contains($p.text,$it.값)}\n    }\n  }\n  return {주제:$읽음.주제,언어:$읽음.언어,주장:$행 >> [table:filter]{where:($r)=>$r.원문있음},\n          버림:$행 >> [table:filter]{where:($r)=>not $r.원문있음}}\n}\n\n# 표기 숫자를 미터로. 해석 불가는 null.\n[def:미터로]($값,$단위) {\n  $수 = number(replace($값,\",\",\"\"))\n  $배 = $단위 == \"km\" ? 1000 : $단위 == \"mi\" ? 1609.344 : $단위 == \"ft\" ? 0.3048 : 1\n  return $수 * $배\n}\n\n# 주제 안의 값들을 0.1% 이내면 같은 값으로 묶는다.\n[def:값묶기]($주장들) {\n  $정렬 = sorted($주장들,\"미터\")\n  return reduce($정렬,[],($묶음,$r)=>len($묶음) > 0 and abs($r.미터 - $묶음[-1].대표) <= $묶음[-1].대표 * 0.001 ? $묶음[:-1] + [{대표:$묶음[-1].대표,근거:$묶음[-1].근거 + [$r]}] : $묶음 + [{대표:$r.미터,근거:[$r]}])\n}\n\n[def:주제정리]($주제,$읽음목록,$주장목록) {\n  $원천들 = $읽음목록 >> [table:filter]{where:($r)=>$r.주제 == $주제.주제}\n  $내주장 = $주장목록 >> [table:filter]{where:($r)=>$r.주제 == $주제.주제}\n  $수치 = $내주장 >> [table:each] { return {**$it,미터:[fn:미터로]{값:$it.값,단위:$it.단위}} }\n  $묶음 = [fn:값묶기]{주장들:$수치}\n  $읽은것 = $원천들 >> [table:filter]{where:($r)=>$r.ok}\n  return {주제:$주제.주제,질문:$주제.질문,\n          원천수:len($읽은것),원천전체:len($원천들),\n          묶음:$묶음,상충후보:len($묶음) > 1}\n}\n\n[def:묶음표]($묶음) {\n  $줄 = $묶음 >> [table:each] {\n    $g = $it\n    $출처 = $g.근거 >> [table:each] { return f\"${$it.언어} ¶${$it.문단} `${$it.값} ${$it.단위}` (${$it.대상}${$it.측정 == null ? '' : ', ' + $it.측정})\" }\n    return f\"| ${round($g.대표)} m | ${join('<br>',$출처)} |\"\n  }\n  return \"| 값(미터 환산) | 근거(언어·문단·원문 표기) |\\n| --- | --- |\\n\" + join(\"\\n\",$줄)\n}\n\n[def:문서]($정리,$해설,$읽음,$버림,$추출실패) {\n  $절 = $정리 >> [table:each] {\n    $t = $it\n    $hs = $해설 >> [table:filter]{where:($r)=>$r.주제 == $t.주제}\n    $h = $hs[0]\n    $표 = [fn:묶음표]{묶음:$t.묶음}\n    return f\"## ${$t.주제}\\n질문: ${$t.질문} · 원천 ${$t.원천수}/${$t.원천전체}\\n\\n${$표}\\n\\n**판정: ${$h.판정}** — ${$h.해설}\\n\"\n  }\n  $실패 = $읽음 >> [table:filter]{where:($r)=>not $r.ok}\n  $자름 = $읽음 >> [table:filter]{where:($r)=>$r.ok and $r.적중 > $r.사용}\n  $m1 = $실패 >> [table:each] { return f\"- 읽지 못함: ${$it.주제} ${$it.언어} ${$it.url} — ${$it.이유}\" }\n  $m2 = $자름 >> [table:each] { return f\"- 문단 상한: ${$it.주제} ${$it.언어} 적중 ${$it.적중} 중 ${$it.사용}만 사용\" }\n  $m3 = $버림 >> [table:each] { return f\"- 원문 불일치로 버린 모델 추출: ${$it.주제} ${$it.언어} ¶${$it.문단} `${$it.값}`\" }\n  $m4 = $추출실패 >> [table:each] { return f\"- 모델 추출 실패: ${$it.주제} ${$it.언어} — ${get($it,'추출실패','')}\" }\n  $미확인 = $m1 + $m4 + $m2 + $m3\n  $원천표 = $읽음 >> [table:each] { return f\"- ${$it.주제} ${$it.언어}: ${$it.url} (${$it.ok ? '읽음' : '실패'})\" }\n  return f\"# 세계 지리 수치 논쟁 학습 자료\\n\\n${join('\\n',$절)}\\n## 확인 못 한 부분\\n${len($미확인)==0 ? '- 없음' : join('\\n',$미확인)}\\n\\n## 원천\\n${join('\\n',$원천표)}\\n\"\n}\n\n# ── 최상위 ──\n$읽음 = $원천 >> [table:each]{parallel:6} { [fn:원천읽기]{원천:$it,상한:$문단상한} }\n$질문들 = $읽음 >> [table:each] {\n  $qs = $주제 >> [table:filter]{where:($t)=>$t.주제 == $it.주제}\n  return $qs[0].질문\n}\n$첫추출 = $읽음 >> [table:each]{parallel:6,on_error:\"collect\"} { [fn:주장추출]{읽음:$it,질문:$질문들[$i]} }\n$추출 = $읽음 >> [table:each] {\n  [if:is_ok($첫추출[$i])] { return unwrap($첫추출[$i]) }\n  [else] {\n    [try] { return [fn:주장추출]{읽음:$it,질문:$질문들[$i]} }\n    [catch] { return {주제:$it.주제,언어:$it.언어,주장:[],버림:[],추출실패:f\"1차: ${error_of($첫추출[$i]).message} / 재시도: ${$error.message}\"} }\n  }\n}\n$추출실패 = $추출 >> [table:filter]{where:($r)=>has($r,\"추출실패\")}\n$주장 = $추출 >> [table:each]{mode:\"flat_map\"} { return $it.주장 }\n$버림 = $추출 >> [table:each]{mode:\"flat_map\"} { return $it.버림 }\n$정리 = $주제 >> [table:each] { [fn:주제정리]{주제:$it,읽음목록:$읽음,주장목록:$주장} }\n$해설입력 = $정리 >> [table:each] {\n  $t = $it\n  return {주제:$t.주제,질문:$t.질문,값목록:$t.묶음 >> [table:each] { return {미터:round($it.대표),근거:$it.근거 >> [table:select]{columns:[\"언어\",\"값\",\"단위\",\"대상\",\"측정\"]}} }}\n}\n$해설 = $해설입력 >> [table:ai]{\n  instruction:\"각 주제의 값목록(서로 다른 값 묶음)을 보고 판정하라. 값이 하나면 '일치'. 여럿이면 대상·측정 설명을 근거로 '정의 차이'(재는 대상·범위가 다름)/'측정 시기 차이'/'진짜 불일치'/'혼합' 중 하나. 해설은 2~3문장, 주어진 값만 인용하고 새 수치를 만들지 마라.\",\n  schema:\"판정(일치|정의 차이|측정 시기 차이|진짜 불일치|혼합), 해설(문자열)\",\n  preserve_rows:true\n}\n$본문 = [fn:문서]{정리:$정리,해설:$해설.items,읽음:$읽음,버림:$버림,추출실패:$추출실패}\n$저장 = [self:write]{path:$출력,content:$본문}\n$확인 = [self:read]{path:$출력}\nreturn {\n  저장일치:$확인.text == $본문,\n  원천:$읽음 >> [table:select]{columns:[\"주제\",\"언어\",\"ok\",\"적중\",\"사용\"]},\n  주장수:len($주장),버림수:len($버림),추출실패:$추출실패 >> [table:select]{columns:[\"주제\",\"언어\",\"추출실패\"]},\n  주제:$정리 >> [table:each] { return {주제:$it.주제,묶음수:len($it.묶음),원천:f\"${$it.원천수}/${$it.원천전체}\"} },\n  판정:$해설.items >> [table:select]{columns:[\"주제\",\"판정\"]}\n}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task",
+  "inputs": {
+   "원천": [
+    {
+     "주제": "T1 에베레스트",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+     "키워드": [
+      "8,84",
+      "8,85",
+      "8848",
+      "8850"
+     ]
+    },
+    {
+     "주제": "T1 에베레스트",
+     "언어": "en",
+     "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+     "키워드": [
+      "8,84",
+      "8,85"
+     ]
+    },
+    {
+     "주제": "T2 만리장성",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/만리장성",
+     "키워드": [
+      "길이",
+      "\\d ?km",
+      "킬로미터"
+     ]
+    },
+    {
+     "주제": "T2 만리장성",
+     "언어": "en",
+     "url": "https://en.wikipedia.org/wiki/Great_Wall_of_China",
+     "키워드": [
+      "length",
+      "\\d ?km"
+     ]
+    },
+    {
+     "주제": "T3 나일강",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/나일강",
+     "키워드": [
+      "\\d ?km",
+      "길이",
+      "아마존"
+     ]
+    },
+    {
+     "주제": "T3 나일강",
+     "언어": "en",
+     "url": "https://en.wikipedia.org/wiki/Nile",
+     "키워드": [
+      "\\d ?km",
+      "longest",
+      "Amazon"
+     ]
+    }
+   ],
+   "주제": [
+    {
+     "주제": "T1 에베레스트",
+     "질문": "에베레스트 산 정상의 해발 높이"
+    },
+    {
+     "주제": "T2 만리장성",
+     "질문": "만리장성(성벽)의 전체 길이 또는 특정 왕조 성벽의 길이"
+    },
+    {
+     "주제": "T3 나일강",
+     "질문": "나일강의 길이 및 아마존강 길이와의 최장 비교"
+    }
+   ],
+   "문단상한": 15,
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_3회차/out/study_notes.md"
+  }
+ },
+ "elapsed_s": 85.8,
+ "response": {
+  "success": false,
+  "error": "산술에는 관측 가능한 유한 숫자가 필요합니다.",
+  "diagnostic": {
+   "code": "NUMBER_REQUIRED",
+   "kind": "partial",
+   "message": "산술에는 관측 가능한 유한 숫자가 필요합니다.",
+   "frames": [],
+   "has_partial": true,
+   "partial": [
+    {
+     "주제": "T1 에베레스트",
+     "질문": "에베레스트 산 정상의 해발 높이",
+     "원천수": 2,
+     "원천전체": 2,
+     "묶음": [
+      {
+       "대표": 8839,
+       "근거": [
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 253,
+         "값": "8,839",
+         "단위": "m",
+         "대상": "에베레스트산 정상 해발 높이 최초 측정치",
+         "측정": "1856년",
+         "원문있음": true,
+         "미터": 8839
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 253,
+         "값": "29,000",
+         "단위": "ft",
+         "대상": "에베레스트산 정상 해발 높이 발표 전 수치",
+         "측정": "1856년",
+         "원문있음": true,
+         "미터": 8839.2
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 411,
+         "값": "29,000",
+         "단위": "ft",
+         "대상": "에베레스트 정상 해발 높이 계산값",
+         "측정": "Andrew Waugh 측 계산",
+         "원문있음": true,
+         "미터": 8839.2
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 411,
+         "값": "8,839.2",
+         "단위": "m",
+         "대상": "에베레스트 정상 해발 높이 계산값",
+         "측정": "Andrew Waugh 측 계산",
+         "원문있음": true,
+         "미터": 8839.2
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 411,
+         "값": "29000",
+         "단위": "ft",
+         "대상": "에베레스트 정상 해발 높이 계산값",
+         "측정": "Andrew Waugh 측 계산",
+         "원문있음": true,
+         "미터": 8839.2
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 411,
+         "값": "8,839.8",
+         "단위": "m",
+         "대상": "에베레스트 정상 해발 높이 공표값",
+         "측정": "1856년 Andrew Waugh 발표",
+         "원문있음": true,
+         "미터": 8839.8
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 253,
+         "값": "29,002",
+         "단위": "ft",
+         "대상": "에베레스트산 정상 해발 높이 발표치",
+         "측정": "1856년",
+         "원문있음": true,
+         "미터": 8839.8096
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 411,
+         "값": "29,002",
+         "단위": "ft",
+         "대상": "에베레스트 정상 해발 높이",
+         "측정": "1856년 Andrew Waugh 발표",
+         "원문있음": true,
+         "미터": 8839.8096
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 411,
+         "값": "29,002",
+         "단위": "ft",
+         "대상": "에베레스트 정상 해발 높이 공표값",
+         "측정": "1856년 Andrew Waugh 발표",
+         "원문있음": true,
+         "미터": 8839.8096
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 415,
+         "값": "29,002",
+         "단위": "ft",
+         "대상": "에베레스트 정상 해발 높이",
+         "측정": "Great Trigonometrical Survey 관측, 1856년 Andrew Waugh 발표",
+         "원문있음": true,
+         "미터": 8839.8096
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 411,
+         "값": "8,840",
+         "단위": "m",
+         "대상": "에베레스트 정상 해발 높이",
+         "측정": "1856년 Andrew Waugh 발표",
+         "원문있음": true,
+         "미터": 8840
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 415,
+         "값": "8,840",
+         "단위": "m",
+         "대상": "에베레스트 정상 해발 높이",
+         "측정": "Great Trigonometrical Survey 관측, 1856년 Andrew Waugh 발표",
+         "원문있음": true,
+         "미터": 8840
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 420,
+         "값": "8,844",
+         "단위": "m",
+         "대상": "에베레스트 정상 암반 해발 높이 중국 주장값",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8844
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 420,
+         "값": "8,844",
+         "단위": "m",
+         "대상": "에베레스트 정상 암반 해발 높이 2010년 네팔 인정값",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8844
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 912,
+         "값": "8,844",
+         "단위": "m",
+         "대상": "에베레스트 정상 암반의 대략적인 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8844
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 252,
+         "값": "8,844.43",
+         "단위": "m",
+         "대상": "에베레스트산 정상 바위 최고점 해발 높이",
+         "측정": "2005년 10월 9일 중화인민공화국 정부 발표",
+         "원문있음": true,
+         "미터": 8844.43
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 420,
+         "값": "8,844.43",
+         "단위": "m",
+         "대상": "에베레스트 정상 암반 해발 높이",
+         "측정": "2005년 중국과학원·국가측량국",
+         "원문있음": true,
+         "미터": 8844.43
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 420,
+         "값": "29,017.16",
+         "단위": "ft",
+         "대상": "에베레스트 정상 암반 해발 높이",
+         "측정": "2005년 중국과학원·국가측량국",
+         "원문있음": true,
+         "미터": 8844.430368
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 415,
+         "값": "8,847.73",
+         "단위": "m",
+         "대상": "에베레스트 정상 적설면 해발 높이",
+         "측정": "1952~1954년 Survey of India",
+         "원문있음": true,
+         "미터": 8847.73
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 415,
+         "값": "29,028",
+         "단위": "ft",
+         "대상": "에베레스트 정상 적설면 해발 높이",
+         "측정": "1952~1954년 Survey of India",
+         "원문있음": true,
+         "미터": 8847.7344
+        }
+       ]
+      },
+      {
+       "대표": 8848,
+       "근거": [
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 415,
+         "값": "8,848",
+         "단위": "m",
+         "대상": "에베레스트 정상 공식 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 420,
+         "값": "8,848",
+         "단위": "m",
+         "대상": "에베레스트 정상 눈·얼음 포함 해발 높이",
+         "측정": "2005년 중국 측량팀",
+         "원문있음": true,
+         "미터": 8848
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 420,
+         "값": "8,848",
+         "단위": "m",
+         "대상": "에베레스트 정상 적설면 해발 높이 네팔 주장값",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 420,
+         "값": "8,848",
+         "단위": "m",
+         "대상": "에베레스트 정상 해발 높이 2010년 합의값",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 426,
+         "값": "8,848",
+         "단위": "m",
+         "대상": "에베레스트 정상 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 426,
+         "값": "29,028.9",
+         "단위": "ft",
+         "대상": "에베레스트 정상 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848.00872
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 415,
+         "값": "29,029",
+         "단위": "ft",
+         "대상": "에베레스트 정상 공식 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848.0392
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 420,
+         "값": "29,029",
+         "단위": "ft",
+         "대상": "에베레스트 정상 눈·얼음 포함 해발 높이",
+         "측정": "2005년 중국 측량팀",
+         "원문있음": true,
+         "미터": 8848.0392
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 253,
+         "값": "8,848.10",
+         "단위": "m",
+         "대상": "에베레스트산 정상 해발 높이",
+         "측정": "1950년대 인도",
+         "원문있음": true,
+         "미터": 8848.1
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 415,
+         "값": "8,848.13",
+         "단위": "m",
+         "대상": "에베레스트 정상 적설면 해발 높이",
+         "측정": "1975년 중국 측량",
+         "원문있음": true,
+         "미터": 8848.13
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 415,
+         "값": "29,029.30",
+         "단위": "ft",
+         "대상": "에베레스트 정상 적설면 해발 높이",
+         "측정": "1975년 중국 측량",
+         "원문있음": true,
+         "미터": 8848.13064
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 311,
+         "값": "8848.43",
+         "단위": "m",
+         "대상": "에베레스트산 정상 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848.43
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 386,
+         "값": "29,031",
+         "단위": "ft",
+         "대상": "에베레스트 정상 해발 높이의 피트 부분(원문에 8+1⁄2 in 병기)",
+         "측정": "2020년 네팔·중국 당국 공동 측량",
+         "원문있음": true,
+         "미터": 8848.6488
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 226,
+         "값": "29,031.69",
+         "단위": "ft",
+         "대상": "에베레스트산 정상 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848.859112
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 228,
+         "값": "29,031.69",
+         "단위": "ft",
+         "대상": "에베레스트산 정상 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848.859112
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 226,
+         "값": "8,848.860",
+         "단위": "m",
+         "대상": "에베레스트산 정상 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848.86
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 228,
+         "값": "8,848.860",
+         "단위": "m",
+         "대상": "에베레스트산 정상 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848.86
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 249,
+         "값": "8,848.86",
+         "단위": "m",
+         "대상": "에베레스트산 정상 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848.86
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 230,
+         "값": "8,848.86",
+         "단위": "m",
+         "대상": "에베레스트 정상 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848.86
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 386,
+         "값": "8,848.86",
+         "단위": "m",
+         "대상": "에베레스트 정상 해발 높이",
+         "측정": "2020년 네팔·중국 당국 공동 측량",
+         "원문있음": true,
+         "미터": 8848.86
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 420,
+         "값": "8,848.86",
+         "단위": "m",
+         "대상": "에베레스트 정상 공식 해발 높이",
+         "측정": "2020년 중국·네팔 공동 발표",
+         "원문있음": true,
+         "미터": 8848.86
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 230,
+         "값": "29,031.7",
+         "단위": "ft",
+         "대상": "에베레스트 정상 해발 높이",
+         "측정": null,
+         "원문있음": true,
+         "미터": 8848.86216
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 420,
+         "값": "29,031.7",
+         "단위": "ft",
+         "대상": "에베레스트 정상 공식 해발 높이",
+         "측정": "2020년 중국·네팔 공동 발표",
+         "원문있음": true,
+         "미터": 8848.86216
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 416,
+         "값": "29,035",
+         "단위": "ft",
+         "대상": "에베레스트 정상 암반 해발 높이",
+         "측정": "1999년 5월 Bradford Washburn 지휘 미국 에베레스트 원정대 GPS 측량",
+         "원문있음": true,
+         "미터": 8849.868
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 253,
+         "값": "8,850",
+         "단위": "m",
+         "대상": "에베레스트산 정상 해발 높이",
+         "측정": "2008년 기준 GPS",
+         "원문있음": true,
+         "미터": 8850
+        },
+        {
+         "주제": "T1 에베레스트",
+         "언어": "en",
+         "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+         "문단": 416,
+         "값": "8,850",
+         "단위": "m",
+         "대상": "에베레스트 정상 암반 해발 높이",
+         "측정": "1999년 5월 Bradford Washburn 지휘 미국 에베레스트 원정대 GPS 측량",
+         "원문있음": true,
+         "미터": 8850
+        }
+       ]
+      },
+      {
+       "대표": 88392000.0,
+       "근거": [
+        {
+         "주제": "T1 에베레스트",
+         "언어": "ko",
+         "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+         "문단": 253,
+         "값": "29,0000000",
+         "단위": "ft",
+         "대상": "에베레스트산 정상 해발 높이 최초 측정치",
+         "측정": "1856년",
+         "원문있음": true,
+         "미터": 88392000.0
+        }
+       ]
+      }
+     ],
+     "상충후보": true
+    }
+   ],
+   "evidence": [
+    2281
+   ],
+   "details": {
+    "coverage": [
+     "ok",
+     "failed",
+     "pending"
+    ],
+    "successful_indices": [
+     0
+    ],
+    "errors": {
+     "1": {
+      "code": "NUMBER_REQUIRED",
+      "kind": "partial",
+      "message": "산술에는 관측 가능한 유한 숫자가 필요합니다.",
+      "frames": [
+       {
+        "function": "주제정리",
+        "call": {
+         "source_hash": "59ae33ad61b5f71d4e7ba46e8cd4dfd3361193c4463d9760e680e9ce5dbcc6d2",
+         "start": 4519,
+         "end": 4554,
+         "line": 108,
+         "column": 29
+        },
+        "definition": {
+         "source_hash": "59ae33ad61b5f71d4e7ba46e8cd4dfd3361193c4463d9760e680e9ce5dbcc6d2",
+         "start": 1913,
+         "end": 2331,
+         "line": 52,
+         "column": 1
+        }
+       }
+      ],
+      "has_partial": true,
+      "partial": [
+       {
+        "주제": "T2 만리장성",
+        "언어": "ko",
+        "url": "https://ko.wikipedia.org/wiki/만리장성",
+        "문단": 194,
+        "값": "2,700",
+        "단위": "km",
+        "대상": "만리장성의 지도상 전체 길이",
+        "측정": null,
+        "원문있음": true,
+        "미터": 2700000
+       }
+      ],
+      "evidence": [
+       2276
+      ],
+      "details": {
+       "coverage": [
+        "ok",
+        "failed",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending",
+        "pending"
+       ],
+       "successful_indices": [
+        0
+       ],
+       "errors": {
+        "1": {
+         "code": "NUMBER_REQUIRED",
+         "kind": "runtime",
+         "message": "산술에는 관측 가능한 유한 숫자가 필요합니다.",
+         "frames": [
+          {
+           "function": "미터로",
+           "call": {
+            "source_hash": "59ae33ad61b5f71d4e7ba46e8cd4dfd3361193c4463d9760e680e9ce5dbcc6d2",
+            "start": 2115,
+            "end": 2142,
+            "line": 55,
+            "column": 49
+           },
+           "definition": {
+            "source_hash": "59ae33ad61b5f71d4e7ba46e8cd4dfd3361193c4463d9760e680e9ce5dbcc6d2",
+            "start": 1503,
+            "end": 1653,
+            "line": 40,
+            "column": 1
+           }
+          }
+         ],
+         "has_partial": false,
+         "partial": null,
+         "evidence": [
+          2268
+         ],
+         "details": {},
+         "source_span": {
+          "source_hash": "59ae33ad61b5f71d4e7ba46e8cd4dfd3361193c4463d9760e680e9ce5dbcc6d2",
+          "start": 1530,
+          "end": 1556,
+          "line": 41,
+          "column": 8
+         }
+        }
+       }
+      },
+      "source_span": {
+       "source_hash": "59ae33ad61b5f71d4e7ba46e8cd4dfd3361193c4463d9760e680e9ce5dbcc6d2",
+       "start": 1530,
+       "end": 1556,
+       "line": 41,
+       "column": 8
+      }
+     }
+    }
+   },
+   "source_span": {
+    "source_hash": "59ae33ad61b5f71d4e7ba46e8cd4dfd3361193c4463d9760e680e9ce5dbcc6d2",
+    "start": 1530,
+    "end": 1556,
+    "line": 41,
+    "column": 8
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "261aa41b419946ffa155e23b344b7a7d6fae43779ed977a33d11babfa4a0c554",
+  "source_complete": false,
+  "usage": {
+   "steps": 9883,
+   "rows": 263,
+   "elapsed_ms": 85146,
+   "model": {
+    "requests": 7,
+    "measured_requests": 7,
+    "unmeasured_requests": 0,
+    "input": 118848,
+    "output": 4973,
+    "cache_read": 21888,
+    "cache_create": 0,
+    "reasoning": null,
+    "calls": [
+     {
+      "call_id": "181f670b1dc14205a79442524f909b42",
+      "parent_call_id": null,
+      "role": "oneshot:execution",
+      "phase": "execution",
+      "provider": "Codex",
+      "model": "gpt-6-astra:high",
+      "round_index": 1,
+      "tier": "고급",
+      "source": "gear:최대|실행→고급",
+      "measured": true,
+      "elapsed_ms": 9139,
+      "input": 15944,
+      "output": 171,
+      "cache_read": 0,
+      "cache_create": 0
+     },
+     {
+      "call_id": "9d807bf0cd044b6a850f557a60cd0c88",
+      "parent_call_id": null,
+      "role": "oneshot:execution",
+      "phase": "execution",
+      "provider": "Codex",
+      "model": "gpt-6-astra:high",
+      "round_index": 1,
+      "tier": "고급",
+      "source": "gear:최대|실행→고급",
+      "measured": true,
+      "elapsed_ms": 11428,
+      "input": 16671,
+      "output": 241,
+      "cache_read": 0,
+      "cache_create": 0
+     },
+     {
+      "call_id": "ab1e33e4d6bd4a518368496eea6f2f03",
+      "parent_call_id": null,
+      "role": "oneshot:execution",
+      "phase": "execution",
+      "provider": "Codex",
+      "model": "gpt-6-astra:high",
+      "round_index": 1,
+      "tier": "고급",
+      "source": "gear:최대|실행→고급",
+      "measured": true,
+      "elapsed_ms": 16568,
+      "input": 17578,
+      "output": 397,
+      "cache_read": 5632,
+      "cache_create": 0
+     },
+     {
+      "call_id": "35327be3ba184db88c9cd8efbd97162d",
+      "parent_call_id": null,
+      "role": "oneshot:execution",
+      "phase": "execution",
+      "provider": "Codex",
+      "model": "gpt-6-astra:high",
+      "round_index": 1,
+      "tier": "고급",
+      "source": "gear:최대|실행→고급",
+      "measured": true,
+      "elapsed_ms": 24989,
+      "input": 16442,
+      "output": 696,
+      "cache_read": 16256,
+      "cache_create": 0
+     },
+     {
+      "call_id": "476456384541404aa1f14f854e4b59c0",
+      "parent_call_id": null,
+      "role": "oneshot:execution",
+      "phase": "execution",
+      "provider": "Codex",
+      "model": "gpt-6-astra:high",
+      "round_index": 1,
+      "tier": "고급",
+      "source": "gear:최대|실행→고급",
+      "measured": true,
+      "elapsed_ms": 37337,
+      "input": 18336,
+      "output": 1042,
+      "cache_read": 0,
+      "cache_create": 0
+     },
+     {
+      "call_id": "afb1c2f72650444499f60c125c2a589b",
+      "parent_call_id": null,
+      "role": "oneshot:execution",
+      "phase": "execution",
+      "provider": "Codex",
+      "model": "gpt-6-astra:high",
+      "round_index": 1,
+      "tier": "고급",
+      "source": "gear:최대|실행→고급",
+      "measured": true,
+      "elapsed_ms": 68718,
+      "input": 17206,
+      "output": 2157,
+      "cache_read": 0,
+      "cache_create": 0
+     },
+     {
+      "call_id": "fee36d36476147e78f4a9a47211f469d",
+      "parent_call_id": null,
+      "role": "oneshot:execution",
+      "phase": "execution",
+      "provider": "Codex",
+      "model": "gpt-6-astra:high",
+      "round_index": 1,
+      "tier": "고급",
+      "source": "gear:최대|실행→고급",
+      "measured": true,
+      "elapsed_ms": 12184,
+      "input": 16671,
+      "output": 269,
+      "cache_read": 0,
+      "cache_create": 0
+     }
+    ]
+   }
+  },
+  "precheck_warnings": [
+   {
+    "rule": "repeated_ai_batch",
+    "code": "repeated_ai_batch",
+    "severity": "warning",
+    "location": {
+     "source_hash": "59ae33ad61b5f71d4e7ba46e8cd4dfd3361193c4463d9760e680e9ce5dbcc6d2",
+     "start": 797,
+     "end": 1082,
+     "line": 22,
+     "column": 19,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 27,
+     "end_column": 4,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "message": "반복 행에 의존하지 않는 목록 전체를 AI 호출에 반복 전달합니다.",
+    "hint": "행별 판단이면 현재 행을 전달하고, 전체 비교 의도라면 이 경고를 수용하세요.",
+    "facts": {
+     "argument": "input_fields",
+     "input_count": 2,
+     "repeat_count": 6,
+     "loop": "call:3962:4039"
+    }
+   },
+   {
+    "rule": "repeated_ai_batch",
+    "code": "repeated_ai_batch",
+    "severity": "warning",
+    "location": {
+     "source_hash": "59ae33ad61b5f71d4e7ba46e8cd4dfd3361193c4463d9760e680e9ce5dbcc6d2",
+     "start": 797,
+     "end": 1082,
+     "line": 22,
+     "column": 19,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 27,
+     "end_column": 4,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "message": "반복 행에 의존하지 않는 목록 전체를 AI 호출에 반복 전달합니다.",
+    "hint": "행별 판단이면 현재 행을 전달하고, 전체 비교 의도라면 이 경고를 수용하세요.",
+    "facts": {
+     "argument": "input_fields",
+     "input_count": 2,
+     "repeat_count": 6,
+     "loop": "call:4053:4310"
+    }
+   }
+  ],
+  "resume": {
+   "run_id": "3c85a40176ef4cc7be15ce50112f1f67"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 2281,
+   "source_complete": false,
+   "tool_failures": 1,
+   "source_failures": 1,
+   "failures": [
+    {
+     "id": 380,
+     "action": "table:ai",
+     "code": "TOOL",
+     "failure_kind": "runtime",
+     "incomplete": true
+    }
+   ],
+   "failures_omitted": 0
+  },
+  "result_ref": {
+   "id": "af763e9eb2d72d23646c9b3b4d737a30bbdfe9019bd2eb77e0a41799326aeaa7",
+   "chars": 2049226,
+   "max_limit": 60000,
+   "paths": [
+    {
+     "path": [
+      "diagnostic",
+      "partial"
+     ],
+     "chars": 16549
+    },
+    {
+     "path": [
+      "diagnostic",
+      "details"
+     ],
+     "chars": 3095
+    }
+   ],
+   "read_args": {
+    "id": "af763e9eb2d72d23646c9b3b4d737a30bbdfe9019bd2eb77e0a41799326aeaa7",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "diagnostic"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "partial_reads": [
+    {
+     "branch_index": 0,
+     "partial_index": 0,
+     "read_args": {
+      "id": "af763e9eb2d72d23646c9b3b4d737a30bbdfe9019bd2eb77e0a41799326aeaa7",
+      "path": [
+       "diagnostic",
+       "partial",
+       0
+      ],
+      "offset": 0,
+      "limit": 60000
+     },
+     "input_args": {
+      "입력": {
+       "$ref": "af763e9eb2d72d23646c9b3b4d737a30bbdfe9019bd2eb77e0a41799326aeaa7",
+       "path": [
+        "diagnostic",
+        "partial",
+        0
+       ]
+      }
+     }
+    }
+   ],
+   "partial_reads_omitted": 0,
+   "partial_mapping_read_args": {
+    "id": "af763e9eb2d72d23646c9b3b4d737a30bbdfe9019bd2eb77e0a41799326aeaa7",
+    "path": [
+     "diagnostic",
+     "details"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

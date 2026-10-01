@@ -1,0 +1,1157 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 5회차 P2 대조 — P1($ref) 영수증과 카드 명세서를 맞추고 이상 항목을 md·json 으로 (최초 초안)\n# inputs: 추출={$ref P1}, 카드(csv 경로), 정책(json 경로), 보고서(md 경로), 목록(json 경로)\n\n# 1) 같은 원문 영수증 — 먼저 나온 것만 쓰고 뒤의 것은 중복 영수증\n[def:중복영수증]($행) {\n  $행 >> [table:each] {\n    $me = $it\n    $앞 = $행[:$i] >> [table:filter]{where:($r)=>$r.원문 == $me.원문}\n    return {**$me,같은영수증:len($앞) > 0 ? $앞[0].id : null}\n  }\n}\n\n# 2) 날짜+금액이 같은 카드 행과 짝짓기 — 이미 쓴 승인번호는 다시 쓰지 않는다\n[def:정확짝]($영수증,$카드) {\n  $사용 = []\n  $짝 = []\n  [repeat:while $i < len($영수증)] {\n    $r = $영수증[$i]\n    $후보 = $카드 >> [table:filter]{where:($c)=>$c.승인일 == $r.날짜 and $c.금액 == $r.합계 and not ($c.승인번호 in $사용)}\n    [if:len($후보) > 0] {\n      $사용 = $사용 + [$후보[0].승인번호]\n      $짝 = $짝 + [{영수증:$r.id,승인번호:$후보[0].승인번호,영수증가맹점:$r.가맹점,카드가맹점:$후보[0].가맹점,영수증금액:$r.합계,카드금액:$후보[0].금액,날짜:$r.날짜}]\n    }\n  }\n  return {짝:$짝,사용:$사용}\n}\n\n# ── 최상위 ──\n$문서 = [self:read]{path:$카드} & [self:read]{path:$정책}\n$카드행 = $문서[0].data.items >> [table:each] { return {승인일:$it.승인일,가맹점:$it.가맹점,금액:number($it.금액),승인번호:$it.승인번호} }\n$기준 = $문서[1].data.정책.결재필요_금액\n$못읽음 = $추출.영수증 >> [table:filter]{where:($r)=>$r.상태 != \"읽음\"}\n$검사됨 = $추출.추출 >> [table:filter]{where:($r)=>$r.원문확인}\n$미검증 = $추출.추출 >> [table:filter]{where:($r)=>not $r.원문확인}\n$표시 = [fn:중복영수증]{행:$검사됨}\n$중복영 = $표시 >> [table:filter]{where:($r)=>$r.같은영수증 != null}\n$유효 = $표시 >> [table:filter]{where:($r)=>$r.같은영수증 == null}\n\n$정확 = [fn:정확짝]{영수증:$유효,카드:$카드행}\n$남은영 = $유효 >> [table:filter]{where:($r)=>not ($r.id in ($정확.짝 >> [table:each] { return $it.영수증 }))}\n$남은카 = $카드행 >> [table:filter]{where:($c)=>not ($c.승인번호 in $정확.사용)}\n\n# 3) 같은 날 금액이 다른 짝 후보 → 가맹점 동일성 판정(정확 짝도 함께 확인)\n$후보쌍 = $남은영 >> [table:each]{mode:\"flat_map\"} {\n  $r = $it\n  $남은카 >> [table:each]{mode:\"flat_map\"} {\n    [if:$it.승인일 == $r.날짜] { return [{영수증:$r.id,승인번호:$it.승인번호,영수증가맹점:$r.가맹점,카드가맹점:$it.가맹점,영수증금액:$r.합계,카드금액:$it.금액,날짜:$r.날짜}] }\n    return []\n  }\n}\n$판정입력 = $정확.짝 + $후보쌍\n$판정 = $판정입력 >> [table:judge]{instruction:\"영수증의 가맹점명(영수증가맹점)과 카드사 명세서의 가맹점 표기(카드가맹점)가 같은 가게를 가리키는가? 영문·축약·지점명 차이는 같은 가게로 본다.\",type:\"boolean\"}\n$판정행 = $판정.items\n$불일치 = $판정행 >> [table:filter]{where:($p)=>$p.영수증금액 != $p.카드금액 and $p.judgment_result_value == true}\n$불일치영 = $불일치 >> [table:each] { return $it.영수증 }\n$불일치카 = $불일치 >> [table:each] { return $it.승인번호 }\n$정확확인필요 = $판정행 >> [table:filter]{where:($p)=>$p.영수증금액 == $p.카드금액 and $p.judgment_result_value != true}\n\n$카드없음 = $남은영 >> [table:filter]{where:($r)=>not ($r.id in $불일치영)}\n$카드만 = $남은카 >> [table:filter]{where:($c)=>not ($c.승인번호 in $불일치카)}\n# 카드만 있는 행 중 이미 짝지어진 결제와 날짜·가맹점·금액이 같으면 중복 청구\n$중복청구 = $카드만 >> [table:filter]{where:($c)=>len($정확.짝 >> [table:filter]{where:($p)=>$p.날짜 == $c.승인일 and $p.카드가맹점 == $c.가맹점 and $p.카드금액 == $c.금액}) > 0}\n$중복번호 = $중복청구 >> [table:each] { return $it.승인번호 }\n$영수증없음 = $카드만 >> [table:filter]{where:($c)=>not ($c.승인번호 in $중복번호)}\n\n# 4) 결재 필요 — 영수증 금액 기준, 영수증을 못 읽은 카드 결제는 카드 금액\n$결재 = ($유효 >> [table:filter]{where:($r)=>$r.합계 >= $기준} >> [table:each] { return {대상:$it.id,금액:$it.합계,근거:\"영수증\"} })\n  + ($영수증없음 >> [table:filter]{where:($c)=>$c.금액 >= $기준} >> [table:each] { return {대상:$it.승인번호,금액:$it.금액,근거:\"카드(영수증 없음)\"} })\n\n# 5) 이상 목록(json)\n$못읽음id = join(\", \",$못읽음 >> [table:each] { return $it.id })\n$이상 = ($불일치 >> [table:each] { return {종류:\"금액 불일치\",승인번호:$it.승인번호,영수증:$it.영수증,금액:$it.카드금액,설명:f\"영수증 ${$it.영수증금액} / 카드 ${$it.카드금액}\"} })\n  + ($카드없음 >> [table:each] { return {종류:\"카드 내역 없음\",승인번호:null,영수증:$it.id,금액:$it.합계,설명:f\"${$it.가맹점} ${$it.날짜}\"} })\n  + ($중복청구 >> [table:each] { return {종류:\"중복 청구 의심\",승인번호:$it.승인번호,영수증:null,금액:$it.금액,설명:f\"${$it.가맹점} ${$it.승인일} 같은 금액 결제가 이미 영수증과 짝지어짐\"} })\n  + ($영수증없음 >> [table:each] { return {종류:\"영수증 없음\",승인번호:$it.승인번호,영수증:null,금액:$it.금액,설명:len($못읽음) > 0 ? f\"${$it.가맹점} ${$it.승인일} — 읽지 못한 영수증(${$못읽음id}) 중 하나일 수 있음\" : f\"${$it.가맹점} ${$it.승인일}\"} })\n  + ($중복영 >> [table:each] { return {종류:\"중복 영수증\",승인번호:null,영수증:$it.id,금액:$it.합계,설명:f\"${$it.같은영수증} 과 같은 영수증 — 대조에서 제외\"} })\n  + ($못읽음 >> [table:each] { return {종류:\"영수증 읽지 못함\",승인번호:null,영수증:$it.id,금액:null,설명:$it.이유} })\n  + ($미검증 >> [table:each] { return {종류:\"추출값 원문 불일치\",승인번호:null,영수증:$it.id,금액:null,설명:\"모델 추출 합계·날짜가 원문에 없음\"} })\n  + ($정확확인필요 >> [table:each] { return {종류:\"가맹점 확인 필요\",승인번호:$it.승인번호,영수증:$it.영수증,금액:$it.카드금액,설명:f\"${$it.영수증가맹점} ↔ ${$it.카드가맹점} 동일성 판정 ${text($it.judgment_result_value)}\"} })\n\n# 6) 보고서(md)\n$카드합 = sum($카드행 >> [table:each] { return $it.금액 })\n$영합 = sum($유효 >> [table:each] { return $it.합계 })\n$짝줄 = $정확.짝 >> [table:each] { return f\"| ${$it.영수증} | ${$it.영수증가맹점} | ${$it.승인번호} | ${$it.카드가맹점} | ${$it.카드금액} |\" }\n$이상줄 = $이상 >> [table:each] { return f\"| ${$it.종류} | ${$it.영수증 == null ? '-' : $it.영수증} | ${$it.승인번호 == null ? '-' : $it.승인번호} | ${$it.금액 == null ? '-' : text($it.금액)} | ${$it.설명} |\" }\n$결재줄 = $결재 >> [table:each] { return f\"- ${$it.대상} ${$it.금액}원 (${$it.근거})\" }\n$보고 = f\"# 9월 법인카드 경비 정산\\n\\n- 카드 결제 ${len($카드행)}건 합계 ${$카드합}원 / 대조에 쓴 영수증 ${len($유효)}장 합계 ${$영합}원\\n- 영수증 파일 ${len($추출.영수증)}개 중 읽지 못함 ${len($못읽음)}개\\n\\n## 이상 항목\\n| 종류 | 영수증 | 승인번호 | 금액 | 설명 |\\n| --- | --- | --- | --- | --- |\\n${join('\\n',$이상줄)}\\n\\n## 결재 필요(${$기준}원 이상)\\n${len($결재줄) == 0 ? '- 없음' : join('\\n',$결재줄)}\\n\\n## 정상 짝\\n| 영수증 | 영수증 가맹점 | 승인번호 | 카드 가맹점 | 금액 |\\n| --- | --- | --- | --- | --- |\\n${join('\\n',$짝줄)}\\n\"\n$목록본 = json({결재기준:$기준,이상:$이상,결재필요:$결재})\n$쓰기 = [self:write]{path:$보고서,content:$보고} & [self:write]{path:$목록,content:$목록본}\n$재읽기 = [self:read]{path:$보고서} & [self:read]{path:$목록}\nreturn {보고일치:$재읽기[0].text == $보고,목록일치:$재읽기[1].text == $목록본,\n        이상수:len($이상),종류:$이상 >> [table:each] { return f\"${$it.종류}:${$it.영수증 == null ? $it.승인번호 : $it.영수증}\" },\n        결재:$결재,카드합:$카드합,영합:$영합}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI5_trainer",
+  "task_id": "LSI5_task",
+  "check": true,
+  "inputs": {
+   "추출": {
+    "$ref": "d0d3d62383596dbda6b985d18ca98b19ed6e269e84fbde632cfdc899018fbbbc"
+   },
+   "카드": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/card_statement.csv",
+   "정책": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/policy.json",
+   "보고서": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_5회차/out/report.md",
+   "목록": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_5회차/out/anomalies.json"
+  }
+ },
+ "elapsed_s": 0.33,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 1437,
+     "end": 1477,
+     "line": 41,
+     "column": 57
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 1437,
+     "end": 1477,
+     "line": 41,
+     "column": 57,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 41,
+     "end_column": 97,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 2547,
+     "end": 2643,
+     "line": 63,
+     "column": 48
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 2547,
+     "end": 2643,
+     "line": 63,
+     "column": 48,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 63,
+     "end_column": 144,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 2935,
+     "end": 3052,
+     "line": 69,
+     "column": 6
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 2935,
+     "end": 3052,
+     "line": 69,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 69,
+     "end_column": 123,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: List<{대상: Unknown, 금액: Number, 근거: Text}>",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 2935,
+     "end": 3052,
+     "line": 69,
+     "column": 6
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "List<{대상: Unknown, 금액: Number, 근거: Text}>",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 2935,
+     "end": 3052,
+     "line": 69,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 69,
+     "end_column": 123,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "ARITHMETIC",
+    "severity": "error",
+    "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3091,
+     "end": 3129,
+     "line": 72,
+     "column": 20
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3091,
+     "end": 3129,
+     "line": 72,
+     "column": 20,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 72,
+     "end_column": 58,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3268,
+     "end": 3374,
+     "line": 74,
+     "column": 6
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3268,
+     "end": 3374,
+     "line": 74,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 74,
+     "end_column": 112,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: List<{종류: Text, 승인번호: Null, 영수증: Text, 금액: Number, 설명: Text}>",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3268,
+     "end": 3374,
+     "line": 74,
+     "column": 6
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "List<{종류: Text, 승인번호: Null, 영수증: Text, 금액: Number, 설명: Text}>",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3268,
+     "end": 3374,
+     "line": 74,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 74,
+     "end_column": 112,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "ARITHMETIC",
+    "severity": "error",
+    "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3381,
+     "end": 3513,
+     "line": 75,
+     "column": 6
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3381,
+     "end": 3513,
+     "line": 75,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 75,
+     "end_column": 138,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: List<{종류: Text, 승인번호: Unknown, 영수증: Null, 금액: Number, 설명: Text}>",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3381,
+     "end": 3513,
+     "line": 75,
+     "column": 6
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "List<{종류: Text, 승인번호: Unknown, 영수증: Null, 금액: Number, 설명: Text}>",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3381,
+     "end": 3513,
+     "line": 75,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 75,
+     "end_column": 138,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "ARITHMETIC",
+    "severity": "error",
+    "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3520,
+     "end": 3705,
+     "line": 76,
+     "column": 6
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3520,
+     "end": 3705,
+     "line": 76,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 76,
+     "end_column": 191,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: List<{종류: Text, 승인번호: Unknown, 영수증: Null, 금액: Number, 설명: Text}>",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3520,
+     "end": 3705,
+     "line": 76,
+     "column": 6
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "List<{종류: Text, 승인번호: Unknown, 영수증: Null, 금액: Number, 설명: Text}>",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3520,
+     "end": 3705,
+     "line": 76,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 76,
+     "end_column": 191,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "ARITHMETIC",
+    "severity": "error",
+    "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3712,
+     "end": 3826,
+     "line": 77,
+     "column": 6
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3712,
+     "end": 3826,
+     "line": 77,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 77,
+     "end_column": 120,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: List<{종류: Text, 승인번호: Null, 영수증: Text, 금액: Number, 설명: Text}>",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3712,
+     "end": 3826,
+     "line": 77,
+     "column": 6
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "List<{종류: Text, 승인번호: Null, 영수증: Text, 금액: Number, 설명: Text}>",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3712,
+     "end": 3826,
+     "line": 77,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 77,
+     "end_column": 120,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "ARITHMETIC",
+    "severity": "error",
+    "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3833,
+     "end": 3920,
+     "line": 78,
+     "column": 6
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3833,
+     "end": 3920,
+     "line": 78,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 78,
+     "end_column": 93,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: List<{종류: Text, 승인번호: Null, 영수증: Text, 금액: Null, 설명: Null | Text}>",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3833,
+     "end": 3920,
+     "line": 78,
+     "column": 6
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "List<{종류: Text, 승인번호: Null, 영수증: Text, 금액: Null, 설명: Null | Text}>",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3833,
+     "end": 3920,
+     "line": 78,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 78,
+     "end_column": 93,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "ARITHMETIC",
+    "severity": "error",
+    "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3927,
+     "end": 4030,
+     "line": 79,
+     "column": 6
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3927,
+     "end": 4030,
+     "line": 79,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 79,
+     "end_column": 109,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: List<{종류: Text, 승인번호: Null, 영수증: Never, 금액: Null, 설명: Text}>",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3927,
+     "end": 4030,
+     "line": 79,
+     "column": 6
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "List<{종류: Text, 승인번호: Null, 영수증: Never, 금액: Null, 설명: Text}>",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 3927,
+     "end": 4030,
+     "line": 79,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 79,
+     "end_column": 109,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "ARITHMETIC",
+    "severity": "error",
+    "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 4037,
+     "end": 4203,
+     "line": 80,
+     "column": 6
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 4037,
+     "end": 4203,
+     "line": 80,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 80,
+     "end_column": 172,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: List<{종류: Text, 승인번호: Unknown, 영수증: Unknown, 금액: Unknown, 설명: Text}>",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 4037,
+     "end": 4203,
+     "line": 80,
+     "column": 6
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "List<{종류: Text, 승인번호: Unknown, 영수증: Unknown, 금액: Unknown, 설명: Text}>",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 4037,
+     "end": 4203,
+     "line": 80,
+     "column": 6,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 80,
+     "end_column": 172,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "ARITHMETIC",
+    "severity": "error",
+    "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 4230,
+     "end": 4268,
+     "line": 83,
+     "column": 12
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 4230,
+     "end": 4268,
+     "line": 83,
+     "column": 12,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 83,
+     "end_column": 50,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 4280,
+     "end": 4317,
+     "line": 84,
+     "column": 11
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 4280,
+     "end": 4317,
+     "line": 84,
+     "column": 11,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 84,
+     "end_column": 48,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   }
+  ],
+  "guards": [],
+  "guards_total": 91,
+  "guards_inner": 0,
+  "guards_omitted": 91,
+  "result_type": "{보고일치: Bool, 목록일치: Bool, 이상수: Number, 종류: List<Text>, 결재: List<{대상: Text, 금액: Number, 근거: Text}>, 카드합: Unknown, 영합: Unknown}",
+  "effects": [
+   "pure",
+   "read_external",
+   "unknown",
+   "write_external"
+  ],
+  "functions": {
+   "def:198:377": {
+    "name": "중복영수증",
+    "params": {
+     "행": "List<{id: Text, 가맹점: Text, 날짜: Text, 합계: Number, 합계표기: Text, 원문확인: Bool, 원문: Text}>"
+    },
+    "required": [
+     "행"
+    ],
+    "pipe_input": "행",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "ef5265508105993e299c4898b32b449440e518387aeef14662da5e5f310f55ad",
+    "result": "List<{id: Text, 가맹점: Text, 날짜: Text, 합계: Number, 합계표기: Text, 원문확인: Bool, 원문: Text, 같은영수증: Null | Text}>",
+    "specializations": [
+     {
+      "params": {
+       "행": "List<{id: Text, 가맹점: Text, 날짜: Text, 합계: Number, 합계표기: Text, 원문확인: Bool, 원문: Text}>"
+      },
+      "result": "List<{id: Text, 가맹점: Text, 날짜: Text, 합계: Number, 합계표기: Text, 원문확인: Bool, 원문: Text, 같은영수증: Null | Text}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 198,
+     "end": 377,
+     "line": 6,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 12,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:427:831": {
+    "name": "정확짝",
+    "params": {
+     "영수증": "List<{id: Text, 가맹점: Text, 날짜: Text, 합계: Number, 합계표기: Text, 원문확인: Bool, 원문: Text, 같은영수증: Null}>",
+     "카드": "List<{승인일: Unknown, 가맹점: Unknown, 금액: Number, 승인번호: Unknown}>"
+    },
+    "required": [
+     "영수증",
+     "카드"
+    ],
+    "pipe_input": "영수증",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "721bf501b9ba32f10d9e92222e4bf9329b5be0f565f20373e44eca742e47780d",
+    "result": "{짝: Unknown, 사용: Unknown}",
+    "specializations": [
+     {
+      "params": {
+       "영수증": "List<{id: Text, 가맹점: Text, 날짜: Text, 합계: Number, 합계표기: Text, 원문확인: Bool, 원문: Text, 같은영수증: Null}>",
+       "카드": "List<{승인일: Unknown, 가맹점: Unknown, 금액: Number, 승인번호: Unknown}>"
+      },
+      "result": "{짝: Unknown, 사용: Unknown}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+     "start": 427,
+     "end": 831,
+     "line": 15,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 27,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "ce2ca9efb48386351be79d78d701fa46e44acef9eb6bc02328f0c0b3f6bc0b37",
+  "dependencies": {
+   "source": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "추출": "{영수증: List<{id: Text, 파일: Text, 상태: Text, 이유: Null | Text}>, 추출: List<{id: Text, 가맹점: Text, 날짜: Text, 합계: Number, 합계표기: Text, 원문확인: Bool, 원문: Text}>}",
+    "카드": "Text",
+    "정책": "Text",
+    "보고서": "Text",
+    "목록": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 5488
+    }
+   ],
+   "contracts": "0e3d1e925b4d9fc24c2a63d235176ee5bd940abc25cad67a3100b2dbabf88568",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "cece9404f75d401bd766689f258ec312f2d8628cdce0c53c1585fb766a0242d8"
+  },
+  "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 925,
+      "end": 1006,
+      "line": 31,
+      "column": 29,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 31,
+      "end_column": 110,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 224,
+      "end": 375,
+      "line": 7,
+      "column": 9,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 11,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 472,
+      "end": 806,
+      "line": 18,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 25,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "동적 반복 횟수"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 1612,
+      "end": 1842,
+      "line": 45,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 51,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 1665,
+      "end": 1840,
+      "line": 47,
+      "column": 11,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 50,
+      "end_column": 4,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 2138,
+      "end": 2169,
+      "line": 56,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 56,
+      "end_column": 48,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 2186,
+      "end": 2218,
+      "line": 57,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 57,
+      "end_column": 49,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 2667,
+      "end": 2699,
+      "line": 64,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 64,
+      "end_column": 50,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 2874,
+      "end": 2928,
+      "line": 68,
+      "column": 59,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 68,
+      "end_column": 113,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 2989,
+      "end": 3052,
+      "line": 69,
+      "column": 60,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 69,
+      "end_column": 123,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 3099,
+      "end": 3129,
+      "line": 72,
+      "column": 28,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 72,
+      "end_column": 58,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 3146,
+      "end": 3261,
+      "line": 73,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 73,
+      "end_column": 131,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 3277,
+      "end": 3374,
+      "line": 74,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 74,
+      "end_column": 112,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 3390,
+      "end": 3513,
+      "line": 75,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 75,
+      "end_column": 138,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 3530,
+      "end": 3705,
+      "line": 76,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 76,
+      "end_column": 191,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 3720,
+      "end": 3826,
+      "line": 77,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 77,
+      "end_column": 120,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 3841,
+      "end": 3920,
+      "line": 78,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 78,
+      "end_column": 93,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 3935,
+      "end": 4030,
+      "line": 79,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 79,
+      "end_column": 109,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 4048,
+      "end": 4203,
+      "line": 80,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 80,
+      "end_column": 172,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 4238,
+      "end": 4268,
+      "line": 83,
+      "column": 20,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 83,
+      "end_column": 50,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 4287,
+      "end": 4317,
+      "line": 84,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 84,
+      "end_column": 48,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 4334,
+      "end": 4434,
+      "line": 85,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 85,
+      "end_column": 116,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 4449,
+      "end": 4618,
+      "line": 86,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 86,
+      "end_column": 184,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 4633,
+      "end": 4694,
+      "line": 87,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 87,
+      "end_column": 76,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "42f5da9b31b7359d5220bf0db90ecb91e39e4db4aba4711998a14b3808ad3dec",
+      "start": 5378,
+      "end": 5454,
+      "line": 93,
+      "column": 32,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 93,
+      "end_column": 108,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 91,
+   "informative": 74
+  },
+  "guards_ref": {
+   "id": "2f396245d7a3c6ad33efd721894dc656ef6ced00678f512bcb9f6acfbf83f054",
+   "chars": 62409,
+   "read_args": {
+    "id": "2f396245d7a3c6ad33efd721894dc656ef6ced00678f512bcb9f6acfbf83f054",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "inputs_resolved": [
+   {
+    "name": "추출",
+    "id": "d0d3d62383596dbda6b985d18ca98b19ed6e269e84fbde632cfdc899018fbbbc",
+    "path": [
+     "value_wire"
+    ],
+    "evidence": {
+     "fingerprint": "e27e1de95cbda2b83c9d66bcfc24bdff0c8ec449a90835f29f015493ba4c0f8c",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "92b30e80df894fe496e93297d64fc22d"
+    },
+    "chars": 4762
+   }
+  ]
+ }
+}

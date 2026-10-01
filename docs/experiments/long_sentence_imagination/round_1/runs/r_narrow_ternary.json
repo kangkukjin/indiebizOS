@@ -1,0 +1,58 @@
+{
+ "request": {
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI1_trainer",
+  "task_id": "LSI1_task"
+ },
+ "code_file": null,
+ "elapsed_s": 0.67,
+ "response": {
+  "success": false,
+  "ok": false,
+  "status": "invalid",
+  "error": "실행 전 검사에서 거절했습니다: Bool | Number | Text가 필요하지만 Null | Number입니다. (TYPE)",
+  "issues": [
+   {
+    "code": "TYPE",
+    "message": "Bool | Number | Text가 필요하지만 Null | Number입니다.",
+    "source_span": {
+     "source_hash": "d1bc9f0233a639e0ccff379817953e0b8a951582b2dd6c4c667ffbfa133a1189",
+     "start": 99,
+     "end": 104,
+     "line": 3,
+     "column": 59
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null | Number",
+    "location": {
+     "source_hash": "d1bc9f0233a639e0ccff379817953e0b8a951582b2dd6c4c667ffbfa133a1189",
+     "start": 99,
+     "end": 104,
+     "line": 3,
+     "column": 59,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 64,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "TYPE",
+    "severity": "error",
+    "hint": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요."
+   }
+  ],
+  "warnings": [],
+  "evidence_summary": {
+   "events": 0,
+   "source_complete": null,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "guards_count": 0,
+  "response_chars": 2878,
+  "guards_chars": 2
+ }
+}

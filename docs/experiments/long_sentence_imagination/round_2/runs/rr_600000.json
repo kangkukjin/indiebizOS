@@ -1,0 +1,46 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "read_result": {
+   "id": "59f334c5e98c93edfdce14d027177679355f45e58c94ae9974fb2911c1fe76e7",
+   "offset": 600000,
+   "limit": 700
+  }
+ },
+ "elapsed_s": 0.02,
+ "response": {
+  "id": "59f334c5e98c93edfdce14d027177679355f45e58c94ae9974fb2911c1fe76e7",
+  "offset": 600000,
+  "chars": 1255621,
+  "text": "\"invocation_id\": 5801, \"kind\": \"field\", \"parents\": [5800]}, {\"id\": 5802, \"node_id\": \"ref:492:494\", \"invocation_id\": 5802, \"kind\": \"ref\", \"parents\": [5406]}, {\"id\": 5803, \"node_id\": \"binary:481:494\", \"invocation_id\": 5803, \"kind\": \"binary\", \"parents\": [5801, 5802]}, {\"id\": 5804, \"node_id\": \"ref:481:483\", \"invocation_id\": 5804, \"kind\": \"ref\", \"parents\": []}, {\"id\": 5805, \"node_id\": \"field:481:488\", \"invocation_id\": 5805, \"kind\": \"field\", \"parents\": [5804]}, {\"id\": 5806, \"node_id\": \"ref:492:494\", \"invocation_id\": 5806, \"kind\": \"ref\", \"parents\": [5406]}, {\"id\": 5807, \"node_id\": \"binary:481:494\", \"invocation_id\": 5807, \"kind\": \"binary\", \"parents\": [5805, 5806]}, {\"id\": 5808, \"node_id\": \"ref:481:4",
+  "integrity": "verified",
+  "next_offset": 600700,
+  "next_read": {
+   "id": "59f334c5e98c93edfdce14d027177679355f45e58c94ae9974fb2911c1fe76e7",
+   "offset": 600700,
+   "limit": 700
+  },
+  "read_scope": {
+   "path": [],
+   "start": 600000,
+   "end": 600700,
+   "total_chars": 1255621,
+   "complete": false,
+   "format": "stored"
+  },
+  "_display": {
+   "max_chars": 700
+  },
+  "input_args": {
+   "입력": {
+    "$ref": "59f334c5e98c93edfdce14d027177679355f45e58c94ae9974fb2911c1fe76e7",
+    "path": []
+   }
+  }
+ }
+}

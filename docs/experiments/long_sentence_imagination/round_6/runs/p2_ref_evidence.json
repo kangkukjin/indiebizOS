@@ -1,0 +1,60 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task",
+  "read_result": {
+   "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+   "path": [
+    "evidence"
+   ],
+   "offset": 0,
+   "limit": 200
+  }
+ },
+ "elapsed_s": 0.03,
+ "response": {
+  "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+  "offset": 0,
+  "chars": 596348,
+  "text": "[\n  {\n    \"id\": 1,\n    \"node_id\": \"sequence:15:4442\",\n    \"invocation_id\": 1,\n    \"kind\": \"input_ref\",\n    \"parents\": [],\n    \"origin\": {\n      \"name\": \"자료\",\n      \"id\": \"87cee360f886722bcb7489ea4f143",
+  "integrity": "verified",
+  "source_chars": 995843,
+  "path": [
+   "evidence"
+  ],
+  "next_offset": 200,
+  "next_read": {
+   "id": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+   "offset": 200,
+   "limit": 200,
+   "path": [
+    "evidence"
+   ]
+  },
+  "read_scope": {
+   "path": [
+    "evidence"
+   ],
+   "start": 0,
+   "end": 200,
+   "total_chars": 596348,
+   "complete": false,
+   "format": "json"
+  },
+  "_display": {
+   "max_chars": 200
+  },
+  "input_args": {
+   "입력": {
+    "$ref": "cd477365049cae82253ce2057e42d4d47811123226cde798dabbc2242f5b2519",
+    "path": [
+     "evidence"
+    ]
+   }
+  }
+ }
+}

@@ -1,0 +1,114 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$목록 = [\"a\"]\n  + [\"b\"]\nreturn $목록\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI5_trainer",
+  "task_id": "LSI5_task"
+ },
+ "elapsed_s": 0.27,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: List<Text>",
+    "source_span": {
+     "source_hash": "72f1931153c14f34624c4ef07f17ad74adc174e11e65ee27a04686cea193e25c",
+     "start": 32,
+     "end": 37,
+     "line": 3,
+     "column": 5
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "List<Text>",
+    "location": {
+     "source_hash": "72f1931153c14f34624c4ef07f17ad74adc174e11e65ee27a04686cea193e25c",
+     "start": 32,
+     "end": 37,
+     "line": 3,
+     "column": 5,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 10,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "ARITHMETIC",
+    "severity": "error",
+    "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 0,
+  "guards_inner": 0,
+  "guards_omitted": 0,
+  "result_type": "List<Text>",
+  "effects": [],
+  "functions": {},
+  "plan_hash": "42cd2a287e416e22cc303dc7cf04f65f3231a624fb8c07a2528d99af28134388",
+  "dependencies": {
+   "source": "72f1931153c14f34624c4ef07f17ad74adc174e11e65ee27a04686cea193e25c",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 49
+    }
+   ],
+   "contracts": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "cece9404f75d401bd766689f258ec312f2d8628cdce0c53c1585fb766a0242d8"
+  },
+  "source_hash": "72f1931153c14f34624c4ef07f17ad74adc174e11e65ee27a04686cea193e25c",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "success": false,
+  "error": "실행 전 검사에서 거절했습니다: 산술로 관측할 수 없는 타입: List<Text> (ARITHMETIC)",
+  "evidence_summary": {
+   "events": 0,
+   "source_complete": null,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "85a0ac08538046da568da80f1d7ef9381f40964db0ae74209e45fffd12ebf3f6",
+   "chars": 2151,
+   "max_limit": 60000,
+   "paths": [],
+   "read_args": {
+    "id": "85a0ac08538046da568da80f1d7ef9381f40964db0ae74209e45fffd12ebf3f6",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "issues"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+ }
+}

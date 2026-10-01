@@ -1,0 +1,324 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "describe": [
+   "table:ai",
+   "table:groupby",
+   "self:write",
+   "self:list",
+   "table:join",
+   "table:judge"
+  ]
+ },
+ "elapsed_s": 0.35,
+ "response": {
+  "actions": [
+   {
+    "action": "table:ai",
+    "definition": {
+     "description": "통화 변환자(AI) — items 를 자연어 지시(instruction)대로 의미 변환(선별·주석·재구성). 참/거짓·선택·점수만 필요하면 [table:judge], 규칙으로 적을 수 있으면 filter/sort 먼저.",
+     "group": "transform",
+     "runs_on": "anywhere",
+     "target_description": "instruction(필수 — 자연어 지시, 예 \"광고성 행 제거\"·\"각 행에 한 줄 요약 summary 필드 추가\"·\"조건에 맞는 것만\") · schema(선택 — 새 필드 명세 \"selected(불리언), reason(사유)\". 정적 검사·출력 지시·필드 존재 검사 공용) · input_fields(선택 — 모델에 보낼 최상위 열 배열, 생략=전체; 숨긴 원본 열은 모델이 수정할 수 없음) · preserve_rows(선택 boolean, 기본 false — 모든 _i 정확히 한 번, 입력 순서 복원; 누락·중복·추가 거절) · fields(선택 — 병합 뒤 남길 필드 배열, 생략=입력 필드 보존+추가 허용; 입력 필드를 나열해도 모델이 되쓰지 않는다 — 코드가 원 행에서 가져온다). 모델 출력=행마다 새/바뀐 필드만(색인 병합, 2026-09-06) — 큰 입력이라도 출력은 새 정보 크기. 집합 전체를 한 호출로 처리(행별 독립 처리는 [table:each] 안에서). 반환에 rows_in/rows_out(+rows_dropped) 동반 — 조용한 깎기 금지. 입력 상한 초과=정직 거절(take/filter 로 줄이기). >> 파이프로 앞 통화 자동 수용. contract(선택 — 중첩 배열의 입력 ID 전수 응답·필수 필드·허용값, 응답 직후 검사; 행 보존 자동 적용) · inspect:batch|each(선택 — 실제 투영 입력의 요청 크기·반복 배열 점검, 모델 호출 0, 원본 items+inspection 반환; criteria와 충돌). 상세 guides/ibl_composition.md. 일반 실행은 모델 비용(기어 실행 축).",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "contract": "Unknown",
+       "criteria": "Unknown",
+       "do": "Unknown",
+       "fields": "Unknown",
+       "input_fields": "Unknown",
+       "inspect": "Unknown",
+       "instruction": "Unknown",
+       "items": "List|Record|Text",
+       "op": "Unknown",
+       "preserve_rows": "Unknown",
+       "project_id": "Unknown",
+       "prompt": "Unknown",
+       "schema": "Unknown",
+       "scope": "Unknown",
+       "target": "Unknown"
+      },
+      "open_params": false,
+      "required": [],
+      "result": "Record",
+      "effects": [
+       "unknown"
+      ],
+      "compatibility": "legacy-envelope/1",
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "input_envelopes": [
+        "items"
+       ],
+       "value_path": ""
+      },
+      "pipe_input": "items"
+     },
+     "operations": {}
+    }
+   },
+   {
+    "action": "table:groupby",
+    "definition": {
+     "description": "통화 변환자 — items를 키 필드로 그룹지어 집계(형태 보존 — 그룹 행도 items). agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 \"count\")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null.",
+     "group": "transform",
+     "runs_on": "anywhere",
+     "target_description": "by(그룹 키 열, 필수 — 목록이면 교차집계: [\"아파트명\", \"계약유형\"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:\"count\" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:[\"count\"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 'op_원본열'(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 객체가 아닌 행이 섞이면 삭제하지 않고 오류를 반환한다. 빈 표형 입력도 스키마를 가진 0행 결과로 처리한다. 그룹 키와 집계 출력 열 이름이 겹치면 오류이므로 다른 출력 이름을 지정한다. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다.",
+     "callable_contract": {
+      "version": 1,
+      "nonempty": [
+       "by"
+      ],
+      "params": {
+       "agg": "Unknown",
+       "by": "Unknown",
+       "criteria": "Unknown",
+       "items": "List|Record|Text",
+       "op": "Unknown",
+       "project_id": "Unknown",
+       "scope": "Unknown",
+       "target": "Unknown"
+      },
+      "open_params": false,
+      "required": [],
+      "result": "Record",
+      "effects": [
+       "unknown"
+      ],
+      "compatibility": "legacy-envelope/1",
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "input_envelopes": [
+        "items"
+       ],
+       "value_path": ""
+      },
+      "pipe_input": "items"
+     },
+     "operations": {}
+    }
+   },
+   {
+    "action": "self:write",
+    "definition": {
+     "description": "텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(message 있으면 산문, 없으면 JSON). format:\"json\" 이면 items와 명시된 원문 본문을 함께 JSON으로 보존. spill:true 면 봉투에 참조(ref)만.",
+     "group": "file",
+     "target_description": "쓸 파일 경로 + content. 상대경로는 현재 프로젝트 기준(시스템 AI는 data/일 수 있음). 원장과 공유할 파일은 ~workspace/ 접두 또는 반환된 절대경로를 쓴다. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. 파이프 싱크의 모양 — 통화에 message(산문)가 있으면 그 산문을, 없으면 JSON 을 쓴다(정직 표지·_메타는 파일에서 빼고 excluded_meta 로 신고). format:\"json\" = 통화 보존 스위치 — items/count와 명시된 원문(transcript/text/content), 출처·언어·시간 정보를 함께 저장한다. saved_to_file 원문은 전문을 읽어 넣으므로 저장 뒤 캐시가 삭제돼도 다시 struct에 전달할 수 있다. 원문 파일이 없으면 실패한다. 실행 진단은 제외한다(원장 누적 관용구 `$본 = [self:read]{path}` → `$본.items & (새 조회 >> …) >> [table:union] >> [table:dedup]{by} >> [self:write]{path, format:\"json\"}` 의 첫 저장이 이것으로 선다). spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "path": "Text",
+       "content": "Text"
+      },
+      "required": [
+       "path",
+       "content"
+      ],
+      "pipe_input": "content",
+      "write_resources": {
+       "file": "path"
+      },
+      "result": "Record",
+      "effects": [
+       "write_external"
+      ],
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": ""
+      },
+      "nondeterministic": true
+     },
+     "operations": {},
+     "observed_returns": {
+      "self:write": {
+       "kind": "scalar",
+       "keys": [
+        "path",
+        "size",
+        "chars"
+       ],
+       "observed": "2026-09-28",
+       "source": "usage"
+      }
+     },
+     "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."
+    }
+   },
+   {
+    "action": "self:list",
+    "definition": {
+     "description": "디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).",
+     "group": "file",
+     "target_description": "조회할 디렉토리 경로. pattern으로 이름 선별(한글 NFC/NFD 정규화·대소문자 무시, 원래 경로 보존). items 필드는 file_find와 같은 name/path/size/mtime/dir/is_dir이며 title/meta/url도 유지한다. 하위 폴더까지 찾으려면 file_find를 쓴다.",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "path": "Text",
+       "pattern": "Text"
+      },
+      "required": [
+       "path"
+      ],
+      "pipe_input": "path",
+      "result": "List<Record>",
+      "effects": [
+       "read_external"
+      ],
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": "/items",
+       "attachments": [
+        "total",
+        "pattern"
+       ]
+      },
+      "nondeterministic": true
+     },
+     "operations": {},
+     "observed_returns": {
+      "self:list": {
+       "kind": "items",
+       "keys": [
+        "title",
+        "meta",
+        "summary",
+        "url",
+        "name",
+        "size",
+        "mtime",
+        "path",
+        "dir",
+        "is_dir"
+       ],
+       "observed": "2026-09-29",
+       "source": "fixture"
+      }
+     },
+     "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."
+    }
+   },
+   {
+    "action": "table:join",
+    "definition": {
+     "description": "통화 변환자(이항) — 두 입력을 공통 키(on)로 결합(how=inner/left/right/full/semi/anti). 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.",
+     "group": "transform",
+     "runs_on": "anywhere",
+     "target_description": "how(inner 기본, left=왼쪽 보존, right=오른쪽 보존, full=양쪽 보존, semi=키 기준 교집합(일치하는 왼쪽 행), anti=키 기준 차집합(불일치 왼쪽 행)). semi/anti는 오른쪽 중복으로 왼쪽 행을 복제하지 않는다. defaults({결과열:기본값})는 left/right/full에서 짝이 없는 쪽의 열에만 적용; 실제 null은 바꾸지 않는다. 빈 items에는 defaults로 빈 쪽 열을 선언할 수 있다. on(조인 키 이름, 양쪽에 존재, 필수 — 목록이면 복합키 조인이고 키 일부가 빈 행은 불일치 행으로 처리). 표형 table 입력=열 기준, items=필드 기준. null·필드 부재·빈/공백 문자열은 키 없음으로 제외(0·False는 유효 키). 결과=좌측 전체+우측(키 제외, 동명은 _2부터 빈 접미사). 충돌 이름은 입력 전체 열에서 한 번 정해 희소 행마다 달라지지 않는다. 표의 생략된 후행 셀은 null로 채워 열 위치를 보존한다. 주가의 date와 연도 자료를 바로 조인하지 말고, 연도 열을 만들고 연간 집계한 뒤 공통 키로 결합한다. 두 입력은 & 병렬로 공급 — 가지에 파이프가 필요하면(rename 등) 변수에 담아 left/right 로: $a = [A] >> [table:rename]{...} 후 [table:join]{left: \"$a\", right: \"$b\", on: ...}. ★1:N 조인은 왼쪽 값이 N행에 복제된다 — 조인 뒤 sum/avg 는 중복 합산이 되기 쉬우니 집계(groupby)는 조인 전에 하고 결과를 조인할 것.",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "inputs": "List<List<Record>|Record|Text>",
+       "left": "List<Record>|Record|Text",
+       "right": "List<Record>|Record|Text",
+       "on": "Text|List<Text>",
+       "how": "Text",
+       "defaults": "Record"
+      },
+      "required": [
+       "on"
+      ],
+      "required_any": [
+       [
+        "inputs",
+        "left"
+       ]
+      ],
+      "requires": {
+       "left": [
+        "right"
+       ],
+       "right": [
+        "left"
+       ]
+      },
+      "exclusive": [
+       [
+        "inputs",
+        "left"
+       ],
+       [
+        "inputs",
+        "right"
+       ]
+      ],
+      "aliases": {
+       "table1": "left",
+       "table2": "right",
+       "a": "left",
+       "b": "right"
+      },
+      "pipe_input": "inputs",
+      "result": "Record",
+      "effects": [
+       "pure"
+      ],
+      "nondeterministic": false,
+      "enums": {
+       "how": [
+        "inner",
+        "left",
+        "right",
+        "full",
+        "semi",
+        "anti"
+       ]
+      },
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": ""
+      }
+     },
+     "operations": {}
+    }
+   },
+   {
+    "action": "table:judge",
+    "definition": {
+     "description": "판정 전용 변환자 — 각 행의 참/거짓·선택·점수를 Jev로 일괄 판정. 원 행과 순서를 보존하고 judgment_ 접두 열 추가. 의미 판정은 judge, 규칙 비교는 filter, 글 생성은 ai/brief.",
+     "group": "transform",
+     "runs_on": "anywhere",
+     "target_description": "instruction(단일 질문, 결과 이름 result) · type(boolean 기본 / choice / score) · criteria(choice는 선택지→설명 맵, score는 낮은 순 2~10개 등급 목록, 점수 0~N-1) 또는 questions({이름:{instruction,type,criteria?}} 여러 독립 질문. items(직접 입력) 또는 >> 파이프. as(판정 열 접두사, 기본 judgment, 기존 열과 충돌 시 오류). threshold(0.5 초과~1, 기본 0.8): boolean 참 확률≥threshold면 true, ≤1-threshold면 false, 중간은 null; choice/score는 confidence≥threshold일 때만 value 확정. 결과 열 judgment_<질문>_value·judgment_<질문>_status(decided/unknown), 같은 접두사의 probability 또는 choice/score·confidence·probabilities. unknown은 false가 아니다. 행×질문≤100, 요청≤60000자; 빈 입력은 호출 0, 나머지는 한 요청. 통신/형식 오류는 실패, LLM 자동 폴백 없음. 인증 TYPESAFE_API_KEY(.env), 생성형 기어와 독립된 Jev API 비용·usage 신고. 상세 guides/judgment.md.",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "as": "Unknown",
+       "criteria": "Unknown",
+       "instruction": "Unknown",
+       "items": "List|Record|Text",
+       "op": "Unknown",
+       "project_id": "Unknown",
+       "questions": "Unknown",
+       "scope": "Unknown",
+       "target": "Unknown",
+       "threshold": "Unknown",
+       "type": "Unknown"
+      },
+      "open_params": false,
+      "required": [],
+      "result": "Record",
+      "effects": [
+       "unknown"
+      ],
+      "compatibility": "legacy-envelope/1",
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "input_envelopes": [
+        "items"
+       ],
+       "value_path": ""
+      },
+      "pipe_input": "items"
+     },
+     "operations": {}
+    }
+   }
+  ],
+  "executed": false
+ }
+}

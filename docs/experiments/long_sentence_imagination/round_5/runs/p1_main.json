@@ -1,0 +1,295 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 5회차 P1 추출 — 영수증 PDF 전부 읽고 글자 있는 것만 모델로 구조화 (최초 초안)\n# inputs: 폴더(receipts 폴더 절대경로)\n# 반환: {영수증:[{id,파일,상태,이유}], 추출:[{id,가맹점,날짜,합계,합계표기,원문확인,원문}]}\n\n[def:영수증읽기]($파일) {\n  $id = replace($파일.name,\".pdf\",\"\")\n  [try] {\n    $d = [self:read]{path:$파일.path}\n    [if:len(strip($d.text)) == 0] { return {id:$id,파일:$파일.path,상태:\"글자 없음\",이유:\"PDF 에 글자 층이 없음(스캔 추정)\",원문:\"\"} }\n    return {id:$id,파일:$파일.path,상태:\"읽음\",이유:null,원문:$d.text}\n  } [catch] {\n    return {id:$id,파일:$파일.path,상태:\"읽기 실패\",이유:f\"${$error.code}: ${$error.message}\",원문:\"\"}\n  }\n}\n\n[def:금액]($표기) {\n  [try] { return number(replace(replace($표기,\",\",\"\"),\"원\",\"\")) } [catch] { return null }\n}\n\n# ── 최상위 ──\n$파일 = [self:list]{path:$폴더,pattern:\"*.pdf\"}\n$읽기 = $파일 >> [table:each]{parallel:6} { [fn:영수증읽기]{파일:$it} }\n$영수증 = sorted($읽기,\"id\")\n$읽음 = $영수증 >> [table:filter]{where:($r)=>$r.상태 == \"읽음\"}\n$추출 = $읽음 >> [table:ai]{\n  instruction:\"각 행의 원문은 영수증 한 장이다. 가맹점명(원문 첫 줄 표기 그대로), 거래 날짜(YYYY-MM-DD), 최종 합계 금액(원문 표기 그대로, 예 '24,500')을 적어라. 원문에 없으면 null.\",\n  schema:\"가맹점(문자열), 날짜(문자열), 합계(문자열)\",\n  input_fields:[\"id\",\"원문\"],\n  preserve_rows:true\n}\n$행 = $추출.items >> [table:each] {\n  $표기 = $it.합계 == null ? \"\" : $it.합계\n  $날 = $it.날짜 == null ? \"\" : $it.날짜\n  return {id:$it.id,가맹점:$it.가맹점,날짜:$it.날짜,합계:[fn:금액]{표기:$표기},합계표기:$it.합계,\n          원문확인:len($표기) > 0 and contains($it.원문,$표기) and len($날) > 0 and contains($it.원문,$날),원문:$it.원문}\n}\nreturn {영수증:$영수증 >> [table:select]{columns:[\"id\",\"파일\",\"상태\",\"이유\"]},추출:$행}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI5_trainer",
+  "task_id": "LSI5_task",
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts"
+  }
+ },
+ "elapsed_s": 6.94,
+ "response": {
+  "success": true,
+  "value": {
+   "영수증": [
+    {
+     "id": "R01",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R01.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R02",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R02.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R03",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R03.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R04",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R04.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R05",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R05.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R06",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R06.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R07",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R07.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R08",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R08.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R09",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R09.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R10",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R10.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R11",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R11.pdf",
+     "상태": "읽음",
+     "이유": null
+    },
+    {
+     "id": "R12",
+     "파일": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_5/input/receipts/R12.pdf",
+     "상태": "글자 없음",
+     "이유": "PDF 에 글자 층이 없음(스캔 추정)"
+    }
+   ],
+   "추출": [
+    {
+     "id": "R01",
+     "가맹점": "스타벅스 강남대로점",
+     "날짜": "2026-09-01",
+     "합계": 23500,
+     "합계표기": "23,500",
+     "원문확인": true,
+     "원문": "\n--- Page 1 ---\n스타벅스 강남대로점\n거래일시 2026-09-01 12:01\n----------------------------\n아메리카노 x3 @4,500원\n카페라떼 x2 @5,000원\n----------------------------\n합계 금액 23,500원\n카드 승인\n"
+    },
+    {
+     "id": "R02",
+     "가맹점": "(주)한솥 역삼점",
+     "날짜": "2026-09-02",
+     "합계": 24500,
+     "합계표기": "24,500",
+     "원문확인": true,
+     "원문": "\n--- Page 1 ---\n(주)한솥 역삼점\n거래일시 2026-09-02 12:02\n----------------------------\n품목        수량     금액\n치킨마요         5    24,500\n----------------------------\n합계 금액 24,500원\n카드 승인\n"
+    },
+    {
+     "id": "R03",
+     "가맹점": "교보문고 광화문",
+     "날짜": "2026-09-03",
+     "합계": 45000,
+     "합계표기": "45,000",
+     "원문확인": true,
+     "원문": "\n--- Page 1 ---\n교보문고 광화문\n거래일시 2026-09-03 12:03\n----------------------------\n파이썬 책 x1 @36,000원\n노트 x3 @3,000원\n----------------------------\n합계 금액 45,000원\n카드 승인\n"
+    },
+    {
+     "id": "R04",
+     "가맹점": "카카오T 택시",
+     "날짜": "2026-09-04",
+     "합계": 18700,
+     "합계표기": "18,700",
+     "원문확인": true,
+     "원문": "\n--- Page 1 ---\n카카오T 택시\n거래일시 2026-09-04 12:04\n----------------------------\n운임 x1 @18,700원\n----------------------------\n합계 금액 18,700원\n카드 승인\n"
+    },
+    {
+     "id": "R05",
+     "가맹점": "오피스디포 선릉",
+     "날짜": "2026-09-05",
+     "합계": 111000,
+     "합계표기": "111,000",
+     "원문확인": true,
+     "원문": "\n--- Page 1 ---\n오피스디포 선릉\n거래일시 2026-09-05 12:05\n----------------------------\n품목        수량     금액\nA4 용지        4    22,000\n토너           1    89,000\n----------------------------\n합계 금액 111,000원\n카드 승인\n"
+    },
+    {
+     "id": "R06",
+     "가맹점": "본죽 삼성점",
+     "날짜": "2026-09-08",
+     "합계": 26000,
+     "합계표기": "26,000",
+     "원문확인": true,
+     "원문": "\n--- Page 1 ---\n본죽 삼성점\n거래일시 2026-09-08 12:06\n----------------------------\n전복죽 x2 @13,000원\n----------------------------\n합계 금액 26,000원\n카드 승인\n"
+    },
+    {
+     "id": "R07",
+     "가맹점": "동네 문구점",
+     "날짜": "2026-09-09",
+     "합계": 5000,
+     "합계표기": "5,000",
+     "원문확인": true,
+     "원문": "\n--- Page 1 ---\n동네 문구점\n거래일시 2026-09-09 12:07\n----------------------------\n포스트잇 x2 @2,500원\n----------------------------\n합계 금액 5,000원\n카드 승인\n"
+    },
+    {
+     "id": "R08",
+     "가맹점": "코레일 KTX",
+     "날짜": "2026-09-10",
+     "합계": 119600,
+     "합계표기": "119,600",
+     "원문확인": true,
+     "원문": "\n--- Page 1 ---\n코레일 KTX\n거래일시 2026-09-10 12:08\n----------------------------\n품목        수량     금액\n서울-부산        2   119,600\n----------------------------\n합계 금액 119,600원\n카드 승인\n"
+    },
+    {
+     "id": "R09",
+     "가맹점": "이디야 선릉역점",
+     "날짜": "2026-09-11",
+     "합계": 19200,
+     "합계표기": "19,200",
+     "원문확인": true,
+     "원문": "\n--- Page 1 ---\n이디야 선릉역점\n거래일시 2026-09-11 12:09\n----------------------------\n아메리카노 x6 @3,200원\n----------------------------\n합계 금액 19,200원\n카드 승인\n"
+    },
+    {
+     "id": "R10",
+     "가맹점": "쿠팡",
+     "날짜": "2026-09-12",
+     "합계": 42900,
+     "합계표기": "42,900",
+     "원문확인": true,
+     "원문": "\n--- Page 1 ---\n쿠팡\n거래일시 2026-09-12 12:10\n----------------------------\n모니터암 x1 @42,900원\n----------------------------\n합계 금액 42,900원\n카드 승인\n"
+    },
+    {
+     "id": "R11",
+     "가맹점": null,
+     "날짜": null,
+     "합계": null,
+     "합계표기": null,
+     "원문확인": false,
+     "원문": "\n--- Page 1 ---\n"
+    }
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "e561c1c09308eae5fc4b6719a49cd3ecef04f69ef0f749c4d4d600c80bc93ac1",
+  "source_complete": true,
+  "usage": {
+   "steps": 1471,
+   "rows": 23,
+   "elapsed_ms": 6620,
+   "model": {
+    "requests": 1,
+    "measured_requests": 1,
+    "unmeasured_requests": 0,
+    "input": 6961,
+    "output": 516,
+    "cache_read": 540,
+    "cache_create": 6419,
+    "reasoning": 43,
+    "calls": [
+     {
+      "call_id": "ba63d0fef5ec4495b4d57d76fafe34e5",
+      "parent_call_id": null,
+      "role": "oneshot:execution",
+      "phase": "execution",
+      "provider": "ClaudeCode",
+      "model": "opus",
+      "round_index": 1,
+      "tier": "고급",
+      "source": "gear:최대|실행→고급",
+      "measured": true,
+      "elapsed_ms": 5301,
+      "input": 6961,
+      "output": 516,
+      "cache_read": 540,
+      "cache_create": 6419,
+      "reasoning": 43
+     }
+    ]
+   }
+  },
+  "resume": {
+   "run_id": "a5efa7ab78b74f2b926f7a25509f0f09"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "a5efa7ab78b74f2b926f7a25509f0f09"
+    }
+   },
+   "read_calls": 13,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 395,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "32bc3aebb953faee6b33dda7e2230fbe1ed8274d3d795d742aba045630d5b8ac",
+   "chars": 115763,
+   "max_limit": 60000,
+   "paths": [
+    {
+     "path": [
+      "value",
+      "추출"
+     ],
+     "chars": 3212
+    },
+    {
+     "path": [
+      "value",
+      "영수증"
+     ],
+     "chars": 2232
+    }
+   ],
+   "read_args": {
+    "id": "32bc3aebb953faee6b33dda7e2230fbe1ed8274d3d795d742aba045630d5b8ac",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "value"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "input_args": {
+    "입력": {
+     "$ref": "32bc3aebb953faee6b33dda7e2230fbe1ed8274d3d795d742aba045630d5b8ac"
+    }
+   },
+   "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+   "value_chars": 4819
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

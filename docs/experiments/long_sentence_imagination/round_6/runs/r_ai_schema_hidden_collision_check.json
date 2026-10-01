@@ -1,0 +1,79 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# L6-2: schema 필드 \"분류\" 가 input_fields 밖의 기존 열(분류:null)과 같은 이름 → check 통과, 모델 호출 뒤 TOOL \"input_fields 밖의 원본 필드를 변경\". 어느 필드인지 없음.\n$행 = [{설명:\"HAIRSHOP BLUE\",분류:null,출처:\"규칙\"},{설명:\"KTX 코레일\",분류:null,출처:\"규칙\"}]\n$행 >> [table:ai]{instruction:\"설명의 지출 분류를 정한다(식비·교통·미용 중 하나).\",schema:\"분류(문자열)\",input_fields:[\"설명\"],preserve_rows:true}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI6_trainer",
+  "task_id": "LSI6_task",
+  "check": true
+ },
+ "elapsed_s": 0.29,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 1,
+  "guards_inner": 0,
+  "guards_omitted": 1,
+  "result_type": "Record",
+  "effects": [
+   "model"
+  ],
+  "functions": {},
+  "plan_hash": "c865d97be48df4f2dd14c88e69f81d9a12d281f1a72cca28f923cca889f69e40",
+  "dependencies": {
+   "source": "7ddea976ce58c11e74293d3d0d6ccf1a69c06c8442fa8e6aecf18d05c269da64",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 338
+    }
+   ],
+   "contracts": "b03dfda8f9d7c3f289bf8b7b86921805b8219c53c4bb3421ddaabba85eef712d",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "4043ed08260cb693dc9460438ba61fa46506ddf922a12230d21e7f27218b0c3d",
+   "core": "beea52a869367eaf43dfe7604f213e793daa2f250579ddcd1b29e5dab3365cea"
+  },
+  "source_hash": "7ddea976ce58c11e74293d3d0d6ccf1a69c06c8442fa8e6aecf18d05c269da64",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 1,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 1,
+   "informative": 1
+  },
+  "guards_ref": {
+   "id": "c109d132a676330e56a87b697b5eb1807d666efc88dfef2372a890a1c21b7b5f",
+   "chars": 722,
+   "read_args": {
+    "id": "c109d132a676330e56a87b697b5eb1807d666efc88dfef2372a890a1c21b7b5f",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

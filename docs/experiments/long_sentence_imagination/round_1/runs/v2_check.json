@@ -1,0 +1,156 @@
+{
+ "request": {
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI1_trainer",
+  "task_id": "LSI1_task",
+  "check": true,
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_1회차/input",
+   "요구파일": "requirements.json",
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_1회차/out/main_report.md",
+   "업체": [
+    {
+     "vendor": "A",
+     "file": "vendor_A.csv",
+     "format": "csv"
+    },
+    {
+     "vendor": "B",
+     "file": "vendor_B.json",
+     "format": "json"
+    },
+    {
+     "vendor": "C",
+     "file": "vendor_C.csv",
+     "format": "csv"
+    }
+   ]
+  }
+ },
+ "code_file": null,
+ "elapsed_s": 0.42,
+ "response": {
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "TYPE",
+    "message": "Bool | Number | Text가 필요하지만 Null | Number입니다.",
+    "source_span": {
+     "source_hash": "c35206173e5686bf8dc613636a68980978cd83e7edcf78b91804806715eb9235",
+     "start": 2312,
+     "end": 2322,
+     "line": 61,
+     "column": 45
+    },
+    "call_path": [
+     {
+      "function": "보고서",
+      "call": {
+       "source_hash": "c35206173e5686bf8dc613636a68980978cd83e7edcf78b91804806715eb9235",
+       "start": 3167,
+       "end": 3205,
+       "line": 85,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 85,
+       "end_column": 45,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "c35206173e5686bf8dc613636a68980978cd83e7edcf78b91804806715eb9235",
+       "start": 2161,
+       "end": 2904,
+       "line": 57,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 77,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "expected": "Bool | Number | Text",
+    "actual": "Null | Number",
+    "location": {
+     "source_hash": "c35206173e5686bf8dc613636a68980978cd83e7edcf78b91804806715eb9235",
+     "start": 2312,
+     "end": 2322,
+     "line": 61,
+     "column": 45,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 61,
+     "end_column": 55,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "TYPE",
+    "severity": "error",
+    "hint": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요."
+   },
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool만 사용할 수 있습니다.",
+    "source_span": {
+     "source_hash": "c35206173e5686bf8dc613636a68980978cd83e7edcf78b91804806715eb9235",
+     "start": 2844,
+     "end": 2847,
+     "line": 75,
+     "column": 13
+    },
+    "call_path": [
+     {
+      "function": "보고서",
+      "call": {
+       "source_hash": "c35206173e5686bf8dc613636a68980978cd83e7edcf78b91804806715eb9235",
+       "start": 3167,
+       "end": 3205,
+       "line": 85,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 85,
+       "end_column": 45,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "definition": {
+       "source_hash": "c35206173e5686bf8dc613636a68980978cd83e7edcf78b91804806715eb9235",
+       "start": 2161,
+       "end": 2904,
+       "line": 57,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 77,
+       "end_column": 2,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "location": {
+     "source_hash": "c35206173e5686bf8dc613636a68980978cd83e7edcf78b91804806715eb9235",
+     "start": 2844,
+     "end": 2847,
+     "line": 75,
+     "column": 13,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 75,
+     "end_column": 16,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   }
+  ],
+  "warnings": [],
+  "guards_count": 24,
+  "response_chars": 42642,
+  "guards_chars": 30593
+ }
+}

@@ -1,0 +1,169 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$r = [sense:search]{queries:[\"python 3.14\",\"python 3.13\"],limit:2}\nreturn $r.items >> [table:each] { return {q:$it.query,u:$it.url} }\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "check": true
+ },
+ "elapsed_s": 0.26,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 1,
+  "guards_inner": 0,
+  "guards_omitted": 1,
+  "result_type": "List<{q: Unknown, u: Unknown}>",
+  "effects": [
+   "read_external"
+  ],
+  "functions": {},
+  "plan_hash": "70b7456726e1461495417e4bcec8fcebdc70c40d3525f5dfb9d250d0f4ce0fff",
+  "dependencies": {
+   "source": "9c47bacd7d597e4611fe993a5c1de57ee1ce93e85d8e2cbb70d3fcc533385d52",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 150
+    }
+   ],
+   "contracts": "8fc1c9d9d02b820b2965f13c007d63685402883a2b1fc4babdede2decd47e19f",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "b8cba6f27e39735b3c9966ca55ce032775ce63e8fbae8e972be9a7390cac651c"
+  },
+  "source_hash": "9c47bacd7d597e4611fe993a5c1de57ee1ce93e85d8e2cbb70d3fcc533385d52",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "9c47bacd7d597e4611fe993a5c1de57ee1ce93e85d8e2cbb70d3fcc533385d52",
+      "start": 102,
+      "end": 149,
+      "line": 3,
+      "column": 20,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 3,
+      "end_column": 67,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [
+    {
+     "code": "UNOBSERVED_FIELD",
+     "rule": "UNOBSERVED_FIELD",
+     "severity": "warning",
+     "message": "관측된 반환 필드에 없는 이름입니다: query. 관측 필드: title, meta, summary, url",
+     "source_span": {
+      "source_hash": "9c47bacd7d597e4611fe993a5c1de57ee1ce93e85d8e2cbb70d3fcc533385d52",
+      "start": 127,
+      "end": 136,
+      "line": 3,
+      "column": 45
+     },
+     "call_path": [],
+     "facts": {
+      "field": "query",
+      "observed": [
+       "title",
+       "meta",
+       "summary",
+       "url"
+      ]
+     },
+     "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+     "location": {
+      "source_hash": "9c47bacd7d597e4611fe993a5c1de57ee1ce93e85d8e2cbb70d3fcc533385d52",
+      "start": 127,
+      "end": 136,
+      "line": 3,
+      "column": 45,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 3,
+      "end_column": 54,
+      "offset_encoding": "unicode-codepoints"
+     }
+    }
+   ],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: query. 관측 필드: title, meta, summary, url",
+    "source_span": {
+     "source_hash": "9c47bacd7d597e4611fe993a5c1de57ee1ce93e85d8e2cbb70d3fcc533385d52",
+     "start": 127,
+     "end": 136,
+     "line": 3,
+     "column": 45
+    },
+    "call_path": [],
+    "facts": {
+     "field": "query",
+     "observed": [
+      "title",
+      "meta",
+      "summary",
+      "url"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "9c47bacd7d597e4611fe993a5c1de57ee1ce93e85d8e2cbb70d3fcc533385d52",
+     "start": 127,
+     "end": 136,
+     "line": 3,
+     "column": 45,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 54,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 1,
+   "informative": 0
+  },
+  "guards_ref": {
+   "id": "5ac77446f5a6a8ac9d749127530351b8b0e263f1ee677ae764f8e03f5394632e",
+   "chars": 646,
+   "read_args": {
+    "id": "5ac77446f5a6a8ac9d749127530351b8b0e263f1ee677ae764f8e03f5394632e",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

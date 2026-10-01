@@ -1,0 +1,1 @@
+{"inputs":{"자료":{"$ref":"d0bccadf6497e7c3701ce957cf687ab65d2bcad60696ff037ffacf3eb4f6f3c6"},"기대파일":["orders_2025-01.csv","orders_2025-02.csv","orders_2025-03.csv","orders_2025-04.csv","orders_2025-05.csv","orders_2025-06.csv","carrier_A.csv","carrier_B.json","returns.csv","refunds.csv","sla.json"]},"budget":{"steps":900000,"rows":90000}}

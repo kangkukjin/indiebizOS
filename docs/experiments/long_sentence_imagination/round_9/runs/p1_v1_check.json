@@ -1,0 +1,281 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 9회차 P1 v1 (v0: get 2인자 ARITY) 수집·정규화·사유 유형화 — inputs: 폴더. 요청 budget {steps:600000,rows:60000}\n# 반환: 주문(금액수·월), 배송(택배사·주문번호·발송일·도착일 ISO), 반품(유형 포함), 환불(환불금액수), 기준, 파일상태, 오류행\n\n# 금액 열을 숫자로. 빠른 경로가 실패한 파일만 행별로 다시 읽어 오류 행을 보존한다.\n[def:금액정규화]($행들,$열) {\n  [try] { return {행:$행들 >> [table:compute]{set:($r)=>{금액수:number(get($r,$열,null))}},오류행:[]} }\n  [catch] {\n    $느 = $행들 >> [table:each] {\n      [try] { return {**$it,금액수:number(get($it,$열,null)),금액오류:null} }\n      [catch] { return {**$it,금액수:null,금액오류:$error.message} }\n    }\n    return {행:$느,오류행:$느 >> [table:filter]{where:($r)=>$r.금액오류 != null}}\n  }\n}\n\n# 있을 수도 없을 수도 있는 파일 하나를 읽어 상태와 함께 돌려준다.\n[def:파일읽기]($경로,$이름) {\n  [try] { $문 = [self:read]{path:$경로}\n    return {파일:$이름,상태:\"읽음\",자료:$문.data,오류:null} }\n  [catch] { return {파일:$이름,상태:\"실패\",자료:null,오류:$error.message} }\n}\n\n# ── 주문 ──\n$주문파일 = [self:list]{path:f\"${$폴더}/orders\",pattern:\"orders_2025-*.csv\"} >> [table:sort]{by:\"name\"}\n$주문읽기 = $주문파일 >> [table:each]{parallel:4} {\n  $f = [fn:파일읽기]{경로:$it.path,이름:$it.name}\n  [if:$f.상태 != \"읽음\"] { return {파일:$it.name,상태:\"실패\",행:[],오류행:[],오류:$f.오류} }\n  $정 = [fn:금액정규화]{행들:$f.자료.items,열:\"금액\"}\n  return {파일:$it.name,상태:\"읽음\",행:$정.행,오류행:$정.오류행,오류:null}\n}\n$주문원 = $주문읽기 >> [table:each]{mode:\"flat_map\"} { return $it.행 }\n$주문 = $주문원 >> [table:compute]{set:($r)=>{월:split($r.주문일,\"-\")[1]}}\n$주문오류 = $주문읽기 >> [table:each]{mode:\"flat_map\"} { return $it.오류행 }\n\n# ── 배송: A(CSV, ISO 날짜) · B(JSON, order_id/shipped/delivered, 슬래시 날짜·null) ──\n$fa = [fn:파일읽기]{경로:f\"${$폴더}/shipments/carrier_A.csv\",이름:\"carrier_A.csv\"}\n$fb = [fn:파일읽기]{경로:f\"${$폴더}/shipments/carrier_B.json\",이름:\"carrier_B.json\"}\n$배송A = []\n[if:$fa.상태 == \"읽음\"] {\n  $배송A = $fa.자료.items >> [table:compute]{set:($r)=>{택배사:\"A\",도착:$r.도착일 == \"\" ? null : $r.도착일}} >> [table:select]{columns:[\"택배사\",\"주문번호\",\"발송일\",\"도착\"]}\n}\n$배송B = []\n[if:$fb.상태 == \"읽음\"] {\n  $배송B = $fb.자료.shipments >> [table:compute]{set:($r)=>{택배사:\"B\",주문번호:$r.order_id,발송일:replace($r.shipped,\"/\",\"-\"),도착:$r.delivered == null ? null : replace($r.delivered,\"/\",\"-\")}} >> [table:select]{columns:[\"택배사\",\"주문번호\",\"발송일\",\"도착\"]}\n}\n$배송 = $배송A + $배송B\n\n# ── 반품·환불·기준 ──\n$fr = [fn:파일읽기]{경로:f\"${$폴더}/returns.csv\",이름:\"returns.csv\"}\n$ff = [fn:파일읽기]{경로:f\"${$폴더}/refunds.csv\",이름:\"refunds.csv\"}\n$fs = [fn:파일읽기]{경로:f\"${$폴더}/sla.json\",이름:\"sla.json\"}\n$반품원 = $fr.상태 == \"읽음\" ? $fr.자료.items : []\n$환불정 = [fn:금액정규화]{행들:$ff.상태 == \"읽음\" ? $ff.자료.items : [],열:\"환불금액\"}\n\n# 사유 문장(서로 다른 것만)을 AI 로 유형화 → 반품 행에 붙인다.\n$사유들 = $반품원 >> [table:dedup]{by:\"사유\"}\n$사유표 = $사유들.items >> [table:select]{columns:[\"사유\"]}\n$AI = $사유표 >> [table:ai]{instruction:\"각 행의 사유는 온라인 상점 고객이 적은 반품 사유다. 유형을 '불량·파손', '오배송', '단순 변심', '배송 지연', '기대와 다름', '기타' 중 하나로 정한다.\",schema:\"유형(문자열)\",preserve_rows:true}\n$반품 = [table:join]{left:$반품원,right:$AI.items,on:\"사유\",how:\"left\",defaults:{유형:\"미분류\"}}\n\n$주문상태 = $주문읽기 >> [table:each] { return {파일:$it.파일,상태:$it.상태,행수:len($it.행),오류:$it.오류} }\n$파일상태 = $주문상태 + [\n  {파일:\"carrier_A.csv\",상태:$fa.상태,행수:len($배송A),오류:$fa.오류},\n  {파일:\"carrier_B.json\",상태:$fb.상태,행수:len($배송B),오류:$fb.오류},\n  {파일:\"returns.csv\",상태:$fr.상태,행수:len($반품원),오류:$fr.오류},\n  {파일:\"refunds.csv\",상태:$ff.상태,행수:len($환불정.행),오류:$ff.오류},\n  {파일:\"sla.json\",상태:$fs.상태,행수:0,오류:$fs.오류}]\nreturn {주문:$주문,배송:$배송,반품:$반품.items,환불:$환불정.행,기준:$fs.자료,파일상태:$파일상태,\n        오류행:$주문오류 + $환불정.오류행,사유유형:$AI.items,행수:{주문:len($주문),배송:len($배송),반품:len($반품원),환불:len($환불정.행)}}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI9_trainer",
+  "task_id": "LSI9_task",
+  "check": true,
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_9/input"
+  },
+  "budget": {
+   "steps": 600000,
+   "rows": 60000
+  }
+ },
+ "elapsed_s": 0.34,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 55,
+  "guards_inner": 0,
+  "guards_omitted": 55,
+  "result_type": "{주문: List<{월: Text}>, 배송: List<{택배사: Unknown, 주문번호: Unknown, 발송일: Unknown, 도착: Unknown}>, 반품: Unknown, 환불: List<Record>, 기준: Unknown, 파일상태: List<{파일: Unknown, 상태: Text, 행수: Number, 오류: Unknown}>, 오류행: List<{금액수: Null | Number, 금액오류: Unknown}>, 사유유형: Unknown, 행수: {주문: Number, 배송: Number, 반품: Number, 환불: Number}}",
+  "effects": [
+   "model",
+   "pure",
+   "read_external",
+   "unknown"
+  ],
+  "functions": {
+   "def:658:831": {
+    "name": "파일읽기",
+    "params": {
+     "경로": "Unknown",
+     "이름": "Unknown"
+    },
+    "required": [
+     "경로",
+     "이름"
+    ],
+    "pipe_input": "경로",
+    "default_expressions": {},
+    "effects": [
+     "read_external"
+    ],
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "37a8015a1decd76a670e5ebb131000c6d458d22629595c19bab444c378863a76",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "경로": "Unknown",
+       "이름": "Unknown"
+      },
+      "result": "{파일: Unknown, 상태: Text, 자료: Unknown, 오류: Unknown}"
+     },
+     {
+      "params": {
+       "경로": "Text",
+       "이름": "Text"
+      },
+      "result": "{파일: Text, 상태: Text, 자료: Unknown, 오류: Unknown}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "e61fd8664e7dea043b46e637793e95ba717eb3c3fd87bace8e67bc3cb885121d",
+     "start": 658,
+     "end": 831,
+     "line": 18,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 22,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:242:616": {
+    "name": "금액정규화",
+    "params": {
+     "행들": "Unknown",
+     "열": "Text"
+    },
+    "required": [
+     "행들",
+     "열"
+    ],
+    "pipe_input": "행들",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:compute",
+     "table:filter"
+    ],
+    "source_hash": "a76e666c259fc4e326a6b35a0409319dfdf5d442b5177208568012b639fc7e7f",
+    "result": "{행: List<Record>, 오류행: List<{금액수: Null | Number, 금액오류: Unknown}>}",
+    "specializations": [
+     {
+      "params": {
+       "행들": "Unknown",
+       "열": "Text"
+      },
+      "result": "{행: List<Record>, 오류행: List<{금액수: Null | Number, 금액오류: Unknown}>}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "e61fd8664e7dea043b46e637793e95ba717eb3c3fd87bace8e67bc3cb885121d",
+     "start": 242,
+     "end": 616,
+     "line": 6,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 15,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "c2216df85e8e9d01520afa8c020b38a3d877cbdde2c242f1f7d0d6d40b1792d9",
+  "dependencies": {
+   "source": "e61fd8664e7dea043b46e637793e95ba717eb3c3fd87bace8e67bc3cb885121d",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "폴더": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 3320
+    }
+   ],
+   "contracts": "8a8cf76b5f543a02428177e688814cf6186f31baa3661faa5137ff21b9a3d6f9",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "4043ed08260cb693dc9460438ba61fa46506ddf922a12230d21e7f27218b0c3d",
+   "core": "8a571d05ab34b82eb8d144e69a8ed3ed9c85f5f5589197e7244a0651393256d1"
+  },
+  "source_hash": "e61fd8664e7dea043b46e637793e95ba717eb3c3fd87bace8e67bc3cb885121d",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "e61fd8664e7dea043b46e637793e95ba717eb3c3fd87bace8e67bc3cb885121d",
+      "start": 959,
+      "end": 1202,
+      "line": 26,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 31,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "e61fd8664e7dea043b46e637793e95ba717eb3c3fd87bace8e67bc3cb885121d",
+      "start": 386,
+      "end": 538,
+      "line": 9,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 12,
+      "end_column": 6,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "e61fd8664e7dea043b46e637793e95ba717eb3c3fd87bace8e67bc3cb885121d",
+      "start": 1219,
+      "end": 1265,
+      "line": 32,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 32,
+      "end_column": 63,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "e61fd8664e7dea043b46e637793e95ba717eb3c3fd87bace8e67bc3cb885121d",
+      "start": 1349,
+      "end": 1397,
+      "line": 34,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 34,
+      "end_column": 66,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "e61fd8664e7dea043b46e637793e95ba717eb3c3fd87bace8e67bc3cb885121d",
+      "start": 2443,
+      "end": 2465,
+      "line": 57,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 57,
+      "end_column": 38,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "e61fd8664e7dea043b46e637793e95ba717eb3c3fd87bace8e67bc3cb885121d",
+      "start": 2792,
+      "end": 2861,
+      "line": 62,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 62,
+      "end_column": 87,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 55,
+   "informative": 43
+  },
+  "guards_ref": {
+   "id": "32eaab623e5c8c2a820f69827fa4720def30b174001755173ee54b280de81142",
+   "chars": 50564,
+   "read_args": {
+    "id": "32eaab623e5c8c2a820f69827fa4720def30b174001755173ee54b280de81142",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 600000,
+   "rows": 60000
+  }
+ }
+}

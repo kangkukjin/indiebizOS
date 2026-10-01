@@ -1,0 +1,53 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI10_trainer",
+  "task_id": "LSI10_task",
+  "describe": [
+   "table:sort"
+  ]
+ },
+ "elapsed_s": 0.25,
+ "response": {
+  "actions": [
+   {
+    "action": "table:sort",
+    "definition": {
+     "description": "통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, descending 옵션).",
+     "group": "transform",
+     "runs_on": "anywhere",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "items": "List<Record>",
+       "by": "Text",
+       "descending": "Bool"
+      },
+      "required": [
+       "items",
+       "by"
+      ],
+      "pipe_input": "items",
+      "result": "List<Record>",
+      "effects": [
+       "pure"
+      ],
+      "nondeterministic": false,
+      "adapter": {
+       "protocol": "core-table/2",
+       "operation": "sort"
+      },
+      "aliases": {
+       "desc": "descending"
+      }
+     },
+     "operations": {}
+    }
+   }
+  ],
+  "executed": false
+ }
+}

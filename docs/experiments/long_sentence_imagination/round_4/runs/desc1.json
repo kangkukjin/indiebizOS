@@ -1,0 +1,202 @@
+{
+ "request": {
+  "code": "",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "describe": [
+   "fn:본문에서찾기",
+   "sense:search"
+  ]
+ },
+ "elapsed_s": 0.49,
+ "response": {
+  "actions": [
+   {
+    "action": "fn:본문에서찾기",
+    "definition": {
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "목록": "Unknown",
+       "패턴": "Text",
+       "문맥": "Number",
+       "개수": "Number"
+      },
+      "required": [
+       "목록",
+       "패턴",
+       "문맥",
+       "개수"
+      ],
+      "result": {
+       "items": "List<Record>",
+       "count": "Number",
+       "match_info": {
+        "total_matches": "Number",
+        "selected_matches": "Number",
+        "omitted_matches": "Number"
+       }
+      },
+      "effects": [
+       "pure"
+      ],
+      "compatibility": "legacy-function/1",
+      "implementation_fingerprint": "e23043de0923377d96d3d694c0a5e558f1b575faa7ac3e98421f8283607b50f6",
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": ""
+      },
+      "pipe_input": "목록"
+     }
+    }
+   },
+   {
+    "action": "sense:search",
+    "definition": {
+     "description": "웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.",
+     "group": "research",
+     "target_description": "검색어. gnews/hn 정상 0건은 성공한 빈 items이며 HTTP·파싱·시간 초과 오류와 구별한다. 배치 실패는 errors에 남기고 성공한 행은 보존한다. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). ★검색어가 여럿이면 한 호출에 — queries:[\"…\",\"…\"](모든 source 공통 배치 — 병렬로 돌려 행마다 query 태그, sections 에 검색어별 건수, 실패한 검색어만 errors). 소스가 다르면 & 로 잇는다. naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·curate(경량 편집장) 지원. ★hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days(최근 N일) 를 줄 것. hn·gnews·guardian·naver(news) 결과의 date 필드가 ISO8601 aware 게시일, naver(blog)는 날짜만(YYYY-MM-DD) — 발행일 파싱 불능 행은 date 없음. 신선도 술어는 우변도 aware 로 쓸 것 — 예 where \"date >= 2026-08-07T00:00:00Z\" (날짜만 리터럴은 naive 라 aware 값과 혼합 판정 불능 — ISO 시간 의미론 2026-08-27 판정).",
+     "callable_contract": {
+      "version": 1,
+      "params": {
+       "query": "Text",
+       "source": "Text",
+       "limit": "Number",
+       "days": "Number",
+       "type": "Text",
+       "sort": "Text",
+       "country": "Text",
+       "language": "Text",
+       "curate": "Number",
+       "headlines": "Bool",
+       "queries": "Text|List<Text>",
+       "sources": "Text",
+       "from_date": "Text",
+       "to_date": "Text"
+      },
+      "result": {
+       "items": "List<Record>"
+      },
+      "effects": [
+       "read_external",
+       "model"
+      ],
+      "adapter": {
+       "protocol": "legacy-envelope",
+       "value_path": ""
+      },
+      "required": [],
+      "integers": [
+       "limit",
+       "days",
+       "curate"
+      ],
+      "minimum": {
+       "limit": 1,
+       "days": 0,
+       "curate": 0
+      },
+      "nonempty": [
+       "query",
+       "queries"
+      ],
+      "enums": {
+       "source": [
+        "ddg",
+        "naver",
+        "gnews",
+        "hn",
+        "guardian"
+       ]
+      },
+      "defaults": {
+       "source": "ddg",
+       "headlines": false,
+       "curate": 0
+      },
+      "variants": [
+       {
+        "when": {
+         "headlines": false
+        },
+        "required_any": [
+         [
+          "query",
+          "queries"
+         ]
+        ]
+       },
+       {
+        "when": {
+         "curate": 0
+        },
+        "effects": [
+         "read_external"
+        ]
+       },
+       {
+        "when": {
+         "source": "ddg"
+        },
+        "required_any": [
+         [
+          "query",
+          "queries"
+         ]
+        ]
+       },
+       {
+        "when": {
+         "source": "naver"
+        },
+        "required_any": [
+         [
+          "query",
+          "queries"
+         ]
+        ]
+       },
+       {
+        "when": {
+         "source": "guardian"
+        },
+        "required_any": [
+         [
+          "query",
+          "queries"
+         ]
+        ]
+       }
+      ],
+      "aliases": {
+       "count": "limit",
+       "display": "limit",
+       "page_size": "limit",
+       "max_results": "limit",
+       "front_page": "headlines"
+      }
+     },
+     "operations": {},
+     "observed_returns": {
+      "sense:search": {
+       "kind": "items",
+       "keys": [
+        "title",
+        "meta",
+        "summary",
+        "url"
+       ],
+       "observed": "2026-09-29",
+       "source": "fixture"
+      }
+     },
+     "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."
+    }
+   }
+  ],
+  "executed": false
+ }
+}

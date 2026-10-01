@@ -1,0 +1,88 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$x = [1,2,3]\nreturn reduce($x,0,($a,$b)=>\n  $a + $b)\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task",
+  "check": true
+ },
+ "elapsed_s": 0.34,
+ "response": {
+  "edition": 2,
+  "ok": false,
+  "success": false,
+  "executed": false,
+  "status": "invalid",
+  "error": "식을 읽을 수 없습니다: \n",
+  "diagnostic": {
+   "code": "SYNTAX",
+   "kind": "compile",
+   "message": "식을 읽을 수 없습니다: \n",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [],
+   "details": {},
+   "source_span": {
+    "source_hash": "17e144f425976bed81f9d9280e0f6c781a7dd113f63ff9ef8d9b32e69f2aa2b0",
+    "start": 57,
+    "end": 58,
+    "line": 3,
+    "column": 29
+   },
+   "rule": "SYNTAX",
+   "severity": "error",
+   "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+   "location": {
+    "source_hash": "17e144f425976bed81f9d9280e0f6c781a7dd113f63ff9ef8d9b32e69f2aa2b0",
+    "start": 57,
+    "end": 58,
+    "line": 3,
+    "column": 29,
+    "source": "<program>",
+    "uri": "ibl://program",
+    "end_line": 4,
+    "end_column": 1,
+    "offset_encoding": "unicode-codepoints"
+   }
+  },
+  "issues": [
+   {
+    "code": "SYNTAX",
+    "kind": "compile",
+    "message": "식을 읽을 수 없습니다: \n",
+    "frames": [],
+    "has_partial": false,
+    "partial": null,
+    "evidence": [],
+    "details": {},
+    "source_span": {
+     "source_hash": "17e144f425976bed81f9d9280e0f6c781a7dd113f63ff9ef8d9b32e69f2aa2b0",
+     "start": 57,
+     "end": 58,
+     "line": 3,
+     "column": 29
+    },
+    "rule": "SYNTAX",
+    "severity": "error",
+    "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+    "location": {
+     "source_hash": "17e144f425976bed81f9d9280e0f6c781a7dd113f63ff9ef8d9b32e69f2aa2b0",
+     "start": 57,
+     "end": 58,
+     "line": 3,
+     "column": 29,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 4,
+     "end_column": 1,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "guards": [],
+  "source_hash": "17e144f425976bed81f9d9280e0f6c781a7dd113f63ff9ef8d9b32e69f2aa2b0"
+ }
+}

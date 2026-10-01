@@ -1,0 +1,88 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 2회차 최초 초안 — 송년회 장소·날짜 제안서\n# inputs: 폴더, 출력, 미정비율(1 = 미정 전원 반영)\n\n# 응답 행 → 날짜별 한 행씩 펼침 (attend Y/미정만)\n[def:날짜펼침]($응답) {\n  $응답 >> [table:filter]{where:($r)=>$r.attend != \"N\"} >> [table:each]{mode:\"flat_map\"} {\n    $r = $it\n    split($r.dates, \";\") >> [table:each] { return {id:$r.id, date:$it, attend:$r.attend, diet:$r.diet} }\n  }\n}\n\n# 날짜별 확정·미정·식단 집계\n[def:날짜집계]($펼침, $날짜들, $미정비율) {\n  $날짜들 >> [table:each] {\n    $d = $it\n    $그날 = $펼침 >> [table:filter]{where:($p)=>$p.date == $d}\n    $확정 = $그날 >> [table:filter]{where:($p)=>$p.attend == \"Y\"}\n    $미정 = len($그날) - len($확정)\n    $채식 = $확정 >> [table:filter]{where:($p)=>$p.diet == \"채식\"}\n    $알레르기 = $확정 >> [table:filter]{where:($p)=>$p.diet == \"견과류 알레르기\"}\n    # 올림 = -((-x)//1)\n    $미정반영 = 0 - ((0 - $미정 * $미정비율) // 1)\n    return {date:$d, 확정:len($확정), 미정:$미정, 필요:len($확정) + $미정반영,\n            채식:len($채식), 알레르기:len($알레르기)}\n  }\n}\n\n# 날짜×장소 판정\n[def:안판정]($장소, $집계, $예산) {\n  $장소.dates >> [table:each] {\n    $d = $it\n    $n = ($집계 >> [table:filter]{where:($a)=>$a.date == $d})[0]\n    $비용 = $장소.rental_fee + $장소.price_per_head * $n.확정\n    $사유 = []\n    [if:$장소.capacity < $n.필요] { $사유 = $사유 + [f\"수용 부족(${n.필요}명 > ${장소.capacity}석)\"] }\n    [if:$비용 > $예산] { $사유 = $사유 + [f\"예산 초과(${비용}원)\"] }\n    [if:$n.채식 > 0 and $장소.vegetarian == false] { $사유 = $사유 + [\"채식 불가\"] }\n    return {venue:$장소.id, name:$장소.name, date:$d, 확정:$n.확정, 필요:$n.필요, capacity:$장소.capacity,\n            cost:$비용, ok:len($사유) == 0, reasons:$사유, veg_unknown:$장소.vegetarian == null,\n            채식:$n.채식, 알레르기:$n.알레르기}\n  }\n}\n\n# 후기 읽기 (장소 하나) — 실패는 호출자가 collect\n[def:후기읽기]($장소, $폴더) {\n  $문서 = [self:read]{path:f\"${폴더}/${장소.review_file}\"}\n  $줄 = split($문서.text, \"\\n\") >> [table:each]{mode:\"flat_map\"} { [if:len(strip($it)) > 0] { return [strip($it)] }; return [] }\n  return {venue:$장소.id, name:$장소.name, reviews:join(\"\\n\", $줄)}\n}\n\n# 모델: 장점·우려 요약\n[def:후기요약]($후기들) {\n  [if:len($후기들) == 0] { return [] }\n  $r = $후기들 >> [table:ai]{instruction:\"각 행의 reviews(한 줄에 후기 하나)를 읽고 장점과 우려를 짧은 구절 목록으로 정리하라. 후기에 없는 내용을 지어내지 말 것.\",\n                             schema:\"pros(문자열 목록), cons(문자열 목록)\", input_fields:[\"venue\",\"reviews\"], preserve_rows:true}\n  return $r.items\n}\n\n[def:제안서]($이벤트, $예산, $집계, $안들, $추천, $요약, $후기실패) {\n  $집계표 = $집계 >> [table:each] { return f\"| ${it.date} | ${it.확정} | ${it.미정} | ${it.필요} | ${it.채식} | ${it.알레르기} |\" }\n  $안표 = $안들 >> [table:each] {\n    $판정 = $it.ok ? \"가능\" : join(\", \", $it.reasons)\n    return f\"| ${it.venue} ${it.name} | ${it.date} | ${it.필요}/${it.capacity} | ${it.cost} | ${판정} |\"\n  }\n  $추천절 = $추천 >> [table:each] {\n    $a = $it\n    $s = $요약 >> [table:filter]{where:($x)=>$x.venue == $a.venue}\n    $장점 = len($s) > 0 ? join(\"; \", $s[0].pros) : \"후기 읽지 못함\"\n    $우려 = len($s) > 0 ? join(\"; \", $s[0].cons) : \"후기 읽지 못함\"\n    $질문 = ($a.veg_unknown ? [f\"채식 메뉴 가능 여부 (채식 ${a.채식}명)\"] : []) + ($a.알레르기 > 0 ? [f\"견과류 알레르기 ${a.알레르기}명 대응 가능 여부\"] : [])\n    $질문2 = []\n    [if:len($s) > 0] { $질문2 = $s[0].cons >> [table:each] { return f\"후기 우려 확인: ${it}\" } }\n    $질문줄 = ($질문 + $질문2) >> [table:each]{ return f\"  - ${it}\" }\n    return join(\"\\n\", [f\"### ${$i + 1}안: ${a.name} (${a.date})\", f\"- 확정 ${a.확정}명, 필요 좌석 ${a.필요}/${a.capacity}, 비용 ${a.cost}원\",\n                       f\"- 장점: ${장점}\", f\"- 우려: ${우려}\", \"- 업체 질문:\", join(\"\\n\", $질문줄)])\n  }\n  $실패줄 = $후기실패 >> [table:each] { return f\"- ${it.venue}: 후기 파일을 읽지 못함(${it.error})\" }\n  return join(\"\\n\", [f\"# ${이벤트} 장소·날짜 제안서 (예산 ${예산}원)\", \"\", \"## 날짜별 인원\", \"| 날짜 | 확정 | 미정 | 필요 좌석 | 채식 | 알레르기 |\", \"|---|---|---|---|---|---|\", join(\"\\n\", $집계표),\n                     \"\", \"## 날짜×장소 판정\", \"| 장소 | 날짜 | 필요/수용 | 비용 | 판정 |\", \"|---|---|---|---|---|\", join(\"\\n\", $안표),\n                     \"\", \"## 추천\", join(\"\\n\\n\", $추천절), \"\", \"## 후기 읽기 실패\", len($실패줄) > 0 ? join(\"\\n\", $실패줄) : \"- 없음\"])\n}\n\n# ── 최상위 ──\n$원천 = [self:read]{path:f\"${폴더}/responses.csv\"} & [self:read]{path:f\"${폴더}/venues.json\"}\n$응답 = $원천[0].data.items\n$설정 = $원천[1].data\n$펼침 = [fn:날짜펼침]{응답:$응답}\n$날짜값 = $펼침 >> [table:each] { return $it.date }\n$날짜들 = sorted(unique($날짜값))\n$집계 = [fn:날짜집계]{펼침:$펼침, 날짜들:$날짜들, 미정비율:$미정비율}\n$안들 = $설정.venues >> [table:each]{mode:\"flat_map\"} { [fn:안판정]{장소:$it, 집계:$집계, 예산:$설정.budget} }\n$가능 = $안들 >> [table:filter]{where:($a)=>$a.ok}\n$추천 = sorted($가능, ($a)=>[0 - $a.확정, $a.cost])[:2]\n\n$읽기 = $설정.venues >> [table:each]{parallel:4, on_error:\"collect\"} { [fn:후기읽기]{장소:$it, 폴더:$폴더} }\n$후기들 = $설정.venues >> [table:each]{mode:\"flat_map\"} { [if:is_ok($읽기[$i])] { return [unwrap($읽기[$i])] }; return [] }\n$후기실패 = $설정.venues >> [table:each]{mode:\"flat_map\"} { [if:is_ok($읽기[$i])] { return [] }; return [{venue:$it.id, error:error_of($읽기[$i]).message}] }\n$요약 = [fn:후기요약]{후기들:$후기들}\n\n$본문 = [fn:제안서]{이벤트:$설정.event, 예산:$설정.budget, 집계:$집계, 안들:$안들, 추천:$추천, 요약:$요약, 후기실패:$후기실패}\n$저장 = [self:write]{path:$출력, content:$본문}\n$확인 = [self:read]{path:$출력}\nreturn {집계:$집계, 추천:$추천 >> [table:each]{ return {venue:$it.venue, date:$it.date, cost:$it.cost} },\n        가능안수:len($가능), 요약:$요약, 후기실패:$후기실패, saved:$저장.path, verified:$확인.text == $본문,\n        rows_read:len($응답)}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/input",
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_2회차/out/proposal.md",
+   "미정비율": 1
+  }
+ },
+ "elapsed_s": 0.88,
+ "response": {
+  "success": false,
+  "error": "sorted의 키를 서로 비교할 수 없습니다. 목록·레코드 키는 순서가 없습니다. 여러 키로 정렬하려면 뒤 키부터 차례로 정렬하세요(정렬은 안정적): sorted(sorted($목록, \"b\"), \"a\") 또는 >> [table:sort]{by:\"b\"} >> [table:sort]{by:\"a\"}.",
+  "diagnostic": {
+   "code": "UNORDERED",
+   "kind": "runtime",
+   "message": "sorted의 키를 서로 비교할 수 없습니다. 목록·레코드 키는 순서가 없습니다. 여러 키로 정렬하려면 뒤 키부터 차례로 정렬하세요(정렬은 안정적): sorted(sorted($목록, \"b\"), \"a\") 또는 >> [table:sort]{by:\"b\"} >> [table:sort]{by:\"a\"}.",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [
+    9437
+   ],
+   "details": {},
+   "source_span": {
+    "source_hash": "8488dac3cf27a3273ff45e1e999a0fbfd67d0d85c77718d4572c42353e14b6bd",
+    "start": 4170,
+    "end": 4209,
+    "line": 94,
+    "column": 7
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "bbb257b0aef96c665b9cc643c30656ef1b665064318af7feacf16d5120cc72be",
+  "source_complete": true,
+  "usage": {
+   "steps": 12255,
+   "rows": 528,
+   "elapsed_ms": 400
+  },
+  "resume": {
+   "run_id": "2528bf4a2b874c68a1f15723ee917991"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "2528bf4a2b874c68a1f15723ee917991"
+    }
+   },
+   "read_calls": 2,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 9437,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "afef7844104ff3b20e5652d0c5b9e4dd54cc050092dfc60ccd2391bb58ca1358",
+   "chars": 1067005,
+   "max_limit": 60000,
+   "paths": [],
+   "read_args": {
+    "id": "afef7844104ff3b20e5652d0c5b9e4dd54cc050092dfc60ccd2391bb58ca1358",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "diagnostic"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

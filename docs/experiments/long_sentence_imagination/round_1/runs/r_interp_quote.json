@@ -1,0 +1,92 @@
+{
+ "request": {
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI1_trainer",
+  "task_id": "LSI1_task"
+ },
+ "code_file": null,
+ "elapsed_s": 0.69,
+ "response": {
+  "success": false,
+  "ok": false,
+  "status": "invalid",
+  "error": "보간의 닫는 }가 없습니다.",
+  "issues": [
+   {
+    "code": "SYNTAX",
+    "kind": "compile",
+    "message": "보간의 닫는 }가 없습니다.",
+    "frames": [],
+    "has_partial": false,
+    "partial": null,
+    "evidence": [],
+    "details": {},
+    "source_span": {
+     "source_hash": "aac0aa80208c8c01e60609c274777db402c54ffa84907e96510ce8f84d3e1154",
+     "start": 56,
+     "end": 57,
+     "line": 3,
+     "column": 22
+    },
+    "rule": "SYNTAX",
+    "severity": "error",
+    "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+    "location": {
+     "source_hash": "aac0aa80208c8c01e60609c274777db402c54ffa84907e96510ce8f84d3e1154",
+     "start": 56,
+     "end": 57,
+     "line": 3,
+     "column": 22,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 23,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "evidence_summary": {
+   "events": 0,
+   "source_complete": null,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "diagnostic": {
+   "code": "SYNTAX",
+   "kind": "compile",
+   "message": "보간의 닫는 }가 없습니다.",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [],
+   "details": {},
+   "source_span": {
+    "source_hash": "aac0aa80208c8c01e60609c274777db402c54ffa84907e96510ce8f84d3e1154",
+    "start": 56,
+    "end": 57,
+    "line": 3,
+    "column": 22
+   },
+   "rule": "SYNTAX",
+   "severity": "error",
+   "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+   "location": {
+    "source_hash": "aac0aa80208c8c01e60609c274777db402c54ffa84907e96510ce8f84d3e1154",
+    "start": 56,
+    "end": 57,
+    "line": 3,
+    "column": 22,
+    "source": "<program>",
+    "uri": "ibl://program",
+    "end_line": 3,
+    "end_column": 23,
+    "offset_encoding": "unicode-codepoints"
+   }
+  },
+  "guards_count": 0,
+  "response_chars": 2268,
+  "guards_chars": 2
+ }
+}

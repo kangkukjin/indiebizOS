@@ -1,0 +1,116 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$a = [{x:1}]\nreturn ($a >> [table:each] { return {y:$it.x} }) + ($a >> [table:each] { return {y:2} })\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI5_trainer",
+  "task_id": "LSI5_task",
+  "check": true
+ },
+ "elapsed_s": 0.27,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "305151f2a367c12a998adc528ddcd067528a46bd403ffcb02e9b3e5c72c70a6d",
+     "start": 37,
+     "end": 76,
+     "line": 3,
+     "column": 9
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "305151f2a367c12a998adc528ddcd067528a46bd403ffcb02e9b3e5c72c70a6d",
+     "start": 37,
+     "end": 76,
+     "line": 3,
+     "column": 9,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 48,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "305151f2a367c12a998adc528ddcd067528a46bd403ffcb02e9b3e5c72c70a6d",
+     "start": 81,
+     "end": 116,
+     "line": 3,
+     "column": 53
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "305151f2a367c12a998adc528ddcd067528a46bd403ffcb02e9b3e5c72c70a6d",
+     "start": 81,
+     "end": 116,
+     "line": 3,
+     "column": 53,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 3,
+     "end_column": 88,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   }
+  ],
+  "guards": [],
+  "guards_total": 0,
+  "guards_inner": 0,
+  "guards_omitted": 0,
+  "result_type": "List<{y: Number}>",
+  "effects": [],
+  "functions": {},
+  "plan_hash": "85cfa3c9a5564ce652d9f750b91b524cd1988c5654ef90320878ca1c005f0a02",
+  "dependencies": {
+   "source": "305151f2a367c12a998adc528ddcd067528a46bd403ffcb02e9b3e5c72c70a6d",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 118
+    }
+   ],
+   "contracts": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "2585742dfa6d29c30202903544c30bd57545245141eacbf6ce96b3ddc2b71da9",
+   "core": "cece9404f75d401bd766689f258ec312f2d8628cdce0c53c1585fb766a0242d8"
+  },
+  "source_hash": "305151f2a367c12a998adc528ddcd067528a46bd403ffcb02e9b3e5c72c70a6d",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+ }
+}

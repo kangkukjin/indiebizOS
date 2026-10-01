@@ -1,0 +1,77 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$r = [{a:1,b:2},{a:1,b:1}]\nreturn sorted($r, ($x)=>[$x.a, $x.b])\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "check": true
+ },
+ "elapsed_s": 0.3,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 2,
+  "guards_inner": 0,
+  "guards_omitted": 2,
+  "result_type": "List<{a: Number, b: Number}>",
+  "effects": [],
+  "functions": {},
+  "plan_hash": "67049846571dfd2e70de1777946ea4c7b74ddba1cf1b8dd850d435bf13970ef5",
+  "dependencies": {
+   "source": "0cf191db61d212f23ebcbadc92877216795401956c589d5f3e68f00a6fd391ef",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 81
+    }
+   ],
+   "contracts": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "c1794ea4f0c1da284c6c08fd27dd3f3dd6fac373f9dc627fc2c31d90486a3897",
+   "expressions": "8d08f157bcfb3c7db9e8da2fdb89205d54121034a929a4e110ca50844bc8ca91",
+   "core": "53edf2c6feeb307b4ba9aecb8e482e3ad02d310f8d88f1ce8fa0ff382311ccc0"
+  },
+  "source_hash": "0cf191db61d212f23ebcbadc92877216795401956c589d5f3e68f00a6fd391ef",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 2,
+   "informative": 2
+  },
+  "guards_ref": {
+   "id": "a4014df516080b92f1bff6f76b503947b9819cd4f89ab794bea8c90e5e567400",
+   "chars": 1236,
+   "read_args": {
+    "id": "a4014df516080b92f1bff6f76b503947b9819cd4f89ab794bea8c90e5e567400",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

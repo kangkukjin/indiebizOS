@@ -1,0 +1,70 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$v = \"5,000~6,000\"\n$n = number(replace($v,\",\",\"\"))\nreturn $n\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task"
+ },
+ "elapsed_s": 0.3,
+ "response": {
+  "success": false,
+  "error": "산술에는 관측 가능한 유한 숫자가 필요합니다.",
+  "diagnostic": {
+   "code": "NUMBER_REQUIRED",
+   "kind": "runtime",
+   "message": "산술에는 관측 가능한 유한 숫자가 필요합니다.",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [
+    11
+   ],
+   "details": {},
+   "source_span": {
+    "source_hash": "c7fbc0707f9ae84e85a315ecdecd2d2c92bb6694cced22960ef99ba8a85ad1bb",
+    "start": 40,
+    "end": 66,
+    "line": 3,
+    "column": 6
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "4410f3f3e0dad853b3c8d6ba2e67cb0f79a0d468f81631c8f46a528092de95a2",
+  "source_complete": true,
+  "usage": {
+   "steps": 13,
+   "rows": 0,
+   "elapsed_ms": 0
+  },
+  "resume": {
+   "run_id": "ec64ac9c1bb542f3b13402f9c6f0b31f"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "evidence_summary": {
+   "events": 11,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "82e1cea31f70fa8f4c879d14ffd59c07885dc0bbcac9be07d6f767d484480963",
+   "chars": 3650,
+   "max_limit": 60000,
+   "paths": [],
+   "read_args": {
+    "id": "82e1cea31f70fa8f4c879d14ffd59c07885dc0bbcac9be07d6f767d484480963",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "diagnostic"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+ }
+}

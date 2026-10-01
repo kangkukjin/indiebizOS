@@ -1,0 +1,399 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 10회차 P2 v1 분석 (v0: sort by 목록 미지원 TYPE → 합성 키 / 하락 필터 뒤 cur 의 null 좁힘 없음 TYPE → prev-하락) — inputs: 자료={$ref P1}. 요청 budget {steps:900000,rows:90000}\n$학생 = $자료.학생\n$출결 = $자료.출결\n$기준 = $자료.기준\n$재원 = $학생 >> [table:filter]{where:($s)=>$s.상태 == \"재원\"}\n$퇴원 = $학생 >> [table:filter]{where:($s)=>$s.상태 == \"퇴원\"}\n$학생반 = $학생 >> [table:select]{columns:[\"학번\",\"이름\",\"반\",\"수강료수\",\"상태\"]}\n\n# 읽기 문제\n$파일문제 = $자료.파일상태 >> [table:filter]{where:($f)=>$f.상태 != \"읽음\"} >> [table:each] { return {종류:\"파일 읽지 못함\",대상:$it.파일,근거:$it.상태 + \" — \" + get($it,\"오류\",\"\")} }\n$출결완전 = len($자료.파일상태 >> [table:filter]{where:($f)=>$f.상태 != \"읽음\" and contains($f.파일,\"week\")}) == 0\n$출결단서 = $출결완전 ? null : \"출결 파일 일부를 읽지 못해 출석률·연속 결석은 읽은 주만으로 계산\"\n$줄문제 = $자료.오류행 >> [table:each] { return {종류:\"해석 못 한 줄\",대상:$it.학번,근거:\"금액 원문 '\" + $it.금액 + \"'\"} }\n\n# 출석률(지각은 출석) — 재원생\n$출결수 = $출결 >> [table:compute]{set:($r)=>{온:$r.상태 == \"결석\" ? 0 : 1}}\n$학생출결 = ($출결수 >> [table:groupby]{by:\"학번\",agg:{수업:[\"count\"],출석:[\"sum\",\"온\"]}}).items\n$재원출결 = ([table:join]{left:$학생출결,right:$학생반,on:\"학번\",how:\"inner\"}).items >> [table:filter]{where:($r)=>$r.상태 == \"재원\"}\n$미달 = $재원출결 >> [table:filter]{where:($r)=>$r.출석 / $r.수업 < $기준.출석률_기준} >> [table:sort]{by:\"학번\"}\n$미달이상 = $미달 >> [table:each] { return {종류:\"출석률 미달\",대상:$it.학번,반:$it.반,단서:$출결단서,근거:$it.이름 + \" 출석 \" + text($it.출석) + \"/\" + text($it.수업) + \" (\" + text(round(100 * $it.출석 / $it.수업, 1)) + \"%)\"} }\n\n# 연속 결석 — 학번·일자 순으로 한 번 훑으며 학생별 연속 결석 길이를 센다\n$순서 = $출결 >> [table:compute]{set:($r)=>{순서키:$r.학번 + \"|\" + $r.일자}} >> [table:sort]{by:\"순서키\"}\n$n = $기준.연속결석_기준\n$훑기 = reduce($순서, {cur:\"\",run:0,hit:[]}, ($a,$r)=>{\n  cur:$r.학번,\n  run:$r.상태 == \"결석\" ? ($r.학번 == $a.cur ? $a.run + 1 : 1) : 0,\n  hit:($r.상태 == \"결석\" and ($r.학번 == $a.cur ? $a.run + 1 : 1) == $n) ? $a.hit + [$r.학번] : $a.hit})\n$연속명단 = unique($훑기.hit)\n$재원번호 = $재원 >> [table:each] { return $it.학번 }\n$연속이상 = $연속명단 >> [table:each]{mode:\"flat_map\"} { return $it in $재원번호 ? [{종류:\"연속 결석\",대상:$it,단서:$출결단서,근거:text($n) + \"회 이상 연속 결석\"}] : [] }\n\n# 퇴원생 출석\n$퇴원출석 = ([table:join]{left:$학생출결,right:$퇴원 >> [table:select]{columns:[\"학번\",\"이름\",\"반\"]},on:\"학번\",how:\"inner\"}).items >> [table:sort]{by:\"학번\"}\n$퇴원이상 = $퇴원출석 >> [table:each] { return {종류:\"퇴원생 출석\",대상:$it.학번,반:$it.반,근거:$it.이름 + \" 퇴원 상태인데 출결 기록 \" + text($it.수업) + \"건\"} }\n\n# 성적\n$성적 = $자료.성적 >> [table:compute]{set:($e)=>{학번:$e.id,하락:$e.cur == null ? null : $e.prev - $e.cur}}\n$하락 = $성적 >> [table:filter]{where:($e)=>$e.하락 != null and $e.하락 >= $기준.성적하락_기준} >> [table:sort]{by:\"학번\"}\n$하락이상 = $하락 >> [table:each] { return {종류:\"성적 하락\",대상:$it.학번,근거:text($it.prev) + \"점 → \" + text($it.prev - $it.하락) + \"점 (\" + text($it.하락) + \"점 하락)\"} }\n$미응시 = $성적 >> [table:filter]{where:($e)=>$e.cur == null} >> [table:sort]{by:\"학번\"}\n$미응시이상 = $미응시 >> [table:each] { return {종류:\"미응시\",대상:$it.학번,근거:\"이번 달 월말평가 점수 없음(지난달 \" + text($it.prev) + \"점)\"} }\n\n# 수납\n$납부 = ($자료.수납 >> [table:groupby]{by:\"학번\",agg:{건수:[\"count\"],합계:[\"sum\",\"금액수\"]}}).items\n$미납 = ([table:join]{left:$재원,right:$납부,on:\"학번\",how:\"anti\"}).items >> [table:sort]{by:\"학번\"}\n$미납이상 = $미납 >> [table:each] { return {종류:\"미납\",대상:$it.학번,반:$it.반,근거:$it.이름 + \" 이번 달 납부 없음(수강료 \" + text($it.수강료수) + \"원)\"} }\n$납부학생 = ([table:join]{left:$납부,right:$학생반,on:\"학번\",how:\"left\",defaults:{이름:\"(명단에 없음)\",반:\"\",수강료수:null,상태:\"\"}}).items >> [table:sort]{by:\"학번\"}\n$중복이상 = $납부학생 >> [table:filter]{where:($p)=>$p.건수 > 1} >> [table:each] { return {종류:\"중복 납부\",대상:$it.학번,반:$it.반,근거:$it.이름 + \" \" + text($it.건수) + \"회 납부 합계 \" + text($it.합계) + \"원\"} }\n$부족이상 = $납부학생 >> [table:filter]{where:($p)=>$p.건수 == 1 and $p.수강료수 != null and $p.합계 < $p.수강료수} >> [table:each] { return {종류:\"금액 부족\",대상:$it.학번,반:$it.반,근거:$it.이름 + \" \" + text($it.합계) + \"원 납부(수강료 \" + text($it.수강료수) + \"원)\"} }\n\n# 반별 표\n$반출결 = ($재원출결 >> [table:groupby]{by:\"반\",agg:{학생수:[\"count\"],출석:[\"sum\",\"출석\"],수업:[\"sum\",\"수업\"]}}).items\n$성적반 = ([table:join]{left:$성적,right:$학생반,on:\"학번\",how:\"inner\"}).items >> [table:filter]{where:($e)=>$e.상태 == \"재원\"}\n$반성적 = ($성적반 >> [table:groupby]{by:\"반\",agg:{평균점수:[\"avg\",\"cur\"]}}).items\n$반표 = ([table:join]{left:$반출결,right:$반성적,on:\"반\",how:\"left\",defaults:{평균점수:null}}).items >> [table:sort]{by:\"반\"} >> [table:each] { return {반:$it.반,학생수:$it.학생수,출석률:round(100 * $it.출석 / $it.수업, 1),평균점수:$it.평균점수 == null ? null : round($it.평균점수, 1)} }\n\n# 메모\n$유형별 = ($자료.메모 >> [table:groupby]{by:\"유형\",agg:{건수:[\"count\"]}}).items >> [table:sort]{by:\"건수\",descending:true}\n$조치 = $자료.메모 >> [table:filter]{where:($m)=>$m.유형 == \"조치 필요\" or $m.유형 == \"확인 필요\"} >> [table:sort]{by:\"일자\"}\n\n$문제 = $파일문제 + $줄문제 + $미달이상 + $연속이상 + $하락이상 + $미응시이상 + $미납이상 + $중복이상 + $부족이상 + $퇴원이상\n$종류별 = ($문제 >> [table:groupby]{by:\"종류\",agg:{건수:[\"count\"]}}).items\nreturn {문제:$문제,종류별:$종류별,반표:$반표,유형별:$유형별,조치메모:$조치,유형표:$자료.유형표,파일상태:$자료.파일상태,출결단서:$출결단서,\n        재원수:len($재원),퇴원수:len($퇴원),출결행수:len($출결),수납합계:sum($납부 >> [table:each]{ return $it.합계 })}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI10_trainer",
+  "task_id": "LSI10_task",
+  "check": true,
+  "inputs": {
+   "자료": {
+    "$ref": "d850fa912f7eb797d7727c2ec44270398a6f8a45b788cb237fab79f8f0ef0866"
+   }
+  },
+  "budget": {
+   "steps": 900000,
+   "rows": 90000
+  }
+ },
+ "elapsed_s": 1.29,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 152,
+  "guards_inner": 0,
+  "guards_omitted": 152,
+  "result_type": "{문제: List<{근거: Unknown, 대상: Unknown, 종류: Text}>, 종류별: Unknown, 반표: List<{반: Unknown, 학생수: Unknown, 출석률: Number, 평균점수: Null | Number}>, 유형별: List<Record>, 조치메모: List<{학번: Text, 일자: Text, 메모: Text, 유형: Text, 확신: Number}>, 유형표: List<{메모: Text, 유형: Text, 확신: Number}>, 파일상태: List<{파일: Text, 상태: Text, 행수: Number, 오류: Null}>, 출결단서: Null | Text, 재원수: Number, 퇴원수: Number, 출결행수: Number, 수납합계: Unknown}",
+  "effects": [
+   "pure",
+   "unknown"
+  ],
+  "functions": {},
+  "plan_hash": "e608f61c99d563e8351a70b601001dc87dccf01becc4db20d673dcc0f8cc20d7",
+  "dependencies": {
+   "source": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "자료": "{학생: List<{학번: Text, 이름: Text, 반: Text, 수강료: Text, 상태: Text, 수강료수: Number}>, 출결: List<{학번: Text, 일자: Text, 상태: Text}>, 성적: List<{id: Text, prev: Number, cur: Null | Number}>, 수납: List<{학번: Text, 납부일: Text, 금액: Text, 금액수: Number}>, 메모: List<{학번: Text, 일자: Text, 메모: Text, 유형: Text, 확신: Number}>, 유형표: List<{메모: Text, 유형: Text, 확신: Number}>, 기준: {출석률_기준: Number, 연속결석_기준: Number, 성적하락_기준: Number, 지각은_출석으로_친다: Bool}, 파일상태: List<{파일: Text, 상태: Text, 행수: Number, 오류: Null}>, 오류행: List<Unknown>}"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 4724
+    }
+   ],
+   "contracts": "d9675eda8d3e73fbefa0b9afa2ee02ec03001db61558c6f492c55f7900fce545",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "abd7730a44fd28dd449e8ea743b9ee47a627bf42bdc6f960bebaf330c68a47d6",
+   "core": "0a3065a418bbf3ee6fbdac66d236d2fc8d75aeeb4c493b8bd7f6fc7815ac63bc"
+  },
+  "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 456,
+      "end": 542,
+      "line": 11,
+      "column": 66,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 11,
+      "end_column": 152,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 723,
+      "end": 800,
+      "line": 14,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 14,
+      "end_column": 96,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 906,
+      "end": 964,
+      "line": 18,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 18,
+      "end_column": 76,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 1199,
+      "end": 1372,
+      "line": 21,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 21,
+      "end_column": 189,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 1791,
+      "end": 1821,
+      "line": 31,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 31,
+      "end_column": 46,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 1839,
+      "end": 1957,
+      "line": 32,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 32,
+      "end_column": 136,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 2124,
+      "end": 2230,
+      "line": 36,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 36,
+      "end_column": 124,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 2455,
+      "end": 2587,
+      "line": 41,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 41,
+      "end_column": 148,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 2687,
+      "end": 2781,
+      "line": 43,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 43,
+      "end_column": 112,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 2805,
+      "end": 2865,
+      "line": 46,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 46,
+      "end_column": 78,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 2979,
+      "end": 3085,
+      "line": 48,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 48,
+      "end_column": 122,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 3284,
+      "end": 3403,
+      "line": 50,
+      "column": 59,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 50,
+      "end_column": 178,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 3503,
+      "end": 3626,
+      "line": 51,
+      "column": 100,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 51,
+      "end_column": 223,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 3652,
+      "end": 3727,
+      "line": 54,
+      "column": 18,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 54,
+      "end_column": 93,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 3865,
+      "end": 3913,
+      "line": 56,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 56,
+      "end_column": 65,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 4036,
+      "end": 4167,
+      "line": 57,
+      "column": 116,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 57,
+      "end_column": 247,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 4192,
+      "end": 4235,
+      "line": 60,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 60,
+      "end_column": 62,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 4490,
+      "end": 4533,
+      "line": 64,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 64,
+      "end_column": 59,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af7fc165b4615f3d45ad38bc84273ad9bd079acddae9821c0cdc97e8ee598e12",
+      "start": 4692,
+      "end": 4721,
+      "line": 66,
+      "column": 65,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 66,
+      "end_column": 94,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "실행하려면 같은 code·inputs·budget으로 check를 제거하거나 false로 호출하세요. 실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.",
+  "runtime_checks": {
+   "total": 152,
+   "informative": 80
+  },
+  "guards_ref": {
+   "id": "15ace14c1355ccbab0372b8d0f814b3d418400285ea74b2e66bbc5fa38e30696",
+   "chars": 98410,
+   "read_args": {
+    "id": "15ace14c1355ccbab0372b8d0f814b3d418400285ea74b2e66bbc5fa38e30696",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 900000,
+   "rows": 90000
+  },
+  "inputs_resolved": [
+   {
+    "name": "자료",
+    "id": "d850fa912f7eb797d7727c2ec44270398a6f8a45b788cb237fab79f8f0ef0866",
+    "path": [
+     "value_wire"
+    ],
+    "evidence": {
+     "fingerprint": "2a77ceda0b839f3fd2b3e8397cd883b16edb2be3c538c489a814ddfd6e40b5f6",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "452a98473a1541358f70035780dffa33"
+    },
+    "chars": 394891
+   }
+  ]
+ }
+}

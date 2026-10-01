@@ -1,0 +1,112 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 같은 식, 0.5 가 리터럴이냐 inputs 냐만 다름\n$리터럴 = (0 - 12 * 0.5) // 1\n$입력 = (0 - 12 * $비율) // 1\nreturn {리터럴:f\"${리터럴}\", 입력:f\"${입력}\", 같음:$리터럴 == $입력, 리터럴_json:json([$리터럴]), 입력_json:json([$입력])}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task",
+  "inputs": {
+   "비율": 0.5
+  }
+ },
+ "elapsed_s": 0.29,
+ "response": {
+  "success": true,
+  "value": {
+   "리터럴": "-6",
+   "입력": "-6.0",
+   "같음": true,
+   "리터럴_json": "[-6.0]",
+   "입력_json": "[-6.0]"
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "리터럴",
+      [
+       "scalar",
+       "-6"
+      ]
+     ],
+     [
+      "입력",
+      [
+       "scalar",
+       "-6.0"
+      ]
+     ],
+     [
+      "같음",
+      [
+       "scalar",
+       true
+      ]
+     ],
+     [
+      "리터럴_json",
+      [
+       "scalar",
+       "[-6.0]"
+      ]
+     ],
+     [
+      "입력_json",
+      [
+       "scalar",
+       "[-6.0]"
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "3fca8b2ccfb72a679fffeca4ab8a4d7abc8f797c1df83b3d4a072008f07c7970",
+  "source_complete": true,
+  "usage": {
+   "steps": 36,
+   "rows": 0,
+   "elapsed_ms": 0
+  },
+  "resume": {
+   "run_id": "c163c80b58ba43f1b353252970fbef1f"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "evidence_summary": {
+   "events": 32,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "b62095da9d88676077b9a8571108baa2ddbe99a0994a607c108d23eb2ee44638",
+   "chars": 8568,
+   "max_limit": 60000,
+   "paths": [],
+   "read_args": {
+    "id": "b62095da9d88676077b9a8571108baa2ddbe99a0994a607c108d23eb2ee44638",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "value"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "input_args": {
+    "입력": {
+     "$ref": "b62095da9d88676077b9a8571108baa2ddbe99a0994a607c108d23eb2ee44638"
+    }
+   },
+   "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

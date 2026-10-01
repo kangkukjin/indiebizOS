@@ -1,0 +1,141 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# schema 에 pros/cons 를 선언했는데 오타 필드 conz 를 읽는다 — check 가 잡는가\n$r = [{venue:\"V1\", reviews:\"좋아요\\n추워요\"}] >> [table:ai]{instruction:\"장점 pros, 우려 cons 목록\", schema:\"pros(문자열 목록), cons(문자열 목록)\", preserve_rows:true}\n$x = $r.items >> [table:each] { return {v:$it.venue, c:$it.conz} }\nreturn $x\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI2_trainer",
+  "task_id": "LSI2_task"
+ },
+ "elapsed_s": 6.18,
+ "response": {
+  "success": false,
+  "error": "필드가 없습니다: conz",
+  "diagnostic": {
+   "code": "MISSING_FIELD",
+   "kind": "partial",
+   "message": "필드가 없습니다: conz",
+   "frames": [],
+   "has_partial": true,
+   "partial": [],
+   "evidence": [
+    28
+   ],
+   "details": {
+    "coverage": [
+     "failed"
+    ],
+    "successful_indices": [],
+    "errors": {
+     "0": {
+      "code": "MISSING_FIELD",
+      "kind": "runtime",
+      "message": "필드가 없습니다: conz",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+       23
+      ],
+      "details": {
+       "missing_fields": [
+        "conz"
+       ],
+       "available_fields": [
+        "venue",
+        "reviews",
+        "pros",
+        "cons",
+        "_ai"
+       ]
+      },
+      "source_span": {
+       "source_hash": "c460ba19b72ea92856115d056f831ebaed1768a9699ca7facec205fee1d25833",
+       "start": 277,
+       "end": 285,
+       "line": 4,
+       "column": 56
+      }
+     }
+    }
+   },
+   "source_span": {
+    "source_hash": "c460ba19b72ea92856115d056f831ebaed1768a9699ca7facec205fee1d25833",
+    "start": 277,
+    "end": 285,
+    "line": 4,
+    "column": 56
+   }
+  },
+  "partial_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "list",
+    []
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "ecf71142645037a1c0a2e06d48e1cbab96b34e10458590e77e5ee4a6cb2012fa",
+  "source_complete": false,
+  "usage": {
+   "steps": 27,
+   "rows": 1,
+   "elapsed_ms": 5847
+  },
+  "resume": {
+   "run_id": "fc8f55f144544c25aebcc6f967e6638c"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 28,
+   "source_complete": false,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "7a49f0b586f3047f64ab4f759e2c3cc25983e733aae87ca09ca0844cddb65228",
+   "chars": 9428,
+   "max_limit": 60000,
+   "paths": [
+    {
+     "path": [
+      "diagnostic",
+      "details"
+     ],
+     "chars": 722
+    }
+   ],
+   "read_args": {
+    "id": "7a49f0b586f3047f64ab4f759e2c3cc25983e733aae87ca09ca0844cddb65228",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "diagnostic"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "partial_reads": [],
+   "partial_reads_omitted": 0,
+   "partial_mapping_read_args": {
+    "id": "7a49f0b586f3047f64ab4f759e2c3cc25983e733aae87ca09ca0844cddb65228",
+    "path": [
+     "diagnostic",
+     "details"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

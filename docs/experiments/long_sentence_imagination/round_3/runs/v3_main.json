@@ -1,0 +1,569 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 긴문장 3회차 — 세계 지리 수치 논쟁 학습 자료 (v3: 식 자리의 파이프·호출을 변수로)\n# inputs: 원천[{주제,언어,url,키워드[]}], 주제[{주제,질문}], 문단상한, 출력\n\n# 원천 하나를 읽어 키워드 문단만 남긴다. 실패는 원천 행에 남긴다(빈 성공으로 숨기지 않음).\n[def:원천읽기]($원천,$상한) {\n  [try] {\n    $문서 = [sense:crawl]{url:$원천.url}\n    $적중 = $문서.items >> [table:filter]{where:($p)=>any(reduce($원천.키워드,[],($a,$k)=>$a+[contains($p.text,$k)]))}\n    $사용 = $적중[:$상한]\n    return {주제:$원천.주제,언어:$원천.언어,url:$원천.url,ok:true,적중:len($적중),사용:len($사용),\n            문단:$사용 >> [table:select]{columns:[\"paragraph_index\",\"text\"]}}\n  } [catch] {\n    return {주제:$원천.주제,언어:$원천.언어,url:$원천.url,ok:false,이유:$error.message,적중:0,사용:0,문단:[]}\n  }\n}\n\n# 한 원천의 문단들에서 모델로 수치 주장을 뽑는다. 원문에 없는 값은 버리고 따로 센다.\n[def:주장추출]($읽음,$질문) {\n  [if:not $읽음.ok or len($읽음.문단)==0] { return {주장:[],버림:[]} }\n  $추출 = $읽음.문단 >> [table:ai]{\n    instruction:f\"각 문단에서 '${질문}'에 해당하는 수치 주장만 찾아라. 다른 대상의 수치는 무시. 값은 문단 원문 표기 그대로(쉼표 포함) 옮긴다. 없으면 빈 목록.\",\n    schema:\"주장(목록, 각 원소 {값:원문 표기 숫자 문자열, 단위:m|km|ft|mi, 대상:무엇의 수치인지 짧게, 측정:측정 연도·기관 또는 null})\",\n    input_fields:[\"paragraph_index\",\"text\"],\n    preserve_rows:true\n  }\n  $행 = $추출.items >> [table:each]{mode:\"flat_map\"} {\n    $p = $it\n    $p.주장 >> [table:each] {\n      return {주제:$읽음.주제,언어:$읽음.언어,url:$읽음.url,문단:$p.paragraph_index,\n              값:$it.값,단위:$it.단위,대상:$it.대상,측정:$it.측정,원문있음:contains($p.text,$it.값)}\n    }\n  }\n  return {주장:$행 >> [table:filter]{where:($r)=>$r.원문있음},\n          버림:$행 >> [table:filter]{where:($r)=>not $r.원문있음}}\n}\n\n# 표기 숫자를 미터로. 해석 불가는 null.\n[def:미터로]($값,$단위) {\n  $수 = number(replace($값,\",\",\"\"))\n  $배 = $단위 == \"km\" ? 1000 : $단위 == \"mi\" ? 1609.344 : $단위 == \"ft\" ? 0.3048 : 1\n  return $수 * $배\n}\n\n# 주제 안의 값들을 0.1% 이내면 같은 값으로 묶는다.\n[def:값묶기]($주장들) {\n  $정렬 = sorted($주장들,\"미터\")\n  return reduce($정렬,[],($묶음,$r)=>len($묶음) > 0 and abs($r.미터 - $묶음[-1].대표) <= $묶음[-1].대표 * 0.001 ? $묶음[:-1] + [{대표:$묶음[-1].대표,근거:$묶음[-1].근거 + [$r]}] : $묶음 + [{대표:$r.미터,근거:[$r]}])\n}\n\n[def:주제정리]($주제,$읽음목록,$주장목록) {\n  $원천들 = $읽음목록 >> [table:filter]{where:($r)=>$r.주제 == $주제.주제}\n  $내주장 = $주장목록 >> [table:filter]{where:($r)=>$r.주제 == $주제.주제}\n  $수치 = $내주장 >> [table:each] { return {**$it,미터:[fn:미터로]{값:$it.값,단위:$it.단위}} }\n  $묶음 = [fn:값묶기]{주장들:$수치}\n  $읽은것 = $원천들 >> [table:filter]{where:($r)=>$r.ok}\n  return {주제:$주제.주제,질문:$주제.질문,\n          원천수:len($읽은것),원천전체:len($원천들),\n          묶음:$묶음,상충후보:len($묶음) > 1}\n}\n\n[def:묶음표]($묶음) {\n  $줄 = $묶음 >> [table:each] {\n    $g = $it\n    $출처 = $g.근거 >> [table:each] { return f\"${$it.언어} ¶${$it.문단} `${$it.값} ${$it.단위}` (${$it.대상}${$it.측정 == null ? '' : ', ' + $it.측정})\" }\n    return f\"| ${round($g.대표)} m | ${join('<br>',$출처)} |\"\n  }\n  return \"| 값(미터 환산) | 근거(언어·문단·원문 표기) |\\n| --- | --- |\\n\" + join(\"\\n\",$줄)\n}\n\n[def:문서]($정리,$해설,$읽음,$버림) {\n  $절 = $정리 >> [table:each] {\n    $t = $it\n    $hs = $해설 >> [table:filter]{where:($r)=>$r.주제 == $t.주제}\n    $h = $hs[0]\n    $표 = [fn:묶음표]{묶음:$t.묶음}\n    return f\"## ${$t.주제}\\n질문: ${$t.질문} · 원천 ${$t.원천수}/${$t.원천전체}\\n\\n${$표}\\n\\n**판정: ${$h.판정}** — ${$h.해설}\\n\"\n  }\n  $실패 = $읽음 >> [table:filter]{where:($r)=>not $r.ok}\n  $자름 = $읽음 >> [table:filter]{where:($r)=>$r.ok and $r.적중 > $r.사용}\n  $m1 = $실패 >> [table:each] { return f\"- 읽지 못함: ${$it.주제} ${$it.언어} ${$it.url} — ${$it.이유}\" }\n  $m2 = $자름 >> [table:each] { return f\"- 문단 상한: ${$it.주제} ${$it.언어} 적중 ${$it.적중} 중 ${$it.사용}만 사용\" }\n  $m3 = $버림 >> [table:each] { return f\"- 원문 불일치로 버린 모델 추출: ${$it.주제} ${$it.언어} ¶${$it.문단} `${$it.값}`\" }\n  $미확인 = $m1 + $m2 + $m3\n  $원천표 = $읽음 >> [table:each] { return f\"- ${$it.주제} ${$it.언어}: ${$it.url} (${$it.ok ? '읽음' : '실패'})\" }\n  return f\"# 세계 지리 수치 논쟁 학습 자료\\n\\n${join('\\n',$절)}\\n## 확인 못 한 부분\\n${len($미확인)==0 ? '- 없음' : join('\\n',$미확인)}\\n\\n## 원천\\n${join('\\n',$원천표)}\\n\"\n}\n\n# ── 최상위 ──\n$읽음 = $원천 >> [table:each]{parallel:6} { [fn:원천읽기]{원천:$it,상한:$문단상한} }\n$추출 = $읽음 >> [table:each]{parallel:6} {\n  $q = ($주제 >> [table:filter]{where:($t)=>$t.주제 == $it.주제})[0].질문\n  [fn:주장추출]{읽음:$it,질문:$q}\n}\n$주장 = $추출 >> [table:each]{mode:\"flat_map\"} { return $it.주장 }\n$버림 = $추출 >> [table:each]{mode:\"flat_map\"} { return $it.버림 }\n$정리 = $주제 >> [table:each] { [fn:주제정리]{주제:$it,읽음목록:$읽음,주장목록:$주장} }\n$해설입력 = $정리 >> [table:each] {\n  $t = $it\n  return {주제:$t.주제,질문:$t.질문,값목록:$t.묶음 >> [table:each] { return {미터:round($it.대표),근거:$it.근거 >> [table:select]{columns:[\"언어\",\"값\",\"단위\",\"대상\",\"측정\"]}} }}\n}\n$해설 = $해설입력 >> [table:ai]{\n  instruction:\"각 주제의 값목록(서로 다른 값 묶음)을 보고 판정하라. 값이 하나면 '일치'. 여럿이면 대상·측정 설명을 근거로 '정의 차이'(재는 대상·범위가 다름)/'측정 시기 차이'/'진짜 불일치'/'혼합' 중 하나. 해설은 2~3문장, 주어진 값만 인용하고 새 수치를 만들지 마라.\",\n  schema:\"판정(일치|정의 차이|측정 시기 차이|진짜 불일치|혼합), 해설(문자열)\",\n  preserve_rows:true\n}\n$본문 = [fn:문서]{정리:$정리,해설:$해설.items,읽음:$읽음,버림:$버림}\n$저장 = [self:write]{path:$출력,content:$본문}\n$확인 = [self:read]{path:$출력}\nreturn {\n  저장일치:$확인.text == $본문,\n  원천:$읽음 >> [table:select]{columns:[\"주제\",\"언어\",\"ok\",\"적중\",\"사용\"]},\n  주장수:len($주장),버림수:len($버림),\n  주제:$정리 >> [table:each] { return {주제:$it.주제,묶음수:len($it.묶음),원천:f\"${$it.원천수}/${$it.원천전체}\"} },\n  판정:$해설.items >> [table:select]{columns:[\"주제\",\"판정\"]}\n}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task",
+  "inputs": {
+   "원천": [
+    {
+     "주제": "T1 에베레스트",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+     "키워드": [
+      "8,84",
+      "8,85",
+      "8848",
+      "8850"
+     ]
+    },
+    {
+     "주제": "T1 에베레스트",
+     "언어": "en",
+     "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+     "키워드": [
+      "8,84",
+      "8,85"
+     ]
+    },
+    {
+     "주제": "T2 만리장성",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/만리장성",
+     "키워드": [
+      "길이",
+      "km",
+      "킬로미터"
+     ]
+    },
+    {
+     "주제": "T2 만리장성",
+     "언어": "en",
+     "url": "https://en.wikipedia.org/wiki/Great_Wall_of_China",
+     "키워드": [
+      "length",
+      "km"
+     ]
+    },
+    {
+     "주제": "T3 나일강",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/나일강",
+     "키워드": [
+      "km",
+      "길이",
+      "아마존"
+     ]
+    },
+    {
+     "주제": "T3 나일강",
+     "언어": "en",
+     "url": "https://en.wikipedia.org/wiki/Nile",
+     "키워드": [
+      "km",
+      "longest",
+      "Amazon"
+     ]
+    }
+   ],
+   "주제": [
+    {
+     "주제": "T1 에베레스트",
+     "질문": "에베레스트 산 정상의 해발 높이"
+    },
+    {
+     "주제": "T2 만리장성",
+     "질문": "만리장성(성벽)의 전체 길이 또는 특정 왕조 성벽의 길이"
+    },
+    {
+     "주제": "T3 나일강",
+     "질문": "나일강의 길이 및 아마존강 길이와의 최장 비교"
+    }
+   ],
+   "문단상한": 15,
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-30_3회차/out/study_notes.md"
+  }
+ },
+ "elapsed_s": 4.2,
+ "response": {
+  "success": false,
+  "error": "공유 실행 예산을 초과했습니다.",
+  "diagnostic": {
+   "code": "BUDGET",
+   "kind": "budget",
+   "message": "공유 실행 예산을 초과했습니다.",
+   "frames": [],
+   "has_partial": true,
+   "partial": [
+    {
+     "주제": "T1 에베레스트",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/에베레스트산",
+     "ok": true,
+     "적중": 6,
+     "사용": 6,
+     "문단": [
+      {
+       "paragraph_index": 226,
+       "text": "8,848.860 m (29,031.69 ft)"
+      },
+      {
+       "paragraph_index": 228,
+       "text": "8,848.860 m (29,031.69 ft)"
+      },
+      {
+       "paragraph_index": 249,
+       "text": "에베레스트산(영어: Mount Everest)은 높이가 해발 8,848.86 m로 지구에서 가장 높은 산[1]이다. 네팔에서는 사가르마타(산스크리트어: सगरमाथा)[2]라 하고, 티베트어로는 초모랑마(티베트어: ཇོ་མོ་གླང་མ [t͡ɕʰo˩˧.mo˥˥ laŋ˥˥.ma˥˥], 중국조선어: 쵸몰라마봉), 중국어와 문화어에서는 티베트어 '초모랑마'를 그대로 차용해 주무랑마봉(중국어: 珠穆朗瑪峰 Zhūmùlǎngmǎ Fēng[*])이라고 부른다. '에베레스트'는 영국의 조지 에버리스트 경의 이름을 따서 붙여졌다. 에베레스트산은 가장 높은 산이지만, 지구의 중심에서 가장 멀리 떨어진 산은 아니다. 지구 중심에서 가장 먼 산은 안데스산맥의 침보라소산이다. 중국과 네팔의 국경이 에베레스트산 정상을 지난다. 에베레스트산괴에는 주위의 로체산(8,516m), 눕체산(7,855m), 창체산(7,580m)이 포함된다."
+      },
+      {
+       "paragraph_index": 252,
+       "text": "2005년 10월 9일 중화인민공화국 정부는 에베레스트산의 높이가 8,844.43m이며 이것이 가장 정확한 측정값이라고 밝혔다. 그러나 이 높이는 바위의 최고점을 잰 것이라, 그 위에 덮인 얼음이나 관설(冠雪, snowcap)을 계산에 넣지 않았다."
+      },
+      {
+       "paragraph_index": 253,
+       "text": "최초의 측정치는 1856년 29,0000000피트(8,839m)인데, 29,000 피트는 근사치로 보인다는 생각에 2피트를 추가한 29,002피트로 발표했다. 1950년대 인도에서 측정한 8,848.10m가 받아들여지기도 했다. 1998년에는 미국 탐사대가 에베레스트산 꼭대기에 GPS 장비를 설치했다. GPS에 따른 에베레스트산의 높이는 2008년 기준으로 8,850m이다."
+      },
+      {
+       "paragraph_index": 311,
+       "text": "8848.43미터 봉우리"
+      }
+     ]
+    },
+    {
+     "주제": "T1 에베레스트",
+     "언어": "en",
+     "url": "https://en.wikipedia.org/wiki/Mount_Everest",
+     "ok": true,
+     "적중": 9,
+     "사용": 9,
+     "문단": [
+      {
+       "paragraph_index": 230,
+       "text": "8,848.86 m (29,031.7 ft)[note 2]"
+      },
+      {
+       "paragraph_index": 386,
+       "text": "Mount Everest (known in Nepali as Sagarmāthā[a], in Sherpa as Chamolangma[4], and in Tibetan as Jomolangma/Čhomolangma[b] is the highest mountain on Earth above sea level. It lies in the Mahalangur Himal sub-range of the Himalayas and marks part of the China–Nepal border at its summit.[5] Its height was most recently measured in 2020 through a joint survey by Nepalese and Chinese authorities as 8,848.86 m (29,031 ft 8+1⁄2 in).[6][7]"
+      },
+      {
+       "paragraph_index": 411,
+       "text": "In 1852, stationed at the survey headquarters in Dehradun, Radhanath Sikdar, an Indian mathematician and surveyor from Bengal was the first to identify Everest as the world's highest peak, using trigonometric calculations based on Nicolson's measurements.[29] An official announcement that Peak XV was the highest was delayed for several years as the calculations were repeatedly verified. Waugh began work on Nicolson's data in 1854, and along with his staff spent almost two years working on the numbers, having to deal with the problems of light refraction, barometric pressure, and temperature over the vast distances of the observations. Finally, in March 1856 he announced his findings in a letter to his deputy in Calcutta. Kangchenjunga was declared to be 8,582 m (28,156 ft), while Peak XV was given the height of 8,840 m (29,002 ft). Waugh concluded that Peak XV was \"most probably the highest in the world\".[20] Peak XV (measured in feet) was calculated to be exactly 29,000 ft (8,839.2 m) high, but was publicly declared to be 29,002 ft (8,839.8 m) in order to avoid the impression that an exact height of 29000 ft was nothing more than a rounded estimate.[30] Waugh is sometimes playfully credited with being \"the first person to put two feet on top of Mount Everest\".[31]"
+      },
+      {
+       "paragraph_index": 415,
+       "text": "In 1856, Andrew Waugh announced Everest (then known as Peak XV) as 8,840 m (29,002 ft) high, after several years of calculations based on observations made by the Great Trigonometrical Survey.[32] From 1952 to 1954, the Survey of India, using triangulation methods, determined that the height of Everest was 8,847.73 m (29,028 ft).[33] In 1975 it was subsequently reaffirmed by a Chinese measurement of 8,848.13 m (29,029.30 ft).[34] In both cases the snow cap, not the rock head, was measured. The 8,848 m (29,029 ft) height given was officially recognised by Nepal and China.[35] Nepal planned a new survey in 2019 to determine if the April 2015 Nepal earthquake affected the height of the mountain.[36]"
+      },
+      {
+       "paragraph_index": 416,
+       "text": "In May 1999, an American Everest expedition directed by Bradford Washburn anchored a GPS unit into the highest bedrock. A rock head elevation of 8,850 m (29,035 ft), and a snow/ice elevation 1 m (3 ft) higher, were obtained via this device.[37] Geoid uncertainty casts doubt upon the accuracy claimed by both the 1999 and 2005 (see § 21st-century surveys) surveys.[38]"
+      },
+      {
+       "paragraph_index": 420,
+       "text": "On 9 October 2005, after several months of measurement and calculation, the Chinese Academy of Sciences and State Bureau of Surveying and Mapping announced the height of Everest as 8,844.43 m (29,017.16 ft) with accuracy of ±0.21 m (8.3 in), claiming it was the most accurate and precise measurement to date.[40] This height is based on the highest point of rock and not the snow and ice covering it. The Chinese team measured a snow-ice depth of 3.5 m (11 ft),[34] which is in agreement with a net elevation of 8,848 m (29,029 ft). An argument arose between China and Nepal as to whether the official height should be the rock height (8,844 m, China) or the snow height (8,848 m, Nepal). In 2010, both sides agreed that the height of Everest is 8,848 m, and Nepal recognises China's claim that the rock height of Everest is 8,844 m.[41] On 8 December 2020, it was jointly announced by the two countries that the new official height is 8,848.86 metres (29,031.7 ft).[42][43]"
+      },
+      {
+       "paragraph_index": 426,
+       "text": "The summit of Chimborazo in Ecuador is 2,168 m (7,113 ft) farther from Earth's centre (6,384.4 km or 3,967.1 mi) than that of Everest (6,382.3 km, 3,965.8 mi), because the Earth bulges at the equator.[49] This is despite Chimborazo having a peak of 6,268 m (20,564.3 ft) above sea level versus Mount Everest's 8,848 m (29,028.9 ft)."
+      },
+      {
+       "paragraph_index": 786,
+       "text": "From the South Summit, climbers follow the knife-edge Southeast Ridge along what is known as the \"Cornice traverse\", where snow clings to intermittent rock. This is the most exposed section of the climb, and a misstep to the left would send one 2,400 m (7,900 ft) down the Southwest Face, while to the immediate right is the 3,050 m (10,010 ft) Kangshung Face. At the end of this traverse is an imposing 12 m (39 ft) rock wall, the Hillary Step, at 8,790 m (28,840 ft).[261]"
+      },
+      {
+       "paragraph_index": 912,
+       "text": "↑ Based on the 2020 surveys of elevation of snow cap, i.e. the highest point of permanent snow ice on the summit—as opposed to the highest point of rock, which was measured at roughly 8,844 metres. For more details, see Surveys."
+      }
+     ]
+    },
+    {
+     "주제": "T2 만리장성",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/만리장성",
+     "ok": true,
+     "적중": 6,
+     "사용": 6,
+     "문단": [
+      {
+       "paragraph_index": 117,
+       "text": "Norsk bokmål"
+      },
+      {
+       "paragraph_index": 194,
+       "text": "지도상의 연장은 약 2,700km이지만, 기복이 있거나 중첩된 부분을 고려한다면 총 길이 5,000~6,000km에 달한다.[1] 그 거대함 때문에 “달에서도 보이는 유일한 인공 건축물”이라고 거론되었으나 2004년 12월 8일 중국과학원은 사람의 눈으로는 우주 공간에서 만리장성을 관측할 수 없다고 밝혔다. 중국 스포츠 국가대표팀의 별칭으로도 사용되고 있다."
+      },
+      {
+       "paragraph_index": 227,
+       "text": "만리장성 중 가장 인기 있는 관광지는 베이징 부근의 팔달령 장성(八達嶺長城)이다. 수도인 베이징에서 80km 떨어져 있다는 지리적 장점과 함께 용이 춤을 추는 듯한 역동적인 형상 때문에 팔달령은 1년 내내 관광객이 끊이지 않는 곳이다.[4]"
+      },
+      {
+       "paragraph_index": 230,
+       "text": "중국은 2009년 진장성과 명장성으로 대표되는 만리장성의 전체 길이와 위치를 확정하여 발표하였다. 한국에서는 중국이 만리장성의 동쪽 끝이라 발표한 단둥 시의 ‘호산산성’이 고구려의 박작성이라는 사실에 언론이 주목하여 논란이 되었다. 2004년부터 고구려의 박작성을 대대적으로 개축하여 만리장성의 일부라고 주장하고 있다고 한다.[5] 또한 2012년에는 중국의 역대 왕조들이 건설한 장성 유적을 모두 조사하고 그 결과를 발표하였는데, 한국의 언론에서는 이를 기존의 만리장성의 길이를 연장한 것이라 왜곡하여 발표, 대중의 논란을 불러일으켰다.[6] 중국의 조사는 만리장성으로 대표되는 진나라 및 한나라, 명나라의 장성 유적뿐만 아니라 그외 다른 역대 왕조에서 건설된 다양한 장성을 조사하여 그것을 모두 합산하여 만리장성의 길이가 연장되었다고 발표한 바 있다. 한국에서는 언론의 왜곡된 발표로 논란이 되고 있으나, 동북아역사재단은 공식 검토 의견을 통해 중국의 정치적 의도 및 고구려, 발해와의 연관성은 확인할 필요가 있으나 정확한 사실도 확인하지 않고 촉발된 언론의 논란은 잘못된 것이라 일축했다.[7]"
+      },
+      {
+       "paragraph_index": 280,
+       "text": "↑ “중국정사조선전 주석보기 > 三國志 卷 030 魏書 30 東夷傳 第 030 [註003] 長城之北 去玄菟千里”. 국사편찬위원회. 2014년 1월 11일에 원본 문서에서 보존된 문서. 2013년 3월 23일에 확인함. 地圖상의 연장은 약 2,700km이지만, 기복이 있거나 중첩된 부분을 고려한다면 5,000km에 달한다. ...≪參考文獻≫王國良, 『中國長城沿革攷』1931.佟柱臣, 「赤峰附近新發見之漢前土城址與古長城」『歷史與考古』1946, 瀋陽博物館.中國社會科學院考古硏究所編, 『新中國的考古發現和硏究』1984, 文物出版社."
+      },
+      {
+       "paragraph_index": 286,
+       "text": "↑ 중국의‘장성(長城)’보도 관련 전문가 토론회 개최 중 첨부자료 중국역대장성길이발표에대한검토-동북아역사재단"
+      }
+     ]
+    },
+    {
+     "주제": "T3 나일강",
+     "언어": "ko",
+     "url": "https://ko.wikipedia.org/wiki/나일강",
+     "ok": true,
+     "적중": 7,
+     "사용": 7,
+     "문단": [
+      {
+       "paragraph_index": 157,
+       "text": "Norsk bokmål"
+      },
+      {
+       "paragraph_index": 204,
+       "text": "Türkmençe"
+      },
+      {
+       "paragraph_index": 275,
+       "text": "길이"
+      },
+      {
+       "paragraph_index": 278,
+       "text": "8 km (5 mi)"
+      },
+      {
+       "paragraph_index": 280,
+       "text": "3,400,000 km2 (1,312,747 sq mi)"
+      },
+      {
+       "paragraph_index": 284,
+       "text": "나일강(영어: Nile, 아랍어: النيل an-nīl[*])은 아프리카 대륙의 동북부를 흐르는 강이다. 총 길이는 6,650km(6,695km)이며 세계에서 가장 긴 강이다."
+      },
+      {
+       "paragraph_index": 305,
+       "text": "크기 정도 (길이)"
+      }
+     ]
+    }
+   ],
+   "evidence": [
+    197
+   ],
+   "details": {
+    "coverage": [
+     "ok",
+     "ok",
+     "ok",
+     "failed",
+     "ok",
+     "failed"
+    ],
+    "successful_indices": [
+     0,
+     1,
+     2,
+     4
+    ],
+    "errors": {
+     "3": {
+      "code": "BUDGET",
+      "kind": "budget",
+      "message": "공유 실행 예산을 초과했습니다.",
+      "frames": [
+       {
+        "function": "원천읽기",
+        "call": {
+         "source_hash": "b6c1471603d16ff446b90b464563d66d5f69245225e60873607b1b7609d9c9a0",
+         "start": 3673,
+         "end": 3699,
+         "line": 90,
+         "column": 41
+        },
+        "definition": {
+         "source_hash": "b6c1471603d16ff446b90b464563d66d5f69245225e60873607b1b7609d9c9a0",
+         "start": 181,
+         "end": 638,
+         "line": 6,
+         "column": 1
+        }
+       }
+      ],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+       164
+      ],
+      "details": {
+       "row_index": 17,
+       "operation": "filter"
+      },
+      "source_span": {
+       "source_hash": "b6c1471603d16ff446b90b464563d66d5f69245225e60873607b1b7609d9c9a0",
+       "start": 344,
+       "end": 351,
+       "line": 9,
+       "column": 95
+      }
+     },
+     "5": {
+      "code": "BUDGET",
+      "kind": "budget",
+      "message": "공유 실행 예산을 초과했습니다.",
+      "frames": [
+       {
+        "function": "원천읽기",
+        "call": {
+         "source_hash": "b6c1471603d16ff446b90b464563d66d5f69245225e60873607b1b7609d9c9a0",
+         "start": 3673,
+         "end": 3699,
+         "line": 90,
+         "column": 41
+        },
+        "definition": {
+         "source_hash": "b6c1471603d16ff446b90b464563d66d5f69245225e60873607b1b7609d9c9a0",
+         "start": 181,
+         "end": 638,
+         "line": 6,
+         "column": 1
+        }
+       }
+      ],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+       192
+      ],
+      "details": {},
+      "source_span": {
+       "source_hash": "b6c1471603d16ff446b90b464563d66d5f69245225e60873607b1b7609d9c9a0",
+       "start": 254,
+       "end": 359,
+       "line": 9,
+       "column": 5
+      }
+     }
+    }
+   },
+   "source_span": {
+    "source_hash": "b6c1471603d16ff446b90b464563d66d5f69245225e60873607b1b7609d9c9a0",
+    "start": 344,
+    "end": 351,
+    "line": 9,
+    "column": 95
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "e465f00fc3f51b97742bcea9a30e939d661aae40960c8365bf91b92651c38f56",
+  "source_complete": false,
+  "usage": {
+   "steps": 100002,
+   "rows": 6296,
+   "elapsed_ms": 3664
+  },
+  "precheck_warnings": [
+   {
+    "rule": "repeated_ai_batch",
+    "code": "repeated_ai_batch",
+    "severity": "warning",
+    "location": {
+     "source_hash": "b6c1471603d16ff446b90b464563d66d5f69245225e60873607b1b7609d9c9a0",
+     "start": 792,
+     "end": 1077,
+     "line": 21,
+     "column": 19,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 26,
+     "end_column": 4,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "message": "반복 행에 의존하지 않는 목록 전체를 AI 호출에 반복 전달합니다.",
+    "hint": "행별 판단이면 현재 행을 전달하고, 전체 비교 의도라면 이 경고를 수용하세요.",
+    "facts": {
+     "argument": "input_fields",
+     "input_count": 2,
+     "repeat_count": 6,
+     "loop": "call:3715:3835"
+    }
+   }
+  ],
+  "resume": {
+   "run_id": "e35a846483f546ce84c9fd7f57d3311c"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "e35a846483f546ce84c9fd7f57d3311c"
+    }
+   },
+   "read_calls": 6,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 197,
+   "source_complete": false,
+   "tool_failures": 1,
+   "source_failures": 0,
+   "failures": [
+    {
+     "id": 155,
+     "action": "table:filter",
+     "code": "BUDGET",
+     "failure_kind": "budget",
+     "incomplete": false
+    }
+   ],
+   "failures_omitted": 0
+  },
+  "result_ref": {
+   "id": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+   "chars": 1607068,
+   "max_limit": 60000,
+   "paths": [
+    {
+     "path": [
+      "diagnostic",
+      "partial"
+     ],
+     "chars": 9675
+    },
+    {
+     "path": [
+      "diagnostic",
+      "details"
+     ],
+     "chars": 2141
+    }
+   ],
+   "read_args": {
+    "id": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "diagnostic"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "partial_reads": [
+    {
+     "branch_index": 0,
+     "partial_index": 0,
+     "read_args": {
+      "id": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+      "path": [
+       "diagnostic",
+       "partial",
+       0
+      ],
+      "offset": 0,
+      "limit": 60000
+     },
+     "input_args": {
+      "입력": {
+       "$ref": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+       "path": [
+        "diagnostic",
+        "partial",
+        0
+       ]
+      }
+     }
+    },
+    {
+     "branch_index": 1,
+     "partial_index": 1,
+     "read_args": {
+      "id": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+      "path": [
+       "diagnostic",
+       "partial",
+       1
+      ],
+      "offset": 0,
+      "limit": 60000
+     },
+     "input_args": {
+      "입력": {
+       "$ref": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+       "path": [
+        "diagnostic",
+        "partial",
+        1
+       ]
+      }
+     }
+    },
+    {
+     "branch_index": 2,
+     "partial_index": 2,
+     "read_args": {
+      "id": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+      "path": [
+       "diagnostic",
+       "partial",
+       2
+      ],
+      "offset": 0,
+      "limit": 60000
+     },
+     "input_args": {
+      "입력": {
+       "$ref": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+       "path": [
+        "diagnostic",
+        "partial",
+        2
+       ]
+      }
+     }
+    },
+    {
+     "branch_index": 4,
+     "partial_index": 3,
+     "read_args": {
+      "id": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+      "path": [
+       "diagnostic",
+       "partial",
+       3
+      ],
+      "offset": 0,
+      "limit": 60000
+     },
+     "input_args": {
+      "입력": {
+       "$ref": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+       "path": [
+        "diagnostic",
+        "partial",
+        3
+       ]
+      }
+     }
+    }
+   ],
+   "partial_reads_omitted": 0,
+   "partial_mapping_read_args": {
+    "id": "2b3c34aa12c292353e777f6e1e841ab960996642c21cad68d4cd989eb953042d",
+    "path": [
+     "diagnostic",
+     "details"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

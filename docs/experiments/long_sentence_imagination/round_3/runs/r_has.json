@@ -1,0 +1,167 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# inputs: bad (Bool)\n[def:하나]($bad) {\n  [if:$bad] { return {id:1,실패:\"x\"} }\n  return {id:2}\n}\n$행 = [[fn:하나]{bad:$bad},[fn:하나]{bad:false}]\n$실패 = $행 >> [table:filter]{where:($r)=>has($r,\"실패\")}\nreturn $실패 >> [table:each] { return $it.실패 }\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task",
+  "check": true,
+  "inputs": {
+   "bad": true
+  }
+ },
+ "elapsed_s": 0.29,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: 실패. 선택 필드는 has/get을 쓰세요.",
+    "source_span": {
+     "source_hash": "fe0320bc8d4ee92b38b7f651c783f4891803d3ce6a82777ee3162b9a843aa616",
+     "start": 242,
+     "end": 248,
+     "line": 9,
+     "column": 37
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "fe0320bc8d4ee92b38b7f651c783f4891803d3ce6a82777ee3162b9a843aa616",
+     "start": 242,
+     "end": 248,
+     "line": 9,
+     "column": 37,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 43,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "MISSING_FIELD",
+    "severity": "error",
+    "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 1,
+  "guards_inner": 0,
+  "guards_omitted": 1,
+  "result_type": "List<Unknown>",
+  "effects": [
+   "pure"
+  ],
+  "functions": {
+   "def:37:108": {
+    "name": "하나",
+    "params": {
+     "bad": "Bool"
+    },
+    "required": [
+     "bad"
+    ],
+    "pipe_input": "bad",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "2febd14eb572f7e95cbdbdb99ec4b735cc3b6b11f229811b41682abeeb68f597",
+    "result": "{id: Number}",
+    "specializations": [
+     {
+      "params": {
+       "bad": "Bool"
+      },
+      "result": "{id: Number}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "fe0320bc8d4ee92b38b7f651c783f4891803d3ce6a82777ee3162b9a843aa616",
+     "start": 37,
+     "end": 108,
+     "line": 3,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 6,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "84f05942728ef3ff6a27a86fe8dea53516fe0f7a13b852d9d689c0ae88442072",
+  "dependencies": {
+   "source": "fe0320bc8d4ee92b38b7f651c783f4891803d3ce6a82777ee3162b9a843aa616",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "bad": "Bool"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 251
+    }
+   ],
+   "contracts": "f47cbcad4861d86f8aa517ba4dc8e5506eb0dec55142ca37620cf1e58b93d3ab",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "739fb256d4c1cd624d348cfd60cdbd0894014fc5ed49ce5a12409a466f5bd6e9",
+   "core": "4a416e63dec7848249623d7e48af7ee81077e9411f596b7a53b4f8f4e4cedfd0"
+  },
+  "source_hash": "fe0320bc8d4ee92b38b7f651c783f4891803d3ce6a82777ee3162b9a843aa616",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "fe0320bc8d4ee92b38b7f651c783f4891803d3ce6a82777ee3162b9a843aa616",
+      "start": 220,
+      "end": 250,
+      "line": 9,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 9,
+      "end_column": 45,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 1,
+   "informative": 1
+  },
+  "guards_ref": {
+   "id": "13d4529a7c6a45cc3c35533ad06f40fd1a24209cdb66c344ef74d46c89fdb7c8",
+   "chars": 644,
+   "read_args": {
+    "id": "13d4529a7c6a45cc3c35533ad06f40fd1a24209cdb66c344ef74d46c89fdb7c8",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

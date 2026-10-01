@@ -1,0 +1,95 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$r = [{a:1,t:\"가\"}] >> [table:ai]{instruction:\"t 를 보고 채워라\", schema:\"x(문자열), y(문자열)\", preserve_rows:true}\nreturn $r.items >> [table:each] { return {a:$it.a,t:$it.t} }\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI3_trainer",
+  "task_id": "LSI3_task",
+  "check": true
+ },
+ "elapsed_s": 0.33,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 1,
+  "guards_inner": 0,
+  "guards_omitted": 1,
+  "result_type": "List<{a: Unknown, t: Unknown}>",
+  "effects": [
+   "model"
+  ],
+  "functions": {},
+  "plan_hash": "d3d60cb53f32cfe6dcb04b48ae2fd6cc64da5f85869d24e89569db12da5ccebe",
+  "dependencies": {
+   "source": "f924f442e8a13310f6fa863fa1638b0a0dc853fc2510bbbf6f063c8c636c0d0d",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 181
+    }
+   ],
+   "contracts": "f57916e0d431fd2436749b49b652124d2c54ef511bf9c3ea750d1deb0c91159e",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "739fb256d4c1cd624d348cfd60cdbd0894014fc5ed49ce5a12409a466f5bd6e9",
+   "core": "4a416e63dec7848249623d7e48af7ee81077e9411f596b7a53b4f8f4e4cedfd0"
+  },
+  "source_hash": "f924f442e8a13310f6fa863fa1638b0a0dc853fc2510bbbf6f063c8c636c0d0d",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "f924f442e8a13310f6fa863fa1638b0a0dc853fc2510bbbf6f063c8c636c0d0d",
+      "start": 139,
+      "end": 180,
+      "line": 3,
+      "column": 20,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 3,
+      "end_column": 61,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 1,
+   "informative": 1
+  },
+  "guards_ref": {
+   "id": "2ba3673307ef3e2c12f20b6643157691d23732e4da52d9473ef773752dd2ad42",
+   "chars": 722,
+   "read_args": {
+    "id": "2ba3673307ef3e2c12f20b6643157691d23732e4da52d9473ef773752dd2ad42",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  }
+ }
+}

@@ -1,0 +1,282 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 4회차 P1 수집 — 검색으로 공식 What's New 문서를 찾아 PEP 문단을 모은다 (v1: 람다 안 지역 함수 호출 → 술어를 돌려주는 함수)\n# inputs: 버전[Text], 문단상한(모델 입력 보호가 아니라 표시 없음 — 전건 사용, 생략은 match_info 로 신고)\n# 반환: {검색:[{query,title,url}], 원천:[{버전,ok,url,찾은경로,이유?,문단:[{paragraph_index,text}],적중,생략}]}\n\n[def:공식인가]($버전) {\n  return ($행)=>contains($행.url,\"docs.python.org\") and contains($행.url,f\"whatsnew/${$버전}.html\")\n}\n\n[def:버전문서찾기]($버전,$검색행,$색인링크) {\n  $공식 = [fn:공식인가]{버전:$버전}\n  $직접 = $검색행 >> [table:filter]{where:$공식}\n  [if:len($직접) > 0] { return {버전:$버전,url:$직접[0].url,찾은경로:f\"검색: ${$직접[0].query}\"} }\n  $링크 = $색인링크 >> [table:filter]{where:$공식}\n  [if:len($링크) > 0] { return {버전:$버전,url:$링크[0].url,찾은경로:f\"검색으로 찾은 공식 색인의 링크: ${$링크[0].source_url}\"} }\n  return {버전:$버전,url:null,찾은경로:null}\n}\n\n[def:PEP문단]($찾음) {\n  [if:$찾음.url == null] { return {버전:$찾음.버전,ok:false,url:null,찾은경로:null,이유:\"검색·공식 색인 어디에서도 공식 문서를 찾지 못함\",문단:[],적중:0,생략:0} }\n  [try] {\n    $문서 = [sense:crawl]{url:$찾음.url}\n    $찾기 = $문서.items >> [fn:본문에서찾기]{패턴:\"PEP \\\\d+\",문맥:0,개수:1000}\n    return {버전:$찾음.버전,ok:true,url:$찾음.url,찾은경로:$찾음.찾은경로,\n            문단:$찾기.items >> [table:select]{columns:[\"paragraph_index\",\"text\"]},\n            적중:$찾기.match_info.total_matches,생략:$찾기.match_info.omitted_matches}\n  } [catch] {\n    return {버전:$찾음.버전,ok:false,url:$찾음.url,찾은경로:$찾음.찾은경로,이유:$error.message,문단:[],적중:0,생략:0}\n  }\n}\n\n# ── 최상위 ──\n$검색어 = $버전 >> [table:each] { return f\"What's New In Python ${$it}\" }\n$검색 = [sense:search]{queries:$검색어,limit:8}\n$검색행 = $검색.items\n$직접있음 = $버전 >> [table:each] {\n  $v = $it\n  $공식 = [fn:공식인가]{버전:$v}\n  $hit = $검색행 >> [table:filter]{where:$공식}\n  return len($hit) > 0\n}\n# 직접 못 찾은 버전이 있을 때만 공식 색인(검색 결과에 있는 것)을 한 번 읽어 링크를 본다\n$색인링크 = []\n[if:not all($직접있음)] {\n  $색인 = $검색행 >> [table:filter]{where:($r)=>contains($r.url,\"docs.python.org\") and contains($r.url,\"whatsnew/index.html\")}\n  [if:len($색인) > 0] {\n    $링크 = [sense:crawl]{url:$색인[0].url,op:\"links\"}\n    $색인링크 = $링크.items\n  }\n}\n$찾음 = $버전 >> [table:each] { [fn:버전문서찾기]{버전:$it,검색행:$검색행,색인링크:$색인링크} }\n$원천 = $찾음 >> [table:each]{parallel:4} { [fn:PEP문단]{찾음:$it} }\nreturn {검색:$검색행 >> [table:select]{columns:[\"query\",\"title\",\"url\"]},원천:$원천}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI4_trainer",
+  "task_id": "LSI4_task",
+  "inputs": {
+   "버전": [
+    "3.13",
+    "3.14"
+   ]
+  }
+ },
+ "elapsed_s": 3.38,
+ "response": {
+  "success": true,
+  "value": {
+   "검색": [
+    {
+     "query": "What's New In Python 3.13",
+     "title": "History of Python - Wikipedia",
+     "url": "https://en.wikipedia.org/wiki/History_of_Python"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "Python Release Python 3.13.0 | Python.org",
+     "url": "https://www.python.org/downloads/release/python-3130/"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "The New Interactive Interpreter in Python 3.13 | by Anna Astori",
+     "url": "https://python.plainenglish.io/the-new-interactive-interpreter-in-python-3-13-6748d9cad182"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "Python Tutorial - GeeksforGeeks",
+     "url": "https://www.geeksforgeeks.org/python/python-programming-language-tutorial/"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "Python Download Free - 3.14.7 | TechSpot",
+     "url": "https://www.techspot.com/downloads/5505-python.html"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "#1082278 - python-urllib3 FTBFS with Python 3.13 - Debian Bug...",
+     "url": "https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1082278"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "Exception & Error Handling in Python | Tutorial by... | DataCamp",
+     "url": "https://www.datacamp.com/tutorial/exception-handling-python"
+    },
+    {
+     "query": "What's New In Python 3.13",
+     "title": "GitHub - python/cpython: The Python programming language · GitHub",
+     "url": "https://github.com/python/cpython"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "History of Python - Wikipedia",
+     "url": "https://en.wikipedia.org/wiki/History_of_Python"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "Python Release Python 3.14.0 | Python.org",
+     "url": "https://www.python.org/downloads/release/python-3140/"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "The best new features and fixes in Python 3.14 feature | by Mohd Azhar",
+     "url": "https://python.plainenglish.io/the-best-new-features-and-fixes-in-python-3-14-feature-d300bcc63c9a"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "Python 3.14 Has Arrived With T-String Support",
+     "url": "https://www.howtogeek.com/python-314-has-arrived-with-t-string-support/"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "Issue 57: Python 3.14 (AKA Piethon) is Out, Learning Python 6th...",
+     "url": "https://www.linkedin.com/pulse/python-314-aka-piethon-out-learning-6th-edition-new-rami-krispin-f7suc"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "3.14. Body Mass Index - Python - SOLUTIONS MOVED... - YouTube",
+     "url": "https://www.youtube.com/watch?v=p2FgB_x94Cg"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "Python - Download - Softpedia",
+     "url": "https://www.softpedia.com/get/Programming/Coding-languages-Compilers/Python.shtml"
+    },
+    {
+     "query": "What's New In Python 3.14",
+     "title": "Real Python: Build Real-World Python Skills",
+     "url": "https://realpython.com/"
+    }
+   ],
+   "원천": [
+    {
+     "버전": "3.13",
+     "ok": false,
+     "url": null,
+     "찾은경로": null,
+     "이유": "검색·공식 색인 어디에서도 공식 문서를 찾지 못함",
+     "문단": [],
+     "적중": 0,
+     "생략": 0
+    },
+    {
+     "버전": "3.14",
+     "ok": false,
+     "url": null,
+     "찾은경로": null,
+     "이유": "검색·공식 색인 어디에서도 공식 문서를 찾지 못함",
+     "문단": [],
+     "적중": 0,
+     "생략": 0
+    }
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "894c2e44a0156db6fd806cad1c05ab378ca15d830d5cfc72a72acdabf101a666",
+  "source_complete": true,
+  "usage": {
+   "steps": 832,
+   "rows": 8,
+   "elapsed_ms": 3091
+  },
+  "precheck_warnings": [
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: query. 관측 필드: title, meta, summary, url",
+    "source_span": {
+     "source_hash": "192299b5108f3940b0ab4ff7c257102928e5ca44a6a39dacdc9508ba49043fde",
+     "start": 550,
+     "end": 562,
+     "line": 13,
+     "column": 66
+    },
+    "call_path": [
+     {
+      "function": "버전문서찾기",
+      "call": {
+       "source_hash": "192299b5108f3940b0ab4ff7c257102928e5ca44a6a39dacdc9508ba49043fde",
+       "start": 1948,
+       "end": 1987,
+       "line": 51,
+       "column": 29
+      },
+      "definition": {
+       "source_hash": "192299b5108f3940b0ab4ff7c257102928e5ca44a6a39dacdc9508ba49043fde",
+       "start": 386,
+       "end": 752,
+       "line": 10,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {
+     "field": "query",
+     "observed": [
+      "title",
+      "meta",
+      "summary",
+      "url"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "192299b5108f3940b0ab4ff7c257102928e5ca44a6a39dacdc9508ba49043fde",
+     "start": 550,
+     "end": 562,
+     "line": 13,
+     "column": 66,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 13,
+     "end_column": 78,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: query. 관측 필드: title, meta, summary, url",
+    "source_span": {
+     "source_hash": "192299b5108f3940b0ab4ff7c257102928e5ca44a6a39dacdc9508ba49043fde",
+     "start": 2093,
+     "end": 2116,
+     "line": 53,
+     "column": 43
+    },
+    "call_path": [],
+    "facts": {
+     "field": "query",
+     "observed": [
+      "title",
+      "meta",
+      "summary",
+      "url"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "192299b5108f3940b0ab4ff7c257102928e5ca44a6a39dacdc9508ba49043fde",
+     "start": 2093,
+     "end": 2116,
+     "line": 53,
+     "column": 43,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 53,
+     "end_column": 66,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "resume": {
+   "run_id": "bfeead5b195e4932bbd2186bd634684d"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "bfeead5b195e4932bbd2186bd634684d"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "evidence_summary": {
+   "events": 203,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  },
+  "result_ref": {
+   "id": "81155c576816cb152605c4157d6ce6cbb5afaf1caae895714c58ed2a5a1798a5",
+   "chars": 65611,
+   "max_limit": 60000,
+   "paths": [
+    {
+     "path": [
+      "value",
+      "검색"
+     ],
+     "chars": 3076
+    }
+   ],
+   "read_args": {
+    "id": "81155c576816cb152605c4157d6ce6cbb5afaf1caae895714c58ed2a5a1798a5",
+    "offset": 0,
+    "limit": 60000,
+    "path": [
+     "value"
+    ]
+   },
+   "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+   "input_args": {
+    "입력": {
+     "$ref": "81155c576816cb152605c4157d6ce6cbb5afaf1caae895714c58ed2a5a1798a5"
+    }
+   },
+   "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+   "value_chars": 3044
+  },
+  "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+  "_display": {
+   "max_chars": 12000
+  }
+ }
+}

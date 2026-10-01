@@ -1,0 +1,71 @@
+{
+ "request": {
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI1_trainer",
+  "task_id": "LSI1_task",
+  "check": true,
+  "inputs": {
+   "폴더": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_1회차/input_variant",
+   "요구파일": "requirements.json",
+   "출력": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-09-29_1회차/out/variant_report.md",
+   "업체": [
+    {
+     "vendor": "A",
+     "file": "vendor_A.csv",
+     "format": "csv"
+    },
+    {
+     "vendor": "B",
+     "file": "vendor_B.json",
+     "format": "json"
+    },
+    {
+     "vendor": "C",
+     "file": "vendor_C.csv",
+     "format": "csv"
+    }
+   ]
+  }
+ },
+ "code_file": null,
+ "elapsed_s": 0.28,
+ "response": {
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: error. 선택 필드는 has/get을 쓰세요.",
+    "source_span": {
+     "source_hash": "85c0fdd68fcf31265f47dfeb832d22791a36150c65c4112e224baaafd9d56ca8",
+     "start": 3799,
+     "end": 3808,
+     "line": 93,
+     "column": 104
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "85c0fdd68fcf31265f47dfeb832d22791a36150c65c4112e224baaafd9d56ca8",
+     "start": 3799,
+     "end": 3808,
+     "line": 93,
+     "column": 104,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 93,
+     "end_column": 113,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "MISSING_FIELD",
+    "severity": "error",
+    "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+   }
+  ],
+  "warnings": [],
+  "guards_count": 24,
+  "response_chars": 40518,
+  "guards_chars": 28347
+ }
+}

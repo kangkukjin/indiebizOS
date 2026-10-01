@@ -1,0 +1,568 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 9회차 P2 v0 대사·분석 — inputs: 자료={$ref P1}, 기대파일(이름 목록). 요청 budget {steps:900000,rows:90000}. 렌더·저장은 P3.\n$주문 = $자료.주문\n$배송 = $자료.배송\n$반품 = $자료.반품\n$환불 = $자료.환불\n$허용 = $자료.기준.허용배송일수\n$기준일 = $자료.기준.기준일\n$분실일수 = $자료.기준.분실의심일수\n\n# 읽기 문제\n$읽은파일 = $자료.파일상태 >> [table:filter]{where:($f)=>$f.상태 == \"읽음\"} >> [table:each] { return $it.파일 }\n$파일문제 = $기대파일 >> [table:each]{mode:\"flat_map\"} {\n  [if:$it in $읽은파일] { return [] }\n  return [{종류:\"파일 읽지 못함\",파일:$it,근거:f\"${$it} 을 읽지 못함 — 이 원천에 기대는 판정은 확인 불가로 표시\"}]\n}\n$B없음 = not (\"carrier_B.json\" in $읽은파일)\n$A없음 = not (\"carrier_A.csv\" in $읽은파일)\n$배송단서 = $B없음 or $A없음 ? \"택배사 기록 일부를 읽지 못해 단정할 수 없음\" : null\n$줄문제 = $자료.오류행 >> [table:each] { return {종류:\"해석 못 한 줄\",주문번호:$it.주문번호,근거:f\"금액 원문 '${get($it,'금액',get($it,'환불금액',''))}' — 합계에서 제외\"} }\n\n# 주문 상태별\n$유효 = $주문 >> [table:filter]{where:($o)=>$o.상태 != \"취소\"}\n$취소 = $주문 >> [table:filter]{where:($o)=>$o.상태 == \"취소\"}\n\n# 1) 배송 기록 없는 주문(취소 아님)\n$무배송 = [table:join]{left:$유효,right:$배송,on:\"주문번호\",how:\"anti\"}\n$무배송이상 = $무배송.items >> [table:each] { return {종류:\"배송 기록 없음\",주문번호:$it.주문번호,단서:$배송단서,근거:f\"${$it.주문일} 주문 ${$it.금액수}원 ${$it.지역}, 배송 기록 없음\"} }\n\n# 2) 같은 주문 두 번 배송\n$배송수 = $배송 >> [table:groupby]{by:\"주문번호\",agg:{건수:[\"count\"]}}\n$중복 = $배송수.items >> [table:filter]{where:($g)=>$g.건수 > 1} >> [table:sort]{by:\"주문번호\"}\n$중복이상 = $중복 >> [table:each] {\n  $id = $it.주문번호\n  $내 = $배송 >> [table:filter]{where:($s)=>$s.주문번호 == $id}\n  $글 = $내 >> [table:each] { return f\"${$it.택배사} ${$it.발송일}→${$it.도착 == null ? '도착 없음' : $it.도착}\" }\n  return {종류:\"중복 배송\",주문번호:$id,근거:join(\" / \",$글)}\n}\n\n# 3) 취소인데 배송\n$취소배송 = [table:join]{left:$취소,right:$배송,on:\"주문번호\",how:\"semi\"}\n$취소배송이상 = $취소배송.items >> [table:each] { return {종류:\"취소 주문 배송\",주문번호:$it.주문번호,근거:f\"${$it.주문일} 취소 주문에 배송 기록 있음\"} }\n\n# 4) 지연·분실 의심 — 완전히 같은 기록은 한 번만, 주문의 지역으로 기준 적용\n$배송유일 = $배송 >> [table:dedup]{by:[\"택배사\",\"주문번호\",\"발송일\"]}\n$주문지역 = $주문 >> [table:select]{columns:[\"주문번호\",\"지역\"]}\n$배송지역 = [table:join]{left:$배송유일.items,right:$주문지역,on:\"주문번호\",how:\"inner\"}\n$도착 = $배송지역.items >> [table:filter]{where:($s)=>$s.도착 != null} >> [table:compute]{set:($s)=>{지연:date_diff($s.도착,$s.발송일) > get($허용,$s.지역,99) ? 1 : 0}}\n$택배사별 = $도착 >> [table:groupby]{by:\"택배사\",agg:{도착:[\"count\"],지연:[\"sum\",\"지연\"]}}\n$지역별 = $도착 >> [table:groupby]{by:\"지역\",agg:{도착:[\"count\"],지연:[\"sum\",\"지연\"]}}\n$택배사표 = $택배사별.items >> [table:sort]{by:\"택배사\"} >> [table:each] { return {**$it,지연율:round(100 * $it.지연 / $it.도착, 1)} }\n$지역표 = $지역별.items >> [table:sort]{by:\"지역\"} >> [table:each] { return {**$it,지연율:round(100 * $it.지연 / $it.도착, 1)} }\n$지연건수 = sum($택배사표 >> [table:each] { return $it.지연 })\n$미도착 = $배송지역.items >> [table:filter]{where:($s)=>$s.도착 == null}\n$분실 = $미도착 >> [table:filter]{where:($s)=>date_diff($기준일,$s.발송일) > $분실일수} >> [table:sort]{by:\"주문번호\"}\n$분실이상 = $분실 >> [table:each] { return {종류:\"분실 의심\",주문번호:$it.주문번호,근거:f\"택배사 ${$it.택배사} ${$it.발송일} 발송, 기준일 ${$기준일}까지 ${date_diff($기준일,$it.발송일)}일 도착 기록 없음\"} }\n\n# 5) 반품·환불 대사\n$환불없음 = [table:join]{left:$반품,right:$환불,on:\"주문번호\",how:\"anti\"}\n$환불없음이상 = $환불없음.items >> [table:sort]{by:\"주문번호\"} >> [table:each] { return {종류:\"반품 후 환불 없음\",주문번호:$it.주문번호,근거:f\"${$it.반품일} 반품(${$it.유형}), 환불 기록 없음\"} }\n$유령환불 = [table:join]{left:$환불,right:$반품,on:\"주문번호\",how:\"anti\"}\n$유령환불이상 = $유령환불.items >> [table:sort]{by:\"주문번호\"} >> [table:each] { return {종류:\"반품 없이 환불\",주문번호:$it.주문번호,근거:f\"${$it.환불일} ${$it.금액수}원 환불, 반품 기록 없음\"} }\n$주문금액 = $주문 >> [table:compute]{set:($o)=>{주문금액:$o.금액수}} >> [table:select]{columns:[\"주문번호\",\"주문금액\"]}\n$환불주문 = [table:join]{left:$환불,right:$주문금액,on:\"주문번호\",how:\"left\",defaults:{주문금액:null}}\n$금액다름 = $환불주문.items >> [table:filter]{where:($r)=>$r.주문금액 != null and $r.금액수 != null and $r.금액수 != $r.주문금액} >> [table:sort]{by:\"주문번호\"}\n$금액다름이상 = $금액다름 >> [table:each] { return {종류:\"환불 금액 다름\",주문번호:$it.주문번호,근거:f\"주문 ${$it.주문금액}원, 환불 ${$it.금액수}원(차이 ${$it.주문금액 - $it.금액수}원)\"} }\n$주문없는환불 = $환불주문.items >> [table:filter]{where:($r)=>$r.주문금액 == null} >> [table:each] { return {종류:\"주문 없는 환불\",주문번호:$it.주문번호,근거:\"환불 기록의 주문번호가 주문 내역에 없음\"} }\n\n# 6) 반품 사유 유형(AI)·월별\n$유형별 = $반품 >> [table:groupby]{by:\"유형\",agg:{건수:[\"count\"]}}\n$유형표 = $유형별.items >> [table:sort]{by:\"건수\",descending:true}\n$월주문 = $주문 >> [table:groupby]{by:\"월\",agg:{주문수:[\"count\"]}}\n$월매출 = $유효 >> [table:groupby]{by:\"월\",agg:{매출:[\"sum\",\"금액수\"],유효주문:[\"count\"]}}\n$주문월 = $주문 >> [table:select]{columns:[\"주문번호\",\"월\"]}\n$반품월 = [table:join]{left:$반품,right:$주문월,on:\"주문번호\",how:\"inner\"}\n$월반품 = $반품월.items >> [table:groupby]{by:\"월\",agg:{반품:[\"count\"]}}\n$월1 = [table:join]{left:$월주문.items,right:$월매출.items,on:\"월\",how:\"left\",defaults:{매출:0,유효주문:0}}\n$월2 = [table:join]{left:$월1.items,right:$월반품.items,on:\"월\",how:\"left\",defaults:{반품:0}}\n$월표 = $월2.items >> [table:sort]{by:\"월\"} >> [table:each] { return {**$it,반품률:$it.유효주문 == 0 ? null : round(100 * $it.반품 / $it.유효주문, 1)} }\n$총매출 = sum($월표 >> [table:each] { return $it.매출 })\n\n$문제 = $파일문제 + $줄문제 + $무배송이상 + $중복이상 + $취소배송이상 + $분실이상 + $환불없음이상 + $금액다름이상 + $유령환불이상 + $주문없는환불\n$종류별 = $문제 >> [table:groupby]{by:\"종류\",agg:{건수:[\"count\"]}}\nreturn {문제:$문제,종류별:$종류별.items,택배사표:$택배사표,지역표:$지역표,지연건수:$지연건수,도착수:len($도착),미도착수:len($미도착),\n        유형표:$유형표,월표:$월표,총매출:$총매출,주문수:len($주문),취소수:len($취소),배송단서:$배송단서,파일상태:$자료.파일상태,사유유형:$자료.사유유형}\n",
+  "edition": 2,
+  "project_id": "컨텐츠",
+  "origin": "training",
+  "agent_id": "LSI9_trainer",
+  "task_id": "LSI9_task",
+  "check": true,
+  "inputs": {
+   "자료": {
+    "$ref": "d0bccadf6497e7c3701ce957cf687ab65d2bcad60696ff037ffacf3eb4f6f3c6"
+   },
+   "기대파일": [
+    "orders_2025-01.csv",
+    "orders_2025-02.csv",
+    "orders_2025-03.csv",
+    "orders_2025-04.csv",
+    "orders_2025-05.csv",
+    "orders_2025-06.csv",
+    "carrier_A.csv",
+    "carrier_B.json",
+    "returns.csv",
+    "refunds.csv",
+    "sla.json"
+   ]
+  },
+  "budget": {
+   "steps": 900000,
+   "rows": 90000
+  }
+ },
+ "elapsed_s": 3.6,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+     "start": 2491,
+     "end": 2530,
+     "line": 53,
+     "column": 13
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+     "start": 2491,
+     "end": 2530,
+     "line": 53,
+     "column": 13,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 53,
+     "end_column": 52,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+     "start": 4674,
+     "end": 4711,
+     "line": 80,
+     "column": 12
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+     "start": 4674,
+     "end": 4711,
+     "line": 80,
+     "column": 12,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 80,
+     "end_column": 49,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   }
+  ],
+  "guards": [],
+  "guards_total": 122,
+  "guards_inner": 0,
+  "guards_omitted": 122,
+  "result_type": "{문제: List<{근거: Text, 종류: Text}>, 종류별: Unknown, 택배사표: List<{지연율: Number}>, 지역표: List<{지연율: Number}>, 지연건수: Unknown, 도착수: Number, 미도착수: Number, 유형표: List<Record>, 월표: List<{반품률: Null | Number}>, 총매출: Unknown, 주문수: Number, 취소수: Number, 배송단서: Null | Text, 파일상태: List<{파일: Text, 상태: Text, 행수: Number, 오류: Null}>, 사유유형: List<{사유: Text, 유형: Text, _ai: Bool}>}",
+  "effects": [
+   "pure",
+   "unknown"
+  ],
+  "functions": {},
+  "plan_hash": "4a699cd01d5bd6401e1c39c30918f1991b227bba083b88417f25248d4dc664ae",
+  "dependencies": {
+   "source": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "자료": "{주문: List<{주문번호: Text, 주문일: Text, 고객: Text, 지역: Text, 금액: Text, 상태: Text, 금액수: Number, 월: Text}>, 배송: List<{택배사: Text, 주문번호: Text, 발송일: Text, 도착: Null | Text}>, 반품: List<{주문번호: Text, 반품일: Text, 사유: Text, 유형: Text, _ai: Bool}>, 환불: List<{주문번호: Text, 환불일: Text, 환불금액: Text, 금액수: Number}>, 기준: {허용배송일수: {수도권: Number, 지방: Number, 제주: Number}, 기준일: Text, 분실의심일수: Number}, 파일상태: List<{파일: Text, 상태: Text, 행수: Number, 오류: Null}>, 오류행: List<Unknown>, 사유유형: List<{사유: Text, 유형: Text, _ai: Bool}>, 행수: {주문: Number, 배송: Number, 반품: Number, 환불: Number}}",
+    "기대파일": "List<Text>"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 5055
+    }
+   ],
+   "contracts": "78b1f82b109bbfd50df6e5d947b07b29a388c72df1865db7231b23ec5a1aec8f",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "4aff97ec4d3206ebac9e1cfed7b38c54b95df3302ca6f96a3b23f0e6d6ad7a5f",
+   "expressions": "4043ed08260cb693dc9460438ba61fa46506ddf922a12230d21e7f27218b0c3d",
+   "core": "8a571d05ab34b82eb8d144e69a8ed3ed9c85f5f5589197e7244a0651393256d1"
+  },
+  "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 305,
+      "end": 335,
+      "line": 12,
+      "column": 66,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 12,
+      "end_column": 96,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 655,
+      "end": 768,
+      "line": 20,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 20,
+      "end_column": 132,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 998,
+      "end": 1112,
+      "line": 28,
+      "column": 24,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 28,
+      "end_column": 138,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 1146,
+      "end": 1191,
+      "line": 31,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 31,
+      "end_column": 60,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 1292,
+      "end": 1530,
+      "line": 33,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 38,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 1394,
+      "end": 1479,
+      "line": 36,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 36,
+      "end_column": 99,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 1632,
+      "end": 1718,
+      "line": 42,
+      "column": 26,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 42,
+      "end_column": 112,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 1783,
+      "end": 1821,
+      "line": 45,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 45,
+      "end_column": 54,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 2113,
+      "end": 2173,
+      "line": 49,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 49,
+      "end_column": 76,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 2188,
+      "end": 2247,
+      "line": 50,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 50,
+      "end_column": 74,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 2297,
+      "end": 2364,
+      "line": 51,
+      "column": 50,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 51,
+      "end_column": 117,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 2411,
+      "end": 2478,
+      "line": 52,
+      "column": 47,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 52,
+      "end_column": 114,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 2500,
+      "end": 2530,
+      "line": 53,
+      "column": 22,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 53,
+      "end_column": 52,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 2711,
+      "end": 2848,
+      "line": 56,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 56,
+      "end_column": 153,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 2978,
+      "end": 3074,
+      "line": 60,
+      "column": 53,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 60,
+      "end_column": 149,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 3189,
+      "end": 3284,
+      "line": 62,
+      "column": 53,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 62,
+      "end_column": 148,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 3623,
+      "end": 3741,
+      "line": 66,
+      "column": 20,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 66,
+      "end_column": 138,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 3814,
+      "end": 3895,
+      "line": 67,
+      "column": 73,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 67,
+      "end_column": 154,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 3932,
+      "end": 3975,
+      "line": 70,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 70,
+      "end_column": 58,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 4049,
+      "end": 4092,
+      "line": 72,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 72,
+      "end_column": 58,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 4107,
+      "end": 4168,
+      "line": 73,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 73,
+      "end_column": 76,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 4304,
+      "end": 4346,
+      "line": 76,
+      "column": 22,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 76,
+      "end_column": 64,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 4570,
+      "end": 4662,
+      "line": 79,
+      "column": 44,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 79,
+      "end_column": 136,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 4681,
+      "end": 4711,
+      "line": 80,
+      "column": 19,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 80,
+      "end_column": 49,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "3528e45df8e3b3d23f076dc2db21846c263903bc436fe4338e0f90901b3bd187",
+      "start": 4822,
+      "end": 4865,
+      "line": 83,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 83,
+      "end_column": 58,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "runtime_checks": {
+   "total": 122,
+   "informative": 77
+  },
+  "guards_ref": {
+   "id": "e269f6a36e9ab511712866de20f81a51a755f1053859d4ef3ce6eb2eeec9d75c",
+   "chars": 79509,
+   "read_args": {
+    "id": "e269f6a36e9ab511712866de20f81a51a755f1053859d4ef3ce6eb2eeec9d75c",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 900000,
+   "rows": 90000
+  },
+  "inputs_resolved": [
+   {
+    "name": "자료",
+    "id": "d0bccadf6497e7c3701ce957cf687ab65d2bcad60696ff037ffacf3eb4f6f3c6",
+    "path": [
+     "value_wire"
+    ],
+    "evidence": {
+     "fingerprint": "fab497e8af5b77b0366658c2822e0255004a2edfec3f0adde91fccf45285cf56",
+     "incomplete": false,
+     "execution_success": true,
+     "run_id": "ffbd612107b04b84a226572bbc77f29a"
+    },
+    "chars": 1256343
+   }
+  ],
+  "request_inputs": {
+   "input_args": {
+    "자료": {
+     "$ref": "9f9ec02e75ee3614f70fdc9c37f66453fcf900e522ac436f9237cbadea11cfe0"
+    },
+    "기대파일": {
+     "$ref": "7ccf4d86b90d7c5fe4d111224c0a060358f6eaa2f68f64bb4246b0ea6e7587bd"
+    }
+   },
+   "unavailable": {},
+   "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  }
+ }
+}

@@ -1,0 +1,498 @@
+{
+  "measured_at": "2026-10-01T12:44:05.648241+09:00",
+  "method": "Historical saved prompt character counts (Python len, Unicode code points), not current reconstruction or token estimates. Read-only SQLite and rollout reads; no model/recall calls.",
+  "code_revision": "d1882222ddb5c0c5032b43340f537907f0b00902",
+  "sources": {
+    "episode_id": 4197,
+    "trajectory_run_id": "run_ea5c99007e82dce6180d",
+    "call_id": "d8c8eb48f26f4870b7858eea4f43861a",
+    "rollout": "~/.codex/sessions/2026/10/01/rollout-2026-10-01T06-47-02-01a0f449-07d7-7270-879b-59ee81222b6f.jsonl",
+    "rollout_sha256": "cc42b6f91520dc80f637a971ed8e83de59a8a84bb8bfdb318b3205337a17ac0f",
+    "raw_prompt_committed": false
+  },
+  "input": {
+    "recorded_shape": {
+      "accounting": "input_shape_only",
+      "call_id": "d8c8eb48f26f4870b7858eea4f43861a",
+      "history_chars": 0,
+      "images": 0,
+      "message_chars": 8250,
+      "model": "gpt-6-astra:high",
+      "parent_call_id": null,
+      "phase": "system_ai",
+      "provider": "Codex",
+      "role": "system_ai",
+      "round_index": 0,
+      "source": "gear:최대|실행→고급",
+      "system_chars": 46900,
+      "tier": "고급",
+      "tool_schema_chars": 12346
+    },
+    "cli_logged_message_chars": 55963,
+    "stable_chars": 46900,
+    "raw_message_chars": 8250,
+    "provider_tool_policy_chars": 806,
+    "provider_separator_chars": 7,
+    "cli_message_sha256": "bc67c375dfd264f52c19b573568268e47060b526af7811a8297c78ee58aa5cd5",
+    "formula": "46900 + 806 + 7 + 8250 = 55963; CLI message already includes system prompt; adding 46900 double-counts it."
+  },
+  "stable_components": [
+    {
+      "key": "date",
+      "start": 0,
+      "end": 32,
+      "chars": 32,
+      "source": "prompt_builder.PromptBuilder.build",
+      "sha256": "8a2539ed7c010b91a7bacb58eea4d87694d42b119f5bc59b0b9a8e3ec654b5fa"
+    },
+    {
+      "key": "base_prompt",
+      "start": 34,
+      "end": 5081,
+      "chars": 5047,
+      "source": "data/common_prompts/base_prompt_v6.md",
+      "sha256": "628109908d47e5b4966a26e6c9cd5d6cf293d03cc6f892b9fd210608e4f667e1"
+    },
+    {
+      "key": "system_structure",
+      "start": 5084,
+      "end": 15509,
+      "chars": 10425,
+      "source": "prompt_builder.get_system_structure_core",
+      "sha256": "3279690e9c43b31fe0feef9285683b21d4d0a8475c1e8eab7df9fd9d26f25228"
+    },
+    {
+      "key": "ibl_executor",
+      "start": 15511,
+      "end": 19687,
+      "chars": 4176,
+      "source": "data/common_prompts/fragments/12_ibl_compact.md",
+      "sha256": "dfeb792c30330d14d4a8a81a2e5c287f0d7345c289570637fcc3a26faa5dad93"
+    },
+    {
+      "key": "ibl_actions",
+      "start": 19688,
+      "end": 42088,
+      "chars": 22400,
+      "source": "ibl_access.build_environment → render_action_brief",
+      "sha256": "f36c804068371640ba8df1c65afb6e376c920fe29defa9884f38e072d5537b31"
+    },
+    {
+      "key": "ibl_idioms",
+      "start": 42089,
+      "end": 45641,
+      "chars": 3552,
+      "source": "ibl_access.idioms_map",
+      "sha256": "11a4470c191a2b4c3751be0cdfb2ffdda11d9b1c1b3106c1224959c3e5f2e2da"
+    },
+    {
+      "key": "system_ai_delegation",
+      "start": 45643,
+      "end": 46504,
+      "chars": 861,
+      "source": "data/common_prompts/fragments/10_system_ai_delegation.md",
+      "sha256": "45397095b562794b1928510111c642751dc698eafa70d51e294559d1df617d17"
+    },
+    {
+      "key": "role",
+      "start": 46507,
+      "end": 46900,
+      "chars": 393,
+      "source": "data/system_ai_role.txt",
+      "sha256": "0091eb37cd3ee6189c6d6309b3ad185de611603a619072f61b34a41c0d3d1f44"
+    }
+  ],
+  "stable_separators_chars": 14,
+  "catalog_detail": {
+    "action_lines_by_node": {
+      "sense": {
+        "actions": 43,
+        "chars": 5303
+      },
+      "self": {
+        "actions": 51,
+        "chars": 6244
+      },
+      "limbs": {
+        "actions": 13,
+        "chars": 1357
+      },
+      "others": {
+        "actions": 17,
+        "chars": 2379
+      },
+      "engines": {
+        "actions": 7,
+        "chars": 928
+      },
+      "table": {
+        "actions": 23,
+        "chars": 3113
+      }
+    },
+    "action_lines_chars": 19324,
+    "idiom_anchor_lines": 7,
+    "idiom_anchor_chars": 1020,
+    "other_chars_including_wrappers_and_legend": 2056
+  },
+  "message_components": {
+    "recall_sources": [
+      {
+        "source": "hippocampus",
+        "chars": 2007,
+        "status": "ok"
+      },
+      {
+        "source": "memory_map",
+        "chars": 883,
+        "status": "ok"
+      },
+      {
+        "source": "recalled_memory",
+        "chars": 430,
+        "status": "lexical_only"
+      },
+      {
+        "source": "guide_map",
+        "chars": 2224,
+        "status": "ok"
+      },
+      {
+        "source": "decision_ledger",
+        "chars": 1067,
+        "status": "ok"
+      },
+      {
+        "source": "pursuit",
+        "chars": 797,
+        "status": "ok"
+      },
+      {
+        "source": "method_map",
+        "chars": 0,
+        "status": "no_match"
+      },
+      {
+        "source": "world_memory",
+        "chars": 704,
+        "status": "ok"
+      }
+    ],
+    "recall_chars": 8112,
+    "other_chars": 138,
+    "other_includes": "turn wrapper, time, model name, user request, separators; no prior conversation (history_chars=0)"
+  },
+  "execution_usage": {
+    "rounds": 26,
+    "input": 2270036,
+    "cache_read_subset": 2089856,
+    "output": 14168,
+    "first_round_input": 45107,
+    "rounds_detail": [
+      {
+        "round": 1,
+        "input_tokens": 45107,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 74,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 45181
+      },
+      {
+        "round": 2,
+        "input_tokens": 56363,
+        "cached_input_tokens": 44928,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 68,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 56431
+      },
+      {
+        "round": 3,
+        "input_tokens": 68371,
+        "cached_input_tokens": 56192,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 78,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 68449
+      },
+      {
+        "round": 4,
+        "input_tokens": 78142,
+        "cached_input_tokens": 68224,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 25,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 78167
+      },
+      {
+        "round": 5,
+        "input_tokens": 79504,
+        "cached_input_tokens": 77952,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 149,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 79653
+      },
+      {
+        "round": 6,
+        "input_tokens": 87776,
+        "cached_input_tokens": 79360,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 140,
+        "reasoning_output_tokens": 34,
+        "total_tokens": 87916
+      },
+      {
+        "round": 7,
+        "input_tokens": 87940,
+        "cached_input_tokens": 87552,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 96,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 88036
+      },
+      {
+        "round": 8,
+        "input_tokens": 92368,
+        "cached_input_tokens": 87808,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 218,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 92586
+      },
+      {
+        "round": 9,
+        "input_tokens": 97716,
+        "cached_input_tokens": 92160,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 178,
+        "reasoning_output_tokens": 13,
+        "total_tokens": 97894
+      },
+      {
+        "round": 10,
+        "input_tokens": 102161,
+        "cached_input_tokens": 97536,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 170,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 102331
+      },
+      {
+        "round": 11,
+        "input_tokens": 108305,
+        "cached_input_tokens": 102016,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 78,
+        "reasoning_output_tokens": 20,
+        "total_tokens": 108383
+      },
+      {
+        "round": 12,
+        "input_tokens": 111654,
+        "cached_input_tokens": 108160,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 71,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 111725
+      },
+      {
+        "round": 13,
+        "input_tokens": 115668,
+        "cached_input_tokens": 111488,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 182,
+        "reasoning_output_tokens": 20,
+        "total_tokens": 115850
+      },
+      {
+        "round": 14,
+        "input_tokens": 117272,
+        "cached_input_tokens": 115456,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 85,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 117357
+      },
+      {
+        "round": 15,
+        "input_tokens": 118341,
+        "cached_input_tokens": 117120,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 119,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 118460
+      },
+      {
+        "round": 16,
+        "input_tokens": 124374,
+        "cached_input_tokens": 118144,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 198,
+        "reasoning_output_tokens": 84,
+        "total_tokens": 124572
+      },
+      {
+        "round": 17,
+        "input_tokens": 132391,
+        "cached_input_tokens": 124160,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4779,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 137170
+      },
+      {
+        "round": 18,
+        "input_tokens": 49888,
+        "cached_input_tokens": 44928,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 133,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 50021
+      },
+      {
+        "round": 19,
+        "input_tokens": 54663,
+        "cached_input_tokens": 49664,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 93,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 54756
+      },
+      {
+        "round": 20,
+        "input_tokens": 65274,
+        "cached_input_tokens": 54528,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 270,
+        "reasoning_output_tokens": 121,
+        "total_tokens": 65544
+      },
+      {
+        "round": 21,
+        "input_tokens": 67937,
+        "cached_input_tokens": 65152,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3202,
+        "reasoning_output_tokens": 257,
+        "total_tokens": 71139
+      },
+      {
+        "round": 22,
+        "input_tokens": 76305,
+        "cached_input_tokens": 67712,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 84,
+        "reasoning_output_tokens": 30,
+        "total_tokens": 76389
+      },
+      {
+        "round": 23,
+        "input_tokens": 78285,
+        "cached_input_tokens": 76160,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1614,
+        "reasoning_output_tokens": 274,
+        "total_tokens": 79899
+      },
+      {
+        "round": 24,
+        "input_tokens": 80862,
+        "cached_input_tokens": 78080,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1345,
+        "reasoning_output_tokens": 9,
+        "total_tokens": 82207
+      },
+      {
+        "round": 25,
+        "input_tokens": 84923,
+        "cached_input_tokens": 80640,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 638,
+        "reasoning_output_tokens": 81,
+        "total_tokens": 85561
+      },
+      {
+        "round": 26,
+        "input_tokens": 88446,
+        "cached_input_tokens": 84736,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 81,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 88527
+      }
+    ],
+    "compactions": [
+      {
+        "after_round": 17,
+        "timestamp": "2026-09-30T21:52:29.781Z",
+        "original_prompt_retained": true
+      }
+    ]
+  },
+  "postprocessing_usage": [
+    {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 0,
+      "call_id": "ea199ac47fa14743aa14257126f9b638",
+      "event": "usage",
+      "input": 22333,
+      "latency_ms": 10264,
+      "model": "gpt-6-astra:high",
+      "output": 166,
+      "parent_call_id": null,
+      "phase": "execution",
+      "provider": "Codex",
+      "role": "unified_distill",
+      "round_index": 1
+    }
+  ],
+  "tool_outputs": {
+    "count": 23,
+    "chars_once_each": 302996,
+    "largest_five": [
+      {
+        "chars": 27550,
+        "tool": "execute_ibl",
+        "call_id": "call_EGriBjuNJyz6aFEb6lZnhlt9"
+      },
+      {
+        "chars": 24910,
+        "tool": "execute_ibl",
+        "call_id": "call_hA2wXAGb6Ng1iWgpeU5EE6IK"
+      },
+      {
+        "chars": 21837,
+        "tool": "execute_ibl",
+        "call_id": "call_G4v5nJDL0F4VSneDUkfipsuT"
+      },
+      {
+        "chars": 20980,
+        "tool": "execute_ibl",
+        "call_id": "call_j7UgHhedszF7rfJxEi7GWYlr"
+      },
+      {
+        "chars": 20593,
+        "tool": "read_guide",
+        "call_id": "call_SINts25Z43ZhEH6HEtPRx9UE"
+      }
+    ]
+  },
+  "findings": [
+    "The 55,963-character CLI message includes the 46,900-character system prompt, not a second 55,963-character recall payload.",
+    "IBL action catalog: 22,400 chars (47.76% of stable); system structure: 10,425 chars (22.23%). Investigate compact action descriptions first; preserve discoverability and describe contracts.",
+    "First provider round is 45,107 input tokens including native CLI context/tools. No measured token attribution by prompt component is available.",
+    "26 rounds sum exactly to episode billable input 2,270,036. One compaction after round 17 retains the original prompt, but changes accumulated context. Do not multiply character counts into token costs or claim a measured half-of-total share.",
+    "Tool outputs total 302,996 characters counted once, separate from repeated model input and not a token attribution."
+  ],
+  "verification": [
+    "Historical prompt found by exact logged length and request suffix",
+    "System spans non-overlapping, remainder whitespace only, all lengths sum",
+    "Recall source lengths matched saved prompt XML blocks",
+    "26 response IDs matched trajectory and usage sums matched billable_usage",
+    "Raw prompt, personal memory, tool contents, and native instructions excluded from artifact"
+  ]
+}

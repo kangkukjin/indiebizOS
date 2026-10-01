@@ -205,10 +205,17 @@ class CognitiveConsciousnessMixin:
         "처음부터다시", "깨끗하게시작", "여기까지하자",
         "그만하자", "다른이야기하자", "새작업으로넘어가",
     )
+    # 공백을 뺀 글자 수 상한 — 리셋 인사는 한두 문장이다. 그보다 길면 작업 지시로 본다(애매하면 EXECUTE).
+    _RESET_MAX_CHARS = 60
 
     def _is_reset_keyword(self, message: str) -> bool:
         """의식 OFF 에서 분류기를 스킵하므로, 세션 리셋만 비-LLM 키워드로 대체 탐지(토큰 0)."""
         low = (message or "").lower().replace(" ", "")
+        # 리셋은 대화에 대한 말이지 작업 지시의 조각이 아니다. 위임·예약 과제(`[task:…]`)와 긴 지시문 안의
+        # 같은 글자열은 리셋이 아니다 — 2026-10-01 실측: 예약 위임 문구의 "처음부터 다시 훑지 말고"가
+        # 받는 에이전트의 세션을 지우고 표준 응답만 돌려줬다(일은 하지 않음).
+        if low.startswith("[task:") or len(low) > self._RESET_MAX_CHARS:
+            return False
         return any(p in low for p in self._RESET_PHRASES)
 
     def _tag_override(self, message: str) -> Optional[str]:

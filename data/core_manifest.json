@@ -86,6 +86,7 @@
       "python_bridge_worker.py",
       "targeted_code_read.py",
       "test_ai_tips_report.py",
+      "test_folder_watch.py",
       "test_judgment_idioms.py",
       "tips_nest.py",
       "webapp_work.py",
@@ -105,7 +106,8 @@
       "음성받아쓰기.py",
       "이미지변환.py",
       "인사말붙이기.py",
-      "잔여추정.py"
+      "잔여추정.py",
+      "폴더변화.py"
     ],
     "vocab_fragments": [
       "engines.yaml",

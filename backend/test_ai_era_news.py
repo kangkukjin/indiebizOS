@@ -120,5 +120,73 @@ def test_report_change_blocks_stale_translation(news):
     assert module.load_state()["done"] == {}
 
 
+def refused(candidate, error):
+    return {"key": candidate["key"], "report_date": candidate["report_date"], "url": candidate["url"], "_error": error}
+
+
+def test_refused_source_stops_retrying_after_repeated_evidence(news):
+    """2026-10-01: 차단된 출처가 매시 재시도되며 트리거를 61회 연속 실패로 만들었다."""
+    module, candidate = news
+    row = refused(candidate, 'Step 1 에러: {"success": false, "reason": "bot_blocked", "error": "HTTP 403: 봇 차단"}')
+    for attempt in range(1, module.MAX_BLOCKED + 1):
+        assert module.prepare()["pending"] == 1
+        error = module.normalize([row])["errors"][0]
+        assert error["reason"] == "원문 제목 확인 실패" and error["attempts"] == attempt
+    prepared = module.prepare()
+    assert prepared["items"] == [] and prepared["pending"] == 0 and prepared["unreachable"] == 1
+    status = module.main({"op": "status"})
+    assert status["success"] is True and status["pending_count"] == 0
+    assert status["unreachable"][0]["url"] == candidate["url"] and status["unreachable"][0]["attempts"] == module.MAX_BLOCKED
+    module.main({"op": "retry", "keys": [candidate["key"]]})
+    assert module.prepare()["pending"] == 1
+
+
+def test_transient_failure_is_not_counted_as_refusal(news):
+    module, candidate = news
+    row = refused(candidate, "Step 1 에러: 시간 초과")
+    for _ in range(module.MAX_BLOCKED + 2):
+        error = module.normalize([row])["errors"][0]
+        assert "attempts" not in error
+    assert module.prepare()["pending"] == 1
+    assert module.main({"op": "status"})["success"] is False
+
+
+def test_success_after_refusals_clears_the_count(news):
+    module, candidate = news
+    module.normalize([refused(candidate, "HTTP 403")])
+    assert module.load_state()["blocked"][candidate["key"]]["count"] == 1
+    assert module.normalize([metadata(candidate, "AI 새 소식")])["errors"] == []
+    assert candidate["key"] not in module.load_state()["blocked"]
+
+
+def _report(module, name, body, urls):
+    report = module.REPORTS / f"ai_trend_report_{name}.md"
+    report.write_text(body)
+    verified = module.REPORTS / f"_verified_rows_{name}.json"
+    verified.write_text(json.dumps([{"verified": True, "label": "NEW", "url": u} for u in urls]))
+    for file in (report, verified):
+        os.utime(file, (1, 1))
+    ledger = module.REPORTS / "_coverage_ledger.json"
+    ledger.write_text(json.dumps(json.loads(ledger.read_text()) + [{"date": name, "file": report.name}]))
+
+
+def test_source_cited_in_body_counts_without_a_sources_heading(news):
+    """10-01 호: 출처를 본문에 인용했지만 절 제목이 '조사 범위와 검증 메모'라 통째로 막혔다."""
+    module, _ = news
+    _report(module, "2026-09-16", "# 보고서\n\n본문 [발표](https://example.com/a?utm_source=x).\n\n## 조사 범위와 검증 메모\n",
+            ["https://example.com/a", "https://example.com/not-cited"])
+    prepared = module.prepare()
+    assert prepared["issues"] == []
+    assert [c["url"] for c in prepared["items"] if c["report_date"] == "2026-09-16"] == ["https://example.com/a"]
+
+
+def test_report_citing_none_of_its_verified_sources_is_an_issue(news):
+    module, _ = news
+    _report(module, "2026-09-17", "# 보고서\n\n## 출처\n[검증 원장](_verified_rows_2026-09-17.json)\n", ["https://example.com/b"])
+    prepared = module.prepare()
+    assert prepared["issues"] == [{"report_date": "2026-09-17", "reason": "보고서가 검증 출처를 인용하지 않음"}]
+    assert all(c["report_date"] != "2026-09-17" for c in prepared["items"])
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

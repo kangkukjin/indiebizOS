@@ -40,6 +40,8 @@ class Plan:
     dependencies: dict
     function_contracts: dict = field(default_factory=dict)
     preflight: dict = field(default_factory=dict)
+    # 이 계획을 검사한 저장 함수 목록 — 실행 시점의 중첩 문장 검사(code_params)가 컴파일 때와 같은 목록을 본다.
+    definitions: dict = field(default_factory=dict)
 
     REPORT_GUARDS_CAP = 24
 
@@ -876,4 +878,5 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
         preflight['warnings_omitted'] = preflight.get('warnings_omitted', 0) + max(0, len(merged) - 32)
     return Plan(compiler.source, root, compiler.functions, registry, compiler.inputs,
                 compiler.issues, compiler.guards, compiler.effects, result,
-                digest(dependencies), dependencies, compiler.function_contracts, preflight)
+                digest(dependencies), dependencies, compiler.function_contracts, preflight,
+                compiler.definitions)

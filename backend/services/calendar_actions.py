@@ -5,6 +5,7 @@ CalendarManager에서 분리된 액션 함수들을 Mixin으로 제공합니다.
 "보이는 실행"을 위한 창/WS 관리 헬퍼를 포함합니다.
 """
 
+import json
 from typing import Dict
 
 from runtime_utils import get_base_path
@@ -233,13 +234,17 @@ class CalendarActionsMixin:
             if trigger_id:
                 try:
                     from trigger_engine import add_history
-                    _fr = result.get("final_result", result) if isinstance(result, dict) else result
+                    # 판본 2 실행 결과는 final_result 가 아니라 value 에 값을 싣는다 — 옛 판은 그 이력 요약을 비웠다
+                    # (2026-10-01: "깨우지 않음" 같은 판정이 이력에 남지 않았다).
+                    _fr = (result.get("final_result", result.get("value", result))
+                           if isinstance(result, dict) else result)
                     _items = _fr.get("items") if isinstance(_fr, dict) else None
                     add_history(
                         trigger_id=trigger_id,
                         trigger_name=task.get("title", ""),
                         success=result.get("success", False),
-                        result_summary=str(result.get("final_result", ""))[:500],
+                        result_summary=("" if _fr is result else
+                                        _fr if isinstance(_fr, str) else json.dumps(_fr, ensure_ascii=False, default=str))[:500],
                         duration_ms=duration_ms,
                         error=(result.get("error") if not result.get("success") else None),
                         count=(len(_items) if isinstance(_items, list) else None),

@@ -20,6 +20,12 @@ STATE = BASE / "outputs/ai_era_news/state.json"
 START = "2026-09-15"
 ENDPOINT = "https://ai-era-b18.pages.dev/api/news"
 FIELDS = {"key", "url", "title_ko", "publisher", "report_date", "published_date"}
+# 원문이 접근을 거절한 증거(봇 차단·로그인 벽·없는 페이지)가 이 횟수만큼 쌓이면 그 출처는 더 시도하지 않는다.
+# 2026-10-01 실측: 차단된 출처 3건이 매시 재시도되며 트리거를 61회 연속 실패로 만들었다. 일시 장애(시간 초과·
+# 네트워크)는 세지 않는다 — 거절의 증거만 센다. 가끔 열리는 곳(같은 주소가 403 과 200 을 오간다)을 위해 여러 번 본다.
+MAX_BLOCKED = 6
+BLOCKED = re.compile(r"bot_blocked|login_required|paywall|봇 차단|HTTP (?:401|403|404|410|451)", re.I)
+BLOCK_TITLE = re.compile(r"access denied|just a moment|captcha|403 forbidden|404 not found", re.I)
 HOSTS = {
     "pymnts.com": "PYMNTS", "n.news.naver.com": "뉴시스",
     "tokenpost.kr": "토큰포스트", "ifm.ai": "IFM",
@@ -93,6 +99,20 @@ def rows_of(value):
         return value["events"]   # 발행 게이트 결과를 그대로 저장한 날({events,new_count,…})
     raise ValueError("items 목록 필요")
 
+def cited_urls(text):
+    """보고서 본문이 공개로 인용한 주소 — 절 제목이 아니라 인용 사실로 '공개 출처'를 가른다."""
+    found = set()
+    for raw in re.findall(r"https://[^\s)\]>\"'|]+", text):
+        try:
+            found.add(safe_url(raw.rstrip(".,;:")))
+        except (ValueError, TypeError):
+            continue
+    return found
+
+def given_up(s, key, c):
+    b = s.get("blocked", {}).get(key)
+    return bool(b and b["version"] == c["version"] and b["count"] >= MAX_BLOCKED)
+
 def report_fingerprint(report, rows):
     return digest(report.read_text() + "\n" + rows.read_text())
 
@@ -116,12 +136,12 @@ def prepare():
                 continue
             if time.time() - max(report.stat().st_mtime, verified.stat().st_mtime) < 120:
                 continue
-            text = report.read_text()
-            # 출처 절 = 제목에 '출처'가 든 2단 절('## 출처와 조사 한계'·'## 조사 범위·한계와 출처' 포함).
-            if not re.search(r"^##\s+[^\n]*출처", text, re.M):
-                issues.append({"report_date": m[1], "reason": "출처 절 누락"})
-                continue
+            # 공개 출처 = 보고서 본문이 그 주소를 실제로 인용했는가. 옛 판은 절 제목에 '출처'가 있는지를 봤는데,
+            # 제목은 쓰는 쪽이 매 호 다르게 짓는다 — 10-01 호는 출처를 본문에 인용하고도 절 제목이 '조사 범위와
+            # 검증 메모'라 통째로 막혔다(09-20~09-30 열 호에서는 두 기준의 결과가 같다).
+            cited = cited_urls(report.read_text())
             version = report_fingerprint(report, verified)
+            usable = 0
             for row in rows_of(json.loads(verified.read_text())):
                 if row.get("verified") is not True or row.get("label") not in ("NEW", "CHANGED", "ONGOING"):
                     continue
@@ -134,25 +154,33 @@ def prepare():
                         continue
                 except (ValueError, TypeError):
                     continue
+                usable += 1
+                if url not in cited:
+                    continue
                 key = digest(filename + "\n" + url)
                 candidate = {"key": key, "url": url, "report_date": m[1],
                              "version": version, "report": filename,
                              "verified": verified.name}
                 eligible[key] = candidate
                 s["candidates"][key] = candidate
+            if usable and not any(c["report"] == filename for c in eligible.values()):
+                issues.append({"report_date": m[1], "reason": "보고서가 검증 출처를 인용하지 않음"})
         # 현재 원장에 있는 보고서의 삭제/수정된 후보는 과거 pending에서 배제한다.
         for key, c in list(s["candidates"].items()):
             if c["report"] in complete and key not in eligible:
                 del s["candidates"][key]
-        pending = [c for key, c in s["candidates"].items()
-                   if s["done"].get(key) != c["version"]]
+                s.get("blocked", {}).pop(key, None)
+        open_ = [c for key, c in s["candidates"].items()
+                 if s["done"].get(key) != c["version"]]
+        pending = [c for c in open_ if not given_up(s, c["key"], c)]
         pending.sort(key=lambda c: (c["report_date"], c["key"]))
         s["last_prepare"] = {"time": time.time(), "pending": len(pending), "issues": issues}
         save_state(s)
     # 내부 경로·요약·장부 문자열은 모델/공개 배관에 싣지 않는다.
     return {"items": [{k: c[k] for k in ("key", "url", "report_date")}
                       for c in pending[:40]], "pending": len(pending),
-            "remaining": max(0, len(pending)-40), "issues": issues}
+            "remaining": max(0, len(pending)-40), "issues": issues,
+            "unreachable": len(open_) - len(pending)}
 
 def normalize(data):
     groups = {}
@@ -167,12 +195,21 @@ def normalize(data):
             if not c:
                 raise ValueError("알 수 없는 후보")
             titles = [r for r in meta if r.get("field") == "title" and r.get("value")]
-            titles = [r for r in titles if not re.search(r"access denied|just a moment|captcha|403 forbidden|404 not found", str(r["value"]), re.I)]
+            walls = [str(r["value"]) for r in titles if BLOCK_TITLE.search(str(r["value"]))]
+            titles = [r for r in titles if not BLOCK_TITLE.search(str(r["value"]))]
             titles.sort(key=lambda r: (0 if "headline" in r.get("source", "") else
                                       1 if "og:title" in r.get("source", "") else
                                       2 if "twitter:title" in r.get("source", "") else 3))
             if not titles:
-                errors.append({"key": key, "reason": "원문 제목 확인 실패"})
+                error = {"key": key, "reason": "원문 제목 확인 실패"}
+                refused = next((m.group(0) for r in meta for m in [BLOCKED.search(str(r.get("_error") or ""))] if m),
+                               walls[0][:40] if walls else None)
+                if refused:
+                    before = s.setdefault("blocked", {}).get(key) or {}
+                    count = before.get("count", 0) + 1 if before.get("version") == c["version"] else 1
+                    s["blocked"][key] = {"version": c["version"], "count": count, "evidence": refused}
+                    error.update(blocked=refused, attempts=count)
+                errors.append(error)
                 continue
             # 한국어 제목 중간의 말줄임표는 흔한 구두점이다. 끝이 잘린
             # 메타 제목만 제외하고, 같은 페이지의 완전한 다른 제목을 찾는다.
@@ -201,6 +238,7 @@ def normalize(data):
                       "publisher": publisher, "report_date": c["report_date"],
                       "published_date": published}
             s["metadata"][key] = {**record, "version": c["version"]}
+            s.get("blocked", {}).pop(key, None)
             result.append(record)
         s["last_normalize"] = {"errors": errors, "count": len(result)}
         save_state(s)
@@ -272,18 +310,25 @@ def main(args):
                 if key not in s["candidates"]:
                     raise ValueError("알 수 없는 재시도 키")
                 s["done"].pop(key, None)
+                s.get("blocked", {}).pop(key, None)
             save_state(s)
         return {"items": [], "retry": len(args["keys"])}
     if op == "status":
         s = load_state()
-        pending = {k for k, c in s["candidates"].items()
-                   if s["done"].get(k) != c["version"]}
+        open_ = {k for k, c in s["candidates"].items()
+                 if s["done"].get(k) != c["version"]}
+        # 접근을 거절한 출처는 더 시도하지 않는다 — 실패가 아니라 "전하지 못한 출처"로 따로 보인다(retry 로 되살린다).
+        unreachable = [{"key": k, "url": s["candidates"][k]["url"], "report_date": s["candidates"][k]["report_date"],
+                        "evidence": s["blocked"][k]["evidence"], "attempts": s["blocked"][k]["count"]}
+                       for k in sorted(open_) if given_up(s, k, s["candidates"][k])]
+        pending = open_ - {u["key"] for u in unreachable}
         errors = [e for e in s.get("last_normalize", {}).get("errors", [])
                   if e["key"] in pending]
         issues = s.get("last_prepare", {}).get("issues", [])
         return {"items": [], "success": not errors and not issues,
                 "candidates": len(s["candidates"]), "done": len(s["done"]),
                 "pending_count": len(pending), "errors": errors, "issues": issues,
+                "unreachable": unreachable,
                 "prepare": s.get("last_prepare"), "normalize": s.get("last_normalize"),
                 "publish": s.get("last_publish")}
     raise ValueError("지원하지 않는 작업")

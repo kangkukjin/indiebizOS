@@ -574,7 +574,7 @@ class Runtime(ExpressionEvaluator):
             raise Fault('DEFINITION_CHANGED', '참조한 실행 자산이 검사 이후 변경되었습니다.', node, kind='protocol')
         contract = selected(spec.contract, args.value)
         from ibl_value_checks import value_problems
-        failures = problems(contract, args.value) + value_problems(contract, args.value, self.plan.registry)
+        failures = problems(contract, args.value) + value_problems(contract, args.value, self.plan.registry, self.plan.definitions)
         failures += [f"필수 인자 누락: {k}" for k in contract.get("required", contract["params"]) if k not in args.value]
         if failures:
             raise Fault('ARGUMENT_CONTRACT', '; '.join(failures), node)

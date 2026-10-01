@@ -1,0 +1,24 @@
+code: "#!ibl edition=2\n[def:프로젝트재조사]($project, $agent) {\n  $변화 = [self:script]{op:\"\
+  run\", id:\"폴더변화\", args:{path:\"projects/\" + $project, name:\"forage_resurvey\"\
+  , commit:false, exclude:[\"*_todo_state.json\", \"todo_state.json\", \"question_state.json\"\
+  , \"*.bak\", \"tokens/*\", \"memory_tree_*/*\"]}}\n  [if: $변화.count == 0] {\n  \
+  \  return {items:[], woke:false, project:$project, watched_files:$변화.watched_files,\
+  \ checked_at:$변화.checked_at}\n  }\n  $확인 = '[fn:프로젝트재조사확인]{project:\"' + $project\
+  \ + '\"}'\n  $알림 = f\"\"\"주간 재조사: 지난 조사 뒤 네 프로젝트 폴더에서 바뀐 파일을 기계가 대조했다(DB·실행 부산물·심층\
+  \ 기억 트리는 대조에서 뺐다). 프롬프트의 <project_memory>(doc 속성이 정본 경로)를 guides/folder_survey.md\
+  \ 지침대로, 아래 변화만 반영해 갱신해라. 폴더 전체를 새로 훑지 말고 이 목록에서 출발한다. 심층 기억 가지는 문서에 옮겨 적지 않는다(<memory_map>\
+  \ 이 매 턴 전달한다). 사용자가 고친 줄은 보존하고 24KB 안에서 골격만 둔다. 골격·관습·자리가 달라졌으면 문서를 고치고 끝의 갱신 기록\
+  \ 절에 일시와 한 줄, 단언이 바뀌면 [self:forage] note 나 문서 편집 뒤 sync. 문서가 이미 옳으면(이름 규칙 안의 평범한\
+  \ 추가 등) 문서에는 아무것도 쓰지 않는다.\n마지막에 — 문서를 고쳤든 고칠 것이 없었든 — ${$확인} 를 한 번 실행해 이번 변화를 본\
+  \ 것으로 표시한다. 표시하지 않으면 다음 주에 같은 목록이 다시 온다.\n\n바뀐 파일 ${$변화.count}건 (1단 폴더별 건수 ${json($변화.by_dir)},\
+  \ 목록에서 생략 ${$변화.omitted}건):\n${json($변화.items)}\"\"\"\n  return [others:delegate]{scope:\"\
+  cross\", agent_id:$agent, message:$알림}\n}\n"
+description: 프로젝트 폴더의 주간 재조사 — 폴더변화로 먼저 대조해 바뀐 것이 있을 때만 그 목록을 실어 프로젝트 에이전트를 깨운다. 변화가
+  없으면 턴도 기록도 없다. 인자 project(프로젝트 폴더 이름)·agent(프로젝트/에이전트)
+edition: 2
+name: 프로젝트재조사
+params_required:
+- project
+- agent
+plan_hash: 85b07a4214144dfa769450ca9f36565ee493901f068a84b16e0d6fbc91be92d5
+updated: '2026-10-01T20:28:27.045555'

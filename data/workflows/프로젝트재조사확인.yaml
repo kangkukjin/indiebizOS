@@ -1,0 +1,11 @@
+code: "#!ibl edition=2\n[def:프로젝트재조사확인]($project) {\n  return [self:script]{op:\"\
+  run\", id:\"폴더변화\", args:{op:\"ack\", path:\"projects/\" + $project, name:\"forage_resurvey\"\
+  }}\n}\n"
+description: 주간 재조사를 받은 에이전트가 끝에 한 번 부른다 — 이번에 전달된 폴더 변화를 본 것으로 표시(폴더변화 ack). 인자 project(프로젝트
+  폴더 이름)
+edition: 2
+name: 프로젝트재조사확인
+params_required:
+- project
+plan_hash: e680a0e7117c804b9fc06ad9e6ded95c0c113fd39fd8fa1e810b87faf0ec2a06
+updated: '2026-10-01T20:28:24.450793'

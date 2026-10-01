@@ -1,11 +1,13 @@
 AI시대뉴스동기화:
   description: '완료된 AI 동향 보고서의 공개 출처 준비·제목 번역용 메타 정규화·뉴스 전송 — args: op(prepare 기본값|normalize|publish|retry|status)·data(normalize/publish에서
-    필수인 행 목록 또는 items 봉투)·keys(retry에서 필수인 후보 키 목록). prepare는 미처리 출처를 반환하고, normalize는
-    key를 보존한 크롤 메타데이터를 원제·매체·날짜로 정규화한다. publish는 정규화 결과에 title_ko를 추가한 행을 전송하며 원문
-    식별정보 변경을 거부한다. retry는 지정 키의 완료 표시를 지우고, status는 미처리 수와 오류를 조회한다.'
+    필수인 행 목록 또는 items 봉투)·keys(retry에서 필수인 후보 키 목록). prepare는 보고서 본문이 실제로 인용한 검증 출처
+    가운데 미처리분을 반환하고(절 제목은 보지 않는다), normalize는 key를 보존한 크롤 메타데이터를 원제·매체·날짜로 정규화한다. 원문이
+    접근을 거절한 증거(봇 차단·로그인 벽·없는 페이지)가 6회 쌓인 출처는 더 시도하지 않고 status의 unreachable로 보인다(일시
+    장애는 세지 않는다). publish는 정규화 결과에 title_ko를 추가한 행을 전송하며 원문 식별정보 변경을 거부한다. retry는 지정
+    키의 완료·거절 표시를 지우고, status는 미처리 수와 오류를 조회한다.'
   file: ai_era_news.py
   interpreter: python
-  registered_at: '2026-09-15T21:09:05'
+  registered_at: '2026-10-01T20:33:02'
   timeout: 120
 AI팁보고서:
   description: AI팁보고서쓰기의 준비·저장·공유·재개 부품. op:start의 config는 생략 가능한 설정 객체(topic,date,root,share_root,mode:draft|commit,run_id,reader_context).
@@ -343,6 +345,17 @@ python_libraries:
   interpreter: python
   registered_at: '2026-09-21T21:58:24'
   timeout: 30
+폴더변화:
+  description: '폴더의 파일 골격(경로·크기·수정 시각)을 지난번 본 모습과 대조해 바뀐 것만 낸다 — args: path(필수, 상대
+    경로는 작업공간 기준)·exclude(glob 목록, 기본 제외 DB·캐시에 더함)·name(같은 폴더를 다른 목적으로 따로 볼 때)·op(check
+    기본|ack)·commit(기본 true=지금 모습을 새 기준으로 저장, false=기준은 두고 ''확인 대기''로만 적어 받는 쪽의 op:ack
+    를 기다린다 — 확인 전 재대조는 같은 변화를 다시 낸다)·since(기준이 없을 때만: ISO 시각 또는 파일 경로의 수정 시각; 없으면
+    첫 대조는 기준만 세우고 0건)·limit(기본 60). items(path·change:added|modified|removed·size·modified_at)+count·omitted·by_dir·baseline_at·first_check·awaiting_ack.
+    측정만 한다 — 무엇이 기억할 만한지는 받는 쪽 판단. 예약 과제가 AI 를 깨우기 전의 변화 관문(2026-10-01)'
+  file: 폴더변화.py
+  interpreter: python
+  registered_at: '2026-10-01T20:33:01'
+  timeout: 120
 폴더용량:
   description: outputs 폴더 용량 요약 (items)
   file: 샘플_폴더용량.py

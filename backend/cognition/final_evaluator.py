@@ -35,12 +35,36 @@ class Evaluator(CognitiveEvalMixin):
 
 def execution_trace(controller, tool_calls):
     """스트림의 네이티브 호출과 작업대의 IBL 원문을 합친다. 보완 호출도 매번 새로 수집한다."""
-    calls, pending = [], defaultdict(deque)
+    calls, pending, identities = [], defaultdict(deque), {}
     def signature(name, payload):
-        return name.rsplit("__", 1)[-1], digest(json.dumps(payload, ensure_ascii=False, sort_keys=True))
+        name = name.removeprefix("mcp__indiebizos__")
+        if name == "execute_ibl" and isinstance(payload, dict):
+            from ibl_edition import authoring_request
+            # MCP는 판본을 보충하고 API는 실행 문맥을 별도로 전달한다.
+            # 같은 턴의 두 관측을 연결하되 실제 실행 인자는 전부 비교한다.
+            payload = {k: v for k, v in payload.items()
+                       if k not in {"project_path", "origin"} and v is not None}
+            source = payload.get("code") or payload.get("pipeline") or ""
+            if isinstance(source, str):
+                payload = authoring_request(payload)
+            if payload.get("check") is False:
+                payload = {k: v for k, v in payload.items() if k != "check"}
+        return name, digest(json.dumps(payload, ensure_ascii=False, sort_keys=True))
+
+    def result_identity(value):
+        try:
+            value = json.loads(value) if isinstance(value, str) else value
+        except ValueError:
+            pass
+        if isinstance(value, dict) and isinstance(value.get("result_ref"), dict):
+            ref = value["result_ref"].get("id")
+            if ref:
+                return "ref", ref
+        return "body", digest(json.dumps(value, ensure_ascii=False, sort_keys=True))
     for call in tool_calls or []:
         if isinstance(call, dict):
             pending[signature(call.get("name", ""), call.get("input", {}))].append(len(calls))
+            identities[len(calls)] = result_identity(call.get("result"))
             calls.append(dict(call))
     for row in controller.store.tool_index(limit=10000):
         ref = row.get("input", {}).get("id")
@@ -52,8 +76,16 @@ def execution_trace(controller, tool_calls):
                  "result": controller.store.read_evidence(row["result"]["id"], 0, None)["text"],
                  "is_error": row["is_error"]}
         matches = pending[signature(row["name"], payload)]
-        if matches:
-            calls[matches.popleft()].update(entry)
+        identity = result_identity(entry["result"])
+        # 병렬 반복 호출은 종료 순서가 다를 수 있다. 공통 결과 참조로 먼저
+        # 연결하고, 참조 없는 옛 기록만 정규화 인자의 발생 순서로 보완한다.
+        match = next((i for i in matches if identities[i] == identity), None)
+        if match is None:
+            match = next((i for i in matches if identity[0] != "ref"
+                          or identities[i][0] != "ref"), None)
+        if match is not None:
+            matches.remove(match)
+            calls[match].update(entry)
         else:
             calls.append(entry)
     return calls

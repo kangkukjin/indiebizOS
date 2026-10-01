@@ -340,3 +340,79 @@ def test_unlinked_free_prose_is_not_passed_as_repair_instructions(supervisor, mo
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_mcp_defaults_merge_without_collapsing_real_retries(supervisor):
+    native = []
+    for result in ('원천 실패', '저장 후 검증 성공'):
+        payload = {'code': 'return $x', 'edition': 2, 'inputs': {'x': 3}}
+        key = supervisor._start('execute_ibl', payload)
+        supervisor._finish(key, result, error=result == '원천 실패')
+        native.append({'name': 'mcp__indiebizos__execute_ibl',
+                       'input': {'code': 'return $x', 'project_path': '.',
+                                 'inputs': {'x': 3}, 'check': False, 'resume': None},
+                       'result': '표시 사본'})
+    calls = execution_trace(supervisor, native)
+    assert len(calls) == 2
+    assert [c['result'] for c in calls] == ['원천 실패', '저장 후 검증 성공']
+    assert [c['is_error'] for c in calls] == [True, False]
+
+
+@pytest.mark.parametrize('changed', [
+    {'inputs': {'x': 4}}, {'edition': 1}, {'check': True},
+    {'reuse': {'run_id': 'other'}}, {'budget': {'steps': 2000}},
+])
+def test_trace_merge_keeps_semantically_different_requests(supervisor, changed):
+    payload = {'code': 'return $x', 'edition': 2, 'inputs': {'x': 3}}
+    key = supervisor._start('execute_ibl', payload)
+    supervisor._finish(key, 'stored result')
+    calls = execution_trace(supervisor, [{'name': 'execute_ibl',
+                                         'input': {**payload, **changed}, 'result': 'other result'}])
+    assert len(calls) == 2
+
+
+def test_other_mcp_server_is_not_the_same_tool(supervisor):
+    key = supervisor._start('execute_ibl', {'code': 'return 1'})
+    supervisor._finish(key, 'local')
+    calls = execution_trace(supervisor, [{'name': 'mcp__other__execute_ibl',
+                                         'input': {'code': 'return 1'}, 'result': 'remote'}])
+    assert len(calls) == 2
+
+
+def test_parallel_same_requests_match_result_references_not_completion_order(supervisor):
+    payload = {'code': 'return 1', 'edition': 2}
+    first = supervisor._start('execute_ibl', payload)
+    second = supervisor._start('execute_ibl', payload)
+    for key, ref in ((second, 'second'), (first, 'first')):
+        supervisor._finish(key, json.dumps({'result_ref': {'id': ref}, 'full': ref}))
+    native = [{'name': 'execute_ibl', 'input': {**payload, 'project_path': '.'},
+               'result': json.dumps({'result_ref': {'id': ref}})} for ref in ('first', 'second')]
+    calls = execution_trace(supervisor, native)
+    assert len(calls) == 2
+    assert [json.loads(c['result'])['full'] for c in calls] == ['first', 'second']
+
+
+@pytest.mark.parametrize('verified', [True, False])
+def test_final_model_receives_terminal_verification_without_forced_approval(supervisor, monkeypatch, verified):
+    for i in range(10):
+        key = supervisor._start('execute_ibl', {'code': f'return {i}'})
+        supervisor._finish(key, json.dumps({'success': True, 'value': {'large': 'x' * 4000}}))
+    key = supervisor._start('execute_ibl', {'code': 'return $validation'})
+    supervisor._finish(key, json.dumps({'success': True, 'value': {'verified': verified, 'rows': 320}}))
+    prompts = []
+    def evaluate(prompt, **kwargs):
+        prompts.append(prompt)
+        assert '"verified": ' + str(verified).lower() in prompt
+        assert '"rows": 320' in prompt
+        assert '총 11회' in prompt
+        return 'UNKNOWN\n다른 필수 조건의 증거가 아직 없습니다.'
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    finish(supervisor, '검증 결과를 확인해 주세요')
+    assert len(prompts) == 1
+    assert tc.get_goal_eval_outcome()['status'] == 'UNKNOWN'
+
+
+def test_rejected_malformed_native_input_does_not_break_evaluation(supervisor):
+    calls = execution_trace(supervisor, [{'name': 'execute_ibl', 'input': {'code': 123},
+                                         'result': 'invalid code type', 'is_error': True}])
+    assert len(calls) == 1 and calls[0]['is_error']

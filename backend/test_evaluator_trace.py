@@ -239,3 +239,36 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
     raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))
+
+
+def test_small_terminal_verification_survives_large_earlier_results():
+    import json
+    calls = [{'name': 'execute_ibl', 'result': json.dumps({'large': 'x' * 4000})}
+             for _ in range(10)]
+    calls.append({'name': 'execute_ibl', 'result': json.dumps({'verified': True, 'rows': 320})})
+    trace = serialize_tool_trace(calls, total_budget=24000, head_keep=12,
+                                 tail_keep=12, per_result_chars=3000)
+    assert '"verified": true' in trace and '"rows": 320' in trace
+    assert all(f'[{i}]' in trace for i in range(1, 12))
+    assert len(trace) <= 24000
+    assert '일부 결과 본문 생략됨' in trace
+
+
+def test_budget_preserves_both_ends_and_terminal_failure():
+    calls = [{'name': 'inspect', 'result': 'FIRST_SOURCE\n' + 'a' * 3000}]
+    calls += [{'name': 'work', 'result': 'b' * 5000} for _ in range(20)]
+    calls += [{'name': 'verify', 'result': 'c' * 4000 + '\nFAILED_VALIDATION', 'is_error': True}]
+    trace = serialize_tool_trace(calls, total_budget=1800, head_keep=2, tail_keep=2)
+    assert 'FIRST_SOURCE' in trace and 'FAILED_VALIDATION' in trace
+    assert '[22] verify [ERROR]' in trace
+    assert len(trace) <= 1800 and '일부 결과 본문 생략됨' in trace
+    assert [int(line.split(']')[0][1:]) for line in trace.splitlines()
+            if line.startswith('[')] == list(range(1, 23))
+
+
+def test_tiny_budget_keeps_headers_but_does_not_leak_large_bodies():
+    calls = [{'name': 'read', 'result': 'DATA' * 10000},
+             {'name': 'verify', 'result': 'FAIL', 'is_error': True}]
+    trace = serialize_tool_trace(calls, total_budget=1)
+    assert '[1] read' in trace and '[2] verify [ERROR]' in trace
+    assert 'DATA' not in trace and len(trace) < 200

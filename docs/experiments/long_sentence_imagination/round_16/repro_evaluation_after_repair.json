@@ -1,0 +1,14 @@
+{
+  "native_calls": 1,
+  "store_calls": 1,
+  "merged_calls": 1,
+  "same_invocation_payload_shapes": [
+    {
+      "code": "return 1",
+      "edition": 2
+    }
+  ],
+  "tail_header_kept": true,
+  "tail_verification_kept": true,
+  "omission_declared": true
+}

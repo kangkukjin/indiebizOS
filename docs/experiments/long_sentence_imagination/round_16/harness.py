@@ -1,9 +1,9 @@
-"""Executed round-16 harness, retained as evidence rather than a valid control protocol.
+"""Round-16 harness; original execution is preserved at commit 987c85a9.
 
-L16-3: switch(warm) restores messages/session/lineage but omits pursuit state.
-Its warm result is NOT a controlled comparison. Do not reuse this restoration
-for another experiment; restore all actor state in an isolated fixture and
-assert both pursuit equivalence and actual native session continuity first.
+L16-3 repair: partial warm rollback is forbidden. Run seed -> warm -> cold in
+isolated fixtures (cold needs its own seed without warm results). Warm must pass preflight against the seed snapshot and
+postflight native-session continuity. A failed comparison never becomes valid
+merely because its output is correct. The original round-16 warm stays invalid.
 """
 import hashlib
 import json
@@ -21,6 +21,8 @@ def config():
 
 
 def run(name):
+    if name == 'warm':
+        warm_preflight()
     c=config(); actor='baseline' if name=='baseline' else 'seed'
     pid=c['project']['id']; aid=c['agents'][actor]['id']
     base=f'http://127.0.0.1:8765/projects/{pid}/agents/{aid}'
@@ -31,6 +33,12 @@ def run(name):
     r=requests.post(base+'/command',json=dict(command=prompt,origin='training'),timeout=2500)
     (WORK/f'{name}_response.json').write_text(r.text)
     dump(WORK/f'{name}_elapsed.json',dict(elapsed_s=time.time()-t,http_status=r.status_code))
+    if name == 'warm':
+        seed = json.loads((WORK/'seed_snapshot.json').read_text())
+        current = own_sessions(c)
+        valid = r.status_code == 200 and current['codex_sessions.json'] == seed['sessions']['codex_sessions.json']
+        dump(WORK/'warm_context_check.json', dict(valid=valid, expected=seed['sessions'],
+             actual=current, reason='' if valid else 'native session changed; exclude warm comparison'))
     print(name,r.status_code,r.text[:300],flush=True)
 
 
@@ -42,6 +50,38 @@ def own_session_key(key, c):
 def actor_messages(db, name):
     aid=db.execute('SELECT id FROM agents WHERE name=?',(name,)).fetchone()[0]
     return [r[0] for r in db.execute('SELECT id FROM messages WHERE from_agent_id=? OR to_agent_id=?',(aid,aid))]
+
+
+
+def own_sessions(c):
+    result = {}
+    for filename in ('codex_sessions.json', 'codex_session_sizes.json'):
+        obj = json.loads((ROOT/'data'/filename).read_text())
+        result[filename] = {k: v for k, v in obj.items() if own_session_key(k, c)}
+    return result
+
+
+def comparison_state(path):
+    """Read-only logical state of the dedicated fixture, including pursuit history."""
+    with sqlite3.connect('file:' + str(path) + '?mode=ro', uri=True) as db:
+        tables = ('messages', 'tasks', 'pursuit', 'pursuit_event', 'pursuit_turn')
+        return {name: db.execute(f'SELECT * FROM {name} ORDER BY rowid').fetchall()
+                for name in tables}
+
+
+def warm_preflight():
+    """Reject changed state before sending a model request; never roll it back."""
+    if (WORK/'cold_started.json').exists() or (WORK/'isolation_cold.json').exists():
+        raise RuntimeError('warm must run immediately after seed, before cold; no partial rollback')
+    c = config()
+    seed = json.loads((WORK/'seed_snapshot.json').read_text())
+    backup = ROOT/'data/_backups/2026-10-01_lsi16_seed/conversations.db'
+    if comparison_state(Path(c['project']['path'])/'conversations.db') != comparison_state(backup):
+        raise RuntimeError('seed messages/tasks/pursuit state changed; exclude warm comparison')
+    if not seed['sessions']['codex_sessions.json'] or own_sessions(c) != seed['sessions']:
+        raise RuntimeError('seed native session state changed; exclude warm comparison')
+    if any(Path(path).read_text() != text for path, text in seed['lineages'].items()):
+        raise RuntimeError('seed reference lineage changed; exclude warm comparison')
 
 
 def snapshot():
@@ -66,6 +106,10 @@ def snapshot():
 
 def switch(condition):
     assert condition in ('cold','warm','restore')
+    if condition == 'warm':
+        raise RuntimeError('partial warm rollback is unsafe; run warm directly after seed')
+    if condition == 'cold' and (WORK/'warm_started.json').exists():
+        raise RuntimeError('cold needs an independent seed without warm results')
     c=config(); v=json.loads((WORK/'seed_snapshot.json').read_text())
     aid=c['agents']['seed']['id']; name=c['agents']['seed']['name']
     db=sqlite3.connect(Path(c['project']['path'])/'conversations.db')

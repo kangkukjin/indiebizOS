@@ -140,7 +140,7 @@ def serialize_tool_trace(
 ) -> str:
     """도구 호출 시퀀스를 평가자가 읽을 수 있는 한 문자열로 직렬화.
 
-    핵심 원칙: **호출 이름·순서는 어떤 경우에도 보존**한다. 결과 본문만 잘라낸다.
+    핵심 원칙: **호출 이름·순서는 어떤 경우에도 보존**한다. 결과 본문만 잘라낸다. 헤더 자체가 예산보다 크면 그 크기가 하한이다.
     호출 수가 많아 total_budget을 넘으면, 앞 head_keep + 뒤 tail_keep 개 호출만 상세히 보여주고
     가운데는 "[헤더만 — 결과 생략]" 모드로 압축하여 시퀀스 자체는 끝까지 노출한다.
 
@@ -173,60 +173,63 @@ def serialize_tool_trace(
             + [True] * tail_keep
         )
 
-    lines: List[str] = [f"# 도구 호출 시퀀스 (총 {total}회)"]
-    omitted_run = 0
+    title = f"# 도구 호출 시퀀스 (총 {total}회)"
+    headers, bodies = [], []
     for idx, (entry, detailed) in enumerate(zip(normalized, detail_mask), start=1):
         name = entry["name"] or "(이름미상)"
         brief = _brief_input(entry["input"])
         err_tag = " [ERROR]" if entry["is_error"] else ""
         header = f"[{idx}] {name}({brief}){err_tag}" if brief else f"[{idx}] {name}{err_tag}"
-        # 본문 발췌가 잘려도 수집 범위의 한계는 호출 헤더와 함께 남긴다.
         from ibl_honesty import truncation_evidence
         cuts = truncation_evidence(entry["result"]).get("truncations") or []
         if cuts:
             scopes = ",".join(sorted({str(c.get("scope", "unknown")) for c in cuts}))
             header += f" [절단 증거 {len(cuts)}건: {scopes}; 전량 확인으로 간주하지 말 것]"
+        headers.append(header)
+        result = _result_evidence(entry["result"]) if entry["result"] else ""
+        bodies.append(result.strip().replace("\n", " ") if detailed else "")
 
-        if detailed:
-            if omitted_run > 0:
-                lines.append(f"  … (호출 {omitted_run}개 — 헤더는 위에서 이어짐, 결과 생략) …")
-                omitted_run = 0
-            result = _result_evidence(entry["result"]) if entry["result"] else ""
-            if isinstance(result, str) and result:
-                excerpt = result.strip().replace("\n", " ")
-                if len(excerpt) > per_result_chars:
-                    excerpt = excerpt[:per_result_chars] + "…"
-                lines.append(f"{header}\n    → {excerpt}")
-            else:
-                lines.append(header)
-        else:
-            # 헤더만 — 시퀀스 손실 방지가 목적
-            lines.append(header)
-            omitted_run += 1
+    # 헤더와 생략 고지를 먼저 예약한다. 짧은 결과는 전부 싣고 남은 예산을
+    # 긴 결과에 균등 배분하여 앞쪽 대량 자료가 마지막 검증을 밀어내지 않는다.
+    notice = "  (일부 결과 본문 생략됨 — 발췌만으로 전량 확인을 단정하지 말 것)"
+    base = len("\n".join([title] + headers))
+    available = max(0, total_budget - base - len(notice) - 1)
+    limits = [0] * total
+    active = [i for i, body in enumerate(bodies) if body]
+    caps = {i: min(len(bodies[i]), max(0, per_result_chars)) + 7 for i in active}
+    while active and available >= 8 * len(active):
+        share = available // len(active)
+        small = [i for i in active if caps[i] <= share]
+        if not small:
+            for i in active:
+                limits[i] = share - 7  # 줄바꿈 + 결과 접두사
+            break
+        for i in small:
+            limits[i] = caps[i] - 7
+            available -= caps[i]
+        active = [i for i in active if i not in small]
 
-    if omitted_run > 0:
-        lines.append(f"  … (위 {omitted_run}개 호출은 결과 본문 생략됨) …")
-
+    lines = [title]
+    omitted = False
+    for entry, header, body, limit in zip(normalized, headers, bodies, limits):
+        lines.append(header)
+        if body and limit:
+            if len(body) > limit:
+                # 큰 결과 하나에서도 뒤쪽 실패·검증 정보를 함께 남긴다.
+                marker = " …[본문 일부 생략]… "
+                if limit > len(marker) + 1:
+                    size = limit - len(marker)
+                    body = body[:(size + 1) // 2] + marker + body[-(size // 2):]
+                else:
+                    body = "…"
+                omitted = True
+            lines.append("    → " + body)
+        elif entry["result"]:
+            omitted = True
+    if omitted:
+        lines.append(notice)
+    # 헤더만으로 예산을 넘는 경우에도 호출 순서·실패·원천 절단은 숨기지 않는다.
     serialized = "\n".join(lines)
-
-    # 안전망: 그래도 budget을 넘으면 결과 라인부터 추가 truncate.
-    # 호출 헤더(`[N] name(...)` 줄)는 살리고, 결과 줄(`    → ...`)을 우선적으로 자른다.
-    if len(serialized) > total_budget:
-        kept: List[str] = []
-        budget = total_budget
-        for line in lines:
-            if budget <= 0:
-                # 결과 줄이면 스킵, 헤더 줄이면 짧게라도 포함.
-                # 상세 항목은 "헤더\n    → 결과" 결합 문자열이라 헤더만 잘라 살린다
-                # (안 하면 budget 소진 후에도 결과 본문이 통째로 통과).
-                if line.startswith("    → ") or line.startswith("  … "):
-                    continue
-                kept.append(line.split("\n", 1)[0])
-                continue
-            kept.append(line)
-            budget -= len(line) + 1
-        kept.append(f"  (총 길이 budget {total_budget}자 초과 — 일부 결과 본문 생략됨)")
-        serialized = "\n".join(kept)
 
     return serialized
 

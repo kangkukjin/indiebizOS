@@ -1,0 +1,50 @@
+{
+  "source": "original round-16 native rollout + stored evidence; no tool/model re-execution",
+  "cases": [
+    {
+      "episode": 4215,
+      "case": "baseline",
+      "native_ibl_calls": 11,
+      "native_not_executed": 0,
+      "stored_calls": 11,
+      "merged_calls": 11,
+      "trace_chars": 23996,
+      "terminal_verified_visible": true,
+      "headers": 11
+    },
+    {
+      "episode": 4216,
+      "case": "seed",
+      "native_ibl_calls": 17,
+      "native_not_executed": 0,
+      "stored_calls": 17,
+      "merged_calls": 17,
+      "trace_chars": 23990,
+      "terminal_verified_visible": true,
+      "headers": 17
+    },
+    {
+      "episode": 4217,
+      "case": "cold",
+      "native_ibl_calls": 14,
+      "native_not_executed": 1,
+      "stored_calls": 13,
+      "merged_calls": 14,
+      "trace_chars": 23990,
+      "terminal_verified_visible": true,
+      "headers": 14
+    },
+    {
+      "episode": 4218,
+      "case": "warm",
+      "native_ibl_calls": 10,
+      "native_not_executed": 0,
+      "stored_calls": 15,
+      "merged_calls": 15,
+      "trace_chars": 23996,
+      "terminal_verified_visible": true,
+      "headers": 15
+    }
+  ],
+  "note": "cold의 차단 호출 1개와 warm의 작업대 전용 기록 5개는 별도 증거이므로 보존한다."
+}

@@ -3,7 +3,7 @@ import { openSystemAI, openPromptComposition, openGuides, openVocabulary, openEx
  * 런처 - 데스크탑 스타일 프로젝트/폴더/스위치 관리
  */
 import { BACKEND_ORIGIN, IS_WEB_SURFACE } from '../lib/backend-origin';
-import { LanguagePicker, UiText, uiMessage } from '../i18n/ui';
+import { LanguagePicker, UiText, uiMessage, useLocale } from '../i18n/ui';
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Zap, Boxes, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone, Layers, FileText } from 'lucide-react';
@@ -26,7 +26,7 @@ import {
 import { GuideDialog } from './GuideDialog';
 import { OnboardingDialog } from './OnboardingDialog';
 import { UserManualDialog } from './UserManualDialog';
-import { ActionDesktop, STATIC_APP_META } from './ActionDesktop';
+import { ActionDesktop, STATIC_APP_META, staticAppLabel } from './ActionDesktop';
 import ManualMode from './ManualMode';
 import { ForageBrowser } from './ForageBrowser';
 import { WarehouseView } from './WarehouseView';
@@ -50,6 +50,7 @@ const MODE_META: Record<LauncherMode, { label: string; icon: typeof Search }> = 
 };
 
 export function Launcher() {
+  useLocale();
   const {
     switches,
     loadProjects,
@@ -627,7 +628,7 @@ export function Launcher() {
   return (
     <div className="launcher-root h-full flex flex-col bg-[#F5F1EB]">
       {IS_WEB_SURFACE && <div className="remote-mobile-only mobile-launcher-heading">
-        <span className="font-semibold text-stone-800">{showingApp ? activeMeta!.label : <UiText id={MODE_META[launcherTab].label} />}</span>
+        <span className="font-semibold text-stone-800">{showingApp ? staticAppLabel({id: activeAppId!, ...activeMeta!}) : <UiText id={MODE_META[launcherTab].label} />}</span>
         <button onClick={openSystemAI} className="ml-auto rounded-xl bg-amber-600 text-white px-3 flex items-center gap-2"><Bot size={18} /> 시스템 AI</button>
         <button onClick={() => setMobileToolsOpen(v => !v)} aria-expanded={mobileToolsOpen} aria-controls="launcher-tools" className="rounded-xl border border-stone-300 px-3">{mobileToolsOpen ? '접기' : '더보기'}</button>
       </div>}
@@ -647,7 +648,7 @@ export function Launcher() {
               {showingApp
                 ? <span className="text-[15px] leading-none">{activeMeta!.icon}</span>
                 : <ActiveModeIcon size={15} />}
-              <span className="text-[13px] font-medium">{showingApp ? activeMeta!.label : <UiText id={MODE_META[launcherTab].label} />}</span>
+              <span className="text-[13px] font-medium">{showingApp ? staticAppLabel({id: activeAppId!, ...activeMeta!}) : <UiText id={MODE_META[launcherTab].label} />}</span>
               <ChevronDown size={12} className={`transition-transform ${showModeMenu ? 'rotate-180' : ''}`} />
             </button>
             {showModeMenu && (
@@ -682,7 +683,7 @@ export function Launcher() {
                             className={`flex-1 min-w-0 flex items-center gap-3 pl-4 pr-2 py-2.5 text-left ${active ? 'text-amber-900' : 'text-[#4A4035]'}`}
                           >
                             <span className="text-base leading-none w-4 text-center">{app.icon}</span>
-                            <span className="text-sm truncate">{app.label}</span>
+                            <span className="text-sm truncate">{staticAppLabel(app)}</span>
                           </button>
                           <button
                             onClick={() => demotePromoted(app.id)}

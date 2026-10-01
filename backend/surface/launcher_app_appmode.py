@@ -12,6 +12,33 @@ let VIEW_CTX=null; /* 마지막 렌더의 {view,data} — 행 버튼/드릴 디�
 let SPLIT=false, LIST=null; /* master-detail: SPLIT=2분할 모드, LIST={view,data}=리스트 컨텍스트 */
 const CUSTOM_RENDERERS={}; /* escape hatch: manifest renderer:"custom:이름" → 전용 렌더 함수 (지도·플레이어 등) */
 
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!window.__ui) return;
+  window.__ui.subscribe(()=>{
+    const home=document.getElementById('appHome'), box=document.getElementById('appInst');
+    if(appHomeRendered && home && home.style.display!=='none') renderAppHome();
+    if(!box || box.style.display==='none' || !CUR.inst) return;
+    const ix=INSTRUMENTS.findIndex(i=>i.id===CUR.inst.id); if(ix<0) return;
+    const previous=CUR, context=VIEW_CTX, list=LIST;
+    const modeIndex=Math.max(0,(previous.inst.modes||[previous.inst]).indexOf(previous.mode));
+    const controls=[...box.querySelectorAll('input,textarea,select')].map(el=>({el,id:el.id,value:el.value,checked:el.checked}));
+    const out=document.getElementById('instOut');
+    openInstrument(ix,true); if(modeIndex) setMode(modeIndex,true);
+    CUR.optCache=previous.optCache; CUR.filterVal=previous.filterVal; CUR.catFilter=previous.catFilter;
+    if(context && context.refresh==='mode'){
+      VIEW_CTX={...context,view:CUR.mode.view,compose:CUR.mode.compose};
+      document.getElementById('instOut').innerHTML=renderModeBody(CUR.mode,context.data);
+    }else if(out && document.getElementById('instOut')){
+      document.getElementById('instOut').replaceWith(out); VIEW_CTX=context; LIST=list;
+    }
+    for(const saved of controls){
+      const el=saved.id && document.getElementById(saved.id); if(!el) continue;
+      if(saved.el.type==='file'){el.replaceWith(saved.el);continue;}
+      if(el.tagName==='SELECT' && el.options.length<=1) el.innerHTML=saved.el.innerHTML;
+      el.value=saved.value; if('checked' in el) el.checked=saved.checked;
+    }
+  });
+});
 let _revalidating=false;
 async function loadInstruments(force){
   if(INSTRUMENTS.length && !force){ _revalidateInstruments(); return; }  /* 캐시로 즉시 그림 — 재확인은 배경에서(아래) */
@@ -45,7 +72,7 @@ LAUNCHER_APPHOME_JS = """async function renderAppHome(force){
   home.innerHTML=
     '<p class="muted" style="margin-bottom:12px">직접 조작 — 아이콘을 눌러 바로 실행 (0 토큰)</p>'+
     '<div class="grid">'+INSTRUMENTS.map((inst,ix)=>
-      '<button class="tile" onclick="openInstrument('+ix+')"><span class="em">'+esc(inst.icon||'🔧')+'</span><span class="nm">'+esc(inst.name)+'</span></button>'
+      '<button class="tile" onclick="openInstrument('+ix+')"><span class="em">'+esc(inst.icon||'🔧')+'</span><span class="nm">'+esc(window.__ui ? window.__ui.instrument(inst).name : inst.name)+'</span></button>'
     ).join('')+
     /* 내장 앱(매니페스트 밖): 포식(검색) 브라우저 — 구 표면 탭에서 앱으로 이사 */
     '<button class="tile" onclick="openForage()"><span class="em">🔍</span><span class="nm">검색브라우저</span></button>'+
@@ -62,8 +89,9 @@ LAUNCHER_APPMODE_REST_JS = """function appBackHome(){
   document.getElementById('appInst').style.display='none';
   document.getElementById('appHome').style.display='block';
 }
-function openInstrument(ix){
-  const inst=INSTRUMENTS[ix]; if(!inst) return;
+function openInstrument(ix,presentationOnly=false){
+  const rawInst=INSTRUMENTS[ix]; if(!rawInst) return;
+  const inst=window.__ui ? window.__ui.instrument(rawInst) : rawInst;
   CUR={inst:inst, mode:null, optCache:{}}; VIEW_CTX=null;
   // 홈에서 계기로 들어갈 때만 history 항목 push(뒤로가기로 그리드 복귀). 중복 push 방지.
   const _fromHome=document.getElementById('appHome').style.display!=='none';
@@ -90,9 +118,9 @@ function openInstrument(ix){
   if(_tabsHtml||_topHtml){ h+='<div class="tabs" style="align-items:center">'+_tabsHtml+_topHtml+'</div>'; }
   h+='<div id="modeBody"></div>';
   box.innerHTML=h;
-  setMode(0);
+  setMode(0,presentationOnly);
 }
-function setMode(i){
+function setMode(i,presentationOnly=false){
   const inst=CUR.inst; const modes=inst.modes||[inst]; const mode=modes[i];
   CUR.mode=mode; VIEW_CTX=null; SPLIT=false; LIST=null;
   if(inst.modes) modes.forEach((m,j)=>{ const t=document.getElementById('modeTab'+j); if(t)t.classList.toggle('on',j===i); });
@@ -132,6 +160,7 @@ function setMode(i){
   h+='<div id="instOut"></div>';
   document.getElementById('modeBody').innerHTML=h;
   // select 채우기는 선언 순서대로 — 정적 옵션(동기)이 먼저 값을 잡아야 종속 옵션이 그 값을 읽는다
+  if(presentationOnly) return;  // Language changes never run IBL or reset input values.
   (async()=>{ for(const inp of inputs){ if(inp.type==='select') await fillOptions(inp); } if(mode.auto_run) runMode(); })();
 }
 /* options_action 의 $key 를 형제 입력값으로 치환 — 비어 있으면 missing 표시(종속 대기) */

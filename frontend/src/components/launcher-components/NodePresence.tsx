@@ -11,6 +11,7 @@
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { useEffect, useState } from 'react';
 import { Smartphone } from 'lucide-react';
+import { ui, uiMessage, useLocale } from '../../i18n/ui';
 
 const API_BASE = BACKEND_ORIGIN;
 const POLL_MS = 20000;
@@ -23,6 +24,7 @@ interface PeerStatus {
 }
 
 export function NodePresence() {
+  useLocale();
   const [peer, setPeer] = useState<PeerStatus | null>(null);
 
   useEffect(() => {
@@ -45,9 +47,9 @@ export function NodePresence() {
   if (!peer) return null;  // 첫 로드 전/조회 실패 시 숨김
 
   const online = peer.has_peer && peer.online;
-  const name = peer.peer_name || '다른 몸';
-  const statusText = !peer.has_peer ? '미연동' : (peer.online ? '연결됨' : '오프라인');
-  const title = peer.detail || (online ? `${name} 연결됨` : `${name} ${statusText}`);
+  const name = peer.peer_name || ui.text(uiMessage('peer.defaultName', '다른 몸'));
+  const statusText = ui.text(uiMessage('peer.status', !peer.has_peer ? '미연동' : (peer.online ? '연결됨' : '오프라인')));
+  const title = peer.detail || `${name} ${statusText}`;
 
   // 루트가 span(inline-flex)인 이유: 조종실 '시스템 상태' 접힌 줄(button 요소) 안에
   // IBL 배지와 나란히 들어가므로 phrasing content 여야 한다.

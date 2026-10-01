@@ -1,5 +1,5 @@
 import { createElement, useSyncExternalStore } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, ElementType } from 'react';
 import { createUI } from '../../i18n/runtime.mjs';
 import catalog from '../../i18n/catalog.json';
 
@@ -13,11 +13,19 @@ export function UiText({ id, values = [] }: { id: string; values?: unknown[] }) 
   useLocale();
   return ui.text(id, values);
 }
+export function UiChoice({ value, choices }: { value: string; choices: Record<string, string> }) {
+  useLocale();
+  return Object.hasOwn(choices, value) ? ui.text(choices[value]) : value;
+}
+export function UiSystemText({ value, fragments = false }: { value?: string; fragments?: boolean }) {
+  useLocale();
+  return ui.system(value ?? '', fragments);
+}
 export function UiElement({ as, uiAttrs, children, ...props }: {
-  as: string; uiAttrs: Record<string, string>; children?: ReactNode; [key: string]: unknown;
+  as: ElementType; uiAttrs: Record<string, string | {id: string; values: unknown[]} | {value: string; choices: Record<string,string>} | {resolve: () => unknown}>; children?: ReactNode; [key: string]: unknown;
 }) {
   useLocale();
-  const translated = Object.fromEntries(Object.entries(uiAttrs).map(([name, id]) => [name, ui.text(id)]));
+  const translated = Object.fromEntries(Object.entries(uiAttrs).map(([name, id]) => [name, typeof id === 'string' ? ui.text(id) : 'resolve' in id ? id.resolve() : 'id' in id ? ui.text(id.id, id.values) : Object.hasOwn(id.choices, id.value) ? ui.text(id.choices[id.value]) : id.value]));
   return createElement(as, { ...props, ...translated }, children);
 }
 export function LanguagePicker() {

@@ -7,6 +7,7 @@
  *
  * 디자인 원칙: 기능 메뉴가 아니라 마법사의 책장. 사용자 인지를 보완한다.
  */
+import { ui, useLocale } from '../../i18n/ui';
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { useCallback, useEffect, useState } from 'react';
 import { BookOpen, X } from 'lucide-react';
@@ -101,6 +102,7 @@ const GROUP_ORDER = [
 ];
 
 export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps) {
+  useLocale();
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -267,7 +269,7 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
                                     }
                                     onMouseLeave={() => setHoveredAction(null)}
                                     className="px-2.5 py-1 text-xs font-mono bg-white border border-[#E5D5B0] rounded-md text-[#4A4035] hover:bg-[#FFE9B8] hover:border-[#D97706] hover:text-[#92400E] transition-colors"
-                                    title={meta.description}
+                                    title={ui.system(meta.description)}
                                   >
                                     {action}
                                   </button>
@@ -286,7 +288,7 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
                             onMouseEnter={() => setHoveredAction({ node, action })}
                             onMouseLeave={() => setHoveredAction(null)}
                             className="px-2.5 py-1 text-xs font-mono bg-white border border-[#E5D5B0] rounded-md text-[#4A4035] hover:bg-[#FFE9B8] hover:border-[#D97706] hover:text-[#92400E] transition-colors"
-                            title={meta.description}
+                            title={ui.system(meta.description)}
                           >
                             {action}
                           </button>
@@ -305,7 +307,7 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
                 [{hoveredAction.node}:{hoveredAction.action}]
               </div>
               <p className="text-sm text-[#4A4035] mb-3 leading-relaxed">
-                {hoveredMeta.description}
+                {ui.system(hoveredMeta.description)}
               </p>
               {hoveredMeta.target_description && (
                 <div className="text-xs text-[#A09080] mb-2 leading-relaxed">
@@ -313,12 +315,12 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
                   {hoveredMeta.target_key ? (
                     <code className="bg-[#F3E5C2] px-1 rounded">{hoveredMeta.target_key}</code>
                   ) : null}{' '}
-                  — {hoveredMeta.target_description}
+                  — {ui.system(hoveredMeta.target_description)}
                 </div>
               )}
               {hoveredMeta.implementation && (
                 <div className="text-xs text-[#A09080] mt-3 pt-3 border-t border-[#E5D5B0] leading-relaxed">
-                  <span className="font-semibold">구현:</span> {hoveredMeta.implementation}
+                  <span className="font-semibold">구현:</span> {ui.system(hoveredMeta.implementation)}
                 </div>
               )}
             </aside>

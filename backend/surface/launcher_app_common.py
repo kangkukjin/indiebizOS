@@ -205,13 +205,13 @@ function renderPeer(d){
   const el=document.getElementById('peerStatus'); if(!el) return;
   if(!d){ el.style.display='none'; return; }
   const online = !!(d.has_peer && d.online);
-  const name = d.peer_name || '다른 몸';
+  const name = d.peer_name ? esc(d.peer_name) : systemText('다른 몸');
   const status = !d.has_peer ? '미연동' : (online ? '연결됨' : '오프라인');
   const dot = online ? '#10b981' : '#d6d3d1';
   el.innerHTML =
     '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+dot+'"></span>'+
-    '<span style="color:'+(online?'#44403c':'#a8a29e')+';margin-left:8px">'+((d.peer_icon||'📱'))+' '+esc(name)+'</span>'+
-    '<span style="color:'+(online?'#059669':'#a8a29e')+';margin-left:6px">· '+status+'</span>';
+    '<span style="color:'+(online?'#44403c':'#a8a29e')+';margin-left:8px">'+((d.peer_icon||'📱'))+' '+name+'</span>'+
+    '<span style="color:'+(online?'#059669':'#a8a29e')+';margin-left:6px">· '+systemText(status)+'</span>';
   el.style.cssText='display:flex;align-items:center;font-size:12px;padding:8px 2px;margin-bottom:8px';
 }
 async function loadPeer(){
@@ -220,6 +220,13 @@ async function loadPeer(){
 }
 
 /* ===== 모델 기어 — 계기판 변속 레버 + 설정(프리셋·핀). data-속성 위임으로 따옴표 함정 회피 ===== */
+/* UI-only sinks: raw ids and user names must never pass through these helpers. */
+function systemText(value,fragments){
+  return '<span data-ui-system="'+esc(value||'')+'"'+(fragments?' data-ui-fragments':'')+'>'+esc(value||'')+'</span>';
+}
+function gearOption(value,selected,pin){
+  return '<option value="'+esc(value)+'" data-ui-system="'+esc(value)+'"'+(pin?' data-ui-prefix="📌 "':'')+(selected?' selected':'')+'>'+(pin?'📌 ':'')+esc(value)+'</option>';
+}
 let gearState=null, gearOpen=false, gearAgents=[], gearOverrides={}, gearPresetDraft={};
 const GEAR_DESC={'절약':'기어 역할 경량 — 빠르고 저렴','균형':'실행·의식 중급 — 기본','최대':'실행·의식 고급 — 최고 품질'};
 async function loadGear(){
@@ -236,19 +243,19 @@ function renderGear(){
   (g.gears||[]).forEach(function(name){
     const on=g.current_gear===name;
     h+='<button data-act="gear" data-g="'+esc(name)+'" style="padding:10px 6px;border-radius:10px;border:1px solid '+(on?'var(--acc)':'var(--line)')+';background:'+(on?'var(--acc)':'var(--bg)')+';color:'+(on?'#fff':'var(--txt)')+';text-align:center">';
-    h+='<div style="font-weight:700;font-size:13px">'+esc(name)+'</div>';
-    h+='<div style="font-size:10px;margin-top:2px;color:'+(on?'rgba(255,255,255,.85)':'var(--dim)')+'">'+esc(GEAR_DESC[name]||'')+'</div></button>';
+    h+='<div style="font-weight:700;font-size:13px">'+systemText(name)+'</div>';
+    h+='<div style="font-size:10px;margin-top:2px;color:'+(on?'rgba(255,255,255,.85)':'var(--dim)')+'">'+systemText(GEAR_DESC[name]||'')+'</div></button>';
   });
   h+='</div>';
   if(g.axes){
     h+='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--dim)">';
-    Object.keys(g.axes).forEach(function(ax){ h+='<span>'+esc((g.axis_info&&g.axis_info[ax]?g.axis_info[ax].label:ax))+' <b style="color:var(--txt)">'+esc(g.axes[ax].tier)+'</b></span>'; });
+    Object.keys(g.axes).forEach(function(ax){ h+='<span>'+systemText((g.axis_info&&g.axis_info[ax]?g.axis_info[ax].label:ax))+' <b style="color:var(--txt)">'+systemText(g.axes[ax].tier)+'</b></span>'; });
     h+='<span style="color:var(--dim)">· 티어별 모델은 설정 ▸ 모델 설정</span></div>';
   }
   if(typeof g.consciousness_enabled!=='undefined'){
     const on=g.consciousness_enabled!==false;
     h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line)">';
-    h+='<span style="font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b style="color:'+(on?'var(--txt)':'var(--dim)')+'">🧠 최초 숙고 '+(on?'켜짐':'꺼짐')+'</b> <span style="color:var(--dim)">'+(on?'— 복잡한 일은 계획부터':'— 바로 실행부터')+'</span></span>';
+    h+='<span style="font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b style="color:'+(on?'var(--txt)':'var(--dim)')+'">🧠 최초 숙고 '+systemText(on?'켜짐':'꺼짐')+'</b> <span style="color:var(--dim)">'+systemText(on?'— 복잡한 일은 계획부터':'— 바로 실행부터')+'</span></span>';
     h+='<button data-act="mind" role="switch" aria-checked="'+on+'" title="의식 없는 바로 실행·반사 경로는 감독·평가를 생략합니다." style="position:relative;flex-shrink:0;width:40px;height:20px;border-radius:9999px;border:none;cursor:pointer;background:'+(on?'var(--acc)':'var(--line)')+'">';
     h+='<span style="position:absolute;top:2px;left:'+(on?'22px':'2px')+';width:16px;height:16px;border-radius:9999px;background:#fff;transition:left .15s"></span></button></div>';
   }
@@ -259,26 +266,26 @@ function renderGear(){
 function renderGearSettings(){
   const g=gearState, tiers=g.tiers||['경량','중급','고급'], axes=g.axis_names||['분류','평가','실행','의식'];
   let h='<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:600">기어 프리셋</span><button data-act="savePresets" style="font-size:11px;padding:3px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg3);color:var(--txt)">저장</button></div>';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:600">기어 프리셋 — 인지 축별 AI 모델 등급</span><button data-act="savePresets" style="font-size:11px;padding:3px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg3);color:var(--txt)">저장</button></div>';
   h+='<table style="width:100%;font-size:11px;border-collapse:collapse"><tr style="color:var(--dim)"><td style="padding:2px 4px">기어</td>';
-  axes.forEach(function(ax){ h+='<td style="padding:2px;text-align:center">'+esc((g.axis_info&&g.axis_info[ax]?g.axis_info[ax].label:ax))+'</td>'; });
+  axes.forEach(function(ax){ h+='<td style="padding:2px;text-align:center">'+systemText((g.axis_info&&g.axis_info[ax]?g.axis_info[ax].label:ax))+'</td>'; });
   h+='</tr>';
   Object.keys(gearPresetDraft).forEach(function(gn){
-    h+='<tr><td style="padding:3px 4px;font-weight:600">'+esc(gn)+'</td>';
+    h+='<tr><td style="padding:3px 4px;font-weight:600">'+systemText(gn)+'</td>';
     axes.forEach(function(ax){
       h+='<td style="padding:2px"><select data-act="cell" data-gn="'+esc(gn)+'" data-ax="'+esc(ax)+'" style="width:100%;font-size:11px;padding:2px;background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:5px">';
-      tiers.forEach(function(t){ h+='<option'+((gearPresetDraft[gn]||{})[ax]===t?' selected':'')+'>'+esc(t)+'</option>'; });
+      tiers.forEach(function(t){ h+=gearOption(t,(gearPresetDraft[gn]||{})[ax]===t,false); });
       h+='</select></td>';
     });
     h+='</tr>';
   });
   h+='</table>';
-  axes.forEach(function(ax){ const info=(g.axis_info||{})[ax]; if(info) h+='<p style="font-size:11px;color:var(--dim);margin:5px 0"><b>'+esc(info.label)+'</b> · '+esc(info.description)+'</p>'; });
+  axes.forEach(function(ax){ const info=(g.axis_info||{})[ax]; if(info) h+='<p style="font-size:11px;color:var(--dim);margin:5px 0"><b>'+systemText(info.label)+'</b> · '+systemText(info.description)+'</p>'; });
   h+='<div style="margin:16px 0"><b style="font-size:12px">시각·청각·기억 모델</b><p style="font-size:11px;color:var(--dim)">현재 선택 경로와 별도 설정입니다. 조회 전용 항목은 이 기어에서 변경하지 않습니다.</p>';
   (g.sensory_models||[]).forEach(function(item){
     h+='<div style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:8px;font-size:11px;overflow-wrap:anywhere">';
-    h+='<b>'+esc(item.label)+'</b><div style="margin:4px 0">'+esc(item.model?((item.provider?item.provider+' / ':'')+item.model):'미설정')+'</div>';
-    h+='<div style="color:var(--dim)">'+esc(item.policy)+'</div><p style="color:var(--dim);margin:4px 0">'+esc(item.detail)+'</p>';
+    h+='<b>'+systemText(item.label)+'</b><div style="margin:4px 0">'+esc(item.model?((item.provider?item.provider+' / ':'')+item.model):'미설정')+'</div>';
+    h+='<div style="color:var(--dim)">'+systemText(item.policy)+'</div><p style="color:var(--dim);margin:4px 0">'+systemText(item.detail,true)+'</p>';
     h+='<div style="color:var(--dim);font-size:10px">설정 출처: '+esc(item.source)+'</div></div>';
   });
   h+='</div>';
@@ -289,7 +296,7 @@ function renderGearSettings(){
     h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0">';
     h+='<span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.name)+' <span style="color:var(--dim);font-size:10px">'+esc(a.project)+'</span></span>';
     h+='<select data-act="pin" data-id="'+esc(a.id)+'" style="font-size:11px;padding:2px 4px;border-radius:5px;background:'+(cur?'var(--acc)':'var(--bg)')+';color:'+(cur?'#fff':'var(--dim)')+';border:1px solid var(--line)"><option value="">기어 따름</option>';
-    tiers.forEach(function(t){ h+='<option'+(cur===t?' selected':'')+' value="'+esc(t)+'">📌 '+esc(t)+'</option>'; });
+    tiers.forEach(function(t){ h+=gearOption(t,cur===t,true); });
     h+='</select></div>';
   });
   h+='</div></div>';

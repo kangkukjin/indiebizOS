@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { ArrowLeft, Boxes, Folder, Archive, Trash2, LockKeyhole, X } from 'lucide-react';
+import { ui, uiMessage, useLocale } from '../i18n/ui';
 import { api } from '../lib/api';
 import { getBackendOrigin } from '../lib/backend-origin';
 import type { VocabularyPackage } from '../lib/api-packages';
@@ -16,10 +17,13 @@ import { PackageDeveloperDialog } from './launcher-components/dialogs/PackageDev
 import { ToolSearchDialog } from './launcher-components/dialogs/ToolSearchDialog';
 import './vocabulary/desktop.css';
 
+const MENU_LABELS: Record<string, string> = Object.fromEntries(['기본설명','단어소개','내보내기','복원','바탕으로 꺼내기','저장고에 넣기','쓰레기통으로 보내기','열기','파일 가져오기','공유 어휘 찾기','제작 및 라이브러리 관리','이름 바꾸기','폴더 없애기 · 내용은 꺼내기','새 폴더','아이콘 정렬'].map(label => [label, uiMessage('vocabulary.menu', label)]));
+
 interface Menu { x: number; y: number; item?: string; parent: string; canvasX: number; canvasY: number }
 interface Detail { pkg: VocabularyPackage; kind: 'description' | 'words'; words?: Word[] }
 
 export function VocabularyView({ folderId = ROOT }: { folderId?: string }) {
+  useLocale();
   const [packages, setPackages] = useState<VocabularyPackage[]>([]);
   const [desktop, setDesktop] = useState<VocabularyDesktop | null>(null);
   const [busy, setBusy] = useState(false);
@@ -156,8 +160,8 @@ export function VocabularyView({ folderId = ROOT }: { folderId?: string }) {
   const pkg = menu?.item ? packages.find(p => p.id === menu.item) : undefined;
   const folder = menu?.item ? desktop?.folders[menu.item] : undefined;
   const menuButton = (label: string, onClick: () => void, disabled = false) => <button role="menuitem" disabled={busy || disabled}
-    className="block w-full px-4 py-2 text-left text-sm hover:bg-amber-50 focus:bg-amber-50 outline-none disabled:opacity-40" onClick={onClick}>{label}</button>;
-  const openName = folderId === ROOT ? '내 어휘' : desktop?.folders[folderId]?.name || '어휘 폴더';
+    className="block w-full px-4 py-2 text-left text-sm hover:bg-amber-50 focus:bg-amber-50 outline-none disabled:opacity-40" onClick={onClick}>{MENU_LABELS[label] ? ui.text(MENU_LABELS[label]) : label}</button>;
+  const openName = folderId === ROOT ? ui.text(uiMessage('vocabulary.title', '내 어휘')) : desktop?.folders[folderId]?.name || ui.text(uiMessage('vocabulary.title', '어휘 폴더'));
   const parent = desktop?.folders[folderId]?.parent || ROOT;
   const missingFolder = desktop && folderId !== ROOT && !desktop.folders[folderId];
   useEffect(() => { document.title = openName; }, [openName]);

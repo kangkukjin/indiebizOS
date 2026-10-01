@@ -17,6 +17,7 @@ import { Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert,
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
+import { ui, uiMessage, useLocale } from '../i18n/ui';
 import { IS_WEB_SURFACE } from '../lib/backend-origin';
 import { NodePresence, ModelGearLever, ActiveProjects, LimbSwitch, SystemLogViewer, BodyLedger } from './launcher-components';
 import { EpisodeJournal } from './EpisodeJournal';
@@ -30,15 +31,15 @@ const SERVICE_LABELS: Record<string, string> = {
 
 // 점검 시각을 "방금 전 / N분 전 / N시간 전 / N일 전"으로
 function relTime(iso: string | null): string {
-  if (!iso) return '미점검';
+  if (!iso) return ui.text(uiMessage('time.status', '미점검'));
   const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return '미점검';
+  if (Number.isNaN(t)) return ui.text(uiMessage('time.status', '미점검'));
   const m = Math.floor((Date.now() - t) / 60000);
-  if (m < 1) return '방금 전';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1) return ui.text(uiMessage('time.status', '방금 전'));
+  if (m < 60) return ui.text(uiMessage('time.status', '{0}분 전'), [m]);
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+  if (h < 24) return ui.text(uiMessage('time.status', '{0}시간 전'), [h]);
+  return ui.text(uiMessage('time.status', '{0}일 전'), [Math.floor(h / 24)]);
 }
 
 // 수동 모드에서 IBL 액션이 쓰는 프로젝트 컨텍스트 (활성 프로젝트가 없어도 경로 확보)
@@ -125,6 +126,7 @@ const NODE_GLOSS: Record<string, string> = {
 };
 
 export default function ManualMode() {
+  useLocale();
   const [mobileMonitorOpen, setMobileMonitorOpen] = useState(false);
   // 'indiebizOS의 구조' — 버튼 밑 인라인 박스(anatomy 문서). 첫 펼칠 때 원본 마크다운을 당겨 캐시.
   const [structOpen, setStructOpen] = useState(false);
@@ -717,7 +719,7 @@ export default function ManualMode() {
                             <button
                               key={o.op}
                               onClick={() => seedFromAction(g.node, a.name, a.targetKey, o.op)}
-                              title={o.desc}
+                              title={ui.system(o.desc)}
                               className="px-1.5 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-200 text-[11px] text-amber-800 font-mono transition"
                             >
                               {o.op}{o.op === a.opDefault ? '★' : ''}
@@ -726,7 +728,7 @@ export default function ManualMode() {
                         </div>
                         {/* 정체(무슨 일을 하는지) — 늘 보이게. 예전엔 hover 툴팁에만 있어 "뭔지 모르겠던" 부분 */}
                         {a.description && (
-                          <div className="text-[12px] text-stone-600 mt-1 leading-snug">{a.description}</div>
+                          <div className="text-[12px] text-stone-600 mt-1 leading-snug">{ui.system(a.description)}</div>
                         )}
                         {/* op별 뜻 — 분기가 있으면 각 op가 무슨 일인지 펼쳐 보여준다 */}
                         {a.ops.length > 0 && (
@@ -734,7 +736,7 @@ export default function ManualMode() {
                             {a.ops.map((o) => (
                               <li key={o.op} className="text-[11px] text-stone-500 leading-snug flex gap-1.5">
                                 <span className="font-mono text-amber-700 shrink-0">{o.op}{o.op === a.opDefault ? '★' : ''}</span>
-                                <span>{o.desc}</span>
+                                <span>{ui.system(o.desc)}</span>
                               </li>
                             ))}
                           </ul>
@@ -742,7 +744,7 @@ export default function ManualMode() {
                         {/* 인자/사용법 */}
                         {a.targetDesc && (
                           <div className="text-[10px] text-stone-400 mt-1 leading-snug">
-                            <span className="text-stone-300">인자 · </span>{a.targetDesc}
+                            <span className="text-stone-300">인자 · </span>{ui.system(a.targetDesc)}
                           </div>
                         )}
                       </div>

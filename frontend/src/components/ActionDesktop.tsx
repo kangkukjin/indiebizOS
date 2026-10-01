@@ -21,6 +21,7 @@ import { MapInstrument } from './MapInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
 import { BinNote } from './BinNote';
 import { YtMusicInstrument } from './YtMusicInstrument';
+import { uiMessage, ui, useLocale } from '../i18n/ui';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 import { DraggableIcon } from './launcher-components/DraggableIcon';
 import { ChatView } from './chat/ChatView';
@@ -128,9 +129,15 @@ const EMPTY_LAYOUT: AppLayout = { version: 1, positions: {}, folders: {}, member
 // (매니페스트 앱은 런처가 /launcher/instruments 로 직접 파싱 — 여기선 코드-정의 static 만)
 export const STATIC_APP_META = STATIC_DOMAINS.flatMap((d) =>
   d.instruments.length === 0
-    ? [{ id: d.id, icon: d.icon, label: d.label }]
-    : d.instruments.filter((i) => !i.soon).map((i) => ({ id: i.id, icon: i.icon, label: i.label }))
+    ? [{ id: d.id, icon: d.icon, label: d.label, labelMessage: uiMessage('app.static', d.label) }]
+    : d.instruments.filter((i) => !i.soon).map((i) => ({ id: i.id, icon: i.icon, label: i.label, labelMessage: uiMessage('app.static', i.label) }))
 );
+
+// Translate only a matching built-in id AND its unchanged source label. User names stay literal.
+export function staticAppLabel(app: { id: string; label: string }): string {
+  const source = STATIC_APP_META.find(m => m.id === app.id && m.label === app.label);
+  return source ? ui.text(source.labelMessage) : ui.instrument({id: app.id, name: app.label}).name;
+}
 
 // openAppId: 런처 모드 선택기의 승격 앱에서 넘어온 딥링크 대상. 마운트/변경 시 그 앱을 바로 연다.
 // 매니페스트·레이아웃 로컬 캐시 — static 앱(코드 내장)은 첫 페인트에 바로 그려지지만
@@ -148,6 +155,7 @@ function readCache<T>(key: string, fallback: T): T {
 }
 
 export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | null; openNonce?: number } = {}) {
+  useLocale();
   // 레벨2로 열린 앱 id(인라인 el). null = 홈. 도메인→계기 2단이 없어져 단일 상태로 충분.
   const [openId, setOpenId] = useState<string | null>(null);
   const [manifest, setManifest] = useState<AppInstrument[]>(() => readCache(MANIFEST_CACHE_KEY, []));
@@ -419,7 +427,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
   if (openAppObj?.el) {
     return (
       <div className="absolute inset-0 flex flex-col">
-        <BackBar onBack={() => setOpenId(null)} crumbs={[openAppObj.label]} />
+        <BackBar onBack={() => setOpenId(null)} crumbs={[staticAppLabel(openAppObj)]} />
         <div className="flex-1 min-h-0">{openAppObj.el}</div>
       </div>
     );
@@ -447,7 +455,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
             <Grid>
               {members.map((d) => (
                 <div key={d.id} className="relative">
-                  <IconTile icon={d.icon} label={d.label} onClick={() => { setOpenFolderId(null); openApp(d); }} />
+                  <IconTile icon={d.icon} label={staticAppLabel(d)} onClick={() => { setOpenFolderId(null); openApp(d); }} />
                   <button title="홈으로 꺼내기" onClick={() => ejectFromFolder(d.id)}
                     className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white border border-stone-300 text-stone-500 text-xs shadow-sm hover:bg-stone-100">⤴</button>
                 </div>
@@ -482,7 +490,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
       {IS_WEB_SURFACE && <div className="absolute inset-0 overflow-auto p-5 pb-24">
         <div className="mb-5 flex justify-end"><button onClick={() => setStoreOpen(true)} className="text-sm underline">앱저장소</button></div>
         <Grid>
-          {homeApps.map(d => <IconTile key={d.id} icon={d.icon} label={d.label} soon={d.soon} onClick={() => openApp(d)} />)}
+          {homeApps.map(d => <IconTile key={d.id} icon={d.icon} label={staticAppLabel(d)} soon={d.soon} onClick={() => openApp(d)} />)}
           {folderTargets.map(fid => <IconTile key={fid} icon={layout.folders[fid].icon} label={layout.folders[fid].label}
             onClick={() => setOpenFolderId(fid)} />)}
         </Grid>
@@ -495,7 +503,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
             // — DraggableIcon은 position prop을 최초 1회만 내부 state로 받으므로 remount로 갱신.
             key={`${d.id}@${p.join(',')}`}
             icon={d.icon}
-            label={d.label}
+            label={staticAppLabel(d)}
             position={p}
             whiteTile   // 앱 아이콘 = 흰 배경 타일
             onDoubleClick={() => openApp(d)}
@@ -624,7 +632,7 @@ function AppStore({ domains, removed, onBack, onAdd, onUninstall }: {
                 className="flex items-center gap-3 p-3 rounded-xl bg-white border border-stone-200 shadow-sm hover:border-stone-300 select-none">
                 <div className="w-11 h-11 shrink-0 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-center text-2xl">{d.icon}</div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm text-stone-700 truncate">{d.label}</div>
+                  <div className="text-sm text-stone-700 truncate">{staticAppLabel(d)}</div>
                   <div className="mt-0.5 text-xs text-stone-400">{isRemoved ? '저장소에 있음' : '홈에 설치됨'}</div>
                 </div>
               </div>
@@ -637,7 +645,7 @@ function AppStore({ domains, removed, onBack, onAdd, onUninstall }: {
       {menu && menuApp && (
         <div className="fixed z-50 bg-white rounded-lg shadow-lg border border-stone-200 py-1 text-sm text-stone-700 min-w-[150px]"
           style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
-          <div className="px-4 py-1.5 text-xs text-stone-400 border-b border-stone-100 truncate">{menuApp.icon} {menuApp.label}</div>
+          <div className="px-4 py-1.5 text-xs text-stone-400 border-b border-stone-100 truncate">{menuApp.icon} {staticAppLabel(menuApp)}</div>
           <button className="block w-full text-left px-4 py-1.5 hover:bg-stone-100"
             onClick={() => openCode(menu.id, menuApp.label)}>{'<>'} 코드보기</button>
           {menuRemoved && (
@@ -669,10 +677,10 @@ function AppStore({ domains, removed, onBack, onAdd, onUninstall }: {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setConfirmId(null)}>
           <div className="bg-white rounded-2xl shadow-xl border border-stone-200 p-6 max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 text-stone-800 font-medium mb-2">
-              <span className="text-2xl">{confirmApp.icon}</span> {confirmApp.label}
+              <span className="text-2xl">{confirmApp.icon}</span> {staticAppLabel(confirmApp)}
             </div>
             <p className="text-sm text-stone-600 leading-relaxed">
-              <b className="text-red-600">{confirmApp.label}</b> 앱을 완전 삭제하시겠습니까?<br />
+              <b className="text-red-600">{staticAppLabel(confirmApp)}</b> 앱을 완전 삭제하시겠습니까?<br />
               쌓인 데이터가 초기화되고 앱저장소에서도 사라집니다.
             </p>
             <div className="mt-5 flex justify-end gap-2">

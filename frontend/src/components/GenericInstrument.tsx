@@ -25,7 +25,8 @@
  * 더 풍부한 데스크탑 전용 계기(도서·투자·라디오 등)는 ActionDesktop의
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.
  */
-import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react';
+import { ui, useLocale } from '../i18n/ui';
 import { StreamPlayer, loadHls } from './StreamPlayer';
 import type { StreamData } from './chat/chatUtils';
 import {
@@ -574,20 +575,21 @@ function SelectInput({ inp, values, onChange }: { inp: AppInput; values: Record<
 type DrillTab = { name: string; view: AppViewPrim[]; compose?: AppCompose };
 type DrillState = { data: Json; action: string; item: Json; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] };
 
-function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
+function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   mode: AppMode;
+  sourceMode: AppMode; // Execution identity is independent of display language.
   openNeighborId?: number | null;   // 딥링크 — 이 이웃 id 의 행으로 자동 드릴(메신저 DM 진입 등)
   onDeepLinkDone?: () => void;
 }) {
   const initVals = useCallback(() => {
     const v: Record<string, string> = {};
-    (mode.inputs || []).forEach((inp) => { v[inp.key] = inp.default || ''; });
-    if (mode.filter?.items?.length) {
-      const def = mode.filter.items.find((x) => x.default) || mode.filter.items[0];
-      v[mode.filter.key || 'filter'] = String(def.value);
+    (sourceMode.inputs || []).forEach((inp) => { v[inp.key] = inp.default || ''; });
+    if (sourceMode.filter?.items?.length) {
+      const def = sourceMode.filter.items.find((x) => x.default) || sourceMode.filter.items[0];
+      v[sourceMode.filter.key || 'filter'] = String(def.value);
     }
     return v;
-  }, [mode]);
+  }, [sourceMode]);
 
   const [values, setValues] = useState<Record<string, string>>(initVals);
   const [data, setData] = useState<Json | null>(null);
@@ -610,25 +612,25 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
   drillRef.current = drill;
 
   const run = useCallback(async (override?: Record<string, string>) => {
-    if (!mode.action) return;
+    if (!sourceMode.action) return;
     const vals = override || valuesRef.current;
-    for (const inp of mode.inputs || []) if (inp.required && !vals[inp.key]) return;
+    for (const inp of sourceMode.inputs || []) if (inp.required && !vals[inp.key]) return;
     setLoading(true); setError(null); setDrill(null); setCatFilter(null);
     try {
-      setData(await runIBL(buildAction(mode.action, vals)));
+      setData(await runIBL(buildAction(sourceMode.action, vals)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, [mode]);
+  }, [sourceMode]);
 
   // 모드 진입 시 초기화 + auto_run
   useEffect(() => {
     const v = initVals();
     setValues(v); setData(null); setDrill(null); setError(null); setComposeText(''); setComposeCh(''); setCatFilter(null);
-    if (mode.auto_run) run(v);
-  }, [mode, initVals, run]);
+    if (sourceMode.auto_run) run(v);
+  }, [sourceMode, initVals, run]);
 
   const onDrill = useCallback(async (p: AppViewPrim, item: Json) => {
     const dc = p.item_click as { action: string; recursive?: boolean; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] } | undefined;
@@ -1012,11 +1014,13 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
   );
 }
 
-export function GenericInstrument({ instrument, openNeighborId, onDeepLinkDone }: {
+export function GenericInstrument({ instrument: rawInstrument, openNeighborId, onDeepLinkDone }: {
   instrument: AppInstrument;
   openNeighborId?: number | null;
   onDeepLinkDone?: () => void;
 }) {
+  const locale = useLocale();
+  const instrument = useMemo(() => ui.instrument(rawInstrument) as AppInstrument, [rawInstrument, locale]);
   const modes: AppMode[] = instrument.modes || [instrument];
   const [modeIdx, setModeIdx] = useState(0);
   const mode = modes[Math.min(modeIdx, modes.length - 1)];
@@ -1063,7 +1067,7 @@ export function GenericInstrument({ instrument, openNeighborId, onDeepLinkDone }
         </div>
       )}
       {topMsg && <div className="max-w-2xl mx-auto px-5 pt-2 text-sm text-emerald-700">{topMsg}</div>}
-      <ModePane mode={mode} openNeighborId={openNeighborId} onDeepLinkDone={onDeepLinkDone} />
+      <ModePane mode={mode} sourceMode={(rawInstrument.modes || [rawInstrument])[Math.min(modeIdx, modes.length - 1)]} openNeighborId={openNeighborId} onDeepLinkDone={onDeepLinkDone} />
     </div>
   );
 }

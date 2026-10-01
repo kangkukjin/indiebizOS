@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import { Gauge, Loader2, Settings2, Save, Check, Brain, Boxes } from 'lucide-react';
 import { api } from '../../lib/api';
+import { UiSystemText, ui, useLocale } from '../../i18n/ui';
 import type { ModelGearState } from '../../lib/api-system-ai';
 
 interface AgentInfo { id: string; name: string; project: string; }
@@ -28,6 +29,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
   onToggleStruct?: () => void;   // 'indiebizOS의 구조'(anatomy) 토글 — 설정 옆 작은 버튼으로 노출
   structOpen?: boolean;
 } = {}) {
+  useLocale(); // Dynamic system attributes also follow language changes.
   const [gear, setGear] = useState<ModelGearState | null>(null);
   const [changing, setChanging] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -166,7 +168,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
                   : 'bg-white border-stone-200 text-stone-700 hover:border-stone-400'
               }`}
             >
-              <div className="text-sm font-bold">{g}</div>
+              <div className="text-sm font-bold"><UiSystemText value={g} /></div>
               <div className={`text-[10.5px] mt-0.5 leading-tight ${active ? 'text-white/80' : 'text-stone-400'}`}>
                 {GEAR_DESC[g] ?? ''}
               </div>
@@ -180,8 +182,8 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-stone-500 pt-1 border-t border-stone-100">
           {Object.entries(gear.axes).map(([axis, info]) => (
             <span key={axis} className="flex items-center gap-1">
-              <span className="text-stone-400" title={gear.axis_info?.[axis]?.description}>{axisLabel(axis)}</span>
-              <span className="text-stone-700 font-medium">{info.tier}</span>
+              <span className="text-stone-400" title={ui.system(gear.axis_info?.[axis]?.description ?? '')}>{<UiSystemText value={axisLabel(axis)} />}</span>
+              <span className="text-stone-700 font-medium">{<UiSystemText value={info.tier} />}</span>
             </span>
           ))}
           <span className="text-stone-300">·</span>
@@ -225,7 +227,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
           {/* 1. 프리셋 편집기 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-stone-600">기어 프리셋 — 역할별 모델 등급</span>
+              <span className="text-xs font-semibold text-stone-600">기어 프리셋 — 인지 축별 AI 모델 등급</span>
               <button
                 onClick={savePresets}
                 disabled={savingPresets}
@@ -240,13 +242,13 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
                 <thead>
                   <tr className="text-stone-400">
                     <th className="text-left font-medium py-1 pr-2">기어</th>
-                    {axes.map((axis) => <th key={axis} title={gear?.axis_info?.[axis]?.description} className="font-medium py-1 px-1 text-center">{axisLabel(axis)}</th>)}
+                    {axes.map((axis) => <th key={axis} title={ui.system(gear?.axis_info?.[axis]?.description ?? '')} className="font-medium py-1 px-1 text-center">{<UiSystemText value={axisLabel(axis)} />}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {Object.keys(draftPresets).map((g) => (
                     <tr key={g} className="border-t border-stone-100">
-                      <td className="py-1 pr-2 font-semibold text-stone-700 whitespace-nowrap">{g}</td>
+                      <td className="py-1 pr-2 font-semibold text-stone-700 whitespace-nowrap"><UiSystemText value={g} /></td>
                       {axes.map((axis) => (
                         <td key={axis} className="py-1 px-1">
                           <select
@@ -254,7 +256,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
                             onChange={(e) => setDraftCell(g, axis, e.target.value)}
                             className="w-full px-1 py-1 bg-white border border-stone-200 rounded text-stone-700 text-[11px] focus:border-stone-400 focus:outline-none"
                           >
-                            {tiers.map((t) => <option key={t} value={t}>{t}</option>)}
+                            {tiers.map((t) => <option key={t} value={t}><UiSystemText value={t} /></option>)}
                           </select>
                         </td>
                       ))}
@@ -265,7 +267,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
             </div>
             <div className="space-y-1 text-[11px] text-stone-500">
               {axes.map((axis) => (
-                <p key={axis}><b className="text-stone-600">{axisLabel(axis)}</b> · {gear?.axis_info?.[axis]?.description}</p>
+                <p key={axis}><b className="text-stone-600">{<UiSystemText value={axisLabel(axis)} />}</b> · {ui.system(gear?.axis_info?.[axis]?.description ?? '')}</p>
               ))}
             </div>
           </div>
@@ -276,10 +278,10 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
             <div className="grid gap-2 sm:grid-cols-2">
               {gear?.sensory_models?.map((item) => (
                 <div key={item.id} className="min-w-0 rounded-lg border border-stone-200 bg-white p-2.5 space-y-1">
-                  <div className="text-xs font-semibold text-stone-700">{item.label}</div>
+                  <div className="text-xs font-semibold text-stone-700">{<UiSystemText value={item.label} />}</div>
                   <div className="text-[11px] font-medium text-stone-700 break-all">{item.model ? `${item.provider ? item.provider + ' / ' : ''}${item.model}` : '미설정'}</div>
-                  <div className="text-[10.5px] text-stone-500">{item.policy}</div>
-                  <p className="text-[11px] text-stone-500">{item.detail}</p>
+                  <div className="text-[10.5px] text-stone-500">{<UiSystemText value={item.policy} />}</div>
+                  <p className="text-[11px] text-stone-500">{<UiSystemText value={item.detail} fragments />}</p>
                   <p className="text-[10px] text-stone-400 break-all">설정 출처: {item.source}</p>
                 </div>
               ))}
@@ -309,7 +311,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
                       }`}
                     >
                       <option value="">기어 따름</option>
-                      {tiers.map((t) => <option key={t} value={t}>📌 {t} 고정</option>)}
+                      {tiers.map((t) => <option key={t} value={t}>📌 <UiSystemText value={t} /> 고정</option>)}
                     </select>
                   </div>
                 </div>

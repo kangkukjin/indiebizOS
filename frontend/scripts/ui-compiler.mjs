@@ -1,4 +1,5 @@
 import ts from 'typescript';
+import { staticValues } from './ui-static-values.mjs';
 import { createHash } from 'node:crypto';
 
 export const korean = text => /[가-힣]/.test(text);
@@ -28,12 +29,22 @@ function jsxText(text) {
   }).filter(Boolean).join(' ');
 }
 export function compileReact(source, file, catalog) {
-  const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, /\.[jt]sx$/.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const edits = [];
+  const finite = staticValues(ast);
   let used = false;
+  function choices(node, context) {
+    const values = finite(node);
+    if (!values?.some(korean)) return;
+    return Object.fromEntries(values.filter(korean).map(value => [value, catalog.add(context, value)]));
+  }
   const edit = (node, text) => edits.push({ start: node.getStart(ast), end: node.end, text });
   function expression(node, context) {
     if (!node) return;
+    if (!ts.isStringLiteral(node) && !ts.isNoSubstitutionTemplateLiteral(node)) {
+      const mapping = choices(node, context);
+      if (mapping) { edit(node, `<__UiChoice value={${node.getText(ast)}} choices={${json(mapping)}} />`); used = true; return; }
+    }
     if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && korean(node.text)) {
       edit(node, `<__UiText id=${json(catalog.add(context, node.text))} />`); used = true;
     } else if (ts.isTemplateExpression(node) && korean(node.getText(ast))) {
@@ -46,33 +57,77 @@ export function compileReact(source, file, catalog) {
     } else if (ts.isBinaryExpression(node) && [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(node.operatorToken.kind)) {
       expression(node.right, context);
     } else if (ts.isParenthesizedExpression(node)) expression(node.expression, context);
-  }
-  function walk(node, blocked = false) {
-    if (ts.isCallExpression(node) && node.expression.getText(ast) === 'uiMessage' && node.arguments.length === 2 && node.arguments.every(ts.isStringLiteral)) {
-      edit(node, json(catalog.add(node.arguments[0].text, node.arguments[1].text))); return;
+    else {
+      const mapping = choices(node, context);
+      if (mapping) { edit(node, `<__UiChoice value={${node.getText(ast)}} choices={${json(mapping)}} />`); used = true; }
     }
-    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+  }
+  function displayString(node, context) {
+    if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && korean(node.text)) return `__ui.text(${json(catalog.add(context,node.text))})`;
+    if (ts.isTemplateExpression(node)) {
+      let source = node.head.text;
+      const values = node.templateSpans.map((span,i)=>{source += `{${i}}` + span.literal.text; return span.expression.getText(ast);});
+      if (korean(source)) return `__ui.text(${json(catalog.add(context,source))},[${values.join(',')}])`;
+    }
+    if (ts.isConditionalExpression(node)) {
+      const yes=displayString(node.whenTrue,context), no=displayString(node.whenFalse,context);
+      if(yes||no) return `${node.condition.getText(ast)} ? (${yes||node.whenTrue.getText(ast)}) : (${no||node.whenFalse.getText(ast)})`;
+    }
+    if (ts.isBinaryExpression(node) && [ts.SyntaxKind.BarBarToken,ts.SyntaxKind.QuestionQuestionToken,ts.SyntaxKind.AmpersandAmpersandToken].includes(node.operatorToken.kind)) {
+      const right=displayString(node.right,context);
+      if(right) return `${node.left.getText(ast)} ${node.operatorToken.getText(ast)} (${right})`;
+    }
+  }
+
+  function walk(node, blocked = false) {
+    if (ts.isCallExpression(node) && node.expression.getText(ast) === 'uiMessage' && node.arguments.length === 2 && ts.isStringLiteral(node.arguments[0])) {
+      const values = finite(node.arguments[1]);
+      if (values) {
+        const ids = Object.fromEntries(values.map(value => [value,catalog.add(node.arguments[0].text,value)]));
+        edit(node, ts.isStringLiteral(node.arguments[1]) ? json(ids[node.arguments[1].text]) : `(${json(ids)})[${node.arguments[1].getText(ast)}]`); return;
+      }
+      throw new Error(`${file}: uiMessage requires finite source-owned strings`);
+    }
+    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node)) {
+      const fragment = ts.isJsxFragment(node);
       const opening = ts.isJsxElement(node) ? node.openingElement : node;
-      const tag = opening.tagName.getText(ast);
-      const excluded = opening.attributes.properties.some(a => ts.isJsxAttribute(a) &&
+      const tag = fragment ? 'fragment' : opening.tagName.getText(ast);
+      const properties = fragment ? [] : opening.attributes.properties;
+      const excluded = properties.some(a => ts.isJsxAttribute(a) &&
         (a.name.getText(ast) === 'data-ui-skip' || a.name.getText(ast) === 'translate' && a.initializer?.text === 'no'));
       const skip = blocked || excluded;
       const messages = {};
-      if (!skip && /^[a-z]/.test(tag)) {
-        for (const attr of opening.attributes.properties) {
+      if (!skip) {
+        for (const attr of properties) {
           if (!ts.isJsxAttribute(attr)) continue;
           const name = attr.name.getText(ast);
-          if (attrs.has(name) && attr.initializer && ts.isStringLiteral(attr.initializer) && korean(attr.initializer.text)) {
-            messages[name] = catalog.add(`${file}:${tag}@${name}`, attr.initializer.text);
+          if (/^on[A-Z]/.test(name) && attr.initializer) walk(attr.initializer, skip);
+          const display = attrs.has(name) || /^[A-Z]/.test(tag) && ['label','description','hint','message','emptyText','confirmText','cancelText'].includes(name);
+          if (display && attr.initializer && ts.isStringLiteral(attr.initializer) && korean(attr.initializer.text)) {
+            messages[name] = json(catalog.add(`${file}:${tag}@${name}`, attr.initializer.text));
+          } else if (display && attr.initializer && ts.isJsxExpression(attr.initializer) && attr.initializer.expression) {
+            const value = attr.initializer.expression;
+            if (ts.isTemplateExpression(value)) {
+              let source = value.head.text;
+              const values = value.templateSpans.map((span,i) => {source += `{${i}}` + span.literal.text; return span.expression.getText(ast);});
+              if (korean(source)) { messages[name] = `{id:${json(catalog.add(`${file}:${tag}@${name}`,source))},values:[${values.join(',')}]}`; continue; }
+            }
+            const mapping = choices(value, `${file}:${tag}@${name}`);
+            if (mapping) messages[name] = `{value:(${value.getText(ast)}),choices:${json(mapping)}}`;
+            else { const resolved = displayString(value, `${file}:${tag}@${name}`); if (resolved) messages[name] = `{resolve:()=>(${resolved})}`; }
           }
+          // JSX-valued slots (actions/header/footer/render callbacks) are UI too.
+          // Primitive props remain data unless the explicit display rule matched.
+          if (!/^on[A-Z]/.test(name) && attr.initializer && !messages[name]) walk(attr.initializer, skip);
         }
       }
       if (Object.keys(messages).length) {
-        edit(opening.tagName, `__UiElement as=${json(tag)} uiAttrs={${json(messages)}}`);
+        const as = /^[a-z]/.test(tag) ? json(tag) : `{${tag}}`;
+        edit(opening.tagName, `__UiElement as=${as} uiAttrs={{${Object.entries(messages).map(([k,v]) => `${json(k)}:${v}`).join(',')}}}`);
         if (ts.isJsxElement(node)) edit(node.closingElement.tagName, '__UiElement');
         used = true;
       }
-      if (ts.isJsxElement(node)) {
+      if (ts.isJsxElement(node) || fragment) {
         for (const child of node.children) {
           if (!skip && !noText.has(tag) && ts.isJsxText(child)) {
             const text = decodeHTML(jsxText(child.text));
@@ -80,18 +135,28 @@ export function compileReact(source, file, catalog) {
           } else if (!skip && !noText.has(tag) && ts.isJsxExpression(child)) {
             expression(child.expression, `${file}:${tag}`);
             // Visit JSX nested in conditional branches, but not its literal expressions twice.
-            function nested(n) { if (ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n)) walk(n, skip); else ts.forEachChild(n, nested); }
+            function nested(n) { if (ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n) || ts.isJsxFragment(n)) walk(n, skip); else ts.forEachChild(n, nested); }
             if (child.expression) nested(child.expression);
           } else if (!ts.isJsxText(child)) walk(child, skip || noText.has(tag));
         }
       }
       return;
     }
+    if (!blocked && ts.isCallExpression(node) && ['alert','confirm','prompt','window.alert','window.confirm','window.prompt'].includes(node.expression.getText(ast))) {
+      const argument = node.arguments[0];
+      if (argument && (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument)) && korean(argument.text)) {
+        edit(argument, `__ui.text(${json(catalog.add(`${file}:dialog`, argument.text))})`); used = true;
+      } else if (argument && ts.isTemplateExpression(argument)) {
+        let source = argument.head.text;
+        const values = argument.templateSpans.map((span,i) => { source += `{${i}}` + span.literal.text; return span.expression.getText(ast); });
+        if (korean(source)) { edit(argument, `__ui.text(${json(catalog.add(`${file}:dialog`, source))},[${values.join(',')}])`); used = true; }
+      }
+    }
     ts.forEachChild(node, n => walk(n, blocked));
   }
   walk(ast);
   const output = apply(source, edits);
-  return used ? `import { UiText as __UiText, UiElement as __UiElement } from '/src/i18n/ui';\n${output}` : output;
+  return used ? `import { UiText as __UiText, UiChoice as __UiChoice, UiElement as __UiElement, ui as __ui } from '/src/i18n/ui';\n${output}` : output;
 }
 
 // Only source-code HTML text/attributes are annotated. No runtime data enters this compiler.
@@ -128,8 +193,12 @@ function decodeHTML(text) {
 }
 export function compileRemoteJS(source, catalog) {
   const ast = ts.createSourceFile('remote.js', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const finite = staticValues(ast);
   const edits = [];
   function walk(node) {
+    if (ts.isCallExpression(node) && node.expression.getText(ast) === 'systemText') {
+      for (const value of finite(node.arguments[0]) || []) if (korean(value)) catalog.add('system:metadata', value);
+    }
     if (ts.isCallExpression(node) && node.expression.getText(ast) === 'esc' && ['nm', 'ds'].includes(node.arguments[0]?.getText(ast))) {
       let owner = node.parent;
       while (owner && !ts.isFunctionDeclaration(owner)) owner = owner.parent;
@@ -146,10 +215,10 @@ export function compileRemoteJS(source, catalog) {
           edits.push({start:node.getStart(ast),end:node.end,text:name === 'apCard' ? `{ui:${json(id)}}` : `window.__ui.text(${json(id)})`}); return;
         }
       }
-      if (/<[a-z][\s\S]*>/i.test(value)) {
+      if (/<\/?[a-z][\s\S]*>|["']>[^<>]*[가-힣]/i.test(value)) {
         if (/<(?:pre|code|textarea)\b|\bdata-ui-skip\b|\btranslate=["']no["']/i.test(value)) return;
         // Only fully bounded text in HTML fragments; never translate concatenated data or HTML attribute fragments.
-        const bounded = value.replace(/(<(?:h[1-6]|button|span|label|p|div)\b[^>]*>)([^<>]*[가-힣][^<>]*)$/gi, (_,tag,text) => `${tag}<span data-ui-text="${catalog.add('remote:dynamic',decodeHTML(text))}">${text}</span>`);
+        const bounded = value.replace(/(>)([^<>]*[가-힣][^<>]*)$/gi, (_,tag,text) => `${tag}<span data-ui-text="${catalog.add('remote:dynamic',decodeHTML(text))}">${text}</span>`);
         const next = bounded.replace(/(>)([^<>]*[가-힣][^<>]*)(<)/g, (all, left, text, right) => {
           if (/[{}]|\bfunction\b/.test(text)) return all;
           return `${left}<span data-ui-text="${catalog.add('remote:dynamic', decodeHTML(text))}">${text}</span>${right}`;

@@ -1,0 +1,124 @@
+{
+  "date": "2026-10-01",
+  "baseline_commit": "ecf9aa032c587ef0d76c8edd97d0fcd0359455f9",
+  "repository": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+  "scope": "Documentation reassessment. No runtime code changed, live model calls or production database writes. Existing unrelated working-tree changes excluded from edits and commit.",
+  "related_tests": {
+    "files": [
+      "backend/test_repair_plan_boundaries.py",
+      "backend/test_ibl_criteria_contract.py",
+      "backend/test_episode3632_result_reads.py",
+      "backend/test_execution_trace.py",
+      "backend/test_long_sentence_round7_9_repairs.py",
+      "backend/test_long_sentence_round10_repairs.py",
+      "backend/test_long_sentence_remaining_repairs.py",
+      "backend/test_ibl_input_abstraction.py",
+      "backend/test_distill_efficiency_2026_09_30.py",
+      "backend/test_episode4182_repairs.py",
+      "backend/test_file_script.py",
+      "backend/test_list_value_composition.py",
+      "backend/test_long_sentence_round12_repairs.py",
+      "backend/test_long_sentence_round13_repairs.py",
+      "backend/test_long_sentence_round14_repairs.py",
+      "backend/test_episode4202_repairs.py"
+    ],
+    "command": ".venv/bin/python3 -m pytest backend/test_repair_plan_boundaries.py backend/test_ibl_criteria_contract.py backend/test_episode3632_result_reads.py backend/test_execution_trace.py backend/test_long_sentence_round7_9_repairs.py backend/test_long_sentence_round10_repairs.py backend/test_long_sentence_remaining_repairs.py backend/test_ibl_input_abstraction.py backend/test_distill_efficiency_2026_09_30.py backend/test_episode4182_repairs.py backend/test_file_script.py backend/test_list_value_composition.py backend/test_long_sentence_round12_repairs.py backend/test_long_sentence_round13_repairs.py backend/test_long_sentence_round14_repairs.py backend/test_episode4202_repairs.py",
+    "tests": 232,
+    "passed": 231,
+    "failures": [
+      {
+        "nodeid": "backend/test_file_script.py::test_timeout_and_cancel_stop_child",
+        "message": "KeyError: 'pid'"
+      }
+    ],
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 26.11
+  },
+  "isolated_retry": {
+    "command": ".venv/bin/python3 -m pytest backend/test_file_script.py::test_timeout_and_cancel_stop_child",
+    "tests": 1,
+    "passed": 1,
+    "failures": [],
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 0.455
+  },
+  "probes": {
+    "pre_spawn_cancellation": {
+      "state": "interrupted",
+      "pid_present": false,
+      "popen_calls": 0,
+      "method": "file_script.execute(check raises once prepared meta.json exists); temporary workspace; Popen spy forbids child creation"
+    },
+    "repair_cue": {
+      "method": "Extract current AST constants and method only; no model or runner initialization",
+      "cases": [
+        {
+          "message": "학원 운영 보고서를 만들어 줘.",
+          "repair_cue": false
+        },
+        {
+          "message": "백엔드는 수정하지 말고 자료만 분석해 줘.",
+          "repair_cue": true
+        },
+        {
+          "message": "백엔드를 수정해 줘.",
+          "repair_cue": true
+        }
+      ]
+    }
+  },
+  "interpretation": {
+    "cancellation": "Initial batch failure remains a validation residual. Retry passing does not close timing/order dependence. Production run_process permits cancellation before Popen; the timed test assumes all execution records have pid.",
+    "repair_cue": "Negative instruction remains a positive repair candidate; subsequent consciousness correction and authority checks are separate.",
+    "not_performed": [
+      "full backend regression",
+      "all system tests",
+      "new live model task",
+      "new production episode aggregate",
+      "matched quality/time/total-token effectiveness comparison"
+    ]
+  },
+  "code_sha256": {
+    "backend/cognition/model_result_view.py": "47b15c607e32ebd5d3b946156488620023755e498322a663d819914e5836f948",
+    "backend/datastore/supervision_store.py": "1c8e92762e18b3946670b576db8ba1d7b9b6eeeaec3f2b9a23bc5074203c282c",
+    "backend/cognition/final_evaluator.py": "f916abc28ef0af51e027220c71c915a76e661176b568ca77c0ef8c328c6d370f",
+    "backend/cognition/supervisor_handoff.py": "0c9cdb4f406e38a788e3aaa82b6e49ac7e044084346dbfc8c72e14c1405bb571",
+    "backend/cognition/catalog_recall.py": "888ad5e8e577315d13998e828ae71bf1591d373c287a1698596b44963b06d2fc",
+    "backend/cognition/world_context.py": "72cb375015e9c897cd62b40a7ec0aed24e2ec683acf277e18d555bc54686fc68",
+    "backend/cognition/ibl_v2_experience.py": "142e7c2d6e783fea1b40e5ab95848fb4317fefc448217f8bfb3ac2b59a200f4f",
+    "backend/ibl/ibl_v2_learning.py": "242c63df308737fad7d2ba05e66686839f326f0f998c19a9ae8b3b5301fcaf6d",
+    "backend/ibl/ibl_run_journal.py": "9089f7d7f58f20b8a1afe0090777bc4b21d39e333f4d51d039c00f37f4ea6834",
+    "backend/ibl/ibl_file_script.py": "55b827db52e6aa056e4dcc9b95755e0a412201bb753b58271e2afef9da5026c4",
+    "backend/base/file_script.py": "d725fc69226b16b23cab956fbeeb4640537fc85dc89fc1846c193a3a95aa3520",
+    "backend/base/script_process.py": "4899ec81bc755258429ee8bb2d03d3f802639177700914ecb2a9e46cf837b339",
+    "backend/cognition/cognitive_consciousness.py": "3c7bba5bfb41f78b04c4991f008b3e75307cf67981b3194a00d897ea486fb1df",
+    "backend/test_file_script.py": "680e2e3f32d6c7b75ed63b44526f544dd8c2fe1d6b104c38e67e0c0f38cf9c5e"
+  },
+  "document_validation": {
+    "local_links_checked": 26,
+    "missing_links": [],
+    "commit_references_verified": [
+      "0fce24d6",
+      "202b6a7e",
+      "2ec95e96",
+      "569e5c73",
+      "80b726e8",
+      "854ab55d",
+      "9ddbae92",
+      "a3e17eaf",
+      "a5678e5d",
+      "a5678e5d57d8f8ec047670d5ab4c0a5339ff6b56",
+      "ba8b772d",
+      "cd69584c",
+      "d6bece7b",
+      "e4c8fa1d",
+      "eab98a43",
+      "ecf9aa03",
+      "c0cd804a"
+    ]
+  },
+  "closing_review_commit": "c0cd804a19673540f333bbebe32864d2a7cfdf45",
+  "closing_review_note": "Separate session committed four previously existing changes. Read report coverage policy and search type/sort forwarding diff; included as current policy, not credited as this task repair or new test result."
+}

@@ -37,7 +37,7 @@ export function SpreadsheetWorkspace() {
         void run(async()=>{const response=await fetch(`${BACKEND_ORIGIN}/spreadsheets/import?filename=${encodeURIComponent(file.name)}`,{method:'POST',credentials:'include',body:file});const result=await response.json();if(!response.ok)throw new Error(result.detail);await activate(result);});
       }}/></label>
       <label>새 통합문서 제목<input value={title} onChange={e=>setTitle(e.target.value)}/></label>
-      <label>템플릿<select value={template} onChange={e=>setTemplate(e.target.value)}>{Object.entries({blank:'빈 통합문서',quotation:'견적서',ledger:'수입지출',inventory:'재고·입출고',attendance:'근태',schedule:'일정',budget:'프로젝트 예산'}).map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
+      <label>템플릿<select aria-label="템플릿" value={template} onChange={e=>setTemplate(e.target.value)}>{Object.entries({blank:'빈 통합문서',quotation:'간단 견적',print_quotation:'인쇄용 견적서',invoice:'청구서',ledger:'수입지출',inventory:'재고·입출고',attendance:'근태',schedule:'일정',budget:'프로젝트 예산'}).map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
       <button disabled={busy} onClick={()=>void run(async()=>activate(await sheetRequest<SheetDetail>('/new','POST',{args:{title,template}})))}>새로 만들기</button>
     </div>
     {error&&<p role="alert">{error}</p>}

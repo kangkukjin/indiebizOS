@@ -354,6 +354,7 @@
     "services/spreadsheet_files",
     "services/spreadsheet_formats",
     "services/spreadsheet_imports",
+    "services/spreadsheet_templates",
     "services/spreadsheet_workspace",
     "services/sync_exchange",
     "services/warehouse_adapters",
@@ -535,8 +536,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 460,
-    "engine": 434,
+    "total": 461,
+    "engine": 435,
     "blocklist": 26
   }
 }

@@ -90,9 +90,14 @@ class SpreadsheetWorkspace(OfficeSessions):
         templates={'blank':[], 'budget':['항목','예산','실제','차이'], 'ledger':['날짜','구분','거래처','수입','지출'],
                    'inventory':['품목코드','품목','입고','출고','재고'], 'quotation':['품목','수량','단가','금액'],
                    'schedule':['날짜','일정','담당','상태'], 'attendance':['날짜','이름','출근','퇴근','비고']}
-        if template not in templates:
+        from spreadsheet_templates import PRINT_FORMS, populate
+        if template not in templates and template not in PRINT_FORMS:
             raise ValueError('템플릿을 확인하세요')
         book=Workbook(); sheet=book.active; sheet.title='자료'
+        if template in PRINT_FORMS:
+            populate(book, template)
+            buffer=io.BytesIO(); book.save(buffer)
+            return import_bytes(self,title.strip()+'.xlsx',buffer.getvalue())
         if templates[template]:
             sheet.append(templates[template])
             for c in sheet[1]:

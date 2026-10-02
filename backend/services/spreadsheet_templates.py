@@ -53,7 +53,7 @@ def populate(book, template):
         cell.font = Font(name='Noto Sans CJK KR', size=10, bold=True, color='FFFFFF')
         cell.fill = PatternFill('solid', fgColor='245B48')
     for row in range(10, 25):
-        sheet.cell(row, 1, row - 9)
+        sheet.cell(row, 1, '=ROW()-9')
         sheet.cell(row, 6, f'=IF(OR(D{row}="",E{row}=""),"",ROUND(D{row}*E{row},0))')
         for col in ('B', 'C', 'D', 'E'):
             inputs.append(f'{col}{row}')
@@ -92,10 +92,17 @@ def populate(book, template):
     help_sheet['A2'] = '연녹색 셀에 거래 정보를 입력합니다. 합계 셀은 수식으로 계산됩니다.'
     help_sheet['A3'] = '세율은 기본 0%입니다. 거래 조건에 맞는 세율을 직접 입력하세요.'
     help_sheet['A4'] = '행 추가·로고 삽입: 보호 탭에서 암호 없이 시트 보호를 해제한 뒤 편집합니다.'
-    help_sheet['A5'] = '품목 행을 추가하면 금액 수식·합계 범위·인쇄 영역을 확인하세요.'
-    help_sheet['A6'] = '인쇄 메뉴에서 양식 시트만 선택하세요. 전체 통합문서는 안내 시트도 출력합니다.'
-    help_sheet.column_dimensions['A'].width = 100
-    help_sheet.print_area = 'A1:A6'
+    help_sheet['A5'] = '품목 사이의 셀을 선택하고 Ctrl+Shift+더하기 → 전체 행으로 삽입합니다. 기존 품목 영역 안에 추가하세요.'
+    help_sheet['A6'] = '바로 위 품목의 A~F 셀을 새 행에 복사한 뒤 품목·단위·수량·단가만 바꿉니다. 번호·금액 수식과 입력 서식을 이어받습니다.'
+    help_sheet['A7'] = '합계·단위 목록·인쇄 영역을 확인하고 필요하면 시트 보호를 다시 켜세요. 맨 아래에 덧붙일 때는 합계 범위도 확인하세요.'
+    help_sheet['A8'] = 'PDF 설정의 범위에서 활성 시트는 양식만, 모든 시트는 이 안내까지 출력합니다.'
+    help_sheet.column_dimensions['A'].width = 90
+    for row in range(1, 9):
+        cell = help_sheet.cell(row, 1)
+        cell.font = Font(name='Noto Sans CJK KR', size=11, bold=row == 1)
+        cell.alignment = Alignment(wrap_text=True, vertical='center')
+        help_sheet.row_dimensions[row].height = 48 if row > 1 else 32
+    help_sheet.print_area = 'A1:A8'
     help_sheet.sheet_properties.pageSetUpPr.fitToPage = True
     help_sheet.page_setup.fitToWidth = 1
     help_sheet.page_setup.fitToHeight = 1

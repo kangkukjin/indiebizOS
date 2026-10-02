@@ -15,11 +15,8 @@ import boot_paths  # noqa: E402,F401
 
 PATHS = [
     'backend/services/spreadsheet_templates.py',
-    'backend/services/spreadsheet_workspace.py',
     'backend/test_spreadsheet_print_live.py',
-    'frontend/src/components/SpreadsheetWorkspace.tsx',
-    'scripts/check_backend_layers.py', 'scripts/verify_spreadsheet_print.py',
-    'data/scripts/spreadsheet_followup.py',
+    'scripts/verify_spreadsheet_print.py',
     'docs/SPREADSHEET_APP_DESIGN_2026_10_02.md',
     'data/bodies/android.engine.json', 'data/core_manifest.json',
 ]
@@ -32,6 +29,10 @@ def checks(args):
     commands = {
         'live': [[sys.executable, '-m', 'pytest',
                   'backend/test_spreadsheet_print_live.py', '-s', '--tb=short']],
+        'manual': [[sys.executable, '-m', 'pytest',
+                    'backend/test_spreadsheet_print_live.py', '-k', 'manual', '-s', '--tb=short']],
+        'structure': [[sys.executable, '-m', 'pytest',
+                       'backend/test_spreadsheet_print_live.py', '-k', 'structure', '-s', '--tb=short']],
         'multipage': [[sys.executable, '-m', 'pytest',
                        'backend/test_spreadsheet_print_live.py', '-k', 'multipage', '-s', '--tb=short']],
         'build': [['npx', '--no-install', 'tsc', '-p', 'tsconfig.app.json'],
@@ -58,7 +59,7 @@ def activate():
     if '.worktrees' in ROOT.parts or subprocess.check_output(
             ['git', 'branch', '--show-current'], cwd=ROOT, text=True).strip() != 'main':
         raise RuntimeError('정본 main에서만 활성 검사와 커밋합니다')
-    base.run(['npx', '--no-install', 'vite', 'build'], cwd=ROOT / 'frontend')
+    # Frontend is unchanged; reuse its existing build receipt.
     receipt = checks({'mode': 'live'})
     print(json.dumps(receipt, ensure_ascii=False), flush=True)
     if not receipt['ok']:
@@ -67,7 +68,7 @@ def activate():
     original_run = base.run
     def run(command, **kwargs):
         if command[:2] == ['git', 'commit']:
-            command[-1] = 'Add printable spreadsheet forms and multi-page PDF acceptance'
+            command[-1] = 'Preserve form numbering during row insertion and verify workbook printing'
         return original_run(command, **kwargs)
     base.run = run
     sys.argv = [__file__, '--commit-only']

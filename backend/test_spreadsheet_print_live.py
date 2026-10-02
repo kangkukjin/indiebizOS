@@ -1,6 +1,7 @@
 """Printable templates and live ONLYOFFICE PDF/save acceptance on synthetic files."""
 import io
 import os
+import re
 import socket
 import threading
 import time
@@ -37,7 +38,7 @@ def test_print_template(tmp_path, template, title):
 
 @pytest.mark.system
 @pytest.mark.skipif(os.environ.get('INDIEBIZ_OFFICE_LIVE_TEST') != '1', reason='explicit local app acceptance')
-@pytest.mark.parametrize('multipage', [False, True], ids=['singlepage', 'multipage'])
+@pytest.mark.parametrize('multipage', [False, True, 'structure', 'manual'], ids=['singlepage', 'multipage', 'structure', 'manual'])
 def test_printable_form_app_save_pdf(tmp_path, monkeypatch, multipage):
     import api_spreadsheets
     import document_office
@@ -60,7 +61,10 @@ def test_printable_form_app_save_pdf(tmp_path, monkeypatch, multipage):
     png = io.BytesIO(); logo.save(png, format='PNG'); png.seek(0)
     book = load_workbook(source)
     book.active.add_image(Image(png), 'E3')
-    if multipage:
+    structural = multipage in ('structure', 'manual')
+    total_cell = 'F28' if structural else 'F27'
+    expected_total = 66000 if structural else 60500
+    if multipage is True:
         # Tall item rows force natural page breaks without altering formulas.
         for row in range(10, 25):
             book.active.row_dimensions[row].height = 85
@@ -128,19 +132,56 @@ def test_printable_form_app_save_pdf(tmp_path, monkeypatch, multipage):
                     return {total:sheet.GetRange('F27').GetValue(), values:sheet.GetRange('B10:F11').GetValue(), buyer:sheet.GetRange('B4').GetValue()};
                 },false,true,resolve))''')
                 assert edited['buyer'] == '한글 거래처', edited
+                if structural:
+                    editor_frame = next(f for f in page.frames if '/spreadsheeteditor/' in f.url)
+                    editor_frame.get_by_role('tab', name='보호', exact=True).click()
+                    editor_frame.get_by_text(re.compile(r'^시트\s*보호$')).click()
+                    plugin.evaluate('''() => new Promise(resolve => Asc.plugin.callCommand(function(){
+                        Api.GetActiveSheet().GetRange('12:12').Select();
+                    },false,false,resolve))''')
+                    editor_frame.locator('#area_id').focus()
+                    page.keyboard.press('Control+Shift+Equal')
+                    editor_frame.get_by_role('radio', name='전체 행', exact=True).click()
+                    editor_frame.get_by_text('OK', exact=True).click()
+                    inserted = plugin.evaluate('''() => new Promise(resolve => Asc.plugin.callCommand(function(){
+                        var sheet=Api.GetActiveSheet();
+                        sheet.GetRange('A11:F11').Copy(sheet.GetRange('A12:F12'));
+                        sheet.GetRange('B12:E12').SetValue([['추가 품목','건',1,5000]]);
+                        return sheet.GetRange('F26').GetFormula();
+                    },false,true,resolve))''')
+                    assert inserted.replace(' ', '') == '=SUM(F10:F25)', inserted
                 # callCommand batches recalculation until its command closes.
                 calculated = plugin.evaluate('''() => new Promise(resolve => Asc.plugin.callCommand(function(){
-                    return Api.GetActiveSheet().GetRange('F27').GetValue();
-                },false,false,resolve))''')
-                assert calculated == '60500', calculated
+                    return Api.GetActiveSheet().GetRange('TOTAL_CELL').GetValue();
+                },false,false,resolve))'''.replace('TOTAL_CELL', total_cell))
+                assert calculated == str(expected_total), calculated
+                if multipage == 'manual':
+                    plugin.evaluate('''() => new Promise(resolve => Asc.plugin.callCommand(function(){
+                        Api.GetActiveSheet().GetRange('A20').Select();
+                    },false,false,resolve))''')
+                    editor_frame.get_by_role('tab', name='레이아웃', exact=True).click()
+                    editor_frame.get_by_text('나누기', exact=True).click()
+                    editor_frame.get_by_text('페이지 나누기 삽입', exact=True).click()
                 assert source.read_bytes() == original
                 page.get_by_role('button', name='원본 저장', exact=True).click()
                 expect(page.locator('.sheet-editor [role=status]')).to_have_text('저장됨 · 원본 파일 기록 확인', timeout=60000)
                 saved = load_workbook(source)
                 sheet = saved['견적서']
                 assert sheet['B4'].value == '한글 거래처'
-                assert sheet['F10'].data_type == 'f' and sheet['F27'].data_type == 'f'
-                assert sheet.protection.sheet and not sheet['D10'].protection.locked
+                assert sheet['F10'].data_type == 'f' and sheet[total_cell].data_type == 'f'
+                assert sheet.protection.sheet == (not structural)
+                assert not sheet['D10'].protection.locked
+                if structural:
+                    assert '$A$1:$F$32' in sheet.print_area, sheet.print_area
+                    assert sheet['F26'].value == '=SUM(F10:F25)'
+                    if multipage == 'manual':
+                        assert any(b.id == 19 and b.man for b in sheet.row_breaks.brk), sheet.row_breaks
+                    assert sheet['B12'].value == '추가 품목'
+                    assert sheet['A12'].value == '=ROW()-9'
+                    assert sheet['F12'].data_type == 'f'
+                    assert sheet['F12'].protection.locked and not sheet['D12'].protection.locked
+                    cached = load_workbook(source, data_only=True)['견적서']
+                    assert [cached.cell(row, 1).value for row in range(10, 26)] == list(range(1, 17))
                 assert 'A1:F2' in sheet.merged_cells and sheet._images
                 # ONLYOFFICE stores validations in OOXML x14 extensions;
                 # openpyxl warns and drops that extension from its read model.
@@ -149,12 +190,26 @@ def test_printable_form_app_save_pdf(tmp_path, monkeypatch, multipage):
                 with zipfile.ZipFile(source) as archive:
                     xml = ET.fromstring(archive.read('xl/worksheets/sheet1.xml'))
                 validations = [e for e in xml.iter() if e.tag.rsplit('}', 1)[-1] == 'dataValidation']
-                assert any(v.get('type') == 'list' and '개,건,시간,일,월,식' in ''.join(v.itertext())
-                           and ('C10:C24' in ''.join(v.itertext()) or v.get('sqref') == 'C10:C24')
-                           for v in validations)
-                assert load_workbook(source, data_only=True)['견적서']['F27'].value == 60500
+                from openpyxl.worksheet.cell_range import MultiCellRange
+                unit_ranges = []
+                for validation in validations:
+                    if validation.get('type') == 'list' and '개,건,시간,일,월,식' in ''.join(validation.itertext()):
+                        refs = validation.get('sqref') or next(
+                            e.text for e in validation.iter() if e.tag.rsplit('}', 1)[-1] == 'sqref')
+                        unit_ranges.append(MultiCellRange(refs))
+                last_item_row = 25 if structural else 24
+                assert all(any(f'C{row}' in refs for refs in unit_ranges)
+                           for row in range(10, last_item_row + 1)), unit_ranges
+                assert not any(f'C{last_item_row + 1}' in refs for refs in unit_ranges)
+                assert load_workbook(source, data_only=True)['견적서'][total_cell].value == expected_total
                 page.evaluate("window.acceptanceEditor.downloadAs('pdf')")
                 editor_frame = next(f for f in page.frames if '/spreadsheeteditor/' in f.url)
+                if structural:
+                    for combo in editor_frame.get_by_role('combobox').all():
+                        if combo.input_value() == '활성 시트':
+                            combo.click()
+                            break
+                    editor_frame.get_by_text('모든 시트', exact=True).click()
                 editor_frame.get_by_text('저장 및 다운로드', exact=True).click()
                 page.wait_for_function('window.acceptanceDownload && window.acceptanceDownload.url', timeout=60000)
                 pdf = document_office.download(page.evaluate('window.acceptanceDownload.url'), cfg)
@@ -163,17 +218,27 @@ def test_printable_form_app_save_pdf(tmp_path, monkeypatch, multipage):
                 with pymupdf.open(stream=pdf, filetype='pdf') as doc:
                     texts = [p.get_text() for p in doc]
                     print('PRINT_PDF', {'pages': len(doc), 'text': texts})
-                    if multipage:
+                    if multipage is True:
                         assert len(doc) > 1, 'Tall rows must produce multiple pages'
                         assert all('견적서' in t and '품목 / 내용' in t for t in texts), texts
+                    elif multipage == 'manual':
+                        assert len(doc) == 3, 'Manual break must split the form before the help sheet'
+                        assert all('견적서' in t and '품목 / 내용' in t for t in texts[:2])
+                        assert '66,000' in texts[1] and '사용 안내' in texts[2]
+                    elif structural:
+                        assert len(doc) == 2, 'Workbook must include the form and its help sheet'
+                        assert '사용 안내' in texts[1]
                     else:
                         assert len(doc) == 1, 'Selected form sheet must fit one A4 page'
                     assert '견적서' in texts[0] and '한글 거래처' in texts[0]
-                    assert '60,500' in ''.join(texts) and all('사용 안내' not in t for t in texts)
+                    assert f'{expected_total:,}' in ''.join(texts)
+                    if not structural:
+                        assert all('사용 안내' not in t for t in texts)
                     assert any(i['width'] == 96 and i['height'] == 32 for i in doc[0].get_image_info()), 'Fixture logo, including inline PDF images, must survive'
                     assert all(t.strip() for t in texts), 'No blank pages'
                     for index, text in enumerate(texts, 1):
-                        assert f'{index} 쪽' in text, 'PDF page number must match its actual position'
+                        if not structural or index == 1 or (multipage == 'manual' and index == 2):
+                            assert f'{index} 쪽' in text, 'PDF page number must match its actual position'
                         doc[index - 1].get_pixmap(matrix=pymupdf.Matrix(1.5, 1.5)).save(
                             str(tmp_path / f'form-{index}.png'))
                     doc[0].get_pixmap(matrix=pymupdf.Matrix(1.5, 1.5)).save(str(tmp_path / 'form.png'))
@@ -185,13 +250,21 @@ def test_printable_form_app_save_pdf(tmp_path, monkeypatch, multipage):
                                           capture_output=True, text=True, timeout=90)
                 assert reopened.returncode == 0, reopened.stderr
                 independent = load_workbook(out / source.name, data_only=True)['견적서']
-                assert independent['F27'].value == 60500
+                assert independent[total_cell].value == expected_total
                 independent_structure = load_workbook(out / source.name)['견적서']
-                assert independent_structure._images and independent_structure.protection.sheet
+                assert independent_structure._images
+                assert independent_structure.protection.sheet == (not structural)
                 assert independent_structure.data_validations.dataValidation
+                if structural:
+                    assert '$A$1:$F$32' in independent_structure.print_area
+                    assert [independent.cell(row, 1).value for row in range(10, 26)] == list(range(1, 17))
+                    assert all(any(f'C{row}' in rule.sqref for rule in independent_structure.data_validations.dataValidation)
+                               for row in range(10, 26))
+                    if multipage == 'manual':
+                        assert any(b.id == 19 and b.man for b in independent_structure.row_breaks.brk)
                 assert source.read_bytes() == saved_bytes, 'Independent consumer must not overwrite app output'
                 print('PRINT_ACCEPTANCE', {'source': str(source), 'pdf': str(tmp_path / 'form.pdf'),
-                                          'image': str(tmp_path / 'form.png'), 'total': 60500})
+                                          'image': str(tmp_path / 'form.png'), 'total': expected_total})
             finally:
                 print('APP_ALERTS', page.get_by_role('alert').all_text_contents())
                 for frame in page.frames:

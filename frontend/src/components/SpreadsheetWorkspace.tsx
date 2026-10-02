@@ -4,6 +4,7 @@ import { useRetryingLoad } from '../lib/use-retrying-load';
 import { SpreadsheetImport } from './spreadsheets/SpreadsheetImport';
 import { SpreadsheetEditor } from './spreadsheets/SpreadsheetEditor';
 import { SpreadsheetConversion } from './spreadsheets/SpreadsheetConversion';
+import { SpreadsheetRecovery } from './spreadsheets/SpreadsheetRecovery';
 import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import './spreadsheets/spreadsheet.css';
 
@@ -14,22 +15,25 @@ export function SpreadsheetWorkspace() {
   const client=useRef(sessionStorage.getItem('sheet-client')||crypto.randomUUID());
   sessionStorage.setItem('sheet-client',client.current);
   const capture=useRef<null|(()=>Promise<void>)>(null);
+  const [recovery,setRecovery]=useState(''),[editorGeneration,setEditorGeneration]=useState(0);
   const load=useCallback(async()=>{const r=await sheetRequest<{items:Document[]}>('');setRecent(r.items);},[]);
   const {retrying}=useRetryingLoad(load,{onFocus:true});
   const update=(d:SheetDetail)=>setTabs(rows=>rows.map(r=>r.document.id===d.document.id?d:r));
   const run=async(action:()=>Promise<void>)=>{if(busy)return;setBusy(true);setError('');try{await action();}catch(e){setError(String(e));}finally{setBusy(false);}};
   const activate=async(d:SheetDetail)=>{
     if(active&&active!==d.document.id&&capture.current)await capture.current();
-    const acquired=d.capabilities.edit_native?await sheetCommand<SheetDetail>(d.document.id,'sessions',{client_id:client.current}):d;
+    const fresh=await sheetRequest<SheetDetail>('/'+d.document.id);
+    if(fresh.capabilities.edit_native&&fresh.session&&(fresh.session.client_id!==client.current||fresh.session.state==='recovering')){setRecovery(fresh.document.id);return;}
+    const acquired=fresh.capabilities.edit_native?await sheetCommand<SheetDetail>(fresh.document.id,'sessions',{client_id:client.current}):fresh;
     setTabs(rows=>[...rows.filter(r=>r.document.id!==acquired.document.id),acquired]);setActive(acquired.document.id);await load();
   };
   const detail=tabs.find(d=>d.document.id===active);
   return <main className="spreadsheet-workspace">
     <header className="sheet-header"><strong>스프레드시트</strong><span>셀과 계산 · 내 파일</span>
-      <button onClick={()=>window.open(window.location.href,'_blank','noopener')}>새 창</button>
+      <button disabled={busy||!!recovery} onClick={()=>window.open(window.location.href,'_blank','noopener')}>새 창</button>
       <details><summary>지원 현황</summary><p>XLSX 직접 편집·원본 저장을 제공합니다. 전체 출시 인수는 진행 중이며 다른 형식과 매크로·외부 연결 보존은 아직 검증 중입니다.</p></details>
     </header>
-    <div className="sheet-open">
+    <div className="sheet-open" inert={!!recovery}>
       <label>로컬 파일 경로<input value={path} onChange={e=>setPath(e.target.value)} placeholder="/…/장부.xlsx"/></label>
       <button disabled={busy||!path} onClick={()=>void run(async()=>activate(await sheetRequest<SheetDetail>('/open','POST',{path})))}>파일 열기</button>
       <label className="sheet-upload">파일 가져오기<input type="file" accept=".xlsx,.xltx,.xlsm,.ods,.ots,.fods,.xls,.csv,.tsv,.numbers,.cell,.nxl" disabled={busy} onChange={e=>{
@@ -41,12 +45,14 @@ export function SpreadsheetWorkspace() {
       <button disabled={busy} onClick={()=>void run(async()=>activate(await sheetRequest<SheetDetail>('/new','POST',{args:{title,template}})))}>새로 만들기</button>
     </div>
     {error&&<p role="alert">{error}</p>}
-    <nav className="sheet-tabs" aria-label="통합문서 탭">{tabs.map(d=><button key={d.document.id} aria-pressed={active===d.document.id} disabled={busy} onClick={()=>void run(async()=>activate(d))}>{d.document.title}{d.session?.state==='draft'?' •':''}</button>)}</nav>
-    <div inert={busy} aria-busy={busy}>
+    {detail&&!recovery&&<button disabled={busy} onClick={()=>setRecovery(detail.document.id)}>연결·저장 복구</button>}
+    {recovery&&<SpreadsheetRecovery key={recovery} documentId={recovery} clientId={client.current} onCancel={()=>setRecovery('')} onRecovered={d=>{setTabs(rows=>[...rows.filter(r=>r.document.id!==d.document.id),d]);setActive(d.document.id);setEditorGeneration(g=>g+1);setRecovery('');void load();}}/>}
+    <nav className="sheet-tabs" inert={!!recovery} aria-label="통합문서 탭">{tabs.map(d=><button key={d.document.id} aria-pressed={active===d.document.id} disabled={busy} onClick={()=>void run(async()=>activate(d))}>{d.document.title}{d.session?.state==='draft'?' •':''}</button>)}</nav>
+    <div inert={busy||!!recovery} aria-busy={busy}>
     {detail&&<SpreadsheetConversion key={'conversion-'+detail.document.id} detail={detail} beforeConvert={async()=>{if(detail.capabilities.edit_native){if(!capture.current)throw new Error("편집기가 아직 준비되지 않았습니다");await capture.current();}}} onConverted={activate} onBusyChange={setBusy} disabled={busy}/>}
     {!detail?<section className="sheet-home"><h1>계산하고, 정리하고, 함께 검토하세요.</h1><p>파일을 열거나 템플릿으로 새 장부를 시작하세요.</p><h2>최근 통합문서</h2>{retrying&&<p role="status">연결을 기다리고 있습니다…</p>}{recent.map(d=><button key={d.id} onClick={()=>void run(async()=>activate(await sheetRequest<SheetDetail>(`/${d.id}`)))}>{d.title}<small>{d.source_uri}</small></button>)}</section>
       :!detail.capabilities.edit_native?<section className="sheet-home"><h2>{detail.document.title}</h2><p>{detail.capabilities.reason}</p><p>등록한 원본 파일은 변경하지 않았습니다.</p>{['csv','tsv'].includes(detail.document.source_format)&&<SpreadsheetImport detail={detail} onImported={activate}/>}</section>
-      :<SpreadsheetEditor key={detail.document.id} detail={detail} onChange={update} captureRef={capture}/>}
+      :<SpreadsheetEditor key={detail.document.id+':'+editorGeneration} detail={detail} onChange={update} captureRef={capture}/>}
     </div>
   </main>;
 }

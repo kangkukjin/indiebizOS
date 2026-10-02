@@ -64,10 +64,18 @@ class OfficeSessions:
                 return cached
             d, s = self._session(document_id, session_id, client_id, epoch, expected)
             self.validate_output(d, self.store.bytes(revision["blob"]))
+            previous = None
+            if s['blob'] != revision['blob'] and s['blob'] != d['source_sha256']:
+                previous = {'id': identifier(), 'document_id': document_id,
+                            'blob': s['blob'], 'created_at': time.time(),
+                            'is_recovery': True, 'label': '복구 직전 초안',
+                            'engine_epoch': s['engine_epoch']}
             s.update(blob=revision["blob"], engine_epoch=identifier(), session_revision=expected + 1,
                      state="draft", engine_closed=False)
             op["result"] = {"session": s}
             with self.store.connect() as conn:
+                if previous:
+                    self.store.put('engine_recovery', previous, conn)
                 self.store.put("session", s, conn)
                 self.store.put("operation", op, conn)
             return op["result"]
@@ -94,7 +102,7 @@ class OfficeSessions:
                     self.store.put("document", d, conn)
             return self.detail(document_id)
 
-    def reclaim(self, document_id, client_id, expected_epoch):
+    def reclaim(self, document_id, client_id, expected_epoch, expected_revision=None):
         """Explicit owner recovery fences the old window; it never overwrites bytes."""
         if not isinstance(client_id, str) or not 1 <= len(client_id) <= 128:
             raise ValueError("작성 창 식별자가 필요합니다")
@@ -105,6 +113,8 @@ class OfficeSessions:
             s = self.store.get("session", d["session_id"])
             if s["engine_epoch"] != expected_epoch:
                 raise DocumentConflict("이미 다른 창에서 세션을 복구했습니다")
+            if expected_revision is not None and s['session_revision'] != expected_revision:
+                raise DocumentConflict('복구 화면을 연 뒤 초안이 바뀌었습니다. 다시 확인하세요')
             s.update(client_id=client_id, engine_epoch=identifier())
             self.store.put("session", s)
             return self.detail(document_id)
@@ -269,7 +279,10 @@ class OfficeSessions:
                     sync_directory(path.parent)
                     results.append(self._finish_save(op) if op.get("kind") == "save" else self._finish_export(op))
                 else:
-                    op["status"] = "conflict" if path.exists() else "not_written"
+                    unchanged = (op.get('kind') == 'save' and path.is_file()
+                                 and not path.is_symlink()
+                                 and digest(read_bytes(path)) == op.get('base_sha256'))
+                    op["status"] = "not_written" if unchanged or not path.exists() else "conflict"
                     self.store.put("operation", op)
                     results.append({"state": op["status"], "draft_preserved": True})
             return {"items": results, "detail": self.detail(document_id)}

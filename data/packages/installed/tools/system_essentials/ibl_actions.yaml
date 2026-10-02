@@ -132,7 +132,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: '2026-10-02', impl: "1b34ef010f2e4fa1"}
+        path_audited: {at: '2026-10-02', impl: "2cae2513f73d275b"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -144,7 +144,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: '2026-10-02', impl: "1b34ef010f2e4fa1"}
+        path_audited: {at: '2026-10-02', impl: "2cae2513f73d275b"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -222,7 +222,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: '2026-10-02', impl: "1b34ef010f2e4fa1"}
+        path_audited: {at: '2026-10-02', impl: "2cae2513f73d275b"}
         target_key: path
       list:
         callable_contract:
@@ -777,12 +777,13 @@ nodes:
         side_effect: true
         # find(기본 op)는 실존 파일 경로 인자에 의존 — self:read 선례.
         exempt: 실존 xlsx 파일 경로 인자 필요(고정 fixture 부적합)
-        description: 엑셀 장부 행·범위 편집과 재계산. find/append/update, range/range_write, calculate(계산값 반환·원본 보존).
+        description: 엑셀 파일 작업과 활성 스프레드시트 세션. 기존 find/append/update·range/range_write·calculate 보존. open/snapshot/status/read/propose/apply/save/export/versions/restore/capabilities/recover는 앱 공통 서비스.
         group: file
-        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★append/update는 openpyxl의 보존 한계가 있으며 .xlsm 매크로는 보존. range: range(A1:C10)·sheet → 셀별 값/수식·sha256. range_write: expected_sha256·range·values(같은 크기 2차원 배열)·format(number_format/bold)·output(새 경로), 비대상 ZIP 파트 보존. calculate: path(xlsx)·output(새 경로)·timeout(1~120초), LibreOffice/SOFFICE_PATH 필요, 원래 수식/비대상 파트에 셀 계산 캐시만 반영. 공유/배열/외부 수식·매크로 재계산은 거절, errors와 recalculated 확인.'
+        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★append/update는 openpyxl의 보존 한계가 있으며 .xlsm 매크로는 보존. range: range(A1:C10)·sheet → 셀별 값/수식·sha256. range_write: expected_sha256·range·values(같은 크기 2차원 배열)·format(number_format/bold)·output(새 경로), 비대상 ZIP 파트 보존. calculate: path(xlsx)·output(새 경로)·timeout(1~120초), LibreOffice/SOFFICE_PATH 필요, 원래 수식/비대상 파트에 셀 계산 캐시만 반영. 공유/배열/외부 수식·매크로 재계산은 거절, errors와 recalculated 확인. 세션 op는 args 객체: document_id=open의 document.id. snapshot(document_id,operation_id)은 편집창에 최신 상태 요청, status(document_id,접수 반환 operation_id)로 완료 영수증의 result.snapshot.id를 확인. read(document_id,snapshot_id,sheet_id,range)는 고정 값·수식·계산 상태. propose(document_id,snapshot_id,sheet_id,range,values,kind=set_values/set_formulas). 세션 인자=document_id,session_id,client_id,epoch=engine_epoch,expected=session_revision. apply는 세션 인자+proposal_id+operation_id. save(document_id,operation_id,expected_revision)는 최신 편집기 포획 후 저장 접수. queued는 완료가 아니며 status를 읽는다. export는 세션 인자+operation_id+filename, 확인된 초안의 같은 형식 새 사본. restore는 세션 인자+revision_id+operation_id. versions/capabilities/recover는 document_id. 닫힌 파일의 저장 캐시는 기존 range로 읽으며 활성 미저장 값과 구별한다.'
         router: handler
         tool: sheet_op
         params:
+          args: object
           range: string
           values: array
           format: object
@@ -802,7 +803,23 @@ nodes:
           side_effect:
             find: false
             range: false
+            status: false
+            read: false
+            versions: false
+            capabilities: false
           values:
+            open: path로 자료 등록·상태 조회, 앱의 document.id가 공통 자료 ID
+            snapshot: 활성 편집창에 최신 스냅샷 요청 — args document_id·operation_id, queued는 미완료
+            status: args document_id·operation_id(접수 반환 ID)의 완료·실패·결과 조회
+            read: args document_id·snapshot_id·sheet_id·range로 고정된 값·수식·계산 상태 읽기
+            propose: 고정 스냅샷의 범위 값·수식 변경안 — args 상세는 target_description
+            apply: 세션·제안 버전을 검사하고 편집기에 변경 접수 — status 영수증 확인
+            save: 최신 편집 상태 포획 후 조건부 원본 저장 접수 — status 영수증 확인
+            export: 확인된 복구 초안의 같은 형식 사본 저장 — 세션 인자·operation_id·filename
+            versions: args document_id로 저장 버전 목록
+            restore: 이전 저장 버전을 초안으로 복구 — 세션 인자·revision_id·operation_id
+            capabilities: args document_id로 형식·엔진 능력 및 미검증 조회
+            recover: args document_id로 끊긴 원본 저장 결과 회수
             find: 조건으로 행 검색 — where 생략 시 전체, _row 포함
             append: 행 추가 — 기존 수식·서식 보존, "=수식" 문자열 지원
             update: where 로 찾은 행의 set 셀 수정 — where 필수
@@ -871,7 +888,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: '2026-10-02', impl: "1b34ef010f2e4fa1"}
+        path_audited: {at: '2026-10-02', impl: "2cae2513f73d275b"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -1871,13 +1888,16 @@ tool_json:
       properties:
         op: {type: string, description: inspect/edit}
   - name: sheet_op
-    description: 엑셀 장부 행/범위 편집·재계산. range_write/calculate는 새 결과 파일에 저장하며 원본을 보존.
+    description: 엑셀 파일 행/범위·재계산과 앱 활성 세션. snapshot/save/apply의 queued는 접수이며 status의 완료 영수증을 확인. 기존 range_write/calculate는 새 결과 파일이며 원본 보존.
     input_schema:
       type: object
       properties:
         op:
           type: string
-          description: find(기본)/append/update/range/range_write/calculate
+          description: find(기본)/append/update/range/range_write/calculate 및 open/snapshot/status/read/propose/apply/save/export/versions/restore/capabilities/recover
+        args:
+          type: object
+          description: 세션 op 인자. document_id는 open의 document.id, snapshot/save/apply는 operation_id로 접수 후 status 결과 확인.
         path:
           type: string
           description: 대상 xlsx/xlsm 파일 경로

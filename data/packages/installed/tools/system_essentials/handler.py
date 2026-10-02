@@ -35,33 +35,11 @@ DATA_PATH = Path(__file__).parent.parent.parent.parent
 SYSTEM_AI_STATE_PATH = DATA_PATH / "system_ai_state"
 
 
+_state_paths = _load_sibling("essentials_state_paths")
+
+
 def get_state_paths(project_path: str, agent_id: str = None) -> dict:
-    """에이전트별 상태 파일 경로 반환
-
-    - 시스템 AI: data/system_ai_state/
-    - 프로젝트 에이전트: projects/{project_id}/agent_{agent_id}_*.json
-    """
-    project_path = Path(project_path).resolve()
-
-    # 시스템 AI인지 확인 (project_path가 data 폴더 또는 "."인 경우)
-    if str(project_path).endswith("data") or project_path == Path(".").resolve():
-        state_dir = SYSTEM_AI_STATE_PATH
-        prefix = ""
-    else:
-        # 프로젝트 에이전트는 프로젝트 폴더에 상태 저장
-        state_dir = project_path
-        # 에이전트별 파일명 접두사 (agent_id가 있으면 사용)
-        prefix = f"agent_{agent_id}_" if agent_id else ""
-
-    # 폴더 생성
-    state_dir.mkdir(parents=True, exist_ok=True)
-
-    return {
-        "todo": state_dir / f"{prefix}todo_state.json",
-        "question": state_dir / f"{prefix}question_state.json",
-        "plan_mode": state_dir / f"{prefix}plan_mode_state.json",
-        "plan_file": state_dir / f"{prefix}current_plan.md"
-    }
+    return _state_paths.get_state_paths(project_path, agent_id, SYSTEM_AI_STATE_PATH)
 
 
 # 위험한 명령어 패턴 (정규식, 사용자 승인 필요)
@@ -626,6 +604,18 @@ _OP_DISPATCHERS = {
         "remove": _sib_op("webapp_registry", "op_remove"),
     },
     "sheet_op": {
+        "open": _sib_op("essentials_spreadsheet_workspace", "op_open"),
+        "snapshot": _sib_op("essentials_spreadsheet_workspace", "op_snapshot"),
+        "status": _sib_op("essentials_spreadsheet_workspace", "op_status"),
+        "read": _sib_op("essentials_spreadsheet_workspace", "op_read"),
+        "propose": _sib_op("essentials_spreadsheet_workspace", "op_propose"),
+        "apply": _sib_op("essentials_spreadsheet_workspace", "op_apply"),
+        "save": _sib_op("essentials_spreadsheet_workspace", "op_save"),
+        "export": _sib_op("essentials_spreadsheet_workspace", "op_export"),
+        "versions": _sib_op("essentials_spreadsheet_workspace", "op_versions"),
+        "restore": _sib_op("essentials_spreadsheet_workspace", "op_restore"),
+        "capabilities": _sib_op("essentials_spreadsheet_workspace", "op_capabilities"),
+        "recover": _sib_op("essentials_spreadsheet_workspace", "op_recover"),
         "find": _sib_op("sheet_ops", "op_find"),
         "append": _sib_op("sheet_ops", "op_append"),
         "update": _sib_op("sheet_ops", "op_update"),

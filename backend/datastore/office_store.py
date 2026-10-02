@@ -65,6 +65,32 @@ class OfficeStore:
             conn.rollback()
             conn.close()
 
+    @contextmanager
+    def legacy_write(self, path, expected_sha256):
+        """Fence in-place legacy tools against both office apps and stale reads."""
+        import time
+        path = Path(path).resolve()
+        with self.lock():
+            rows = [r for r in self.list('document') if r.get('source_uri') == str(path)]
+            if any(r.get('session_id') for r in rows):
+                raise ValueError('OFFICE_SESSION_CONFLICT: 열린 문서·시트의 직접 파일 쓰기는 차단됩니다. 활성 세션에서 수정하세요')
+            original = path.read_bytes()
+            if digest(original) != expected_sha256:
+                raise ValueError('OFFICE_SOURCE_CONFLICT: 파일을 읽은 뒤 원본이 바뀌었습니다')
+            if rows:
+                self.blob(original)
+            yield
+            if rows:
+                data = path.read_bytes()
+                blob = self.blob(data)
+                with self.connect() as conn:
+                    for row in rows:
+                        previous = row['revision_id']
+                        row.update(source_sha256=blob, revision_id=identifier())
+                        self.put('document', row, conn)
+                        self.put('revision', {'id':row['revision_id'], 'document_id':row['id'],
+                            'parent_revision_id':previous, 'blob':blob, 'created_at':time.time()}, conn)
+
     def put(self, kind, row, conn=None):
         if conn is None:
             with self.connect() as transaction:

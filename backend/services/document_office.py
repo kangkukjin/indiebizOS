@@ -84,6 +84,11 @@ def download(url, config):
 
 
 class OfficeEngine:
+    native_formats = NATIVE
+    namespace = 'documents'
+    editor_type = 'word'
+    plugin_guid = 'asc.{49DC913A-68D4-44AA-8A07-88107E1F9012}'
+
     def __init__(self, app):
         self.app, self.store = app, app.store
 
@@ -93,7 +98,7 @@ class OfficeEngine:
             raise DocumentUnsupported("로컬 문서 엔진을 시작하세요")
         with self.store.lock():
             d, s = self.app._session(document_id, session_id, client_id, epoch, expected)
-            if d["source_format"] not in NATIVE:
+            if d["source_format"] not in self.native_formats:
                 raise DocumentUnsupported("이 형식의 원형 편집 엔진이 없습니다")
             if s.get("engine_closed"):
                 s.update(engine_epoch=identifier(), engine_closed=False)
@@ -103,9 +108,9 @@ class OfficeEngine:
             if not s.get("engine_key") or s.get("key_epoch") != s["engine_epoch"]:
                 s.update(engine_key=identifier(), key_epoch=s["engine_epoch"], engine_base_blob=s["blob"])
             self.store.put("session", s)
-            base = cfg["callback_origin"].rstrip("/") + "/documents/engine-io/" + s["id"]
+            base = cfg["callback_origin"].rstrip("/") + "/" + self.namespace + "/engine-io/" + s["id"]
             token = s["ticket"]
-            options = {"documentType": "pdf" if d["source_format"] == "pdf" else "word",
+            options = {"documentType": "pdf" if d["source_format"] == "pdf" else self.editor_type,
                 "width": "100%", "height": "100%", "type": "desktop",
                 "document": {"fileType": d["source_format"], "key": s["engine_key"],
                     "title": d["title"], "url": base + "/content?ticket=" + token,
@@ -113,15 +118,15 @@ class OfficeEngine:
                 "editorConfig": {"lang": "ko", "mode": "edit",
                     "callbackUrl": base + "/callback?ticket=" + token,
                     "user": {"id": client_id, "name": "문서 작성자"},
-                    "customization": {"forcesave": False, "autosave": True,
+                    "customization": {"forcesave": False, "autosave": True, "macros": False, "macrosMode": "disable",
                         "close": {"visible": True}},
                     "coEditing": {"mode": "fast", "change": False}}}
             if d["source_format"] != "pdf":
                 from urllib.parse import urlencode
                 s["plugin_parent"] = browser_origin
                 self.store.put("session", s)
-                plugin = browser_api_origin.rstrip("/") + "/documents/engine-io/" + s["id"] + "/plugin/" + token + "/config.json"
-                options["editorConfig"]["plugins"] = {"autostart": ["asc.{49DC913A-68D4-44AA-8A07-88107E1F9012}"], "pluginsData": [plugin]}
+                plugin = browser_api_origin.rstrip("/") + "/" + self.namespace + "/engine-io/" + s["id"] + "/plugin/" + token + "/config.json"
+                options["editorConfig"]["plugins"] = {"autostart": [self.plugin_guid], "pluginsData": [plugin]}
             options["token"] = jwt.encode(options, cfg["secret"], algorithm="HS256")
             return {"url": cfg["url"], "config": options, "session": s, "plugin": {"channel": token, "origin": browser_api_origin}}
 
@@ -144,7 +149,7 @@ class OfficeEngine:
         cfg = settings()
         signed = body.get("token") or authorization.removeprefix("Bearer ")
         try:
-            claims = jwt.decode(signed, cfg["secret"], algorithms=["HS256"])
+            claims = jwt.decode(signed, cfg["secret"], algorithms=["HS256"], leeway=5)
         except (jwt.PyJWTError, TypeError) as exc:
             raise PermissionError("문서 엔진 서명이 올바르지 않습니다") from exc
         payload = claims.get("payload", claims)
@@ -162,7 +167,7 @@ class OfficeEngine:
         if body.get("filetype") != d["source_format"]:
             raise DocumentUnsupported("엔진 출력 형식이 원본과 다릅니다. 원본을 보존했습니다")
         data = download(body["url"], cfg)
-        validate(data, d["source_format"])
+        self.app.validate_output(d, data)
         with self.store.lock():
             d, s = self.ticket(session_id, token)  # Fence again after network I/O.
             signature = digest(json.dumps(body, sort_keys=True).encode())
@@ -177,8 +182,24 @@ class OfficeEngine:
                 self.store.put("session", s)
                 return {"error": 0}
             key = self.store.blob(data)
+            if status == 2 and s.get('captured_sequence', 0) and key != s['blob']:
+                # Terminal callbacks have no force-save sequence. Never let an
+                # unorderable close overwrite the last confirmed capture.
+                recovery = {'id': digest((session_id+':'+key).encode()), 'document_id':d['id'],
+                            'blob':key, 'created_at':time.time(), 'is_recovery':True,
+                            'engine_epoch':s['engine_epoch'], 'confirmed_blob':s['blob'], 'label':'엔진 종료 복구 후보'}
+                confirmed={**recovery,'id':digest((session_id+':confirmed:'+s['blob']).encode()),
+                           'blob':s['blob'],'label':'마지막 확인 초안'}
+                s.update(engine_closed=True, state='recovering',
+                         callbacks=(s.get('callbacks', [])+[signature])[-64:])
+                with self.store.connect() as conn:
+                    self.store.put('engine_recovery', recovery, conn)
+                    self.store.put('engine_recovery', confirmed, conn)
+                    self.store.put('session', s, conn)
+                    self.store.event(d['id'], {'type':'engine_recovery_available','recovery_id':recovery['id']}, conn)
+                return {'error':0}
             s.update(blob=key, session_revision=s["session_revision"] + 1,
-                     state="saved" if key == d["source_sha256"] else "draft",
+                     state="recovering" if s.get("state") == "recovering" else "saved" if key == d["source_sha256"] else "draft",
                      capture_id=body.get("userdata"), captured_at=time.time(),
                      capture_ids=(s.get("capture_ids", []) + [body.get("userdata")])[-64:],
                      captured_sequence=max(sequence, s.get("captured_sequence", 0)),

@@ -76,8 +76,8 @@ export function DocumentReferences({ detail, selection, disabled, onProposal }: 
     {refs.map(ref => <div key={ref.id}>
       <p>{ref.provenance.source_uri} · {ref.selector.sheet}!{ref.selector.range} · 버전 {ref.revision_id}</p>
       {ref.linked && <><button disabled={disabled || pending} onClick={() => void act(async () => {
-        const status = await documentRequest<{ source_changed: boolean }>(`/${id}/references/${ref.id}`);
-        setMessage(status.source_changed ? '원본이 변경됐습니다. 기존 표 유지 또는 선택 갱신이 가능합니다.' : '원본 변경 없음');
+        const status = await documentRequest<{ source_changed?: boolean; source_available?: boolean; source_error?: string }>(`/${id}/references/${ref.id}`);
+        setMessage(status.source_available === false ? '원본을 확인할 수 없습니다: '+(status.source_error || '이동·삭제·권한을 확인하세요') : status.source_changed ? '원본이 변경됐습니다. 기존 표 유지 또는 선택 갱신이 가능합니다.' : '원본 변경 없음');
       })}>원본 변경 확인</button><button disabled={disabled || pending || !selection} onClick={() => void refresh(ref)}>선택 구간 갱신 제안</button></>}
     </div>)}
     <label>강의 ID<input value={lecture} onChange={e => setLecture(e.target.value)} /></label>

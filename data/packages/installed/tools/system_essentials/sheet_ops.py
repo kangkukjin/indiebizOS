@@ -39,7 +39,12 @@ def _resolve(tool_input):
 def _open(p):
     import openpyxl
     # data_only=False(기본) — 수식 원문 보존이 이 액션의 존재 이유
-    return openpyxl.load_workbook(str(p), keep_vba=(p.suffix.lower() == ".xlsm"))
+    import io
+    from office_store import digest
+    data = p.read_bytes()
+    wb = openpyxl.load_workbook(io.BytesIO(data), keep_vba=(p.suffix.lower() == ".xlsm"))
+    wb._indiebiz_source_sha256 = digest(data)
+    return wb
 
 
 def _pick_sheet(wb, tool_input):
@@ -116,9 +121,13 @@ def _guard(tool_input, p):
 
 def _save(wb, p):
     """원자 교체 저장 — 살아있는 장부를 반쪽 파일로 만들지 않는다."""
-    tmp = p.with_name(p.name + ".tmp~")
-    wb.save(str(tmp))
-    os.replace(tmp, p)
+    from office_store import OfficeStore
+    import tempfile
+    with OfficeStore().legacy_write(p, wb._indiebiz_source_sha256):
+        with tempfile.TemporaryDirectory(prefix=".indiebiz-sheet-", dir=p.parent) as folder:
+            tmp = Path(folder) / p.name
+            wb.save(str(tmp))
+            os.replace(tmp, p)
 
 
 def _prep(tool_input, need_where=False):

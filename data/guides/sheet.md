@@ -120,3 +120,31 @@ LibreOffice가 임시 사본에서 실제로 계산하고 **계산 캐시만 원
   `success:false`, `recalculated:true`, `errors`로 셀별 오류를 알린다.
 - 출력 생략 시 `<원본명>_calculated.xlsx`. 이 기능이 저장한 파일을 range/read로 읽어야
   갱신된 캐시를 본다. PNG/PDF 화면 검수는 기존 engines:render가 담당한다.
+
+## 스프레드시트 앱의 세션 경로 (2026-10-02)
+
+독립 앱은 문서 앱과 같은 OfficeStore·자료 ID·작성 권한·저장/복구 서비스를 사용한다.
+구현·인수·적용 상태는 docs/SPREADSHEET_APP_DESIGN_2026_10_02.md의 구현 상태를 따른다.
+전체 출시 인수는 아직 완료되지 않았으며 현재 원본 편집·저장 경로는 XLSX다.
+
+- open의 document.id가 공통 자료 ID다. snapshot은 args의 document_id·operation_id로
+  활성 편집창에 최신 계산 스냅샷을 요청한다. queued는 접수이며 완료가 아니다.
+  반환 operation_id로 status를 읽고 completed와 result.snapshot을 확인한다.
+- read는 document_id·snapshot_id·sheet_id·range를 받아 고정된 셀 타입·수식·값·계산 상태를 낸다.
+  calc_status가 stale/error/unsupported이면 최신 정상 합계로 보고하지 않는다.
+- propose는 snapshot_id·sheet_id·range·values·kind로 데이터만 있는 변경안을 만든다.
+  kind는 set_values/set_formulas이며 apply는 세션 인자와 proposal_id·operation_id를 받는다.
+  엔진에서 현재 상태와 다시 대조하고, status의 영수증까지 확인한다. 임의 스크립트를 실행하지 않는다.
+- save는 document_id·operation_id·expected_revision으로 편집창의 최신 초안을 포획한 뒤
+  조건부 원본 저장을 요청한다. export는 확인된 초안의 같은 형식 사본이며 자동 최신 포획이 아니다.
+- versions는 저장 버전과 is_recovery=true인 엔진 종료 복구 후보를 구분한다. 순서를 확정할 수 없는
+  종료 콜백은 확인된 초안을 덮지 않는다. 사용자가 선택한 버전을 restore한 뒤 저장한다.
+- append/update는 활성 작성 세션과 같은 잠금을 거쳐 직접 쓰기를 거절하며 읽기 이후 파일 변경도 검사한다.
+  기존 range_write/calculate는 계속 새 결과 파일을 만든다.
+- 현재 AI 스냅샷은 통합문서 20,000셀, 단일 범위는 10,000셀, 파일은 25MB 상한이다.
+  직접 편집의 대규모 성능은 미측정이다. 대규모 과제를 완료했다고 주장하지 않는다.
+- CSV 가져오기는 인코딩·구분자·열 타입을 명시하고 전체 행을 검사한다. 기본 텍스트 타입은 코드·
+  긴 ID·수식처럼 보이는 문자열을 유지한다. 오류 행을 버리지 않고 사본 생성을 거절한다.
+
+정확한 인자는 describe로 확인하고 기존 파일 작업과 세션 작업의 결과를 구별해 조합한다.
+

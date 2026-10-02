@@ -1,4 +1,4 @@
-import { openPhoto, openPCManager, openLecture, openDocuments, openCoding, openExternalLink } from '../lib/surface-navigation';
+import { openPhoto, openPCManager, openLecture, openDocuments, openSpreadsheets, openCoding, openExternalLink } from '../lib/surface-navigation';
 /**
  * ActionDesktop — 런처의 "앱" 표면 (앱모드)
  *
@@ -72,6 +72,7 @@ const STATIC_DOMAINS: Domain[] = [
   },
   { id: 'lecture', icon: '🎓', label: '강의 만들기', onOpen: () => openLecture(), instruments: [] },
   { id: 'coding', icon: '💻', label: '코딩', onOpen: () => openCoding(), instruments: [] },
+  { id: 'spreadsheets', icon: '📊', label: '스프레드시트', onOpen: () => openSpreadsheets(), instruments: [] },
   { id: 'documents', icon: '📄', label: '문서', onOpen: () => openDocuments(), instruments: [] },
   {
     id: 'binnote', icon: '📝', label: '빈노트',

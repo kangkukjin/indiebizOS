@@ -348,6 +348,9 @@
     "services/report_html",
     "services/resource_links",
     "services/scheduler",
+    "services/spreadsheet_files",
+    "services/spreadsheet_imports",
+    "services/spreadsheet_workspace",
     "services/sync_exchange",
     "services/warehouse_adapters",
     "services/warehouse_feed",
@@ -389,6 +392,7 @@
     "surface/api_repair_continuation",
     "surface/api_report",
     "surface/api_scheduler",
+    "surface/api_spreadsheets",
     "surface/api_supervision",
     "surface/api_switches",
     "surface/api_system_ai",
@@ -527,8 +531,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 452,
-    "engine": 426,
+    "total": 456,
+    "engine": 430,
     "blocklist": 26
   }
 }

@@ -893,14 +893,26 @@
     },
     {
       "name": "sheet_op",
-      "description": "엑셀 장부 행/범위 편집·재계산. range_write/calculate는 새 결과 파일에 저장하며 원본을 보존.",
+      "description": "엑셀 파일 행/범위·재계산과 앱 활성 세션. snapshot/save/apply의 queued는 접수이며 status의 완료 영수증을 확인. 기존 range_write/calculate는 새 결과 파일이며 원본 보존.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "find(기본)/append/update/range/range_write/calculate",
+            "description": "find(기본)/append/update/range/range_write/calculate 및 open/snapshot/status/read/propose/apply/save/export/versions/restore/capabilities/recover",
             "enum": [
+              "open",
+              "snapshot",
+              "status",
+              "read",
+              "propose",
+              "apply",
+              "save",
+              "export",
+              "versions",
+              "restore",
+              "capabilities",
+              "recover",
               "find",
               "append",
               "update",
@@ -909,6 +921,10 @@
               "calculate"
             ],
             "default": "find"
+          },
+          "args": {
+            "type": "object",
+            "description": "세션 op 인자. document_id는 open의 document.id, snapshot/save/apply는 operation_id로 접수 후 status 결과 확인."
           },
           "path": {
             "type": "string",

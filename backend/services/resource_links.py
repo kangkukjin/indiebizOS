@@ -63,6 +63,19 @@ class ResourceLinks:
                "items": result["items"]}
         return ref
 
+    def sheet_snapshot(self, resource_id, snapshot_id, sheet_id, cell_range):
+        from spreadsheet_files import projection
+        row=self.resources.get(resource_id)
+        snap=self.store.get('sheet_snapshot',snapshot_id)
+        if snap['document_id']!=resource_id:
+            raise PermissionError('다른 통합문서의 스냅샷입니다')
+        result=projection(self.store.bytes(snap['blob']),sheet_id,cell_range)
+        return {'resource_id':resource_id,'revision_id':snap['revision_id'],'snapshot_id':snapshot_id,
+                'selector':{'kind':'sheet_range','sheet_id':sheet_id,'sheet':result['sheet']['name'],'range':cell_range},
+                'provenance':{'source_uri':row['source_uri'],'source_sha256':snap['blob'],
+                    'calculation_state':snap['calc_status'],'calc_revision':snap['calc_revision'],'unsaved':snap['unsaved']},
+                'items':[{**c,'value':c['error_code'] if c['error_code'] else c['effective_value']} for c in result['items']]}
+
     def _reference(self, reference_id):
         link = self.store.get("resource_link", reference_id)
         self.resources.get(link["target_id"])
@@ -76,8 +89,14 @@ class ResourceLinks:
     def status(self, reference_id):
         ref = self._reference(reference_id)
         source = self.resources.get(ref["resource_id"])
-        current = digest(read_bytes(Path(source["source_uri"])))
-        return {"reference": ref, "source_changed": current != ref["provenance"]["source_sha256"],
+        if ref.get("snapshot_id") and source.get("session_id"):
+            current = self.store.get("session", source["session_id"])["blob"]
+        else:
+            try:
+                current = digest(read_bytes(Path(source["source_uri"])))
+            except (OSError, ValueError) as exc:
+                return {"reference": ref, "source_available": False, "source_error": str(exc), "automatic_update": False}
+        return {"reference": ref, "source_available": True, "source_changed": current != ref["provenance"]["source_sha256"],
                 "observed_sha256": current, "automatic_update": False}
 
     @staticmethod
@@ -92,7 +111,8 @@ class ResourceLinks:
                 return "[계산값 없음]"
             if v is None:
                 return ""
-            return str(v).replace("\\", "\\\\").replace("|", "\\|").replace("\r", " ").replace("\n", " ")
+            from html import escape
+            return escape(str(v), quote=False).replace("\\", "\\\\").replace("|", "\\|").replace("\r", " ").replace("\n", " ")
         lines = ["| " + " | ".join(get_column_letter(c) for c in range(c1, c2 + 1)) + " |",
                  "| " + " | ".join("---" for _ in range(c1, c2 + 1)) + " |"]
         for r in range(r1, r2 + 1):

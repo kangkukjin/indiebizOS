@@ -25,7 +25,7 @@ export function OfficeDocumentEditor({ detail, onChange, captureRef }: { detail:
   const [pdfPages,setPdfPages] = useState('1');
   const [pdfAction,setPdfAction] = useState('rotate');
   const [filename, setFilename] = useState(`사본_${detail.document.title}`);
-  const [versions, setVersions] = useState<{ id: string; created_at: number }[]>([]);
+  const [versions, setVersions] = useState<{ id: string; created_at: number; label?: string }[]>([]);
   const [generation, setGeneration] = useState(0);
   const [selected, setSelected] = useState<{text:string;bookmark:string}|null>(null);
   const [instruction,setInstruction] = useState('문장의 뜻을 유지하며 자연스럽게 다듬어줘');
@@ -135,7 +135,7 @@ export function OfficeDocumentEditor({ detail, onChange, captureRef }: { detail:
       <button disabled={busy} onClick={save}>원본 저장</button>
       <button disabled={busy} onClick={() => void run(async () => { await capture(); setMessage('복구 초안 저장됨'); })}>작업 저장</button>
       <button disabled={busy} onClick={() => void run(async () => {
-        const result = await documentRequest<{ items: { id: string; created_at: number }[] }>(`/${detail.document.id}/versions`); setVersions(result.items);
+        const result = await documentRequest<{ items: { id: string; created_at: number; label?: string }[] }>(`/${detail.document.id}/versions`); setVersions(result.items);
       })}>버전 이력</button>
       <button disabled={busy} onClick={() => setGeneration(v => v + 1)}>편집기 다시 연결</button>
       <label>사본 파일명<input value={filename} onChange={e => setFilename(e.target.value)} /></label>
@@ -149,7 +149,7 @@ export function OfficeDocumentEditor({ detail, onChange, captureRef }: { detail:
       await documentCommand(detail.document.id, 'restore', { ...sessionArgs(s), operation_id: crypto.randomUUID(), revision_id: v.id });
       const next = await documentRequest<Detail>(`/${detail.document.id}`); current.current = next; onChange(next);
       setGeneration(g => g + 1); setVersions([]); setMessage('이전 버전을 초안으로 복구했습니다');
-    })}>{new Date(v.created_at * 1000).toLocaleString()} · 초안 복구</button>)}</details>}
+    })}>{new Date(v.created_at * 1000).toLocaleString()} · {v.label || '저장 버전'} · 초안 복구</button>)}</details>}
     {detail.document.source_format!=='pdf' && <details className="office-ai" open><summary>선택 수정 · AI</summary>
       <button disabled={busy||!pluginReady} onMouseDown={e=>e.preventDefault()} onClick={()=>void run(async()=>{
         const result=await pluginCall('select',{bookmark:'ib_'+crypto.randomUUID().replaceAll('-','').slice(0,24)});

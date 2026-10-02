@@ -119,43 +119,6 @@ class DocumentWorkspace(OfficeSessions):
             result["text"] = self.store.bytes(session["blob"]).decode(d["encoding"])
         return result
 
-    def acquire(self, document_id, client_id):
-        if not isinstance(client_id, str) or not 1 <= len(client_id) <= 128:
-            raise ValueError("작성 창 식별자가 필요합니다")
-        with self.store.lock():
-            d = self._doc(document_id)
-            if not self.capabilities(document_id)["edit_native"]:
-                raise DocumentUnsupported(self.capabilities(document_id)["reason"])
-            if d["session_id"]:
-                s = self.store.get("session", d["session_id"])
-                if s["client_id"] != client_id:
-                    raise DocumentConflict("다른 창이 작성 중입니다. 그 창에서 저장·닫기를 완료하세요")
-            else:
-                s = {"id": identifier(), "document_id": document_id, "client_id": client_id,
-                     "engine_id": "source" if d["encoding"] else "office", "engine_epoch": identifier(), "session_revision": 0,
-                     "blob": d["source_sha256"], "saved_blob": d["source_sha256"],
-                     "state": "saved", "created_at": time.time()}
-                d["session_id"] = s["id"]
-                with self.store.connect() as conn:
-                    self.store.put("session", s, conn)
-                    self.store.put("document", d, conn)
-            return self.detail(document_id)
-
-    def reclaim(self, document_id, client_id, expected_epoch):
-        """Explicit owner recovery fences the old window; it never overwrites bytes."""
-        if not isinstance(client_id, str) or not 1 <= len(client_id) <= 128:
-            raise ValueError("작성 창 식별자가 필요합니다")
-        with self.store.lock():
-            d = self._doc(document_id)
-            if not d["session_id"]:
-                raise DocumentConflict("복구할 활성 세션이 없습니다")
-            s = self.store.get("session", d["session_id"])
-            if s["engine_epoch"] != expected_epoch:
-                raise DocumentConflict("이미 다른 창에서 세션을 복구했습니다")
-            s.update(client_id=client_id, engine_epoch=identifier())
-            self.store.put("session", s)
-            return self.detail(document_id)
-
     def draft(self, document_id, session_id, client_id, epoch, expected, operation_id, text):
         owner()
         payload = ["draft", session_id, client_id, epoch, expected, text]
@@ -298,30 +261,3 @@ class DocumentWorkspace(OfficeSessions):
                 self.store.event(document_id, {"type": "proposal_applied", "proposal_id": proposal_id,
                     "operation_id": operation_id, "session_revision": s["session_revision"]}, conn)
             return result
-
-    def versions(self, document_id):
-        self._doc(document_id)
-        return [r for r in self.store.list("revision") if r["document_id"] == document_id]
-
-    def restore(self, document_id, revision_id, session_id, client_id, epoch, expected, operation_id):
-        d = self._doc(document_id)
-        revision = self.store.get("revision", revision_id)
-        if revision["document_id"] != document_id:
-            raise PermissionError("다른 문서의 버전입니다")
-        if d["encoding"]:
-            return self.draft(document_id, session_id, client_id, epoch, expected, operation_id,
-                              self.store.bytes(revision["blob"]).decode(d["encoding"]))
-        with self.store.lock():
-            op, cached = self._operation(document_id, operation_id,
-                ["restore", revision_id, session_id, client_id, epoch, expected])
-            if cached is not None:
-                return cached
-            d, s = self._session(document_id, session_id, client_id, epoch, expected)
-            self.validate_output(d, self.store.bytes(revision["blob"]))
-            s.update(blob=revision["blob"], engine_epoch=identifier(), session_revision=expected + 1,
-                     state="draft", engine_closed=False)
-            op["result"] = {"session": s}
-            with self.store.connect() as conn:
-                self.store.put("session", s, conn)
-                self.store.put("operation", op, conn)
-            return op["result"]

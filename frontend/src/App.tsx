@@ -21,6 +21,7 @@ import { PromptCompositionView } from './components/PromptCompositionView';
 import { GuidesView } from './components/GuidesView';
 import { CodingWorkspace } from './components/CodingWorkspace';
 import { DocumentWorkspace } from './components/DocumentWorkspace';
+import { SpreadsheetWorkspace } from './components/SpreadsheetWorkspace';
 import { ExternalUsersView } from './components/ExternalUsersView';
 import { VocabularyView } from './components/VocabularyView';
 import { installVocabularySync } from './components/vocabulary/window-sync';
@@ -51,6 +52,7 @@ interface HashRoute {
   isGuides: boolean;
   isCoding: boolean;
   isDocuments: boolean;
+  isSpreadsheets: boolean;
   isExternalUsers: boolean;
   vocabularyFolder: string | null;
 }
@@ -62,7 +64,7 @@ const EMPTY_ROUTE: HashRoute = {
   isPCManager: false, pcManagerPath: null,
   isPhotoManager: false, photoManagerPath: null,
   isSystemAI: false, isLectureWorkspace: false, lectureId: null,
-  isPromptComposition: false, isGuides: false, isExternalUsers: false, isCoding: false, isDocuments: false,
+  isPromptComposition: false, isGuides: false, isExternalUsers: false, isCoding: false, isDocuments: false, isSpreadsheets: false,
   vocabularyFolder: null,
 };
 
@@ -83,6 +85,7 @@ function parseHash(hash: string): HashRoute {
   if (hash === '#/external-users') return { ...EMPTY_ROUTE, isExternalUsers: true };
   if (hash === '#/guides') return { ...EMPTY_ROUTE, isGuides: true };
   if (hash === '#/coding') return { ...EMPTY_ROUTE, isCoding: true };
+  if (hash === '#/spreadsheets') return { ...EMPTY_ROUTE, isSpreadsheets: true };
   if (hash === '#/documents') return { ...EMPTY_ROUTE, isDocuments: true };
   const vocabularyMatch = hash.match(/^#\/vocabulary(?:\/([A-Za-z0-9_-]{1,128}))?$/);
   if (vocabularyMatch) return { ...EMPTY_ROUTE, vocabularyFolder: vocabularyMatch[1] || 'desktop' };
@@ -135,7 +138,7 @@ function App() {
     isCommunity, isMessenger, isBusiness,
     isPCManager, pcManagerPath, isPhotoManager, photoManagerPath,
     isSystemAI, isLectureWorkspace, lectureId,
-    isPromptComposition, isGuides, isExternalUsers, vocabularyFolder, isCoding, isDocuments,
+    isPromptComposition, isGuides, isExternalUsers, vocabularyFolder, isCoding, isDocuments, isSpreadsheets,
   } = route;
 
   useEffect(installVocabularySync, []);
@@ -233,6 +236,7 @@ function App() {
   if (vocabularyFolder) return <VocabularyView key={vocabularyFolder} folderId={vocabularyFolder} />;
   if (isCoding) return <CodingWorkspace />;
   if (isDocuments) return <DocumentWorkspace />;
+  if (isSpreadsheets) return <SpreadsheetWorkspace />;
 
   // 강의 만들기 워크스페이스 창인 경우
   if (isLectureWorkspace) {

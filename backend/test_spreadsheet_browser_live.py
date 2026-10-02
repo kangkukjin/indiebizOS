@@ -175,7 +175,7 @@ def test_app_snapshot_proposal_save(tmp_path,monkeypatch):
                 from spreadsheet_formats import convert
                 from test_spreadsheet_workspace import args as session_args
                 # Template conversions use the same real engine and source fences.
-                for fmt in ('xltx','ots'):
+                for fmt in ('xltx','ots','fods'):
                     doc=workspace.detail(copied['id'])
                     converted=convert(workspace,copied['id'],fmt,doc['document']['revision_id'],**session_args(doc['session']))
                     template=converted['document']
@@ -209,14 +209,50 @@ def test_app_snapshot_proposal_save(tmp_path,monkeypatch):
                 assert formulas.active['D2'].value=='=B2*C2' and values.active['D2'].value==234.5
                 assert formulas.active['A2'].value=='00123' and formulas.active['A3'].value=='=1+1'
                 assert formulas.active['A3'].data_type=='s' and values.active['B3'].value is False
-                # The converter changes a boolean literal into =FALSE(). This is
-                # a reported loss, not a pass of the literal-type preservation gate.
-                assert formulas.active['B3'].value=='=FALSE()'
-                assert odf_copy['provenance']['loss_report']['changes']
-                assert returned['provenance']['loss_report']['changes']
+                assert formulas.active['B3'].value is False and formulas.active['B3'].data_type=='b'
+                assert odf_copy['provenance']['loss_report']['boolean_literals_restored']==1
+                assert not odf_copy['provenance']['loss_report']['changes']
+                assert not returned['provenance']['loss_report']['changes']
+                flat_copy=convert(workspace,original['id'],'fods',original['revision_id'])['document']
+                flat_returned=convert(workspace,flat_copy['id'],'xlsx',flat_copy['revision_id'])['document']
+                flat_book=load_workbook(flat_returned['source_uri'])
+                assert flat_book.active['B3'].value is False and flat_book.active['B3'].data_type=='b'
+                assert flat_book.active['A2'].value=='00123' and flat_book.active['A3'].value=='=1+1'
+                assert flat_book.active['A3'].data_type=='s' and flat_book.active['D2'].value=='=B2*C2'
+                assert len(flat_book.active._charts)==1 and flat_book['보조']['A1'].value=='한글 보존'
                 assert len(formulas.active._charts)==1 and formulas['보조']['A1'].value=='한글 보존'
                 assert Path(original['source_uri']).read_bytes()==buffer.getvalue()
-                print('ACTIVE_CONVERSION: XLSX/ODS and XLTX/OTS copies; LibreOffice reopening; text, formula 234.5, chart and 2 sheets; boolean representation loss reported; original unchanged')
+                page.get_by_label('로컬 파일 경로').fill(original['source_uri'])
+                page.get_by_role('button',name='파일 열기',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_have_text('편집 준비 완료',timeout=60000)
+                page.get_by_label('변환 사본 형식',exact=True).select_option('fods')
+                page.get_by_role('button',name='변환 사본 만들기',exact=True).click()
+                expect(page.get_by_role('status').filter(has_text='XLSX → FODS')).to_be_visible(timeout=60000)
+                ui_flat=next(d for d in workspace.list() if d['source_format']=='fods' and
+                             d.get('provenance',{}).get('resource_id')==original['id'] and d['id']!=flat_copy['id'])
+                page.get_by_label('변환 사본 형식',exact=True).select_option('xlsx')
+                page.get_by_role('button',name='변환 사본 만들기',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_have_text('편집 준비 완료',timeout=60000)
+                ui_returned=next(d for d in workspace.list() if d.get('provenance',{}).get('resource_id')==ui_flat['id'])
+                expect(page.get_by_role('button',name='계산·스냅샷',exact=True)).to_be_enabled(timeout=20000)
+                page.get_by_label('범위',exact=True).fill('B2')
+                page.get_by_role('button',name='최신 범위 읽기',exact=True).click()
+                expect(page.locator('.sheet-review pre').first).to_contain_text('B2',timeout=30000)
+                page.get_by_text('직접 변경안 작성',exact=True).click()
+                page.get_by_label('행·열 값 (JSON)').fill('[[8]]')
+                page.get_by_role('button',name='변경안 만들기',exact=True).click()
+                page.get_by_role('button',name='변경안 적용',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_contain_text('변경 묶음 적용됨',timeout=30000)
+                page.get_by_role('button',name='원본 저장',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_have_text('저장됨 · 원본 파일 기록 확인',timeout=60000)
+                edited=load_workbook(ui_returned['source_uri'])
+                assert edited.active['B3'].value is False and edited.active['B3'].data_type=='b'
+                assert edited.active['B2'].value==8 and edited.active['D2'].value=='=B2*C2'
+                assert load_workbook(ui_returned['source_uri'],data_only=True).active['D2'].value==268
+                assert edited.active['A3'].value=='=1+1' and edited.active['A3'].data_type=='s'
+                assert len(edited.active._charts)==1 and edited['보조']['A1'].value=='한글 보존'
+                assert Path(original['source_uri']).read_bytes()==buffer.getvalue()
+                print('ACTIVE_CONVERSION: XLSX/ODS/FODS and XLTX/OTS copies; LibreOffice reopening; literal boolean type preserved; text, formula 234.5, chart and 2 sheets; original unchanged; FODS UI roundtrip and later edit/save recalculated 268')
             except Exception:
                 page.screenshot(path=str(tmp_path/'spreadsheet-failure.png'))
                 print('UI',page.locator('body').inner_text()[-6000:])

@@ -54,7 +54,8 @@ def activate(range_exports=False, formats=False):
         ]
     if formats:
         base.PATHS = [
-            'backend/services/spreadsheet_formats.py', 'backend/surface/api_spreadsheets.py',
+            'backend/services/spreadsheet_formats.py', 'backend/services/spreadsheet_conversion_types.py',
+            'backend/surface/api_spreadsheets.py',
             'backend/test_spreadsheet_formats.py', 'backend/test_spreadsheet_browser_live.py',
             'frontend/src/components/SpreadsheetWorkspace.tsx',
             'frontend/src/components/spreadsheets/SpreadsheetConversion.tsx',
@@ -69,7 +70,7 @@ def activate(range_exports=False, formats=False):
     original_run = base.run
     def run(command, **kwargs):
         if command[:2] == ['git', 'commit']:
-            command[-1] = ('Add guarded spreadsheet format conversion copies' if formats else
+            command[-1] = ('Preserve boolean literals across spreadsheet formats and add FODS copies' if formats else
                            'Export pinned spreadsheet ranges with explicit text and calculation policies'
                            if range_exports else 'Preserve spreadsheet edits during cancellation and import refresh')
         return original_run(command, **kwargs)
@@ -87,9 +88,10 @@ def main():
     env = dict(os.environ, INDIEBIZ_OFFICE_LIVE_TEST='1')
     env['PYTHONPATH'] = str(ROOT / 'backend')
     commands = {
+        'format-live': [[sys.executable, '-m', 'pytest', 'backend/test_spreadsheet_formats.py', '-m', 'system', '-s']],
         'unit': [[sys.executable, '-m', 'pytest', 'backend/test_spreadsheet_changes.py',
                   'backend/test_spreadsheet_workspace.py', 'backend/test_spreadsheet_imports.py',
-                  'backend/test_spreadsheet_formats.py']],
+                  'backend/test_spreadsheet_formats.py', '-m', 'not system']],
         'build': [['npx', '--no-install', 'tsc', '-p', 'tsconfig.app.json'], ['npx', '--no-install', 'vite', 'build']],
         'live': [[sys.executable, '-m', 'pytest', 'backend/test_spreadsheet_browser_live.py', '-s']],
         'scale': [[sys.executable, '-m', 'pytest', 'backend/test_spreadsheet_scale_live.py', '-s']],

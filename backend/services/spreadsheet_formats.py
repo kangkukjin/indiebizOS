@@ -23,7 +23,7 @@ from document_creation import import_bytes
 from office_sessions import DocumentConflict, DocumentUnsupported, read_bytes
 from office_store import identifier
 
-FORMATS = {'xlsx', 'xltx', 'ods', 'ots'}
+FORMATS = {'xlsx', 'xltx', 'ods', 'ots', 'fods'}
 ODF = 'urn:oasis:names:tc:opendocument:xmlns:'
 XLINK = '{http://www.w3.org/1999/xlink}href'
 MIMES = {'ods': 'application/vnd.oasis.opendocument.spreadsheet',
@@ -33,7 +33,7 @@ MIMES = {'ods': 'application/vnd.oasis.opendocument.spreadsheet',
 def inspect(data, format):
     """Reject active/external input before the engine sees any conversion bytes."""
     if format not in FORMATS:
-        raise DocumentUnsupported('변환 사본은 XLSX·XLTX·ODS·OTS만 지원합니다')
+        raise DocumentUnsupported('변환 사본은 XLSX·XLTX·ODS·OTS·FODS만 지원합니다')
     if format in {'xlsx', 'xltx'}:
         meta = spreadsheet_files.validate(data)
         with spreadsheet_files.archive(data) as archive:
@@ -54,48 +54,86 @@ def inspect(data, format):
                             boolean_formulas += 1
         return {'sheets': len(meta['sheets']), 'date_system': meta['date_system'],
                 'boolean_literal_nodes': boolean_literals, 'boolean_formula_nodes': boolean_formulas}
+    if format == 'fods':
+        from office_sessions import MAX_BYTES
+        if len(data) > MAX_BYTES:
+            raise DocumentUnsupported('스프레드시트 크기 상한은 25MB입니다')
+        root = fromstring(data)
+        office = '{'+ODF+'office:1.0}'
+        if root.tag != office+'document' or root.get(office+'mimetype') != MIMES['ods']:
+            raise DocumentUnsupported('올바른 FODS 통합문서가 아닙니다')
+        return _inspect_odf({'content.xml': root}, {'content.xml'}, flat=True)
     with spreadsheet_files.archive(data) as archive:
         names = set(archive.namelist())
+        if not {'mimetype', 'content.xml', 'META-INF/manifest.xml'} <= names:
+            raise DocumentUnsupported('ODF 통합문서 구조가 불완전합니다')
         if archive.read('mimetype').decode('ascii').strip() != MIMES[format]:
             raise DocumentUnsupported('확장자와 ODF 형식이 다릅니다')
-        if not {'content.xml', 'META-INF/manifest.xml'} <= names:
-            raise DocumentUnsupported('ODF 통합문서 구조가 불완전합니다')
-        sheets = boolean_literals = boolean_formulas = 0
         for name in names:
             # vj-ok: archive part security classification, not cell comparison.
             if any(part in name.lower().split('/') for part in ('scripts', 'basic')):
                 raise DocumentUnsupported('매크로가 있는 ODF는 변환하지 않습니다')
-            if not name.endswith('.xml'):
+        parts = {name: fromstring(archive.read(name)) for name in names if name.endswith('.xml')}
+    return _inspect_odf(parts, names)
+
+
+def _empty_script_library(element):
+    """LibreOffice emits an inert Basic library container even in macro-free FODS."""
+    script = '{'+ODF+'script:1.0}'
+    return (element.tag == '{'+ODF+'office:1.0}script'
+            and element.attrib == {script+'language': 'ooo:Basic'}
+            and not (element.text or '').strip() and len(element) == 1
+            and element[0].tag == '{http://openoffice.org/2004/office}libraries'
+            and not element[0].attrib and len(element[0]) == 0
+            and not (element[0].text or '').strip()
+            and not (element[0].tail or '').strip())
+
+def _flat_chart_parent(element, parents):
+    """A nested ODF chart's '..' refers to its in-document drawing host, not a file."""
+    if element.tag != '{'+ODF+'chart:1.0}chart':
+        return False
+    for tag in ('office:1.0}chart', 'office:1.0}body',
+                'office:1.0}document', 'drawing:1.0}object'):
+        element = parents.get(element)
+        if element is None or element.tag != '{'+ODF+tag:
+            return False
+    return True
+
+def _inspect_odf(parts, names, flat=False):
+    sheets = boolean_literals = boolean_formulas = 0
+    for name, root in parts.items():
+        parents = {child: parent for parent in root.iter() for child in parent} if flat else {}
+        for element in root.iter():
+            local = element.tag.rsplit('}', 1)[-1]
+            if local == 'script' and _empty_script_library(element):
                 continue
-            root = fromstring(archive.read(name))
-            for element in root.iter():
-                local = element.tag.rsplit('}', 1)[-1]
-                if local in {'script', 'event-listener', 'encryption-data',
-                             'dde-link', 'database-source-sql', 'database-source-query',
-                             'database-source-table', 'object-ole'}:
-                    raise DocumentUnsupported('외부 연결·스크립트·암호화 ODF는 변환하지 않습니다')
-                href = element.get(XLINK)
-                if href and not href.startswith('#'):
-                    link = urlsplit(href)
-                    target = posixpath.normpath(posixpath.join(posixpath.dirname(name), unquote(link.path)))
-                    # Embedded charts refer to their containing workbook as '..'.
-                    # Resolve within the package, including its root directory.
-                    internal = target == '.' or target in names or any(n.startswith(target+'/') for n in names)
-                    if link.scheme or link.netloc or target == '..' or target.startswith(('/', '../')) or not internal:
-                        raise DocumentUnsupported(f'외부 참조가 있는 ODF는 변환하지 않습니다 ({name}: {href})')
-                formula = element.get('{'+ODF+'table:1.0}formula', '')
-                if name == 'content.xml' and element.get('{'+ODF+'office:1.0}value-type') == 'boolean':
-                    if formula:
-                        boolean_formulas += 1
-                    else:
-                        boolean_literals += 1
-                if re.search(r'WEBSERVICE|DDE\s*\(|IMAGE\s*\(|https?:|file:|\|', formula, re.I):
-                    raise DocumentUnsupported('외부 자원 수식은 변환하지 않습니다')
-            if name == 'content.xml':
-                sheets = len(root.findall('{'+ODF+'office:1.0}body/{'+ODF+
-                                          'office:1.0}spreadsheet/{'+ODF+'table:1.0}table'))
-        if not sheets:
-            raise DocumentUnsupported('ODF 시트를 찾지 못했습니다')
+            if local in {'script', 'event-listener', 'encryption-data',
+                         'dde-link', 'database-source-sql', 'database-source-query',
+                         'database-source-table', 'object-ole'}:
+                raise DocumentUnsupported(f'외부 연결·스크립트·암호화 ODF는 변환하지 않습니다 ({local})')
+            href = element.get(XLINK)
+            if href and not href.startswith('#') and not (
+                    flat and href == '..' and _flat_chart_parent(element, parents)):
+                link = urlsplit(href)
+                target = posixpath.normpath(posixpath.join(posixpath.dirname(name), unquote(link.path)))
+                # Embedded charts may reference the containing packaged workbook.
+                # A flat document has no sibling package parts to resolve.
+                internal = target == '.' or target in names or any(n.startswith(target+'/') for n in names)
+                if flat or link.scheme or link.netloc or target == '..' or target.startswith(('/', '../')) or not internal:
+                    raise DocumentUnsupported(f'외부 참조가 있는 ODF는 변환하지 않습니다 ({name}: {href})')
+            formula = element.get('{'+ODF+'table:1.0}formula', '')
+            if name == 'content.xml' and element.get('{'+ODF+'office:1.0}value-type') == 'boolean':
+                if formula:
+                    boolean_formulas += 1
+                else:
+                    boolean_literals += 1
+            if re.search(r'WEBSERVICE|DDE\s*\(|IMAGE\s*\(|https?:|file:|\|', formula, re.I):
+                raise DocumentUnsupported('외부 자원 수식은 변환하지 않습니다')
+        if name == 'content.xml':
+            sheets = len(root.findall('{'+ODF+'office:1.0}body/{'+ODF+
+                                      'office:1.0}spreadsheet/{'+ODF+'table:1.0}table'))
+    if not sheets:
+        raise DocumentUnsupported('ODF 시트를 찾지 못했습니다')
     return {'sheets': sheets, 'date_system': 'unverified',
             'boolean_literal_nodes': boolean_literals, 'boolean_formula_nodes': boolean_formulas}
 
@@ -103,9 +141,9 @@ def inspect(data, format):
 def _libreoffice(data, source_format, output_format):
     executable = shutil.which('soffice')
     if not executable:
-        raise DocumentUnsupported('ODS·OTS 변환에는 LibreOffice가 필요합니다')
+        raise DocumentUnsupported('ODS·OTS·FODS 변환에는 LibreOffice가 필요합니다')
     filters = {'xlsx': 'Calc MS Excel 2007 XML', 'xltx': 'Calc MS Excel 2007 XML Template',
-               'ods': 'calc8', 'ots': 'calc8_template'}
+               'ods': 'calc8', 'ots': 'calc8_template', 'fods': 'OpenDocument Spreadsheet Flat XML'}
     with tempfile.TemporaryDirectory(prefix='sheet-convert-') as folder:
         root = Path(folder)
         profile = root/'profile'; (profile/'user').mkdir(parents=True)
@@ -128,7 +166,7 @@ def _libreoffice(data, source_format, output_format):
 def _convert_bytes(app, document_id, data, source_format, output_format):
     # The installed ONLYOFFICE ODF converter emits invalid numFmts attributes.
     # Use a separate, explicitly reported conversion copy, never editor caches.
-    if {source_format, output_format} & {'ods', 'ots'}:
+    if {source_format, output_format} & {'ods', 'ots', 'fods'}:
         return _libreoffice(data, source_format, output_format)
     cfg = document_office.settings()
     if not cfg:
@@ -166,7 +204,7 @@ def content(app, conversion_id, ticket):
 def convert(app, document_id, output_format, expected_revision, session_id=None,
             client_id=None, epoch=None, expected=None):
     if output_format not in FORMATS:
-        raise DocumentUnsupported('변환 사본은 XLSX·XLTX·ODS·OTS만 지원합니다')
+        raise DocumentUnsupported('변환 사본은 XLSX·XLTX·ODS·OTS·FODS만 지원합니다')
     with app.store.lock():
         document = app._doc(document_id)
         if document['revision_id'] != expected_revision:
@@ -182,18 +220,22 @@ def convert(app, document_id, output_format, expected_revision, session_id=None,
         source_info = inspect(data, source_format)
     converted = data if source_format == output_format else _convert_bytes(
         app, document_id, data, source_format, output_format)
+    inspect(converted, output_format)
+    from spreadsheet_conversion_types import preserve_booleans
+    converted, repaired_booleans = preserve_booleans(data, source_format, converted, output_format)
     output_info = inspect(converted, output_format)
     if source_info['sheets'] != output_info['sheets']:
         raise DocumentUnsupported('변환 중 시트 수가 달라졌습니다. 결과를 등록하지 않았습니다')
     # Conversion chains retain earlier known losses as well as this step's facts.
     changes = list(document.get('provenance', {}).get('loss_report', {}).get('changes', []))
-    if source_info['boolean_literal_nodes'] != output_info['boolean_literal_nodes']:
-        changes.append('불리언 상수 기록 수가 달라졌습니다. TRUE/FALSE 수식으로 바뀔 수 있어 입력 타입 보존을 보장하지 않습니다.')
+    # Literal preservation is checked by logical sheet/cell coordinates above.
+    # ODF repeat compression means XML node counts are not cell counts.
     report = {'status': 'partial', 'changes': changes, 'source_format': source_format, 'output_format': output_format,
               'source': source_info, 'output': output_info, 'sheet_count_preserved': True,
+              'boolean_literals_restored': repaired_booleans, 'source_boolean_literals_preserved': True,
               'unverified': ['셀 타입·수식 의미', '피벗·차트·이름·유효성', '서식·인쇄·날짜 체계'],
               'engine': ('copy' if source_format == output_format else 'LibreOffice'
-                         if {source_format, output_format} & {'ods', 'ots'} else 'ONLYOFFICE'),
+                         if {source_format, output_format} & {'ods', 'ots', 'fods'} else 'ONLYOFFICE'),
               'calculation': '변환 엔진에서 재계산될 수 있습니다. 활성 편집기의 계산값을 대체하지 않습니다.',
               'message': '변환 사본입니다. 원본은 보존했습니다. 수식·차트·서식·인쇄를 비교하세요.'}
     with app.store.lock():

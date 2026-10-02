@@ -158,6 +158,65 @@ def test_app_snapshot_proposal_save(tmp_path,monkeypatch):
                 recipe=workspace.store.get('sheet_import',imported['import']['id'])
                 assert recipe['rows_imported']==2 and len(recipe['runs'])==1
                 print('ACTIVE_REFRESH: recorded types reapplied, shortened area cleared, ID preserved, source retained')
+                original_bytes=Path(imported_path).read_bytes()
+                page.get_by_label('변환 사본 형식',exact=True).select_option('ods')
+                page.get_by_role('button',name='변환 사본 만들기',exact=True).click()
+                expect(page.get_by_role('status').filter(has_text='XLSX → ODS')).to_be_visible(timeout=60000)
+                ods_doc=next(d for d in workspace.list() if d['source_format']=='ods')
+                assert Path(imported_path).read_bytes()==original_bytes
+                assert ods_doc['provenance']['original_preserved'] is True
+                page.get_by_label('변환 사본 형식',exact=True).select_option('xlsx')
+                page.get_by_role('button',name='변환 사본 만들기',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_have_text('편집 준비 완료',timeout=60000)
+                copied=next(d for d in workspace.list() if d.get('provenance',{}).get('resource_id')==ods_doc['id'])
+                book=load_workbook(copied['source_uri'])
+                assert book.active['A2'].value=='00123' and book.active['A2'].data_type=='s'
+                assert book.active['B2'].value==9
+                from spreadsheet_formats import convert
+                from test_spreadsheet_workspace import args as session_args
+                # Template conversions use the same real engine and source fences.
+                for fmt in ('xltx','ots'):
+                    doc=workspace.detail(copied['id'])
+                    converted=convert(workspace,copied['id'],fmt,doc['document']['revision_id'],**session_args(doc['session']))
+                    template=converted['document']
+                    reopened=convert(workspace,template['id'],'xlsx',template['revision_id'])
+                    assert load_workbook(reopened['document']['source_uri']).active['A2'].value=='00123'
+                import subprocess
+                independent=tmp_path/'independent-conversion';independent.mkdir()
+                result=subprocess.run(['soffice','-env:UserInstallation='+(tmp_path/'conversion-profile').as_uri(),
+                    '--headless','--convert-to','xlsx','--outdir',str(independent),ods_doc['source_uri']],
+                    capture_output=True,text=True,timeout=90)
+                assert result.returncode==0,result.stderr
+                reopened=load_workbook(independent/(Path(ods_doc['source_uri']).stem+'.xlsx'))
+                assert reopened.active['A2'].value=='00123' and reopened.active['B2'].value==9
+                assert Path(imported_path).read_bytes()==original_bytes
+                from openpyxl import Workbook
+                from openpyxl.chart import BarChart, Reference
+                from document_creation import import_bytes
+                fixture=Workbook();sheet=fixture.active
+                sheet.append(['품목','수량','단가','합계'])
+                sheet.append(['00123',7,33.5,'=B2*C2'])
+                sheet['A3']='=1+1';sheet['A3'].data_type='s';sheet['B3']=False
+                sheet['D2'].number_format='#,##0.00'
+                chart=BarChart();chart.add_data(Reference(sheet,min_col=2,max_col=3,min_row=1,max_row=2),titles_from_data=True)
+                sheet.add_chart(chart,'F1');sheet.print_title_rows='1:1';sheet.print_area='A1:J20'
+                fixture.create_sheet('보조')['A1']='한글 보존'
+                buffer=io.BytesIO();fixture.save(buffer)
+                original=import_bytes(workspace,'형식 인수.xlsx',buffer.getvalue())['document']
+                odf_copy=convert(workspace,original['id'],'ods',original['revision_id'])['document']
+                returned=convert(workspace,odf_copy['id'],'xlsx',odf_copy['revision_id'])['document']
+                formulas=load_workbook(returned['source_uri']);values=load_workbook(returned['source_uri'],data_only=True)
+                assert formulas.active['D2'].value=='=B2*C2' and values.active['D2'].value==234.5
+                assert formulas.active['A2'].value=='00123' and formulas.active['A3'].value=='=1+1'
+                assert formulas.active['A3'].data_type=='s' and values.active['B3'].value is False
+                # The converter changes a boolean literal into =FALSE(). This is
+                # a reported loss, not a pass of the literal-type preservation gate.
+                assert formulas.active['B3'].value=='=FALSE()'
+                assert odf_copy['provenance']['loss_report']['changes']
+                assert returned['provenance']['loss_report']['changes']
+                assert len(formulas.active._charts)==1 and formulas['보조']['A1'].value=='한글 보존'
+                assert Path(original['source_uri']).read_bytes()==buffer.getvalue()
+                print('ACTIVE_CONVERSION: XLSX/ODS and XLTX/OTS copies; LibreOffice reopening; text, formula 234.5, chart and 2 sheets; boolean representation loss reported; original unchanged')
             except Exception:
                 page.screenshot(path=str(tmp_path/'spreadsheet-failure.png'))
                 print('UI',page.locator('body').inner_text()[-6000:])

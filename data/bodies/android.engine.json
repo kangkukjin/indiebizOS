@@ -351,6 +351,7 @@
     "services/scheduler",
     "services/spreadsheet_changes",
     "services/spreadsheet_files",
+    "services/spreadsheet_formats",
     "services/spreadsheet_imports",
     "services/spreadsheet_workspace",
     "services/sync_exchange",
@@ -533,8 +534,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 458,
-    "engine": 432,
+    "total": 459,
+    "engine": 433,
     "blocklist": 26
   }
 }

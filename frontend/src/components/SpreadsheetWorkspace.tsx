@@ -3,6 +3,7 @@ import { sheetRequest, sheetCommand, type SheetDetail, type Document } from '../
 import { useRetryingLoad } from '../lib/use-retrying-load';
 import { SpreadsheetImport } from './spreadsheets/SpreadsheetImport';
 import { SpreadsheetEditor } from './spreadsheets/SpreadsheetEditor';
+import { SpreadsheetConversion } from './spreadsheets/SpreadsheetConversion';
 import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import './spreadsheets/spreadsheet.css';
 
@@ -31,7 +32,7 @@ export function SpreadsheetWorkspace() {
     <div className="sheet-open">
       <label>로컬 파일 경로<input value={path} onChange={e=>setPath(e.target.value)} placeholder="/…/장부.xlsx"/></label>
       <button disabled={busy||!path} onClick={()=>void run(async()=>activate(await sheetRequest<SheetDetail>('/open','POST',{path})))}>파일 열기</button>
-      <label className="sheet-upload">파일 가져오기<input type="file" accept=".xlsx,.xlsm,.ods,.xls,.csv,.tsv,.numbers,.cell,.nxl" disabled={busy} onChange={e=>{
+      <label className="sheet-upload">파일 가져오기<input type="file" accept=".xlsx,.xltx,.xlsm,.ods,.ots,.xls,.csv,.tsv,.numbers,.cell,.nxl" disabled={busy} onChange={e=>{
         const file=e.target.files?.[0];if(!file)return;
         void run(async()=>{const response=await fetch(`${BACKEND_ORIGIN}/spreadsheets/import?filename=${encodeURIComponent(file.name)}`,{method:'POST',credentials:'include',body:file});const result=await response.json();if(!response.ok)throw new Error(result.detail);await activate(result);});
       }}/></label>
@@ -41,6 +42,7 @@ export function SpreadsheetWorkspace() {
     </div>
     {error&&<p role="alert">{error}</p>}
     <nav className="sheet-tabs" aria-label="통합문서 탭">{tabs.map(d=><button key={d.document.id} aria-pressed={active===d.document.id} disabled={busy} onClick={()=>void run(async()=>activate(d))}>{d.document.title}{d.session?.state==='draft'?' •':''}</button>)}</nav>
+    {detail&&<SpreadsheetConversion key={'conversion-'+detail.document.id} detail={detail} beforeConvert={async()=>{if(detail.capabilities.edit_native){if(!capture.current)throw new Error("편집기가 아직 준비되지 않았습니다");await capture.current();}}} onConverted={activate}/>}
     {!detail?<section className="sheet-home"><h1>계산하고, 정리하고, 함께 검토하세요.</h1><p>파일을 열거나 템플릿으로 새 장부를 시작하세요.</p><h2>최근 통합문서</h2>{retrying&&<p role="status">연결을 기다리고 있습니다…</p>}{recent.map(d=><button key={d.id} onClick={()=>void run(async()=>activate(await sheetRequest<SheetDetail>(`/${d.id}`)))}>{d.title}<small>{d.source_uri}</small></button>)}</section>
       :!detail.capabilities.edit_native?<section className="sheet-home"><h2>{detail.document.title}</h2><p>{detail.capabilities.reason}</p><p>등록한 원본 파일은 변경하지 않았습니다.</p>{['csv','tsv'].includes(detail.document.source_format)&&<SpreadsheetImport detail={detail} onImported={activate}/>}</section>
       :<SpreadsheetEditor key={detail.document.id} detail={detail} onChange={update} captureRef={capture}/>}

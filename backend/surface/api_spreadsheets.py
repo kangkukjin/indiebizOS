@@ -14,6 +14,7 @@ from spreadsheet_workspace import SpreadsheetWorkspace, SpreadsheetEngine
 import document_office
 import spreadsheet_imports
 import spreadsheet_changes
+import spreadsheet_formats
 
 router=APIRouter(prefix='/spreadsheets',tags=['spreadsheets'],dependencies=[Depends(authorize)])
 
@@ -53,6 +54,12 @@ async def import_file(request:Request,filename:str):
         if len(data)>25*1024*1024:
             raise HTTPException(413,'파일 상한 25MB를 초과했습니다')
     return await run_in_threadpool(invoke,import_bytes,service(),filename,bytes(data))
+
+
+@router.get('/convert-io/{conversion_id}')
+def conversion_content(conversion_id: str, ticket: str):
+    data = invoke(spreadsheet_formats.content, service(), conversion_id, ticket)
+    return Response(data, media_type='application/octet-stream', headers={'Cache-Control': 'no-store'})
 
 
 @router.get('/engine-io/{session_id}/content')
@@ -133,6 +140,7 @@ def events(document_id:str,after:int=0):
 
 
 OPERATIONS={
+    'convert':spreadsheet_formats.convert,
     'preflight':spreadsheet_changes.preflight,
     'changes':spreadsheet_changes.history, 'undo-propose':spreadsheet_changes.inverse,
     'imports':spreadsheet_changes.imports, 'import-refresh':spreadsheet_changes.refresh,

@@ -13,6 +13,7 @@ from api_document_engine import router as engine_router
 import document_office_ai
 import document_formats
 import document_pdf
+import document_hwp
 
 LOOPBACK = {"localhost", "127.0.0.1", "::1", "testclient"}
 
@@ -148,6 +149,40 @@ def detail(document_id: str):
 @router.get("/{document_id}/capabilities")
 def capabilities(document_id: str):
     return invoke(service().capabilities, document_id)
+
+
+@router.get("/hwp-assets/{asset:path}")
+def hwp_asset(asset: str):
+    from fastapi.responses import FileResponse
+    root = document_hwp.ASSETS.resolve()
+    target = (root / asset).resolve()
+    if not target.is_relative_to(root) or not target.is_file():
+        raise HTTPException(404, "한글 편집기 자산이 없습니다. 설치 가이드를 확인하세요")
+    return FileResponse(target, headers={"Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; "
+        "connect-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'"})
+
+
+@router.get("/{document_id}/hwp-content")
+def hwp_content(document_id: str, session_id: str, client_id: str, epoch: str, expected: int):
+    from fastapi.responses import Response
+    data = invoke(document_hwp.content, service(), document_id, session_id, client_id, epoch, expected)
+    return Response(data, media_type="application/octet-stream", headers={"Cache-Control": "no-store"})
+
+
+@router.post("/{document_id}/hwp-draft")
+async def hwp_draft(document_id: str, request: Request, session_id: str, client_id: str,
+                    epoch: str, expected: int, operation_id: str):
+    from starlette.concurrency import run_in_threadpool
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > 25 * 1024 * 1024:
+            raise HTTPException(413, "문서 크기 상한은 25MB입니다")
+    return await run_in_threadpool(invoke, document_hwp.draft, service(), document_id,
+        session_id, client_id, epoch, expected, operation_id, bytes(data))
 
 
 @router.get("/{document_id}/versions")

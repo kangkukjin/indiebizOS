@@ -69,6 +69,5 @@ Unidecode
 # 깔려 있었다(감사에서 발견). yfinance 가 떨구면 세 패키지가 같이 죽는 구조라 명시 선언.
 curl_cffi
 
-# [self:read] 확장 형식 (2026-09-15): hwp v5 컨테이너 · HEIC 읽기(이미지변환 스크립트)
-olefile
+# [self:read] HEIC 읽기 (HWP olefile은 문서앱 공통 core 의존성)
 pillow-heif

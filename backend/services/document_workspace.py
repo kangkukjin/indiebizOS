@@ -1,8 +1,7 @@
 """Document sessions with conditional source saves and exclusive copy exports.
 External applications do not share our lock: hash checks are best effort.
 
-Hancom capabilities remain unavailable until a licensed adapter passes the
-engine acceptance contract. This service never converts those files silently.
+HWP/HWPX use the local RHWP adapter without changing the source format.
 """
 import codecs
 import json
@@ -13,6 +12,7 @@ import principal
 from office_store import OfficeStore, digest, identifier
 from office_resources import OfficeResources
 import document_office
+import document_hwp
 from office_sessions import (OfficeSessions, DocumentConflict, DocumentUnsupported,
                              owner, read_bytes)
 
@@ -71,6 +71,8 @@ class DocumentWorkspace(OfficeSessions):
     def validate_output(self, document, data):
         if document["source_format"] in SOURCE_FORMATS:
             data.decode(document["encoding"], errors="strict")
+        elif document["source_format"] in document_hwp.FORMATS:
+            document_hwp.validate(data, document["source_format"])
         else:
             document_office.validate(data, document["source_format"])
 
@@ -85,13 +87,16 @@ class DocumentWorkspace(OfficeSessions):
         d = self._doc(document_id)
         source = d["source_format"] in SOURCE_FORMATS
         office = d["source_format"] in document_office.NATIVE and document_office.available()
-        engine = "source" if source else "hancom" if d["source_format"] in {"hwp", "hwpx"} else "office"
-        reason = "소스 원문 편집" if source else "로컬 사무 문서 편집" if office else "이 형식의 편집 엔진을 연결해야 합니다"
-        return {"engine": engine, "edit_native": source or office, "save": source or office, "export_copy": source or office,
-                "ai_text_replace": source or (office and d["source_format"] != "pdf"), "structural_edit": office,
-                "reason": reason, "loss_report": {"status": "unverified", "items": []},
-                "unavailable": ["hancom", "epub_edit", "latex_compile", "project_assets"],
-                "ocr_correction": d["source_format"] == "pdf", "format_export": True}
+        hwp = d["source_format"] in document_hwp.FORMATS and document_hwp.available()
+        engine = "source" if source else "rhwp" if d["source_format"] in document_hwp.FORMATS else "office"
+        reason = "소스 원문 편집" if source else "로컬 한글 문서 편집" if hwp else "로컬 사무 문서 편집" if office else "이 형식의 편집 엔진을 연결해야 합니다"
+        return {"engine": engine, "edit_native": source or office or hwp, "save": source or office or hwp,
+                "export_copy": source or office or hwp,
+                "ai_text_replace": source or (office and d["source_format"] != "pdf"),
+                "structural_edit": office or hwp, "reason": reason,
+                "loss_report": {"status": "unverified", "items": []},
+                "unavailable": ([] if hwp or engine != "rhwp" else ["hwp_editor"]) + ["epub_edit", "latex_compile", "project_assets"],
+                "ocr_correction": d["source_format"] == "pdf", "format_export": engine != "rhwp"}
 
     def open(self, path, encoding=None):
         owner()
@@ -108,6 +113,8 @@ class DocumentWorkspace(OfficeSessions):
             chosen = None
             if extension in SOURCE_FORMATS:
                 _, chosen = decode_source(data, encoding)
+            elif extension in document_hwp.FORMATS:
+                document_hwp.validate(data, extension)
             row = self.resources.register(path, data, chosen)
             return self.detail(row["id"])
 

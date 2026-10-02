@@ -2,6 +2,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { OfficeDocumentEditor } from './OfficeDocumentEditor';
+import { HwpDocumentEditor } from './HwpDocumentEditor';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { documentRequest, documentCommand, sessionArgs, type Detail, type Document, type Session, type Snapshot, type Proposal } from '../lib/api-documents';
 import { useRetryingLoad } from '../lib/use-retrying-load';
@@ -247,7 +248,7 @@ export function DocumentWorkspace() {
 
   return <main className="document-workspace">
     <header><div><span className="document-eyebrow">INDIEBIZ OS</span><h1>문서</h1></div><span className="document-badge">글·페이지·PDF</span></header>
-    <p className="document-limit">문서를 열어 직접 편집하고 버전별로 저장하세요. DOCX·ODT·RTF·PDF는 로컬 사무 편집기를 사용합니다. 한글 원형 편집은 전용 엔진 연결이 필요합니다.</p>
+    <p className="document-limit">문서를 열어 직접 편집하고 버전별로 저장하세요. DOCX·ODT·RTF·PDF는 로컬 사무 편집기를 사용합니다. HWP·HWPX는 로컬 오픈소스 한글 편집기를 사용합니다.</p>
     <form className="document-open" onSubmit={e => { e.preventDefault(); open(); }}>
       <label>로컬 파일 경로<input value={path} onChange={e => setPath(e.target.value)} placeholder="/Users/…/문서.txt" /></label>
       <label>인코딩<select aria-label="인코딩" value={encoding} onChange={e => setEncoding(e.target.value)}><option value="">UTF/BOM 자동 확인</option>{['utf-8', 'utf-8-sig', 'utf-16', 'cp949', 'euc-kr'].map(e => <option key={e}>{e}</option>)}</select></label>
@@ -276,7 +277,7 @@ export function DocumentWorkspace() {
       <section className="document-editor" aria-label="문서 편집">
         {detail ? <>
           <div className="document-title"><h2>{detail.document.title}</h2><small>{detail.document.encoding || detail.document.source_format} · {detail.document.source_uri}</small></div>
-          {detail.capabilities.engine!=='office' || !detail.capabilities.edit_native ? <div className="document-toolbar"><label>출력 형식<select value={outputFormat} onChange={e=>setOutputFormat(e.target.value)}>{['pdf','docx','odt','rtf','html','txt','epub'].map(f=><option key={f}>{f}</option>)}</select></label><button disabled={busy} onClick={()=>void act(async()=>{
+          {detail.capabilities.engine !== 'rhwp' && (detail.capabilities.engine!=='office' || !detail.capabilities.edit_native) ? <div className="document-toolbar"><label>출력 형식<select value={outputFormat} onChange={e=>setOutputFormat(e.target.value)}>{['pdf','docx','odt','rtf','html','txt','epub'].map(f=><option key={f}>{f}</option>)}</select></label><button disabled={busy} onClick={()=>void act(async()=>{
             const s=await flush(); const d=current.current;if(!d)return;
             const result=await documentCommand<Detail>(d.document.id,'convert',{...(s?sessionArgs(s):{}),output_format:outputFormat,expected_revision:d.document.revision_id});
             await display(result);await load();setMessage('변환 사본을 만들었습니다 · 원본은 보존됩니다. 쪽 배치와 서식을 확인하세요.');
@@ -287,7 +288,7 @@ export function DocumentWorkspace() {
             const recovered = await documentCommand<Detail>(detail.document.id, 'reclaim', { client_id: client.current, expected_epoch: detail.session.engine_epoch });
             await display(recovered);
           })}>이 창에서 초안 복구</button></div>}
-          {detail.capabilities.engine === 'office' && detail.capabilities.edit_native && detail.session?.client_id === client.current ? <OfficeDocumentEditor key={detail.document.id} captureRef={officeCapture} detail={detail} onChange={d => { current.current = d; setDetail(d); }} /> : <>
+          {detail.capabilities.engine === 'rhwp' && detail.capabilities.edit_native && detail.session?.client_id === client.current ? <HwpDocumentEditor key={`${detail.document.id}:${detail.session.engine_epoch}`} captureRef={officeCapture} detail={detail} onChange={d => { current.current = d; setDetail(d); }} /> : detail.capabilities.engine === 'office' && detail.capabilities.edit_native && detail.session?.client_id === client.current ? <OfficeDocumentEditor key={detail.document.id} captureRef={officeCapture} detail={detail} onChange={d => { current.current = d; setDetail(d); }} /> : <>
           {mixedNewlines && <p role="alert">혼합 줄바꿈 문서입니다. 원문을 보호하기 위해 이 화면의 편집을 제한합니다.</p>}
           <div className="document-toolbar"><button disabled={!editable || busy} onClick={() => void act(async () => { await flush(); })}>작업 저장</button><button disabled={!editable || busy || !detail.capabilities.save} onClick={saveOriginal}>원본 저장</button><button disabled={busy} onClick={recoverSave}>저장 상태 복구</button><button disabled={busy} onClick={showVersions}>버전 이력</button><button disabled={!editable || busy} onClick={select}>선택 고정</button><button disabled={!undo || text !== undo.after || busy} onClick={() => { if (undo) { updateText(undo.before); setUndo(null); } }}>선택 교체 되돌리기</button>{['html', 'htm', 'md', 'markdown'].includes(detail.document.source_format) && <button onClick={() => setPreview(!preview)}>{preview ? '원문 보기' : '비실행 미리보기'}</button>}</div>
           {preview ? (['md','markdown'].includes(detail.document.source_format) ? <div className="document-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]} components={{img:({alt})=><span>[그림: {alt || '첨부 이미지'}]</span>}}>{text}</ReactMarkdown></div> : <iframe title="HTML 비실행 미리보기" sandbox="" srcDoc={previewHtml} />) : <textarea ref={editor} aria-label="문서 원문" spellCheck={false} value={text} readOnly={!editable || (busy && !aiBusy)}
@@ -303,6 +304,6 @@ export function DocumentWorkspace() {
         </> : <div className="document-empty"><h2>원문과 초안을 함께 보존합니다</h2><p>파일을 열거나 왼쪽 목록에서 작업을 이어가세요.</p></div>}
       </section>
       {detail?.document.encoding && <aside><h2>선택 교체 · AI 수정</h2><p>고정한 선택과 작업 버전을 기준으로 교체합니다. 선택 이후 문서가 바뀌면 적용을 거절합니다.</p>{selection ? <><blockquote>{selection.text}</blockquote><p>고정한 선택 {Array.from(selection.text).length}자와 지시가 현재 설정된 AI 모델 제공자에게 전달됩니다.</p><label>AI 수정 지시<textarea value={instruction} onChange={e => setInstruction(e.target.value)} /></label><button disabled={busy || !instruction.trim()} onClick={generate}>{aiBusy ? 'AI 제안 생성 중…' : 'AI 수정 제안'}</button><label>교체할 문구<textarea value={replacement} onChange={e => { setReplacement(e.target.value); setProposal(null); }} /></label><button disabled={busy} onClick={propose}>제안 만들기</button><button disabled={busy || !proposal} onClick={apply}>제안 적용</button><button onClick={() => { setSelection(null); setProposal(null); }}>제안 버리기</button></> : <p>문구를 선택하고 ‘선택 고정’을 누르세요.</p>}</aside>}
-    </div><footer role="status" aria-live="polite">{busy ? '처리 중…' : message}<span>{Array.from(text).length.toLocaleString()}자</span></footer>
+    </div><footer role="status" aria-live="polite">{busy ? '처리 중…' : message}<span>{detail?.document.encoding ? `${Array.from(text).length.toLocaleString()}자` : detail?.document.source_format.toUpperCase()}</span></footer>
   </main>;
 }

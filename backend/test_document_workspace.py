@@ -177,7 +177,7 @@ def test_unencodable_draft_does_not_replace_recovery(work):
 
 
 def test_office_not_falsely_reported_supported(tmp_path):
-    file = tmp_path / "form.hwpx"
+    file = tmp_path / "form.pages"
     file.write_bytes(b"not a real office document")
     app = DocumentWorkspace(tmp_path / "state")
     d = app.open(file)["document"]

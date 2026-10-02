@@ -1,0 +1,126 @@
+Bundled font notices (RHWP 0.8.6 assets, unmodified WOFF2 files).
+Copyright notices below are copied from each font name table.
+OFL fonts: full SIL OFL 1.1 text accompanies fonts/SourceHanSerifK-OFL.txt.
+Latin Modern Math: GUST-FONT-LICENSE.txt and LPPL-1.3c.txt accompany this notice.
+Cafe24 and Happiness fonts are excluded from the IndieBiz runtime.
+
+D2Coding-Bold.woff2
+Copyright (c) 2015-2016 NHN Corporation. All rights reserved. Font designed by FONTRIX Inc.
+SIL Open Font License 1.1
+
+D2Coding-Regular.woff2
+Copyright (c) 2015-2016 NHN Corporation. All rights reserved. Font designed by FONTRIX Inc.
+SIL Open Font License 1.1
+
+GowunBatang-Bold.woff2
+Copyright 2021 The Gowun Batang Project Authors (https://github.com/yangheeryu/Gowun-Batang)
+SIL Open Font License 1.1
+
+GowunBatang-Regular.woff2
+Copyright 2021 The Gowun Batang Project Authors (https://github.com/yangheeryu/Gowun-Batang)
+SIL Open Font License 1.1
+
+GowunDodum-Regular.woff2
+Copyright 2021 The Gowun Dodum Project Authors (https://github.com/yangheeryu/Gowun-Dodum)
+SIL Open Font License 1.1
+
+LatinModernMath-Regular.woff2
+Copyright 2012--2014 for Latin Modern Math OTF by B. Jackowski, P. Strzelczyk and P. Pianowski (on behalf of TeX users groups). This work is released under the GUST Font License -- see http://tug.org/fonts/licenses/GUST-FONT-LICENSE.txt for details.
+GUST Font License
+
+NanumGothic-Bold.woff2
+Copyright © 2011 NHN Corporation. All rights reserved. Font designed by Sandoll Communications Inc.
+SIL Open Font License 1.1
+
+NanumGothic-ExtraBold.woff2
+Copyright © 2011 NHN Corporation. All rights reserved. Font designed by Sandoll Communications Inc.
+SIL Open Font License 1.1
+
+NanumGothic-Regular.woff2
+Copyright © 2011 NHN Corporation. All rights reserved. Font designed by Sandoll Communications Inc.
+SIL Open Font License 1.1
+
+NanumGothicCoding-Bold.woff2
+Copyright © 2009 NHN Corporation. All rights reserved. Font designed by Sandoll Communications Inc.
+SIL Open Font License 1.1
+
+NanumGothicCoding-Regular.woff2
+Copyright © 2009 NHN Corporation. All rights reserved. Font designed by Sandoll Communications Inc.
+SIL Open Font License 1.1
+
+NanumMyeongjo-Bold.woff2
+Copyright © 2010 NHN Corporation. All rights reserved. Font designed by FONTRIX.
+SIL Open Font License 1.1
+
+NanumMyeongjo-ExtraBold.woff2
+Copyright © 2010 NHN Corporation. All rights reserved. Font designed by FONTRIX.
+SIL Open Font License 1.1
+
+NanumMyeongjo-Regular.woff2
+Copyright © 2010 NHN Corporation. All rights reserved. Font designed by FONTRIX.
+SIL Open Font License 1.1
+
+NotoSansKR-Bold.woff2
+(c) 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+SIL Open Font License 1.1
+
+NotoSansKR-ExtraLight.woff2
+(c) 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+SIL Open Font License 1.1
+
+NotoSansKR-Regular.woff2
+(c) 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+SIL Open Font License 1.1
+
+NotoSerifKR-Bold.woff2
+(c) 2017-2024 Adobe (http://www.adobe.com/).
+SIL Open Font License 1.1
+
+NotoSerifKR-Regular.woff2
+(c) 2017-2024 Adobe (http://www.adobe.com/).
+SIL Open Font License 1.1
+
+Pretendard-Black.woff2
+Copyright © 2023 Kil Hyung-jin
+SIL Open Font License 1.1
+
+Pretendard-Bold.woff2
+Copyright © 2023 Kil Hyung-jin
+SIL Open Font License 1.1
+
+Pretendard-ExtraBold.woff2
+Copyright © 2023 Kil Hyung-jin
+SIL Open Font License 1.1
+
+Pretendard-ExtraLight.woff2
+Copyright © 2023 Kil Hyung-jin
+SIL Open Font License 1.1
+
+Pretendard-Light.woff2
+Copyright © 2023 Kil Hyung-jin
+SIL Open Font License 1.1
+
+Pretendard-Medium.woff2
+Copyright © 2023 Kil Hyung-jin
+SIL Open Font License 1.1
+
+Pretendard-Regular.woff2
+Copyright © 2023 Kil Hyung-jin
+SIL Open Font License 1.1
+
+Pretendard-SemiBold.woff2
+Copyright © 2023 Kil Hyung-jin
+SIL Open Font License 1.1
+
+Pretendard-Thin.woff2
+Copyright © 2023 Kil Hyung-jin
+SIL Open Font License 1.1
+
+SourceHanSerifK-OldHangul-subset.woff2
+© 2017-2024 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+SIL Open Font License 1.1
+
+SpoqaHanSans-Regular.woff2
+Copyright  2015 Spoqa (http://bi.spoqa.com/)
+SIL Open Font License 1.1
+

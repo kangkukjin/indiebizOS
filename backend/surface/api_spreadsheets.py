@@ -113,6 +113,18 @@ def read(document_id:str,snapshot_id:str,sheet_id:str,range:str):
     return invoke(service().read,document_id,snapshot_id,sheet_id,range)
 
 
+@router.post('/{document_id}/range-export')
+def range_export(document_id: str, body: Command):
+    data, mime, summary = invoke(service().export_range, document_id, **body.args)
+    return Response(data, media_type=mime, headers={
+        'Content-Disposition': 'attachment; filename=range.' + summary['format'],
+        'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "default-src 'none'; sandbox",
+        'X-Sheet-Export': json.dumps(summary, ensure_ascii=True),
+        'Access-Control-Expose-Headers': 'X-Sheet-Export',
+    })
+
+
 @router.get('/{document_id}/events')
 def events(document_id:str,after:int=0):
     invoke(service().detail,document_id)

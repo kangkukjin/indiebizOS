@@ -1,3 +1,4 @@
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { openDocuments } from '../../lib/surface-navigation';
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { sheetCommand, sheetRequest, sheetUpload, sessionArgs, type SheetDetail, type Session, type SheetSnapshot } from '../../lib/api-spreadsheets';
@@ -20,6 +21,8 @@ export function SpreadsheetEditor({detail,onChange,captureRef}:{detail:SheetDeta
   const [changes,setChanges]=useState<{operation_id:string;status:string;result?:{applied?:boolean;snapshot_id?:string}}[]>([]);
   const [imports,setImports]=useState<{id:string;rows_imported:number}[]>([]);
   const [importSource,setImportSource]=useState('');
+  const [exportFormat,setExportFormat]=useState('csv'),[exportEncoding,setExportEncoding]=useState('utf-8-sig');
+  const [exportNewline,setExportNewline]=useState('crlf'),[textMode,setTextMode]=useState('safe'),[allowStale,setAllowStale]=useState(false);
   const [filename,setFilename]=useState('사본_'+detail.document.title),[versions,setVersions]=useState<{id:string;created_at:number;label?:string}[]>([]);
   const slot=useRef('sheet-'+crypto.randomUUID()),current=useRef(detail),dirty=useRef(false),working=useRef(false);
   const engine=useRef<Engine|null>(null),bridge=useRef<{channel:string;origin:string;source:Window|null}|null>(null);
@@ -122,6 +125,29 @@ export function SpreadsheetEditor({detail,onChange,captureRef}:{detail:SheetDeta
       <aside className="sheet-review"><h2>AI와 변경 검토</h2><label>대상 시트<select value={sheetId} onChange={e=>{setSheetId(e.target.value);setProposal(null);}}>{detail.workbook.sheets?.map(s=><option key={s.sheet_id} value={s.sheet_id}>{s.name}</option>)}</select></label>
       <label>범위<input value={range} onChange={e=>{setRange(e.target.value);setProposal(null);}}/></label>
       <button disabled={busy||!ready} onClick={()=>void run(async()=>{const s=await takeSnapshot();const r=await sheetRequest<Result>(`/${detail.document.id}/snapshots/${s.id}?sheet_id=${encodeURIComponent(sheetId)}&range=${encodeURIComponent(range)}`);setPreview(r);})}>최신 범위 읽기</button>
+      <details><summary>범위 내보내기</summary>
+        <label>출력 형식<select aria-label="출력 형식" value={exportFormat} onChange={e=>setExportFormat(e.target.value)}>{['csv','tsv','html','json'].map(f=><option key={f} value={f}>{f.toUpperCase()}</option>)}</select></label>
+        {(exportFormat==='csv'||exportFormat==='tsv')&&<>
+          <label>문자 인코딩<select aria-label="문자 인코딩" value={exportEncoding} onChange={e=>setExportEncoding(e.target.value)}>{['utf-8-sig','utf-8','utf-16','cp949','euc-kr'].map(v=><option key={v} value={v}>{v}</option>)}</select></label>
+          <label>줄바꿈<select aria-label="줄바꿈" value={exportNewline} onChange={e=>setExportNewline(e.target.value)}><option value="crlf">CRLF</option><option value="lf">LF</option></select></label>
+          <label>텍스트 처리<select aria-label="텍스트 처리" value={textMode} onChange={e=>setTextMode(e.target.value)}><option value="safe">수식 오인 방지</option><option value="raw">원문 유지</option></select></label>
+          <p>CSV·TSV는 값만 저장하며 빈 셀과 빈 문자열을 구분하지 않습니다. 수식 오인 방지는 =·+·-·@ 등으로 시작하는 문자 앞에 작은따옴표를 붙입니다. 원문 유지는 외부 프로그램이 문자를 수식으로 해석할 수 있습니다. 식별자의 셀 타입까지 보존하려면 JSON이나 XLSX를 사용하세요.</p>
+        </>}
+        <label><input type="checkbox" checked={allowStale} onChange={e=>setAllowStale(e.target.checked)}/>계산 미확인 시 현재 캐시 내보내기</label>
+        <button disabled={busy||!ready} onClick={()=>void run(async()=>{
+          const s=await takeSnapshot();
+          const response=await fetch(`${BACKEND_ORIGIN}/spreadsheets/${detail.document.id}/range-export`,{
+            method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({args:{snapshot_id:s.id,sheet_id:sheetId,range,format:exportFormat,
+              encoding:exportEncoding,newline:exportNewline,text_mode:textMode,allow_stale:allowStale}}),
+          });
+          if(!response.ok){const failure=await response.json();throw new Error(failure.detail||'범위 출력 실패');}
+          const info=JSON.parse(response.headers.get('X-Sheet-Export')||'{}') as Result;
+          const url=URL.createObjectURL(await response.blob());const link=document.createElement('a');
+          link.href=url;link.download=`범위.${exportFormat}`;link.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+          setMessage(`범위 출력됨 · ${String(info.cells??'')}셀 · 계산 ${s.calc_status} · 수식 오인 방지 ${String(info.escaped_text_cells??0)}셀 · 계산값 없음 ${String(info.missing_formula_cells??0)}셀 · 오류 ${String(info.error_cells??0)}셀`);
+        })}>현재 범위 다운로드</button>
+      </details>
       {preview&&<details open><summary>값·수식·계산 근거</summary><pre>{JSON.stringify(preview,null,2)}</pre></details>}
       <button disabled={busy||!snapshot} onClick={()=>void run(async()=>{const report=await sheetCommand<{document:{title:string}}>(detail.document.id,'report',{snapshot_id:snapshot?.id,sheet_id:sheetId,range,operation_id:crypto.randomUUID()});setMessage('문서에 표 보고서를 만들었습니다: '+report.document.title);openDocuments();})}>문서에 표 보고서 만들기</button>
       <details><summary>변경 취소와 가져오기 갱신</summary>

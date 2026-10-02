@@ -139,6 +139,15 @@ class SpreadsheetWorkspace(OfficeSessions):
                 'resource_id':document_id,'revision_id':s['revision_id'],'unsaved':s['unsaved'],
                 'provenance':{'engine':'ONLYOFFICE','captured_at':s['created_at'],'sha256':s['blob']}}
 
+    def export_range(self, document_id, snapshot_id, sheet_id, range, format='csv',
+                     encoding='utf-8-sig', newline='crlf', text_mode='safe', allow_stale=False):
+        if type(allow_stale) is not bool:
+            raise ValueError('allow_stale은 boolean입니다')
+        observed = self.read(document_id, snapshot_id, sheet_id, range)
+        if observed['calc_status'] != 'fresh' and not allow_stale:
+            raise DocumentConflict('계산이 최신으로 확인되지 않았습니다. 재계산하거나 현재 캐시 사용을 선택하세요')
+        return files.render_range(observed, format, encoding, newline, text_mode)
+
     def generate_proposal(self, document_id, snapshot_id, sheet_id, range, instruction):
         from model_resolver import get_provider_for
         from consciousness_agent import call_oneshot_provider

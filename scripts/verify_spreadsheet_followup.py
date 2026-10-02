@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT / 'backend'))
 import boot_paths  # noqa: E402,F401
 
 
-def activate():
+def activate(range_exports=False):
     import verify_spreadsheet_app as base
     import httpx
     if '.worktrees' in ROOT.parts or subprocess.check_output(['git', 'branch', '--show-current'], cwd=ROOT, text=True).strip() != 'main':
@@ -18,8 +18,10 @@ def activate():
     # Rebuild the deployed surface. Unit and engine receipts are retained; the
     # full release remains open (LET, other formats, accessibility, recovery).
     base.run(['npx', '--no-install', 'vite', 'build'], cwd=ROOT/'frontend')
-    response = httpx.post('http://127.0.0.1:8765/spreadsheets/__acceptance_missing__/changes',
-                         json={'args': {}}, timeout=20, trust_env=False)
+    operation = 'range-export' if range_exports else 'changes'
+    args = {'snapshot_id': 'missing', 'sheet_id': '1', 'range': 'A1'} if range_exports else {}
+    response = httpx.post('http://127.0.0.1:8765/spreadsheets/__acceptance_missing__/' + operation,
+                         json={'args': args}, timeout=20, trust_env=False)
     if response.status_code != 400 or response.json().get('detail') != '문서 작업 항목을 찾을 수 없습니다':
         raise RuntimeError('새 시트 변경 경로가 활성화되지 않았습니다')
     base.PATHS = [
@@ -38,12 +40,24 @@ def activate():
         'data/bodies/android.engine.json', 'data/system_docs/architecture.md',
         'data/system_docs/system_structure.md', 'data/shell_shadow.json',
     ]
+    if range_exports:
+        # Translation catalogs and document-app files already carry concurrent
+        # work. Rebuild for the active surface, but never include them here.
+        base.PATHS = [
+            'backend/services/spreadsheet_files.py', 'backend/services/spreadsheet_workspace.py',
+            'backend/surface/api_spreadsheets.py', 'backend/test_spreadsheet_workspace.py',
+            'backend/test_spreadsheet_browser_live.py', 'backend/test_spreadsheet_functions_live.py',
+            'frontend/src/components/spreadsheets/SpreadsheetEditor.tsx',
+            'scripts/verify_spreadsheet_followup.py', 'docs/SPREADSHEET_APP_DESIGN_2026_10_02.md',
+            'data/bodies/android.engine.json', 'data/core_manifest.json',
+        ]
     # Reuse the established tracked/unignored path selection and build/commit
     # gates. No prior commit is repeated; these are the new follow-up paths.
     original_run = base.run
     def run(command, **kwargs):
         if command[:2] == ['git', 'commit']:
-            command[-1] = 'Preserve spreadsheet edits during cancellation and import refresh'
+            command[-1] = ('Export pinned spreadsheet ranges with explicit text and calculation policies'
+                           if range_exports else 'Preserve spreadsheet edits during cancellation and import refresh')
         return original_run(command, **kwargs)
     base.run = run
     sys.argv = [__file__, '--commit-only']
@@ -51,8 +65,8 @@ def activate():
 
 
 def main():
-    if '--activate' in sys.argv:
-        activate()
+    if '--activate' in sys.argv or '--activate-exports' in sys.argv:
+        activate(range_exports='--activate-exports' in sys.argv)
         return
     args = json.loads(sys.stdin.read() or '{}') if not sys.stdin.isatty() else {}
     mode = args.get('mode', 'unit')
@@ -61,7 +75,7 @@ def main():
     commands = {
         'unit': [[sys.executable, '-m', 'pytest', 'backend/test_spreadsheet_changes.py',
                   'backend/test_spreadsheet_workspace.py', 'backend/test_spreadsheet_imports.py']],
-        'build': [['npx', 'tsc', '-p', 'tsconfig.app.json'], ['npx', 'vite', 'build']],
+        'build': [['npx', '--no-install', 'tsc', '-p', 'tsconfig.app.json'], ['npx', '--no-install', 'vite', 'build']],
         'live': [[sys.executable, '-m', 'pytest', 'backend/test_spreadsheet_browser_live.py', '-s']],
         'scale': [[sys.executable, '-m', 'pytest', 'backend/test_spreadsheet_scale_live.py', '-s']],
         'functions': [[sys.executable, '-m', 'pytest', 'backend/test_spreadsheet_functions_live.py', '-s']],

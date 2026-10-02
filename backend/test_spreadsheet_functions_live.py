@@ -39,7 +39,9 @@ CASES = [
  ('FILTER', '=FILTER(B2:B4,A2:A4="A")', 15), ('SORT', '=SORT({3;1;2})', 1),
  ('UNIQUE', '=UNIQUE({1;1;2})', 1), ('SEQUENCE', '=SEQUENCE(3)', 1),
  ('TRANSPOSE', '=TRANSPOSE({1,2,3})', 1), ('SUMPRODUCT', '=SUMPRODUCT({1,2},{3,4})', 11),
- ('LET', '=LET(x,2,x*3)', 6), ('MEDIAN', '=MEDIAN(1,3,8)', 3),
+ ('LET', '=LET(x,2,x*3)', 6),
+ ('LET_named', '=LET(amount,2,amount*3)', 6),
+ ('LET_ooxml', '=_xlfn.LET(amount,2,amount*3)', 6), ('MEDIAN', '=MEDIAN(1,3,8)', 3),
  ('STDEV.S', '=STDEV.S(1,2,3)', 1), ('VAR.S', '=VAR.S(1,2,3)', 1),
  ('CORREL', '=CORREL({1,2,3},{2,4,6})', 1), ('RANK.EQ', '=RANK.EQ(2,{1,2,3},0)', 2),
  ('PMT', '=PMT(0,10,100)', -10), ('NPV', '=NPV(0.1,110)', 100), ('IRR', '=IRR({-100;110})', .1),
@@ -51,7 +53,9 @@ CASES = [
 def test_required_functions(tmp_path, monkeypatch):
     code = '\n'.join('sheet.GetRange('+json.dumps('H'+str(i*5+1))+').SetValue('+json.dumps(formula)+');'
                      for i, (_, formula, _) in enumerate(CASES))
-    monkeypatch.setattr(gate, 'PLUGIN', gate.PLUGIN.replace('sheet.SetActive();', code+'\nsheet.SetActive();'))
+    plugin = gate.PLUGIN.replace('sheet.SetActive();', code+'\nsheet.SetActive();')
+    plugin = plugin.replace('edited:true,', 'edited:true,let_api:typeof Api.WorksheetFunction.LET,')
+    monkeypatch.setattr(gate, 'PLUGIN', plugin)
     gate.test_spreadsheet_plugin_roundtrip(tmp_path, monkeypatch)
     saved = load_workbook(tmp_path/'roundtrip.xlsx', data_only=True)['Transactions']
     independent = load_workbook(tmp_path/'independent/roundtrip.xlsx', data_only=True)['Transactions']
@@ -59,8 +63,14 @@ def test_required_functions(tmp_path, monkeypatch):
     for i, (name, formula, expected) in enumerate(CASES):
         value = saved['H'+str(i*5+1)].value
         equal = value == pytest.approx(expected) if type(expected) in (int, float) else type(value) is type(expected) and value == expected
+        independent_value = independent['H'+str(i*5+1)].value
+        independent_equal = (independent_value == pytest.approx(expected)
+                             if type(expected) in (int, float)
+                             else type(independent_value) is type(expected) and independent_value == expected)
         observations.append({'function':name,'formula':formula,'engine':value,'expected':expected,
-                             'passed':bool(equal),'libreoffice':independent['H'+str(i*5+1)].value})
+                             'passed':bool(equal and independent_equal),
+                             'engine_passed':bool(equal), 'independent_passed':bool(independent_equal),
+                             'libreoffice':independent_value})
     print('FUNCTION_MATRIX '+json.dumps(observations, ensure_ascii=False, default=str))
     assert all(r['passed'] for r in observations), [r for r in observations if not r['passed']]
 

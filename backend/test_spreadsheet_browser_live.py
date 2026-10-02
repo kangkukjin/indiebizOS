@@ -114,6 +114,24 @@ def test_app_snapshot_proposal_save(tmp_path,monkeypatch):
                 assert restored.active['A2'].value=='=1+1' and restored.active['A2'].data_type=='s'
                 assert restored.active['D2'].value=='=B2*C2'
                 print('ACTIVE_UNDO: restored B2 only; later literal-text A2 and formula D2 preserved')
+                page.get_by_label('범위', exact=True).fill('A2:D2')
+                page.get_by_text('범위 내보내기', exact=True).click()
+                page.get_by_label('문자 인코딩', exact=True).select_option('cp949')
+                with page.expect_download(timeout=60000) as download:
+                    page.get_by_role('button', name='현재 범위 다운로드', exact=True).click()
+                import csv
+                import io
+                exported = Path(download.value.path()).read_bytes()
+                assert list(csv.reader(io.StringIO(exported.decode('cp949'))))[0] == ["'=1+1", '1', '0', '0']
+                page.get_by_label('출력 형식', exact=True).select_option('json')
+                with page.expect_download(timeout=60000) as download:
+                    page.get_by_role('button', name='현재 범위 다운로드', exact=True).click()
+                exported = __import__('json').loads(Path(download.value.path()).read_bytes())
+                assert exported['items'][0]['entered_value'] == '=1+1'
+                assert exported['items'][3]['formula'] == '=B2*C2'
+                assert exported['metadata']['calc_status'] == 'fresh'
+                assert load_workbook(source).active['A2'].value == '=1+1'
+                print('ACTIVE_EXPORT: CP949 text-safe CSV and typed JSON downloaded through current snapshot')
                 from spreadsheet_imports import import_csv
                 csv_path=tmp_path/'repeat.csv';csv_path.write_text('id,amount\n00123,7\n00456,8\n')
                 csv_doc=workspace.open(csv_path)['document']

@@ -1,5 +1,8 @@
 """Bounded spreadsheet inspection. Never rewrites an existing workbook."""
+import csv
+import html
 import io
+import json
 import posixpath
 import re
 import zipfile
@@ -115,6 +118,78 @@ def cell_name(column, row):
         column, rem=divmod(column-1,26)
         name=chr(65+rem)+name
     return name+str(row)
+
+
+def render_range(observed, format='csv', encoding='utf-8-sig', newline='crlf', text_mode='safe'):
+    """Export an immutable projection; JSON retains cell types and provenance.
+
+    CSV/TSV are value-only and cannot encode the distinction between a blank
+    cell and empty text. Safe mode prefixes potentially executable strings;
+    raw mode preserves text but lets external consumers interpret it.
+    """
+    if format not in {'csv', 'tsv', 'html', 'json'}:
+        raise ValueError('범위 출력 형식은 csv/tsv/html/json입니다')
+    if encoding not in {'utf-8', 'utf-8-sig', 'utf-16', 'cp949', 'euc-kr'}:
+        raise ValueError('지원하는 출력 인코딩을 선택하세요')
+    if newline not in {'crlf', 'lf'} or text_mode not in {'safe', 'raw'}:
+        raise ValueError('줄바꿈 또는 텍스트 출력 정책이 올바르지 않습니다')
+    x1, y1, x2, y2 = bounds(observed['range'])
+    width = x2 - x1 + 1
+    items = observed['items']
+    if observed.get('truncated') or len(items) != width * (y2 - y1 + 1):
+        raise ValueError('불완전한 범위는 내보낼 수 없습니다')
+    summary = {k: observed[k] for k in ('resource_id', 'revision_id', 'snapshot_id',
+               'session_revision', 'calc_revision', 'calc_status', 'unsaved', 'range',
+               'sheet', 'date_system', 'provenance')}
+    summary.update(format=format, rows=y2-y1+1, columns=width, cells=len(items),
+                   escaped_text_cells=0, missing_formula_cells=0, error_cells=0,
+                   text_mode=text_mode, value_only=format != 'json')
+    values = []
+    for cell in items:
+        value = cell['effective_value']
+        if cell['error_code']:
+            summary['error_cells'] += 1
+            value = cell['error_code']
+        elif cell['formula'] and value is None:
+            summary['missing_formula_cells'] += 1
+        if type(value) is bool:
+            text = 'TRUE' if value else 'FALSE'
+        else:
+            text = '' if value is None else str(value)
+        if (format in {'csv', 'tsv'} and text_mode == 'safe'
+                and isinstance(value, str)
+                and (text.lstrip().startswith(('=', '+', '-', '@')) or text.startswith(('\t', '\r', '\n')))):
+            text = "'" + text
+            summary['escaped_text_cells'] += 1
+        values.append(text)
+    rows = [values[i:i+width] for i in range(0, len(values), width)]
+    if format in {'csv', 'tsv'}:
+        stream = io.StringIO(newline='')
+        writer = csv.writer(stream, delimiter=',' if format == 'csv' else '\t',
+                            lineterminator='\r\n' if newline == 'crlf' else '\n')
+        writer.writerows(rows)
+        text = stream.getvalue()
+        summary.update(encoding=encoding, newline=newline, blank_and_empty_text_merged=True)
+        mime = 'text/csv' if format == 'csv' else 'text/tab-separated-values'
+    elif format == 'json':
+        text = json.dumps({'metadata': summary, 'items': items}, ensure_ascii=False, allow_nan=False)
+        encoding, mime = 'utf-8', 'application/json'
+    else:
+        caption = html.escape(observed['sheet']['name'] + '!' + observed['range'])
+        text = '<!doctype html><meta charset="utf-8"><title>' + caption + '</title>'
+        text += '<table><caption>' + caption + '</caption><tbody>'
+        text += ''.join('<tr>' + ''.join('<td>' + html.escape(v) + '</td>' for v in row) + '</tr>' for row in rows)
+        text += '</tbody></table><pre>' + html.escape(json.dumps(summary, ensure_ascii=False)) + '</pre>'
+        encoding, mime = 'utf-8', 'text/html'
+    try:
+        content = text.encode(encoding, errors='strict')
+    except UnicodeEncodeError as exc:
+        raise ValueError('선택한 인코딩으로 표현하지 못하는 문자가 있습니다. UTF-8을 선택하세요') from exc
+    if len(content) > MAX_BYTES:
+        raise ValueError('출력 상한 25MB를 초과했습니다. 범위를 나누세요')
+    if mime.startswith('text/'):
+        mime += '; charset=' + ('utf-8' if encoding == 'utf-8-sig' else encoding)
+    return content, mime, summary
 
 
 def projection(data, sheet_id, address):

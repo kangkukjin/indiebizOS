@@ -157,6 +157,93 @@ def test_engine_type_and_namespace(workspace,tmp_path,monkeypatch):
     assert setup['config']['editorConfig']['plugins']['autostart']==[SpreadsheetEngine.plugin_guid]
 
 
+@pytest.mark.parametrize('encoding', ['utf-8', 'utf-8-sig', 'utf-16', 'cp949', 'euc-kr'])
+def test_export_csv_text_policy_and_encoding(workspace, tmp_path, encoding):
+    import csv
+    book = Workbook()
+    values = ['00123', '123456789012345678', '010-1234-5678', '한글,줄\n바꿈', '=1+1', '+cmd', '-cmd', '@cmd', 0, False, None]
+    for col, value in enumerate(values, 1):
+        cell = book.active.cell(1, col, value)
+        if isinstance(value, str):
+            cell.data_type = 's'
+    path = tmp_path / 'types.xlsx'
+    book.save(path)
+    original = path.read_bytes()
+    doc = workspace.open(path)['document']
+    session = workspace.acquire(doc['id'], 'export-test')['session']
+    snap = workspace.snapshot(doc['id'], **args(session), engine_state='fixture', calculation='stale')
+    with pytest.raises(DocumentConflict):
+        workspace.export_range(doc['id'], snap['id'], '1', 'A1:K1')
+    output, mime, report = workspace.export_range(doc['id'], snap['id'], '1', 'A1:K1',
+                                                 encoding=encoding, allow_stale=True)
+    row = list(csv.reader(io.StringIO(output.decode(encoding), newline='')))[0]
+    assert row == values[:4] + ["'=1+1", "'+cmd", "'-cmd", "'@cmd", '0', 'FALSE', '']
+    assert report['escaped_text_cells'] == 4 and report['cells'] == 11
+    assert report['snapshot_id'] == snap['id'] and report['calc_status'] == 'stale'
+    assert mime == 'text/csv; charset=' + ('utf-8' if encoding == 'utf-8-sig' else encoding)
+    assert path.read_bytes() == original
+    raw, _, raw_report = workspace.export_range(doc['id'], snap['id'], '1', 'E1:H1',
+                                                text_mode='raw', encoding=encoding, newline='lf', allow_stale=True)
+    assert list(csv.reader(io.StringIO(raw.decode(encoding))))[0] == values[4:8]
+    assert raw_report['escaped_text_cells'] == 0 and raw.decode(encoding).endswith('\n')
+
+
+def test_export_json_preserves_types_and_snapshot(workspace, tmp_path):
+    import json
+    path, doc, session = opened(workspace, tmp_path)
+    snap = workspace.snapshot(doc['id'], **args(session), engine_state='fixture', calculation='stale')
+    session.update(blob=workspace.store.blob(data(99)), session_revision=1)
+    workspace.store.put('session', session)
+    result, mime, report = workspace.export_range(doc['id'], snap['id'], '1', 'A1:E1',
+                                                 format='json', allow_stale=True)
+    result = json.loads(result)
+    assert mime == 'application/json'
+    assert [c['effective_value'] for c in result['items']] == ['00123', 10, False, None, None]
+    assert result['items'][3]['formula'] == '=B1*2'
+    assert result['items'][4]['value_type'] == 'blank'
+    assert report['missing_formula_cells'] == 1 and report['session_revision'] == 0
+    assert load_workbook(path).active['B1'].value == 10
+    other = workspace.create('other')['document']
+    with pytest.raises(PermissionError):
+        workspace.export_range(other['id'], snap['id'], '1', 'A1', allow_stale=True)
+
+
+def test_export_html_escapes_content_and_unencodable_text_fails(workspace, tmp_path):
+    book = Workbook()
+    book.active['A1'] = '<script>alert(1)</script>😀'
+    path = tmp_path / 'unsafe.xlsx'
+    book.save(path)
+    doc = workspace.open(path)['document']
+    session = workspace.acquire(doc['id'], 'export-test')['session']
+    snap = workspace.snapshot(doc['id'], **args(session), engine_state='fixture', calculation='stale')
+    output, _, _ = workspace.export_range(doc['id'], snap['id'], '1', 'A1', format='html', allow_stale=True)
+    assert b'<script>' not in output and b'&lt;script&gt;' in output
+    with pytest.raises(ValueError, match='인코딩'):
+        workspace.export_range(doc['id'], snap['id'], '1', 'A1', encoding='cp949', allow_stale=True)
+    with pytest.raises(ValueError):
+        workspace.export_range(doc['id'], snap['id'], '1', 'A1', format='xlsx', allow_stale=True)
+
+
+def test_export_api_attachment_is_guarded(workspace, tmp_path, monkeypatch):
+    import api_spreadsheets
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    _, doc, session = opened(workspace, tmp_path)
+    snap = workspace.snapshot(doc['id'], **args(session), engine_state='fixture', calculation='stale')
+    monkeypatch.setattr(api_spreadsheets, 'service', lambda: workspace)
+    app = FastAPI()
+    app.dependency_overrides[api_spreadsheets.authorize] = lambda: None
+    app.include_router(api_spreadsheets.router)
+    with TestClient(app) as client:
+        request = {'snapshot_id': snap['id'], 'sheet_id': '1', 'range': 'A1:C1', 'format': 'tsv'}
+        assert client.post('/spreadsheets/'+doc['id']+'/range-export', json={'args': request}).status_code == 409
+        result = client.post('/spreadsheets/'+doc['id']+'/range-export', json={'args': {**request, 'allow_stale': True}})
+        assert result.status_code == 200, result.text
+        assert result.content.decode('utf-8-sig') == '00123\t10\tFALSE\r\n'
+        assert result.headers['content-disposition'] == 'attachment; filename=range.tsv'
+        assert result.headers['x-content-type-options'] == 'nosniff'
+
+
 if __name__ == '__main__':
     import sys
     import pytest

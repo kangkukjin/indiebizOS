@@ -145,6 +145,7 @@ data/*.json
 !data/ibl_nodes.yaml
 data/system_ai_state/
 data/coding/
+data/document_workspace/
 data/world_pulse.db
 data/conversations.db*
 .bfg-report/

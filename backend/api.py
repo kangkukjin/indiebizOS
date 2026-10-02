@@ -614,6 +614,7 @@ from api_xray import router as xray_router
 from api_prompt_composition import router as prompt_composition_router
 from api_guides import router as guides_router
 from api_coding import router as coding_router
+from api_documents import router as documents_router
 from api_lecture_workspace import router as lecture_workspace_router
 
 # 매니저 주입
@@ -686,6 +687,7 @@ app.include_router(member_router, tags=["member"])  # /m/* 외부 서비스 앱 
 app.include_router(xray_router, tags=["xray"])
 app.include_router(prompt_composition_router)  # 로컬 전용 — is_public_remote_path 등록 금지 (프롬프트·기억 본문)
 app.include_router(coding_router)
+app.include_router(documents_router)
 app.include_router(guides_router)  # 로컬 전용 — is_public_remote_path 등록 금지 (가이드 본문·편집)
 app.include_router(lecture_workspace_router, tags=["lecture-workspace"])
 

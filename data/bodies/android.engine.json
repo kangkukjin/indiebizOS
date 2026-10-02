@@ -155,6 +155,7 @@
     "datastore/conversation_db",
     "datastore/decision_ledger",
     "datastore/distill_ledger",
+    "datastore/document_store",
     "datastore/face_config",
     "datastore/file_index",
     "datastore/finance_ledger_sync",
@@ -314,6 +315,7 @@
     "services/coding_git",
     "services/coding_runs",
     "services/coding_workspace",
+    "services/document_workspace",
     "services/execution_trace",
     "services/execution_trace_scope",
     "services/gen_newspaper",
@@ -345,6 +347,7 @@
     "surface/api_coding",
     "surface/api_config_tiers",
     "surface/api_conversations",
+    "surface/api_documents",
     "surface/api_execution_trace",
     "surface/api_external_users",
     "surface/api_family_news",
@@ -514,8 +517,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 439,
-    "engine": 413,
+    "total": 442,
+    "engine": 416,
     "blocklist": 26
   }
 }

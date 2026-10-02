@@ -1,0 +1,53 @@
+.document-workspace{height:100vh;display:flex;flex-direction:column;background:#f6f5f1;color:#23332f;font:14px/1.5 system-ui,sans-serif;overflow:hidden}
+.document-workspace header{padding:18px 26px;display:flex;align-items:center;justify-content:space-between;background:#fff;border-bottom:1px solid #d9ded8}
+.document-workspace h1{font-size:27px;margin:0}
+.document-eyebrow{font-size:10px;letter-spacing:.19em;color:#62766a}
+.document-badge{padding:6px 12px;background:#edf2df;border-radius:20px;color:#536b25}
+.document-limit{margin:0;padding:10px 26px;background:#fff8e5;color:#755820;font-size:12px}
+.document-open{display:flex;gap:12px;padding:15px 26px;align-items:end;border-bottom:1px solid #d9ded8}
+.document-open label:first-child{flex:1}
+.document-workspace label{display:flex;flex-direction:column;gap:4px;font-size:12px}
+.document-workspace input,.document-workspace select{padding:8px 10px;border:1px solid #c8d1c9;background:white;border-radius:5px;min-width:0}
+.document-workspace button{padding:8px 12px;border:1px solid #c8d1c9;border-radius:5px;background:white;color:#244637;cursor:pointer}
+.document-workspace button:hover:not(:disabled){background:#e8efe7}
+.document-workspace button:disabled{opacity:.45;cursor:default}
+.document-workspace :focus-visible{outline:3px solid #408269;outline-offset:2px}
+.document-body{display:grid;grid-template-columns:210px minmax(300px,1fr) 260px;flex:1;min-height:0}
+.document-body nav{padding:16px 12px;overflow:auto;border-right:1px solid #d9ded8}
+.document-body h2{font-size:14px;margin:0 0 12px}
+.document-body nav button{display:flex;flex-direction:column;text-align:left;width:100%;margin-bottom:8px;overflow-wrap:anywhere}
+.document-body nav .selected{background:#dfe9dd;border-color:#708c75}
+.document-body nav small{font-size:10px;color:#6d8075}
+.document-editor{display:flex;flex-direction:column;min-width:0;min-height:0;background:white}
+.document-title{padding:16px 22px;border-bottom:1px solid #e5e8e3;overflow-wrap:anywhere}
+.document-title h2{margin:0;font-size:17px}
+.document-title small{font-size:11px;color:#6a776f}
+.document-toolbar{display:flex;gap:7px;padding:10px 20px;flex-wrap:wrap}
+.document-editor>textarea{flex:1;resize:none;border:0;border-top:1px solid #e8ebe5;padding:25px;line-height:1.8;font:15px/1.8 ui-monospace,monospace;min-height:150px;outline-offset:-3px}
+.document-editor>iframe{flex:1;border:0;width:100%;background:#fff}
+.document-editor>p{padding:20px}
+.document-export{padding:12px 20px;display:flex;align-items:end;gap:10px;border-top:1px solid #ddd}
+.document-export label{flex:1}
+.document-body aside{padding:18px;border-left:1px solid #d9ded8;overflow:auto}
+.document-body aside p{color:#64736a;font-size:12px}
+.document-body aside textarea{min-height:140px;resize:vertical;padding:10px;border:1px solid #c8d1c9;border-radius:5px;font:14px/1.6 inherit}
+.document-body aside button{margin:8px 5px 0 0}
+.document-body blockquote{margin:12px 0;padding:10px;background:#e8eee4;border-left:3px solid #668366;white-space:pre-wrap;overflow-wrap:anywhere;max-height:180px;overflow:auto}
+.document-workspace footer{display:flex;justify-content:space-between;padding:10px 22px;border-top:1px solid #d9ded8;background:#fff;font-size:12px;overflow-wrap:anywhere;gap:12px}
+.document-empty{margin:auto;text-align:center;padding:30px;color:#66796a}
+.document-error{padding:10px 22px;background:#ffe9e1;color:#8f3a26;display:flex;justify-content:space-between;gap:10px}
+.document-workspace button,.document-workspace input,.document-workspace select{font:inherit}
+.remote-content .document-workspace{height:100%}
+@media(max-width:1000px){.document-body{grid-template-columns:160px minmax(300px,1fr)}
+.document-body aside{display:none}
+}
+@media(max-width:650px){.document-body{grid-template-columns:1fr}
+.document-body nav{max-height:100px;display:flex;gap:8px;border-bottom:1px solid #ddd}
+.document-body nav h2{display:none}
+.document-body nav button{min-width:130px}
+.document-open{flex-wrap:wrap;padding:10px}
+.document-workspace header{padding:12px}
+.document-badge{font-size:10px}
+.document-limit{padding:8px 12px}
+}
+

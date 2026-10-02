@@ -1,45 +1,24 @@
 """Document sessions with conditional source saves and exclusive copy exports.
 External applications do not share our lock: hash checks are best effort.
 
-Office/PDF/Hancom capabilities remain unavailable until real adapters pass the
+Hancom capabilities remain unavailable until a licensed adapter passes the
 engine acceptance contract. This service never converts those files silently.
 """
 import codecs
 import json
-import os
-import tempfile
 import time
 from pathlib import Path
 
 import principal
-from document_store import DocumentStore, digest, identifier, sync_directory
+from office_store import OfficeStore, digest, identifier
+from office_resources import OfficeResources
+import document_office
+from office_sessions import (OfficeSessions, DocumentConflict, DocumentUnsupported,
+                             owner, read_bytes)
 
 SOURCE_FORMATS = {"txt", "md", "markdown", "html", "htm", "tex", "typ"}
 ENCODINGS = {"utf-8", "utf-8-sig", "utf-16", "utf-16-le", "utf-16-be", "cp949", "euc-kr"}
 MAX_BYTES = 25 * 1024 * 1024
-
-
-class DocumentConflict(ValueError):
-    pass
-
-
-class DocumentUnsupported(ValueError):
-    pass
-
-
-def owner():
-    if not principal.is_owner():
-        raise PermissionError("문서 작업 공간은 현재 소유자 전용입니다")
-
-
-def read_bytes(path):
-    if not path.is_file() or path.is_symlink():
-        raise ValueError("일반 문서 파일을 선택하세요")
-    with path.open("rb") as stream:
-        data = stream.read(MAX_BYTES + 1)
-    if len(data) > MAX_BYTES:
-        raise DocumentUnsupported("현재 작업 공간의 파일 상한은 25MB입니다")
-    return data
 
 
 def decode_source(data, encoding=None):
@@ -84,16 +63,19 @@ def generate_selection(instruction, selected):
     return answer, {"kind": "ai", "role": "execution", "usage": metrics}
 
 
-class DocumentWorkspace:
+class DocumentWorkspace(OfficeSessions):
     def __init__(self, root=None):
-        self.store = DocumentStore(root)
+        self.store = OfficeStore(root)
+        self.resources = OfficeResources(self.store)
+
+    def validate_output(self, document, data):
+        if document["source_format"] in SOURCE_FORMATS:
+            data.decode(document["encoding"], errors="strict")
+        else:
+            document_office.validate(data, document["source_format"])
 
     def _doc(self, document_id):
-        owner()
-        row = self.store.get("document", document_id)
-        if row["owner"] != principal.cache_key():
-            raise PermissionError("이 문서의 소유자가 아닙니다")
-        return row
+        return self.resources.get(document_id)
 
     def list(self):
         owner()
@@ -102,12 +84,14 @@ class DocumentWorkspace:
     def capabilities(self, document_id):
         d = self._doc(document_id)
         source = d["source_format"] in SOURCE_FORMATS
+        office = d["source_format"] in document_office.NATIVE and document_office.available()
         engine = "source" if source else "hancom" if d["source_format"] in {"hwp", "hwpx"} else "office"
-        reason = "소스 원문 편집" if source else "편집 엔진 연결·라이선스·실파일 왕복 검증 미확보"
-        return {"engine": engine, "edit_native": source, "save": source, "export_copy": source,
-                "ai_text_replace": source, "structural_edit": False,
+        reason = "소스 원문 편집" if source else "로컬 사무 문서 편집" if office else "이 형식의 편집 엔진을 연결해야 합니다"
+        return {"engine": engine, "edit_native": source or office, "save": source or office, "export_copy": source or office,
+                "ai_text_replace": source or (office and d["source_format"] != "pdf"), "structural_edit": office,
                 "reason": reason, "loss_report": {"status": "unverified", "items": []},
-                "unavailable": ["office", "hancom", "pdf_edit", "ocr_correction", "compile", "format_export"]}
+                "unavailable": ["hancom", "epub_edit", "latex_compile", "project_assets"],
+                "ocr_correction": d["source_format"] == "pdf", "format_export": True}
 
     def open(self, path, encoding=None):
         owner()
@@ -124,16 +108,7 @@ class DocumentWorkspace:
             chosen = None
             if extension in SOURCE_FORMATS:
                 _, chosen = decode_source(data, encoding)
-            key = self.store.blob(data)
-            revision = identifier()
-            row = {"id": identifier(), "owner": principal.cache_key(), "title": path.name,
-                   "source_uri": str(path), "source_format": extension, "source_sha256": key,
-                   "revision_id": revision, "encoding": chosen, "session_id": None,
-                   "created_at": time.time()}
-            with self.store.connect() as conn:
-                self.store.put("document", row, conn)
-                self.store.put("revision", {"id": revision, "document_id": row["id"],
-                    "parent_revision_id": None, "blob": key, "created_at": time.time()}, conn)
+            row = self.resources.register(path, data, chosen)
             return self.detail(row["id"])
 
     def detail(self, document_id):
@@ -157,7 +132,7 @@ class DocumentWorkspace:
                     raise DocumentConflict("다른 창이 작성 중입니다. 그 창에서 저장·닫기를 완료하세요")
             else:
                 s = {"id": identifier(), "document_id": document_id, "client_id": client_id,
-                     "engine_id": "source", "engine_epoch": identifier(), "session_revision": 0,
+                     "engine_id": "source" if d["encoding"] else "office", "engine_epoch": identifier(), "session_revision": 0,
                      "blob": d["source_sha256"], "saved_blob": d["source_sha256"],
                      "state": "saved", "created_at": time.time()}
                 d["session_id"] = s["id"]
@@ -181,30 +156,6 @@ class DocumentWorkspace:
             self.store.put("session", s)
             return self.detail(document_id)
 
-    def _session(self, document_id, session_id, client_id, epoch, expected):
-        d = self._doc(document_id)
-        if d["session_id"] != session_id:
-            raise DocumentConflict("편집 세션이 바뀌었습니다")
-        s = self.store.get("session", session_id)
-        if s["client_id"] != client_id or s["engine_epoch"] != epoch:
-            raise DocumentConflict("작성 창 또는 엔진 세대가 바뀌었습니다")
-        if s["session_revision"] != expected:
-            raise DocumentConflict("편집 버전이 바뀌었습니다. 현재 내용을 다시 읽으세요")
-        return d, s
-
-    def _operation(self, document_id, operation_id, payload):
-        if not isinstance(operation_id, str) or not 1 <= len(operation_id) <= 128:
-            raise ValueError("작업 식별자가 필요합니다")
-        fingerprint = digest(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode())
-        key = digest((document_id + ":" + operation_id).encode())
-        try:
-            op = self.store.get("operation", key)
-        except ValueError:
-            return {"id": key, "document_id": document_id, "fingerprint": fingerprint}, None
-        if op["fingerprint"] != fingerprint:
-            raise DocumentConflict("같은 작업 식별자가 다른 요청에 사용됐습니다")
-        return op, op.get("result")
-
     def draft(self, document_id, session_id, client_id, epoch, expected, operation_id, text):
         owner()
         payload = ["draft", session_id, client_id, epoch, expected, text]
@@ -214,6 +165,8 @@ class DocumentWorkspace:
             if cached is not None:
                 return cached
             d, s = self._session(document_id, session_id, client_id, epoch, expected)
+            if not d["encoding"]:
+                raise DocumentUnsupported("사무 문서는 활성 편집기에서 수정하세요")
             data = text.encode(d["encoding"], errors="strict")
             if len(data) > MAX_BYTES:
                 raise ValueError("문서 크기 상한을 초과했습니다")
@@ -243,6 +196,8 @@ class DocumentWorkspace:
         row = self.store.get("snapshot", snapshot_id)
         if row["document_id"] != document_id:
             raise PermissionError("다른 문서의 스냅샷입니다")
+        if not d["encoding"]:
+            raise DocumentUnsupported("사무 문서는 활성 편집기의 선택 읽기를 사용하세요")
         return {"snapshot": row, "text": self.store.bytes(row["blob"]).decode(d["encoding"])}
 
     def propose(self, document_id, snapshot_id, start, end, selected_sha256, replacement):
@@ -335,148 +290,14 @@ class DocumentWorkspace:
             with self.store.connect() as conn:
                 self.store.put("session", s, conn)
                 self.store.put("operation", op, conn)
+                if p.get("resource_reference"):
+                    reference = {**p["resource_reference"], "proposal_id": proposal_id,
+                                 "target_snapshot_id": p["snapshot_id"],
+                                 "target_session_revision": s["session_revision"]}
+                    self.store.put("resource_link", reference, conn)
                 self.store.event(document_id, {"type": "proposal_applied", "proposal_id": proposal_id,
                     "operation_id": operation_id, "session_revision": s["session_revision"]}, conn)
             return result
-
-    def save(self, document_id, session_id, client_id, epoch, expected, operation_id, expected_revision):
-        """One writer inside this service; external writers require hash rechecks.
-
-        A prepared intent is never replayed against the filesystem. Recovery
-        observes the output hash and only finalizes metadata, or reports a
-        conflict. Immutable blobs retain both the base and the edited bytes.
-        """
-        with self.store.lock():
-            self._doc(document_id)
-            op, cached = self._operation(document_id, operation_id,
-                ["save", session_id, client_id, epoch, expected, expected_revision])
-            if cached is not None:
-                return cached
-            d, s = self._session(document_id, session_id, client_id, epoch, expected)
-            if d["revision_id"] != expected_revision:
-                raise DocumentConflict("원본 버전이 바뀌었습니다. 현재 버전을 확인하세요")
-            if any(o.get("status") == "prepared" and o["document_id"] == document_id
-                   for o in self.store.list("operation")):
-                raise DocumentConflict("미완료 저장을 먼저 복구하세요. 원본을 다시 쓰지 않습니다")
-            if not self.capabilities(document_id)["save"]:
-                raise DocumentUnsupported("이 형식의 원본 저장은 아직 지원하지 않습니다")
-            path = Path(d["source_uri"])
-            original = read_bytes(path)
-            if digest(original) != d["source_sha256"]:
-                raise DocumentConflict("외부에서 원본이 바뀌었습니다. 초안을 보존했습니다. 사본 저장을 사용하세요")
-            # Retain the confirmed base even if publication or metadata fails.
-            self.store.blob(original)
-            data = self.store.bytes(s["blob"])
-            data.decode(d["encoding"], errors="strict")
-            op.update(kind="save", status="prepared", blob=s["blob"], output=str(path),
-                      session_id=session_id, parent_revision_id=expected_revision,
-                      base_sha256=d["source_sha256"], revision_id=identifier(),
-                      created_at=time.time())
-            self.store.put("operation", op)
-            fd, temporary = tempfile.mkstemp(prefix=".indiebiz-document-", dir=path.parent)
-            try:
-                with os.fdopen(fd, "wb") as stream:
-                    stream.write(data)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                os.chmod(temporary, path.stat().st_mode & 0o777)
-                if digest(read_bytes(path)) != op["base_sha256"]:
-                    op["status"] = "conflict"
-                    self.store.put("operation", op)
-                    raise DocumentConflict("저장 직전 외부 수정이 발견됐습니다. 원본과 초안을 보존했습니다")
-                # This is atomic publication, not an OS compare-and-swap with
-                # arbitrary external writers. The UI states that limitation.
-                os.replace(temporary, path)
-                sync_directory(path.parent)
-                if digest(read_bytes(path)) != op["blob"]:
-                    raise DocumentConflict("저장 후 원본이 바뀌었습니다. 초안을 보존하고 복구를 기다립니다")
-                return self._finish_save(op)
-            finally:
-                if os.path.exists(temporary):
-                    os.unlink(temporary)
-
-    def _finish_save(self, op):
-        d = self._doc(op["document_id"])
-        if d["revision_id"] != op["parent_revision_id"]:
-            raise DocumentConflict("저장 확정 기준이 바뀌었습니다. 원본은 다시 쓰지 않습니다")
-        d.update(source_sha256=op["blob"], revision_id=op["revision_id"])
-        s = self.store.get("session", op["session_id"])
-        s.update(saved_blob=op["blob"], state="saved" if s["blob"] == op["blob"] else "draft")
-        result = {"state": "saved", "path": op["output"], "sha256": op["blob"],
-                  "revision_id": op["revision_id"], "session": s}
-        op.update(status="committed", result=result)
-        with self.store.connect() as conn:
-            self.store.put("document", d, conn)
-            self.store.put("session", s, conn)
-            self.store.put("revision", {"id": op["revision_id"], "document_id": d["id"],
-                "parent_revision_id": op["parent_revision_id"], "blob": op["blob"],
-                "created_at": op["created_at"]}, conn)
-            self.store.put("operation", op, conn)
-            self.store.event(d["id"], {"type": "saved", "operation_id": op["id"],
-                "revision_id": op["revision_id"]}, conn)
-        return result
-
-    def export_copy(self, document_id, session_id, client_id, epoch, expected, operation_id, filename):
-        if (not filename or Path(filename).name != filename or filename in {".", ".."}
-                or "/" in filename or "\\" in filename):
-            raise ValueError("같은 폴더에 저장할 새 파일명만 입력하세요")
-        with self.store.lock():
-            self._doc(document_id)
-            op, cached = self._operation(document_id, operation_id,
-                ["export_copy", session_id, client_id, epoch, expected, filename])
-            if cached is not None:
-                return cached
-            d, s = self._session(document_id, session_id, client_id, epoch, expected)
-            path = Path(d["source_uri"]).parent / filename
-            if path.suffix.lower().lstrip(".") != d["source_format"]:  # vj-ok: 파일 확장자 식별 규약
-                raise DocumentUnsupported("사본은 같은 형식으로 저장하세요. 형식 변환은 아직 지원하지 않습니다")
-            if path.exists() or path.is_symlink():
-                raise DocumentConflict("이미 있는 파일은 덮어쓰지 않습니다")
-            data = self.store.bytes(s["blob"])
-            data.decode(d["encoding"], errors="strict")
-            op.update(status="prepared", blob=s["blob"], output=str(path), session_id=session_id)
-            self.store.put("operation", op)
-            fd, temporary = tempfile.mkstemp(prefix=".indiebiz-document-", dir=path.parent)
-            try:
-                with os.fdopen(fd, "wb") as stream:
-                    stream.write(data)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                # Atomic, exclusive publication. A concurrent creator wins;
-                # neither the original nor an existing destination is replaced.
-                os.link(temporary, path)
-                sync_directory(path.parent)
-                if digest(read_bytes(path)) != s["blob"]:
-                    raise DocumentConflict("생성된 사본이 외부에서 변경됐습니다. 초안을 보존했습니다")
-                return self._finish_export(op)
-            finally:
-                if os.path.exists(temporary):
-                    os.unlink(temporary)
-
-    def _finish_export(self, op):
-        op.update(status="committed", result={"path": op["output"], "sha256": op["blob"],
-                  "state": "copy_saved", "original_unchanged": True})
-        with self.store.connect() as conn:
-            self.store.put("operation", op, conn)
-            self.store.event(op["document_id"], {"type": "copy_saved", "path": op["output"]}, conn)
-        return op["result"]
-
-    def recover(self, document_id):
-        with self.store.lock():
-            self._doc(document_id)
-            results = []
-            for op in self.store.list("operation"):
-                if op["document_id"] != document_id or op.get("status") != "prepared":
-                    continue
-                path = Path(op["output"])
-                if path.is_file() and not path.is_symlink() and digest(read_bytes(path)) == op["blob"]:
-                    sync_directory(path.parent)
-                    results.append(self._finish_save(op) if op.get("kind") == "save" else self._finish_export(op))
-                else:
-                    op["status"] = "conflict" if path.exists() else "not_written"
-                    self.store.put("operation", op)
-                    results.append({"state": op["status"], "draft_preserved": True})
-            return {"items": results, "detail": self.detail(document_id)}
 
     def versions(self, document_id):
         self._doc(document_id)
@@ -487,17 +308,20 @@ class DocumentWorkspace:
         revision = self.store.get("revision", revision_id)
         if revision["document_id"] != document_id:
             raise PermissionError("다른 문서의 버전입니다")
-        return self.draft(document_id, session_id, client_id, epoch, expected, operation_id,
-                          self.store.bytes(revision["blob"]).decode(d["encoding"]))
-
-    def close(self, document_id, session_id, client_id, epoch, expected):
+        if d["encoding"]:
+            return self.draft(document_id, session_id, client_id, epoch, expected, operation_id,
+                              self.store.bytes(revision["blob"]).decode(d["encoding"]))
         with self.store.lock():
+            op, cached = self._operation(document_id, operation_id,
+                ["restore", revision_id, session_id, client_id, epoch, expected])
+            if cached is not None:
+                return cached
             d, s = self._session(document_id, session_id, client_id, epoch, expected)
-            if s["blob"] != d["source_sha256"]:
-                raise DocumentConflict("초안이 남아 있습니다. 먼저 파일을 저장하세요")
-            if any(o.get("status") == "prepared" and o["document_id"] == document_id
-                   for o in self.store.list("operation")):
-                raise DocumentConflict("미완료 저장을 먼저 복구하세요")
-            d["session_id"] = None
-            self.store.put("document", d)
-            return {"closed": True}
+            self.validate_output(d, self.store.bytes(revision["blob"]))
+            s.update(blob=revision["blob"], engine_epoch=identifier(), session_revision=expected + 1,
+                     state="draft", engine_closed=False)
+            op["result"] = {"session": s}
+            with self.store.connect() as conn:
+                self.store.put("session", s, conn)
+                self.store.put("operation", op, conn)
+            return op["result"]

@@ -14,14 +14,12 @@ from ibl_edition import text_result
 
 _CURRENT_DIR = Path(__file__).parent
 
-
 def _load_sibling(module_name):
     """패키지 형제 모듈 spec-load (real-estate load_module 선례)."""
     spec = importlib.util.spec_from_file_location(module_name, _CURRENT_DIR / f"{module_name}.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
-
 
 # 파일 찾기 하부는 형제 모듈이 안다 — handler 에는 분기와 봉투만 (2026-08-29 분리).
 _file_io = _load_sibling("essentials_file_io")
@@ -638,6 +636,13 @@ _OP_DISPATCHERS = {
     "document_op": {
         "inspect": _sib_op("docx_edit_ops", "op_inspect"),
         "edit": _sib_op("docx_edit_ops", "op_edit"),
+        "open": _sib_op("essentials_document_workspace", "op_open"), "session": _sib_op("essentials_document_workspace", "op_session"),
+        "draft": _sib_op("essentials_document_workspace", "op_draft"), "snapshot": _sib_op("essentials_document_workspace", "op_snapshot"),
+        "read": _sib_op("essentials_document_workspace", "op_read"), "propose": _sib_op("essentials_document_workspace", "op_propose"),
+        "apply": _sib_op("essentials_document_workspace", "op_apply"), "save": _sib_op("essentials_document_workspace", "op_save"),
+        "export": _sib_op("essentials_document_workspace", "op_export"), "versions": _sib_op("essentials_document_workspace", "op_versions"),
+        "restore": _sib_op("essentials_document_workspace", "op_restore"), "capabilities": _sib_op("essentials_document_workspace", "op_capabilities"),
+        "recover": _sib_op("essentials_document_workspace", "op_recover"), "close": _sib_op("essentials_document_workspace", "op_close"),
     },
     # JSON 원장 — 등록 스크립트에서 승격(2026-09-04, 사용자 판정 언어 개정). 관문 넷은 ledger_ops 머리말.
     "ledger_op": {
@@ -719,7 +724,7 @@ def _execute(tool_input: dict, context) -> str:
                               ensure_ascii=False)
         try:
             return json.dumps(fn({**tool_input, "_project_path": project_path,
-                                  "_path_guard": _validate_path_in_scope}), ensure_ascii=False)
+                                  "_path_guard": _validate_path_in_scope, "_code_path": lambda p: _red_is_live_path(p) or _red_family.repair_artifact(p, _REPO_ROOT)}), ensure_ascii=False)
         except Exception as e:
             return json.dumps({"success": False, "error": f"{tool_name} 오류: {e}"}, ensure_ascii=False)
 

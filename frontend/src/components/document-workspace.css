@@ -13,6 +13,7 @@
 .document-workspace button:disabled{opacity:.45;cursor:default}
 .document-workspace :focus-visible{outline:3px solid #408269;outline-offset:2px}
 .document-body{display:grid;grid-template-columns:210px minmax(300px,1fr) 260px;flex:1;min-height:0}
+.document-body:not(:has(>aside)){grid-template-columns:210px minmax(300px,1fr)}
 .document-body nav{padding:16px 12px;overflow:auto;border-right:1px solid #d9ded8}
 .document-body h2{font-size:14px;margin:0 0 12px}
 .document-body nav button{display:flex;flex-direction:column;text-align:left;width:100%;margin-bottom:8px;overflow-wrap:anywhere}
@@ -40,8 +41,10 @@
 .remote-content .document-workspace{height:100%}
 @media(max-width:1000px){.document-body{grid-template-columns:160px minmax(300px,1fr)}
 .document-body aside{display:none}
+.document-body:not(:has(>aside)){grid-template-columns:160px minmax(300px,1fr)}
 }
 @media(max-width:650px){.document-body{grid-template-columns:1fr}
+.document-body:not(:has(>aside)){grid-template-columns:1fr}
 .document-body nav{max-height:100px;display:flex;gap:8px;border-bottom:1px solid #ddd}
 .document-body nav h2{display:none}
 .document-body nav button{min-width:130px}
@@ -51,3 +54,11 @@
 .document-limit{padding:8px 12px}
 }
 
+
+.office-document{flex:1;min-height:0;display:flex;flex-direction:column}.office-frame{flex:1;min-height:400px}.office-document>p{margin:0;padding:8px 16px}.office-frame>iframe{width:100%;height:100%;border:0}.office-document details{max-height:100px;overflow:auto}
+.document-editor>section[aria-label="자료 연결"]{max-height:170px;overflow:auto;padding:12px 20px;border-top:1px solid #ddd}
+
+.document-new{display:flex;align-items:end;gap:8px;padding:8px 26px;border-bottom:1px solid #ddd;flex-wrap:wrap}.document-new label{max-width:200px}
+
+.office-ai{padding:8px 16px;max-height:240px;overflow:auto;background:#f8faf5}.office-ai textarea{min-height:70px;width:100%;border:1px solid #c8d1c9}.office-ai>button{margin:4px}.office-ai blockquote{display:inline-block;margin:4px;padding:4px 10px}.office-ai p{font-size:12px;color:#66776a}
+.document-ocr{padding:8px 16px;max-height:260px;overflow:auto;background:#f8faf5}.ocr-words section{display:flex;flex-wrap:wrap;gap:6px}.ocr-words label{max-width:140px}.ocr-low input{border-color:#bd862b}.document-markdown{overflow:auto;flex:1;padding:25px}.document-markdown table{border-collapse:collapse}.document-markdown td,.document-markdown th{border:1px solid #ddd;padding:6px}

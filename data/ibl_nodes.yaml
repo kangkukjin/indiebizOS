@@ -5709,7 +5709,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-02'
-          impl: f4bbc2799ffab658
+          impl: 1b34ef010f2e4fa1
         target_key: path
         aliases:
           offset:
@@ -5722,7 +5722,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-02'
-          impl: f4bbc2799ffab658
+          impl: 1b34ef010f2e4fa1
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5799,7 +5799,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-02'
-          impl: f4bbc2799ffab658
+          impl: 1b34ef010f2e4fa1
         target_key: path
       list:
         callable_contract:
@@ -6371,8 +6371,8 @@ nodes:
         guides:
         - body.md
       document:
-        description: 기존 DOCX 문단·표·머리말 조회·교체. Word 변경 추적·주석, 원본 보존. 새 문서 생성은 table:document.
-        target_description: 'inspect: path·offset·limit → 문단 items(block_id/text/editable), 파일 sha256. edit: path·expected_sha256(조회 해시)·edits 배열([{block_id,old_string,new_string,comment?}])·output(새 docx 경로). track_changes 기본 true, author 기본 IndieBizOS. 한 문단당 한 교체, old_string 고유 일치 필수. 복합 필드·링크·기존 변경/주석 문단은 editable=false로 보호. 문서 생성은 table:document, 양식 채우기는 self:fill.'
+        description: 문서앱 세션·스냅샷·제안·조건부 저장과 기존 DOCX inspect/edit. 원본·버전·작성 창 보호. 새 생성은 table:document.
+        target_description: 'inspect: path·offset·limit → 문단 items(block_id/text/editable), 파일 sha256. edit: path·expected_sha256(조회 해시)·edits 배열([{block_id,old_string,new_string,comment?}])·output(새 docx 경로). track_changes 기본 true, author 기본 IndieBizOS. 한 문단당 한 교체, old_string 고유 일치 필수. 복합 필드·링크·기존 변경/주석 문단은 editable=false로 보호. 소스 문서앱 op는 args 객체로 서비스 인자를 전달: open(path,encoding?), session(document_id,client_id), draft(문서/세션/client_id/epoch/expected,operation_id,text), snapshot(동일 세션 인자), read(document_id,snapshot_id), propose(document_id,snapshot_id,start,end,selected_sha256,replacement), apply(세션 인자,operation_id,proposal_id), save(세션 인자,operation_id,expected_revision), export(세션 인자,operation_id,filename), versions/capabilities/recover(document_id), restore(세션 인자,operation_id,revision_id), close(세션 인자). UI가 작성 중이면 세션을 빼앗지 않으며 저장 전 초안은 UI 전송 확인 뒤 snapshot으로 읽는다. DOCX/ODT/RTF/PDF 원형 편집은 문서앱의 연결된 로컬 엔진, 사무 선택 수정은 활성 편집기 플러그인으로 수행. HWP/HWPX 원형 편집 엔진은 미연결. 생성은 table:document, 양식은 self:fill.'
         returns: items
         side_effect: true
         exempt: 실제 DOCX 경로 필요 — 임시 문서 회귀로 검증
@@ -6381,8 +6381,9 @@ nodes:
         tool: document_op
         target_key: op
         runs_on: pc_only
-        implementation: docx_edit_ops.py — OOXML 문단 교체·w:ins/w:del·comments 배선, 비대상 ZIP 파트 보존
+        implementation: docx_edit_ops.py 사본 편집 + essentials_document_workspace.py 공통 세션·스냅샷·조건부 저장
         params:
+          args: object
           path: string
           output: string
           expected_sha256: string
@@ -6397,9 +6398,26 @@ nodes:
             edit: effect
           side_effect:
             inspect: false
+            read: false
+            versions: false
+            capabilities: false
           values:
             inspect: DOCX 문단·표·머리말·꼬리말 텍스트와 편집 가능 여부 조회
             edit: 선택 문구 일괄 교체·변경 추적·주석을 새 파일에 저장
+            open: 파일을 문서앱 공통 원장에 등록
+            session: 단독 작성 창 세션 시작 또는 재연결
+            draft: 세션 버전을 확인하고 복구 초안 저장
+            snapshot: 서버에 도달한 현재 초안의 고정 스냅샷
+            read: 고정 스냅샷 원문 조회
+            propose: 스냅샷 선택에 고정한 교체 제안 생성
+            apply: 세션·선택 검증 후 제안을 초안에 적용
+            save: 기대 원본 버전 확인 후 원본 파일 저장
+            export: 동일 형식의 새 파일에 사본 저장
+            versions: 확정 버전 이력 조회
+            restore: 선택 버전을 초안으로 복구
+            capabilities: 실제 형식별 지원과 미지원 사유 조회
+            recover: 미완료 저장 의도를 재쓰기 없이 복구
+            close: 저장 완료된 작성 세션 닫기
         keywords:
         - 워드
         - 문서수정
@@ -6516,7 +6534,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-02'
-          impl: f4bbc2799ffab658
+          impl: 1b34ef010f2e4fa1
         pipe_in: true
         lands_on: body
         limb_op:

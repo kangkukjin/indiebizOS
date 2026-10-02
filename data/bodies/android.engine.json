@@ -179,6 +179,7 @@
     "datastore/node_registry",
     "datastore/notification_manager",
     "datastore/notify_dispatch",
+    "datastore/office_store",
     "datastore/onboarding_state",
     "datastore/peer_cards",
     "datastore/project_manager",
@@ -315,6 +316,11 @@
     "services/coding_git",
     "services/coding_runs",
     "services/coding_workspace",
+    "services/document_creation",
+    "services/document_formats",
+    "services/document_office",
+    "services/document_office_ai",
+    "services/document_pdf",
     "services/document_workspace",
     "services/execution_trace",
     "services/execution_trace_scope",
@@ -333,11 +339,14 @@
     "services/nas_subtitle",
     "services/nas_webapp",
     "services/nostr_phone_bridge",
+    "services/office_resources",
+    "services/office_sessions",
     "services/oneshot_facade",
     "services/phone_notifications",
     "services/record_adapters",
     "services/record_dispatch",
     "services/report_html",
+    "services/resource_links",
     "services/scheduler",
     "services/sync_exchange",
     "services/warehouse_adapters",
@@ -347,6 +356,7 @@
     "surface/api_coding",
     "surface/api_config_tiers",
     "surface/api_conversations",
+    "surface/api_document_engine",
     "surface/api_documents",
     "surface/api_execution_trace",
     "surface/api_external_users",
@@ -517,8 +527,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 442,
-    "engine": 416,
+    "total": 452,
+    "engine": 426,
     "blocklist": 26
   }
 }

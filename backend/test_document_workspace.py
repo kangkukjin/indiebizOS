@@ -12,6 +12,7 @@ for layer in ("datastore", "services", "surface"):
     sys.path.insert(0, str(HERE / layer))
 import principal
 import document_workspace as mod
+import office_sessions as storage
 from document_workspace import DocumentWorkspace, DocumentConflict, DocumentUnsupported
 from document_store import digest
 
@@ -60,11 +61,11 @@ def test_original_save_rejects_external_change(work):
 
 def test_external_write_immediately_before_publication_preserved(work, monkeypatch):
     app, path, d, s = edit(work)
-    link = mod.os.link
+    link = storage.os.link
     def race(src, dst):
         path.write_bytes(b"external at last instant")
         return link(src, dst)
-    monkeypatch.setattr(mod.os, "link", race)
+    monkeypatch.setattr(storage.os, "link", race)
     output = app.export_copy(**args(d, s), operation_id="race", filename="copy.txt")
     assert path.read_bytes() == b"external at last instant"
     assert Path(output["path"]).read_bytes() == "고친 초안\r\n".encode("cp949")
@@ -73,11 +74,11 @@ def test_external_write_immediately_before_publication_preserved(work, monkeypat
 
 def test_destination_race_never_overwrites(work, monkeypatch):
     app, path, d, s = edit(work)
-    link = mod.os.link
+    link = storage.os.link
     def race(src, dst):
         Path(dst).write_bytes(b"other writer")
         return link(src, dst)
-    monkeypatch.setattr(mod.os, "link", race)
+    monkeypatch.setattr(storage.os, "link", race)
     with pytest.raises(FileExistsError):
         app.export_copy(**args(d, s), operation_id="race", filename="copy.txt")
     assert path.with_name("copy.txt").read_bytes() == b"other writer"
@@ -103,7 +104,7 @@ def test_disk_failure_keeps_draft_and_original(work, monkeypatch):
     original = path.read_bytes()
     def full(*a, **kw):
         raise OSError("disk full")
-    monkeypatch.setattr(mod.tempfile, "mkstemp", full)
+    monkeypatch.setattr(storage.tempfile, "mkstemp", full)
     with pytest.raises(OSError):
         app.export_copy(**args(d, s), operation_id="copy", filename="copy.txt")
     assert path.read_bytes() == original
@@ -256,11 +257,11 @@ def test_conditional_save_versions_and_duplicate(work):
 
 def test_save_rechecks_hash_after_temporary_write(work, monkeypatch):
     app, path, d, s = edit(work)
-    chmod = mod.os.chmod
+    chmod = storage.os.chmod
     def race(*a, **kw):
         path.write_bytes(b"external during save")
         return chmod(*a, **kw)
-    monkeypatch.setattr(mod.os, "chmod", race)
+    monkeypatch.setattr(storage.os, "chmod", race)
     with pytest.raises(DocumentConflict):
         app.save(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
     assert path.read_bytes() == b"external during save"
@@ -275,18 +276,18 @@ def test_save_fault_recovery_never_republishes(work, monkeypatch, failure):
         raise OSError("injected " + failure)
     with monkeypatch.context() as patch:
         if failure == "disk":
-            patch.setattr(mod.tempfile, "mkstemp", crash)
+            patch.setattr(storage.tempfile, "mkstemp", crash)
         elif failure == "replace":
-            patch.setattr(mod.os, "replace", crash)
+            patch.setattr(storage.os, "replace", crash)
         elif failure == "directory_sync":
-            patch.setattr(mod, "sync_directory", crash)
+            patch.setattr(storage, "sync_directory", crash)
         else:
             patch.setattr(app, "_finish_save", crash)
         with pytest.raises(OSError):
             app.save(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
     app = DocumentWorkspace(app.store.root)
     with monkeypatch.context() as patch:
-        patch.setattr(mod.os, "replace", crash)
+        patch.setattr(storage.os, "replace", crash)
         recovered = app.recover(d["id"])["items"][0]
     if failure in {"directory_sync", "database"}:
         assert recovered["state"] == "saved"

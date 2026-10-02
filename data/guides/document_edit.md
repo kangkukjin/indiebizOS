@@ -38,3 +38,34 @@
 수정 후 inspect로 새 문구를 확인하고 `[engines:render]{op:"docx", path:"제안서_검토.docx"}`로
 레이아웃을 확인한다. 렌더러에 따라 추적/주석 표시는 다르므로 화면만으로 기록의 존재를
 판정하지 않는다. Word에서 추적 변경 및 주석을 확인할 수 있다.
+
+## 문서 앱의 활성 세션과 소스 원문
+
+런처의 **문서** 앱은 DOCX/ODT/RTF/PDF를 로컬 ONLYOFFICE에서 편집한다. 앱의
+`원본 저장`은 편집기의 저장 콜백을 확인하고 원본 해시를 다시 검사한 뒤 파일을 교체한다.
+편집기 안의 저장은 편집 서버 반영이며, 원본 파일 확정과 구분한다. `작업 저장`은
+복구 초안, `사본 저장`은 같은 형식, `내보내기`는 원본을 보존하는 변환이다.
+
+TXT/MD/HTML/LaTeX/Typst 원문은 같은 저장·버전·세션 계약을 IBL로 사용한다.
+
+```ibl
+[self:document]{op:"open", path:"보고서.md"}
+[self:document]{op:"capabilities", args:{document_id:"open에서 받은 document.id"}}
+[self:document]{op:"session", args:{document_id:"문서 ID", client_id:"작성 창 ID"}}
+```
+
+- `draft`는 `args:{session_id,client_id,epoch,expected,operation_id,text}`를 받는다.
+  `epoch`는 `engine_epoch`, `expected`는 직전 `session_revision`이다. `document_id`는
+  args에 함께 넣는다. `snapshot` 뒤 `read`가 고정된 원문을 읽는다.
+- `propose`는 스냅샷 ID·문자 범위·선택 SHA-256·교체 문구를, `apply`는 제안 ID와
+  현재 세션 인자를 받는다. 다른 창·과거 버전의 제안은 거절한다.
+- `save`는 세션 인자·operation_id·expected_revision을, `export`는 세션 인자·
+  operation_id·새 파일명(filename)을 받는다. 중복 요청은 같은 operation_id를 유지한다.
+- `versions`로 저장 버전을 조회하고 `restore`로 초안에 복구한다. `recover`는
+  파일 기록 뒤 끊긴 저장의 결과를 확인한다. `close`는 미저장 초안이 없을 때만 가능하다.
+- 사무 문서의 선택 수정은 앱 안의 공식 편집기 플러그인을 거친다. 바이너리를 문자열로
+  덮어쓰거나 활성 편집기를 우회하지 않는다. `inspect/edit`는 위의 별도 사본 계약을 유지한다.
+- XLSX/XLSM 범위는 등록한 원본 버전에서 읽어 Markdown에 표로 삽입한다. 원본 변경 확인과
+  새 버전 등록은 명시적으로 수행한다. 소스 선택을 강의 재료로 전달하면 원본 버전과 범위를 남긴다.
+
+운영·검증·미완료 범위는 [구현 상태](../../docs/DOCUMENT_APP_DESIGN_2026_10_02.md#구현-상태-2026-10-02)를 따른다.

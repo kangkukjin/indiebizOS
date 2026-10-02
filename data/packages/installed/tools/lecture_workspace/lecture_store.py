@@ -678,7 +678,7 @@ def add_material_from_file(lecture_id: str, source_path: str) -> dict:
     return entry
 
 
-def add_material_from_text(lecture_id: str, text: str, filename: str) -> dict:
+def add_material_from_text(lecture_id: str, text: str, filename: str, source_reference=None) -> dict:
     """텍스트를 materials/{filename}에 직접 쓰기."""
     md = materials_dir(lecture_id)
     md.mkdir(parents=True, exist_ok=True)
@@ -705,6 +705,8 @@ def add_material_from_text(lecture_id: str, text: str, filename: str) -> dict:
         "added_at": _now_iso(),
         "source": "inline_text",
     }
+    if source_reference is not None:
+        entry["source_reference"] = source_reference
     deck.setdefault("materials", []).append(entry)
     write_deck(lecture_id, deck)
     return entry

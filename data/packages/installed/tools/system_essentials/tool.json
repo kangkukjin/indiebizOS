@@ -834,9 +834,27 @@
             "description": "inspect/edit",
             "enum": [
               "inspect",
-              "edit"
+              "edit",
+              "open",
+              "session",
+              "draft",
+              "snapshot",
+              "read",
+              "propose",
+              "apply",
+              "save",
+              "export",
+              "versions",
+              "restore",
+              "capabilities",
+              "recover",
+              "close"
             ],
             "default": "inspect"
+          },
+          "args": {
+            "type": "object",
+            "description": "self:document 파라미터"
           },
           "path": {
             "type": "string",

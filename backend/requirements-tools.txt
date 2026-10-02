@@ -51,8 +51,7 @@ pyobjc-framework-CoreLocation; sys_platform == "darwin"
 openpyxl
 # system_essentials [self:read] — 구형 XLS 통계 자료(UTF-8 텍스트로 읽지 않음)
 xlrd
-# system_essentials office_ops·data-ops·lecture_workspace — 워드 문서
-python-docx
+# python-docx는 문서 앱의 기본 템플릿을 위해 requirements-core.txt에서 설치
 # DOCX/XLSX 선택적 OOXML 수정 (비대상 ZIP 파트 보존)
 lxml
 # computer-use 패키지 — 마우스/키보드/화면(pyautogui) + macOS 캡처·OCR(Quartz/AS/Vision)

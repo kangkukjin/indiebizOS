@@ -56,7 +56,7 @@ LAYERS = {
         "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
         "record_admin", "record_assets", "record_facade",
         "knowledge_catalog", "knowledge_graph", "tree_recall", "tree_doc", "world_recall_store", "forage_recall_store",
-        "document_store", "coding_store", "vocabulary_policy", "vocabulary_state", "pursuit_ledger", "agent_registry", "body_trust", "boot_status", "business_manager",
+        "office_store", "document_store", "coding_store", "vocabulary_policy", "vocabulary_state", "pursuit_ledger", "agent_registry", "body_trust", "boot_status", "business_manager",
         "calendar_manager", "calendar_rules", "conversation_db", "decision_ledger", "face_config", "file_index", "focus_map",
         "forage_memory", "forage_doc", "hippo_tree", "guide_registry", "health_sync", "finance_ledger_sync", "ibl_registry",
         "ibl_signature_slot", "ibl_name_search", "ibl_returns_observed", "ibl_example_batch", "ibl_usage_db",
@@ -109,7 +109,7 @@ LAYERS = {
         "world_pulse", "world_pulse_collectors", "world_pulse_health",
     },
     "services": {
-        "document_workspace", "coding_git", "coding_workspace", "coding_runs",
+        "document_pdf", "document_formats", "document_office_ai", "document_creation", "document_office", "resource_links", "office_resources", "office_sessions", "document_workspace", "coding_git", "coding_workspace", "coding_runs",
         "record_dispatch", "record_adapters",
         "client_agent",
         "android_calibrate", "auto_response", "business_sync", "restart_controller", "restart_helper",

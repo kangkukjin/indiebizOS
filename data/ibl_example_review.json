@@ -861,20 +861,20 @@
   },
   "self:document": {
    "fields": {
-    "description": "ec1fc4927c39",
-    "target_description": "13ee217746e5",
-    "implementation": "dee471f4c794",
+    "description": "5c963dc703c5",
+    "target_description": "cbdfaca3c3e6",
+    "implementation": "aaf8afb38619",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "a2dc9bcc8dda",
-    "ops": "19cde0734fce",
+    "params": "8df8da5082c6",
+    "ops": "bc18555cbc20",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "61923ca8e999"
    },
-   "reviewed": "2026-09-18",
-   "examples": 10
+   "reviewed": "2026-10-02",
+   "examples": 13
   },
   "self:download": {
    "fields": {

@@ -39,6 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
+        "coding_process",
         "execution_commit", "embedding_guard", "python_environment_lock", "tool_completion", "completion_lease", "history_excerpt", "distill_receipts", "trajectory_payload", "corpus_policy",
         "audit_lifecycle", "execution_workers", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract", "image_envelopes",
@@ -55,7 +56,7 @@ LAYERS = {
         "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
         "record_admin", "record_assets", "record_facade",
         "knowledge_catalog", "knowledge_graph", "tree_recall", "tree_doc", "world_recall_store", "forage_recall_store",
-        "vocabulary_policy", "vocabulary_state", "pursuit_ledger", "agent_registry", "body_trust", "boot_status", "business_manager",
+        "coding_store", "vocabulary_policy", "vocabulary_state", "pursuit_ledger", "agent_registry", "body_trust", "boot_status", "business_manager",
         "calendar_manager", "calendar_rules", "conversation_db", "decision_ledger", "face_config", "file_index", "focus_map",
         "forage_memory", "forage_doc", "hippo_tree", "guide_registry", "health_sync", "finance_ledger_sync", "ibl_registry",
         "ibl_signature_slot", "ibl_name_search", "ibl_returns_observed", "ibl_example_batch", "ibl_usage_db",
@@ -108,6 +109,7 @@ LAYERS = {
         "world_pulse", "world_pulse_collectors", "world_pulse_health",
     },
     "services": {
+        "coding_git", "coding_workspace", "coding_runs",
         "record_dispatch", "record_adapters",
         "client_agent",
         "android_calibrate", "auto_response", "business_sync", "restart_controller", "restart_helper",

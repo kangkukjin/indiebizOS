@@ -5,6 +5,7 @@
     "base/ai_candidates",
     "base/audit_lifecycle",
     "base/codex_rollout",
+    "base/coding_process",
     "base/completion_lease",
     "base/corpus_policy",
     "base/desktop_notify",
@@ -150,6 +151,7 @@
     "datastore/business_manager",
     "datastore/calendar_manager",
     "datastore/calendar_rules",
+    "datastore/coding_store",
     "datastore/conversation_db",
     "datastore/decision_ledger",
     "datastore/distill_ledger",
@@ -309,6 +311,9 @@
     "services/chat_runs",
     "services/chat_streams",
     "services/client_agent",
+    "services/coding_git",
+    "services/coding_runs",
+    "services/coding_workspace",
     "services/execution_trace",
     "services/execution_trace_scope",
     "services/gen_newspaper",
@@ -337,6 +342,7 @@
     "services/warehouse_feed",
     "surface/api_agents",
     "surface/api_business",
+    "surface/api_coding",
     "surface/api_config_tiers",
     "surface/api_conversations",
     "surface/api_execution_trace",
@@ -508,8 +514,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 433,
-    "engine": 407,
+    "total": 439,
+    "engine": 413,
     "blocklist": 26
   }
 }

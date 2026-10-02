@@ -103,6 +103,7 @@ OS_SEAM_ALLOWLIST = {
 
     "backend/base/restart_protocol.py",  # 재기동 제어 파일의 fsync/flock/Windows 잠금
     "backend/base/restart_process.py",  # 프로세스 출생 신원과 OS별 spawn/종료
+    "backend/base/coding_process.py",  # 코딩 앱 쓰기 경계(OS 샌드박스·프로세스 그룹) — 현재 macOS sandbox-exec 만, 다른 몸은 실행 거절. 이식 시 OS별 격리 수단 추가 지점
 
     "backend/base/runtime_utils.py",   # detect_body + 번들 런타임 경로(Win/Unix 분기)
     "backend/ibl/ibl_exec_output.py",   # 파일 열기·클립보드·탐색기(Darwin/Windows/Linux 3분기)

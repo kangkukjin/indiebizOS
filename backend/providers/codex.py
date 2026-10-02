@@ -550,6 +550,9 @@ class CodexProvider(CliSubprocessProvider):
         비용·품질). 남는 16K 는 Codex 자신의 기본 지침·AGENTS.md·작업공간 맥락이라
         어차피 이 플래그로는 못 깎는다.
         """
+        if getattr(self, 'execution_profile', '') == 'coding':
+            from .coding_profile import codex_command
+            return codex_command(self, resume_session_id)
         cmd = [
             self._binary_path,
             "exec",

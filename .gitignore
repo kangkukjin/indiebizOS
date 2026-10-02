@@ -144,6 +144,7 @@ data/*.json
 !data/world_pulse_config.example.json
 !data/ibl_nodes.yaml
 data/system_ai_state/
+data/coding/
 data/world_pulse.db
 data/conversations.db*
 .bfg-report/

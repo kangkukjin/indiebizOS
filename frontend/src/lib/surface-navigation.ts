@@ -38,6 +38,10 @@ export function openPromptComposition() {
   openPage('/prompt-composition', window.electron?.openToolWindow?.bind(window.electron, 'prompt-composition'));
 }
 
+export function openCoding() {
+  openPage('/coding', window.electron?.openToolWindow?.bind(window.electron, 'coding'));
+}
+
 export function openGuides() {
   openPage('/guides', window.electron?.openToolWindow?.bind(window.electron, 'guides'));
 }

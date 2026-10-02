@@ -136,6 +136,7 @@ DECLARATIONS: List[tuple] = [
     ("data/warehouse_directory_cache.json", "창고 둘러보기 캐시",                "cache"),
 
     ("data/restart_control/**", "단일 현역 재기동 제어자(상태·요청·결과·커널 잠금)", "state"),
+    ("data/coding/**", "코딩 앱 상태(과제·사건 DB·과제별 작업 공간·실행 런타임)", "state"),
 
     # 런타임 상태 파일 (현재값의 진실 소스)
     ("data/model_gear.json",        "모델 기어(model_resolver)",                 "state"),

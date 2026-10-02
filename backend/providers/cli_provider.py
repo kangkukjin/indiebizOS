@@ -474,6 +474,12 @@ class CliSubprocessProvider(BaseProvider):
         # process_message_stream 시작 시 비워지고, tool_result 소비 중 누적된다.
         self._pending_map_tags: List[str] = []
 
+    def _terminate_cli(self, proc):
+        if getattr(self, 'execution_profile', '') == 'coding':
+            self.coding_processes.terminate(proc)
+        else:
+            proc.kill()
+
     # ================= 서브클래스 훅 =================
 
     @classmethod
@@ -758,7 +764,7 @@ class CliSubprocessProvider(BaseProvider):
         self._completion_channel = create_channel()
         mcp_config_path = None
         try:
-            mcp_config_path = self._mcp_bridge_acquire()
+            mcp_config_path = None if getattr(self, 'execution_profile', '') == 'coding' else self._mcp_bridge_acquire()
             # 2.5) 시스템 프롬프트를 파일로 (윈도우 argv 상한 회피).
             #      리트라이 루프 전체에서 재사용(내용 불변). 실패 시 None → 인자 방식 폴백.
             system_prompt_file = self._write_system_prompt_file()
@@ -846,6 +852,8 @@ class CliSubprocessProvider(BaseProvider):
                 )
 
                 env = self._build_env()
+                if getattr(self, 'execution_profile', '') == 'coding':
+                    env.update(self.coding_environment)
                 env["INDIEBIZOS_COMPLETION_CHANNEL"] = self._completion_channel
                 start = time.time()
                 cwd = self.project_path if self.project_path and self.project_path != "." else None
@@ -857,7 +865,8 @@ class CliSubprocessProvider(BaseProvider):
                     #  깨지지 않도록(한글 프롬프트·응답 JSON 보존).
                     def _spawn():
                         # cmd[0]=self._binary_path 를 참조하도록 매 호출 시 갱신값을 반영
-                        return subprocess.Popen(
+                        spawn = self.coding_processes.spawn if getattr(self, 'execution_profile', '') == 'coding' else subprocess.Popen
+                        return spawn(
                             cmd,
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
@@ -911,7 +920,7 @@ class CliSubprocessProvider(BaseProvider):
                         if cancel_check and cancel_check():
                             _idle["cancelled"] = True
                             cancel_channel(self._completion_channel)
-                            proc.kill()
+                            self._terminate_cli(proc)
                             return
                         if is_waiting(self._completion_channel):
                             _idle["last"] = time.monotonic()
@@ -921,7 +930,7 @@ class CliSubprocessProvider(BaseProvider):
                             _idle["fired"] = silent
                             self._log(f"무출력 {int(silent)}초 — 프로세스 종료(마감)")
                             try:
-                                proc.kill()
+                                self._terminate_cli(proc)
                             except Exception:
                                 pass
                             return
@@ -950,7 +959,7 @@ class CliSubprocessProvider(BaseProvider):
                     for raw_line in proc.stdout:
                         _idle["last"] = time.monotonic()     # 한 줄 = 살아 있다는 신호
                         if cancel_check and cancel_check():
-                            proc.kill()
+                            self._terminate_cli(proc)
                             yield {"type": "error", "content": "사용자 취소"}
                             return
 
@@ -970,6 +979,8 @@ class CliSubprocessProvider(BaseProvider):
                         if err_text:
                             resume_err_text = err_text
 
+                        if getattr(self, 'coding_event_sink', None):
+                            self.coding_event_sink(event)
                         yielded = self._translate_stream_event(event, accumulated_text, start)
                         for out_event, new_acc in yielded:
                             if new_acc is not None:
@@ -1011,7 +1022,7 @@ class CliSubprocessProvider(BaseProvider):
                         return
 
                 except subprocess.TimeoutExpired:
-                    proc.kill()
+                    self._terminate_cli(proc)
                     self.metrics.record_error()
                     yield {"type": "error",
                            "content": f"{self.CLI_DISPLAY} 호출 타임아웃 ({self.DEFAULT_TIMEOUT_SEC}초)"}
@@ -1024,7 +1035,7 @@ class CliSubprocessProvider(BaseProvider):
                     _idle_stop.set()          # 감시 해제 (프로세스보다 먼저 — 오살 방지)
                     if proc.poll() is None:
                         cancel_channel(self._completion_channel)
-                        proc.kill()
+                        self._terminate_cli(proc)
 
                 # 비정상 종료 시 stderr 확보 (resume 실패 메시지가 여기에 담긴다)
                 stderr_text = ""
@@ -1186,6 +1197,8 @@ class CliSubprocessProvider(BaseProvider):
 
     def _get_session_key(self) -> str:
         """세션 매핑의 키. thread_context의 registry_key 우선, 없으면 agent_id/이름 폴백."""
+        if getattr(self, 'execution_profile', '') == 'coding':
+            return self.coding_session_key
         # 리허설 턴은 자기 세션을 쓴다 — 주인의 실제 대화 세션을 이어받거나 지우지 않는다.
         suffix = ""
         try:

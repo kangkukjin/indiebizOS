@@ -572,6 +572,7 @@ function createLectureWorkspaceWindow(lectureId = null) {
  * 독립 창(크기 조절·OS 제목줄)으로 연다. 도구별(어휘는 폴더별) 하나만, 다시 열면 포커스.
  */
 const TOOL_WINDOWS = {
+  'coding': { title: '코딩', width: 1440, height: 940, minWidth: 800, minHeight: 600 },
   'external-users': { title: '외부사용자 관리', width: 1100, height: 820 },
   'prompt-composition': { title: '프롬프트 구성', width: 1180, height: 860 },
   'guides': { title: '가이드 파일', width: 1280, height: 860 },

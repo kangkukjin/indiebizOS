@@ -82,6 +82,7 @@ OPERATIONS = {
     "sheet-preview": lambda app, document_id, **args: ResourceLinks(app).sheet(document_id, **args),
     "refresh-source": lambda app, document_id, **args: ResourceLinks(app).refresh(document_id, **args),
     "import-sheet": lambda app, document_id, **args: ResourceLinks(app).sheet_proposal(document_id, **args),
+    "refresh-sheet": lambda app, document_id, **args: ResourceLinks(app).refresh_sheet_proposal(document_id, **args),
     "lecture": lambda app, document_id, **args: ResourceLinks(app).deliver(document_id, **args),
 }
 

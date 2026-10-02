@@ -145,6 +145,8 @@ OPERATIONS={
     'changes':spreadsheet_changes.history, 'undo-propose':spreadsheet_changes.inverse,
     'imports':spreadsheet_changes.imports, 'import-refresh':spreadsheet_changes.refresh,
     'report':SpreadsheetWorkspace.create_report,
+    'request-snapshot':SpreadsheetWorkspace.request_snapshot,
+    'operation-status':SpreadsheetWorkspace.operation_status,
     'csv-preview':spreadsheet_imports.preview, 'csv-import':spreadsheet_imports.import_csv,
     'sessions':SpreadsheetWorkspace.acquire,'reclaim':SpreadsheetWorkspace.reclaim,
     'snapshot':SpreadsheetWorkspace.snapshot,'propose':SpreadsheetWorkspace.propose,

@@ -134,6 +134,60 @@ class ResourceLinks:
         self.store.put("proposal", proposal)
         return proposal
 
+    def refresh_sheet_proposal(self, document_id, reference_id, snapshot_id,
+                               start, end, selected_sha256, source_snapshot_id=None,
+                               source_revision_id=None, allow_stale=False):
+        """Propose an explicit range replacement; publication uses the document CAS.
+
+        Open sheets must supply a captured snapshot, never their older disk cache.
+        The reference is replaced only when the reviewed proposal is applied.
+        """
+        if type(allow_stale) is not bool:
+            raise ValueError("allow_stale은 boolean입니다")
+        previous = self._reference(reference_id)
+        if previous["target_id"] != document_id:
+            raise PermissionError("다른 문서의 연결입니다")
+        if not previous.get("linked"):
+            raise DocumentConflict("고정 사본입니다. 원본 연결을 선택한 자료만 갱신합니다")
+        target = self.resources.get(document_id)
+        if target["source_format"] not in {"md", "markdown"}:
+            raise DocumentUnsupported("표 갱신은 Markdown 소스 문서에서 지원합니다")
+        if bool(source_snapshot_id) == bool(source_revision_id):
+            raise ValueError("원본 스냅샷 또는 저장 버전 중 하나를 지정하세요")
+        source = self.resources.get(previous["resource_id"])
+        selector = previous["selector"]
+        if source_snapshot_id:
+            snap = self.store.get("sheet_snapshot", source_snapshot_id)
+            if snap["document_id"] != source["id"]:
+                raise PermissionError("다른 통합문서의 스냅샷입니다")
+            from spreadsheet_files import inspect
+            sheets = inspect(self.store.bytes(snap["blob"]))["sheets"]
+            sheet_id = selector.get("sheet_id")
+            if sheet_id is None:
+                matches = [s for s in sheets if s["name"] == selector["sheet"]]
+                if len(matches) != 1:
+                    raise DocumentConflict("원본 시트를 찾을 수 없습니다. 시트 삭제·이름 변경을 확인하세요")
+                sheet_id = matches[0]["sheet_id"]
+            ref = self.sheet_snapshot(source["id"], source_snapshot_id, sheet_id, selector["range"])
+        else:
+            if source.get("session_id"):
+                raise DocumentConflict("열린 시트는 최신 스냅샷으로 갱신하세요")
+            if source["revision_id"] != source_revision_id:
+                raise DocumentConflict("원본 버전이 바뀌었습니다. 다시 확인하세요")
+            ref = self.sheet(source["id"], source_revision_id, selector["sheet"], selector["range"])
+        if ref["provenance"]["calculation_state"] != "fresh" and not allow_stale:
+            raise DocumentConflict("계산 최신성이 미확인입니다. 미확인 계산값 사용을 명시하세요")
+        ref.update(id=reference_id, target_id=document_id, linked=True,
+                   created_at=previous["created_at"], updated_at=time.time(),
+                   previous_source={"revision_id": previous["revision_id"],
+                                    "snapshot_id": previous.get("snapshot_id"),
+                                    "provenance": previous["provenance"]})
+        proposal = self.app.propose(document_id, snapshot_id, start, end,
+                                    selected_sha256, self.markdown_table(ref))
+        proposal["resource_reference"] = ref
+        self.store.put("proposal", proposal)
+        return proposal
+
     def deliver(self, document_id, revision_id, start, end, selected_sha256, lecture_id, operation_id):
         row, revision, data = self.resources.revision(document_id, revision_id)
         if not row.get("encoding"):

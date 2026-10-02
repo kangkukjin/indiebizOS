@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { sheetCommand, type SheetSnapshot } from '../lib/api-spreadsheets';
 import { documentCommand, documentRequest, type Detail, type Proposal, type Snapshot } from '../lib/api-documents';
 
 type Selection = { snapshot: Snapshot; start: number; end: number; text: string; hash: string };
@@ -13,6 +14,9 @@ export function DocumentReferences({ detail, selection, disabled, onProposal }: 
   const [sheet, setSheet] = useState('Sheet1');
   const [range, setRange] = useState('A1:B3');
   const [linked, setLinked] = useState(true);
+  const [allowStale, setAllowStale] = useState(false);
+  const currentId = useRef(detail.document.id);
+  currentId.current = detail.document.id;
   const [lecture, setLecture] = useState('');
   const [refs, setRefs] = useState<Reference[]>([]);
   const [message, setMessage] = useState('');
@@ -48,10 +52,32 @@ export function DocumentReferences({ detail, selection, disabled, onProposal }: 
   const refresh = (ref: Reference) => act(async () => {
     if (!selection) throw new Error('갱신할 표 구간을 먼저 선택 고정하세요');
     const source = await documentRequest<Detail>(`/${ref.resource_id}`);
-    const revision = await documentCommand<{ revision_id: string }>(ref.resource_id, 'refresh-source', {
-      expected_revision: source.document.revision_id,
+    let sourceArgs: Record<string, unknown>;
+    if (source.session) {
+      const request = await sheetCommand<{ operation_id: string }>(ref.resource_id, 'request-snapshot', { operation_id: crypto.randomUUID() });
+      let captured: SheetSnapshot | undefined;
+      for (let attempt = 0; attempt < 60; attempt++) {
+        if (currentId.current !== id) return;
+        const receipt = await sheetCommand<{ status: string; completed: boolean; result?: { snapshot?: SheetSnapshot; error?: string } }>(ref.resource_id, 'operation-status', { operation_id: request.operation_id });
+        if (receipt.completed) { captured = receipt.result?.snapshot; break; }
+        if (['failed', 'interrupted'].includes(receipt.status)) throw new Error(receipt.result?.error || '원본 스냅샷 요청이 중단됐습니다');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      if (!captured) throw new Error('원본 편집창의 스냅샷 완료를 확인하지 못했습니다. 원본 창 연결을 확인하세요');
+      sourceArgs = { source_snapshot_id: captured.id };
+    } else {
+      const revision = await documentCommand<{ revision_id: string }>(ref.resource_id, 'refresh-source', {
+        expected_revision: source.document.revision_id,
+      });
+      sourceArgs = { source_revision_id: revision.revision_id };
+    }
+    if (currentId.current !== id) return;
+    const p = await documentCommand<Proposal & { replacement: string }>(id, 'refresh-sheet', {
+      reference_id: ref.id, snapshot_id: selection.snapshot.id, start: selection.start,
+      end: selection.end, selected_sha256: selection.hash, allow_stale: allowStale, ...sourceArgs,
     });
-    await propose(ref.resource_id, revision.revision_id, ref.selector.sheet, ref.selector.range, ref.linked);
+    if (currentId.current !== id) return;
+    onProposal(p); setMessage('갱신 제안을 만들었습니다. 문서에서 손본 내용과 비교한 뒤 적용하세요.');
   });
   const send = () => act(async () => {
     if (!selection || detail.session?.state !== 'saved') throw new Error('원본 저장 후 전달할 구간을 다시 선택 고정하세요');
@@ -67,7 +93,8 @@ export function DocumentReferences({ detail, selection, disabled, onProposal }: 
 
   return <section aria-label="자료 연결">
     <h3>시트·강의 연결</h3>
-    <p>표는 저장된 계산값을 가져옵니다. 수식 캐시의 최신성은 미확인이며 원본 갱신은 직접 선택합니다.</p>
+    <p>새 표는 저장된 계산값을 가져옵니다. 연결 갱신은 열린 시트의 최신 스냅샷을 요청하고 선택한 문서 구간의 변경안을 만듭니다. 적용 전 차이를 검토하세요.</p>
+    <label><input type="checkbox" checked={allowStale} onChange={e=>setAllowStale(e.target.checked)}/>갱신에 미확인 계산값 사용</label>
     <label>XLSX 파일 경로<input value={path} onChange={e => setPath(e.target.value)} /></label>
     <label>시트 이름<input value={sheet} onChange={e => setSheet(e.target.value)} /></label>
     <label>셀 범위<input value={range} onChange={e => setRange(e.target.value)} /></label>

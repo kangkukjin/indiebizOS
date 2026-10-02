@@ -229,17 +229,20 @@ class SpreadsheetWorkspace(OfficeSessions):
             self.store.put('operation',op)
             return {'operation_id':op['id'],'status':'queued'}
 
-    def create_report(self, document_id, snapshot_id, sheet_id, range, operation_id, allow_stale=False):
+    def create_report(self, document_id, snapshot_id, sheet_id, range, operation_id, allow_stale=False, linked=False):
         from resource_links import ResourceLinks
         from document_workspace import DocumentWorkspace
         from document_creation import import_bytes
-        if type(allow_stale) is not bool:
-            raise ValueError('allow_stale은 boolean입니다')
+        if type(allow_stale) is not bool or type(linked) is not bool:
+            raise ValueError('allow_stale과 linked는 boolean입니다')
         ref=ResourceLinks(self).sheet_snapshot(document_id,snapshot_id,sheet_id,range)
         if ref['provenance']['calculation_state']!='fresh' and not allow_stale:
             raise DocumentConflict('계산이 최신으로 확인되지 않았습니다. 재계산하거나 오래된 값 사용을 명시하세요')
         with self.store.lock():
-            op,cached=self._operation(document_id,operation_id,['sheet_report',snapshot_id,sheet_id,range,allow_stale])
+            signature=['sheet_report',snapshot_id,sheet_id,range,allow_stale]
+            if linked:
+                signature.append({'linked':True})
+            op,cached=self._operation(document_id,operation_id,signature)
             if cached is not None:return cached
             if op.get('status'):
                 raise DocumentConflict('보고서 생성 결과를 확인 중입니다. 같은 작업을 중복 생성하지 않습니다')
@@ -248,7 +251,7 @@ class SpreadsheetWorkspace(OfficeSessions):
         text='# 스프레드시트 범위 보고서\n\n'+ResourceLinks.markdown_table(ref)
         text+='\n계산 상태: '+ref['provenance']['calculation_state']+'\n'
         result=import_bytes(documents,'시트보고서-'+op['id'][:10]+'.md',text.encode())
-        ref.update(id=identifier(),target_id=result['document']['id'],linked=False,created_at=time.time())
+        ref.update(id=identifier(),target_id=result['document']['id'],linked=linked,created_at=time.time())
         with self.store.connect() as conn:
             self.store.put('resource_link',ref,conn)
             result['reference']=ref

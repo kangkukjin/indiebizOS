@@ -5,6 +5,8 @@
 
 indiebizOS에 **독립 문서 앱**을 만든다. 일반 글쓰기부터 보고서·공문·신청서·계약서·매뉴얼·논문 열람과 편집까지 한 작업 공간에서 처리한다. 기존 **강의만들기**는 강의 구성과 슬라이드 제작을 담당하고, **스프레드시트**는 별도 앱으로 셀·수식·분석을 담당한다. 세 앱은 파일 식별·버전·참조·AI 접근 계약을 공유한다.
 
+별도 [스프레드시트 앱 설계](SPREADSHEET_APP_DESIGN_2026_10_02.md)는 시트 기능·계산·저장 호환을 정의한다. 두 설계의 공통 파일·세션·엔진 기반은 한 구현을 공유한다.
+
 이번 설계는 자주 쓰는 형식과 기능을 사용 빈도에 따라 뒤로 미루지 않는다. 문서 앱의 출시 범위에 DOCX, HWP/HWPX, PDF, ODT, RTF, TXT, Markdown, HTML과 구형 DOC의 처리, 직접 편집, AI 수정, 저장·복구·인쇄를 포함한다. 개발 순서는 의존 관계를 뜻하며 뒤 단계의 필수 항목을 빼고 완성으로 선언하지 않는다.
 
 설계 판단은 [IBL 진화 목적과 개선 판단](IBL_EVOLUTION_PURPOSE.md)을 따른다. 문서를 보기 좋게 열기만 하는 것보다, 사람이 원한 수정과 최종 제출까지 원본 손실 없이 완료하는지를 본다.
@@ -219,6 +221,8 @@ UI는 문서 서비스 API를 직접 호출한다. AI는 기존 `self:document`�
 | `backend/datastore/document_store.py` | 문서·버전·세션·작업 원장과 복구 |
 | `backend/services/resource_links.py` | 앱 간 버전·범위·출처 연결. 문서 형식 내부는 모름 |
 | 기존 문서 패키지 | IBL 진입, 검증된 읽기·양식·OCR·출력 기능 |
+
+위 문서 모듈의 공통 책임은 [스프레드시트 설계 10절](SPREADSHEET_APP_DESIGN_2026_10_02.md#10-내부-구조와-ibl-연결)의 `office_resources`·`office_sessions`·`office_store`·`office_engines/`로 배정한다. `document_workspace.py`는 문서 전용 조정을 맡는다. 표의 `document_store.py`와 `document_engines/`는 이 공통 기반과 문서 어댑터에 통합하며, 앱마다 별도 잠금·버전 저장소·사무 엔진 서버를 만들지 않는다.
 
 어댑터 계약은 `probe`, `open`, `capabilities`, `barrier`, `read`, `apply`, `flush`, `export`, `close`로 제한한다. 형식별 내부 DOM을 외부 계약으로 강제하지 않는다. `capabilities`는 파일·설치 버전·라이선스·현재 모드에 따라 달라지며 동작별 사유를 반환한다. 페이지를 열었어도 `edit_native`가 없으면 원형 편집으로 표시하지 않는다.
 

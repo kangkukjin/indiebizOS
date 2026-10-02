@@ -24,6 +24,19 @@ HomePages 류 일반 웹 프로젝트가 이 모양이다)는 가족이 아니�
 import os
 
 
+def repair_artifact(path, root):
+    """수리 그랜트 안에서 코드와 함께 격리할 사전·패키지 소스. 사용자 자료는 제외한다."""
+    if not root:
+        return False
+    rel = os.path.relpath(os.path.realpath(path), os.path.realpath(root)).replace(os.sep, "/")
+    if rel.startswith("data/ibl_nodes_src/"):
+        return rel.endswith((".yaml", ".yml"))
+    if not rel.startswith("data/packages/installed/"):
+        return False
+    return (rel.endswith((".py", ".js", ".ts", ".tsx", ".jsx", ".css", ".html"))
+            or rel.rsplit("/", 1)[-1] in {"ibl_actions.yaml", "tool.json", "package.json"})
+
+
 def principal_root(root: str) -> str:
     """root 가 git 워크트리면 그 본체 루트, 아니면 자신."""
     try:

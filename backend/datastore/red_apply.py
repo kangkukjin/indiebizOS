@@ -32,6 +32,7 @@ UNKNOWN_LIVE_GRACE_S = float(os.environ.get("RED_APPLY_UNKNOWN_LIVE_GRACE_S", 60
 # 적용 후 검증 위탁(2026-08-25) — 턴이 자기 죽음 뒤를 못 보므로 재현·회귀 확인도 여기서 돈다.
 VERIFY_HEALTH_WAIT_S = float(os.environ.get("RED_APPLY_VERIFY_HEALTH_WAIT_S", 120))
 VERIFY_TIMEOUT_S = float(os.environ.get("RED_APPLY_VERIFY_TIMEOUT_S", 180))
+ACTIVE_VERIFY_TIMEOUT_S = float(os.environ.get("RED_ACTIVE_VERIFY_TIMEOUT_S", 1800))
 VERIFY_OUTPUT_CAP = 4000
 # 정적(quiescence) 대기 (2026-09-02) — 도는 턴이 0 이 될 때까지. 상한에 닿으면 강행하되
 # 결말(quiesce_outcome="cap")을 다음 턴 보고에 싣는다. 좌초 신고(30분)보다 짧게 —
@@ -286,43 +287,53 @@ def _wait_healthy(cap_s: float) -> bool:
     return False
 
 
-def _run_post_verify(repo: str, cmd: str) -> dict:
-    """적용 후 검증 명령을 **여기서** 돌린다 — 죽음을 넘는 프로세스가 소유한다(2026-08-25).
+def _run_post_verify(repo: str, cmd: str, *, timeout=None, receipt_path=None) -> dict:
+    """검사 결과를 원장 갱신보다 먼저 영속화한다. 시간 초과의 부분 출력도 보존한다.
 
-    ★왜: 턴은 자기 죽음 이후를 볼 수 없는데, backend 수리의 결과는 죽음 뒤에야 관측된다.
-    검증을 턴에 남겨두면 AI 는 자기 턴 안에서 '적용됐나' 를 폴링하게 되고, 그 기다림이
-    바로 적용을 막는다(자기 자신이 병목). 그래서 확인할 명령을 예약과 함께 위탁받아
-    적용 뒤 여기서 돌리고, 결과를 다음 턴 보고에 실어 보낸다.
-
-    권한은 새로 열리지 않는다 — 이 명령은 예약을 낸 그 턴이 이미 셸로 돌릴 수 있던 것이고,
-    바뀐 것은 **실행 시점**뿐이다. 대신 시간(타임아웃)·출력량(캡)은 여기서 묶는다."""
+    부팅 검사는 짧은 상한, ACTIVE 이후 기능 검사·커밋은 별도 상한을 사용한다.
+    영수증은 과거 실행의 증거이며 변경된 코드의 검증 통과를 뜻하지 않는다.
+    """
+    import hashlib
     import subprocess
+    import uuid
+    from logging_utils import mask_secrets
+    from restart_protocol import atomic_json
+
+    timeout = VERIFY_TIMEOUT_S if timeout is None else timeout
+    home = Path(repo).resolve() / "data/system_ai_state/repair_check_outputs"
+    receipt = Path(receipt_path).resolve() if receipt_path else home / (uuid.uuid4().hex + ".json")
+    if not receipt.is_relative_to(home):
+        raise ValueError("검사 영수증 경로가 원장 밖입니다")
     if not _wait_healthy(VERIFY_HEALTH_WAIT_S):
         _log(f"검증 위탁: 몸이 {VERIFY_HEALTH_WAIT_S:.0f}초 안에 돌아오지 않음 — 그래도 실행")
     _log(f"검증 위탁 실행: {cmd[:160]}")
+
+    def text(value):
+        return value.decode("utf-8", "replace") if isinstance(value, bytes) else value or ""
+
+    result = {"ran": True, "cmd": mask_secrets(cmd), "timeout_s": timeout,
+              "command_sha256": hashlib.sha256(cmd.encode()).hexdigest()}
     try:
         r = subprocess.run(cmd, shell=True, cwd=repo, capture_output=True,
-                           text=True, timeout=VERIFY_TIMEOUT_S)
-        out = ((r.stdout or "") + (("\n[stderr] " + r.stderr) if r.stderr else ""))
-        from logging_utils import mask_secrets
-        from restart_protocol import atomic_json
-        import uuid
-        full = mask_secrets(out.strip())
-        receipt = Path(repo) / "data/system_ai_state/repair_check_outputs" / (uuid.uuid4().hex + ".json")
-        atomic_json(receipt, {"cmd": mask_secrets(cmd), "exit_code": r.returncode, "output": full})
-        marker = "\n… 원문은 output_path …\n"
-        head = (VERIFY_OUTPUT_CAP - len(marker)) // 2
-        excerpt = full if len(full) <= VERIFY_OUTPUT_CAP else (
-            full[:head] + marker + full[-(VERIFY_OUTPUT_CAP - len(marker) - head):])
-        return {"ran": True, "cmd": cmd, "exit_code": r.returncode,
-                "output": excerpt, "output_path": str(receipt),
-                "truncated": len(full) > VERIFY_OUTPUT_CAP}
-    except subprocess.TimeoutExpired:
-        return {"ran": True, "cmd": cmd, "exit_code": None,
-                "output": f"검증 명령이 상한({VERIFY_TIMEOUT_S:.0f}초)을 넘겨 중단됐습니다.",
-                "timed_out": True}
-    except Exception as e:
-        return {"ran": True, "cmd": cmd, "exit_code": None, "output": f"실행 실패: {e!r}"}
+                           text=True, timeout=timeout)
+        result["exit_code"] = r.returncode
+        output = text(r.stdout) + ("\n[stderr] " + text(r.stderr) if r.stderr else "")
+    except subprocess.TimeoutExpired as exc:
+        result.update(exit_code=None, timed_out=True, effect_unknown=True)
+        output = (text(exc.stdout) + "\n[stderr] " + text(exc.stderr)
+                  + f"\n검증 명령이 상한({timeout:.0f}초)을 넘겨 중단됐습니다. 부수효과를 확인한 뒤 이어가세요.")
+    except Exception as exc:
+        result.update(exit_code=None, effect_unknown=True)
+        output = f"실행 실패: {exc!r}"
+    full = mask_secrets(output.strip())
+    result["output_path"] = str(receipt)
+    atomic_json(receipt, {**result, "output": full})
+    marker = "\n… 원문은 output_path …\n"
+    head = (VERIFY_OUTPUT_CAP - len(marker)) // 2
+    result["output"] = full if len(full) <= VERIFY_OUTPUT_CAP else (
+        full[:head] + marker + full[-(VERIFY_OUTPUT_CAP - len(marker) - head):])
+    result["truncated"] = len(full) > VERIFY_OUTPUT_CAP
+    return result
 
 
 def _load_handler(job: dict):

@@ -304,7 +304,7 @@ def _red_write_prepare(path: str, new_content=None) -> str | None:
             return _pkg_err
     except Exception:
         pass
-    if not _red_is_live_path(abs_path):
+    if not _repair_is_live_path(abs_path):
         return None
     grant = _red_grant_active()
     if not grant:
@@ -472,7 +472,7 @@ def _red_stage(path: str, for_write: bool) -> str:
     for_write=False : **이미 스테이징된 파일만** 리다이렉트 — 안 건드린 파일을 읽을 때는
                       라이브를 보여준다(격리 사본이 조사 대상을 왜곡하지 않게)."""
     try:
-        if not _red_is_live_path(path):
+        if not _repair_is_live_path(path):
             return path
         key = _staging_key()
         if not key:
@@ -481,11 +481,28 @@ def _red_stage(path: str, for_write: bool) -> str:
         live_abs = os.path.realpath(path)
         st = _staging_mod()
         if for_write:
-            return st.stage_file(repo, key, live_abs) or path
+            staged = st.stage_file(repo, key, live_abs)
+            if not staged and _red_family.repair_artifact(path, _REPO_ROOT):
+                raise RuntimeError("패키지·사전 수리의 격리를 확보하지 못했습니다. 라이브 쓰기를 중단합니다")
+            return staged or path
         return st.staged_path(repo, key, live_abs) or path
     except Exception as e:
+        if for_write and _repair_is_live_path(path) and _red_family.repair_artifact(path, _REPO_ROOT):
+            raise RuntimeError("수리 변경을 격리하지 못해 라이브 쓰기를 중단합니다") from e
         print(f"[수리 스테이징] 리다이렉션 실패 — 종전 경로로 진행: {e}")
         return path
+
+
+def _repair_is_live_path(path):
+    """권한 범위는 유지하며 승인된 수리의 패키지·사전 변경을 같은 세션에 묶는다."""
+    if _red_is_live_path(path):
+        return True
+    if not _REPO_ROOT or not _red_grant_active():
+        return False
+    if _red_family.repair_artifact(path, _REPO_ROOT):
+        return True
+    session = _staging_mod().read_session(str(_REPO_ROOT), _staging_key()) or {}
+    return os.path.realpath(path) in session.get("files", {})  # 이동의 일반 data 대상도 같은 백업·되읽기
 
 
 def _red_can_stage(path: str) -> bool:
@@ -504,8 +521,13 @@ def _red_stage_delete(path: str) -> bool:
         key = _staging_key()
         if not key:
             return False
-        return _staging_mod().stage_delete(str(_REPO_ROOT), key, os.path.realpath(path))
+        staged = _staging_mod().stage_delete(str(_REPO_ROOT), key, os.path.realpath(path))
+        if not staged and _red_family.repair_artifact(path, _REPO_ROOT):
+            raise RuntimeError("패키지·사전 삭제를 격리하지 못했습니다")
+        return staged
     except Exception as e:
+        if _repair_is_live_path(path) and _red_family.repair_artifact(path, _REPO_ROOT):
+            raise RuntimeError("수리 삭제를 격리하지 못해 라이브 삭제를 중단합니다") from e
         print(f"[수리 스테이징] 삭제 적재 실패 — 종전 경로로 진행: {e}")
         return False
 
@@ -1170,19 +1192,20 @@ def _execute(tool_input: dict, context) -> str:
             if scope_err:
                 return scope_err
 
-            if not os.path.exists(src):
+            read_src = _red_stage(src, for_write=False)
+            if not os.path.exists(read_src):
                 raise FileNotFoundError(2, "원본이 존재하지 않습니다", src)
 
             # RED 안전판 — 디렉토리 단위 RED 복사는 그랜트가 있어도 금지(파급 과대)
-            if _red_is_live_path(dst):
-                if os.path.isdir(src):
+            if _repair_is_live_path(dst):
+                if os.path.isdir(read_src):
                     return ("Error: RED 구역에는 디렉토리 단위 복사가 금지됩니다"
                             "(수리 그랜트가 있어도). 파일 단위로 나눠서 하세요.")
                 # 격리 스테이징 — 쓰기와 같은 층. 라이브 dst 는 apply 때 생긴다.
                 _staged_dst = _red_stage(dst, for_write=True)
                 if _staged_dst != dst:
                     os.makedirs(os.path.dirname(os.path.abspath(_staged_dst)), exist_ok=True)
-                    shutil.copy2(src, _staged_dst)
+                    shutil.copy2(read_src, _staged_dst)
                     return json.dumps({
                         "success": True, "staged": True,
                         "path": os.path.abspath(_staged_dst),
@@ -1193,7 +1216,7 @@ def _execute(tool_input: dict, context) -> str:
                 _src_content = None
                 if dst.endswith(".py"):
                     try:
-                        with open(src, encoding="utf-8") as _f:
+                        with open(read_src, encoding="utf-8") as _f:
                             _src_content = _f.read()
                     except Exception:
                         pass
@@ -1201,7 +1224,7 @@ def _execute(tool_input: dict, context) -> str:
                 if _red_err:
                     return _red_err
 
-            result = _load_sibling("copy_ops").transfer_path(src, dst)
+            result = _load_sibling("copy_ops").transfer_path(read_src, dst)
             _red_write_finalize(result["path"])
             _vocab_enforce(result["path"])
             return json.dumps(result, ensure_ascii=False)
@@ -1218,16 +1241,17 @@ def _execute(tool_input: dict, context) -> str:
             if scope_err:
                 return scope_err
 
-            if not os.path.exists(src):
+            read_src = _red_stage(src, for_write=False)
+            if not os.path.exists(read_src):
                 raise FileNotFoundError(2, "원본이 존재하지 않습니다", src)
 
             # RED 안전판 — RED 를 향하거나 RED 에서 빠져나가는 이동은 파일 단위만 + 백업
-            if _red_is_live_path(dst) or _red_is_live_path(src):
+            if _repair_is_live_path(dst) or _repair_is_live_path(src):
                 # 반출(src=RED)도 게이트 대상 — dst 만 검사하던 구멍을 닫는다
                 _rv = _red_zone_violation(os.path.realpath(src)) if _red_is_live_path(src) else None
                 if _rv:
                     return _rv
-                if os.path.isdir(src):
+                if os.path.isdir(read_src):
                     return ("Error: RED 구역이 걸린 디렉토리 단위 이동은 금지됩니다"
                             "(수리 그랜트가 있어도). 파일 단위로 나눠서 하세요.")
                 # 격리 스테이징 — 이동은 '대상 쓰기 + 원본 삭제' 한 쌍이라 **둘 다 적재
@@ -1235,10 +1259,12 @@ def _execute(tool_input: dict, context) -> str:
                 # 색깔과 무관하게 양쪽을 적재한다: dst 가 GREEN 이어도 원본 삭제를 미룬 채
                 # dst 만 라이브에 만들면 apply 없이 '복사'가 되어 이동이 아니게 된다.
                 if _red_can_stage(src) and _red_can_stage(dst):
-                    _staged_dst = _red_stage(dst, for_write=True)
-                    if _staged_dst != dst and _red_stage_delete(src):
+                    _staged_dst = _staging_mod().stage_file(str(_REPO_ROOT), _staging_key(), os.path.realpath(dst))
+                    if _staged_dst and _staged_dst != dst:
                         os.makedirs(os.path.dirname(os.path.abspath(_staged_dst)), exist_ok=True)
-                        shutil.copy2(src, _staged_dst)
+                        shutil.copy2(read_src, _staged_dst)
+                        if not _red_stage_delete(src):
+                            return "Error: 이동의 원본 삭제를 격리하지 못했습니다. 라이브는 무변경입니다."
                         return json.dumps({
                             "success": True, "staged": True,
                             "live_path": os.path.abspath(dst),
@@ -1246,6 +1272,8 @@ def _execute(tool_input: dict, context) -> str:
                                         f"{os.path.relpath(os.path.abspath(src), str(_REPO_ROOT))} → "
                                         f"{os.path.relpath(os.path.abspath(dst), str(_REPO_ROOT))}. "
                                         + _STAGED_NOTE)}, ensure_ascii=False)
+                if _red_grant_active() and any(_red_family.repair_artifact(p, _REPO_ROOT) for p in (src, dst)):
+                    return "Error: 수리 이동의 양쪽 경로를 격리하지 못했습니다. 라이브는 변경하지 않습니다."
                 if _red_is_live_path(src):
                     _red_err = _red_write_prepare(src)  # 사라질 원본 백업
                     if _red_err:
@@ -1254,7 +1282,7 @@ def _execute(tool_input: dict, context) -> str:
                     _src_content = None
                     if dst.endswith(".py"):
                         try:
-                            with open(src, encoding="utf-8") as _f:
+                            with open(read_src, encoding="utf-8") as _f:
                                 _src_content = _f.read()
                         except Exception:
                             pass
@@ -1282,7 +1310,7 @@ def _execute(tool_input: dict, context) -> str:
             abs_target = os.path.abspath(target)
 
             # RED 안전판 — 디렉토리 단위 RED 삭제는 그랜트가 있어도 금지, 파일은 백업 후 삭제
-            if _red_is_live_path(abs_target):
+            if _repair_is_live_path(abs_target):
                 if os.path.isdir(target):
                     return ("Error: RED 구역 디렉토리 삭제는 금지됩니다(수리 그랜트가 있어도). "
                             "정말 필요하면 파일 단위로 지우세요.")

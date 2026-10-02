@@ -154,7 +154,7 @@ def test_review_stream_runs_evaluator_without_executor(supervisor, tmp_path, mon
 def test_active_check_failure_does_not_rollback_or_repeat(tmp_path, monkeypatch, exit_code, phase):
     row = record(tmp_path, result={"outcome": "healthy", "active_verify_cmd": "test-and-commit"})
     calls = []
-    monkeypatch.setattr("red_apply._run_post_verify", lambda *a: calls.append(a) or {"exit_code": exit_code})
+    monkeypatch.setattr("red_apply._run_post_verify", lambda *a, **kw: calls.append(a) or {"exit_code": exit_code})
     checked = continuation_worker.active_check(row, tmp_path)
     assert checked["phase"] == phase and checked["result"]["outcome"] == "healthy"
     continuation_worker.active_check(journal.read(row["task_id"], tmp_path), tmp_path)

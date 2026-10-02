@@ -98,8 +98,10 @@ class RuntimeAdmission:
         path = scope.get("path", "")
         safe = (scope.get("method") in {"GET", "HEAD", "OPTIONS"}
                 or path.startswith(("/runtime/", "/mcp"))
-                or path in {"/ibl/recover", "/ibl/guide", "/ibl/read-guide", "/ibl/reframe"}
-                or any(p in {"cancel", "steer", "stop", "interrupt", "recover"} for p in path.split("/")))
+                or path in {"/ibl/recover", "/ibl/guide", "/ibl/read-guide", "/ibl/reframe",
+                            "/ibl/supervision", "/ibl/supervision/boundary"}
+                or any(p in {"cancel", "cancel_all", "steer", "stop", "stop_all", "interrupt", "recover"}
+                       for p in path.split("/")))
         if scope["type"] == "http" and path == "/ibl/execute" and not safe:
             # 기존 원문 회수/정적 계약 조회는 실행을 새로 승인하지 않는다.
             import json

@@ -132,7 +132,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: '2026-10-02', impl: "0dbbbc0825fc7948"}
+        path_audited: {at: '2026-10-02', impl: "f4bbc2799ffab658"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -144,7 +144,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: '2026-10-02', impl: "0dbbbc0825fc7948"}
+        path_audited: {at: '2026-10-02', impl: "f4bbc2799ffab658"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -222,7 +222,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: '2026-10-02', impl: "0dbbbc0825fc7948"}
+        path_audited: {at: '2026-10-02', impl: "f4bbc2799ffab658"}
         target_key: path
       list:
         callable_contract:
@@ -856,7 +856,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: '2026-10-02', impl: "0dbbbc0825fc7948"}
+        path_audited: {at: '2026-10-02', impl: "f4bbc2799ffab658"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

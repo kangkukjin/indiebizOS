@@ -4,8 +4,11 @@
 파일 잠금과 runtime lease는 중복 실행 및 재개 도중 재기동을 막는다.
 """
 import asyncio
+import hashlib
 import threading
 import time
+from pathlib import Path
+from uuid import uuid4
 
 from repair_continuation import (TERMINAL, cancelled, claim, directory, outcome, read, resuming,
                                  resume_context, save)
@@ -24,12 +27,27 @@ def active_check(row, base=None):
         row["phase"] = "verify_remaining" if result.get("outcome") == "healthy" else "repair_apply"
         return save(row, base)
     if not row.get("active_verify"):
-        row.update(phase="active_verify", active_verify={"state": "running", "command": command})
+        receipt_path = (Path(base or get_base_path()) / "data/system_ai_state/repair_check_outputs"
+                        / (uuid4().hex + ".json"))
+        row.update(phase="active_verify", active_verify={"state": "running", "command": command,
+                   "output_path": str(receipt_path),
+                   "command_sha256": hashlib.sha256(command.encode()).hexdigest()})
         save(row, base)  # 실행 뒤 영수증 전에 죽었으면 재실행하지 않고 실행자가 확인한다.
-        from red_apply import _run_post_verify
-        checked = _run_post_verify(str(base or get_base_path()), command)
-        row["active_verify"] = {"state": "passed" if checked.get("exit_code") == 0 else "failed",
-                                "receipt": checked}
+        from red_apply import _run_post_verify, ACTIVE_VERIFY_TIMEOUT_S
+        checked = _run_post_verify(str(base or get_base_path()), command,
+                                   timeout=ACTIVE_VERIFY_TIMEOUT_S, receipt_path=receipt_path)
+        row["active_verify"].update(state="passed" if checked.get("exit_code") == 0 else "failed",
+                                    receipt=checked)
+    elif row["active_verify"]["state"] == "running":
+        # 명령 완료 영수증 뒤, 인계 원장 갱신 전에 죽은 경우만 기존 결말을 회수한다.
+        pending = row["active_verify"]
+        path = Path(pending.get("output_path") or ".").resolve()
+        home = Path(base or get_base_path()).resolve() / "data/system_ai_state/repair_check_outputs"
+        checked = read_json(path) if path.is_relative_to(home) else None
+        expected = hashlib.sha256(command.encode()).hexdigest()
+        if checked and checked.get("command_sha256") == expected == pending.get("command_sha256"):
+            pending.update(state="passed" if checked.get("exit_code") == 0 else "failed",
+                           receipt={k: v for k, v in checked.items() if k != "output"}, recovered=True)
     row["phase"] = "verify_remaining" if row["active_verify"]["state"] == "passed" else "repair_active"
     return save(row, base)
 
@@ -149,6 +167,9 @@ def process_pending(base, generation, execute=_execute):
                 continue
             if row.get("phase") not in {"review", "execution"}:
                 row = active_check(row, base)
+            if cancelled(row, base):
+                _settle(row, "cancelled", "사용자가 수리 재개를 취소했습니다.", base)
+                continue
             with resuming(row):
                 answer = execute(row)
             current = read(row["task_id"], base) or row

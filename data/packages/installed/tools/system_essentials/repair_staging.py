@@ -561,13 +561,12 @@ def verify(repo: str, sess: dict):
 # ── 지연 적용 (2026-08-19) ────────────────────────────────────────────────
 
 def _reload_triggering(sess: dict) -> bool:
-    """이 적용이 uvicorn 리로드를 부르는가 — backend/**.py 가 하나라도 끼면 참.
-
-    uvicorn 은 reload=True(reload_delay 2초)로 backend 를 감시한다. frontend/scripts 는
-    라이브 프로세스가 import 하지 않아 즉시 적용해도 이 턴이 죽지 않는다."""
+    """백엔드·패키지·사전 적용은 턴 종료 후 제어자가 묶어서 반영한다."""
     for r in (sess.get("files") or {}).values():
         rel = (r.get("rel") or "").replace(os.sep, "/")
         if rel.startswith("backend/") and rel.endswith(".py"):
+            return True
+        if rel.startswith(("data/packages/installed/", "data/ibl_nodes_src/")):
             return True
     return False
 

@@ -18,6 +18,16 @@ def bind_pursuit():
         binding.output = (row or {}).get("framing") or {}
 
 
+def restore_completion(controller, request, binding):
+    """완료 의도도 구간을 넘는다. 같은 전체 기준에 연결된 현재 버전만 승인할 수 있다."""
+    if not request:
+        return
+    if (not binding or not binding.row or binding.row["id"] != request["id"]
+            or binding.row["goal_criteria"] != request["goal_criteria"]):
+        raise ValueError("재개 대기 중 전체 과제 연결 또는 완료 기준이 변경됐습니다")
+    controller.done_request = {**request, "version": binding.row["version"]}
+
+
 def restore_review(controller, row):
     """같은 응답·파일·전달 지문을 복원한다. 승인 전에는 현재 파일을 다시 대조한다."""
     from runtime_utils import get_base_path
@@ -43,6 +53,16 @@ def restore_review(controller, row):
     controller.delivery = DeliveryQueue(path.parent / "delivery", get_base_path() / "공유창고", controller.log)
     controller._evaluation_packet = saved["packet"]
     controller._evaluation_snapshot = saved["snapshot"]
+    # 이전 판본도 시각 증거 원본을 packet에 저장했다. 해시가 일치할 때만 관측으로 복원한다.
+    import base64, hashlib
+    applied = {str((get_base_path() / name).resolve()) for name in
+               ((row.get("result") or {}).get("apply") or {}).get("files", [])}
+    for img in saved["packet"].get("images", []):
+        name = img.get("_path")
+        fingerprint = saved["snapshot"]["files"].get(name, {})
+        if (name not in applied and fingerprint.get("mode") == "bytes"
+                and hashlib.sha256(base64.b64decode(img["base64"], validate=True)).hexdigest() == fingerprint["hash"]):
+            fingerprint["mode"] = "image"
     controller._final_criteria_contract = saved["packet"]["context"]["criteria_contract"]
     controller.done_request = saved.get("done_request")
     controller.original_pursuit = saved.get("original_pursuit")
@@ -73,10 +93,7 @@ def review_stream(runner, controller, row, cancel_check=None):
         restore_review(controller, row)
         from pursuit_bind import current as binding_current
         binding = binding_current()
-        if controller.done_request and binding and binding.row:
-            if binding.row["goal_criteria"] != controller.done_request["goal_criteria"]:
-                raise ValueError("평가 대기 중 완료 요청의 전체 기준이 변경됐습니다")
-            controller.done_request["version"] = binding.row["version"]
+        restore_completion(controller, controller.done_request, binding)
         channel = open_turn(key, runner, row["goal"], [], "", framing, repair=True,
                             aliases=[controller.owner])
         response = yield from controller.finalize(controller.store.text, [], lambda event: None, cancel_check)

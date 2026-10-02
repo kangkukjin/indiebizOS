@@ -181,7 +181,7 @@ def load_session(repo: str, key: str):
 
 
 def _resume_staging(repo: str, key: str):
-    """롤백된 동일 작업의 격리본 소유권을 후속 구간으로 넘긴다. 파일 복제는 하지 않는다."""
+    """미완료·롤백된 동일 작업의 격리본 소유권을 후속 구간으로 넘긴다. 파일 복제는 하지 않는다."""
     from repair_continuation import current
     from principal import is_owner
     from thread_context import get_current_task_id, get_task_origin
@@ -189,10 +189,12 @@ def _resume_staging(repo: str, key: str):
     if (not row or not is_owner() or get_task_origin() != "user"
             or row.get("resume_task_id") != get_current_task_id()
             or task_key(row.get("resume_task_id")) != key
-            or (row.get("result") or {}).get("outcome") != "rolled_back"):
+            or (row.get("phase") != "execution" and (row.get("result") or {}).get("outcome") != "rolled_back")):
         return None
-    prior = read_session(repo, task_key(row["task_id"]))
+    prior = read_session(repo, task_key(row.get("staging_task_id") or row["task_id"]))
     if not prior or prior.get("reused_by") or prior.get("owner") != _repair_owner():
+        return None
+    if row.get("phase") == "execution" and prior.get("status") != "staging":
         return None
     wt = os.path.realpath(os.path.join(repo, prior.get("worktree") or ""))
     if not wt.startswith(os.path.realpath(os.path.join(repo, ".worktrees")) + os.sep) or not os.path.isdir(wt):

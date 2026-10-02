@@ -134,7 +134,7 @@ def process_pending(base, generation, execute=_execute):
                    for p in directory(base).glob("*.json")):
                 save({**row, "status": "continued"}, base)
                 continue
-            if row.get("phase") == "review":
+            if row.get("phase") in {"review", "execution"}:
                 if row.get("retry_at") is None or row["retry_at"] > time.time():
                     continue
                 row = save({**row, "status": "running", "generation": generation}, base)
@@ -147,7 +147,7 @@ def process_pending(base, generation, execute=_execute):
                 _deliver_blocked(row)
                 _settle(row, "blocked", row["reason"], base)
                 continue
-            if row.get("phase") != "review":
+            if row.get("phase") not in {"review", "execution"}:
                 row = active_check(row, base)
             with resuming(row):
                 answer = execute(row)
@@ -158,8 +158,8 @@ def process_pending(base, generation, execute=_execute):
             if current.get("status") == "continued":
                 continue
             evaluation = answer.get("evaluation") or {}
-            if current.get("status") == "waiting_review":
-                # 구현은 이미 끝났다. 저장된 검수 단계만 다음 스캔에서 재개한다.
+            if current.get("status") in {"waiting_review", "waiting_execution"}:
+                # 저장한 단계(남은 개발 또는 검수)를 다음 스캔에서 재개한다.
                 continue
             status = "completed" if evaluation.get("achieved") else "blocked"
             if answer.get("cancelled"):
@@ -200,7 +200,7 @@ def kick():
         _last_scan = time.monotonic()
         candidates = [read_json(p) or {} for p in directory(base).glob("*.json")]
         if not any(r.get("status") not in TERMINAL and
-                   (r.get("phase") != "review" or cancelled(r, base) or
+                   (r.get("phase") not in {"review", "execution"} or cancelled(r, base) or
                     r.get("retry_at") is not None and r["retry_at"] <= time.time())
                    for r in candidates if r.get("authorized_origin") == "user"):
             _lock.release()

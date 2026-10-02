@@ -1051,7 +1051,7 @@ def _latency_from_prose(text):
 
 def _final_evaluation_result(log_text):
     """평가 루프의 최종 판정을 읽는다. 산문 응답이 아니라 라운드 마커가 1차 원장이다."""
-    final = re.findall(r'\[GoalEval\] 최종 판정: (ACHIEVED|NOT_ACHIEVED|UNKNOWN|PENDING_APPLY|PENDING_REVIEW)\b', log_text)
+    final = re.findall(r'\[GoalEval\] 최종 판정: (ACHIEVED|NOT_ACHIEVED|UNKNOWN|PENDING_APPLY|PENDING_REVIEW|PENDING_EXECUTION)\b', log_text)
     if final:
         return final[-1]
     supervisor = re.findall(r'\[ConsciousSupervisor\] 최종 판정: (APPROVED|REWORK|UNKNOWN)\b', log_text)

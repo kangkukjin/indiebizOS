@@ -17,9 +17,14 @@ import re
 import subprocess
 import sys
 import time
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "backend"))
+import boot_paths  # noqa: E402,F401
+from logging_utils import mask_secrets
+
 PY = sys.executable
 SUMMARY_RE = re.compile(r"(\d+) (passed|failed|error|errors|skipped)")
 PROGRESS_RE = re.compile(r"^([.FEsx]+)\s+\[\s*\d+%\]")
@@ -54,6 +59,17 @@ def _run(files, k, timeout):
     return counts, failures, p.returncode, text
 
 
+def _failure_output(text):
+    """진단은 즉시 보여 주고 전체 출력은 같은 영수증에서 회수한다."""
+    text = mask_secrets(text)
+    directory = ROOT / "data/spill/test_outputs"
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / (uuid.uuid4().hex + ".log")
+    path.write_text(text, encoding="utf-8")
+    excerpt = text if len(text) <= 6000 else text[:3000] + "\n… 중간 생략, output_path에 전체 보존 …\n" + text[-3000:]
+    return {"output": excerpt, "output_path": str(path), "truncated": len(text) > 6000}
+
+
 def _whole_suite(requested):
     """전수인가 — files 생략, 또는 폴더를 가리킨 선택."""
     return not requested or any((ROOT / f).is_dir() for f in requested)
@@ -81,13 +97,16 @@ def main():
         try:
             counts, failures, rc, text = _run([f], k, max(5.0, timeout - (time.time() - t0)))
             ok = rc == 0 or (rc == 5 and not failures)          # 5 = 수집 0(k 로 전부 걸러짐)
-            items.append({"file": f, "ok": ok, **counts, "failures": failures[:12]})
-        except subprocess.TimeoutExpired:
-            items.append({"file": f, "ok": False, "passed": 0, "failed": 0, "errors": 1, "skipped": 0, "failures": ["시한 초과"]})
+            items.append({"file": f, "ok": ok, **counts, "failures": failures[:12],
+                          **(_failure_output(text) if not ok else {})})
+        except subprocess.TimeoutExpired as exc:
+            parts = [v.decode(errors="replace") if isinstance(v, bytes) else (v or "") for v in (exc.stdout, exc.stderr)]
+            evidence = _failure_output("\n".join(parts) + "\n시험 실행 시한 초과")
+            items.append({"file": f, "ok": False, "passed": 0, "failed": 0, "errors": 1, "skipped": 0, "failures": ["시한 초과"], **evidence})
     ok = all(i["ok"] for i in items)
     p_sum = sum(i["passed"] for i in items); f_sum = sum(i["failed"] + i["errors"] for i in items)
     print(json.dumps({"items": items, "ok": ok, "seconds": round(time.time() - t0, 1),
-                      "message": f"{len(items)}파일 · 통과 {p_sum} · 실패 {f_sum}" + ("" if ok else " — 실패 목록은 items[].failures")},
+                      "message": f"{len(items)}파일 · 통과 {p_sum} · 실패 {f_sum}" + ("" if ok else " — 실패 원인·전체 출력은 items[].output / output_path")},
                      ensure_ascii=False))
     return 0          # 시험·관문 실패는 *결과*(ok:false·items)이지 스크립트 고장이 아니다 — exit 1 이면 [self:script] 가 "스크립트 실패" 로 봉해 items 가 안 흐른다(ep2862 실측)
 

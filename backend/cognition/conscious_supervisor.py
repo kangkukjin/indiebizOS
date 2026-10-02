@@ -270,6 +270,9 @@ class Supervisor:
             from repair_continuation import current as repair_current
             prior = repair_current() or {}
             self.verifications.records = list(prior.get("verification_records", []))
+            self._final_criteria_contract = prior.get("criteria_contract")
+            from repair_resume import restore_completion
+            restore_completion(self, prior.get("done_request"), binding)
         if binding and binding.row:
             self.original_pursuit = {k: binding.row[k] for k in ("id", "version", "goal_criteria")}
         self.log("framing", role="consciousness" if self.enabled else "harness",
@@ -868,6 +871,9 @@ class Supervisor:
                         break
                     evidence_reads += 1
                 elif decision["status"] == "REWORK":
+                    # 개발이 남았으면 최종 문구 보완 통로 대신 영속 실행 단계로 넘긴다.
+                    if self.repair_granted and getattr(self, "_review_row", None) and decision.get("repair_scope") == "research":
+                        break
                     if repairs_used >= max_repairs:
                         break
                     repairs_used += 1
@@ -953,7 +959,7 @@ class Supervisor:
         status = "ACHIEVED" if approved else "NOT_ACHIEVED" if decision["status"] == "REWORK" else "UNKNOWN"
         from repair_continuation import finish_review
         if finish_review(self, decision):
-            status = "PENDING_REVIEW"
+            status = "PENDING_EXECUTION" if self._review_row.get("phase") == "execution" else "PENDING_REVIEW"
         set_goal_eval_outcome(approved, 2 if status == "NOT_ACHIEVED" else 0,
                               status=status, reason=decision.get("reason", ""))
         # 과거 원문·승인 지문과 실패 범주를 보존해 다음 요청에서 재검수할 수 있다.
@@ -966,7 +972,9 @@ class Supervisor:
         }, ensure_ascii=False), encoding="utf-8")
         print(f"[GoalEval] 최종 판정: {status}")
         final = self.store.text
-        if status == "PENDING_REVIEW":
+        if status == "PENDING_EXECUTION":
+            final += "\n\n[작업 계속] 전체 완료 기준을 보존했습니다. 남은 구현·검사를 같은 목표로 이어갑니다."
+        elif status == "PENDING_REVIEW":
             final += "\n\n[평가 대기] 구현과 검사 결과를 보존했습니다. 평가만 재개하며 구현은 반복하지 않습니다."
             if (getattr(self, "_review_row", {}) or {}).get("review_failures", 0) >= 3:
                 final += " 평가 서비스가 계속 실패해 자동 호출을 멈췄습니다. 평가 재개가 필요합니다."

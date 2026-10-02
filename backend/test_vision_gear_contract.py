@@ -3,7 +3,7 @@
 시각 읽기·채점은 범용 능력 — 모델은 기어가 단독 결정한다(에이전트·코드별 벤더 고정 금지).
 - vision_read(critic/read)와 ingest _vision_json 은 기어-해소 원샷을 탄다.
 - 이미지 읽기·채점은 실행 모델 우선, 입력 미지원/미확인 때 비전 슬롯을 사용한다.
-- 나머지 원샷 이미지 추출·기존 평가는 별도 비전 슬롯을 유지한다.
+- 이미지 평가는 준비된 평가 모델 우선, 나머지 원샷 이미지 추출은 별도 비전 슬롯을 유지한다.
 - 재발 방지 관문: 범용 비전 경로 소스에 벤더 API URL 직서술 금지(이미지 *생성* 등
   벤더 고유 기능 파일은 대상 아님).
 
@@ -130,8 +130,8 @@ class _SentinelProvider:
         return "SENTINEL_VISION_OK"
 
 
-def test_oneshot_prefers_vision_modality_slot(monkeypatch):
-    """images 가 있으면 role 축이 아니라 gear modality.image 프로바이더가 0차."""
+def test_oneshot_routes_extraction_and_evaluation_separately(monkeypatch):
+    """추출은 비전 슬롯, 평가는 이미지 평가 리졸버를 사용하며 이미지 원본을 넘긴다."""
     import model_resolver
     import consciousness_agent as ca
     monkeypatch.setattr(model_resolver, "get_vision_provider",
@@ -139,6 +139,8 @@ def test_oneshot_prefers_vision_modality_slot(monkeypatch):
     out = ca.oneshot_ai_call("설명해줘", images=[{"base64": "eA==", "media_type": "image/png"}],
                              role="classify")
     assert out == "SENTINEL_VISION_OK"
+    monkeypatch.setattr(model_resolver, "get_image_evaluation_provider",
+                        lambda agent_id: (_SentinelProvider(), {"source": "평가 축"}))
     out2 = ca.system_ai_call("평가해줘", images=[{"base64": "eA==", "media_type": "image/png"}],
                              role="evaluate")
     assert out2 == "SENTINEL_VISION_OK"

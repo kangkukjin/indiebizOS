@@ -92,7 +92,7 @@ def test_resolver_keeps_oneshot_and_mutable_session_in_separate_buckets(monkeypa
     import model_resolver as models
     monkeypatch.setattr(models, "_provider_cache", {})
     monkeypatch.setattr(providers, "get_provider", lambda *a, **kw: SimpleNamespace(
-        init_client=lambda: None, disable_session_persistence=False,
+        init_client=lambda: None, is_ready=True, disable_session_persistence=False,
         no_tools=False, disable_thinking=False, kwargs=kw))
     d = {"provider": "codex", "model": "test", "api_key": ""}
     one = models._provider_from_desc(d, oneshot=True)

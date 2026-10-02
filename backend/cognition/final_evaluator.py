@@ -17,7 +17,7 @@ POLICY = """이번 호출은 도구 없는 최종 평가다. 의식이 명시한
 원장·파일·수치 검사 결과는 해당 기준의 달성을 검증하는 증거다. 이 자료에서 별도 의무를 만들지 않는다.
 사소한 표현·오타, 추가 개선 가능성, 이미 정직하게 밝힌 비핵심 한계만으로 보완시키지 않는다.
 본문/결과가 발췌됐다는 사실은 미실행의 증거가 아니다. 핵심 판단 근거가 부족하면 UNKNOWN이다.
-수정본에는 이전 피드백의 결함과 그에 의존하는 주장만 재평가한다. 새로운 개선 목표를 만들지 않는다.
+수정본도 원래 criteria 전체를 평가한다. 이전 피드백이 한 항목만 지적했어도 나머지 기준은 면제되지 않는다. 새로운 개선 목표를 만들지 않는다.
 완료 요청의 전체 과제 기준이 제공되면 이번 응답과 함께 그 기준도 충족해야 ACHIEVED다.
 pending_delivery의 초안 내용·알림도 결과물이다. 공개/알림은 승인 뒤 하네스가 수행한다.
 응답 형식: ACHIEVED면 한 줄로 끝낸다. UNKNOWN이면 이유 한 줄을 덧붙인다.
@@ -151,7 +151,10 @@ def prepare(controller, tool_calls=None):
         path = img.get("_path")
         if path:
             import hashlib
-            snapshots[path] = {"hash": hashlib.sha256(Path(path).read_bytes()).hexdigest(), "mode": "bytes"}
+            # 이미지는 관측 증거다. 임시 원본의 수명과 검수 증거의 수명을 분리한다.
+            import base64
+            snapshots.setdefault(path, {"hash": hashlib.sha256(base64.b64decode(img["base64"], validate=True)).hexdigest(),
+                                        "mode": "image"})
     criteria = getattr(controller, "_final_criteria_contract", None)
     if criteria is None:
         criteria = criteria_contract(controller.message, controller.framing)
@@ -212,6 +215,12 @@ def snapshot_error(controller):
     for name, fingerprint in snapshot["files"].items():
         try:
             path = Path(name)
+            if fingerprint["mode"] == "image":
+                import base64, hashlib
+                image = next((i for i in controller._evaluation_packet.get("images", []) if i.get("_path") == name), None)
+                if not image or hashlib.sha256(base64.b64decode(image["base64"], validate=True)).hexdigest() != fingerprint["hash"]:
+                    return "보존된 시각 증거가 변경됐습니다"
+                continue
             if fingerprint["mode"] == "missing":
                 if path.exists():
                     return "평가 중 삭제된 구현 파일이 다시 생성됐습니다"
@@ -223,7 +232,7 @@ def snapshot_error(controller):
                 actual = hashlib.sha256(path.read_bytes()).hexdigest()
             if actual != fingerprint["hash"]:
                 return "평가 중 산출물이 변경됐습니다"
-        except (OSError, UnicodeError):
+        except (OSError, UnicodeError, ValueError, KeyError):
             return "평가 중 산출물을 읽을 수 없습니다"
     return None
 
@@ -271,7 +280,7 @@ def invoke(controller, prompt="", *, phase="final"):
             result["repair_block_ids"] = [i for i in ids if isinstance(i, str) and i in valid] if isinstance(ids, list) else []
         except ValueError:
             result["repair_block_ids"] = []
-        result["instruction"] = ("아래에서 지적한 결함과 의존 주장만 한 번 보완하세요. 기존 조사·산출물을 재사용하고 "
+        result["instruction"] = ("아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 "
                                  "전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\n" + feedback)
     elif (result["status"] == "UNKNOWN" and not controller.cancelled()
           and re.search(r"UNKNOWN_REASON:\s*evidence\b", feedback)):

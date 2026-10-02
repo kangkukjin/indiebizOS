@@ -102,7 +102,8 @@ OS_SEAM_ALLOWLIST = {
     "backend/base/python_environment_lock.py",  # POSIX 공유 설치 잠금과 Windows 배타 잠금
 
     "backend/base/restart_protocol.py",  # 재기동 제어 파일의 fsync/flock/Windows 잠금
-    "backend/base/restart_process.py",  # 프로세스 출생 신원과 OS별 spawn/종료
+    "backend/base/restart_process.py",  # OS별 spawn/종료
+    "backend/common/completion_contract.py",  # 완료 대기·재기동 공용 프로세스 신원: macOS 시계 보정 전 커널 출생값
     "backend/base/coding_process.py",  # 코딩 앱 쓰기 경계(OS 샌드박스·프로세스 그룹) — 현재 macOS sandbox-exec 만, 다른 몸은 실행 거절. 이식 시 OS별 격리 수단 추가 지점
 
     "backend/base/runtime_utils.py",   # detect_body + 번들 런타임 경로(Win/Unix 분기)

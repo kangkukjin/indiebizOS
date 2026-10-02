@@ -995,7 +995,7 @@ def system_ai_call(prompt: str, system_prompt: str = None,
       - execution + images(이미지 읽기·채점) → 실행 모델 우선, 미지원/미확인 시 비전 슬롯
     리졸버 프로바이더 우선 → 옛 system_ai 원샷 getter → 의식 에이전트(본격) 순 폴백.
     """
-    # 실행 역할의 이미지는 실행 모델 우선. 나머지 이미지 소비처는 별도 비전 슬롯 유지.
+    # 실행·평가는 해당 역할의 이미지 지원 모델 우선. 다른 이미지 소비처는 비전 슬롯 유지.
     provider = None
     if images and role == "execution":
         try:
@@ -1004,6 +1004,13 @@ def system_ai_call(prompt: str, system_prompt: str = None,
             logger.warning("[image] 실행 이미지 모델 해소 실패: %s", exc)
         if provider is None:
             return None  # 이미지 없는 텍스트 모델로 채점을 계속하지 않는다.
+    elif images and role == "evaluate":
+        from model_resolver import get_image_evaluation_provider
+        from thread_context import get_current_agent_id
+        provider, descriptor = get_image_evaluation_provider(get_current_agent_id())
+        if provider is None:
+            raise RuntimeError("사용 가능한 이미지 평가 모델이 없습니다")
+        logger.info("[image] 평가 모델 %s/%s", descriptor.get("provider"), descriptor.get("model"))
     elif images:
         try:
             from model_resolver import get_vision_provider

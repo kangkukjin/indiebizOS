@@ -581,6 +581,9 @@ def _provider_from_desc(d: dict, system_prompt: str = "", tools=None,
     bucket = "oneshot" if oneshot else "session"
     cache_key = f"{bucket}|{d['provider']}|{d['model']}|{keyhash}"
     prov = _provider_cache.get(cache_key)
+    if prov is not None and not prov.is_ready:
+        _provider_cache.pop(cache_key, None)
+        prov = None
     if prov is None:
         try:
             from providers import create_initialized_provider
@@ -588,6 +591,9 @@ def _provider_from_desc(d: dict, system_prompt: str = "", tools=None,
                 d["provider"], api_key=d["api_key"], model=d["model"],
                 system_prompt=system_prompt, tools=tools or [],
                 isolated_session=oneshot, no_tools=oneshot, disable_thinking=oneshot)
+            if not prov.is_ready:
+                logger.warning("[model_resolver] 초기화되지 않은 provider: %s/%s", d["provider"], d["model"])
+                return None
             _provider_cache[cache_key] = prov
         except Exception as e:
             logger.warning(f"[model_resolver] provider 생성 실패 ({d['provider']}/{d['model']}): {e}")
@@ -663,6 +669,18 @@ def get_vision_provider(oneshot: bool = True) -> Tuple[Any, dict]:
     """별도 비전 프로바이더. 이미지 추출·최종 시각 검수 등이 사용한다."""
     d = resolve_vision()
     return _provider_from_desc(d, oneshot=oneshot), d
+
+
+def get_image_evaluation_provider(agent_id=None):
+    """평가 축의 이미지 지원 모델을 유지하고, 준비된 비전 슬롯으로만 대체한다."""
+    primary = resolve("evaluate", agent_id)
+    for descriptor in (primary, resolve_vision()):
+        if image_input_support(descriptor) is not True:
+            continue
+        provider = _provider_from_desc(descriptor, oneshot=True)
+        if provider is not None:
+            return provider, descriptor
+    return None, {"source": "이미지 평가 모델을 사용할 수 없음"}
 
 
 def image_input_support(descriptor: dict) -> Optional[bool]:

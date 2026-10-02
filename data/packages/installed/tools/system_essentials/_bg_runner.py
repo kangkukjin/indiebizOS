@@ -68,7 +68,8 @@ def main():
         if parsed is not None:
             job["result"] = parsed
     else:
-        if isinstance(parsed, dict) and (isinstance(parsed.get("items"), list) or isinstance(parsed.get("table"), dict)):
+        if isinstance(parsed, dict) and (isinstance(parsed.get("items"), list) or isinstance(parsed.get("table"), dict)
+                                         or 'operation_outcome' in parsed):
             job["result"] = parsed
         else:
             job["result"] = {"stdout": out[-STDOUT_TAIL:]}
@@ -91,10 +92,14 @@ def _announce(job):
         import os
         import urllib.request
         port = os.environ.get("INDIEBIZ_API_PORT", "8765")
-        ok = job.get("status") == "done"
+        result = job.get('result')
+        outcome = result.get('operation_outcome', {}) if isinstance(result, dict) else {}
+        work_failed = isinstance(outcome, dict) and outcome.get('status') == 'failed'
+        ok = job.get("status") == "done" and not work_failed
+        reason = outcome.get('message', '내부 작업 실패') if work_failed else job.get('error', '')
         secs = round((job.get("duration_ms") or 0) / 1000)
         body = (f"{job.get('id')} {'완료' if ok else '실패'} ({secs}초)"
-                + ("" if ok else " — " + str(job.get("error", ""))[:200])
+                + ("" if ok else " — " + str(reason)[:200])
                 + f"\n결과: [self:script]{{op: \"status\", job_id: \"{job.get('job_id')}\"}}")
         payload = json.dumps({"title": "백그라운드 작업 " + ("완료" if ok else "실패"),
                               "message": body, "type": "info" if ok else "error",

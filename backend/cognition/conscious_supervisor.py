@@ -392,6 +392,8 @@ class Supervisor:
             self.recent.append(self.log("tool.finished", id=key, name=call.get("name"), evidence=ref,
                                         is_error=error, observation="missing_read" if observation else "",
                                         internal_tool_failures=evidence_summary.get('tool_failures', 0),
+                                        operation_outcomes=evidence_summary.get('operation_outcomes',
+                                                                                detail.get('operation_outcomes', [])),
                                         source_failures=evidence_summary.get('source_failures', 0),
                                         check_rejected=detail.get('ok') is False and (
                                             detail.get('mode') == 'check' or

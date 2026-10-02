@@ -737,6 +737,13 @@ def project_v2_result(result):
     failures = [e for e in result.get('evidence', []) if e.get('kind') == 'tool_failure']
     out['evidence_summary'].update(tool_failures=len(failures),
                                   source_failures=sum(e.get('incomplete') is True for e in failures))
+    outcomes = {o['id']: o for e in result.get('evidence', []) if e.get('kind') == 'tool_evidence'
+                for o in e.get('operation_outcomes', [])
+                if isinstance(o, dict) and isinstance(o.get('id'), str)
+                and o.get('status') in ('passed', 'failed')}
+    if outcomes:
+        out['evidence_summary']['operation_outcomes'] = list(outcomes.values())
+        out['evidence_summary']['operation_failures'] = sum(o['status'] == 'failed' for o in outcomes.values())
     if failures:
         out['evidence_summary']['failures'] = [
             {k: e[k] for k in ('id', 'action', 'code', 'failure_kind', 'incomplete') if k in e}

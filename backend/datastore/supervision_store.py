@@ -173,6 +173,8 @@ class TurnStore:
         self.evidence_coverage = {}
         self.sequence = 0
         self.cost = Counter()
+        self.operation_failures_seen = set()
+        self.operations_seen = set()
 
     def evidence(self, value):
         masked = mask_secrets(value) if isinstance(value, str) else mask_secret_data(value)
@@ -348,6 +350,19 @@ class TurnStore:
             self.sequence += 1
             record = mask_secret_data({"seq": self.sequence, "kind": kind, **fields})
             if kind == "tool.finished":
+                # Same job can be polled, projected, or replayed several times.
+                # This is a work verdict, not a transport/tool exception.
+                outcomes = [o for o in (fields.get('operation_outcomes') or [])
+                            if isinstance(o, dict) and isinstance(o.get('id'), str)
+                            and o.get('status') in ('passed', 'failed')]
+                observed = {o['id'] for o in outcomes}
+                failed = {o['id'] for o in outcomes if o['status'] == 'failed'}
+                record['operation_failures'] = len(failed - self.operation_failures_seen)
+                self.operation_failures_seen.update(failed)
+                if outcomes:
+                    self.cost['operations_observed'] += len(observed - self.operations_seen)
+                    self.cost['operation_failures'] += record['operation_failures']
+                    self.operations_seen.update(observed)
                 self.cost["execution_calls"] += 1
                 self.cost["execution_failures"] += int(bool(fields.get("is_error")))
                 self.cost["internal_tool_failures"] += fields.get("internal_tool_failures", 0)

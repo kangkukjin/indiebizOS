@@ -149,6 +149,17 @@ $r.items >> [table:sort]{by:"mb",descending:true} >> [table:take]{n:5}
 
 위 `수집`은 등록 id 예시다. 실제 id는 list로 확인한다. 종료 코드가 0이어도 JSON의
 `success:false` 또는 `error`는 실행 실패다. 부분 원천 표지도 경계에서 전파한다.
+검증·빌드처럼 실행 자체는 성공했으나 내부 작업 판정이 실패일 수 있는 스크립트는
+stdout 최상위에 `operation_outcome: {status:"passed"|"failed", message:"판정 근거"}`를
+명시한다(message는 선택). 기존 `ok`·`items`와 반환값은 그대로 읽을 수 있고 제어 흐름을
+실패로 바꾸지 않는다. 실행기가 부여한 실행 ID와 판정은 IBL 증거 및 감독의
+`operation_failures`에 전달된다. 같은 실행의 상태 재조회·영수증 재사용은 한 감독 턴에서
+한 번만 실패로 집계한다. 새 실행은 별개다. 임의의 `ok:false`, 중첩 데이터나 행의
+`exit_code`는 작업 실패로 추측하지 않는다. 선언 없는 과거 실행의 미관측을 성공으로
+해석하지 않으며, `operation_failures`는 개별 assertion 수가 아닌 실패한 작업 수다.
+`operations_observed`는 명시 판정을 관측한 작업 수이며 선언 없는 실행은 포함하지 않는다.
+백그라운드 작업의 프로세스 상태는 `done`이어도 내부 판정이 실패이면 완료 알림에 실패를
+표시한다. 명시 타입 프로토콜의 `value.operation_outcome`은 일반 데이터로 남는다.
 새 명시 타입 프로토콜(`callable_contract`의 `ibl-script/2`)은 opt-in이며 기존 스크립트의
 본문·등록을 이 프로토콜로 바꾸지 않아도 현재 IBL에서 호출할 수 있다.
 list/register/remove/status는 관리 결과 Record를 반환한다. 기존 등록의 background 실행은

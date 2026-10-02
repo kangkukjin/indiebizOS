@@ -110,7 +110,11 @@ def main():
                         'stdout': result.stdout, 'stderr': result.stderr})
         if result.returncode:
             break
-    print(json.dumps({'ok': all(r['exit_code'] == 0 for r in results), 'items': results}, ensure_ascii=False))
+    ok = all(r['exit_code'] == 0 for r in results)
+    print(json.dumps({'ok': ok, 'items': results,
+                      'operation_outcome': {'status': 'passed' if ok else 'failed',
+                                            'message': f'{mode}: ' + ('통과' if ok else '검증 실패')}},
+                     ensure_ascii=False))
 
 
 if __name__ == '__main__':

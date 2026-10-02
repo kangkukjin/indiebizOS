@@ -274,6 +274,9 @@ def decode_envelope(raw, adapter, input_values=None):
     from ibl_v2_ir import pack, unpack
     value = unpack(pack(value))
     evidence = {"markers": markers, "attachments": {k: raw[k] for k in adapter.get("attachments", []) if k in raw}}
+    # Execution metadata declared by the adapter/runner, never business value fields.
+    if isinstance(raw.get('operation_outcomes'), list):
+        evidence['operation_outcomes'] = raw['operation_outcomes']
     if isinstance(raw.get('warning'), str) and raw['warning']:
         evidence['warning'] = raw['warning']
     return value, evidence

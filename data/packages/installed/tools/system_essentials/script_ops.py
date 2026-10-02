@@ -591,6 +591,10 @@ def op_run(tool_input):
                 **({"interpreter_note": interp_note} if interp_note else {})}
 
     res = {"success": True, "id": sid, "exit_code": 0, "duration_ms": duration_ms, "log": str(log_path)}
+    # Typed protocol value is arbitrary business data, not a legacy stdout envelope.
+    outcomes = [] if wire_v2 else _runtime.operation_outcomes(script_value if v2 else parsed, log_path)
+    if outcomes:
+        res['operation_outcomes'] = outcomes
     if interp_note:
         res["interpreter_note"] = interp_note
     if _args_src:
@@ -733,6 +737,10 @@ def op_status(tool_input):
     if len(still) == 1 and len(items) == 1 and items[0].get("progress"):
         text += " · " + items[0]["progress"][-1]
     res = {"success": True, "items": items, "count": len(items), "running": still, "text": text}
+    outcomes = [outcome for row in items if row['status'] == 'done'
+                for outcome in _runtime.operation_outcomes(row.get('result'), row['job_id'])]
+    if outcomes:
+        res['operation_outcomes'] = outcomes
     if job_id and len(items) == 1:
         res["status"] = items[0]["status"]
         if items[0]["status"] in ("failed", "lost"):

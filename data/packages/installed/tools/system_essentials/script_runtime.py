@@ -3,8 +3,26 @@ import json
 import os
 import tempfile
 import threading
+import uuid
 
 STATE_LOCK = threading.RLock()
+
+
+def operation_outcomes(value, identity):
+    """Explicit work verdict, separate from successful execution of the script.
+
+    Only the registered stdout envelope's declaration is meaningful. Never infer
+    a verdict from business rows, ok, exit_code, or nested result fields.
+    The runner supplies identity so polling cannot count one operation twice.
+    """
+    if not isinstance(value, dict) or 'operation_outcome' not in value:
+        return []
+    outcome = value['operation_outcome']
+    if (not isinstance(outcome, dict) or outcome.get('status') not in ('passed', 'failed')
+            or not isinstance(outcome.get('message', ''), str)):
+        raise ValueError('operation_outcome은 status(passed|failed)와 선택 Text message 객체입니다.')
+    return [{'id': 'script:' + str(identity), 'status': outcome['status'],
+             'message': outcome.get('message', '')}]
 
 
 def atomic_write(path, text):
@@ -27,10 +45,15 @@ def parse_output(stdout):
         return None, None
     if not isinstance(parsed, dict):
         return None, None
+    try:
+        operation_outcomes(parsed, '')
+    except ValueError as exc:
+        return parsed, str(exc)
     error = parsed.get('error')
     if parsed.get('success') is False or error:
         return {**parsed, 'success': False}, str(error or '스크립트가 실패 결과를 반환했습니다.')
-    if isinstance(parsed.get('items'), list) or isinstance(parsed.get('table'), dict):
+    if (isinstance(parsed.get('items'), list) or isinstance(parsed.get('table'), dict)
+            or 'operation_outcome' in parsed):
         return parsed, None
     return None, None
 
@@ -110,6 +133,7 @@ def legacy_value_output(stdout):
     except ValueError:
         return stdout, None
     _v2_json_safe(value)
+    operation_outcomes(value, '')
     if isinstance(value, dict) and (value.get("success") is False or value.get("error")):
         return value, str(value.get("error") or "스크립트가 실패 결과를 반환했습니다.")
     return value, None
@@ -157,4 +181,7 @@ def member_value_script(params, command, exchange):
     if not contract:
         from ibl_honesty import merge_into
         merge_into(value, out)
+        outcomes = operation_outcomes(value, uuid.uuid4().hex)
+        if outcomes:
+            out['operation_outcomes'] = outcomes
     return out

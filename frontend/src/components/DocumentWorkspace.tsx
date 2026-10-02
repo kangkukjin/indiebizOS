@@ -30,6 +30,10 @@ export function DocumentWorkspace() {
   const [replacement, setReplacement] = useState('');
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [preview, setPreview] = useState(false);
+  const [instruction, setInstruction] = useState('문장의 뜻을 유지하면서 자연스럽게 다듬어줘');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [versions, setVersions] = useState<{ id: string; created_at: number }[]>([]);
+  const pendingSave = useRef<{ id: string; args: Record<string, unknown> } | null>(null);
   const [undo, setUndo] = useState<{ before: string; after: string } | null>(null);
   const current = useRef<Detail | null>(null);
   const draftText = useRef('');
@@ -97,7 +101,7 @@ export function DocumentWorkspace() {
         void flush().catch(e => setError(String(e)));
     }, 900);
     return () => clearTimeout(timer);
-  }, [text, detail?.document.id]); // Text changes schedule autosave, never an AI call.
+  }, [text, detail?.document.id, busy]); // Resume draft saving after an AI request finishes.
 
   useEffect(() => {
     const before = (event: BeforeUnloadEvent) => {
@@ -114,7 +118,7 @@ export function DocumentWorkspace() {
       try { d = await documentCommand<Detail>(d.document.id, 'sessions', { client_id: client.current }); }
       catch (e) { setError(String(e)); }
     }
-    current.current = d; setDetail(d); pending.current = null;
+    current.current = d; setDetail(d); pending.current = null; setVersions([]);
     acknowledged.current = d.text || '';
     const value = localStorage.getItem(cacheKey(d.document.id)) ?? acknowledged.current;
     const crlf = (value.match(/\r\n/g) || []).length;
@@ -135,6 +139,57 @@ export function DocumentWorkspace() {
     await flush();
     const d = await documentRequest<Detail>('/open', 'POST', { path, encoding: encoding || null });
     await display(d); await load();
+  });
+  const saveOriginal = () => act(async () => {
+    const session = await flush(); const d = current.current;
+    if (!session || !d) return;
+    const request = pendingSave.current?.id === d.document.id ? pendingSave.current : {
+      id: d.document.id,
+      args: { ...sessionArgs(session), operation_id: crypto.randomUUID(), expected_revision: d.document.revision_id },
+    };
+    pendingSave.current = request;
+    const result = await documentCommand<{ revision_id: string; sha256: string; session: Session }>(request.id, 'save', request.args);
+    pendingSave.current = null;
+    const next = await documentRequest<Detail>(`/${request.id}`);
+    current.current = next; setDetail(next);
+    setMessage(next.session?.state === 'saved' && next.document.revision_id === result.revision_id ? '저장됨 · 원본 파일 기록 확인' : '이전 요청 저장됨 · 이후 초안은 원본에 미저장');
+    await load();
+  });
+  const recoverSave = () => act(async () => {
+    const d = current.current; if (!d) return;
+    const result = await documentCommand<{ detail: Detail; items: { state: string }[] }>(d.document.id, 'recover');
+    current.current = result.detail; setDetail(result.detail); pendingSave.current = null;
+    setMessage(result.items.length ? `저장 복구 확인: ${result.items.map(r => r.state).join(', ')} · 현재 초안 유지` : '미완료 저장 없음 · 현재 초안 유지');
+  });
+  const generate = () => act(async () => {
+    const fixed = selection, d = current.current;
+    if (!fixed || !d) return;
+    const session = await flush(); if (!session) return;
+    setAiBusy(true);
+    try {
+      const result = await documentCommand<Proposal & { replacement: string }>(d.document.id, 'ai', {
+        ...sessionArgs(session), operation_id: crypto.randomUUID(), instruction,
+        snapshot_id: fixed.snapshot.id, start: fixed.start, end: fixed.end, selected_sha256: fixed.hash,
+      });
+      if (current.current?.document.id !== d.document.id) return;
+      setReplacement(result.replacement); setProposal(result);
+      setMessage('AI 제안 도착 · 원문에는 아직 적용되지 않음');
+    } finally { setAiBusy(false); }
+  });
+  const showVersions = () => act(async () => {
+    if (!current.current) return;
+    const result = await documentRequest<{ items: { id: string; created_at: number }[] }>(`/${current.current.document.id}/versions`);
+    setVersions(result.items);
+  });
+  const restoreVersion = (revision_id: string) => act(async () => {
+    const s = await flush(), d = current.current; if (!s || !d) return;
+    await documentCommand(d.document.id, 'restore', { ...sessionArgs(s), operation_id: crypto.randomUUID(), revision_id });
+    // Keep the server's previous immutable draft, then replace the browser view
+    // only after the version restore has been acknowledged.
+    const restored = await documentRequest<Detail>(`/${d.document.id}`);
+    localStorage.removeItem(cacheKey(d.document.id));
+    await display(restored); setVersions([]);
+    setMessage('선택 버전을 작업 초안으로 복구했습니다 · 원본 저장 전');
   });
   const exportCopy = () => act(async () => {
     const session = await flush(); const d = current.current;
@@ -180,7 +235,7 @@ export function DocumentWorkspace() {
 
   return <main className="document-workspace">
     <header><div><span className="document-eyebrow">INDIEBIZ OS</span><h1>문서</h1></div><span className="document-badge">개발 중 · 소스 문서 작업</span></header>
-    <p className="document-limit">TXT·Markdown·HTML·LaTeX·Typst 원문을 편집하고 같은 형식의 사본을 저장합니다. 사무 문서·한글·PDF 편집, AI 생성과 원본 덮어쓰기는 아직 사용할 수 없습니다.</p>
+    <p className="document-limit">TXT·Markdown·HTML·LaTeX·Typst 원문을 편집하고 같은 형식으로 원본 또는 사본을 저장합니다. 선택한 원문은 AI 수정 제안을 받을 수 있습니다. 사무 문서·한글·PDF 편집은 아직 사용할 수 없습니다.</p>
     <form className="document-open" onSubmit={e => { e.preventDefault(); open(); }}>
       <label>로컬 파일 경로<input value={path} onChange={e => setPath(e.target.value)} placeholder="/Users/…/문서.txt" /></label>
       <label>인코딩<select aria-label="인코딩" value={encoding} onChange={e => setEncoding(e.target.value)}><option value="">UTF/BOM 자동 확인</option>{['utf-8', 'utf-8-sig', 'utf-16', 'cp949', 'euc-kr'].map(e => <option key={e}>{e}</option>)}</select></label>
@@ -199,15 +254,17 @@ export function DocumentWorkspace() {
             await display(recovered);
           })}>이 창에서 초안 복구</button></div>}
           {mixedNewlines && <p role="alert">혼합 줄바꿈 문서입니다. 원문을 보호하기 위해 이 화면의 편집을 제한합니다.</p>}
-          <div className="document-toolbar"><button disabled={!editable || busy} onClick={() => void act(async () => { await flush(); })}>작업 저장</button><button disabled={!editable || busy} onClick={select}>선택 고정</button><button disabled={!undo || text !== undo.after || busy} onClick={() => { if (undo) { updateText(undo.before); setUndo(null); } }}>선택 교체 되돌리기</button>{['html', 'htm'].includes(detail.document.source_format) && <button onClick={() => setPreview(!preview)}>{preview ? '원문 보기' : '비실행 미리보기'}</button>}</div>
-          {preview ? <iframe title="HTML 비실행 미리보기" sandbox="" srcDoc={previewHtml} /> : <textarea ref={editor} aria-label="문서 원문" spellCheck={false} value={text} readOnly={!editable || busy}
+          <div className="document-toolbar"><button disabled={!editable || busy} onClick={() => void act(async () => { await flush(); })}>작업 저장</button><button disabled={!editable || busy || !detail.capabilities.save} onClick={saveOriginal}>원본 저장</button><button disabled={busy} onClick={recoverSave}>저장 상태 복구</button><button disabled={busy} onClick={showVersions}>버전 이력</button><button disabled={!editable || busy} onClick={select}>선택 고정</button><button disabled={!undo || text !== undo.after || busy} onClick={() => { if (undo) { updateText(undo.before); setUndo(null); } }}>선택 교체 되돌리기</button>{['html', 'htm'].includes(detail.document.source_format) && <button onClick={() => setPreview(!preview)}>{preview ? '원문 보기' : '비실행 미리보기'}</button>}</div>
+          {preview ? <iframe title="HTML 비실행 미리보기" sandbox="" srcDoc={previewHtml} /> : <textarea ref={editor} aria-label="문서 원문" spellCheck={false} value={text} readOnly={!editable || (busy && !aiBusy)}
             onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }}
             onChange={e => updateText(e.target.value.replace(/\r\n/g, '\n').replace(/\n/g, newline.current))}
-            onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); exportCopy(); } }} />}
+            onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); saveOriginal(); } }} />}
+          {!!versions.length && <section aria-label="저장 버전"><h3>확정 저장 버전</h3>{versions.map(v => <button key={v.id} disabled={!editable || busy} onClick={() => void restoreVersion(v.id)}>{new Date(v.created_at * 1000).toLocaleString()} · {v.id === detail.document.revision_id ? "현재 원본" : "이전 버전"} · 초안으로 복구</button>)}</section>}
+          <p>원본 저장은 외부 변경을 직전에 재검사합니다. 다른 프로그램의 동시 쓰기까지 잠그지는 못하므로 같은 원본을 동시에 편집하지 마세요. 이전 버전과 초안은 보존됩니다.</p>
           <div className="document-export"><label>사본 파일명<input value={filename} onChange={e => setFilename(e.target.value)} /></label><button disabled={!editable || busy || !filename} onClick={exportCopy}>사본 저장</button></div>
         </> : <div className="document-empty"><h2>원문과 초안을 함께 보존합니다</h2><p>파일을 열거나 왼쪽 목록에서 작업을 이어가세요.</p></div>}
       </section>
-      <aside><h2>선택 교체</h2><p>고정한 선택과 작업 버전을 기준으로 교체합니다. 선택 이후 문서가 바뀌면 적용을 거절합니다.</p>{selection ? <><blockquote>{selection.text}</blockquote><label>교체할 문구<textarea value={replacement} onChange={e => { setReplacement(e.target.value); setProposal(null); }} /></label><button disabled={busy} onClick={propose}>제안 만들기</button><button disabled={busy || !proposal} onClick={apply}>제안 적용</button><button onClick={() => { setSelection(null); setProposal(null); }}>제안 버리기</button></> : <p>문구를 선택하고 ‘선택 고정’을 누르세요.</p>}</aside>
+      <aside><h2>선택 교체 · AI 수정</h2><p>고정한 선택과 작업 버전을 기준으로 교체합니다. 선택 이후 문서가 바뀌면 적용을 거절합니다.</p>{selection ? <><blockquote>{selection.text}</blockquote><p>고정한 선택 {Array.from(selection.text).length}자와 지시가 현재 설정된 AI 모델 제공자에게 전달됩니다.</p><label>AI 수정 지시<textarea value={instruction} onChange={e => setInstruction(e.target.value)} /></label><button disabled={busy || !instruction.trim()} onClick={generate}>{aiBusy ? 'AI 제안 생성 중…' : 'AI 수정 제안'}</button><label>교체할 문구<textarea value={replacement} onChange={e => { setReplacement(e.target.value); setProposal(null); }} /></label><button disabled={busy} onClick={propose}>제안 만들기</button><button disabled={busy || !proposal} onClick={apply}>제안 적용</button><button onClick={() => { setSelection(null); setProposal(null); }}>제안 버리기</button></> : <p>문구를 선택하고 ‘선택 고정’을 누르세요.</p>}</aside>
     </div><footer role="status" aria-live="polite">{busy ? '처리 중…' : message}<span>{Array.from(text).length.toLocaleString()}자</span></footer>
   </main>;
 }

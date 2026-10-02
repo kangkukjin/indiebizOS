@@ -16,18 +16,10 @@ sys.path.insert(0, str(ROOT / "backend"))
 import boot_paths  # noqa: E402,F401
 
 FILES = [
-    ".gitignore",
-    "backend/api.py", "backend/datastore/document_store.py",
     "backend/services/document_workspace.py", "backend/surface/api_documents.py",
     "backend/test_document_workspace.py", "backend/test_document_browser.py",
-    "frontend/electron/windows.js", "frontend/src/App.tsx",
-    "frontend/src/components/ActionDesktop.tsx", "frontend/src/components/DocumentWorkspace.tsx",
-    "frontend/src/components/document-workspace.css", "frontend/src/lib/api-documents.ts",
-    "frontend/src/lib/surface-navigation.ts", "frontend/src/types/index.ts",
-    "scripts/check_backend_layers.py", "scripts/verify_document_workspace.py",
+    "frontend/src/components/DocumentWorkspace.tsx", "scripts/verify_document_workspace.py",
     "data/bodies/android.engine.json", "frontend/i18n/catalog.json", "frontend/i18n/translations.json",
-    "data/system_docs/system_structure.md", "data/system_docs/architecture.md",
-    "data/system_docs/technical.md",
 ]
 
 
@@ -49,7 +41,68 @@ def registered(filename, args):
     return row
 
 
+def live_probe(origin="http://127.0.0.1:8765", root=None):
+    """Fast post-restart behavior check; commit/test batteries run separately.
+
+    Keep the apply controller's 180-second deadline separate from a commit
+    hook's execution time. These are synthetic app fixtures, not user files.
+    """
+    from urllib.request import Request, urlopen
+    from urllib.error import HTTPError
+    from uuid import uuid4
+    import hashlib
+
+    def request(route, body=None):
+        payload = None if body is None else json.dumps(body).encode()
+        req = Request(origin + "/documents" + route, data=payload,
+                      headers={"Content-Type": "application/json"})
+        with urlopen(req, timeout=15) as response:
+            return json.load(response)
+
+    folder = (root or ROOT) / "data/document_workspace/verification"
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / ("source-save-" + uuid4().hex + ".txt")
+    path.write_text("원본 문장", encoding="utf-8")
+    d = request("/open", {"path": str(path)})["document"]
+    detail = request("/" + d["id"] + "/sessions", {"args": {"client_id": "verify-" + uuid4().hex}})
+    s = detail["session"]
+
+    def command(op, extra):
+        args = {"session_id": s["id"], "client_id": s["client_id"], "epoch": s["engine_epoch"],
+                "expected": s["session_revision"], **extra}
+        return request("/" + d["id"] + "/" + op, {"args": args})
+
+    s = command("draft", {"operation_id": "probe-draft", "text": "미저장 초안"})["session"]
+    snap = command("snapshots", {})
+    p = request("/" + d["id"] + "/proposals", {"args": {
+        "snapshot_id": snap["id"], "start": 0, "end": 3,
+        "selected_sha256": hashlib.sha256("미저장".encode()).hexdigest(), "replacement": "수정한"}})
+    s = command("apply", {"operation_id": "probe-apply", "proposal_id": p["id"]})["session"]
+    save_args = {"operation_id": "probe-save", "expected_revision": d["revision_id"]}
+    result = command("save", save_args)
+    assert result["state"] == "saved" and path.read_text(encoding="utf-8") == "수정한 초안"
+    assert command("save", save_args) == result
+    assert len(request("/" + d["id"] + "/versions")["items"]) == 2
+    s = command("draft", {"operation_id": "probe-later", "text": "보존할 초안"})["session"]
+    path.write_text("외부 수정", encoding="utf-8")
+    try:
+        command("save", {"operation_id": "probe-conflict", "expected_revision": result["revision_id"]})
+    except HTTPError as exc:
+        assert exc.code == 409
+    else:
+        raise AssertionError("외부 수정 충돌이 거절되지 않았습니다")
+    assert path.read_text(encoding="utf-8") == "외부 수정"
+    assert request("/" + d["id"])["text"] == "보존할 초안"
+    return {"ok": True, "release_complete": False, "live_source_save": True,
+            "snapshot_proposal": True, "duplicate_save": True, "external_conflict": True,
+            "document_id": d["id"], "fixture": str(path), "scope": "source service; not live UI or Office engines"}
+
+
 def main():
+    if "--live-only" in sys.argv:
+        result = live_probe()
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
     active = "--active" in sys.argv
     rows = []
     if active:
@@ -80,7 +133,7 @@ def main():
             rows.append(command(["git", "add", "--", *FILES]))
             if rows[-1]["ok"]:
                 rows.append(command(["git", "commit", "--only", "-m",
-                    "Add isolated source document workspace with safe copy saves", "--", *FILES], timeout=600))
+                    "Add conditional source saves and snapshot-bound AI proposals", "--", *FILES], timeout=600))
     result = {"ok": all(r["ok"] for r in rows), "release_complete": False, "items": rows}
     print(json.dumps(result, ensure_ascii=False))
     if os.environ.get("INDIEBIZ_SCRIPT_RESULT"):

@@ -45,6 +45,14 @@ def test_browser_source_workflow(tmp_path, monkeypatch):
 
     workspace = DocumentWorkspace(tmp_path / "workspace")
     monkeypatch.setattr(api_documents, "service", lambda: workspace)
+    import document_workspace
+    ai_started, ai_release = threading.Event(), threading.Event()
+    def model_fixture(instruction, selected):
+        if instruction == "지연 시험":
+            ai_started.set()
+            assert ai_release.wait(15), "AI 시험 응답 해제 시간 초과"
+        return "AI 수정", {"kind": "ai", "test_double": True}
+    monkeypatch.setattr(document_workspace, "generate_selection", model_fixture)
     app = FastAPI()
     app.include_router(api_documents.router)
 
@@ -113,7 +121,51 @@ def test_browser_source_workflow(tmp_path, monkeypatch):
                 page.reload()
                 page.get_by_role("button", name="보고서.txt TXT").click()
                 expect(page.get_by_role("textbox", name="문서 원문", exact=True)).to_have_value("수정한 문장\n원본 보존\n")
+                page.get_by_role("button", name="원본 저장", exact=True).click()
+                expect(page.locator("footer")).to_contain_text("저장됨 · 원본 파일 기록 확인")
+                assert source.read_bytes() == "수정한 문장\r\n원본 보존\r\n".encode("cp949")
+                page.get_by_role("button", name="버전 이력", exact=True).click()
+                page.get_by_role("button", name="초안으로 복구").last.click()
+                expect(editor).to_have_value("처음 문장\n원본 보존\n")
+                assert source.read_bytes() != original
+                # An ordinary text editor reopens the exact native bytes;
+                # this does not stand in for Office/Hancom independent consumers.
+                editor.press("Control+s")
+                expect(page.locator("footer")).to_contain_text("원본 파일 기록 확인")
+                assert source.read_bytes() == original
+                editor.evaluate("el => { el.focus(); el.setSelectionRange(0, 2); }")
+                page.get_by_role("button", name="선택 고정", exact=True).click()
+                expect(page.locator("aside")).to_contain_text("AI 모델 제공자에게 전달")
+                page.get_by_role("button", name="AI 수정 제안", exact=True).click()
+                expect(page.get_by_label("교체할 문구")).to_have_value("AI 수정")
+                page.get_by_role("button", name="제안 적용", exact=True).click()
+                expect(editor).to_have_value("AI 수정 문장\n원본 보존\n")
+                assert source.read_bytes() == original
+                page.get_by_role("button", name="선택 교체 되돌리기", exact=True).click()
+                expect(editor).to_have_value("처음 문장\n원본 보존\n")
+                editor.evaluate("el => { el.focus(); el.setSelectionRange(0, 2); }")
+                page.get_by_role("button", name="선택 고정", exact=True).click()
+                page.get_by_label("AI 수정 지시").fill("지연 시험")
+                page.get_by_role("button", name="AI 수정 제안", exact=True).click()
+                assert ai_started.wait(5)
+                expect(editor).to_be_editable()
+                editor.fill("AI 대기 중 사람의 수정\n")
+                ai_release.set()
+                expect(page.get_by_label("교체할 문구")).to_have_value("AI 수정")
+                page.get_by_role("button", name="제안 적용", exact=True).click()
+                expect(page.get_by_role("alert")).to_contain_text("제안 이후 문서가 바뀌었습니다")
+                expect(editor).to_have_value("AI 대기 중 사람의 수정\n")
+                source.write_bytes("외부 수정\r\n".encode("cp949"))
+                editor.fill("이후 초안\n")
+                page.get_by_role("button", name="원본 저장", exact=True).click()
+                expect(page.get_by_role("alert")).to_contain_text("외부에서 원본이 바뀌었습니다")
+                assert source.read_bytes() == "외부 수정\r\n".encode("cp949")
+                expect(editor).to_have_value("이후 초안\n")
                 assert not failures, failures
+                spec = importlib.util.spec_from_file_location("document_live_probe", ROOT / "scripts/verify_document_workspace.py")
+                verifier = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(verifier)
+                assert verifier.live_probe(f"http://127.0.0.1:{port}", tmp_path)["ok"]
             finally:
                 browser.close()
     finally:

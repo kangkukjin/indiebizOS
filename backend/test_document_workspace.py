@@ -48,14 +48,14 @@ def test_native_encoding_crlf_and_no_original_write(work):
     assert app.detail(d["id"])["session"]["state"] == "draft"
 
 
-def test_original_overwrite_is_explicitly_unavailable(work):
+def test_original_save_rejects_external_change(work):
     app, path, d, s = edit(work)
     path.write_bytes(b"external changed")
-    with pytest.raises(DocumentUnsupported):
+    with pytest.raises(DocumentConflict):
         app.save(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
     assert path.read_bytes() == b"external changed"
     assert app.detail(d["id"])["text"] == "고친 초안\r\n"
-    assert app.capabilities(d["id"])["save"] is False
+    assert app.capabilities(d["id"])["save"] is True
 
 
 def test_external_write_immediately_before_publication_preserved(work, monkeypatch):
@@ -234,6 +234,198 @@ def test_paths_and_cross_document_snapshot_denied(work, tmp_path):
     snap = app.snapshot(**args(d, s))
     with pytest.raises(PermissionError):
         app.read(d2["id"], snap["id"])
+
+
+def test_conditional_save_versions_and_duplicate(work):
+    app, path, d, s = edit(work)
+    original = path.read_bytes()
+    call = dict(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(lambda _: app.save(**call), range(2)))
+    assert results[0] == results[1]
+    assert path.read_bytes() == "고친 초안\r\n".encode("cp949")
+    assert app.store.bytes(d["source_sha256"]) == original
+    assert len(app.versions(d["id"])) == 2
+    assert app.detail(d["id"])["session"]["state"] == "saved"
+    with pytest.raises(DocumentConflict):
+        app.save(**{**call, "operation_id": "stale"})
+    restored = app.restore(**args(d, s), revision_id=d["revision_id"], operation_id="restore")
+    assert restored["session"]["state"] == "draft"
+    assert path.read_bytes() != original  # Restore is a draft, not a disk write.
+
+
+def test_save_rechecks_hash_after_temporary_write(work, monkeypatch):
+    app, path, d, s = edit(work)
+    chmod = mod.os.chmod
+    def race(*a, **kw):
+        path.write_bytes(b"external during save")
+        return chmod(*a, **kw)
+    monkeypatch.setattr(mod.os, "chmod", race)
+    with pytest.raises(DocumentConflict):
+        app.save(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
+    assert path.read_bytes() == b"external during save"
+    assert app.detail(d["id"])["text"] == "고친 초안\r\n"
+
+
+@pytest.mark.parametrize("failure", ["disk", "replace", "directory_sync", "database"])
+def test_save_fault_recovery_never_republishes(work, monkeypatch, failure):
+    app, path, d, s = edit(work)
+    original = path.read_bytes()
+    def crash(*a, **kw):
+        raise OSError("injected " + failure)
+    with monkeypatch.context() as patch:
+        if failure == "disk":
+            patch.setattr(mod.tempfile, "mkstemp", crash)
+        elif failure == "replace":
+            patch.setattr(mod.os, "replace", crash)
+        elif failure == "directory_sync":
+            patch.setattr(mod, "sync_directory", crash)
+        else:
+            patch.setattr(app, "_finish_save", crash)
+        with pytest.raises(OSError):
+            app.save(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
+    app = DocumentWorkspace(app.store.root)
+    with monkeypatch.context() as patch:
+        patch.setattr(mod.os, "replace", crash)
+        recovered = app.recover(d["id"])["items"][0]
+    if failure in {"directory_sync", "database"}:
+        assert recovered["state"] == "saved"
+        assert path.read_bytes() == "고친 초안\r\n".encode("cp949")
+        assert len(app.versions(d["id"])) == 2
+    else:
+        assert recovered["draft_preserved"]
+        assert path.read_bytes() == original
+    assert app.detail(d["id"])["text"] == "고친 초안\r\n"
+    assert app.store.bytes(d["source_sha256"]) == original
+
+
+def test_unfinished_save_blocks_rewrite_and_keeps_later_draft(work, monkeypatch):
+    app, path, d, s = edit(work)
+    def crash(op):
+        raise OSError("database failed after replace")
+    with monkeypatch.context() as patch:
+        patch.setattr(app, "_finish_save", crash)
+        with pytest.raises(OSError):
+            app.save(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
+    with pytest.raises(DocumentConflict):
+        app.save(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
+    newer = app.draft(**args(d, s), operation_id="later", text="이후 사람 입력")["session"]
+    app.recover(d["id"])
+    detail = app.detail(d["id"])
+    assert detail["text"] == "이후 사람 입력"
+    assert detail["session"]["session_revision"] == newer["session_revision"]
+    assert detail["session"]["state"] == "draft"
+    assert path.read_bytes() == "고친 초안\r\n".encode("cp949")
+
+
+def test_external_change_after_failed_commit_is_never_overwritten(work, monkeypatch):
+    app, path, d, s = edit(work)
+    def crash(op):
+        raise OSError("database failed")
+    with monkeypatch.context() as patch:
+        patch.setattr(app, "_finish_save", crash)
+        with pytest.raises(OSError):
+            app.save(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
+    path.write_bytes(b"new external bytes")
+    assert app.recover(d["id"])["items"][0]["state"] == "conflict"
+    assert path.read_bytes() == b"new external bytes"
+    assert app.detail(d["id"])["session"]["state"] == "draft"
+
+
+def ai_args(app, d, s, text):
+    snap = app.snapshot(**args(d, s))
+    return dict(**args(d, s), snapshot_id=snap["id"], start=0, end=len(text),
+                selected_sha256=digest(text.encode()), instruction="자연스럽게 수정", operation_id="ai-1")
+
+
+def test_ai_reads_unsaved_selection_and_never_writes_source(work, monkeypatch):
+    text = "미저장 선택 문장"
+    app, path, d, s = edit(work, text)
+    original = path.read_bytes()
+    calls = []
+    def generate(instruction, selected):
+        calls.append(selected)
+        return "다듬은 문장", {"kind": "ai"}
+    monkeypatch.setattr(mod, "generate_selection", generate)
+    call = ai_args(app, d, s, text)
+    proposal = app.generate_proposal(**call)
+    assert app.generate_proposal(**call) == proposal
+    assert calls == [text]
+    assert proposal["provenance"]["kind"] == "ai"
+    assert app.detail(d["id"])["text"] == text
+    changed = app.apply(**args(d, s), proposal_id=proposal["id"], operation_id="apply-ai")
+    assert changed["text"] == "다듬은 문장"
+    assert path.read_bytes() == original
+
+
+def test_human_edit_while_ai_runs_fences_proposal(work, monkeypatch):
+    text = "선택한 문장"
+    app, path, d, s = edit(work, text)
+    def generate(instruction, selected):
+        app.draft(**args(d, s), text="사람이 나중에 수정", operation_id="human")
+        return "AI의 늦은 응답", {"kind": "ai"}
+    monkeypatch.setattr(mod, "generate_selection", generate)
+    proposal = app.generate_proposal(**ai_args(app, d, s, text))
+    latest = app.detail(d["id"])["session"]
+    with pytest.raises(DocumentConflict):
+        app.apply(**args(d, latest), proposal_id=proposal["id"], operation_id="late-ai")
+    assert app.detail(d["id"])["text"] == "사람이 나중에 수정"
+
+
+def test_failed_ai_preserves_draft_and_does_not_repeat_call(work, monkeypatch):
+    app, path, d, s = edit(work, "선택")
+    def failure(*args):
+        raise DocumentUnsupported("model failed")
+    monkeypatch.setattr(mod, "generate_selection", failure)
+    call = ai_args(app, d, s, "선택")
+    with pytest.raises(DocumentUnsupported):
+        app.generate_proposal(**call)
+    with pytest.raises(DocumentConflict):
+        app.generate_proposal(**call)
+    assert app.detail(d["id"])["text"] == "선택"
+
+
+def test_database_transaction_failure_rolls_back_metadata(work, monkeypatch):
+    app, path, d, s = edit(work)
+    put = app.store.put
+    def failing_put(kind, row, conn=None):
+        if kind == "revision" and conn is not None:
+            raise OSError("database transaction failure")
+        return put(kind, row, conn)
+    with monkeypatch.context() as patch:
+        patch.setattr(app.store, "put", failing_put)
+        with pytest.raises(OSError):
+            app.save(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
+    assert app.detail(d["id"])["document"]["revision_id"] == d["revision_id"]
+    assert len(app.versions(d["id"])) == 1
+    assert app.recover(d["id"])["items"][0]["state"] == "saved"
+    assert len(app.versions(d["id"])) == 2
+
+
+def test_process_exit_after_replace_recovers_confirmed_bytes(work):
+    import json
+    import subprocess
+    app, path, d, s = edit(work)
+    call = dict(**args(d, s), operation_id="save", expected_revision=d["revision_id"])
+    program = """
+import os, sys, json
+import boot_paths
+from document_workspace import DocumentWorkspace
+app = DocumentWorkspace(sys.argv[1])
+app._finish_save = lambda operation: os._exit(17)
+app.save(**json.loads(sys.argv[2]))
+"""
+    import os
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join([str(HERE), str(HERE / "services"),
+                                        str(HERE / "datastore"), env.get("PYTHONPATH", "")])
+    result = subprocess.run([sys.executable, "-c", program, str(app.store.root), json.dumps(call)],
+                            env=env, capture_output=True, timeout=30)
+    assert result.returncode == 17, result.stderr
+    restored = DocumentWorkspace(app.store.root)
+    assert restored.recover(d["id"])["items"][0]["state"] == "saved"
+    assert path.read_bytes() == "고친 초안\r\n".encode("cp949")
+    assert restored.detail(d["id"])["text"] == "고친 초안\r\n"
 
 
 if __name__ == "__main__":

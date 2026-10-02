@@ -59,6 +59,7 @@ class Command(BaseModel):
 OPERATIONS = {
     "sessions": DocumentWorkspace.acquire, "draft": DocumentWorkspace.draft,
     "snapshots": DocumentWorkspace.snapshot, "proposals": DocumentWorkspace.propose,
+    "ai": DocumentWorkspace.generate_proposal,
     "apply": DocumentWorkspace.apply, "save": DocumentWorkspace.save,
     "export": DocumentWorkspace.export_copy, "restore": DocumentWorkspace.restore,
     "recover": DocumentWorkspace.recover, "close": DocumentWorkspace.close,

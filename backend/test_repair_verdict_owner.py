@@ -19,8 +19,10 @@
   O6 지연 결말의 주인은 **세션 원장**에서 온다 (분리 수행자에겐 수리한 턴의 컨텍스트가 없다)
 """
 import ast
+import hashlib
 import json
 import os
+import time
 
 import pytest
 
@@ -110,6 +112,81 @@ def test_o4_unapplied_staging_is_owner_scoped(tmp_path):
     assert [s["key"] for s in mine] == ["s_data"]
     assert [s["key"] for s in rr.collect_unapplied(repo, min_age_s=0,
                                                    owner=rr.OWNER_SYSTEM_AI)] == ["s_old"]
+
+
+@pytest.mark.parametrize('live,staged,op,expected', [
+    (b'new', b'new', 'write', 'matching'),  # 다른 작업에서 이미 반영한 내용
+    (b'base', b'new', 'write', 'base_unchanged'),
+    (b'newer', b'new', 'write', 'diverged'),  # 반영 뒤 추가 개발도 미반영으로 단정하지 않음
+    (b'base', None, 'write', 'unknown'),  # 격리 파일 유실은 미반영 증거가 아님
+    (None, b'new', 'write', 'diverged'),  # 원본 파일이 별도로 삭제됨
+    (None, None, 'delete', 'matching'),
+    (b'base', None, 'delete', 'base_unchanged'),
+])
+def test_staged_observation_compares_bytes_without_changing_ledger(
+        tmp_path, live, staged, op, expected):
+    target = tmp_path / 'backend' / 'example.py'
+    isolated = tmp_path / '.worktrees' / 'repair' / 'backend' / 'example.py'
+    for path, content in ((target, live), (isolated, staged)):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if content is not None:
+            path.write_bytes(content)
+    root = tmp_path / 'data/system_ai_state/repair_sessions'
+    root.mkdir(parents=True)
+    record = {'rel': 'backend/example.py', 'staged': str(isolated), 'op': op,
+              'base_sha': hashlib.sha256(b'base').hexdigest()}
+    ledger = root / 'repair.json'
+    ledger.write_text(json.dumps({'key': 'repair', 'status': 'staging',
+                                  'files': {str(target): record}}))
+    before = ledger.read_bytes()
+    os.utime(ledger, (1, time.time() - 120))
+    observation = rr.collect_unapplied(str(tmp_path))[0]['live_comparison']
+    assert observation[expected] == 1 and sum(observation.values()) == 1
+    scent = rr.pending_scent(str(tmp_path))
+    assert '기능 부재·활성화·커밋 여부는 별도 확인' in scent
+    assert '지금 시스템에 없다' not in scent
+    assert ledger.read_bytes() == before
+    assert (target.read_bytes() if target.exists() else None) == live
+
+
+def test_new_file_and_unobservable_staging(tmp_path, monkeypatch):
+    staged = tmp_path / 'staged.py'
+    staged.write_bytes(b'new')
+    rec = {'rel': 'new.py', 'staged': str(staged), 'op': 'write', 'base_sha': None}
+    assert rr.staged_live_comparison(str(tmp_path), {'files': {'new.py': rec}})['base_unchanged'] == 1
+    rec.pop('base_sha')  # 옛 원장: 시작 지문을 모른다
+    assert rr.staged_live_comparison(str(tmp_path), {'files': {'new.py': rec}})['unknown'] == 1
+    rec['rel'] = '../outside.py'
+    assert rr.staged_live_comparison(str(tmp_path), {'files': {'new.py': rec}})['unknown'] == 1
+    rec['rel'] = 'new.py'
+    from pathlib import Path
+    def denied(*args, **kwargs):
+        raise PermissionError('unreadable')
+    monkeypatch.setattr(Path, 'open', denied)
+    assert rr.staged_live_comparison(str(tmp_path), {'files': {'new.py': rec}})['unknown'] == 1
+
+
+def test_old_schedule_is_review_candidate_not_dead_worker(tmp_path):
+    _put_session(str(tmp_path), 'scheduled', status='apply_scheduled')
+    ledger = tmp_path / 'data/system_ai_state/repair_sessions/scheduled.json'
+    now = time.time()
+    assert rr.collect_unapplied(str(tmp_path), min_age_s=0) == []
+    os.utime(ledger, (now - rr.SCHEDULED_STALE_S - 1,) * 2)
+    scent = rr.pending_scent(str(tmp_path))
+    assert 'scheduled_review="true"' in scent
+    assert '수행자·영수증을 확인' in scent
+    assert '수행자가 죽어' not in scent
+
+
+def test_status_tool_uses_same_observation_as_recall(tmp_path):
+    from test_repair_staging import _load_handler
+    _put_session(str(tmp_path), 'repair')
+    tool = _load_handler()._staging_mod().op_status(
+        {'_repo_root': str(tmp_path), '_grant_key': 'repair'})
+    recalled = rr.collect_unapplied(str(tmp_path), min_age_s=0)[0]
+    assert tool['items'][0]['live_comparison'] == recalled['live_comparison']
+    assert recalled['live_comparison']['unknown'] == 1
+    assert '기능 부재·활성화·커밋 판정이 아닙니다' in tool['message']
 
 
 def test_o5_producers_borrow_the_single_rule():

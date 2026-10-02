@@ -12,9 +12,12 @@ IndieBiz OS Core
 남긴다. 회수는 한 번뿐(announced_at 기록)이고, 오래된 판정은 조용히 흘려보낸다.
 표준 라이브러리만 사용 — 워치독(의존성 0 계약)도 같은 파일 형식을 읽고 쓴다.
 """
+import hashlib
 import json
 import os
+import stat
 import time
+from pathlib import Path
 
 MAX_AGE_S = 24 * 3600   # 이보다 오래된 판정은 보고하지 않는다(지난 이야기)
 MAX_ITEMS = 3           # 한 턴에 얹는 판정 수 상한
@@ -30,8 +33,7 @@ _OUTCOME_LABEL = {
     "deferred_canceled": "예약 적용 취소 — 예약 후 세션이 변해 스냅샷이 낡음(라이브 무변경)",
 }
 
-# 예약 적용은 턴 종료 후 몇 분 안에 스스로 끝난다 — 이보다 오래 apply_scheduled 로
-# 남아 있으면 수행자(red_apply)가 죽은 것(좌초)이라 다시 보고 대상이 된다.
+# 오래 남은 예약은 재확인 대상으로 보고한다. 시간만으로 수행자 사망을 판정하지 않는다.
 SCHEDULED_STALE_S = 30 * 60
 
 
@@ -190,15 +192,63 @@ def mark_announced(items: list):
             continue
 
 
+def staged_live_comparison(repo: str, session: dict) -> dict:
+    """조회 시 파일 내용만 비교한다. 기능 동등·커밋·활성화·수행자 생존 판정은 아니다.
+
+    원장과 파일은 변경하지 않는다. 다른 경로로 반영되거나 발전한 정본도 그대로 둔다.
+    """
+    root = Path(repo).resolve()
+    unknown = object()
+
+    def fingerprint(value):
+        if not isinstance(value, str) or not value:
+            return unknown
+        try:
+            candidate = root / value
+            path = candidate.resolve()
+            path.relative_to(root)
+            if candidate.is_symlink() or not stat.S_ISREG(path.stat().st_mode):
+                return unknown
+            with path.open('rb') as stream:
+                return hashlib.file_digest(stream, 'sha256').hexdigest()
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError, RuntimeError):
+            return unknown
+
+    counts = dict(matching=0, base_unchanged=0, diverged=0, unknown=0)
+    for rec in (session.get('files') or {}).values():
+        if not isinstance(rec, dict):
+            counts['unknown'] += 1
+            continue
+        live = fingerprint(rec.get('rel'))
+        desired = None if rec.get('op') == 'delete' else fingerprint(rec.get('staged'))
+        if live is unknown or desired is unknown or (desired is None and rec.get('op') != 'delete'):
+            state = 'unknown'
+        elif live == desired:
+            state = 'matching'
+        elif 'base_sha' not in rec:
+            state = 'unknown'
+        elif live == rec['base_sha']:
+            state = 'base_unchanged'
+        else:
+            state = 'diverged'
+        counts[state] += 1
+    return counts
+
+
+def staged_summary(row: dict) -> str:
+    counts = row['live_comparison']
+    return (f"내용 같음 {counts['matching']} · 원본 그대로 {counts['base_unchanged']} · "
+            f"정본 별도 변경 {counts['diverged']} · 확인 불가 {counts['unknown']}")
+
+
 def collect_unapplied(repo: str, min_age_s: float = 60.0, owner: str = None) -> list:
-    """적용되지 않은 채 남은 격리 스테이징 세션 (2026-08-17).
+    """원장에 남은 격리 세션과 현재 파일 비교. 미반영 기능 목록이 아니다.
 
-    ★왜 여기냐: 격리 스테이징은 라이브를 안 건드리는 게 장점인데, 바로 그래서 **적용을
-    빠뜨린 수리가 아무 흔적도 남기지 않는다** — 사용자 자리에서는 '고쳤다더니 그대로'가
-    된다. 판정 회수(위)가 죽음을 넘은 결말을 닫는 것과 같은 이유로, 이건 *일어나지 않은*
-    적용을 닫는다. 세션은 apply/discard 로 스스로 사라지므로 해소되면 조용해진다.
-
-    부작용 없음. min_age_s 는 지금 돌고 있는 턴의 세션을 오보하지 않기 위한 유예."""
+    부작용 없음. min_age_s는 진행 중 세션의 보고 유예이며 오래된 예약도
+    수행자 사망으로 단정하지 않는다. 호환 이름 stranded_scheduled는 재확인 후보다.
+    """
     root = os.path.join(repo, "data", "system_ai_state", "repair_sessions")
     now = time.time()
     out = []
@@ -228,13 +278,16 @@ def collect_unapplied(repo: str, min_age_s: float = 60.0, owner: str = None) -> 
             continue
         if status == "staging" and age < min_age_s:
             continue
-        # 신선한 예약은 수행자가 곧 처리한다 — 오보하지 않는다. 오래 남은 것만 좌초.
+        # 신선한 예약은 기다린다. 오래된 예약은 생존 여부를 추측하지 않고 보고한다.
         if status == "apply_scheduled" and age < SCHEDULED_STALE_S:
             continue
         out.append({"key": s.get("key"),
                     "files": [r.get("rel") for r in (s.get("files") or {}).values()],
                     "age_s": int(age),
+                    "live_comparison": staged_live_comparison(repo, s),
                     "stranded_scheduled": status == "apply_scheduled"})
+        if len(out) >= MAX_ITEMS:
+            break  # 프롬프트에 싣지 않을 세션의 파일까지 읽지 않는다.
     return out[:MAX_ITEMS]
 
 
@@ -242,8 +295,7 @@ def pending_scent(repo: str, owner: str = None) -> str:
     """미보고 판정 + 미적용 스테이징을 연상 블록용 XML 로. 없으면 빈 문자열(0토큰).
 
     ★부작용 있음: 반환과 동시에 판정에 보고 표식을 남긴다(한 번만 말하기 위해).
-    스테이징 쪽은 표식을 남기지 않는다 — 그건 지나간 사건이 아니라 *지금도 참인 상태*라,
-    해소(apply/discard)될 때까지 계속 보여야 한다.
+    스테이징 원장은 수정하지 않고 조회 때마다 파일을 대조한다.
 
     owner: 이 턴을 도는 주체의 열쇠 — 자기가 한 수리의 결말만 줍는다. 남의 판정을
     가져가면 그 판정은 announced 표식이 찍힌 채 **정작 명령한 창에서는 영영 안 보인다.**
@@ -284,12 +336,10 @@ def _staged_block(staged: list) -> str:
     if not staged:
         return ""
     rows = [f'  <staged key="{s["key"]}" files="{len(s["files"])}"'
-            + (' stranded_scheduled="true"' if s.get("stranded_scheduled") else "")
-            + ">" + ", ".join(s["files"][:6]) + "</staged>" for s in staged]
-    note = ("지난 수리가 격리 사본에만 쌓인 채 **라이브에 적용되지 않았다** — 그 수정은 "
-            "지금 시스템에 없다. 이어서 마무리하려면 [self:patch]{op:\"apply\"} 로 "
-            "검증·적용하고, 더 필요 없으면 {op:\"discard\"} 로 정리하라. 어느 쪽이든 "
-            "사용자에게 '아직 반영되지 않았다'는 사실을 먼저 알려라. "
-            "stranded_scheduled=true 는 예약된 지연 적용의 수행자가 죽어 좌초한 것 — "
-            "다시 apply 하면 재검증 후 재예약된다.")
+            + (' scheduled_review="true"' if s.get("stranded_scheduled") else "")
+            + ">" + staged_summary(s) + " — " + ", ".join(s["files"][:6]) + "</staged>" for s in staged]
+    note = ("미정리 격리 세션과 조회 시 파일 비교다. 원본 그대로는 스테이징 시작 내용과 같다는 뜻이다. "
+            "기능 부재·활성화·커밋 여부는 별도 확인한다. 현재 과제에 필요한 차이만 검토하며 "
+            "이 목록만으로 apply/discard하지 않는다. scheduled_review는 오래된 예약이므로 "
+            "수행자·영수증을 확인한다.")
     return f"\n<repair_staged note=\"{note}\">\n" + "\n".join(rows) + "\n</repair_staged>"

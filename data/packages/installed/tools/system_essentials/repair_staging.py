@@ -1026,7 +1026,8 @@ def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
 
 
 def op_status(ti):
-    """스테이징 현황 — 무엇이 격리에 쌓여 있고 라이브에 뭐가 안 갔는지."""
+    """세션 원장과 현재 파일 비교. 기능·활성화·커밋은 별도 증거로 확인한다."""
+    from red_report import staged_live_comparison
     repo, key = _ctx(ti)
     if not repo:
         return {"success": False, "error": "repo 루트를 찾지 못했습니다."}
@@ -1049,6 +1050,8 @@ def op_status(ti):
             "files": [r.get("rel") for r in (s.get("files") or {}).values()],
             "worktree": s.get("worktree"), "created_at": s.get("created_at"),
             "applied_at": s.get("applied_at"), "current": s.get("key") == key,
+            "live_comparison": (staged_live_comparison(repo, s)
+                                if s.get("status") in ("staging", "apply_scheduled") else None),
         })
     # ★현재 태스크의 세션을 맨 앞에 — 자기 상태가 남의 세션 더미에 파묻히지 않게
     #   (2026-08-31 ep2461: 재실행 턴이 55KB 목록 속 자기 예약분을 못 알아봤다).
@@ -1056,8 +1059,8 @@ def op_status(ti):
     pending = [i for i in items if i["status"] == "staging"]
     props = [i for i in pending if i.get("kind") == "proposal"]
     scheduled = [i for i in items if i["status"] == "apply_scheduled"]
-    msg = (f"스테이징 세션 {len(items)}건 (미적용 {len(pending)}건 · 그중 적용 대기 제안 "
-           f"{len(props)}건). 미적용은 라이브에 아무 영향이 없습니다.")
+    msg = (f"스테이징 세션 {len(items)}건 (미정리 {len(pending)}건 · 그중 제안 "
+           f"{len(props)}건). live_comparison은 조회 시 내용 비교이며 기능 부재·활성화·커밋 판정이 아닙니다.")
     if props:
         msg += (" 제안 적용은 [self:patch]{op:\"apply\", proposal_id:\"<id>\"} "
                 "— 수리(REPAIR) 경로에서만 통과합니다.")
@@ -1074,8 +1077,7 @@ def op_status(ti):
                                     "worktree": cur_sched["worktree"]}
         out["message"] = (
             f"★이 턴의 세션({cur_sched['key']})에 **적용 예약분이 대기 중**: {files_str} — "
-            "검증 통과·작성 완료 상태이며, 라이브 트리·git 에는 턴이 닫힌 뒤에야 나타난다"
-            "(file_find·grep 에 안 보이는 것이 정상). **같은 경로를 재작성·직접 커밋하지 "
+            "이 세션의 적용 완료는 아직 확인되지 않았습니다. **같은 경로를 재작성·직접 커밋하지 "
             f"마라** — 지연 적용과 충돌한다. 내용 확인은 격리본(`{cur_sched['worktree']}/…`)을 "
             "읽어라. | " + msg)
     elif scheduled:

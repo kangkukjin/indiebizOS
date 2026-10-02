@@ -25,6 +25,21 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: repair-grant-propose-only
+    retired: 2026-10-02
+    reason: RED 그랜트 실행자에게 propose를 강제해 실제 도구 계약과 충돌했다.
+    instead: 그랜트 턴은 write/edit로 격리 작성·검증 후 apply하며 무그랜트 제안 계약은 유지한다.
+    phrases: ['backend 수리는 `[self:patch]{op: "propose"}` 한 번']
+  - id: repair-edit-kills-turn
+    retired: 2026-10-02
+    reason: 격리 작성과 재기동을 혼동해 작성 후 검증을 금지하는 옛 지침이 남았다.
+    instead: 격리 write/edit 뒤 검증·수정을 계속하고 backend apply 예약 뒤 현재 턴을 닫는다.
+    phrases: ['쓰기를 턴의 마지막 행위로 놓아라', '쓰기 이후를 전제한 계획은 원리적으로 완주하지 못한다', '편집 뒤에 같은 프로세스가 살아 있다고 전제한 단계는 완주하지 못한다']
+  - id: staging-is-live-absence
+    retired: 2026-10-02
+    reason: 남은 세션 원장을 현재 정본의 기능 부재로 단정해 이미 반영된 기반을 다시 조사했다.
+    instead: 원장 상태와 조회 시 파일 비교를 표시하고 활성화·커밋·기능 판단은 별도 증거로 한다.
+    phrases: ['그 수정은 지금 시스템에 없다', "아직 반영되지 않았다'는 사실을 먼저 알려라", '미적용은 라이브에 아무 영향이 없습니다.', '격리 스테이징 미적용']
   - id: script-registered-only
     retired: 2026-10-01
     reason: 임시 계산을 등록하거나 IBL 밖에서 실행해야 하던 조합 단절을 해소.

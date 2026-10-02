@@ -38,7 +38,7 @@ def test_main_prompt_has_no_repair_tail_or_history():
 
 def test_repair_fragment_holds_the_doctrine():
     f = _read("fragments/14_consciousness_repair.md")
-    for keep in ("뿌리에서 고치", "원인 사슬", "되묻기는 두 종류뿐", "apply", "리로드를 손으로 강제하지 마라"):
+    for keep in ("뿌리에서 고치", "원인 사슬", "되묻기는 두 종류뿐", "apply", "재기동을 손으로 강제하지 마라"):
         assert keep in f
 
 

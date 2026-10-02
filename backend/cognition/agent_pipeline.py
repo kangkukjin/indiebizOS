@@ -839,11 +839,10 @@ class CognitivePipelineMixin:
                 # 다음 턴의 연상이 <repair_staged> 로 물고 온다(red_report).
                 try:
                     from runtime_utils import get_base_path
-                    from red_report import collect_unapplied
+                    from red_report import collect_unapplied, staged_summary
                     for _s in collect_unapplied(str(get_base_path()), min_age_s=0.0):
-                        print(f"[수리] ⚠ 격리 스테이징 미적용 — {_s['key']}: "
-                              f"{len(_s['files'])}건이 라이브에 반영되지 않았습니다 "
-                              f"(apply 미호출). 다음 턴에 보고됩니다.")
+                        print(f"[수리] 격리 세션 원장 — {_s['key']}: "
+                              f"{staged_summary(_s)} (기능·활성화·커밋은 별도 확인).")
                 except Exception:
                     pass
                 try:

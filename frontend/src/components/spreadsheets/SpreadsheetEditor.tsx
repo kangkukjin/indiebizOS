@@ -1,6 +1,6 @@
 import { openDocuments } from '../../lib/surface-navigation';
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
-import { sheetCommand, sheetRequest, sessionArgs, type SheetDetail, type Session, type SheetSnapshot } from '../../lib/api-spreadsheets';
+import { sheetCommand, sheetRequest, sheetUpload, sessionArgs, type SheetDetail, type Session, type SheetSnapshot } from '../../lib/api-spreadsheets';
 
 type Result=Record<string,unknown>;
 type Setup={url:string;config:Result;session:Session;plugin:{channel:string;origin:string}};
@@ -17,6 +17,9 @@ export function SpreadsheetEditor({detail,onChange,captureRef}:{detail:SheetDeta
   const [preview,setPreview]=useState<Result|null>(null),[replacement,setReplacement]=useState('[["수정할 값"]]');
   const [kind,setKind]=useState('set_values'),[proposal,setProposal]=useState<{id:string}|null>(null);
   const [instruction,setInstruction]=useState('이 범위의 오탈자를 정리해줘');
+  const [changes,setChanges]=useState<{operation_id:string;status:string;result?:{applied?:boolean;snapshot_id?:string}}[]>([]);
+  const [imports,setImports]=useState<{id:string;rows_imported:number}[]>([]);
+  const [importSource,setImportSource]=useState('');
   const [filename,setFilename]=useState('사본_'+detail.document.title),[versions,setVersions]=useState<{id:string;created_at:number;label?:string}[]>([]);
   const slot=useRef('sheet-'+crypto.randomUUID()),current=useRef(detail),dirty=useRef(false),working=useRef(false);
   const engine=useRef<Engine|null>(null),bridge=useRef<{channel:string;origin:string;source:Window|null}|null>(null);
@@ -79,10 +82,19 @@ export function SpreadsheetEditor({detail,onChange,captureRef}:{detail:SheetDeta
         if(!result){try{
           if(op.command.kind==='snapshot'){result={snapshot:await takeSnapshot(),completed:true};}
           else if(op.command.kind==='save'){const captured=await capture();result=await sheetCommand<Result>(detail.document.id,'save',{...sessionArgs(captured),expected_revision:op.command.expected_revision,operation_id:String(op.command.operation_id)});publish(await sheetRequest<SheetDetail>('/'+detail.document.id));}
-          else result=await pluginCall('apply',op.command);
+          else {
+            const captured=await capture();
+            await sheetCommand(detail.document.id,'preflight',{...sessionArgs(captured),operation_id:op.id});
+            result=await pluginCall('apply',op.command);
+            if(result.applied){
+              try {const captured=await takeSnapshot();result.snapshot_id=captured.id;}
+              catch(e){result.capture_warning=String(e);}
+            }
+          }
         }catch(e){result=(e as {editorResult?:Result}).editorResult||{error:String(e),applied:false};}completed.current.set(op.id,result);}
-        await sheetCommand(detail.document.id,'receipt',{...sessionArgs(current.current.session!),operation_id:op.id,result});
-        if(result.applied){setMessage('변경 묶음 적용됨 · 원본 저장 전');setProposal(null);setSnapshot(null);}else if(result.error)throw new Error(String(result.error));
+        result=await sheetCommand<Result>(detail.document.id,'receipt',{...sessionArgs(current.current.session!),operation_id:op.id,result});
+        completed.current.set(op.id,result);
+        if(result.applied){setMessage('변경 묶음 적용됨 · 원본 저장 전'+(result.capture_warning?' · '+String(result.capture_warning):''));setProposal(null);setSnapshot(null);}else if(result.error)throw new Error(String(result.error));
       }});
     })().catch(e=>{if(!stopped)setError(String(e));});},1500);
     return()=>{stopped=true;clearInterval(timer);};
@@ -112,6 +124,12 @@ export function SpreadsheetEditor({detail,onChange,captureRef}:{detail:SheetDeta
       <button disabled={busy||!ready} onClick={()=>void run(async()=>{const s=await takeSnapshot();const r=await sheetRequest<Result>(`/${detail.document.id}/snapshots/${s.id}?sheet_id=${encodeURIComponent(sheetId)}&range=${encodeURIComponent(range)}`);setPreview(r);})}>최신 범위 읽기</button>
       {preview&&<details open><summary>값·수식·계산 근거</summary><pre>{JSON.stringify(preview,null,2)}</pre></details>}
       <button disabled={busy||!snapshot} onClick={()=>void run(async()=>{const report=await sheetCommand<{document:{title:string}}>(detail.document.id,'report',{snapshot_id:snapshot?.id,sheet_id:sheetId,range,operation_id:crypto.randomUUID()});setMessage('문서에 표 보고서를 만들었습니다: '+report.document.title);openDocuments();})}>문서에 표 보고서 만들기</button>
+      <details><summary>변경 취소와 가져오기 갱신</summary>
+      <button disabled={busy} onClick={()=>void run(async()=>{setChanges(await sheetCommand(detail.document.id,'changes',{}));setImports(await sheetCommand(detail.document.id,'imports',{}));})}>변경·가져오기 이력</button>
+      {changes.filter(c=>c.result?.applied&&c.result.snapshot_id).map(c=><button key={c.operation_id} disabled={busy||!ready} onClick={()=>void run(async()=>{const s=await takeSnapshot();const p=await sheetCommand<{id:string;values:unknown}>(detail.document.id,'undo-propose',{operation_id:c.operation_id,snapshot_id:s.id});setProposal(p);setReplacement(JSON.stringify(p.values));setMessage('영향 셀만 되돌리는 변경안입니다. 후속 편집을 비교했습니다');})}>변경 {c.operation_id.slice(0,8)} 취소안</button>)}
+      <label>갱신 CSV/TSV 파일<input type="file" disabled={busy} accept=".csv,.tsv" onChange={e=>{const file=e.target.files?.[0];if(file)void run(async()=>{const d=await sheetUpload(file);setImportSource(d.document.id);setMessage('갱신 원본을 등록했습니다');});}}/></label>
+      {imports.map(r=><button key={r.id} disabled={busy||!ready||!importSource} onClick={()=>void run(async()=>{const s=await takeSnapshot();const source=await sheetRequest<SheetDetail>('/'+importSource);const p=await sheetCommand<{id:string;values:unknown}>(detail.document.id,'import-refresh',{recipe_id:r.id,source_resource_id:importSource,expected_revision:source.document.revision_id,snapshot_id:s.id});setProposal(p);setReplacement(JSON.stringify(p.values));setMessage('기록된 열 타입으로 전체 행을 검사했습니다. 갱신안을 적용하세요');})}>{r.rows_imported}행 가져오기 갱신안</button>)}
+      </details>
       <label>AI에게 요청<input value={instruction} onChange={e=>setInstruction(e.target.value)}/></label>
       <button disabled={busy||!snapshot} onClick={()=>void run(async()=>{const r=await sheetCommand<{id:string;values:unknown}>(detail.document.id,'ai',{snapshot_id:snapshot?.id,sheet_id:sheetId,range,instruction});setProposal(r);setReplacement(JSON.stringify(r.values));})}>AI 수정 제안</button>
       <details><summary>직접 변경안 작성</summary><label>입력 종류<select value={kind} onChange={e=>{setKind(e.target.value);setProposal(null);}}><option value="set_values">값</option><option value="set_formulas">수식</option></select></label><label>행·열 값 (JSON)<textarea value={replacement} onChange={e=>{setReplacement(e.target.value);setProposal(null);}}/></label><button disabled={busy||!snapshot} onClick={()=>void run(async()=>setProposal(await sheetCommand(detail.document.id,'propose',{snapshot_id:snapshot?.id,sheet_id:sheetId,range,kind,values:JSON.parse(replacement)})))}>변경안 만들기</button></details>

@@ -203,6 +203,12 @@ python_libraries:
   interpreter: python
   registered_at: '2026-08-24T03:39:12'
   timeout: 300
+스프레드시트후속검증:
+  description: '시트 후속 검증: args.root=정본 또는 그 .worktrees 경로, mode=unit/build/live/gates'
+  file: spreadsheet_followup.py
+  interpreter: python
+  registered_at: '2026-10-02T18:32:09'
+  timeout: 300
 슬라이드틀적용:
   description: '공통 HTML 틀 한 벌 + 장별 JSON을 AI 호출 없이 덱에 적용. args: lecture_id, lecture_dir(선택),
     template_path({{slot}} 틀 파일), contents_path([{id,title,speaker_note,fields:{...}}]

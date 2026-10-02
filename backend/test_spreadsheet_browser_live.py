@@ -96,7 +96,50 @@ def test_app_snapshot_proposal_save(tmp_path,monkeypatch):
                 page.screenshot(path=str(tmp_path/'spreadsheet-app.png'))
                 # Reuse the already verified snapshot only after re-reading current state.
                 page.get_by_role('button',name='최신 범위 읽기',exact=True).click()
-                expect(page.locator('.sheet-review pre').first).to_contain_text('"entered_value": 7',timeout=30000)
+                expect(page.locator('.sheet-review pre').first).to_contain_text('\"entered_value\": 7',timeout=30000)
+                from spreadsheet_changes import history
+                operations=history(workspace,document_id)
+                first=next(o for o in operations if workspace.store.get('sheet_proposal',o['proposal_id'])['range']=='B2')
+                assert first['result'].get('snapshot_id'),first
+                page.get_by_text('변경 취소와 가져오기 갱신',exact=True).click()
+                page.get_by_role('button',name='변경·가져오기 이력',exact=True).click()
+                page.get_by_role('button',name='변경 '+first['operation_id'][:8]+' 취소안',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_contain_text('영향 셀만',timeout=40000)
+                page.get_by_role('button',name='변경안 적용',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_contain_text('변경 묶음 적용됨',timeout=40000)
+                page.get_by_role('button',name='원본 저장',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_have_text('저장됨 · 원본 파일 기록 확인',timeout=60000)
+                restored=load_workbook(source)
+                assert restored.active['B2'].value==1
+                assert restored.active['A2'].value=='=1+1' and restored.active['A2'].data_type=='s'
+                assert restored.active['D2'].value=='=B2*C2'
+                print('ACTIVE_UNDO: restored B2 only; later literal-text A2 and formula D2 preserved')
+                from spreadsheet_imports import import_csv
+                csv_path=tmp_path/'repeat.csv';csv_path.write_text('id,amount\n00123,7\n00456,8\n')
+                csv_doc=workspace.open(csv_path)['document']
+                imported=import_csv(workspace,csv_doc['id'],csv_doc['revision_id'],types=['text','number'])
+                imported_path=imported['document']['source_uri']
+                page.get_by_label('로컬 파일 경로').fill(imported_path)
+                page.get_by_role('button',name='파일 열기',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_have_text('편집 준비 완료',timeout=60000)
+                expect(page.get_by_role('button',name='계산·스냅샷',exact=True)).to_be_enabled(timeout=20000)
+                page.get_by_text('변경 취소와 가져오기 갱신',exact=True).click()
+                page.get_by_role('button',name='변경·가져오기 이력',exact=True).click()
+                expect(page.get_by_label('갱신 CSV/TSV 파일')).to_be_enabled(timeout=10000)
+                page.get_by_label('갱신 CSV/TSV 파일').set_input_files({'name':'updated.csv','mimeType':'text/csv','buffer':b'id,amount\n00123,9\n'})
+                expect(page.locator('.sheet-editor [role=status]')).to_have_text('갱신 원본을 등록했습니다',timeout=20000)
+                page.get_by_role('button',name='3행 가져오기 갱신안',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_contain_text('갱신안을 적용하세요',timeout=40000)
+                page.get_by_role('button',name='변경안 적용',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_contain_text('변경 묶음 적용됨',timeout=40000)
+                page.get_by_role('button',name='원본 저장',exact=True).click()
+                expect(page.locator('.sheet-editor [role=status]')).to_have_text('저장됨 · 원본 파일 기록 확인',timeout=60000)
+                result=load_workbook(imported_path)
+                assert result.active['A2'].value=='00123' and result.active['A2'].data_type=='s'
+                assert result.active['B2'].value==9 and result.active['A3'].value is None
+                recipe=workspace.store.get('sheet_import',imported['import']['id'])
+                assert recipe['rows_imported']==2 and len(recipe['runs'])==1
+                print('ACTIVE_REFRESH: recorded types reapplied, shortened area cleared, ID preserved, source retained')
             except Exception:
                 page.screenshot(path=str(tmp_path/'spreadsheet-failure.png'))
                 print('UI',page.locator('body').inner_text()[-6000:])

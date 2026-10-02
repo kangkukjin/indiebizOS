@@ -10,6 +10,12 @@ export async function sheetRequest<T>(path:string,method='GET',body?:unknown):Pr
   if(!response.ok)throw new Error(typeof value.detail==='string'?value.detail:`스프레드시트 요청 실패 (${response.status})`);
   return value as T;
 }
+export async function sheetUpload(file:File):Promise<SheetDetail> {
+  const response=await fetch(`${BACKEND_ORIGIN}/spreadsheets/import?filename=${encodeURIComponent(file.name)}`,{method:'POST',credentials:'include',body:file});
+  const value=await response.json();
+  if(!response.ok)throw new Error(typeof value.detail==='string'?value.detail:'파일 가져오기에 실패했습니다');
+  return value as SheetDetail;
+}
 export function sheetCommand<T>(id:string,op:string,args:Record<string,unknown>={}):Promise<T> {
   return sheetRequest<T>(`/${encodeURIComponent(id)}/${op}`,'POST',{args});
 }

@@ -318,6 +318,7 @@
     "services/coding_workspace",
     "services/document_creation",
     "services/document_formats",
+    "services/document_hwp",
     "services/document_office",
     "services/document_office_ai",
     "services/document_pdf",
@@ -348,6 +349,7 @@
     "services/report_html",
     "services/resource_links",
     "services/scheduler",
+    "services/spreadsheet_changes",
     "services/spreadsheet_files",
     "services/spreadsheet_imports",
     "services/spreadsheet_workspace",
@@ -531,8 +533,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 456,
-    "engine": 430,
+    "total": 458,
+    "engine": 432,
     "blocklist": 26
   }
 }

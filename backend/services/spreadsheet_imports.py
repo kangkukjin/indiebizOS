@@ -110,7 +110,8 @@ def import_csv(app,document_id,expected_revision,encoding='utf-8-sig',delimiter=
     recipe={'id':identifier(),'source_resource_id':document_id,'source_revision_id':expected_revision,
             'source_sha256':d['source_sha256'],'target_resource_id':result['document']['id'],
             'encoding':encoding,'delimiter':delimiter,'quotechar':quotechar,'header':header,'types':types,
-            'rows_imported':len(rows),'cells_imported':sum(len(r) for r in rows),'original_preserved':True}
+            'rows_imported':len(rows),'cells_imported':sum(len(r) for r in rows),'original_preserved':True,
+            'baseline_blob':result['document']['source_sha256'], 'sheet_id':'1', 'runs':[]}
     app.store.put('sheet_import',recipe)
     result['import']=recipe
     return result

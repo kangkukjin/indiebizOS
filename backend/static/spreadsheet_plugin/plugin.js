@@ -43,7 +43,7 @@
           if(typeof args.engine_state!=='string'||args.engine_state!==before) return {error:'제안 이후 셀·시트 구조가 바뀌었습니다. 스냅샷을 다시 만드세요'};
           var sheet=Api.GetSheet(args.sheet_name);
           if(!sheet||!/^([A-Z]{1,3}[1-9][0-9]*)(:[A-Z]{1,3}[1-9][0-9]*)?$/.test(args.range)) return {error:'대상 시트 또는 범위가 없습니다'};
-          if(!['set_values','set_formulas'].includes(args.kind)||!Array.isArray(args.values)) return {error:'지원하지 않는 변경입니다'};
+          if(!['set_values','set_formulas','restore_cells'].includes(args.kind)||!Array.isArray(args.values)) return {error:'지원하지 않는 변경입니다'};
           var range=sheet.GetRange(args.range), values=args.values;
           var old=[], rows=values.length, cols=rows?values[0].length:0;
           if(!rows||!cols||rows*cols>10000) return {error:'수정 범위 상한을 확인하세요'};
@@ -51,26 +51,36 @@
             if(!Array.isArray(values[r])||values[r].length!==cols) return {error:'수정 값의 행열 수가 다릅니다'};
             old[r]=[];
             for(var c=0;c<cols;c++) {
-              var cell=range.GetCells(r+1,c+1), value=values[r][c];
+              var cell=range.GetCells(r+1,c+1), entry=values[r][c];
+              var value=args.kind==='restore_cells'?(entry.formula||entry.value):entry;
+              var isFormula=args.kind==='set_formulas'||(args.kind==='restore_cells'&&!!entry.formula);
               if(value!==null&&!['string','number','boolean'].includes(typeof value)) return {error:'허용되지 않는 셀 값입니다'};
               if(typeof value==='number'&&!Number.isFinite(value)) return {error:'유한한 숫자만 입력하세요'};
-              if(args.kind==='set_formulas'&&(typeof value!=='string'||value[0]!=='='||/\[[^\]]+\][A-Za-z0-9 _.']*!|https?:|WEBSERVICE|IMAGE\s*\(|RTD\s*\(|\|/i.test(value))) return {error:'외부 접근 또는 올바르지 않은 수식입니다'};
-              old[r][c]={value:cell.GetValue(),formula:cell.GetFormula(),format:cell.GetNumberFormat()};
+              if(isFormula&&(typeof value!=='string'||value[0]!=='='||/\[[^\]]+\][A-Za-z0-9 _.']*!|https?:|WEBSERVICE|IMAGE\s*\(|RTD\s*\(|\|/i.test(value))) return {error:'외부 접근 또는 올바르지 않은 수식입니다'};
+              if(!args.before_cells||!args.before_cells[r]||!args.before_cells[r][c])return {error:'타입을 보존한 복원 근거가 없습니다. 변경안을 다시 만드세요'};
+              old[r][c]={value:args.before_cells[r][c].value,formula:args.before_cells[r][c].formula,format:cell.GetNumberFormat()};
             }
           }
           function set(cell,value,formula) {
-            if(value===null) {cell.SetValue('');return;}
-            if(formula) {cell.SetValue(value);return;}
-            // Text is explicitly typed; identifiers and formula-looking strings stay text.
-            if(typeof value==='string') {cell.SetValue("'"+value);}
-            else cell.SetValue(value);
+            if(value===null) {cell.ClearContents();return;}
+            // SetValue interprets the current number format. Under @ an apostrophe
+            // becomes data; under General a numeric-looking string becomes a number.
+            // Select the intended input type, then restore the display format.
+            var format=cell.GetNumberFormat();
+            cell.SetNumberFormat(!formula&&typeof value==='string'?'@':'General');
+            cell.SetValue(value);
+            cell.SetNumberFormat(format);
           }
           try {
-            for(var rr=0;rr<rows;rr++)for(var cc=0;cc<cols;cc++)set(range.GetCells(rr+1,cc+1),values[rr][cc],args.kind==='set_formulas');
+            for(var rr=0;rr<rows;rr++)for(var cc=0;cc<cols;cc++){
+              var entry=values[rr][cc], restore=args.kind==='restore_cells';
+              set(range.GetCells(rr+1,cc+1),restore?(entry.formula||entry.value):entry,restore?!!entry.formula:args.kind==='set_formulas');
+            }
             Api.RecalculateAllFormulas();
             for(var vr=0;vr<rows;vr++)for(var vc=0;vc<cols;vc++){
-              var checked=range.GetCells(vr+1,vc+1), expected=values[vr][vc];
-              if(args.kind==='set_formulas'){if(checked.GetFormula()!==expected)throw new Error('수식 적용 결과가 요청과 다릅니다');}
+              var checked=range.GetCells(vr+1,vc+1), entry=values[vr][vc];
+              var expected=args.kind==='restore_cells'?(entry.formula||entry.value):entry;
+              if(args.kind==='set_formulas'||(args.kind==='restore_cells'&&!!entry.formula)){if(checked.GetFormula()!==expected)throw new Error('수식 적용 결과가 요청과 다릅니다');}
               else {var actual=checked.GetValue2();var wanted=expected===null?'':String(expected);
                 if(typeof expected==='boolean'){actual=String(actual).toLowerCase();}
                 if(String(actual)!==wanted)throw new Error('셀 적용 결과가 요청과 다릅니다');}

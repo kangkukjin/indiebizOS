@@ -13,6 +13,7 @@ from api_documents import authorize, invoke, LOOPBACK, OpenRequest, Command
 from spreadsheet_workspace import SpreadsheetWorkspace, SpreadsheetEngine
 import document_office
 import spreadsheet_imports
+import spreadsheet_changes
 
 router=APIRouter(prefix='/spreadsheets',tags=['spreadsheets'],dependencies=[Depends(authorize)])
 
@@ -120,6 +121,9 @@ def events(document_id:str,after:int=0):
 
 
 OPERATIONS={
+    'preflight':spreadsheet_changes.preflight,
+    'changes':spreadsheet_changes.history, 'undo-propose':spreadsheet_changes.inverse,
+    'imports':spreadsheet_changes.imports, 'import-refresh':spreadsheet_changes.refresh,
     'report':SpreadsheetWorkspace.create_report,
     'csv-preview':spreadsheet_imports.preview, 'csv-import':spreadsheet_imports.import_csv,
     'sessions':SpreadsheetWorkspace.acquire,'reclaim':SpreadsheetWorkspace.reclaim,

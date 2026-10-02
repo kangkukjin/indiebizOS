@@ -176,6 +176,8 @@ class SpreadsheetWorkspace(OfficeSessions):
             raise ValueError('수정 값의 행·열 수가 범위와 다릅니다')
         if p['protected'] or p['merged_ranges'] or any(c['formula_type'] not in (None,'normal') for c in p['items']):
             raise DocumentUnsupported('보호·병합·배열 범위는 편집기에서 구조를 확인하고 수정하세요')
+        if any(c['error_code'] and not c['formula'] for c in p['items']):
+            raise DocumentUnsupported('오류 리터럴의 복원을 보장하지 못합니다. 편집기에서 수정하세요')
         for row in values:
             for v in row:
                 if v is not None and type(v) not in (str,int,float,bool):
@@ -187,7 +189,9 @@ class SpreadsheetWorkspace(OfficeSessions):
         json.dumps(values,allow_nan=False)
         row={'id':identifier(),'document_id':document_id,'snapshot_id':snapshot_id,'sheet_id':str(sheet_id),
              'sheet_name':p['sheet']['name'],'range':range,'values':values,'kind':kind,'created_at':time.time(),
-             'session_revision':s['session_revision'],'affected_cells':len(p['items'])}
+             'session_revision':s['session_revision'],'affected_cells':len(p['items']),
+             'before_cells':[[{'value':c['entered_value'],'formula':c['formula']} for c in p['items'][i:i+x2-x1+1]]
+                             for i,_ in enumerate(p['items']) if i % (x2-x1+1)==0]}
         self.store.put('sheet_proposal',row)
         return row
 
@@ -286,6 +290,8 @@ class SpreadsheetWorkspace(OfficeSessions):
             if result.get('recovery_required'):
                 session=self.store.get('session',session_id)
                 session['state']='recovering';self.store.put('session',session)
+            from spreadsheet_changes import finish
+            finish(self,op,result)
             result={k:v for k,v in result.items() if k!='engine_state'}
             op.update(status='failed' if result.get('error') else 'completed',result=result)
             self.store.put('operation',op)

@@ -3,6 +3,8 @@ import io
 import posixpath
 import re
 import zipfile
+from copy import deepcopy
+from functools import lru_cache
 from common.value_semantics import numeric_value
 
 from defusedxml.ElementTree import fromstring
@@ -27,6 +29,13 @@ def archive(data):
 
 
 def inspect(data):
+    # Content-keyed cache: immutable source/draft bytes, never path or session ID.
+    # Four compressed inputs are bounded by MAX_BYTES; callers own their metadata.
+    return deepcopy(_inspect_bytes(bytes(data)))
+
+
+@lru_cache(maxsize=4)
+def _inspect_bytes(data):
     with archive(data) as z:
         if 'xl/workbook.xml' not in z.namelist():
             raise DocumentUnsupported('올바른 XLSX 통합문서가 아닙니다')

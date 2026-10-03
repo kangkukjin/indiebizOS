@@ -525,7 +525,13 @@ const NODE_LABELS = {
   sense: '감각 (Sense)', self: '자아 (Self)', limbs: '팔다리 (Limbs)',
   others: '타자 (Others)', engines: '엔진 (Engines)', table: '표 (Table)',
 };
-function nodeLabel(k) { return NODE_LABELS[k] || k; }
+function systemLabel(value) { return window.__ui ? window.__ui.system(value) : value; }
+function nodeLabel(k) { return systemLabel(NODE_LABELS[k] || k); }
+const AXIS_KEYS = ['분류','평가','실행','의식'];
+const DEFAULT_TIER = '경량';
+let loadError = null;
+let selectedDocIndex = 0;
+let selectedNode = null;
 let DATA = null;
 let tooltip = null;
 
@@ -537,14 +543,20 @@ let MEMORY = null;
 let currentTab = 'bodymap';
 let goalFilter = 'all';
 
+function renderLoadError() {
+  document.getElementById('app').innerHTML =
+    '<div class="loading" style="color:#ef4444">데이터 로드 실패: ' + escHtml(loadError) + '</div>';
+}
+
 async function fetchData() {
   try {
     const res = await fetch(API_BASE + '/xray/data');
     DATA = await res.json();
+    loadError = null;
     render();
   } catch(e) {
-    document.getElementById('app').innerHTML =
-      '<div class="loading" style="color:#ef4444">데이터 로드 실패: ' + e.message + '</div>';
+    loadError = e.message;
+    renderLoadError();
   }
 }
 
@@ -648,7 +660,6 @@ function render() {
   const NODE_ORDER = ['sense', 'self', 'limbs', 'others', 'engines', 'table'];
   const nodeKeys = [...NODE_ORDER.filter(k => nodes[k]),
                     ...Object.keys(nodes).filter(k => !NODE_ORDER.includes(k)).sort()];
-  const nodeLabels = NODE_LABELS;
   const nodeHealth = {};
   nodeKeys.forEach(k => {
     const n = nodes[k];
@@ -748,7 +759,7 @@ function render() {
             const aPct = a / total * 100;
             const fPct = f / total * 100;
             return `<div class="node-bar-row">
-              <div class="node-bar-label">${nodeLabels[k] || k}</div>
+              <div class="node-bar-label">${nodeLabel(k)}</div>
               <div class="node-bar-track" style="display:flex;overflow:hidden;">
                 ${v > 0 ? `<div style="width:${vPct}%;background:#22c55e;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;">${v}</div>` : ''}
                 ${a > 0 ? `<div style="width:${aPct}%;background:#94a3b8;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;">${a}</div>` : ''}
@@ -822,7 +833,7 @@ function render() {
           <div class="section-title">서비스 상태</div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
             ${Object.entries(sh.services).map(([name, alive]) =>
-              `<div style="padding:6px 12px;border-radius:6px;font-size:12px;background:${alive ? '#064e3b' : '#7f1d1d'};color:${alive ? '#34d399' : '#fca5a5'}">${name}</div>`
+              `<div style="padding:6px 12px;border-radius:6px;font-size:12px;background:${alive ? '#064e3b' : '#7f1d1d'};color:${alive ? '#34d399' : '#fca5a5'}">${escHtml(systemLabel(name))}</div>`
             ).join('')}
           </div>
         </div>` : ''}
@@ -899,18 +910,18 @@ function renderCognition() {
   // 모델 기어 — 4축(분류/평가/실행/의식) → 티어. model_gear.json이 단일 진실원.
   const gear = c.gear || {};
   const tierColor = t => t === '경량' ? '#22c55e' : t === '중급' ? '#f59e0b' : t === '고급' ? '#a78bfa' : '#64748b';
-  const tierBadge = t => `<span style="color:${tierColor(t)};font-size:10px;">${t || '?'}</span>`;
+  const tierBadge = t => `<span style="color:${tierColor(t)};font-size:10px;">${systemLabel(t || '?')}</span>`;
   const axes = gear.axes || {};
   const consOn = gear.consciousness_enabled !== false;
   const gearBox = gear.current ? `
       <div style="background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
           <span style="color:#60a5fa;font-size:12px;font-weight:600;">⚙ 모델 기어</span>
-          ${(gear.presets||[]).map(p => `<span style="padding:2px 10px;border-radius:10px;font-size:11px;${p===gear.current ? 'background:#1e3a5f;color:#60a5fa;border:1px solid #3b82f6;font-weight:600;' : 'background:#1e293b;color:#64748b;'}">${p}</span>`).join('')}
+          ${(gear.presets||[]).map(p => `<span style="padding:2px 10px;border-radius:10px;font-size:11px;${p===gear.current ? 'background:#1e3a5f;color:#60a5fa;border:1px solid #3b82f6;font-weight:600;' : 'background:#1e293b;color:#64748b;'}">${systemLabel(p)}</span>`).join('')}
           <span style="padding:2px 10px;border-radius:10px;font-size:11px;${consOn ? 'background:#064e3b;color:#34d399;' : 'background:#7c2d12;color:#fb923c;'}">의식 ${consOn ? 'ON' : 'OFF — THINK 차단'}</span>
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#94a3b8;">
-          ${['분류','평가','실행','의식'].map(a => `<span>${a} → ${tierBadge(axes[a])}</span>`).join('')}
+          ${AXIS_KEYS.map(a => `<span>${systemLabel(a)} → ${tierBadge(axes[a])}</span>`).join('')}
         </div>
       </div>` : '';
   const html = `
@@ -939,7 +950,7 @@ function renderCognition() {
       <div style="display:flex;gap:14px;align-items:flex-start;">
         <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 1</div>
         <div style="flex:1;border-left:2px solid #22c55e;padding-left:14px;">
-          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">분류 · 반사 ${tierBadge(axes['분류'] || '경량')}</div>
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">분류 · 반사 ${tierBadge(axes['분류'] || DEFAULT_TIER)}</div>
           <div style="color:#94a3b8;font-size:12px;line-height:1.6;">경량 AI가 요청을 <b style="color:#f59e0b;">EXECUTE</b>(의식 생략, 즉시 실행)와 <b style="color:#a78bfa;">THINK</b>(의식 경유)로 분류합니다. 단, 해마 점수가 <b>Reflex 임계(0.85)</b> 이상이면 분류조차 건너뛰고 과거 top-1 코드를 그대로 실행합니다(척수반사) — 이미 찾은 답을 내보내는 것이라 <b style="color:#22c55e;">항상 경량</b>(기어 무관)입니다.</div>
         </div>
       </div>
@@ -1241,11 +1252,12 @@ function renderDocs(selectedIdx) {
   if (!files.length) { panel.innerHTML = '<div style="padding:40px;color:#475569;">문서 없음</div>'; return; }
 
   const idx = selectedIdx || 0;
+  selectedDocIndex = idx;
   const file = files[idx];
 
   // 사이드바
   const sidebar = files.map((f, i) => {
-    const mod = f.modified ? new Date(f.modified).toLocaleDateString('ko-KR') : '';
+    const mod = f.modified ? new Date(f.modified).toLocaleDateString(window.__ui?.getLocale() || 'ko') : '';
     return `<div class="doc-item ${i === idx ? 'active' : ''}" onclick="renderDocs(${i})">
       <div class="doc-item-name">${f.name}</div>
       <div class="doc-item-meta">${mod} · ${f.size_lines || 0}줄</div>
@@ -1357,6 +1369,7 @@ function renderBodyMap(nodeHealth, sh, cog, nodes) {
 }
 
 function showNodeDetail(nodeKey) {
+  selectedNode = nodeKey;
   const ibl = DATA.ibl || {};
   const allActions = ibl.all_actions || [];
 
@@ -1718,17 +1731,25 @@ let ws = null;
 let liveFeed = [];
 const MAX_FEED = 50;
 
+function renderConnectionStatus() {
+  const el = document.getElementById('ws-status');
+  if (!el) return;
+  if (ws?.readyState === WebSocket.OPEN) {
+    el.textContent = '● LIVE'; el.style.color = '#34d399';
+  } else if (ws?.readyState === WebSocket.CLOSED) {
+    el.innerHTML = '&#9679; 연결 끊김'; el.style.color = '#ef4444';
+  }
+}
+
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(proto + '//' + location.host + '/xray/ws');
 
   ws.onopen = () => {
-    const el = document.getElementById('ws-status');
-    if (el) { el.innerHTML = '&#9679; LIVE'; el.style.color = '#34d399'; }
+    renderConnectionStatus();
   };
   ws.onclose = () => {
-    const el = document.getElementById('ws-status');
-    if (el) { el.innerHTML = '&#9679; 연결 끊김'; el.style.color = '#ef4444'; }
+    renderConnectionStatus();
     // 3초 후 재연결
     setTimeout(connectWS, 3000);
   };
@@ -1788,6 +1809,27 @@ function renderLiveFeed() {
     (items || '<div class="live-item" style="color:#475569;">실시간 이벤트 대기 중...</div>') +
     '</div>';
 }
+
+// Repaint cached UI on language changes without refetching or translating user content.
+window.__ui?.subscribe(() => {
+  if (!DATA) { if (loadError !== null) renderLoadError(); return; }
+  const tab = currentTab;
+  const openNode = document.querySelector('.node-modal-overlay') ? selectedNode : null;
+  const scroll = window.scrollY;
+  document.querySelector('.node-modal-overlay')?.remove();
+  render();
+  if (GOALS) renderGoalTimeline();
+  if (TOOLS) { renderTools(); renderSystemDashboard(); }
+  if (COGNITION) renderCognition();
+  if (MEMORY) renderMemory();
+  if (DOCS) renderDocs(selectedDocIndex);
+  switchTab(tab);
+  if (openNode) showNodeDetail(openNode);
+  if (liveFeed.length) renderLiveFeed();
+  renderConnectionStatus();
+  hideTip();
+  window.scrollTo(0, scroll);
+});
 
 // 초기 로드
 fetchData();

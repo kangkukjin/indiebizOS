@@ -2,8 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import ts from 'typescript';
 import { collector, compileReact, compileHTML, compileRemoteJS, messageId } from './ui-compiler.mjs';
-import { refresh, validTranslation, mergeMemoryEdits, maskSource } from './ui-catalog.mjs';
+import { refresh, validTranslation, mergeMemoryEdits, maskSource, requireCompleteTranslations } from './ui-catalog.mjs';
 import { createUI } from '../i18n/runtime.mjs';
+
+test('provider outage stops queued batches and cannot pass the build boundary', async () => {
+  const messages = Object.fromEntries(Array.from({length:265}, (_, i) => [String(i), {source:'미번역 '+i}]));
+  let calls = 0;
+  const memory = {};
+  const stats = await refresh(messages, memory, {ko:'한국어',en:'English'}, async () => {
+    calls++; throw new Error('offline');
+  });
+  assert.equal(calls, 3);
+  assert.equal(stats.failed, 265);
+  assert.equal(stats.translated, 0);
+  assert.deepEqual(memory.en, {});
+  assert.throws(() => requireCompleteTranslations(stats), {code:'UI_TRANSLATION_INCOMPLETE'});
+  assert.doesNotThrow(() => requireCompleteTranslations({failed:0}));
+});
 
 test('API help translation preserves executable examples and named template variables', () => {
   const source = '날씨 조회 [sense:weather]{city:"서울"} · {name} 안내';

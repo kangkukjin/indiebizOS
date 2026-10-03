@@ -2,12 +2,15 @@
 import os
 import subprocess
 import tempfile
+from contextlib import nullcontext
 from pathlib import Path
 
 from coding_process import sandbox_command
 
 
-def run(command, workspace, *, timeout=300, env=None, text=True, readonly=False, **kwargs):
+def run(command, workspace, *, timeout=300, env=None, text=True, readonly=False, live_read=False, **kwargs):
+    if live_read and not readonly:
+        raise ValueError("운영 읽기 통로는 읽기 전용 활성 검사에서만 사용합니다")
     root = Path(workspace).resolve()
     with tempfile.TemporaryDirectory(prefix="repair-run-", dir="/tmp") as runtime:
         clean = {k: v for k, v in (env or os.environ).items()
@@ -33,8 +36,12 @@ def run(command, workspace, *, timeout=300, env=None, text=True, readonly=False,
         from script_process import run_process
         check = kwargs.pop("check", None)
         cwd = kwargs.pop("cwd", str(root))
-        result = run_process(argv, b"", cwd=cwd, env=clean, timeout=timeout,
-                             check=check, terminate_descendants=True)
+        from repair_live_probe import live_probe
+        with live_probe() if live_read else nullcontext() as url:
+            if url:
+                clean["INDIEBIZ_VERIFY_BASE_URL"] = url
+            result = run_process(argv, b"", cwd=cwd, env=clean, timeout=timeout,
+                                 check=check, terminate_descendants=True)
         if result["timed_out"]:
             raise subprocess.TimeoutExpired(command, timeout, result.get("stdout"), result.get("stderr"))
         return subprocess.CompletedProcess(command, result["exit_code"],

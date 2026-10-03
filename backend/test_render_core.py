@@ -29,8 +29,8 @@ def _assembled_script() -> str:
     from launcher_surface_remote import launcher_html
 
     blocks = re.findall(r"<script>(.*?)</script>", launcher_html(), re.S)
-    assert len(blocks) == 1, f"런처 셸의 <script> 블록이 1개가 아님: {len(blocks)}"
-    return blocks[0]
+    assert blocks, "런처 셸의 실행 스크립트가 없습니다"
+    return ";\n".join(blocks)  # 번역 부트스트랩과 렌더 코어를 문서 순서대로 실행한다.
 
 
 def test_remote_renderer_primitives():

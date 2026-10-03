@@ -46,12 +46,16 @@ def main():
         "ON s.episode_id=e.id WHERE e.started_at>=? AND e.ended_at IS NOT NULL "
         "AND COALESCE(e.source,'usage')='usage' AND s.execution_rounds IS NULL", (args.since,)).fetchall()
     for ep in episodes:
-        calls = [(row, json.loads(row["data"])) for row in conn.execute(
+        all_calls = [(row, json.loads(row["data"])) for row in conn.execute(
             "SELECT * FROM trajectory_event WHERE episode_id=? AND kind='model.call_started'", (ep["id"],))]
-        calls = [(r, d) for r, d in calls if d.get("provider") == "Codex" and d.get("role") == "execution"]
+        calls = [(r, d) for r, d in all_calls if d.get("provider") == "Codex"
+                 and d.get("role") in {"execution", "system_ai", "system_repair"}]
         if len(calls) != 1:
             continue  # 여러 실행 호출을 시간 추측으로 합치지 않는다.
-        matches = [t for t in turns if stamp(ep["started_at"]) <= t["started"] <= stamp(ep["ended_at"])
+        start = stamp(calls[0][0]["ts"])
+        end = min([stamp(ep["ended_at"])] + [stamp(r["ts"]) for r, d in all_calls
+                  if d.get("provider") == "Codex" and stamp(r["ts"]) > start])
+        matches = [t for t in turns if start <= t["started"] < end
                    and t["responses"] and any(ep["user_message"] in m for m in t["messages"])]
         if len(matches) != 1:
             continue

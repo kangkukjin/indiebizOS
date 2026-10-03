@@ -19,6 +19,38 @@ _lock = threading.Lock()
 _last_scan = 0.0
 
 
+def retry_environment(task_id, base):
+    """환경을 고친 운영자가 실패한 검사만 한 번 재예약한다. 원문 영수증은 보존한다."""
+    from repair_continuation import key
+    from red_apply import _load_handler
+    from repair_live_probe import failure_kind
+    lock = OwnerLock(directory(base) / (key(task_id) + ".lock"))
+    if not lock.acquire():
+        raise ValueError("수리 검사가 실행 중입니다")
+    try:
+        row = read(task_id, base) or {}
+        active = row.get("active_verify") or {}
+        receipt = active.get("receipt") or {}
+        if (row.get("status") != "blocked" or active.get("state") != "failed"
+                or row.get("environment_retries", 0) >= 1
+                or receipt.get("effect_unknown") or receipt.get("timed_out")
+                or (receipt.get("failure_kind") or failure_kind(receipt.get("output", ""),
+                                                               receipt.get("exit_code"))) != "environment"):
+            raise ValueError("확정된 환경 실패만 한 번 재검사할 수 있습니다")
+        st = _load_handler({"repo": str(base)})._staging_mod()
+        session = st.read_session(str(base), key(row.get("staging_task_id") or task_id)) or {}
+        sealed = session.get("sealed") or {}
+        if not sealed or any(st._candidate.fingerprint(st._candidate.target(base, rel)) != item["after"]
+                             for rel, item in sealed.items()):
+            raise ValueError("정본이 변경됐습니다. 새 변경 묶음을 검증해야 합니다")
+        row.setdefault("active_verify_history", []).append(active)
+        row.update(active_verify=None, status="waiting_apply", phase="active_verify",
+                   environment_retries=1, reason="환경 복구 후 기존 활성 검사만 재예약")
+        return save(row, base)
+    finally:
+        lock.close()
+
+
 def active_check(row, base=None):
     """ACTIVE에서만 소비자가 호출한다. 부수효과의 불확실한 실행은 자동 반복하지 않는다."""
     result = row.get("result") or {}
@@ -185,6 +217,15 @@ def process_pending(base, generation, execute=_execute):
                 row = active_check(row, base)
             if cancelled(row, base):
                 _settle(row, "cancelled", "사용자가 수리 재개를 취소했습니다.", base)
+                continue
+            receipt = (row.get("active_verify") or {}).get("receipt") or {}
+            if receipt.get("failure_kind") == "environment":
+                row.update(status="blocked", phase="verify_environment",
+                           reason="활성 검사 환경이 차단되었습니다. 코드 수리 세션을 추가로 열지 않습니다. "
+                           "환경 복구 후 실패한 검사만 다시 실행하세요. " + receipt.get("output_path", ""))
+                save(row, base)
+                _deliver_blocked(row)
+                _settle(row, "blocked", row["reason"], base)
                 continue
             with resuming(row):
                 answer = _receipt_completion(row, base) or execute(row)

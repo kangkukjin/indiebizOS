@@ -10,6 +10,9 @@ import { API, WebView } from './support';
 import type { Tab, PoolItem } from './support';
 import { useRetryingLoad } from '../../lib/use-retrying-load';
 import { RemoteBrowserTab } from './RemoteBrowserTab';
+import { ui } from '../../i18n/ui';
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
+import { isXrayURL, xrayLocaleURL, xrayLocaleScript } from '../../lib/xray-locale';
 
 // 탭 하나 = webview 하나. 자기 네비 이벤트를 부모 Tab 상태로 올리고, 팝업(target=_blank 등)은 새 탭으로.
 // src 는 initialUrl 로 최초 1회만 로드 — 이후 이동은 goBack/reload 등 imperative 로만(재로드 튐 방지).
@@ -26,10 +29,20 @@ export function BrowserTabView(props: BrowserTabProps) {
 
 function NativeBrowserTab({ tab, onUpdate, registerRef, onOpenTab }: BrowserTabProps) {
   const ref = useRef<any>(null);
+  const initialUrl = useRef(xrayLocaleURL(tab.initialUrl, BACKEND_ORIGIN, ui.getLocale()));
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     registerRef(tab.id, el);
+    let ready = false;
+    const syncLocale = () => {
+      if (ready && isXrayURL(el.getURL?.() || '', BACKEND_ORIGIN)) {
+        void el.executeJavaScript(xrayLocaleScript(BACKEND_ORIGIN, ui.getLocale())).catch((error: unknown) => console.warn('X-Ray locale sync failed', error));
+      }
+    };
+    const onReady = () => { ready = true; syncLocale(); };
+    el.addEventListener('dom-ready', onReady);
+    const unsubscribeLocale = ui.subscribe(syncLocale);
     const sync = (e?: any) => {
       const u = e?.url || el.getURL?.();
       onUpdate(tab.id, {
@@ -39,7 +52,7 @@ function NativeBrowserTab({ tab, onUpdate, registerRef, onOpenTab }: BrowserTabP
         canFwd: !!el.canGoForward?.(),
       });
     };
-    const onStart = () => onUpdate(tab.id, { loading: true, translated: false });
+    const onStart = () => { ready = false; onUpdate(tab.id, { loading: true, translated: false }); };
     const onStop = () => { onUpdate(tab.id, { loading: false }); sync(); };
     const onTitle = (e: any) => onUpdate(tab.id, { title: e?.title || el.getTitle?.() || tab.url });
     const onNew = (e: any) => { if (e?.url) onOpenTab(e.url); };  // target=_blank / window.open → 새 탭
@@ -50,6 +63,8 @@ function NativeBrowserTab({ tab, onUpdate, registerRef, onOpenTab }: BrowserTabP
     el.addEventListener('page-title-updated', onTitle);
     el.addEventListener('new-window', onNew);
     return () => {
+      unsubscribeLocale();
+      el.removeEventListener('dom-ready', onReady);
       el.removeEventListener('did-navigate', sync);
       el.removeEventListener('did-navigate-in-page', sync);
       el.removeEventListener('did-start-loading', onStart);
@@ -60,7 +75,7 @@ function NativeBrowserTab({ tab, onUpdate, registerRef, onOpenTab }: BrowserTabP
   }, [tab.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <WebView ref={ref} src={tab.initialUrl} partition="persist:forage" allowpopups="true"
+    <WebView ref={ref} src={initialUrl.current} partition="persist:forage" allowpopups="true"
       style={{ width: '100%', height: '100%', border: 'none' }} />
   );
 }

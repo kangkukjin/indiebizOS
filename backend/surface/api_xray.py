@@ -1124,6 +1124,8 @@ async def xray_app():
     """System X-Ray 시각화 페이지"""
     html_path = DATA_PATH / "xray" / "index.html"
     if html_path.exists():
-        return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+        from launcher_surface_remote import localized_html
+        return HTMLResponse(content=localized_html(
+            html_path.read_text(encoding="utf-8"), "xray"))
     return HTMLResponse(content="<h1>X-Ray HTML not found</h1><p>data/xray/index.html 파일이 필요합니다.</p>", status_code=404)
 

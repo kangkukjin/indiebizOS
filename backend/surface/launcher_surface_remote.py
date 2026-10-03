@@ -19,10 +19,15 @@ _LOG = logging.getLogger(__name__)
 def launcher_html() -> str:
     """검증된 번역 셸 또는 한국어 원문. 네트워크·사용자 데이터 전송 없음."""
     source = LAUNCHER_SHELL_HTML + LAUNCHER_APP_JS + LAUNCHER_RENDER_JS
+    return localized_html(source, "remote")
+
+
+def localized_html(source: str, surface: str) -> str:
+    """Serve a compiled UI only when it matches its source, including X-Ray."""
     root = Path(__file__).resolve().parents[2]
     candidates = (
-        root / "frontend/i18n/remote.json",
-        root / "backend/static/ui_i18n/remote.json",
+        root / "frontend/i18n" / f"{surface}.json",
+        root / "backend/static/ui_i18n" / f"{surface}.json",
     )
     for path in candidates:
         if not path.is_file():

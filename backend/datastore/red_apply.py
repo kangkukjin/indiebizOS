@@ -315,7 +315,9 @@ def _run_post_verify(repo: str, cmd: str, *, timeout=None, receipt_path=None) ->
               "command_sha256": hashlib.sha256(cmd.encode()).hexdigest()}
     try:
         from repair_process import run
-        r = run(["/bin/sh", "-c", cmd], repo, timeout=timeout, readonly=True)
+        from repair_live_probe import ENVIRONMENT_VERSION
+        r = run(["/bin/sh", "-c", cmd], repo, timeout=timeout, readonly=True, live_read=True)
+        result["environment_version"] = ENVIRONMENT_VERSION
         result["exit_code"] = r.returncode
         output = text(r.stdout) + ("\n[stderr] " + text(r.stderr) if r.stderr else "")
     except subprocess.TimeoutExpired as exc:
@@ -326,6 +328,8 @@ def _run_post_verify(repo: str, cmd: str, *, timeout=None, receipt_path=None) ->
         result.update(exit_code=None, effect_unknown=True)
         output = f"실행 실패: {exc!r}"
     full = mask_secrets(output.strip())
+    from repair_live_probe import failure_kind
+    result["failure_kind"] = failure_kind(full, result.get("exit_code"))
     result["output_path"] = str(receipt)
     atomic_json(receipt, {**result, "output": full})
     marker = "\n… 원문은 output_path …\n"

@@ -24,7 +24,7 @@ const mkEl = () => {
 };
 const sandbox = {
   console,
-  document: { createElement: mkEl, getElementById: () => null, querySelectorAll: () => [], body: mkEl(), addEventListener(){} },
+  document: { documentElement: mkEl(), createElement: mkEl, getElementById: () => null, querySelectorAll: () => [], body: mkEl(), addEventListener(){} },
   window: {}, navigator: { connection: undefined }, location: { search: '', href: '' },
   localStorage: { getItem: () => null, setItem(){}, removeItem(){} },
   fetch: async () => ({ ok: true, json: async () => ({}) }),

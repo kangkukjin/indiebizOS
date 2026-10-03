@@ -15,12 +15,29 @@ export function createUI(catalog, host = globalThis) {
     return value.replace(/\{(\d+)\}/g, (_, i) => String(values[Number(i)] ?? `{${i}}`));
   }
   // Called only at explicitly declared system-metadata sinks, never arbitrary content.
-  const systemMessages = Object.entries(catalog.messages).filter(([, m]) => m.context === 'system:metadata');
+  const systemMessages = Object.entries(catalog.messages).filter(([, m]) => m.context === 'system:metadata' || m.context === 'system:status');
+  // Match complete source-owned status templates, never substitute inside diagnostic values.
+  const statusTemplates = systemMessages.filter(([, m]) => m.context === 'system:status' && /\{\d+\}/.test(m.source)).sort((a, b) => b[1].source.length - a[1].source.length).map(([id, m]) => {
+    const slots = [];
+    const pattern = m.source.split(/(\{\d+\})/).map(part => {
+      if (/^\{\d+\}$/.test(part)) { slots.push(Number(part.slice(1, -1))); return '([\\s\\S]*?)'; }
+      return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }).join('');
+    return { id, slots, pattern: new RegExp('^' + pattern + '$') };
+  });
   const systemIds = new Map(systemMessages.map(([id, m]) => [m.source, id]));
   const fragments = [...systemIds.keys()].filter(s => s.length > 4).sort((a,b) => b.length - a.length);
   function system(value, allowFragments = false) {
     if (typeof value !== 'string' || locale === 'ko') return value;
     if (systemIds.has(value)) return text(systemIds.get(value));
+    if (value.length <= 10000) for (const template of statusTemplates) {
+      const match = template.pattern.exec(value);
+      if (match) {
+        const values = [];
+        template.slots.forEach((slot, index) => { values[slot] = match[index + 1]; });
+        return text(template.id, values);
+      }
+    }
     if (!allowFragments) return value;
     // Server-owned descriptions can concatenate source sentences; unmatched text stays literal.
     let output = '', cursor = 0;
@@ -100,9 +117,13 @@ export function mountRemote(ui, doc = document) {
   picker(doc.querySelector('.login-box')); picker(doc.querySelector('.top'));
   update(doc);
   const observer = new MutationObserver(records => {
-    for (const record of records) for (const node of record.addedNodes) if (node.nodeType === 1) update(node);
+    for (const record of records) {
+      if (record.type === 'attributes') update(record.target);
+      else for (const node of record.addedNodes) if (node.nodeType === 1) update(node);
+    }
   });
-  observer.observe(doc.body, { childList: true, subtree: true });
+  observer.observe(doc.body, { childList: true, subtree: true, attributes: true,
+    attributeFilter: ['data-ui-system', 'data-ui-prefix', 'data-ui-fragments', 'data-ui-text', ...attributes.map(a => `data-ui-${a}`)] });
   ui.subscribe(() => update(doc));
   return () => observer.disconnect();
 }

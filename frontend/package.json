@@ -81,6 +81,7 @@
     ],
     "extraResources": [
       { "from": "i18n/remote.json", "to": "backend/static/ui_i18n/remote.json" },
+      { "from": "i18n/xray.json", "to": "backend/static/ui_i18n/xray.json" },
       {
         "from": "../backend",
         "to": "backend",

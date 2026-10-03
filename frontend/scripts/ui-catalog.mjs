@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
 import { collector, compileReact, compileHTML, compileRemoteJS, korean } from './ui-compiler.mjs';
 import { createUI, mountRemote } from '../i18n/runtime.mjs';
+import { compileXray } from './ui-xray.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const i18n = path.join(root, 'frontend/i18n');
@@ -113,9 +114,9 @@ export async function refresh(messages, memory, languages, translate = translate
       pending.push([id, entry]);
     }
     // Bound provider traffic; static source UI only. Failures are not cached as successful translations.
-    let cursor = 0;
+    let cursor = 0, providerFailed = false;
     await Promise.all(Array.from({ length: 3 }, async () => {
-      while (cursor < pending.length) {
+      while (cursor < pending.length && !providerFailed) {
         const batch = pending.slice(cursor, cursor += 20);
         stats.requested += batch.length;
         try {
@@ -128,11 +129,17 @@ export async function refresh(messages, memory, languages, translate = translate
               memory[language][id] = { source: entry.source, text: result[i] }; stats.translated++;
             } else stats.failed++;
           }
-        } catch (error) { stats.failed += batch.length; console.warn(`[ui-i18n] ${language}: translation batch failed (${error.code || error.name})`); }
+        } catch (error) {
+          providerFailed = true;
+          stats.failed += batch.length;
+          // 공급자 장애는 최대 3개 진행 중 요청까지만 회수한다. 미번역 전체를 재호출하지 않는다.
+          console.warn(`[ui-i18n] ${language}: translation provider failed (${error.code || error.name}); remaining batches stopped`);
+        }
         checkpoint(memory);
         console.log('[ui-i18n progress]', JSON.stringify(stats));
       }
     }));
+    stats.failed += Math.max(0, pending.length - cursor);
   }
   return stats;
 }
@@ -159,8 +166,11 @@ export async function buildCatalog({ translate = translateBatch } = {}) {
   const python = process.env.INDIEBIZ_PYTHON || (fs.existsSync(path.join(root, '.venv/bin/python3')) ? path.join(root, '.venv/bin/python3') : 'python3');
   const systemSources = JSON.parse(execFileSync(python, [path.join(root, 'frontend/scripts/ui-system-sources.py')], {encoding:'utf8'}));
   for (const source of systemSources.messages) catalog.add('system:metadata', source);
+  for (const source of systemSources.status_messages) catalog.add('system:status', source);
   const raw = rawRemote();
   const remote = compileRemote(raw, catalog);
+  const xrayRaw = fs.readFileSync(path.join(root, 'data/xray/index.html'), 'utf8');
+  const xray = compileXray(xrayRaw, catalog);
   const languages = readJSON(path.join(i18n, 'languages.json'));
   if (languages.ko !== '한국어' || !languages.en) throw new Error('UI language registry requires ko and en');
   const memory = readJSON(path.join(i18n, 'translations.json'));
@@ -172,6 +182,7 @@ export async function buildCatalog({ translate = translateBatch } = {}) {
   };
   const stats = await refresh(catalog.messages, memory, languages, translate, saveMemory);
   saveMemory();
+  requireCompleteTranslations(stats);
   for (const [id, entry] of Object.entries(catalog.messages)) {
     entry.translations = {};
     for (const lang of Object.keys(languages)) {
@@ -185,8 +196,16 @@ export async function buildCatalog({ translate = translateBatch } = {}) {
   const remoteBundle = { languages, instruments: bundle.instruments, messages: Object.fromEntries(Object.entries(bundle.messages).filter(([, m]) => m.context.startsWith('remote:') || m.context === 'system:metadata')) };
   const encoded = JSON.stringify(remoteBundle).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   const bootstrap = `<script>window.__ui=(${createUI.toString()})(${encoded},window);\nwindow.__uiContent=function(value){if(value&&typeof value==='object'&&value.ui){const span=document.createElement('span');span.dataset.uiText=value.ui;span.textContent=window.__ui.text(value.ui);return span.outerHTML;}const span=document.createElement('span');span.textContent=String(value==null?'':value);return span.innerHTML;};window.__uiSetText=function(el,id){const span=document.createElement('span');span.setAttribute('data-ui-text',id);span.textContent=window.__ui.text(id);el.replaceChildren(span);};\ndocument.addEventListener('DOMContentLoaded',function(){(${mountRemote.toString()})(window.__ui,document);});</script>`;
-  const html = remote.replace('</head>', bootstrap + '</head>');
+  const html = remote.replace('</head>', () => bootstrap + '</head>');
   writeJSON(path.join(i18n, 'remote.json'), { source_hash: createHash('sha256').update(raw).digest('hex'), html });
+  const xrayBundle = { languages, messages: Object.fromEntries(Object.entries(bundle.messages).filter(([, m]) => m.context.startsWith('xray:') || m.context.startsWith('system:'))) };
+  const xrayEncoded = JSON.stringify(xrayBundle).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  const xrayBootstrap = `<script>window.__ui=(${createUI.toString()})(${xrayEncoded},window);
+const requestedLocale=new URL(location.href).searchParams.get('ui_locale');
+if(requestedLocale){window.__ui.setLocale(requestedLocale);const url=new URL(location.href);url.searchParams.delete('ui_locale');history.replaceState(null,'',url);}
+window.addEventListener('message',event=>{if(event.source===parent && parent!==window && event.data?.type==='indiebiz:ui-locale' && document.referrer && event.origin===new URL(document.referrer).origin)window.__ui.setLocale(event.data.locale);});
+document.addEventListener('DOMContentLoaded',()=>(${mountRemote.toString()})(window.__ui,document));</script>`;
+  writeJSON(path.join(i18n, 'xray.json'), { source_hash: createHash('sha256').update(xrayRaw).digest('hex'), html: xray.replace('</head>', () => xrayBootstrap + '</head>') });
   console.log('[ui-i18n]', JSON.stringify({ messages: Object.keys(bundle.messages).length, ...stats }));
   return { ...stats, count: Object.keys(bundle.messages).length };
 }
@@ -205,15 +224,27 @@ export function uiCatalogPlugin() {
       return { code: compileReact(source, path.relative(root, file).replaceAll(path.sep, '/'), collector()), map: null };
     },
     configureServer(server) {
-      server.watcher.add([path.join(root, 'data/ibl_nodes.yaml'), path.join(root, 'data/instruments'), path.join(root, 'backend/services/model_settings_view.py'), path.join(root, 'backend/base/model_resolver.py'), ...files(path.join(root, 'backend/surface')).filter(file => /launcher_[^/]+\.py$/.test(file)), path.join(i18n, 'languages.json'), path.join(i18n, 'translations.json')]);
+      server.watcher.add([path.join(root, 'data/xray/index.html'), path.join(root, 'data/ibl_nodes.yaml'), path.join(root, 'data/instruments'), path.join(root, 'backend/services/model_settings_view.py'), path.join(root, 'backend/base/model_resolver.py'), path.join(root, 'backend/cognition/world_pulse_health.py'), path.join(root, 'backend/cognition/ibl_description_audit.py'), ...files(path.join(root, 'backend/surface')).filter(file => /launcher_[^/]+\.py$/.test(file)), path.join(i18n, 'languages.json'), path.join(i18n, 'translations.json')]);
       let timer;
       const queue = file => {
-        if (!(file.includes('/frontend/src/') || file.endsWith('/ibl_nodes.yaml') || file.includes('/data/instruments/') || /launcher_[^/]+\.py$/.test(file) || file.endsWith('/languages.json') || file.endsWith('/model_settings_view.py') || file.endsWith('/model_resolver.py') || (file.endsWith('/translations.json') && !running))) return;
-        clearTimeout(timer); timer = setTimeout(async () => { await build(); server.ws.send({ type: 'full-reload' }); }, 250);
+        if (!(file.includes('/frontend/src/') || file.endsWith('/data/xray/index.html') || file.endsWith('/ibl_nodes.yaml') || file.includes('/data/instruments/') || /launcher_[^/]+\.py$/.test(file) || file.endsWith('/languages.json') || file.endsWith('/model_settings_view.py') || file.endsWith('/model_resolver.py') || file.endsWith('/world_pulse_health.py') || file.endsWith('/ibl_description_audit.py') || (file.endsWith('/translations.json') && !running))) return;
+        clearTimeout(timer); timer = setTimeout(async () => {
+          try { await build(); server.ws.send({ type: 'full-reload' }); }
+          catch (error) { server.config.logger.error(error.message); }
+        }, 250);
       };
       server.watcher.on('change', queue); server.watcher.on('add', queue); server.watcher.on('unlink', queue);
       server.httpServer?.once('close', () => clearTimeout(timer));
     },
   };
 }
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await buildCatalog();
+export function requireCompleteTranslations(stats) {
+  if (!stats.failed) return;
+  const error = new Error(`[ui-i18n] build failed: ${stats.failed} untranslated messages; last successful bundles preserved. Check translation provider access and retry.`);
+  error.code = 'UI_TRANSLATION_INCOMPLETE'; error.stats = stats;
+  throw error;
+}
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try { await buildCatalog(); }
+  catch (error) { console.error(error.message); process.exitCode = 1; }
+}

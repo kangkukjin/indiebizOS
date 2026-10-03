@@ -742,9 +742,9 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
     _who = f"지금 이 턴(주행기록 {eid})" if eid else "지금 이 턴"
     _verify_note = (
         f"활성화 전 읽기·부팅 검증(`{job['verify_cmd'][:120]}`)은 수행자가 돌리고 결과를 보존합니다. "
-        f"기능 선택·저장·커밋은 ACTIVE 이후 active_verify_cmd 또는 재개 실행에서 수행합니다."
+        "ACTIVE 이후 active_verify_cmd는 읽기 확인만 수행하고, 커밋은 각인 서비스가 맡습니다."
         if job.get("verify_cmd") else
-        "부팅·읽기 검사는 verify_cmd, 활성화 후 기능 검사·커밋은 active_verify_cmd로 맡기세요. "
+        "부팅·읽기 검사는 verify_cmd, 활성화 후 읽기 확인은 active_verify_cmd로 맡기세요. 커밋은 각인 서비스가 맡습니다. "
         "이 턴에서 기다려서는 결과를 볼 수 없습니다.")
     return {
         "success": True, "applied": False, "scheduled": True, "verified": True,

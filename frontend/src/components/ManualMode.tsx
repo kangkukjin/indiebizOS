@@ -17,7 +17,7 @@ import { Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert,
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
-import { ui, uiMessage, useLocale } from '../i18n/ui';
+import { ui, uiMessage, UiSystemText, useLocale } from '../i18n/ui';
 import { IS_WEB_SURFACE } from '../lib/backend-origin';
 import { NodePresence, ModelGearLever, ActiveProjects, LimbSwitch, SystemLogViewer, BodyLedger } from './launcher-components';
 import { EpisodeJournal } from './EpisodeJournal';
@@ -26,7 +26,9 @@ import type { IblValidateResult, IblSafety, IblCatalog, DashboardStatus, RecallP
 
 // 계기판 서비스 라벨
 const SERVICE_LABELS: Record<string, string> = {
-  scheduler: '스케줄러', channel_poller: '채널 폴러', system_ai_runner: '시스템 AI',
+  scheduler: uiMessage('system.service', '스케줄러'),
+  channel_poller: uiMessage('system.service', '채널 폴러'),
+  system_ai_runner: uiMessage('system.service', '시스템 AI'),
 };
 
 // 점검 시각을 "방금 전 / N분 전 / N시간 전 / N일 전"으로
@@ -536,9 +538,9 @@ export default function ManualMode() {
                     : <AlertTriangle size={14} className="text-red-500" />}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="text-stone-700">{it.label}</span>
+                  <span className="text-stone-700">{<UiSystemText value={it.label} />}</span>
                   {it.ok === false && it.detail && (
-                    <span className="block text-[11px] text-red-600 break-words">{it.detail}</span>
+                    <span className="block text-[11px] text-red-600 break-words">{<UiSystemText value={it.detail} />}</span>
                   )}
                   {/* 설명 정합은 주 1회 카덴스라 고쳐도 옛 빨간불이 잔존 — 빨간불일 때만 재감사 버튼 노출 */}
                   {it.key === 'description_drift' && it.ok === false && (
@@ -573,7 +575,7 @@ export default function ManualMode() {
               {Object.entries(dashboard.services).map(([k, alive]) => (
                 <span key={k} className="flex items-center gap-1">
                   <span className={`inline-block w-1.5 h-1.5 rounded-full ${alive ? 'bg-emerald-500' : 'bg-stone-300'}`} />
-                  {SERVICE_LABELS[k] || k}
+                  {ui.text(SERVICE_LABELS[k] || k)}
                 </span>
               ))}
             </div>

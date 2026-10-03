@@ -85,7 +85,10 @@ def main():
                 elif path == '/launcher/app-layout': payload = {'version':1,'positions':{},'folders':{},'membership':{},'removed':[],'uninstalled':[],'promoted':[]}
                 elif path == '/launcher/instruments': payload = {'instruments':[{'id':'user-app','name':'사진','icon':'★','modes':[]}, manifest_probe]}
                 elif path == '/health': payload = {'status': 'ok'}
-                elif path == '/world-pulse/dashboard': payload = {'ibl_health':{'healthy':True,'items':[]},'services':{}}
+                elif path == '/world-pulse/dashboard': payload = {'ibl_health':{'healthy':False,'stale':False,'checked_at':'2026-10-03T12:00:00','action_count':168,'items':[
+                    {'key':'ibl_consistency','label':'어휘 정합 — 선언·구현·도구 일치','ok':True},
+                    {'key':'ibl_health_check','label':'점검 실행 — 검사기 자체','ok':False,'detail':'ibl_health_check 실행 실패: 사용자파일 $& <raw>.py'},
+                ]},'services':{'scheduler':True,'channel_poller':False,'system_ai_runner':True}}
                 elif path == '/model-gear':
                     if route.request.method == 'PUT':
                         body = route.request.post_data_json
@@ -134,6 +137,29 @@ def main():
                 assert len(set(headings)) == 14
                 reports.append({'surface':'desktop','guidePagesChecked':headings})
                 page.keyboard.press('Escape')
+                monitor = page.locator('#cockpit-monitor')
+                status_toggle = monitor.locator('button').first
+                status_toggle.click()
+                monitor.get_by_text(tr('어휘 정합 — 선언·구현·도구 일치'), exact=True).wait_for()
+                detail_en = tr('ibl_health_check 실행 실패: {0}').replace('{0}', '사용자파일 $& <raw>.py')
+                monitor.get_by_text(detail_en, exact=True).wait_for()
+                system_text = monitor.locator('div.rounded-xl').first.inner_text().replace('사용자파일', '')
+                assert not __import__('re').search('[가-힣]', system_text), ('system status untranslated', system_text)
+                picker.first.select_option('ko')
+                monitor.get_by_text('어휘 정합 — 선언·구현·도구 일치', exact=True).wait_for()
+                monitor.get_by_text('ibl_health_check 실행 실패: 사용자파일 $& <raw>.py', exact=True).wait_for()
+                picker.first.select_option('en')
+                status_toggle.click()
+                status_toggle.click()
+                monitor.get_by_text(detail_en, exact=True).wait_for()
+                # A second page receives the saved locale and a newly fetched status response.
+                reopened = context.new_page()
+                reopened.route('**/*', api)
+                reopened.goto(origin + '/')
+                reopened.keyboard.press('Escape')
+                reopened.locator('#cockpit-monitor').get_by_text(detail_en, exact=True).wait_for()
+                reopened.close()
+                reports.append({'systemStatus':'English/Korean switch, collapse/reopen and fresh page/API fetch', 'diagnosticValuesPreserved':True})
             for name in ['절약','균형','최대']:
                 panel.get_by_text(tr(name), exact=True).wait_for()
                 assert panel.get_by_text(name, exact=True).count() == 0
@@ -156,7 +182,7 @@ def main():
             assert selects.count() >= 12
             panel_text = panel.inner_text().replace('사용자 프로젝트','').replace('절약','')
             assert not __import__('re').search('[가-힣]',panel_text), (surface,'untranslated gear UI',panel_text)
-            page.screenshot(path='/tmp/indiebiz-ui-'+surface+'-en.png')
+            assert page.screenshot().startswith(b'\x89PNG'), 'browser screenshot must render'
             first = selects.first
             first.select_option('고급')
             assert first.input_value() == '고급'
@@ -257,6 +283,31 @@ def main():
                     reports.append({'systemWindow':route_name,'text':text,'attributesChecked':len(attrs),'pageErrors':window_errors,'data':'empty synthetic records; document content excluded'})
                     window.close()
             context.close()
+        # Test-only Japanese registration: production languages and resources stay unchanged.
+        fixture = json.loads((ROOT / 'i18n/catalog.json').read_text())
+        fixture['languages']['ja'] = '日本語'
+        japanese = {
+            '어휘 정합 — 선언·구현·도구 일치': '語彙の整合性 — 宣言・実装・ツールの一致',
+            '점검 실행 — 검사기 자체': '検査の実行 — 検査プログラム',
+            'ibl_health_check 실행 실패: {0}': 'ibl_health_check の実行に失敗: {0}',
+        }
+        for message in fixture['messages'].values():
+            if message['source'] in japanese:
+                message.setdefault('translations', {})['ja'] = japanese[message['source']]
+        fixture_page = browser.new_page()
+        fixture_page.set_content('<html><body><span id="label" data-ui-system="어휘 정합 — 선언·구현·도구 일치"></span><span id="detail" data-ui-system="ibl_health_check 실행 실패: 사용자파일.py"></span><span id="missing" data-ui-system="미등록 문구"></span></body></html>')
+        runtime = (ROOT / 'i18n/runtime.mjs').read_text().replace('export function ', 'function ')
+        fixture_page.add_script_tag(content=runtime + '\nwindow.fixtureUI=createUI(' + json.dumps(fixture) + '); mountRemote(window.fixtureUI);')
+        fixture_page.evaluate("fixtureUI.setLocale('ja')")
+        fixture_page.get_by_text(japanese['어휘 정합 — 선언·구현·도구 일치'], exact=True).wait_for()
+        fixture_page.get_by_text('ibl_health_check の実行に失敗: 사용자파일.py', exact=True).wait_for()
+        assert fixture_page.locator('#missing').inner_text() == '미등록 문구'
+        fixture_page.locator('#detail').evaluate("el=>el.setAttribute('data-ui-system','ibl_health_check 실행 실패: 다음파일.py')")
+        fixture_page.get_by_text('ibl_health_check の実行に失敗: 다음파일.py', exact=True).wait_for()
+        fixture_page.evaluate("fixtureUI.setLocale('ko')")
+        fixture_page.get_by_text('ibl_health_check 실행 실패: 다음파일.py', exact=True).wait_for()
+        reports.append({'systemStatusJapanese':'test-only registry/resources; shared runtime DOM, refresh and Korean fallback verified'})
+        fixture_page.close()
         browser.close()
     server.shutdown()
     print(json.dumps(reports, ensure_ascii=False, indent=2))

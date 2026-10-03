@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { checkRemoteSession } from '../../lib/remote-session';
 import { openExternalLink } from '../../lib/surface-navigation';
 import type { Tab } from './support';
+import { ui } from '../../i18n/ui';
+import { isXrayURL, xrayLocaleURL } from '../../lib/xray-locale';
 
 /** 브라우저 표면의 탐색기. 교차 출처 프레임의 DOM/실제 이동 기록을 읽을 수 있다고 가장하지 않는다. */
 export function RemoteBrowserTab({ tab, onUpdate, registerRef }: {
@@ -12,6 +14,12 @@ export function RemoteBrowserTab({ tab, onUpdate, registerRef }: {
 }) {
   const [url, setUrl] = useState(tab.initialUrl);
   const [revision, setRevision] = useState(0);
+  const frame = useRef<HTMLIFrameElement>(null);
+  const frameURL = useMemo(() => xrayLocaleURL(url, BACKEND_ORIGIN, ui.getLocale()), [url, revision]);
+  const syncLocale = () => {
+    if (isXrayURL(url, BACKEND_ORIGIN)) frame.current?.contentWindow?.postMessage({type: 'indiebiz:ui-locale', locale: ui.getLocale()}, BACKEND_ORIGIN);
+  };
+  useEffect(() => { const unsubscribe = ui.subscribe(syncLocale); return () => { unsubscribe(); }; }, [url]); // eslint-disable-line react-hooks/exhaustive-deps
   const [verdict, setVerdict] = useState<{ framable: boolean; reason: string } | null>(null);
   useEffect(() => {
     registerRef(tab.id, {
@@ -60,8 +68,8 @@ export function RemoteBrowserTab({ tab, onUpdate, registerRef }: {
     </div>
     {!verdict ? <p className="p-6 text-stone-500">표시 확인 중…</p>
       : !verdict.framable ? <p className="p-6 text-stone-600">이 페이지는 앱 안에 표시할 수 없습니다. {verdict.reason}</p>
-      : <iframe key={`${url}:${revision}`} title="검색 페이지" src={url}
+      : <iframe ref={frame} key={`${url}:${revision}`} title="검색 페이지" src={frameURL}
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
-          className="flex-1 min-h-0 w-full border-0" onLoad={() => onUpdate(tab.id, { loading: false })} />}
+          className="flex-1 min-h-0 w-full border-0" onLoad={() => { syncLocale(); onUpdate(tab.id, { loading: false }); }} />}
   </div>;
 }

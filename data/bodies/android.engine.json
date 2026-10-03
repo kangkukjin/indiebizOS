@@ -41,6 +41,7 @@
     "base/quiescent_reload",
     "base/r2_client",
     "base/reload_gate",
+    "base/repair_live_probe",
     "base/repair_process",
     "base/repair_runtime",
     "base/repair_test_results",
@@ -543,8 +544,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 468,
-    "engine": 442,
+    "total": 469,
+    "engine": 443,
     "blocklist": 26
   }
 }

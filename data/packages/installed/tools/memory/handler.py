@@ -38,10 +38,44 @@ def _store(tool_input: dict) -> str:
     return "실행" if str(tool_input.get("store") or "").strip() == "실행" else "심층"
 
 
+def repair_safe_call(name, payload):
+    """수리 중 실행기억 회상은 정본 DB·문서 동기화 없이 스냅샷에서 읽는다."""
+    return name == "memory_op" and payload.get("op") == "recall" and _store(payload) == "실행"
+
+
+def _repair_recall(tool_input):
+    import tempfile
+    from pathlib import Path
+    import hippo_tree
+    # WAL을 포함한 일관된 스냅샷. 조회가 요구하는 옛 스키마 보완도 사본에서만 한다.
+    with tempfile.TemporaryDirectory(prefix="repair-recall-") as directory:
+        snapshot = str(Path(directory) / "examples.db")
+        source = sqlite3.connect(Path(hippo_tree._default_db_path()).resolve().as_uri() + "?mode=ro",
+                                 uri=True, timeout=10)
+        target = sqlite3.connect(snapshot, timeout=10)
+        try:
+            source.backup(target)
+        finally:
+            target.close()
+            source.close()
+        node = hippo_tree.norm_topic(tool_input.get("node") or "")
+        if node or tool_input.get("node"):
+            out = hippo_tree.recall(node, snapshot, expand=tool_input.get("expand"), synchronize=False)
+        else:
+            out = {"success": True, "node": "", "map": hippo_tree.map_text(snapshot),
+                   "nodes": hippo_tree.map_lines(snapshot), "items": hippo_tree.rows_of("", snapshot)}
+        out.update(store="실행", sync_deferred=True,
+                   source_note="수리 중에는 현재 실행기억 색인의 스냅샷을 읽으며 정본 문서·색인을 갱신하지 않습니다.")
+        return json.dumps(out, ensure_ascii=False)
+
+
 def _op_recall(tool_input: dict, context) -> str:
     """한 가지(node)를 연다 — 문서 소개 + 출처를 가진 기억 한 벌 + 하위 가지. node 없음 = 지도.
     store:"실행" 이면 실행기억(해마 용례) 주제 트리(backend hippo_tree)를 연다."""
     import memory_db, memory_tree
+    from repair_context import active
+    if active() and _store(tool_input) == "실행":
+        return _repair_recall(tool_input)
     if _store(tool_input) == "실행":
         import hippo_tree
         node = hippo_tree.norm_topic(tool_input.get("node") or "")

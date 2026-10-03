@@ -42,6 +42,7 @@
     "base/r2_client",
     "base/reload_gate",
     "base/repair_process",
+    "base/repair_runtime",
     "base/repeat_guard",
     "base/restart_protocol",
     "base/result_read_contract",
@@ -539,8 +540,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 464,
-    "engine": 438,
+    "total": 465,
+    "engine": 439,
     "blocklist": 26
   }
 }

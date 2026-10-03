@@ -99,12 +99,13 @@ def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
         for g in _GREP_LOG_GLOBS:
             cmd += ["--glob", g]
     # svg 는 텍스트라 rg 가 검색해버림 — 파이썬 경로의 SKIP_EXTS 와 의미 정렬(나머지는 바이너리 자동 스킵)
-    cmd += ["--glob", "!*.svg", "--regexp", pattern, root]
+    cwd = root if os.path.isdir(root) else os.path.dirname(os.path.abspath(root))
+    cmd += ["--glob", "!*.svg", "--regexp", pattern, "." if os.path.isdir(root) else os.path.basename(root)]
     rows, total_chars = [], 0
     search_done = hit_size_cap = False
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                text=True, encoding="utf-8", errors="replace")
+                                text=True, encoding="utf-8", errors="replace", cwd=cwd)
     except OSError:
         return None
     deadline = time.time() + _DEADLINE_S
@@ -124,7 +125,7 @@ def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
             if not fp:
                 continue  # 비-utf8 파일명(base64 통보)은 드묾 — 생략
             snippet = ((d.get("lines") or {}).get("text") or "").rstrip()
-            rows.append((os.path.abspath(fp), d.get("line_number") or 0, snippet))
+            rows.append((os.path.abspath(os.path.join(cwd, fp)), d.get("line_number") or 0, snippet))
             total_chars += min(len(snippet), max_line_chars)
             if len(rows) >= max_results or total_chars >= max_total_chars:
                 search_done = True
@@ -167,10 +168,11 @@ def _rg_count(pattern, root, file_pattern, use_regex, include_logs=False, ignore
     if not include_logs:
         for g in _GREP_LOG_GLOBS:
             cmd += ["--glob", g]
-    cmd += ["--glob", "!*.svg", "--regexp", pattern, root]
+    cwd = root if os.path.isdir(root) else os.path.dirname(os.path.abspath(root))
+    cmd += ["--glob", "!*.svg", "--regexp", pattern, "." if os.path.isdir(root) else os.path.basename(root)]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
-                              errors="replace", timeout=_DEADLINE_S)
+                              errors="replace", timeout=_DEADLINE_S, cwd=cwd)
     except (OSError, subprocess.TimeoutExpired):
         return None
     if proc.returncode == 2:  # 패턴 오류 등 — 폴백 (1=매칭 없음, 정상)
@@ -179,7 +181,7 @@ def _rg_count(pattern, root, file_pattern, use_regex, include_logs=False, ignore
     for line in (proc.stdout or "").splitlines():
         p, _, c = line.rpartition(":")
         if p and c.isdigit():
-            counts[os.path.abspath(p)] = int(c)
+            counts[os.path.abspath(os.path.join(cwd, p))] = int(c)
     return dict(sorted(counts.items()))
 
 
@@ -217,7 +219,7 @@ def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
             f for f in files
             if os.path.isfile(f)
             and os.path.splitext(f)[1].lower() not in _GREP_SKIP_EXTS
-            and not any(skip in f.split(os.sep) for skip in _GREP_SKIP_DIRS)
+            and not any(skip in os.path.relpath(f, root).split(os.sep) for skip in _GREP_SKIP_DIRS)
             and (include_logs or not _GREP_LOG_RE.search(os.path.basename(f)))
         ]
 

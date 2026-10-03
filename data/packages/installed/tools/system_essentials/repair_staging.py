@@ -260,6 +260,8 @@ def ensure_session(repo: str, key: str):
     """스테이징 세션 확보 — 없으면 worktree 를 만든다. 실패 시 None(호출자는 쓰기 거절)."""
     sess = load_session(repo, key)
     if sess and os.path.isdir(os.path.join(repo, sess["worktree"])):
+        from repair_runtime import prepare_dependencies
+        prepare_dependencies(repo, os.path.join(repo, sess["worktree"]))
         return sess
     # ★적용 예약(apply_scheduled) 세션에 같은 키의 쓰기가 이어지면 staging 으로 재개봉한다
     #   — 예약 스냅샷이 낡아지므로 수행자(red_apply)가 상태를 보고 그 예약을 취소한다.
@@ -302,12 +304,14 @@ def ensure_session(repo: str, key: str):
     #   돌아가게 하는 열쇠. 규칙은 red_report 한 곳에만 둔다(생산자·소비자 동형, 08-25).
     sess = {"key": key, "worktree": wt_rel, "status": "staging",
             "created_at": datetime.now().isoformat(), "owner": _repair_owner(), "files": {}}
-    for relative in (".venv", "frontend/node_modules"):
+    for relative in (".venv",):
         source, destination = os.path.join(repo, relative), os.path.join(wt_abs, relative)
         if (os.path.isdir(source) and not os.path.lexists(destination)
                 and _git(["check-ignore", "-q", relative], repo).returncode == 0):
             os.makedirs(os.path.dirname(destination), exist_ok=True)
             os.symlink(source, destination)  # 실제 쓰기는 OS 경계가 원본 경로에서 거절한다.
+    from repair_runtime import prepare_dependencies
+    prepare_dependencies(repo, wt_abs)
     _candidate.initialize(repo, sess)
     _save_session(repo, sess)
     print(f"[수리 스테이징] 격리 사본 개설: {wt_rel} — 라이브는 이 세션이 적용될 때까지 무변경")

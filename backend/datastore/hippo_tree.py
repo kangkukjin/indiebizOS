@@ -1169,15 +1169,17 @@ def _current_names(groups, db_path):
     return out
 
 
-def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = None) -> Dict[str, Any]:
+def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = None,
+           *, synchronize: bool = True) -> Dict[str, Any]:
     topic = norm_topic(topic)
-    sync_topic(topic, db_path)
+    if synchronize:
+        sync_topic(topic, db_path)
     path = doc_path(topic)
     if not os.path.exists(path) and topic not in all_topics(db_path):
         return {"success": False, "topic": topic,
                 "error": f"없는 가지: '{topic}' — 지도([self:memory]{{op:\"recall\", store:\"실행\"}} — node 생략)의 이름을 쓰거나 증류·move 로 가지를 만든다.",
                 "topics": [m["topic"] for m in map_lines(db_path) if m["topic"]]}
-    if not os.path.exists(path):
+    if synchronize and not os.path.exists(path):
         refresh_topic(topic, db_path)
     rows = rows_of(topic, db_path, kind="word")
     phrases = rows_of(topic, db_path, kind="phrase")
@@ -1196,7 +1198,7 @@ def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = No
             break
         ancestor = parent_of(ancestor)
     counts = topic_counts(db_path)
-    full = open(path, encoding="utf-8").read()
+    full = Path(path).read_text(encoding="utf-8") if os.path.exists(path) else ""
     exp = (expand or "").strip()
     if exp not in ("all", "전문", "주행") and not exp.startswith("#"):
         rows, phrases, inherited = _current_names([rows, phrases, inherited], db_path)

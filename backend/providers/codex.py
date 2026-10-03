@@ -96,6 +96,18 @@ def canonical_model_slug(value: str) -> str:
     return value  # 사용자 지정 ID는 카탈로그에 없다는 이유로 바꾸지 않는다.
 
 
+def parse_model_selector(value: str) -> tuple:
+    """실행과 능력 조회가 같은 Codex 모델·추론강도 선택자를 해석한다."""
+    raw = (value or "").strip()
+    if ":" not in raw:
+        return canonical_model_slug(raw), None
+    slug, _, effort = raw.rpartition(":")
+    effort = effort.strip().lower()
+    if effort not in CodexProvider.REASONING_EFFORTS:
+        return raw, None
+    return canonical_model_slug(slug.strip()), effort
+
+
 # 롤아웃 꼬리를 몇 바이트나 읽을지 — 마지막 token_count 는 파일 끝에서 1KB 안쪽에 있다
 # (실측 2026-08-31: 77MB 파일에서 EOF−787B). 256KB 면 여유가 크다.
 _ROLLOUT_TAIL_BYTES = 256 * 1024
@@ -504,17 +516,13 @@ class CodexProvider(CliSubprocessProvider):
         모르는 값을 그대로 흘리면 codex 가 통째로 거절해 턴이 죽는다.
         """
         raw = (self.model or "").strip()
-        if ":" not in raw:
-            return canonical_model_slug(raw), None
-        slug, _, effort = raw.rpartition(":")
-        slug, effort = slug.strip(), effort.strip().lower()
-        if effort not in self.REASONING_EFFORTS:
+        slug, effort = parse_model_selector(raw)
+        if ":" in raw and effort is None:
             self._log(
-                f"알 수 없는 추론강도 '{effort}' 무시 — 가능한 값: "
+                f"알 수 없는 추론강도 '{raw.rpartition(':')[2].strip().lower()}' 무시 — 가능한 값: "
                 f"{', '.join(self.REASONING_EFFORTS)} (모델 설정 '{raw}')"
             )
-            return raw, None
-        return canonical_model_slug(slug), effort
+        return slug, effort
 
     # ================= 명령 조립 =================
 

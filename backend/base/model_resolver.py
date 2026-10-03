@@ -703,6 +703,10 @@ def image_input_support(descriptor: dict) -> Optional[bool]:
     if isinstance(modalities, list):
         return "image" in modalities
     model = str(descriptor.get("model") or "").lower()
+    if provider in {"codex", "codex_cli", "codex-cli"}:
+        from providers.codex import parse_model_selector
+        model, _ = parse_model_selector(model)
+        model = model.lower()
     for entry in catalog.get("rules", []):
         if not isinstance(entry, dict):
             continue

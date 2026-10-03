@@ -6,12 +6,13 @@ import uuid
 from pathlib import Path
 
 SAFE = {"read_op", "read_file", "write_file", "edit_file", "list_directory", "make_directory",
-        "delete_path", "move_path", "copy_path", "run_command", "patch_op"}
-PATHS = {"path", "file_path", "target", "dir_path", "src", "source", "dest", "destination"}
+        "delete_path", "move_path", "copy_path", "run_command", "patch_op", "grep_files", "glob_files"}
+PATHS = {"path", "root_path", "file_path", "target", "dir_path", "src", "source", "dest", "destination"}
 
 
 def allowed(name, payload):
-    return name in SAFE and (name != "read_op" or payload.get("format", "text") == "text")
+    return (name in SAFE and (name != "read_op" or payload.get("format", "text") == "text")
+            and (name != "glob_files" or bool(payload.get("pattern"))))
 
 
 def prepare(self_module, name, payload, project):
@@ -34,6 +35,13 @@ def prepare(self_module, name, payload, project):
         raise PermissionError("취소된 수리입니다")
     wt, root = (Path(repo) / sess["worktree"]).resolve(), Path(repo).resolve()
     result = dict(payload)
+    if name in {"glob_files", "grep_files"}:
+        # 메타 색인은 정본을 가리키므로 사본의 실제 파일만 탐색한다.
+        pattern = payload.get("pattern" if name == "glob_files" else "file_pattern") or ""
+        if os.path.isabs(pattern) or ".." in Path(pattern).parts:
+            raise ValueError("수리 검색 패턴은 사본의 검색 루트 안에서만 사용합니다")
+        if not result.get("path") and not result.get("root_path"):
+            result["path"] = "."
     if name == "read_op":
         result["format"] = "text"
     if name == "patch_op":
@@ -77,7 +85,9 @@ def run_shell(handler, command, timeout):
         output = result.stdout + result.stderr
     except (subprocess.TimeoutExpired, PermissionError) as exc:
         result = subprocess.CompletedProcess(command, 124 if isinstance(exc, subprocess.TimeoutExpired) else 130, "", "")
-        output = str(exc)
+        chunks = [getattr(exc, "stdout", None), getattr(exc, "stderr", None), str(exc)]
+        output = "\n".join(c.decode("utf-8", "replace") if isinstance(c, bytes) else c
+                           for c in chunks if c)
     after = candidate.digest(candidate.collect(repo, sess))
     after_env = candidate.environment(wt)
     # 종료 코드와 내부 검사 결과는 별개다. skip·0건·실패를 초록으로 승격하지 않는다.

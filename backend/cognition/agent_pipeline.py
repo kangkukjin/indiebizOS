@@ -633,10 +633,21 @@ class CognitivePipelineMixin:
                 # success 는 결과 도착 시 확정된다 — 여기서는 미확정 표시로 True 를 둔다
                 # (결과가 끝내 안 오는 취소·중단 턴에서는 옛 동작 그대로).
                 # _t0 = 시간 선택압의 측정 이음매 — 결과 도착 시 elapsed_ms 로 환산·제거된다.
-                tool_calls_log.append({"tool_name": _name, "input": ev.get("input", {}),
+                # 기록은 실행층과 같은 요청을 담는다(2026-10-03, ep4278 추적): 모델 원입력은 edition 을
+                # 거의 싣지 않는데 실행층(system_tools)은 authoring_request 로 판본 2 를 기본값 삼아 돈다.
+                # 기록층이 원입력을 그대로 적으면 소비자(연상 사용 집계·관용구 귀속·증류 재사용)가
+                # 판본 1 로 파싱해 v2 코드를 전부 놓친다 — 정규화는 소비자마다가 아니라 이 한 자리.
+                _input = ev.get("input", {})
+                if _name == "execute_ibl" and isinstance(_input, dict):
+                    try:
+                        from ibl_edition import authoring_request
+                        _input = authoring_request(_input)
+                    except Exception:
+                        pass
+                tool_calls_log.append({"tool_name": _name, "input": _input,
                                        "success": True, "_t0": _time.monotonic()})
                 eval_tool_calls.append({"id": ev.get("id", ""), "name": _name,
-                                        "input": ev.get("input", {}),
+                                        "input": _input,
                                         "result": "", "is_error": False})
             elif et == "tool_result":
                 _rt = ev.get("result", "")

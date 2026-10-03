@@ -2,6 +2,7 @@
 from collections import deque
 from contextlib import contextmanager
 import hashlib
+import json
 import os
 from pathlib import Path
 import stat
@@ -62,8 +63,15 @@ def atomic_write_text(path, content):
         temp.unlink(missing_ok=True)
 
 
-def read_text_window(path, params, bounds, max_chars=1_000_000):
-    """전체 행수는 스트리밍 계수, 선택 범위만 보유. 전체 읽기는 표시 상한까지만 보유."""
+TEXT_PREVIEW_CHARS = 1_000_000
+
+
+def read_text_window(path, params, bounds, max_chars=TEXT_PREVIEW_CHARS):
+    """행 범위/텍스트 미리보기. max_chars=None은 구조 파싱용 완전한 원문이다.
+
+    구조화 자료의 처리량을 모델 표시량으로 자르지 않는다. 완전한 값은 기존
+    결과 저장·참조 경계가 보존하고, 모델 전달 경계에서만 미리보기를 제한한다.
+    """
     tail = params.get('tail')
     offset = params.get('offset') or 0
     limit = params.get('limit')
@@ -78,7 +86,7 @@ def read_text_window(path, params, bounds, max_chars=1_000_000):
                 selected.append(line)
             elif i >= offset and (limit is None or i < offset + limit):
                 text = f'{i + 1}\t{line}' if numbered else line
-                if ranged:
+                if ranged or max_chars is None:
                     selected.append(text)
                 else:
                     room = max(0, max_chars - chars)
@@ -91,6 +99,18 @@ def read_text_window(path, params, bounds, max_chars=1_000_000):
     if tail is not None and numbered:
         selected = [f'{n}\t{line}' for n, line in enumerate(selected, start + 1)]
     return ''.join(selected), total, start, end, ranged, truncated
+
+
+def structured_data(content, data_format, path):
+    """전체 원문만 받는다. 주인/회원 읽기가 같은 원천 검증과 구조를 쓴다."""
+    if data_format != 'json':
+        return delimited_data(content, '\t' if data_format == 'tsv' else ',')
+    from common.value_semantics import public_result
+    try:
+        public_result(content, strict=True)
+        return json.loads(content)
+    except ValueError as exc:
+        raise ValueError(f"{path}: JSON 원문 오류: {exc}") from exc
 
 
 def delimited_data(content, delimiter):

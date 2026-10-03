@@ -81,14 +81,14 @@ def read_document(params, command, exchange, workspace):
     lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
     start, end, ranged = ranges.text_read_bounds(p, len(lines))
     text = ''.join(lines[start:end])
+    # 구조화 전체 읽기는 표시 상한과 분리한다. 수신 바이트 예산은 _receive가 소유한다.
+    if p.get('blocks') and not ranged and fmt in ('json', 'csv', 'tsv') and (fmt != 'json' or text.strip()):
+        data = _sibling('essentials_file_io').structured_data(text, fmt, params['path'])
+        return {'success': True, 'text': text, 'blocks': [], 'structured_data': data,
+                'path': params['path']}
     if len(text) > 1000000:
         return {'success': True, 'text': text[:1000000], 'blocks': [], 'truncated': True,  # truncation-scope: source — 회원 문서의 안전캡
                 'total_lines': len(lines)}
-    if p.get('blocks') and not ranged and fmt in ('json', 'csv', 'tsv') and (fmt != 'json' or text.strip()):
-        data = (json.loads(text) if fmt == 'json' else
-                _sibling('essentials_file_io').delimited_data(text, '\t' if fmt == 'tsv' else ','))
-        return {'success': True, 'text': text, 'blocks': [], 'structured_data': data,
-                'path': params['path']}
     if p.get('blocks'):
         from doc_ir import markdown_to_blocks
         items = markdown_to_blocks(text)

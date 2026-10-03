@@ -797,24 +797,19 @@ def _execute(tool_input: dict, context) -> str:
             # 그대로 소비. docx·pdf 읽기의 자체 IR 방출과 같은 통화로 3경로 정렬.
             # 원문은 message 로도 보존. 어느 파일이든 쓰는 일반 표시 옵션.
             file_size = os.path.getsize(path)
-            content, total, start, end, ranged, truncated = _file_io.read_text_window(
-                path, tool_input, _text_read_bounds)
             data_format = (tool_input.get("format") or os.path.splitext(path)[1].lstrip(".")).lower()
+            structured = tool_input.get("blocks") and data_format in {"json", "csv", "tsv"}
+            content, total, start, end, ranged, truncated = _file_io.read_text_window(
+                path, tool_input, _text_read_bounds,
+                max_chars=None if structured else _file_io.TEXT_PREVIEW_CHARS)
             if tool_input.get("blocks") and data_format == "json" and not ranged and not truncated and content.strip():
-                try:
-                    # 원천의 중복 키·비유한 수를 출력 계약 위반으로 오진하지 않는다.
-                    # 값의 검증은 바깥 반환 경계와 같은 정본을 쓴다.
-                    from common.value_semantics import public_result
-                    public_result(content, strict=True)
-                    parsed = json.loads(content)
-                except ValueError as exc:
-                    raise ValueError(f"{path}: JSON 원문 오류: {exc}") from exc
+                parsed = _file_io.structured_data(content, data_format, path)
                 return json.dumps({"success": True, "text": content, "blocks": [],
                                    "structured_data": parsed, "path": path}, ensure_ascii=False,
                                   default=str)
             if tool_input.get("blocks") and data_format in {"csv", "tsv"} and not ranged and not truncated:
                 try:
-                    data = _file_io.delimited_data(content, "\t" if data_format == "tsv" else ",")
+                    data = _file_io.structured_data(content, data_format, path)
                 except ValueError as exc:
                     raise ValueError(f"{path}: {exc}") from exc
                 return json.dumps({"success": True, "text": content, "blocks": [],

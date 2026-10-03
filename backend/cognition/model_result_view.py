@@ -446,15 +446,26 @@ def _read_reference(ref, result):
             if len(paths) == 6:
                 break
     paths = paths[:6]
+    read_path = (prefix if result.get('edition') == 2 or isinstance(value, list)
+                 else paths[0]["path"] if paths else prefix)
+    # Only the explicit stored-function envelope declares items as its final
+    # return. Ordinary records retain their whole-value default and semantics.
+    function_items = (isinstance(value, dict) and value.get("_fn_result") is True
+                      and isinstance(value.get("items"), list))
+    if function_items:
+        read_path = prefix + ["items"]
     out = {
         **{k: ref[k] for k in ("id", "chars")},
         "max_limit": MAX_LIMIT,
         "paths": paths,
         "read_args": {"id": ref["id"], "offset": 0, "limit": DEFAULT_LIMIT,
-                      "path": prefix if result.get('edition') == 2 or isinstance(value, list)
-                      else paths[0]["path"] if paths else prefix},
+                      "path": read_path},
         "read": 'execute_ibl(code="", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요',
     }
+    if function_items:
+        out["read_hint"] = ("read_args는 함수의 최종 items 본문을 직접 엽니다. "
+                            "execution_ref는 중간 실행 진단용입니다. "
+                            "계산용 input_args는 전체 반환 값을 유지합니다.")
     masked = ref.get("masked_paths") or []
     if typed_value and _masked_selection(masked, _value_source(result, ["value"])):
         out["input_unavailable"] = _MASKED_INPUT

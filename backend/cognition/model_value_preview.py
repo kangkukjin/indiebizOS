@@ -24,6 +24,24 @@ def _shares(sizes, budget):
     return result
 
 
+def _fragmented_records(rows, budget):
+    """Prefer intact rows only when fair sharing would cut multiple text fields.
+
+    A candidate table with one long description keeps its broad overview and
+    short dates/IDs. A paragraph plus long source address needs an intact row.
+    """
+    if not rows or not all(isinstance(row, dict) for row in rows):
+        return False
+    shares = _shares([_size(row) for row in rows], max(0, budget - 2 * len(rows)))
+    for row, cap in zip(rows, shares):
+        overhead = 2 + sum(_size(key) + 4 for key in row)
+        fields = _shares([_size(v) for v in row.values()], max(0, cap - overhead))
+        if sum(isinstance(v, str) and _size(v) > limit
+               for v, limit in zip(row.values(), fields)) > 1:
+            return True
+    return False
+
+
 def preview_value(value, budget, ref_id, *, path=None):
     """Keep order and shape where possible, with bounded, actionable omissions.
 
@@ -63,6 +81,24 @@ def preview_value(value, budget, ref_id, *, path=None):
             note(where, "depth" if depth >= 12 else "budget", 0, len(item))
             return [] if isinstance(item, list) else {}
         if isinstance(item, list):
+            # Records are useful as complete units (including their source/ID).
+            # Sharing a small budget across many records turns every field into
+            # fragments and forces another model round just to read one row.
+            if _fragmented_records(item, cap):
+                used, count = 2, 0
+                for row in item:
+                    needed = _size(row) + (2 if count else 0)
+                    if used + needed > cap:
+                        break
+                    used += needed
+                    count += 1
+                if count:
+                    note(where, "list", count, len(item))
+                    return item[:count]
+                # A single oversized record still has an actionable preview.
+                if len(item) > 1:
+                    note(where, "list", 1, len(item))
+                return [visit(item[0], cap - 2, where + [0], depth + 1)]
             # A bounded prefix prevents enormous arrays of empty row placeholders.
             count = min(len(item), max(1, cap // 96))
             if count < len(item):

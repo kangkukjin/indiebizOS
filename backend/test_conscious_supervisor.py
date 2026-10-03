@@ -508,17 +508,65 @@ def test_progress_after_review_before_delivery_retires_old_instruction(superviso
     assert supervisor.pending is None
 
 
-def test_long_progressing_work_gets_bounded_cost_review(supervisor, monkeypatch):
+@pytest.mark.parametrize("elapsed", [500, 1800, 7200])
+@pytest.mark.parametrize("state", ["progressing", "drafting", "single_failure"])
+def test_elapsed_time_alone_never_starts_review(supervisor, monkeypatch, elapsed, state):
     seen = []
     monkeypatch.setattr("supervisor_runtime.invoke", lambda *a, **kw: (seen.append(kw) or '{"status":"CONTINUE","reason":"독립 처리 병렬 실행 중"}'))
+    # 이전 설치의 설정이 남아 있어도 정상 실행/답변 작성을 주기적으로 검토하지 않는다.
+    supervisor.config["long_task_s"] = 480
     key = supervisor._start("inspect", {})
-    supervisor._finish(key, "progress")
-    now = supervisor.started + 500
-    supervisor.last_progress = now - 10
+    supervisor._finish(key, "progress" if state != "single_failure" else "failed",
+                       error=state == "single_failure")
+    now = supervisor.started + elapsed
+    if state == "progressing":
+        supervisor.last_progress = now - 10
+        key = supervisor._start("inspect", {"target": "next source"})
+        supervisor.active[key]["started"] = now - 10
     supervisor.tick(now)
-    assert supervisor.reviews == 1
+    assert supervisor.reviews == 0
     supervisor.tick(now + 1)
-    assert len(seen) == 1
+    assert not seen
+
+
+@pytest.mark.parametrize("failure", [False, True])
+def test_failure_and_repeat_still_start_review_before_eight_minutes(supervisor, monkeypatch, failure):
+    seen = []
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, prompt, **kw:
+                        seen.append(json.loads(prompt)["trigger"]) or verdict(c, "CONTINUE"))
+    for _ in range(2 if failure else 3):
+        key = supervisor._start("inspect", {"target": "same"})
+        supervisor._finish(key, "same result", error=failure)
+    supervisor.tick(supervisor.started + 10)
+    assert seen == ["repeated_failure" if failure else "unchanged_repeat"]
+    assert supervisor.reviews == 1
+
+
+@pytest.mark.parametrize("failure", [False, True])
+def test_background_failure_and_stall_still_start_review(supervisor, monkeypatch, tmp_path, failure):
+    seen = []
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, prompt, **kw:
+                        seen.append(json.loads(prompt)["trigger"]) or verdict(c, "CONTINUE"))
+    path = tmp_path / "render.log"
+    path.write_text('PROGRESS {"phase":"generate","completed":1,"total":10}\n')
+    job = JobWatch(path, now=supervisor.started)
+    job.poll(supervisor.started)
+    supervisor.jobs[str(path)] = job
+    if failure:
+        (tmp_path / "jobs").mkdir()
+        (tmp_path / "jobs/render.json").write_text('{"status":"failed"}')
+    supervisor.tick(supervisor.started + (10 if failure else 181))
+    assert seen == ["job_failed" if failure else "job_stalled"]
+
+
+def test_explicit_milestone_still_requests_review(supervisor, monkeypatch):
+    seen = []
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, prompt, **kw:
+                        seen.append((json.loads(prompt)["trigger"], c.executor_paused))
+                        or verdict(c, "CONTINUE"))
+    result = {"supervision_checkpoint": {"reason": "검토가 필요한 중간 산출물"}}
+    assert supervisor.run_tool("inspect", {}, lambda: result) == result
+    assert seen == [("milestone", True)]
 
 
 def test_manager_state_is_delta_and_cannot_consume_job_progress(supervisor, tmp_path):

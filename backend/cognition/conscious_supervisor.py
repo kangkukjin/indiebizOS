@@ -13,7 +13,7 @@ from supervision_store import TurnStore, digest
 from supervision_watch import JobWatch
 
 DEFAULTS = {"enabled": True, "max_reviews": 2, "review_interval_s": 240,
-            "stall_s": 180, "long_task_s": 480, "tick_s": 5,
+            "stall_s": 180, "tick_s": 5,
             "call_timeout_s": 180, "max_tools_per_call": 10, "max_tools_total": 40,
             "final_tool_reserve": 12, "max_repairs": 1,
             "max_input_tokens": 300000, "max_output_tokens": 16000,
@@ -619,10 +619,9 @@ class Supervisor:
             active_since = min((call["started"] for call in self.active.values()), default=now)
             if self.active and now - max(self.last_progress, active_since) >= self.config["stall_s"]:
                 self.trigger = self.trigger or "tool_stalled"
-            waiting_on_job = any(j.phase != "complete" for j in self.jobs.values())
-            if (now - self.last_review >= self.config["long_task_s"] and self.recent
-                    and (not waiting_on_job or self.active)):
-                self.trigger = self.trigger or "long_task_checkpoint"
+            # 경과 시간만으로는 개입할 근거가 없다. 정상 진행·모델의 답변 작성은
+            # 그대로 두고 실패·반복·실행 중 정체 또는 명시적 이정표만 검토한다.
+            # 구 설정의 long_task_s가 남아 있어도 시간 기반 감독은 재활성화하지 않는다.
             trigger = self.trigger
         if trigger:
             self.review(trigger)

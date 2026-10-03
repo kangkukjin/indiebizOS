@@ -898,6 +898,10 @@ def _execute_tool_with_cancel(tool_name, tool_input, project_path, agent_id, can
     return result_holder[0]
 
 
+from repair_execution_scope import scoped as repair_scoped
+
+
+@repair_scoped
 def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, agent_id: str = None, cancel_check=None) -> str:
     """도구 실행 내부 구현 (시스템 도구 + 동적 로딩). project_path는 필수."""
     # 호출 통로 기록 (action_health.channel) — 에이전트 도구 루프. set-if-unset:
@@ -938,10 +942,6 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
         if tool_name == "execute_ibl":
             from ibl_edition import authoring_request
             return _execute_ibl_unified(authoring_request(tool_input), project_path, agent_id, cancel_check=cancel_check)
-
-        from repair_context import active as repair_active, guard_tool
-        if repair_active():
-            guard_tool(load_tool_handler(tool_name), tool_name, tool_input)
 
         # 시스템 도구 처리
         if tool_name == "call_agent":

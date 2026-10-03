@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: repair-capability-denial
+    retired: 2026-10-03
+    reason: 수리 사본의 목적은 실행 중 코드와 수정 대상의 분리이며 일반 능력 제한이 아니다.
+    instead: 모델·인증·외부 네트워크는 이어 쓰고 파일·등록/임시 스크립트는 사본을 대상으로 한다. 적용·재시작은 기존 제어자가 소유한다.
+    phrases: ['이 도구의 자기수리 격리는 미지원입니다', '이 실행 경로는 자기수리 격리를 지원하지 않습니다', '자기수리 임시 Python은 격리 셸에서 실행하세요', '등록 스크립트·임시 Python·그 밖의 패키지 직접 실행은 이 경로에서 지원하지 않는다']
   - id: repair-mandatory-registered-test
     retired: 2026-10-03
     reason: 수리 격리에서 지원하지 않는 등록 스크립트·기억 호출을 필수 절차로 지시했다.

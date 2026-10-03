@@ -83,7 +83,8 @@ def test_pointed_count_and_repair_doctrine():
     from ibl_usage_rag import _pointed_count
     assert _pointed_count([{"pointed": 2}, {"pointed": "1"}, {"x": 1}, None]) == 3
     doc = (Path(__file__).resolve().parent.parent / "data" / "common_prompts" / "fragments" / "13_repair.md").read_text(encoding="utf-8")
-    assert "한 파일 한 통로" in doc
+    assert "같은 사본을 사용한다" in doc
+    assert "정본 반영·활성 확인·커밋은 기존 적용 서비스" in doc
 
 
 if __name__ == "__main__":

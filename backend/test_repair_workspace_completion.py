@@ -263,18 +263,23 @@ def test_execution_evidence_rejects_missing_or_stale_results(setup, monkeypatch,
     assert st.read_session(str(root), 'task')['execution_checks'][-1]['id'] == result['verification']['id']
 
 
-def test_unisolated_routes_are_refused_before_execution(monkeypatch):
+def test_repair_api_route_and_session_keep_ordinary_permissions(monkeypatch):
     import repair_context
     import ibl_routing
     import ibl_script_session
+    import api_engine
+    import ibl_registry
     monkeypatch.setattr(repair_context, 'active', lambda: {'task_id': 'repair'})
-    calls = [lambda: ibl_routing._route_api_engine('anything', {}, '.'),
-             lambda: ibl_routing._route_system('install_lib', {}, '.'),
-             lambda: ibl_routing._route_driver('sqlite', 'self', 'anything', {}, '.'),
-             ibl_script_session.authorize]
-    for call in calls:
-        with pytest.raises(PermissionError, match='격리'):
-            call()
+    monkeypatch.setattr(ibl_registry, 'is_registry_tool', lambda name: True)
+    monkeypatch.setattr(api_engine, 'execute_tool', lambda name, args, path: {'items': [{'value': 7}]})
+    assert ibl_routing._route_api_engine('fixture', {}, '.', 'fixture')['items'][0]['value'] == 7
+    monkeypatch.setattr('principal.is_owner', lambda: True)
+    monkeypatch.setattr('thread_context.get_allowed_nodes', lambda: None)
+    ibl_script_session.authorize()
+    monkeypatch.setattr('principal.is_owner', lambda: False)
+    from ibl_v2_ir import Fault
+    with pytest.raises(Fault, match='주인'):
+        ibl_script_session.authorize()
 
 
 def test_commit_keeps_preexisting_dirty_hunk_in_same_file(setup):

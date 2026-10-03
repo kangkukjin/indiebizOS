@@ -166,6 +166,12 @@ class ToolContext:
         except Exception:
             project_id = agent_id = task_id = None
 
+        from thread_context import get_repair_workspace
+        from runtime_utils import get_base_path
+        # 수리 상태/적용 도구는 정본 원장만 읽는다. 작업 사본을 요구하지 않는다.
+        workspace = get_repair_workspace() if tool_name != "patch_op" else None
+        if workspace and project_path and os.path.realpath(project_path) == os.path.realpath(get_base_path()):
+            project_path = workspace
         return cls(
             project_path=project_path,
             tool_name=tool_name,

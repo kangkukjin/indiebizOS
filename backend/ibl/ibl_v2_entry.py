@@ -3,6 +3,10 @@ from ibl_v2_ir import Fault, projection
 from ibl_v2_parser import edition_of
 
 
+from repair_execution_scope import scoped as repair_scoped
+
+
+@repair_scoped
 def handle_request(request, project_path=".", agent_id=None, cancel_check=None, *, input_evidence=None):
     from script_workspace import request_scope
     from ibl_run_journal import journal_root, recorded_file_scope

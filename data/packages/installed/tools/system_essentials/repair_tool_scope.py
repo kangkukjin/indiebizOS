@@ -5,19 +5,16 @@ import re
 import uuid
 from pathlib import Path
 
-SAFE = {"read_op", "read_file", "write_file", "edit_file", "list_directory", "make_directory",
+FILE_TOOLS = {"read_op", "read_file", "write_file", "edit_file", "list_directory", "make_directory",
         "delete_path", "move_path", "copy_path", "run_command", "patch_op", "grep_files", "glob_files"}
-PATHS = {"path", "root_path", "file_path", "target", "dir_path", "src", "source", "dest", "destination"}
-
-
-def allowed(name, payload):
-    return (name in SAFE and (name != "read_op" or payload.get("format", "text") == "text")
-            and (name != "glob_files" or bool(payload.get("pattern"))))
+PATHS = {"path", "root_path", "file_path", "target", "dir_path", "src", "source", "dest", "destination", "args_file"}
 
 
 def prepare(self_module, name, payload, project):
-    if not allowed(name, payload):
-        raise PermissionError("수리 격리가 지원되지 않는 도구입니다. 사본 파일 도구 또는 격리 셸을 사용하세요")
+    if name == "body_op" and payload.get("op") == "commit":
+        raise PermissionError("수리 델타의 각인은 self:patch apply 이후 적용 서비스가 수행합니다")
+    if name not in FILE_TOOLS and name != "script_op":
+        return dict(payload), project
     st, repo, key = self_module._staging_mod(), str(self_module._REPO_ROOT), self_module._staging_key()
     from repair_context import activation_only
     if activation_only():
@@ -42,8 +39,6 @@ def prepare(self_module, name, payload, project):
             raise ValueError("수리 검색 패턴은 사본의 검색 루트 안에서만 사용합니다")
         if not result.get("path") and not result.get("root_path"):
             result["path"] = "."
-    if name == "read_op":
-        result["format"] = "text"
     if name == "patch_op":
         return result, str(root)  # 적용자는 정본을 소유. 일반 파일 도구와 구별한다.
     from runtime_utils import expand_body_path
@@ -60,7 +55,13 @@ def prepare(self_module, name, payload, project):
                 raise PermissionError("수리 파일 도구는 같은 사본만 읽고 씁니다. 외부 의존성은 격리 셸로 읽으세요")
         else:
             rel = path.as_posix()
-        result[field] = str(st._candidate.target(wt, rel))
+        from script_workspace import current_scope, workspace, prepare_path
+        candidate = (wt / rel).resolve()
+        if current_scope() and candidate.is_relative_to(workspace().resolve()):
+            prepare_path(candidate)
+            result[field] = str(candidate)
+        else:
+            result[field] = str(st._candidate.target(wt, rel))
     return result, str(wt)
 
 

@@ -667,10 +667,6 @@ _file_views = _fs_find.file_views
 _ENVELOPED_FAILURE_TOOLS = ("copy_path", "move_path", "delete_path")
 
 
-def repair_safe_call(name, payload):
-    return _load_sibling("repair_tool_scope").allowed(name, payload)
-
-
 def execute(tool_input: dict, context) -> str:
     try:
         if _red_grant_active() and context.tool_name != "patch_op":

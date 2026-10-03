@@ -46,7 +46,8 @@ def expand_body_path(raw) -> str:
         return expand(s)
     if s == WORKSPACE_TOKEN or s.startswith(WORKSPACE_TOKEN + "/") or s.startswith(WORKSPACE_TOKEN + "\\"):
         rest = s[len(WORKSPACE_TOKEN):].lstrip("/\\")
-        base = get_base_path()
+        from thread_context import get_repair_workspace
+        base = Path(get_repair_workspace() or get_base_path())
         return str(base / rest) if rest else str(base)
     return os.path.expanduser(s)  # path-ok: 단일 해소점 자신
 

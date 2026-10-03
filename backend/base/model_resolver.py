@@ -95,7 +95,7 @@ _DEFAULT_TIER = "고급"      # preset 에 축이 없을 때 → 고급(품질 �
 
 
 def _data_path():
-    return get_base_path() / "data"
+    return Path(os.environ.get("INDIEBIZ_MODEL_CONFIG_ROOT") or get_base_path()) / "data"
 
 
 # AI 티어 설정 파일 경로 정본 — api_config 에서 이동 (2026-08-05 감사 ⑦).

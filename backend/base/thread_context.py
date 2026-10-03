@@ -661,3 +661,23 @@ def get_context_summary() -> dict:
         "allowed_nodes": get_allowed_nodes(),
         "user_input": get_user_input()
     }
+
+
+def get_repair_workspace(*, resolve=True, create=True):
+    """현재 호출의 수리 사본. snapshot/restore가 병렬 도구에도 함께 전달한다."""
+    workspace = getattr(_thread_local, 'repair_workspace', None)
+    if resolve and callable(workspace):
+        workspace = workspace(create=create)
+        if workspace is not None:
+            _thread_local.repair_workspace = workspace
+    return workspace
+
+
+@contextmanager
+def repair_workspace_scope(path):
+    previous = get_repair_workspace(resolve=False)
+    _thread_local.repair_workspace = path
+    try:
+        yield
+    finally:
+        _thread_local.repair_workspace = previous

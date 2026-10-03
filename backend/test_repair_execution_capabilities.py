@@ -48,7 +48,6 @@ def test_image_support_does_not_strip_other_provider_ids_or_unknown_effort(monke
 ])
 def test_repair_search_reads_candidate_not_live(setup, monkeypatch, name, payload):
     from test_repair_staging import _load_handler
-    from repair_context import guard_tool
     root, wt, st, sess = setup
     (wt / "a.txt").write_text("candidate only")
     handler = _load_handler()
@@ -58,7 +57,6 @@ def test_repair_search_reads_candidate_not_live(setup, monkeypatch, name, payloa
     monkeypatch.setattr(handler, "_staging_mod", lambda: st)
     monkeypatch.setattr(handler, "_staging_key", lambda: "task")
     context = SimpleNamespace(tool_name=name, project_path=str(root), agent_id="owner")
-    guard_tool(handler, name, payload)
     result = json.loads(handler.execute(payload, context))
     assert result.get("success", True), result
     assert result["items"]
@@ -91,13 +89,11 @@ def test_repair_recall_keeps_live_schema_and_documents_unchanged(env, tmp_path, 
     monkeypatch.setattr("repair_context.active", lambda: True)
     monkeypatch.setattr(ht, "sync_all", lambda *a: pytest.fail("live sync"))
     monkeypatch.setattr(ht, "sync_topic", lambda *a: pytest.fail("live sync"))
-    assert handler.repair_safe_call("memory_op", payload)
     result = json.loads(handler.execute(payload, SimpleNamespace(tool_name="memory_op")))
     assert result["success"] and result["sync_deferred"], result
     assert "개발" in json.dumps(result, ensure_ascii=False)
     assert Path(db).read_bytes() == original
     assert not Path(ht.DOC_DIR).exists()
-    assert not handler.repair_safe_call("memory_op", {"op": "move", "store": "실행"})
 
 
 def test_dependency_cache_writable_while_shared_package_is_protected(setup):

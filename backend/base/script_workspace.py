@@ -40,7 +40,9 @@ def request_scope(project, agent=None, resume=None, stored_scope=None):
 
 def storage_root():
     from runtime_utils import get_base_path
-    return get_base_path() / 'data' / 'script_runs' / 'transient'
+    from thread_context import get_repair_workspace
+    root = Path(get_repair_workspace() or get_base_path())
+    return root / 'data' / 'script_runs' / 'transient'
 
 
 def current_scope():

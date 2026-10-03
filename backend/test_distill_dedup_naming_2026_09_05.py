@@ -96,13 +96,13 @@ def test_n1_name_shape_rule_is_now_a_gate_not_prose():
     assert register_idiom._gates("제안적용하기", "제안을 적용해야 할 때", good)[1] is None
 
 
-def test_r1_repair_fragment_uses_supported_isolated_tools_and_checks():
+def test_r1_repair_fragment_preserves_capabilities_and_check_receipts():
     frag = open(os.path.join(os.path.dirname(BACKEND), "data", "common_prompts", "fragments", "13_repair.md"), encoding="utf-8").read()
-    assert "격리 사본" in frag and "격리 셸" in frag
+    assert "수리 사본은 작업 대상" in frag and "격리 셸" in frag
     assert "verification_plan" in frag and "pytest" in frag and "node --test" in frag
     assert 'method:"semantic"' in frag
-    assert '[self:script]{op: "list"}' not in frag
-    assert '[self:memory]{op: "recall"' not in frag
+    assert "등록/임시 스크립트" in frag and "평소 권한" in frag
+    assert "정본 반영·활성 확인·커밋은 기존 적용 서비스" in frag
 
 
 if __name__ == "__main__":

@@ -38,11 +38,6 @@ def _store(tool_input: dict) -> str:
     return "실행" if str(tool_input.get("store") or "").strip() == "실행" else "심층"
 
 
-def repair_safe_call(name, payload):
-    """수리 중 실행기억 회상은 정본 DB·문서 동기화 없이 스냅샷에서 읽는다."""
-    return name == "memory_op" and payload.get("op") == "recall" and _store(payload) == "실행"
-
-
 def _repair_recall(tool_input):
     import tempfile
     from pathlib import Path

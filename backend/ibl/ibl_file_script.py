@@ -32,9 +32,6 @@ def invocation_identity(args):
 
 
 def invoke(runtime, args, config, node, action):
-    from repair_context import active
-    if active():
-        raise Fault('LOCAL_CODE_PERMISSION', '자기수리 임시 Python은 격리 셸에서 실행하세요.', kind='permission')
     from member_profile import gate
     from device_registry import required_capability, local_capabilities
     from script_workspace import authorize, source_path, workspace

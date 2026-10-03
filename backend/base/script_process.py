@@ -40,6 +40,11 @@ def run_process(argv, stdin, *, cwd, env, timeout, check=None,
 Files avoid pipe deadlocks and unbounded in-memory diagnostics. Even a host
 exception waits for child termination before returning to its receipt owner.
 """
+    from thread_context import get_repair_workspace
+    workspace = get_repair_workspace()
+    if workspace and not (env or {}).get("INDIEBIZ_REPAIR_CHILD"):
+        from repair_process import prepare
+        argv, env = prepare(argv, workspace, env=env)
     from contextlib import ExitStack
     with ExitStack() as stack:
         inp = stack.enter_context(tempfile.TemporaryFile())

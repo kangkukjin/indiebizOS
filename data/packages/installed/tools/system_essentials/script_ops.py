@@ -61,6 +61,13 @@ _STDERR_TAIL = 2000
 _DEFAULT_TIMEOUT = 300
 
 
+def _path(name):
+    from thread_context import get_repair_workspace
+    root = get_repair_workspace()
+    original = globals()[name]
+    return Path(root) / original.relative_to(_ROOT) if root else original
+
+
 def _review_environment():
     """등록 스크립트에 턴의 비공개 검수 작업대를 전달한다(스크립트 이름과 무관한 계약)."""
     from supervision_bus import current
@@ -124,7 +131,7 @@ def _args_from_file(path_str):
     """
     p = Path(expand_body_path(str(path_str)))
     if not p.is_absolute():
-        p = (_ROOT / p)
+        p = (_path("_ROOT") / p)
     if not p.is_file():
         return None, (f"args_file 을 찾지 못했습니다: {p} — 실존 파일 경로를 주세요"
                       "(상대경로는 저장소 루트 기준).")
@@ -235,26 +242,26 @@ def _atomic_write(path, text):
 
 def _read_registry():
     try:
-        d = yaml.safe_load(_REGISTRY.read_text(encoding="utf-8"))
+        d = yaml.safe_load(_path("_REGISTRY").read_text(encoding="utf-8"))
         return d if isinstance(d, dict) else {}
     except (OSError, ValueError, yaml.YAMLError):
         return {}
 
 
 def _write_registry(d):
-    _atomic_write(_REGISTRY, yaml.safe_dump(d, allow_unicode=True, sort_keys=True))
+    _atomic_write(_path("_REGISTRY"), yaml.safe_dump(d, allow_unicode=True, sort_keys=True))
 
 
 def _read_state():
     try:
-        d = json.loads(_STATE.read_text(encoding="utf-8"))
+        d = json.loads(_path("_STATE").read_text(encoding="utf-8"))
         return d if isinstance(d, dict) else {}
     except (OSError, ValueError):
         return {}
 
 
 def _write_state(d):
-    _atomic_write(_STATE, json.dumps(d, ensure_ascii=False, indent=1))
+    _atomic_write(_path("_STATE"), json.dumps(d, ensure_ascii=False, indent=1))
 
 
 def _update_state(sid, **values):
@@ -266,7 +273,7 @@ def _update_state(sid, **values):
 
 def _script_path(entry):
     """registry 의 file(이름)을 실경로로. 저장소 상대라 어느 기기에서나 푼다."""
-    return _SCRIPT_DIR / str(entry.get("file") or "")
+    return _path("_SCRIPT_DIR") / str(entry.get("file") or "")
 
 
 def _rel_to_root(raw):
@@ -275,7 +282,7 @@ def _rel_to_root(raw):
     ★resolve() 를 쓰지 않는다 — .venv/bin/python3 은 homebrew 로 가는 심볼릭 링크라
       따라가면 저장소 밖이 되어 접히지 않는다(접어야 하는 바로 그 대상이다)."""
     try:
-        return Path(raw).relative_to(_ROOT).as_posix()
+        return Path(raw).relative_to(_path("_ROOT")).as_posix()
     except ValueError:
         return str(raw)
 
@@ -311,7 +318,7 @@ def _resolve_interpreter(raw, suffix=None):
     if "/" in s or "\\" in s:                      # 경로가 박힌 값
         p = Path(s)
         if not p.is_absolute():
-            p = _ROOT / s                          # 저장소 상대
+            p = _path("_ROOT") / s                          # 저장소 상대
         if p.is_file():
             return str(p), None
         note = (f"원장에 박힌 인터프리터 경로({s})가 이 몸에 없어 역할로 해소했습니다 — "
@@ -344,7 +351,7 @@ def _resolve_path(tool_input, raw):
         # 등록 스크립트의 정본 루트에서 먼저 해소한다.
         parts = p.parts
         if len(parts) >= 2 and parts[:2] == ("data", "scripts"):
-            p = _ROOT / p
+            p = _path("_ROOT") / p
         else:
             p = Path(tool_input.get("_project_path") or ".") / p
     return p.resolve()
@@ -404,7 +411,7 @@ def op_register(tool_input):
     # 본문은 data/scripts/ 에만 산다 — 여기 있어야 버전 관리되고 다른 기기에서도 돈다.
     # (옛날엔 outputs/ 아래라 .gitignore 에 걸려 백업조차 없었다.)
     try:
-        rel = p.relative_to(_SCRIPT_DIR).as_posix()
+        rel = p.relative_to(_path("_SCRIPT_DIR")).as_posix()
     except ValueError:
         return {"success": False,
                 "error": f"등록 스크립트는 data/scripts/ 안에 있어야 합니다 (지금: {p}).",
@@ -525,8 +532,8 @@ def op_run(tool_input):
     except (TypeError, ValueError):
         timeout = _DEFAULT_TIMEOUT
 
-    _RUN_DIR.mkdir(parents=True, exist_ok=True)
-    log_path = _RUN_DIR / f"{sid}-{uuid.uuid4().hex}.log"
+    _path("_RUN_DIR").mkdir(parents=True, exist_ok=True)
+    log_path = _path("_RUN_DIR") / f"{sid}-{uuid.uuid4().hex}.log"
     interp, interp_note = _resolve_interpreter(entry.get("interpreter"), p.suffix)
     if tool_input.get("background"):
         job = _run_background(sid, entry, p, stdin_data, timeout, interp, interp_note)
@@ -652,10 +659,10 @@ def _progress_tail(log_path, n=_PROGRESS_LINES):
 
 def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp_note=None):
     """별도 프로세스로 실행 — 즉시 job_id 반환. 상태는 data/script_runs/jobs/<job_id>.json."""
-    _JOB_DIR.mkdir(parents=True, exist_ok=True)
+    _path("_JOB_DIR").mkdir(parents=True, exist_ok=True)
     job_id = f"{sid}-{time.strftime('%Y%m%d_%H%M%S')}-{uuid.uuid4().hex}"
-    job_path = _JOB_DIR / f"{job_id}.json"
-    log_path = _RUN_DIR / f"{job_id}.log"
+    job_path = _path("_JOB_DIR") / f"{job_id}.json"
+    log_path = _path("_RUN_DIR") / f"{job_id}.log"
     job = {"job_id": job_id, "id": sid, "status": "starting", "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
            "created_epoch": time.time(), "timeout": timeout, "log": str(log_path), "interpreter": interp,
            "script": str(script_path), "stdin": stdin_data}
@@ -663,11 +670,17 @@ def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp
     # 러너는 부모(백엔드)의 죽음·리로드를 넘어 살아야 한다 — 분리 방식은 OS 마다 다르므로
     # 공용 spawn_detached 에 맡긴다(유닉스=새 세션 / 윈도우=DETACHED_PROCESS, 세션 개념 없음).
     try:
+        command = [sys.executable or "python3", str(_BG_RUNNER), str(job_path)]
+        environment = _child_env("background")
+        from thread_context import get_repair_workspace
+        if get_repair_workspace():
+            from repair_process import prepare
+            command, environment = prepare(command, get_repair_workspace(), env=environment)
         runner = platform_utils.spawn_detached(
-            [sys.executable or "python3", str(_BG_RUNNER), str(job_path)],
+            command,
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             cwd=str(script_path.parent),
-            env=_child_env("background"),
+            env=environment,
         )
     except OSError as e:
         job["status"] = "failed"; job["error"] = f"러너 기동 실패: {e}"
@@ -682,7 +695,7 @@ def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp
 
 def op_status(tool_input):
     """작업 상태 — job_id(하나) 또는 id(그 스크립트의 최근 작업들) 또는 전체. wait(초, ≤240)=끝날 때까지 유한 대기."""
-    _JOB_DIR.mkdir(parents=True, exist_ok=True)
+    _path("_JOB_DIR").mkdir(parents=True, exist_ok=True)
     job_id = str(tool_input.get("job_id") or "").strip()
     sid = _sanitize_id(tool_input.get("id") or "") if tool_input.get("id") else ""
     try:
@@ -696,7 +709,7 @@ def op_status(tool_input):
 
     def _collect():
         rows = []
-        for jp in sorted(_JOB_DIR.glob("*.json"), reverse=True):
+        for jp in sorted(_path("_JOB_DIR").glob("*.json"), reverse=True):
             j = _read_job(jp)
             if not j:
                 continue

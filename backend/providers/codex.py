@@ -552,10 +552,10 @@ class CodexProvider(CliSubprocessProvider):
             if repair_active():
                 head += (
                     "\n현재는 승인된 자기수리다. 네이티브 셸은 읽기 전용이다. "
-                    "파일 읽기·수정은 execute_ibl의 self:read(format:text)/write/edit로, "
+                    "파일 읽기·수정은 execute_ibl의 self:read/write/edit로, "
                     "검색·빌드·테스트는 mcp__indiebizos__run_command로 같은 사본에서 실행한다. "
-                    "이 run_command가 검증 증거를 남긴다. 격리 미지원 도구를 반복하거나 "
-                    "네이티브 셸로 검증을 대신하지 말고 지원된 사본 도구를 사용한다.\n"
+                    "이 run_command가 검증 증거를 남긴다. 모델·검색·네트워크와 IBL 도구는 평소 권한으로 사용한다. "
+                    "등록·임시 스크립트도 사본에서 실행한다. 검사는 영수증을 남기는 run_command를 사용한다.\n"
                 )
         if not head.strip():
             return body

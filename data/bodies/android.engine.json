@@ -295,6 +295,7 @@
     "ibl/member_profile",
     "ibl/package_manager",
     "ibl/pipeline_state",
+    "ibl/repair_execution_scope",
     "ibl/tool_context",
     "ibl/tool_loader",
     "ibl/tool_selector",
@@ -544,8 +545,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 469,
-    "engine": 443,
+    "total": 470,
+    "engine": 444,
     "blocklist": 26
   }
 }

@@ -14,7 +14,8 @@ def registration(args):
     from runtime_utils import get_base_path
     if args.get('op', 'run' if args.get('id') else 'list') != 'run':
         return None
-    root = get_base_path() / 'data/scripts'
+    from thread_context import get_repair_workspace
+    root = Path(get_repair_workspace() or get_base_path()) / 'data/scripts'
     registry_path = root / 'registry.yaml'
     registry = yaml.safe_load(registry_path.read_text()) if registry_path.exists() else {}
     registry = registry or {}
@@ -40,8 +41,6 @@ def is_stateful(args):
 
 
 def authorize():
-    from repair_context import guard_route
-    guard_route()
     import principal
     from thread_context import get_allowed_nodes
     if not principal.is_owner() or get_allowed_nodes() is not None:
@@ -63,6 +62,8 @@ def invoke(runtime, args, registration, project_path, agent_id, config, node, ac
     if required and required not in local_capabilities():
         raise Fault('SCRIPT_CAPABILITY', '이 몸은 등록 세션 스크립트를 로컬에서 실행할 수 없습니다. 원격 전송하지 않았습니다.', kind='protocol')
     sid, entry, path = registration
+    from thread_context import get_repair_workspace
+    project_path = get_repair_workspace() or project_path
     if args.get('background') or args.get('args_file') or args.get('target'):
         raise Fault('SCRIPT_CAPABILITY', '세션 스크립트는 현재 로컬 IBL의 동기 실행과 명시 args를 사용합니다.', kind='protocol')
     from common.value_semantics import compare_order, order_matches

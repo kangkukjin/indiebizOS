@@ -48,7 +48,13 @@ class Session:
         self.lease.__enter__()
         worker = self.script_path
         try:
-            self.proc = subprocess.Popen([interpreter, '-I', str(worker), str(Path(boot_paths.__file__).parent), str(get_base_path() / "pylibs")], stdin=subprocess.PIPE,
+            command = [interpreter, '-I', str(worker), str(Path(boot_paths.__file__).parent), str(get_base_path() / "pylibs")]
+            environment = None
+            from thread_context import get_repair_workspace
+            if get_repair_workspace():
+                from repair_process import prepare
+                command, environment = prepare(command, get_repair_workspace())
+            self.proc = subprocess.Popen(command, env=environment, stdin=subprocess.PIPE,
                                          stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
                                          cwd=self.project, start_new_session=True, bufsize=1)
         except OSError as exc:

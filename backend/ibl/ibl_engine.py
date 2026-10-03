@@ -1031,7 +1031,11 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     return _attach_param_warning(result, _param_warning)
 
 
+from repair_execution_scope import scoped as repair_scoped
+
+
 @runtime_work.tracked("ibl")
+@repair_scoped
 def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
     """모든 IBL 실행 모양에 공개 결과 계약 + criteria 품질 계약을 적용하는 최외곽 관문.
 

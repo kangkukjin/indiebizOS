@@ -10,7 +10,8 @@ def script_snapshot(args, root=None):
         # A preceding write may create this file. Pin bytes in the receipt at invocation.
         return {'scope': 'invocation-file', 'protocol': 'file-script/1'}
     from runtime_utils import get_base_path
-    root = Path(root) if root else get_base_path() / 'data/scripts'
+    from thread_context import get_repair_workspace
+    root = Path(root) if root else Path(get_repair_workspace(create=bool(args)) or get_base_path()) / 'data/scripts'
     registry_path = root / 'registry.yaml'
     registry = yaml.safe_load(registry_path.read_text()) if registry_path.exists() else {}
     registry = registry or {}

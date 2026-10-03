@@ -42,6 +42,8 @@ def main():
         data = [{'id': str(i), 'source': text, 'context': contexts[i] if i < len(contexts) else ''} for i, text in enumerate(texts)]
         result = oneshot_ai_call(f'Target language: {target}\n' + json.dumps(data, ensure_ascii=False), system_prompt=system, role='background')
     raw = (result or '').strip()
+    if not raw:
+        raise RuntimeError('Translation model returned no response; inspect provider configuration and the preceding provider error')
     if raw.startswith('```'):
         raw = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw)
     translated = json.loads(raw)

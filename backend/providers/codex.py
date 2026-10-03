@@ -564,7 +564,8 @@ class CodexProvider(CliSubprocessProvider):
             # indiebizOS 자체 게이트(IBL 승인·write_ledger)가 맡는다.
             "--dangerously-bypass-approvals-and-sandbox",
         ]
-        if getattr(self, "agent_role", "execution") == "consciousness":
+        from repair_context import active as repair_active
+        if getattr(self, "agent_role", "execution") == "consciousness" or repair_active():
             # 의식의 실제 변경은 공유 작업대에서 소유권/예산을 검사한 뒤 기존 도구로 한다.
             # Codex 네이티브 셸은 끌 수 없으므로 직접 파일 변경은 OS 샌드박스로 제한한다.
             cmd.remove("--dangerously-bypass-approvals-and-sandbox")

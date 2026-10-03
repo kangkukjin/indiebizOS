@@ -939,6 +939,10 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
             from ibl_edition import authoring_request
             return _execute_ibl_unified(authoring_request(tool_input), project_path, agent_id, cancel_check=cancel_check)
 
+        from repair_context import active as repair_active, guard_tool
+        if repair_active():
+            guard_tool(load_tool_handler(tool_name), tool_name, tool_input)
+
         # 시스템 도구 처리
         if tool_name == "call_agent":
             return execute_call_agent(tool_input, project_path)

@@ -1264,17 +1264,17 @@
   },
   "self:patch": {
    "fields": {
-    "description": "543ef8b97a38",
-    "target_description": "e72cb001e486",
+    "description": "041e7a3e6688",
+    "target_description": "46da11a37650",
     "implementation": "79621998804f",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
     "aliases": "f6d057add97d",
-    "ops": "213f5b93c6a0",
+    "ops": "47666c315d86",
     "router": "ebbb1532efbc",
     "tool": "81a5a9cfe344"
    },
-   "reviewed": "2026-10-02",
+   "reviewed": "2026-10-03",
    "examples": 10
   },
   "self:phone_sync": {

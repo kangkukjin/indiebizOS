@@ -40,6 +40,8 @@ def is_stateful(args):
 
 
 def authorize():
+    from repair_context import guard_route
+    guard_route()
     import principal
     from thread_context import get_allowed_nodes
     if not principal.is_owner() or get_allowed_nodes() is not None:

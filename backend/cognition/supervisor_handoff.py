@@ -23,7 +23,9 @@ def criteria_contract(message, framing):
         quote = row.get("user_quote", "")
         mandatory = isinstance(quote, str) and bool(quote.strip()) and quote in message
         rows.append({"text": str(row["text"]).strip(), "source": "user" if mandatory else "consciousness",
-                     "user_quote": quote if mandatory else "", "fallback": row.get("fallback", "")})
+                     "user_quote": quote if mandatory else "", "fallback": row.get("fallback", ""),
+                     "verification_phase": row.get("verification_phase", "workspace"),
+                     "activation_plan": row.get("activation_plan", "")})
     if not rows and (framing or {}).get("achievement_criteria"):
         values = framing["achievement_criteria"]
         for value in values if isinstance(values, list) else [values]:

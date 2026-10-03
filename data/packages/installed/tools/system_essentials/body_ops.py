@@ -629,7 +629,7 @@ _LOCK_STALE_S = 600       # 이보다 오래된 잠금 = 죽은 소유자로 보
 _LOCK_WAIT_S = 30
 
 
-def _git_env(root, args, env, timeout=_COMMIT_TIMEOUT_S):
+def _git_env(root, args, env, timeout=_COMMIT_TIMEOUT_S, input_text=None):
     """각인 전용 실행기 — 임시 인덱스 env 와 긴 timeout. 반환 규약은 _git 과 동일하되
     관문(pre-commit) 거부문이 stdout 으로 나오는 경우가 많아 stdout·stderr 둘 다 싣는다."""
     git = _find_git()
@@ -640,7 +640,7 @@ def _git_env(root, args, env, timeout=_COMMIT_TIMEOUT_S):
         proc = subprocess.run([git, "-C", root, "-c", "core.quotepath=false"] + args,
                               capture_output=True,
                               text=True, encoding="utf-8", errors="replace",
-                              timeout=timeout, env=env)
+                              timeout=timeout, env=env, input=input_text)
     except (OSError, subprocess.TimeoutExpired) as e:
         return None, f"git 실행 실패: {e}"
     if proc.returncode != 0:
@@ -721,9 +721,47 @@ def _hook_state(root):
     return "통과" if os.path.isfile(os.path.join(hp, "pre-commit")) else "없음"
 
 
-def op_commit(tool_input):
+def _refresh_repair_index(root, patch):
+    """공유 인덱스의 타인 staged hunk를 보존하면서 수리 델타만 따라간다."""
+    import shutil
+    git_dir, error = _git(root, ["rev-parse", "--absolute-git-dir"])
+    if error:
+        return error
+    index = os.path.join(git_dir.strip(), "index")
+    lock = index + ".lock"
+    temp = None
+    try:
+        fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except OSError as exc:
+        return str(exc)
+    try:
+        with os.fdopen(fd, "wb") as output:
+            tmp_fd, temp = tempfile.mkstemp(prefix="repair-index-")
+            os.close(tmp_fd)
+            shutil.copyfile(index, temp)
+            env = {**os.environ, "GIT_INDEX_FILE": temp}
+            _, error = _git_env(root, ["apply", "--cached", "--3way", "--whitespace=nowarn", "-"], env, input_text=patch)
+            if error:
+                return error  # 충돌 인덱스를 공유 인덱스로 내보내지 않는다.
+            with open(temp, "rb") as merged:
+                shutil.copyfileobj(merged, output)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(lock, index)
+        return None
+    except OSError as exc:
+        return str(exc)
+    finally:
+        for path in (temp, lock):
+            if path and os.path.exists(path):
+                os.unlink(path)
+
+
+def op_commit(tool_input, *, index_patch=None, trusted_root=None):
     """각인 — 지정한 경로의 현재 작업트리 상태만 몸 원장에 기록한다."""
     root, err = _guard_root()
+    if trusted_root is not None:
+        root, err = trusted_root, None
     if err:
         return err
     message = str(tool_input.get("message") or "").strip()
@@ -755,7 +793,11 @@ def op_commit(tool_input):
             _, gerr = _git_env(root, ["read-tree", "HEAD"] if start_head else ["read-tree", "--empty"], env)
             if gerr:
                 return {"success": False, "message": gerr}
-            _, gerr = _git_env(root, ["add", "-A", "--"] + paths, env)
+            if index_patch is None:
+                _, gerr = _git_env(root, ["add", "-A", "--"] + paths, env)
+            else:
+                _, gerr = _git_env(root, ["apply", "--cached", "--3way", "--whitespace=nowarn", "-"],
+                                  env, input_text=index_patch)
             if gerr:
                 return {"success": False,
                         "message": f"경로를 반영할 수 없습니다 (존재하지 않는 pathspec 등) — {gerr}"}
@@ -791,7 +833,10 @@ def op_commit(tool_input):
             # 공유 인덱스의 '내 경로' 항목만 새 HEAD 로 동기화 — `git commit -- paths` 의
             # 원 의미 재현. 안 하면 그 경로가 남들에게 유령 스테이징(HEAD 대비 낡은 항목)으로
             # 보인다. 남의 스테이징(다른 경로)은 건드리지 않고, 실패해도 커밋은 이미 사실이다.
-            _, rerr = _git(root, ["reset", "-q", "HEAD", "--"] + paths)
+            if index_patch is None:
+                _, rerr = _git(root, ["reset", "-q", "HEAD", "--"] + paths)
+            else:
+                rerr = _refresh_repair_index(root, index_patch)
             short, _ = _git(root, ["rev-parse", "--short", new_head])
             gates = _hook_state(root)
             row = {"커밋": (short or new_head[:9]).strip(), "요지": message.splitlines()[0],

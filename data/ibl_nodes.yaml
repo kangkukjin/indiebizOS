@@ -5708,8 +5708,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-10-02'
-          impl: bc544d96a3985592
+          at: '2026-10-03'
+          impl: ae6d254a21d436bb
         target_key: path
         aliases:
           offset:
@@ -5721,8 +5721,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-10-02'
-          impl: bc544d96a3985592
+          at: '2026-10-03'
+          impl: ae6d254a21d436bb
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5798,8 +5798,8 @@ nodes:
           content: $content
         member_transform: member_documents:write
         path_audited:
-          at: '2026-10-02'
-          impl: bc544d96a3985592
+          at: '2026-10-03'
+          impl: ae6d254a21d436bb
         target_key: path
       list:
         callable_contract:
@@ -6179,7 +6179,7 @@ nodes:
         target_key: path
       patch:
         returns: effect
-        description: 자기개조 패치 — RED 코어 코드(backend/·frontend/·scripts/) 변경을 격리 사본(worktree)에서 다룬다. 수리 경로의 RED write/edit 은 자동으로 격리에 쌓이고(라이브 무변경), apply 가 기계검증 후 통과분만 라이브로 옮긴다. propose 제안도 apply{proposal_id} 로 집어간다.
+        description: 자기개조 패치 — RED 코어 코드(backend/·frontend/·scripts/) 변경을 격리 사본(worktree)에서 다룬다. 수리 경로의 변경은 같은 사본에 쌓이고, apply는 요청 전체의 사본 기계검증과 기존 평가자의 준비 판정 후 고정된 묶음만 정본에 반영한다. propose 제안도 apply{proposal_id} 로 집어간다.
         group: file
         ops:
           default: propose
@@ -6191,10 +6191,10 @@ nodes:
             status: '[self:patch]{op: "status"}'
           values:
             propose: RED 변경을 격리 사본에 제안 + 기계검증 (라이브 무변경, 자율 태스크용 — 적용은 사용자 수리 턴의 apply{proposal_id})
-            apply: 격리 변경을 검증 후 통과분만 라이브 적용. proposal_id 로 제안 적용. backend 는 턴 종료 후 적용
+            apply: 요청 전체의 사본 검증·준비 평가 뒤 검증된 묶음만 정본 반영. proposal_id 로 제안 적용. backend 는 턴 종료 후 적용
             status: 스테이징 세션 + 적용 대기 제안 현황 — 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔나
             discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
-        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 활성화 후 기능 검사·커밋은 active_verify_cmd 로 위탁 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 적용 후 파생물 검증 실패는 applied:true와 success:false·verified:false로 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
+        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 요청 전체의 사본 기계검증·준비 평가 후 고정된 묶음만 정본 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 반영 후 읽기 전용 확인은 active_verify_cmd 로 위탁. 기능 검사는 사본에서 끝내며 커밋은 기존 각인 서비스가 수리 델타만 수행 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 반영·활성 확인·커밋·전체 완료를 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
         aliases:
           old_string:
           - old
@@ -6550,8 +6550,8 @@ nodes:
             - read_external
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-10-02'
-          impl: bc544d96a3985592
+          at: '2026-10-03'
+          impl: ae6d254a21d436bb
         pipe_in: true
         lands_on: body
         limb_op:

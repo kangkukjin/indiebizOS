@@ -10,6 +10,7 @@ from types import SimpleNamespace
 
 import boot_paths  # noqa: F401
 import pytest
+from test_repair_workspace_completion import setup as repair_setup
 
 ROOT = Path(__file__).resolve().parents[1]
 PKG = ROOT / 'data/packages/installed/tools'
@@ -298,23 +299,19 @@ def test_portal_audit_filters_before_limit(tmp_path, monkeypatch):
     assert json.loads(handler._fn_audit({'portal': 'missing'}))['success'] is False
 
 
-def test_patch_post_apply_verification_failure_is_reported(tmp_path, monkeypatch):
-    mod = load('system_essentials', 'repair_staging')
-    live, staged = tmp_path / 'live.py', tmp_path / 'staged.py'
-    live.write_text('old\n')
-    staged.write_text('new\n')
-    sess = {'files': {str(live): {'staged': str(staged), 'rel': 'live.py'}}, 'worktree': 'fixture'}
-    saved = []
-    monkeypatch.setattr(mod, '_save_session', lambda repo, s: saved.append(dict(s)))
-    monkeypatch.setattr(mod, '_cleanup_old', lambda *a: None)
-    monkeypatch.setattr(mod, 'sync_live_derived', lambda *a: {'gate': 'live_derived', 'passed': False, 'detail': 'fixture failure'})
-    result = mod._perform_apply(str(tmp_path), sess, [], None, None)
-    assert live.read_text() == 'new\n' and result['applied'] is True
-    assert result['success'] is False and result['verified'] is False and result['error']
-    assert saved[0]['verified'] is False
-    monkeypatch.setattr(mod, 'read_session', lambda *a: saved[0])
-    again = mod.perform_scheduled_apply(str(tmp_path), 'fixture')
-    assert again['success'] is False and again['applied'] is True
+def test_patch_post_apply_verification_failure_is_reported(repair_setup, monkeypatch):
+    import red_apply
+    from test_repair_workspace_completion import ready
+    root, wt, mod, sess = repair_setup
+    (wt / 'a.txt').write_text('new')
+    sess['activation_commands'] = {'active_verify_cmd': 'probe'}
+    ready(root, mod, sess)
+    monkeypatch.setattr(red_apply, '_run_post_verify', lambda *a, **kw: {'exit_code': 1, 'output': 'fixture failure'})
+    result = mod._perform_apply(str(root), sess, [], None, None)
+    result = mod._complete_immediate(str(root), sess, result, {})
+    assert result['applied'] and not result['success'] and not result['complete']
+    assert result['activation']['state'] == 'failed'
+    assert not mod.read_session(str(root), sess['key']).get('commit')
 
 
 def test_patch_parallel_proposals_have_distinct_sessions(tmp_path, monkeypatch):
@@ -427,20 +424,22 @@ def test_failed_patch_verification_reaches_restart_controller(tmp_path, monkeypa
     assert json.loads(path.with_name('result.json').read_text())['outcome'] == 'verification_failed'
 
 
-def test_patch_delete_failure_is_not_reported_as_removed(tmp_path, monkeypatch):
-    mod = load('system_essentials', 'repair_staging')
-    path = tmp_path / 'keep.py'
-    path.write_text('original')
+def test_patch_delete_failure_is_not_reported_as_removed(repair_setup, monkeypatch):
+    from test_repair_workspace_completion import ready
+    root, wt, mod, sess = repair_setup
+    path = root / 'a.txt'
+    (wt / 'a.txt').unlink()
+    ready(root, mod, sess)
     original = mod.os.remove
     def remove(target):
         if str(target) == str(path):
             raise PermissionError('fixture')
         return original(target)
     monkeypatch.setattr(mod.os, 'remove', remove)
-    monkeypatch.setattr(mod, '_save_session', lambda *a: pytest.fail('failed deletion marked applied'))
     with pytest.raises(OSError, match='삭제 실패'):
-        mod._perform_apply(str(tmp_path), {'files': {str(path): {'op': 'delete', 'rel': path.name}}}, [], None, None)
-    assert path.read_text() == 'original'
+        mod._perform_apply(str(root), sess, [], None, None)
+    assert path.read_text() == 'before'
+    assert mod.read_session(str(root), sess['key'])['status'] == 'applying'
 
 
 if __name__ == '__main__':

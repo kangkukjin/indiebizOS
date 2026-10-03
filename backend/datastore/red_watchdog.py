@@ -58,6 +58,16 @@ SAFETY_SUFFIXES = (
     "tools/system_essentials/repair_staging.py",
     # 검증 관문 형제(2026-09-01 분리, 1500줄 규칙) — 관문이 죽으면 거짓 초록 부류.
     "tools/system_essentials/repair_gates.py",
+    "tools/system_essentials/repair_candidate.py",
+    "tools/system_essentials/repair_tool_scope.py",
+    "tools/system_essentials/body_ops.py",
+    "backend/base/repair_process.py",
+    "backend/base/coding_process.py",
+    "backend/datastore/repair_context.py",
+    "backend/cognition/repair_readiness.py",
+    "backend/providers/cli_provider.py",
+    "backend/providers/codex.py",
+    "backend/providers/claude_code.py",
     "scripts/red_safety_selftest.py",
 )
 

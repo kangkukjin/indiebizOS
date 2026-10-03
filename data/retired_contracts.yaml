@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: repair-partial-machine-green-apply
+    retired: 2026-10-03
+    reason: 일부 기계 관문 성공을 요청 전체의 준비 완료로 취급하고 수리 사본 실패 시 정본으로 돌아갔다.
+    instead: 모든 수리 변경은 같은 사본에 격리하며 원래 기준 전체의 실행 근거와 기존 평가자의 준비 판정 뒤 고정 묶음만 반영한다.
+    phrases: ['스모크)을 돌리고 **통과분만** 라이브로', '종전 라이브 직행 경로', '비-RED(data/·outputs/ 등)였다면 이미 라이브에']
   - id: repair-grant-propose-only
     retired: 2026-10-02
     reason: RED 그랜트 실행자에게 propose를 강제해 실제 도구 계약과 충돌했다.

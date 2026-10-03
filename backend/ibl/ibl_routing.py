@@ -123,6 +123,8 @@ def _route_api_engine(action: str, params: dict, project_path: str,
     이를 통해 노드 액션(informant:search 등)이 handler.py 없이
     api_registry.yaml + api_engine.py transform으로 직접 동작합니다.
     """
+    from repair_context import guard_route
+    guard_route()
     from api_engine import execute_tool as api_execute
     from ibl_registry import is_registry_tool
 
@@ -439,6 +441,9 @@ def _route_handler(mapped_tool: str, params: dict,
             return {"success": False,
                     "error": f"{mapped_tool}: " + "; ".join(_refused) + ". " + _tail}
 
+    from repair_context import guard_tool
+    guard_tool(handler, mapped_tool, merged_params)
+
     # handler.execute는 신규 시그니처 (tool_input, context)만 지원
     import inspect
     sig = inspect.signature(handler.execute)
@@ -551,6 +556,9 @@ def _route_handler(mapped_tool: str, params: dict,
 
 def _route_system(func_name: str, params: dict, project_path: str, agent_id: str = None) -> Any:
     """system_tools 내장 함수 직접 호출"""
+    if func_name not in {"table_each", "table_reduce"}:
+        from repair_context import guard_route
+        guard_route()
     if func_name == "send_notification":
         return _cap("send_notification")(dict(params), project_path)
 
@@ -1172,6 +1180,8 @@ def _route_driver(driver_type: str, node: str, action: str,
     6-Node 통합으로 source/messenger 등 상위 노드가 photo/health/blog/contact/memory
     등의 하위 핸들러를 포함하게 됨. driver_node가 지정되면 실제 드라이버 핸들러명으로 사용.
     """
+    from repair_context import guard_route
+    guard_route()
     # 드라이버 인스턴스 가져오기
     driver_registry = {
         "sqlite": ("drivers.sqlite_driver", "get_driver"),

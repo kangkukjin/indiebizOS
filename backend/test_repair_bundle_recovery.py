@@ -32,6 +32,9 @@ def bundle(tmp_path, monkeypatch):
     monkeypatch.setenv("INDIEBIZ_BASE_PATH", str(repo))
     monkeypatch.setenv("INDIEBIZ_REPAIR_NO_SPAWN", "1")
     key = _grant(handler)
+    import supervision_bus
+    from test_repair_staging import _ready_supervisor
+    monkeypatch.setattr(supervision_bus, "current", lambda *a, **kw: _ready_supervisor())
     yield repo, package, handler, handler._staging_mod(), key
     _ungrant()
 
@@ -79,7 +82,8 @@ def test_package_only_repair_defers_and_does_not_leak_on_staging_failure(bundle,
 
 def test_package_sources_do_not_change_regular_data_or_nonrepair_writes(bundle):
     repo, package, handler, staging, key = bundle
-    assert handler._red_stage(str(package / "customer_data.json"), True) == str(package / "customer_data.json")
+    assert handler._red_stage(str(package / "customer_data.json"), True) != str(package / "customer_data.json")
+    assert not (package / "customer_data.json").exists()
     foreign = repo.parent / "other/data/packages/installed/tools/example/handler.py"
     assert handler._red_stage(str(foreign), True) == str(foreign)
     _ungrant()
@@ -210,7 +214,7 @@ def test_timeout_preserves_partial_evidence_and_active_uses_separate_deadline(tm
     def timeout(*args, **kwargs):
         calls.append(kwargs["timeout"])
         raise subprocess.TimeoutExpired("check", kwargs["timeout"], output=b"tests PASSED", stderr=b"commit started")
-    monkeypatch.setattr(subprocess, "run", timeout)
+    monkeypatch.setattr("repair_process.run", timeout)
     row = record(tmp_path, result={"outcome": "healthy", "active_verify_cmd": "check"})
     checked = continuation.active_check(row, tmp_path)
     result = checked["active_verify"]["receipt"]

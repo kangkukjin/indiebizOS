@@ -286,7 +286,7 @@ def _red_write_prepare(path: str, new_content=None) -> str | None:
     if not grant:
         return None  # 게이트가 이미 막았을 것 — 방어적 no-op
     # 사전 구문검증 — 깨진 .py 가 라이브에 닿기 전에 거른다(브릭의 대부분 = import 시 SyntaxError)
-    if abs_path.endswith(".py") and isinstance(new_content, str):
+    if abs_path.endswith(".py") and isinstance(new_content, (str, bytes)):
         try:
             compile(new_content, abs_path, "exec")
         except SyntaxError as e:
@@ -321,7 +321,8 @@ def _red_write_prepare(path: str, new_content=None) -> str | None:
         import hashlib
         from restart_protocol import atomic_json
         manifest.setdefault("target_hashes", {})[abs_path] = (
-            hashlib.sha256(new_content.encode()).hexdigest() if isinstance(new_content, str) else None)
+            hashlib.sha256(new_content.encode() if isinstance(new_content, str) else new_content).hexdigest()
+            if isinstance(new_content, (str, bytes)) else None)
         atomic_json(manifest_path, manifest)
         # 매니페스트 mtime 갱신 = 워치독 조용 타이머 리셋(연쇄 편집을 한 검사로 묶음)
     except Exception as e:
@@ -384,11 +385,7 @@ def _red_write_finalize(path: str):
         print(f"[RED 안전판] 워치독 기동 실패 (백업은 확보됨): {e}")
 
 
-# ── 수리 격리 스테이징 (2026-08-17) ────────────────────────────────────────
-# 그랜트된 RED 쓰기는 라이브가 아니라 **격리 사본(worktree)** 으로 간다 — 스테이징
-# 중에는 리로드가 없어 편집자가 자기 턴 안에서 살아 있고, 라이브는 검증을 통과한
-# 내용만 [self:patch]{op:"apply"} 로 한 번에 받는다. 로직=repair_staging.py.
-# git 이 없는 몸(설치본·폰)에서는 세션이 안 열리고 종전 라이브 직행으로 폴백한다.
+# 수리 컨텍스트는 경로·읽기·쓰기·OS 실행을 같은 사본에 묶는다.
 
 def _staging_key():
     """현재 그랜트의 세션 키 — 그랜트가 없으면 None(스테이징 대상 아님)."""
@@ -442,43 +439,35 @@ def _vocab_enforce(path: str):
 
 
 def _red_stage(path: str, for_write: bool) -> str:
-    """RED 경로를 격리 사본 경로로 바꾼다(해당될 때만). 아니면 원 경로 그대로.
-
-    for_write=True  : 처음 건드리는 파일이면 라이브 원본에서 씨를 뿌리고 스테이징.
-    for_write=False : **이미 스테이징된 파일만** 리다이렉트 — 안 건드린 파일을 읽을 때는
-                      라이브를 보여준다(격리 사본이 조사 대상을 왜곡하지 않게)."""
-    try:
-        if not _repair_is_live_path(path):
-            return path
-        key = _staging_key()
-        if not key:
-            return path
-        repo = str(_REPO_ROOT)
-        live_abs = os.path.realpath(path)
-        st = _staging_mod()
-        if for_write:
-            staged = st.stage_file(repo, key, live_abs)
-            if not staged and _red_family.repair_artifact(path, _REPO_ROOT):
-                raise RuntimeError("패키지·사전 수리의 격리를 확보하지 못했습니다. 라이브 쓰기를 중단합니다")
-            return staged or path
-        return st.staged_path(repo, key, live_abs) or path
-    except Exception as e:
-        if for_write and _repair_is_live_path(path) and _red_family.repair_artifact(path, _REPO_ROOT):
-            raise RuntimeError("수리 변경을 격리하지 못해 라이브 쓰기를 중단합니다") from e
-        print(f"[수리 스테이징] 리다이렉션 실패 — 종전 경로로 진행: {e}")
+    if not _repair_is_live_path(path):
         return path
+    key = _staging_key()
+    if not key:
+        if for_write:
+            raise RuntimeError("수리 그랜트 없이 원본에 쓸 수 없습니다")
+        return path
+    st, repo = _staging_mod(), str(_REPO_ROOT)
+    live_abs = os.path.realpath(path)
+    if for_write:
+        staged = st.stage_file(repo, key, live_abs)
+        if not staged:
+            raise RuntimeError("수리 사본을 확보하지 못했습니다. 라이브 쓰기를 거절합니다")
+        return staged
+    session = st.ensure_session(repo, key)
+    if not session:
+        raise RuntimeError("수리 사본을 읽을 수 없습니다")
+    return st.staged_path(repo, key, live_abs)
 
 
 def _repair_is_live_path(path):
-    """권한 범위는 유지하며 승인된 수리의 패키지·사전 변경을 같은 세션에 묶는다."""
-    if _red_is_live_path(path):
-        return True
-    if not _REPO_ROOT or not _red_grant_active():
+    if not _REPO_ROOT:
         return False
-    if _red_family.repair_artifact(path, _REPO_ROOT):
-        return True
-    session = _staging_mod().read_session(str(_REPO_ROOT), _staging_key()) or {}
-    return os.path.realpath(path) in session.get("files", {})  # 이동의 일반 data 대상도 같은 백업·되읽기
+    from pathlib import Path
+    root, target = Path(_REPO_ROOT).resolve(), Path(path).resolve()
+    if _red_grant_active() and target.is_relative_to(root):
+        # 이미 사본을 가리키는 경로를 또 사본 안에 중첩하지 않는다.
+        return not target.is_relative_to(root / ".worktrees")
+    return _red_is_live_path(path)
 
 
 def _red_can_stage(path: str) -> bool:
@@ -492,20 +481,10 @@ def _red_can_stage(path: str) -> bool:
 
 
 def _red_stage_delete(path: str) -> bool:
-    """RED 파일 삭제를 세션에 적재(라이브 무변경). False 면 호출자가 종전 라이브 경로로."""
-    try:
-        key = _staging_key()
-        if not key:
-            return False
-        staged = _staging_mod().stage_delete(str(_REPO_ROOT), key, os.path.realpath(path))
-        if not staged and _red_family.repair_artifact(path, _REPO_ROOT):
-            raise RuntimeError("패키지·사전 삭제를 격리하지 못했습니다")
-        return staged
-    except Exception as e:
-        if _repair_is_live_path(path) and _red_family.repair_artifact(path, _REPO_ROOT):
-            raise RuntimeError("수리 삭제를 격리하지 못해 라이브 삭제를 중단합니다") from e
-        print(f"[수리 스테이징] 삭제 적재 실패 — 종전 경로로 진행: {e}")
-        return False
+    key = _staging_key()
+    if not key or not _staging_mod().stage_delete(str(_REPO_ROOT), key, os.path.realpath(path)):
+        raise RuntimeError("수리 삭제를 격리하지 못했습니다. 라이브 삭제를 거절합니다")
+    return True
 
 
 _STAGED_NOTE = ("라이브는 무변경입니다(리로드 없음). 검증 후 실제로 반영하려면 "
@@ -688,8 +667,22 @@ _file_views = _fs_find.file_views
 _ENVELOPED_FAILURE_TOOLS = ("copy_path", "move_path", "delete_path")
 
 
+def repair_safe_call(name, payload):
+    return _load_sibling("repair_tool_scope").allowed(name, payload)
+
+
 def execute(tool_input: dict, context) -> str:
-    result = _execute(tool_input, context)
+    try:
+        if _red_grant_active() and context.tool_name != "patch_op":
+            with _staging_mod()._candidate.locked(str(_REPO_ROOT), "application"):
+                result = _execute(tool_input, context)
+                if context.tool_name in {"write_file", "edit_file", "copy_path", "move_path", "delete_path", "make_directory"}:
+                    result = _load_sibling("repair_tool_scope").record_write(
+                        _staging_mod(), str(_REPO_ROOT), _staging_key(), result)
+        else:
+            result = _execute(tool_input, context)
+    except (PermissionError, ValueError, RuntimeError) as exc:
+        return json.dumps({"success": False, "error": str(exc)}, ensure_ascii=False)
     if context.tool_name in _ENVELOPED_FAILURE_TOOLS and isinstance(result, str) and result.startswith("Error:"):
         return json.dumps({"success": False, "error": result.removeprefix("Error:").strip()}, ensure_ascii=False)
     return result
@@ -700,6 +693,14 @@ def _execute(tool_input: dict, context) -> str:
     tool_name = context.tool_name
     project_path = context.project_path
     agent_id = context.agent_id
+    if _red_grant_active():
+        from copy import copy
+        from types import SimpleNamespace
+        scope = _load_sibling("repair_tool_scope")
+        tool_input, project_path = scope.prepare(self_module=SimpleNamespace(**globals()), name=tool_name,
+                                                payload=tool_input, project=project_path)
+        context = copy(context)
+        context.project_path = project_path
 
     # op 디스패처 액션 ([self:webapp]·[self:sheet] — music-player execute 규약)
     # _project_path(상대경로 해석)·_path_guard(쓰기 범위 검증)를 주입 — 형제 모듈이 소비.
@@ -1137,7 +1138,7 @@ def _execute(tool_input: dict, context) -> str:
                 _shadow = _judge_shell(command, cwd=project_path)
             except Exception:  # noqa: BLE001 — 관문 고장은 셸을 막지 않는다(판정 오류는 통과)
                 _shadow = None
-            if _shadow:
+            if _shadow and not _red_grant_active():
                 return json.dumps({"success": False, "error": _shadow, "error_type": "shell_shadow"}, ensure_ascii=False)
 
             # 위험한 명령어 감지 - 승인되지 않았으면 승인 요청
@@ -1146,6 +1147,9 @@ def _execute(tool_input: dict, context) -> str:
 
             # 명령어 실행
             try:
+                if _red_grant_active():
+                    return json.dumps(_load_sibling("repair_tool_scope").run_shell(
+                        __import__("types").SimpleNamespace(**globals()), command, timeout), ensure_ascii=False)
                 result = subprocess.run(
                     command,
                     shell=True,

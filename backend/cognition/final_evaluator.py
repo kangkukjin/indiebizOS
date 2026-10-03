@@ -253,12 +253,18 @@ def invoke(controller, prompt="", *, phase="final"):
                                               head_keep=12, tail_keep=12, per_result_chars=3000),
         action_ledger=build_action_ledger(packet["calls"]), visual_artifacts=packet["images"],
         evaluation_context=json.dumps(packet["context"], ensure_ascii=False),
-        evaluation_policy=POLICY, full_response=True,
+        evaluation_policy=POLICY + (WORKSPACE_POLICY if phase == "workspace" else ""), full_response=True,
     )
     manifest = controller._evaluation_snapshot["response"]
     result = {"status": "APPROVED" if achieved is True else "REWORK" if achieved is False else "UNKNOWN",
               "reason": feedback, "severity": severity, "response_version": manifest["version"],
               "response_hash": manifest["hash"], "instruction": "", "pursuit_status": "UNKNOWN"}
+    if phase == "workspace":
+        match = re.search(r"(?m)^WORKSPACE_COVERAGE:\s*(\[.*\])\s*$", feedback)
+        try:
+            result["workspace_coverage"] = json.loads(match[1]) if match else []
+        except ValueError:
+            result["workspace_coverage"] = []
     if getattr(evaluator, "evaluation_retryable", False):
         result["retryable"] = True
     if controller.cancelled():
@@ -293,3 +299,16 @@ def invoke(controller, prompt="", *, phase="final"):
     controller.log("evaluation.finished", role="evaluate", elapsed_s=round(time.monotonic() - started, 3),
                    decision=result)
     return json.dumps(result, ensure_ascii=False)
+
+
+WORKSPACE_POLICY = """
+이번 판정 대상은 수리 사본의 적용 준비다. 정본 반영·재기동·커밋 완료를 승인하는 호출이 아니다.
+원래 요청 전체에서 사본 확인 가능한 필수 기준을 모두 확인한다. 부분 기능의 성공은 전체 준비가 아니다.
+실행자의 완료 주장이나 기계 관문만으로 기능 검증을 대신하지 않는다. workspace_evidence의 실행 결과와
+검사 범위가 각 기준을 입증하는지 판정한다. 부족하거나 실패한 증거는 NOT_ACHIEVED/UNKNOWN이다.
+activation 구분은 기준 정본의 verification_phase와 activation_plan이 있는 항목에만 허용한다.
+사본에서 확인 가능한 기능을 활성 확인으로 옮기지 않는다. 잘못 분류된 기준은 UNKNOWN이다.
+ACHIEVED여도 다음 한 줄을 추가한다:
+WORKSPACE_COVERAGE: [{"criterion_id":"C1","status":"passed","evidence_ids":["workspace_evidence의 실제 id"]}]
+모든 기준을 포함한다. 반영 후에만 확인 가능한 기준은 status="activation_pending", evidence_ids=[]로 적는다.
+"""

@@ -280,6 +280,10 @@ class Supervisor:
                  framing_source=(framing or {}).get("_framing_source", "unobserved"),
                  evidence=self.store.evidence(framing or {}))
 
+    def prepare_repair(self, repo, session, verify, candidate):
+        from repair_readiness import prepare
+        return prepare(self, repo, session, verify, candidate)
+
     @property
     def evaluation_enabled(self):
         from supervisor_handoff import criteria_contract
@@ -929,6 +933,12 @@ class Supervisor:
                     break
         approved = decision["status"] == "APPROVED"
         completion_binding = None
+        if approved and self.repair_granted:
+            from repair_readiness import completion_error
+            error = completion_error(self)
+            if error:
+                approved = False
+                decision = {"status": "UNKNOWN", "reason": error}
         if approved and self.done_request:
             try:
                 from pursuit_bind import resolve_session

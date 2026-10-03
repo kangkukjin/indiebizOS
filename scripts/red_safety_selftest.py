@@ -171,7 +171,12 @@ def main():
         # 그랜트가 없으면 스테이징도 없다 — 게이트가 막는 자리와 같은 조건
         red_grant.revoke_grant()
         thread_context.clear_all_context()
-        check("staging_off_without_grant", h._red_stage(str(foo), for_write=True) == str(foo))
+        refused = False
+        try:
+            h._red_stage(str(foo), for_write=True)
+        except RuntimeError:
+            refused = True
+        check("staging_off_without_grant", refused)
         # RED 밖 경로는 스테이징 대상이 아니다(일상 data/ 쓰기가 격리로 새면 안 됨)
         check("staging_ignores_green",
               h._red_stage(str(tmp / "data" / "x.json"), for_write=True) == str(tmp / "data" / "x.json"))

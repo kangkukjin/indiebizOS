@@ -42,6 +42,10 @@ def apply_job(base, path):
     job = inspect_job(base, path)
     handler = _load_handler(job)
     staging = handler._staging_mod()
+    session = staging.read_session(str(base), job["key"]) or {}
+    if (not job.get("readiness_hash") or
+            job["readiness_hash"] != staging._candidate.digest(session.get("readiness"))):
+        return {"success": False, "applied": False, "error": "예약의 준비 판정이 없거나 변경됐습니다"}
     task_id, agent_id = job.get("task_id") or job["key"], job.get("agent_id") or "system_ai"
     with actor_context(agent_id=agent_id, task_id=task_id):
         issue_grant(agent_id=agent_id, task_id=task_id, reason=job.get("reason") or "예약 적용")
@@ -54,7 +58,7 @@ def apply_job(base, path):
             if not manifest:
                 return "RED 복구 manifest를 읽을 수 없습니다"
             manifest.setdefault("target_hashes", {})[str(Path(target).resolve())] = (
-                hashlib.sha256(content.encode()).hexdigest() if content is not None else None)
+                hashlib.sha256(content.encode() if isinstance(content, str) else content).hexdigest() if content is not None else None)
             manifest["restart_controller"] = True
             atomic_json(path, manifest)
         path_job = Path(path)

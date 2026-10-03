@@ -15,17 +15,21 @@ def configure(provider, task, processes):
         "model": provider.model}, sort_keys=True).encode()).hexdigest()
     provider.coding_environment = {}
     if provider.__class__.__name__ == "CodexProvider":
-        home = Path(processes.runtime) / "codex"
-        home.mkdir(exist_ok=True)
-        auth = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "auth.json"
-        if not auth.is_file():
-            raise RuntimeError("Codex 구독 로그인이 필요합니다")
-        link = home / "auth.json"
-        if not link.exists():
-            link.symlink_to(auth.resolve())
-        provider.coding_environment = {"CODEX_HOME": str(home)}
+        provider.coding_environment = isolated_codex_environment(processes.runtime)
     # 모델 교체는 앱의 명시적 인계로 이어간다. CLI 내부 이력 혼합을 피한다.
     provider.disable_session_persistence = True
+
+
+def isolated_codex_environment(runtime):
+    home = Path(runtime) / "codex"
+    home.mkdir(parents=True, exist_ok=True)
+    auth = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "auth.json"
+    if not auth.is_file():
+        raise RuntimeError("Codex 구독 로그인이 필요합니다")
+    link = home / "auth.json"
+    if not link.exists():
+        link.symlink_to(auth.resolve())
+    return {"CODEX_HOME": str(home)}
 
 
 def codex_command(provider, resume_session_id=None):

@@ -96,7 +96,7 @@ def main():
             continue
         try:
             counts, failures, rc, text = _run([f], k, max(5.0, timeout - (time.time() - t0)))
-            ok = rc == 0 or (rc == 5 and not failures)          # 5 = 수집 0(k 로 전부 걸러짐)
+            ok = rc == 0 and counts["passed"] > 0 and not counts["skipped"]          # 5 = 수집 0(k 로 전부 걸러짐)
             items.append({"file": f, "ok": ok, **counts, "failures": failures[:12],
                           **(_failure_output(text) if not ok else {})})
         except subprocess.TimeoutExpired as exc:

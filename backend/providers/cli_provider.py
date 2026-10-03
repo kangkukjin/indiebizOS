@@ -857,6 +857,27 @@ class CliSubprocessProvider(BaseProvider):
                 env["INDIEBIZOS_COMPLETION_CHANNEL"] = self._completion_channel
                 start = time.time()
                 cwd = self.project_path if self.project_path and self.project_path != "." else None
+                from repair_context import active as repair_active
+                if repair_active() and not _tools_mode:
+                    if self.__class__.__name__ not in {"CodexProvider", "ClaudeCodeProvider"}:
+                        raise RuntimeError("이 네이티브 실행자의 자기수리 격리는 미지원입니다")
+                    from tool_loader import load_tool_handler
+                    handler = load_tool_handler("patch_op")
+                    st, repo = handler._staging_mod(), str(handler._REPO_ROOT)
+                    if self.__class__.__name__ == "CodexProvider":
+                        from .coding_profile import isolated_codex_environment
+                        from repair_continuation import current as repair_current
+                        root_key = st.task_key((repair_current() or {}).get("root_task_id") or handler._staging_key())
+                        runtime = os.path.join(repo, "data/system_ai_state/repair_cli", root_key)
+                        env.update(isolated_codex_environment(runtime))
+                    from repair_context import activation_only
+                    if activation_only():
+                        cwd = repo
+                    else:
+                        session = st.ensure_session(repo, handler._staging_key())
+                        if not session:
+                            raise RuntimeError("수리 사본이 없습니다")
+                        cwd = os.path.join(repo, session["worktree"])
                 try:
                     # ★유저 프롬프트는 argv 가 아니라 stdin 으로 넘긴다: 윈도우 명령줄 상한
                     #  (32,767자)에 걸려 [WinError 206]로 실행 자체가 실패하던 걸 회피. CLI 는

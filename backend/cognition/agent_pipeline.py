@@ -742,6 +742,9 @@ class CognitivePipelineMixin:
                 _initial_stream = self.ai.process_message_stream(
                     message_content=augmented_message, history=history,
                     images=images, cancel_check=cancel_check)
+            if _repair_granted_task is not None and not _clarify_text:
+                from repair_readiness import execution_stream
+                _initial_stream = execution_stream(_initial_stream)
             for event in _initial_stream:
                 _collect(event)
                 if _supervisor:

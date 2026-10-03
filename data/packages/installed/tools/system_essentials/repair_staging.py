@@ -1,52 +1,10 @@
-"""
-repair_staging.py - 수리(REPAIR)의 격리 스테이징 (system_essentials 형제 모듈)
+"""승인된 자기수리의 사본 개발·준비 평가·고정 묶음 적용.
 
-★왜 (2026-08-17): 헌법 2026-08-05 의 REPAIR 경로는 사용자 명령 수리에서 RED
-(backend/*.py)를 **라이브에 직접** 쓴다. 그래서 편집이 부른 리로드가 편집자 자신의
-턴을 끊는다 — keeper 일시정지(_keeper_pause)·분리 워치독(red_watchdog)·다음 턴 판정
-회수(red_report)는 전부 그 죽음을 *사후에* 수습하는 장치다. 검증도 사후다: 사전
-검증은 compile() 한 줄(구문)뿐이고, 사후 판정은 /health 200 — 즉 "프로세스가 살아는
-있다" 뿐이다.
-
-이 모듈은 순서를 뒤집는다:
-
-    (종전)  쓴다 → 리로드 → 죽는다 → 워치독이 맥을 짚는다 → 다음 턴이 판정을 읽는다
-    (신)    격리 사본에 쓴다 → 거기서 검증한다 → 통과분만 한 번에 라이브로 옮긴다
-
-스테이징 중에는 라이브가 무변경이라 **리로드가 없고, 편집자가 살아 있다** — 자기
-검증 결과를 읽고 고쳐 쓸 수 있다. 라이브가 받는 것은 언제나 검증을 통과한 내용이고,
-리로드는 적용 순간 한 번이다. ★그 한 번마저 턴 밖으로 미룬다(2026-08-19 지연 적용):
-backend/*.py 적용은 분리 수행자(backend/datastore/red_apply.py)가 턴 종료(응답 전송→
-주행기록 END→증류 재합류)를 기다렸다가 쓰기 직전 재검증 후 수행한다 — 최종 보고·
-주행기록·증류가 리로드보다 **먼저** 완료된다("자기 죽음 이후 단계는 죽음을 넘는
-프로세스가 맡는다"의 적용 단계 판, 워치독 선례). frontend/scripts 만이면 리로드가
-없으므로 즉시 적용한다.
-
-★기존 안전판은 무엇도 대체하지 않는다. 적용 단계가 _red_write_prepare/
-_red_write_finalize 를 그대로 통과하므로 백업·keeper 일시정지·분리 워치독·자동
-롤백이 전부 이어받는다. 스테이징은 그 **앞에** 검증 층을 하나 더 놓을 뿐이다.
-(라이브 프로세스의 *행동* 검증은 여전히 적용 이후다 — 격리 사본에서 잡는 것은
-구조적 브릭[구문·import·삼각·안전장치 스모크]이고, 브릭 위험은 거기 산다.)
-
-★스테이징 베이스 = 라이브 작업 트리 (HEAD 아님). worktree 는 HEAD 로 만들지만
-①세션 생성 시 라이브 드리프트(미커밋·미추적 포함)를 파일 복사로 맞추고 ②파일을 처음
-건드릴 때 **라이브 원본에서 씨를 뿌리며**(권위) ③검증 시마다 같은 동기화를 다시 돌려
-'지금 라이브 + 세션 델타'를 본다(_sync_worktree_to_live — 2026-08-19 거짓 초록 봉합).
-HEAD 를 베이스로 쓰면 미커밋 라이브 작업을 적용이 조용히 되돌린다 — 데이터 손실.
-
-★★사정거리 (2026-08-18 정정) — 이 격리는 **파일이 아니라 문 하나**에 걸려 있다.
-게이트는 handler 의 `_red_zone_write_block`(= `[self:write]`/`[self:edit]` 가 지나는 자리)
-이고 그랜트는 REPAIR 경로만 발급한다. 그 문을 안 쓰는 편집자 — 아웃오브프로세스
-Claude Code 세션(자체 Edit/Bash), `[self:script]{op:run}`, `run_command`, 패키지
-핸들러 자신의 `open()` — 는 backend 로 **라이브 직행**하고, 게이트는 repo 루트
-미탐지 시 fail-open 이다. 즉 참인 불변식은 "backend 는 격리를 거쳐야 바뀐다"가 아니라
-**"REPAIR 경로는 격리를 쓴다"** 이다. 아웃오브프로세스 손은 이 프로세스 밖이라
-원리적으로 차단할 수 없으므로, 우회는 차단이 아니라 **가시성**으로 다룬다 —
-`scripts/check_red_drift.py`(자가점검 §1H). 정본=docs/SELF_MODIFICATION_SAFETY_DESIGN.md
-'이 격리의 사정거리' 표.
-
-원장: data/system_ai_state/repair_sessions/<task_key>.json
-격리: .worktrees/repair-<task_key>/
+모든 수리 편집은 같은 사본에 남는다. 기계 검증과 기존 의미 평가의 준비 판정 뒤에만
+적용을 예약한다. 실제 적용은 판정·취소·정본 기준을 다시 확인하고 고정된 바이트를 쓴다.
+사전 검사/폐기는 정본을 수정하지 않는다. 예약 실패의 즉시 적용 폴백은 없다.
+네이티브 파일 쓰기는 제한하며 격리 셸은 repair_process의 OS 경계를 사용한다.
+정본 설계: docs/SELF_REPAIR_WORKSPACE_COMPLETION_DESIGN_2026_10_03.md.
 """
 import hashlib
 import importlib.util
@@ -96,6 +54,12 @@ _live_build_inputs_touched = _gates._live_build_inputs_touched
 sync_live_derived = _gates.sync_live_derived
 _derived_fingerprint = _gates._derived_fingerprint
 
+_candidate_spec = importlib.util.spec_from_file_location(
+    "system_essentials_repair_candidate", os.path.join(os.path.dirname(__file__), "repair_candidate.py"))
+_candidate = importlib.util.module_from_spec(_candidate_spec)
+_candidate_spec.loader.exec_module(_candidate)
+
+
 SESSION_DIRNAME = os.path.join("data", "system_ai_state", "repair_sessions")
 # ★옛 제안 원장(통합 전 세대). propose 가 여기+selfpatch-* 워크트리를 따로 써서 apply 가
 # 원리적으로 못 봤다(실측 08-18: 제안 7건 누적 / 적용 0건). 지금은 제안도 세션이라
@@ -104,24 +68,8 @@ PROPOSAL_DIRNAME = os.path.join("data", "system_ai_state", "patch_proposals")
 WORKTREE_PREFIX = os.path.join(".worktrees", "repair-")
 SESSION_TTL_DAYS = 7          # 이보다 오래된 종료 세션은 기회주의적으로 청소
 
-# 안전장치 파일 — 수정되면 기능 스모크(red_safety_selftest)까지 통과해야 한다.
-# red_watchdog.SAFETY_SUFFIXES 와 같은 목록(둘 다 접미사 매칭).
-SAFETY_SUFFIXES = (
-    "backend/datastore/red_grant.py",
-    "backend/datastore/red_watchdog.py",
-    "backend/datastore/restart_red.py",
-    "backend/base/restart_protocol.py",
-    "backend/base/restart_process.py",
-    "backend/base/restart_child.py",
-    "backend/base/runtime_work.py",
-    "backend/services/restart_controller.py",
-    "backend/services/restart_helper.py",
-    "backend/surface/api_runtime.py",
-    "tools/system_essentials/handler.py",
-    "tools/system_essentials/repair_staging.py",
-    "tools/system_essentials/repair_gates.py",
-    "scripts/red_safety_selftest.py",
-)
+# 기능 스모크 대상은 워치독 선언 한 벌을 공유한다.
+from red_watchdog import SAFETY_SUFFIXES
 
 
 # ── 기본 유틸 ─────────────────────────────────────────────────────────────
@@ -177,7 +125,7 @@ def load_session(repo: str, key: str):
     s = read_session(repo, key)
     if s is None:
         s = _resume_staging(repo, key)
-    return s if s and s.get("status") == "staging" else None
+    return s if s and s.get("status") == "staging" and not s.get("reused_by") else None
 
 
 def _resume_staging(repo: str, key: str):
@@ -241,8 +189,8 @@ def list_legacy_proposals(repo: str):
 
 
 def _save_session(repo: str, sess: dict):
-    with open(_session_path(repo, sess["key"]), "w", encoding="utf-8") as f:
-        json.dump(sess, f, ensure_ascii=False, indent=2)
+    from restart_protocol import atomic_json
+    atomic_json(_session_path(repo, sess["key"]), sess)
 
 
 # ── 세션 (격리 사본) ──────────────────────────────────────────────────────
@@ -309,7 +257,7 @@ def _sync_worktree_to_live(repo: str, wt_abs: str, skip_rels=()):
 
 
 def ensure_session(repo: str, key: str):
-    """스테이징 세션 확보 — 없으면 worktree 를 만든다. 실패 시 None(=라이브 직행 폴백)."""
+    """스테이징 세션 확보 — 없으면 worktree 를 만든다. 실패 시 None(호출자는 쓰기 거절)."""
     sess = load_session(repo, key)
     if sess and os.path.isdir(os.path.join(repo, sess["worktree"])):
         return sess
@@ -317,38 +265,50 @@ def ensure_session(repo: str, key: str):
     #   — 예약 스냅샷이 낡아지므로 수행자(red_apply)가 상태를 보고 그 예약을 취소한다.
     #   재개봉 없이 두면 아래 '잔재 정리'가 예약분 워크트리를 지워버린다(예약 파괴).
     full = read_session(repo, key)
+    if full and full.get("status") in {"applying", "applied", "discarded"}:
+        raise RuntimeError("이 수리의 적용·복구 결과를 먼저 확인하세요. 기존 사본과 영수증을 새 사본으로 덮지 않습니다")
+    if full and full.get("reused_by"):
+        raise RuntimeError("이 사본의 수정 소유권은 후속 실행으로 인계됐습니다")
     if (full and full.get("status") == "apply_scheduled"
             and os.path.isdir(os.path.join(repo, full.get("worktree") or ""))):
+        _candidate.invalidate(full)
         full["status"] = "staging"
         full.pop("scheduled_at", None)
         _save_session(repo, full)
         print("[수리 스테이징] 적용 예약 세션에 쓰기 재개 — 예약 취소, staging 재개봉")
         return full
     if not _is_git_repo(repo):
-        return None                      # git 없는 몸 — 스테이징 불가, 종전 경로로
+        return None                      # git 없는 몸 — 쓰기 거절
     wt_rel = WORKTREE_PREFIX + key
     wt_abs = os.path.join(repo, wt_rel)
     if os.path.isdir(wt_abs):            # 원장만 사라진 잔재 — 재사용 대신 정리
         _git(["worktree", "remove", "--force", wt_abs], repo)
     add = _git(["worktree", "add", "--detach", wt_abs, "HEAD"], repo)
     if add.returncode != 0:
-        print(f"[수리 스테이징] worktree 생성 실패 — 스테이징 없이 진행: {add.stderr.strip()[:200]}")
+        print(f"[수리 스테이징] worktree 생성 실패 — 쓰기 거절: {add.stderr.strip()[:200]}")
         return None
     # 라이브 드리프트(미커밋·미추적)를 격리 사본에 맞춘다 — ★best-effort 가 아니다.
     # 옛 구현(git diff HEAD | git apply)은 ①추적 파일 한정이라 미추적 신규 모듈이 빠져
     # import 스모크가 거짓 빨강을 냈고 ②컨텍스트 불일치로 조용히 실패하면 베이스가 HEAD 로
     # 남아 검증이 HEAD 기준 초록을 냈다(거짓 초록 — 2026-08-19 봉합). 동기화가 안 되면
-    # 격리는 거짓말을 하므로 세션 자체를 거부한다 → 호출자는 종전 라이브 직행 경로
-    # (구문검증+백업+워치독)로 폴백한다(S5b 와 같은 착지 — 격리 없음 > 거짓 격리).
+    # 기준 동기화 실패는 쓰기 거절이다. 정본으로 돌아가지 않는다.
+
     ok, detail = _sync_worktree_to_live(repo, wt_abs)
     if not ok:
-        print(f"[수리 스테이징] 베이스 동기화 실패 — 스테이징 없이 진행: {detail}")
+        print(f"[수리 스테이징] 베이스 동기화 실패 — 쓰기 거절: {detail}")
         _git(["worktree", "remove", "--force", wt_abs], repo)
         return None
     # ★주인 — 미적용 스테이징(<repair_staged>)과 지연 적용 결말이 **명령한 창으로**
     #   돌아가게 하는 열쇠. 규칙은 red_report 한 곳에만 둔다(생산자·소비자 동형, 08-25).
     sess = {"key": key, "worktree": wt_rel, "status": "staging",
             "created_at": datetime.now().isoformat(), "owner": _repair_owner(), "files": {}}
+    for relative in (".venv", "frontend/node_modules"):
+        source, destination = os.path.join(repo, relative), os.path.join(wt_abs, relative)
+        if (os.path.isdir(source) and not os.path.lexists(destination)
+                and _git(["check-ignore", "-q", relative], repo).returncode == 0):
+            os.makedirs(os.path.dirname(destination), exist_ok=True)
+            os.symlink(source, destination)  # 실제 쓰기는 OS 경계가 원본 경로에서 거절한다.
+    _candidate.initialize(repo, sess)
     _save_session(repo, sess)
     print(f"[수리 스테이징] 격리 사본 개설: {wt_rel} — 라이브는 이 세션이 적용될 때까지 무변경")
     return sess
@@ -359,16 +319,18 @@ def staged_path(repo: str, key: str, live_abs: str):
     sess = load_session(repo, key)
     if not sess:
         return None
-    rec = (sess.get("files") or {}).get(live_abs)
-    return rec.get("staged") if rec else None
+    _candidate.refresh(repo, sess)
+    rel = _rel_in_repo(repo, live_abs)
+    return str(_candidate.target(os.path.join(repo, sess["worktree"]), rel)) if rel else None
 
 
 def _rel_in_repo(repo: str, live_abs: str):
+    rel = os.path.relpath(live_abs, repo)
     try:
-        rel = os.path.relpath(live_abs, repo)
+        _candidate.target(repo, rel)
     except ValueError:
         return None
-    return None if rel.startswith("..") else rel
+    return rel
 
 
 def can_stage(repo: str, key: str, live_abs: str) -> bool:
@@ -382,7 +344,7 @@ def can_stage(repo: str, key: str, live_abs: str) -> bool:
 def stage_file(repo: str, key: str, live_abs: str):
     """쓰기 대상을 격리 사본 경로로 바꾼다(첫 접촉 시 라이브 원본에서 씨 뿌리기).
 
-    반환: 격리 사본 절대경로. 스테이징 불가(git 없음 등)면 None → 호출자는 라이브 직행."""
+    반환: 격리 사본 절대경로. 스테이징 불가(git 없음 등)면 None → 호출자는 쓰기 거절."""
     sess = ensure_session(repo, key)
     if not sess:
         return None
@@ -390,7 +352,8 @@ def stage_file(repo: str, key: str, live_abs: str):
     if rel is None:
         return None                       # repo 밖 — 스테이징 대상 아님
     wt_abs = os.path.join(repo, sess["worktree"])
-    st_abs = os.path.join(wt_abs, rel)
+    st_abs = str(_candidate.target(wt_abs, rel))
+    _candidate.invalidate(sess)
     files = sess.setdefault("files", {})
     rec = files.get(live_abs)
     if rec is None or rec.get("op") == "delete":
@@ -417,12 +380,13 @@ def stage_delete(repo: str, key: str, live_abs: str) -> bool:
     if rel is None:
         return False
     wt_abs = os.path.join(repo, sess["worktree"])
-    st_abs = os.path.join(wt_abs, rel)
+    st_abs = str(_candidate.target(wt_abs, rel))
+    _candidate.invalidate(sess)
     try:
         if os.path.exists(st_abs):
             os.remove(st_abs)
     except OSError as e:
-        print(f"[수리 스테이징] 격리 사본 삭제 실패(계속): {e}")
+        raise RuntimeError("격리 사본 삭제 실패") from e
     sess.setdefault("files", {})[live_abs] = {
         "op": "delete", "rel": rel, "staged": st_abs, "existed": os.path.exists(live_abs),
         "base_sha": _file_sha(live_abs)}
@@ -431,6 +395,11 @@ def stage_delete(repo: str, key: str, live_abs: str) -> bool:
 
 
 # ── 검증 배터리 (격리 사본 안에서만) ──────────────────────────────────────
+
+def _sandbox_check(command, *, cwd=None, env=None, **kwargs):
+    from repair_process import run
+    return run(command, (env or {})["INDIEBIZ_BASE_PATH"], cwd=cwd, env=env, **kwargs)
+
 
 def verify(repo: str, sess: dict):
     """격리 사본에서 기계 검증. (통과여부, checks[]) — 자기채점 아닌 pass/fail 기계값."""
@@ -441,14 +410,20 @@ def verify(repo: str, sess: dict):
     checks = []
     py = sys.executable or "python3"       # ★venv 파이썬 — 시스템 python3 는 의존성이 없다
 
-    # ★베이스 신선도 — 격리 사본을 '지금 라이브 + 세션 델타'로 동기화한 뒤에만 관문을
-    # 돌린다. 안 그러면 세션 개설 후의 라이브 변화(격리 밖 파일 직행 편집·새 커밋·개설 때
-    # 이식 실패 잔재)를 못 본 채 초록을 낸다(거짓 초록 — 2026-08-19 봉합).
-    ok_sync, sync_detail = _sync_worktree_to_live(
-        repo, wt_abs, skip_rels={r["rel"] for r in recs})
-    checks.append({"gate": "live_sync", "passed": ok_sync, "detail": sync_detail[:800]})
-    if not ok_sync:
-        return False, checks               # 낡은 베이스 위의 관문은 초록도 빨강도 못 믿는다
+    # 준비 검사도 정본에는 쓰지 않는다. 변경은 실제 사본 델타에서 수집한다.
+    try:
+        _candidate.refresh(repo, sess)
+        _save_session(repo, sess)
+        recs = list(sess["files"].values())
+        rels = [r["rel"] for r in recs if r["op"] != "delete"]
+        del_rels = [r["rel"] for r in recs if r["op"] == "delete"]
+        drift = _candidate.conflicts(repo, sess)
+        checks.append({"gate": "live_sync", "passed": not drift,
+                       "detail": "정본 충돌: " + ", ".join(drift[:12]) if drift else "정본 무변경 확인"})
+        if drift:
+            return False, checks
+    except (ValueError, OSError) as exc:
+        return False, [{"gate": "candidate", "passed": False, "detail": str(exc)}]
 
     # ★적재 파일 자체의 라이브 드리프트 (2026-08-31 ep2461 봉합) — live_sync 는 세션
     # 적재분을 건너뛰므로(스테이징이 이긴다), 스테이징~적용 사이에 **같은 경로**가
@@ -500,7 +475,7 @@ def verify(repo: str, sess: dict):
     # 1. 구문 (모든 .py)
     py_rels = [r for r in rels if r.endswith(".py")]
     if py_rels:
-        p = subprocess.run([py, "-m", "py_compile"] + [os.path.join(wt_abs, r) for r in py_rels],
+        p = _sandbox_check([py, "-m", "py_compile"] + [os.path.join(wt_abs, r) for r in py_rels],
                            capture_output=True, text=True, timeout=SMOKE_TIMEOUT,
                            env=_smoke_env(wt_abs))
         checks.append({"gate": "py_compile", "passed": p.returncode == 0,
@@ -511,7 +486,7 @@ def verify(repo: str, sess: dict):
     mods = sorted({m for m in (_module_name(r, wt_abs) for r in rels) if m})
     if mods:
         code = "import boot_paths\n" + "".join(f"import {m}\n" for m in mods)
-        p = subprocess.run([py, "-c", code], cwd=os.path.join(wt_abs, "backend"),
+        p = _sandbox_check([py, "-c", code], cwd=os.path.join(wt_abs, "backend"),
                            capture_output=True, text=True, timeout=SMOKE_TIMEOUT,
                            env=_smoke_env(wt_abs))
         checks.append({"gate": "import_smoke", "passed": p.returncode == 0,
@@ -523,16 +498,15 @@ def verify(repo: str, sess: dict):
     #    사본에서 못 돈다 → plain build(삼각)까지가 격리에서 가능한 최대치.
     build = os.path.join(wt_abs, "scripts", "build_ibl_nodes.py")
     if os.path.exists(build):
-        p = subprocess.run([py, "scripts/build_ibl_nodes.py"], cwd=wt_abs,
+        p = _sandbox_check([py, "scripts/build_ibl_nodes.py"], cwd=wt_abs,
                            capture_output=True, text=True, timeout=BUILD_TIMEOUT,
                            env=_smoke_env(wt_abs))
         checks.append({"gate": "ibl_triangle", "passed": p.returncode == 0,
                        "detail": ((p.stdout or "") + (p.stderr or "")).strip()[-800:]})
         # ★위 빌드는 **워크트리에** 파생물을 쓴다 — 그 초록은 격리 안에서만 참이다.
         #   라이브도 빌드돼 있는지는 라이브에서만 물을 수 있다(ep2519 봉합).
-        live = sync_live_derived(repo)
-        if live:
-            checks.append(live)
+        _candidate.collect(repo, sess)
+        _save_session(repo, sess)
 
     # 4. frontend 타입검사 — RED 구역에 frontend 가 있으므로 .ts/.tsx 도 이 층을 지난다.
     #    삭제도 방아쇠에 넣는다: 지워진 모듈을 아직 import 하는 쪽은 파이썬만 고아 검사가
@@ -549,13 +523,13 @@ def verify(repo: str, sess: dict):
     if any(r.replace(os.sep, "/").endswith(s) for r in (rels + del_rels) for s in SAFETY_SUFFIXES):
         st = os.path.join(wt_abs, "scripts", "red_safety_selftest.py")
         if os.path.exists(st):
-            p = subprocess.run([py, "scripts/red_safety_selftest.py"], cwd=wt_abs,
+            p = _sandbox_check([py, "scripts/red_safety_selftest.py"], cwd=wt_abs,
                                capture_output=True, text=True, timeout=SMOKE_TIMEOUT,
                                env=_smoke_env(wt_abs))
             checks.append({"gate": "safety_selftest", "passed": p.returncode == 0,
                            "detail": ((p.stdout or "") + (p.stderr or "")).strip()[-800:]})
 
-    return all(c["passed"] for c in checks), checks
+    return all(c["passed"] and not c.get("skipped") for c in checks), checks
 
 
 # ── 지연 적용 (2026-08-19) ────────────────────────────────────────────────
@@ -699,7 +673,7 @@ def _quiesce_cap_s() -> int:
 def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: str = "", active_verify_cmd: str = ""):
     """지연 적용 예약 — 라이브 쓰기를 '이 턴이 닫힌 뒤'로 미뤄 분리 수행자에 맡긴다.
 
-    반환: 응답 dict / None(예약 불능 → 호출자가 즉시 적용으로 폴백).
+    반환: 응답 dict / None(예약 불능 → 사본 보존·적용 거절).
     수행자(red_apply)는 ①주행기록 ended_at(=응답 전송·버퍼 저장 완료) ②증류 재합류
     (refresh_episode 의 log 재기록)를 기다린 뒤 쓰기 직전 재검증하고 적용한다."""
     key = sess["key"]
@@ -718,6 +692,7 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
            "episode_id": _current_episode_id(repo, agent_id or "system_ai"),
            "task_id": task_id or key, "agent_id": agent_id or "system_ai",
            "reason": reason, "scheduled_at": datetime.now().isoformat(),
+           "readiness_hash": _candidate.digest(sess.get("readiness")),
            "verify_cmd": (verify_cmd or "").strip(),
            "active_verify_cmd": (active_verify_cmd or "").strip(),
            "handler_path": os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -818,7 +793,11 @@ def perform_scheduled_apply(repo: str, key: str, prepare=None, finalize=None):
             "note": "격리 사본이 사라져 예약 적용을 수행할 수 없었습니다 — 다시 수리하세요."},
             owner=_owner)
         return {"success": False, "applied": False, "error": "격리 사본 소실"}
-    ok, checks = verify(repo, sess)
+    try:
+        _candidate.validate(repo, sess)
+        ok, checks = True, sess["readiness"]["checks"]
+    except (ValueError, OSError) as exc:
+        ok, checks = False, [{"gate": "workspace_ready", "passed": False, "detail": str(exc)}]
     if not ok:
         failed = [c["gate"] for c in checks if not c["passed"]]
         sess["status"] = "staging"
@@ -854,11 +833,7 @@ def _ctx(ti):
 
 
 def op_apply(ti):
-    """검증 통과분의 라이브 반영 — backend/*.py 는 ★지연 적용(턴 종료 후 분리 수행자).
-
-    검증 → (리로드를 부르는 세트면) 예약 → 수행자가 턴 종료 대기 → 재검증 → 준비(백업·
-    구문·keeper) → 쓰기 → 워치독. 어느 단계에서 막히든 그 앞까지는 라이브 무변경이다.
-    리로드가 없는 세트(frontend/scripts)는 지금 즉시 같은 코어로 적용한다."""
+    """전체 기준의 사본 준비를 승인받은 고정 묶음만 기존 적용 경로로 넘긴다."""
     repo, key = _ctx(ti)
     if not repo:
         return {"success": False, "error": "repo 루트를 찾지 못했습니다."}
@@ -880,6 +855,8 @@ def op_apply(ti):
         # ★staging 뿐 아니라 apply_scheduled 도 받는다 — 예약이 좌초하면(수행자 사망)
         #   다시 apply 가 재검증 후 재예약한다(수행자 중복은 perform 쪽 멱등으로 안전).
         sess = read_session(repo, key) or _resume_staging(repo, key)
+        if sess and sess.get("status") == "applied":
+            return _complete_immediate(repo, sess, {"success": True, "applied": True}, ti)
         if sess and sess.get("status") not in ("staging", "apply_scheduled"):
             sess = None
         if sess and not os.path.isdir(os.path.join(repo, sess.get("worktree") or "")):
@@ -897,6 +874,11 @@ def op_apply(ti):
             return {"success": False, "applied": False,
                     "error": (f"제안 {pid} 의 격리 사본이 사라져 적용할 내용이 없습니다 — "
                               f"기록만 남은 죽은 제안입니다. 다시 propose 하세요.")}
+    if sess:
+        try:
+            _candidate.collect(repo, sess)
+        except (ValueError, OSError) as exc:
+            return {"success": False, "applied": False, "error": str(exc)}
     if not sess or not (sess.get("files") or {}):
         pend = pending_proposals(repo)
         hint = ""
@@ -905,19 +887,21 @@ def op_apply(ti):
                     + " 또는 ".join(f'[self:patch]{{op:"apply", proposal_id:"{x}"}}'
                                     for x in pend[:3]))
         return {"success": False, "error":
-                "적용할 스테이징 변경이 없습니다. RED 구역(backend/·frontend/·scripts/)의 파일을 [self:write]/[self:edit] 로 "
-                "고치면 자동으로 격리 사본에 쌓입니다. 이 턴의 편집이 전부 비-RED(data/·outputs/ 등)였다면 이미 라이브에 "
-                "반영돼 있어 apply 가 필요 없습니다(편집 결과의 '라이브 파일에 반영됨' 문장이 그 표지)." + hint,
+                "적용할 수리 델타가 없습니다. [self:write]/[self:edit]와 격리 셸로 "
+                "같은 사본을 수정하고 원래 요청 전체를 검증한 뒤 apply 하세요." + hint,
                 "pending_proposals": pend}
 
-    ok, checks = verify(repo, sess)
-    if not ok:
-        failed = [c["gate"] for c in checks if not c["passed"]]
-        return {"success": False, "applied": False, "verified": False,
-                "checks": checks, "failed_gates": failed,
-                "message": (f"기계 검증 실패({', '.join(failed)}) — 라이브는 무변경입니다. "
-                            f"격리 사본에서 고쳐 쓴 뒤 다시 apply 하세요."),
-                "worktree": sess["worktree"]}
+    from supervision_bus import current
+    controller = current()
+    if not controller or not controller.repair_granted:
+        return {"success": False, "applied": False, "error": "사본 준비를 판정할 수리 감독이 없습니다"}
+    sess["activation_commands"] = {k: str(ti.get(k) or "").strip()
+                                    for k in ("verify_cmd", "active_verify_cmd")}
+    approval = controller.prepare_repair(repo, sess, verify, _candidate)
+    if not approval.get("success"):
+        return approval
+    checks = sess["readiness"]["checks"]
+    _save_session(repo, sess)
 
     prepare = ti.get("_red_prepare")
     finalize = ti.get("_red_finalize")
@@ -936,37 +920,73 @@ def op_apply(ti):
         out = _schedule_deferred_apply(repo, sess, checks, verify_cmd, active_verify_cmd)
         if out is not None:
             return out
-        print("[수리 스테이징] 지연 적용 예약 불능 — 즉시 적용 폴백(이 턴은 리로드에 끊길 수 있음)")
+        return {"success": False, "applied": False, "error": "적용 예약 실패. 사본을 보존했습니다. 즉시 적용하지 않습니다"}
+    sess["apply_task_id"] = _grant_identity()[0] or sess["key"]
     out = _perform_apply(repo, sess, checks, prepare, finalize)
-    if verify_cmd and out.get("applied"):
-        # 즉시 적용 경로(리로드 없음)에는 위탁할 죽음이 없다 — 이 턴이 그대로 살아 있으므로
-        # 검증은 지금 직접 하는 게 맞다. 조용히 삼키면 "돌렸겠지"로 오해된다.
-        out["verify_cmd_deferred"] = False
-        out["message"] = (out.get("message") or "") + (
-            f" ★verify_cmd 는 돌리지 않았습니다 — 리로드 없는 즉시 적용이라 이 턴이 살아 "
-            f"있습니다. 지금 직접 확인하세요: {verify_cmd[:160]}")
-    if active_verify_cmd and out.get("applied"):
-        out["active_verify_cmd_deferred"] = False
-        out["message"] = (out.get("message") or "") + f" 활성화 후 명령도 이 턴에서 직접 수행하세요: {active_verify_cmd[:160]}"
-    return out
+    return _complete_immediate(repo, sess, out, ti)
+
+
+def _complete_immediate(repo, sess, result, ti):
+    if not result.get("applied"):
+        return result
+    if _reload_triggering(sess):
+        return {**result, "complete": False, "message": "기존 적용 영수증의 활성 확인을 기다립니다"}
+    sess = read_session(repo, sess["key"]) or sess
+    for field in ("verify_cmd", "active_verify_cmd"):
+        command = (sess.get("readiness", {}).get("activation_commands") or {}).get(field)
+        if command:
+            checked = _candidate.activation(repo, sess, field, command, _save_session)
+            if checked.get("state") != "passed":
+                return {**result, "success": False, "complete": False, "activation": checked}
+    committed = commit_applied(repo, sess["key"])
+    return {**result, "success": bool(committed.get("success")), "commit": committed,
+            "complete": bool(committed.get("success"))}
 
 
 def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
-    """검증 통과분의 실제 라이브 반영 — 즉시 경로와 지연 수행자가 공유하는 단일 쓰기 코어."""
-    files = sess["files"]
-    to_write = {p: r for p, r in files.items() if r.get("op") != "delete"}
-    to_delete = {p: r for p, r in files.items() if r.get("op") == "delete"}
-
-    # 준비 전량 선통과 — 하나라도 막히면 아무것도 건드리지 않는다(부분 적용 금지).
-    # 삭제도 여기서 백업을 뜬다: 워치독 롤백이 되돌릴 수 있는 건 백업이 있는 것뿐이다.
-    staged_contents = {}
-    for live_abs, rec in to_write.items():
+    with _candidate.locked(repo, "application"):
+        persisted = read_session(repo, sess["key"]) or {}
+        if persisted.get("status") == "applied":
+            return {"success": persisted.get("verified", False), "applied": True,
+                    "verified": persisted.get("verified", False), "note": "이미 적용됨"}
+        if persisted.get("status") == "applying":
+            recovered = _recover_immediate(repo, persisted)
+            if recovered:
+                return {"success": False, "applied": False, "rolled_back": True, "error": "중단된 적용을 복구했습니다. 같은 사본을 다시 검증하세요"}
+            return {"success": False, "applied": False, "error": "이전 적용 결과 불명. 기존 복구 영수증을 먼저 회수하세요"}
         try:
-            with open(rec["staged"], encoding="utf-8") as f:
-                staged_contents[live_abs] = f.read()
-        except Exception as e:
-            return {"success": False, "applied": False,
-                    "error": f"격리 사본을 읽지 못했습니다: {rec['rel']} ({e})"}
+            return _perform_apply_locked(repo, sess, checks, prepare, finalize)
+        except OSError:
+            if sess.get("status") == "applying":
+                _recover_immediate(repo, sess)
+            raise
+
+
+def _recover_immediate(repo, sess):
+    """리로드 없는 중단만 여기서 복구. backend 복구는 기존 외부 제어자가 소유한다."""
+    if _reload_triggering(sess):
+        return False
+    from restart_red import recover_code
+    manifest = os.path.join(repo, "data/system_ai_state/red_backups",
+                            task_key(sess.get("apply_task_id") or sess["key"]), "manifest.json")
+    if not recover_code(repo, {"request": {"operation": "red_verify", "payload": {"manifest_path": manifest}}}):
+        return False
+    sess["status"] = "staging"
+    sess.pop("activation_checks", None)
+    _candidate.invalidate(sess)
+    _save_session(repo, sess)
+    return True
+
+
+def _perform_apply_locked(repo: str, sess: dict, checks: list, prepare, finalize):
+    """검증 통과분의 실제 라이브 반영 — 즉시 경로와 지연 수행자가 공유하는 단일 쓰기 코어."""
+    try:
+        plan = _candidate.validate(repo, sess)
+    except (ValueError, OSError) as exc:
+        return {"success": False, "applied": False, "error": str(exc)}
+    files = {str(path): {"rel": str(path.relative_to(os.path.realpath(repo)))} for path, _, _ in plan}
+    staged_contents = {str(path): data for path, data, _ in plan if data is not None}
+    to_delete = {str(path): files[str(path)] for path, data, _ in plan if data is None}
     if prepare:
         for live_abs, content in staged_contents.items():
             err = prepare(live_abs, content)
@@ -979,12 +999,24 @@ def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
                 return {"success": False, "applied": False,
                         "error": f"삭제 전 백업이 실패했습니다({files[live_abs]['rel']}): {err}"}
 
+    try:
+        _candidate.validate(repo, sess)
+    except (ValueError, OSError) as exc:
+        return {"success": False, "applied": False, "error": str(exc)}
+    sess["status"] = "applying"
+    _save_session(repo, sess)
+
     # ★쓰기 먼저, 삭제 나중 — 이동(move)은 '대상에 생긴 뒤 원본이 사라진다'가 안전한 순서다
     written, removed = [], []
     for live_abs, content in staged_contents.items():
         os.makedirs(os.path.dirname(live_abs), exist_ok=True)
-        with open(live_abs, "w", encoding="utf-8") as f:
+        from tempfile import NamedTemporaryFile
+        with NamedTemporaryFile(dir=os.path.dirname(live_abs), delete=False) as f:
             f.write(content)
+            temp = f.name
+        mode = sess["sealed"][files[live_abs]["rel"]]["after"]["mode"]
+        os.chmod(temp, mode)
+        os.replace(temp, live_abs)
         written.append(files[live_abs]["rel"])
     for live_abs, rec in to_delete.items():
         try:
@@ -996,13 +1028,6 @@ def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
     if finalize:
         for live_abs in list(staged_contents) + list(to_delete):
             finalize(live_abs)             # backend .py 면 워치독(헬스체크·자동 롤백)
-
-    # ★적용 **후** 파생물 재생성 (2026-09-01): verify 의 live_derived 는 적용 *전*
-    # 라이브의 신선도만 증명한다 — 방금 쓴 파일이 빌드 입력이면 그 순간 다시 낡는다.
-    # 즉시·지연 적용이 공유하는 단일 쓰기 코어라, 여기가 유일한 봉합 지점이다.
-    live_after = sync_live_derived(repo)
-    if live_after is not None:
-        checks = checks + [live_after]
 
     sess["status"] = "applied"
     sess["applied_at"] = datetime.now().isoformat()
@@ -1023,6 +1048,21 @@ def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
                     f"/health 를 확인해 실패 시 자동 롤백합니다(판정은 다음 턴에 보고됩니다)."),
         "worktree": sess["worktree"],
     }
+
+
+def commit_applied(repo, key):
+    sess = read_session(repo, key)
+    if not sess:
+        return {"success": False, "error": "수리 세션이 없습니다"}
+    body_spec = importlib.util.spec_from_file_location(
+        "system_essentials_repair_body", os.path.join(os.path.dirname(__file__), "body_ops.py"))
+    body = importlib.util.module_from_spec(body_spec)
+    body_spec.loader.exec_module(body)
+    with _candidate.locked(repo, "application"):
+        result = _candidate.commit(repo, sess, body)
+        sess["commit"] = result
+        _save_session(repo, sess)
+        return result
 
 
 def op_status(ti):
@@ -1105,9 +1145,11 @@ def op_discard(ti):
         return {"success": False, "error":
                 f"그런 스테이징 세션이 없습니다: {target}. "
                 f"propose 로 올린 제안을 지우려면 proposal_id 를 주세요(op:status 에 목록)."}
-    # ★폐기 = 워크트리가 사라지는 순간이다. 관문이 그 안에 써 둔 파생물도 같이 죽으므로,
-    #   지우기 **전에** 라이브를 스스로 맞춰 둔다(ep2519: 여기서 자막 어휘가 증발했다).
-    live = sync_live_derived(repo)
+    if sess.get("owner") != _repair_owner() or sess.get("reused_by"):
+        return {"success": False, "error": "이 사본을 폐기할 소유권이 없습니다"}
+    if sess.get("status") in {"applying", "applied"}:
+        return {"success": False, "error": "적용·복구 중인 사본은 폐기하지 않습니다"}
+    live = None  # 폐기는 정본 파생물을 변경하지 않는다.
     _remove_worktree(repo, sess)
     sess["status"] = "discarded"
     sess["discarded_at"] = datetime.now().isoformat()
@@ -1156,7 +1198,7 @@ def _cleanup_old(repo: str):
         try:
             with open(p, encoding="utf-8") as f:
                 s = json.load(f)
-            if s.get("status") == "staging":
+            if s.get("status") not in ("applied", "discarded"):
                 continue
             stamp = s.get("applied_at") or s.get("discarded_at") or s.get("created_at")
             if stamp and datetime.fromisoformat(stamp) < cutoff:

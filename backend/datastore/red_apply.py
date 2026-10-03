@@ -314,8 +314,8 @@ def _run_post_verify(repo: str, cmd: str, *, timeout=None, receipt_path=None) ->
     result = {"ran": True, "cmd": mask_secrets(cmd), "timeout_s": timeout,
               "command_sha256": hashlib.sha256(cmd.encode()).hexdigest()}
     try:
-        r = subprocess.run(cmd, shell=True, cwd=repo, capture_output=True,
-                           text=True, timeout=timeout)
+        from repair_process import run
+        r = run(["/bin/sh", "-c", cmd], repo, timeout=timeout, readonly=True)
         result["exit_code"] = r.returncode
         output = text(r.stdout) + ("\n[stderr] " + text(r.stderr) if r.stderr else "")
     except subprocess.TimeoutExpired as exc:
@@ -339,7 +339,7 @@ def _run_post_verify(repo: str, cmd: str, *, timeout=None, receipt_path=None) ->
 def _load_handler(job: dict):
     """system_essentials handler 로드 — 안전판(prepare/finalize)을 재사용하기 위해.
     _REPO_ROOT 는 대상 repo 로 맞춘다(가짜 저장소 테스트에서 코드 루트와 갈라진다)."""
-    hpath = job.get("handler_path") or str(
+    hpath = str(
         CODE_ROOT / "data" / "packages" / "installed" / "tools"
         / "system_essentials" / "handler.py")
     spec = importlib.util.spec_from_file_location("se_handler_deferred", hpath)

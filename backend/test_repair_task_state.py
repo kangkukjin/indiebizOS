@@ -56,6 +56,9 @@ def test_real_pipeline_resumes_without_recall_classifier_or_planner(supervisor, 
     monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: "ACHIEVED")
     row = record(tmp_path, goal=supervisor.message, agent_id=supervisor.owner,
                  resume_task_id=supervisor.task, result={"outcome": "healthy"})
+    from restart_protocol import atomic_json
+    atomic_json(tmp_path / "data/system_ai_state/repair_sessions" / (row["task_id"] + ".json"),
+                {"status": "applied", "commit": {"success": True}})
     with journal.resuming(row):
         events = list(runner._cognitive_stream_body(row["goal"], []))
     assert not [e for e in events if e["type"] == "error"]
@@ -171,7 +174,7 @@ def test_interrupted_active_check_is_reconciled_not_blindly_replayed(tmp_path, m
 def test_verification_preserves_failure_tail_and_full_output(tmp_path, monkeypatch):
     import red_apply
     monkeypatch.setattr(red_apply, "_wait_healthy", lambda *a: True)
-    monkeypatch.setattr("subprocess.run", lambda *a, **kw:
+    monkeypatch.setattr("repair_process.run", lambda *a, **kw:
                         SimpleNamespace(returncode=1, stdout="build output\n" * 1000, stderr="ACTUAL FAILURE"))
     result = red_apply._run_post_verify(str(tmp_path), "check")
     assert result["truncated"] and "ACTUAL FAILURE" in result["output"]

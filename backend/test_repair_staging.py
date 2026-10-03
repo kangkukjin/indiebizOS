@@ -7,10 +7,10 @@ REPAIR 경로가 라이브 substrate 를 직접 수술하지 않고 격리 사�
 
 핵심 계약 5:
   S1 그랜트 있는 RED 쓰기는 격리로 간다 — 라이브 무변경(리로드 없음)
-  S2 자기가 쓴 것을 되읽으면 격리본이 온다 (안 건드린 파일은 라이브)
+  S2 모든 수리 읽기는 같은 격리본을 본다
   S3 검증이 실패하면 라이브는 끝까지 무변경 (부분 적용 없음)
   S4 검증이 통과하면 라이브로 일괄 이동 + 기존 안전판(백업)이 이어받는다
-  S5 그랜트가 없거나 git 이 없으면 스테이징 없이 종전 경로로 폴백한다
+  S5 그랜트 또는 격리가 없으면 수리 쓰기를 거절한다
   S8 검증 베이스 = 지금 라이브 + 세션 델타 (2026-08-19 거짓 초록 봉합 — 미추적 신규
      의존·세션 개설 후 라이브 드리프트·커밋 드리프트까지 검증 시마다 동기화)
   S9 지연 적용 (2026-08-19): backend/*.py apply=예약(라이브 무변경)→수행자가 턴 종료
@@ -108,7 +108,26 @@ def _apply_full(st, h, tmp, key_str):
     return r
 
 
+def _ready_supervisor():
+    """이 배터리는 적용/복구 계약을 검사한다. 의미 평가자는 고정된 합격 판정으로 대체한다.
+
+    실제 준비 평가의 누락·부분 합격·낡은 증거 거절은 test_repair_workspace_completion에서 검사한다.
+    """
+    from types import SimpleNamespace
+    def prepare(repo, sess, verify, candidate):
+        ok, checks = verify(repo, sess)
+        if not ok:
+            return {"success": False, "applied": False, "verified": False, "checks": checks,
+                    "failed_gates": [c["gate"] for c in checks if not c["passed"]]}
+        candidate.seal(repo, sess, checks, {"status": "APPROVED"},
+                       {"criteria": [{"id": "C1", "text": "fixture repair"}]})
+        return {"success": True}
+    return SimpleNamespace(repair_granted=True, prepare_repair=prepare)
+
+
 def run():
+    import supervision_bus
+    supervision_bus.current = lambda *args, **kwargs: _ready_supervisor()
     h = _load_handler()
     st = h._staging_mod()
     # 예약이 실제 수행자를 spawn 하면 배터리의 직접 perform 호출과 경주한다 — 심으로 차단
@@ -136,8 +155,9 @@ def run():
         # S2 — 되읽기는 격리본, 안 건드린 파일은 라이브
         check("S2_read_sees_own_write",
               h._red_stage(str(victim), for_write=False) == staged)
-        check("S2_untouched_reads_live",
-              h._red_stage(str(bystander), for_write=False) == str(bystander))
+        check("S2_untouched_reads_workspace",
+              h._red_stage(str(bystander), for_write=False) != str(bystander)
+              and Path(h._red_stage(str(bystander), False)).read_text() == bystander.read_text())
 
         # S3a — 구문 오류는 py_compile 이 잡고, 라이브는 무변경
         Path(staged).write_text("VALUE = 'broken'\ndef (:\n")
@@ -396,8 +416,12 @@ def run():
 
         # ── S5a — 그랜트 없으면 스테이징 없음(게이트가 이미 막는 자리) ──
         _ungrant()
-        check("S5a_no_grant_no_staging",
-              h._red_stage(str(victim), for_write=True) == str(victim))
+        try:
+            h._red_stage(str(victim), for_write=True)
+            denied = False
+        except RuntimeError:
+            denied = True
+        check("S5a_no_grant_write_denied", denied)
     finally:
         _ungrant()
         import shutil
@@ -410,8 +434,13 @@ def run():
         h._REPO_ROOT = tmp2
         v2 = tmp2 / "backend" / "cognition" / "victim.py"
         _grant(h, "task_nogit")
-        check("S5b_nogit_falls_back_to_live",
-              h._red_stage(str(v2), for_write=True) == str(v2))
+        before = v2.read_bytes()
+        try:
+            h._red_stage(str(v2), for_write=True)
+            denied = False
+        except RuntimeError:
+            denied = True
+        check("S5b_nogit_denies_live_fallback", denied and v2.read_bytes() == before)
     finally:
         _ungrant()
         import shutil
@@ -484,7 +513,7 @@ def run():
         #     (검사 못 하는 것이 apply 를 영원히 막으면 2026-08-18 부류의 재생산)
         g_skip = st._tsc_check(str(tmp4), str(tmp4), ["frontend/src/x.ts"])
         check("S12a_skips_honestly_without_node_modules",
-              g_skip["passed"] is True and g_skip.get("skipped") is True and g_skip["detail"],
+              g_skip["passed"] is False and g_skip.get("skipped") is True and g_skip["detail"],
               json.dumps(g_skip, ensure_ascii=False)[:200])
 
         if live_nm.is_dir():
@@ -529,7 +558,7 @@ def run():
         s13 = h._red_stage(str(v13), for_write=True)
         Path(s13).write_text("T13 = 'patched'\n")
         r13 = st.op_apply({"_repo_root": str(tmp5), "_grant_key": st.task_key(task13),
-                           "verify_cmd": "python3 -c \"open('verify_ran.txt','w').write('ok')\"",
+                           "verify_cmd": "python3 -c \"print('activation_checked')\"",
                            "_red_prepare": h._red_write_prepare,
                            "_red_finalize": h._red_write_finalize})
         # (가) 자기수용감각 — 응답이 '기다리는 대상이 곧 너'라고 말하는가
@@ -547,7 +576,7 @@ def run():
         job13 = (tmp5 / "data" / "system_ai_state" / "repair_sessions"
                  / f"{st.task_key(task13)}.apply.json")
         check("S13b_verify_cmd_handed_to_executor",
-              job13.exists() and "verify_ran.txt" in json.loads(job13.read_text()).get("verify_cmd", ""),
+              job13.exists() and "activation_checked" in json.loads(job13.read_text()).get("verify_cmd", ""),
               job13.read_text()[:200] if job13.exists() else "no job")
         # 실프로세스 종단 — 적용 + 검증 실행 + 후속 기록까지 (S10 과 같은 격리: 닿지 않는 몸)
         env13 = {**os.environ, "RED_APPLY_NO_EPISODE_GRACE_S": "0", "RED_APPLY_SETTLE_S": "0",
@@ -558,7 +587,7 @@ def run():
         p13 = subprocess.run([sys.executable, "-c", "import sys,json\nfrom pathlib import Path\nsys.path.insert(0, str(Path(sys.argv[2]) / 'backend'))\nimport boot_paths\nfrom restart_controller import Controller\nfrom restart_protocol import code_manifest, request, read_json\nfrom test_restart_controller import Adapter\njob_path=Path(sys.argv[1]); job=json.loads(job_path.read_text()); base=Path(job['repo'])\nadapter=Adapter(); adapter.base=base; ctl=Controller(base,base,adapter)\nctl.save(phase='ACTIVE',generation='fixture',worker={'pid':11,'born':1},code_digest=code_manifest(base)['digest'],control_token='fixture')\nrequest(base,'red_apply',operation='red_apply',payload={'job_path':str(job_path)})\nfor _ in range(20):\n ctl.tick()\nresult=read_json(job_path).get('controller_apply', {})\nassert result.get('applied'), (result,ctl.state)\nassert ctl.state['phase']=='ACTIVE',ctl.state\n", str(job13), str(REPO)], capture_output=True, text=True, timeout=180, env=env13)
         check("S13b_process_applied", p13.returncode == 0 and v13.read_text() == "T13 = 'patched'\n",
               ((p13.stdout or "") + (p13.stderr or ""))[-400:])
-        check("S13b_verify_cmd_actually_ran", (tmp5 / "verify_ran.txt").exists(),
+        check("S13b_verify_cmd_actually_ran", "activation_checked" in json.loads(job13.read_text()).get("post_verify", {}).get("output", "") and not (tmp5 / "verify_ran.txt").exists(),
               "위탁받은 검증 명령이 적용 후에 돌지 않았다 — 위탁이 말뿐이면 AI 는 다시 기다린다")
         fu13 = (tmp5 / "data" / "system_ai_state" / "red_backups"
                 / st.task_key(task13) / "followup.json")
@@ -800,10 +829,11 @@ def run():
         s17 = h._red_stage(str(tmp17 / "backend" / "cognition" / "seventeen.py"), for_write=True)
         Path(s17).parent.mkdir(parents=True, exist_ok=True)
         Path(s17).write_text("SEVENTEEN = 1\n")
+        live_before_discard = (tmp17 / "data" / "derived.txt").read_bytes()
         rd = st.op_discard({"_repo_root": str(tmp17), "_grant_key": st.task_key(task17)})
-        check("S17e_discard_syncs_live_derived",
-              (tmp17 / "data" / "derived.txt").read_text() == "v3\n"
-              and (rd.get("live_derived") or {}).get("passed") is True,
+        check("S17e_discard_preserves_live_derived",
+              (tmp17 / "data" / "derived.txt").read_bytes() == live_before_discard
+              and not rd.get("live_derived"),
               json.dumps(rd, ensure_ascii=False)[:300])
         # 그리고 "라이브는 무변경"이라고 뭉뚱그리지 않는다 — 남은 미커밋을 센다
         check("S17e_discard_does_not_claim_clean_live",

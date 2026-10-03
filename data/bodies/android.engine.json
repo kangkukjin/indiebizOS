@@ -41,6 +41,7 @@
     "base/quiescent_reload",
     "base/r2_client",
     "base/reload_gate",
+    "base/repair_process",
     "base/repeat_guard",
     "base/restart_protocol",
     "base/result_read_contract",
@@ -120,6 +121,7 @@
     "cognition/pursuit_maintenance",
     "cognition/pursuit_tools",
     "cognition/reframe",
+    "cognition/repair_readiness",
     "cognition/repair_resume",
     "cognition/routing_system",
     "cognition/supervisor_content",
@@ -196,6 +198,7 @@
     "datastore/red_grant",
     "datastore/red_report",
     "datastore/red_watchdog",
+    "datastore/repair_context",
     "datastore/repair_continuation",
     "datastore/schema_migrations",
     "datastore/service_status",
@@ -536,8 +539,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 461,
-    "engine": 435,
+    "total": 464,
+    "engine": 438,
     "blocklist": 26
   }
 }

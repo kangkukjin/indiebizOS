@@ -23,6 +23,8 @@ def active_check(row, base=None):
     """ACTIVE에서만 소비자가 호출한다. 부수효과의 불확실한 실행은 자동 반복하지 않는다."""
     result = row.get("result") or {}
     command = result.get("active_verify_cmd")
+    if result.get("outcome") == "healthy" and not command:
+        _commit_ready(row, base)
     if result.get("outcome") != "healthy" or not command:
         row["phase"] = "verify_remaining" if result.get("outcome") == "healthy" else "repair_apply"
         return save(row, base)
@@ -48,8 +50,22 @@ def active_check(row, base=None):
         if checked and checked.get("command_sha256") == expected == pending.get("command_sha256"):
             pending.update(state="passed" if checked.get("exit_code") == 0 else "failed",
                            receipt={k: v for k, v in checked.items() if k != "output"}, recovered=True)
+    if row["active_verify"]["state"] == "passed":
+        _commit_ready(row, base)
     row["phase"] = "verify_remaining" if row["active_verify"]["state"] == "passed" else "repair_active"
     return save(row, base)
+
+
+def _commit_ready(row, base=None):
+    from red_apply import _load_handler
+    from repair_continuation import key
+    root = str(base or get_base_path())
+    st = _load_handler({"repo": root})._staging_mod()
+    session_key = key(row.get("staging_task_id") or row["task_id"])
+    sess = st.read_session(root, session_key)
+    # 과거 영수증을 소급 각인하지 않는다. 새 판본의 검증된 묶음만 소비한다.
+    if sess and sess.get("readiness"):
+        row["commit"] = st.commit_applied(root, session_key)
 
 
 def _project_runner(row):

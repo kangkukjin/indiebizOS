@@ -137,7 +137,8 @@ def _tsc_errors(text: str):
 
 
 def _run_tsc(fe_dir: str, tsc_bin: str, wt_abs: str):
-    p = subprocess.run([tsc_bin, "-p", "tsconfig.app.json", "--noEmit"], cwd=fe_dir,
+    from repair_process import run
+    p = run([tsc_bin, "-p", "tsconfig.app.json", "--noEmit", "--incremental", "false"], wt_abs, cwd=fe_dir,
                        capture_output=True, text=True, timeout=SMOKE_TIMEOUT,
                        env=_smoke_env(wt_abs))
     return p.returncode, ((p.stdout or "") + (p.stderr or "")).strip()
@@ -166,7 +167,7 @@ def _tsc_check(repo: str, wt_abs: str, ts_rels: list):
     gate = {"gate": "frontend_tsc", "files": ts_rels[:12]}
     fe_wt = os.path.join(wt_abs, "frontend")
     if not os.path.exists(os.path.join(fe_wt, "tsconfig.app.json")):
-        return dict(gate, passed=True, skipped=True,
+        return dict(gate, passed=False, skipped=True,
                     detail="frontend/tsconfig.app.json 없음 — 타입검사 건너뜀")
 
     nm_wt = os.path.join(fe_wt, "node_modules")
@@ -174,25 +175,25 @@ def _tsc_check(repo: str, wt_abs: str, ts_rels: list):
     borrowed = False
     if not os.path.exists(nm_wt):
         if not os.path.isdir(nm_live):
-            return dict(gate, passed=True, skipped=True,
+            return dict(gate, passed=False, skipped=True,
                         detail="frontend/node_modules 미설치 — 타입검사 불가"
                                "(npm install 후 재검증하면 이 관문이 켜집니다)")
         try:
             os.symlink(nm_live, nm_wt)
             borrowed = True
         except OSError as e:
-            return dict(gate, passed=True, skipped=True,
+            return dict(gate, passed=False, skipped=True,
                         detail=f"node_modules 를 빌리지 못함 — 타입검사 건너뜀 ({e})")
 
     tsc_bin = os.path.join(nm_wt, ".bin", "tsc")
     try:
         if not os.path.exists(tsc_bin):
-            return dict(gate, passed=True, skipped=True,
+            return dict(gate, passed=False, skipped=True,
                         detail="node_modules/.bin/tsc 없음 — 타입검사 건너뜀")
         try:
             rc, out = _run_tsc(fe_wt, tsc_bin, wt_abs)
         except (OSError, subprocess.SubprocessError) as e:
-            return dict(gate, passed=True, skipped=True,
+            return dict(gate, passed=False, skipped=True,
                         detail=f"tsc 실행 실패 — 타입검사 건너뜀 ({e})")
         if rc == 0:
             return dict(gate, passed=True, detail="타입 오류 없음")

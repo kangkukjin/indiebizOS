@@ -12,7 +12,7 @@ def available():
     return sys.platform == "darwin" and Path("/usr/bin/sandbox-exec").is_file()
 
 
-def sandbox_command(command, workspace, runtime):
+def sandbox_command(command, workspace, runtime, *, local_network=False):
     if not available():
         raise RuntimeError("이 몸의 코딩 쓰기 샌드박스는 미지원입니다(macOS 필요)")
     workspace, runtime = Path(workspace).resolve(), Path(runtime).resolve()
@@ -22,6 +22,13 @@ def sandbox_command(command, workspace, runtime):
               f"(deny file-write* (literal {quote(workspace / '.git')}))",
               f"(deny file-write* (subpath {quote(workspace / '.git')}))",
               "(deny network*)"]
+    if local_network:
+        # 사본의 임시 서버·문서 엔진만 사용. 운영 API는 허용 대상이 아니다.
+        policy += ['(allow file-write-data (literal "/dev/null"))', '(deny appleevent-send)', '(deny signal)', '(allow signal (target self) (target children) (target same-sandbox))',
+                   '(allow network-bind (local ip "*:*"))', '(allow network-inbound (local ip "*:*"))',
+                   f'(allow network* (local unix-socket (subpath {quote(runtime)})) (remote unix-socket (subpath {quote(runtime)})))',
+                   '(allow network-outbound (remote ip "localhost:*"))',
+                   '(deny network-outbound (remote tcp "localhost:8765"))']
     return ["/usr/bin/sandbox-exec", "-p", "\n".join(policy), *command]
 
 

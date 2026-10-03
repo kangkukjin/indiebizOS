@@ -319,7 +319,9 @@ def run(tool_input: dict, project_path: str) -> str:
     # 한글(비ASCII) 패턴은 cp949 파일을 rg 가 원리적으로 못 찾으므로 파이썬 경로로.
     raw_rows = None
     regex_error = None
-    if _RG_BIN and pattern.isascii():
+    if output_mode != "content" and full_counts is not None:
+        raw_rows, search_done, hit_size_cap = [], False, False
+    elif _RG_BIN and pattern.isascii():
         rg_out = _rg_grep(pattern, root, file_pattern, use_regex,
                           max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS, include_logs, ignore_case)
         if rg_out is not None:
@@ -351,7 +353,8 @@ def run(tool_input: dict, project_path: str) -> str:
     if not results and not full_counts:
         # 0건도 통화 봉투로(2026-08-08 ⑯) — 맨 문자열은 ??(폴백)의 빈손 술어와
         # 변환자가 구조로 인식할 수 없다. 사람용 안내는 text 에 그대로.
-        return json.dumps({"success": True, "items": [], "total": 0, "total_files": 0, "excluded": _excl_note,
+        return json.dumps({"success": True, "items": [], "total": 0, "total_files": 0,
+                           "total_matches": 0, "excluded": _excl_note,
                            "truncated": bool(search_done),  # truncation-scope: bounded — 명시 limit 선택과 시간·크기 원천 상한을 별도 truncations로 신고
                            "truncations": ([{"scope": "source", "reason": "검색 시간·크기 상한"}]
                                            if search_done else []),
@@ -380,9 +383,13 @@ def run(tool_input: dict, project_path: str) -> str:
             file_order = [os.path.relpath(p, project_path) for p in full_counts]
         text = "\n".join(file_order) + (regex_note if full_counts is not None else truncated)
         items = [{"파일": fp} for fp in file_order]
-        return json.dumps({"text": text, "items": items, "total": grand_total, "excluded": _excl_note,
+        return json.dumps({"text": text, "items": items, "total": n_files,
+                           "total_matches": grand_total, "excluded": _excl_note,
                            "total_files": n_files,
-                           "truncated": False if full_counts is not None else truncated_flag},  # truncation-scope: bounded — 명시 limit 선택과 시간·크기 원천 상한을 별도 truncations로 신고
+                           "total_complete": full_counts is not None or not search_done,
+                           "truncations": ([{"scope": "source", "reason": "검색 시간·크기 상한"}]
+                                           if full_counts is None and truncated_flag else []),
+                           "truncated": False if full_counts is not None else truncated_flag},  # truncation-scope: bounded — 파일 수와 일치 줄 수를 구분; 미완료 스캔은 source
                           ensure_ascii=False)
 
     if output_mode == "count":
@@ -394,9 +401,13 @@ def run(tool_input: dict, project_path: str) -> str:
             pairs = [(fp, file_counts[fp]) for fp in file_order]
         text = "\n".join(f"{fp}: {cnt}" for fp, cnt in pairs) + (regex_note if full_counts is not None else truncated)
         items = [{"파일": fp, "매칭 수": cnt} for fp, cnt in pairs]
-        return json.dumps({"text": text, "items": items, "total": grand_total, "excluded": _excl_note,
+        return json.dumps({"text": text, "items": items, "total": n_files,
+                           "total_matches": grand_total, "excluded": _excl_note,
                            "total_files": n_files,
-                           "truncated": False if full_counts is not None else truncated_flag},  # truncation-scope: bounded — 명시 limit 선택과 시간·크기 원천 상한을 별도 truncations로 신고
+                           "total_complete": full_counts is not None or not search_done,
+                           "truncations": ([{"scope": "source", "reason": "검색 시간·크기 상한"}]
+                                           if full_counts is None and truncated_flag else []),
+                           "truncated": False if full_counts is not None else truncated_flag},  # truncation-scope: bounded — 파일 수와 일치 줄 수를 구분; 미완료 스캔은 source
                           ensure_ascii=False)
 
     # output_mode == "content" (기본): 매칭 라인 (상한 내 표본, 경로순 결정적).

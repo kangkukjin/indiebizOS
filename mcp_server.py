@@ -436,6 +436,24 @@ async def execute_ibl(code: str, project_path: str = "",
 
 
 @mcp.tool()
+async def run_command(command: str, timeout: Annotated[int, Field(ge=1, le=300)] = 60,
+                      approved: bool = False, ctx: Context = None):
+    """승인된 자기수리의 같은 사본에서 검색·빌드·테스트를 실행하고 검증 증거를 남깁니다.
+    네이티브 셸 대신 사용합니다. 라이브·사본 밖 쓰기는 OS 격리가 막습니다.
+    일반 작업·무그랜트·다른 실행자는 거절됩니다. timeout은 초(최대 300)입니다.
+    """
+    agent, _, task, _ = _http_identity(ctx)
+    req = {"agent_id": agent or DEFAULT_AGENT_ID, "task_id": task or DEFAULT_TASK_ID,
+           "payload": {"command": command, "timeout": timeout, "approved": approved}}
+    raw = await anyio.to_thread.run_sync(
+        lambda: _post_backend("/ibl/repair/command", req, timeout + 10))
+    from ibl_result_transport import tool_result_is_error
+    from mcp.types import CallToolResult, TextContent
+    return CallToolResult(isError=tool_result_is_error(raw), content=[
+        TextContent(type="text", text=_trim_for_agent(raw))])
+
+
+@mcp.tool()
 async def read_guide(query: str, read: bool = True, ctx: Context = None,
                      if_hash: str = None, section: str = None):
     """작업 가이드(워크플로우·레시피)를 가이드 DB에서 검색해 읽습니다.

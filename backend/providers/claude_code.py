@@ -489,7 +489,9 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         repair_mode = bool(repair_active())
         if repair_mode and not tools_mode:
             cmd += ["--strict-mcp-config"]
-            cmd += ["--tools", "", "--allowed-tools", ",".join(t for t in self.EAGER_TOOLS if t.startswith("mcp__indiebizos__")),
+            cmd += ["--tools", "", "--allowed-tools", ",".join(
+                    [t for t in self.EAGER_TOOLS if t.startswith("mcp__indiebizos__")]
+                    + ["mcp__indiebizos__run_command"]),
                     "--disallowed-tools", ",".join(self.EAGER_BUILTIN_TOOLS)]
         elif context_update and not response_repair:
             names = [t for t in self.EAGER_TOOLS if t.startswith("mcp__indiebizos__")]

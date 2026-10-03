@@ -61,7 +61,8 @@ def test_actual_edit_grep_and_empty_result(tmp_path, monkeypatch):
     for pattern,expected in [('changed',2),('absent',0)]:
         result=handle_request({'edition':2,'code':'[self:grep]{path:$p,pattern:$q,file_pattern:"*.txt",output_mode:"count"}','inputs':{'p':str(tmp_path),'q':pattern}},str(tmp_path))
         assert result['success'],result
-        assert result['value']['total']==expected
+        assert result['value']['total_matches']==expected
+        assert result['value']['total']==len(result['value']['items'])==int(expected>0)
 
 
 def test_typed_list_preserves_all_fields_and_partial_failure(registry):
@@ -69,7 +70,7 @@ def test_typed_list_preserves_all_fields_and_partial_failure(registry):
     from ibl_v2_adapters import decode_envelope
     from ibl_v2_ir import Fault
     contract=selected(registry['self:grep'].contract, {'output_mode':'count'})
-    raw={'items':[{'파일':'a','매칭 수':2,'extra':'kept'}],'total':2,'truncated':False,'evidence':'kept'}
+    raw={'items':[{'파일':'a','매칭 수':2,'extra':'kept'}],'total':1,'total_matches':2,'truncated':False,'evidence':'kept'}
     value,_=decode_envelope(raw,contract['adapter'])
     assert guard(value,contract['result'],'grep') == raw
     with pytest.raises(Fault) as exc:

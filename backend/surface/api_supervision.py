@@ -14,7 +14,7 @@ class Request(BaseModel):
     payload: dict = {}
 
 
-def dispatch(agent_id, task_id, payload, boundary=False):
+def dispatch(agent_id, task_id, payload, boundary=False, repair_command=False):
     from supervision_bus import current
     from thread_context import snapshot, restore, set_current_agent_id
     supervisor = current(agent_id, task_id)
@@ -31,6 +31,20 @@ def dispatch(agent_id, task_id, payload, boundary=False):
                 trajectory_scope(task_id=task_id, episode_id=getattr(supervisor, "episode_id", None)):
             if boundary:
                 return {"active": True, "instruction": supervisor.boundary()}
+            if repair_command:
+                from repair_context import active
+                if agent_id != supervisor.owner or not active():
+                    return {"success": False, "error": "승인된 수리 실행자만 사본 명령을 실행할 수 있습니다"}
+                from system_tools import execute_tool
+                result = supervisor.run_tool("run_command", payload, lambda: execute_tool(
+                    "run_command", payload, supervisor.project_path,
+                    agent_id=agent_id, cancel_check=supervisor.cancelled))
+                if isinstance(result, str):
+                    try:
+                        return json.loads(result)
+                    except ValueError:
+                        return {"success": False, "error": result}
+                return result
             return json.loads(supervisor.tool(payload))
     finally:
         restore(previous)
@@ -44,3 +58,9 @@ async def bridge(req: Request):
 @router.post("/supervision/boundary")
 async def boundary(req: Request):
     return await asyncio.to_thread(dispatch, req.agent_id, req.task_id, req.payload, True)
+
+
+@router.post("/repair/command")
+async def repair_command(req: Request):
+    return await asyncio.to_thread(dispatch, req.agent_id, req.task_id, req.payload,
+                                   repair_command=True)

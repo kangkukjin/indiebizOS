@@ -414,6 +414,7 @@ return {complete:len($미완료)==0,checked:len($확인),missing:$미완료,chec
 앞은 검사 프로그램의 실행, 뒤는 명시 조건의 달성 여부다. 실행 종료·응답 생성만으로 사용자 목표 달성을 주장하지 않는다.
 
 `self:read`는 확장자/`format`에 따라 `.text`·`.blocks`·`.data`를 반환한다.
+본문만 필요하면 `format:"text"`의 `.text`만 반환한다. 위치 탐색은 `output_mode:"files_with_matches"`로 좁힌다.
 JSON 전체 읽기는 `.data`(배열은 `.data.items`), CSV/TSV는 `.data.items`·`.data.table`(문자열 셀)을 쓴다.
 표·시트는 `.data.table`·`.data.sheets`로 읽는다. 범위·절단 읽기는 텍스트이며 부분 추출 표지를 확인한다. 파일 부재는 `NOT_FOUND`다.
 회원 AI도 같은 문법을 사용하며, 회원 기기에서 받은 자료와 정의만 사용한다.
@@ -496,8 +497,7 @@ assert는 작성한 조건을 실제 결과에 대해 검사하며 조건 자체
 날짜·이름 등 중요한 필드가 압축되면 해당 경로만 더 읽는다. 작은 완결 결과는 그대로 온다.
 
 `evidence_summary`는 내부 도구·원천 실패를 상위 실행 성공과 구분한다. 오류의 `result_ref.read_args`는 진단을 먼저 연다. 가이드 재독 대신 변경 확인은 `read_guide`의 `if_hash`, 특정 절만 재확인할 때는 `section`을 쓴다. 본문이 문맥에서 사라졌으면 전문을 다시 읽는다.
-일반 파일에서 특정 문단을 찾을 때는 `self:grep`의 `pattern`·`context` 또는
-`self:read`의 줄 범위를 사용한다. 이미 받은 본문은 다시 읽지 않고 참조 입력으로 가공한다.
+문단 위치는 `self:grep`의 `pattern`·`context`로 찾는다.
 액션의 인자가 불명확하면 `describe`의 `callable_contract`와 `target_description`을 함께 본다.
 legacy-envelope 액션의 구판 전용 설명에는 소스의 `target_description_edition: 1`을 표시해 새 판본 조회에서 제외한다.
 실패의 `diagnostic.details`에 사용 예시·허용 값·hint가 있으면 소스 탐색 전에 이를 확인한다.

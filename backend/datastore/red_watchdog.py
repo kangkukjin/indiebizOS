@@ -68,6 +68,8 @@ SAFETY_SUFFIXES = (
     "backend/providers/cli_provider.py",
     "backend/providers/codex.py",
     "backend/providers/claude_code.py",
+    "backend/surface/api_supervision.py",
+    "mcp_server.py",
     "scripts/red_safety_selftest.py",
 )
 

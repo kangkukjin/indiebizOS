@@ -108,6 +108,7 @@ class Supervisor:
         self.final_images = None
         self.content_artifacts = []
         self._native = {}
+        self._bridge_pending = {}
         self._execute = getattr(runner.ai, "_custom_execute_tool", None)
         if self._execute is None:
             from system_tools import execute_tool
@@ -516,8 +517,20 @@ class Supervisor:
 
     def observe_native(self, event):
         name = event.get("name") or event.get("tool") or ""
-        if name in {"mcp__indiebizos__execute_ibl", "mcp__indiebizos__supervision"} or name in self.catalog or name == "supervision":
-            return  # API/MCP 브리지가 이미 실제 실행을 기록했다.
+        bridge_name = name.removeprefix("mcp__indiebizos__")
+        if bridge_name in {"execute_ibl", "supervision"} or bridge_name in self.catalog or name == "mcp__indiebizos__run_command":
+            # 서버가 기록한 업무 실패는 중복 집계하지 않는다. 클라이언트의 승인·전송
+            # 실패는 서버에 도달하지 않을 수 있어 CLI 경계의 증거로 따로 남긴다.
+            native_id = event.get("id") or name
+            if event.get("type") == "tool_start":
+                self._bridge_pending[native_id] = event.get("input", {})
+            elif event.get("type") == "tool_result":
+                payload = self._bridge_pending.pop(native_id, {})
+                if event.get("transport_error"):
+                    key = self._start(name, payload)
+                    self.log("tool.transport_error", id=key, name=name, role="execution")
+                    self._finish(key, event.get("result", ""), True)
+            return
         if event.get("type") == "tool_start":
             self._native[event.get("id") or name] = self._start(name, event.get("input", {}))
         elif event.get("type") == "tool_result":

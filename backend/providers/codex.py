@@ -435,6 +435,16 @@ class CodexProvider(CliSubprocessProvider):
             # 네이티브 셸의 read-only 샌드박스와 다른 MCP 도구의 승인 정책은 유지한다.
             args += ["-c", f'{ns}.enabled_tools=["supervision"]']
             args += ["-c", f'{ns}.tools.supervision.approval_mode="approve"']
+        else:
+            from repair_context import active as repair_active
+            if repair_active():
+                # 네이티브 쓰기는 계속 read-only. 승인된 수리의 파일/셸/적용은
+                # IBL 서버의 그랜트·사본·준비 판정 경계를 통과해야 한다.
+                args += ["-c", f'{ns}.enabled_tools=["execute_ibl","read_guide","run_command"]']
+                for tool in ("execute_ibl", "read_guide", "run_command"):
+                    args += ["-c", f'{ns}.tools.{tool}.approval_mode="approve"']
+            else:
+                args += ["-c", f'{ns}.disabled_tools=["run_command"]']
         return args
 
     def _image_prompt_prefix(self, image_paths: List[str]) -> str:
@@ -525,6 +535,15 @@ class CodexProvider(CliSubprocessProvider):
         head = (self.system_prompt or "")
         if not getattr(self, "no_tools", False) and getattr(self, "agent_role", "execution") != "consciousness":
             head += self.TOOL_POLICY
+            from repair_context import active as repair_active
+            if repair_active():
+                head += (
+                    "\n현재는 승인된 자기수리다. 네이티브 셸은 읽기 전용이다. "
+                    "파일 읽기·수정은 execute_ibl의 self:read(format:text)/write/edit로, "
+                    "검색·빌드·테스트는 mcp__indiebizos__run_command로 같은 사본에서 실행한다. "
+                    "이 run_command가 검증 증거를 남긴다. 격리 미지원 도구를 반복하거나 "
+                    "네이티브 셸로 검증을 대신하지 말고 지원된 사본 도구를 사용한다.\n"
+                )
         if not head.strip():
             return body
         return f"{head}\n\n---\n\n{body}"
@@ -728,6 +747,11 @@ class CodexProvider(CliSubprocessProvider):
                 raw = item.get("content_meta")
             if raw is None:
                 raw = item.get("result")
+            if item.get("error"):
+                # 서버 도착 전 승인 거절·전송 실패에는 result 대신 error만 온다.
+                error = item["error"]
+                return (error if isinstance(error, str) else
+                        json.dumps(error, ensure_ascii=False)), True
             text, mcp_error = CodexProvider._unwrap_mcp_content(raw)
             if text is not None:
                 # MCP 프로토콜의 isError 는 봉투 안에만 있다 — item.status 는 '호출이
@@ -860,7 +884,8 @@ class CodexProvider(CliSubprocessProvider):
                 self._log_tool_result(result_text, is_error)
                 out.append((
                     {"type": "tool_result", "id": iid, "name": name,
-                     "result": result_text, "is_error": is_error},
+                     "result": result_text, "is_error": is_error,
+                     "transport_error": itype == "mcp_tool_call" and bool(item.get("error"))},
                     None,
                 ))
 

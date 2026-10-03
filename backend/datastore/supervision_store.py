@@ -385,6 +385,9 @@ class TurnStore:
                 self.cost["evaluation_calls"] += 1
             elif kind == "evaluation.finished":
                 self.cost["evaluation_model_s"] += fields.get("elapsed_s", 0)
+            elif kind == "evaluation.stage_finished" and fields.get("stage") in {
+                    "wait", "prepare", "visual", "checkpoint"}:
+                self.cost["evaluation_" + fields["stage"] + "_s"] += fields.get("elapsed_s", 0)
             elif kind in {"decision.stale", "instruction.delivered"}:
                 self.cost[kind] += 1
             with (self.directory / "events.jsonl").open("a", encoding="utf-8") as stream:

@@ -146,7 +146,8 @@ def prepare(controller, tool_calls=None):
         files.append(f"### {path}\n{bounded_attachment(path, text, 2 * EVALUATION_FILE_CHARS)}")
         snapshots[path] = {"hash": digest(text), "mode": "text"}
     evaluator = Evaluator()
-    images = evaluator._collect_visual_artifacts(artifact_response, tool_calls=calls)
+    with controller.evaluation_stage("visual"):
+        images = evaluator._collect_visual_artifacts(artifact_response, tool_calls=calls)
     for img in images:
         path = img.get("_path")
         if path:

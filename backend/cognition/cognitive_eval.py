@@ -242,7 +242,36 @@ class CognitiveEvalMixin:
                 seen.add(p)
                 cand.append(p)
 
-        img_re = re.compile(r'(/[^\s"\'<>]+\.(?:png|jpe?g|webp|gif))', re.IGNORECASE)
+        # 경로는 토큰 경계에서만 시작한다. base64의 매 '/'부터 긴 실패 검색을
+        # 반복하던 정규식은 이미지가 많은 턴의 최종 준비를 수십 초 막았다.
+        img_re = re.compile(
+            r'(?<![^\s"\'<>`(\[={])(/[^\s"\'<>`]+\.(?:png|jpe?g|webp|gif))'
+            r'(?=$|[\s"\'<>`)\]},;])', re.IGNORECASE)
+
+        def collect(value):
+            # 원 증거는 그대로 두고 JSON 구조의 문자열만 본다. 이미지 바이트는
+            # 파일 경로가 아니며, 이 함수는 생성된 로컬 산출물만 수집한다.
+            pending = [value]
+            while pending:
+                item = pending.pop()
+                if isinstance(item, dict):
+                    pending.extend(v for k, v in reversed(list(item.items()))
+                                   if k not in {"base64", "b64", "image_base64"})
+                elif isinstance(item, list):
+                    pending.extend(reversed(item))
+                elif isinstance(item, str):
+                    stripped = item.lstrip()
+                    if stripped.startswith(("{", "[")):
+                        try:
+                            pending.append(json.loads(item))
+                            continue
+                        except ValueError:
+                            pass  # 기존 평문/Markdown 도구 결과도 지원한다.
+                    if stripped.startswith("data:"):
+                        continue
+                    _add(item)  # 구조화된 경로는 공백·한글도 원형대로 받는다.
+                    for path in img_re.findall(item):
+                        _add(path)
 
         if tool_calls:
             for entry in tool_calls:
@@ -256,13 +285,9 @@ class CognitiveEvalMixin:
                     if isinstance(params, dict):
                         for key in _FILE_PATH_INPUT_KEYS:
                             _add(params.get(key))
-                res = entry.get("result")
-                if isinstance(res, str):
-                    for m in img_re.findall(res):
-                        _add(m)
+                collect(entry.get("result"))
 
-        for m in img_re.findall(response or ""):
-            _add(m)
+        collect(response or "")
 
         # 실존+크기 검증을 max_images 슬라이스 *전에* 수행 — 그래야 상한이 진짜
         # 이미지에만 쓰인다. (상대경로 'slides/s.png' 안의 '/s.png' 조각 같은 가짜

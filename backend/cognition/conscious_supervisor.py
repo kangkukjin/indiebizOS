@@ -165,6 +165,18 @@ class Supervisor:
             self.preparing = None
             self.phase = previous
 
+    @contextmanager
+    def evaluation_stage(self, stage):
+        """모델 호출 앞의 로컬 준비도 시작·종료·실패와 비용을 남긴다."""
+        started, completed = time.monotonic(), False
+        self.log("evaluation.stage_started", role="harness", stage=stage)
+        try:
+            yield
+            completed = True
+        finally:
+            self.log("evaluation.stage_finished", role="harness", stage=stage,
+                     elapsed_s=round(time.monotonic() - started, 6), completed=completed)
+
     def call_cancelled(self):
         from providers.base import turn_limit_reason
         task_limit = turn_limit_reason()
@@ -841,7 +853,11 @@ class Supervisor:
         if not getattr(self, "_resume_evaluation", False):
             self.store.put_response(response)
         decision = {"status": "UNKNOWN", "reason": "검수가 완료되지 않았습니다"}
+        wait_started = time.monotonic()
+        self.log("evaluation.stage_started", role="harness", stage="wait")
         with self.review_lock:
+            self.log("evaluation.stage_finished", role="harness", stage="wait",
+                     elapsed_s=round(time.monotonic() - wait_started, 6), completed=True)
             self.executor_paused = True
             # 예전 설정에 2 이상이 남아 있어도 최종 보완은 한 번으로 제한한다.
             max_repairs = min(1, max(0, self.config["max_repairs"]))
@@ -861,10 +877,12 @@ class Supervisor:
                             decision = {"status": "UNKNOWN", "reason": changed + " — 보존된 검수 증거 재사용 불가"}
                             break
                     else:
-                        prepare(self, tool_calls)
+                        with self.evaluation_stage("prepare"):
+                            prepare(self, tool_calls)
                     from repair_continuation import review_checkpoint
                     self._final_repair_counts = [repairs_used, evidence_reads]
-                    review_checkpoint(self, self._evaluation_packet, self._evaluation_snapshot)
+                    with self.evaluation_stage("checkpoint"):
+                        review_checkpoint(self, self._evaluation_packet, self._evaluation_snapshot)
                     raw = invoke(self, "", phase="final")
                     decision = ({"status": "UNKNOWN", **self.call_stop} if self.call_stop
                                 else parse_decision(raw))

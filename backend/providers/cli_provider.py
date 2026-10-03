@@ -511,6 +511,40 @@ class CliSubprocessProvider(BaseProvider):
         """
         raise NotImplementedError
 
+    def _prepare_launch_context(self, tools_mode):
+        """실행과 계측이 공유할 최종 환경·작업 폴더를 세션 측정 전에 확정한다."""
+        env = self._build_env()
+        if getattr(self, 'execution_profile', '') == 'coding':
+            env.update(self.coding_environment)
+        env["INDIEBIZOS_COMPLETION_CHANNEL"] = self._completion_channel
+        cwd = self.project_path if self.project_path and self.project_path != "." else None
+        from repair_context import active as repair_active
+        if repair_active() and not tools_mode:
+            if self.__class__.__name__ not in {"CodexProvider", "ClaudeCodeProvider"}:
+                raise RuntimeError("이 네이티브 실행자의 자기수리 격리는 미지원입니다")
+            from tool_loader import load_tool_handler
+            handler = load_tool_handler("patch_op")
+            st, repo = handler._staging_mod(), str(handler._REPO_ROOT)
+            if self.__class__.__name__ == "CodexProvider":
+                from .coding_profile import isolated_codex_environment
+                from repair_continuation import current as repair_current
+                root_key = st.task_key((repair_current() or {}).get("root_task_id") or handler._staging_key())
+                runtime = os.path.join(repo, "data/system_ai_state/repair_cli", root_key)
+                env.update(isolated_codex_environment(runtime))
+            from repair_context import activation_only
+            if activation_only():
+                cwd = repo
+            else:
+                session = st.ensure_session(repo, handler._staging_key())
+                if not session:
+                    raise RuntimeError("수리 사본이 없습니다")
+                cwd = os.path.join(repo, session["worktree"])
+        self._on_launch_environment(env)
+        return env, cwd
+
+    def _on_launch_environment(self, env):
+        """프로바이더 계측에 실제 자식 프로세스 환경을 전달한다."""
+
     def _capture_session_id(self, event: Dict) -> Optional[str]:
         """이벤트에서 세션 id 를 뽑는다 (벤더마다 키가 다름)."""
         return event.get("session_id")
@@ -769,6 +803,9 @@ class CliSubprocessProvider(BaseProvider):
             #      리트라이 루프 전체에서 재사용(내용 불변). 실패 시 None → 인자 방식 폴백.
             system_prompt_file = self._write_system_prompt_file()
 
+            _tools_mode = ("read" if image_paths else "none") if getattr(self, "no_tools", False) else None
+            env, cwd = self._prepare_launch_context(_tools_mode)
+
             # 3) 세션 연속성 결정 (--resume)
             # 빈 history 또는 의식이 선별한 교체본이면 fresh. 그 밖에는 저장된 id로 resume.
             # 산문을 파싱하지 않고 하네스의 구조 표식만 읽는다. resume은 교체본을 무시한다.
@@ -832,9 +869,6 @@ class CliSubprocessProvider(BaseProvider):
                 if image_paths:
                     full_prompt = self._image_prompt_prefix(image_paths) + full_prompt
 
-                _tools_mode = None
-                if getattr(self, "no_tools", False):
-                    _tools_mode = "read" if image_paths else "none"
                 cmd = self._build_command(
                     mcp_config_path=mcp_config_path,
                     stream=True,
@@ -851,33 +885,7 @@ class CliSubprocessProvider(BaseProvider):
                     f"system_prompt={_sp_len}자 message={_msg_len}자"
                 )
 
-                env = self._build_env()
-                if getattr(self, 'execution_profile', '') == 'coding':
-                    env.update(self.coding_environment)
-                env["INDIEBIZOS_COMPLETION_CHANNEL"] = self._completion_channel
                 start = time.time()
-                cwd = self.project_path if self.project_path and self.project_path != "." else None
-                from repair_context import active as repair_active
-                if repair_active() and not _tools_mode:
-                    if self.__class__.__name__ not in {"CodexProvider", "ClaudeCodeProvider"}:
-                        raise RuntimeError("이 네이티브 실행자의 자기수리 격리는 미지원입니다")
-                    from tool_loader import load_tool_handler
-                    handler = load_tool_handler("patch_op")
-                    st, repo = handler._staging_mod(), str(handler._REPO_ROOT)
-                    if self.__class__.__name__ == "CodexProvider":
-                        from .coding_profile import isolated_codex_environment
-                        from repair_continuation import current as repair_current
-                        root_key = st.task_key((repair_current() or {}).get("root_task_id") or handler._staging_key())
-                        runtime = os.path.join(repo, "data/system_ai_state/repair_cli", root_key)
-                        env.update(isolated_codex_environment(runtime))
-                    from repair_context import activation_only
-                    if activation_only():
-                        cwd = repo
-                    else:
-                        session = st.ensure_session(repo, handler._staging_key())
-                        if not session:
-                            raise RuntimeError("수리 사본이 없습니다")
-                        cwd = os.path.join(repo, session["worktree"])
                 try:
                     # ★유저 프롬프트는 argv 가 아니라 stdin 으로 넘긴다: 윈도우 명령줄 상한
                     #  (32,767자)에 걸려 [WinError 206]로 실행 자체가 실패하던 걸 회피. CLI 는

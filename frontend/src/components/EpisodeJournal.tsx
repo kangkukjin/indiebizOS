@@ -97,7 +97,7 @@ export function EpisodeJournal() {
   // 펼칠 때 첫 1회만 조회(지연 로드) — 접혀 있을 땐 호출 안 함
   const { retry: reload, retrying } = useRetryingLoad(load, { enabled: open && rows === null });
   useEffect(() => {
-    if (!open || loading || !rows?.some(ep => ep.is_running)) return;
+    if (!open || loading || rows === null) return;
     const timer = setTimeout(() => { void load().catch(() => {}); }, 5000);
     return () => clearTimeout(timer);
   }, [open, loading, rows, load]);

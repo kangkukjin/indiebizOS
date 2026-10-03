@@ -113,7 +113,7 @@ def parse_model_selector(value: str) -> tuple:
 _ROLLOUT_TAIL_BYTES = 256 * 1024
 
 
-def read_thread_usage(thread_id: str) -> Optional[Dict[str, int]]:
+def read_thread_usage(thread_id: str, *, home: Optional[Path] = None) -> Optional[Dict[str, int]]:
     """스레드의 **현재 컨텍스트**와 스레드 누적 입력을 Codex 자신의 롤아웃에서 읽는다.
 
     왜 필요한가(실측 2026-08-31): `turn.completed` 의 `usage` 는 그 턴의 컨텍스트가 아니라
@@ -135,7 +135,7 @@ def read_thread_usage(thread_id: str) -> Optional[Dict[str, int]]:
         return None
     try:
         hits = sorted(
-            _codex_home().glob(f"sessions/**/rollout-*-{thread_id}.jsonl"),
+            (home if home is not None else _codex_home()).glob(f"sessions/**/rollout-*-{thread_id}.jsonl"),
             key=lambda q: q.stat().st_mtime, reverse=True)
         if not hits:
             return None
@@ -352,7 +352,12 @@ class CodexProvider(CliSubprocessProvider):
             env.pop("CODEX_API_KEY", None)
         return env
 
+    def _on_launch_environment(self, env):
+        # 수리·코딩은 별도 CODEX_HOME을 쓴다. 부모 환경에서 추측하지 않는다.
+        self._runtime_home = Path(env.get("CODEX_HOME") or (Path.home() / ".codex"))
+
     def _reset_turn_state(self) -> None:
+        self._runtime_home = None
         self._started_items.clear()
         self._response_ledger = None
         self._last_agent_message = None
@@ -366,7 +371,7 @@ class CodexProvider(CliSubprocessProvider):
         같은 읽기로 이 턴의 비용 기준선(_turn_base_total)도 잡는다 — 두 값이 같은
         파일의 같은 이벤트에서 나오므로 따로 저장해 둘 상태가 없다.
         """
-        usage = read_thread_usage(session_id)
+        usage = read_thread_usage(session_id, home=getattr(self, "_runtime_home", None))
         if not usage:
             self._log(f"세션 {session_id[:8]}… 롤아웃을 못 읽음 — 컨텍스트 미측정")
             return None
@@ -806,7 +811,8 @@ class CodexProvider(CliSubprocessProvider):
         if etype == "thread.started":
             from codex_rollout import CodexResponseLedger
             self._response_ledger = CodexResponseLedger(
-                _codex_home(), event.get("thread_id"), start_time)
+                getattr(self, "_runtime_home", None) or _codex_home(),
+                event.get("thread_id"), start_time)
         if self._response_ledger is not None:
             for response in self._response_ledger.poll():
                 self._note_model_round()

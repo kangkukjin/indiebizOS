@@ -30,12 +30,18 @@ import {
   createLectureWorkspaceWindow, createMultiChatWindow, createProjectPanelWindow, registerToolWindowIPC,
 } from './windows.js';
 import { setTray, bumpBadge } from './badge.js';
+import { installDevServerRecovery } from './window-recovery.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 개발 모드 확인
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+
+// 모든 앱 창(시스템 AI·프로젝트 포함)의 로컬 개발 서버 재기동을 복구한다.
+app.on('browser-window-created', (_event, win) => {
+  if (isDev) installDevServerRecovery(win.webContents);
+});
 
 let mainWindow = null;
 let tray = null; // 트레이 (win/linux — 실행 중 빠른 열기·종료 편의)

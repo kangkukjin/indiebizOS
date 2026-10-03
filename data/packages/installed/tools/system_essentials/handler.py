@@ -107,7 +107,7 @@ def _safety_watch_files():
 def _red_grant_active():
     """현재 호출 컨텍스트에 유효한 RED 쓰기 그랜트(헌법 2026-08-05).
 
-    그랜트는 인지 파이프라인의 REPAIR 경로만 발급한다(사람 명령 + 고급 모델 + 의식 각성).
+    그랜트는 인지 파이프라인의 REPAIR 경로만 발급한다(사람 명령 + 고급 모델 + 수리 규정).
     red_grant 모듈 부재(폰 몸 등)·컨텍스트 부재 시 None = fail-closed."""
     try:
         from red_grant import active_grant

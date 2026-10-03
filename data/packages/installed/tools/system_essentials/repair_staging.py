@@ -304,6 +304,9 @@ def ensure_session(repo: str, key: str):
     #   돌아가게 하는 열쇠. 규칙은 red_report 한 곳에만 둔다(생산자·소비자 동형, 08-25).
     sess = {"key": key, "worktree": wt_rel, "status": "staging",
             "created_at": datetime.now().isoformat(), "owner": _repair_owner(), "files": {}}
+    from supervision_bus import current
+    from repair_policy import enabled, VERSION
+    sess["repair_policy"] = VERSION if enabled(current()) else 1
     for relative in (".venv",):
         source, destination = os.path.join(repo, relative), os.path.join(wt_abs, relative)
         if (os.path.isdir(source) and not os.path.lexists(destination)
@@ -323,7 +326,8 @@ def staged_path(repo: str, key: str, live_abs: str):
     sess = load_session(repo, key)
     if not sess:
         return None
-    _candidate.refresh(repo, sess)
+    if sess.get("repair_policy", 1) == 1:
+        _candidate.refresh(repo, sess)
     rel = _rel_in_repo(repo, live_abs)
     return str(_candidate.target(os.path.join(repo, sess["worktree"]), rel)) if rel else None
 
@@ -416,7 +420,10 @@ def verify(repo: str, sess: dict):
 
     # 준비 검사도 정본에는 쓰지 않는다. 변경은 실제 사본 델타에서 수집한다.
     try:
-        _candidate.refresh(repo, sess)
+        if sess.get("repair_policy", 1) == 1:
+            _candidate.refresh(repo, sess)
+        else:
+            _candidate.collect(repo, sess)
         _save_session(repo, sess)
         recs = list(sess["files"].values())
         rels = [r["rel"] for r in recs if r["op"] != "delete"]
@@ -501,8 +508,11 @@ def verify(repo: str, sess: dict):
     #    ★--check 의 코퍼스/fixture 검사는 런타임 DB·미추적 파생물에 의존해 격리
     #    사본에서 못 돈다 → plain build(삼각)까지가 격리에서 가능한 최대치.
     build = os.path.join(wt_abs, "scripts", "build_ibl_nodes.py")
-    if os.path.exists(build):
-        p = _sandbox_check([py, "scripts/build_ibl_nodes.py"], cwd=wt_abs,
+    if os.path.exists(build) and (sess.get("repair_policy", 1) == 1 or _live_build_inputs_touched(wt_abs, rels + del_rels)):
+        args = [py, "scripts/build_ibl_nodes.py"]
+        if sess.get("repair_policy") == 2:
+            args.append("--check")
+        p = _sandbox_check(args, cwd=wt_abs,
                            capture_output=True, text=True, timeout=BUILD_TIMEOUT,
                            env=_smoke_env(wt_abs))
         checks.append({"gate": "ibl_triangle", "passed": p.returncode == 0,
@@ -901,7 +911,10 @@ def op_apply(ti):
         return {"success": False, "applied": False, "error": "사본 준비를 판정할 수리 감독이 없습니다"}
     sess["activation_commands"] = {k: str(ti.get(k) or "").strip()
                                     for k in ("verify_cmd", "active_verify_cmd")}
+    if "verification_plan" in ti:
+        sess["verification_plan"] = ti["verification_plan"]
     approval = controller.prepare_repair(repo, sess, verify, _candidate)
+    _save_session(repo, sess)
     if not approval.get("success"):
         return approval
     checks = sess["readiness"]["checks"]
@@ -1114,6 +1127,17 @@ def op_status(ti):
                           "verified": i.get("verified"), "created_at": i["created_at"]}
                          for i in props],
            "message": msg}
+    own = read_session(repo, key) if key else None
+    if own and own.get("owner") == _repair_owner():
+        out["repair_policy"] = own.get("repair_policy", 1)
+        out["verification_plan"] = own.get("verification_plan", [])
+        out["last_preparation"] = own.get("preparation_result", {}).get("result")
+        out["execution_checks"] = [{k: v for k, v in r.items() if k != "output"}
+                                    for r in own.get("execution_checks", [])[-8:]]
+        current_item = next((item for item in items if item["current"]), None)
+        if current_item is not None:
+            current_item.update({field: out[field] for field in
+                                 ("repair_policy", "verification_plan", "last_preparation", "execution_checks")})
     cur_sched = next((i for i in scheduled if i["current"]), None)
     if cur_sched:
         files_str = ", ".join(f"`{r}`" for r in cur_sched["files"]) or "(파일 목록 미기재)"

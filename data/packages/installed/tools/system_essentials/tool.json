@@ -486,7 +486,7 @@
     },
     {
       "name": "patch_op",
-      "description": "자기수리의 격리 사본·전체 준비 판정·정본 반영. 사용자 승인 REPAIR에서는 소스·설정·문서·검사·파생물을 모두 같은 사본에서 수정하고 격리 셸로 검사한다. apply는 원래 완료 기준 전체의 유효한 실행 근거를 기존 평가자에게 대조한 뒤 고정된 바이트만 적용한다. 하위 기능 완료·구문 통과만으로 예약하지 않는다. 기준 부족이면 같은 사본에서 보완한다. status는 조회만, discard는 미적용 사본만 폐기한다. 무그랜트 propose는 사본 제안만 남기며 승인 수리의 apply도 동일한 전체 준비 관문을 따른다. backend·패키지 변경은 기존 제어자에게 예약하므로 scheduled 뒤 현재 턴을 종료한다. 인계가 활성 확인과 수리 델타 커밋을 이어가며 예약/준비/반영은 전체 완료와 다르다. verify_cmd와 active_verify_cmd는 적용 후 읽기 전용 확인이다. 이 단계에서 구현·빌드하지 않는다. 격리 실패·예약 실패 때 정본 직접 쓰기나 즉시 적용으로 돌아가지 않는다.",
+      "description": "자기수리의 격리 사본·전체 준비 판정·정본 반영. 사용자 승인 REPAIR에서는 소스·설정·문서·검사·파생물을 모두 같은 사본에서 수정하고 격리 셸로 검사한다. 새 수리의 apply는 verification_plan으로 각 기준을 실제 검사(method:test, 단일 pytest 또는 node --test 명령) 또는 의미 검토(method:semantic)에 연결한다. 같은 후보·환경의 통과 검사를 재사용하며 의미 조건만 평가한다. 이전 수리는 이전 정책을 유지한다. 동기화·생성·빌드는 apply 전에 격리 셸에서 끝내며 apply는 읽기 검사 후 고정된 바이트만 적용한다. 하위 기능 완료·구문 통과만으로 예약하지 않는다. 기준 부족이면 같은 사본에서 보완한다. status는 조회만, discard는 미적용 사본만 폐기한다. 무그랜트 propose는 사본 제안만 남기며 승인 수리의 apply도 동일한 전체 준비 관문을 따른다. backend·패키지 변경은 기존 제어자에게 예약하므로 scheduled 뒤 현재 턴을 종료한다. 인계가 활성 확인과 수리 델타 커밋을 이어가며 예약/준비/반영은 전체 완료와 다르다. verify_cmd와 active_verify_cmd는 적용 후 읽기 전용 확인이다. 이 단계에서 구현·빌드하지 않는다. 격리 실패·예약 실패 때 정본 직접 쓰기나 즉시 적용으로 돌아가지 않는다.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -532,6 +532,32 @@
           "verify_cmd": {
             "type": "string",
             "description": "(apply) 반영 후 읽기 전용 부팅 검증 명령. 기존 제어자가 실행하며 실패 시 복구한다. 구현·빌드·커밋을 넣지 않는다. 리로드 없는 즉시 적용도 실행 영수증을 보존한다."
+          },
+          "verification_plan": {
+            "type": "array",
+            "description": "(apply, 새 수리) 각 기능 기준과 검사 연결. 직접 수리의 C1은 사용자 요청 전체. test는 단일 pytest 또는 node --test 명령, semantic은 보존된 관측으로 의미 조건만 검토한다. status로 기존 검사와 실패 이유 확인.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "criterion_id": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "test",
+                    "semantic"
+                  ]
+                },
+                "command": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "criterion_id",
+                "method"
+              ]
+            }
           },
           "active_verify_cmd": {
             "type": "string",

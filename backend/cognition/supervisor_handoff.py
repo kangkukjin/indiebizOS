@@ -34,7 +34,7 @@ def criteria_contract(message, framing):
     rows = [row for row in rows if row["text"]]
     for i, row in enumerate(rows, 1):
         row["id"] = f"C{i}"
-    return {"user_goal": message, "owner": "consciousness", "criteria": rows,
+    return {"user_goal": message, "owner": "execution" if (framing or {}).get("_framing_source") == "repair_execution" else "consciousness", "criteria": rows,
             "policy": "평가는 이 criteria의 달성 여부만 판정한다. 사용자 원문은 기준의 뜻과 권한을 해석하는 맥락이다. "
                       "기준 추가·강화·면제는 평가자의 권한이 아니다. 의식이 정한 fallback만 적용하며 사용자 명시 조건을 대체하지 않는다. "
                       "기준이 사용자 원문과 명백히 충돌하면 UNKNOWN으로 보고하며 승인하거나 대신 수정하지 않는다. "

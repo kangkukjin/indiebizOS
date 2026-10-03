@@ -307,7 +307,10 @@ class Supervisor:
             env = _revise(ch, "executor", payload["broken_assumption"], payload["evidence"],
                           payload.get("progress", ""), payload.get("kind", "other"))
             if env.get("revised"):
+                policy = (self.framing or {}).get("_repair_policy")
                 self.framing = ch.current
+                if policy is not None:
+                    self.framing["_repair_policy"] = policy
             self.log("premise.challenged", role="execution", input=self.store.evidence(payload), result=self.store.evidence(env))
             return render_for_executor(env)
         except Exception as exc:
@@ -626,6 +629,9 @@ class Supervisor:
 
     def review(self, reason, paused=False):
         from supervisor_runtime import invoke, parse_decision
+        from repair_policy import enabled
+        if enabled(self) and (self.framing or {}).get("_framing_source") == "repair_execution":
+            return  # 직접 수리의 도구 실패는 같은 실행자가 받는다. 의식은 reframe으로 요청한다.
         if not self.enabled:
             return
         if not self.review_lock.acquire(blocking=False):
@@ -806,6 +812,13 @@ class Supervisor:
             self.log("repair.deferred", role="harness", task_id=self.task,
                      continuation=pending["task_id"])
             final = response + "\n\n[적용 대기] " + reason
+            yield {"type": "text", "content": final}
+            yield {"type": "final", "content": final}
+            return final
+        from repair_policy import enabled as receipt_repair, finalize as finish_repair
+        if (receipt_repair(self) and getattr(self, "_repair_completion_policy", 2) == 2
+                and not self.done_request and not self.delivery.manifest()):
+            final = finish_repair(self, response)
             yield {"type": "text", "content": final}
             yield {"type": "final", "content": final}
             return final

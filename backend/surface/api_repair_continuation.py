@@ -108,7 +108,7 @@ def _execute(row):
 
 
 def _deliver_blocked(row):
-    text = "[자기수리 미완료] " + row["reason"]
+    text = row["reason"] if row.get("completion_notice") else "[자기수리 미완료] " + row["reason"]
     if row["system_ai"]:
         from system_ai_memory import save_conversation
         save_conversation("assistant", text)
@@ -187,7 +187,7 @@ def process_pending(base, generation, execute=_execute):
                 _settle(row, "cancelled", "사용자가 수리 재개를 취소했습니다.", base)
                 continue
             with resuming(row):
-                answer = execute(row)
+                answer = _receipt_completion(row, base) or execute(row)
             current = read(row["task_id"], base) or row
             if cancelled(current, base):
                 _settle(row, "cancelled", "사용자가 수리 재개를 취소했습니다.", base)
@@ -261,3 +261,44 @@ def kick():
     except Exception:
         _lock.release()
         raise
+
+
+def _receipt_completion(row, base):
+    """새 정책의 정상 적용은 모델 세션을 열지 않고 기존 영수증으로 닫는다."""
+    if (row.get("repair_policy") != 2 or row.get("done_request") or row.get("pending_delivery")
+            or row.get("phase") != "verify_remaining"):
+        return None
+    from repair_continuation import key
+    from repair_policy import completion
+    session = read_json(Path(base) / "data/system_ai_state/repair_sessions" /
+                        (key(row.get("staging_task_id") or row["task_id"]) + ".json")) or {}
+    passed, reason = completion(session, row, base)
+    _record_receipt_verdict(row, session, base, passed, reason)
+    if not passed:
+        return {"response": reason, "evaluation": {"achieved": False, "status": "UNKNOWN",
+                "reason": reason, "method": "repair_receipts"}}
+    response = row.get("response", "") + "\n\n[수리 완료] " + reason + " (" + session["commit"]["commit"][:12] + ")"
+    if row.get("system_ai"):
+        from system_ai_memory import save_conversation
+        save_conversation("assistant", response)
+    else:
+        # 기존 전달 경로를 공유한다. 판정 실패와 완료는 서로 다른 표제를 사용한다.
+        _deliver_blocked({**row, "reason": response, "completion_notice": True})
+    return {"response": response, "evaluation": {"achieved": True, "status": "ACHIEVED",
+            "reason": reason, "method": "repair_receipts"}}
+
+
+def _record_receipt_verdict(row, session, base, passed, reason):
+    """모델 세션 없이 닫아도 원래 작업의 검증 이력·학습 상태를 갱신한다."""
+    from episode_logger import trajectory_scope, record_trajectory_event
+    from restart_protocol import atomic_json
+    status = "ACHIEVED" if passed else "UNKNOWN"
+    verdict = {"validator": "repair_receipts", "status": status, "achieved": passed,
+               "reason": reason, "method": "repair_receipts", "commit": session.get("commit")}
+    with trajectory_scope(task_id=row["task_id"], episode_id=row.get("episode_id")):
+        record_trajectory_event("validation.completed", verdict)
+    store = Path(row.get("store") or ".").resolve()
+    home = (Path(base) / "data/spill/supervision").resolve()
+    if store.is_relative_to(home) and store.is_dir():
+        atomic_json(store / "review_status.json", {**verdict, "original_goal": row["goal"],
+                    "episode_id": row.get("episode_id"), "learning": "eligible" if passed else "deferred"})

@@ -253,13 +253,14 @@ def invoke(controller, prompt="", *, phase="final"):
                                               head_keep=12, tail_keep=12, per_result_chars=3000),
         action_ledger=build_action_ledger(packet["calls"]), visual_artifacts=packet["images"],
         evaluation_context=json.dumps(packet["context"], ensure_ascii=False),
-        evaluation_policy=POLICY + (WORKSPACE_POLICY if phase == "workspace" else ""), full_response=True,
+        evaluation_policy=POLICY + (WORKSPACE_POLICY if phase == "workspace" else
+                                    SEMANTIC_POLICY if phase == "semantic" else ""), full_response=True,
     )
     manifest = controller._evaluation_snapshot["response"]
     result = {"status": "APPROVED" if achieved is True else "REWORK" if achieved is False else "UNKNOWN",
               "reason": feedback, "severity": severity, "response_version": manifest["version"],
               "response_hash": manifest["hash"], "instruction": "", "pursuit_status": "UNKNOWN"}
-    if phase == "workspace":
+    if phase in {"workspace", "semantic"}:
         match = re.search(r"(?m)^WORKSPACE_COVERAGE:\s*(\[.*\])\s*$", feedback)
         try:
             result["workspace_coverage"] = json.loads(match[1]) if match else []
@@ -311,4 +312,13 @@ activation 구분은 기준 정본의 verification_phase와 activation_plan이 �
 ACHIEVED여도 다음 한 줄을 추가한다:
 WORKSPACE_COVERAGE: [{"criterion_id":"C1","status":"passed","evidence_ids":["workspace_evidence의 실제 id"]}]
 모든 기준을 포함한다. 반영 후에만 확인 가능한 기준은 status="activation_pending", evidence_ids=[]로 적는다.
+"""
+
+
+SEMANTIC_POLICY = """
+이번 호출은 criteria_contract에 명시한 의미 조건만 판정한다. 다른 기준·정본 반영·커밋은 호출 범위 밖이다.
+workspace_evidence의 관측과 결과로 해당 조건을 판정한다. 실행자의 완료 주장만으로 승인하지 않는다.
+부족한 원문이면 UNKNOWN_REASON: evidence와 필요한 evidence_ref.id를 정확하게 적는다.
+ACHIEVED일 때는 실제 관측의 id를 인용해 다음 한 줄로 각 조건을 증명한다:
+WORKSPACE_COVERAGE: [{"criterion_id":"C1","status":"passed","evidence_ids":["실제 관측 id"]}]
 """

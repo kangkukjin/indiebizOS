@@ -234,7 +234,7 @@ def _tsc_check(repo: str, wt_abs: str, ts_rels: list):
 
 # ── 라이브 파생물 신선도 (2026-09-01 ep2519 봉합) ──────────────────────────
 
-def _live_build_inputs_touched(repo: str) -> bool:
+def _live_build_inputs_touched(repo: str, paths=None) -> bool:
     """라이브 작업 트리에 빌드 트리거 파일이 하나라도 걸려 있나 — 7초짜리 --check 의 문지기.
 
     트리거 목록은 여기 없다: 빌더가 선언하고(iblbuild_common.GUARD_INPUT_PATTERNS)
@@ -251,6 +251,8 @@ def _live_build_inputs_touched(repo: str) -> bool:
         if r.returncode != 0 or not (r.stdout or "").strip():
             return True                    # 트리거를 못 물었으면 건너뛰지 않는다
         pattern = re.compile((r.stdout or "").strip().splitlines()[-1])
+        if paths is not None:
+            return any(pattern.match(p.replace(os.sep, "/")) for p in paths)
         st = _git(["status", "--porcelain", "-z", "--no-renames",
                    "--untracked-files=all"], repo)
         if st.returncode != 0:

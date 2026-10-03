@@ -56,8 +56,17 @@ class CognitiveConsciousnessMixin:
             from repair_resume import bind_pursuit
             bind_pursuit()
             return inherited
+        # 명시적인 수리는 실행자가 직접 조사·검사한다. #think는 기존 의식을 유지한다.
+        from thread_context import get_task_origin
+        if (repair and get_task_origin() == "user" and re.search(r"(?i)#repair\b", user_message)
+                and not re.search(r"(?i)#think\b", user_message)):
+            from repair_policy import direct_framing
+            return direct_framing(user_message)
         from pursuit_bind import run_consciousness
-        return run_consciousness(self, user_message, history, execution_memory, repair)
+        result = run_consciousness(self, user_message, history, execution_memory, repair)
+        if repair and isinstance(result, dict) and get_task_origin() == "user":
+            result["_repair_policy"] = 2
+        return result
 
     def _run_consciousness(self, user_message: str, history: list,
                            execution_memory: str = "", repair: bool = False,

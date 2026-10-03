@@ -1,4 +1,4 @@
-"""기존 도구 없는 최종 평가자를 사본 준비 단계에서 호출한다. 완료 판정과 분리한다."""
+"""저장된 정책에 따라 사본 검사·필요한 의미 검토를 연결한다. 적용 완료와 분리한다."""
 import copy
 import json
 
@@ -43,6 +43,12 @@ def completion_error(controller):
 
 
 def prepare(controller, repo, session, verify, candidate):
+    from repair_policy import enabled, prepare as prepare_receipts
+    controller._repair_completion_policy = session.get("repair_policy", 1)
+    if enabled(controller) and session.get("repair_policy") == 2:
+        result = prepare_receipts(controller, repo, session, verify, candidate)
+        controller._repair_failure = None if result.get("success") else result
+        return result
     from final_evaluator import prepare as prepare_packet, invoke, snapshot_error
     from supervisor_handoff import criteria_contract
     if controller.cancelled() or not controller.repair_granted or not controller.evaluation_enabled:

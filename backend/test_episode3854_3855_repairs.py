@@ -151,8 +151,10 @@ def test_script_runner_tells_the_child_how_it_is_run(tmp_path, monkeypatch):
 def test_repair_doctrine_and_guide_state_the_verification_scope():
     doctrine = (ROOT / "data" / "common_prompts" / "fragments" / "13_repair.md").read_text(encoding="utf-8")
     guide = (ROOT / "data" / "guides" / "script.md").read_text(encoding="utf-8")
-    assert "검증의 범위는 바뀐 곳이다" in doctrine and "검증의 범위는 바뀐 곳이다" in guide
-    assert "wait: 240" in doctrine and "background: true" in guide
+    assert "요청과 변경에 관련된 검사" in doctrine and "검증의 범위는 바뀐 곳이다" in guide
+    assert "적용 단계는 후보 파일을 바꾸지 않는다" in doctrine
+    assert "동일한 후보와 환경의 통과 결과는 재사용" in doctrine
+    assert "background: true" in guide  # 일반 등록 스크립트의 배경 실행 계약은 유지
 
 
 if __name__ == "__main__":

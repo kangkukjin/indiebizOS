@@ -73,6 +73,15 @@ def run_shell(handler, command, timeout):
         raise PermissionError("수리 사본이 없습니다")
     candidate = st._candidate
     wt = Path(repo) / sess["worktree"]
+    if sess.get("repair_policy") == 2:
+        from repair_check_runner import execute
+        # Preparation occurs before the command; apply itself never syncs or builds.
+        candidate.refresh(repo, sess)
+        record = execute(repo, sess, candidate, command, current(), timeout)
+        st._save_session(repo, sess)
+        return {"success": record["exit_code"] == 0, "exit_code": record["exit_code"],
+                "output": record["output"],
+                "verification": {k: v for k, v in record.items() if k != "output"}, "worktree": str(wt)}
     before = candidate.digest(candidate.inventory(wt))
     before_env = candidate.environment(wt)
     controller = current()

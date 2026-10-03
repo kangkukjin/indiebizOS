@@ -43,6 +43,7 @@
     "base/reload_gate",
     "base/repair_process",
     "base/repair_runtime",
+    "base/repair_test_results",
     "base/repeat_guard",
     "base/restart_protocol",
     "base/result_read_contract",
@@ -122,6 +123,8 @@
     "cognition/pursuit_maintenance",
     "cognition/pursuit_tools",
     "cognition/reframe",
+    "cognition/repair_check_runner",
+    "cognition/repair_policy",
     "cognition/repair_readiness",
     "cognition/repair_resume",
     "cognition/routing_system",
@@ -540,8 +543,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 465,
-    "engine": 439,
+    "total": 468,
+    "engine": 442,
     "blocklist": 26
   }
 }

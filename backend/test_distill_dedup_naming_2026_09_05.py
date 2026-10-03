@@ -96,11 +96,13 @@ def test_n1_name_shape_rule_is_now_a_gate_not_prose():
     assert register_idiom._gates("제안적용하기", "제안을 적용해야 할 때", good)[1] is None
 
 
-def test_r1_repair_fragment_routes_to_recall_scripts_and_find():
+def test_r1_repair_fragment_uses_supported_isolated_tools_and_checks():
     frag = open(os.path.join(os.path.dirname(BACKEND), "data", "common_prompts", "fragments", "13_repair.md"), encoding="utf-8").read()
-    assert 'store: "실행"' in frag and "[fn:이름]" in frag
-    assert '[self:script]{op: "list"}' in frag and "pytest" in frag
-    assert "[self:file_find]" in frag
+    assert "격리 사본" in frag and "격리 셸" in frag
+    assert "verification_plan" in frag and "pytest" in frag and "node --test" in frag
+    assert 'method:"semantic"' in frag
+    assert '[self:script]{op: "list"}' not in frag
+    assert '[self:memory]{op: "recall"' not in frag
 
 
 if __name__ == "__main__":

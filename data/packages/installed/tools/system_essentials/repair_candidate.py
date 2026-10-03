@@ -168,7 +168,7 @@ def seal(repo, session, checks, decision, criteria):
         if item["before_data"] is not None and hashlib.sha256(base64.b64decode(item["before_data"])).hexdigest() != item["before"]["sha"]:
             raise ValueError("고정 중 정본이 변경됐습니다: " + rel)
     session["sealed"] = payload
-    session["readiness"] = {"version": VERSION, "candidate_hash": digest(current),
+    session["readiness"] = {"version": 2 if session.get("repair_policy") == 2 else VERSION, "candidate_hash": digest(current),
                             "environment_hash": environment(Path(repo) / session["worktree"]),
                             "bundle_hash": digest(payload), "criteria": criteria,
                             "criteria_hash": digest(criteria), "checks": checks,
@@ -179,7 +179,8 @@ def seal(repo, session, checks, decision, criteria):
 
 def validate(repo, session):
     ready, payload = session.get("readiness") or {}, session.get("sealed") or {}
-    if (ready.get("version") != VERSION or not payload
+    expected_version = 2 if session.get("repair_policy") == 2 else VERSION
+    if (ready.get("version") != expected_version or not payload
             or ready.get("decision", {}).get("status") != "APPROVED"
             or ready.get("bundle_hash") != digest(payload)
             or ready.get("criteria_hash") != digest(ready.get("criteria"))

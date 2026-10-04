@@ -53,7 +53,7 @@
       "name": "본문에서찾기",
       "source_edition": 1,
       "source_sha256": "55fffca39cdcd67b64af112991f4e63c43d895f0cc6f389eb16921bb411f5c90",
-      "inputs": "원문 문단 목록·정규식 패턴·문맥 폭·선택 개수를 명시한다. items는 문단이며, 일치·원천 진단은 final_result·results를 포함한 반환 Record 전체에서 확인한다.",
+      "inputs": "원문 문단 목록·정규식 패턴·문맥 폭·선택 개수를 명시한다. items는 문단이며 match_info 등 일치·원천 정보도 반환 Record에서 직접 읽는다. 중간 실행 진단은 evidence의 execution_ref로 조회한다.",
       "example": "#!ibl edition=2\nreturn [fn:본문에서찾기]{목록:[{url:\"https://example.com/\",text:\"앞 문단\"},{url:\"https://example.com/\",text:\"핵심 근거\"}],패턴:\"핵심\",문맥:1,개수:1}",
       "returns": "Record",
       "intent": "수집한 본문 문단에서 패턴에 맞는 대목과 같은 페이지의 앞뒤 문맥을 출처·실패·일치 계수와 함께 찾을 때. 추가 AI 호출·요약 없이 원문을 보존한다.",

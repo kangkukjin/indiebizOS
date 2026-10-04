@@ -180,6 +180,31 @@ def trajectory_scope(task_id: str = "", parent_run_id: str = "", episode_id=None
         _current_trajectory.reset(token)
 
 
+@contextmanager
+def resume_episode_trajectory(episode_id):
+    """재기동 후 영속 후처리를 원래 에피소드 run에 연결한다. 종료 시 문맥을 복원한다."""
+    row = None
+    if episode_id is not None:
+        conn = _get_db()
+        try:
+            row = conn.execute("SELECT run_id, task_id, parent_run_id FROM episode_log WHERE id=?",
+                               (episode_id,)).fetchone()
+        finally:
+            conn.close()
+    trace = None
+    if row and row["run_id"]:
+        trace = _Trajectory(row["run_id"], row["task_id"], row["parent_run_id"])
+        trace.episode_id = episode_id
+    # 워커에 남아 있는 다른 턴 신원으로 쓰지 않는다.
+    ep_token = _current_episode.set(None)
+    trace_token = _current_trajectory.set(trace)
+    try:
+        yield trace
+    finally:
+        _current_trajectory.reset(trace_token)
+        _current_episode.reset(ep_token)
+
+
 def capture_trace():
     """현재 컨텍스트의 궤적 손잡이 — 스레드 이음매가 신원을 나르는 통로.
 

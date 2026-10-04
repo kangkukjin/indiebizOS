@@ -1219,6 +1219,8 @@ def _promote_final_currency(out, steps: Optional[list] = None):
                         if isinstance(_obj, dict) and _obj.get("assigned") == "return" and "value" in _obj:
                             _v = _obj["value"]
                             fr = _v if isinstance(_v, str) else json.dumps(_v, ensure_ascii=False)
+                            # 문자열 "17"과 숫자 17을 호출 경계에서 추측으로 구별하지 않는다.
+                            out["_return_encoding"] = "text" if isinstance(_v, str) else "json"
                         out["final_result"] = fr
                         out["returned"] = "$return"
                         break

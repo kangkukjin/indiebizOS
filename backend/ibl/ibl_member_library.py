@@ -36,8 +36,8 @@ def adapters(project_path, agent_id):
     from ibl_edition import source_edition
     from ibl_parser import parse
     from ibl_engine import execute_ibl
-    from ibl_v2_adapters import Adapter, Adapted, decode_envelope
-    from ibl_v2_compat import plain_arguments
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_compat import plain_arguments, decode_function_result
     from workflow_contract import pipe_input_param
     source = "\n".join(s for s in _source.get() if source_edition(s) == 1)
     if not source:
@@ -49,11 +49,11 @@ def adapters(project_path, agent_id):
     for s in statements:
         name = s["name"]
         contract = {"version": 1, "params": {p: "Unknown" for p in s.get("signature", [])},
-                    "result": "Record", "effects": ["unknown"],
-                    "compatibility": "legacy-function/1", "implementation_fingerprint": digest(source),
-                    "adapter": {"protocol": "legacy-envelope", "value_path": ""}}
+                    "result": "Unknown", "effects": ["unknown"],
+                    "compatibility": "legacy-function-value/1", "implementation_fingerprint": digest(source),
+                    "adapter": {"protocol": "legacy-envelope", "value_path": "/final_result"}}
         receiver = pipe_input_param(s.get("body"))
-        from ibl_v2_compat import forwarding_contract, promote_return_fields
+        from ibl_v2_compat import forwarding_contract
         contract.update(forwarding_contract(s.get("body", []), contract["params"], receiver))
         if receiver in contract["params"]:
             contract["pipe_input"] = receiver
@@ -63,8 +63,6 @@ def adapters(project_path, agent_id):
             call = parse(source + "\n[fn:" + name + "]{}")[-1]
             call["params"] = plain_arguments(args)
             raw = execute_ibl(call, project_path, agent_id=agent_id)
-            value, evidence = decode_envelope(raw, contract["adapter"])
-            evidence["compatibility"] = "legacy-function/1"
-            return Adapted(promote_return_fields(value, contract), evidence)
+            return decode_function_result(raw)
         result["fn:" + name] = Adapter(contract, run)
     return result

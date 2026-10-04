@@ -244,7 +244,9 @@ class DistillQueue:
         if job.ctx is not None:
             job.ctx.run(_call)
         else:
-            _call()
+            from episode_logger import resume_episode_trajectory
+            with resume_episode_trajectory(p.get("episode_id")):
+                _call()
 
     @staticmethod
     def _record_cost(job, started, before_tokens, succeeded):

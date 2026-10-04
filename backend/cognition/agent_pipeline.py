@@ -890,6 +890,13 @@ class CognitivePipelineMixin:
                 pass
             # thread_context의 node/action/ms 이력 합류 (X-Ray·증류용)
             self._collect_thread_tool_calls(tool_calls_log)
+            # 활용 관측은 증류 성공·응답 완료·역할과 독립적이다. 먼저 영속화한다.
+            if recall:
+                try:
+                    recall.finish(tool_calls=tool_calls_log, response=final_content,
+                                  completed=_response_completed)
+                except Exception as exc:
+                    print(f"[연상:사용] 턴 종료 기록 실패: {type(exc).__name__}: {exc}")
             # 턴 토큰 원장 마감 — 이 턴의 모델 소요(토큰 선택압의 귀속 입력, 미측정=None).
             try:
                 from providers.base import read_turn_tokens, read_turn_cache_read_tokens
@@ -948,6 +955,7 @@ class CognitivePipelineMixin:
                 self._after_response_async(
                     message, final_content, tool_calls=tool_calls_log, turn_tokens=turn_tokens,
                     write_experience=False, write_deep=False, write_forage=True,
+                    presented=recall.usage_payload() if recall else None,
                     model_descriptor=_distill_model)
 
         if _error_text is not None:

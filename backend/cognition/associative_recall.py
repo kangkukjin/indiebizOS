@@ -16,6 +16,7 @@
 """
 import re
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
@@ -71,6 +72,7 @@ class Recall:
         self.blocks: List[Block] = []
         self.routed = False
         self.request_type: Optional[str] = None
+        self.recall_id = uuid.uuid4().hex
 
     # 파이프라인이 두 상 사이에 끼우는 블록(과제 원장·문맥 갱신 표식) — 조립은 여기 한 곳이다.
     def attach(self, source: str, text: str, tag: str = "") -> None:
@@ -101,8 +103,13 @@ class Recall:
 
     def usage_payload(self) -> List[Dict[str, Any]]:
         """턴 끝 결합용 — 사용 해석기가 있는 공급원의 제시 id 와 결합 키. 값으로 넘긴다(증류 큐는 스레드를 넘는다)."""
-        return [{"source": b.source, "ids": list(b.ids), "join": b.join}
+        return [{"source": b.source, "ids": list(b.ids), "join": b.join, "recall_id": self.recall_id}
                 for b in self.blocks if b.ids and b.source in USAGE]
+
+    def finish(self, *, tool_calls=None, response="", completed=True):
+        """증류와 독립적인 턴 종료 관측. 중단도 확인된 호출·응답만 기록한다."""
+        return record_usage(self.usage_payload(), tool_calls=tool_calls, response=response,
+                            phase="turn", completed=completed)
 
 
 def begin(runner, message: str, *, history: Optional[list] = None, channel: str = "pipeline",
@@ -176,6 +183,7 @@ def _record_presented(recall: Recall) -> None:
     try:
         from episode_logger import record_trajectory_event
         record_trajectory_event("recall.presented", {
+            "recall_id": recall.recall_id,
             "channel": recall.request.channel, "request_type": recall.request_type,
             "reflex": {"score": round(float(recall.reflex.score or 0.0), 4), "code": (recall.reflex.code or "")[:120]},
             "blocks": recall.presented(),
@@ -435,6 +443,8 @@ def _ibl_codes(tool_calls) -> List[str]:
     out = []
     for tc in tool_calls or []:
         if isinstance(tc, dict) and tc.get("tool_name") == "execute_ibl":
+            if "_t0" in tc or (tc.get("input") or {}).get("check"):
+                continue  # 검사만 했거나 결과 도착 전 중단된 요청은 실행 증거가 아니다.
             code = (tc.get("input") or {}).get("code", "")
             if code:
                 from ibl_edition import explicit_source
@@ -516,7 +526,8 @@ def deep_used_at(db_path: str, ids) -> Dict[str, Any]:
         return {}
 
 
-def record_usage(presented, *, tool_calls=None, response: str = "", deep_touched=None) -> List[Dict[str, Any]]:
+def record_usage(presented, *, tool_calls=None, response: str = "", deep_touched=None,
+                 phase="distill", completed=None) -> List[Dict[str, Any]]:
     """턴 끝 — 제시된 후보 중 무엇이 쓰였는지 기억별 해석기로 가르고 `recall.used` 사건 하나로 남긴다. 실패는 무시."""
     if not presented:
         return []
@@ -530,12 +541,14 @@ def record_usage(presented, *, tool_calls=None, response: str = "", deep_touched
             r = fn(list(p["ids"]), p.get("join") or {}, ev)
         except Exception as e:  # noqa: BLE001
             r = {"used": [], "evidence": "error", "error": type(e).__name__}
-        out.append({"source": p["source"], "presented": list(p["ids"])[:10], "used": list(r.get("used") or [])[:10],
+        out.append({"source": p["source"], **({"recall_id": p["recall_id"]} if p.get("recall_id") else {}),
+                    "presented": list(p["ids"])[:10], "used": list(r.get("used") or [])[:10],
                     "evidence": r.get("evidence", ""), **{k: v for k, v in r.items() if k not in ("used", "evidence")}})
     if out:
         try:
             from episode_logger import record_trajectory_event
-            record_trajectory_event("recall.used", {"blocks": out})
+            record_trajectory_event("recall.used", {"blocks": out, "phase": phase,
+                                                    **({"completed": completed} if completed is not None else {})})
         except Exception:
             pass
         print("[연상:사용] " + " · ".join(f"{o['source']} {len(o['used'])}/{len(o['presented'])}({o['evidence']})" for o in out))

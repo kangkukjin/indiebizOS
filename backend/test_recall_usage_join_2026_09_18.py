@@ -73,7 +73,7 @@ def test_usage_payload_carries_join_but_event_carries_ids_only():
     r.blocks.append(AR.Block("guide_map", "guide_map", "<g/>"))
     r.routed = True
     payload = r.usage_payload()
-    assert payload == [{"source": "hippocampus", "ids": ["1", "2"], "join": {"items": [{"id": "1", "code": "c"}]}}]
+    assert payload == [{"source": "hippocampus", "ids": ["1", "2"], "join": {"items": [{"id": "1", "code": "c"}]}, "recall_id": r.recall_id}]
     assert all("join" not in p for p in r.presented())
 
 

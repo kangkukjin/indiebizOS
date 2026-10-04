@@ -114,7 +114,7 @@ def test_current_call_examples_compile_and_preserve_adapter_result(lesson):
         assert set(seen[0]) == set(keys)
 
 
-def test_real_legacy_body_keeps_match_diagnostics_in_its_envelope(memory):
+def test_real_legacy_body_returns_matches_and_separates_execution_evidence(memory):
     from ibl_v2_entry import handle_request
     catalog = json.loads((ROOT / 'data/idioms/curated.json').read_text())['idioms']
     body = next(e['body'] for e in catalog if e['name'] == '본문에서찾기')
@@ -126,9 +126,14 @@ def test_real_legacy_body_keeps_match_diagnostics_in_its_envelope(memory):
     envelope = result['value']
     assert [r['text'] for r in envelope['items']] == ['앞 문단', '핵심 근거']
     assert all(r['url'] == 'https://example.com/' for r in envelope['items'])
-    # Only items/count are promoted. The full result owns the richer metadata.
-    assert 'match_info' in json.loads(envelope['final_result'])
-    assert 'results' in envelope
+    assert 'match_info' in envelope
+    assert 'final_result' not in envelope and 'results' not in envelope
+    refs = [e['attachments']['execution_ref'] for e in result['evidence']
+            if (e.get('attachments') or {}).get('execution_ref')]
+    assert refs
+    from model_result_view import read_result
+    steps = json.loads(read_result(refs[-1]['read_args'])['text'])
+    assert steps and all('result' in step for step in steps)
 
 
 if __name__ == '__main__':

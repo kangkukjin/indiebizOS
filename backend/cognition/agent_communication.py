@@ -506,10 +506,8 @@ class AgentCommunicationMixin:
 
                 # AI 처리
                 if self.ai:
-                    # 연상 — 공통 흐름(associative_recall, 채널 agent_message). 분류가 없는 경로라 EXECUTE 로 닫는다 —
-                    #   세계 지도 두 채널 모두 개인 기억이 아니라 에이전트 간 경로도 같은 블록을 받는다(2026-09-18 판정).
-                    exec_mem = self._associate(content, channel="agent_message").route("EXECUTE").text()
-                    ai_message = f"{exec_mem}\n\n{content}" if exec_mem else content
+                    # 아래 cognitive_stream이 회상·제시·활용 관측을 한 번 담당한다.
+                    ai_message = content
                     history = []
 
                     # 시스템 AI 위임인 경우 파일 경로 원칙 추가

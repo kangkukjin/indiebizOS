@@ -32,9 +32,9 @@
 `call_path`로 확인한다. 회상과 정의 펼침은 같은 호출 줄·관측 반환 표시를 사용하고 저장된
 적용 조건을 함께 보여준다. 업무의 완료 조건은 프로그램에 명시하며 계약 조회가 대신 판정하지 않는다.
 
-저장 함수의 `final_result`·`items` 값 계약은 유지한다. 최종 본문은 `result_ref.read_args`로
-`items`를 직접 읽는다. `results`는 단계 요약, `execution_ref.read_args`는 중간 진단 원문용이다.
-조회는 재실행하지 않으며 `result_ref.input_args`는 전체 반환 값을 유지한다.
+관용구 반환: 목록은 그대로, Record는 계약의 필드로 읽는다.
+`final_result`·`results` 실행 봉투는 값과 분리한다. 값 조회·재전달은 `result_ref.read_args`·`input_args`,
+중간 진단은 `evidence($값).events`의 `attachments.execution_ref.read_args`를 쓴다(재실행 없음).
 `failure_origin`의 `input_shape`는 입력 필드 불일치(책임 미확정), `unknown`은 원인 미확정,
 `definition`은 확인된 정의 구문 오류다. 입력/미확정 실패는 실행 실패로 남기되 정의 실패 점수에서 제외한다.
 

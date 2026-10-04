@@ -103,8 +103,9 @@ recall.presented()                                # 제시 기록(사건에도 �
 | 결합 키 | 공급원이 `Block.join` 으로 제시 항목의 결합 키를 낸다 — 해마 `{items:[{id, code, kind, alias}]}`(`build_execution_memory_detail`), 심층 `{paths:{id: 가지}, db}`, 세계 두 채널 `{names:{id:[이름, 별칭…]}}`(`recall_for_turn_detail`/`world_memory_detail`). 옛 튜플·문자열 판은 래퍼로 남는다 |
 | 전달 | `Recall.usage_payload()` → 파이프라인이 `_after_response_async(presented=…)` 로 값으로 넘김(증류 큐 payload) — 사건엔 id·건수만(4KB 절단 안전) |
 | 해석기 (`USAGE` 표) | 해마 `executed`: 제시 용례의 `[node:action]` 쌍이 이 턴의 execute_ibl 에 등장(`record_recall_outcome` 과 같은 규칙), 관용구는 `[fn:이름]`. 세계 `mentioned`: 이름·별칭(2자 이상)이 응답·코드에 등장 — 약한 증거(모델이 이미 알던 이름일 수 있다). 심층 `expanded`: `[self:memory]{op:"recall", node|expand:"#id"}` 가 제시 가지·id 를 열었다 / `confirmed`: 증류가 SAME/UPDATE 로 다시 만나 `used_at` 을 올렸다(전후 대조). 자동 회상은 사용이 아니다(used_at 계약 유지) |
-| 기록 | `_after_response` 5단계에서 `record_usage` → 사건 `recall.used` `{blocks:[{source, presented, used, evidence}]}` 하나 |
-| 읽기 | `scripts/recall_usage_report.py` — 기억별 제시 턴·결합 턴·항목 사용률·증거 분포, 자주 제시되나 안 쓰인 항목. 합산 평균 없음 |
+| 기록 | 턴 종료 `Recall.finish`가 먼저 `recall.used(phase=turn)`를 기록한다. 응답 중단·증류 생략에도 남는다. 증류 후에는 같은 recall_id로 `phase=distill` 관측을 추가한다. 재기동한 큐는 원래 episode/run 신원을 복원한다 |
+| 결합 | 제시와 사용에 recall_id를 실어 턴/증류의 used 집합을 합치며 중복 계수하지 않는다. 프리뷰·표본은 실행 사용률에서 제외한다. 옛 사건은 같은 run/episode의 최근 제시와 연결한다 |
+| 읽기 | `scripts/recall_usage_report.py` — 기억별 제시·관측·미관측, 관측된 항목의 사용률·증거 분포. 지연·누락·해석 오류를 미사용으로 세지 않는다. 합산 평균 없음 |
 
 **갱신 규칙은 그대로**: 해마 success_rate 는 `record_recall_outcome`(top-1·≥0.85), 심층 `used_at` 은 증류·명시 조회, 세계는 없음. 결합은 관측이지 학습이 아니다 — 학습 규칙을 바꾸는 일은 이 보고서를 근거로 기억별로 판정한다.
 
@@ -135,3 +136,11 @@ recall.presented()                                # 제시 기록(사건에도 �
 
 증명: `backend/test_tree_doc.py` — 기질 계약 7건 + **사본 감시**(세 모듈에 절 나누기·표식 정규식·요약·도장 사본이 되살아나면 실패;
 첫 실행이 남은 사본 하나를 잡았다). 기존 트리 시험 3벌(memory_tree 7·hippo_tree 13·forage_doc 17)과 관용구·주행·포식 회상 시험 전부 초록.
+
+### 2026-10-04 활용 관측 수명 보완
+
+오늘 4296–4306의 활용 사건은 감사 이후 증류가 끝나며 모두 저장됐다. 초기 누락처럼 보인 현상은 지연이었다.
+실제 누락 경로도 있었다: 중단/역할 턴의 증류 생략과 프로세스 재기동 후 큐의 trajectory 문맥 소실.
+활용 관측을 전경 finally로 옮기고 재개 신원을 복원했다. 에이전트 통신의 중복 사전 회상은 제거하여
+실제 cognitive_stream의 제시 한 번과 결합하고, 스위치는 자체 실행 finally에서 관측한다.
+과거 미관측 항목을 추정으로 채우거나 점수·성공률을 바꾸지 않는다.

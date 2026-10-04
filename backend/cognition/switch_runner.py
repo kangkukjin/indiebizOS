@@ -105,6 +105,9 @@ class SwitchRunner:
         # 동기 run() 호출자(calendar/scheduler) 보호를 위해 이전 값 백업 후 finally에서 복원.
         _ctx_modified = False
         _prev_project_id = None
+        recall, response, completed = None, "", False
+        from thread_context import get_tool_calls
+        calls_before = len(get_tool_calls())
         try:
             from thread_context import get_current_project_id, set_current_project_id
             _prev_project_id = get_current_project_id()
@@ -186,7 +189,8 @@ class SwitchRunner:
                 from associative_recall import begin
                 holder = SimpleNamespace(config={"allowed_nodes": allowed_nodes}, project_path=project_path,
                                          agent_id=self.config.get("agent_id") or self.config.get("agentId") or "")
-                execution_memory = begin(holder, command, channel="switch").route("EXECUTE").text()
+                recall = begin(holder, command, channel="switch").route("EXECUTE")
+                execution_memory = recall.text()
                 if execution_memory:
                     self._status("실행기억 로드됨")
             except Exception as e:
@@ -231,6 +235,7 @@ class SwitchRunner:
             )
 
             self._status("실행 완료")
+            completed = True
             self.result = {
                 "success": True,
                 "message": "스위치 실행 완료",
@@ -250,6 +255,12 @@ class SwitchRunner:
             }
 
         finally:
+            if recall:
+                try:
+                    recall.finish(tool_calls=get_tool_calls()[calls_before:], response=response,
+                                  completed=completed)
+                except Exception as exc:
+                    self._status(f"회상 활용 기록 실패: {type(exc).__name__}")
             self.running = False
             # thread_context 복원 (동기 run() 호출자 보호)
             if _ctx_modified:

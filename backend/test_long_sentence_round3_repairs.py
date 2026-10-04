@@ -103,7 +103,7 @@ def test_number_diagnostic_and_recovery(registry):
 
 def test_legacy_filter_contract_and_reuse(registry, tmp_path, monkeypatch):
     import ibl_v2_compat
-    # Preserve runtime semantics and return envelope of an existing definition.
+    # Preserve the body semantics and expose selected values with separate evidence.
     spec = registry['fn:본문에서찾기']
     assert spec.contract['effects'] == ['pure']
     assert spec.contract['params']['패턴'] == 'Text'
@@ -113,7 +113,8 @@ def test_legacy_filter_contract_and_reuse(registry, tmp_path, monkeypatch):
     assert out['value']['items'] == rows[:1]
     assert out['value']['match_info']['total_matches'] == 3
     assert out['value']['match_info']['omitted_matches'] == 2
-    assert isinstance(out['value']['final_result'], str)
+    assert 'final_result' not in out['value']
+    assert any((event.get('attachments') or {}).get('execution_ref') for event in out['evidence'])
     calls = []
     local = {**registry, 't:read': Adapter({'version': 1, 'params': {}, 'result': 'List<Record>',
              'effects': ['read_external']}, lambda rt, args: calls.append(1) or rows)}

@@ -1,8 +1,7 @@
 """Conservative bridges for declared legacy handler vocabulary.
 
-This does not infer a native v2 return contract. The complete legacy envelope
-is a Record and parameter values remain Unknown until the existing handler
-validates them. Preflight explicitly reports this weaker boundary.
+Legacy functions expose their selected return value; execution envelopes stay
+in evidence. Unproven return and parameter types remain Unknown.
 """
 from ibl_v2_ir import Fault
 
@@ -113,15 +112,22 @@ def forwarding_contract(steps, params, receiver):
     return {"params": inferred, "effects": leaf["effects"], "result": leaf["result"]}
 
 
-def promote_return_fields(value, contract):
-    """Keep the complete legacy envelope, exposing only declared leaf metadata."""
-    from common.currency import coerce_json_param
-    if not isinstance(contract.get("result"), dict) or not isinstance(value, dict):
-        return value
-    leaf = coerce_json_param(value.get("final_result"))
-    if isinstance(leaf, dict):
-        return {**{k: leaf[k] for k in contract["result"] if k in leaf}, **value}
-    return value
+def decode_function_result(raw):
+    """Unwrap only runner-tagged function returns, retaining boundary failures."""
+    from common.currency import coerce_json_param, fn_result_payload
+    from ibl_v2_adapters import Adapted, decode_envelope
+    raw = coerce_json_param(raw)
+    selected, value = fn_result_payload(raw, typed=True)
+    adapter = {"protocol": "legacy-envelope", "value_path": "",
+               "attachments": ["execution_ref", "execution_ref_error"]}
+    if selected:
+        # Validate status/completeness on the execution envelope, never on the
+        # business value (whose error/success/final_result keys are just data).
+        raw = {**raw, "_return_value": value}
+        adapter["value_path"] = "/_return_value"
+    value, evidence = decode_envelope(raw, adapter)
+    evidence["compatibility"] = "legacy-function-value/1"
+    return Adapted(value, evidence)
 
 
 def function_adapters(project_path, agent_id):
@@ -129,7 +135,7 @@ def function_adapters(project_path, agent_id):
     if is_member():
         from ibl_member_library import adapters
         return adapters(project_path, agent_id)
-    from ibl_v2_adapters import Adapter, Adapted, decode_envelope
+    from ibl_v2_adapters import Adapter
     from ibl_v2_ir import digest
     from ibl_engine import execute_ibl
     from workflow_contract import (
@@ -158,9 +164,9 @@ def function_adapters(project_path, agent_id):
             continue
         contract = {"version": 1, "params": {p: "Unknown" for p in [*params, *defaults]},
                     "required": [p for p in params if p not in defaults],
-                    "result": "Record", "effects": ["unknown"],
-                    "compatibility": "legacy-function/1", "implementation_fingerprint": digest([snapshot, implementation]),
-                    "adapter": {"protocol": "legacy-envelope", "value_path": ""}}
+                    "result": "Unknown", "effects": ["unknown"],
+                    "compatibility": "legacy-function-value/1", "implementation_fingerprint": digest([snapshot, implementation]),
+                    "adapter": {"protocol": "legacy-envelope", "value_path": "/final_result"}}
         contract.update(forwarding_contract(steps, contract["params"], receiver))
         if receiver in params:
             contract["pipe_input"] = receiver
@@ -171,8 +177,6 @@ def function_adapters(project_path, agent_id):
             with source_context(1):
                 raw = execute_ibl({"_node": "fn", "action": name, "params": plain_arguments(args)},
                                   project_path, agent_id=agent_id)
-            value, evidence = decode_envelope(raw, contract["adapter"])
-            evidence["compatibility"] = "legacy-function/1"
-            return Adapted(promote_return_fields(value, contract), evidence)
+            return decode_function_result(raw)
         result[f"fn:{name}"] = Adapter(contract, run)
     return result

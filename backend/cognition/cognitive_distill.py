@@ -729,7 +729,7 @@ AI 답변: {ai_response[:1400]}
                 review_used_guides(guides_used, user_message, response, tool_calls=tool_calls)
             except Exception as e:
                 log(f"[가이드되먹임] 오류 (무시): {e}")
-        # 5) 제시→사용 결합 — 이 턴에 실린 후보 중 무엇이 쓰였는지 한 사건(recall.used)으로. 점수는 고치지 않는다.
+        # 5) 증류 후 활용 확인 — 턴 종료 관측에 같은 recall_id로 합류한다. 보고는 사용 집합을 합치며 점수는 고치지 않는다.
         if presented:
             try:
                 _deep_after = _ar.deep_used_at(_deep_db, (_deep or {}).get("ids") or [])

@@ -130,7 +130,7 @@ def coerce_json_param(value: Any) -> Any:
     return value
 
 
-def fn_result_payload(raw: Any) -> tuple:
+def fn_result_payload(raw: Any, *, typed: bool = False) -> tuple:
     """함수의 실행 기록과 반환값을 분리한다. 값은 final_result 한 곳에만 둔다.
 
     실행기가 붙인 표식만 읽으므로 사용자 데이터의 fn/final_result 키를 벗기지
@@ -143,6 +143,11 @@ def fn_result_payload(raw: Any) -> tuple:
                 and obj.get('success') is True and 'final_result' in obj):
             break
         found, value = True, obj['final_result']
+        if typed and obj.get('_return_encoding') == 'text':
+            return True, value
+        if typed and obj.get('_return_encoding') == 'json':
+            # 실행기가 명시한 직렬화만 해독한다. JSON처럼 생긴 사용자 문자열은 text다.
+            return True, json.loads(value) if isinstance(value, str) else value
     return found, coerce_json_param(value) if found else raw
 
 

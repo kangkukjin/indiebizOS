@@ -51,7 +51,7 @@ def test_native_local_override_does_not_credit_stored_function(memory):
     assert memory.find_phrase_by_alias('값', edition=2)['success_count'] == 0
 
 
-def test_legacy_function_reuses_original_semantics_and_returns_envelope(memory):
+def test_legacy_function_reuses_body_and_returns_selected_value(memory):
     code = '$return = $목록 >> [table:take]{n:$개수}'
     assert memory.add_examples_batch([example(code, '예전앞부분')]) == 1
     result = handle_request({'edition': 2, 'code': '$r=[fn:예전앞부분]{목록:[{id:"007"},{id:"b"}],개수:1}\nreturn $r.items'})
@@ -60,7 +60,7 @@ def test_legacy_function_reuses_original_semantics_and_returns_envelope(memory):
     assert checked['status'] == 'incomplete'
     from model_result_view import read_result
     guards = json.loads(read_result(checked['guards_ref']['read_args'])['text'])
-    assert any(g.get('boundary') == 'legacy-function/1' for g in guards)
+    assert any(g.get('boundary') == 'legacy-function-value/1' for g in guards)
 
 
 def test_legacy_pipe_receiver_survives_bridge_and_rejects_collision(memory):

@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: repair-agent-only-grant
+    retired: 2026-10-04
+    reason: 같은 에이전트의 다른 작업이 수리 권한과 사본을 공유했다.
+    instead: 하네스가 실행 ID를 확보하고 경계에서 전달·복원한다. 발급·조회는 해당 실행 ID에만 묶이며 누락 시 오류·거부한다.
+    phrases: ['무태스크 발급분(agent 슬롯)은 agent_id 일치로 연다', 'agent_id 일치로만 폴백한다', '신원 유실 심에서만 agent 슬롯']
   - id: source-capacity-preview-caps
     retired: 2026-10-04
     reason: 표시 분량을 원자료 처리 상한으로 사용해 문서·표·웹 본문이 잘리거나 편집이 거절됐다.

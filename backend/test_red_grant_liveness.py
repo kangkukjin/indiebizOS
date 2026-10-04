@@ -9,7 +9,7 @@
   G1 발급 턴이 살아 있으면 옛 한도를 한참 넘겨도 만료되지 않는다 (사고 재현)
   G2 턴이 닫힌 뒤에는 유휴 한도로 회수된다 (finally 누수 방지 — 시계의 진짜 용도)
   G3 유휴는 **마지막 사용**부터 잰다 — 일하는 그랜트는 데워진다
-  G4 신원 매칭은 종전 그대로 (무임승차 거부·양쪽 미상은 fail-closed)
+  G4 실행 ID 일치만 허용 (같은 agent의 다른 작업·신원 유실은 fail-closed)
   G5 사유를 구별해 말한다 (만료 / 미발급 / 주인 아님)
   G6 판정 불능인 몸(폰·분리 수행자 red_apply — 열린 턴 원장이 없다)에서는 종전대로 시계로 회수
   G7 발급 조건은 **헌법이 선언한 것뿐**이다 — 선언에 없는 조건이 코드에만 붙지 않는다 (2026-08-25)
@@ -94,13 +94,13 @@ def test_g3_idle_clock_counts_from_last_use():
     assert rg.active_grant(task_id="task_warm") is None
 
 
-def test_g4_identity_matching_unchanged():
-    """무회귀 — 만료 규칙만 바뀌고 '누가 주인인가'는 종전 그대로여야 한다."""
+def test_g4_identity_is_bound_to_execution():
+    """2026-10-04 사용자 개정: 같은 agent라도 실행 ID 없는 호출에 권한을 빌려주지 않는다."""
     _open_turn()
     rg.issue_grant(agent_id="system_ai", task_id="task_owner", reason="주인")
     assert rg.active_grant(task_id="task_owner") is not None
     assert rg.active_grant(task_id="task_other") is None                 # 병행 자율 태스크 무임승차 거부
-    assert rg.active_grant(task_id=None, agent_id="system_ai") is not None  # 신원 유실 심 폴백
+    assert rg.active_grant(task_id=None, agent_id="system_ai") is None
     assert rg.active_grant(task_id=None, agent_id="다른몸") is None
     assert rg.active_grant() is None                                     # 둘 다 없으면 fail-closed
 
@@ -132,14 +132,15 @@ def test_g6_bodies_without_a_turn_ledger_still_expire():
 
 
 
-def test_g8_concurrent_runs_each_keep_their_own_grant():
+@pytest.mark.parametrize("second_agent", ["system_ai", "storyteller"])
+def test_g8_concurrent_runs_each_keep_their_own_grant(second_agent):
     """★ep2519/ep2520 재현 (2026-08-31 23:24): 싱글턴 슬롯에서는 59초 뒤 시작된 병행
     REPAIR 런(녹음기)의 발급이 위임 런(자막 수리, storyteller)의 그랜트를 **덮어써**,
     밀려난 턴이 정상 경로(write 자동 적재→apply)를 잃고 propose/discard 루프로 밀려나
     파생물을 만들고 죽이다 미완으로 끝났다. 다중 슬롯: 발급·회수는 자기 슬롯만."""
     _open_turn(90001)
     rg.issue_grant(agent_id="storyteller", task_id="task_e06d14d3", reason="자막 수리")
-    rg.issue_grant(agent_id="system_ai", task_id="task_sysai_854eda60", reason="녹음기")
+    rg.issue_grant(agent_id=second_agent, task_id="task_sysai_854eda60", reason="녹음기")
     # 두 그랜트가 공존한다 — 후발 발급이 선발을 덮어쓰지 않는다
     assert rg.active_grant(task_id="task_e06d14d3") is not None
     assert rg.active_grant(task_id="task_sysai_854eda60") is not None
@@ -147,11 +148,34 @@ def test_g8_concurrent_runs_each_keep_their_own_grant():
     rg.revoke_grant(task_id="task_sysai_854eda60")
     assert rg.active_grant(task_id="task_sysai_854eda60") is None
     assert rg.active_grant(task_id="task_e06d14d3") is not None
-    # 무태스크 발급분(신원 유실 심)은 agent 슬롯 — agent 로 회수한다
-    rg.issue_grant(agent_id="system_ai", task_id="", reason="신원 유실 심")
-    assert rg.active_grant(task_id=None, agent_id="system_ai") is not None
-    rg.revoke_grant(agent_id="system_ai")
-    assert rg.active_grant(task_id=None, agent_id="system_ai") is None
+    assert rg.active_grant(task_id="task_other", agent_id="storyteller") is None
+    assert rg.active_grant(task_id=None, agent_id="storyteller") is None
+    rg.revoke_grant(agent_id="storyteller")
+    rg.revoke_grant(task_id="")
+    assert rg.active_grant(task_id="task_e06d14d3") is not None
+
+
+@pytest.mark.parametrize("task_id", [None, "", "   "])
+def test_taskless_issuance_is_rejected_without_changing_existing_grants(task_id):
+    rg.issue_grant(agent_id="system_ai", task_id="task_owner")
+    with pytest.raises(ValueError, match="실행 ID"):
+        rg.issue_grant(agent_id="system_ai", task_id=task_id)
+    assert list(rg._grants) == ["task_owner"]
+    assert rg.active_grant(task_id="task_owner")
+
+
+def test_legacy_agent_slot_never_authorizes_or_renews():
+    # 이미 로드된 옛 슬롯이 있어도 다른 실행에 권한이 번지지 않는다.
+    grant = rg.issue_grant(agent_id="system_ai", task_id="task_owner")
+    last_used = grant["last_used_at"] - 1
+    rg._grants["@system_ai"] = dict(grant, task_id="", last_used_at=last_used)
+    assert not rg._idle_expired(rg._grants["@system_ai"])
+    for task in (None, "", "task_schedule_other", "@system_ai"):
+        assert rg.active_grant(task_id=task, agent_id="system_ai") is None
+        assert rg.denial_note(task_id=task, agent_id="system_ai")
+    assert rg._grants["@system_ai"]["last_used_at"] == last_used
+    assert "실행 ID" in rg.denial_note(agent_id="system_ai")
+
 
 
 def test_g7_grant_condition_is_only_what_the_constitution_declared():

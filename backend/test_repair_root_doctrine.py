@@ -90,11 +90,15 @@ def test_d4_prompt_reloads_on_mtime_change(tmp_path):
     assert agent._prompt == "새 교리"
 
 
-def test_d5_repair_fragment_reaches_executor_only_with_grant():
+def test_d5_repair_fragment_reaches_executor_only_with_grant(monkeypatch):
     """D5 — 그랜트 있는 턴: 13_repair.md 가 turn_context 에 실린다 / 없는 턴: 안 실린다."""
     import prompt_builder
     import thread_context
     from red_grant import issue_grant, revoke_grant
+
+    # 앞선 수리 재개 시험의 임시 저장소를 가리키는 싱글턴을 물려받지 않는다.
+    monkeypatch.setattr(prompt_builder, "_prompt_builder_instance",
+                        prompt_builder.PromptBuilder(PROMPTS))
 
     task_id = "task_doctrine_probe_d5"
     snap = thread_context.snapshot()
@@ -111,6 +115,10 @@ def test_d5_repair_fragment_reaches_executor_only_with_grant():
         issue_grant(agent_id="system_ai", task_id=task_id, reason="d5")
         ctx = prompt_builder._build_dynamic_context(consciousness_output=None, model_name="m")
         assert "원인 사슬을 끝까지 따라가" in ctx
+        for other_task in ("task_other", ""):
+            thread_context.set_current_task_id(other_task)
+            other_ctx = prompt_builder._build_dynamic_context(consciousness_output=None, model_name="m")
+            assert "원인 사슬을 끝까지 따라가" not in other_ctx
         assert "되묻기는 두 종류뿐" in ctx
         assert "최종 보고 형식" in ctx
         assert ctx.startswith("<turn_context")   # dynamic — stable prefix 캐시를 안 깬다

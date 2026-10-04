@@ -137,7 +137,7 @@ class CalendarActionsMixin:
             import thread_context as tc
             previous = tc.snapshot()
             try:
-                # 정기 실행의 고유 task_id — 빈 task_id 는 수리 그랜트 폴백을 연다(ibl_scheduled 와 같은 이유).
+                # 정기 실행마다 독립 ID를 부여한다(ibl_scheduled와 같은 계약).
                 with tc.actor_context(agent_id=task.get("owner_agent_id") or "system_ai",
                                       task_id=f"task_schedule_{uuid.uuid4().hex[:8]}", origin="scheduler"):
                     tc.set_call_channel("scheduler", override=True)

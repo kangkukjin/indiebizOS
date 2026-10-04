@@ -206,6 +206,38 @@ def test_common_entry_recovers_episode_id_and_restores_context(tmp_path, monkeyp
     assert identities[-1] and identities[-1] != task
 
 
+@pytest.mark.parametrize('route', ['REPAIR', 'THINK'])
+def test_taskless_repair_entry_issues_and_revokes_execution_grant(tmp_path, monkeypatch, isolated, route):
+    import red_grant as rg
+    tasks = []
+    framing = {'task_framing': '수리', 'needs_repair': True, 'achievement_criteria': ''}
+    monkeypatch.setattr(Runner, '_decide_request_type', lambda *a: (route, None))
+    monkeypatch.setattr(Runner, '_run_consciousness_or_reuse', lambda *a, **kw: framing)
+    monkeypatch.setattr('system_ai_core._switch_to_role', lambda *a: None)
+    monkeypatch.setattr('repair_policy.enabled', lambda *a: False)
+
+    def stream(**kwargs):
+        task = tc.get_current_task_id()
+        tasks.append(task)
+        assert task and rg.active_grant(task_id=task)
+        assert rg.active_grant(agent_id=tc.get_current_agent_id()) is None
+        yield {'type': 'final', 'content': '수리 실행 시험'}
+
+    rg.revoke_grant()
+    try:
+        runner = Runner(tmp_path, stream)
+        for _ in range(2):
+            with tc.actor_context(origin='user'):
+                assert tc.get_current_task_id() is None
+                events = list(runner.cognitive_stream('수리 실행 신원 시험'))
+            assert not [e for e in events if e['type'] == 'error'], events
+            assert tasks and rg.active_grant(task_id=tasks[-1]) is None
+            assert tc.get_current_task_id() is None
+        assert len(tasks) == 2 and tasks[0] != tasks[1]
+    finally:
+        rg.revoke_grant()
+
+
 def test_common_entry_closes_supervisor_on_generator_exit(tmp_path, monkeypatch, isolated):
     from supervision_bus import current
     seen = []

@@ -456,7 +456,6 @@ class CognitivePipelineMixin:
         original_provider = None
         _reframe_channel = None
         _repair_granted_task = None  # 이 런이 발급한 RED 그랜트의 task_id (finally 회수용)
-        _repair_grant_agent = None   # 무태스크 발급분의 agent 슬롯 회수용 (2026-09-01 다중 슬롯)
         if force_role:
             # 표면별 전용 에이전트: 의식 건너뛰고 지정 모델(기본 경량)로 바로 실행.
             original_provider = _switch_to_role(self, force_role)
@@ -493,12 +492,12 @@ class CognitivePipelineMixin:
             elif _origin == "user":
                 original_provider = _switch_to_role(self, "system_repair")
                 from red_grant import issue_grant
-                _g_task = get_current_task_id() or ""
+                _g_task = get_current_task_id()
                 _repair_grant_agent = get_current_agent_id() or "system_ai"
                 issue_grant(agent_id=_repair_grant_agent,
                             task_id=_g_task, reason=message)
-                _repair_granted_task = _g_task or "__untasked__"
-                print(f"[수리] RED 그랜트 발급 (task={_g_task or '없음'}) — 고급 모델·의식 각성 경로")
+                _repair_granted_task = _g_task
+                print(f"[수리] RED 그랜트 발급 (task={_g_task}) — 고급 모델·의식 각성 경로")
             else:
                 # 자율 태스크 — 승격·그랜트 없음. 의식 framing 은 하되
                 # RED 쓰기는 게이트가 막고 [self:patch]{op:"propose"} 경로를 안내한다.
@@ -516,12 +515,12 @@ class CognitivePipelineMixin:
                 if _origin == "user":
                     original_provider = _switch_to_role(self, "system_repair")
                     from red_grant import issue_grant
-                    _g_task = get_current_task_id() or ""
+                    _g_task = get_current_task_id()
                     _repair_grant_agent = get_current_agent_id() or "system_ai"
                     issue_grant(agent_id=_repair_grant_agent,
                                 task_id=_g_task, reason=message)
-                    _repair_granted_task = _g_task or "__untasked__"
-                    print(f"[수리] 늦은 REPAIR 승격 (task={_g_task or '없음'}) — 의식 needs_repair 선언")
+                    _repair_granted_task = _g_task
+                    print(f"[수리] 늦은 REPAIR 승격 (task={_g_task}) — 의식 needs_repair 선언")
                     # 분류기가 놓친 수리 턴이라 의식은 수리 교리 없이 규정을 세웠다 —
                     # 교리를 싣고 한 번 더 깨워 규정(가설 원인 사슬·apply 기준)을 수리 턴 것으로 바꾼다.
                     _re = self._run_consciousness_or_reuse(message, history, execution_memory, repair=True)
@@ -861,11 +860,8 @@ class CognitivePipelineMixin:
                     pass
                 try:
                     from red_grant import revoke_grant
-                    # 자기 슬롯만 — 무태스크 발급분은 agent 슬롯으로 회수(빈 인자 전량
-                    # 회수는 테스트 전용이라 여기서 절대 부르지 않는다. 09-01 다중 슬롯).
-                    revoke_grant(task_id=(None if _repair_granted_task == "__untasked__"
-                                          else _repair_granted_task),
-                                 agent_id=_repair_grant_agent)
+                    # 공통 진입점이 확보한 실행 ID의 슬롯만 회수한다.
+                    revoke_grant(task_id=_repair_granted_task)
                     print("[수리] RED 그랜트 회수")
                 except Exception:
                     pass

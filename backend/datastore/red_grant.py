@@ -15,7 +15,7 @@ IndieBiz OS Core
 ★스레드 로컬이 아니라 프로세스 전역인 이유: claude_code 프로바이더의 도구 호출은
 MCP→HTTP 재진입(api_ibl 워커 스레드)으로 실행돼 스레드 로컬이 끊긴다. task_id 는
 그 심(seam)을 건너 복원되므로(mcp_server 헤더 → api_ibl set_current_task_id)
-task_id 매칭을 1순위로 쓴다.
+task_id 매칭만 허용한다. 신원이 유실되면 agent 이름으로 권한을 빌리지 않는다.
 
 ★태스크별 다중 슬롯 (2026-09-01, ep2519/ep2520 수리): 옛 저장소는 싱글턴 슬롯이었고
 그 정당화("시스템 AI 는 동시 런이 없다")는 위임 런이 생기면서 반증됐다 — 08-31 23:24,
@@ -28,7 +28,7 @@ import threading
 import time
 
 _lock = threading.Lock()
-# key(task_id, 없으면 "@"+agent_id) → {"agent_id","task_id","reason","issued_at",
+# key(task_id) → {"agent_id","task_id","reason","issued_at",
 # "last_used_at","episode_ids"}. 만료 레코드는 즉시 지우지 않는다 — denial_note 가
 # "만료됐습니다"를 정직하게 말하려면 시체가 필요하다(발급이 넘칠 때만 청소).
 _grants: dict = {}
@@ -97,20 +97,6 @@ def _idle_expired(g) -> bool:
     return time.time() - g.get("last_used_at", g["issued_at"]) > _IDLE_TTL_SEC
 
 
-def _identity_ok(g, task_id, agent_id) -> bool:
-    """이 호출이 그랜트의 주인인가 (종전 매칭 규칙 — 둘 다 없으면 fail-closed)."""
-    if g["task_id"]:
-        if task_id:
-            return task_id == g["task_id"]
-        return bool(agent_id and agent_id == g["agent_id"])
-    return bool(agent_id and agent_id == g["agent_id"])
-
-
-def _slot_key(task_id: str, agent_id: str) -> str:
-    """저장 슬롯 키 — task_id 가 정상, 신원 유실 심에서만 agent 슬롯."""
-    return task_id if task_id else "@" + (agent_id or "")
-
-
 def issue_grant(agent_id: str, task_id: str, reason: str = "") -> dict:
     """RED 쓰기 그랜트 발급 — agent_pipeline REPAIR 경로 전용.
 
@@ -118,6 +104,8 @@ def issue_grant(agent_id: str, task_id: str, reason: str = "") -> dict:
     (2026-09-01 개정 — 모듈 docstring의 ep2519/ep2520 사건)."""
     if not _principal_is_owner():
         return {}   # 주체 관문 — origin 과 별개로, 주인이 아니면 RED 그랜트는 없다(2026-09-14)
+    if not isinstance(task_id, str) or not task_id.strip():
+        raise ValueError("수리 실행 ID(task_id)가 없습니다 — 하네스에서 실행 신원을 복원해야 합니다")
     with _lock:
         _now = time.time()
         # 시체 청소는 발급이 넘칠 때만 — denial_note 의 만료 정직 신고를 위해 남겨둔다.
@@ -126,61 +114,44 @@ def issue_grant(agent_id: str, task_id: str, reason: str = "") -> dict:
                 _grants.pop(k, None)
         g = {
             "agent_id": agent_id or "",
-            "task_id": task_id or "",
+            "task_id": task_id,
             "reason": (reason or "")[:300],
             "issued_at": _now,
             "last_used_at": _now,
             "episode_ids": _issuer_episode_ids(),
         }
-        _grants[_slot_key(task_id or "", agent_id or "")] = g
+        _grants[task_id] = g
         return dict(g)
 
 
 def revoke_grant(task_id: str = None, agent_id: str = None):
-    """그랜트 회수 — 자기 슬롯만. task_id(정상) 또는 agent_id(신원 유실 심의 무태스크
-    발급분)를 주면 그 슬롯만 지운다 — 다른 런의 finally 가 남의 그랜트를 못 지운다.
-    둘 다 없으면 전량 회수(테스트·셀프테스트 정리 전용 — 파이프라인은 쓰지 않는다)."""
+    """자기 task 슬롯만 회수한다. agent_id만으로는 아무 슬롯도 회수하지 않는다.
+
+    인자를 모두 생략한 전량 회수는 테스트·셀프테스트 정리 전용이다.
+    빈 ID를 명시한 호출은 전량 회수로 확대하지 않는다.
+    """
     with _lock:
         if task_id:
             _grants.pop(task_id, None)
-        elif agent_id:
-            _grants.pop("@" + agent_id, None)
-        else:
+        elif task_id is None and agent_id is None:
             _grants.clear()
 
 
 def active_grant(task_id: str = None, agent_id: str = None):
     """현재 호출 컨텍스트에 유효한 그랜트를 반환(없으면 None).
 
-    매칭 규칙(종전과 동일 — 저장만 슬롯화):
-    - 호출측 task_id 는 자기 task 슬롯만 연다 — 병행하는 자율 태스크(자기 task_sysai_*
-      id 를 갖는다)가 남의 그랜트에 무임승차하지 못한다.
-    - 무태스크 발급분(agent 슬롯)은 agent_id 일치로 연다.
-    - 호출측 task_id 가 비어 있으면(신원 유실 심) agent_id 일치로만 폴백한다.
-    - 둘 다 없으면 허용하지 않는다(fail-closed).
+    호출측 task_id와 발급 실행 ID가 일치해야 한다. agent_id는 진단용이며
+    권한을 대신 증명하지 않는다. 누락·다른 실행·옛 agent 슬롯은 모두 거부한다.
     """
     if not _principal_is_owner():
         return None   # 주체 관문 — 발급 뒤 주체가 좁혀져도 조회는 닫힌다
     with _lock:
-        candidates = []
-        if task_id and task_id in _grants:
-            candidates.append(_grants[task_id])
-        if agent_id and ("@" + agent_id) in _grants:
-            candidates.append(_grants["@" + agent_id])
-        if not task_id and agent_id:
-            # 신원 유실 심 — 어느 슬롯이든 agent 일치로 폴백(가장 최근 사용분 우선)
-            candidates.extend(sorted(
-                (g for g in _grants.values() if g.get("agent_id") == agent_id),
-                key=lambda g: g.get("last_used_at", 0), reverse=True))
-        for g in candidates:
-            if _idle_expired(g):
-                continue
-            if not _identity_ok(g, task_id, agent_id):
-                continue
-            # 쓰는 동안 데워진다 — 격리 적재로 일하고 있는 턴의 권한은 시계에 죽지 않는다.
-            g["last_used_at"] = time.time()
-            return dict(g)
-        return None
+        g = _grants.get(task_id) if task_id else None
+        if g is None or g.get("task_id") != task_id or _idle_expired(g):
+            return None
+        # 쓰는 동안 데워진다 — 격리 적재로 일하고 있는 턴의 권한은 시계에 죽지 않는다.
+        g["last_used_at"] = time.time()
+        return dict(g)
 
 
 def denial_note(task_id: str = None, agent_id: str = None) -> str:
@@ -190,19 +161,17 @@ def denial_note(task_id: str = None, agent_id: str = None) -> str:
     뭉갰다. 그래서 만료로 막힌 수리 턴이 자기를 '수리 경로 밖 세션'으로 **오진**하고
     사용자에게 없는 사실을 보고했다 — 판정 불능을 '없음'으로 뭉개면 다음 진단이 거짓말을
     한다. 거절은 그대로 fail-closed 로 두되, 사유만 정직하게 말한다."""
+    if not _principal_is_owner():
+        return "요청 주체가 소유자가 아니므로 수리 그랜트를 사용할 수 없습니다."
+    if not task_id:
+        return "수리 실행 ID(task_id)가 없습니다 — 하네스에서 실행 신원을 복원해야 합니다."
     with _lock:
         if not _grants:
             return ("수리 그랜트가 없습니다 — 이 턴은 REPAIR 경로로 발급된 적이 없습니다"
                     "(사용자가 '#repair' 로 명령한 턴에서만 발급됩니다).")
         # 자기 슬롯이 있으면 그 레코드의 사정(만료)을 말한다.
-        g = _grants.get(task_id) if task_id else None
-        if g is None and agent_id:
-            g = _grants.get("@" + agent_id)
-        if g is None and not task_id and agent_id:
-            g = next((x for x in sorted(_grants.values(),
-                                        key=lambda x: x.get("last_used_at", 0), reverse=True)
-                      if x.get("agent_id") == agent_id), None)
-        if g is not None:
+        g = _grants.get(task_id)
+        if g is not None and g.get("task_id") == task_id:
             if _idle_expired(g):
                 _issued = time.strftime("%H:%M:%S", time.localtime(g["issued_at"]))
                 _idle_m = int((time.time() - g.get("last_used_at", g["issued_at"])) / 60)

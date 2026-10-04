@@ -8,11 +8,8 @@ def execute_scheduled(steps, run_path, agent_id, edition=None, inputs=None):
 
     previous = tc.snapshot()
     try:
-        # 정기 실행마다 고유 task_id. 종전 task_id="" 는 수리 그랜트의 "신원 유실 심" 폴백
-        # (red_grant.active_grant)을 열어, 시스템 AI 가 수리 중이면 무관한 정기 작업이 수리 사본 안에서
-        # 돌았다(2026-10-03~04 뉴스 작업 FileNotFoundError — 사본에 outputs/ 가 없다). "task_id 는 자기
-        # 슬롯만 연다"는 기존 규칙이 막아 주므로 권한 규칙은 손대지 않는다. task_sysai_ 접두사는 시스템 AI
-        # 활성 작업 등록(thread_context.set_current_task_id)에 쓰이므로 피한다.
+        # 정기 실행마다 독립 ID를 부여한다. 수리 권한도 실행 ID로 격리된다.
+        # task_sysai_ 접두사는 시스템 AI 활성 작업 등록에 쓰이므로 피한다.
         with tc.actor_context(agent_id=agent_id or "system_ai",
                               task_id=f"task_schedule_{uuid.uuid4().hex[:8]}", origin="scheduler"):
             tc.clear_called_agent()

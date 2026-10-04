@@ -224,7 +224,8 @@ async def execute_ibl_code(req: IBLRequest):
                 _adopt = trajectory_scope(task_id=req.task_id or "",
                                           parent_run_id=req.parent_run_id or "",
                                           episode_id=req.episode_id)
-            with _adopt, actor_context(agent_id=agent_id, task_id=req.task_id or None,
+            # 누락된 실행 ID는 풀 스레드에 남은 다른 수리 신원을 상속하지 않는다.
+            with _adopt, actor_context(agent_id=agent_id, task_id=req.task_id or "",
                                        origin=_origin), adopt_turn_token_ledger(agent_id, req.task_id):
                 try:
                     from system_tools import _execute_ibl_unified

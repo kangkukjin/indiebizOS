@@ -144,5 +144,57 @@ def test_recover_does_not_relabel_existing_execution(monkeypatch):
     assert seen == [("/ibl/recover", {"ticket": "abcdef123456", "wait": 0.0})]
 
 
+@pytest.mark.parametrize('transport', ['http', 'stdio'])
+@pytest.mark.parametrize('task', ['repair-task', 'other-task', ''])
+def test_repair_grant_requires_execution_identity_across_mcp(tmp_path, monkeypatch, transport, task):
+    import api_ibl
+    import red_grant as rg
+    import repair_context
+    import system_tools
+    import thread_context as tc
+
+    ctx = _ctx('user') if transport == 'http' else None
+    if ctx:
+        ctx.request_context.request.headers[M._HDR_TASK] = task
+    else:
+        monkeypatch.setattr(M, 'DEFAULT_TASK_ID', task)
+        monkeypatch.setattr(M, 'DEFAULT_AGENT_ID', 'training-origin-agent')
+    seen = []
+    monkeypatch.setattr(api_ibl, '_attach_steer', lambda value, *args: value)
+
+    def execute(*args, **kwargs):
+        seen.append((tc.get_current_task_id(), repair_context.active()))
+        return {'success': True, 'value': 1}
+
+    monkeypatch.setattr(system_tools, '_execute_ibl_unified', execute)
+
+    original_to_thread = asyncio.to_thread
+
+    async def reused_worker(fn, *args, **kwargs):
+        # 실제 수신 컨텍스트를 재사용 스레드의 잔류 수리 신원 위에서 실행한다.
+        def run():
+            with tc.actor_context(agent_id='training-origin-agent', task_id='repair-task'):
+                result = fn(*args, **kwargs)
+                assert tc.get_current_task_id() == 'repair-task'
+                return result
+        return await original_to_thread(run)
+
+    monkeypatch.setattr(asyncio, 'to_thread', reused_worker)
+
+    def post(path, payload, timeout):
+        req = api_ibl.IBLRequest(**{**payload, 'ticket': None})
+        return json.dumps(asyncio.run(api_ibl.execute_ibl_code(req)))
+
+    monkeypatch.setattr(M, '_post_backend', post)
+    rg.revoke_grant()
+    try:
+        rg.issue_grant(agent_id='training-origin-agent', task_id='repair-task')
+        asyncio.run(M.execute_ibl('return 1', project_path=str(tmp_path), ctx=ctx))
+        assert len(seen) == 1 and seen[0][0] == task
+        assert bool(seen[0][1]) is (task == 'repair-task')
+    finally:
+        rg.revoke_grant()
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

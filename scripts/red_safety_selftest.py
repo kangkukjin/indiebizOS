@@ -92,6 +92,8 @@ def main():
         thread_context.set_current_agent_id("system_ai")
         red_grant.issue_grant("system_ai", "task_sysai_selftest", "selftest")
         check("grant_task_match", h._red_zone_violation(str(foo)) is None)
+        thread_context.set_current_task_id("")
+        check("grant_missing_task_refused", h._red_zone_violation(str(foo)) is not None)
         thread_context.set_current_task_id("task_sysai_OTHER")
         check("grant_other_task_refused", h._red_zone_violation(str(foo)) is not None)
         thread_context.set_current_task_id("task_sysai_selftest")

@@ -3,7 +3,7 @@
 사건: 10-03~04 매시 뉴스 작업이 시스템 AI 수리 중에 돌면 task_id="" 폴백(red_grant.active_grant 의
 "신원 유실 심")으로 수리 그랜트를 열어 수리 사본 안에서 실행됐다 — 사본에 outputs/ 가 없어
 FileNotFoundError. 정기 실행에 고유 task_id 를 주면 "task_id 는 자기 슬롯만 연다"는 기존 규칙이
-막는다(규칙은 손대지 않는다). 스케줄 위임의 부모 발급은 그 task_id 를 그대로 쓴다.
+막는다. 실행 ID 없는 호출도 권한을 빌리지 못한다. 스케줄 위임은 그 task_id 를 그대로 쓴다.
 """
 import boot_paths  # noqa: F401
 import pytest
@@ -31,9 +31,9 @@ def test_scheduled_pipeline_runs_outside_the_repair_grant(monkeypatch, tmp_path)
     import ibl_v2_entry
     from ibl_scheduled import execute_scheduled
     _system_ai_is_repairing()
-    # 종전 신원(agent=system_ai, task="")으로는 폴백이 수리 그랜트를 열었다 — 규칙은 그대로다.
+    # 종전 사고 신원도 이제 닫힌다 — 실행 ID 누락은 권한 공유가 아니다.
     with tc.actor_context(agent_id="system_ai", task_id="", origin="scheduler"):
-        assert repair_context.active() is not None
+        assert repair_context.active() is None
     seen = []
 
     def handle(payload, run_path, agent_id=None):

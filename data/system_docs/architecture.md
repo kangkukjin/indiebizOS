@@ -86,6 +86,8 @@ EXECUTE/Reflex                          [2] 과제 규정 재검토 → 유효�
 
 - 조종실: `backend/surface/api_ibl.py` (`/ibl/translate`·`/ibl/validate`(dry-run)·`/ibl/execute`·`/ibl/distill`) + `frontend/src/components/ManualMode.tsx`. 부작용 step은 명시적 확인 게이팅, 해마 증류는 사용자 승인 시에만.
 - 앱: **선언 기반 단일소스**. 각 계기는 IBL 액션의 `app:` 블록(`data/ibl_nodes_src/`)이고 `/launcher/instruments`로 자동 파생 → **데스크탑(`GenericInstrument.tsx`)·원격 런처·폰이 같은 선언을 같은 어휘로 렌더**(app 블록 1개 = 전 표면 동시 등장). 어휘: modes 탭, view 프리미티브 12종(metric/kv/kv_list/card_list+드릴/image_grid/sparkline/list_action/thread/form/editable_list/map(인터랙티브 leaflet)/calendar), `on:` 뷰-이벤트(지도 moveend→재조회·marker_click→IBL 액션 또는 `{stream:true}`→HLS 영상), filter 필터칩(정적 단일선택 재조회 + 동적 `from_field`=결과-필드 distinct 칩, 클라이언트 측 거르기), 표시 템플릿 `{path|filter}`. 0토큰 IBL 직접 실행. escape hatch 2층: OVERRIDES(photo 풍부창·네이티브 창 등 손제작 풍부판) + STATIC_DOMAINS(부동산 실거래가·길찾기 등 렌더 어휘 밖 — 2026-06-29 상권은 인터랙티브 map+동적필터+드릴로 흡수돼 은퇴). `build_ibl_nodes --check`에 app 블록 정합성 합류.
+- **작업 공간 앱**(2026-10-02~): 계기(`app:` 블록) 어휘 밖의 손제작 독립 창 셋 — 문서(`DocumentWorkspace.tsx`·`api_documents.py`)·스프레드시트(`SpreadsheetWorkspace.tsx`·`api_spreadsheets.py`)·코딩(`CodingWorkspace.tsx`·`api_coding.py`). 문서·시트는 공통 사무 기반(`datastore/office_store.py`, `services/office_sessions.py`·`office_resources.py`·`resource_links.py`) 위에서 **엔진 초안과 원본 저장을 분리**한다: 편집 엔진(로컬 ONLYOFFICE, HWP/HWPX 는 로컬 RHWP)의 콜백은 초안만 남기고, 원본 파일 교체는 앱의 명시적 저장이 원본 해시·세션 세대·작성 권한을 확인한 뒤 원자적으로 한다. AI 변경안은 모델이 실행 코드를 만들지 않고 공식 플러그인의 고정 명령으로 적용된다(문서=책갈피로 고정한 선택에 변경 추적, 시트=범위 값·수식 변경안과 적용 전후 대조). 코딩 앱은 과제마다 worktree 를 따로 두고 실행자를 교체 가능하게 연결하며(`providers/coding_profile.py`, `services/coding_{workspace,runs,git}.py`), 쓰기 경계는 OS 이음매 `base/coding_process.py` 가 진다 — macOS 밖에서는 경계를 보장할 수 없어 실행을 거절한다. IBL 연결은 `self:document`·`self:sheet` 의 세션 op(어휘 증식 없음). 설계·구현 상태: `docs/{DOCUMENT,SPREADSHEET,CODING}_APP_DESIGN_2026_10_02.md`.
+- **UI 국제화**(2026-10-01~): 한국어 소스가 정본. Vite `uiCatalogPlugin` 이 dev/build 때 React·원격 셸·X-Ray 의 표시 문구를 수집해 카탈로그를 만들고, 번역은 몸의 모델 설정을 따르는 백그라운드 원샷 호출이 **빌드 시점에** 번역 메모리(`frontend/i18n/translations.json`)를 채운다. 런타임은 네트워크 번역을 하지 않는다. 미번역이 하나라도 남으면 빌드가 실패하고 마지막 정상 산출물을 덮지 않으며, 원격 셸은 원문 지문이 맞지 않으면 한국어 셸로 폴백한다. 언어 추가는 `languages.json` 한 줄이다. 계약·검사: `frontend/i18n/README.md`.
 - `_raw: true` 파라미터는 `postprocess:compress`(액션 결과의 AI 요약)를 우회한다 — 다만 **현재 그 블록을 선언한 액션은 0개**다(2026-06-27, 검색계가 `records`/`items` 구조화 통화로 옮겨가며 compress 폐지 — 압축이 통화를 문자열로 파괴하던 결함). 엔진의 기계는 남아 있고 선언만 비었다.
 
 ## 시스템 구조
@@ -430,6 +432,7 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 - **한도 ②최고 모델 고정**: 기어가 절약이어도 REPAIR 실행 모델은 고급으로 승격(`model_resolver`, reflex→경량 고정의 역방향).
 - **한도 ③의식 각성**: 의식 토글 OFF 여도 REPAIR 는 THINK(의식 framing) 경로를 강제.
 - **실행 소유권(2026-10-04 사용자 개정)**: 그랜트 발급·조회는 실행 ID(`task_id`)에 묶인다. 공통 인지 진입점이 ID를 확보하고 MCP·HTTP 경계가 전달·복원한다. ID 없는 발급은 오류, 누락·다른 실행의 조회는 거부한다. agent 이름만으로 권한을 공유하는 슬롯·폴백은 없다. 사용자 자격·모델·의식 조건과 재기동 인계는 유지하며, 사용자의 추가 승인이나 ID 입력은 요구하지 않는다.
+- **사본에서 끝내고 묶음으로 반영(2026-10-03)**: 수리 변경은 전부 같은 작업 사본(`.worktrees/repair-*`)에 격리된다. 실행자가 그 사본에서 조사·수정·관련 검사를 끝내면 신뢰된 적용 서비스가 **검사한 그 바이트 묶음만** 정본에 반영하고, 활성 확인·커밋·각인으로 닫는다. 격리·예약이 실패했을 때 정본에 직접 쓰는 폴백은 없다. 모든 수리에 붙던 의무 AI 계획·포괄 적용 심사는 없앴다 — 기계로 확인되는 조건은 실제 pytest/Node 보고서와 후보·환경 지문으로 판정하고, 의미 판단이 필요한 조건만 기존 평가자가 본다. 사본은 *실행 중인 자신을 고치는 수명 문제*를 푸는 작업 대상일 뿐이라 모델·인증·외부 네트워크·일반 IBL 능력은 그대로 이어 쓰고(`repair_execution_scope`·`repair_process.prepare`), 정본 코드·Git·적용 원장에 대한 자식 프로세스 쓰기만 막는다. 패키지·사전 파일의 승인된 변경도 같은 격리·백업·지연 적용 묶음을 탄다. 정본: `docs/SELF_REPAIR_WORKSPACE_COMPLETION_DESIGN_2026_10_03.md`.
 - **기계 안전판**: 사전 구문검증(`compile` — 깨진 `.py` 는 라이브에 닿기 전 거부) → 원본 백업(파일당 최초 1회) → backend `.py` 면 **분리 워치독**(`red_watchdog.py`, `start_new_session` — 서버가 죽어도 생존)이 리로드 후 `/health` 확인, 죽어 있으면 백업 복원 + 재기동 + OS 알림으로 **자동 롤백**. **2026-09-11 R1 이후 재기동 자체는 재기동 제어자의 몫**이다 — 분리 수행자 `red_apply` 는 예약 턴의 종료·증류를 기다린 뒤 `restart_controller` 에 `red_apply` 요청을 넘길 뿐 스스로 게이트·drain·적용을 하지 않고, 제어자가 접수 차단→종료 대기→종료 뒤 `restart_red`(적용·부팅 후 검증·실패 시 검증된 백업 복원·재부팅)를 돌린다. 워치독은 백업·헬스 확인·안전 셀프테스트를, `red_report` 는 결말 회수를 그대로 맡는다(아래 원칙 1·3 의 2026-09-11 주석).
 
 ### ★일반 원칙 둘 (이 경로가 가르쳐 준 것)
@@ -503,8 +506,8 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 - backend **.py 536개**(test 제외, git 추적 기준) — 층 디렉토리 `base 72 · datastore 74 · ibl 86 · cognition 83 · services 59 · surface 86`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **89개**(guide_db 등록 **85**)
 - op 분기 액션 **78개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 47·false 25·미선언 96)
 <!-- IBL_STATS:END -->
-- 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)
-- 해마 코퍼스 **3,530 용례**·증류 누적 907 (2026-08-22 실측 — 라이브 수치는 조종실·memory.md)
+- 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)
+- 해마 코퍼스 **3,746 용례** (2026-10-04 실측 — 라이브 수치는 조종실·memory.md)
 - 등록 스크립트 `data/scripts/`(`registry.yaml` + .py) — 어휘가 아닌 절차의 거처. 개수는 레지스트리가 정본이다.
 
 ## 참조

@@ -186,6 +186,20 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `GET /music/stream` 부분 응답(Range 206, 소스 폴더 화이트리스트) · `GET /music/cover` 앨범아트(내장 태그→폴더 아트→SVG 폴백)
 - 어휘는 `[self:music]{op}`. 재생은 **서버 무음** — 통화의 `stream` 필드를 보는 표면의 `<audio>`가 문다.
 
+### 작업 공간 앱 (/documents · /spreadsheets · /coding) — 2026-10-02
+
+세 라우터 모두 주인 권한 뒤에 있다. 화면은 Electron 독립 창(`createToolWindow`) 또는 같은 해시 라우트.
+
+- **문서** `api_documents.py`(+ 편집 엔진 입출력 `api_document_engine.py`): `GET /documents`(목록) · `POST /documents/{import|new|open}` · `GET /documents/{id}`·`/capabilities`·`/versions`·`/snapshots/{sid}`·`/references`·`/events` · `POST /documents/{id}/{operation}`(저장·사본·복구·변환·PDF 쪽 조작·OCR·제안 적용 등 문서 작업의 단일 입구) · `GET /documents/{id}/hwp-content`·`POST /documents/{id}/hwp-draft`(HWP/HWPX) · `POST /documents/engine/start`. 엔진과의 통로 `/engine-io/{session}/content|callback|plugin/...` 과 `/convert-io/{id}` 는 서명·문서 키·세션 세대·만료 ticket 을 확인한다.
+- **스프레드시트** `api_spreadsheets.py`: 같은 골격(`GET /spreadsheets`, `import|new|open`, `{id}`·`versions`·`snapshots`·`events`, `POST {id}/{operation}`)에 `POST /spreadsheets/{id}/range-export`(고정 범위 내보내기 — 텍스트·계산 정책 명시).
+- **코딩** `api_coding.py`: `GET /coding/state` · `POST /coding/repositories` · `POST /coding/tasks` · `GET /coding/tasks/{id}`·`/events`(사건 재구독) · `GET|PUT /coding/tasks/{id}/file`(간단 편집) · `POST /coding/tasks/{id}/{runs|verify|review|approve|apply|cancel}`.
+
+서비스: `services/document_{workspace,office,office_ai,formats,pdf,hwp,creation}.py` · `services/spreadsheet_{workspace,files,imports,formats,changes,templates}.py` · 공통 `datastore/office_store.py`·`services/office_{sessions,resources}.py`·`resource_links.py` · `services/coding_{workspace,runs,git}.py`·`datastore/coding_store.py`·`base/coding_process.py`(OS 이음매)·`providers/coding_profile.py`.
+
+런타임 데이터(git 제외): `data/document_workspace/`(엔진 JWT 설정 `engine.json` 은 0600 — 출력·커밋 금지), `data/coding/`(과제·사건 DB·과제별 작업 공간). 문서·시트의 편집 엔진은 로컬 ONLYOFFICE 로 loopback 에만 게시되며 원격 브라우저에는 제공하지 않는다. 운영은 `python3 scripts/manage_document_engine.py start|status|stop`(문서 앱의 **편집 서버 시작** 버튼과 같은 동작. Docker/Colima 최초 설치는 별도). HWP/HWPX 는 로컬 RHWP 엔진(`backend/static/document_hwp/`, 재현 빌드 `scripts/prepare_document_hwp.py`)이 외부 글꼴 요청 없이 편집하고, 암호·배포용·DRM 파일은 거절한다.
+
+IBL 쪽은 `self:document`·`self:sheet` 의 세션 op 가 같은 서비스를 부른다(교재 `data/guides/document_edit.md`·`sheet.md`). 기존 `self:sheet` 의 append/update 는 공통 잠금과 읽은 파일 해시를 검사해 열려 있는 편집 창이나 낡은 읽기 위에 덮어쓰지 않는다. 형식별 지원 계약과 미완료 범위는 `docs/{DOCUMENT,SPREADSHEET,CODING}_APP_DESIGN_2026_10_02.md` 의 '구현 상태'.
+
 ### 알림 도달 (notify_dispatch)
 - 수신 단일 관문(`channel_poller._save_message_to_db`) 직후 `notify_dispatch.notify_user()` — ①알림함 기록 ②런처 연결 시 `/ws/launcher` `show_notification`(`api_websocket.send_launcher_command_sync`, 워커 스레드 안전) → Electron OS 네이티브 알림+배지 ③미연결이면 `desktop_notify.py`(의존성 0 — osascript / PowerShell WinRT / notify-send). `[self:notify_user]` 도 같은 관문을 쓴다.
 - ★웹 푸시(경로 C)와 클립박스(`/launcher/clipbox`)는 둘 다 **은퇴**(2026-07-28~08-01): 전자는 같은 origin 다중 PWA 의 알림 위임 때문에 실기기 도달 실패, 후자는 '폰으로'가 종전 푸시 큐로 원복.
@@ -456,3 +470,15 @@ member_policy.json의 일일·레벨별·전역 한도와 턴 토큰/모델 호�
 재시작 대기 중 감독 작업대와 프로젝트 취소·중단은 유지한다. 활성 검사 영수증은
 프로세스 사망 뒤 회수하며, 부팅 검사와 활성 검사·커밋의 시간 상한은 분리한다.
 상세 계약은 [재기동 설계의 문서앱 에피소드 수리](../../docs/RESTART_COORDINATION_DESIGN_2026_09_11.md#문서앱-에피소드-425142534257의-경계-수리)를 따른다.
+
+### UI 국제화 (2026-10-01)
+
+한국어 소스가 정본이고 번역은 빌드 산출물이다. `frontend/i18n/`: `languages.json`(언어 목록 — 한 줄 추가가 곧 언어 추가) · `translations.json`(번역 메모리 — 교정은 해당 레코드의 `text` 만) · 생성물 `catalog.json`·`remote.json`·`xray.json`(직접 편집 금지) · `runtime.mjs`. 번역 메모리와 생성물은 배포와 함께 버전 관리한다.
+
+Vite `uiCatalogPlugin`(`frontend/scripts/ui-catalog.mjs`·`ui-compiler.mjs`)이 `npm run dev`/`build` 에서 React 표시 문구, 서버가 조립하는 원격 셸(`launcher_surface_remote.py`), X-Ray(`data/xray/index.html`), IBL 사전·계기 매니페스트의 표시 사본, 조종실 시스템 상태 문구를 수집한다. 새 문구의 번역은 `ui-translate.py` 가 `oneshot_ai_call(role="background")` 로 요청하므로 모델·키는 몸의 설정을 따른다. 런타임은 네트워크 번역을 하지 않고, 대화·파일명·입력값·프롬프트·API 응답·실행 계약은 번역 대상이 아니다. 미번역이 남으면 빌드는 종료 코드 1 로 실패하고 마지막 정상 산출물을 보존한다. 서버는 원문 지문이 일치하는 생성물만 내주며 아니면 한국어 셸로 폴백한다 — **원격 셸 Python 을 고치면 frontend 빌드도 함께 돌려야 한다.**
+
+검사: `node --test scripts/ui-i18n.test.mjs` · `node scripts/ui-source-check.mjs` · `npx tsc -p tsconfig.app.json` · `scripts/ui-server-check.py` · `scripts/ui-browser-check.py`(실제 빌드 산출물, API 데이터는 합성). 정적 검사는 등록 문구의 미번역 0 을 보장할 뿐 모든 동적 UI 의 등록을 증명하지 않는다. 계약 전문: `frontend/i18n/README.md`.
+
+### 회귀 시험 실행 (2026-10-04)
+
+일상 회귀는 병렬(pytest-xdist)로 돌고, 전체 재생이 필요한 고비용 검사는 `system` 표지로 분리돼 있다. 변경한 파일에서 관련 시험을 고르는 선택기는 `scripts/select_tests.py`. 시험은 런타임 저장소·스필 루트를 워커 단위 임시 경로로 격리하며, 시험이 추적 파일이나 실제 저장소에 쓰면 세션 관문이 실패시킨다. 규약 정본: `docs/REGRESSION_TESTING.md`.

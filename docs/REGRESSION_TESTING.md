@@ -122,9 +122,33 @@ v2 엔진 핵심(`ibl_v2_adapters`·`ibl_v2_compile`·`ibl_v2_runtime`)은 모�
 전수 스캔이다(위 표). 본문·파라미터·assertion은 바꾸지 않았고 마커만 더했다. 기본 집합
 8,774개와 system 128개의 합은 수집 8,902개와 같다. 삭제할 시험은 이번에도 찾지 못했다.
 
-병렬 격리 관찰: 병렬 1회 실행 뒤 `data/scripts/registry.yaml`이 줄바꿈만 바뀐 채 재직렬화돼
-있었다(내용 동일). 시험이 실 저장소를 쓴 것인지 라이브 몸이 쓴 것인지 가리지 못했다. 병렬
-실행 뒤 `git status`에 data/ 변경이 남으면 그 시험을 찾아 `tmp_path`로 격리한다.
+## 시험의 실 저장소 쓰기 (2026-10-04 스윕)
+
+병렬 1회 뒤 `data/scripts/registry.yaml`이 재직렬화돼 있던 원인을 스윕으로 찾았다. 저장소
+트리로 향하는 모든 쓰기(open w/a/x/+, os.replace, os.rename)를 시험 nodeid와 함께 기록하는
+임시 플러그인으로 기본 집합을 돌렸다. 결과와 수리:
+
+- 추적 파일 쓰기 1건: `test_pipe_currency_failures::test_p17_script_list_preflight`가 실
+  `data/scripts/registry.yaml`·`data/scripts.json`에 시험 항목을 등록했다가 스냅샷으로 되돌렸다.
+  재직렬화 외에, 되돌리기가 그 사이 라이브 몸이 등록한 항목을 덮어쓸 수 있었다. 원장 앵커를
+  `tmp_path`로 돌렸다.
+- `data/spill` 쓰기 1,659 경로·46MB(1회분, 66개 시험 파일). 실 스필 112K 파일·9.8GB의 최근분
+  대부분이 시험 산물이었다. 스필 루트 시임은 `common/spill.py`의 `_root` 하나다(순수 코어라 `get_base_path`를 import할
+  수 없어 파일 상대 앵커 유지, 층 관문). 직접 경로를 짓던 세 곳(`ibl_v2_experience`·`conscious_supervisor`·`supervision_store`)을
+  `spill_dir()` 시임으로 돌리고, `conftest.py`의 autouse fixture가 시험마다 스필 루트를 `tmp_path`로
+  보낸다(시험이 `get_base_path`를 돌렸으면 그 아래 `data/spill`, 회원 사설 스필은 그대로).
+  ContextVar가 아니라 모듈 함수를 바꾸는 이유: 작업자 스레드는 ContextVar를 물려받지 않는다.
+- 수리 뒤 재스윕: 추적 파일 쓰기 0, `data/spill` 쓰기 0. 종합 회귀 8,779 통과.
+- 남은 비추적 쓰기(1회분, 경로 수): `data/script_runs` 65와 `data/scripts.json`
+  (`test_exposed_idiom_boundaries`·`test_targeted_code_read`·`test_imagination_round67_repairs`가
+  실 `[self:script]` 실행으로 라이브 실행 원장에 기록), `data/workflows` 25(`test_workflow_params`),
+  `data/completion_wait` 18, `data/system_ai_state` 7, `data/recall_index` 5. 패키지
+  `script_ops`의 원장 앵커는 수리 작업공간 시임뿐이라 conftest에서 돌릴 자리가 없다. 다음 수리는
+  그 앵커에 시임을 두는 일이다.
+
+`conftest.py`의 세션 훅이 세션 전후의 추적 파일 변경(`git status --porcelain`)을 대조해 새로
+바뀐 추적 파일이 있으면 세션을 실패로 끝낸다. 병렬 실행 뒤 `git status`에 data/ 변경이 남으면
+먼저 이 훅의 메시지를 본다.
 
 ## 분리 판단의 근거 (2026-09-29)
 

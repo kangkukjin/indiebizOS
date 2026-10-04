@@ -533,13 +533,27 @@ def test_p16_fallback_matrix_and_mixed_grammar():
     print("P16 OK — (A??B)>>C 결합·3단 매트릭스(성공>첫 빈손>마지막 에러)·전부 빈손=정직 0건")
 
 
-def test_p17_script_list_preflight():
+def test_p17_script_list_preflight(tmp_path, monkeypatch):
     """P17(⑱ 실험 9): script list 가 실행 가능 여부를 안 봄 — 파일이 사라져도 ✅ 로 남았다.
 
     d6a6fb1 개정 반영: 원장이 정의(data/scripts/registry.yaml, 추적)/상태(data/scripts.json,
-    무시)로 갈라졌고, 본문은 data/scripts/ 안에만 산다(밖이면 register 거절)."""
+    무시)로 갈라졌고, 본문은 data/scripts/ 안에만 산다(밖이면 register 거절).
+
+    2026-10-04: 원장 앵커를 tmp_path 로 돌린다. 전에는 **실 data/scripts/registry.yaml·scripts.json 에**
+    등록했다가 스냅샷으로 되돌렸다 — 매 회귀마다 추적 파일이 재직렬화돼 git 에 떴고, 되돌리기가
+    라이브 몸이 그 사이 등록한 항목을 덮어쓸 수 있었다(병렬 회귀·라이브 몸 공존 실측)."""
     _script = _load("_t_script", os.path.join(_PKG, "system_essentials", "script_ops.py"))
     import copy
+    root = tmp_path / "repo"
+    (root / "data" / "scripts").mkdir(parents=True)
+    # 실 정의 원장의 사본을 씨앗으로(읽기만) — list 가 실제 항목 사이에서 시험 항목을 고르게
+    (root / "data" / "scripts" / "registry.yaml").write_bytes(_script._REGISTRY.read_bytes())
+    monkeypatch.setattr(_script, "_ROOT", root)
+    monkeypatch.setattr(_script, "_SCRIPT_DIR", root / "data" / "scripts")
+    monkeypatch.setattr(_script, "_REGISTRY", root / "data" / "scripts" / "registry.yaml")
+    monkeypatch.setattr(_script, "_STATE", root / "data" / "scripts.json")
+    monkeypatch.setattr(_script, "_RUN_DIR", root / "data" / "script_runs")
+    monkeypatch.setattr(_script, "_JOB_DIR", root / "data" / "script_runs" / "jobs")
     orig_reg = copy.deepcopy(_script._read_registry())
     orig_state = copy.deepcopy(_script._read_state())
     sid = "_p17_시험용"

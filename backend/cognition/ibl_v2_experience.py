@@ -132,7 +132,8 @@ def _learning_store(turn_cost):
     path = (turn_cost or {}).get('events_path')
     if not path:
         return None
-    root = get_base_path() / 'data' / 'spill' / 'supervision'
+    from common.spill import spill_dir
+    root = Path(spill_dir()) / 'supervision'   # 스필 루트 시임(2026-10-04)
     path = Path(path)
     try:
         directory = trace_directory(root, path.parent.name)

@@ -38,6 +38,9 @@ ENVELOPE_KEEP_MAX = 16_000
 
 
 def _root() -> str:
+    """스필 루트 시임(2026-10-04). 순수 코어(ibl_envelope → 여기)라 runtime_utils 를 import 할 수
+    없다(층 관문) — 파일 상대 앵커를 유지한다. 스필 소비자는 이 시임(spill_dir) 을 쓰고 직접
+    `get_base_path()/data/spill` 을 짓지 말 것. 시험은 conftest 가 `_root` 를 tmp_path 로 바꾼다."""
     if _spill_root.get() is not None:
         return _spill_root.get()
     here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

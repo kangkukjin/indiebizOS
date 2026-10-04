@@ -54,7 +54,8 @@ class Supervisor:
         from member_runtime import is_member, private_path
         if is_member():
             directory = private_path("supervision/" + self.turn_id)
-        self.store = TurnStore(directory or (get_base_path() / "data" / "spill" / "supervision" / self.turn_id))
+        from common.spill import spill_dir
+        self.store = TurnStore(directory or (Path(spill_dir()) / "supervision" / self.turn_id))   # 스필 루트 시임(2026-10-04)
         try:
             import principal
             self.store.join_lineage(agent, self.project_path, principal.cache_key())

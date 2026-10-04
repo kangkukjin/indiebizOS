@@ -1,5 +1,6 @@
 import { createElement, useSyncExternalStore } from 'react';
 import type { ReactNode, ElementType } from 'react';
+import { Languages, ChevronDown } from 'lucide-react';
 import { createUI } from '../../i18n/runtime.mjs';
 import catalog from '../../i18n/catalog.json';
 
@@ -30,8 +31,12 @@ export function UiElement({ as, uiAttrs, children, ...props }: {
 }
 export function LanguagePicker() {
   const locale = useLocale();
-  return <select aria-label="Language / 언어" value={locale} onChange={event => ui.setLocale(event.target.value)}
-    className="text-xs rounded-md border border-[#D5CCC0] bg-white px-2 py-1 text-[#4A4035] max-w-28">
-    {Object.entries(ui.languages).map(([value, label]) => <option key={value} value={value}>{String(label)}</option>)}
-  </select>;
+  return <div className="relative flex items-center text-[#6B5B4F]">
+    <Languages size={15} aria-hidden="true" className="pointer-events-none absolute left-2.5" />
+    <select aria-label="Language / 언어" value={locale} onChange={event => ui.setLocale(event.target.value)}
+      className="appearance-none cursor-pointer rounded-lg border-0 bg-transparent pl-[31px] pr-7 py-1.5 text-[13px] leading-[19.5px] font-medium text-[#6B5B4F] transition-colors hover:bg-[#EAE4DA] active:bg-[#E0D9CC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A08060] focus-visible:ring-offset-1">
+      {Object.entries(ui.languages).map(([value, label]) => <option key={value} value={value}>{String(label)}</option>)}
+    </select>
+    <ChevronDown size={12} aria-hidden="true" className="pointer-events-none absolute right-2.5" />
+  </div>;
 }

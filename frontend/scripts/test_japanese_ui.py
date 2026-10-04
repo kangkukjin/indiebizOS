@@ -5,9 +5,9 @@ import re
 import threading
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
 
 import pytest
+from launcher_browser import prepare_launcher, select_locale, settled_style
 from test_xray_ui import browser, server, prepare, USER_TEXT  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,25 +34,7 @@ def launcher():
 def test_japanese_picker_persistence_and_restore(launcher, browser, surface):
     context = browser.new_context()
     page = context.new_page()
-    errors = prepare(page)
-    def api(route):
-        path = urlsplit(route.request.url).path
-        if route.request.url.startswith(launcher) and (path in ['/', '/launcher/app'] or path.startswith('/assets/')):
-            route.continue_()
-            return
-        payload = {}
-        if path == '/launcher/config':
-            payload = {'has_password': False, 'host': 'desktop'}
-        elif path in ['/projects', '/switches', '/folders']:
-            payload = {path[1:]: []}
-        elif path == '/launcher/instruments':
-            payload = {'instruments': []}
-        elif path == '/launcher/app-layout':
-            payload = {'version': 1, 'positions': {}, 'folders': {}, 'membership': {}, 'removed': [], 'uninstalled': [], 'promoted': []}
-        elif path == '/health':
-            payload = {'status': 'ok'}
-        route.fulfill(status=200, content_type='application/json', body=json.dumps(payload), headers={'Access-Control-Allow-Origin': '*'})
-    page.route('**/*', api)
+    errors = prepare_launcher(page, launcher + surface)
     page.goto(launcher + surface)
     picker = page.get_by_label('Language / 언어').filter(visible=True).first
     picker.wait_for()
@@ -69,8 +51,7 @@ def test_japanese_picker_persistence_and_restore(launcher, browser, surface):
     picker.wait_for()
     assert picker.input_value() == 'ja'
     assert page.locator('html').get_attribute('lang') == 'ja'
-    picker.select_option('en')
-    assert page.locator('html').get_attribute('lang') == 'en'
+    select_locale(page, picker, 'en', keyboard=True)
     picker.select_option('ko')
     assert page.locator('html').get_attribute('lang') == 'ko'
     assert not errors, errors
@@ -105,5 +86,30 @@ def test_japanese_xray_all_tabs_content_and_sibling_sync(server, browser):
     page.reload()
     page.wait_for_selector('.tab-bar')
     assert page.locator('html').get_attribute('lang') == 'ja'
+    assert not errors, errors
+    context.close()
+
+
+def test_desktop_picker_toolbar_states(launcher, browser, tmp_path):
+    context = browser.new_context(viewport={'width': 1280, 'height': 800})
+    page = context.new_page()
+    errors = prepare_launcher(page, launcher)
+    page.goto(launcher)
+    picker = page.get_by_label('Language / 언어').filter(visible=True).first
+    picker.wait_for()
+    neighbour = page.get_by_title('화면 모드 선택', exact=True)
+    fields = ['height', 'borderRadius', 'backgroundColor', 'color']
+    assert settled_style(picker, fields) == settled_style(neighbour, fields)
+    neighbour.hover()
+    hover = settled_style(neighbour, ['backgroundColor'])
+    picker.hover()
+    assert settled_style(picker, ['backgroundColor']) == hover
+    page.keyboard.press('Tab')
+    picker.focus()
+    assert picker.evaluate("el => el.matches(':focus-visible')")
+    style = settled_style(picker, ['outlineStyle', 'boxShadow'])
+    assert style['outlineStyle'] != 'none' or style['boxShadow'] != 'none'
+    page.screenshot(path=str(tmp_path / 'desktop-picker-focus.png'))
+    select_locale(page, picker, 'en', keyboard=True)
     assert not errors, errors
     context.close()

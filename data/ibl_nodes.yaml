@@ -5709,7 +5709,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-04'
-          impl: 0681a494c529717b
+          impl: 4bd94651c2108318
         target_key: path
         aliases:
           offset:
@@ -5722,7 +5722,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-04'
-          impl: 0681a494c529717b
+          impl: 4bd94651c2108318
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5799,7 +5799,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-04'
-          impl: 0681a494c529717b
+          impl: 4bd94651c2108318
         target_key: path
       list:
         callable_contract:
@@ -6194,9 +6194,9 @@ nodes:
           values:
             propose: RED 변경을 격리 사본에 제안 + 기계검증 (라이브 무변경, 자율 태스크용 — 적용은 사용자 수리 턴의 apply{proposal_id})
             apply: 조건별 검사 뒤 고정 묶음 정본 반영. backend 는 턴 종료 후 적용
-            status: 스테이징 세션 + 적용 대기 제안 현황 — 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔나
+            status: 사본·적용·활성 확인·커밋 상태와 실패 원인·재개 정보. key로 해당 수리 조회
             discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
-        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: verification_plan의 실제 검사·선택한 의미 조건 검토 후 고정 묶음 정본 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 반영 후 읽기 전용 확인은 active_verify_cmd 로 위탁. 기능 검사는 사본에서 끝내며 커밋은 기존 각인 서비스가 수리 델타만 수행 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 반영·활성 확인·커밋·전체 완료를 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
+        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: verification_plan의 실제 검사·선택한 의미 조건 검토 후 고정 묶음 정본 적용 — 적용 전 거절은 라이브 무변경이며 적용 후 실패는 applied·stage·activation·commit·recovery로 구분한다. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 반영 후 읽기 전용 확인은 active_verify_cmd 로 위탁. 기능 검사는 사본에서 끝내며 커밋은 기존 각인 서비스가 수리 델타만 수행 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 반영·활성 확인·커밋·전체 완료를 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
         aliases:
           old_string:
           - old
@@ -6553,7 +6553,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-04'
-          impl: 0681a494c529717b
+          impl: 4bd94651c2108318
         pipe_in: true
         lands_on: body
         limb_op:

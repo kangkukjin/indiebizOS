@@ -69,6 +69,30 @@ def initialize(repo, session):
     session["candidate_version"] = VERSION
     session["root_task_id"] = session.get("root_task_id") or session["key"]
     session["execution_checks"] = []
+    session["repository_baseline"] = repository_baseline(repo)
+
+
+def repository_baseline(repo):
+    """Git 메타데이터는 사본 자식 대신 준비 서비스가 조회·갱신한다. 작업 파일은 바꾸지 않는다."""
+    def git(*args):
+        return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True,
+                              timeout=15, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
+    local = git("rev-parse", "HEAD").stdout.strip()
+    result = {"live_head": local, "source": "canonical_working_tree", "includes_local_changes": True,
+              "fetch_owner": "preparation_service", "fetch_status": "no_origin"}
+    if git("remote", "get-url", "origin").returncode == 0:
+        try:
+            result["fetch_status"] = "ok" if git("fetch", "origin").returncode == 0 else "failed"
+        except subprocess.TimeoutExpired:
+            result["fetch_status"] = "timeout"
+        remote = git("rev-parse", "--verify", "origin/main")
+        if remote.returncode == 0:
+            result["origin_main"] = remote.stdout.strip()
+            count = git("rev-list", "--count", local + "..origin/main")
+            result["behind_origin_main"] = int(count.stdout.strip()) if count.returncode == 0 else None
+    result["hint"] = ("사본은 정본의 코드와 미커밋 변경에서 준비했습니다. git fetch는 준비 서비스가 소유합니다. "
+                      "fetch_status=ok일 때만 원격 최신성을 확인한 것이며 사본 셸에서 fetch를 반복하지 마세요.")
+    return result
 
 
 def collect(repo, session):
@@ -280,6 +304,23 @@ def activation(repo, session, field, command, save):
     records = session.setdefault("activation_checks", {})
     record = records.get(field)
     expected = hashlib.sha256(command.encode()).hexdigest()
+    from repair_live_probe import ENVIRONMENT_VERSION
+    if record and record.get("command_sha256") != expected:
+        return {"state": "conflict", "error": "기존 활성 확인 명령과 검사한 계획이 다릅니다"}
+    # 명시적 apply 재개만 새 환경에서 실패한 읽기 검사를 재시도한다. 결과 불명은 반복하지 않는다.
+    if (record and record.get("state") == "failed"
+            and record.get("receipt", {}).get("exit_code") is not None
+            and not record.get("receipt", {}).get("effect_unknown")
+            and not record.get("receipt", {}).get("timed_out")
+            and record.get("receipt", {}).get("environment_version", ENVIRONMENT_VERSION) < ENVIRONMENT_VERSION):
+        for rel, item in (session.get("sealed") or {}).items():
+            if fingerprint(target(repo, rel)) != item["after"]:
+                return {"state": "conflict", "error": "활성 확인 전에 적용된 파일이 변경됐습니다: " + rel}
+        if not session.get("sealed"):
+            return {"state": "conflict", "error": "고정 적용 묶음이 없어 활성 확인을 재시도하지 않습니다"}
+        session.setdefault("activation_history", {}).setdefault(field, []).append(record)
+        record = None
+        records.pop(field)
     if record is None:
         path = Path(repo) / "data/system_ai_state/repair_check_outputs" / (uuid.uuid4().hex + ".json")
         record = records[field] = {"state": "running", "command_sha256": expected, "output_path": str(path)}

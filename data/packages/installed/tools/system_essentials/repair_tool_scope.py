@@ -24,7 +24,10 @@ def prepare(self_module, name, payload, project):
         return dict(payload), repo
     if name == "patch_op":
         return dict(payload), repo
-    sess = st.ensure_session(repo, key)
+    read_only = name in {"read_file", "read_op", "list_directory", "grep_files", "glob_files"}
+    sess = st.read_session(repo, key) if read_only else None
+    if not sess:
+        sess = st.ensure_session(repo, key)
     if not sess:
         raise PermissionError("수리 사본을 확보하지 못했습니다. 정본은 변경하지 않습니다")
     from repair_continuation import cancelled
@@ -80,9 +83,10 @@ def run_shell(handler, command, timeout):
         candidate.refresh(repo, sess)
         record = execute(repo, sess, candidate, command, current(), timeout)
         st._save_session(repo, sess)
-        return {"success": record["exit_code"] == 0, "exit_code": record["exit_code"],
+        return shell_result({"success": record["exit_code"] == 0, "exit_code": record["exit_code"],
                 "output": record["output"],
-                "verification": {k: v for k, v in record.items() if k != "output"}, "worktree": str(wt)}
+                "verification": {k: v for k, v in record.items() if k != "output"}, "worktree": str(wt),
+                "repository_baseline": sess.get("repository_baseline")}, current())
     before = candidate.digest(candidate.inventory(wt))
     before_env = candidate.environment(wt)
     controller = current()
@@ -119,9 +123,18 @@ def run_shell(handler, command, timeout):
     sess.setdefault("execution_checks", []).append(record)
     candidate.invalidate(sess)
     st._save_session(repo, sess)
-    return {"success": result.returncode == 0, "exit_code": result.returncode,
+    return shell_result({"success": result.returncode == 0, "exit_code": result.returncode,
             "output": output, "verification": {k: v for k, v in record.items() if k != "output"},
-            "worktree": str(wt)}
+            "worktree": str(wt)}, controller)
+
+
+def shell_result(result, controller):
+    """MCP 압축 뒤에도 사본 밖 파일 대신 기존 작업 증거 조회로 원문을 회수한다."""
+    if controller:
+        ref = controller.store.evidence(result)
+        result["result_ref"] = {"id": ref["id"], "chars": ref["chars"], "scope": "tool_result",
+                                "read_args": {"id": ref["id"], "path": ["output"], "limit": 16000}}
+    return result
 
 
 def record_write(st, repo, key, result):

@@ -79,10 +79,17 @@ def fit_tool_result(raw: str, budget: int) -> str:
     """
     if len(raw) <= budget:
         return raw
-    from common.spill import spill_write
-    saved = spill_write(raw, tag="model_result")
-    saved["_trimmed"] = "전달 한도로 본문 표시를 생략했습니다. ref.path의 원문을 읽으세요(재실행 불필요)."
     parsed = _parse(raw)
+    ref = parsed.get("result_ref", {}) if isinstance(parsed, dict) else {}
+    if (isinstance(ref, dict) and ref.get("scope") == "tool_result"
+            and isinstance(ref.get("read_args"), dict) and ref.get("id")
+            and ref["read_args"].get("id") == ref["id"]):
+        saved = {"result_ref": ref, "ref": ref,
+                 "_trimmed": "전달 한도로 본문 표시를 생략했습니다. execute_ibl의 read_result에 result_ref.read_args를 전달하세요(재실행 불필요)."}
+    else:
+        from common.spill import spill_write
+        saved = spill_write(raw, tag="model_result")
+        saved["_trimmed"] = "전달 한도로 본문 표시를 생략했습니다. ref.path의 원문을 읽으세요(재실행 불필요)."
     dumps = lambda value: json.dumps(value, ensure_ascii=False)
 
     if isinstance(parsed, dict):

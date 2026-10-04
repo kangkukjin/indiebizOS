@@ -296,3 +296,51 @@ flowchart LR
 - 최종 호스트 전수(`.venv/bin/python -m pytest backend/ --ff`): **8,701 passed, 2 failed, 16 skipped, 1,095.30초**. 실패는 앞 절에서 변경 전에도 확인한 `test_render_core` 두 항목뿐이며 해당 렌더러와 시험 파일은 이번에 변경하지 않았다. 초기 전수에서 발견한 새 SQLite 연결의 timeout 선언·직접 시험 실행 진입점 누락을 고친 뒤 관련 33개 검사와 이 전수를 다시 실행했다. 바깥 Codex 샌드박스에서의 첫 시도는 포트/프로세스/브라우저 제약 때문에 실패하여 호스트에서 재검사했다. 시험 안의 앱 수리 샌드박스는 그대로 유지했다. 전수 무실패로 보고하지 않는다.
 - 에피소드 4281은 31분 58초, 에피소드 도구 기록 74회(IBL 52·셸 22), 실패 14회였다. IBL 52회 중 40회는 복합 프로그램이며 성공한 읽기와 편집 목록을 참조로 재사용했다. 따라서 원인을 단순히 IBL을 조합하지 않은 데서 찾지 않는다. 감독을 포함한 기록의 입력은 12,384,003, 그중 캐시 12,031,616, 출력 39,252 토큰이다. 총량을 현금 비용이나 순수 반복 낭비와 동일시하지 않는다.
 - 검수 원장 중복(97개 호출 기록에 같은 셸 호출의 관측 22쌍이 중복)과 실패한 캡처 경로에서 오래된 이미지를 수집한 문제도 확인했다. 이 절에서는 위 두 핵심 능력을 수리하며, 기존 동결 검수 증거와 대기 중인 UI 수리를 소급 승인하거나 재개하지 않는다. 최신 이미지의 출처·성공 여부 검증은 별도 잔여 문제다. LibreOffice 격리 실행의 기존 한계도 이 시험으로 해결됐다고 하지 않는다.
+
+
+## 2026-10-04 에피소드 4296–4306: 증거 연결과 실패 후 재개
+
+의미 검토와 적용 관문은 같은 증거 계약을 사용한다. 현재 후보·환경의 통과 검사
+`id`(또는 그 `evidence_ref.id`)를 필수 앵커로 삼고, 같은 턴에서 성공한 도구 관측
+`result.id`는 `supporting_evidence_ids`에 보존한다. 이전 평가자의 혼합 `evidence_ids`도
+이 두 범주로 정규화한다. 없는 ID·오래된 후보·검사 없는 승인으로는 적용하지 않는다.
+새 보충 관측은 의미 실패 캐시를 무효화하며, 증거 연결 실패를 `ACHIEVED` 오류로
+표시하지 않는다. 에피소드 최종 판정은 중간 `GoalEval` 뒤의 `RepairCheck`도 읽는다.
+
+수리 셸의 전체 결과는 기존 TurnStore 증거 저장소에 둔다. 전달 한도에서 생략되면
+`result_ref.read_args`를 `execute_ibl.read_result`로 조회한다. 보호된 정본 spill 경로를
+읽거나 셸을 재실행할 필요가 없다. 원격 fetch는 사본 준비 서비스가 한 번 수행하고
+`repository_baseline`에 결과·정본 HEAD·원격 뒤처짐을 남긴다. 실패와 timeout은 원격
+최신성 미확인으로 표시하며 작업 파일을 갱신하지 않는다. 예약·적용된 사본의 파일
+읽기는 원장을 재개봉하지 않는다.
+
+런처 브라우저 준비는 `frontend/scripts/launcher_browser.py`를 공유한다. 안내창과 API
+fixture, 실제 키보드 선택, 폰트·CSS 전환 완료 후 스타일 관측을 재사용한다. 데스크톱은
+먼저 현재 소스로 빌드해야 한다. `test_japanese_ui.py`와 `test_remote_language_picker.py`가
+데스크톱·원격·로그인·화면 폭별 언어/키보드/hover 동작을 검사한다.
+
+적용 응답과 상태 행에 `applied`, `complete`, `stage`, `activation`, `commit`, `recovery`를
+함께 싣는다. 기존 `activation.state/receipt`는 유지하고 전체 검사 원장은
+`activation_checks`로 제공한다. IBL 실패 봉투도 이 자료를 보존한다. 정본 파일 반영 뒤 활성 확인·커밋
+실패를 전체 성공으로 표시하지 않으며, 상태 조회 자체의 성공은 `last_error`와 구분한다.
+각인만 남으면 같은 apply로 재개하고 파일은 다시 적용하지 않는다. 활성 확인의
+읽기 프록시는 `/health`, `/xray/app`, `/launcher/app`을 지원하며 다른 경로·query·쓰기는
+기존처럼 거절한다. 명령이 같고 적용 파일이 그대로이며 실행 환경 판본이 올라간
+명확한 실패만 명시적 apply에서 재검사한다. 이전 영수증은 `activation_history`에 남긴다.
+실행 중·시간 초과·결과 불명은 자동 반복하지 않는다.
+
+회귀는 기본 수집 경로 `backend/test_episode4296_4306_repairs.py`와
+`backend/test_repair_live_probe.py`에 있다. 과거 수리 원장을 소급 승인하거나 원래 UI
+과제를 재실행한 것은 아니며, 실제 에피소드 시간·토큰 감소는 후속 실행에서 측정한다.
+
+
+최종 검증: 비-system 종합 **8,735 passed, 1 skipped, 116 deselected, 802.72초**.
+관련 system(`test_python_libraries`, `test_vocabulary_archive`, `test_vocabulary_bundle_split`)
+71개, 브라우저 10개, 번역/상태 UI 6개가 통과했다. TypeScript·프런트엔드 빌드·어휘
+파생물·회원 감사 지문·Android 번들·커밋 필수 관문도 통과했다. 최초 종합에서 발견한
+`activation.state` 호환성은 복원했고, 파생물 갱신 중 시험 프로세스가 이전 지문을 읽은
+실패는 파생물 확정 후 위 종합으로 재확인했다. 기존 다른 작업의 미추적 시험 파일은
+pytest 직접 실행 진입점만 보완하고 이번 커밋에서 제외했다.
+
+백엔드 ACTIVE·정본 코드 지문 일치를 확인했다. 실제 `repair_process.run(readonly=True,
+live_read=True)` 자식에서 `/launcher/app`을 조회하여 HTTP 200과 본문 수신을 확인했다.

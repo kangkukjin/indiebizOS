@@ -320,6 +320,8 @@ SEMANTIC_POLICY = """
 이번 호출은 criteria_contract에 명시한 의미 조건만 판정한다. 다른 기준·정본 반영·커밋은 호출 범위 밖이다.
 workspace_evidence의 관측과 결과로 해당 조건을 판정한다. 실행자의 완료 주장만으로 승인하지 않는다.
 부족한 원문이면 UNKNOWN_REASON: evidence와 필요한 evidence_ref.id를 정확하게 적는다.
-ACHIEVED일 때는 실제 관측의 id를 인용해 다음 한 줄로 각 조건을 증명한다:
-WORKSPACE_COVERAGE: [{"criterion_id":"C1","status":"passed","evidence_ids":["실제 관측 id"]}]
+ACHIEVED일 때 evidence_ids에는 workspace_evidence의 현재 사본 검사 id를 하나 이상 넣는다.
+이미지 판독 등 evidence_index의 보충 관측 result.id는 supporting_evidence_ids에 구분한다.
+보충 관측만으로 현재 사본의 검사 근거를 대체하지 않는다:
+WORKSPACE_COVERAGE: [{"criterion_id":"C1","status":"passed","evidence_ids":["현재 검사 id"],"supporting_evidence_ids":["보충 관측 result.id"]}]
 """

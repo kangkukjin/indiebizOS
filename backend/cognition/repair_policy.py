@@ -52,7 +52,10 @@ def prepare(controller, repo, session, verify, candidate):
     wt = Path(repo) / session["worktree"]
     before = candidate.collect(repo, session)
     env = candidate.environment(wt)
+    supporting = {r["result"]["id"] for r in controller.store.tool_index(limit=10000)
+                  if not r.get("is_error") and r.get("result", {}).get("id")}
     token = candidate.digest({"candidate": before, "env": env, "contract": contract, "plan": plan,
+                              "supporting": sorted(supporting),
                               "activation": session.get("activation_commands"),
                               "evidence": session.get("execution_checks", [])})
     drift = candidate.conflicts(repo, session)
@@ -64,6 +67,7 @@ def prepare(controller, repo, session, verify, candidate):
     def finish(result):
         session["preparation_result"] = {"input_hash": candidate.digest({
             "candidate": before, "env": env, "contract": contract, "plan": plan,
+            "supporting": sorted(supporting),
             "activation": session.get("activation_commands"), "evidence": session.get("execution_checks", [])}),
             "attempts": cached.get("attempts", 1) + 1 if cached.get("input_hash") == token else 1,
             "result": result, "retryable": result.get("decision", {}).get("retryable", False)}
@@ -99,12 +103,14 @@ def prepare(controller, repo, session, verify, candidate):
                         if r.get("candidate_hash") == r.get("before_hash") == current_hash
                         and r.get("environment_hash") == env]
         decision = semantic_review(controller, contract, semantic, session, observations)
-        covered = {r.get("criterion_id") for r in decision.get("workspace_coverage", [])
-                   if isinstance(r, dict) and r.get("status") == "passed"
-                   and r.get("evidence_ids") and set(r["evidence_ids"]) <= {e["id"] for e in observations}}
-        if decision.get("status") != "APPROVED" or not {c["id"] for c in semantic} <= covered:
-            return finish(failure("semantic", decision.get("reason", "의미 조건 미확인"), decision=decision,
-                                  missing_criteria=[c["id"] for c in semantic]))
+        covered, invalid = normalize_coverage(decision, observations, supporting)
+        missing = sorted({c["id"] for c in semantic} - covered)
+        if decision.get("status") != "APPROVED" or missing:
+            message = ("의미 검토의 증거 연결이 유효하지 않습니다. 현재 사본의 검사 id와 보충 증거 id를 확인하세요"
+                       if decision.get("status") == "APPROVED" else decision.get("reason", "의미 조건 미확인"))
+            return finish(failure("semantic", message, decision=decision,
+                                  missing_criteria=missing, invalid_evidence=invalid,
+                                  allowed_evidence_ids=[e["id"] for e in observations]))
         decision.update(method="mixed" if coverage else "semantic",
                         workspace_coverage=coverage + decision.get("workspace_coverage", []))
     if controller.cancelled() or before != candidate.collect(repo, session) or env != candidate.environment(wt):
@@ -121,6 +127,33 @@ def prepare(controller, repo, session, verify, candidate):
     controller.log("repair.workspace_ready", role="harness", method=decision["method"],
                    candidate_hash=candidate.digest(before), criteria=contract)
     return finish({"success": True, "ready": True, "applied": False, "method": decision["method"]})
+
+
+def normalize_coverage(decision, observations, supporting):
+    """현재 후보의 검사를 앵커로 삼고 같은 턴의 보충 관측은 별도로 보존한다."""
+    aliases = {r["id"]: r["id"] for r in observations if r.get("status") == "passed"}
+    aliases.update({r["evidence_ref"]["id"]: r["id"] for r in observations
+                    if r.get("status") == "passed" and r.get("evidence_ref", {}).get("id")})
+    covered, invalid = set(), []
+    for row in decision.get("workspace_coverage", []):
+        if not isinstance(row, dict) or row.get("status") != "passed":
+            continue
+        refs = row.get("evidence_ids", [])
+        extra = row.get("supporting_evidence_ids", [])
+        if not isinstance(refs, list) or not isinstance(extra, list) or not all(
+                isinstance(ref, str) for ref in refs + extra):
+            invalid.append({"criterion_id": row.get("criterion_id"), "reason": "증거 id는 문자열 목록이어야 합니다"})
+            continue
+        anchors = list(dict.fromkeys(aliases[ref] for ref in refs if ref in aliases))
+        supplements = list(dict.fromkeys(ref for ref in refs + extra if ref not in aliases and ref in supporting))
+        unknown = [ref for ref in refs + extra if ref not in aliases and ref not in supporting]
+        if not anchors or unknown:
+            invalid.append({"criterion_id": row.get("criterion_id"), "unknown_ids": unknown,
+                            "missing_current_check": not anchors})
+            continue
+        row.update(evidence_ids=anchors, supporting_evidence_ids=supplements)
+        covered.add(row.get("criterion_id"))
+    return covered, invalid
 
 
 def semantic_review(controller, contract, criteria, session, evidence):

@@ -523,7 +523,7 @@
           },
           "key": {
             "type": "string",
-            "description": "(discard) 폐기할 스테이징 세션 키. 생략 시 현재 수리 세션."
+            "description": "(status/discard) 조회·폐기할 수리 세션 키. status 생략 시 목록, discard 생략 시 현재 세션."
           },
           "proposal_id": {
             "type": "string",

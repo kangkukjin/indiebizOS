@@ -4,11 +4,11 @@ import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 import pytest
 from playwright.sync_api import expect, sync_playwright
+from launcher_browser import prepare_launcher as prepare, select_locale, settled_style
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -52,40 +52,6 @@ def browser():
         instance.close()
 
 
-def prepare(page, url, login):
-    errors = []
-    page.on("pageerror", lambda error: errors.append(str(error)))
-    page.add_init_script("""window.WebSocket=class {static OPEN=1;readyState=1;
-      constructor(){setTimeout(()=>this.onopen?.(),50)}close(){}};""")
-
-    def api(route):
-        if route.request.url == url:
-            route.continue_()
-            return
-        path = urlsplit(route.request.url).path
-        payload = {}
-        if login and path == "/projects":
-            route.fulfill(status=401, content_type="application/json", body="{}")
-            return
-        if path == "/launcher/config":
-            payload = {"has_password": login, "host": "desktop"}
-        elif path in ["/projects", "/switches", "/folders"]:
-            payload = {path[1:]: []}
-        elif path == "/launcher/instruments":
-            payload = {"instruments": []}
-        elif path == "/launcher/app-layout":
-            payload = {"version": 1, "positions": {}, "folders": {},
-                       "membership": {}, "removed": [], "uninstalled": [], "promoted": []}
-        elif path == "/health":
-            payload = {"status": "ok"}
-        if urlsplit(route.request.url).netloc != urlsplit(url).netloc:
-            route.fulfill(status=200, body="")
-        else:
-            route.fulfill(status=200, content_type="application/json", body=json.dumps(payload))
-    page.route("**/*", api)
-    return errors
-
-
 @pytest.mark.parametrize("width", [320, 390, 1280])
 @pytest.mark.parametrize("login", [False, True])
 def test_remote_picker_layout_language_and_keyboard(launcher, browser, width, login, tmp_path):
@@ -99,8 +65,7 @@ def test_remote_picker_layout_language_and_keyboard(launcher, browser, width, lo
     wrapper = picker.locator("..")
     assert wrapper.locator('svg[aria-hidden="true"]').count() == 2
     for locale in ["en", "ja", "ko"]:
-        picker.select_option(locale)
-        expect(page.locator("html")).to_have_attribute("lang", locale)
+        select_locale(page, picker, locale)
         expect(page.locator(".ui-language").nth(0)).to_have_value(locale)
         expect(page.locator(".ui-language").nth(1)).to_have_value(locale)
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
@@ -113,14 +78,17 @@ def test_remote_picker_layout_language_and_keyboard(launcher, browser, width, lo
         .map(key=>[key,a[key],b[key]]);
     }""")
     assert all(a == b for _, a, b in styles), styles
+    if not login:
+        neighbour = page.locator('.clipmac')
+        neighbour.hover()
+        expected_hover = settled_style(neighbour, ['backgroundColor'])
+        picker.hover()
+        assert settled_style(picker, ['backgroundColor']) == expected_hover
     page.keyboard.press("Tab")
     picker.focus()
     assert picker.evaluate("el=>el.matches(':focus-visible')")
     assert picker.evaluate("el=>getComputedStyle(el).outlineStyle") == "solid"
-    picker.press("e")
-    picker.press("Tab")
-    expect(picker).to_have_value("en")
-    expect(page.locator("html")).to_have_attribute("lang", "en")
+    select_locale(page, picker, "en", keyboard=True)
     picker.select_option("ja")
     page.reload()
     expect(picker).to_have_value("ja")

@@ -46,7 +46,7 @@ IBL 사전의 description/target_description/ops/implementation은 소스 정의
 개발 서버의 재빌드 실패도 콘솔에 남기며 성공으로 새로고침하지 않는다.
 
 격리된 적용 후 검사에서는 `INDIEBIZ_VERIFY_BASE_URL`이 제공된다. 검증 부모의 임시
-읽기 통로는 `/health`·`/xray/app`만 전달하고 운영 API 직접 접근과 쓰기는 계속 차단한다.
+읽기 통로는 `/health`·`/xray/app`·`/launcher/app`을 전달하고 운영 API 직접 접근과 쓰기는 계속 차단한다.
 환경 장애는 `failure_kind=environment`로 남기며 새 개발 모델 세션을 호출하지 않는다.
 환경 복구 뒤 운영자는 `api_repair_continuation.retry_environment(task_id, base)`로
 같은 파일 묶음의 실패한 검사만 한 번 재예약할 수 있다. 바뀐 파일·불확실한 실행·시간
@@ -57,6 +57,10 @@ IBL 사전의 description/target_description/ops/implementation은 소스 정의
 `languages.json`에 `"ja":"日本語"` 또는 `"zh-CN":"简体中文"`을 추가하면 다음 dev/build에서 같은 경로로 해당 언어 번역을 생성하고 두 표면의 선택기에 자동 추가한다. 화면별 구현은 필요 없다. 신규 언어의 번역 품질 검토는 별도다.
 
 ## 검사
+
+브라우저 시험의 준비·네이티브 언어 선택·CSS 전환 관측은 `scripts/launcher_browser.py`를
+재사용한다. `test_japanese_ui.py`와 `test_remote_language_picker.py` 실행 전에 데스크톱
+산출물을 빌드한다. 실제 라이브 HTML 조회는 `INDIEBIZ_VERIFY_BASE_URL`로 선택한다.
 
 - `node --test scripts/ui-i18n.test.mjs`: 대상 경계·변수·번역 메모리·실패 폴백·선택 유지.
 - `node scripts/ui-source-check.mjs`: 전체 React 변환 구문 및 생성 원격 JS 구문.

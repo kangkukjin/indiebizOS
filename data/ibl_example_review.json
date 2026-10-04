@@ -1265,16 +1265,16 @@
   "self:patch": {
    "fields": {
     "description": "313dd5f0d602",
-    "target_description": "1678d5c546da",
+    "target_description": "55915c2dae57",
     "implementation": "79621998804f",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
     "aliases": "f6d057add97d",
-    "ops": "e44348661487",
+    "ops": "1ac478288506",
     "router": "ebbb1532efbc",
     "tool": "81a5a9cfe344"
    },
-   "reviewed": "2026-10-03",
+   "reviewed": "2026-10-04",
    "examples": 10
   },
   "self:phone_sync": {

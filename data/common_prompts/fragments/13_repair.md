@@ -20,11 +20,15 @@
 ## 같은 사본에서 수정·검사·반영
 - **수리 사본은 작업 대상이다.** 파일 도구·셸·등록/임시 스크립트와 `~workspace`는 같은 사본을 사용한다. 모델·인증·인터넷·검색·IBL은 평소 권한으로 사용한다. 별도 사본의 목적은 실행 중인 코드를 수정 도중 바꾸지 않는 것이며, 일반 능력을 제한하는 것이 아니다. 필요한 코드·문서는 사본에서 검색하고 읽는다. 기능 시험의 데이터·서버는 사본과 별도 포트를 사용한다.
 - 요청과 변경에 관련된 검사를 선택한다. 생성·빌드는 검사 전에 마친다. 격리 셸 시작 시 미수정 의존 파일을 정본에 맞추며 충돌은 보존하고 알린다. 적용 단계는 후보 파일을 바꾸지 않는다.
+- 사본은 정본의 코드·미커밋 변경에서 준비한다. 원격 갱신은 준비 서비스가 한 번 수행하며 status/셸 결과의 `repository_baseline`에 기준 HEAD·fetch 결과·뒤처짐을 남긴다. 사본 셸에서 `git fetch`를 반복하지 않는다. fetch 실패·timeout이면 원격 최신성은 미확인이다.
+- 긴 셸 출력은 `result_ref.read_args`를 execute_ibl의 `read_result`로 회수한다. 결과 파일 경로를 추측하거나 같은 명령을 재실행하지 않는다.
+- 런처 브라우저 검사는 `frontend/scripts/launcher_browser.py`의 준비·전환 완료 관측·언어 선택을 재사용한다. 실제 인수는 `test_japanese_ui.py`와 `test_remote_language_picker.py`에 있다. 데스크톱은 `cd frontend && npm run build` 뒤 검사한다. 안내창·로그인 fixture·CSS 전환 대기를 매번 새로 만들지 않는다.
 - 새 수리는 apply의 `verification_plan`에 기준별 검사 계획을 전달한다. 직접 수리의 `C1`은 사용자 요청 전체다. 예: `[self:patch]{op:"apply", verification_plan:[{criterion_id:"C1",method:"test",command:"cd frontend && node --test scripts/ui-status.test.mjs"}]}`. 검사 명령에는 출력 폐기·파이프를 넣지 않는다. 여러 조건을 한 검사에 연결할 수 있다. 구문 검사·exit 0만으로 기능 통과를 주장하지 않는다.
 - 단일 pytest 또는 node --test의 실제 보고서가 지원된다. 다른 검사·화면의 의미 판단은 해당 기준을 `method:"semantic"`으로 연결하고 격리 셸 관측을 남긴다. 모든 수리에 AI 심사를 요구하지 않는다.
 - 동일한 후보와 환경의 통과 결과는 재사용한다. 검사 0건·건너뜀·실패·검사 중 변경은 통과가 아니다. apply 실패의 `stage`, `checks`, `missing_criteria`, `decision`을 읽고 해당 단계만 보완한다. 동일 입력의 실패를 반복 호출하지 않는다. 원문은 반환된 evidence_ref로 회수한다.
 - 이전에 진행 중인 수리는 저장된 정책을 유지한다. status의 repair_policy=1이면 기존 사본 준비 심사를 따른다.
 - 정본 반영·활성 확인·커밋은 기존 적용 서비스가 맡는다. `verify_cmd`와 `active_verify_cmd`는 반영 후 읽기 전용 확인이다. backend 변경의 scheduled 응답을 받으면 턴을 종료한다. 완료된 검사나 개발을 새 세션에서 반복하지 않는다.
+- 적용 후 실패는 `applied`, `stage`, `activation`, `commit`, `recovery`를 따른다. `[self:patch]{op:"status",key:"수리 키"}`의 해당 행에서 같은 상태·실패 원문을 읽는다. 각인 재개는 apply이며 파일 재적용은 하지 않는다. 활성 검사의 결과 불명은 자동 재실행하지 않고, 실패한 검사는 실행 환경 판본이 바뀐 뒤 명시적 apply에서만 새 영수증으로 재검사한다. 활성 확인 URL은 `INDIEBIZ_VERIFY_BASE_URL`이며 `/health`, `/xray/app`, `/launcher/app`의 읽기를 지원한다.
 - 훈련 작업을 함께 수행 중이면 관련 작업·티켓 종료와 증거 회수 후 적용한다. timeout은 종료가 아니다.
 
 ## 최종 보고 형식

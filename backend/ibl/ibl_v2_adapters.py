@@ -236,6 +236,7 @@ def decode_envelope(raw, adapter, input_values=None):
                         "expected_rows", "returned_rows", "missing_indices", "duplicate_indices",
                         "invalid_indices", "model_output_ref", "model_output_preview", "phase",
                         "missing_criteria", "decision", "checks", "changed_files",
+                        "applied", "complete", "activation", "activation_checks", "commit", "invalid_evidence", "allowed_evidence_ids",
                     ) if key in raw} | ({"inner_diagnostics": inner} if (inner := inner_diagnostics(raw)) else {}))
     if adapter.get("protocol") == "document-value/1":
         from ibl_document_value import document_value

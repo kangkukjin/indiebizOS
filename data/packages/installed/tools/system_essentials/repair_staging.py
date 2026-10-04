@@ -59,6 +59,11 @@ _candidate_spec = importlib.util.spec_from_file_location(
 _candidate = importlib.util.module_from_spec(_candidate_spec)
 _candidate_spec.loader.exec_module(_candidate)
 
+_outcomes_spec = importlib.util.spec_from_file_location(
+    "system_essentials_repair_outcomes", os.path.join(os.path.dirname(__file__), "repair_outcomes.py"))
+_outcomes = importlib.util.module_from_spec(_outcomes_spec)
+_outcomes_spec.loader.exec_module(_outcomes)
+
 
 SESSION_DIRNAME = os.path.join("data", "system_ai_state", "repair_sessions")
 # ★옛 제안 원장(통합 전 세대). propose 가 여기+selfpatch-* 워크트리를 따로 써서 apply 가
@@ -954,10 +959,14 @@ def _complete_immediate(repo, sess, result, ti):
         if command:
             checked = _candidate.activation(repo, sess, field, command, _save_session)
             if checked.get("state") != "passed":
-                return {**result, "success": False, "complete": False, "activation": checked}
+                out = _outcomes.finish(sess, result)
+                if checked.get("error"):
+                    out.update(error=checked["error"], stage="activation", complete=False, success=False)
+                return out
     committed = commit_applied(repo, sess["key"])
-    return {**result, "success": bool(committed.get("success")), "commit": committed,
-            "complete": bool(committed.get("success"))}
+    sess = read_session(repo, sess["key"]) or sess
+    sess["commit"] = committed
+    return _outcomes.finish(sess, result)
 
 
 def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
@@ -1060,9 +1069,8 @@ def _perform_apply_locked(repo: str, sess: dict, checks: list, prepare, finalize
            if not verified else {}),
         "files": written, "removed": removed,
         "checks": [{"gate": c["gate"], "passed": c.get("passed", True)} for c in checks],
-        "message": (f"검증 통과 후 라이브 적용 {_n}건(쓰기 {len(written)}·삭제 {len(removed)}). "
-                    f"backend/*.py 가 포함되면 지금 리로드가 일어나고, 분리 워치독이 "
-                    f"/health 를 확인해 실패 시 자동 롤백합니다(판정은 다음 턴에 보고됩니다)."),
+        "message": (f"검사한 파일을 정본에 적용했습니다({_n}건, 쓰기 {len(written)}·삭제 {len(removed)}). "
+                    "전체 완료는 활성 확인·커밋 영수증으로 판정합니다."),
         "worktree": sess["worktree"],
     }
 
@@ -1100,6 +1108,8 @@ def op_status(ti):
                 s = json.load(f)
         except Exception:
             continue
+        if ti.get("key") and s.get("key") != ti["key"]:
+            continue
         items.append({
             "key": s.get("key"), "status": s.get("status"), "kind": s.get("kind") or "repair",
             "proposal_id": s.get("proposal_id"), "reason": s.get("reason"),
@@ -1127,17 +1137,23 @@ def op_status(ti):
                           "verified": i.get("verified"), "created_at": i["created_at"]}
                          for i in props],
            "message": msg}
-    own = read_session(repo, key) if key else None
+    requested = ti.get("key") or key
+    own = read_session(repo, requested) if requested else None
     if own and own.get("owner") == _repair_owner():
+        out.update(_outcomes.progress(own))
+        # status 호출의 성공과 수리의 완료 상태는 별개다.
+        out["last_error"] = out.pop("error", None)
+        out["repository_baseline"] = own.get("repository_baseline")
         out["repair_policy"] = own.get("repair_policy", 1)
         out["verification_plan"] = own.get("verification_plan", [])
         out["last_preparation"] = own.get("preparation_result", {}).get("result")
         out["execution_checks"] = [{k: v for k, v in r.items() if k != "output"}
                                     for r in own.get("execution_checks", [])[-8:]]
-        current_item = next((item for item in items if item["current"]), None)
+        current_item = next((item for item in items if item["key"] == own["key"]), None)
         if current_item is not None:
             current_item.update({field: out[field] for field in
-                                 ("repair_policy", "verification_plan", "last_preparation", "execution_checks")})
+                                 ("repair_policy", "verification_plan", "last_preparation", "execution_checks",
+                                  "repository_baseline", "applied", "complete", "stage", "activation", "activation_checks", "commit", "recovery", "last_error")})
     cur_sched = next((i for i in scheduled if i["current"]), None)
     if cur_sched:
         files_str = ", ".join(f"`{r}`" for r in cur_sched["files"]) or "(파일 목록 미기재)"

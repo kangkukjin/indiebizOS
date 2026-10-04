@@ -7,8 +7,8 @@ from urllib.parse import urlsplit
 
 
 # GET이라도 동작을 일으키는 API가 있으므로 명시된 읽기 표면만 제공한다.
-READ_PATHS = frozenset({"/health", "/xray/app"})
-ENVIRONMENT_VERSION = 1
+READ_PATHS = frozenset({"/health", "/xray/app", "/launcher/app"})
+ENVIRONMENT_VERSION = 2
 
 
 @contextmanager

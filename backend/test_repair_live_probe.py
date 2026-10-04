@@ -11,7 +11,8 @@ from repair_live_probe import live_probe, failure_kind
 from test_repair_continuation import consumer, record, receipt  # noqa: F401
 
 
-def test_live_probe_only_forwards_explicit_reads():
+@pytest.mark.parametrize("surface", ["/xray/app", "/launcher/app", "/health"])
+def test_live_probe_only_forwards_explicit_reads(surface):
     requests = []
 
     class Upstream(BaseHTTPRequestHandler):
@@ -28,14 +29,14 @@ def test_live_probe_only_forwards_explicit_reads():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
         with live_probe(server.server_port) as url:
-            with urlopen(url + "/xray/app") as response:
+            with urlopen(url + surface) as response:
                 assert response.read() == b"live page"
             for path, method in [("/xray/app", "POST"), ("/shutdown", "GET"),
                                  ("/xray/app?path=/secret", "GET"), ("//other/health", "GET")]:
                 with pytest.raises(HTTPError) as exc:
                     urlopen(Request(url + path, method=method))
                 assert exc.value.code in {403, 501}
-        assert requests == ["/xray/app"]
+        assert requests == [surface]
     finally:
         server.shutdown()
         server.server_close()

@@ -50,6 +50,8 @@ $후보 >> [table:union]{} >> [table:dedup]{by:"url"} >> [table:select]{fields:[
 - 게시일을 제공하는 gnews·hn·guardian·naver(news/blog)는 `date`로 신선도를 판정한다. ddg·일반 웹문서는 게시일을 보장하지 않는다. hn 최신 조사는 `days`를 명시한다.
 - crawl은 div 본문·중첩 목록의 부모 문장·그림 설명을 보존하고 요청별 브라우저 탭을 사용한다. HTTP 오류를 정상 원문으로 캐시하지 않는다. `source_ref`는 추출된 전문·문단·링크·메타 관측과 수집 HTML의 스냅샷이다. 이미지 픽셀은 include_images로 별도 첨부한다.
 
+회원의 공개 웹 본문도 `max_length`는 표시 예산이며 전체 추출 본문은 변수·`result_ref`에 보존한다. 회원 경로는 주인의 브라우저·개인 캐시를 사용하지 않고 기존 공개 주소 검사와 수신 바이트 예산을 적용한다.
+
 
 ## 7. 같은 페이지에서 본문·링크·메타정보를 고르기
 

@@ -414,9 +414,9 @@ return {complete:len($미완료)==0,checked:len($확인),missing:$미완료,chec
 
 `self:read`는 확장자/`format`에 따라 `.text`·`.blocks`·`.data`를 반환한다.
 본문만 필요하면 `format:"text"`의 `.text`만 반환한다. 위치 탐색은 `output_mode:"files_with_matches"`로 좁힌다.
-JSON 전체 읽기는 `.data`(배열은 `.data.items`), CSV/TSV는 `.data.items`·`.data.table`(문자열 셀)을 쓴다.
-JSON/CSV/TSV 전체 값은 100만 문자 표시 상한으로 자르지 않는다. IBL에서 집계·선택하고, 큰 결과는 `result_ref`로 이어 쓴다.
-표·시트는 `.data.table`·`.data.sheets`로 읽는다. 범위·절단 읽기는 텍스트이며 부분 추출 표지를 확인한다. 파일 부재는 `NOT_FOUND`다.
+JSON은 `.data`(배열은 `.data.items`), CSV/TSV는 `.data.items`·`.data.table`(문자열 셀), XLSX/XLS는 `.data.table.rows`를 쓴다.
+구조화 파일·오피스는 기본 전체 읽기다. XLSX/XLS의 `max_rows`(헤더 포함)와 문서의 `max_blocks`는 생략·0=전체, 양수=선택이다. 원문은 보존하고 표시만 제한하며 큰 값은 `result_ref`로 잇는다.
+`.data.sheets`는 시트명이다. 부분 추출을 확인하며, 파일 부재는 `NOT_FOUND`다.
 회원 AI도 같은 문법을 사용하며, 회원 기기에서 받은 자료와 정의만 사용한다.
 
 최종 응답을 받기 전에 연결이 끊겼다면 기존 HTTP 티켓 recover의 `progress.resume` 또는

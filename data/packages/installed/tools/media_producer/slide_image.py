@@ -456,7 +456,7 @@ def create_image_slide(tool_input: dict, output_base: str, style: str, slide_id:
     if forced_comp in COMPOSITIONS:
         user += f"\n# 구성 강제\ncomposition은 반드시 \"{forced_comp}\""
     if content:
-        user += f"\n# 참고 내용 (여기서 인용, 지어내지 말 것)\n{content[:10000]}"
+        user += f"\n# 참고 내용 (여기서 인용, 지어내지 말 것)\n{content}"
     user += "\n위 정보로 JSON 한 객체를 출력하라."
     try:
         ai = _get_ai()

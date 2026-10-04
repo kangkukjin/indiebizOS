@@ -311,7 +311,7 @@ def read_docx(tool_input: dict, project_path: str) -> str:
     file_path = _get_path(tool_input)
     extract_images = tool_input.get("extract_images", False)
 
-    # 부분 읽기 파라미터 — 큰 docx의 컨텍스트 잠식 방지
+    # 명시적 부분 읽기만 선택한다. 모델 표시 예산은 결과 표시 경계가 소유한다.
     # 블록 = 문단(p) 또는 표(tbl) 하나
     try:
         offset = max(0, int(tool_input.get("offset", 0) or 0))
@@ -323,9 +323,9 @@ def read_docx(tool_input: dict, project_path: str) -> str:
     except (TypeError, ValueError):
         limit = None
     try:
-        max_blocks = int(tool_input.get("max_blocks", 300))
+        max_blocks = int(tool_input.get("max_blocks") or 0)
     except (TypeError, ValueError):
-        max_blocks = 300
+        max_blocks = 0
 
     if not file_path:
         return json.dumps({"success": False, "error": "file_path가 제공되지 않았습니다."}, ensure_ascii=False)
@@ -470,7 +470,7 @@ def read_docx(tool_input: dict, project_path: str) -> str:
         # --- 부분 읽기 슬라이싱 ---
         total_blocks = len(extracted_parts)
 
-        # 적용 한계 결정: 명시적 limit > max_blocks(기본 안전망)
+        # 적용 한계 결정: 명시적 limit > max_blocks, 생략하면 전체
         # max_blocks=0이면 무제한
         if limit is not None and limit >= 0:
             effective_limit = limit
@@ -570,10 +570,12 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
 
     file_path = _get_path(tool_input)
     sheet_name = tool_input.get("sheet")  # 특정 시트만 (생략 시 전체)
-    try:
-        max_rows = int(tool_input.get("max_rows", 200) or 200)
-    except (TypeError, ValueError):
-        max_rows = 200
+    from common.value_semantics import integer_value
+    requested_rows = tool_input.get("max_rows")
+    max_rows = 0 if requested_rows is None else integer_value(requested_rows)
+    if max_rows is None or max_rows < 0:
+        return json.dumps({"success": False, "error": "max_rows는 0 이상의 정수입니다(0·생략=전체)."},
+                          ensure_ascii=False)
 
     if not file_path:
         return json.dumps({"success": False, "error": "file_path가 제공되지 않았습니다."}, ensure_ascii=False)
@@ -632,7 +634,7 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
             rows_text = []
             truncated = False
             for i, row in enumerate(_merged_rows(sn)):
-                if i >= max_rows:
+                if max_rows and i >= max_rows:
                     truncated = True
                     break
                 cells = ["" if c is None else str(c) for c in row]
@@ -640,7 +642,7 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
             header = f"### 시트: {sn} ({ws.max_row}행 × {ws.max_column}열)"
             if truncated:
                 header += f" — 처음 {max_rows}행만 (max_rows로 조정)"
-                truncations.append({"scope": "selection" if "max_rows" in tool_input else "source",
+                truncations.append({"scope": "selection",
                                     "sheet": sn, "returned_rows": max_rows, "total_rows": ws.max_row})
             parts.append(header + "\n" + "\n".join(rows_text))
 
@@ -683,7 +685,7 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
             tws = wb[tsn]
             all_rows = []
             for i, row in enumerate(_merged_rows(tsn)):
-                if i >= max_rows:
+                if max_rows and i >= max_rows:
                     break
                 all_rows.append(list(row))
             if all_rows:

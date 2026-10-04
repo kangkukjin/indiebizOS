@@ -39,11 +39,18 @@ def test_http_conditional_text_save_and_owner(surface):
         assert client.put(base + "/file", json=payload).status_code == 200
         assert client.put(base + "/file", json=payload).status_code == 409
         assert client.get(base + "/file", params={"path": "../outside"}).status_code == 400
-        for name, data in [("binary", b"\0bytes"), ("legacy", b"\xff\xfe"), ("large", b"a" * 200001)]:
+        for name, data in [("binary", b"\0bytes"), ("legacy", b"\xff\xfe")]:
             (Path(task["workspace"]) / name).write_bytes(data)
             item = client.get(base + "/file", params={"path": name}).json()
             assert item["binary"] or item["truncated"]
             assert client.put(base + "/file", json={"path": name, "content": "overwrite", "expected": item["fingerprint"]}).status_code == 400
+        content = "한글" * 100000
+        (Path(task["workspace"]) / "large").write_text(content)
+        large = client.get(base + "/file", params={"path": "large"}).json()
+        assert large["text"] == content and not large["truncated"]
+        updated = client.put(base + "/file", json={"path": "large", "content": content + "끝",
+                                                    "expected": large["fingerprint"]})
+        assert updated.status_code == 200 and updated.json()["text"] == content + "끝"
         assert client.post("/coding/tasks", json={"repository_id": repository["id"], "goal": "bad"},
                            headers={"origin": "https://attacker.invalid"}).status_code == 403
         with principal.narrow(principal.ANONYMOUS):

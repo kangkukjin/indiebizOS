@@ -91,8 +91,8 @@ nodes:
           ocr: boolean       # pdf 전용 — 글자 없는 선택 페이지에 로컬 OCR(기본 true).
           pages: string     # pdf 전용 — 페이지 범위(예 '1-5').
           extract_images: boolean  # docx 전용 — 이미지 추출 여부(기본 true).
-          max_blocks: integer      # docx 전용 — 블록(문단·표) 상한(기본 300, 0=무제한).
-          max_rows: integer        # xlsx/xls 전용 — 시트당 행 상한(기본 200).
+          max_blocks: integer      # docx 전용 — 블록(문단·표) 선택 상한(생략·0=전체).
+          max_rows: integer        # xlsx/xls 전용 — 시트당 행 선택 상한(헤더 포함, 생략·0=전체).
           sheet: string            # xlsx/xls 전용 — 이 시트만 읽는다(생략=전체). office_ops.read_xlsx 가 읽는다 (2026-09-18 선언 보충)
           numbered: boolean  # text 전용 — 각 줄 앞에 줄번호(cat -n 모양). grep 줄번호·edit start_line 과 같은 자 (2026-09-05 그림자 관문)
           tail: integer      # text 전용 — 끝에서 N줄(1 이상), blocks에서도 동일. 앞쪽 범위 옵션과 동시 지정 불가.
@@ -123,7 +123,7 @@ nodes:
         exempt: '파일 경로 인자 필요(고정 fixture 부적합)'
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: 'path는 읽을 파일 경로. format(text/json/csv/tsv/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub)은 생략 시 확장자로 정한다. 판본 2 반환은 Document{text,blocks,data}. text — offset/limit(0-기반 행 범위, limit:0은 빈 본문), start_line/end_line(1-기반 양끝 포함), tail(끝 N줄, 다른 범위와 병용 금지), numbered(줄번호). 역전·비정수·충돌 범위는 오류. docx/hwp/hwpx — offset/limit/max_blocks는 블록 단위. pdf — pages는 1-기반 범위(예 "1-5,8"), tables:true는 .data.table로 표 추출. PDF text는 페이지 표지 없는 추출 본문이며 blocks.page는 1-기반이다. .data.page_text_chars와 .data.no_text_pages로 선택 페이지별 글자 수·추출 불가 페이지를 알린다. 글자 없는 선택 페이지는 로컬 Tesseract OCR을 자동 실행한다(ocr:false로 해제). .data.ocr_pages에 엔진·언어·상태·단어 신뢰도를, blocks.source에 native/ocr 출처를 남긴다. OCR 미설치·실패·빈 결과·낮은 신뢰도는 PARTIAL_SOURCE로 .partial에 읽은 Document를 보존한다. .data.incomplete_pages는 미완료 페이지다. OCR은 글자 인식이며 정확성 보증·표 구조 추출은 아니다. 0쪽·파싱 손상은 TOOL 오류의 details.error_type=corrupt다. xlsx/xls — sheet/max_rows, 첫 행은 헤더, .data.items와 .data.table 및 TSV text. pptx/epub — pages로 슬라이드/챕터 선택. extract_images:true는 임시 캐시에 그림을 추출한다(OCR과 별개). JSON 전체 읽기는 .data에 파싱 값을 보존한다(배열은 .data.items). JSON/CSV/TSV 전체 구조 읽기는 텍스트 미리보기의 100만 문자 상한을 적용하지 않는다. 완전한 원문·구조는 내부 값과 결과 참조에 보존하고 모델 표시만 제한한다. 큰 자료는 IBL에서 집계·선택한 값만 반환하거나 결과 참조로 이어 쓴다. CSV/TSV 전체 읽기는 .data.items(헤더→문자열 셀)와 .data.table{columns,rows}; 인용된 구분자·줄바꿈을 보존하며 빈 셀은 빈 문자열, 0은 문자열 "0"이다. 텍스트 범위·절단 읽기는 구조 파싱 없이 .text로 남는다. 빈 파일은 빈 text. .data에는 일반 본문·구판 실행 봉투를 중복하지 않는다. 파일 부재는 NOT_FOUND, 원인·경로는 오류 details에 보존한다.'
+        target_description: 'path는 읽을 파일 경로. format(text/json/csv/tsv/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub)은 생략 시 확장자로 정한다. 판본 2 반환은 Document{text,blocks,data}. text — offset/limit(0-기반 행 범위, limit:0은 빈 본문), start_line/end_line(1-기반 양끝 포함), tail(끝 N줄, 다른 범위와 병용 금지), numbered(줄번호). 역전·비정수·충돌 범위는 오류. docx/hwp/hwpx — offset/limit/max_blocks는 블록 단위. max_blocks는 생략·0이면 전체, 양수면 명시한 범위를 읽는다. pdf — pages는 1-기반 범위(예 "1-5,8"), tables:true는 .data.table로 표 추출. PDF text는 페이지 표지 없는 추출 본문이며 blocks.page는 1-기반이다. .data.page_text_chars와 .data.no_text_pages로 선택 페이지별 글자 수·추출 불가 페이지를 알린다. 글자 없는 선택 페이지는 로컬 Tesseract OCR을 자동 실행한다(ocr:false로 해제). .data.ocr_pages에 엔진·언어·상태·단어 신뢰도를, blocks.source에 native/ocr 출처를 남긴다. OCR 미설치·실패·빈 결과·낮은 신뢰도는 PARTIAL_SOURCE로 .partial에 읽은 Document를 보존한다. .data.incomplete_pages는 미완료 페이지다. OCR은 글자 인식이며 정확성 보증·표 구조 추출은 아니다. 0쪽·파싱 손상은 TOOL 오류의 details.error_type=corrupt다. xlsx/xls — sheet/max_rows, max_rows는 헤더를 포함한 행 선택 상한(생략·0=전체), 첫 행은 헤더, .data.table{columns,rows} 및 TSV text. pptx/epub — pages로 슬라이드/챕터 선택. extract_images:true는 임시 캐시에 그림을 추출한다(OCR과 별개). JSON 전체 읽기는 .data에 파싱 값을 보존한다(배열은 .data.items). JSON/CSV/TSV 전체 구조 읽기는 텍스트 미리보기의 100만 문자 상한을 적용하지 않는다. 오피스 문서도 기본 읽기는 전체이며 완전한 원문·구조는 내부 값과 결과 참조에 보존하고 모델 표시만 제한한다. 큰 자료는 IBL에서 집계·선택한 값만 반환하거나 결과 참조로 이어 쓴다. CSV/TSV 전체 읽기는 .data.items(헤더→문자열 셀)와 .data.table{columns,rows}; 인용된 구분자·줄바꿈을 보존하며 빈 셀은 빈 문자열, 0은 문자열 "0"이다. 텍스트 범위·절단 읽기는 구조 파싱 없이 .text로 남는다. 빈 파일은 빈 text. .data에는 일반 본문·구판 실행 봉투를 중복하지 않는다. 파일 부재는 NOT_FOUND, 원인·경로는 오류 details에 보존한다.'
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx/read_xlsx(office_ops)·read_hwp/hwpx/pptx/epub(doc_read_extra)에 위임. 읽기 예외는 JSON 실패 봉투로 반환하며 파일 부재(not_found)·권한(permission)·I/O(io)의 error_type과 errno를 보존한다. 선택 파일은 self:list의 빈 목록으로 부재를 먼저 확인하고 필수 파일의 실패는 전파한다.
@@ -132,7 +132,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-04", impl: "4a4ae86371d55e57"}
+        path_audited: {at: "2026-10-04", impl: "0681a494c529717b"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -144,7 +144,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-04", impl: "4a4ae86371d55e57"}
+        path_audited: {at: "2026-10-04", impl: "0681a494c529717b"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -222,7 +222,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-04", impl: "4a4ae86371d55e57"}
+        path_audited: {at: "2026-10-04", impl: "0681a494c529717b"}
         target_key: path
       list:
         callable_contract:
@@ -890,7 +890,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-04", impl: "4a4ae86371d55e57"}
+        path_audited: {at: "2026-10-04", impl: "0681a494c529717b"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

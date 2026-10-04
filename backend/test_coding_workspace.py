@@ -160,3 +160,18 @@ def test_own_repository_is_refused_until_repair_link(tmp_path):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+@pytest.mark.parametrize("content", ["a" * 250000, "한글" * 100000], ids=["ascii", "korean"])
+def test_large_utf8_file_roundtrip_and_stale_save_protection(workspace, content):
+    service, record, _ = workspace
+    task, root = prepare(service, record)
+    path = root / "large.txt"
+    path.write_text(content)
+    opened = service.read_file(task["id"], "large.txt")
+    assert opened["text"] == content and not opened["truncated"]
+    saved = service.save_file(task["id"], "large.txt", content + "끝", opened["fingerprint"])
+    assert saved["text"] == content + "끝" and path.read_text() == saved["text"]
+    with pytest.raises(CodingConflict, match="변경"):
+        service.save_file(task["id"], "large.txt", content, opened["fingerprint"])
+    assert path.read_text() == content + "끝"

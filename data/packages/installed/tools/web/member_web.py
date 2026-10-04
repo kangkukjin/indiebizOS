@@ -1,5 +1,4 @@
 """외부 클라이언트 공개 웹 조사. 쿠키·주인 브라우저·파일·개인 관점 캐시를 사용하지 않는다."""
-from common.currency import bounded_selection
 import http.client
 import ipaddress
 import json
@@ -104,20 +103,21 @@ def execute(name, args):
             return {'success': True, 'items': items, 'query': query,
                     'message': '검색 요약입니다. 사실 확인에는 sense:crawl로 원문을 읽으세요.'}
         if name == 'crawl_website':
+            limit = args.get('max_length', 60000)
+            if type(limit) is not int or limit < 1:
+                raise ValueError('max_length는 양의 정수(모델 표시량)여야 합니다.')
             url, data, mime = fetch_public(str(args.get('url') or ''))
             from bs4 import BeautifulSoup
             page = BeautifulSoup(data, 'html.parser')
             for element in page(['script', 'style', 'nav', 'footer', 'noscript']):
                 element.decompose()
             content = page.get_text('\n', strip=True)
-            limit = int(args.get('max_length') or 24000)
-            if not 1 <= limit <= 60000:
-                raise ValueError('본문 한도는 1~60000자입니다')
             return {'success': True, 'url': url, 'title': page.title.get_text() if page.title else '',
-                    'items': [{'type': 'paragraph', 'text': content[:limit]}],
-                    'truncated': len(content) > limit, 'total_chars': len(content),  # truncation-scope: bounded — bounded_selection에서 원 요청·실효 상한·반환 건수를 대조; 기본값·미충족은 source
-                    **bounded_selection(args.get('max_length'), limit, min(len(content), limit),
-                                        len(content) > limit, reason='max_length')}
+                    # 원문은 회원 실행의 결과 저장/참조에 보존하고 표시만 줄인다.
+                    'text': content,
+                    'items': [{'type': 'paragraph', 'text': content}],
+                    'total_chars': len(content),
+                    '_display': {'max_chars': limit, 'limit_rows': False, 'mirror_fields': ['text']}}
         raise ValueError('외부사용자용 웹 기능이 아닙니다')
     except Exception as exc:
         # 원문·세션·시스템 경로가 섞일 수 있는 예외를 반환하거나 기록하지 않는다.

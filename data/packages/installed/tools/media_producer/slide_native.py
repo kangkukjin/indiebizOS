@@ -496,7 +496,7 @@ def create_native_slide(tool_input: dict, output_base: str, slide_id: str = None
     # 1) 저작 (한 장 한 명제 큐레이션)
     parts = [f"# 만들 슬라이드\n{instruction}"]
     if content:
-        parts.append(f"\n# 참고 내용 (이 사실·표현에서 가져오고 지어내지 말 것)\n{content[:12000]}")
+        parts.append(f"\n# 참고 내용 (이 사실·표현에서 가져오고 지어내지 말 것)\n{content}")
     parts.append(f"\n# 미적 톤\n{art_def['ko']} — 위 JSON 스키마 그대로 한 객체만 출력하라.")
     user = "\n".join(parts)
     try:

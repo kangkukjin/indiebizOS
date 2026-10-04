@@ -10,7 +10,7 @@ def normalize_read_range(params):
     tail은 앞쪽 기준 범위와 함께 지정할 수 없다(한쪽을 조용히 무시하지 않는다).
     """
     out = dict(params)
-    for key in ('offset', 'start', 'start_line', 'end_line', 'end', 'limit', 'tail'):
+    for key in ('offset', 'start', 'start_line', 'end_line', 'end', 'limit', 'tail', 'max_rows', 'max_blocks'):
         value = params.get(key)
         if value is None:
             continue

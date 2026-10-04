@@ -2745,8 +2745,8 @@ nodes:
               - queries
         lands_on: hub
         path_audited:
-          at: '2026-09-30'
-          impl: b536e06743f20e6f
+          at: '2026-10-04'
+          impl: 32ca152da9b68956
         aliases:
           limit:
           - count
@@ -2861,8 +2861,8 @@ nodes:
               items: List<Record>
         lands_on: hub
         path_audited:
-          at: '2026-09-30'
-          impl: b536e06743f20e6f
+          at: '2026-10-04'
+          impl: 32ca152da9b68956
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -5698,7 +5698,7 @@ nodes:
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: path는 읽을 파일 경로. format(text/json/csv/tsv/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub)은 생략 시 확장자로 정한다. 판본 2 반환은 Document{text,blocks,data}. text — offset/limit(0-기반 행 범위, limit:0은 빈 본문), start_line/end_line(1-기반 양끝 포함), tail(끝 N줄, 다른 범위와 병용 금지), numbered(줄번호). 역전·비정수·충돌 범위는 오류. docx/hwp/hwpx — offset/limit/max_blocks는 블록 단위. pdf — pages는 1-기반 범위(예 "1-5,8"), tables:true는 .data.table로 표 추출. PDF text는 페이지 표지 없는 추출 본문이며 blocks.page는 1-기반이다. .data.page_text_chars와 .data.no_text_pages로 선택 페이지별 글자 수·추출 불가 페이지를 알린다. 글자 없는 선택 페이지는 로컬 Tesseract OCR을 자동 실행한다(ocr:false로 해제). .data.ocr_pages에 엔진·언어·상태·단어 신뢰도를, blocks.source에 native/ocr 출처를 남긴다. OCR 미설치·실패·빈 결과·낮은 신뢰도는 PARTIAL_SOURCE로 .partial에 읽은 Document를 보존한다. .data.incomplete_pages는 미완료 페이지다. OCR은 글자 인식이며 정확성 보증·표 구조 추출은 아니다. 0쪽·파싱 손상은 TOOL 오류의 details.error_type=corrupt다. xlsx/xls — sheet/max_rows, 첫 행은 헤더, .data.items와 .data.table 및 TSV text. pptx/epub — pages로 슬라이드/챕터 선택. extract_images:true는 임시 캐시에 그림을 추출한다(OCR과 별개). JSON 전체 읽기는 .data에 파싱 값을 보존한다(배열은 .data.items). JSON/CSV/TSV 전체 구조 읽기는 텍스트 미리보기의 100만 문자 상한을 적용하지 않는다. 완전한 원문·구조는 내부 값과 결과 참조에 보존하고 모델 표시만 제한한다. 큰 자료는 IBL에서 집계·선택한 값만 반환하거나 결과 참조로 이어 쓴다. CSV/TSV 전체 읽기는 .data.items(헤더→문자열 셀)와 .data.table{columns,rows}; 인용된 구분자·줄바꿈을 보존하며 빈 셀은 빈 문자열, 0은 문자열 "0"이다. 텍스트 범위·절단 읽기는 구조 파싱 없이 .text로 남는다. 빈 파일은 빈 text. .data에는 일반 본문·구판 실행 봉투를 중복하지 않는다. 파일 부재는 NOT_FOUND, 원인·경로는 오류 details에 보존한다.
+        target_description: path는 읽을 파일 경로. format(text/json/csv/tsv/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub)은 생략 시 확장자로 정한다. 판본 2 반환은 Document{text,blocks,data}. text — offset/limit(0-기반 행 범위, limit:0은 빈 본문), start_line/end_line(1-기반 양끝 포함), tail(끝 N줄, 다른 범위와 병용 금지), numbered(줄번호). 역전·비정수·충돌 범위는 오류. docx/hwp/hwpx — offset/limit/max_blocks는 블록 단위. max_blocks는 생략·0이면 전체, 양수면 명시한 범위를 읽는다. pdf — pages는 1-기반 범위(예 "1-5,8"), tables:true는 .data.table로 표 추출. PDF text는 페이지 표지 없는 추출 본문이며 blocks.page는 1-기반이다. .data.page_text_chars와 .data.no_text_pages로 선택 페이지별 글자 수·추출 불가 페이지를 알린다. 글자 없는 선택 페이지는 로컬 Tesseract OCR을 자동 실행한다(ocr:false로 해제). .data.ocr_pages에 엔진·언어·상태·단어 신뢰도를, blocks.source에 native/ocr 출처를 남긴다. OCR 미설치·실패·빈 결과·낮은 신뢰도는 PARTIAL_SOURCE로 .partial에 읽은 Document를 보존한다. .data.incomplete_pages는 미완료 페이지다. OCR은 글자 인식이며 정확성 보증·표 구조 추출은 아니다. 0쪽·파싱 손상은 TOOL 오류의 details.error_type=corrupt다. xlsx/xls — sheet/max_rows, max_rows는 헤더를 포함한 행 선택 상한(생략·0=전체), 첫 행은 헤더, .data.table{columns,rows} 및 TSV text. pptx/epub — pages로 슬라이드/챕터 선택. extract_images:true는 임시 캐시에 그림을 추출한다(OCR과 별개). JSON 전체 읽기는 .data에 파싱 값을 보존한다(배열은 .data.items). JSON/CSV/TSV 전체 구조 읽기는 텍스트 미리보기의 100만 문자 상한을 적용하지 않는다. 오피스 문서도 기본 읽기는 전체이며 완전한 원문·구조는 내부 값과 결과 참조에 보존하고 모델 표시만 제한한다. 큰 자료는 IBL에서 집계·선택한 값만 반환하거나 결과 참조로 이어 쓴다. CSV/TSV 전체 읽기는 .data.items(헤더→문자열 셀)와 .data.table{columns,rows}; 인용된 구분자·줄바꿈을 보존하며 빈 셀은 빈 문자열, 0은 문자열 "0"이다. 텍스트 범위·절단 읽기는 구조 파싱 없이 .text로 남는다. 빈 파일은 빈 text. .data에는 일반 본문·구판 실행 봉투를 중복하지 않는다. 파일 부재는 NOT_FOUND, 원인·경로는 오류 details에 보존한다.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx/read_xlsx(office_ops)·read_hwp/hwpx/pptx/epub(doc_read_extra)에 위임. 읽기 예외는 JSON 실패 봉투로 반환하며 파일 부재(not_found)·권한(permission)·I/O(io)의 error_type과 errno를 보존한다. 선택 파일은 self:list의 빈 목록으로 부재를 먼저 확인하고 필수 파일의 실패는 전파한다.
@@ -5709,7 +5709,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-04'
-          impl: 4a4ae86371d55e57
+          impl: 0681a494c529717b
         target_key: path
         aliases:
           offset:
@@ -5722,7 +5722,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-04'
-          impl: 4a4ae86371d55e57
+          impl: 0681a494c529717b
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5799,7 +5799,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-04'
-          impl: 4a4ae86371d55e57
+          impl: 0681a494c529717b
         target_key: path
       list:
         callable_contract:
@@ -6553,7 +6553,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-04'
-          impl: 4a4ae86371d55e57
+          impl: 0681a494c529717b
         pipe_in: true
         lands_on: body
         limb_op:

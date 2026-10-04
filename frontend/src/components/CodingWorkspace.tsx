@@ -177,7 +177,7 @@ export function CodingWorkspace() {
                 const saved = await request<OpenFile>(`/tasks/${taskId}/file`, 'PUT', { path: file.path, content: draft, expected: file.fingerprint }); setFile(saved);
               })}>변경 저장</button></div>
             {file.binary ? <p>바이너리 파일입니다. 변경은 원문 패치에 보존됩니다.</p> : <>
-              {file.truncated && <p>200KB를 넘는 파일의 일부입니다. 간단 편집으로 저장할 수 없습니다.</p>}
+              {file.truncated && <p>파일의 일부만 전달되어 저장할 수 없습니다. 다시 열어 주세요.</p>}
               <textarea className="coding-editor" aria-label="파일 내용" spellCheck={false} readOnly={active || file.truncated} value={draft} onChange={e => setDraft(e.target.value)} />
               <label><input type="checkbox" checked={attached} onChange={e => setAttached(e.target.checked)} /> 다음 지시에 파일 첨부</label>
               <label> 시작 줄 <input type="number" min={1} value={selectionStart} onChange={e => setSelectionStart(Number(e.target.value))} /></label>

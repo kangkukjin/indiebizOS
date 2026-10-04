@@ -124,7 +124,7 @@ def structure_document(tool_input, output_base="."):
                            ensure_ascii=False)
 
     instruction = (tool_input.get("instruction") or "").strip()
-    user = f"# 정리할 내용\n{content[:16000]}"
+    user = f"# 정리할 내용\n{content}"
     if instruction:
         user += f"\n\n# 정리 방향\n{instruction}"
     user += "\n\n위 내용을 문서 IR(JSON 한 객체)로 출력하라."

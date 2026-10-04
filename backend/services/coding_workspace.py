@@ -73,12 +73,10 @@ class CodingWorkspace:
         except UnicodeDecodeError:
             binary, decoded = True, ""
         return {"path": path, "fingerprint": fingerprint(data), "binary": binary,
-                "size": len(data), "truncated": len(data) > 200000,
-                "text": "" if binary else decoded[:200000]}
+                "size": len(data), "truncated": False,
+                "text": "" if binary else decoded}
 
     def save_file(self, task_id, path, content, expected, *, run_id=None):
-        if len(content.encode()) > 200000:
-            raise ValueError("간단 편집은 200KB 이하 텍스트만 지원합니다")
         with self.store.lock(task_id):
             task = self.store.get("task", task_id)
             if run_id is None or task.get('active_run') != run_id:
@@ -86,8 +84,8 @@ class CodingWorkspace:
             target = safe_path(task["workspace"], path)
             if run_id is None and target.exists():
                 opened = self.read_file(task_id, path)
-                if opened["binary"] or opened["truncated"]:
-                    raise ValueError("간단 편집은 200KB 이하 UTF-8 텍스트만 지원합니다")
+                if opened["binary"]:
+                    raise ValueError("간단 편집은 UTF-8 텍스트만 지원합니다")
             actual = fingerprint(target.read_bytes()) if target.exists() else None
             if actual != expected:
                 raise CodingConflict("파일이 변경되었습니다. 다시 읽고 저장하세요")

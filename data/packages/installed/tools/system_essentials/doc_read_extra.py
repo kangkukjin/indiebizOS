@@ -59,7 +59,7 @@ def _finish(path: Path, blocks: list, tool_input: dict, extra_meta: dict, images
     offset = max(0, _int(tool_input.get("offset", 0), 0))
     limit_raw = tool_input.get("limit")
     limit = _int(limit_raw, None) if limit_raw is not None else None
-    max_blocks = _int(tool_input.get("max_blocks", 300), 300)
+    max_blocks = _int(tool_input.get("max_blocks"), 0)
 
     total = len(blocks)
     if limit is not None and limit >= 0:

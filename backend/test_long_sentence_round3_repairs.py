@@ -190,6 +190,7 @@ def test_expensive_stage_reference_survives_downstream_edit(tmp_path, monkeypatc
     assert repaired['success'] and repaired['value'] == [None] and calls == [1]
 
 
+@pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
 @pytest.mark.parametrize('variant', [False, True])
 def test_full_report_and_six_source_reuse(registry, tmp_path, monkeypatch, variant):
     import oneshot_facade

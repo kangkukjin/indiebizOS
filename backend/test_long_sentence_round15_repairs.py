@@ -130,6 +130,7 @@ def test_explicit_repair_tag_still_wins():
     assert CognitiveConsciousnessMixin()._decide_request_type('#repair 백엔드는 수정하지 마', 0, '') == ('REPAIR', None)
 
 
+@pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
 def test_original_round15_full_program_recovers_without_recollecting(tmp_path, monkeypatch):
     """Original 200-line composition, with only the model leaf replaced by a deterministic double."""
     from dataclasses import replace

@@ -96,7 +96,12 @@ def test_timeout_and_cancel_stop_child(tmp_path):
         file_script.execute(source, b'{}', work, check=check)
     for meta_path in (work.parent / 'executions').glob('*/meta.json'):
         meta = json.loads(meta_path.read_text())
-        assert not psutil.pid_exists(meta['pid'])
+        # 취소가 자식 spawn 보다 먼저 닿으면 pid 없는 'interrupted' 가 정상이다(2026-10-04 병렬 부하 실측).
+        # 보는 것은 하나 — 살아 있는 자식이 없다.
+        if 'pid' in meta:
+            assert not psutil.pid_exists(meta['pid'])
+        else:
+            assert meta['state'] == 'interrupted', meta['state']
 
 
 def test_expired_or_changed_record_never_uses_display_copy(tmp_path):

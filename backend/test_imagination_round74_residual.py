@@ -188,6 +188,7 @@ def _gate():
     return iblbuild_user_path_effects
 
 
+@pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
 def test_user_path_effects_gate_is_clean_on_live_tree():
     import yaml
     gate = _gate()

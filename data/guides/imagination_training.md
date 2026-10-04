@@ -224,8 +224,8 @@ run_command: cd "$INDIEBIZ_BASE_PATH" && .venv/bin/python -m pytest backend/test
   0바이트 로그를 초록으로 읽지 말 것. 출력에 `N passed` 가 있어야 통과다.
 - ★**`&& echo OK` 로 판정하지 말 것.** 종료코드는 "안 돌았다"와 "다 통과했다"를 구별하지 못한다.
   로그 파일로 넘길 때도 **파일이 비어 있으면 실패로 읽는다.**
-- 무엇을 돌릴지 모르면 전체를 돌린다: `.venv/bin/python -m pytest backend -q`
-  (CI 와 같게 하려면 `-m "not local"`).
+- 무엇을 돌릴지는 선택기가 먼저 고른다: `.venv/bin/python -m pytest $(scripts/select_tests.py) -n auto --dist loadfile`.
+  선택기가 허브를 이름 부르며 `backend/` 를 내면 그때가 전수다(절차 정본 docs/REGRESSION_TESTING.md).
 - ★**라이브 트리에 실측용 스크래치 `.py` 를 만들 때는 리로드 감시 밖 이름만** —
   `test_*.py`·`conftest.py`·`_이름.py`(선행 밑줄 하나). 감시 트리에 새 `.py` 가 생기면
   WatchFiles 리로드 = **자기 절단**이다(2026-08-27 실측: 수리 턴이 이빨 실측 사본을
@@ -243,7 +243,7 @@ run_command: cd "$INDIEBIZ_BASE_PATH" && .venv/bin/python -m pytest backend/test
 - [ ] 핸드오프 §7 갭 요약 누적
 - [ ] 판정 요청(2종 한정)을 사용자에게 보고 (보고서 경로 포함) — 결함은 집행 완료 절에
 - [ ] 지표 스냅샷 보존 (다음 회차와 비교용 — `--json` 출력 권장)
-- [ ] **회귀 확인은 `pytest` 출력으로**(§4-4) — `N passed` 를 보고서에 적고, 0건·빈 출력은 실패로 읽는다
+- [ ] **회귀 확인은 `pytest` 출력으로**(§4-4) — 선택 범위(선택기 요약 줄 또는 전수)와 `N passed` 를 보고서에 적고, 0건·빈 출력은 실패로 읽는다. 새 시험은 회차 파일이 아니라 모듈명 파일에
 - [ ] **훈련 실측은 `origin: "training"` 으로**(§3-5) — 리허설이 건강 원장에 실사용으로 쌓이지 않게
 - [ ] **교재 드리프트를 고쳤으면** 핸들러 문자열·독스트링까지 훑었고, 은퇴한 계약은 `data/retired_contracts.yaml` 에 등록됐다(§4-3)
 

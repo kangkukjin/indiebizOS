@@ -58,10 +58,11 @@ IBL과 주변 시스템의 개선·설계·평가를 시작할 때는 `data/syst
 
 ## 4. 검증
 
-- 회귀 절차 정본 = `docs/REGRESSION_TESTING.md`. 개발 중에는 변경 계약과 관련
-  소비자의 검사만 돌리고, 실패 수정은 해당 항목으로 확인한다. 작은 수정마다 전수를
-  반복하지 않는다. 종합 회귀는 `.venv/bin/python3 -m pytest backend/ -m "not system"`과
-  변경에 관련된 `system` 묶음을 실행한다. 영향 범위 미확정·격리 변경은 전수를 실행한다.
+- 회귀 절차 정본 = `docs/REGRESSION_TESTING.md`. 개발 중에는 `scripts/select_tests.py`가
+  고른 변경의 전이 소비자 검사만 돌리고, 실패 수정은 해당 항목으로 확인한다. 작은 수정마다
+  전수를 반복하지 않는다. 종합 회귀는 `.venv/bin/python3 -m pytest backend/ -m "not system"
+  -n auto --dist loadfile`과 변경에 관련된 `system` 묶음을 실행한다. 영향 범위 미확정·격리
+  변경·선택기가 허브를 이름 부른 변경은 전수를 실행한다. 새 회귀 시험은 모듈명 파일에 둔다.
 - pytest 설정에 `-q`가 있으므로 명령에서 반복하지 않는다. 검사 범위·결과·미검증을
   보고하고, 전수 미실행을 전수 통과로 적지 않는다.
 - 백업은 `data/_backups/YYYY-MM-DD_이름/` 에만. 작업 폴더에 `*_backup*` 흩뿌리지 말 것.

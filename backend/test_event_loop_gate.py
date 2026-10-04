@@ -29,6 +29,7 @@ def test_guard_fixtures_pass():
     assert fx.main() == 0
 
 
+@pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
 def test_repo_has_no_blocking_calls_in_async_bodies():
     """저장소 전체(backend/ + 패키지)에 async 본문의 동기 블로킹 호출(직접·간접)이 없다."""
     r = subprocess.run([sys.executable, str(SCRIPTS / "check_event_loop.py")],

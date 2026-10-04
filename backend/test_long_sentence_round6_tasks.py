@@ -63,6 +63,7 @@ def model_transports(monkeypatch):
     return calls
 
 
+@pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
 @pytest.mark.parametrize('variant', ['original', 'missing', 'triple'])
 def test_full_ledger_and_render_change(tmp_path, model_transports, variant):
     folder = tmp_path / 'input'
@@ -114,6 +115,7 @@ def test_full_ledger_and_render_change(tmp_path, model_transports, variant):
     assert len(model_transports['ai']) == 1
 
 
+@pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
 def test_real_read_reuse_survives_process_restart(tmp_path):
     source = tmp_path / 'source.txt'
     source.write_text('restart preserved')

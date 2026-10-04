@@ -59,8 +59,10 @@ pyautogui
 pyobjc-framework-Quartz; sys_platform == "darwin"
 pyobjc-framework-ApplicationServices; sys_platform == "darwin"
 pyobjc-framework-Vision; sys_platform == "darwin"
-# 개발·회귀 테스트 (test_pipe_currency_failures.py 등)
+# 개발·회귀 테스트 (test_pipe_currency_failures.py 등). xdist = 종합 회귀 병렬(docs/REGRESSION_TESTING.md)
 pytest
+pytest-xdist==3.8.0
+execnet==2.1.2
 # lecture_workspace 슬러그 로마자화 1순위 (없으면 내장 자모 로마자화 폴백) —
 # 의존성 커버리지 감사(scripts/check_import_coverage.py, 2026-08-13)에서 합류
 Unidecode

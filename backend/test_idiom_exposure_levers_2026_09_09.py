@@ -63,6 +63,7 @@ def test_catalog_line_stands_under_anchor_and_switch_strips_both(tmp_path, monke
     assert "self:read ::" in hidden and "self:write ::" in hidden   # 어휘 목록 자체는 그대로
 
 
+@pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
 def test_validate_catalog_runs_every_producer_example_through_the_gate():
     import curate_idioms
     catalog = json.loads((ROOT / "data/idioms/curated.json").read_text())

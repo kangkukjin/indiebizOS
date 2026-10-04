@@ -11,6 +11,7 @@ from world_context import assemble
 from test_knowledge_catalog import ROOT, world  # noqa: F401
 
 
+@pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
 def test_every_entry_reachable_by_browsing_without_names():
     snapshot = catalog.load_snapshot(ROOT)
     pending, found, visited = [{"op": "browse", "limit": 3}], set(), set()

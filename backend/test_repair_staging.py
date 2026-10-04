@@ -23,6 +23,7 @@ REPAIR 경로가 라이브 substrate 를 직접 수술하지 않고 격리 사�
 
 실행: python3 backend/test_repair_staging.py   (exit 0 = 전부 통과)
 """
+import pytest
 import importlib.util
 import json
 import os
@@ -1001,6 +1002,7 @@ def run():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+@pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
 def test_battery_under_pytest():
     """pytest 가 이 배터리를 **보게 하는 다리** (2026-08-23).
 

@@ -1,4 +1,7 @@
 # Development only: reproducible generated regression cases (upgrade with the
 # authoring property suite). Not included in desktop/phone runtime dependencies.
 pytest
+# 병렬 회귀(2026-10-04): 종합 회귀는 `-n auto --dist loadfile` 로 돈다 — docs/REGRESSION_TESTING.md
+pytest-xdist==3.8.0
+execnet==2.1.2
 hypothesis==6.168.1

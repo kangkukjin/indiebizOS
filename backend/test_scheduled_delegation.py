@@ -79,7 +79,8 @@ def test_non_delegating_pipeline_preserves_context_without_system_task(scheduled
 
     def execute(*args, **kwargs):
         # same 위임은 프로젝트 DB를 쓰므로 시스템 DB의 부모를 끼워 넣으면 안 된다.
-        assert not tc.get_current_task_id()
+        # 정기 실행은 호출자와 다른 자기 task_id 로 돈다(2026-10-04, test_scheduled_identity) — 부모 기록은 없다.
+        assert tc.get_current_task_id().startswith("task_schedule_")
         assert tc.get_task_origin() == "scheduler"
         if failure:
             raise RuntimeError("pipeline failed")

@@ -20,11 +20,14 @@ STATE = BASE / "outputs/ai_era_news/state.json"
 START = "2026-09-15"
 ENDPOINT = "https://ai-era-b18.pages.dev/api/news"
 FIELDS = {"key", "url", "title_ko", "publisher", "report_date", "published_date"}
-# 원문이 접근을 거절한 증거(봇 차단·로그인 벽·없는 페이지)가 이 횟수만큼 쌓이면 그 출처는 더 시도하지 않는다.
-# 2026-10-01 실측: 차단된 출처 3건이 매시 재시도되며 트리거를 61회 연속 실패로 만들었다. 일시 장애(시간 초과·
-# 네트워크)는 세지 않는다 — 거절의 증거만 센다. 가끔 열리는 곳(같은 주소가 403 과 200 을 오간다)을 위해 여러 번 본다.
+# 같은 보고서 판본에서 한 출처의 실패가 이 횟수만큼 반복되면 그 출처는 더 시도하지 않는다(status 의 unreachable 로,
+# 증거 문구와 함께 보인다. retry 로 되살린다). 가끔 열리는 곳(같은 주소가 403 과 200 을 오간다)을 위해 여러 번 본다.
+# 2026-10-01 실측: 차단된 출처 3건이 매시 재시도되며 트리거를 61회 연속 실패로 만들었다 — 그때는 거절의 증거
+# (BLOCKED)만 셌다. 2026-10-04 실측: PDF 출처는 거절이 아니라 "구조 없음"으로 제목을 못 얻었고, 허용 목록 밖이라
+# 32회 연속 실패로 남았다. 이제 사유를 가리지 않고 세되, 이쪽 사정인 일시 장애(TRANSIENT)만 제외한다.
 MAX_BLOCKED = 6
 BLOCKED = re.compile(r"bot_blocked|login_required|paywall|봇 차단|HTTP (?:401|403|404|410|451)", re.I)
+TRANSIENT = re.compile(r"시간 초과|timeout|timed out|연결 실패|connection|네트워크|network|원문 보관 실패|source_storage_failed|HTTP 429", re.I)
 BLOCK_TITLE = re.compile(r"access denied|just a moment|captcha|403 forbidden|404 not found", re.I)
 HOSTS = {
     "pymnts.com": "PYMNTS", "n.news.naver.com": "뉴시스",
@@ -113,6 +116,18 @@ def given_up(s, key, c):
     b = s.get("blocked", {}).get(key)
     return bool(b and b["version"] == c["version"] and b["count"] >= MAX_BLOCKED)
 
+def note_failure(s, key, c, reason, evidence=None, raw=None):
+    """같은 판본의 반복 실패를 센다. 일시 장애(raw 또는 evidence 가 TRANSIENT)는 세지 않는다. 돌려주는 값은 errors 행."""
+    error = {"key": key, "reason": reason}
+    evidence = " ".join(str(evidence or reason).split())[:160]
+    if TRANSIENT.search(evidence) or TRANSIENT.search(str(raw or "")):
+        return error
+    before = s.setdefault("blocked", {}).get(key) or {}
+    count = before.get("count", 0) + 1 if before.get("version") == c["version"] else 1
+    s["blocked"][key] = {"version": c["version"], "count": count, "evidence": evidence}
+    error.update(evidence=evidence, attempts=count)
+    return error
+
 def report_fingerprint(report, rows):
     return digest(report.read_text() + "\n" + rows.read_text())
 
@@ -197,19 +212,17 @@ def normalize(data):
             titles = [r for r in meta if r.get("field") == "title" and r.get("value")]
             walls = [str(r["value"]) for r in titles if BLOCK_TITLE.search(str(r["value"]))]
             titles = [r for r in titles if not BLOCK_TITLE.search(str(r["value"]))]
-            titles.sort(key=lambda r: (0 if "headline" in r.get("source", "") else
+            # 근거 순위: 기사 구조화 제목·PDF 첫 쪽 최대 글꼴 줄 > og:title > twitter:title > 그 밖(HTML <title>·PDF 내장 제목).
+            titles.sort(key=lambda r: (0 if "headline" in r.get("source", "") or "pdf.page" in r.get("source", "") else
                                       1 if "og:title" in r.get("source", "") else
                                       2 if "twitter:title" in r.get("source", "") else 3))
             if not titles:
-                error = {"key": key, "reason": "원문 제목 확인 실패"}
-                refused = next((m.group(0) for r in meta for m in [BLOCKED.search(str(r.get("_error") or ""))] if m),
+                failures = [str(r.get("_error") or "") for r in meta if r.get("_error")]
+                refused = next((m.group(0) for e in failures for m in [BLOCKED.search(e)] if m),
                                walls[0][:40] if walls else None)
-                if refused:
-                    before = s.setdefault("blocked", {}).get(key) or {}
-                    count = before.get("count", 0) + 1 if before.get("version") == c["version"] else 1
-                    s["blocked"][key] = {"version": c["version"], "count": count, "evidence": refused}
-                    error.update(blocked=refused, attempts=count)
-                errors.append(error)
+                errors.append(note_failure(s, key, c, "원문 제목 확인 실패",
+                                           refused or (failures[0] if failures else "제목 관측 없음"),
+                                           raw="\n".join(failures)))
                 continue
             # 한국어 제목 중간의 말줄임표는 흔한 구두점이다. 끝이 잘린
             # 메타 제목만 제외하고, 같은 페이지의 완전한 다른 제목을 찾는다.
@@ -217,7 +230,7 @@ def normalize(data):
                         if 3 <= len(str(r["value"]).strip()) <= 500
                         and not str(r["value"]).strip().endswith(("…", "..."))]
             if not complete:
-                errors.append({"key": key, "reason": "제목 잘림"})
+                errors.append(note_failure(s, key, c, "제목 잘림", str(titles[0]["value"])))
                 continue
             selected = complete[0]
             title = str(selected["value"]).strip()
@@ -226,7 +239,7 @@ def normalize(data):
                 if urlsplit(url).hostname == "news.google.com":
                     raise ValueError("원문 주소 미해소")
             except ValueError as exc:
-                errors.append({"key": key, "reason": str(exc)})
+                errors.append(note_failure(s, key, c, str(exc), selected.get("source_url") or selected.get("url")))
                 continue
             dates = sorted({str(r.get("normalized") or r.get("value"))[:10]
                             for r in meta if r.get("field") == "published_at"

@@ -59,7 +59,7 @@ def test_incomplete_headline_stays_pending(news, title):
     module, candidate = news
     result = module.normalize([metadata(candidate, title)])
     assert result["items"] == []
-    assert result["errors"] == [{"key": candidate["key"], "reason": "제목 잘림"}]
+    assert result["errors"][0]["reason"] == "제목 잘림" and result["errors"][0]["attempts"] == 1
     assert module.load_state()["done"] == {}
 
 
@@ -149,6 +149,50 @@ def test_transient_failure_is_not_counted_as_refusal(news):
         assert "attempts" not in error
     assert module.prepare()["pending"] == 1
     assert module.main({"op": "status"})["success"] is False
+
+
+@pytest.mark.parametrize("rows,reason,evidence", [
+    (lambda m, c: [metadata(c, "AI 새 소식…")], "제목 잘림", "AI 새 소식…"),
+    (lambda m, c: [refused(c, "Step 1 에러: 이 수집 결과는 HTML 구조를 제공하지 않습니다(PDF 등). 본문은 op:content로 읽으세요.")],
+     "원문 제목 확인 실패", "HTML 구조를 제공하지 않습니다"),
+    (lambda m, c: [{**c, "field": "title", "value": "AI 새 소식", "source": "title",
+                    "source_url": "https://news.google.com/rss/articles/abc"}], "원문 주소 미해소", "news.google.com"),
+])
+def test_repeated_non_refusal_failures_give_up_with_evidence(news, rows, reason, evidence):
+    """2026-10-04: PDF 출처의 '구조 없음'은 거절 증거가 아니라 세지 않았고, 매시 재시도되며 32회 연속 실패로 남았다.
+    실패 사유를 가리지 않고 세되, 증거 문구를 남겨 같은 사유가 쌓이는 것이 보이게 한다."""
+    module, candidate = news
+    for attempt in range(1, module.MAX_BLOCKED + 1):
+        assert module.prepare()["pending"] == 1
+        error = module.normalize(rows(module, candidate))["errors"][0]
+        assert error["reason"] == reason and error["attempts"] == attempt and evidence in error["evidence"]
+    prepared = module.prepare()
+    assert prepared["pending"] == 0 and prepared["unreachable"] == 1
+    status = module.main({"op": "status"})
+    assert status["success"] is True and evidence in status["unreachable"][0]["evidence"]
+    module.main({"op": "retry", "keys": [candidate["key"]]})
+    assert module.prepare()["pending"] == 1
+
+
+@pytest.mark.parametrize("error", ["Step 1 에러: 시간 초과", "Connection reset by peer", "원문 보관 실패: 디스크", "HTTP 429: 봇 차단"])
+def test_transient_failures_of_any_reason_are_not_counted(news, error):
+    module, candidate = news
+    for _ in range(module.MAX_BLOCKED + 2):
+        error_row = module.normalize([refused(candidate, error)])["errors"][0]
+        assert "attempts" not in error_row
+    assert module.prepare()["pending"] == 1
+
+
+def test_pdf_first_page_heading_outranks_embedded_title_and_filename_is_never_a_title(news):
+    """EADV 보도자료: 내장 제목이 비어 파일명이 제목으로 나왔다. 첫 쪽 최대 글꼴 줄이 근거 있는 제목이다."""
+    module, candidate = news
+    result = module.normalize([
+        metadata(candidate, "Microsoft Word - Press release", "pdf.info.title"),
+        metadata(candidate, "Autonomous AI could create capacity for thousands more dermatology appointments, real-world study finds",
+                 "pdf.page[1].largest_font(16pt)"),
+    ])
+    assert result["errors"] == []
+    assert result["items"][0]["original_title"].startswith("Autonomous AI could create capacity")
 
 
 def test_success_after_refusals_clears_the_count(news):

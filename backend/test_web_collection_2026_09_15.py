@@ -89,12 +89,77 @@ def test_structure_modes_do_not_turn_blocked_pages_into_success(crawler, monkeyp
     assert not c.crawl_website(URL, op="metadata")["success"]
 
 
-def test_pdf_structure_is_unsupported_and_invalid_op_does_not_fetch(crawler, monkeypatch):
+def test_structureless_result_is_reported_and_invalid_op_does_not_fetch(crawler, monkeypatch):
     c, calls = crawler
     assert not c.crawl_website(URL, op="unknown")["success"] and not calls
     monkeypatch.setattr(c, "_crawl_website_impl", lambda *a, **kw:
-                        {"success": True, "text": "PDF 본문", "title": "PDF"})
+                        {"success": True, "text": "브라우저 본문", "title": "렌더"})
     assert c.crawl_website(URL, op="links")["reason"] == "structure_unavailable"
+
+
+def _pdf_bytes(tmp_path, *, heading=True, info=None):
+    import fitz
+    doc = fitz.open()
+    page = doc.new_page()
+    y = 90
+    if heading:
+        for line in ("Autonomous AI could create capacity for thousands", "more dermatology appointments, study finds"):
+            page.insert_text((72, y), line, fontsize=16)
+            y += 22
+    for i in range(14):
+        page.insert_text((72, y), f"Body paragraph line {i} of the press release describing the study." , fontsize=11)
+        y += 16
+    page.insert_link({"kind": fitz.LINK_URI, "from": fitz.Rect(72, y, 300, y + 14), "uri": "https://example.test/study?x=1"})
+    page.insert_text((72, y + 11), "Read the study", fontsize=11)
+    if info:
+        doc.set_metadata(info)
+    out = tmp_path / "EADV-2026_Press-Release.pdf"
+    doc.save(out)
+    doc.close()
+    return out.read_bytes()
+
+
+def _serve_pdf(c, monkeypatch, data):
+    pdf_url = "https://fixture.test/wp-content/EADV-2026_Press-Release.pdf"
+    monkeypatch.setattr(c, "_http_get", lambda url: SimpleNamespace(
+        status_code=200, url=pdf_url, content=data, headers={"Content-Type": "application/pdf"}))
+    return pdf_url
+
+
+def test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title(crawler, monkeypatch, tmp_path):
+    """2026-10-04 EADV 보도자료: 내장 제목이 빈 PDF 의 제목이 파일명이었고 metadata 보기는 구조 없음으로 실패했다."""
+    c, _ = crawler
+    pdf_url = _serve_pdf(c, monkeypatch, _pdf_bytes(tmp_path, info={"author": "Luke", "creationDate": "D:20260928090844+01'00'"}))
+    meta = c.crawl_website(pdf_url, op="metadata")
+    assert meta["success"] and meta["op"] == "metadata" and "partial" not in meta
+    titles = [r for r in meta["items"] if r["field"] == "title"]
+    assert [r["source"] for r in titles] == ["pdf.page[1].largest_font(16pt)"]
+    assert titles[0]["value"] == "Autonomous AI could create capacity for thousands more dermatology appointments, study finds"
+    assert not any("Press-Release" in str(r["value"]) for r in meta["items"])
+    assert {(r["field"], r["source"]) for r in meta["items"]} >= {("author", "pdf.info.author"), ("date", "pdf.info.creationDate")}
+    assert next(r for r in meta["items"] if r["field"] == "date")["normalized"] == "2026-09-28T09:08:44+01:00"
+    links = c.crawl_website(pdf_url, op="links")
+    assert links["count"] == 1 and links["items"][0]["url"] == "https://example.test/study?x=1"
+    assert links["items"][0]["text"] == "Read the study" and links["items"][0]["page"] == 1
+    content = c.crawl_website(pdf_url)
+    assert content["title"].startswith("Autonomous AI") and content["items"][0]["text"] == content["title"]
+
+
+def test_pdf_without_distinct_heading_or_embedded_title_has_no_title_observation(crawler, monkeypatch, tmp_path):
+    c, _ = crawler
+    pdf_url = _serve_pdf(c, monkeypatch, _pdf_bytes(tmp_path, heading=False))
+    meta = c.crawl_website(pdf_url, op="metadata")
+    assert meta["success"] and not [r for r in meta["items"] if r["field"] == "title"]
+    content = c.crawl_website(pdf_url)
+    assert content["success"] and content["title"] == "" and content["items"][0]["type"] == "paragraph"
+
+
+def test_pdf_embedded_title_is_an_observation_next_to_the_heading(crawler, monkeypatch, tmp_path):
+    c, _ = crawler
+    pdf_url = _serve_pdf(c, monkeypatch, _pdf_bytes(tmp_path, info={"title": "Microsoft Word - release.docx"}))
+    rows = [(r["source"], r["value"]) for r in c.crawl_website(pdf_url, op="metadata")["items"] if r["field"] == "title"]
+    assert rows[0][0].startswith("pdf.page[1].largest_font") and rows[1] == ("pdf.info.title", "Microsoft Word - release.docx")
+    assert c.crawl_website(pdf_url)["title"] == "Microsoft Word - release.docx"
 
 
 def filtered(rows, **over):

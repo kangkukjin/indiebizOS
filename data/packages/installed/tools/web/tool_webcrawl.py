@@ -368,8 +368,11 @@ def _extract_pdf_response(response, requested_url: str, pdf_url: str,
 
         text = payload.get("text") or ""
         metadata = payload.get("metadata") or {}
-        title = (viewer_title or metadata.get("title")
-                 or os.path.basename(urlparse(pdf_url).path))
+        # 링크·메타정보는 HTML 과 같은 관측 행으로(op:links/metadata). 제목은 뷰어 제목 → 내장
+        # 제목 → 첫 쪽 최대 글꼴 줄 순이며, 어느 것도 없으면 빈 문자열이다 — 파일명은 관측이
+        # 아니라 주소의 일부라서 제목으로 내지 않는다(2026-10-04, EADV 보도자료 사건).
+        structure = _structure().extract_pdf(tmp_path, pdf_url, metadata)
+        title = viewer_title or structure.pop("title", "")
         reason = _diagnose(200, pdf_url, requested_url, text, title)
         text, original_length, truncated = _truncate(text, max_length)
         result = {
@@ -382,6 +385,7 @@ def _extract_pdf_response(response, requested_url: str, pdf_url: str,
             "truncated": truncated,  # truncation-scope: source — 공개 크롤은 전문 저장; 내부 max_length로 자른 원문은 불완전
             "method": method + "_pdf",
             "total_pages": payload.get("total_pages"),
+            "_page_structure": structure,
         }
         if reason:
             result["reason"] = reason

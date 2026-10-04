@@ -58,7 +58,7 @@ $후보 >> [table:union]{} >> [table:dedup]{by:"url"} >> [table:select]{fields:[
 - `[sense:crawl]{url:"https://example.com",op:"content"}`: 본문(기본 모드). 문단의 `url·paragraph_index`를 보존한다.
 - `[sense:crawl]{url:"https://example.com",op:"links"}`: 링크의 `text·url·href·source_url·rel·link_index`. 상대 주소는 해소하고 실행·메일 링크는 제외한다.
 - `[sense:crawl]{url:"https://example.com",op:"metadata"}`: 제목·대표 URL·저자·게시/수정 날짜의 관측 목록. `field·value·raw·source·source_url`을 보고 근거를 판단한다. 날짜가 충돌하면 두 관측을 남기며 일반 `<time>`을 게시일로 추정하지 않는다. ISO 형식만 `normalized`에 정규화하고 나머지는 null이다.
-- 같은 프로젝트·에이전트의 같은 URL은 모드 사이에서도 15분간 스냅샷을 재사용한다. 갱신은 `refresh:true`. 구조만 읽힌 짧은 페이지는 본문 읽기를 다시 시도한다. `structure_errors`·`partial`은 구조 수집의 누락이며 정상 0건과 구분한다. PDF에는 링크·메타 모드를 제공하지 않는다.
+- 같은 프로젝트·에이전트의 같은 URL은 모드 사이에서도 15분간 스냅샷을 재사용한다. 갱신은 `refresh:true`. 구조만 읽힌 짧은 페이지는 본문 읽기를 다시 시도한다. `structure_errors`·`partial`은 구조 수집의 누락이며 정상 0건과 구분한다. PDF도 같은 모양이다: 제목은 내장 정보(`pdf.info.title`)와 첫 쪽 최대 글꼴 줄(`pdf.page[1].largest_font`)을 각각 근거로 내고 파일명은 제목으로 내지 않는다.
 
 본문에서 조건을 찾을 때는 원문 통화를 그대로 넘긴다:
 

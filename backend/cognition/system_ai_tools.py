@@ -160,7 +160,8 @@ def _execute_call_project_agent(tool_input: dict) -> str:
 
     # 스케줄의 직접 실행에는 대화 부모가 없다. cross 위임기가 자기 DB에
     # 부모를 발급한다 — 같은 프로젝트 위임의 conversations.db와 섞지 않는다.
-    if not get_current_task_id() and get_call_channel() == "scheduler":
+    # 2026-10-04: 정기 실행은 고유 task_id 를 갖고 돈다(수리 그랜트 편승 차단) — 부모 기록의 유무로 가른다.
+    if get_call_channel() == "scheduler" and not get_task(get_current_task_id() or ""):
         return _execute_scheduled_project_agent(tool_input)
 
     # 대상 에이전트 찾기 (실행 중인지 확인)
@@ -352,7 +353,8 @@ def _execute_scheduled_project_agent(tool_input: dict) -> str:
     import thread_context as tc
     from system_ai_memory import create_task, get_task, complete_task, clear_delegation_context
 
-    task_id = f"task_schedule_{uuid.uuid4().hex}"
+    # 정기 실행이 이미 세운 task_id 가 있으면 그것이 부모다(한 실행 = 한 신원).
+    task_id = tc.get_current_task_id() or f"task_schedule_{uuid.uuid4().hex}"
     create_task(task_id=task_id, requester="scheduler", requester_channel="scheduler",
                 original_request=tool_input["message"])
     with tc.actor_context(agent_id="system_ai", task_id=task_id, origin="scheduler"):

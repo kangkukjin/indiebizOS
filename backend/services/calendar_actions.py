@@ -133,11 +133,13 @@ class CalendarActionsMixin:
 
             self._log(f"워크플로우 실행: {workflow_id}"
                       + (f" (params: {', '.join(wf_params)})" if wf_params else ""))
+            import uuid
             import thread_context as tc
             previous = tc.snapshot()
             try:
+                # 정기 실행의 고유 task_id — 빈 task_id 는 수리 그랜트 폴백을 연다(ibl_scheduled 와 같은 이유).
                 with tc.actor_context(agent_id=task.get("owner_agent_id") or "system_ai",
-                                      task_id="", origin="scheduler"):
+                                      task_id=f"task_schedule_{uuid.uuid4().hex[:8]}", origin="scheduler"):
                     tc.set_call_channel("scheduler", override=True)
                     result = execute_workflow(workflow_id, CalendarActionsMixin._owner_run_path(task.get("owner_project_id")), params=wf_params)
             finally:

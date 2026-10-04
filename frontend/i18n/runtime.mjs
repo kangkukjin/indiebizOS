@@ -101,17 +101,42 @@ export function mountRemote(ui, doc = document) {
       }
     }
   }
+  // Serialized into the remote bundle: keep the picker and its scoped styles together.
+  const pickerStyle = doc.createElement('style');
+  pickerStyle.textContent = `
+.ui-language-picker{position:relative;display:inline-flex;align-items:center;flex-shrink:0;color:var(--dim,#8A7B6C)}
+.top .ui-language-picker{margin-left:8px}
+.login-box .ui-language-picker{display:flex;width:max-content;margin:14px auto 0}
+.ui-language-picker .ui-language{appearance:none;-webkit-appearance:none;box-sizing:border-box;cursor:pointer;height:26px;max-width:140px;border:1px solid var(--line,#E5DFD5);border-radius:999px;background:var(--bg3,#EAE4DA);color:inherit;font-family:inherit;font-size:11px;font-weight:600;line-height:1.5;letter-spacing:-.01em;padding:0 25px 0 29px;transition:background .15s,border-color .15s,color .15s}
+.ui-language-picker .ui-language:hover{border-color:var(--acc,#D97706);color:var(--acc2,#B45309)}
+.ui-language-picker .ui-language:active{background:var(--line,#E5DFD5);border-color:var(--acc,#D97706);color:var(--acc2,#B45309)}
+.ui-language-picker .ui-language:focus-visible{outline:2px solid var(--acc,#D97706);outline-offset:2px}
+.ui-language-picker svg{position:absolute;pointer-events:none;width:13px;height:13px;left:10px}
+.ui-language-picker .ui-language-chevron{width:11px;height:11px;left:auto;right:9px}
+.ui-language-picker option{background:var(--bg2,#FFFFFF);color:var(--txt,#4A4035)}
+`;
+  doc.head.append(pickerStyle);
   function picker(parent) {
     if (!parent) return;
+    const wrapper = doc.createElement('div');
+    wrapper.className = 'ui-language-picker';
+    function icon(path, className = '') {
+      const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      for (const [key, value] of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'2','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false',class:className})) svg.setAttribute(key, value);
+      const shape = doc.createElementNS('http://www.w3.org/2000/svg', 'path');
+      shape.setAttribute('d', path); svg.append(shape);
+      return svg;
+    }
+    wrapper.append(icon('m5 8 6 6m-7 0 6-6 2-3M2 5h12M7 2h1m14 20-5-11-5 11m2-4h6'));
     const select = doc.createElement('select');
     select.setAttribute('aria-label', 'Language / 언어');
     select.className = 'ui-language';
-    select.style.cssText = 'font:inherit;padding:4px;border-radius:6px;max-width:120px;background:#fff;color:#333';
     for (const [value, label] of Object.entries(ui.languages)) {
       const option = doc.createElement('option'); option.value = value; option.textContent = label; select.append(option);
     }
     select.value = ui.getLocale(); select.addEventListener('change', () => ui.setLocale(select.value));
-    parent.append(select);
+    wrapper.append(select, icon('M6 9l6 6 6-6', 'ui-language-chevron'));
+    parent.append(wrapper);
     ui.subscribe(() => { select.value = ui.getLocale(); });
   }
   picker(doc.querySelector('.login-box')); picker(doc.querySelector('.top'));

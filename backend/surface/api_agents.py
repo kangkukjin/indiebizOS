@@ -49,8 +49,14 @@ project_manager = None
 from agent_registry import agent_runners, get_agent_runners  # noqa: F401
 
 
+class AgentImage(BaseModel):
+    base64: str
+    media_type: str = "image/png"
+
+
 class AgentCommand(BaseModel):
     command: str
+    images: list[AgentImage] | None = None
     origin: str | None = None
     # True면 즉시 반환(fire-and-forget) — 영상 생성 등 수 분짜리 작업이 터널 타임아웃(524)에
     # 걸리지 않도록. 응답은 평소처럼 conversations.db에 저장되니 호출 측이 메시지를 폴링해서 받는다.
@@ -308,7 +314,7 @@ def _command_origin(origin):
     return origin or "user"
 
 
-def _run_agent_command(project_id: str, agent_id: str, runner, command: str, origin=None, *, continuation=None):
+def _run_agent_command(project_id: str, agent_id: str, runner, command: str, origin=None, *, continuation=None, images=None):
     """에이전트 명령 처리 코어 — 동기/백그라운드 양쪽이 공유.
 
     응답 텍스트를 반환하고, 사용자/AI 메시지를 conversations.db에 저장한다.
@@ -369,7 +375,7 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
 
         # 사용자 메시지 저장
         if not continuation:
-            db.save_message(user_id, target_agent_id, command, contact_type=contact_type)
+            db.save_message(user_id, target_agent_id, command, images=images, contact_type=contact_type)
 
         # AI 응답 생성 — 인지 파이프라인 제너레이터를 drain 하는 블로킹 어댑터.
         #
@@ -386,7 +392,7 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
         # 기어 동기화도 파이프라인 0단계라 여기서 따로 부르지 않는다.
         from agent_pipeline import drain_stream
         from repair_continuation import resume_context, cancelled as repair_cancelled
-        result = drain_stream(runner.cognitive_stream(command, history, agent_name=agent_name,
+        result = drain_stream(runner.cognitive_stream(command, history, images=images, agent_name=agent_name,
                                                       extra_role=resume_context(continuation) if continuation else "",
                                                       cancel_check=(lambda: repair_cancelled(continuation)) if continuation else None,
                                                       utterance_author="owner"))
@@ -457,10 +463,11 @@ def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
     if not runner or not runner.ai:
         raise HTTPException(status_code=400, detail="에이전트 AI가 준비되지 않았습니다.")
 
+    image_args = {"images": [image.model_dump() for image in cmd.images]} if cmd.images else {}
     if cmd.background:
         def _worker():
             try:
-                _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin)
+                _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin, **image_args)
             except Exception:
                 import traceback
                 traceback.print_exc()
@@ -468,7 +475,7 @@ def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
         return {"status": "started"}
 
     try:
-        response = _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin)
+        response = _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin, **image_args)
         return {"response": response}
     except Exception as e:
         import traceback

@@ -4,7 +4,7 @@
 
 LAUNCHER_AUTOPILOT_JS = """/* ================= 자율주행 (드릴다운) ================= */
 let apAgents=[]; let apAgProject=null;
-/* 첨부 사진 (전송 대기) — {b64, media_type, dataUrl}. 시스템 AI 채팅 전용. */
+/* 첨부 사진 (전송 대기) — {b64, media_type, dataUrl}. 시스템 AI·프로젝트 에이전트 공통. */
 let apImages=[];
 async function apLoad(){
   try{ await apLoadProjects(); await apLoadSwitches(); apBrowseRoot(); }
@@ -204,8 +204,7 @@ function apOpenChat(title,sub){
   document.getElementById('apTitle').textContent=title;
   document.getElementById('apSub').textContent=sub||'';
   document.getElementById('apMsgs').innerHTML='<div class="empty">메시지를 입력해 시작하세요.</div>';
-  // 사진 첨부는 시스템 AI 채팅만 (에이전트 /command 는 이미지 미지원)
-  document.getElementById('apAttach').style.display=(apChat.type==='system')?'':'none';
+  document.getElementById('apAttach').style.display='';
   apImages=[]; apRenderChips();
   apShowChat();
   apLoadHistory();  // 시스템 AI·에이전트 모두 과거 대화 자동 로드(연속성)
@@ -256,7 +255,10 @@ function apRemoveChip(i){ apImages.splice(i,1); apRenderChips(); }
    → 폰 브라우저 다운로드 = 폰 저장) */
 function apImgObjs(paths){
   return (paths||[]).map(p=>{
-    const u='/system-ai/image?path='+encodeURIComponent(p);
+    const endpoint=apChat.type==='agent'
+      ? '/conversations/'+encodeURIComponent(apChat.projectId)+'/image'
+      : '/system-ai/image';
+    const u=endpoint+'?path='+encodeURIComponent(p);
     return {src:u, dl:u+'&dl=1'};
   });
 }
@@ -279,7 +281,7 @@ async function apLoadHistory(){
       const r=await jfetch('/conversations/'+encodeURIComponent(apChat.projectId)+'/'+encodeURIComponent(apChat.agentId)+'/messages?limit=40');
       if(!r.ok) return;
       const msgs=((await r.json()).messages||[]).slice().reverse();  // DESC → 시간순
-      convs=msgs.map(m=>({role:(m.is_agent===true)?'assistant':'user', content:m.content||''}));
+      convs=msgs.map(m=>({role:(m.is_agent===true)?'assistant':'user', content:m.content||'', images:m.images||null}));
     }else return;
     if(!convs.length) return;  // 이력 없으면 안내문 유지
     const c=document.getElementById('apMsgs'); c.innerHTML='';
@@ -347,14 +349,16 @@ async function apSend(){
     // 시스템 AI·에이전트 공통: 영상 생성처럼 수 분짜리 작업이 Cloudflare 터널 100초 타임아웃(524)에
     // 걸려 "실패"로 보이던 문제 해결 — 백그라운드로 보내고(즉시 반환) 대화 DB를 폴링해 답을 받는다.
     const baselineId=apMaxId(await apAssistantMsgs());
+    const images=sendImgs.map(im=>({base64:im.b64,media_type:im.media_type}));
+    const message=msg||'첨부한 사진을 봐줘.';
     let r;
     if(apChat.type==='system'){
-      const body={message:msg||'첨부한 사진을 봐줘.',background:true};
-      if(sendImgs.length) body.images=sendImgs.map(im=>({base64:im.b64,media_type:im.media_type}));
+      const body={message,background:true};
+      if(images.length) body.images=images;
       r=await jfetch('/system-ai/chat',{method:'POST',body:JSON.stringify(body)});
     }else{
       await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/start',{method:'POST'});
-      r=await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/command',{method:'POST',body:JSON.stringify({command:msg,background:true})});
+      r=await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/command',{method:'POST',body:JSON.stringify({command:message,background:true,...(images.length?{images}:{})})});
     }
     if(!r.ok){ const d=await r.json().catch(()=>({})); last.textContent='['+r.status+'] '+(d.detail||'오류'); return; }
     last.textContent='작업 중…';

@@ -4,6 +4,7 @@ IndieBiz OS Core
 """
 
 
+import json
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -23,6 +24,26 @@ def init_manager(pm):
 
 
 # ============ 대화 API ============
+
+@router.get("/conversations/{project_id}/image")
+async def get_conversation_image(project_id: str, path: str, dl: int = 0):
+    """프로젝트 대화 첨부 이미지. 런처 인증 뒤 프로젝트 images 폴더만 서빙한다."""
+    from fastapi.responses import FileResponse
+
+    project_path = project_manager.get_project_path(project_id)
+    base = (project_path / "images").resolve()
+    target = (project_path / path).resolve()
+    if not target.is_relative_to(base) or target == base:
+        raise HTTPException(status_code=403, detail="대화 이미지 폴더만 허용됩니다.")
+    if target.suffix.lower() not in (".png", ".jpg", ".jpeg", ".gif", ".webp"):
+        raise HTTPException(status_code=403, detail="이미지 파일만 허용됩니다.")
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="이미지가 없습니다.")
+    return FileResponse(
+        target, filename=target.name if dl else None,
+        headers={"Cache-Control": "private, max-age=86400"},
+    )
+
 
 @router.get("/conversations/{project_id}")
 async def get_conversations(project_id: str):
@@ -90,7 +111,7 @@ async def get_messages(project_id: str, agent_id: str, limit: int = 50, offset: 
         with db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, from_agent_id, to_agent_id, content, message_time
+                SELECT id, from_agent_id, to_agent_id, content, message_time, images
                 FROM messages
                 WHERE (from_agent_id = ? OR to_agent_id = ?)
                   AND (COALESCE(contact_type, 'gui') = 'rehearsal') = ?
@@ -107,7 +128,8 @@ async def get_messages(project_id: str, agent_id: str, limit: int = 50, offset: 
                     # 이 메시지가 해당 에이전트 발신인지 — 원격 런처가 숫자 id 를 몰라도 라벨/필터 가능하게.
                     "is_agent": (row[1] == num_id),
                     "content": row[3],
-                    "timestamp": db.message_timestamp(row[4])
+                    "timestamp": db.message_timestamp(row[4]),
+                    "images": json.loads(row[5]) if row[5] else None
                 })
 
         return {"messages": messages, "agent_id": num_id}
@@ -216,7 +238,7 @@ async def get_messages_between(project_id: str, agent1_id: int, agent2_id: int, 
         with db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, from_agent_id, to_agent_id, content, message_time
+                SELECT id, from_agent_id, to_agent_id, content, message_time, images
                 FROM messages
                 WHERE ((from_agent_id = ? AND to_agent_id = ?)
                    OR (from_agent_id = ? AND to_agent_id = ?))
@@ -232,7 +254,8 @@ async def get_messages_between(project_id: str, agent1_id: int, agent2_id: int, 
                     "from_agent_id": row[1],
                     "to_agent_id": row[2],
                     "content": row[3],
-                    "timestamp": db.message_timestamp(row[4])
+                    "timestamp": db.message_timestamp(row[4]),
+                    "images": json.loads(row[5]) if row[5] else None
                 })
 
         return {"messages": messages}

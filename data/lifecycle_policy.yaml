@@ -46,5 +46,7 @@ envelope_preview:
   issues_chars: 2000   # 완료 문제 진단 문자열별 미리보기
 
 # 크롤 원문은 spill에 24h 보관. URL 재사용 기간과 모델 표시 예산은 별개다.
+# 스필 하위 트리(tool_evidence·supervision)의 증거·감독 기록은 7일 보존(common.spill.EVIDENCE_TTL_S, 2026-10-04 판정).
+# 집행 = 일일 유지보수 번들(world_pulse_health.run_maintenance_bundle → spill.gc).
 webcrawl_cache:
   reuse_seconds: 900   # 명시 refresh=true는 이 기간 안에도 새 스냅샷을 수집

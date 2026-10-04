@@ -415,6 +415,14 @@ def run_maintenance_bundle() -> Dict:
     except Exception as exc:
         logger.warning(f'[Maintenance] IBL 실행 기록 정리 실패: {exc}')
 
+    # 스필 하위 트리 gc — 최상위 24h 는 티켓마다 spill.gc 가 걷지만 증거·감독 하위 트리는 아무도 안 걷어
+    # 7.4GB·2.3GB 가 쌓였다(2026-10-04 실측). 7일 TTL(common.spill.EVIDENCE_TTL_S), 디스크 순회라 여기서만.
+    try:
+        from common import spill
+        result['spill'] = {'removed': spill.gc_evidence()}
+    except Exception as exc:
+        logger.warning(f'[Maintenance] 스필 gc 실패: {exc}')
+
     # 1) 만성 실패 능동 알림
     try:
         from world_pulse import _load_config

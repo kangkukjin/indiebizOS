@@ -21,6 +21,9 @@ import uuid
 from typing import Any, Dict, Optional, Tuple
 
 SPILL_TTL_S = 24 * 3600
+# 하위 트리(tool_evidence/<네임스페이스>·supervision/<턴>)의 증거·감독 기록 보존(2026-10-04 사용자 판정 7일).
+# result_ref 회수는 최근 턴에만 유효하므로 그 뒤는 역사일 뿐 — 전에는 gc 가 최상위 파일만 봐 무한히 쌓였다(7.4GB).
+EVIDENCE_TTL_S = 7 * 24 * 3600
 # 통신 한도와 실행 수명은 독립적이다. 기본 완료 대기에는 총시간 마감이 없다.
 # SURFACE_CLIENT_WALL_S는 기존 설정 소비자의 호환 이름이다.
 from common.completion_contract import MCP_CLIENT_TIMEOUT_S as SURFACE_CLIENT_WALL_S
@@ -54,7 +57,8 @@ def spill_dir() -> str:
 
 
 def gc(max_age_s: int = SPILL_TTL_S) -> int:
-    """TTL 지난 스필 파일 삭제 — 삭제 수 반환. 실패는 조용히(캐시 청소가 본 작업을 깨면 안 된다)."""
+    """TTL 지난 **최상위** 스필 파일 삭제 — 삭제 수 반환. 실패는 조용히(캐시 청소가 본 작업을 깨면 안 된다).
+    티켓마다 async 경로(ticket_begin)에서 불리므로 싸야 한다 — 하위 트리는 걷지 않는다(gc_evidence)."""
     n = 0
     try:
         d = _root()
@@ -80,6 +84,45 @@ def gc(max_age_s: int = SPILL_TTL_S) -> int:
                 pass
     except Exception:
         pass
+    return n
+
+
+def gc_evidence(max_age_s: int = EVIDENCE_TTL_S) -> int:
+    """하위 트리(tool_evidence/<네임스페이스>·supervision/<턴> 등)의 TTL(7일) 지난 파일 삭제, 빈 디렉터리 제거.
+    디스크를 재귀 순회하므로 async 경로에서 부르지 말 것 — 호출 = 일일 유지보수 번들(world_pulse_health).
+    2026-10-04 전에는 아무도 하위 트리를 걷지 않아 7.4GB·2.3GB 가 무한 누적됐다."""
+    n = 0
+    try:
+        d = _root()
+        if not os.path.isdir(d):
+            return 0
+        now = time.time()
+        for name in os.listdir(d):
+            p = os.path.join(d, name)
+            if os.path.isdir(p):
+                n += _gc_tree(p, now, max_age_s)
+    except Exception:
+        pass
+    return n
+
+
+def _gc_tree(top: str, now: float, max_age_s: int) -> int:
+    """하위 트리: TTL 지난 파일 삭제 → 빈 디렉터리 제거(아래부터). 실패는 조용히."""
+    n = 0
+    for root, dirs, files in os.walk(top, topdown=False):
+        for f in files:
+            p = os.path.join(root, f)
+            try:
+                if now - os.path.getmtime(p) > max_age_s:
+                    os.remove(p)
+                    n += 1
+            except OSError:
+                pass
+        try:
+            if not os.listdir(root):
+                os.rmdir(root)
+        except OSError:
+            pass
     return n
 
 

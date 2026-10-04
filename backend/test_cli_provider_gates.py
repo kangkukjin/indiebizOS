@@ -92,13 +92,15 @@ def test_session_stores_are_distinct_and_registered():
     assert not missing, f"세션 저장소 미등록: {missing} (CliSessionStore 로 생성할 것)"
 
 
-def test_derived_session_keys_are_swept_on_reset():
+def test_derived_session_keys_are_swept_on_reset(tmp_path, monkeypatch):
     """파생 세션 키(`키#해시`)도 '새 대화'가 지운다.
 
     codex 는 시스템 프롬프트 해시를 키에 붙인다 — 호출부는 그 파생을 모르고 평범한
     registry_key 를 넘기므로, 접두 스윕이 없으면 옛 스레드가 살아남는다.
     """
+    from providers import cli_provider
     from providers.cli_provider import CliSessionStore
+    monkeypatch.setattr(cli_provider, "_data_dir", lambda: tmp_path)   # 실 data/ 에 __test_sweep_* 를 남기지 않는다
 
     store = CliSessionStore("__test_sweep", "TestStore")
     try:

@@ -61,11 +61,23 @@ _STDERR_TAIL = 2000
 _DEFAULT_TIMEOUT = 300
 
 
+_STATE_NAMES = ("_STATE", "_RUN_DIR", "_JOB_DIR")
+_STATE_DEFAULTS = {"_STATE": _STATE, "_RUN_DIR": _RUN_DIR, "_JOB_DIR": _JOB_DIR}
+
+
 def _path(name):
     from thread_context import get_repair_workspace
     root = get_repair_workspace()
     original = globals()[name]
-    return Path(root) / original.relative_to(_ROOT) if root else original
+    if root:
+        return Path(root) / original.relative_to(_ROOT)
+    # 실행 상태 원장(상태·로그·잡)만 런타임 상태 루트(INDIEBIZ_RUNTIME_STATE_DIR) 아래로 — 회귀 격리
+    # 시임(2026-10-04, docs/REGRESSION_TESTING.md). 정의 원장(_REGISTRY)·본문(_SCRIPT_DIR) 은 그대로.
+    # 시험이 전역을 직접 바꿨으면(기본값과 다르면) 그 값을 존중한다.
+    state_dir = os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR")
+    if state_dir and name in _STATE_NAMES and original == _STATE_DEFAULTS[name]:
+        return Path(state_dir) / original.relative_to(_ROOT / "data")
+    return original
 
 
 def _review_environment():

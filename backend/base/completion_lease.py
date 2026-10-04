@@ -4,6 +4,7 @@ A random per-turn channel connects both CLI adapters to their MCP waiter. Only
 an existing channel can be updated; tool arguments cannot choose a file path.
 """
 import json
+from pathlib import Path
 import os
 import re
 import time
@@ -14,11 +15,20 @@ TRANSPORT_LOSS_S = 120
 from common.completion_contract import MCP_CLIENT_TIMEOUT_S, process_identity, owner_alive
 
 
+def _root():
+    """완료 대기 채널 루트(2026-10-04). 채널은 CLI 어댑터와 MCP 대기자 — 서로 다른 프로세스 — 가
+    공유하므로 시임은 환경변수다(자식에게 상속): INDIEBIZ_RUNTIME_STATE_DIR/completion_wait. 회귀는 conftest 가 tmp 로."""
+    env = os.environ.get('INDIEBIZ_RUNTIME_STATE_DIR')
+    if env:
+        return Path(env) / 'completion_wait'
+    from runtime_utils import get_base_path
+    return get_base_path() / 'data' / 'completion_wait'
+
+
 def _directory(token):
     if not isinstance(token, str) or not re.fullmatch(r'[a-f0-9]{32}', token):
         return None
-    from runtime_utils import get_base_path
-    return get_base_path() / 'data' / 'completion_wait' / token
+    return _root() / token
 
 
 def _write(path, value):

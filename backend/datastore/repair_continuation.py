@@ -23,8 +23,16 @@ def key(task):
     return re.sub(r"[^A-Za-z0-9_-]", "_", task or "")[:48] or "notask"
 
 
+def state_root():
+    """시스템 AI 상태 루트(data/system_ai_state) 시임(2026-10-04). 런타임 상태 루트 환경변수
+    INDIEBIZ_RUNTIME_STATE_DIR 가 있으면 그 아래(회귀 격리, 자식 상속). 시험은 conftest 가 바꾼다."""
+    import os
+    state = os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR")
+    return Path(state) / "system_ai_state" if state else Path(get_base_path()) / "data/system_ai_state"
+
+
 def directory(base=None):
-    return Path(base or get_base_path()) / "data/system_ai_state/repair_continuations"
+    return Path(base) / "data/system_ai_state/repair_continuations" if base else state_root() / "repair_continuations"
 
 
 def read(task, base=None):

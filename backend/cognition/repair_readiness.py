@@ -9,13 +9,12 @@ def execution_stream(stream):
     if not active() or activation_only():
         yield from stream
         return
-    from runtime_utils import get_base_path
-    from repair_continuation import current, key
+    from repair_continuation import current, key, state_root
     from thread_context import get_current_task_id
     from restart_protocol import OwnerLock
     row = current() or {}
     root = key(row.get("root_task_id") or get_current_task_id())
-    lock = OwnerLock(get_base_path() / "data/system_ai_state/repair_sessions" / ("owner-" + root + ".lock"))
+    lock = OwnerLock(state_root() / "repair_sessions" / ("owner-" + root + ".lock"))
     if not lock.acquire():
         raise RuntimeError("같은 수리 사본을 다른 실행자가 수정 중입니다")
     try:

@@ -33,6 +33,18 @@ from pathlib import Path
 
 _ROOT = Path(__file__).parent.parent.parent
 _LEDGER_PATH = _ROOT / "data" / "write_ledger.jsonl"
+
+
+_LEDGER_DEFAULT = _LEDGER_PATH
+
+
+def _ledger_path() -> Path:
+    """원장 경로 시임(2026-10-04): 런타임 상태 루트 환경변수가 있으면 그 아래(회귀 격리, 자식 상속).
+    시험이 _LEDGER_PATH 를 직접 바꿨으면(기본값과 다르면) 그 값을 존중한다."""
+    if _LEDGER_PATH != _LEDGER_DEFAULT:
+        return _LEDGER_PATH
+    state = os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR")
+    return Path(state) / "write_ledger.jsonl" if state else _LEDGER_PATH
 _ROTATE_BYTES = 8 * 1024 * 1024   # 1세대 로테이션 (~40k행)
 
 # 심장박동 가족 — 폴링·상태 갱신이 분 단위로 두드리는 파일(상대경로). 행위자 없는
@@ -114,13 +126,13 @@ def log_write(path, event: str = "write", gate: str = "", size=None) -> None:
         if size is not None:
             row["size"] = int(size)
         line = (json.dumps(row, ensure_ascii=False) + "\n").encode("utf-8")
-        _LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _ledger_path().parent.mkdir(parents=True, exist_ok=True)
         try:
-            if _LEDGER_PATH.stat().st_size > _ROTATE_BYTES:
-                os.replace(_LEDGER_PATH, str(_LEDGER_PATH) + ".1")
+            if _ledger_path().stat().st_size > _ROTATE_BYTES:
+                os.replace(_ledger_path(), str(_ledger_path()) + ".1")
         except OSError:
             pass
-        fd = os.open(_LEDGER_PATH, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+        fd = os.open(_ledger_path(), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
         try:
             os.write(fd, line)
         finally:
@@ -138,7 +150,7 @@ def read_rows(days: int = 7):
     except Exception:
         pass
     rows = []
-    for p in (str(_LEDGER_PATH) + ".1", str(_LEDGER_PATH)):
+    for p in (str(_ledger_path()) + ".1", str(_ledger_path())):
         try:
             with open(p, encoding="utf-8") as f:
                 for line in f:
@@ -158,5 +170,5 @@ def read_rows(days: int = 7):
 def read_trace_page(episode_ids, cursor=None, limit=50, path=None):
     """Only explicit episode joins are scoped. Legacy task/run strings are insufficient."""
     from trace_read import jsonl_page
-    return jsonl_page("writes", path or _LEDGER_PATH, cursor, limit,
+    return jsonl_page("writes", path or _ledger_path(), cursor, limit,
                       predicate=lambda row: row.get("episode_id") in episode_ids)

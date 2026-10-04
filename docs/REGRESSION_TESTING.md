@@ -139,16 +139,39 @@ v2 엔진 핵심(`ibl_v2_adapters`·`ibl_v2_compile`·`ibl_v2_runtime`)은 모�
   보낸다(시험이 `get_base_path`를 돌렸으면 그 아래 `data/spill`, 회원 사설 스필은 그대로).
   ContextVar가 아니라 모듈 함수를 바꾸는 이유: 작업자 스레드는 ContextVar를 물려받지 않는다.
 - 수리 뒤 재스윕: 추적 파일 쓰기 0, `data/spill` 쓰기 0. 종합 회귀 8,779 통과.
-- 남은 비추적 쓰기(1회분, 경로 수): `data/script_runs` 65와 `data/scripts.json`
-  (`test_exposed_idiom_boundaries`·`test_targeted_code_read`·`test_imagination_round67_repairs`가
-  실 `[self:script]` 실행으로 라이브 실행 원장에 기록), `data/workflows` 25(`test_workflow_params`),
-  `data/completion_wait` 18, `data/system_ai_state` 7, `data/recall_index` 5. 패키지
-  `script_ops`의 원장 앵커는 수리 작업공간 시임뿐이라 conftest에서 돌릴 자리가 없다. 다음 수리는
-  그 앵커에 시임을 두는 일이다.
+- 2차 스윕(같은 날)에서 남은 런타임 저장소 쓰기를 전부 시임으로 돌렸다. 시임은 두 종류다.
+  **루트 함수**(프로세스 안에서만 쓰는 저장소): 실행 영수증 `ibl_run_journal.runs_root`, 수리 세션
+  잠금·계속 기록 `repair_continuation.state_root`, 워크플로우 `workflow_store._get_workflows_path`,
+  스크립트 작업공간 `script_workspace.storage_root` — `conftest.py`의 `isolated_runtime_stores`가
+  시험마다 `tmp_path`로 바꾸되, 시험이 `get_base_path`를 돌렸으면 그 아래 `data/…`를 따른다.
+  **환경변수 `INDIEBIZ_RUNTIME_STATE_DIR`**(프로세스를 넘는 저장소): 완료 대기 채널(CLI 어댑터와 MCP
+  대기자가 다른 프로세스 — 함수 patch는 `test_long_completion` 2건이 깨졌다), 스크립트 실행 원장
+  `data/script_runs`·`data/scripts.json`(패키지 `script_ops`, 정의 원장과 본문은 그대로), 쓰기 원장
+  `write_ledger`, 그리고 위 루트 함수들도 이 변수가 있으면 그 아래를 본다(자식 프로세스 상속). 회상
+  색인은 기존 `INDIEBIZ_RECALL_INDEX_DIR`. 환경변수는 `pytest_configure`가 워커(프로세스) 단위로
+  한 번 두고(시험이 끝난 뒤에 쓰는 작업자 스레드 — 회상 색인 동기화 등 — 도 실 저장소가 아니라 여기로
+  온다), `isolated_runtime_stores`가 시험 단위로 새 디렉터리를 덮는다. 시험이 모듈 전역(`_LEDGER_PATH`·
+  `script_ops._STATE` 등)을 직접 바꿨으면 그 값이 환경변수보다 앞선다.
+- 실행 영수증 `data/ibl_runs`는 실 저장소 957MB·37K 파일 중 매 회귀 수십 디렉터리가 시험 산물이었고,
+  자식 프로세스(MCP 대기자)가 만든 sqlite까지 환경변수 시임이 걷는다.
+- 남긴 것: `data/runtime/python-environment.lock`(환경 임대 잠금 파일, 데이터 아님),
+  `data/guide_dates_cache.json`(가이드 날짜 캐시의 재생성, 내용 동일), `.hypothesis/`(예시 DB),
+  `outputs/ibl-replay-test-*`(TemporaryDirectory, 자동 삭제).
 
-`conftest.py`의 세션 훅이 세션 전후의 추적 파일 변경(`git status --porcelain`)을 대조해 새로
-바뀐 추적 파일이 있으면 세션을 실패로 끝낸다. 병렬 실행 뒤 `git status`에 data/ 변경이 남으면
-먼저 이 훅의 메시지를 본다.
+스윕은 상설 도구다. `INDIEBIZ_TEST_WRITE_SWEEP=<로그파일>`을 주면 `conftest.py`가 저장소 트리로
+향하는 모든 쓰기(open w/a/x/+, os.replace, os.rename)를 `nodeid<TAB>종류<TAB>경로`로 기록한다.
+xdist에서 해시 변화를 본 시험은 쓴 시험이 아니므로 반드시 이 기록으로 주인을 찾는다. 자식
+프로세스의 쓰기는 잡지 못하니 실행 뒤 `find data -newermt`로 잔존물도 본다.
+
+```bash
+INDIEBIZ_TEST_WRITE_SWEEP=/tmp/sweep.log .venv/bin/python3 -m pytest backend/ -m "not system" -n auto --dist loadfile
+cut -f3 /tmp/sweep.log | grep '^data/' | sed -E 's#^(data/[^/]+).*#\1#' | sort | uniq -c | sort -rn
+```
+
+새 런타임 저장소를 만들 때는 루트 함수(또는 프로세스를 넘는 저장소면 환경변수)를 하나 두고
+`isolated_runtime_stores`에 한 줄 더한다. `conftest.py`의 세션 훅이 세션 전후의 추적 파일
+변경(`git status --porcelain`)을 대조해 새로 바뀐 추적 파일이 있으면 세션을 실패로 끝낸다.
+병렬 실행 뒤 `git status`에 data/ 변경이 남으면 먼저 이 훅의 메시지를 본다.
 
 ## 분리 판단의 근거 (2026-09-29)
 

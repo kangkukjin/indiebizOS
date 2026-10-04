@@ -27,14 +27,25 @@ def durable(operation):
     return wrapped
 
 
+def runs_root():
+    """주인 몸의 실행 영수증 루트 시임(2026-10-04). 런타임 상태 루트 환경변수 INDIEBIZ_RUNTIME_STATE_DIR
+    가 있으면 그 아래(자식 프로세스까지 상속되는 회귀 격리 시임, docs/REGRESSION_TESTING.md),
+    없으면 base/data/ibl_runs. 시험은 conftest 가 바꾼다."""
+    import os
+    state = os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR")
+    if state:
+        return Path(state) / "ibl_runs"
+    from runtime_utils import get_base_path
+    return get_base_path() / "data/ibl_runs"
+
+
 def journal_root(project_path):
     import member_runtime
     import principal
-    from runtime_utils import get_base_path
     p = principal.current()
     if p.kind == principal.KIND_MEMBER:
         return member_runtime.private_path("ibl_runs")
-    return get_base_path() / "data/ibl_runs" / digest([p.key(), str(Path(project_path).resolve())])
+    return runs_root() / digest([p.key(), str(Path(project_path).resolve())])
 
 
 def recorded_file_scope(root, resume):
@@ -518,8 +529,7 @@ def cleanup_runs(root, *, now=None, retention_days=30, max_bytes=512*1024*1024):
 
 def maintain_owner_runs():
     import principal
-    from runtime_utils import get_base_path
     if not principal.is_owner():
         return {'skipped': 'private-session-lifecycle'}
-    root = get_base_path() / 'data/ibl_runs'
+    root = runs_root()
     return {p.name: cleanup_runs(p) for p in root.iterdir() if p.is_dir() and not p.is_symlink()} if root.exists() else {}

@@ -122,6 +122,34 @@ def execution_trace(controller, tool_calls):
     return calls
 
 
+#: 보완 증거 첨부 전체의 글자 상한. 넘으면 최신 증거부터 전문으로 싣고 나머지는 앞·뒤 발췌로 줄인다.
+RECOVERED_EVIDENCE_CHARS = 2 * EVALUATION_FILE_CHARS
+
+
+def recovered_pages(store, refs, budget=RECOVERED_EVIDENCE_CHARS):
+    """보완 구간의 증거 원문을 시간순으로 돌려준다. 예산은 최신 증거부터 배정한다."""
+    from cognitive_eval import bounded_attachment
+    texts = {}
+    for ref in reversed(refs):
+        try:
+            text = store.read_evidence(ref, 0, None)["text"]
+        except (OSError, ValueError, KeyError):
+            continue
+        try:
+            body = json.loads(text)
+            if isinstance(body, dict) and "value_wire" in body and "value" in body:
+                # value_wire는 value의 전송 부호화다. 같은 내용을 두 번 싣지 않는다.
+                text = json.dumps({k: v for k, v in body.items() if k != "value_wire"}, ensure_ascii=False)
+        except ValueError:
+            pass
+        if budget <= 0:
+            break
+        text = bounded_attachment(ref, text, max(budget, 2000))
+        texts[ref] = text
+        budget -= len(text)
+    return [texts[ref] for ref in refs if ref in texts]
+
+
 def prepare(controller, tool_calls=None):
     """모델에 넘길 자료와 승인 대상 지문을 고정한다. 모델의 페이지 열람 영수증은 요구하지 않는다."""
     from supervisor_content import discover
@@ -177,16 +205,26 @@ def prepare(controller, tool_calls=None):
     cursor = getattr(controller, "_repair_evidence_since", None)
     recovered = []
     if cursor is not None:
+        refs = []
         while True:
             page = controller.store.read_events(cursor)
             for event in page["events"]:
+                if event.get("is_error"):
+                    continue
+                # 작업대 증거 읽기뿐 아니라 보완 실행자가 새로 만든 도구 결과(재독 원문·대조표)도
+                # 보완 증거다. 뒤쪽을 빼면 그 결과가 다시 발췌 예산에서 잘려 같은 UNKNOWN이 반복된다(ep4325).
                 if event.get("kind") == "response.operation" and event.get("operation") == "evidence":
                     ref = event.get("result", {}).get("id")
-                    if ref and not event.get("is_error"):
-                        recovered.append(controller.store.read_evidence(ref, 0, None)["text"])
+                elif event.get("kind") == "tool.finished":
+                    ref = (event.get("evidence") or {}).get("id")
+                else:
+                    continue
+                if ref and ref not in refs:
+                    refs.append(ref)
             if page["next_offset"] is None:
                 break
             cursor = page["next_offset"]
+        recovered = recovered_pages(controller.store, refs)
     if recovered:
         context["recovered_evidence"] = recovered
     # 공개 텍스트 초안은 위에서 읽는다. 그 밖의 생성 파일도 기존 평가 수집 경로를 유지한다.

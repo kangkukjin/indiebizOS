@@ -353,10 +353,12 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
                 annotate_failure(out, name, origin, fdef["_idiom_code"])
             # 실행 실패와 정의 결함은 다르다. 입력/원천/미확정 실패는 사건으로만 보존한다.
             try:
-                ok = bool(out.get("success", True))
+                from ibl_function_result import source_partial
+                partial = bool(out.get("success", True)) and source_partial(out)
+                ok = bool(out.get("success", True)) and not partial
                 elapsed = max(1, round((_time.monotonic() - started) * 1000)) if ok else None
                 attributed = record_idiom_outcome(fdef["_idiom_code"], out, elapsed, origin)
-                status = '성공' if ok else '정의 실패' if attributed else '실패 귀속 보류'
+                status = '성공' if ok else '부분 결과 — 점수 귀속 보류' if partial else '정의 실패' if attributed else '실패 귀속 보류'
                 print(f"[해마피드백:관용구] [fn:{name}] {status} 기록(실행 자리)")
             except Exception:
                 pass

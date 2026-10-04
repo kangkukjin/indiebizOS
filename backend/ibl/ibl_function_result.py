@@ -69,10 +69,21 @@ def failure_origin(out, steps, required):
     return origin
 
 
+def source_partial(out):
+    """호출부 관문(PARTIAL_SOURCE)과 같은 기준 — 표본 선택이 아닌 절단, 또는 원천 불완전 표지."""
+    from ibl_honesty import truncation_evidence
+    return out.get("source_complete") is False or any(
+        t.get("scope") != "selection" for t in truncation_evidence(out).get("truncations", []))
+
+
 def record_idiom_outcome(code, out, elapsed_ms, origin=None):
     """Keep execution failures observable without treating every one as bad code."""
     ok = out.get("success", True) is True
     origin = origin or {"kind": "unknown", "definition_failure": False}
+    # 원천이 잘린 결과는 호출부에서 부분 실패가 된다. 성공 점수에도 실패 점수에도 올리지 않는다(ep4325).
+    partial = ok and source_partial(out)
+    if partial:
+        ok, origin = False, {"kind": "partial_source", "definition_failure": False}
     attributed = ok or origin.get("definition_failure") is True
     if attributed:
         from ibl_usage_db import IBLUsageDB

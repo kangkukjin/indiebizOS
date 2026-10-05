@@ -24,7 +24,7 @@ from pathlib import Path
 
 from runtime_utils import get_base_path
 from thread_context import (
-    actor_context, get_current_agent_id, get_current_agent_name, get_current_project_id,
+    actor_context, get_call_channel, get_current_agent_id, get_current_agent_name, get_current_project_id,
     get_delegation_chain, get_task_origin, set_delegation_chain, set_called_agent,
 )
 
@@ -46,7 +46,13 @@ class DelegationCycle(ValueError):
 # ── 행위자 식별과 봉투 ─────────────────────────────────────────────────────────
 
 def actor_identity() -> str:
-    """현재 스레드 행위자의 식별자. 프로젝트 에이전트='프로젝트:에이전트id', 그 밖='system_ai'."""
+    """위임을 시작한 행위자. 직접 실행 표면의 운영자 권한과 AI 실행 신원은 다르다."""
+    # 앱/예약 실행도 도구 권한에는 system_ai 를 쓰지만, AI가 자기에게 위임한 것은
+    # 아니다. 진입점이 세운 통로로 구분한다(from_agent 는 표시 이름이라 신뢰하지 않음).
+    # 기존 조상 사슬은 envelope 가 그대로 검사하므로 앱 표식으로 순환을 우회하지 못한다.
+    channel = get_call_channel()
+    if channel in {"app", "scheduler"}:
+        return channel
     project_id = get_current_project_id() or ""
     agent_id = get_current_agent_id() or get_current_agent_name() or ""
     if project_id and agent_id and agent_id not in ("system_ai", "system_ai_delegation"):

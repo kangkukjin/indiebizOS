@@ -189,6 +189,68 @@ def test_system_scope_sync_waits_for_the_preissued_task(world, monkeypatch):
     assert result["task_ref"]["owner"] == "system" and result["sync"] is True
 
 
+@pytest.mark.parametrize("surface", [None, "web"])
+def test_app_button_can_start_system_delegation(world, monkeypatch, surface):
+    """실 REST 진입 문맥: 운영자 권한의 system_ai 는 AI가 실행 중이라는 뜻이 아니다."""
+    import asyncio
+    from api_ibl import IBLRequest, execute_ibl_code
+    from routing_system import register_all
+
+    queued = _fake_system_runner(monkeypatch)
+    tc.clear_all_context()
+    register_all()
+    result = asyncio.run(execute_ibl_code(IBLRequest(
+        code='[others:delegate]{scope:"system",message:"보고서 써줘",from_agent:"정기보고앱"}',
+        project_path=world.project_path, surface=surface)))
+    assert queued, result
+    msg = queued[0]
+    assert msg["envelope"]["chain"] == ["app"]
+    assert msg["envelope"]["origin"] == "user"
+    assert memory.get_task(msg["task_id"])["parent_task_id"] is None
+
+
+def test_scheduled_pipeline_can_start_system_delegation(world, monkeypatch):
+    from ibl_scheduled import execute_scheduled
+    from routing_system import register_all
+
+    queued = _fake_system_runner(monkeypatch)
+    tc.clear_all_context()
+    register_all()
+    result = execute_scheduled(
+        '[others:delegate]{scope:"system",message:"보고서 써줘"}', world.project_path, None)
+    assert queued, result
+    msg = queued[0]
+    assert msg["envelope"]["chain"] == ["scheduler"]
+    assert msg["envelope"]["origin"] == "scheduler"
+    assert memory.get_task(msg["task_id"])["parent_task_id"].startswith("task_schedule_")
+
+
+@pytest.mark.parametrize("channel", [None, "agent", "app", "scheduler"])
+def test_system_ancestor_cannot_be_bypassed_by_channel_or_sender(world, monkeypatch, channel):
+    from routing_system import _delegate_unified
+
+    queued = _fake_system_runner(monkeypatch)
+    tc.set_delegation_chain(["system_ai"])
+    tc.set_call_channel(channel, override=True)
+    result = _delegate_unified({"scope": "system", "message": "되돌려", "from_agent": "정기보고앱"},
+                               world.project_path)
+    assert result["error_type"] == "delegation_cycle"
+    assert not queued
+
+
+@pytest.mark.parametrize("agent_id", ["system_ai", "system_ai_delegation"])
+def test_system_ai_cannot_delegate_to_itself(world, monkeypatch, agent_id):
+    from routing_system import _delegate_unified
+
+    queued = _fake_system_runner(monkeypatch)
+    tc.set_current_agent_id(agent_id)
+    tc.set_call_channel("agent", override=True)
+    result = _delegate_unified({"scope": "system", "message": "되돌려", "from_agent": "앱"},
+                               world.project_path)
+    assert result["error_type"] == "delegation_cycle"
+    assert not queued
+
+
 # ── ⑨ 위임의 실행 범위 지정(2026-10-05): role·allowed·context — allowed 는 좁히기만·상속 ──
 
 def test_allowed_narrows_only_and_inherits(world):

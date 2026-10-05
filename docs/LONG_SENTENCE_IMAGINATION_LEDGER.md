@@ -61,7 +61,7 @@
 상세 설명이 필요하면 이 표 아래에 회차별 절을 둔다. 1회차에는 가이드에서 실제로 도움이 된 절,
 모호하거나 불필요했던 절과 빠진 지침도 기록한다.
 
-## 17회차 — 시설 예약 시간구간 감사 (2026-10-05, 완료·코어 수리 없음)
+## 17회차 — 시설 예약 시간구간 감사 (2026-10-05, 훈련 완료·후속 수리)
 
 합성 예약 2,400건(CSV/JSON)·방240·점검480으로 다대다 시간구간 결합, 중복 없는 영향 집계,
 E 건물만 준비시간15분을 더하는 조건 변경을 시험했다. 사전 기대·자연어 요청을 고정한 뒤
@@ -91,14 +91,16 @@ AI 변형의 원자료4개 재조회·기본조건 재계산은 관측됐지만,
 [보고서·재현 자료](experiments/long_sentence_imagination/round_17/report.md).
 로컬 전체 증거: `outputs/long_sentence_imagination/2026-10-05_17회차/`.
 
+후속 수리(2026-10-05): 평가 발췌의 중간 검증 보존·groupby 순수 효과·독립 비교 지시를 수리했다. 원래 기본/변형과 새 45분 조건 전건 대조, non-system 8,796 통과·1 skip, 관련 경계 72 통과. 실제 모델 재평가와 절감량은 미측정. [수리·검증 기록](experiments/long_sentence_imagination/round_17/report.md#후속-수리--2026-10-05).
+
 ## 갭 원장
 
 예시 ID를 실제 발견으로 등록하지 않는다.
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
-| L17-1 | 계약 공백 — groupby의 정적 효과 unknown이 집계 함수의 람다 조합을 거절 | 17회차 `repro/groupby_in_lambda.ibl` → PURE_EXPRESSION, 주 P2의 내부 모델 호출 사전 판정도 미상. 반면 read+groupby reuse는 2/2 성공 | 확인됨·미수리 — 정적/실행 효과 계약 일치 후보. 주/변형 결과는 정상 | [17회차 보고서](experiments/long_sentence_imagination/round_17/report.md) |
-| L17-2 | 훈련 설계 공백 — 다른 실행자 결과 금지가 자기 직전 결과까지 금지로 읽힐 수 있음 | ep4336이 원자료4개·기본 조건을 재계산하고 기본 결과 미열람을 명시. 훈련자만 P1 참조 사용 | 재계산은 사실, 자발적 재사용 실패 인과는 미확정. 다음 요청에서 자기 결과 허용 명시 | [17회차 보고서](experiments/long_sentence_imagination/round_17/report.md) |
+| L17-1 | 계약 공백 — groupby의 정적 효과 unknown이 집계 함수의 람다 조합을 거절 | 17회차 `repro/groupby_in_lambda.ibl` → PURE_EXPRESSION, 주 P2의 내부 모델 호출 사전 판정도 미상. 반면 read+groupby reuse는 2/2 성공 | 수리됨(2026-10-05) — 사전 effects=pure, 람다 조합·읽기 재사용·실패 유지 회귀. 최초 관측은 보존 | [17회차 보고서](experiments/long_sentence_imagination/round_17/report.md) |
+| L17-2 | 훈련 설계 공백 — 다른 실행자 결과 금지가 자기 직전 결과까지 금지로 읽힐 수 있음 | ep4336이 원자료4개·기본 조건을 재계산하고 기본 결과 미열람을 명시. 훈련자만 P1 참조 사용 | 지시 수리됨(2026-10-05) — 자기 직전 결과 허용을 가이드에 명시. 최초 재계산의 인과·실제 절감은 미확정 | [17회차 보고서](experiments/long_sentence_imagination/round_17/report.md) |
 | L1-1 | 문법·값 계약 공백 — 정적 검사기 null 좁힘 없음(삼항·`[if]`+return·변수 보간) | `$it.a == null ? "-" : text($it.a)` → TYPE; `[if:…==null]{return}` 뒤 `text()` → TYPE; `f"${v}"` → FORMAT_TYPE. 우회 `json()` (`round_1/repro/narrow_*`) | 수리됨 | `674d65ee` · v2·v4 검사, null 삼항·조기 반환·보간, 전체·누락 변형 통과
 | L1-2 | 문법·값 계약 공백 — filter 판별 술어 뒤 합집합 레코드 좁힘 없음 | collect 결과를 `not $v.ok` 로 거른 뒤 `$it.error` → MISSING_FIELD error. 우회 `get(…,"")` (`round_1/drafts/v4.ibl` 93행) | 수리됨 | `674d65ee` · v4 error 직접 접근, 전체·누락 변형·읽기 3건 reuse 통과
 | L1-3 | 구현 결함+계약 공백 — `self:read .data` 형식별 불선언·CSV 는 구판 봉투 누수·observed_returns 가 내용 키로 오염 | CSV `.data`={success,items,message,path,count}(본문 3중), JSON `.data`=파싱 값(미문서), target_description null, observed keys=`version,run,config,root,snapshot…` (`repro/read_*`) | 수리됨 | `674d65ee` · JSON·CSV/TSV·회원 읽기·내용 키 차단, 새 인용/빈칸/0 변형 통과
@@ -175,7 +177,7 @@ AI 변형의 원자료4개 재조회·기본조건 재계산은 관측됐지만,
 | L15-3 | 구현 결함 — 부정한 시스템 수리 지시도 REPAIR 단서로 탐지 | ep4201 REPAIR→의식이 THINK로 정정. “백엔드는 수정하지 말고…” cue=true [재현](experiments/long_sentence_imagination/round_15/repair_cue_repro.json) | 수리됨 — 금지·인용·가정과 긍정 실행 의도 구별, R3·R4 | `6a4fd95a` (2026-10-01): 부정·인용·가정 단서 제외, 명시 태그·긍정 요청 유지 |
 
 | L16-1 | 구현 결함 — 최종 평가의 네이티브/작업대 호출 병합에서 같은 호출을 중복 계수 | ep4215 실제 11회→평가 22회, 전송 project_path/정규화 edition 차이. 최소 1+1→2 [재현](experiments/long_sentence_imagination/round_16/repro_evaluation_result.json) | 수리됨 — 작성 인자 정규화·공통 결과 참조와 일대일 대응 | 2026-10-01 후속 수리. 원 기록 ep4215 22→11, 병렬/재시도/의미 차이 보존. 보고서 후속 절 |
-| L16-2 | 증거 전달 결함 — 최종 예산에서 뒤쪽 실행·저장 검증 결과 본문 소실 | 실제 verified:true/320행/건수·합계가 평가 입력에서 누락, C1/C5 UNKNOWN. [근거](experiments/long_sentence_imagination/round_16/evaluation_gap.json) | 수리됨 — 헤더 예약 후 결과 예산 배분·본문 앞/뒤 발췌 | 2026-10-01 후속 수리. ep4215~4218 모두 24,000자 안에 verified 근거 보존. UNKNOWN 안전성 유지 |
+| L16-2 | 증거 전달 결함 — 최종 예산에서 뒤쪽 실행·저장 검증 결과 본문 소실 | 실제 verified:true/320행/건수·합계가 평가 입력에서 누락, C1/C5 UNKNOWN. [근거](experiments/long_sentence_imagination/round_16/evaluation_gap.json) | 수리됨 — 헤더 예약·예산 배분. 2026-10-05 추가: v2 중복 봉투 제거·큰 필드 명시 생략으로 중간 검증 보존 | 2026-10-01 후속 수리. ep4215~4218 모두 24,000자 안에 verified 근거 보존. UNKNOWN 안전성 유지 |
 | L16-3 | 훈련자 실험 설계 오류 — warm 복원에서 pursuit 과제 원장 누락 | cold 과제에 warm 연결, native도 seed와 달라짐. [상태 대조](experiments/long_sentence_imagination/round_16/pursuit_snapshot_comparison.json) | 절차·하네스 보완 — 부분 복원 차단·사전 상태/사후 세션 검사 | 2026-10-01 후속 수리. 원래 비교 무효 유지, 재실행 없음. 정상 제품 결함·언어 개정으로 세지 않음 |
 
 상태는 미확정 / 확인됨 / 수리 중 / 수리됨 / 수용된 한계로 구분한다.

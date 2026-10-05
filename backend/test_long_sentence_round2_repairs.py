@@ -100,7 +100,7 @@ def test_other_preserved_value_reproductions(registry, name):
 
 
 @pytest.mark.parametrize('name,expected', [('reuse_after_write', 1), ('reuse_no_write', 1),
-                                         ('reuse_after_groupby', 2)])
+                                         ('reuse_after_groupby', 1)])
 def test_preserved_reuse_reproductions(tmp_path, name, expected):
     reg = load_registry(str(tmp_path))
     inputs = {'폴더': str(FIXTURE / 'input'), '출력': str(tmp_path / 'scratch.txt')}
@@ -110,6 +110,13 @@ def test_preserved_reuse_reproductions(tmp_path, name, expected):
     result = run((FIXTURE / 'repro' / (name + '_b.ibl')).read_text(), reg, inputs,
                  reusable=reusable_receipts(tmp_path / 'runs', original), reuse_run=original)
     assert result['reuse']['reused_calls'] == expected
+    if name == 'reuse_after_groupby':
+        # groupby는 이제 순수 계산이다. 외부 읽기 1건만 영수증을 복원하고 집계는 계산한다.
+        assert result['value']['g'] == [{'k': 'a', '합': 3}]
+        reused = [e for e in result['evidence'] if e['kind'] == 'receipt_reused']
+        assert len(reused) == 1
+        events = {e['id']: e for e in result['evidence']}
+        assert events[reused[0]['parents'][0]]['action'] == 'self:read'
 
 
 def test_unmeasured_model_failures_are_not_reported_as_zero():

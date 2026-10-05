@@ -466,7 +466,7 @@ return {목록:$결과,앞쪽:$결과[:1],표시:join(", ",$결과)}
 문자열 변환·길이·슬라이싱은 NFC를 사용해 맥의 NFD 한글도 음절 단위로 다룬다.
 파일 접근에는 목록이 반환한 원래 `path`를 사용한다.
 
-`map`은 각 원소를 변환하고 `filter`는 Bool 조건으로 거른다. 콜백은 순수식이며 공통 예산을 쓴다.
+`map`은 변환, `filter`는 Bool 필터다. 콜백은 순수식(`groupby` 집계 함수 포함)이며 공통 예산을 쓴다.
 <!-- example:pure_list_transform -->
 ```ibl
 [{t:" 강의 , 음악 "}] >> [table:compute]{set:($r)=>{

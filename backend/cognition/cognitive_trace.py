@@ -119,18 +119,55 @@ def _result_evidence(result: Any) -> str:
     발췌가 `{"success": true, "steps_completed"...}` 포장에서 끝나면 평가자가
     증거 없이 자기 파라미터 지식으로 사실성을 판정하는 사고가 난다
     (2026-07-03 fable5 오판: 실제 검색 증거를 못 보고 실존 모델을 허구로 판정)."""
-    if not isinstance(result, str):
-        result = str(result)
     try:
         unwrapped = _unwrap_payload(result)
     except Exception:
-        return result
+        return str(result)
     if isinstance(unwrapped, str):
         return unwrapped
+    if isinstance(unwrapped, dict) and unwrapped.get("edition") == 2 and "value" in unwrapped:
+        # 실행 봉투의 전송 사본·재개 안내가 업무 값 중간의 검증을 밀어내지 않게 한다.
+        # 성공/실패·원천 완전성·진단은 보존한다. 원본은 result_ref로 계속 회수 가능하다.
+        unwrapped = {k: v for k, v in unwrapped.items() if k not in {
+            "value_wire", "continuation", "inputs_resolved", "_hint", "_display"}}
+        if "evidence_summary" in unwrapped:
+            unwrapped.pop("evidence", None)
+        ref = unwrapped.get("result_ref")
+        if isinstance(ref, dict):
+            unwrapped["result_ref"] = {k: ref[k] for k in ("id", "chars", "value_chars") if k in ref}
     try:
         return json.dumps(unwrapped, ensure_ascii=False)
     except Exception:
-        return result
+        return str(result)
+
+
+def _bounded_result_evidence(body: str, limit: int) -> str:
+    """작은 업무 필드는 온전히 남기고 큰 필드만 경로·크기로 생략 표시한다.
+
+    검증 이름/업무 도메인을 추측하지 않는다. 거짓·null·오류도 원값 그대로다.
+    여전히 큰 결과나 비구조 결과는 앞뒤 발췌와 명시적 생략 고지로 물러난다.
+    """
+    try:
+        record = json.loads(body)
+    except (ValueError, TypeError):
+        record = None
+    if isinstance(record, dict) and record.get("edition") == 2 and isinstance(record.get("value"), dict):
+        value = record["value"]
+        fields = sorted(value, key=lambda k: len(json.dumps(value[k], ensure_ascii=False)), reverse=True)
+        for key in fields:
+            old = json.dumps(value[key], ensure_ascii=False)
+            omitted = {"_evaluation_omitted": True, "path": ["value", key], "chars": len(old)}
+            if len(json.dumps(omitted, ensure_ascii=False)) >= len(old):
+                continue
+            value[key] = omitted
+            body = json.dumps(record, ensure_ascii=False)
+            if len(body) <= limit:
+                return body
+    marker = " …[본문 일부 생략]… "
+    if limit <= len(marker) + 1:
+        return "…"
+    size = limit - len(marker)
+    return body[:(size + 1) // 2] + marker + body[-(size // 2):]
 
 
 def serialize_tool_trace(
@@ -217,13 +254,7 @@ def serialize_tool_trace(
         lines.append(header)
         if body and limit:
             if len(body) > limit:
-                # 큰 결과 하나에서도 뒤쪽 실패·검증 정보를 함께 남긴다.
-                marker = " …[본문 일부 생략]… "
-                if limit > len(marker) + 1:
-                    size = limit - len(marker)
-                    body = body[:(size + 1) // 2] + marker + body[-(size // 2):]
-                else:
-                    body = "…"
+                body = _bounded_result_evidence(body, limit)
                 omitted = True
             lines.append("    → " + body)
         elif entry["result"]:

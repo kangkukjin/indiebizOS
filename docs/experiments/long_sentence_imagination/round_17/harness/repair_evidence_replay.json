@@ -1,0 +1,18 @@
+[
+  {
+    "version": "before",
+    "calls": 10,
+    "chars": 23996,
+    "saved": false,
+    "match": false,
+    "metamorphic": false
+  },
+  {
+    "version": "after",
+    "calls": 10,
+    "chars": 23429,
+    "saved": true,
+    "match": true,
+    "metamorphic": true
+  }
+]

@@ -416,3 +416,27 @@ def test_rejected_malformed_native_input_does_not_break_evaluation(supervisor):
     calls = execution_trace(supervisor, [{'name': 'execute_ibl', 'input': {'code': 123},
                                          'result': 'invalid code type', 'is_error': True}])
     assert len(calls) == 1 and calls[0]['is_error']
+
+
+@pytest.mark.parametrize('matched', [True, False])
+def test_first_evaluation_receives_round17_checks_without_repair(supervisor, monkeypatch, matched):
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[1] / 'docs/experiments/long_sentence_imagination/round_17/harness/evaluation_gap.json'
+    receipt = json.loads(path.read_text())['before_evaluation_result']
+    receipt['value']['verification']['exact_content_match'] = matched
+    for i in range(9):
+        key = supervisor._start('execute_ibl', {'code': f'return {i}'})
+        supervisor._finish(key, json.dumps({'success': True, 'value': {'large': 'x' * 6000}}))
+    key = supervisor._start('execute_ibl', {'code': 'return $receipt'})
+    supervisor._finish(key, json.dumps(receipt))
+    prompts = []
+    def evaluate(prompt, **kwargs):
+        prompts.append(prompt)
+        assert '"saved_files_read_back": 3' in prompt
+        assert '"exact_content_match": ' + str(matched).lower() in prompt
+        assert '"W_overlaps_unchanged": true' in prompt
+        return 'UNKNOWN\n다른 조건은 미검증입니다.'
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    finish(supervisor, '저장 검증을 확인해 주세요')
+    assert len(prompts) == 1
+    assert tc.get_goal_eval_outcome()['status'] == 'UNKNOWN'

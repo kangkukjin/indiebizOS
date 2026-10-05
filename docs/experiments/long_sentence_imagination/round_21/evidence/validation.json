@@ -1,0 +1,50 @@
+{
+  "trainer/index_base": {
+    "documents": 14,
+    "chunks": 469,
+    "source_chars": 207245,
+    "all_fields_equal": true
+  },
+  "trainer/index_variant": {
+    "documents": 14,
+    "chunks": 301,
+    "source_chars": 207245,
+    "all_fields_equal": true
+  },
+  "agent/base": {
+    "documents": 14,
+    "chunks": 469,
+    "source_chars": 207245,
+    "all_fields_equal": true
+  },
+  "agent/variant": {
+    "documents": 14,
+    "chunks": 301,
+    "source_chars": 207245,
+    "all_fields_equal": true
+  },
+  "trainer/base_after": {
+    "documents": 14,
+    "chunks": 469,
+    "source_chars": 207245,
+    "all_fields_equal": true
+  },
+  "trainer/variant_after": {
+    "documents": 14,
+    "chunks": 301,
+    "source_chars": 207245,
+    "all_fields_equal": true
+  },
+  "trainer/record_after": {
+    "documents": 14,
+    "chunks": 469,
+    "source_chars": 207245,
+    "all_fields_equal": true
+  },
+  "trainer/record_variant_after": {
+    "documents": 14,
+    "chunks": 301,
+    "source_chars": 207245,
+    "all_fields_equal": true
+  }
+}

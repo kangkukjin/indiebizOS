@@ -2403,7 +2403,7 @@
   "table:chunk": {
    "fields": {
     "description": "51e09798912d",
-    "target_description": "5968b40062fd",
+    "target_description": "95c761aad84c",
     "implementation": "38414c92fd09",
     "returns": "5450ffb2cf8a",
     "target_key": "eb1e91e44529",
@@ -2412,7 +2412,7 @@
     "router": "ebbb1532efbc",
     "tool": "17c3086f634b"
    },
-   "reviewed": "2026-09-25",
+   "reviewed": "2026-10-05",
    "examples": 4
   },
   "table:compute": {

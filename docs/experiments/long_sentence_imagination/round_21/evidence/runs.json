@@ -1,0 +1,602 @@
+{
+  "base_after": {
+    "success": true,
+    "executed": true,
+    "source_complete": true,
+    "run_status": "completed",
+    "usage": {
+      "steps": 307401,
+      "rows": 970,
+      "elapsed_ms": 1222,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 11,
+          "steps": 267097
+        },
+        {
+          "line": 23,
+          "steps": 15032
+        },
+        {
+          "line": 24,
+          "steps": 8396
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "resume": {
+      "run_id": "e8339be420a44008a53df79eb1e7c23c"
+    },
+    "evidence_summary": {
+      "events": 1730,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "http_elapsed": 1.404431916307658,
+    "source_sha256": "e6e3d28e936f7d2215086958bf2ec9989ace068f4d13598c7c34eca8d2097456",
+    "inputs": {
+      "prepared": {
+        "$ref": "d4d3ae2ab6acdd063452c1611655219ec61883470210c37007323b6dae03aca5"
+      },
+      "size": 512,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/base_after"
+    }
+  },
+  "edges": {
+    "success": true,
+    "executed": true,
+    "source_complete": true,
+    "run_status": "completed",
+    "usage": {
+      "steps": 13936,
+      "rows": 84,
+      "elapsed_ms": 651
+    },
+    "resume": {
+      "run_id": "c9cd9cc8dec04d3789d1c286e9a37ff6"
+    },
+    "evidence_summary": {
+      "events": 1911,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "http_elapsed": 0.722269790712744,
+    "source_sha256": "e6e3d28e936f7d2215086958bf2ec9989ace068f4d13598c7c34eca8d2097456",
+    "inputs": {
+      "size": 512,
+      "overlap": 64,
+      "lengths": [
+        0,
+        1,
+        63,
+        64,
+        65,
+        447,
+        448,
+        449,
+        511,
+        512,
+        513,
+        895,
+        896,
+        897,
+        959,
+        960,
+        961
+      ]
+    }
+  },
+  "index_base": {
+    "success": true,
+    "executed": true,
+    "source_complete": true,
+    "run_status": "completed",
+    "usage": {
+      "steps": 307401,
+      "rows": 970,
+      "elapsed_ms": 1218,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 11,
+          "steps": 267097
+        },
+        {
+          "line": 23,
+          "steps": 15032
+        },
+        {
+          "line": 24,
+          "steps": 8396
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "resume": {
+      "run_id": "382f26ef927944b6a00d10e2908557d0"
+    },
+    "evidence_summary": {
+      "events": 1730,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "http_elapsed": 1.3976322920061648,
+    "source_sha256": "e6e3d28e936f7d2215086958bf2ec9989ace068f4d13598c7c34eca8d2097456",
+    "inputs": {
+      "prepared": {
+        "$ref": "d4d3ae2ab6acdd063452c1611655219ec61883470210c37007323b6dae03aca5"
+      },
+      "size": 512,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/index_base"
+    }
+  },
+  "index_check": {
+    "executed": false,
+    "issues": [],
+    "http_elapsed": 0.36903737485408783,
+    "source_sha256": "e6e3d28e936f7d2215086958bf2ec9989ace068f4d13598c7c34eca8d2097456",
+    "inputs": {
+      "prepared": {
+        "$ref": "d4d3ae2ab6acdd063452c1611655219ec61883470210c37007323b6dae03aca5"
+      },
+      "size": 512,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/index_base"
+    }
+  },
+  "index_variant": {
+    "success": true,
+    "executed": true,
+    "source_complete": true,
+    "run_status": "completed",
+    "usage": {
+      "steps": 271713,
+      "rows": 634,
+      "elapsed_ms": 1038,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 11,
+          "steps": 245257
+        },
+        {
+          "line": 23,
+          "steps": 9656
+        },
+        {
+          "line": 24,
+          "steps": 5300
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "resume": {
+      "run_id": "c3ec0170473a42f69c842cb3a6072111"
+    },
+    "evidence_summary": {
+      "events": 1730,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "http_elapsed": 1.1980115002952516,
+    "source_sha256": "e6e3d28e936f7d2215086958bf2ec9989ace068f4d13598c7c34eca8d2097456",
+    "inputs": {
+      "prepared": {
+        "$ref": "d4d3ae2ab6acdd063452c1611655219ec61883470210c37007323b6dae03aca5"
+      },
+      "size": 777,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/index_variant"
+    }
+  },
+  "prepare": {
+    "success": true,
+    "executed": true,
+    "source_complete": true,
+    "run_status": "completed",
+    "usage": {
+      "steps": 23,
+      "rows": 0,
+      "elapsed_ms": 500
+    },
+    "resume": {
+      "run_id": "e7f0b42c872043b2a1b7c54fab45c53f"
+    },
+    "evidence_summary": {
+      "events": 23,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "http_elapsed": 0.6800926667638123,
+    "source_sha256": "5ce66ff8c811fe25064d1e5522794b15fde30c34385ba29d927f838003237047",
+    "inputs": {
+      "source": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/input/documents.json",
+      "queries": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/input/queries.json",
+      "size": 512,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/base"
+    }
+  },
+  "prepare_check": {
+    "executed": false,
+    "issues": [],
+    "http_elapsed": 0.3132259580306709,
+    "source_sha256": "5ce66ff8c811fe25064d1e5522794b15fde30c34385ba29d927f838003237047",
+    "inputs": {
+      "source": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/input/documents.json",
+      "queries": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/input/queries.json",
+      "size": 512,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/base"
+    }
+  },
+  "record": {
+    "success": false,
+    "executed": true,
+    "source_complete": false,
+    "run_status": "interrupted",
+    "usage": {
+      "steps": 283115,
+      "rows": 950,
+      "elapsed_ms": 907,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 11,
+          "steps": 267048
+        },
+        {
+          "line": 7,
+          "steps": 7956
+        },
+        {
+          "line": 14,
+          "steps": 1980
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "diagnostic": {
+      "code": "TOOL",
+      "kind": "partial",
+      "message": "chunk: 본문 문자열을 찾지 못했습니다 (후보 키: ['text'], 받은 키: ['id', 'title', 'text']). field 로 지정하세요.",
+      "frames": [],
+      "has_partial": true,
+      "evidence": [
+        1453
+      ],
+      "details": {
+        "coverage": [
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "failed",
+          "failed"
+        ],
+        "successful_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "errors": {
+          "12": {
+            "code": "TOOL",
+            "kind": "runtime",
+            "message": "chunk: 본문 문자열을 찾지 못했습니다 (후보 키: ['text'], 받은 키: ['id', 'title', 'text']). field 로 지정하세요.",
+            "frames": [
+              {
+                "function": "문서색인",
+                "call": {
+                  "source_hash": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+                  "start": 959,
+                  "end": 1005,
+                  "line": 18,
+                  "column": 45
+                },
+                "definition": {
+                  "source_hash": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+                  "start": 16,
+                  "end": 888,
+                  "line": 2,
+                  "column": 1
+                }
+              }
+            ],
+            "has_partial": false,
+            "partial": null,
+            "evidence": [
+              1440
+            ],
+            "details": {},
+            "source_span": {
+              "source_hash": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+              "start": 67,
+              "end": 133,
+              "line": 3,
+              "column": 18
+            }
+          },
+          "13": {
+            "code": "TOOL",
+            "kind": "runtime",
+            "message": "chunk: 본문 문자열을 찾지 못했습니다 (후보 키: ['text'], 받은 키: ['id', 'title', 'text']). field 로 지정하세요.",
+            "frames": [
+              {
+                "function": "문서색인",
+                "call": {
+                  "source_hash": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+                  "start": 959,
+                  "end": 1005,
+                  "line": 18,
+                  "column": 45
+                },
+                "definition": {
+                  "source_hash": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+                  "start": 16,
+                  "end": 888,
+                  "line": 2,
+                  "column": 1
+                }
+              }
+            ],
+            "has_partial": false,
+            "partial": null,
+            "evidence": [
+              1448
+            ],
+            "details": {},
+            "source_span": {
+              "source_hash": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+              "start": 67,
+              "end": 133,
+              "line": 3,
+              "column": 18
+            }
+          }
+        }
+      },
+      "source_span": {
+        "source_hash": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+        "start": 67,
+        "end": 133,
+        "line": 3,
+        "column": 18
+      }
+    },
+    "resume": {
+      "run_id": "365c7dc08f6d4d7ab7622311d8d820a5"
+    },
+    "evidence_summary": {
+      "events": 1453,
+      "source_complete": false,
+      "tool_failures": 2,
+      "source_failures": 0,
+      "failures": [
+        {
+          "id": 1433,
+          "action": "table:chunk",
+          "code": "TOOL",
+          "failure_kind": "runtime",
+          "incomplete": false
+        },
+        {
+          "id": 1441,
+          "action": "table:chunk",
+          "code": "TOOL",
+          "failure_kind": "runtime",
+          "incomplete": false
+        }
+      ],
+      "failures_omitted": 0
+    },
+    "http_elapsed": 1.1469962908886373,
+    "source_sha256": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+    "inputs": {
+      "prepared": {
+        "$ref": "d4d3ae2ab6acdd063452c1611655219ec61883470210c37007323b6dae03aca5"
+      },
+      "size": 512,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/record"
+    }
+  },
+  "record_after": {
+    "success": true,
+    "executed": true,
+    "source_complete": true,
+    "run_status": "completed",
+    "usage": {
+      "steps": 307401,
+      "rows": 970,
+      "elapsed_ms": 1309,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 11,
+          "steps": 267097
+        },
+        {
+          "line": 23,
+          "steps": 15032
+        },
+        {
+          "line": 24,
+          "steps": 8396
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "resume": {
+      "run_id": "f41515d477c541c484be2da7cdbdc763"
+    },
+    "evidence_summary": {
+      "events": 1730,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "http_elapsed": 1.5078330826945603,
+    "source_sha256": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+    "inputs": {
+      "prepared": {
+        "$ref": "d4d3ae2ab6acdd063452c1611655219ec61883470210c37007323b6dae03aca5"
+      },
+      "size": 512,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/record_after"
+    }
+  },
+  "record_check": {
+    "executed": false,
+    "issues": [],
+    "http_elapsed": 0.3242291668429971,
+    "source_sha256": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+    "inputs": {
+      "prepared": {
+        "$ref": "d4d3ae2ab6acdd063452c1611655219ec61883470210c37007323b6dae03aca5"
+      },
+      "size": 512,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/record"
+    }
+  },
+  "record_variant_after": {
+    "success": true,
+    "executed": true,
+    "source_complete": true,
+    "run_status": "completed",
+    "usage": {
+      "steps": 271713,
+      "rows": 634,
+      "elapsed_ms": 1072,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 11,
+          "steps": 245257
+        },
+        {
+          "line": 23,
+          "steps": 9656
+        },
+        {
+          "line": 24,
+          "steps": 5300
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "resume": {
+      "run_id": "cc52f58bc38f4f53aa83ee8d1ddd69cc"
+    },
+    "evidence_summary": {
+      "events": 1730,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "http_elapsed": 1.2393949581310153,
+    "source_sha256": "93565dd95e0e239825cfe8c0885f59146c97de51e6a516665f0602f3602752e0",
+    "inputs": {
+      "prepared": {
+        "$ref": "d4d3ae2ab6acdd063452c1611655219ec61883470210c37007323b6dae03aca5"
+      },
+      "size": 777,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/record_variant_after"
+    }
+  },
+  "variant_after": {
+    "success": true,
+    "executed": true,
+    "source_complete": true,
+    "run_status": "completed",
+    "usage": {
+      "steps": 271713,
+      "rows": 634,
+      "elapsed_ms": 1188,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 11,
+          "steps": 245257
+        },
+        {
+          "line": 23,
+          "steps": 9656
+        },
+        {
+          "line": 24,
+          "steps": 5300
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "resume": {
+      "run_id": "05d4afaf3fd342e6987a7ea4ccb44446"
+    },
+    "evidence_summary": {
+      "events": 1730,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "http_elapsed": 1.3551842076703906,
+    "source_sha256": "e6e3d28e936f7d2215086958bf2ec9989ace068f4d13598c7c34eca8d2097456",
+    "inputs": {
+      "prepared": {
+        "$ref": "d4d3ae2ab6acdd063452c1611655219ec61883470210c37007323b6dae03aca5"
+      },
+      "size": 777,
+      "overlap": 64,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/trainer/variant_after"
+    }
+  }
+}

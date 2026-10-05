@@ -1,0 +1,1 @@
+같은 매뉴얼 색인의 조각 크기만777자로 바꾸고 겹침64자는 유지해줘. 나머지 조건·검증은 모두 같고 새 index.json과 report.json을 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_21회차/agent/variant에 저장해줘. 원자료는 바뀌지 않았다. 네 자신의 직전 결과·프로그램·중간 참조는 재사용해도 된다. 다른 실행자의 trainer/harness/drafts·정답·훈련 보고서는 참조하지 마. 기본 결과 파일은 보존해줘.

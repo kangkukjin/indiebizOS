@@ -1,0 +1,32 @@
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [ 17%]
+........................................................................ [ 34%]
+........................................................................ [ 51%]
+........................................................................ [ 69%]
+........................................................................ [ 86%]
+........................................................                 [100%]
+=============================== warnings summary ===============================
+backend/test_episode4064_repairs.py::test_mcp_combined_call_keeps_repeat_guard
+  /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: IncompleteFieldDefinitionWarning: Field 'lifespan' has an incomplete definition: its annotation contains an unresolved forward reference, so settings sources may fail to correctly resolve its value. Call `model_rebuild()` on the model where the field is defined, once all the referenced types are defined.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+29.78s call     backend/test_vocabulary_bundle_split.py::test_split_archives_register_without_any_original_bundle
+14.30s call     backend/test_idiom_exposure_levers_2026_09_09.py::test_validate_catalog_runs_every_producer_example_through_the_gate
+13.03s call     backend/test_vocabulary_archive.py::test_real_cache_reset_updates_catalog_and_gate
+12.51s call     backend/test_vocabulary_archive.py::test_roundtrip_seed_sleep_wake
+11.30s call     backend/test_imagination_round58_repairs.py::test_builder_guards_every_unary_flow_without_action_name_list
+9.74s call     backend/test_imagination_round74_residual.py::test_user_path_effects_gate_is_clean_on_live_tree
+7.08s call     backend/test_vocabulary_archive.py::test_failed_seed_restores_catalog_and_selection
+6.38s call     backend/test_imagination_round78_79_place.py::test_silent_clamp_gate_sees_ranges_and_named_caps
+3.60s call     backend/test_imagination_round78_79_memory.py::test_recent_chats_filters_are_refused_with_guidance
+3.36s call     backend/test_chunk_ops.py::test_full_document_index_with_empty_sources[False]
+3.01s call     backend/test_imagination_round72_followup.py::test_live_vocabulary_has_no_undeclared_dispatcher_reads
+2.91s call     backend/test_imagination_round72_followup.py::test_pipe_collision_names_the_receiver
+2.86s call     backend/test_long_sentence_round18_repairs.py::test_call_identity_walks_arguments_once
+2.83s call     backend/test_episode4064_repairs.py::test_missing_file_is_tool_failure_with_original_cause
+2.66s setup    backend/test_imagination_round58_repairs.py::test_unary_pipeline_equals_explicit_input[groupby-by:"category",agg:{total:["sum","amount"]}-rows0-expected0]
+416 passed, 1 warning in 44.65s

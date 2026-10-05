@@ -307,9 +307,9 @@ $합계 = [{분류:"식비",금액:30},{분류:"식비",금액:20}] >> [table:gr
 $합계.items >> [table:sort]{by:"합계",descending:true}
 ```
 
-`chunk`는 평문·목록·본문 봉투를 받아 Record의 `.items`로 덩이를 낸다. 빈 목록은 정상
-0건이며 본문이 없거나 빈 행을 생략하면 행 수와 원래 인덱스를 신고한다. 일부 원문을 잃은
-결과는 `PARTIAL_SOURCE`이고, catch에서 `$error.partial`을 사용해도 불완전 표지는 남는다.
+`chunk`는 평문·목록·봉투를 받아 `.items`로 덩이를 낸다. 빈 문자열·목록은 정상 0건,
+`by:"chars"`는 평문·`text`·`field` 본문의 공백도 보존한다. items의 누락·빈 행은
+생략 수·원래 인덱스와 `PARTIAL_SOURCE`로 신고하며, catch의 `$error.partial`에도 불완전 표지가 남는다.
 
 `flatten`도 모든 중첩 목록이 비어 있으면 정상 0건을 반환한다. 목록이 아닌 행을 생략하면
 `rows_dropped`와 `skipped_row_indices`로 원래 위치를 알린다. `field:"refs"`로 items 봉투를

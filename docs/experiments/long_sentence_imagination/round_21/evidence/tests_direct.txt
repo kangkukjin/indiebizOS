@@ -1,0 +1,7 @@
+....................                                                     [100%]
+============================= slowest 15 durations =============================
+2.28s call     backend/test_chunk_ops.py::test_full_document_index_with_empty_sources[False]
+0.46s call     backend/test_chunk_ops.py::test_full_document_index_with_empty_sources[True]
+
+(13 durations < 0.1s hidden.)
+20 passed in 3.47s

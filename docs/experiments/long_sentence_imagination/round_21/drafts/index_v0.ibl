@@ -1,0 +1,30 @@
+#!ibl edition=2
+[def:문서색인]($doc,$size,$overlap) {
+  $split=$doc.text >> [table:chunk]{by:"chars",size:$size,overlap:$overlap}
+  $parts=$split.items
+  $rows=$parts >> [table:each] {
+    $c=$it
+    return {doc_id:$doc.id,index:$c.index,start:$c.start,end:$c.start+$c.chars,chars:$c.chars,text:$c.text}
+  }
+  $checks=$rows >> [table:each] {
+    $c=$it
+    return $c.text==$doc.text[$c.start:$c.end] and $c.chars==len($c.text) and $c.chars<=$size and $c.end<=len($doc.text) and ($c.index==0 ? $c.start==0 : $c.start==$rows[$c.index-1].end-$overlap and $rows[$c.index-1].end<len($doc.text))
+  }
+  $covered=len($rows)==0 ? len($doc.text)==0 : $rows[-1].end==len($doc.text)
+  $chars=sum(map($rows,($r)=>$r.chars))
+  return {id:$doc.id,source_chars:len($doc.text),chunks:len($rows),chunk_chars:$chars,duplicate_chars:$chars-len($doc.text),verified:all($checks) and $covered,items:$rows}
+}
+$docs=$prepared.documents
+$indexed=$docs >> [table:each]{parallel:3} {[fn:문서색인]{doc:$it,size:$size,overlap:$overlap}}
+$chunks=$indexed >> [table:each]{mode:"flat_map"}{return $it.items}
+$stats=map($indexed,($d)=>{id:$d.id,source_chars:$d.source_chars,chunks:$d.chunks,chunk_chars:$d.chunk_chars,duplicate_chars:$d.duplicate_chars,verified:$d.verified})
+$queries=$prepared.queries >> [table:each] {
+  $term=$it
+  $found=filter($chunks,($c)=>contains($c.text,$term,true))
+  return {query:$term,documents:unique(map($found,($c)=>$c.doc_id))}
+}
+$index={chunks:$chunks,documents:$stats}
+$report={queries:$queries,verified:all(map($stats,($d)=>$d.verified)),documents:len($docs),source_chars:sum(map($stats,($d)=>$d.source_chars)),chunks:len($chunks),chunk_chars:sum(map($stats,($d)=>$d.chunk_chars)),duplicate_chars:sum(map($stats,($d)=>$d.duplicate_chars))}
+$writes=[self:write]{path:$out+"/index.json",content:json($index)} & [self:write]{path:$out+"/report.json",content:json($report)}
+$back=[self:read]{path:$writes[0].path} & [self:read]{path:$writes[1].path}
+return {report:$report,index_verified:$back[0].data==$index,report_verified:$back[1].data==$report,stats:$stats}

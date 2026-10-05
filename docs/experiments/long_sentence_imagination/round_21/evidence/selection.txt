@@ -1,0 +1,25 @@
+변경 20 파일, backend 모듈 0개 → 전이 시험 파일 24/566 (4%)
+  test_chunk_ops: 변경된 시험
+  test_corpus_current_idiom_teaching: 경로 참조 data/ibl_nodes.yaml
+  test_data_ownership: 경로 참조 data/ibl_nodes.yaml
+  test_doc_drift: 경로 참조 data/ibl_nodes.yaml
+  test_episode4064_repairs: 경로 참조 data/guides/ibl_composition.md
+  test_episode4169_recall: 경로 참조 data/packages/installed/tools/data-ops/ibl_actions.yaml
+  test_grep_edit_topic_gate_2026_09_05: 경로 참조 data/packages/installed/tools/data-ops/ibl_actions.yaml
+  test_handler_error_contract: 경로 참조 data/packages/installed/tools/data-ops/ibl_actions.yaml
+  test_ibl_composition_teaching: 경로 참조 data/guides/ibl_composition.md
+  test_idiom_expansion_2026_09_09: 경로 참조 data/ibl_nodes.yaml
+  test_idiom_exposure_levers_2026_09_09: 경로 참조 data/ibl_nodes.yaml
+  test_imagination_round72_followup: 경로 참조 data/ibl_nodes.yaml
+  test_imagination_round73_residual: 경로 참조 data/ibl_nodes.yaml
+  test_imagination_round74_residual: 경로 참조 data/ibl_nodes.yaml
+  test_imagination_round78_79_forage: 경로 참조 data/packages/installed/tools/data-ops/ibl_actions.yaml
+  test_imagination_round78_79_memory: 경로 참조 data/ibl_nodes.yaml
+  test_imagination_round78_79_place: 경로 참조 data/ibl_nodes.yaml
+  test_long_sentence_round18_repairs: 경로 참조 data/ibl_nodes.yaml
+  test_vocabulary_archive: 경로 참조 data/ibl_nodes.yaml
+  test_vocabulary_bundle_split: 경로 참조 data/ibl_nodes.yaml
+  test_vocabulary_prompt: 경로 참조 data/ibl_nodes.yaml
+  test_vocabulary_state: 경로 참조 data/ibl_nodes.yaml
+  test_workspace_sessions: 경로 참조 data/packages/installed/tools/data-ops/ibl_actions.yaml
+  test_world_noun_refutable: 경로 참조 data/packages/installed/tools/data-ops/ibl_actions.yaml

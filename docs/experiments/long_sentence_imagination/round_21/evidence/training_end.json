@@ -1,0 +1,42 @@
+{
+  "at": "2026-10-05T22:54:53.453924+09:00",
+  "head": "0e85d86f96ac0baf72ac99380a77993f57cc457c",
+  "agent_tasks": [
+    {
+      "task_id": "task_sysai_64554ea8",
+      "state": "succeeded"
+    },
+    {
+      "task_id": "task_sysai_362bd9b5",
+      "state": "succeeded"
+    }
+  ],
+  "trainer_runs": {
+    "prepare": {
+      "run_id": "e7f0b42c872043b2a1b7c54fab45c53f",
+      "status": "completed",
+      "success": true
+    },
+    "index_base": {
+      "run_id": "382f26ef927944b6a00d10e2908557d0",
+      "status": "completed",
+      "success": true
+    },
+    "index_variant": {
+      "run_id": "c3ec0170473a42f69c842cb3a6072111",
+      "status": "completed",
+      "success": true
+    },
+    "edges": {
+      "run_id": "c9cd9cc8dec04d3789d1c286e9a37ff6",
+      "status": "completed",
+      "success": true
+    },
+    "record": {
+      "run_id": "365c7dc08f6d4d7ab7622311d8d820a5",
+      "status": "interrupted",
+      "success": false
+    }
+  },
+  "note": "record interrupted is the completed synchronous failure response; no queued recovery or background IBL task."
+}

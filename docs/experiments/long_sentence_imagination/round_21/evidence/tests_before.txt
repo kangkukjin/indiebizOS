@@ -1,0 +1,64 @@
+FF.FF..F..FF...F                                                         [100%]
+=================================== FAILURES ===================================
+____________ test_source_forms_keep_empty_and_whitespace[explicit-] ____________
+backend/test_chunk_ops.py:35: in test_source_forms_keep_empty_and_whitespace
+    assert actual['items'] == expected['items']
+E   AssertionError: assert [{'index': 0,...rt': 15}, ...] == []
+E     
+E     Left contains 7 more items, first extra item: {'index': 0, 'text': 'MUST', 'chars': 4, 'start': 0}
+E     Use -v to get more diff
+________ test_source_forms_keep_empty_and_whitespace[explicit- \t\n  ] _________
+backend/test_chunk_ops.py:35: in test_source_forms_keep_empty_and_whitespace
+    assert actual['items'] == expected['items']
+E   AssertionError: assert [{'index': 0,...rt': 15}, ...] == [{'index': 0,..., 'start': 3}]
+E     
+E     At index 0 diff: {'index': 0, 'text': 'MUST', 'chars': 4, 'start': 0} != {'index': 0, 'text': ' \t\n ', 'chars': 4, 'start': 0}
+E     Left contains 5 more items, first extra item: {'index': 2, 'text': 'OT U', 'chars': 4, 'start': 6}
+E     Use -v to get more diff
+_____________ test_source_forms_keep_empty_and_whitespace[record-] _____________
+backend/test_chunk_ops.py:34: in test_source_forms_keep_empty_and_whitespace
+    assert actual['success'], actual
+E   AssertionError: {'success': False, 'error': "chunk: 본문 문자열을 찾지 못했습니다 (후보 키: ['text', 'transcript', 'content', 'message', 'body'], 받은 키: ['text']). field 로 지정하세요."}
+E   assert False
+_________ test_source_forms_keep_empty_and_whitespace[record- \t\n  ] __________
+backend/test_chunk_ops.py:34: in test_source_forms_keep_empty_and_whitespace
+    assert actual['success'], actual
+E   AssertionError: {'success': False, 'error': "chunk: 본문 문자열을 찾지 못했습니다 (후보 키: ['text', 'transcript', 'content', 'message', 'body'], 받은 키: ['text']). field 로 지정하세요."}
+E   assert False
+__________ test_source_forms_keep_empty_and_whitespace[field- \t\n  ] __________
+backend/test_chunk_ops.py:35: in test_source_forms_keep_empty_and_whitespace
+    assert actual['items'] == expected['items']
+E   AssertionError: assert [] == [{'index': 0,..., 'start': 3}]
+E     
+E     Right contains 2 more items, first extra item: {'index': 0, 'text': ' \t\n ', 'chars': 4, 'start': 0}
+E     Use -v to get more diff
+______ test_many_small_segments_pack_without_rejoining_prefixes[line-\n] _______
+backend/test_chunk_ops.py:61: in test_many_small_segments_pack_without_rejoining_prefixes
+    assert joins <= len(result['items']) + 1
+E   AssertionError: assert 6000 <= (1 + 1)
+E    +  where 1 = len([{'index': 0, 'text': 'ab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\...\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab', 'chars': 17999, 'start': 0}])
+___ test_many_small_segments_pack_without_rejoining_prefixes[paragraph-\n\n] ___
+backend/test_chunk_ops.py:61: in test_many_small_segments_pack_without_rejoining_prefixes
+    assert joins <= len(result['items']) + 1
+E   AssertionError: assert 6001 <= (2 + 1)
+E    +  where 2 = len([{'index': 0, 'text': 'ab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\...ab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab\n\nab', 'chars': 3998, 'start': 5000}])
+______________ test_full_document_index_with_empty_sources[True] _______________
+backend/test_chunk_ops.py:89: in test_full_document_index_with_empty_sources
+    assert result['success'], result.get('diagnostic')
+E   AssertionError: {'code': 'TOOL', 'kind': 'partial', 'message': "chunk: 본문 문자열을 찾지 못했습니다 (후보 키: ['text'], 받은 키: ['id', 'text']). field 로 지정하세요.", 'frames': [], ...}
+E   assert False
+============================= slowest 15 durations =============================
+2.34s call     backend/test_chunk_ops.py::test_full_document_index_with_empty_sources[False]
+0.37s call     backend/test_chunk_ops.py::test_full_document_index_with_empty_sources[True]
+
+(13 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_chunk_ops.py::test_source_forms_keep_empty_and_whitespace[explicit-]
+FAILED backend/test_chunk_ops.py::test_source_forms_keep_empty_and_whitespace[explicit- \t\n  ]
+FAILED backend/test_chunk_ops.py::test_source_forms_keep_empty_and_whitespace[record-]
+FAILED backend/test_chunk_ops.py::test_source_forms_keep_empty_and_whitespace[record- \t\n  ]
+FAILED backend/test_chunk_ops.py::test_source_forms_keep_empty_and_whitespace[field- \t\n  ]
+FAILED backend/test_chunk_ops.py::test_many_small_segments_pack_without_rejoining_prefixes[line-\n]
+FAILED backend/test_chunk_ops.py::test_many_small_segments_pack_without_rejoining_prefixes[paragraph-\n\n]
+FAILED backend/test_chunk_ops.py::test_full_document_index_with_empty_sources[True]
+8 failed, 8 passed in 3.12s

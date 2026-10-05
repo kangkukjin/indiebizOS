@@ -12,20 +12,21 @@ _CHUNK_TEXT_FIELDS = ("text", "transcript", "content", "message", "body")
 
 def _chunk_source_text(prev, params):
     """chunk 의 본문 찾기: text 파라미터 > 평문 prev > dict 의 text 계열 필드(field 로 지정 가능). 반환 (본문, 봉투|None, 사유|None)."""
+    # 빈 문자열·공백도 명시한 본문이다. 누락과 구분하고 선택한 원문을 그대로 넘긴다.
     t = params.get("text")
-    if isinstance(t, str) and t.strip():
+    if isinstance(t, str):
         return t, None, None
     if isinstance(prev, str):
         return prev, None, None
     if isinstance(prev, dict):
         field = params.get("field")
-        if field and isinstance(prev.get(field), str) and prev[field].strip():
+        if field and isinstance(prev.get(field), str):
             return prev[field], prev, None
         if isinstance(prev.get("items"), list):
             return None, prev, None      # items 통화가 있으면 그것이 본문 — 봉투의 message 는 안내문일 때가 많다(자막 op 실측)
         for k in ([field] if field else list(_CHUNK_TEXT_FIELDS)):
             v = prev.get(k) if k else None
-            if isinstance(v, str) and v.strip():
+            if isinstance(v, str):
                 return v, prev, None
         return None, prev, f"chunk: 본문 문자열을 찾지 못했습니다 (후보 키: {([field] if field else list(_CHUNK_TEXT_FIELDS))}, 받은 키: {list(prev.keys())[:12]}). field 로 지정하세요."
     if isinstance(prev, list):
@@ -130,23 +131,24 @@ def _op_chunk(prev, params):
             parts = [p for p in re.split(r"\n", text) if p.strip()]
             if len(parts) <= 1:
                 return _op_chunk(prev, {**params, "by": "chars"})
-        buf, buf_start, joiner = [], 0, ("\n\n" if by == "paragraph" else "\n")
+        buf, buf_start, cur, joiner = [], 0, 0, ("\n\n" if by == "paragraph" else "\n")
         def _flush():
             if buf:
                 piece = joiner.join(buf)
                 items.append({"index": len(items), "text": piece, "chars": len(piece), "start": buf_start})
         for i, p in enumerate(parts):
             if len(p) > size:
-                _flush(); buf, buf_start = [], i + 1
+                _flush(); buf, buf_start, cur = [], i + 1, 0
                 for sub in _op_chunk(p, {"size": size, "overlap": overlap, "by": "chars"})["items"]:
                     items.append({"index": len(items), "text": sub["text"], "chars": sub["chars"], "start": i})
                 continue
-            cur = len(joiner.join(buf)) if buf else 0
             if buf and cur + len(joiner) + len(p) > size:
-                _flush(); buf, buf_start = [p], i
+                _flush(); buf, buf_start, cur = [p], i, len(p)
             else:
                 if not buf:
                     buf_start = i
+                # 길이는 누적하고, 문자열 결합은 덩이를 확정할 때만 한다.
+                cur += (len(joiner) if buf else 0) + len(p)
                 buf.append(p)
         _flush()
     out = {"success": True, "items": items, "count": len(items), "source_chars": len(text),

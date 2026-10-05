@@ -2464,3 +2464,4 @@
 [2026-10-05 22:20:46] PROJECT_CREATED: P3 (ID: P3)
 [2026-10-05 22:20:46] PROJECT_CREATED: P3 (ID: P3)
 [2026-10-05 22:39:00] BUG_FIX: 긴문장20 — CSV/TSV 주인·회원 읽기에서 셀 CR/LF/CRLF 보존, CR 행 구분 파서 수정. 원문 독립 대조·원천 부재/BOM/빈 파일 전체 프로그램 회귀. 관련 1215통과·1건너뜀. docs/experiments/long_sentence_imagination/round_20/report.md
+[2026-10-05 23:08:10] BUG_FIX: 긴문장21 — chunk의 빈/공백 본문을 누락과 구별, 줄·문단 묶기 길이 누적으로 반복 결합 제거. 전체·Record/크기 변형 전건 일치, 관련416검사 통과. docs/experiments/long_sentence_imagination/round_21/report.md

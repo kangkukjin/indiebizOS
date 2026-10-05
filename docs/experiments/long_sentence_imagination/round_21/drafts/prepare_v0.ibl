@@ -1,0 +1,3 @@
+#!ibl edition=2
+$read=[self:read]{path:$source} & [self:read]{path:$queries}
+return {documents:$read[0].data.documents,queries:$read[1].data.items}

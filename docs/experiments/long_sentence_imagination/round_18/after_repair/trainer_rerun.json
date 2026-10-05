@@ -1,0 +1,148 @@
+{
+ "p1": {
+  "success": true,
+  "usage": {
+   "steps": 66625,
+   "rows": 0,
+   "elapsed_ms": 2378
+  },
+  "run_id": "a75e1557222b4df090af4c4a7506b948",
+  "result_ref": "d801a3dd3f6bbdf579c5180d4746195414e95144559b7703026fc3d56b171ca7"
+ },
+ "p2_base": {
+  "success": true,
+  "usage": {
+   "steps": 545237,
+   "rows": 16,
+   "elapsed_ms": 17661,
+   "limits": {
+    "steps": 1000000,
+    "rows": 100000
+   },
+   "steps_by_line": [
+    {
+     "line": 37,
+     "steps": 138296
+    },
+    {
+     "line": 32,
+     "steps": 92256
+    },
+    {
+     "line": 38,
+     "steps": 76848
+    }
+   ],
+   "detail": "read_result path [\"usage\"]",
+   "tool_ms_by_line": [
+    {
+     "line": 33,
+     "ms": 2032,
+     "calls": 8,
+     "actions": [
+      "table:join"
+     ]
+    },
+    {
+     "line": 36,
+     "ms": 1834,
+     "calls": 8,
+     "actions": [
+      "table:join"
+     ]
+    },
+    {
+     "line": 16,
+     "ms": 1657,
+     "calls": 8,
+     "actions": [
+      "table:join"
+     ]
+    }
+   ]
+  },
+  "run_id": "42ed9889eef5437aae7b0ee203b44502",
+  "result_ref": "2be5787a7470d39df6f57d71cf6ac85a909715db6ba678c585239ce81de62d45"
+ },
+ "p2_variant": {
+  "success": true,
+  "usage": {
+   "steps": 549928,
+   "rows": 16,
+   "elapsed_ms": 17749,
+   "limits": {
+    "steps": 1000000,
+    "rows": 100000
+   },
+   "steps_by_line": [
+    {
+     "line": 37,
+     "steps": 138296
+    },
+    {
+     "line": 32,
+     "steps": 92256
+    },
+    {
+     "line": 38,
+     "steps": 76848
+    }
+   ],
+   "detail": "read_result path [\"usage\"]",
+   "tool_ms_by_line": [
+    {
+     "line": 36,
+     "ms": 2107,
+     "calls": 8,
+     "actions": [
+      "table:join"
+     ]
+    },
+    {
+     "line": 33,
+     "ms": 1904,
+     "calls": 8,
+     "actions": [
+      "table:join"
+     ]
+    },
+    {
+     "line": 16,
+     "ms": 1786,
+     "calls": 8,
+     "actions": [
+      "table:join"
+     ]
+    }
+   ]
+  },
+  "run_id": "08ea10fdc97642c3aba0bc5f3833e70e",
+  "result_ref": "c69975239f0af6972fc62f212d47acf420a7e9148c83cbe9de156a47b6cea3e4"
+ },
+ "p3": {
+  "success": true,
+  "usage": {
+   "steps": 20029,
+   "rows": 0,
+   "elapsed_ms": 874
+  },
+  "run_id": "36b9cf92de0e4558a30cc90a35b5b9cc",
+  "result_ref": "e16b327089caecd383081bc4b1bbf7a039459e22481b3164f013ec8a8ebdc1e8"
+ },
+ "t_select8": {
+  "before_ms": 2656,
+  "after_ms": 922
+ },
+ "t_join8": {
+  "before_ms": 6291,
+  "after_ms": 2279
+ },
+ "t_groupby8": {
+  "before_ms": 3694,
+  "after_ms": 1359
+ },
+ "t_compute8": {
+  "before_ms": 3411,
+  "after_ms": 1440
+ }
+}

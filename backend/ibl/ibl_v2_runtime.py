@@ -11,7 +11,7 @@ import threading
 import time
 from concurrent.futures import wait, FIRST_COMPLETED
 from execution_workers import create_executor
-from ibl_v2_ir import (Fault, UNIT, Unit, ResultValue, digest, pack, projection, span,
+from ibl_v2_ir import (Fault, UNIT, Unit, ResultValue, digest, digest_packed, pack, projection, span,
                        parallel_branches)
 from ibl_v2_expr import (Builtin, Closure, binary, boolean, number, scalar_text,
                          pure_call, check_arity, free_names)
@@ -108,6 +108,7 @@ class Runtime(ExpressionEvaluator):
         self._next_cancel_check = 0.0   # 첫 걸음에서는 바로 확인한다
         self.budget = budget or Budget()
         self.trace, self.recordings = [], []
+        self.tool_time = {}   # node_id → [호출 수, 초, 액션] — 걸음 수가 세지 않는 도구 시간을 줄별로 보인다
         self.model_usage = []
         self.reuse_models = reuse_models
         self.reused_model_calls = 0
@@ -557,8 +558,18 @@ class Runtime(ExpressionEvaluator):
             # Serialize invocation AND receipt/evidence, so another branch cannot
             # observe the object mutation before its evidence has been committed.
             with self.foreign_lock:
-                return self._invoke(node, args, piped)
-        return self._invoke(node, args, piped)
+                return self._timed_invoke(node, args, piped)
+        return self._timed_invoke(node, args, piped)
+
+    def _timed_invoke(self, node, args, piped):
+        started = time.monotonic()
+        try:
+            return self._invoke(node, args, piped)
+        finally:
+            with self.lock:
+                cell = self.tool_time.setdefault(node.id, [0, 0.0, f"{node.data['node']}:{node.data['action']}"])
+                cell[0] += 1
+                cell[1] += time.monotonic() - started
 
     def _invoke(self, node, args, piped):
         key = f"{node.data['node']}:{node.data['action']}"
@@ -596,7 +607,11 @@ class Runtime(ExpressionEvaluator):
             if isinstance(value, list):
                 return [request_value(v) for v in value]
             return value
-        request = {"action": key, "args": pack(request_value(args.value)), "plan": self.plan.fingerprint}
+        # 인자 전체는 여기서 한 번만 훑는다(긴문장 L18-1). 요청 해시·재사용 열쇠·차원별 지문이 저마다 인자를
+        # 다시 포장·직렬화해 행 목록을 네 번 훑었고, 2천 행 표 변환 한 번이 0.3초였다(실제 표 처리는 그 2%).
+        # 신원에는 인자의 지문만 싣는다 — 같은 인자면 같은 지문이므로 재사용·재개 판정의 뜻은 그대로다.
+        request = {"action": key, "args": {"digest": digest_packed(pack(request_value(args.value)))},
+                   "plan": self.plan.fingerprint}
         invocation_dependency = spec.invocation_dependency(args.value) if spec.invocation_dependency else None
         if invocation_dependency is not None:
             request['invocation_dependency'] = invocation_dependency
@@ -894,6 +909,21 @@ class Runtime(ExpressionEvaluator):
                 lines[place] = lines.get(place, 0) + count
         top = sorted(lines.items(), key=lambda item: (-item[1], item[0][1]))[:10]
         out['usage']['steps_by_line'] = [{"line": line, "steps": count, "source_hash": source} for (source, line), count in top]
+        # 걸음 수는 식 평가만 센다 — 표 변환·읽기 같은 도구 호출은 한 걸음이어도 행 수만큼 시간이 든다(긴문장 L18-1).
+        # 느린 줄은 걸음이 아니라 시간으로 가리킨다. 안쪽 호출을 품은 줄(each 본문 등)은 그 시간을 포함한다.
+        slow = {}
+        for node_id, (calls, seconds, action) in self.tool_time.items():
+            where = self.source_map.get(node_id, {})
+            if where.get('line') is not None:
+                cell = slow.setdefault((where.get('source_hash'), where['line']), [0, 0.0, []])
+                cell[0] += calls
+                cell[1] += seconds
+                if action not in cell[2]:
+                    cell[2].append(action)
+        out['usage']['tool_ms_by_line'] = [
+            {"line": line, "ms": round(seconds * 1000), "calls": calls, "actions": actions, "source_hash": source}
+            for (source, line), (calls, seconds, actions) in
+            sorted(slow.items(), key=lambda item: (-item[1][1], item[0][1]))[:10]]
         notes = [{'event_id': event['id'], 'location': self.source_map.get(event['node_id'], {}),
                   'warning': event['warning'][:1000]}
                  for event in self.trace if event.get('warning')]

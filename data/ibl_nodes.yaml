@@ -9424,7 +9424,7 @@ nodes:
           required: []
           result: Record
           effects:
-          - unknown
+          - pure
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope
@@ -9805,7 +9805,7 @@ nodes:
           required: []
           result: Record
           effects:
-          - unknown
+          - pure
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope
@@ -9949,11 +9949,13 @@ nodes:
             project_id: Unknown
             scope: Unknown
             target: Unknown
+          aliases:
+            mapping: map
           open_params: false
           required: []
           result: Record
           effects:
-          - unknown
+          - pure
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope
@@ -9979,6 +9981,7 @@ nodes:
         aliases:
           map:
           - columns
+          - mapping
         implementation: data-ops handler.py — table 열 이름/records dict 키 재명명. 교환(A↔B) 원자적 허용.
         target_key: map
         keywords:
@@ -10003,7 +10006,7 @@ nodes:
           required: []
           result: Record
           effects:
-          - unknown
+          - pure
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope
@@ -10050,7 +10053,7 @@ nodes:
           required: []
           result: Record
           effects:
-          - unknown
+          - pure
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope

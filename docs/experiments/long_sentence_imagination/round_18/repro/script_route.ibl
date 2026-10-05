@@ -1,0 +1,4 @@
+#!ibl edition=2
+$f=[self:write]{path:"~turn/합계.py",content:$본문}
+$r=[self:script]{path:$f.path,args:$자료}
+return $r

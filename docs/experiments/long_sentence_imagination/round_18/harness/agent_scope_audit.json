@@ -1,0 +1,46 @@
+{
+ "4337": {
+  "calls": 14,
+  "leak_terms": {
+   "/trainer": 0,
+   "/harness": 0,
+   "/drafts": 0,
+   "expected_": 0
+  },
+  "raw_input_mentions": 18,
+  "kinds": {
+   "shell": 2,
+   "execute_ibl": 12
+  },
+  "first_tool": "11:01:53",
+  "request": "11:00:12",
+  "compacted": 0,
+  "sources": [
+   "",
+   "codex_rollout",
+   "execution_instance"
+  ]
+ },
+ "4338": {
+  "calls": 13,
+  "leak_terms": {
+   "/trainer": 0,
+   "/harness": 0,
+   "/drafts": 0,
+   "expected_": 22
+  },
+  "raw_input_mentions": 12,
+  "kinds": {
+   "shell": 2,
+   "execute_ibl": 11
+  },
+  "first_tool": "11:11:45",
+  "request": "11:10:10",
+  "compacted": 0,
+  "sources": [
+   "",
+   "codex_rollout",
+   "execution_instance"
+  ]
+ }
+}

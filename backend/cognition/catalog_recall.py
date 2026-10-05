@@ -152,11 +152,22 @@ def recall_for_turn_detail(runner, message, history, *, request_type, reflex_hin
                          chars=len(snippet), omitted=omitted,
                          semantic="unavailable" if config.get("semantic_enabled") else "disabled")
             by_id = {e.id: e for e in snapshot.entries}
-            names.update({i: [by_id[i].name, *by_id[i].aliases] for i in ids if i in by_id})
+            names.update({i: identity_names(by_id[i]) for i in ids if i in by_id})
             return finish(snippet)
         except Exception as exc:
             event.update(status="error", error=type(exc).__name__)
             return finish()
+
+
+def identity_names(entry):
+    """제시→사용 결합에 쓰는 이름 — 그 방법의 고유 이름과 괄호로 병기한 이름만.
+
+    별칭은 질문이 방법에 닿게 하는 검색 열쇠(상황 낱말: 'csv'·'sql'·'선후관계')다. 사용 증거로 다시 쓰면
+    과제의 파일 이름이나 요청문에 걸려, 쓰지 않은 방법이 사용으로 남는다(긴문장 L18-5: 입력 `tasks_a.csv` 로
+    DuckDB 가 두 턴 연속 used)."""
+    import re
+    parts = [p.strip() for p in re.split(r"[()（）]", entry.name or "") if p.strip()]
+    return list(dict.fromkeys([entry.name, *parts]))
 
 
 def world_memory_for_turn(message, lexical_snippet=""):
@@ -212,7 +223,7 @@ def world_memory_detail(message, lexical_snippet="", *, budget=None):
                              '설치·권한·실행 가능성은 describe로 확인한다. 관련 없으면 무시하고 위 지도에서 직접 찾는다.">\n'
                              f"고른 가지: {escape(branches)}\n" + structured + "\n</world_memory>")
         snippet = "\n".join(parts)
-        names.update({i: [by_id[i].name, *by_id[i].aliases] for i in shown_ids})
+        names.update({i: identity_names(by_id[i]) for i in shown_ids})
         event.update(status=r["status"], ids=shown_ids, branches=["/".join(b) for b in r["branches"]],
                      chars=len(snippet), outside_beats_inside=r.get("outside_beats_inside", False),
                      revision=store.snapshot.revision)

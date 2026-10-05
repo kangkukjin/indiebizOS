@@ -1,0 +1,19 @@
+#!ibl edition=2
+$bp=$base.result.projects >> [table:compute]{set:($r)=>{old_duration:$r.duration}} >> [table:select]{columns:["project","old_duration"]}
+$j=[table:join]{left:$variant.result.projects,right:$bp,on:"project",how:"inner"}
+$changed=$j.items >> [table:filter]{where:($r)=>$r.duration!=$r.old_duration} >> [table:compute]{set:($r)=>{new_duration:$r.duration,diff:$r.duration-$r.old_duration}} >> [table:select]{columns:["project","old_duration","new_duration","diff"]} >> [table:sort]{by:"project"}
+$ap=$variant.delay.applied
+$absorbed=sorted(difference(unique(map($ap,($r)=>$r.project)),map($changed,($r)=>$r.project)))
+$bc=map(filter($base.result.tasks,($r)=>$r.critical),($r)=>$r.id)
+$vc=map(filter($variant.result.tasks,($r)=>$r.critical),($r)=>$r.id)
+$delta={applied_task_count:len($ap),changed_projects:$changed,absorbed_projects:$absorbed,not_applied:$variant.delay.not_applied,newly_critical:sorted(difference($vc,$bc)),no_longer_critical:sorted(difference($bc,$vc))}
+$old=[self:read]{path:f"${$out}/report.md",format:"text"}
+$cl=map($changed,($r)=>f"| ${$r.project} | ${$r.old_duration} | ${$r.new_duration} | ${$r.diff} |")
+$nl=map($delta.not_applied,($r)=>f"| ${$r.task} | ${$r.reason} |")
+$report=$old.text+f"\n## 지연 반영 결과\n\n지연이 적용된 작업 ${$delta.applied_task_count}개. 새로 임계가 된 작업 ${len($delta.newly_critical)}개, 임계에서 벗어난 작업 ${len($delta.no_longer_critical)}개.\n\n| 프로젝트 | 이전 기간 | 새 기간 | 차이 |\n|---|---:|---:|---:|\n"+join("\n",$cl)+"\n\n지연을 여유로 흡수해 기간이 그대로인 프로젝트: "+join(", ",$absorbed)+"\n\n| 적용하지 못한 지연 작업 | 이유 |\n|---|---|\n"+join("\n",$nl)+"\n"
+$d=[self:write]{path:f"${$out}/delta.json",content:json($delta)}
+$m=[self:write]{path:f"${$out}/report.md",content:$report}
+$read=[self:read]{path:$d.path} & [self:read]{path:$m.path,format:"text"}
+assert $read[0].data==$delta,"delta 저장 대조 실패"
+assert $read[1].text==$report,"보고서 저장 대조 실패"
+return {delta_counts:{applied:$delta.applied_task_count,changed:len($changed),absorbed:len($absorbed),not_applied:len($delta.not_applied),newly:len($delta.newly_critical),no_longer:len($delta.no_longer_critical)},verified:true}

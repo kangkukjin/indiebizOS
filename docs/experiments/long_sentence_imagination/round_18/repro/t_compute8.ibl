@@ -1,0 +1,4 @@
+#!ibl edition=2
+$x=$p.tasks
+[repeat:8] { $x=$x >> [table:compute]{set:($r)=>{ls:$r.dur-1}} }
+return len($x)

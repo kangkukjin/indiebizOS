@@ -1,0 +1,1 @@
+{"command": "/bin/zsh -lc \"python3 -B '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_18회차/agent/base/cpm.py'\""}

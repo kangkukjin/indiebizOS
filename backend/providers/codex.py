@@ -394,7 +394,9 @@ class CodexProvider(CliSubprocessProvider):
         (옛 키의 잔재는 CliSessionStore.clear_agent 의 접두 스윕이 '새 대화' 때 함께 지운다.)
         """
         base = super()._get_session_key()
-        digest = hashlib.md5((self.system_prompt or "").encode("utf-8")).hexdigest()[:8]
+        # 도구 정책도 fresh 턴 머리에만 실린다 — 정책이 바뀌어도 키가 그대로면 옛 스레드가 옛 정책으로 산다(긴문장 L18-4).
+        head = (self.system_prompt or "") + self.TOOL_POLICY
+        digest = hashlib.md5(head.encode("utf-8")).hexdigest()[:8]
         return f"{base}#{digest}"
 
     # ================= 도구 브리지 =================
@@ -496,8 +498,9 @@ class CodexProvider(CliSubprocessProvider):
         f"`{MCP_TOOL_PREFIX}execute_ibl` 로 "
         "`[self:read]`(파일 읽기)·`[self:write]`/`[self:edit]`(쓰기·편집)·`[self:grep]`(코드검색)·"
         "`[sense:search]`(웹검색 — source: ddg/naver/gnews)·`[sense:crawl]`(웹페이지) 을 호출하라.\n"
-        "셸은 **IBL 에 등가물이 없는 일에만** 쓰는 탈출구다: `git`·프로세스 조회·AST 검사·"
-        "임의 Python/Node 실행. 등가물이 있는 일을 셸로 하지 마라."
+        "셸은 **IBL 에 등가물이 없는 일에만** 쓰는 탈출구다: `git`·프로세스 조회·AST 검사·빌드와 시험 실행·파일로 남겨 둔 스크립트 실행. "
+        "이번 턴에만 쓰는 계산 스크립트는 본문을 `[self:write]{path:\"~turn/이름.py\"}` 로 쓰고 `[self:script]{path, args}` 로 돌리면 결과가 값과 참조로 남아 다음 프로그램이 잇는다(셸로 돌린 계산은 실행 기록·결과 참조 밖이라 파일로만 이어진다). "
+        "등가물이 있는 일을 셸로 하지 마라."
     )
 
     # ================= 모델·추론강도 =================

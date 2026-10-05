@@ -113,7 +113,9 @@ def test_reduce_refuses_nonrecord_rows_before_aggregation(registry, bad, placeme
         source = json.dumps(source, ensure_ascii=False)
     result = run('$source >> [table:reduce]{init:0,step:"acc+1"}', registry, {'source': source})
     assert result['executed'] and not result['success'], result
-    assert result['source_complete'] is False
+    # reduce 는 순수 계산이다(긴문장 L18-2). 거절은 실행 실패로 드러나고, 원천 불완전 표지는 외부 호출의
+    # 실패에만 붙는다 — 같은 거절을 하는 join 과 같은 계약이다(아래 시험). 행을 버린 합계를 만들지 않는 것이 요점.
+    assert result['source_complete'] is True
     assert '객체' in result['error'] and '행' in result['error']
 
 

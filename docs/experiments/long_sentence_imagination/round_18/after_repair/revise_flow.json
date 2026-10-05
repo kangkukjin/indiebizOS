@@ -1,0 +1,29 @@
+{
+ "rejected": {
+  "code": "$rejected:a441786eb130ad134b1fec24d094f3f650aeda096cb0ad7e6d2c4b79afbbaead",
+  "code_edits": [
+   {
+    "old": "<고칠 원문 조각>",
+    "new": "<바꿀 글>"
+   }
+  ]
+ },
+ "check_after_edit": {
+  "ok": true,
+  "status": "incomplete",
+  "execute_args": {
+   "code": "$checked:c9d5273ab55562c7f0558f3af180253efa33b08a3e05caa485fdffac1c83d73c"
+  }
+ },
+ "exec": [
+  {
+   "b": 1
+  }
+ ],
+ "alias_exec": [
+  {
+   "b": 1
+  }
+ ],
+ "ambiguous": "code_edits[0].old 가 원문에 60번 나옵니다: '$v'. 한 곳만 가리키도록 길게 적거나 all:true 로 전부 바꾸세요."
+}

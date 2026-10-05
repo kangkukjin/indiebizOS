@@ -263,6 +263,7 @@ async def execute_ibl(code: str, project_path: str = "",
                       resume: Optional[dict] = None,
                       reuse: Optional[dict] = None,
                       budget: Optional[dict] = None,
+                      code_edits: Optional[List[dict]] = None,
                       files: Optional[List[str]] = None,
                       files_from: Optional[List[str]] = None,
                       recover: Optional[str] = None,
@@ -286,6 +287,8 @@ async def execute_ibl(code: str, project_path: str = "",
     계약 조회 성공 후 코드를 한 번 실행하고 descriptions를 덧붙입니다. 긴 프로그램은 check=True로 먼저 검사합니다.
     검사를 통과하면 반환된 execute_args.code("$checked:…")를 code에 그대로 넣어 원문을 다시 적지 않고 실행합니다.
     issues의 location/call_path/hint로 오류를 모아 고친 뒤 전체를 재검사합니다.
+    거절된 긴 프로그램은 원문을 다시 적지 않습니다. 반환된 revise_args.code("$rejected:…")를 code에 넣고
+    code_edits=[{old, new}]로 고칠 조각만 보냅니다(old는 원문에 한 번 나오는 글, 여러 곳이면 all:true).
     warnings는 의도를 확인하며 incomplete는 실행 중 검사할 경계가 있다는 뜻입니다.
 
     inputs는 이름→값 객체입니다. 문자열 안의 $이름은 치환하지 않습니다.
@@ -345,6 +348,8 @@ async def execute_ibl(code: str, project_path: str = "",
         payload["resume"] = resume
     if reuse is not None:
         payload["reuse"] = reuse  # 고친 프로그램의 읽기 영수증 재사용(2026-09-26)
+    if code_edits is not None:
+        payload["code_edits"] = code_edits  # 참조한 원문의 조각 치환(긴문장 L18-7)
     if files is not None:
         payload["files"] = files
     if files_from is not None:

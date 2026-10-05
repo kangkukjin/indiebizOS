@@ -1,0 +1,29 @@
+#!ibl edition=2
+[def:기간해석]($v) {
+  [try] { return number($v) } [catch] { return null }
+}
+[def:준비]($root) {
+  $docs=[self:read]{path:f"${$root}/tasks_a.csv"} & [self:read]{path:f"${$root}/tasks_b.json"} & [self:read]{path:f"${$root}/deps.csv"}
+  $raw=$docs[0].data.items + $docs[1].data.items
+  $tasks=$raw >> [table:compute]{set:($r)=>{task:$r.id,dur:[fn:기간해석]{v:$r.duration}}} >> [table:select]{columns:["task","project","owner","dur"]}
+  $rawdeps=$docs[2].data.items
+  $dd=$rawdeps >> [table:dedup]{by:["task","depends_on"]}
+  $deps=$dd.items
+  $badrows=$tasks >> [table:filter]{where:($r)=>$r.dur==null ? true : $r.dur<=0}
+  $bad=$badrows >> [table:groupby]{by:"project",agg:{nb:["count"]}}
+  $ids=$tasks >> [table:compute]{set:($r)=>{depends_on:$r.task}} >> [table:select]{columns:["depends_on"]}
+  $dangling=[table:join]{left:$deps,right:$ids,on:"depends_on",how:"anti"}
+  $miss=$dangling.items >> [table:groupby]{by:"project",agg:{nm:["count"]}}
+  $projects=$tasks >> [table:groupby]{by:"project",agg:{task_count:["count"]}}
+  $p1=[table:join]{left:$projects.items,right:$bad.items,on:"project",how:"left",defaults:{nb:0}}
+  $p2=[table:join]{left:$p1.items,right:$miss.items,on:"project",how:"left",defaults:{nm:0}}
+  $status=$p2.items >> [table:compute]{set:($r)=>{reason:$r.nb>0 ? "bad_duration" : $r.nm>0 ? "missing_dep" : "candidate",detail_count:$r.nb>0 ? $r.nb : $r.nm}}
+  $pre=$status >> [table:filter]{where:($r)=>$r.reason!="candidate"} >> [table:select]{columns:["project","reason","detail_count"]}
+  $cand=$status >> [table:filter]{where:($r)=>$r.reason=="candidate"} >> [table:select]{columns:["project"]}
+  $ctasks=[table:join]{left:$tasks,right:$cand,on:"project",how:"semi"}
+  $cdeps=[table:join]{left:$deps,right:$cand,on:"project",how:"semi"}
+  $all=$tasks >> [table:select]{columns:["task","project"]}
+  assert len($raw)==len($tasks),"작업 행 누락"
+  return {task_count:len($raw),project_count:len($projects.items),dep_count_raw:len($rawdeps),dep_count_unique:len($deps),pre_excluded:$pre,all_tasks:$all,tasks:$ctasks.items,deps:$cdeps.items}
+}
+return [fn:준비]{root:$root}

@@ -45,7 +45,7 @@
           required: []
           result: Record
           effects:
-          - unknown
+          - pure
           compatibility: legacy-envelope/1
           adapter:
             protocol: legacy-envelope

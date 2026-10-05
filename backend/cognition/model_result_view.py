@@ -666,6 +666,8 @@ def completed_call_references(result):
 
 #: 예산의 이 비율 이상을 쓴 실행에만 비싼 줄을 모델 사본에 싣는다.
 _USAGE_DETAIL_SHARE = 0.2
+#: 이보다 오래 걸린 실행에는 도구 시간이 든 줄을 싣는다 — 걸음 수는 도구 호출의 시간을 세지 않는다.
+_USAGE_SLOW_MS = 10_000
 
 
 def model_usage(usage):
@@ -686,6 +688,13 @@ def model_usage(usage):
         out["steps_by_line"] = [{k: v for k, v in row.items() if k != "source_hash" or len(sources) > 1}
                                 for row in lines]
         out["detail"] = 'read_result path ["usage"]'
+    if type(usage.get("elapsed_ms")) is int and usage["elapsed_ms"] >= _USAGE_SLOW_MS:
+        slow = [row for row in usage.get("tool_ms_by_line") or [] if isinstance(row, dict)][:3]
+        if slow:
+            sources = {row.get("source_hash") for row in slow}
+            out["tool_ms_by_line"] = [{k: v for k, v in row.items() if k != "source_hash" or len(sources) > 1}
+                                      for row in slow]
+            out["detail"] = 'read_result path ["usage"]'
     return out
 
 

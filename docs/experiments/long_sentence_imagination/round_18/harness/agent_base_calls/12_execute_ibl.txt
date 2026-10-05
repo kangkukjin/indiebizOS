@@ -1,0 +1,1 @@
+{"code": "[self:install_lib]{package:\"networkx\",check:true}", "edition": 2}

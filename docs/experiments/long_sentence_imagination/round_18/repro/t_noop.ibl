@@ -1,0 +1,2 @@
+#!ibl edition=2
+return len($p.tasks)

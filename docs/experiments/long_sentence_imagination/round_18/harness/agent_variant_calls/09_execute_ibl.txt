@@ -1,0 +1,1 @@
+{"code": "$checked:6a21d8b149d3ef468be1bfc8ac7b0067affcf04225b91daa92a2a24eee4560ed", "edition": 2, "inputs": {"out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_18회차/agent/variant", "root": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-05_18회차"}, "budget": {"steps": 1000000, "rows": 100000}}

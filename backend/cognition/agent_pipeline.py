@@ -641,6 +641,12 @@ class CognitivePipelineMixin:
                     try:
                         from ibl_edition import authoring_request
                         _input = authoring_request(_input)
+                        # code 자리의 참조($checked·$rejected+code_edits)도 실행층과 같은 원문으로 적는다(긴문장 L18-7).
+                        # 손잡이만 남으면 연상 사용 집계가 실행한 프로그램을 못 본다(ep4338: 해마 5건 제시·8호출·used 0).
+                        from system_tools_ibl import _resolve_checked_code
+                        _resolved, _ref_error = _resolve_checked_code(_input)
+                        if not _ref_error:
+                            _input = _resolved
                     except Exception:
                         pass
                 tool_calls_log.append({"tool_name": _name, "input": _input,

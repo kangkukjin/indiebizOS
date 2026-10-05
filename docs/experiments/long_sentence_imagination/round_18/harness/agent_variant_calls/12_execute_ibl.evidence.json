@@ -1,0 +1,1 @@
+{"masked_paths": [], "text": "{\"code\": \"[self:write]{path:$out+\\\"/verify.py\\\",content:$code}\", \"edition\": 2, \"inputs\": {\"out\": {\"$ref\": \"4a5d36990d3e17d07050a45bff8e745240d5fcfb31de2ebd29c4d42c2d3d7bbb\"}, \"code\": {\"$ref\": \"ba6cdf65baee4c868561d11c0934080ee510ee8f6af777a84c43004b8480f1ec\"}}}", "version": 1}

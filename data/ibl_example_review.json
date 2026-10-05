@@ -2416,13 +2416,13 @@
     "implementation": "d1e588d0092a",
     "returns": "5450ffb2cf8a",
     "target_key": "33dffa18ca3f",
-    "aliases": "ae226be6fea6",
+    "aliases": "b732021247ac",
     "runs_on": "519dd933e8a2",
     "router": "ebbb1532efbc",
     "tool": "88f226a5e614"
    },
-   "reviewed": "2026-09-18",
-   "examples": 10
+   "reviewed": "2026-10-05",
+   "examples": 9
   },
   "table:select": {
    "fields": {

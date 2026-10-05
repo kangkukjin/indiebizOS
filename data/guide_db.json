@@ -52,7 +52,17 @@
       "id": "judgment",
       "name": "판정 전용 어휘 — Jev",
       "description": "[table:judge]로 각 행의 참/거짓·선택·점수를 일괄 판정한다. 질문 작성, unknown 분기, 필터·정렬 조합, API 인증·호출 상한과 사용량.",
-      "keywords": ["판정", "Jev", "judge", "분류", "관련성", "광고성", "점수", "불확실", "AI 호출 절약"],
+      "keywords": [
+        "판정",
+        "Jev",
+        "judge",
+        "분류",
+        "관련성",
+        "광고성",
+        "점수",
+        "불확실",
+        "AI 호출 절약"
+      ],
       "file": "judgment.md",
       "topic": "IBL"
     },
@@ -1402,8 +1412,8 @@
     },
     {
       "id": "script",
-      "name": "등록 스크립트 실행기 가이드",
-      "description": "[self:script] register/run — 완성·검증된 파이썬/셸 스크립트를 등록해 워크플로우·트리거·앱이 결정론 실행. 코드가 아니라 id만 나름(저작·디버깅은 run_command). stdout JSON=통화 승격, 스케줄 거는 법, 실패·유지보수 루프.",
+      "name": "파일 Script 실행·등록 가이드",
+      "description": "[self:script] — Python 파일을 실행해 결과를 값으로 받는다. 과제의 계산은 [self:write]{path:\"~turn/이름.py\"} 로 쓰고 [self:script]{path,args} 로 실행(수정은 self:edit — 셸이나 run_command 없이 된다). 완성·검증된 스크립트는 등록(id)해 워크플로우·트리거·앱이 결정론 실행. 결과 파일=값, 스케줄 거는 법, 실패·유지보수 루프.",
       "keywords": [
         "스크립트",
         "등록",
@@ -1414,7 +1424,10 @@
         "정기 실행",
         "스케줄",
         "결정화",
-        "run_pipeline"
+        "run_pipeline",
+        "계산 스크립트",
+        "분석 스크립트",
+        "~turn"
       ],
       "file": "script.md",
       "topic": "워크플로·스크립트"

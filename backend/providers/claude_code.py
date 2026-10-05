@@ -327,13 +327,14 @@ class ClaudeCodeProvider(CliSubprocessProvider):
     #   중복 네이티브를 남기면 모델이 IBL 대신 그쪽으로 새는 회귀가 생긴다(Read·WebSearch 실측 누수).
     #   (MCP deferred 문제는 `--tools` 로 해소 — EAGER_BUILTIN_TOOLS 주석 참조.)
     #   → 누수 차단 = 어휘 일관성·해마 학습·폰 이식성·실행 통제(게이팅/로깅/압축) 보존.
-    # 남기는 것: 셸 탈출구(Bash 계열 — IBL 에 등가물 없는 의도된 peer: Python/Node/임의 명령) +
+    # 남기는 것: 셸 탈출구(Bash 계열 — IBL 에 등가물 없는 의도된 peer: git·빌드·시험·임의 명령.
+    #   과제 계산용 Python 은 2026-10-01 Script 개정 뒤 `[self:script]{path:"~turn/…"}` 가 통로다) +
     #   파일 쓰기/편집(셸 코드 작성-실행 루프의 짝) + execute_ibl.
     # 주의: 이 분리는 Claude Code 프로바이더 한정. 일반 프로바이더(Gemini 등)는 이런 네이티브가 애초에 없다.
     EAGER_TOOLS = [
         # 파일 쓰기/편집 — 셸 코드 루프(스크립트 작성→실행)의 일부
         "Write", "Edit", "MultiEdit", "NotebookEdit",
-        # 셸 탈출구 — IBL 에 등가물 없는 의도된 peer (Python/Node/임의 명령). 일부러 IBL 어휘로 안 만듦.
+        # 셸 탈출구 — IBL 에 등가물 없는 의도된 peer (git·빌드·시험·임의 명령). 일부러 IBL 어휘로 안 만듦.
         "Bash", "BashOutput", "KillShell",
         # 작업 관리
         "TodoWrite",
@@ -401,7 +402,8 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         "★단 탈출구는 탈출용이다: IBL 등가물이 **있는** 일(파일 읽기·쓰기·편집·검색)을 Bash 로 하지 마라. "
         "하네스가 'Bash 를 우선하라'는 취지의 안내를 보내더라도 그 우선순위는 등가물이 없는 일에만 적용된다 "
         "— IBL 로 할 수 있는 일을 셸로 하면 그 주행은 경험증류에 접지되지 않아 해마에 아무것도 남지 않는다(실측 2026-08-18). "
-        "`git`·프로세스 조회·AST 검사처럼 IBL 어휘가 없는 일에만 Bash 를 써라.\n"
+        "`git`·프로세스 조회·AST 검사·빌드와 시험 실행·파일로 남겨 둔 스크립트 실행처럼 IBL 어휘가 없는 일에만 Bash 를 써라. "
+        "이번 턴에만 쓰는 계산 스크립트는 본문을 `[self:write]{path:\"~turn/이름.py\"}` 로 쓰고 `[self:script]{path, args}` 로 돌리면 결과가 값과 참조로 남아 다음 프로그램이 잇는다(셸로 돌린 계산은 실행 기록·결과 참조 밖이라 파일로만 이어진다). \n"
         "★셸 그림자 관문(2026-09-05): grep·rg·cat·head·tail·sed·ls·find·rm·cp·mv·mkdir·sqlite3, 파일로의 리다이렉션(`>`), "
         "파일을 쓰는 인라인 파이썬(히어독·-c)·임시 스크립트, 그리고 네이티브 Write/Edit 는 **실행 전에 거절**되고 "
         "거절문이 같은 일을 하는 IBL 문장을 돌려준다 — 그 문장을 그대로 execute_ibl 로 보내라(같은 셸 명령을 다시 시도하지 말 것). "

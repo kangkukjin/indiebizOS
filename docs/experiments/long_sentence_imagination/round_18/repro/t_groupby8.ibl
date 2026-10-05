@@ -1,0 +1,4 @@
+#!ibl edition=2
+$n=0
+[repeat:8] { $g=$p.deps >> [table:groupby]{by:"task",agg:{n:["count"]}}; $n=$n+len($g.items) }
+return $n

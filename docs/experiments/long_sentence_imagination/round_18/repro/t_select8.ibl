@@ -1,0 +1,4 @@
+#!ibl edition=2
+$n=0
+[repeat:8] { $g=$p.tasks >> [table:select]{columns:["task","dur"]}; $n=$n+len($g) }
+return $n

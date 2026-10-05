@@ -1,0 +1,8 @@
+elapsed(profiled) 72.38 True {'task_count': 2400, 'project_count': 60, 'computable_projects': 48, 'excluded_projects': 12, 'dep_count_raw': 3806, 'dep_count_uni
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+34622441/693868   29.873    0.000   39.217    0.000 /Users/kangkukjin/Desktop/AI/indiebizOS/backend/common/expression_ir.py:112(pack)
+176210036/176210023    7.596    0.000    7.599    0.000 {built-in method builtins.isinstance}
+     1819    4.295    0.002    4.295    0.002 /opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/json/encoder.py:2
+ 34622450    2.673    0.000    2.673    0.000 /Users/kangkukjin/Desktop/AI/indiebizOS/backend/common/value_semantics.py:134(native_numeric_scalar)
+3940149/100760    2.075    0.000    4.896    0.000 /Users/kangkukjin/Desktop/AI/indiebizOS/backend/ibl/ibl_v2_types.py:145(infer)
+4306295/157710    1.596    0.000    3.619    0.000 /opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/copy.py:119(

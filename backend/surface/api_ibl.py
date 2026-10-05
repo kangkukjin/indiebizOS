@@ -22,6 +22,7 @@ class IBLRequest(BaseModel):
     check: bool = False                # 정적 통화 검사만(실행 없음) — ibl_typecheck (2026-09-05)
     resume: Optional[dict] = None      # 실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 그 step 부터 재개.
     reuse: Optional[dict] = None       # 고친 프로그램이 이전 실행 {run_id}의 읽기 영수증을 재사용(2026-09-26).
+    code_edits: Optional[List[dict]] = None  # code 가 $checked·$rejected 참조일 때 그 원문의 조각 치환(긴문장 L18-7).
     budget: Optional[dict] = None      # 판본 2 요청 단위 steps/rows 상한.
     files: Optional[List[str]] = None  # 긴 텍스트/코드를 IBL 파서 밖에서 전달 ($file:0 로 참조).
     files_from: Optional[List[str]] = None  # files 의 경로 참조판 — 서버가 읽어 files 뒤에 병합.
@@ -248,6 +249,8 @@ async def execute_ibl_code(req: IBLRequest):
                         _ti["reuse"] = req.reuse
                     if req.budget is not None:
                         _ti["budget"] = req.budget
+                    if req.code_edits is not None:
+                        _ti["code_edits"] = req.code_edits
                     if req.files is not None:
                         _ti["files"] = req.files
                     if req.files_from is not None:

@@ -1050,8 +1050,10 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     node = tool_input.get("_node") or "ibl"
     action = tool_input.get("action") or "block"
     criteria = pop_criteria(tool_input)
-    result = public_result(_execute_ibl_impl(tool_input, project_path, agent_id),
-                           producer=f"{node}:{action}")
+    from vocabulary_state import inventory_scope
+    with inventory_scope():   # 호출 하나의 인자 검사·도구 찾기·활성 판정이 재고를 한 번만 검증한다
+        result = public_result(_execute_ibl_impl(tool_input, project_path, agent_id),
+                               producer=f"{node}:{action}")
     # 봉투 규모 불변식 신고 (2026-09-04): 원천이 total>items 를 침묵하면 여기서 이름을 대고
     # 신고한다 — 픽스처 건강검진(§1B)이 같은 함수로 판정을 내리므로 이 로그는 실사용 누수용.
     try:

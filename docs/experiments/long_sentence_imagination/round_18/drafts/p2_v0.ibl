@@ -1,0 +1,101 @@
+#!ibl edition=2
+[def:지연읽기]($path) {
+  $doc=[self:read]{path:$path}
+  $rows=$doc.data.items >> [table:compute]{set:($r)=>{extra:number($r.extra_days)}}
+  $g=$rows >> [table:groupby]{by:"task",agg:{extra:["sum","extra"]}}
+  return $g.items
+}
+[def:앞방향]($tasks,$deps) {
+  $indeg=$deps >> [table:groupby]{by:"task",agg:{indeg:["count"]}}
+  $st=[table:join]{left:$tasks,right:$indeg.items,on:"task",how:"left",defaults:{indeg:0}}
+  $done=$st.items >> [table:filter]{where:($r)=>$r.indeg==0} >> [table:compute]{set:($r)=>{es:0,ef:$r.dur}} >> [table:select]{columns:["task","es","ef"]}
+  $left=$st.items >> [table:filter]{where:($r)=>$r.indeg>0} >> [table:select]{columns:["task","project","dur","indeg"]}
+  $rounds=0
+  [repeat:until $new==0] {
+    $pred=$done >> [table:compute]{set:($r)=>{depends_on:$r.task,pef:$r.ef}} >> [table:select]{columns:["depends_on","pef"]}
+    $e=[table:join]{left:$deps,right:$pred,on:"depends_on",how:"inner"}
+    $g=$e.items >> [table:groupby]{by:"task",agg:{n:["count"],es:["max","pef"]}}
+    $c=[table:join]{left:$left,right:$g.items,on:"task",how:"inner"}
+    $ready=$c.items >> [table:filter]{where:($r)=>$r.n==$r.indeg} >> [table:compute]{set:($r)=>{ef:$r.es+$r.dur}} >> [table:select]{columns:["task","es","ef"]}
+    $new=len($ready)
+    $done=$done+$ready
+    $rest=[table:join]{left:$left,right:$ready,on:"task",how:"anti"}
+    $left=$rest.items
+    $rounds=$rounds+1
+  }
+  return {done:$done,stuck:$left,rounds:$rounds}
+}
+[def:뒤방향]($sched,$deps) {
+  $cur=$sched
+  $rounds=0
+  [repeat:until $changed==0] {
+    $s=$cur >> [table:compute]{set:($r)=>{ls:$r.lf-$r.dur}} >> [table:select]{columns:["task","ls"]}
+    $e=[table:join]{left:$deps,right:$s,on:"task",how:"inner"}
+    $g=$e.items >> [table:groupby]{by:"depends_on",agg:{m:["min","ls"]}}
+    $gm=$g.items >> [table:compute]{set:($r)=>{task:$r.depends_on}} >> [table:select]{columns:["task","m"]}
+    $j=[table:join]{left:$cur,right:$gm,on:"task",how:"left",defaults:{m:999999}}
+    $next=$j.items >> [table:compute]{set:($r)=>{nlf:$r.m<$r.lf ? $r.m : $r.lf}}
+    $moved=$next >> [table:filter]{where:($r)=>$r.nlf!=$r.lf}
+    $changed=len($moved)
+    $cur=$next >> [table:compute]{set:($r)=>{lf:$r.nlf}} >> [table:select]{columns:["task","project","owner","dur","es","ef","lf"]}
+    $rounds=$rounds+1
+  }
+  return {rows:$cur,rounds:$rounds}
+}
+[def:일정]($prepared,$extra) {
+  $tj=[table:join]{left:$prepared.tasks,right:$extra,on:"task",how:"left",defaults:{extra:0}}
+  $tasks=$tj.items >> [table:compute]{set:($r)=>{dur:$r.dur+$r.extra}} >> [table:select]{columns:["task","project","owner","dur"]}
+  $f=[fn:앞방향]{tasks:$tasks,deps:$prepared.deps}
+  $cyc=$f.stuck >> [table:groupby]{by:"project",agg:{detail_count:["count"]}}
+  $cycle=$cyc.items >> [table:compute]{set:($r)=>{reason:"cycle"}} >> [table:select]{columns:["project","reason","detail_count"]}
+  $excluded=($prepared.pre_excluded+$cycle) >> [table:sort]{by:"project"}
+  $okt=[table:join]{left:$tasks,right:$cycle,on:"project",how:"anti"}
+  $sj=[table:join]{left:$okt.items,right:$f.done,on:"task",how:"inner"}
+  assert len($sj.items)==len($okt.items),"순환 없는 프로젝트에 미계산 작업"
+  $pd=$sj.items >> [table:groupby]{by:"project",agg:{duration:["max","ef"],task_count:["count"]}}
+  $withd=[table:join]{left:$sj.items,right:$pd.items,on:"project",how:"inner"}
+  $sched=$withd.items >> [table:compute]{set:($r)=>{lf:$r.duration}} >> [table:select]{columns:["task","project","owner","dur","es","ef","lf"]}
+  $b=[fn:뒤방향]{sched:$sched,deps:$prepared.deps}
+  $full=$b.rows >> [table:compute]{set:($r)=>{id:$r.task,slack:$r.lf-$r.dur-$r.es,critical:$r.lf-$r.dur-$r.es==0}} >> [table:sort]{by:"id"}
+  $crit=$full >> [table:filter]{where:($r)=>$r.critical}
+  $pc=$crit >> [table:groupby]{by:"project",agg:{critical_count:["count"]}}
+  $pj=[table:join]{left:$pd.items,right:$pc.items,on:"project",how:"left",defaults:{critical_count:0}}
+  $projects=$pj.items >> [table:select]{columns:["project","duration","task_count","critical_count"]} >> [table:sort]{by:"project"}
+  $top=[fn:정렬해추리기]{목록:$projects,기준:"duration",내림차순:true,개수:10,열:["project","duration","task_count","critical_count"]}
+  $oc=$full >> [table:groupby]{by:"owner",agg:{task_count:["count"]}}
+  $occ=$crit >> [table:groupby]{by:"owner",agg:{critical_count:["count"]}}
+  $oj=[table:join]{left:$oc.items,right:$occ.items,on:"owner",how:"left",defaults:{critical_count:0}}
+  $owners=$oj.items >> [table:sort]{by:"owner"}
+  $summary={task_count:$prepared.task_count,project_count:$prepared.project_count,computable_projects:len($projects),excluded_projects:len($excluded),dep_count_raw:$prepared.dep_count_raw,dep_count_unique:$prepared.dep_count_unique,critical_task_count:len($crit),longest_duration:$top[0].duration}
+  assert $summary.computable_projects+$summary.excluded_projects==$summary.project_count,"프로젝트 분류 누락"
+  return {summary:$summary,excluded:$excluded,tasks:($full >> [table:select]{columns:["id","project","es","ef","slack","critical"]}),projects:$projects,top10:$top,owners:$owners,rounds:{forward:$f.rounds,backward:$b.rounds}}
+}
+[def:지연분류]($extra,$all,$excluded) {
+  $known=[table:join]{left:$extra,right:$all,on:"task",how:"left",defaults:{project:"?"}}
+  $ex=$excluded >> [table:select]{columns:["project","reason"]}
+  $kj=[table:join]{left:$known.items,right:$ex,on:"project",how:"left",defaults:{reason:"ok"}}
+  $cls=$kj.items >> [table:compute]{set:($r)=>{why:$r.project=="?" ? "unknown_task" : $r.reason!="ok" ? "excluded_project" : "applied"}}
+  $na=$cls >> [table:filter]{where:($r)=>$r.why!="applied"} >> [table:compute]{set:($r)=>{reason:$r.why}} >> [table:select]{columns:["task","reason"]} >> [table:sort]{by:"task"}
+  $ap=$cls >> [table:filter]{where:($r)=>$r.why=="applied"} >> [table:select]{columns:["task","project","extra"]}
+  return {not_applied:$na,applied:$ap}
+}
+[def:보고]($result,$title,$note) {
+  $lines=map(entries($result.summary),($kv)=>f"| ${$kv[0]} | ${$kv[1]} |")
+  $rg=$result.excluded >> [table:groupby]{by:"reason",agg:{count:["count"]}}
+  $reasons=map($rg.items,($r)=>f"| ${$r.reason} | ${$r.count} |")
+  $exl=map($result.excluded,($r)=>f"| ${$r.project} | ${$r.reason} | ${$r.detail_count} |")
+  $top=map($result.top10,($r)=>f"| ${$r.project} | ${$r.duration} | ${$r.task_count} | ${$r.critical_count} |")
+  $own=map($result.owners,($r)=>f"| ${$r.owner} | ${$r.task_count} | ${$r.critical_count} |")
+  return f"# ${$title}\n\n합성 자료. 실제 일정 변경 없음.\n\n## 요약\n\n| 지표 | 값 |\n|---|---:|\n"+join("\n",$lines)+"\n\n## 제외 이유별 프로젝트 수\n\n| 이유 | 프로젝트 수 |\n|---|---:|\n"+join("\n",$reasons)+"\n\n| 프로젝트 | 이유 | detail_count |\n|---|---|---:|\n"+join("\n",$exl)+"\n\n## 기간 상위 10개 프로젝트\n\n| 프로젝트 | 기간 | 작업 수 | 임계 작업 수 |\n|---|---:|---:|---:|\n"+join("\n",$top)+"\n\n## 담당 팀별 임계 작업 수\n\n| 팀 | 작업 수 | 임계 작업 수 |\n|---|---:|---:|\n"+join("\n",$own)+"\n\n## 규칙·근거·미확인\n\n- 제외는 프로젝트 단위, bad_duration → missing_dep → cycle 순으로 하나만 배정했다. 같은 선후관계의 중복 줄은 한 번으로 셌다.\n- es=선행 ef 의 최댓값(선행 없으면 0), ef=es+duration, 프로젝트 기간=ef 최댓값, slack=가장 늦은 시작-es, slack 0 이 critical.\n- 근거 파일: inputs/tasks_a.csv, inputs/tasks_b.json, inputs/deps.csv. 작업별 값은 result.json 의 tasks.\n- 확인하지 못한 것: 제외 프로젝트의 일정(계산하지 않음), 기간 오류 프로젝트 안에 다른 결함이 더 있는지(우선순위상 앞 이유만 기록), 합성 자료라 실제 달력·휴일은 반영하지 않음.\n"+$note
+}
+[if:$delays_path==null] { $extra=[] } [else] { $extra=[fn:지연읽기]{path:$delays_path} }
+$r=[fn:일정]{prepared:$prepared,extra:$extra}
+$d=[fn:지연분류]{extra:$extra,all:$prepared.all_tasks,excluded:$r.excluded}
+$result={summary:$r.summary,excluded:$r.excluded,tasks:$r.tasks,projects:$r.projects,top10:$r.top10,owners:$r.owners}
+$report=[fn:보고]{result:$result,title:$title,note:$note}
+$j=[self:write]{path:f"${$out}/result.json",content:json($result)}
+$m=[self:write]{path:f"${$out}/report.md",content:$report}
+$read=[self:read]{path:$j.path} & [self:read]{path:$m.path,format:"text"}
+assert $read[0].data==$result,"JSON 저장 대조 실패"
+assert $read[1].text==$report,"Markdown 저장 대조 실패"
+return {result:$result,delay:$d,rounds:$r.rounds,verified:true,files:[$j.path,$m.path]}

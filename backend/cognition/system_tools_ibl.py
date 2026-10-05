@@ -539,23 +539,88 @@ def _offer_checked_code(checked, code) -> None:
                               '실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.')
 
 
+#: 이보다 짧은 원문은 다시 적는 편이 싸다 — 손잡이 안내가 원문보다 길어지지 않게.
+_REVISION_MIN_CHARS = 300
+_REJECTED_CODE_RE = re.compile(r"\s*\$rejected:([0-9a-f]{64})\s*")
+_CODE_EDIT_EXAMPLE = [{"old": "<고칠 원문 조각>", "new": "<바꿀 글>"}]
+
+
+def _offer_code_revision(result, code) -> None:
+    """실행 전에 거절된 프로그램에 수정 손잡이를 붙인다 — 한 군데를 고치려고 원문 전체를 다시 적지 않게(긴문장 L18-7).
+
+    통과한 검사에는 `$checked` 가 있는데 거절에는 없어서, 7K자 프로그램의 인자 이름 하나를 고치는 데 92초가 들었다
+    (ep4338, 전문 재출력). 보낸 원문은 이미 여기 있으므로 증거 저장소에 두고 `code: "$rejected:<id>"` 와
+    `code_edits`(정확히 일치하는 조각 치환)로 고친다. `$checked` 와 같은 code 자리의 참조이고 새 문법이 아니다."""
+    if (not isinstance(result, dict) or result.get("executed") is not False
+            or result.get("ok") is not False or not result.get("issues")):
+        return
+    if not isinstance(code, str) or len(code) < _REVISION_MIN_CHARS:
+        return
+    try:
+        from model_result_view import evidence_store
+        ref = evidence_store().evidence(json.dumps({"kind": "rejected_program", "code": code}, ensure_ascii=False))
+    except (OSError, ValueError, TypeError):
+        return
+    if ref.get("masked_paths"):
+        return
+    result["revise_args"] = {"code": f"$rejected:{ref['id']}", "code_edits": _CODE_EDIT_EXAMPLE}
+    result["revise_hint"] = ('고칠 조각만 보내세요: revise_args.code 를 그대로 code 에 넣고 code_edits 에 {old, new} 를 적습니다'
+                             '(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 같은 inputs·budget·check 를 '
+                             '함께 보냅니다. 원문 전체를 다시 적지 않습니다.')
+
+
+def apply_code_edits(source, edits):
+    """(고친 원문, 오류문). 조각은 글자 그대로 일치해야 하며 앞 치환의 결과 위에 차례로 적용한다."""
+    if not isinstance(edits, list) or not edits or len(edits) > 40:
+        return source, "code_edits 는 {old, new} 1~40개의 목록입니다."
+    for index, edit in enumerate(edits):
+        if (not isinstance(edit, dict) or set(edit) - {"old", "new", "all"} or type(edit.get("old")) is not str
+                or not edit["old"] or type(edit.get("new")) is not str or type(edit.get("all", False)) is not bool):
+            return source, f"code_edits[{index}] 는 {{old: 비어 있지 않은 글, new: 글, all?: Bool}} 입니다."
+        found = source.count(edit["old"])
+        if found == 0:
+            return source, (f"code_edits[{index}].old 가 원문에 없습니다: {edit['old'][:120]!r}. "
+                            "앞 치환이 이미 바꿨는지, 공백·따옴표가 원문과 같은지 확인하세요.")
+        if found > 1 and not edit.get("all"):
+            return source, (f"code_edits[{index}].old 가 원문에 {found}번 나옵니다: {edit['old'][:120]!r}. "
+                            "한 곳만 가리키도록 길게 적거나 all:true 로 전부 바꾸세요.")
+        source = source.replace(edit["old"], edit["new"])
+    return source, None
+
+
 def _resolve_checked_code(tool_input):
-    """`code: "$checked:<id>"` 를 검사 때 저장한 원문으로 바꾼다. (요청, 오류문) — 참조가 아니면 그대로."""
+    """code 자리의 참조(`$checked:<id>` 통과분 · `$rejected:<id>` 거절분+code_edits)를 저장한 원문으로 바꾼다.
+
+    (요청, 오류문) — 참조가 아니면 그대로. 실행 초크포인트와 도구 호출 기록 자리가 같은 함수를 쓴다:
+    기록이 손잡이만 담으면 실행한 프로그램을 읽는 소비자(연상 사용 집계·증류·평가)가 원문을 못 본다."""
     code = (tool_input or {}).get("code")
+    edits = (tool_input or {}).get("code_edits")
     match = _CHECKED_CODE_RE.fullmatch(code) if isinstance(code, str) else None
-    if not match:
+    rejected = _REJECTED_CODE_RE.fullmatch(code) if isinstance(code, str) and not match else None
+    if not match and not rejected:
+        if edits is not None:
+            return tool_input, ("code_edits 는 code 가 $checked:… 또는 $rejected:… 참조일 때 그 원문에 적용합니다. "
+                                "새 프로그램은 code 에 원문을 적으세요.")
         return tool_input, None
+    name, kind = ("$checked", "checked_program") if match else ("$rejected", "rejected_program")
     again = " 프로그램 원문을 code 로 다시 보내세요."
     try:
         from model_result_view import evidence_store
-        page = evidence_store().read_evidence_across_turns(match[1], 0, None)
+        page = evidence_store().read_evidence_across_turns((match or rejected)[1], 0, None)
         record = json.loads(page["text"])
     except (ValueError, OSError, TypeError, KeyError) as exc:
-        return tool_input, f"$checked 참조를 읽을 수 없습니다: {exc}.{again}"
+        return tool_input, f"{name} 참조를 읽을 수 없습니다: {exc}.{again}"
     if (page.get("masked_paths") or not isinstance(record, dict)
-            or record.get("kind") != "checked_program" or not isinstance(record.get("code"), str)):
-        return tool_input, f"$checked 참조가 검사를 통과한 프로그램이 아닙니다.{again}"
-    return {**tool_input, "code": record["code"]}, None
+            or record.get("kind") != kind or not isinstance(record.get("code"), str)):
+        return tool_input, f"{name} 참조가 {'검사를 통과한' if match else '거절된'} 프로그램이 아닙니다.{again}"
+    source = record["code"]
+    if edits is not None:
+        source, problem = apply_code_edits(source, edits)
+        if problem:
+            return tool_input, problem
+    elif rejected:
+        return tool_input, "$rejected 참조는 거절된 원문입니다 — code_edits 로 고칠 조각을 함께 보내세요."
+    return {**{k: v for k, v in tool_input.items() if k != "code_edits"}, "code": source}, None
 
 
 def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str = None,
@@ -669,7 +734,9 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         retain_failed_inputs(_v2, tool_input.get("inputs"), _ref_notes)
         if tool_input.get("check"):
             _offer_checked_code(_v2, code)
-        return json.dumps(_v2 if tool_input.get("check") else _preview_boundary(_v2, tool_input), ensure_ascii=False)
+        _shown = _v2 if tool_input.get("check") else _preview_boundary(_v2, tool_input)
+        _offer_code_revision(_shown, code)
+        return json.dumps(_shown, ensure_ascii=False)
 
     # --- files 파라미터: $file:N 참조 정보 보관 (파싱 후 치환) ---
     # files_from(경로 참조)은 여기서 인라인 files 뒤에 병합된다 — 번호 연속.

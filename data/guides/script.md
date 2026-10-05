@@ -1,6 +1,6 @@
 # 파일 Script 실행과 등록 — [self:script]
 
-> 2026-08-07 신설. **결정화 사다리의 가운데 가로대** — 자율주행이 write+run_command 로 만들어
+> 2026-08-07 신설. **결정화 사다리의 가운데 가로대** — 자율주행이 `[self:write]`+`[self:script]{path}` 로 만들어
 > 검증까지 끝낸 스크립트를 "몸의 일부"로 승격시키는 관문. 이게 없던 시절엔 완성 스크립트가
 > /tmp 고아가 되거나, 트리거가 자연어 위임([others:delegate])으로 매번 본격 모델을 깨워야 했다.
 
@@ -242,8 +242,8 @@ POST /scheduler/tasks {"name": "월간 정산", "time": "09:00", "repeat": "mont
 ## 실패와 유지보수 (신고는 어휘층, 수리는 도구층)
 
 run 실패 시 `success:false + exit_code + stderr_tail + log 경로`를 정직하게 반환하고 원장
-last_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 확인 → run_command 로 스크립트
-디버깅(도구층) → 파일 수정 → 같은 id 그대로 (파일이 같으면 재등록도 불필요). 등록 파일이
+last_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 확인 → `[self:edit]` 로 파일 수정 →
+`[self:script]` 로 다시 실행해 확인(셸·run_command 가 없어도 된다) → 같은 id 그대로 (파일이 같으면 재등록도 불필요). 등록 파일이
 사라지면 run 이 명시적으로 알린다.
 
 ## 함정

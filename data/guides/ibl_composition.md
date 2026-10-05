@@ -18,7 +18,7 @@
    의미 있는 하위 작업마다 입력·반환·실패·외부 효과를 정하고 구현한 뒤, 마지막에 전체 흐름을 조합한다.
    첫 인자가 파이프 자리다. 모든 외부 의존은 인자로 받는다. `return`은 즉시 반환한다. 저장·등록 없이 실행된다.
 5. 빈값·실패·입력 규모·재개를 설계한 뒤 `check:true`로 검사하고, 통과하면 `execute_args.code`를 `code`로 실행한다.
-   오류는 `issues`를 모아 `location`(원문·정의 안의 위치), `call_path`, `expected/actual`, `hint`로 고친 뒤 전체를 재검사한다.
+   오류는 `issues`를 모아 `location`(원문·정의 안의 위치), `call_path`, `expected/actual`, `hint`로 고친 뒤 전체를 재검사한다. 긴 원문은 `revise_args`의 `code_edits`로 조각만 고친다.
    `warnings`의 반복 AI 입력은 의도를 확인한다. `incomplete`는 실행 중 검사할 타입·도구 경계가 있다는 뜻이다.
    `UNOBSERVED_FIELD`는 관측된 반환 필드 밖의 이름이다 — `describe`의 `observed_returns`나 작은 실행으로 실제 필드를 본 뒤 쓴다.
 6. 수정 실행은 `continuation.reuse_args`로 같은 읽기·성공 모델 결과를 재사용한다(조건은 아래 「중단 뒤 이어가기」).
@@ -104,7 +104,7 @@ $접수 = [{id:"a",score:3},{id:"b",score:7},{id:"c",score:5}]
 $접수 >> [table:filter]{where:($행)=>$행.score >= 5} >> [table:sort]{by:"score",descending:true} >> [table:select]{columns:["id","score"]}
 ```
 
-결과는 `[{id:"b",score:7},{id:"c",score:5}]`다. 반환 목록은 `value`에서 읽는다.
+결과는 `[{id:"b",score:7},{id:"c",score:5}]`다.
 조건을 문자열이나 `{field,op,value}`로 다시 해석하지 않는다. 콜백도 일반 식과 같은 규칙이다.
 
 `sort`의 기준 필드가 비어 있지 않은 입력의 모든 행에 없으면 `MISSING_FIELD`로 실패한다.
@@ -257,7 +257,7 @@ AI 호출의 입력 한도와 마지막 통합의 크기도 계산한다. 작업
 단계를 이어 가고 이미 성공한 쓰기·수집을 재실행하지 않는다.
 공유 예산은 기본 10만 단계·1만 반복 행·깊이 64다. steps는 평가한 식·문장·내장 작업량이다.
 람다 변환은 행당 여러 단계를 쓴다. 요청 `budget:{steps:300000,rows:20000}`로 조정한다(최대 100만·10만).
-`check`는 인자만 검증한다. `usage`는 합계, 예산 20%↑면 `steps_by_line` 3줄(전문=`read_result` `["usage"]`).
+`check`는 인자만 검증한다. `usage`는 합계, 예산 20%↑면 `steps_by_line`, 10초↑면 `tool_ms_by_line`(도구 시간) 3줄(전문=`read_result` `["usage"]`).
 BUDGET의 소진 차원·사용량·한도를 보고
 도구 필터나 여러 실행으로 나눈다. `number()` 해석 실패는 null이 아니라 잡을 수 있는 오류다.
 
@@ -338,7 +338,7 @@ stdout은 진단, 결과 파일은 값이다. 수정·재현·권한은 [Script 
 
 결과는 `value`, 상태는 `success/source_complete`, 진단은 `diagnostic/evidence`다.
 보여 준 결과가 짧으면 `result_ref.read_args`로 필요한 필드만 읽는다. 상세 조회를 위해 원래 작업을
-재실행하지 않는다. 고정 응답 시험은 실제 웹·AI 품질 검증이 아니다.
+재실행하지 않는다.
 
 ## 반복으로 목록 누적하기
 

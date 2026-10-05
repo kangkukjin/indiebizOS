@@ -1,0 +1,2 @@
+#!ibl edition=2
+return [self:script]{path:$p,args:{n:1}}

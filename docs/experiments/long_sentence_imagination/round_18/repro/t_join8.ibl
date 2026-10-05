@@ -1,0 +1,4 @@
+#!ibl edition=2
+$n=0
+[repeat:8] { $j=[table:join]{left:$p.deps,right:$p.tasks,on:"task",how:"inner"}; $n=$n+len($j.items) }
+return $n

@@ -93,12 +93,51 @@ AI 변형의 원자료4개 재조회·기본조건 재계산은 관측됐지만,
 
 후속 수리(2026-10-05): 평가 발췌의 중간 검증 보존·groupby 순수 효과·독립 비교 지시를 수리했다. 원래 기본/변형과 새 45분 조건 전건 대조, non-system 8,796 통과·1 skip, 관련 경계 72 통과. 실제 모델 재평가와 절감량은 미측정. [수리·검증 기록](experiments/long_sentence_imagination/round_17/report.md#후속-수리--2026-10-05).
 
+## 18회차 — 프로젝트 일정표의 선후관계 전파 (2026-10-05, 훈련 완료·후속 수리)
+
+합성 프로젝트 60개·작업 2,400(CSV/JSON, 기간 표기 혼합)·선후관계 3,806줄(중복 7)·지연 통보 180줄.
+새 연결은 **횟수를 미리 모르는 반복(그래프 전파)**: 앞방향 시작일·뒤방향 여유, 전파가 멈춘 뒤 남은 작업=순환,
+제외 사유 우선순위(bad_duration→missing_dep→cycle, 겹치는 프로젝트 2개 포함). 변형은 지연 일수 반영과 delta.
+사전 기대·요청 원문을 고정한 뒤 훈련자 기본/변형과 시스템 AI ep4337/4338 의 **네 결과 모두 6섹션(작업 1,920행 포함)·delta 6키 전건 일치**.
+계산 가능 48·제외 12(5/4/3)·임계 403→406·최장 102→110일, 지연 적용 133·기간 변경 30·흡수 14·미적용 41.
+
+훈련자: `$ref` 3프로그램(준비/일정/delta), `repeat:until` 두 번, **최초 초안 수정 0주기**, 변형은 준비 참조 재사용(원자료 재읽기 0).
+런타임 P1 7.3초·P2 61.8초/66.5초·P3 1.2초. 시스템 AI: 기본 463.8초(도구 14, 입력 1,389,368/출력 11,032),
+변형 544.1초(도구 13, 입력 1,387,870/출력 14,816) — **변형이 기본보다 느렸다**. 전파는 IBL 이 아니라 99줄 Python 을 셸로 돌렸다.
+최종평가는 두 번 다 첫 판 APPROVED(17회차 평가 증거 수리의 새 분야 확인), 변형은 자기 기본 파일을 읽어 원자료 재읽기 0
+(17회차 재사용 지시 수리 확인, 표본 1회). 자동 압축 0, 증류는 리허설이라 꺼짐.
+
+**L18-1** 순수 표 변환 호출마다 인자 전체를 네 번 직렬화·해시(`ibl_v2_runtime._invoke`) — 격리 프로파일에서 P2 시간의 55%가 digest,
+실제 표 처리는 2%. 단계 예산은 이 비용을 세지 않아 비싼 줄을 가리키지 못한다.
+**L18-2** L17-1 수리가 groupby 한 낱말에 그쳐 dedup·rename·flatten·since·reduce·chunk 가 여전히 effects unknown(람다 거절 재현).
+**L18-3** 자작 관문이 핵심 구현 뒤에 울리고 `install_lib check` 한 번으로 걷힌 뒤 같은 내용을 재쓰기 — 두 턴 연속 동일 반복, 결과 변화 0.
+**L18-4** 핵심 계산이 `self:script` 가 아닌 실행자 셸로 나가 IBL 저널·결과 참조·쓰기 기록 밖(판정 필요).
+**L18-5** `recall.used` 가 쓰지 않은 duckdb 를 사용으로 기록(근거 mentioned), 맞닿은 critical_path 는 미사용.
+**L18-6** 관문 거절이 source_failures 로 집계. **L18-7** 한 낱말 수정에 7K자 프로그램 전체 재전송 92초, `rename{mapping}` 오기는 17회차에 이어 재발.
+
+시작 10:58:00, 실험·진단 종료 11:20 KST(약 22분, 상한 60분). HEAD `3b07ff7e154ccc564ae60c54b838af728e5c29c0`, 코어 수리 0·backend 편집 0.
+내부 코드는 훈련자 프로그램이 끝난 뒤 L18-1 원인 진단에만 읽기 전용으로 열었다. 운영 실수 2건(실행 스크립트 project_id 누락,
+변형 도중 입력을 같은 내용으로 재생성 — 에이전트 읽기 뒤라 영향 없음)은 보고서에 적었다. 훈련자 토큰·절감률 미측정.
+[보고서·재현 자료](experiments/long_sentence_imagination/round_18/report.md). 로컬 전체 증거: `outputs/long_sentence_imagination/2026-10-05_18회차/`.
+
+후속 수리(2026-10-05): L18-1·2·4·5·7 수리, L18-3·6 은 설계대로로 정정. 뿌리는 "같은 값을 여러 번 훑는 신원 계산"(L18-1),
+"낱말마다 손으로 적는 효과 선언"(L18-2), "통로를 만든 개정이 실행기 정책 문장을 갱신하지 않음"(L18-4), "검색 열쇠를 사용 증거로 재사용"(L18-5),
+"통과한 검사에만 준 손잡이"(L18-7). 원래 프로그램 재실행 전건 동일·P2 61.8→17.7초, non-system 8,823 통과·1 skip.
+수리 뒤 시스템 AI 새 변형 두 번(ep4339·4340)도 전건 일치·첫 판 승인, 사용 집계 오기 해소. 다만 Python 은 여전히 셸로 돌렸고(문장 교정으로 행동 불변, Script 통로는 `~turn` 전용) 벽시계는 줄지 않았다(558·415초 — 시간은 모델의 작성에 든다). [18회차 후속 수리](experiments/long_sentence_imagination/round_18/report.md#후속-수리--2026-10-05).
+
 ## 갭 원장
 
 예시 ID를 실제 발견으로 등록하지 않는다.
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
+| L18-1 | 과도한 비용(구현) — 순수 도구 호출에서도 인자 전체를 pack·digest 4회, 재사용 지문은 순수 호출에서 미사용 | 18회차 `repro/t_*.ibl`(select 2,040행 회당 0.33초), `repro/profile_p2.py`(digest 38.6초/70.1초, 핸들러 1.47초). 훈련자 P2 61.8·66.5초, ep4337 집계 프로그램 16.6초 | 수리됨(2026-10-05) — 인자 지문 1회·신원은 지문만, 도구 호출 범위의 재고 검증 묶기, `usage.tool_ms_by_line`. 격리 34.5→12.1초, 라이브 P2 61.8→17.7초, 결과 전건 동일 | [18회차 후속 수리](experiments/long_sentence_imagination/round_18/report.md#후속-수리--2026-10-05) |
+| L18-2 | 계약 공백 — L17-1 과 같은 부류의 잔여: dedup·rename·flatten·since·reduce·chunk 의 effects unknown | 18회차 `repro/dedup_in_lambda.ibl` → PURE_EXPRESSION. describe 16개 전수 조회 | 수리됨(2026-10-05) — chunk·rename·flatten·dedup·reduce pure, transform 부류 관문 시험(`since` 는 관측 상태라 unknown 유지) | [18회차 후속 수리](experiments/long_sentence_imagination/round_18/report.md#후속-수리--2026-10-05) |
+| L18-3 | 발견·학습/과도한 비용 — 자작 관문의 시점(구현 뒤)과 효과(확인 1회로 통과, 내용 불변) | ep4337 seq120~140, ep4338 seq109~129 동일 반복. 방법 지도는 critical_path 를 턴 시작에 제시 | 설계대로(정정) — 확인만 요구·턴 단위 원장은 명시 결정, 턴당 약 16초. 고치지 않음 | [18회차 후속 수리](experiments/long_sentence_imagination/round_18/report.md#후속-수리--2026-10-05) |
+| L18-4 | 관측·축적 공백 — 핵심 계산이 실행자 셸로 나가 IBL 저널·결과 참조·쓰기 기록 밖 | ep4337 seq85·146, ep4338 seq84·133 `shell` (`python3 cpm.py`), 감독 원장 elapsed 0.002초, graph.json 쓰기 사건 없음 | 허용 통로로 둠(추천 판정) + 교정(2026-10-05) — 거짓이 된 문장 세 곳(두 실행기 정책·가이드 목록 설명·`script.md` 본문)과 Codex 세션 키. 수리 뒤 2회 재실행에서도 셸 사용 — 금지·관문은 두지 않음 | [18회차 후속 수리](experiments/long_sentence_imagination/round_18/report.md#후속-수리--2026-10-05) |
+| L18-5 | 관측·축적 공백 — recall.used 의 mentioned 근거가 미사용 항목을 사용으로 기록 | ep4337·4338 `used:["duckdb"]`, 호출·스크립트 어디에도 없음 | 수리됨(2026-10-05) — 사용 결합의 이름을 고유 이름으로(별칭=검색 열쇠 제외) | [18회차 후속 수리](experiments/long_sentence_imagination/round_18/report.md#후속-수리--2026-10-05) |
+| L18-6 | 관측·축적 공백 — 정책 관문 거절이 source_failures 로 집계 | 두 에피소드 cost.summary `source_failures:1` | 설계대로 — 실패한 외부 쓰기도 값의 불완전 표지. 고치지 않음 | [18회차 후속 수리](experiments/long_sentence_imagination/round_18/report.md#후속-수리--2026-10-05) |
+| L18-7 | 작성 마찰/과도한 비용 — 검사 거절 뒤 코드 일부만 고쳐 보낼 통로 없음, `rename{mapping}` 오기 재발 | ep4338 seq87→93 92초(7,201자 재전송), 17회차 ep4335 seq160 같은 오기 | 수리됨(2026-10-05) — 거절 응답의 `$rejected` 손잡이 + `code_edits` 조각 치환(스키마·HTTP·MCP 세 표면), `rename` 별칭 mapping→map, 기록 자리의 참조 해소 | [18회차 후속 수리](experiments/long_sentence_imagination/round_18/report.md#후속-수리--2026-10-05) |
 | L17-1 | 계약 공백 — groupby의 정적 효과 unknown이 집계 함수의 람다 조합을 거절 | 17회차 `repro/groupby_in_lambda.ibl` → PURE_EXPRESSION, 주 P2의 내부 모델 호출 사전 판정도 미상. 반면 read+groupby reuse는 2/2 성공 | 수리됨(2026-10-05) — 사전 effects=pure, 람다 조합·읽기 재사용·실패 유지 회귀. 최초 관측은 보존 | [17회차 보고서](experiments/long_sentence_imagination/round_17/report.md) |
 | L17-2 | 훈련 설계 공백 — 다른 실행자 결과 금지가 자기 직전 결과까지 금지로 읽힐 수 있음 | ep4336이 원자료4개·기본 조건을 재계산하고 기본 결과 미열람을 명시. 훈련자만 P1 참조 사용 | 지시 수리됨(2026-10-05) — 자기 직전 결과 허용을 가이드에 명시. 최초 재계산의 인과·실제 절감은 미확정 | [17회차 보고서](experiments/long_sentence_imagination/round_17/report.md) |
 | L1-1 | 문법·값 계약 공백 — 정적 검사기 null 좁힘 없음(삼항·`[if]`+return·변수 보간) | `$it.a == null ? "-" : text($it.a)` → TYPE; `[if:…==null]{return}` 뒤 `text()` → TYPE; `f"${v}"` → FORMAT_TYPE. 우회 `json()` (`round_1/repro/narrow_*`) | 수리됨 | `674d65ee` · v2·v4 검사, null 삼항·조기 반환·보간, 전체·누락 변형 통과

@@ -5,6 +5,9 @@ import os
 import re
 import tempfile
 import threading
+import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 import yaml
@@ -16,6 +19,27 @@ from vocabulary_policy import load_policy, required_packages
 
 LOCK = threading.RLock()
 _inventory_cache = {}
+#: 한 도구 호출 안에서 재고 검증(보유 폴더 전체 stat)을 묶는 창 — inventory_scope 참조.
+_SCOPE_WINDOW_S = 1.0
+_scope = ContextVar("vocabulary_inventory_scope", default=None)
+
+
+@contextmanager
+def inventory_scope():
+    """한 도구 호출 동안 같은 재고를 다시 검증하지 않는다(긴문장 18회차 후속).
+
+    inventory() 는 부를 때마다 보유 묶음의 정의 파일을 전부 stat 해 캐시를 검증한다. 도구 호출 한 번이
+    인자 검사·도구 찾기·활성 판정으로 이 함수를 열두 번쯤 부르므로, 표 변환 69번에 stat 이 49만 번이었다.
+    호출 하나 안에서는 처음 검증한 결과를 _SCOPE_WINDOW_S 동안 쓴다. 창을 두는 까닭은 오래 도는 호출
+    (위임·반복) 안에서도 밖의 설치·삭제가 곧 보이게 하려는 것이다. 범위 밖의 조회는 종전대로 매번 검증한다."""
+    if _scope.get() is not None:
+        yield
+        return
+    token = _scope.set({})
+    try:
+        yield
+    finally:
+        _scope.reset(token)
 _state_cache = {}
 
 
@@ -28,6 +52,11 @@ def valid_id(value: str) -> str:
 def inventory(root: Path = None) -> dict:
     """두 보관 폴더가 보유 정본. 내용은 import하지 않고 정의만 읽는다."""
     root = Path(root or get_base_path())
+    held = _scope.get()
+    if held is not None:
+        seen = held.get(str(root))
+        if seen and time.monotonic() - seen[0] < _SCOPE_WINDOW_S:
+            return seen[1]
     with LOCK:
         paths = []
         for location in ("installed", "not_installed"):
@@ -41,6 +70,8 @@ def inventory(root: Path = None) -> dict:
                                      if (p / name).is_file())) for p, _ in paths)
         cached = _inventory_cache.get(str(root))
         if cached and cached[0] == stamps:
+            if held is not None:
+                held[str(root)] = (time.monotonic(), cached[1])
             return cached[1]
         packages, tools, actions = {}, {}, {}
         for path, location in paths:
@@ -69,6 +100,8 @@ def inventory(root: Path = None) -> dict:
                         actions[key] = pid
         result = {"packages": packages, "tools": tools, "actions": actions}
         _inventory_cache[str(root)] = (stamps, result)
+        if held is not None:
+            held[str(root)] = (time.monotonic(), result)
         return result
 
 
@@ -249,3 +282,6 @@ def active_paths(root: Path = None) -> list:
 def invalidate_inventory() -> None:
     with LOCK:
         _inventory_cache.clear()
+        held = _scope.get()
+        if held is not None:
+            held.clear()

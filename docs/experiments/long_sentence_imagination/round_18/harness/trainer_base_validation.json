@@ -1,0 +1,16 @@
+{
+ "who": "trainer",
+ "kind": "base",
+ "summary": true,
+ "excluded": true,
+ "tasks": true,
+ "projects": true,
+ "top10": true,
+ "owners": true,
+ "extra_keys": [],
+ "md_chars": 1717,
+ "md_summary_values": true,
+ "md_top10": true,
+ "md_owners": true,
+ "md_excluded": true
+}

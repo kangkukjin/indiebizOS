@@ -101,7 +101,13 @@ nodes:
               sub: '{added_at}'
               button:
                 label: ▶
-                action: '[limbs:radio]{op: "play", station_id: $item.station_id, stream_url: $item.stream_url}'
+                # ID 없는 외부 방송·URL 없는 동적 국내 방송의 null을 문자열 인자로 보내지 않는다.
+                action: >-
+                  [if:$item.station_id != null and $item.station_id != ""] {
+                    [limbs:radio]{op: "play", station_id: $item.station_id}
+                  } [else] {
+                    [limbs:radio]{op: "play", stream_url: $item.stream_url}
+                  }
               button2:
                 label: ✕
                 action: '[limbs:radio_favorite]{op: "remove", name: $item.name}'

@@ -2054,7 +2054,7 @@ nodes:
               sub: '{added_at}'
               button:
                 label: ▶
-                action: '[limbs:radio]{op: "play", station_id: $item.station_id, stream_url: $item.stream_url}'
+                action: "[if:$item.station_id != null and $item.station_id != \"\"] {\n  [limbs:radio]{op: \"play\", station_id: $item.station_id}\n} [else] {\n  [limbs:radio]{op: \"play\", stream_url: $item.stream_url}\n}"
               button2:
                 label: ✕
                 action: '[limbs:radio_favorite]{op: "remove", name: $item.name}'

@@ -1,0 +1,14 @@
+.......................                                                  [100%]
+============================= slowest 15 durations =============================
+26.83s call     backend/test_vocabulary_bundle_split.py::test_split_archives_register_without_any_original_bundle
+12.67s call     backend/test_vocabulary_archive.py::test_real_cache_reset_updates_catalog_and_gate
+10.96s call     backend/test_vocabulary_archive.py::test_roundtrip_seed_sleep_wake
+6.93s call     backend/test_vocabulary_archive.py::test_failed_seed_restores_catalog_and_selection
+0.83s call     backend/test_vocabulary_bundle_split.py::test_moved_word_gate_and_recall_are_independent_from_parent
+0.41s call     backend/test_vocabulary_archive.py::test_legacy_manifest_dependencies_do_not_become_package_ids
+0.41s call     backend/test_vocabulary_bundle_split.py::test_package_ownership_and_phone_actions_are_preserved
+0.18s call     backend/test_vocabulary_bundle_split.py::test_exported_bundle_runs_without_original_package[books-book_op-params0]
+0.13s call     backend/test_vocabulary_bundle_split.py::test_exported_bundle_runs_without_original_package[freelance-services-freelance_search-params3]
+
+(6 durations < 0.1s hidden.)
+23 passed in 60.14s (0:01:00)

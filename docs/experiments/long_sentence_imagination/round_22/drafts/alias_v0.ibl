@@ -1,0 +1,16 @@
+#!ibl edition=2
+[def:자료읽기]($path) {
+  $r=[self:read]{path:$path}
+  return $r.data.items
+}
+[def:후보정리]($rows) {
+  $unique=$rows >> [table:dedup]{key:["title","author"]}
+  $summary=$unique.items >> [table:groupby]{by:"section",agg:{count:["count"],amount:["sum","price"]}}
+  return {rows:$unique.items,summary:$summary.items,total:sum(map($unique.items,($r)=>$r.price)),count:len($unique.items)}
+}
+$parts=$sources >> [table:each]{parallel:2}{[fn:자료읽기]{path:$it}}
+$rows=$parts >> [table:each]{mode:"flat_map"}{return $it}
+$report=[fn:후보정리]{rows:$rows}
+$written=[self:write]{path:$out+".json",content:json($report)}
+$back=[self:read]{path:$written.path}
+return {report:$report,verified:$back.data==$report,path:$written.path}

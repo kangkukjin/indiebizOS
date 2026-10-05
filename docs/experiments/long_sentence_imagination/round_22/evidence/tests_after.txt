@@ -1,0 +1,11 @@
+....................................................................     [100%]
+============================= slowest 15 durations =============================
+2.45s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[author]
+1.06s call     backend/test_workspace_sessions.py::test_code_workspace_shares_the_contract
+0.64s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[key1]
+0.32s call     backend/test_tool_radio.py::test_favorite_play_uses_only_available_identifier[row1-expected1]
+0.32s call     backend/test_tool_radio.py::test_favorite_play_uses_only_available_identifier[row0-expected0]
+0.31s call     backend/test_tool_radio.py::test_favorite_play_uses_only_available_identifier[row2-expected2]
+
+(9 durations < 0.1s hidden.)
+68 passed in 6.60s

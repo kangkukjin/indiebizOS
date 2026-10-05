@@ -1,0 +1,30 @@
+{
+  "time": "2026-10-06T00:59:27.586517+09:00",
+  "runs": [
+    {
+      "label": "before_run",
+      "run_id": {
+        "run_id": "126465cd6c064ea7ac0e98e072ab3130"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "alias_before_run",
+      "run_id": {
+        "run_id": "4451b0cb4e1e423b960d265502f66817"
+      },
+      "status": "interrupted",
+      "success": false
+    },
+    {
+      "label": "variant_before_run",
+      "run_id": {
+        "run_id": "c8a071a315c04c22a482a612500466ff"
+      },
+      "status": "completed",
+      "success": true
+    }
+  ],
+  "pending": []
+}

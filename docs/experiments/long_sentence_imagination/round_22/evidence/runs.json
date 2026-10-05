@@ -1,0 +1,618 @@
+{
+  "variant_after_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "fbb59ca1a93b478a9018b88066a1e966"
+    },
+    "usage": {
+      "steps": 149,
+      "rows": 4,
+      "elapsed_ms": 432
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "rows": [
+          {
+            "id": "a",
+            "title": "새 책",
+            "author": "Kim",
+            "section": "인문",
+            "price": 10
+          },
+          {
+            "id": "b",
+            "title": "Data",
+            "author": "Lee",
+            "section": "기술",
+            "price": 20
+          },
+          {
+            "id": "c",
+            "title": "A|B",
+            "author": "C",
+            "section": "기술",
+            "price": 30
+          },
+          {
+            "id": "d",
+            "title": "A",
+            "author": "B|C",
+            "section": "기술",
+            "price": 40
+          },
+          {
+            "id": "e",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 50
+          },
+          {
+            "id": "f",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 60
+          }
+        ],
+        "summary": [
+          {
+            "section": "인문",
+            "count": 1,
+            "amount": 10
+          },
+          {
+            "section": "기술",
+            "count": 3,
+            "amount": 90
+          },
+          {
+            "section": "확인",
+            "count": 2,
+            "amount": 110
+          }
+        ],
+        "total": 210,
+        "count": 6
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_22회차/variant.json"
+    },
+    "http_seconds": 0.4611286246217787
+  },
+  "before_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "126465cd6c064ea7ac0e98e072ab3130"
+    },
+    "usage": {
+      "steps": 153,
+      "rows": 4,
+      "elapsed_ms": 376
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "rows": [
+          {
+            "id": "a",
+            "title": "새 책",
+            "author": "Kim",
+            "section": "인문",
+            "price": 10
+          },
+          {
+            "id": "b",
+            "title": "Data",
+            "author": "Lee",
+            "section": "기술",
+            "price": 20
+          },
+          {
+            "id": "c",
+            "title": "A|B",
+            "author": "C",
+            "section": "기술",
+            "price": 30
+          },
+          {
+            "id": "d",
+            "title": "A",
+            "author": "B|C",
+            "section": "기술",
+            "price": 40
+          },
+          {
+            "id": "e",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 50
+          },
+          {
+            "id": "f",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 60
+          },
+          {
+            "id": "k",
+            "title": "Straße",
+            "author": "Hans",
+            "section": "인문",
+            "price": 70
+          }
+        ],
+        "summary": [
+          {
+            "section": "인문",
+            "count": 2,
+            "amount": 80
+          },
+          {
+            "section": "기술",
+            "count": 3,
+            "amount": 90
+          },
+          {
+            "section": "확인",
+            "count": 2,
+            "amount": 110
+          }
+        ],
+        "total": 280,
+        "count": 7
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_22회차/main.json"
+    },
+    "http_seconds": 0.4046738753095269
+  },
+  "reverse_after_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "22dcad35badd484886092cc08f0446bf"
+    },
+    "usage": {
+      "steps": 157,
+      "rows": 4,
+      "elapsed_ms": 375
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "rows": [
+          {
+            "id": "g",
+            "title": "새 책",
+            "author": "Kim",
+            "section": "인문",
+            "price": 10
+          },
+          {
+            "id": "h",
+            "title": " data ",
+            "author": "LEE",
+            "section": "기술",
+            "price": 20
+          },
+          {
+            "id": "i",
+            "title": "A|B",
+            "author": "C",
+            "section": "기술",
+            "price": 30
+          },
+          {
+            "id": "j",
+            "title": "A",
+            "author": "B|C",
+            "section": "기술",
+            "price": 40
+          },
+          {
+            "id": "k",
+            "title": "Straße",
+            "author": "Hans",
+            "section": "인문",
+            "price": 70
+          },
+          {
+            "id": "m",
+            "title": "Data",
+            "author": "Park",
+            "section": "기술",
+            "price": 80
+          },
+          {
+            "id": "e",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 50
+          },
+          {
+            "id": "f",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 60
+          }
+        ],
+        "summary": [
+          {
+            "section": "인문",
+            "count": 2,
+            "amount": 80
+          },
+          {
+            "section": "기술",
+            "count": 4,
+            "amount": 170
+          },
+          {
+            "section": "확인",
+            "count": 2,
+            "amount": 110
+          }
+        ],
+        "total": 360,
+        "count": 8
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_22회차/reverse.json"
+    },
+    "http_seconds": 0.4031965830363333
+  },
+  "alias_after_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "99df9441141f47e49828913b6690dc24"
+    },
+    "usage": {
+      "steps": 157,
+      "rows": 4,
+      "elapsed_ms": 588
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "rows": [
+          {
+            "id": "a",
+            "title": "새 책",
+            "author": "Kim",
+            "section": "인문",
+            "price": 10
+          },
+          {
+            "id": "b",
+            "title": "Data",
+            "author": "Lee",
+            "section": "기술",
+            "price": 20
+          },
+          {
+            "id": "c",
+            "title": "A|B",
+            "author": "C",
+            "section": "기술",
+            "price": 30
+          },
+          {
+            "id": "d",
+            "title": "A",
+            "author": "B|C",
+            "section": "기술",
+            "price": 40
+          },
+          {
+            "id": "e",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 50
+          },
+          {
+            "id": "f",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 60
+          },
+          {
+            "id": "k",
+            "title": "Straße",
+            "author": "Hans",
+            "section": "인문",
+            "price": 70
+          },
+          {
+            "id": "m",
+            "title": "Data",
+            "author": "Park",
+            "section": "기술",
+            "price": 80
+          }
+        ],
+        "summary": [
+          {
+            "section": "인문",
+            "count": 2,
+            "amount": 80
+          },
+          {
+            "section": "기술",
+            "count": 4,
+            "amount": 170
+          },
+          {
+            "section": "확인",
+            "count": 2,
+            "amount": 110
+          }
+        ],
+        "total": 360,
+        "count": 8
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_22회차/alias_output.json"
+    },
+    "http_seconds": 0.6189957922324538
+  },
+  "alias_before_run": {
+    "success": false,
+    "ok": null,
+    "status": null,
+    "run_status": "interrupted",
+    "resume": {
+      "run_id": "4451b0cb4e1e423b960d265502f66817"
+    },
+    "usage": {
+      "steps": 68,
+      "rows": 4,
+      "elapsed_ms": 319
+    },
+    "diagnostic": {
+      "code": "TOOL",
+      "kind": "runtime",
+      "message": "data_dedup: `key` 에는 타입 선언이 없는 자리인데 2개짜리 목록이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).",
+      "frames": [
+        {
+          "function": "후보정리",
+          "call": {
+            "source_hash": "24d8b07754a3207590d6134021f7534ae9088c6391d3033fe6a930c3626082aa",
+            "start": 526,
+            "end": 547,
+            "line": 13,
+            "column": 9
+          },
+          "definition": {
+            "source_hash": "24d8b07754a3207590d6134021f7534ae9088c6391d3033fe6a930c3626082aa",
+            "start": 90,
+            "end": 394,
+            "line": 6,
+            "column": 1
+          }
+        }
+      ],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        56
+      ],
+      "details": {},
+      "source_span": {
+        "source_hash": "24d8b07754a3207590d6134021f7534ae9088c6391d3033fe6a930c3626082aa",
+        "start": 129,
+        "end": 166,
+        "line": 7,
+        "column": 20
+      }
+    },
+    "value": null,
+    "http_seconds": 0.3492207922972739
+  },
+  "check_run": {
+    "success": null,
+    "ok": true,
+    "status": "incomplete",
+    "run_status": null,
+    "resume": null,
+    "usage": null,
+    "diagnostic": null,
+    "value": null,
+    "http_seconds": 0.30422320775687695
+  },
+  "variant_before_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "c8a071a315c04c22a482a612500466ff"
+    },
+    "usage": {
+      "steps": 149,
+      "rows": 4,
+      "elapsed_ms": 370
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "rows": [
+          {
+            "id": "a",
+            "title": "새 책",
+            "author": "Kim",
+            "section": "인문",
+            "price": 10
+          },
+          {
+            "id": "b",
+            "title": "Data",
+            "author": "Lee",
+            "section": "기술",
+            "price": 20
+          },
+          {
+            "id": "c",
+            "title": "A|B",
+            "author": "C",
+            "section": "기술",
+            "price": 30
+          },
+          {
+            "id": "d",
+            "title": "A",
+            "author": "B|C",
+            "section": "기술",
+            "price": 40
+          },
+          {
+            "id": "e",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 50
+          },
+          {
+            "id": "f",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 60
+          }
+        ],
+        "summary": [
+          {
+            "section": "인문",
+            "count": 1,
+            "amount": 10
+          },
+          {
+            "section": "기술",
+            "count": 3,
+            "amount": 90
+          },
+          {
+            "section": "확인",
+            "count": 2,
+            "amount": 110
+          }
+        ],
+        "total": 210,
+        "count": 6
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_22회차/variant.json"
+    },
+    "http_seconds": 0.3976175826974213
+  },
+  "after_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "2c8eafac41a04435851581ff48cd3363"
+    },
+    "usage": {
+      "steps": 153,
+      "rows": 4,
+      "elapsed_ms": 470
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "rows": [
+          {
+            "id": "a",
+            "title": "새 책",
+            "author": "Kim",
+            "section": "인문",
+            "price": 10
+          },
+          {
+            "id": "b",
+            "title": "Data",
+            "author": "Lee",
+            "section": "기술",
+            "price": 20
+          },
+          {
+            "id": "c",
+            "title": "A|B",
+            "author": "C",
+            "section": "기술",
+            "price": 30
+          },
+          {
+            "id": "d",
+            "title": "A",
+            "author": "B|C",
+            "section": "기술",
+            "price": 40
+          },
+          {
+            "id": "e",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 50
+          },
+          {
+            "id": "f",
+            "title": "",
+            "author": "Lee",
+            "section": "확인",
+            "price": 60
+          },
+          {
+            "id": "k",
+            "title": "Straße",
+            "author": "Hans",
+            "section": "인문",
+            "price": 70
+          }
+        ],
+        "summary": [
+          {
+            "section": "인문",
+            "count": 2,
+            "amount": 80
+          },
+          {
+            "section": "기술",
+            "count": 3,
+            "amount": 90
+          },
+          {
+            "section": "확인",
+            "count": 2,
+            "amount": 110
+          }
+        ],
+        "total": 280,
+        "count": 7
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_22회차/main.json"
+    },
+    "http_seconds": 0.5026241671293974
+  }
+}

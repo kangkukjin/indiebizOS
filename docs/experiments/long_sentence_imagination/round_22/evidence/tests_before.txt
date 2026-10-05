@@ -1,0 +1,35 @@
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+___________ test_dedup_documented_alias_selects_the_same_keys[key1] ____________
+
+key = ['title', 'author']
+
+    @pytest.mark.parametrize('key', ['author', ['title', 'author']])
+    def test_dedup_documented_alias_selects_the_same_keys(key):
+        from ibl_v2_adapters import load_registry
+        from ibl_v2_compile import compile_program
+        from ibl_v2_runtime import Runtime
+        from thread_context import actor_context
+        inputs = {'rows': [{'title': 'Shared', 'author': 'A'},
+                           {'title': 'Shared', 'author': 'B'},
+                           {'title': 'Shared', 'author': 'a'}], 'key': key}
+        results = []
+        for argument in ('by', 'key'):
+            plan = compile_program('$rows >> [table:dedup]{' + argument + ':$key}',
+                                   load_registry(str(ROOT)), inputs)
+            assert not plan.issues, plan.issues
+            with actor_context(origin='training'):
+                result = Runtime(plan, inputs).run()
+>           assert result['success'], result.get('diagnostic')
+E           AssertionError: {'code': 'TOOL', 'kind': 'runtime', 'message': 'data_dedup: `key` 에는 타입 선언이 없는 자리인데 2개짜리 목록이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: "…$it.필드…"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).', 'frames': [], ...}
+E           assert False
+
+backend/test_data_ops.py:26: AssertionError
+============================= slowest 15 durations =============================
+2.26s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[author]
+0.58s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[key1]
+
+(4 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[key1]
+1 failed, 1 passed in 3.05s

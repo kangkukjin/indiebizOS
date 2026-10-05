@@ -393,7 +393,6 @@ actions:
         by: Unknown
         criteria: Unknown
         items: List|Record|Text
-        key: Unknown
         op: Unknown
         project_id: Unknown
         scope: Unknown

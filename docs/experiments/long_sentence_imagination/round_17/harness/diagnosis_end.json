@@ -1,0 +1,1 @@
+{"started_at": "2026-10-05T09:45:43+09:00", "diagnosis_ended_at": "2026-10-05T10:10:14+09:00", "duration": [{"start_seconds": 35143, "end_seconds": 36614, "diagnosis_seconds": 1471, "diagnosis_minutes": 24.52}], "all_jobs_terminal": true, "episodes": [4335, 4336], "new_experiments_stopped": true}

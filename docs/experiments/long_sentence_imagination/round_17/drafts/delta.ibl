@@ -1,0 +1,9 @@
+#!ibl edition=2
+# inputs base/variant = P2 result refs (fields result,verified,buffer,files), out=variant dir
+$a=map($base.result.pairs,($r)=>{a:$r.a,b:$r.b})
+$b=map($variant.result.pairs,($r)=>{a:$r.a,b:$r.b})
+$delta={added:difference($b,$a),removed:difference($a,$b),impacted_change:$variant.result.summary.impacted_unique-$base.result.summary.impacted_unique}
+$f=[self:write]{path:f"${$out}/delta.json",content:json($delta)}
+$read=[self:read]{path:$f.path}
+assert $read.data==$delta,"delta 저장 대조 실패"
+return {added:len($delta.added),removed:len($delta.removed),impacted_change:$delta.impacted_change,path:$f.path}

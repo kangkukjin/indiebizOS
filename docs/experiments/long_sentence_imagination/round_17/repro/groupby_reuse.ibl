@@ -1,0 +1,2 @@
+$r=[self:read]{path:$path}; $g=$r.data.items >> [table:groupby]{by:"building",agg:{n:["count"]}}; return {groups:$g.items,revision:2}
+# Run once then rerun with reuse:{run_id:first}; observed reused_calls2/candidates2.

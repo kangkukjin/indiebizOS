@@ -1,0 +1,12 @@
+#!ibl edition=2
+# Only synthetic input generation and oracle preparation; NOT the task solution.
+# inputs: root=round folder absolute path containing harness/generate.py
+$s=[self:read]{path:f"${$root}/harness/generate.py",format:"text"}
+$f=[self:write]{path:"~turn/round17_prepare.py",content:$s.text}
+$r=[self:script]{path:$f.path,args:{}}
+[self:write]{path:f"${$root}/inputs/bookings_a.csv",content:$r.a,format:"csv"}
+[self:write]{path:f"${$root}/inputs/bookings_b.json",content:json($r.b)}
+[self:write]{path:f"${$root}/inputs/rooms.json",content:json($r.rooms)}
+[self:write]{path:f"${$root}/inputs/maintenance.csv",content:$r.maintenance,format:"csv"}
+[self:write]{path:f"${$root}/harness/expected.json",content:json($r.expected)}
+return {counts:$r.counts,expected:$r.expected.summaries}

@@ -1,0 +1,23 @@
+#!ibl edition=2
+# Input root; return reusable normalized data and policy-independent candidates.
+[def:예약정규화]($rows) {
+  return $rows >> [table:compute]{set:($r)=>{start:number($r.start),end:number($r.end),people:number($r.people),row:number($r.row)}}
+}
+[def:준비]($root) {
+  $docs=[self:read]{path:f"${$root}/bookings_a.csv"} & [self:read]{path:f"${$root}/bookings_b.json"} & [self:read]{path:f"${$root}/rooms.json"} & [self:read]{path:f"${$root}/maintenance.csv"}
+  $raw=$docs[0].data.items + $docs[1].data.items
+  $bookings=[fn:예약정규화]{rows:$raw}
+  $rooms=$docs[2].data.items
+  $maintenance=$docs[3].data.items >> [table:compute]{set:($r)=>{ms:number($r.start),me:number($r.end)}} >> [table:select]{columns:["mid","room","day","ms","me"]}
+  $joined=[table:join]{left:$bookings,right:$rooms,on:"room",how:"left",defaults:{building:"?",capacity:null}}
+  $classified=$joined.items >> [table:compute]{set:($r)=>{reason:$r.status=="cancelled" ? "cancelled" : $r.building=="?" ? "unknown_room" : $r.end<=$r.start ? "invalid_interval" : "usable"}}
+  $excluded=$classified >> [table:filter]{where:($r)=>$r.reason!="usable"} >> [table:select]{columns:["id","reason","source","row"]}
+  $usable=$classified >> [table:filter]{where:($r)=>$r.reason=="usable"}
+  $slim=$usable >> [table:select]{columns:["id","room","day","start","end","building"]}
+  $pairs=[table:join]{left:$slim,right:$slim,on:["room","day"],how:"inner"}
+  $candidates=$pairs.items >> [table:filter]{where:($r)=>$r.id<$r.id_2}
+  $blocks=[table:join]{left:$slim,right:$maintenance,on:["room","day"],how:"inner"}
+  assert len($raw)==len($usable)+len($excluded),"예약 분류 누락"
+  return {input_count:len($raw),rooms:$rooms,usable:$usable,excluded:$excluded,pair_candidates:$candidates,maintenance_candidates:$blocks.items}
+}
+return [fn:준비]{root:$root}

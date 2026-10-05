@@ -1,0 +1,2 @@
+[def:건수]($rows){$g=$rows >> [table:groupby]{by:"k",agg:{n:["count"]}}; return $g.items[0].n}
+return map([{k:"a"}],($r)=>[fn:건수]{rows:[$r]})

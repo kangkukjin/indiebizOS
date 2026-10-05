@@ -1,0 +1,37 @@
+#!ibl edition=2
+# Prepared data is the explicit input; buffer changes only E-building occupancy.
+[def:감사]($prepared,$buffer) {
+  $pc=$prepared.pair_candidates >> [table:compute]{set:($r)=>{ae:$r.end+($r.building=="E" ? $buffer : 0),be:$r.end_2+($r.building=="E" ? $buffer : 0)}}
+  $pairs=$pc >> [table:filter]{where:($r)=>$r.start<$r.be and $r.start_2<$r.ae} >> [table:compute]{set:($r)=>{a:$r.id,b:$r.id_2,overlap:($r.ae<$r.be ? $r.ae : $r.be)-($r.start>$r.start_2 ? $r.start : $r.start_2)}} >> [table:select]{columns:["a","b","room","day","overlap"]}
+  $mc=$prepared.maintenance_candidates >> [table:compute]{set:($r)=>{ae:$r.end+($r.building=="E" ? $buffer : 0)}}
+  $maintenance=$mc >> [table:filter]{where:($r)=>$r.start<$r.me and $r.ms<$r.ae} >> [table:compute]{set:($r)=>{overlap:($r.ae<$r.me ? $r.ae : $r.me)-($r.start>$r.ms ? $r.start : $r.ms)}} >> [table:select]{columns:["id","mid","overlap"]}
+  $unknown=$prepared.usable >> [table:filter]{where:($r)=>$r.capacity==null}
+  $over=$prepared.usable >> [table:filter]{where:($r)=>$r.capacity!=null and $r.people>$r.capacity}
+  $ids=unique(map($pairs,($r)=>$r.a)+map($pairs,($r)=>$r.b)+map($maintenance,($r)=>$r.id)+map($unknown,($r)=>$r.id)+map($over,($r)=>$r.id))
+  $idrows=map($ids,($id)=>{id:$id})
+  $impacted=[table:join]{left:$prepared.usable,right:$idrows,on:"id",how:"semi"}
+  $counts=$prepared.usable >> [table:groupby]{by:"room",agg:{usable_count:["count"]}}
+  $badcounts=$impacted.items >> [table:groupby]{by:"room",agg:{impacted_unique:["count"]}}
+  $rooms=[table:join]{left:$prepared.rooms,right:$counts,on:"room",how:"left",defaults:{usable_count:0}}
+  $rooms=[table:join]{left:$rooms,right:$badcounts,on:"room",how:"left",defaults:{impacted_unique:0}}
+  $rooms=$rooms.items >> [table:select]{columns:["room","building","usable_count","impacted_unique"]}
+  $ordered=$rooms >> [table:sort]{by:"room"}
+  $top=[fn:정렬해추리기]{목록:$ordered,기준:"impacted_unique",내림차순:true,개수:10,열:["room","building","usable_count","impacted_unique"]}
+  $summary={input_count:$prepared.input_count,usable_count:len($prepared.usable),excluded_count:len($prepared.excluded),pair_count:len($pairs),maintenance_count:len($maintenance),over_capacity_count:len($over),unknown_capacity_count:len($unknown),impacted_unique:len($ids)}
+  return {summary:$summary,excluded:$prepared.excluded,pairs:$pairs,maintenance:$maintenance,over_capacity:sorted(map($over,($r)=>$r.id)),unknown_capacity:sorted(map($unknown,($r)=>$r.id)),rooms:$rooms,top10:$top}
+}
+[def:보고]($result,$buffer) {
+  $lines=map(entries($result.summary),($kv)=>f"| ${$kv[0]} | ${$kv[1]} |")
+  $reasons=$result.excluded >> [table:groupby]{by:"reason",agg:{count:["count"]}}
+  $excluded=map($reasons.items,($r)=>f"| ${$r.reason} | ${$r.count} |")
+  $top=map($result.top10,($r)=>f"| ${$r.room} | ${$r.building} | ${$r.usable_count} | ${$r.impacted_unique} |")
+  return "# 문화센터 예약 감사\n\n합성 자료; 실제 예약 변경 없음.\n\n| 지표 | 값 |\n|---|---:|\n"+join("\n",$lines)+"\n\n| 제외 사유 | 건수 |\n|---|---:|\n"+join("\n",$excluded)+"\n\n| 방 | 건물 | 유효 예약 | 문제영향 예약 |\n|---|---|---:|---:|\n"+join("\n",$top)+f"\n\n시간은 [start,end). E 건물의 종료 후 준비시간 ${$buffer}분을 포함한다. cancelled→unknown_room→invalid_interval 순으로 제외했다. 정원 null은 미확인이며 0으로 보지 않았다. 영향 예약은 모든 문제 유형의 합집합이다. 동률은 room 오름차순이다.\n\n근거: inputs/bookings_a.csv, inputs/bookings_b.json, inputs/rooms.json, inputs/maintenance.csv. 제외 source·row 및 충돌 ID는 result.json에 보존했다. 실제 시설의 영업·예약 현황은 조사하지 않았으며, 정원 미상은 확인 필요다.\n"
+}
+$result=[fn:감사]{prepared:$prepared,buffer:$buffer}
+$report=[fn:보고]{result:$result,buffer:$buffer}
+$j=[self:write]{path:f"${$out}/result.json",content:json($result)}
+$m=[self:write]{path:f"${$out}/report.md",content:$report}
+$read=[self:read]{path:$j.path} & [self:read]{path:$m.path,format:"text"}
+assert $read[0].data==$result,"JSON 저장 대조 실패"
+assert $read[1].text==$report,"Markdown 저장 대조 실패"
+return {result:$result,verified:true,buffer:$buffer,files:[$j.path,$m.path]}

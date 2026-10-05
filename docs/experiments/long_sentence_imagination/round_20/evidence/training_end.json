@@ -1,0 +1,24 @@
+{
+  "base_v0": {
+    "run_id": "b6b6f53f0acf41598dfc917b29054b08",
+    "status": "completed",
+    "source_complete": true,
+    "verified": {
+      "json_verified": true,
+      "csv_verified": true
+    },
+    "elapsed": 0.6016854578629136
+  },
+  "missing_v0": {
+    "run_id": "42869a2bce2c4742893c2573a0665256",
+    "status": "completed",
+    "source_complete": false,
+    "verified": {
+      "json_verified": true,
+      "csv_verified": true
+    },
+    "elapsed": 0.511412417050451
+  },
+  "confirmed_before_repair": "2026-10-05T22:30:57.380146+09:00",
+  "head": "f796cb8899d11686cdf010158b4b257cfb0f9c03"
+}

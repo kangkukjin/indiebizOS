@@ -1,0 +1,19 @@
+........................................................................ [ 71%]
+.............................                                            [100%]
+============================= slowest 15 durations =============================
+3.17s call     backend/test_structured_file_read.py::test_large_json_aggregate_and_reference_retain_last_item[True]
+2.94s call     backend/test_structured_file_read.py::test_large_json_aggregate_and_reference_retain_last_item[False]
+2.25s call     backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r\n-csv-,]
+1.66s call     backend/test_structured_file_read.py::test_explicit_text_and_line_selection_keep_their_contract
+1.02s call     backend/test_structured_file_read.py::test_large_delimited_source_preserves_quoted_newlines[tsv-\t]
+0.97s call     backend/test_structured_file_read.py::test_large_delimited_source_preserves_quoted_newlines[csv-,]
+0.76s call     backend/test_source_capacity.py::test_office_display_is_bounded_but_reference_keeps_tail[docx]
+0.74s call     backend/test_source_capacity.py::test_office_display_is_bounded_but_reference_keeps_tail[hwpx]
+0.70s call     backend/test_source_capacity.py::test_office_display_is_bounded_but_reference_keeps_tail[xlsx]
+0.48s call     backend/test_long_sentence_repairs.py::test_full_report_and_missing_source[v4-False]
+0.47s call     backend/test_long_sentence_repairs.py::test_full_report_and_missing_source[repaired-False]
+0.46s call     backend/test_long_sentence_repairs.py::test_full_report_and_missing_source[repaired-True]
+0.45s call     backend/test_long_sentence_repairs.py::test_full_report_and_missing_source[v4-True]
+0.44s call     backend/test_source_capacity.py::test_xlsx_aggregate_reads_full_source_or_explicit_rows[-250]
+0.44s call     backend/test_source_capacity.py::test_xlsx_aggregate_reads_full_source_or_explicit_rows[,max_rows:0-250]
+101 passed in 28.47s

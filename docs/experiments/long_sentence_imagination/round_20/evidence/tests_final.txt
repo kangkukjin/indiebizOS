@@ -1,0 +1,63 @@
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [  5%]
+........................................................................ [ 11%]
+........................................................................ [ 17%]
+........................................................................ [ 23%]
+........................................................................ [ 29%]
+........................................................................ [ 35%]
+........................................................................ [ 41%]
+........................................................................ [ 47%]
+........................................................................ [ 53%]
+........................................................................ [ 59%]
+........................................................................ [ 65%]
+........................................................................ [ 71%]
+........................................................................ [ 77%]
+........................................................................ [ 82%]
+........................................................................ [ 88%]
+........................................................................ [ 94%]
+...................................................Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 14083.16it/s]
+............          [100%]<sys>:0: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+<sys>:0: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+=============================== warnings summary ===============================
+backend/test_web_collection_2026_09_15.py::test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title
+backend/test_web_collection_2026_09_15.py::test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+backend/test_web_collection_2026_09_15.py::test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title
+backend/test_web_collection_2026_09_15.py::test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+backend/test_web_collection_2026_09_15.py::test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+backend/test_episode4132_4134_repairs.py::test_guide_mcp_protocol_and_codex_failure_accounting[payload0-True]
+backend/test_episode4064_repairs.py::test_mcp_combined_call_keeps_repeat_guard
+  /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: IncompleteFieldDefinitionWarning: Field 'lifespan' has an incomplete definition: its annotation contains an unresolved forward reference, so settings sources may fail to correctly resolve its value. Call `model_rebuild()` on the model where the field is defined, once all the referenced types are defined.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+28.60s call     backend/test_vocabulary_bundle_split.py::test_split_archives_register_without_any_original_bundle
+22.17s call     backend/test_repair_staging.py::test_battery_under_pytest
+11.84s call     backend/test_vocabulary_archive.py::test_real_cache_reset_updates_catalog_and_gate
+11.69s call     backend/test_vocabulary_archive.py::test_roundtrip_seed_sleep_wake
+7.14s call     backend/test_vocabulary_archive.py::test_failed_seed_restores_catalog_and_selection
+3.50s call     backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r\n-csv-,]
+3.27s call     backend/test_value_judgment_gate.py::test_gate_passes_on_current_tree
+2.91s call     backend/test_long_sentence_round6_repairs.py::test_original_normalization_with_explicit_budget
+2.81s call     backend/test_ibl_learnability.py::test_multiline_values_and_each_return_are_the_same_program
+2.68s setup    backend/test_imagination_round65_repairs.py::test_real_vocabulary_compositions[0]
+2.67s setup    backend/test_long_sentence_round3_repairs.py::test_schema_reproductions[1]
+2.65s setup    backend/test_long_sentence_repairs.py::test_null_branches_and_early_return[return $it.a == null ? "-" : text($it.a)]
+2.64s call     backend/test_long_sentence_round3_repairs.py::test_full_report_and_six_source_reuse[False]
+2.64s call     backend/test_report_repair_contracts_2026_09_08.py::test_dict_compute_allowed_after_expression_revision[set]
+2.38s call     backend/test_field_path_single_owner.py::test_gate_passes_and_has_teeth
+1215 passed, 1 skipped, 12 warnings in 48.73s

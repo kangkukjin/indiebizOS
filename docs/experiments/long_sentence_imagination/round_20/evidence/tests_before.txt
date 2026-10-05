@@ -1,0 +1,144 @@
+..FFFFFF.FFFF                                                            [100%]
+=================================== FAILURES ===================================
+_____________ test_delimited_parser_preserves_cell_newlines[\r-,] ______________
+backend/test_essentials_file_io.py:37: in test_delimited_parser_preserves_cell_newlines
+    assert module('essentials_file_io').delimited_data(content, delimiter)['items'] == expected
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+data/packages/installed/tools/system_essentials/essentials_file_io.py:121: in delimited_data
+    columns = next(reader, None)
+              ^^^^^^^^^^^^^^^^^^
+E   _csv.Error: new-line character seen in unquoted field - do you need to open the file with newline=''?
+_____________ test_delimited_parser_preserves_cell_newlines[\r-\t] _____________
+backend/test_essentials_file_io.py:37: in test_delimited_parser_preserves_cell_newlines
+    assert module('essentials_file_io').delimited_data(content, delimiter)['items'] == expected
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+data/packages/installed/tools/system_essentials/essentials_file_io.py:121: in delimited_data
+    columns = next(reader, None)
+              ^^^^^^^^^^^^^^^^^^
+E   _csv.Error: new-line character seen in unquoted field - do you need to open the file with newline=''?
+_________ test_document_read_and_csv_save_preserve_source[\r\n-csv-,] __________
+backend/test_essentials_file_io.py:60: in test_document_read_and_csv_save_preserve_source
+    assert result['value']['source']['text'] == content
+E   assert '\ufeff"name"..."""\n"c",""\n' == '\ufeff"name"...r\n"c",""\r\n'
+E     
+E     - ﻿"name","note"
+E     ?               -
+E     + ﻿"name","note"
+E     - "a","CR
+E     ?        ^
+E     + "a","CR...
+E     
+E     ...Full output truncated (14 lines hidden), use '-vv' to show
+----------------------------- Captured stdout call -----------------------------
+[도구 핸들러 로드] read_op <- system_essentials
+[도구 핸들러 재사용] write_file <- system_essentials (공유 모듈)
+_________ test_document_read_and_csv_save_preserve_source[\r\n-tsv-\t] _________
+backend/test_essentials_file_io.py:60: in test_document_read_and_csv_save_preserve_source
+    assert result['value']['source']['text'] == content
+E   assert '\ufeff"name"...""\n"c"\t""\n' == '\ufeff"name"...\n"c"\t""\r\n'
+E     
+E     - ﻿"name"	"note"
+E     ?        	      -
+E     + ﻿"name"	"note"
+E     - "a"	"CR
+E     ?    	   ^
+E     + "a"	"CR...
+E     
+E     ...Full output truncated (14 lines hidden), use '-vv' to show
+__________ test_document_read_and_csv_save_preserve_source[\r-csv-,] ___________
+backend/test_essentials_file_io.py:60: in test_document_read_and_csv_save_preserve_source
+    assert result['value']['source']['text'] == content
+E   assert '\ufeff"name"..."""\n"c",""\n' == '\ufeff"name"..."""\r"c",""\r'
+E     
+E     - ﻿"name","note"
+E     ?               ^
+E     + ﻿"name","note"
+E     ?               ^
+E     - "a","CR
+E     ?        ^...
+E     
+E     ...Full output truncated (18 lines hidden), use '-vv' to show
+__________ test_document_read_and_csv_save_preserve_source[\r-tsv-\t] __________
+backend/test_essentials_file_io.py:60: in test_document_read_and_csv_save_preserve_source
+    assert result['value']['source']['text'] == content
+E   assert '\ufeff"name"...""\n"c"\t""\n' == '\ufeff"name"...""\r"c"\t""\r'
+E     
+E     - ﻿"name"	"note"
+E     ?        	      ^
+E     + ﻿"name"	"note"
+E     ?        	      ^
+E     - "a"	"CR
+E     ?    	   ^...
+E     
+E     ...Full output truncated (18 lines hidden), use '-vv' to show
+____________ test_received_csv_cells_keep_newline_bytes[\r\n-csv-,] ____________
+backend/test_member_documents.py:29: in test_received_csv_cells_keep_newline_bytes
+    assert result['text'] == content
+E   assert '\ufeffa,b\n1...nCRLF\nend"\n' == '\ufeffa,b\r\...F\r\nend"\r\n'
+E     
+E     - ﻿a,b
+E     ?     -
+E     + ﻿a,b
+E     - 1,"CR
+E     ?      ^
+E     + 1,"CR...
+E     
+E     ...Full output truncated (8 lines hidden), use '-vv' to show
+___________ test_received_csv_cells_keep_newline_bytes[\r\n-tsv-\t] ____________
+backend/test_member_documents.py:29: in test_received_csv_cells_keep_newline_bytes
+    assert result['text'] == content
+E   assert '\ufeffa\tb\n...nCRLF\nend"\n' == '\ufeffa\tb\r...F\r\nend"\r\n'
+E     
+E     - ﻿a	b
+E     ?   	 -
+E     + ﻿a	b
+E     - 1	"CR
+E     ?  	   ^
+E     + 1	"CR...
+E     
+E     ...Full output truncated (8 lines hidden), use '-vv' to show
+_____________ test_received_csv_cells_keep_newline_bytes[\r-csv-,] _____________
+backend/test_member_documents.py:29: in test_received_csv_cells_keep_newline_bytes
+    assert result['text'] == content
+E   assert '\ufeffa,b\n1...nCRLF\nend"\n' == '\ufeffa,b\r1...RLF\r\nend"\r'
+E     
+E     - ﻿a,b
+E     ?     ^
+E     + ﻿a,b
+E     ?     ^
+E     - 1,"CR
+E     ?      ^...
+E     
+E     ...Full output truncated (10 lines hidden), use '-vv' to show
+____________ test_received_csv_cells_keep_newline_bytes[\r-tsv-\t] _____________
+backend/test_member_documents.py:29: in test_received_csv_cells_keep_newline_bytes
+    assert result['text'] == content
+E   assert '\ufeffa\tb\n...nCRLF\nend"\n' == '\ufeffa\tb\r...RLF\r\nend"\r'
+E     
+E     - ﻿a	b
+E     ?   	 ^
+E     + ﻿a	b
+E     ?   	 ^
+E     - 1	"CR
+E     ?  	   ^...
+E     
+E     ...Full output truncated (10 lines hidden), use '-vv' to show
+============================= slowest 15 durations =============================
+2.12s call     backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r\n-csv-,]
+0.35s call     backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r-tsv-\t]
+0.33s call     backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r\n-tsv-\t]
+0.33s call     backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r-csv-,]
+
+(11 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_essentials_file_io.py::test_delimited_parser_preserves_cell_newlines[\r-,]
+FAILED backend/test_essentials_file_io.py::test_delimited_parser_preserves_cell_newlines[\r-\t]
+FAILED backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r\n-csv-,]
+FAILED backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r\n-tsv-\t]
+FAILED backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r-csv-,]
+FAILED backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r-tsv-\t]
+FAILED backend/test_member_documents.py::test_received_csv_cells_keep_newline_bytes[\r\n-csv-,]
+FAILED backend/test_member_documents.py::test_received_csv_cells_keep_newline_bytes[\r\n-tsv-\t]
+FAILED backend/test_member_documents.py::test_received_csv_cells_keep_newline_bytes[\r-csv-,]
+FAILED backend/test_member_documents.py::test_received_csv_cells_keep_newline_bytes[\r-tsv-\t]
+10 failed, 3 passed in 3.40s

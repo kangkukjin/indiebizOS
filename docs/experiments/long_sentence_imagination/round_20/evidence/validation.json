@@ -1,0 +1,162 @@
+{
+  "base_v0": {
+    "run_id": "b6b6f53f0acf41598dfc917b29054b08",
+    "status": "completed",
+    "achieved": false,
+    "rows": 18,
+    "unexpected": 1,
+    "failures": 0,
+    "drift": [
+      {
+        "path": "part0/file2.bin",
+        "expected": "두 줄\r\n유지",
+        "actual": "두 줄\n유지"
+      },
+      {
+        "path": "part0/file3.bin",
+        "expected": "캐리지\r리턴",
+        "actual": "캐리지\n리턴"
+      },
+      {
+        "path": "part1/file2.bin",
+        "expected": "두 줄\r\n유지",
+        "actual": "두 줄\n유지"
+      },
+      {
+        "path": "part1/file3.bin",
+        "expected": "캐리지\r리턴",
+        "actual": "캐리지\n리턴"
+      },
+      {
+        "path": "part2/file2.bin",
+        "expected": "두 줄\r\n유지",
+        "actual": "두 줄\n유지"
+      },
+      {
+        "path": "part2/file3.bin",
+        "expected": "캐리지\r리턴",
+        "actual": "캐리지\n리턴"
+      }
+    ],
+    "source_complete": true,
+    "elapsed_seconds": 0.6016854578629136,
+    "usage": {
+      "steps": 4179,
+      "rows": 24,
+      "elapsed_ms": 548
+    },
+    "save_readback_equal": true,
+    "result_ref": "2d951045d23f8eac2e9df523ac39b099072f79bfb595404f0ea33c41049f5732"
+  },
+  "missing_v0": {
+    "run_id": "42869a2bce2c4742893c2573a0665256",
+    "status": "completed",
+    "achieved": false,
+    "rows": 12,
+    "unexpected": 7,
+    "failures": 1,
+    "drift": [
+      {
+        "path": "part0/file2.bin",
+        "expected": "두 줄\r\n유지",
+        "actual": "두 줄\n유지"
+      },
+      {
+        "path": "part0/file3.bin",
+        "expected": "캐리지\r리턴",
+        "actual": "캐리지\n리턴"
+      },
+      {
+        "path": "part1/file2.bin",
+        "expected": "두 줄\r\n유지",
+        "actual": "두 줄\n유지"
+      },
+      {
+        "path": "part1/file3.bin",
+        "expected": "캐리지\r리턴",
+        "actual": "캐리지\n리턴"
+      }
+    ],
+    "source_complete": false,
+    "elapsed_seconds": 0.511412417050451,
+    "usage": {
+      "steps": 2901,
+      "rows": 18,
+      "elapsed_ms": 465
+    },
+    "save_readback_equal": true,
+    "result_ref": "c3381b9aee4f98bf57ad289b3672fd608daad1a303d005e33ed1b7941c1e94e8"
+  },
+  "base_after": {
+    "run_id": "9a2df46a44394f4bb9f54a07b6b4897f",
+    "status": "completed",
+    "achieved": true,
+    "rows": 18,
+    "unexpected": 1,
+    "failures": 0,
+    "drift": [],
+    "source_complete": true,
+    "elapsed_seconds": 0.5928826248273253,
+    "usage": {
+      "steps": 4179,
+      "rows": 24,
+      "elapsed_ms": 532
+    },
+    "save_readback_equal": true,
+    "result_ref": "9fd15f45713fe61069794eb6ace1a1d7a57e617c413c7b361b774ca578238fc0"
+  },
+  "missing_after": {
+    "run_id": "14c92724eae245089baa059b7d717f4d",
+    "status": "completed",
+    "achieved": true,
+    "rows": 12,
+    "unexpected": 7,
+    "failures": 1,
+    "drift": [],
+    "source_complete": false,
+    "elapsed_seconds": 0.5297393752261996,
+    "usage": {
+      "steps": 2901,
+      "rows": 18,
+      "elapsed_ms": 484
+    },
+    "save_readback_equal": true,
+    "result_ref": "55a7a2e35b0610ac34cee25c822ed9eda5991bf95595704fd3b3dc0465d12ef0"
+  },
+  "bom_cr": {
+    "run_id": "d6a38cbe4729429783638d4832653a9e",
+    "status": "completed",
+    "achieved": true,
+    "rows": 18,
+    "unexpected": 1,
+    "failures": 0,
+    "drift": [],
+    "source_complete": true,
+    "elapsed_seconds": 0.5517247500829399,
+    "usage": {
+      "steps": 4179,
+      "rows": 24,
+      "elapsed_ms": 503
+    },
+    "save_readback_equal": true,
+    "result_ref": "cdc17fab21d0f28c57e7a478c5fd25d6f0c1e09b8e47f8f63408e0a20d16f5a7"
+  },
+  "empty": {
+    "run_id": "f576a9c7dc2f4f0bb98c6553f29b56d5",
+    "status": "completed",
+    "achieved": true,
+    "rows": 12,
+    "unexpected": 7,
+    "failures": 0,
+    "drift": [],
+    "source_complete": true,
+    "elapsed_seconds": 0.5266268327832222,
+    "usage": {
+      "steps": 2901,
+      "rows": 18,
+      "elapsed_ms": 481
+    },
+    "save_readback_equal": true,
+    "result_ref": "1e6dd1956e30afe32c75d498853e84aa982c9009ff8694c04a32ee5f50a2bb87"
+  }
+}

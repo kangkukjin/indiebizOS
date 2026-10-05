@@ -66,11 +66,13 @@ def atomic_write_text(path, content):
 TEXT_PREVIEW_CHARS = 1_000_000
 
 
-def read_text_window(path, params, bounds, max_chars=TEXT_PREVIEW_CHARS):
+def read_text_window(path, params, bounds, max_chars=TEXT_PREVIEW_CHARS, *,
+                     preserve_newlines=False):
     """행 범위/텍스트 미리보기. max_chars=None은 구조 파싱용 완전한 원문이다.
 
     구조화 자료의 처리량을 모델 표시량으로 자르지 않는다. 완전한 값은 기존
     결과 저장·참조 경계가 보존하고, 모델 전달 경계에서만 미리보기를 제한한다.
+    CSV/TSV는 셀 안의 CR/LF도 데이터이므로 줄 인식과 줄바꿈 변환을 분리한다.
     """
     tail = params.get('tail')
     offset = params.get('offset') or 0
@@ -79,7 +81,8 @@ def read_text_window(path, params, bounds, max_chars=TEXT_PREVIEW_CHARS):
     selected = deque(maxlen=tail) if tail is not None else []
     total, chars, truncated = 0, 0, False
     numbered = bool(params.get('numbered')) and not params.get('blocks')
-    with open(path, 'r', encoding='utf-8') as stream:
+    with open(path, 'r', encoding='utf-8',
+              newline='' if preserve_newlines else None) as stream:
         for i, line in enumerate(stream):
             total = i + 1
             if tail is not None:
@@ -117,7 +120,8 @@ def delimited_data(content, delimiter):
     """CSV/TSV preserves quoted delimiters/newlines and missing/zero cells."""
     import csv
     import io
-    reader = csv.reader(io.StringIO(content.lstrip("\ufeff")), delimiter=delimiter, strict=True)
+    reader = csv.reader(io.StringIO(content.lstrip("\ufeff"), newline=''),
+                        delimiter=delimiter, strict=True)
     columns = next(reader, None)
     if columns is None:
         return {"items": [], "table": {"columns": [], "rows": []}}

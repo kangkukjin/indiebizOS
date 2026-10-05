@@ -1,0 +1,51 @@
+[build_ibl_nodes] 노드 6개, 액션 178개, 패키지 fragment 62개(+141 액션) (11428줄, 545723바이트)
+[build_ibl_nodes] 검증 통과 ✓ (등록·op enum·default·handler 분기)
+[build_ibl_nodes] 코퍼스 param 정합 통과 ✓
+[build_ibl_nodes] param 선언 완전성 통과 ✓ (미선언 0)
+[build_ibl_nodes] 구현-읽기 감사 통과 ✓ (죽은 컨테이너 자리 0 · 신규 미선언 0)
+[build_ibl_nodes] 액션별 구현-읽기 관문 통과 ✓ (디스패처 op 가 읽는 인자 ⊆ 판본 2 허용 집합)
+[build_ibl_nodes] 선언-읽기 관문 통과 ✓ (판정 21 · 흐름 미관측 판정 불가 44)
+[build_ibl_nodes] 사용자 경로 효과 관문 통과 ✓ (읽기 op 의 사용자 위치 쓰기 0 · 사유 없는 사용자 위치 삭제 0 · 시작점 미상 71)
+[build_ibl_nodes] 예약 규칙 관문 통과 ✓ (캘린더 규칙 쓰기 = 정규화 입구뿐 · check↔등록 같은 판정 함수)
+[build_ibl_nodes] 표시 칸 접기 관문 통과 ✓ (meta·summary 에 접은 값 = 같은 행 구조 칸에도)
+[build_ibl_nodes] 원천 정직 관문 통과 ✓ (구조 미발견 ≠ 0건 · source 원천마다 실행 예시)
+[build_ibl_nodes] 원천 요청 한도 관문 통과 ✓ (429 = 공통 봉투 → 판본 2 RATE_LIMITED)
+[build_ibl_nodes] 열린 인자 계약 관문 통과 ✓ (사유 있는 개방 2: self:workflow, table:each)
+[build_ibl_nodes] 선언 내부 모순 없음 ✓ (산문의 컨테이너 허용 = 타입 선언)
+[build_ibl_nodes] 코퍼스 어휘 생존 통과 ✓ (죽은 어휘·파싱 불가 0)
+[build_ibl_nodes] fixture 완전성 통과 ✓ (모든 items/scalar 액션이 fixture/exempt 보유)
+[build_ibl_nodes] flow 선언 완전성 통과 ✓ (모든 transform 액션이 flow 보유)
+[build_ibl_nodes] 용례 재검토 원장 일치 ✓ (계약이 바뀐 액션 0)
+[build_ibl_nodes] 부작용 정직성 통과 ✓ (쓰기 원시에 닿는 scalar/items 액션 전부 선언 보유)
+[build_ibl_nodes] enum-가드 통과 ✓ (handler 분기 리터럴 ⊆ 파라미터 enum)
+[build_ibl_nodes] 포크-가드 통과 ✓ (INDIEBIZ_PROFILE 분기 11개, 전부 이음매 아래)
+[build_ibl_nodes] OS-가드 통과 ✓ (OS 이음매 21개 파일 — 윈도우/리눅스 이식 점검 대상)
+[build_ibl_nodes] launcher-가드 통과 ✓ (라우팅된 창 명령 전부 main.js switch 에 핸들러 보유)
+[build_ibl_nodes] 교재-가드 통과 ✓ (스니펫 실존 + 노드 선택표 집합 일치)
+[build_ibl_nodes] 자기상 가드 통과 ✓ (system_structure.md 현 상태 줄 = 레지스트리)
+[build_ibl_nodes] 뷰-어휘 가드 통과 ✓ (ibl.md·new_action_checklist.md 어휘 줄 = 코드 선언)
+[build_ibl_nodes] 뷰-렌더러 가드 통과 ✓ (APP_VIEW_TYPES 전부 데스크탑·원격 렌더러에 p.type 케이스 보유)
+[build_ibl_nodes] 앱-템플릿 param 가드 통과 ✓ (모든 app 템플릿 키가 액션 허용키)
+[build_ibl_nodes] 판본 2 앱-템플릿 가드 통과 ✓ (edition 2 템플릿 전부 컴파일)
+  ⚠ self:record modes[0]: self:record 는 이 몸의 활성 레지스트리에 없는 어휘(잠든 패키지 또는 다른 몸 전용) — 컴파일 검사 건너뜀 ('[self:record]{op:"describe"}')
+  ⚠ instruments/newspaper.yaml modes[0]: limbs:phone 는 이 몸의 활성 레지스트리에 없는 어휘(잠든 패키지 또는 다른 몸 전용) — 컴파일 검사 건너뜀 ('$d = [self:read]{path: "outputs/newspaper_current.html"}@hub; [limbs:phone]{op: "share", content: $d.text, filename: "newspaper.html", mime: "text/html"}')
+  ⚠ instruments/report.yaml modes[0]: limbs:phone 는 이 몸의 활성 레지스트리에 없는 어휘(잠든 패키지 또는 다른 몸 전용) — 컴파일 검사 건너뜀 ('$l = [self:file_find]{pattern: "*report_*.md", path: $folder}@hub >> [table:sort]{by: "title", descending: true} >> [table:take]{n: 1}; $d = [self:read]{path: $l[0].url}@hub; [limbs:phone]{op: "share", content: $d.text, filename: "report.md", mime: "text/markdown"}')
+[build_ibl_nodes] 가이드 배선 가드 통과 ✓ (guide_db 실존 + 코드 경로 유효)
+[build_ibl_nodes] 압축 경고(비차단): 5건 — 개념중복 후보, 병합 판단은 docs/VOCAB_DEDUP_HANDOFF.md
+  ⚠ desc 면책 과다: self:folder 이 타 액션 3개를 지목(self:list, self:mkdir, self:trash…) — 개념 경계 재점검 후보
+  ⚠ desc 면책 과다: self:warehouse 이 타 액션 3개를 지목(others:warehouse, self:mkdir, self:trash…) — 개념 경계 재점검 후보
+  ⚠ desc 면책 과다: limbs:open_window 이 타 액션 4개를 지목(limbs:os_open, self:business, self:folder, self:project…) — 개념 경계 재점검 후보
+  ⚠ desc 면책 과다: others:chat_room 이 타 액션 3개를 지목(others:messages, self:delete, self:trash…) — 개념 경계 재점검 후보
+  ⚠ desc 면책 과다: others:warehouse 이 타 액션 3개를 지목(others:neighbor, self:warehouse, sense:search…) — 개념 경계 재점검 후보
+[build_ibl_nodes] 가이드 부패 경고 없음 ✓ (죽은 참조·고아 0)
+[build_ibl_nodes] check: 바이트 일치 ✓
+[build_ibl_nodes] check: phone_manifest.json 일치 ✓
+[build_ibl_nodes] check: member_manifest.json 일치 ✓
+[build_ibl_nodes] check: package_meta.json 일치 ✓
+[build_ibl_nodes] check: ibl_fixtures.json 일치 ✓
+[build_ibl_nodes] check: shell_shadow.json 일치 ✓
+[build_ibl_nodes] check: tool.json 파생 일치 ✓ (47개 패키지)
+[build_ibl_nodes] check: core_manifest.json 일치 ✓
+[build_ibl_nodes] check: 설치필터(dist) 일치 ✓
+[build_ibl_nodes] check: 문서 파생 일치 ✓ (11개 문서)
+[build_ibl_nodes] 프롬프트 예산: 카탈로그 87,814자 · always_on 코어(others·self·table) 58,842자 = 67.0% (스코핑 최대 절감 33.0%)

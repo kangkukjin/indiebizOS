@@ -78,7 +78,9 @@ def read_document(params, command, exchange, workspace):
             if key in result:
                 result[key] = params['path']
         return result
-    lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
+    preserve_newlines = p.get('blocks') and fmt in ('csv', 'tsv')
+    with path.open(encoding='utf-8', newline='' if preserve_newlines else None) as stream:
+        lines = stream.read().splitlines(keepends=True)
     start, end, ranged = ranges.text_read_bounds(p, len(lines))
     text = ''.join(lines[start:end])
     # 구조화 전체 읽기는 표시 상한과 분리한다. 수신 바이트 예산은 _receive가 소유한다.

@@ -1,0 +1,15 @@
+...................                                                      [100%]
+============================= slowest 15 durations =============================
+1.79s call     backend/test_episode4064_repairs.py::test_member_combined_call_keeps_member_execution_context
+0.58s call     backend/test_essentials_file_io.py::test_manifest_reconciliation_preserves_original_notes[empty]
+0.57s call     backend/test_essentials_file_io.py::test_manifest_reconciliation_preserves_original_notes[bom_cr]
+0.53s call     backend/test_essentials_file_io.py::test_manifest_reconciliation_preserves_original_notes[base]
+0.52s call     backend/test_essentials_file_io.py::test_manifest_reconciliation_preserves_original_notes[missing]
+0.49s call     backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r\n-csv-,]
+0.43s call     backend/test_ibl_execution_evolution.py::test_member_transfer_prepares_same_envelope_without_hub_paths
+0.36s call     backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r-tsv-\t]
+0.34s call     backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r-csv-,]
+0.34s call     backend/test_essentials_file_io.py::test_document_read_and_csv_save_preserve_source[\r\n-tsv-\t]
+
+(5 durations < 0.1s hidden.)
+19 passed in 6.27s

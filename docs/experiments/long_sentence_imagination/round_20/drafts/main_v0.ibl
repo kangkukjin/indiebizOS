@@ -1,0 +1,33 @@
+#!ibl edition=2
+[def:원천읽기]($path) {
+  [try] {
+    $doc=[self:read]{path:$path}
+    return {path:$path,ok:true,rows:$doc.data.items,error:null}
+  } [catch] {
+    return {path:$path,ok:false,rows:[],error:$error.message}
+  }
+}
+[def:대조]($row,$source,$actual) {
+  $found=filter($actual,($a)=>$a.path==$row.path)
+  $sizes=map($found,($a)=>$a.bytes)
+  $expected=number($row.expected_bytes)
+  $status=len($found)==0 ? "missing" : len($found)>1 ? "duplicate" : $sizes[0]!=$expected ? "mismatch" : "ok"
+  return {source:$source,component:$row.component,path:$row.path,expected_bytes:$expected,actual_count:len($found),actual_bytes:json($sizes),status:$status,note:$row.note}
+}
+$reads=($sources >> [table:each]{parallel:3}{[fn:원천읽기]{path:$it}}) & [self:read]{path:$actual}
+$files=$reads[0]
+$actual_rows=$reads[1].data.items
+$rows=$files >> [table:each]{mode:"flat_map"} {
+  $file=$it
+  $file.rows >> [table:each] { [fn:대조]{row:$it,source:$file.path,actual:$actual_rows} }
+}
+$paths=map($rows,($r)=>$r.path)
+$extra=filter($actual_rows,($a)=>not ($a.path in $paths))
+$failures=filter($files,($f)=>not $f.ok)
+$summary=$rows >> [table:groupby]{by:"status",agg:{count:["count"]}}
+$report={rows:$rows,unexpected:$extra,failures:$failures,summary:$summary.items}
+$writes=[self:write]{path:$out+".json",content:json($report)} & [self:write]{path:$out+".csv",format:"csv",content:$rows,columns:["source","component","path","expected_bytes","actual_count","actual_bytes","status","note"]}
+$back=[self:read]{path:$writes[0].path} & [self:read]{path:$writes[1].path}
+$csv=$back[1].data.items
+$csv_expected=map($rows,($r)=>{source:$r.source,component:$r.component,path:$r.path,expected_bytes:text($r.expected_bytes),actual_count:text($r.actual_count),actual_bytes:$r.actual_bytes,status:$r.status,note:$r.note})
+return {report:$report,json_verified:$back[0].data==$report,csv_verified:$csv==$csv_expected,paths:map($writes,($w)=>$w.path)}

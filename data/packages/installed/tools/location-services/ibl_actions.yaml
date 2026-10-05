@@ -132,11 +132,11 @@ nodes:
             search: 키워드/카테고리로 장소 검색 (기본)
             detail: 한 곳 상세 — name(+id·lat·lng) → 카카오 기본 + 네이버 설명 + 블로그 언급
         # ── 원격 런처·폰 표면의 '지도' 계기(선언형 4탭). 데스크탑은 같은 id 의 커스텀 계기(MapInstrument)가 덮는다.
-        #    저장 원장은 PC 의 outputs/map/places.json 한 곳 — 폰에서도 @hub 로 같은 원장을 읽고 쓴다(정기보고 선례).
+        #    저장 원장은 PC 의 outputs/map/places.json 한 곳 — 폰에서도 @hub 로 같은 원장을 읽고 쓴다(정기보고 선례). 판본 2(2026-10-05):
+        #    저장 = 원장 data.items + 상세 items 를 이어 dedup 뒤 .items 를 write(봉투 {items,count} 유지), 삭제 = 람다 filter.
         #    ★첫 저장은 원장 파일이 있어야 한다(데스크탑 지도 앱의 첫 ☆ 저장이 만든다) — 없는 몸에선 읽기가 실패한다.
         app:
-          edition: 1   # 판본 1 유지 — 아래 legacy_reason
-          legacy_reason: '판본 2 는 @노드 지정(@hub)·파이프 축약(| sort:)을 받지 않는다 — 폰 포워드 라우팅이 이 문법에 기대어 있어 구형 치환 유지'
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: directions
           icon: 🗺️
           name: 지도
@@ -163,14 +163,14 @@ nodes:
               - {value: 숙박, label: 🛏️ 숙박}
               - {value: 관광명소, label: 🏛️ 관광명소}
               - {value: 지하철, label: 🚇 지하철}
-            action: '[sense:place]{query: "$q", category: "$category", limit: 30}@hub'
+            action: '[sense:place]{query: $q, category: $category, limit: 30}@hub'
             filter:
               from_field: cat
             view:
             - type: map
               markers: items
               'on':
-                search_here: '[sense:place]{query: "$q", category: "$category", lat: "$lat", lng: "$lng", radius: $radius, sort: "distance", limit: 30}@hub'
+                search_here: '[sense:place]{query: $q, category: $category, lat: $lat, lng: $lng, radius: $radius, sort: "distance", limit: 30}@hub'
             - type: list_action
               from: items
               icon: 📍
@@ -179,10 +179,10 @@ nodes:
               empty: 검색 결과가 없습니다
               button:
                 label: ☆ 저장
-                action: '[self:read]{path: "outputs/map/places.json"}@hub & [sense:place]{op: "detail", name: "{name}", id: "{id}", lat: {lat}, lng: {lng}}@hub >> [table:union] >> [table:dedup]{by: "id"} >> [self:write]{path: "outputs/map/places.json", format: "json"}@hub'
+                action: '$s = [self:read]{path: "outputs/map/places.json"}@hub; $d = [sense:place]{op: "detail", name: $item.name, id: $item.id, lat: $item.lat, lng: $item.lng}@hub; (($s.data.items + $d.items) >> [table:dedup]{by: "id"}).items >> [self:write]{path: "outputs/map/places.json", format: "json"}@hub'
                 refresh: false
               item_click:
-                action: '[sense:place]{op: "detail", name: "{name}", id: "{id}", lat: {lat}, lng: {lng}}@hub'
+                action: '[sense:place]{op: "detail", name: $item.name, id: $item.id, lat: $item.lat, lng: $item.lng}@hub'
                 view:
                 - type: card_list
                   from: items
@@ -203,11 +203,12 @@ nodes:
                   sub: 저장 장소에 추가 (폴더·메모는 데스크탑 지도 앱에서)
                   button:
                     label: ☆ 저장
-                    action: '[self:read]{path: "outputs/map/places.json"}@hub & [sense:place]{op: "detail", name: "{name}", id: "{id}", lat: {lat}, lng: {lng}}@hub >> [table:union] >> [table:dedup]{by: "id"} >> [self:write]{path: "outputs/map/places.json", format: "json"}@hub'
+                    action: '$s = [self:read]{path: "outputs/map/places.json"}@hub; $d = [sense:place]{op: "detail", name: $item.name, id: $item.id, lat: $item.lat, lng: $item.lng}@hub; (($s.data.items + $d.items) >> [table:dedup]{by: "id"}).items >> [self:write]{path: "outputs/map/places.json", format: "json"}@hub'
                     refresh: false
           - name: 저장
             auto_run: true
-            action: '[self:read]{path: "outputs/map/places.json"}@hub'
+            # 판본 2 의 [self:read] 는 Document{text,blocks,data} — 원장 봉투 {items,count} 는 data 에 있다. 뷰(markers/from: items)를 위해 items 로 올린다.
+            action: '{items: ([self:read]{path: "outputs/map/places.json"}@hub).data.items}'
             filter:
               from_field: tag
             view:
@@ -222,10 +223,10 @@ nodes:
               button:
                 label: 삭제
                 confirm: 이 장소를 저장 목록에서 뺄까요?
-                action: '[self:read]{path: "outputs/map/places.json"}@hub >> [table:filter]{where: {field: "id", op: "ne", value: "{id}"}} >> [self:write]{path: "outputs/map/places.json", format: "json"}@hub'
+                action: '$s = [self:read]{path: "outputs/map/places.json"}@hub; $s.data.items >> [table:filter]{where: ($r) => $r.id != $item.id} >> [self:write]{path: "outputs/map/places.json", format: "json"}@hub'
                 refresh: true
               item_click:
-                action: '[sense:place]{op: "detail", name: "{name}", id: "{id}", lat: {lat}, lng: {lng}}@hub'
+                action: '[sense:place]{op: "detail", name: $item.name, id: $item.id, lat: $item.lat, lng: $item.lng}@hub'
                 view:
                 - type: card_list
                   from: items
@@ -249,7 +250,7 @@ nodes:
               label: 도착
               placeholder: 도착지 장소명
               required: true
-            action: '[sense:navigate_route]{origin: "$origin", destination: "$destination"}'
+            action: '[sense:navigate_route]{origin: $origin, destination: $destination}'
             view:
             - type: map
               from: map_data
@@ -274,7 +275,7 @@ nodes:
               label: 도착
               placeholder: 도착지 장소명
               required: true
-            action: '[sense:navigate_route]{mode: "transit", origin: "$origin", destination: "$destination"}@hub'
+            action: '[sense:navigate_route]{mode: "transit", origin: $origin, destination: $destination}@hub'
             view:
             - type: card_list
               from: items

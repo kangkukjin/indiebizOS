@@ -628,6 +628,10 @@ class Runtime(ExpressionEvaluator):
         # 신원에는 인자의 지문만 싣는다 — 같은 인자면 같은 지문이므로 재사용·재개 판정의 뜻은 그대로다.
         request = {"action": key, "args": {"digest": digest_packed(pack(request_value(args.value)))},
                    "plan": self.plan.fingerprint}
+        target_node = node.data.get("target")   # @별칭 — 어느 몸에서 실행하나(같은 인자라도 다른 몸의 영수증과 섞이지 않게 신원에 싣는다)
+        run_extra = {"target_node": target_node} if target_node else {}
+        if target_node:
+            request["target_node"] = target_node
         invocation_dependency = spec.invocation_dependency(args.value) if spec.invocation_dependency else None
         if invocation_dependency is not None:
             request['invocation_dependency'] = invocation_dependency
@@ -747,7 +751,7 @@ class Runtime(ExpressionEvaluator):
             from execution_commit import bind_scope
             self.local.invocation_id = call_id
             with bind_scope(self.commit_scope, receipt.get("observed_at")):
-                spec.run(self, copy.deepcopy(args.value))
+                spec.run(self, copy.deepcopy(args.value), **run_extra)
         if receipt is not None:
             if stateful:
                 raise failed(Fault("PY_STATE_EXPIRED", "외부 실행 상태는 새 워커에 복원되지 않습니다. export한 값을 새 입력으로 사용하세요.", node, kind="protocol"))
@@ -786,7 +790,7 @@ class Runtime(ExpressionEvaluator):
                 with capture_usage() as usage:
                     try:
                         with bind_scope(self.commit_scope, observed_at):
-                            value = spec.run(self, copy.deepcopy(args.value))
+                            value = spec.run(self, copy.deepcopy(args.value), **run_extra)
                     finally:
                         # 호출 뒤 첫 걸음은 바로 취소를 확인한다 — 호출 도중 들어온 취소가
                         # 간격에 가려 성공으로 끝나지 않게(걸음 간격 확인은 순수 계산 구간에만 적용된다).

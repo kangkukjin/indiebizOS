@@ -13,6 +13,15 @@ INPUT = re.compile(r'\$\{?([A-Za-z_][A-Za-z_0-9]*)')   # $name · f-문자열의
 ROW = re.compile(r'\{([\w.]+)\}')                        # 구형 행 치환 {field}
 ROW_V2 = re.compile(r'\$\{?item\.([A-Za-z_][\w.]*)')     # 판본 2 행 레코드 필드 $item.a.b · f-문자열 ${item.a.b}
 LITERAL = re.compile(r'"(?:\\.|[^"\\])*"')
+BOUND_ASSIGN = re.compile(r'\$(\w+)\s*=(?!=)')          # 템플릿 안 대입 — 입력이 아니다
+BOUND_LAMBDA = re.compile(r'\(([^()]*)\)\s*=>')          # 람다 인자 — 입력이 아니다
+
+
+def _bound_names(code: str) -> set:
+    names = set(BOUND_ASSIGN.findall(code))
+    for params in BOUND_LAMBDA.findall(code):
+        names.update(re.findall(r'\$(\w+)', params))
+    return names
 
 
 def compile_apps(instruments):
@@ -33,7 +42,7 @@ def compile_apps(instruments):
                         # 모드/버튼의 기존 ID를 유지하고 하위 동작은 선언 경로로 구별한다.
                         code = value if isinstance(value, str) else value.get('message', '')
                         v2 = edition == 2 and key != 'request'
-                        names = sorted(set(INPUT.findall(code)) - ({'item'} if v2 else set()))
+                        names = sorted(set(INPUT.findall(code)) - ({'item'} | _bound_names(code) if v2 else set()))
                         if key == 'request':
                             rows = []
                         else:

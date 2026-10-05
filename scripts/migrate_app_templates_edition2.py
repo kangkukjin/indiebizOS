@@ -31,8 +31,8 @@ STANDALONE = sorted((ROOT / "data/instruments").glob("*.yaml"))
 TEMPLATE_KEYS = ("action", "options_action", "delete_action", "add_action", "remove_action", "search_here",
                  "moveend", "center_drag", "marker_click", "selection", "saved")
 TEMPLATE_LINE = re.compile(r"^(\s*)(?:- )?([a-z_]+):\s*'(.*)'\s*(#.*)?$")
-EDITION1_ONLY = re.compile(r"\}@[^\s\(\)\{\}\[\]&|>?@]+|\|\s*(sort|take|filter)\s*:")
-LEGACY_REASON = "판본 2 는 @노드 지정(@hub)·파이프 축약(| sort:)을 받지 않는다 — 폰 포워드 라우팅이 이 문법에 기대어 있어 구형 치환 유지"
+EDITION1_ONLY = re.compile(r"\|\s*(sort|take|filter)\s*:")   # @노드 지정은 판본 2 도 받는다(2026-10-05)
+LEGACY_REASON = "판본 2 는 파이프 축약(| sort: / | take:)을 받지 않는다 — >> [table:sort]/[table:take] 조합으로 손 변환 뒤 edition 2 로"
 
 STR_LIT = re.compile(r'"((?:\\.|[^"\\])*)"')
 DOLLAR = re.compile(r"\$([A-Za-z_]\w*)")

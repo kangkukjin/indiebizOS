@@ -371,7 +371,7 @@ def load_registry(project_path=".", agent_id=None):
             files = {str(p): file_hashes[str(p)] for p in package_paths}
             contract["implementation_fingerprint"] = digest(files)
             def run(runtime, args, *, node=node, action=action, c=contract,
-                    ac=action_config, files=files, allowed=allowed):
+                    ac=action_config, files=files, allowed=allowed, target_node=None):
                 if allowed is not None and not check_node_access(node, allowed):
                     raise Fault("NODE_ACCESS", f"허용되지 않은 노드: {node}", kind="permission")
                 current = load_nodes_installed().get("nodes", {}).get(node, {}).get("actions", {}).get(action)
@@ -399,7 +399,14 @@ def load_registry(project_path=".", agent_id=None):
                 if pipe_key and pipe_key in params:
                     previous = params[pipe_key]
                     params["_prev_result"] = {"items": previous} if isinstance(previous, list) else previous
-                raw = execute_ibl({"_node": node, "action": action, "params": params}, project_path, agent_id=agent_id)
+                step = {"_node": node, "action": action, "params": params}
+                if target_node:
+                    # 노드 지정은 주인의 몸 사이 라우팅이다 — 회원·손님·이웃 주체의 프로그램은 다른 몸으로 호출을 보낼 수 없다.
+                    import principal as _principal
+                    if not _principal.is_owner():
+                        raise Fault("NODE_ACCESS", f"노드 지정 @{target_node} 은 주인 전용입니다.", kind="permission")
+                    step["target_node"] = target_node   # 엔진의 다중 노드 라우팅(_resolve_and_maybe_forward)이 읽는다
+                raw = execute_ibl(step, project_path, agent_id=agent_id)
                 boundary = c["adapter"]
                 if protocol == "ibl-script/2" and params["op"] != "run":
                     boundary = {**boundary, "value_path": ""}

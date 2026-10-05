@@ -63,6 +63,23 @@ _LEGACY_ROW_RE = re.compile(r"(?<![\$\{\w])\{[A-Za-z_][\w.]*\}")
 _STRING_LITERAL_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
 
 
+# 템플릿 안에서 묶이는 이름 — 대입 `$x = …`(비교 `==` 제외)과 람다 인자 `($a, $b) => …`. 입력이 아니다.
+_BOUND_ASSIGN_RE = re.compile(r"\$(\w+)\s*=(?!=)")
+_BOUND_LAMBDA_RE = re.compile(r"\(([^()]*)\)\s*=>")
+
+
+def _bound_names(t: str) -> set:
+    names = set(_BOUND_ASSIGN_RE.findall(t))
+    for params in _BOUND_LAMBDA_RE.findall(t):
+        names.update(re.findall(r"\$(\w+)", params))
+    return names
+
+
+def _template_input_names(t: str) -> set:
+    """판본 2 템플릿이 표면에서 받아야 하는 입력 이름 — 모든 $참조에서 템플릿 안에서 묶인 이름을 뺀 것(렌더 코어 templateNames 와 같은 규칙)."""
+    return set(re.findall(r"\$\{?(\w+)", t)) - _bound_names(t)
+
+
 def _quoted_dollar(t: str) -> bool:
     """일반(f 접두 없는) 문자열 리터럴 안에 $이름 이 남아 있나 — 리터럴 단위로 본다(따옴표 사이를 건너 매칭하지 않게)."""
     for m in _STRING_LITERAL_RE.finditer(t):
@@ -71,8 +88,8 @@ def _quoted_dollar(t: str) -> bool:
         if re.search(r"\$[A-Za-z_]", m.group(0)):
             return True
     return False
-# 판본 2 가 받지 않는 판본 1 전용 문법 — @노드 지정, 파이프 축약(| sort: / | take: / | filter:)
-_EDITION1_ONLY_RE = re.compile(r"\}@[^\s\(\)\{\}\[\]&|>?@]+|\|\s*(sort|take|filter)\s*:")
+# 판본 2 가 받지 않는 판본 1 전용 문법 — 파이프 축약(| sort: / | take: / | filter:). @노드 지정은 2026-10-05 부터 판본 2 도 받는다.
+_EDITION1_ONLY_RE = re.compile(r"\|\s*(sort|take|filter)\s*:")
 APP_TPL_FILTERS = {"round", "num", "abs", "arrow"}  # + 'opt:' / 'trunc:' 접두 허용
 
 # === 뷰-어휘 문서-동기 가드 (2026-07-03, ibl.md '표현 언어의 층위' 조항 집행) ===
@@ -629,7 +646,7 @@ def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: d
                 continue
             if f"{ref_node}:{ref_action}" not in qualified_set:
                 issues.append(f"{blabel}: app 템플릿이 미존재 액션 [{ref_node}:{ref_action}] 참조 ({t!r})")
-        for key in re.findall(r"\$\{?(\w+)", t):
+        for key in sorted(_template_input_names(t) if edition == 2 else set(re.findall(r"\$\{?(\w+)", t))):
             if key not in input_keys:
                 issues.append(f"{blabel}: app 템플릿 $%s 에 대응하는 input 없음 ({t!r})" % key)
         if edition == 2:
@@ -638,7 +655,7 @@ def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: d
             if _quoted_dollar(t):
                 issues.append(f"{blabel}: edition 2 문자열 리터럴 안의 $이름 은 문자 그대로 간다 — 따옴표를 벗기거나(값) f\"…${{이름}}…\"(보간) ({t!r})")
             if _EDITION1_ONLY_RE.search(t):
-                issues.append(f"{blabel}: edition 2 는 @노드 지정·파이프 축약(| sort:)을 받지 않는다 — 조합 문법으로 바꾸거나 edition: 1 + legacy_reason ({t!r})")
+                issues.append(f"{blabel}: edition 2 는 파이프 축약(| sort: / | take:)을 받지 않는다 — >> [table:sort]/[table:take] 조합으로 바꾼다 ({t!r})")
     return issues
 
 
@@ -1015,7 +1032,7 @@ def check_app_templates_edition2(data: dict, root: Path) -> tuple[list[str], lis
     catalog_actions = {f"{n}:{a}" for n, nd in nodes.items() if isinstance(nd, dict) for a in (nd.get("actions") or {})}
     for label, blk in blocks:
         for t in _app_action_templates(blk):
-            names = set(re.findall(r"\$\{?(\w+)", t)) - {"item"}
+            names = _template_input_names(t) - {"item"}
             types = {n: UNKNOWN for n in names}
             if re.search(r"\$\{?item\b", t):
                 types["item"] = Type("Record", (), open=True)
@@ -1029,11 +1046,11 @@ def check_app_templates_edition2(data: dict, root: Path) -> tuple[list[str], lis
                     warnings.append(f"{label}: {issue['message']} — 실행 시 해마·워크플로 원장에서 해소되지 않으면 거절된다 ({t!r})")
                     continue
                 if issue.get("code") == "UNSUPPORTED_ADAPTER":
-                    # 사전집(배포물)에는 있는데 이 몸의 활성 레지스트리에 없는 어휘 = 잠든 패키지. 템플릿의 잘못이 아니라
-                    # 이 몸의 설치 상태라 경고로 남긴다(깨우면 같은 가드가 실제 컴파일 검사를 한다).
+                    # 사전집(배포물)에는 있는데 이 몸의 활성 레지스트리에 없는 어휘 = 잠든 패키지 또는 다른 몸 전용(phone_only 등).
+                    # 템플릿의 잘못이 아니라 이 몸의 설치 상태라 경고로 남긴다(그 몸·활성 상태에서는 같은 가드가 실제 컴파일 검사를 한다).
                     missing = re.findall(r"판본 2 계약이 없는 어휘: (\w+:\w+)", issue.get("message", ""))
                     if missing and all(k in catalog_actions and k not in registry for k in missing):
-                        warnings.append(f"{label}: {', '.join(missing)} 는 잠든(비활성) 패키지의 어휘 — 이 몸에서 컴파일 검사 건너뜀 ({t!r})")
+                        warnings.append(f"{label}: {', '.join(missing)} 는 이 몸의 활성 레지스트리에 없는 어휘(잠든 패키지 또는 다른 몸 전용) — 컴파일 검사 건너뜀 ({t!r})")
                         continue
                 issues.append(f"{label}: [{issue.get('code')}] {issue.get('message')} ({t!r})")
     return issues, warnings

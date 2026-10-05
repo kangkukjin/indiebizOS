@@ -89,10 +89,16 @@ function rowAction(template, item) {
  * declared_inputs 로 간다. 빈 값('' / null)은 "미지정" — inputs 에 없고 declared 에만 있어 컴파일러가 그
  * 인자를 생략한다(구형 "빈 입력=인자 삭제"와 같은 뜻). 행·드릴 컨텍스트는 $item 한 레코드다. */
 
-/** 템플릿이 참조하는 입력 이름($name · f-문자열 ${name}) — $item 은 레코드라 제외 */
+/** 템플릿이 참조하는 입력 이름($name · f-문자열 ${name}) — $item(레코드)과 템플릿 안에서 묶이는 이름(`$x = …` 대입,
+ *  `($a, $b) => …` 람다 인자)은 입력이 아니다(검증기 _template_input_names 와 같은 규칙). */
 function templateNames(template) {
-  var names = [], seen = {}, re = /\$\{?([A-Za-z_][A-Za-z0-9_]*)/g, m, s = String(template);
-  while ((m = re.exec(s))) { if (m[1] !== 'item' && !seen[m[1]]) { seen[m[1]] = 1; names.push(m[1]); } }
+  var s = String(template), bound = { item: 1 }, m;
+  var asg = /\$([A-Za-z_][A-Za-z0-9_]*)\s*=(?!=)/g;
+  while ((m = asg.exec(s))) bound[m[1]] = 1;
+  var lam = /\(([^()]*)\)\s*=>/g, inner = /\$([A-Za-z_][A-Za-z0-9_]*)/g, p;
+  while ((m = lam.exec(s))) { while ((p = inner.exec(m[1]))) bound[p[1]] = 1; }
+  var names = [], seen = {}, re = /\$\{?([A-Za-z_][A-Za-z0-9_]*)/g;
+  while ((m = re.exec(s))) { if (!bound[m[1]] && !seen[m[1]]) { seen[m[1]] = 1; names.push(m[1]); } }
   return names;
 }
 

@@ -99,7 +99,7 @@
       "package": "record-ops",
       "side_effect": true,
       "path_audited": {
-        "at": "2026-10-01",
+        "at": "2026-10-05",
         "impl": "3c31b0566918933b",
         "dependencies": {
           "backend/common/expression_eval.py": "539142b9eb7f27ca915f5be9a47ba995516d1ed7302b4a1e737e1145b0473c89",
@@ -107,7 +107,7 @@
           "backend/common/expression_ir.py": "a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f",
           "backend/common/expression_legacy.py": "4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9",
           "backend/common/expression_ops.py": "bebda213e12ac8adb67608ecaa7c4e22f4c0ed27863bcc60dc45653555b1f783",
-          "backend/common/expression_parser.py": "414904117be6a1fb37dbea6af484503b410e53089df0a974e248d55216ba240c",
+          "backend/common/expression_parser.py": "1b7de199a511066b07435687549d546448b58fec8b50975c9e9d39e18308eca5",
           "backend/base/principal.py": "ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779",
           "backend/base/runtime_utils.py": "a2cc50cf1dcafb3f83d32c298787dbd3e5fb4ef4276ff0c8bbc77bf449cd1198",
           "backend/common/field_path.py": "b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df",

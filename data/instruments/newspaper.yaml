@@ -14,8 +14,7 @@
 #   경로 해소의 실제 주체는 앱모드 프로젝트 컨텍스트다. 2026-07-24 죽은 param 제거.)
 
 instrument: newspaper
-edition: 1   # 판본 1 유지 — 아래 legacy_reason
-legacy_reason: '판본 2 는 @노드 지정(@hub)·파이프 축약(| sort:)을 받지 않는다 — 폰 포워드 라우팅이 이 문법에 기대어 있어 구형 치환 유지'
+edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs. @hub 노드 지정은 판본 2 도 받는다(판본 1 문법 이월)
 icon: 📰
 name: 신문
 order: 12
@@ -24,16 +23,17 @@ modes:
   # ── PC 가 발행한 최신 신문 판을 읽어 보여준다(재취재 없음). @hub = 맥에서 읽기(폰은 포워드). ──
   - name: 신문
     auto_run: true
-    action: '[self:read]{path: "outputs/newspaper_current.md", blocks: true}@hub'
+    # 판본 2 의 [self:read] 는 Document{text,blocks,data} 를 돌려준다 — blocks 뷰는 from: blocks
+    action: '[self:read]{path: "outputs/newspaper_current.md"}@hub'
     view:
       - type: blocks
-        from: items
+        from: blocks
         empty: 아직 발행된 신문이 없습니다 — PC 의 신문 앱에서 "새로 발행"을 눌러 만드세요.
     # 폰에 저장·공유 — 맥의 자기완결 HTML 판을 @hub 으로 읽어(raw 텍스트=_prev_result) 폰 공유 시트로.
     # read 는 @hub(맥에서 읽기), share 는 phone_only(폰에서 저장+ACTION_SEND). 공유는 사용자 탭.
     buttons:
       - label: 📤 폰에 저장·공유
-        action: '[self:read]{path: "outputs/newspaper_current.html"}@hub >> [limbs:phone]{op: "share", filename: "newspaper.html", mime: "text/html"}'
+        action: '$d = [self:read]{path: "outputs/newspaper_current.html"}@hub; [limbs:phone]{op: "share", content: $d.text, filename: "newspaper.html", mime: "text/html"}'
 
   # ── 발행: 결정론적 IBL — [engines:newspaper] 가 허브(PC)에서 발행 레시피를 직접 실행.
   #  (구 방식=시스템 AI 자연어 위임: AI 가 레시피를 안 따르면 조용히 무시됐음 → 2026-07-23 결정화.)

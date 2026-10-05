@@ -170,7 +170,9 @@ def function_adapters(project_path, agent_id):
         contract.update(forwarding_contract(steps, contract["params"], receiver))
         if receiver in params:
             contract["pipe_input"] = receiver
-        def run(runtime, args, *, name=name, contract=contract, snapshot=snapshot):
+        def run(runtime, args, *, name=name, contract=contract, snapshot=snapshot, target_node=None):
+            if target_node:
+                raise Fault("TARGET_NODE", "함수 호출에는 노드 지정을 쓸 수 없습니다.", kind="compile")
             if legacy_snapshot(name, legacy_functions()) != snapshot or legacy_runtime_snapshot() != implementation:
                 raise Fault("DEFINITION_CHANGED", "컴파일 이후 기존 관용구가 바뀌었습니다. 다시 검사하세요.", kind="protocol")
             from ibl_edition import source_context

@@ -437,7 +437,14 @@ class Parser:
         if name == "table" and action == "each":
             self.nl()
             body = self.block()
-        return self.node("call", start, node=name, action=action, params=params, body=body)
+        # 노드 지정 `[node:action]{…}@별칭`(판본 1 문법의 이월, 2026-10-05 표면 바인딩 ① 잔여): 이 호출을 어느 몸에서
+        # 실행할지(@hub=주 컴퓨트 노드, @폰2 …). 값 자리의 @(이메일 등)와 충돌하지 않는다 — 인자 블록 밖, 호출 직후만.
+        target = None
+        if self.t.text == "@" and self.tokens[self.i + 1].kind == "name":
+            self.pop()
+            target = self.name()
+        return self.node("call", start, node=name, action=action, params=params, body=body,
+                         **({"target": target} if target else {}))
 
     def attached(self, name):
         saved = self.i

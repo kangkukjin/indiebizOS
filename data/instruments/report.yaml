@@ -1,6 +1,6 @@
 # 정기보고 앱 — 어휘 없는 순수 매니페스트 (상부구조). 신문과 같은 "PC 문서" 형(型).
 #
-#   보기(최신·목록) = [self:file_find]@hub → [self:read]{blocks}@hub → blocks 뷰
+#   보기(최신·목록) = [self:file_find]@hub >> sort >> take → [self:read]@hub(Document) → blocks 뷰(from: blocks)
 #   공유           = 최신 보고서를 @hub 로 읽어 [limbs:phone]{share} (폰 Downloads + 공유 시트)
 #   생성(작성)     = [others:delegate]{scope: system}  (자율주행에 위임)
 #   레시피         = data/guides/ai_trend_report.md · ai_startup_report.md (어휘 아님)
@@ -11,8 +11,7 @@
 #  서빙 노드 기준이라 폰서 포워드 시 어긋나므로 안 씀). 저술(가이드/시스템 AI)은 무변경.
 
 instrument: report
-edition: 1   # 판본 1 유지 — 아래 legacy_reason
-legacy_reason: '판본 2 는 @노드 지정(@hub)·파이프 축약(| sort:)을 받지 않는다 — 폰 포워드 라우팅이 이 문법에 기대어 있어 구형 치환 유지'
+edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs. 판본 1 의 `| sort: … | take:` 축약은 조합 문법으로 풀었다
 icon: 📑
 name: 정기보고
 order: 16
@@ -31,10 +30,11 @@ modes:
           - {value: "~workspace/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
           - {value: "~workspace/outputs/housing_reports",   label: 부동산 발굴 보고서}
           - {value: "~workspace/outputs/ai_tips_reports",   label: 유튜브 AI 팁 보고서}
-    action: '[self:file_find]{pattern: "*report_*.md", path: "$folder"}@hub | sort: title desc | take: 1 >> [self:read]{blocks: true}@hub'
+    # 최신 1건 = 찾기 >> 제목 내림차순 >> 1건; 없으면 빈 blocks 로 끝(empty 문구). [self:read] 는 Document{text,blocks,data}
+    action: '$l = [self:file_find]{pattern: "*report_*.md", path: $folder}@hub >> [table:sort]{by: "title", descending: true} >> [table:take]{n: 1}; [if: len($l) == 0] { return {blocks: [], items: []} } [self:read]{path: $l[0].url}@hub'
     view:
       - type: blocks
-        from: items
+        from: blocks
         empty: 아직 작성된 보고서가 없습니다 — "작성" 탭에서 새 보고서를 만들어 보세요.
     # 폰에 저장·공유 — 최신 보고서를 @hub 로 읽어 폰 공유 시트로(카카오톡 등). 공유는 사용자 탭.
     # phone_only: 맥 데스크탑(GenericInstrument)에선 숨긴다 — [limbs:phone] 는 runs_on:phone_only 라
@@ -43,7 +43,7 @@ modes:
     buttons:
       - label: 📤 폰에 저장·공유
         phone_only: true
-        action: '[self:file_find]{pattern: "*report_*.md", path: "$folder"}@hub | sort: title desc | take: 1 >> [self:read]{}@hub >> [limbs:phone]{op: "share", filename: "report.md", mime: "text/markdown"}'
+        action: '$l = [self:file_find]{pattern: "*report_*.md", path: $folder}@hub >> [table:sort]{by: "title", descending: true} >> [table:take]{n: 1}; $d = [self:read]{path: $l[0].url}@hub; [limbs:phone]{op: "share", content: $d.text, filename: "report.md", mime: "text/markdown"}'
 
   # ── 목록: 선택 타입의 전체 보고서(최신순), 클릭하면 본문 ──
   - name: 목록
@@ -58,7 +58,7 @@ modes:
           - {value: "~workspace/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
           - {value: "~workspace/outputs/housing_reports",   label: 부동산 발굴 보고서}
           - {value: "~workspace/outputs/ai_tips_reports",   label: 유튜브 AI 팁 보고서}
-    action: '[self:file_find]{pattern: "*report_*.md", path: "$folder"}@hub | sort: title desc'
+    action: '{items: [self:file_find]{pattern: "*report_*.md", path: $folder}@hub >> [table:sort]{by: "title", descending: true}}'
     view:
       - type: card_list
         from: items
@@ -68,10 +68,10 @@ modes:
           lines:
             - '{meta}'
         item_click:
-          action: '[self:read]{path: "{url}", blocks: true}@hub'
+          action: '[self:read]{path: $item.url}@hub'
           view:
             - type: blocks
-              from: items
+              from: blocks
 
   # ── 가이드: 각 보고서를 만드는 레시피(가이드 파일) 본문 (@hub = PC 에서 읽기) ──
   #  보고서는 data/guides/*.md 레시피에 기초해 생성된다. 그 레시피를 앱에서 바로 열어 본다.
@@ -87,10 +87,10 @@ modes:
           - {value: "~workspace/data/guides/ai_startup_report.md", label: AI 창업·응모 정보 보고서 가이드}
           - {value: "~workspace/data/guides/housing_report.md",   label: 부동산 발굴 보고서 가이드}
           - {value: "~workspace/data/guides/youtube_ai_tips_report.md", label: 유튜브 AI 팁 보고서 가이드}
-    action: '[self:read]{path: "$guide", blocks: true}@hub'
+    action: '[self:read]{path: $guide}@hub'
     view:
       - type: blocks
-        from: items
+        from: blocks
         empty: 가이드 파일을 찾을 수 없습니다.
 
   # ── 작성: 자율주행(시스템 AI)에 보고서 작성 위임 ──

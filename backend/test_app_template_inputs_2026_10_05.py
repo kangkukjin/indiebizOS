@@ -104,11 +104,15 @@ def test_validator_edition2_rejects_legacy_syntax_and_allows_item():
     row = av._validate_app_block("t", _block('[sense:search]{query: "{title}"}', edition=2), QUALIFIED)
     assert any("$item" in i for i in row), row
     hub = av._validate_app_block("t", _block('[sense:search]{query: $q}@hub', edition=2), QUALIFIED)
-    assert any("@노드 지정" in i for i in hub), hub
+    assert hub == [], hub   # @노드 지정은 판본 2 도 받는다(2026-10-05 이월)
     pipe = av._validate_app_block("t", _block('[sense:search]{query: $q} | sort: title desc', edition=2), QUALIFIED)
     assert any("파이프 축약" in i for i in pipe), pipe
     item = av._validate_app_block("t", _block('[self:read]{path: $item.path, q: f"${q}"}', edition=2), QUALIFIED)
     assert item == [], item
+    # 템플릿 안에서 묶인 이름(대입·람다 인자)은 입력이 아니다
+    bound = av._validate_app_block("t", _block('$s = [self:read]{path: $q}; $s.data.items >> [table:take]{n: 1} >> [table:take]{n: len(($r) => $r.id)}', edition=2), QUALIFIED)
+    assert not any("$s" in i or "$r" in i for i in bound), bound
+    assert av._template_input_names('$s = [a:b]{x: $q}; ($r, $t) => $r.id != $item.id') == {"q", "item"}
     typo = av._validate_app_block("t", _block('[sense:search]{query: $qury}', edition=2), QUALIFIED)
     assert any("$qury" in i for i in typo), typo
 
@@ -191,6 +195,28 @@ def test_manifest_hides_apps_of_sleeping_packages(monkeypatch):
     monkeypatch.setattr(vs, "is_active", lambda pid, root=None, profile=None: True if pid == owner else real(pid, root, profile))
     awake = {i["id"]: i for i in _derive_instruments(include_standalone=False)["instruments"]}
     assert "managed_records" in awake and awake["managed_records"].get("edition") == 2
+
+
+# ── @노드 지정(판본 1 문법의 이월) ───────────────────────────────────────────
+
+def test_node_annotation_parses_compiles_and_reaches_the_engine(monkeypatch):
+    from project_manager import ProjectManager
+    pp = str(ProjectManager().get_project_path("앱모드"))
+    ok = _run({"code": '[self:list]{path: "."}@hub', "inputs": {}, "check": True})
+    assert ok["ok"] is True, ok.get("issues")
+    bad = _run({"code": "[fn:없음]{}@hub", "inputs": {}, "check": True})
+    assert "TARGET_NODE" in [i["code"] for i in bad["issues"]]
+    import ibl_engine
+    captured = []
+    real = ibl_engine.execute_ibl
+    def spy(step, project_path, agent_id=None, **kw):
+        captured.append(dict(step))
+        return real(step, project_path, agent_id=agent_id, **kw)
+    monkeypatch.setattr(ibl_engine, "execute_ibl", spy)
+    from ibl_v2_entry import handle_request
+    r = handle_request({"code": '[self:list]{path: "outputs"}@hub', "edition": 2, "inputs": {}}, pp, None)
+    assert r["success"], r.get("error")
+    assert [c.get("target_node") for c in captured] == ["hub"]
 
 
 if __name__ == "__main__":

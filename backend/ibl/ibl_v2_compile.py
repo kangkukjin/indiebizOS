@@ -556,6 +556,8 @@ class Compiler:
             if arg_type.open:
                 self.need(d["params"], UNKNOWN, Type("Record"))
             key = f"{d['node']}:{d['action']}"
+            if d.get("target") and (d["node"] == "fn" or key == "table:each"):
+                self.issue(node, "TARGET_NODE", f"노드 지정 @{d['target']} 은 도구 호출에만 붙습니다 — 함수·each 블록에는 쓸 수 없습니다.")
             if key == "table:each":
                 return self.each(node, args, env, names, piped)
             if d["node"] == "fn":

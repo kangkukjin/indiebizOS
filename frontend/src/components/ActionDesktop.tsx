@@ -1,4 +1,4 @@
-import { openPhoto, openPCManager, openLecture, openDocuments, openSpreadsheets, openCoding, openExternalLink } from '../lib/surface-navigation';
+import { openPhoto, openPCManager, openLecture, openSpreadsheets, openCoding, openExternalLink } from '../lib/surface-navigation';
 /**
  * ActionDesktop — 런처의 "앱" 표면 (앱모드)
  *
@@ -73,9 +73,8 @@ const STATIC_DOMAINS: Domain[] = [
   { id: 'lecture', icon: '🎓', label: '강의 만들기', onOpen: () => openLecture(), instruments: [] },
   { id: 'coding', icon: '💻', label: '코딩', onOpen: () => openCoding(), instruments: [] },
   { id: 'spreadsheets', icon: '📊', label: '스프레드시트', onOpen: () => openSpreadsheets(), instruments: [] },
-  // 문서 앱의 본체는 매니페스트 계기 `document`(data/instruments/document.yaml — 빈노트를 흡수, 2026-10-05).
-  // 이 창은 거기 아직 없는 기능(시트 표 연결·강의 전달·템플릿 새 문서·파일 가져오기)과 시트 앱의 "문서에 표 보고서"가 쓴다.
-  { id: 'documents', icon: '🗂️', label: '문서 (옛 창)', onOpen: () => openDocuments(), instruments: [] },
+  // 문서 앱 = 매니페스트 계기 `document`(data/instruments/document.yaml — 빈노트와 옛 문서 창을 흡수, 2026-10-06).
+  // 옛 창(#/documents, DocumentWorkspace.tsx)은 홈에서 내렸고, 그 창을 모는 브라우저 인수 시험 3종을 새 계기로 옮길 때 지운다.
   {
     id: 'directions', icon: '🗺️', label: '지도',  // 2026-09-03 길찾기·CCTV→지도(장소 검색·저장·상세·길찾기). id 는 저장된 배치 보존을 위해 유지
     instruments: [

@@ -22,3 +22,13 @@
 .engine-editor .document-ocr{max-height:260px;overflow:auto}
 .engine-editor .ocr-words section{display:flex;flex-wrap:wrap;gap:6px}
 .engine-editor .ocr-low input{border-color:#bd862b}
+/* 원문 미리보기(마크다운) — 캔버스와 같은 자리, 읽기용 */
+.engine-preview h1{font-size:1.6em;font-weight:700;margin:.6em 0 .4em}.engine-preview h2{font-size:1.3em;font-weight:700;margin:.8em 0 .3em}.engine-preview h3{font-size:1.1em;font-weight:700;margin:.8em 0 .2em}
+.engine-preview p{margin:.5em 0}.engine-preview ul{list-style:disc;padding-left:1.4em}.engine-preview ol{list-style:decimal;padding-left:1.4em}
+.engine-preview table{border-collapse:collapse;margin:.6em 0}.engine-preview td,.engine-preview th{border:1px solid #d6d3d1;padding:4px 10px}
+.engine-preview code{background:#f5f5f4;padding:1px 4px;border-radius:4px;font-size:.9em}.engine-preview pre{background:#f5f5f4;padding:12px;border-radius:8px;overflow:auto}
+.engine-preview blockquote{border-left:3px solid #d6d3d1;padding-left:12px;color:#57534e}.engine-preview a{color:#b45309;text-decoration:underline}
+/* ⚙ 도구 패널 안의 시트·강의 연결(옛 문서 창의 DocumentReferences) — 줄바꿈되는 한 묶음으로 */
+.engine-editor section[aria-label="자료 연결"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.engine-editor section[aria-label="자료 연결"]>h3{display:none}
+.engine-editor section[aria-label="자료 연결"]>p,.engine-editor section[aria-label="자료 연결"]>div{width:100%}

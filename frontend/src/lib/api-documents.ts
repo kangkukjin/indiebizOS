@@ -5,6 +5,8 @@ export type Session = { id: string; client_id: string; engine_epoch: string; ses
 export type Detail = { document: Document; session: Session | null; text?: string; capabilities: { edit_native: boolean; save: boolean; export_copy: boolean; reason: string; engine: string } };
 export type Snapshot = { id: string; session_revision: number; blob: string };
 export type Proposal = { id: string; snapshot_id: string };
+/** 캔버스에서 미리보기를 낼 수 있는 원문 형식 */
+export const PREVIEWABLE = ['md', 'markdown', 'html', 'htm'];
 
 export async function documentRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const response = await fetch(`${BACKEND_ORIGIN}/documents${path}`, {

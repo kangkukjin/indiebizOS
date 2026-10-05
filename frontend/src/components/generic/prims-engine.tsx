@@ -14,12 +14,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppViewPrim, AppFormField, AppMode, ViewEvent } from './manifest';
 import { jget, tpl, actionRequest, runIBL, suggestionText } from './manifest';
 import { AiDockPanel } from './prims-edit';
-import { documentCommand, documentRequest, sessionArgs, type Detail } from '../../lib/api-documents';
+import { documentCommand, documentRequest, sessionArgs, PREVIEWABLE, type Detail } from '../../lib/api-documents';
 import { sheetCommand, sheetRequest, type SheetDetail } from '../../lib/api-spreadsheets';
 import { OfficeDocumentEditor } from '../OfficeDocumentEditor';
 import { HwpDocumentEditor } from '../HwpDocumentEditor';
 import { SpreadsheetEditor } from '../spreadsheets/SpreadsheetEditor';
 import './engine-editors.css';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { SourceTools } from './engine-source-tools';
 
 type Dock = NonNullable<AppFormField['ai_dock']>;
 type Host = { dock?: Dock; vars?: Record<string, unknown>; block?: AppMode };  // 독 선언과 그 action 이 읽을 $변수·실행 블록
@@ -54,26 +57,36 @@ export function EnginePrim({ p, data, onViewEvent, vars, block }: {
 function DocumentEngine({ id, emit, host }: { id: string; emit: (e: 'selection' | 'saved', p: Payload) => void; host: Host }) {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState('');
-  const client = useRef(clientId());
+  const [me] = useState(clientId);
   const capture = useRef<(() => Promise<unknown>) | null>(null);
   useEffect(() => {
     let dead = false;
     (async () => {
       try {
         let d = await documentRequest<Detail>(`/${encodeURIComponent(id)}`);
-        if (d.capabilities.edit_native && (!d.session || d.session.client_id !== client.current)) {
-          d = await documentCommand<Detail>(id, 'sessions', { client_id: client.current });
+        if (d.capabilities.edit_native && (!d.session || d.session.client_id !== me)) {
+          d = await documentCommand<Detail>(id, 'sessions', { client_id: me });
         }
         if (!dead) setDetail(d);
       } catch (e) { if (!dead) setError(e instanceof Error ? e.message : String(e)); }
     })();
     return () => { dead = true; };
-  }, [id]);
+  }, [id, me]);
   if (error) return <p role="alert" className="text-sm text-red-600">{error}</p>;
   if (!detail) return <p className="text-sm text-stone-400">편집 표면을 여는 중…</p>;
   const onChange = (d: Detail) => setDetail(d);
   const saved = (d: Detail) => emit('saved', { revision: d.document.revision_id });
   if (!detail.capabilities.edit_native) return <p className="text-sm text-stone-500">{detail.capabilities.reason} — 열람만 가능합니다.</p>;
+  if (detail.session && detail.session.client_id !== me) return (
+    <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600">
+      <span>다른 작성 창이 이 문서를 쥐고 있습니다. 이 창으로 가져오면 그 창의 저장 권한이 끝납니다.</span>
+      <button className="px-3 py-1.5 rounded-lg border border-stone-300 hover:border-stone-500" onClick={() => {
+        const s = detail.session; if (!s) return;
+        documentCommand<Detail>(id, 'reclaim', { client_id: me, expected_epoch: s.engine_epoch })
+          .then(setDetail, (e) => setError(e instanceof Error ? e.message : String(e)));
+      }}>이 창에서 초안 이어 쓰기</button>
+    </div>
+  );
   if (detail.capabilities.engine === 'rhwp')
     return <div className="engine-editor"><HwpDocumentEditor key={`${detail.document.id}:${detail.session?.engine_epoch}`} detail={detail} onChange={onChange}
       captureRef={capture as never} onSaved={saved} /></div>;
@@ -108,8 +121,8 @@ function SourceEngine({ detail, onChange, emit, host }: {
   const [picked, setPicked] = useState(0);            // 지금 선택된 글자 수(독이 무엇을 고칠지 보여 준다)
   const [undo, setUndo] = useState<string | null>(null);  // AI 반영 직전 본문(한 번 되돌리기)
   const [scope, setScope] = useState<'선택' | '전체'>('전체');
-  const [versions, setVersions] = useState<{ id: string; created_at: number }[] | null>(null);  // 확정 저장 버전(펼쳤을 때만)
-  const [copyName, setCopyName] = useState('');
+  const [tools, setTools] = useState(false);          // ⚙ 도구 패널(사본·변환·버전·연결) — 평소엔 접어 둔다
+  const [preview, setPreview] = useState(false);
   const editor = useRef<HTMLTextAreaElement>(null);
   const live = useRef(text); live.current = text;
   const acknowledged = useRef(text);                  // 서버 초안과 같은 본문
@@ -125,7 +138,7 @@ function SourceEngine({ detail, onChange, emit, host }: {
     setText(v); live.current = v; acknowledged.current = v;
     range.current = { a: 0, b: 0 }; pinned.current = null; setPicked(0); setUndo(null);
   };
-  useEffect(() => { adopt(detail); setVersions(null); }, [detail.document.id, detail.session?.engine_epoch]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { adopt(detail); setPreview(false); }, [detail.document.id, detail.session?.engine_epoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 초안 저장은 한 줄로 세운다 — 세션 개정 번호(expected)를 물고 가므로 겹치면 뒤의 것이 거절된다.
   const draft = useCallback((): Promise<Detail> => {
@@ -170,26 +183,11 @@ function SourceEngine({ detail, onChange, emit, host }: {
     setMessage('저장됨 · 원본 파일 기록 확인');
     emit('saved', { revision: next.document.revision_id });
   });
-  const toggleVersions = () => void run(async () => {
-    if (versions) { setVersions(null); return; }
-    const id = current.current.document.id, title = current.current.document.title, dot = title.lastIndexOf('.');
-    setVersions((await documentRequest<{ items: { id: string; created_at: number }[] }>(`/${id}/versions`)).items);
-    if (!copyName) setCopyName(dot > 0 ? `${title.slice(0, dot)}_사본${title.slice(dot)}` : `${title}_사본`);
-  });
-  const restore = (revision_id: string) => void run(async () => {
-    const d = await draft();
-    if (!d.session) throw new Error('작성 세션이 없습니다');
-    await documentCommand(d.document.id, 'restore', { ...sessionArgs(d.session), operation_id: crypto.randomUUID(), revision_id });
-    const next = await documentRequest<Detail>(`/${d.document.id}`);
-    current.current = next; onChange(next); adopt(next);
-    setMessage('고른 버전을 작업 초안으로 되살렸습니다 · 원본 저장 전');
-  });
-  const exportCopy = () => void run(async () => {
-    const d = await draft();
-    if (!d.session) throw new Error('작성 세션이 없습니다');
-    const result = await documentCommand<{ path: string }>(d.document.id, 'export', { ...sessionArgs(d.session), operation_id: crypto.randomUUID(), filename: copyName });
-    setMessage(`사본 저장됨: ${result.path} · 원본은 그대로`);
-  });
+  const replaceFrom = (next: Detail) => { current.current = next; onChange(next); adopt(next); };
+  const pick = () => {
+    const { a, b } = range.current;
+    return a === b ? null : { ...address(a, b), text: toSource(live.current.slice(a, b)) };
+  };
   const address = (a: number, b: number) => {  // 캔버스 범위 → 서버 주소(코드포인트·원본 줄바꿈)
     const start = cp(toSource(live.current.slice(0, a)));
     return { start, end: start + cp(toSource(live.current.slice(a, b))) };
@@ -246,35 +244,23 @@ function SourceEngine({ detail, onChange, emit, host }: {
         <span className="text-xs text-stone-400 shrink-0">{picked ? `선택 ${picked.toLocaleString()}자 · ` : ''}{cp(text).toLocaleString()}자</span>
         {undo != null && <button disabled={busy} onClick={() => { rewrite(undo); setUndo(null); }}
           className="px-2.5 py-1.5 rounded-lg text-sm text-stone-600 hover:bg-stone-100">AI 반영 되돌리기</button>}
-        <button disabled={busy} onClick={toggleVersions}
-          className={`px-2.5 py-1.5 rounded-lg text-sm hover:bg-stone-100 ${versions ? 'bg-stone-100 text-stone-800' : 'text-stone-600'}`}>버전·사본</button>
+        <button onClick={() => setTools((v) => !v)} title="사본·변환·버전·시트 표 연결"
+          className={`px-2.5 py-1.5 rounded-lg text-sm hover:bg-stone-100 ${tools ? 'bg-stone-100 text-stone-800' : 'text-stone-600'}`}>⚙ 도구</button>
         <button disabled={busy || !writable} onClick={save}
           className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-40">저장</button>
       </div>
-      {versions && (
-        <div className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-stone-500 shrink-0">다른 이름으로 사본 저장</span>
-            <input value={copyName} onChange={(e) => setCopyName(e.target.value)} aria-label="사본 파일명"
-              className="flex-1 min-w-[10rem] px-2 py-1 rounded-lg border border-stone-200" />
-            <button disabled={busy || !writable || !copyName.trim()} onClick={exportCopy}
-              className="px-2.5 py-1 rounded-lg border border-stone-300 hover:border-stone-500 disabled:opacity-40">사본 저장</button>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-stone-500">저장 버전 — 되살리면 작업 초안이 되고, 저장을 눌러야 원본이 바뀝니다</span>
-            {versions.length === 0 && <span className="text-xs text-stone-400">아직 저장한 버전이 없습니다</span>}
-            {versions.map((v) => (
-              <div key={v.id} className="flex items-center gap-2">
-                <span className="flex-1 text-stone-700">{new Date(v.created_at * 1000).toLocaleString()}{v.id === detail.document.revision_id ? ' · 현재 원본' : ''}</span>
-                {v.id !== detail.document.revision_id && <button disabled={busy || !writable} onClick={() => restore(v.id)}
-                  className="px-2.5 py-1 rounded-lg border border-stone-300 hover:border-stone-500 disabled:opacity-40">되살리기</button>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {tools && <SourceTools detail={detail} text={text} busy={busy} writable={writable} run={run} draft={draft} pick={pick}
+        replaceFrom={replaceFrom} setMessage={setMessage} preview={preview} setPreview={setPreview} />}
       {style.current.mixed && <p role="alert" className="text-sm text-amber-700">줄바꿈이 섞인 문서입니다. 원문을 보호하기 위해 이 화면의 편집을 막습니다.</p>}
-      <textarea ref={editor} aria-label="문서 원문" spellCheck={false} value={text} readOnly={!writable}
+      {preview && PREVIEWABLE.includes(detail.document.source_format) && (
+        ['md', 'markdown'].includes(detail.document.source_format)
+          ? <div className="engine-preview w-full min-h-[calc(100vh-320px)] bg-white rounded-xl shadow-sm border border-stone-200 px-10 py-9 text-[15px] leading-8">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ img: ({ alt }) => <span>[그림: {alt || '첨부 이미지'}]</span> }}>{text}</ReactMarkdown>
+            </div>
+          : <iframe title="HTML 비실행 미리보기" sandbox="" className="w-full min-h-[calc(100vh-320px)] bg-white rounded-xl border border-stone-200"
+              srcDoc={`<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'"><style>body{font:16px/1.7 sans-serif;padding:24px;overflow-wrap:anywhere}</style>${text}`} />
+      )}
+      <textarea ref={editor} aria-label="문서 원문" hidden={preview} spellCheck={false} value={text} readOnly={!writable}
         placeholder="여기에 자유롭게 글을 쓰세요…"
         onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }}
         onChange={(e) => edit(e.target.value)} onSelect={track}

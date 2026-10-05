@@ -259,6 +259,16 @@ def _derive_instruments(include_standalone=True) -> dict:
         nodes = (yaml.safe_load(f) or {}).get("nodes", {})
 
     runnable = _phone_runnable_actions()  # 폰이면 집합, PC면 None
+    # 잠든(비활성) 패키지의 앱은 표면에서 빠진다 — packages.md '보유와 활성': 잠든 묶음은 소개·회상·실행에서 빠진다.
+    # 앱 블록만 남기면 홈에 아이콘은 보이는데 누르면 "낱말은 잠들어 있습니다"로 거절되는 반쪽 상태였다(2026-10-05 실측, record-ops).
+    try:
+        import vocabulary_state as _vs
+        def _asleep(node_name: str, action_name: str, action_cfg: dict) -> bool:
+            owner = _vs.action_owner(node_name, action_name, action_cfg)
+            return bool(owner) and not _vs.is_active(owner)
+    except Exception:  # 어휘 활성 원장을 못 읽으면 종전처럼 전부 노출(숨김은 보수적으로)
+        def _asleep(node_name: str, action_name: str, action_cfg: dict) -> bool:
+            return False
 
     groups: dict[str, list] = {}
     group_seq: list[str] = []
@@ -270,6 +280,8 @@ def _derive_instruments(include_standalone=True) -> dict:
                 continue
             app = action.get("app")
             if not isinstance(app, dict):
+                continue
+            if _asleep(node_name, action_name, action):
                 continue
             # 폰 프로파일: app: 블록은 기본 노출 — 실행은 라우팅(phone_api._code_needs_mac)이
             # 로컬/맥 자동 결정한다(폰 불가 액션도 맥 위임 후 폰서 렌더). phone_render:false 만
@@ -752,7 +764,12 @@ async def get_instruments():
     (화이트리스트 아님 — 데이터 엔드포인트라 로그인 후 접근이 맞음).
     """
     try:
-        mtime = _instruments_mtime()
+        # 캐시 키 = 파일 mtime + 어휘 활성 원장 판본 — 묶음을 깨우거나 잠재우면 홈 그리드도 따라 바뀐다.
+        try:
+            from vocabulary_state import revision as _vocab_revision
+            mtime = (_instruments_mtime(), _vocab_revision())
+        except Exception:
+            mtime = _instruments_mtime()
         if _instruments_cache["mtime"] != mtime:
             _instruments_cache["payload"] = _derive_instruments()
             _instruments_cache["mtime"] = mtime

@@ -175,5 +175,23 @@ def test_member_resolve_legacy_block_still_substitutes():
     assert "limit:3" in r["code"] and '"q"' in r["code"]
 
 
+# ── 앱 매니페스트: 잠든 패키지의 앱은 표면에서 빠진다 ───────────────────────────
+
+def test_manifest_hides_apps_of_sleeping_packages(monkeypatch):
+    import vocabulary_state as vs
+    from api_launcher_web import _derive_instruments
+    owner = vs.action_owner("self", "record")
+    assert owner, "record-ops 의 self:record 소유 패키지를 찾아야 한다"
+    real = vs.is_active
+
+    monkeypatch.setattr(vs, "is_active", lambda pid, root=None, profile=None: False if pid == owner else real(pid, root, profile))
+    asleep_ids = {i["id"] for i in _derive_instruments(include_standalone=False)["instruments"]}
+    assert "managed_records" not in asleep_ids
+
+    monkeypatch.setattr(vs, "is_active", lambda pid, root=None, profile=None: True if pid == owner else real(pid, root, profile))
+    awake = {i["id"]: i for i in _derive_instruments(include_standalone=False)["instruments"]}
+    assert "managed_records" in awake and awake["managed_records"].get("edition") == 2
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

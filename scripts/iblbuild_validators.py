@@ -1283,14 +1283,10 @@ def validate(data: dict, root: Path) -> list[str]:
     issues.extend(validate_side_effect_declaration(data))
     issues.extend(validate_standard_core(data, root))
     issues.extend(validate_desc_discipline(data))
+    from iblbuild_requires import validate_requires
+    issues.extend(validate_requires(data, root))
     return issues
 
-
-# ───────── 압축 상설 기관 (5-A): 개념중복 *경고* — 차단 아님 ─────────
-# 배경(docs/VOCAB_DEDUP_HANDOFF.md): 정합성 가드는 존재 정합만 본다 — 같은 개념이
-# 두 액션이어도 각자 정합이면 통과한다. 아래 두 신호는 2026-08-05 감사의 "자백"(desc
-# 면책)과 "구조"(op 집합 닮음) 신호를 상설화한 것. 판단·병합은 사람 몫이라 경고만 낸다.
-# (셋째 신호 "실증"=코퍼스 최근접은 주간 감사 vocab_overlap_audit — 빌드는 코퍼스를 안 읽는다.)
 
 # 2026-08-05 동결 — 기존 다참조 desc 4건(정당한 교차 안내 포함). 새 진입만 경고.
 _COMPRESSION_DESC_BASELINE = {

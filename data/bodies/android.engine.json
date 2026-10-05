@@ -2,7 +2,9 @@
   "_doc": "scripts/build_body_bundle.py 가 data/bodies/android.json 에서 파생. 직접 편집 금지 — 프로파일을 고치고 재생성하라.",
   "body": "android",
   "engine_modules": [
+    "base/action_requires",
     "base/ai_candidates",
+    "base/approval_tokens",
     "base/audit_lifecycle",
     "base/codex_rollout",
     "base/coding_process",
@@ -547,8 +549,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 472,
-    "engine": 446,
+    "total": 474,
+    "engine": 448,
     "blocklist": 26
   }
 }

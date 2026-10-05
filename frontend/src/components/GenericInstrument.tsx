@@ -621,7 +621,8 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   const [eventVars, setEventVars] = useState<Record<string, unknown>>({});
   const eventVarsRef = useRef(eventVars);
   eventVarsRef.current = eventVars;
-  const allVars = useCallback((): Record<string, unknown> => ({ ...valuesRef.current, ...eventVarsRef.current }), []);
+  // $principal — 보고 있는 주체(서버가 매니페스트에 요청마다 붙임). 읽기 전용 표시·분기용; 판정은 서버 문맥의 principal.
+  const allVars = useCallback((): Record<string, unknown> => ({ principal: (sourceMode as AppInstrument).principal, ...valuesRef.current, ...eventVarsRef.current }), [sourceMode]);
   // onDrill 은 의존성 없이(정체성 고정) 만들어지므로 현재 드릴을 ref 로 본다 — recursive 드릴이
   // "지금 보고 있는 뷰"를 물려받아야 하는데, 클로저로 잡으면 첫 렌더 값에 박제된다.
   const drillRef = useRef<DrillState | null>(null);

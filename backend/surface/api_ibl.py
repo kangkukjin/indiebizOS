@@ -3,7 +3,7 @@ import json
 import os
 import re
 from typing import Optional, List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/ibl", tags=["ibl"])
@@ -19,6 +19,9 @@ class IBLRequest(BaseModel):
     # 표면 바인딩(2026-10-05 ①): 앱 템플릿이 참조하는 입력 이름 전부. inputs 에 없는 이름 = 미지정
     # (호출 인자 생략·보간 ""). 렌더러가 치환 대신 원문 + inputs + declared_inputs 를 보낸다.
     declared_inputs: Optional[List[str]] = None
+    # 사람 승인 토큰(② 권한 연결, 2026-10-05): human_confirm 액션이 approval_required 를 돌려주면 표면이 /ibl/approve 로
+    # 토큰을 받아 같은 요청(code·inputs 동일 = 같은 지문)에 실어 재전송한다. 관문이 1회 소비.
+    approval: Optional[str] = None
     value_protocols: Optional[List[str]] = None
     describe: Optional[List[str]] = None
     read_result: Optional[dict] = None
@@ -125,6 +128,24 @@ class DistillRequest(BaseModel):
     code: str
     top_score: float = 0.0
 
+class ApproveRequest(BaseModel):
+    """사람 승인(② 권한 연결): human_confirm 액션이 돌려준 approval_required.challenge 에 대해 토큰을 발급한다."""
+    challenge: str
+
+
+@router.post("/approve")
+async def approve_ibl(req: ApproveRequest, request: Request):
+    """사람 통로 전용 — 런처 세션(원격) 또는 로컬 브라우저 출처(데스크탑)만 통과(api_vocabulary.human_authority 와 같은 판정).
+    IBL 안에서는 부를 수 없다(에이전트의 도구는 execute_ibl 하나). 토큰은 challenge 에 묶여 1회·120초."""
+    from api_vocabulary import human_authority
+    human_authority(request)
+    import approval_tokens
+    try:
+        return {"success": True, **approval_tokens.issue(req.challenge)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.get("/capabilities")
 async def ibl_capabilities():
     from ibl_v2_entry import capabilities
@@ -187,6 +208,7 @@ async def execute_ibl_code(req: IBLRequest):
                                     set_call_channel, get_call_channel, clear_call_channel,
                                     set_surface_ticket, get_surface_ticket,
                                     set_progress_ticket, get_progress_ticket,
+                                    set_approval, get_approval,
                                     actor_context)
 
         def _run_in_context():
@@ -195,6 +217,11 @@ async def execute_ibl_code(req: IBLRequest):
             _prev_channel = get_call_channel()
             _prev_ticket = get_surface_ticket()
             _prev_prog_ticket = get_progress_ticket()
+            _prev_approval = get_approval()
+            # 사람 승인(②) — 토큰과 이 요청의 지문(code·inputs·declared)을 스레드에 싣는다. 관문(action_requires.gate)이
+            # (주체·액션·op·지문) challenge 로 대조·1회 소비. 풀 스레드 재사용 → 복원 필수(티켓 선례).
+            import approval_tokens as _approval_tokens
+            set_approval(req.approval or None, _approval_tokens.request_digest(req.code, req.inputs, req.declared_inputs))
             # 표면 티켓을 스레드에 싣는다(⑨) — 엔진 최외곽 파이프라인이 step 경계마다
             # ticket_progress 를 쓴다. to_thread 풀 스레드 재사용 → 복원 필수(선례 동일).
             set_surface_ticket(req.ticket or None)
@@ -273,6 +300,7 @@ async def execute_ibl_code(req: IBLRequest):
                     set_current_project_id(_prev_pid)
                     set_current_surface(_prev_surface)
                     set_surface_ticket(_prev_ticket)
+                    set_approval(*_prev_approval)
                     set_progress_ticket(_prev_prog_ticket)
                     if _prev_channel is None:
                         clear_call_channel()

@@ -206,6 +206,17 @@ def get_surface_ticket():
     return getattr(_thread_local, 'surface_ticket', None)
 
 
+def set_approval(token, request_digest):
+    """사람 승인(②, 2026-10-05) — 이 요청에 실린 승인 토큰과 요청 지문. 표면(api_ibl)이 실행 전에 싣고 실행 후 복원한다.
+    action_requires.gate 가 human_confirm 액션에서 (주체·액션·지문) challenge 로 토큰을 1회 소비한다. snapshot()이 함께 옮긴다."""
+    _thread_local.approval = (token, request_digest)
+
+
+def get_approval():
+    """현재 스레드의 (승인 토큰, 요청 지문) — 없으면 (None, None)."""
+    return getattr(_thread_local, 'approval', (None, None))
+
+
 def set_progress_ticket(ticket):
     """진행 **신고** 티켓 (2026-09-01) — 좌표 소유권과 분리된 두 번째 슬롯.
 

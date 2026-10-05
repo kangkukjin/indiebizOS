@@ -409,11 +409,16 @@
           package_id: [name]   # _package_op 폴백 키
         # list op 가 목록을 낸다 — self:switch·self:trigger 와 같은 부류.
         returns: items
-        # 활성 선택은 사람의 조종실 동작. IBL install/remove는 변경 제안만 반환한다.
+        # 활성 선택은 사람의 동작 — activate/deactivate 는 requires(owner + human_confirm)로 실행기 관문이 사람 승인 토큰을 요구한다
+        # (② 권한 연결 2026-10-05). install/remove 는 변경 제안만 반환한다(호환).
         side_effect: true
+        requires:
+          ops:
+            activate: {principal: [owner], human_confirm: true}
+            deactivate: {principal: [owner], human_confirm: true}
         fixture: '[self:package]{op: "list"}'
-        description: 도구 패키지 생애주기 관리 (op 분기). list=사용 중/잠든 보유 묶음, info=상세, install/remove=사람에게 깨우기/잠재우기 제안, reload=런타임 캐시만 초기화(handler.py·어휘 선언 편집 뒤, POST /packages/reload 의 낱말 자리).
-        target_description: 'list/reload — (파라미터 없음). info/install/remove — package_id(필수). reload 는 되살린 범위(reloaded)와 못 되살린 범위(not_reloaded — tool_*.py·backend 는 재기동)를 봉투로 말한다.'
+        description: 도구 패키지 생애주기 관리 (op 분기). list=보유 묶음, info=상세, activate/deactivate=깨우기/잠재우기(주인 + 사람 승인 토큰), install/remove=제안만(호환), reload=런타임 캐시 초기화(POST /packages/reload 의 낱말 자리).
+        target_description: 'list/reload — (파라미터 없음). info/install/remove/activate/deactivate — package_id(필수). activate/deactivate 는 사람 승인이 없으면 approval_required{challenge} 로 거절되며, 승인 뒤 같은 요청을 approval 과 함께 다시 보낸다. reload 는 되살린 범위(reloaded)와 못 되살린 범위(not_reloaded — tool_*.py·backend 는 재기동)를 봉투로 말한다.'
         group: system
         target_key: op
         router: system
@@ -430,20 +435,27 @@
           returns:
             install: effect
             remove: effect
+            activate: effect
+            deactivate: effect
             reload: effect
             info: scalar
           side_effect:
             list: false
             info: false
+          exempt:
+            activate: 사람 승인 토큰 필요 — 고정 fixture 부적합
+            deactivate: 사람 승인 토큰 필요 — 고정 fixture 부적합
           fixture:
             info: '[self:package]{op: "info", package_id: "web"}'
           values:
             list: 사용 중/잠든 보유 묶음 목록 (package_id, 어휘 액션 수 포함)
             info: 패키지 상세 정보 (package_id)
-            install: 깨우기 제안 — 실제 선택은 조종실에서 사람이 수행 (package_id)
-            remove: 잠재우기 제안 — 파일과 기억 보존, 사람이 선택 (package_id)
+            activate: 묶음 깨우기 (package_id) — 주인 + 사람 승인 토큰(requires). 파일·기억은 보존, 선택만 바뀐다
+            deactivate: 묶음 잠재우기 (package_id) — 주인 + 사람 승인 토큰(requires). 소개·회상·실행에서 빠지되 파일·용례·기록 보존
+            install: 깨우기 제안 — 호환(activate 가 실제 선택) (package_id)
+            remove: 잠재우기 제안 — 호환(deactivate 가 실제 선택) (package_id)
             reload: 런타임 캐시만 초기화 — 카탈로그·api_registry·실행기·의식·handler.py (POST /packages/reload 동형)
-        implementation: vocabulary_lifecycle.set_package_active 공통 진입점. IBL에는 사람 권한을 전달하지 않아 변경 제안만 반환. 조종실은 원장 변경과 공통 캐시 초기화까지 완료한다.
+        implementation: vocabulary_lifecycle.set_package_active 공통 진입점. activate/deactivate 는 실행기 관문(action_requires.gate)이 사람 승인 토큰을 소비한 뒤 HUMAN_AUTHORITY 로 선택을 바꾸고 공통 캐시를 초기화한다(조종실 HTTP 와 같은 진입점). install/remove 는 제안만.
         keywords:
         - 패키지
         - 도구

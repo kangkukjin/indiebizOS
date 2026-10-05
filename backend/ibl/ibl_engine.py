@@ -847,6 +847,13 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
         raise  # 회원 관문을 불러올 수 없으면 실행하지 않는다
     if _deny:
         return _deny
+    # 선언된 요구 권한(requires: principal·min_level·human_confirm, ② 권한 연결 2026-10-05) — 주체 종류·등급·사람 승인 토큰.
+    from action_requires import gate as _requires_gate
+    from ibl_ops import resolve_op as _resolve_op
+    _raw_params = tool_input.get("params") or {}
+    _deny = _requires_gate(node, action, action_config, _resolve_op(action_config, _raw_params if isinstance(_raw_params, dict) else {}))
+    if _deny:
+        return _deny
     from ibl_code_ir import receive_params
     params = receive_params(tool_input.get("params", {}))
     # 중첩 깊이를 params 에 실어 라우터가 볼 수 있게 한다 (_prev_result 와 같은 관습 —

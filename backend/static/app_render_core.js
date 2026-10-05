@@ -99,6 +99,14 @@ function actionRequest(block, template, values, item) {
   return appRequest(template, values || {}, item);
 }
 
+/** 응답에서 사람 승인 도전(action_requires.gate 의 approval_required)을 찾는다 — 판본 1 봉투 최상위 또는 판본 2 diagnostic.details.
+ *  있으면 {challenge, action, op, summary}, 없으면 null. 표면은 사람에게 묻고 /ibl/approve 로 토큰을 받아 같은 요청을 approval 과 함께 재전송한다. */
+function approvalChallenge(d) {
+  if (!d || typeof d !== 'object') return null;
+  var a = d.approval_required || (d.diagnostic && d.diagnostic.details && d.diagnostic.details.approval_required);
+  return a && typeof a === 'object' && typeof a.challenge === 'string' ? a : null;
+}
+
 /** 실행 요청(문자열 또는 봉투)의 코드 원문 — 로그·정규식 판정용 */
 function requestCode(req) { return req && typeof req === 'object' ? String(req.code || '') : String(req == null ? '' : req); }
 
@@ -434,7 +442,7 @@ function dateInputType(t) { return t === 'datetime' ? 'datetime-local' : t; }
 
 /* --- ESM export (데스크탑 Vite 전용 — 원격 인라인 시 이 블록만 제거된다. 파일의 마지막) --- */
 export {
-  jget, applyFilter, tplWith, templateNames, appRequest, actionRequest, requestCode, viewList,
+  jget, applyFilter, tplWith, templateNames, appRequest, actionRequest, requestCode, approvalChallenge, viewList,
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   CAL_PERIODIC, calendarModel, calShift, pad2,

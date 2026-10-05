@@ -16,7 +16,7 @@ import { iblSurface } from '../../lib/remote-session';
  */
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import {
-  jget, applyFilter, tplWith, templateNames, requestCode, viewList,
+  jget, applyFilter, tplWith, templateNames, requestCode, approvalChallenge, viewList,
   appRequest, actionRequest,
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
@@ -29,7 +29,7 @@ import {
 
 // 공용 코어 재수출 — 소비자(프리미티브들)는 종전처럼 './generic/manifest' 에서 가져간다.
 export {
-  jget, applyFilter, tplWith, templateNames, requestCode, appRequest, actionRequest,
+  jget, applyFilter, tplWith, templateNames, requestCode, approvalChallenge, appRequest, actionRequest,
   emptyText, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   calendarModel, calShift, pad2,
@@ -153,6 +153,7 @@ export interface AppInstrument extends AppMode {
   modes?: AppMode[];
   system?: boolean;  // 런처 직속 시스템 표면(메신저·커뮤니티) — 데스크탑 앱 그리드에서 제외
   top_buttons?: AppButton[];  // 탭과 무관하게 계기 최상단에 항상 보이는 버튼(예: 소개발행). 탭 전환과 독립.
+  principal?: { kind: string; level?: number | null; id?: string };  // 보고 있는 주체(서버가 요청마다 붙임) — 템플릿 $principal(읽기 전용)
 }
 
 export type Json = Record<string, unknown>;
@@ -164,14 +165,30 @@ export type ViewEvent = (template: string, payload: Record<string, unknown>) => 
 /** 실행 — 문자열(구형 치환 결과) 또는 판본 2 봉투(actionRequest). 봉투는 code·edition·inputs·declared_inputs 를 그대로 싣는다. */
 export async function runIBL(req: ActionReq): Promise<Json> {
   const body = typeof req === 'string' ? { code: req } : { ...req };
-  const res = await fetch(IBL_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...iblSurface, ...body, project_id: '앱모드', project_path: '.' }),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const post = async (extra: Record<string, unknown>) => {
+    const res = await fetch(IBL_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...iblSurface, ...body, ...extra, project_id: '앱모드', project_path: '.' }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  };
+  let raw = await post({});
+  // 사람 승인(② 권한 연결): human_confirm 액션은 approval_required{challenge} 로 거절한다 — 여기(사람이 보는 표면)서 묻고
+  // /ibl/approve 로 토큰을 받아 **같은 요청**을 approval 과 함께 한 번 재전송한다(토큰은 요청 지문에 묶여 1회).
+  const ask = approvalChallenge(raw);
+  if (ask && typeof window !== 'undefined' && window.confirm(`사람 확인이 필요한 동작입니다:\n${ask.summary || ask.action}\n\n실행할까요?`)) {
+    const ok = await fetch(IBL_ENDPOINT.replace(/\/execute$/, '/approve'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...iblSurface, challenge: ask.challenge }),
+    });
+    if (ok.ok) {
+      const t = await ok.json() as { token?: string };
+      if (t.token) raw = await post({ approval: t.token });
+    }
+  }
   // 합성(>>) 액션의 final_result 펼치기는 공용 코어(원격 ibl() 과 같은 규칙)
-  return unwrapFinalResult(await res.json()) as Json;
+  return unwrapFinalResult(raw) as Json;
 }
 
 // ===== 템플릿 (공용 코어 위의 데스크탑 얇은 층) =====

@@ -773,7 +773,15 @@ async def get_instruments():
         if _instruments_cache["mtime"] != mtime:
             _instruments_cache["payload"] = _derive_instruments()
             _instruments_cache["mtime"] = mtime
-        return _instruments_cache["payload"]
+        payload = _instruments_cache["payload"]
+        # 보고 있는 주체(② 권한 연결 2026-10-05) — 표면의 $principal(읽기 전용 표시·분기). 캐시 밖에서 요청마다 붙인다(주체는 요청마다 다르다).
+        try:
+            import principal as _principal
+            _p = _principal.current()
+            who = {"kind": _p.kind, "level": _p.level, "id": _p.id}
+        except Exception:
+            who = {"kind": "owner", "level": None, "id": ""}
+        return {**payload, "principal": who, "instruments": [{**i, "principal": who} for i in payload.get("instruments", [])]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"계기 파생 실패: {e}")
 

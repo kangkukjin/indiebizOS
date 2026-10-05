@@ -632,6 +632,7 @@ def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: d
                 issues.append(f"{blabel}: app.inputs[{j}] select 는 정적 options 또는 options_action 필수")
     if edition == 2:
         input_keys.add("item")  # 행·드릴 컨텍스트 레코드 — 렌더러가 inputs.item 으로 싣는다
+        input_keys.add("principal")  # 보고 있는 주체 {kind, level, id}(읽기 전용 표시·분기용, ② 권한 연결) — 판정은 서버 문맥의 principal
     for t in _app_action_templates(blk):
         for ref_node, ref_action in re.findall(r"\[(\w+):(\w+)\]", t):
             # [fn:이름] = 관용구 호출(2026-10-05 앱 구성 재계획) — 앱은 어휘 조합+관용구로 선다. 이름은 해마·워크플로
@@ -1026,10 +1027,12 @@ def check_app_templates_edition2(data: dict, root: Path) -> tuple[list[str], lis
     catalog_actions = {f"{n}:{a}" for n, nd in nodes.items() if isinstance(nd, dict) for a in (nd.get("actions") or {})}
     for label, blk in blocks:
         for t in _app_action_templates(blk):
-            names = _template_input_names(t) - {"item"}
+            names = _template_input_names(t) - {"item", "principal"}
             types = {n: UNKNOWN for n in names}
             if re.search(r"\$\{?item\b", t):
                 types["item"] = Type("Record", (), open=True)
+            if re.search(r"\$\{?principal\b", t):
+                types["principal"] = Type("Record", (("kind", Type("Text")), ("level", UNKNOWN), ("id", Type("Text"))), open=False)
             try:
                 plan = compile_program(t, registry, {}, defs, input_types=types)
             except Exception as exc:  # noqa: BLE001 — 파서 Fault 포함

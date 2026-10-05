@@ -29,7 +29,8 @@
 **전환**: 구형 선언을 일괄 `edition:2`로 바꾸지 않는다. (a) 빌드가 구형 템플릿(`$key`·`{field}`)을 새 이름 공간으로 **기계 변환**하고 결과를 파일에 쓴다(사람이 diff 확인). (b) **생략·`null`·빈 문자열 셋을 가른다** — 인자 생략은 키 자체가 없는 것(핸들러의 `params.get("limit", 20)` 기본값이 산다), 명시 `null`은 값 `null`(기본값이 적용되지 **않는다**), 빈 문자열은 값 `""`. 지금 치환기는 빈 입력을 **인자 쌍 삭제**(=생략)로 처리하므로 변환 규칙은 "구형 템플릿에서 빈 입력이던 자리 → 생략 유지"다. 신형 템플릿은 생략을 `$input.limit ?? omit`처럼 명시하거나, 컴파일러가 미지정 입력에 매인 인자를 생략으로 접는다 — 둘 중 하나로 정하되 `null`로 바꿔 넘기지 않는다. (c) 변환기가 못 푸는 템플릿은 목록으로 신고하고 그 앱만 구형 경로를 유지한다. 두 경로는 플래그 하나로 공존하되 **새 앱은 신형만**.
 **완료 조건**: 33개 앱 블록 + 독립 매니페스트 2장이 신형으로 돌고 기존 회귀(`test_app_view_*`·계기 시험) 통과, 구형 치환 코드 삭제, 업무기록 `actions/{id}` 전송을 `[self:record]` 직접 호출로 대체해도 객체 `input`·`expected[]`가 손실 없이 도착.
 
-### ② 권한 기반의 연결 — 주체·허용 범위·사람 승인은 서로 다른 사실 (언어 개정 · 판정)
+### ② 권한 기반의 연결 — 주체·허용 범위·사람 승인은 서로 다른 사실 (언어 개정 · 판정) — **1차 집행 2026-10-05**
+**집행**: (1) 액션 선언 `requires: {principal, min_level, human_confirm, ops}` + 빌드 검증(`validate_requires`) + 실행기 관문 한 곳(`backend/base/action_requires.gate`, `execute_ibl` 잎) (2) 사람 승인 토큰 `backend/base/approval_tokens`(주체·액션·op·요청 지문 challenge, 1회·120초) + `/ibl/approve`(사람 통로) + 요청 `approval` 필드 + 두 렌더러의 승인 왕복(approval_required → confirm → approve → 같은 요청 재전송; 포털은 승인 통로 없음) (3) `$principal` 표면 변수(매니페스트에 요청마다 `principal` 부착, 검증기 허용) (4) 첫 소비자 `[self:package]{op: activate|deactivate}`(owner + human_confirm → `set_package_active(HUMAN_AUTHORITY)`). **남은 것**: `human_authority` HTTP 라우트(어휘 활성·외부사용자)의 `requires` 이관, 포털 템플릿 검사의 자원 범위 선언(`paths`) 뒤 축소, 업무기록 확인 토큰의 공통 토큰 전환(변경 내용 지문=proposal), 회원 승인 통로, 매니저·설정 창의 IBL 전환(⑩).
 **있는 것**: 실행 문맥의 주체(`principal.current()`)는 이미 있고 넓힐 수 없다. 감사의 "봉투에 주체가 없다"는 **틀렸다** — 봉투 필드가 없을 뿐 문맥에는 있다.
 **없는 것 셋**:
 1. **액션이 요구 권한을 선언할 자리가 없다.** 지금 "사람만"은 라우트 함수 `human_authority`(Origin·Fetch-Metadata 검사)와 `vocabulary_lifecycle.human_required` 플래그에 산다. 그래서 `self:package`는 "변경 제안만", 매니저·설정·외부사용자는 REST로 남고, NAS는 별도 쿠키를 둔다.

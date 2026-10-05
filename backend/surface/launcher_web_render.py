@@ -509,6 +509,7 @@ function gatherInputs(){
   const vals={};
   (CUR.mode.inputs||[]).forEach(inp=>{ const el=document.getElementById('in_'+inp.key); vals[inp.key]=el?el.value.trim():''; });
   if(CUR.mode.filter&&CUR.filterVal!=null) vals[CUR.mode.filter.key||'filter']=CUR.filterVal;
+  if(CUR.inst&&CUR.inst.principal) vals.principal=CUR.inst.principal;  /* $principal — 보고 있는 주체(읽기 전용) */
   saveInpVals();  // 조회 시점에도 현재 값 영속화(onchange 못 탄 경우 안전망)
   return vals;
 }

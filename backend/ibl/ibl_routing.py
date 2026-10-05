@@ -908,6 +908,20 @@ def _package_op(params: dict) -> dict:
             "items": [{**p, "installed": True} for p in inst] + [{**p, "installed": False} for p in avail],
         }
 
+    if op in ("activate", "deactivate"):
+        # 사람 승인은 실행기 관문(action_requires.gate — requires.ops.activate/deactivate: owner + human_confirm)이 이미
+        # 요청 지문에 묶인 토큰을 소비했다. 그래서 여기서 HUMAN_AUTHORITY 를 건넨다 — 조종실 HTTP(api_vocabulary)와 같은 진입점.
+        pid = (params.get("package_id") or params.get("name") or "").strip()
+        if not pid:
+            return {"error": "package_id 를 지정하세요. 예: [self:package]{op: \"activate\", package_id: \"record-ops\"}"}
+        from vocabulary_lifecycle import set_package_active, HUMAN_AUTHORITY
+        try:
+            return set_package_active(pid, op == "activate", authority=HUMAN_AUTHORITY, profile="owner")
+        except ValueError as exc:
+            return {"success": False, "error": str(exc), "package_id": pid}
+        except RuntimeError as exc:
+            return {"success": False, "error": str(exc), "package_id": pid, "error_type": "capability"}
+
     if op == "reload":
         # POST /packages/reload 의 낱말 자리 — 편집 결과문이 이 op 을 약속해 왔는데(live_effect_note)
         # 낱말엔 없어서 모델이 curl 로 우회했다(ep2904 ×4, 관문·해마 밖). 한 절차(invalidate_runtime_caches).

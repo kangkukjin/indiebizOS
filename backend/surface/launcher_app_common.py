@@ -54,13 +54,22 @@ async function ibl(code){
      (포털은 게이트가 서버측에서 같은 표식을 붙인다). */
   /* code 는 문자열(구형 치환 결과) 또는 판본 2 봉투 {code,edition,inputs,declared_inputs}(공용 코어 appRequest). */
   const body=(code&&typeof code==='object')?Object.assign({},code):{code:code};
-  const r=window.__PORTAL
-    ? await jfetch(window.__PORTAL.exec,{method:'POST',body:JSON.stringify(body)})
-    : await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify(Object.assign(body,{project_id:'앱모드',project_path:'.',surface:'web'}))});
+  const send=async(extra)=> window.__PORTAL
+    ? await jfetch(window.__PORTAL.exec,{method:'POST',body:JSON.stringify(Object.assign({},body,extra||{}))})
+    : await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify(Object.assign({},body,extra||{},{project_id:'앱모드',project_path:'.',surface:'web'}))});
+  let r=await send();
   if(!r.ok){ let m='[HTTP '+r.status+']'; try{ const e=await r.json(); if(e&&(e.error||e.detail)) m=e.error||e.detail; }catch(_e){} throw new Error(m); }
+  let raw=await r.json();
+  /* 사람 승인(② 권한 연결): approval_required{challenge} 면 여기(사람이 보는 표면)서 묻고 /ibl/approve 토큰으로 같은 요청을 한 번 재전송.
+     포털(손님·회원)은 승인 통로가 없어 거절 봉투 그대로 — 주인 표면(런처 세션)만. */
+  const ask=approvalChallenge(raw);
+  if(ask&&!window.__PORTAL&&confirm('사람 확인이 필요한 동작입니다 — '+(ask.summary||ask.action)+' — 실행할까요?')){
+    const a=await jfetch('/ibl/approve',{method:'POST',body:JSON.stringify({challenge:ask.challenge})});
+    if(a.ok){ const t=await a.json(); if(t&&t.token){ r=await send({approval:t.token}); if(r.ok) raw=await r.json(); } }
+  }
   /* 합성(>>) 액션은 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 — view의 from/{필드}가 풀리도록.
      펼치는 규칙은 공용 렌더 코어(unwrapFinalResult)가 정본 — 데스크탑 runIBL 과 같은 것. */
-  return unwrapFinalResult(await r.json());
+  return unwrapFinalResult(raw);
 }
 
 /* ===== 로그인 ===== */

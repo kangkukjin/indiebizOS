@@ -309,6 +309,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 169 액션(sense 43·self 53·limbs 14·others 17·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 538(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 169 액션(sense 43·self 53·limbs 14·others 17·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 540(test 제외)**<!-- SELF_IMAGE:END -->
 
 *최근 변경(2026-09-24): 프롬프트 자기상의 IBL 설명을 현재 명시 값·함수·검사·실패 문법으로 교체. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

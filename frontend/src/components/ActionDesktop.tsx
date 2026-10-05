@@ -19,7 +19,7 @@ import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } fro
 import { Plus, Package, LayoutGrid, Trash2, ArrowUpFromLine, ArrowDownFromLine, Wand2 } from 'lucide-react';
 import { MapInstrument } from './MapInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
-import { BinNote } from './BinNote';
+import { rescueBinnoteDraft } from '../lib/binnote-rescue';
 import { YtMusicInstrument } from './YtMusicInstrument';
 import { uiMessage, ui, useLocale } from '../i18n/ui';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
@@ -73,13 +73,9 @@ const STATIC_DOMAINS: Domain[] = [
   { id: 'lecture', icon: '🎓', label: '강의 만들기', onOpen: () => openLecture(), instruments: [] },
   { id: 'coding', icon: '💻', label: '코딩', onOpen: () => openCoding(), instruments: [] },
   { id: 'spreadsheets', icon: '📊', label: '스프레드시트', onOpen: () => openSpreadsheets(), instruments: [] },
-  { id: 'documents', icon: '📄', label: '문서', onOpen: () => openDocuments(), instruments: [] },
-  {
-    id: 'binnote', icon: '📝', label: '빈노트',
-    instruments: [
-      { id: 'binnote', icon: '📝', label: '빈노트', el: <BinNote /> },  // 인라인 계기 — 메인 창 안에서 열리고 BackBar로 나간다
-    ],
-  },
+  // 문서 앱의 본체는 매니페스트 계기 `document`(data/instruments/document.yaml — 빈노트를 흡수, 2026-10-05).
+  // 이 창은 거기 아직 없는 기능(시트 표 연결·강의 전달·템플릿 새 문서·파일 가져오기)과 시트 앱의 "문서에 표 보고서"가 쓴다.
+  { id: 'documents', icon: '🗂️', label: '문서 (옛 창)', onOpen: () => openDocuments(), instruments: [] },
   {
     id: 'directions', icon: '🗺️', label: '지도',  // 2026-09-03 길찾기·CCTV→지도(장소 검색·저장·상세·길찾기). id 는 저장된 배치 보존을 위해 유지
     instruments: [
@@ -95,7 +91,7 @@ const STATIC_DOMAINS: Domain[] = [
 // 홈 그리드 기본 배치 순서 (평탄화된 앱 id 기준 — 사용자 레이아웃이 없는 첫 실행/신규 앱의 자동 자리).
 const HOME_ORDER = [
   'realty', 'commercial', 'book', 'obsidian', 'calendar', 'newspaper', 'photo', 'files', 'launch',
-  'lecture', 'binnote', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic', 'forage',
+  'lecture', 'document', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic', 'forage',
 ];
 
 // STATIC 도메인을 평탄한 앱 목록으로 — instruments 있으면 각각을 앱으로, 없으면(onOpen 도메인)
@@ -124,6 +120,20 @@ function manifestToApp(inst: AppInstrument): App {
 const GRID_X0 = 28, GRID_Y0 = 28, GRID_DX = 104, GRID_DY = 116, GRID_COLS = 7;
 function autoPos(index: number): [number, number] {
   return [GRID_X0 + (index % GRID_COLS) * GRID_DX, GRID_Y0 + Math.floor(index / GRID_COLS) * GRID_DY];
+}
+
+// 빈노트가 문서 앱(document)에 흡수됐다 — 사용자가 빈노트를 두었던 자리·폴더·숨김을 문서 앱이 물려받는다.
+// 바꿀 것이 없으면 null.
+function inheritBinnote(l: AppLayout): AppLayout | null {
+  const had = l.positions?.binnote || l.membership?.binnote || l.removed?.includes('binnote');
+  if (!had) return null;
+  const next: AppLayout = { ...l, positions: { ...l.positions }, membership: { ...l.membership }, removed: [...(l.removed || [])] };
+  if (next.positions.binnote && !next.positions.document) next.positions.document = next.positions.binnote;
+  if (next.membership.binnote && !next.membership.document) next.membership.document = next.membership.binnote;
+  if (next.removed.includes('binnote') && !next.removed.includes('document')) next.removed.push('document');
+  delete next.positions.binnote; delete next.membership.binnote;
+  next.removed = next.removed.filter((id) => id !== 'binnote');
+  return next;
 }
 
 const EMPTY_LAYOUT: AppLayout = { version: 1, positions: {}, folders: {}, membership: {}, removed: [], uninstalled: [], promoted: [] };
@@ -190,7 +200,10 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
   }, []);
 
   const loadLayout = useCallback(() => {
-    return api.getAppLayout().then((l: AppLayout) => {
+    return api.getAppLayout().then((loaded: AppLayout) => {
+      const moved = inheritBinnote(loaded);
+      if (moved) api.saveAppLayout(moved).catch((e) => console.error('레이아웃 저장 실패:', e));
+      const l = moved || loaded;
       try { localStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(l)); } catch { /* 저장 실패 무해 */ }
       setLayout(l);
     });
@@ -204,6 +217,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
   // 백엔드 미기동/재기동 중이면 캐시로 그린 화면 유지 + 백오프 재시도로 자동 회복,
   // window focus 마다 재조회(새 앱 반영) — useRetryingLoad 로 공용화.
   useRetryingLoad(loadAll, { onFocus: true });
+  useEffect(() => { void rescueBinnoteDraft(); }, []);  // 은퇴한 빈노트의 브라우저 임시저장 글을 한 번 건진다
 
   // 레이아웃 낙관적 갱신 + 지속 (함수형 업데이트로 연속 드래그 race 방지)
   const mutate = useCallback((fn: (l: AppLayout) => AppLayout) => {

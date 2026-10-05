@@ -28,7 +28,7 @@
 | 갈래 | 언제 | 어디서 | 가이드 |
 |---|---|---|---|
 | **선언형 `app:` 블록** | 데이터-모양 앱(목록·지표·폼·차트) — 뷰 어휘 14종으로 표현 가능 | src 액션에 `app:` 블록 한 개 | `new_action_checklist.md` "앱 표면 노출" 절 |
-| **커스텀 React 계기(escape hatch)** | 뷰 어휘를 넘는 것 — 자유 편집 캔버스, 그리기, 채팅, 특수 인터랙션 (예: 빈노트·신문·길찾기) | `frontend/src/components/*.tsx` 컴포넌트 | **이 문서** |
+| **커스텀 React 계기(escape hatch)** | 뷰 어휘를 넘는 것 — 자유 편집 캔버스, 그리기, 채팅, 특수 인터랙션 (예: 신문·지도). 파일을 여는 글쓰기 캔버스는 escape 가 아니다 — 뷰 `engine`(문서 앱 `data/instruments/document.yaml`) | `frontend/src/components/*.tsx` 컴포넌트 | **이 문서** |
 
 > 판별: 만들려는 화면을 `metric/kv/card_list/image_grid/form/thread/map/calendar/...` 조합으로 그릴 수 있으면 **선언형이 먼저다**(표면별 코드 0줄, 원격·폰 자동 파리티). 안 되면 이 문서의 커스텀 계기.
 
@@ -44,7 +44,7 @@
 3. **기존 계기 모방** — 가장 비슷한 계기가 어떤 어휘를 부르는지.
 
 **살아있는 선례 (표현은 커스텀, 능력은 기존 어휘):**
-- 빈노트(문서) = `[self:write]` · `[self:read]` · `[self:file_find]` · `[self:delete]` (파일 어휘 그대로)
+- 문서(옛 빈노트를 흡수한 선언형 계기) = `[self:file_find]` · `[self:workspace]` · `[self:write]` · `[self:delete]` · `[self:ask]` (파일·작업 공간 어휘 그대로)
 - 신문 = `[sense:search]{source: "gnews"}` 를 키워드마다 팬아웃
 - 지도 = `[sense:place]`(검색·상세) · `[sense:navigate_route]` · `[sense:cctv]` · `[sense:reverse_geocode]` · `[sense:here]` + 저장 장소는 `[self:read]`/`[self:write]{format:"json"}` 원장(`MapInstrument.tsx` + `map/` 하위 모듈로 분할 — 1500줄 규칙)
 - 정기보고 = `[self:file_find]`→`[self:read]` + 작성은 `[others:delegate]{scope:system}`
@@ -69,7 +69,7 @@
 
 ## 인라인 계기 만들기 (표준 경로 — 이것만 하면 끝)
 
-기존 인라인 계기를 **모방하라**: `NewspaperInstrument.tsx`(뷰어), `MapInstrument.tsx`(지도+패널, 하위 `map/`), `BinNote.tsx`(편집기+AI채팅).
+기존 인라인 계기를 **모방하라**: `NewspaperInstrument.tsx`(뷰어), `MapInstrument.tsx`(지도+패널, 하위 `map/`). 편집기+AI 는 커스텀으로 짜지 말고 `engine` 뷰 + `ai_dock`(아래 ④).
 
 ### 1) 컴포넌트 작성 — `frontend/src/components/MyThing.tsx`
 ```tsx
@@ -147,7 +147,7 @@ AI 호출은 raw fetch 로 새로 짜지 말고 **어휘로** 부른다. 세 모
 
 **③ 무거운 동기 대화 (드묾)** — 지금 답이 필요한데 **도구까지** 써야 할 때(예: "이 글 PDF로 저장하고 경로 알려줘"). `askSystemAI` — 전체 인지 파이프라인이라 느리다(수십 초~분). ①·②로 안 될 때만.
 
-**④ ai_dock — 텍스트를 고치는 AI (선언형, 코드 0).** "이 글을 AI에게 다듬어 달라"는 편집기 UX(빈노트 656)를 어휘로. `form` 의 `textarea` 필드에 `ai_dock` 을 붙이면 요청→제안→**반영(대체)/첨부/닫기** 박스가 자동으로 뜬다(비누적, 데스크탑·원격 동일). 커스텀 React 편집기를 새로 짤 필요 없이 선언형 form 이면 어디서나.
+**④ ai_dock — 텍스트를 고치는 AI (선언형, 코드 0).** "이 글을 AI에게 다듬어 달라"는 편집기 UX(옛 빈노트)를 어휘로. `form` 의 `textarea` 필드에 `ai_dock` 을 붙이면 요청→제안→**반영(대체)/첨부/닫기** 박스가 자동으로 뜬다(비누적, 데스크탑·원격 동일). 커스텀 React 편집기를 새로 짤 필요 없이 선언형 form 이면 어디서나.
 ```yaml
 - key: body
   type: textarea
@@ -156,7 +156,9 @@ AI 호출은 raw fetch 로 새로 짜지 말고 **어휘로** 부른다. 세 모
     modes: [replace, append]   # dismiss 는 항상. 생략 시 둘 다
     placeholder: "AI에게 시키기 — 더 간결하게 / 개요 만들어줘"
 ```
-`$<필드키>`(현재 텍스트)·`$dock`(요청 입력)이 action 에 주입되고, 결과 스칼라 텍스트가 제안이 된다. 참조 소비자: `data/instruments/notepad.yaml`(메모 앱). 무거운 편집기(폴더 트리·다른이름저장)가 필요하면 아직 커스텀(BinNote)이지만, 단순 "쓰고 AI로 다듬기"는 이걸로 선언형이면 충분하다.
+`$<필드키>`(현재 텍스트)·`$dock`(요청 입력)이 action 에 주입되고, 결과 스칼라 텍스트가 제안이 된다. 참조 소비자: `data/instruments/notepad.yaml`(메모 앱). 단순 "쓰고 AI로 다듬기"는 이걸로 선언형이면 충분하다.
+
+**engine 뷰의 독(2026-10-05).** 파일을 여는 편집 캔버스는 `{type: engine, ref: '{data.resource}', ai_dock: {action: …}}` — 캔버스 아래 같은 독이 뜬다. action 은 `$resource`·`$sel`·`$start/$end`·`$text`·`$dock` 을 받는다(**선택이 있으면 선택, 없으면 글 전체**가 `$text`). 돌려준 본문을 엔진이 사람의 편집으로 그 자리에 넣으므로 초안·저장·버전은 평소 편집과 같은 길이다. 요청 뒤 그 자리의 글이 바뀌었으면 반영을 거절한다. 지금은 원문 형식(txt·md·html·tex·typ)만 독을 띄운다. 설계: `docs/DOCUMENT_APP_ON_BINNOTE_PLAN_2026_10_05.md`.
 
 > 판별: **가볍게 지금 답** = ① `askAI`/`[self:ask]`(기본) · **가서 만들어 둬** = ② `[others:delegate]` · **도구+지금 답** = ③ `askSystemAI`. 대부분 ①로 충분하다.
 
@@ -180,7 +182,7 @@ AI 호출은 raw fetch 로 새로 짜지 말고 **어휘로** 부른다. 세 모
 
 이미 있는 계기를 고칠 때도(버그·기능 추가·UX 변경) 위 **철칙과 도구**가 그대로 적용된다. 순서:
 
-1. **찾기 (탐색 먼저, 바닥부터 grep 금지)** — `read_guide("코드 구조")`(codebase_map)로 위치를 잡고, `[self:grep]`로 해당 계기를 짚는다. 예: 라벨/아이콘/기능 문자열로 `[self:grep]{path: "frontend/src/components", pattern: "빈노트|BinNote"}`. 계기 컴포넌트는 `frontend/src/components/*.tsx`, 앱 모드 등록은 `ActionDesktop.tsx`(STATIC_DOMAINS·HOME_ORDER·OVERRIDES).
+1. **찾기 (탐색 먼저, 바닥부터 grep 금지)** — `read_guide("코드 구조")`(codebase_map)로 위치를 잡고, `[self:grep]`로 해당 계기를 짚는다. 예: 라벨/아이콘/기능 문자열로 `[self:grep]{path: "frontend/src/components", pattern: "신문|NewspaperInstrument"}`. 계기 컴포넌트는 `frontend/src/components/*.tsx`, 앱 모드 등록은 `ActionDesktop.tsx`(STATIC_DOMAINS·HOME_ORDER·OVERRIDES).
 2. **읽기** — 고치기 전 `[self:read]`로 대상 파일을 통째로 읽어 현재 구조를 파악한다(추측 편집 금지). 어떤 표면에 걸쳐 있는지도 확인: 순수 프론트 컴포넌트면 그 `.tsx`만, 별도 창이면 main.js/preload/App.tsx까지.
 3. **고치기** — `[self:edit]{path: "<절대경로>", old_string: "...", new_string: "..."}`. old_string은 파일에서 **유일**하게 매칭되도록 충분한 맥락을 포함한다. 앱이 IBL을 호출하는 코드면 **철칙2(`project_id: '앱모드'`)** 를 깨지 않았는지 확인.
 4. **별도 창 → 인라인 전환 같은 구조 변경**이면, 죽는 배관(main.js 창 생성·ipc·preload·types·App.tsx 분기)을 **함께 걷어낸다** — 좀비 코드 방지. `[self:grep]`로 잔여 참조 0을 확인.
@@ -211,7 +213,7 @@ AI 호출은 raw fetch 로 새로 짜지 말고 **어휘로** 부른다. 세 모
 3. **`project_id: '앱모드'` 누락** — 앱 모드 `[self:*]` 저장/읽기가 "활성 프로젝트 경로 확보 불가"로 실패. `iblExecuteApp` 헬퍼를 import 하면 구조적으로 방지(복붙 말 것).
 4. **응답 shape 추측** — 라이브 `/ibl/execute`로 확인 후 파싱. items 통화 관습(`{items:[{title,meta,url}]}`).
 5. **선언형으로 될 걸 커스텀으로** — 데이터-모양이면 `app:` 블록이 먼저(원격·폰 파리티 공짜).
-6. **탐색을 바닥부터** — 저술 전 `codebase_map` 가이드와 가장 비슷한 기존 계기(Newspaper/MapInstrument/BinNote)를 먼저 읽어 모방한다.
+6. **탐색을 바닥부터** — 저술 전 `codebase_map` 가이드와 가장 비슷한 기존 계기(Newspaper/MapInstrument)를 먼저 읽어 모방한다.
 
 ## 관련
 - `new_action_checklist.md` — IBL 액션 저술 + 선언형 `app:` 블록

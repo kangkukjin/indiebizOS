@@ -144,7 +144,10 @@ export function OfficeDocumentEditor({ detail, onChange, captureRef, onSelection
       <label>출력 형식<select value={outputFormat} onChange={e=>setOutputFormat(e.target.value)}>{['pdf','docx','odt','rtf','html','txt','epub'].map(f=><option key={f}>{f}</option>)}</select></label>
       <button disabled={busy} onClick={()=>void run(async()=>{const s=await capture();const d=current.current;const result=await documentCommand<Detail>(d.document.id,'convert',{...sessionArgs(s),expected_revision:d.document.revision_id,output_format:outputFormat});setMessage('변환 사본 저장됨: '+result.document.source_uri);})}>내보내기</button>
     </div>
-    {error && <p role="alert">{error}</p>}
+    {error && <p role="alert">{error} {/엔진|편집 서버/.test(error) && <button disabled={busy} onClick={() => void run(async () => {
+      const result = await documentRequest<{ message: string }>('/engine/start', 'POST');
+      setError(''); setMessage(result.message); setGeneration(v => v + 1);
+    })}>편집 서버 시작</button>}</p>}
     {versions.length > 0 && <details open><summary>저장 버전</summary>{versions.map(v => <button key={v.id} disabled={busy} onClick={() => void run(async () => {
       const s = await capture();
       await documentCommand(detail.document.id, 'restore', { ...sessionArgs(s), operation_id: crypto.randomUUID(), revision_id: v.id });

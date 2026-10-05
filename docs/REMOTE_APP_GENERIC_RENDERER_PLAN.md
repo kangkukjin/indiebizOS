@@ -14,6 +14,7 @@
 
 - **view 프리미티브 16종(15 → +engine):** `engine` = 외부 편집 엔진 표면을 **작업 공간 자료 ID**(`ref` 템플릿, `[self:workspace]{op:"open"}` 반환)로 바인딩. 엔진 선택(ONLYOFFICE·RHWP·원문 textarea·시트)은 자료 capabilities 가 정한다. 데스크탑 `EnginePrim`(prims-engine.tsx)이 기존 편집기 컴포넌트를 **낱말 밑의 바인딩**으로 호스팅(escape 아님). 원격/폰은 열람 강등(원문 표시 + 안내).
 - **뷰-이벤트 6종(4 → +selection, +saved):** engine 전용. selection 은 `$sel`(selector Record — 2026-10-05 ① 이후 객체 그대로)·`$start/$end/$text`(원문)·`$sheet/$range`(시트)·`$resource/$revision`, saved 는 `$resource/$revision`. 템플릿 `keep` 은 재조회 없이 페이로드를 $변수로만 남긴다 — **뷰-이벤트 페이로드가 이후 액션 템플릿의 $변수로 남는 규약**(GenericInstrument `onViewEvent` → values 병합)이 이때 생겼고, ai_dock 의 action 이 `$sel` 을 받는다.
+- **engine 의 `ai_dock`(2026-10-05 밤, [문서 앱 계획](DOCUMENT_APP_ON_BINNOTE_PLAN_2026_10_05.md)):** 원문 엔진이 빈노트 캔버스(넓은 편집면·자동 초안·Cmd+S)로 바뀌고 캔버스 아래 독을 띄운다. 독의 표면은 form 독과 한 컴포넌트(`AiDockPanel`). engine 이 있는 모드는 넓은 배치(선언 키 없음). 원격/폰은 여전히 열람 강등 — 독 없음.
 - 검증기: engine 은 `ref` 필수, `on` 은 map/engine 전용이며 이벤트 집합이 뷰별로 갈린다(`APP_MAP_EVENTS`/`APP_ENGINE_EVENTS`).
 - 근거·판정: [앱 구성 재계획](APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md) §3-c·§7.
 

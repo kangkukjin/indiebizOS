@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   type AppViewPrim, type AppFormField, type FormAction, type Dispatch, type Json, type AppMode,
-  tpl, asList, actionRequest, runIBL, parseImagePaths,
+  tpl, asList, actionRequest, runIBL, parseImagePaths, suggestionText,
   fieldCls, imageUrl, RECURRENCE_OPTS, dateInputType,
 } from './manifest';
 import { Card } from './prims-basic';
@@ -119,6 +119,21 @@ function AiDock({ field, value, vals, onApply, block }: {
   field: AppFormField; value: string; vals: Record<string, unknown>; onApply: (v: string) => void; block?: AppMode;
 }) {
   const dock = field.ai_dock!;
+  // 판본 2 블록이면 치환 없이 원문+inputs(필드값·뷰-이벤트 $변수·요청). 구형은 $key 치환.
+  const ask = async (instruction: string) =>
+    suggestionText(await runIBL(actionRequest(block, dock.action, { ...vals, [field.key]: value, dock: instruction })));
+  const apply = (mode: 'replace' | 'append', suggestion: string) =>
+    onApply(mode === 'append' ? (value.trim() ? `${value}\n\n${suggestion}` : suggestion) : suggestion);
+  return <AiDockPanel dock={dock} ask={ask} onApply={apply} />;
+}
+
+// 독의 표면(입력 한 줄 + 제안 박스) — form textarea 와 engine 캔버스가 같이 쓴다. 무엇을 묻고 어디에 반영하는지는 주인이 정한다.
+export function AiDockPanel({ dock, ask: askOwner, onApply, applyLabel }: {
+  dock: NonNullable<AppFormField['ai_dock']>;
+  ask: (instruction: string) => Promise<string>;
+  onApply: (mode: 'replace' | 'append', suggestion: string) => void;
+  applyLabel?: string;
+}) {
   const modes = dock.modes && dock.modes.length ? dock.modes : (['replace', 'append'] as const);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -128,22 +143,16 @@ function AiDock({ field, value, vals, onApply, block }: {
     if (!instruction || busy) return;
     setInput(''); setBusy(true); setSuggestion(null);
     try {
-      // 판본 2 블록이면 치환 없이 원문+inputs(필드값·뷰-이벤트 $변수·요청). 구형은 $key 치환.
-      const code = actionRequest(block, dock.action, { ...vals, [field.key]: value, dock: instruction });
-      const d = await runIBL(code);
-      const o = d && typeof d === 'object' ? (d as Json) : null;
-      const text = typeof d === 'string' ? d
-        : String(o?.result ?? o?.text ?? o?.answer ?? o?.message ?? o?.error ?? '');
-      setSuggestion(text || '(빈 응답)');
-    } catch {
-      setSuggestion('⚠️ AI 응답을 받지 못했습니다. 백엔드 연결을 확인하세요.');
+      setSuggestion(await askOwner(instruction));
+    } catch (e) {
+      setSuggestion('⚠️ ' + (e instanceof Error && e.message ? e.message : 'AI 응답을 받지 못했습니다. 백엔드 연결을 확인하세요.'));
     } finally {
       setBusy(false);
     }
   };
   const apply = (mode: 'replace' | 'append') => {
     if (suggestion == null) return;
-    onApply(mode === 'append' ? (value.trim() ? `${value}\n\n${suggestion}` : suggestion) : suggestion);
+    onApply(mode, suggestion);
     setSuggestion(null);
   };
   const isErr = suggestion != null && suggestion.startsWith('⚠️');
@@ -155,7 +164,7 @@ function AiDock({ field, value, vals, onApply, block }: {
           <div className="max-h-40 overflow-auto px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed text-stone-800">{suggestion}</div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-amber-100">
             {!isErr && modes.includes('replace') && (
-              <button type="button" onClick={() => apply('replace')} className="px-2.5 py-1 rounded-md text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700">반영 (대체)</button>
+              <button type="button" onClick={() => apply('replace')} className="px-2.5 py-1 rounded-md text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700">{applyLabel || '반영 (대체)'}</button>
             )}
             {!isErr && modes.includes('append') && (
               <button type="button" onClick={() => apply('append')} className="px-2.5 py-1 rounded-md text-xs font-semibold text-amber-700 border border-amber-300 hover:bg-amber-100">첨부</button>

@@ -104,7 +104,7 @@ export interface AppFormField {
   //   images = 이미지 썸네일 격자, files = 임의 파일 다중 선택(고른 파일마다 add_action 1회).
   add_action?: string;    // [..]{op:add_image|add, ..., path:"$path"} — $path=소스 파일경로
   remove_action?: string; // [..]{op:remove_image, ..., path:"$path"} — $path=제거할 첨부
-  // type:'textarea' 전용 — ai_dock 어피던스(요청→제안→반영/첨부/닫기). BinNote 656 UX 를 어휘로.
+  // type:'textarea' 전용 — ai_dock 어피던스(요청→제안→반영/첨부/닫기). 옛 빈노트의 편집 UX 를 어휘로(engine 뷰에도 붙는다).
   // action 은 $<필드키>(현재 텍스트)·$dock(요청)을 주입받고, 결과 스칼라 텍스트가 제안이 된다.
   ai_dock?: { action: string; modes?: ('replace' | 'append')[]; placeholder?: string };
 }
@@ -161,6 +161,15 @@ export type Json = Record<string, unknown>;
 // 뷰-이벤트 콜백 — 프리미티브(map·engine)가 사용자 조작을 액션 템플릿+페이로드로 흘린다. ModePane 가 재조회.
 // 페이로드는 타입을 보존한다(좌표는 Number, selection 의 sel 은 Record) — 판본 2 는 inputs 로 그대로 간다.
 export type ViewEvent = (template: string, payload: Record<string, unknown>) => void;
+
+// AI 응답에서 제안 본문을 꺼낸다 — 스칼라, 또는 관용구가 돌려준 Record 의 본문 필드. 실패는 ⚠️ 로 시작(반영 버튼 숨김).
+export function suggestionText(d: unknown): string {
+  if (typeof d === 'string') return d || '(빈 응답)';
+  const o = d && typeof d === 'object' ? (d as Json) : null;
+  if (o?.error || o?.success === false) return '⚠️ ' + String(o.error || o.message || '실패');
+  const v = o?.result ?? o?.text ?? o?.answer ?? o?.after ?? o?.fixed ?? o?.message;
+  return typeof v === 'string' && v ? v : v != null && typeof v !== 'object' ? String(v) : '(빈 응답)';
+}
 
 /** 실행 — 문자열(구형 치환 결과) 또는 판본 2 봉투(actionRequest). 봉투는 code·edition·inputs·declared_inputs 를 그대로 싣는다. */
 export async function runIBL(req: ActionReq): Promise<Json> {

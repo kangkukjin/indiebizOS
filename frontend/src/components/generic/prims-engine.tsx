@@ -6,16 +6,23 @@
  *   · selection — 선택 고정: $sel(selector Record)·$start/$end(Number)/$text(원문) · $sheet/$range(시트) · $resource/$revision
  *   · saved     — 원본 저장 완료: $resource/$revision
  * on: 의 템플릿이 없거나 'keep' 이면 페이로드를 $변수로만 남긴다(이후 ai_dock·버튼·폼이 쓴다).
+ * ai_dock(2026-10-05, docs/DOCUMENT_APP_ON_BINNOTE_PLAN_2026_10_05.md): 캔버스 아래 AI 한 줄. action 은
+ *   $resource/$sel/$start/$end/$text(선택이 없으면 글 전체)/$dock(요청)을 받아 본문을 돌려주고, 반영은 엔진이
+ *   사람의 편집으로 캔버스에 넣는다 — 초안·저장·버전은 평소 편집과 같은 길. 지금은 원문 엔진만 독을 띄운다.
  * 편집기 컴포넌트(Office/Hwp/Spreadsheet)는 이 낱말 밑의 바인딩이다 — escape 가 아니다. */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AppViewPrim, ViewEvent } from './manifest';
-import { jget, tpl } from './manifest';
+import type { AppViewPrim, AppFormField, AppMode, ViewEvent } from './manifest';
+import { jget, tpl, actionRequest, runIBL, suggestionText } from './manifest';
+import { AiDockPanel } from './prims-edit';
 import { documentCommand, documentRequest, sessionArgs, type Detail } from '../../lib/api-documents';
 import { sheetCommand, sheetRequest, type SheetDetail } from '../../lib/api-spreadsheets';
 import { OfficeDocumentEditor } from '../OfficeDocumentEditor';
 import { HwpDocumentEditor } from '../HwpDocumentEditor';
 import { SpreadsheetEditor } from '../spreadsheets/SpreadsheetEditor';
+import './engine-editors.css';
 
+type Dock = NonNullable<AppFormField['ai_dock']>;
+type Host = { dock?: Dock; vars?: Record<string, unknown>; block?: AppMode };  // 독 선언과 그 action 이 읽을 $변수·실행 블록
 type Payload = Record<string, unknown>;  // 타입 보존 — sel 은 Record, start/end 는 Number(판본 2 inputs 로 그대로 간다)
 const CLIENT_KEY = 'indiebiz-engine-client';
 function clientId(): string {
@@ -28,7 +35,9 @@ function clientId(): string {
   } catch { return 'engine-' + crypto.randomUUID(); }
 }
 
-export function EnginePrim({ p, data, onViewEvent }: { p: AppViewPrim; data: unknown; onViewEvent?: ViewEvent }) {
+export function EnginePrim({ p, data, onViewEvent, vars, block }: {
+  p: AppViewPrim; data: unknown; onViewEvent?: ViewEvent; vars?: Record<string, unknown>; block?: AppMode;
+}) {
   const ref = tpl(String(p.ref || ''), data).trim();
   const kind = (p.kind ? tpl(String(p.kind), data) : String(jget(data, 'kind') ?? '')).trim();
   const on = (p.on as Record<string, string> | undefined) || {};
@@ -38,11 +47,11 @@ export function EnginePrim({ p, data, onViewEvent }: { p: AppViewPrim; data: unk
   if (!ref) return <p className="text-sm text-stone-400">열 자료가 없습니다 — <code>[self:workspace]{'{op:"open"}'}</code> 결과의 <code>resource</code> 를 <code>ref</code> 로 주세요.</p>;
   if (kind === 'code') return <p className="text-sm text-stone-400">코딩 작업 공간은 엔진 표면이 없습니다 — <code>blocks</code>(diff·파일)와 <code>selection</code> 으로 봅니다.</p>;
   if (kind === 'sheet') return <SheetEngine id={ref} emit={emit} />;
-  return <DocumentEngine id={ref} emit={emit} />;
+  return <DocumentEngine id={ref} emit={emit} host={{ dock: p.ai_dock as Dock | undefined, vars, block }} />;
 }
 
 /* ── 문서: capabilities.engine 으로 office / rhwp / source 를 고른다 ── */
-function DocumentEngine({ id, emit }: { id: string; emit: (e: 'selection' | 'saved', p: Payload) => void }) {
+function DocumentEngine({ id, emit, host }: { id: string; emit: (e: 'selection' | 'saved', p: Payload) => void; host: Host }) {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState('');
   const client = useRef(clientId());
@@ -66,37 +75,85 @@ function DocumentEngine({ id, emit }: { id: string; emit: (e: 'selection' | 'sav
   const saved = (d: Detail) => emit('saved', { revision: d.document.revision_id });
   if (!detail.capabilities.edit_native) return <p className="text-sm text-stone-500">{detail.capabilities.reason} — 열람만 가능합니다.</p>;
   if (detail.capabilities.engine === 'rhwp')
-    return <HwpDocumentEditor key={`${detail.document.id}:${detail.session?.engine_epoch}`} detail={detail} onChange={onChange}
-      captureRef={capture as never} onSaved={saved} />;
+    return <div className="engine-editor"><HwpDocumentEditor key={`${detail.document.id}:${detail.session?.engine_epoch}`} detail={detail} onChange={onChange}
+      captureRef={capture as never} onSaved={saved} /></div>;
   if (detail.capabilities.engine === 'office')
-    return <OfficeDocumentEditor key={detail.document.id} detail={detail} onChange={onChange} captureRef={capture as never}
+    return <div className="engine-editor"><OfficeDocumentEditor key={detail.document.id} detail={detail} onChange={onChange} captureRef={capture as never}
       onSelection={(sel) => emit('selection', { sel: { bookmark: sel.bookmark }, text: sel.text, revision: detail.document.revision_id })}
-      onSaved={saved} />;
-  return <SourceEngine detail={detail} onChange={onChange} emit={emit} />;
+      onSaved={saved} /></div>;
+  return <SourceEngine detail={detail} onChange={onChange} emit={emit} host={host} />;
 }
 
-/* ── 원문(TXT/MD/HTML/LaTeX…): textarea + 작업 저장(draft) + 원본 저장. 선택은 문자 범위. ── */
-function SourceEngine({ detail, onChange, emit }: { detail: Detail; onChange: (d: Detail) => void; emit: (e: 'selection' | 'saved', p: Payload) => void }) {
-  const [text, setText] = useState(detail.text ?? '');
+/* ── 원문(TXT/MD/HTML/LaTeX…): 넓은 캔버스 + 자동 초안(작업 저장) + 원본 저장 + AI 독. ──
+ * 캔버스는 줄바꿈을 \n 으로만 보여 주고 서버에는 원본의 줄바꿈으로 되돌려 보낸다. 선택 주소는 서버가 세는
+ * 단위(코드포인트, 원본 줄바꿈 기준)로 내보낸다. 줄바꿈이 섞인 문서는 원문 보호를 위해 열람만. */
+const cp = (text: string) => Array.from(text).length;
+function newlineOf(source: string): { nl: string; mixed: boolean } {
+  const crlf = (source.match(/\r\n/g) || []).length;
+  const rest = source.replace(/\r\n/g, '');
+  const lf = (rest.match(/\n/g) || []).length;
+  return { nl: crlf && !lf ? '\r\n' : '\n', mixed: rest.includes('\r') || !!(crlf && lf) };
+}
+
+function SourceEngine({ detail, onChange, emit, host }: {
+  detail: Detail; onChange: (d: Detail) => void; emit: (e: 'selection' | 'saved', p: Payload) => void; host: Host;
+}) {
+  const source = detail.text ?? '';
+  const style = useRef(newlineOf(source));
+  const toView = (v: string) => (style.current.mixed ? v : v.replace(/\r\n/g, '\n'));
+  const toSource = (v: string) => (style.current.nl === '\n' ? v : v.replace(/\n/g, style.current.nl));
+  const [text, setText] = useState(() => toView(source));
   const [message, setMessage] = useState('원본을 읽었습니다');
   const [busy, setBusy] = useState(false);
+  const [picked, setPicked] = useState(0);            // 지금 선택된 글자 수(독이 무엇을 고칠지 보여 준다)
+  const [undo, setUndo] = useState<string | null>(null);  // AI 반영 직전 본문(한 번 되돌리기)
+  const [scope, setScope] = useState<'선택' | '전체'>('전체');
+  const [versions, setVersions] = useState<{ id: string; created_at: number }[] | null>(null);  // 확정 저장 버전(펼쳤을 때만)
+  const [copyName, setCopyName] = useState('');
   const editor = useRef<HTMLTextAreaElement>(null);
-  const acknowledged = useRef(detail.text ?? '');
+  const live = useRef(text); live.current = text;
+  const acknowledged = useRef(text);                  // 서버 초안과 같은 본문
+  const range = useRef({ a: 0, b: 0 });               // 캔버스 선택(포커스가 독으로 옮겨가도 남는다)
+  const pinned = useRef<{ a: number; b: number; before: string } | null>(null);  // 독 요청 때 고정한 범위
   const composing = useRef(false);
+  const chain = useRef<Promise<unknown>>(Promise.resolve());
   const current = useRef(detail); current.current = detail;
-  useEffect(() => { setText(detail.text ?? ''); acknowledged.current = detail.text ?? ''; }, [detail.document.id, detail.session?.engine_epoch]); // eslint-disable-line react-hooks/exhaustive-deps
+  const writable = !style.current.mixed && !!detail.session;
+  const adopt = (d: Detail) => {  // 서버가 준 본문을 캔버스의 기준으로 삼는다(열기·세션 교체·버전 복구)
+    style.current = newlineOf(d.text ?? '');
+    const v = toView(d.text ?? '');
+    setText(v); live.current = v; acknowledged.current = v;
+    range.current = { a: 0, b: 0 }; pinned.current = null; setPicked(0); setUndo(null);
+  };
+  useEffect(() => { adopt(detail); setVersions(null); }, [detail.document.id, detail.session?.engine_epoch]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const draft = useCallback(async (): Promise<Detail> => {
-    const d = current.current;
-    if (!d.session) throw new Error('작성 세션이 없습니다');
-    if (acknowledged.current === text) return d;
-    const result = await documentCommand<{ session: Detail['session'] }>(d.document.id, 'draft',
-      { ...sessionArgs(d.session), operation_id: crypto.randomUUID(), text });
-    acknowledged.current = text;
-    const next = { ...d, session: result.session, text };
-    current.current = next; onChange(next);
-    return next;
-  }, [text, onChange]);
+  // 초안 저장은 한 줄로 세운다 — 세션 개정 번호(expected)를 물고 가므로 겹치면 뒤의 것이 거절된다.
+  const draft = useCallback((): Promise<Detail> => {
+    const task = chain.current.catch(() => undefined).then(async () => {
+      const d = current.current, value = live.current;
+      if (!d.session) throw new Error('작성 세션이 없습니다');
+      if (acknowledged.current === value) return d;
+      const result = await documentCommand<{ session: Detail['session'] }>(d.document.id, 'draft',
+        { ...sessionArgs(d.session), operation_id: crypto.randomUUID(), text: toSource(value) });
+      acknowledged.current = value;
+      const next = { ...d, session: result.session, text: toSource(value) };
+      current.current = next; onChange(next);
+      return next;
+    });
+    chain.current = task;
+    return task;
+  }, [onChange]);
+
+  // 자동 초안 — 창을 잘못 닫아도 글이 남는다(서버 초안. 원본은 그대로).
+  useEffect(() => {
+    if (!writable || text === acknowledged.current) return;
+    const timer = setTimeout(() => {
+      if (composing.current) return;
+      draft().then(() => { if (live.current === acknowledged.current) setMessage('작업 저장됨 · 원본에는 저장되지 않음'); },
+        (e) => setMessage('⚠️ 작업 저장 실패 — ' + (e instanceof Error ? e.message : String(e))));
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [text, writable, draft]);
 
   const run = async (fn: () => Promise<void>) => {
     if (busy || composing.current) return;
@@ -104,35 +161,133 @@ function SourceEngine({ detail, onChange, emit }: { detail: Detail; onChange: (d
     try { await fn(); } catch (e) { setMessage('⚠️ ' + (e instanceof Error ? e.message : String(e))); }
     finally { setBusy(false); }
   };
-  const select = () => {
-    const el = editor.current; if (!el) return;
-    const start = el.selectionStart, end = el.selectionEnd;
-    if (start === end) return;
-    emit('selection', { sel: { start, end }, start, end,
-      text: text.slice(start, end), revision: current.current.document.revision_id });
-    setMessage(`선택 고정 ${start}–${end}`);
+  const save = () => void run(async () => {
+    const d = await draft();
+    if (!d.session) throw new Error('작성 세션이 없습니다');
+    await documentCommand(d.document.id, 'save', { ...sessionArgs(d.session), operation_id: crypto.randomUUID(), expected_revision: d.document.revision_id });
+    const next = await documentRequest<Detail>(`/${d.document.id}`);
+    current.current = next; onChange(next);
+    setMessage('저장됨 · 원본 파일 기록 확인');
+    emit('saved', { revision: next.document.revision_id });
+  });
+  const toggleVersions = () => void run(async () => {
+    if (versions) { setVersions(null); return; }
+    const id = current.current.document.id, title = current.current.document.title, dot = title.lastIndexOf('.');
+    setVersions((await documentRequest<{ items: { id: string; created_at: number }[] }>(`/${id}/versions`)).items);
+    if (!copyName) setCopyName(dot > 0 ? `${title.slice(0, dot)}_사본${title.slice(dot)}` : `${title}_사본`);
+  });
+  const restore = (revision_id: string) => void run(async () => {
+    const d = await draft();
+    if (!d.session) throw new Error('작성 세션이 없습니다');
+    await documentCommand(d.document.id, 'restore', { ...sessionArgs(d.session), operation_id: crypto.randomUUID(), revision_id });
+    const next = await documentRequest<Detail>(`/${d.document.id}`);
+    current.current = next; onChange(next); adopt(next);
+    setMessage('고른 버전을 작업 초안으로 되살렸습니다 · 원본 저장 전');
+  });
+  const exportCopy = () => void run(async () => {
+    const d = await draft();
+    if (!d.session) throw new Error('작성 세션이 없습니다');
+    const result = await documentCommand<{ path: string }>(d.document.id, 'export', { ...sessionArgs(d.session), operation_id: crypto.randomUUID(), filename: copyName });
+    setMessage(`사본 저장됨: ${result.path} · 원본은 그대로`);
+  });
+  const address = (a: number, b: number) => {  // 캔버스 범위 → 서버 주소(코드포인트·원본 줄바꿈)
+    const start = cp(toSource(live.current.slice(0, a)));
+    return { start, end: start + cp(toSource(live.current.slice(a, b))) };
   };
+  const track = () => {
+    const el = editor.current; if (!el) return;
+    range.current = { a: el.selectionStart, b: el.selectionEnd };
+    setPicked(cp(el.value.slice(el.selectionStart, el.selectionEnd)));
+  };
+  const select = () => {
+    track();
+    const { a, b } = range.current;
+    if (a === b) return;
+    const at = address(a, b);
+    emit('selection', { sel: at, ...at, text: toSource(live.current.slice(a, b)), revision: current.current.document.revision_id });
+  };
+  const edit = (value: string) => { setText(value); live.current = value; setMessage('수정됨 · 원본에는 저장되지 않음'); };
+  const rewrite = (value: string) => {  // AI 반영·되돌리기 — 글이 통째로 바뀌므로 이전 선택 범위는 버린다
+    setUndo(live.current); edit(value);
+    range.current = { a: 0, b: 0 }; pinned.current = null; setPicked(0);
+  };
+
+  // 독 — 선택이 있으면 선택만, 없으면 글 전체를 묻는다. 묻기 전에 초안을 올려 자료를 읽는 action 도 같은 글을 본다.
+  const ask = async (instruction: string) => {
+    if (!host.dock) return '';
+    if (writable) await draft();
+    const value = live.current;
+    const has = range.current.a !== range.current.b;
+    const a = has ? range.current.a : 0, b = has ? range.current.b : value.length;
+    pinned.current = { a, b, before: value.slice(a, b) };
+    setScope(has ? '선택' : '전체');
+    const at = address(a, b);
+    return suggestionText(await runIBL(actionRequest(host.block, host.dock.action, {
+      ...(host.vars || {}), resource: current.current.document.id, revision: current.current.document.revision_id,
+      sel: at, ...at, text: toSource(value.slice(a, b)), dock: instruction,
+    })));
+  };
+  const applySuggestion = (mode: 'replace' | 'append', suggestion: string) => {
+    const s = toView(suggestion), value = live.current, pin = pinned.current;
+    if (mode === 'append') { rewrite(value.trim() ? `${value}\n\n${s}` : s); return; }
+    if (!pin || value.slice(pin.a, pin.b) !== pin.before) { setMessage('⚠️ 요청한 뒤 그 자리의 글이 바뀌어 반영하지 않았습니다 — 다시 요청하세요'); return; }
+    // 고른 범위 양 끝의 공백·줄바꿈은 원문 것을 지킨다 — 문단째 고르면 끝 줄바꿈이 딸려 오고 AI 는 그것을 떼고 답한다.
+    const lead = /^\s*/.exec(pin.before)![0], trail = /\s*$/.exec(pin.before.slice(lead.length))![0];
+    rewrite(value.slice(0, pin.a) + lead + s.trim() + trail + value.slice(pin.b));
+  };
+  const dirty = text !== toView(source) || detail.session?.state === 'draft';
   return (
     <div className="flex flex-col gap-2">
-      <textarea ref={editor} aria-label="문서 원문" spellCheck={false} value={text} rows={18}
-        onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }}
-        onChange={(e) => { setText(e.target.value); setMessage('수정됨 · 원본에는 저장되지 않음'); }}
-        onMouseUp={select} onKeyUp={(e) => { if (e.shiftKey || e.key.startsWith('Arrow')) select(); }}
-        className="w-full rounded-lg border border-stone-200 p-3 font-mono text-sm leading-relaxed" />
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <button disabled={busy} onClick={() => void run(async () => { await draft(); setMessage('작업 저장됨 · 원본에는 저장되지 않음'); })}
-          className="px-3 py-1.5 rounded-lg border border-stone-300 hover:border-stone-500 disabled:opacity-40">작업 저장</button>
-        <button disabled={busy} onClick={() => void run(async () => {
-          const d = await draft();
-          if (!d.session) throw new Error('작성 세션이 없습니다');
-          await documentCommand(d.document.id, 'save', { ...sessionArgs(d.session), operation_id: crypto.randomUUID(), expected_revision: d.document.revision_id });
-          const next = await documentRequest<Detail>(`/${d.document.id}`);
-          current.current = next; onChange(next);
-          setMessage('저장됨 · 원본 파일 기록 확인');
-          emit('saved', { revision: next.document.revision_id });
-        })} className="px-3 py-1.5 rounded-lg bg-stone-800 text-white hover:bg-stone-900 disabled:opacity-40">원본 저장</button>
-        <span className="text-stone-500">{message}</span>
+        <span className="font-semibold text-stone-800 truncate max-w-[40%]" title={detail.document.source_uri}>{detail.document.title}</span>
+        {dirty && <span className="text-xs text-amber-600 shrink-0">● 원본 저장 안 됨</span>}
+        <span className="text-xs text-stone-500 truncate">{message}</span>
+        <div className="flex-1" />
+        <span className="text-xs text-stone-400 shrink-0">{picked ? `선택 ${picked.toLocaleString()}자 · ` : ''}{cp(text).toLocaleString()}자</span>
+        {undo != null && <button disabled={busy} onClick={() => { rewrite(undo); setUndo(null); }}
+          className="px-2.5 py-1.5 rounded-lg text-sm text-stone-600 hover:bg-stone-100">AI 반영 되돌리기</button>}
+        <button disabled={busy} onClick={toggleVersions}
+          className={`px-2.5 py-1.5 rounded-lg text-sm hover:bg-stone-100 ${versions ? 'bg-stone-100 text-stone-800' : 'text-stone-600'}`}>버전·사본</button>
+        <button disabled={busy || !writable} onClick={save}
+          className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-40">저장</button>
       </div>
+      {versions && (
+        <div className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-stone-500 shrink-0">다른 이름으로 사본 저장</span>
+            <input value={copyName} onChange={(e) => setCopyName(e.target.value)} aria-label="사본 파일명"
+              className="flex-1 min-w-[10rem] px-2 py-1 rounded-lg border border-stone-200" />
+            <button disabled={busy || !writable || !copyName.trim()} onClick={exportCopy}
+              className="px-2.5 py-1 rounded-lg border border-stone-300 hover:border-stone-500 disabled:opacity-40">사본 저장</button>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-stone-500">저장 버전 — 되살리면 작업 초안이 되고, 저장을 눌러야 원본이 바뀝니다</span>
+            {versions.length === 0 && <span className="text-xs text-stone-400">아직 저장한 버전이 없습니다</span>}
+            {versions.map((v) => (
+              <div key={v.id} className="flex items-center gap-2">
+                <span className="flex-1 text-stone-700">{new Date(v.created_at * 1000).toLocaleString()}{v.id === detail.document.revision_id ? ' · 현재 원본' : ''}</span>
+                {v.id !== detail.document.revision_id && <button disabled={busy || !writable} onClick={() => restore(v.id)}
+                  className="px-2.5 py-1 rounded-lg border border-stone-300 hover:border-stone-500 disabled:opacity-40">되살리기</button>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {style.current.mixed && <p role="alert" className="text-sm text-amber-700">줄바꿈이 섞인 문서입니다. 원문을 보호하기 위해 이 화면의 편집을 막습니다.</p>}
+      <textarea ref={editor} aria-label="문서 원문" spellCheck={false} value={text} readOnly={!writable}
+        placeholder="여기에 자유롭게 글을 쓰세요…"
+        onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }}
+        onChange={(e) => edit(e.target.value)} onSelect={track}
+        onMouseUp={select} onKeyUp={(e) => { if (e.shiftKey || e.key.startsWith('Arrow')) select(); }}
+        onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); save(); } }}
+        className="w-full min-h-[calc(100vh-320px)] resize-none bg-white rounded-xl shadow-sm border border-stone-200 px-10 py-9 text-[15px] leading-8 outline-none focus:border-amber-300"
+        style={{ fontFamily: "'Noto Serif KR', serif" }} />
+      {host.dock && writable && (
+        <div className="sticky bottom-0 -mx-1 px-1 pb-2 bg-stone-50/95 backdrop-blur">
+          <AiDockPanel dock={{ ...host.dock, placeholder: host.dock.placeholder || (picked ? `선택한 ${picked.toLocaleString()}자를 AI에게 — 예: 더 간결하게 (Enter 전송)` : '글 전체를 AI에게 — 예: 문장을 다듬어줘 (Enter 전송)') }}
+            ask={ask} onApply={applySuggestion} applyLabel={`반영 (${scope} 대체)`} />
+        </div>
+      )}
     </div>
   );
 }

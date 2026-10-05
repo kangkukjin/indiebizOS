@@ -1,0 +1,96 @@
+# 문서 앱 — 빈노트의 얼굴 + 형식별 엔진 (docs/DOCUMENT_APP_ON_BINNOTE_PLAN_2026_10_05.md)
+# 어휘 없는 순수 매니페스트. 능력은 전부 기존 낱말이다.
+#
+#   문서함   = [self:file_find] >> 폴더 빼기 >> 최근순 → 고르면 [self:workspace]{op: open} → engine 뷰
+#   새 문서  = 같은 이름이 없을 때만 [self:write](빈 파일) → open → engine 뷰
+#   열기     = 경로로 바로 open (문서함 밖의 DOCX·HWP·PDF 등)
+#   편집     = engine 뷰 — 자료 capabilities 가 편집기를 고른다(원문=넓은 캔버스 · DOCX류=ONLYOFFICE · HWP=RHWP).
+#              저장·자동 초안·버전·사본은 엔진의 일(조건부 원본 저장).
+#   AI       = 캔버스 아래 ai_dock — 선택이 있으면 선택, 없으면 글 전체($text)를 [self:ask](경량 원샷)에게.
+#              반영은 사람이 누른다. 여러 단계가 필요한 일은 시스템 AI 에게 따로 시킨다.
+#
+# 문서함의 기본 폴더는 빈노트가 쓰던 자리(projects/앱모드/outputs/binnote) — 노트를 옮길 필요가 없다.
+# 빈노트(BinNote.tsx)는 이 앱에 흡수돼 은퇴했다(2026-10-05). 옛 문서 창은 아직 여기 없는 기능
+# (시트 표 연결·강의 전달·템플릿 새 문서·파일 가져오기) 때문에 '문서 (옛 창)' 으로 남아 있다.
+
+instrument: document
+edition: 2
+icon: 📄
+name: 문서
+order: 12
+
+modes:
+  - name: 문서함
+    auto_run: true
+    run_label: 보기
+    inputs:
+      - key: folder
+        type: text
+        default: "outputs/binnote"
+        placeholder: "문서 폴더 (기본: 빈노트 폴더)"
+    action: '{items: [self:file_find]{pattern: "*", path: $folder} >> [table:filter]{where: ($r) => $r.is_dir != true} >> [table:sort]{by: "mtime", descending: true}}'
+    view:
+      - type: list_action
+        from: items
+        empty: 이 폴더에 문서가 없습니다 — "새 문서" 탭에서 만들거나 "열기" 탭에서 경로로 여세요.
+        icon: 📄
+        title: '{title}'
+        sub: '{meta}'
+        button:
+          label: 삭제
+          confirm: 이 문서를 영구 삭제할까요? (휴지통을 거치지 않습니다)
+          action: '[self:delete]{path: $item.url}'
+          refresh: true
+        item_click:
+          action: '[self:workspace]{op: "open", path: $item.url}'
+          view:
+            - &canvas
+              type: engine
+              ref: '{resource}'
+              ai_dock:
+                action: '[self:ask]{prompt: $dock, context: $text, system: "너는 편집자다. context 의 글을 사용자의 지시대로 고쳐, 설명·머리말 없이 고친 본문만 답한다. 지시가 질문이면 답만 쓴다."}'
+
+  - name: 새 문서
+    run_label: 만들기
+    inputs:
+      - key: name
+        type: text
+        required: true
+        placeholder: "문서 이름 (확장자 없이)"
+      - key: folder
+        type: text
+        default: "outputs/binnote"
+        placeholder: "만들 폴더 (없으면 생긴다)"
+      - key: format
+        type: select
+        default: md
+        options:
+          - {value: md,   label: 마크다운 (.md)}
+          - {value: txt,  label: 텍스트 (.txt)}
+          - {value: html, label: HTML (.html)}
+          - {value: tex,  label: LaTeX (.tex)}
+          - {value: typ,  label: Typst (.typ)}
+    # 같은 이름이 있으면 덮어쓰지 않고 멈춘다(빈 파일 쓰기가 기존 글을 지우지 않게).
+    action: '$file = f"${name}.${format}"; $있음 = [self:file_find]{pattern: $file, path: $folder}; [if: len($있음.items) > 0] { return {error: f"이미 있는 문서입니다: ${file} — 문서함에서 여세요"} } $쓴 = [self:write]{path: f"${folder}/${file}", content: ""}; [self:workspace]{op: "open", path: $쓴.path}'
+    view:
+      - *canvas
+
+  - name: 열기
+    run_label: 열기
+    inputs:
+      - key: path
+        type: text
+        required: true
+        placeholder: "문서 경로 — txt·md·html·tex·typ · docx·odt·rtf · hwp·hwpx · pdf"
+      - key: encoding
+        type: select
+        default: ""
+        options:
+          - {value: "",          label: 인코딩 자동}
+          - {value: "utf-8",     label: UTF-8}
+          - {value: "utf-16",    label: UTF-16}
+          - {value: "cp949",     label: CP949}
+          - {value: "euc-kr",    label: EUC-KR}
+    action: '[self:workspace]{op: "open", path: $path, encoding: $encoding}'
+    view:
+      - *canvas

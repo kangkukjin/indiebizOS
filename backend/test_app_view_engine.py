@@ -48,6 +48,20 @@ def test_engine_block_with_selection_and_saved_is_valid():
     assert issues == [], issues
 
 
+def test_engine_canvas_dock_is_valid_and_checked():
+    """engine 뷰의 ai_dock(2026-10-05 문서 앱): 선택 페이로드와 $dock 을 받는 템플릿이 통과하고, 스키마는 form 독과 같은 검사를 받는다."""
+    av = _appview()
+    dock = {"action": '[fn:선택교정]{자료:$resource, 선택:$sel, 지시:$dock}', "modes": ["replace"]}
+    ok = av._validate_app_block("t", _block([{"type": "engine", "ref": "{data.resource}", "ai_dock": dock}]), QUALIFIED)
+    assert ok == [], ok
+    no_action = av._validate_app_block("t", _block([{"type": "engine", "ref": "{data.resource}", "ai_dock": {}}]), QUALIFIED)
+    assert any("ai_dock.action" in i for i in no_action), no_action
+    elsewhere = av._validate_app_block("t", _block([{"type": "blocks", "from": "items", "ai_dock": dock}]), QUALIFIED)
+    assert any("engine 뷰 또는 form" in i for i in elsewhere), elsewhere
+    desktop = (ROOT / "frontend/src/components/generic/prims-engine.tsx").read_text(encoding="utf-8")
+    assert "AiDockPanel" in desktop and "p.ai_dock" in desktop
+
+
 def test_engine_requires_ref_and_rejects_foreign_events():
     av = _appview()
     missing = av._validate_app_block("t", _block([{"type": "engine"}]), QUALIFIED)

@@ -90,7 +90,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
 }) {
   if (p.type === 'map') return <MapPrim p={p} data={data} onViewEvent={onViewEvent} onStream={onStream} />;
   // engine — 외부 편집 엔진 표면을 작업 공간 자료(ref)로 바인딩. 선택·저장은 뷰-이벤트(selection/saved).
-  if (p.type === 'engine') return <EnginePrim p={p} data={data} onViewEvent={onViewEvent} />;
+  if (p.type === 'engine') return <EnginePrim p={p} data={data} onViewEvent={onViewEvent} vars={vars} block={block} />;
 
   // group — 파티션 콤비네이터. from 리스트를 by 키로 나눠(입력 순서 보존) 그룹마다 헤더 + 내부 view 재귀 렌더.
   // 각 그룹은 단일통화 {items: 멤버}로 내부 view 에 전달 → 내부 프리미티브는 from:items 로 슬라이스 참조.
@@ -808,6 +808,8 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   const inputs = mode.inputs || [];
   // master_detail card_list → 반응형 2분할(PC: 리스트 좌+상세 우 동시 / 폰: 리스트→선택→상세→뒤로)
   const isSplit = !(mode as { modes?: AppMode[] }).modes && hasMasterDetail(mode.view);
+  // engine 뷰(편집 캔버스)가 있는 모드는 넓게 — 글 쓰는 자리가 화면의 대부분이어야 한다(선언에 레이아웃 키를 두지 않는다).
+  const isCanvas = [...(mode.view || []), ...(drill?.view || []), ...(drill?.tabs || []).flatMap((x) => x.view || [])].some((v) => v.type === 'engine');
 
   // 동적 필터(filter.from_field): 결과 items 의 그 필드 distinct 값으로 칩 + 클라이언트 측 거르기(재조회 없음).
   // distinct 수집·거르기는 공용 렌더 코어(dynFilterCats/applyDynFilter) — 원격 표면과 단일 소스.
@@ -879,7 +881,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   ) : null;
 
   return (
-    <div className={`${isSplit ? 'max-w-5xl' : 'max-w-2xl'} mx-auto p-5`}>
+    <div className={`${isSplit || isCanvas ? 'max-w-5xl' : 'max-w-2xl'} mx-auto p-5`}>
       {mode.note && (
         <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
           {mode.note}

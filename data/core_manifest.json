@@ -65,6 +65,7 @@
       ]
     },
     "instruments": [
+      "document",
       "newspaper",
       "report"
     ],

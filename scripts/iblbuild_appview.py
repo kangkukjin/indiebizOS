@@ -38,8 +38,10 @@ APP_INPUT_TYPES = {"text", "select", "file"}
 # files: 데스크탑 네이티브 다중 파일 선택(window.electron.selectFiles) — 고른 파일마다 add_action
 #   1회 실행(images 와 같은 즉시-영속 계보, form save 와 무관). 원격은 안내만(folder 와 같은 강등).
 APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images", "date", "time", "datetime", "recurrence", "folder", "files"}
-# ai_dock 어피던스(textarea 위 ephemeral AI 제안 — 요청→제안→반영/첨부/닫기). BinNote 656 UX 를
+# ai_dock 어피던스(textarea 위 ephemeral AI 제안 — 요청→제안→반영/첨부/닫기). 옛 빈노트의 UX 를
 # 어휘로 흡수 — 어떤 선언형 form 이든 textarea 에 붙일 수 있다. dismiss 는 항상, 아래는 적용 모드.
+# engine 뷰에도 붙는다(2026-10-05 문서 앱): 캔버스 아래 독. action 은 선택 페이로드($resource/$sel/$start/$end/$text —
+# 선택이 없으면 글 전체)와 $dock 을 받아 본문을 돌려주고, 반영은 엔진이 사람의 편집으로 캔버스에 넣는다.
 APP_AIDOCK_MODES = {"replace", "append"}
 APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes", "web_app",
             "note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter",
@@ -233,6 +235,10 @@ def _app_action_templates(app: dict) -> list[str]:
                     dock = f.get("ai_dock")
                     if isinstance(dock, dict) and isinstance(dock.get("action"), str):
                         out.append(dock["action"])
+            if p.get("type") == "engine":  # 캔버스 독의 AI 템플릿
+                dock = p.get("ai_dock")
+                if isinstance(dock, dict) and isinstance(dock.get("action"), str):
+                    out.append(dock["action"])
             if p.get("type") in ("editable_list", "calendar"):
                 if isinstance(p.get("delete_action"), str):
                     out.append(p["delete_action"])
@@ -303,6 +309,9 @@ def _block_local_keys(blk: dict) -> set:
                 keys.add("date")  # 렌더러가 선택일 date 를 add 액션에 자동 주입
             if isinstance(p.get("on"), dict):  # 뷰-이벤트 액션의 $lat/$lng/$id/$radius 등은 이벤트 페이로드가 주입
                 keys.update(APP_EVENT_VARS)
+            if p.get("type") == "engine" and isinstance(p.get("ai_dock"), dict):  # 독은 선택 페이로드 + $dock 을 직접 주입
+                keys.update(APP_EVENT_VARS)
+                keys.add("dock")
             drill = p.get("item_click")
             if isinstance(drill, dict):
                 from_compose(drill.get("compose"))
@@ -317,15 +326,16 @@ def _block_local_keys(blk: dict) -> set:
     return keys
 
 
-def _check_ai_dock(where: str, field: dict) -> list[str]:
-    """textarea 필드의 ai_dock 어피던스 검증 — action(AI 템플릿) 필수, modes 는 {replace,append} 부분집합.
-    ai_dock.action 은 $<필드키>(현재 텍스트)·$dock(요청 입력)을 주입받는다(_block_local_keys 참조)."""
+def _check_ai_dock(where: str, field: dict, engine: bool = False) -> list[str]:
+    """ai_dock 어피던스 검증 — action(AI 템플릿) 필수, modes 는 {replace,append} 부분집합.
+    주인은 form 의 textarea 필드($<필드키>·$dock 주입) 또는 engine 뷰(engine=True — 선택 페이로드·$dock 주입).
+    주입 키는 _block_local_keys 참조."""
     issues: list[str] = []
     dock = field.get("ai_dock")
     if not isinstance(dock, dict):
         issues.append(f"{where}: ai_dock 는 매핑")
         return issues
-    if field.get("type") != "textarea":
+    if not engine and field.get("type") != "textarea":
         issues.append(f"{where}: ai_dock 는 textarea 필드 전용 (현재 type={field.get('type')!r})")
     if not isinstance(dock.get("action"), str) or not dock.get("action"):
         issues.append(f"{where}: ai_dock.action(AI IBL 템플릿) 필수")
@@ -462,6 +472,11 @@ def _app_check_view(qualified: str, view, depth: int = 0, in_group: bool = False
             issues.append(f"{where}: 불리언 키 발견 — 'on'(또는 off/yes/no) 키는 YAML 불리언으로 해석됨. 따옴표로 감싸세요('on':)")
         if ptype == "engine" and not isinstance(p.get("ref"), str):
             issues.append(f"{where}: engine 은 ref(작업 공간 자료 ID 템플릿, 예 '{{data.resource}}') 필수")
+        if p.get("ai_dock") is not None:  # 뷰에 직접 붙는 독은 engine 뿐(form 은 textarea 필드에)
+            if ptype == "engine":
+                issues.extend(_check_ai_dock(f"{where}: engine", p, engine=True))
+            else:
+                issues.append(f"{where}: ai_dock 는 engine 뷰 또는 form 의 textarea 필드에만")
         if "on" in p:  # 뷰-이벤트→액션 바인딩 — map(지도 조작)·engine(선택·저장)
             on = p.get("on")
             if ptype not in ("map", "engine"):

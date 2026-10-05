@@ -671,7 +671,6 @@ class LoginModel(BaseModel):
 
 # 커스텀 React 계기(선언형 밖) id → 컴포넌트 파일. 매니페스트 밖 프론트 등록이라 여기 명시.
 _CUSTOM_APP_SOURCES = {
-    "binnote": "frontend/src/components/BinNote.tsx",
     "directions": "frontend/src/components/DirectionsInstrument.tsx",
     "newspaper": "frontend/src/components/NewspaperInstrument.tsx",
     "ytmusic": "frontend/src/components/YtMusicInstrument.tsx",

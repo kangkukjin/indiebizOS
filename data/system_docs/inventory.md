@@ -87,4 +87,4 @@
 위 표의 설치됨/미설치는 **보관 위치**(installed/not_installed)다. 이 몸이 실제로 소개·회상·실행하는 묶음은 활성 원장 `data/vocabulary/activation.json`이 정하며, 런처 안경 메뉴 → **내 어휘**에서 깨우고 잠재운다(필수 공급자는 `data/vocabulary_policy.yaml`이 보호). → packages.md '보유와 활성'
 
 ---
-*마지막 업데이트: 2026-10-05 20:00*
+*마지막 업데이트: 2026-10-05 22:20*

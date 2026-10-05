@@ -54,7 +54,9 @@ async function _revalidateInstruments(){
   try{
     const r=await jfetch('/launcher/instruments'); if(!r.ok) return;
     const fresh=((await r.json()).instruments)||[];
-    const key=l=>l.map(i=>(i.id||'')+':'+(i.name||'')).join('|');
+    /* 내용 전체를 비교한다 — id·이름만 보면 버튼 action 이 바뀐 개정(2026-10-05 판본 2 이행)을 놓쳐
+       오래 열린 탭이 옛 code 를 계속 보냈다. */
+    const key=l=>JSON.stringify(l);
     if(!fresh.length || key(fresh)===key(INSTRUMENTS)) return;
     INSTRUMENTS=fresh;
     const home=document.getElementById('appHome');

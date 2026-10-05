@@ -247,6 +247,55 @@ def _phone_runnable_actions():
     return _phone_runnable_cache["set"]
 
 
+_IBL_CALL_RE = re.compile(r"\[([a-z_]+):([a-z_0-9]+)\]")
+
+
+def _unrunnable_call(code) -> Optional[str]:
+    """버튼 code 안에 이 몸의 사전에서 걷힌 호출(다른 몸 전용·잠든 묶음)이 있으면 그 사유.
+
+    `@별칭` 으로 다른 몸에 보내는 호출은 제외한다 — 그건 이 몸이 실행하는 것이 아니다.
+    """
+    if not isinstance(code, str):
+        return None
+    from ibl_registry import pruned_reason
+    for mt in _IBL_CALL_RE.finditer(code):
+        why = pruned_reason(mt.group(1), mt.group(2))
+        if not why:
+            continue
+        i = mt.end()
+        if code[i:i + 1] == "{":  # 인자 블록을 건너뛰어 뒤따르는 @별칭을 본다
+            depth, quote = 0, ""
+            while i < len(code):
+                ch = code[i]
+                if quote:
+                    if ch == "\\":
+                        i += 1
+                    elif ch == quote:
+                        quote = ""
+                elif ch in "\"'":
+                    quote = ch
+                elif ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        i += 1
+                        break
+                i += 1
+        if code[i:i + 1] != "@":
+            return why
+    return None
+
+
+def _drop_unrunnable_buttons(scope: dict) -> None:
+    """계기·탭의 buttons/top_buttons 에서 이 몸이 실행할 수 없는 버튼을 뺀다."""
+    for key in ("buttons", "top_buttons"):
+        buttons = scope.get(key)
+        if isinstance(buttons, list):
+            scope[key] = [b for b in buttons
+                          if not (isinstance(b, dict) and _unrunnable_call(b.get("action")))]
+
+
 def _derive_instruments(include_standalone=True) -> dict:
     """ibl_nodes.yaml 의 app: 블록 → 원격 앱 표면 계기 매니페스트 합성.
 
@@ -359,6 +408,16 @@ def _derive_instruments(include_standalone=True) -> dict:
     instruments.sort(key=lambda i: i["_order"])
     for inst in instruments:
         inst.pop("_order", None)
+    # 컴퓨트 몸(데스크톱·원격런처=맥의 얼굴): 이 몸의 사전에 없는 호출만 하는 버튼은 내놓지 않는다.
+    # 원격런처는 폰 브라우저로 보더라도 실행은 맥이라 [limbs:phone] 버튼이 "사용 불가: 폰 전용"으로
+    # 거절됐다(2026-10-05 실측, 신문 '폰에 저장·공유'). 손 표식(phone_only) 대신 사전에서 파생한다.
+    if runnable is None:
+        for inst in instruments:
+            _drop_unrunnable_buttons(inst)
+            if isinstance(inst.get("modes"), list):
+                inst["modes"] = [dict(m) for m in inst["modes"]]
+                for m in inst["modes"]:
+                    _drop_unrunnable_buttons(m)
     return {"version": 2, "source": "ibl_nodes", "instruments": instruments}
 
 # 세션 저장소 (메모리)

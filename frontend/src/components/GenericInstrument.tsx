@@ -21,7 +21,7 @@
  *  - form/editable_list: $field=입력값, {field}=드릴 데이터 → 저장/추가/삭제 후 새로고침(dispatch).
  *  - 표시 템플릿 "{path|filter}": round·num·abs·arrow·opt:앞,뒤·trunc:N
  *  - action 템플릿(edition 2): 치환 없이 원문+inputs 로 실행 — $key=사용자 입력(빈 값=미지정→인자 생략), $item.field=행·드릴 레코드,
- *    뷰-이벤트 페이로드는 $변수로 잔류. 구형(edition 없음)은 $key/{path} 문자열 치환(공용 코어 actionRequest 가 가른다).
+ *    뷰-이벤트 페이로드는 $변수로 잔류. 구형 $key/{path} 문자열 치환은 은퇴(2026-10-05) — 공용 코어 actionRequest 는 항상 원문+inputs.
  *
  * 더 풍부한 데스크탑 전용 계기(도서·투자·라디오 등)는 ActionDesktop의
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.

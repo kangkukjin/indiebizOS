@@ -51,11 +51,10 @@ APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes"
             # system: true = 런처 직속 시스템 표면(메신저·커뮤니티) — 데스크탑 앱 그리드에서 제외,
             # 원격/폰(리모컨)은 노출 유지. 진입점은 런처 버튼·전용 창.
             "system",
-            # edition(2026-10-05 표면 바인딩 ①): 2 = 렌더러가 치환 없이 템플릿 원문 + inputs(타입 보존) + declared_inputs 를
-            # 보내고 미지정 입력은 컴파일러가 인자 생략으로 접는다. $key=입력, $item.field=행·드릴 레코드. 새 앱의 기본.
-            # 1 = 구형 $key/{field} 문자열 치환 — 판본 2 가 못 받는 문법(@노드 지정·파이프 축약)이 꼭 필요한 블록만,
-            # legacy_reason(이유 한 줄)과 함께. 선언 없음 = 검증 실패.
-            "edition", "legacy_reason"}
+            # edition(2026-10-05 표면 바인딩 ①): 2 — 렌더러가 치환 없이 템플릿 원문 + inputs(타입 보존) + declared_inputs 를
+            # 보내고 미지정 입력은 컴파일러가 인자 생략으로 접는다. $key=입력, $item.field=행·드릴 레코드. 2 만 유효하며
+            # 선언 필수 — 구형 $key/{field} 문자열 치환(edition 1)은 모든 블록이 넘어간 같은 날 은퇴했다.
+            "edition"}
 
 # 판본 2 템플릿 안에 남은 구형 행 치환 {field} — $·{ 뒤가 아닌 {이름} / {a.b}. 판본 2 레코드 {k: v} 는 콜론이 있어 걸리지 않는다.
 _LEGACY_ROW_RE = re.compile(r"(?<![\$\{\w])\{[A-Za-z_][\w.]*\}")
@@ -576,11 +575,9 @@ def _app_check_filters(qualified: str, app: dict) -> list[str]:
 
 
 def _block_edition(blk: dict, inherited: dict | None = None):
-    """블록의 템플릿 판본과 구형 사유 — 블록 선언이 앱(계기) 레벨 선언을 덮는다."""
+    """블록의 템플릿 판본 — 블록 선언이 앱(계기) 레벨 선언을 덮는다. (두 번째 값은 호환용 자리, 항상 None)"""
     inherited = inherited or {}
-    edition = blk.get("edition", inherited.get("edition"))
-    reason = blk.get("legacy_reason", inherited.get("legacy_reason"))
-    return edition, reason
+    return blk.get("edition", inherited.get("edition")), None
 
 
 def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: dict | None = None) -> list[str]:
@@ -591,14 +588,11 @@ def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: d
     """
     import re
     issues: list[str] = []
-    edition, legacy_reason = _block_edition(blk, inherited)
+    edition, _ = _block_edition(blk, inherited)
     if edition is None:
-        issues.append(f"{blabel}: edition 선언 필수 — 새 앱은 edition: 2(치환 없는 원문+inputs). 판본 1 전용 문법이 꼭 필요하면 edition: 1 + legacy_reason")
-    elif edition == 1:
-        if not isinstance(legacy_reason, str) or not legacy_reason.strip():
-            issues.append(f"{blabel}: edition: 1 은 legacy_reason(판본 2 로 못 가는 이유 한 줄)과 함께 선언")
+        issues.append(f"{blabel}: edition: 2 선언 필수 — 템플릿은 치환 없는 판본 2 원문(원문+inputs)으로 실행된다")
     elif edition != 2:
-        issues.append(f"{blabel}: edition 은 1 또는 2 (현재 {edition!r})")
+        issues.append(f"{blabel}: edition 은 2 만 유효 (현재 {edition!r}) — 구형 치환 경로(edition 1)는 2026-10-05 은퇴")
     if not isinstance(blk.get("action"), str) and not blk.get("buttons"):
         issues.append(f"{blabel}: app.action(IBL 템플릿) 또는 buttons 필수")
     # action 있는 블록은 결과를 그릴 view 필수. 버튼 전용(action 없음)은 그릴 데이터가
@@ -703,7 +697,7 @@ def validate_standalone_instruments(data: dict) -> list[str]:
                 if not mode.get("name"):
                     issues.append(f"instruments/{name}: modes[{mi}] name(탭 이름) 필수")
                 issues.extend(_validate_app_block(f"instruments/{name} modes[{mi}]", mode, qualified_set,
-                                                  {"edition": m.get("edition"), "legacy_reason": m.get("legacy_reason")}))
+                                                  {"edition": m.get("edition")}))
         else:
             issues.append(f"instruments/{name}: modes(비어있지 않은 리스트) 필수")
     return issues
@@ -757,7 +751,7 @@ def validate_app_blocks(data: dict) -> list[str]:
             else:
                 blocks = [(qualified, app)]
 
-            inherited = {"edition": app.get("edition"), "legacy_reason": app.get("legacy_reason")}
+            inherited = {"edition": app.get("edition")}
             for blabel, blk in blocks:
                 issues.extend(_validate_app_block(blabel, blk, qualified_set, inherited))
 
@@ -984,7 +978,7 @@ def _edition2_blocks(data: dict) -> list[tuple[str, dict]]:
             app = action.get("app") if isinstance(action, dict) else None
             if not isinstance(app, dict):
                 continue
-            inherited = {"edition": app.get("edition"), "legacy_reason": app.get("legacy_reason")}
+            inherited = {"edition": app.get("edition")}
             modes = app.get("modes")
             blocks = [(f"{node_name}:{action_name} modes[{i}]", m) for i, m in enumerate(modes)
                       if isinstance(m, dict)] if isinstance(modes, list) and modes else [(f"{node_name}:{action_name}", app)]
@@ -1000,7 +994,7 @@ def _edition2_blocks(data: dict) -> list[tuple[str, dict]]:
             continue
         if not isinstance(m, dict):
             continue
-        inherited = {"edition": m.get("edition"), "legacy_reason": m.get("legacy_reason")}
+        inherited = {"edition": m.get("edition")}
         for mi, mode in enumerate(m.get("modes") or []):
             if isinstance(mode, dict) and _block_edition(mode, inherited)[0] == 2:
                 out.append((f"instruments/{os.path.basename(fp)} modes[{mi}]", mode))

@@ -87,14 +87,12 @@ def _block(action, **extra):
             "view": [{"type": "card_list", "from": "items", "card": {"title": "{title}"}}], **extra}
 
 
-def test_validator_requires_edition_and_reason_for_legacy():
+def test_validator_requires_edition_2_only():
     av = _appview()
     none = av._validate_app_block("t", _block('[sense:search]{query: $q}'), QUALIFIED)
-    assert any("edition 선언 필수" in i for i in none), none
+    assert any("edition: 2 선언 필수" in i for i in none), none
     legacy = av._validate_app_block("t", _block('[sense:search]{query: "$q"}', edition=1), QUALIFIED)
-    assert any("legacy_reason" in i for i in legacy), legacy
-    ok = av._validate_app_block("t", _block('[sense:search]{query: "$q"}@hub', edition=1, legacy_reason="@hub"), QUALIFIED)
-    assert ok == [], ok
+    assert any("은퇴" in i for i in legacy), legacy
     inherited = av._validate_app_block("t", _block('[sense:search]{query: $q}'), QUALIFIED, {"edition": 2})
     assert inherited == [], inherited
 
@@ -171,12 +169,12 @@ def test_member_resolve_edition2_passes_inputs_without_substitution():
     assert hostile["code"] == '[self:list]{path: $path, limit: $limit}' and hostile["inputs"]["path"].startswith('"}')
 
 
-def test_member_resolve_legacy_block_still_substitutes():
+def test_member_resolve_never_substitutes_and_keeps_input_types():
     from member_app_actions import compile_apps, resolve
-    _, registry = compile_apps([{"id": "t", "action": '[sense:search]{query:"$query",limit:$limit}'}])
-    r = resolve(registry, "t", {"query": "q", "limit": 3})
-    assert "edition" not in r or r.get("edition") is None
-    assert "limit:3" in r["code"] and '"q"' in r["code"]
+    _, registry = compile_apps([{"id": "t", "action": '[sense:search]{query: $query, limit: $limit}'}])
+    r = resolve(registry, "t", {"query": '1} >> [self:config]{}', "limit": 3})
+    assert r["code"] == '[sense:search]{query: $query, limit: $limit}' and r["edition"] == 2
+    assert r["inputs"] == {"query": '1} >> [self:config]{}', "limit": 3}
 
 
 # ── 앱 매니페스트: 잠든 패키지의 앱은 표면에서 빠진다 ───────────────────────────

@@ -1,5 +1,5 @@
 /* The renderer keeps its existing view grammar; every web execution is a server action ID. */
-const originalBuildAction=buildAction,originalRowAction=rowAction,legacyMemberIbl=ibl,legacyFillOptions=fillOptions;
+const legacyMemberIbl=ibl,legacyFillOptions=fillOptions;
 function clientSpec(value){
  const id=typeof value==='string'&&value.startsWith('client-action:')?value.slice(14):value?.action_id;
  if(!id)return null;
@@ -13,11 +13,9 @@ function clientCall(value,inputs={},row){
  if(spec.rows.length)args._row=Object.fromEntries(spec.rows.map(k=>[k,row?jget(row,k)??'':value?.args?._row?.[k]??'']));
  return {action_id:spec.id,args,title:CUR.inst?.name||'앱 실행',app_id:CUR.inst?.id};
 }
-buildAction=function(value,inputs){return clientCall(value,inputs)||originalBuildAction(value,inputs)};
-rowAction=function(value,row){return clientCall(value,{},row)||originalRowAction(value,row)};
-/* 판본 2 바인딩(actionRequest)도 같은 동작 ID 경로 — 회원 표면은 원문 IBL 을 보내지 않는다. 치환·inputs 조립은 서버(member_app_actions.resolve). */
-const originalActionRequest=typeof actionRequest==='function'?actionRequest:null;
-if(originalActionRequest)actionRequest=function(block,value,inputs,row){return clientCall(value,inputs||{},row)||originalActionRequest(block,value,inputs,row)};
+/* 회원 표면은 원문 IBL 을 보내지 않는다 — 모든 실행은 동작 ID 경로. inputs 조립은 서버(member_app_actions.resolve). */
+const originalActionRequest=actionRequest;
+actionRequest=function(block,value,inputs,row){return clientCall(value,inputs||{},row)||originalActionRequest(block,value,inputs,row)};
 ibl=function(value){
  const request=clientCall(value);
  if(!request){if(INSTRUMENTS.some(a=>a.client_actions))return Promise.reject(Error('현재 공개된 앱 동작이 아닙니다'));return legacyMemberIbl(value)}

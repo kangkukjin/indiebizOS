@@ -645,38 +645,6 @@ def collect_templates(inst: dict) -> list:
     return out
 
 
-_PLACEHOLDER_RE = re.compile(r"\$\w+|\{[\w.|:$ ]+\}")
-
-
-def _parse_single(code: str):
-    """단일 단순 액션만 파싱(파이프라인·병렬·제어 블록 거부). 실패 시 None."""
-    try:
-        import ibl_parser
-        steps = ibl_parser.parse(code)
-    except Exception:
-        return None
-    if not isinstance(steps, list) or len(steps) != 1:
-        return None
-    s = steps[0]
-    if not isinstance(s, dict) or not s.get("_node") or not s.get("action"):
-        return None
-    if s.get("type") or s.get("steps") or s.get("parallel"):
-        return None
-    return s
-
-
-def _value_regex(template_value: str):
-    """플레이스홀더($key·{field})가 든 템플릿 값 → 값 매칭 정규식."""
-    parts = _PLACEHOLDER_RE.split(template_value)
-    holes = _PLACEHOLDER_RE.findall(template_value)
-    rx = ""
-    for i, lit in enumerate(parts):
-        rx += re.escape(lit)
-        if i < len(holes):
-            rx += r"[\s\S]{0,%d}?" % _PARAM_VALUE_MAX
-    return re.compile(rx + r"$")
-
-
 _AI_CALL_ACTIONS_CACHE = None
 
 
@@ -707,8 +675,8 @@ def _portal_scalar(v) -> bool:
 
 def template_allowed(code: str, inputs, declared, templates: list):
     """판본 2 표면 요청(2026-10-05 ①) — code 는 선언 템플릿 **원문과 글자 그대로** 같아야 하고(치환 없음),
-    inputs·declared_inputs 는 그 템플릿이 참조하는 `$이름` 안이어야 한다. 구형 action_allowed 가 치환된
-    인스턴스를 템플릿에 역대조하던 것보다 강한 검사다 — 고정 인자(op·경로)는 원문 그대로 묶인다.
+    inputs·declared_inputs 는 그 템플릿이 참조하는 `$이름` 안이어야 한다. 치환된 인스턴스를 템플릿에 역대조하던
+    구형 action_allowed(2026-10-05 은퇴)보다 강한 검사다 — 고정 인자(op·경로)는 원문 그대로 묶인다.
     노드(self/others)·AI 낱말 금지는 구형과 같다."""
     text = (code or "").strip()
     if text not in {t.strip() for t in templates}:
@@ -732,53 +700,6 @@ def template_allowed(code: str, inputs, declared, templates: list):
         if (node, action) in _ai_call_actions():
             return False, "허용되지 않는 동작입니다 (AI 호출 동작은 포털에서 제공되지 않습니다)"
     return True, ""
-
-
-def action_allowed(code: str, templates: list):
-    """posted code 가 선언 템플릿의 인스턴스인가 — (허용여부, 사유). 구형(판본 1) 블록용."""
-    step = _parse_single(code)
-    if step is None:
-        return False, "허용되지 않는 형식입니다 (단일 계기 동작만 가능)"
-    node, action, params = step["_node"], step["action"], step.get("params") or {}
-    if node in {"self", "others"}:
-        return False, "허용되지 않는 동작입니다"
-    if (node, action) in _ai_call_actions():
-        return False, "허용되지 않는 동작입니다 (AI 호출 동작은 포털에서 제공되지 않습니다)"
-    for k, v in params.items():
-        if isinstance(v, (dict, list)):
-            return False, "허용되지 않는 파라미터 형식입니다"
-        if isinstance(v, str) and len(v) > _PARAM_VALUE_MAX:
-            return False, "입력이 너무 깁니다"
-    for t in templates:
-        ts = _parse_single(t)
-        if ts is None or ts["_node"] != node or ts["action"] != action:
-            continue
-        tp = ts.get("params") or {}
-        ok = True
-        for k, v in params.items():
-            if k not in tp:
-                ok = False
-                break
-            tv = tp[k]
-            if isinstance(tv, str) and _PLACEHOLDER_RE.search(tv):
-                if not _value_regex(tv).match(str(v)):
-                    ok = False
-                    break
-            elif v != tv and str(v) != str(tv):
-                ok = False
-                break
-        if not ok:
-            continue
-        # 템플릿의 리터럴 파라미터는 생략 불가(op·mode 강제) — 플레이스홀더 자리만 생략 허용.
-        for k, tv in tp.items():
-            if isinstance(tv, str) and _PLACEHOLDER_RE.search(tv):
-                continue
-            if k not in params:
-                ok = False
-                break
-        if ok:
-            return True, ""
-    return False, "이 계기에 선언되지 않은 동작입니다"
 
 
 class PortalDenied(Exception):

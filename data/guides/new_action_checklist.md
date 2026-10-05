@@ -355,7 +355,7 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 - form 필드 11종: text / select / toggle / textarea / images / date / time / datetime / recurrence / folder / files
 - textarea 어피던스 `ai_dock` — `{action, modes:[replace,append], placeholder}`, action 에 `$<필드키>`·`$dock` 주입. 상세 `custom_app_instrument.md` ④.
 - ★위 두 어휘 줄은 빌드의 **뷰-어휘 문서-동기 가드**가 `APP_VIEW_TYPES`/`APP_FORM_FIELD_TYPES` 선언과 자동 대조한다 — 뷰 어휘를 바꾸면 이 줄(과 `ibl.md` 앱 절의 같은 줄)도 함께 고쳐야 빌드가 통과한다.
-- **표면 바인딩(2026-10-05 ①)**: `edition: 2` 블록 템플릿은 판본 2 원문(치환 없음, `inputs` 타입 보존). `$key`=입력, `$item.필드`=행, 문자열 안 `f"…${k}…"`, 빈 입력=인자 생략. 구형 `{필드}`·`"$key"` 금지. 규칙 정본: `ibl.md` '표면 바인딩'.
+- **표면 바인딩(2026-10-05 ①)**: `edition: 2`(필수) 템플릿은 판본 2 원문(치환 없음, `inputs` 타입 보존). `$key`=입력, `$item.필드`=행, 문자열 안 `f"…${k}…"`, 빈 입력=인자 생략. 구형 `{필드}`·`"$key"` 금지. 규칙 정본: `ibl.md` '표면 바인딩'.
 - 정합성은 `--check`가 검증한다(`validate_app_blocks`: 참조 액션 실존·$key↔inputs·view 어휘·계기 그룹·판본 + 판본 2 템플릿 컴파일 가드).
 - 해마(3·4단계)와 무관 — app:은 에이전트가 호출하는 어휘가 아니라 표면이 읽는 선언.
 - 어휘 전체 명세: `docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md`, 요약: `system_docs/ibl.md` "앱 표면 노출" 절. 뷰 어휘의 헌법적 지위(승격 4기준·정지규칙)는 `ibl.md` "표현 언어의 층위" 조항.

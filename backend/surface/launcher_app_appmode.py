@@ -402,7 +402,7 @@ async function fireTop(i){
 }
 
 /* ----- 액션 템플릿·표시 템플릿 -----
-   jget/buildAction/viewList/rowAction/applyFilter/statusGlyph 의 정본은 공용 렌더 코어
+   jget/actionRequest/viewList/applyFilter/statusGlyph 의 정본은 공용 렌더 코어
    (backend/static/app_render_core.js — 데스크탑과 단일 소스). 여기 남는 건 표면 차이 하나뿐:
    원격은 HTML 문자열을 만들므로 치환된 값을 esc() 해야 한다(데스크탑은 React 가 한다). */
 function tpl(t,data){ return tplWith(t,data,esc); }

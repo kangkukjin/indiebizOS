@@ -46,9 +46,12 @@ console.log('== 원격 렌더러 인프로세스 검증 ==');
 check('tpl 필터 체인', sandbox.tpl('{a.b|round}·{n|num}·{d|arrow}', {a:{b:2.6}, n:12345, d:-1}) === '3·12,345·▼',
   sandbox.tpl('{a.b|round}·{n|num}·{d|arrow}', {a:{b:2.6}, n:12345, d:-1}));
 check('tpl 이 값을 HTML 이스케이프', sandbox.tpl('{t}', {t:'<b>&'}) === '&lt;b&gt;&amp;', sandbox.tpl('{t}', {t:'<b>&'}));
-check('buildAction 빈 파라미터 제거 + 백슬래시 보존',
-  sandbox.buildAction('[n:a]{p:"$k", q:"$none"}', {k:'C:\\Users'}) === '[n:a]{p:"C:\\\\Users"}',
-  sandbox.buildAction('[n:a]{p:"$k", q:"$none"}', {k:'C:\\Users'}));
+// 표면 바인딩(2026-10-05): 치환 없이 원문 + inputs(빈 값=미지정) + declared_inputs. 묶인 이름($x = …, 람다 인자)은 입력이 아니다.
+const req = sandbox.actionRequest({edition: 2}, '$s = [n:a]{p: $k, q: $none}; $s.items >> [t:f]{where: ($r) => $r.id != $item.id}', {k:'C:\\Users', none:''}, {id:'x'});
+check('actionRequest 원문 보존 + inputs/declared',
+  req.code.startsWith('$s = [n:a]{p: $k, q: $none}') && req.edition === 2 && req.inputs.k === 'C:\\Users' && !('none' in req.inputs)
+    && req.inputs.item.id === 'x' && JSON.stringify(req.declared_inputs) === JSON.stringify(['k','none','item']),
+  JSON.stringify(req));
 
 // 2) 프리미티브 렌더
 const metric = R([{type:'metric', label:'현재가', big:'{price|num}', unit:'원', sub:'{chg}', trend:'chg'}], {price:71500, chg:-2.1});

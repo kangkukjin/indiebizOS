@@ -61,33 +61,11 @@ function tplWith(t, data, esc) {
   });
 }
 
-/**
- * $key 치환(사용자 입력) + 빈 입력 'param: ""' 쌍 자동 제거.
- * ★값은 스트립이 아니라 이스케이프 — IBL 값은 JSON5 문자열 리터럴로 파싱되므로
- *   윈도우 경로(C:\Users\…)의 백슬래시를 스트립하면 깨진다.
- */
-function buildAction(template, values) {
-  var code = String(template).replace(/\$(\w+)/g, function (_m, k) {
-    var v = values ? values[k] : undefined;
-    return v == null ? '' : String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  });
-  code = code.replace(/\w+:\s*"",?\s*/g, '');
-  code = code.replace(/,\s*\}/g, '}').replace(/\{\s*,/g, '{');
-  return code;
-}
-
-/** 행 데이터 {path} 치환 (드릴·행 버튼용) — 구형(edition 1) 블록 전용 */
-function rowAction(template, item) {
-  return String(template).replace(/\{([\w.]+)\}/g, function (_m, path) {
-    var v = jget(item, path);
-    return v == null ? '' : String(v).replace(/"/g, '');
-  });
-}
-
-/* ===== 판본 2 표면 바인딩 (2026-10-05 ①) =====
+/* ===== 표면 바인딩 (2026-10-05 ①) =====
  * 템플릿을 치환하지 않는다. 원문 그대로 보내고 값은 inputs(타입 보존)로, 템플릿이 참조하는 이름 전부는
  * declared_inputs 로 간다. 빈 값('' / null)은 "미지정" — inputs 에 없고 declared 에만 있어 컴파일러가 그
- * 인자를 생략한다(구형 "빈 입력=인자 삭제"와 같은 뜻). 행·드릴 컨텍스트는 $item 한 레코드다. */
+ * 인자를 생략한다. 행·드릴 컨텍스트는 $item 한 레코드다. 구형 $key/{field} 문자열 치환은 모든 앱 블록이
+ * edition 2 로 넘어간 뒤 은퇴했다(같은 날). */
 
 /** 템플릿이 참조하는 입력 이름($name · f-문자열 ${name}) — $item(레코드)과 템플릿 안에서 묶이는 이름(`$x = …` 대입,
  *  `($a, $b) => …` 람다 인자)은 입력이 아니다(검증기 _template_input_names 와 같은 규칙). */
@@ -114,15 +92,11 @@ function appRequest(template, values, item) {
   return { code: String(template), edition: /** @type {2} */ (2), inputs: inputs, declared_inputs: declared };
 }
 
-/** 블록(모드·계기)의 판본에 따라 실행 요청을 만든다.
- *  edition 2 → appRequest(원문+inputs). 그 밖(구형) → 종전 치환: values 가 있으면 $key 치환, item 이 있으면 {field} 치환.
- *  values 를 null 로 넘기면 구형 경로는 $key 치환을 건너뛴다(행 버튼처럼 종전에 rowAction 만 쓰던 자리). */
-/** @param {{edition?: number}|null|undefined} block @param {string} template
- *  @param {Record<string, unknown>|null|undefined} [values] @param {unknown} [item] @returns {string|AppRequest} */
+/** 블록(모드·계기)의 실행 요청 — 항상 appRequest(원문+inputs). block 인자는 호출 자리의 형태 유지용(판본 상속 정보).
+ *  @param {{edition?: number}|null|undefined} block @param {string} template
+ *  @param {Record<string, unknown>|null|undefined} [values] @param {unknown} [item] @returns {AppRequest} */
 function actionRequest(block, template, values, item) {
-  if (block && block.edition === 2) return appRequest(template, values || {}, item);
-  var code = values != null ? buildAction(template, values) : String(template);
-  return item != null ? rowAction(code, item) : code;
+  return appRequest(template, values || {}, item);
 }
 
 /** 실행 요청(문자열 또는 봉투)의 코드 원문 — 로그·정규식 판정용 */
@@ -460,7 +434,7 @@ function dateInputType(t) { return t === 'datetime' ? 'datetime-local' : t; }
 
 /* --- ESM export (데스크탑 Vite 전용 — 원격 인라인 시 이 블록만 제거된다. 파일의 마지막) --- */
 export {
-  jget, applyFilter, tplWith, buildAction, rowAction, templateNames, appRequest, actionRequest, requestCode, viewList,
+  jget, applyFilter, tplWith, templateNames, appRequest, actionRequest, requestCode, viewList,
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   CAL_PERIODIC, calendarModel, calShift, pad2,

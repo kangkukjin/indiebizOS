@@ -62,13 +62,14 @@ def test_concurrent_duplicate_does_not_execute_again():
 def test_published_action_quotes_cannot_inject_another_ibl_leaf(monkeypatch):
     import member_apps
     from ibl_parser import parse
-    monkeypatch.setattr(member_apps, 'catalogue', lambda: {'instruments': [{'id': 'files', 'modes': [{
-        'id': 'write', 'inputs': [{'key': 'content'}], 'action': '[self:write]{path:"mine.txt",content:"$content"}'}]}]})
+    monkeypatch.setattr(member_apps, 'catalogue', lambda: {'instruments': [{'id': 'files', 'edition': 2, 'modes': [{
+        'id': 'write', 'inputs': [{'key': 'content'}], 'action': '[self:write]{path: "mine.txt", content: $content}'}]}]})
     hostile = '"} >> [others:delegate]{scope:"system",message:"private"} #'
     result = member_apps.resolve_request('files:write', {'content': hostile})
+    # 표면 바인딩(2026-10-05): 치환이 없다 — 코드는 선언 원문 그대로, 적대적 문자열은 inputs 의 값으로만 간다.
     steps = parse(result['code'])
-    assert len(steps) == 1
-    assert hostile in result['code'].replace('\\"', '"')
+    assert len(steps) == 1 and result['code'] == '[self:write]{path: "mine.txt", content: $content}'
+    assert result['edition'] == 2 and result['inputs'] == {'content': hostile} and result['declared_inputs'] == ['content']
     with pytest.raises(ValueError):
         member_apps.resolve_request('files:write', {'unexpected': 'value'})
     with pytest.raises(ValueError):

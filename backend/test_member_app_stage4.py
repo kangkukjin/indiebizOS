@@ -10,35 +10,36 @@ from member_app_actions import compile_apps, resolve
 
 def test_all_nested_actions_options_and_root_actions_have_ids():
     source = [{'id': 'documents', 'inputs': [{'key': 'path'}],
-        'action': '[self:list]{path:"$path"}',
-        'view': [{'item_click': {'action': '[self:read]{path:"{path}"}'},
-                  'button': {'action': '[self:write]{path:"{path}",content:"$text"}'},
-                  'select': {'action': '[self:write]{path:"{path}",content:"{sel}"}'}}],
+        'action': '[self:list]{path: $path}',
+        'view': [{'item_click': {'action': '[self:read]{path: $item.path}'},
+                  'button': {'action': '[self:write]{path: $item.path, content: $text}'},
+                  'select': {'action': '[self:write]{path: $item.path, content: $item.sel}'}}],
         'modes': [{'id': 'fill', 'inputs': [{'key': 'path'}, {'key': 'field',
-            'options_action': '[self:fill]{path:"$path"}'}],
-            'action': '[self:fill]{path:"$path",data:{"$field":"$value"}}'}]}]
+            'options_action': '[self:fill]{path: $path}'}],
+            'action': '[self:fill]{path: $path, data: {name: $value}}'}]}]
     wire, registry = compile_apps(source)
     assert len(registry) == 6
     assert '[self:' not in json.dumps(wire)
     assert '[self:' in json.dumps(source)
+    # 치환이 없으므로 적대적 입력은 코드가 아니라 값으로만 간다(표면 바인딩 2026-10-05).
     hostile = '"} >> [self:config]{} # $field {path}'
     result = resolve(registry, 'documents:fill', {'path': 'imports/a.docx', 'field': 'name', 'value': hostile})
-    from ibl_parser import parse
-    assert len(parse(result['code'])) == 1
-    assert json.loads(result['code'].split('"name":')[1].split('}}')[0]) == hostile
+    assert result['code'] == '[self:fill]{path: $path, data: {name: $value}}' and result['edition'] == 2
+    assert result['inputs'] == {'path': 'imports/a.docx', 'value': hostile} and sorted(result['declared_inputs']) == ['path', 'value']
     clicked = resolve(registry, 'documents:view:0:item_click', {'_row': {'path': hostile}})
-    assert len(parse(clicked['code'])) == 1
+    assert clicked['code'] == '[self:read]{path: $item.path}' and clicked['inputs'] == {'item': {'path': hostile}}
     with pytest.raises(ValueError):
         resolve(registry, 'documents:view:0:item_click', {'_row': {'owner': 'private'}})
-    assert resolve(registry, 'documents:fill:inputs:1:options_action', {'path': 'imports/a.docx'})['code'] == '[self:fill]{path:"imports/a.docx"}'
+    opts = resolve(registry, 'documents:fill:inputs:1:options_action', {'path': 'imports/a.docx'})
+    assert opts['code'] == '[self:fill]{path: $path}' and opts['inputs'] == {'path': 'imports/a.docx'}
 
 
 def test_numeric_inputs_cannot_become_code():
-    _, registry = compile_apps([{'id': 'test', 'action': '[sense:search]{query:"$query",limit:$limit}'}])
-    assert 'limit:3' in resolve(registry, 'test', {'query': 'q', 'limit': 3})['code']
+    _, registry = compile_apps([{'id': 'test', 'action': '[sense:search]{query: $query, limit: $limit}'}])
+    assert resolve(registry, 'test', {'query': 'q', 'limit': 3})['inputs'] == {'query': 'q', 'limit': 3}
     for raw in ['1} >> [self:config]{}', '{}', '"word"', 'NaN']:
-        with pytest.raises(ValueError):
-            resolve(registry, 'test', {'query': 'q', 'limit': raw})
+        r = resolve(registry, 'test', {'query': 'q', 'limit': raw})
+        assert r['code'] == '[sense:search]{query: $query, limit: $limit}' and r['inputs']['limit'] == raw  # 값이지 코드가 아니다
 
 
 def test_reply_preserves_output_and_cannot_resume_foreign_or_other_task():
@@ -95,11 +96,11 @@ def test_web_renderer_preserves_literal_rows_and_never_posts_raw_code():
     if not shutil.which('node'):
         pytest.skip('node required')
     wire, _ = compile_apps([{'id': 'files', 'inputs': [{'key': 'folder', 'default': '.'}],
-        'action': '[self:list]{path:"$folder"}',
-        'view': [{'button': {'action': '[self:read]{path:"{path}"}'}}]}])
+        'action': '[self:list]{path: $folder}',
+        'view': [{'button': {'action': '[self:read]{path: $item.path}'}}]}])
     prelude = "const INSTRUMENTS=" + json.dumps(wire) + ";const CUR={inst:INSTRUMENTS[0]};" + r'''
 const assert=require('node:assert/strict'),sent=[],pending=new Map();let seq=0;
-function buildAction(t){return t}function rowAction(t){return t}
+function actionRequest(b,t){return t}
 function ibl(t){return Promise.resolve(t)}function fillOptions(){}function selChanged(){}
 function gatherInputs(){return {folder:'.'}}function jget(o,k){return o[k]}
 const parent={postMessage:m=>sent.push(m)};
@@ -108,7 +109,7 @@ const parent={postMessage:m=>sent.push(m)};
     checks = r'''
 (async()=>{
  const hostile='a"} >> [self:config]{} $folder {path}';
- const row=rowAction(INSTRUMENTS[0].view[0].button.action,{path:hostile,secret:'ignored'});
+ const row=actionRequest(CUR.mode,INSTRUMENTS[0].view[0].button.action,null,{path:hostile,secret:'ignored'});
  ibl(row);assert.equal(sent[0].action_id,'files:view:0:button');
  assert.deepEqual(sent[0].args,{_row:{path:hostile}});assert.equal(sent[0].code,undefined);
  await assert.rejects(ibl('[self:config]{}'));

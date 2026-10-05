@@ -7,8 +7,8 @@
   · 섞인 리터럴 "…$key…{f}…"                      → f"…${key}…${item.f}…"
   · 따옴표 밖 {field} (예: lat: {lat})            → $item.lat
   · 따옴표 밖 $key                                 → 그대로
-  블록마다 `edition: 2` 를 선언한다. 판본 2 가 받지 않는 문법(@노드 지정 `}@hub`, 파이프 축약 `| sort:`)이 든
-  블록은 변환하지 않고 `edition: 1` + `legacy_reason` 을 선언한다(지도·정기보고·신문).
+  블록마다 `edition: 2` 를 선언한다. 판본 2 가 받지 않는 파이프 축약 `| sort:` 이 든 블록은 변환하지 않고 신고한다
+  (>> [table:sort]/[table:take] 조합으로 손 변환 뒤 다시 돌린다). @노드 지정은 판본 2 도 받는다. edition 1 은 은퇴.
 
 왜 텍스트 변환인가: yaml 재직렬화는 주석·순서·따옴표를 잃는다. 템플릿은 한 줄 single-quoted 스칼라
 (`action: '...'`)로만 쓰이므로(사전 조사) 그 줄만 바꾸고 나머지 바이트는 건드리지 않는다.
@@ -104,8 +104,8 @@ def migrate_text(text: str, block_pat: re.Pattern, decl_indent_extra: int, whole
         templates = [(k, m) for k, m in templates if m and m.group(2) in TEMPLATE_KEYS]
         pad = " " * (indent + decl_indent_extra)
         if any(EDITION1_ONLY.search(m.group(3)) for _, m in templates):
-            lines[start + 1:start + 1] = [f"{pad}edition: 1   # 판본 1 유지 — 아래 legacy_reason", f"{pad}legacy_reason: '{LEGACY_REASON}'"]
-            notes.append(f"legacy(edition 1) @{start + 1}")
+            # 판본 1 파이프 축약은 기계 변환하지 않는다 — >> [table:sort]/[table:take] 조합으로 손 변환 뒤 다시 돌린다(edition 1 은 은퇴).
+            notes.append(f"manual(파이프 축약 — 손 변환 필요) @{start + 1}")
             continue
         for k, m in templates:
             new = convert_template(m.group(3))

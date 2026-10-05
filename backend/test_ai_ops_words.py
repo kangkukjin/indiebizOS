@@ -200,9 +200,9 @@ check("S8 없는 파일 → extract_source 정직 오류", not r.get("success") 
 print("[게이트·플래그]")
 sys.path.insert(0, os.path.join(_PKG, "community-portal"))
 _pc = _load("_t_portal_core", os.path.join(_PKG, "community-portal", "portal_core.py"))
-ok, why = _pc.action_allowed('[table:ai]{instruction: "x"}', ['[table:ai]{instruction: "{q}"}'])
+ok, why = _pc.template_allowed('[table:ai]{instruction: $q}', {"q": "x"}, ["q"], ['[table:ai]{instruction: $q}'])
 check("G1 포털 게이트 — AI 낱말 템플릿이 있어도 거부", not ok and "AI" in why)
-ok2, _ = _pc.action_allowed('[table:filter]{where: "a"}', ['[table:filter]{where: "{q}"}'])
+ok2, _ = _pc.template_allowed('[table:filter]{where: $q}', {"q": "a"}, ["q"], ['[table:filter]{where: $q}'])
 check("G2 포털 게이트 — 결정론 낱말 회귀 무손상", ok2)
 
 import yaml as _yaml

@@ -16,7 +16,7 @@ import { iblSurface } from '../../lib/remote-session';
  */
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import {
-  jget, applyFilter, tplWith, buildAction, rowAction, templateNames, requestCode, viewList,
+  jget, applyFilter, tplWith, templateNames, requestCode, viewList,
   appRequest, actionRequest,
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
@@ -29,7 +29,7 @@ import {
 
 // 공용 코어 재수출 — 소비자(프리미티브들)는 종전처럼 './generic/manifest' 에서 가져간다.
 export {
-  jget, applyFilter, tplWith, buildAction, rowAction, templateNames, requestCode, appRequest, actionRequest,
+  jget, applyFilter, tplWith, templateNames, requestCode, appRequest, actionRequest,
   emptyText, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   calendarModel, calShift, pad2,
@@ -133,7 +133,7 @@ export interface AppFilter {
 export interface AppMode {
   id?: string;
   name?: string;
-  edition?: number;  // 템플릿 판본(2026-10-05 ①): 2 = 치환 없이 원문+inputs 로 실행. 없음·1 = 구형 $key/{field} 치환.
+  edition?: number;  // 템플릿 판본(2026-10-05 ①): 2 — 치환 없이 원문+inputs 로 실행(전 블록 필수). 구형 치환 경로는 은퇴.
   note?: string;
   auto_run?: boolean;
   inputs?: AppInput[];

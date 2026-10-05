@@ -61,13 +61,29 @@ def _delegate_unified(params: dict, project_path: str) -> Any:
                 _parent_task = get_current_task_id() or None
             except Exception:
                 pass
-            SystemAIRunner.send_message(content=message,
-                                        from_agent=params.get("from_agent") or "앱",
-                                        task_id=_parent_task, envelope=env)
+            # ③ 작업 선발급(2026-10-05): HTTP background 와 같은 접수 계약 — 큐에 올리기 **전에** 시스템 작업 행을
+            # 만들어 접수증(task_ref·status_url)이 즉시 조회 가능한 id 를 돌려준다. 러너는 이 id 를 그대로 써서
+            # 끝나면 complete_task 로 닫는다(옛 경로는 부모 task id 를 넘겨 자식 작업이 없었다 — 접수증에 id 가 없던 이유).
+            import uuid as _uuid
+            from system_ai_memory import create_task as _create_system_task
+            from_agent = params.get("from_agent") or "앱"
+            child_id = f"task_sysai_{_uuid.uuid4().hex[:8]}"
+            _create_system_task(task_id=child_id, requester=f"{from_agent}@{Path(project_path).name}",
+                                requester_channel="delegate", original_request=message,
+                                delegated_to="system_ai", parent_task_id=_parent_task)
+            SystemAIRunner.send_message(content=message, from_agent=from_agent,
+                                        task_id=child_id, envelope=env)
         except Exception as e:  # noqa: BLE001 — 큐잉 실패는 그대로 보고
             return {"error": f"시스템 AI 위임 실패: {e}"}
-        return {"success": True, "queued": True, "accepted": True, "target": "시스템 AI",
-                "message": "시스템 AI에 요청을 전달했습니다. 완료되면 결과를 확인하세요."}
+        from delegation_tasks import SYSTEM_OWNER, accepted, await_child
+        from thread_context import did_call_agent
+        receipt = accepted(SYSTEM_OWNER, child_id, queued=True, target="시스템 AI", child_task_id=child_id,
+                           parent_task_id=_parent_task, mode=mode,
+                           message=f"시스템 AI에 요청을 전달했습니다 (task {child_id}). 접수 확인이며 결과는 아직 없습니다.")
+        if mode != "sync":
+            return receipt
+        return await_child(Path(project_path).name, _parent_task, SYSTEM_OWNER, child_id,
+                           prev_called=did_call_agent(), agent_label="시스템 AI", project_id=None)
 
     agent_id_raw = params.get("agent_id", "")
     if isinstance(agent_id_raw, (int, float)):

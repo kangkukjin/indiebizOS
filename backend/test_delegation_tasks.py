@@ -144,6 +144,51 @@ def test_cross_async_returns_receipt_not_completion(world):
     assert child["parent_task_id"] == "parent2" and child["requester_channel"] == "system_ai"
 
 
+def _fake_system_runner(monkeypatch):
+    # 위임자는 프로젝트 에이전트(시스템 AI 가 자기에게 위임하면 순환으로 거절되는 것이 맞다)
+    tc.set_current_project_id(PROJECT)
+    tc.set_current_agent_id(AGENT_ID)
+    queued = []
+    class FakeSystemAIRunner:
+        @classmethod
+        def send_message(cls, content, from_agent, task_id=None, project_id=None, envelope=None):
+            queued.append({"content": content, "from_agent": from_agent, "task_id": task_id, "envelope": envelope})
+    monkeypatch.setitem(sys.modules, "system_ai_runner", SimpleNamespace(SystemAIRunner=FakeSystemAIRunner))
+    return queued
+
+
+def test_system_scope_async_returns_receipt_with_preissued_task(world, monkeypatch):
+    """③ 2차: scope:system 도 접수 시점에 시스템 작업을 선발급해 task_ref·status_url 을 돌려준다(옛 경로는 id 없는 문구뿐)."""
+    from routing_system import _delegate_unified
+    queued = _fake_system_runner(monkeypatch)
+    memory.create_task("parent5", "user@gui", "gui", "원요청")
+    tc.set_current_task_id("parent5")
+    result = _delegate_unified({"scope": "system", "message": "AI 동향 보고서 써줘", "from_agent": "앱"}, world.project_path)
+    assert result["accepted"] is True and result["state"] == "queued" and result["queued"] is True
+    child = result["task_ref"]["task_id"]
+    assert result["task_ref"] == {"kind": "delegation", "owner": "system", "task_id": child}
+    assert result["status_url"] == f"/system-ai/tasks/{child}"
+    assert queued and queued[0]["task_id"] == child and queued[0]["envelope"]["chain"]
+    row = memory.get_task(child)
+    assert row["parent_task_id"] == "parent5" and row["requester_channel"] == "delegate" and row["delegated_to"] == "system_ai"
+    assert world.dt.task_view("system", child)["state"] == "running"
+
+
+def test_system_scope_sync_waits_for_the_preissued_task(world, monkeypatch):
+    from routing_system import _delegate_unified
+    queued = _fake_system_runner(monkeypatch)
+    def finish_later():
+        deadline = time.time() + 3
+        while time.time() < deadline and not queued:
+            time.sleep(0.01)
+        time.sleep(0.05)
+        memory.complete_task(queued[0]["task_id"], "보고서 본문")
+    threading.Thread(target=finish_later, daemon=True).start()
+    result = _delegate_unified({"scope": "system", "mode": "sync", "message": "보고서"}, world.project_path)
+    assert result["success"] is True and result["state"] == "succeeded" and result["response"] == "보고서 본문"
+    assert result["task_ref"]["owner"] == "system" and result["sync"] is True
+
+
 def test_cross_sync_timeout_keeps_task_running_and_settles_to_async(world, monkeypatch):
     from routing_system import _delegate_unified
     monkeypatch.setattr(world.dt, "SYNC_WAIT_SECONDS", 0.15)

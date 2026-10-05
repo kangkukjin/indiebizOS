@@ -42,7 +42,7 @@
 남은 것(⑩ 뒤): 바탕화면·가져오기·외부사용자·패키지 설치/삭제 HTTP 창의 IBL 전환.
 
 ### 2-③ ③ 작업 수명의 공통 관찰·제어 (다음 큰 일)
-**1차 집행 완료(2026-10-05 밤)** — 접수증 통화 `task_receipts.receipt`, `[self:task]{status|wait|cancel}`, 어댑터 7종(delegation·script·guestpc·newspaper·lecture_video·notebook_source·sheet_op), 상태 어휘 한 벌. 명세 ibl.md '작업 접수증과 대기', 가이드 `data/guides/task_receipts.md`, 회귀 `test_task_receipts_2026_10_05.py`. **2차(남은 것)**: 사진·PC 스캔 접수증화(React 폴링 은퇴, 실기기) · `scope: system` 위임 작업 id · 표면 `await:` + mode 버튼 결과 렌더(렌더러 2곳 setInterval 은퇴) · `/m/run` 스트림 투영 · 용례가 옮겨가면 `self:script status(job_id)`·`guestpc result`·`deck video check` 은퇴 판정. 아래는 원 계획(참고).
+**1차 집행 완료(2026-10-05 밤)** — 접수증 통화 `task_receipts.receipt`, `[self:task]{status|wait|cancel}`, 어댑터 7종(delegation·script·guestpc·newspaper·lecture_video·notebook_source·sheet_op), 상태 어휘 한 벌. 명세 ibl.md '작업 접수증과 대기', 가이드 `data/guides/task_receipts.md`, 회귀 `test_task_receipts_2026_10_05.py`. **2차 완료**: `scope: system` 위임 선발급 접수증 + sync 대기(`test_delegation_tasks::test_system_scope_*`). **남은 것(3차)**: 사진·PC 스캔 접수증화(React 폴링 은퇴, 실기기) · 표면 `await:` + mode 버튼 결과 렌더(렌더러 2곳 setInterval 은퇴) · `/m/run` 스트림 투영 · 용례가 옮겨가면 `self:script status(job_id)`·`guestpc result`·`deck video check` 은퇴 판정. 아래는 원 계획(참고).
 설치 목록 §1-③ 그대로. 요점만:
 - 수명 셋을 섞지 않는다: **목표**(`self:goal`) / **작업**(task·job) / **티켓**(HTTP 복구). 공통은 관찰·제어 계약, 기존 실행기는 어댑터 뒤.
 - 접수증 통화 1종 = 위임 접수증 모양(`delegation_tasks.accepted`: `accepted·task_ref·run_id·state·status_url`)을 채택. 현재 제각각인 것: `[self:script]{background:true}`→`job_id`+`op:status`, guestpc `op:result`, `[engines:newspaper]`→즉시 반환+상태 JSON(`newspaper_publish_state.json`), 사진·PC 스캔(`api_photo.py:71` 스레드+진행 dict+2초 폴링), 시트 `apply` `state:queued`.

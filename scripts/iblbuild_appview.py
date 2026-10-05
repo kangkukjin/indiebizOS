@@ -1011,6 +1011,8 @@ def check_app_templates_edition2(data: dict, root: Path) -> tuple[list[str], lis
         return issues, warnings
     registry = load_registry(str(root), None)
     defs = definitions()
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    catalog_actions = {f"{n}:{a}" for n, nd in nodes.items() if isinstance(nd, dict) for a in (nd.get("actions") or {})}
     for label, blk in blocks:
         for t in _app_action_templates(blk):
             names = set(re.findall(r"\$\{?(\w+)", t)) - {"item"}
@@ -1026,5 +1028,12 @@ def check_app_templates_edition2(data: dict, root: Path) -> tuple[list[str], lis
                 if issue.get("code") == "FUNCTION" and "등록된 함수가 없습니다" in issue.get("message", ""):
                     warnings.append(f"{label}: {issue['message']} — 실행 시 해마·워크플로 원장에서 해소되지 않으면 거절된다 ({t!r})")
                     continue
+                if issue.get("code") == "UNSUPPORTED_ADAPTER":
+                    # 사전집(배포물)에는 있는데 이 몸의 활성 레지스트리에 없는 어휘 = 잠든 패키지. 템플릿의 잘못이 아니라
+                    # 이 몸의 설치 상태라 경고로 남긴다(깨우면 같은 가드가 실제 컴파일 검사를 한다).
+                    missing = re.findall(r"판본 2 계약이 없는 어휘: (\w+:\w+)", issue.get("message", ""))
+                    if missing and all(k in catalog_actions and k not in registry for k in missing):
+                        warnings.append(f"{label}: {', '.join(missing)} 는 잠든(비활성) 패키지의 어휘 — 이 몸에서 컴파일 검사 건너뜀 ({t!r})")
+                        continue
                 issues.append(f"{label}: [{issue.get('code')}] {issue.get('message')} ({t!r})")
     return issues, warnings

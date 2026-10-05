@@ -1,4 +1,4 @@
-import { iblSurface } from '../lib/remote-session';
+import { iblSurface, checkRemoteSession } from '../lib/remote-session';
 /**
  * YtMusicInstrument — 유튜브 뮤직 "계기(instrument)" (앱 모드)
  *
@@ -41,6 +41,7 @@ async function runIBL<T = Record<string, unknown>>(code: string): Promise<T & { 
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...iblSurface, code, project_id: PROJECT_ID }),
     });
+    checkRemoteSession(res.status);  // 원격 세션 만료 처리 — 정본 헬퍼(lib/instrument.iblExecuteApp)와 같은 규약
     return await res.json();
   } catch {
     return { success: false, error: '서버에 연결할 수 없습니다.' } as T & { success?: boolean; error?: string };

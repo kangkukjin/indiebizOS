@@ -5570,8 +5570,7 @@ nodes:
         guides:
         - managed_records.md
         app:
-          edition: 1
-          legacy_reason: self:record 에 판본 2 계약(UNSUPPORTED_ADAPTER)이 없다 — 계약이 붙으면 edition 2 로 전환
+          edition: 2
           instrument: managed_records
           name: 공동 업무
           icon: 📋

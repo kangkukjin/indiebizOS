@@ -220,7 +220,8 @@
       },
       "params": [
         "op",
-        "package_id"
+        "package_id",
+        "profile"
       ]
     },
     "self:read": {

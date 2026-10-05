@@ -129,5 +129,39 @@ def test_manifest_carries_principal_and_validator_allows_it():
     assert av._validate_app_block("t", block, {"self:list"}) == []
 
 
+def test_activation_route_is_thin_passage_over_requires_gate(monkeypatch):
+    """② 2차: 조종실 HTTP `/vocabulary/{id}/activation` 은 사람 통로 증명 뒤 `[self:package]{op, package_id, profile}` 를 관문 위로
+    보내는 얇은 통로다 — 라우트가 HUMAN_AUTHORITY 를 직접 건네지 않고, 관문이 소비한 뒤 핸들러가 건넨다. 주체가 owner 가 아니면
+    (사람 표면이어도) requires.principal 이 거절한다."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import api_vocabulary as V
+    import vocabulary_lifecycle as VL
+    calls = []
+    monkeypatch.setattr(V, "human_authority", lambda request: VL.HUMAN_AUTHORITY)   # 사람 표면 증명은 기존 검사 그대로(여기선 통과)
+    monkeypatch.setattr(VL, "set_package_active", lambda pid, active, *, authority=None, profile=None:
+                        (calls.append((pid, active, authority is VL.HUMAN_AUTHORITY, profile)) or {"success": True, "package_id": pid, "active": active}))
+    app = FastAPI()
+    @app.middleware("http")
+    async def identify(request, call_next):
+        tok = P.set_transport(P.ANONYMOUS if request.headers.get("x-test-anonymous") else P.OWNER)
+        try:
+            return await call_next(request)
+        finally:
+            P.reset_transport(tok)
+    app.include_router(V.router)
+    import approval_tokens as T
+    with TestClient(app) as c:
+        before = T.pending_count()
+        r = c.post("/vocabulary/record-ops/activation", json={"active": True, "profile": "member"})
+        assert r.status_code == 200 and r.json()["active"] is True, r.text
+        assert calls == [("record-ops", True, True, "member")]
+        assert T.pending_count() == before   # 통로가 발급한 토큰은 관문이 소비했다(남는 토큰 없음)
+        assert c.post("/vocabulary/record-ops/activation", json={"active": False, "profile": "king"}).status_code == 400
+        denied = c.post("/vocabulary/record-ops/activation", json={"active": False}, headers={"x-test-anonymous": "1"})
+        assert denied.status_code == 400 and "주체만" in denied.json()["detail"], denied.text
+        assert len(calls) == 1
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

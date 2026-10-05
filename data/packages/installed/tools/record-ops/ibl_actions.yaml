@@ -27,17 +27,17 @@ actions:
         backend/common/safe_expr.py: 393baf8c10b1d7d25fe5ecbf40f5b44b8a1e9e12149e1be6bcda36db8c2cc360
         backend/common/value_semantics.py: 704636d403a5f37eca941838baac4876def288cd93c9676167e1eaad4e561c17
         backend/datastore/record_admin.py: 26d13e5e73c42d56a8d6ed2119a81e0a7738c897c535ca3281311f05fcaa9dab
-        backend/datastore/record_assets.py: a9119891401cab4d11d80091d07d7bf545abb1c34fdabf79cd96bb95016df267
-        backend/datastore/record_commands.py: e58a57308b625a7e485b4cf85357ae9d07464293229f7ef3b795dfcb786aaffb
+        backend/datastore/record_assets.py: b2271b04ac857ba746e8d883b756b7219d4ac0e4367f6a8ee718bc7d6caf5da9   # 재감사 2026-10-05: 사람 확인 토큰을 공통 승인 토큰(approval_tokens, 주체·self:record·변경 지문 결속 1회)으로 — 회원 권한 범위 불변
+        backend/datastore/record_commands.py: 294276901dfa8bc052ae82cbfdeb460e5c2a555c60c75477a6d37093cc832c53   # 재감사 2026-10-05: 사람 확인 토큰을 공통 승인 토큰(approval_tokens, 주체·self:record·변경 지문 결속 1회)으로 — 회원 권한 범위 불변
         backend/datastore/record_facade.py: 1a174729a552f8eb163e7937b5d0d6a7179566dd55539c956bae49412b80fc0c
         backend/datastore/record_policy.py: 9854a57fa93a18c2a66311bf0f84b604c0b2703daf9485613ba2db5d29efaaf2
         backend/datastore/record_queries.py: 96d7910b537fd330792429de671c8ccca13b7148a397e425c3f87c712ab954fc
-        backend/datastore/record_store.py: 9fa2a3ac69f8a949487af6da80d43c3bfc264584f89eae88cde9b2f7dd41ea1f
+        backend/datastore/record_store.py: 21a34f0663ce5ffdf376dadc497810a0badd66559ece1e14e1481d781db688c5   # 재감사 2026-10-05: 사람 확인 토큰을 공통 승인 토큰(approval_tokens, 주체·self:record·변경 지문 결속 1회)으로 — 회원 권한 범위 불변
         backend/datastore/record_tasks.py: 1eeb5196c1aa5d0190a22ad371f8a69f736defc4830d19915030de7472dcfce8
         backend/services/record_adapters.py: b6889645d10621d529c9a22db66657cc7c76c6b6f3fe1a94fb762962035b9b19
         backend/services/record_dispatch.py: 7fb7cad5be40924f1e665187f870468b2bec0fc2903073cc5a61cbff3202510d
         backend/static/record_app.html: cef6f1e74df5d03819b55be833e874d6a3b4eb8c623a7b6a5cafba314afd1be2
-        backend/surface/api_records.py: aafb8e0ae55991d678511bb765a0b87655607559bd04ada7b2c2047defab3951
+        backend/surface/api_records.py: 50df7120036bed7b72e0832f36e935f66a516945ee08deb1e390448d13c49dfb   # 재감사 2026-10-05: 사람 확인 토큰을 공통 승인 토큰(approval_tokens, 주체·self:record·변경 지문 결속 1회)으로 — 회원 권한 범위 불변
         backend/surface/record_app_page.py: 9359437a7c2af9b70eb2be1ffe6e22314c2bb76fffb0fb51dcf24c040677a987
     scope: workspace
     group: system

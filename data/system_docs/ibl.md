@@ -236,7 +236,11 @@ reuse는 두 실행에서 이 범위의 충돌을 함께 검사한다. 선언·�
 `approval_required.challenge` 에 대해 발급하며, challenge 는 주체·액션·op·**요청 지문(code+inputs)** 의 해시라 승인 뒤 내용을 바꾸면 맞지 않고,
 1회·120초다. 표면은 거절 봉투의 `approval_required` 를 보고 사람에게 묻고 같은 요청을 `approval` 과 함께 한 번 재전송한다 — 매니페스트 변경 없음.
 세 사실(누구인가 / 무엇이 허용됐나 / 사람이 이 변경을 승인했나)은 각각 principal·requires·토큰이 맡고 하나로 뭉개지 않는다.
-첫 소비자: `[self:package]{op: activate|deactivate}`(owner + human_confirm). `requires` 구조는 빌드(`validate_requires`)가 검사한다.
+첫 소비자: `[self:package]{op: activate|deactivate, profile}`(owner + human_confirm). `requires` 구조는 빌드(`validate_requires`)가 검사한다.
+사람 통로는 셋이다(모두 토큰을 발급만 하고 소비는 관문): `/ibl/approve`(표면 왕복), 조종실 HTTP `/vocabulary/{id}/activation`(사람 표면 증명 뒤 같은 낱말을
+관문 위로 보내는 **얇은 통로** `api_vocabulary.run_ibl_as_human` — 라우트는 HUMAN_AUTHORITY 를 직접 건네지 않는다), 업무기록 `/records/spaces/{space}/confirm`
+(둘째 소비자 — 주체·`self:record`(apply)·변경 내용 지문 `request_hash` 에 묶인 같은 토큰, 공간별 confirmations 표는 은퇴). 어휘 낱말이 없는 HTTP 창(바탕화면·
+가져오기·외부사용자)은 ⑩ 뒤에 같은 길을 간다. 회원 승인 통로(`/m/approve`)는 회원이 닿는 human_confirm 액션이 생길 때 그 첫 소비자와 함께 연다.
 검사와 실행은 같은 선언을 소비한다. 동적 선택자는 실행 직전 검사로 남긴다.
 `{"$list": {필드: 타입}}`은 구조를 가진 목록 행의 타입 선언이다.
 `describe:["fn:이름"]`은 컴파일러가 검사한 저장 함수의 입력·반환·효과·미확정 경계를 본문 없이 돌려준다.

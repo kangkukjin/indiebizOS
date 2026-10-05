@@ -14,6 +14,13 @@ def request_hash(args):
     return digest({k: args.get(k) for k in ('command', 'definition_revision', 'input', 'expected', 'reason')})
 
 
+def confirmation_challenge(auth, fingerprint):
+    """사람 확인의 승인 대상 지문 — 공통 승인 토큰(approval_tokens)의 challenge. 주체(업무 주체 subject)·`self:record`(op apply)·
+    변경 내용 지문(request_hash)에 묶인다. 발급(api_records.issue_confirmation)과 소비(apply)가 같은 함수를 쓴다."""
+    import approval_tokens
+    return approval_tokens.challenge(auth.subject, 'self:record', fingerprint, 'apply')
+
+
 def apply(space, args, auth, root=None, *, task_guard=None):
     check_auth(auth, space, args.get('command', ''))
     name(args.get('request_id'))
@@ -57,10 +64,10 @@ def apply(space, args, auth, root=None, *, task_guard=None):
                    for policy in (command['allow'], current_command['allow'])):
             fail('forbidden', '이 명령을 실행할 권한이 없습니다.')
         if any(c.get('confirmation') == 'human' for c in (command, current_command)):
-            row = conn.execute('SELECT * FROM confirmations WHERE token=?', (args.get('confirmation', ''),)).fetchone()
-            if not row or row['subject'] != auth.subject or row['hash'] != fingerprint or row['used'] or row['expires'] < time.time():
+            # 공통 승인 토큰(② 권한 연결): 주체·self:record(apply)·변경 내용 지문에 묶인 1회성 — 관문(action_requires.gate)과 같은 소비 의미.
+            import approval_tokens
+            if not approval_tokens.consume(args.get('confirmation', ''), confirmation_challenge(auth, fingerprint)):
                 fail('forbidden', '현재 대상과 입력에 대한 사람의 확인이 필요합니다.')
-            conn.execute('UPDATE confirmations SET used=1 WHERE token=?', (row['token'],))
         expected = args.get('expected', [])
         if not isinstance(expected, list):
             fail('validation', 'expected는 대상 버전 목록이어야 합니다.')

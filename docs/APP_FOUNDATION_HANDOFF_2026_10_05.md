@@ -15,7 +15,7 @@
 
 검증 상태: `build_ibl_nodes.py --check` 27 가드 통과, `tsc`, 렌더 코어·층·크기·validate-parity 가드, 비시스템 전수 8,878 통과(`pytest -m "not system" -n auto --dist loadfile`). 라이브(맥) 확인: 전 계기 edition 2, 지도·정기보고·신문 읽기, 승인 왕복(거절→승인→재전송).
 
-**설치 목록 기준 완료**: ① 전부. ② 1차(§2-② 참조). 나머지 ③~⑩ 미착수.
+**설치 목록 기준 완료**: ① 전부. ② 1차+2차(§2-② 참조 — 셋은 판정으로 닫음). 나머지 ③~⑩ 미착수.
 
 ## 1 사용자 실기기 확인 대기 (다음 세션 첫 일)
 
@@ -31,14 +31,15 @@
 - `scripts/migrate_app_templates_edition2.py` 는 1회성 — 블록이 전부 edition 2 라 더 할 일이 없다. 삭제 판정은 사용자(파괴적). 남기면 "파이프 축약 신고기"로만 의미.
 - 해마에 시딩된 관용구 6개(`선택교정` 등, `data/idioms/workspace_seeds.json`)는 **워크플로 원장에 정의가 없어** 매니페스트 `[fn:…]` 로 부르면 실행이 거절된다. 빌드 가드가 경고로 드러낸다. 문서 앱 계기 선언 때 먼저 걸린다 → `[self:workflow]{op:"save"}` 로 정의를 원장에 올리는 것이 해법(코딩·문서·시트 재구성 때 함께).
 
-### 2-② ② 권한 연결 잔여
+### 2-② ② 권한 연결 잔여 — **2차 집행 완료(2026-10-05 밤), 셋은 판정으로 닫음**
 완료: `requires` 선언·관문(`backend/base/action_requires.py`), 승인 토큰(`backend/base/approval_tokens.py`, `/ibl/approve`), 렌더러 2곳 승인 왕복, `$principal`, 첫 소비자 self:package. 회귀 `backend/test_action_requires_2026_10_05.py`.
-남은 것:
-1. **`human_authority` HTTP 라우트의 `requires` 이관** — `api_vocabulary.set_activation`(이제 IBL `self:package activate` 가 같은 일을 함)·`update_desktop`·`import_vocabulary`·`api_external_users`. 라우트는 얇은 통로로 남기거나 조종실 UI가 IBL 을 부르게 바꾼다. `vocabulary_lifecycle.HUMAN_AUTHORITY` 는 관문 통과 뒤에만 건넨다는 규약을 유지.
-2. **포털 템플릿 검사의 자원 범위** — `template_allowed` 는 원문 글자 대조로 고정 인자를 묶지만, 같은 `self:read` 라도 공개/개인 폴더 구분은 `requires` 에 자원 범위(`paths: [public/**]` 같은 선언)가 생겨야 한다. 그 전까지 포털 화이트리스트(원문 대조)는 그대로.
-3. **업무기록 확인 토큰 → 공통 승인 토큰** — `api_records.issue_confirmation`(CSRF+120초)을 `approval_tokens` 로. 변경 내용 지문은 `[self:workspace]{op:"propose"}` 의 `proposal`/`request_id` 를 쓴다(Codex 검토 2). record-ops 가 잠들어 있어 지금은 실측 불가 — 깨우고 할 것.
-4. **회원 승인 통로** — `/m/approve`(회원 키 인증). 지금은 회원 주체의 `human_confirm` 액션이 거절 봉투로 끝난다(정직). 포털(손님)은 통로 없음이 맞다.
-5. `self:install_lib` 의 `install_approvals`(승인 전 차단, 조종실 HTTP 승인)를 같은 `requires: human_confirm` 로 접을 수 있는지 검토 — 지금은 두 패턴이 공존.
+2차(같은 날 밤):
+1. ✅ 어휘 활성 HTTP `/vocabulary/{id}/activation` = 얇은 통로(`api_vocabulary.run_ibl_as_human` → `[self:package]{op, package_id, profile}` → 관문). `self:package` 에 `profile`(owner|member) 인자. `human_authority` 는 "사람 표면 증명"만 남는다. 회귀 `test_activation_route_is_thin_passage_over_requires_gate`.
+2. ✅ 업무기록 확인 토큰 → 공통 승인 토큰(`record_commands.confirmation_challenge`: 주체·`self:record`·`request_hash`). 공간별 `confirmations` 표 은퇴(DDL·내보내기·복원 `DROP TABLE IF EXISTS`). record-ops `path_audited` 4 파일 재감사. 회귀 `test_managed_records_api::test_human_confirmation_is_bound_to_input`(그대로 통과). **record-ops 는 아직 잠들어 있다** — 라이브 확인은 깨운 뒤.
+3. 판정 — 포털 자원 범위(`requires.paths`): 자원 인자 선언 자리가 ⑤ 와 같은 설계 → ⑤ 와 함께. 화이트리스트 그대로.
+4. 판정 — 회원 승인 통로 `/m/approve`: 회원이 닿는 `human_confirm` 액션이 없어 소비자 없는 배관 → ⑩ 의 첫 회원 소비자와 함께(`/m/run` 봉투 `approval` → member_session → 관문 배선 + 회원 셸 왕복, 실기기 확인).
+5. 판정 — `install_approvals` 는 접지 않음(동기 표면 승인 vs 자율 에이전트의 비동기 보류 — "누가 기다리는가"가 다름). ③ 뒤 재검토.
+남은 것(⑩ 뒤): 바탕화면·가져오기·외부사용자·패키지 설치/삭제 HTTP 창의 IBL 전환.
 
 ### 2-③ ③ 작업 수명의 공통 관찰·제어 (다음 큰 일)
 설치 목록 §1-③ 그대로. 요점만:

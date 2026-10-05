@@ -915,8 +915,11 @@ def _package_op(params: dict) -> dict:
         if not pid:
             return {"error": "package_id 를 지정하세요. 예: [self:package]{op: \"activate\", package_id: \"record-ops\"}"}
         from vocabulary_lifecycle import set_package_active, HUMAN_AUTHORITY
+        profile = (params.get("profile") or "owner").strip()
+        if profile not in ("owner", "member"):
+            return {"success": False, "error": f"profile 은 owner 또는 member 입니다 (받음: {profile})", "package_id": pid}
         try:
-            return set_package_active(pid, op == "activate", authority=HUMAN_AUTHORITY, profile="owner")
+            return set_package_active(pid, op == "activate", authority=HUMAN_AUTHORITY, profile=profile)
         except ValueError as exc:
             return {"success": False, "error": str(exc), "package_id": pid}
         except RuntimeError as exc:

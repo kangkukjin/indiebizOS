@@ -130,9 +130,14 @@ async def confirm(space: str, request: Request):
 
 
 def issue_confirmation(space, data, auth):
-    from record_commands import request_hash
+    """사람 확인 토큰 발급 — 공통 승인 토큰(approval_tokens, ② 권한 연결 둘째 소비자).
+    이 라우트가 사람 통로다(업무 화면의 CSRF 쿠키가 표면 증명). 토큰은 주체·`self:record`(apply)·**변경 내용 지문**
+    (record_commands.request_hash = 명령·정의 판본·입력·expected·사유)에 묶이고 1회·120초 — 승인 뒤 입력을 바꾸면 맞지 않는다.
+    소비는 record_commands.apply 가 같은 challenge 로 한 번 한다(옛 공간별 confirmations 표는 은퇴)."""
+    import approval_tokens
+    from record_commands import request_hash, confirmation_challenge
     from record_policy import roles, allowed
-    with transaction(space, write=True) as conn:
+    with transaction(space) as conn:
         member_roles = roles(conn, auth)
         defn, revision = definition(conn, data.get('definition_revision'))
         current, _ = definition(conn)
@@ -142,9 +147,7 @@ def issue_confirmation(space, data, auth):
             raise HTTPException(409, '현재 확인할 명령이 아닙니다.')
         if not allowed({k: v for k, v in command['allow'].items() if k not in {'where', 'deny_self'}}, auth, member_roles):
             raise HTTPException(403, '승인 권한이 없습니다.')
-        token = secrets.token_urlsafe(32)
-        conn.execute('INSERT INTO confirmations(token,subject,hash,expires) VALUES (?,?,?,?)',
-                     (token, auth.subject, request_hash(data), time.time() + 120))
+    token = approval_tokens.issue(confirmation_challenge(auth, request_hash(data)))['token']
     return {'success': True, 'confirmation': token}
 
 

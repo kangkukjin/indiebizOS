@@ -27,7 +27,6 @@ CREATE TABLE task_history(seq INTEGER PRIMARY KEY AUTOINCREMENT, commit_id TEXT 
 CREATE TABLE events(id TEXT PRIMARY KEY, commit_id TEXT, body TEXT, at REAL);
 CREATE TABLE deliveries(id TEXT PRIMARY KEY, kind TEXT, body TEXT, state TEXT, due REAL, lease_until REAL,
  attempt INTEGER NOT NULL DEFAULT 0, result TEXT, subject TEXT, definition_revision INTEGER);
-CREATE TABLE confirmations(token TEXT PRIMARY KEY, subject TEXT, hash TEXT, expires REAL, used INTEGER DEFAULT 0);
 CREATE TABLE artifacts(id TEXT PRIMARY KEY, hash TEXT, size INTEGER, filename TEXT, subject TEXT, at REAL);
 CREATE TABLE admin_log(seq INTEGER PRIMARY KEY AUTOINCREMENT, operation TEXT, subject TEXT, reason TEXT, body TEXT, at REAL);
 CREATE INDEX records_collection ON records(collection,archived);

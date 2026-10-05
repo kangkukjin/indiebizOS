@@ -404,7 +404,7 @@
       package:
         # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
         open_params: false
-        params: {op: string, package_id: string}
+        params: {op: string, package_id: string, profile: string}
         aliases:
           package_id: [name]   # _package_op 폴백 키
         # list op 가 목록을 낸다 — self:switch·self:trigger 와 같은 부류.
@@ -418,7 +418,7 @@
             deactivate: {principal: [owner], human_confirm: true}
         fixture: '[self:package]{op: "list"}'
         description: 도구 패키지 생애주기 관리 (op 분기). list=보유 묶음, info=상세, activate/deactivate=깨우기/잠재우기(주인 + 사람 승인 토큰), install/remove=제안만(호환), reload=런타임 캐시 초기화(POST /packages/reload 의 낱말 자리).
-        target_description: 'list/reload — (파라미터 없음). info/install/remove/activate/deactivate — package_id(필수). activate/deactivate 는 사람 승인이 없으면 approval_required{challenge} 로 거절되며, 승인 뒤 같은 요청을 approval 과 함께 다시 보낸다. reload 는 되살린 범위(reloaded)와 못 되살린 범위(not_reloaded — tool_*.py·backend 는 재기동)를 봉투로 말한다.'
+        target_description: 'list/reload — (파라미터 없음). info/install/remove/activate/deactivate — package_id(필수). activate/deactivate 는 profile(owner=주인 선택, member=회원 공개 허용; 기본 owner)을 받고, 사람 승인이 없으면 approval_required{challenge} 로 거절되며, 승인 뒤 같은 요청을 approval 과 함께 다시 보낸다. reload 는 되살린 범위(reloaded)와 못 되살린 범위(not_reloaded — tool_*.py·backend 는 재기동)를 봉투로 말한다.'
         group: system
         target_key: op
         router: system

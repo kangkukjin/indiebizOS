@@ -1249,18 +1249,18 @@
   "self:package": {
    "fields": {
     "description": "923f6b04d4cd",
-    "target_description": "2586135961c2",
+    "target_description": "76fb52aa0cc5",
     "implementation": "5f6c85358ab4",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "b2dc5c6192b2",
+    "params": "5c57ce719584",
     "aliases": "11b65feaf5b0",
     "ops": "6fe6fde54cf0",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
    "reviewed": "2026-10-05",
-   "examples": 31
+   "examples": 35
   },
   "self:patch": {
    "fields": {

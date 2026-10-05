@@ -66,8 +66,8 @@ def export_space(space, auth, root=None):
             target = sqlite3.connect(str(Path(tmp) / 'records.db'), timeout=2)
             try:
                 source.backup(target)
-                # 확인 증표는 사용 권한이므로 내보내지 않는다.
-                target.execute('DELETE FROM confirmations')
+                # 옛 확인 증표 표(공간별 confirmations)는 은퇴했다(② 공통 승인 토큰, 2026-10-05) — 남아 있던 공간이면 내보내기에서 뗀다.
+                target.execute('DROP TABLE IF EXISTS confirmations')
                 target.commit()
                 refs = target.execute('SELECT id,hash FROM artifacts').fetchall()
             finally:
@@ -129,7 +129,7 @@ def import_space(space, content, auth, root=None):
                 put_meta(conn, 'uuid', uid('space'))
                 put_meta(conn, 'recovery_required', True)
                 put_meta(conn, 'paused', True)
-                conn.execute('DELETE FROM confirmations')
+                conn.execute('DROP TABLE IF EXISTS confirmations')
                 conn.execute("UPDATE deliveries SET state='unknown',lease_until=0 WHERE kind='effect' AND state IN ('pending','leased')")
                 conn.execute("UPDATE deliveries SET state='blocked',lease_until=0 WHERE kind='command' AND state IN ('pending','leased')")
                 conn.execute('DELETE FROM memberships')

@@ -1964,6 +1964,27 @@
       ],
       "file": "workspace.md",
       "topic": "파일"
+    },
+    {
+      "id": "task_receipts",
+      "name": "긴 작업 접수증과 대기 — [self:task]",
+      "description": "긴 작업(위임·script 백그라운드·guestpc·신문 발행·강의 렌더·노트북 색인·시트 엔진)의 공통 접수증 task_ref 를 [self:task]{op: status|wait|cancel} 로 읽고 기다려 값으로 잇는다. 상태 어휘(timeout≠failed·cancel_requested≠cancelled·unknown), 새 긴 작업에 어댑터 다는 법.",
+      "keywords": [
+        "접수증",
+        "task_ref",
+        "긴 작업",
+        "백그라운드",
+        "대기",
+        "wait",
+        "작업 상태",
+        "취소",
+        "self:task",
+        "task",
+        "queued",
+        "accepted"
+      ],
+      "file": "task_receipts.md",
+      "topic": "워크플로·스크립트"
     }
   ]
 }

@@ -87,6 +87,7 @@
     "self:storage",
     "self:struct",
     "self:switch",
+    "self:task",
     "self:time",
     "self:trigger",
     "self:webapp",

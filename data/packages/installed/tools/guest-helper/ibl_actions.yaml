@@ -1,3 +1,6 @@
+task_kinds:
+  guestpc: "handler:task_status"   # ③ 접수증 어댑터 — [self:task] 가 적재(cancel = task_status_cancel)
+
 nodes:
   limbs:
     actions:

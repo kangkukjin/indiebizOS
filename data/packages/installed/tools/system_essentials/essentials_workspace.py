@@ -110,3 +110,21 @@ def op_restore(p): return _run(p, "restore")
 def op_close(p): return _run(p, "close")
 def op_capabilities(p): return _run(p, "capabilities")
 def op_recover(p): return _run(p, "recover")
+
+
+# ── ③ 접수증 어댑터(kind=sheet_op) — 시트 엔진 작업(apply/save 접수)의 투영. owner = 자료 id ──
+_SHEET_TASK_STATES = {"queued": "queued", "creating": "running", "completed": "succeeded", "committed": "succeeded",
+                      "failed": "failed", "interrupted": "interrupted"}
+
+
+def sheet_task_status(ref: dict) -> dict:
+    import task_receipts as T
+    doc = ref.get("owner")
+    if not doc:
+        return T.view(ref, T.UNKNOWN, error="sheet_op 접수증에는 owner(자료 id)가 있어야 합니다")
+    try:
+        st = service().sheets().operation_status(doc, ref["task_id"])
+    except KeyError:
+        return T.view(ref, T.UNKNOWN, error=f"시트 작업 {ref['task_id']} 을(를) 찾지 못했습니다")
+    state = _SHEET_TASK_STATES.get(st.get("status"), T.UNKNOWN)
+    return T.view(ref, state, result=st.get("result"), error=st.get("reason") if state != T.SUCCEEDED else None, raw=st)

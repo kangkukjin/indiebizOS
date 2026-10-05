@@ -1,5 +1,7 @@
 """위임·백그라운드 작업의 공통 접수증·상태 투영·동기 대기 (2026-10-05).
 
+접수증 통화는 이제 base 의 task_receipts(③ 작업 수명)가 정본이고 이 모듈은 그 `delegation` 종류의 어댑터다.
+
 왜 이 모듈인가 — 설계 정본 docs/ASYNC_DELEGATION_REPAIR_DESIGN_2026_10_05.md.
   ① HTTP background 접수가 "작업을 시작했습니다" 문구만 돌려주고 task_id 가 없어 런처가
      *새 메시지 번호*로 답을 추측했다(다른 작업의 답을 자기 답으로 회수할 수 있다).
@@ -27,6 +29,7 @@ from thread_context import (
 )
 
 SYSTEM_OWNER = "system"
+KIND = "delegation"   # 접수증 통화의 작업 종류(task_receipts)
 TERMINAL_STATES = frozenset({"succeeded", "failed", "cancelled"})
 # 동기 위임 기본 대기 상한(초). 옛 임시 에이전트 경로도 모델 턴 전체를 막았으므로 같은 규모.
 # 상한이 끝나도 작업을 실패·취소로 바꾸지 않고 같은 task 의 현재 상태를 돌려준다.
@@ -160,8 +163,8 @@ def task_view(owner: str, task_id: str, agent_id: str = None):
         parent_owner = SYSTEM_OWNER if row.get("requester_channel") == "system_ai" else owner
     terminal = state in TERMINAL_STATES
     return {
-        "task_ref": {"owner": owner, "task_id": task_id},
-        "parent_task_ref": {"owner": parent_owner, "task_id": parent_id} if parent_id else None,
+        "task_ref": {"kind": KIND, "owner": owner, "task_id": task_id},
+        "parent_task_ref": {"kind": KIND, "owner": parent_owner, "task_id": parent_id} if parent_id else None,
         "run_id": row.get("run_id"),
         "parent_run_id": row.get("parent_run_id") or None,
         "state": state,
@@ -196,15 +199,22 @@ def wait_for_task(owner: str, task_id: str, timeout: float, agent_id: str = None
 def accepted(owner: str, task_id: str, agent_id: str = None, **extra) -> dict:
     """HTTP background 와 위임이 같은 모양으로 돌려주는 접수증."""
     from episode_logger import trajectory_run_id
-    out = {
-        "success": True, "accepted": True,
-        "task_ref": {"owner": owner, "task_id": task_id},
-        "run_id": trajectory_run_id(task_id),
-        "state": "queued",
-        "status_url": status_url(owner, task_id, agent_id),
-    }
-    out.update(extra)
-    return out
+    import task_receipts
+    return task_receipts.receipt(KIND, task_id, owner=owner, status_url=status_url(owner, task_id, agent_id),
+                                 run_id=trajectory_run_id(task_id), **extra)
+
+
+def task_status(ref: dict) -> dict:
+    """③ 접수증 어댑터 — task_ref{kind: delegation, owner, task_id} → 공통 투영. routing_system.register_all 이 등록."""
+    import task_receipts as T
+    owner = ref.get("owner") or SYSTEM_OWNER
+    v = task_view(owner, ref["task_id"])
+    if v is None:
+        return T.view(ref, T.UNKNOWN, error=f"작업 {ref['task_id']} 을(를) {owner} 저장소에서 찾지 못했습니다")
+    state = v["state"] if v["state"] in T.STATES else T.RUNNING   # waiting_user 등 수리 대기 = 아직 살아 있음
+    progress = {"pending_children": v["pending_children"], "children": v["children"], "status": v["status"]}
+    return T.view(ref, state, progress=progress, result=v.get("result"), error=v.get("error"),
+                  status_url=v["status_url"], run_id=v.get("run_id"))
 
 
 def await_child(parent_owner: str, parent_task_id: str, child_owner: str, child_task_id: str, *,

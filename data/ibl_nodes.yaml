@@ -2762,7 +2762,7 @@ nodes:
         lands_on: hub
         path_audited:
           at: '2026-10-04'
-          impl: 558d23b01eb115a7
+          impl: d18914db9de2e881
         aliases:
           limit:
           - count
@@ -2878,7 +2878,7 @@ nodes:
         lands_on: hub
         path_audited:
           at: '2026-10-04'
-          impl: 558d23b01eb115a7
+          impl: d18914db9de2e881
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -3615,6 +3615,48 @@ nodes:
         keywords:
         - 다운로드
         - 파일받기
+      task:
+        open_params: false
+        params:
+          op: string
+          ref:
+          - object
+          - string
+          kind: string
+          task_id: string
+          owner: string
+          timeout: integer
+        returns: scalar
+        side_effect: true
+        exempt: 접수증(task_ref) 필요 — 고정 fixture 부적합
+        description: 긴 작업 접수증(task_ref)의 공통 관찰·제어 (op 분기). status=현재 상태, wait=끝날 때까지 유한 대기 뒤 result, cancel=취소 요청. 위임·script·guestpc·신문·강의 렌더·노트북·시트가 같은 접수증.
+        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). status: 상태 어휘(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)와 progress. wait: timeout(초, 기본 60·상한 240) 안에 끝나면 state·result, 초과면 timed_out(실패 아님 — 같은 ref 로 다시). cancel: 어댑터가 확인한 사실만(cancel_requested≠cancelled), 미지원 종류는 거절.'
+        group: system
+        target_key: op
+        router: system
+        func: task_op
+        implementation: _route_system task_op → backend/base/task_receipts(접수증 통화·상태 어휘·어댑터 등록부). 위임 어댑터는 routing_system.register_all, 패키지 종류는 각 ibl_actions.yaml 최상위 task_kinds.
+        ops:
+          default: status
+          returns:
+            cancel: effect
+          side_effect:
+            status: false
+            wait: false
+          exempt:
+            status: task_ref 필요 — 고정 fixture 부적합
+            wait: task_ref 필요 — 고정 fixture 부적합
+          values:
+            status: 현재 상태·진행·(종료면) 결과
+            wait: 유한 대기 뒤 결과 — 시간 초과는 실패가 아니다
+            cancel: 취소 요청 — 확인된 사실만 보고
+        keywords:
+        - 작업 상태
+        - 접수증
+        - 대기
+        - task
+        - wait
+        - 취소
       package:
         open_params: false
         params:
@@ -5752,7 +5794,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-05'
-          impl: 68d07688c73a6af4
+          impl: e6228e10872cb199
         target_key: path
         aliases:
           offset:
@@ -5765,7 +5807,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-05'
-          impl: 68d07688c73a6af4
+          impl: e6228e10872cb199
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5842,7 +5884,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-05'
-          impl: 68d07688c73a6af4
+          impl: e6228e10872cb199
         target_key: path
       list:
         callable_contract:
@@ -6630,7 +6672,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-05'
-          impl: 68d07688c73a6af4
+          impl: e6228e10872cb199
         pipe_in: true
         lands_on: body
         limb_op:

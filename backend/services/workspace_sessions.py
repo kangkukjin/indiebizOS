@@ -88,6 +88,15 @@ class Workspace:
 
     # ── 공통 머리 ──────────────────────────────────────────────────────────
     @staticmethod
+    def _sheet_receipt(row, result):
+        """③ 시트 엔진 접수 → 공통 접수증 필드(task_ref{kind: sheet_op, owner: 자료 id}). 접수는 완료가 아니다."""
+        import task_receipts
+        op_id = (result or {}).get("operation_id")
+        if not op_id:
+            return {}
+        return {"accepted": True, "state": task_receipts.QUEUED, "task_ref": task_receipts.ref("sheet_op", op_id, row["id"])}
+
+    @staticmethod
     def head(kind, row, **extra):
         out = {"resource": row["id"], "kind": kind, "revision": row.get("revision_id"),
                "title": row.get("title"), "path": row.get("source_uri") or row.get("workspace")}
@@ -313,7 +322,8 @@ class Workspace:
         result = app.apply(row["id"], proposal, **args, operation_id=key)
         self._mark_applied(app, row, key, proposal)
         if kind == "sheet":
-            return self.head(kind, row, proposal=proposal, **result, note="편집기에 전달된 접수입니다. 완료는 status 영수증으로 확인됩니다")
+            return self.head(kind, row, proposal=proposal, **result, **self._sheet_receipt(row, result),
+                             note="편집기에 전달된 접수입니다. 완료는 [self:task]{op: \"wait\", ref: $r.task_ref} 로 확인됩니다")
         return self.head(kind, row, proposal=proposal, applied=True, session_revision=result["session"]["session_revision"],
                          text=result.get("text"))
 
@@ -370,7 +380,8 @@ class Workspace:
         if kind == "sheet":
             key = operation_key("save", row["id"], {"revision": row["revision_id"]})
             receipt = app.request_save(row["id"], key, row["revision_id"])
-            return self.head(kind, row, **receipt, note="편집창 포획 뒤 저장이 접수됐습니다. 완료는 영수증으로 확인됩니다")
+            return self.head(kind, row, **receipt, **self._sheet_receipt(row, receipt),
+                             note="편집창 포획 뒤 저장이 접수됐습니다. 완료는 [self:task]{op: \"wait\", ref: $r.task_ref} 로 확인됩니다")
         args = self._session_args(kind, app, row, client, "save")
         key = operation_key("save", row["id"], {"revision": row["revision_id"], "expected": args["expected"]})
         result = app.save(row["id"], **args, operation_id=key, expected_revision=row["revision_id"])

@@ -102,8 +102,8 @@
 ## IBL 어휘 현황
 
 <!-- IBL_STATS:START -->
-**6노드 169 액션** — sense 43 · self 53 · limbs 14 · others 17 · engines 19 · table 23
-(op 분기 액션 79개 / op 분기 패키지 34개, 나머지 op 액션은 backend-native 라우팅)
+**6노드 170 액션** — sense 43 · self 54 · limbs 14 · others 17 · engines 19 · table 23
+(op 분기 액션 80개 / op 분기 패키지 34개, 나머지 op 액션은 backend-native 라우팅)
 <!-- IBL_STATS:END -->
 (위 수치는 빌드가 재생성 — 손 수정 금지)
 

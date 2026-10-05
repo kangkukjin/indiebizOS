@@ -1,3 +1,6 @@
+task_kinds:
+  notebook_source: "notebook_core:task_status"   # ③ 접수증 어댑터 — [self:task] 가 적재
+
 nodes:
   self:
     actions:

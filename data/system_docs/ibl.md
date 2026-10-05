@@ -257,6 +257,33 @@ reuse는 두 실행에서 이 범위의 충돌을 함께 검사한다. 선언·�
 `$error.partial`을 명시적으로 사용해도 `source_complete:false`는 남는다.
 권한 거절·취소·예산 고갈·프로토콜 미지원은 기본 catch/fallback으로 성공 처리하지 않는다.
 
+## 작업 접수증과 대기 — 긴 작업의 공통 관찰·제어 (2026-10-05, 설치 목록 ③)
+
+수명이 다른 셋을 섞지 않는다 — **목표**(`[self:goal]`, 라운드를 거듭하는 의지) / **작업**(한 실행: 위임 task·script job·guestpc 명령·
+신문 발행·강의 렌더·노트북 색인·시트 엔진 작업) / **티켓**(`ticket`·`/ibl/recover`, HTTP 연결 복구). 이 절은 둘째의 계약이다.
+
+**접수증(통화 1종)** — 긴 작업을 시작하는 낱말은 즉시 이 모양을 돌려준다. 접수는 완료가 아니다:
+`{success: true, accepted: true, task_ref: {kind, task_id[, owner]}, state: "queued"|"running"[, status_url], …}`.
+옛 키(`job_id`·`queued`·`status`)는 호환으로 남지만 **읽는 열쇠는 `task_ref`** 다. 종류(kind)는 몸의 명사 — `delegation`(owner=system|프로젝트)·
+`script`·`guestpc`·`newspaper`·`lecture_video`·`notebook_source`·`sheet_op`(owner=자료 id).
+
+**읽는 낱말 하나** — `[self:task]{op: status|wait|cancel, ref: $r.task_ref, timeout}`. 접수증 통째·`task_ref`·`"kind:id"` 문자열 전부 ref 로 받는다.
+- `status` → 투영 `{task_ref, state, terminal, progress?, result?(succeeded 일 때만), error?(failed·interrupted), …}`
+- `wait` → 종료 상태까지 유한 대기(기본 60초·상한 240초) 뒤 투영. **시간 초과는 실패가 아니다** — `timed_out: true` 와 현재 상태를 돌려주고
+  같은 ref 로 다시 기다린다. `$r = [self:task]{op: "wait", ref: $receipt.task_ref}` 뒤 `$r.result` 를 다음 낱말에 넘긴다 — 화면 진행률이 아니라
+  **값으로 잇는 것**이 이 낱말의 존재 이유다.
+- `cancel` → 어댑터가 확인한 사실만: 요청을 남겼으면 `cancel_requested`, 되돌렸으면 `cancelled`, 미지원 종류는 현재 상태와 함께 거절.
+
+**상태 어휘(한 벌)**: `queued · running · waiting_children · cancel_requested · succeeded · failed · cancelled · interrupted · unknown`.
+`timeout`(대기자의 사정)≠`failed`(작업의 사정) · `cancel_requested`≠`cancelled` · `interrupted`(실행자가 종료 기록 없이 사라짐)≠`failed` ·
+`unknown`(이 몸이 모르는 작업 — 유실·재기동·회수됨·남의 작업)은 실패로 꾸미지 않는다. 재접속(ticket 회수)≠재실행(새 task).
+
+**어댑터 뒤의 실행기** — 저장소는 각자 그대로(`backend/base/task_receipts` 는 통화·상태 어휘·등록부만). 등록은 두 길: 코드(몸의 명사 —
+위임은 `routing_system.register_all` 주입) / 데이터(사전 — 패키지 `ibl_actions.yaml` 최상위 `task_kinds: {kind: "모듈:함수"}`, 모르는 kind 를
+처음 만나면 설치 패키지에서 적재; `<함수>_cancel` 이 있으면 취소 어댑터). 잠든 패키지의 작업은 `unknown`.
+아직 접수증이 아닌 것(다음 차수): 사진·PC 스캔(HTTP 전용 동기 경로)·`scope: system` 위임(시스템 AI 가 작업 id 를 접수 시점에 만들지 않음)·
+표면 `await:` 선언(접수증이면 진행률·취소·완료 재조회 — 렌더러 2곳의 폴링 코드 은퇴는 그때).
+
 ## 실행 증거와 값 전송
 
 `value`는 사람이 읽는 값, `value_wire:{protocol:"ibl-value/1",data:...}`는 모든 컨테이너를 태그한 손실 없는 값이다.
@@ -637,7 +664,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 - **지표어(indexical) 감각** (2026-07-22): `sense:here`(현재위치)·`sense:see`(카메라)·`sense:listen`(마이크)는 phone_only 를 벗었다 — 뜻은 몸 독립이고("지금 나 어디?") *어떻게 답하나*만 몸마다 다르다(폰=GPS/카메라, 데스크톱=`desktop_av` 프로브). 하드웨어가 없으면 거짓말 대신 `no_hardware` 로 정직하게 통화를 돌려준다. `sense:phone`(알림 피드)은 폰이 보내는 입력이라 별개.
 - **파일 듣기** (2026-09-10): `[sense:listen]{path}`는 파일 전사, `{path, question}`은 소리 내용 분석, `{path, op:"inspect"}`는 원본 신호 검사다. path 생략 시 기존 마이크 동작. 파일에 마이크는 불필요하며 실행·감독은 같은 구간 분석 증거를 재사용한다. [오디오 듣기 가이드](../guides/audio_listen.md).
 <!-- RUNS_ON:START -->
-- 현 분포: `anywhere` 119 · `pc_only` 49 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
+- 현 분포: `anywhere` 120 · `pc_only` 49 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
 <!-- RUNS_ON:END -->
 
 **분산 IBL — 액션이 실행 단위(폰↔맥 연합)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션을 거부하지 않고 **맥에 단건 위임**(`_forward_to_mac` ↔ 맥→폰 `forward_to_phone` 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로 **혼합 code도 액션별로 쪼개져** 일부는 폰·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. **맥→폰 도달(2026-06-17 라이브)**=`INDIEBIZ_PHONE_URL`+`INDIEBIZ_PHONE_TOKEN`: 폰 `phone_api` 미들웨어가 비localhost 요청에 `X-Phone-Token`을 검증(hmac.compare_digest, localhost=WebView 자기접속은 통과), 맥 `forward_to_phone`가 그 토큰을 자동 동봉. 폰 백엔드는 **앱 UI 없이 상주**(`AgentForegroundService`가 `App.ensureBackend()` 기동·START_STICKY·부팅 재기동)하고 **토큰이 있을 때만 `0.0.0.0`(LAN) 바인드**(노출과 인증을 한 묶음 — 토큰 없으면 `127.0.0.1` 전용). 빌린 산출 파일은 `_pull_remote_artifacts`로 양방향 회수(맥←phone_only·폰←mac_only). 보안: 양방향 게이트(맥→폰=토큰/폰→맥=HTTPS 터널+런처 비번), 인터넷 비노출(폰=LAN 한정), caveat=맥→폰 LAN 평문 HTTP(가정 WPA2 저위험·공용 WiFi 금지). 폰=몸(센서·신원·렌더) 자급·머리(연산)는 맥 연합 — 클라이언트-서버 아니라 주권 피어들의 협력(미래 피어=같은 뼈대+허가 층).
@@ -654,7 +681,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 ### 핵심 노드 분류
 
 <!-- IBL_STATS:START -->
-총 **169 액션** — sense 43 · self 53 · limbs 14 · others 17 · engines 19 · table 23
+총 **170 액션** — sense 43 · self 54 · limbs 14 · others 17 · engines 19 · table 23
 <!-- IBL_STATS:END -->
 (위 줄은 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 

@@ -719,6 +719,9 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
     elif func_name == "package_op":
         return _package_op(dict(params))
 
+    elif func_name == "task_op":
+        return _task_op(dict(params))
+
     # 도구 의존성 런타임 자동설치 — self:install_lib {package}
     elif func_name == "install_lib":
         return _install_lib(dict(params))
@@ -871,6 +874,26 @@ def invalidate_runtime_caches() -> list:
         except Exception as e:  # noqa: BLE001
             failed.append(f"{name}({type(e).__name__})")
     return failed
+
+
+def _task_op(params: dict) -> dict:
+    """[self:task]{op: status|wait|cancel, ref, timeout} — 긴 작업 접수증(task_ref)의 공통 관찰·제어(③ 작업 수명).
+    위임·script 백그라운드·guestpc·신문 발행·강의 렌더·노트북 색인·시트 엔진이 같은 접수증을 돌려주고 여기서 읽는다.
+    실행기는 어댑터 뒤(task_receipts 등록부) — 이 낱말은 저장소를 갖지 않는다."""
+    import task_receipts as T
+    op = (params.get("op") or "status").strip()
+    r = T.normalize_ref(params.get("ref"), kind=params.get("kind"), task_id=params.get("task_id"), owner=params.get("owner"))
+    if r is None:
+        return {"success": False, "error": "ref 가 필요합니다 — 접수증의 task_ref 를 그대로 넣으세요. 예: [self:task]{op: \"wait\", ref: $r.task_ref}",
+                "known_kinds": T.registered()}
+    if op == "status":
+        v = T.status(r)
+        return {"success": v["state"] != T.UNKNOWN, **v}
+    if op == "wait":
+        return T.wait(r, params.get("timeout", 60))
+    if op == "cancel":
+        return T.cancel(r)
+    return {"success": False, "error": f"알 수 없는 op: {op} (status/wait/cancel)"}
 
 
 def _package_op(params: dict) -> dict:

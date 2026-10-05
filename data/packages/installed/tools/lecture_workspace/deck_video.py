@@ -441,3 +441,19 @@ def _child_main() -> int:
 
 if __name__ == "__main__":
     sys.exit(_child_main())
+
+
+# ── ③ 접수증 어댑터(kind=lecture_video) — lecture_workspace/ibl_actions.yaml task_kinds 가 가리킨다 ──
+TASK_KIND = "lecture_video"
+_TASK_STATES = {"building": "running", "done": "succeeded", "error": "failed", "interrupted": "interrupted"}
+
+
+def task_status(ref: dict) -> dict:
+    import task_receipts as T
+    st = status(ref["task_id"])   # 죽은 렌더는 여기서 interrupted 로 확정된다
+    if not st:
+        return T.view(ref, T.UNKNOWN, error=f"강의 '{ref['task_id']}' 의 렌더 상태 기록이 없습니다")
+    state = _TASK_STATES.get(st.get("status"), T.UNKNOWN)
+    progress = {k: st.get(k) for k in ("stage", "index", "total", "detail", "alive", "age_sec") if k in st}
+    return T.view(ref, state, progress=progress or None, result=st if state == T.SUCCEEDED else None,
+                  error=st.get("error") if state in (T.FAILED, T.INTERRUPTED) else None, raw=st)

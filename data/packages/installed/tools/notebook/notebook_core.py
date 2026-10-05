@@ -623,9 +623,12 @@ def add_source(name: str, path: str = "", text: str = "", title: str = "") -> Di
                              daemon=True, name=f"nb-index-{source_id}")
         _bg_threads[source_id] = t
         t.start()
-        return {"success": True, "queued": True, "source_id": source_id, "title": src_title,
-                "chunks": len(chunks), "chars": char_count,
-                "message": f"'{src_title}' 색인을 백그라운드로 시작했습니다({len(chunks)}청크). op:sources로 상태 확인."}
+        import task_receipts
+        # ③ 공통 접수증 — [self:task]{op: wait, ref: $r.task_ref} 가 읽는다(op:sources 의 status 열도 그대로).
+        return task_receipts.receipt(TASK_KIND, source_id, state=task_receipts.RUNNING, queued=True, source_id=source_id,
+                                     title=src_title, chunks=len(chunks), chars=char_count,
+                                     message=f"'{src_title}' 색인을 백그라운드로 시작했습니다({len(chunks)}청크). "
+                                             f"[self:task]{{op: \"wait\", ref: $r.task_ref}} 또는 op:sources 로 상태 확인.")
 
     _index_chunks_job(nb["id"], source_id, src_title, chunks)
     st = _source_status(source_id)
@@ -901,3 +904,23 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
             break
     return {"success": True, "notebook": nb["name"], "note": nb.get("note", ""),
             "results": results, "search_type": stype, "source_filter": _src or None}
+
+
+# ── ③ 접수증 어댑터(kind=notebook_source) — notebook/ibl_actions.yaml task_kinds 가 가리킨다 ──
+TASK_KIND = "notebook_source"
+_TASK_STATES = {"indexing": "running", "ready": "succeeded", "error": "failed"}
+
+
+def task_status(ref: dict) -> dict:
+    import task_receipts as T
+    try:
+        sid = int(ref["task_id"])
+    except (TypeError, ValueError):
+        return T.view(ref, T.UNKNOWN, error="notebook_source 의 task_id 는 소스 번호입니다")
+    st = _source_status(sid)
+    if not st:
+        return T.view(ref, T.UNKNOWN, error=f"소스 {sid} 가 없습니다(삭제됐거나 다른 몸)")
+    state = _TASK_STATES.get(st.get("status"), T.UNKNOWN)
+    keep = {k: st.get(k) for k in ("id", "title", "kind", "chunk_count", "char_count", "status")}
+    return T.view(ref, state, result=keep if state == T.SUCCEEDED else None,
+                  error=st.get("error") if state == T.FAILED else None, raw=keep)

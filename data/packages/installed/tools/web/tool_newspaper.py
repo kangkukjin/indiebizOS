@@ -206,6 +206,30 @@ def _build_markdown(title: str, date_label: str, sections: list) -> str:
 
 STATE_FILE = "newspaper_publish_state.json"   # 백그라운드 발행 진행 상태(뷰어·상태 버튼이 읽음)
 STALE_BUILDING_SEC = 300                       # building 이 5분 넘게 남아 있으면 죽은 발행으로 간주
+TASK_KIND = "newspaper"                        # ③ 접수증 종류 — web/ibl_actions.yaml task_kinds 가 task_status 를 가리킨다
+
+
+def task_status(ref: dict) -> dict:
+    """③ 접수증 어댑터 — 상태 파일(한 발행만 기록) → 공통 투영. 다른 발행이 덮었으면 unknown."""
+    import task_receipts as T
+    st = _read_state(_outputs_dir())
+    recorded = st.get("task_id") or st.get("started_at")
+    if not st or recorded != ref["task_id"]:
+        return T.view(ref, T.UNKNOWN, error="이 발행의 상태 기록이 없습니다(다른 발행이 덮었거나 기록 없음)")
+    status = st.get("status")
+    if status == "building":
+        try:
+            age = (datetime.now() - datetime.fromisoformat(st.get("started_at", ""))).total_seconds()
+        except Exception:
+            age = None
+        if age is not None and age > STALE_BUILDING_SEC:
+            return T.view(ref, T.INTERRUPTED, error=f"발행이 {int(age)}초째 building 으로 멈춤 — 발행 스레드가 사라진 것으로 판정", raw=st)
+        return T.view(ref, T.RUNNING, progress={"started_at": st.get("started_at"), "age_sec": round(age) if age is not None else None}, raw=st)
+    if status == "done":
+        return T.view(ref, T.SUCCEEDED, result={"message": st.get("message", ""), "finished_at": st.get("finished_at")}, raw=st)
+    if status == "error":
+        return T.view(ref, T.FAILED, error=st.get("message") or "발행 실패", raw=st)
+    return T.view(ref, T.UNKNOWN, error=f"알 수 없는 상태 '{status}'", raw=st)
 
 
 def _read_state(out: Path) -> dict:
@@ -243,7 +267,9 @@ def publish_newspaper(tool_input: dict, gnews_batch) -> dict:
         except Exception:
             pass
 
-    _write_state(out, {"status": "building", "started_at": datetime.now().isoformat()})
+    started_at = datetime.now().isoformat()
+    task_id = started_at   # 접수증의 task_id = 발행 시작 시각(상태 파일이 한 발행만 기록하므로 이것이 식별자)
+    _write_state(out, {"status": "building", "started_at": started_at, "task_id": task_id})
 
     import threading
 
@@ -252,17 +278,20 @@ def publish_newspaper(tool_input: dict, gnews_batch) -> dict:
             result = _publish_sync(tool_input, gnews_batch)
             _write_state(out, {
                 "status": "done" if result.get("success") else "error",
-                "started_at": datetime.now().isoformat(),
+                "started_at": started_at, "task_id": task_id,
                 "finished_at": datetime.now().isoformat(),
                 "message": result.get("message") or result.get("error", ""),
             })
         except Exception as e:
-            _write_state(out, {"status": "error", "finished_at": datetime.now().isoformat(),
-                               "message": f"발행 실패: {e}"})
+            _write_state(out, {"status": "error", "started_at": started_at, "task_id": task_id,
+                               "finished_at": datetime.now().isoformat(), "message": f"발행 실패: {e}"})
 
     threading.Thread(target=_bg, daemon=True).start()  # cc-ok: 발행 잡 — 상태 파일로 관측(사멸 시 상태 버튼이 미완을 드러냄)
-    return {"success": True, "queued": True,
-            "message": "신문 발행을 시작했습니다 — 약 1분 뒤 신문 탭을 다시 열면 새 판이 보입니다. (발행 상태 버튼으로 진행 확인)"}
+    import task_receipts
+    # ③ 공통 접수증 — [self:task]{op: wait, ref: $r.task_ref, timeout: 120} 가 읽는다.
+    return task_receipts.receipt(TASK_KIND, task_id, state=task_receipts.RUNNING, queued=True,
+                                 message="신문 발행을 시작했습니다 — 약 1분 뒤 신문 탭을 다시 열면 새 판이 보입니다. "
+                                         "([self:task]{op: \"wait\", ref: $r.task_ref, timeout: 120} 또는 발행 상태 버튼으로 진행 확인)")
 
 
 def _publish_sync(tool_input: dict, gnews_batch) -> dict:

@@ -1417,10 +1417,13 @@ def _deck_video(tool_input: dict) -> str:
     except Exception as e:
         deck_video.write_state(lecture_id, {"status": "error", "error": str(e)})
         return _err(f"렌더 프로세스 기동 실패: {e}")
+    import task_receipts
+    # ③ 공통 접수증 — [self:task]{op: wait, ref: $r.task_ref, timeout: 240} 가 읽는다(check:true·video_state.json 도 그대로).
     return _ok({
-        "status": "queued",
+        "status": "queued", "accepted": True, "state": task_receipts.QUEUED,
+        "task_ref": task_receipts.ref(deck_video.TASK_KIND, lecture_id),
         "note": "별도 프로세스로 렌더 시작 — 백엔드가 리로드돼도 계속됩니다. "
-                "진행·결과는 check:true 또는 video_state.json.",
+                "진행·결과는 [self:task]{op: \"wait\", ref: $r.task_ref} 또는 check:true 또는 video_state.json.",
         "state_file": str(sp), **spawned,
     })
 

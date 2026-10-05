@@ -1,3 +1,6 @@
+task_kinds:
+  lecture_video: "deck_video:task_status"   # ③ 접수증 어댑터 — [self:task] 가 적재
+
 node: self
 actions:
   lecture:

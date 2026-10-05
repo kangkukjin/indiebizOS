@@ -1,3 +1,8 @@
+# ③ 작업 접수증 어댑터(task_receipts) — kind: "모듈:함수". [self:task] 가 모르는 kind 를 만나면 여기서 적재한다.
+task_kinds:
+  script: "script_ops:task_status"
+  sheet_op: "essentials_workspace:sheet_task_status"
+
 nodes:
   self:
     actions:
@@ -132,7 +137,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-05", impl: "68d07688c73a6af4"}
+        path_audited: {at: "2026-10-05", impl: "e6228e10872cb199"}  # 재감사 2026-10-05(③): script_ops 에 task_status 어댑터·접수증 task_ref 추가 — 회원 경로 불변
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -144,7 +149,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-05", impl: "68d07688c73a6af4"}
+        path_audited: {at: "2026-10-05", impl: "e6228e10872cb199"}  # 재감사 2026-10-05(③): script_ops 에 task_status 어댑터·접수증 task_ref 추가 — 회원 경로 불변
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -222,7 +227,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-05", impl: "68d07688c73a6af4"}
+        path_audited: {at: "2026-10-05", impl: "e6228e10872cb199"}  # 재감사 2026-10-05(③): script_ops 에 task_status 어댑터·접수증 task_ref 추가 — 회원 경로 불변
         target_key: path
       list:
         callable_contract:
@@ -908,7 +913,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-05", impl: "68d07688c73a6af4"}
+        path_audited: {at: "2026-10-05", impl: "e6228e10872cb199"}  # 재감사 2026-10-05(③): script_ops 에 task_status 어댑터·접수증 task_ref 추가 — 회원 경로 불변
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

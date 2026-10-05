@@ -700,9 +700,12 @@ def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp
         return {"success": False, "job_id": job_id, "error": job["error"]}
     # 이후 상태 파일의 유일한 작성자는 러너다. 빠른 완료를 부모의 starting으로 덮지 않는다.
     _update_state(sid, last_job=job_id)
-    return {"success": True, "job_id": job_id, "id": sid, "status": "running", "log": str(log_path),
-            **({"interpreter_note": interp_note} if interp_note else {}),
-            "message": f"백그라운드 시작 — [self:script]{{op: \"status\", job_id: \"{job_id}\", wait: 60}} 로 확인(폴링 대신 wait)."}
+    import task_receipts
+    # ③ 공통 접수증 — task_ref{kind: script} 를 [self:task]{op: wait} 가 읽는다. 옛 키(job_id·status)는 호환으로 남긴다.
+    return task_receipts.receipt(TASK_KIND, job_id, state=task_receipts.QUEUED, job_id=job_id, id=sid, status="running",
+                                 log=str(log_path), **({"interpreter_note": interp_note} if interp_note else {}),
+                                 message=(f"백그라운드 시작 — [self:task]{{op: \"wait\", ref: $r.task_ref, timeout: 60}} 또는 "
+                                          f"[self:script]{{op: \"status\", job_id: \"{job_id}\", wait: 60}} 로 확인(폴링 대신 wait)."))
 
 
 def op_status(tool_input):
@@ -780,3 +783,21 @@ def op_status(tool_input):
                     if k in r:
                         res[k] = r[k]
     return res
+
+
+# ── ③ 접수증 어댑터(kind=script) — system_essentials/ibl_actions.yaml 최상위 task_kinds 가 가리킨다 ──
+TASK_KIND = "script"
+_TASK_STATES = {"starting": "queued", "running": "running", "done": "succeeded", "failed": "failed", "lost": "interrupted"}
+
+
+def task_status(ref: dict) -> dict:
+    """백그라운드 작업 json(op_status 와 같은 읽기·lost 판정) → 공통 투영. 결과는 done 일 때만."""
+    import task_receipts as T
+    res = op_status({"job_id": ref["task_id"], "wait": 0})
+    rows = res.get("items") or []
+    if not rows:
+        return T.view(ref, T.UNKNOWN, error=res.get("error") or f"job_id 없음: {ref['task_id']}")
+    row = rows[0]
+    state = _TASK_STATES.get(row.get("status"), T.UNKNOWN)
+    return T.view(ref, state, progress={"lines": row.get("progress") or [], "log": row.get("log")},
+                  result=row.get("result"), error=row.get("error"), job=row)

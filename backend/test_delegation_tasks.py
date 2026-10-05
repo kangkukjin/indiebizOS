@@ -138,7 +138,7 @@ def test_cross_async_returns_receipt_not_completion(world):
     result = _delegate_unified({"scope": "cross", "agent_id": f"{PROJECT}/{AGENT_ID}", "message": "조사"},
                                world.project_path)
     assert result["accepted"] is True and result["state"] == "queued"
-    assert result["child_task_id"] and result["task_ref"] == {"owner": PROJECT, "task_id": result["child_task_id"]}
+    assert result["child_task_id"] and result["task_ref"] == {"kind": "delegation", "owner": PROJECT, "task_id": result["child_task_id"]}   # ③ 접수증 통화: kind 동반
     assert "접수" in result["message"] and tc.did_call_agent() is True
     child = world.db.get_task(result["child_task_id"])
     assert child["parent_task_id"] == "parent2" and child["requester_channel"] == "system_ai"
@@ -318,7 +318,7 @@ def test_system_ai_background_receipt_carries_task_and_records_failure(world, mo
     view = api_system_ai.get_system_ai_task(receipt.task_id)
     assert view["state"] == "failed" and "모델 호출 실패" in view["error"]
     assert "sk-abcdefghijklmnopqrstuvwxyz0123" not in view["error"]   # 비밀 마스킹
-    assert view["task_ref"] == {"owner": "system", "task_id": receipt.task_id}
+    assert view["task_ref"] == {"kind": "delegation", "owner": "system", "task_id": receipt.task_id}
     # 옛 클라이언트(메시지 폴링)도 실패를 본다
     rows = memory.get_recent_conversations(limit=5)
     assert any(r["role"] == "assistant" and r["content"].startswith("[실패]") for r in rows)

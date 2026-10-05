@@ -401,6 +401,43 @@
         keywords:
         - 다운로드
         - 파일받기
+      task:
+        # ③ 작업 수명의 공통 관찰·제어(2026-10-05, docs/APP_COMMON_FOUNDATION_GAPS §1-③). 긴 작업의 접수증(task_ref)을 읽는
+        # 유일한 낱말 — 위임·script 백그라운드·guestpc·신문 발행·강의 렌더·노트북 색인·시트 엔진이 같은 통화를 돌려준다.
+        # 저장소 없음(backend/base/task_receipts 어댑터 등록부). 목표(self:goal)는 다른 수명이라 섞지 않는다.
+        open_params: false
+        params: {op: string, ref: [object, string], kind: string, task_id: string, owner: string, timeout: integer}
+        returns: scalar
+        side_effect: true        # cancel 보유 — 통화(returns)와 안전은 다른 축
+        exempt: '접수증(task_ref) 필요 — 고정 fixture 부적합'
+        description: 긴 작업 접수증(task_ref)의 공통 관찰·제어 (op 분기). status=현재 상태, wait=끝날 때까지 유한 대기 뒤 result, cancel=취소 요청. 위임·script·guestpc·신문·강의 렌더·노트북·시트가 같은 접수증.
+        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). status: 상태 어휘(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)와 progress. wait: timeout(초, 기본 60·상한 240) 안에 끝나면 state·result, 초과면 timed_out(실패 아님 — 같은 ref 로 다시). cancel: 어댑터가 확인한 사실만(cancel_requested≠cancelled), 미지원 종류는 거절.'
+        group: system
+        target_key: op
+        router: system
+        func: task_op
+        implementation: _route_system task_op → backend/base/task_receipts(접수증 통화·상태 어휘·어댑터 등록부). 위임 어댑터는 routing_system.register_all, 패키지 종류는 각 ibl_actions.yaml 최상위 task_kinds.
+        ops:
+          default: status
+          returns:
+            cancel: effect
+          side_effect:
+            status: false
+            wait: false
+          exempt:
+            status: 'task_ref 필요 — 고정 fixture 부적합'
+            wait: 'task_ref 필요 — 고정 fixture 부적합'
+          values:
+            status: 현재 상태·진행·(종료면) 결과
+            wait: 유한 대기 뒤 결과 — 시간 초과는 실패가 아니다
+            cancel: 취소 요청 — 확인된 사실만 보고
+        keywords:
+        - 작업 상태
+        - 접수증
+        - 대기
+        - task
+        - wait
+        - 취소
       package:
         # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
         open_params: false

@@ -63,6 +63,7 @@
     "base/supervision_bus",
     "base/supervision_hook",
     "base/supervision_watch",
+    "base/task_receipts",
     "base/thread_context",
     "base/thumbnails",
     "base/tool_completion",
@@ -549,8 +550,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 474,
-    "engine": 448,
+    "total": 475,
+    "engine": 449,
     "blocklist": 26
   }
 }

@@ -1461,6 +1461,21 @@
    "reviewed": "2026-09-29",
    "examples": 11
   },
+  "self:task": {
+   "fields": {
+    "description": "8022d8516550",
+    "target_description": "dd6eec36f2d8",
+    "implementation": "22e22b80a762",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "params": "20267f3e8310",
+    "ops": "5d8afb80e081",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-10-05",
+   "examples": 0
+  },
   "self:time": {
    "fields": {
     "description": "6bb3dca9035c",

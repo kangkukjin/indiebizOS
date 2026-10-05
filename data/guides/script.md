@@ -269,6 +269,8 @@ last_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 
   stdout 결과는 진행 줄에 섞지 않는다. 긴 스크립트는 진행을 stderr 에 쓰면 된다(stdout 은 통화 자리).
   실사고: 55분짜리 나레이션 생성이 26라운드 내내 'running' 만 돌려줬다 — 로그가 끝난 뒤에야 생겼기 때문.
 - wait 상한 240초(초과 요청은 신고 후 상한). 더 긴 작업은 status 를 다시 부르거나 트리거에 맡긴다.
+- **접수증(2026-10-05 ③)**: background 반환에 `task_ref: {kind: "script", task_id}` 가 실린다 — 다른 긴 작업(위임·신문·렌더)과 같은 통화라
+  `$r = [self:task]{op: "wait", ref: $job.task_ref, timeout: 120}` 로 기다리고 `$r.result` 를 잇는다(`[self:script]{op:"status", job_id}` 도 그대로). 상세 ibl.md '작업 접수증과 대기'.
 
 
 ## 입출력 타입을 선언하는 스크립트 계약 (선택)

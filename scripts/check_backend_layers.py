@@ -46,7 +46,7 @@ LAYERS = {
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
         "member_runtime", "episode_logger", "ibl_edition", "ibl_code_corpus", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys",
         "ai_candidates", "imap_reader", "logging_utils", "mime_compat", "model_resolver", "model_context", "nip17", "nip44",
-        "phone_jobs", "principal", "approval_tokens", "action_requires", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
+        "phone_jobs", "principal", "approval_tokens", "action_requires", "task_receipts", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
         "selfbuild_gate", "shell_shadow_gate", "supervision_bus", "supervision_watch", "supervision_hook",
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
         "file_script", "script_process", "script_workspace",

@@ -1,3 +1,6 @@
+task_kinds:
+  newspaper: "tool_newspaper:task_status"   # ③ 접수증 어댑터 — [self:task] 가 적재
+
 nodes:
   sense:
     actions:
@@ -76,7 +79,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-10-04", impl: "558d23b01eb115a7"}
+        path_audited: {at: "2026-10-04", impl: "d18914db9de2e881"}  # 재감사 2026-10-05(③): tool_newspaper 에 task_status 어댑터·접수증 task_ref — 회원 경로 불변
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -160,7 +163,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-10-04", impl: "558d23b01eb115a7"}
+        path_audited: {at: "2026-10-04", impl: "d18914db9de2e881"}  # 재감사 2026-10-05(③): tool_newspaper 에 task_status 어댑터·접수증 task_ref — 회원 경로 불변
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'

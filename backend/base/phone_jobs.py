@@ -132,16 +132,35 @@ def get_partial(job_id: str) -> Optional[dict]:
         return dict(entry["partial"]) if entry else None
 
 
+_CONSUMED: dict = {}   # job_id -> 회수(pop) 시각 — 회수된 작업을 '아직 실행 중'으로 오판하지 않게(접수증 관찰)
+
+
+def peek_result(job_id: str) -> Optional[dict]:
+    """결과를 **비파괴**로 본다 — {"result": …} / {"consumed": True}(이미 wait_result 가 회수) / None. 접수증 관찰
+    (task_receipts guestpc 어댑터)이 쓴다: status 는 여러 번 읽히므로 pop 하지 않는다(회수 pop 은 wait_result 그대로)."""
+    with _LOCK:
+        entry = _RESULTS.get(job_id)
+        if entry:
+            return {"result": entry.get("result")}
+        ts = _CONSUMED.get(job_id)
+        if ts is not None and time.time() - ts <= RESULT_TTL:
+            return {"consumed": True}
+        return None
+
+
 def wait_result(job_id: str, timeout: float = 20.0) -> Any:
     """작업 결과를 동기 대기. 시간 내 미도착이면 None(호출부가 queued 로 응답)."""
     with _LOCK:
         if job_id in _RESULTS:
+            _CONSUMED[job_id] = time.time()
             return _RESULTS.pop(job_id).get("result")
         ev = _RESULT_EVENTS.setdefault(job_id, threading.Event())
     hit = ev.wait(timeout=timeout)
     with _LOCK:
         _RESULT_EVENTS.pop(job_id, None)
         entry = _RESULTS.pop(job_id, None)
+        if hit and entry:
+            _CONSUMED[job_id] = time.time()
     return entry.get("result") if (hit and entry) else None
 
 

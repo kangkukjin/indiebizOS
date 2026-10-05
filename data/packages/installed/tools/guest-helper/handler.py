@@ -325,16 +325,21 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
 
     # 백그라운드 모드(설치·빌드 등 오래 걸리는 셸) — 즉시 job_id 반환, 결과는 op=result 로.
     if bool(tool_input.get("background")) and op == "shell":
-        return {"success": True, "op": "shell", "background": True,
-                "limb": device_id, "limb_name": alias, "job_id": job_id,
-                "message": (f"손발 '{alias}' 에서 백그라운드로 실행 중입니다. 결과는 "
-                            f'[limbs:guestpc]{{op: "result", job: "{job_id}"}} 로 확인하세요.')}
+        import task_receipts
+        # ③ 공통 접수증 — [self:task]{op: wait, ref: $r.task_ref} 가 읽는다. 옛 op=result(1회 pop)도 그대로.
+        return task_receipts.receipt(TASK_KIND, job_id, state=task_receipts.QUEUED, op="shell", background=True,
+                                     limb=device_id, limb_name=alias, job_id=job_id,
+                                     message=(f"손발 '{alias}' 에서 백그라운드로 실행 중입니다. 결과는 "
+                                              f'[self:task]{{op: "wait", ref: $r.task_ref}} 또는 '
+                                              f'[limbs:guestpc]{{op: "result", job: "{job_id}"}} 로 확인하세요.'))
 
     result = phone_jobs.wait_result(job_id, timeout=wait)
     if result is None:
         # ★실패 단정 금지: 명령은 그 PC 에서 계속 실행 중일 수 있다(오프라인과 구별 불가).
         #   같은 명령 재전송은 이중 실행 위험 — job_id 로 결과를 회수하는 게 정도(正道).
-        return {"success": False, "queued": True, "job_id": job_id,
+        import task_receipts
+        return {"success": False, "queued": True, "accepted": True, "job_id": job_id,
+                "task_ref": task_receipts.ref(TASK_KIND, job_id), "state": task_receipts.RUNNING,
                 "message": (f"손발 '{alias}' 의 응답을 {wait:.0f}초 안에 못 받았습니다 — 명령이 오래 걸리는 "
                             f"중이거나(설치·빌드 등) 손발이 오프라인입니다. ★같은 명령을 다시 보내지 말고 "
                             f'[limbs:guestpc]{{op: "result", job: "{job_id}"}} 로 결과를 확인하세요. '
@@ -730,3 +735,34 @@ def execute(tool_input: dict, context) -> dict:
                     "error": f"알 수 없는 op '{op}'. 사용 가능: {'/'.join(_OP_DISPATCHERS[tool_name])}"}
         return fn(tool_input)
     raise ValueError(f"Unknown tool: {tool_name}")
+
+
+# ── ③ 접수증 어댑터(kind=guestpc) — phone_jobs 를 비파괴로 읽는다(결과 pop 은 op=result 그대로) ──
+TASK_KIND = "guestpc"
+
+
+def task_status(ref: dict) -> dict:
+    import phone_jobs
+    import task_receipts as T
+    jid = ref["task_id"]
+    got = phone_jobs.peek_result(jid)
+    if got is not None:
+        if got.get("consumed"):
+            return T.view(ref, T.SUCCEEDED, result=None, note="결과는 이미 op=result 로 회수(pop)됐습니다 — 회수한 쪽이 들고 있습니다")
+        return T.view(ref, T.SUCCEEDED, result=got["result"])   # succeeded = 손발이 결과를 회신했다(내용의 성패는 result 안)
+    partial = phone_jobs.get_partial(jid)
+    if partial:
+        return T.view(ref, T.RUNNING, progress=partial)
+    if phone_jobs.owner_of(jid):
+        return T.view(ref, T.RUNNING, note="결과·경과 없음 — 기기가 실행 중이거나 아직 가져가지 않았습니다")
+    return T.view(ref, T.UNKNOWN, error="모르는 작업 — 결과가 이미 회수(pop)됐거나 보존 시간(5분)·재기동으로 유실")
+
+
+def task_status_cancel(ref: dict) -> dict:
+    """기기가 아직 가져가지 않은 작업만 되돌린다 — 실행된 것으로 추정하지 않는다."""
+    import phone_jobs
+    import task_receipts as T
+    if phone_jobs.cancel_pending(ref["task_id"]):
+        return T.view(ref, T.CANCELLED)
+    cur = task_status(ref)
+    return {**cur, "error": "기기가 이미 가져간(또는 모르는) 작업은 취소할 수 없습니다"}

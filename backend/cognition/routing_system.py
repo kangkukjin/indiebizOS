@@ -360,3 +360,7 @@ def register_all() -> None:
         # ibl 층은 인지층을 모른다(의존 역전, 2026-08-27).
         "oneshot_ai_call": _cap_oneshot_ai_call,
     })
+    # ③ 작업 접수증(task_receipts): 위임 작업의 관찰 어댑터 — 코드(몸의 명사) 길. 패키지 종류는 yaml task_kinds 로.
+    import task_receipts
+    from delegation_tasks import KIND as _DELEGATION_KIND, task_status as _delegation_task_status
+    task_receipts.register(_DELEGATION_KIND, _delegation_task_status)

@@ -1,0 +1,7 @@
+.............                                                            [100%]
+============================= slowest 15 durations =============================
+2.38s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[author]
+0.58s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[key1]
+
+(13 durations < 0.1s hidden.)
+13 passed in 3.16s

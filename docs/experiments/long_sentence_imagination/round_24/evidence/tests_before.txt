@@ -1,0 +1,97 @@
+.......FF..F.                                                            [100%]
+=================================== FAILURES ===================================
+________ test_groupby_sparse_rows_do_not_materialize_missing_cells[24] _________
+
+data_ops = <module 'data_ops_contract' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+count = 24
+
+    @pytest.mark.parametrize('count', [24, 120])
+    def test_groupby_sparse_rows_do_not_materialize_missing_cells(data_ops, count):
+        reads = 0
+    
+        class Row(dict):
+            def get(self, *args):
+                nonlocal reads
+                reads += 1
+                return super().get(*args)
+    
+        rows = [Row(team='A', score=i + 1, **{f'note_{i}': 'optional'})
+                for i in range(count)]
+        result = data_ops._op_groupby({'items': rows}, {
+            'by': 'team', 'agg': {'count': ['count'], 'total': ['sum', 'score']}})
+        assert result['items'] == [{'team': 'A', 'count': count,
+                                    'total': count * (count + 1) // 2}]
+        # Only observed fields and requested aggregates justify cell reads.
+        # A rectangular intermediate would take O(rows * distinct_columns).
+>       assert reads < 20 * count, reads
+E       AssertionError: 1248
+E       assert 1248 < (20 * 24)
+
+backend/test_data_ops.py:87: AssertionError
+________ test_groupby_sparse_rows_do_not_materialize_missing_cells[120] ________
+
+data_ops = <module 'data_ops_contract' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+count = 120
+
+    @pytest.mark.parametrize('count', [24, 120])
+    def test_groupby_sparse_rows_do_not_materialize_missing_cells(data_ops, count):
+        reads = 0
+    
+        class Row(dict):
+            def get(self, *args):
+                nonlocal reads
+                reads += 1
+                return super().get(*args)
+    
+        rows = [Row(team='A', score=i + 1, **{f'note_{i}': 'optional'})
+                for i in range(count)]
+        result = data_ops._op_groupby({'items': rows}, {
+            'by': 'team', 'agg': {'count': ['count'], 'total': ['sum', 'score']}})
+        assert result['items'] == [{'team': 'A', 'count': count,
+                                    'total': count * (count + 1) // 2}]
+        # Only observed fields and requested aggregates justify cell reads.
+        # A rectangular intermediate would take O(rows * distinct_columns).
+>       assert reads < 20 * count, reads
+E       AssertionError: 29280
+E       assert 29280 < (20 * 120)
+
+backend/test_data_ops.py:87: AssertionError
+___________ test_groupby_keeps_source_precedence_and_metadata[both] ____________
+
+data_ops = <module 'data_ops_contract' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+kind = 'both'
+
+    @pytest.mark.parametrize('kind', ['items', 'table', 'both', 'domain'])
+    def test_groupby_keeps_source_precedence_and_metadata(data_ops, kind):
+        rows = [{'team': 'A', 'score': 2}, {'team': 'B', 'score': 3}]
+        table = {'columns': ['team', 'score'], 'rows': [['T', 9]]}
+        payload = {'items': rows, 'total': 20}
+        if kind == 'table':
+            payload = {'table': table, 'total': 20}
+        elif kind == 'both':
+            payload['table'] = table
+        elif kind == 'domain':
+            payload = {'items': [{'title': 'preview'}], 'data': rows}
+        result = data_ops._op_groupby(payload, {'by': 'team', 'agg': {'total_score': ['sum', 'score']}})
+        if kind == 'table':
+            assert result['table'] == {'columns': ['team', 'total_score'], 'rows': [['T', 9]]}
+        else:
+>           assert result['items'] == [{'team': 'A', 'total_score': 2},
+                                       {'team': 'B', 'total_score': 3}]
+E           AssertionError: assert [{'team': 'T'...al_score': 9}] == [{'team': 'A'...al_score': 3}]
+E             
+E             At index 0 diff: {'team': 'T', 'total_score': 9} != {'team': 'A', 'total_score': 2}
+E             Right contains one more item: {'team': 'B', 'total_score': 3}
+E             Use -v to get more diff
+
+backend/test_data_ops.py:105: AssertionError
+============================= slowest 15 durations =============================
+2.33s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[author]
+0.60s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[key1]
+
+(13 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_data_ops.py::test_groupby_sparse_rows_do_not_materialize_missing_cells[24]
+FAILED backend/test_data_ops.py::test_groupby_sparse_rows_do_not_materialize_missing_cells[120]
+FAILED backend/test_data_ops.py::test_groupby_keeps_source_precedence_and_metadata[both]
+3 failed, 10 passed in 3.17s

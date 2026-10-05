@@ -1,0 +1,23 @@
+{
+  "time": "2026-10-06T01:25:13.168103+09:00",
+  "runs": [
+    {
+      "label": "before_run",
+      "run_id": {
+        "run_id": "38a01b6bc3214fa8837a4125a6d4068c"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "variant_before_run",
+      "run_id": {
+        "run_id": "c88ed60a237b4417ad84cbb3b35f0701"
+      },
+      "status": "completed",
+      "success": true
+    }
+  ],
+  "pending": [],
+  "diagnostic_end": "2026-10-06T01:26:05.018426+09:00"
+}

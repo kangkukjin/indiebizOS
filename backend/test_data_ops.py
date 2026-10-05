@@ -66,5 +66,47 @@ def test_flatten_sparse_nested_keep_and_scalar_children(data_ops):
                                {'value': 7, 'meta.id_2': 'A'}, {'other': 2}]
 
 
+@pytest.mark.parametrize('count', [24, 120])
+def test_groupby_sparse_rows_do_not_materialize_missing_cells(data_ops, count):
+    reads = 0
+
+    class Row(dict):
+        def get(self, *args):
+            nonlocal reads
+            reads += 1
+            return super().get(*args)
+
+    rows = [Row(team='A', score=i + 1, **{f'note_{i}': 'optional'})
+            for i in range(count)]
+    result = data_ops._op_groupby({'items': rows}, {
+        'by': 'team', 'agg': {'count': ['count'], 'total': ['sum', 'score']}})
+    assert result['items'] == [{'team': 'A', 'count': count,
+                                'total': count * (count + 1) // 2}]
+    # Only observed fields and requested aggregates justify cell reads.
+    # A rectangular intermediate would take O(rows * distinct_columns).
+    assert reads < 20 * count, reads
+
+
+@pytest.mark.parametrize('kind', ['items', 'table', 'both', 'domain'])
+def test_groupby_keeps_source_precedence_and_metadata(data_ops, kind):
+    rows = [{'team': 'A', 'score': 2}, {'team': 'B', 'score': 3}]
+    table = {'columns': ['team', 'score'], 'rows': [['T', 9]]}
+    payload = {'items': rows, 'total': 20}
+    if kind == 'table':
+        payload = {'table': table, 'total': 20}
+    elif kind == 'both':
+        payload['table'] = table
+    elif kind == 'domain':
+        payload = {'items': [{'title': 'preview'}], 'data': rows}
+    result = data_ops._op_groupby(payload, {'by': 'team', 'agg': {'total_score': ['sum', 'score']}})
+    if kind == 'table':
+        assert result['table'] == {'columns': ['team', 'total_score'], 'rows': [['T', 9]]}
+    else:
+        assert result['items'] == [{'team': 'A', 'total_score': 2},
+                                   {'team': 'B', 'total_score': 3}]
+    if kind in ('items', 'table', 'both'):
+        assert result['total'] == (1 if kind == 'table' else 2)
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

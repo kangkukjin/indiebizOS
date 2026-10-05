@@ -1,0 +1,52 @@
+........................................................................ [  5%]
+........................................................................ [ 11%]
+........................................................................ [ 17%]
+........................................................................ [ 23%]
+........................................................................ [ 29%]
+........................................................................ [ 35%]
+........................................................................ [ 41%]
+........................................................................ [ 47%]
+........................................................................ [ 53%]
+........................................................................ [ 59%]
+........................................................................ [ 65%]
+........................................................................ [ 70%]
+........................................................................ [ 76%]
+........................................................................ [ 82%]
+........................................................................ [ 88%]
+........................................................................ [ 94%]
+..................................................................       [100%]
+=============================== warnings summary ===============================
+backend/test_episode4064_repairs.py::test_mcp_combined_call_keeps_repeat_guard
+  /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: IncompleteFieldDefinitionWarning: Field 'lifespan' has an incomplete definition: its annotation contains an unresolved forward reference, so settings sources may fail to correctly resolve its value. Call `model_rebuild()` on the model where the field is defined, once all the referenced types are defined.
+    warnings.warn(
+
+backend/test_render_xlsx_contract.py::test_recalc_gate_pdf_has_computed_value
+backend/test_render_xlsx_contract.py::test_recalc_gate_pdf_has_computed_value
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+backend/test_render_xlsx_contract.py::test_recalc_gate_pdf_has_computed_value
+backend/test_render_xlsx_contract.py::test_recalc_gate_pdf_has_computed_value
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+backend/test_render_xlsx_contract.py::test_recalc_gate_pdf_has_computed_value
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+20.25s call     backend/test_repair_staging.py::test_battery_under_pytest
+5.81s call     backend/test_imagination_round58_repairs.py::test_builder_guards_every_unary_flow_without_action_name_list
+2.25s call     backend/test_value_judgment_gate.py::test_gate_passes_on_current_tree
+1.80s call     backend/test_long_sentence_round6_repairs.py::test_original_normalization_with_explicit_budget
+1.60s call     backend/test_repair_bundle_recovery.py::test_code_and_package_declarations_apply_as_one_recoverable_bundle
+1.59s call     backend/test_field_path_single_owner.py::test_gate_passes_and_has_teeth
+1.49s call     backend/test_long_sentence_round3_repairs.py::test_full_report_and_six_source_reuse[False]
+1.45s call     backend/test_long_sentence_round3_repairs.py::test_full_report_and_six_source_reuse[True]
+1.27s call     backend/test_episode4064_repairs.py::test_check_with_describe_never_executes_and_failure_is_preserved
+1.27s call     backend/test_memory_final_retention.py::test_pipeline_queues_only_after_final_delivery[complete]
+1.26s setup    backend/test_render_xlsx_contract.py::test_recalc_gate_pdf_has_computed_value
+1.16s call     backend/test_ai_boundary_contract.py::test_static_contract_and_inspection_use_dictionary_metadata
+1.16s call     backend/test_repair_bundle_recovery.py::test_package_write_edit_copy_move_delete_use_staging
+1.14s call     backend/test_idiom_expansion_2026_09_09.py::test_selected_idioms_exposed_in_map_and_leaf_actions_with_scope_filter[True]
+1.12s call     backend/test_render_xlsx_contract.py::test_korean_glyphs_not_silently_lost
+1218 passed, 1 skipped, 6 warnings in 75.22s (0:01:15)
+<sys>:0: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

@@ -1,0 +1,14 @@
+#!ibl edition=2
+[def:점수정리]($rows) {
+  $groups=$rows >> [table:groupby]{by:"team",agg:{count:["count"],total:["sum","score"],average:["avg","score"]}}
+  $ranked=$groups.items >> [table:sort]{by:"total",descending:true} >> [table:select]{columns:["team","count","total","average"]}
+  $total=sum(map($rows,($r)=>$r.score))
+  assert sum(map($ranked,($r)=>$r.total))==$total, "합계 불일치"
+  assert sum(map($ranked,($r)=>$r.count))==len($rows), "응답 누락"
+  return {ranking:$ranked,total:$total,count:len($rows)}
+}
+$read=[self:read]{path:$source}
+$report=[fn:점수정리]{rows:$read.data.items}
+$write=[self:write]{path:$out+".json",content:json($report)}
+$back=[self:read]{path:$write.path}
+return {report:$report,verified:$back.data==$report,path:$write.path}

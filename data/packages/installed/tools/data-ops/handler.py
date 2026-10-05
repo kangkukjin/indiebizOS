@@ -678,6 +678,13 @@ def _rows_for_field(obj, field):
     키가 "필드 없음" 으로 죽으므로, 판정은 키 집합 단위여야 한다.
     """
     fields = [str(f) for f in ([field] if isinstance(field, str) else list(field or [])) if f]
+    # 정본 items가 요구 필드를 이미 갖고 있으면 표시용 table로 왕복하지 않는다.
+    # 희소 행을 직사각형으로 채우면 O(행수 × 전체 열수)의 불필요한 셀이 생긴다.
+    direct, _ = _get_items(obj)
+    if direct is not None:
+        rows = [row for row in direct if isinstance(row, dict)]
+        if rows and (not fields or all(any(f in row for row in rows) for f in fields)):
+            return rows
     cands = []  # [(키, list-of-dicts)]
     if isinstance(obj, list):
         cands.append(("(root)", [x for x in obj if isinstance(x, dict)]))
@@ -760,7 +767,9 @@ def _op_groupby(prev, params):
     if missing:
         # 없는 by 를 조용히 받으면 전 행이 null 한 그룹으로 뭉개진다(⑧′ 실측: [[null, 83]])
         return _field_missing_error("groupby", missing, dicts)
-    _, env = _get_table(prev)
+    _, env = _get_items(prev)
+    if env is None:
+        _, env = _get_table(prev)
     env = env or {}
     # agg 모양 사전·정규화는 형제 모듈(agg_spec.py, 1500줄 규칙 분리 2026-08-27)
     specs, auto_named, _agg_err = _agg_spec.normalize_agg(

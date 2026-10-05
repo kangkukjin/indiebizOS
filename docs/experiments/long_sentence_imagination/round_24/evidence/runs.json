@@ -1,0 +1,195 @@
+{
+  "variant_after_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "97cb1467b3714ec59ff2c9f4410c32dd"
+    },
+    "usage": {
+      "steps": 110,
+      "rows": 0,
+      "elapsed_ms": 417
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "ranking": [],
+        "total": 0,
+        "count": 0
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_24회차/variant_report.json"
+    },
+    "http_seconds": 0.447310374584049
+  },
+  "before_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "38a01b6bc3214fa8837a4125a6d4068c"
+    },
+    "usage": {
+      "steps": 230,
+      "rows": 0,
+      "elapsed_ms": 366
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "ranking": [
+          {
+            "team": "C",
+            "count": 8,
+            "total": 108,
+            "average": 13.5
+          },
+          {
+            "team": "B",
+            "count": 8,
+            "total": 100,
+            "average": 12.5
+          },
+          {
+            "team": "A",
+            "count": 8,
+            "total": 92,
+            "average": 11.5
+          }
+        ],
+        "total": 300,
+        "count": 24
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_24회차/main_report.json"
+    },
+    "http_seconds": 0.39699083426967263
+  },
+  "reverse_after_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "ee47994e0f5b4e68855abd2d4820dcc9"
+    },
+    "usage": {
+      "steps": 230,
+      "rows": 0,
+      "elapsed_ms": 404
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "ranking": [
+          {
+            "team": "C",
+            "count": 8,
+            "total": 108,
+            "average": 13.5
+          },
+          {
+            "team": "B",
+            "count": 8,
+            "total": 100,
+            "average": 12.5
+          },
+          {
+            "team": "A",
+            "count": 8,
+            "total": 92,
+            "average": 11.5
+          }
+        ],
+        "total": 300,
+        "count": 24
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_24회차/reverse_report.json"
+    },
+    "http_seconds": 0.4334195419214666
+  },
+  "check_run": {
+    "success": null,
+    "ok": true,
+    "status": "incomplete",
+    "run_status": null,
+    "resume": null,
+    "usage": null,
+    "diagnostic": null,
+    "value": null,
+    "http_seconds": 0.3134490419179201
+  },
+  "variant_before_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "c88ed60a237b4417ad84cbb3b35f0701"
+    },
+    "usage": {
+      "steps": 110,
+      "rows": 0,
+      "elapsed_ms": 334
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "ranking": [],
+        "total": 0,
+        "count": 0
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_24회차/variant_report.json"
+    },
+    "http_seconds": 0.3623029999434948
+  },
+  "after_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "996389593fb4466a8a9cc8ee51077245"
+    },
+    "usage": {
+      "steps": 230,
+      "rows": 0,
+      "elapsed_ms": 427
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "ranking": [
+          {
+            "team": "C",
+            "count": 8,
+            "total": 108,
+            "average": 13.5
+          },
+          {
+            "team": "B",
+            "count": 8,
+            "total": 100,
+            "average": 12.5
+          },
+          {
+            "team": "A",
+            "count": 8,
+            "total": 92,
+            "average": 11.5
+          }
+        ],
+        "total": 300,
+        "count": 24
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_24회차/main_report.json"
+    },
+    "http_seconds": 0.46432270808145404
+  }
+}

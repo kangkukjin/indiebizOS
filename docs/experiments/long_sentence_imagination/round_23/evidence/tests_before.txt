@@ -1,0 +1,142 @@
+..FFFFF                                                                  [100%]
+=================================== FAILURES ===================================
+___ test_flatten_parent_columns_are_stable_for_sparse_children[False-False] ____
+
+data_ops = <module 'data_ops_contract' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+reverse = False, reserved = False
+
+    @pytest.mark.parametrize('reverse', [False, True])
+    @pytest.mark.parametrize('reserved', [False, True])
+    def test_flatten_parent_columns_are_stable_for_sparse_children(data_ops, reverse, reserved):
+        import copy
+        rows = [{'shipment': 'S1', 'lines': [{'sku': 'A', 'shipment': 'vendor', 'qty': 2},
+                                           {'sku': 'B', 'qty': 3}]},
+                {'shipment': 'S2', 'lines': [{'sku': 'C', 'qty': 4}]}]
+        if reserved:
+            rows[1]['lines'][0]['shipment_2'] = 'original'
+        if reverse:
+            rows.reverse()
+        original = copy.deepcopy(rows)
+        result = data_ops._op_flatten({'items': rows}, {'field': 'lines', 'keep': ['shipment']})
+        assert result['success']
+        parent = 'shipment_3' if reserved else 'shipment_2'
+        expected = [{**child, parent: row['shipment']} for row in rows for child in row['lines']]
+>       assert result['items'] == expected
+E       AssertionError: assert [{'sku': 'A',...pment': 'S2'}] == [{'sku': 'A',...ent_2': 'S2'}]
+E         
+E         At index 1 diff: {'sku': 'B', 'qty': 3, 'shipment': 'S1'} != {'sku': 'B', 'qty': 3, 'shipment_2': 'S1'}
+E         Use -v to get more diff
+
+backend/test_data_ops.py:57: AssertionError
+____ test_flatten_parent_columns_are_stable_for_sparse_children[False-True] ____
+
+data_ops = <module 'data_ops_contract' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+reverse = True, reserved = False
+
+    @pytest.mark.parametrize('reverse', [False, True])
+    @pytest.mark.parametrize('reserved', [False, True])
+    def test_flatten_parent_columns_are_stable_for_sparse_children(data_ops, reverse, reserved):
+        import copy
+        rows = [{'shipment': 'S1', 'lines': [{'sku': 'A', 'shipment': 'vendor', 'qty': 2},
+                                           {'sku': 'B', 'qty': 3}]},
+                {'shipment': 'S2', 'lines': [{'sku': 'C', 'qty': 4}]}]
+        if reserved:
+            rows[1]['lines'][0]['shipment_2'] = 'original'
+        if reverse:
+            rows.reverse()
+        original = copy.deepcopy(rows)
+        result = data_ops._op_flatten({'items': rows}, {'field': 'lines', 'keep': ['shipment']})
+        assert result['success']
+        parent = 'shipment_3' if reserved else 'shipment_2'
+        expected = [{**child, parent: row['shipment']} for row in rows for child in row['lines']]
+>       assert result['items'] == expected
+E       AssertionError: assert [{'sku': 'C',...pment': 'S1'}] == [{'sku': 'C',...ent_2': 'S1'}]
+E         
+E         At index 0 diff: {'sku': 'C', 'qty': 4, 'shipment': 'S2'} != {'sku': 'C', 'qty': 4, 'shipment_2': 'S2'}
+E         Use -v to get more diff
+
+backend/test_data_ops.py:57: AssertionError
+____ test_flatten_parent_columns_are_stable_for_sparse_children[True-False] ____
+
+data_ops = <module 'data_ops_contract' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+reverse = False, reserved = True
+
+    @pytest.mark.parametrize('reverse', [False, True])
+    @pytest.mark.parametrize('reserved', [False, True])
+    def test_flatten_parent_columns_are_stable_for_sparse_children(data_ops, reverse, reserved):
+        import copy
+        rows = [{'shipment': 'S1', 'lines': [{'sku': 'A', 'shipment': 'vendor', 'qty': 2},
+                                           {'sku': 'B', 'qty': 3}]},
+                {'shipment': 'S2', 'lines': [{'sku': 'C', 'qty': 4}]}]
+        if reserved:
+            rows[1]['lines'][0]['shipment_2'] = 'original'
+        if reverse:
+            rows.reverse()
+        original = copy.deepcopy(rows)
+        result = data_ops._op_flatten({'items': rows}, {'field': 'lines', 'keep': ['shipment']})
+        assert result['success']
+        parent = 'shipment_3' if reserved else 'shipment_2'
+        expected = [{**child, parent: row['shipment']} for row in rows for child in row['lines']]
+>       assert result['items'] == expected
+E       AssertionError: assert [{'sku': 'A',...pment': 'S2'}] == [{'sku': 'A',...ent_3': 'S2'}]
+E         
+E         At index 0 diff: {'sku': 'A', 'shipment': 'vendor', 'qty': 2, 'shipment_2': 'S1'} != {'sku': 'A', 'shipment': 'vendor', 'qty': 2, 'shipment_3': 'S1'}
+E         Use -v to get more diff
+
+backend/test_data_ops.py:57: AssertionError
+____ test_flatten_parent_columns_are_stable_for_sparse_children[True-True] _____
+
+data_ops = <module 'data_ops_contract' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+reverse = True, reserved = True
+
+    @pytest.mark.parametrize('reverse', [False, True])
+    @pytest.mark.parametrize('reserved', [False, True])
+    def test_flatten_parent_columns_are_stable_for_sparse_children(data_ops, reverse, reserved):
+        import copy
+        rows = [{'shipment': 'S1', 'lines': [{'sku': 'A', 'shipment': 'vendor', 'qty': 2},
+                                           {'sku': 'B', 'qty': 3}]},
+                {'shipment': 'S2', 'lines': [{'sku': 'C', 'qty': 4}]}]
+        if reserved:
+            rows[1]['lines'][0]['shipment_2'] = 'original'
+        if reverse:
+            rows.reverse()
+        original = copy.deepcopy(rows)
+        result = data_ops._op_flatten({'items': rows}, {'field': 'lines', 'keep': ['shipment']})
+        assert result['success']
+        parent = 'shipment_3' if reserved else 'shipment_2'
+        expected = [{**child, parent: row['shipment']} for row in rows for child in row['lines']]
+>       assert result['items'] == expected
+E       AssertionError: assert [{'sku': 'C',...pment': 'S1'}] == [{'sku': 'C',...ent_3': 'S1'}]
+E         
+E         At index 0 diff: {'sku': 'C', 'qty': 4, 'shipment_2': 'original', 'shipment': 'S2'} != {'sku': 'C', 'qty': 4, 'shipment_2': 'original', 'shipment_3': 'S2'}
+E         Use -v to get more diff
+
+backend/test_data_ops.py:57: AssertionError
+_____________ test_flatten_sparse_nested_keep_and_scalar_children ______________
+
+data_ops = <module 'data_ops_contract' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+
+    def test_flatten_sparse_nested_keep_and_scalar_children(data_ops):
+        rows = [{'meta': {'id': 'A'}, 'lines': [{'meta.id': 'child'}, 7]},
+                {'meta': {}, 'lines': [{'other': 2}]}]
+        result = data_ops._op_flatten({'items': rows}, {'field': 'lines', 'keep': ['meta.id']})
+>       assert result['items'] == [{'meta.id': 'child', 'meta.id_2': 'A'},
+                                   {'value': 7, 'meta.id_2': 'A'}, {'other': 2}]
+E       AssertionError: assert [{'meta.id': ... {'other': 2}] == [{'meta.id': ... {'other': 2}]
+E         
+E         At index 1 diff: {'value': 7, 'meta.id': 'A'} != {'value': 7, 'meta.id_2': 'A'}
+E         Use -v to get more diff
+
+backend/test_data_ops.py:65: AssertionError
+============================= slowest 15 durations =============================
+2.34s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[author]
+0.59s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[key1]
+
+(13 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_data_ops.py::test_flatten_parent_columns_are_stable_for_sparse_children[False-False]
+FAILED backend/test_data_ops.py::test_flatten_parent_columns_are_stable_for_sparse_children[False-True]
+FAILED backend/test_data_ops.py::test_flatten_parent_columns_are_stable_for_sparse_children[True-False]
+FAILED backend/test_data_ops.py::test_flatten_parent_columns_are_stable_for_sparse_children[True-True]
+FAILED backend/test_data_ops.py::test_flatten_sparse_nested_keep_and_scalar_children
+5 failed, 2 passed in 3.13s

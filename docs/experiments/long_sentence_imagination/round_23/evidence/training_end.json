@@ -1,0 +1,22 @@
+{
+  "time": "2026-10-06T01:12:10.323474+09:00",
+  "runs": [
+    {
+      "label": "before_run",
+      "run_id": {
+        "run_id": "080fab83701b4473aee1294db10e67ff"
+      },
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "variant_before_run",
+      "run_id": {
+        "run_id": "ced3f72a7ec3417a901c007419379a75"
+      },
+      "status": "interrupted",
+      "success": false
+    }
+  ],
+  "pending": []
+}

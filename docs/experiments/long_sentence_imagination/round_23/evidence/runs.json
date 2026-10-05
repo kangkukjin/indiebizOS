@@ -1,0 +1,336 @@
+{
+  "variant_after_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "87a3272604bb4628bf83e04d3e244262"
+    },
+    "usage": {
+      "steps": 99,
+      "rows": 0,
+      "elapsed_ms": 560
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "rows": [
+          {
+            "sku": "A",
+            "shipment": "vendor-A",
+            "qty": 2,
+            "shipment_3": "S1"
+          },
+          {
+            "sku": "B",
+            "qty": 3,
+            "shipment_3": "S1"
+          },
+          {
+            "sku": "C",
+            "qty": 4,
+            "shipment_3": "S2"
+          },
+          {
+            "sku": "D",
+            "shipment": "vendor-D",
+            "qty": 5,
+            "shipment_3": "S2"
+          },
+          {
+            "sku": "E",
+            "shipment_2": "reserved",
+            "qty": 6,
+            "shipment_3": "S4"
+          }
+        ],
+        "summary": [
+          {
+            "shipment_3": "S1",
+            "quantity": 5,
+            "count": 2
+          },
+          {
+            "shipment_3": "S2",
+            "quantity": 9,
+            "count": 2
+          },
+          {
+            "shipment_3": "S4",
+            "quantity": 6,
+            "count": 1
+          }
+        ],
+        "total": 20,
+        "count": 5
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_23회차/variant_report.json"
+    },
+    "http_seconds": 0.5933295842260122
+  },
+  "before_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "080fab83701b4473aee1294db10e67ff"
+    },
+    "usage": {
+      "steps": 95,
+      "rows": 0,
+      "elapsed_ms": 501
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "rows": [
+          {
+            "sku": "A",
+            "shipment": "vendor-A",
+            "qty": 2,
+            "shipment_2": "S1"
+          },
+          {
+            "sku": "B",
+            "qty": 3,
+            "shipment": "S1"
+          },
+          {
+            "sku": "C",
+            "qty": 4,
+            "shipment": "S2"
+          },
+          {
+            "sku": "D",
+            "shipment": "vendor-D",
+            "qty": 5,
+            "shipment_2": "S2"
+          }
+        ],
+        "summary": [
+          {
+            "shipment_2": "S1",
+            "quantity": 2,
+            "count": 1
+          },
+          {
+            "shipment_2": null,
+            "quantity": 7,
+            "count": 2
+          },
+          {
+            "shipment_2": "S2",
+            "quantity": 5,
+            "count": 1
+          }
+        ],
+        "total": 14,
+        "count": 4
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_23회차/main_report.json"
+    },
+    "http_seconds": 0.5312427086755633
+  },
+  "reverse_after_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "a41b555d885142d4978b4e731f979844"
+    },
+    "usage": {
+      "steps": 95,
+      "rows": 0,
+      "elapsed_ms": 428
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "rows": [
+          {
+            "sku": "C",
+            "qty": 4,
+            "shipment_2": "S2"
+          },
+          {
+            "sku": "D",
+            "shipment": "vendor-D",
+            "qty": 5,
+            "shipment_2": "S2"
+          },
+          {
+            "sku": "A",
+            "shipment": "vendor-A",
+            "qty": 2,
+            "shipment_2": "S1"
+          },
+          {
+            "sku": "B",
+            "qty": 3,
+            "shipment_2": "S1"
+          }
+        ],
+        "summary": [
+          {
+            "shipment_2": "S2",
+            "quantity": 9,
+            "count": 2
+          },
+          {
+            "shipment_2": "S1",
+            "quantity": 5,
+            "count": 2
+          }
+        ],
+        "total": 14,
+        "count": 4
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_23회차/reverse_report.json"
+    },
+    "http_seconds": 0.45584637485444546
+  },
+  "check_run": {
+    "success": null,
+    "ok": true,
+    "status": "incomplete",
+    "run_status": null,
+    "resume": null,
+    "usage": null,
+    "diagnostic": null,
+    "value": null,
+    "http_seconds": 0.30700666597113013
+  },
+  "variant_before_run": {
+    "success": false,
+    "ok": null,
+    "status": null,
+    "run_status": "interrupted",
+    "resume": {
+      "run_id": "ced3f72a7ec3417a901c007419379a75"
+    },
+    "usage": {
+      "steps": 35,
+      "rows": 0,
+      "elapsed_ms": 338
+    },
+    "diagnostic": {
+      "code": "TOOL",
+      "kind": "runtime",
+      "message": "groupby: 'shipment_3' 필드가 어느 행에도 없습니다. 사용 가능한 필드: ['sku', 'shipment', 'qty', 'shipment_2']",
+      "frames": [
+        {
+          "function": "출하대조",
+          "call": {
+            "source_hash": "7727ebf08a88b5ac812118001bdccf491ebc685b39035dacca062ed745aa0c15",
+            "start": 373,
+            "end": 427,
+            "line": 8,
+            "column": 9
+          },
+          "definition": {
+            "source_hash": "7727ebf08a88b5ac812118001bdccf491ebc685b39035dacca062ed745aa0c15",
+            "start": 16,
+            "end": 325,
+            "line": 2,
+            "column": 1
+          }
+        }
+      ],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        42
+      ],
+      "details": {
+        "error_code": "MISSING_FIELDS",
+        "input_contract": {
+          "operation": "groupby",
+          "missing_fields": [
+            "shipment_3"
+          ],
+          "available_fields": [
+            "sku",
+            "shipment",
+            "qty",
+            "shipment_2"
+          ]
+        }
+      },
+      "source_span": {
+        "source_hash": "7727ebf08a88b5ac812118001bdccf491ebc685b39035dacca062ed745aa0c15",
+        "start": 136,
+        "end": 208,
+        "line": 4,
+        "column": 27
+      }
+    },
+    "value": null,
+    "http_seconds": 0.3673799172975123
+  },
+  "after_run": {
+    "success": true,
+    "ok": null,
+    "status": null,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "92ee537328b74536b97e54d465312665"
+    },
+    "usage": {
+      "steps": 95,
+      "rows": 0,
+      "elapsed_ms": 437
+    },
+    "diagnostic": null,
+    "value": {
+      "report": {
+        "rows": [
+          {
+            "sku": "A",
+            "shipment": "vendor-A",
+            "qty": 2,
+            "shipment_2": "S1"
+          },
+          {
+            "sku": "B",
+            "qty": 3,
+            "shipment_2": "S1"
+          },
+          {
+            "sku": "C",
+            "qty": 4,
+            "shipment_2": "S2"
+          },
+          {
+            "sku": "D",
+            "shipment": "vendor-D",
+            "qty": 5,
+            "shipment_2": "S2"
+          }
+        ],
+        "summary": [
+          {
+            "shipment_2": "S1",
+            "quantity": 5,
+            "count": 2
+          },
+          {
+            "shipment_2": "S2",
+            "quantity": 9,
+            "count": 2
+          }
+        ],
+        "total": 14,
+        "count": 4
+      },
+      "verified": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_23회차/main_report.json"
+    },
+    "http_seconds": 0.4674841249361634
+  }
+}

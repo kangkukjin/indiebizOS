@@ -1104,7 +1104,7 @@ def _op_flatten(prev, params):
     """행 속 중첩 목록 필드를 펼쳐(unnest) 행들로.
 
     field 경로의 값이 목록이면 그 원소들이 새 행이 되고, {items: [...]} 봉투면
-    items 로 자동 승격. keep=[부모 필드/점 경로]는 같은 이름으로 각 새 행에 승계(충돌 시 _2 접미 —
+    items 로 자동 승격. keep=[부모 필드/점 경로]는 같은 이름으로 각 새 행에 승계(전체 자식 열에 대한 충돌 시 _2부터 빈 접미사 —
     침묵 오선택 방지). 빈 목록은 정상 0행이며, 목록 아닌 행의 생략은
     rows_dropped/skipped_rows/skipped_row_indices로 신고한다. 명시 items 봉투의
     원천 근거는 row_honesty로 보존하며 업무 레코드 내부의 상태 필드는 판정하지 않는다.
@@ -1165,7 +1165,8 @@ def _op_flatten(prev, params):
             nested_honesty.append({"row_index": row_index, "field": field,
                                    "markers": markers})
 
-    out = []
+    pending = []
+    child_keys = set()
     skipped = []
     valid_inputs = 0
     nested_honesty = []
@@ -1204,11 +1205,15 @@ def _op_flatten(prev, params):
         carry = {k: value for k in keep if (value := _keep_value(r, k)) is not MISSING}
         for sub in v:
             base = dict(sub) if isinstance(sub, dict) else {"value": sub}
-            if carry:
-                disp = _suffix_collisions(list(base.keys()), list(carry.keys()))
-                for (ck, cv), name in zip(carry.items(), disp):
-                    base[name] = cv
-            out.append(base)
+            child_keys.update(base)
+            pending.append((base, carry))
+    # 같은 부모 필드는 희소 자식에서도 같은 열이다. 행별 접미사는 하류 집계를 쪼갠다.
+    carry_names = dict(zip(keep, _suffix_collisions(child_keys, keep)))
+    out = []
+    for base, carry in pending:
+        for key, value in carry.items():
+            base[carry_names[key]] = value
+        out.append(base)
     if not out and not valid_inputs:
         # ★F17 확장 (2026-08-17 12회차): 입력 0행은 실수가 아니라 정당한 빈손 — 0건 통화로
         # 파이프를 완주시킨다(each 와 같은 수리 — "목록 필드가 없다" 오류의 전제는

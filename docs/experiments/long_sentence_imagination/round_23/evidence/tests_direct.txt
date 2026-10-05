@@ -1,0 +1,11 @@
+........................................................................ [ 86%]
+...........                                                              [100%]
+============================= slowest 15 durations =============================
+8.17s call     backend/test_imagination_round58_repairs.py::test_builder_guards_every_unary_flow_without_action_name_list
+2.43s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[author]
+0.62s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[key1]
+0.29s setup    backend/test_imagination_round59_repairs.py::test_empty_nested_collections_are_success[rows0]
+0.27s setup    backend/test_imagination_round58_repairs.py::test_unary_pipeline_equals_explicit_input[groupby-by:"category",agg:{total:["sum","amount"]}-rows0-expected0]
+
+(10 durations < 0.1s hidden.)
+83 passed in 14.18s

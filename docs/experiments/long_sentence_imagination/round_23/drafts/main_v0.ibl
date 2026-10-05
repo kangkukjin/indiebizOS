@@ -1,0 +1,11 @@
+#!ibl edition=2
+[def:출하대조]($rows,$parent) {
+  $flat=$rows >> [table:flatten]{field:"lines",keep:["shipment"]}
+  $summary=$flat.items >> [table:groupby]{by:$parent,agg:{quantity:["sum","qty"],count:["count"]}}
+  return {rows:$flat.items,summary:$summary.items,total:sum(map($flat.items,($r)=>$r.qty)),count:len($flat.items)}
+}
+$source_data=[self:read]{path:$source}
+$report=[fn:출하대조]{rows:$source_data.data.items,parent:$parent}
+$written=[self:write]{path:$out+".json",content:json($report)}
+$back=[self:read]{path:$written.path}
+return {report:$report,verified:$back.data==$report,path:$written.path}

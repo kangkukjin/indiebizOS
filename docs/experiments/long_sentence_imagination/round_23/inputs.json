@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "shipment": "S1",
+      "lines": [
+        {
+          "sku": "A",
+          "shipment": "vendor-A",
+          "qty": 2
+        },
+        {
+          "sku": "B",
+          "qty": 3
+        }
+      ]
+    },
+    {
+      "shipment": "S2",
+      "lines": [
+        {
+          "sku": "C",
+          "qty": 4
+        },
+        {
+          "sku": "D",
+          "shipment": "vendor-D",
+          "qty": 5
+        }
+      ]
+    },
+    {
+      "shipment": "S3",
+      "lines": []
+    }
+  ]
+}

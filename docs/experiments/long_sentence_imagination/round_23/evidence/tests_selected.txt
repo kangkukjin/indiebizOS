@@ -1,0 +1,345 @@
+........................................................................ [  5%]
+........................................................................ [ 11%]
+........................................................................ [ 17%]
+........................................................................ [ 23%]
+........................................................................ [ 29%]
+........................................................................ [ 35%]
+........................................................................ [ 40%]
+........................................................................ [ 46%]
+........................................................................ [ 52%]
+........................................................................ [ 58%]
+........................................................................ [ 64%]
+........................................................................ [ 70%]
+......................................................................FF [ 75%]
+.FF.....F...F........................F....FF..F......................... [ 81%]
+........................................................................ [ 87%]
+........................................................................ [ 93%]
+........................................................................ [ 99%]
+.........                                                                [100%]
+=================================== FAILURES ===================================
+___________________ test_recalc_gate_pdf_has_computed_value ____________________
+
+rendered = {'result': {'success': False, 'error': 'xlsx→PDF 변환 실패 (soffice returncode=1): 출력 없음'}, 'src': '/private/var/folders/d...wrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4319/ledger0/fixture.xlsx', 'mtime_before': 1791216867.6969771}
+
+    def test_recalc_gate_pdf_has_computed_value(rendered):
+        """★관문: 캐시 없는 =A1+A2 가 PDF 텍스트에 5 로 실재해야 한다 — 재계산의 유일한 증거."""
+        result = rendered["result"]
+>       assert result.get("items"), f"변환 실패: {result}"
+E       AssertionError: 변환 실패: {'success': False, 'error': 'xlsx→PDF 변환 실패 (soffice returncode=1): 출력 없음'}
+E       assert None
+E        +  where None = <built-in method get of dict object at 0x10debf900>('items')
+E        +    where <built-in method get of dict object at 0x10debf900> = {'success': False, 'error': 'xlsx→PDF 변환 실패 (soffice returncode=1): 출력 없음'}.get
+
+backend/test_render_xlsx_contract.py:69: AssertionError
+___________________________ test_rows_are_xlsx_pngs ____________________________
+
+rendered = {'result': {'success': False, 'error': 'xlsx→PDF 변환 실패 (soffice returncode=1): 출력 없음'}, 'src': '/private/var/folders/d...wrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4319/ledger0/fixture.xlsx', 'mtime_before': 1791216867.6969771}
+
+    def test_rows_are_xlsx_pngs(rendered):
+        """행 계약: op=xlsx, path=실재하는 PNG 절대 경로 (GoalEval 시각 수집기 연동 조건)."""
+>       for row in rendered["result"]["items"]:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'items'
+
+backend/test_render_xlsx_contract.py:83: KeyError
+_______________________ test_viewports_ignored_with_note _______________________
+
+rendered = {'result': {'success': False, 'error': 'xlsx→PDF 변환 실패 (soffice returncode=1): 출력 없음'}, 'src': '/private/var/folders/d...wrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4319/ledger0/fixture.xlsx', 'mtime_before': 1791216867.6969771}
+
+    def test_viewports_ignored_with_note(rendered):
+        """조용한 무시 금지: xlsx 에 viewports 를 주면 note 로 비적용을 알린다."""
+>       assert "viewports" in rendered["result"].get("note", "")
+E       AssertionError: assert 'viewports' in ''
+E        +  where '' = <built-in method get of dict object at 0x10debf900>('note', '')
+E        +    where <built-in method get of dict object at 0x10debf900> = {'success': False, 'error': 'xlsx→PDF 변환 실패 (soffice returncode=1): 출력 없음'}.get
+
+backend/test_render_xlsx_contract.py:96: AssertionError
+_____________________ test_korean_glyphs_not_silently_lost _____________________
+
+ra = <module 'mp_render_artifact_test' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/media_producer/render_artifact.py'>
+tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x106e8f820>, _basetemp=PosixPath...rs/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4319'), _retention_count=3, _retention_policy='all')
+
+    def test_korean_glyphs_not_silently_lost(ra, tmp_path_factory):
+        """★한글 잉크 관문 (2026-08-27 실측): 맥 헤드리스 LibreOffice 는 시스템 폰트 폴백이 죽어
+        한글이 텍스트 층에만 있고 픽셀에서 조용히 증발했다. 수리 = 프로파일 user/fonts 에
+        CJK 시스템 폰트 링크. 이 관문은 한글만 든 셀이 실제 잉크로 그려졌는지를 픽셀로 잰다 —
+        폰트명·OS 에 무관한 판정(글리프 유실이면 해당 영역이 전부 백지)."""
+        if not ra._find_soffice():
+            pytest.skip("LibreOffice(soffice) 없음 — 한글 잉크 관문 생략")
+        import openpyxl
+        d = tmp_path_factory.mktemp("hangul")
+        src = d / "hangul.xlsx"
+        wb = openpyxl.Workbook()
+        wb.active["A1"] = "품목합계"                     # 한글만 — 숫자·라틴 없음
+        wb.save(str(src))
+        result = json.loads(ra.render_op_xlsx({"path": str(src)}, output_base=str(d)))
+>       assert result.get("items"), f"변환 실패: {result}"
+E       AssertionError: 변환 실패: {'success': False, 'error': 'xlsx→PDF 변환 실패 (soffice returncode=1): 출력 없음'}
+E       assert None
+E        +  where None = <built-in method get of dict object at 0x1106c2d80>('items')
+E        +    where <built-in method get of dict object at 0x1106c2d80> = {'success': False, 'error': 'xlsx→PDF 변환 실패 (soffice returncode=1): 출력 없음'}.get
+
+backend/test_render_xlsx_contract.py:113: AssertionError
+______ test_code_and_package_declarations_apply_as_one_recoverable_bundle ______
+
+bundle = (PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4319/test_code_and_pa...gkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/system_essentials/repair_staging.py'>, 'task_staging_test')
+
+    def test_code_and_package_declarations_apply_as_one_recoverable_bundle(bundle):
+        repo, package, handler, staging, key = bundle
+        changes = {repo / "backend/cognition/victim.py": "VALUE = 'new'\n",
+                   package / "handler.py": "VALUE = 'new'\n",
+                   package / "ibl_actions.yaml": "op: new\n",
+                   package / "new_module.py": "VALUE = 2\n"}
+        originals = {p: p.read_bytes() if p.exists() else None for p in changes}
+        for path, content in changes.items():
+            staged = Path(handler._red_stage(str(path), for_write=True))
+            assert staged != path
+            staged.write_text(content)
+            assert handler._red_stage(str(path), for_write=False) == str(staged)
+            assert (path.read_bytes() if path.exists() else None) == originals[path]
+        session = staging.read_session(str(repo), key)
+        assert len(session["files"]) == 4
+        result = staging.op_apply({"_repo_root": str(repo), "_grant_key": key})
+>       assert result["scheduled"] and not result["applied"]
+               ^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'scheduled'
+
+backend/test_repair_bundle_recovery.py:58: KeyError
+----------------------------- Captured stdout call -----------------------------
+[수리 스테이징] 격리 사본 개설: .worktrees/repair-task_staging_test — 라이브는 이 세션이 적용될 때까지 무변경
+_____________ test_package_write_edit_copy_move_delete_use_staging _____________
+
+bundle = (PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4319/test_package_wri...gkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/system_essentials/repair_staging.py'>, 'task_staging_test')
+
+    def test_package_write_edit_copy_move_delete_use_staging(bundle):
+        repo, package, handler, staging, key = bundle
+        def call(name, **args):
+            return handler.execute(args, ToolContext(str(repo), name, agent_id="system_ai"))
+        path = package / "handler.py"
+        assert json.loads(call("write_file", path=str(path), content="VALUE = 2\n"))["staged"]
+        assert "2" in call("read_file", path=str(path))
+        assert "격리" in call("edit_file", path=str(path), old_string="2", new_string="3")
+        assert path.read_text() == "VALUE = 'original'\n"
+        copy = package / "copy.py"
+        assert json.loads(call("copy_path", src=str(path), dest=str(copy)))["staged"]
+        assert not copy.exists()
+        assert Path(handler._red_stage(str(copy), False)).read_text() == "VALUE = 3\n"
+        # 이동은 목적지가 보통 data여도 양쪽을 묶어야 한다.
+        moved = repo / "data/moved.txt"
+        assert json.loads(call("move_path", src=str(path), dest=str(moved)))["staged"]
+        assert path.exists() and not moved.exists()
+        assert Path(staging.staged_path(str(repo), key, str(moved))).read_text() == "VALUE = 3\n"
+        assert "VALUE = 3" in call("read_file", path=str(moved))
+        declaration = package / "ibl_actions.yaml"
+        assert json.loads(call("delete_path", path=str(declaration)))["staged"]
+        assert declaration.exists()
+        records = staging.read_session(str(repo), key)["files"]
+        assert records[str(path)]["op"] == records[str(declaration)]["op"] == "delete"
+>       assert staging.op_apply({"_repo_root": str(repo), "_grant_key": key})["scheduled"]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'scheduled'
+
+backend/test_repair_bundle_recovery.py:128: KeyError
+----------------------------- Captured stdout call -----------------------------
+[수리 스테이징] 격리 사본 개설: .worktrees/repair-task_staging_test — 라이브는 이 세션이 적용될 때까지 무변경
+_______ test_dependency_cache_writable_while_shared_package_is_protected _______
+
+setup = (PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4319/test_dependency_...': 'task', 'worktree': '.worktrees/repair-task', 'status': 'staging', 'created_at': '2026-10-06T01:14:33.520457', ...})
+
+    def test_dependency_cache_writable_while_shared_package_is_protected(setup):
+        from repair_runtime import prepare_dependencies
+        from repair_process import run
+        root, wt, st, sess = setup
+        live = root / "frontend/node_modules"
+        (live / "pkg").mkdir(parents=True)
+        (live / "pkg/index.js").write_text("original")
+        (live / ".tmp").mkdir()
+        (live / ".tmp/previous").write_text("live cache")
+        (wt / "frontend").mkdir()
+        (wt / "frontend/node_modules").symlink_to(live, target_is_directory=True)
+        prepare_dependencies(root, wt)
+        prepare_dependencies(root, wt)
+        code = "from pathlib import Path; Path('frontend/node_modules/.tmp/new').write_text('local'); print('ok')"
+        result = run([sys.executable, "-c", code], wt)
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: sandbox-exec: sandbox_apply: Operation not permitted
+E         
+E       assert 71 == 0
+E        +  where 71 = CompletedProcess(args=['/Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python', '-c', "from pathlib import Path; Pa...ext('local'); print('ok')"], returncode=71, stdout='', stderr='sandbox-exec: sandbox_apply: Operation not permitted\n').returncode
+
+backend/test_repair_execution_capabilities.py:114: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+[수리 스테이징] 격리 사본 개설: .worktrees/repair-task — 라이브는 이 세션이 적용될 때까지 무변경
+_________________ test_typescript_and_vite_build_in_candidate __________________
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4319/test_typescript_and_vite_build0')
+
+    def test_typescript_and_vite_build_in_candidate(tmp_path):
+        from repair_runtime import prepare_dependencies
+        from repair_process import run
+        repo = Path(__file__).resolve().parents[1]
+        if not (repo / "frontend/node_modules/vite").is_dir():
+            pytest.skip("frontend dependencies unavailable")
+        root = tmp_path / "candidate"
+        frontend = root / "frontend"
+        frontend.mkdir(parents=True)
+        (frontend / "package.json").write_text(json.dumps({
+            "type": "module", "scripts": {"build": "tsc --noEmit && vite build"},
+            "devDependencies": {"typescript": "*", "vite": "*"},
+        }))
+        (frontend / "tsconfig.json").write_text(json.dumps({"compilerOptions": {
+            "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler", "types": [],
+            "incremental": True, "tsBuildInfoFile": "./node_modules/.tmp/check.tsbuildinfo",
+        }}))
+        (frontend / "index.html").write_text('<h1>Ready</h1><script type="module" src="/main.ts"></script>')
+        (frontend / "main.ts").write_text('document.title = "Candidate"; export {};')
+        prepare_dependencies(repo, root)
+        result = run(["/bin/sh", "-c", "cd frontend && npm run build"], root, timeout=60)
+>       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: sandbox-exec: sandbox_apply: Operation not permitted
+E         
+E       assert 71 == 0
+E        +  where 71 = CompletedProcess(args=['/bin/sh', '-c', 'cd frontend && npm run build'], returncode=71, stdout='', stderr='sandbox-exec: sandbox_apply: Operation not permitted\n').returncode
+
+backend/test_repair_execution_capabilities.py:201: AssertionError
+_____ test_electron_captures_persistent_image_and_preserves_outer_boundary _____
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4319/test_electron_captures_persist0')
+
+    @pytest.mark.system
+    def test_electron_captures_persistent_image_and_preserves_outer_boundary(tmp_path):
+        from repair_process import run
+        package = Path(__file__).resolve().parents[1] / "frontend/node_modules/electron"
+        if not (package / "path.txt").is_file():
+            pytest.skip("Electron unavailable")
+        binary = package / "dist" / (package / "path.txt").read_text().strip()
+        root = tmp_path / "candidate"
+        root.mkdir()
+        outside = tmp_path / "outside.txt"
+        outside.write_text("original")
+        main = root / "main.cjs"
+        main.write_text('''const {app, BrowserWindow}=require('electron');
+    const fs=require('fs'), path=require('path');
+    app.setPath('userData', path.join(__dirname, 'profile'));
+    app.whenReady().then(async()=>{
+      const win=new BrowserWindow({show:false});
+      await win.loadURL('data:text/html,<title>English UI</title><h1>Ready</h1>');
+      const title=await win.webContents.executeJavaScript('document.title');
+      const image=await win.webContents.capturePage();
+      fs.writeFileSync(path.join(__dirname, 'capture.png'), image.toPNG());
+      let protectedOutside=false;
+      try {fs.writeFileSync(process.argv[2], 'bad')} catch(e) {protectedOutside=true;}
+      console.log(JSON.stringify({title, protectedOutside}));
+      app.exit(title==='English UI' && protectedOutside && !image.isEmpty() ? 0 : 2);
+    }).catch(e=>{console.error(e); app.exit(3)});
+    setTimeout(()=>app.exit(4), 15000);
+    ''')
+        result = run([str(binary), str(main), str(outside)], root, timeout=25)
+>       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: sandbox-exec: sandbox_apply: Operation not permitted
+E         
+E       assert 71 == 0
+E        +  where 71 = CompletedProcess(args=['/Users/kangkukjin/Desktop/AI/indiebizOS/frontend/node_modules/electron/dist/Electron.app/Conte...ures_persist0/outside.txt'], returncode=71, stdout='', stderr='sandbox-exec: sandbox_apply: Operation not permitted\n').returncode
+
+backend/test_repair_execution_capabilities.py:235: AssertionError
+__________________________ test_battery_under_pytest ___________________________
+
+    @pytest.mark.system  # 2026-10-04: 전체 재생·전수 스캔은 system 묶음(docs/REGRESSION_TESTING.md 표)
+    def test_battery_under_pytest():
+        """pytest 가 이 배터리를 **보게 하는 다리** (2026-08-23).
+    
+        이 파일은 `check(name, cond)` 누적형 스크립트라 `def test_*` 가 없다 — 그래서
+        정본 러너(pytest.ini·CI `python -m pytest -m "not local"`)가 여기서 **0건을 수집하고
+        조용히 지나갔다**. 실측: 자기수정 격리 생애주기 배터리(63검사)가 CI 에서 한 번도 안 돌고 있었다.
+        ★0건 수집은 '통과'가 아니라 '아무것도 안 봤다'이다 — 러너가 그 둘을 같은 초록으로
+        보여주는 것이 거짓 초록의 뿌리다(27·28회차 상상훈련이 이 초록을 "전부 통과"로 적었다).
+        본문은 모듈 레벨에서 스텁·전역을 만지므로 **별도 프로세스**로 돌린다(공유 프로세스
+        오염 회피 — test_framing_amend_gate 가 모듈 스킵을 택한 것과 같은 이유의 반대편 해법).
+        """
+        import subprocess
+        import sys as _sys
+        proc = subprocess.run([_sys.executable, os.path.abspath(__file__)],
+                              cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                              capture_output=True, text=True, timeout=900)
+>       assert proc.returncode == 0, \
+            "배터리 실패 (rc=%s)\n%s" % (proc.returncode, ((proc.stdout or "") + (proc.stderr or ""))[-3000:])
+E       AssertionError: 배터리 실패 (rc=1)
+E         [수리 스테이징] 격리 사본 개설: .worktrees/repair-task_staging_test — 라이브는 이 세션이 적용될 때까지 무변경
+E         [수리 스테이징] 격리 사본 개설: .worktrees/repair-task_newfile — 라이브는 이 세션이 적용될 때까지 무변경
+E         [수리 스테이징] 격리 사본 개설: .worktrees/repair-task_delete — 라이브는 이 세션이 적용될 때까지 무변경
+E         [RED 안전판] 워치독 기동 (pid=13927) — 헬스체크·자동 롤백 대기
+E         [수리 스테이징] 격리 사본 개설: .worktrees/repair-task_orphan — 라이브는 이 세션이 적용될 때까지 무변경
+E         [수리 스테이징] 격리 사본 개설: .worktrees/repair-task_move — 라이브는 이 세션이 적용될 때까지 무변경
+E         [수리 스테이징] 격리 사본 개설: .worktrees/repair-task_sync — 라이브는 이 세션이 적용될 때까지 무변경
+E         [수리 스테이징] 격리 사본 개설: .worktrees/repair-task_defer_drift — 라이브는 이 세션이 적용될 때까지 무변경
+E         [수리 스테이징] 격리 사본 개설: .worktrees/repair-task_red_apply_proc — 라이브는 이 세션이 적용될 때까지 무변경
+E         [수리 스테이징] 격리 사본 개설: .worktrees/repair-task_discard_test — 라이브는 이 세션이 적용될 때까지 무변경
+E         [수리 스테이징] 격리 사본 개설: .worktrees/repair-task_wait_contract — 라이브는 이 세션이 적용될 때까지 무변경
+E         Traceback (most recent call last):
+E           File "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/test_repair_staging.py", line 1031, in <module>
+E             raise SystemExit(run())
+E                              ~~~^^
+E           File "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/test_repair_staging.py", line 591, in run
+E             check("S13b_verify_cmd_actually_ran", "activation_checked" in json.loads(job13.read_text()).get("post_verify", {}).get("output", "") and not (tmp5 / "verify_ran.txt").exists(),
+E                                                                                      ~~~~~~~~~~~~~~~^^
+E           File "/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/pathlib/_local.py", line 546, in read_text
+E             return PathBase.read_text(self, encoding, errors, newline)
+E                    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/pathlib/_abc.py", line 632, in read_text
+E             with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+E                  ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/pathlib/_local.py", line 537, in open
+E             return io.open(self, mode, buffering, encoding, errors, newline)
+E                    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/stg_wait_u6ewnjbq/data/system_ai_state/repair_sessions/task_wait_contract.apply.json'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python', '/Users/kangkukjin/Desktop/AI/indie...swrj4wl6k23mmmnqhtyc0000gn/T/stg_wait_u6ewnjbq/data/system_ai_state/repair_sessions/task_wait_contract.apply.json\'\n').returncode
+
+backend/test_repair_staging.py:1022: AssertionError
+=============================== warnings summary ===============================
+backend/test_episode4064_repairs.py::test_mcp_combined_call_keeps_repeat_guard
+  /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: IncompleteFieldDefinitionWarning: Field 'lifespan' has an incomplete definition: its annotation contains an unresolved forward reference, so settings sources may fail to correctly resolve its value. Call `model_rebuild()` on the model where the field is defined, once all the referenced types are defined.
+    warnings.warn(
+
+backend/test_web_collection_2026_09_15.py::test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title
+backend/test_web_collection_2026_09_15.py::test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+backend/test_web_collection_2026_09_15.py::test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title
+backend/test_web_collection_2026_09_15.py::test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+backend/test_web_collection_2026_09_15.py::test_pdf_metadata_and_links_come_with_evidence_and_filename_is_never_a_title
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+7.45s call     backend/test_imagination_round58_repairs.py::test_builder_guards_every_unary_flow_without_action_name_list
+4.88s call     backend/test_repair_staging.py::test_battery_under_pytest
+2.27s call     backend/test_value_judgment_gate.py::test_gate_passes_on_current_tree
+1.87s call     backend/test_long_sentence_round6_repairs.py::test_original_normalization_with_explicit_budget
+1.62s call     backend/test_workspace_sessions.py::test_code_workspace_shares_the_contract
+1.59s call     backend/test_field_path_single_owner.py::test_gate_passes_and_has_teeth
+1.59s call     backend/test_long_sentence_round3_repairs.py::test_full_report_and_six_source_reuse[False]
+1.56s call     backend/test_long_sentence_round3_repairs.py::test_full_report_and_six_source_reuse[True]
+1.44s call     backend/test_episode4064_repairs.py::test_check_with_describe_never_executes_and_failure_is_preserved
+1.36s call     backend/test_ai_boundary_contract.py::test_static_contract_and_inspection_use_dictionary_metadata
+1.30s call     backend/test_memory_final_retention.py::test_pipeline_queues_only_after_final_delivery[complete]
+1.24s call     backend/test_idiom_expansion_2026_09_09.py::test_selected_idioms_exposed_in_map_and_leaf_actions_with_scope_filter[True]
+1.16s setup    backend/test_imagination_root_repairs.py::test_parallel_file_aliases_use_runtime_identity
+1.04s call     backend/test_repair_bundle_recovery.py::test_code_and_package_declarations_apply_as_one_recoverable_bundle
+1.01s call     backend/test_data_ops.py::test_dedup_documented_alias_selects_the_same_keys[author]
+=========================== short test summary info ============================
+FAILED backend/test_render_xlsx_contract.py::test_recalc_gate_pdf_has_computed_value
+FAILED backend/test_render_xlsx_contract.py::test_rows_are_xlsx_pngs - KeyErr...
+FAILED backend/test_render_xlsx_contract.py::test_viewports_ignored_with_note
+FAILED backend/test_render_xlsx_contract.py::test_korean_glyphs_not_silently_lost
+FAILED backend/test_repair_bundle_recovery.py::test_code_and_package_declarations_apply_as_one_recoverable_bundle
+FAILED backend/test_repair_bundle_recovery.py::test_package_write_edit_copy_move_delete_use_staging
+FAILED backend/test_repair_execution_capabilities.py::test_dependency_cache_writable_while_shared_package_is_protected
+FAILED backend/test_repair_execution_capabilities.py::test_typescript_and_vite_build_in_candidate
+FAILED backend/test_repair_execution_capabilities.py::test_electron_captures_persistent_image_and_preserves_outer_boundary
+FAILED backend/test_repair_staging.py::test_battery_under_pytest - AssertionE...
+10 failed, 1223 passed, 1 skipped, 6 warnings in 66.15s (0:01:06)
+<sys>:0: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

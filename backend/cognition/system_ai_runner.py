@@ -74,7 +74,8 @@ class SystemAIRunner:
             'timestamp': datetime.now().isoformat()
         }
         if envelope:
-            msg_dict.update({k: envelope[k] for k in ("origin", "chain") if k in envelope})
+            from delegation_tasks import ENVELOPE_KEYS
+            msg_dict.update({k: envelope[k] for k in ENVELOPE_KEYS if k in envelope})
         with cls._lock:
             cls.internal_messages.append(msg_dict)
         print(f"[SystemAIRunner] 메시지 수신 대기열 추가: {from_agent}@{project_id}")
@@ -381,7 +382,7 @@ class SystemAIRunner:
                                 reply_to=f"{from_agent}@internal"
                             )
                         else:
-                            response = self._process_via_cognition(ai_message, history)
+                            response = self._process_via_cognition(ai_message, history, force_role=msg_dict.get('role') or '')
                         print(f"[SystemAIRunner] 응답 생성: {len(response)}자")
 
                         # 시스템 AI가 에이전트 보고를 받아 처리한 결과는 사용자에게 전달됨
@@ -417,7 +418,7 @@ class SystemAIRunner:
                 print(f"[SystemAIRunner] 메시지 처리 실패: {e}")
                 traceback.print_exc()
 
-    def _process_via_cognition(self, ai_message: str, history: list) -> str:
+    def _process_via_cognition(self, ai_message: str, history: list, force_role: str = "") -> str:
         """위임 한 턴을 인지 파이프라인으로 돌린다 (연상→분류→의식→실행→평가→반성→증류).
 
         ★2026-08-31: 이 루프는 그동안 `self.ai.process_message_with_history` 를 직접 불러
@@ -451,8 +452,12 @@ class SystemAIRunner:
             original = _switch_to_role(runner, "system_ai",
                                        agent_id="system_ai_delegation")
             try:
+                # ⑨ 봉투의 role=프롬프트 조립 선택(force_role), allowed=received() 가 세운 스레드 집합을 프롬프트 어휘 스코핑에도.
+                from thread_context import get_allowed_nodes
                 response, _images = process_system_ai_message(ai_message, history,
-                                                              utterance_author="agent")
+                                                              utterance_author="agent",
+                                                              force_role=force_role or "",
+                                                              allowed_set=get_allowed_nodes())
                 return response
             finally:
                 _restore_provider(runner, original)

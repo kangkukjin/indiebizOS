@@ -41,12 +41,16 @@ def execute_call_agent(tool_input: dict, project_path: str) -> str:
 
         if target_runner:
             # 순환 위임 차단 — 대상이 조상 사슬(자기 자신 포함)에 있으면 접수하지 않는다.
-            from delegation_tasks import DelegationCycle, envelope, target_identity
+            from delegation_tasks import DelegationCycle, envelope, target_identity, with_context
             try:
-                env = envelope(target_identity(project_id, target_runner.config.get("id") or agent_id_or_name))
+                env = envelope(target_identity(project_id, target_runner.config.get("id") or agent_id_or_name),
+                               role=tool_input.get("role"), allowed=tool_input.get("allowed"), context=tool_input.get("context"))
+                message = with_context(message, tool_input.get("context"))
             except DelegationCycle as cyc:
                 return json.dumps({"success": False, "error": str(cyc), "error_type": "delegation_cycle"},
                                   ensure_ascii=False)
+            except ValueError as bad:
+                return json.dumps({"success": False, "error": str(bad)}, ensure_ascii=False)
             # call_agent 호출 플래그 설정 (자동 보고 스킵용) — 접수가 확정된 뒤에만.
             set_called_agent(True)
             return _send_to_running_agent(target_runner, message, project_path, mode=mode, envelope=env)

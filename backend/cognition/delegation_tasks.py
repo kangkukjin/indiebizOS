@@ -58,11 +58,44 @@ def target_identity(project_id: str, agent_id: str) -> str:
     return f"{project_id}:{agent_id}"
 
 
-def envelope(target: str) -> dict:
+# 봉투 열쇠(송신 send_message 들이 msg_dict 로 복사하는 전부) — origin·chain(2026-10-05 수리) + role·allowed·context(⑨ 위임 범위).
+ENVELOPE_KEYS = ("origin", "chain", "role", "allowed", "context")
+CONTEXT_MAX_BYTES = 64 * 1024
+
+
+def narrowed_allowed(requested) -> tuple:
+    """⑨ 허용 집합은 **부모 권한을 좁히기만** 한다(principal.narrow 와 같은 방향) — (유효 집합 목록 | None, 잘린 노드 목록).
+
+    부모(현재 스레드 allowed_nodes)가 None(무제한)이면 요청을 그대로(agents.yaml 과 같은 해석 — 표준 코어는 항상 포함).
+    요청이 없으면 부모 집합을 그대로 **상속**한다(하위 위임이 조용히 넓어지지 않게). 부모 밖 노드는 잘라내고 이름을 돌려준다."""
+    from thread_context import get_allowed_nodes
+    from ibl_access import resolve_allowed_nodes
+    parent = get_allowed_nodes()
+    if requested in (None, "", [], ()):
+        return (sorted(parent) if parent else None), []
+    names = [str(x).strip() for x in (requested if isinstance(requested, (list, tuple, set)) else [requested]) if str(x).strip()]
+    wanted = resolve_allowed_nodes(names) or set()
+    if parent is None:
+        return sorted(wanted), []
+    return sorted(wanted & set(parent)), sorted(wanted - set(parent))
+
+
+def with_context(message: str, context) -> str:
+    """⑨ 구조화 맥락을 메시지에 동봉 — 자식은 LLM 턴이라 JSON 블록이 운반체다(봉투에도 그대로 실린다). 64KB 상한."""
+    if context in (None, "", {}, []):
+        return message
+    text = json.dumps(context, ensure_ascii=False, default=str)
+    if len(text.encode("utf-8")) > CONTEXT_MAX_BYTES:
+        raise ValueError(f"context 가 {CONTEXT_MAX_BYTES // 1024}KB 를 넘습니다 — 파일로 쓰고 경로를 넘기세요")
+    return f"{message}\n\n[context — 위임자가 준 구조화 맥락]\n```json\n{text}\n```"
+
+
+def envelope(target: str, *, role: str = None, allowed=None, context=None) -> dict:
     """자식에게 실어 보낼 봉투. 순환이면 DelegationCycle.
 
     chain = 조상 행위자 목록 + 나. 대상이 그 안에 있으면(자기 자신 포함) 거절한다.
-    origin 은 서버가 실행 문맥에서 정한다 — 모델이 임의로 바꾸지 않는다."""
+    origin 은 서버가 실행 문맥에서 정한다 — 모델이 임의로 바꾸지 않는다.
+    ⑨ role(프롬프트 조립 선택 — 시스템 AI 위임의 force_role)·allowed(부모 ∩ 요청, 좁히기만·상속)·context(구조화 맥락)."""
     me = actor_identity()
     chain = get_delegation_chain()
     if me not in chain:
@@ -71,18 +104,35 @@ def envelope(target: str) -> dict:
         raise DelegationCycle(
             f"순환 위임: '{target}' 은(는) 이미 위임 사슬 {' → '.join(chain)} 에 있습니다. "
             "같은 요청을 조상에게 되돌려 보내지 말고 직접 수행하거나 부모에게 필요성을 보고하세요.")
-    return {"origin": get_task_origin(), "chain": chain}
+    env = {"origin": get_task_origin(), "chain": chain}
+    effective, clamped = narrowed_allowed(allowed)
+    if effective is not None:
+        env["allowed"] = effective
+    if clamped:
+        env["allowed_clamped"] = clamped
+    if role:
+        env["role"] = str(role)
+    if context not in (None, "", {}, []):
+        env["context"] = context
+    return env
 
 
 @contextmanager
 def received(msg_dict: dict):
-    """수신 측 — 봉투의 origin·chain 을 처리 동안 스레드 컨텍스트에 세우고 끝나면 복원.
+    """수신 측 — 봉투의 origin·chain(·allowed) 을 처리 동안 스레드 컨텍스트에 세우고 끝나면 복원.
 
-    에피소드 시작(start_episode)이 출처를 읽으므로 **그 전에** 들어가야 한다."""
+    에피소드 시작(start_episode)이 출처를 읽으므로 **그 전에** 들어가야 한다.
+    allowed 가 있으면 처리 동안 allowed_nodes 로 세운다 — 실행 관문(판본 1·2)과 프롬프트 어휘 스코핑이 같은 집합을 읽고,
+    이 턴이 다시 위임하면 envelope() 이 그것을 부모 집합으로 상속한다."""
+    from thread_context import get_allowed_nodes, set_allowed_nodes
     origin = msg_dict.get("origin") if isinstance(msg_dict, dict) else None
     chain = msg_dict.get("chain") if isinstance(msg_dict, dict) else None
+    allowed = msg_dict.get("allowed") if isinstance(msg_dict, dict) else None
     prev_chain = get_delegation_chain()
+    prev_allowed = get_allowed_nodes()
     set_delegation_chain(chain)
+    if isinstance(allowed, (list, tuple, set)) and allowed:
+        set_allowed_nodes(set(str(x) for x in allowed))
     try:
         # None 이면 actor_context 가 칸을 건드리지 않는다 — 봉투에 출처가 없는 메시지
         # (스케줄러 하달·앱 버튼)는 러너 스레드의 빈 출처 그대로(fail-closed) 돈다.
@@ -90,6 +140,25 @@ def received(msg_dict: dict):
             yield
     finally:
         set_delegation_chain(prev_chain)
+        set_allowed_nodes(prev_allowed)
+
+
+@contextmanager
+def scoped(*, role: str = None, allowed=None, context=None):
+    """⑨ 얇은 통로용 — HTTP 표면(포식 브라우저 등)이 큐를 거치지 않고 **같은 봉투 계약**으로 한 턴을 돌린다.
+    envelope() 과 같은 좁힘·상속 규칙, received() 와 같은 집행. yield 값 = 봉투(allowed 가 유효 집합)."""
+    env = {"origin": get_task_origin() or None, "chain": get_delegation_chain()}
+    effective, clamped = narrowed_allowed(allowed)
+    if effective is not None:
+        env["allowed"] = effective
+    if clamped:
+        env["allowed_clamped"] = clamped
+    if role:
+        env["role"] = str(role)
+    if context not in (None, "", {}, []):
+        env["context"] = context
+    with received(env):
+        yield env
 
 
 # ── 저장소 접근 (소유자별) ────────────────────────────────────────────────────

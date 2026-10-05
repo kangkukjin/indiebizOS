@@ -959,7 +959,6 @@ def forage_chat(chat: ForageMessage):
     import uuid
     from thread_context import (
         set_current_task_id, clear_current_task_id, clear_called_agent,
-        set_allowed_nodes, get_allowed_nodes,
     )
     from system_ai_memory import (
         create_task as create_system_ai_task,
@@ -1023,14 +1022,14 @@ def forage_chat(chat: ForageMessage):
     )
     set_current_task_id(task_id)
     clear_called_agent()
-    # 포식 노드 스코프 — sense(검색·크롤·소스) + self(자기 출력·상태) + table(통화 변환자: filter/sort/dedup…).
-    # engines(미디어 생성=슬라이드·영상·이미지)는 제외 — 포식은 링크 나열이라 생성기 불요. 변환 문법은
-    #   table 노드로 분리됐으므로 그쪽을 준다(옛 engines는 변환자 때문에 넣었던 것 → table 이 그 자리).
-    # limbs(브라우저 운전=인간 몫)·others(위임·연락=말단 단일 에이전트엔 무용)는 제외.
-    # allowed_set=프롬프트 어휘 스코핑(IBL XML 축소), thread_context=실행 하드 집행 — 같은 집합.
-    forage_nodes = {"sense", "self", "table"}
-    _prev_allowed = get_allowed_nodes()
-    set_allowed_nodes(forage_nodes)
+    # 포식 노드 스코프(⑨ 위임 범위, 2026-10-05): 역할·허용 집합·사냥판 맥락을 **위임 봉투와 같은 계약**(delegation_tasks.scoped —
+    # role/allowed/context, 좁히기만·상속·같은 집행)으로 세운다. 시스템 AI 큐([others:delegate]{scope:system})를 타지 않는 얇은 통로인
+    # 이유: 러너는 한 번에 한 메시지라 검색이 긴 보고서 뒤에 줄을 서게 된다(판정 기록 docs/APP_COMMON_FOUNDATION_GAPS §1-⑨).
+    # allowed=["sense"] 는 agents.yaml 과 같은 해석으로 표준 코어(self·others·table)를 포함한다 — engines(생성기)·limbs(브라우저 운전)는 제외.
+    # 프롬프트 어휘 스코핑(allowed_set)과 실행 관문(thread_context)이 같은 집합을 읽는다.
+    from delegation_tasks import scoped as _delegation_scoped
+    _forage_scope = _delegation_scoped(role="forage", allowed=["sense"], context=chat.hunt)
+    forage_nodes = set(_forage_scope.__enter__().get("allowed") or []) or None
     # 에피소드 로깅 — agent="forage" 로 주행 기록을 남긴다. 포식은 WebSocket 핸들러를 안 타는
     # 동기 REST 라 그동안 주행기록계에서 빠져 있었음(분석할 데이터 부재). start/end 한 쌍만 걸면,
     # 내부 인지 파이프라인이 찍는 [연상]·[무의식] 마커가 그대로 요약 지표로 자동 추출된다.
@@ -1053,7 +1052,7 @@ def forage_chat(chat: ForageMessage):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"포식 검색 실패: {str(e)}")
     finally:
-        set_allowed_nodes(_prev_allowed)
+        _forage_scope.__exit__(None, None, None)
         clear_current_task_id()
         clear_called_agent()
         try:

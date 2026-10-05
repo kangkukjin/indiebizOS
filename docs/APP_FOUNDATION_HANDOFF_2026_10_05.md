@@ -15,7 +15,7 @@
 
 검증 상태: `build_ibl_nodes.py --check` 27 가드 통과, `tsc`, 렌더 코어·층·크기·validate-parity 가드, 비시스템 전수 8,878 통과(`pytest -m "not system" -n auto --dist loadfile`). 라이브(맥) 확인: 전 계기 edition 2, 지도·정기보고·신문 읽기, 승인 왕복(거절→승인→재전송).
 
-**설치 목록 기준 완료**: ① 전부. ② 1차+2차(§2-② 참조 — 셋은 판정으로 닫음). ③ 1차(§2-③). 나머지 ④~⑩ 미착수.
+**설치 목록 기준 완료**: ① 전부. ② 1차+2차(§2-② 참조 — 셋은 판정으로 닫음). ③ 1차+2차(§2-③). ⑨ 1차(§2-⑨). 나머지 ④~⑧·⑩ 미착수.
 
 ## 1 사용자 실기기 확인 대기 (다음 세션 첫 일)
 
@@ -61,6 +61,7 @@
 `select`(다중)·`reorder` 이벤트, `page:`(next_cursor 소비 — `self:record query` 에 cursor 있음), `state:`. 뷰 낱말은 승격 4기준 충족분만: `tree`(escape 6개: 폴더 창·공유창고·PC 탐색·NAS·빈노트 폴더·강의 재료), `grid`·`chart`, map `map_click`·`layers`, `video`(HLS 정식화), 다화자 `thread`+입력창. 낱말 하나당 지정 escape 를 **같은 커밋에서 삭제**. ①의 `$event`·`$state` 이름 공간이 그릇.
 
 ### 2-⑨ ⑨ 위임 범위 지정 (소형 아님)
+**1차 완료(2026-10-05 밤)**: 봉투 role·allowed(부모 ∩ 요청, 상속)·context, 세 scope 공통, 수신 집행, `/forage/chat` 은 같은 봉투의 얇은 통로(큐 직렬화 때문에 delegate 로 바꾸지 않음 — 판정 기록은 설치 목록 ⑨). 남은 것: 빈노트·강의·문서의 AI 호출을 같은 통로로(세 앱 재구성 때). 아래는 원 계획.
 `[others:delegate]{…, role, allowed, context}` — `allowed` 는 부모 권한 좁히기만·하위 위임 상속, `context` 는 ①의 inputs. 제한 변환은 `table:ai` 유지(모든 AI 호출을 전체 파이프라인에 올리지 않음). 첫 소비자 검색브라우저 `/forage/chat`(`force_role="forage"`, `allowed_set=sense+self+table`, 사냥판 스냅샷).
 
 ### 2-⑩ ⑩ 몸의 명사 생애주기 어휘 (② 뒤)

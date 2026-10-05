@@ -266,9 +266,14 @@ def _execute_call_project_agent(tool_input: dict) -> dict:
 
     # 순환 위임 차단 — 대상이 조상 사슬(자기 자신 포함)에 있으면 접수하지 않는다.
     try:
-        env = envelope(target_identity(project_id, agent_id))
+        env = envelope(target_identity(project_id, agent_id), role=tool_input.get("role"),
+                       allowed=tool_input.get("allowed"), context=tool_input.get("context"))
+        from delegation_tasks import with_context
+        message = with_context(message, tool_input.get("context"))
     except DelegationCycle as cyc:
         return _fail(str(cyc), error_type="delegation_cycle")
+    except ValueError as bad:
+        return _fail(str(bad))
 
     # 자식 태스크 생성
     child_task_id = f"task_{uuid.uuid4().hex[:8]}"

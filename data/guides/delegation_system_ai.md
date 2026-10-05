@@ -138,3 +138,14 @@
 - 프로젝트 에이전트는 시스템 AI에게 위임 불가 (일방향)
 - 위임 시 해당 프로젝트의 모든 에이전트가 자동 활성화됨
 - 결과는 자동으로 돌아오므로 기다리면 됨
+
+## 범위 지정 — role · allowed · context (2026-10-05 ⑨)
+```
+[others:delegate]{scope: "system", mode: "sync", role: "forage", allowed: ["sense"], context: {query: "평택 맛집", need: 5},
+                  message: "가볼 만한 곳 5개"}
+```
+- `allowed` 는 **부모 권한을 좁히기만** 한다(부모 집합 ∩ 요청, 밖의 노드는 잘라 `allowed_clamped` 로 알림). 생략하면 부모 집합을 상속 —
+  하위 위임이 조용히 넓어지지 않는다. 자식 턴에서 허용 밖 낱말은 실행 관문이 거절한다.
+- `role` 은 시스템 AI 위임의 프롬프트 역할(force_role). 프로젝트 에이전트는 자기 역할이 고정이라 봉투에만 남는다.
+- `context` 는 구조화 맥락 — 메시지에 JSON 블록으로 동봉된다(64KB 상한, 더 크면 파일로 쓰고 경로를).
+- 접수증은 다른 위임과 같다(`task_ref` → `[self:task]{op: "wait"}`).

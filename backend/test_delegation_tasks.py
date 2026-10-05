@@ -49,7 +49,7 @@ class FakeRunner:
     def send_message(self, to_agent_id, message, from_agent="system", task_id=None, envelope=None):
         msg = {"content": message, "from_agent": from_agent, "task_id": task_id}
         if envelope:
-            msg.update({k: envelope[k] for k in ("origin", "chain") if k in envelope})
+            msg.update({k: envelope[k] for k in ("origin", "chain", "role", "allowed", "context") if k in envelope})   # = ENVELOPE_KEYS
         self.internal_messages.setdefault(to_agent_id, []).append(msg)
         self.sent.append(msg)
         return True
@@ -187,6 +187,82 @@ def test_system_scope_sync_waits_for_the_preissued_task(world, monkeypatch):
     result = _delegate_unified({"scope": "system", "mode": "sync", "message": "보고서"}, world.project_path)
     assert result["success"] is True and result["state"] == "succeeded" and result["response"] == "보고서 본문"
     assert result["task_ref"]["owner"] == "system" and result["sync"] is True
+
+
+# ── ⑨ 위임의 실행 범위 지정(2026-10-05): role·allowed·context — allowed 는 좁히기만·상속 ──
+
+def test_allowed_narrows_only_and_inherits(world):
+    from delegation_tasks import narrowed_allowed, envelope, received
+    tc.set_allowed_nodes(None)
+    eff, clamped = narrowed_allowed(["sense"])
+    assert "sense" in eff and {"self", "others", "table"} <= set(eff) and clamped == []     # 무제한 부모 = 요청 그대로(코어 포함)
+    assert narrowed_allowed(None) == (None, [])
+    tc.set_allowed_nodes({"sense", "self", "others", "table"})
+    eff, clamped = narrowed_allowed(["limbs", "sense"])
+    assert "limbs" not in eff and "sense" in eff and clamped == ["limbs"]                   # 부모 밖은 잘린다
+    assert narrowed_allowed(None) == (sorted({"sense", "self", "others", "table"}), [])     # 요청 없음 = 상속
+    tc.set_current_project_id(PROJECT); tc.set_current_agent_id(AGENT_ID)
+    env = envelope("other:agent", role="forage", allowed=["limbs"], context={"q": 1})
+    assert env["allowed_clamped"] == ["limbs"] and "limbs" not in env["allowed"] and env["role"] == "forage" and env["context"] == {"q": 1}
+    # 수신 측은 처리 동안 집합을 세우고 끝나면 복원
+    tc.set_allowed_nodes(None)
+    with received({"allowed": ["sense", "self", "table"], "chain": ["a"]}):
+        assert tc.get_allowed_nodes() == {"sense", "self", "table"}
+        inner = envelope("x:y", allowed=["limbs", "others"])
+        assert inner["allowed"] == ["self", "sense", "table"] or set(inner["allowed"]) <= {"sense", "self", "table"}   # 하위 위임은 넓히지 못한다
+        assert "limbs" in inner["allowed_clamped"]
+    assert tc.get_allowed_nodes() is None
+
+
+def test_same_scope_delegate_carries_role_allowed_context(world):
+    from routing_system import _delegate_unified
+    tc.set_allowed_nodes(None)
+    memory.create_task("parent9", "user@gui", "gui", "원요청")
+    tc.set_current_task_id("parent9")
+    result = _delegate_unified({"agent_id": AGENT_NAME, "message": "조사", "role": "forage", "allowed": ["sense"],
+                                "context": {"query": "맛집", "need": 3}}, world.project_path)
+    result = json.loads(result) if isinstance(result, str) else result   # same 접수는 도구 문자열 봉투
+    assert result["accepted"] is True, result
+    msg = world.runner.internal_messages[f"{PROJECT}:{AGENT_ID}"][0]
+    assert msg["role"] == "forage" and "sense" in msg["allowed"] and msg["context"] == {"query": "맛집", "need": 3}
+    assert "[context — 위임자가 준 구조화 맥락]" in msg["content"] and '"need": 3' in msg["content"]
+    big = {"blob": "x" * (70 * 1024)}
+    bad = _delegate_unified({"agent_id": AGENT_NAME, "message": "조사", "context": big}, world.project_path)
+    bad = json.loads(bad) if isinstance(bad, str) else bad
+    assert bad.get("success") is False and "64KB" in bad["error"]
+
+
+def test_execution_rejects_nodes_outside_allowed_set():
+    """완료 조건: 허용 집합 밖 낱말 호출이 거절된다 — 실행 관문이 스레드 allowed_nodes 를 읽는다."""
+    from project_manager import ProjectManager
+    from ibl_v2_entry import handle_request
+    pp = str(ProjectManager().get_project_path("앱모드"))
+    prev = tc.get_allowed_nodes()
+    tc.set_allowed_nodes({"sense", "self", "table"})
+    try:
+        r = handle_request({"code": '[limbs:phone]{op: "info"}', "edition": 2, "inputs": {}, "declared_inputs": []}, pp, None)
+        assert r["success"] is False, r
+        r = handle_request({"code": '[self:time]{}', "edition": 2, "inputs": {}, "declared_inputs": []}, pp, None)
+        assert r["success"] is True, r.get("error")
+    finally:
+        tc.set_allowed_nodes(prev)
+
+
+def test_forage_route_is_thin_passage_over_delegation_scope(world, monkeypatch):
+    """첫 소비자: /forage/chat 이 role=forage·allowed=[sense]·context=사냥판을 위임 봉투와 같은 계약(scoped)으로 세운다."""
+    import api_system_ai as S
+    seen = {}
+    def fake_process(message, history=None, images=None, **kw):
+        seen["allowed_now"] = tc.get_allowed_nodes()
+        seen["force_role"] = kw.get("force_role"); seen["allowed_set"] = kw.get("allowed_set")
+        return ("- [a](https://a.test) — x", None)
+    monkeypatch.setattr(S, "process_system_ai_message", fake_process)
+    monkeypatch.setattr(S, "load_system_ai_config", lambda: {"enabled": True, "apiKey": "k", "provider": "anthropic", "model": "m"})
+    tc.set_allowed_nodes(None)
+    out = S.forage_chat(S.ForageMessage(message="평택 맛집", count=5))
+    assert out.response.startswith("- [a]")
+    assert seen["force_role"] == "forage" and "sense" in seen["allowed_now"] and "limbs" not in seen["allowed_now"]
+    assert seen["allowed_set"] == seen["allowed_now"] and tc.get_allowed_nodes() is None   # 같은 집합, 끝나면 복원
 
 
 def test_cross_sync_timeout_keeps_task_running_and_settles_to_async(world, monkeypatch):

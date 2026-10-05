@@ -47,11 +47,14 @@ def _delegate_unified(params: dict, project_path: str) -> Any:
             return {"error": "message 파라미터가 필요합니다. 예: {scope: \"system\", message: \"AI 동향 보고서 써줘\"}"}
         try:
             from system_ai_runner import SystemAIRunner
-            from delegation_tasks import DelegationCycle, envelope
+            from delegation_tasks import DelegationCycle, envelope, with_context
             try:
-                env = envelope("system_ai")
+                env = envelope("system_ai", role=params.get("role"), allowed=params.get("allowed"), context=params.get("context"))
+                message = with_context(message, params.get("context"))
             except DelegationCycle as cyc:
                 return {"success": False, "error": str(cyc), "error_type": "delegation_cycle"}
+            except ValueError as bad:
+                return {"success": False, "error": str(bad)}
             # 부모 task 동봉 — fire-and-forget 큐가 스레드 컨텍스트를 잃으므로
             # 여기서 떠서 봉투에 싣는다(claude_code 재진입 env/헤더와 같은 부류,
             # 2026-08-21 ③-b). 없으면 러너 루프가 새로 발급한다.
@@ -79,6 +82,8 @@ def _delegate_unified(params: dict, project_path: str) -> Any:
         from thread_context import did_call_agent
         receipt = accepted(SYSTEM_OWNER, child_id, queued=True, target="시스템 AI", child_task_id=child_id,
                            parent_task_id=_parent_task, mode=mode,
+                           **({"allowed": env["allowed"]} if env.get("allowed") else {}),
+                           **({"allowed_clamped": env["allowed_clamped"]} if env.get("allowed_clamped") else {}),
                            message=f"시스템 AI에 요청을 전달했습니다 (task {child_id}). 접수 확인이며 결과는 아직 없습니다.")
         if mode != "sync":
             return receipt

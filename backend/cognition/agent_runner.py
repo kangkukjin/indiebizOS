@@ -242,7 +242,8 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
                 'timestamp': datetime.now().isoformat()
             }
             if envelope:
-                msg_dict.update({k: envelope[k] for k in ("origin", "chain") if k in envelope})
+                from delegation_tasks import ENVELOPE_KEYS
+                msg_dict.update({k: envelope[k] for k in ENVELOPE_KEYS if k in envelope})
 
             if to_agent_id not in cls.internal_messages:
                 cls.internal_messages[to_agent_id] = runtime_work.WorkMessages()

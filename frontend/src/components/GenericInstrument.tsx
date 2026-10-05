@@ -416,14 +416,14 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
                 )}
                 {btn && (
                   <button disabled={busyRow === rowKey}
-                    onClick={(e) => { e.stopPropagation(); btn.stream ? onStream(it) : btn.action && onRowAction(btn.action, it, rowKey, btn.refresh); }}
+                    onClick={(e) => { e.stopPropagation(); if (btn.confirm && !window.confirm(btn.confirm)) return; btn.stream ? onStream(it) : btn.action && onRowAction(btn.action, it, rowKey, btn.refresh); }}
                     className="px-3 py-1.5 rounded-lg border border-stone-200 text-sm text-stone-800 hover:border-stone-400 disabled:opacity-40">
                     {busyRow === rowKey ? '…' : btn.label || '▶'}
                   </button>
                 )}
                 {btn2 && (
                   <button disabled={busyRow === rowKey2}
-                    onClick={(e) => { e.stopPropagation(); btn2.stream ? onStream(it) : btn2.action && onRowAction(btn2.action, it, rowKey2, btn2.refresh); }}
+                    onClick={(e) => { e.stopPropagation(); if (btn2.confirm && !window.confirm(btn2.confirm)) return; btn2.stream ? onStream(it) : btn2.action && onRowAction(btn2.action, it, rowKey2, btn2.refresh); }}
                     className="px-3 py-1.5 rounded-lg border border-stone-200 text-sm text-stone-800 hover:border-stone-400 disabled:opacity-40">
                     {busyRow === rowKey2 ? '…' : btn2.label || '⬇'}
                   </button>

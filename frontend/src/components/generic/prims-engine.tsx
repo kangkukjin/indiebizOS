@@ -47,7 +47,7 @@ export function EnginePrim({ p, data, onViewEvent, vars, block }: {
   const emit = useCallback((event: 'selection' | 'saved', payload: Payload) => {
     onViewEvent?.(on[event] || 'keep', { resource: ref, ...payload });
   }, [on, onViewEvent, ref]);
-  if (!ref) return <p className="text-sm text-stone-400">열 자료가 없습니다 — <code>[self:workspace]{'{op:"open"}'}</code> 결과의 <code>resource</code> 를 <code>ref</code> 로 주세요.</p>;
+  if (!ref) return null;  // 열린 자료가 없으면 자리를 차지하지 않는다 — 같은 화면에 목록과 캔버스를 함께 선언할 수 있게(문서함의 폴더 탐색)
   if (kind === 'code') return <p className="text-sm text-stone-400">코딩 작업 공간은 엔진 표면이 없습니다 — <code>blocks</code>(diff·파일)와 <code>selection</code> 으로 봅니다.</p>;
   if (kind === 'sheet') return <SheetEngine id={ref} emit={emit} />;
   return <DocumentEngine id={ref} emit={emit} host={{ dock: p.ai_dock as Dock | undefined, vars, block }} />;

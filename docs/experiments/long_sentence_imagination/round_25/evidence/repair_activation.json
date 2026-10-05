@@ -1,0 +1,43 @@
+{
+  "verified_at": "2026-10-06T02:09:17.313717+09:00",
+  "backend": {
+    "status": "healthy",
+    "timestamp": "2026-10-06T02:06:18.889920",
+    "base_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+    "live_turns": [],
+    "live_turns_observation": "known"
+  },
+  "null_hint": {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: Null",
+    "source_span": {
+      "source_hash": "5244abc0d86795c501230f218296590764b11f0193f7b5bac5fdeffd376606fc",
+      "start": 75,
+      "end": 80,
+      "line": 1,
+      "column": 76
+    },
+    "call_path": [],
+    "expected": "Number",
+    "actual": "Null",
+    "hint": "null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: $값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. null 처리 결과는 과제 기준으로 정하세요.",
+    "location": {
+      "source_hash": "5244abc0d86795c501230f218296590764b11f0193f7b5bac5fdeffd376606fc",
+      "start": 75,
+      "end": 80,
+      "line": 1,
+      "column": 76,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 1,
+      "end_column": 81,
+      "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "ARITHMETIC",
+    "severity": "error"
+  },
+  "modified_files_sha256": {
+    "backend/ibl/ibl_v2_types.py": "08a64202ff3167b734a4c6316e338fb22f2d3fc1f99be6f8b43f899432d8f80a",
+    "backend/ibl/ibl_v2_analysis.py": "ceee7ef00a40fc3c6bc4bc9d99faf06845037d63f6317d029f038f189f4ce58e"
+  }
+}

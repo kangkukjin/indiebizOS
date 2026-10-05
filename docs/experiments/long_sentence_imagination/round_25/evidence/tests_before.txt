@@ -1,0 +1,155 @@
+FFFF.................................................................... [ 55%]
+.....................................................F....               [100%]
+=================================== FAILURES ===================================
+____ test_unconstrained_contract_does_not_infer_nested_rows[Unknown-value0] ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107250fc0>
+spec = 'Unknown', value = {'rows': [{'n': 1}, {'n': None}]}
+
+    @pytest.mark.parametrize('spec,value', [
+        ('Unknown', {'rows': [{'n': 1}, {'n': None}]}),
+        ('Record', {'rows': [{'n': 1}, {'n': None}]}),
+        ('List', [{'n': 1}, {'n': None}]),
+        ('List<Unknown>', [{'n': 1}, {'n': None}]),
+    ])
+    def test_unconstrained_contract_does_not_infer_nested_rows(monkeypatch, spec, value):
+        def unexpected_inference(_value):
+            pytest.fail('an unconstrained child must not be inferred')
+        monkeypatch.setattr(types, 'infer', unexpected_inference)
+>       assert types.guard(value, spec, 'input') is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/test_ibl_v2_types.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/ibl/ibl_v2_types.py:215: in guard
+    actual = infer(value)
+             ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_value = {'rows': [{'n': 1}, {'n': None}]}
+
+    def unexpected_inference(_value):
+>       pytest.fail('an unconstrained child must not be inferred')
+E       Failed: an unconstrained child must not be inferred
+
+backend/test_ibl_v2_types.py:19: Failed
+____ test_unconstrained_contract_does_not_infer_nested_rows[Record-value1] _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x106edc9d0>
+spec = 'Record', value = {'rows': [{'n': 1}, {'n': None}]}
+
+    @pytest.mark.parametrize('spec,value', [
+        ('Unknown', {'rows': [{'n': 1}, {'n': None}]}),
+        ('Record', {'rows': [{'n': 1}, {'n': None}]}),
+        ('List', [{'n': 1}, {'n': None}]),
+        ('List<Unknown>', [{'n': 1}, {'n': None}]),
+    ])
+    def test_unconstrained_contract_does_not_infer_nested_rows(monkeypatch, spec, value):
+        def unexpected_inference(_value):
+            pytest.fail('an unconstrained child must not be inferred')
+        monkeypatch.setattr(types, 'infer', unexpected_inference)
+>       assert types.guard(value, spec, 'input') is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/test_ibl_v2_types.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/ibl/ibl_v2_types.py:215: in guard
+    actual = infer(value)
+             ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_value = {'rows': [{'n': 1}, {'n': None}]}
+
+    def unexpected_inference(_value):
+>       pytest.fail('an unconstrained child must not be inferred')
+E       Failed: an unconstrained child must not be inferred
+
+backend/test_ibl_v2_types.py:19: Failed
+_____ test_unconstrained_contract_does_not_infer_nested_rows[List-value2] ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107160170>
+spec = 'List', value = [{'n': 1}, {'n': None}]
+
+    @pytest.mark.parametrize('spec,value', [
+        ('Unknown', {'rows': [{'n': 1}, {'n': None}]}),
+        ('Record', {'rows': [{'n': 1}, {'n': None}]}),
+        ('List', [{'n': 1}, {'n': None}]),
+        ('List<Unknown>', [{'n': 1}, {'n': None}]),
+    ])
+    def test_unconstrained_contract_does_not_infer_nested_rows(monkeypatch, spec, value):
+        def unexpected_inference(_value):
+            pytest.fail('an unconstrained child must not be inferred')
+        monkeypatch.setattr(types, 'infer', unexpected_inference)
+>       assert types.guard(value, spec, 'input') is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/test_ibl_v2_types.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/ibl/ibl_v2_types.py:215: in guard
+    actual = infer(value)
+             ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_value = [{'n': 1}, {'n': None}]
+
+    def unexpected_inference(_value):
+>       pytest.fail('an unconstrained child must not be inferred')
+E       Failed: an unconstrained child must not be inferred
+
+backend/test_ibl_v2_types.py:19: Failed
+_ test_unconstrained_contract_does_not_infer_nested_rows[List<Unknown>-value3] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107045590>
+spec = 'List<Unknown>', value = [{'n': 1}, {'n': None}]
+
+    @pytest.mark.parametrize('spec,value', [
+        ('Unknown', {'rows': [{'n': 1}, {'n': None}]}),
+        ('Record', {'rows': [{'n': 1}, {'n': None}]}),
+        ('List', [{'n': 1}, {'n': None}]),
+        ('List<Unknown>', [{'n': 1}, {'n': None}]),
+    ])
+    def test_unconstrained_contract_does_not_infer_nested_rows(monkeypatch, spec, value):
+        def unexpected_inference(_value):
+            pytest.fail('an unconstrained child must not be inferred')
+        monkeypatch.setattr(types, 'infer', unexpected_inference)
+>       assert types.guard(value, spec, 'input') is value
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/test_ibl_v2_types.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/ibl/ibl_v2_types.py:215: in guard
+    actual = infer(value)
+             ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_value = [{'n': 1}, {'n': None}]
+
+    def unexpected_inference(_value):
+>       pytest.fail('an unconstrained child must not be inferred')
+E       Failed: an unconstrained child must not be inferred
+
+backend/test_ibl_v2_types.py:19: Failed
+__________ test_nullable_arithmetic_diagnostic_explains_direct_guard ___________
+
+    def test_nullable_arithmetic_diagnostic_explains_direct_guard():
+        source = '''$rows >> [table:each]{
+          $status=$it.price==null ? "unknown" : "ok"
+          return $status=="ok" ? $it.price*2 : null
+        }'''
+        plan = compile_program(source, inputs={'rows': [{'price': None}, {'price': 3}]})
+        issue = next(i for i in plan.issues if i['code'] == 'ARITHMETIC')
+        assert issue['actual'] == 'Null'
+>       assert 'null' in issue['hint'] and '직접' in issue['hint']
+E       AssertionError: assert ('null' in '산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요.')
+
+backend/test_ibl_v2_analysis.py:17: AssertionError
+============================= slowest 15 durations =============================
+
+(15 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_ibl_v2_types.py::test_unconstrained_contract_does_not_infer_nested_rows[Unknown-value0]
+FAILED backend/test_ibl_v2_types.py::test_unconstrained_contract_does_not_infer_nested_rows[Record-value1]
+FAILED backend/test_ibl_v2_types.py::test_unconstrained_contract_does_not_infer_nested_rows[List-value2]
+FAILED backend/test_ibl_v2_types.py::test_unconstrained_contract_does_not_infer_nested_rows[List<Unknown>-value3]
+FAILED backend/test_ibl_v2_analysis.py::test_nullable_arithmetic_diagnostic_explains_direct_guard
+5 failed, 125 passed in 0.99s

@@ -1,0 +1,27 @@
+#!ibl edition=2
+[def:주문읽기]($path) {
+  [try] {
+    $d=[self:read]{path:$path}
+    return {path:$path,ok:true,rows:$d.data.items,error:null}
+  } [catch] {
+    return {path:$path,ok:false,rows:[],error:$error.message}
+  }
+}
+[def:정규화]($orders) {
+  $flat=$orders >> [table:flatten]{field:"lines",keep:["order_id","region"]}
+  $rows=$flat.items >> [table:each] {
+    return {order_id:$it.order_id_2,line_no:$it.line_no,region:$it.region,sku:$it.sku,qty:$it.qty,note:$it.note,vendor_order_id:get($it,"order_id",null)}
+  }
+  $unique=$rows >> [table:dedup]{key:["order_id","line_no"]}
+  return $unique.items
+}
+$reads=($sources >> [table:each]{parallel:3}{[fn:주문읽기]{path:$it}}) & [self:read]{path:$prices} & [self:read]{path:$returns}
+$files=$reads[0]
+$all=$files >> [table:each]{mode:"flat_map"}{return $it.rows}
+$orders=[fn:정규화]{orders:$all}
+$price_rows=map($reads[1].data.items,($r)=>{sku:$r.sku,unit_price:number($r.unit_price)})
+$return_rows=map($reads[2].data.items,($r)=>{order_id:$r.order_id,line_no:$r.line_no,returned_qty:number($r.returned_qty)})
+$return_totals=$return_rows >> [table:groupby]{by:["order_id","line_no"],agg:{returned_qty:["sum","returned_qty"]}}
+$priced=[table:join]{left:$orders,right:$price_rows,on:"sku",how:"left",defaults:{unit_price:null}}
+$combined=[table:join]{left:$priced.items,right:$return_totals.items,on:["order_id","line_no"],how:"left",defaults:{returned_qty:0}}
+return {rows:$combined.items,failures:filter($files,($f)=>not $f.ok),source_complete:all(map($files,($f)=>$f.ok))}

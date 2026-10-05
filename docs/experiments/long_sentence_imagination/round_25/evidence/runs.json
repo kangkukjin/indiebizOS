@@ -1,0 +1,1409 @@
+[
+  {
+    "label": "after_null_hint",
+    "started": 1791220007.480032,
+    "ended": 1791220007.770645,
+    "elapsed": 0.29061293601989746,
+    "executed": false,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": [
+      {
+        "code": "ARITHMETIC",
+        "message": "산술로 관측할 수 없는 타입: Null",
+        "source_span": {
+          "source_hash": "5244abc0d86795c501230f218296590764b11f0193f7b5bac5fdeffd376606fc",
+          "start": 75,
+          "end": 80,
+          "line": 1,
+          "column": 76
+        },
+        "call_path": [],
+        "expected": "Number",
+        "actual": "Null",
+        "hint": "null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: $값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. null 처리 결과는 과제 기준으로 정하세요.",
+        "location": {
+          "source_hash": "5244abc0d86795c501230f218296590764b11f0193f7b5bac5fdeffd376606fc",
+          "start": 75,
+          "end": 80,
+          "line": 1,
+          "column": 76,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 1,
+          "end_column": 81,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "ARITHMETIC",
+        "severity": "error"
+      }
+    ],
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "5244abc0d86795c501230f218296590764b11f0193f7b5bac5fdeffd376606fc"
+  },
+  {
+    "label": "after_prepare_main",
+    "started": 1791219999.19327,
+    "ended": 1791220002.172377,
+    "elapsed": 2.979107141494751,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "ad3787f5feef4d34afb86e02d5686929"
+    },
+    "source_complete": true,
+    "usage": {
+      "steps": 92426,
+      "rows": 3696,
+      "elapsed_ms": 2430
+    },
+    "evidence_summary": {
+      "events": 215,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "2147538505219c956f65d607faa96cf0dadbeb647f0da49958fccac9d7057a25"
+  },
+  {
+    "label": "after_prepare_missing",
+    "started": 1791220002.214284,
+    "ended": 1791220004.296454,
+    "elapsed": 2.082170009613037,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "6fc84e60f59244c68fae13cbe101b608"
+    },
+    "source_complete": false,
+    "usage": {
+      "steps": 64136,
+      "rows": 2466,
+      "elapsed_ms": 1695
+    },
+    "evidence_summary": {
+      "events": 219,
+      "source_complete": false,
+      "tool_failures": 1,
+      "source_failures": 1,
+      "failures": [
+        {
+          "id": 35,
+          "action": "self:read",
+          "code": "NOT_FOUND",
+          "failure_kind": "runtime",
+          "incomplete": true
+        }
+      ],
+      "failures_omitted": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "2147538505219c956f65d607faa96cf0dadbeb647f0da49958fccac9d7057a25"
+  },
+  {
+    "label": "after_prepare_reverse",
+    "started": 1791220004.340178,
+    "ended": 1791220007.4383519,
+    "elapsed": 3.0981738567352295,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "5b046aecfa5047e2932628995b33500f"
+    },
+    "source_complete": true,
+    "usage": {
+      "steps": 92426,
+      "rows": 3696,
+      "elapsed_ms": 2552
+    },
+    "evidence_summary": {
+      "events": 215,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "2147538505219c956f65d607faa96cf0dadbeb647f0da49958fccac9d7057a25"
+  },
+  {
+    "label": "after_settle_main",
+    "started": 1791220081.517626,
+    "ended": 1791220087.469634,
+    "elapsed": 5.952008008956909,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "e10c78549634461d838ee3a8a2d7af51"
+    },
+    "source_complete": true,
+    "usage": {
+      "steps": 358958,
+      "rows": 7200,
+      "elapsed_ms": 4611,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 107709
+        },
+        {
+          "line": 9,
+          "steps": 75509
+        },
+        {
+          "line": 5,
+          "steps": 57081
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "evidence_summary": {
+      "events": 18281,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": [
+      {
+        "name": "prepared",
+        "id": "8171e9ca3d740e70a08ecffbdb10fc93c5b3ca3bfea61848d1f97848bee0c10a",
+        "path": [
+          "value_wire"
+        ],
+        "evidence": {
+          "fingerprint": "88f37d554e261b9ef2f95456a7d21d74e9ab3b09cb4b354c77b7667cbaf99e5f",
+          "fingerprint_scheme": "certified-evidence/1",
+          "incomplete": false,
+          "execution_success": true,
+          "run_id": "ad3787f5feef4d34afb86e02d5686929"
+        },
+        "chars": 584278
+      }
+    ],
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "5d4a60fb7534721e8af63bfcb4e9eb46e532123e68a8e5e6dd5bb7dc141efdb7"
+  },
+  {
+    "label": "after_settle_missing",
+    "started": 1791220093.139182,
+    "ended": 1791220097.6719732,
+    "elapsed": 4.5327911376953125,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "956b227774cd44688ee77aa26a625e9c"
+    },
+    "source_complete": false,
+    "usage": {
+      "steps": 239354,
+      "rows": 4800,
+      "elapsed_ms": 3603,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 71805
+        },
+        {
+          "line": 9,
+          "steps": 50341
+        },
+        {
+          "line": 5,
+          "steps": 38049
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "evidence_summary": {
+      "events": 12281,
+      "source_complete": false,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": [
+      {
+        "name": "prepared",
+        "id": "7d61461d20e9a09585475f72f7a9f4baf3401d5315c7c10ad96e213ea9582355",
+        "path": [
+          "value_wire"
+        ],
+        "evidence": {
+          "fingerprint": "f2ccf943e7c1b7b7a471efaccaae4ac4cbb8fd25eee5fcc9e1e831aeb63e1fd2",
+          "fingerprint_scheme": "certified-evidence/1",
+          "incomplete": true,
+          "execution_success": true,
+          "run_id": "6fc84e60f59244c68fae13cbe101b608"
+        },
+        "chars": 389793
+      }
+    ],
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "5d4a60fb7534721e8af63bfcb4e9eb46e532123e68a8e5e6dd5bb7dc141efdb7"
+  },
+  {
+    "label": "after_settle_policy",
+    "started": 1791220087.5141718,
+    "ended": 1791220093.090421,
+    "elapsed": 5.576249122619629,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "612e762bd0b041aeb264d2832cbde51c"
+    },
+    "source_complete": true,
+    "usage": {
+      "steps": 358958,
+      "rows": 7200,
+      "elapsed_ms": 4107,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 107709
+        },
+        {
+          "line": 9,
+          "steps": 75509
+        },
+        {
+          "line": 5,
+          "steps": 57081
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "evidence_summary": {
+      "events": 18278,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": [
+      {
+        "name": "prepared",
+        "id": "8171e9ca3d740e70a08ecffbdb10fc93c5b3ca3bfea61848d1f97848bee0c10a",
+        "path": [
+          "value_wire"
+        ],
+        "evidence": {
+          "fingerprint": "88f37d554e261b9ef2f95456a7d21d74e9ab3b09cb4b354c77b7667cbaf99e5f",
+          "fingerprint_scheme": "certified-evidence/1",
+          "incomplete": false,
+          "execution_success": true,
+          "run_id": "ad3787f5feef4d34afb86e02d5686929"
+        },
+        "chars": 584278
+      }
+    ],
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "5d4a60fb7534721e8af63bfcb4e9eb46e532123e68a8e5e6dd5bb7dc141efdb7"
+  },
+  {
+    "label": "after_settle_reverse",
+    "started": 1791220097.7229178,
+    "ended": 1791220103.868042,
+    "elapsed": 6.145124197006226,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "b012a8f665f44fafb86ba79957de4115"
+    },
+    "source_complete": true,
+    "usage": {
+      "steps": 358958,
+      "rows": 7200,
+      "elapsed_ms": 4778,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 107709
+        },
+        {
+          "line": 9,
+          "steps": 75509
+        },
+        {
+          "line": 5,
+          "steps": 57081
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "evidence_summary": {
+      "events": 18281,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": [
+      {
+        "name": "prepared",
+        "id": "1170577f7f9eab2265d3d132073bdb47121accafe98f56b7a826857bfa4ca652",
+        "path": [
+          "value_wire"
+        ],
+        "evidence": {
+          "fingerprint": "51ee4ff6d1e6dabd1acea9ae0058fc348fa22cc874545c514a17d5e0371d7c48",
+          "fingerprint_scheme": "certified-evidence/1",
+          "incomplete": false,
+          "execution_success": true,
+          "run_id": "5b046aecfa5047e2932628995b33500f"
+        },
+        "chars": 584278
+      }
+    ],
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "5d4a60fb7534721e8af63bfcb4e9eb46e532123e68a8e5e6dd5bb7dc141efdb7"
+  },
+  {
+    "label": "ai_main_final",
+    "started": 1791219486.746516,
+    "ended": 1791219486.761933,
+    "elapsed": 0.015417098999023438,
+    "executed": null,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": "succeeded",
+    "request_source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "ai_policy_final",
+    "started": 1791219785.2763782,
+    "ended": 1791219785.291847,
+    "elapsed": 0.015468835830688477,
+    "executed": null,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": "succeeded",
+    "request_source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "ai_policy_poll1",
+    "started": 1791219687.2288241,
+    "ended": 1791219688.245615,
+    "elapsed": 1.0167908668518066,
+    "executed": null,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": "running",
+    "request_source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "ai_policy_start",
+    "started": 1791219486.889834,
+    "ended": 1791219486.906077,
+    "elapsed": 0.01624298095703125,
+    "executed": null,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": "task_sysai_98891334",
+    "state": "queued",
+    "request_source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "ai_poll1",
+    "started": 1791219017.737344,
+    "ended": 1791219018.763353,
+    "elapsed": 1.0260090827941895,
+    "executed": null,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": "running",
+    "request_source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "ai_poll2",
+    "started": 1791219196.668347,
+    "ended": 1791219197.6955671,
+    "elapsed": 1.0272202491760254,
+    "executed": null,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": "running",
+    "request_source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "ai_poll3",
+    "started": 1791219336.997013,
+    "ended": 1791219338.0466628,
+    "elapsed": 1.049649715423584,
+    "executed": null,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": "running",
+    "request_source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "ai_poll4",
+    "started": 1791219430.5401752,
+    "ended": 1791219431.5672371,
+    "elapsed": 1.027061939239502,
+    "executed": null,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": "running",
+    "request_source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "ai_start",
+    "started": 1791218952.418091,
+    "ended": 1791218952.44255,
+    "elapsed": 0.024458885192871094,
+    "executed": null,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": "task_sysai_7aedbf82",
+    "state": "queued",
+    "request_source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "health_after",
+    "started": 1791219978.868497,
+    "ended": 1791219978.890253,
+    "elapsed": 0.02175617218017578,
+    "executed": null,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "null_probe_0",
+    "started": 1791219107.2673569,
+    "ended": 1791219107.347925,
+    "elapsed": 0.08056807518005371,
+    "executed": false,
+    "success": false,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": [
+      {
+        "code": "EDITION_ARGUMENT",
+        "kind": "compile",
+        "message": "inputs는 판본 2에서만 사용할 수 있습니다.",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "rule": "EDITION_ARGUMENT",
+        "severity": "error",
+        "hint": "호출 인자·타입·해당 위치의 계약을 확인하세요."
+      }
+    ],
+    "diagnostic": {
+      "code": "EDITION_ARGUMENT",
+      "kind": "compile",
+      "message": "inputs는 판본 2에서만 사용할 수 있습니다.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [],
+      "details": {},
+      "rule": "EDITION_ARGUMENT",
+      "severity": "error",
+      "hint": "호출 인자·타입·해당 위치의 계약을 확인하세요."
+    },
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "45ce6cfdef47f666839aa9e2cc1713b1986aa8add0d3f74c8bbf718bf2115fdf"
+  },
+  {
+    "label": "null_probe_0_fixed",
+    "started": 1791219124.6242108,
+    "ended": 1791219133.348154,
+    "elapsed": 8.72394323348999,
+    "executed": false,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": [],
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "45ce6cfdef47f666839aa9e2cc1713b1986aa8add0d3f74c8bbf718bf2115fdf"
+  },
+  {
+    "label": "null_probe_1",
+    "started": 1791219107.390357,
+    "ended": 1791219107.4245608,
+    "elapsed": 0.03420376777648926,
+    "executed": false,
+    "success": false,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": [
+      {
+        "code": "EDITION_ARGUMENT",
+        "kind": "compile",
+        "message": "inputs는 판본 2에서만 사용할 수 있습니다.",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "rule": "EDITION_ARGUMENT",
+        "severity": "error",
+        "hint": "호출 인자·타입·해당 위치의 계약을 확인하세요."
+      }
+    ],
+    "diagnostic": {
+      "code": "EDITION_ARGUMENT",
+      "kind": "compile",
+      "message": "inputs는 판본 2에서만 사용할 수 있습니다.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [],
+      "details": {},
+      "rule": "EDITION_ARGUMENT",
+      "severity": "error",
+      "hint": "호출 인자·타입·해당 위치의 계약을 확인하세요."
+    },
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "5244abc0d86795c501230f218296590764b11f0193f7b5bac5fdeffd376606fc"
+  },
+  {
+    "label": "null_probe_1_fixed",
+    "started": 1791219133.395624,
+    "ended": 1791219138.9661639,
+    "elapsed": 5.570539951324463,
+    "executed": false,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": [
+      {
+        "code": "ARITHMETIC",
+        "message": "산술로 관측할 수 없는 타입: Null",
+        "source_span": {
+          "source_hash": "5244abc0d86795c501230f218296590764b11f0193f7b5bac5fdeffd376606fc",
+          "start": 75,
+          "end": 80,
+          "line": 1,
+          "column": 76
+        },
+        "call_path": [],
+        "expected": "Number",
+        "actual": "Null",
+        "location": {
+          "source_hash": "5244abc0d86795c501230f218296590764b11f0193f7b5bac5fdeffd376606fc",
+          "start": 75,
+          "end": 80,
+          "line": 1,
+          "column": 76,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 1,
+          "end_column": 81,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "ARITHMETIC",
+        "severity": "error",
+        "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+      }
+    ],
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "5244abc0d86795c501230f218296590764b11f0193f7b5bac5fdeffd376606fc"
+  },
+  {
+    "label": "prepare_check",
+    "started": 1791218952.51697,
+    "ended": 1791218953.175374,
+    "elapsed": 0.6584041118621826,
+    "executed": false,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": [],
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "2147538505219c956f65d607faa96cf0dadbeb647f0da49958fccac9d7057a25"
+  },
+  {
+    "label": "prepare_main",
+    "started": 1791218972.475487,
+    "ended": 1791218976.010062,
+    "elapsed": 3.5345749855041504,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "a4dc9d603a5643d0b779b94b26c10482"
+    },
+    "source_complete": true,
+    "usage": {
+      "steps": 92426,
+      "rows": 3696,
+      "elapsed_ms": 2988
+    },
+    "evidence_summary": {
+      "events": 215,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "2147538505219c956f65d607faa96cf0dadbeb647f0da49958fccac9d7057a25"
+  },
+  {
+    "label": "prepare_missing",
+    "started": 1791219007.5947049,
+    "ended": 1791219010.85826,
+    "elapsed": 3.2635550498962402,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "17af16ab59054c15a53dbc1d91990538"
+    },
+    "source_complete": false,
+    "usage": {
+      "steps": 64136,
+      "rows": 2466,
+      "elapsed_ms": 2713
+    },
+    "evidence_summary": {
+      "events": 219,
+      "source_complete": false,
+      "tool_failures": 1,
+      "source_failures": 1,
+      "failures": [
+        {
+          "id": 35,
+          "action": "self:read",
+          "code": "NOT_FOUND",
+          "failure_kind": "runtime",
+          "incomplete": true
+        }
+      ],
+      "failures_omitted": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "2147538505219c956f65d607faa96cf0dadbeb647f0da49958fccac9d7057a25"
+  },
+  {
+    "label": "settle_check",
+    "started": 1791218972.4746041,
+    "ended": 1791218973.0640728,
+    "elapsed": 0.5894687175750732,
+    "executed": false,
+    "success": null,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": null,
+    "issues": [],
+    "diagnostic": null,
+    "inputs_resolved": null,
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3"
+  },
+  {
+    "label": "settle_main",
+    "started": 1791219007.591875,
+    "ended": 1791219008.9123242,
+    "elapsed": 1.3204491138458252,
+    "executed": false,
+    "success": false,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": {
+      "events": 0,
+      "source_complete": null,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": [
+      {
+        "code": "MISSING_FIELD",
+        "message": "선언된 필드가 없습니다: rows. 선택 필드는 has/get을 쓰세요.",
+        "source_span": {
+          "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+          "start": 513,
+          "end": 527,
+          "line": 8,
+          "column": 7
+        },
+        "call_path": [],
+        "location": {
+          "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+          "start": 513,
+          "end": 527,
+          "line": 8,
+          "column": 7,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 8,
+          "end_column": 21,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "MISSING_FIELD",
+        "severity": "error",
+        "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+      },
+      {
+        "code": "MISSING_FIELD",
+        "message": "선언된 필드가 없습니다: source_complete. 선택 필드는 has/get을 쓰세요.",
+        "source_span": {
+          "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+          "start": 1019,
+          "end": 1044,
+          "line": 11,
+          "column": 140
+        },
+        "call_path": [],
+        "location": {
+          "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+          "start": 1019,
+          "end": 1044,
+          "line": 11,
+          "column": 140,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 11,
+          "end_column": 165,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "MISSING_FIELD",
+        "severity": "error",
+        "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+      },
+      {
+        "code": "MISSING_FIELD",
+        "message": "선언된 필드가 없습니다: failures. 선택 필드는 has/get을 쓰세요.",
+        "source_span": {
+          "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+          "start": 1054,
+          "end": 1072,
+          "line": 11,
+          "column": 175
+        },
+        "call_path": [],
+        "location": {
+          "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+          "start": 1054,
+          "end": 1072,
+          "line": 11,
+          "column": 175,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 11,
+          "end_column": 193,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "MISSING_FIELD",
+        "severity": "error",
+        "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+      }
+    ],
+    "diagnostic": null,
+    "inputs_resolved": [
+      {
+        "name": "prepared",
+        "at": [
+          "입력"
+        ],
+        "id": "a0bdafd31f57bf7f53fa462ff92d095694377557e28ef1a27215c3da9a4c8f4a",
+        "path": [
+          "value_wire"
+        ],
+        "evidence": {
+          "fingerprint": "ffb8d74baeac78de9615c98e0766c6350a3723f5006dfddb588dcab213425d23",
+          "fingerprint_scheme": "certified-evidence/1",
+          "incomplete": false,
+          "execution_success": true,
+          "run_id": "a4dc9d603a5643d0b779b94b26c10482"
+        },
+        "chars": 584278
+      }
+    ],
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3"
+  },
+  {
+    "label": "settle_main_v1",
+    "started": 1791219037.2697139,
+    "ended": 1791219038.72525,
+    "elapsed": 1.455536127090454,
+    "executed": false,
+    "success": false,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": {
+      "events": 0,
+      "source_complete": null,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": [
+      {
+        "code": "ARITHMETIC",
+        "message": "산술로 관측할 수 없는 타입: Null",
+        "source_span": {
+          "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+          "start": 202,
+          "end": 215,
+          "line": 5,
+          "column": 32
+        },
+        "call_path": [
+          {
+            "function": "行정산",
+            "call": {
+              "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+              "start": 544,
+              "end": 580,
+              "line": 8,
+              "column": 38,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 8,
+              "end_column": 74,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+              "start": 16,
+              "end": 506,
+              "line": 2,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 7,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Number",
+        "actual": "Null",
+        "location": {
+          "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+          "start": 202,
+          "end": 215,
+          "line": 5,
+          "column": 32,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 5,
+          "end_column": 45,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "ARITHMETIC",
+        "severity": "error",
+        "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+      }
+    ],
+    "diagnostic": null,
+    "inputs_resolved": [
+      {
+        "name": "prepared",
+        "id": "a0bdafd31f57bf7f53fa462ff92d095694377557e28ef1a27215c3da9a4c8f4a",
+        "path": [
+          "value_wire"
+        ],
+        "evidence": {
+          "fingerprint": "ffb8d74baeac78de9615c98e0766c6350a3723f5006dfddb588dcab213425d23",
+          "fingerprint_scheme": "certified-evidence/1",
+          "incomplete": false,
+          "execution_success": true,
+          "run_id": "a4dc9d603a5643d0b779b94b26c10482"
+        },
+        "chars": 584278
+      }
+    ],
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3"
+  },
+  {
+    "label": "settle_main_v2",
+    "started": 1791219107.265502,
+    "ended": 1791219113.4157069,
+    "elapsed": 6.15020489692688,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "66379a9cfdd743c8b8481470dd48697d"
+    },
+    "source_complete": true,
+    "usage": {
+      "steps": 358958,
+      "rows": 7200,
+      "elapsed_ms": 4818,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 107709
+        },
+        {
+          "line": 9,
+          "steps": 75509
+        },
+        {
+          "line": 5,
+          "steps": 57081
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "evidence_summary": {
+      "events": 18281,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": [
+      {
+        "name": "prepared",
+        "id": "a0bdafd31f57bf7f53fa462ff92d095694377557e28ef1a27215c3da9a4c8f4a",
+        "path": [
+          "value_wire"
+        ],
+        "evidence": {
+          "fingerprint": "ffb8d74baeac78de9615c98e0766c6350a3723f5006dfddb588dcab213425d23",
+          "fingerprint_scheme": "certified-evidence/1",
+          "incomplete": false,
+          "execution_success": true,
+          "run_id": "a4dc9d603a5643d0b779b94b26c10482"
+        },
+        "chars": 584278
+      }
+    ],
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "5d4a60fb7534721e8af63bfcb4e9eb46e532123e68a8e5e6dd5bb7dc141efdb7"
+  },
+  {
+    "label": "settle_missing_v1",
+    "started": 1791219037.2666209,
+    "ended": 1791219038.7279081,
+    "elapsed": 1.461287260055542,
+    "executed": false,
+    "success": false,
+    "run_status": null,
+    "resume": null,
+    "source_complete": null,
+    "usage": null,
+    "evidence_summary": {
+      "events": 0,
+      "source_complete": null,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": [
+      {
+        "code": "ARITHMETIC",
+        "message": "산술로 관측할 수 없는 타입: Null",
+        "source_span": {
+          "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+          "start": 202,
+          "end": 215,
+          "line": 5,
+          "column": 32
+        },
+        "call_path": [
+          {
+            "function": "行정산",
+            "call": {
+              "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+              "start": 544,
+              "end": 580,
+              "line": 8,
+              "column": 38,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 8,
+              "end_column": 74,
+              "offset_encoding": "unicode-codepoints"
+            },
+            "definition": {
+              "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+              "start": 16,
+              "end": 506,
+              "line": 2,
+              "column": 1,
+              "source": "<program>",
+              "uri": "ibl://program",
+              "end_line": 7,
+              "end_column": 2,
+              "offset_encoding": "unicode-codepoints"
+            }
+          }
+        ],
+        "expected": "Number",
+        "actual": "Null",
+        "location": {
+          "source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3",
+          "start": 202,
+          "end": 215,
+          "line": 5,
+          "column": 32,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 5,
+          "end_column": 45,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "ARITHMETIC",
+        "severity": "error",
+        "hint": "산술은 Number끼리만 합니다. 글자로 된 숫자는 number(...)로 바꾸고, 목록·레코드는 필드를 골라 계산하세요."
+      }
+    ],
+    "diagnostic": null,
+    "inputs_resolved": [
+      {
+        "name": "prepared",
+        "id": "5acf1de02b0e57c658961f07ad9f63e703a0550e8da137c051367e40dfe04497",
+        "path": [
+          "value_wire"
+        ],
+        "evidence": {
+          "fingerprint": "152c2f12736a7957d763b77f00725a0477e7e651b72f2a9259f4560a1f8a3f76",
+          "fingerprint_scheme": "certified-evidence/1",
+          "incomplete": true,
+          "execution_success": true,
+          "run_id": "17af16ab59054c15a53dbc1d91990538"
+        },
+        "chars": 389793
+      }
+    ],
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "11bf87d9e36c0dc50574a0c6fe5bdb776f79c5d05a5419bacc274245775763f3"
+  },
+  {
+    "label": "settle_missing_v2",
+    "started": 1791219138.685326,
+    "ended": 1791219143.1922271,
+    "elapsed": 4.506901025772095,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "21a9ee0dd3f640b1a83388240f4a2ec5"
+    },
+    "source_complete": false,
+    "usage": {
+      "steps": 239354,
+      "rows": 4800,
+      "elapsed_ms": 3356,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 71805
+        },
+        {
+          "line": 9,
+          "steps": 50341
+        },
+        {
+          "line": 5,
+          "steps": 38049
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "evidence_summary": {
+      "events": 12281,
+      "source_complete": false,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": [
+      {
+        "name": "prepared",
+        "id": "5acf1de02b0e57c658961f07ad9f63e703a0550e8da137c051367e40dfe04497",
+        "path": [
+          "value_wire"
+        ],
+        "evidence": {
+          "fingerprint": "152c2f12736a7957d763b77f00725a0477e7e651b72f2a9259f4560a1f8a3f76",
+          "fingerprint_scheme": "certified-evidence/1",
+          "incomplete": true,
+          "execution_success": true,
+          "run_id": "17af16ab59054c15a53dbc1d91990538"
+        },
+        "chars": 389793
+      }
+    ],
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "5d4a60fb7534721e8af63bfcb4e9eb46e532123e68a8e5e6dd5bb7dc141efdb7"
+  },
+  {
+    "label": "settle_policy_v2",
+    "started": 1791219124.626084,
+    "ended": 1791219138.6381881,
+    "elapsed": 14.012104034423828,
+    "executed": true,
+    "success": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "bac2bab92aae4329a322e5c161cd4eed"
+    },
+    "source_complete": true,
+    "usage": {
+      "steps": 358958,
+      "rows": 7200,
+      "elapsed_ms": 12629,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 107709
+        },
+        {
+          "line": 9,
+          "steps": 75509
+        },
+        {
+          "line": 5,
+          "steps": 57081
+        }
+      ],
+      "detail": "read_result path [\"usage\"]",
+      "tool_ms_by_line": [
+        {
+          "line": 13,
+          "ms": 2351,
+          "calls": 3,
+          "actions": [
+            "self:read"
+          ]
+        },
+        {
+          "line": 12,
+          "ms": 971,
+          "calls": 3,
+          "actions": [
+            "self:write"
+          ]
+        },
+        {
+          "line": 10,
+          "ms": 88,
+          "calls": 1,
+          "actions": [
+            "table:groupby"
+          ]
+        }
+      ]
+    },
+    "evidence_summary": {
+      "events": 18278,
+      "source_complete": true,
+      "tool_failures": 0,
+      "source_failures": 0
+    },
+    "issues": null,
+    "diagnostic": null,
+    "inputs_resolved": [
+      {
+        "name": "prepared",
+        "id": "a0bdafd31f57bf7f53fa462ff92d095694377557e28ef1a27215c3da9a4c8f4a",
+        "path": [
+          "value_wire"
+        ],
+        "evidence": {
+          "fingerprint": "ffb8d74baeac78de9615c98e0766c6350a3723f5006dfddb588dcab213425d23",
+          "fingerprint_scheme": "certified-evidence/1",
+          "incomplete": false,
+          "execution_success": true,
+          "run_id": "a4dc9d603a5643d0b779b94b26c10482"
+        },
+        "chars": 584278
+      }
+    ],
+    "task_id": null,
+    "state": null,
+    "request_source_hash": "5d4a60fb7534721e8af63bfcb4e9eb46e532123e68a8e5e6dd5bb7dc141efdb7"
+  }
+]

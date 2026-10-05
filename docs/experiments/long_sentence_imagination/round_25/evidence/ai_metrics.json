@@ -1,0 +1,380 @@
+[
+  {
+    "episode": 4346,
+    "started": "2026-10-06T01:49:12.550380",
+    "ended": "2026-10-06T01:57:45.421249",
+    "total_ms": 512870,
+    "run_id": "run_1b922789a12be6664c3c",
+    "totals": {
+      "input": 2055516,
+      "output": 11373,
+      "cache_read": 1641856,
+      "cache_create": 0
+    },
+    "roles": {
+      "oneshot:classify": {
+        "input": 3193,
+        "output": 2,
+        "cache_read": 2432,
+        "cache_create": 0
+      },
+      "consciousness": {
+        "input": 118407,
+        "output": 2096,
+        "cache_read": 77824,
+        "cache_create": 0
+      },
+      "execution": {
+        "input": 1742798,
+        "output": 8774,
+        "cache_read": 1561600,
+        "cache_create": 0
+      },
+      "oneshot:evaluate": {
+        "input": 191118,
+        "output": 501,
+        "cache_read": 0,
+        "cache_create": 0
+      }
+    },
+    "usage": [
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 2432,
+        "call_id": "2388fa9e4c1d4fbe847ca772a6e5f992",
+        "event": "usage",
+        "input": 3193,
+        "latency_ms": 1337,
+        "model": "deepseek-flash",
+        "output": 2,
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "OpenAI",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 77824,
+        "call_id": "e77e3efdd21440cead25c9a0f8d02320",
+        "event": "usage",
+        "input": 118407,
+        "latency_ms": 80270,
+        "model": "gpt-6-astra:high",
+        "output": 2096,
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 3,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 1006464,
+        "call_id": "807c40b0da1a4486b6c2f78f93f30575",
+        "event": "usage",
+        "input": 1115396,
+        "latency_ms": 307044,
+        "model": "gpt-6-astra:high",
+        "output": 7126,
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 13,
+        "source": "gear:최대|실행→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 0,
+        "call_id": "80a6e673c8774adbac8492c0a8ce659d",
+        "event": "usage",
+        "input": 83420,
+        "latency_ms": 20473,
+        "model": "gpt-6-astra:high",
+        "output": 429,
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 1,
+        "source": "gear:최대|평가→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 555136,
+        "call_id": "8635d0b62a6944ee8bd18717d31364d8",
+        "event": "usage",
+        "input": 627402,
+        "latency_ms": 88230,
+        "model": "gpt-6-astra:high",
+        "output": 1648,
+        "parent_call_id": null,
+        "phase": "repair",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 10,
+        "source": "gear:최대|실행→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 0,
+        "call_id": "075793f8e5f54e69aa93ee71325f5354",
+        "event": "usage",
+        "input": 107698,
+        "latency_ms": 8184,
+        "model": "gpt-6-astra:high",
+        "output": 72,
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 1,
+        "source": "gear:최대|평가→고급",
+        "tier": "고급"
+      }
+    ],
+    "route": [
+      {
+        "kind": "cognition.route",
+        "data": {
+          "force_role": "",
+          "intent": "task",
+          "reflex": false,
+          "request_type": "THINK"
+        }
+      },
+      {
+        "kind": "cognition.evaluation",
+        "data": {
+          "path": "goal_eval",
+          "supervised": true
+        }
+      },
+      {
+        "kind": "supervision.cost.summary",
+        "data": {
+          "cost": {
+            "check_rejections": 3,
+            "evaluation_calls": 2,
+            "evaluation_checkpoint_s": 0.001745,
+            "evaluation_model_s": 29.482,
+            "evaluation_prepare_s": 0.36395999999999995,
+            "evaluation_visual_s": 0.008216000000000001,
+            "evaluation_wait_s": 0.000865,
+            "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/96a579556a8d47118df33f886220c4b8/events.jsonl",
+            "execution_calls": 13,
+            "execution_failures": 2,
+            "execution_tool_s": 45.483,
+            "internal_tool_failures": 0,
+            "request_intent": "task",
+            "source_failures": 0,
+            "supervisor_cache_read": 77824,
+            "supervisor_calls": 1,
+            "supervisor_input": 118407,
+            "supervisor_model_s": 80.863,
+            "supervisor_output": 2096,
+            "supervisor_tool_failures": 0,
+            "supervisor_tools": 2,
+            "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+            "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+            "wall_s": 511.967
+          },
+          "kind": "cost.summary",
+          "phase": "final",
+          "role": "harness",
+          "seq": 82,
+          "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/96a579556a8d47118df33f886220c4b8",
+          "task_id": "task_sysai_7aedbf82",
+          "time": 1791219465.375696
+        }
+      }
+    ],
+    "calls_started": 13,
+    "check_rejections": 3,
+    "execution_errors": 2
+  },
+  {
+    "episode": 4347,
+    "started": "2026-10-06T01:58:06.907540",
+    "ended": "2026-10-06T02:01:32.499558",
+    "total_ms": 205591,
+    "run_id": "run_b7eacc0afbab1377286a",
+    "totals": {
+      "input": 929810,
+      "output": 4789,
+      "cache_read": 713088,
+      "cache_create": 0
+    },
+    "roles": {
+      "oneshot:classify": {
+        "input": 2851,
+        "output": 2,
+        "cache_read": 2432,
+        "cache_create": 0
+      },
+      "consciousness": {
+        "input": 38747,
+        "output": 1866,
+        "cache_read": 0,
+        "cache_create": 0
+      },
+      "execution": {
+        "input": 806731,
+        "output": 2810,
+        "cache_read": 710656,
+        "cache_create": 0
+      },
+      "oneshot:evaluate": {
+        "input": 81481,
+        "output": 111,
+        "cache_read": 0,
+        "cache_create": 0
+      }
+    },
+    "usage": [
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 2432,
+        "call_id": "b4758a9213b24758b19e06d10157054e",
+        "event": "usage",
+        "input": 2851,
+        "latency_ms": 605,
+        "model": "deepseek-flash",
+        "output": 2,
+        "parent_call_id": null,
+        "phase": "classify",
+        "provider": "OpenAI",
+        "role": "oneshot:classify",
+        "round_index": 1,
+        "source": "gear:최대|분류→경량",
+        "tier": "경량"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 0,
+        "call_id": "9c33a367b4ef4ac191cfe07bd6ba4474",
+        "event": "usage",
+        "input": 38747,
+        "latency_ms": 60272,
+        "model": "gpt-6-astra:high",
+        "output": 1866,
+        "parent_call_id": null,
+        "phase": "plan",
+        "provider": "Codex",
+        "role": "consciousness",
+        "round_index": 1,
+        "source": "execution_instance",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 710656,
+        "call_id": "f55c99570e8f4aaeba76885cc3086a38",
+        "event": "usage",
+        "input": 806731,
+        "latency_ms": 131451,
+        "model": "gpt-6-astra:high",
+        "output": 2810,
+        "parent_call_id": null,
+        "phase": "execute",
+        "provider": "Codex",
+        "role": "execution",
+        "round_index": 10,
+        "source": "gear:최대|실행→고급",
+        "tier": "고급"
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 0,
+        "call_id": "dfbe664125994f488d4eaa1d3012b289",
+        "event": "usage",
+        "input": 81481,
+        "latency_ms": 10006,
+        "model": "gpt-6-astra:high",
+        "output": 111,
+        "parent_call_id": null,
+        "phase": "evaluate",
+        "provider": "Codex",
+        "role": "oneshot:evaluate",
+        "round_index": 1,
+        "source": "gear:최대|평가→고급",
+        "tier": "고급"
+      }
+    ],
+    "route": [
+      {
+        "kind": "cognition.route",
+        "data": {
+          "force_role": "",
+          "intent": "task",
+          "reflex": false,
+          "request_type": "THINK"
+        }
+      },
+      {
+        "kind": "cognition.evaluation",
+        "data": {
+          "path": "goal_eval",
+          "supervised": true
+        }
+      },
+      {
+        "kind": "supervision.cost.summary",
+        "data": {
+          "cost": {
+            "check_rejections": 0,
+            "evaluation_calls": 1,
+            "evaluation_checkpoint_s": 0.000863,
+            "evaluation_model_s": 10.474,
+            "evaluation_prepare_s": 0.168029,
+            "evaluation_visual_s": 0.004007,
+            "evaluation_wait_s": 0.000867,
+            "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/62b6bb4dd8a8490396f89f68c05d3c81/events.jsonl",
+            "execution_calls": 9,
+            "execution_failures": 0,
+            "execution_tool_s": 19.54,
+            "internal_tool_failures": 0,
+            "request_intent": "task",
+            "source_failures": 0,
+            "supervisor_cache_read": 0,
+            "supervisor_calls": 1,
+            "supervisor_input": 38747,
+            "supervisor_model_s": 60.932,
+            "supervisor_output": 1866,
+            "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+            "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+            "wall_s": 205.634
+          },
+          "kind": "cost.summary",
+          "phase": "final",
+          "role": "harness",
+          "seq": 51,
+          "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/62b6bb4dd8a8490396f89f68c05d3c81",
+          "task_id": "task_sysai_98891334",
+          "time": 1791219692.4799309
+        }
+      }
+    ],
+    "calls_started": 9,
+    "check_rejections": 0,
+    "execution_errors": 0
+  }
+]

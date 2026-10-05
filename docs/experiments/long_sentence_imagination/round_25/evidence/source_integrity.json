@@ -1,0 +1,27 @@
+[
+  {
+    "name": "orders_0.json",
+    "same_as_generator": true,
+    "sha256": "253caa9550676c568936631181c3f8a415fd0f39e4978a492f7123d93c9378f4"
+  },
+  {
+    "name": "orders_1.json",
+    "same_as_generator": true,
+    "sha256": "a6d75d49c8921fe604f3f142548e7084b0ba20565f01687c1b38e93694062a35"
+  },
+  {
+    "name": "orders_2.json",
+    "same_as_generator": true,
+    "sha256": "217bdde69c09f3cedc6d0f3709a59d0be0e647c03335670a568cbf7b909ef167"
+  },
+  {
+    "name": "prices.csv",
+    "same_as_generator": true,
+    "sha256": "d99b1a8ad9af7607a0c7257b7da78af4eb9f0f246b346244e6e23d1fa3848cb9"
+  },
+  {
+    "name": "returns.csv",
+    "same_as_generator": true,
+    "sha256": "219195330180a3d3bedd29808d580b510dbb1c69292433595bd46e305555f69c"
+  }
+]

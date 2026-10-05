@@ -233,8 +233,15 @@ def numeric_operand(compiler, node, typ):
     elif typ.kind in ('Text', 'Unknown'):
         compiler.need(node, UNKNOWN, NUMBER)
     elif typ.kind != 'Number':
+        advice = {}
+        if typ.kind == 'Null':
+            advice['hint'] = (
+                'null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: '
+                '$값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 '
+                '원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. '
+                'null 처리 결과는 과제 기준으로 정하세요.')
         compiler.issue(node, 'ARITHMETIC', f'산술로 관측할 수 없는 타입: {typ}',
-                       expected='Number', actual=str(typ))
+                       expected='Number', actual=str(typ), **advice)
 
 
 def access_type(compiler, node, base, key, key_type=None):

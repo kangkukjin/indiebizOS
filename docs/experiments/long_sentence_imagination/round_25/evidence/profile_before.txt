@@ -1,0 +1,48 @@
+         33893920 function calls (25125406 primitive calls) in 7.433 seconds
+
+   Ordered by: cumulative time
+   List reduced from 2538 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    5.603    5.603 ibl_v2_runtime.py:857(run)
+        1    0.003    0.003    5.602    5.602 ibl_v2_runtime.py:875(_run)
+   7201/1    0.004    0.000    4.564    4.564 ibl_v2_runtime.py:185(frame)
+ 340843/1    0.710    0.000    4.564    4.564 ibl_v2_runtime.py:191(eval)
+ 340843/1    0.207    0.000    4.564    4.564 ibl_v2_runtime.py:237(_eval)
+  36015/6    0.009    0.000    4.564    0.761 ibl_v2_runtime.py:239(<lambda>)
+        1    0.001    0.001    3.307    3.307 ibl_v2_runtime.py:426(each)
+169283/27    0.070    0.000    2.942    0.109 ibl_v2_types.py:145(infer)
+       15    0.004    0.000    2.942    0.196 ibl_v2_types.py:129(ordered_list)
+16767/14570    0.036    0.000    2.798    0.000 ibl_v2_types.py:88(join)
+340843/43218    0.273    0.000    2.777    0.000 expression_eval.py:24(expression)
+290425/90012    0.061    0.000    2.634    0.000 expression_eval.py:26(<lambda>)
+   366630    0.059    0.000    2.370    0.000 {built-in method builtins.sorted}
+        1    0.001    0.001    2.325    2.325 ibl_v2_runtime.py:448(fanout)
+     3600    0.001    0.000    2.324    0.001 ibl_v2_runtime.py:470(accept)
+     3600    0.006    0.000    2.323    0.001 ibl_v2_runtime.py:454(run)
+     3600    0.004    0.000    2.310    0.001 ibl_v2_runtime.py:432(row)
+    93428    0.024    0.000    2.310    0.000 ibl_v2_types.py:126(<lambda>)
+169253/68417    0.019    0.000    1.980    0.000 ibl_v2_types.py:161(<genexpr>)
+        1    0.000    0.000    1.955    1.955 ibl_v2_compile.py:852(compile_program)
+93720/93687    0.014    0.000    1.821    0.000 {built-in method builtins.repr}
+1357989/93438    0.606    0.000    1.807    0.000 reprlib.py:15(wrapper)
+1357989/93438    0.743    0.000    1.730    0.000 <string>:10(__repr__)
+        5    0.000    0.000    0.999    0.200 ibl_v2_types.py:213(guard)
+        1    0.000    0.000    0.969    0.969 ibl_v2_compile.py:75(__init__)
+      3/1    0.000    0.000    0.891    0.891 ibl_v2_compile.py:207(sequence)
+    173/6    0.000    0.000    0.891    0.149 ibl_v2_compile.py:319(visit)
+    158/5    0.000    0.000    0.891    0.178 ibl_v2_compile.py:323(<lambda>)
+        1    0.000    0.000    0.886    0.886 ibl_v2_adapters.py:288(observed_result)
+        1    0.000    0.000    0.884    0.884 ibl_typecheck.py:87(catalog_entry)
+        1    0.000    0.000    0.870    0.870 ibl_access.py:144(_return_shapes)
+        1    0.000    0.000    0.869    0.869 ibl_access.py:1103(load_nodes_raw)
+        1    0.000    0.000    0.869    0.869 __init__.py:117(safe_load)
+        1    0.001    0.001    0.869    0.869 __init__.py:74(load)
+        1    0.000    0.000    0.868    0.868 constructor.py:47(get_single_data)
+        1    0.000    0.000    0.833    0.833 composer.py:29(get_single_node)
+        1    0.000    0.000    0.833    0.833 composer.py:50(compose_document)
+  21272/1    0.020    0.000    0.833    0.833 composer.py:63(compose_node)
+   2053/1    0.008    0.000    0.833    0.833 composer.py:117(compose_mapping_node)
+   7203/3    0.010    0.000    0.831    0.277 expression_eval.py:179(callback)
+
+

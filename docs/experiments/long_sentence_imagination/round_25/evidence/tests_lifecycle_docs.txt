@@ -1,0 +1,18 @@
+.............................................................            [100%]
+============================= slowest 15 durations =============================
+2.65s call     backend/test_lifecycle_vocab_2026_10_05.py::test_project_folder_trash_lifecycle_and_requires
+1.38s call     backend/test_lifecycle_vocab_2026_10_05.py::test_launch_sites_alias_and_ops
+1.33s call     backend/test_lifecycle_vocab_2026_10_05.py::test_agents_lifecycle_ops
+1.08s call     backend/test_lifecycle_vocab_2026_10_05.py::test_switch_lifecycle_and_run_receipt
+0.72s call     backend/test_lifecycle_vocab_2026_10_05.py::test_channel_settings_ops
+0.68s setup    backend/test_ibl_composition_teaching.py::test_guide_programs_execute[local_decomposition]
+0.46s call     backend/test_ibl_composition_teaching.py::test_guide_is_reachable_from_actual_prompt_and_old_links
+0.39s call     backend/test_ibl_composition_teaching.py::test_guide_programs_execute[optional_file]
+0.33s call     backend/test_lifecycle_vocab_2026_10_05.py::test_media_probe_and_subtitles
+0.30s setup    backend/test_ibl_composition_teaching.py::test_guide_programs_execute[document_completion]
+0.30s setup    backend/test_ibl_composition_teaching.py::test_guide_programs_execute[container_record]
+0.29s setup    backend/test_ibl_composition_teaching.py::test_chunk_covers_empty_and_more_than_old_default_each_limit[130]
+0.29s setup    backend/test_ibl_composition_teaching.py::test_empty_and_failure_are_distinct
+0.29s setup    backend/test_ibl_composition_teaching.py::test_pipeline_and_new_idiom_composition
+0.28s setup    backend/test_ibl_composition_teaching.py::test_guide_programs_execute[unary_group]
+61 passed in 18.40s

@@ -1,0 +1,49 @@
+{
+  "time": "2026-10-06T02:03:05.424832+09:00",
+  "head": "5bd2c0c1def455f241cb100169e4262b8ec8e8c1",
+  "states": [
+    {
+      "label": "prepare_main",
+      "run_id": "a4dc9d603a5643d0b779b94b26c10482",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "prepare_missing",
+      "run_id": "17af16ab59054c15a53dbc1d91990538",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "settle_main_v2",
+      "run_id": "66379a9cfdd743c8b8481470dd48697d",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "settle_missing_v2",
+      "run_id": "21a9ee0dd3f640b1a83388240f4a2ec5",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "settle_policy_v2",
+      "run_id": "bac2bab92aae4329a322e5c161cd4eed",
+      "status": "completed",
+      "success": true
+    },
+    {
+      "label": "ai_main_final",
+      "task_id": "task_sysai_7aedbf82",
+      "state": "succeeded",
+      "pending_children": 0
+    },
+    {
+      "label": "ai_policy_final",
+      "task_id": "task_sysai_98891334",
+      "state": "succeeded",
+      "pending_children": 0
+    }
+  ],
+  "notes": "검사 거절은 executed=false. HTTP timeout 없음. 두 AI 작업·자식과 모든 동기 실행 종료 확인 후 라이브 수리 시작."
+}

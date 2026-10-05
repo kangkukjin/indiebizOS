@@ -1,0 +1,17 @@
+#!ibl edition=2
+[def:行정산]($r,$threshold) {
+  $net=$r.qty-$r.returned_qty
+  $status=$r.returned_qty>$r.qty ? "excess_return" : $r.unit_price==null ? "unknown_price" : "ok"
+  $amount=$r.unit_price==null ? null : $r.returned_qty>$r.qty ? null : $net*$r.unit_price
+  return {order_id:$r.order_id,line_no:$r.line_no,region:$r.region,sku:$r.sku,qty:$r.qty,returned_qty:$r.returned_qty,unit_price:$r.unit_price,net_qty:$net,amount:$amount,status:$status,eligible:$amount!=null and $amount>=$threshold,note:$r.note,vendor_order_id:$r.vendor_order_id}
+}
+$rows=$prepared.rows >> [table:each]{[fn:行정산]{r:$it,threshold:$threshold}}
+$counts=map($rows,($r)=>{region:$r.region,amount:$r.amount==null ? 0 : $r.amount,anomalies:$r.status=="ok" ? 0 : 1,eligible:$r.eligible ? 1 : 0})
+$groups=$counts >> [table:groupby]{by:"region",agg:{lines:["count"],amount:["sum","amount"],anomalies:["sum","anomalies"],eligible:["sum","eligible"]}}
+$summary={summary:$groups.items,total_amount:reduce($counts,0,($s,$r)=>$s+$r.amount),count:len($rows),threshold:$threshold,source_complete:$prepared.source_complete,failures:$prepared.failures}
+$writes=[self:write]{path:$out+"/details.json",content:json($rows)} & [self:write]{path:$out+"/details.csv",format:"csv",content:$rows,columns:["order_id","line_no","region","sku","qty","returned_qty","unit_price","net_qty","amount","status","eligible","note","vendor_order_id"]} & [self:write]{path:$out+"/summary.json",content:json($summary)}
+$back=[self:read]{path:$writes[0].path} & [self:read]{path:$writes[1].path} & [self:read]{path:$writes[2].path}
+assert $back[0].data.items==$rows, "JSON 상세 재독 불일치"
+assert $back[2].data==$summary, "JSON 요약 재독 불일치"
+assert len($back[1].data.items)==len($rows), "CSV 행수 불일치"
+return {summary:$summary,verified:true,paths:map($writes,($w)=>$w.path)}

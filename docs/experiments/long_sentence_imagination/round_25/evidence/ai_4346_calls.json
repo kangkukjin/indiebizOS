@@ -1,0 +1,2157 @@
+[
+  {
+    "kind": "supervision.tool.started",
+    "id": "f9373403a90049d9b0da1cac14ab79f6",
+    "input": {
+      "code": "[self:list]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_25회차/source\"}",
+      "edition": 2
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "f9373403a90049d9b0da1cac14ab79f6",
+    "elapsed_s": 0.292,
+    "check_rejected": false,
+    "is_error": false,
+    "result": {
+      "success": true,
+      "executed": true,
+      "usage": {
+        "steps": 4,
+        "rows": 0,
+        "elapsed_ms": 283
+      },
+      "run_status": "completed",
+      "resume": {
+        "run_id": "f92fe7fa0cc648d9bf3b1426eac54468"
+      },
+      "continuation": {
+        "reuse_args": {
+          "reuse": {
+            "run_id": "f92fe7fa0cc648d9bf3b1426eac54468"
+          }
+        },
+        "read_calls": 1,
+        "state_change_possible": false,
+        "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+      },
+      "result_ref": {
+        "id": "86d377492e42137b0e9203e8b0565bd6f410b31456fccbdc30e7bfe8ab3b513e",
+        "chars": 13427,
+        "max_limit": 60000,
+        "paths": [],
+        "read_args": {
+          "id": "86d377492e42137b0e9203e8b0565bd6f410b31456fccbdc30e7bfe8ab3b513e",
+          "offset": 0,
+          "limit": 60000,
+          "path": [
+            "value"
+          ]
+        },
+        "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+        "input_args": {
+          "입력": {
+            "$ref": "86d377492e42137b0e9203e8b0565bd6f410b31456fccbdc30e7bfe8ab3b513e"
+          }
+        },
+        "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+        "value_chars": 2567
+      }
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "e4bb3ec1c2014997ab8c7e67c7094928",
+    "input": {
+      "code": "$files=sorted($입력,\"name\"); $reads=$files >> [table:each]{parallel:5}{ [try]{ $doc=[self:read]{path:$it.path}; return {path:$it.path,name:$it.name,ok:true,data:$doc.data} }[catch]{return {path:$it.path,name:$it.name,ok:false,reason:$error.message}} }; return $reads",
+      "edition": 2,
+      "inputs": {
+        "입력": {
+          "$ref": "86d377492e42137b0e9203e8b0565bd6f410b31456fccbdc30e7bfe8ab3b513e"
+        }
+      },
+      "describe": [
+        "table:flatten",
+        "table:dedup",
+        "table:groupby",
+        "table:join",
+        "table:compute",
+        "table:select"
+      ]
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "e4bb3ec1c2014997ab8c7e67c7094928",
+    "elapsed_s": 1.406,
+    "check_rejected": false,
+    "is_error": false,
+    "result": {
+      "success": true,
+      "executed": true,
+      "usage": {
+        "steps": 115,
+        "rows": 5,
+        "elapsed_ms": 710
+      },
+      "run_status": "completed",
+      "resume": {
+        "run_id": "33ec147bc8f1445b806249e63a469288"
+      },
+      "continuation": {
+        "reuse_args": {
+          "reuse": {
+            "run_id": "33ec147bc8f1445b806249e63a469288"
+          }
+        },
+        "read_calls": 5,
+        "state_change_possible": false,
+        "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+      },
+      "inputs_resolved": [
+        {
+          "name": "입력",
+          "id": "86d377492e42137b0e9203e8b0565bd6f410b31456fccbdc30e7bfe8ab3b513e",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "198afd8980f5da2e0dd570b56559c06b3bfba22aca9170c5e0b0b955d261fec3",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": "f92fe7fa0cc648d9bf3b1426eac54468"
+          },
+          "chars": 2567
+        }
+      ],
+      "result_ref": {
+        "id": "d7640e2fc334d975f1f64ed6541396e799b2635994bcb86b0679933dcb32a6aa",
+        "chars": 2477288,
+        "max_limit": 60000,
+        "paths": [
+          {
+            "path": [
+              "value",
+              0,
+              "data"
+            ],
+            "chars": 98994
+          },
+          {
+            "path": [
+              "value",
+              1,
+              "data"
+            ],
+            "chars": 99104
+          },
+          {
+            "path": [
+              "value",
+              2,
+              "data"
+            ],
+            "chars": 99166
+          },
+          {
+            "path": [
+              "value",
+              3,
+              "data"
+            ],
+            "chars": 7336
+          },
+          {
+            "path": [
+              "value",
+              4,
+              "data"
+            ],
+            "chars": 48686
+          }
+        ],
+        "read_args": {
+          "id": "d7640e2fc334d975f1f64ed6541396e799b2635994bcb86b0679933dcb32a6aa",
+          "offset": 0,
+          "limit": 60000,
+          "path": [
+            "value"
+          ]
+        },
+        "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+        "input_args": {
+          "입력": {
+            "$ref": "d7640e2fc334d975f1f64ed6541396e799b2635994bcb86b0679933dcb32a6aa"
+          }
+        },
+        "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+        "value_chars": 354121
+      }
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "2a5c8dbb5a4747c3891a5e1f81dbc7fb",
+    "input": {
+      "code": "#!ibl edition=2\n$orders=filter($sources,($s)=>contains($s.name,\"orders_\"));\n$failures=map(filter($orders,($s)=>not $s.ok),($s)=>{path:$s.path,reason:$s.reason});\n$good=filter($orders,($s)=>$s.ok);\n$parents=$good >> [table:each]{mode:\"flat_map\"}{return $it.data.items};\n$safe=$parents >> [table:compute]{set:($p)=>{lines:map($p.lines,($l)=>{line_no:text($l.line_no),sku:$l.sku,qty:number($l.qty),note:$l.note,vendor_order_id:get($l,\"order_id\",null)})}};\n$flat=$safe >> [table:flatten]{field:\"lines\",keep:[\"order_id\",\"region\"]};\n$unique=$flat.items >> [table:dedup]{by:[\"order_id\",\"line_no\"]};\n$price_source=filter($sources,($s)=>$s.name==\"prices.csv\")[0];\n$return_source=filter($sources,($s)=>$s.name==\"returns.csv\")[0];\nassert $price_source.ok and $return_source.ok,\"단가 또는 반품 원천 읽기 실패\";\n$prices=$price_source.data.items >> [table:select]{columns:[\"sku\",\"unit_price\"]} >> [table:compute]{set:($r)=>{unit_price:number($r.unit_price)}};\n$price_keys=$prices >> [table:dedup]{by:\"sku\"};\nassert len($price_keys.items)==len($prices),\"단가 SKU 중복\";\n$returns=$return_source.data.items >> [table:compute]{set:($r)=>{line_no:text($r.line_no),returned_qty:number($r.returned_qty)}} >> [table:groupby]{by:[\"order_id\",\"line_no\"],agg:{returned_qty:[\"sum\",\"returned_qty\"]}};\n$with_returns=[table:join]{left:$unique.items,right:$returns.items,on:[\"order_id\",\"line_no\"],how:\"left\",defaults:{returned_qty:0}};\n$joined=[table:join]{left:$with_returns.items,right:$prices,on:\"sku\",how:\"left\",defaults:{unit_price:null}};\nassert len($joined.items)==len($unique.items),\"결합 후 행수 변경\";\n$details=$joined.items >> [table:compute]{set:($r)=>{net_qty:$r.qty-$r.returned_qty,status:$r.returned_qty>$r.qty ? \"excess_return\" : $r.unit_price==null ? \"unknown_price\" : \"ok\"}} >> [table:compute]{set:($r)=>{amount:$r.status==\"ok\" ? $r.net_qty*$r.unit_price : null}} >> [table:compute]{set:($r)=>{eligible:$r.status==\"ok\" and $r.amount>=30000}} >> [table:select]{columns:$columns};\n$metrics=$details >> [table:compute]{set:($r)=>{anomaly_flag:$r.status==\"ok\" ? 0 : 1,eligible_flag:$r.eligible ? 1 : 0}};\n$groups=$metrics >> [table:groupby]{by:\"region\",agg:{lines:[\"count\"],amount:[\"sum\",\"amount\"],anomalies:[\"sum\",\"anomaly_flag\"],eligible:[\"sum\",\"eligible_flag\"]}};\n$regions=$groups.items >> [table:compute]{set:($r)=>{amount:$r.amount==null ? 0 : $r.amount}} >> [table:sort]{by:\"region\"};\n$summary={regions:$regions,count:len($details),total_amount:sum(map($regions,($r)=>$r.amount)),threshold:30000,source_complete:len($failures)==0,failures:$failures,anomalies:sum(map($regions,($r)=>$r.anomalies)),eligible:sum(map($regions,($r)=>$r.eligible)),source_file_order:map($orders,($r)=>$r.path),ordering:\"파일명 오름차순, 파일 내 주문·품목 순서; 복합키 최초 접수 유지\",csv_serialization:{null:\"empty cell\",boolean:\"true/false (case-insensitive on read)\",note:\"원문 보존, CSV 표준 인용\"}};\nreturn {details:$details,summary:$summary,audit:{order_files:len($orders),readable_order_files:len($good),parents:len($parents),flattened:len($flat.items),duplicates_removed:len($flat.items)-len($details),return_rows:len($return_source.data.items),return_keys:len($returns.items),prices:len($prices)}}",
+      "inputs": {
+        "sources": {
+          "$ref": "d7640e2fc334d975f1f64ed6541396e799b2635994bcb86b0679933dcb32a6aa"
+        },
+        "columns": [
+          "order_id",
+          "line_no",
+          "region",
+          "sku",
+          "qty",
+          "returned_qty",
+          "unit_price",
+          "net_qty",
+          "amount",
+          "status",
+          "eligible",
+          "note",
+          "vendor_order_id"
+        ]
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "check": true
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "2a5c8dbb5a4747c3891a5e1f81dbc7fb",
+    "elapsed_s": 0.787,
+    "check_rejected": true,
+    "is_error": false,
+    "result": {
+      "ok": false,
+      "executed": false,
+      "issues": [
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: reason. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "f96497b09d35352f5e1a67f6fe9f34653df7eed20333577da04bf894751fc2f4",
+            "start": 149,
+            "end": 158,
+            "line": 3,
+            "column": 74
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "f96497b09d35352f5e1a67f6fe9f34653df7eed20333577da04bf894751fc2f4",
+            "start": 149,
+            "end": 158,
+            "line": 3,
+            "column": 74,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 3,
+            "end_column": 83,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        }
+      ],
+      "inputs_resolved": [
+        {
+          "name": "sources",
+          "id": "d7640e2fc334d975f1f64ed6541396e799b2635994bcb86b0679933dcb32a6aa",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "c5978806edd2578140482eb1039fbc751dfb02336a1e1bebb54f5ee183cf6588",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": "33ec147bc8f1445b806249e63a469288"
+          },
+          "chars": 354121
+        }
+      ]
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "244d1f8c08ee401b829d595c267667d5",
+    "input": {
+      "code": "$rejected:ffdb78e483318d6c4c8c956ab932b64395b3e8d5b56c2d460163dd5755b0f1c8",
+      "edition": 2,
+      "inputs": {
+        "sources": {
+          "$ref": "4f8d3c8b58323f3f871941c0f87eca80dececcb8e8a996180768103dc140c1a9"
+        },
+        "columns": {
+          "$ref": "17b7e3007924a35b32f62162bc2d830b2bd999b16a011f51294f7f2852aee226"
+        }
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "code_edits": [
+        {
+          "old": "reason:$s.reason",
+          "new": "reason:get($s,\"reason\",\"읽기 실패 사유 미제공\")"
+        }
+      ],
+      "check": true
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "244d1f8c08ee401b829d595c267667d5",
+    "elapsed_s": 0.552,
+    "check_rejected": false,
+    "is_error": false,
+    "result": {
+      "ok": true,
+      "executed": false,
+      "issues": [],
+      "inputs_resolved": [
+        {
+          "name": "sources",
+          "id": "4f8d3c8b58323f3f871941c0f87eca80dececcb8e8a996180768103dc140c1a9",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "894edf18c8490f9ba0fea3e36dfc63c3c109c197149395871a323a91fd2d2bae",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 354121
+        },
+        {
+          "name": "columns",
+          "id": "17b7e3007924a35b32f62162bc2d830b2bd999b16a011f51294f7f2852aee226",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "14b69acf95ef5b54fc1b2324eefba87faecd741432399d8803fc090259099f0f",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 147
+        }
+      ]
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "cb96fafc5e8e4838807d25f392c015ca",
+    "input": {
+      "code": "$checked:26305bc257089d3df39ea2befa3a7ad30504c98556ffdf91c2f7723e1a43acf8",
+      "edition": 2,
+      "inputs": {
+        "sources": {
+          "$ref": "4f8d3c8b58323f3f871941c0f87eca80dececcb8e8a996180768103dc140c1a9"
+        },
+        "columns": {
+          "$ref": "17b7e3007924a35b32f62162bc2d830b2bd999b16a011f51294f7f2852aee226"
+        }
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      }
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "cb96fafc5e8e4838807d25f392c015ca",
+    "elapsed_s": 9.079,
+    "check_rejected": false,
+    "is_error": false,
+    "result": {
+      "success": true,
+      "executed": true,
+      "usage": {
+        "steps": 276359,
+        "rows": 3,
+        "elapsed_ms": 8593,
+        "limits": {
+          "steps": 1000000,
+          "rows": 100000
+        },
+        "steps_by_line": [
+          {
+            "line": 19,
+            "steps": 139343
+          },
+          {
+            "line": 6,
+            "steps": 89796
+          },
+          {
+            "line": 20,
+            "steps": 39606
+          }
+        ],
+        "detail": "read_result path [\"usage\"]"
+      },
+      "run_status": "completed",
+      "resume": {
+        "run_id": "cbc07be2039e450bac7e48b7dd8c280a"
+      },
+      "inputs_resolved": [
+        {
+          "name": "sources",
+          "id": "4f8d3c8b58323f3f871941c0f87eca80dececcb8e8a996180768103dc140c1a9",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "894edf18c8490f9ba0fea3e36dfc63c3c109c197149395871a323a91fd2d2bae",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 354121
+        },
+        {
+          "name": "columns",
+          "id": "17b7e3007924a35b32f62162bc2d830b2bd999b16a011f51294f7f2852aee226",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "14b69acf95ef5b54fc1b2324eefba87faecd741432399d8803fc090259099f0f",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 147
+        }
+      ],
+      "result_ref": {
+        "id": "be5ef203a11cf026a96a55c554fd477ffc88ae9b45b3420895ed6f432291c358",
+        "chars": 2468392,
+        "max_limit": 60000,
+        "paths": [
+          {
+            "path": [
+              "value",
+              "details"
+            ],
+            "chars": 820767
+          },
+          {
+            "path": [
+              "value",
+              "summary"
+            ],
+            "chars": 1195
+          }
+        ],
+        "read_args": {
+          "id": "be5ef203a11cf026a96a55c554fd477ffc88ae9b45b3420895ed6f432291c358",
+          "offset": 0,
+          "limit": 60000,
+          "path": [
+            "value"
+          ]
+        },
+        "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+        "input_args": {
+          "입력": {
+            "$ref": "be5ef203a11cf026a96a55c554fd477ffc88ae9b45b3420895ed6f432291c358"
+          }
+        },
+        "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+        "value_chars": 822156
+      }
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "fd76346660d34974939ba8edc51ce033",
+    "input": {
+      "code": "#!ibl edition=2\n$raw=filter($sources,($s)=>contains($s.name,\"orders_\") and $s.ok) >> [table:each]{mode:\"flat_map\"}{ $it.data.items >> [table:each]{mode:\"flat_map\"}{ $p=$it; return map($p.lines,($l)=>{order_id:$p.order_id,line_no:text($l.line_no),region:$p.region,sku:$l.sku,qty:number($l.qty),note:$l.note,vendor_order_id:get($l,\"order_id\",null)}) } };\n$ordered=sorted($raw,($r)=>json([$r.order_id,$r.line_no]));\n$first=$ordered >> [table:each]{mode:\"flat_map\"}{ [if:$i==0 or $it.order_id!=$ordered[$i-1].order_id or $it.line_no!=$ordered[$i-1].line_no]{return [$it]}[else]{return []} };\n$actual=sorted($result.details,($r)=>json([$r.order_id,$r.line_no]));\n$lineage=$actual >> [table:select]{columns:[\"order_id\",\"line_no\",\"region\",\"sku\",\"qty\",\"note\",\"vendor_order_id\"]};\nassert $lineage==$first,\"최초 원천행·부모 키·판매자 키·note 대조 불일치\";\n$ret_src=filter($sources,($s)=>$s.name==\"returns.csv\")[0].data.items;\n$ret=sorted($ret_src,($r)=>json([$r.order_id,text($r.line_no)]));\n$ret_reference=[]; $running=0;\n[repeat:while $i<len($ret)]{\n $r=$ret[$i]; $running=$running+number($r.returned_qty);\n [if:$i==len($ret)-1 or $r.order_id!=$ret[$i+1].order_id or $r.line_no!=$ret[$i+1].line_no]{ $ret_reference=$ret_reference+[{order_id:$r.order_id,line_no:text($r.line_no),returned_qty:$running}]; $running=0 }\n}\n$price_src=filter($sources,($s)=>$s.name==\"prices.csv\")[0].data.items;\n$price_reference=map($price_src,($r)=>{sku:$r.sku,unit_price:number($r.unit_price)});\n$ref_returns=[table:join]{left:$first,right:$ret_reference,on:[\"order_id\",\"line_no\"],how:\"left\",defaults:{returned_qty:0}};\n$ref_full=[table:join]{left:$ref_returns.items,right:$price_reference,on:\"sku\",how:\"left\",defaults:{unit_price:null}};\n$checked=$ref_full.items >> [table:each]{\n $r=$it; $got=$actual[$i]; $net=$r.qty-$r.returned_qty;\n $status=$net<0 ? \"excess_return\" : $r.unit_price==null ? \"unknown_price\" : \"ok\";\n $amount=$status==\"ok\" ? $net*$r.unit_price : null;\n assert $got.returned_qty==$r.returned_qty and $got.unit_price==$r.unit_price and $got.net_qty==$net and $got.status==$status and $got.amount==$amount and $got.eligible==($status==\"ok\" and $amount>=30000),\"정산 원천 대조 불일치\",{order_id:$r.order_id,line_no:$r.line_no};\n assert keys($got)==$columns,\"상세 필드 불일치\";\n return true\n};\n$region_checks=$result.summary.regions >> [table:each]{\n $region=$it; $rows=filter($result.details,($r)=>$r.region==$region.region);\n $ok=filter($rows,($r)=>$r.status==\"ok\");\n assert $region.lines==len($rows) and $region.amount==sum(map($ok,($r)=>$r.amount)) and $region.anomalies==len($rows)-len($ok) and $region.eligible==len(filter($rows,($r)=>$r.eligible)),\"지역 요약 불일치\";\n return true\n};\nassert $result.summary.count==len($actual) and $result.summary.total_amount==sum(map(filter($actual,($r)=>$r.status==\"ok\"),($r)=>$r.amount)),\"전체 합계 불일치\";\n$writes=[self:write]{path:f\"${out}/details.json\",content:json($result.details)} & [self:write]{path:f\"${out}/details.csv\",content:$result.details,format:\"csv\",columns:$columns} & [self:write]{path:f\"${out}/summary.json\",content:json($result.summary)};\n$readback=[self:read]{path:f\"${out}/details.json\"} & [self:read]{path:f\"${out}/details.csv\"} & [self:read]{path:f\"${out}/summary.json\"};\nassert $readback[0].data.items==$result.details,\"저장 JSON 불일치\";\nassert $readback[2].data==$result.summary,\"저장 요약 불일치\";\nassert $readback[1].data.table.columns==$columns,\"CSV 열 불일치\";\n$csv=map($readback[1].data.items,($r)=>{order_id:$r.order_id,line_no:$r.line_no,region:$r.region,sku:$r.sku,qty:number($r.qty),returned_qty:number($r.returned_qty),unit_price:$r.unit_price==\"\" ? null : number($r.unit_price),net_qty:number($r.net_qty),amount:$r.amount==\"\" ? null : number($r.amount),status:$r.status,eligible:lower($r.eligible)==\"true\",note:$r.note,vendor_order_id:$r.vendor_order_id==\"\" ? null : $r.vendor_order_id});\nassert $csv==$result.details,\"CSV 재읽기 값·note 불일치\";\nassert all(map($readback[1].data.items,($r)=>lower($r.eligible) in [\"true\",\"false\"])),\"CSV 불리언 불일치\";\nreturn {verified:true,checked_rows:len($checked),checked_regions:len($region_checks),source_complete:$result.summary.source_complete,summary:$result.summary,audit:$result.audit,files:$writes}",
+      "inputs": {
+        "sources": {
+          "$ref": "d7640e2fc334d975f1f64ed6541396e799b2635994bcb86b0679933dcb32a6aa"
+        },
+        "result": {
+          "$ref": "be5ef203a11cf026a96a55c554fd477ffc88ae9b45b3420895ed6f432291c358"
+        },
+        "columns": {
+          "$ref": "17b7e3007924a35b32f62162bc2d830b2bd999b16a011f51294f7f2852aee226"
+        },
+        "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_25회차/ai/main"
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "check": true
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "fd76346660d34974939ba8edc51ce033",
+    "elapsed_s": 1.934,
+    "check_rejected": true,
+    "is_error": false,
+    "result": {
+      "ok": false,
+      "executed": false,
+      "issues": [
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: lines. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 184,
+            "end": 192,
+            "line": 2,
+            "column": 169
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 184,
+            "end": 192,
+            "line": 2,
+            "column": 169,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 2,
+            "end_column": 177,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: order_id. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 209,
+            "end": 220,
+            "line": 2,
+            "column": 194
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 209,
+            "end": 220,
+            "line": 2,
+            "column": 194,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 2,
+            "end_column": 205,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: region. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 253,
+            "end": 262,
+            "line": 2,
+            "column": 238
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 253,
+            "end": 262,
+            "line": 2,
+            "column": 238,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 2,
+            "end_column": 247,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: order_id. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 932,
+            "end": 943,
+            "line": 9,
+            "column": 34
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 932,
+            "end": 943,
+            "line": 9,
+            "column": 34,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 9,
+            "end_column": 45,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: line_no. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 949,
+            "end": 959,
+            "line": 9,
+            "column": 51
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 949,
+            "end": 959,
+            "line": 9,
+            "column": 51,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 9,
+            "end_column": 61,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: returned_qty. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1064,
+            "end": 1079,
+            "line": 12,
+            "column": 40
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1064,
+            "end": 1079,
+            "line": 12,
+            "column": 40,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 12,
+            "end_column": 55,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: order_id. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1106,
+            "end": 1117,
+            "line": 13,
+            "column": 25
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1106,
+            "end": 1117,
+            "line": 13,
+            "column": 25,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 13,
+            "end_column": 36,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: order_id. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1119,
+            "end": 1138,
+            "line": 13,
+            "column": 38
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1119,
+            "end": 1138,
+            "line": 13,
+            "column": 38,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 13,
+            "end_column": 57,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: line_no. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1142,
+            "end": 1152,
+            "line": 13,
+            "column": 61
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1142,
+            "end": 1152,
+            "line": 13,
+            "column": 61,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 13,
+            "end_column": 71,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: line_no. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1154,
+            "end": 1172,
+            "line": 13,
+            "column": 73
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1154,
+            "end": 1172,
+            "line": 13,
+            "column": 73,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 13,
+            "end_column": 91,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: order_id. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1216,
+            "end": 1227,
+            "line": 13,
+            "column": 135
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1216,
+            "end": 1227,
+            "line": 13,
+            "column": 135,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 13,
+            "end_column": 146,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: line_no. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1241,
+            "end": 1251,
+            "line": 13,
+            "column": 160
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1241,
+            "end": 1251,
+            "line": 13,
+            "column": 160,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 13,
+            "end_column": 170,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: sku. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1407,
+            "end": 1413,
+            "line": 16,
+            "column": 44
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1407,
+            "end": 1413,
+            "line": 16,
+            "column": 44,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 16,
+            "end_column": 50,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: unit_price. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1432,
+            "end": 1445,
+            "line": 16,
+            "column": 69
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "a40821074d2c6a1399a93aa1da6258bd52a433ebe5f351f5fd1597cfd810a07b",
+            "start": 1432,
+            "end": 1445,
+            "line": 16,
+            "column": 69,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 16,
+            "end_column": 82,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        }
+      ],
+      "inputs_resolved": [
+        {
+          "name": "sources",
+          "id": "d7640e2fc334d975f1f64ed6541396e799b2635994bcb86b0679933dcb32a6aa",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "c5978806edd2578140482eb1039fbc751dfb02336a1e1bebb54f5ee183cf6588",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": "33ec147bc8f1445b806249e63a469288"
+          },
+          "chars": 354121
+        },
+        {
+          "name": "result",
+          "id": "be5ef203a11cf026a96a55c554fd477ffc88ae9b45b3420895ed6f432291c358",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "d2bc6b790bbca0813bdc716aa37d3b7fd324956b5b26a273869a666539746441",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": "cbc07be2039e450bac7e48b7dd8c280a"
+          },
+          "chars": 822156
+        },
+        {
+          "name": "columns",
+          "id": "17b7e3007924a35b32f62162bc2d830b2bd999b16a011f51294f7f2852aee226",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "14b69acf95ef5b54fc1b2324eefba87faecd741432399d8803fc090259099f0f",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 147
+        }
+      ]
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "e3357022f9184aa59130dded6d3af66a",
+    "input": {
+      "code": "$rejected:f0144db9635923bf907d2c004425eec1afff001e74d693aef9520decd58aba6c",
+      "edition": 2,
+      "inputs": {
+        "sources": {
+          "$ref": "4f8d3c8b58323f3f871941c0f87eca80dececcb8e8a996180768103dc140c1a9"
+        },
+        "result": {
+          "$ref": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47"
+        },
+        "columns": {
+          "$ref": "a7934646fec6d0087b2729a875703fae0b556591406fffed4a55217ac0e2a5a3"
+        },
+        "out": {
+          "$ref": "a59b7dca0050fe898d00f3abdbee32945436563128cc2b6a1f22bddf0634fe78"
+        }
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "code_edits": [
+        {
+          "old": "$it.data.items >>",
+          "new": "get($it.data,\"items\") >>"
+        },
+        {
+          "old": "$ret_src=filter($sources,($s)=>$s.name==\"returns.csv\")[0].data.items;",
+          "new": "$ret_src=get(filter($sources,($s)=>$s.name==\"returns.csv\")[0].data,\"items\");"
+        },
+        {
+          "old": "$price_src=filter($sources,($s)=>$s.name==\"prices.csv\")[0].data.items;",
+          "new": "$price_src=get(filter($sources,($s)=>$s.name==\"prices.csv\")[0].data,\"items\");"
+        }
+      ],
+      "check": true
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "e3357022f9184aa59130dded6d3af66a",
+    "elapsed_s": 1.1,
+    "check_rejected": false,
+    "is_error": false,
+    "result": {
+      "ok": true,
+      "executed": false,
+      "issues": [],
+      "inputs_resolved": [
+        {
+          "name": "sources",
+          "id": "4f8d3c8b58323f3f871941c0f87eca80dececcb8e8a996180768103dc140c1a9",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "894edf18c8490f9ba0fea3e36dfc63c3c109c197149395871a323a91fd2d2bae",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 354121
+        },
+        {
+          "name": "result",
+          "id": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "4d894b6849d23806087268991dda40917aa4aa01edb373c496885f20760e30be",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 822156
+        },
+        {
+          "name": "columns",
+          "id": "a7934646fec6d0087b2729a875703fae0b556591406fffed4a55217ac0e2a5a3",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "5c32c8cb676abd7ab7c9d2314089a63444413cb0f4375dc92d4aec8c9204d464",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 147
+        },
+        {
+          "name": "out",
+          "id": "a59b7dca0050fe898d00f3abdbee32945436563128cc2b6a1f22bddf0634fe78",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "590655eb59c5db47df7e222fb8e4a1d92010b8b1e0857e17667a6b0b84e7ace6",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 99
+        }
+      ]
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "575fb1151fa944c692c4edc04ca60b4b",
+    "input": {
+      "code": "$checked:34f5e347706b6654dcba197acb525605a0a4968ae216a0e6f02ab954f61f26a7",
+      "edition": 2,
+      "inputs": {
+        "sources": {
+          "$ref": "4f8d3c8b58323f3f871941c0f87eca80dececcb8e8a996180768103dc140c1a9"
+        },
+        "result": {
+          "$ref": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47"
+        },
+        "columns": {
+          "$ref": "a7934646fec6d0087b2729a875703fae0b556591406fffed4a55217ac0e2a5a3"
+        },
+        "out": {
+          "$ref": "a59b7dca0050fe898d00f3abdbee32945436563128cc2b6a1f22bddf0634fe78"
+        }
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      }
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "575fb1151fa944c692c4edc04ca60b4b",
+    "elapsed_s": 15.201,
+    "check_rejected": false,
+    "is_error": true,
+    "result": {
+      "success": false,
+      "executed": true,
+      "diagnostic": {
+        "code": "BUDGET",
+        "kind": "budget",
+        "message": "공유 실행 예산을 초과했습니다: steps 1e+06/1e+06. 도구의 필터·검색으로 입력을 좁히거나 전건을 여러 실행으로 나누세요. 요청 budget:{steps:...,rows:...}로 한도를 명시할 수도 있습니다(최대 steps 1000000·rows 100000). usage.steps_by_line에서 비싼 줄을 확인하세요. 전건 처리가 필요하면 take로 조용히 잘라내지 마세요.",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [
+          26405
+        ],
+        "details": {
+          "exceeded": {
+            "steps": {
+              "used": 1000001,
+              "limit": 1000000
+            }
+          },
+          "hint": "도구의 필터·검색으로 입력을 좁히거나 전건을 여러 실행으로 나누세요. 요청 budget:{steps:...,rows:...}로 한도를 명시할 수도 있습니다(최대 steps 1000000·rows 100000). usage.steps_by_line에서 비싼 줄을 확인하세요. 전건 처리가 필요하면 take로 조용히 잘라내지 마세요.",
+          "list_index": 2036
+        },
+        "source_span": {
+          "source_hash": "1fb74f38d4e317e37413426f0d7dd413590702822534e6025f1f0c0d532fa91c",
+          "start": 3761,
+          "end": 3811,
+          "line": 39,
+          "column": 382
+        }
+      },
+      "usage": {
+        "steps": 1000001,
+        "rows": 9129,
+        "elapsed_ms": 11334,
+        "limits": {
+          "steps": 1000000,
+          "rows": 100000
+        },
+        "steps_by_line": [
+          {
+            "line": 23,
+            "steps": 136509
+          },
+          {
+            "line": 28,
+            "steps": 129654
+          },
+          {
+            "line": 39,
+            "steps": 126286
+          }
+        ],
+        "detail": "read_result path [\"usage\"]",
+        "tool_ms_by_line": [
+          {
+            "line": 34,
+            "ms": 2434,
+            "calls": 3,
+            "actions": [
+              "self:write"
+            ]
+          },
+          {
+            "line": 35,
+            "ms": 2319,
+            "calls": 3,
+            "actions": [
+              "self:read"
+            ]
+          },
+          {
+            "line": 6,
+            "ms": 734,
+            "calls": 1,
+            "actions": [
+              "table:select"
+            ]
+          }
+        ]
+      },
+      "run_status": "interrupted",
+      "resume": {
+        "run_id": "a1a42b6d2dd249a881ba5ad35c0c0588"
+      },
+      "continuation": {
+        "reuse_args": {
+          "reuse": {
+            "run_id": "a1a42b6d2dd249a881ba5ad35c0c0588"
+          }
+        },
+        "read_calls": 3,
+        "state_change_possible": true,
+        "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+      },
+      "inputs_resolved": [
+        {
+          "name": "sources",
+          "id": "4f8d3c8b58323f3f871941c0f87eca80dececcb8e8a996180768103dc140c1a9",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "894edf18c8490f9ba0fea3e36dfc63c3c109c197149395871a323a91fd2d2bae",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 354121
+        },
+        {
+          "name": "result",
+          "id": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "4d894b6849d23806087268991dda40917aa4aa01edb373c496885f20760e30be",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 822156
+        },
+        {
+          "name": "columns",
+          "id": "a7934646fec6d0087b2729a875703fae0b556591406fffed4a55217ac0e2a5a3",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "5c32c8cb676abd7ab7c9d2314089a63444413cb0f4375dc92d4aec8c9204d464",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 147
+        },
+        {
+          "name": "out",
+          "id": "a59b7dca0050fe898d00f3abdbee32945436563128cc2b6a1f22bddf0634fe78",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "590655eb59c5db47df7e222fb8e4a1d92010b8b1e0857e17667a6b0b84e7ace6",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 99
+        }
+      ],
+      "result_ref": {
+        "id": "d228f68d9ab8076f048e7b61022350cd0ed6a97b3dcabd36379306fa12420298",
+        "chars": 8422215,
+        "max_limit": 60000,
+        "paths": [],
+        "read_args": {
+          "id": "d228f68d9ab8076f048e7b61022350cd0ed6a97b3dcabd36379306fa12420298",
+          "offset": 0,
+          "limit": 60000,
+          "path": [
+            "diagnostic"
+          ]
+        },
+        "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+        "completed_calls": [
+          {
+            "index": 0,
+            "action": "self:write",
+            "source_complete": true,
+            "read_args": {
+              "id": "feb3068027e5c18613fec83dc03970c9508563e554d0f65496c66f1d1cd3532f",
+              "offset": 0,
+              "limit": 60000,
+              "path": [
+                "value"
+              ]
+            },
+            "input_args": {
+              "입력": {
+                "$ref": "feb3068027e5c18613fec83dc03970c9508563e554d0f65496c66f1d1cd3532f"
+              }
+            }
+          },
+          {
+            "index": 1,
+            "action": "self:write",
+            "source_complete": true,
+            "read_args": {
+              "id": "2cafbcf0df7e71ef0e23585e5db775ad2dcfaa6b14a2fe2a2619092cf11c3d0f",
+              "offset": 0,
+              "limit": 60000,
+              "path": [
+                "value"
+              ]
+            },
+            "input_args": {
+              "입력": {
+                "$ref": "2cafbcf0df7e71ef0e23585e5db775ad2dcfaa6b14a2fe2a2619092cf11c3d0f"
+              }
+            }
+          },
+          {
+            "index": 2,
+            "action": "self:write",
+            "source_complete": true,
+            "read_args": {
+              "id": "e71af7cd24dedad1eb2ee8b36ec31ca404d464372376791b87c47673fb408ad3",
+              "offset": 0,
+              "limit": 60000,
+              "path": [
+                "value"
+              ]
+            },
+            "input_args": {
+              "입력": {
+                "$ref": "e71af7cd24dedad1eb2ee8b36ec31ca404d464372376791b87c47673fb408ad3"
+              }
+            }
+          },
+          {
+            "index": 3,
+            "action": "self:read",
+            "source_complete": true,
+            "read_args": {
+              "id": "9ddb08125d6626022c5d01594dc4b87bfaafa79afe6329626d9046a1415a2b22",
+              "offset": 0,
+              "limit": 60000,
+              "path": [
+                "value"
+              ]
+            },
+            "input_args": {
+              "입력": {
+                "$ref": "9ddb08125d6626022c5d01594dc4b87bfaafa79afe6329626d9046a1415a2b22"
+              }
+            }
+          },
+          {
+            "index": 4,
+            "action": "self:read",
+            "source_complete": true,
+            "read_args": {
+              "id": "2dcc09b37f5010a51ddce6c3d00185a90990610e1294805a6fb24a7bb1805c84",
+              "offset": 0,
+              "limit": 60000,
+              "path": [
+                "value"
+              ]
+            },
+            "input_args": {
+              "입력": {
+                "$ref": "2dcc09b37f5010a51ddce6c3d00185a90990610e1294805a6fb24a7bb1805c84"
+              }
+            }
+          },
+          {
+            "index": 5,
+            "action": "self:read",
+            "source_complete": true,
+            "read_args": {
+              "id": "33d28a5a4985370f11dbc87b55d4be27b5e09b5ab6d601f23f4b06ccb7242483",
+              "offset": 0,
+              "limit": 60000,
+              "path": [
+                "value"
+              ]
+            },
+            "input_args": {
+              "입력": {
+                "$ref": "33d28a5a4985370f11dbc87b55d4be27b5e09b5ab6d601f23f4b06ccb7242483"
+              }
+            }
+          }
+        ],
+        "completed_calls_omitted": 0,
+        "failed_calls": [],
+        "failed_calls_omitted": 0
+      }
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "fb2ba8276fe94445b36702f3923e357b",
+    "input": {
+      "code": "#!ibl edition=2\nassert $jsondoc.data.items==$result.details,\"저장 JSON 불일치\";\nassert $summarydoc.data==$result.summary,\"저장 요약 불일치\";\nassert $csvdoc.data.table.columns==$columns,\"CSV 열 불일치\";\n$csv=map($csvdoc.data.items,($r)=>{order_id:$r.order_id,line_no:$r.line_no,region:$r.region,sku:$r.sku,qty:number($r.qty),returned_qty:number($r.returned_qty),unit_price:$r.unit_price==\"\" ? null : number($r.unit_price),net_qty:number($r.net_qty),amount:$r.amount==\"\" ? null : number($r.amount),status:$r.status,eligible:lower($r.eligible)==\"true\",note:$r.note,vendor_order_id:$r.vendor_order_id==\"\" ? null : $r.vendor_order_id});\nassert $csv==$result.details,\"CSV 재읽기 값·note 불일치\";\nassert all(map($csvdoc.data.items,($r)=>lower($r.eligible) in [\"true\",\"false\"])),\"CSV 불리언 불일치\";\nreturn {verified:true,checked_rows:len($csv),summary:$result.summary,files:$receipts}",
+      "inputs": {
+        "jsondoc": {
+          "$ref": "9ddb08125d6626022c5d01594dc4b87bfaafa79afe6329626d9046a1415a2b22"
+        },
+        "csvdoc": {
+          "$ref": "2dcc09b37f5010a51ddce6c3d00185a90990610e1294805a6fb24a7bb1805c84"
+        },
+        "summarydoc": {
+          "$ref": "33d28a5a4985370f11dbc87b55d4be27b5e09b5ab6d601f23f4b06ccb7242483"
+        },
+        "result": {
+          "$ref": "be5ef203a11cf026a96a55c554fd477ffc88ae9b45b3420895ed6f432291c358"
+        },
+        "columns": {
+          "$ref": "17b7e3007924a35b32f62162bc2d830b2bd999b16a011f51294f7f2852aee226"
+        },
+        "receipts": [
+          {
+            "$ref": "feb3068027e5c18613fec83dc03970c9508563e554d0f65496c66f1d1cd3532f"
+          },
+          {
+            "$ref": "2cafbcf0df7e71ef0e23585e5db775ad2dcfaa6b14a2fe2a2619092cf11c3d0f"
+          },
+          {
+            "$ref": "e71af7cd24dedad1eb2ee8b36ec31ca404d464372376791b87c47673fb408ad3"
+          }
+        ]
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "check": true
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "fb2ba8276fe94445b36702f3923e357b",
+    "elapsed_s": 3.961,
+    "check_rejected": true,
+    "is_error": false,
+    "result": {
+      "ok": false,
+      "executed": false,
+      "issues": [
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: table. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "28fc4f3d3ba34d7d7d47ec83868ae6ba5130d69a51ca54297d608311b44eb1cb",
+            "start": 136,
+            "end": 154,
+            "line": 4,
+            "column": 8
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "28fc4f3d3ba34d7d7d47ec83868ae6ba5130d69a51ca54297d608311b44eb1cb",
+            "start": 136,
+            "end": 154,
+            "line": 4,
+            "column": 8,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 4,
+            "end_column": 26,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: items. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "28fc4f3d3ba34d7d7d47ec83868ae6ba5130d69a51ca54297d608311b44eb1cb",
+            "start": 195,
+            "end": 213,
+            "line": 5,
+            "column": 10
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "28fc4f3d3ba34d7d7d47ec83868ae6ba5130d69a51ca54297d608311b44eb1cb",
+            "start": 195,
+            "end": 213,
+            "line": 5,
+            "column": 10,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 5,
+            "end_column": 28,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        },
+        {
+          "code": "MISSING_FIELD",
+          "message": "선언된 필드가 없습니다: items. 선택 필드는 has/get을 쓰세요.",
+          "source_span": {
+            "source_hash": "28fc4f3d3ba34d7d7d47ec83868ae6ba5130d69a51ca54297d608311b44eb1cb",
+            "start": 682,
+            "end": 700,
+            "line": 7,
+            "column": 16
+          },
+          "call_path": [],
+          "location": {
+            "source_hash": "28fc4f3d3ba34d7d7d47ec83868ae6ba5130d69a51ca54297d608311b44eb1cb",
+            "start": 682,
+            "end": 700,
+            "line": 7,
+            "column": 16,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 7,
+            "end_column": 34,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "MISSING_FIELD",
+          "severity": "error",
+          "hint": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요."
+        }
+      ],
+      "inputs_resolved": [
+        {
+          "name": "jsondoc",
+          "id": "9ddb08125d6626022c5d01594dc4b87bfaafa79afe6329626d9046a1415a2b22",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "d19254e5fe3321b5915eb62cd4c023547555a8e03b10c71021ec696b3e653632",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 1385904
+        },
+        {
+          "name": "csvdoc",
+          "id": "2dcc09b37f5010a51ddce6c3d00185a90990610e1294805a6fb24a7bb1805c84",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "2cabc07acc797614aae6d2dc70d6985819f6b005d4f17120adc9051f47266ade",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 2536
+        },
+        {
+          "name": "summarydoc",
+          "id": "33d28a5a4985370f11dbc87b55d4be27b5e09b5ab6d601f23f4b06ccb7242483",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "6de75af8b5447805b379d59d863900f624da97e08cd31d86f478bf3fa640bb28",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 1783922
+        },
+        {
+          "name": "result",
+          "id": "be5ef203a11cf026a96a55c554fd477ffc88ae9b45b3420895ed6f432291c358",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "d2bc6b790bbca0813bdc716aa37d3b7fd324956b5b26a273869a666539746441",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": "cbc07be2039e450bac7e48b7dd8c280a"
+          },
+          "chars": 822156
+        },
+        {
+          "name": "columns",
+          "id": "17b7e3007924a35b32f62162bc2d830b2bd999b16a011f51294f7f2852aee226",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "14b69acf95ef5b54fc1b2324eefba87faecd741432399d8803fc090259099f0f",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 147
+        },
+        {
+          "name": "receipts",
+          "at": [
+            0
+          ],
+          "id": "feb3068027e5c18613fec83dc03970c9508563e554d0f65496c66f1d1cd3532f",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "36b07ad6e3835d45f4efa646153a9ee33b92582669280eda18dc51bdeedad404",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 171
+        },
+        {
+          "name": "receipts",
+          "at": [
+            1
+          ],
+          "id": "2cafbcf0df7e71ef0e23585e5db775ad2dcfaa6b14a2fe2a2619092cf11c3d0f",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "c7bdacd7452c39a7d532c5543a88c0e6270900516fd3bdd0739ae8359c6ce217",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 168
+        },
+        {
+          "name": "receipts",
+          "at": [
+            2
+          ],
+          "id": "e71af7cd24dedad1eb2ee8b36ec31ca404d464372376791b87c47673fb408ad3",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "3903f5581c41a87cca1a00b25be7528bd1451406d0f96ef2ce4c105607d578f1",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 172
+        }
+      ]
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "f2724ebb495f48e0997e924013fc60d9",
+    "input": {
+      "code": "$rejected:f8fa8f3ad8ddbc65e793182c41f4744848af81d726c91ccc3771bcd3bb3471d1",
+      "edition": 2,
+      "inputs": {
+        "jsondoc": {
+          "$ref": "33d28a5a4985370f11dbc87b55d4be27b5e09b5ab6d601f23f4b06ccb7242483"
+        },
+        "csvdoc": {
+          "$ref": "9ddb08125d6626022c5d01594dc4b87bfaafa79afe6329626d9046a1415a2b22"
+        },
+        "summarydoc": {
+          "$ref": "2dcc09b37f5010a51ddce6c3d00185a90990610e1294805a6fb24a7bb1805c84"
+        },
+        "result": {
+          "$ref": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47"
+        },
+        "columns": {
+          "$ref": "a7934646fec6d0087b2729a875703fae0b556591406fffed4a55217ac0e2a5a3"
+        },
+        "receipts": {
+          "$ref": "7a57775a0c13be1133f5abdc61364c68b1a0e61bbb7117bf38be515dab5c4e06"
+        }
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "check": true
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "f2724ebb495f48e0997e924013fc60d9",
+    "elapsed_s": 0.003,
+    "check_rejected": false,
+    "is_error": true,
+    "result": {
+      "success": false,
+      "executed": false
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "f7ebb387080240c7a63c970f48233b7c",
+    "input": {
+      "code": "$rejected:f8fa8f3ad8ddbc65e793182c41f4744848af81d726c91ccc3771bcd3bb3471d1",
+      "edition": 2,
+      "inputs": {
+        "jsondoc": {
+          "$ref": "33d28a5a4985370f11dbc87b55d4be27b5e09b5ab6d601f23f4b06ccb7242483"
+        },
+        "csvdoc": {
+          "$ref": "9ddb08125d6626022c5d01594dc4b87bfaafa79afe6329626d9046a1415a2b22"
+        },
+        "summarydoc": {
+          "$ref": "2dcc09b37f5010a51ddce6c3d00185a90990610e1294805a6fb24a7bb1805c84"
+        },
+        "result": {
+          "$ref": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47"
+        },
+        "columns": {
+          "$ref": "a7934646fec6d0087b2729a875703fae0b556591406fffed4a55217ac0e2a5a3"
+        },
+        "receipts": {
+          "$ref": "7a57775a0c13be1133f5abdc61364c68b1a0e61bbb7117bf38be515dab5c4e06"
+        }
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "code_edits": [
+        {
+          "old": "return {verified:true,",
+          "new": "return {verified:true,source_verification:\"원천 전건 대조 완료; 저장 자료 후속 검증\", "
+        }
+      ],
+      "check": true
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "f7ebb387080240c7a63c970f48233b7c",
+    "elapsed_s": 1.927,
+    "check_rejected": false,
+    "is_error": false,
+    "result": {
+      "ok": true,
+      "executed": false,
+      "issues": [],
+      "inputs_resolved": [
+        {
+          "name": "jsondoc",
+          "id": "33d28a5a4985370f11dbc87b55d4be27b5e09b5ab6d601f23f4b06ccb7242483",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "6de75af8b5447805b379d59d863900f624da97e08cd31d86f478bf3fa640bb28",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 1783922
+        },
+        {
+          "name": "csvdoc",
+          "id": "9ddb08125d6626022c5d01594dc4b87bfaafa79afe6329626d9046a1415a2b22",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "d19254e5fe3321b5915eb62cd4c023547555a8e03b10c71021ec696b3e653632",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 1385904
+        },
+        {
+          "name": "summarydoc",
+          "id": "2dcc09b37f5010a51ddce6c3d00185a90990610e1294805a6fb24a7bb1805c84",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "2cabc07acc797614aae6d2dc70d6985819f6b005d4f17120adc9051f47266ade",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 2536
+        },
+        {
+          "name": "result",
+          "id": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "4d894b6849d23806087268991dda40917aa4aa01edb373c496885f20760e30be",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 822156
+        },
+        {
+          "name": "columns",
+          "id": "a7934646fec6d0087b2729a875703fae0b556591406fffed4a55217ac0e2a5a3",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "5c32c8cb676abd7ab7c9d2314089a63444413cb0f4375dc92d4aec8c9204d464",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 147
+        },
+        {
+          "name": "receipts",
+          "id": "7a57775a0c13be1133f5abdc61364c68b1a0e61bbb7117bf38be515dab5c4e06",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "906d02d92f1bce3e1c51fa0bec4af7460ce63884462f115d62abc134692e052d",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 517
+        }
+      ]
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "90d6165e80f343f1b4bc976fe132a12d",
+    "input": {
+      "code": "$checked:050c6bbaaf2646b4dcbb427df54a1d2424b08bf7f4290a4094893ec014468a17",
+      "edition": 2,
+      "inputs": {
+        "jsondoc": {
+          "$ref": "33d28a5a4985370f11dbc87b55d4be27b5e09b5ab6d601f23f4b06ccb7242483"
+        },
+        "csvdoc": {
+          "$ref": "9ddb08125d6626022c5d01594dc4b87bfaafa79afe6329626d9046a1415a2b22"
+        },
+        "summarydoc": {
+          "$ref": "2dcc09b37f5010a51ddce6c3d00185a90990610e1294805a6fb24a7bb1805c84"
+        },
+        "result": {
+          "$ref": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47"
+        },
+        "columns": {
+          "$ref": "a7934646fec6d0087b2729a875703fae0b556591406fffed4a55217ac0e2a5a3"
+        },
+        "receipts": {
+          "$ref": "7a57775a0c13be1133f5abdc61364c68b1a0e61bbb7117bf38be515dab5c4e06"
+        }
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      }
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "90d6165e80f343f1b4bc976fe132a12d",
+    "elapsed_s": 6.512,
+    "check_rejected": false,
+    "is_error": false,
+    "result": {
+      "success": true,
+      "executed": true,
+      "usage": {
+        "steps": 262831,
+        "rows": 0,
+        "elapsed_ms": 6053,
+        "limits": {
+          "steps": 1000000,
+          "rows": 100000
+        },
+        "steps_by_line": [
+          {
+            "line": 5,
+            "steps": 223183
+          },
+          {
+            "line": 7,
+            "steps": 39611
+          },
+          {
+            "line": 8,
+            "steps": 11
+          }
+        ],
+        "detail": "read_result path [\"usage\"]"
+      },
+      "run_status": "completed",
+      "resume": {
+        "run_id": "28f15b04c6cc4e81b58bab0752d364c6"
+      },
+      "inputs_resolved": [
+        {
+          "name": "jsondoc",
+          "id": "33d28a5a4985370f11dbc87b55d4be27b5e09b5ab6d601f23f4b06ccb7242483",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "6de75af8b5447805b379d59d863900f624da97e08cd31d86f478bf3fa640bb28",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 1783922
+        },
+        {
+          "name": "csvdoc",
+          "id": "9ddb08125d6626022c5d01594dc4b87bfaafa79afe6329626d9046a1415a2b22",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "d19254e5fe3321b5915eb62cd4c023547555a8e03b10c71021ec696b3e653632",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 1385904
+        },
+        {
+          "name": "summarydoc",
+          "id": "2dcc09b37f5010a51ddce6c3d00185a90990610e1294805a6fb24a7bb1805c84",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "2cabc07acc797614aae6d2dc70d6985819f6b005d4f17120adc9051f47266ade",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 2536
+        },
+        {
+          "name": "result",
+          "id": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "4d894b6849d23806087268991dda40917aa4aa01edb373c496885f20760e30be",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 822156
+        },
+        {
+          "name": "columns",
+          "id": "a7934646fec6d0087b2729a875703fae0b556591406fffed4a55217ac0e2a5a3",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "5c32c8cb676abd7ab7c9d2314089a63444413cb0f4375dc92d4aec8c9204d464",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 147
+        },
+        {
+          "name": "receipts",
+          "id": "7a57775a0c13be1133f5abdc61364c68b1a0e61bbb7117bf38be515dab5c4e06",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "906d02d92f1bce3e1c51fa0bec4af7460ce63884462f115d62abc134692e052d",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 517
+        }
+      ],
+      "result_ref": {
+        "id": "64e2989ab1fc737046f6e8ec0d00e0dd6ed93d96f57bf49b4d2cd550d84ae899",
+        "chars": 47287,
+        "max_limit": 60000,
+        "paths": [
+          {
+            "path": [
+              "value",
+              "summary"
+            ],
+            "chars": 1195
+          },
+          {
+            "path": [
+              "value",
+              "files"
+            ],
+            "chars": 519
+          }
+        ],
+        "read_args": {
+          "id": "64e2989ab1fc737046f6e8ec0d00e0dd6ed93d96f57bf49b4d2cd550d84ae899",
+          "offset": 0,
+          "limit": 60000,
+          "path": [
+            "value"
+          ]
+        },
+        "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+        "input_args": {
+          "입력": {
+            "$ref": "64e2989ab1fc737046f6e8ec0d00e0dd6ed93d96f57bf49b4d2cd550d84ae899"
+          }
+        },
+        "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+        "value_chars": 1825
+      }
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "id": "0c74b3b29187465b811bdf35dfc6c7ff",
+    "input": {
+      "code": "$overlap=filter($result.details,($r)=>$r.unit_price==null and $r.returned_qty>$r.qty);\n$orders=filter($sources,($s)=>contains($s.name,\"orders_\") and $s.ok);\n$examples=$orders >> [table:each]{ $s=$it; return {path:$s.path,orders:filter(get($s.data,\"items\"),($p)=>$p.order_id==\"O0000\")} };\n$ret=get(filter($sources,($s)=>$s.name==\"returns.csv\")[0].data,\"items\");\nreturn {audit:$result.audit,first_receipt_source:$examples,first_receipt_result:filter($result.details,($r)=>$r.order_id==\"O0000\"),return_source:filter($ret,($r)=>$r.order_id==\"O0000\"),priority_overlap_count:len($overlap),priority_examples:$overlap[0:2]}",
+      "edition": 2,
+      "inputs": {
+        "sources": {
+          "$ref": "4f8d3c8b58323f3f871941c0f87eca80dececcb8e8a996180768103dc140c1a9"
+        },
+        "result": {
+          "$ref": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47"
+        }
+      },
+      "budget": {
+        "steps": 200000,
+        "rows": 10000
+      }
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "id": "0c74b3b29187465b811bdf35dfc6c7ff",
+    "elapsed_s": 2.729,
+    "check_rejected": false,
+    "is_error": false,
+    "result": {
+      "success": true,
+      "executed": true,
+      "usage": {
+        "steps": 49125,
+        "rows": 3,
+        "elapsed_ms": 2598,
+        "limits": {
+          "steps": 200000,
+          "rows": 10000
+        },
+        "steps_by_line": [
+          {
+            "line": 1,
+            "steps": 21798
+          },
+          {
+            "line": 5,
+            "steps": 21025
+          },
+          {
+            "line": 3,
+            "steps": 6209
+          }
+        ],
+        "detail": "read_result path [\"usage\"]"
+      },
+      "run_status": "completed",
+      "resume": {
+        "run_id": "8b97f6dcb55b427b89176ad7518e2246"
+      },
+      "inputs_resolved": [
+        {
+          "name": "sources",
+          "id": "4f8d3c8b58323f3f871941c0f87eca80dececcb8e8a996180768103dc140c1a9",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "894edf18c8490f9ba0fea3e36dfc63c3c109c197149395871a323a91fd2d2bae",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 354121
+        },
+        {
+          "name": "result",
+          "id": "6fa46e06d88dcddd40d75b0a087e0572f68d0f1f453f328eb0086a1ea359cb47",
+          "path": [
+            "value_wire"
+          ],
+          "evidence": {
+            "fingerprint": "4d894b6849d23806087268991dda40917aa4aa01edb373c496885f20760e30be",
+            "fingerprint_scheme": "certified-evidence/1",
+            "incomplete": false,
+            "execution_success": true,
+            "run_id": null
+          },
+          "chars": 822156
+        }
+      ],
+      "result_ref": {
+        "id": "ae2bf8a817476f61d5c74fb5c1a94b91240d264cb31775e9f1fb33e54cae2a9d",
+        "chars": 38193,
+        "max_limit": 60000,
+        "paths": [
+          {
+            "path": [
+              "value",
+              "first_receipt_source"
+            ],
+            "chars": 942
+          },
+          {
+            "path": [
+              "value",
+              "first_receipt_result"
+            ],
+            "chars": 704
+          }
+        ],
+        "read_args": {
+          "id": "ae2bf8a817476f61d5c74fb5c1a94b91240d264cb31775e9f1fb33e54cae2a9d",
+          "offset": 0,
+          "limit": 60000,
+          "path": [
+            "value"
+          ]
+        },
+        "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+        "input_args": {
+          "입력": {
+            "$ref": "ae2bf8a817476f61d5c74fb5c1a94b91240d264cb31775e9f1fb33e54cae2a9d"
+          }
+        },
+        "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요.",
+        "value_chars": 2298
+      }
+    }
+  }
+]

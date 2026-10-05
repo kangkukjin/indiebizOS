@@ -27,6 +27,10 @@ def world(tmp_path, monkeypatch):
     (tmp_path / "templates" / "기본").mkdir(parents=True)
     (tmp_path / "templates" / "기본" / "agents.yaml").write_text(yaml.safe_dump({"agents": [], "common": {}}), encoding="utf-8")
     (tmp_path / "data").mkdir(exist_ok=True)
+    # 다른 시험이 먼저 import했으면 환경변수만으로 모듈의 저장 경로가 바뀌지 않는다.
+    import system_docs
+    monkeypatch.setattr(system_docs, "DATA_PATH", tmp_path / "data")
+    monkeypatch.setattr(system_docs, "DOCS_PATH", tmp_path / "data" / "system_docs")
     # 어휘 원장·파생물은 기본 경로에서 읽는다 — 저장소만 격리하고 사전은 실물을 복사(패키지 폴더는 링크, 읽기만)
     for name in ("ibl_nodes.yaml", "core_manifest.json", "member_manifest.json", "phone_manifest.json", "ibl_fixtures.json", "package_meta.json",
                  "vocabulary_policy.yaml", "lifecycle_policy.yaml", "shell_shadow.json"):
@@ -79,6 +83,7 @@ def test_project_folder_trash_lifecycle_and_requires(world):
     pp = str(world.tmp)
     r = L.project_op({"op": "create", "name": "연구"})
     assert r["success"] and r["project"]["id"] == "연구" and (world.tmp / "projects" / "연구").is_dir()
+    assert "PROJECT_CREATED: 연구" in (world.tmp / "data/system_docs/changelog.log").read_text()
     assert any(p["id"] == "연구" for p in L.project_op({"op": "list"})["items"])
     assert L.project_op({"op": "templates"})["count"] >= 1
     f = L.folder_op({"op": "create", "name": "묶음"})

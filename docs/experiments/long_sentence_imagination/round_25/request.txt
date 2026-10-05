@@ -1,0 +1,11 @@
+세 지역 주문 JSON과 단가 CSV, 반품 CSV를 대조해 교육 키트 정산 결과를 만들어줘.
+중첩 lines를 펼치되 부모 주문번호와 품목 안 판매자 order_id를 구별하고 원문 note를 그대로 보존해줘.
+같은 주문번호·line_no 재접수는 처음 것을 쓰고, 반품은 동일 복합키별로 먼저 합쳐줘.
+반품이 주문수량보다 많으면 excess_return, 단가가 없으면 unknown_price, 나머지는 ok로 구분해줘.
+초과반품 판정이 우선이고, 이상 행 금액은 null이며 정상 금액은 (수량-반품수량)*단가야.
+정상 행 중 금액 30000 이상을 eligible로 표시하고 지역별 행수·정상금액 합계·이상행수·eligible행수와 전체 합계를 내줘.
+상세행 JSON과 CSV, 요약 JSON을 저장하고 원자료와 대조해 확인해줘.
+원천 주문파일 하나를 못 읽으면 나머지는 처리하되 파일 경로와 이유·불완전성을 결과에 명시하고 전체 확정 정산으로 표현하지 마.
+입력 폴더: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_25회차/source
+출력 폴더: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-06_25회차/ai/main
+상세행 필드: order_id(부모),line_no,region,sku,qty,returned_qty,unit_price,net_qty,amount,status,eligible,note,vendor_order_id(없으면 null). 상세 JSON은 행 배열, CSV는 같은 필드, 요약에는 지역별 lines/amount/anomalies/eligible와 count/total_amount/threshold/source_complete/failures를 포함해줘. 출력 파일명은 details.json,details.csv,summary.json. 입력은 읽기만 하고 파일 작성은 위 출력 폴더 안으로 한정해. 다른 실행자의 trainer/harness/drafts/정답은 참조하지 마. 네가 만든 결과·중간 참조는 재사용 가능해. 시스템 코드는 수정하지 마.

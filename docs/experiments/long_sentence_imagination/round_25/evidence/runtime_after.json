@@ -1,0 +1,20 @@
+{
+  "timings": {
+    "before": [
+      2.5407513747923076,
+      2.4529841248877347,
+      2.461590124759823
+    ],
+    "candidate": [
+      1.9836484575644135,
+      1.982427291572094,
+      1.9875265420414507
+    ]
+  },
+  "medians": {
+    "before": 2.461590124759823,
+    "candidate": 1.9836484575644135
+  },
+  "equal_value_evidence_recordings_usage": true,
+  "scope": "runtime only, already compiled; no file IO, model, network, final result projection"
+}

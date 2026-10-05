@@ -1,0 +1,11 @@
+........................................................................ [ 36%]
+........................................................................ [ 72%]
+......................................................                   [100%]
+============================= slowest 15 durations =============================
+20.75s call     backend/test_ibl_v2_contracts.py::test_full_scheduling_program_and_new_policy_preserve_all_results
+2.59s call     backend/test_ibl_v2_contracts.py::test_groupby_declared_pure_and_composes_inside_lambda
+0.69s call     backend/test_ibl_v2_contracts.py::test_groupby_does_not_invalidate_reused_reads
+0.30s call     backend/test_ibl_v2_contracts.py::test_groupby_invalid_aggregation_still_fails
+
+(11 durations < 0.1s hidden.)
+198 passed in 25.37s

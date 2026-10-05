@@ -211,7 +211,18 @@ def compatible(actual, expected):
 
 
 def guard(value, spec, label):
+    """Validate only the depth constrained by the declared contract."""
     expected = declared(spec)
+    # Unknown has no value constraint. Bare containers constrain the outer
+    # kind, so inferring every child just to discard its type is unnecessary.
+    # Typed fields/elements and mismatches retain the complete check below.
+    if expected.kind == 'Unknown':
+        return value
+    if expected.kind == 'Record' and isinstance(value, dict) and not expected.fields:
+        return value
+    if (expected.kind == 'List' and isinstance(value, list)
+            and (expected.item is None or expected.item.kind == 'Unknown')):
+        return value
     actual = infer(value)
     if not compatible(actual, expected):
         # 정적 검사(TYPE)와 같은 처방 — 값으로만 타입이 정해지는 입력은 실행에서 처음 드러난다.

@@ -82,6 +82,7 @@
         - 스케줄관리
         - 예약관리
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: calendar
           icon: 📅
           name: 일정
@@ -92,9 +93,9 @@
           - type: calendar
             from: items
             color_field: type
-            delete_action: '[self:manage_events]{op: "delete", event_id: "{id}"}'
+            delete_action: '[self:manage_events]{op: "delete", event_id: $item.id}'
             add:
-              action: '[self:manage_events]{op: "create", title: "$title", date: "$date", time: "$time", repeat: "$repeat", type: "$type", description: "$description"}'
+              action: '[self:manage_events]{op: "create", title: $title, date: $date, time: $time, repeat: $repeat, type: $type, description: $description}'
               fields:
               - {key: title, type: text, placeholder: 제목}
               - {key: time, type: time}

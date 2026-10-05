@@ -85,7 +85,10 @@ def run(envelope, resolved, *, name='', body_session='', on_event=None, manager=
     try:
         result = (manager or MemberSessionManager.instance()).turn(
             p.id, p.device_id, p.level, name, resolved.get('message') or '앱 실행',
-            local_task_id=envelope['conversation_id'], code=resolved.get('code'),
+            local_task_id=envelope['conversation_id'],
+            # 판본 2 선언(edition·inputs 동봉)은 치환 없는 요청 dict 로, 구형은 치환된 원문 문자열로 넘긴다.
+            code=({k: resolved[k] for k in ('code', 'edition', 'inputs', 'declared_inputs') if k in resolved}
+                  if resolved.get('code') is not None and resolved.get('edition') == 2 else resolved.get('code')),
             on_event=lambda event: emit(event['type'] if event.get('type') in {'client_action_required', 'delivered'} else 'progress', detail=event), body_session=body_session,
             client_context={'request_id': envelope['request_id'], 'capabilities': envelope.get('capabilities', {}),
                             'attachments': envelope.get('attachments', []), 'workflow': resolved.get('workflow')})

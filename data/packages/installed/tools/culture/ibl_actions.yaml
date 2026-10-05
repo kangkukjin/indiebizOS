@@ -37,6 +37,7 @@ actions:
     - 뮤지컬
     - 공연장
     app:
+      edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
       instrument: culture
       icon: 🎭
       name: 문화공연
@@ -61,7 +62,7 @@ actions:
       - key: kw
         type: text
         placeholder: 공연명 키워드(선택)
-      action: '[sense:performance]{genre: "$genre", region: "$region", keyword: "$kw"}'
+      action: '[sense:performance]{genre: $genre, region: $region, keyword: $kw}'
       view:
       - type: image_grid
         from: items
@@ -85,6 +86,7 @@ actions:
     implementation: 한국문화정보원(KCISA) API로 전시/문화행사 검색
     target_key: query   # 정본(2026-08-24 #repair B5) — keyword 는 aliases 로 수용
     app:
+      edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
       instrument: culture
       mode: 전시
       mode_order: 1
@@ -94,7 +96,7 @@ actions:
         default: 전시
         placeholder: '전시 키워드 (예: 사진, 현대미술)'
         required: true
-      action: '[sense:exhibit]{keyword: "$kw"}'
+      action: '[sense:exhibit]{keyword: $kw}'
       view:
       - type: image_grid
         from: items

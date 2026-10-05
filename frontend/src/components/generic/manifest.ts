@@ -16,7 +16,8 @@ import { iblSurface } from '../../lib/remote-session';
  */
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import {
-  jget, applyFilter, tplWith, buildAction, rowAction, viewList,
+  jget, applyFilter, tplWith, buildAction, rowAction, templateNames, requestCode, viewList,
+  appRequest, actionRequest,
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   calendarModel, calShift, pad2,
@@ -28,7 +29,7 @@ import {
 
 // 공용 코어 재수출 — 소비자(프리미티브들)는 종전처럼 './generic/manifest' 에서 가져간다.
 export {
-  jget, applyFilter, tplWith, buildAction, rowAction,
+  jget, applyFilter, tplWith, buildAction, rowAction, templateNames, requestCode, appRequest, actionRequest,
   emptyText, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   calendarModel, calShift, pad2,
@@ -39,6 +40,10 @@ export {
 };
 
 export const IBL_ENDPOINT = `${BACKEND_ORIGIN}/ibl/execute`;
+
+// 판본 2 표면 바인딩 요청 봉투(공용 코어 appRequest 의 반환) — 치환 없는 원문 + 타입 보존 inputs + 참조 이름.
+export interface AppRequest { code: string; edition: 2; inputs: Record<string, unknown>; declared_inputs: string[] }
+export type ActionReq = string | AppRequest;  // 빌더(appRequest·actionRequest)는 공용 코어 — JSDoc 타입을 TS 가 그대로 읽는다.
 
 // ===== 매니페스트 타입 (느슨하게 — 서버 파생 JSON이 진실) =====
 
@@ -83,7 +88,7 @@ export interface AppComposeChannels {
 }
 
 export interface AppViewPrim {
-  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map' | 'group' | 'calendar' | 'blocks' | 'media_player';
+  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map' | 'group' | 'calendar' | 'blocks' | 'media_player' | 'engine';
   [k: string]: unknown;
 }
 
@@ -115,7 +120,7 @@ export interface FormAction {
 
 // 액션 실행기: $field 치환 + {path}(rowContext, 기본 드릴 데이터) 치환 → 실행 → 현재 뷰 새로고침
 // opts.back: 성공 시 새로고침 대신 드릴을 닫고 목록으로 복귀(삭제 등 — 현재 상세가 사라지는 경우)
-export type Dispatch = (template: string, fieldValues?: Record<string, string>, rowContext?: Json, opts?: { back?: boolean }) => Promise<boolean>;
+export type Dispatch = (template: string, fieldValues?: Record<string, unknown>, rowContext?: Json, opts?: { back?: boolean }) => Promise<boolean>;
 
 export interface AppFilter {
   key?: string;  // 정적 필터: 액션 템플릿이 참조하는 파라미터명 ($key) — 기본 'filter'
@@ -128,6 +133,7 @@ export interface AppFilter {
 export interface AppMode {
   id?: string;
   name?: string;
+  edition?: number;  // 템플릿 판본(2026-10-05 ①): 2 = 치환 없이 원문+inputs 로 실행. 없음·1 = 구형 $key/{field} 치환.
   note?: string;
   auto_run?: boolean;
   inputs?: AppInput[];
@@ -151,14 +157,17 @@ export interface AppInstrument extends AppMode {
 
 export type Json = Record<string, unknown>;
 
-// 뷰-이벤트 콜백 — 프리미티브(현재 map)가 사용자 조작을 액션 템플릿+페이로드로 흘린다. ModePane 가 재조회.
-export type ViewEvent = (template: string, payload: Record<string, string>) => void;
+// 뷰-이벤트 콜백 — 프리미티브(map·engine)가 사용자 조작을 액션 템플릿+페이로드로 흘린다. ModePane 가 재조회.
+// 페이로드는 타입을 보존한다(좌표는 Number, selection 의 sel 은 Record) — 판본 2 는 inputs 로 그대로 간다.
+export type ViewEvent = (template: string, payload: Record<string, unknown>) => void;
 
-export async function runIBL(code: string): Promise<Json> {
+/** 실행 — 문자열(구형 치환 결과) 또는 판본 2 봉투(actionRequest). 봉투는 code·edition·inputs·declared_inputs 를 그대로 싣는다. */
+export async function runIBL(req: ActionReq): Promise<Json> {
+  const body = typeof req === 'string' ? { code: req } : { ...req };
   const res = await fetch(IBL_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...iblSurface, code, project_id: '앱모드', project_path: '.' }),
+    body: JSON.stringify({ ...iblSurface, ...body, project_id: '앱모드', project_path: '.' }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   // 합성(>>) 액션의 final_result 펼치기는 공용 코어(원격 ibl() 과 같은 규칙)

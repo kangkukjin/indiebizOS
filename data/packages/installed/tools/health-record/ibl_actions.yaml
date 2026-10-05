@@ -70,6 +70,7 @@ actions:
     - 체중
     - 투약
     app:
+      edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
       instrument: health
       icon: 🩺
       name: 건강기록
@@ -98,7 +99,7 @@ actions:
           - { label: 체온, value: 체온 }
           - { label: 전체, value: 측정기록 }
         - { key: days, type: text, default: '365' }
-        action: '[self:health]{op: "query", query_type: "$category", days: "$days"}'
+        action: '[self:health]{op: "query", query_type: $category, days: $days}'
         view:
         - type: sparkline
           from: points
@@ -135,7 +136,7 @@ actions:
           - { label: 산소포화도, value: 산소포화도 }
         - { key: value, type: text, required: true, placeholder: '값 (예 128/85, 96.5, 72.3)' }
         - { key: note, type: text, placeholder: '메모 (선택)' }
-        action: '[self:health]{op: "save", category: "$category", value: "$value", note: "$note"}'
+        action: '[self:health]{op: "save", category: $category, value: $value, note: $note}'
         view:
         - type: kv
           rows:
@@ -148,7 +149,7 @@ actions:
         inputs:
         - { key: file, type: file, label: '파일', accept: 'image/*,.pdf,.txt,.md,.csv,.xlsx,.xls' }
         - { key: text, type: text, placeholder: '메모 또는 붙여넣기 (선택)' }
-        action: '[self:health]{op: "ingest", file: "$file", text: "$text"}'
+        action: '[self:health]{op: "ingest", file: $file, text: $text}'
         view:
         - type: kv
           rows:
@@ -167,7 +168,7 @@ actions:
         note: 키워드로 측정·증상·투약·문서 기록을 찾습니다.
         inputs:
         - { key: keyword, type: text, required: true, placeholder: '예 혈액검사, 두통' }
-        action: '[self:health]{op: "query", query_type: "search", keyword: "$keyword"}'
+        action: '[self:health]{op: "query", query_type: "search", keyword: $keyword}'
         view:
         - type: card_list
           from: items

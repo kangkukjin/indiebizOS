@@ -16,6 +16,9 @@ class IBLRequest(BaseModel):
     code: str
     edition: Optional[int] = None
     inputs: Optional[dict] = None
+    # 표면 바인딩(2026-10-05 ①): 앱 템플릿이 참조하는 입력 이름 전부. inputs 에 없는 이름 = 미지정
+    # (호출 인자 생략·보간 ""). 렌더러가 치환 대신 원문 + inputs + declared_inputs 를 보낸다.
+    declared_inputs: Optional[List[str]] = None
     value_protocols: Optional[List[str]] = None
     describe: Optional[List[str]] = None
     read_result: Optional[dict] = None
@@ -110,6 +113,7 @@ class ValidateRequest(BaseModel):
     code: str
     edition: Optional[int] = None
     inputs: Optional[dict] = None
+    declared_inputs: Optional[List[str]] = None
 
 
 class DistillRequest(BaseModel):
@@ -239,6 +243,8 @@ async def execute_ibl_code(req: IBLRequest):
                         _ti["value_protocols"] = req.value_protocols
                     if req.inputs is not None:
                         _ti["inputs"] = req.inputs
+                    if req.declared_inputs is not None:
+                        _ti["declared_inputs"] = req.declared_inputs
                     if req.describe is not None:
                         _ti["describe"] = req.describe
                     if req.read_result is not None:
@@ -626,8 +632,10 @@ async def validate_ibl(req: ValidateRequest):
     if not code:
         raise HTTPException(status_code=400, detail="빈 코드입니다.")
     def _validate():
-        if getattr(req, "edition", None) is not None or getattr(req, "inputs", None) is not None:
-            return validate_request_code(code, edition=req.edition, inputs=req.inputs)
+        if (getattr(req, "edition", None) is not None or getattr(req, "inputs", None) is not None
+                or getattr(req, "declared_inputs", None) is not None):
+            return validate_request_code(code, edition=req.edition, inputs=req.inputs,
+                                         declared_inputs=req.declared_inputs)
         return validate_code(code)
     import asyncio
     from execution_workers import bind_context
@@ -649,7 +657,7 @@ def validate_code(code: str) -> dict:
     return validate_request_code(code)
 
 
-def validate_request_code(code: str, edition=None, inputs=None) -> dict:
+def validate_request_code(code: str, edition=None, inputs=None, declared_inputs=None) -> dict:
     """dry-run 본체 — 라우터(`/ibl/validate`)와 관문(`scripts/check_validate_parity.py`)이
     **같은 함수**를 쓴다 (B53-1, 2026-09-02). 검수기가 파서 개정을 모르면 멀쩡한 문장에
     거짓 빨강이 난다(B49-1 `do` 재파싱 · B53-1 `$변수 >>` 파이프 머리 — 같은 속 두 번).
@@ -664,7 +672,8 @@ def validate_request_code(code: str, edition=None, inputs=None) -> dict:
         except ValueError as exc:
             return {"edition": 2, "mode": "check", "executed": False, "ok": False, "valid": False,
                     "status": "invalid", "error": str(exc)}
-    v2 = handle_request({"code": code, "edition": edition, "inputs": inputs, "check": True})
+    v2 = handle_request({"code": code, "edition": edition, "inputs": inputs, "check": True,
+                         **({"declared_inputs": declared_inputs} if declared_inputs is not None else {})})
     if v2 is not None:
         return {**v2, "valid": v2.get("ok", False)}
     code = (code or "").strip()

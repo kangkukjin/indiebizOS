@@ -17,7 +17,7 @@ function loadScript(url: string) {
   return scriptPromise;
 }
 
-export function OfficeDocumentEditor({ detail, onChange, captureRef }: { detail: Detail; onChange: (detail: Detail) => void; captureRef: MutableRefObject<(() => Promise<Session>) | null> }) {
+export function OfficeDocumentEditor({ detail, onChange, captureRef, onSelection, onSaved }: { detail: Detail; onChange: (detail: Detail) => void; captureRef: MutableRefObject<(() => Promise<Session>) | null>; onSelection?: (sel: { text: string; bookmark: string }) => void; onSaved?: (detail: Detail) => void }) {
   const [message, setMessage] = useState('편집기를 여는 중…');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -122,6 +122,7 @@ export function OfficeDocumentEditor({ detail, onChange, captureRef }: { detail:
       operation_id: crypto.randomUUID(), expected_revision: d.document.revision_id });
     const next = await documentRequest<Detail>(`/${d.document.id}`); current.current = next; onChange(next);
     setMessage('저장됨 · 원본 파일 기록 확인');
+    onSaved?.(next);
   });
   const copy = () => run(async () => {
     const session = await capture();
@@ -154,6 +155,7 @@ export function OfficeDocumentEditor({ detail, onChange, captureRef }: { detail:
       <button disabled={busy||!pluginReady} onMouseDown={e=>e.preventDefault()} onClick={()=>void run(async()=>{
         const result=await pluginCall('select',{bookmark:'ib_'+crypto.randomUUID().replaceAll('-','').slice(0,24)});
         setSelected({text:String(result.text),bookmark:String(result.bookmark)});setReplacement(String(result.text));setProposal(null);
+        onSelection?.({text:String(result.text),bookmark:String(result.bookmark)});
         setMessage('선택 위치를 고정했습니다');
       })}>문구 선택 고정</button>
       {selected && <><blockquote>{selected.text}</blockquote><label>사무 문서 AI 지시<input value={instruction} onChange={e=>setInstruction(e.target.value)}/></label>

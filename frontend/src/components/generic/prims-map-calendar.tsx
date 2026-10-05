@@ -60,7 +60,7 @@ export function MapPrim({ p, data, onViewEvent, onStream }: { p: AppViewPrim; da
     const map = mapRef.current;
     if (!tpl || !map || !evRef.current) return;
     const r = Math.round(map.distance(map.getCenter(), map.getBounds().getNorthEast())); // viewport 반경(m)
-    evRef.current(tpl, { lat: lat.toFixed(6), lng: lng.toFixed(6), radius: String(r), radius_km: (r / 1000).toFixed(2) });
+    evRef.current(tpl, { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), radius: r, radius_km: Number((r / 1000).toFixed(2)) });
   }, []);
 
   // "이 지역에서 검색" 버튼 — 현재 지도 중심·반경을 액션 템플릿($lat/$lng/$radius/$radius_km)에 실어 재조회.
@@ -70,7 +70,7 @@ export function MapPrim({ p, data, onViewEvent, onStream }: { p: AppViewPrim; da
     if (!searchHereTpl || !map || !evRef.current) return;
     const c = map.getCenter();
     const r = Math.round(map.distance(c, map.getBounds().getNorthEast())); // viewport 반경(m)
-    evRef.current(searchHereTpl, { lat: c.lat.toFixed(6), lng: c.lng.toFixed(6), radius: String(r), radius_km: (r / 1000).toFixed(2) });
+    evRef.current(searchHereTpl, { lat: Number(c.lat.toFixed(6)), lng: Number(c.lng.toFixed(6)), radius: r, radius_km: Number((r / 1000).toFixed(2)) });
   }, [searchHereTpl]);
 
   // 지도 1회 생성 + 사용자 이동 이벤트 바인딩 (data 변경에도 재생성 안 함 → viewport 보존)
@@ -127,8 +127,8 @@ export function MapPrim({ p, data, onViewEvent, onStream }: { p: AppViewPrim; da
         marker.on('click', () => streamRef.current!(m as Json));  // 행 데이터(url/playable/name/lat/lng) → StreamPlayer
       } else if (clickTpl && evRef.current) {
         marker.on('click', () => evRef.current!(clickTpl, {
-          id: String(r.id ?? ''), name: String(r.name ?? r.title ?? ''),
-          lat: String(r.lat), lng: String(r.lng), url: String(r.url ?? ''),
+          id: r.id ?? '', name: String(r.name ?? r.title ?? ''),
+          lat: r.lat, lng: r.lng, url: String(r.url ?? ''),
         }));
       } else {
         const popup = '<b>' + escHtml(r.name || r.title || '마커') + '</b>' + (r.meta ? '<br>' + escHtml(r.meta) : '') +

@@ -323,11 +323,29 @@ async function apAssistantMsgs(){
 }
 function apMaxId(arr){ let mx=0; (arr||[]).forEach(m=>{ if(m.id>mx) mx=m.id; }); return mx; }
 function apSleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
-/* 백그라운드 명령의 답을 대화 DB 폴링으로 회수. baselineId 보다 큰 id의 어시스턴트 메시지가
-   나타나면 그 메시지({content, images}) 반환. 각 폴링은 짧은 요청이라 터널 100초 타임아웃에
-   안 걸린다. 최대 ~10분. */
-async function apPollAssistant(baselineId,bub){
+/* 백그라운드 명령의 답을 회수. 접수증에 status_url 이 있으면 **그 작업**의 상태를 조회해
+   종료(succeeded/failed/cancelled)를 판정한다 — 다른 작업의 새 메시지를 자기 답으로 집지 않는다.
+   표시 본문은 작업의 result 전문, 이미지는 같은 본문의 어시스턴트 메시지에서 찾는다.
+   status_url 이 없는 구버전 서버에만 메시지 번호 폴링으로 폴백한다(동시 작업 식별은 불가).
+   각 조회는 wait=20 의 제한 대기라 터널 100초 타임아웃에 안 걸린다. 최대 ~10분. */
+async function apPollAssistant(baselineId,bub,statusUrl){
   const dots=['작업 중…','작업 중… ·','작업 중… · ·','작업 중… · · ·'];
+  if(statusUrl){
+    const deadline=Date.now()+10*60*1000; let i=0, misses=0;
+    while(Date.now()<deadline){
+      if(bub) bub.textContent=dots[(i++)%dots.length];
+      let v; try{ const r=await jfetch(statusUrl+'?wait=20'); if(!r.ok){ if(++misses>5) break; await apSleep(2000); continue; } v=await r.json(); }
+      catch(e){ if(++misses>5) break; await apSleep(2000); continue; }
+      if(!v||!v.state){ break; }  // 상태 투영이 아니다(구버전 서버) → 메시지 폴링 폴백
+      if(v.state==='succeeded'||v.state==='failed'||v.state==='cancelled'){
+        const text=v.state==='succeeded'?(v.result||''):('['+(v.state==='failed'?'실패':'취소')+'] '+(v.error||v.result||''));
+        let images=null;
+        try{ const a=await apAssistantMsgs(); const same=(a||[]).filter(m=>m.id>baselineId&&m.content===(v.result||'')); if(same.length) images=same[same.length-1].images||null; }catch(e){}
+        return {content:text, images, state:v.state};
+      }
+    }
+    if(Date.now()>=deadline) return {content:'⏳ 아직 처리 중입니다. 잠시 후 대화를 다시 열어 확인해 주세요.', images:null, state:'running'};
+  }
   for(let i=0;i<200;i++){
     await apSleep(i<6?1500:3000);  // 짧은 답은 빨리, 긴 작업은 느슨하게
     if(bub) bub.textContent=dots[i%dots.length];
@@ -361,8 +379,9 @@ async function apSend(){
       r=await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/command',{method:'POST',body:JSON.stringify({command:message,background:true,...(images.length?{images}:{})})});
     }
     if(!r.ok){ const d=await r.json().catch(()=>({})); last.textContent='['+r.status+'] '+(d.detail||'오류'); return; }
+    const acc=await r.json().catch(()=>({}));
     last.textContent='작업 중…';
-    const fin=await apPollAssistant(baselineId,last);
+    const fin=await apPollAssistant(baselineId,last,acc&&acc.status_url);
     last.innerHTML=mdChat(fin.content||'');
     apAppendImgs(last,apImgObjs(fin.images));  // AI 생성 이미지(tool_images) 렌더 + ⬇ 저장
     const mc=document.getElementById('apMsgs'); mc.scrollTop=mc.scrollHeight;

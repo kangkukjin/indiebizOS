@@ -669,14 +669,18 @@ def get_task(task_id: str) -> Optional[Dict]:
 
 
 def complete_task(task_id: str, result: str = None) -> bool:
-    """작업 완료 처리 — status 업데이트 + 도구 이력 저장"""
+    """작업 완료 처리 — status 업데이트 + 도구 이력 저장.
+
+    result 는 **전문**을 저장한다(2026-10-05). 그동안 500자로 잘라 저장해 작업 조회가
+    요약밖에 돌려주지 못했고, 동기 위임·백그라운드 접수의 결과 회수가 전문으로 돌아갈
+    길이 없었다. 표시용 발췌는 소비자가 자른다."""
     from repair_continuation import task_state
     pending = task_state(task_id)
     if pending and pending != "completed":
         init_memory_db()
         with _get_exclusive_connection() as conn:
             cursor = conn.execute("UPDATE tasks SET status=?, result=?, completed_at=NULL WHERE task_id=?",
-                                  (pending, result[:500] if result else None, task_id))
+                                  (pending, result if result else None, task_id))
             return cursor.rowcount > 0
     import json as _json
     init_memory_db()
@@ -702,7 +706,7 @@ def complete_task(task_id: str, result: str = None) -> bool:
         UPDATE tasks SET status = 'completed', result = ?,
                          completed_at = CURRENT_TIMESTAMP, tool_history = ?
         WHERE task_id = ?
-    """, (result[:500] if result else None, tool_history_json, task_id))
+    """, (result if result else None, tool_history_json, task_id))
     conn.commit()
     updated = cursor.rowcount > 0
     conn.close()
@@ -793,6 +797,97 @@ def decrement_pending_and_update_context(task_id: str,
         cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
         row = cursor.fetchone()
         return row[0] if row else 0
+
+
+def record_child_response(task_id: str, new_response: dict) -> dict:
+    """자식 응답을 부모 원장에 **child_task_id 별 한 번만** 반영한다 (2026-10-05).
+
+    기존 decrement_pending_and_update_context 는 응답이 올 때마다 카운터를 빼고 목록에
+    붙였다 — 같은 응답의 재전송·늦은 중복 통지가 부모를 두 번 완료시킬 수 있었다.
+    반환: {"remaining": 남은 pending, "duplicate": 이미 반영된 자식인가,
+           "mode": 접수 때 기록된 위임 mode(sync/async, 모르면 "async"),
+           "total": 이 사이클의 위임 수}. duplicate 면 원장은 바뀌지 않는다."""
+    import json as _json
+    init_memory_db()
+    child_id = (new_response or {}).get("child_task_id") or ""
+    with _get_exclusive_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT delegation_context, pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
+        row = cursor.fetchone()
+        if not row:
+            return {"remaining": 0, "duplicate": False, "mode": "async", "total": 0, "found": False}
+        try:
+            ctx = _json.loads(row[0]) if row[0] else {}
+        except _json.JSONDecodeError:
+            ctx = {}
+        if not isinstance(ctx, dict):
+            ctx = {}
+        responses = ctx.setdefault("responses", [])
+        delegations = ctx.get("delegations") or []
+        entry = next((d for d in delegations if isinstance(d, dict) and d.get("child_task_id") == child_id), None)
+        mode = (entry or {}).get("mode") or "async"
+        if child_id and any(isinstance(r, dict) and r.get("child_task_id") == child_id for r in responses):
+            return {"remaining": row[1] or 0, "duplicate": True, "mode": mode,
+                    "total": len(delegations), "found": True}
+        responses.append(new_response)
+        cursor.execute("""
+            UPDATE tasks
+            SET delegation_context = ?,
+                pending_delegations = MAX(0, COALESCE(pending_delegations, 0) - 1)
+            WHERE task_id = ?
+        """, (_json.dumps(ctx, ensure_ascii=False), task_id))
+        cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
+        left = cursor.fetchone()
+        return {"remaining": (left[0] if left else 0) or 0, "duplicate": False, "mode": mode,
+                "total": len(delegations), "found": True}
+
+
+def settle_sync_delegation(task_id: str, child_task_id: str):
+    """동기 대기가 시간 초과로 끝날 때의 원자적 정산 (2026-10-05).
+
+    같은 배타 트랜잭션 안에서: 자식 응답이 이미 원장에 있으면 그 응답을 돌려주고(대기자가
+    그대로 결과로 쓴다 — 보고기는 mode=sync 를 보고 부모 러너에 통지하지 않았다), 없으면
+    해당 위임 항목의 mode 를 async 로 바꿔 **이후** 도착하는 보고가 평소대로 부모 러너에
+    전달되게 한다. 보고기의 판정(record_child_response)과 같은 잠금을 쓰므로 둘 사이에
+    끼어드는 경우가 없다 — 응답이 두 번 쓰이거나 영영 사라지는 창이 닫힌다."""
+    import json as _json
+    init_memory_db()
+    with _get_exclusive_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT delegation_context FROM tasks WHERE task_id = ?', (task_id,))
+        row = cursor.fetchone()
+        if not row or not row[0]:
+            return None
+        try:
+            ctx = _json.loads(row[0])
+        except _json.JSONDecodeError:
+            return None
+        for r in ctx.get("responses") or []:
+            if isinstance(r, dict) and r.get("child_task_id") == child_task_id:
+                return r
+        changed = False
+        for d in ctx.get("delegations") or []:
+            if isinstance(d, dict) and d.get("child_task_id") == child_task_id and d.get("mode") == "sync":
+                d["mode"] = "async"
+                changed = True
+        if changed:
+            cursor.execute("UPDATE tasks SET delegation_context = ? WHERE task_id = ?",
+                           (_json.dumps(ctx, ensure_ascii=False), task_id))
+        return None
+
+
+def fail_task(task_id: str, error: str) -> bool:
+    """작업을 실패로 닫는다 — 원인은 result 에 남겨 작업 조회에서 보이게 한다 (2026-10-05).
+
+    백그라운드 접수의 예외가 서버 traceback 으로만 사라지던 경로를 없앤다. 이미 끝난
+    (completed/failed/cancelled) 작업은 덮지 않는다."""
+    init_memory_db()
+    with _get_exclusive_connection() as conn:
+        cursor = conn.execute("""
+            UPDATE tasks SET status = 'failed', result = ?, completed_at = CURRENT_TIMESTAMP
+            WHERE task_id = ? AND COALESCE(status, 'pending') NOT IN ('completed', 'failed', 'cancelled')
+        """, (error or "", task_id))
+        return cursor.rowcount > 0
 
 
 def clear_delegation_context(task_id: str) -> bool:

@@ -19,9 +19,14 @@ from ibl_v2_types import guard
 
 
 from common.expression_eval import Binding, ExpressionEvaluator
+from common.value_semantics import normalized_text
 
 #: 취소 확인 간격(초). 확인 함수가 파일·프로세스를 보는 경로가 있어 걸음마다 부르지 않는다.
 _CANCEL_CHECK_INTERVAL_S = 0.02
+
+#: 미지정 입력(declared_inputs − inputs)의 값 자리 표식. 레코드(호출 인자)에서는 그 필드가 빠지고,
+#: f-문자열 보간에서는 빈 문자열이 된다. 컴파일러가 그 두 자리 밖의 사용을 거절하므로 업무 값으로 새지 않는다.
+OMITTED = object()
 
 
 class Returned(BaseException):
@@ -232,8 +237,19 @@ class Runtime(ExpressionEvaluator):
     def _eval(self, node, env, piped):
         d, kind = node.data, node.kind
         sub = lambda n: self.eval(n, env)
+        unspecified = self.plan.unspecified
+        if unspecified:
+            if kind == "ref" and d["name"] in unspecified and d["name"] not in env:
+                return Binding(OMITTED)
+            if kind == "format":
+                parts = [sub(p) if not isinstance(p, str) else Binding(p) for p in d["parts"]]
+                text = "".join("" if p.value is OMITTED else scalar_text(p.value) for p in parts)
+                return Binding(normalized_text(text), self.parents(parts))
         value = self.expression(node, env)
         if value is not NotImplemented:
+            if unspecified and kind == "record" and isinstance(value.value, dict) \
+                    and any(v is OMITTED for v in value.value.values()):
+                value = Binding({k: v for k, v in value.value.items() if v is not OMITTED}, value.evidence)
             return value
         if kind == "sequence":
             result, parents = Binding(UNIT), set()

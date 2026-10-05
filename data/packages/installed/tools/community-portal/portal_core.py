@@ -701,8 +701,41 @@ def _ai_call_actions():
     return _AI_CALL_ACTIONS_CACHE
 
 
+def _portal_scalar(v) -> bool:
+    return isinstance(v, (str, int, float, bool)) and (not isinstance(v, str) or len(v) <= _PARAM_VALUE_MAX)
+
+
+def template_allowed(code: str, inputs, declared, templates: list):
+    """판본 2 표면 요청(2026-10-05 ①) — code 는 선언 템플릿 **원문과 글자 그대로** 같아야 하고(치환 없음),
+    inputs·declared_inputs 는 그 템플릿이 참조하는 `$이름` 안이어야 한다. 구형 action_allowed 가 치환된
+    인스턴스를 템플릿에 역대조하던 것보다 강한 검사다 — 고정 인자(op·경로)는 원문 그대로 묶인다.
+    노드(self/others)·AI 낱말 금지는 구형과 같다."""
+    text = (code or "").strip()
+    if text not in {t.strip() for t in templates}:
+        return False, "이 계기에 선언되지 않은 동작입니다"
+    if not isinstance(inputs, dict) or not isinstance(declared, list):
+        return False, "허용되지 않는 형식입니다"
+    names = set(re.findall(r"\$\{?([A-Za-z_]\w*)", text))
+    if (set(declared) | set(inputs)) - names:
+        return False, "선언되지 않은 입력입니다"
+    for k, v in inputs.items():
+        if k == "item":
+            if not isinstance(v, dict) or len(json.dumps(v, ensure_ascii=False)) > 4000 \
+                    or not all(_portal_scalar(x) or (isinstance(x, dict) and all(_portal_scalar(y) for y in x.values()))
+                               for x in v.values()):
+                return False, "허용되지 않는 행 입력 형식입니다"
+        elif not _portal_scalar(v):
+            return False, "입력이 너무 길거나 허용되지 않는 형식입니다"
+    for node, action in re.findall(r"\[(\w+):(\w+)\]", text):
+        if node in {"self", "others"}:
+            return False, "허용되지 않는 동작입니다"
+        if (node, action) in _ai_call_actions():
+            return False, "허용되지 않는 동작입니다 (AI 호출 동작은 포털에서 제공되지 않습니다)"
+    return True, ""
+
+
 def action_allowed(code: str, templates: list):
-    """posted code 가 선언 템플릿의 인스턴스인가 — (허용여부, 사유)."""
+    """posted code 가 선언 템플릿의 인스턴스인가 — (허용여부, 사유). 구형(판본 1) 블록용."""
     step = _parse_single(code)
     if step is None:
         return False, "허용되지 않는 형식입니다 (단일 계기 동작만 가능)"

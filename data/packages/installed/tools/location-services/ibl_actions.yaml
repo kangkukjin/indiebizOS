@@ -14,6 +14,7 @@ nodes:
         tool: get_weather
         implementation: Open-Meteo 무료 API로 날씨 조회 (API키 불필요)
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           icon: 🌤️
           name: 날씨
           order: 0
@@ -31,7 +32,7 @@ nodes:
             - 수원
             - 인천
             - 대구
-          action: '[sense:weather]{city: "$city", days: 7}'
+          action: '[sense:weather]{city: $city, days: 7}'
           view:
           - type: metric
             label: '{city}'
@@ -60,6 +61,7 @@ nodes:
         implementation: Kakao(페이지네이션 15×3=45) + Naver Local 듀얼 검색, 가게명 정규화로 중복 병합. 상위 12곳은 네이버 블로그 검색(/v1/search/blog.json, 검색어 = 행 주소의 시·군·구 + 가게명 — 주소 없는 행은 검색 좌표의 역지오코딩 시·군·구)으로 blog_count·reason(가게명 등장 글 제목만) 병렬 부착 후 언급순 정렬. url=카카오 place.map.kakao.com(평점/리뷰 페이지).
         target_key: query
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           icon: 🍴
           name: 맛집
           order: 2
@@ -68,14 +70,14 @@ nodes:
             type: text
             placeholder: '예: 강남역 맛집 / 성수동 카페'
             required: true
-          action: '[sense:restaurant]{query: "$q"}'
+          action: '[sense:restaurant]{query: $q}'
           filter:
             from_field: cat
           view:
           - type: map
             markers: items
             'on':
-              search_here: '[sense:restaurant]{query: "$q", x: "$lng", y: "$lat", radius: $radius}'
+              search_here: '[sense:restaurant]{query: $q, x: $lng, y: $lat, radius: $radius}'
           - type: card_list
             from: items
             empty: 검색 결과가 없습니다
@@ -133,6 +135,8 @@ nodes:
         #    저장 원장은 PC 의 outputs/map/places.json 한 곳 — 폰에서도 @hub 로 같은 원장을 읽고 쓴다(정기보고 선례).
         #    ★첫 저장은 원장 파일이 있어야 한다(데스크탑 지도 앱의 첫 ☆ 저장이 만든다) — 없는 몸에선 읽기가 실패한다.
         app:
+          edition: 1   # 판본 1 유지 — 아래 legacy_reason
+          legacy_reason: '판본 2 는 @노드 지정(@hub)·파이프 축약(| sort:)을 받지 않는다 — 폰 포워드 라우팅이 이 문법에 기대어 있어 구형 치환 유지'
           instrument: directions
           icon: 🗺️
           name: 지도
@@ -353,6 +357,7 @@ nodes:
         - 예약
         - 리조트
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: stay
           icon: 🏨
           name: 숙소
@@ -385,7 +390,7 @@ nodes:
               type: text
               label: 체크아웃
               placeholder: 'YYYY-MM-DD'
-            action: '[sense:stay]{source: "goodchoice", region: "$region", type: "$type", checkin: "$checkin", checkout: "$checkout"}'
+            action: '[sense:stay]{source: "goodchoice", region: $region, type: $type, checkin: $checkin, checkout: $checkout}'
             view:
             - type: card_list
               from: items
@@ -410,7 +415,7 @@ nodes:
               type: text
               label: 주간요금 상한(원)
               placeholder: '예: 300000'
-            action: '[sense:stay]{source: "33m2", region: "$region", max_week_fee: "$max_week_fee"}'
+            action: '[sense:stay]{source: "33m2", region: $region, max_week_fee: $max_week_fee}'
             view:
             - type: card_list
               from: items

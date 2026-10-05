@@ -19,11 +19,23 @@ from typing import Any
 # === 위임 기계 — ibl_routing 에서 verbatim 이동 ===
 
 def _delegate_unified(params: dict, project_path: str) -> Any:
-    """위임 통합 디스패처 — mode(async/sync/workflow) × scope(same/cross/system)."""
+    """위임 통합 디스패처 — mode(async/sync/workflow) × scope(same/cross/system).
+
+    2026-10-05 수리(docs/ASYNC_DELEGATION_REPAIR_DESIGN_2026_10_05.md):
+      · cross 가 mode 분기보다 먼저 반환해 sync 가 무시되던 것 → cross 도 접수 뒤 같은 task 를 기다린다.
+      · same 의 sync 가 임시 AIAgent(별도 실행기)를 만들던 것 → async 와 같은 접수 경로(상주 러너)로
+        접수하고 같은 task 를 기다린다. 두 mode 는 '기다리는가'만 다르다.
+      · cross/system 의 workflow 는 구현된 적이 없다 → 명시적 미지원 오류(검사기 variant 와 일치).
+      · 접수 응답은 delegation_tasks.accepted 모양(task_ref·status_url). 오류는 dict 봉투.
+    """
     mode = (params.get("mode") or "async").lower()
     scope = (params.get("scope") or "same").lower()
     if mode not in {"async", "sync", "workflow"} or scope not in {"same", "cross", "system"}:
         return {"success": False, "error": "mode는 async/sync/workflow, scope는 same/cross/system입니다."}
+    if mode == "workflow" and scope != "same":
+        return {"success": False, "error_type": "capability",
+                "error": (f"scope={scope} 의 mode=workflow 는 지원하지 않습니다. 타 프로젝트·시스템 AI 에는 "
+                          "자연어 message 로 async/sync 위임하세요(do 는 같은 프로젝트 workflow 전용).")}
 
     if scope == "system":
         # 시스템 AI(자율주행 top-level)에게 자연어 의도를 fire-and-forget 위임.
@@ -35,6 +47,11 @@ def _delegate_unified(params: dict, project_path: str) -> Any:
             return {"error": "message 파라미터가 필요합니다. 예: {scope: \"system\", message: \"AI 동향 보고서 써줘\"}"}
         try:
             from system_ai_runner import SystemAIRunner
+            from delegation_tasks import DelegationCycle, envelope
+            try:
+                env = envelope("system_ai")
+            except DelegationCycle as cyc:
+                return {"success": False, "error": str(cyc), "error_type": "delegation_cycle"}
             # 부모 task 동봉 — fire-and-forget 큐가 스레드 컨텍스트를 잃으므로
             # 여기서 떠서 봉투에 싣는다(claude_code 재진입 env/헤더와 같은 부류,
             # 2026-08-21 ③-b). 없으면 러너 루프가 새로 발급한다.
@@ -46,35 +63,76 @@ def _delegate_unified(params: dict, project_path: str) -> Any:
                 pass
             SystemAIRunner.send_message(content=message,
                                         from_agent=params.get("from_agent") or "앱",
-                                        task_id=_parent_task)
+                                        task_id=_parent_task, envelope=env)
         except Exception as e:  # noqa: BLE001 — 큐잉 실패는 그대로 보고
             return {"error": f"시스템 AI 위임 실패: {e}"}
-        return {"success": True, "queued": True, "target": "시스템 AI",
+        return {"success": True, "queued": True, "accepted": True, "target": "시스템 AI",
                 "message": "시스템 AI에 요청을 전달했습니다. 완료되면 결과를 확인하세요."}
+
+    agent_id_raw = params.get("agent_id", "")
+    if isinstance(agent_id_raw, (int, float)):
+        agent_id_raw = str(int(agent_id_raw))
+    agent_id_raw = str(agent_id_raw or "")
+    # 옛 동기 경로는 '프로젝트/에이전트' 를 스스로 풀어 타 프로젝트까지 닿았다 — 그 도달 범위를
+    # 유지한다: same 로 왔어도 다른 프로젝트를 가리키면 cross 접수로 보낸다.
+    if scope == "same" and mode != "workflow" and "/" in agent_id_raw:
+        other_project = agent_id_raw.split("/", 1)[0]
+        if other_project and other_project != Path(project_path).name:
+            scope = "cross"
 
     if scope == "cross":
         from system_ai_tools import _execute_call_project_agent
-        agent_id_raw = params.get("agent_id", "")
         if not agent_id_raw:
             return {"error": "agent_id가 필요합니다. 예: '의료/내과'"}
         # '프로젝트/에이전트' 자동 분리 (call_project_agent는 둘을 분리해서 받음)
-        if "project_id" not in params and "/" in str(agent_id_raw):
-            project_id, agent_id = str(agent_id_raw).split("/", 1)
+        if "project_id" not in params and "/" in agent_id_raw:
+            project_id, agent_id = agent_id_raw.split("/", 1)
             call_input = {**params, "project_id": project_id, "agent_id": agent_id}
         else:
             call_input = dict(params)
-        return _execute_call_project_agent(call_input)
-
-    if mode == "sync":
-        return _agent_ask_sync(params.get("agent_id", ""), params, project_path)
+        call_input["mode"] = mode
+        from thread_context import did_call_agent, get_current_task_id
+        prev_called = did_call_agent()
+        accept = _execute_call_project_agent(call_input)
+        if mode != "sync" or not isinstance(accept, dict) or not accept.get("success"):
+            return accept
+        from delegation_tasks import SYSTEM_OWNER, await_child
+        return await_child(SYSTEM_OWNER, accept.get("parent_task_id") or get_current_task_id(),
+                           accept["task_ref"]["owner"], accept["child_task_id"],
+                           prev_called=prev_called, agent_label=accept.get("agent") or agent_id_raw,
+                           project_id=accept["task_ref"]["owner"], agent_id=call_input.get("agent_id"))
 
     if mode == "workflow":
-        return _delegate_workflow(params.get("agent_id", "") or params.get("workflow", ""),
+        return _delegate_workflow(agent_id_raw or params.get("workflow", ""),
                                    params, project_path)
 
-    # 기본: async (같은 프로젝트 비동기 위임)
+    # same: async/sync 모두 같은 접수 경로(상주 러너). sync 는 접수한 같은 task 를 기다린다.
     from system_tools import execute_call_agent
-    return execute_call_agent(dict(params), project_path)
+    from thread_context import did_call_agent, get_current_task_id
+    prev_called = did_call_agent()
+    message = params.get("message", params.get("query", ""))
+    prev = params.get("_prev_result", "")
+    if prev and message and prev not in message:
+        message = f"{message}\n\n--- 이전 단계 결과 ---\n{prev}"
+    call_input = {**params, "agent_id": agent_id_raw, "message": message, "mode": mode}
+    raw = execute_call_agent(call_input, project_path)
+    if mode != "sync":
+        return raw
+    try:
+        accept = json.loads(raw) if isinstance(raw, str) else raw
+    except (ValueError, TypeError):
+        return {"success": False, "error": f"접수 응답을 해석할 수 없습니다: {str(raw)[:300]}"}
+    if not isinstance(accept, dict) or not accept.get("success"):
+        return accept
+    child_id = accept.get("child_task_id")
+    if not child_id:
+        return {"success": False, "error": "동기 위임의 자식 작업이 만들어지지 않았습니다 — 접수 응답에 child_task_id 가 없습니다.",
+                "accepted": True, "task_ref": accept.get("task_ref")}
+    from delegation_tasks import await_child
+    project_id = Path(project_path).name
+    return await_child(project_id, get_current_task_id(), project_id, child_id,
+                       prev_called=prev_called, agent_label=accept.get("agent") or agent_id_raw,
+                       project_id=project_id, agent_id=agent_id_raw)
 
 
 def _delegate_workflow(agent_id: str, params: dict, project_path: str) -> Any:
@@ -115,143 +173,9 @@ execute_ibl(node="system", action="run_pipeline", params={{"steps": {steps_json}
     )
 
 
-def _agent_ask_sync(agent_id: str, params: dict, project_path: str) -> Any:
-    """에이전트에게 동기 질문 — 응답을 기다려서 반환 (파이프라인용)
-
-    비동기 agent_ask와 달리, 임시 AI 에이전트를 생성하여
-    메시지를 처리하고 결과 텍스트를 직접 반환합니다.
-
-    사용: [others:delegate]{mode: "sync", agent_id: "프로젝트/에이전트", message: "분석해줘"}
-    파이프라인: [self:blog]{op: "search", query: "AI"} >> [others:delegate]{mode: "sync", agent_id: "컨텐츠/컨텐츠", message: "요약해줘"}
-    """
-    if not agent_id:
-        return {"error": "agent_id(문자열)가 필요합니다. 예: \"대장장이\" 또는 \"컨텐츠/대장장이\" 형식"}
-
-    # agent_id가 숫자로 들어온 경우 문자열로 변환
-    if isinstance(agent_id, (int, float)):
-        agent_id = str(int(agent_id))
-
-    # "프로젝트/에이전트이름" 파싱
-    parts_split = agent_id.split("/", 1)
-    if len(parts_split) == 2:
-        project_id, agent_name = parts_split
-    else:
-        agent_name = parts_split[0]
-        project_id = Path(project_path).name
-
-    message = params.get("message", params.get("query", ""))
-    if not message:
-        return {"error": "message 파라미터가 필요합니다. 예: {agent_id: \"대장장이\", message: \"이것 좀 분석해줘\"}"}
-
-    # _prev_result가 있으면 message에 첨부
-    prev = params.get("_prev_result", "")
-    if prev and prev not in message:
-        message = f"{message}\n\n--- 이전 단계 결과 ---\n{prev}"
-
-    # agents.yaml에서 대상 에이전트 설정 로드
-    env_path = os.environ.get("INDIEBIZ_BASE_PATH")
-    base = Path(env_path) if env_path else Path(__file__).parent.parent.parent
-    target_project_path = base / "projects" / project_id
-    agents_yaml = target_project_path / "agents.yaml"
-
-    if not agents_yaml.exists():
-        return {"error": f"프로젝트 '{project_id}'를 찾을 수 없습니다."}
-
-    try:
-        import yaml as _yaml
-        data = _yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
-    except Exception as e:
-        return {"error": f"agents.yaml 로드 실패: {e}"}
-
-    # 에이전트 찾기
-    agents = data.get("agents", [])
-    agent_config = None
-    for ag in agents:
-        if ag.get("name") == agent_name or ag.get("id") == agent_name:
-            agent_config = ag
-            break
-
-    if not agent_config:
-        available = [ag.get("name", ag.get("id", "?")) for ag in agents]
-        return {"error": f"에이전트 '{agent_name}'을 찾을 수 없습니다.", "available": available}
-
-    # 모델은 **모델 기어가 단독 결정**한다 — per-agent yaml(ai.provider/model/apiKey)은
-    # 폐지된 설정이다(agent_cognitive._resolve_execution_config 와 같은 규칙).
-    # ★왜 여기가 따로 필요한가: 비동기 위임은 상주 러너(AgentRunner)로 가서 기어 해소를
-    #   이미 거치지만, 동기 위임은 이 자리에서 임시 에이전트를 만든다. 그래서 여기가
-    #   해소를 안 하면 **같은 어휘의 두 mode 가 서로 다른 모델로 돈다** — 기어를 '최대'로
-    #   놔도 sync 만 폐지된 옛 설정(죽은 키)으로 붙어 빈 응답을 돌려주던 원인.
-    from model_resolver import resolve_agent_ai
-    ai_config = resolve_agent_ai(agent_config.get("ai"), project_id, agent_config.get("id") or "")
-    if not ai_config.get("model"):
-        return {"error": ("실행 모델이 해소되지 않았습니다 — 런처의 모델 티어"
-                          "(경량/중급/고급) 설정을 확인하세요. 에이전트는 키를 들고 다니지 않습니다.")}
-    print(f"[동기위임] {project_id}:{agent_config.get('id')}: 모델 기어 → "
-          f"{ai_config['provider']}/{ai_config['model']} ({ai_config.get('_gear_source')})")
-
-    # 임시 AI 에이전트 생성 + 동기 호출
-    try:
-        from ai_agent import AIAgent
-        from prompt_builder import build_agent_prompt
-        from ibl_access import build_environment
-        from tool_loader import load_tool_schema
-
-        # IBL 도구 로드
-        ibl_schema = load_tool_schema("execute_ibl")
-        tools = [ibl_schema] if ibl_schema else []
-
-        # 프롬프트 구성
-        allowed_nodes = agent_config.get("allowed_nodes")
-        system_prompt = build_agent_prompt(
-            agent_name=agent_name,
-            role=agent_config.get("role_description", ""),
-            agent_count=1,
-            ibl_only=True,
-            allowed_nodes=allowed_nodes,
-            project_path=str(target_project_path),
-            agent_id=agent_config.get("id", ""),
-        )
-
-        agent = AIAgent(
-            ai_config=ai_config,
-            system_prompt=system_prompt,
-            agent_name=agent_name,
-            tools=tools,
-        )
-
-        # 동기 호출 — AI가 응답할 때까지 대기
-        response = agent.process_message_with_history(
-            message_content=message,
-            from_email="pipeline@system",
-            history=[],
-        )
-
-        # ★빈 응답을 성공으로 포장하지 않는다 — 프로바이더가 오류(인증·모델 부재)를
-        #   빈 문자열로 삼키면 부르는 쪽은 "저쪽이 할 말이 없었다"와 "저쪽이 고장났다"를
-        #   구별할 수 없다. 동기 위임의 계약은 '답을 돌려준다'이므로 답이 없으면 실패다.
-        if not (response or "").strip():
-            return {
-                "success": False,
-                "agent": agent_name,
-                "project": project_id,
-                "error": (f"'{agent_name}'이(가) 빈 응답을 반환했습니다 "
-                          f"(모델 {ai_config.get('provider')}/{ai_config.get('model')}). "
-                          f"프로바이더 인증·모델 설정 실패일 수 있습니다 — 백엔드 로그의 "
-                          f"해당 프로바이더 오류를 확인하세요."),
-                "sync": True,
-            }
-        return {
-            "success": True,
-            "agent": agent_name,
-            "project": project_id,
-            "response": response,
-            "sync": True,
-        }
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {"error": f"동기 에이전트 호출 실패: {e}"}
+# _agent_ask_sync (임시 AIAgent 동기 실행기) 은퇴 — 2026-10-05. 동기 위임은 execute_call_agent 로
+# 접수한 같은 task 를 delegation_tasks.await_child 가 기다린다(같은 어휘의 두 mode 가 다른
+# 실행기·다른 모델 해소로 돌던 뿌리 제거).
 
 
 def _agent_info(agent_id: str) -> Any:

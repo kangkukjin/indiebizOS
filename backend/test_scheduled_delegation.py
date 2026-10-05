@@ -142,7 +142,8 @@ def test_chat_delegation_keeps_existing_parent(scheduled):
     tc.set_current_task_id("chat_parent")
     reply = _delegate_unified({"scope": "cross", "agent_id": "fixture/조사자",
                                "message": "재조사"}, ".")
-    assert "위임했습니다" in reply
+    assert reply["accepted"] is True and "위임했습니다" in reply["message"]
+    assert reply["task_ref"] == {"owner": "fixture", "task_id": reply["child_task_id"]}
     assert scheduled.children[0]["parent_task_id"] == "chat_parent"
     assert tc.get_current_task_id() == "chat_parent"
 

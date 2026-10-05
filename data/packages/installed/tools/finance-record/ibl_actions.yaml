@@ -87,6 +87,7 @@ actions:
     - 순자산
     - 회사 재무
     app:
+      edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
       instrument: finance
       icon: 💰
       name: 재무기록
@@ -169,7 +170,7 @@ actions:
           - { label: 수입, value: 수입 }
         - { key: days, type: text, default: '31' }
         - { key: keyword, type: text, placeholder: '가맹점·메모 검색' }
-        action: '[self:finance]{op: "query", query_type: "$tx", days: "$days", keyword: "$keyword", owner: "$owner"}'
+        action: '[self:finance]{op: "query", query_type: $tx, days: $days, keyword: $keyword, owner: $owner}'
         view:
         - type: sparkline
           from: points
@@ -188,7 +189,7 @@ actions:
           options_from: items
           option_value: title
           option_label: title
-        action: '[self:finance]{op: "query", query_type: "자산", owner: "$owner"}'
+        action: '[self:finance]{op: "query", query_type: "자산", owner: $owner}'
         view:
         - type: kv
           rows:
@@ -221,7 +222,7 @@ actions:
         - { key: category, type: text, placeholder: '분류 (예 식비)' }
         - { key: counterparty, type: text, placeholder: '가맹점/거래처' }
         - { key: owner, type: text, placeholder: '주체 (비우면 기본)' }
-        action: '[self:finance]{op: "save", kind: "$kind", amount: "$amount", category: "$category", counterparty: "$counterparty", owner: "$owner"}'
+        action: '[self:finance]{op: "save", kind: $kind, amount: $amount, category: $category, counterparty: $counterparty, owner: $owner}'
         view:
         - type: kv
           rows:
@@ -235,7 +236,7 @@ actions:
         - { key: file, type: file, label: '파일', accept: 'image/*,.pdf,.txt,.md,.csv,.xlsx,.xls' }
         - { key: text, type: text, placeholder: '메모 또는 붙여넣기 (선택)' }
         - { key: owner, type: text, placeholder: '주체 (비우면 기본)' }
-        action: '[self:finance]{op: "ingest", file: "$file", text: "$text", owner: "$owner"}'
+        action: '[self:finance]{op: "ingest", file: $file, text: $text, owner: $owner}'
         view:
         - type: kv
           rows:

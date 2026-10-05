@@ -314,11 +314,13 @@ def _command_origin(origin):
     return origin or "user"
 
 
-def _run_agent_command(project_id: str, agent_id: str, runner, command: str, origin=None, *, continuation=None, images=None):
+def _run_agent_command(project_id: str, agent_id: str, runner, command: str, origin=None, *, continuation=None, images=None,
+                       task_id=None):
     """에이전트 명령 처리 코어 — 동기/백그라운드 양쪽이 공유.
 
     응답 텍스트를 반환하고, 사용자/AI 메시지를 conversations.db에 저장한다.
     백그라운드 경로에서는 자체 스레드에서 돌므로 스레드 컨텍스트를 여기서 설정/정리한다.
+    task_id 를 주면(백그라운드 접수의 선발급) 그 작업을 쓴다 — 이미 행이 있으면 다시 만들지 않는다.
     """
     from conversation_db import ConversationDB
     from thread_context import (set_current_agent_id, set_current_agent_name,
@@ -329,7 +331,7 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
     task_origin = _command_origin(origin)
     rehearsal = task_origin == "training"
     contact_type = "rehearsal" if rehearsal else "gui"
-    task_id = continuation["resume_task_id"] if continuation else f"task_{uuid4().hex}"
+    task_id = continuation["resume_task_id"] if continuation else (task_id or f"task_{uuid4().hex}")
     db = None
     user_id = target_agent_id = None
     response_saved = False
@@ -362,7 +364,7 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
 
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
-        if not continuation or not db.get_task(task_id):
+        if not db.get_task(task_id):
             db.create_task(task_id, "user@gui", contact_type, command, agent_name,
                            parent_task_id=continuation["task_id"] if continuation else None)
 
@@ -465,14 +467,29 @@ def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
 
     image_args = {"images": [image.model_dump() for image in cmd.images]} if cmd.images else {}
     if cmd.background:
+        # 작업 선발급(2026-10-05): 접수증에 task_id·status_url 을 싣는다. 실행 전에 행을 남겨
+        # 즉시 조회가 되고, 워커의 예외는 _run_agent_command 가 failed 로 기록한다.
+        task_id = f"task_{uuid.uuid4().hex}"
+        try:
+            from conversation_db import ConversationDB
+            project_path = project_manager.get_project_path(project_id)
+            db = ConversationDB(str(project_path / "conversations.db"))
+            db.create_task(task_id, "user@gui", "rehearsal" if cmd.origin == "training" else "gui",
+                           cmd.command, runner.config.get("name", agent_id))
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"작업 접수 실패: {exc}")
+
         def _worker():
             try:
-                _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin, **image_args)
+                _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin, task_id=task_id, **image_args)
             except Exception:
                 import traceback
                 traceback.print_exc()
         threading.Thread(target=_worker, daemon=True).start()
-        return {"status": "started"}
+        from delegation_tasks import status_url
+        return {"status": "started", "accepted": True, "task_id": task_id, "state": "queued",
+                "task_ref": {"owner": project_id, "task_id": task_id},
+                "status_url": status_url(project_id, task_id, agent_id)}
 
     try:
         response = _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin, **image_args)
@@ -481,6 +498,38 @@ def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/projects/{project_id}/agents/{agent_id}/tasks/{task_id}")
+def get_agent_task(project_id: str, agent_id: str, task_id: str, wait: int = 0):
+    """접수한 작업의 상태·결과 조회 (2026-10-05). 실행을 만들지 않는 GET.
+
+    경로의 agent 를 믿지 않고 저장된 delegated_to 와 대조한다(id 또는 이름). wait 는 서버 상한
+    (delegation_tasks.HTTP_WAIT_MAX)으로 제한된 대기. 결과 전문은 종료 상태에서만."""
+    from delegation_tasks import HTTP_WAIT_MAX, task_view, wait_for_task
+    try:
+        project_path = project_manager.get_project_path(project_id)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=f"프로젝트를 찾을 수 없습니다: {exc}")
+    names = {agent_id}
+    try:
+        agents_file = project_path / "agents.yaml"
+        if agents_file.exists():
+            with open(agents_file, 'r', encoding='utf-8') as f:
+                for agent in (yaml.safe_load(f) or {}).get("agents", []) or []:
+                    if agent.get("id") == agent_id or agent.get("name") == agent_id:
+                        names |= {agent.get("id"), agent.get("name")}
+    except Exception:
+        pass
+    runner_info = (agent_runners.get(project_id) or {}).get(agent_id) or {}
+    runner = runner_info.get("runner")
+    if runner is not None:
+        names |= {runner.config.get("id"), runner.config.get("name")}
+    bounded = max(0, min(int(wait or 0), HTTP_WAIT_MAX))
+    view = wait_for_task(project_id, task_id, bounded, agent_id) if bounded else task_view(project_id, task_id, agent_id)
+    if view is None or view.get("delegated_to") not in names:
+        raise HTTPException(status_code=404, detail=f"작업을 찾을 수 없습니다: {task_id}")
+    return view
 
 
 # ============ 에이전트 노트/역할 ============

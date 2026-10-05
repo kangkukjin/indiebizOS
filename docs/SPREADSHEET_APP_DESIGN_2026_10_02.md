@@ -192,6 +192,8 @@ AI 요청은 현재 선택 범위 또는 사용자가 지정한 표·시트·통
 
 ## 10 내부 구조와 IBL 연결
 
+> **2026-10-05 개정**: 아래의 `self:document`/`self:sheet` 세션 op 는 범용 작업 공간 낱말 **`[self:workspace]`** 로 흡수됐다(`backend/services/workspace_sessions.py`, 가이드 `workspace.md`). 재계획 정본은 [APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md](APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md).
+
 아래 경로와 API는 **제안**이다. 문서 앱 설계의 공통 기반을 구체화하며 두 앱의 서비스 중복을 막는다. 새 backend 모듈은 층 검사기에 등록하고 파일 1500줄 제한·패키지 모듈명 충돌 검사를 지킨다.
 
 | 위치 | 책임 |

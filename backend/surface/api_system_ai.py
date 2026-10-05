@@ -128,6 +128,10 @@ class ChatResponse(BaseModel):
     timestamp: str
     provider: str
     model: str
+    # 접수증(2026-10-05): background 접수도 동기 응답도 같은 task 를 가리킨다. 조회는 status_url.
+    task_id: Optional[str] = None
+    state: Optional[str] = None
+    status_url: Optional[str] = None
 
 
 class SteerMessage(BaseModel):
@@ -252,21 +256,26 @@ def chat_with_system_ai(chat: ChatMessage):
         init_all_docs()
         _docs_initialized = True
 
+    # 작업 선발급(2026-10-05): 실행을 시작하기 **전에** task 를 영속 저장한다 — background 접수증이
+    # 돌려주는 task_id 로 즉시 조회할 수 있고, 워커가 시작 전에 죽어도 실패 상태를 남길 자리가 있다.
+    task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
+    ws_client_id = chat.context.get("ws_client_id") if chat.context else None
+    create_system_ai_task(
+        task_id=task_id,
+        requester="user@gui",
+        requester_channel="gui",
+        original_request=chat.message,
+        delegated_to="system_ai",
+        ws_client_id=ws_client_id
+    )
+    from delegation_tasks import SYSTEM_OWNER, status_url as _status_url
+    _url = _status_url(SYSTEM_OWNER, task_id)
+
     def _process() -> str:
-        """태스크 생성 + LLM 처리 + 대화 저장. 스레드 컨텍스트(threading.local)가 필요하므로
+        """LLM 처리 + 대화 저장. 스레드 컨텍스트(threading.local)가 필요하므로
         동기/백그라운드 모두 이 함수 한 덩어리를 한 스레드에서 실행한다. 응답 텍스트를 반환하고
         (위임 없을 때) assistant 메시지를 대화 로그에 저장한다. 위임이면 최종 결과는
         system_ai_runner._finalize_task() 가 따로 저장한다."""
-        task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
-        ws_client_id = chat.context.get("ws_client_id") if chat.context else None
-        create_system_ai_task(
-            task_id=task_id,
-            requester="user@gui",
-            requester_channel="gui",
-            original_request=chat.message,
-            delegated_to="system_ai",
-            ws_client_id=ws_client_id
-        )
         set_current_task_id(task_id)
         clear_called_agent()
         # 원격 런처 자율주행 탭 채팅 = 사람의 직접 명령 (RED 수리 그랜트 전제조건)
@@ -338,7 +347,7 @@ def chat_with_system_ai(chat: ChatMessage):
 
             # 위임 없음 → 즉시 응답, 태스크 완료
             from system_ai_memory import complete_task as complete_system_ai_task
-            complete_system_ai_task(task_id, response_text[:500])
+            complete_system_ai_task(task_id, response_text)
             save_conversation("assistant", response_text, source=conv_source, images=tool_images)
             return response_text
         finally:
@@ -352,32 +361,67 @@ def chat_with_system_ai(chat: ChatMessage):
                 # 파이프라인은 리허설 출처를 턴 끝까지 남긴다(에피소드 마감·증류 판정이 읽는다) — 여기서 걷는다.
                 clear_task_origin()
 
+    def _record_failure(exc: BaseException):
+        """백그라운드·동기 공통: 예외를 작업 조회에서 보이게 남긴다(서버 traceback 만 남던 경로 폐지).
+        옛 클라이언트(메시지 폴링)도 실패를 보도록 assistant 메시지로도 남긴다."""
+        from logging_utils import mask_secrets
+        from system_ai_memory import fail_task
+        error = mask_secrets(str(exc)) or exc.__class__.__name__
+        try:
+            fail_task(task_id, error)
+        except Exception as store_err:
+            print(f"[시스템 AI] 실패 상태 기록 실패: {store_err}")
+        try:
+            save_conversation("assistant", f"[실패] {error}", source=conv_source)
+        except Exception:
+            pass
+        return error
+
     if chat.background:
         def _worker():
             try:
                 _process()
-            except Exception:
+            except Exception as exc:
                 import traceback
                 traceback.print_exc()
+                _record_failure(exc)
         threading.Thread(target=_worker, daemon=True).start()
         return ChatResponse(
             response="작업을 시작했습니다.",
             timestamp=datetime.now().isoformat(),
             provider=provider,
-            model=model
+            model=model,
+            task_id=task_id, state="queued", status_url=_url,
         )
 
     try:
         response_text = _process()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI 응답 생성 실패: {str(e)}")
+        error = _record_failure(e)
+        raise HTTPException(status_code=500, detail=f"AI 응답 생성 실패: {error}")
 
     return ChatResponse(
         response=response_text,
         timestamp=datetime.now().isoformat(),
         provider=provider,
-        model=model
+        model=model,
+        task_id=task_id, state=None, status_url=_url,
     )
+
+
+@router.get("/system-ai/tasks/{task_id}")
+def get_system_ai_task(task_id: str, wait: int = 0):
+    """접수한 작업의 상태·결과 조회 (2026-10-05). 실행을 만들지 않는 GET.
+
+    wait(초, 서버 상한 delegation_tasks.HTTP_WAIT_MAX)를 주면 종료 상태가 되거나 시간이 끝날 때까지
+    기다린 뒤 현재 상태를 돌려준다 — 클라이언트가 무한 대기를 지정하지 못한다. 결과 전문은 종료
+    상태에서만 `result`(실패면 `error`). 완료 상태와 업무 달성 판정은 별개다."""
+    from delegation_tasks import HTTP_WAIT_MAX, SYSTEM_OWNER, task_view, wait_for_task
+    bounded = max(0, min(int(wait or 0), HTTP_WAIT_MAX))
+    view = wait_for_task(SYSTEM_OWNER, task_id, bounded) if bounded else task_view(SYSTEM_OWNER, task_id)
+    if view is None:
+        raise HTTPException(status_code=404, detail=f"작업을 찾을 수 없습니다: {task_id}")
+    return view
 
 
 class RecallPreviewRequest(BaseModel):

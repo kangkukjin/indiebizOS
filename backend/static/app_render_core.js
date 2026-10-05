@@ -76,13 +76,51 @@ function buildAction(template, values) {
   return code;
 }
 
-/** 행 데이터 {path} 치환 (드릴·행 버튼용) */
+/** 행 데이터 {path} 치환 (드릴·행 버튼용) — 구형(edition 1) 블록 전용 */
 function rowAction(template, item) {
   return String(template).replace(/\{([\w.]+)\}/g, function (_m, path) {
     var v = jget(item, path);
     return v == null ? '' : String(v).replace(/"/g, '');
   });
 }
+
+/* ===== 판본 2 표면 바인딩 (2026-10-05 ①) =====
+ * 템플릿을 치환하지 않는다. 원문 그대로 보내고 값은 inputs(타입 보존)로, 템플릿이 참조하는 이름 전부는
+ * declared_inputs 로 간다. 빈 값('' / null)은 "미지정" — inputs 에 없고 declared 에만 있어 컴파일러가 그
+ * 인자를 생략한다(구형 "빈 입력=인자 삭제"와 같은 뜻). 행·드릴 컨텍스트는 $item 한 레코드다. */
+
+/** 템플릿이 참조하는 입력 이름($name · f-문자열 ${name}) — $item 은 레코드라 제외 */
+function templateNames(template) {
+  var names = [], seen = {}, re = /\$\{?([A-Za-z_][A-Za-z0-9_]*)/g, m, s = String(template);
+  while ((m = re.exec(s))) { if (m[1] !== 'item' && !seen[m[1]]) { seen[m[1]] = 1; names.push(m[1]); } }
+  return names;
+}
+
+/** @typedef {{code: string, edition: 2, inputs: Record<string, unknown>, declared_inputs: string[]}} AppRequest */
+/** 판본 2 요청 봉투 {code, edition:2, inputs, declared_inputs}
+ *  @param {string} template @param {Record<string, unknown>|null|undefined} values @param {unknown} [item] @returns {AppRequest} */
+function appRequest(template, values, item) {
+  /** @type {Record<string, unknown>} */
+  var inputs = {};
+  var names = templateNames(template), declared = names.slice();
+  names.forEach(function (k) { var v = values ? values[k] : undefined; if (v != null && v !== '') inputs[k] = v; });
+  if (/\$\{?item\b/.test(String(template))) { declared.push('item'); if (item != null) inputs.item = item; }  // $item.x · f"${item.x}"
+  return { code: String(template), edition: /** @type {2} */ (2), inputs: inputs, declared_inputs: declared };
+}
+
+/** 블록(모드·계기)의 판본에 따라 실행 요청을 만든다.
+ *  edition 2 → appRequest(원문+inputs). 그 밖(구형) → 종전 치환: values 가 있으면 $key 치환, item 이 있으면 {field} 치환.
+ *  values 를 null 로 넘기면 구형 경로는 $key 치환을 건너뛴다(행 버튼처럼 종전에 rowAction 만 쓰던 자리). */
+/** @param {{edition?: number}|null|undefined} block @param {string} template
+ *  @param {Record<string, unknown>|null|undefined} [values] @param {unknown} [item] @returns {string|AppRequest} */
+function actionRequest(block, template, values, item) {
+  if (block && block.edition === 2) return appRequest(template, values || {}, item);
+  var code = values != null ? buildAction(template, values) : String(template);
+  return item != null ? rowAction(code, item) : code;
+}
+
+/** 실행 요청(문자열 또는 봉투)의 코드 원문 — 로그·정규식 판정용 */
+function requestCode(req) { return req && typeof req === 'object' ? String(req.code || '') : String(req == null ? '' : req); }
 
 /** view 통화 슬라이스 — from:'.' 은 응답 자체를 1행으로 */
 function viewList(data, from) {
@@ -416,7 +454,7 @@ function dateInputType(t) { return t === 'datetime' ? 'datetime-local' : t; }
 
 /* --- ESM export (데스크탑 Vite 전용 — 원격 인라인 시 이 블록만 제거된다. 파일의 마지막) --- */
 export {
-  jget, applyFilter, tplWith, buildAction, rowAction, viewList,
+  jget, applyFilter, tplWith, buildAction, rowAction, templateNames, appRequest, actionRequest, requestCode, viewList,
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   CAL_PERIODIC, calendarModel, calShift, pad2,

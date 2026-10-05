@@ -241,7 +241,20 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
     }
   }
 
+  var pollStatusUrl = null;
   function pollOnce(){
+    if (pollStatusUrl){
+      api("GET", pollStatusUrl, null, function(st, v){
+        if (st === 401){ showLogin(); return; }
+        if (st !== 200 || !v) return;
+        if (v.state === "succeeded" || v.state === "failed" || v.state === "cancelled"){
+          clearInterval(pollTimer); pollTimer = null; setWait(false); pollStatusUrl = null;
+          loadChat();
+        }
+      });
+      if (new Date().getTime() > pollUntil){ clearInterval(pollTimer); pollTimer = null; setWait(false); pollStatusUrl = null; }
+      return;
+    }
     api("GET", "/system-ai/conversations?limit=10", null, function(st, d){
       if (st !== 200 || !d) return;
       var rows = d.conversations || [], gotAi = false;
@@ -264,6 +277,8 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
     // 본판 자율주행과 동일: background:true 즉시 반환 → 대화 로그 폴링으로 응답 수신
     api("POST", "/system-ai/chat", { message: msg, background: true }, function(st, d){
       if (st === 401){ showLogin(); return; }
+      // 접수증의 status_url 로 그 작업의 종료를 판정한다(구버전 서버면 메시지 폴링 폴백).
+      pollStatusUrl = (st === 200 && d && d.status_url) ? d.status_url : null;
     });
     var div = document.createElement("div");
     div.className = "msg user";

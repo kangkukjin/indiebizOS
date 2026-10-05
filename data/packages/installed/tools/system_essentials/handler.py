@@ -582,19 +582,22 @@ _OP_DISPATCHERS = {
         "register": _sib_op("webapp_registry", "op_register"),
         "remove": _sib_op("webapp_registry", "op_remove"),
     },
+    # 범용 작업 공간(2026-10-05) — 문서·시트·코딩의 세션 op 를 한 낱말로 흡수(essentials_workspace → workspace_sessions)
+    "workspace_op": {
+        "open": _sib_op("essentials_workspace", "op_open"),
+        "snapshot": _sib_op("essentials_workspace", "op_snapshot"),
+        "read": _sib_op("essentials_workspace", "op_read"),
+        "propose": _sib_op("essentials_workspace", "op_propose"),
+        "apply": _sib_op("essentials_workspace", "op_apply"),
+        "save": _sib_op("essentials_workspace", "op_save"),
+        "export": _sib_op("essentials_workspace", "op_export"),
+        "versions": _sib_op("essentials_workspace", "op_versions"),
+        "restore": _sib_op("essentials_workspace", "op_restore"),
+        "close": _sib_op("essentials_workspace", "op_close"),
+        "capabilities": _sib_op("essentials_workspace", "op_capabilities"),
+        "recover": _sib_op("essentials_workspace", "op_recover"),
+    },
     "sheet_op": {
-        "open": _sib_op("essentials_spreadsheet_workspace", "op_open"),
-        "snapshot": _sib_op("essentials_spreadsheet_workspace", "op_snapshot"),
-        "status": _sib_op("essentials_spreadsheet_workspace", "op_status"),
-        "read": _sib_op("essentials_spreadsheet_workspace", "op_read"),
-        "propose": _sib_op("essentials_spreadsheet_workspace", "op_propose"),
-        "apply": _sib_op("essentials_spreadsheet_workspace", "op_apply"),
-        "save": _sib_op("essentials_spreadsheet_workspace", "op_save"),
-        "export": _sib_op("essentials_spreadsheet_workspace", "op_export"),
-        "versions": _sib_op("essentials_spreadsheet_workspace", "op_versions"),
-        "restore": _sib_op("essentials_spreadsheet_workspace", "op_restore"),
-        "capabilities": _sib_op("essentials_spreadsheet_workspace", "op_capabilities"),
-        "recover": _sib_op("essentials_spreadsheet_workspace", "op_recover"),
         "find": _sib_op("sheet_ops", "op_find"),
         "append": _sib_op("sheet_ops", "op_append"),
         "update": _sib_op("sheet_ops", "op_update"),
@@ -605,13 +608,6 @@ _OP_DISPATCHERS = {
     "document_op": {
         "inspect": _sib_op("docx_edit_ops", "op_inspect"),
         "edit": _sib_op("docx_edit_ops", "op_edit"),
-        "open": _sib_op("essentials_document_workspace", "op_open"), "session": _sib_op("essentials_document_workspace", "op_session"),
-        "draft": _sib_op("essentials_document_workspace", "op_draft"), "snapshot": _sib_op("essentials_document_workspace", "op_snapshot"),
-        "read": _sib_op("essentials_document_workspace", "op_read"), "propose": _sib_op("essentials_document_workspace", "op_propose"),
-        "apply": _sib_op("essentials_document_workspace", "op_apply"), "save": _sib_op("essentials_document_workspace", "op_save"),
-        "export": _sib_op("essentials_document_workspace", "op_export"), "versions": _sib_op("essentials_document_workspace", "op_versions"),
-        "restore": _sib_op("essentials_document_workspace", "op_restore"), "capabilities": _sib_op("essentials_document_workspace", "op_capabilities"),
-        "recover": _sib_op("essentials_document_workspace", "op_recover"), "close": _sib_op("essentials_document_workspace", "op_close"),
     },
     # JSON 원장 — 등록 스크립트에서 승격(2026-09-04, 사용자 판정 언어 개정). 관문 넷은 ledger_ops 머리말.
     "ledger_op": {
@@ -654,7 +650,7 @@ _OP_DISPATCHERS = {
     },
 }
 _OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list", "ledger_op": "select", "sqlite_op": "query",
-                "patch_op": "propose", "body_op": "changes", "document_op": "inspect"}
+                "patch_op": "propose", "body_op": "changes", "document_op": "inspect", "workspace_op": "capabilities"}
 
 
 _file_views = _fs_find.file_views

@@ -437,11 +437,19 @@ class AgentCommunicationMixin:
                 messages = AgentRunner.internal_messages.get(my_key, [])
                 return messages.pop(0) if messages else None
 
+        from delegation_tasks import received as _received_envelope
         for msg_dict in runtime_work.message_stream(pop):
+          # 봉투(origin·chain)를 처리 동안 세운다 — 에피소드 시작보다 먼저여야 출처가 읽힌다.
+          # 훈련(origin=training)이 위임을 지나도 자식이 실사용으로 기록되지 않고, 대화·CLI 세션이
+          # 리허설로 갈린다(cli_provider 의 @rehearsal 세션 키·conversation_db 의 rehearsal 스레드).
+          with _received_envelope(msg_dict):
+            extracted_task_id = None
             try:
                 from_agent = msg_dict.get('from_agent', 'unknown')
                 content = msg_dict.get('content', '')
                 task_id = msg_dict.get('task_id')
+                from thread_context import in_rehearsal as _in_rehearsal
+                _contact = 'rehearsal' if _in_rehearsal() else 'agent_to_agent'
 
                 print(f"[AgentRunner] {my_name} 내부 메시지 수신: {from_agent}로부터")
                 print(f"   내용: {content[:100]}..." if len(content) > 100 else f"   내용: {content}")
@@ -450,7 +458,7 @@ class AgentCommunicationMixin:
                 try:
                     from_agent_db_id = self.db.get_or_create_agent(from_agent, "ai_agent")
                     my_agent_db_id = self.db.get_or_create_agent(my_name, "ai_agent")
-                    self.db.save_message(from_agent_db_id, my_agent_db_id, content, contact_type='agent_to_agent')
+                    self.db.save_message(from_agent_db_id, my_agent_db_id, content, contact_type=_contact)
                 except Exception as db_err:
                     print(f"[AgentRunner] 수신 메시지 DB 기록 실패: {db_err}")
 
@@ -558,7 +566,7 @@ class AgentCommunicationMixin:
                     try:
                         my_agent_db_id = self.db.get_or_create_agent(my_name, "ai_agent")
                         from_agent_db_id = self.db.get_or_create_agent(from_agent, "ai_agent")
-                        self.db.save_message(my_agent_db_id, from_agent_db_id, response, contact_type='agent_to_agent')
+                        self.db.save_message(my_agent_db_id, from_agent_db_id, response, contact_type=_contact)
                     except Exception as db_err:
                         print(f"[AgentRunner] 응답 메시지 DB 기록 실패: {db_err}")
 
@@ -580,6 +588,15 @@ class AgentCommunicationMixin:
                 import traceback
                 print(f"[AgentRunner] {my_name} 메시지 처리 실패: {e}")
                 traceback.print_exc()
+                # 자식 실패를 침묵시키지 않는다(2026-10-05): 자기 task 를 failed 로 닫고 부모에게
+                # 실패를 보고한다 — 부모의 pending 이 영영 남거나 동기 대기가 시간 초과로만 끝나지 않게.
+                if extracted_task_id:
+                    try:
+                        from logging_utils import mask_secrets
+                        self._auto_report_to_chain(extracted_task_id, f"[실패] {mask_secrets(str(e))}",
+                                                   msg_dict.get('from_agent', 'unknown'), failed=True)
+                    except Exception as report_err:
+                        print(f"[AgentRunner] 실패 보고 실패: {report_err}")
             finally:
                 # 기존엔 예외 시 컨텍스트 정리가 건너뛰어졌음(except 가 잡고 다음 메시지로
                 # 넘어가 task_id 누수) → finally 로 이동해 에피소드 종료와 함께 확정.
@@ -667,11 +684,13 @@ class AgentCommunicationMixin:
 
             # 시스템 AI에게 메시지 전송
             report_msg = f"[task:{task_id}] 완료.\n{response}"
+            from thread_context import get_task_origin, get_delegation_chain
             SystemAIRunner.send_message(
                 content=report_msg,
                 from_agent=my_name,
                 task_id=task_id,
-                project_id=self.project_id
+                project_id=self.project_id,
+                envelope={"origin": get_task_origin(), "chain": get_delegation_chain()[:-1] or None},
             )
             print(f"[시스템 AI 전송] {my_name}@{self.project_id} → 시스템 AI: {task_id}")
             # DB 기록은 659번(agent_to_agent)에서 이미 수행됨 - 중복 저장 방지
@@ -752,13 +771,26 @@ class AgentCommunicationMixin:
 
         return "\n".join(lines) + "\n"
 
-    def _auto_report_to_chain(self, task_id: str, response: str, from_agent: str):
+    def _close_own_task(self, task_id: str, response: str, failed: bool):
+        """자기 task 행을 닫는다 — 전문(요약 아님)을 남기고, 실패면 failed 로."""
+        if failed:
+            self.db.fail_task(task_id, response)
+        else:
+            self.db.complete_task(task_id, response)
+
+    def _auto_report_to_chain(self, task_id: str, response: str, from_agent: str, failed: bool = False):
         """
         자동 보고 체인: 작업 완료 시 위임 체인을 따라 결과 전달
 
         1. parent_task_id가 있으면 → 부모 태스크의 delegated_to에게 보고
         2. parent_task_id가 없으면 → 발신자에게 응답
         3. 병렬 위임 시 → 모든 응답 수집 후 통합 보고
+
+        2026-10-05: 부모 원장 반영은 record_child_response 로 **child_task_id 별 한 번**(중복
+        통지는 보고 생략). 접수 때 mode=sync 로 기록된 자식은 부모 러너에 통지하지 않는다 —
+        결과는 같은 task 를 기다리는 부모 턴이 회수한다. failed=True 면 자기 행을 failed 로
+        닫고 응답 항목에 failed 표식을 실어 부모가 실패를 성공으로 합치지 못하게 한다.
+        자기 task 행에는 전문을 남긴다(부모에게는 파일 경로+요약).
         """
         from agent_runner import AgentRunner
         my_name = self.config.get('name', '')
@@ -769,6 +801,9 @@ class AgentCommunicationMixin:
                 print(f"[자동 보고] task를 찾을 수 없음: {task_id}")
                 # 태스크 없으면 발신자에게 직접 응답
                 self._send_response_to_sender(from_agent, response)
+                return
+            if (task.get('status') or 'pending') in ('completed', 'failed', 'cancelled'):
+                print(f"[자동 보고] 이미 닫힌 task 의 재보고 생략: {task_id} ({task.get('status')})")
                 return
 
             parent_task_id = task.get('parent_task_id')
@@ -816,22 +851,26 @@ class AgentCommunicationMixin:
                                     'child_task_id': task_id,
                                     'from_agent': my_name,
                                     'response': result_summary,
-                                    'completed_at': datetime.now().isoformat()
+                                    'completed_at': datetime.now().isoformat(),
+                                    'failed': bool(failed),
                                 }
 
-                                # pending_delegations 감소 및 응답 누적 (원자적 수행)
-                                # Race Condition 방지: DB 트랜잭션 내에서 read-append-write
+                                # pending_delegations 감소 및 응답 누적 (원자적·child 별 1회)
                                 if channel == 'system_ai':
-                                    from system_ai_memory import decrement_pending_and_update_context as sys_decrement
-                                    remaining = sys_decrement(
-                                        parent_task_id,
-                                        new_response=new_response
-                                    )
+                                    from system_ai_memory import record_child_response as sys_record
+                                    recorded = sys_record(parent_task_id, new_response)
                                 else:
-                                    remaining = self.db.decrement_pending_and_update_context(
-                                        parent_task_id,
-                                        new_response=new_response
-                                    )
+                                    recorded = self.db.record_child_response(parent_task_id, new_response)
+                                remaining = recorded["remaining"]
+                                if recorded["duplicate"]:
+                                    print(f"[자동 보고] 중복 응답 생략: {task_id} → {parent_task_id} (이미 반영됨)")
+                                    self._close_own_task(task_id, response, failed)
+                                    return
+                                if recorded["mode"] == "sync":
+                                    # 동기 위임 — 부모 턴이 같은 task 를 기다리고 있다. 러너 통지 없이 자기 행만 닫는다.
+                                    print(f"[자동 보고] 동기 위임 응답 원장 반영: {task_id} → {parent_task_id} (대기자가 회수)")
+                                    self._close_own_task(task_id, response, failed)
+                                    return
 
                                 print(f"[자동 보고] 응답 누적: {task_id} → {parent_task_id} (남은 위임: {remaining}/{total_delegations})")
 
@@ -845,9 +884,9 @@ class AgentCommunicationMixin:
                                     # 병렬 위임 모드 (이 응답 도착 전에 2개 이상 대기 중이었음)
                                     if remaining > 0:
                                         print(f"[자동 보고] 병렬 수집 모드 - 대기 중: {remaining}개 응답 더 필요")
-                                        # 현재 태스크 삭제 후 리턴
-                                        self.db.complete_task(task_id, result_summary)
-                                        print(f"[자동 보고] 태스크 삭제: {task_id}")
+                                        # 현재 태스크 닫고 리턴 (전문 보존)
+                                        self._close_own_task(task_id, response, failed)
+                                        print(f"[자동 보고] 태스크 닫음: {task_id}")
                                         return  # 아직 다 안 모임 → 보고 스킵
                                     else:
                                         print(f"[자동 보고] 병렬 수집 모드 - 모든 응답 도착! 통합 보고 전송")
@@ -864,7 +903,8 @@ class AgentCommunicationMixin:
                                             all_responses = [new_response]
                                         combined_report = "[병렬 위임 결과 통합 보고]\n\n"
                                         for resp in all_responses:
-                                            combined_report += f"◆ {resp['from_agent']}:\n{resp['response']}\n\n"
+                                            mark = " (실패)" if resp.get('failed') else ""
+                                            combined_report += f"◆ {resp.get('from_agent')}{mark}:\n{resp.get('response')}\n\n"
                                         result_summary = combined_report
                                 # else: 순차 위임 모드 - 각 응답을 개별적으로 보고
                             else:
@@ -888,7 +928,7 @@ class AgentCommunicationMixin:
                             target = AgentRunner.get_agent_by_name(report_to, project_id=self.project_id)
                             if target:
                                 # 부모 태스크 ID로 보고
-                                report_msg = f"[task:{parent_task_id}] 완료.\n{result_summary}"
+                                report_msg = f"[task:{parent_task_id}] {'실패 보고' if failed else '완료'}.\n{result_summary}"
                                 target_key = target.registry_key
 
                                 msg_dict = {
@@ -935,9 +975,9 @@ class AgentCommunicationMixin:
                     self._send_response_to_sender(from_agent, result_summary)
                 print(f"[자동 보고] 최초 태스크 완료: {task_id} (채널: {channel})")
 
-            # 보고 완료 후 현재 태스크 삭제
-            self.db.complete_task(task_id, result_summary)
-            print(f"[자동 보고] 태스크 삭제: {task_id}")
+            # 보고 완료 후 현재 태스크 닫기 (자기 행에는 전문)
+            self._close_own_task(task_id, response, failed)
+            print(f"[자동 보고] 태스크 닫음: {task_id}")
 
         except Exception as e:
             import traceback

@@ -634,13 +634,15 @@ class ConversationDB:
             return out
 
     def complete_task(self, task_id: str, result: str) -> bool:
-        """작업 완료 처리 — status 업데이트 + 도구 이력 저장 (세션 내 조회용)"""
+        """작업 완료 처리 — status 업데이트 + 도구 이력 저장 (세션 내 조회용).
+
+        result 는 전문을 저장한다(2026-10-05, system_ai_memory.complete_task 와 같은 수리)."""
         from repair_continuation import task_state
         pending = task_state(task_id)
         if pending and pending != "completed":
             with self.get_connection() as conn:
                 cursor = conn.execute("UPDATE tasks SET status=?, result=?, completed_at=NULL WHERE task_id=?",
-                                      (pending, result[:500] if result else None, task_id))
+                                      (pending, result if result else None, task_id))
                 conn.commit()
                 return cursor.rowcount > 0
         # 현재 스레드의 도구 호출 이력 수집
@@ -673,7 +675,7 @@ class ConversationDB:
                     completed_at = CURRENT_TIMESTAMP,
                     tool_history = ?
                 WHERE task_id = ?
-            """, (result[:500] if result else None, tool_history_json, task_id))
+            """, (result if result else None, tool_history_json, task_id))
             conn.commit()
             updated = cursor.rowcount > 0
 
@@ -780,6 +782,76 @@ class ConversationDB:
             cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
             row = cursor.fetchone()
             return row[0] if row else 0
+
+    def record_child_response(self, task_id: str, new_response: dict) -> dict:
+        """자식 응답을 child_task_id 별 한 번만 반영 (system_ai_memory.record_child_response 와 동형)."""
+        import json as _json
+        child_id = (new_response or {}).get("child_task_id") or ""
+        with self.get_exclusive_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT delegation_context, pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
+            row = cursor.fetchone()
+            if not row:
+                return {"remaining": 0, "duplicate": False, "mode": "async", "total": 0, "found": False}
+            try:
+                ctx = _json.loads(row[0]) if row[0] else {}
+            except _json.JSONDecodeError:
+                ctx = {}
+            if not isinstance(ctx, dict):
+                ctx = {}
+            responses = ctx.setdefault("responses", [])
+            delegations = ctx.get("delegations") or []
+            entry = next((d for d in delegations if isinstance(d, dict) and d.get("child_task_id") == child_id), None)
+            mode = (entry or {}).get("mode") or "async"
+            if child_id and any(isinstance(r, dict) and r.get("child_task_id") == child_id for r in responses):
+                return {"remaining": row[1] or 0, "duplicate": True, "mode": mode,
+                        "total": len(delegations), "found": True}
+            responses.append(new_response)
+            cursor.execute("""
+                UPDATE tasks
+                SET delegation_context = ?,
+                    pending_delegations = MAX(0, COALESCE(pending_delegations, 0) - 1)
+                WHERE task_id = ?
+            """, (_json.dumps(ctx, ensure_ascii=False), task_id))
+            cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
+            left = cursor.fetchone()
+            return {"remaining": (left[0] if left else 0) or 0, "duplicate": False, "mode": mode,
+                    "total": len(delegations), "found": True}
+
+    def settle_sync_delegation(self, task_id: str, child_task_id: str):
+        """동기 대기 시간 초과의 원자적 정산 (system_ai_memory.settle_sync_delegation 과 동형)."""
+        import json as _json
+        with self.get_exclusive_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT delegation_context FROM tasks WHERE task_id = ?', (task_id,))
+            row = cursor.fetchone()
+            if not row or not row[0]:
+                return None
+            try:
+                ctx = _json.loads(row[0])
+            except _json.JSONDecodeError:
+                return None
+            for r in ctx.get("responses") or []:
+                if isinstance(r, dict) and r.get("child_task_id") == child_task_id:
+                    return r
+            changed = False
+            for d in ctx.get("delegations") or []:
+                if isinstance(d, dict) and d.get("child_task_id") == child_task_id and d.get("mode") == "sync":
+                    d["mode"] = "async"
+                    changed = True
+            if changed:
+                cursor.execute("UPDATE tasks SET delegation_context = ? WHERE task_id = ?",
+                               (_json.dumps(ctx, ensure_ascii=False), task_id))
+            return None
+
+    def fail_task(self, task_id: str, error: str) -> bool:
+        """작업을 실패로 닫고 원인을 result 에 남긴다. 이미 끝난 작업은 덮지 않는다."""
+        with self.get_exclusive_connection() as conn:
+            cursor = conn.execute("""
+                UPDATE tasks SET status = 'failed', result = ?, completed_at = CURRENT_TIMESTAMP
+                WHERE task_id = ? AND COALESCE(status, 'pending') NOT IN ('completed', 'failed', 'cancelled')
+            """, (error or "", task_id))
+            return cursor.rowcount > 0
 
     def decrement_pending_delegations(self, task_id: str) -> int:
         """

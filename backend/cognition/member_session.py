@@ -283,7 +283,13 @@ class MemberSessionManager:
                 from agent_pipeline import drain_stream
                 if code is not None:
                     from ibl_edition import source_edition
-                    raw = s.runner._member_tool("execute_ibl", {"code": code, "edition": source_edition(code)})
+                    # code 는 원문 문자열(구형 치환 결과) 또는 표면 바인딩 요청 dict(code·edition·inputs·declared_inputs,
+                    # 2026-10-05 ①). dict 는 서버가 치환하지 않은 선언 원문 + 타입 보존 입력이다.
+                    if isinstance(code, dict):
+                        payload = {k: code[k] for k in ("code", "edition", "inputs", "declared_inputs") if k in code}
+                    else:
+                        payload = {"code": code, "edition": source_edition(code)}
+                    raw = s.runner._member_tool("execute_ibl", payload)
                     value = json.loads(raw) if isinstance(raw, str) else raw
                     result = {"final": json.dumps(value, ensure_ascii=False), "app_result": value,
                               "error": (value.get("error") or ("앱 실행 실패" if value.get("success") is False else None)) if isinstance(value, dict) else None}

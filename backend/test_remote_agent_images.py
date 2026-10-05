@@ -59,7 +59,11 @@ def test_command_images_reach_ai_storage_history_and_image_route(chat, photo, ba
     response = client.post('/projects/p/agents/agent_photo/command', json={
         'command': '사진 확인', 'images': images, 'background': background})
     assert response.status_code == 200
-    assert response.json() == ({'status': 'started'} if background else {'response': '사진을 받았습니다.'})
+    body = response.json()
+    if background:
+        assert body['status'] == 'started' and body['task_id'] and body['status_url'].endswith('/tasks/' + body['task_id'])
+    else:
+        assert body == {'response': '사진을 받았습니다.'}
     assert calls[0]['images'] == images
     messages = client.get('/conversations/p/agent_photo/messages').json()['messages']
     user = next(m for m in messages if not m['is_agent'])
@@ -122,7 +126,7 @@ def test_browser_select_send_and_reopen(chat, photo, target):
         elif path == '/system-ai/image':
             request_route.fulfill(content_type='image/png', body=photo)
             return
-        elif path.startswith('/conversations/') or path.endswith('/command'):
+        elif path.startswith('/conversations/') or path.endswith('/command') or '/tasks/' in path:
             if path.endswith('/command'):
                 sent.append(request.post_data_json)
             response = client.request(request.method, path + ('?' + parsed.query if parsed.query else ''),

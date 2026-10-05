@@ -42,6 +42,9 @@ class Plan:
     preflight: dict = field(default_factory=dict)
     # 이 계획을 검사한 저장 함수 목록 — 실행 시점의 중첩 문장 검사(code_params)가 컴파일 때와 같은 목록을 본다.
     definitions: dict = field(default_factory=dict)
+    # 선언됐지만 제공되지 않은 입력 이름(declared_inputs − inputs). 앱 표면의 빈 입력이 여기 온다 —
+    # 호출 인자 자리에서는 그 인자가 생략되고, f-문자열 보간에서는 빈 문자열이다(2026-10-05, 표면 바인딩 개정 ①).
+    unspecified: frozenset = frozenset()
 
     REPORT_GUARDS_CAP = 24
 
@@ -63,16 +66,21 @@ class Plan:
                 "plan_hash": self.fingerprint, "dependencies": dependencies,
                 "source_hash": digest(self.source[:self.dependencies["source_map"][0]["end"]]),
                 "capabilities": ["ibl-edition/2", "ibl-value/1"],
+                **({"unspecified_inputs": sorted(self.unspecified)} if self.unspecified else {}),
                 "preflight": self.preflight, "warnings": self.preflight.get("warnings", []),
                 "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."}
 
 
 class Compiler:
-    def __init__(self, source, registry, inputs, definitions=None):
+    def __init__(self, source, registry, inputs, definitions=None, declared_inputs=None, input_types=None):
         self.source, self.registry = source, registry
         self.definitions, self.external = definitions or {}, {}
         self.source_map = [{"name": "<program>", "start": 0, "end": len(source)}]
         self.inputs = {k: infer(v) for k, v in inputs.items()}
+        # input_types: 값 없이 타입만 아는 입력(앱 템플릿의 저술 시점 검사 — 전부 Unknown). 실행에는 쓰지 않는다.
+        self.inputs.update(input_types or {})
+        # 선언됐지만 제공되지 않은 입력 — 인자 자리에서 생략, 보간에서 "", 그 밖의 자리는 거절(UNSPECIFIED_INPUT).
+        self.unspecified = frozenset(declared_inputs or ()) - set(self.inputs)
         self.functions, self.scopes, self.function_scopes = {}, {}, {}
         self.issues, self.guards, self.effects = [], [], set()
         self.warnings = []  # 실행을 막지 않는 관측 불일치 — preflight.warnings 로 합류
@@ -102,6 +110,11 @@ class Compiler:
                 "facts": facts, "hint": HINTS.get(code, "해당 위치의 계약과 실제 결과를 확인하세요.")}
         if item not in self.warnings:
             self.warnings.append(item)
+
+    def omitted(self, node, env):
+        """미지정 입력을 그대로 가리키는 자리인가 — 그 자리는 값이 아니라 '없음'이다(인자 생략·보간 "")."""
+        return (isinstance(node, Node) and node.kind == "ref" and node.data["name"] in self.unspecified
+                and node.data["name"] not in env)
 
     def need(self, node, actual, expected):
         if actual.kind == "Unknown":
@@ -320,6 +333,11 @@ class Compiler:
         if kind == "ref":
             if d["name"] not in env:
                 extra = {}
+                if d["name"] in self.unspecified:
+                    self.issue(node, "UNSPECIFIED_INPUT",
+                               f"미지정 입력 ${d['name']} 은 호출 인자 자리(인자 생략)와 f-문자열 보간(빈 문자열)에서만 쓸 수 있습니다.",
+                               hint="값이 필요하면 표면 입력에 default 를 선언하거나, 호출 앞 문장에서 조건 값으로 정하세요.")
+                    return UNKNOWN
                 if d["name"] in self.default_scope:
                     extra["hint"] = ("기본값 식은 호출 전에 따로 평가되어 다른 인자를 볼 수 없습니다. 인자에 따라 정해지는 값은 "
                                      "기본값 인자로 두지 말고 함수 본문에서 계산하세요(예: $최종 = $가격 * (1 - $율)).")
@@ -359,9 +377,13 @@ class Compiler:
         if kind == "record":
             self.container_value(node)
             if "entries" not in d:
-                return Type("Record", tuple((k, sub(v)) for k, v in d["fields"].items()), open=False)
+                # 미지정 입력에 매인 필드는 레코드(=호출 인자)에서 빠진다 — 핸들러의 기본값이 산다.
+                return Type("Record", tuple((k, sub(v)) for k, v in d["fields"].items()
+                                            if not self.omitted(v, env)), open=False)
             fields, opened = {}, False
             for key, value in d["entries"]:
+                if key is not None and self.omitted(value, env):
+                    continue
                 typ = sub(value)
                 if key is None:
                     self.need(value, typ, Type("Record"))
@@ -472,6 +494,9 @@ class Compiler:
         if kind == "format":
             known = []
             for part in d["parts"]:
+                if isinstance(part, Node) and self.omitted(part, env):
+                    known.append("")   # 미지정 입력의 보간은 빈 문자열(구형 표면 치환과 같은 뜻)
+                    continue
                 if isinstance(part, Node):
                     self.container_value(part)
                     t = sub(part)
@@ -822,7 +847,9 @@ class Compiler:
         target.update(merged)
 
 
-def compile_program(source, registry=None, inputs=None, definitions=None):
+def compile_program(source, registry=None, inputs=None, definitions=None, *, declared_inputs=None, input_types=None):
+    """declared_inputs: 표면이 템플릿에서 참조하는 입력 이름 전부. inputs 에 없는 이름은 '미지정'으로 컴파일된다.
+    input_types: 값 없는 입력의 타입 선언(저술 시점 검사용) — 실행 요청에는 쓰지 않는다."""
     from ibl_v2_adapters import Adapter
     registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize, v.dependency,
                           getattr(v, "reusable", None), getattr(v, "stateful", None),
@@ -830,7 +857,8 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
                           getattr(v, 'invocation_dependency', None))
                 for k, v in (registry or {}).items()}
     inputs = copy.deepcopy(inputs or {})
-    compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}))
+    compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}),
+                        declared_inputs=declared_inputs, input_types=input_types)
     root = parse(source)
     result = compiler.sequence(root, compiler.inputs.copy(), {})
     for t in compiler.returns:
@@ -879,4 +907,4 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
     return Plan(compiler.source, root, compiler.functions, registry, compiler.inputs,
                 compiler.issues, compiler.guards, compiler.effects, result,
                 digest(dependencies), dependencies, compiler.function_contracts, preflight,
-                compiler.definitions)
+                compiler.definitions, compiler.unspecified)

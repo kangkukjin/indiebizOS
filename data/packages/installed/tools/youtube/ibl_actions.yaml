@@ -84,6 +84,7 @@ nodes:
         implementation: yt-dlp ytsearch로 유튜브 검색 결과 목록 추출
         target_key: query
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: ytmusic
           icon: 🎵
           name: 유튜브 뮤직
@@ -100,7 +101,7 @@ nodes:
               required: true
             # 2026-09-05 15 → 45(사용자 "3배로"). 뷰가 list_action 이라 항목이 늘어도
             # <audio> 는 생기지 않는다(preload 폭주와 무관). 상한은 tool_youtube.SEARCH_COUNT_MAX=75.
-            action: '[sense:search_youtube]{query: "$q", count: 45}'
+            action: '[sense:search_youtube]{query: $q, count: 45}'
             view:
             - type: list_action
               from: items
@@ -109,10 +110,10 @@ nodes:
               sub: '{channel} · {duration}'
               button:
                 label: ▶
-                action: '[limbs:music]{op: "play", mode: "client", query: "https://www.youtube.com/watch?v={video_id}"}'
+                action: '[limbs:music]{op: "play", mode: "client", query: f"https://www.youtube.com/watch?v=${item.video_id}"}'
               button2:
                 label: ⬇
-                action: '[limbs:music]{op: "download", mode: "client", url: "https://www.youtube.com/watch?v={video_id}"}'
+                action: '[limbs:music]{op: "download", mode: "client", url: f"https://www.youtube.com/watch?v=${item.video_id}"}'
           - name: 큐
             phone_render: false
             auto_run: true

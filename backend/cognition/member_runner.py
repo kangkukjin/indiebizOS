@@ -131,7 +131,7 @@ class MemberRunner(AgentRunner):
         from ibl_edition import authoring_request
         from ibl_member_library import library
         request = authoring_request({k: v for k, v in tool_input.items()
-                                     if k in {"code", "edition", "inputs", "check", "resume", "files", "describe"}})
+                                     if k in {"code", "edition", "inputs", "declared_inputs", "check", "resume", "files", "describe"}})
         if len(json.dumps(request, ensure_ascii=False).encode()) > 4 * 1024 * 1024:
             return json.dumps({"success": False, "error": "입력은 합계 4MB 이하여야 합니다"}, ensure_ascii=False)
         source = getattr(self, "config", {}).get("_member_sentences", "")

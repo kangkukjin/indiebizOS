@@ -27,6 +27,7 @@ actions:
     - 정책자금
     - R&D
     app:
+      edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
       icon: 🚀
       name: 사업공고
       order: 11
@@ -48,7 +49,7 @@ actions:
             label: 중기부
           - value: all
             label: 통합
-        action: '[sense:startup]{query: "$q", source: "$src"}'
+        action: '[sense:startup]{query: $q, source: $src}'
         view:
         - type: card_list
           from: items

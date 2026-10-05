@@ -56,6 +56,7 @@ nodes:
         - portal
         - community
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: portal
           icon: 🏘️
           name: 포털
@@ -82,7 +83,7 @@ nodes:
               - key: title
                 label: 포털 이름 (예 우리 가족, 동창 모임)
                 type: text
-              action: '[others:portal]{op: "create", title: "$title"}'
+              action: '[others:portal]{op: "create", title: $title}'
               button: ➕ 새 주소 만들기
           - name: 이웃
             auto_run: true
@@ -95,7 +96,7 @@ nodes:
               options_from: items
               option_value: slug
               option_label: label
-            action: '[others:portal]{op: "members", portal: "$portal"}'
+            action: '[others:portal]{op: "members", portal: $portal}'
             view:
             - type: kv
               title: '{portal.title}'
@@ -113,7 +114,7 @@ nodes:
               - key: contact
                 label: 연락처 (선택)
                 type: text
-              action: '[others:portal]{op: "join", portal: "$portal", name: "$name", contact: "$contact"}'
+              action: '[others:portal]{op: "join", portal: $portal, name: $name, contact: $contact}'
               button: ➕ 등록
             - type: list_action
               from: items
@@ -122,11 +123,11 @@ nodes:
               sub: '{meta}'
               button:
                 label: ▲ 승급
-                action: '[others:portal]{op: "promote", portal: "{portal}", member_id: "{id}"}'
+                action: '[others:portal]{op: "promote", portal: $item.portal, member_id: $item.id}'
                 refresh: true
               button2:
                 label: ▼ 내림
-                action: '[others:portal]{op: "promote", portal: "{portal}", member_id: "{id}", down: true}'
+                action: '[others:portal]{op: "promote", portal: $item.portal, member_id: $item.id, down: true}'
                 refresh: true
             - type: list_action
               from: items
@@ -135,11 +136,11 @@ nodes:
               sub: '{key_hint}'
               button:
                 label: 🔗 재발급
-                action: '[others:portal]{op: "issue", portal: "{portal}", member_id: "{id}"}'
+                action: '[others:portal]{op: "issue", portal: $item.portal, member_id: $item.id}'
                 refresh: true
               button2:
                 label: ⛔ 회수
-                action: '[others:portal]{op: "revoke", portal: "{portal}", member_id: "{id}"}'
+                action: '[others:portal]{op: "revoke", portal: $item.portal, member_id: $item.id}'
                 refresh: true
             - type: kv_list
               from: items
@@ -157,7 +158,7 @@ nodes:
               options_from: items
               option_value: slug
               option_label: label
-            action: '[others:portal]{op: "display", portal: "$portal"}'
+            action: '[others:portal]{op: "display", portal: $portal}'
             view:
             - type: list_action
               from: items
@@ -179,7 +180,7 @@ nodes:
                   label: 3 친구부터
                 - value: '4'
                   label: 4 가족만
-                action: '[others:portal]{op: "display", portal: "{portal}", key: "{key}", set_level: "{sel}"}'
+                action: '[others:portal]{op: "display", portal: $item.portal, key: $item.key, set_level: $item.sel}'
                 refresh: true
           - name: 기록
             auto_run: true
@@ -205,7 +206,7 @@ nodes:
               options_from: items
               option_value: slug
               option_label: label
-            action: '[others:portal]{op: "status", portal: "$portal"}'
+            action: '[others:portal]{op: "status", portal: $portal}'
             view:
             - type: kv
               title: 공개 주소
@@ -223,7 +224,7 @@ nodes:
                 label: 소개글
                 type: textarea
                 value: '{settings.intro}'
-              action: '[others:portal]{op: "config", portal: "$portal", title: "$title", intro: "$intro"}'
+              action: '[others:portal]{op: "config", portal: $portal, title: $title, intro: $intro}'
               button: 저장
             - type: kv
               title: 일일 사용 한도
@@ -245,7 +246,7 @@ nodes:
                 label: 계기별 전체 하루 상한 — 0이면 무제한
                 type: text
                 value: '{settings.global_daily}'
-              action: '[others:portal]{op: "config", portal: "$portal", guest_daily: "$guest_daily", member_daily: "$member_daily", global_daily: "$global_daily"}'
+              action: '[others:portal]{op: "config", portal: $portal, guest_daily: $guest_daily, member_daily: $member_daily, global_daily: $global_daily}'
               button: 한도 저장
 
 # tool.json 파생 원본 — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.

@@ -83,6 +83,7 @@ nodes:
         - 비즈니스 목록
         - 사업 등록
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: business
           icon: 🏢
           name: 비즈니스
@@ -118,9 +119,9 @@ nodes:
                 value: -1
             buttons:
             - label: ＋ 비즈니스 추가
-              action: '[self:business]{store: "business", op: "save", name: "$q"}'
+              action: '[self:business]{store: "business", op: "save", name: $q}'
               refresh: true
-            action: '[self:business]{store: "business", op: "list", level: "$level", search: "$q"}'
+            action: '[self:business]{store: "business", op: "list", level: $level, search: $q}'
             view:
             - type: card_list
               from: items
@@ -129,7 +130,7 @@ nodes:
               # (2026-07-29: 여기 있던 editable_list 는 사진을 못 붙여, 같은 일을 하는 두 창구 중
               #  사진 없는 쪽이 자연스러운 자리에 앉아 "사진 기능이 사라졌다"로 읽혔다.)
               item_click:
-                action: '[self:business]{store: "business", op: "detail", id: "{id}"}'
+                action: '[self:business]{store: "business", op: "detail", id: $item.id}'
                 view:
                 - type: form
                   title: 비즈니스 정보
@@ -159,11 +160,11 @@ nodes:
                     label: 설명
                     type: textarea
                     value: '{business.description}'
-                  action: '[self:business]{store: "business", op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
+                  action: '[self:business]{store: "business", op: "save", id: $item.business.id, name: $name, level: $level, description: $description}'
                   button: 저장
                   actions:
                   - label: 비즈니스 삭제
-                    action: '[self:business]{store: "business", op: "delete", id: "{business.id}"}'
+                    action: '[self:business]{store: "business", op: "delete", id: $item.business.id}'
                     style: danger
                     confirm: 이 비즈니스를 삭제할까요? 소속 아이템도 함께 사라집니다.
                     back: true
@@ -189,16 +190,16 @@ nodes:
               placeholder: 제목 검색 · ＋추가할 제목
             buttons:
             - label: ＋ 아이템 추가
-              action: '[self:business]{store: "item", op: "save", business_id: "$biz", title: "$q"}'
+              action: '[self:business]{store: "item", op: "save", business_id: $biz, title: $q}'
               refresh: true
-            action: '[self:business]{store: "item", op: "list", business_id: "$biz", search: "$q"}'
+            action: '[self:business]{store: "item", op: "list", business_id: $biz, search: $q}'
             view:
             - type: card_list
               from: items
               master_detail: true
               empty_from: message
               item_click:
-                action: '[self:business]{store: "item", op: "detail", item_id: "{id}"}'
+                action: '[self:business]{store: "item", op: "detail", item_id: $item.id}'
                 view:
                 - type: form
                   title: 아이템
@@ -215,13 +216,13 @@ nodes:
                     label: 사진
                     type: images
                     value: '{item.attachment_path}'
-                    add_action: '[self:business]{store: "item", op: "add_image", item_id: "{item.id}", path: "$path"}'
-                    remove_action: '[self:business]{store: "item", op: "remove_image", item_id: "{item.id}", path: "$path"}'
-                  action: '[self:business]{store: "item", op: "save", id: "{item.id}", title: "$title", details: "$details"}'
+                    add_action: '[self:business]{store: "item", op: "add_image", item_id: $item.item.id, path: $path}'
+                    remove_action: '[self:business]{store: "item", op: "remove_image", item_id: $item.item.id, path: $path}'
+                  action: '[self:business]{store: "item", op: "save", id: $item.item.id, title: $title, details: $details}'
                   button: 저장
                   actions:
                   - label: 아이템 삭제
-                    action: '[self:business]{store: "item", op: "delete", item_id: "{item.id}"}'
+                    action: '[self:business]{store: "item", op: "delete", item_id: $item.item.id}'
                     style: danger
                     confirm: 이 아이템을 삭제할까요?
                     back: true
@@ -242,7 +243,7 @@ nodes:
             - type: card_list
               from: items
               item_click:
-                action: '[self:business]{store: "document", op: "detail", level: "{level}"}'
+                action: '[self:business]{store: "document", op: "detail", level: $item.level}'
                 view:
                 - type: form
                   title: 공개 비즈니스 문서
@@ -255,7 +256,7 @@ nodes:
                     label: 내용
                     type: textarea
                     value: '{document.content}'
-                  action: '[self:business]{store: "document", op: "save", level: "{document.level}", title: "$title", content: "$content"}'
+                  action: '[self:business]{store: "document", op: "save", level: $item.document.level, title: $title, content: $content}'
                   button: 저장
               card:
                 title: '{title}'
@@ -268,7 +269,7 @@ nodes:
             - type: card_list
               from: items
               item_click:
-                action: '[self:business]{store: "guideline", op: "detail", level: "{level}"}'
+                action: '[self:business]{store: "guideline", op: "detail", level: $item.level}'
                 view:
                 - type: form
                   title: 근무 지침
@@ -281,7 +282,7 @@ nodes:
                     label: 내용
                     type: textarea
                     value: '{guideline.content}'
-                  action: '[self:business]{store: "guideline", op: "save", level: "{guideline.level}", title: "$title", content: "$content"}'
+                  action: '[self:business]{store: "guideline", op: "save", level: $item.guideline.level, title: $title, content: $content}'
                   button: 저장
               card:
                 title: 레벨 {level} · {title}
@@ -344,6 +345,7 @@ nodes:
             inbox: 대화 목록 (이웃별 최근 메시지·미응답, 최근순)
         implementation: handler.py messages_op — op:thread 는 business_manager.get_messages(neighbor_id) 를 시간 오름차순 반환(채팅 순서), op:inbox 는 neighbors⋈messages 조인으로 대화 목록 합성.
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: messenger
           icon: 💬
           name: 메신저
@@ -374,15 +376,15 @@ nodes:
               value: 4
           buttons:
           - label: ＋ 이웃 추가
-            action: '[others:neighbor]{op: "save", name: "$q"}'
-          action: '[others:messages]{op: "inbox", level: "$level", search: "$q"}'
+            action: '[others:neighbor]{op: "save", name: $q}'
+          action: '[others:messages]{op: "inbox", level: $level, search: $q}'
           view:
           - type: card_list
             from: items
             master_detail: true
             empty_from: message
             item_click:
-              action: '[others:messages]{op: "thread", neighbor_id: "{id}", pubkey: "{pubkey}"}'
+              action: '[others:messages]{op: "thread", neighbor_id: $item.id, pubkey: $item.pubkey}'
               tabs:
               - name: 대화
                 view:
@@ -407,7 +409,7 @@ nodes:
                     sendable:
                     - email
                     - nostr
-                  action: '[others:channel_send]{channel_type: "$channel_type", to: "$to", body: "$text"}'
+                  action: '[others:channel_send]{channel_type: $channel_type, to: $to, body: $text}'
               - name: 이웃 정보
                 view:
                 - type: form
@@ -474,13 +476,13 @@ nodes:
                     label: 비즈니스 문서(공개)
                     type: textarea
                     value: '{business_doc}'
-                  action: '[others:neighbor]{op: "save", id: "{neighbor_id}", name: "$name", info_level: "$info_level", rating: "$rating", warehouse_score: "$warehouse_score", info_share: "$info_share", additional_info: "$additional_info", business_doc: "$business_doc"}'
+                  action: '[others:neighbor]{op: "save", id: $item.neighbor_id, name: $name, info_level: $info_level, rating: $rating, warehouse_score: $warehouse_score, info_share: $info_share, additional_info: $additional_info, business_doc: $business_doc}'
                   button: 저장
                   actions:
                   - label: ⭐ 즐겨찾기 토글
-                    action: '[others:neighbor]{op: "favorite", id: "{neighbor_id}"}'
+                    action: '[others:neighbor]{op: "favorite", id: $item.neighbor_id}'
                   - label: 이웃 삭제 · 대화 숨김
-                    action: '[others:neighbor]{op: "delete", id: "{neighbor_id}", pubkey: "{pubkey}"}'
+                    action: '[others:neighbor]{op: "delete", id: $item.neighbor_id, pubkey: $item.pubkey}'
                     style: danger
                     confirm: 삭제할까요? 이웃이면 연락처·대화가 사라지고, 이웃 아닌 쪽지 상대면 대화가 숨겨집니다(새 메시지가 오면 다시 보여요).
                     back: true
@@ -490,14 +492,14 @@ nodes:
                   - key: merge_from
                     label: 합칠 이웃 (이름 또는 id) — 그쪽의 연락처·대화·가입 자격이 이 이웃으로 합류하고, 그쪽 레코드는 은퇴합니다
                     type: text
-                  action: '[others:neighbor]{op: "merge", id: "{neighbor_id}", from: "$merge_from"}'
+                  action: '[others:neighbor]{op: "merge", id: $item.neighbor_id, from: $merge_from}'
                   button: 이 이웃으로 합치기
                 - type: editable_list
                   from: contacts
                   title: 연락처
                   display: '{contact_type} · {contact_value}'
                   empty: 연락처 없음
-                  delete_action: '[others:neighbor]{op: "contact_delete", contact_id: "{id}"}'
+                  delete_action: '[others:neighbor]{op: "contact_delete", contact_id: $item.id}'
                   add:
                     fields:
                     - key: contact_type
@@ -519,7 +521,7 @@ nodes:
                     - key: contact_value
                       type: text
                       placeholder: 연락처 값
-                    action: '[others:neighbor]{op: "contact_add", neighbor_id: "{neighbor_id}", contact_type: "$contact_type", contact_value: "$contact_value"}'
+                    action: '[others:neighbor]{op: "contact_add", neighbor_id: $item.neighbor_id, contact_type: $contact_type, contact_value: $contact_value}'
                     button: 추가
             card:
               title: '{favorite|opt:⭐ ,}{name}'

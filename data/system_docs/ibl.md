@@ -622,7 +622,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 - **지표어(indexical) 감각** (2026-07-22): `sense:here`(현재위치)·`sense:see`(카메라)·`sense:listen`(마이크)는 phone_only 를 벗었다 — 뜻은 몸 독립이고("지금 나 어디?") *어떻게 답하나*만 몸마다 다르다(폰=GPS/카메라, 데스크톱=`desktop_av` 프로브). 하드웨어가 없으면 거짓말 대신 `no_hardware` 로 정직하게 통화를 돌려준다. `sense:phone`(알림 피드)은 폰이 보내는 입력이라 별개.
 - **파일 듣기** (2026-09-10): `[sense:listen]{path}`는 파일 전사, `{path, question}`은 소리 내용 분석, `{path, op:"inspect"}`는 원본 신호 검사다. path 생략 시 기존 마이크 동작. 파일에 마이크는 불필요하며 실행·감독은 같은 구간 분석 증거를 재사용한다. [오디오 듣기 가이드](../guides/audio_listen.md).
 <!-- RUNS_ON:START -->
-- 현 분포: `anywhere` 119 · `pc_only` 48 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
+- 현 분포: `anywhere` 119 · `pc_only` 49 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
 <!-- RUNS_ON:END -->
 
 **분산 IBL — 액션이 실행 단위(폰↔맥 연합)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션을 거부하지 않고 **맥에 단건 위임**(`_forward_to_mac` ↔ 맥→폰 `forward_to_phone` 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로 **혼합 code도 액션별로 쪼개져** 일부는 폰·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. **맥→폰 도달(2026-06-17 라이브)**=`INDIEBIZ_PHONE_URL`+`INDIEBIZ_PHONE_TOKEN`: 폰 `phone_api` 미들웨어가 비localhost 요청에 `X-Phone-Token`을 검증(hmac.compare_digest, localhost=WebView 자기접속은 통과), 맥 `forward_to_phone`가 그 토큰을 자동 동봉. 폰 백엔드는 **앱 UI 없이 상주**(`AgentForegroundService`가 `App.ensureBackend()` 기동·START_STICKY·부팅 재기동)하고 **토큰이 있을 때만 `0.0.0.0`(LAN) 바인드**(노출과 인증을 한 묶음 — 토큰 없으면 `127.0.0.1` 전용). 빌린 산출 파일은 `_pull_remote_artifacts`로 양방향 회수(맥←phone_only·폰←mac_only). 보안: 양방향 게이트(맥→폰=토큰/폰→맥=HTTPS 터널+런처 비번), 인터넷 비노출(폰=LAN 한정), caveat=맥→폰 LAN 평문 HTTP(가정 WPA2 저위험·공용 WiFi 금지). 폰=몸(센서·신원·렌더) 자급·머리(연산)는 맥 연합 — 클라이언트-서버 아니라 주권 피어들의 협력(미래 피어=같은 뼈대+허가 층).
@@ -639,7 +639,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 ### 핵심 노드 분류
 
 <!-- IBL_STATS:START -->
-총 **168 액션** — sense 43 · self 52 · limbs 14 · others 17 · engines 19 · table 23
+총 **169 액션** — sense 43 · self 53 · limbs 14 · others 17 · engines 19 · table 23
 <!-- IBL_STATS:END -->
 (위 줄은 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 
@@ -764,7 +764,8 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
           auto_run: true          # 열자마자 기본값으로 실행
           inputs:                 # text/select(+options_action)/chips/required/default
           - { key: coin, type: text, default: BTC, chips: [BTC, ETH] }
-          action: '[sense:crypto]{coin: "$coin"}'   # $key=입력 치환, 빈 입력 파라미터 자동 제거
+          edition: 2              # 템플릿 판본(2026-10-05) — 아래 '표면 바인딩' 참조. 선언 필수
+          action: '[sense:crypto]{coin: $coin}'      # $key=입력(타입 보존). 빈 입력=미지정 → 그 인자 생략
           view:                   # 프리미티브 목록은 아래 어휘 줄 참조(빌드 가드가 동기 검증)
           # compose: 하단 작성바 — $text=작성, {field}=드릴 데이터. 전송 후 새로고침
           # item_click.tabs: 드릴 상세 탭(대화↔이웃정보 등) — 한 액션 데이터를 탭별 view 로 분할
@@ -774,10 +775,12 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
           - { type: metric, big: '{data.current_price_krw|num}', trend: data.change_24h_percent }
 ```
 
-- view 프리미티브 15종: metric / kv / kv_list / card_list / image_grid / sparkline / list_action / thread / form / editable_list / map / calendar / group / blocks / media_player — media_player=오디오 플레이어(items의 src 필드=파일 절대경로/URL → HTML5 `<audio>`, 백엔드 `/launcher/file` 서빙 · 원격/폰 파리티), card_list=+item_click 드릴·탭·compose, image_grid=+button 행 버튼(label/action/confirm/refresh — list_action button 과 같은 어휘, 사진 빼기 등), thread=채팅 버블+status+item_button(본문이 match 정규식과 일치하는 항목에만 붙는 선언형 버튼 — label/action/refresh, 캡처 그룹은 `{match1}..{matchN}` 필드로 액션 템플릿에 공급. 계약은 매니페스트 데이터 — 예: 게시판 창고 소개의 창고이웃 등록), form=편집 필드+저장, editable_list=행 CRUD, map=leaflet 지도, calendar=월 그리드, group=파티션 콤비네이터(`by` 키 템플릿으로 items를 나눠 그룹마다 내부 `view:` 재귀 렌더 — table:groupby(집계)와 달리 멤버 유지, 뷰-계층의 groupby), blocks=**문서 IR 렌더**(heading/paragraph/list/table/quote/code/divider/image 블록 배열을 문서로 — `[self:read]{blocks:true}`·`[table:structure]` 출력 직결. 표현 언어 층위 조항의 "정적 표현 원자 공유": 페이로드 IR의 읽기 전용 부분집합이 표면 언어에도 그대로 옴).
+- view 프리미티브 16종: metric / kv / kv_list / card_list / image_grid / sparkline / list_action / thread / form / editable_list / map / calendar / group / blocks / media_player / engine — media_player=오디오 플레이어(items의 src 필드=파일 절대경로/URL → HTML5 `<audio>`, 백엔드 `/launcher/file` 서빙 · 원격/폰 파리티), card_list=+item_click 드릴·탭·compose, image_grid=+button 행 버튼(label/action/confirm/refresh — list_action button 과 같은 어휘, 사진 빼기 등), thread=채팅 버블+status+item_button(본문이 match 정규식과 일치하는 항목에만 붙는 선언형 버튼 — label/action/refresh, 캡처 그룹은 `{match1}..{matchN}` 필드로 액션 템플릿에 공급. 계약은 매니페스트 데이터 — 예: 게시판 창고 소개의 창고이웃 등록), form=편집 필드+저장, editable_list=행 CRUD, map=leaflet 지도, calendar=월 그리드, group=파티션 콤비네이터(`by` 키 템플릿으로 items를 나눠 그룹마다 내부 `view:` 재귀 렌더 — table:groupby(집계)와 달리 멤버 유지, 뷰-계층의 groupby), blocks=**문서 IR 렌더**(heading/paragraph/list/table/quote/code/divider/image 블록 배열을 문서로 — `[self:read]{blocks:true}`·`[table:structure]` 출력 직결. 표현 언어 층위 조항의 "정적 표현 원자 공유": 페이로드 IR의 읽기 전용 부분집합이 표면 언어에도 그대로 옴).
+- **engine 뷰 + selection/saved 이벤트(2026-10-05, [앱 구성 재계획](../../docs/APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md) §3-c):** `type: engine` 은 외부 편집 엔진 표면을 **작업 공간 자료**(`ref: '{data.resource}'` — `[self:workspace]{op:"open"}` 의 반환)로 바인딩한다. 어떤 엔진(ONLYOFFICE·RHWP·원문 textarea·시트)을 띄울지는 자료의 capabilities 가 정하고 선언은 모른다. `'on': {selection: …, saved: …}` 로 사용자 조작을 흘린다 — selection(선택 고정: `$sel` JSON selector·`$start/$end/$text`·`$sheet/$range`·`$resource/$revision`), saved(원본 저장: `$resource/$revision`). 템플릿이 `keep` 이면 재조회 없이 $변수로만 남기고 이후 ai_dock·버튼·폼 액션이 쓴다(ai_dock 의 action 이 `$sel` 을 받는 길). 승격 4기준: escape 3개(문서·한글·시트 편집기) 은퇴 ✓ · 통화(resource) 소비 ✓ · 3표면(원격·폰은 열람 강등) ✓ · 레이아웃 아님 ✓. 코딩 작업 공간은 엔진 표면이 없다(blocks 로 diff).
 - form 필드 11종: text / select / toggle / textarea / images / date / time / datetime / recurrence / folder / files
 - ★위 두 어휘 줄은 빌드의 **뷰-어휘 문서-동기 가드**가 코드 선언(`APP_VIEW_TYPES`/`APP_FORM_FIELD_TYPES`)과 자동 대조 — `new_action_checklist.md`의 같은 줄과 함께, 뷰 어휘 변경 시 두 문서를 같이 고쳐야 빌드 통과.
 - 표시 템플릿 `{path|filter}` — 필터: round/num/abs/arrow/`opt:앞,뒤`/`trunc:N`. 드릴 응답엔 클릭 행이 `_item`으로 주입.
+- **표면 바인딩 — 액션 템플릿은 치환하지 않는다 (2026-10-05 개정 ①, [설치 목록](../../docs/APP_COMMON_FOUNDATION_GAPS_2026_10_05.md) §1-①):** 블록마다 `edition: 2` 를 선언하면 렌더러(데스크탑·원격·폰·포털·회원 앱)가 템플릿 **원문 그대로** + `inputs`(제공 값, 타입 보존) + `declared_inputs`(템플릿이 참조하는 이름 전부)를 `/ibl/execute` 에 보낸다. 템플릿은 판본 2 프로그램이다 — `$key`=상단 입력·폼 필드·compose(`$text`)·ai_dock(`$dock`)·뷰-이벤트 페이로드(`$lat`·`$sel`…, keep 규약으로 잔류), `$item.필드`=행·드릴 컨텍스트 레코드(구형 `{필드}` 의 자리), 문자열 안 보간은 `f"…${key}…"`, `[fn:이름]` 호출 가능. **미지정 규칙**: 빈 값(`''`/null)은 표면이 `inputs` 에서 빼고 `declared_inputs` 에만 남긴다 → 호출 인자 자리면 그 인자가 **생략**(핸들러 기본값이 산다, 구형 "빈 입력=인자 삭제"와 같은 뜻), f-문자열 보간이면 빈 문자열, 그 밖의 자리는 `UNSPECIFIED_INPUT` 거절. 명시 `null` 은 값이다. 검증기(`validate_app_blocks`)는 edition 선언 필수·판본 2 블록의 구형 `{필드}`·`"$key"`·`@노드`·파이프 축약 거절·`$item` 허용을 보고, `--check` 의 **판본 2 앱-템플릿 가드**가 전 템플릿을 판본 2 컴파일러로 검사한다(입력은 Unknown, 미등록 `[fn:]` 은 경고). `edition: 1` + `legacy_reason` 은 판본 2 가 못 받는 문법(`@hub` 노드 지정·`| sort:` 축약, 판본 2 계약 없는 어휘)이 꼭 필요한 블록만 — 지도·정기보고·신문·공동업무가 그 예이며, 그 블록은 종전 `$key`/`{필드}` 문자열 치환(공용 코어 `buildAction`/`rowAction`)으로 돈다. 기계 변환기 `scripts/migrate_app_templates_edition2.py`.
 - 리스트 프리미티브의 `from: "."` = 응답 자체를 1행으로 (단일 객체 응답에 행 버튼 달기 — 예: 신문 생성 결과에 "띄우기").
 - **select 입력 2종:** ①정적 `options: [{value,label}]` (IBL 호출 없음 — 시/도·유형 등 고정 목록) ②동적 `options_action`+`options_from` (IBL로 옵션 조회; 응답이 배열이면 option_value/option_label로, 딕셔너리 `{이름:코드}`면 자동 entries 정규화). **종속(cascade):** options_action 안에 `$형제키`를 쓰면 그 형제 select가 바뀔 때 자동 재조회 — 예: 구/군 `options_action: '[sense:realty]{op:"codes", city:"$province"}'` 가 시/도 선택에 따라 갱신. 실거래가 계기가 시연.
 - **인터랙티브 지도 — `map` 프리미티브 + `on:` 뷰-이벤트(2026-06-29):** `type: map`은 봉투(`from: map_data`의 center/path/origin/destination)와 마커 리스트(`markers: items`)를 leaflet으로 그린다. `on:` 맵으로 *사용자 조작을 액션으로* 흘린다 — `moveend`(지도 팬/줌 → `$lat/$lng/$radius` 주입해 재조회, 위치 입력박스 대체) / `marker_click`(마커 클릭 → IBL 템플릿 재조회 `$id/$name/$lat/$lng/$url`, **또는** `{stream: true}` = 마커 url 을 HLS 영상 오버레이로 재생, CCTV). 상호작용도 선언이다 — 표면별 코드 0. **★YAML 함정:** `on:`은 따옴표 필수(`'on':`) — 무인용은 YAML 1.1 불리언으로 파싱돼 무시된다(체커가 RED 로 차단).
@@ -785,7 +788,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 - 탭 계기는 여러 액션이 같은 `instrument:` id + `mode:` 이름 공유 (예: performance+exhibit → 문화공연, search_youtube+music → 유튜브 뮤직). 노드가 달라도 병합된다.
 - **리모컨 의미론(2026-06-11 사용자 결정):** 부작용이 집 PC에서 일어나는 계기(라디오·유튜브뮤직 재생, 신문 띄우기)도 원격 노출 OK — `note:`로 "집 PC에서 실행됩니다" 경고만 명확히. 폰-로컬 실행은 폰 네이티브 배포의 일이므로 섞지 말 것.
 - `GET /launcher/instruments`가 app: 블록을 모아 계기 매니페스트로 자동 파생 (api_launcher_web._derive_instruments).
-- 정합성은 `build_ibl_nodes.py --check`의 `validate_app_blocks`가 정적 차단 (참조 액션 실존·$key↔inputs·view 어휘·계기 그룹).
+- 정합성은 `build_ibl_nodes.py --check`의 `validate_app_blocks`가 정적 차단 (참조 액션 실존·$key↔inputs·view 어휘·계기 그룹·템플릿 판본) + 판본 2 앱-템플릿 컴파일 가드.
 - app: 블록은 에이전트 프롬프트에 직렬화되지 않는다 (프롬프트 비용 0). 해마 용례·임베딩과도 무관 — 에이전트가 호출하는 어휘가 아니라 표면이 읽는 선언이다.
 - 전체 어휘 명세: `docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md`.
 

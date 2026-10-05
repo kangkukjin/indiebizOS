@@ -7,8 +7,8 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import {
-  type AppViewPrim, type AppFormField, type FormAction, type Dispatch, type Json,
-  tpl, asList, buildAction, runIBL, parseImagePaths,
+  type AppViewPrim, type AppFormField, type FormAction, type Dispatch, type Json, type AppMode,
+  tpl, asList, actionRequest, runIBL, parseImagePaths,
   fieldCls, imageUrl, RECURRENCE_OPTS, dateInputType,
 } from './manifest';
 import { Card } from './prims-basic';
@@ -115,8 +115,8 @@ function FilesField({ f, dispatch, busy, setBusy }:
 
 // textarea 위 ephemeral AI 제안 독 — 요청→제안→반영(대체)/첨부/닫기. 실행 후 제안 사라짐(비누적).
 // action 은 $<필드키>(현재 텍스트)·$dock(요청)을 주입받아 스칼라 텍스트를 낸다(runIBL: project_id='앱모드').
-function AiDock({ field, value, vals, onApply }: {
-  field: AppFormField; value: string; vals: Record<string, string>; onApply: (v: string) => void;
+function AiDock({ field, value, vals, onApply, block }: {
+  field: AppFormField; value: string; vals: Record<string, unknown>; onApply: (v: string) => void; block?: AppMode;
 }) {
   const dock = field.ai_dock!;
   const modes = dock.modes && dock.modes.length ? dock.modes : (['replace', 'append'] as const);
@@ -128,7 +128,8 @@ function AiDock({ field, value, vals, onApply }: {
     if (!instruction || busy) return;
     setInput(''); setBusy(true); setSuggestion(null);
     try {
-      const code = buildAction(dock.action, { ...vals, [field.key]: value, dock: instruction });
+      // 판본 2 블록이면 치환 없이 원문+inputs(필드값·뷰-이벤트 $변수·요청). 구형은 $key 치환.
+      const code = actionRequest(block, dock.action, { ...vals, [field.key]: value, dock: instruction });
       const d = await runIBL(code);
       const o = d && typeof d === 'object' ? (d as Json) : null;
       const text = typeof d === 'string' ? d
@@ -176,7 +177,7 @@ function AiDock({ field, value, vals, onApply }: {
   );
 }
 
-export function FormPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown; dispatch: Dispatch }) {
+export function FormPrim({ p, data, dispatch, vars, block }: { p: AppViewPrim; data: unknown; dispatch: Dispatch; vars?: Record<string, unknown>; block?: AppMode }) {
   const fields = (p.fields as AppFormField[]) || [];
   const initVals = useCallback(
     () => Object.fromEntries(fields.map((f) => [f.key, tpl(f.value ?? '', data)])),
@@ -216,7 +217,7 @@ export function FormPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown;
             ) : f.type === 'textarea' ? (
               <>
                 <textarea value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} rows={f.rows || 3} placeholder={f.placeholder || ''} className={`${fieldCls} resize-y`} />
-                {f.ai_dock && <AiDock field={f} value={vals[f.key] ?? ''} vals={vals} onApply={(v) => set(f.key, v)} />}
+                {f.ai_dock && <AiDock field={f} value={vals[f.key] ?? ''} vals={{ ...(vars || {}), ...vals }} onApply={(v) => set(f.key, v)} block={block} />}
               </>
             ) : f.type === 'images' ? (
               <ImagesField f={f} value={vals[f.key] ?? ''} dispatch={dispatch} busy={saving} setBusy={setSaving} />

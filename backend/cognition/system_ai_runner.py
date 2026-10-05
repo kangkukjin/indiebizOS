@@ -55,7 +55,8 @@ class SystemAIRunner:
         return cls._instance
 
     @classmethod
-    def send_message(cls, content: str, from_agent: str, task_id: str = None, project_id: str = None):
+    def send_message(cls, content: str, from_agent: str, task_id: str = None, project_id: str = None,
+                     envelope: dict = None):
         """시스템 AI에게 메시지 전송 (외부에서 호출)
 
         Args:
@@ -63,6 +64,7 @@ class SystemAIRunner:
             from_agent: 발신 에이전트 이름
             task_id: 태스크 ID
             project_id: 프로젝트 ID (에이전트 식별용)
+            envelope: 위임 봉투(origin·chain) — 수신 루프가 처리 동안 세운다(2026-10-05).
         """
         msg_dict = {
             'content': content,
@@ -71,6 +73,8 @@ class SystemAIRunner:
             'project_id': project_id,
             'timestamp': datetime.now().isoformat()
         }
+        if envelope:
+            msg_dict.update({k: envelope[k] for k in ("origin", "chain") if k in envelope})
         with cls._lock:
             cls.internal_messages.append(msg_dict)
         print(f"[SystemAIRunner] 메시지 수신 대기열 추가: {from_agent}@{project_id}")
@@ -225,13 +229,19 @@ class SystemAIRunner:
                 return (SystemAIRunner.internal_messages.pop(0)
                         if SystemAIRunner.internal_messages else None)
 
+        from delegation_tasks import received as _received_envelope
         for msg_dict in runtime_work.message_stream(pop):
-            self._sync_gear()
+          self._sync_gear()
+          # 봉투(origin·chain) — 훈련 자식의 완료 보고가 돌아오는 턴도 리허설로 돈다(에피소드·
+          # 대화 스레드·CLI 세션). 에피소드 시작보다 먼저 세운다.
+          with _received_envelope(msg_dict):
             try:
                 from_agent = msg_dict.get('from_agent', 'unknown')
                 content = msg_dict.get('content', '')
                 task_id = msg_dict.get('task_id')
                 project_id = msg_dict.get('project_id', '')
+                from thread_context import in_rehearsal as _in_rehearsal
+                _conv_source = "rehearsal" if _in_rehearsal() else None
 
                 # 에이전트 식별자: 에이전트명@프로젝트ID
                 agent_identifier = f"{from_agent}@{project_id}" if project_id else from_agent
@@ -244,7 +254,7 @@ class SystemAIRunner:
                     save_conversation(
                         role="agent_report",
                         content=f"[수신] {agent_identifier} → 시스템 AI: {content}",
-                        source=f"{agent_identifier}→system_ai"
+                        source=_conv_source or f"{agent_identifier}→system_ai"
                     )
                 except Exception as e:
                     print(f"[SystemAIRunner] 수신 메시지 DB 기록 실패: {e}")
@@ -551,12 +561,12 @@ class SystemAIRunner:
         else:
             print(f"[SystemAIRunner] 최종 응답: {response[:200]}...")
 
-        # 대화 히스토리에 저장
-        save_conversation("assistant", response)
+        # 대화 히스토리에 저장 — 리허설 턴은 rehearsal 스레드(주인의 대화와 섞지 않음)
+        from thread_context import in_rehearsal as _in_rehearsal
+        save_conversation("assistant", response, source=("rehearsal" if _in_rehearsal() else None))
 
-        # 태스크 완료 (요약본 저장)
-        result_summary = response[:500] if len(response) > 500 else response
-        complete_task(task_id, result_summary)
+        # 태스크 완료 (전문 저장 — 2026-10-05, 작업 조회가 요약밖에 못 주던 것 수리)
+        complete_task(task_id, response)
         print(f"[SystemAIRunner] 태스크 완료: {task_id}")
 
     def _send_to_gui(self, ws_client_id: str, response: str):

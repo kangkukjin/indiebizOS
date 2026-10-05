@@ -333,7 +333,7 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 
 ## 선택 단계: 앱 표면 노출 (`app:` 블록)
 
-> **먼저 판별**: 만들려는 화면이 아래 뷰 어휘 14종으로 그려지면 이 선언형 `app:` 블록(표면별 코드 0줄, 원격·폰 파리티 공짜). **뷰 어휘를 넘으면**(자유 편집 캔버스·그리기·채팅·특수 인터랙션 — 빈노트·신문·길찾기류) → 선언형 아니라 **커스텀 React 계기**다: `custom_app_instrument.md` 가이드를 따른다(인라인 `el` 기본, 앱모드 `project_id:'앱모드'` 필수).
+> **먼저 판별**: 화면이 아래 뷰 어휘로 그려지면 선언형 `app:` 블록(표면별 코드 0줄, 원격·폰 파리티). 뷰 어휘를 넘으면(캔버스·그리기·특수 인터랙션) 커스텀 React 계기 — `custom_app_instrument.md`(인라인 `el`, `project_id:'앱모드'`).
 
 액션을 **앱 모드 계기(GUI)**로도 쓰게 하려면 src 액션 정의에 `app:` 블록을 단다 — 그러면 데스크탑(`GenericInstrument.tsx`)과 원격 런처에 **계기로 자동 등장**한다(표면별 코드 0줄, `GET /launcher/instruments` 파생).
 
@@ -342,19 +342,21 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
           icon: 🪙
           name: 코인                  # 단독 계기는 icon+name 필수
           order: 6                    # 홈 그리드 정렬
+          edition: 2                  # 판본 선언 필수(아래 '표면 바인딩')
           inputs:
           - { key: coin, type: text, default: BTC, required: true }
-          action: '[sense:crypto]{coin: "$coin"}'    # $key=입력 치환
+          action: '[sense:crypto]{coin: $coin}'      # $key=입력(빈 입력=인자 생략)
           view:
           - { type: metric, big: '{data.current_price_krw|num}' }
 ```
 
-- **저술 전에 기존 계기를 모방하라.** 명세 암기보다 튼튼한 절차: 만들려는 계기와 가장 비슷한 기존 `app:` 블록을 먼저 읽는다 — 살아있는 용례 코퍼스는 `grep -rn 'app:' data/ibl_nodes_src/*.yaml data/packages/installed/tools/*/ibl_actions.yaml` + standalone `data/instruments/*.yaml`. 패턴별 모범: 단순 조회+지표=host(시스템) / 목록+드릴+지도+종속 select=realty / CRUD 폼·탭=business / 채팅=messenger / 달력=calendar / 이미지=photo.
-- view 프리미티브 15종: metric / kv / kv_list / card_list / image_grid / sparkline / list_action / thread / form / editable_list / map / calendar / group / blocks / media_player — media_player=오디오 플레이어(`<audio>`, items의 src=파일 절대경로/URL → `/launcher/file` 서빙). image_grid=+button 행 버튼(label/action/confirm/refresh — list_action button 과 같은 어휘). 표시 템플릿 `{path|filter}`. blocks=문서 IR(read{blocks:true}·table:structure 출력) 렌더. **응답 shape은 추측하지 말고 live `/ibl/execute`로 확인 후 작성.**
+- **저술 전에 기존 계기를 모방하라.** 가장 비슷한 기존 `app:` 블록을 먼저 읽는다(`grep -rn 'app:' data/ibl_nodes_src/*.yaml data/packages/installed/tools/*/ibl_actions.yaml` + `data/instruments/*.yaml`). 모범: 조회+지표=host / 목록+드릴+지도+종속 select=realty / CRUD 폼·탭=business / 채팅=messenger / 달력=calendar / 이미지=photo.
+- view 프리미티브 16종: metric / kv / kv_list / card_list / image_grid / sparkline / list_action / thread / form / editable_list / map / calendar / group / blocks / media_player / engine — media_player=오디오 플레이어(`<audio>`, items의 src=파일 절대경로/URL → `/launcher/file` 서빙). image_grid=+button 행 버튼(label/action/confirm/refresh — list_action button 과 같은 어휘). 표시 템플릿 `{path|filter}`. blocks=문서 IR(read{blocks:true}·table:structure 출력) 렌더. **응답 shape은 추측하지 말고 live `/ibl/execute`로 확인 후 작성.**
 - form 필드 11종: text / select / toggle / textarea / images / date / time / datetime / recurrence / folder / files
-- textarea 어피던스 `ai_dock`(필드 타입 아님) — `{action, modes:[replace,append], placeholder}`. 텍스트에 대한 ephemeral AI 제안(요청→반영/첨부/닫기). action 에 `$<필드키>`(현재 텍스트)·`$dock`(요청) 주입. 참조: `data/instruments/notepad.yaml`. 상세는 `custom_app_instrument.md` ④.
+- textarea 어피던스 `ai_dock` — `{action, modes:[replace,append], placeholder}`, action 에 `$<필드키>`·`$dock` 주입. 상세 `custom_app_instrument.md` ④.
 - ★위 두 어휘 줄은 빌드의 **뷰-어휘 문서-동기 가드**가 `APP_VIEW_TYPES`/`APP_FORM_FIELD_TYPES` 선언과 자동 대조한다 — 뷰 어휘를 바꾸면 이 줄(과 `ibl.md` 앱 절의 같은 줄)도 함께 고쳐야 빌드가 통과한다.
-- 정합성은 2단계의 `--check`가 함께 검증한다(`validate_app_blocks` — 참조 액션 실존, $key↔inputs, view 어휘, 계기 그룹).
+- **표면 바인딩(2026-10-05 ①)**: `edition: 2` 블록 템플릿은 판본 2 원문(치환 없음, `inputs` 타입 보존). `$key`=입력, `$item.필드`=행, 문자열 안 `f"…${k}…"`, 빈 입력=인자 생략. 구형 `{필드}`·`"$key"` 금지. 규칙 정본: `ibl.md` '표면 바인딩'.
+- 정합성은 `--check`가 검증한다(`validate_app_blocks`: 참조 액션 실존·$key↔inputs·view 어휘·계기 그룹·판본 + 판본 2 템플릿 컴파일 가드).
 - 해마(3·4단계)와 무관 — app:은 에이전트가 호출하는 어휘가 아니라 표면이 읽는 선언.
 - 어휘 전체 명세: `docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md`, 요약: `system_docs/ibl.md` "앱 표면 노출" 절. 뷰 어휘의 헌법적 지위(승격 4기준·정지규칙)는 `ibl.md` "표현 언어의 층위" 조항.
 

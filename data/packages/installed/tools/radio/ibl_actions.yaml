@@ -41,6 +41,7 @@ nodes:
         - MBC
         - SBS
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           icon: 📻
           name: 라디오
           order: 5
@@ -59,10 +60,10 @@ nodes:
               sub: '{broadcaster} · {description}'
               button:
                 label: ▶
-                action: '[limbs:radio]{op: "play", station_id: "{station_id}"}'
+                action: '[limbs:radio]{op: "play", station_id: $item.station_id}'
               button2:
                 label: ♡
-                action: '[limbs:radio_favorite]{op: "add", station_id: "{station_id}", name: "{name}"}'
+                action: '[limbs:radio_favorite]{op: "add", station_id: $item.station_id, name: $item.name}'
           - name: 검색
             buttons:
             - label: ■ 정지
@@ -72,7 +73,7 @@ nodes:
               type: text
               placeholder: 방송국 이름·태그  예) jazz, BBC
               required: true
-            action: '[sense:radio]{op: "search", query: "$q", limit: 30}'
+            action: '[sense:radio]{op: "search", query: $q, limit: 30}'
             view:
             - type: list_action
               from: items
@@ -81,10 +82,10 @@ nodes:
               sub: '{country} · {tags|trunc:40}'
               button:
                 label: ▶
-                action: '[limbs:radio]{op: "play", stream_url: "{stream_url}"}'
+                action: '[limbs:radio]{op: "play", stream_url: $item.stream_url}'
               button2:
                 label: ♡
-                action: '[limbs:radio_favorite]{op: "add", stream_url: "{stream_url}", name: "{name}"}'
+                action: '[limbs:radio_favorite]{op: "add", stream_url: $item.stream_url, name: $item.name}'
           - name: 즐겨찾기
             auto_run: true
             buttons:
@@ -100,10 +101,10 @@ nodes:
               sub: '{added_at}'
               button:
                 label: ▶
-                action: '[limbs:radio]{op: "play", station_id: "{station_id}", stream_url: "{stream_url}"}'
+                action: '[limbs:radio]{op: "play", station_id: $item.station_id, stream_url: $item.stream_url}'
               button2:
                 label: ✕
-                action: '[limbs:radio_favorite]{op: "remove", name: "{name}"}'
+                action: '[limbs:radio_favorite]{op: "remove", name: $item.name}'
                 refresh: true
   limbs:
     actions:

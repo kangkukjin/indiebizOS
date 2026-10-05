@@ -851,7 +851,7 @@
     },
     {
       "name": "document_op",
-      "description": "기존 DOCX inspect/edit — 문단 id·해시 조회 후 선택 교체, 변경 추적·주석, 원본 보존.",
+      "description": "기존 DOCX inspect/edit — 문단 id·해시 조회 후 선택 교체, 변경 추적·주석, 원본 보존. 열린 문서의 세션·저장은 workspace_op.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -860,27 +860,9 @@
             "description": "inspect/edit",
             "enum": [
               "inspect",
-              "edit",
-              "open",
-              "session",
-              "draft",
-              "snapshot",
-              "read",
-              "propose",
-              "apply",
-              "save",
-              "export",
-              "versions",
-              "restore",
-              "capabilities",
-              "recover",
-              "close"
+              "edit"
             ],
             "default": "inspect"
-          },
-          "args": {
-            "type": "object",
-            "description": "self:document 파라미터"
           },
           "path": {
             "type": "string",
@@ -918,18 +900,17 @@
       }
     },
     {
-      "name": "sheet_op",
-      "description": "엑셀 파일 행/범위·재계산과 앱 활성 세션. snapshot/save/apply의 queued는 접수이며 status의 완료 영수증을 확인. 기존 range_write/calculate는 새 결과 파일이며 원본 보존.",
+      "name": "workspace_op",
+      "description": "범용 작업 공간 — 문서·스프레드시트·코딩(git)을 같은 계약으로 열기·스냅샷·읽기·제안·적용·저장·버전·복구. resource 하나로 종류 무관, 세션 배관은 몸이 숨긴다. 접수(queued)는 완료가 아니다.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "find(기본)/append/update/range/range_write/calculate 및 open/snapshot/status/read/propose/apply/save/export/versions/restore/capabilities/recover",
+            "description": "open/snapshot/read/propose/apply/save/export/versions/restore/close/capabilities/recover",
             "enum": [
               "open",
               "snapshot",
-              "status",
               "read",
               "propose",
               "apply",
@@ -937,8 +918,93 @@
               "export",
               "versions",
               "restore",
+              "close",
               "capabilities",
-              "recover",
+              "recover"
+            ],
+            "default": "capabilities"
+          },
+          "path": {
+            "type": "string",
+            "description": "open — 파일 또는 git 폴더 경로"
+          },
+          "resource": {
+            "type": "string",
+            "description": "open 이 돌려준 자료 ID (이후 op 공통)"
+          },
+          "selector": {
+            "type": "object",
+            "description": "read/propose — 문서 {start,end,selected_sha256?} · 사무 {offset,limit,pages,tables} · 시트 {sheet,range} · 코딩 {path,start_line,end_line}|{diff:true}|{files:true}"
+          },
+          "replacement": {
+            "type": "string",
+            "description": "propose — 교체 문구(문서) 또는 파일 본문·줄 범위 교체문(코딩)"
+          },
+          "values": {
+            "type": "array",
+            "description": "propose(시트) — 범위와 같은 행·열의 2차원 배열"
+          },
+          "proposal": {
+            "type": "string",
+            "description": "apply — 제안 ID"
+          },
+          "client": {
+            "type": "string",
+            "description": "작성 창 식별자 — 세션을 쥔 창만 적용·저장·내보내기·복구·닫기"
+          },
+          "message": {
+            "type": "string",
+            "description": "save(코딩) — 커밋 메시지(필수)"
+          },
+          "verify": {
+            "type": "string",
+            "description": "save(코딩) — 반영 전 돌릴 검증 명령"
+          },
+          "filename": {
+            "type": "string",
+            "description": "export — 같은 폴더의 새 파일명(같은 형식)"
+          },
+          "revision": {
+            "type": "string",
+            "description": "restore — 버전 ID"
+          },
+          "wait": {
+            "type": "number",
+            "description": "snapshot(시트) — 편집창 엔진 응답 대기 초(상한 30)"
+          },
+          "args": {
+            "type": "object",
+            "description": "self:workspace 파라미터"
+          },
+          "encoding": {
+            "type": "string",
+            "description": "self:workspace 파라미터"
+          },
+          "kind": {
+            "type": "string",
+            "description": "self:workspace 파라미터"
+          },
+          "goal": {
+            "type": "string",
+            "description": "self:workspace 파라미터"
+          },
+          "snapshot": {
+            "type": "string",
+            "description": "self:workspace 파라미터"
+          }
+        }
+      }
+    },
+    {
+      "name": "sheet_op",
+      "description": "엑셀 파일 행/범위·재계산 — find/append/update/range/range_write/calculate. range_write/calculate는 새 결과 파일이며 원본 보존. 열린 시트의 세션·제안·저장은 workspace_op.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "find(기본)/append/update/range/range_write/calculate",
+            "enum": [
               "find",
               "append",
               "update",
@@ -947,10 +1013,6 @@
               "calculate"
             ],
             "default": "find"
-          },
-          "args": {
-            "type": "object",
-            "description": "세션 op 인자. document_id는 open의 document.id, snapshot/save/apply는 operation_id로 접수 후 status 결과 확인."
           },
           "path": {
             "type": "string",

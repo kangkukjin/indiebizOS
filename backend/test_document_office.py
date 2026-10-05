@@ -138,24 +138,26 @@ def test_sheet_reference_uses_pinned_bytes(tmp_path):
 
 
 def test_ibl_uses_same_session_and_blocks_code_publication(tmp_path, monkeypatch):
+    """[self:workspace](2026-10-05) — 옛 document 세션 op 를 흡수한 한 낱말이 같은 서비스·같은 관문을 지난다."""
     from resource_links import package_module
-    bridge = package_module('system_essentials', 'essentials_document_workspace')
+    from workspace_sessions import Workspace
+    bridge = package_module('system_essentials', 'essentials_workspace')
     path = tmp_path / 'source.md'; path.write_text('Original')
-    app = DocumentWorkspace(tmp_path / 'state')
+    app = Workspace(tmp_path / 'state')
     monkeypatch.setattr(bridge, 'service', lambda: app)
     opened = bridge.op_open({'path': str(path)})
-    d = opened['document']
-    assert opened['items'][0]['document']['id'] == d['id']
-    s = bridge.op_session({'args': {'document_id': d['id'], 'client_id': 'ibl'}})['session']
-    s = bridge.op_draft({'args': {**arguments(d, s), 'operation_id': 'draft', 'text': 'Changed'}})['session']
-    request = {'args': {**arguments(d, s), 'operation_id': 'publish', 'expected_revision': d['revision_id']},
-               '_path_guard': lambda *a: None, '_code_path': lambda *a: True}
+    resource = opened['resource']
+    assert opened['kind'] == 'document' and opened['items'][0]['resource'] == resource
+    proposal = bridge.op_propose({'resource': resource, 'selector': {'start': 0, 'end': 8}, 'replacement': 'Changed'})['proposal']
+    applied = bridge.op_apply({'resource': resource, 'proposal': proposal})
+    assert applied['applied'] is True and applied['text'] == 'Changed'
+    request = {'resource': resource, '_path_guard': lambda *a: None, '_code_path': lambda *a: True}
     with pytest.raises(PermissionError):
         bridge.op_save(request)
     assert path.read_text() == 'Original'
     request['_code_path'] = lambda *a: False
     result = bridge.op_save(request)
-    assert result['items'][0]['state'] == 'saved'
+    assert result['state'] == 'saved'
     assert path.read_text() == 'Changed'
 
 

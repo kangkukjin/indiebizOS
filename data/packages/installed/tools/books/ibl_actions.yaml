@@ -45,6 +45,7 @@ actions:
     - ISBN
     - 도서관
     app:
+      edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
       icon: 📚
       name: 도서
       order: 1
@@ -77,13 +78,13 @@ actions:
           - {value: '47', label: 경북}
           - {value: '48', label: 경남}
           - {value: '50', label: 제주}
-        action: '[sense:book]{keyword: "$q"}'
+        action: '[sense:book]{keyword: $q}'
         view:
         - type: card_list
           from: items
           empty_from: message
           item_click:
-            action: '[sense:book]{isbn: "{isbn13}", detail: true, region: "$region"}'
+            action: '[sense:book]{isbn: $item.isbn13, detail: true, region: $region}'
             tabs:
             - name: 개요
               view:
@@ -207,13 +208,13 @@ actions:
           - {value: '', label: 성별 전체}
           - {value: '여성', label: 여성}
           - {value: '남성', label: 남성}
-        action: '[sense:book]{op: "popular", region: "$region", age: "$age", gender: "$gender"}'
+        action: '[sense:book]{op: "popular", region: $region, age: $age, gender: $gender}'
         view:
         - type: card_list
           from: items
           empty_from: message
           item_click:
-            action: '[sense:book]{isbn: "{isbn13}", detail: true, region: "$region"}'
+            action: '[sense:book]{isbn: $item.isbn13, detail: true, region: $region}'
             tabs:
             - name: 개요
               view:
@@ -275,7 +276,7 @@ actions:
           from: items
           empty_from: message
           item_click:
-            action: '[sense:book]{isbn: "{isbn13}", detail: true}'
+            action: '[sense:book]{isbn: $item.isbn13, detail: true}'
             tabs:
             - name: 개요
               view:
@@ -326,7 +327,7 @@ actions:
           type: text
           placeholder: 납본 전수 — 신간·소부수도  예) 하네스
           required: true
-        action: '[sense:book]{keyword: "$q", source: "nl"}'
+        action: '[sense:book]{keyword: $q, source: "nl"}'
         view:
         - type: card_list
           from: items
@@ -345,7 +346,7 @@ actions:
           type: text
           placeholder: 국내외 도서·원서  예) sapiens, 한강
           required: true
-        action: '[sense:book]{source: "google", keyword: "$q"}'
+        action: '[sense:book]{source: "google", keyword: $q}'
         view:
         - type: card_list
           from: items
@@ -365,7 +366,7 @@ actions:
           type: text
           placeholder: 서양 고전  예) sherlock, austen
           required: true
-        action: '[sense:classic]{op: "western", query: "$q"}'
+        action: '[sense:classic]{op: "western", query: $q}'
         view:
         - type: card_list
           from: items

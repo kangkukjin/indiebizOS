@@ -341,6 +341,20 @@ def in_rehearsal() -> bool:
     return get_isolated_origin() in REHEARSAL_ORIGINS
 
 
+# ── 위임 사슬 — 순환 위임 차단의 재료 (2026-10-05 비동기 위임 수리) ──────────────
+# 부모가 자식에게 넘기는 봉투에 조상 행위자 목록을 싣는다. 받는 쪽은 처리 동안 이 칸에
+# 세우고, 다시 위임할 때 "대상이 이미 조상 사슬에 있으면" 거절한다. 깊이 숫자가 아니라
+# 사슬 소속으로 판정하므로 설정값이 없다(설계안의 '동시 자식 2개'는 근거 부족으로 삭제).
+def set_delegation_chain(chain):
+    """현재 스레드의 위임 사슬(조상 행위자 식별자 목록) 설정. None/빈 목록 = 최상위."""
+    _thread_local.delegation_chain = list(chain) if chain else None
+
+
+def get_delegation_chain() -> list:
+    """현재 스레드의 위임 사슬 사본 (없으면 빈 목록)."""
+    return list(getattr(_thread_local, 'delegation_chain', None) or [])
+
+
 @contextmanager
 def actor_context(agent_id=None, task_id=None, origin=None):
     """진입점 계약 — 행위자 3칸(agent·task·origin)을 세우고 끝나면 이전 값으로 복원.
@@ -647,6 +661,7 @@ def clear_all_context():
     _thread_local.call_channel = None
     _thread_local.surface_ticket = None
     _thread_local.progress_ticket = None
+    _thread_local.delegation_chain = None
 
 
 def get_context_summary() -> dict:

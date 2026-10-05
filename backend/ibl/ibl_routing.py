@@ -579,7 +579,7 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
     # (2026-08-05 감사 D12) 죽은 elif 6개 삭제 — call_agent/delegate_workflow/agent_ask/
     # agent_ask_sync/agent_list/agent_info 는 어떤 액션도 func: 로 선언하지 않았다.
     # 위임의 정본은 func:delegate(_delegate_unified) — mode 로 sync/workflow 를 분기하며
-    # _agent_ask_sync/_delegate_workflow/_agent_info 는 그 경로가 직접 호출한다.
+    # _delegate_workflow/_agent_info 는 그 경로가 직접 호출한다(_agent_ask_sync 는 2026-10-05 은퇴 — 동기 위임은 접수 후 같은 task 대기).
 
     # 출력 싱크 — 단일 액션 패턴: output {op: gui|clipboard} (2026-06-04 통합)
     # download는 획득 동작이라 별도 액션 유지.
@@ -1155,7 +1155,7 @@ def search_guide(query: str, params: dict) -> Any:
     return guide_read_view(result, params) if isinstance(result, dict) else result
 
 
-# 위임 기계(_delegate_unified·_delegate_workflow·_agent_ask_sync·_agent_info)는
+# 위임 기계(_delegate_unified·_delegate_workflow·_agent_info·delegation_tasks)는
 # routing_system(인지층)으로 이동 — 능력 테이블(register_system_capabilities) 경유
 # (2026-08-05 감사 ⑦ 후반부. delegate/agent_info 이름으로 등록된다).
 

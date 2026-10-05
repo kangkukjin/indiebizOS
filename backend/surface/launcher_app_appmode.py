@@ -186,8 +186,11 @@ async function fillOptions(inp){
   if(!inp.options_action) return;
   const {code,missing}=resolveOptionsAction(inp.options_action);
   if(missing){ setOptions(sel, [], null); return; }   /* 종속 부모 미선택 — 비워두고 대기 */
-  let opts=CUR.optCache[code];
-  if(!opts){ try{ const d=await ibl(code); opts=normalizeOptions(jget(d,inp.options_from),inp); CUR.optCache[code]=opts; }catch(e){ opts=[]; } }
+  /* 판본 2 모드면 치환 없이 원문+inputs(형제 입력값)로 — 캐시 키는 봉투 직렬화 */
+  const req=(CUR.mode&&CUR.mode.edition===2)?actionRequest(CUR.mode,inp.options_action,gatherInputs()):code;
+  const ck=typeof req==='string'?req:JSON.stringify(req);
+  let opts=CUR.optCache[ck];
+  if(!opts){ try{ const d=await ibl(req); opts=normalizeOptions(jget(d,inp.options_from),inp); CUR.optCache[ck]=opts; }catch(e){ opts=[]; } }
   if(document.getElementById('in_'+inp.key)!==sel) return;
   setOptions(sel, opts, inp.default);
 }
@@ -379,7 +382,7 @@ async function fireButton(bi,btn){
   const b=(CUR.mode.buttons||[])[bi]; if(!b) return;
   btn.disabled=true;
   /* $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 데스크탑 fireButton 과 동일 의미 */
-  try{ let d=unwrapFinalResult(await ibl(buildAction(b.action,gatherInputs())));
+  try{ let d=unwrapFinalResult(await ibl(actionRequest(CUR.mode,b.action,Object.assign({},gatherInputs(),VIEW_VARS||{}))));
     if(d&&d.stop_in_client){ stopRadioStream(); }
     else if(d&&d.error){ alert(d.error); }
     else if(d&&d.url){ try{await navigator.clipboard.writeText(d.url);}catch(e){} alert((d.message||'발행 완료')+'\\n\\n링크가 복사되었습니다 — 친구에게 붙여넣으세요:\\n'+d.url); }  // 발행 등 링크 반환 액션
@@ -392,7 +395,7 @@ async function fireButton(bi,btn){
 async function fireTop(i){
   const b=(CUR.inst.top_buttons||[])[i]; if(!b||!b.action) return;
   if(b.confirm && !confirm(b.confirm)) return;
-  try{ const d=unwrapFinalResult(await ibl(b.action));
+  try{ const d=unwrapFinalResult(await ibl(actionRequest(CUR.inst,b.action,{})));
     if(d&&d.error){ alert(d.error); } else{ alert((d&&d.message)||'완료'); }
   }
   catch(e){ alert('실행 실패: '+e.message); }

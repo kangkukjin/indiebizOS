@@ -132,6 +132,7 @@ from iblbuild_appview import (  # noqa: E402,F401
     validate_app_blocks,
     _template_param_keys,
     validate_app_template_params,
+    check_app_templates_edition2,
 )
 from iblbuild_params_check import (validate_declared_params, validate_impl_reads,
                                    validate_param_type_vs_prose)
@@ -668,6 +669,26 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 앱-템플릿 param 가드 통과 ✓ (모든 app 템플릿 키가 액션 허용키)")
 
+    # --- 판본 2 앱-템플릿 컴파일 가드 (--check/--validate 전용, 2026-10-05 표면 바인딩 ①) ---
+    # edition 2 블록의 템플릿 원문을 판본 2 컴파일러로 검사한다(입력은 Unknown, $item 은 열린 레코드).
+    # 치환 정규식을 다른 정규식으로 바꾸지 않는다 — 실행기가 보는 그 문법으로 저술 시점에 검사.
+    apptpl_failed = False
+    if check or validate_only:
+        tissues, twarns = check_app_templates_edition2(data, root) if data is not None else ([], [])
+        if tissues:
+            apptpl_failed = True
+            print(
+                f"[build_ibl_nodes] 판본 2 앱-템플릿 가드 실패: {len(tissues)}건 "
+                f"(edition 2 블록 템플릿이 판본 2 컴파일러를 통과하지 못함)",
+                file=sys.stderr,
+            )
+            for issue in tissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 판본 2 앱-템플릿 가드 통과 ✓ (edition 2 템플릿 전부 컴파일)")
+        for w in twarns:
+            print(f"  ⚠ {w}")
+
     # --- 가이드 배선 가드 (--check/--validate 전용) ---
     # 가이드는 절차 기억이라 낡는다. 어휘 은퇴 절차엔 코퍼스 이관 의무는 있어도
     # 가이드 정리 의무가 없어서 2026-08-17 에 81KB 를 손으로 걷어냈다 — 그 의무를 여기 둔다.
@@ -715,7 +736,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      or enum_failed
                      or profile_failed or os_failed or launcher_failed
                      or textbook_failed or appvocab_failed or selfimg_failed
-                     or renderer_failed or appparam_failed or guidewire_failed) else 0
+                     or renderer_failed or appparam_failed or apptpl_failed or guidewire_failed) else 0
 
     # 폰 매니페스트 파생 (runs_on + 검증된 폰 패키지). data 파싱 성공 시에만.
     manifest_path = root / "data" / "phone_manifest.json"
@@ -1006,7 +1027,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      and not profile_failed and not os_failed
                      and not launcher_failed and not textbook_failed
                      and not appvocab_failed and not selfimg_failed
-                     and not renderer_failed and not appparam_failed
+                     and not renderer_failed and not appparam_failed and not apptpl_failed
                      and not guidewire_failed) else 1
 
     if validation_failed:

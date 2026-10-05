@@ -37,6 +37,7 @@ nodes:
             webcam: 좌표 근처 해외 경치 웹캠 (Windy 직행, 교통 CCTV 건너뜀)
         implementation: cctv_search/nearby/webcam op 분기 (카카오 우선 → TOPIS/UTIC/ITS → Windy 폴백; webcam은 Windy 직행).
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: cctv
           icon: 📹
           name: CCTV
@@ -48,7 +49,7 @@ nodes:
             placeholder: '지역·도로 (예: 해운대, 경부)'
             default: 해운대
           auto_run: true
-          action: '[sense:cctv]{op: "search", query: "$q"}'
+          action: '[sense:cctv]{op: "search", query: $q}'
           view:
           - type: map
             markers: items

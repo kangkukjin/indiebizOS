@@ -40,6 +40,7 @@ nodes:
         - 내몸
         - 프로세스
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           # 2026-09-03 파일 앱 + 시스템 앱 병합(사용자 판정): 상태·프로세스·자원 + 검색·문서·큰 파일 이 한 계기.
           # system:true = 데스크탑 홈 그리드에서 숨김 — 진입점은 PC 관리 창의 '시스템' 모드(원격·폰 그리드는 그대로 노출).
           # 옛 phone_render:false 는 뗐다 — 폰에선 실행 라우팅이 맥 위임으로 처리(관찰 항목).
@@ -108,7 +109,7 @@ nodes:
             - key: q
               type: text
               placeholder: 파일명·확장자 검색 (예 report, pdf)
-            action: '[self:file_find]{search_term: "$q", limit: 50}'
+            action: '[self:file_find]{search_term: $q, limit: 50}'
             view:
             - type: card_list
               from: items

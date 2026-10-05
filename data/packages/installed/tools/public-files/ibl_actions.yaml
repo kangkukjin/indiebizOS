@@ -53,6 +53,7 @@ nodes:
         - 외부 공유 사이트
         - showcase
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: showcase
           icon: 🌐
           name: 공개파일
@@ -79,7 +80,7 @@ nodes:
                 lines:
                 - '{meta}'
               item_click:
-                action: '[others:showcase]{op: "detail", path: "{path}"}'
+                action: '[others:showcase]{op: "detail", path: $item.path}'
                 view:
                 - type: form
                   title: 폴더 설정
@@ -88,11 +89,11 @@ nodes:
                     label: 표시명
                     type: text
                     value: '{folder.title}'
-                  action: '[others:showcase]{op: "config", path: "{folder.path}", title: "$title"}'
+                  action: '[others:showcase]{op: "config", path: $item.folder.path, title: $title}'
                   button: 저장
                   actions:
                   - label: 폴더 제거 (모든 주소에서)
-                    action: '[others:showcase]{op: "remove", path: "{folder.path}"}'
+                    action: '[others:showcase]{op: "remove", path: $item.folder.path}'
                     style: danger
                     confirm: 이 폴더를 목록·모든 주소에서 뺄까요? (원본 파일은 안 지웁니다)
                     back: true
@@ -120,7 +121,7 @@ nodes:
                   label: 사진·동영상·음악
                 - value: files
                   label: 파일 전체
-              action: '[others:showcase]{op: "add", path: "$path", title: "$title", mode: "$mode"}'
+              action: '[others:showcase]{op: "add", path: $path, title: $title, mode: $mode}'
               button: 공개 추가
           - name: 바스켓
             auto_run: true
@@ -143,7 +144,7 @@ nodes:
                   href: '{url}'
                   label: 이 주소 열기 →
               item_click:
-                action: '[others:showcase]{op: "basket_detail", basket_id: "{id}"}'
+                action: '[others:showcase]{op: "basket_detail", basket_id: $item.id}'
                 view:
                 - type: kv
                   title: 이 주소
@@ -159,11 +160,11 @@ nodes:
                     label: 이름
                     type: text
                     value: '{basket.title}'
-                  action: '[others:showcase]{op: "basket_save", basket_id: "{basket.id}", title: "$title"}'
+                  action: '[others:showcase]{op: "basket_save", basket_id: $item.basket.id, title: $title}'
                   button: 이름 저장
                   actions:
                   - label: 이 주소 삭제
-                    action: '[others:showcase]{op: "basket_delete", basket_id: "{basket.id}"}'
+                    action: '[others:showcase]{op: "basket_delete", basket_id: $item.basket.id}'
                     style: danger
                     confirm: 이 바스켓과 주소를 삭제할까요? (폴더 자체는 안 지워집니다)
                     back: true
@@ -173,7 +174,7 @@ nodes:
                   sub: '{meta}'
                   button:
                     label: '{member_action}'
-                    action: '[others:showcase]{op: "basket_toggle", basket_id: "{basket_id}", folder_id: "{id}"}'
+                    action: '[others:showcase]{op: "basket_toggle", basket_id: $item.basket_id, folder_id: $item.id}'
                     refresh: true
             - type: form
               title: 새 주소(바스켓) 만들기
@@ -185,7 +186,7 @@ nodes:
               - key: all_folders
                 label: 전체 폴더 자동 포함 (전체 공개 갤러리)
                 type: toggle
-              action: '[others:showcase]{op: "basket_save", title: "$title", all_folders: "$all_folders"}'
+              action: '[others:showcase]{op: "basket_save", title: $title, all_folders: $all_folders}'
               button: 주소 만들기
           - name: 설정
             auto_run: true
@@ -203,7 +204,7 @@ nodes:
                 label: 동영상 H.264 변환 (브라우저 재생용)
                 type: toggle
                 value: '{settings.transcode_video}'
-              action: '[others:showcase]{op: "config", strip_exif: "$strip_exif", transcode_video: "$transcode_video"}'
+              action: '[others:showcase]{op: "config", strip_exif: $strip_exif, transcode_video: $transcode_video}'
               button: 저장
 
 # tool.json 파생 원본 — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.

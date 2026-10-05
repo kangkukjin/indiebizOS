@@ -69,6 +69,7 @@ nodes:
         - mp3
         - flac
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: music
           icon: 🎧
           name: 음악
@@ -84,7 +85,7 @@ nodes:
             - key: q
               type: text
               placeholder: 곡·아티스트·앨범 검색
-            action: '[self:music]{op: "library", q: "$q", limit: 300}'
+            action: '[self:music]{op: "library", q: $q, limit: 300}'
             view:
             - type: card_list
               from: items
@@ -96,7 +97,7 @@ nodes:
                 - '{duration_str}'
                 image: '{image}'
               item_click:
-                action: '[self:music]{op: "track", path: "{path}"}'
+                action: '[self:music]{op: "track", path: $item.path}'
                 tabs:
                 - name: 재생
                   view:
@@ -113,7 +114,7 @@ nodes:
                     sub: '{meta}'
                     button:
                       label: 담기
-                      action: '[self:music]{op: "playlist_add", name: "{name}", path: "{track_path}"}'
+                      action: '[self:music]{op: "playlist_add", name: $item.name, path: $item.track_path}'
                       refresh: true
                 - name: 정보
                   view:
@@ -148,7 +149,7 @@ nodes:
               title: '{title}'
               sub: '{meta}'
               item_click:
-                action: '[self:music]{op: "folders", folder: "{path}"}'
+                action: '[self:music]{op: "folders", folder: $item.path}'
                 tabs:
                 # 탐색 탭이 먼저다 — 폴더를 고르는 동안 곡은 보이지 않는다(폴더 안에 폴더밖에
                 # 없는데 하위 곡이 깔리면 그 폴더에 든 것으로 오해된다).
@@ -162,7 +163,7 @@ nodes:
                     item_click:
                       # 같은 화면(이 탭 구성)을 그대로 다시 쓴다 — 깊이 무제한 트리.
                       # 폴더 트리는 깊이를 미리 알 수 없어 손으로 중첩하면 반드시 막힌다.
-                      action: '[self:music]{op: "folders", folder: "{path}"}'
+                      action: '[self:music]{op: "folders", folder: $item.path}'
                       recursive: true
                   # 파인더처럼 폴더와 '그 폴더에 직접 든 곡'을 한 화면에. 하위 폴더 곡은
                   # 여기 없다(그건 옆 탭) — 폴더만 든 곳에선 이 자리가 조용하다.
@@ -196,11 +197,11 @@ nodes:
               sub: '{meta}'
               button:
                 label: 삭제
-                action: '[self:music]{op: "playlist_delete", name: "{name}"}'
+                action: '[self:music]{op: "playlist_delete", name: $item.name}'
                 confirm: 이 플레이리스트를 삭제할까요? (곡 파일은 그대로 남습니다)
                 refresh: true
               item_click:
-                action: '[self:music]{op: "playlist", name: "{name}"}'
+                action: '[self:music]{op: "playlist", name: $item.name}'
                 tabs:
                 - name: 연속 재생
                   view:
@@ -217,7 +218,7 @@ nodes:
                     sub: '{artist} · {album}'
                     button:
                       label: 빼기
-                      action: '[self:music]{op: "playlist_remove", name: "{playlist_name}", path: "{path}"}'
+                      action: '[self:music]{op: "playlist_remove", name: $item.playlist_name, path: $item.path}'
                       refresh: true
             - type: form
               title: 새 플레이리스트
@@ -226,7 +227,7 @@ nodes:
                 label: 이름
                 type: text
                 placeholder: 예) 드라이브, 잠들기 전
-              action: '[self:music]{op: "playlist_create", name: "$name"}'
+              action: '[self:music]{op: "playlist_create", name: $name}'
               button: 만들기
           - name: 보관함
             auto_run: true
@@ -256,9 +257,9 @@ nodes:
                 - key: path
                   label: 음악 폴더
                   type: folder
-                action: '[self:music]{op: "add_source", path: "$path"}'
+                action: '[self:music]{op: "add_source", path: $path}'
                 button: 폴더 등록
-              delete_action: '[self:music]{op: "remove_source", path: "{path}"}'
+              delete_action: '[self:music]{op: "remove_source", path: $item.path}'
 
 # tool.json 파생 원본 — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
 # op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).

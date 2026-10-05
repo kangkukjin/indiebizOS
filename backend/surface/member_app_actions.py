@@ -1,10 +1,17 @@
-"""공개 앱 선언의 모든 실행 잎을 ID로 전달한다. 코드 치환은 서버 한 곳에서만 한다."""
+"""공개 앱 선언의 모든 실행 잎을 ID로 전달한다. 코드 치환은 서버 한 곳에서만 한다.
+
+판본 2 블록(`edition: 2`, 2026-10-05 표면 바인딩 ①)은 치환하지 않는다 — 선언 원문 + `inputs`(제공 값,
+타입 보존) + `declared_inputs`(템플릿이 참조하는 이름)를 그대로 실행기에 넘기고, 미지정 입력(빈 값)은
+컴파일러가 호출 인자 생략으로 접는다. 행 레코드는 `$item` 한 입력이다. 구형 블록(edition 없음·1)은
+종전 문자열 치환 경로를 유지한다(`@hub` 등 판본 1 전용 문법 블록).
+"""
 import copy
 import json
 import re
 
-INPUT = re.compile(r'\$([A-Za-z_][A-Za-z_0-9]*)')
-ROW = re.compile(r'\{([\w.]+)\}')
+INPUT = re.compile(r'\$\{?([A-Za-z_][A-Za-z_0-9]*)')   # $name · f-문자열의 ${name}
+ROW = re.compile(r'\{([\w.]+)\}')                        # 구형 행 치환 {field}
+ROW_V2 = re.compile(r'\$\{?item\.([A-Za-z_][\w.]*)')     # 판본 2 행 레코드 필드 $item.a.b · f-문자열 ${item.a.b}
 LITERAL = re.compile(r'"(?:\\.|[^"\\])*"')
 
 
@@ -12,11 +19,12 @@ def compile_apps(instruments):
     apps, registry = copy.deepcopy(instruments), {}
     for app in apps:
         declarations = {}
-        def walk(obj, path, inputs):
+        def walk(obj, path, inputs, edition):
             if isinstance(obj, list):
                 for i, value in enumerate(obj):
-                    walk(value, path + [str(i)], inputs)
+                    walk(value, path + [str(i)], inputs, edition)
             elif isinstance(obj, dict):
+                edition = obj.get('edition', edition)
                 inputs = {**inputs, **{i['key']: i for i in obj.get('inputs', [])},
                           **{i['key']: i for i in obj.get('fields', []) if 'key' in i}}
                 for key, value in list(obj.items()):
@@ -24,9 +32,14 @@ def compile_apps(instruments):
                         identity = ':'.join(path + ([] if key in ('action', 'request') else [key]))
                         # 모드/버튼의 기존 ID를 유지하고 하위 동작은 선언 경로로 구별한다.
                         code = value if isinstance(value, str) else value.get('message', '')
-                        names = sorted(set(INPUT.findall(code)))
-                        rows = sorted(set(ROW.findall(code))) if key != 'request' else []
-                        spec = {'inputs': inputs, 'names': names, 'rows': rows, key: value}
+                        v2 = edition == 2 and key != 'request'
+                        names = sorted(set(INPUT.findall(code)) - ({'item'} if v2 else set()))
+                        if key == 'request':
+                            rows = []
+                        else:
+                            rows = sorted(set(ROW_V2.findall(code))) if v2 else sorted(set(ROW.findall(code)))
+                        spec = {'inputs': inputs, 'names': names, 'rows': rows, key: value,
+                                'edition': 2 if v2 else None}
                         registry[identity] = spec
                         declarations[identity] = {'inputs': names, 'rows': rows,
                             'defaults': {k: v.get('default', '') for k, v in inputs.items()}}
@@ -38,15 +51,31 @@ def compile_apps(instruments):
                     elif isinstance(value, (dict, list)):
                         if key == 'modes':
                             for i, mode in enumerate(value):
-                                walk(mode, [app['id'], mode.get('id', str(i))], inputs)
+                                walk(mode, [app['id'], mode.get('id', str(i))], inputs, edition)
                         elif key == 'buttons':
                             for i, button in enumerate(value):
-                                walk(button, path + ['button', str(i)], inputs)
+                                walk(button, path + ['button', str(i)], inputs, edition)
                         else:
-                            walk(value, path + [key], inputs)
-        walk(app, [app['id']], {})
+                            walk(value, path + [key], inputs, edition)
+        walk(app, [app['id']], {}, None)
         app['client_actions'] = declarations
     return apps, registry
+
+
+def _nested(flat: dict) -> dict:
+    """{'board.id': v} → {'board': {'id': v}} — 행 필드 경로를 $item 레코드로(점 경로 해석은 common.field_path 한 벌)."""
+    from common.field_path import parse_path
+    out = {}
+    for key, value in flat.items():
+        cursor = out
+        parts = [str(x) for x in parse_path(str(key))]
+        for part in parts[:-1]:
+            nxt = cursor.get(part)
+            if not isinstance(nxt, dict):
+                nxt = cursor[part] = {}
+            cursor = nxt
+        cursor[parts[-1]] = value
+    return out
 
 
 def resolve(registry, action_id, args):
@@ -75,6 +104,14 @@ def resolve(registry, action_id, args):
         request = spec['request']
         return {'message': fill(request['message']), 'workflow': request.get('workflow'), 'output': request.get('output')}
     code = next(v for k, v in spec.items() if k == 'action' or k.endswith('_action'))
+    if spec.get('edition') == 2:
+        # 판본 2: 치환 없음. 빈 값은 미지정(컴파일러가 인자 생략) — 구형 "빈 입력=인자 삭제"와 같은 뜻.
+        inputs = {k: v for k, v in values.items() if k in spec['names'] and v not in ('', None)}
+        declared = list(spec['names'])
+        if spec['rows']:
+            inputs['item'] = _nested(row)
+            declared.append('item')
+        return {'message': '앱 실행', 'code': code, 'edition': 2, 'inputs': inputs, 'declared_inputs': declared}
     # 문자열 밖 숫자 자리도 JSON 값으로만 삽입하며 IBL 코드는 받지 않는다.
     chunks, last = [], 0
     for match in LITERAL.finditer(code):

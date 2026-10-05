@@ -33,6 +33,7 @@ nodes:
         - 중복 사진
         - 사진 상세
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: photo
           icon: 📷
           name: 사진
@@ -56,7 +57,7 @@ nodes:
             - key: q
               type: text
               placeholder: 파일명·기종 검색
-            action: '[self:photo]{q: "$q", limit: 40}'
+            action: '[self:photo]{q: $q, limit: 40}'
             view:
             - type: image_grid
               from: items
@@ -84,7 +85,7 @@ nodes:
             - key: q
               type: text
               placeholder: 파일명 검색 (비우면 최신순)
-            action: '[self:photo]{source: "usb", q: "$q", limit: 40}'
+            action: '[self:photo]{source: "usb", q: $q, limit: 40}'
             view:
             - type: image_grid
               from: items

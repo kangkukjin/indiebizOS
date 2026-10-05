@@ -20,7 +20,8 @@
  *  - item_click.tabs: 드릴 상세 탭(대화↔이웃정보) — 한 액션 데이터를 탭별 view 로.
  *  - form/editable_list: $field=입력값, {field}=드릴 데이터 → 저장/추가/삭제 후 새로고침(dispatch).
  *  - 표시 템플릿 "{path|filter}": round·num·abs·arrow·opt:앞,뒤·trunc:N
- *  - action 템플릿: $key=사용자 입력(빈 입력 파라미터 자동 제거), {path}=데이터 행 필드
+ *  - action 템플릿(edition 2): 치환 없이 원문+inputs 로 실행 — $key=사용자 입력(빈 값=미지정→인자 생략), $item.field=행·드릴 레코드,
+ *    뷰-이벤트 페이로드는 $변수로 잔류. 구형(edition 없음)은 $key/{path} 문자열 치환(공용 코어 actionRequest 가 가른다).
  *
  * 더 풍부한 데스크탑 전용 계기(도서·투자·라디오 등)는 ActionDesktop의
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.
@@ -31,14 +32,15 @@ import { StreamPlayer, loadHls } from './StreamPlayer';
 import type { StreamData } from './chat/chatUtils';
 import {
   type AppInput, type AppButton, type AppCompose, type AppViewPrim, type AppMode,
-  type AppInstrument, type Json, type Dispatch, type ViewEvent,
-  runIBL, jget, tpl, buildAction, rowAction, trendClass, asList,
+  type AppInstrument, type Json, type Dispatch, type ViewEvent, type ActionReq,
+  runIBL, jget, tpl, actionRequest, trendClass, asList,
   composeChannelOptions, mediaSrc, audioUrl, statusGlyph, IMAGE_BASE,
   groupPartition, mediaModel, isSlowNet, shuffleNext, hasMasterDetail, dynFilterCats, applyDynFilter,
 } from './generic/manifest';
 import { linkify, Card, EmptyMsg, KvRow, Sparkline, DocBlock } from './generic/prims-basic';
 import { FormPrim, EditableListPrim } from './generic/prims-edit';
 import { MapPrim, CalendarPrim } from './generic/prims-map-calendar';
+import { EnginePrim } from './generic/prims-engine';
 
 // 기존 import 경로 호환 재수출 — 다른 컴포넌트·계기 뷰가 './GenericInstrument' 에서 타입을 가져간다.
 export type {
@@ -75,7 +77,7 @@ function HlsVideo({ hlsUrl, fallback, poster, preload }: {
   return <video ref={ref} controls preload={preload} poster={poster} playsInline className={VIDEO_CLS} />;
 }
 
-function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, onViewEvent }: {
+function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, onViewEvent, vars, block }: {
   p: AppViewPrim; data: unknown;
   onDrill: (p: AppViewPrim, item: Json) => void;
   onRowAction: (action: string, item: Json, rowKey: string, refresh?: boolean) => void;
@@ -83,8 +85,12 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
   busyRow: string | null;
   dispatch: Dispatch;
   onViewEvent?: ViewEvent;
+  vars?: Record<string, unknown>;  // 모드 입력값 + 뷰-이벤트가 남긴 $변수(selection → $sel 등) — ai_dock 이 읽는다
+  block?: AppMode;  // 실행 블록(판본·입력 선언) — ai_dock 등 프리미티브 안의 직접 실행이 actionRequest 에 넘긴다
 }) {
   if (p.type === 'map') return <MapPrim p={p} data={data} onViewEvent={onViewEvent} onStream={onStream} />;
+  // engine — 외부 편집 엔진 표면을 작업 공간 자료(ref)로 바인딩. 선택·저장은 뷰-이벤트(selection/saved).
+  if (p.type === 'engine') return <EnginePrim p={p} data={data} onViewEvent={onViewEvent} />;
 
   // group — 파티션 콤비네이터. from 리스트를 by 키로 나눠(입력 순서 보존) 그룹마다 헤더 + 내부 view 재귀 렌더.
   // 각 그룹은 단일통화 {items: 멤버}로 내부 view 에 전달 → 내부 프리미티브는 from:items 로 슬라이스 참조.
@@ -106,7 +112,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
               <h3 className="text-lg font-bold text-stone-800 border-b-2 border-stone-300 pb-1.5 mb-3">{header}</h3>
               {inner.map((ip, j) => (
                 <ViewPrim key={j} p={ip} data={gdata} onDrill={onDrill} onRowAction={onRowAction}
-                  onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} />
+                  onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} vars={vars} block={block} />
               ))}
             </div>
           );
@@ -375,7 +381,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
     );
   }
 
-  if (p.type === 'form') return <FormPrim p={p} data={data} dispatch={dispatch} />;
+  if (p.type === 'form') return <FormPrim p={p} data={data} dispatch={dispatch} vars={vars} block={block} />;
   if (p.type === 'editable_list') return <EditableListPrim p={p} data={data} dispatch={dispatch} />;
   if (p.type === 'calendar') return <CalendarPrim p={p} data={data} dispatch={dispatch} />;
 
@@ -433,7 +439,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
   return null;
 }
 
-function ViewRenderer({ view, data, onDrill, onRowAction, onStream, busyRow, dispatch, onViewEvent }: {
+function ViewRenderer({ view, data, onDrill, onRowAction, onStream, busyRow, dispatch, onViewEvent, vars, block }: {
   view: AppViewPrim[]; data: Json;
   onDrill: (p: AppViewPrim, item: Json) => void;
   onRowAction: (action: string, item: Json, rowKey: string, refresh?: boolean) => void;
@@ -441,13 +447,15 @@ function ViewRenderer({ view, data, onDrill, onRowAction, onStream, busyRow, dis
   busyRow: string | null;
   dispatch: Dispatch;
   onViewEvent?: ViewEvent;
+  vars?: Record<string, unknown>;
+  block?: AppMode;
 }) {
   if (data.error) return <p className="text-sm text-stone-400">{String(data.error)}</p>;
   if (data.success === false) return <p className="text-sm text-stone-400">{String(data.message || '실패')}</p>;
   return (
     <>
       {view.map((p, i) => (
-        <ViewPrim key={i} p={p} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} />
+        <ViewPrim key={i} p={p} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} vars={vars} block={block} />
       ))}
     </>
   );
@@ -540,19 +548,22 @@ function FileInput({ inp, value, onChange }: { inp: AppInput; value: string; onC
   );
 }
 
-function SelectInput({ inp, values, onChange }: { inp: AppInput; values: Record<string, string>; onChange: (v: string) => void }) {
+function SelectInput({ inp, values, onChange, block }: { inp: AppInput; values: Record<string, string>; onChange: (v: string) => void; block?: AppMode }) {
   const staticOpts = inp.options ? inp.options.map((o) => ({ value: String(o.value), label: String(o.label) })) : null;
   const [options, setOptions] = useState<{ value: string; label: string }[]>(staticOpts || []);
   const value = values[inp.key] || '';
 
   // 종속 옵션: $형제 치환된 액션이 바뀌면 다시 불러온다 (cascade)
   const resolved = !staticOpts && inp.options_action ? resolveOptionsAction(inp.options_action, values) : null;
-  const actionCode = resolved && !resolved.missing ? resolved.code : '';
+  // 판본 2 블록은 치환 없이 원문+inputs(형제 입력값). missing(종속 부모 미선택) 판정은 공통.
+  const actionReq: ActionReq = resolved && !resolved.missing
+    ? (block?.edition === 2 ? actionRequest(block, inp.options_action as string, values) : resolved.code) : '';
+  const actionCode = typeof actionReq === 'string' ? actionReq : JSON.stringify(actionReq);
   useEffect(() => {
     if (staticOpts) return;
     if (!actionCode) { setOptions([]); return; }
     let alive = true;
-    runIBL(actionCode).then((d) => { if (alive) setOptions(normalizeOptions(jget(d, inp.options_from), inp)); }).catch(() => {});
+    runIBL(actionReq).then((d) => { if (alive) setOptions(normalizeOptions(jget(d, inp.options_from), inp)); }).catch(() => {});
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionCode]);
@@ -573,7 +584,7 @@ function SelectInput({ inp, values, onChange }: { inp: AppInput; values: Record<
 }
 
 type DrillTab = { name: string; view: AppViewPrim[]; compose?: AppCompose };
-type DrillState = { data: Json; action: string; item: Json; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] };
+type DrillState = { data: Json; action: ActionReq; item: Json; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] };  // action: 재조회용 실행 요청(구형 문자열 또는 판본 2 봉투)
 
 function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   mode: AppMode;
@@ -606,6 +617,11 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   const [sending, setSending] = useState(false);
   const valuesRef = useRef(values);
   valuesRef.current = values;
+  // 뷰-이벤트가 남긴 $변수(keep 규약) — 타입 보존(좌표 Number·selection Record). 입력값(values)과 합쳐 요청에 실린다.
+  const [eventVars, setEventVars] = useState<Record<string, unknown>>({});
+  const eventVarsRef = useRef(eventVars);
+  eventVarsRef.current = eventVars;
+  const allVars = useCallback((): Record<string, unknown> => ({ ...valuesRef.current, ...eventVarsRef.current }), []);
   // onDrill 은 의존성 없이(정체성 고정) 만들어지므로 현재 드릴을 ref 로 본다 — recursive 드릴이
   // "지금 보고 있는 뷰"를 물려받아야 하는데, 클로저로 잡으면 첫 렌더 값에 박제된다.
   const drillRef = useRef<DrillState | null>(null);
@@ -617,7 +633,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
     for (const inp of sourceMode.inputs || []) if (inp.required && !vals[inp.key]) return;
     setLoading(true); setError(null); setDrill(null); setCatFilter(null);
     try {
-      setData(await runIBL(buildAction(sourceMode.action, vals)));
+      setData(await runIBL(actionRequest(sourceMode, sourceMode.action, { ...vals, ...eventVarsRef.current })));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -628,7 +644,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   // 모드 진입 시 초기화 + auto_run
   useEffect(() => {
     const v = initVals();
-    setValues(v); setData(null); setDrill(null); setError(null); setComposeText(''); setComposeCh(''); setCatFilter(null);
+    setValues(v); setEventVars({}); setData(null); setDrill(null); setError(null); setComposeText(''); setComposeCh(''); setCatFilter(null);
     if (sourceMode.auto_run) run(v);
   }, [sourceMode, initVals, run]);
 
@@ -639,7 +655,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
     try {
       // 드릴 액션의 $입력(현재 다이얼 값) + {필드}(클릭 행) 둘 다 치환 — realty 추이처럼
       // "현재 지역·유형 + 클릭한 단지"를 합쳐 묻는 드릴을 지원.
-      const code = rowAction(buildAction(dc.action, valuesRef.current), item);
+      const code = actionRequest(sourceMode, dc.action, allVars(), item);
       const d = await runIBL(code);
       if (d && typeof d === 'object') (d as Json)._item = item; // 드릴 뷰에서 클릭 행 참조용
       // recursive: 지금 보고 있는 드릴 화면(뷰 또는 탭)을 그대로 다시 쓴다 — 깊이를 모르는
@@ -655,7 +671,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sourceMode, allVars]);
 
   // 딥링크 — 창을 "이 이웃의 대화"로 바로 연다(이웃찾기 DM 등). 목록 데이터가 도착한 뒤
   // 마스터 card_list 에서 id 일치 행을 찾아 자동 드릴. 못 찾으면(검색·레벨 필터에 가려짐 등)
@@ -685,22 +701,21 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
         const vals = valuesRef.current;
         const ok = (mode.inputs || []).every((inp) => !inp.required || vals[inp.key]);
         if (ok) {
-          try { setData(await runIBL(buildAction(mode.action, vals))); } catch { /* 목록은 다음 조회가 진실 */ }
+          try { setData(await runIBL(actionRequest(sourceMode, mode.action, { ...vals, ...eventVarsRef.current }))); } catch { /* 목록은 다음 조회가 진실 */ }
         }
       }
     } else {
       run();
     }
-  }, [drill, run, mode]);
+  }, [drill, run, mode, sourceMode]);
 
   // 액션 실행기: $field 치환 + {path}(rowContext, 기본 드릴 데이터) 치환 → 실행 → 새로고침
   const dispatch = useCallback<Dispatch>(async (template, fieldValues, rowContext, opts) => {
     try {
       // 모드 입력값도 $key 치환에 합류 — form/행 액션이 상단 셀렉터(포털 선택 등)를 참조 가능.
       // 필드값이 우선이라 키 충돌 시 기존 동작 그대로. (원격 dispatchAction 과 파리티)
-      let code = buildAction(template, { ...valuesRef.current, ...(fieldValues || {}) });
       const ctx = rowContext ?? (drill ? drill.data : undefined);
-      if (ctx) code = rowAction(code, ctx);
+      const code = actionRequest(sourceMode, template, { ...allVars(), ...(fieldValues || {}) }, ctx);
       const d = await runIBL(code);
       if (d?.error || d?.success === false) { alert(String(d.error || d.message || '실패')); return false; }
       if (opts?.back && drill) {
@@ -711,7 +726,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
           const vals = valuesRef.current;
           const filled = (mode.inputs || []).every((inp) => !inp.required || vals[inp.key]);
           if (filled) {
-            try { setData(await runIBL(buildAction(mode.action, vals))); } catch { /* 목록은 다음 조회가 진실 */ }
+            try { setData(await runIBL(actionRequest(sourceMode, mode.action, { ...vals, ...eventVarsRef.current }))); } catch { /* 목록은 다음 조회가 진실 */ }
           }
         }
       } else await refreshCurrent();
@@ -720,7 +735,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
       alert('실패: ' + (e instanceof Error ? e.message : String(e)));
       return false;
     }
-  }, [drill, refreshCurrent, mode]);
+  }, [drill, refreshCurrent, mode, sourceMode, allVars]);
 
   // 작성바 전송 — $text + {path}(드릴 데이터) 치환 → 실행 → 새로고침
   const composeSend = useCallback(async (cmp: AppCompose) => {
@@ -738,7 +753,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   const onRowAction = useCallback(async (action: string, item: Json, rowKey: string, refresh?: boolean) => {
     setBusyRow(rowKey);
     try {
-      const d = await runIBL(rowAction(action, item));
+      const d = await runIBL(actionRequest(sourceMode, action, null, item));
       if (d?.error || d?.success === false) alert(String(d.error || d.message || '실패'));
       else {
         if (d?.message) { setNotice(String(d.message)); setTimeout(() => setNotice(null), 2500); }
@@ -749,7 +764,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
     } finally {
       setBusyRow(null);
     }
-  }, [refreshCurrent]);
+  }, [refreshCurrent, sourceMode]);
 
   // 스트림 재생 — 행 데이터(url/playable/name/lat/lng)를 클라이언트 StreamPlayer 로 연다(서버 호출 없음)
   const onStream = useCallback((item: Json) => setStream(item), []);
@@ -757,20 +772,24 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   // 뷰-이벤트(map moveend/marker_click) → 액션 재조회. ★loading 안 켬: 지도를 언마운트하지 않아야
   // viewport 가 보존되고(마커만 in-place 갱신) 재조회 피드백 루프가 안 생긴다(MapPrim didFit 가드와 짝).
   const onViewEvent = useCallback<ViewEvent>((template, payload) => {
+    // 뷰-이벤트 페이로드는 이후 액션 템플릿의 $변수로 남는다(2026-10-05) — engine 의 selection 이 남긴
+    // $sel/$start/$end/$text/$sheet/$range/$resource 를 ai_dock·버튼·폼이 쓴다. 'keep' = 남기기만(재조회 없음).
+    setEventVars((v) => ({ ...v, ...payload }));
+    if (!template || template === 'keep') return;
     (async () => {
       try {
-        const code = buildAction(template, { ...valuesRef.current, ...payload });
+        const code = actionRequest(sourceMode, template, { ...allVars(), ...payload });
         const d = await runIBL(code);
         if (d && !d.error) { setData(d); setCatFilter(null); }  // 지도 재조회=새 결과 → 동적 필터 초기화
       } catch { /* 재조회 실패는 현재 화면 유지 */ }
     })();
-  }, []);
+  }, [sourceMode, allVars]);
 
   const fireButton = useCallback(async (b: AppButton) => {
     if (!b.action) return;
     try {
       // $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 빈 입력 파라미터는 제거됨
-      const d = await runIBL(buildAction(b.action, valuesRef.current));
+      const d = await runIBL(actionRequest(sourceMode, b.action, allVars()));
       // stop_in_client — "소리는 이 표면이 내고 있으니 네가 멈춰라"(라디오 client 모드 규약).
       // 음악 파일은 늘 표면의 <audio> 가 문다: 곡이 수백 개면 재생 중인 것을 찾아 누를 수가
       // 없으므로 라디오 '■ 정지'와 같은 자리·같은 규약으로 멈춘다.
@@ -783,7 +802,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
     } catch (e) {
       alert('실행 실패: ' + (e instanceof Error ? e.message : String(e)));
     }
-  }, [run]);
+  }, [run, sourceMode, allVars]);
 
   const inputs = mode.inputs || [];
   // master_detail card_list → 반응형 2분할(PC: 리스트 좌+상세 우 동시 / 폰: 리스트→선택→상세→뒤로)
@@ -855,7 +874,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   const drillViewEl = drill ? (
     <ViewRenderer
       view={drillTabs ? (drillTabs[Math.min(tabIdx, drillTabs.length - 1)]?.view || []) : (drill.view || [])}
-      data={drill.data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} />
+      data={drill.data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} vars={{ ...values, ...eventVars }} block={sourceMode} />
   ) : null;
 
   return (
@@ -870,7 +889,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
         <div className="instrument-inputs flex gap-2 mb-2">
           {inputs.map((inp) =>
             inp.type === 'select' ? (
-              <SelectInput key={inp.key} inp={inp} values={values}
+              <SelectInput key={inp.key} inp={inp} values={values} block={sourceMode}
                 onChange={(v) => setValues((s) => ({ ...s, [inp.key]: v }))} />
             ) : inp.type === 'file' ? (
               <FileInput key={inp.key} inp={inp} value={values[inp.key] || ''}
@@ -962,7 +981,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
       {isSplit && !loading && data && (
         <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-210px)]">
           <div className={`md:w-72 md:shrink-0 md:overflow-y-auto md:pr-1 ${drill ? 'hidden md:block' : 'block'}`}>
-            <ViewRenderer view={mode.view || []} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} />
+            <ViewRenderer view={mode.view || []} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} vars={{ ...values, ...eventVars }} block={sourceMode} />
           </div>
           <div className={`flex-1 min-w-0 md:border-l md:border-stone-200 md:pl-4 ${drill ? 'flex flex-col min-h-0' : 'hidden md:flex md:flex-col'}`}>
             {drill ? (
@@ -989,7 +1008,7 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
         </>
       )}
       {!isSplit && !loading && !drill && viewData && mode.view && (
-        <ViewRenderer view={mode.view} data={viewData} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} />
+        <ViewRenderer view={mode.view} data={viewData} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} vars={{ ...values, ...eventVars }} block={sourceMode} />
       )}
       {!isSplit && (() => {
         const cmp = drill ? activeCompose : mode.compose;
@@ -1033,7 +1052,7 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
     if (b.confirm && !window.confirm(b.confirm)) return;
     setTopBusy(true); setTopMsg('');
     try {
-      const r = await runIBL(b.action);
+      const r = await runIBL(actionRequest(rawInstrument, b.action, {}));
       setTopMsg(String((r && (r.message as string)) || '완료'));
     } catch (e) {
       setTopMsg('오류: ' + String(e));

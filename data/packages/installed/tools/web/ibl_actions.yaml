@@ -307,6 +307,7 @@ nodes:
         implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈) — workspace 도구(프로젝트 무관)
         target_key: action
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           icon: 🔖
           name: 즐겨찾기
           order: 10

@@ -81,11 +81,16 @@ def test_rehearsal_failure_and_background_keep_origin(tmp_path, monkeypatch, iso
         assert conn.execute('SELECT status FROM tasks').fetchone()[0] == 'failed'
     monkeypatch.setattr(api_agents, 'agent_runners', {'p': {'a': {'runner': runner}}})
     calls = []
-    monkeypatch.setattr(api_agents, '_run_agent_command', lambda *a: calls.append(a))
+    monkeypatch.setattr(api_agents, '_run_agent_command', lambda *a, **k: calls.append(a))
     monkeypatch.setattr(api_agents.threading, 'Thread', lambda target, **kw: SimpleNamespace(start=target))
-    assert api_agents.send_agent_command('p', 'a', api_agents.AgentCommand(
-        command='훈련', origin='training', background=True)) == {'status': 'started'}
-    assert calls[0][-1] == 'training'
+    accepted = api_agents.send_agent_command('p', 'a', api_agents.AgentCommand(
+        command='훈련', origin='training', background=True))
+    assert accepted['status'] == 'started' and accepted['task_id'] and accepted['state'] == 'queued'
+    assert calls[0][4] == 'training'
+    with sqlite3.connect(tmp_path / 'conversations.db') as conn:
+        # 백그라운드 접수는 실행 전에 작업을 선발급하고 리허설 채널로 남긴다.
+        assert conn.execute('SELECT requester_channel FROM tasks WHERE task_id=?',
+                            (accepted['task_id'],)).fetchone() == ('rehearsal',)
     for background in (True, False):
         with pytest.raises(api_agents.HTTPException) as refused:
             api_agents.send_agent_command('p', 'a', api_agents.AgentCommand(

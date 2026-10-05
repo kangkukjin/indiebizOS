@@ -83,12 +83,19 @@ async def tool_gate(slug: str, iid: str, request: Request,
         raise HTTPException(status_code=400, detail="code required")
     ip = _client_ip(request, x_client_ip)
     member_key = request.cookies.get(f"pk_{slug}", "")
+    # 판본 2 표면 바인딩(2026-10-05 ①): 치환 없는 선언 원문 + inputs + declared_inputs. 구형은 치환된 code 만.
+    bound = body.get("inputs") is not None or body.get("declared_inputs") is not None or body.get("edition") == 2
+    inputs = body.get("inputs") if isinstance(body.get("inputs"), dict) else {}
+    declared = body.get("declared_inputs") if isinstance(body.get("declared_inputs"), list) else []
 
     # ① 계기 선언 템플릿 화이트리스트 — 범용 실행이 아니라 선언된 동작의 인스턴스만
     inst = core.portal_instrument(iid)
     if not inst:
         raise HTTPException(status_code=404, detail="no such instrument")
-    allowed, reason = core.action_allowed(code, core.collect_templates(inst))
+    if bound:
+        allowed, reason = core.template_allowed(code, inputs, declared, core.collect_templates(inst))
+    else:
+        allowed, reason = core.action_allowed(code, core.collect_templates(inst))
     if not allowed:
         core.audit_log(f"deny:{ip}", iid, code, False, note=reason, portal=slug)
         return JSONResponse({"error": reason}, status_code=403)
@@ -118,7 +125,9 @@ async def tool_gate(slug: str, iid: str, request: Request,
             # 명령)로 기본하는데, 포털 회원·손님은 소유자가 아니다 — 명시해서 그 기본을 막는다
             # (origin=='user' 는 자기수정 그랜트의 게이트 축, fail-closed 유지).
             result = await execute_ibl_code(IBLRequest(code=code, project_id="앱모드",
-                                                       surface="web", origin="portal"))
+                                                       surface="web", origin="portal",
+                                                       **({"edition": 2, "inputs": inputs, "declared_inputs": declared}
+                                                          if bound else {})))
             # 유튜브뮤직 등 클라이언트 재생: googlevideo URL 은 맥 IP 에 잠겨 외부망 회원은 403.
             # 오디오 프록시(/h/<slug>/tune/<vid>)로 바꿔치기 — 맥이 집 IP 로 받아 중계한다.
             if (isinstance(result, dict) and result.get("play_in_client")

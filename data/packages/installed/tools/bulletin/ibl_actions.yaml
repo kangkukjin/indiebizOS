@@ -45,6 +45,7 @@ nodes:
         - bulletin
         - 주소로 글쓰기
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: bulletin
           icon: 📋
           name: 게시판
@@ -74,7 +75,7 @@ nodes:
                   href: '{url}'
                   label: 이 게시판 열기 →
               item_click:
-                action: '[others:bulletin]{op: "detail", board_id: "{id}"}'
+                action: '[others:bulletin]{op: "detail", board_id: $item.id}'
                 view:
                 - type: kv
                   title: 이 게시판
@@ -94,11 +95,11 @@ nodes:
                     label: 사진 첨부 허용
                     type: toggle
                     value: '{board.allow_images}'
-                  action: '[others:bulletin]{op: "config", board_id: "{board.id}", title: "$title", allow_images: "$allow_images"}'
+                  action: '[others:bulletin]{op: "config", board_id: $item.board.id, title: $title, allow_images: $allow_images}'
                   button: 저장
                   actions:
                   - label: 이 게시판 삭제
-                    action: '[others:bulletin]{op: "delete", board_id: "{board.id}"}'
+                    action: '[others:bulletin]{op: "delete", board_id: $item.board.id}'
                     style: danger
                     confirm: 이 게시판과 주소, 모든 글·사진을 삭제할까요? (되돌릴 수 없습니다)
                     back: true
@@ -108,7 +109,7 @@ nodes:
                   sub: '{meta}'
                   button:
                     label: 삭제
-                    action: '[others:bulletin]{op: "post_delete", board_id: "{board_id}", post_id: "{id}"}'
+                    action: '[others:bulletin]{op: "post_delete", board_id: $item.board_id, post_id: $item.id}'
                     refresh: true
           - name: 게시판 만들기
             auto_run: true
@@ -126,7 +127,7 @@ nodes:
                 label: 사진 첨부 허용
                 type: toggle
                 value: 'true'
-              action: '[others:bulletin]{op: "create", title: "$title", allow_images: "$allow_images"}'
+              action: '[others:bulletin]{op: "create", title: $title, allow_images: $allow_images}'
               button: 게시판 만들기
           - name: 포털 연결
             auto_run: true
@@ -146,7 +147,7 @@ nodes:
                 lines:
                 - '{meta}'
               item_click:
-                action: '[others:bulletin]{op: "portals", board_id: "{id}"}'
+                action: '[others:bulletin]{op: "portals", board_id: $item.id}'
                 view:
                 - type: kv
                   title: 이 게시판
@@ -163,7 +164,7 @@ nodes:
                   sub: '{meta}'
                   button:
                     label: '{action}'
-                    action: '[others:portal]{op: "display", portal: "{portal_slug}", key: "{board_key}", enabled: "{enabled_next}", min_level: "{min_level_next}"}'
+                    action: '[others:portal]{op: "display", portal: $item.portal_slug, key: $item.board_key, enabled: $item.enabled_next, min_level: $item.min_level_next}'
                     refresh: true
           - name: 설정
             auto_run: true
@@ -177,7 +178,7 @@ nodes:
                 label: 공개 사이트 base URL
                 type: text
                 value: '{public_base}'
-              action: '[others:bulletin]{op: "config", public_base: "$public_base"}'
+              action: '[others:bulletin]{op: "config", public_base: $public_base}'
               button: 저장
 
 # tool.json 파생 원본 — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.

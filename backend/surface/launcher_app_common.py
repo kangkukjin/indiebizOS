@@ -52,9 +52,11 @@ async function ibl(code){
   /* 포털(회원 원격 계기): 범용 /ibl/execute 대신 회원 실행 게이트로 보낸다 — 렌더러 포크 금지·매개변수화 */
   /* surface:'web' = 보고 있는 곳이 브라우저라는 표식 — 소리·저장이 맥이 아니라 여기서 나게 한다
      (포털은 게이트가 서버측에서 같은 표식을 붙인다). */
+  /* code 는 문자열(구형 치환 결과) 또는 판본 2 봉투 {code,edition,inputs,declared_inputs}(공용 코어 appRequest). */
+  const body=(code&&typeof code==='object')?Object.assign({},code):{code:code};
   const r=window.__PORTAL
-    ? await jfetch(window.__PORTAL.exec,{method:'POST',body:JSON.stringify({code:code})})
-    : await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'앱모드',project_path:'.',surface:'web'})});
+    ? await jfetch(window.__PORTAL.exec,{method:'POST',body:JSON.stringify(body)})
+    : await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify(Object.assign(body,{project_id:'앱모드',project_path:'.',surface:'web'}))});
   if(!r.ok){ let m='[HTTP '+r.status+']'; try{ const e=await r.json(); if(e&&(e.error||e.detail)) m=e.error||e.detail; }catch(_e){} throw new Error(m); }
   /* 합성(>>) 액션은 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 — view의 from/{필드}가 풀리도록.
      펼치는 규칙은 공용 렌더 코어(unwrapFinalResult)가 정본 — 데스크탑 runIBL 과 같은 것. */

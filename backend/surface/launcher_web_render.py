@@ -81,14 +81,17 @@ function mpShuffle(btn){
    봉투: route_map{origin,destination,path:[[lat,lng]],summary} | location_map{center,markers:[{name,lat,lng}]}.
    spec: {type:'map', from:'map_data'(봉투 위치), markers:'cctvs'(추가 마커, 옵션)} */
 var _MAP_QUEUE={}, _mapSeq=0, _LMAPS={};
+/* 뷰-이벤트 페이로드 잔류($변수) — 데스크탑 ModePane.values 와 같은 뜻(selection 등 keep 규약). */
+var VIEW_VARS={};
 // 인터랙티브 지도(on:) — _mapProg=프로그래매틱 이동(fitBounds/setView) 가드(재조회 피드백 루프 차단),
 // _mapKeepView=재조회 재렌더 너머 viewport 보존(데스크탑 didFit 가드의 원격판).
 var _mapProg=false, _mapKeepView=null;
 /* 뷰-이벤트(map moveend/marker_click) → 액션 재조회 후 현재 모드 view 재렌더. viewport 는 _mapKeepView 로 보존. */
 async function mapViewEvent(tpl,payload){
-  if(!tpl||!VIEW_CTX) return;
+  Object.assign(VIEW_VARS,payload||{});
+  if(!tpl||tpl==='keep'||!VIEW_CTX) return;
   const vals=Object.assign({},gatherInputs(),payload);
-  let d; try{ d=await ibl(buildAction(tpl,vals)); }catch(e){ return; }
+  let d; try{ d=await ibl(actionRequest(CUR.mode,tpl,vals)); }catch(e){ return; }
   if(!d||d.error||d.success===false) return;
   VIEW_CTX.data=d;
   const out=document.getElementById('instOut'); if(!out) return;
@@ -102,7 +105,7 @@ function mapSearchHere(id){
   const map=_LMAPS[id]; if(!map||!map._searchHere) return;
   const c=map.getCenter(); _mapKeepView={c:c,z:map.getZoom()};
   const r=Math.round(map.distance(c,map.getBounds().getNorthEast()));
-  mapViewEvent(map._searchHere,{lat:c.lat.toFixed(6),lng:c.lng.toFixed(6),radius:String(r),radius_km:(r/1000).toFixed(2)});
+  mapViewEvent(map._searchHere,{lat:Number(c.lat.toFixed(6)),lng:Number(c.lng.toFixed(6)),radius:r,radius_km:Number((r/1000).toFixed(2))});
 }
 /* 지도가 세로 스와이프를 먹어 페이지 스크롤을 막는 문제 해결:
    기본은 dragging(한 손가락 패닝) 끔 → 한 손가락 스와이프는 페이지 스크롤로 통과.
@@ -144,7 +147,7 @@ function initMaps(){
           else mk.bindPopup('<b>'+esc(nm)+'</b>');
         } else if(clickTpl){
           mk.on('click',()=>{ _mapKeepView={c:map.getCenter(),z:map.getZoom()};
-            mapViewEvent(clickTpl,{id:String(m.id==null?'':m.id),name:String(nm),lat:String(m.lat),lng:String(m.lng),url:String(m.url==null?'':m.url)}); });
+            mapViewEvent(clickTpl,{id:m.id==null?'':m.id,name:String(nm),lat:m.lat,lng:m.lng,url:m.url==null?'':String(m.url)}); });
         } else {
           let btn='';
           if(m.url){ const i=_streamUrls.push(m.url)-1; btn='<br><button class="go" style="margin-top:6px;padding:4px 12px" onclick="playStream('+i+')">▶ 영상</button>'; }
@@ -163,7 +166,7 @@ function initMaps(){
           if(map._reqT) clearTimeout(map._reqT);
           map._reqT=setTimeout(()=>{ const c=map.getCenter(); _mapKeepView={c:c,z:map.getZoom()};
             const r=Math.round(map.distance(c,map.getBounds().getNorthEast()));
-            mapViewEvent(moveTpl,{lat:c.lat.toFixed(6),lng:c.lng.toFixed(6),radius:String(r),radius_km:(r/1000).toFixed(2)}); },600); });
+            mapViewEvent(moveTpl,{lat:Number(c.lat.toFixed(6)),lng:Number(c.lng.toFixed(6)),radius:r,radius_km:Number((r/1000).toFixed(2))}); },600); });
         setTimeout(()=>{ _mapProg=false; },500); // fit 이 moveend 안 내도 가드 해제(백업)
       }
       setTimeout(()=>map.invalidateSize(),60);
@@ -389,6 +392,12 @@ function renderPrim(p,vi,data){
       return '<div class="tmsg'+(mine?' me':'')+'"><div class="tbub">'+txt+'</div>'+ibtn+(foot?'<div class="tfoot">'+foot+'</div>':'')+'</div>';
     }).join('')+'</div>';
   }
+  if(p.type==='engine'){
+    // engine(2026-10-05) — 편집 엔진 표면은 데스크탑 계기가 연다. 원격/폰은 열람 강등: 원문이 있으면 보여주고 안내만.
+    const text=jget(data,'text');
+    return '<div class="card muted" style="font-size:13px">편집 엔진 표면은 데스크탑 앱에서 열립니다 · 여기서는 열람만</div>'
+      +(text?'<pre class="result">'+esc(String(text))+'</pre>':'');
+  }
   if(p.type==='blocks'){
     // 문서 IR 렌더 — from 배열의 각 원소 = 블록 {type,...} (self:read blocks:true / table:structure 출력)
     const arr=viewList(data,p.from);
@@ -515,7 +524,7 @@ async function runMode(){
   for(const inp of (mode.inputs||[])) if(inp.required&&!vals[inp.key]) return;
   out.innerHTML='<div class="center"><div class="spin"></div></div>';
   try{
-    const d=await ibl(buildAction(mode.action,vals));
+    const d=await ibl(actionRequest(mode,mode.action,vals));
     SPLIT=hasMasterDetail(mode.view);   // 공용 코어 — 데스크탑 isSplit 과 같은 판정
     if(SPLIT){
       LIST={view:mode.view,data:d}; VIEW_CTX=null;
@@ -563,7 +572,7 @@ async function refreshCurrent(){
         const vals=gatherInputs(); let ok=true;
         for(const inp of (CUR.mode.inputs||[])) if(inp.required&&!vals[inp.key]) ok=false;
         if(ok){
-          const md=await ibl(buildAction(CUR.mode.action,vals));
+          const md=await ibl(actionRequest(CUR.mode,CUR.mode.action,vals));
           LIST.data=md;
           const ml=document.getElementById('mdList');
           if(ml){ ml.innerHTML=renderView(CUR.mode.view,md); initMaps(); }
@@ -578,9 +587,8 @@ async function refreshCurrent(){
 async function dispatchAction(template,fieldValues,rowContext,opts){
   /* 모드 입력값(gatherInputs)도 $key 치환에 합류 — form/행 액션이 상단 셀렉터(포털 선택 등)를
      참조할 수 있게. 필드값이 우선이라 키 충돌 시 기존 동작 그대로. (데스크탑 dispatch 와 파리티) */
-  let code=buildAction(template,Object.assign(gatherInputs(),fieldValues||{}));
   const ctx=rowContext||(VIEW_CTX&&VIEW_CTX.data);
-  if(ctx) code=rowAction(code,ctx);
+  const code=actionRequest(CUR.mode,template,Object.assign(gatherInputs(),fieldValues||{}),ctx||undefined);
   const d=await ibl(code);
   if(d&&(d.error||d.success===false)){ alert(d.error||d.message||'실패'); return false; }
   if(opts&&opts.back) runMode(); else await refreshCurrent();
@@ -652,7 +660,7 @@ async function aiDockAsk(vi,fi,btn){
   const sug=document.getElementById('aid_sug_'+vi+'_'+fi);
   btn.disabled=true; if(sug) sug.innerHTML='<div class="card muted" style="font-size:12px;margin-top:6px">AI가 생각 중…</div>';
   try{
-    const d=await ibl(buildAction(f.ai_dock.action,vals));
+    const d=await ibl(actionRequest(CUR.mode,f.ai_dock.action,Object.assign({},gatherInputs(),VIEW_VARS||{},vals)));
     const text=(typeof d==='string')?d:String((d&&(d.result??d.text??d.answer??d.message??d.error))||'');
     window.__aidock[vi+'_'+fi]=text;
     const modes=(f.ai_dock.modes&&f.ai_dock.modes.length)?f.ai_dock.modes:['replace','append'];
@@ -705,7 +713,7 @@ async function rowBtn(vi,ri,btn,key){
   // stream:true 버튼 = 클라이언트 스트림 재생(CCTV '보기'). IBL 실행 없이 행 url 을 playStream(hls.js) 오버레이로.
   if(r.prim[key].stream){ if(r.item&&r.item.url){ const i=_streamUrls.push(r.item.url)-1; playStream(i); } return; }
   if(r.prim[key].confirm && !confirm(r.prim[key].confirm)) return;  // 파괴적 행 버튼(사진 빼기 등) 확인
-  const action=rowAction(r.prim[key].action,r.item);
+  const action=actionRequest(CUR.mode,r.prim[key].action,null,r.item);
   btn.disabled=true; const old=btn.textContent; btn.textContent='…';
   try{
     const d=await ibl(action);
@@ -713,7 +721,7 @@ async function rowBtn(vi,ri,btn,key){
     else if(d&&d.download_in_client){ toast(d.saved===false?('⚠ '+(d.message||'저장 실패')):('📥 '+(d.message||'저장됨'))); }  // mp3 폰 저장 결과
     else if(d&&d.error){
       // 폰: os_open(집 PC GUI)이 pc_only 로 막히면, 로컬 생성한 HTML 을 인앱 뷰어로 띄운다.
-      const m=action.match(/path:\\s*"([^"]+\\.html?)"/i);
+      const m=requestCode(action).match(/path:\\s*"([^"]+\\.html?)"/i);
       if(d.pc_only && m){ openFileOverlay(m[1]); }
       else alert(d.error);
     }
@@ -734,7 +742,7 @@ async function threadIbBtn(vi,ri,btn){
   const m=tpl(r.prim.text,r.item).match(re); if(!m) return;
   const item=Object.assign({},r.item);
   for(let gi=1;gi<m.length;gi++) item['match'+gi]=m[gi]==null?'':m[gi];
-  const action=rowAction(ib.action,item);
+  const action=actionRequest(CUR.mode,ib.action,null,item);
   btn.disabled=true; const old=btn.textContent; btn.textContent='…';
   try{
     const d=await ibl(action);
@@ -747,7 +755,7 @@ async function threadIbBtn(vi,ri,btn){
 async function rowSel(vi,ri,sel){
   const r=rowItem(vi,ri); if(!r||!r.prim.select||!r.prim.select.action) return;
   const item=Object.assign({},r.item,{sel:sel.value});
-  const action=rowAction(r.prim.select.action,item);
+  const action=actionRequest(CUR.mode,r.prim.select.action,null,item);
   sel.disabled=true;
   try{
     const d=await ibl(action);
@@ -854,7 +862,7 @@ async function rowDrill(vi,ri){
   const detail = SPLIT ? document.getElementById('mdDetail') : document.getElementById('instOut');
   detail.innerHTML='<div class="center"><div class="spin"></div></div>';
   try{
-    const code=rowAction(buildAction(dc.action,gatherInputs()),item);  /* $입력(현재 다이얼)+{필드}(클릭 행) 둘 다 치환 */
+    const code=actionRequest(CUR.mode,dc.action,gatherInputs(),item);  /* $입력(현재 다이얼)+$item(클릭 행) — 판본 2 는 치환 없이 inputs 로 */
     const d=await ibl(code);
     if(d&&typeof d==='object') d._item=item; /* 드릴 뷰에서 클릭한 행 참조용 */
     /* recursive: 지금 보고 있는 드릴 화면(뷰 또는 탭)을 그대로 재사용 — 깊이를 모르는

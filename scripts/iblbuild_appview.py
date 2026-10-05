@@ -6,6 +6,7 @@ app: 블록/standalone 계기/템플릿 param 검증, 뷰-어휘·뷰-렌더러 
 (GenericInstrument.tsx·api_launcher_web.py)라 이 모듈 이동과 무관.
 """
 from __future__ import annotations
+import re
 from pathlib import Path
 
 from iblbuild_common import (
@@ -20,11 +21,17 @@ from iblbuild_derive import build_tool_index
 # === app: 블록 검증 (2026-06-11, 원격 앱 표면 제네릭화 2단계) ===
 # 액션이 자기 앱 표면(inputs/action 템플릿/view)을 선언하면 원격 런처가 자동 파생.
 # 어휘 명세: docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md. 소비자: api_launcher_web._derive_instruments.
-APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list", "map", "calendar", "group", "blocks", "media_player"}
+APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list", "map", "calendar", "group", "blocks", "media_player", "engine"}
 # 뷰-이벤트 → 액션 바인딩(상호작용을 데이터로): map 프리미티브가 사용자 조작을 액션으로 흘린다.
 #   marker_click=마커 클릭(IBL 템플릿: 페이로드 $id/$name/$lat/$lng/$url · 또는 {stream: true}=마커 url 을 클라이언트 영상 재생, CCTV) · moveend/center_drag=지도 이동·중심 드래그(자동 재조회, $lat/$lng/$radius/$radius_km) · search_here="이 지역에서 검색" 버튼(사용자가 영역을 잡고 명시적 클릭 시 현재 뷰포트로 재조회, $lat/$lng/$radius/$radius_km)
-APP_VIEW_EVENTS = {"marker_click", "moveend", "center_drag", "search_here"}
-APP_EVENT_VARS = {"lat", "lng", "id", "name", "radius", "radius_km", "url"}  # 이벤트 페이로드가 액션 템플릿에 주입하는 $변수
+# engine(2026-10-05) 뷰-이벤트: selection=편집 표면에서 선택 고정($sel JSON selector·$start/$end/$text·$sheet/$range·$resource/$revision)
+#   · saved=원본 저장 완료($resource/$revision). 템플릿 'keep' = 페이로드를 $변수로만 남긴다(재조회 없음).
+APP_VIEW_EVENTS = {"marker_click", "moveend", "center_drag", "search_here", "selection", "saved"}
+APP_EVENT_VARS = {"lat", "lng", "id", "name", "radius", "radius_km", "url",
+                  "sel", "resource", "revision", "start", "end", "text", "sheet", "range"}  # 이벤트 페이로드가 액션 템플릿에 주입하는 $변수
+# engine 뷰 — 외부 편집 엔진 표면을 작업 공간 자료 ID(ref 템플릿)로 바인딩. 어떤 엔진인지는 자료 capabilities 가 정한다.
+APP_ENGINE_EVENTS = {"selection", "saved"}
+APP_MAP_EVENTS = {"marker_click", "moveend", "center_drag", "search_here"}
 # file: 선택 즉시 POST /launcher/upload → 값=서버 절대경로 (ingest 층 분해 ①운반, 2026-08-14).
 #   accept 로 <input accept> 필터. 렌더러 2곳(GenericInstrument.tsx FileInput · launcher_app_appmode upFile).
 APP_INPUT_TYPES = {"text", "select", "file"}
@@ -43,7 +50,29 @@ APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes"
             "top_buttons",
             # system: true = 런처 직속 시스템 표면(메신저·커뮤니티) — 데스크탑 앱 그리드에서 제외,
             # 원격/폰(리모컨)은 노출 유지. 진입점은 런처 버튼·전용 창.
-            "system"}
+            "system",
+            # edition(2026-10-05 표면 바인딩 ①): 2 = 렌더러가 치환 없이 템플릿 원문 + inputs(타입 보존) + declared_inputs 를
+            # 보내고 미지정 입력은 컴파일러가 인자 생략으로 접는다. $key=입력, $item.field=행·드릴 레코드. 새 앱의 기본.
+            # 1 = 구형 $key/{field} 문자열 치환 — 판본 2 가 못 받는 문법(@노드 지정·파이프 축약)이 꼭 필요한 블록만,
+            # legacy_reason(이유 한 줄)과 함께. 선언 없음 = 검증 실패.
+            "edition", "legacy_reason"}
+
+# 판본 2 템플릿 안에 남은 구형 행 치환 {field} — $·{ 뒤가 아닌 {이름} / {a.b}. 판본 2 레코드 {k: v} 는 콜론이 있어 걸리지 않는다.
+_LEGACY_ROW_RE = re.compile(r"(?<![\$\{\w])\{[A-Za-z_][\w.]*\}")
+# 판본 2 문자열 리터럴 안의 $이름 은 문자 그대로다 — 구형 "$key" 치환이 남은 자리(f-문자열 f"…${x}…" 은 제외)
+_STRING_LITERAL_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
+
+
+def _quoted_dollar(t: str) -> bool:
+    """일반(f 접두 없는) 문자열 리터럴 안에 $이름 이 남아 있나 — 리터럴 단위로 본다(따옴표 사이를 건너 매칭하지 않게)."""
+    for m in _STRING_LITERAL_RE.finditer(t):
+        if m.start() > 0 and t[m.start() - 1] in "fF":
+            continue
+        if re.search(r"\$[A-Za-z_]", m.group(0)):
+            return True
+    return False
+# 판본 2 가 받지 않는 판본 1 전용 문법 — @노드 지정, 파이프 축약(| sort: / | take: / | filter:)
+_EDITION1_ONLY_RE = re.compile(r"\}@[^\s\(\)\{\}\[\]&|>?@]+|\|\s*(sort|take|filter)\s*:")
 APP_TPL_FILTERS = {"round", "num", "abs", "arrow"}  # + 'opt:' / 'trunc:' 접두 허용
 
 # === 뷰-어휘 문서-동기 가드 (2026-07-03, ibl.md '표현 언어의 층위' 조항 집행) ===
@@ -415,16 +444,25 @@ def _app_check_view(qualified: str, view, depth: int = 0, in_group: bool = False
                 issues.append(f"{where}: editable_list.delete_action 은 IBL 템플릿 문자열")
         if True in p or False in p:  # ★YAML 1.1 함정: 따옴표 없는 on/off/yes/no 키가 불리언으로 파싱됨
             issues.append(f"{where}: 불리언 키 발견 — 'on'(또는 off/yes/no) 키는 YAML 불리언으로 해석됨. 따옴표로 감싸세요('on':)")
-        if "on" in p:  # 뷰-이벤트→액션 바인딩 — 현재 map 전용
+        if ptype == "engine" and not isinstance(p.get("ref"), str):
+            issues.append(f"{where}: engine 은 ref(작업 공간 자료 ID 템플릿, 예 '{{data.resource}}') 필수")
+        if "on" in p:  # 뷰-이벤트→액션 바인딩 — map(지도 조작)·engine(선택·저장)
             on = p.get("on")
-            if ptype != "map":
-                issues.append(f"{where}: on(뷰-이벤트) 은 map 전용")
+            if ptype not in ("map", "engine"):
+                issues.append(f"{where}: on(뷰-이벤트) 은 map/engine 전용")
             elif not isinstance(on, dict) or not on:
                 issues.append(f"{where}: on 은 비어있지 않은 매핑(event→IBL 템플릿)")
             else:
+                allowed = APP_MAP_EVENTS if ptype == "map" else APP_ENGINE_EVENTS
                 for ev, atpl in on.items():
                     if ev not in APP_VIEW_EVENTS:
                         issues.append(f"{where}: on 미지의 이벤트 {ev!r} (허용: {sorted(APP_VIEW_EVENTS)})")
+                    elif ev not in allowed:
+                        issues.append(f"{where}: on.{ev} 은 {ptype} 뷰의 이벤트가 아니다 (허용: {sorted(allowed)})")
+                    if ptype == "engine":
+                        if not isinstance(atpl, str) or not atpl:
+                            issues.append(f"{where}: on.{ev} 은 IBL 액션 템플릿 문자열 또는 'keep'(변수로만 남김)")
+                        continue
                     # marker_click 은 IBL 템플릿(문자열·재조회) 또는 클라이언트 스트림 재생 {stream: true}(CCTV 영상 등) 둘 중 하나.
                     if ev == "marker_click" and isinstance(atpl, dict):
                         if atpl.get("stream") is not True or (set(atpl) - {"stream"}):
@@ -520,14 +558,30 @@ def _app_check_filters(qualified: str, app: dict) -> list[str]:
     return issues
 
 
-def _validate_app_block(blabel: str, blk: dict, qualified_set: set) -> list[str]:
+def _block_edition(blk: dict, inherited: dict | None = None):
+    """블록의 템플릿 판본과 구형 사유 — 블록 선언이 앱(계기) 레벨 선언을 덮는다."""
+    inherited = inherited or {}
+    edition = blk.get("edition", inherited.get("edition"))
+    reason = blk.get("legacy_reason", inherited.get("legacy_reason"))
+    return edition, reason
+
+
+def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: dict | None = None) -> list[str]:
     """단일 앱 블록(탭 또는 단독 계기) 검증 — 노드 app: 블록과 standalone 매니페스트 공용.
 
     action(IBL 템플릿) 필수 · view 어휘 · compose · inputs(key/type/select) ·
-    템플릿의 [node:action] 실존 · $key↔inputs 대응.
+    템플릿의 [node:action] 실존 · $key↔inputs 대응 · 템플릿 판본(edition 2 기본, 1 은 legacy_reason 필수).
     """
     import re
     issues: list[str] = []
+    edition, legacy_reason = _block_edition(blk, inherited)
+    if edition is None:
+        issues.append(f"{blabel}: edition 선언 필수 — 새 앱은 edition: 2(치환 없는 원문+inputs). 판본 1 전용 문법이 꼭 필요하면 edition: 1 + legacy_reason")
+    elif edition == 1:
+        if not isinstance(legacy_reason, str) or not legacy_reason.strip():
+            issues.append(f"{blabel}: edition: 1 은 legacy_reason(판본 2 로 못 가는 이유 한 줄)과 함께 선언")
+    elif edition != 2:
+        issues.append(f"{blabel}: edition 은 1 또는 2 (현재 {edition!r})")
     if not isinstance(blk.get("action"), str) and not blk.get("buttons"):
         issues.append(f"{blabel}: app.action(IBL 템플릿) 또는 buttons 필수")
     # action 있는 블록은 결과를 그릴 view 필수. 버튼 전용(action 없음)은 그릴 데이터가
@@ -565,13 +619,26 @@ def _validate_app_block(blabel: str, blk: dict, qualified_set: set) -> list[str]
                     issues.append(f"{blabel}: app.inputs[{j}] select options_action 에 options_from 필수")
             else:
                 issues.append(f"{blabel}: app.inputs[{j}] select 는 정적 options 또는 options_action 필수")
+    if edition == 2:
+        input_keys.add("item")  # 행·드릴 컨텍스트 레코드 — 렌더러가 inputs.item 으로 싣는다
     for t in _app_action_templates(blk):
         for ref_node, ref_action in re.findall(r"\[(\w+):(\w+)\]", t):
+            # [fn:이름] = 관용구 호출(2026-10-05 앱 구성 재계획) — 앱은 어휘 조합+관용구로 선다. 이름은 해마·워크플로
+            # 원장이 실행 시점에 해소하므로 빌드는 존재를 단정하지 않는다(없으면 실행이 정직하게 거절한다).
+            if ref_node in ("fn", "def"):
+                continue
             if f"{ref_node}:{ref_action}" not in qualified_set:
                 issues.append(f"{blabel}: app 템플릿이 미존재 액션 [{ref_node}:{ref_action}] 참조 ({t!r})")
-        for key in re.findall(r"\$(\w+)", t):
+        for key in re.findall(r"\$\{?(\w+)", t):
             if key not in input_keys:
                 issues.append(f"{blabel}: app 템플릿 $%s 에 대응하는 input 없음 ({t!r})" % key)
+        if edition == 2:
+            if _LEGACY_ROW_RE.search(t):
+                issues.append(f"{blabel}: edition 2 템플릿에 구형 행 치환 {{필드}} — $item.필드 로 쓴다 ({t!r})")
+            if _quoted_dollar(t):
+                issues.append(f"{blabel}: edition 2 문자열 리터럴 안의 $이름 은 문자 그대로 간다 — 따옴표를 벗기거나(값) f\"…${{이름}}…\"(보간) ({t!r})")
+            if _EDITION1_ONLY_RE.search(t):
+                issues.append(f"{blabel}: edition 2 는 @노드 지정·파이프 축약(| sort:)을 받지 않는다 — 조합 문법으로 바꾸거나 edition: 1 + legacy_reason ({t!r})")
     return issues
 
 
@@ -618,7 +685,8 @@ def validate_standalone_instruments(data: dict) -> list[str]:
                     continue
                 if not mode.get("name"):
                     issues.append(f"instruments/{name}: modes[{mi}] name(탭 이름) 필수")
-                issues.extend(_validate_app_block(f"instruments/{name} modes[{mi}]", mode, qualified_set))
+                issues.extend(_validate_app_block(f"instruments/{name} modes[{mi}]", mode, qualified_set,
+                                                  {"edition": m.get("edition"), "legacy_reason": m.get("legacy_reason")}))
         else:
             issues.append(f"instruments/{name}: modes(비어있지 않은 리스트) 필수")
     return issues
@@ -672,8 +740,9 @@ def validate_app_blocks(data: dict) -> list[str]:
             else:
                 blocks = [(qualified, app)]
 
+            inherited = {"edition": app.get("edition"), "legacy_reason": app.get("legacy_reason")}
             for blabel, blk in blocks:
-                issues.extend(_validate_app_block(blabel, blk, qualified_set))
+                issues.extend(_validate_app_block(blabel, blk, qualified_set, inherited))
 
             issues.extend(_app_check_filters(qualified, app))
 
@@ -877,3 +946,85 @@ def validate_app_template_params(data: dict, root: Path) -> list[str]:
                 f"오타 정정 · open_params 중 택1. ({tmpl!r})"
             )
     return issues
+
+
+# === 판본 2 앱 템플릿 컴파일 가드 (2026-10-05 표면 바인딩 ①) ===
+# 치환 정규식 검사를 다른 정규식으로 바꾸지 않는다 — 판본 2 컴파일러가 템플릿 원문을 그대로 검사한다.
+# 입력은 값 없이 타입만(Unknown) 선언하고 $item 은 열린 레코드다. 등록되지 않은 [fn:이름] 은 경고(실행 시 해마·
+# 워크플로 원장이 해소하며 없으면 실행이 거절한다).
+
+def _edition2_blocks(data: dict) -> list[tuple[str, dict]]:
+    """edition 2 로 선언된 앱 블록 전부 — 노드 app: 블록 + standalone 매니페스트."""
+    import glob
+    import os
+    import yaml
+    out: list[tuple[str, dict]] = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            app = action.get("app") if isinstance(action, dict) else None
+            if not isinstance(app, dict):
+                continue
+            inherited = {"edition": app.get("edition"), "legacy_reason": app.get("legacy_reason")}
+            modes = app.get("modes")
+            blocks = [(f"{node_name}:{action_name} modes[{i}]", m) for i, m in enumerate(modes)
+                      if isinstance(m, dict)] if isinstance(modes, list) and modes else [(f"{node_name}:{action_name}", app)]
+            for label, blk in blocks:
+                if _block_edition(blk, inherited)[0] == 2:
+                    out.append((label, blk))
+    inst_dir = os.path.join(os.path.dirname(__file__), "..", "data", "instruments")
+    for fp in sorted(glob.glob(os.path.join(inst_dir, "*.yaml"))):
+        try:
+            with open(fp, "r", encoding="utf-8") as f:
+                m = yaml.safe_load(f) or {}
+        except Exception:
+            continue
+        if not isinstance(m, dict):
+            continue
+        inherited = {"edition": m.get("edition"), "legacy_reason": m.get("legacy_reason")}
+        for mi, mode in enumerate(m.get("modes") or []):
+            if isinstance(mode, dict) and _block_edition(mode, inherited)[0] == 2:
+                out.append((f"instruments/{os.path.basename(fp)} modes[{mi}]", mode))
+    return out
+
+
+def check_app_templates_edition2(data: dict, root: Path) -> tuple[list[str], list[str]]:
+    """edition 2 앱 템플릿 전부를 판본 2 컴파일러로 검사 → (하드 이슈, 경고). 백엔드를 못 싣는 환경이면 경고 1건으로 건너뛴다."""
+    issues: list[str] = []
+    warnings: list[str] = []
+    blocks = _edition2_blocks(data)
+    if not blocks:
+        return issues, warnings
+    try:
+        import sys as _sys
+        if str(root / "backend") not in _sys.path:
+            _sys.path.insert(0, str(root / "backend"))
+        import boot_paths  # noqa: F401
+        from ibl_v2_adapters import load_registry
+        from ibl_v2_compile import compile_program
+        from ibl_v2_store import definitions
+        from ibl_v2_types import Type, UNKNOWN
+    except Exception as exc:  # noqa: BLE001
+        warnings.append(f"판본 2 템플릿 컴파일 검사 건너뜀 — 백엔드 적재 실패: {type(exc).__name__}: {exc}")
+        return issues, warnings
+    registry = load_registry(str(root), None)
+    defs = definitions()
+    for label, blk in blocks:
+        for t in _app_action_templates(blk):
+            names = set(re.findall(r"\$\{?(\w+)", t)) - {"item"}
+            types = {n: UNKNOWN for n in names}
+            if re.search(r"\$\{?item\b", t):
+                types["item"] = Type("Record", (), open=True)
+            try:
+                plan = compile_program(t, registry, {}, defs, input_types=types)
+            except Exception as exc:  # noqa: BLE001 — 파서 Fault 포함
+                issues.append(f"{label}: 판본 2 파싱/컴파일 실패 — {type(exc).__name__}: {str(exc)[:160]} ({t!r})")
+                continue
+            for issue in plan.issues:
+                if issue.get("code") == "FUNCTION" and "등록된 함수가 없습니다" in issue.get("message", ""):
+                    warnings.append(f"{label}: {issue['message']} — 실행 시 해마·워크플로 원장에서 해소되지 않으면 거절된다 ({t!r})")
+                    continue
+                issues.append(f"{label}: [{issue.get('code')}] {issue.get('message')} ({t!r})")
+    return issues, warnings

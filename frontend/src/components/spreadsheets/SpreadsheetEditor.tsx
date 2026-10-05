@@ -11,7 +11,7 @@ function sdk(url:string){
   if(!sdkPromise)sdkPromise=new Promise<void>((resolve,reject)=>{const s=document.createElement('script');s.src=url+'/web-apps/apps/api/documents/api.js';s.onload=()=>resolve();s.onerror=()=>{sdkPromise=null;s.remove();reject(new Error('스프레드시트 편집 서버에 연결하지 못했습니다'));};document.head.appendChild(s);});
   return sdkPromise;
 }
-export function SpreadsheetEditor({detail,onChange,captureRef}:{detail:SheetDetail;onChange:(d:SheetDetail)=>void;captureRef:MutableRefObject<null|(()=>Promise<void>)>}){
+export function SpreadsheetEditor({detail,onChange,captureRef,onSaved}:{detail:SheetDetail;onChange:(d:SheetDetail)=>void;captureRef:MutableRefObject<null|(()=>Promise<void>)>;onSaved?:(d:SheetDetail)=>void}){
   const [message,setMessage]=useState('편집기를 여는 중…'),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const [ready,setReady]=useState(false),[generation,setGeneration]=useState(0),[snapshot,setSnapshot]=useState<SheetSnapshot|null>(null);
   const [sheetId,setSheetId]=useState(detail.workbook.sheets?.[0]?.sheet_id||'1'),[range,setRange]=useState('A1:D10');
@@ -113,7 +113,7 @@ export function SpreadsheetEditor({detail,onChange,captureRef}:{detail:SheetDeta
   };
   return <section className="sheet-editor">
     <div className="sheet-actions">
-      <button disabled={busy} onClick={()=>void run(async()=>{const s=await capture();const d=current.current;await sheetCommand(d.document.id,'save',{...sessionArgs(s),operation_id:crypto.randomUUID(),expected_revision:d.document.revision_id});publish(await sheetRequest<SheetDetail>('/'+d.document.id));setMessage('저장됨 · 원본 파일 기록 확인');})}>원본 저장</button>
+      <button disabled={busy} onClick={()=>void run(async()=>{const s=await capture();const d=current.current;await sheetCommand(d.document.id,'save',{...sessionArgs(s),operation_id:crypto.randomUUID(),expected_revision:d.document.revision_id});const saved=await sheetRequest<SheetDetail>('/'+d.document.id);publish(saved);onSaved?.(saved);setMessage('저장됨 · 원본 파일 기록 확인');})}>원본 저장</button>
       <button disabled={busy} onClick={()=>void run(async()=>{await capture();setMessage('복구 초안 저장됨');})}>작업 저장</button>
       <button disabled={busy||!ready} onClick={()=>void run(async()=>{await takeSnapshot();})}>계산·스냅샷</button>
       <button disabled={busy} onClick={()=>void run(async()=>setVersions((await sheetRequest<{items:{id:string;created_at:number;label?:string}[]}>('/'+detail.document.id+'/versions')).items))}>버전 이력</button>

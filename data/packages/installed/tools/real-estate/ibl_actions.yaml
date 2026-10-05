@@ -20,6 +20,7 @@ actions:
     tool: search_commercial_district
     implementation: 소상공인진흥공단 상권정보 공개 API(storeListInRadius/storeListInDong) 전 페이지 수집 → 점포 items. 집계 없음.
     app:
+      edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
       instrument: commercial
       icon: 🏪
       name: 상권
@@ -34,7 +35,7 @@ actions:
         label: 경도
         default: '127.0276'
       auto_run: true
-      action: '[sense:commercial]{lat: "$lat", lng: "$lng"}'
+      action: '[sense:commercial]{lat: $lat, lng: $lng}'
       filter:
         from_field: category
       view:
@@ -42,7 +43,7 @@ actions:
         markers: items
         max: 1500
         'on':
-          moveend: '[sense:commercial]{lat: "$lat", lng: "$lng", radius: "$radius"}'
+          moveend: '[sense:commercial]{lat: $lat, lng: $lng, radius: $radius}'
       - type: metric
         label: 주변 점포 수
         big: '{total_count}개'
@@ -54,7 +55,7 @@ actions:
           lines:
           - '{category} · {address}'
         item_click:
-          action: '[sense:restaurant]{query: "{name}", x: {lng}, y: {lat}, radius: 300}'
+          action: '[sense:restaurant]{query: $item.name, x: $item.lng, y: $item.lat, radius: 300}'
           view:
           - type: card_list
             from: items
@@ -187,6 +188,7 @@ actions:
     - 빌라
     - 원룸
     app:
+      edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
       icon: 🏢
       name: 실거래가
       order: 9
@@ -234,7 +236,7 @@ actions:
         type: select
         label: 구/군
         required: true
-        options_action: '[sense:realty]{op: "codes", city: "$province"}'
+        options_action: '[sense:realty]{op: "codes", city: $province}'
         options_from: items
         option_value: 코드
         option_label: 지역
@@ -269,7 +271,7 @@ actions:
           label: 최근 6개월
         - value: '12'
           label: 최근 12개월
-      action: '[sense:realty]{region_code: "$region", type: "$type", deal: "$deal", months: "$period"}'
+      action: '[sense:realty]{region_code: $region, type: $type, deal: $deal, months: $period}'
       view:
       - type: metric
         label: 평균 거래가
@@ -290,7 +292,7 @@ actions:
           - '{법정동} · {면적}㎡ · {층}층 · {건축년도}년'
           - '{거래금액}만원 · {거래년도}.{거래월}.{거래일}'
         item_click:
-          action: '[sense:realty]{region_code: "$region", type: "$type", deal: "$deal", months: 12, name: "{명칭}"}'
+          action: '[sense:realty]{region_code: $region, type: $type, deal: $deal, months: 12, name: "{명칭}"}'
           view:
           - type: card_list
             from: items

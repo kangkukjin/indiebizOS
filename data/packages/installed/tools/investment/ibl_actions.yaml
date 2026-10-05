@@ -57,6 +57,7 @@ actions:
     - 종목
     - 매매동향
     app:
+      edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
       instrument: invest
       icon: 📈
       name: 투자
@@ -88,7 +89,7 @@ actions:
             value: 3mo
           - label: 1년
             value: 1y
-        action: '[sense:stock]{op: "quote", ticker: "$q", period: "$period", max_points: 60}'
+        action: '[sense:stock]{op: "quote", ticker: $q, period: $period, max_points: 60}'
         view:
         - type: metric
           label: '{data.symbol}'
@@ -131,7 +132,7 @@ actions:
             value: 30
           - label: 3달
             value: 90
-        action: '[sense:crypto]{coin_id: "$coin", days: $days}'
+        action: '[sense:crypto]{coin_id: $coin, days: $days}'
         view:
         - type: metric
           label: '{data.name} ({data.symbol})'
@@ -183,7 +184,7 @@ actions:
             value: 3mo
           - label: 1년
             value: 1y
-        action: '[sense:stock]{op: "quote", ticker: "$sym", period: "$period", max_points: 60}'
+        action: '[sense:stock]{op: "quote", ticker: $sym, period: $period, max_points: 60}'
         view:
         - type: metric
           label: '{data.symbol}'

@@ -216,7 +216,7 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
 
     @classmethod
     def send_message(cls, to_agent_id: str, message: str, from_agent: str = "system",
-                     task_id: str = None) -> bool:
+                     task_id: str = None, envelope: dict = None) -> bool:
         """
         에이전트에게 메시지 전송 (비동기)
 
@@ -225,6 +225,8 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
             message: 전달할 메시지
             from_agent: 발신 에이전트 이름
             task_id: 연관된 태스크 ID
+            envelope: 위임 봉투(origin·chain, delegation_tasks.envelope) — 수신 루프가
+                      처리 동안 출처·사슬을 세운다(2026-10-05). 없으면 빈 출처.
 
         Returns:
             성공 여부
@@ -239,6 +241,8 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
                 'task_id': task_id,
                 'timestamp': datetime.now().isoformat()
             }
+            if envelope:
+                msg_dict.update({k: envelope[k] for k in ("origin", "chain") if k in envelope})
 
             if to_agent_id not in cls.internal_messages:
                 cls.internal_messages[to_agent_id] = runtime_work.WorkMessages()

@@ -22,6 +22,7 @@ actions:
     - kaggle
     - 캐글
     app:
+      edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
       icon: 🏆
       name: AI 공모전
       order: 12
@@ -44,7 +45,7 @@ actions:
             label: 상금순
           - value: numberOfTeams
             label: 인기순
-        action: '[sense:contest]{query: "$q", sort: "$sort"}'
+        action: '[sense:contest]{query: $q, sort: $sort}'
         view:
         - type: card_list
           from: items

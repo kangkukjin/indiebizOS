@@ -1946,6 +1946,24 @@
       ],
       "file": "world_map.md",
       "topic": "시스템·확장"
+    },
+    {
+      "id": "workspace",
+      "name": "작업 공간 — 문서·시트·코딩 공통 세션",
+      "description": "[self:workspace] 의 열기·스냅샷·읽기·제안·적용·저장·버전·복구. 종류별 selector, 작성 창 세션 보호, AI 제안 조합.",
+      "keywords": [
+        "작업 공간",
+        "workspace",
+        "세션",
+        "스냅샷",
+        "제안",
+        "저장",
+        "문서 편집",
+        "시트 편집",
+        "코딩"
+      ],
+      "file": "workspace.md",
+      "topic": "파일"
     }
   ]
 }

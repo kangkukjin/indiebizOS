@@ -35,7 +35,7 @@ PATHS = [
     'data/packages/installed/tools/system_essentials/handler.py',
     'data/packages/installed/tools/system_essentials/ibl_actions.yaml',
     'data/packages/installed/tools/system_essentials/sheet_ops.py',
-    'data/packages/installed/tools/system_essentials/essentials_spreadsheet_workspace.py',
+    'data/packages/installed/tools/system_essentials/essentials_workspace.py',
     'data/packages/installed/tools/system_essentials/essentials_state_paths.py',
     'data/packages/installed/tools/system_essentials/tool.json',
     'data/ibl_example_review.json', 'data/ibl_nodes.yaml', 'data/member_manifest.json',

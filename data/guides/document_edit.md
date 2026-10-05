@@ -46,27 +46,19 @@
 편집기 안의 저장은 편집 서버 반영이며, 원본 파일 확정과 구분한다. `작업 저장`은
 복구 초안, `사본 저장`은 같은 형식, `내보내기`는 원본을 보존하는 변환이다.
 
-TXT/MD/HTML/LaTeX/Typst 원문은 같은 저장·버전·세션 계약을 IBL로 사용한다.
+TXT/MD/HTML/LaTeX/Typst 원문과 사무 문서의 세션·스냅샷·제안·저장·버전은 **`[self:workspace]`** 가 맡는다
+(2026-10-05, 이 액션의 세션 op 14개를 흡수). 자세한 흐름은 `workspace.md`.
 
 ```ibl
-[self:document]{op:"open", path:"보고서.md"}
-[self:document]{op:"capabilities", args:{document_id:"open에서 받은 document.id"}}
-[self:document]{op:"session", args:{document_id:"문서 ID", client_id:"작성 창 ID"}}
+$w = [self:workspace]{op:"open", path:"보고서.md"}
+$r = [self:workspace]{op:"read", resource:$w.resource, selector:{start:0, end:200}}
+$p = [self:workspace]{op:"propose", resource:$w.resource, selector:{start:0, end:200, selected_sha256:$r.selected_sha256}, replacement:"고친 문단"}
+[self:workspace]{op:"apply", resource:$w.resource, proposal:$p.proposal} >> [self:workspace]{op:"save", resource:$w.resource}
 ```
 
-- `draft`는 `args:{session_id,client_id,epoch,expected,operation_id,text}`를 받는다.
-  `epoch`는 `engine_epoch`, `expected`는 직전 `session_revision`이다. `document_id`는
-  args에 함께 넣는다. `snapshot` 뒤 `read`가 고정된 원문을 읽는다.
-- `propose`는 스냅샷 ID·문자 범위·선택 SHA-256·교체 문구를, `apply`는 제안 ID와
-  현재 세션 인자를 받는다. 다른 창·과거 버전의 제안은 거절한다.
-- `save`는 세션 인자·operation_id·expected_revision을, `export`는 세션 인자·
-  operation_id·새 파일명(filename)을 받는다. 중복 요청은 같은 operation_id를 유지한다.
-- `versions`로 저장 버전을 조회하고 `restore`로 초안에 복구한다. `recover`는
-  파일 기록 뒤 끊긴 저장의 결과를 확인한다. `close`는 미저장 초안이 없을 때만 가능하다.
-- 사무 문서의 선택 수정은 앱 안의 공식 편집기 플러그인을 거친다. 바이너리를 문자열로
-  덮어쓰거나 활성 편집기를 우회하지 않는다. `inspect/edit`는 위의 별도 사본 계약을 유지한다.
-- XLSX/XLSM 범위는 등록한 원본 버전에서 읽어 Markdown에 표로 삽입한다. 원본 변경 확인과
-  새 버전 등록은 명시적으로 수행한다. 소스 선택을 강의 재료로 전달하면 원본 버전과 범위를 남긴다.
+- 세션 ID·epoch·operation_id 는 언어에 나오지 않는다. 작성 창이 세션을 쥐고 있으면 그 창의 `client` 만 적용·저장할 수 있다.
+- 사무 문서(DOCX/PDF/HWP)의 `read` 는 읽기 투영이고 선택 수정은 앱의 편집 표면에서 한다. `inspect/edit` 는 위의 별도 사본 계약을 유지한다.
+- XLSX/XLSM 범위는 `[self:workspace]{op:"read", selector:{sheet, range}}` 로 저장본·스냅샷에서 읽어 Markdown 표로 넣는다.
 
 운영·검증·미완료 범위는 [구현 상태](../../docs/DOCUMENT_APP_DESIGN_2026_10_02.md#구현-상태-2026-10-02)를 따른다.
 

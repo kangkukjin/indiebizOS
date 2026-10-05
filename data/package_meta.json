@@ -403,6 +403,7 @@
     "self:struct": "ai-ops",
     "self:time": "system_essentials",
     "self:webapp": "system_essentials",
+    "self:workspace": "system_essentials",
     "self:write": "system_essentials",
     "sense:book": "books",
     "sense:cctv": "cctv",

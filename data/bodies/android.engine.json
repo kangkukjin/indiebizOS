@@ -91,6 +91,7 @@
     "cognition/conscious_supervisor",
     "cognition/consciousness_agent",
     "cognition/corpus_vocab_audit",
+    "cognition/delegation_tasks",
     "cognition/derived_freshness",
     "cognition/distill_memory_adapters",
     "cognition/distill_queue",
@@ -368,6 +369,7 @@
     "services/sync_exchange",
     "services/warehouse_adapters",
     "services/warehouse_feed",
+    "services/workspace_sessions",
     "surface/api_agents",
     "surface/api_business",
     "surface/api_coding",
@@ -545,8 +547,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 470,
-    "engine": 444,
+    "total": 472,
+    "engine": 446,
     "blocklist": 26
   }
 }

@@ -26,6 +26,8 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
                 raise Fault("EDITION_ARGUMENT", "budget은 판본 2에서만 사용할 수 있습니다.", kind="compile")
             if request.get("inputs") is not None:
                 raise Fault("EDITION_ARGUMENT", "inputs는 판본 2에서만 사용할 수 있습니다.", kind="compile")
+            if request.get("declared_inputs") is not None:
+                raise Fault("EDITION_ARGUMENT", "declared_inputs는 판본 2에서만 사용할 수 있습니다.", kind="compile")
             return None
         incompatible = [k for k in ("files", "files_from") if request.get(k) is not None]
         if incompatible:
@@ -39,6 +41,12 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
             raise Fault("INPUTS", "inputs는 예약 이름을 제외한 이름→값 Record입니다.", kind="compile")
         from ibl_v2_ir import pack
         pack(inputs)
+        # declared_inputs(표면 바인딩 2026-10-05): 템플릿이 참조하는 입력 이름 전부. inputs 에 없는 이름은
+        # '미지정'으로 컴파일된다 — 인자 자리 생략·보간 "". 모델 저술 프로그램은 보내지 않는다(없으면 종전과 같다).
+        declared = request.get("declared_inputs")
+        if declared is not None and (not isinstance(declared, list) or any(
+                not isinstance(k, str) or not k.isidentifier() or k in {"it", "i", "error"} for k in declared)):
+            raise Fault("INPUTS", "declared_inputs는 예약 이름을 제외한 입력 이름 목록입니다.", kind="compile")
         reuse = request.get("reuse")
         if reuse is not None:
             if request.get("resume") is not None:
@@ -51,7 +59,8 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
         from ibl_v2_runtime import Runtime, Budget
         budget = Budget.from_request(request.get("budget"))
         from ibl_v2_store import definitions
-        plan = compile_program(source, load_registry(project_path, agent_id), inputs, definitions())
+        plan = compile_program(source, load_registry(project_path, agent_id), inputs, definitions(),
+                               declared_inputs=declared)
         from ibl_run_journal import Journal, journal_root, identity, reusable_receipts, validate_resume
         if request.get("check"):
             if reuse:

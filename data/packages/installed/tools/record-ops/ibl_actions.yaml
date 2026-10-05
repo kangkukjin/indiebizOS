@@ -86,6 +86,8 @@ actions:
     keywords: [공동 업무, 관리 기록, 승인, 원자 확정, 업무 공간]
     guides: [managed_records.md]
     app:
+      edition: 1   # 판본 1 유지 — self:record 는 판본 2 어댑터 계약이 없어 판본 2 실행기가 받지 못한다(legacy_reason)
+      legacy_reason: 'self:record 에 판본 2 계약(UNSUPPORTED_ADAPTER)이 없다 — 계약이 붙으면 edition 2 로 전환'
       instrument: managed_records
       name: 공동 업무
       icon: 📋

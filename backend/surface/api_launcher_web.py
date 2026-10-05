@@ -221,7 +221,9 @@ def _instruments_mtime() -> float:
 # app 블록에서 모드(탭) 레벨로 그대로 전달되는 필드
 # phone_render 포함: 포털(개인 커뮤니티 홈)이 매니페스트에서 "브라우저에 못 싣는 모드"
 # (맥 스피커·네이티브 창 등)를 걸러내는 데 쓴다 — 렌더러들은 미지 필드를 무시하므로 무해.
-_APP_MODE_FIELDS = ("note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter", "phone_render", "run_label")
+_APP_MODE_FIELDS = ("note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter", "phone_render", "run_label",
+                    # edition: 블록의 템플릿 판본(2026-10-05 ①). 2 = 렌더러가 치환 없이 원문+inputs 를 보낸다.
+                    "edition")
 
 # 폰 프로파일(#3 runs_on): INDIEBIZ_PROFILE=phone 이면 phone_manifest.json 의 runnable_actions 에
 # 없는 계기(=폰서 못 도는 액션)를 홈 그리드에서 숨긴다. PC(프로파일 미설정)면 필터 없음.
@@ -305,6 +307,9 @@ def _derive_instruments(include_standalone=True) -> dict:
             inst["system"] = True
         if primary.get('web_app'):
             inst['web_app'] = primary['web_app']
+        # 템플릿 판본 — 계기 레벨(top_buttons 가 읽음)에도 두고, 아래서 각 탭에 상속시킨다.
+        if primary.get("edition") is not None:
+            inst["edition"] = primary["edition"]
         # top_buttons: 탭 무관 최상단 고정 버튼(소개발행 등) — 인스트루먼트 레벨 통과.
         if primary.get("top_buttons"):
             inst["top_buttons"] = primary.get("top_buttons")
@@ -318,6 +323,8 @@ def _derive_instruments(include_standalone=True) -> dict:
                 # 폰 프로파일: 탭도 phone_render:false 만 숨김(실행은 라우팅이 결정)
                 if runnable is not None and m.get("phone_render") is False:
                     continue
+                if "edition" not in m and primary.get("edition") is not None:
+                    m = {**m, "edition": primary["edition"]}  # 앱 레벨 선언을 탭에 상속
                 modes.append(m)
             if not modes:
                 continue  # 모든 탭이 폰서 제외 → 계기 숨김

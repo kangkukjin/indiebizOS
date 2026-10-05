@@ -13,9 +13,15 @@ from pathlib import Path
 
 
 def execute_call_agent(tool_input: dict, project_path: str) -> str:
-    """call_agent 도구 실행 - 에이전트 간 통신"""
+    """call_agent 도구 실행 - 에이전트 간 통신
+
+    같은 프로젝트 위임의 **단일 접수 경로**(2026-10-05): mode=async/sync 모두 여기서 자식
+    task 를 만들고 상주 러너에 메시지를 넣는다. sync 는 routing_system 이 접수 뒤 같은
+    task 를 기다린다(옛 임시 AIAgent 실행기 은퇴 — 같은 어휘의 두 mode 가 다른 실행기로
+    돌지 않게). 반환 JSON 에 child_task_id·task_ref 가 실린다."""
     agent_id_or_name = tool_input.get("agent_id", "")
     message = tool_input.get("message", "")
+    mode = (tool_input.get("mode") or "async").lower()
 
     try:
         from agent_runner import AgentRunner
@@ -24,9 +30,6 @@ def execute_call_agent(tool_input: dict, project_path: str) -> str:
             get_current_task_id, set_called_agent
         )
         from conversation_db import ConversationDB
-
-        # call_agent 호출 플래그 설정 (자동 보고 스킵용)
-        set_called_agent(True)
 
         # 프로젝트 ID 추출
         project_id = Path(project_path).name
@@ -37,7 +40,16 @@ def execute_call_agent(tool_input: dict, project_path: str) -> str:
             target_runner = AgentRunner.get_agent_by_id(agent_id_or_name, project_id=project_id)
 
         if target_runner:
-            return _send_to_running_agent(target_runner, message, project_path)
+            # 순환 위임 차단 — 대상이 조상 사슬(자기 자신 포함)에 있으면 접수하지 않는다.
+            from delegation_tasks import DelegationCycle, envelope, target_identity
+            try:
+                env = envelope(target_identity(project_id, target_runner.config.get("id") or agent_id_or_name))
+            except DelegationCycle as cyc:
+                return json.dumps({"success": False, "error": str(cyc), "error_type": "delegation_cycle"},
+                                  ensure_ascii=False)
+            # call_agent 호출 플래그 설정 (자동 보고 스킵용) — 접수가 확정된 뒤에만.
+            set_called_agent(True)
+            return _send_to_running_agent(target_runner, message, project_path, mode=mode, envelope=env)
 
         # 2. 레지스트리에 없으면 agents.yaml 확인
         return _check_agents_yaml(agent_id_or_name, project_path)
@@ -48,7 +60,8 @@ def execute_call_agent(tool_input: dict, project_path: str) -> str:
         return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
 
 
-def _send_to_running_agent(target_runner, message: str, project_path: str) -> str:
+def _send_to_running_agent(target_runner, message: str, project_path: str,
+                           mode: str = "async", envelope: dict = None) -> str:
     """실행 중인 에이전트에게 메시지 전송"""
     from agent_runner import AgentRunner
     from thread_context import get_current_agent_name, get_current_task_id
@@ -65,15 +78,20 @@ def _send_to_running_agent(target_runner, message: str, project_path: str) -> st
     current_task_id = get_current_task_id()
     new_task_id = None
 
+    # 태스크 태그 제거
+    message = re.sub(r'\[task:[^\]]+\]\s*', '', message)
     if current_task_id:
-        # 태스크 태그 제거
-        message = re.sub(r'\[task:[^\]]+\]\s*', '', message)
+        # 자식 태스크 생성 (접수 때 mode 를 부모 원장에 기록 — 보고기가 sync 자식은 부모 러너에
+        # 통지하지 않고 대기자가 회수하게 가른다)
+        new_task_id = _create_child_task(current_task_id, target_name, message, project_path, mode=mode)
+    else:
+        # 작업 문맥이 없는 호출(직접 IBL 탐침 등) — 접수한 작업을 식별·회수할 수 있어야 하므로
+        # 부모 없는 자식 행을 만든다. 보고기는 부모 없는 'pipeline' 채널을 발신자 응답으로 처리한다.
+        new_task_id = _create_standalone_task(target_name, message, project_path, from_agent)
 
-        # 자식 태스크 생성
-        new_task_id = _create_child_task(current_task_id, target_name, message, project_path)
-
-        # 메시지에 태스크 ID 추가
-        task_for_message = new_task_id if new_task_id else current_task_id
+    # 메시지에 태스크 ID 추가
+    task_for_message = new_task_id if new_task_id else current_task_id
+    if task_for_message:
         message = f"[task:{task_for_message}] {message}"
 
     # 메시지 전송
@@ -81,7 +99,8 @@ def _send_to_running_agent(target_runner, message: str, project_path: str) -> st
         to_agent_id=target_runner.registry_key,
         message=message,
         from_agent=from_agent,
-        task_id=new_task_id if new_task_id else current_task_id
+        task_id=new_task_id if new_task_id else current_task_id,
+        envelope=envelope,
     )
 
     if success:
@@ -94,13 +113,14 @@ def _send_to_running_agent(target_runner, message: str, project_path: str) -> st
         except Exception as e:
             print(f"[call_agent] 위임 메시지 DB 기록 실패: {e}")
 
-        return json.dumps({
-            "success": True,
-            "message": f"'{target_name}'에게 메시지를 전송했습니다. 비동기로 처리됩니다.",
-            "agent": target_name,
-            "task_id": new_task_id if new_task_id else current_task_id,
-            "async": True
-        }, ensure_ascii=False)
+        from delegation_tasks import accepted
+        project_id = Path(project_path).name
+        out = accepted(project_id, new_task_id or current_task_id or "", agent_id=target_id,
+                       message=(f"'{target_name}'에게 작업을 위임했습니다 (task {new_task_id or current_task_id}). "
+                                "접수 확인이며 결과는 아직 없습니다 — 비동기 보고로 도착합니다."),
+                       agent=target_name, child_task_id=new_task_id, **{"async": True})
+        out["task_id"] = new_task_id if new_task_id else current_task_id
+        return json.dumps(out, ensure_ascii=False)
     else:
         return json.dumps({
             "success": False,
@@ -108,7 +128,22 @@ def _send_to_running_agent(target_runner, message: str, project_path: str) -> st
         }, ensure_ascii=False)
 
 
-def _create_child_task(parent_task_id: str, target_name: str, message: str, project_path: str) -> str:
+def _create_standalone_task(target_name: str, message: str, project_path: str, from_agent: str) -> str:
+    """부모 작업이 없는 접수의 자식 행 — 회수할 task 를 항상 남긴다(2026-10-05)."""
+    from conversation_db import ConversationDB
+    try:
+        db = ConversationDB(str(Path(project_path) / "conversations.db"))
+        new_task_id = f"task_{uuid.uuid4().hex[:8]}"
+        db.create_task(task_id=new_task_id, requester=from_agent, requester_channel='pipeline',
+                       original_request=message, delegated_to=target_name, parent_task_id=None)
+        return new_task_id
+    except Exception as e:
+        print(f"   [call_agent] 독립 태스크 생성 실패: {e}")
+        return None
+
+
+def _create_child_task(parent_task_id: str, target_name: str, message: str, project_path: str,
+                       mode: str = "async") -> str:
     """위임 시 자식 태스크 생성"""
     from conversation_db import ConversationDB
     from thread_context import get_current_agent_name
@@ -130,7 +165,8 @@ def _create_child_task(parent_task_id: str, target_name: str, message: str, proj
             'child_task_id': new_task_id,
             'delegated_to': target_name,
             'delegation_message': message,
-            'delegation_time': datetime.now().isoformat()
+            'delegation_time': datetime.now().isoformat(),
+            'mode': mode,
         })
 
         delegation_context = json.dumps(existing_context, ensure_ascii=False)

@@ -3,12 +3,12 @@ import type { RhwpDocumentStateV1 } from '@rhwp/editor';
 import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { documentCommand, documentRequest, sessionArgs, type Detail, type Session } from '../lib/api-documents';
 
-type Props = { detail: Detail; captureRef: MutableRefObject<(() => Promise<Session>) | null>; onChange: (d: Detail) => void };
+type Props = { detail: Detail; captureRef: MutableRefObject<(() => Promise<Session>) | null>; onChange: (d: Detail) => void; onSaved?: (d: Detail) => void };
 type Exported = { data: Uint8Array; state: RhwpDocumentStateV1 };
 type Pending = { data: Uint8Array; state: RhwpDocumentStateV1; query: string };
 const same = (a: RhwpDocumentStateV1 | null, b: RhwpDocumentStateV1) => a?.documentEpoch === b.documentEpoch && a?.changeSeq === b.changeSeq && a?.documentSha256 === b.documentSha256;
 
-export function HwpDocumentEditor({ detail, captureRef, onChange }: Props) {
+export function HwpDocumentEditor({ detail, captureRef, onChange, onSaved }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
   const latest = useRef(detail); latest.current = detail;
   const changed = useRef(onChange); changed.current = onChange;
@@ -83,6 +83,7 @@ export function HwpDocumentEditor({ detail, captureRef, onChange }: Props) {
     saveRequest.current = null;
     const next = await documentRequest<Detail>(`/${d.document.id}`);
     latest.current = next; changed.current(next);
+    onSaved?.(next);
     const state = await rpc<RhwpDocumentStateV1>('state');
     setMessage(same(lastState.current, state) ? '원본 저장됨 · 파일 기록 확인' : '이전 초안은 원본 저장됨 · 새 편집 내용은 미저장');
   });

@@ -28,10 +28,13 @@
           - when: {scope: same, mode: workflow}
             required: [steps]
             required_any: [[agent_id, workflow]]
+          # cross/system 의 workflow 는 구현된 적이 없다 — 검사와 실행 양쪽에서 거절(2026-10-05).
           - when: {scope: cross}
             required: [agent_id, message]
+            enums: {mode: [async, sync], scope: [same, cross, system]}
           - when: {scope: system}
             required: [message]
+            enums: {mode: [async, sync], scope: [same, cross, system]}
           result: Record
           effects: [write_external]
           compatibility: legacy-envelope/1
@@ -47,16 +50,18 @@
           message: [query]   # _delegate_unified·_agent_ask_sync 폴백 키
         returns: effect
         pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
-        description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기.
-        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본,비동기 보고)/sync(응답 대기, 파이프라인용)/workflow(do=IBL 문장 위임). scope: same(기본)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 fire-and-forget — 앱 "생성" 버튼용, agent_id 불필요). mode=workflow 시 do 필수.'
+        description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기. 반환은 접수증(task_ref·child_task_id·status_url) — 접수는 완료가 아니다.
+        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본, 접수증 반환·결과는 비동기 보고)/sync(같은 접수 뒤 그 작업을 제한 시간 동안 기다려 response 반환, 파이프라인용 — 시간 초과면 실패로 바꾸지 않고 task_ref·state 반환)/workflow(do=IBL 문장 위임, same 전용). scope: same(기본)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 fire-and-forget — 앱 "생성" 버튼용, agent_id 불필요). cross/system 의 workflow 는 미지원 오류. 순환 위임(대상이 조상 사슬에 있음)은 접수 거절.'
         group: delegation
         target_key: agent_id
         router: system
         func: delegate
         implementation: |
-          mode/scope로 기존 4 함수를 통합 디스패치 — scope=cross → _execute_call_project_agent
-          (시스템 AI만), scope=same일 때 mode=async → execute_call_agent, mode=sync →
-          _agent_ask_sync (응답 텍스트 반환), mode=workflow → _delegate_workflow (steps 위임).
+          mode/scope 통합 디스패치(routing_system._delegate_unified). scope=cross →
+          _execute_call_project_agent(접수증 dict), scope=same → execute_call_agent(접수증 JSON);
+          mode=sync 는 두 scope 모두 같은 접수 뒤 delegation_tasks.await_child 가 자식 task 를
+          기다린다(임시 AIAgent 실행기 은퇴, 2026-10-05). mode=workflow → _delegate_workflow (same 전용).
+          봉투(origin·chain)는 delegation_tasks.envelope, 상태 투영은 task_view.
         keywords:
         - 위임
         - 에이전트
@@ -200,6 +205,7 @@
             post: 커뮤니티에 글 게시
         implementation: channel_engine._community_feed — read=indienet.fetch_posts/fetch_board_posts, post=indienet.post_to_board. 발신 신원=시스템(indienet) 키.
         app:
+          edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           instrument: community
           icon: 🌐
           name: IndieNet
@@ -222,9 +228,9 @@
               placeholder: '#태그 주소 — 태그를 아는 사람들의 방'
             buttons:
             - label: ⭐ 즐겨찾기
-              action: '[others:board]{op: "create", hashtag: "$tag"}'
+              action: '[others:board]{op: "create", hashtag: $tag}'
               refresh: true
-            action: '[others:feed]{op: "read", hashtag: "$tag"}'
+            action: '[others:feed]{op: "read", hashtag: $tag}'
             view:
             - type: thread
               reverse: true
@@ -239,10 +245,10 @@
               item_button:
                 match: '공유창고\s*Warehouse\s*:\s*(https?://\S+)'
                 label: 📦 창고이웃 등록
-                action: '[others:neighbor]{op: "save", npub: "{author_full}", warehouse: "{match1}"}'
+                action: '[others:neighbor]{op: "save", npub: $item.author_full, warehouse: $item.match1}'
             compose:
               placeholder: 이 게시판에 글 쓰기…
-              action: '[others:feed]{op: "post", content: "$text", hashtag: "$tag"}'
+              action: '[others:feed]{op: "post", content: $text, hashtag: $tag}'
               button: 게시
           - name: 즐겨찾기
             auto_run: true
@@ -256,10 +262,10 @@
               sub: '#{hashtag}'
               button:
                 label: 삭제
-                action: '[others:board]{op: "delete", hashtag: "{hashtag}"}'
+                action: '[others:board]{op: "delete", hashtag: $item.hashtag}'
                 refresh: true
               item_click:
-                action: '[others:feed]{op: "read", hashtag: "{hashtag}"}'
+                action: '[others:feed]{op: "read", hashtag: $item.hashtag}'
                 view:
                 - type: thread
                   reverse: true
@@ -272,10 +278,10 @@
                   item_button:
                     match: '공유창고\s*Warehouse\s*:\s*(https?://\S+)'
                     label: 📦 창고이웃 등록
-                    action: '[others:neighbor]{op: "save", npub: "{author_full}", warehouse: "{match1}"}'
+                    action: '[others:neighbor]{op: "save", npub: $item.author_full, warehouse: $item.match1}'
                 compose:
                   placeholder: 이 게시판에 글 쓰기…
-                  action: '[others:feed]{op: "post", content: "$text", hashtag: "{hashtag}"}'
+                  action: '[others:feed]{op: "post", content: $text, hashtag: $item.hashtag}'
                   button: 게시
         keywords:
         - 커뮤니티

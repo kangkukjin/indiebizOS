@@ -2,6 +2,21 @@
 
 > 작성: 2026-06-11 · 상태: **전 단계 완료(2026-06-11)** — 1·2단계 + 데스크탑 흡수 + 승격 1·2차(11계기). "모든 표면이 한 정의" 달성.
 
+## ✅ 표면 바인딩 개정 ① — 액션 템플릿 치환 폐지, 원문+inputs (2026-10-05)
+
+- **왜**: `buildAction`/`rowAction` 의 `$key`·`{field}` 문자열 스플라이스는 입력이 프로그램의 의미를 바꿨다(빈 값=인자 쌍 삭제, 행 값의 `"` 삭제, 객체·배열 전달 불가, IBL 변수와 이름 충돌, 판본 미명시로 모든 앱 호출이 판본 1). 업무기록 화면이 REST 로 간 명시 사유. 전수 감사·설치 목록: [APP_IBL_GAP_AUDIT](APP_IBL_GAP_AUDIT_2026_10_05.md) · [APP_COMMON_FOUNDATION_GAPS §1-①](APP_COMMON_FOUNDATION_GAPS_2026_10_05.md).
+- **계약**: 블록 `edition: 2` → 렌더러가 템플릿 **원문** + `inputs`(제공 값, 타입 보존) + `declared_inputs`(참조 이름)를 `/ibl/execute` 에 보낸다(공용 코어 `appRequest`/`actionRequest`, 데스크탑 `runIBL(req)`·원격 `ibl(req)` 가 문자열·봉투 둘 다 받음). 빈 값은 미지정: `declared_inputs` 에만 있고 `inputs` 에 없다 → 판본 2 컴파일러가 **호출 인자 자리면 그 인자를 생략**(핸들러 기본값), **f-문자열 보간이면 빈 문자열**, 그 밖의 자리는 `UNSPECIFIED_INPUT` 거절(`ibl_v2_compile.Compiler.unspecified`, 런타임 `OMITTED` 표식). 행·드릴 컨텍스트는 `$item` 레코드 하나(구형 `{field}` → `$item.field`). 뷰-이벤트 페이로드는 타입 보존(좌표 Number·selection 의 `sel` Record)으로 `$변수` 잔류(데스크탑 `eventVars`, 원격 `VIEW_VARS`).
+- **경계**: 포털 게이트는 판본 2 요청을 선언 원문과 **글자 그대로** 대조(`portal_core.template_allowed` — 고정 인자가 원문에 묶여 구형 역대조보다 강함). 회원 앱은 동작 ID 경로 그대로, 서버 `member_app_actions.resolve` 가 edition 2 선언을 치환 없이 `inputs` 로 해소. `/m/run`→`member_session.turn(code=dict)`→`execute_ibl` 에 `declared_inputs` 통과.
+- **전환**: `scripts/migrate_app_templates_edition2.py` 가 앱 블록 32개를 기계 변환(`"$key"`→`$key`, `"{f}"`→`$item.f`, 섞인 리터럴→`f"…${k}…"`, 따옴표 밖 `{f}`→`$item.f`, 블록마다 `edition: 2`). 판본 2 가 못 받는 문법(`@hub` 노드 지정·`| sort:` 축약)과 판본 2 계약 없는 어휘(`self:record`)를 쓰는 4개 블록(지도 directions·정기보고·신문·공동업무)은 `edition: 1` + `legacy_reason` 으로 종전 치환 경로 유지. 검증기: edition 선언 필수, edition 2 의 구형 `{필드}`·`"$key"`·`@노드`·축약 거절, `$item` 허용; `--check` 의 **판본 2 앱-템플릿 가드**가 전 템플릿을 판본 2 컴파일러로 컴파일(입력 Unknown, 미등록 `[fn:]` 경고).
+- **남은 것**: edition 1 블록 4개의 전환(판본 2 에 노드 지정이 들어오거나 폰 라우팅이 봉투로 옮겨가면), 구형 치환 코드(`buildAction`/`rowAction`·`_outside`) 삭제는 그 뒤. 회귀 `backend/test_app_template_inputs_2026_10_05.py`.
+
+## ✅ engine 뷰 + selection/saved 뷰-이벤트 (2026-10-05)
+
+- **view 프리미티브 16종(15 → +engine):** `engine` = 외부 편집 엔진 표면을 **작업 공간 자료 ID**(`ref` 템플릿, `[self:workspace]{op:"open"}` 반환)로 바인딩. 엔진 선택(ONLYOFFICE·RHWP·원문 textarea·시트)은 자료 capabilities 가 정한다. 데스크탑 `EnginePrim`(prims-engine.tsx)이 기존 편집기 컴포넌트를 **낱말 밑의 바인딩**으로 호스팅(escape 아님). 원격/폰은 열람 강등(원문 표시 + 안내).
+- **뷰-이벤트 6종(4 → +selection, +saved):** engine 전용. selection 은 `$sel`(selector Record — 2026-10-05 ① 이후 객체 그대로)·`$start/$end/$text`(원문)·`$sheet/$range`(시트)·`$resource/$revision`, saved 는 `$resource/$revision`. 템플릿 `keep` 은 재조회 없이 페이로드를 $변수로만 남긴다 — **뷰-이벤트 페이로드가 이후 액션 템플릿의 $변수로 남는 규약**(GenericInstrument `onViewEvent` → values 병합)이 이때 생겼고, ai_dock 의 action 이 `$sel` 을 받는다.
+- 검증기: engine 은 `ref` 필수, `on` 은 map/engine 전용이며 이벤트 집합이 뷰별로 갈린다(`APP_MAP_EVENTS`/`APP_ENGINE_EVENTS`).
+- 근거·판정: [앱 구성 재계획](APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md) §3-c·§7.
+
 ## ✅ calendar 단일소스화 — bespoke 은퇴 (2026-07-02)
 
 - **데스크탑 `CalendarPrim` 신설**(GenericInstrument view 프리미티브 +calendar): 월 그리드(타입색 점)·선택일 상세(시간·반복·설명·삭제)·정기일정 목록·add 폼. 데이터=manifest items(자동 월필터·클라이언트 월네비, list가 전 이벤트 반환), add/delete=dispatch. **옛 bespoke `CalendarInstrument.tsx`(321줄) 삭제** + ActionDesktop STATIC_DOMAINS 엔트리·import 제거 → 데스크탑·원격·폰이 매니페스트 `[self:manage_events]` app 블록 단일 정의를 공유. HOME_ORDER 의 'calendar' 가 위치 유지.

@@ -143,20 +143,33 @@ def _execute_list_project_agents(tool_input: dict) -> str:
         }, ensure_ascii=False)
 
 
-def _execute_call_project_agent(tool_input: dict) -> str:
-    """프로젝트 에이전트 호출 실행 (자동 시작 포함)"""
+def _fail(message: str, **extra) -> dict:
+    """위임 실패 봉투 — 문자열 "오류: …" 는 legacy-envelope 어댑터가 성공으로 읽었다(2026-10-05)."""
+    return {"success": False, "error": message, **extra}
+
+
+def _execute_call_project_agent(tool_input: dict) -> dict:
+    """프로젝트 에이전트 호출 실행 (자동 시작 포함) — 접수증 dict 를 돌려준다.
+
+    2026-10-05: 반환이 문자열("…위임했습니다. 결과를 기다리세요.")이어서 접수한 자식 task 를
+    호출자가 알 수 없었고, 오류 문자열은 어댑터가 성공으로 읽었다. 이제 delegation_tasks.accepted
+    모양(task_ref·child_task_id·status_url)과 실패 봉투를 돌려준다. mode 는 부모 원장의 위임
+    항목에 기록되고(sync 면 보고기가 부모 러너에 통지하지 않는다), 봉투(origin·chain)가 자식
+    메시지에 실린다."""
     import uuid
     import yaml
     from agent_runner import AgentRunner
     from thread_context import get_current_task_id, get_call_channel, set_called_agent
     from system_ai_memory import get_task, update_task_delegation
+    from delegation_tasks import DelegationCycle, accepted, envelope, target_identity
 
     project_id = tool_input.get("project_id", "")
     agent_id = tool_input.get("agent_id", "")
     message = tool_input.get("message", "")
+    mode = (tool_input.get("mode") or "async").lower()
 
     if not project_id or not agent_id or not message:
-        return "오류: project_id, agent_id, message가 모두 필요합니다."
+        return _fail("project_id, agent_id, message가 모두 필요합니다.")
 
     # 스케줄의 직접 실행에는 대화 부모가 없다. cross 위임기가 자기 DB에
     # 부모를 발급한다 — 같은 프로젝트 위임의 conversations.db와 섞지 않는다.
@@ -186,7 +199,7 @@ def _execute_call_project_agent(tool_input: dict) -> str:
             agents_yaml = project_path / "agents.yaml"
 
             if not agents_yaml.exists():
-                return f"오류: 프로젝트 '{project_id}'를 찾을 수 없습니다."
+                return _fail(f"프로젝트 '{project_id}'를 찾을 수 없습니다.", error_type="not_found")
 
             data = yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
             agents = data.get("agents", [])
@@ -201,10 +214,10 @@ def _execute_call_project_agent(tool_input: dict) -> str:
                     break
 
             if not target_config:
-                return f"오류: 에이전트 '{agent_id}'를 찾을 수 없습니다."
+                return _fail(f"에이전트 '{agent_id}'를 찾을 수 없습니다.", error_type="not_found")
 
             if not target_config.get("active", True):
-                return f"오류: 에이전트 '{agent_id}'가 비활성화되어 있습니다."
+                return _fail(f"에이전트 '{agent_id}'가 비활성화되어 있습니다.")
 
             # 공통 설정 로드
             common_config = data.get("common", {})
@@ -241,15 +254,21 @@ def _execute_call_project_agent(tool_input: dict) -> str:
             registry_key = f"{project_id}:{agent_id}"
             target = AgentRunner.agent_registry.get(registry_key)
             if not target:
-                return f"오류: 에이전트 '{agent_id}' 시작 실패"
+                return _fail(f"에이전트 '{agent_id}' 시작 실패")
 
         except Exception as e:
-            return f"오류: 프로젝트 활성화 실패 - {str(e)}"
+            return _fail(f"프로젝트 활성화 실패 - {str(e)}")
 
     # 현재 태스크 ID (시스템 AI의 태스크)
     parent_task_id = get_current_task_id()
     if not parent_task_id:
-        return "오류: 현재 태스크 ID가 없습니다. (내부 오류)"
+        return _fail("현재 태스크 ID가 없습니다. (내부 오류)")
+
+    # 순환 위임 차단 — 대상이 조상 사슬(자기 자신 포함)에 있으면 접수하지 않는다.
+    try:
+        env = envelope(target_identity(project_id, agent_id))
+    except DelegationCycle as cyc:
+        return _fail(str(cyc), error_type="delegation_cycle")
 
     # 자식 태스크 생성
     child_task_id = f"task_{uuid.uuid4().hex[:8]}"
@@ -306,7 +325,8 @@ def _execute_call_project_agent(tool_input: dict) -> str:
             'child_task_id': child_task_id,
             'delegated_to': target.config.get('name', agent_id),
             'delegation_message': message,
-            'delegation_time': datetime.now().isoformat()
+            'delegation_time': datetime.now().isoformat(),
+            'mode': mode,
         })
 
         update_task_delegation(
@@ -330,7 +350,10 @@ def _execute_call_project_agent(tool_input: dict) -> str:
         'content': f"[task:{child_task_id}] {message}",
         'from_agent': '시스템 AI',
         'task_id': child_task_id,
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        # 봉투 — 출처(training 등)와 조상 사슬. 수신 루프가 처리 동안 세운다.
+        'origin': env.get('origin'),
+        'chain': env.get('chain'),
     }
 
     with AgentRunner._lock:
@@ -342,9 +365,12 @@ def _execute_call_project_agent(tool_input: dict) -> str:
     set_called_agent(True)
 
     agent_name = target.config.get('name', agent_id)
-    print(f"[시스템 AI] 위임: 시스템 AI → {agent_name} (task: {child_task_id})")
+    print(f"[시스템 AI] 위임: 시스템 AI → {agent_name} (task: {child_task_id}, mode: {mode})")
 
-    return f"'{agent_name}'에게 작업을 위임했습니다. 결과를 기다리세요."
+    return accepted(project_id, child_task_id, agent_id=agent_id, agent=agent_name,
+                    child_task_id=child_task_id, parent_task_id=parent_task_id, mode=mode,
+                    message=(f"'{agent_name}'에게 작업을 위임했습니다 (task {child_task_id}). "
+                             "접수 확인이며 결과는 아직 없습니다 — 완료 보고가 도착할 때까지 기다리세요."))
 
 
 def _execute_scheduled_project_agent(tool_input: dict) -> str:
@@ -362,8 +388,10 @@ def _execute_scheduled_project_agent(tool_input: dict) -> str:
         queued = False
         dispatched = False
         try:
-            reply = _execute_call_project_agent(tool_input)
-            dispatched = True
+            accept = _execute_call_project_agent(tool_input)
+            reply = (accept.get("message") if accept.get("success")
+                     else f"오류: {accept.get('error')}") if isinstance(accept, dict) else str(accept)
+            dispatched = bool(isinstance(accept, dict) and accept.get("success"))
         except Exception as exc:
             reply = f"오류: {exc}"
             raise

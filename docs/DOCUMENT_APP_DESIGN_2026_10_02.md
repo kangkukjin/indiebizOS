@@ -210,6 +210,8 @@ AI 요청은 `document_id + snapshot_id + 선택 앵커 + 목표`를 고정한�
 
 ### IBL 연결
 
+> **2026-10-05 개정**: 아래의 `self:document`/`self:sheet` 세션 op 는 범용 작업 공간 낱말 **`[self:workspace]`** 로 흡수됐다(`backend/services/workspace_sessions.py`, 가이드 `workspace.md`). 재계획 정본은 [APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md](APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md).
+
 UI는 문서 서비스 API를 직접 호출한다. AI는 기존 `self:document`의 op를 확장해 같은 서비스에 접근하도록 하며 새 코어 문법·노드를 만들지 않는다. 제안 op는 `open`, `snapshot`, `read`, `propose`, `apply`, `save`, `export`, `versions`, `restore`, `capabilities`다. 기존 `inspect/edit` 인자·원본 보존·새 파일 반환 계약을 유지한다. 부작용 op별 선언과 사용자 신원 검사를 명시한다.
 
 `table:document`는 새 문서 생성 책임을 유지하고 결과 파일을 문서 서비스에 등록한다. `self:read`의 일반 파일 읽기와 `self:fill`의 기존 양식 채우기는 중복 재구현하지 않는다. 능력 추가 때 소스 YAML·가이드·핸들러 도움말·용례·파생 빌드를 함께 갱신한다. 현재 설계 문서는 이 op들이 이미 구현됐다고 뜻하지 않는다.

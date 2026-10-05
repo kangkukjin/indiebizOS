@@ -15,6 +15,9 @@ function clientCall(value,inputs={},row){
 }
 buildAction=function(value,inputs){return clientCall(value,inputs)||originalBuildAction(value,inputs)};
 rowAction=function(value,row){return clientCall(value,{},row)||originalRowAction(value,row)};
+/* 판본 2 바인딩(actionRequest)도 같은 동작 ID 경로 — 회원 표면은 원문 IBL 을 보내지 않는다. 치환·inputs 조립은 서버(member_app_actions.resolve). */
+const originalActionRequest=typeof actionRequest==='function'?actionRequest:null;
+if(originalActionRequest)actionRequest=function(block,value,inputs,row){return clientCall(value,inputs||{},row)||originalActionRequest(block,value,inputs,row)};
 ibl=function(value){
  const request=clientCall(value);
  if(!request){if(INSTRUMENTS.some(a=>a.client_actions))return Promise.reject(Error('현재 공개된 앱 동작이 아닙니다'));return legacyMemberIbl(value)}

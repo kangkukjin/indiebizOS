@@ -239,6 +239,7 @@
     "self:trigger#history": "트리거 id 필요 — 고정 fixture 부적합",
     "self:workflow#detail": "workflow_id 필요(list 결과의 id) — 고정 fixture 부적합",
     "self:workflow#run": "workflow_id/name 또는 do 필요 + 부작용 몸통 실행 — 고정 fixture 부적합",
+    "self:workspace": "실제 파일·저장소 경로 필요 — 임시 작업 공간 회귀(test_workspace_sessions)로 검증",
     "sense:here": "위치 측정(폰=GPS 센서) — 자동 점검 실행 금지",
     "sense:listen": "마이크 하드웨어/오디오 파일·모델 키 필요 — 자동 호출 금지",
     "sense:listen#analyze": "오디오 파일과 모델 API 키 필요",

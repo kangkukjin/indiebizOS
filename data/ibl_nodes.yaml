@@ -246,6 +246,7 @@ nodes:
         - ISBN
         - 도서관
         app:
+          edition: 2
           icon: 📚
           name: 도서
           order: 1
@@ -296,13 +297,13 @@ nodes:
                 label: 경남
               - value: '50'
                 label: 제주
-            action: '[sense:book]{keyword: "$q"}'
+            action: '[sense:book]{keyword: $q}'
             view:
             - type: card_list
               from: items
               empty_from: message
               item_click:
-                action: '[sense:book]{isbn: "{isbn13}", detail: true, region: "$region"}'
+                action: '[sense:book]{isbn: $item.isbn13, detail: true, region: $region}'
                 tabs:
                 - name: 개요
                   view:
@@ -454,13 +455,13 @@ nodes:
                 label: 여성
               - value: 남성
                 label: 남성
-            action: '[sense:book]{op: "popular", region: "$region", age: "$age", gender: "$gender"}'
+            action: '[sense:book]{op: "popular", region: $region, age: $age, gender: $gender}'
             view:
             - type: card_list
               from: items
               empty_from: message
               item_click:
-                action: '[sense:book]{isbn: "{isbn13}", detail: true, region: "$region"}'
+                action: '[sense:book]{isbn: $item.isbn13, detail: true, region: $region}'
                 tabs:
                 - name: 개요
                   view:
@@ -522,7 +523,7 @@ nodes:
               from: items
               empty_from: message
               item_click:
-                action: '[sense:book]{isbn: "{isbn13}", detail: true}'
+                action: '[sense:book]{isbn: $item.isbn13, detail: true}'
                 tabs:
                 - name: 개요
                   view:
@@ -573,7 +574,7 @@ nodes:
               type: text
               placeholder: 납본 전수 — 신간·소부수도  예) 하네스
               required: true
-            action: '[sense:book]{keyword: "$q", source: "nl"}'
+            action: '[sense:book]{keyword: $q, source: "nl"}'
             view:
             - type: card_list
               from: items
@@ -592,7 +593,7 @@ nodes:
               type: text
               placeholder: 국내외 도서·원서  예) sapiens, 한강
               required: true
-            action: '[sense:book]{source: "google", keyword: "$q"}'
+            action: '[sense:book]{source: "google", keyword: $q}'
             view:
             - type: card_list
               from: items
@@ -612,7 +613,7 @@ nodes:
               type: text
               placeholder: 서양 고전  예) sherlock, austen
               required: true
-            action: '[sense:classic]{op: "western", query: "$q"}'
+            action: '[sense:classic]{op: "western", query: $q}'
             view:
             - type: card_list
               from: items
@@ -686,6 +687,7 @@ nodes:
             webcam: 좌표 근처 해외 경치 웹캠 (Windy 직행, 교통 CCTV 건너뜀)
         implementation: cctv_search/nearby/webcam op 분기 (카카오 우선 → TOPIS/UTIC/ITS → Windy 폴백; webcam은 Windy 직행).
         app:
+          edition: 2
           instrument: cctv
           icon: 📹
           name: CCTV
@@ -697,7 +699,7 @@ nodes:
             placeholder: '지역·도로 (예: 해운대, 경부)'
             default: 해운대
           auto_run: true
-          action: '[sense:cctv]{op: "search", query: "$q"}'
+          action: '[sense:cctv]{op: "search", query: $q}'
           view:
           - type: map
             markers: items
@@ -742,6 +744,7 @@ nodes:
         - kaggle
         - 캐글
         app:
+          edition: 2
           icon: 🏆
           name: AI 공모전
           order: 12
@@ -764,7 +767,7 @@ nodes:
                 label: 상금순
               - value: numberOfTeams
                 label: 인기순
-            action: '[sense:contest]{query: "$q", sort: "$sort"}'
+            action: '[sense:contest]{query: $q, sort: $sort}'
             view:
             - type: card_list
               from: items
@@ -849,6 +852,7 @@ nodes:
         - 뮤지컬
         - 공연장
         app:
+          edition: 2
           instrument: culture
           icon: 🎭
           name: 문화공연
@@ -873,7 +877,7 @@ nodes:
           - key: kw
             type: text
             placeholder: 공연명 키워드(선택)
-          action: '[sense:performance]{genre: "$genre", region: "$region", keyword: "$kw"}'
+          action: '[sense:performance]{genre: $genre, region: $region, keyword: $kw}'
           view:
           - type: image_grid
             from: items
@@ -898,6 +902,7 @@ nodes:
         implementation: 한국문화정보원(KCISA) API로 전시/문화행사 검색
         target_key: query
         app:
+          edition: 2
           instrument: culture
           mode: 전시
           mode_order: 1
@@ -907,7 +912,7 @@ nodes:
             default: 전시
             placeholder: '전시 키워드 (예: 사진, 현대미술)'
             required: true
-          action: '[sense:exhibit]{keyword: "$kw"}'
+          action: '[sense:exhibit]{keyword: $kw}'
           view:
           - type: image_grid
             from: items
@@ -993,6 +998,7 @@ nodes:
         - 개발외주
         - 재능마켓
         app:
+          edition: 2
           instrument: freelance
           icon: 💼
           name: 외주
@@ -1013,7 +1019,7 @@ nodes:
                 label: 인기순
               - value: score
                 label: 연관도순
-            action: '[sense:freelance]{type: "gigs", query: "$query", sort: "$sort"}'
+            action: '[sense:freelance]{type: "gigs", query: $query, sort: $sort}'
             view:
             - type: card_list
               from: items
@@ -1034,7 +1040,7 @@ nodes:
               label: 검색어
               placeholder: '예: 로고디자인, 웹개발'
               required: true
-            action: '[sense:freelance]{type: "experts", query: "$query"}'
+            action: '[sense:freelance]{type: "experts", query: $query}'
             view:
             - type: card_list
               from: items
@@ -1106,6 +1112,7 @@ nodes:
         - 종목
         - 매매동향
         app:
+          edition: 2
           instrument: invest
           icon: 📈
           name: 투자
@@ -1137,7 +1144,7 @@ nodes:
                 value: 3mo
               - label: 1년
                 value: 1y
-            action: '[sense:stock]{op: "quote", ticker: "$q", period: "$period", max_points: 60}'
+            action: '[sense:stock]{op: "quote", ticker: $q, period: $period, max_points: 60}'
             view:
             - type: metric
               label: '{data.symbol}'
@@ -1180,7 +1187,7 @@ nodes:
                 value: 30
               - label: 3달
                 value: 90
-            action: '[sense:crypto]{coin_id: "$coin", days: $days}'
+            action: '[sense:crypto]{coin_id: $coin, days: $days}'
             view:
             - type: metric
               label: '{data.name} ({data.symbol})'
@@ -1232,7 +1239,7 @@ nodes:
                 value: 3mo
               - label: 1년
                 value: 1y
-            action: '[sense:stock]{op: "quote", ticker: "$sym", period: "$period", max_points: 60}'
+            action: '[sense:stock]{op: "quote", ticker: $sym, period: $period, max_points: 60}'
             view:
             - type: metric
               label: '{data.symbol}'
@@ -1373,6 +1380,7 @@ nodes:
         tool: get_weather
         implementation: Open-Meteo 무료 API로 날씨 조회 (API키 불필요)
         app:
+          edition: 2
           icon: 🌤️
           name: 날씨
           order: 0
@@ -1390,7 +1398,7 @@ nodes:
             - 수원
             - 인천
             - 대구
-          action: '[sense:weather]{city: "$city", days: 7}'
+          action: '[sense:weather]{city: $city, days: 7}'
           view:
           - type: metric
             label: '{city}'
@@ -1419,6 +1427,7 @@ nodes:
         implementation: Kakao(페이지네이션 15×3=45) + Naver Local 듀얼 검색, 가게명 정규화로 중복 병합. 상위 12곳은 네이버 블로그 검색(/v1/search/blog.json, 검색어 = 행 주소의 시·군·구 + 가게명 — 주소 없는 행은 검색 좌표의 역지오코딩 시·군·구)으로 blog_count·reason(가게명 등장 글 제목만) 병렬 부착 후 언급순 정렬. url=카카오 place.map.kakao.com(평점/리뷰 페이지).
         target_key: query
         app:
+          edition: 2
           icon: 🍴
           name: 맛집
           order: 2
@@ -1427,14 +1436,14 @@ nodes:
             type: text
             placeholder: '예: 강남역 맛집 / 성수동 카페'
             required: true
-          action: '[sense:restaurant]{query: "$q"}'
+          action: '[sense:restaurant]{query: $q}'
           filter:
             from_field: cat
           view:
           - type: map
             markers: items
             'on':
-              search_here: '[sense:restaurant]{query: "$q", x: "$lng", y: "$lat", radius: $radius}'
+              search_here: '[sense:restaurant]{query: $q, x: $lng, y: $lat, radius: $radius}'
           - type: card_list
             from: items
             empty: 검색 결과가 없습니다
@@ -1490,6 +1499,8 @@ nodes:
             search: 키워드/카테고리로 장소 검색 (기본)
             detail: 한 곳 상세 — name(+id·lat·lng) → 카카오 기본 + 네이버 설명 + 블로그 언급
         app:
+          edition: 1
+          legacy_reason: 판본 2 는 @노드 지정(@hub)·파이프 축약(| sort:)을 받지 않는다 — 폰 포워드 라우팅이 이 문법에 기대어 있어 구형 치환 유지
           instrument: directions
           icon: 🗺️
           name: 지도
@@ -1738,6 +1749,7 @@ nodes:
         - 예약
         - 리조트
         app:
+          edition: 2
           instrument: stay
           icon: 🏨
           name: 숙소
@@ -1770,7 +1782,7 @@ nodes:
               type: text
               label: 체크아웃
               placeholder: YYYY-MM-DD
-            action: '[sense:stay]{source: "goodchoice", region: "$region", type: "$type", checkin: "$checkin", checkout: "$checkout"}'
+            action: '[sense:stay]{source: "goodchoice", region: $region, type: $type, checkin: $checkin, checkout: $checkout}'
             view:
             - type: card_list
               from: items
@@ -1795,7 +1807,7 @@ nodes:
               type: text
               label: 주간요금 상한(원)
               placeholder: '예: 300000'
-            action: '[sense:stay]{source: "33m2", region: "$region", max_week_fee: "$max_week_fee"}'
+            action: '[sense:stay]{source: "33m2", region: $region, max_week_fee: $max_week_fee}'
             view:
             - type: card_list
               from: items
@@ -1844,6 +1856,7 @@ nodes:
         - 내몸
         - 프로세스
         app:
+          edition: 2
           instrument: host
           icon: 🖥️
           name: 시스템
@@ -1909,7 +1922,7 @@ nodes:
             - key: q
               type: text
               placeholder: 파일명·확장자 검색 (예 report, pdf)
-            action: '[self:file_find]{search_term: "$q", limit: 50}'
+            action: '[self:file_find]{search_term: $q, limit: 50}'
             view:
             - type: card_list
               from: items
@@ -1982,6 +1995,7 @@ nodes:
         - MBC
         - SBS
         app:
+          edition: 2
           icon: 📻
           name: 라디오
           order: 5
@@ -2000,10 +2014,10 @@ nodes:
               sub: '{broadcaster} · {description}'
               button:
                 label: ▶
-                action: '[limbs:radio]{op: "play", station_id: "{station_id}"}'
+                action: '[limbs:radio]{op: "play", station_id: $item.station_id}'
               button2:
                 label: ♡
-                action: '[limbs:radio_favorite]{op: "add", station_id: "{station_id}", name: "{name}"}'
+                action: '[limbs:radio_favorite]{op: "add", station_id: $item.station_id, name: $item.name}'
           - name: 검색
             buttons:
             - label: ■ 정지
@@ -2013,7 +2027,7 @@ nodes:
               type: text
               placeholder: 방송국 이름·태그  예) jazz, BBC
               required: true
-            action: '[sense:radio]{op: "search", query: "$q", limit: 30}'
+            action: '[sense:radio]{op: "search", query: $q, limit: 30}'
             view:
             - type: list_action
               from: items
@@ -2022,10 +2036,10 @@ nodes:
               sub: '{country} · {tags|trunc:40}'
               button:
                 label: ▶
-                action: '[limbs:radio]{op: "play", stream_url: "{stream_url}"}'
+                action: '[limbs:radio]{op: "play", stream_url: $item.stream_url}'
               button2:
                 label: ♡
-                action: '[limbs:radio_favorite]{op: "add", stream_url: "{stream_url}", name: "{name}"}'
+                action: '[limbs:radio_favorite]{op: "add", stream_url: $item.stream_url, name: $item.name}'
           - name: 즐겨찾기
             auto_run: true
             buttons:
@@ -2041,10 +2055,10 @@ nodes:
               sub: '{added_at}'
               button:
                 label: ▶
-                action: '[limbs:radio]{op: "play", station_id: "{station_id}", stream_url: "{stream_url}"}'
+                action: '[limbs:radio]{op: "play", station_id: $item.station_id, stream_url: $item.stream_url}'
               button2:
                 label: ✕
-                action: '[limbs:radio_favorite]{op: "remove", name: "{name}"}'
+                action: '[limbs:radio_favorite]{op: "remove", name: $item.name}'
                 refresh: true
       commercial:
         params:
@@ -2072,6 +2086,7 @@ nodes:
         tool: search_commercial_district
         implementation: 소상공인진흥공단 상권정보 공개 API(storeListInRadius/storeListInDong) 전 페이지 수집 → 점포 items. 집계 없음.
         app:
+          edition: 2
           instrument: commercial
           icon: 🏪
           name: 상권
@@ -2086,7 +2101,7 @@ nodes:
             label: 경도
             default: '127.0276'
           auto_run: true
-          action: '[sense:commercial]{lat: "$lat", lng: "$lng"}'
+          action: '[sense:commercial]{lat: $lat, lng: $lng}'
           filter:
             from_field: category
           view:
@@ -2094,7 +2109,7 @@ nodes:
             markers: items
             max: 1500
             'on':
-              moveend: '[sense:commercial]{lat: "$lat", lng: "$lng", radius: "$radius"}'
+              moveend: '[sense:commercial]{lat: $lat, lng: $lng, radius: $radius}'
           - type: metric
             label: 주변 점포 수
             big: '{total_count}개'
@@ -2106,7 +2121,7 @@ nodes:
               lines:
               - '{category} · {address}'
             item_click:
-              action: '[sense:restaurant]{query: "{name}", x: {lng}, y: {lat}, radius: 300}'
+              action: '[sense:restaurant]{query: $item.name, x: $item.lng, y: $item.lat, radius: 300}'
               view:
               - type: card_list
                 from: items
@@ -2239,6 +2254,7 @@ nodes:
         - 빌라
         - 원룸
         app:
+          edition: 2
           icon: 🏢
           name: 실거래가
           order: 9
@@ -2286,7 +2302,7 @@ nodes:
             type: select
             label: 구/군
             required: true
-            options_action: '[sense:realty]{op: "codes", city: "$province"}'
+            options_action: '[sense:realty]{op: "codes", city: $province}'
             options_from: items
             option_value: 코드
             option_label: 지역
@@ -2321,7 +2337,7 @@ nodes:
               label: 최근 6개월
             - value: '12'
               label: 최근 12개월
-          action: '[sense:realty]{region_code: "$region", type: "$type", deal: "$deal", months: "$period"}'
+          action: '[sense:realty]{region_code: $region, type: $type, deal: $deal, months: $period}'
           view:
           - type: metric
             label: 평균 거래가
@@ -2342,7 +2358,7 @@ nodes:
               - '{법정동} · {면적}㎡ · {층}층 · {건축년도}년'
               - '{거래금액}만원 · {거래년도}.{거래월}.{거래일}'
             item_click:
-              action: '[sense:realty]{region_code: "$region", type: "$type", deal: "$deal", months: 12, name: "{명칭}"}'
+              action: '[sense:realty]{region_code: $region, type: $type, deal: $deal, months: 12, name: "{명칭}"}'
               view:
               - type: card_list
                 from: items
@@ -2443,6 +2459,7 @@ nodes:
         - 정책자금
         - R&D
         app:
+          edition: 2
           icon: 🚀
           name: 사업공고
           order: 11
@@ -2464,7 +2481,7 @@ nodes:
                 label: 중기부
               - value: all
                 label: 통합
-            action: '[sense:startup]{query: "$q", source: "$src"}'
+            action: '[sense:startup]{query: $q, source: $src}'
             view:
             - type: card_list
               from: items
@@ -3080,6 +3097,7 @@ nodes:
         implementation: yt-dlp ytsearch로 유튜브 검색 결과 목록 추출
         target_key: query
         app:
+          edition: 2
           instrument: ytmusic
           icon: 🎵
           name: 유튜브 뮤직
@@ -3091,7 +3109,7 @@ nodes:
               type: text
               placeholder: 곡·아티스트 검색
               required: true
-            action: '[sense:search_youtube]{query: "$q", count: 45}'
+            action: '[sense:search_youtube]{query: $q, count: 45}'
             view:
             - type: list_action
               from: items
@@ -3100,10 +3118,10 @@ nodes:
               sub: '{channel} · {duration}'
               button:
                 label: ▶
-                action: '[limbs:music]{op: "play", mode: "client", query: "https://www.youtube.com/watch?v={video_id}"}'
+                action: '[limbs:music]{op: "play", mode: "client", query: f"https://www.youtube.com/watch?v=${item.video_id}"}'
               button2:
                 label: ⬇
-                action: '[limbs:music]{op: "download", mode: "client", url: "https://www.youtube.com/watch?v={video_id}"}'
+                action: '[limbs:music]{op: "download", mode: "client", url: f"https://www.youtube.com/watch?v=${item.video_id}"}'
           - name: 큐
             phone_render: false
             auto_run: true
@@ -3249,6 +3267,7 @@ nodes:
         - 스케줄관리
         - 예약관리
         app:
+          edition: 2
           instrument: calendar
           icon: 📅
           name: 일정
@@ -3259,9 +3278,9 @@ nodes:
           - type: calendar
             from: items
             color_field: type
-            delete_action: '[self:manage_events]{op: "delete", event_id: "{id}"}'
+            delete_action: '[self:manage_events]{op: "delete", event_id: $item.id}'
             add:
-              action: '[self:manage_events]{op: "create", title: "$title", date: "$date", time: "$time", repeat: "$repeat", type: "$type", description: "$description"}'
+              action: '[self:manage_events]{op: "create", title: $title, date: $date, time: $time, repeat: $repeat, type: $type, description: $description}'
               fields:
               - key: title
                 type: text
@@ -3834,6 +3853,7 @@ nodes:
         - 비즈니스 목록
         - 사업 등록
         app:
+          edition: 2
           instrument: business
           icon: 🏢
           name: 비즈니스
@@ -3866,15 +3886,15 @@ nodes:
                 value: -1
             buttons:
             - label: ＋ 비즈니스 추가
-              action: '[self:business]{store: "business", op: "save", name: "$q"}'
+              action: '[self:business]{store: "business", op: "save", name: $q}'
               refresh: true
-            action: '[self:business]{store: "business", op: "list", level: "$level", search: "$q"}'
+            action: '[self:business]{store: "business", op: "list", level: $level, search: $q}'
             view:
             - type: card_list
               from: items
               master_detail: true
               item_click:
-                action: '[self:business]{store: "business", op: "detail", id: "{id}"}'
+                action: '[self:business]{store: "business", op: "detail", id: $item.id}'
                 view:
                 - type: form
                   title: 비즈니스 정보
@@ -3904,11 +3924,11 @@ nodes:
                     label: 설명
                     type: textarea
                     value: '{business.description}'
-                  action: '[self:business]{store: "business", op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
+                  action: '[self:business]{store: "business", op: "save", id: $item.business.id, name: $name, level: $level, description: $description}'
                   button: 저장
                   actions:
                   - label: 비즈니스 삭제
-                    action: '[self:business]{store: "business", op: "delete", id: "{business.id}"}'
+                    action: '[self:business]{store: "business", op: "delete", id: $item.business.id}'
                     style: danger
                     confirm: 이 비즈니스를 삭제할까요? 소속 아이템도 함께 사라집니다.
                     back: true
@@ -3933,16 +3953,16 @@ nodes:
               placeholder: 제목 검색 · ＋추가할 제목
             buttons:
             - label: ＋ 아이템 추가
-              action: '[self:business]{store: "item", op: "save", business_id: "$biz", title: "$q"}'
+              action: '[self:business]{store: "item", op: "save", business_id: $biz, title: $q}'
               refresh: true
-            action: '[self:business]{store: "item", op: "list", business_id: "$biz", search: "$q"}'
+            action: '[self:business]{store: "item", op: "list", business_id: $biz, search: $q}'
             view:
             - type: card_list
               from: items
               master_detail: true
               empty_from: message
               item_click:
-                action: '[self:business]{store: "item", op: "detail", item_id: "{id}"}'
+                action: '[self:business]{store: "item", op: "detail", item_id: $item.id}'
                 view:
                 - type: form
                   title: 아이템
@@ -3959,13 +3979,13 @@ nodes:
                     label: 사진
                     type: images
                     value: '{item.attachment_path}'
-                    add_action: '[self:business]{store: "item", op: "add_image", item_id: "{item.id}", path: "$path"}'
-                    remove_action: '[self:business]{store: "item", op: "remove_image", item_id: "{item.id}", path: "$path"}'
-                  action: '[self:business]{store: "item", op: "save", id: "{item.id}", title: "$title", details: "$details"}'
+                    add_action: '[self:business]{store: "item", op: "add_image", item_id: $item.item.id, path: $path}'
+                    remove_action: '[self:business]{store: "item", op: "remove_image", item_id: $item.item.id, path: $path}'
+                  action: '[self:business]{store: "item", op: "save", id: $item.item.id, title: $title, details: $details}'
                   button: 저장
                   actions:
                   - label: 아이템 삭제
-                    action: '[self:business]{store: "item", op: "delete", item_id: "{item.id}"}'
+                    action: '[self:business]{store: "item", op: "delete", item_id: $item.item.id}'
                     style: danger
                     confirm: 이 아이템을 삭제할까요?
                     back: true
@@ -3986,7 +4006,7 @@ nodes:
             - type: card_list
               from: items
               item_click:
-                action: '[self:business]{store: "document", op: "detail", level: "{level}"}'
+                action: '[self:business]{store: "document", op: "detail", level: $item.level}'
                 view:
                 - type: form
                   title: 공개 비즈니스 문서
@@ -3999,7 +4019,7 @@ nodes:
                     label: 내용
                     type: textarea
                     value: '{document.content}'
-                  action: '[self:business]{store: "document", op: "save", level: "{document.level}", title: "$title", content: "$content"}'
+                  action: '[self:business]{store: "document", op: "save", level: $item.document.level, title: $title, content: $content}'
                   button: 저장
               card:
                 title: '{title}'
@@ -4012,7 +4032,7 @@ nodes:
             - type: card_list
               from: items
               item_click:
-                action: '[self:business]{store: "guideline", op: "detail", level: "{level}"}'
+                action: '[self:business]{store: "guideline", op: "detail", level: $item.level}'
                 view:
                 - type: form
                   title: 근무 지침
@@ -4025,7 +4045,7 @@ nodes:
                     label: 내용
                     type: textarea
                     value: '{guideline.content}'
-                  action: '[self:business]{store: "guideline", op: "save", level: "{guideline.level}", title: "$title", content: "$content"}'
+                  action: '[self:business]{store: "guideline", op: "save", level: $item.guideline.level, title: $title, content: $content}'
                   button: 저장
               card:
                 title: 레벨 {level} · {title}
@@ -4180,6 +4200,7 @@ nodes:
         - 순자산
         - 회사 재무
         app:
+          edition: 2
           instrument: finance
           icon: 💰
           name: 재무기록
@@ -4269,7 +4290,7 @@ nodes:
             - key: keyword
               type: text
               placeholder: 가맹점·메모 검색
-            action: '[self:finance]{op: "query", query_type: "$tx", days: "$days", keyword: "$keyword", owner: "$owner"}'
+            action: '[self:finance]{op: "query", query_type: $tx, days: $days, keyword: $keyword, owner: $owner}'
             view:
             - type: sparkline
               from: points
@@ -4288,7 +4309,7 @@ nodes:
               options_from: items
               option_value: title
               option_label: title
-            action: '[self:finance]{op: "query", query_type: "자산", owner: "$owner"}'
+            action: '[self:finance]{op: "query", query_type: "자산", owner: $owner}'
             view:
             - type: kv
               rows:
@@ -4332,7 +4353,7 @@ nodes:
             - key: owner
               type: text
               placeholder: 주체 (비우면 기본)
-            action: '[self:finance]{op: "save", kind: "$kind", amount: "$amount", category: "$category", counterparty: "$counterparty", owner: "$owner"}'
+            action: '[self:finance]{op: "save", kind: $kind, amount: $amount, category: $category, counterparty: $counterparty, owner: $owner}'
             view:
             - type: kv
               rows:
@@ -4353,7 +4374,7 @@ nodes:
             - key: owner
               type: text
               placeholder: 주체 (비우면 기본)
-            action: '[self:finance]{op: "ingest", file: "$file", text: "$text", owner: "$owner"}'
+            action: '[self:finance]{op: "ingest", file: $file, text: $text, owner: $owner}'
             view:
             - type: kv
               rows:
@@ -4473,6 +4494,7 @@ nodes:
         - 체중
         - 투약
         app:
+          edition: 2
           instrument: health
           icon: 🩺
           name: 건강기록
@@ -4509,7 +4531,7 @@ nodes:
             - key: days
               type: text
               default: '365'
-            action: '[self:health]{op: "query", query_type: "$category", days: "$days"}'
+            action: '[self:health]{op: "query", query_type: $category, days: $days}'
             view:
             - type: sparkline
               from: points
@@ -4557,7 +4579,7 @@ nodes:
             - key: note
               type: text
               placeholder: 메모 (선택)
-            action: '[self:health]{op: "save", category: "$category", value: "$value", note: "$note"}'
+            action: '[self:health]{op: "save", category: $category, value: $value, note: $note}'
             view:
             - type: kv
               rows:
@@ -4575,7 +4597,7 @@ nodes:
             - key: text
               type: text
               placeholder: 메모 또는 붙여넣기 (선택)
-            action: '[self:health]{op: "ingest", file: "$file", text: "$text"}'
+            action: '[self:health]{op: "ingest", file: $file, text: $text}'
             view:
             - type: kv
               rows:
@@ -4597,7 +4619,7 @@ nodes:
               type: text
               required: true
               placeholder: 예 혈액검사, 두통
-            action: '[self:health]{op: "query", query_type: "search", keyword: "$keyword"}'
+            action: '[self:health]{op: "query", query_type: "search", keyword: $keyword}'
             view:
             - type: card_list
               from: items
@@ -4852,6 +4874,7 @@ nodes:
         - mp3
         - flac
         app:
+          edition: 2
           instrument: music
           icon: 🎧
           name: 음악
@@ -4867,7 +4890,7 @@ nodes:
             - key: q
               type: text
               placeholder: 곡·아티스트·앨범 검색
-            action: '[self:music]{op: "library", q: "$q", limit: 300}'
+            action: '[self:music]{op: "library", q: $q, limit: 300}'
             view:
             - type: card_list
               from: items
@@ -4879,7 +4902,7 @@ nodes:
                 - '{duration_str}'
                 image: '{image}'
               item_click:
-                action: '[self:music]{op: "track", path: "{path}"}'
+                action: '[self:music]{op: "track", path: $item.path}'
                 tabs:
                 - name: 재생
                   view:
@@ -4896,7 +4919,7 @@ nodes:
                     sub: '{meta}'
                     button:
                       label: 담기
-                      action: '[self:music]{op: "playlist_add", name: "{name}", path: "{track_path}"}'
+                      action: '[self:music]{op: "playlist_add", name: $item.name, path: $item.track_path}'
                       refresh: true
                 - name: 정보
                   view:
@@ -4931,7 +4954,7 @@ nodes:
               title: '{title}'
               sub: '{meta}'
               item_click:
-                action: '[self:music]{op: "folders", folder: "{path}"}'
+                action: '[self:music]{op: "folders", folder: $item.path}'
                 tabs:
                 - name: 폴더
                   view:
@@ -4941,7 +4964,7 @@ nodes:
                     title: '{title}'
                     sub: '{meta}'
                     item_click:
-                      action: '[self:music]{op: "folders", folder: "{path}"}'
+                      action: '[self:music]{op: "folders", folder: $item.path}'
                       recursive: true
                   - type: media_player
                     from: direct
@@ -4972,11 +4995,11 @@ nodes:
               sub: '{meta}'
               button:
                 label: 삭제
-                action: '[self:music]{op: "playlist_delete", name: "{name}"}'
+                action: '[self:music]{op: "playlist_delete", name: $item.name}'
                 confirm: 이 플레이리스트를 삭제할까요? (곡 파일은 그대로 남습니다)
                 refresh: true
               item_click:
-                action: '[self:music]{op: "playlist", name: "{name}"}'
+                action: '[self:music]{op: "playlist", name: $item.name}'
                 tabs:
                 - name: 연속 재생
                   view:
@@ -4993,7 +5016,7 @@ nodes:
                     sub: '{artist} · {album}'
                     button:
                       label: 빼기
-                      action: '[self:music]{op: "playlist_remove", name: "{playlist_name}", path: "{path}"}'
+                      action: '[self:music]{op: "playlist_remove", name: $item.playlist_name, path: $item.path}'
                       refresh: true
             - type: form
               title: 새 플레이리스트
@@ -5002,7 +5025,7 @@ nodes:
                 label: 이름
                 type: text
                 placeholder: 예) 드라이브, 잠들기 전
-              action: '[self:music]{op: "playlist_create", name: "$name"}'
+              action: '[self:music]{op: "playlist_create", name: $name}'
               button: 만들기
           - name: 보관함
             auto_run: true
@@ -5032,9 +5055,9 @@ nodes:
                 - key: path
                   label: 음악 폴더
                   type: folder
-                action: '[self:music]{op: "add_source", path: "$path"}'
+                action: '[self:music]{op: "add_source", path: $path}'
                 button: 폴더 등록
-              delete_action: '[self:music]{op: "remove_source", path: "{path}"}'
+              delete_action: '[self:music]{op: "remove_source", path: $item.path}'
       notebook:
         returns: items
         side_effect: true
@@ -5109,6 +5132,7 @@ nodes:
             delete: 노트북 삭제 (소스·색인 포함 — 그 노트북의 포식 기억 문서는 _gone 으로 접힘, 일주일 뒤 삭제)
         implementation: notebook 패키지 notebook_op — 저장·색인·검색=notebook_core.py(data/notebook/notebooks.db sqlite WAL, 청크 650자 문단 경계, 하이브리드=ko-sroberta 768d+sqlite-vec+FTS5 BM25, 미설치 시 FTS 폴백 — ★해마 임베딩 모델 아님). ask=문서 지도·본문 경로 또는 청크 검색 경로. 본문 인용은 실제 제공한 source/loc로 검증하고 유효 인용 없으면 실패. 청크 경로는 handler가 발췌 top-K를 경량 AI 제약 생성(발췌만·[n] 인용 의무·모름=NOT_IN_SOURCES)에 넣고, 인용을 결정론 후검증(무효 [n] 제거·quote는 청크 원문에서 코드가 추출=인용 환각 차단). 원본=경로 참조+mtime(사본 없음), 변경은 sources op가 stale로 노출. 스캔(이미지) PDF=OCR 없음 정직 거부. 설계 정본=docs/NOTEBOOK_GROUNDED_QUERY_DESIGN.md
         app:
+          edition: 2
           instrument: notebook
           icon: 📚
           name: 노트북
@@ -5128,7 +5152,7 @@ nodes:
             - key: query
               type: text
               placeholder: 질문 — 소스 안에서만 답합니다
-            action: '[self:notebook]{op: "ask", name: "$nb", query: "$query"}'
+            action: '[self:notebook]{op: "ask", name: $nb, query: $query}'
             view:
             - type: blocks
               from: blocks
@@ -5149,7 +5173,7 @@ nodes:
               master_detail: true
               empty_from: message
               item_click:
-                action: '[self:notebook]{op: "sources", name: "{name}"}'
+                action: '[self:notebook]{op: "sources", name: $item.name}'
                 tabs:
                 - name: 소스
                   view:
@@ -5160,7 +5184,7 @@ nodes:
                     sub: '{meta}'
                     button:
                       label: 빼기
-                      action: '[self:notebook]{op: "remove", name: "{notebook}", source_id: "{source_id}"}'
+                      action: '[self:notebook]{op: "remove", name: $item.notebook, source_id: $item.source_id}'
                       confirm: 이 소스를 노트북에서 뺄까요? 색인도 함께 삭제됩니다.
                       refresh: true
                 - name: 관리
@@ -5171,7 +5195,7 @@ nodes:
                     - key: pick
                       label: 파일 골라 넣기 — 여러 개 선택 가능(고르는 즉시 들어갑니다)
                       type: files
-                      add_action: '[self:notebook]{op: "add", name: "{notebook}", path: "$path"}'
+                      add_action: '[self:notebook]{op: "add", name: $item.notebook, path: $path}'
                     - key: src
                       label: 경로/URL
                       type: text
@@ -5184,11 +5208,11 @@ nodes:
                       label: 본문 붙여넣기(경로 대신)
                       type: textarea
                       value: ''
-                    action: '[self:notebook]{op: "add", name: "{notebook}", path: "$src", title: "$title", text: "$text"}'
+                    action: '[self:notebook]{op: "add", name: $item.notebook, path: $src, title: $title, text: $text}'
                     button: 넣기
                     actions:
                     - label: 이 노트북 삭제
-                      action: '[self:notebook]{op: "delete", name: "{notebook}"}'
+                      action: '[self:notebook]{op: "delete", name: $item.notebook}'
                       style: danger
                       confirm: 이 노트북과 모든 소스·색인을 삭제할까요? (원본 파일·URL은 지우지 않습니다)
                       back: true
@@ -5208,7 +5232,7 @@ nodes:
               option_value: name
               option_label: name
               required: true
-            action: '[self:notebook]{op: "map", name: "$nb"}'
+            action: '[self:notebook]{op: "map", name: $nb}'
             view:
             - type: card_list
               from: items
@@ -5220,7 +5244,7 @@ nodes:
                 - '{meta}'
                 - '{summary}'
               item_click:
-                action: '[self:notebook]{op: "card_read", name: "{notebook}", source: "{source_id}"}'
+                action: '[self:notebook]{op: "card_read", name: $item.notebook, source: $item.source_id}'
                 view:
                 - type: form
                   title: 카드 — {title}
@@ -5230,11 +5254,11 @@ nodes:
                     type: textarea
                     rows: 28
                     value: '{text}'
-                  action: '[self:notebook]{op: "card_save", name: "{notebook}", source: "{source_id}", text: "$text"}'
+                  action: '[self:notebook]{op: "card_save", name: $item.notebook, source: $item.source_id, text: $text}'
                   button: 저장
                   actions:
                   - label: AI 에게 맡기기 (다시 쓰기)
-                    action: '[self:notebook]{op: "card", name: "{notebook}", source: "{source_id}", force: true}'
+                    action: '[self:notebook]{op: "card", name: $item.notebook, source: $item.source_id, force: true}'
                     confirm: AI 가 문서를 다시 읽어 카드를 새로 씁니다. 지금 원문은 덮입니다.
                     refresh: true
           - name: 만들기
@@ -5253,7 +5277,7 @@ nodes:
                 label: 목적 한 줄(옵션 — 답변의 렌즈)
                 type: text
                 value: ''
-              action: '[self:notebook]{op: "create", name: "$name", note: "$note"}'
+              action: '[self:notebook]{op: "create", name: $name, note: $note}'
               button: 만들기
         keywords:
         - 노트북
@@ -5386,6 +5410,7 @@ nodes:
         - 중복 사진
         - 사진 상세
         app:
+          edition: 2
           instrument: photo
           icon: 📷
           name: 사진
@@ -5409,7 +5434,7 @@ nodes:
             - key: q
               type: text
               placeholder: 파일명·기종 검색
-            action: '[self:photo]{q: "$q", limit: 40}'
+            action: '[self:photo]{q: $q, limit: 40}'
             view:
             - type: image_grid
               from: items
@@ -5436,7 +5461,7 @@ nodes:
             - key: q
               type: text
               placeholder: 파일명 검색 (비우면 최신순)
-            action: '[self:photo]{source: "usb", q: "$q", limit: 40}'
+            action: '[self:photo]{source: "usb", q: $q, limit: 40}'
             view:
             - type: image_grid
               from: items
@@ -5545,6 +5570,8 @@ nodes:
         guides:
         - managed_records.md
         app:
+          edition: 1
+          legacy_reason: self:record 에 판본 2 계약(UNSUPPORTED_ADAPTER)이 없다 — 계약이 붙으면 edition 2 로 전환
           instrument: managed_records
           name: 공동 업무
           icon: 📋
@@ -5708,8 +5735,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-10-04'
-          impl: 2fa9a04ae7cb4b2d
+          at: '2026-10-05'
+          impl: 68d07688c73a6af4
         target_key: path
         aliases:
           offset:
@@ -5721,8 +5748,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-10-04'
-          impl: 2fa9a04ae7cb4b2d
+          at: '2026-10-05'
+          impl: 68d07688c73a6af4
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5798,8 +5825,8 @@ nodes:
           content: $content
         member_transform: member_documents:write
         path_audited:
-          at: '2026-10-04'
-          impl: 2fa9a04ae7cb4b2d
+          at: '2026-10-05'
+          impl: 68d07688c73a6af4
         target_key: path
       list:
         callable_contract:
@@ -6253,6 +6280,7 @@ nodes:
         guides:
         - webapp.md
         app:
+          edition: 2
           instrument: webapp
           icon: 🕸️
           name: 웹앱
@@ -6301,7 +6329,7 @@ nodes:
             - key: memo
               type: text
               placeholder: 메모 (선택)
-            action: '[self:webapp]{op: "register", name: "$name", url: "$url", memo: "$memo"}'
+            action: '[self:webapp]{op: "register", name: $name, url: $url, memo: $memo}'
             view:
             - type: card_list
               from: items
@@ -6373,8 +6401,8 @@ nodes:
         guides:
         - body.md
       document:
-        description: 문서앱 세션·스냅샷·제안·조건부 저장과 기존 DOCX inspect/edit. 원본·버전·작성 창 보호. 새 생성은 table:document.
-        target_description: 'inspect: path·offset·limit → 문단 items(block_id/text/editable), 파일 sha256. edit: path·expected_sha256(조회 해시)·edits 배열([{block_id,old_string,new_string,comment?}])·output(새 docx 경로). track_changes 기본 true, author 기본 IndieBizOS. 한 문단당 한 교체, old_string 고유 일치 필수. 복합 필드·링크·기존 변경/주석 문단은 editable=false로 보호. 소스 문서앱 op는 args 객체로 서비스 인자를 전달: open(path,encoding?), session(document_id,client_id), draft(문서/세션/client_id/epoch/expected,operation_id,text), snapshot(동일 세션 인자), read(document_id,snapshot_id), propose(document_id,snapshot_id,start,end,selected_sha256,replacement), apply(세션 인자,operation_id,proposal_id), save(세션 인자,operation_id,expected_revision), export(세션 인자,operation_id,filename), versions/capabilities/recover(document_id), restore(세션 인자,operation_id,revision_id), close(세션 인자). UI가 작성 중이면 세션을 빼앗지 않으며 저장 전 초안은 UI 전송 확인 뒤 snapshot으로 읽는다. DOCX/ODT/RTF/PDF 원형 편집은 문서앱의 연결된 로컬 엔진, 사무 선택 수정은 활성 편집기 플러그인으로 수행. HWP/HWPX 원형 편집 엔진은 미연결. 생성은 table:document, 양식은 self:fill.'
+        description: 기존 DOCX 의 문단 조회(inspect)와 사본 편집(edit) — 변경 추적·주석, 원본 보존. 문서앱 세션·스냅샷·저장은 [self:workspace](2026-10-05 흡수), 새 생성은 table:document, 양식은 self:fill.
+        target_description: 'inspect: path·offset·limit → 문단 items(block_id/text/editable), 파일 sha256. edit: path·expected_sha256(조회 해시)·edits 배열([{block_id,old_string,new_string,comment?}])·output(새 docx 경로). track_changes 기본 true, author 기본 IndieBizOS. 한 문단당 한 교체, old_string 고유 일치 필수. 복합 필드·링크·기존 변경/주석 문단은 editable=false로 보호. 열린 문서의 초안·세션·저장은 [self:workspace] 로.'
         returns: items
         side_effect: true
         exempt: 실제 DOCX 경로 필요 — 임시 문서 회귀로 검증
@@ -6383,9 +6411,8 @@ nodes:
         tool: document_op
         target_key: op
         runs_on: pc_only
-        implementation: docx_edit_ops.py 사본 편집 + essentials_document_workspace.py 공통 세션·스냅샷·조건부 저장
+        implementation: docx_edit_ops.py 사본 편집(inspect/edit). 세션 op 14개는 2026-10-05 [self:workspace] 로 흡수.
         params:
-          args: object
           path: string
           output: string
           expected_sha256: string
@@ -6400,26 +6427,9 @@ nodes:
             edit: effect
           side_effect:
             inspect: false
-            read: false
-            versions: false
-            capabilities: false
           values:
             inspect: DOCX 문단·표·머리말·꼬리말 텍스트와 편집 가능 여부 조회
             edit: 선택 문구 일괄 교체·변경 추적·주석을 새 파일에 저장
-            open: 파일을 문서앱 공통 원장에 등록
-            session: 단독 작성 창 세션 시작 또는 재연결
-            draft: 세션 버전을 확인하고 복구 초안 저장
-            snapshot: 서버에 도달한 현재 초안의 고정 스냅샷
-            read: 고정 스냅샷 원문 조회
-            propose: 스냅샷 선택에 고정한 교체 제안 생성
-            apply: 세션·선택 검증 후 제안을 초안에 적용
-            save: 기대 원본 버전 확인 후 원본 파일 저장
-            export: 동일 형식의 새 파일에 사본 저장
-            versions: 확정 버전 이력 조회
-            restore: 선택 버전을 초안으로 복구
-            capabilities: 실제 형식별 지원과 미지원 사유 조회
-            recover: 미완료 저장 의도를 재쓰기 없이 복구
-            close: 저장 완료된 작성 세션 닫기
         keywords:
         - 워드
         - 문서수정
@@ -6430,26 +6440,93 @@ nodes:
         - document
         guides:
         - document_edit.md
+      workspace:
+        description: 범용 작업 공간 — 문서(TXT/MD/HTML/DOCX/PDF/HWP)·스프레드시트·코딩(git 저장소)을 같은 계약으로 열기·스냅샷·읽기·제안·적용·저장·버전·복구. 종류는 자료가 정하고(resource 하나), 세션 배관은 몸이 숨긴다. 접수(queued)는 완료가 아니다.
+        target_description: 'op — open: path(파일 또는 git 폴더)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩 과제 목표) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}; snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement → proposal. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 검토·승인·커밋 반영(verify=검증 명령 선택). export: filename 같은 형식 사본. versions/restore(revision)/close/capabilities/recover. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다.'
+        returns: items
+        side_effect: true
+        exempt: 실제 파일·저장소 경로 필요 — 임시 작업 공간 회귀(test_workspace_sessions)로 검증
+        group: file
+        router: handler
+        tool: workspace_op
+        target_key: op
+        runs_on: pc_only
+        implementation: essentials_workspace.py(인자·경로 관문) → backend/services/workspace_sessions.Workspace(어댑터 document/sheet/code 위 공통 계약, office_sessions·coding_workspace 재사용)
+        params:
+          args: object
+          path: string
+          encoding: string
+          kind: string
+          goal: string
+          resource: string
+          selector: object
+          snapshot: string
+          replacement: string
+          values: array
+          proposal: string
+          client: string
+          message: string
+          verify: string
+          filename: string
+          revision: string
+          wait: number
+        ops:
+          default: capabilities
+          returns:
+            save: effect
+            apply: effect
+            export: effect
+            restore: effect
+            close: effect
+          side_effect:
+            read: false
+            versions: false
+            capabilities: false
+            snapshot: false
+          values:
+            open: 파일·git 폴더를 작업 공간에 등록(종류 자동) — resource·capabilities·세션 상태
+            snapshot: 지금 초안·저장본의 고정 스냅샷(시트는 편집창 엔진 응답 대기, queued 가능)
+            read: selector 로 읽기 — 문자 범위·시트 범위·파일 줄 범위·diff·파일 목록, 사무 문서는 읽기 투영
+            propose: 스냅샷에 고정한 변경 제안(문서 교체문·시트 값/수식·코딩 파일 본문)
+            apply: 제안을 초안에 적용(작성 창 세션 보호, 시트는 편집기 접수)
+            save: 기대 버전 확인 뒤 원본 저장 / 코딩은 검토·승인·커밋 반영(message 필수)
+            export: 같은 형식의 새 사본 저장
+            versions: 저장 버전·복구 초안 목록(코딩은 커밋 이력)
+            restore: 선택 버전을 초안으로 복구
+            close: 저장 완료된 작성 세션 닫기
+            capabilities: 자료의 실제 지원·엔진·미지원 사유
+            recover: 끊긴 원본 저장 결과를 재쓰기 없이 회수
+        keywords:
+        - 작업공간
+        - 문서편집
+        - 시트편집
+        - 코딩
+        - 세션
+        - 스냅샷
+        - 저장
+        - 버전
+        - workspace
+        guides:
+        - workspace.md
       sheet:
         returns: items
         pipe_in: true
         columns_from: data
         side_effect: true
         exempt: 실존 xlsx 파일 경로 인자 필요(고정 fixture 부적합)
-        description: 엑셀 파일 작업과 활성 스프레드시트 세션. 기존 find/append/update·range/range_write·calculate 보존. open/snapshot/status/read/propose/apply/save/export/versions/restore/capabilities/recover는 앱 공통 서비스.
+        description: 엑셀 파일 작업 — find/append/update·range/range_write/calculate. 활성 시트 세션(열기·스냅샷·제안·저장·버전)은 [self:workspace](2026-10-05 흡수).
         group: file
-        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★append/update는 openpyxl의 보존 한계가 있으며 .xlsm 매크로는 보존. range: range(A1:C10)·sheet → 셀별 값/수식·sha256. range_write: expected_sha256·range·values(같은 크기 2차원 배열)·format(number_format/bold)·output(새 경로), 비대상 ZIP 파트 보존. calculate: path(xlsx)·output(새 경로)·timeout(1~120초), LibreOffice/SOFFICE_PATH 필요, 원래 수식/비대상 파트에 셀 계산 캐시만 반영. 공유/배열/외부 수식·매크로 재계산은 거절, errors와 recalculated 확인. 세션 op는 args 객체: document_id=open의 document.id. snapshot(document_id,operation_id)은 편집창에 최신 상태 요청, status(document_id,접수 반환 operation_id)로 완료 영수증의 result.snapshot.id를 확인. read(document_id,snapshot_id,sheet_id,range)는 고정 값·수식·계산 상태. propose(document_id,snapshot_id,sheet_id,range,values,kind=set_values/set_formulas). 세션 인자=document_id,session_id,client_id,epoch=engine_epoch,expected=session_revision. apply는 세션 인자+proposal_id+operation_id. save(document_id,operation_id,expected_revision)는 최신 편집기 포획 후 저장 접수. queued는 완료가 아니며 status를 읽는다. export는 세션 인자+operation_id+filename, 확인된 초안의 같은 형식 새 사본. restore는 세션 인자+revision_id+operation_id. versions/capabilities/recover는 document_id. 닫힌 파일의 저장 캐시는 기존 range로 읽으며 활성 미저장 값과 구별한다.'
+        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★append/update는 openpyxl의 보존 한계가 있으며 .xlsm 매크로는 보존. range: range(A1:C10)·sheet → 셀별 값/수식·sha256. range_write: expected_sha256·range·values(같은 크기 2차원 배열)·format(number_format/bold)·output(새 경로), 비대상 ZIP 파트 보존. calculate: path(xlsx)·output(새 경로)·timeout(1~120초), LibreOffice/SOFFICE_PATH 필요, 원래 수식/비대상 파트에 셀 계산 캐시만 반영. 공유/배열/외부 수식·매크로 재계산은 거절, errors와 recalculated 확인. 열린 시트의 세션·스냅샷·제안·저장은 [self:workspace] 로. 닫힌 파일의 저장 캐시는 기존 range로 읽으며 활성 미저장 값과 구별한다.'
         router: handler
         tool: sheet_op
         params:
-          args: object
           range: string
           values: array
           format: object
           output: string
           expected_sha256: string
           timeout: number
-        implementation: sheet_ops.py — 헤더 기반 openpyxl 행 편집. sheet_range_ops.py — ZIP 파트 보존 범위/서식 편집 및 LibreOffice 계산 캐시 이식.
+        implementation: sheet_ops.py — 헤더 기반 openpyxl 행 편집. sheet_range_ops.py — ZIP 파트 보존 범위/서식 편집 및 LibreOffice 계산 캐시 이식. 세션 op 11개는 2026-10-05 [self:workspace] 로 흡수.
         target_key: op
         runs_on: pc_only
         ops:
@@ -6462,23 +6539,7 @@ nodes:
           side_effect:
             find: false
             range: false
-            status: false
-            read: false
-            versions: false
-            capabilities: false
           values:
-            open: path로 자료 등록·상태 조회, 앱의 document.id가 공통 자료 ID
-            snapshot: 활성 편집창에 최신 스냅샷 요청 — args document_id·operation_id, queued는 미완료
-            status: args document_id·operation_id(접수 반환 ID)의 완료·실패·결과 조회
-            read: args document_id·snapshot_id·sheet_id·range로 고정된 값·수식·계산 상태 읽기
-            propose: 고정 스냅샷의 범위 값·수식 변경안 — args 상세는 target_description
-            apply: 세션·제안 버전을 검사하고 편집기에 변경 접수 — status 영수증 확인
-            save: 최신 편집 상태 포획 후 조건부 원본 저장 접수 — status 영수증 확인
-            export: 확인된 복구 초안의 같은 형식 사본 저장 — 세션 인자·operation_id·filename
-            versions: args document_id로 저장 버전 목록
-            restore: 이전 저장 버전을 초안으로 복구 — 세션 인자·revision_id·operation_id
-            capabilities: args document_id로 형식·엔진 능력 및 미검증 조회
-            recover: args document_id로 끊긴 원본 저장 결과 회수
             find: 조건으로 행 검색 — where 생략 시 전체, _row 포함
             append: 행 추가 — 기존 수식·서식 보존, "=수식" 문자열 지원
             update: where 로 찾은 행의 set 셀 수정 — where 필수
@@ -6552,8 +6613,8 @@ nodes:
             - read_external
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-10-04'
-          impl: 2fa9a04ae7cb4b2d
+          at: '2026-10-05'
+          impl: 68d07688c73a6af4
         pipe_in: true
         lands_on: body
         limb_op:
@@ -7175,6 +7236,7 @@ nodes:
         implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈) — workspace 도구(프로젝트 무관)
         target_key: action
         app:
+          edition: 2
           icon: 🔖
           name: 즐겨찾기
           order: 10
@@ -7332,10 +7394,26 @@ nodes:
             required:
             - agent_id
             - message
+            enums:
+              mode:
+              - async
+              - sync
+              scope:
+              - same
+              - cross
+              - system
           - when:
               scope: system
             required:
             - message
+            enums:
+              mode:
+              - async
+              - sync
+              scope:
+              - same
+              - cross
+              - system
           result: Record
           effects:
           - write_external
@@ -7370,17 +7448,21 @@ nodes:
           - query
         returns: effect
         pipe_in: true
-        description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기.
-        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본,비동기 보고)/sync(응답 대기, 파이프라인용)/workflow(do=IBL 문장 위임). scope: same(기본)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 fire-and-forget — 앱 "생성" 버튼용, agent_id 불필요). mode=workflow 시 do 필수.'
+        description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기. 반환은 접수증(task_ref·child_task_id·status_url) — 접수는 완료가 아니다.
+        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본, 접수증 반환·결과는 비동기 보고)/sync(같은 접수 뒤 그 작업을 제한 시간 동안 기다려 response 반환, 파이프라인용 — 시간 초과면 실패로 바꾸지 않고 task_ref·state 반환)/workflow(do=IBL 문장 위임, same 전용). scope: same(기본)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 fire-and-forget — 앱 "생성" 버튼용, agent_id 불필요). cross/system 의 workflow 는 미지원 오류. 순환 위임(대상이 조상 사슬에 있음)은 접수 거절.'
         group: delegation
         target_key: agent_id
         router: system
         func: delegate
-        implementation: 'mode/scope로 기존 4 함수를 통합 디스패치 — scope=cross → _execute_call_project_agent
+        implementation: 'mode/scope 통합 디스패치(routing_system._delegate_unified). scope=cross →
 
-          (시스템 AI만), scope=same일 때 mode=async → execute_call_agent, mode=sync →
+          _execute_call_project_agent(접수증 dict), scope=same → execute_call_agent(접수증 JSON);
 
-          _agent_ask_sync (응답 텍스트 반환), mode=workflow → _delegate_workflow (steps 위임).
+          mode=sync 는 두 scope 모두 같은 접수 뒤 delegation_tasks.await_child 가 자식 task 를
+
+          기다린다(임시 AIAgent 실행기 은퇴, 2026-10-05). mode=workflow → _delegate_workflow (same 전용).
+
+          봉투(origin·chain)는 delegation_tasks.envelope, 상태 투영은 task_view.
 
           '
         keywords:
@@ -7574,6 +7656,7 @@ nodes:
             post: 커뮤니티에 글 게시
         implementation: channel_engine._community_feed — read=indienet.fetch_posts/fetch_board_posts, post=indienet.post_to_board. 발신 신원=시스템(indienet) 키.
         app:
+          edition: 2
           instrument: community
           icon: 🌐
           name: IndieNet
@@ -7589,9 +7672,9 @@ nodes:
               placeholder: '#태그 주소 — 태그를 아는 사람들의 방'
             buttons:
             - label: ⭐ 즐겨찾기
-              action: '[others:board]{op: "create", hashtag: "$tag"}'
+              action: '[others:board]{op: "create", hashtag: $tag}'
               refresh: true
-            action: '[others:feed]{op: "read", hashtag: "$tag"}'
+            action: '[others:feed]{op: "read", hashtag: $tag}'
             view:
             - type: thread
               reverse: true
@@ -7604,10 +7687,10 @@ nodes:
               item_button:
                 match: 공유창고\s*Warehouse\s*:\s*(https?://\S+)
                 label: 📦 창고이웃 등록
-                action: '[others:neighbor]{op: "save", npub: "{author_full}", warehouse: "{match1}"}'
+                action: '[others:neighbor]{op: "save", npub: $item.author_full, warehouse: $item.match1}'
             compose:
               placeholder: 이 게시판에 글 쓰기…
-              action: '[others:feed]{op: "post", content: "$text", hashtag: "$tag"}'
+              action: '[others:feed]{op: "post", content: $text, hashtag: $tag}'
               button: 게시
           - name: 즐겨찾기
             auto_run: true
@@ -7621,10 +7704,10 @@ nodes:
               sub: '#{hashtag}'
               button:
                 label: 삭제
-                action: '[others:board]{op: "delete", hashtag: "{hashtag}"}'
+                action: '[others:board]{op: "delete", hashtag: $item.hashtag}'
                 refresh: true
               item_click:
-                action: '[others:feed]{op: "read", hashtag: "{hashtag}"}'
+                action: '[others:feed]{op: "read", hashtag: $item.hashtag}'
                 view:
                 - type: thread
                   reverse: true
@@ -7637,10 +7720,10 @@ nodes:
                   item_button:
                     match: 공유창고\s*Warehouse\s*:\s*(https?://\S+)
                     label: 📦 창고이웃 등록
-                    action: '[others:neighbor]{op: "save", npub: "{author_full}", warehouse: "{match1}"}'
+                    action: '[others:neighbor]{op: "save", npub: $item.author_full, warehouse: $item.match1}'
                 compose:
                   placeholder: 이 게시판에 글 쓰기…
-                  action: '[others:feed]{op: "post", content: "$text", hashtag: "{hashtag}"}'
+                  action: '[others:feed]{op: "post", content: $text, hashtag: $item.hashtag}'
                   button: 게시
         keywords:
         - 커뮤니티
@@ -7802,6 +7885,7 @@ nodes:
         - bulletin
         - 주소로 글쓰기
         app:
+          edition: 2
           instrument: bulletin
           icon: 📋
           name: 게시판
@@ -7831,7 +7915,7 @@ nodes:
                   href: '{url}'
                   label: 이 게시판 열기 →
               item_click:
-                action: '[others:bulletin]{op: "detail", board_id: "{id}"}'
+                action: '[others:bulletin]{op: "detail", board_id: $item.id}'
                 view:
                 - type: kv
                   title: 이 게시판
@@ -7851,11 +7935,11 @@ nodes:
                     label: 사진 첨부 허용
                     type: toggle
                     value: '{board.allow_images}'
-                  action: '[others:bulletin]{op: "config", board_id: "{board.id}", title: "$title", allow_images: "$allow_images"}'
+                  action: '[others:bulletin]{op: "config", board_id: $item.board.id, title: $title, allow_images: $allow_images}'
                   button: 저장
                   actions:
                   - label: 이 게시판 삭제
-                    action: '[others:bulletin]{op: "delete", board_id: "{board.id}"}'
+                    action: '[others:bulletin]{op: "delete", board_id: $item.board.id}'
                     style: danger
                     confirm: 이 게시판과 주소, 모든 글·사진을 삭제할까요? (되돌릴 수 없습니다)
                     back: true
@@ -7865,7 +7949,7 @@ nodes:
                   sub: '{meta}'
                   button:
                     label: 삭제
-                    action: '[others:bulletin]{op: "post_delete", board_id: "{board_id}", post_id: "{id}"}'
+                    action: '[others:bulletin]{op: "post_delete", board_id: $item.board_id, post_id: $item.id}'
                     refresh: true
           - name: 게시판 만들기
             auto_run: true
@@ -7883,7 +7967,7 @@ nodes:
                 label: 사진 첨부 허용
                 type: toggle
                 value: 'true'
-              action: '[others:bulletin]{op: "create", title: "$title", allow_images: "$allow_images"}'
+              action: '[others:bulletin]{op: "create", title: $title, allow_images: $allow_images}'
               button: 게시판 만들기
           - name: 포털 연결
             auto_run: true
@@ -7903,7 +7987,7 @@ nodes:
                 lines:
                 - '{meta}'
               item_click:
-                action: '[others:bulletin]{op: "portals", board_id: "{id}"}'
+                action: '[others:bulletin]{op: "portals", board_id: $item.id}'
                 view:
                 - type: kv
                   title: 이 게시판
@@ -7920,7 +8004,7 @@ nodes:
                   sub: '{meta}'
                   button:
                     label: '{action}'
-                    action: '[others:portal]{op: "display", portal: "{portal_slug}", key: "{board_key}", enabled: "{enabled_next}", min_level: "{min_level_next}"}'
+                    action: '[others:portal]{op: "display", portal: $item.portal_slug, key: $item.board_key, enabled: $item.enabled_next, min_level: $item.min_level_next}'
                     refresh: true
           - name: 설정
             auto_run: true
@@ -7934,7 +8018,7 @@ nodes:
                 label: 공개 사이트 base URL
                 type: text
                 value: '{public_base}'
-              action: '[others:bulletin]{op: "config", public_base: "$public_base"}'
+              action: '[others:bulletin]{op: "config", public_base: $public_base}'
               button: 저장
       messages:
         aliases:
@@ -7960,6 +8044,7 @@ nodes:
             inbox: 대화 목록 (이웃별 최근 메시지·미응답, 최근순)
         implementation: handler.py messages_op — op:thread 는 business_manager.get_messages(neighbor_id) 를 시간 오름차순 반환(채팅 순서), op:inbox 는 neighbors⋈messages 조인으로 대화 목록 합성.
         app:
+          edition: 2
           instrument: messenger
           icon: 💬
           name: 메신저
@@ -7988,15 +8073,15 @@ nodes:
               value: 4
           buttons:
           - label: ＋ 이웃 추가
-            action: '[others:neighbor]{op: "save", name: "$q"}'
-          action: '[others:messages]{op: "inbox", level: "$level", search: "$q"}'
+            action: '[others:neighbor]{op: "save", name: $q}'
+          action: '[others:messages]{op: "inbox", level: $level, search: $q}'
           view:
           - type: card_list
             from: items
             master_detail: true
             empty_from: message
             item_click:
-              action: '[others:messages]{op: "thread", neighbor_id: "{id}", pubkey: "{pubkey}"}'
+              action: '[others:messages]{op: "thread", neighbor_id: $item.id, pubkey: $item.pubkey}'
               tabs:
               - name: 대화
                 view:
@@ -8019,7 +8104,7 @@ nodes:
                     sendable:
                     - email
                     - nostr
-                  action: '[others:channel_send]{channel_type: "$channel_type", to: "$to", body: "$text"}'
+                  action: '[others:channel_send]{channel_type: $channel_type, to: $to, body: $text}'
               - name: 이웃 정보
                 view:
                 - type: form
@@ -8086,13 +8171,13 @@ nodes:
                     label: 비즈니스 문서(공개)
                     type: textarea
                     value: '{business_doc}'
-                  action: '[others:neighbor]{op: "save", id: "{neighbor_id}", name: "$name", info_level: "$info_level", rating: "$rating", warehouse_score: "$warehouse_score", info_share: "$info_share", additional_info: "$additional_info", business_doc: "$business_doc"}'
+                  action: '[others:neighbor]{op: "save", id: $item.neighbor_id, name: $name, info_level: $info_level, rating: $rating, warehouse_score: $warehouse_score, info_share: $info_share, additional_info: $additional_info, business_doc: $business_doc}'
                   button: 저장
                   actions:
                   - label: ⭐ 즐겨찾기 토글
-                    action: '[others:neighbor]{op: "favorite", id: "{neighbor_id}"}'
+                    action: '[others:neighbor]{op: "favorite", id: $item.neighbor_id}'
                   - label: 이웃 삭제 · 대화 숨김
-                    action: '[others:neighbor]{op: "delete", id: "{neighbor_id}", pubkey: "{pubkey}"}'
+                    action: '[others:neighbor]{op: "delete", id: $item.neighbor_id, pubkey: $item.pubkey}'
                     style: danger
                     confirm: 삭제할까요? 이웃이면 연락처·대화가 사라지고, 이웃 아닌 쪽지 상대면 대화가 숨겨집니다(새 메시지가 오면 다시 보여요).
                     back: true
@@ -8102,14 +8187,14 @@ nodes:
                   - key: merge_from
                     label: 합칠 이웃 (이름 또는 id) — 그쪽의 연락처·대화·가입 자격이 이 이웃으로 합류하고, 그쪽 레코드는 은퇴합니다
                     type: text
-                  action: '[others:neighbor]{op: "merge", id: "{neighbor_id}", from: "$merge_from"}'
+                  action: '[others:neighbor]{op: "merge", id: $item.neighbor_id, from: $merge_from}'
                   button: 이 이웃으로 합치기
                 - type: editable_list
                   from: contacts
                   title: 연락처
                   display: '{contact_type} · {contact_value}'
                   empty: 연락처 없음
-                  delete_action: '[others:neighbor]{op: "contact_delete", contact_id: "{id}"}'
+                  delete_action: '[others:neighbor]{op: "contact_delete", contact_id: $item.id}'
                   add:
                     fields:
                     - key: contact_type
@@ -8131,7 +8216,7 @@ nodes:
                     - key: contact_value
                       type: text
                       placeholder: 연락처 값
-                    action: '[others:neighbor]{op: "contact_add", neighbor_id: "{neighbor_id}", contact_type: "$contact_type", contact_value: "$contact_value"}'
+                    action: '[others:neighbor]{op: "contact_add", neighbor_id: $item.neighbor_id, contact_type: $contact_type, contact_value: $contact_value}'
                     button: 추가
             card:
               title: '{favorite|opt:⭐ ,}{name}'
@@ -8280,6 +8365,7 @@ nodes:
         - portal
         - community
         app:
+          edition: 2
           instrument: portal
           icon: 🏘️
           name: 포털
@@ -8306,7 +8392,7 @@ nodes:
               - key: title
                 label: 포털 이름 (예 우리 가족, 동창 모임)
                 type: text
-              action: '[others:portal]{op: "create", title: "$title"}'
+              action: '[others:portal]{op: "create", title: $title}'
               button: ➕ 새 주소 만들기
           - name: 이웃
             auto_run: true
@@ -8319,7 +8405,7 @@ nodes:
               options_from: items
               option_value: slug
               option_label: label
-            action: '[others:portal]{op: "members", portal: "$portal"}'
+            action: '[others:portal]{op: "members", portal: $portal}'
             view:
             - type: kv
               title: '{portal.title}'
@@ -8337,7 +8423,7 @@ nodes:
               - key: contact
                 label: 연락처 (선택)
                 type: text
-              action: '[others:portal]{op: "join", portal: "$portal", name: "$name", contact: "$contact"}'
+              action: '[others:portal]{op: "join", portal: $portal, name: $name, contact: $contact}'
               button: ➕ 등록
             - type: list_action
               from: items
@@ -8346,11 +8432,11 @@ nodes:
               sub: '{meta}'
               button:
                 label: ▲ 승급
-                action: '[others:portal]{op: "promote", portal: "{portal}", member_id: "{id}"}'
+                action: '[others:portal]{op: "promote", portal: $item.portal, member_id: $item.id}'
                 refresh: true
               button2:
                 label: ▼ 내림
-                action: '[others:portal]{op: "promote", portal: "{portal}", member_id: "{id}", down: true}'
+                action: '[others:portal]{op: "promote", portal: $item.portal, member_id: $item.id, down: true}'
                 refresh: true
             - type: list_action
               from: items
@@ -8359,11 +8445,11 @@ nodes:
               sub: '{key_hint}'
               button:
                 label: 🔗 재발급
-                action: '[others:portal]{op: "issue", portal: "{portal}", member_id: "{id}"}'
+                action: '[others:portal]{op: "issue", portal: $item.portal, member_id: $item.id}'
                 refresh: true
               button2:
                 label: ⛔ 회수
-                action: '[others:portal]{op: "revoke", portal: "{portal}", member_id: "{id}"}'
+                action: '[others:portal]{op: "revoke", portal: $item.portal, member_id: $item.id}'
                 refresh: true
             - type: kv_list
               from: items
@@ -8381,7 +8467,7 @@ nodes:
               options_from: items
               option_value: slug
               option_label: label
-            action: '[others:portal]{op: "display", portal: "$portal"}'
+            action: '[others:portal]{op: "display", portal: $portal}'
             view:
             - type: list_action
               from: items
@@ -8403,7 +8489,7 @@ nodes:
                   label: 3 친구부터
                 - value: '4'
                   label: 4 가족만
-                action: '[others:portal]{op: "display", portal: "{portal}", key: "{key}", set_level: "{sel}"}'
+                action: '[others:portal]{op: "display", portal: $item.portal, key: $item.key, set_level: $item.sel}'
                 refresh: true
           - name: 기록
             auto_run: true
@@ -8429,7 +8515,7 @@ nodes:
               options_from: items
               option_value: slug
               option_label: label
-            action: '[others:portal]{op: "status", portal: "$portal"}'
+            action: '[others:portal]{op: "status", portal: $portal}'
             view:
             - type: kv
               title: 공개 주소
@@ -8447,7 +8533,7 @@ nodes:
                 label: 소개글
                 type: textarea
                 value: '{settings.intro}'
-              action: '[others:portal]{op: "config", portal: "$portal", title: "$title", intro: "$intro"}'
+              action: '[others:portal]{op: "config", portal: $portal, title: $title, intro: $intro}'
               button: 저장
             - type: kv
               title: 일일 사용 한도
@@ -8469,7 +8555,7 @@ nodes:
                 label: 계기별 전체 하루 상한 — 0이면 무제한
                 type: text
                 value: '{settings.global_daily}'
-              action: '[others:portal]{op: "config", portal: "$portal", guest_daily: "$guest_daily", member_daily: "$member_daily", global_daily: "$global_daily"}'
+              action: '[others:portal]{op: "config", portal: $portal, guest_daily: $guest_daily, member_daily: $member_daily, global_daily: $global_daily}'
               button: 한도 저장
       family_news:
         returns: items
@@ -8523,6 +8609,7 @@ nodes:
         - 주간 가족지
         - family news
         app:
+          edition: 2
           instrument: family_news
           icon: 🗞️
           name: 가족신문
@@ -8559,7 +8646,7 @@ nodes:
               sub: ② 미리보기 확인 후 누르세요 — 가족 누구나 볼 수 있게 됩니다
               button:
                 label: 발행
-                action: '[others:family_news]{op: "publish", edition_id: "{id}"}'
+                action: '[others:family_news]{op: "publish", edition_id: $item.id}'
                 refresh: true
             - type: card_list
               from: published
@@ -8592,7 +8679,7 @@ nodes:
                 label: 며칠치 (선택)
                 type: text
                 placeholder: 비우면 지난 발행 이후 (첫 판은 7일)
-              action: '[others:family_news]{op: "create", photo_limit: "$photo_limit", days: "$days"}'
+              action: '[others:family_news]{op: "create", photo_limit: $photo_limit, days: $days}'
               button: 🗞️ 신문 만들기
           - name: 편집
             auto_run: true
@@ -8614,7 +8701,7 @@ nodes:
               button:
                 label: ✕ 빼기
                 confirm: 이 사진을 신문에서 뺄까요? 남은 후보가 있으면 다른 사진으로 채웁니다.
-                action: '[others:family_news]{op: "remove_photo", edition_id: "{edition_id}", file: "{file}"}'
+                action: '[others:family_news]{op: "remove_photo", edition_id: $item.edition_id, file: $item.file}'
                 refresh: true
           - name: 방명록
             auto_run: true
@@ -8653,7 +8740,7 @@ nodes:
                 label: 판당 사진 수 상한
                 type: text
                 value: '{settings.photo_limit}'
-              action: '[others:family_news]{op: "config", title: "$title", photo_limit: "$photo_limit"}'
+              action: '[others:family_news]{op: "config", title: $title, photo_limit: $photo_limit}'
               button: 저장
       showcase:
         returns: items
@@ -8707,6 +8794,7 @@ nodes:
         - 외부 공유 사이트
         - showcase
         app:
+          edition: 2
           instrument: showcase
           icon: 🌐
           name: 공개파일
@@ -8733,7 +8821,7 @@ nodes:
                 lines:
                 - '{meta}'
               item_click:
-                action: '[others:showcase]{op: "detail", path: "{path}"}'
+                action: '[others:showcase]{op: "detail", path: $item.path}'
                 view:
                 - type: form
                   title: 폴더 설정
@@ -8742,11 +8830,11 @@ nodes:
                     label: 표시명
                     type: text
                     value: '{folder.title}'
-                  action: '[others:showcase]{op: "config", path: "{folder.path}", title: "$title"}'
+                  action: '[others:showcase]{op: "config", path: $item.folder.path, title: $title}'
                   button: 저장
                   actions:
                   - label: 폴더 제거 (모든 주소에서)
-                    action: '[others:showcase]{op: "remove", path: "{folder.path}"}'
+                    action: '[others:showcase]{op: "remove", path: $item.folder.path}'
                     style: danger
                     confirm: 이 폴더를 목록·모든 주소에서 뺄까요? (원본 파일은 안 지웁니다)
                     back: true
@@ -8774,7 +8862,7 @@ nodes:
                   label: 사진·동영상·음악
                 - value: files
                   label: 파일 전체
-              action: '[others:showcase]{op: "add", path: "$path", title: "$title", mode: "$mode"}'
+              action: '[others:showcase]{op: "add", path: $path, title: $title, mode: $mode}'
               button: 공개 추가
           - name: 바스켓
             auto_run: true
@@ -8797,7 +8885,7 @@ nodes:
                   href: '{url}'
                   label: 이 주소 열기 →
               item_click:
-                action: '[others:showcase]{op: "basket_detail", basket_id: "{id}"}'
+                action: '[others:showcase]{op: "basket_detail", basket_id: $item.id}'
                 view:
                 - type: kv
                   title: 이 주소
@@ -8813,11 +8901,11 @@ nodes:
                     label: 이름
                     type: text
                     value: '{basket.title}'
-                  action: '[others:showcase]{op: "basket_save", basket_id: "{basket.id}", title: "$title"}'
+                  action: '[others:showcase]{op: "basket_save", basket_id: $item.basket.id, title: $title}'
                   button: 이름 저장
                   actions:
                   - label: 이 주소 삭제
-                    action: '[others:showcase]{op: "basket_delete", basket_id: "{basket.id}"}'
+                    action: '[others:showcase]{op: "basket_delete", basket_id: $item.basket.id}'
                     style: danger
                     confirm: 이 바스켓과 주소를 삭제할까요? (폴더 자체는 안 지워집니다)
                     back: true
@@ -8827,7 +8915,7 @@ nodes:
                   sub: '{meta}'
                   button:
                     label: '{member_action}'
-                    action: '[others:showcase]{op: "basket_toggle", basket_id: "{basket_id}", folder_id: "{id}"}'
+                    action: '[others:showcase]{op: "basket_toggle", basket_id: $item.basket_id, folder_id: $item.id}'
                     refresh: true
             - type: form
               title: 새 주소(바스켓) 만들기
@@ -8839,7 +8927,7 @@ nodes:
               - key: all_folders
                 label: 전체 폴더 자동 포함 (전체 공개 갤러리)
                 type: toggle
-              action: '[others:showcase]{op: "basket_save", title: "$title", all_folders: "$all_folders"}'
+              action: '[others:showcase]{op: "basket_save", title: $title, all_folders: $all_folders}'
               button: 주소 만들기
           - name: 설정
             auto_run: true
@@ -8857,7 +8945,7 @@ nodes:
                 label: 동영상 H.264 변환 (브라우저 재생용)
                 type: toggle
                 value: '{settings.transcode_video}'
-              action: '[others:showcase]{op: "config", strip_exif: "$strip_exif", transcode_video: "$transcode_video"}'
+              action: '[others:showcase]{op: "config", strip_exif: $strip_exif, transcode_video: $transcode_video}'
               button: 저장
     description: '타자: 외부 에이전트 및 사용자와의 소통 — 위임, 메시징, SMS, 이메일, 연락처, 협업'
     always_on: true

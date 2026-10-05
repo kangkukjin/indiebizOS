@@ -28,7 +28,8 @@ see_also: [architecture.md, ibl.md]
 - `DELETE /projects/{project_id}/agents/{agent_id}` - 에이전트 삭제
 - `POST /projects/{project_id}/agents/{agent_id}/start` - 에이전트 시작
 - `POST /projects/{project_id}/agents/{agent_id}/stop` - 에이전트 중지
-- `POST /projects/{project_id}/agents/{agent_id}/command` - 명령 전송
+- `POST /projects/{project_id}/agents/{agent_id}/command` - 명령 전송. `background:true` 면 접수증(`task_id`·`state`·`status_url`)을 즉시 돌려준다(2026-10-05, 작업 선발급)
+- `GET /projects/{project_id}/agents/{agent_id}/tasks/{task_id}` - 접수한 작업의 상태·결과 조회(`?wait=`초 제한 대기, 상한 30). 경로의 agent 는 저장된 `delegated_to` 와 대조. 상태 투영=`delegation_tasks.task_view`
 - `GET /projects/{project_id}/agents/{agent_id}/role` - 역할 조회
 - `PUT /projects/{project_id}/agents/{agent_id}/role` - 역할 업데이트
 - `PUT /projects/{project_id}/agents/role-descriptions` - 역할 설명 일괄 업데이트
@@ -45,7 +46,8 @@ see_also: [architecture.md, ibl.md]
 ### 시스템 AI
 - `GET /system-ai` - 시스템 AI 설정 조회
 - `PUT /system-ai` - 시스템 AI 설정 업데이트
-- `POST /system-ai/chat` - 시스템 AI와 대화. 본문 `origin:"training"` = 리허설 턴(에피소드·궤적 source `training`, 대화는 `rehearsal` 스레드, CLI 세션 `…@rehearsal`, 증류·RED 그랜트 없음). 다른 값은 400
+- `POST /system-ai/chat` - 시스템 AI와 대화. 본문 `origin:"training"` = 리허설 턴(에피소드·궤적 source `training`, 대화는 `rehearsal` 스레드, CLI 세션 `…@rehearsal`, 증류·RED 그랜트 없음). 다른 값은 400. 응답에 `task_id`·`status_url`(2026-10-05); `background:true` 면 접수증(`state:"queued"`)만 즉시 반환하고 예외는 작업을 `failed` 로 남긴다
+- `GET /system-ai/tasks/{task_id}` - 접수한 작업의 상태·결과 조회(`?wait=`초 제한 대기, 상한 30). 종료 상태에서만 `result` 전문(실패면 `error`). 완료 상태와 업무 달성 판정은 별개
 - `GET /system-ai/prompts/config` - 프롬프트 설정 조회
 - `PUT /system-ai/prompts/config` - 프롬프트 설정 업데이트 (역할 프롬프트 토글)
 - `GET /system-ai/prompts/role` - 역할 프롬프트 조회
@@ -360,7 +362,7 @@ execute_ibl(code='$s=[sense:host]{op:"status"}; [if:$s.cpu_percent>80] { [self:n
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(72) → `datastore`(74) → `ibl`(86) → `cognition`(83) → `services`(59) → `surface`(86). `.py` 총 536개(test 제외).
+  `base`(72) → `datastore`(74) → `ibl`(86) → `cognition`(84) → `services`(60) → `surface`(86). `.py` 총 538개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(31) · `backend/providers/`(14, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
@@ -371,7 +373,7 @@ execute_ibl(code='$s=[sense:host]{op:"status"}; [if:$s.cpu_percent>80] { [self:n
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처
 - `data/private_nouns.txt`: **개인 명사 관문 목록**(gitignore, 로컬 전용) — `scripts/check_private_nouns.py`(pre-commit, 모든 스테이지 파일)가 가족·개인 이름·목소리 키가 몸(코드·어휘·가이드·문서)에 박히는 것을 막는다. 한 줄=정규식, `allow: <glob>`=면제(저자 서명·연구 기록). 이름 자체가 저장소에 들어오지 않는 구조(2026-09-02)
 - `data/instruments/`: standalone 앱 매니페스트 (어휘 없는 계기 — report·newspaper)
-- `data/guides/`: 가이드 89개 (guide_db 등록 85). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
+- `data/guides/`: 가이드 90개 (guide_db 등록 86). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
 <!-- IBL_STATS:END -->
 - `projects/`: 사용자 프로젝트 데이터 (24개 — 시스템 프로젝트 수동모드·앱모드 포함)
 - `data/_backups/YYYY-MM-DD_<이름>/`: **일회성 백업의 유일한 주소**(2026-08-14 규약). 작업 폴더·`data/` 루트에 `*_backup*` 사본 금지. **git 추적 대상이 아니다** — 규약 정본 `README.md` 하나만 `!` 예외

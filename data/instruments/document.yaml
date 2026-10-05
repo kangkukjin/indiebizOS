@@ -12,8 +12,8 @@
 #              반영은 사람이 누른다. 여러 단계가 필요한 일은 시스템 AI 에게 따로 시킨다.
 #
 # 문서함의 기본 폴더는 빈노트가 쓰던 자리(projects/앱모드/outputs/binnote) — 노트를 옮길 필요가 없다.
-# 빈노트(BinNote.tsx)는 이 앱에 흡수돼 은퇴했다. 옛 문서 창은 홈에서 내렸고(기능은 이 앱으로 이관),
-# 그 창을 모는 브라우저 인수 시험을 옮길 때까지 #/documents 경로만 남아 있다(2026-10-06).
+# 빈노트(BinNote.tsx)와 옛 문서 창(DocumentWorkspace.tsx)은 이 앱에 흡수돼 은퇴했다(2026-10-06).
+# 단독 창 경로 #/documents 도 이 선언을 그대로 띄운다(frontend DocumentApp.tsx).
 
 instrument: document
 edition: 2

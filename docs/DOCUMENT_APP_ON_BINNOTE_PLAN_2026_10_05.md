@@ -1,6 +1,6 @@
 # 문서 앱 = 빈노트의 얼굴 + 형식별 엔진
 
-작성일: 2026-10-05. 상태: **1~3단계·빈노트 은퇴·옛 창 기능 이관 완료(2026-10-06). 옛 창은 홈에서 내렸고, 코드 삭제는 인수 시험 이전 뒤 — §6 끝 '남은 일(갱신)'.** 독자: 이 일을 이어받는 구현자.
+작성일: 2026-10-05. 상태: **완료(2026-10-06) — 빈노트·옛 문서 창 모두 은퇴, 인수 시험 3종은 새 화면으로 이전. 후속 과제는 §6 끝 '후속'.** 독자: 이 일을 이어받는 구현자.
 상위 계획: [공통 기반 위의 앱 구성](APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md) §6-4~5 의 문서 앱 몫.
 
 사용자 명제(2026-10-05): *앱 모드의 빈노트는 사실 문서 앱의 기본 모습이어야 한다. 문서 앱은 기본적으로
@@ -137,3 +137,17 @@
    (`backend/test_document_browser.py`·`test_document_hwp.py`·`test_document_office_live.py`)과 `scripts/verify_document_workspace.py` 가 그 화면의
    라벨('로컬 파일 경로'·'파일 열기' 등)을 몰고 있어, 시험을 새 계기(`/launcher/instruments`+`/ibl/execute` 를 받는 대역 서버)로 옮긴 뒤 지운다.
 2. 문서함 `tree` 교체·폴더 만들기, DOCX·HWP AI 독, 폰·원격 원문 편집, 홈 그리드 새 타일 겹침(칩으로 분리) — 앞의 2~4 그대로.
+
+### 옛 문서 창 코드 삭제와 인수 시험 이전 (2026-10-06)
+- `DocumentWorkspace.tsx`·`document-workspace.css` 삭제. 단독 창 경로 `#/documents` 는 **같은 계기 선언을 한 창에 띄우는** `DocumentApp.tsx` 가 받는다
+  (`/launcher/instruments` 에서 `document` 를 찾아 `GenericInstrument` 로). Electron 'documents' 도구 창과 시트 앱의 "문서에 표 보고서 만들기"가 이 경로를 쓴다.
+- 인수 시험: 격리 서버에 계기 선언과 IBL 운반 대역을 다는 `backend/test_document_app_support.py`(열기는 시험의 작업 공간 서비스로, AI 한 줄은 시험 함수로;
+  편집·초안·저장·버전은 진짜 `/documents` 경로). 여는 길만 바꾼 것 — `test_document_hwp.py`(hwp·hwpx 편집→저장→재열기), `test_document_office_live.py`
+  (DOCX 편집·변경 추적·내보내기, ODT·RTF, PDF 쪽 회전). 새 화면으로 다시 쓴 것 — `test_document_browser.py`(cp949·CRLF 열기 → 자동 초안 → AI 선택 반영 →
+  사본 → 새 창에서 초안 유지 → 저장 → 버전 되살리기 → Cmd/Ctrl+S → AI 되돌리기 → AI 응답 중 사람이 고치면 반영 거절 → 외부 수정 충돌 거절).
+  세 파일 모두 통과(office 는 `INDIEBIZ_OFFICE_LIVE_TEST=1`).
+- 시험이 잡아 준 결함: 독·도구가 선택을 "마지막으로 본 값"에서 읽어, 키보드·스크립트로 바뀐 선택을 놓쳤다 → 요청하는 순간 캔버스에서 직접 읽는다.
+  상태 문구에 `role="status"`, 독 입력에 `aria-label="AI 요청"`.
+
+### 후속
+문서함 `tree` 교체·폴더 만들기 · DOCX·HWP AI 독 · 폰·원격 원문 편집 · 파일 가져오기(필요 시) · 홈 그리드 새 타일 겹침(칩으로 분리).

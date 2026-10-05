@@ -1,4 +1,5 @@
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
+import { openDocuments } from '../../lib/surface-navigation';
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { sheetCommand, sheetRequest, sheetUpload, sessionArgs, type SheetDetail, type Session, type SheetSnapshot } from '../../lib/api-spreadsheets';
 
@@ -150,7 +151,7 @@ export function SpreadsheetEditor({detail,onChange,captureRef,onSaved}:{detail:S
       </details>
       {preview&&<details open><summary>값·수식·계산 근거</summary><pre>{JSON.stringify(preview,null,2)}</pre></details>}
       <label><input type="checkbox" checked={linkedReport} onChange={e=>setLinkedReport(e.target.checked)}/>보고서에 원본 연결 유지</label>
-      <button disabled={busy||!snapshot} onClick={()=>void run(async()=>{const report=await sheetCommand<{document:{title:string;source_uri?:string}}>(detail.document.id,'report',{snapshot_id:snapshot?.id,sheet_id:sheetId,range,operation_id:crypto.randomUUID(),linked:linkedReport});setMessage('문서에 표 보고서를 만들었습니다: '+report.document.title+' · 문서 앱의 "열기"에서 여세요'+(report.document.source_uri?': '+report.document.source_uri:''));})}>문서에 표 보고서 만들기</button>
+      <button disabled={busy||!snapshot} onClick={()=>void run(async()=>{const report=await sheetCommand<{document:{title:string;source_uri?:string}}>(detail.document.id,'report',{snapshot_id:snapshot?.id,sheet_id:sheetId,range,operation_id:crypto.randomUUID(),linked:linkedReport});setMessage('문서에 표 보고서를 만들었습니다: '+report.document.title+' · 문서 앱의 "열기"에서 여세요'+(report.document.source_uri?': '+report.document.source_uri:''));openDocuments();})}>문서에 표 보고서 만들기</button>
       <details><summary>변경 취소와 가져오기 갱신</summary>
       <button disabled={busy} onClick={()=>void run(async()=>{setChanges(await sheetCommand(detail.document.id,'changes',{}));setImports(await sheetCommand(detail.document.id,'imports',{}));})}>변경·가져오기 이력</button>
       {changes.filter(c=>c.result?.applied&&c.result.snapshot_id).map(c=><button key={c.operation_id} disabled={busy||!ready} onClick={()=>void run(async()=>{const s=await takeSnapshot();const p=await sheetCommand<{id:string;values:unknown}>(detail.document.id,'undo-propose',{operation_id:c.operation_id,snapshot_id:s.id});setProposal(p);setReplacement(JSON.stringify(p.values));setMessage('영향 셀만 되돌리는 변경안입니다. 후속 편집을 비교했습니다');})}>변경 {c.operation_id.slice(0,8)} 취소안</button>)}

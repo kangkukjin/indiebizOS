@@ -20,7 +20,7 @@ import { LectureWorkspace } from './components/LectureWorkspace';
 import { PromptCompositionView } from './components/PromptCompositionView';
 import { GuidesView } from './components/GuidesView';
 import { CodingWorkspace } from './components/CodingWorkspace';
-import { DocumentWorkspace } from './components/DocumentWorkspace';
+import { DocumentApp } from './components/DocumentApp';
 import { SpreadsheetWorkspace } from './components/SpreadsheetWorkspace';
 import { ExternalUsersView } from './components/ExternalUsersView';
 import { VocabularyView } from './components/VocabularyView';
@@ -235,7 +235,7 @@ function App() {
   if (isGuides) return <GuidesView />;
   if (vocabularyFolder) return <VocabularyView key={vocabularyFolder} folderId={vocabularyFolder} />;
   if (isCoding) return <CodingWorkspace />;
-  if (isDocuments) return <DocumentWorkspace />;
+  if (isDocuments) return <DocumentApp />;
   if (isSpreadsheets) return <SpreadsheetWorkspace />;
 
   // 강의 만들기 워크스페이스 창인 경우

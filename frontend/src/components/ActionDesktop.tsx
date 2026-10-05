@@ -74,7 +74,7 @@ const STATIC_DOMAINS: Domain[] = [
   { id: 'coding', icon: '💻', label: '코딩', onOpen: () => openCoding(), instruments: [] },
   { id: 'spreadsheets', icon: '📊', label: '스프레드시트', onOpen: () => openSpreadsheets(), instruments: [] },
   // 문서 앱 = 매니페스트 계기 `document`(data/instruments/document.yaml — 빈노트와 옛 문서 창을 흡수, 2026-10-06).
-  // 옛 창(#/documents, DocumentWorkspace.tsx)은 홈에서 내렸고, 그 창을 모는 브라우저 인수 시험 3종을 새 계기로 옮길 때 지운다.
+  // 단독 창 경로(#/documents)는 같은 계기를 한 창에 띄운다(DocumentApp.tsx).
   {
     id: 'directions', icon: '🗺️', label: '지도',  // 2026-09-03 길찾기·CCTV→지도(장소 검색·저장·상세·길찾기). id 는 저장된 배치 보존을 위해 유지
     instruments: [

@@ -184,8 +184,14 @@ function SourceEngine({ detail, onChange, emit, host }: {
     emit('saved', { revision: next.document.revision_id });
   });
   const replaceFrom = (next: Detail) => { current.current = next; onChange(next); adopt(next); };
+  // 선택은 요청하는 순간 캔버스에서 직접 읽는다 — 포커스가 독·도구로 옮겨가도 textarea 는 선택을 쥐고 있다.
+  const selected = () => {
+    const el = editor.current;
+    if (el) range.current = { a: el.selectionStart, b: el.selectionEnd };
+    return range.current;
+  };
   const pick = () => {
-    const { a, b } = range.current;
+    const { a, b } = selected();
     return a === b ? null : { ...address(a, b), text: toSource(live.current.slice(a, b)) };
   };
   const address = (a: number, b: number) => {  // 캔버스 범위 → 서버 주소(코드포인트·원본 줄바꿈)
@@ -214,9 +220,9 @@ function SourceEngine({ detail, onChange, emit, host }: {
   const ask = async (instruction: string) => {
     if (!host.dock) return '';
     if (writable) await draft();
-    const value = live.current;
-    const has = range.current.a !== range.current.b;
-    const a = has ? range.current.a : 0, b = has ? range.current.b : value.length;
+    const value = live.current, now = selected();
+    const has = now.a !== now.b;
+    const a = has ? now.a : 0, b = has ? now.b : value.length;
     pinned.current = { a, b, before: value.slice(a, b) };
     setScope(has ? '선택' : '전체');
     const at = address(a, b);
@@ -239,7 +245,7 @@ function SourceEngine({ detail, onChange, emit, host }: {
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="font-semibold text-stone-800 truncate max-w-[40%]" title={detail.document.source_uri}>{detail.document.title}</span>
         {dirty && <span className="text-xs text-amber-600 shrink-0">● 원본 저장 안 됨</span>}
-        <span className="text-xs text-stone-500 truncate">{message}</span>
+        <span role="status" className="text-xs text-stone-500 truncate">{message}</span>
         <div className="flex-1" />
         <span className="text-xs text-stone-400 shrink-0">{picked ? `선택 ${picked.toLocaleString()}자 · ` : ''}{cp(text).toLocaleString()}자</span>
         {undo != null && <button disabled={busy} onClick={() => { rewrite(undo); setUndo(null); }}

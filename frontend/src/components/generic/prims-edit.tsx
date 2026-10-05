@@ -175,7 +175,7 @@ export function AiDockPanel({ dock, ask: askOwner, onApply, applyLabel }: {
         </div>
       )}
       <div className="flex items-end gap-1.5">
-        <textarea value={input} onChange={(e) => setInput(e.target.value)}
+        <textarea value={input} onChange={(e) => setInput(e.target.value)} aria-label="AI 요청"
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } }}
           placeholder={dock.placeholder || 'AI에게 시키기 — 예: 더 간결하게 (Enter 전송)'} rows={1}
           className={`${fieldCls} resize-none flex-1`} />

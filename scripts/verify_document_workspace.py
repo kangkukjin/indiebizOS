@@ -18,7 +18,7 @@ import boot_paths  # noqa: E402,F401
 FILES = [
     "backend/services/document_workspace.py", "backend/surface/api_documents.py",
     "backend/test_document_workspace.py", "backend/test_document_browser.py",
-    "frontend/src/components/DocumentWorkspace.tsx", "scripts/verify_document_workspace.py",
+    "frontend/src/components/DocumentApp.tsx", "scripts/verify_document_workspace.py",
     "data/bodies/android.engine.json", "frontend/i18n/catalog.json", "frontend/i18n/translations.json",
 ]
 

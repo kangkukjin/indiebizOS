@@ -114,6 +114,8 @@ def test_local_hwp_browser_roundtrip(tmp_path, monkeypatch, format):
     workspace = DocumentWorkspace(tmp_path / 'workspace')
     monkeypatch.setattr(api_documents, 'service', lambda: workspace)
     app = FastAPI(); app.include_router(api_documents.router)
+    from test_document_app_support import mount_document_app, open_document
+    mount_document_app(app, workspace)
     @app.get('/launcher/auth/session')
     def auth():
         return {'authenticated': True, 'external': False}
@@ -141,9 +143,7 @@ def test_local_hwp_browser_roundtrip(tmp_path, monkeypatch, format):
             failures, remote = [], []
             page.on('pageerror', lambda error: failures.append(str(error)))
             page.on('request', lambda req: remote.append(req.url) if req.url.startswith('http') and not req.url.startswith(f'http://127.0.0.1:{port}/') else None)
-            page.goto(f'http://127.0.0.1:{port}/#/documents')
-            page.get_by_label('로컬 파일 경로').fill(str(source))
-            page.get_by_role('button', name='파일 열기', exact=True).click()
+            open_document(page, port, source)
             ui = page.get_by_role('region', name='한글 문서 편집기', exact=True)
             try:
                 expect(ui.get_by_role('button', name='원본 저장', exact=True)).to_be_enabled(timeout=60000)
@@ -171,8 +171,7 @@ def test_local_hwp_browser_roundtrip(tmp_path, monkeypatch, format):
                     with zipfile.ZipFile(source) as archive:
                         assert b'<hp:tbl' in archive.read('Contents/section0.xml')
                 # Reload the app and reopen the same native saved document.
-                page.reload()
-                page.get_by_role('button', name='sample.' + format + ' ' + format.upper(), exact=True).click()
+                open_document(page, port, source, fresh=True)
                 expect(ui.get_by_role('button', name='원본 저장', exact=True)).to_be_enabled(timeout=30000)
                 assert not remote, remote
                 # Electron's packaged frontend has an opaque file: origin. The

@@ -45,16 +45,16 @@ def test_browser_source_workflow(tmp_path, monkeypatch):
 
     workspace = DocumentWorkspace(tmp_path / "workspace")
     monkeypatch.setattr(api_documents, "service", lambda: workspace)
-    import document_workspace
+    from test_document_app_support import mount_document_app, open_document
     ai_started, ai_release = threading.Event(), threading.Event()
-    def model_fixture(instruction, selected):
+    def ask(instruction, selected):
         if instruction == "지연 시험":
             ai_started.set()
             assert ai_release.wait(15), "AI 시험 응답 해제 시간 초과"
-        return "AI 수정", {"kind": "ai", "test_double": True}
-    monkeypatch.setattr(document_workspace, "generate_selection", model_fixture)
+        return "수정한" if instruction == "고쳐" else "AI 수정"
     app = FastAPI()
     app.include_router(api_documents.router)
+    mount_document_app(app, workspace, ask)
 
     # This loopback fixture exercises document UI, not remote authentication.
     @app.get("/launcher/auth/session")
@@ -92,73 +92,73 @@ def test_browser_source_workflow(tmp_path, monkeypatch):
                 page = browser.new_page(viewport={"width": 1440, "height": 1000})
                 failures = []
                 page.on("pageerror", lambda error: failures.append(str(error)))
-                page.goto(f"http://127.0.0.1:{port}/#/documents")
+                def select(start, end):
+                    editor.evaluate("(el, r) => { el.focus(); el.setSelectionRange(r[0], r[1]); el.dispatchEvent(new Event('select', {bubbles: true})); }", [start, end])
+                def dock(instruction):
+                    box = page.get_by_role("textbox", name="AI 요청", exact=True)
+                    box.fill(instruction); box.press("Enter")
                 try:
-                    page.get_by_label("로컬 파일 경로").wait_for(timeout=10000)
+                    open_document(page, port, source, "cp949")
+                    editor = page.get_by_role("textbox", name="문서 원문", exact=True)
+                    expect(editor).to_have_value("처음 문장\n원본 보존\n", timeout=10000)
                 except Exception as exc:
                     raise AssertionError({"page_errors": failures, "body": page.locator("body").inner_text()}) from exc
-                page.get_by_label("로컬 파일 경로").fill(str(source))
-                page.get_by_label("인코딩", exact=True).select_option("cp949")
-                page.get_by_role("button", name="파일 열기", exact=True).click()
-                editor = page.get_by_role("textbox", name="문서 원문", exact=True)
-                expect(editor).to_have_value("처음 문장\n원본 보존\n")
+                status = page.get_by_role("status").first
+                # 쓰면 초안이 저절로 서버에 올라간다(원본은 그대로).
                 editor.fill("새로운 문장\n원본 보존\n")
-                page.get_by_role("button", name="작업 저장", exact=True).click()
-                expect(page.locator("footer")).to_contain_text("작업 저장됨")
-                editor.evaluate("el => { el.focus(); el.setSelectionRange(0, 3); }")
-                page.get_by_role("button", name="선택 고정", exact=True).click()
-                expect(page.get_by_label("교체할 문구")).to_have_value("새로운")
-                page.get_by_label("교체할 문구").fill("수정한")
-                page.get_by_role("button", name="제안 만들기", exact=True).click()
-                page.get_by_role("button", name="제안 적용", exact=True).click()
+                expect(status).to_contain_text("작업 저장됨")
+                assert source.read_bytes() == original
+                # AI 한 줄 — 선택한 부분만 고친다.
+                select(0, 3)
+                dock("고쳐")
+                page.get_by_role("button", name="반영 (선택 대체)", exact=True).click()
                 expect(editor).to_have_value("수정한 문장\n원본 보존\n")
+                # ⚙ 도구 — 사본은 원본의 인코딩·줄바꿈으로.
+                page.get_by_role("button", name="⚙ 도구", exact=True).last.click()
                 page.get_by_label("사본 파일명").fill("결과.txt")
-                page.get_by_role("button", name="사본 저장", exact=True).click()
-                expect(page.locator("footer")).to_contain_text("사본 저장됨")
-                expect(page.locator("footer")).to_be_in_viewport()
+                page.get_by_role("button", name="다른 이름으로 저장", exact=True).click()
+                expect(status).to_contain_text("사본 저장됨")
                 assert (tmp_path / "결과.txt").read_bytes() == "수정한 문장\r\n원본 보존\r\n".encode("cp949")
                 assert source.read_bytes() == original
-                page.reload()
-                page.get_by_role("button", name="보고서.txt TXT").click()
-                expect(page.get_by_role("textbox", name="문서 원문", exact=True)).to_have_value("수정한 문장\n원본 보존\n")
-                page.get_by_role("button", name="원본 저장", exact=True).click()
-                expect(page.locator("footer")).to_contain_text("저장됨 · 원본 파일 기록 확인")
+                # 창을 새로 띄워도 초안이 남아 있다.
+                open_document(page, port, source, fresh=True)
+                editor = page.get_by_role("textbox", name="문서 원문", exact=True)
+                expect(editor).to_have_value("수정한 문장\n원본 보존\n", timeout=10000)
+                page.get_by_role("button", name="저장", exact=True).click()
+                expect(status).to_contain_text("저장됨 · 원본 파일 기록 확인")
                 assert source.read_bytes() == "수정한 문장\r\n원본 보존\r\n".encode("cp949")
-                page.get_by_role("button", name="버전 이력", exact=True).click()
-                page.get_by_role("button", name="초안으로 복구").last.click()
+                # 이전 버전 되살리기 → 초안. 저장해야 원본이 바뀐다.
+                page.get_by_role("button", name="⚙ 도구", exact=True).last.click()
+                page.get_by_role("button", name="되살리기", exact=True).last.click()
                 expect(editor).to_have_value("처음 문장\n원본 보존\n")
                 assert source.read_bytes() != original
-                # An ordinary text editor reopens the exact native bytes;
-                # this does not stand in for Office/Hancom independent consumers.
                 editor.press("Control+s")
-                expect(page.locator("footer")).to_contain_text("원본 파일 기록 확인")
+                expect(status).to_contain_text("원본 파일 기록 확인")
                 assert source.read_bytes() == original
-                editor.evaluate("el => { el.focus(); el.setSelectionRange(0, 2); }")
-                page.get_by_role("button", name="선택 고정", exact=True).click()
-                expect(page.locator("aside")).to_contain_text("AI 모델 제공자에게 전달")
-                page.get_by_role("button", name="AI 수정 제안", exact=True).click()
-                expect(page.get_by_label("교체할 문구")).to_have_value("AI 수정")
-                page.get_by_role("button", name="제안 적용", exact=True).click()
+                # AI 반영은 한 번 되돌릴 수 있다.
+                select(0, 2)
+                dock("다듬어")
+                page.get_by_role("button", name="반영 (선택 대체)", exact=True).click()
                 expect(editor).to_have_value("AI 수정 문장\n원본 보존\n")
                 assert source.read_bytes() == original
-                page.get_by_role("button", name="선택 교체 되돌리기", exact=True).click()
+                page.get_by_role("button", name="AI 반영 되돌리기", exact=True).click()
                 expect(editor).to_have_value("처음 문장\n원본 보존\n")
-                editor.evaluate("el => { el.focus(); el.setSelectionRange(0, 2); }")
-                page.get_by_role("button", name="선택 고정", exact=True).click()
-                page.get_by_label("AI 수정 지시").fill("지연 시험")
-                page.get_by_role("button", name="AI 수정 제안", exact=True).click()
+                # AI 가 답하는 동안 사람이 고치면, 늦게 온 제안은 그 자리에 반영되지 않는다.
+                select(0, 2)
+                dock("지연 시험")
                 assert ai_started.wait(5)
                 expect(editor).to_be_editable()
                 editor.fill("AI 대기 중 사람의 수정\n")
                 ai_release.set()
-                expect(page.get_by_label("교체할 문구")).to_have_value("AI 수정")
-                page.get_by_role("button", name="제안 적용", exact=True).click()
-                expect(page.get_by_role("alert")).to_contain_text("제안 이후 문서가 바뀌었습니다")
+                page.get_by_role("button", name="반영 (선택 대체)", exact=True).click()
+                expect(status).to_contain_text("반영하지 않았습니다")
                 expect(editor).to_have_value("AI 대기 중 사람의 수정\n")
+                # 밖에서 원본이 바뀌었으면 저장을 거절하고 초안을 지킨다.
+                expect(status).to_contain_text("작업 저장됨", timeout=10000)
                 source.write_bytes("외부 수정\r\n".encode("cp949"))
                 editor.fill("이후 초안\n")
-                page.get_by_role("button", name="원본 저장", exact=True).click()
-                expect(page.get_by_role("alert")).to_contain_text("외부에서 원본이 바뀌었습니다")
+                page.get_by_role("button", name="저장", exact=True).click()
+                expect(status).to_contain_text("외부에서 원본이 바뀌었습니다")
                 assert source.read_bytes() == "외부 수정\r\n".encode("cp949")
                 expect(editor).to_have_value("이후 초안\n")
                 assert not failures, failures

@@ -156,63 +156,12 @@ async def get_project_agents(project_id: str, request: Request):
 
 @router.post("/projects/{project_id}/agents/{agent_id}/start")
 async def start_agent(project_id: str, agent_id: str, background_tasks: BackgroundTasks):
-    """에이전트 시작"""
-    from agent_runner import AgentRunner
-
+    """에이전트 시작 — 구현은 agent_lifecycle.start_agent([others:agents]{op:start} 와 같은 함수)."""
+    import agent_lifecycle
     try:
-        project_path = project_manager.get_project_path(project_id)
-        agents_file = project_path / "agents.yaml"
-
-        if not agents_file.exists():
-            raise HTTPException(status_code=404, detail="에이전트 설정을 찾을 수 없습니다.")
-
-        with open(agents_file, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-
-        # 에이전트 찾기
-        agent_config = None
-        for agent in data.get("agents", []):
-            if agent.get("id") == agent_id:
-                agent_config = agent
-                break
-
-        if not agent_config:
-            raise HTTPException(status_code=404, detail=f"에이전트 '{agent_id}'를 찾을 수 없습니다.")
-
-        # 러너 저장소 초기화
-        if project_id not in agent_runners:
-            agent_runners[project_id] = {}
-
-        # 이미 실행 중인지 확인
-        if agent_id in agent_runners[project_id]:
-            runner = agent_runners[project_id][agent_id].get("runner")
-            if runner and runner.running:
-                return {"status": "already_running", "agent_id": agent_id}
-
-        # 공통 설정 로드
-        common_config = data.get("common", {})
-
-        # 프로젝트 경로 추가
-        agent_config["_project_path"] = str(project_path)
-        agent_config["_project_id"] = project_id
-
-        # AgentRunner 생성 및 시작
-        runner = AgentRunner(agent_config, common_config)
-        runner.start()
-
-        # 저장
-        agent_runners[project_id][agent_id] = {
-            "runner": runner,
-            "config": agent_config,
-            "running": True,
-            "started_at": datetime.now().isoformat()
-        }
-
-        print(f"[에이전트 시작] {agent_config['name']}")
-
-        return {"status": "started", "agent_id": agent_id}
-    except HTTPException:
-        raise
+        return agent_lifecycle.start_agent(project_id, agent_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -221,17 +170,10 @@ async def start_agent(project_id: str, agent_id: str, background_tasks: Backgrou
 
 @router.post("/projects/{project_id}/agents/{agent_id}/stop")
 async def stop_agent(project_id: str, agent_id: str):
-    """에이전트 중지"""
+    """에이전트 중지 — 구현은 agent_lifecycle.stop_agent."""
+    import agent_lifecycle
     try:
-        if project_id in agent_runners and agent_id in agent_runners[project_id]:
-            runner = agent_runners[project_id][agent_id].get("runner")
-            if runner:
-                runner.stop()
-                print(f"[에이전트 중지] {runner.config.get('name', agent_id)}")
-            del agent_runners[project_id][agent_id]
-            return {"status": "stopped", "agent_id": agent_id}
-
-        return {"status": "not_running", "agent_id": agent_id}
+        return agent_lifecycle.stop_agent(project_id, agent_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -651,54 +593,13 @@ async def update_agent_role(project_id: str, agent_id: str, role_data: AgentRole
 
 @router.post("/projects/{project_id}/agents")
 async def create_agent(project_id: str, agent_data: AgentUpdate):
-    """새 에이전트 생성"""
+    """새 에이전트 생성 — 구현은 agent_lifecycle.create_agent([others:agents]{op:create} 와 같은 함수)."""
+    import agent_lifecycle
     try:
-        project_path = project_manager.get_project_path(project_id)
-        agents_file = project_path / "agents.yaml"
-
-        if not agents_file.exists():
-            data = {"agents": [], "common": {}}
-        else:
-            with open(agents_file, 'r', encoding='utf-8') as f:
-                data = yaml.safe_load(f) or {"agents": [], "common": {}}
-
-        # 새 ID
-        new_id = f"agent_{uuid.uuid4().hex[:8]}"
-
-        # ★per-agent 모델 설정 폐지 — 모델은 모델 기어(런처 경량/중급/고급 티어)가 단독 결정.
-        #   ai 블록을 쓰지 않는다(_resolve_execution_config 가 무시·기어로 채움).
-        new_agent = {
-            "id": new_id,
-            "name": agent_data.name,
-            "type": agent_data.type,
-            "active": True,
-        }
-
-        # Phase 16: allowed_nodes 우선, 하위 호환으로 allowed_tools도 지원
-        if agent_data.allowed_nodes is not None:
-            new_agent["allowed_nodes"] = agent_data.allowed_nodes
-            new_agent["ibl_only"] = True
-        elif agent_data.allowed_tools is not None:
-            new_agent["allowed_tools"] = agent_data.allowed_tools
-
-        if agent_data.type == "external" and agent_data.channel:
-            new_agent["channel"] = agent_data.channel
-            if agent_data.email:
-                new_agent["email"] = agent_data.email
-
-        data["agents"].append(new_agent)
-
-        with open(agents_file, 'w', encoding='utf-8') as f:
-            yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
-
-        if agent_data.role:
-            role_file = project_path / f"agent_{agent_data.name}_role.txt"
-            role_file.write_text(agent_data.role, encoding='utf-8')
-
-        # 응답에는 키를 되돌려 보내지 않는다 (요청자는 이미 키를 가졌지만,
-        # 프록시/로깅 표면에 평문 키가 새지 않도록 일관되게 마스킹)
+        new_agent = agent_lifecycle.create_agent(project_id, agent_data.name, type=agent_data.type, role=agent_data.role,
+                                                 allowed_nodes=agent_data.allowed_nodes, allowed_tools=agent_data.allowed_tools,
+                                                 channel=agent_data.channel, email=agent_data.email)
         return {"status": "created", "agent": _redact_agent_secrets(new_agent)}
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -740,103 +641,28 @@ async def update_role_descriptions(project_id: str, data: RoleDescriptions):
 
 @router.put("/projects/{project_id}/agents/{agent_id}")
 async def update_agent(project_id: str, agent_id: str, agent_data: AgentUpdate):
-    """에이전트 업데이트"""
+    """에이전트 업데이트(이름 바꾸기 포함) — 구현은 agent_lifecycle.update_agent."""
+    import agent_lifecycle
     try:
-        project_path = project_manager.get_project_path(project_id)
-        agents_file = project_path / "agents.yaml"
-
-        if not agents_file.exists():
-            raise HTTPException(status_code=404, detail="에이전트 설정을 찾을 수 없습니다.")
-
-        with open(agents_file, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-
-        agent_found = False
-        for i, agent in enumerate(data.get("agents", [])):
-            if agent.get("id") == agent_id:
-                agent_found = True
-                old_name = agent.get("name", "")
-
-                agent["name"] = agent_data.name
-                agent["type"] = agent_data.type
-                # ★per-agent 모델 설정 폐지 — 모델은 모델 기어가 단독 결정. 레거시 ai 블록은 제거.
-                agent.pop("ai", None)
-
-                # Phase 16: allowed_nodes 우선, 하위 호환으로 allowed_tools도 지원
-                if agent_data.allowed_nodes is not None:
-                    agent["allowed_nodes"] = agent_data.allowed_nodes
-                    agent["ibl_only"] = True
-                    agent.pop("allowed_tools", None)  # 구 필드 제거
-                elif agent_data.allowed_tools is not None:
-                    agent["allowed_tools"] = agent_data.allowed_tools
-
-                if agent_data.type == "external" and agent_data.channel:
-                    agent["channel"] = agent_data.channel
-                    if agent_data.email:
-                        agent["email"] = agent_data.email
-
-                data["agents"][i] = agent
-
-                if agent_data.role is not None:
-                    role_file = project_path / f"agent_{agent_data.name}_role.txt"
-                    role_file.write_text(agent_data.role, encoding='utf-8')
-
-                    if old_name and old_name != agent_data.name:
-                        old_role_file = project_path / f"agent_{old_name}_role.txt"
-                        if old_role_file.exists():
-                            old_role_file.unlink()
-
-                break
-
-        if not agent_found:
-            raise HTTPException(status_code=404, detail=f"에이전트 '{agent_id}'를 찾을 수 없습니다.")
-
-        with open(agents_file, 'w', encoding='utf-8') as f:
-            yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
-
+        agent_lifecycle.update_agent(project_id, agent_id, name=agent_data.name, type=agent_data.type, role=agent_data.role,
+                                     allowed_nodes=agent_data.allowed_nodes, allowed_tools=agent_data.allowed_tools,
+                                     channel=agent_data.channel, email=agent_data.email)
         return {"status": "updated", "agent_id": agent_id}
-
-    except HTTPException:
-        raise
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/projects/{project_id}/agents/{agent_id}")
 async def delete_agent(project_id: str, agent_id: str):
-    """에이전트 삭제"""
+    """에이전트 삭제 — 구현은 agent_lifecycle.delete_agent(러너가 돌고 있으면 먼저 중지)."""
+    import agent_lifecycle
     try:
-        project_path = project_manager.get_project_path(project_id)
-        agents_file = project_path / "agents.yaml"
-
-        if not agents_file.exists():
-            raise HTTPException(status_code=404, detail="에이전트 설정을 찾을 수 없습니다.")
-
-        with open(agents_file, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-
-        agent_name = None
-        for i, agent in enumerate(data.get("agents", [])):
-            if agent.get("id") == agent_id:
-                agent_name = agent.get("name")
-                del data["agents"][i]
-                break
-
-        if agent_name is None:
-            raise HTTPException(status_code=404, detail=f"에이전트 '{agent_id}'를 찾을 수 없습니다.")
-
-        with open(agents_file, 'w', encoding='utf-8') as f:
-            yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
-
-        # 관련 파일 삭제
-        for suffix in ["_role.txt", "_note.txt"]:
-            file = project_path / f"agent_{agent_name}{suffix}"
-            if file.exists():
-                file.unlink()
-
-        return {"status": "deleted", "agent_id": agent_id}
-
-    except HTTPException:
-        raise
+        agent_lifecycle.stop_agent(project_id, agent_id)
+        name = agent_lifecycle.delete_agent(project_id, agent_id)
+        return {"status": "deleted", "agent_id": agent_id, "name": name}
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

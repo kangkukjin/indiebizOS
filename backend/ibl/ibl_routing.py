@@ -562,10 +562,19 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         return _cap("ask_body")(dict(params))
 
     elif func_name == "agents":
+        # ⑩ 생애주기 op(create|update|delete|start|stop|role|note)는 인지층(agent_lifecycle) 능력으로, list/info 는 종전대로.
+        op = (params.get("op") or "").strip()
+        if op and op not in ("list", "info"):
+            return _cap("agents_lifecycle")(op, dict(params))
         agent_id = params.get("agent_id", "")
-        if agent_id:
+        if agent_id and op != "list":
             return _cap("agent_info")(agent_id)
         return _cap("list_project_agents")(dict(params))
+
+    elif func_name in ("project_op", "folder_op", "trash_op", "chat_room_op", "warehouse_op", "my_warehouse_op",
+                       "channel_op", "media_op"):
+        # ⑩ 몸의 명사 생애주기(런처 항목·채팅방·창고·채널 설정·미디어) — 구현은 서비스층, 조립 루트(boot_common)가 주입(의존 역전)
+        return _cap(func_name)(dict(params))
 
     # [table:each] — 문장을 값으로 받는 고차 변환자. 다른 table 변환자와 달리 패키지가 아니라
     # 엔진 층에 산다(하위 문장 실행이 execute_ibl 재귀 — 패키지가 엔진을 import 하면 층 역전).
@@ -643,13 +652,13 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         return _cap("run_switch")(params)
 
     elif func_name == "switch_op":
-        # 단일 액션 패턴: switch {op: list|run}
+        # 단일 액션 패턴: switch {op: list|run|info|create|update|rename|copy|trash|delete}
         op = (params.get("op") or "").strip()
         if op == "list":
             return _route_system("list_switches", params, project_path, agent_id=agent_id)
         if op == "run":
             return _route_system("run_switch", params, project_path, agent_id=agent_id)
-        return {"success": False, "error": "op 파라미터가 필요합니다. (list|run)"}
+        return _cap("switch_manage_op")(dict(params))   # ⑩ 생애주기 — 서비스층 launcher_ops(switch_manager 의 같은 함수)
 
     elif func_name == "goal_op":
         # 단일 액션 패턴: goal {op: list|status|kill|log|attempts}

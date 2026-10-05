@@ -123,6 +123,28 @@ def wire_local_subsystems(profile: str = None) -> dict:
     except Exception as e:
         print(f"{tag} 시스템 라우터 능력 등록 실패: {e}")
         results["system_capabilities"] = False
+    # ⑩ 몸의 명사 생애주기(2026-10-05) — 서비스층 명사(채팅방·창고·채널 설정·미디어)는 인지층이 import 할 수 없어
+    # 조립 루트가 직접 주입한다(라우터는 이름만 안다 — 위와 같은 의존 역전).
+    try:
+        from ibl_routing import register_system_capabilities
+        from launcher_ops import project_op, folder_op, trash_op, switch_manage_op
+        from chat_room_ops import chat_room_op
+        from warehouse_ops import warehouse_op
+        from warehouse_admin import my_warehouse_op
+        from channel_settings_ops import channel_op
+        import media_ops
+        import task_receipts
+        register_system_capabilities({"project_op": project_op, "folder_op": folder_op, "trash_op": trash_op,
+                                      "switch_manage_op": switch_manage_op,
+                                      "chat_room_op": chat_room_op, "warehouse_op": warehouse_op,
+                                      "my_warehouse_op": my_warehouse_op, "channel_op": channel_op,
+                                      "media_op": media_ops.media_op})
+        task_receipts.register(media_ops.TRANSCODE_KIND, media_ops.task_status)
+        task_receipts.register(media_ops.HLS_KIND, media_ops.task_status)
+        results["noun_capabilities"] = True
+    except Exception as e:
+        print(f"{tag} 명사 생애주기 능력 등록 실패: {e}")
+        results["noun_capabilities"] = False
 
     return results
 

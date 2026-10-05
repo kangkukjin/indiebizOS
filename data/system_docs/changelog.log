@@ -2406,3 +2406,16 @@
 2026-10-05 | ③ 2차 — `[others:delegate]{scope: "system"}` 가 접수 시점에 시스템 작업을 선발급(routing_system: system_ai_memory.create_task(parent_task_id) → SystemAIRunner.send_message(task_id=자식)) → 다른 위임과 같은 접수증(task_ref{kind: delegation, owner: system}·status_url)·`mode: sync` 는 await_child 로 그 작업을 기다린다. 옛 경로는 부모 task id 를 러너에 넘겨 자식 작업 행이 없었고 접수증에 id 가 없었다. 예약 경로(ibl_scheduled 의 queued+task_id 추적) 의미를 바꾸지 않으려 접수증에 task_id 는 싣지 않음. 어휘 설명(others.yaml delegate scope=system) 갱신·용례 재검토 ack. 회귀 test_delegation_tasks::test_system_scope_async/sync.
 
 2026-10-05 | ⑨ 위임의 실행 범위 지정 1차(docs/APP_COMMON_FOUNDATION_GAPS_2026_10_05.md §1-⑨): `[others:delegate]{…, role, allowed, context}` — delegation_tasks.envelope 이 allowed 를 부모 집합 ∩ 요청으로만(무제한 부모=요청 그대로·표준 코어 포함, 밖은 allowed_clamped), 요청 없으면 상속; received() 가 처리 동안 thread allowed_nodes 를 세워 실행 관문·프롬프트 스코핑·재위임이 같은 집합(ENVELOPE_KEYS 를 두 러너 send_message 가 복사). role=시스템 AI 위임 force_role(_process_via_cognition), context=메시지 JSON 동봉(64KB 상한, with_context)+봉투. 세 scope 공통. 첫 소비자 /forage/chat 은 delegation_tasks.scoped(role=forage, allowed=[sense], context=사냥판) 위의 얇은 통로 — 시스템 AI 큐(순차)를 타지 않는 판정. 어휘 others:delegate params/target_description 갱신(ack). 회귀 test_delegation_tasks 4건 추가.
+[2026-10-05 20:00:51] PROJECT_CREATED: 연구 (ID: 연구)
+[2026-10-05 20:00:51] PROJECT_CREATED: 연구 (ID: 연구)
+[2026-10-05 20:00:51] PROJECT_RENAMED: 연구 -> 연구2
+[2026-10-05 20:00:53] PROJECT_DELETED: 연구2
+[2026-10-05 20:00:53] PROJECT_DELETED: ID: 연구2
+[2026-10-05 20:00:55] PROJECT_CREATED: P1 (ID: P1)
+[2026-10-05 20:00:55] PROJECT_CREATED: P1 (ID: P1)
+[2026-10-05 20:00:57] PROJECT_CREATED: P2 (ID: P2)
+[2026-10-05 20:00:57] PROJECT_CREATED: P2 (ID: P2)
+
+2026-10-05 | ⑩ 몸의 명사 생애주기 어휘(docs/APP_COMMON_FOUNDATION_GAPS_2026_10_05.md §1-⑩, 사용자: 전부 진행·판정은 구현자): 새 낱말 7 `self:project`·`self:folder`·`self:trash`·`others:chat_room`·`others:warehouse`·`self:warehouse`·`others:channel`·`self:media`, op 확장 3 `others:agents`(생애주기·시작/중지·역할/메모, 주 키 op)·`self:switch`(생애주기 + run 을 ③ 접수증으로 수리: 옛 run 은 SwitchRunner(sm).run_switch 라는 없는 호출로 죽었다)·`limbs:launch`(ops open_ui/list/add/remove, 옛 action 별칭). 구현은 조종실 라우트와 같은 서비스 함수 한 벌로 내렸다(services/launcher_ops·chat_room_ops·warehouse_ops·warehouse_admin·channel_settings_ops·media_ops, cognition/agent_lifecycle, base/warehouse_paths) — 라우트(api_agents 생애주기 5·api_switches create·api_warehouse_feed like/retweet·portal_admin 6·api_business 채널 PUT·api_nas probe/내장자막)가 그 함수를 부른다. 조립 루트(boot_common)가 서비스층 능력을 라우터에 주입. 권한: 쓰기 op owner, 영구 삭제·채널 set 은 human_confirm. 회귀 test_lifecycle_vocab_2026_10_05(9), 용례 28건 시딩, 가이드 body_lifecycle.md(+guide_db). web·system_essentials 재감사. 남은 뷰 작업(calendar 바인딩·즐겨찾기 버튼)은 실기기 묶음.
+[2026-10-05 20:00:59] PROJECT_CREATED: P3 (ID: P3)
+[2026-10-05 20:00:59] PROJECT_CREATED: P3 (ID: P3)

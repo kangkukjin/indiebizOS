@@ -27,6 +27,28 @@ from portal_warehouse import (
 
 router = APIRouter()
 
+
+import warehouse_admin   # ⑩ 내 창고 관리의 정본(IBL [self:warehouse] 와 같은 함수)
+
+
+async def _json(request: Request) -> dict:
+    try:
+        return json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+
+
+def _svc(fn, *args):
+    """서비스 예외 → HTTP: ValueError/FileExistsError=400·409, LookupError=404."""
+    try:
+        return fn(*args)
+    except FileExistsError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
 # ── 창고 관리(소유자 전용) — 런처 '공유창고' 표면(데스크탑·원격)이 부른다. ────────
 # _check_secret 없음 + is_public_remote_path 미등록 → 익명 외부는 터널 게이트 401.
 # 단, 로그인된 원격 런처는 launcher_session 쿠키가 있어 remote_access_guard 를 통과한다
@@ -179,201 +201,35 @@ def _warehouse_admin_add_sync(body: dict) -> dict:
 
 @router.post("/warehouse-admin/remove")
 async def warehouse_admin_remove(request: Request):
-    try:
-        body = json.loads((await request.body()).decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="bad json")
-    lv = _admin_level(body.get("level", 0))
-    name = str(body.get("name", ""))
-    if not name:
-        raise HTTPException(status_code=400, detail="name required")
-    src = _safe_rel(_warehouse_dir(lv), name)
-    if not src.exists() or src == _warehouse_dir(lv):
-        raise HTTPException(status_code=404, detail="no such item")
-    trash = _WAREHOUSE_ROOT / "휴지통" / _WAREHOUSE_LEVELS[lv]
-    trash.mkdir(parents=True, exist_ok=True)
-    dest = trash / src.name
-    if dest.exists():
-        dest = (trash / f"{src.stem}.{int(time.time())}{src.suffix}" if src.is_file()
-                else trash / f"{src.name}.{int(time.time())}")
-    src.rename(dest)   # 같은 볼륨 → 이동. 폴더도 통째로(파인더식 빼기).
-    return {"ok": True, "trashed": str(dest)}
-
+    body = await _json(request)
+    return await asyncio.to_thread(_svc, warehouse_admin.remove, body.get("level", 0), str(body.get("name", "")))
 
 @router.post("/warehouse-admin/move")
 async def warehouse_admin_move(request: Request):
-    """창고 안에서 옮기기·이름변경 — 파일이든 폴더든. self:move 와 같은 의미론
-    (같은 폴더+new_name=이름변경, dest 다르면 이동)의 창고 스코프판.
-
-    dest_level 이 있으면 레벨을 넘는 이동 = '공개 범위 변경' — 드래그로 레벨 탭에
-    떨어뜨리는 명시적 제스처에만 쓴다(2026-07-20 사용자 승인으로 허용).
-    같은 볼륨이라 rename = 원자적 이동 — 복사본이 생기지 않는다.
-    """
-    try:
-        body = json.loads((await request.body()).decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="bad json")
-    lv = _admin_level(body.get("level", 0))
-    name = str(body.get("name", "")).strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="name required")
-    root = _warehouse_dir(lv)
-    src = _safe_rel(root, name)
-    if not src.exists():
-        raise HTTPException(status_code=404, detail="no such item")
-    dst_lv = _admin_level(body.get("dest_level", lv))
-    _ensure_warehouses()                                # dest_level 폴더가 아직 없을 수 있다
-    dst_root = _warehouse_dir(dst_lv)
-    dst_dir = _safe_rel(dst_root, str(body.get("dest", "")).strip())   # 빈 값 = 창고 루트
-    if not dst_dir.is_dir():
-        raise HTTPException(status_code=400, detail="목적지가 폴더가 아니에요")
-    # 폴더를 자기 자신·자기 하위로 옮기면 트리가 끊긴다(자기를 삼킴).
-    if src.is_dir() and (dst_dir == src
-                         or str(dst_dir.resolve()).startswith(str(src.resolve()) + os.sep)):
-        raise HTTPException(status_code=400, detail="폴더를 자기 안으로는 옮길 수 없어요")
-    new_name = str(body.get("new_name", "")).strip()
-    if new_name and ("/" in new_name or new_name.startswith(".")):
-        raise HTTPException(status_code=400, detail="쓸 수 없는 이름이에요")
-    base_name = new_name or src.name
-    if src.parent == dst_dir and base_name == src.name:
-        return {"ok": True, "moved": name, "noop": True}
-
-    def _is_src(p: Path) -> bool:
-        # 맥 기본 파일시스템은 대소문자 무시 — 케이스만 바꾸는 이름변경에서
-        # target.exists() 가 자기 자신을 보고 참이 된다. 문자열 비교로는 못 가른다.
-        try:
-            return os.path.samefile(p, src)
-        except OSError:
-            return False
-    target = dst_dir / base_name
-    if new_name and target.exists() and not _is_src(target):
-        raise HTTPException(status_code=409, detail="같은 이름이 이미 있어요")
-    n = 2
-    while target.exists() and not _is_src(target):
-        stem, dot, ext = base_name.rpartition(".")
-        target = dst_dir / (f"{stem} ({n}).{ext}" if (dot and src.is_file())
-                            else f"{base_name} ({n})")
-        n += 1
-    src.rename(target)
-    return {"ok": True, "moved": str(target.relative_to(dst_root)), "level": dst_lv}
-
+    """창고 안에서 옮기기·이름변경 — 구현은 warehouse_admin.move([self:warehouse]{op:move} 와 같은 함수)."""
+    body = await _json(request)
+    return await asyncio.to_thread(_svc, warehouse_admin.move, body.get("level", 0), str(body.get("name", "")),
+                                   str(body.get("dest", "")), body.get("dest_level"), str(body.get("new_name", "")))
 
 @router.post("/warehouse-admin/mkdir")
 async def warehouse_admin_mkdir(request: Request):
-    """빈 폴더 생성 — 파인더식 '새 폴더'. AI 는 self:mkdir 로 같은 일을 한다(어휘 중복
-    아님 — 이건 GUI 배관: 경로 감옥 + 이름 충돌 시 '(2)' 관례가 창고 스코프에 산다)."""
-    try:
-        body = json.loads((await request.body()).decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="bad json")
-    lv = _admin_level(body.get("level", 0))
-    _ensure_warehouses()
-    root = _warehouse_dir(lv)
-    parent = _safe_rel(root, str(body.get("dest", "")).strip())    # 빈 값 = 창고 루트
-    if not parent.is_dir():
-        raise HTTPException(status_code=400, detail="목적지가 폴더가 아니에요")
-    name = str(body.get("name", "")).strip() or "새 폴더"
-    if "/" in name or name.startswith("."):
-        raise HTTPException(status_code=400, detail="쓸 수 없는 이름이에요")
-    target = parent / name
-    n = 2
-    while target.exists():
-        target = parent / f"{name} ({n})"
-        n += 1
-    target.mkdir()
-    return {"ok": True, "created": str(target.relative_to(root))}
-
+    body = await _json(request)
+    return await asyncio.to_thread(_svc, warehouse_admin.mkdir, body.get("level", 0), str(body.get("name", "")), str(body.get("dest", "")))
 
 @router.get("/warehouse-admin/trash")
-def warehouse_admin_trash():  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
-    """휴지통 내용 — 뺀 단위(파일·폴더) 그대로, 전 레벨 합쳐서. 복구 목적지를 알아야
-    하니 각 항목에 원래 레벨이 실린다(휴지통/<level>/ 구조가 그 기억)."""
-    items = []
-    trash_root = _WAREHOUSE_ROOT / "휴지통"
-    for lv, sub in _WAREHOUSE_LEVELS.items():
-        d = trash_root / sub
-        if not d.is_dir():
-            continue
-        for p in d.iterdir():
-            if p.name.startswith("."):
-                continue
-            st = p.stat()
-            if p.is_dir():
-                inner = [f for f in p.rglob("*") if f.is_file() and not f.name.startswith(".")]
-                items.append({"name": p.name, "level": lv, "is_dir": True,
-                              "count": len(inner), "bytes": sum(f.stat().st_size for f in inner),
-                              "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds")})
-            else:
-                items.append({"name": p.name, "level": lv, "is_dir": False,
-                              "count": 1, "bytes": st.st_size,
-                              "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds")})
-    items.sort(key=lambda i: i["mtime"], reverse=True)
-    return {"items": items, "count": len(items)}
-
+def warehouse_admin_trash():  # 동기 def=스레드풀
+    return warehouse_admin.trash_list()
 
 @router.post("/warehouse-admin/restore")
 async def warehouse_admin_restore(request: Request):
-    """휴지통에서 원래 레벨의 창고 루트로 복구 — remove 의 역방향."""
-    try:
-        body = json.loads((await request.body()).decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="bad json")
-    lv = _admin_level(body.get("level", 0))
-    name = str(body.get("name", "")).strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="name required")
-    trash_dir = _WAREHOUSE_ROOT / "휴지통" / _WAREHOUSE_LEVELS[lv]
-    src = _safe_rel(trash_dir, name)
-    if src.parent != trash_dir or not src.exists():
-        raise HTTPException(status_code=404, detail="no such item")
-    _ensure_warehouses()
-    root = _warehouse_dir(lv)
-    target = root / src.name
-    n = 2
-    while target.exists():
-        target = root / (f"{src.stem} ({n}){src.suffix}" if src.is_file()
-                         else f"{src.name} ({n})")
-        n += 1
-    src.rename(target)
-    return {"ok": True, "restored": str(target.relative_to(root)), "level": lv}
-
+    body = await _json(request)
+    return await asyncio.to_thread(_svc, warehouse_admin.restore, body.get("level", 0), str(body.get("name", "")))
 
 @router.post("/warehouse-admin/trash-delete")
 async def warehouse_admin_trash_delete(request: Request):
-    """휴지통 영구 삭제 — {level, name} 단건 또는 {all: true} 비우기. 여기만 파괴적
-    (창고 본체의 remove 는 언제나 휴지통 이동) — UI 가 confirm 을 앞세운다."""
-    try:
-        body = json.loads((await request.body()).decode("utf-8"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="bad json")
-    return await asyncio.to_thread(_warehouse_admin_trash_delete_sync, body)   # rmtree — 루프 밖에서
-
-
-def _warehouse_admin_trash_delete_sync(body: dict) -> dict:
-    import shutil
-    trash_root = _WAREHOUSE_ROOT / "휴지통"
-    if body.get("all"):
-        removed = 0
-        for sub in _WAREHOUSE_LEVELS.values():
-            d = trash_root / sub
-            if not d.is_dir():
-                continue
-            for p in d.iterdir():
-                if p.name.startswith("."):
-                    continue
-                shutil.rmtree(p) if p.is_dir() else p.unlink()
-                removed += 1
-        return {"ok": True, "removed": removed}
-    lv = _admin_level(body.get("level", 0))
-    name = str(body.get("name", "")).strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="name required")
-    trash_dir = trash_root / _WAREHOUSE_LEVELS[lv]
-    src = _safe_rel(trash_dir, name)
-    if src.parent != trash_dir or not src.exists():
-        raise HTTPException(status_code=404, detail="no such item")
-    shutil.rmtree(src) if src.is_dir() else src.unlink()
-    return {"ok": True, "removed": 1}
+    """휴지통 영구 삭제 — {level, name} 단건 또는 {all: true}. 구현은 warehouse_admin.purge(여기만 파괴적)."""
+    body = await _json(request)
+    return await asyncio.to_thread(_svc, warehouse_admin.purge, body.get("level", 0), str(body.get("name", "")), bool(body.get("all")))
 
 
 @router.get("/warehouse-admin/file")

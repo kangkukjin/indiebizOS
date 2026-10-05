@@ -105,7 +105,20 @@
       switch:
         # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
         open_params: false
-        params: {op: string, switch_id: string}
+        params: {op: string, switch_id: string, name: string, new_name: string, command: string, project_id: string,
+                 agent_name: string, icon: string, description: string, config: object}
+        aliases:
+          switch_id: [id]
+          agent_name: [agent_id]
+        # ⑩ 생애주기 op(create/update/rename/copy/trash/delete)는 주인 전용, delete 는 사람 승인
+        requires:
+          ops:
+            create: {principal: [owner]}
+            update: {principal: [owner]}
+            rename: {principal: [owner]}
+            copy: {principal: [owner]}
+            trash: {principal: [owner]}
+            delete: {principal: [owner], human_confirm: true}
         # list op 가 목록을 내므로 items — 설명이 약속한 것을 통화 선언이 부정하고 있었다
         # (주간 설명 감사가 짚은 건, self:agents 와 같은 부류. 실측: `>> [table:take]` 가
         #  "items 통화를 찾지 못했습니다"로 끊겼다).
@@ -114,8 +127,8 @@
         # 선언이 없으면 returns:items 에서 '읽기'로 파생돼 조종실 dry-run 이 거짓 초록불을 켠다.
         side_effect: true
         fixture: '[self:switch]{op: "list"}'
-        description: 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
-        target_description: 'list는 파라미터 없음. run은 switch_id 필요.'
+        description: 스위치 관리 (op 분기). list/run(접수증)/info/create/update/rename/copy/trash/delete(사람 승인). 스위치=프로젝트 설정을 얼린 원클릭 명령.
+        target_description: 'list — 파라미터 없음. run — switch_id → 접수증 task_ref([self:task]{op:wait} 로 결과). info — switch_id. create — name + command + project_id(+agent_name·icon·description) — 그 프로젝트의 역할·노드를 복사해 얼린다(모델은 얼리지 않음). update — switch_id + name|command|icon|description|config. rename — switch_id + new_name. copy — switch_id. trash — switch_id(복구는 [self:trash]). delete — switch_id 영구, 사람 승인 토큰 필요.'
         group: schedule
         target_key: op
         router: system
@@ -123,12 +136,29 @@
         ops:
           returns:
             run: effect
+            info: scalar
+            create: effect
+            update: effect
+            rename: effect
+            copy: effect
+            trash: effect
+            delete: effect
           side_effect:
             list: false
+            info: false
+          exempt:
+            info: 'switch_id 필요(list 결과의 id) — 고정 fixture 부적합'
           values:
             list: 등록된 스위치 목록
-            run: 스위치 즉시 실행 (switch_id 필수)
-        implementation: _route_system이 op로 분기 — list는 _execute_list_switches, run은 SwitchRunner.run_switch.
+            run: 스위치 즉시 실행 — 접수증 반환 (switch_id 필수)
+            info: 스위치 상세 (switch_id)
+            create: 새 스위치 (name + command + project_id, agent_name·icon·description 선택)
+            update: 필드 갱신 (switch_id + name|command|icon|description|config)
+            rename: 이름 바꾸기 (switch_id + new_name)
+            copy: 복제 (switch_id)
+            trash: 휴지통으로 (switch_id)
+            delete: 영구 삭제 (switch_id, 사람 승인 토큰 필요)
+        implementation: _route_system이 op로 분기 — list는 _execute_list_switches, run은 _cap_run_switch(SwitchRunner.run_async + 접수증), 나머지는 launcher_ops.switch_manage_op(switch_manager).
         keywords:
         - 스위치
         - 스위치 목록
@@ -438,6 +468,217 @@
         - task
         - wait
         - 취소
+      project:
+        # ⑩ 몸의 명사 생애주기(2026-10-05): 런처 항목(프로젝트)은 파일이 아니라 projects.json 의 행 — 파일 낱말이 닿지 못해
+        # 매니저·런처가 REST 로만 열려 있었다. 구현은 조종실 라우트와 같은 project_manager 함수(ibl_launcher_ops).
+        open_params: false
+        params: {op: string, project_id: string, name: string, new_name: string, template: string, parent_folder: string, folder_id: string}
+        aliases:
+          project_id: [id]
+        returns: items
+        side_effect: true
+        requires:
+          principal: [owner]
+          ops:
+            delete: {principal: [owner], human_confirm: true}
+        fixture: '[self:project]{op: "list"}'
+        description: 런처 프로젝트 생애주기 (op 분기). list/templates/create/rename/copy/move(폴더로)/trash(휴지통)/delete(영구, 사람 승인). 주인 전용.
+        target_description: 'list·templates — 파라미터 없음. create — name 필수, template(기본 "기본")·parent_folder 선택. rename — project_id+new_name. copy — project_id(+new_name·parent_folder). move — project_id+folder_id(없으면 폴더 밖으로). trash — project_id(휴지통, 복구는 [self:trash]). delete — project_id, 영구 삭제라 사람 승인 토큰 필요.'
+        group: system
+        target_key: op
+        router: system
+        func: project_op
+        implementation: launcher_ops.project_op → project_manager(list_projects/list_templates/create_project/rename_item/copy_item/move_to_folder/move_to_trash/delete_project). 조종실 /projects 라우트와 같은 함수.
+        ops:
+          default: list
+          returns:
+            create: effect
+            rename: effect
+            copy: effect
+            move: effect
+            trash: effect
+            delete: effect
+          side_effect:
+            list: false
+            templates: false
+          fixture:
+            templates: '[self:project]{op: "templates"}'
+          values:
+            list: 휴지통 밖 프로젝트 목록
+            templates: 만들 때 고를 수 있는 템플릿 목록
+            create: 새 프로젝트 (name 필수, template·parent_folder 선택)
+            rename: 이름 바꾸기 (project_id + new_name)
+            copy: 복제 (project_id, new_name·parent_folder 선택)
+            move: 런처 폴더로 넣기/빼기 (project_id + folder_id, 없으면 폴더 밖으로)
+            trash: 휴지통으로 (project_id — 복구는 [self:trash])
+            delete: 영구 삭제 (project_id, 사람 승인 토큰 필요)
+        keywords:
+        - 프로젝트
+        - 프로젝트 만들기
+        - 프로젝트 삭제
+        - 런처
+      folder:
+        # ⑩ 런처 폴더(바탕화면의 폴더) — 디스크 폴더(self:mkdir/list)와 다른 명사. 같은 projects.json 에 type=folder 로 산다.
+        open_params: false
+        params: {op: string, folder_id: string, name: string, new_name: string, parent_folder: string}
+        aliases:
+          folder_id: [id]
+        returns: items
+        side_effect: true
+        requires:
+          principal: [owner]
+        fixture: '[self:folder]{op: "list"}'
+        description: 런처 폴더(바탕화면 폴더) 생애주기 (op 분기). list/create/items/rename/move/trash. 디스크 폴더는 self:mkdir·self:list.
+        target_description: 'list — 파라미터 없음. create — name(+parent_folder). items — folder_id(폴더 안 항목). rename — folder_id+new_name. move — folder_id(+parent_folder, 없으면 바깥으로). trash — folder_id(휴지통, 복구는 [self:trash]).'
+        group: system
+        target_key: op
+        router: system
+        func: folder_op
+        implementation: launcher_ops.folder_op → project_manager(create_folder/get_folder_items/rename_item/move_to_folder/move_out_of_folder/move_to_trash). 조종실 /folders 라우트와 같은 함수.
+        ops:
+          default: list
+          returns:
+            items: items
+            create: effect
+            rename: effect
+            move: effect
+            trash: effect
+          side_effect:
+            list: false
+            items: false
+          exempt:
+            items: 'folder_id 필요(list 결과의 id) — 고정 fixture 부적합'
+          values:
+            list: 휴지통 밖 런처 폴더 목록
+            create: 새 폴더 (name, parent_folder 선택)
+            items: 폴더 안 항목 (folder_id)
+            rename: 이름 바꾸기 (folder_id + new_name)
+            move: 다른 폴더로/바깥으로 (folder_id + parent_folder)
+            trash: 휴지통으로 (folder_id)
+        keywords:
+        - 런처 폴더
+        - 폴더 만들기
+      trash:
+        # ⑩ 런처 휴지통 — 프로젝트·폴더·스위치·채팅방이 한 휴지통(조종실 /trash 와 같은 세 저장소 합집합). 디스크 삭제(self:delete)와 무관.
+        open_params: false
+        params: {op: string, item_id: string, item_type: string}
+        aliases:
+          item_id: [id]
+        returns: items
+        side_effect: true
+        requires:
+          principal: [owner]
+          ops:
+            empty: {principal: [owner], human_confirm: true}
+        fixture: '[self:trash]{op: "list"}'
+        description: 런처 휴지통 (op 분기). list=프로젝트·폴더·스위치·채팅방 휴지통 합집합, restore=복구(item_id+item_type), empty=비우기(영구, 사람 승인).
+        target_description: 'list — 파라미터 없음(각 행 item_type=project|folder|switch|chat_room). restore — item_id + item_type. empty — 전부 영구 삭제, 사람 승인 토큰 필요.'
+        group: system
+        target_key: op
+        router: system
+        func: trash_op
+        implementation: launcher_ops.trash_op → project_manager.list_trash/restore_from_trash/empty_trash + switch_manager + multi_chat_manager(chat_room_ops). 조종실 /trash 라우트와 같은 함수.
+        ops:
+          default: list
+          returns:
+            restore: effect
+            empty: effect
+          side_effect:
+            list: false
+          values:
+            list: 휴지통 항목 전부 (item_type 동반)
+            restore: 복구 (item_id + item_type)
+            empty: 휴지통 비우기 (영구, 사람 승인 토큰 필요)
+        keywords:
+        - 휴지통
+        - 복구
+      warehouse:
+        # ⑩ 내 창고(공유창고 레벨 0~4) 관리 — 공개면 관리창(portal_admin)과 같은 함수(warehouse_admin). 이웃 창고는 [others:warehouse].
+        open_params: false
+        params: {op: string, level: integer, name: string, new_name: string, dest: string, dest_level: integer, paths: array, path: string, all: boolean}
+        returns: items
+        side_effect: true
+        requires:
+          principal: [owner]
+          ops:
+            purge: {principal: [owner], human_confirm: true}
+        fixture: '[self:warehouse]{op: "list"}'
+        description: 내 공유창고(레벨 0~4) 관리 (op 분기) — 이웃 창고 피드는 [others:warehouse]. list/add(넣기)/remove(휴지통으로)/move(옮기기·이름변경·레벨 변경)/mkdir/trash(휴지통 목록)/restore/purge(영구, 사람 승인).
+        target_description: 'level 은 0~4(기본 0). list — level. add — level + paths(디스크 경로 목록, 폴더도 됨) + dest(창고 안 하위폴더, 선택). remove — level + name(창고 안 상대경로) → 휴지통. move — level + name + dest(폴더) + dest_level(레벨 변경=공개 범위 변경) + new_name. mkdir — level + name + dest. trash — 전 레벨 휴지통 목록. restore — level + name. purge — level + name 또는 all:true, 사람 승인 토큰 필요.'
+        group: system
+        target_key: op
+        router: system
+        func: my_warehouse_op
+        implementation: 조립 루트가 주입한 warehouse_admin.my_warehouse_op(서비스층) — 경로 규칙은 base.warehouse_paths 한 벌.
+        ops:
+          default: list
+          returns:
+            trash: items
+            add: effect
+            remove: effect
+            move: effect
+            mkdir: effect
+            restore: effect
+            purge: effect
+          side_effect:
+            list: false
+            trash: false
+          fixture:
+            trash: '[self:warehouse]{op: "trash"}'
+          values:
+            list: 그 레벨 창고의 파일·폴더 목록 (level)
+            add: 디스크 파일·폴더를 창고에 넣기 (level + paths + dest)
+            remove: 창고에서 빼기 = 휴지통으로 (level + name)
+            move: 창고 안 옮기기·이름변경·레벨 변경 (level + name + dest/dest_level/new_name)
+            mkdir: 새 폴더 (level + name + dest)
+            trash: 창고 휴지통 목록 (전 레벨)
+            restore: 휴지통에서 복구 (level + name)
+            purge: 휴지통 영구 삭제 (level + name 또는 all, 사람 승인 토큰 필요)
+        keywords:
+        - 내 창고
+        - 공유창고 관리
+        - 창고에 넣기
+      media:
+        # ⑩ 미디어 파일 탐침·변환·HLS·자막 — NAS 라우트(api_nas)와 같은 함수(media_ops). 변환·사다리는 ③ 접수증(task_ref).
+        open_params: false
+        params: {op: string, path: string, dst: string, track: integer, smi_class: string}
+        aliases:
+          path: [file]
+        returns: scalar
+        side_effect: true
+        exempt: '미디어 파일 경로 필요 — 고정 fixture 부적합'
+        description: 미디어 파일 (op 분기). probe=코덱·길이·내장 자막 트랙, transcode=브라우저용 mp4 변환(접수증), hls=HLS 사다리 준비(접수증), subtitles=연결 자막 파일 목록, subtitle=자막을 VTT 텍스트로.
+        target_description: 'path 필수(동영상 또는 자막 파일). probe — path. transcode — path(+dst, 기본 같은 자리 .web.mp4) → task_ref(접수증, [self:task]{op:wait}). hls — path → task_ref. subtitles — path(동영상): 옆에 있는 srt/vtt/ass/smi 목록 + 내장 트랙. subtitle — path(자막 파일, smi_class 선택) 또는 path(동영상)+track(내장 트랙 번호) → vtt.'
+        group: system
+        target_key: op
+        router: system
+        func: media_op
+        implementation: 조립 루트가 주입한 media_ops.media_op(서비스층) — ffprobe 탐침(캐시)·thumbnails.transcode_video_to_mp4·hls_ladder.ensure_ladder·nas_subtitle 변환.
+        runs_on: pc_only
+        ops:
+          default: probe
+          returns:
+            transcode: effect
+            hls: effect
+          side_effect:
+            probe: false
+            subtitles: false
+            subtitle: false
+          exempt:
+            probe: '미디어 파일 경로 필요'
+            subtitles: '동영상 경로 필요'
+            subtitle: '자막 파일 경로 필요'
+          values:
+            probe: 코덱·컨테이너·길이·내장 자막·브라우저 호환 여부 (path)
+            transcode: 브라우저용 mp4 변환 — 접수증 반환 (path, dst 선택)
+            hls: HLS 사다리 준비 — 접수증 반환 (path)
+            subtitles: 연결 자막 파일 목록 + 내장 트랙 (path)
+            subtitle: 자막 → VTT 텍스트 (자막 path, 또는 동영상 path + track)
+        keywords:
+        - 미디어
+        - 동영상 변환
+        - 자막
+        - ffprobe
       package:
         # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
         open_params: false

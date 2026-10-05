@@ -33,72 +33,12 @@ async def list_switches():
 
 @router.post("/switches")
 async def create_switch(switch: SwitchCreate):
-    """새 스위치 생성 - 프로젝트 설정을 완전히 복사하여 독립적으로 저장"""
-    import yaml
-    from project_manager import ProjectManager
-
+    """새 스위치 생성 — 프로젝트 설정 복사 규칙은 ibl_launcher_ops.build_switch_config([self:switch]{op:create} 와 같은 함수)"""
+    from launcher_ops import build_switch_config
     try:
-        config = switch.config.copy() if switch.config else {}
-        project_id = config.get("projectId")
-        agent_name = config.get("agentName")
-
-        # 프로젝트에서 설정 복사
-        if project_id:
-            pm = ProjectManager()
-            project_path = pm.get_project_path(project_id)
-            agents_file = project_path / "agents.yaml"
-
-            if agents_file.exists():
-                with open(agents_file, 'r', encoding='utf-8') as f:
-                    project_config = yaml.safe_load(f) or {}
-
-                # 에이전트 찾기
-                agents = project_config.get("agents", [])
-                agent = None
-                for a in agents:
-                    if a.get("name") == agent_name or a.get("id") == agent_name:
-                        agent = a
-                        break
-
-                if not agent and agents:
-                    agent = agents[0]
-
-                # 에이전트 설정 복사
-                if agent:
-                    config["agent_name"] = agent.get("name", agent_name)
-                    # 현행 agents.yaml 필드는 role, 옛 프로젝트는 role_description
-                    config["agent_role"] = agent.get("role", "") or agent.get("role_description", "")
-                    # 노드 스코프 복사 — 프로젝트 삭제 후에도 스위치 독립 유지
-                    # (SwitchRunner._resolve_allowed_nodes 1순위)
-                    if agent.get("allowed_nodes") and not config.get("allowed_nodes"):
-                        config["allowed_nodes"] = agent["allowed_nodes"]
-
-                    # ★모델은 얼리지 않는다 — 스위치가 얼리는 것은 *그 프로젝트의 설정*
-                    # (역할·노드·프롬프트)이고, 모델은 프로젝트 설정이 아니라 런처의
-                    # 모델 기어가 런타임에 단독 결정한다. 옛 코드는 per-agent provider/
-                    # model/api_key 를 여기서 복사해 얼렸는데, 그 설정은 폐지됐으므로
-                    # 얼린 값은 곧 죽은 키가 된다(기어를 바꿔도 스위치만 옛 모델로 남는다).
-                    # 대신 에이전트 **신원**만 얼린다 — 기어의 중앙 핀(`{project}:{id}`)이
-                    # 이 스위치에도 그대로 걸리게.
-                    if agent.get("id"):
-                        config["agent_id"] = agent["id"]
-                    # 비-모델 ai 필드(thinkingBudget 등)가 있으면 보존
-                    _non_model = {k: v for k, v in (agent.get("ai") or {}).items()
-                                  if k not in ("provider", "model", "api_key", "apiKey")}
-                    if _non_model:
-                        config["ai"] = _non_model
-
-                # 공통 프롬프트 복사
-                config["common_prompt"] = project_config.get("common", {}).get("common_prompt", "")
-
-        result = switch_manager.create_switch(
-            name=switch.name,
-            command=switch.command,
-            config=config,
-            icon=switch.icon,
-            description=switch.description
-        )
-        return result
+        return switch_manager.create_switch(name=switch.name, command=switch.command,
+                                            config=build_switch_config(switch.config or {}),
+                                            icon=switch.icon, description=switch.description)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

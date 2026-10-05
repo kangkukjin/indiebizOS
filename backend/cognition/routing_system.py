@@ -12,6 +12,7 @@ system_tools·body_ask·world_pulse·switch_runner·ai_agent…)을 14간선으�
 
 import json
 import os
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -246,7 +247,29 @@ def _cap_list_switches(params: dict) -> Any:
     return _execute_list_switches(params)
 
 
+_SWITCH_RUNS: dict = {}   # run_id -> {state, result, switch_id, started_at} — [self:switch]{op: run} 접수증의 관찰 저장소(프로세스 메모리)
+SWITCH_RUN_KIND = "switch_run"
+
+
+def _switch_run_status(ref: dict) -> dict:
+    import task_receipts as T
+    row = _SWITCH_RUNS.get(ref["task_id"])
+    if not row:
+        return T.view(ref, T.UNKNOWN, error="모르는 스위치 실행(재기동으로 유실됐거나 다른 몸)")
+    if row["state"] == T.RUNNING:
+        return T.view(ref, T.RUNNING, progress={"switch_id": row["switch_id"], "started_at": row["started_at"]})
+    if row["state"] == T.SUCCEEDED:
+        return T.view(ref, T.SUCCEEDED, result=row.get("result"))
+    return T.view(ref, T.FAILED, error=(row.get("result") or {}).get("error") or "스위치 실행 실패", raw=row.get("result"))
+
+
 def _cap_run_switch(params: dict) -> Any:
+    """[self:switch]{op: run} — 조종실 POST /switches/{id}/execute 와 같은 실행(SwitchRunner.run_async + record_run).
+    옛 코드는 SwitchRunner(sm).run_switch(...) 를 불렀는데 그런 생성자·메서드가 없어 AttributeError 로 죽었다(2026-10-05 ⑩ 조사).
+    반환은 ③ 접수증 — [self:task]{op: wait, ref: $r.task_ref} 로 결과를 잇는다."""
+    import threading
+    import time as _time
+    import task_receipts as T
     from switch_manager import SwitchManager
     from switch_runner import SwitchRunner
     switch_id = params.get("switch_id", "")
@@ -256,9 +279,22 @@ def _cap_run_switch(params: dict) -> Any:
     switch = sm.get_switch(switch_id)
     if not switch:
         return {"success": False, "error": f"스위치 없음: {switch_id}"}
-    runner = SwitchRunner(sm)
-    result = runner.run_switch(switch_id)
-    return {"success": True, "switch_id": switch_id, "result": result}
+    run_id = f"swrun_{uuid.uuid4().hex[:12]}"
+    _SWITCH_RUNS[run_id] = {"state": T.RUNNING, "switch_id": switch_id, "started_at": _time.strftime("%Y-%m-%dT%H:%M:%S")}
+    # 오래된 기록은 접는다(메모리 상한 200)
+    for old in list(_SWITCH_RUNS)[:-200]:
+        _SWITCH_RUNS.pop(old, None)
+
+    def _done(result):
+        row = _SWITCH_RUNS.get(run_id)
+        if row is not None:
+            row["result"] = result
+            row["state"] = T.SUCCEEDED if (isinstance(result, dict) and result.get("success")) else T.FAILED
+
+    SwitchRunner(switch).run_async(callback=_done)
+    sm.record_run(switch_id)
+    return T.receipt(SWITCH_RUN_KIND, run_id, state=T.RUNNING, switch_id=switch_id, switch_name=switch.get("name"),
+                     message=f"스위치 '{switch.get('name')}' 실행을 시작했습니다 — [self:task]{{op: \"wait\", ref: $r.task_ref, timeout: 240}} 로 결과 확인.")
 
 
 def _cap_world_pulse(action_name: str, params: dict) -> Any:
@@ -385,3 +421,7 @@ def register_all() -> None:
     import task_receipts
     from delegation_tasks import KIND as _DELEGATION_KIND, task_status as _delegation_task_status
     task_receipts.register(_DELEGATION_KIND, _delegation_task_status)
+    task_receipts.register(SWITCH_RUN_KIND, _switch_run_status)
+    # ⑩ 몸의 명사 생애주기 — 에이전트(인지층 러너 시작·중지 포함)
+    from agent_lifecycle import agents_op as _agents_op
+    register_system_capabilities({"agents_lifecycle": _agents_op})

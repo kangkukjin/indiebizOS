@@ -69,6 +69,7 @@
     "base/tool_completion",
     "base/trace_read",
     "base/trajectory_payload",
+    "base/warehouse_paths",
     "base/window_requests",
     "base/write_ledger",
     "boot_common",
@@ -76,6 +77,7 @@
     "cognition/agent_cognitive",
     "cognition/agent_communication",
     "cognition/agent_goals",
+    "cognition/agent_lifecycle",
     "cognition/agent_pipeline",
     "cognition/agent_runner",
     "cognition/ai_agent",
@@ -323,6 +325,8 @@
     "services/business_sync",
     "services/calendar_actions",
     "services/calendar_html",
+    "services/channel_settings_ops",
+    "services/chat_room_ops",
     "services/chat_runs",
     "services/chat_streams",
     "services/client_agent",
@@ -347,6 +351,8 @@
     "services/indienet_relay",
     "services/indienet_social",
     "services/ingest_engine",
+    "services/launcher_ops",
+    "services/media_ops",
     "services/model_settings_view",
     "services/multi_chat_manager",
     "services/nas_music",
@@ -371,7 +377,9 @@
     "services/spreadsheet_workspace",
     "services/sync_exchange",
     "services/warehouse_adapters",
+    "services/warehouse_admin",
     "services/warehouse_feed",
+    "services/warehouse_ops",
     "services/workspace_sessions",
     "surface/api_agents",
     "surface/api_business",
@@ -550,8 +558,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 475,
-    "engine": 449,
+    "total": 483,
+    "engine": 457,
     "blocklist": 26
   }
 }

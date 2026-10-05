@@ -79,7 +79,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-10-04", impl: "d18914db9de2e881"}  # 재감사 2026-10-05(③): tool_newspaper 에 task_status 어댑터·접수증 task_ref — 회원 경로 불변
+        path_audited: {at: "2026-10-04", impl: "8aa9d5ddc1d13a23"}  # 재감사 2026-10-05(③·⑩): tool_newspaper task_status 어댑터·launch_sites 주 키 op — 회원 경로 불변
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -163,7 +163,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-10-04", impl: "d18914db9de2e881"}  # 재감사 2026-10-05(③): tool_newspaper 에 task_status 어댑터·접수증 task_ref — 회원 경로 불변
+        path_audited: {at: "2026-10-04", impl: "8aa9d5ddc1d13a23"}  # 재감사 2026-10-05(③·⑩): tool_newspaper task_status 어댑터·launch_sites 주 키 op — 회원 경로 불변
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -300,22 +300,45 @@ nodes:
   limbs:
     actions:
       launch:
+        # ⑩ 즐겨찾기 add/remove 노출(2026-10-05): 핸들러(launch_sites)엔 있었으나 사전에 op 가 없었다. 주 키 op(옛 action 은 별칭).
+        open_params: false
+        params: {op: string, name: string, url: string}
+        aliases:
+          op: [action]
         returns: effect
-        description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
+        side_effect: true
+        requires:
+          ops:
+            add: {principal: [owner]}
+            remove: {principal: [owner]}
+        description: 즐겨찾기 사이트 (op 분기). open_ui=대시보드 띄우기(기본), list=목록, add=등록(name+url), remove=삭제(name).
         group: open
-        target_description: (미지정 시 대시보드 표시). action으로 open_ui(대시보드)/add/list/remove 사이트 관리. 등록은 add + name + url.
+        target_description: 'op 미지정 시 open_ui(대시보드). list — 파라미터 없음(items). add — name + url. remove — name.'
         router: handler
         tool: launch_sites
         scope: workspace
-        implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈) — workspace 도구(프로젝트 무관)
-        target_key: action
+        implementation: 즐겨찾기 JSON(sites.json) 기반 — list/add/remove 는 파일, open_ui 는 webbrowser 일괄 오픈. workspace 도구(프로젝트 무관)
+        target_key: op
+        ops:
+          default: open_ui
+          returns:
+            list: items
+          side_effect:
+            list: false
+          fixture:
+            list: '[limbs:launch]{op: "list"}'
+          values:
+            open_ui: 즐겨찾기 대시보드 띄우기
+            list: 등록된 사이트 목록
+            add: 사이트 등록 (name + url)
+            remove: 사이트 삭제 (name)
         app:
           edition: 2   # 표면 바인딩 판본(2026-10-05): 치환 없이 원문+inputs, $item=행·드릴 레코드
           icon: 🔖
           name: 즐겨찾기
           order: 10
           auto_run: true
-          action: '[limbs:launch]{action: "list"}'
+          action: '[limbs:launch]{op: "list"}'
           view:
           - type: card_list
             from: items

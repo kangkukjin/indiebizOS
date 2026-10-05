@@ -99,23 +99,241 @@
         - 몸간요청
         - 명함
         - 다른기기
+      chat_room:
+        # ⑩ 멀티채팅 채팅방(여러 에이전트가 한 방에서 말하는 곳) — multi_chat.db. 이웃 메신저(others:messages)와 다른 명사.
+        open_params: false
+        params: {op: string, room_id: string, name: string, description: string, project_id: string, agent_id: string,
+                 agent_name: string, message: string, response_count: integer, limit: integer}
+        aliases:
+          room_id: [id]
+          message: [text]
+        returns: items
+        side_effect: true
+        requires:
+          ops:
+            create: {principal: [owner]}
+            add: {principal: [owner]}
+            remove: {principal: [owner]}
+            say: {principal: [owner]}
+            clear: {principal: [owner]}
+            trash: {principal: [owner]}
+            delete: {principal: [owner], human_confirm: true}
+        fixture: '[others:chat_room]{op: "list"}'
+        description: 멀티채팅 채팅방 (op 분기). list/candidates/create/info/participants/add/remove/messages/say(발화→에이전트 응답)/clear/trash/delete(사람 승인).
+        target_description: 'list·candidates(초대 가능 에이전트) — 파라미터 없음. create — name(+description). info/participants/messages(+limit)/clear/trash/delete — room_id. add — room_id + project_id + agent_id("프로젝트/에이전트" 도 됨). remove — room_id + agent_name. say — room_id + message(@이름 으로 지목, response_count 기본 2) → items=응답들.'
+        group: delegation
+        target_key: op
+        router: system
+        func: chat_room_op
+        implementation: 조립 루트가 주입한 chat_room_ops.chat_room_op(서비스층) → multi_chat_manager(조종실 /multi-chat 라우트와 같은 매니저).
+        ops:
+          default: list
+          returns:
+            candidates: items
+            create: effect
+            info: scalar
+            participants: items
+            add: effect
+            remove: effect
+            messages: items
+            say: items
+            clear: effect
+            trash: effect
+            delete: effect
+          side_effect:
+            list: false
+            candidates: false
+            info: false
+            participants: false
+            messages: false
+          fixture:
+            candidates: '[others:chat_room]{op: "candidates"}'
+          exempt:
+            info: 'room_id 필요 — 고정 fixture 부적합'
+            participants: 'room_id 필요 — 고정 fixture 부적합'
+            messages: 'room_id 필요 — 고정 fixture 부적합'
+          values:
+            list: 채팅방 목록
+            candidates: 초대할 수 있는 에이전트 목록 (전 프로젝트)
+            create: 새 채팅방 (name, description 선택)
+            info: 채팅방 상세 + 참가자 (room_id)
+            participants: 참가자 목록 (room_id)
+            add: 참가자 추가 (room_id + project_id + agent_id)
+            remove: 참가자 제거 (room_id + agent_name)
+            messages: 최근 메시지 (room_id, limit)
+            say: 발화 → 참가 에이전트 응답 (room_id + message, @이름 지목)
+            clear: 메시지 전부 삭제 (room_id)
+            trash: 휴지통으로 (room_id, 복구는 [self:trash])
+            delete: 영구 삭제 (room_id, 사람 승인 토큰 필요)
+        keywords:
+        - 채팅방
+        - 멀티채팅
+        - 에이전트 회의
+      warehouse:
+        # ⑩ 이웃 창고(공유창고 피드) — 조종실 창고 창(api_warehouse_feed)과 같은 함수(warehouse_ops). 내 창고 관리는 [self:warehouse].
+        open_params: false
+        params: {op: string, url: string, path: string, query: string, limit: integer, sort: string, min_level: integer,
+                 min_score: integer, favorites: boolean, name: string, level: integer, mode: string, warehouse: string,
+                 score: integer, neighbor_id: integer, memo: string}
+        aliases:
+          query: [q]
+          url: [wh_url]
+        returns: items
+        side_effect: true
+        requires:
+          ops:
+            like: {principal: [owner]}
+            retweet: {principal: [owner]}
+            score: {principal: [owner]}
+            memo: {principal: [owner]}
+            poll: {principal: [owner]}
+            forget: {principal: [owner], human_confirm: true}
+        fixture: '[others:warehouse]{op: "neighbors"}'
+        description: 이웃 창고 피드 (op 분기) — 내 창고 관리는 [self:warehouse]. neighbors/poll(새로 읽기)/feed/browse(한 창고 안)/search/like/retweet(내 창고로 소개)/score(0~3)/memo/forget(사람 승인). 이웃 등급은 [others:neighbor]{op:save, info_level}.
+        target_description: 'neighbors — 파라미터 없음(상태·점수 동반). poll — url(없으면 전부). feed — limit·min_level·min_score·favorites(필터). browse — url + path. search — query(+limit·sort·필터). like — url(창고) + path(파일). retweet — url(파일 주소) + name + level(0~4) + mode(link|copy). score — url + score(0~3). memo — neighbor_id + memo. forget — url(이웃 창고를 등기부·캐시에서 제거, 사람 승인).'
+        group: community
+        target_key: op
+        router: system
+        func: warehouse_op
+        implementation: 조립 루트가 주입한 warehouse_ops.warehouse_op(서비스층) → warehouse_feed(SQLite)·business_manager. 좋아요·리트윗은 라우트와 같은 함수.
+        ops:
+          default: feed
+          returns:
+            browse: scalar
+            like: effect
+            retweet: effect
+            score: effect
+            memo: effect
+            forget: effect
+            poll: effect
+          side_effect:
+            neighbors: false
+            feed: false
+            browse: false
+            search: false
+          fixture:
+            feed: '[others:warehouse]{op: "feed", limit: 5}'
+          exempt:
+            browse: 'url 필요(neighbors 결과) — 고정 fixture 부적합'
+            search: 'query 필요 — 고정 fixture 부적합'
+          values:
+            neighbors: 이웃 창고 명부 (상태·점수)
+            poll: 창고 새로 읽기 (url, 없으면 전부)
+            feed: 최근 올라온 것 (limit, 필터 min_level/min_score/favorites)
+            browse: 한 창고의 폴더 보기 (url + path)
+            search: 스냅샷 검색 (query)
+            like: 좋아요 (url + path)
+            retweet: 내 창고로 소개 (url + name + level + mode)
+            score: 창고 점수 0~3 (url + score)
+            memo: 이웃 창고 메모 (neighbor_id + memo)
+            forget: 이웃 창고 잊기 (url, 사람 승인 토큰 필요)
+        keywords:
+        - 창고 피드
+        - 이웃 창고
+        - 리트윗
+        - 좋아요
+      channel:
+        # ⑩ 통신 채널(gmail·nostr)의 설정·폴러 — 설정 창(api_business /channels)과 같은 함수(channel_settings_ops). 읽기·보내기는 channel_read/channel_send.
+        open_params: false
+        params: {op: string, channel_type: string, enabled: boolean, polling_interval: integer, config: object}
+        aliases:
+          channel_type: [channel]
+        returns: items
+        side_effect: true
+        requires:
+          principal: [owner]
+          ops:
+            set: {principal: [owner], human_confirm: true}
+        fixture: '[others:channel]{op: "list"}'
+        description: 통신 채널 설정·폴러 (op 분기). list/detail/set(활성·폴링 주기·config, 사람 승인)/poll(즉시 수신)/status(폴러). 읽기·보내기는 channel_read·channel_send.
+        target_description: 'list·status — 파라미터 없음. detail — channel_type(gmail|nostr). set — channel_type + enabled|polling_interval(초, ≥5)|config(객체), 사람 승인 토큰 필요(gmail 은 config.yaml 동기화·폴러 새로고침 포함). poll — channel_type 즉시 수신. 비밀 값은 *** 로 가려 돌려준다.'
+        group: communication
+        target_key: op
+        router: system
+        func: channel_op
+        implementation: 조립 루트가 주입한 channel_settings_ops.channel_op(서비스층) → business_manager.channel_settings + channel_poller.
+        ops:
+          default: list
+          returns:
+            detail: scalar
+            set: effect
+            poll: effect
+            status: scalar
+          side_effect:
+            list: false
+            detail: false
+            status: false
+          fixture:
+            status: '[others:channel]{op: "status"}'
+          exempt:
+            detail: 'channel_type 필요 — 고정 fixture 부적합'
+          values:
+            list: 채널 설정 목록 (비밀은 가림)
+            detail: 채널 한 건 (channel_type)
+            set: 설정 변경 — enabled·polling_interval·config (사람 승인 토큰 필요)
+            poll: 즉시 수신 (channel_type)
+            status: 폴러 상태 (running·active_channels)
+        keywords:
+        - 채널 설정
+        - 폴링 주기
+        - 메일 수신 설정
       agents:
         # 닫힌 인자 계약(2026-09-29 78회차 F78-2 census) — 구현이 실제로 읽는 키. 밖의 인자는 check·실행이 UNKNOWN_ARGUMENT.
+        # ⑩ 생애주기 op 추가(2026-10-05): create/update/delete/start/stop/role/note — 매니저 창 라우트와 같은 함수(agent_lifecycle).
         open_params: false
-        params: {agent_id: string}
+        params: {op: string, agent_id: string, project_id: string, name: string, type: string, role: string,
+                 allowed_nodes: array, allowed_tools: array, channel: string, email: string, text: string}
         # 실측 items(에이전트 트리 행들) — 07-28 통화 축 정정이 방출은 고치고 선언이
         # 뒤처져 있던 것 (2026-08-19 returns 드리프트 스윕).
         returns: items
+        side_effect: true
+        requires:
+          ops:
+            create: {principal: [owner]}
+            update: {principal: [owner]}
+            delete: {principal: [owner], human_confirm: true}
+            start: {principal: [owner]}
+            stop: {principal: [owner]}
+            role: {principal: [owner]}
+            note: {principal: [owner]}
         fixture: '[others:agents]{}'
-        description: 프로젝트·에이전트 조회. agent_id 없으면 전체 프로젝트별 에이전트 트리(명부), 있으면 단건 상세. (구 [self:agents] 흡수 2026-08-05.)
-        target_description: agent_id ('프로젝트/에이전트' 형식). 생략 시 전체 프로젝트별 에이전트 트리 반환 (위임 대상 확인용).
+        description: 프로젝트·에이전트 조회와 생애주기 (op 분기). list=프로젝트별 명부, info=단건, create/update/delete(사람 승인)/start/stop/role/note. (구 [self:agents] 흡수 2026-08-05.)
+        target_description: 'op 생략 시 agent_id 가 있으면 info, 없으면 list. agent_id 는 "프로젝트/에이전트id"(또는 project_id 와 함께). create — project_id + name(+type·role·allowed_nodes·channel·email). update — agent_id + 바꿀 필드. delete — agent_id, 영구라 사람 승인 토큰. start/stop — agent_id(상주 러너). role/note — agent_id(+text 주면 쓰기, 없으면 읽기).'
         group: delegation
-        target_key: agent_id
+        target_key: op
         router: system
         func: agents
+        ops:
+          default: list
+          returns:
+            info: scalar
+            create: effect
+            update: effect
+            delete: effect
+            start: effect
+            stop: effect
+            role: scalar
+            note: scalar
+          side_effect:
+            list: false
+            info: false
+          exempt:
+            info: 'agent_id 필요(list 결과) — 고정 fixture 부적합'
+            role: 'agent_id 필요 — 고정 fixture 부적합'
+            note: 'agent_id 필요 — 고정 fixture 부적합'
+          values:
+            list: 전체 프로젝트별 에이전트 명부 (위임 대상 확인)
+            info: 에이전트 단건 상세 (agent_id)
+            create: 새 에이전트 (project_id + name, type·role·allowed_nodes 선택)
+            update: 에이전트 갱신·이름 바꾸기 (agent_id + 필드)
+            delete: 에이전트 삭제 (agent_id, 사람 승인 토큰 필요)
+            start: 상주 러너 시작 (agent_id)
+            stop: 상주 러너 중지 (agent_id)
+            role: 역할문 읽기/쓰기 (agent_id, text 주면 쓰기)
+            note: 메모 읽기/쓰기 (agent_id, text 주면 쓰기)
         implementation: |
-          agent_id 없음 → _execute_list_project_agents (프로젝트별 트리), agent_id 있음 →
-          _agent_info (node_registry에서 단건 상세).
+          list → _execute_list_project_agents (프로젝트별 트리), info → _agent_info (node_registry 단건 상세),
+          생애주기 op → 인지층 agent_lifecycle.agents_op (agents.yaml·역할/메모 파일·AgentRunner 시작/중지).
         keywords:
         - 에이전트
         - 프로젝트목록

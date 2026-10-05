@@ -1074,7 +1074,7 @@ def _execute(tool_input: dict, context):
 
     # 사이트 런처
     elif tool_name == "launch_sites":
-        action = tool_input.get("action", "open_ui")
+        action = tool_input.get("op") or tool_input.get("action", "open_ui")   # ⑩ 주 키 op(옛 action 은 별칭)
         name = tool_input.get("name")
         url = tool_input.get("url")
         return launch_sites(action, name, url, project_path)

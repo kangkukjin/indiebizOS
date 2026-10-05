@@ -15,7 +15,7 @@
 
 검증 상태: `build_ibl_nodes.py --check` 27 가드 통과, `tsc`, 렌더 코어·층·크기·validate-parity 가드, 비시스템 전수 8,878 통과(`pytest -m "not system" -n auto --dist loadfile`). 라이브(맥) 확인: 전 계기 edition 2, 지도·정기보고·신문 읽기, 승인 왕복(거절→승인→재전송).
 
-**설치 목록 기준 완료**: ① 전부. ② 1차+2차(§2-② 참조 — 셋은 판정으로 닫음). ③ 1차+2차(§2-③). ⑨ 1차(§2-⑨). 나머지 ④~⑧·⑩ 미착수.
+**설치 목록 기준 완료**: ① 전부. ② 1차+2차(§2-② 참조 — 셋은 판정으로 닫음). ③ 1차+2차(§2-③). ⑨ 1차(§2-⑨). ⑩ 완료(§2-⑩). 나머지 ④~⑧(렌더러·뷰 — 실기기) 미착수.
 
 ## 1 사용자 실기기 확인 대기 (다음 세션 첫 일)
 
@@ -65,6 +65,7 @@
 `[others:delegate]{…, role, allowed, context}` — `allowed` 는 부모 권한 좁히기만·하위 위임 상속, `context` 는 ①의 inputs. 제한 변환은 `table:ai` 유지(모든 AI 호출을 전체 파이프라인에 올리지 않음). 첫 소비자 검색브라우저 `/forage/chat`(`force_role="forage"`, `allowed_set=sense+self+table`, 사냥판 스냅샷).
 
 ### 2-⑩ ⑩ 몸의 명사 생애주기 어휘 (② 뒤)
+**집행 완료(2026-10-05 밤)**: 새 낱말 7·op 확장 3 — 지도는 `data/guides/body_lifecycle.md`, 판정 기록은 설치 목록 ⑩. 남은 뷰 작업(calendar update/toggle/run_now 바인딩·즐겨찾기 add/delete 버튼)은 실기기 묶음. 아래는 원 계획.
 에이전트·프로젝트·폴더·휴지통(매니저·폴더 창), 채팅방(멀티채팅), 스위치 CRUD, 즐겨찾기 add/remove 노출, calendar update/toggle, 창고 feed·like·poll·레벨, 채널 설정, 미디어 probe·transcode·자막. **op 신설도 어휘 증식**(사용자 질책 09-14) — 각각 판정 기록과 가이드·checklist·용례 시딩 의무.
 
 ### 2-§2 수리 (판정 불요, 기반 완료를 기다리지 않음 — 단 React 화면은 실기기 확인이 붙는다)

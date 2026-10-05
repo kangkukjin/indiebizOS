@@ -264,6 +264,17 @@
           "url": {
             "type": "string",
             "description": "사이트 URL (add용)"
+          },
+          "op": {
+            "type": "string",
+            "description": "limbs:launch 의 주 파라미터",
+            "enum": [
+              "open_ui",
+              "list",
+              "add",
+              "remove"
+            ],
+            "default": "open_ui"
           }
         }
       }

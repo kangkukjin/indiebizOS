@@ -47,6 +47,8 @@ def init_manager(ai_config: dict = None):
     global multi_chat_manager
     from multi_chat_manager import MultiChatManager
     multi_chat_manager = MultiChatManager(ai_config=ai_config)
+    from chat_room_ops import set_manager   # ⑩ [others:chat_room] 과 같은 매니저(싱글턴 한 곳)
+    set_manager(multi_chat_manager)
 
 
 def get_manager():

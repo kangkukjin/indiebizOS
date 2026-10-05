@@ -354,15 +354,19 @@
   },
   "limbs:launch": {
    "fields": {
-    "description": "5414d2fc67e5",
-    "target_description": "c3743bceb67c",
-    "implementation": "4fe36143850d",
+    "description": "5487735234c7",
+    "target_description": "c0b0326e1859",
+    "implementation": "26a22b637adc",
     "returns": "9a5e13f69efc",
-    "target_key": "6b6fdce2c6f9",
+    "target_key": "0cacf69ab63c",
+    "params": "681cf69483ad",
+    "aliases": "39fcc5f706d5",
+    "ops": "eef5049d2adf",
+    "side_effect": "b5bea41b6c62",
     "router": "ebbb1532efbc",
     "tool": "07896d60cbc2"
    },
-   "reviewed": "2026-09-29",
+   "reviewed": "2026-10-05",
    "examples": 17
   },
   "limbs:music": {
@@ -487,15 +491,17 @@
   },
   "others:agents": {
    "fields": {
-    "description": "8f3a1b341740",
-    "target_description": "e037465aa3e8",
-    "implementation": "9bbceb3e40f2",
+    "description": "04911cd6ed1e",
+    "target_description": "83073c5a9435",
+    "implementation": "3cb20d736985",
     "returns": "3c22349f8d0b",
-    "target_key": "4423a660687c",
-    "params": "c1d1ba152c34",
+    "target_key": "0cacf69ab63c",
+    "params": "f2677a16046b",
+    "ops": "921aa1325000",
+    "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-29",
+   "reviewed": "2026-10-05",
    "examples": 24
   },
   "others:ask": {
@@ -559,6 +565,22 @@
    "reviewed": "2026-09-29",
    "examples": 15
   },
+  "others:channel": {
+   "fields": {
+    "description": "0daac80b8673",
+    "target_description": "fba1d9c35e62",
+    "implementation": "fa7e570ca51a",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "6df65dcce369",
+    "aliases": "5534519f92a3",
+    "ops": "c56160a14af6",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-10-05",
+   "examples": 3
+  },
   "others:channel_read": {
    "fields": {
     "description": "13b6c07f64fb",
@@ -583,6 +605,22 @@
    },
    "reviewed": "2026-09-29",
    "examples": 13
+  },
+  "others:chat_room": {
+   "fields": {
+    "description": "3b50c7bb4731",
+    "target_description": "d20828beb618",
+    "implementation": "c648cb764373",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "1591ffe4ed83",
+    "aliases": "a2ddbf542eda",
+    "ops": "2ad00c309afe",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-10-05",
+   "examples": 0
   },
   "others:delegate": {
    "fields": {
@@ -736,6 +774,22 @@
    },
    "reviewed": "2026-09-18",
    "examples": 17
+  },
+  "others:warehouse": {
+   "fields": {
+    "description": "6473b72323a3",
+    "target_description": "4b2ba320d86f",
+    "implementation": "1e503a1e8745",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "dde82b2a3907",
+    "aliases": "99b3e0f5d2f4",
+    "ops": "fca164308d50",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-10-05",
+   "examples": 0
   },
   "self:ask": {
    "fields": {
@@ -949,6 +1003,22 @@
    "reviewed": "2026-09-29",
    "examples": 33
   },
+  "self:folder": {
+   "fields": {
+    "description": "9d8c1d94c79e",
+    "target_description": "5f2c4e09b1f5",
+    "implementation": "81246d648c23",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "71fe2ce6bd5a",
+    "aliases": "59f8b735b2e5",
+    "ops": "f0fb56e2541e",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-10-05",
+   "examples": 0
+  },
   "self:folder_note": {
    "fields": {
     "description": "b1639aef82c4",
@@ -1139,6 +1209,23 @@
    "reviewed": "2026-09-18",
    "examples": 9
   },
+  "self:media": {
+   "fields": {
+    "description": "ebcb62d37379",
+    "target_description": "fe6c1d63c206",
+    "implementation": "e0bd6073839b",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "params": "32c91036eca5",
+    "aliases": "33b619f8f22c",
+    "ops": "4f986d5f3557",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-10-05",
+   "examples": 0
+  },
   "self:memory": {
    "fields": {
     "description": "76bb20d737f3",
@@ -1306,6 +1393,22 @@
    "reviewed": "2026-09-29",
    "examples": 33
   },
+  "self:project": {
+   "fields": {
+    "description": "fa88e1ef5fae",
+    "target_description": "230eae0b769b",
+    "implementation": "e209c3b0dbe9",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "c9f6cd2a0dbe",
+    "aliases": "a6dbc1fbf73f",
+    "ops": "5c4baf16d1b4",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-10-05",
+   "examples": 0
+  },
   "self:read": {
    "fields": {
     "description": "81bf640209e9",
@@ -1448,17 +1551,18 @@
   },
   "self:switch": {
    "fields": {
-    "description": "52df92555e7a",
-    "target_description": "b6e69b9a0b1c",
-    "implementation": "f46969a9fe96",
+    "description": "6f9b8a36d2cb",
+    "target_description": "b32bed0a805e",
+    "implementation": "c042ebd382eb",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "770eb272054c",
-    "ops": "b9968b53f13c",
+    "params": "3798a35d6e79",
+    "aliases": "8a29b686b813",
+    "ops": "69a5c4fc05ad",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-29",
+   "reviewed": "2026-10-05",
    "examples": 11
   },
   "self:task": {
@@ -1488,6 +1592,22 @@
    "reviewed": "2026-09-29",
    "examples": 21
   },
+  "self:trash": {
+   "fields": {
+    "description": "a575145e893a",
+    "target_description": "deb6adc3870e",
+    "implementation": "da1735ee61dc",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "c0670876754d",
+    "aliases": "3e09bae34d26",
+    "ops": "4832951e00c6",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-10-05",
+   "examples": 0
+  },
   "self:trigger": {
    "fields": {
     "description": "76e49e9632f9",
@@ -1503,6 +1623,21 @@
    },
    "reviewed": "2026-09-29",
    "examples": 57
+  },
+  "self:warehouse": {
+   "fields": {
+    "description": "3586abca49b6",
+    "target_description": "cce27b56e1a6",
+    "implementation": "ce10a638d5d1",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "a8551da86456",
+    "ops": "f60294221382",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-10-05",
+   "examples": 0
   },
   "self:webapp": {
    "fields": {

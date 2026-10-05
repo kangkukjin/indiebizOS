@@ -180,7 +180,7 @@ Claude Code는 CLI 기본 정책, API는 모델별 입력 예산을 사용한다
 - **어휘 스캔 한 벌**(2026-09-11 `c96e6481`): 따옴표 경계·연산자 분할·소스 머리 인식은 `backend/ibl/ibl_scanner.py` 하나를 파서 셋(`ibl_parser`·`ibl_parser_blocks`·`ibl_parser_values`)이 공유하고, JSON5→JSON 복호는 `ibl_parser_values._try_json_like` 한 곳이다 — 골든 경계 코퍼스 `backend/testdata/ibl_parser_boundaries.json`.
 - **값 의미론 단일 코어**(2026-08-25): `common/value_semantics.py`가 값 분류(null/bool/number/**datetime**/text/structure/other — datetime 은 2026-08-27 신설), JSON 구조 순회(dict=무순서 쌍·list=순서 열), 조건 동등성, 4상태 순서(작음/같음/큼/판정불능), 숫자 관측, 정렬 버킷(숫자→날짜→문자열→결측), groupby 엄격 식별자와 join/merge/dedup 관계 식별자를 한 벌로 소유한다. `table:filter/sort`·`[if]/[case]/repeat`·선언형 `response.sort`·집계·관계 연산은 의미를 재구현하지 않고 공통 결과를 자기 오류 봉투로 번역만 한다. `test_value_semantics_single_owner.py`가 대칭·추이·동등/순서/정렬 일치와 사적 정책 함수 재도입 금지를 지킨다.
 - **프롬프트 가독성**: 액션에 category 태그 부여 → `<action-categories>`로 그룹 표시 (순수 표시용)
-- **액션 라우팅**<!-- ROUTERS:START -->(액션 단위 실측, 합 170): handler 141 · system 19 · channel_engine 7 · driver 1 · workflow_engine 1 · trigger_engine 1<!-- ROUTERS:END -->
+- **액션 라우팅**<!-- ROUTERS:START -->(액션 단위 실측, 합 178): handler 141 · system 27 · channel_engine 7 · driver 1 · workflow_engine 1 · trigger_engine 1<!-- ROUTERS:END -->
   - handler: 패키지 `handler.py` / system: 백엔드 내부 함수 직접 / channel_engine·driver: 채널·프로토콜 추상화 / workflow·trigger: 오케스트레이션 엔진
   - (`api_engine` 은 `api_registry.yaml` 실행 엔진 — 라우터 축이 아니라 별도 경로다.)
   - API 등록 여부·설정 조회·리로드는 `ibl_registry`가 소유한다. `system_tools`의 직접 등록 도구 호출과 `api_pipeline`의 YAML 선언 실행은 살아 있으며 `api_engine`이 실행한다.
@@ -502,9 +502,9 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 > 아래 마커 구간은 `scripts/build_ibl_nodes.py`가 레지스트리 실측과 `docs/generated_templates/`의 편집 원문으로 통째 재생성한다(손 수정 금지). 설명을 바꾸려면 템플릿·설명 원문을 편집한 뒤 빌드한다. 마커 밖 항목(프로젝트·해마 등 런타임 수치)은 날짜를 달아 손으로 갱신.
 
 <!-- IBL_STATS:START -->
-- 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 170 액션** (sense 43·self 54·limbs 14·others 17·engines 19·table 23)
-- backend **.py 541개**(test 제외, git 추적 기준) — 층 디렉토리 `base 75 · datastore 74 · ibl 86 · cognition 84 · services 60 · surface 86`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **91개**(guide_db 등록 **87**)
-- op 분기 액션 **80개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 49·false 25·미선언 96)
+- 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 178 액션** (sense 43·self 59·limbs 14·others 20·engines 19·table 23)
+- backend **.py 549개**(test 제외, git 추적 기준) — 층 디렉토리 `base 76 · datastore 74 · ibl 86 · cognition 85 · services 66 · surface 86`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **92개**(guide_db 등록 **88**)
+- op 분기 액션 **90개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 25·미선언 94)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)
 - 해마 코퍼스 **3,746 용례** (2026-10-04 실측 — 라이브 수치는 조종실·memory.md)

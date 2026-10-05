@@ -268,79 +268,9 @@ def format_size(size: int) -> str:
 
 
 def probe_video(file_path: Path) -> dict:
-    """ffprobe로 동영상 코덱/컨테이너/내장자막 분석 (mtime 기반 캐시)"""
-    path_str = str(file_path)
-    mtime = file_path.stat().st_mtime
-    cache_key = (path_str, mtime)
-
-    if cache_key in _probe_cache:
-        return _probe_cache[cache_key]
-
-    try:
-        result = subprocess.run(
-            [FFPROBE_PATH, "-v", "quiet", "-print_format", "json",
-             "-show_streams", "-show_format", path_str],
-            capture_output=True, text=True, timeout=15
-        )
-        if result.returncode != 0:
-            return {"error": "ffprobe failed", "needs_transcode": True}
-        info = json.loads(result.stdout)
-    except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
-        return {"error": str(e), "needs_transcode": True}
-
-    streams = info.get("streams", [])
-    fmt = info.get("format", {})
-
-    video_codec = None
-    audio_codec = None
-    subtitle_tracks = []
-    duration = float(fmt.get("duration", 0))
-
-    for s in streams:
-        codec_type = s.get("codec_type")
-        codec_name = s.get("codec_name", "").lower()
-        if codec_type == "video" and video_codec is None:
-            video_codec = codec_name
-        elif codec_type == "audio" and audio_codec is None:
-            audio_codec = codec_name
-        elif codec_type == "subtitle":
-            track_index = len(subtitle_tracks)
-            lang = s.get("tags", {}).get("language", "")
-            title = s.get("tags", {}).get("title", "")
-            subtitle_tracks.append({
-                "index": track_index,
-                "codec": codec_name,
-                "language": lang,
-                "title": title or LANG_NAMES.get(lang, lang) or f"Track {track_index}",
-            })
-
-    container = file_path.suffix.lower().lstrip(".")
-
-    video_ok = video_codec in BROWSER_COMPATIBLE_VIDEO
-    audio_ok = audio_codec in BROWSER_COMPATIBLE_AUDIO or audio_codec is None
-    container_ok = container in BROWSER_COMPATIBLE_CONTAINERS
-    needs_transcode = not (video_ok and audio_ok and container_ok)
-
-    probe_result = {
-        "video_codec": video_codec,
-        "audio_codec": audio_codec,
-        "container": container,
-        "duration": duration,
-        "needs_transcode": needs_transcode,
-        "video_compatible": video_ok,
-        "audio_compatible": audio_ok,
-        "container_compatible": container_ok,
-        "subtitle_tracks": subtitle_tracks,
-    }
-
-    # 캐시 저장 (최대치 초과 시 절반 삭제)
-    if len(_probe_cache) >= _PROBE_CACHE_MAX:
-        keys = list(_probe_cache.keys())
-        for k in keys[:len(keys) // 2]:
-            del _probe_cache[k]
-    _probe_cache[cache_key] = probe_result
-
-    return probe_result
+    """ffprobe 탐침 — 정본은 services.media_ops.probe([self:media]{op:probe} 와 같은 함수·같은 캐시)."""
+    import media_ops
+    return media_ops.probe(file_path)
 
 
 def _kill_transcode(process: subprocess.Popen):
@@ -957,16 +887,14 @@ def get_embedded_subtitle(
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
 
     try:
-        result = subprocess.run(
-            [FFMPEG_PATH, "-i", str(safe_path),
-             "-map", f"0:s:{track}", "-f", "webvtt", "-v", "quiet", "pipe:1"],
-            capture_output=True, timeout=30
-        )
-        if result.returncode != 0 or not result.stdout:
+        import media_ops
+        try:
+            vtt = media_ops.embedded_subtitle_vtt(safe_path, track)   # [self:media]{op:subtitle, track} 와 같은 함수
+        except LookupError:
             raise HTTPException(status_code=404, detail="자막 트랙을 추출할 수 없습니다")
 
         return Response(
-            content=result.stdout,
+            content=vtt,
             media_type="text/vtt; charset=utf-8",
             headers={"Content-Type": "text/vtt; charset=utf-8"},
         )

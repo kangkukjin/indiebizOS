@@ -1,0 +1,728 @@
+[
+ {
+  "label": "evidence_p1",
+  "http_seconds": 0.8670685831457376,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "5c093c835a76457f9ef191ef63f10780",
+  "result_ref": "f67859d35a8ae6518d41c100806d40b1023278e06f065741e446aacbd41092ce",
+  "result_chars": 9432,
+  "usage": {
+   "steps": 19,
+   "rows": 0,
+   "elapsed_ms": 512
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 14,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "p1",
+  "http_seconds": 1.2362164161168039,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "baff7de1383d49a0ba0d893e2ce6861f",
+  "result_ref": "8220c29c1096671406769429a02050db48354c43c7f57089a07f5b8068ec20e5",
+  "result_chars": 1784530,
+  "usage": {
+   "steps": 55832,
+   "rows": 0,
+   "elapsed_ms": 892
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 5501,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "p1_after",
+  "http_seconds": 1.8730278750881553,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "3d534b0623ba48c8acf6dbd79fa62573",
+  "result_ref": "32f35d41970dab295903967a7de4d0acbb580df34f42382342bf4e533ec2f48e",
+  "result_chars": 1784532,
+  "usage": {
+   "steps": 55832,
+   "rows": 0,
+   "elapsed_ms": 1499
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 5501,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "p1_check",
+  "http_seconds": null,
+  "success": null,
+  "ok": true,
+  "executed": false,
+  "status": "incomplete",
+  "run_status": null,
+  "run_id": null,
+  "result_ref": null,
+  "result_chars": null,
+  "usage": null,
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": null
+ },
+ {
+  "label": "p2_allcancel_after",
+  "http_seconds": 9.104563416913152,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "d9767555710841ceb9471a077217420b",
+  "result_ref": "e70564839e58963a3f8673eb78cfdeb425cf1ce6cc539f6f61ab7cf13256e5f3",
+  "result_chars": 4482254,
+  "usage": {
+   "steps": 135894,
+   "rows": 8682,
+   "elapsed_ms": 7969
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 27109,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "p2_base_after",
+  "http_seconds": 15.229513209313154,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "2ce210f759b84897aeb9f9bffb718f7d",
+  "result_ref": "a04f8e1db20f498b39aadc63a2747c46105fe9cbaff9d31d146510d70f6f00f2",
+  "result_chars": 11687428,
+  "usage": {
+   "steps": 701624,
+   "rows": 14138,
+   "elapsed_ms": 12677,
+   "limits": {
+    "steps": 1000000,
+    "rows": 100000
+   },
+   "steps_by_line": [
+    {
+     "line": 23,
+     "steps": 366295
+    },
+    {
+     "line": 24,
+     "steps": 56358
+    },
+    {
+     "line": 28,
+     "steps": 43186
+    }
+   ],
+   "detail": "read_result path [\"usage\"]",
+   "tool_ms_by_line": [
+    {
+     "line": 23,
+     "ms": 3865,
+     "calls": 1,
+     "actions": [
+      "table:compute"
+     ]
+    },
+    {
+     "line": 24,
+     "ms": 1242,
+     "calls": 1,
+     "actions": [
+      "table:filter"
+     ]
+    },
+    {
+     "line": 28,
+     "ms": 1041,
+     "calls": 3,
+     "actions": [
+      "table:compute",
+      "table:select",
+      "table:sort"
+     ]
+    }
+   ]
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 82967,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "p2_base_v1",
+  "http_seconds": 11.210004082880914,
+  "success": false,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "interrupted",
+  "run_id": "94f1d1af577d458790d3bfc77d66d6fd",
+  "result_ref": "5c0310cdda7d1b84e1bc32a4b12805bc07acfdedcec87a17456804121aba6ebd",
+  "result_chars": 5875280,
+  "usage": {
+   "steps": 1000001,
+   "rows": 3781,
+   "elapsed_ms": 9857,
+   "limits": {
+    "steps": 1000000,
+    "rows": 100000
+   },
+   "steps_by_line": [
+    {
+     "line": 16,
+     "steps": 380010
+    },
+    {
+     "line": 21,
+     "steps": 329219
+    },
+    {
+     "line": 15,
+     "steps": 101207
+    }
+   ],
+   "detail": "read_result path [\"usage\"]"
+  },
+  "issues": [],
+  "error_code": "BUDGET",
+  "evidence_summary": {
+   "events": 47978,
+   "source_complete": false,
+   "tool_failures": 1,
+   "source_failures": 0,
+   "failures": [
+    {
+     "id": 47965,
+     "action": "table:filter",
+     "code": "BUDGET",
+     "failure_kind": "budget",
+     "incomplete": false
+    }
+   ],
+   "failures_omitted": 0
+  }
+ },
+ {
+  "label": "p2_base_v2",
+  "http_seconds": 11.445717791095376,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "fa4d7a9f46f64427bafa5a7a8fe3dd96",
+  "result_ref": "cd8acf8d0a3ac711e922e7a4ec15d14093584e49b35882f58ae55bb1b5146425",
+  "result_chars": 11687207,
+  "usage": {
+   "steps": 701624,
+   "rows": 14138,
+   "elapsed_ms": 9277,
+   "limits": {
+    "steps": 1000000,
+    "rows": 100000
+   },
+   "steps_by_line": [
+    {
+     "line": 23,
+     "steps": 366295
+    },
+    {
+     "line": 24,
+     "steps": 56358
+    },
+    {
+     "line": 28,
+     "steps": 43186
+    }
+   ],
+   "detail": "read_result path [\"usage\"]"
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 82967,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "p2_check",
+  "http_seconds": 1.1027539167553186,
+  "success": null,
+  "ok": false,
+  "executed": false,
+  "status": "invalid",
+  "run_status": null,
+  "run_id": null,
+  "result_ref": null,
+  "result_chars": null,
+  "usage": null,
+  "issues": [
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: skus. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "4bb24b871944343e77b716b00beee396466159259a6e30961ad7d1ad3b4fb499",
+     "start": 1023,
+     "end": 1037,
+     "line": 24,
+     "column": 8,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 24,
+     "end_column": 22,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: orders. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "4bb24b871944343e77b716b00beee396466159259a6e30961ad7d1ad3b4fb499",
+     "start": 1082,
+     "end": 1098,
+     "line": 25,
+     "column": 13,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 25,
+     "end_column": 29,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: lots. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "4bb24b871944343e77b716b00beee396466159259a6e30961ad7d1ad3b4fb499",
+     "start": 1409,
+     "end": 1423,
+     "line": 27,
+     "column": 77,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 27,
+     "end_column": 91,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: lots. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "4bb24b871944343e77b716b00beee396466159259a6e30961ad7d1ad3b4fb499",
+     "start": 2119,
+     "end": 2133,
+     "line": 32,
+     "column": 23,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 32,
+     "end_column": 37,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: raw_orders. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "4bb24b871944343e77b716b00beee396466159259a6e30961ad7d1ad3b4fb499",
+     "start": 2532,
+     "end": 2552,
+     "line": 36,
+     "column": 22,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 36,
+     "end_column": 42,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: duplicate_rows. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "4bb24b871944343e77b716b00beee396466159259a6e30961ad7d1ad3b4fb499",
+     "start": 2595,
+     "end": 2619,
+     "line": 36,
+     "column": 85,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 36,
+     "end_column": 109,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "MISSING_FIELD",
+    "message": "선언된 필드가 없습니다: lots. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "4bb24b871944343e77b716b00beee396466159259a6e30961ad7d1ad3b4fb499",
+     "start": 3609,
+     "end": 3623,
+     "line": 41,
+     "column": 54,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 41,
+     "end_column": 68,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "error_code": null,
+  "evidence_summary": null
+ },
+ {
+  "label": "p2_check_inputs_fixed",
+  "http_seconds": 0.7802875838242471,
+  "success": null,
+  "ok": false,
+  "executed": false,
+  "status": "invalid",
+  "run_status": null,
+  "run_id": null,
+  "result_ref": null,
+  "result_chars": null,
+  "usage": null,
+  "issues": [
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: Null",
+    "location": {
+     "source_hash": "4bb24b871944343e77b716b00beee396466159259a6e30961ad7d1ad3b4fb499",
+     "start": 228,
+     "end": 234,
+     "line": 8,
+     "column": 50,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 8,
+     "end_column": 56,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "ARITHMETIC",
+    "message": "산술로 관측할 수 없는 타입: Null",
+    "location": {
+     "source_hash": "4bb24b871944343e77b716b00beee396466159259a6e30961ad7d1ad3b4fb499",
+     "start": 255,
+     "end": 261,
+     "line": 9,
+     "column": 19,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 25,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "error_code": null,
+  "evidence_summary": null
+ },
+ {
+  "label": "p2_v1_check",
+  "http_seconds": 0.8827411253005266,
+  "success": null,
+  "ok": true,
+  "executed": false,
+  "status": "incomplete",
+  "run_status": null,
+  "run_id": null,
+  "result_ref": null,
+  "result_chars": null,
+  "usage": null,
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": null
+ },
+ {
+  "label": "p2_v2_check",
+  "http_seconds": 0.9033967503346503,
+  "success": null,
+  "ok": true,
+  "executed": false,
+  "status": "incomplete",
+  "run_status": null,
+  "run_id": null,
+  "result_ref": null,
+  "result_chars": null,
+  "usage": null,
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": null
+ },
+ {
+  "label": "p2_variant",
+  "http_seconds": 11.139421541709453,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "abc5faf6ac0a45e1ab1bd66c1d8a65a1",
+  "result_ref": "3e0bafc78f7090251c05f4ea87e127d1cfb25ce243c45cbfab9b748a161a847e",
+  "result_chars": 11330389,
+  "usage": {
+   "steps": 669630,
+   "rows": 13944,
+   "elapsed_ms": 8856,
+   "limits": {
+    "steps": 1000000,
+    "rows": 100000
+   },
+   "steps_by_line": [
+    {
+     "line": 23,
+     "steps": 344663
+    },
+    {
+     "line": 24,
+     "steps": 53030
+    },
+    {
+     "line": 28,
+     "steps": 41686
+    }
+   ],
+   "detail": "read_result path [\"usage\"]"
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 79730,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "p2_variant_after",
+  "http_seconds": 14.937563917133957,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "8ddf5015487048a2ae00b23a0e8d7208",
+  "result_ref": "a80d75765da1b029321454bad7ce08619a2d464bc94424684b69834006991050",
+  "result_chars": 11330542,
+  "usage": {
+   "steps": 669630,
+   "rows": 13944,
+   "elapsed_ms": 12733,
+   "limits": {
+    "steps": 1000000,
+    "rows": 100000
+   },
+   "steps_by_line": [
+    {
+     "line": 23,
+     "steps": 344663
+    },
+    {
+     "line": 24,
+     "steps": 53030
+    },
+    {
+     "line": 28,
+     "steps": 41686
+    }
+   ],
+   "detail": "read_result path [\"usage\"]",
+   "tool_ms_by_line": [
+    {
+     "line": 23,
+     "ms": 3871,
+     "calls": 1,
+     "actions": [
+      "table:compute"
+     ]
+    },
+    {
+     "line": 18,
+     "ms": 1371,
+     "calls": 1,
+     "actions": [
+      "table:compute"
+     ]
+    },
+    {
+     "line": 24,
+     "ms": 1272,
+     "calls": 1,
+     "actions": [
+      "table:filter"
+     ]
+    }
+   ]
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 79730,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "p3",
+  "http_seconds": 5.647549250163138,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "415f1121d47e4556aa9988ce49e01b95",
+  "result_ref": "d7bcb9450f46ecf5f16a715ba0f0f7bc408a11a4195df407e7f0f755a50d3e00",
+  "result_chars": 274777,
+  "usage": {
+   "steps": 28197,
+   "rows": 0,
+   "elapsed_ms": 1854
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 114,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "p3_after",
+  "http_seconds": 2.8267965423874557,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "5db3fb2613c54a03bfa22485fe1565f7",
+  "result_ref": "aa3b8a35fffe80031f195973973bea8c5c7048fe5a1b73fdbf0cd78e839f6e8a",
+  "result_chars": 274991,
+  "usage": {
+   "steps": 28197,
+   "rows": 0,
+   "elapsed_ms": 2033
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 114,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "p3_check",
+  "http_seconds": 4.135761999990791,
+  "success": null,
+  "ok": true,
+  "executed": false,
+  "status": "incomplete",
+  "run_status": null,
+  "run_id": null,
+  "result_ref": null,
+  "result_chars": null,
+  "usage": null,
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": null
+ },
+ {
+  "label": "reference_only",
+  "http_seconds": 4.569571333006024,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "75f06de9718f46e7b42bc896e9523772",
+  "result_ref": "d1cdc2afc717adff92aa90ba27b1c6ac829af1cf1a52c56cd505782eb7699d8a",
+  "result_chars": 7624,
+  "usage": {
+   "steps": 9,
+   "rows": 0,
+   "elapsed_ms": 854
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 9,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ },
+ {
+  "label": "reference_only_after",
+  "http_seconds": 1.795212000142783,
+  "success": true,
+  "ok": null,
+  "executed": true,
+  "status": null,
+  "run_status": "completed",
+  "run_id": "77471711d13840bbbf65c3fb92003f7e",
+  "result_ref": "c7cf96a7c3683de6605c76f91b02bcf2b72a49435e6d2f400aa1f8a283ec9431",
+  "result_chars": 7809,
+  "usage": {
+   "steps": 9,
+   "rows": 0,
+   "elapsed_ms": 1416
+  },
+  "issues": [],
+  "error_code": null,
+  "evidence_summary": {
+   "events": 9,
+   "source_complete": true,
+   "tool_failures": 0,
+   "source_failures": 0
+  }
+ }
+]

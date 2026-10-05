@@ -1,0 +1,50 @@
+#!ibl edition=2
+[def:구간]($rows,$sortkeys,$startkey,$endkey) {
+  $ordered=$rows >> [table:sort]{by:$sortkeys}
+  $total=0
+  $spans=[]
+  [repeat:len($ordered)] {
+    $r=$ordered[$i]
+    $spans=$spans+[{**$r,start:$total,end:$total+$r.qty}]
+    $total=$total+$r.qty
+  }
+  return $spans >> [table:rename]{map:{start:$startkey,end:$endkey}}
+}
+[def:품목배분]($sku,$lots,$orders) {
+  $ls=$lots >> [table:filter]{where:($r)=>$r.sku==$sku}
+  $os=$orders >> [table:filter]{where:($r)=>$r.sku==$sku}
+  $l=[fn:구간]{rows:$ls,sortkeys:["received","lot"],startkey:"ls",endkey:"le"}
+  $o=[fn:구간]{rows:$os,sortkeys:["seq","order"],startkey:"os",endkey:"oe"}
+  [if:len($l)==0 or len($o)==0] { return [] }
+  $pairs=[table:join]{left:$o,right:$l,on:"sku"}
+  $used=$pairs.items >> [table:compute]{set:($r)=>{used:max(0,min($r.oe,$r.le)-max($r.os,$r.ls))}}
+  $positive=$used >> [table:filter]{where:($r)=>$r.used>0}
+  return $positive >> [table:each]{return {order:$it.order,sku:$it.sku,lot:$it.lot,qty:$it.used,cost:$it.used*$it.unit_cost}}
+}
+$known=$prepared.skus >> [table:each]{return $it.sku}
+$classified=$prepared.orders >> [table:compute]{set:($r)=>{status:$r.order in $cancellations ? "cancelled" : $r.qty==null ? "invalid_qty" : not ($r.sku in $known) ? "unknown_sku" : "active"}}
+$active=$classified >> [table:filter]{where:($r)=>$r.status=="active"}
+$allocations=$known >> [table:each]{mode:"flat_map"}{[fn:품목배분]{sku:$it,lots:$prepared.lots,orders:$active}} >> [table:sort]{by:["order","lot"]}
+$a=$allocations >> [table:groupby]{by:"order",agg:{allocated:["sum","qty"],cost:["sum","cost"]}}
+$joined=[table:join]{left:$classified,right:$a.items,on:"order",how:"left",defaults:{allocated:0,cost:0}}
+$orders=$joined.items >> [table:compute]{set:($r)=>{shortage:$r.status=="active" ? $r.qty-$r.allocated : 0,status:$r.status!="active" ? $r.status : $r.allocated==$r.qty ? "fulfilled" : $r.allocated>0 ? "partial" : "shortage"}} >> [table:select]{columns:["order","sku","qty","status","allocated","cost","shortage"]} >> [table:sort]{by:"order"}
+$bylot=$allocations >> [table:groupby]{by:"lot",agg:{used:["sum","qty"]}}
+$lj=[table:join]{left:$prepared.lots,right:$bylot.items,on:"lot",how:"left",defaults:{used:0}}
+$lots=$lj.items >> [table:compute]{set:($r)=>{remaining:$r.qty-$r.used}} >> [table:select]{columns:["sku","lot","remaining"]} >> [table:sort]{by:"lot"}
+$counts=$orders >> [table:groupby]{by:"status",agg:{count:["count"]}}
+[def:件数]($rows,$status) {return reduce($rows,0,($n,$r)=>$n+($r.status==$status ? $r.count : 0))}
+$summary={raw_orders:$prepared.raw_orders,unique_orders:len($orders),duplicate_rows:$prepared.duplicate_rows,lots:len($lots),requested:reduce($active,0,($n,$r)=>$n+$r.qty),allocated:reduce($orders,0,($n,$r)=>$n+$r.allocated),shortage:reduce($orders,0,($n,$r)=>$n+$r.shortage),remaining:reduce($lots,0,($n,$r)=>$n+$r.remaining),cost:reduce($orders,0,($n,$r)=>$n+$r.cost),fulfilled_orders:[fn:件数]{rows:$counts.items,status:"fulfilled"},partial_orders:[fn:件数]{rows:$counts.items,status:"partial"},shortage_orders:[fn:件数]{rows:$counts.items,status:"shortage"},cancelled_orders:[fn:件数]{rows:$counts.items,status:"cancelled"},invalid_qty_orders:[fn:件数]{rows:$counts.items,status:"invalid_qty"},unknown_sku_orders:[fn:件数]{rows:$counts.items,status:"unknown_sku"}}
+$ids=$orders >> [table:each]{return $it.order}
+$unknown=sorted(difference(unique($cancellations),$ids))
+$result={summary:$summary,orders:$orders,allocations:$allocations,lots:$lots,unknown_cancellations:$unknown}
+assert $summary.allocated+$summary.shortage==$summary.requested,"주문 수량 보존"
+assert $summary.allocated+$summary.remaining==reduce($prepared.lots,0,($n,$r)=>$n+$r.qty),"재고 보존"
+$top=$orders >> [table:filter]{where:($r)=>$r.shortage>0} >> [table:compute]{set:($r)=>{rank:0-$r.shortage}} >> [table:sort]{by:["rank","order"]} >> [table:take]{n:10} >> [table:select]{columns:["order","shortage"]}
+$report=f"# FIFO 배분\n\n요약(수량·원가·상태별 주문수): ${json($summary)}\n\n부족 상위10: ${json($top)}\n\n입력: ${$source}/skus.json, lots.json, orders.csv; 취소목록은 별도 입력.\n규칙: seq/order 순 주문에 received/lot 순 재고를 배분. 취소→수량오류→미등록품목 순 제외. 부족분은 명시하며 실제 주문은 실행하지 않음.\n"
+[self:write]{path:f"${$dest}/result.json",content:json($result)}
+[self:write]{path:f"${$dest}/report.md",content:$report}
+$saved=[self:read]{path:f"${$dest}/result.json"}
+$readreport=[self:read]{path:f"${$dest}/report.md"}
+assert $saved.data==$result,"JSON 저장 대조"
+assert $readreport.text==$report,"보고서 저장 대조"
+return {result:$result,verification:{json:true,report:true,quantity:true},top10:$top}

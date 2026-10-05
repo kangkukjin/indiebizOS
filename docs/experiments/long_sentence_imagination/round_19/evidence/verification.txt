@@ -1,0 +1,4 @@
+Final backend suite: 8962 passed, 14 skipped, 182 warnings in 189.47s.
+Initial suite: 1 failed (new test files needed __main__), 8959 passed, 16 skipped in 185.67s.
+Build: build_ibl_nodes.py --check passed; Android manifest regenerated (other-session changes not committed).
+Ref profile before 4.0168041666s (digest 3.716s), after 0.3090170412s.

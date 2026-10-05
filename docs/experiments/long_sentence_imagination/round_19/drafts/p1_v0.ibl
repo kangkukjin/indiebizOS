@@ -1,0 +1,12 @@
+#!ibl edition=2
+[def:수량]($v) {
+  [try] {
+    $n=number($v)
+    return $n>0 and $n==round($n) ? $n : null
+  } [catch] { return null }
+}
+$d=[self:read]{path:f"${$root}/skus.json"} & [self:read]{path:f"${$root}/lots.json"} & [self:read]{path:f"${$root}/orders.csv"}
+$raw=$d[2].data.items
+$unique=$raw >> [table:dedup]{by:"order"}
+$orders=$unique.items >> [table:compute]{set:($r)=>{qty:[fn:수량]{v:$r.qty},seq:number($r.seq)}}
+return {skus:$d[0].data.items,lots:$d[1].data.items,orders:$orders,raw_orders:len($raw),duplicate_rows:len($raw)-len($orders)}

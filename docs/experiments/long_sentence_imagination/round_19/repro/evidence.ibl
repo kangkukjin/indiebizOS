@@ -1,0 +1,3 @@
+#!ibl edition=2
+$e=evidence($prepared)
+return {events:len($e.events),sample:$e.events[:4]}

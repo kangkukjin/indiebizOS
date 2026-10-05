@@ -1,0 +1,9 @@
+#!ibl edition=2
+$b=$base.result.orders >> [table:rename]{map:{allocated:"allocated_before",cost:"cost_before",status:"status_before"}} >> [table:select]{columns:["order","allocated_before","cost_before","status_before"]}
+$j=[table:join]{left:$variant.result.orders,right:$b,on:"order"}
+$changed=$j.items >> [table:filter]{where:($r)=>$r.status!=$r.status_before or $r.allocated!=$r.allocated_before or $r.cost!=$r.cost_before}
+$delta=$changed >> [table:rename]{map:{allocated:"allocated_after",cost:"cost_after"}} >> [table:select]{columns:["order","allocated_before","allocated_after","cost_before","cost_after"]} >> [table:sort]{by:"order"}
+[self:write]{path:f"${$dest}/delta.json",content:json($delta)}
+$saved=[self:read]{path:f"${$dest}/delta.json"}
+assert $saved.data.items==$delta,"delta 재읽기"
+return {changed:len($delta),verification:true}

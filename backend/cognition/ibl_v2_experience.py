@@ -156,7 +156,12 @@ def abstract_call(tc, request, result, *, turn_cost=None):
         raise ValueError('inputs must be a record')
     from model_result_view import resolve_input_refs
     store = _learning_store(turn_cost) if result.get('inputs_resolved') else None
-    inputs, notes = resolve_input_refs(inputs, store=store)
+    recorded_notes = result.get('inputs_resolved') or []
+    legacy_fingerprints = bool(recorded_notes) and not any(
+        (note.get('evidence') or {}).get('fingerprint_scheme') == 'certified-evidence/1'
+        for note in recorded_notes)
+    inputs, notes = resolve_input_refs(inputs, store=store,
+                                      legacy_fingerprints=legacy_fingerprints)
     if notes or result.get('inputs_resolved'):
         if not result.get('plan_hash') or digest(notes) != digest(result.get('inputs_resolved')):
             raise ValueError('원 실행 입력 참조의 근거가 없거나 변경되었습니다.')

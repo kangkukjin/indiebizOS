@@ -205,7 +205,7 @@ def _is_reference(value):
     return isinstance(value, dict) and isinstance(value.get("$ref"), str) and set(value) <= {"$ref", "path"}
 
 
-def _resolve_reference(name, value, notes, at, store=None):
+def _resolve_reference(name, value, notes, at, store=None, legacy_fingerprints=False):
     """참조 하나를 업무 값으로 — 최상위·목록·레코드 안이 모두 이 한 규칙을 쓴다."""
     ref_id, path = value["$ref"], value.get("path")
     where = f"inputs.{name}" + "".join(f"[{p!r}]" for p in at)
@@ -248,25 +248,29 @@ def _resolve_reference(name, value, notes, at, store=None):
         resolved = _walk(stored, selection)
     notes.append({"name": name, **({"at": at} if at else {}), "id": ref_id,
                   "path": source if path is None and source == ["value_wire"] else selection,
-                  "evidence": input_ref_evidence(stored),
+                  "evidence": input_ref_evidence(
+                      stored, certified_id=(page.get("id") if not legacy_fingerprints
+                                            and page.get("integrity") == "verified" else None)),
                   # 앞 턴이 저장한 값이면 그 턴을 밝힌다 — 그때 조회한 값이지 지금 원천의 상태가 아니다.
                   **({"from_turn": page["from_turn"]} if page.get("from_turn") else {}),
                   "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
     return resolved
 
 
-def _resolve_nested(name, value, notes, at, store=None):
+def _resolve_nested(name, value, notes, at, store=None, legacy_fingerprints=False):
     """목록·레코드 안의 참조도 같은 규칙으로 푼다(69회차 B69-2). 참조 모양($ref·path만)이 아닌 $ref 객체는 데이터다."""
     if _is_reference(value):
-        return _resolve_reference(name, value, notes, at, store)
+        return _resolve_reference(name, value, notes, at, store, legacy_fingerprints)
     if isinstance(value, dict):
-        return {k: _resolve_nested(name, v, notes, at + [k], store) for k, v in value.items()}
+        return {k: _resolve_nested(name, v, notes, at + [k], store, legacy_fingerprints)
+                for k, v in value.items()}
     if isinstance(value, list):
-        return [_resolve_nested(name, v, notes, at + [i], store) for i, v in enumerate(value)]
+        return [_resolve_nested(name, v, notes, at + [i], store, legacy_fingerprints)
+                for i, v in enumerate(value)]
     return value
 
 
-def resolve_input_refs(inputs, *, store=None):
+def resolve_input_refs(inputs, *, store=None, legacy_fingerprints=False):
     """inputs 값 자리의 참조를 저장 결과의 실제 값으로 푼다 — 앞 실행의 결과를 *복사 없이* 다음 프로그램에 넘기는 통로.
 
     형태: {"$ref": result_ref.id, "path": [키·인덱스…]}. 이름의 값 자리뿐 아니라 그 안의 목록·레코드 원소에도 쓴다.
@@ -274,7 +278,8 @@ def resolve_input_refs(inputs, *, store=None):
     걷는다 — 저장 사본의 공개 투영은 표시용이다(69회차 B69-1). 실패 봉투의 기본 참조와 저장 시 가린 자리는 거절한다.
     옛 봉투는 final_result, 둘 다 없으면 저장 본문 전체. 전송 절단 봉투의 스필 참조({"ref": {"path"…}, "_spilled": true})도 푼다.
     값은 여전히 *명시 입력*이다 — 이전 턴 변수의 자동 주입이 아니라 모델이 이름·출처를 적은 것만 들어온다(2026-09-26).
-    실패는 ValueError 로 — 호출자가 실행 전 거절 봉투로 돌려준다."""
+    실패는 ValueError 로 — 호출자가 실행 전 거절 봉투로 돌려준다.
+    legacy_fingerprints는 개정 전 실행 증거를 학습에서 대조할 때만 쓴다."""
     if not isinstance(inputs, dict):
         return inputs, []
     if "$ref" in inputs:
@@ -288,7 +293,7 @@ def resolve_input_refs(inputs, *, store=None):
         if isinstance(value, dict) and "$ref" in value:
             if set(value) - {"$ref", "path"}:
                 raise ValueError(f"inputs.{name}: $ref 참조에는 path만 함께 씁니다")
-            out[name] = _resolve_reference(name, value, notes, [], store)
+            out[name] = _resolve_reference(name, value, notes, [], store, legacy_fingerprints)
         elif is_ref(value):
             resolved, err = resolve_ref(value)
             if err:
@@ -298,7 +303,7 @@ def resolve_input_refs(inputs, *, store=None):
                           "evidence": input_ref_evidence(resolved),
                           "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
         else:
-            out[name] = _resolve_nested(name, value, notes, [], store)
+            out[name] = _resolve_nested(name, value, notes, [], store, legacy_fingerprints)
     if notes:
         try:
             from episode_logger import record_trajectory_event
@@ -324,10 +329,18 @@ def input_evidence_by_name(notes):
     return out
 
 
-def input_ref_evidence(stored):
+def input_ref_evidence(stored, *, certified_id=None):
     """Preserve source status at the reference boundary, never infer it from business values."""
     from ibl_v2_ir import digest
-    out = {"fingerprint": digest(stored)}
+    # TurnStore has already hashed and verified the full immutable record,
+    # including its masking facts. Repacking the entire trace here repeats that
+    # work (L19-2: 93% of reference resolution). Keep certification and source
+    # status intact; only reuse the certified content identity.
+    if certified_id is not None:
+        out = {"fingerprint": digest({"certified_evidence": certified_id}),
+               "fingerprint_scheme": "certified-evidence/1"}
+    else:
+        out = {"fingerprint": digest(stored)}
     if not isinstance(stored, dict):
         return out
     if stored.get("edition") == 2:

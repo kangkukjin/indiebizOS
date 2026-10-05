@@ -1,0 +1,77 @@
+{
+  "trainer_base": {
+    "summary": true,
+    "orders": true,
+    "allocations": true,
+    "lots": true,
+    "unknown_cancellations": true,
+    "report_summary": true,
+    "report_top10": true,
+    "report_sources_rules": true
+  },
+  "trainer_variant": {
+    "summary": true,
+    "orders": true,
+    "allocations": true,
+    "lots": true,
+    "unknown_cancellations": true,
+    "report_summary": true,
+    "report_top10": true,
+    "report_sources_rules": true,
+    "delta": true
+  },
+  "trainer_base_preserved": true,
+  "agent_base": {
+    "summary": true,
+    "orders": true,
+    "allocations": true,
+    "lots": true,
+    "unknown_cancellations": true,
+    "report_summary": true,
+    "report_top10": true,
+    "report_sources_rules": true
+  },
+  "agent_variant": {
+    "summary": true,
+    "orders": true,
+    "allocations": true,
+    "lots": true,
+    "unknown_cancellations": true,
+    "report_summary": true,
+    "report_top10": true,
+    "report_sources_rules": true,
+    "delta": true
+  },
+  "agent_base_preserved": true,
+  "trainer_after_base": {
+    "summary": true,
+    "orders": true,
+    "allocations": true,
+    "lots": true,
+    "unknown_cancellations": true,
+    "report_summary": true,
+    "report_top10": true,
+    "report_sources_rules": true
+  },
+  "trainer_after_variant": {
+    "summary": true,
+    "orders": true,
+    "allocations": true,
+    "lots": true,
+    "unknown_cancellations": true,
+    "report_summary": true,
+    "report_top10": true,
+    "report_sources_rules": true,
+    "delta": true
+  },
+  "allcancel": {
+    "summary": true,
+    "orders": true,
+    "allocations": true,
+    "lots": true,
+    "unknown_cancellations": true,
+    "report_summary": true,
+    "report_top10": true,
+    "report_sources_rules": true
+  }
+}

@@ -1197,6 +1197,8 @@ def get_episode_journal(limit: int = 30, include_test: bool = False, *,
         if items:
             from model_call_context import count_execution_rounds
             marks = ",".join("?" for _ in items)
+            # 목록은 실사용 에피소드만 고르지만, 선택된 주행 안에서 수행한 훈련도
+            # 실제 호출이다. 전역 실사용 통계의 training 제외를 여기 적용하면 0회로 왜곡된다.
             calls = conn.execute(
                 f"""SELECT episode_id,
                     SUM(CASE WHEN kind='supervision.tool.started'
@@ -1206,7 +1208,7 @@ def get_episode_journal(limit: int = 30, include_test: bool = False, *,
                     SUM(CASE WHEN kind='ibl.started' THEN COALESCE(json_extract(data, '$.action_count'), 0) END) actions
                     FROM trajectory_event WHERE episode_id IN ({marks})
                     AND kind IN ('supervision.tool.started', 'ibl.started') AND json_valid(data)
-                    {'' if include_test else "AND COALESCE(source, 'usage') NOT IN ('test', 'training')"}
+                    {'' if include_test else "AND COALESCE(source, 'usage') != 'test'"}
                     GROUP BY episode_id""", [item["id"] for item in items]).fetchall()
             # IBL 실행 = 코드를 실은 호출(설명 조회·결과 읽기 제외) + 엔진 진입 전 거절된 시도. 액션 = 쓴 어휘 수.
             counts = {r["episode_id"]: r["coded"] + max(r["attempts"] - r["starts"], 0) for r in calls}

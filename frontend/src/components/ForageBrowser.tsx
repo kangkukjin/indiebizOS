@@ -1,4 +1,5 @@
 import { iblSurface } from '../lib/remote-session';
+import { iblFailure } from '../lib/instrument';
 /**
  * ForageBrowser — 계기판에 박힌 "포식 브라우저" (개인 검색엔진 + 도로)
  *
@@ -690,6 +691,8 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
     const d = await r.json();
     let res = (d && typeof d === 'object' && 'result' in d) ? (d as any).result : d;
     if (typeof res === 'string') { try { res = JSON.parse(res); } catch { /* keep */ } }
+    const fail = iblFailure(res);
+    if (fail) throw new Error(fail);   // 담기·빼기가 거절됐는데 "담았어요"라고 말하지 않는다
     return res;
   };
 

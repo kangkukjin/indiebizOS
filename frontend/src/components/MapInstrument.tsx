@@ -171,8 +171,10 @@ export function MapInstrument() {
   }, []);
 
   /* ══ 저장 장소 원장 ══ */
-  useRetryingLoad(useCallback(async () => { setSaved(await loadSaved()); }, []));
+  const savedLoaded = useRef(false);   // 원장을 한 번이라도 읽기 전의 저장은 원장을 덮어쓴다 — 막는다
+  useRetryingLoad(useCallback(async () => { setSaved(await loadSaved()); savedLoaded.current = true; }, []));
   const persist = async (next: SavedPlace[]) => {
+    if (!savedLoaded.current) { flash('저장 장소를 아직 불러오지 못했습니다 — 잠시 후 다시 시도하세요'); return; }
     setSaved(next); setSaving(true);
     const ok = await writeSaved(next).catch(() => false);
     setSaving(false);

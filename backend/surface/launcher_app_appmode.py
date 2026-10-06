@@ -386,7 +386,7 @@ async function fireButton(bi,btn){
   /* $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 데스크탑 fireButton 과 동일 의미 */
   try{ let d=unwrapFinalResult(await ibl(actionRequest(CUR.mode,b.action,Object.assign({},gatherInputs(),VIEW_VARS||{}))));
     if(d&&d.stop_in_client){ stopRadioStream(); }
-    else if(d&&d.error){ alert(d.error); }
+    else if(d&&(d.error||d.success===false)){ alert(d.error||d.message||'실패'); }
     else if(d&&d.url){ try{await navigator.clipboard.writeText(d.url);}catch(e){} alert((d.message||'발행 완료')+'\\n\\n링크가 복사되었습니다 — 친구에게 붙여넣으세요:\\n'+d.url); }  // 발행 등 링크 반환 액션
     else if(b.refresh){ runMode(); }  // 실행 후 현재 모드 재조회(토글/재생성 즉시 반영)
   }
@@ -398,7 +398,7 @@ async function fireTop(i){
   const b=(CUR.inst.top_buttons||[])[i]; if(!b||!b.action) return;
   if(b.confirm && !confirm(b.confirm)) return;
   try{ const d=unwrapFinalResult(await ibl(actionRequest(CUR.inst,b.action,{})));
-    if(d&&d.error){ alert(d.error); } else{ alert((d&&d.message)||'완료'); }
+    if(d&&(d.error||d.success===false)){ alert(d.error||d.message||'실패'); } else{ alert((d&&d.message)||'완료'); }
   }
   catch(e){ alert('실행 실패: '+e.message); }
 }

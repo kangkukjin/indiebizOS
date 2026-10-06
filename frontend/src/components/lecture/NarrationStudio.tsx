@@ -22,6 +22,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api';
+import { iblFailure } from '../../lib/instrument';
 import type { Deck } from '../../lib/api-lecture-workspace';
 
 type Mark = { slide_id: string; t: number };
@@ -502,7 +503,10 @@ export function NarrationStudio(props: { lectureId: string; deck: Deck }) {
     setBusy(true);
     setError(null);
     try {
-      setRender(await api.renderLectureVideo(lectureId) as Record<string, unknown>);
+      const started = await api.renderLectureVideo(lectureId);
+      const fail = iblFailure(started);
+      if (fail) throw new Error(fail);   // 거절 봉투엔 status 가 없어 화면이 아무 말도 안 하던 자리
+      setRender(started as Record<string, unknown>);
     } catch (e) {
       setError('렌더 시작 실패: ' + msg(e));
     } finally {

@@ -78,7 +78,10 @@ export async function whereAmI(): Promise<Here | null> {
 // 없으면 빈 원장(첫 저장이 파일을 만든다). 연결 실패는 throw — 호출부가 재시도(useRetryingLoad).
 export async function loadSaved(): Promise<SavedPlace[]> {
   const r = await iblExecuteApp(`[self:read]{path: "${SAVED_PATH}"}`);
-  const items = asObj(r).items;
+  // ★읽기 실패(권한·입출력 등)를 빈 원장으로 읽으면 다음 저장이 원장 전체를 새 한 건으로 덮어쓴다 — 파일 없음만 빈 원장이다.
+  const o = asObj(r);
+  if (o.success === false && o.error_type !== 'not_found') throw new Error(String(o.error || '저장 장소를 읽지 못했습니다'));
+  const items = o.items;
   if (!Array.isArray(items)) return [];
   return (items as SavedPlace[]).filter((x) => x && typeof x.lat === 'number' && typeof x.lng === 'number')
     .map((x) => ({ ...x, tag: x.tag || DEFAULT_TAG, memo: x.memo || '' }));

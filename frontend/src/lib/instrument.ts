@@ -47,6 +47,24 @@ export async function iblExecuteApp(code: string): Promise<unknown> {
 }
 
 /**
+ * 실패 봉투 판정 — 거절·오류는 예외가 아니라 HTTP 200 + `{success:false, error}` 로 온다.
+ * 실패면 사유 문자열, 아니면 null. 응답 원형(`{result|final_result: …}`)과 JSON 문자열도 한 겹 벗겨 본다.
+ * ★쓰기·변경을 부른 자리는 반드시 이걸로 확인한다 — 안 보면 거절이 성공으로 보고된다(2026-10-06 신문 HTML 9일 미갱신).
+ */
+export function iblFailure(r: unknown): string | null {
+  let o: unknown = r;
+  for (let depth = 0; depth < 2; depth++) {
+    if (typeof o === 'string') { try { o = JSON.parse(o); } catch { return null; } }
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+    const e = o as { success?: unknown; error?: unknown; message?: unknown; result?: unknown; final_result?: unknown };
+    if (e.success === false || (typeof e.error === 'string' && e.error)) return String(e.error || e.message || '실패');
+    o = e.final_result ?? e.result;
+    if (o === undefined) return null;
+  }
+  return null;
+}
+
+/**
  * 시스템 AI에게 **동기 대화**를 요청한다(맥락+지시를 message 에 담아). 응답 텍스트를 돌려준다.
  *
  * ★전체 인지 파이프라인(의식→실행)을 타므로 느릴 수 있다(수십 초~분). 대신 시스템 AI의

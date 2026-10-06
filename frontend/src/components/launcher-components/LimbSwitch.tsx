@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Usb, Loader2, Plus, Check, ShieldCheck, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '../../lib/api';
+import { iblFailure } from '../../lib/instrument';
 
 const MANUAL_PROJECT_ID = '수동모드';
 
@@ -51,7 +52,11 @@ async function runLimb(op: string, extra: Record<string, unknown> = {}): Promise
     .filter(([, v]) => v !== undefined && v !== '' && v !== null)
     .map(([k, v]) => `${k}: ${typeof v === 'string' ? JSON.stringify(v) : v}`)
     .join(', ');
-  return api.executeIBL(`[self:limb]{${parts}}`, MANUAL_PROJECT_ID);
+  const res = await api.executeIBL(`[self:limb]{${parts}}`, MANUAL_PROJECT_ID);
+  // 발급·폐기·잠금의 거절을 성공으로 넘기지 않는다 — 폐기가 안 됐는데 된 것처럼 보이면 열쇠가 살아 있다
+  const fail = iblFailure(res);
+  if (fail) throw new Error(fail);
+  return res;
 }
 
 export function LimbSwitch() {

@@ -13,7 +13,7 @@
  * 키워드/제목은 편집 가능(localStorage 결정화) — '다음 판'에 쓸 편집 설정이다.
  */
 import { useCallback, useEffect, useRef, useState, type FC } from 'react';
-import { iblExecuteApp } from '../lib/instrument';  // 앱모드 IBL 호출 공용 헬퍼(project_id 내장)
+import { iblExecuteApp, iblFailure } from '../lib/instrument';  // 앱모드 IBL 호출 공용 헬퍼(project_id 내장)
 
 // ── 소스별 판(edition) ─────────────────────────────────────────
 // 신문은 소스마다 독립된 판을 갖는다: 종합(gnews+guardian)·HN 등. 각 판은 자기 키워드·제호·저장
@@ -181,7 +181,8 @@ let SERVER_CFG: NewspaperConfig | null = null;   // 마지막으로 읽은 설�
 async function loadServerConfig(): Promise<NewspaperConfig | null> {
   try {
     const r = await iblExecuteApp(`[self:read]{path: ${JSON.stringify(CONFIG_PATH)}}`);
-    if (r && typeof r === 'object' && !Array.isArray(r)) { SERVER_CFG = r as NewspaperConfig; return SERVER_CFG; }
+    // 실패 봉투(파일 없음 포함)도 객체다 — 설정으로 받아들이면 다음 저장이 그 봉투의 열쇠(success·error·path…)를 설정 파일에 섞어 쓴다
+    if (r && typeof r === 'object' && !Array.isArray(r) && !iblFailure(r)) { SERVER_CFG = r as NewspaperConfig; return SERVER_CFG; }
   } catch { /* 파일 없음 — 첫 발행 때 핸들러가 기본값을 결정화 */ }
   return null;
 }

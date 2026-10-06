@@ -168,6 +168,7 @@ async function whIntro(){
   const b=document.getElementById('whIntroBtn'); if(b){ b.disabled=true; b.textContent='발행 중…'; }
   try{
     const r=await ibl('[self:business]{store: "document", op: "publish"}');
+    if(r&&(r.error||r.success===false)) throw new Error(r.error||r.message||'발행 실패');
     alert((r&&r.message)||'소개를 발행했어요.');
   }catch(e){ alert('소개발행 실패: '+e); }
   if(b){ b.disabled=false; b.textContent='🌐 소개발행'; }

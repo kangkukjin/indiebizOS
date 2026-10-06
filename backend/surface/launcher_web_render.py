@@ -720,11 +720,11 @@ async function rowBtn(vi,ri,btn,key){
     const d=await ibl(action);
     if(d&&d.play_in_client&&d.stream_url){ playRadioStream(d.stream_url,d.volume,d.title||d.station||d.name); }  // 폰 라디오·유튜브뮤직: WebView 직접 재생 + 미니플레이어
     else if(d&&d.download_in_client){ toast(d.saved===false?('⚠ '+(d.message||'저장 실패')):('📥 '+(d.message||'저장됨'))); }  // mp3 폰 저장 결과
-    else if(d&&d.error){
+    else if(d&&(d.error||d.success===false)){
       // 폰: os_open(집 PC GUI)이 pc_only 로 막히면, 로컬 생성한 HTML 을 인앱 뷰어로 띄운다.
       const m=requestCode(action).match(/path:\\s*"([^"]+\\.html?)"/i);
       if(d.pc_only && m){ openFileOverlay(m[1]); }
-      else alert(d.error);
+      else alert(d.error||d.message||'실패');
     }
     else{  // 즐겨찾기 추가/삭제 등: 성공 메시지 토스트 + refresh 플래그면 현재 뷰 재조회
       if(d&&d.message) toast(d.message);
@@ -747,7 +747,7 @@ async function threadIbBtn(vi,ri,btn){
   btn.disabled=true; const old=btn.textContent; btn.textContent='…';
   try{
     const d=await ibl(action);
-    if(d&&d.error) alert(d.error);
+    if(d&&(d.error||d.success===false)) alert(d.error||d.message||'실패');
     else{ if(d&&d.message) toast(d.message); if(ib.refresh) await refreshCurrent(); }
   }
   catch(e){ alert('실행 실패: '+e.message); }
@@ -760,7 +760,7 @@ async function rowSel(vi,ri,sel){
   sel.disabled=true;
   try{
     const d=await ibl(action);
-    if(d&&d.error) alert(d.error);
+    if(d&&(d.error||d.success===false)) alert(d.error||d.message||'실패');
     else{ if(d&&d.message) toast(d.message); if(r.prim.select.refresh) await refreshCurrent(); }
   }
   catch(e){ alert('실행 실패: '+e.message); }

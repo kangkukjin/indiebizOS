@@ -11,7 +11,7 @@
  */
 import { getBackendOrigin as getApiUrl } from '../lib/backend-origin';
 import { useCallback, useEffect, useState } from 'react';
-import { iblExecuteApp } from '../lib/instrument';
+import { iblExecuteApp, iblFailure } from '../lib/instrument';
 
 type PhotoScan = { exists: boolean; photo_count?: number; video_count?: number; last_scan?: string | null };
 type Recall = { doc?: string | null; docs_below?: string[]; map_count?: number; root_missing?: boolean } | null;
@@ -44,12 +44,17 @@ export function FolderMemoryPanel({ path }: { path: string }) {
     setBusy('불러오는 중'); setMsg(null); setDocDirty(false);
     try {
       const r = (await iblExecuteApp(`[self:forage]{op: "recall", locus: ${q(path)}, limit: 1}`)) as Recall;
+      const recallFail = iblFailure(r);
+      if (recallFail) throw new Error(recallFail);
       const doc = r?.doc ?? null;
       setDocPath(doc);
       setDocsBelow(r?.docs_below ?? []);
       setRootMissing(!!r?.root_missing);
       if (doc) {
         const t = (await iblExecuteApp(`[self:read]{path: ${q(doc)}}`)) as { result?: unknown } | string | null;
+        // 읽기 실패를 빈 문서로 보여 주면 그 위에 한 줄 더해 저장하는 순간 기억 문서가 날아간다
+        const readFail = iblFailure(t);
+        if (readFail) throw new Error(readFail);
         setDocText(typeof t === 'string' ? t : String((t as { result?: unknown })?.result ?? ''));
       } else setDocText('');
       try {
@@ -68,8 +73,10 @@ export function FolderMemoryPanel({ path }: { path: string }) {
     setBusy(label); setMsg(null);
     try {
       const r = (await iblExecuteApp(code)) as { success?: boolean; error?: string; message?: string } | null;
-      if (r && r.success === false) setMsg(r.error || r.message || `${label} 실패`);
-      else setMsg(`${label} 완료`);
+      const fail = iblFailure(r);
+      // 실패하면 after(다시 읽기·편집 표시 해제)를 돌리지 않는다 — 저장이 거절됐는데 디스크본을 다시 읽으면 고친 내용이 화면에서 사라진다
+      if (fail) { setMsg(`${label} 실패: ${fail}`); return; }
+      setMsg(`${label} 완료`);
       if (after) await after();
     } catch (e) { setMsg(`${label} 실패: ${e instanceof Error ? e.message : String(e)}`); }
     finally { setBusy(null); }

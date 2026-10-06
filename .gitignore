@@ -319,6 +319,7 @@ cloud_training/*
 !cloud_training/compare_models.py
 !cloud_training/ibl_embedding_trainer_cloud.py
 !cloud_training/make_bundle.sh
+!cloud_training/runtime_ab.py
 
 # --- DB 백업 덤프 (개인정보 포함) ---
 data/*.sql

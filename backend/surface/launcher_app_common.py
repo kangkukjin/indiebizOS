@@ -58,7 +58,7 @@ async function ibl(code){
     ? await jfetch(window.__PORTAL.exec,{method:'POST',body:JSON.stringify(Object.assign({},body,extra||{}))})
     : await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify(Object.assign({},body,extra||{},{project_id:'앱모드',project_path:'.',surface:'web'}))});
   let r=await send();
-  if(!r.ok){ let m='[HTTP '+r.status+']'; try{ const e=await r.json(); if(e&&(e.error||e.detail)) m=e.error||e.detail; }catch(_e){} throw new Error(m); }
+  if(!r.ok){ let m='[HTTP '+r.status+']'; try{ const e=await r.json(); if(e&&(e.error||e.detail)) m=window.__ui ? window.__ui.error(e,r.status) : (typeof (e.error||e.detail)==='string' ? e.error||e.detail : (e.error||e.detail).message||JSON.stringify(e.error||e.detail)); }catch(_e){} throw new Error(m); }
   let raw=await r.json();
   /* 사람 승인(② 권한 연결): approval_required{challenge} 면 여기(사람이 보는 표면)서 묻고 /ibl/approve 토큰으로 같은 요청을 한 번 재전송.
      포털(손님·회원)은 승인 통로가 없어 거절 봉투 그대로 — 주인 표면(런처 세션)만. */

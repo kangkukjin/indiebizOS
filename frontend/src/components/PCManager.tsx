@@ -24,6 +24,7 @@ import { FolderMemoryPanel } from './FolderMemoryPanel';
 import { GenericInstrument } from './GenericInstrument';
 import type { AppInstrument } from './generic/manifest';
 import { useRetryingLoad } from '../lib/use-retrying-load';
+import { ui, useLocale } from '../i18n/ui';
 
 // API 포트 가져오기
 
@@ -32,7 +33,7 @@ interface FileItem {
   path: string;
   type: 'file' | 'directory';
   size?: number;
-  modified?: string;
+  modified?: number;
 }
 
 interface DriveInfo {
@@ -48,11 +49,12 @@ interface PCManagerProps {
 }
 
 export function PCManager({ initialPath }: PCManagerProps) {
+  useLocale();
   const [currentPath, setCurrentPath] = useState<string>(initialPath || '');
   const [items, setItems] = useState<FileItem[]>([]);
   const [drives, setDrives] = useState<DriveInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   // 표면 셋 — 시스템(상태·프로세스·자원·검색·문서·큰 파일) / 탐색(폴더) / 분석(용량). 스위치 하나.
   // 2026-09-03 사용자 판정: 파일 앱과 시스템 앱은 하나(홈에선 system:true 로 숨고 여기가 진입점), 기억은 탐색 표면의 일부.
@@ -103,10 +105,10 @@ export function PCManager({ initialPath }: PCManagerProps) {
         setCurrentPath(data.path || path);
       } else {
         const errData = await response.json();
-        setError(errData.detail || '디렉토리를 열 수 없습니다.');
+        setError(errData);
       }
     } catch (err) {
-      setError('서버에 연결할 수 없습니다.');
+      setError({ code: 'ui.error.network', params: [] });
       console.error('디렉토리 로드 실패:', err);
       throw err;                      // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     } finally {
@@ -175,10 +177,10 @@ export function PCManager({ initialPath }: PCManagerProps) {
   // 파일 크기 포맷
   const formatSize = (bytes?: number) => {
     if (bytes === undefined) return '-';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+    if (bytes < 1024) return `${ui.number(bytes)} B`;
+    if (bytes < 1024 * 1024) return `${ui.number(bytes / 1024, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${ui.number(bytes / (1024 * 1024), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`;
+    return `${ui.number(bytes / (1024 * 1024 * 1024), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} GB`;
   };
 
   // 경로 표시 (브레드크럼)
@@ -319,9 +321,9 @@ export function PCManager({ initialPath }: PCManagerProps) {
                 <div className="flex items-center justify-center h-32 text-[#8B7B6B]">
                   불러오는 중...
                 </div>
-              ) : error ? (
+              ) : error != null ? (
                 <div className="flex items-center justify-center h-32 text-red-500">
-                  {error}
+                  {ui.error(error)}
                 </div>
               ) : items.length === 0 ? (
                 <div className="flex items-center justify-center h-32 text-[#8B7B6B]">
@@ -345,7 +347,7 @@ export function PCManager({ initialPath }: PCManagerProps) {
                       ) : (
                         <File className="w-5 h-5 mr-3 text-[#8B7B6B]" />
                       )}
-                      <span className="flex-1 text-sm text-[#4A4A4A] truncate">
+                      <span className="flex-1 text-sm text-[#4A4A4A] truncate" title={item.modified == null ? undefined : ui.date(item.modified * 1000, { dateStyle: 'medium', timeStyle: 'short' })}>
                         {item.name}
                       </span>
                       <span className="text-xs text-[#A0A0A0] ml-4">
@@ -359,7 +361,7 @@ export function PCManager({ initialPath }: PCManagerProps) {
 
             {/* 상태바 */}
             <div className="h-7 bg-[#F5F1EB] border-t border-[#E5E0D8] flex items-center px-3 text-xs text-[#8B7B6B]">
-              {items.length}개 항목
+              {ui.text('ui.items.count', [ui.number(items.length)], items.length)}
               {selectedItem && ` • 선택됨: ${items.find(i => i.path === selectedItem)?.name || ''}`}
             </div>
           </div>

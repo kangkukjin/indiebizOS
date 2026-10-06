@@ -16,7 +16,8 @@ for (const file of files(path.join(root, 'frontend/src')).filter(f => /\.[jt]sx?
 }
 const built = JSON.parse(fs.readFileSync(path.join(root, 'frontend/i18n/catalog.json'), 'utf8'));
 for (const id of Object.keys(catalog.messages)) assert.ok(built.messages[id], `source message absent from built catalog: ${id}`);
-const missing = Object.entries(built.messages).filter(([,m]) => !Object.hasOwn(m.translations,'en'));
+const missing = Object.entries(built.messages).flatMap(([id, message]) =>
+  Object.keys(built.languages).filter(language => language !== (built.sourceLocale || 'ko') && !Object.hasOwn(message.translations, language)).map(language => ({ id, language })));
 assert.equal(missing.length,0,JSON.stringify(missing));
 const bundle = JSON.parse(fs.readFileSync(path.join(root, 'frontend/i18n/remote.json'), 'utf8'));
 if (bundle.html) {

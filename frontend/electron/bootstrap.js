@@ -4,7 +4,8 @@
  *
  * 창·백엔드 프로세스 상태를 일절 건드리지 않는 준비 작업만 산다.
  */
-import { app, Menu } from 'electron';
+import { app } from 'electron';
+import { nativeMenu } from './ui-locale.js';
 import path from 'path';
 import fs from 'fs';
 import net from 'net';
@@ -15,7 +16,7 @@ import { syncUserData } from './userdata_sync.js';
  */
 function setupContextMenu(window) {
   window.webContents.on('context-menu', (event, params) => {
-    const contextMenu = Menu.buildFromTemplate([
+    const contextMenu = nativeMenu([
       { role: 'undo', label: '실행 취소' },
       { role: 'redo', label: '다시 실행' },
       { type: 'separator' },

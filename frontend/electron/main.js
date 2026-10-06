@@ -18,6 +18,7 @@ import { pipeline } from 'stream/promises';
 import * as foragePw from './forage-passwords.js';
 
 import { setupContextMenu } from './bootstrap.js';
+import { installUILocale, nativeMenu, nativeText, nativeUI } from './ui-locale.js';
 import {
   startPythonBackend, getBasePath, ensureKeeper, fullSystemCleanup,
   suppressSystemCleanup,
@@ -45,8 +46,8 @@ app.on('browser-window-created', (_event, win) => {
   // 죽은 창처럼 보이지 않게 사람에게 묻는다: "닫기"를 고르면 막은 것을 무시하고 닫는다.
   win.webContents.on('will-prevent-unload', (event) => {
     const choice = dialog.showMessageBoxSync(win, {
-      type: 'question', buttons: ['닫기', '취소'], defaultId: 1, cancelId: 1, noLink: true,
-      message: '저장하지 않은 편집 내용이 있을 수 있습니다.', detail: '그래도 이 창을 닫을까요?',
+      type: 'question', buttons: [nativeText('닫기'), nativeText('취소')], defaultId: 1, cancelId: 1, noLink: true,
+      message: nativeText('저장하지 않은 편집 내용이 있을 수 있습니다.'), detail: nativeText('그래도 이 창을 닫을까요?'),
     });
     if (choice === 0) event.preventDefault();
   });
@@ -142,7 +143,7 @@ function createWindow() {
       if (params.isEditable) template.push({ role: 'cut', label: '잘라내기' }, { role: 'paste', label: '붙여넣기' });
       if (params.selectionText) template.push({ role: 'copy', label: '복사' });
       template.push({ role: 'selectAll', label: '전체 선택' });
-      Menu.buildFromTemplate(template).popup({ window: mainWindow });
+      nativeMenu(template).popup({ window: mainWindow });
     });
   });
 
@@ -368,8 +369,8 @@ function setupIPC() {
   ipcMain.on('native-dialog', (event, kind, message) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     const opts = kind === 'confirm'
-      ? { type: 'question', message: String(message ?? ''), buttons: ['확인', '취소'], defaultId: 0, cancelId: 1, noLink: true }
-      : { type: 'info', message: String(message ?? ''), buttons: ['확인'], noLink: true };
+      ? { type: 'question', message: String(message ?? ''), buttons: [nativeText('확인'), nativeText('취소')], defaultId: 0, cancelId: 1, noLink: true }
+      : { type: 'info', message: String(message ?? ''), buttons: [nativeText('확인')], noLink: true };
     const r = win && !win.isDestroyed() ? dialog.showMessageBoxSync(win, opts) : dialog.showMessageBoxSync(opts);
     if (process.platform === 'win32' && win && !win.isDestroyed()) { win.blur(); win.focus(); }
     event.returnValue = kind === 'confirm' ? r === 0 : true;
@@ -379,8 +380,8 @@ function setupIPC() {
   ipcMain.handle('select-folder', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory'],
-      title: '폴더 선택',
-      buttonLabel: '선택'
+      title: nativeText('폴더 선택'),
+      buttonLabel: nativeText('선택')
     });
 
     if (result.canceled || result.filePaths.length === 0) {
@@ -421,9 +422,9 @@ function setupIPC() {
       // 여러 개 선택 허용 — 여는 것은 첫 파일 하나지만, 파일 창 안에서 여러 문서를 골라 한 번에 휴지통으로 보낼 수 있다
       // (macOS: ⌘⌫ 또는 오른쪽 클릭 → 휴지통으로 이동. 지우는 일은 OS 파일 창의 것 — 휴지통이라 되살릴 수 있다).
       properties: ['openFile', 'multiSelections'],
-      title: typeof o.title === 'string' ? o.title : '파일 선택',
-      message: '열 문서를 고르세요 · 여러 개를 골라 ⌘⌫(또는 오른쪽 클릭)로 휴지통에 보낼 수 있습니다',
-      buttonLabel: '열기',
+      title: typeof o.title === 'string' ? o.title : nativeText('파일 선택'),
+      message: nativeText('열 문서를 고르세요 · 여러 개를 골라 ⌘⌫(또는 오른쪽 클릭)로 휴지통에 보낼 수 있습니다'),
+      buttonLabel: nativeText('열기'),
       ...(typeof o.defaultPath === 'string' && o.defaultPath ? { defaultPath: o.defaultPath } : {}),
     };
     const result = win && !win.isDestroyed() ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
@@ -434,10 +435,10 @@ function setupIPC() {
   ipcMain.handle('select-images', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile', 'multiSelections'],
-      title: '이미지 파일 선택',
-      buttonLabel: '선택',
+      title: nativeText('이미지 파일 선택'),
+      buttonLabel: nativeText('선택'),
       filters: [
-        { name: '이미지', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }
+        { name: nativeText('이미지'), extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }
       ]
     });
 
@@ -453,8 +454,8 @@ function setupIPC() {
     const result = await dialog.showOpenDialog({
       // 폴더도 고를 수 있다 — 창고는 폴더를 구조 그대로 받는다(안의 파일이 각각 공개 항목).
       properties: ['openFile', 'openDirectory', 'multiSelections'],
-      title: '파일 · 폴더 선택',
-      buttonLabel: '선택'
+      title: nativeText('파일 · 폴더 선택'),
+      buttonLabel: nativeText('선택')
     });
     if (result.canceled || result.filePaths.length === 0) {
       return null;
@@ -499,7 +500,7 @@ function createTray() {
     const icon = nativeImage.createFromDataURL(TRAY_ICON_DATA_URL);
     tray = new Tray(icon);
     tray.setToolTip('IndieBiz OS');
-    tray.setContextMenu(Menu.buildFromTemplate([
+    tray.setContextMenu(nativeMenu([
       { label: '열기', click: () => showMainWindow() },
       { type: 'separator' },
       { label: '종료', click: () => app.quit() }
@@ -728,15 +729,15 @@ app.whenReady().then(async () => {
     {
       label: 'IndieBiz',
       submenu: [
-        { role: 'about' },
+        { role: 'about', label: '앱 정보' },
         { type: 'separator' },
-        { role: 'services' },
+        { role: 'services', label: '서비스' },
         { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
+        { role: 'hide', label: '가리기' },
+        { role: 'hideOthers', label: '다른 앱 가리기' },
+        { role: 'unhide', label: '모두 보기' },
         { type: 'separator' },
-        { role: 'quit' }
+        { role: 'quit', label: '종료' }
       ]
     },
     {
@@ -780,9 +781,18 @@ app.whenReady().then(async () => {
     }
   ];
   
-  const menu = Menu.buildFromTemplate(template);
+  const menu = nativeMenu(template);
   Menu.setApplicationMenu(menu);
 
+  nativeUI.subscribe(() => {
+    Menu.setApplicationMenu(nativeMenu(template));
+    if (tray) tray.setContextMenu(nativeMenu([
+      { label: '열기', click: () => showMainWindow() },
+      { type: 'separator' },
+      { label: '종료', click: () => app.quit() },
+    ]));
+  });
+  installUILocale();
   // IPC 설정
   setupIPC();
 

@@ -5,7 +5,8 @@
  * 각 창의 참조(Map·싱글턴 변수)가 곧 상태라 생성기와 같은 모듈에 산다.
  * 메인 창(createWindow)은 main.js 잔류 — 앱 생명주기·트레이·런처 WS 가 직접 다룬다.
  */
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, shell, ipcMain } from 'electron';
+import { LocalizedWindow as BrowserWindow, nativeTitle } from './ui-locale.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -135,7 +136,7 @@ function createFolderWindow(folderId, folderName) {
     height: 600,
     minWidth: 600,
     minHeight: 400,
-    title: folderName || '폴더',
+    title: folderName || nativeTitle('폴더'),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 15 },
     webPreferences: {
@@ -194,7 +195,7 @@ function createSystemAIWindow() {
     height: 850,
     minWidth: 400,
     minHeight: 500,
-    title: '시스템 AI',
+    title: nativeTitle('시스템 AI'),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 15 },
     webPreferences: {
@@ -247,7 +248,7 @@ function createBusinessWindow() {
     height: 700,
     minWidth: 800,
     minHeight: 500,
-    title: '비즈니스 관리',
+    title: nativeTitle('비즈니스 관리'),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 15 },
     webPreferences: {
@@ -300,7 +301,7 @@ function createCommunityWindow() {
     height: 800,
     minWidth: 400,
     minHeight: 600,
-    title: '커뮤니티',
+    title: nativeTitle('커뮤니티'),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 15 },
     webPreferences: {
@@ -348,7 +349,7 @@ function createMessengerWindow() {
     height: 760,
     minWidth: 480,
     minHeight: 600,
-    title: '메신저',
+    title: nativeTitle('메신저'),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 15 },
     webPreferences: {
@@ -524,7 +525,7 @@ function createLectureWorkspaceWindow(lectureId = null) {
     height: 1000,
     minWidth: 1200,
     minHeight: 700,
-    title: '강의 만들기',
+    title: nativeTitle('강의 만들기'),
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     trafficLightPosition: process.platform === 'darwin' ? { x: 15, y: 15 } : undefined,
     webPreferences: {
@@ -597,7 +598,7 @@ function createToolWindow(kind, folderId = 'desktop') {
     minWidth: spec.minWidth || 720,
     minHeight: spec.minHeight || 480,
     resizable: true,
-    title: spec.title,
+    title: nativeTitle(spec.title),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -655,7 +656,7 @@ function createMultiChatWindow(roomId, roomName) {
     height: 700,
     minWidth: 900,
     minHeight: 600,
-    title: roomName || '다중채팅방',
+    title: roomName || nativeTitle('다중채팅방'),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 15 },
     webPreferences: {
@@ -730,7 +731,7 @@ function createProjectPanelWindow(panel, projectId, projectName) {
     height: spec.height,
     minWidth: spec.minWidth,
     minHeight: spec.minHeight,
-    title: projectName ? `${spec.title} — ${projectName}` : spec.title,
+    title: nativeTitle(spec.title, projectName),
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 15 },
     webPreferences: {

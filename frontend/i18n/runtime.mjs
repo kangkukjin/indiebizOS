@@ -3,17 +3,48 @@ export function createUI(catalog, host = globalThis) {
   const key = 'indiebiz.ui.locale';
   const listeners = new Set();
   const languages = catalog.languages || { ko: '한국어', en: 'English' };
-  let locale = 'ko';
-  try { const saved = host.localStorage?.getItem(key); if (saved in languages) locale = saved; } catch {}
+  const sourceLocale = catalog.sourceLocale || 'ko';
+  const supports = value => typeof value === 'string' && Object.hasOwn(languages, value);
+  let locale = sourceLocale;
+  try { const saved = host.localStorage?.getItem(key); if (supports(saved)) locale = saved; } catch {}
   const signature = text => [...text.matchAll(/\{\d+\}/g)].map(m => m[0]).sort().join('|');
-  function text(id, values = []) {
-    const message = catalog.messages[id];
+  function text(id, values = [], count) {
+    const message = Object.hasOwn(catalog.messages, id) ? catalog.messages[id] : null;
     if (!message) return id;
     let value = message.translations?.[locale] ?? message.source;
-    if (signature(value) !== signature(message.source)) value = message.source;
+    if (typeof count === 'number' && Number.isFinite(count)) {
+      const forms = message.plurals?.[locale];
+      const category = new Intl.PluralRules(locale).select(count);
+      value = forms?.[category] ?? forms?.other ?? value;
+    }
+    if (typeof value !== 'string' || signature(value) !== signature(message.source)) value = message.source;
     // A function replacement keeps $&, $1 and markup in user values literal.
     return value.replace(/\{(\d+)\}/g, (_, i) => String(values[Number(i)] ?? `{${i}}`));
   }
+  function source(context, value) {
+    const entry = Object.entries(catalog.messages).find(([, m]) => m.context === context && m.source === value);
+    return entry ? text(entry[0]) : value;
+  }
+  // Only a declared code can translate a server message; unknown content remains literal.
+  function message(value) {
+    if (!value || typeof value !== 'object') return value;
+    const entry = Object.hasOwn(catalog.messages, value.code) ? catalog.messages[value.code] : null;
+    if (!entry || entry.context !== 'system:message') return value.message ?? value.msg ?? value;
+    const params = value.params || [];
+    if (!Array.isArray(params)) return value.message ?? value;
+    return text(value.code, params, value.count);
+  }
+  function error(payload, status = 0) {
+    const detail = payload?.ui_message ?? payload?.detail ?? payload?.error ?? payload;
+    const resolved = message(detail);
+    if (typeof resolved === 'string') return resolved;
+    if (typeof payload?.message === 'string') return payload.message;
+    if (resolved != null) return JSON.stringify(resolved);
+    return text('ui.error.http', [status]);
+  }
+  /** @param {number} value @param {Intl.NumberFormatOptions} [options] */
+  const number = (value, options = {}) => new Intl.NumberFormat(locale, options).format(value);
+  const date = (value, options) => new Intl.DateTimeFormat(locale, options).format(value instanceof Date ? value : new Date(value));
   // Called only at explicitly declared system-metadata sinks, never arbitrary content.
   const systemMessages = Object.entries(catalog.messages).filter(([, m]) => m.context === 'system:metadata' || m.context === 'system:status');
   // Match complete source-owned status templates, never substitute inside diagnostic values.
@@ -28,7 +59,7 @@ export function createUI(catalog, host = globalThis) {
   const systemIds = new Map(systemMessages.map(([id, m]) => [m.source, id]));
   const fragments = [...systemIds.keys()].filter(s => s.length > 4).sort((a,b) => b.length - a.length);
   function system(value, allowFragments = false) {
-    if (typeof value !== 'string' || locale === 'ko') return value;
+    if (typeof value !== 'string' || locale === sourceLocale) return value;
     if (systemIds.has(value)) return text(systemIds.get(value));
     if (value.length <= 10000) for (const template of statusTemplates) {
       const match = template.pattern.exec(value);
@@ -50,7 +81,7 @@ export function createUI(catalog, host = globalThis) {
   }
   function instrument(raw) {
     const spec = catalog.instruments?.[raw?.id];
-    if (!spec || spec.name !== raw.name || locale === 'ko') return raw;
+    if (!spec || spec.name !== raw.name || locale === sourceLocale) return raw;
     const copy = structuredClone(raw);
     for (const field of spec.fields) {
       let node = copy;
@@ -65,17 +96,27 @@ export function createUI(catalog, host = globalThis) {
     if (host.document) host.document.documentElement.lang = locale;
     listeners.forEach(fn => fn());
   }
-  function setLocale(next) {
-    if (!(next in languages)) return;
+  function setLocale(next, propagate = true) {
+    if (!supports(next)) return;
+    const changed = locale !== next;
     locale = next;
     try { host.localStorage?.setItem(key, next); } catch {}
-    announce();
+    if (changed) announce();
+    if (propagate) host.electron?.setUILocale?.(next);
   }
+  // Main process is authoritative once connected; listener is installed before the snapshot.
+  let received = false;
+  host.electron?.onUILocale?.(next => { received = true; setLocale(next, false); });
+  host.electron?.getUILocale?.().then(saved => {
+    if (received) return;
+    if (supports(saved)) setLocale(saved, false);
+    else host.electron?.setUILocale?.(locale);
+  }).catch(() => {});
   host.addEventListener?.('storage', event => {
-    if (event.key === key) { locale = event.newValue in languages ? event.newValue : 'ko'; announce(); }
+    if (event.key === key) setLocale(supports(event.newValue) ? event.newValue : sourceLocale, !host.electron?.getUILocale);
   });
   if (host.document) host.document.documentElement.lang = locale;
-  return { text, system, instrument, languages, getLocale: () => locale, setLocale,
+  return { text, source, message, error, number, date, system, instrument, languages, getLocale: () => locale, setLocale,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); } };
 }
 

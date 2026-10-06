@@ -282,6 +282,55 @@ def main():
                     assert not remaining, (route_name,'untranslated attributes',remaining)
                     reports.append({'systemWindow':route_name,'text':text,'attributesChecked':len(attrs),'pageErrors':window_errors,'data':'empty synthetic records; document content excluded'})
                     window.close()
+            if surface == 'desktop':
+                pc = context.new_page()
+                mode = {'count': 1, 'error': False}
+                raw_name = '사용자 파일 $&'
+                def pc_api(route):
+                    path = urlsplit(route.request.url).path
+                    if route.request.url.startswith(origin) and (path == '/' or path.startswith('/assets/')):
+                        route.continue_(); return
+                    status = 200
+                    body = {}
+                    if path == '/pcmanager/list':
+                        if mode['error']:
+                            status = 502
+                            body = {'detail': '원래 오류', 'ui_message': {'code': 'ui.path.failed', 'message': 'fallback', 'params': [raw_name]}}
+                        else:
+                            body = {'path': '/test', 'items': [{'name': raw_name + str(i), 'path': '/test/' + str(i), 'type': 'file', 'size': 1536, 'modified': 1791028800} for i in range(mode['count'])]}
+                    elif path == '/pcmanager/drives': body = {'drives': []}
+                    route.fulfill(status=status, json=body, headers={'Access-Control-Allow-Origin':'*'})
+                pc.route('**/*', pc_api)
+                picker.first.select_option('en')
+                pc.goto(origin + '/#/pcmanager')
+                pc.get_by_text('1 item', exact=True).wait_for()
+                pc.get_by_text('1.5 KB', exact=True).wait_for()
+                filename = pc.get_by_text(raw_name + '0', exact=True)
+                expected = pc.evaluate("new Intl.DateTimeFormat('en',{dateStyle:'medium',timeStyle:'short'}).format(new Date(1791028800000))")
+                assert filename.get_attribute('title') == expected
+                picker.first.select_option('ko')
+                pc.get_by_text('1개 항목', exact=True).wait_for()
+                assert filename.inner_text() == raw_name + '0'
+                expected = pc.evaluate("new Intl.DateTimeFormat('ko',{dateStyle:'medium',timeStyle:'short'}).format(new Date(1791028800000))")
+                assert filename.get_attribute('title') == expected
+                picker.first.select_option('en')
+                mode['count'] = 2
+                pc.reload()
+                pc.get_by_text('2 items', exact=True).wait_for()
+                mode['error'] = True
+                pc.reload()
+                pc.get_by_text('Path access failed (network/drive error): ' + raw_name, exact=True).wait_for()
+                picker.first.select_option('ko')
+                pc.get_by_text('경로 접근 실패 (네트워크/드라이브 오류): ' + raw_name, exact=True).wait_for()
+                reports.append({'fileManager':'built renderer', 'pluralCounts':[1,2], 'numberAndDateLocale':True, 'dynamicErrorReactsToLocale':True, 'rawParameterPreserved':True})
+                pc.close()
+            else:
+                picker.first.select_option('en')
+                raw = '사용자 경로 $& <tag>'
+                page.route('**/ibl/execute', lambda route: route.fulfill(status=502, json={'detail':'원래 오류','ui_message':{'code':'ui.path.failed','message':'fallback','params':[raw]}}))
+                result = page.evaluate("async () => {try {await ibl('probe')} catch(e) {return e.message}}")
+                assert result == 'Path access failed (network/drive error): ' + raw
+                reports.append({'remoteDynamicError':True,'rawParameterPreserved':True})
             context.close()
         # Test-only Japanese registration: production languages and resources stay unchanged.
         fixture = json.loads((ROOT / 'i18n/catalog.json').read_text())

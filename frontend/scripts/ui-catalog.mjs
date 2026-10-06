@@ -167,6 +167,17 @@ export function compileRemote(html, catalog) {
   body = compileHTML(body, 'remote:shell', catalog);
   return body.replace(/<!--UI_SCRIPT_(\d+)-->/g, (_, index) => scripts[Number(index)]);
 }
+export function registerBoundaryMessages(catalog, memory, native, system) {
+  memory.en ||= {};
+  for (const [source, english] of Object.entries(native)) {
+    const id = catalog.add('native:ui', source);
+    memory.en[id] ||= { source, text: english };
+  }
+  for (const [id, entry] of Object.entries(system)) {
+    catalog.messages[id] = { source: entry.source, context: entry.context, plural: !!entry.plurals };
+    memory.en[id] ||= { source: entry.source, text: entry.en, forms: entry.plurals?.en };
+  }
+}
 export async function buildCatalog({ translate = translateBatch } = {}) {
   const catalog = collector();
   for (const file of files(path.join(root, 'frontend/src'))) {
@@ -184,8 +195,10 @@ export async function buildCatalog({ translate = translateBatch } = {}) {
   const xray = compileXray(xrayRaw, catalog);
   const languages = readJSON(path.join(i18n, 'languages.json'));
   if (languages.ko !== '한국어' || !languages.en) throw new Error('UI language registry requires ko and en');
+  for (const language of Object.keys(languages)) Intl.getCanonicalLocales(language);
   const memory = readJSON(path.join(i18n, 'translations.json'));
   let observed = structuredClone(memory);
+  registerBoundaryMessages(catalog, memory, readJSON(path.join(i18n, 'native-messages.json')), readJSON(path.join(i18n, 'system-messages.json')));
   const saveMemory = () => {
     mergeMemoryEdits(memory, observed, readJSON(path.join(i18n, 'translations.json')));
     writeJSON(path.join(i18n, 'translations.json'), memory);
@@ -198,13 +211,26 @@ export async function buildCatalog({ translate = translateBatch } = {}) {
     entry.translations = {};
     for (const lang of Object.keys(languages)) {
       const item = memory[lang]?.[id];
-      if (item?.source === entry.source && validTranslation(entry.source, item.text, item.reviewed === true, entry.context)) entry.translations[lang] = item.text;
+      // 복수 범주가 other 하나뿐인 언어(일본어·중국어 등)는 번역문 자체가 유일한 형태다 — 그 밖의 언어만 forms 를 요구한다.
+      const categories = lang === 'ko' ? [] : new Intl.PluralRules(lang).resolvedOptions().pluralCategories;
+      if (entry.plural && item && !item.forms && categories.length === 1) item.forms = { other: item.text };
+      if (entry.plural && lang !== 'ko' && !item?.forms) throw new Error(`Missing plural forms: ${lang}/${id}`);
+      if (item?.source === entry.source && validTranslation(entry.source, item.text, item.reviewed === true, entry.context)) {
+        entry.translations[lang] = item.text;
+        if (item.forms) {
+          if (!item.forms.other || categories.some(category => !Object.hasOwn(item.forms, category)) ||
+              Object.values(item.forms).some(form => !validTranslation(entry.source, form, false, entry.context))) {
+            throw new Error(`Invalid plural forms: ${lang}/${id}`);
+          }
+          (entry.plurals ||= {})[lang] = item.forms;
+        }
+      }
     }
   }
-  const bundle = { languages, messages: catalog.messages, instruments: systemSources.instruments };
+  const bundle = { sourceLocale: 'ko', languages, messages: catalog.messages, instruments: systemSources.instruments };
   writeJSON(path.join(i18n, 'catalog.json'), bundle);
   // Only remote messages are embedded in the remote shell. Escape the script boundary independently of HTML.
-  const remoteBundle = { languages, instruments: bundle.instruments, messages: Object.fromEntries(Object.entries(bundle.messages).filter(([, m]) => m.context.startsWith('remote:') || m.context === 'system:metadata')) };
+  const remoteBundle = { languages, instruments: bundle.instruments, messages: Object.fromEntries(Object.entries(bundle.messages).filter(([, m]) => m.context.startsWith('remote:') || m.context === 'system:metadata' || m.context === 'system:message')) };
   const encoded = JSON.stringify(remoteBundle).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   const bootstrap = `<script>window.__ui=(${createUI.toString()})(${encoded},window);\nwindow.__uiContent=function(value){if(value&&typeof value==='object'&&value.ui){const span=document.createElement('span');span.dataset.uiText=value.ui;span.textContent=window.__ui.text(value.ui);return span.outerHTML;}const span=document.createElement('span');span.textContent=String(value==null?'':value);return span.innerHTML;};window.__uiSetText=function(el,id){const span=document.createElement('span');span.setAttribute('data-ui-text',id);span.textContent=window.__ui.text(id);el.replaceChildren(span);};\ndocument.addEventListener('DOMContentLoaded',function(){(${mountRemote.toString()})(window.__ui,document);});</script>`;
   const html = remote.replace('</head>', () => bootstrap + '</head>');
@@ -235,11 +261,11 @@ export function uiCatalogPlugin() {
       return { code: compileReact(sourceText(source), file, collector()), map: null };
     },
     configureServer(server) {
-      server.watcher.add([path.join(root, 'data/xray/index.html'), path.join(root, 'data/ibl_nodes.yaml'), path.join(root, 'data/instruments'), path.join(root, 'backend/services/model_settings_view.py'), path.join(root, 'backend/base/model_resolver.py'), path.join(root, 'backend/cognition/world_pulse_health.py'), path.join(root, 'backend/cognition/ibl_description_audit.py'), ...files(path.join(root, 'backend/surface')).filter(file => /launcher_[^/]+\.py$/.test(file)), path.join(i18n, 'languages.json'), path.join(i18n, 'translations.json')]);
+      server.watcher.add([path.join(root, 'data/xray/index.html'), path.join(root, 'data/ibl_nodes.yaml'), path.join(root, 'data/instruments'), path.join(root, 'backend/services/model_settings_view.py'), path.join(root, 'backend/base/model_resolver.py'), path.join(root, 'backend/cognition/world_pulse_health.py'), path.join(root, 'backend/cognition/ibl_description_audit.py'), ...files(path.join(root, 'backend/surface')).filter(file => /launcher_[^/]+\.py$/.test(file)), path.join(i18n, 'languages.json'), path.join(i18n, 'native-messages.json'), path.join(i18n, 'system-messages.json'), path.join(i18n, 'translations.json')]);
       let timer;
       const queue = file => {
         file = portablePath(file);
-        if (!(file.includes('/frontend/src/') || file.endsWith('/data/xray/index.html') || file.endsWith('/ibl_nodes.yaml') || file.includes('/data/instruments/') || /launcher_[^/]+\.py$/.test(file) || file.endsWith('/languages.json') || file.endsWith('/model_settings_view.py') || file.endsWith('/model_resolver.py') || file.endsWith('/world_pulse_health.py') || file.endsWith('/ibl_description_audit.py') || (file.endsWith('/translations.json') && !running))) return;
+        if (!(file.includes('/frontend/src/') || file.endsWith('/data/xray/index.html') || file.endsWith('/ibl_nodes.yaml') || file.includes('/data/instruments/') || /launcher_[^/]+\.py$/.test(file) || file.endsWith('/languages.json') || file.endsWith('/native-messages.json') || file.endsWith('/system-messages.json') || file.endsWith('/model_settings_view.py') || file.endsWith('/model_resolver.py') || file.endsWith('/world_pulse_health.py') || file.endsWith('/ibl_description_audit.py') || (file.endsWith('/translations.json') && !running))) return;
         clearTimeout(timer); timer = setTimeout(async () => {
           try { await build(); server.ws.send({ type: 'full-reload' }); }
           catch (error) { server.config.logger.error(error.message); }

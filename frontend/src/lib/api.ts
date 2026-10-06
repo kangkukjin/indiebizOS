@@ -8,6 +8,7 @@
  *   api-multi-chat.ts - 다중채팅 (방, 참가자, 메시지)
  */
 import { BACKEND_ORIGIN, WEBSOCKET_ORIGIN } from './backend-origin';
+import { ui } from '../i18n/ui';
 import { checkRemoteSession } from './remote-session';
 
 import type { Project, Switch, Agent, Tool, SchedulerTask, SchedulerAction, AppLayout } from '../types';
@@ -43,17 +44,9 @@ class APIClientBase {
     if (!response.ok) {
       checkRemoteSession(response.status);
       const error = await response.json().catch(() => ({ detail: response.statusText }));
-      // error.detail이 객체일 수 있으므로 문자열로 변환
-      const detail = error.detail;
-      let errorMessage: string;
-      if (typeof detail === 'string') {
-        errorMessage = detail;
-      } else if (typeof detail === 'object' && detail !== null) {
-        errorMessage = detail.msg || detail.message || JSON.stringify(detail);
-      } else {
-        errorMessage = error.message || 'API Error';
-      }
-      throw new Error(errorMessage);
+      const failure = new Error();
+      Object.defineProperty(failure, 'message', { get: () => ui.error(error, response.status) });
+      throw failure;
     }
 
     return response.json();

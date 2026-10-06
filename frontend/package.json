@@ -77,7 +77,9 @@
     },
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "i18n/catalog.json",
+      "i18n/runtime.mjs"
     ],
     "extraResources": [
       { "from": "i18n/remote.json", "to": "backend/static/ui_i18n/remote.json" },

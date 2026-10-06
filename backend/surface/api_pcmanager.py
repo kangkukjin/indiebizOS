@@ -8,8 +8,17 @@ import platform
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Query, HTTPException
+from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/pcmanager", tags=["pcmanager"])
+
+
+def _ui_error(status, code, message, params=()):
+    """Keep the public detail string; UI consumers opt into stable message metadata."""
+    return JSONResponse(status_code=status, content={
+        "detail": message,
+        "ui_message": {"code": code, "message": message, "params": list(params)},
+    })
 
 
 def get_home_path() -> str:
@@ -94,11 +103,11 @@ def list_directory(path: Optional[str] = Query(None)):
     # 경로 유효성 검사 — 끊긴 네트워크 드라이브는 exists() 자체가 OSError 를 던진다
     try:
         if not target_path.exists():
-            raise HTTPException(status_code=404, detail="경로를 찾을 수 없습니다")
+            return _ui_error(404, "ui.path.missing", "경로를 찾을 수 없습니다")
         if not target_path.is_dir():
-            raise HTTPException(status_code=400, detail="디렉토리가 아닙니다")
+            return _ui_error(400, "ui.path.not_directory", "디렉토리가 아닙니다")
     except OSError as e:
-        raise HTTPException(status_code=502, detail=f"경로 접근 실패 (네트워크/드라이브 오류): {e}")
+        return _ui_error(502, "ui.path.failed", f"경로 접근 실패 (네트워크/드라이브 오류): {e}", [str(e)])
 
     items = []
 
@@ -125,11 +134,11 @@ def list_directory(path: Optional[str] = Query(None)):
                     # 항목 하나의 오류(권한·네트워크 순단)로 목록 전체를 잃지 않는다
                     continue
     except PermissionError:
-        raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+        return _ui_error(403, "ui.path.denied", "접근 권한이 없습니다")
     except OSError as e:
         # SMB/네트워크 드라이브 특유의 WinError(59·64·1326 등)를 500 이 아니라
         # 진단 가능한 메시지로 — 진범 후보 ② (프론트가 "서버에 연결할 수 없습니다"로 오인).
-        raise HTTPException(status_code=502, detail=f"경로 접근 실패 (네트워크/드라이브 오류): {e}")
+        return _ui_error(502, "ui.path.failed", f"경로 접근 실패 (네트워크/드라이브 오류): {e}", [str(e)])
 
     items.sort(key=lambda x: (x["type"] != "directory", x["name"].lower()))
 
@@ -145,7 +154,7 @@ def get_path_info(path: str = Query(...)):
     target_path = Path(path)
 
     if not target_path.exists():
-        raise HTTPException(status_code=404, detail="경로를 찾을 수 없습니다")
+        return _ui_error(404, "ui.path.missing", "경로를 찾을 수 없습니다")
 
     try:
         stat = target_path.stat()
@@ -158,7 +167,7 @@ def get_path_info(path: str = Query(...)):
             "created": stat.st_ctime
         }
     except PermissionError:
-        raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+        return _ui_error(403, "ui.path.denied", "접근 권한이 없습니다")
 
 
 # 창 열기 요청 큐 — base 층 window_requests 단일 저장소 (ibl_routing open_window 와 공유)
@@ -188,7 +197,7 @@ def open_path_in_finder(path: str = Query(...), reveal: bool = Query(True)):
 
     target_path = Path(path)
     if not target_path.exists():
-        raise HTTPException(status_code=404, detail="경로를 찾을 수 없습니다")
+        return _ui_error(404, "ui.path.missing", "경로를 찾을 수 없습니다")
 
     system = platform.system()
     try:

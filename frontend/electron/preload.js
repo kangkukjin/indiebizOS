@@ -7,6 +7,13 @@ const { contextBridge, ipcRenderer, clipboard, webUtils } = require('electron');
 
 // 렌더러 프로세스에 노출할 API
 contextBridge.exposeInMainWorld('electron', {
+  getUILocale: () => ipcRenderer.invoke('ui-locale:get'),
+  setUILocale: locale => ipcRenderer.invoke('ui-locale:set', locale),
+  onUILocale: callback => {
+    const listener = (_, locale) => callback(locale);
+    ipcRenderer.on('ui-locale:changed', listener);
+    return () => ipcRenderer.removeListener('ui-locale:changed', listener);
+  },
   // 클립보드 기능
   // ★주의: 아래 두 직접 호출은 샌드박스 렌더러(Electron 20+ 기본)에선 clipboard 가
   // undefined 라 호출 시 throw. IPC 판(readClipboardText)이 확실한 경로다.

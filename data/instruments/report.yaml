@@ -97,7 +97,7 @@ modes:
   - name: 작성
     buttons:
       - label: ✍ 새 AI 동향 보고서 작성
-        action: '[others:delegate]{scope: "system", message: "AI 동향 보고서 써줘", from_agent: "정기보고앱"}'
+        action: '[others:delegate]{scope: "system", message: "AI 동향 보고서를 작성하고, 가이드에 따라 공유창고의 오늘의 AI 보고서.html까지 발행해줘. 완료 상태와 HTML 링크를 알려줘.", from_agent: "정기보고앱"}'
       - label: ✍ 새 AI 창업·응모 정보 보고서 작성
         action: '[others:delegate]{scope: "system", message: "AI 창업·응모 정보 보고서 써줘", from_agent: "정기보고앱"}'
       - label: ✍ 새 부동산 발굴 보고서 작성

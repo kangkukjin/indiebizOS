@@ -76,6 +76,7 @@
       "ai_tips_report.py",
       "ai_tips_selection.py",
       "ai_tips_storage.py",
+      "ai_trend_publish.py",
       "arch_render_cli.py",
       "arxiv최신피드.py",
       "examples.json",

@@ -170,7 +170,11 @@ def declared(spec):
     if isinstance(spec, dict) and set(spec) == {"$list"}:
         return Type("List", item=declared(spec["$list"]))
     if isinstance(spec, dict):
-        return Type("Record", tuple((k, declared(v)) for k, v in spec.items()))
+        # `$closed: true` — 이 Record 는 선언한 칸이 전부다(선언 밖 이름 접근은 검사에서 MISSING_FIELD).
+        # 기본은 열린 Record(옛 봉투는 선언 밖 칸을 싣는다). 항상 같은 칸을 돌려주는 도구만 닫는다 —
+        # 실행 중에야 드러나는 없는 칸은 이미 일으킨 부작용을 남긴 채 프로그램을 끝낸다(긴문장 26회차 L26-1).
+        closed = spec.get("$closed") is True
+        return Type("Record", tuple((k, declared(v)) for k, v in spec.items() if k != "$closed"), open=not closed)
     if not isinstance(spec, str):
         raise ValueError("타입 선언은 문자열 또는 Record입니다.")
     if spec.endswith("?"):

@@ -55,10 +55,10 @@ def test_normalize_ref_accepts_receipt_task_ref_string_and_flat():
 
 def test_status_unknown_kind_and_adapter_errors_are_unknown_not_failed():
     v = T.status(T.ref("nope", "1"))
-    assert v["state"] == "unknown" and "어댑터 미등록" in v["error"]
+    assert v["state"] == "unknown" and "어댑터 미등록" in v["failure"]
     T.register("broken", lambda ref: 1 / 0)
     v = T.status(T.ref("broken", "1"))
-    assert v["state"] == "unknown" and "ZeroDivisionError" in v["error"]
+    assert v["state"] == "unknown" and "ZeroDivisionError" in v["failure"] and "error" not in v
     T.register("offvocab", lambda ref: {"state": "done"})
     assert T.status(T.ref("offvocab", "1"))["state"] == "unknown"
 
@@ -66,11 +66,15 @@ def test_status_unknown_kind_and_adapter_errors_are_unknown_not_failed():
 def test_wait_timeout_is_not_failure_and_terminal_returns_result():
     _fake_kind("k", {"slow": [T.RUNNING] * 50, "quick": [T.QUEUED, T.RUNNING, T.SUCCEEDED], "bad": [T.FAILED]})
     out = T.wait(T.ref("k", "slow"), timeout=0.3, poll=0.05)
-    assert out["success"] is False and out["timed_out"] is True and out["state"] == "running" and "실패 아님" in out["error"]
+    # 시간 초과는 대기자의 사정 — 값이다(판본 2 는 success:false·error 를 도구 실패로 올려 프로그램을 끝낸다, 26회차 L26-2)
+    assert out["success"] is True and out["timed_out"] is True and out["state"] == "running" and "실패 아님" in out["note"]
+    assert "error" not in out and out["result"] is None and out["failure"] is None
     out = T.wait(T.ref("k", "quick"), timeout=5, poll=0.01)
     assert out["success"] is True and out["state"] == "succeeded" and out["result"] == {"answer": "quick"} and out["terminal"]
+    assert out["timed_out"] is False and out["failure"] is None          # 칸은 항상 같다
     out = T.wait(T.ref("k", "bad"), timeout=5, poll=0.01)
-    assert out["success"] is False and out["state"] == "failed" and out["error"] == "boom" and "timed_out" not in out
+    assert out["success"] is False and out["state"] == "failed" and out["error"] == "boom" and out["failure"] == "boom"
+    assert out["timed_out"] is False and out["result"] is None
     # 상한: 요청 timeout 이 WAIT_MAX 를 넘으면 줄였다고 말한다
     out = T.wait(T.ref("k", "slow"), timeout=10_000, poll=0.05) if False else None  # (실제 240초 대기는 하지 않는다)
 
@@ -102,6 +106,56 @@ def test_self_task_word_waits_two_receipts_and_merges_in_one_program():
     assert r["success"] is True and r["value"]["state"] in ("running", "succeeded")
     r = handle_request({"code": '[self:task]{op: "status"}', "edition": 2, "inputs": {}, "declared_inputs": []}, pp, None)
     assert r["success"] is False and "ref" in (r.get("error") or "")
+
+
+def _run(code, inputs):
+    from project_manager import ProjectManager
+    from ibl_v2_entry import handle_request
+    pp = str(ProjectManager().get_project_path("앱모드"))
+    return handle_request({"code": code, "edition": 2, "inputs": inputs, "declared_inputs": list(inputs)}, pp, None)
+
+
+def test_timeout_is_a_value_and_failed_job_is_catchable_in_one_program():
+    """긴문장 26회차: 묶음을 기다리다 안 끝난 것은 '진행 중', 실패한 것은 '오류'로 가르는 프로그램이 중단 없이 돈다."""
+    _fake_kind("m", {"slow": [T.RUNNING] * 400, "ok": [T.SUCCEEDED], "bad": [T.FAILED]})
+    code = (
+        '[def:관찰]($ref) {\n'
+        '  [try] {\n'
+        '    $r = [self:task]{op: "wait", ref: $ref, timeout: 0.3}\n'
+        '    [if:$r.timed_out] { return {상태: "진행 중", state: $r.state, result: $r.result, failure: $r.failure} }\n'
+        '    return {상태: "완료", state: $r.state, result: $r.result, failure: $r.failure}\n'
+        '  }\n'
+        '  [catch] { return {상태: "오류", state: $error.details.state, result: null, failure: $error.details.failure} }\n'
+        '}\n'
+        'return [[fn:관찰]{ref: $a}, [fn:관찰]{ref: $b}, [fn:관찰]{ref: $c}]')
+    r = _run(code, {"a": T.ref("m", "slow"), "b": T.ref("m", "ok"), "c": T.ref("m", "bad")})
+    assert r["success"] is True, r.get("error")
+    assert r["value"] == [
+        {"상태": "진행 중", "state": "running", "result": None, "failure": None},
+        {"상태": "완료", "state": "succeeded", "result": {"answer": "ok"}, "failure": None},
+        {"상태": "오류", "state": "failed", "result": None, "failure": "boom"}]
+
+
+def test_status_of_a_failed_job_is_an_answer_and_declared_fields_are_checked():
+    _fake_kind("n", {"bad": [T.FAILED], "ok": [T.SUCCEEDED]})
+    r = _run('$s = [self:task]{op: "status", ref: $x}; return {state: $s.state, failure: $s.failure, terminal: $s.terminal}', {"x": T.ref("n", "bad")})
+    assert r["success"] is True and r["value"] == {"state": "failed", "failure": "boom", "terminal": True}
+    # 모르는 작업은 값을 줄 수 없다 — 호출의 실패이고 사정은 details 로 읽힌다
+    r = _run('[try] { [self:task]{op: "status", ref: $x} } [catch] { return $error.details.state }', {"x": T.ref("no-such-kind", "1")})
+    assert r["success"] is True and r["value"] == "unknown"
+    # 없는 칸(`error`)은 실행 전에 걸린다 — 실행 중 MISSING_FIELD 는 이미 시작한 작업을 남긴 채 끝났다(L26-1)
+    from project_manager import ProjectManager
+    from ibl_v2_entry import handle_request
+    pp = str(ProjectManager().get_project_path("앱모드"))
+    chk = handle_request({"code": '$s = [self:task]{op: "wait", ref: $x}; return $s.error', "edition": 2, "check": True,
+                          "inputs": {"x": T.ref("n", "ok")}, "declared_inputs": ["x"]}, pp, None)
+    assert chk.get("ok") is False and any(i.get("code") in ("MISSING_FIELD", "UNKNOWN_FIELD", "UNOBSERVED_FIELD") for i in chk.get("issues") or []), chk
+
+
+def test_adapter_built_views_get_the_same_fields():
+    T.register("rawkind", lambda ref: {"state": "failed", "error": "옛 칸"})          # view() 를 안 거친 어댑터
+    v = T.status(T.ref("rawkind", "1"))
+    assert v["failure"] == "옛 칸" and "error" not in v and v["terminal"] is True and v["timed_out"] is False and v["result"] is None
 
 
 def test_delegation_adapter_projects_task_view(monkeypatch):

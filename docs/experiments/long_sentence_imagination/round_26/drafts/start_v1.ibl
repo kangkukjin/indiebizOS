@@ -1,0 +1,36 @@
+#!ibl edition=2
+[def:묶음시작]($묶음) {
+  $job = [self:script]{op:"run", id:"시험", args:{files:$묶음.files}, background:true}
+  return {name:$묶음.name, files:$묶음.files, task_ref:$job.task_ref}
+}
+[def:묶음관찰]($접수,$초) {
+  $r = [self:task]{op:"wait", ref:$접수.task_ref, timeout:$초}
+  return {name:$접수.name, files:$접수.files, task_ref:$접수.task_ref, state:$r.state, terminal:$r.terminal, result:get($r,"result"), error:get($r,"error")}
+}
+[def:묶음요약]($관찰) {
+  [if:$관찰.terminal != true] { return {name:$관찰.name, 상태:"진행 중", task_ref:$관찰.task_ref, files:$관찰.files} }
+  [if:$관찰.state != "succeeded"] { return {name:$관찰.name, 상태:"오류", 사유:$관찰.error, task_ref:$관찰.task_ref, files:$관찰.files, passed:0, failed:0, errors:1} }
+  $행 = $관찰.result.items
+  $통과 = sum($행 >> [table:each]{return $it.passed})
+  $실패 = sum($행 >> [table:each]{return $it.failed})
+  $오류 = sum($행 >> [table:each]{return $it.errors})
+  $이름 = $행 >> [table:each]{mode:"flat_map"} { return $it.failures }
+  [if:$실패 + $오류 > 0] { return {name:$관찰.name, 상태:"오류", passed:$통과, failed:$실패, errors:$오류, failures:$이름, 파일별:$행, task_ref:$관찰.task_ref, files:$관찰.files} }
+  [if:$통과 == 0] { return {name:$관찰.name, 상태:"오류", 사유:"통과한 시험이 없습니다", passed:0, failed:0, errors:1, 파일별:$행, task_ref:$관찰.task_ref, files:$관찰.files} }
+  return {name:$관찰.name, 상태:"통과", passed:$통과, failed:$실패, errors:$오류, failures:$이름, 파일별:$행, task_ref:$관찰.task_ref, files:$관찰.files}
+}
+[def:보고서]($묶음들,$단계) {
+  $진행 = len($묶음들 >> [table:filter]{where:($b)=>$b.상태 == "진행 중"})
+  $오류 = len($묶음들 >> [table:filter]{where:($b)=>$b.상태 == "오류"})
+  $판정 = "합격"
+  [if:$오류 > 0] { $판정 = "불합격" }
+  [if:$진행 > 0] { $판정 = "미확정" }
+  return {단계:$단계, 판정:$판정, 진행중:$진행, 오류묶음:$오류, 묶음:$묶음들}
+}
+$접수 = $bundles >> [table:each] { [fn:묶음시작]{묶음:$it} }
+$관찰 = $접수 >> [table:each] { [fn:묶음관찰]{접수:$it, 초:$first_wait} }
+$요약 = $관찰 >> [table:each] { [fn:묶음요약]{관찰:$it} }
+$보고 = [fn:보고서]{묶음들:$요약, 단계:"1차"}
+$저장 = [self:write]{path:$out, content:json($보고)}
+$재독 = [self:read]{path:$out}
+return {보고:$보고, 재독일치:json($재독.data) == json($보고), 경로:$out}

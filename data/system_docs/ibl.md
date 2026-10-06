@@ -272,8 +272,9 @@ reuse는 두 실행에서 이 범위의 충돌을 함께 검사한다. 선언·�
 `script`·`guestpc`·`newspaper`·`lecture_video`·`notebook_source`·`sheet_op`(owner=자료 id).
 
 **읽는 낱말 하나** — `[self:task]{op: status|wait|cancel, ref: $r.task_ref, timeout}`. 접수증 통째·`task_ref`·`"kind:id"` 문자열 전부 ref 로 받는다.
-- `status` → 투영 `{task_ref, state, terminal, progress?, result?(succeeded 일 때만), error?(failed·interrupted), …}`
-- `wait` → 종료 상태까지 유한 대기(기본 60초·상한 240초) 뒤 투영. **시간 초과는 실패가 아니다** — `timed_out: true` 와 현재 상태를 돌려주고
+- `status` → 투영 `{task_ref, state, terminal, timed_out, result(succeeded 일 때만 값), failure(작업의 실패 사유), progress}` — **칸은 항상 같다**(선언된 닫힌 Record, 2026-10-07).
+  실패한 작업도 값으로 답한다. `error` 는 투영의 칸이 아니라 이 낱말 호출의 실패(모르는 작업·기다린 작업의 실패)에만 실리고, 그때 투영 칸은 `$error.details` 로 읽힌다.
+- `wait` → 종료 상태까지 유한 대기(기본 60초·상한 240초) 뒤 투영. **시간 초과는 실패가 아니다** — `timed_out: true` 와 현재 상태를 **값으로** 돌려주고(프로그램은 계속된다)
   같은 ref 로 다시 기다린다. `$r = [self:task]{op: "wait", ref: $receipt.task_ref}` 뒤 `$r.result` 를 다음 낱말에 넘긴다 — 화면 진행률이 아니라
   **값으로 잇는 것**이 이 낱말의 존재 이유다.
 - `cancel` → 어댑터가 확인한 사실만: 요청을 남겼으면 `cancel_requested`, 되돌렸으면 `cancelled`, 미지원 종류는 현재 상태와 함께 거절.

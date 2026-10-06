@@ -1,0 +1,6 @@
+커밋 전 점검을 해줘. 아래 네 묶음을 등록 스크립트 "시험"으로 동시에 백그라운드로 돌려.
+- 빠른: backend/test_preflight_restart.py, backend/test_selfbuild_gate_2026_09_07.py
+- 자료: backend/test_data_ops.py
+- 어휘: backend/test_vocabulary_archive.py
+- 오타: backend/test_lsi26_없는파일.py
+각 묶음을 최대 12초만 기다려서, 그 안에 끝난 묶음은 파일별 통과·실패·오류 수와 실패한 시험 이름을, 안 끝난 묶음은 "진행 중"으로 표시한 1차 보고서를 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_26회차/ai/report_1.json 에 저장하고 다시 읽어서 확인해줘. 없는 파일 같은 오류를 통과로 세지 말고 오류로 드러내. 같은 묶음을 두 번 돌리지 마. 저장소 루트는 /Users/kangkukjin/Desktop/AI/indiebizOS 야. 이건 훈련이니까 코드나 설정은 고치지 말고, 다른 실행자의 trainer/harness/drafts/expected 폴더와 정답은 보지 마.

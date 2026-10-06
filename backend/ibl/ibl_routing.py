@@ -897,7 +897,10 @@ def _task_op(params: dict) -> dict:
                 "known_kinds": T.registered()}
     if op == "status":
         v = T.status(r)
-        return {"success": v["state"] != T.UNKNOWN, **v}
+        # 상태를 물었으면 failed·cancelled 도 답이다(값) — 모르는 작업만 이 호출의 실패(26회차: failure 칸 분리).
+        if v["state"] == T.UNKNOWN:
+            return {"success": False, **v, "error": v.get("failure") or "이 몸이 모르는 작업입니다."}
+        return {"success": True, **v}
     if op == "wait":
         return T.wait(r, params.get("timeout", 60))
     if op == "cancel":

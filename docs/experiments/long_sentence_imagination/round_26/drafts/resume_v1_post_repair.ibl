@@ -1,0 +1,25 @@
+#!ibl edition=2
+[def:이어받기]($묶음,$초) {
+  [if:$묶음.상태 != "진행 중"] { return $묶음 }
+  $r = [self:task]{op:"wait", ref:$묶음.task_ref, timeout:$초}
+  [if:$r.terminal != true] { return $묶음 }
+  [if:$r.state != "succeeded"] { return {name:$묶음.name, 상태:"오류", 사유:$r.failure, task_ref:$묶음.task_ref, files:$묶음.files, passed:0, failed:0, errors:1} }
+  $행 = $r.result.items
+  $통과 = sum($행 >> [table:each]{return $it.passed})
+  $실패 = sum($행 >> [table:each]{return $it.failed})
+  $오류 = sum($행 >> [table:each]{return $it.errors})
+  $이름 = $행 >> [table:each]{mode:"flat_map"} { return $it.failures }
+  [if:$실패 + $오류 > 0] { return {name:$묶음.name, 상태:"오류", passed:$통과, failed:$실패, errors:$오류, failures:$이름, 파일별:$행, task_ref:$묶음.task_ref, files:$묶음.files} }
+  [if:$통과 == 0] { return {name:$묶음.name, 상태:"오류", 사유:"통과한 시험이 없습니다", passed:0, failed:0, errors:1, 파일별:$행, task_ref:$묶음.task_ref, files:$묶음.files} }
+  return {name:$묶음.name, 상태:"통과", passed:$통과, failed:$실패, errors:$오류, failures:$이름, 파일별:$행, task_ref:$묶음.task_ref, files:$묶음.files}
+}
+$묶음들 = $이전.보고.묶음 >> [table:each] { [fn:이어받기]{묶음:$it, 초:$wait} }
+$진행 = len($묶음들 >> [table:filter]{where:($b)=>$b.상태 == "진행 중"})
+$오류 = len($묶음들 >> [table:filter]{where:($b)=>$b.상태 == "오류"})
+$판정 = "합격"
+[if:$오류 > 0] { $판정 = "불합격" }
+[if:$진행 > 0] { $판정 = "미확정" }
+$보고 = {단계:"최종", 판정:$판정, 진행중:$진행, 오류묶음:$오류, 묶음:$묶음들}
+$저장 = [self:write]{path:$out, content:json($보고)}
+$재독 = [self:read]{path:$out}
+return {보고:$보고, 재독일치:json($재독.data) == json($보고), 경로:$out}

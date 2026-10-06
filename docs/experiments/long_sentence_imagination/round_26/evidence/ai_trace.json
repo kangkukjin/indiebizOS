@@ -1,0 +1,212 @@
+{
+ "4358": {
+  "kinds": {
+   "request.received": 1,
+   "cognition.supervisor_selected": 1,
+   "supervision.turn.opened": 1,
+   "supervision.recall.started": 8,
+   "supervision.recall.finished": 8,
+   "model.call_started": 5,
+   "model.input": 5,
+   "model.round": 13,
+   "model.usage": 5,
+   "model.call_finished": 5,
+   "knowledge_catalog.selected": 2,
+   "recall.presented": 1,
+   "cognition.route": 1,
+   "supervision.model.started": 1,
+   "supervision.tool.supervisor": 1,
+   "model.response_observed": 11,
+   "supervision.model.finished": 1,
+   "supervision.framing": 1,
+   "supervision.tool.started": 7,
+   "ibl.started": 7,
+   "ibl.checkpoint": 4,
+   "ibl.finished": 7,
+   "supervision.tool.finished": 7,
+   "supervision.job.progress": 2,
+   "context.input_ref_resolved": 3,
+   "side_effect.write": 1,
+   "capability.judged": 1,
+   "cognition.evaluation": 1,
+   "supervision.evaluation.stage_started": 4,
+   "supervision.evaluation.stage_finished": 4,
+   "supervision.evaluation.started": 1,
+   "supervision.evaluation.finished": 1,
+   "supervision.decision": 1,
+   "validation.completed": 1,
+   "supervision.response.delivered": 1,
+   "recall.used": 1,
+   "supervision.cost.summary": 1,
+   "supervision.turn.closed": 1,
+   "run.ended": 1
+  },
+  "usage": {
+   "input": 731290,
+   "cache_read": 578048,
+   "cache_create": 0,
+   "output": 3864
+  },
+  "calls": [
+   [
+    "05:32:47",
+    "execute_ibl",
+    "{\"chars\": 100, \"excerpt\": \"{\\\"code\\\": \\\"$r=[self:script]{op:\\\\\\\"list\\\\\\\"}; return filter($r.items,($x)=>$x.id==\\\\\\\"시험\\\\\\\")\\\", \\\"edition\\\": 2}\", \"id\": \"619b56b28c1e7981461e7feee5403f9e95978df064322590b4973ad11dacc2ea\", \"integrity\": \"verified\"}"
+   ],
+   [
+    "05:32:48",
+    "  →",
+    "ok {\"call_id\": \"e4edb195dd4d49a29f884c19f881c2a3\", \"check_rejected\": false, \"elapsed_s\": 0.373, \"evidence\": {\"chars\": 3187, \"excerpt\": \"{\\\"success\\\": true, \\\"value\\\": [{\\\"id\\\": \\\"시험\\\", \\\"title\\\": \\\"시험\\\", \\\"meta\\\": \\\"python · data/scripts/시험.py\\\", \\\"summary\\\": \\\"p"
+   ],
+   [
+    "05:32:51",
+    "execute_ibl",
+    "{\"chars\": 129, \"excerpt\": \"{\\\"code\\\": \\\"return [self:read]{path:\\\\\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/scripts/시험.py\\\\\\\",format:\\\\\\\"text\\\\\\\"}\\\", \\\"edition\\\": 2}\", \"id\": \"9cc9e520d753d8db7ed9921d3c0942937759fedb24f175c5a260e8d0430511ad\", \"integrity\": \"verified\"}"
+   ],
+   [
+    "05:32:51",
+    "  →",
+    "ok {\"call_id\": \"e4edb195dd4d49a29f884c19f881c2a3\", \"check_rejected\": false, \"elapsed_s\": 0.317, \"evidence\": {\"chars\": 14694, \"excerpt\": \"{\\\"success\\\": true, \\\"value\\\": {\\\"text\\\": \\\"#!/usr/bin/env python3\\\\n\\\\\\\"\\\\\\\"\\\\\\\"시험 — 이 몸의 pytest 를 파일·표현식 단위로 돌려 items 통화로 보고"
+   ],
+   [
+    "05:33:02",
+    "execute_ibl",
+    "{\"chars\": 1112, \"excerpt\": \"{\\\"code\\\": \\\"#!ibl edition=2\\\\n$groups=[{name:\\\\\\\"빠른\\\\\\\",files:[\\\\\\\"backend/test_preflight_restart.py\\\\\\\",\\\\\\\"backend/test_selfbuild_gate_2026_09_07.py\\\\\\\"]},{name:\\\\\\\"자료\\\\\\\",files:[\\\\\\\"backend/test_data_ops.py\\\\\\\"]},{name:\\\\\\\"어휘\\\\\\\",files:[\\\\\\\"backend/test_vocabulary_archive.py\\\\\\\"]},{name:\\\\\\\"오타\\\\\\\",files:[\\\\\\\"backend/test_lsi26_없는파일.py\\\\\\\"]}]\\\\n$started=$groups >> [table:each]{parallel:4} {\\\\n  [try] {\\\\n    $receipt=[self:script]{op:\\\\\\\"run\\\\\\\",id:\\\\\\\"시험\\\\\\\",args:{files:$it.files},ba"
+   ],
+   [
+    "05:33:02",
+    "  →",
+    "ok {\"call_id\": \"e4edb195dd4d49a29f884c19f881c2a3\", \"check_rejected\": false, \"elapsed_s\": 0.322, \"evidence\": {\"chars\": 2680, \"excerpt\": \"{\\\"edition\\\": 2, \\\"mode\\\": \\\"check\\\", \\\"executed\\\": false, \\\"ok\\\": true, \\\"status\\\": \\\"incomplete\\\", \\\"issues\\\": [], \\\"guards\\\""
+   ],
+   [
+    "05:33:05",
+    "execute_ibl",
+    "{\"chars\": 99, \"excerpt\": \"{\\\"code\\\": \\\"$checked:017f97f681adb80f4b5ffec973e62f9c7b21fb2a87c0eb6575a09303b7392b21\\\", \\\"edition\\\": 2}\", \"id\": \"8d54719d35b028e43891878e171027fd6c29f1a3b71dbe2fd1f65aa5adfa3805\", \"integrity\": \"verified\"}"
+   ],
+   [
+    "05:33:18",
+    "  →",
+    "ok {\"call_id\": \"e4edb195dd4d49a29f884c19f881c2a3\", \"check_rejected\": false, \"elapsed_s\": 13.273, \"evidence\": {\"chars\": 10508, \"excerpt\": \"{\\\"success\\\": true, \\\"value\\\": [{\\\"name\\\": \\\"빠른\\\", \\\"files\\\": [\\\"backend/test_preflight_restart.py\\\", \\\"backend/test_selfbuil"
+   ],
+   [
+    "05:33:38",
+    "execute_ibl",
+    "{\"chars\": 2216, \"excerpt\": \"{\\\"code\\\": \\\"#!ibl edition=2\\\\n$groups=$observations >> [table:each] {\\\\n  $job=$it.observation.items[0]\\\\n  assert $job.job_id==$it.job_id,\\\\\\\"작업 ID 불일치\\\\\\\"\\\\n  $running=$job.status==\\\\\\\"running\\\\\\\"\\\\n  $rows=[]\\\\n  [if:not $running] {\\\\n    $rows=$job.result.items >> [table:each] {\\\\n      $missing=\\\\\\\"파일 없음\\\\\\\" in $it.failures\\\\n      return {**$it,status:$missing ? \\\\\\\"오류\\\\\\\" : $it.ok ? \\\\\\\"통과\\\\\\\" : \\\\\\\"실패 또는 오류\\\\\\\",test_errors:$missing ? null : $it.errors,execution_errors:$missing ?"
+   ],
+   [
+    "05:33:38",
+    "  →",
+    "ok {\"call_id\": \"e4edb195dd4d49a29f884c19f881c2a3\", \"check_rejected\": true, \"elapsed_s\": 0.301, \"evidence\": {\"chars\": 5447, \"excerpt\": \"{\\\"edition\\\": 2, \\\"mode\\\": \\\"check\\\", \\\"executed\\\": false, \\\"ok\\\": false, \\\"status\\\": \\\"invalid\\\", \\\"issues\\\": [{\\\"code\\\": \\\"MIS"
+   ],
+   [
+    "05:33:43",
+    "execute_ibl",
+    "{\"chars\": 423, \"excerpt\": \"{\\\"code\\\": \\\"$rejected:cd6639957ec6d3d7b2d6b63fc0052aceae3e6eb7ded35293e8e9ed94d2323533\\\", \\\"edition\\\": 2, \\\"inputs\\\": {\\\"observations\\\": {\\\"$ref\\\": \\\"f03aa1d4e891a16ba86e8b93b229fd3bc525a3010f050ca42acdcdbdc79be9a6\\\"}, \\\"path\\\": \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_26회차/ai/report_1.json\\\"}, \\\"code_edits\\\": [{\\\"old\\\": \\\"$job.result\\\", \\\"new\\\": \\\"get($job,\\\\\\\"result\\\\\\\")\\\", \\\"all\\\": true}], \\\"check\\\": true}\", \"id\": \"ba1aaf69df6af11281278b18"
+   ],
+   [
+    "05:33:44",
+    "  →",
+    "ok {\"call_id\": \"e4edb195dd4d49a29f884c19f881c2a3\", \"check_rejected\": false, \"elapsed_s\": 0.294, \"evidence\": {\"chars\": 3761, \"excerpt\": \"{\\\"edition\\\": 2, \\\"mode\\\": \\\"check\\\", \\\"executed\\\": false, \\\"ok\\\": true, \\\"status\\\": \\\"incomplete\\\", \\\"issues\\\": [], \\\"guards\\\""
+   ],
+   [
+    "05:33:47",
+    "execute_ibl",
+    "{\"chars\": 99, \"excerpt\": \"{\\\"code\\\": \\\"$checked:7efdf184bf1d7cc36f7fef6a04d9148bcbe2a2582064d0e8979c53f824d7a2bb\\\", \\\"edition\\\": 2}\", \"id\": \"1744035341fcd77bd6cf8917ed5391a26f2b65cb3cd4cab95ee27aba1f9fca96\", \"integrity\": \"verified\"}"
+   ],
+   [
+    "05:33:47",
+    "  →",
+    "ok {\"call_id\": \"e4edb195dd4d49a29f884c19f881c2a3\", \"check_rejected\": false, \"elapsed_s\": 0.37, \"evidence\": {\"chars\": 4232, \"excerpt\": \"{\\\"success\\\": true, \\\"value\\\": {\\\"path\\\": \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07"
+   ]
+  ]
+ },
+ "4359": {
+  "kinds": {
+   "request.received": 1,
+   "cognition.supervisor_selected": 1,
+   "supervision.turn.opened": 1,
+   "supervision.recall.started": 8,
+   "supervision.recall.finished": 8,
+   "model.call_started": 4,
+   "model.input": 4,
+   "model.round": 9,
+   "model.usage": 4,
+   "model.call_finished": 4,
+   "knowledge_catalog.selected": 2,
+   "recall.presented": 1,
+   "cognition.route": 1,
+   "supervision.model.started": 1,
+   "supervision.tool.supervisor": 1,
+   "model.response_observed": 8,
+   "supervision.model.finished": 1,
+   "supervision.framing": 1,
+   "supervision.tool.started": 4,
+   "ibl.started": 4,
+   "ibl.checkpoint": 3,
+   "ibl.finished": 4,
+   "supervision.tool.finished": 4,
+   "context.input_ref_resolved": 2,
+   "side_effect.write": 1,
+   "cognition.evaluation": 1,
+   "supervision.evaluation.stage_started": 4,
+   "supervision.evaluation.stage_finished": 4,
+   "supervision.evaluation.started": 1,
+   "supervision.evaluation.finished": 1,
+   "supervision.decision": 1,
+   "validation.completed": 1,
+   "supervision.response.delivered": 1,
+   "recall.used": 1,
+   "supervision.cost.summary": 1,
+   "supervision.turn.closed": 1,
+   "run.ended": 1
+  },
+  "usage": {
+   "input": 433356,
+   "cache_read": 302592,
+   "cache_create": 0,
+   "output": 3145
+  },
+  "calls": [
+   [
+    "05:34:54",
+    "execute_ibl",
+    "{\"chars\": 161, \"excerpt\": \"{\\\"code\\\": \\\"return [self:read]{path:\\\\\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_26회차/ai/report_1.json\\\\\\\"}\\\", \\\"edition\\\": 2}\", \"id\": \"3e4c0289cafbf0b39295cabace412d243698c36e11d53240b71441332ed0d280\", \"integrity\": \"verified\"}"
+   ],
+   [
+    "05:34:54",
+    "  →",
+    "ok {\"call_id\": \"4c7b955dc3684bfaaad8d520c6c9ad43\", \"check_rejected\": false, \"elapsed_s\": 0.313, \"evidence\": {\"chars\": 18942, \"excerpt\": \"{\\\"success\\\": true, \\\"value\\\": {\\\"text\\\": \\\"{\\\\\\\"report\\\\\\\": \\\\\\\"커밋 전 점검 1차 보고서\\\\\\\", \\\\\\\"repository_root\\\\\\\": \\\\\\\"/Users/kangk"
+   ],
+   [
+    "05:34:57",
+    "execute_ibl",
+    "{\"chars\": 132, \"excerpt\": \"{\\\"code\\\": \\\"return [self:script]{op:\\\\\\\"status\\\\\\\",job_id:\\\\\\\"시험-20261007_053306-f3c34437f50f4d20ae44eda137fe6cfb\\\\\\\",wait:60}\\\", \\\"edition\\\": 2}\", \"id\": \"4c4093b10eb9e4f91b1ee01d177f4d2128f09e8530ecc21f6533bffe9f22e2c3\", \"integrity\": \"verified\"}"
+   ],
+   [
+    "05:34:58",
+    "  →",
+    "ok {\"call_id\": \"4c7b955dc3684bfaaad8d520c6c9ad43\", \"check_rejected\": false, \"elapsed_s\": 0.36, \"evidence\": {\"chars\": 4786, \"excerpt\": \"{\\\"success\\\": true, \\\"value\\\": {\\\"success\\\": true, \\\"items\\\": [{\\\"job_id\\\": \\\"시험-20261007_053306-f3c34437f50f4d20ae44eda137fe6cf"
+   ],
+   [
+    "05:35:31",
+    "execute_ibl",
+    "{\"chars\": 2062, \"excerpt\": \"{\\\"code\\\": \\\"$원본=$이전.data\\\\nassert $새결과.status==\\\\\\\"done\\\\\\\", \\\\\\\"기존 작업이 종료되지 않았습니다\\\\\\\"\\\\nassert $새결과.items[0].job_id==$원본.groups[2].job_id, \\\\\\\"작업 식별자 불일치\\\\\\\"\\\\n$그룹=$원본.groups >> [table:each]{\\\\n [if:$it.process_status!=\\\\\\\"running\\\\\\\"]{return $it}\\\\n assert $it.job_id==$새결과.items[0].job_id, \\\\\\\"미완료 작업 식별자 불일치\\\\\\\"\\\\n $행=$새결과.result.items >> [table:each]{return {**$it,status:\\\\\\\"통과\\\\\\\",test_errors:$it.errors,execution_errors:[],failed_test_names:$it.failures,test_counts_observed:true,err"
+   ],
+   [
+    "05:35:31",
+    "  →",
+    "ok {\"call_id\": \"4c7b955dc3684bfaaad8d520c6c9ad43\", \"check_rejected\": false, \"elapsed_s\": 0.282, \"evidence\": {\"chars\": 6644, \"excerpt\": \"{\\\"edition\\\": 2, \\\"mode\\\": \\\"check\\\", \\\"executed\\\": false, \\\"ok\\\": true, \\\"status\\\": \\\"valid\\\", \\\"issues\\\": [], \\\"guards\\\": [],"
+   ],
+   [
+    "05:35:36",
+    "execute_ibl",
+    "{\"chars\": 99, \"excerpt\": \"{\\\"code\\\": \\\"$checked:cddc3e35ec2e06811cf24577fd6402e844086e5e373df459f74d9ce283ea4f41\\\", \\\"edition\\\": 2}\", \"id\": \"677aa8164f6586d69b9a527c1a584bf5ce012996fcaed572e2be32ba9a69bac8\", \"integrity\": \"verified\"}"
+   ],
+   [
+    "05:35:36",
+    "  →",
+    "ok {\"call_id\": \"4c7b955dc3684bfaaad8d520c6c9ad43\", \"check_rejected\": false, \"elapsed_s\": 0.368, \"evidence\": {\"chars\": 4435, \"excerpt\": \"{\\\"success\\\": true, \\\"value\\\": {\\\"path\\\": \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-0"
+   ]
+  ]
+ }
+}

@@ -437,11 +437,40 @@
         # 저장소 없음(backend/base/task_receipts 어댑터 등록부). 목표(self:goal)는 다른 수명이라 섞지 않는다.
         open_params: false
         params: {op: string, ref: [object, string], kind: string, task_id: string, owner: string, timeout: integer}
+        # 반환 칸 선언(2026-10-07 긴문장 26회차 L26-1): 선언이 없어 검사기가 `$r.error` 같은 없는 칸을 못 잡았고,
+        # 실행 중 MISSING_FIELD 는 이미 시작한 작업을 남긴 채 프로그램을 끝냈다. 투영은 항상 이 칸들을 갖는다.
+        callable_contract:
+          version: 1
+          params: {op: Text, ref: Unknown, kind: Text, task_id: Text, owner: Text, timeout: Number}
+          required: []
+          enums: {op: [status, wait, cancel]}
+          defaults: {op: status}
+          result:
+            $closed: true          # 투영은 항상 이 칸들이다 — 없는 칸(error 등)은 실행 전에 걸린다. 선택 칸(raw·note)은 get 으로
+            success: Bool
+            task_ref: Record
+            state: Text
+            terminal: Bool
+            timed_out: Bool
+            result: Unknown
+            failure: Unknown
+            progress: Unknown
+          effects: [unknown]
+          nondeterministic: true
+          per_run: true
+          adapter: {protocol: legacy-envelope, value_path: ""}
+          variants:
+          - when: {op: status}
+            effects: [read_external]
+          - when: {op: wait}
+            effects: [read_external]
+          - when: {op: cancel}
+            effects: [write_external]
         returns: scalar
         side_effect: true        # cancel 보유 — 통화(returns)와 안전은 다른 축
         exempt: '접수증(task_ref) 필요 — 고정 fixture 부적합'
         description: 긴 작업 접수증(task_ref)의 공통 관찰·제어 (op 분기). status=현재 상태, wait=끝날 때까지 유한 대기 뒤 result, cancel=취소 요청. 위임·script·guestpc·신문·강의 렌더·노트북·시트가 같은 접수증.
-        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). status: 상태 어휘(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)와 progress. wait: timeout(초, 기본 60·상한 240) 안에 끝나면 state·result, 초과면 timed_out(실패 아님 — 같은 ref 로 다시). cancel: 어댑터가 확인한 사실만(cancel_requested≠cancelled), 미지원 종류는 거절.'
+        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). 반환 칸은 항상 같다: state(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)·terminal·timed_out·result(성공일 때만 값, 아니면 null)·failure(작업의 실패 사유, 아니면 null)·progress. status: 실패한 작업도 값으로 답한다(모르는 작업만 실패). wait: timeout(초, 기본 60·상한 240) 안에 성공하면 result, 시간 초과는 실패가 아니라 값(timed_out: true — [if:$r.timed_out] 로 갈라 같은 ref 로 다시), 작업이 실패·취소·유실로 끝나면 이 호출이 실패하며 [catch] 의 $error.details.state·failure 로 사정을 읽는다. cancel: 어댑터가 확인한 사실만(cancel_requested≠cancelled), 미지원 종류는 거절. 작업을 시작한 낱말을 다시 부르지 말 것 — 접수증으로 이어받는다.'
         group: system
         target_key: op
         router: system

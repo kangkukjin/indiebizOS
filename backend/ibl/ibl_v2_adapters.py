@@ -238,6 +238,8 @@ def decode_envelope(raw, adapter, input_values=None):
                         "missing_criteria", "decision", "checks", "changed_files",
                         "applied", "complete", "activation", "activation_checks", "commit", "invalid_evidence", "allowed_evidence_ids",
                         "approval_required",   # 사람 승인 도전(action_requires.gate) — 표면이 읽어 승인 뒤 재전송
+                        # 긴 작업 투영(task_receipts) — 기다리던 작업이 실패·취소·유실로 끝났을 때 catch 가 사정을 가른다
+                        "state", "terminal", "task_ref", "timed_out", "failure", "progress",
                     ) if key in raw} | ({"inner_diagnostics": inner} if (inner := inner_diagnostics(raw)) else {}))
     if adapter.get("protocol") == "document-value/1":
         from ibl_document_value import document_value

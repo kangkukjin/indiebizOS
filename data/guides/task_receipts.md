@@ -5,13 +5,13 @@
 
 ## 모양
 - 접수증: `{success, accepted: true, task_ref: {kind, task_id[, owner]}, state: queued|running, …}`
-- 투영: `{task_ref, state, terminal, progress?, result?, error?}` — `result` 는 `succeeded` 일 때만.
+- 투영(**항상 같은 칸**): `{task_ref, state, terminal, timed_out, result, failure, progress}` — `result` 는 `succeeded` 일 때만 값(아니면 null), `failure` 는 작업의 실패 사유(아니면 null). `error` 칸은 없다 — 읽으면 검사에서 거절된다. 선택 칸(`raw`·`note`)은 `get($r,"note")`.
 - 상태: `queued · running · waiting_children · cancel_requested · succeeded · failed · cancelled · interrupted · unknown`
 
 ## 쓰는 법
 ```
 $job = [self:script]{op: "run", id: "나레이션생성", args: {lecture_id: "x"}, background: true}
-$r = [self:task]{op: "wait", ref: $job.task_ref, timeout: 120}       # 끝나면 $r.result, 초과면 timed_out(실패 아님)
+$r = [self:task]{op: "wait", ref: $job.task_ref, timeout: 120}       # 끝나면 $r.result, 초과면 $r.timed_out == true(값 — 프로그램은 계속된다)
 $r.result                                                            # 다음 낱말에 값으로 잇는다
 ```
 ```
@@ -20,7 +20,22 @@ $b = [engines:newspaper]{}                                          # 접수증(
 $ra = [self:task]{op: "wait", ref: $a.task_ref, timeout: 240}; $rb = [self:task]{op: "wait", ref: $b.task_ref, timeout: 120}
 return {report: $ra.result, paper: $rb.result}                       # 둘을 기다려 합친다
 ```
-- `status` 는 즉시 한 번 읽는다. `wait` 는 유한(기본 60초·상한 240초) — 더 긴 작업은 같은 ref 로 다시 `wait`.
+- `status` 는 즉시 한 번 읽는다 — 실패한 작업도 **값**으로 답한다(`state: "failed"`, `failure`). 모르는 작업(`unknown`)만 호출 실패.
+- `wait` 는 유한(기본 60초·상한 240초). 세 갈래: 성공 → `result` · **시간 초과 → 값**(`timed_out: true`, 같은 ref 로 다시 `wait`) ·
+  작업이 실패·취소·유실로 끝남 → 이 호출이 실패(`[catch]` 의 `$error.details.state`·`.failure`·`.task_ref` 로 사정을 읽는다).
+```
+[def:관찰]($접수, $초) {                                              # 여러 작업 중 안 끝난 것·실패한 것을 갈라 보고할 때
+  [try] {
+    $r = [self:task]{op: "wait", ref: $접수.task_ref, timeout: $초}
+    [if:$r.timed_out] { return {상태: "진행 중", task_ref: $r.task_ref} }
+    return {상태: "완료", result: $r.result}
+  }
+  [catch] { return {상태: "오류", state: $error.details.state, 사유: $error.details.failure} }
+}
+```
+- **작업을 시작한 프로그램이 뒤에서 실패했을 때**: 시작 낱말을 다시 부르면 작업이 중복된다. 실패 응답의 `result_ref.completed_calls[i].input_args`
+  (시작 호출의 접수증 참조)를 다음 프로그램의 `inputs` 로 넘겨 **관찰부터** 이어간다. 길어질 일은 "시작만 하고 접수증을 반환하는 프로그램"과
+  "접수증을 받아 기다리는 프로그램"으로 나누면 이 문제가 생기지 않는다.
 - `cancel` 은 확인된 사실만 말한다(`cancel_requested` ≠ `cancelled`). 미지원 종류(위임·script·렌더)는 현재 상태와 함께 거절된다.
 - `unknown` 은 "이 몸이 모르는 작업"(유실·재기동·이미 회수됨·잠든 패키지)이지 실패가 아니다 — 새 작업을 다시 시작할지는 작업의 성격으로 판단.
 - 같은 명령을 **다시 보내지 말 것** — 접수증이 있으면 그 ref 로 기다린다(이중 실행 방지). 목표(`self:goal`)는 다른 수명이라 이 낱말로 읽지 않는다.

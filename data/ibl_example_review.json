@@ -1568,7 +1568,7 @@
   "self:task": {
    "fields": {
     "description": "8022d8516550",
-    "target_description": "dd6eec36f2d8",
+    "target_description": "8dcfc66218ba",
     "implementation": "22e22b80a762",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
@@ -1577,8 +1577,8 @@
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-10-05",
-   "examples": 0
+   "reviewed": "2026-10-07",
+   "examples": 7
   },
   "self:time": {
    "fields": {

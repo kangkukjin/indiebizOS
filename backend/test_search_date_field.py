@@ -76,7 +76,9 @@ def test_D6_gnews_single_item_builder(web_handler):
     assert row["date"].startswith("2026-08-26")
     assert row["query"] == "태그" and row["link_label"] == "기사 보기"
     src = (_WEB / "handler.py").read_text(encoding="utf-8")
-    joins = src.count('[r.get("source"), r.get("published")]')
+    # 2026-10-06: meta 의 시각은 표시용 현지 시각(_display_time)으로 조립한다 — 구조 칸 published·date 는 그대로.
+    assert row["meta"].startswith("s · 2026-08-2") and row["published"] == "Wed, 26 Aug 2026 15:23:00 GMT"
+    joins = src.count('[r.get("source"), _display_time(')
     assert joins == 1, f"gnews 행 조립이 {joins}곳 — _gnews_item 한 벌이어야 한다"
 
 

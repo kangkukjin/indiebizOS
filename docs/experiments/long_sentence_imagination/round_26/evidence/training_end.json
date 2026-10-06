@@ -1,0 +1,223 @@
+{
+ "written_at": "2026-10-07T05:37:04",
+ "head": "d109f2dc539c035ff98d0ee4ddd72d4f9d6029e7",
+ "git_status_tracked_changes": [],
+ "script_jobs": {
+  "count": 20,
+  "all_terminal": true,
+  "by_status": {
+   "done": 20
+  },
+  "rows": [
+   {
+    "job_id": "시험-20261007_052906-8434e522584a4d0d8df4760b56f9174a",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 894
+   },
+   {
+    "job_id": "시험-20261007_052906-b62328de18fc4c97a5584786c6c2ae0b",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 44
+   },
+   {
+    "job_id": "시험-20261007_052906-bd3ce7807f30402d8506f7d214508d0c",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 3238
+   },
+   {
+    "job_id": "시험-20261007_052906-d9c375586a684638ab6ba62436fc694d",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 28927
+   },
+   {
+    "job_id": "시험-20261007_052947-1728c0578d134dd9881afee9cbde0f01",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 3254
+   },
+   {
+    "job_id": "시험-20261007_052947-3fcc1a4e073c4b00889c1c0473e6112d",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 873
+   },
+   {
+    "job_id": "시험-20261007_052948-234a331b250848c2a1dfdec694407091",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 45
+   },
+   {
+    "job_id": "시험-20261007_052948-a771deb877064221a906aa33887e9cac",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 28997
+   },
+   {
+    "job_id": "시험-20261007_053028-1679e3d8cfa44d42b322e9dbe9c7db94",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 882
+   },
+   {
+    "job_id": "시험-20261007_053028-2d7226c579e5400e856ec7cc4b250092",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 29093
+   },
+   {
+    "job_id": "시험-20261007_053028-e40296550a804189a70edafc89bf5f1f",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 45
+   },
+   {
+    "job_id": "시험-20261007_053028-e8d2644f240f43c583d8e6bf6382afd2",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 3267
+   },
+   {
+    "job_id": "시험-20261007_053108-2091b23e15ed40009e290b1c14dcf0ed",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 875
+   },
+   {
+    "job_id": "시험-20261007_053108-a3202bbecc21426a877f455a041ba0e8",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 3250
+   },
+   {
+    "job_id": "시험-20261007_053108-df45adb256474d2cbb5d36f8f799d25a",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 29112
+   },
+   {
+    "job_id": "시험-20261007_053109-34cf7bf5b6174f21a25b39dc8eac5b6b",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 45
+   },
+   {
+    "job_id": "시험-20261007_053306-7afbd8ecd92c4ec3aa58b943c31a6dae",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 3288
+   },
+   {
+    "job_id": "시험-20261007_053306-a6608f6dd8804341a6c9186ffbf39161",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 885
+   },
+   {
+    "job_id": "시험-20261007_053306-de686de90eb94e5abea697feac8d2ae6",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 46
+   },
+   {
+    "job_id": "시험-20261007_053306-f3c34437f50f4d20ae44eda137fe6cfb",
+    "status": "done",
+    "exit_code": 0,
+    "duration_ms": 29310
+   }
+  ]
+ },
+ "episodes": [
+  {
+   "id": 4358,
+   "started_at": "2026-10-07T05:31:49.812896",
+   "ended_at": "2026-10-07T05:34:00.099108",
+   "total_ms": 130285,
+   "source": "training"
+  },
+  {
+   "id": 4359,
+   "started_at": "2026-10-07T05:34:00.198695",
+   "ended_at": "2026-10-07T05:35:45.558887",
+   "total_ms": 105359,
+   "source": "training"
+  }
+ ],
+ "trainer_runs": {
+  "describe_1_run.json": {
+   "at": "2026-10-07T05:27:06",
+   "elapsed": 0.27,
+   "success": null,
+   "run_status": null,
+   "mode": null
+  },
+  "observe_v1_run.json": {
+   "at": "2026-10-07T05:29:36",
+   "elapsed": 7.76,
+   "success": true,
+   "run_status": "completed",
+   "mode": null
+  },
+  "resume_v0_run.json": {
+   "at": "2026-10-07T05:30:57",
+   "elapsed": 6.48,
+   "success": true,
+   "run_status": "completed",
+   "mode": null
+  },
+  "start_check_v0_run.json": {
+   "at": "2026-10-07T05:28:59",
+   "elapsed": 0.31,
+   "success": true,
+   "run_status": null,
+   "mode": "check"
+  },
+  "start_check_v2_run.json": {
+   "at": "2026-10-07T05:30:19",
+   "elapsed": 0.3,
+   "success": true,
+   "run_status": null,
+   "mode": "check"
+  },
+  "start_v0_run.json": {
+   "at": "2026-10-07T05:29:08",
+   "elapsed": 2.26,
+   "success": false,
+   "run_status": "interrupted",
+   "mode": null
+  },
+  "start_v1_run.json": {
+   "at": "2026-10-07T05:30:03",
+   "elapsed": 15.83,
+   "success": false,
+   "run_status": "interrupted",
+   "mode": null
+  },
+  "start_v2_run.json": {
+   "at": "2026-10-07T05:30:43",
+   "elapsed": 15.87,
+   "success": true,
+   "run_status": "completed",
+   "mode": null
+  },
+  "variant_resume_v0_run.json": {
+   "at": "2026-10-07T05:31:38",
+   "elapsed": 0.35,
+   "success": true,
+   "run_status": "completed",
+   "mode": null
+  },
+  "variant_start_v2_run.json": {
+   "at": "2026-10-07T05:31:38",
+   "elapsed": 30.24,
+   "success": true,
+   "run_status": "completed",
+   "mode": null
+  }
+ },
+ "note": "훈련자 4시도(start_v0 중단→observe_v1 회수 / start_v1 중단 / start_v2+resume_v0 / 변형 start_v2+resume_v0) × 4작업 = 16, 시스템 AI 4. 모든 작업 종료 확인 뒤 수리 적용."
+}

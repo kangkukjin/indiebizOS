@@ -1,0 +1,87 @@
+{
+ "expected_files": {
+  "backend/test_preflight_restart.py": {
+   "passed": 7,
+   "failed": 0,
+   "errors": 0
+  },
+  "backend/test_selfbuild_gate_2026_09_07.py": {
+   "passed": 20,
+   "failed": 0,
+   "errors": 0
+  },
+  "backend/test_data_ops.py": {
+   "passed": 13,
+   "failed": 0,
+   "errors": 0
+  },
+  "backend/test_vocabulary_archive.py": {
+   "passed": 6,
+   "failed": 0,
+   "errors": 0
+  }
+ },
+ "checks": [
+  {
+   "check": "1차: backend/test_preflight_restart.py 통과 수",
+   "ok": true,
+   "detail": "{'passed': 7, 'failed': 0, 'errors': 0} vs {'passed': 7, 'failed': 0, 'errors': 0}"
+  },
+  {
+   "check": "최종: backend/test_preflight_restart.py 통과 수",
+   "ok": true,
+   "detail": "{'passed': 7, 'failed': 0, 'errors': 0} vs {'passed': 7, 'failed': 0, 'errors': 0}"
+  },
+  {
+   "check": "1차: backend/test_selfbuild_gate_2026_09_07.py 통과 수",
+   "ok": true,
+   "detail": "{'passed': 20, 'failed': 0, 'errors': 0} vs {'passed': 20, 'failed': 0, 'errors': 0}"
+  },
+  {
+   "check": "최종: backend/test_selfbuild_gate_2026_09_07.py 통과 수",
+   "ok": true,
+   "detail": "{'passed': 20, 'failed': 0, 'errors': 0} vs {'passed': 20, 'failed': 0, 'errors': 0}"
+  },
+  {
+   "check": "1차: backend/test_data_ops.py 통과 수",
+   "ok": true,
+   "detail": "{'passed': 13, 'failed': 0, 'errors': 0} vs {'passed': 13, 'failed': 0, 'errors': 0}"
+  },
+  {
+   "check": "최종: backend/test_data_ops.py 통과 수",
+   "ok": true,
+   "detail": "{'passed': 13, 'failed': 0, 'errors': 0} vs {'passed': 13, 'failed': 0, 'errors': 0}"
+  },
+  {
+   "check": "1차: 어휘는 수치 없음(진행 중)",
+   "ok": true,
+   "detail": "{'passed': None, 'failed': None, 'errors': None}"
+  },
+  {
+   "check": "최종: backend/test_vocabulary_archive.py 통과 수",
+   "ok": true,
+   "detail": "{'passed': 6, 'failed': 0, 'errors': 0} vs {'passed': 6, 'failed': 0, 'errors': 0}"
+  },
+  {
+   "check": "1차: 없는 파일은 통과 0",
+   "ok": true,
+   "detail": "{'passed': 0, 'failed': 0, 'errors': 1}"
+  },
+  {
+   "check": "최종: 없는 파일은 통과 0",
+   "ok": true,
+   "detail": "{'passed': 0, 'failed': 0, 'errors': 1}"
+  },
+  {
+   "check": "1차 본문에 진행 중 표시",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "최종: 모든 파일에 확정 수치",
+   "ok": true,
+   "detail": "{'backend/test_preflight_restart.py': 7, 'backend/test_selfbuild_gate_2026_09_07.py': 20, 'backend/test_data_ops.py': 13, 'backend/test_vocabulary_archive.py': 6, 'backend/test_lsi26_없는파일.py': 0}"
+  }
+ ],
+ "all_ok": true
+}

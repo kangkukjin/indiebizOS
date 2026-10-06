@@ -7,8 +7,10 @@
 
 접수증(통화 1종) — 모든 긴 작업의 즉시 반환:
     {success: true, accepted: true, task_ref: {kind, task_id[, owner]}, state: "queued"|"running"[, status_url], …}
-투영(status/wait 의 반환):
-    {task_ref, state, progress?, result?(종료·성공일 때만), error?(실패·중단일 때), raw?: 어댑터 원문}
+투영(status/wait 의 반환) — **항상 같은 칸**(2026-10-07 긴문장 26회차: 칸이 상황마다 달라 작업을 시작한 뒤의 프로그램이 죽었다):
+    {task_ref, state, terminal, timed_out, result(성공일 때만 값·아니면 null), failure(작업의 실패 사유·아니면 null), progress, raw?}
+    `error` 는 투영의 칸이 아니다 — **이 낱말 호출 자체의 실패**(값을 못 얻음)에만 실린다. 판본 2 는 `error`/`success:false` 를
+    도구 실패로 올리므로, 작업의 사정(failure)과 호출의 사정(error)을 한 칸에 섞으면 "실패한 작업의 상태 조회"가 중단이 된다.
 상태 어휘(한 벌) — queued · running · waiting_children · cancel_requested · succeeded · failed · cancelled · interrupted · unknown
     cancel_requested ≠ cancelled(요청과 확인은 다른 사실) · timeout(대기자의 사정, 작업은 계속) ≠ failed(작업의 사정) ·
     interrupted(실행자가 종료 기록 없이 사라짐) ≠ failed · unknown(이 몸이 모르는 작업 — 유실·재기동·남의 작업).
@@ -63,13 +65,8 @@ def view(r: dict, state: str, *, progress=None, result=None, error: Optional[str
     """어댑터가 돌려주는 투영 — 상태 어휘 밖의 값은 거절(어댑터의 상태 번역 누락을 드러낸다)."""
     if state not in STATES:
         raise ValueError(f"상태 어휘 밖: {state} (허용 {sorted(STATES)})")
-    out = {"task_ref": dict(r), "state": state, "terminal": state in TERMINAL}
-    if progress is not None:
-        out["progress"] = progress
-    if state == SUCCEEDED:
-        out["result"] = result
-    if error:
-        out["error"] = error
+    out = {"task_ref": dict(r), "state": state, "terminal": state in TERMINAL, "timed_out": False,
+           "result": result if state == SUCCEEDED else None, "failure": error or None, "progress": progress}
     if raw is not None:
         out["raw"] = raw
     out.update(extra)
@@ -192,12 +189,34 @@ def status(r: dict) -> dict:
         return view(r, UNKNOWN, error=f"상태 조회 실패({type(exc).__name__}): {exc}")
     if not isinstance(out, dict) or out.get("state") not in STATES:
         return view(r, UNKNOWN, error=f"어댑터 '{r['kind']}' 가 상태 어휘 밖의 투영을 돌려줌")
+    return _stable(r, out)
+
+
+def _stable(r: dict, out: dict) -> dict:
+    """어댑터가 view() 를 거치지 않고 만든 투영도 같은 칸을 갖게 한다(옛 `error` 칸은 failure 로 옮긴다)."""
+    out = dict(out)
+    legacy = out.pop("error", None)
+    out.setdefault("task_ref", dict(r))
+    out.setdefault("terminal", out["state"] in TERMINAL)
+    out.setdefault("timed_out", False)
+    out.setdefault("progress", None)
+    out["result"] = out.get("result") if out["state"] == SUCCEEDED else None
+    out["failure"] = out.get("failure") or legacy or None
     return out
 
 
+def _unfinished(v: dict) -> str:
+    return v.get("failure") or f"작업이 {v['state']} 상태입니다 — 결과가 없습니다."
+
+
 def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS) -> dict:
-    """종료 상태가 되거나 timeout 이 끝날 때까지 기다린 뒤 투영. 시간 초과는 실패가 아니다 —
-    `timed_out: true` 와 함께 현재 상태를 돌려주고 success 는 False(값을 얻지 못함)."""
+    """종료 상태가 되거나 timeout 이 끝날 때까지 기다린 뒤 투영.
+
+    **시간 초과는 실패가 아니다(대기자의 사정)** — `success: true, timed_out: true` 와 현재 상태를 값으로 돌려준다.
+    프로그램은 `[if:$r.timed_out]` 로 갈라 같은 ref 로 다시 기다린다. 옛 구현은 success:false 라 판본 2 에서 프로그램
+    전체가 중단됐고(이미 시작한 작업만 남긴 채), catch 에서도 시간 초과와 작업 실패를 가를 값이 없었다(26회차 L26-2).
+    작업이 성공 아닌 종료(failed·cancelled·interrupted)·unknown 이면 **기다린 값을 못 얻은 것**이라 success:false —
+    투영 칸(state·failure·task_ref)은 그대로 실려 `$error.details` 로 읽힌다."""
     try:
         requested = float(timeout if timeout is not None else 60.0)
     except (TypeError, ValueError):
@@ -206,14 +225,16 @@ def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS) -> dict:
     deadline = time.monotonic() + limit
     while True:
         v = status(r)
+        if v["state"] == SUCCEEDED:
+            return {"success": True, **v}
         if v["state"] in TERMINAL or v["state"] == UNKNOWN:
-            return {"success": v["state"] == SUCCEEDED, **v}
+            return {"success": False, **v, "error": _unfinished(v)}
         left = deadline - time.monotonic()
         if left <= 0:
             note = f"대기 {int(limit)}초가 끝났습니다 — 작업은 {v['state']} 상태로 계속됩니다(실패 아님). 같은 ref 로 다시 wait 하세요."
             if requested > WAIT_MAX_SECONDS:
                 note += f" (timeout 상한 {WAIT_MAX_SECONDS}초로 줄임)"
-            return {"success": False, "timed_out": True, **v, "error": note}
+            return {"success": True, **v, "timed_out": True, "note": note}
         time.sleep(min(max(poll, 0.1), left))
 
 
@@ -231,7 +252,10 @@ def cancel(r: dict) -> dict:
     if not isinstance(out, dict) or out.get("state") not in STATES:
         cur = status(r)
         return {"success": False, **cur, "error": f"어댑터 '{r['kind']}' 의 취소 투영이 상태 어휘 밖"}
-    return {"success": out["state"] in (CANCELLED, CANCEL_REQUESTED), **out}
+    out = _stable(r, out)
+    if out["state"] in (CANCELLED, CANCEL_REQUESTED):
+        return {"success": True, **out}
+    return {"success": False, **out, "error": out.get("failure") or f"취소되지 않았습니다 (현재 {out['state']})."}
 
 
 def _reset_for_tests() -> None:

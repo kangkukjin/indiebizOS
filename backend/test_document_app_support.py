@@ -36,12 +36,16 @@ def mount_document_app(app, workspace, ask=None):
 
 
 def open_document(page, port, path, encoding=None, fresh=False):
-    """열기 탭에서 경로로 문서를 연다. fresh 면 앱을 새로 띄운다(새로고침 뒤 다시 열기)."""
+    """⚙ 도구 안의 열기 탭에서 경로로 문서를 연다. fresh 면 앱을 새로 띄운다(새로고침 뒤 다시 열기)."""
     if fresh or "#/documents" not in page.url:
         page.goto(f"http://127.0.0.1:{port}/#/documents")
         if fresh:
             page.reload()
-    page.get_by_role("button", name="열기", exact=True).first.click()
+    # 앱은 빈 페이지로 서고 탭은 ⚙ 도구 안에 접혀 있다 — 열기 탭이 안 보이면 ⚙ 를 먼저 편다.
+    tab = page.get_by_role("button", name="열기", exact=True).first
+    if not tab.is_visible():
+        page.get_by_role("button", name="⚙ 도구", exact=True).first.click()
+    tab.click()
     box = page.get_by_placeholder("문서 경로", exact=False)
     box.wait_for(timeout=10000)
     if encoding:

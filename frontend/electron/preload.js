@@ -156,6 +156,9 @@ contextBridge.exposeInMainWorld('electron', {
   // 폴더 선택 다이얼로그
   selectFolder: () => ipcRenderer.invoke('select-folder'),
 
+  // 파일 하나 선택 다이얼로그 — { title, defaultPath }
+  selectFile: (opts) => ipcRenderer.invoke('select-file', opts),
+
   // 이미지 파일 선택 다이얼로그 (다중 선택)
   selectImages: () => ipcRenderer.invoke('select-images'),
 

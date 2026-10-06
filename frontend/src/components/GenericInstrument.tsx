@@ -26,7 +26,7 @@
  * 더 풍부한 데스크탑 전용 계기(도서·투자·라디오 등)는 ActionDesktop의
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.
  */
-import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useContext, type ReactNode } from 'react';
 import { ui, useLocale } from '../i18n/ui';
 import { StreamPlayer, loadHls } from './StreamPlayer';
 import type { StreamData } from './chat/chatUtils';
@@ -36,6 +36,7 @@ import {
   runIBL, jget, tpl, actionRequest, trendClass, asList,
   composeChannelOptions, mediaSrc, audioUrl, statusGlyph, IMAGE_BASE,
   groupPartition, mediaModel, isSlowNet, shuffleNext, hasMasterDetail, dynFilterCats, applyDynFilter,
+  InstrumentMenuContext, type InstrumentMenu,
 } from './generic/manifest';
 import { linkify, Card, EmptyMsg, KvRow, Sparkline, DocBlock } from './generic/prims-basic';
 import { FormPrim, EditableListPrim } from './generic/prims-edit';
@@ -586,7 +587,82 @@ function SelectInput({ inp, values, onChange, block }: { inp: AppInput; values: 
 type DrillTab = { name: string; view: AppViewPrim[]; compose?: AppCompose };
 type DrillState = { data: Json; action: ActionReq; item: Json; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] };  // action: 재조회용 실행 요청(구형 문자열 또는 판본 2 봉투)
 
-function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
+const isLanding = (m: AppMode) => !!m.auto_run && !(m.inputs || []).length && (m.view || []).some((v) => v.type === 'engine');
+type ModePreset = { values: Record<string, string>; data: Json };
+type Picker = { selectFile?: (opts?: { title?: string; defaultPath?: string }) => Promise<string | null> };
+const picker = () => (window as unknown as { electron?: Picker }).electron;
+const canBrowse = () => !!picker()?.selectFile;
+/* 경로 입력의 파일 창 — 선언의 browse(작업 공간 기준 폴더)를 절대 경로로 풀어 그 폴더에서 연다. 폴더를 못 찾으면 OS 가 기억한 자리에서. */
+async function browseFile(block: AppMode, inp: AppInput): Promise<string | null> {
+  let defaultPath: string | undefined;
+  try {
+    const parts = String(inp.browse || '').split('/').filter(Boolean);
+    const name = parts.pop();
+    const listed = await runIBL(actionRequest(block, '$안 = [self:list]{path: $p}\nreturn {items: $안}', { p: parts.join('/') || '.' }));
+    const hit = asList(listed, 'items').find((r) => r && typeof r === 'object' && (r as Json).name === name && (r as Json).is_dir);
+    if (hit) defaultPath = String((hit as Json).path || '') || undefined;
+  } catch { /* 시작 폴더 없이 연다 */ }
+  return (await picker()?.selectFile?.({ title: inp.placeholder || '파일 선택', defaultPath })) ?? null;
+}
+async function runMode(block: AppMode, values: Record<string, string>): Promise<{ data: Json; error?: string }> {
+  try {
+    const d = await runIBL(actionRequest(block, block.action || '', values));
+    return d?.error || d?.success === false ? { data: d, error: String(d.error || d.message || '실패') } : { data: d };
+  } catch (e) { return { data: null as unknown as Json, error: e instanceof Error ? e.message : String(e) }; }
+}
+
+/* 접힌 메뉴의 작은 창 — 그 모드의 입력을 받아 실행하고, 성공했을 때만 결과를 넘긴다(실패는 여기서 보여 주고 머문다). */
+function ModeDialog({ mode, sourceMode, initial, error: firstError, onCancel, onDone }: {
+  mode: AppMode; sourceMode: AppMode; initial: Record<string, string>; error?: string;
+  onCancel: () => void; onDone: (values: Record<string, string>, data: Json) => void;
+}) {
+  const [values, setValues] = useState(initial);
+  const [error, setError] = useState(firstError || '');
+  const [busy, setBusy] = useState(false);
+  const set = (key: string, v: string) => setValues((s) => ({ ...s, [key]: v }));
+  const submit = async () => {
+    if (busy) return;
+    const missing = (sourceMode.inputs || []).find((inp) => inp.required && !values[inp.key]);
+    if (missing) { setError(`${missing.placeholder || missing.key} — 비어 있습니다`); return; }
+    setBusy(true); setError('');
+    const r = await runMode(sourceMode, values);
+    setBusy(false);
+    if (r.error) setError(r.error); else onDone(values, r.data);
+  };
+  const field = 'w-full px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400';
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onCancel}>
+      <div role="dialog" aria-label={mode.name} className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-stone-200 p-5 flex flex-col gap-2.5"
+        onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') onCancel(); }}>
+        <div className="font-semibold text-stone-800">{mode.name}</div>
+        {mode.note && <div className="text-xs text-stone-500">{mode.note}</div>}
+        {(mode.inputs || []).map((inp, i) => {
+          const src = (sourceMode.inputs || [])[i] || inp;
+          return inp.type === 'select' ? (
+            <div key={inp.key} className="instrument-inputs flex"><SelectInput inp={inp} values={values} block={sourceMode} onChange={(v) => set(inp.key, v)} /></div>
+          ) : (
+            <div key={inp.key} className="flex gap-2">
+              <input autoFocus={i === 0} value={values[inp.key] || ''} placeholder={inp.placeholder || ''} className={field}
+                onChange={(e) => set(inp.key, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void submit(); }} />
+              {src.browse && canBrowse() && (
+                <button onClick={async () => { try { const f = await browseFile(sourceMode, src); if (f) set(inp.key, f); } catch { setError('파일 창을 열지 못했습니다 — 앱을 완전히 종료했다가 다시 시작하면 열립니다. 지금은 경로를 직접 적어 주세요.'); } }}
+                  className="shrink-0 px-3 py-2 rounded-lg border border-stone-200 text-sm text-stone-700 hover:border-stone-400">찾아보기…</button>
+              )}
+            </div>
+          );
+        })}
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onCancel} className="px-4 py-2 rounded-lg text-sm text-stone-600 hover:bg-stone-100">취소</button>
+          <button disabled={busy} onClick={() => void submit()} className="px-4 py-2 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40">{busy ? '…' : (mode.run_label || '실행')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: {
+  preset?: ModePreset;  // 메뉴의 작은 창에서 이미 받은 입력과 실행 결과 — 그대로 세우고 다시 실행하지 않는다
   mode: AppMode;
   sourceMode: AppMode; // Execution identity is independent of display language.
   openNeighborId?: number | null;   // 딥링크 — 이 이웃 id 의 행으로 자동 드릴(메신저 DM 진입 등)
@@ -644,10 +720,10 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
 
   // 모드 진입 시 초기화 + auto_run
   useEffect(() => {
-    const v = initVals();
-    setValues(v); setEventVars({}); setData(null); setDrill(null); setError(null); setComposeText(''); setComposeCh(''); setCatFilter(null);
-    if (sourceMode.auto_run) run(v);
-  }, [sourceMode, initVals, run]);
+    const v = { ...initVals(), ...(preset?.values || {}) };
+    setValues(v); setEventVars({}); setData(preset?.data ?? null); setDrill(null); setError(null); setComposeText(''); setComposeCh(''); setCatFilter(null);
+    if (sourceMode.auto_run && !preset) run(v);
+  }, [sourceMode, initVals, run, preset]);
 
   const onDrill = useCallback(async (p: AppViewPrim, item: Json) => {
     const dc = p.item_click as { action: string; recursive?: boolean; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] } | undefined;
@@ -805,7 +881,9 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
     }
   }, [run, sourceMode, allVars]);
 
-  const inputs = mode.inputs || [];
+  // 편집 캔버스가 서 있으면 입력줄·안내는 걷는다 — 화면은 글 쓰는 자리의 것. 다시 쓰려면 캔버스 ⚙ 에서 그 탭을 고른다(탭이 새로 선다).
+  const canvasUp = !!useContext(InstrumentMenuContext)?.claimed;
+  const inputs = canvasUp ? [] : (mode.inputs || []);
   // master_detail card_list → 반응형 2분할(PC: 리스트 좌+상세 우 동시 / 폰: 리스트→선택→상세→뒤로)
   const isSplit = !(mode as { modes?: AppMode[] }).modes && hasMasterDetail(mode.view);
   // engine 뷰(편집 캔버스)가 있는 모드는 넓게 — 글 쓰는 자리가 화면의 대부분이어야 한다(선언에 레이아웃 키를 두지 않는다).
@@ -881,8 +959,8 @@ function ModePane({ mode, sourceMode, openNeighborId, onDeepLinkDone }: {
   ) : null;
 
   return (
-    <div className={`${isSplit || isCanvas ? 'max-w-5xl' : 'max-w-2xl'} mx-auto p-5`}>
-      {mode.note && (
+    <div className={canvasUp ? 'px-3 pt-2' : `${isSplit || isCanvas ? 'max-w-5xl' : 'max-w-2xl'} mx-auto p-5`}>
+      {mode.note && !canvasUp && (
         <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
           {mode.note}
         </div>
@@ -1064,14 +1142,63 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
     }
   };
 
+  // 편집 캔버스(문서 엔진)가 서면 탭 줄은 캔버스의 ⚙ 안으로 접힌다(InstrumentMenuContext). 여는 즉시 캔버스로 가는
+  // 모드(입력 없는 auto_run + engine 뷰)는 캔버스가 서기 전에도 탭 줄 대신 ⚙ 하나만 둔다 — 뜨는 동안 화면이 출렁이지 않게.
+  const [claims, setClaims] = useState(0);
+  const [nonce, setNonce] = useState(0);      // 같은 탭을 다시 골라도 그 모드를 새로 세운다(새 빈 페이지·다시 열기)
+  const [menuOpen, setMenuOpen] = useState(false);
+  const claim = useCallback(() => { setClaims((c) => c + 1); return () => setClaims((c) => c - 1); }, []);
+  const [preset, setPreset] = useState<ModePreset | undefined>(undefined);
+  const [asking, setAsking] = useState<{ idx: number; values: Record<string, string>; error?: string } | null>(null);
+  const enter = useCallback((i: number, p?: ModePreset) => { setModeIdx(i); setPreset(p); setNonce((n) => n + 1); setMenuOpen(false); setAsking(null); }, []);
+  // 접힌 메뉴에서 탭을 고르면 화면을 옮기지 않는다 — 입력이 필요한 모드는 작은 창에서 받고(경로 입력은 데스크탑이면
+  // 파일 창으로 바로), 실행이 성공했을 때만 그 결과로 화면을 바꾼다. 취소·실패는 지금 글을 그대로 둔다.
+  const rawModes = rawInstrument.modes;
+  const go = useCallback((i: number) => {
+    const src = (rawModes || [])[i];
+    const ins = src?.inputs || [];
+    if (!src || !ins.length) { enter(i); return; }
+    const values: Record<string, string> = {};
+    ins.forEach((inp) => { values[inp.key] = inp.default || ''; });
+    const browse = ins.find((inp) => inp.browse);
+    const others = ins.filter((inp) => inp !== browse && inp.required);
+    if (!browse || others.length || !canBrowse()) { setMenuOpen(false); setAsking({ idx: i, values }); return; }
+    (async () => {
+      let chosen: string | null;
+      // 파일 창을 못 띄우면(창만 새로 고쳐져 메인 프로세스에 아직 길이 없을 때 등) 조용히 죽지 않고 작은 창으로 받는다.
+      try { chosen = await browseFile(src, browse); } catch { setMenuOpen(false); setAsking({ idx: i, values }); return; }
+      if (!chosen) return;
+      const v = { ...values, [browse.key]: chosen };
+      const r = await runMode(src, v);
+      if (r.error) setAsking({ idx: i, values: v, error: r.error });
+      else enter(i, { values: v, data: r.data });
+    })();
+  }, [rawModes, enter]);
+  // 여는 즉시 캔버스로 가는 모드(입력 없는 auto_run + engine 뷰)는 앱의 첫 화면이지 메뉴 항목이 아니다 — 이름을 비워 메뉴에서 뺀다.
+  const modeNames = useMemo(() => (instrument.modes || []).map((m) => (isLanding(m) ? '' : m.name || '')), [instrument]);
+  const menu = useMemo<InstrumentMenu>(() => ({ modes: modeNames, idx: modeIdx, go, claim, claimed: claims > 0 }), [modeNames, modeIdx, go, claim, claims]);
+  const bare = !!instrument.modes && isLanding(mode);
+  const folded = topButtons.length === 0 && (claims > 0 || bare);
+
   if (instrument.web_app && /^\/[a-z][a-z0-9/_-]*$/.test(instrument.web_app)) {
     return <iframe title={instrument.name} src={`${IMAGE_BASE}${instrument.web_app}`}
       className="h-full w-full border-0" />;
   }
 
   return (
+    <InstrumentMenuContext.Provider value={menu}>
     <div className="h-full w-full overflow-auto bg-stone-50">
-      {(instrument.modes || topButtons.length > 0) && (
+      {folded && claims === 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
+          <button onClick={() => setMenuOpen((v) => !v)}
+            className={`px-2.5 py-1.5 rounded-lg text-sm hover:bg-stone-100 ${menuOpen ? 'bg-stone-100 text-stone-800' : 'text-stone-600'}`}>⚙ 도구</button>
+          {menuOpen && modeNames.map((name, i) => name && (
+            <button key={i} onClick={() => go(i)}
+              className="px-3 py-1.5 rounded-lg text-sm border bg-white text-stone-600 border-stone-200 hover:border-stone-400">{name}</button>
+          ))}
+        </div>
+      )}
+      {!folded && (instrument.modes || topButtons.length > 0) && (
         <div className="flex items-center gap-1.5 max-w-2xl mx-auto px-5 pt-4">
           {(instrument.modes || []).map((m, i) => (
             <button key={i} onClick={() => setModeIdx(i)}
@@ -1089,7 +1216,12 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
         </div>
       )}
       {topMsg && <div className="max-w-2xl mx-auto px-5 pt-2 text-sm text-emerald-700">{topMsg}</div>}
-      <ModePane mode={mode} sourceMode={(rawInstrument.modes || [rawInstrument])[Math.min(modeIdx, modes.length - 1)]} openNeighborId={openNeighborId} onDeepLinkDone={onDeepLinkDone} />
+      {asking && rawModes?.[asking.idx] && (
+        <ModeDialog mode={modes[asking.idx]} sourceMode={rawModes[asking.idx]} initial={asking.values} error={asking.error}
+          onCancel={() => setAsking(null)} onDone={(values, data) => enter(asking.idx, { values, data })} />
+      )}
+      <ModePane key={nonce} preset={preset} mode={mode} sourceMode={(rawInstrument.modes || [rawInstrument])[Math.min(modeIdx, modes.length - 1)]} openNeighborId={openNeighborId} onDeepLinkDone={onDeepLinkDone} />
     </div>
+    </InstrumentMenuContext.Provider>
   );
 }

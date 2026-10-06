@@ -120,6 +120,17 @@ const GRID_X0 = 28, GRID_Y0 = 28, GRID_DX = 104, GRID_DY = 116, GRID_COLS = 7;
 function autoPos(index: number): [number, number] {
   return [GRID_X0 + (index % GRID_COLS) * GRID_DX, GRID_Y0 + Math.floor(index / GRID_COLS) * GRID_DY];
 }
+// 두 타일이 겹치는가 — 한 격자 칸 안쪽이면 겹침(정렬된 이웃 칸은 정확히 한 칸 떨어져 있어 겹치지 않는다).
+function slotHits(a: [number, number], b: [number, number]): boolean {
+  return Math.abs(a[0] - b[0]) < GRID_DX && Math.abs(a[1] - b[1]) < GRID_DY;
+}
+// from 번째 칸부터 훑어 occupied 어느 것과도 안 겹치는 첫 격자 칸.
+function firstFreeSlot(occupied: [number, number][], from = 0): [number, number] {
+  for (let n = from; ; n++) {
+    const p = autoPos(n);
+    if (!occupied.some((o) => slotHits(o, p))) return p;
+  }
+}
 
 // 빈노트가 문서 앱(document)에 흡수됐다 — 사용자가 빈노트를 두었던 자리·폴더·숨김을 문서 앱이 물려받는다.
 // 바꿀 것이 없으면 null.
@@ -172,6 +183,8 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
   const [openId, setOpenId] = useState<string | null>(null);
   const [manifest, setManifest] = useState<AppInstrument[]>(() => readCache(MANIFEST_CACHE_KEY, []));
   const [layout, setLayout] = useState<AppLayout>(() => readCache(LAYOUT_CACHE_KEY, EMPTY_LAYOUT));
+  // 서버의 매니페스트·레이아웃을 실제로 받았는가 — 캐시만으로 그린 상태에선 레이아웃을 자동 저장하지 않는다.
+  const [loaded, setLoaded] = useState(false);
   const [storeOpen, setStoreOpen] = useState(false);
   const [makerOpen, setMakerOpen] = useState(false);  // 앱메이커 플로팅 패널(앱 저술 전용 AI)
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
@@ -209,7 +222,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
   }, []);
 
   const loadAll = useCallback(
-    () => Promise.all([loadManifest(), loadLayout()]),
+    () => Promise.all([loadManifest(), loadLayout()]).then(() => setLoaded(true)),
     [loadManifest, loadLayout]
   );
 
@@ -291,6 +304,32 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
   const posOf = useCallback((id: string, idx: number): [number, number] =>
     layout.positions[id] || autoPos(idx), [layout.positions]);
 
+  // 홈에 놓인 타일(앱·폴더)이 지금 차지한 자리들. except 는 빼고 센다.
+  const homeSlots = useCallback((except?: Set<string>): [number, number][] => [
+    ...homeApps.filter((a) => !except?.has(a.id)).map((a) => posOf(a.id, catalogIndex.get(a.id) ?? 0)),
+    ...folderTargets.map((fid, i) => posOf(fid, APPS.length + i)),
+  ], [homeApps, folderTargets, posOf, catalogIndex, APPS.length]);
+
+  // 위치 미저장 앱의 자동 자리(카탈로그 인덱스 칸)가 다른 타일의 *저장된* 자리와 겹치면 — 사용자가
+  // 자유 배치로 그 칸에 다른 아이콘을 끌어다 둔 경우, 새 앱이 그 밑에 깔려 안 보이고 못 누른다 —
+  // 첫 빈 칸을 골라 *한 번 저장*한다. 겹친 것만 옮기고 저장하므로 나머지 미저장 아이콘은 그대로
+  // 카탈로그 인덱스 칸에 남고(서로 밀리지 않음), 옮긴 것도 이후엔 저장된 자리라 다시 계산되지 않는다.
+  useEffect(() => {
+    if (!loaded || IS_WEB_SURFACE) return;
+    const saved: [number, number][] = [...homeApps.map((a) => a.id), ...folderTargets]
+      .map((id) => layout.positions[id]).filter((p): p is [number, number] => !!p);
+    const hidden = homeApps.filter((a) => !layout.positions[a.id]
+      && saved.some((o) => slotHits(o, autoPos(catalogIndex.get(a.id) ?? 0))));
+    if (hidden.length === 0) return;
+    const occupied = homeSlots(new Set(hidden.map((a) => a.id)));
+    const fixes: Record<string, [number, number]> = {};
+    for (const a of hidden) {
+      fixes[a.id] = firstFreeSlot(occupied);
+      occupied.push(fixes[a.id]);
+    }
+    mutate((l) => { for (const id in fixes) if (!l.positions[id]) l.positions[id] = fixes[id]; return l; });
+  }, [loaded, homeApps, folderTargets, layout.positions, catalogIndex, homeSlots, mutate]);
+
   // ── 드래그 히트테스트 (폴더 드롭만 — 휴지통 폐기) ──
   const checkFolderHover = (x: number, y: number, draggedId: string): string | null => {
     for (const fid of folderTargets) {
@@ -363,7 +402,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
   // window.prompt 는 Electron 에서 미지원(항상 null) → 폴더를 바로 만들고 인라인 이름변경으로 진입.
   const createFolder = () => {
     const fid = `folder_${Date.now()}`;
-    const pos = autoPos(APPS.length + folderTargets.length);
+    const pos = firstFreeSlot(homeSlots(), APPS.length + folderTargets.length);  // 카탈로그 뒤 첫 빈 칸
     mutate((l) => {
       l.folders[fid] = { label: '새 폴더', icon: '📁' };
       l.positions[fid] = pos;
@@ -442,10 +481,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
   const openAppObj = openId ? APPS.find((a) => a.id === openId) || null : null;
   if (openAppObj?.el) {
     return (
-      <div className="absolute inset-0 flex flex-col">
-        <BackBar onBack={() => setOpenId(null)} crumbs={[staticAppLabel(openAppObj)]} />
-        <div className="flex-1 min-h-0">{openAppObj.el}</div>
-      </div>
+      <OpenApp id={openAppObj.id} label={staticAppLabel(openAppObj)} onBack={() => setOpenId(null)}>{openAppObj.el}</OpenApp>
     );
   }
 
@@ -728,16 +764,54 @@ function IconTile({ icon, label, soon, onClick }: { icon: string; label: string;
   );
 }
 
-function BackBar({ onBack, crumbs }: { onBack: () => void; crumbs: string[] }) {
+/* 열린 앱 — "넓게 보기" 토글로 런처 창 전체를 덮었다가 되돌린다(런처의 툴바·옆 패널을 가린다). 앱마다 기억한다.
+ * 앱이 창에서 실제로 쓸 수 있는 높이는 --app-chrome(= 창 높이 − 앱 자리 높이)으로 내려 준다 — 캔버스류가 딱 맞게 서도록. */
+const WIDE_KEY = 'indiebiz-app-wide';
+function wideApps(): string[] {
+  try { const v = JSON.parse(localStorage.getItem(WIDE_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+function OpenApp({ id, label, onBack, children }: { id: string; label: string; onBack: () => void; children: ReactNode }) {
+  const [wide, setWide] = useState(() => wideApps().includes(id));
+  const seat = useRef<HTMLDivElement>(null);
+  const toggle = () => setWide((was) => {
+    try { localStorage.setItem(WIDE_KEY, JSON.stringify(was ? wideApps().filter((x) => x !== id) : [...wideApps().filter((x) => x !== id), id])); } catch { /* 기억 못 해도 토글은 된다 */ }
+    return !was;
+  });
+  useEffect(() => {
+    const el = seat.current;
+    if (!el) return;
+    const measure = () => el.style.setProperty('--app-chrome', `${Math.max(0, Math.round(window.innerHeight - el.clientHeight))}px`);
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(el);
+    window.addEventListener('resize', measure);
+    return () => { watch.disconnect(); window.removeEventListener('resize', measure); };
+  }, [wide]);
   return (
-    <div className="shrink-0 flex items-center gap-2 px-5 py-2 text-sm">
-      <button onClick={onBack} className="px-2 py-1 rounded-lg text-stone-500 hover:bg-stone-100">‹ 뒤로</button>
+    <div className={wide ? 'fixed inset-0 z-40 flex flex-col bg-stone-50' : 'absolute inset-0 flex flex-col'}>
+      <BackBar onBack={onBack} crumbs={[label]} wide={wide} onWide={toggle} />
+      <div ref={seat} className="flex-1 min-h-0">{children}</div>
+    </div>
+  );
+}
+
+function BackBar({ onBack, crumbs, wide, onWide }: { onBack: () => void; crumbs: string[]; wide?: boolean; onWide?: () => void }) {
+  return (
+    // 넓게 본 상태에선 이 줄이 창 맨 위 — 창 신호등 자리를 비우고(pl-20) 줄을 잡아 창을 끌 수 있게 한다.
+    <div className={`shrink-0 flex items-center gap-2 py-2 text-sm ${wide ? 'pl-20 pr-5 drag' : 'px-5'}`}>
+      <button onClick={onBack} className="no-drag px-2 py-1 rounded-lg text-stone-500 hover:bg-stone-100">‹ 뒤로</button>
       <span className="text-stone-300">/</span>
       {crumbs.map((c, i) => (
         <span key={i} className={i === crumbs.length - 1 ? 'text-stone-800 font-medium' : 'text-stone-400'}>
           {c}{i < crumbs.length - 1 && <span className="text-stone-300 mx-1">/</span>}
         </span>
       ))}
+      {onWide && (
+        <button onClick={onWide} title={wide ? '런처 창 안의 원래 자리로 되돌립니다' : '런처 창 전체로 넓혀 봅니다'}
+          className={`no-drag ml-auto px-2.5 py-1 rounded-lg hover:bg-stone-100 ${wide ? 'bg-stone-100 text-stone-800' : 'text-stone-500'}`}>
+          {wide ? '⤡ 원래 크기' : '⤢ 넓게 보기'}
+        </button>
+      )}
     </div>
   );
 }

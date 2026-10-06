@@ -2,7 +2,7 @@
    편집기 컴포넌트는 옛 문서 창과 같이 쓰므로 클래스 이름은 그대로 두고 .engine-editor 아래로만 건다. */
 .engine-editor{display:flex;flex-direction:column;gap:8px;font-size:13px;color:#44403c}
 .engine-editor .office-document{display:flex;flex-direction:column;gap:8px}
-.engine-editor .office-frame{flex:none;height:max(480px,calc(100vh - 300px));border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;background:#fff}
+.engine-editor .office-frame{flex:none;height:max(480px,calc(100vh - 64px - var(--app-chrome,0px)));border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;background:#fff}
 .engine-editor .office-frame>iframe{width:100%;height:100%;border:0}
 .engine-editor section>iframe{border-radius:12px}
 .engine-editor .document-toolbar,.engine-editor .document-export{display:flex;flex-wrap:wrap;align-items:center;gap:6px}

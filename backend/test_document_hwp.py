@@ -146,6 +146,7 @@ def test_local_hwp_browser_roundtrip(tmp_path, monkeypatch, format):
             open_document(page, port, source)
             ui = page.get_by_role('region', name='한글 문서 편집기', exact=True)
             try:
+                ui.get_by_role('button', name='⚙ 도구', exact=True).click()  # 저장·복구 버튼은 ⚙ 안에 접혀 있다
                 expect(ui.get_by_role('button', name='원본 저장', exact=True)).to_be_enabled(timeout=60000)
                 host = page.frame_locator('iframe[title="로컬 HWP 편집 화면"]')
                 studio = host.frame_locator('iframe')
@@ -172,6 +173,7 @@ def test_local_hwp_browser_roundtrip(tmp_path, monkeypatch, format):
                         assert b'<hp:tbl' in archive.read('Contents/section0.xml')
                 # Reload the app and reopen the same native saved document.
                 open_document(page, port, source, fresh=True)
+                ui.get_by_role('button', name='⚙ 도구', exact=True).click()
                 expect(ui.get_by_role('button', name='원본 저장', exact=True)).to_be_enabled(timeout=30000)
                 assert not remote, remote
                 # Electron's packaged frontend has an opaque file: origin. The

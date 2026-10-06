@@ -41,6 +41,15 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 // 모든 앱 창(시스템 AI·프로젝트 포함)의 로컬 개발 서버 재기동을 복구한다.
 app.on('browser-window-created', (_event, win) => {
   if (isDev) installDevServerRecovery(win.webContents);
+  // 페이지가 닫기를 막으면(beforeunload — 문서·시트 편집기의 미저장 보호) Electron 은 묻지도 않고 창을 안 닫는다.
+  // 죽은 창처럼 보이지 않게 사람에게 묻는다: "닫기"를 고르면 막은 것을 무시하고 닫는다.
+  win.webContents.on('will-prevent-unload', (event) => {
+    const choice = dialog.showMessageBoxSync(win, {
+      type: 'question', buttons: ['닫기', '취소'], defaultId: 1, cancelId: 1, noLink: true,
+      message: '저장하지 않은 편집 내용이 있을 수 있습니다.', detail: '그래도 이 창을 닫을까요?',
+    });
+    if (choice === 0) event.preventDefault();
+  });
 });
 
 let mainWindow = null;
@@ -402,6 +411,23 @@ function setupIPC() {
   ipcMain.handle('forage-pw-import-chrome', () => {
     try { return foragePw.importFromChrome(); }
     catch (e) { return { error: e.message }; }
+  });
+
+  // 파일 하나 선택 다이얼로그 — 시작 폴더(defaultPath)를 받는다(문서 앱 "열기": 문서함에서 시작)
+  ipcMain.handle('select-file', async (event, opts) => {
+    const o = opts && typeof opts === 'object' ? opts : {};
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      // 여러 개 선택 허용 — 여는 것은 첫 파일 하나지만, 파일 창 안에서 여러 문서를 골라 한 번에 휴지통으로 보낼 수 있다
+      // (macOS: ⌘⌫ 또는 오른쪽 클릭 → 휴지통으로 이동. 지우는 일은 OS 파일 창의 것 — 휴지통이라 되살릴 수 있다).
+      properties: ['openFile', 'multiSelections'],
+      title: typeof o.title === 'string' ? o.title : '파일 선택',
+      message: '열 문서를 고르세요 · 여러 개를 골라 ⌘⌫(또는 오른쪽 클릭)로 휴지통에 보낼 수 있습니다',
+      buttonLabel: '열기',
+      ...(typeof o.defaultPath === 'string' && o.defaultPath ? { defaultPath: o.defaultPath } : {}),
+    };
+    const result = win && !win.isDestroyed() ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
+    return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
   });
 
   // 이미지 파일 선택 다이얼로그 (다중 선택)

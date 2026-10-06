@@ -1,3 +1,4 @@
+import { createContext } from 'react';
 import { iblSurface } from '../../lib/remote-session';
 /**
  * generic/manifest.ts — 매니페스트 타입 + IBL 실행 + 데스크탑 전용 헬퍼 (비-JSX 공용층)
@@ -50,6 +51,7 @@ export type ActionReq = string | AppRequest;  // 빌더(appRequest·actionReques
 export interface AppInput {
   key: string;
   type: 'text' | 'select' | 'file';   // file: 선택 즉시 /launcher/upload 로 올리고 값=서버 절대경로
+  browse?: string;  // text 입력이 파일 경로일 때: 데스크탑은 이 폴더에서 시작하는 파일 창으로 고른다(그 외 표면은 글자 입력 그대로)
   accept?: string;                     // file 전용 — <input accept> 필터 (예 'image/*,.pdf')
   default?: string;
   placeholder?: string;
@@ -246,3 +248,9 @@ export const mediaSrc = (u: string) => !u ? u : (u.startsWith('/') ? (isBackendR
 export const audioUrl = (u: string) => resolveMediaUrl(u, IMAGE_BASE);
 
 // RECURRENCE_OPTS(반복 주기 어휘)·dateInputType 은 공용 코어에서 재수출 — 위 export 블록 참조.
+
+/* 계기 메뉴(모드 탭)를 캔버스가 맡는 통로 — 편집 캔버스(engine 뷰의 문서 엔진)가 서 있는 동안 모드 탭 줄은
+ * 화면에서 빠지고 캔버스의 ⚙ 안에 접힌다(글 쓰는 자리가 화면의 대부분이어야 한다). 캔버스가 claim 하면
+ * GenericInstrument 가 탭 줄을 걷고, 캔버스는 modes/go 로 같은 탭을 ⚙ 패널에 그린다. 선언에는 키가 없다. */
+export interface InstrumentMenu { modes: string[]; idx: number; go: (i: number) => void; claim: () => () => void; claimed: boolean }
+export const InstrumentMenuContext = createContext<InstrumentMenu | null>(null);

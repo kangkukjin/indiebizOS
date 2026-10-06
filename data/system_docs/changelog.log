@@ -2406,63 +2406,8 @@
 2026-10-05 | ③ 2차 — `[others:delegate]{scope: "system"}` 가 접수 시점에 시스템 작업을 선발급(routing_system: system_ai_memory.create_task(parent_task_id) → SystemAIRunner.send_message(task_id=자식)) → 다른 위임과 같은 접수증(task_ref{kind: delegation, owner: system}·status_url)·`mode: sync` 는 await_child 로 그 작업을 기다린다. 옛 경로는 부모 task id 를 러너에 넘겨 자식 작업 행이 없었고 접수증에 id 가 없었다. 예약 경로(ibl_scheduled 의 queued+task_id 추적) 의미를 바꾸지 않으려 접수증에 task_id 는 싣지 않음. 어휘 설명(others.yaml delegate scope=system) 갱신·용례 재검토 ack. 회귀 test_delegation_tasks::test_system_scope_async/sync.
 
 2026-10-05 | ⑨ 위임의 실행 범위 지정 1차(docs/APP_COMMON_FOUNDATION_GAPS_2026_10_05.md §1-⑨): `[others:delegate]{…, role, allowed, context}` — delegation_tasks.envelope 이 allowed 를 부모 집합 ∩ 요청으로만(무제한 부모=요청 그대로·표준 코어 포함, 밖은 allowed_clamped), 요청 없으면 상속; received() 가 처리 동안 thread allowed_nodes 를 세워 실행 관문·프롬프트 스코핑·재위임이 같은 집합(ENVELOPE_KEYS 를 두 러너 send_message 가 복사). role=시스템 AI 위임 force_role(_process_via_cognition), context=메시지 JSON 동봉(64KB 상한, with_context)+봉투. 세 scope 공통. 첫 소비자 /forage/chat 은 delegation_tasks.scoped(role=forage, allowed=[sense], context=사냥판) 위의 얇은 통로 — 시스템 AI 큐(순차)를 타지 않는 판정. 어휘 others:delegate params/target_description 갱신(ack). 회귀 test_delegation_tasks 4건 추가.
-[2026-10-05 20:00:51] PROJECT_CREATED: 연구 (ID: 연구)
-[2026-10-05 20:00:51] PROJECT_CREATED: 연구 (ID: 연구)
-[2026-10-05 20:00:51] PROJECT_RENAMED: 연구 -> 연구2
-[2026-10-05 20:00:53] PROJECT_DELETED: 연구2
-[2026-10-05 20:00:53] PROJECT_DELETED: ID: 연구2
-[2026-10-05 20:00:55] PROJECT_CREATED: P1 (ID: P1)
-[2026-10-05 20:00:55] PROJECT_CREATED: P1 (ID: P1)
-[2026-10-05 20:00:57] PROJECT_CREATED: P2 (ID: P2)
-[2026-10-05 20:00:57] PROJECT_CREATED: P2 (ID: P2)
 
 2026-10-05 | ⑩ 몸의 명사 생애주기 어휘(docs/APP_COMMON_FOUNDATION_GAPS_2026_10_05.md §1-⑩, 사용자: 전부 진행·판정은 구현자): 새 낱말 7 `self:project`·`self:folder`·`self:trash`·`others:chat_room`·`others:warehouse`·`self:warehouse`·`others:channel`·`self:media`, op 확장 3 `others:agents`(생애주기·시작/중지·역할/메모, 주 키 op)·`self:switch`(생애주기 + run 을 ③ 접수증으로 수리: 옛 run 은 SwitchRunner(sm).run_switch 라는 없는 호출로 죽었다)·`limbs:launch`(ops open_ui/list/add/remove, 옛 action 별칭). 구현은 조종실 라우트와 같은 서비스 함수 한 벌로 내렸다(services/launcher_ops·chat_room_ops·warehouse_ops·warehouse_admin·channel_settings_ops·media_ops, cognition/agent_lifecycle, base/warehouse_paths) — 라우트(api_agents 생애주기 5·api_switches create·api_warehouse_feed like/retweet·portal_admin 6·api_business 채널 PUT·api_nas probe/내장자막)가 그 함수를 부른다. 조립 루트(boot_common)가 서비스층 능력을 라우터에 주입. 권한: 쓰기 op owner, 영구 삭제·채널 set 은 human_confirm. 회귀 test_lifecycle_vocab_2026_10_05(9), 용례 28건 시딩, 가이드 body_lifecycle.md(+guide_db). web·system_essentials 재감사. 남은 뷰 작업(calendar 바인딩·즐겨찾기 버튼)은 실기기 묶음.
-[2026-10-05 20:00:59] PROJECT_CREATED: P3 (ID: P3)
-[2026-10-05 20:00:59] PROJECT_CREATED: P3 (ID: P3)
-[2026-10-05 22:11:41] PROJECT_CREATED: 연구 (ID: 연구)
-[2026-10-05 22:11:41] PROJECT_CREATED: 연구 (ID: 연구)
-[2026-10-05 22:11:41] PROJECT_RENAMED: 연구 -> 연구2
-[2026-10-05 22:11:42] PROJECT_DELETED: 연구2
-[2026-10-05 22:11:42] PROJECT_DELETED: ID: 연구2
-[2026-10-05 22:11:42] PROJECT_CREATED: P1 (ID: P1)
-[2026-10-05 22:11:42] PROJECT_CREATED: P1 (ID: P1)
-[2026-10-05 22:11:44] PROJECT_CREATED: P2 (ID: P2)
-[2026-10-05 22:11:44] PROJECT_CREATED: P2 (ID: P2)
-[2026-10-05 22:11:45] PROJECT_CREATED: P3 (ID: P3)
-[2026-10-05 22:11:45] PROJECT_CREATED: P3 (ID: P3)
-[2026-10-05 22:17:01] PROJECT_CREATED: 연구 (ID: 연구)
-[2026-10-05 22:17:01] PROJECT_CREATED: 연구 (ID: 연구)
-[2026-10-05 22:17:01] PROJECT_RENAMED: 연구 -> 연구2
-[2026-10-05 22:17:03] PROJECT_DELETED: 연구2
-[2026-10-05 22:17:03] PROJECT_DELETED: ID: 연구2
-[2026-10-05 22:17:04] PROJECT_CREATED: P1 (ID: P1)
-[2026-10-05 22:17:04] PROJECT_CREATED: P1 (ID: P1)
-[2026-10-05 22:17:06] PROJECT_CREATED: P2 (ID: P2)
-[2026-10-05 22:17:06] PROJECT_CREATED: P2 (ID: P2)
-[2026-10-05 22:17:09] PROJECT_CREATED: P3 (ID: P3)
-[2026-10-05 22:17:09] PROJECT_CREATED: P3 (ID: P3)
-[2026-10-05 22:18:49] PROJECT_CREATED: 연구 (ID: 연구)
-[2026-10-05 22:18:49] PROJECT_CREATED: 연구 (ID: 연구)
-[2026-10-05 22:18:49] PROJECT_RENAMED: 연구 -> 연구2
-[2026-10-05 22:18:52] PROJECT_DELETED: 연구2
-[2026-10-05 22:18:52] PROJECT_DELETED: ID: 연구2
-[2026-10-05 22:18:53] PROJECT_CREATED: P1 (ID: P1)
-[2026-10-05 22:18:53] PROJECT_CREATED: P1 (ID: P1)
-[2026-10-05 22:18:55] PROJECT_CREATED: P2 (ID: P2)
-[2026-10-05 22:18:55] PROJECT_CREATED: P2 (ID: P2)
-[2026-10-05 22:18:57] PROJECT_CREATED: P3 (ID: P3)
-[2026-10-05 22:18:57] PROJECT_CREATED: P3 (ID: P3)
-[2026-10-05 22:20:39] PROJECT_CREATED: 연구 (ID: 연구)
-[2026-10-05 22:20:39] PROJECT_CREATED: 연구 (ID: 연구)
-[2026-10-05 22:20:39] PROJECT_RENAMED: 연구 -> 연구2
-[2026-10-05 22:20:41] PROJECT_DELETED: 연구2
-[2026-10-05 22:20:41] PROJECT_DELETED: ID: 연구2
-[2026-10-05 22:20:42] PROJECT_CREATED: P1 (ID: P1)
-[2026-10-05 22:20:42] PROJECT_CREATED: P1 (ID: P1)
-[2026-10-05 22:20:44] PROJECT_CREATED: P2 (ID: P2)
-[2026-10-05 22:20:44] PROJECT_CREATED: P2 (ID: P2)
-[2026-10-05 22:20:46] PROJECT_CREATED: P3 (ID: P3)
-[2026-10-05 22:20:46] PROJECT_CREATED: P3 (ID: P3)
 [2026-10-05 22:39:00] BUG_FIX: 긴문장20 — CSV/TSV 주인·회원 읽기에서 셀 CR/LF/CRLF 보존, CR 행 구분 파서 수정. 원문 독립 대조·원천 부재/BOM/빈 파일 전체 프로그램 회귀. 관련 1215통과·1건너뜀. docs/experiments/long_sentence_imagination/round_20/report.md
 [2026-10-05 23:08:10] BUG_FIX: 긴문장21 — chunk의 빈/공백 본문을 누락과 구별, 줄·문단 묶기 길이 누적으로 반복 결합 제거. 전체·Record/크기 변형 전건 일치, 관련416검사 통과. docs/experiments/long_sentence_imagination/round_21/report.md
 2026-10-06 | **문서 앱 = 빈노트의 얼굴 + 형식별 엔진, 빈노트 은퇴**(docs/DOCUMENT_APP_ON_BINNOTE_PLAN_2026_10_05.md): 선언형 계기 `data/instruments/document.yaml`(문서함·새 문서·열기 — `[self:file_find]`·`[self:workspace]`·`[self:write]`·`[self:delete]`·`[self:ask]`, 새 낱말 없음). 원문 엔진을 넓은 캔버스로(자동 서버 초안·Cmd+S·원본 줄바꿈 보존·코드포인트 주소·버전 되살리기·사본), engine 뷰에 `ai_dock`(선택 또는 글 전체 → 제안 → 반영/첨부, form 독과 한 컴포넌트 `AiDockPanel`), engine 모드는 넓은 배치. 사무·한글 편집기는 계기 안 전용 CSS(`engine-editors.css`)와 편집 서버 시작 버튼. `BinNote.tsx` 삭제 — 홈 자리는 `document` 가 물려받고 브라우저 미저장 초안은 문서함에 한 번 건진다. 옛 문서 창은 미이관 기능(시트 표 연결·강의 전달·템플릿·가져오기·변환) 때문에 '문서 (옛 창)' 으로 유지. 검증기 `iblbuild_appview`(engine ai_dock)·회귀 `test_app_view_engine.py`.
@@ -2471,3 +2416,12 @@
 2026-10-06 | **문서 앱 문서함 폴더 탐색**(새 뷰 낱말 없음): `data/instruments/document.yaml` 문서함이 `[self:list]` 로 폴더를 타고 들어간다 — 폴더 행은 `item_click.recursive` 로 그 안으로, 문서 행은 캔버스로, "‹ 상위 폴더"·"‹ 폴더로 돌아가기" 행으로 거슬러 오른다. 렌더러: `engine` 뷰는 ref 가 비면 그리지 않음(목록과 캔버스를 한 드릴 화면에 선언), 데스크탑 `list_action` 행 버튼 `confirm` 누락 수리(문서함 삭제가 확인 없이 나가던 결함).
 
 [2026-10-06 02:10] IMPROVE: 긴문장25 — 3600행 주문/반품 정산·독립 AI·정책 재사용 검증. 얕은 런타임 계약의 불필요한 깊은 타입 추론 제거, nullable 산술 진단과 전건 검증 분할 안내 보완. 전수에서 드러난 생애주기 시험의 실 시스템 문서 쓰기를 임시 경로로 격리. 훈련 종료 후 수리·전체/새 변형 전건 일치. 검증 범위/비용: docs/experiments/long_sentence_imagination/round_25/report.md
+[2026-10-06 10:20] IMPROVE: 문서 앱 화면 — 열면 빈 페이지(첫 모드 "빈 페이지": 빈 "무제 …" 재사용, 없으면 생성)가 서고, 캔버스가 서 있는 동안 탭 줄·입력줄은 캔버스 "⚙ 도구" 안으로 접힌다(InstrumentMenuContext, 선언 키 없음). 종이는 창 가득·글줄은 가운데. 옛 모드 "⚙ 도구"→"틀로 새 문서". 정본 docs/DOCUMENT_APP_ON_BINNOTE_PLAN_2026_10_05.md 꼬리.
+[2026-10-06 10:35] FIX: 문서 앱 "다른 창이 작성 중입니다" — 작성 세션을 놓는 길이 없어 앱 재시작마다 열었던 문서가 잠기고, 가져오기 화면은 acquire 409 에 가려 닿지 못하던 결함. 원문 문서는 떠날 때 세션을 놓고, 죽은 창의 세션은 생존 확인(BroadcastChannel) 뒤 조용히 이어받는다. 빈 페이지는 세션 없는 빈 "무제"만 재사용.
+[2026-10-06 10:50] IMPROVE: 문서 앱 기본 형식을 텍스트(.txt)로 — 빈 페이지·새 문서. 앱 모드의 열린 앱에 "넓게 보기" 토글(런처 창 전체 ↔ 원래 자리, 앱마다 기억, ActionDesktop.OpenApp) + 앱 자리 높이를 --app-chrome 으로 내려 캔버스가 화면에 맞게 선다.
+[2026-10-06 11:50] IMPROVE: 문서 앱 ⚙ 안의 탭이 화면을 옮기지 않는다 — "열기"는 문서함에서 시작하는 OS 파일 창(text 입력 속성 browse + Electron select-file), "새 문서"·"틀로 새 문서"는 작은 창(ModeDialog), 성공했을 때만 캔버스 교체. "문서함" 탭 은퇴.
+[2026-10-06 12:05] IMPROVE: 문서 앱 "새 문서"에 한글(.hwpx/.hwp) — 빈 문서 틀(data/instruments/document_templates)을 [self:copy] 로 복사해 RHWP 편집기로 연다. ⚙ 메뉴에서 "빈 페이지" 제거(첫 화면 모드는 메뉴 항목이 아님). "열기" 파일 창 호출이 거절될 때 조용히 죽던 것을 작은 창으로 대체.
+[2026-10-06 12:45] IMPROVE: 문서 앱 한글(HWP/HWPX) 화면 — 편집기 위의 작업 저장·원본 저장·복구·버전·사본·안내 문구를 ⚙ 도구 안으로 접고(HwpDocumentEditor tabs/tools), 화면에는 ⚙ 도구 한 줄과 편집기만. 편집기는 창 높이를 채운다.
+[2026-10-06 13:00] FIX: 한글 문서를 열어 두면 창이 닫히지 않던 것 — HwpDocumentEditor 가 beforeunload 를 무조건 막았고 Electron 은 묻지 않고 닫기를 버린다. 무조건 막기를 걷고(초안 4초 자동 저장), 메인 프로세스에 will-prevent-unload 확인 창(닫기/취소)을 달았다 — 사무·시트 편집기의 미저장 보호도 이제 죽은 창이 아니라 물음으로 나온다.
+[2026-10-06 13:25] IMPROVE: 문서 앱 워드 — "새 문서"에 워드(.docx)(빈 문단 [table:document]), 편집 엔진이 직접 못 여는 형식(옛 .doc 등)은 ".docx 사본으로 열기"(convert → 사본으로 갈아탐, 원본 보존), 사무 편집기 화면도 ⚙ 도구 + 상태 한 줄과 편집기만(저장·버전·사본·내보내기·선택 수정 AI·PDF 쪽 작업은 ⚙ 안).
+[2026-10-06 13:40] IMPROVE: 문서 앱 "열기" 파일 창에 여러 개 선택 허용(select-file multiSelections) — 파일 창 안에서 여러 문서를 골라 휴지통으로 보낼 수 있게(여는 것은 첫 파일). 앱 재시작 뒤 적용, 실기 미확인.

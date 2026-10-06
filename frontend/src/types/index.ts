@@ -284,6 +284,9 @@ export interface ElectronAPI {
   // 임의 파일·폴더 선택 다이얼로그 (다중 선택, 확장자 무필터) — 공유창고 넣기·form 의 files 필드
   selectFiles: () => Promise<string[] | null>;
 
+  // 파일 하나 선택 다이얼로그(시작 폴더 지정) — 계기 입력의 browse(문서 앱 "열기")
+  selectFile?: (opts?: { title?: string; defaultPath?: string }) => Promise<string | null>;
+
   // OS 드래그앤드롭 File 객체 → 절대경로 (Electron 32+ 에서 File.path 제거된 정식 대체)
   getPathForFile?: (file: File) => string;
 

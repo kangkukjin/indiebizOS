@@ -1,5 +1,5 @@
 import { DocumentOCR } from './DocumentOCR';
-import { useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { documentCommand, documentRequest, sessionArgs, type Detail, type Session } from '../lib/api-documents';
 
 type OfficeInstance = { destroyEditor: () => void };
@@ -17,7 +17,8 @@ function loadScript(url: string) {
   return scriptPromise;
 }
 
-export function OfficeDocumentEditor({ detail, onChange, captureRef, onSelection, onSaved }: { detail: Detail; onChange: (detail: Detail) => void; captureRef: MutableRefObject<(() => Promise<Session>) | null>; onSelection?: (sel: { text: string; bookmark: string }) => void; onSaved?: (detail: Detail) => void }) {
+export function OfficeDocumentEditor({ tabs, detail, onChange, captureRef, onSelection, onSaved }: { tabs?: ReactNode; detail: Detail; onChange: (detail: Detail) => void; captureRef: MutableRefObject<(() => Promise<Session>) | null>; onSelection?: (sel: { text: string; bookmark: string }) => void; onSaved?: (detail: Detail) => void }) {
+  const [tools, setTools] = useState(false);
   const [message, setMessage] = useState('편집기를 여는 중…');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -131,7 +132,19 @@ export function OfficeDocumentEditor({ detail, onChange, captureRef, onSelection
     });
     setMessage(`사본 저장됨: ${result.path}`);
   });
+  // 화면에는 ⚙ 도구 한 줄과 편집기만 둔다 — 편집기가 자기 메뉴를 갖고 있으므로 저장·버전·사본·내보내기·선택 수정(AI)·PDF 쪽
+  // 작업은 ⚙ 안에 접는다. 계기 탭(새 문서·열기…)도 같은 패널 맨 위에 선다(tabs).
   return <div className="office-document">
+    <div className="document-toolbar">
+      <button onClick={() => setTools(v => !v)} aria-expanded={tools}>⚙ 도구</button>
+      <p role="status">{busy ? '저장 확인 중…' : message}</p>
+    </div>
+    {error && <p role="alert">{error} {/엔진|편집 서버/.test(error) && <button disabled={busy} onClick={() => void run(async () => {
+      const result = await documentRequest<{ message: string }>('/engine/start', 'POST');
+      setError(''); setMessage(result.message); setGeneration(v => v + 1);
+    })}>편집 서버 시작</button>}</p>}
+    {tools && <>
+      {tabs}
     <div className="document-toolbar">
       <button disabled={busy} onClick={save}>원본 저장</button>
       <button disabled={busy} onClick={() => void run(async () => { await capture(); setMessage('복구 초안 저장됨'); })}>작업 저장</button>
@@ -144,10 +157,6 @@ export function OfficeDocumentEditor({ detail, onChange, captureRef, onSelection
       <label>출력 형식<select value={outputFormat} onChange={e=>setOutputFormat(e.target.value)}>{['pdf','docx','odt','rtf','html','txt','epub'].map(f=><option key={f}>{f}</option>)}</select></label>
       <button disabled={busy} onClick={()=>void run(async()=>{const s=await capture();const d=current.current;const result=await documentCommand<Detail>(d.document.id,'convert',{...sessionArgs(s),expected_revision:d.document.revision_id,output_format:outputFormat});setMessage('변환 사본 저장됨: '+result.document.source_uri);})}>내보내기</button>
     </div>
-    {error && <p role="alert">{error} {/엔진|편집 서버/.test(error) && <button disabled={busy} onClick={() => void run(async () => {
-      const result = await documentRequest<{ message: string }>('/engine/start', 'POST');
-      setError(''); setMessage(result.message); setGeneration(v => v + 1);
-    })}>편집 서버 시작</button>}</p>}
     {versions.length > 0 && <details open><summary>저장 버전</summary>{versions.map(v => <button key={v.id} disabled={busy} onClick={() => void run(async () => {
       const s = await capture();
       await documentCommand(detail.document.id, 'restore', { ...sessionArgs(s), operation_id: crypto.randomUUID(), revision_id: v.id });
@@ -188,7 +197,7 @@ export function OfficeDocumentEditor({ detail, onChange, captureRef, onSelection
       })}>PDF 쪽 변경</button></div>
       <DocumentOCR detail={detail}/>
     </>}
+    </>}
     <div className="office-frame"><div id={slot.current} /></div>
-    <p role="status">{busy ? '저장 확인 중…' : message}</p>
   </div>;
 }

@@ -649,7 +649,8 @@ def _validate_app_block(blabel: str, blk: dict, qualified_set: set, inherited: d
         input_keys.add("item")  # 행·드릴 컨텍스트 레코드 — 렌더러가 inputs.item 으로 싣는다
         input_keys.add("principal")  # 보고 있는 주체 {kind, level, id}(읽기 전용 표시·분기용, ② 권한 연결) — 판정은 서버 문맥의 principal
     for t in _app_action_templates(blk):
-        for ref_node, ref_action in re.findall(r"\[(\w+):(\w+)\]", t):
+        # 값 뒤에 붙은 대괄호는 조각내기($t[0:10]·$r.name[a:b])이지 액션 호출이 아니다 — 노드는 글자로 시작하고 값에 붙지 않는다.
+        for ref_node, ref_action in re.findall(r"(?<![\w\]\)])\[([^\W\d]\w*):(\w+)\]", t):
             # [fn:이름] = 관용구 호출(2026-10-05 앱 구성 재계획) — 앱은 어휘 조합+관용구로 선다. 이름은 해마·워크플로
             # 원장이 실행 시점에 해소하므로 빌드는 존재를 단정하지 않는다(없으면 실행이 정직하게 거절한다).
             if ref_node in ("fn", "def"):

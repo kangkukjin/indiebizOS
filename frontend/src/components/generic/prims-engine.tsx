@@ -10,11 +10,11 @@
  *   $resource/$sel/$start/$end/$text(선택이 없으면 글 전체)/$dock(요청)을 받아 본문을 돌려주고, 반영은 엔진이
  *   사람의 편집으로 캔버스에 넣는다 — 초안·저장·버전은 평소 편집과 같은 길. 지금은 원문 엔진만 독을 띄운다.
  * 편집기 컴포넌트(Office/Hwp/Spreadsheet)는 이 낱말 밑의 바인딩이다 — escape 가 아니다. */
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AppViewPrim, AppFormField, AppMode, ViewEvent } from './manifest';
-import { jget, tpl, actionRequest, runIBL, suggestionText } from './manifest';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import type { AppViewPrim, AppFormField, AppMode, ViewEvent, InstrumentMenu } from './manifest';
+import { jget, tpl, actionRequest, runIBL, suggestionText, InstrumentMenuContext } from './manifest';
 import { AiDockPanel } from './prims-edit';
-import { documentCommand, documentRequest, sessionArgs, PREVIEWABLE, type Detail } from '../../lib/api-documents';
+import { documentCommand, documentRequest, releaseSession, sessionArgs, PREVIEWABLE, type Detail } from '../../lib/api-documents';
 import { sheetCommand, sheetRequest, type SheetDetail } from '../../lib/api-spreadsheets';
 import { OfficeDocumentEditor } from '../OfficeDocumentEditor';
 import { HwpDocumentEditor } from '../HwpDocumentEditor';
@@ -25,7 +25,7 @@ import remarkGfm from 'remark-gfm';
 import { SourceTools } from './engine-source-tools';
 
 type Dock = NonNullable<AppFormField['ai_dock']>;
-type Host = { dock?: Dock; vars?: Record<string, unknown>; block?: AppMode };  // 독 선언과 그 action 이 읽을 $변수·실행 블록
+type Host = { dock?: Dock; vars?: Record<string, unknown>; block?: AppMode; menu?: InstrumentMenu | null };  // 독 선언과 그 action 이 읽을 $변수·실행 블록 · 캔버스가 맡은 계기 메뉴
 type Payload = Record<string, unknown>;  // 타입 보존 — sel 은 Record, start/end 는 Number(판본 2 inputs 로 그대로 간다)
 const CLIENT_KEY = 'indiebiz-engine-client';
 function clientId(): string {
@@ -37,6 +37,24 @@ function clientId(): string {
     return fresh;
   } catch { return 'engine-' + crypto.randomUUID(); }
 }
+
+/* 작성 창의 생존 신호 — 서버의 작성 세션은 창이 죽어도 남는다(초안을 지키려고). 그래서 다른 창 이름으로 쥐인 문서를
+ * 만나면 같은 앱의 창들에게 "그 창 살아 있나"를 묻는다: 답이 있으면 사람에게 묻고(가져오기 버튼), 없으면 죽은 창의
+ * 세션이므로 이 창이 조용히 이어받는다(reclaim — 바이트는 건드리지 않고 옛 창의 저장 권한만 끝낸다). */
+const roll = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('indiebiz-engine-clients');
+roll?.addEventListener('message', (e) => { if (e.data?.ask === clientId()) roll.postMessage({ alive: e.data.ask }); });
+function holderAlive(holder: string): Promise<boolean> {
+  if (!roll) return Promise.resolve(true);  // 물을 길이 없으면 살아 있다고 보고 사람에게 맡긴다
+  return new Promise((resolve) => {
+    const ear = new BroadcastChannel('indiebiz-engine-clients');  // 자기 채널의 글은 자기에게 오지 않는다 — 듣는 귀를 따로
+    const done = (v: boolean) => { clearTimeout(timer); ear.close(); resolve(v); };
+    const timer = setTimeout(() => done(false), 400);
+    ear.onmessage = (e) => { if (e.data?.alive === holder) done(true); };
+    roll.postMessage({ ask: holder });
+  });
+}
+
+let leaving: Promise<void> = Promise.resolve();  // 놓는 중인 세션 — 같은 문서를 곧바로 다시 열 때 놓기가 끝난 뒤에 잡는다
 
 export function EnginePrim({ p, data, onViewEvent, vars, block }: {
   p: AppViewPrim; data: unknown; onViewEvent?: ViewEvent; vars?: Record<string, unknown>; block?: AppMode;
@@ -53,32 +71,98 @@ export function EnginePrim({ p, data, onViewEvent, vars, block }: {
   return <DocumentEngine id={ref} emit={emit} host={{ dock: p.ai_dock as Dock | undefined, vars, block }} />;
 }
 
+/* ── 계기 메뉴: 문서 캔버스가 서 있는 동안 계기의 모드 탭(문서함·새 문서·열기…)은 캔버스의 ⚙ 안에 접힌다. ── */
+const menuBtn = (on: boolean) => `px-2.5 py-1.5 rounded-lg text-sm hover:bg-stone-100 ${on ? 'bg-stone-100 text-stone-800' : 'text-stone-600'}`;
+function MenuTabs({ menu }: { menu: InstrumentMenu }) {
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm flex flex-wrap items-center gap-1.5">
+      {menu.modes.map((name, i) => name && (
+        <button key={i} onClick={() => menu.go(i)}
+          className="px-3 py-1 rounded-lg border border-stone-200 bg-white text-stone-700 hover:border-stone-500">{name}</button>
+      ))}
+    </div>
+  );
+}
+// 자기 도구줄을 가진 편집기(사무·한글)와 편집기가 서지 못한 화면 위에 얹는 ⚙ 한 줄.
+function MenuBar({ menu }: { menu?: InstrumentMenu | null }) {
+  const [open, setOpen] = useState(false);
+  if (!menu || !menu.modes.some(Boolean)) return null;
+  return (
+    <div className="flex flex-col gap-2 mb-2">
+      <div><button onClick={() => setOpen((v) => !v)} className={menuBtn(open)}>⚙ 도구</button></div>
+      {open && <MenuTabs menu={menu} />}
+    </div>
+  );
+}
+
 /* ── 문서: capabilities.engine 으로 office / rhwp / source 를 고른다 ── */
-function DocumentEngine({ id, emit, host }: { id: string; emit: (e: 'selection' | 'saved', p: Payload) => void; host: Host }) {
+function DocumentEngine({ id: given, emit, host }: { id: string; emit: (e: 'selection' | 'saved', p: Payload) => void; host: Host }) {
+  // 편집 엔진이 직접 못 여는 형식(옛 워드 .doc 등)은 .docx 변환 사본으로 갈아탄다 — 원본은 그대로 둔다.
+  const [swap, setSwap] = useState<{ from: string; to: string } | null>(null);
+  const id = swap && swap.from === given ? swap.to : given;
+  const [converting, setConverting] = useState(false);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState('');
   const [me] = useState(clientId);
   const capture = useRef<(() => Promise<unknown>) | null>(null);
+  const menu = useContext(InstrumentMenuContext);
+  const claim = menu?.claim;
+  useEffect(() => claim?.(), [claim]);  // 이 캔버스가 서 있는 동안 계기 탭 줄을 맡는다
   useEffect(() => {
     let dead = false;
     (async () => {
       try {
+        await leaving;
         let d = await documentRequest<Detail>(`/${encodeURIComponent(id)}`);
-        if (d.capabilities.edit_native && (!d.session || d.session.client_id !== me)) {
-          d = await documentCommand<Detail>(id, 'sessions', { client_id: me });
+        if (d.capabilities.edit_native) {
+          if (!d.session) d = await documentCommand<Detail>(id, 'sessions', { client_id: me });
+          else if (d.session.client_id !== me && !(await holderAlive(d.session.client_id))) {
+            // 같은 창이 동시에 두 번 이어받으려 하면(개발 모드의 이중 실행) 뒤의 것은 거절된다 — 다시 읽으면 이미 이 창의 세션이다.
+            const epoch = d.session.engine_epoch;
+            d = await documentCommand<Detail>(id, 'reclaim', { client_id: me, expected_epoch: epoch })
+              .catch(() => documentRequest<Detail>(`/${encodeURIComponent(id)}`));
+          }
         }
         if (!dead) setDetail(d);
       } catch (e) { if (!dead) setError(e instanceof Error ? e.message : String(e)); }
     })();
     return () => { dead = true; };
   }, [id, me]);
-  if (error) return <p role="alert" className="text-sm text-red-600">{error}</p>;
-  if (!detail) return <p className="text-sm text-stone-400">편집 표면을 여는 중…</p>;
+  // 떠날 때(다른 문서·탭으로, 창 닫기) 원문 문서의 세션을 놓는다 — 저장 안 한 초안이 있으면 서버가 거절해 세션째 남는다.
+  const latest = useRef(detail);
+  useEffect(() => { latest.current = detail; }, [detail]);
+  useEffect(() => {
+    const release = () => {
+      const d = latest.current;
+      if (d?.session && d.session.client_id === me && d.capabilities.engine !== 'office' && d.capabilities.engine !== 'rhwp') {
+        latest.current = null;
+        leaving = releaseSession(d.document.id, d.session);
+      }
+    };
+    window.addEventListener('pagehide', release);
+    return () => { window.removeEventListener('pagehide', release); release(); };
+  }, [id, me]);
+  if (error) return <><MenuBar menu={menu} /><p role="alert" className="text-sm text-red-600">{error}</p></>;
+  if (!detail) return <><MenuBar menu={menu} /><p className="text-sm text-stone-400">편집 표면을 여는 중…</p></>;
   const onChange = (d: Detail) => setDetail(d);
   const saved = (d: Detail) => emit('saved', { revision: d.document.revision_id });
-  if (!detail.capabilities.edit_native) return <p className="text-sm text-stone-500">{detail.capabilities.reason} — 열람만 가능합니다.</p>;
+  if (!detail.capabilities.edit_native) return (
+    <>
+      <MenuBar menu={menu} />
+      <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600">
+        <span>{detail.document.title} — 이 형식(.{detail.document.source_format})은 편집기가 직접 열지 못합니다. 워드(.docx) 사본으로 바꿔 열 수 있습니다(원본은 그대로).</span>
+        <button disabled={converting} className="px-3 py-1.5 rounded-lg border border-stone-300 hover:border-stone-500 disabled:opacity-40" onClick={() => {
+          setConverting(true);
+          documentCommand<Detail>(detail.document.id, 'convert', { output_format: 'docx', expected_revision: detail.document.revision_id })
+            .then((made) => { setDetail(null); setSwap({ from: given, to: made.document.id }); }, (e) => setError(e instanceof Error ? e.message : String(e)))
+            .finally(() => setConverting(false));
+        }}>{converting ? '바꾸는 중…' : '.docx 사본으로 열기'}</button>
+      </div>
+    </>
+  );
   if (detail.session && detail.session.client_id !== me) return (
     <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600">
+      <MenuBar menu={menu} />
       <span>다른 작성 창이 이 문서를 쥐고 있습니다. 이 창으로 가져오면 그 창의 저장 권한이 끝납니다.</span>
       <button className="px-3 py-1.5 rounded-lg border border-stone-300 hover:border-stone-500" onClick={() => {
         const s = detail.session; if (!s) return;
@@ -89,12 +173,13 @@ function DocumentEngine({ id, emit, host }: { id: string; emit: (e: 'selection' 
   );
   if (detail.capabilities.engine === 'rhwp')
     return <div className="engine-editor"><HwpDocumentEditor key={`${detail.document.id}:${detail.session?.engine_epoch}`} detail={detail} onChange={onChange}
-      captureRef={capture as never} onSaved={saved} /></div>;
+      tabs={menu && menu.modes.some(Boolean) ? <MenuTabs menu={menu} /> : undefined} captureRef={capture as never} onSaved={saved} /></div>;
   if (detail.capabilities.engine === 'office')
     return <div className="engine-editor"><OfficeDocumentEditor key={detail.document.id} detail={detail} onChange={onChange} captureRef={capture as never}
+      tabs={menu && menu.modes.some(Boolean) ? <MenuTabs menu={menu} /> : undefined}
       onSelection={(sel) => emit('selection', { sel: { bookmark: sel.bookmark }, text: sel.text, revision: detail.document.revision_id })}
       onSaved={saved} /></div>;
-  return <SourceEngine detail={detail} onChange={onChange} emit={emit} host={host} />;
+  return <SourceEngine detail={detail} onChange={onChange} emit={emit} host={{ ...host, menu }} />;
 }
 
 /* ── 원문(TXT/MD/HTML/LaTeX…): 넓은 캔버스 + 자동 초안(작업 저장) + 원본 저장 + AI 독. ──
@@ -240,6 +325,10 @@ function SourceEngine({ detail, onChange, emit, host }: {
     rewrite(value.slice(0, pin.a) + lead + s.trim() + trail + value.slice(pin.b));
   };
   const dirty = text !== toView(source) || detail.session?.state === 'draft';
+  // 종이는 창을 가득 채우고(계기 메뉴를 맡았으면 탭 줄·입력줄이 없다), 글줄은 읽기 좋은 폭으로 가운데에 둔다.
+  // --app-chrome = 앱을 품은 표면(런처 앱 모드)이 창에서 차지하는 높이 — 단독 창에는 없다(0).
+  const tall = host.menu ? 'min-h-[calc(100vh-128px-var(--app-chrome,0px))]' : 'min-h-[calc(100vh-320px)]';
+  const page = 'px-[max(2.5rem,calc(50%-26rem))]';
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -250,29 +339,30 @@ function SourceEngine({ detail, onChange, emit, host }: {
         <span className="text-xs text-stone-400 shrink-0">{picked ? `선택 ${picked.toLocaleString()}자 · ` : ''}{cp(text).toLocaleString()}자</span>
         {undo != null && <button disabled={busy} onClick={() => { rewrite(undo); setUndo(null); }}
           className="px-2.5 py-1.5 rounded-lg text-sm text-stone-600 hover:bg-stone-100">AI 반영 되돌리기</button>}
-        <button onClick={() => setTools((v) => !v)} title="사본·변환·버전·시트 표 연결"
-          className={`px-2.5 py-1.5 rounded-lg text-sm hover:bg-stone-100 ${tools ? 'bg-stone-100 text-stone-800' : 'text-stone-600'}`}>⚙ 도구</button>
+        <button onClick={() => setTools((v) => !v)} title="문서함·새 문서·열기 · 사본·변환·버전·시트 표 연결"
+          className={menuBtn(tools)}>⚙ 도구</button>
         <button disabled={busy || !writable} onClick={save}
           className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-40">저장</button>
       </div>
+      {tools && host.menu && host.menu.modes.some(Boolean) && <MenuTabs menu={host.menu} />}
       {tools && <SourceTools detail={detail} text={text} busy={busy} writable={writable} run={run} draft={draft} pick={pick}
         replaceFrom={replaceFrom} setMessage={setMessage} preview={preview} setPreview={setPreview} />}
       {style.current.mixed && <p role="alert" className="text-sm text-amber-700">줄바꿈이 섞인 문서입니다. 원문을 보호하기 위해 이 화면의 편집을 막습니다.</p>}
       {preview && PREVIEWABLE.includes(detail.document.source_format) && (
         ['md', 'markdown'].includes(detail.document.source_format)
-          ? <div className="engine-preview w-full min-h-[calc(100vh-320px)] bg-white rounded-xl shadow-sm border border-stone-200 px-10 py-9 text-[15px] leading-8">
+          ? <div className={`engine-preview w-full ${tall} bg-white rounded-xl shadow-sm border border-stone-200 ${page} py-9 text-[15px] leading-8`}>
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ img: ({ alt }) => <span>[그림: {alt || '첨부 이미지'}]</span> }}>{text}</ReactMarkdown>
             </div>
-          : <iframe title="HTML 비실행 미리보기" sandbox="" className="w-full min-h-[calc(100vh-320px)] bg-white rounded-xl border border-stone-200"
+          : <iframe title="HTML 비실행 미리보기" sandbox="" className={`w-full ${tall} bg-white rounded-xl border border-stone-200`}
               srcDoc={`<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'"><style>body{font:16px/1.7 sans-serif;padding:24px;overflow-wrap:anywhere}</style>${text}`} />
       )}
-      <textarea ref={editor} aria-label="문서 원문" hidden={preview} spellCheck={false} value={text} readOnly={!writable}
+      <textarea ref={editor} autoFocus aria-label="문서 원문" hidden={preview} spellCheck={false} value={text} readOnly={!writable}
         placeholder="여기에 자유롭게 글을 쓰세요…"
         onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }}
         onChange={(e) => edit(e.target.value)} onSelect={track}
         onMouseUp={select} onKeyUp={(e) => { if (e.shiftKey || e.key.startsWith('Arrow')) select(); }}
         onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); save(); } }}
-        className="w-full min-h-[calc(100vh-320px)] resize-none bg-white rounded-xl shadow-sm border border-stone-200 px-10 py-9 text-[15px] leading-8 outline-none focus:border-amber-300"
+        className={`w-full ${tall} resize-none bg-white rounded-xl shadow-sm border border-stone-200 ${page} py-9 text-[15px] leading-8 outline-none focus:border-amber-300`}
         style={{ fontFamily: "'Noto Serif KR', serif" }} />
       {host.dock && writable && (
         <div className="sticky bottom-0 -mx-1 px-1 pb-2 bg-stone-50/95 backdrop-blur">

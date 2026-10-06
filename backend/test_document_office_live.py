@@ -62,6 +62,7 @@ def test_office_docx_roundtrip(tmp_path, monkeypatch):
                 errors=[]; page.on("pageerror", lambda e: errors.append(str(e)))
                 messages=[]; page.on("console", lambda e: messages.append(e.type+": "+e.text))
                 open_document(page, port, source)
+                page.locator('.office-document').get_by_role('button', name='⚙ 도구', exact=True).click()  # 저장·내보내기 등은 ⚙ 안에 접혀 있다
                 expect(page.locator(".office-document").get_by_role("status")).to_have_text("편집 준비 완료", timeout=120000)
                 frame = page.frame_locator('iframe[name="frameEditor"]')
                 area = frame.locator('#area_id')
@@ -117,6 +118,7 @@ def test_office_docx_roundtrip(tmp_path, monkeypatch):
                     path = Path(converted['document']['source_uri'])
                     previous = path.read_bytes()
                     open_document(page, port, path)
+                    page.locator('.office-document').get_by_role('button', name='⚙ 도구', exact=True).click()  # 저장·내보내기 등은 ⚙ 안에 접혀 있다
                     expect(page.locator('.office-document').get_by_role('status')).to_have_text('편집 준비 완료', timeout=60000)
                     area = page.frame_locator('iframe[name="frameEditor"]').locator('#area_id')
                     area.focus(); page.keyboard.type('NATIVE EDIT ', delay=40); page.keyboard.press('Control+s')
@@ -137,6 +139,7 @@ def test_office_docx_roundtrip(tmp_path, monkeypatch):
                         assert 'NATIVE EDIT' in '\n'.join(p.text for p in readback.paragraphs)
                 page.screenshot(path='/tmp/document-office-acceptance.png')
                 open_document(page, port, pdfs[0])
+                page.locator('.office-document').get_by_role('button', name='⚙ 도구', exact=True).click()  # 저장·내보내기 등은 ⚙ 안에 접혀 있다
                 expect(page.locator('.office-document').get_by_role('status')).to_have_text('편집 준비 완료', timeout=60000)
                 with pymupdf.open(pdfs[0]) as pdf:
                     rotation = pdf[0].rotation

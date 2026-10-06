@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import type { RhwpDocumentStateV1 } from '@rhwp/editor';
 import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { documentCommand, documentRequest, sessionArgs, type Detail, type Session } from '../lib/api-documents';
 
-type Props = { detail: Detail; captureRef: MutableRefObject<(() => Promise<Session>) | null>; onChange: (d: Detail) => void; onSaved?: (d: Detail) => void };
+type Props = { tabs?: ReactNode; detail: Detail; captureRef: MutableRefObject<(() => Promise<Session>) | null>; onChange: (d: Detail) => void; onSaved?: (d: Detail) => void };
 type Exported = { data: Uint8Array; state: RhwpDocumentStateV1 };
 type Pending = { data: Uint8Array; state: RhwpDocumentStateV1; query: string };
 const same = (a: RhwpDocumentStateV1 | null, b: RhwpDocumentStateV1) => a?.documentEpoch === b.documentEpoch && a?.changeSeq === b.changeSeq && a?.documentSha256 === b.documentSha256;
 
-export function HwpDocumentEditor({ detail, captureRef, onChange, onSaved }: Props) {
+export function HwpDocumentEditor({ tabs, detail, captureRef, onChange, onSaved }: Props) {
+  const [tools, setTools] = useState(false);
   const frame = useRef<HTMLIFrameElement>(null);
   const latest = useRef(detail); latest.current = detail;
   const changed = useRef(onChange); changed.current = onChange;
@@ -111,14 +112,11 @@ export function HwpDocumentEditor({ detail, captureRef, onChange, onSaved }: Pro
       if (loaded.current && !acting.current && !saving.current)
         void capture().catch(e => { if (mounted.current) setError(String(e)); });
     }, 4000);
-    const before = (event: BeforeUnloadEvent) => {
-      // RHWP keeps its own recovery copy; block accidental close conservatively.
-      if (loaded.current) { event.preventDefault(); event.returnValue = ''; }
-    };
-    window.addEventListener('beforeunload', before);
+    // 창 닫기를 무조건 막지 않는다 — 한글 문서를 열어 둔 것만으로 창이 닫히지 않았다(Electron 은 묻지 않고 그냥 안 닫는다).
+    // 초안은 4초마다 서버에 올라가고, 아직 못 올린 변경이 있으면 RHWP 편집기 자신이 닫기를 붙잡는다(메인 프로세스가 사람에게 묻는다).
     return () => {
       mounted.current = false; loaded.current = false; captureRef.current = null;
-      clearInterval(timer); window.removeEventListener('message', listener); window.removeEventListener('beforeunload', before);
+      clearInterval(timer); window.removeEventListener('message', listener);
       requests.current.forEach(r => { clearTimeout(r.timer); r.reject(new Error('편집기가 닫혔습니다')); });
       requests.current.clear();
     };
@@ -137,8 +135,16 @@ export function HwpDocumentEditor({ detail, captureRef, onChange, onSaved }: Pro
       loaded.current = true; setReady(true); setMessage('문서를 열었습니다 · 원본 형식으로 편집합니다');
     } catch (e) { if (mounted.current) setError(String(e)); }
   };
+  // 화면에는 편집기와 ⚙ 도구 한 줄만 둔다 — 편집기가 자기 메뉴·저장(Ctrl/Cmd+S → 원본 저장)을 갖고 있으므로
+  // 작업 저장·복구·버전·사본·안내는 ⚙ 안에 접는다. 계기 탭(새 문서·열기…)도 같은 패널 맨 위에 선다(tabs).
   return <section aria-label="한글 문서 편집기">
-    <p>HWP/HWPX · 로컬 오픈소스 편집. 대체 글꼴과 복잡한 서식의 쪽 배치는 원본과 다를 수 있습니다.</p>
+    <div className="document-toolbar">
+      <button onClick={() => setTools(v => !v)} aria-expanded={tools}>⚙ 도구</button>
+      <p role="status">{busy ? '저장 처리 중…' : message}</p>
+    </div>
+    {error && <p role="alert">{error}</p>}
+    {tools && <>
+      {tabs}
     <div className="document-toolbar">
       <button disabled={!ready || busy} onClick={() => void act(async () => { await capture(); })}>작업 저장</button>
       <button disabled={!ready || busy} onClick={() => void save()}>원본 저장</button>
@@ -151,11 +157,6 @@ export function HwpDocumentEditor({ detail, captureRef, onChange, onSaved }: Pro
         setVersions((await documentRequest<{ items: { id: string; created_at: number }[] }>(`/${detail.document.id}/versions`)).items);
       })}>버전 이력</button>
     </div>
-    {error && <p role="alert">{error}</p>}
-    <p role="status">{busy ? '저장 처리 중…' : message}</p>
-    <iframe ref={frame} title="로컬 HWP 편집 화면" onLoad={() => void load()}
-      src={`${BACKEND_ORIGIN}/documents/hwp-assets/host.html?channel=${channel}`}
-      style={{ width: '100%', height: '75vh', minHeight: 600, border: '1px solid #ddd' }} />
     {!!versions.length && <section aria-label="한글 저장 버전">{versions.map(v => <button key={v.id} disabled={busy} onClick={() => void act(async () => {
       const s = await capture(), d = latest.current;
       await documentCommand(d.document.id, 'restore', { ...sessionArgs(s), operation_id: crypto.randomUUID(), revision_id: v.id });
@@ -167,6 +168,11 @@ export function HwpDocumentEditor({ detail, captureRef, onChange, onSaved }: Pro
         const result = await documentCommand<{ path: string }>(d.document.id, 'export', { ...sessionArgs(s), operation_id: crypto.randomUUID(), filename });
         setMessage(`사본 저장됨: ${result.path}`);
       })}>사본 저장</button></div>
+      <p>HWP/HWPX · 로컬 오픈소스 편집. 대체 글꼴과 복잡한 서식의 쪽 배치는 원본과 다를 수 있습니다.</p>
     <small>RHWP 0.8.6 · MIT · 본 제품은 한컴의 HWP 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.</small>
+    </>}
+    <iframe ref={frame} title="로컬 HWP 편집 화면" onLoad={() => void load()}
+      src={`${BACKEND_ORIGIN}/documents/hwp-assets/host.html?channel=${channel}`}
+      style={{ width: '100%', height: 'calc(100vh - 64px - var(--app-chrome, 0px))', minHeight: 480, border: '1px solid #e7e5e4', borderRadius: 12 }} />
   </section>;
 }

@@ -109,6 +109,22 @@ def test_P6_apply_세션_파일은_스테이징으로_안_센다(pf, tmp_path, m
     assert pf.check(verbose=False) == 0
 
 
+def test_P7_넘겨받은_중간_고리는_안_막는다(pf, tmp_path, monkeypatch):
+    """reused_by 가 찍힌 세션은 후속 구간이 격리본을 넘겨받은 고리다 — 사슬 끝이 적용됐으면 좌초할 것이 없다
+    (2026-10-06: 적용 끝난 사슬의 고리 3건이 status=staging 인 채 남아 재기동을 막았다)."""
+    db = tmp_path / "world_pulse.db"
+    _make_pulse(db, [(1, "10:40", "10:48", "system_ai", "끝")])
+    sess = tmp_path / "sessions"
+    sess.mkdir()
+    (sess / "task_x.json").write_text(json.dumps(
+        {"status": "staging", "reused_by": "execute_y", "files": {"/a/backend/x.py": {}}}), encoding="utf-8")
+    (sess / "execute_y.json").write_text(json.dumps(
+        {"status": "applied", "files": {"/a/backend/x.py": {}}}), encoding="utf-8")
+    monkeypatch.setattr(pf, "PULSE_DB", db)
+    monkeypatch.setattr(pf, "SESSIONS", sess)
+    assert pf.check(verbose=False) == 0
+
+
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다(28회차).
     raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))

@@ -79,7 +79,9 @@ def staged_sessions():
             j = json.loads(p.read_text(encoding="utf-8"))
         except Exception:
             continue
-        if j.get("status") == "staging" and (j.get("files") or {}):
+        # reused_by = 후속 구간이 같은 격리본을 넘겨받은 중간 고리 — 좌초 판정은 사슬의 끝 세션 몫이다
+        # (repair_staging.load_session 과 같은 기준. 2026-10-06: 적용 끝난 사슬의 고리 3건이 재기동을 막았다).
+        if j.get("status") == "staging" and (j.get("files") or {}) and not j.get("reused_by"):
             out.append((p.stem, list(j.get("files") or {})))
     return out
 

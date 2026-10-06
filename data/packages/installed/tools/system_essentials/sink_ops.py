@@ -36,13 +36,27 @@ def csv_text(content, columns=None):
     return stream.getvalue()
 
 
+def _human_direct_call() -> bool:
+    """턴 밖에서 사람이 표면(앱·수동 모드)으로 직접 부른 쓰기인가 — 작업 ID 가 없고 출처가 user.
+
+    자작 관문은 *모델이 친* 구현 코드를 센다. api_ibl 은 무신원 직접 호출에 system_ai 신원을 주므로
+    관문의 "신원 없는 호출은 세지 않는다"가 이 경로에선 서지 않았고, 신문 앱이 쓰는 공유용 HTML(443줄)이
+    '새 구현 코드'로 거절돼 9일간 갱신되지 않았다(2026-10-06 실측). 모델 턴은 task_id 를 지니고,
+    재진입 봉투는 출처를 부모 값으로만 받으므로(빈 값이면 빈 채) 이 둘로 갈린다. 판정 불능은 False(관문 유지)."""
+    try:
+        from thread_context import get_current_task_id, get_task_origin
+        return not get_current_task_id() and get_task_origin() == "user"
+    except Exception:
+        return False
+
+
 def write_sink(tool_input: dict, path: str, _live_target: str, redirected: bool, *,
                _red_write_prepare, _red_write_finalize, _vocab_enforce, agent_id: str = "") -> str:
     """쓸 경로가 정해진 뒤의 싱크 본체. 반환 = 결과 봉투 JSON 문자열(핸들러 계약)."""
     content = tool_input.get("content")  # 파이프 싱크(구 output op:file 흡수 2026-08-05): 생략 시 _prev_result, ""는 유효
     # 자작 관문(2026-09-07) — 모델이 **직접 친** 구현 코드만 센다. 파이프로 흘러든 본문
     # (_prev_result)은 도구 결과지 자작이 아니므로 content 가 있을 때만 판정한다.
-    if isinstance(content, str):
+    if isinstance(content, str) and not _human_direct_call():
         try:
             from selfbuild_gate import note_code_write as _sb_note
             _refusal = _sb_note(agent_id, path, content)

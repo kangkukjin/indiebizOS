@@ -122,5 +122,21 @@ def test_gate_is_wired_to_the_write_sink():
     assert routing.count("note_consult") >= 3          # _route_handler · search_guide · install_lib
 
 
+def test_human_direct_surface_call_is_not_model_authored():
+    """⑨ 턴 밖의 사람 직접 호출(앱·수동 표면)은 세지 않는다 — api_ibl 이 무신원 호출에 system_ai 신원을
+    주므로 싱크가 task_id·출처로 가른다(2026-10-06: 신문 앱의 공유용 HTML 이 거절되던 자리)."""
+    import importlib.util
+    import thread_context as tc
+    spec = importlib.util.spec_from_file_location(
+        "sink_ops_for_selfbuild_test", ROOT / "data/packages/installed/tools/system_essentials/sink_ops.py")
+    sink = importlib.util.module_from_spec(spec); spec.loader.exec_module(sink)
+    with tc.actor_context(agent_id="system_ai", task_id="", origin="user"):
+        assert sink._human_direct_call() is True            # 앱의 직접 호출
+    with tc.actor_context(agent_id="system_ai", task_id="task_sysai_x", origin="user"):
+        assert sink._human_direct_call() is False           # 사람이 시킨 *모델 턴* 은 여전히 센다
+    src = (ROOT / "data/packages/installed/tools/system_essentials/sink_ops.py").read_text(encoding="utf-8")
+    assert "not _human_direct_call()" in src
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

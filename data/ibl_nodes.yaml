@@ -2761,8 +2761,8 @@ nodes:
               - queries
         lands_on: hub
         path_audited:
-          at: '2026-10-04'
-          impl: 8aa9d5ddc1d13a23
+          at: '2026-10-06'
+          impl: d025580c3522af03
         aliases:
           limit:
           - count
@@ -2877,8 +2877,8 @@ nodes:
               items: List<Record>
         lands_on: hub
         path_audited:
-          at: '2026-10-04'
-          impl: 8aa9d5ddc1d13a23
+          at: '2026-10-06'
+          impl: d025580c3522af03
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -6095,8 +6095,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-10-05'
-          impl: 336f2bb48eca6453
+          at: '2026-10-06'
+          impl: 67ce10e12f8fecd4
         target_key: path
         aliases:
           offset:
@@ -6108,8 +6108,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-10-05'
-          impl: 336f2bb48eca6453
+          at: '2026-10-06'
+          impl: 67ce10e12f8fecd4
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6185,8 +6185,8 @@ nodes:
           content: $content
         member_transform: member_documents:write
         path_audited:
-          at: '2026-10-05'
-          impl: 336f2bb48eca6453
+          at: '2026-10-06'
+          impl: 67ce10e12f8fecd4
         target_key: path
       list:
         callable_contract:
@@ -6973,8 +6973,8 @@ nodes:
             - read_external
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-10-05'
-          impl: 336f2bb48eca6453
+          at: '2026-10-06'
+          impl: 67ce10e12f8fecd4
         pipe_in: true
         lands_on: body
         limb_op:

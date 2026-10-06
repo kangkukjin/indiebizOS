@@ -48,8 +48,8 @@
         "path": "$path"
       },
       "path_audited": {
-        "at": "2026-10-05",
-        "impl": "336f2bb48eca6453"
+        "at": "2026-10-06",
+        "impl": "67ce10e12f8fecd4"
       }
     },
     "self:list": {
@@ -90,8 +90,8 @@
         "path": "$path"
       },
       "path_audited": {
-        "at": "2026-10-05",
-        "impl": "336f2bb48eca6453"
+        "at": "2026-10-06",
+        "impl": "67ce10e12f8fecd4"
       }
     },
     "self:record": {
@@ -149,8 +149,8 @@
         "dependencies": "$dependencies"
       },
       "path_audited": {
-        "at": "2026-10-05",
-        "impl": "336f2bb48eca6453"
+        "at": "2026-10-06",
+        "impl": "67ce10e12f8fecd4"
       }
     },
     "self:write": {
@@ -164,8 +164,8 @@
         "content": "$content"
       },
       "path_audited": {
-        "at": "2026-10-05",
-        "impl": "336f2bb48eca6453"
+        "at": "2026-10-06",
+        "impl": "67ce10e12f8fecd4"
       }
     },
     "sense:crawl": {
@@ -173,8 +173,8 @@
       "package": "web",
       "side_effect": false,
       "path_audited": {
-        "at": "2026-10-04",
-        "impl": "8aa9d5ddc1d13a23"
+        "at": "2026-10-06",
+        "impl": "d025580c3522af03"
       }
     },
     "sense:here": {
@@ -199,8 +199,8 @@
       "package": "web",
       "side_effect": false,
       "path_audited": {
-        "at": "2026-10-04",
-        "impl": "8aa9d5ddc1d13a23"
+        "at": "2026-10-06",
+        "impl": "d025580c3522af03"
       }
     }
   }

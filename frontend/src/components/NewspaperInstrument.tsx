@@ -86,17 +86,24 @@ async function loadEdition(edKey: string): Promise<Edition | null> {
   return null;
 }
 
+// [self:write] 한 번 — 거절 봉투({success:false})는 HTTP 200 으로 와 예외가 안 나므로 여기서 던진다
+// (2026-10-06: 공유용 HTML 쓰기가 거절됐는데 성공으로 보고돼 9일간 옛 판이 공유됐다).
+async function writeFile(path: string, content: string): Promise<void> {
+  const r = (await iblExecuteApp(`[self:write]{path: ${JSON.stringify(path)}, content: ${JSON.stringify(content)}}`)) as { success?: boolean; error?: string } | null;
+  if (r && typeof r === 'object' && r.success === false) throw new Error(r.error || '파일 쓰기가 거절되었습니다.');
+}
+
 // 판을 데이터 레이어에 저장(소스별 최신 하나 덮어쓰기). content 는 JSON 문자열(이중 stringify 로 IBL 문자열 리터럴).
 async function saveEdition(edKey: string, ed: Edition): Promise<void> {
   const content = JSON.stringify(ed);
-  await iblExecuteApp(`[self:write]{path: ${JSON.stringify(editionPaths(edKey).json)}, content: ${JSON.stringify(content)}}`);
+  await writeFile(editionPaths(edKey).json, content);
   // 발아 대조(germination)용 날짜별 아카이브 — 고정 파일은 덮어쓰기라 과거 판이 사라지므로
   // 판별 사본을 남긴다(편집장 role/why 픽 ↔ 이후 에피소드·vault 대조의 원료). 실패해도 발행은 유지.
   try {
     const day = (ed.issuedAt || '').slice(0, 10);
     if (day) {
       const base = edKey === 'default' ? 'newspaper' : `newspaper_${edKey}`;
-      await iblExecuteApp(`[self:write]{path: ${JSON.stringify(`outputs/newspaper_archive/${base}_${day}.json`)}, content: ${JSON.stringify(content)}}`);
+      await writeFile(`outputs/newspaper_archive/${base}_${day}.json`, content);
     }
   } catch { /* 아카이브 실패는 발행을 막지 않는다 */ }
 }
@@ -115,7 +122,7 @@ async function saveMarkdownFile(edKey: string, title: string, dateLabel: string,
     )) as { markdown?: string } | null;
     const md = doc?.markdown;
     if (typeof md === 'string' && md) {
-      await iblExecuteApp(`[self:write]{path: ${JSON.stringify(editionPaths(edKey).md)}, content: ${JSON.stringify(md)}}`);
+      await writeFile(editionPaths(edKey).md, md);
       return true;
     }
   } catch { /* 파생 파일 실패는 발행을 막지 않는다 */ }
@@ -150,7 +157,7 @@ async function saveHtmlFile(edKey: string, title: string, dateLabel: string, sec
   try {
     const masthead = await fetchMasthead().catch(() => ({} as MastheadData));
     const html = buildNewspaperHtml(title, dateLabel, sections, masthead);
-    await iblExecuteApp(`[self:write]{path: ${JSON.stringify(editionPaths(edKey).html)}, content: ${JSON.stringify(html)}}`);
+    await writeFile(editionPaths(edKey).html, html);
     return true;
   } catch { /* 파생 파일 실패는 발행을 막지 않는다 */ }
   return false;

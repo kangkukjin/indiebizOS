@@ -79,7 +79,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-10-04", impl: "8aa9d5ddc1d13a23"}  # 재감사 2026-10-05(③·⑩): tool_newspaper task_status 어댑터·launch_sites 주 키 op — 회원 경로 불변
+        path_audited: {at: "2026-10-06", impl: "d025580c3522af03"}  # 재감사 2026-10-06: gnews 표시 정리(제목의 매체 꼬리 제거·meta 현지 시각·요약=관련 보도 목록) — 표시 문자열만, 구조 칸·회원 경로 불변
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -163,7 +163,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-10-04", impl: "8aa9d5ddc1d13a23"}  # 재감사 2026-10-05(③·⑩): tool_newspaper task_status 어댑터·launch_sites 주 키 op — 회원 경로 불변
+        path_audited: {at: "2026-10-06", impl: "d025580c3522af03"}  # 재감사 2026-10-06: gnews 표시 정리(제목의 매체 꼬리 제거·meta 현지 시각·요약=관련 보도 목록) — 표시 문자열만, 구조 칸·회원 경로 불변
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'

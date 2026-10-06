@@ -167,6 +167,45 @@ def _rfc2822_iso(published: str) -> dict:
         return {}
 
 
+def _display_time(published: str) -> str:
+    """발행 문자열(RFC 2822) → 표시용 현지 시각 `YYYY-MM-DD HH:MM`. 파싱 불능이면 원문 그대로
+    (모르는 시각을 지어내지 않는다). meta 는 표시 문자열이고 구조 칸(published·date)은 그대로 둔다."""
+    try:
+        from email.utils import parsedate_to_datetime
+        return f"{parsedate_to_datetime(published).astimezone():%Y-%m-%d %H:%M}"
+    except Exception:
+        return published or ""
+
+
+_GNEWS_LINK = re.compile(r"<a\b[^>]*>(.*?)</a>(?:\s|&nbsp;)*(?:<font\b[^>]*>(.*?)</font>)?", re.S)
+
+
+def _gnews_title(title: str, source: str) -> str:
+    """구글 뉴스 제목의 꼬리 ` - 매체` 를 뗀다 — 매체는 source 칸·meta 가 이미 말한다."""
+    tail = f" - {source}" if source else ""
+    return title[:-len(tail)].rstrip() if tail and title.endswith(tail) else title
+
+
+def _gnews_summary(raw: str, title: str, source: str) -> str:
+    """구글 뉴스 RSS 의 summary 는 초록이 아니라 **같은 사건의 매체별 기사 목록**(`<a>제목</a> <font>매체</font>` 나열)이다.
+
+    태그만 벗기면 제목·매체가 경계 없이 이어 붙어 읽을 수 없다(2026-10-06 신문 실측). 자기 기사 줄을 빼고
+    다른 매체의 보도만 `제목 (매체)` 로 최대 3건 잇는다. 그 구조가 아니면(다른 피드) 종전대로 태그만 벗긴다.
+    """
+    import html as _html
+    rows = []
+    for t, s in _GNEWS_LINK.findall(raw or ""):
+        t = _html.unescape(re.sub(r"<[^>]+>", "", t)).strip()
+        s = _html.unescape(re.sub(r"<[^>]+>", "", s or "")).strip()
+        if t:
+            rows.append((_gnews_title(t, s), s))
+    if not rows:
+        return clean_html(raw or "")
+    own = _gnews_title(title, source)
+    others = [(t, s) for t, s in rows if t != own and not (s and s == source)]
+    return " · ".join(f"{t} ({s})" if s else t for t, s in others[:3])
+
+
 def _gnews_item(r: dict, tag: str) -> dict:
     """gnews 결과 한 건 → 통화 행(카드 shape) — **단일 생성자**.
 
@@ -180,7 +219,7 @@ def _gnews_item(r: dict, tag: str) -> dict:
         summary = ""
     return {
         "title": r.get("title", ""),
-        "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
+        "meta": " · ".join(x for x in [r.get("source"), _display_time(r.get("published") or "")] if x),
         "summary": summary,
         "url": r.get("url", ""), "link_label": "기사 보기",
         "query": tag,
@@ -239,12 +278,14 @@ def search_gnews(query: str = "", count: int = 10, language: str = "ko", region:
 
         results = []
         for entry in feed.entries[:count]:
+            _src = entry.get('source', {}).get('title', '출처 없음')
+            _title = entry.get('title', '제목 없음')
             results.append({
-                "title": entry.get('title', '제목 없음'),
+                "title": _gnews_title(_title, _src),
                 "url": entry.get('link', ''),
                 "published": entry.get('published', ''),
-                "source": entry.get('source', {}).get('title', '출처 없음'),
-                "summary": clean_html(entry.get('summary', ''))
+                "source": _src,
+                "summary": _gnews_summary(entry.get('summary', ''), _title, _src)
             })
 
         return {
@@ -260,7 +301,7 @@ def search_gnews(query: str = "", count: int = 10, language: str = "ko", region:
             # 비대칭 수리. 파싱 불능이면 필드를 싣지 않는다(모르는 날짜를 주장하지 않음).
             "items": [{
                 "title": r.get("title", ""),
-                "meta": " · ".join(x for x in [r.get("source", ""), r.get("published", "")] if x),
+                "meta": " · ".join(x for x in [r.get("source", ""), _display_time(r.get("published", ""))] if x),
                 "summary": r.get("summary", ""),
                 "url": r.get("url", ""),
                 "query": query,

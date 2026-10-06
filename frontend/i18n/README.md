@@ -10,7 +10,7 @@
 
 기존 `npm run dev`와 `npm run build`에 Vite `uiCatalogPlugin`이 연결되어 있다. 시작/빌드 시, dev 소스 추가·변경·삭제 시 문구를 다시 수집한다. 문맥과 원문으로 메시지 ID를 만들고 `translations.json`에 동일 ID·원문인 번역이 있으면 그대로 재사용한다. 변경된 원문은 새 ID가 되므로 낡은 번역을 적용하지 않는다. 실패는 성공 번역으로 기록하지 않고 다음 실행에서 다시 시도하며 화면은 한국어로 사용할 수 있다.
 
-번역은 `ui-translate.py`가 기존 `oneshot_ai_call(role="background")`을 이용한다. 모델과 키는 몸의 설정을 그대로 따른다. Python은 `INDIEBIZ_PYTHON`, 저장소 `.venv/bin/python3`, `python3` 순으로 선택한다. 격리 개발에서 설정이 다른 디렉터리에 있다면 기존 `INDIEBIZ_BASE_PATH` 설정을 이용한다. 선택적으로 `INDIEBIZ_TRANSLATE_URL`에 기존 texts/target → translations HTTP 프록시를 지정할 수 있다. 키·설정·사용자 데이터는 카탈로그에 복제하지 않는다.
+번역은 `ui-translate.py`가 기존 `oneshot_ai_call(role="background")`을 이용한다. 모델과 키는 몸의 설정을 그대로 따른다. Python은 `scripts/build-python.mjs`에서 공통 선택한다. `INDIEBIZ_PYTHON`을 우선하고, 저장소 가상환경(Windows: `.venv/Scripts/python.exe`, macOS/Linux: `.venv/bin/python3`), PATH의 Python 3 순으로 찾는다. Windows에서는 `python`, `py -3`, `python3`를 차례로 확인한다. npm의 HWP·배포 준비 명령도 같은 선택기를 쓰며 자식 Python은 UTF-8 모드로 실행한다. Git 체크아웃은 `.gitattributes`로 LF를 유지하고, UI 수집·변환은 경로 구분자와 CRLF를 정규화해 같은 번역 ID를 유지한다. 격리 개발에서 설정이 다른 디렉터리에 있다면 기존 `INDIEBIZ_BASE_PATH` 설정을 이용한다. 선택적으로 `INDIEBIZ_TRANSLATE_URL`에 기존 texts/target → translations HTTP 프록시를 지정할 수 있다. 키·설정·사용자 데이터는 카탈로그에 복제하지 않는다.
 
 ## 번역 대상 선언과 안전 경계
 

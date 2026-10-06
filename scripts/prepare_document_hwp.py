@@ -33,6 +33,11 @@ def sha(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def asset_hashes(directory):
+    return {p.relative_to(directory).as_posix(): sha(p)
+            for p in sorted(directory.rglob('*')) if p.is_file()}
+
+
 def download(url, path, expected):
     if not path.exists():
         temporary = path.with_suffix('.download')
@@ -63,7 +68,7 @@ def extract(archive, destination, select, strip=0):
 
 
 def check():
-    manifest = json.loads((DEST / 'indiebiz-build.json').read_text())
+    manifest = json.loads((DEST / 'indiebiz-build.json').read_text(encoding='utf-8'))
     if manifest['version'] != VERSION:
         raise ValueError('RHWP version mismatch')
     for name, expected in manifest['files'].items():
@@ -81,7 +86,7 @@ def check():
 def patch_save_guard(source):
     # Pinpoint patch to the embed export API; preserve the upstream editor.
     main = source / 'rhwp-studio/src/main.ts'
-    text = main.read_text()
+    text = main.read_text(encoding='utf-8')
     for format in ('Hwp', 'Hwpx'):
         before = f"async export{format}() {{\n      await initPromise;\n      return wasm.export{format}();\n    }}"
         after = f"""async export{format}() {{
@@ -97,11 +102,11 @@ def patch_save_guard(source):
             if text.count(before) != 1:
                 raise ValueError('Pinned RHWP embed export contract changed')
             text = text.replace(before, after)
-    main.write_text(text)
+    main.write_text(text, encoding='utf-8', newline='\n')
 
 
 def install(source):
-    if 'IndieBiz: refuse a reported lossy serialization' not in (source / 'rhwp-studio/src/main.ts').read_text():
+    if 'IndieBiz: refuse a reported lossy serialization' not in (source / 'rhwp-studio/src/main.ts').read_text(encoding='utf-8'):
         raise ValueError('Build the RHWP host save guard before installation')
     output = source / 'rhwp-studio/dist'
     stage = DEST.with_name('rhwp-stage')
@@ -109,9 +114,9 @@ def install(source):
         shutil.rmtree(stage)
     shutil.copytree(output, stage, ignore=shutil.ignore_patterns('samples', 'sw.js', 'workbox-*', 'registerSW.js', 'manifest.webmanifest', 'Cafe24*.woff2', 'Happiness*.woff2'))
     index = stage / 'index.html'
-    text = re.sub(r'<script id="vite-plugin-pwa:register-sw"[^>]*></script>', '', index.read_text())
+    text = re.sub(r'<script id="vite-plugin-pwa:register-sw"[^>]*></script>', '', index.read_text(encoding='utf-8'))
     text = re.sub(r'<link rel="manifest"[^>]*>', '', text)
-    index.write_text(text)
+    index.write_text(text, encoding='utf-8', newline='\n')
     for name in ('host.html', 'host.js'):
         shutil.copy2(HOST / name, stage / name)
     shutil.copytree(HOST / 'licenses', stage / 'licenses')
@@ -125,12 +130,19 @@ def install(source):
         shutil.copy2(source / name, stage / name)
     manifest = {'version': VERSION, 'source_sha256': SOURCE_SHA, 'core_sha256': CORE_SHA,
                 'external_webfonts': False, 'reported_loss_guard': True,
-                'files': {str(p.relative_to(stage)): sha(p) for p in sorted(stage.rglob('*')) if p.is_file()}}
-    (stage / 'indiebiz-build.json').write_text(json.dumps(manifest, indent=2) + '\n')
+                'files': asset_hashes(stage)}
+    (stage / 'indiebiz-build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
     if DEST.exists():
         shutil.rmtree(DEST)
     stage.replace(DEST)
     check()
+
+
+def install_dependencies(studio):
+    npm = shutil.which('npm.cmd' if os.name == 'nt' else 'npm')
+    if npm is None:
+        raise FileNotFoundError('npm is required to build RHWP; install Node.js and add it to PATH')
+    subprocess.run([npm, 'ci', '--ignore-scripts'], cwd=studio, check=True)
 
 
 def main():
@@ -160,7 +172,7 @@ def main():
         if fonts.is_symlink():
             fonts.unlink()
         shutil.copytree(source / 'assets/fonts', fonts, dirs_exist_ok=True)
-        subprocess.run(['npm', 'ci', '--ignore-scripts'], cwd=studio, check=True)
+        install_dependencies(studio)
         env = {**os.environ, 'RHWP_DISABLE_EXTERNAL_WEBFONTS': '1'}
         subprocess.run(['node', 'node_modules/vite/bin/vite.js', 'build', '--base=/documents/hwp-assets/'], cwd=studio, env=env, check=True)
     install(source)

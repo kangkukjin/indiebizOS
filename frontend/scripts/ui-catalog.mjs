@@ -7,9 +7,18 @@ import { createHash } from 'node:crypto';
 import { collector, compileReact, compileHTML, compileRemoteJS, korean } from './ui-compiler.mjs';
 import { createUI, mountRemote } from '../i18n/runtime.mjs';
 import { compileXray } from './ui-xray.mjs';
+import { pythonCommand, pythonEnv } from './build-python.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const i18n = path.join(root, 'frontend/i18n');
+const portablePath = file => file.replaceAll('\\', '/');
+const sourceText = text => text.replace(/\r\n?/g, '\n');
+function reactFile(file) {
+  file = portablePath(file);
+  const prefix = portablePath(root) + '/frontend/src/';
+  if (!file.startsWith(prefix) || !/\.[jt]sx?$/.test(file) || file.includes('/i18n/') || /\.(test|spec)\./.test(file)) return null;
+  return file.slice(portablePath(root).length + 1);
+}
 function readJSON(file, fallback = {}) { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback; }
 function writeJSON(file, value) {
   const text = JSON.stringify(value) + '\n';
@@ -75,8 +84,8 @@ export async function translateBatch(texts, target, contexts = []) {
 }
 async function translateProvider(texts, target, contexts = []) {
   if (!process.env.INDIEBIZ_TRANSLATE_URL) {
-    const python = process.env.INDIEBIZ_PYTHON || (fs.existsSync(path.join(root, '.venv/bin/python3')) ? path.join(root, '.venv/bin/python3') : 'python3');
-    const child = promisify(execFile)(python, [path.join(root, 'frontend/scripts/ui-translate.py')], {cwd:root, timeout:120000,maxBuffer:2*1024*1024});
+    const [python, ...prefix] = pythonCommand();
+    const child = promisify(execFile)(python, [...prefix, path.join(root, 'frontend/scripts/ui-translate.py')], {cwd:root, env:pythonEnv(), timeout:120000,maxBuffer:2*1024*1024});
     child.child.stdin.end(JSON.stringify({texts,target,contexts}));
     const {stdout} = await child;
     const result = JSON.parse(stdout);
@@ -144,10 +153,11 @@ export async function refresh(messages, memory, languages, translate = translate
   return stats;
 }
 function rawRemote() {
-  const python = process.env.INDIEBIZ_PYTHON || (fs.existsSync(path.join(root, '.venv/bin/python3')) ? path.join(root, '.venv/bin/python3') : 'python3');
-  return execFileSync(python, ['-c', 'import sys; sys.path.insert(0,"backend"); import boot_paths; from launcher_web_shell import LAUNCHER_SHELL_HTML; from launcher_web_app import LAUNCHER_APP_JS; from launcher_web_render import LAUNCHER_RENDER_JS; sys.stdout.write(LAUNCHER_SHELL_HTML+LAUNCHER_APP_JS+LAUNCHER_RENDER_JS)'], { cwd: root, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  const [python, ...prefix] = pythonCommand();
+  return execFileSync(python, [...prefix, '-c', 'import sys; sys.path.insert(0,"backend"); import boot_paths; from launcher_web_shell import LAUNCHER_SHELL_HTML; from launcher_web_app import LAUNCHER_APP_JS; from launcher_web_render import LAUNCHER_RENDER_JS; sys.stdout.write(LAUNCHER_SHELL_HTML+LAUNCHER_APP_JS+LAUNCHER_RENDER_JS)'], { cwd: root, env: pythonEnv(), encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
 }
 export function compileRemote(html, catalog) {
+  html = sourceText(html);
   const scripts = [];
   let body = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, block => {
     const start = block.indexOf('>') + 1;
@@ -160,16 +170,17 @@ export function compileRemote(html, catalog) {
 export async function buildCatalog({ translate = translateBatch } = {}) {
   const catalog = collector();
   for (const file of files(path.join(root, 'frontend/src'))) {
-    if (!/\.[jt]sx?$/.test(file) || /\/i18n\//.test(file) || /\.(test|spec)\./.test(file)) continue;
-    compileReact(fs.readFileSync(file, 'utf8'), path.relative(root, file).replaceAll(path.sep, '/'), catalog);
+    const relative = reactFile(file);
+    if (!relative) continue;
+    compileReact(sourceText(fs.readFileSync(file, 'utf8')), relative, catalog);
   }
-  const python = process.env.INDIEBIZ_PYTHON || (fs.existsSync(path.join(root, '.venv/bin/python3')) ? path.join(root, '.venv/bin/python3') : 'python3');
-  const systemSources = JSON.parse(execFileSync(python, [path.join(root, 'frontend/scripts/ui-system-sources.py')], {encoding:'utf8'}));
+  const [python, ...prefix] = pythonCommand();
+  const systemSources = JSON.parse(execFileSync(python, [...prefix, path.join(root, 'frontend/scripts/ui-system-sources.py')], {env:pythonEnv(), encoding:'utf8'}));
   for (const source of systemSources.messages) catalog.add('system:metadata', source);
   for (const source of systemSources.status_messages) catalog.add('system:status', source);
-  const raw = rawRemote();
+  const raw = sourceText(rawRemote());
   const remote = compileRemote(raw, catalog);
-  const xrayRaw = fs.readFileSync(path.join(root, 'data/xray/index.html'), 'utf8');
+  const xrayRaw = sourceText(fs.readFileSync(path.join(root, 'data/xray/index.html'), 'utf8'));
   const xray = compileXray(xrayRaw, catalog);
   const languages = readJSON(path.join(i18n, 'languages.json'));
   if (languages.ko !== '한국어' || !languages.en) throw new Error('UI language registry requires ko and en');
@@ -219,14 +230,15 @@ export function uiCatalogPlugin() {
     name: 'indiebiz-ui-catalog', enforce: 'pre',
     async buildStart() { await build(); },
     transform(source, id) {
-      const file = id.split('?')[0];
-      if (!file.startsWith(path.join(root, 'frontend/src/')) || !/\.[jt]sx?$/.test(file) || file.includes('/i18n/')) return null;
-      return { code: compileReact(source, path.relative(root, file).replaceAll(path.sep, '/'), collector()), map: null };
+      const file = reactFile(id.split('?')[0]);
+      if (!file) return null;
+      return { code: compileReact(sourceText(source), file, collector()), map: null };
     },
     configureServer(server) {
       server.watcher.add([path.join(root, 'data/xray/index.html'), path.join(root, 'data/ibl_nodes.yaml'), path.join(root, 'data/instruments'), path.join(root, 'backend/services/model_settings_view.py'), path.join(root, 'backend/base/model_resolver.py'), path.join(root, 'backend/cognition/world_pulse_health.py'), path.join(root, 'backend/cognition/ibl_description_audit.py'), ...files(path.join(root, 'backend/surface')).filter(file => /launcher_[^/]+\.py$/.test(file)), path.join(i18n, 'languages.json'), path.join(i18n, 'translations.json')]);
       let timer;
       const queue = file => {
+        file = portablePath(file);
         if (!(file.includes('/frontend/src/') || file.endsWith('/data/xray/index.html') || file.endsWith('/ibl_nodes.yaml') || file.includes('/data/instruments/') || /launcher_[^/]+\.py$/.test(file) || file.endsWith('/languages.json') || file.endsWith('/model_settings_view.py') || file.endsWith('/model_resolver.py') || file.endsWith('/world_pulse_health.py') || file.endsWith('/ibl_description_audit.py') || (file.endsWith('/translations.json') && !running))) return;
         clearTimeout(timer); timer = setTimeout(async () => {
           try { await build(); server.ws.send({ type: 'full-reload' }); }

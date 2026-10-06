@@ -559,6 +559,30 @@ def test_background_failure_and_stall_still_start_review(supervisor, monkeypatch
     assert seen == ["job_failed" if failure else "job_stalled"]
 
 
+@pytest.mark.parametrize("exit_code", [0, 1, -1])
+def test_finished_script_receipt_is_not_a_stalled_job(supervisor, monkeypatch, tmp_path, exit_code):
+    monkeypatch.setattr("runtime_utils.get_base_path", lambda: tmp_path)
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda *a, **kw: pytest.fail("완료 로그를 감독함"))
+    path = tmp_path / "data/script_runs/done.log"
+    path.parent.mkdir(parents=True)
+    path.write_text(f'# script exit={exit_code} 66ms\nArticle 2026/10 generate models\n--- stderr ---\n')
+    # 같은 경로가 실행 중에 먼저 발견됐어도 완료 영수증은 감시를 끝낸다.
+    supervisor._discover_jobs({"log": str(path), "status": "running"})
+    assert str(path) in supervisor.jobs
+    receipt = {"success": exit_code == 0, "log": str(path), "exit_code": exit_code}
+    supervisor._discover_jobs(json.dumps({"value": {"results": [receipt]}}))
+    assert str(path) not in supervisor.jobs
+    supervisor.tick(supervisor.started + 200)
+    assert supervisor.reviews == 0
+
+
+def test_pending_receipt_with_no_exit_code_keeps_job_watch(supervisor, monkeypatch, tmp_path):
+    monkeypatch.setattr("runtime_utils.get_base_path", lambda: tmp_path)
+    path = tmp_path / "data/script_runs/pending.log"
+    supervisor._discover_jobs({"log": str(path), "exit_code": None, "status": "running"})
+    assert str(path) in supervisor.jobs
+
+
 def test_explicit_milestone_still_requests_review(supervisor, monkeypatch):
     seen = []
     monkeypatch.setattr("supervisor_runtime.invoke", lambda c, prompt, **kw:

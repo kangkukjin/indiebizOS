@@ -102,6 +102,9 @@ def isolated_runtime_stores(tmp_path, monkeypatch):
     monkeypatch.setattr(ibl_run_journal, "runs_root", lambda: follow("ibl_runs"))
     monkeypatch.setattr(repair_continuation, "state_root", lambda: follow("system_ai_state"))
     monkeypatch.setattr(workflow_store, "_get_workflows_path", lambda: _mk(follow("workflows")))
+    # 시스템 문서(changelog.log·inventory.md 는 추적 파일): 프로젝트 생성·개명·삭제가 쓴다(2026-10-06 실측 1회 11줄).
+    import system_docs
+    monkeypatch.setattr(system_docs, "docs_root", lambda: follow("system_docs"))
     from thread_context import get_repair_workspace
 
     def storage_root():

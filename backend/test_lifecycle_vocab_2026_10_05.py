@@ -27,10 +27,6 @@ def world(tmp_path, monkeypatch):
     (tmp_path / "templates" / "기본").mkdir(parents=True)
     (tmp_path / "templates" / "기본" / "agents.yaml").write_text(yaml.safe_dump({"agents": [], "common": {}}), encoding="utf-8")
     (tmp_path / "data").mkdir(exist_ok=True)
-    # 다른 시험이 먼저 import했으면 환경변수만으로 모듈의 저장 경로가 바뀌지 않는다.
-    import system_docs
-    monkeypatch.setattr(system_docs, "DATA_PATH", tmp_path / "data")
-    monkeypatch.setattr(system_docs, "DOCS_PATH", tmp_path / "data" / "system_docs")
     # 어휘 원장·파생물은 기본 경로에서 읽는다 — 저장소만 격리하고 사전은 실물을 복사(패키지 폴더는 링크, 읽기만)
     for name in ("ibl_nodes.yaml", "core_manifest.json", "member_manifest.json", "phone_manifest.json", "ibl_fixtures.json", "package_meta.json",
                  "vocabulary_policy.yaml", "lifecycle_policy.yaml", "shell_shadow.json"):

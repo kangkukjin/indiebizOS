@@ -21,7 +21,7 @@ def read_result_schema():
             "id": {"type": "string"},
             "calls": {"type": "boolean",
                       "description": "true면 id 없이 이 대화의 현재 턴과 바로 앞 턴들이 실행한 호출 목록(프로그램 input.id·결과 result.id·실패 여부)을 돌려줌. "
-                                     "같은 일을 다른 자료로 반복하거나 문맥이 압축돼 앞 프로그램을 잊었을 때, 새로 쓰기 전에 먼저 조회."},
+                                     "같은 일을 다른 자료로 반복하거나 문맥이 압축돼 앞 프로그램을 잊었을 때 조회. limit보다 길면 text 페이지와 next_read를 반환."},
             "offset": {"type": "integer", "minimum": 0, "default": 0},
             "limit": {"type": "integer", "minimum": 1, "maximum": MAX_LIMIT,
                       "default": DEFAULT_LIMIT, "description": "문자 수(토큰 수 아님)"},

@@ -30,19 +30,24 @@ from runtime_utils import get_python_cmd, get_node_cmd
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent.parent
 from runtime_utils import get_base_path as _get_base_path
-DATA_PATH = _get_base_path() / "data"
-DOCS_PATH = DATA_PATH / "system_docs"
+
+
+def docs_root() -> Path:
+    """시스템 문서 루트 — 호출 시점에 기본 경로를 읽는다(2026-10-06).
+    옛 모듈 상수(DOCS_PATH)는 import 시점에 얼어, 뒤늦게 INDIEBIZ_BASE_PATH 를 돌린 시험의
+    changelog.log·inventory.md 쓰기가 실 저장소로 샜다. 시험 격리 시임도 이 함수 하나(conftest)."""
+    return _get_base_path() / "data" / "system_docs"
 
 
 def ensure_docs_dir():
     """문서 디렉토리 생성"""
-    DOCS_PATH.mkdir(parents=True, exist_ok=True)
+    docs_root().mkdir(parents=True, exist_ok=True)
 
 
 def get_doc_path(doc_name: str) -> Path:
     """문서 경로 반환"""
     ensure_docs_dir()
-    return DOCS_PATH / f"{doc_name}.md"
+    return docs_root() / f"{doc_name}.md"
 
 
 def read_doc(doc_name: str) -> str:
@@ -68,7 +73,7 @@ def append_to_doc(doc_name: str, content: str):
 def list_docs() -> List[str]:
     """문서 목록"""
     ensure_docs_dir()
-    return [f.stem for f in DOCS_PATH.glob("*.md")]
+    return [f.stem for f in docs_root().glob("*.md")]
 
 
 # ============ 초기 문서 템플릿 ============
@@ -425,7 +430,7 @@ def update_overview_stats(project_count: int = None, agent_count: int = None, to
 
 def log_change(action: str, details: str):
     """변경 이력 로그"""
-    log_path = DOCS_PATH / "changelog.log"
+    log_path = docs_root() / "changelog.log"
     ensure_docs_dir()
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

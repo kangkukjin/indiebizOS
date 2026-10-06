@@ -68,5 +68,35 @@ def test_certified_identity_never_bypasses_integrity_or_masking(tmp_path, damage
         view.resolve_input_refs({"x": {"$ref": ref['id']}}, store=store)
 
 
+def test_call_list_pages_are_bounded_stable_and_survive_provider_transport(tmp_path, monkeypatch):
+    from ibl_result_transport import provider_tool_result
+    store = TurnStore(tmp_path)
+    monkeypatch.setattr(view, "evidence_store", lambda: store)
+    turns = [{"turn": "current", "current": True, "calls": [
+        {"seq": i, "input": {"id": f"{i:064x}", "excerpt": "긴 본문" * 100},
+         "result": {"id": f"{i + 100:064x}"}, "is_error": False} for i in range(30)]}]
+    monkeypatch.setattr(store, "call_history", lambda: turns)
+    page = view.read_result({"calls": True, "limit": 1200})
+    chunks = []
+    first_id = page["id"]
+    monkeypatch.setattr(store, "call_history", lambda: pytest.fail("후속 조회에서 목록을 다시 만들면 안 됨"))
+    while True:
+        assert len(page["text"]) <= 1200 and page["id"] == first_id
+        delivered = json.loads(provider_tool_result(json.dumps(page, ensure_ascii=False)))
+        assert delivered["text"] == page["text"] and not delivered.get("_spilled")
+        chunks.append(delivered["text"])
+        if page["next_read"] is None:
+            break
+        page = view.read_result(page["next_read"])
+    assert json.loads("".join(chunks))["turns"] == turns
+
+
+@pytest.mark.parametrize("page_args", [{"limit": 0}, {"limit": 60001}, {"offset": -1}])
+def test_call_list_validates_page_bounds_before_reading(monkeypatch, page_args):
+    monkeypatch.setattr(view, "evidence_store", lambda: pytest.fail("invalid request read store"))
+    with pytest.raises(ValueError, match="limit"):
+        view.read_result({"calls": True, **page_args})
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

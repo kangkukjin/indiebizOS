@@ -8,7 +8,7 @@ import threading
 from collections import Counter
 from pathlib import Path
 
-from logging_utils import mask_secret_data, mask_secrets
+from logging_utils import mask_secret_data
 
 EVENT_PAGE_LIMIT = 12000
 RESPONSE_PAGE_LIMIT = 13000
@@ -178,9 +178,19 @@ class TurnStore:
         self.operations_seen = set()
 
     def evidence(self, value):
-        masked = mask_secrets(value) if isinstance(value, str) else mask_secret_data(value)
+        # 도구가 직렬화한 JSON도 구조로 가린다. 문자열 정규식으로 JSON을
+        # 편집하면 본문 속 \"x-api-key: ...\"의 escape가 깨져 부분 조회까지 실패한다.
+        original = value
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except ValueError:
+                pass
+        masked = mask_secret_data(value)
+        if isinstance(original, str) and value != original:
+            masked = original if masked == value else json.dumps(masked, ensure_ascii=False, default=str)
         text = masked if isinstance(masked, str) else json.dumps(masked, ensure_ascii=False, default=str)
-        altered = masked_paths(value, masked) if masked != value else []
+        altered = masked_paths(original, masked) if masked != original else []
         # Identity includes the transformation facts: a literal '****' and a
         # redacted secret must never certify one another merely by sharing text.
         record = {"version": 1, "text": text, "masked_paths": altered}

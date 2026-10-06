@@ -196,7 +196,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                             "description": "새 작성 기본값=2. 저장된 기존 원문의 재실행에만 1을 명시. 문법 오류로 자동 전환하지 않음."},
                 "value_protocols": {"type": "array", "items": {"type": "string", "enum": ["ibl-value/1", "ibl-value/2"]}, "description": "소비 가능한 값 프로토콜. 생략하면 둘 다 지원. 외부 객체 참조는 /2이며 실행 종료 때 만료."},
                 "inputs": {"type": "object", "description": "명시 이름→값. result_ref.input_args를 그대로 사용 가능. 예: {입력:{\"$ref\":\"결과 id\"}}와 code의 $입력. $ref는 inputs 자체가 아닌 이름의 값 자리. path 생략=최종 값, path 지정=원 봉투의 키·인덱스. 이전 턴 변수 자동 주입 없음."},
-                "check": {"type": "boolean", "description": "실행 없이 같은 컴파일러로 검사. 통과하면 반환된 execute_args.code(\"$checked:…\")를 code에 그대로 넣어 원문을 다시 적지 않고 실행."},
+                "check": {"type": "boolean", "description": "실행 없이 같은 컴파일러로 검사. 통과하면 execute_args 그대로 호출하여 원문·inputs·budget을 재사용. 바꿀 인자만 명시하면 그 인자 전체를 교체."},
                 "code_edits": {"type": "array", "items": {"type": "object"}, "description": "code가 $checked:… 또는 거절 응답의 revise_args.code($rejected:…)일 때 그 원문에 적용할 조각 치환 [{old, new, all?}]. old는 원문에 정확히 한 번 나오는 글(여러 곳이면 all:true). 고칠 때 원문 전체를 다시 적지 않는다."},
                 "code": {
                     "type": "string",
@@ -205,6 +205,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                         '목록 >> [table:each]{parallel:4}{return $it}는 순서 보존 반복. '
                         '검색: $r=[sense:search]{query:"AI"}; return $r.items. '
                         '조건 필터: $rows >> [table:filter]{where:($r)=>$r.score>=5}. '
+                        '문자열 결합은 join(구분자, 문자열목록). '
                         '변수는 한 프로그램의 값이며 외부 입력은 inputs. 반환은 value.'
                     )
                 },

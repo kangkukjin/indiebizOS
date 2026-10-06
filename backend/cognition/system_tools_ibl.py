@@ -516,7 +516,7 @@ def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint
 _CHECKED_CODE_RE = re.compile(r"\s*\$checked:([0-9a-f]{64})\s*")
 
 
-def _offer_checked_code(checked, code) -> None:
+def _offer_checked_code(checked, code, request=None) -> None:
     """검사를 통과한 프로그램에 실행 손잡이를 붙인다 — 같은 원문을 다시 적지 않게(ep4211).
 
     check 뒤 실행은 같은 프로그램을 통째로 다시 생성했다(다섯 쌍 약 195초, 7K자 한 편에 100초).
@@ -528,14 +528,18 @@ def _offer_checked_code(checked, code) -> None:
         return
     try:
         from model_result_view import evidence_store
-        ref = evidence_store().evidence(json.dumps({"kind": "checked_program", "code": code}, ensure_ascii=False))
+        saved = {key: request[key] for key in ("inputs", "budget", "edition", "value_protocols")
+                 if request is not None and key in request}
+        ref = evidence_store().evidence(json.dumps(
+            {"kind": "checked_program", "code": code, "request": saved}, ensure_ascii=False))
     except (OSError, ValueError, TypeError):
         return
     if ref.get("masked_paths"):
         return
     checked["execute_args"] = {"code": f"$checked:{ref['id']}"}
-    checked["next_action"] = ('실행하려면 execute_args.code 를 그대로 code 에 넣고 같은 inputs·budget 으로 check 없이 호출하세요 — '
-                              '프로그램 원문을 다시 적지 않습니다. 고칠 때만 code 를 새로 보냅니다. '
+    checked["next_action"] = ('실행하려면 execute_args 를 그대로 check 없이 호출하세요 — '
+                              '프로그램 원문과 검사한 inputs·budget·edition·value_protocols를 재사용하므로 다시 적지 않습니다. '
+                              '바꿀 인자만 명시하면 그 인자 전체를 교체합니다. '
                               '실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.')
 
 
@@ -620,7 +624,11 @@ def _resolve_checked_code(tool_input):
             return tool_input, problem
     elif rejected:
         return tool_input, "$rejected 참조는 거절된 원문입니다 — code_edits 로 고칠 조각을 함께 보내세요."
-    return {**{k: v for k, v in tool_input.items() if k != "code_edits"}, "code": source}, None
+    saved = record.get("request", {}) if match else {}
+    if not isinstance(saved, dict):
+        return tool_input, f"{name} 참조의 저장 인자가 잘못됐습니다.{again}"
+    defaults = {k: v for k, v in saved.items() if k in {"inputs", "budget", "edition", "value_protocols"}}
+    return {**defaults, **{k: v for k, v in tool_input.items() if k != "code_edits"}, "code": source}, None
 
 
 def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str = None,
@@ -715,6 +723,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
     # inputs 값 자리의 {"$ref": result_ref.id, "path": [...]} — 앞 실행의 저장 결과를 복사 없이 넘긴다(2026-09-26).
     # 증거 저장소는 인지 층에서 풀고, 값과 출처 근거를 실행기에 함께 전달한다.
     _ref_notes = []
+    _checked_request = tool_input
     from model_result_view import input_evidence_by_name
     if isinstance(tool_input.get("inputs"), dict):
         try:
@@ -733,7 +742,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         from model_result_view import retain_failed_inputs
         retain_failed_inputs(_v2, tool_input.get("inputs"), _ref_notes)
         if tool_input.get("check"):
-            _offer_checked_code(_v2, code)
+            _offer_checked_code(_v2, code, _checked_request)
         _shown = _v2 if tool_input.get("check") else _preview_boundary(_v2, tool_input)
         _offer_code_revision(_shown, code)
         return json.dumps(_shown, ensure_ascii=False)

@@ -589,7 +589,13 @@ class Supervisor:
                     from runtime_utils import get_base_path
                     path = Path(item).resolve()
                     if path.is_relative_to((get_base_path() / "data" / "script_runs").resolve()):
-                        self.jobs.setdefault(str(path), JobWatch(path))
+                        if type(value.get("exit_code")) is int:
+                            # 동기 실행의 완료 영수증은 진행 중 작업이 아니다.
+                            # stdout의 날짜·generate 같은 업무 본문을 진척으로 읽지 않는다.
+                            self.jobs.pop(str(path), None)
+                            self.job_states.pop(str(path), None)
+                        else:
+                            self.jobs.setdefault(str(path), JobWatch(path))
                 elif isinstance(item, (dict, list)):
                     self._discover_jobs(item)
 

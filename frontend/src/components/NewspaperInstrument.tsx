@@ -107,8 +107,10 @@ async function saveEdition(edKey: string, ed: Edition): Promise<void> {
 async function saveMarkdownFile(edKey: string, title: string, dateLabel: string, sections: Section[]): Promise<boolean> {
   try {
     const items = sections.flatMap((sec) => sec.items.map((it) => ({ ...it, section: sec.keyword })));
+    // as:"cards" 필수 — 항목에 title/meta/summary/url 밖의 열쇠(query·role·why·section…)가 있으면
+    // 자동 판별이 전 열쇠를 열로 하는 표를 내 폰/원격 뷰어가 읽을 수 없게 된다(2026-10-06 실측).
     const doc = (await iblExecuteApp(
-      `[table:document]{format: "markdown", title: ${JSON.stringify(title)}, ` +
+      `[table:document]{format: "markdown", as: "cards", title: ${JSON.stringify(title)}, ` +
       `meta: ${JSON.stringify(dateLabel)}, group_by: "section", items: ${JSON.stringify(items)}}`
     )) as { markdown?: string } | null;
     const md = doc?.markdown;
@@ -581,7 +583,7 @@ export function NewspaperInstrument() {
       const d = new Date();
       const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
       const code =
-        `[table:document]{format: "markdown", title: ${JSON.stringify(title || edition.defaultTitle)}, ` +
+        `[table:document]{format: "markdown", as: "cards", title: ${JSON.stringify(title || edition.defaultTitle)}, ` +
         `meta: ${JSON.stringify(date)}, group_by: "section", items: ${JSON.stringify(items)}} ` +
         `>> [others:publish]{title: ${JSON.stringify(`${title || edition.defaultTitle} · ${date}`)}, slug: ${JSON.stringify(`newspaper-${editionKey}-${stamp}`)}}`;
       const result = (await iblExecuteApp(code)) as { url?: string; error?: string } | null;

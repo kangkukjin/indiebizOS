@@ -413,7 +413,10 @@ function mdInline(t){
   return esc(t==null?'':String(t))
     .replace(/\\*\\*([^*]+)\\*\\*/g,'<strong>$1</strong>')
     .replace(/`([^`]+)`/g,'<code>$1</code>')
-    .replace(/\\[([^\\]]+)\\]\\((https?:[^)\\s]+)\\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+    // 기울임은 낱말 경계의 _짝_ 만(snake_case·URL 의 밑줄은 건드리지 않는다).
+    .replace(/(^|[\\s(])_([^_\\n]+)_(?=$|[\\s).,])/g,'$1<em>$2</em>')
+    // 라벨 안의 대괄호 한 겹([속보] 같은 말머리)을 허용 — 기사 제목 링크가 통째로 원문 노출되던 자리(2026-10-06).
+    .replace(/\\[((?:[^\\[\\]]|\\[[^\\[\\]]*\\])+)\\]\\((https?:[^)\\s]+)\\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
 }
 function docBlockHtml(b){
   if(!b||typeof b!=='object') return '';

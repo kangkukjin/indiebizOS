@@ -10,8 +10,8 @@ import boot_paths  # noqa: F401
 import pytest
 import yaml
 
-from coding_git import CodingConflict, current_tree, git
-from coding_store import CodingStore, identifier
+from coding_git import git
+from coding_store import CodingStore
 from office_sessions import DocumentConflict, DocumentUnsupported
 from workspace_sessions import Workspace, operation_key
 
@@ -119,12 +119,13 @@ def repo(tmp_path):
 
 
 def test_code_workspace_shares_the_contract(ws, repo):
-    opened = ws.open(repo, goal="줄 하나 고치기")
+    """코딩 자료 = 프로젝트 폴더(2026-10-07). 저장은 기록(커밋), 복구는 기록으로. 자세한 회귀는 test_coding_projects."""
+    opened = ws.open(repo)
     r = opened["resource"]
     assert opened["kind"] == "code" and r.startswith("coding_") and opened["capabilities"]["save"] is True
-    assert ws.open(repo, goal="줄 하나 고치기")["resource"] == r
+    assert ws.open(repo)["resource"] == r
     files = ws.read(r)
-    assert {"path": "a.txt"} in files["items"]
+    assert any(f["path"] == "a.txt" for f in files["items"])
     piece = ws.read(r, {"path": "a.txt", "start_line": 2, "end_line": 2})
     assert piece["text"] == "line2" and piece["fingerprint"]
     p = ws.propose(r, {"path": "a.txt", "start_line": 2, "end_line": 2}, replacement="LINE2")
@@ -135,18 +136,12 @@ def test_code_workspace_shares_the_contract(ws, repo):
     assert diff["paths"] == ["a.txt"] and "+LINE2" in diff["patch"]
     with pytest.raises(ValueError, match="message"):
         ws.save(r)
-    with pytest.raises(CodingConflict, match="검증"):
-        ws.save(r, message="줄 수정")                          # 성공한 검증 없이는 반영하지 않는다
-    task = ws.code().task(r)
-    ws.code().store.save("verification", {"id": identifier("verify"), "task_id": r,
-                                          "fingerprint": current_tree(task["workspace"]), "state": "passed", "exit_code": 0})
     saved = ws.save(r, message="줄 수정")
-    assert saved["state"] == "completed" and saved["commit"] and saved["paths"] == ["a.txt"]
+    assert saved["state"] == "committed" and saved["commit"] and saved["paths"] == ["a.txt"]
     assert ws.versions(r)["items"][0]["label"] == "줄 수정"
     with pytest.raises(DocumentUnsupported):
         ws.export(r, "copy.txt")
     assert ws.close(r)["closed"] is True
-
 
 def test_operation_key_is_stable_and_blind_to_plumbing():
     a = operation_key("apply", "res", {"proposal": "p1", "expected": 3})

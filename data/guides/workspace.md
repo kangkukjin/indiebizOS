@@ -1,6 +1,6 @@
 # 작업 공간 — [self:workspace]
 
-문서(TXT/MD/HTML/LaTeX 원문, DOCX/PDF/HWP), 스프레드시트, 코딩(git 저장소)을 **같은 계약**으로
+문서(TXT/MD/HTML/LaTeX 원문, DOCX/PDF/HWP), 스프레드시트, 코딩(프로젝트 폴더)을 **같은 계약**으로
 연다. 종류는 자료가 정한다 — 호출자는 `resource` 하나만 들고 다닌다. 세션·epoch·작업 ID 같은
 배관은 몸이 숨긴다. 접수(`state: queued`)는 완료가 아니다.
 
@@ -30,12 +30,15 @@ $p = [self:workspace]{op:"propose", resource:$w.resource, selector:{start:0, end
 | document(원문) | `{start, end}` 문자 범위 → `selected_sha256` | `{start, end, selected_sha256?}` + `replacement` |
 | document(DOCX/PDF/HWP) | `{offset, limit, pages, tables}` 읽기 투영 | 앱의 편집 표면에서(엔진 bookmark). 서버 제안 없음 |
 | sheet | `{sheet, range}` → `table`(값·수식·`calc_status`) | `{sheet, range}` + `values`(같은 행·열) + `kind: set_values|set_formulas` |
-| code | `{path, start_line, end_line}` / `{diff: true}` / `{files: true}` | `{path, start_line?, end_line?}` + `replacement`(줄 범위 교체 또는 전체 본문) |
+| code | `{path, start_line, end_line}` / `{diff: true}` / `{files: true}` / `{project: true}`(목표 문서·실행 방법·변경 요약) · 자료 없이 `kind:"code", selector:{projects:true}` = 프로젝트 목록 | `{path, start_line?, end_line?}` + `replacement`(줄 범위 교체·전체 본문·`null`=삭제) |
 
 - 시트 `snapshot` 은 편집창 엔진의 응답을 `wait`(≤30초) 기다린다. 닫힌 파일은 저장본에서 고정 투영을 만든다
   (`source: saved_file`). `apply`·`save` 는 편집기에 **접수**된다 — 영수증을 확인한다.
-- 코딩 `open` 은 git 폴더를 과제(worktree)로 연다(`goal` 선택). `save` 는 **반영** — `message` 필수, 검토·승인·커밋을
-  한 번에 하며 `verify:"pytest -q"` 로 검증 명령을 먼저 돌릴 수 있다. 성공한 검증이 없으면 거절한다.
+- 코딩 `open` 은 **프로젝트 폴더**를 연다(git 이 없으면 조용히 init, `goal` 을 주면 목표 문서 `목표.md` 틀을 만든다).
+  `save` 는 **기록** — `message` 필수, 폴더의 모든 변경을 한 커밋으로(바뀐 것이 없으면 `state: clean`). `versions` 가 기록 목록,
+  `restore{revision, path?}` 가 그 기록으로 되돌리기(되돌리기 전 상태를 먼저 기록해 둔다). AI 코딩은 이 낱말이 아니라
+  `[others:delegate]{scope:"system", role:"coding", context:{project: $path, resource: $resource}}` — 실행 에이전트가 목표 문서대로
+  짓고 진행 기록에 한 줄을 남긴다. 프로젝트 명령 실행(개발 서버)은 코딩 앱 실행 탭(엔진 I/O)의 몫.
 
 ## AI 제안은 새 낱말이 아니다
 

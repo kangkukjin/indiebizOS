@@ -16,13 +16,13 @@ def service():
 _ALLOWED = {
     "open": ("path", "encoding", "kind", "goal"),
     "snapshot": ("resource", "client", "wait"),
-    "read": ("resource", "selector", "snapshot"),
+    "read": ("resource", "selector", "snapshot", "kind"),
     "propose": ("resource", "selector", "replacement", "values", "kind", "snapshot"),
     "apply": ("resource", "proposal", "client"),
     "save": ("resource", "client", "message", "verify"),
     "export": ("resource", "filename", "client"),
     "versions": ("resource",),
-    "restore": ("resource", "revision", "client"),
+    "restore": ("resource", "revision", "client", "path"),
     "close": ("resource", "client"),
     "capabilities": ("resource",),
     "recover": ("resource",),
@@ -93,6 +93,11 @@ def _run(p, op):
                 raise ValueError("상대 경로에는 프로젝트 경로가 필요합니다")
             expanded = Path(p["_project_path"]) / expanded
         kwargs["path"] = str(expanded)
+    if op == "read" and not kwargs.get("resource"):
+        kwargs["root"] = p.get("_project_path")   # 자료 없는 읽기(코딩 프로젝트 목록)의 기본 폴더 기준
+    if isinstance(p.get("selector"), str) and p.get("selector").strip().startswith("{"):
+        import json
+        kwargs["selector"] = json.loads(p.get("selector"))   # 판본 1 표면이 JSON 문자열로 보낸 selector
     if op in ("save", "export"):
         _guard_target(p, app, kwargs.get("resource"), kwargs.get("filename"))
     return _wrap(getattr(app, op)(**kwargs))
@@ -128,3 +133,40 @@ def sheet_task_status(ref: dict) -> dict:
         return T.view(ref, T.UNKNOWN, error=f"시트 작업 {ref['task_id']} 을(를) 찾지 못했습니다")
     state = _SHEET_TASK_STATES.get(st.get("status"), T.UNKNOWN)
     return T.view(ref, state, result=st.get("result"), error=st.get("reason") if state != T.SUCCEEDED else None, raw=st)
+
+
+# ── ③ 접수증 어댑터(kind=coding_run) — 코딩 프로젝트의 실행(샌드박스 프로세스). owner = 프로젝트 자료 id ──
+_RUN_STATES = {"running": "running", "passed": "succeeded", "failed": "failed", "cancelled": "cancelled", "interrupted": "interrupted"}
+
+
+def _projects():
+    return service().code().projects
+
+
+def coding_run_status(ref: dict) -> dict:
+    import task_receipts as T
+    try:
+        rec = _projects().run_status(ref["task_id"])
+    except (ValueError, KeyError):
+        return T.view(ref, T.UNKNOWN, error=f"코딩 실행 {ref.get('task_id')} 을(를) 찾지 못했습니다")
+    state = _RUN_STATES.get(rec.get("state"), T.UNKNOWN)
+    tail = _projects().output(rec["id"], max(0, _size(rec) - 4000)).get("text", "")
+    result = {"exit_code": rec.get("exit_code"), "command": rec.get("command")} if state == T.SUCCEEDED else None
+    error = f"종료 코드 {rec.get('exit_code')}" if state == T.FAILED else None
+    return T.view(ref, state, progress={"output_tail": tail[-4000:], "started_at": rec.get("started_at")}, result=result, error=error)
+
+
+def coding_run_status_cancel(ref: dict) -> dict:
+    import task_receipts as T
+    try:
+        rec = _projects().stop(ref["task_id"])
+    except (ValueError, KeyError):
+        return T.view(ref, T.UNKNOWN, error=f"코딩 실행 {ref.get('task_id')} 을(를) 찾지 못했습니다")
+    return T.view(ref, _RUN_STATES.get(rec.get("state"), T.UNKNOWN))
+
+
+def _size(rec: dict) -> int:
+    try:
+        return Path(rec["output"]).stat().st_size
+    except (OSError, KeyError, TypeError):
+        return 0

@@ -65,6 +65,7 @@
       ]
     },
     "instruments": [
+      "coding",
       "document",
       "newspaper",
       "report",

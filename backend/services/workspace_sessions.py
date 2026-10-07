@@ -6,7 +6,7 @@
 worktree)를 두고, 언어(`[self:workspace]`)에는 의도 고도의 op 만 보인다 —
 `session_id·client_id·epoch·expected·operation_id` 같은 엔진 배관은 여기서 해소한다.
 
-- 기존 `office_sessions`·`office_store`(문서·시트)와 `coding_workspace`·`coding_store`(코딩)를
+- 기존 `office_sessions`·`office_store`(문서·시트)와 `coding_projects`·`coding_store`(코딩)를
   **그대로 재사용**한다. 새 저장소·새 잠금은 없다. 엔진(ONLYOFFICE·RHWP·시트 엔진·git)은 어댑터 밑.
 - 작성 창(UI)이 세션을 쥐고 있으면 빼앗지 않는다. 읽기·제안은 세션 없이 되고, 적용·저장·내보내기·
   복구·닫기는 세션 소유 창의 `client` 로만 된다(인자 없으면 행위자 신원으로 세션을 얻되 다른 창이
@@ -40,10 +40,7 @@ def operation_key(op: str, resource: str, args: dict) -> str:
 
 def kind_of_path(path: Path) -> str:
     if path.is_dir():
-        for parent in (path, *path.parents):
-            if (parent / ".git").exists():
-                return "code"
-        raise DocumentUnsupported("폴더는 git 저장소일 때만 코딩 작업 공간으로 엽니다")
+        return "code"   # 폴더 = 코딩 프로젝트. git 이 없으면 coding_projects.open 이 조용히 init 한다(2026-10-07)
     return "sheet" if path.suffix.lower() in SHEET_SUFFIXES else "document"
 
 
@@ -76,7 +73,7 @@ class Workspace:
         if not isinstance(resource, str) or not resource:
             raise ValueError("resource(자료 ID)가 필요합니다 — open 의 반환값")
         if resource.startswith("coding_"):
-            return "code", self.code(), self.code().task(resource)
+            return "code", self.code(), self.code().project(resource)
         store = self.documents().store
         try:
             row = store.get("document", resource)
@@ -99,7 +96,7 @@ class Workspace:
     @staticmethod
     def head(kind, row, **extra):
         out = {"resource": row["id"], "kind": kind, "revision": row.get("revision_id"),
-               "title": row.get("title"), "path": row.get("source_uri") or row.get("workspace")}
+               "title": row.get("title") or row.get("name"), "path": row.get("source_uri") or row.get("path")}
         out.update(extra)
         return out
 
@@ -227,8 +224,13 @@ class Workspace:
         return rows[0] if rows else self._sheet_saved_snapshot(app, row)
 
     # ── read ────────────────────────────────────────────────────────────────
-    def read(self, resource, selector=None, snapshot=None):
+    def read(self, resource=None, selector=None, snapshot=None, kind=None, root=None):
         selector = selector or {}
+        if resource is None:
+            # 자료 없는 읽기는 하나뿐 — 코딩 프로젝트 목록(kind:"code" + selector{projects:true}). root = 기본 폴더의 기준.
+            if kind == "code" and selector.get("projects"):
+                return {"kind": "code", "items": self.code().projects_api.projects(root)}
+            raise ValueError("resource(자료 ID)가 필요합니다 — kind:\"code\" 와 selector{projects:true} 만 자료 없이 읽습니다")
         kind, app, row = self.resolve(resource)
         if kind == "code":
             return self.head(kind, row, **app.read(row, selector))
@@ -391,7 +393,7 @@ class Workspace:
     def export(self, resource, filename, client=None):
         kind, app, row = self.resolve(resource)
         if kind == "code":
-            raise DocumentUnsupported("코딩 작업 공간의 사본 내보내기는 없습니다 — save(반영·커밋)를 사용하세요")
+            raise DocumentUnsupported("코딩 프로젝트의 사본 내보내기는 없습니다 — save(기록)와 versions/restore 를 사용하세요")
         args = self._session_args(kind, app, row, client, "export")
         key = operation_key("export", row["id"], {"filename": filename, "expected": args["expected"]})
         result = app.export_copy(row["id"], **args, operation_id=key, filename=filename)
@@ -407,10 +409,10 @@ class Workspace:
                  for v in app.versions(resource)]
         return self.head(kind, row, items=items)
 
-    def restore(self, resource, revision, client=None):
+    def restore(self, resource, revision, client=None, path=None):
         kind, app, row = self.resolve(resource)
         if kind == "code":
-            raise DocumentUnsupported("코딩 작업 공간의 버전 복구는 git 으로 — [self:body]{op:\"file\"} 로 이력을 보고 파일을 다시 제안하세요")
+            return self.head(kind, row, **app.restore(row, revision, path))
         args = self._session_args(kind, app, row, client, "restore")
         key = operation_key("restore", row["id"], {"revision": revision, "expected": args["expected"]})
         result = app.restore(row["id"], revision, **args, operation_id=key)
@@ -426,108 +428,62 @@ class Workspace:
     def recover(self, resource):
         kind, app, row = self.resolve(resource)
         if kind == "code":
-            raise DocumentUnsupported("코딩 작업 공간은 복구할 미완료 저장이 없습니다")
+            raise DocumentUnsupported("코딩 프로젝트는 복구할 미완료 저장이 없습니다 — 기록은 전부 git 에 있다")
         return self.head(kind, row, **app.recover(resource))
 
 
 class CodeAdapter:
-    """git worktree 를 작업 공간 계약에 맞춘다 — 자료=저장소 과제, 스냅샷=트리 지문, 저장=검토·반영(커밋)."""
+    """코딩 프로젝트(폴더 하나)를 작업 공간 계약에 맞춘다 — 자료=프로젝트, 스냅샷=트리 지문, 저장=기록(커밋), 복구=기록으로 되돌리기.
+
+    몸은 coding_projects.CodingProjects. 옛 과제별 worktree·검토 묶음·승인 흐름은 2026-10-07 에 은퇴했다
+    (docs/CODING_APP_ON_IBL_PLAN_2026_10_07.md §8 판정 ②) — 사용자는 코드를 읽지 않으므로 diff 승인은 관문이 아니고,
+    안전은 샌드박스(프로젝트 밖 쓰기 차단)와 되돌리기가 맡는다."""
 
     def __init__(self, store=None):
-        from coding_workspace import CodingWorkspace
-        self.app = CodingWorkspace(store)
-        self.store = self.app.store
+        from coding_projects import CodingProjects
+        self.projects_api = CodingProjects(store)
+        self.store = self.projects_api.store
 
-    def task(self, task_id):
-        return self.store.get("task", task_id)
+    def project(self, resource):
+        return self.projects_api.project(resource)
+
+    # Workspace.read(kind="code", selector={projects: true}) 가 부른다 — 자료 없는 유일한 읽기
+    @property
+    def projects(self):
+        return self.projects_api
 
     def open(self, path, goal=None):
-        repo = self.app.open_repository(path)
-        for task in self.store.list("task"):
-            if task["repository_id"] == repo["id"] and task.get("kind") != "done" and (goal is None or task["goal"] == goal):
-                return task
-        return self.app.create_task(repo["id"], goal or f"{Path(repo['path']).name} 작업 공간")
+        return self.projects_api.open(path, goal)
 
-    def capabilities(self, task):
+    def capabilities(self, row):
         from coding_process import available
-        return {"engine": "git", "edit_native": True, "save": True, "export_copy": False, "restore": False,
-                "close": True, "read_projection": True, "propose": True, "verify": available(),
-                "reason": "git worktree 작업 공간 — 저장은 검토·승인·커밋 반영"}
+        return {"engine": "git", "edit_native": True, "save": True, "export_copy": False, "restore": True,
+                "close": True, "read_projection": True, "propose": True, "run": available(),
+                "reason": "코딩 프로젝트 — 저장은 기록(커밋), 복구는 기록으로 되돌리기, 실행은 샌드박스 프로세스"}
 
-    def snapshot(self, task):
+    def snapshot(self, row):
         from coding_git import current_tree
-        return current_tree(task["workspace"])
+        return current_tree(row["path"])
 
-    def read(self, task, selector):
-        if selector.get("diff"):
-            from coding_git import current_tree, delta
-            paths, patch = delta(task["workspace"], task["start_tree"], current_tree(task["workspace"]))
-            return {"selector": {"diff": True}, "paths": paths, "patch": patch.decode(errors="replace")}
-        if selector.get("files") or not selector.get("path"):
-            return {"selector": {"files": True}, "items": [{"path": p} for p in self.app.files(task["id"])]}
-        opened = self.app.read_file(task["id"], selector["path"])
-        lines = opened["text"].splitlines()
-        start = int(selector.get("start_line", 1)); end = int(selector.get("end_line", len(lines)))
-        if not 1 <= start <= max(end, 1):
-            raise ValueError("줄 범위를 확인하세요")
-        piece = "\n".join(lines[start - 1:end])
-        return {"selector": {"path": selector["path"], "start_line": start, "end_line": min(end, len(lines))},
-                "fingerprint": opened["fingerprint"], "binary": opened["binary"], "text": piece, "lines": len(lines)}
+    def read(self, row, selector):
+        return self.projects_api.read(row, selector or {})
 
-    def propose(self, task, selector, replacement):
-        path = selector.get("path")
-        if not path or not isinstance(replacement, str):
-            raise ValueError("코딩 제안에는 selector.path 와 replacement(전체 본문 또는 줄 범위 교체문)가 필요합니다")
-        target = Path(task["workspace"]) / path
-        opened = self.app.read_file(task["id"], path) if target.exists() else {"fingerprint": None, "text": ""}
-        if selector.get("start_line") is not None:
-            lines = opened["text"].splitlines()
-            start = int(selector["start_line"]); end = int(selector.get("end_line", start))
-            if not 1 <= start <= end <= max(len(lines), 1):
-                raise ValueError("줄 범위를 확인하세요")
-            content = "\n".join(lines[:start - 1] + replacement.splitlines() + lines[end:]) + ("\n" if opened["text"].endswith("\n") else "")
-        else:
-            content = replacement
-        row = {"id": identifier(), "task_id": task["id"], "path": path, "expected": opened["fingerprint"],
-               "content": content, "selector": selector, "created_at": time.time()}
-        self.store.save("workspace_proposal", row)
-        return {"proposal": row["id"], "selector": {"path": path}, "expected": opened["fingerprint"]}
+    def propose(self, row, selector, replacement):
+        return self.projects_api.propose(row, selector or {}, replacement)
 
-    def apply(self, task, proposal):
-        row = self.store.get("workspace_proposal", proposal)
-        if row["task_id"] != task["id"]:
-            raise PermissionError("다른 과제의 제안입니다")
-        saved = self.app.save_file(task["id"], row["path"], row["content"], row["expected"])
-        return {"proposal": proposal, "applied": True, "path": row["path"], "fingerprint": saved["fingerprint"]}
+    def apply(self, row, proposal):
+        return self.projects_api.apply(row, proposal)
 
-    def save(self, task, message, verify=None):
-        if not message or not str(message).strip():
-            raise ValueError("코딩 작업 공간의 save 는 반영(커밋)입니다 — message 가 필요합니다")
+    def save(self, row, message, verify=None):
         if verify:
-            from coding_runs import CodingRuns
-            CodingRuns(self.app).start(task["id"], "검증: " + verify, "", operation_key("verify", task["id"], {"cmd": verify}),
-                                       background=False, command=verify)
-        review = self.app.review(task["id"], [])
-        self.app.approve(task["id"], review["id"], review["fingerprint"])
-        operation = self.app.apply(task["id"], review["id"], review["fingerprint"],
-                                   operation_key("commit", task["id"], {"review": review["id"]}), message)
-        return {"state": operation["state"], "commit": operation.get("commit"), "paths": review["paths"],
-                "error": operation.get("error")}
+            raise ValueError("코딩 프로젝트의 save 는 기록(커밋)만 한다 — 검증·실행은 실행 탭(엔진 I/O)의 몫이다")
+        return self.projects_api.save(row, message)
 
-    def versions(self, task):
-        """반영(save)은 정본 저장소에 커밋되므로 이력은 저장소 쪽을 읽는다(작업 공간은 시작점에 머문다)."""
-        from coding_git import text_git
-        repo = self.store.get("repository", task["repository_id"])
-        log = text_git(repo["path"], "log", "--format=%H%x1f%ct%x1f%s", "-20")
-        items = []
-        for line in log.splitlines():
-            parts = line.split("\x1f")
-            if len(parts) == 3:
-                items.append({"id": parts[0], "created_at": int(parts[1]), "label": parts[2]})
-        return items
+    def versions(self, row):
+        return self.projects_api.versions(row)
 
-    def close(self, task):
-        self.app.idle(task)
-        task["kind"] = "done"
-        self.store.save("task", task)
+    def restore(self, row, revision, path=None):
+        return self.projects_api.restore(row, revision, path)
+
+    def close(self, row):
         return {"closed": True}

@@ -19,7 +19,6 @@ import { ProjectPanelView } from './components/ProjectPanelView';
 import { LectureWorkspace } from './components/LectureWorkspace';
 import { PromptCompositionView } from './components/PromptCompositionView';
 import { GuidesView } from './components/GuidesView';
-import { CodingWorkspace } from './components/CodingWorkspace';
 import { DocumentApp } from './components/DocumentApp';
 import { ExternalUsersView } from './components/ExternalUsersView';
 import { VocabularyView } from './components/VocabularyView';
@@ -233,7 +232,7 @@ function App() {
   if (isExternalUsers) return <ExternalUsersView />;
   if (isGuides) return <GuidesView />;
   if (vocabularyFolder) return <VocabularyView key={vocabularyFolder} folderId={vocabularyFolder} />;
-  if (isCoding) return <CodingWorkspace />;
+  if (isCoding) return <DocumentApp id="coding" label="코딩 앱" />;
   if (isDocuments) return <DocumentApp />;
   if (isSpreadsheets) return <DocumentApp id="spreadsheet" label="스프레드시트 앱" />;
 

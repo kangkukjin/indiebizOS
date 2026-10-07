@@ -1,0 +1,75 @@
+# 코딩 앱 — 코딩 프로젝트를 문서처럼 (docs/CODING_APP_ON_IBL_PLAN_2026_10_07.md)
+# 어휘 없는 순수 매니페스트. 능력은 전부 기존 낱말이다 — [self:workspace](프로젝트=폴더·읽기·기록·되돌리기),
+# [self:ask](목표 문서 AI 한 줄), [others:delegate]{scope:"system", role:"coding"}(실행 에이전트에게 맡기기 — 엔진이 부른다), [self:task](진행).
+#
+#   첫 화면(프로젝트) = 프로젝트 카드 목록: 등록된 프로젝트 + outputs/coding 의 하위 폴더. 누르면 그 프로젝트를 열어
+#                      코드 엔진(engine 뷰, kind=code)이 선다 — 상단 탭 셋(목표 문서 · 코드 파일 · 실행), 목표 문서가 기본.
+#   새 프로젝트       = 이름 + "무엇을 만들고 싶은지"(말하듯이) → [self:ask] 가 코딩 목표 문서(틀 5절)로 정리 → 폴더·목표.md 를 만들고 연다.
+#                      사용자는 코딩하는 사람이 아니다: 목표 문서가 지시이고, "목표대로 코딩" 단추가 실행 에이전트를 부른다.
+#   기존 폴더 가져오기 = 코드가 있는 폴더를 옮기지 않고 등록(git 이 없으면 조용히 init). 목표 문서가 없으면 엔진이 빈 틀을 보인다.
+#   AI 한 줄(ai_dock) = 목표 문서 탭 아래. 선택이 있으면 선택, 없으면 문서 전체를 지시대로 정리해 제안 — 반영은 사람이 누른다.
+#   화면에 없는 것(일부러): diff·도구 호출 카드·권한 모드·터미널·승인 단추·커밋 메시지. AI 가 한 일은 진행 기록 + 되돌리기(⚙)로.
+# 단독 창 #/coding 도 이 선언을 그대로 띄운다(DocumentApp id="coding"). 옛 코딩 창(CodingWorkspace.tsx)은 2026-10-07 은퇴.
+
+instrument: coding
+edition: 2
+icon: 💻
+name: 코딩
+order: 14
+
+modes:
+  - name: 프로젝트
+    auto_run: true
+    note: 프로젝트마다 폴더 하나(outputs/coding). 카드를 누르면 목표 문서가 열립니다.
+    action: '[self:workspace]{op: "read", kind: "code", selector: {projects: true}}'
+    view:
+      - type: card_list
+        from: items
+        empty: 아직 코딩 프로젝트가 없습니다 — "새 프로젝트" 에서 만들고 싶은 것을 말해 보세요.
+        card:
+          wide: true
+          title: '{icon} {name}'
+          lines: ['{summary}', '{status_label}']
+        item_click:
+          action: '[self:workspace]{op: "open", path: $item.path}'
+          view:
+            - &project
+              type: engine
+              ref: '{resource}'
+              ai_dock:
+                placeholder: "원하는 것을 말하세요 — AI 가 목표 문서로 정리합니다 (Enter 전송)"
+                action: '[self:ask]{prompt: $dock, context: $text, system: "너는 코딩 목표 문서의 편집자다. context 는 목표 문서(선택 부분 또는 전체, 마크다운)다. 사용자의 말을 그 문서의 문장으로 정리해 — 절(무엇을 만드나 / 꼭 되어야 하는 것 / 안 해도 되는 것 / 실행 방법 / 진행 기록)을 지키고, 설명·머리말 없이 고친 본문만 답한다. 코드는 쓰지 않는다. 지시가 질문이면 답만 쓴다."}'
+
+  - name: 새 프로젝트
+    run_label: 만들기
+    inputs:
+      - key: name
+        type: text
+        required: true
+        placeholder: "프로젝트 이름 (폴더 이름이 됩니다)"
+      - key: wish
+        type: text
+        required: true
+        placeholder: "무엇을 만들고 싶은지 — 말하듯이"
+    # 폴더 + 목표 문서(AI 가 바람을 틀에 맞춰 정리) → 연다. 같은 이름이 있으면 멈춘다.
+    action: |
+      $folder = f"outputs/coding/${name}"
+      $있음 = [self:file_find]{pattern: "목표.md", path: $folder}
+      [if: len($있음.items) > 0] { return {error: f"이미 있는 프로젝트입니다: ${name} — 첫 화면에서 여세요"} }
+      $초안 = [self:ask]{prompt: $wish, system: f"사용자의 바람을 코딩 목표 문서(마크다운)로 정리한다. 첫 줄은 '# ${name} — 코딩 목표'. 절은 '## 무엇을 만드나'(한두 문장), '## 꼭 되어야 하는 것'(목록), '## 안 해도 되는 것'(목록), '## 실행 방법'(모르면 '(정해지지 않음)'), '## 진행 기록'(빈 채로) — 이 다섯 절 이름 그대로. 설명 없이 문서만 답한다. 코드는 쓰지 않는다."}
+      $쓴 = [self:write]{path: f"${folder}/목표.md", content: $초안.text}
+      [self:workspace]{op: "open", path: $folder}
+    view:
+      - *project
+
+  - name: 기존 폴더 가져오기
+    run_label: 가져오기
+    inputs:
+      - key: path
+        type: text
+        browse: "outputs/coding"
+        required: true
+        placeholder: "코드가 있는 폴더 (git 이 아니어도 됩니다)"
+    action: '[self:workspace]{op: "open", path: $path}'
+    view:
+      - *project

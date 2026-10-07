@@ -3346,6 +3346,7 @@ nodes:
               principal:
               - owner
               human_confirm: true
+              exists: launcher_ops:switch_exists
         returns: items
         side_effect: true
         fixture: '[self:switch]{op: "list"}'
@@ -3704,6 +3705,8 @@ nodes:
             result: Unknown
             failure: Unknown
             progress: Unknown
+            accepted_at: Unknown
+            elapsed_s: Unknown
           effects:
           - unknown
           nondeterministic: true
@@ -3728,7 +3731,7 @@ nodes:
         side_effect: true
         exempt: 접수증(task_ref) 필요 — 고정 fixture 부적합
         description: 긴 작업 접수증(task_ref)의 공통 관찰·제어 (op 분기). status=현재 상태, wait=끝날 때까지 유한 대기 뒤 result, cancel=취소 요청. 위임·script·guestpc·신문·강의 렌더·노트북·시트가 같은 접수증.
-        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). 반환 칸은 항상 같다: state(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)·terminal·timed_out·result(성공일 때만 값, 아니면 null)·failure(작업의 실패 사유, 아니면 null)·progress. status: 실패한 작업도 값으로 답한다(모르는 작업만 실패). wait: timeout(초, 기본 60·상한 240) 안에 성공하면 result, 시간 초과는 실패가 아니라 값(timed_out: true — [if:$r.timed_out] 로 갈라 같은 ref 로 다시), 작업이 실패·취소·유실로 끝나면 이 호출이 실패하며 [catch] 의 $error.details.state·failure 로 사정을 읽는다. cancel: 어댑터가 확인한 사실만(cancel_requested≠cancelled), 미지원 종류는 거절. 작업을 시작한 낱말을 다시 부르지 말 것 — 접수증으로 이어받는다.'
+        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). 반환 칸은 항상 같다: state(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)·terminal·timed_out·result(성공일 때만 값, 아니면 null)·failure(작업의 실패 사유, 아니면 null)·progress. accepted_at·elapsed_s 는 접수 기준 시계(접수부터 지금·끝났으면 종료까지의 초, 모르면 null) — wait 의 timeout 은 그 호출이 기다린 시간일 뿐이라 "접수 후 N초 안에 끝났는가"는 elapsed_s 로 센다. status: 실패한 작업도 값으로 답한다(모르는 작업만 실패). wait: timeout(초, 기본 60·상한 240) 안에 성공하면 result, 시간 초과는 실패가 아니라 값(timed_out: true — [if:$r.timed_out] 로 갈라 같은 ref 로 다시), 작업이 실패·취소·유실로 끝나면 이 호출이 실패하며 [catch] 의 $error.details.state·failure 로 사정을 읽는다. cancel: 어댑터가 확인한 사실만 — state 로 읽는다(cancelled=멈춤 확인, cancel_requested=요청만 남음). 이미 끝난 작업은 실패가 아니라 그 종료 투영을 값으로 돌려준다(state: succeeded 면 result 도 있다). 살아 있는데 취소를 지원하지 않는 종류(위임·렌더)만 거절되며 [catch] 의 $error.details.state 가 현재 상태다. script 백그라운드 작업은 취소된다. 작업을 시작한 낱말을 다시 부르지 말 것 — 접수증으로 이어받는다.'
         group: system
         target_key: op
         router: system
@@ -3778,6 +3781,7 @@ nodes:
               principal:
               - owner
               human_confirm: true
+              exists: launcher_ops:project_exists
         fixture: '[self:project]{op: "list"}'
         description: 런처 프로젝트 생애주기 (op 분기). list/templates/create/rename/copy/move(폴더로)/trash(휴지통)/delete(영구, 사람 승인). 주인 전용.
         target_description: list·templates — 파라미터 없음. create — name 필수, template(기본 "기본")·parent_folder 선택. rename — project_id+new_name. copy — project_id(+new_name·parent_folder). move — project_id+folder_id(없으면 폴더 밖으로). trash — project_id(휴지통, 복구는 [self:trash]). delete — project_id, 영구 삭제라 사람 승인 토큰 필요.
@@ -6142,8 +6146,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-10-06'
-          impl: 67ce10e12f8fecd4
+          at: '2026-10-07'
+          impl: 73262440cdcfcf1f
         target_key: path
         aliases:
           offset:
@@ -6155,8 +6159,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-10-06'
-          impl: 67ce10e12f8fecd4
+          at: '2026-10-07'
+          impl: 73262440cdcfcf1f
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6232,8 +6236,8 @@ nodes:
           content: $content
         member_transform: member_documents:write
         path_audited:
-          at: '2026-10-06'
-          impl: 67ce10e12f8fecd4
+          at: '2026-10-07'
+          impl: 73262440cdcfcf1f
         target_key: path
       list:
         callable_contract:
@@ -6848,8 +6852,8 @@ nodes:
         guides:
         - document_edit.md
       workspace:
-        description: 범용 작업 공간 — 문서(TXT/MD/HTML/DOCX/PDF/HWP)·스프레드시트·코딩(git 저장소)을 같은 계약으로 열기·스냅샷·읽기·제안·적용·저장·버전·복구. 종류는 자료가 정하고(resource 하나), 세션 배관은 몸이 숨긴다. 접수(queued)는 완료가 아니다.
-        target_description: 'op — open: path(파일 또는 git 폴더)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩 과제 목표) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}; snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement → proposal. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 검토·승인·커밋 반영(verify=검증 명령 선택). export: filename 같은 형식 사본. versions/restore(revision)/close/capabilities/recover. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다.'
+        description: 범용 작업 공간 — 문서(TXT/MD/HTML/DOCX/PDF/HWP)·스프레드시트·코딩(프로젝트 폴더)을 같은 계약으로 열기·스냅샷·읽기·제안·적용·저장·버전·복구. 종류는 자료가 정하고(resource 하나), 세션 배관은 몸이 숨긴다. 접수(queued)는 완료가 아니다.
+        target_description: 'op — open: path(파일 또는 프로젝트 폴더 — git 이 없으면 조용히 init)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩: 목표 문서가 없을 때 「무엇을 만드나」 로 틀을 만든다) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{project:true}(목표 문서 경로·요약·실행 방법·변경 요약·활성 위임); resource 없이 kind:"code"+selector{projects:true} 는 프로젝트 목록(등록 + outputs/coding 하위 폴더); snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement → proposal. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 기록(폴더의 모든 변경을 한 커밋으로, 바뀐 것이 없으면 state=clean). export: filename 같은 형식 사본. versions/restore(revision — 코딩은 되돌리기 전 상태를 먼저 기록하고 path 로 파일 하나만 되돌릴 수도)/close/capabilities/recover. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다.'
         returns: items
         side_effect: true
         exempt: 실제 파일·저장소 경로 필요 — 임시 작업 공간 회귀(test_workspace_sessions)로 검증
@@ -6893,13 +6897,13 @@ nodes:
           values:
             open: 파일·git 폴더를 작업 공간에 등록(종류 자동) — resource·capabilities·세션 상태
             snapshot: 지금 초안·저장본의 고정 스냅샷(시트는 편집창 엔진 응답 대기, queued 가능)
-            read: selector 로 읽기 — 문자 범위·시트 범위·파일 줄 범위·diff·파일 목록, 사무 문서는 읽기 투영
+            read: selector 로 읽기 — 문자·시트 범위, 파일 줄·diff·목록·프로젝트(kind:code+projects=목록), 사무는 투영
             propose: 스냅샷에 고정한 변경 제안(문서 교체문·시트 값/수식·코딩 파일 본문)
             apply: 제안을 초안에 적용(작성 창 세션 보호, 시트는 편집기 접수)
-            save: 기대 버전 확인 뒤 원본 저장 / 코딩은 검토·승인·커밋 반영(message 필수)
+            save: 기대 버전 확인 뒤 원본 저장 / 코딩은 기록 — 모든 변경을 한 커밋으로(message 필수)
             export: 같은 형식의 새 사본 저장
-            versions: 저장 버전·복구 초안 목록(코딩은 커밋 이력)
-            restore: 선택 버전을 초안으로 복구
+            versions: 저장 버전·복구 초안 목록(코딩은 기록(커밋) 이력)
+            restore: 선택 버전을 초안으로 복구(코딩은 그 기록으로 되돌리기 — path 로 파일 하나만도)
             close: 저장 완료된 작성 세션 닫기
             capabilities: 자료의 실제 지원·엔진·미지원 사유
             recover: 끊긴 원본 저장 결과를 재쓰기 없이 회수
@@ -7020,8 +7024,8 @@ nodes:
             - read_external
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-10-06'
-          impl: 67ce10e12f8fecd4
+          at: '2026-10-07'
+          impl: 73262440cdcfcf1f
         pipe_in: true
         lands_on: body
         limb_op:

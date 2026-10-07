@@ -1,13 +1,16 @@
-"""소유자 전용 코딩 앱 API. 경로는 등록 저장소·과제 ID에서 해소한다."""
+"""코딩 앱의 엔진 I/O — 프로젝트 명령 실행(시작·출력 스트림·중지)만 남았다 (2026-10-07).
+
+화면의 나머지(프로젝트 목록·열기·파일·기록·되돌리기)는 선언(data/instruments/coding.yaml)과 코드 엔진이
+`[self:workspace]` 로 부른다 — 여기는 선언이 부르지 않는 길이다(문서 앱의 `/documents/engine/*` 과 같은 기준).
+AI 코딩은 `[others:delegate]{scope:"system", role:"coding"}` 이라 HTTP 가 없다.
+"""
 from functools import lru_cache
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from coding_git import CodingConflict, untracked
-from coding_runs import CodingRuns, choices
-from coding_workspace import CodingWorkspace
+from coding_git import CodingConflict
 
 
 def owner(request: Request):
@@ -27,7 +30,8 @@ router = APIRouter(prefix="/coding", tags=["coding"], dependencies=[Depends(owne
 
 @lru_cache(maxsize=1)
 def service():
-    return CodingWorkspace()
+    from coding_projects import CodingProjects
+    return CodingProjects()
 
 
 def invoke(function, *args, **kwargs):
@@ -35,120 +39,36 @@ def invoke(function, *args, **kwargs):
         return function(*args, **kwargs)
     except CodingConflict as exc:
         raise HTTPException(409, str(exc)) from exc
-    except (ValueError, OSError) as exc:
+    except (ValueError, OSError, PermissionError) as exc:
         raise HTTPException(400, str(exc)) from exc
 
 
-class RepositoryRequest(BaseModel):
-    path: str = Field(min_length=1, max_length=4096)
-
-
-class TaskRequest(BaseModel):
-    repository_id: str
-    goal: str = Field(min_length=1, max_length=1500)
-
-
 class RunRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=30000)
-    executor: str = "system"
-    command_id: str = Field(min_length=1, max_length=128)
-    selection: dict | None = None
+    command: str = Field(min_length=1, max_length=4000)
+    serve: bool = False   # 서버형 실행(포트를 연다) — 샌드박스가 로컬 네트워크를 허용한다
 
 
-class CommandRequest(BaseModel):
-    command: str = Field(min_length=1, max_length=10000)
-    command_id: str = Field(min_length=1, max_length=128)
-
-
-class SaveRequest(BaseModel):
-    path: str
-    content: str
-    expected: str | None
-
-
-class ReviewRequest(BaseModel):
-    selected: list[str] = Field(default_factory=list)
-
-
-class ApprovalRequest(BaseModel):
-    review_id: str
-    fingerprint: str
-
-
-class ApplyRequest(ApprovalRequest):
-    command_id: str = Field(min_length=1, max_length=128)
-    message: str = Field(min_length=1, max_length=1000)
-
-
-@router.get("/state")
-def state():
+@router.post("/projects/{resource}/run")
+def start_run(resource: str, body: RunRequest):
     app = service()
-    return {"repositories": app.store.list("repository"), "tasks": app.store.list("task"), "executors": choices()}
+    row = invoke(app.project, resource)
+    rec = invoke(app.run, row, body.command, body.serve)
+    import task_receipts
+    return task_receipts.receipt("coding_run", rec["id"], owner=row["id"], state=task_receipts.RUNNING, run=rec)
 
 
-@router.post("/repositories")
-def open_repository(body: RepositoryRequest):
-    return invoke(service().open_repository, body.path)
-
-
-@router.post("/tasks")
-def create_task(body: TaskRequest):
-    return invoke(service().create_task, body.repository_id, body.goal)
-
-
-@router.get("/tasks/{task_id}")
-def task_detail(task_id: str):
+@router.get("/projects/{resource}/runs")
+def latest_run(resource: str):
     app = service()
-    task = invoke(app.store.get, "task", task_id)
-    operation = invoke(app.store.get, "apply", task["apply_id"]) if task.get("apply_id") else None
-    return {"task": task, "files": invoke(app.files, task_id), "untracked": untracked(task["workspace"]),
-            "runs": [r for r in app.store.list("run") if r["task_id"] == task_id],
-            "review": app.store.get("review", task["review_id"]) if task.get("review_id") else None,
-            "apply": operation, "pursuit": app.ledger.get(task["pursuit_id"])}
+    row = invoke(app.project, resource)
+    return {"run": app.latest_run(row)}
 
 
-@router.get("/tasks/{task_id}/events")
-def events(task_id: str, after: int = Query(0, ge=0), limit: int = Query(200, ge=1, le=1000)):
-    invoke(service().store.get, "task", task_id)
-    items = service().store.events(task_id, after, limit)
-    return {"items": items, "next": items[-1]["sequence"] if items else after, "has_more": len(items) == limit}
+@router.get("/runs/{run_id}")
+def run_output(run_id: str, offset: int = Query(0, ge=0), limit: int = Query(200000, ge=1, le=1000000)):
+    return invoke(service().output, run_id, offset, limit)
 
 
-@router.post("/tasks/{task_id}/runs")
-def run(task_id: str, body: RunRequest):
-    return invoke(CodingRuns(service()).start, task_id, body.message, body.executor, body.command_id, body.selection)
-
-
-@router.post("/tasks/{task_id}/verify")
-def verify(task_id: str, body: CommandRequest):
-    return invoke(CodingRuns(service()).start, task_id, "검증: " + body.command, "", body.command_id, command=body.command)
-
-
-@router.post("/tasks/{task_id}/cancel")
-def cancel(task_id: str):
-    return invoke(CodingRuns(service()).cancel, task_id)
-
-
-@router.get("/tasks/{task_id}/file")
-def read_file(task_id: str, path: str):
-    return invoke(service().read_file, task_id, path)
-
-
-@router.put("/tasks/{task_id}/file")
-def save_file(task_id: str, body: SaveRequest):
-    return invoke(service().save_file, task_id, body.path, body.content, body.expected)
-
-
-@router.post("/tasks/{task_id}/review")
-def review(task_id: str, body: ReviewRequest):
-    return invoke(service().review, task_id, body.selected)
-
-
-@router.post("/tasks/{task_id}/approve")
-def approve(task_id: str, body: ApprovalRequest):
-    return invoke(service().approve, task_id, body.review_id, body.fingerprint)
-
-
-@router.post("/tasks/{task_id}/apply")
-def apply(task_id: str, body: ApplyRequest):
-    return invoke(service().apply, task_id, body.review_id, body.fingerprint, body.command_id, body.message)
+@router.post("/runs/{run_id}/stop")
+def stop_run(run_id: str):
+    return invoke(service().stop, run_id)

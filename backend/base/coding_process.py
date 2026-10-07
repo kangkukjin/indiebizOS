@@ -35,7 +35,7 @@ def sandbox_command(command, workspace, runtime, *, local_network=False, externa
 
 
 class CodingProcesses:
-    def __init__(self, workspace, runtime, own_sandbox=False, on_spawn=None):
+    def __init__(self, workspace, runtime, own_sandbox=False, on_spawn=None, local_network=False):
         """own_sandbox: 실행자가 자기 명령을 같은 OS 샌드박스로 가두는 네이티브 CLI.
 
         macOS 는 샌드박스 안에서 샌드박스를 다시 걸 수 없다(sandbox_apply 거절) — 바깥을
@@ -44,6 +44,7 @@ class CodingProcesses:
         self.runtime = str(Path(runtime).resolve())
         Path(self.runtime).mkdir(parents=True, exist_ok=True)
         self.own_sandbox = own_sandbox
+        self.local_network = local_network   # 프로젝트 실행(개발 서버)은 포트를 연다
         self.on_spawn = on_spawn
         self.processes = []
         self.lock = threading.RLock()
@@ -58,7 +59,7 @@ class CodingProcesses:
                      and not k.startswith("INDIEBIZOS_") and not k.startswith("GIT_")}
             clean.update({"TMPDIR": self.runtime, "PYTHONDONTWRITEBYTECODE": "1"})
             if not self.own_sandbox:
-                command = sandbox_command(command, self.workspace, self.runtime)
+                command = sandbox_command(command, self.workspace, self.runtime, local_network=self.local_network)
             kwargs.pop("cwd", None)
             proc = subprocess.Popen(command, cwd=self.workspace, env=clean,
                                     start_new_session=True, **kwargs)

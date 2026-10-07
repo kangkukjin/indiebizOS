@@ -1,7 +1,7 @@
 # IBL — 언어와 실행 계약
 
 IBL의 현재 문법은 명시 값·함수·반복·실패를 한 구조로 다룬다.
-작성 교재는 [IBL 조합](../guides/ibl_composition.md), 상시 문법은
+작성 교재는 [IBL 조합](../guides/ibl_composition.md)(도구 결합·문서 읽기·재개는 [둘째 권](../guides/ibl_composition_tools.md)), 상시 문법은
 [실행기 교재](../common_prompts/fragments/12_ibl_only.md)다. 별도의 신판 소개를 읽어 문법을 선택하지 않는다.
 모델 도구의 새 코드는 현재 문법을 기본으로 실행한다. 기존 저장 원문·스케줄·직접 HTTP의
 호환 기본값은 유지하며, 새 저장 소스에는 `#!ibl edition=2`를 기록해 의미를 고정한다.
@@ -181,6 +181,8 @@ catch/finally는 실패 직전까지 재대입한 값을 읽는다. 기존 변�
 - `[if:Bool 식] { ... } [else] { ... }` — else 생략은 Unit.
 - `[case:식] { [when:식] {...} [when:식] {...} [else] {...} }` — 같은 값인 첫 가지.
 - `[try] {...} [catch] {...} [finally] {...}` — `$error`는 코드·종류·위치·부분 결과·증거를 가진 FailureView.
+  블록의 값은 마지막 문장이다(`$w = [try] { …; {칸: 값} } [catch] { {칸: 값} }`). `return`은 블록이 아니라 함수 전체를 끝낸다 —
+  대입 오른쪽 블록(`[try]`·`[if:]`·`[case:]`)의 모든 경로가 return이면 대입이 일어나지 않고 뒤 문장은 실행되지 않는다(검사 경고 BIND_RETURNS).
 - `[repeat:횟수] {...}`, `[repeat:while Bool 식] {...}`, `[repeat:until Bool 식] {...}`.
   i는 0부터 시작하며 while 조건과 본문은 현재 회차 번호를 읽는다. until은 본문 실행 후 조건을 검사한다.
   횟수 식은 바깥 범위에서 한 번 평가하고, 중첩 반복이 끝나면 바깥 i를 복원한다. repeat은 Unit이며 현재 프레임에 대입한다.
@@ -239,6 +241,7 @@ reuse는 두 실행에서 이 범위의 충돌을 함께 검사한다. 선언·�
 종류·등급을 대조하고, `human_confirm` 이면 **사람 승인 토큰**을 요구한다. 토큰은 `/ibl/approve`(사람 통로 — 런처 세션·로컬 브라우저 출처)가
 `approval_required.challenge` 에 대해 발급하며, challenge 는 주체·액션·op·**요청 지문(code+inputs)** 의 해시라 승인 뒤 내용을 바꾸면 맞지 않고,
 1회·120초다. 표면은 거절 봉투의 `approval_required` 를 보고 사람에게 묻고 같은 요청을 `approval` 과 함께 한 번 재전송한다 — 매니페스트 변경 없음.
+`exists: "모듈:함수"` 를 함께 선언하면 관문이 사람에게 묻기 **전에** 그 함수(원 인자)로 대상 존재를 확인한다 — 없는 대상은 승인을 묻지 않고 그 실패 봉투(`error_type: not_found`)로 거절한다(2026-10-07 28회차 L28-4, 첫 소비자 `self:switch`·`self:project` 의 delete).
 세 사실(누구인가 / 무엇이 허용됐나 / 사람이 이 변경을 승인했나)은 각각 principal·requires·토큰이 맡고 하나로 뭉개지 않는다.
 첫 소비자: `[self:package]{op: activate|deactivate, profile}`(owner + human_confirm). `requires` 구조는 빌드(`validate_requires`)가 검사한다.
 사람 통로는 셋이다(모두 토큰을 발급만 하고 소비는 관문): `/ibl/approve`(표면 왕복), 조종실 HTTP `/vocabulary/{id}/activation`(사람 표면 증명 뒤 같은 낱말을
@@ -267,17 +270,20 @@ reuse는 두 실행에서 이 범위의 충돌을 함께 검사한다. 선언·�
 신문 발행·강의 렌더·노트북 색인·시트 엔진 작업) / **티켓**(`ticket`·`/ibl/recover`, HTTP 연결 복구). 이 절은 둘째의 계약이다.
 
 **접수증(통화 1종)** — 긴 작업을 시작하는 낱말은 즉시 이 모양을 돌려준다. 접수는 완료가 아니다:
-`{success: true, accepted: true, task_ref: {kind, task_id[, owner]}, state: "queued"|"running"[, status_url], …}`.
+`{success: true, accepted: true, task_ref: {kind, task_id[, owner]}, state: "queued"|"running", accepted_at[, status_url], …}`.
 옛 키(`job_id`·`queued`·`status`)는 호환으로 남지만 **읽는 열쇠는 `task_ref`** 다. 종류(kind)는 몸의 명사 — `delegation`(owner=system|프로젝트)·
 `script`·`guestpc`·`newspaper`·`lecture_video`·`notebook_source`·`sheet_op`(owner=자료 id).
 
 **읽는 낱말 하나** — `[self:task]{op: status|wait|cancel, ref: $r.task_ref, timeout}`. 접수증 통째·`task_ref`·`"kind:id"` 문자열 전부 ref 로 받는다.
-- `status` → 투영 `{task_ref, state, terminal, timed_out, result(succeeded 일 때만 값), failure(작업의 실패 사유), progress}` — **칸은 항상 같다**(선언된 닫힌 Record, 2026-10-07).
+- `status` → 투영 `{task_ref, state, terminal, timed_out, result(succeeded 일 때만 값), failure(작업의 실패 사유), progress, accepted_at, elapsed_s}` — **칸은 항상 같다**(선언된 닫힌 Record, 2026-10-07).
+  `accepted_at`·`elapsed_s` 는 **접수 기준 시계**(접수 시각, 접수부터 지금·끝났으면 종료까지의 초. 어댑터가 모르면 null) — `wait` 의 `timeout` 은 그 호출이 기다린 시간이라, 접수와 대기가 다른 프로그램이면 "접수 후 N초"는 `elapsed_s` 로 센다.
   실패한 작업도 값으로 답한다. `error` 는 투영의 칸이 아니라 이 낱말 호출의 실패(모르는 작업·기다린 작업의 실패)에만 실리고, 그때 투영 칸은 `$error.details` 로 읽힌다.
 - `wait` → 종료 상태까지 유한 대기(기본 60초·상한 240초) 뒤 투영. **시간 초과는 실패가 아니다** — `timed_out: true` 와 현재 상태를 **값으로** 돌려주고(프로그램은 계속된다)
   같은 ref 로 다시 기다린다. `$r = [self:task]{op: "wait", ref: $receipt.task_ref}` 뒤 `$r.result` 를 다음 낱말에 넘긴다 — 화면 진행률이 아니라
   **값으로 잇는 것**이 이 낱말의 존재 이유다.
-- `cancel` → 어댑터가 확인한 사실만: 요청을 남겼으면 `cancel_requested`, 되돌렸으면 `cancelled`, 미지원 종류는 현재 상태와 함께 거절.
+- `cancel` → 어댑터가 확인한 사실만: 요청을 남겼으면 `cancel_requested`, 멈춘 것을 확인했으면 `cancelled`. **이미 끝난 작업은 값**(종료 투영 그대로 —
+  작업의 사정이지 호출의 실패가 아니다, 2026-10-07 긴문장 27회차). 살아 있는데 취소를 지원하지 않는 종류만 현재 상태와 함께 거절(`$error.details.state`).
+  지원 종류: `script`(러너가 표식을 보고 스크립트와 자손을 끝낸 뒤 `cancelled` 기록)·`guestpc`.
 
 **상태 어휘(한 벌)**: `queued · running · waiting_children · cancel_requested · succeeded · failed · cancelled · interrupted · unknown`.
 `timeout`(대기자의 사정)≠`failed`(작업의 사정) · `cancel_requested`≠`cancelled` · `interrupted`(실행자가 종료 기록 없이 사라짐)≠`failed` ·
@@ -286,7 +292,7 @@ reuse는 두 실행에서 이 범위의 충돌을 함께 검사한다. 선언·�
 **어댑터 뒤의 실행기** — 저장소는 각자 그대로(`backend/base/task_receipts` 는 통화·상태 어휘·등록부만). 등록은 두 길: 코드(몸의 명사 —
 위임은 `routing_system.register_all` 주입) / 데이터(사전 — 패키지 `ibl_actions.yaml` 최상위 `task_kinds: {kind: "모듈:함수"}`, 모르는 kind 를
 처음 만나면 설치 패키지에서 적재; `<함수>_cancel` 이 있으면 취소 어댑터). 잠든 패키지의 작업은 `unknown`.
-아직 접수증이 아닌 것(다음 차수): 사진·PC 스캔(HTTP 전용 동기 경로)·`scope: system` 위임(시스템 AI 가 작업 id 를 접수 시점에 만들지 않음)·
+아직 접수증이 아닌 것(다음 차수): 사진·PC 스캔(HTTP 전용 동기 경로)·
 표면 `await:` 선언(접수증이면 진행률·취소·완료 재조회 — 렌더러 2곳의 폴링 코드 은퇴는 그때).
 
 ## 실행 증거와 값 전송
@@ -823,7 +829,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 ```
 
 - view 프리미티브 16종: metric / kv / kv_list / card_list / image_grid / sparkline / list_action / thread / form / editable_list / map / calendar / group / blocks / media_player / engine — media_player=오디오 플레이어(items의 src 필드=파일 절대경로/URL → HTML5 `<audio>`, 백엔드 `/launcher/file` 서빙 · 원격/폰 파리티), card_list=+item_click 드릴·탭·compose, image_grid=+button 행 버튼(label/action/confirm/refresh — list_action button 과 같은 어휘, 사진 빼기 등), thread=채팅 버블+status+item_button(본문이 match 정규식과 일치하는 항목에만 붙는 선언형 버튼 — label/action/refresh, 캡처 그룹은 `{match1}..{matchN}` 필드로 액션 템플릿에 공급. 계약은 매니페스트 데이터 — 예: 게시판 창고 소개의 창고이웃 등록), form=편집 필드+저장, editable_list=행 CRUD, map=leaflet 지도, calendar=월 그리드, group=파티션 콤비네이터(`by` 키 템플릿으로 items를 나눠 그룹마다 내부 `view:` 재귀 렌더 — table:groupby(집계)와 달리 멤버 유지, 뷰-계층의 groupby), blocks=**문서 IR 렌더**(heading/paragraph/list/table/quote/code/divider/image 블록 배열을 문서로 — `[self:read]{blocks:true}`·`[table:structure]` 출력 직결. 표현 언어 층위 조항의 "정적 표현 원자 공유": 페이로드 IR의 읽기 전용 부분집합이 표면 언어에도 그대로 옴).
-- **engine 뷰 + selection/saved 이벤트(2026-10-05, [앱 구성 재계획](../../docs/APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md) §3-c):** `type: engine` 은 외부 편집 엔진 표면을 **작업 공간 자료**(`ref: '{data.resource}'` — `[self:workspace]{op:"open"}` 의 반환)로 바인딩한다. 어떤 엔진(ONLYOFFICE·RHWP·원문 textarea·시트)을 띄울지는 자료의 capabilities 가 정하고 선언은 모른다. `'on': {selection: …, saved: …}` 로 사용자 조작을 흘린다 — selection(선택 고정: `$sel` JSON selector·`$start/$end/$text`·`$sheet/$range`·시트는 `$table`(선택 값 2차원, 10,000셀 상한)·`$text`(같은 범위 TSV)·`$resource/$revision`), saved(원본 저장: `$resource/$revision`). 템플릿이 `keep` 이면 재조회 없이 $변수로만 남기고 이후 ai_dock·버튼·폼 액션이 쓴다(ai_dock 의 action 이 `$sel` 을 받는 길). engine 뷰는 `ai_dock: {action, modes, placeholder}` 를 직접 가질 수 있다 — 캔버스 아래 독이 같은 페이로드(`$text` 는 선택, 없으면 글 전체)와 `$dock` 을 넘기고, 돌아온 본문은 엔진이 사람의 편집으로 캔버스에 넣는다(원문 엔진). 시트 엔진(2026-10-07, [스프레드시트 앱 재설계](../../docs/SPREADSHEET_APP_ON_IBL_PLAN_2026_10_07.md))은 같은 독을 엑셀의 Copilot 자리(오른쪽 작업창)에 그리고, 값·수식 2차원이 돌아오면 바뀌는 셀을 미리보기로 보인 뒤 반영한다 — 기본 엔진은 브라우저 안 격자(Univer, 서버 없음), 차트·피벗·그림이 있는 통합문서만 ONLYOFFICE. 승격 4기준: escape 3개(문서·한글·시트 편집기) 은퇴 ✓ · 통화(resource) 소비 ✓ · 3표면(원격·폰은 열람 강등) ✓ · 레이아웃 아님 ✓. 코딩 작업 공간은 엔진 표면이 없다(blocks 로 diff).
+- **engine 뷰 + selection/saved 이벤트(2026-10-05, [앱 구성 재계획](../../docs/APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md) §3-c):** `type: engine` 은 외부 편집 엔진 표면을 **작업 공간 자료**(`ref: '{data.resource}'` — `[self:workspace]{op:"open"}` 의 반환)로 바인딩한다. 어떤 엔진(ONLYOFFICE·RHWP·원문 textarea·시트)을 띄울지는 자료의 capabilities 가 정하고 선언은 모른다. `'on': {selection: …, saved: …}` 로 사용자 조작을 흘린다 — selection(선택 고정: `$sel` JSON selector·`$start/$end/$text`·`$sheet/$range`·시트는 `$table`(선택 값 2차원, 10,000셀 상한)·`$text`(같은 범위 TSV)·`$resource/$revision`), saved(원본 저장: `$resource/$revision`). 템플릿이 `keep` 이면 재조회 없이 $변수로만 남기고 이후 ai_dock·버튼·폼 액션이 쓴다(ai_dock 의 action 이 `$sel` 을 받는 길). engine 뷰는 `ai_dock: {action, modes, placeholder}` 를 직접 가질 수 있다 — 캔버스 아래 독이 같은 페이로드(`$text` 는 선택, 없으면 글 전체)와 `$dock` 을 넘기고, 돌아온 본문은 엔진이 사람의 편집으로 캔버스에 넣는다(원문 엔진). 시트 엔진(2026-10-07, [스프레드시트 앱 재설계](../../docs/SPREADSHEET_APP_ON_IBL_PLAN_2026_10_07.md))은 같은 독을 엑셀의 Copilot 자리(오른쪽 작업창)에 그리고, 값·수식 2차원이 돌아오면 바뀌는 셀을 미리보기로 보인 뒤 반영한다 — 기본 엔진은 브라우저 안 격자(Univer, 서버 없음), 차트·피벗·그림이 있는 통합문서만 ONLYOFFICE. 승격 4기준: escape 3개(문서·한글·시트 편집기) 은퇴 ✓ · 통화(resource) 소비 ✓ · 3표면(원격·폰은 열람 강등) ✓ · 레이아웃 아님 ✓. 코드 엔진(2026-10-07, [코딩 앱 재설계](../../docs/CODING_APP_ON_IBL_PLAN_2026_10_07.md))은 코딩 프로젝트(폴더 하나)를 문서처럼 연다 — 상단 탭 셋(목표 문서·코드 파일·실행), 목표 문서 캔버스 아래 같은 독. AI 코딩은 엔진이 `[others:delegate]{scope:"system", role:"coding"}` 한 문장으로 실행 에이전트에게 맡기고 접수증을 `[self:task]` 로 지켜본다; diff·도구 카드·승인 단추는 없고 기록(save=커밋)·되돌리기(restore)가 안전이다.
 - form 필드 11종: text / select / toggle / textarea / images / date / time / datetime / recurrence / folder / files
 - ★위 두 어휘 줄은 빌드의 **뷰-어휘 문서-동기 가드**가 코드 선언(`APP_VIEW_TYPES`/`APP_FORM_FIELD_TYPES`)과 자동 대조 — `new_action_checklist.md`의 같은 줄과 함께, 뷰 어휘 변경 시 두 문서를 같이 고쳐야 빌드 통과.
 - 표시 템플릿 `{path|filter}` — 필터: round/num/abs/arrow/`opt:앞,뒤`/`trunc:N`. 드릴 응답엔 클릭 행이 `_item`으로 주입.

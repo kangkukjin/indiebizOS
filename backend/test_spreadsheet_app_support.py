@@ -5,6 +5,7 @@
 AI 작업창([table:ai])은 시험이 준 함수가 values 2차원으로 답한다. 격자 I/O·초안·저장·스냅샷·제안 적용은 진짜 /spreadsheets 경로가 받는다.
 IBL 쪽 계약([self:workspace])은 test_workspace_sessions 가 따로 지킨다.
 """
+import pytest
 import io
 from pathlib import Path
 
@@ -88,3 +89,7 @@ def test_stub_follows_the_declared_modes(tmp_path):
     assert proposal["value"]["items"][0]["values"] == [[1, "=A1*2"]]
     missing = client.post("/ibl/execute", json={"code": opener["action"], "inputs": {"path": str(tmp_path / "없음.xlsx")}, "edition": 2}).json()
     assert "error" in missing
+
+
+if __name__ == "__main__":
+    raise SystemExit(pytest.main([__file__]))

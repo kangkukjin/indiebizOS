@@ -1,4 +1,4 @@
-import { openPhoto, openPCManager, openLecture, openCoding, openExternalLink } from '../lib/surface-navigation';
+import { openPhoto, openPCManager, openLecture, openExternalLink } from '../lib/surface-navigation';
 /**
  * ActionDesktop — 런처의 "앱" 표면 (앱모드)
  *
@@ -71,7 +71,7 @@ const STATIC_DOMAINS: Domain[] = [
     ],
   },
   { id: 'lecture', icon: '🎓', label: '강의 만들기', onOpen: () => openLecture(), instruments: [] },
-  { id: 'coding', icon: '💻', label: '코딩', onOpen: () => openCoding(), instruments: [] },
+  // 코딩 앱 = 매니페스트 계기 `coding`(data/instruments/coding.yaml — 옛 코딩 창을 흡수, 2026-10-07). 같은 id 라 저장된 자리를 그대로 쓴다. 단독 창 #/coding 도 같은 계기.
   // 스프레드시트 앱 = 매니페스트 계기 `spreadsheet`(data/instruments/spreadsheet.yaml — 옛 시트 창을 흡수, 2026-10-07). 단독 창 #/spreadsheets 도 같은 계기.
   // 문서 앱 = 매니페스트 계기 `document`(data/instruments/document.yaml — 빈노트와 옛 문서 창을 흡수, 2026-10-06).
   // 단독 창 경로(#/documents)는 같은 계기를 한 창에 띄운다(DocumentApp.tsx).

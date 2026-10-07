@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코딩 앱 — 프로젝트 목업 (2026-10-07)</title>
+<style>
+  :root { --bg:#fafaf9; --panel:#fff; --line:#e7e5e4; --line2:#d6d3d1; --text:#1c1917; --muted:#78716c; --accent:#0f766e; --accent-light:#ccfbf1; --mono:ui-monospace,"SF Mono",Menlo,monospace; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--text); font:14px/1.5 "Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",system-ui,sans-serif; }
+  .screen { display:none; height:100vh; flex-direction:column; }
+  .screen.on { display:flex; }
+  .top { height:52px; display:flex; align-items:center; gap:12px; padding:0 20px; background:var(--panel); border-bottom:1px solid var(--line); }
+  .top .title { font-weight:700; font-size:15px; display:flex; align-items:center; gap:8px; }
+  .top .spacer { flex:1; }
+  .btn { height:32px; padding:0 14px; border:1px solid var(--line2); border-radius:8px; background:#fff; font-size:13px; font-weight:500; display:inline-flex; align-items:center; gap:6px; }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn.ghost { border-color:transparent; color:var(--muted); }
+  .search { height:32px; width:260px; border:1px solid var(--line2); border-radius:8px; padding:0 12px; font-size:13px; }
+  /* 첫 화면 */
+  .grid { padding:24px 28px; display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; min-height:128px; display:flex; flex-direction:column; gap:6px; }
+  .card:hover { border-color:var(--accent); }
+  .card .ico { font-size:26px; }
+  .card .name { font-weight:600; font-size:14.5px; }
+  .card .desc { color:#57534e; font-size:12.5px; line-height:1.4; flex:1; }
+  .card .meta { display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--muted); }
+  .chip { display:inline-flex; align-items:center; gap:5px; padding:1px 8px; border-radius:10px; font-size:11px; border:1px solid var(--line2); background:#fff; }
+  .chip.ai { border-color:var(--accent); color:var(--accent); background:var(--accent-light); }
+  .chip.run { border-color:#7dd3fc; color:#0369a1; background:#e0f2fe; }
+  .dot { width:7px; height:7px; border-radius:50%; background:currentColor; display:inline-block; }
+  .card.new { border-style:dashed; align-items:center; justify-content:center; color:var(--muted); gap:8px; }
+  .card.new .ico { color:var(--accent); }
+  .sect { padding:18px 28px 0; font-size:12px; color:var(--muted); }
+  /* 프로젝트 화면 */
+  .tabs { display:flex; gap:4px; background:#f5f5f4; border:1px solid var(--line); border-radius:9px; padding:3px; }
+  .tabs .t { padding:5px 16px; border-radius:7px; font-size:13px; color:#44403c; cursor:pointer; }
+  .tabs .t.on { background:#fff; color:var(--accent); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .pane { display:none; flex:1; overflow:hidden; }
+  .pane.on { display:flex; }
+  /* 목표 문서 */
+  .goal { flex:1; display:flex; flex-direction:column; align-items:center; overflow:auto; padding:28px 20px 0; }
+  .canvas { width:min(820px, 100%); flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px 12px 0 0; padding:36px 48px; font-size:14.5px; line-height:1.7; }
+  .canvas h1 { font-size:22px; margin:0 0 14px; }
+  .canvas h2 { font-size:15px; margin:22px 0 6px; color:#292524; }
+  .canvas p, .canvas li { margin:0 0 4px; color:#292524; }
+  .canvas .sel { background:#ccfbf1; }
+  .canvas .log { color:var(--muted); font-size:13px; }
+  .dock { width:min(820px, 100%); background:var(--panel); border:1px solid var(--line); border-top:0; border-radius:0 0 12px 12px; padding:10px 14px 12px; display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+  .dock .row { display:flex; gap:8px; align-items:center; }
+  .dock input { flex:1; height:36px; border:1px solid var(--line2); border-radius:8px; padding:0 12px; font-size:13.5px; }
+  .dock .hint { font-size:11.5px; color:var(--muted); }
+  .ai-reply { border:1px solid var(--line2); border-left:3px solid var(--accent); border-radius:8px; padding:8px 12px; font-size:13px; background:#fafaf9; }
+  .ai-reply .acts { display:flex; gap:6px; margin-top:6px; }
+  .mini { height:24px; padding:0 9px; border:1px solid var(--line2); border-radius:6px; background:#fff; font-size:12px; display:inline-flex; align-items:center; }
+  .mini.acc { border-color:var(--accent); color:var(--accent); background:var(--accent-light); }
+  /* 코드 파일 */
+  .files { display:grid; grid-template-columns:240px 1fr; flex:1; }
+  .tree { background:var(--panel); border-right:1px solid var(--line); padding:12px 0; overflow:auto; font-size:13px; }
+  .tree .d { padding:4px 16px; color:#44403c; font-weight:600; }
+  .tree .f { padding:4px 16px 4px 32px; font-family:var(--mono); font-size:12px; color:#292524; }
+  .tree .f.on { background:#f0fdfa; color:var(--accent); }
+  .tree .f.new { color:var(--accent); }
+  .tree .f.new::after { content:" ● 새로"; font-size:10px; }
+  .src { display:flex; flex-direction:column; overflow:hidden; }
+  .src .bar { height:40px; display:flex; align-items:center; gap:10px; padding:0 16px; background:var(--panel); border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12.5px; }
+  .src .bar .spacer { flex:1; }
+  .src pre { margin:0; flex:1; padding:16px 20px; font:12.5px/1.6 var(--mono); overflow:auto; background:#fff; color:#1c1917; counter-reset:l; }
+  .src pre span.l { display:block; } .src pre span.l::before { counter-increment:l; content:counter(l); display:inline-block; width:34px; color:#a8a29e; text-align:right; margin-right:16px; }
+  /* 실행 */
+  .runpane { flex:1; display:flex; flex-direction:column; }
+  .runbar { height:48px; display:flex; align-items:center; gap:10px; padding:0 20px; background:var(--panel); border-bottom:1px solid var(--line); }
+  .runbar code { font-family:var(--mono); font-size:12.5px; background:#f5f5f4; padding:4px 8px; border-radius:6px; }
+  .runbody { flex:1; display:grid; grid-template-columns:1fr 1fr; }
+  .out { white-space:pre-wrap; background:#1c1917; color:#e7e5e4; font:12.5px/1.6 var(--mono); padding:16px 20px; overflow:auto; }
+  .out .ok { color:#86efac; } .out .dim { color:#a8a29e; }
+  .prev { background:#fff; border-left:1px solid var(--line); display:flex; flex-direction:column; }
+  .prev .url { height:34px; display:flex; align-items:center; gap:8px; padding:0 12px; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12px; color:var(--muted); }
+  .prev .page { flex:1; padding:24px; }
+  .fake { border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:12px; }
+  .fake .h { font-weight:700; margin-bottom:8px; }
+  .fake .bar { height:8px; background:#e7e5e4; border-radius:4px; margin:6px 0; }
+  .fake .bar.s { width:60%; }
+  .nav { position:fixed; right:12px; bottom:12px; display:flex; gap:6px; opacity:.9; }
+  .nav button { font-size:11px; padding:4px 8px; }
+</style>
+</head>
+<body>
+
+<!-- 첫 화면: 프로젝트 목록 -->
+<section class="screen on" id="s-list">
+  <div class="top">
+    <div class="title">💻 코딩</div>
+    <input class="search" placeholder="프로젝트 검색">
+    <span class="spacer"></span>
+    <button class="btn ghost">기존 폴더 가져오기</button>
+    <button class="btn primary">＋ 새 프로젝트</button>
+  </div>
+  <div class="sect">outputs/coding — 프로젝트마다 폴더 하나</div>
+  <div class="grid">
+    <div class="card new"><div class="ico">＋</div><div>새 프로젝트</div></div>
+    <div class="card"><div class="ico">📈</div><div class="name">kospi-board</div><div class="desc">코스피 종목 현황판. 상승은 빨강, 하락은 파랑. 매일 아침 자동 갱신.</div><div class="meta"><span class="chip ai"><span class="dot"></span>AI 작업 중</span><span>2분 전</span></div></div>
+    <div class="card"><div class="ico">🧾</div><div class="name">가계부-정리</div><div class="desc">은행 CSV 를 읽어 월별 지출을 분류하고 표로 정리한다.</div><div class="meta"><span class="chip run"><span class="dot"></span>실행 중</span><span>어제</span></div></div>
+    <div class="card"><div class="ico">🛒</div><div class="name">content-shop</div><div class="desc">콘텐츠 쇼핑몰 홈페이지. 결제 버튼 모바일 겹침 수정 필요.</div><div class="meta"><span>5일 전</span></div></div>
+    <div class="card"><div class="ico">📰</div><div class="name">뉴스-요약봇</div><div class="desc">관심 키워드 뉴스를 모아 아침 7시에 요약 메시지를 보낸다.</div><div class="meta"><span>2주 전</span></div></div>
+    <div class="card"><div class="ico">🎛️</div><div class="name">esp32-온도계</div><div class="desc">ESP32 온도 센서 값을 폰으로 보여 주는 작은 펌웨어.</div><div class="meta"><span>9월 20일</span></div></div>
+  </div>
+</section>
+
+<!-- 프로젝트 화면 -->
+<section class="screen" id="s-proj">
+  <div class="top">
+    <button class="btn ghost" onclick="show('s-list')">← 프로젝트</button>
+    <div class="title">📈 kospi-board</div>
+    <span class="spacer"></span>
+    <div class="tabs">
+      <div class="t on" data-p="p-goal" onclick="tab(this)">목표 문서</div>
+      <div class="t" data-p="p-files" onclick="tab(this)">코드 파일</div>
+      <div class="t" data-p="p-run" onclick="tab(this)">실행</div>
+    </div>
+    <span class="spacer"></span>
+    <span class="chip ai"><span class="dot"></span>AI 작업 중 · 3/5</span>
+    <button class="btn primary">목표대로 코딩</button>
+    <button class="btn ghost">⚙</button>
+  </div>
+
+  <!-- 목표 문서 탭 -->
+  <div class="pane on" id="p-goal">
+    <div class="goal">
+      <div class="canvas">
+        <h1>kospi-board — 코딩 목표</h1>
+        <h2>무엇을 만드나</h2>
+        <p>코스피 상위 50 종목의 현재가·등락률을 한 화면에 보여 주는 현황판. 브라우저에서 연다.</p>
+        <h2>꼭 되어야 하는 것</h2>
+        <ul>
+          <li>등락은 한국식 색 — 상승 빨강, 하락 파랑.</li>
+          <li>매일 아침 8시에 자동으로 데이터를 갱신한다.</li>
+          <li class="sel">종목을 누르면 최근 30일 차트가 열린다.</li>
+          <li>폰에서도 깨지지 않게.</li>
+        </ul>
+        <h2>안 해도 되는 것</h2>
+        <p>로그인, 알림, 매수·매도 기능.</p>
+        <h2>실행 방법</h2>
+        <p><code>python app.py</code> → http://localhost:5000</p>
+        <h2>진행 기록</h2>
+        <p class="log">10-07 10:40 AI — 현황판·색·자동 갱신 완료(app.py, static/board.js). 차트는 진행 중.</p>
+        <p class="log">10-06 — 프로젝트 만듦.</p>
+      </div>
+      <div class="dock">
+        <div class="ai-reply">선택한 항목을 목표에 이렇게 보탤게요: <b>"종목을 누르면 최근 30일 가격 차트가 열린다. 차트는 선 그래프, 기간 전환(1주·1달·3달) 포함."</b><div class="acts"><span class="mini acc">문서에 반영</span><span class="mini">다시</span><span class="mini">닫기</span></div></div>
+        <div class="row"><input value="차트에 기간 전환도 넣고 싶어"><button class="btn primary">보내기</button></div>
+        <div class="hint">선택한 부분이 있으면 그 부분을, 없으면 문서 전체를 AI 와 다듬습니다. 코딩은 "목표대로 코딩" 단추가 시작합니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 코드 파일 탭 -->
+  <div class="pane" id="p-files">
+    <div class="files">
+      <div class="tree">
+        <div class="d">📁 kospi-board</div>
+        <div class="f on">app.py</div>
+        <div class="f">fetch_prices.py</div>
+        <div class="f">requirements.txt</div>
+        <div class="d">📁 static</div>
+        <div class="f">board.js</div>
+        <div class="f new">chart.js</div>
+        <div class="f">style.css</div>
+        <div class="d">📁 templates</div>
+        <div class="f">index.html</div>
+        <div class="d">📄 목표.md</div>
+      </div>
+      <div class="src">
+        <div class="bar">app.py <span style="color:var(--muted)">· 48줄 · AI 가 10:40 수정</span><span class="spacer"></span><span class="mini">편집</span><span class="mini">이전 기록 보기</span><span class="mini">편집기로 열기</span></div>
+        <pre><span class="l">from flask import Flask, render_template, jsonify</span><span class="l">from fetch_prices import top50, history</span><span class="l"></span><span class="l">app = Flask(__name__)</span><span class="l"></span><span class="l">@app.route("/")</span><span class="l">def board():</span><span class="l">    return render_template("index.html", rows=top50())</span><span class="l"></span><span class="l">@app.route("/api/history/&lt;code&gt;")</span><span class="l">def api_history(code):</span><span class="l">    return jsonify(history(code, days=30))</span><span class="l"></span><span class="l">if __name__ == "__main__":</span><span class="l">    app.run(port=5000)</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- 실행 탭 -->
+  <div class="pane" id="p-run">
+    <div class="runpane">
+      <div class="runbar"><code>python app.py</code><button class="btn primary">▶ 실행</button><button class="btn">■ 중지</button><span class="chip run"><span class="dot"></span>실행 중 · 1분 12초</span><span class="spacer"></span><span class="chip">마지막 실행: 성공 · 10:41</span></div>
+      <div class="runbody">
+        <div class="out"><span class="dim">$ python app.py</span>
+ * Serving Flask app 'app'
+ * Running on http://127.0.0.1:5000
+<span class="ok">127.0.0.1 - - [07/Oct 10:42:03] "GET / HTTP/1.1" 200 -</span>
+<span class="ok">127.0.0.1 - - [07/Oct 10:42:03] "GET /static/board.js HTTP/1.1" 200 -</span>
+<span class="ok">127.0.0.1 - - [07/Oct 10:42:09] "GET /api/history/005930 HTTP/1.1" 200 -</span>
+<span class="dim">…</span></div>
+        <div class="prev"><div class="url">🌐 http://localhost:5000 <span style="margin-left:auto">새로 고침 · 새 창</span></div>
+          <div class="page"><div class="fake"><div class="h">코스피 상위 50</div><div class="bar"></div><div class="bar s"></div><div class="bar"></div><div class="bar s"></div></div><div class="fake"><div class="h">삼성전자 · 최근 30일</div><div class="bar"></div><div class="bar s"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="nav"><button onclick="show('s-list')">첫 화면</button><button onclick="show('s-proj');tabTo('p-goal')">목표</button><button onclick="show('s-proj');tabTo('p-files')">파일</button><button onclick="show('s-proj');tabTo('p-run')">실행</button></div>
+<script>
+  function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); }
+  function tabTo(p){ document.querySelectorAll('.tabs .t').forEach(t=>t.classList.toggle('on', t.dataset.p===p)); document.querySelectorAll('.pane').forEach(x=>x.classList.toggle('on', x.id===p)); }
+  function tab(el){ tabTo(el.dataset.p); }
+</script>
+</body>
+</html>

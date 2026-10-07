@@ -19,6 +19,7 @@ import { OfficeDocumentEditor } from '../OfficeDocumentEditor';
 import { HwpDocumentEditor } from '../HwpDocumentEditor';
 // 시트 엔진(Univer 격자)은 무겁다 — 시트를 여는 화면에서만 내려받는다(lazy).
 const SheetEngine = lazy(() => import('./sheet/SheetEngine').then((m) => ({ default: m.SheetEngine })));
+const CodeEngine = lazy(() => import('./code/CodeEngine').then((m) => ({ default: m.CodeEngine })));
 import './engine-editors.css';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -66,7 +67,8 @@ export function EnginePrim({ p, data, onViewEvent, vars, block }: {
     onViewEvent?.(on[event] || 'keep', { resource: ref, ...payload });
   }, [on, onViewEvent, ref]);
   if (!ref) return null;  // 열린 자료가 없으면 자리를 차지하지 않는다 — 같은 화면에 목록과 캔버스를 함께 선언할 수 있게(문서함의 폴더 탐색)
-  if (kind === 'code') return <p className="text-sm text-stone-400">코딩 작업 공간은 엔진 표면이 없습니다 — <code>blocks</code>(diff·파일)와 <code>selection</code> 으로 봅니다.</p>;
+  // 코딩: 프로젝트를 문서처럼 — 목표 문서·코드 파일·실행 탭 셋(generic/code/CodeEngine.tsx, 2026-10-07)
+  if (kind === 'code') return <Suspense fallback={<p className="text-sm text-stone-400">프로젝트를 여는 중…</p>}><CodeEngine id={ref} emit={emit} host={{ dock: p.ai_dock as Dock | undefined, vars, block }} /></Suspense>;
   // 시트: 엑셀 얼굴 + 격자 엔진(기본)/사무 엔진 — generic/sheet/SheetEngine.tsx (2026-10-07)
   if (kind === 'sheet') return <Suspense fallback={<p className="text-sm text-stone-400">격자 엔진을 내려받는 중…</p>}><SheetEngine id={ref} emit={emit} host={{ dock: p.ai_dock as Dock | undefined, vars, block, clientId: clientId(), holderAlive }} /></Suspense>;
   return <DocumentEngine id={ref} emit={emit} host={{ dock: p.ai_dock as Dock | undefined, vars, block }} />;

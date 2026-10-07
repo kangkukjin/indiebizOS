@@ -2,6 +2,7 @@
 task_kinds:
   script: "script_ops:task_status"
   sheet_op: "essentials_workspace:sheet_task_status"
+  coding_run: "essentials_workspace:coding_run_status"
 
 nodes:
   self:
@@ -137,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-06", impl: "67ce10e12f8fecd4"}  # 재감사 2026-10-06: 자작 관문이 턴 밖 사람 직접 호출(task 없음+origin user)을 세지 않음 — 관문은 권한 경계가 아니다, 회원 경로의 경로·권한 검사 불변
+        path_audited: {at: "2026-10-07", impl: "73262440cdcfcf1f"}  # 재감사 2026-10-07(코딩 앱): essentials_workspace 에 코딩 실행 접수증 어댑터·read 의 kind/selector 정규화 추가 — 작업 공간은 소유자 전용(_owner)이고 회원 경로(member_script 는 인계 args 전송뿐)의 경로·권한 검사 불변
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -149,7 +150,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-06", impl: "67ce10e12f8fecd4"}  # 재감사 2026-10-06: 자작 관문이 턴 밖 사람 직접 호출(task 없음+origin user)을 세지 않음 — 관문은 권한 경계가 아니다, 회원 경로의 경로·권한 검사 불변
+        path_audited: {at: "2026-10-07", impl: "73262440cdcfcf1f"}  # 재감사 2026-10-07(코딩 앱): essentials_workspace 에 코딩 실행 접수증 어댑터·read 의 kind/selector 정규화 추가 — 작업 공간은 소유자 전용(_owner)이고 회원 경로(member_script 는 인계 args 전송뿐)의 경로·권한 검사 불변
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -227,7 +228,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-06", impl: "67ce10e12f8fecd4"}  # 재감사 2026-10-06: 자작 관문이 턴 밖 사람 직접 호출(task 없음+origin user)을 세지 않음 — 관문은 권한 경계가 아니다, 회원 경로의 경로·권한 검사 불변
+        path_audited: {at: "2026-10-07", impl: "73262440cdcfcf1f"}  # 재감사 2026-10-07(코딩 앱): essentials_workspace 에 코딩 실행 접수증 어댑터·read 의 kind/selector 정규화 추가 — 작업 공간은 소유자 전용(_owner)이고 회원 경로(member_script 는 인계 args 전송뿐)의 경로·권한 검사 불변
         target_key: path
       list:
         callable_contract:
@@ -763,8 +764,8 @@ nodes:
         keywords: [워드, 문서수정, DOCX, 변경추적, 주석, 제안서, document]
         guides: [document_edit.md]
       workspace:
-        description: 범용 작업 공간 — 문서(TXT/MD/HTML/DOCX/PDF/HWP)·스프레드시트·코딩(git 저장소)을 같은 계약으로 열기·스냅샷·읽기·제안·적용·저장·버전·복구. 종류는 자료가 정하고(resource 하나), 세션 배관은 몸이 숨긴다. 접수(queued)는 완료가 아니다.
-        target_description: 'op — open: path(파일 또는 git 폴더)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩 과제 목표) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}; snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement → proposal. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 검토·승인·커밋 반영(verify=검증 명령 선택). export: filename 같은 형식 사본. versions/restore(revision)/close/capabilities/recover. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다.'
+        description: 범용 작업 공간 — 문서(TXT/MD/HTML/DOCX/PDF/HWP)·스프레드시트·코딩(프로젝트 폴더)을 같은 계약으로 열기·스냅샷·읽기·제안·적용·저장·버전·복구. 종류는 자료가 정하고(resource 하나), 세션 배관은 몸이 숨긴다. 접수(queued)는 완료가 아니다.
+        target_description: 'op — open: path(파일 또는 프로젝트 폴더 — git 이 없으면 조용히 init)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩: 목표 문서가 없을 때 「무엇을 만드나」 로 틀을 만든다) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{project:true}(목표 문서 경로·요약·실행 방법·변경 요약·활성 위임); resource 없이 kind:"code"+selector{projects:true} 는 프로젝트 목록(등록 + outputs/coding 하위 폴더); snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement → proposal. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 기록(폴더의 모든 변경을 한 커밋으로, 바뀐 것이 없으면 state=clean). export: filename 같은 형식 사본. versions/restore(revision — 코딩은 되돌리기 전 상태를 먼저 기록하고 path 로 파일 하나만 되돌릴 수도)/close/capabilities/recover. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다.'
         returns: items
         side_effect: true
         exempt: 실제 파일·저장소 경로 필요 — 임시 작업 공간 회귀(test_workspace_sessions)로 검증
@@ -799,13 +800,13 @@ nodes:
           values:
             open: 파일·git 폴더를 작업 공간에 등록(종류 자동) — resource·capabilities·세션 상태
             snapshot: 지금 초안·저장본의 고정 스냅샷(시트는 편집창 엔진 응답 대기, queued 가능)
-            read: selector 로 읽기 — 문자 범위·시트 범위·파일 줄 범위·diff·파일 목록, 사무 문서는 읽기 투영
+            read: selector 로 읽기 — 문자·시트 범위, 파일 줄·diff·목록·프로젝트(kind:code+projects=목록), 사무는 투영
             propose: 스냅샷에 고정한 변경 제안(문서 교체문·시트 값/수식·코딩 파일 본문)
             apply: 제안을 초안에 적용(작성 창 세션 보호, 시트는 편집기 접수)
-            save: 기대 버전 확인 뒤 원본 저장 / 코딩은 검토·승인·커밋 반영(message 필수)
+            save: 기대 버전 확인 뒤 원본 저장 / 코딩은 기록 — 모든 변경을 한 커밋으로(message 필수)
             export: 같은 형식의 새 사본 저장
-            versions: 저장 버전·복구 초안 목록(코딩은 커밋 이력)
-            restore: 선택 버전을 초안으로 복구
+            versions: 저장 버전·복구 초안 목록(코딩은 기록(커밋) 이력)
+            restore: 선택 버전을 초안으로 복구(코딩은 그 기록으로 되돌리기 — path 로 파일 하나만도)
             close: 저장 완료된 작성 세션 닫기
             capabilities: 자료의 실제 지원·엔진·미지원 사유
             recover: 끊긴 원본 저장 결과를 재쓰기 없이 회수
@@ -913,7 +914,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-06", impl: "67ce10e12f8fecd4"}  # 재감사 2026-10-06: 자작 관문이 턴 밖 사람 직접 호출(task 없음+origin user)을 세지 않음 — 관문은 권한 경계가 아니다, 회원 경로의 경로·권한 검사 불변
+        path_audited: {at: "2026-10-07", impl: "73262440cdcfcf1f"}  # 재감사 2026-10-07(코딩 앱): essentials_workspace 에 코딩 실행 접수증 어댑터·read 의 kind/selector 정규화 추가 — 작업 공간은 소유자 전용(_owner)이고 회원 경로(member_script 는 인계 args 전송뿐)의 경로·권한 검사 불변
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

@@ -29,6 +29,7 @@ export function ExcelFrame(p: FrameProps) {
   const [file, setFile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [nameBox, setNameBox] = useState('');
+  const [editingName, setEditingName] = useState(false);
   const [formula, setFormula] = useState('');
   const [editingFormula, setEditingFormula] = useState(false);
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
@@ -38,7 +39,10 @@ export function ExcelFrame(p: FrameProps) {
   const stats = engine?.loaded ? engine.stats() : null;
   const tabs = engine?.loaded ? engine.tabs() : [];
   const style = cell?.style || {};
-  useEffect(() => { if (!editingFormula) { setNameBox(sel ? sel.range : ''); setFormula(cell ? cell.formula : ''); } }, [p.tick, editingFormula]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!editingName && !editingFormula) setNameBox(sel ? sel.range : '');
+    if (!editingFormula) setFormula(cell ? cell.formula : '');
+  }, [p.tick, editingName, editingFormula]); // eslint-disable-line react-hooks/exhaustive-deps
   const act = (fn: (e: GridEngine) => void) => () => { if (engine?.loaded) fn(engine); };
   const B = ({ on, title, children, do: fn, disabled }: { on?: boolean; title: string; children: ReactNode; do: (e: GridEngine) => void; disabled?: boolean }) => (
     <button type="button" className={`xl-btn${on ? ' on' : ''}`} title={title} aria-label={title} aria-pressed={on} disabled={disabled || !engine?.loaded} onMouseDown={(e) => e.preventDefault()} onClick={act(fn)}>{children}</button>
@@ -159,6 +163,7 @@ export function ExcelFrame(p: FrameProps) {
 
       <div className="xl-fbar">
         <input className="xl-namebox" aria-label="이름 상자" value={nameBox} onChange={(e) => setNameBox(e.target.value)}
+          onFocus={() => setEditingName(true)} onBlur={() => setEditingName(false)}
           onKeyDown={(e) => { if (e.key === 'Enter') { engine?.goTo(nameBox); (e.target as HTMLInputElement).blur(); } }} />
         <span className="xl-fx">
           <button type="button" title="취소" aria-label="입력 취소" onClick={() => { setEditingFormula(false); setFormula(cell?.formula || ''); }}>✗</button>

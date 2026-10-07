@@ -76,7 +76,11 @@ export class GridEngine {
   onSheets(l: Listener) { this.sheetListeners.add(l); return () => { this.sheetListeners.delete(l); }; }
 
   /* ── 편집 중인 셀 확정(IME·수식 입력줄) — 포획·저장 전에 부른다 ── */
-  async settle() { if (this.wb?.isCellEditing()) await this.wb.endEditingAsync(true); }
+  async settle() {
+    if (this.wb?.isCellEditing()) await this.wb.endEditingAsync(true);
+    // 편집 확정과 수식 결과 반영은 별개다. 저장·스냅샷에 이전 계산값을 싣지 않는다.
+    await this.api.getFormula().onCalculationResultApplied(10000);
+  }
 
   /* ── 내보내기: grid.v1 ── */
   private arrayRanges(sheetId: string): Map<string, IRange> {

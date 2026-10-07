@@ -1,0 +1,184 @@
+[
+  {
+    "label": "sandbox",
+    "suites": [
+      {
+        "name": "pytest",
+        "errors": "27",
+        "failures": "58",
+        "skipped": "15",
+        "tests": "9338",
+        "time": "204.377",
+        "timestamp": "2026-10-07T16:01:20.629419+09:00",
+        "hostname": "Mac-mini.local"
+      }
+    ],
+    "failed": [
+      "backend.test_document_sheet_transit_2026_09_15::test_calculate_real_engine_caches_only",
+      "backend.test_document_sheet_transit_2026_09_15::test_calculate_formula_error_not_success",
+      "backend.test_imagination_round72_76_repairs::test_browser_document_embeds_local_image[pdf]",
+      "backend.test_imagination_round72_76_repairs::test_browser_document_embeds_local_image[png]",
+      "backend.test_repair_workspace_completion::test_local_server_works_but_live_api_connection_and_foreign_signal_do_not",
+      "backend.test_repair_workspace_completion::test_os_boundary_rejects_live_writes_and_allows_workspace[direct]",
+      "backend.test_repair_workspace_completion::test_os_boundary_rejects_live_writes_and_allows_workspace[child]",
+      "backend.test_repair_workspace_completion::test_os_boundary_rejects_live_writes_and_allows_workspace[symlink]",
+      "backend.test_repair_workspace_completion::test_os_boundary_rejects_live_writes_and_allows_workspace[git]",
+      "backend.test_repair_workspace_completion::test_os_boundary_rejects_live_writes_and_allows_workspace[ledger]",
+      "backend.test_repair_workspace_completion::test_os_boundary_rejects_live_writes_and_allows_workspace[hardlink]",
+      "backend.test_package_boundary_repairs::test_real_playwright_pdf_and_png",
+      "backend.test_repair_execution_capabilities::test_dependency_cache_writable_while_shared_package_is_protected",
+      "backend.test_repair_execution_capabilities::test_typescript_and_vite_build_in_candidate",
+      "backend.test_repair_execution_capabilities::test_electron_captures_persistent_image_and_preserves_outer_boundary",
+      "backend.test_tool_completion::test_actual_http_timeout_recovers_once_and_preserves_business_running",
+      "backend.test_restart_process::test_idle_anyio_and_resident_process_allow_restart_and_are_reaped",
+      "backend.test_restart_process::test_clock_correction_preserves_worker_and_child_ownership[-2]",
+      "backend.test_restart_process::test_clock_correction_preserves_worker_and_child_ownership[2]",
+      "backend.test_restart_process::test_real_timeout_drain_and_identical_request_after_controller_restart",
+      "backend.test_restart_process::test_real_worker_crash_reaps_orphan_tool_without_replay",
+      "backend.test_restart_process::test_real_auth_and_pid_reuse",
+      "backend.test_restart_process::test_real_controller_death_at_transition[CHECKING-before]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[CHECKING-after]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[DRAINING-before]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[DRAINING-after]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[STOPPING-before]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[STOPPING-after]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[STARTING-before]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[STARTING-after]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[ACTIVE-before]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[ACTIVE-after]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[RECOVERING-before]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[RECOVERING-after]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[FAILED-before]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[FAILED-after]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[STOPPED-before]",
+      "backend.test_restart_process::test_real_controller_death_at_transition[STOPPED-after]",
+      "backend.test_restart_process::test_real_bad_boot_rolls_back_only_known_bytes",
+      "backend.test_imagination_round81_completion::test_html_broken_image_is_observed_without_network",
+      "backend.test_episode4104_4105_repairs::test_report_tables_wrap_on_desktop_and_mobile",
+      "backend.test_episode_flow_persistence::test_clock_shift_does_not_cancel_live_completion_channel[-2]",
+      "backend.test_episode_flow_persistence::test_clock_shift_does_not_cancel_live_completion_channel[2]",
+      "backend.test_runtime_services::test_real_browser_transport_idle_and_process_receipt",
+      "backend.test_episode_owner_sweep::test_o9_live_body_probe_discriminates",
+      "backend.test_repair_receipt_flow::test_real_test_apply_and_completion_without_ai",
+      "backend.test_episode4279_4280_repairs::test_repair_command_route_reaches_same_workspace_and_records_real_check",
+      "backend.test_repair_receipt_flow::test_failed_test_preserved_and_identical_prepare_not_repeated",
+      "backend.test_task_receipts_2026_10_05::test_script_cancel_stops_the_runner_and_its_children",
+      "backend.test_repair_receipt_flow::test_test_that_mutates_candidate_cannot_be_reused_as_pass",
+      "backend.test_repair_capability_parity::test_registered_script_reads_candidate_and_keeps_live_unchanged",
+      "backend.test_repair_capability_parity::test_temporary_script_uses_candidate_runtime",
+      "backend.test_repair_capability_parity::test_model_settings_and_credentials_reach_child_without_copy",
+      "backend.test_repair_capability_parity::test_public_ibl_read_select_dedup_and_turn_script",
+      "backend.test_repair_capability_parity::test_registered_background_script_uses_candidate",
+      "backend.test_repair_bundle_recovery::test_code_and_package_declarations_apply_as_one_recoverable_bundle",
+      "backend.test_repair_bundle_recovery::test_package_write_edit_copy_move_delete_use_staging",
+      "backend.test_document_hwp::test_local_hwp_browser_roundtrip[hwp]",
+      "backend.test_document_hwp::test_local_hwp_browser_roundtrip[hwpx]",
+      "backend.test_repair_capability_parity::test_session_script_composes_in_repair_candidate",
+      "backend.test_render_xlsx_contract::test_recalc_gate_pdf_has_computed_value",
+      "backend.test_render_xlsx_contract::test_rows_are_xlsx_pngs",
+      "backend.test_render_xlsx_contract::test_viewports_ignored_with_note",
+      "backend.test_render_xlsx_contract::test_korean_glyphs_not_silently_lost",
+      "backend.test_coding_projects::test_run_streams_output_stops_and_reports_exit_code",
+      "backend.test_coding_projects::test_http_engine_io_run_output_stop",
+      "backend.test_remote_agent_images::test_browser_select_send_and_reopen[agent]",
+      "backend.test_remote_agent_images::test_browser_select_send_and_reopen[system]",
+      "backend.test_render_prescreen_contract::test_xlsx_formula_error_marker_flagged",
+      "backend.test_relay_publish_honesty::test_거부는_성공이_아니다",
+      "backend.test_relay_publish_honesty::test_한_릴레이라도_수락하면_성공",
+      "backend.test_repair_live_probe::test_live_probe_only_forwards_explicit_reads[/xray/app]",
+      "backend.test_repair_live_probe::test_live_probe_only_forwards_explicit_reads[/launcher/app]",
+      "backend.test_repair_live_probe::test_live_probe_only_forwards_explicit_reads[/health]",
+      "backend.test_sqlite_http_words_2026_09_05::test_h1_head_get_range_and_404",
+      "backend.test_sqlite_http_words_2026_09_05::test_h2_connection_failure_and_bad_op",
+      "backend.test_ai_trend_publish::test_briefing_mobile_and_desktop_reading[390]",
+      "backend.test_ai_trend_publish::test_briefing_mobile_and_desktop_reading[1280]",
+      "backend.test_single_runner::test_r2_direct_run_delegates_to_pytest",
+      "backend.test_ipad_webapps::test_nas_reader_never_opens_popup_and_preserves_text_and_list",
+      "backend.test_ipad_webapps::test_launcher_refuses_false_login_and_reports_project_failure",
+      "backend.test_document_browser::test_browser_source_workflow",
+      "backend.test_spreadsheet_browser_live::test_grid_app_edit_save_queue_and_ai",
+      "backend.test_repair_staging::test_battery_under_pytest",
+      "backend.test_episode4112_browser_refs::test_real_snapshot_disclosure_click_and_identity_guards"
+    ]
+  },
+  {
+    "label": "native_before_sheet_repair",
+    "suites": [
+      {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "1",
+        "skipped": "12",
+        "tests": "9349",
+        "time": "199.797",
+        "timestamp": "2026-10-07T16:30:42.288450+09:00",
+        "hostname": "Mac-mini.local"
+      }
+    ],
+    "failed": [
+      "backend.test_spreadsheet_browser_live::test_grid_app_edit_save_queue_and_ai"
+    ]
+  },
+  {
+    "label": "sheet_repro",
+    "suites": [
+      {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "1",
+        "skipped": "0",
+        "tests": "1",
+        "time": "26.427",
+        "timestamp": "2026-10-07T16:34:36.425245+09:00",
+        "hostname": "Mac-mini.local"
+      }
+    ],
+    "failed": [
+      "backend.test_spreadsheet_browser_live::test_grid_app_edit_save_queue_and_ai"
+    ]
+  },
+  {
+    "label": "sheet_wait_only",
+    "suites": [
+      {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "1",
+        "time": "26.919",
+        "timestamp": "2026-10-07T16:48:51.153550+09:00",
+        "hostname": "Mac-mini.local"
+      }
+    ],
+    "failed": []
+  },
+  {
+    "label": "final_native_all_backend",
+    "command": ".venv/bin/python -m pytest backend/ -n auto --dist loadfile",
+    "suites": [
+      {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "12",
+        "tests": "9349",
+        "time": "188.982",
+        "timestamp": "2026-10-07T16:54:27.197569+09:00",
+        "hostname": "Mac-mini.local"
+      }
+    ],
+    "failed": []
+  },
+  {
+    "label": "other_checks",
+    "related_tests": 73,
+    "whole_program_tests": 1,
+    "typescript": "npx tsc -p tsconfig.app.json: exit 0",
+    "ibl_build_check": "exit 0",
+    "android_bundle": "regenerated",
+    "git_diff_check": "passed",
+    "finished": "2026-10-07T16:58:34.874803+09:00",
+    "head_before_own_commit": "4b30d490dceaacfb899b176dd739bb510ceea84b"
+  }
+]

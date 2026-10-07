@@ -14,12 +14,14 @@
 $매물 = [{id:"a",price:300},{id:"b",price:200}]
 $관심 = [{id:"a",memo:"역세권"}]
 $결합 = [table:join]{left:$매물,right:$관심,on:"id",how:"left",defaults:{memo:"미검토"}}
+$행 = $결합 >> [table:each] { return $it }
 $날짜 = [self:time]{format:"%Y-%m-%d"}
-return {date:$날짜,items:$결합.items}
+return {date:$날짜,items:$행}
 ```
 
 `join`은 정확히 두 출처를, `merge/union`은 두 개 이상의 출처를 받는다.
 `($첫 & $둘 & $셋) >> [table:merge]{by:"id"}` 또는 `inputs:[$첫,$둘,$셋]`도 가능하다.
+이 세 도구의 결과도 `each/filter/sort/select/compute`에 그대로 전달한다. 명시적인 `.items` 선택도 가능하다.
 `left/right`와 `inputs`(파이프 포함)를 함께 지정하지 않는다. 결과는 Record이므로 행은 `.items`로
 읽는다. 실패한 분기를 건너뛰어 만든 결과는 부분 결과이며 `source_complete:false`를 유지한다.
 `self:time`은 Text를 반환하므로 보고서 제목이나 파일 이름에 바로 쓴다.
@@ -39,6 +41,12 @@ inner 결합의 희소 객체에서 없는 필드는 그대로 없고, 표형 �
 0 기반 위치를 알려주며 계산 전에 거절한다. 행을 몰래 버린 합계·결합 결과를 만들지 않는다.
 `table:reduce`의 빈 입력은 `init`을 반환한다. 전체 합계는 `reduce($행,0,($합,$r)=>$합+$r.금액)`으로 쓴다.
 `groupby`의 키는 필수다(`by:[]` 불가).
+
+`join`은 null·부재·빈/공백 문자열 키를 일치시키지 않는다. 업무에서 빈 문자열이 정상 코드라면
+원래 열을 보존하면서 양쪽에 `lot_key:json([$r.lot])` 같은 별도 키를 만들고 그 열로 결합한다.
+단순 구분자 연결은 코드 안에 같은 문자가 있으면 충돌하므로 쓰지 않는다. 실제 결측도 정상 코드로
+바뀌지 않게 먼저 검사한다. 저장 후 재독 일치와 별개로 원자료 합계·행별 기대값을 대조해야
+키 누락으로 생긴 0을 찾을 수 있다. 표시할 합계가 null이면 `text()` 전에 null 분기로 미확인을 적는다.
 
 `groupby/dedup/rename/flatten/since/reduce/chunk/ai/brief/judge`도 파이프 입력을 받는다.
 이 도구들은 기존 Record 반환을 유지한다. 예를 들어 집계 뒤 정렬은 다음처럼 연결한다:

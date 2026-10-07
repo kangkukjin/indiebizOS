@@ -1,0 +1,62 @@
+[
+  {
+    "label": "post_original_base",
+    "rows": 18,
+    "events": 1800,
+    "passed": true,
+    "elapsed": 1.9120209217071533,
+    "usage": {
+      "steps": 1199,
+      "rows": 27,
+      "elapsed_ms": 1450
+    },
+    "run_id": "013aa003382e4a91871254f462a4e9aa",
+    "source_complete": true,
+    "report": "서울: 기초 6000, 이동 595, 마감 6595; 누락 false\n부산: 기초 6000, 이동 595, 마감 6595; 누락 false\n대전: 기초 6000, 이동 595, 마감 6595; 누락 false"
+  },
+  {
+    "label": "post_original_missing",
+    "rows": 18,
+    "events": 1200,
+    "passed": true,
+    "elapsed": 1.4532060623168945,
+    "usage": {
+      "steps": 1126,
+      "rows": 27,
+      "elapsed_ms": 1285
+    },
+    "run_id": "b998e1b357de472f8ebefad517f97edc",
+    "source_complete": false,
+    "report": "서울: 기초 6000, 이동 595, 마감 6595; 누락 false\n부산: 기초 6000, 이동 미확인, 마감 미확인; 누락 true\n대전: 기초 6000, 이동 595, 마감 6595; 누락 false"
+  },
+  {
+    "label": "post_repaired_base",
+    "rows": 18,
+    "events": 1800,
+    "passed": true,
+    "elapsed": 1.9109818935394287,
+    "usage": {
+      "steps": 8581,
+      "rows": 27,
+      "elapsed_ms": 1703
+    },
+    "run_id": "916ad2bd88d74d54b8edbb51a9cf08df",
+    "source_complete": true,
+    "report": "서울: 기초 6000, 이동 595, 마감 6595; 누락 false\n부산: 기초 6000, 이동 595, 마감 6595; 누락 false\n대전: 기초 6000, 이동 595, 마감 6595; 누락 false"
+  },
+  {
+    "label": "post_new",
+    "rows": 19,
+    "events": 1800,
+    "passed": true,
+    "elapsed": 1.4547808170318604,
+    "usage": {
+      "steps": 8629,
+      "rows": 28,
+      "elapsed_ms": 1239
+    },
+    "run_id": "6d97fce43eba4208b5befe6d4d93ba64",
+    "source_complete": true,
+    "report": "대전: 기초 6000, 이동 -1190, 마감 4810; 누락 false\n부산: 기초 6000, 이동 -1190, 마감 4810; 누락 false\n서울: 기초 6250, 이동 -1190, 마감 5060; 누락 false"
+  }
+]

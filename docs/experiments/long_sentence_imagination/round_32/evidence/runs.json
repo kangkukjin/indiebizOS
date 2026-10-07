@@ -1,0 +1,1054 @@
+[
+  {
+    "label": "ai_base_receipt",
+    "elapsed": 0.0202786922454834,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": null,
+    "state": "queued",
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "ai_base_status",
+    "elapsed": 1.0165770053863525,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": null,
+    "state": "running",
+    "usage": null,
+    "value": null,
+    "origin": null
+  },
+  {
+    "label": "ai_base_status2",
+    "elapsed": 1.0217819213867188,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": null,
+    "state": "running",
+    "usage": null,
+    "value": null,
+    "origin": null
+  },
+  {
+    "label": "ai_base_status3",
+    "elapsed": 4.5474629402160645,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": null,
+    "state": "succeeded",
+    "usage": null,
+    "value": null,
+    "origin": null
+  },
+  {
+    "label": "ai_variant_receipt",
+    "elapsed": 0.019539833068847656,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": null,
+    "state": "queued",
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "ai_variant_status",
+    "elapsed": 20.019548892974854,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": null,
+    "state": "running",
+    "usage": null,
+    "value": null,
+    "origin": null
+  },
+  {
+    "label": "ai_variant_status2",
+    "elapsed": 0.017510175704956055,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": null,
+    "state": "succeeded",
+    "usage": null,
+    "value": null,
+    "origin": null
+  },
+  {
+    "label": "base_check",
+    "elapsed": 0.4380350112915039,
+    "source_hash": "d077c9f5e54cb3e29a97d01315e82936457e80af530fdac46bbb9cb45b403d0c",
+    "success": null,
+    "ok": false,
+    "run_status": null,
+    "run_id": null,
+    "issues": [
+      {
+        "code": "TYPE",
+        "message": "List<Unknown>가 필요하지만 Record입니다. 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요.",
+        "source_span": {
+          "source_hash": "d077c9f5e54cb3e29a97d01315e82936457e80af530fdac46bbb9cb45b403d0c",
+          "start": 869,
+          "end": 1110,
+          "line": 17,
+          "column": 20
+        },
+        "call_path": [],
+        "expected": "List<Unknown>",
+        "actual": "Record",
+        "location": {
+          "source_hash": "d077c9f5e54cb3e29a97d01315e82936457e80af530fdac46bbb9cb45b403d0c",
+          "start": 869,
+          "end": 1110,
+          "line": 17,
+          "column": 20,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 20,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error",
+        "hint": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요."
+      }
+    ],
+    "error": null,
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "base_check_v1",
+    "elapsed": 0.48296594619750977,
+    "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+    "success": null,
+    "ok": true,
+    "run_status": null,
+    "run_id": null,
+    "issues": [],
+    "error": null,
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "base_check_v2",
+    "elapsed": 0.2838599681854248,
+    "source_hash": "12fc2aab7c8568f64b17e44fb4b143f0ef93f43dc4e0ace6d062fa2add8bf28c",
+    "success": false,
+    "ok": false,
+    "run_status": null,
+    "run_id": null,
+    "issues": [
+      {
+        "code": "SYNTAX",
+        "kind": "compile",
+        "message": "보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "source_span": {
+          "source_hash": "12fc2aab7c8568f64b17e44fb4b143f0ef93f43dc4e0ace6d062fa2add8bf28c",
+          "start": 1506,
+          "end": 1509,
+          "line": 24,
+          "column": 113
+        },
+        "rule": "SYNTAX",
+        "severity": "error",
+        "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+        "location": {
+          "source_hash": "12fc2aab7c8568f64b17e44fb4b143f0ef93f43dc4e0ace6d062fa2add8bf28c",
+          "start": 1506,
+          "end": 1509,
+          "line": 24,
+          "column": 113,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 24,
+          "end_column": 116,
+          "offset_encoding": "unicode-codepoints"
+        }
+      }
+    ],
+    "error": "보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.",
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "base_check_v3",
+    "elapsed": 0.30614519119262695,
+    "source_hash": "fd4abc266022aeacd342f60ff0b89996a6d36b93cb6382fed35f39fccd676b1d",
+    "success": null,
+    "ok": true,
+    "run_status": null,
+    "run_id": null,
+    "issues": [],
+    "error": null,
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "base_run_context",
+    "elapsed": 0.8550879955291748,
+    "source_hash": null,
+    "success": true,
+    "ok": null,
+    "run_status": "completed",
+    "run_id": "7b4fa991a1d14d56ba4671db95268608",
+    "issues": null,
+    "error": null,
+    "state": null,
+    "usage": {
+      "steps": 905,
+      "rows": 27,
+      "elapsed_ms": 548
+    },
+    "value": {
+      "count": 18,
+      "events": 1800,
+      "missing_sites": [],
+      "summary": {
+        "items": [
+          {
+            "site": "서울",
+            "opening": 6000,
+            "movement": 492,
+            "closing": 6492
+          },
+          {
+            "site": "부산",
+            "opening": 6000,
+            "movement": 492,
+            "closing": 6492
+          },
+          {
+            "site": "대전",
+            "opening": 6000,
+            "movement": 492,
+            "closing": 6492
+          }
+        ],
+        "count": 3,
+        "success": true
+      }
+    },
+    "origin": "training"
+  },
+  {
+    "label": "base_run_v1",
+    "elapsed": 0.6280441284179688,
+    "source_hash": null,
+    "success": false,
+    "ok": null,
+    "run_status": "interrupted",
+    "run_id": "445392345e534b60b498e5726a8dc359",
+    "issues": null,
+    "error": "활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: read_op. 대상 프로젝트를 params.project_id로 명시하거나 프로젝트 컨텍스트(thread_context.project_id) 안에서 호출하세요. 예: execute_ibl(code='[node:action]{..., project_id: \"컨텐츠\"}') ★each/폴백/병렬 가지 안까지 컨텍스트를 전파하려면 문장 param 대신 /ibl/execute 요청 body의 project_id 필드를 쓰세요 (param 방식은 그 step에만 적용).",
+    "state": null,
+    "usage": {
+      "steps": 16,
+      "rows": 0,
+      "elapsed_ms": 591,
+      "limits": {
+        "steps": 100000,
+        "rows": 10000
+      },
+      "steps_by_span": [
+        {
+          "node_id": "binary:331:356",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 331,
+            "end": 356,
+            "line": 11,
+            "column": 26
+          }
+        },
+        {
+          "node_id": "binary:377:400",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 377,
+            "end": 400,
+            "line": 11,
+            "column": 72
+          }
+        },
+        {
+          "node_id": "bind:306:401",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 306,
+            "end": 401,
+            "line": 11,
+            "column": 1
+          }
+        },
+        {
+          "node_id": "call:314:357",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 314,
+            "end": 357,
+            "line": 11,
+            "column": 9
+          }
+        },
+        {
+          "node_id": "call:360:401",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 360,
+            "end": 401,
+            "line": 11,
+            "column": 55
+          }
+        },
+        {
+          "node_id": "def:16:305",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 16,
+            "end": 305,
+            "line": 2,
+            "column": 1
+          }
+        },
+        {
+          "node_id": "literal:341:356",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 341,
+            "end": 356,
+            "line": 11,
+            "column": 36
+          }
+        },
+        {
+          "node_id": "literal:387:400",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 387,
+            "end": 400,
+            "line": 11,
+            "column": 82
+          }
+        },
+        {
+          "node_id": "parallel:314:401",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 314,
+            "end": 401,
+            "line": 11,
+            "column": 9
+          }
+        },
+        {
+          "node_id": "record:325:357",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 325,
+            "end": 357,
+            "line": 11,
+            "column": 20
+          }
+        },
+        {
+          "node_id": "record:371:401",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 371,
+            "end": 401,
+            "line": 11,
+            "column": 66
+          }
+        },
+        {
+          "node_id": "ref:331:338",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 331,
+            "end": 338,
+            "line": 11,
+            "column": 26
+          }
+        },
+        {
+          "node_id": "ref:377:384",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 377,
+            "end": 384,
+            "line": 11,
+            "column": 72
+          }
+        },
+        {
+          "node_id": "sequence:15:1791",
+          "steps": 1,
+          "location": {
+            "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+            "start": 15,
+            "end": 1791,
+            "line": 1,
+            "column": 16
+          }
+        }
+      ],
+      "steps_other": 2,
+      "steps_by_line": [
+        {
+          "line": 11,
+          "steps": 12,
+          "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92"
+        },
+        {
+          "line": 1,
+          "steps": 1,
+          "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92"
+        },
+        {
+          "line": 2,
+          "steps": 1,
+          "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 11,
+          "ms": 64,
+          "calls": 2,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+          "wall_ms": 32
+        }
+      ]
+    },
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "base_run_v3",
+    "elapsed": 0.8483109474182129,
+    "source_hash": null,
+    "success": true,
+    "ok": null,
+    "run_status": "completed",
+    "run_id": "157f0757a8e649038193de5d0f03b5a0",
+    "issues": null,
+    "error": null,
+    "state": null,
+    "usage": {
+      "steps": 1199,
+      "rows": 27,
+      "elapsed_ms": 694
+    },
+    "value": {
+      "count": 18,
+      "events": 1800,
+      "missing_sites": [],
+      "summary": {
+        "items": [
+          {
+            "site": "서울",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          },
+          {
+            "site": "부산",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          },
+          {
+            "site": "대전",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          }
+        ],
+        "count": 3,
+        "success": true
+      }
+    },
+    "origin": "training"
+  },
+  {
+    "label": "base_validation_v1",
+    "elapsed": 0,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": null,
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": null
+  },
+  {
+    "label": "missing_check_v1",
+    "elapsed": 0.5891120433807373,
+    "source_hash": "ab7b22fcd93651058e577349d3e91efa89cbcf086a1a63570c9de12b6cb36a92",
+    "success": null,
+    "ok": true,
+    "run_status": null,
+    "run_id": null,
+    "issues": [],
+    "error": null,
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "missing_run_context",
+    "elapsed": 0.6886940002441406,
+    "source_hash": null,
+    "success": false,
+    "ok": null,
+    "run_status": "interrupted",
+    "run_id": "68733e2d6c494998a95825a3ca6da3a3",
+    "issues": null,
+    "error": "Text·Number·Bool만 문자열로 바꿀 수 있습니다. 이 값은 null입니다 — 보간·text() 앞에서 `$x == null ? '없음' : text($x)`처럼 가르세요.",
+    "state": null,
+    "usage": {
+      "steps": 797,
+      "rows": 26,
+      "elapsed_ms": 452
+    },
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "missing_run_v3",
+    "elapsed": 0.6276049613952637,
+    "source_hash": null,
+    "success": true,
+    "ok": null,
+    "run_status": "completed",
+    "run_id": "3162c5f913344ef1acfdb082c27590f9",
+    "issues": null,
+    "error": null,
+    "state": null,
+    "usage": {
+      "steps": 1126,
+      "rows": 27,
+      "elapsed_ms": 514
+    },
+    "value": {
+      "count": 18,
+      "events": 1200,
+      "missing_sites": [
+        "부산"
+      ],
+      "summary": {
+        "items": [
+          {
+            "site": "서울",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          },
+          {
+            "site": "부산",
+            "opening": 6000,
+            "movement": null,
+            "closing": null
+          },
+          {
+            "site": "대전",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          }
+        ],
+        "count": 3,
+        "success": true,
+        "aggregation_skips": [
+          {
+            "group": "부산",
+            "output": "movement",
+            "op": "sum",
+            "source": "movement",
+            "skipped": 6,
+            "rows": 6
+          },
+          {
+            "group": "부산",
+            "output": "closing",
+            "op": "sum",
+            "source": "closing",
+            "skipped": 6,
+            "rows": 6
+          }
+        ],
+        "warning": "groupby: 수치 집계에서 결측·비수치·비유한 값 12건을 제외했습니다 — 세부는 aggregation_skips"
+      }
+    },
+    "origin": "training"
+  },
+  {
+    "label": "post_first_check",
+    "elapsed": 0.8251228332519531,
+    "source_hash": "d077c9f5e54cb3e29a97d01315e82936457e80af530fdac46bbb9cb45b403d0c",
+    "success": null,
+    "ok": true,
+    "run_status": null,
+    "run_id": null,
+    "issues": [],
+    "error": null,
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "post_new",
+    "elapsed": 1.4547808170318604,
+    "source_hash": null,
+    "success": true,
+    "ok": null,
+    "run_status": "completed",
+    "run_id": "6d97fce43eba4208b5befe6d4d93ba64",
+    "issues": null,
+    "error": null,
+    "state": null,
+    "usage": {
+      "steps": 8629,
+      "rows": 28,
+      "elapsed_ms": 1239
+    },
+    "value": {
+      "count": 19,
+      "events": 1800,
+      "missing_sites": [],
+      "summary": {
+        "items": [
+          {
+            "site": "대전",
+            "opening": 6000,
+            "movement": -1190,
+            "closing": 4810
+          },
+          {
+            "site": "부산",
+            "opening": 6000,
+            "movement": -1190,
+            "closing": 4810
+          },
+          {
+            "site": "서울",
+            "opening": 6250,
+            "movement": -1190,
+            "closing": 5060
+          }
+        ],
+        "count": 3,
+        "success": true
+      }
+    },
+    "origin": "training"
+  },
+  {
+    "label": "post_original_base",
+    "elapsed": 1.9120209217071533,
+    "source_hash": null,
+    "success": true,
+    "ok": null,
+    "run_status": "completed",
+    "run_id": "013aa003382e4a91871254f462a4e9aa",
+    "issues": null,
+    "error": null,
+    "state": null,
+    "usage": {
+      "steps": 1199,
+      "rows": 27,
+      "elapsed_ms": 1450
+    },
+    "value": {
+      "count": 18,
+      "events": 1800,
+      "missing_sites": [],
+      "summary": {
+        "items": [
+          {
+            "site": "서울",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          },
+          {
+            "site": "부산",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          },
+          {
+            "site": "대전",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          }
+        ],
+        "count": 3,
+        "success": true
+      }
+    },
+    "origin": "training"
+  },
+  {
+    "label": "post_original_missing",
+    "elapsed": 1.4532060623168945,
+    "source_hash": null,
+    "success": true,
+    "ok": null,
+    "run_status": "completed",
+    "run_id": "b998e1b357de472f8ebefad517f97edc",
+    "issues": null,
+    "error": null,
+    "state": null,
+    "usage": {
+      "steps": 1126,
+      "rows": 27,
+      "elapsed_ms": 1285
+    },
+    "value": {
+      "count": 18,
+      "events": 1200,
+      "missing_sites": [
+        "부산"
+      ],
+      "summary": {
+        "items": [
+          {
+            "site": "서울",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          },
+          {
+            "site": "부산",
+            "opening": 6000,
+            "movement": null,
+            "closing": null
+          },
+          {
+            "site": "대전",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          }
+        ],
+        "count": 3,
+        "success": true,
+        "aggregation_skips": [
+          {
+            "group": "부산",
+            "output": "movement",
+            "op": "sum",
+            "source": "movement",
+            "skipped": 6,
+            "rows": 6
+          },
+          {
+            "group": "부산",
+            "output": "closing",
+            "op": "sum",
+            "source": "closing",
+            "skipped": 6,
+            "rows": 6
+          }
+        ],
+        "warning": "groupby: 수치 집계에서 결측·비수치·비유한 값 12건을 제외했습니다 — 세부는 aggregation_skips"
+      }
+    },
+    "origin": "training"
+  },
+  {
+    "label": "post_repaired_base",
+    "elapsed": 1.9109818935394287,
+    "source_hash": null,
+    "success": true,
+    "ok": null,
+    "run_status": "completed",
+    "run_id": "916ad2bd88d74d54b8edbb51a9cf08df",
+    "issues": null,
+    "error": null,
+    "state": null,
+    "usage": {
+      "steps": 8581,
+      "rows": 27,
+      "elapsed_ms": 1703
+    },
+    "value": {
+      "count": 18,
+      "events": 1800,
+      "missing_sites": [],
+      "summary": {
+        "items": [
+          {
+            "site": "서울",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          },
+          {
+            "site": "부산",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          },
+          {
+            "site": "대전",
+            "opening": 6000,
+            "movement": 595,
+            "closing": 6595
+          }
+        ],
+        "count": 3,
+        "success": true
+      }
+    },
+    "origin": "training"
+  },
+  {
+    "label": "repro_join",
+    "elapsed": 0.02362203598022461,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": "IBL 실행 오류: 파라미터를 끝까지 읽지 못했습니다. 해석된 키: [없음] / 남은 조각: 'return $it.n + $it.x'\n→ 값 문자열 안의 따옴표가 이스케이프되지 않았을 가능성이 큽니다. 자유 텍스트(content 등) 안의 \" 는 \\\" 로 쓰세요. (키 표기 오류로 보이지는 않습니다 — 위 \"남은 조각\"이 시작되는 자리를 보세요.)",
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "repro_join_v2",
+    "elapsed": 0.7366249561309814,
+    "source_hash": "bb8c8c931cf564e13490aa4c43cb6b105e9c89a54c94323577704bb751e9335d",
+    "success": null,
+    "ok": false,
+    "run_status": null,
+    "run_id": null,
+    "issues": [
+      {
+        "code": "TYPE",
+        "message": "List<Unknown>가 필요하지만 Record입니다. 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요.",
+        "source_span": {
+          "source_hash": "bb8c8c931cf564e13490aa4c43cb6b105e9c89a54c94323577704bb751e9335d",
+          "start": 66,
+          "end": 100,
+          "line": 1,
+          "column": 67
+        },
+        "call_path": [],
+        "expected": "List<Unknown>",
+        "actual": "Record",
+        "location": {
+          "source_hash": "bb8c8c931cf564e13490aa4c43cb6b105e9c89a54c94323577704bb751e9335d",
+          "start": 66,
+          "end": 100,
+          "line": 1,
+          "column": 67,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 1,
+          "end_column": 101,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error",
+        "hint": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요."
+      }
+    ],
+    "error": null,
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "repro_merge",
+    "elapsed": 0.028521060943603516,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": "IBL 실행 오류: 파라미터를 끝까지 읽지 못했습니다. 해석된 키: [없음] / 남은 조각: 'return $it.id'\n→ 값 문자열 안의 따옴표가 이스케이프되지 않았을 가능성이 큽니다. 자유 텍스트(content 등) 안의 \" 는 \\\" 로 쓰세요. (키 표기 오류로 보이지는 않습니다 — 위 \"남은 조각\"이 시작되는 자리를 보세요.)",
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "repro_merge_v2",
+    "elapsed": 0.8026406764984131,
+    "source_hash": "73d19b3cc5b2d5695938512548cdf9c25d36e413d9d99d27ac2ed33c3f196e0e",
+    "success": null,
+    "ok": false,
+    "run_status": null,
+    "run_id": null,
+    "issues": [
+      {
+        "code": "TYPE",
+        "message": "List<Unknown>가 필요하지만 Record입니다. 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요.",
+        "source_span": {
+          "source_hash": "73d19b3cc5b2d5695938512548cdf9c25d36e413d9d99d27ac2ed33c3f196e0e",
+          "start": 65,
+          "end": 92,
+          "line": 1,
+          "column": 66
+        },
+        "call_path": [],
+        "expected": "List<Unknown>",
+        "actual": "Record",
+        "location": {
+          "source_hash": "73d19b3cc5b2d5695938512548cdf9c25d36e413d9d99d27ac2ed33c3f196e0e",
+          "start": 65,
+          "end": 92,
+          "line": 1,
+          "column": 66,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 1,
+          "end_column": 93,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error",
+        "hint": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요."
+      }
+    ],
+    "error": null,
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "repro_union",
+    "elapsed": 0.0241391658782959,
+    "source_hash": null,
+    "success": null,
+    "ok": null,
+    "run_status": null,
+    "run_id": null,
+    "issues": null,
+    "error": "IBL 실행 오류: 파라미터를 끝까지 읽지 못했습니다. 해석된 키: [없음] / 남은 조각: 'return $it.id'\n→ 값 문자열 안의 따옴표가 이스케이프되지 않았을 가능성이 큽니다. 자유 텍스트(content 등) 안의 \" 는 \\\" 로 쓰세요. (키 표기 오류로 보이지는 않습니다 — 위 \"남은 조각\"이 시작되는 자리를 보세요.)",
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  },
+  {
+    "label": "repro_union_v2",
+    "elapsed": 0.8053741455078125,
+    "source_hash": "82f6d2d36bbd7971143648d3e10ebff46c1e6d19a918836978458c01d54946ea",
+    "success": null,
+    "ok": false,
+    "run_status": null,
+    "run_id": null,
+    "issues": [
+      {
+        "code": "TYPE",
+        "message": "List<Unknown>가 필요하지만 Record입니다. 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요.",
+        "source_span": {
+          "source_hash": "82f6d2d36bbd7971143648d3e10ebff46c1e6d19a918836978458c01d54946ea",
+          "start": 49,
+          "end": 76,
+          "line": 1,
+          "column": 50
+        },
+        "call_path": [],
+        "expected": "List<Unknown>",
+        "actual": "Record",
+        "location": {
+          "source_hash": "82f6d2d36bbd7971143648d3e10ebff46c1e6d19a918836978458c01d54946ea",
+          "start": 49,
+          "end": 76,
+          "line": 1,
+          "column": 50,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 1,
+          "end_column": 77,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error",
+        "hint": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요."
+      }
+    ],
+    "error": null,
+    "state": null,
+    "usage": null,
+    "value": null,
+    "origin": "training"
+  }
+]

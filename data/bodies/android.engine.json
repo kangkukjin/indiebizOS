@@ -105,6 +105,7 @@
     "cognition/fixture_sweeps",
     "cognition/fn_recognizer",
     "cognition/forage_consolidation",
+    "cognition/framing_inheritance",
     "cognition/goal_evaluator",
     "cognition/guide_audit",
     "cognition/guide_downscale",
@@ -558,8 +559,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 483,
-    "engine": 457,
+    "total": 484,
+    "engine": 458,
     "blocklist": 26
   }
 }

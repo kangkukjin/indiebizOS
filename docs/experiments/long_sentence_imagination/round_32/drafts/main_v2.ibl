@@ -1,0 +1,30 @@
+#!ibl edition=2
+[def:원천읽기]($site,$source) {
+  [try] {
+    $d = [self:read]{path:$source + "/" + $site.file}
+    return {site:$site.site,rows:$d.data.items,missing:false}
+  } [catch] {
+    assert $error.code == "NOT_FOUND", "원천 읽기 실패", {error:$error}
+    return {site:$site.site,rows:[],missing:true}
+  }
+}
+$docs = [self:read]{path:$source + "/opening.json"} & [self:read]{path:$source + "/sites.json"}
+$sources = $docs[1].data.items >> [table:each]{parallel:3} { [fn:원천읽기]{site:$it,source:$source} }
+$missing = map(filter($sources,($s)=>$s.missing),($s)=>$s.site)
+$moves = $sources >> [table:each]{mode:"flat_map"} { return $it.rows }
+$totals = $moves >> [table:groupby]{by:["site","sku","lot"],agg:{movement:["sum","quantity"]}}
+$left = $docs[0].data.items >> [table:compute]{set:($r)=>{lot_key:json([$r.lot])}}
+$right = $totals >> [table:compute]{set:($r)=>{lot_key:json([$r.lot])}}
+$joined = [table:join]{left:$left,right:$right,on:["site","sku","lot_key"],how:"left",defaults:{movement:0}}
+$rows = $joined.items >> [table:each] {
+  $absent = $it.site in $missing
+  return {site:$it.site,sku:$it.sku,lot:$it.lot,opening:$it.opening,movement:$absent ? null : $it.movement,closing:$absent ? null : $it.opening + $it.movement,status:$absent ? "원천 누락" : "확인"}
+}
+$summary = $rows >> [table:groupby]{by:"site",agg:{opening:["sum","opening"],movement:["sum","movement"],closing:["sum","closing"]}}
+$lines = $summary.items >> [table:each] { return f"${$it.site}: 기초 ${$it.opening}, 이동 ${$it.movement == null ? "미확인" : text($it.movement)}, 마감 ${$it.closing == null ? "미확인" : text($it.closing)}; 누락 ${$it.site in $missing}" }
+$result = {rows:$rows,events:len($moves),missing_sites:$missing}
+[self:write]{path:$out + "/result.json",content:json($result)}
+[self:write]{path:$out + "/report.md",content:join("\n",$lines)}
+$readback = [self:read]{path:$out + "/result.json"}
+assert $readback.data == $result, "저장 후 값 불일치"
+return {count:len($rows),events:len($moves),missing_sites:$missing,summary:$summary}

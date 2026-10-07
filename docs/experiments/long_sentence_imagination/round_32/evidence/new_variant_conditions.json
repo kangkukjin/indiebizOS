@@ -1,0 +1,7 @@
+{
+  "variant": "사전 고정: 지점·기초·이동행 역순, quantity×-2, 서울 무이동 품목 기초250 추가",
+  "expected_rows": 19,
+  "expected_events": 1800,
+  "expected_site_movement": -1190,
+  "new_item_closing": 250
+}

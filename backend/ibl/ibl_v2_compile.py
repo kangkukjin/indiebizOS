@@ -654,10 +654,10 @@ class Compiler:
             result_type = row_flow_type(self, node, contract, args, fields, values,
                                         result_type, env, names, readonly)
             if (result_type.kind == "Record" and "items" not in dict(result_type.fields)
-                    and contract.get("analysis", {}).get("flow", {}).get("emits") == "items"
-                    and "items" in contract.get("adapter", {}).get("input_envelopes", [])):
-                # 행 봉투를 받아 행 봉투를 내는 변환자(선언: input_envelopes + flow.emits)의 결과는 items 행 목록을
-                # 가진다 — 행 목록 자리가 그대로 받는다. 문서·건수처럼 행이 아닌 Record 는 해당하지 않는다.
+                    and contract.get("analysis", {}).get("flow", {}).get("emits") == "items"):
+                # 출력 형태는 flow.emits가 소유한다. 입력 봉투를 하나 받든 여러
+                # 출처를 결합하든 같은 행 목록이다. 문서·건수 Record에는 적용하지
+                # 않으며 명시된 items 타입과 실행 시 실제 값 검사는 그대로 둔다.
                 result_type = Type("Record", (*result_type.fields, ("items", Type("List", item=UNKNOWN))),
                                    open=result_type.open, observed=result_type.observed)
             if result_type.kind == "Unknown":

@@ -1,0 +1,44 @@
+{
+  "training_ended": "2026-10-07T15:59:15.500665+09:00",
+  "head": "d29f38b07b30303b805c4c420ecb907eef535b0f",
+  "validation": [
+    {
+      "runner": "trainer",
+      "variant": "base",
+      "rows": 18,
+      "events": 1800,
+      "passed": true
+    },
+    {
+      "runner": "trainer",
+      "variant": "missing",
+      "rows": 18,
+      "events": 1200,
+      "passed": true
+    },
+    {
+      "runner": "agent",
+      "variant": "base",
+      "rows": 18,
+      "events": 1800,
+      "passed": true
+    },
+    {
+      "runner": "agent",
+      "variant": "missing",
+      "rows": 18,
+      "events": 1200,
+      "passed": true
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "task_sysai_917d9484",
+      "state": "succeeded"
+    },
+    {
+      "task_id": "task_sysai_1a00f6db",
+      "state": "succeeded"
+    }
+  ]
+}

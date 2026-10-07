@@ -1,0 +1,38 @@
+[
+  {
+    "path": "source/base/opening.json",
+    "sha256": "56c3396cef6c8402240d8dc263bd6b5c7ba8848c8e1ed1531c5b928ddd15c5a6"
+  },
+  {
+    "path": "source/base/sites.json",
+    "sha256": "6429e0ef8501bf9d167ad6fa6871ac0c8451b1cc78a8321c1368859923a15bfd"
+  },
+  {
+    "path": "source/base/대전.json",
+    "sha256": "21500cd2196b85e11578f7b8bc7c9dafcf91eee0929be5c75cd9224cd15497eb"
+  },
+  {
+    "path": "source/base/부산.json",
+    "sha256": "87e816112f588a338d9ee80e51ce974c2ff5fdb9a08f6bb2d7b914ad740435a7"
+  },
+  {
+    "path": "source/base/서울.json",
+    "sha256": "93de2256bf9e509ae3f1921c3319ad8ec26d7e0ad217cf6d5562cacdac5ced60"
+  },
+  {
+    "path": "source/missing/opening.json",
+    "sha256": "56c3396cef6c8402240d8dc263bd6b5c7ba8848c8e1ed1531c5b928ddd15c5a6"
+  },
+  {
+    "path": "source/missing/sites.json",
+    "sha256": "6429e0ef8501bf9d167ad6fa6871ac0c8451b1cc78a8321c1368859923a15bfd"
+  },
+  {
+    "path": "source/missing/대전.json",
+    "sha256": "21500cd2196b85e11578f7b8bc7c9dafcf91eee0929be5c75cd9224cd15497eb"
+  },
+  {
+    "path": "source/missing/서울.json",
+    "sha256": "93de2256bf9e509ae3f1921c3319ad8ec26d7e0ad217cf6d5562cacdac5ced60"
+  }
+]

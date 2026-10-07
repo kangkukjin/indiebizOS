@@ -151,6 +151,24 @@ def test_grid_app_edit_save_queue_and_ai(tmp_path, monkeypatch):
                 expect(status).to_contain_text("저장됨 · 원본 파일 기록 확인", timeout=10000)
                 assert load_workbook(book).active["C3"].value == "=B3*0.1"
                 assert load_workbook(book, data_only=True).active["C2"].value == pytest.approx(0.7)
+                # 이름 상자 입력 중 비동기 제안·계산이 화면을 갱신해도 목적지를 덮지 않는다.
+                snapshot = finished(workspace.request_snapshot(doc["id"], "snap-name-edit")["operation_id"])["result"]["snapshot"]
+                proposal = workspace.propose(doc["id"], snapshot["id"], "1", "B2", [[9]])
+                name_box = page.get_by_label("이름 상자")
+                name_box.fill("D2")
+                detail = workspace.detail(doc["id"])
+                queued = workspace.apply(doc["id"], proposal["id"], session_id=detail["session"]["id"], client_id=detail["session"]["client_id"],
+                                         epoch=detail["session"]["engine_epoch"], expected=detail["session"]["session_revision"], operation_id="apply-name-edit")
+                assert finished(queued["operation_id"])["result"]["applied"] is True
+                expect(name_box).to_have_value("D2")
+                name_box.press("Enter")
+                bar = page.get_by_label("수식 입력줄")
+                bar.fill("=B2*0.2"); bar.press("Enter")
+                page.get_by_role("button", name="저장", exact=True).first.click()
+                expect(status).to_contain_text("저장됨 · 원본 파일 기록 확인", timeout=10000)
+                assert load_workbook(book).active["B2"].value == 9
+                assert load_workbook(book, data_only=True).active["C2"].value == pytest.approx(0.9)
+                assert load_workbook(book, data_only=True).active["D2"].value == pytest.approx(1.8)
                 assert not failures, failures
             finally:
                 browser.close()

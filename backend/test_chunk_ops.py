@@ -56,9 +56,14 @@ def test_many_small_segments_pack_without_rejoining_prefixes(chunk, by, separato
     assert separator.join(item['text'] for item in result['items']) == text
     assert all(item['chars'] <= 20000 for item in result['items'])
     # Deterministic work bound; avoid wall-clock thresholds on shared machines.
-    joins = sum(entry.callcount for entry in profile.getstats()
-                if isinstance(entry.code, str) and "'join' of 'str'" in entry.code)
-    assert joins <= len(result['items']) + 1
+    # chunk_ops 자신이 부른 join 만 센다 — 전체 join 수는 같은 스레드에서 그사이 돈 바깥 코드(긴 xdist 워커의
+    # 가비지 종료자 등)까지 세어 1묶음에 3회로 보인 적이 있다(2026-10-07 전수 1건, 단독 재실행은 통과).
+    own = chunk.__code__.co_filename
+    joins = sum(sub.callcount for entry in profile.getstats()
+                if not isinstance(entry.code, str) and entry.code.co_filename == own
+                for sub in (entry.calls or [])
+                if isinstance(sub.code, str) and "'join' of 'str'" in sub.code)
+    assert 1 <= joins <= len(result['items']) + 1, joins
 
 
 @pytest.mark.parametrize('by,separator', [('line', '\n'), ('paragraph', '\n\n')])

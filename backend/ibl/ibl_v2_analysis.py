@@ -190,6 +190,53 @@ def syntax_report(exc, source):
             'guards': [], 'source_hash': digest(source)}
 
 
+def project_context_warning(plan, project_path):
+    """검사 단계의 문맥 사전경고(긴문장 32·33회차 L33-3).
+
+    프로젝트 경로가 필요한 외부 액션을 쓰는데 요청에 프로젝트 문맥(body project_id·project_path·thread_context)이
+    없으면 실행은 첫 호출에서 '활성 프로젝트 경로를 확보할 수 없어' 로 거절된다 — 검사가 통과한 뒤에.
+    문장 인자 project_id 는 그 step 에만 적용되므로 거절하지 않고 경고로 남긴다."""
+    actions = (plan.preflight or {}).get('actions') or []
+    if not actions:
+        return None
+    needing = []
+    try:
+        for key in actions:
+            spec = plan.registry.get(key)
+            effects = set((spec.contract if spec else {}).get('effects') or [])
+            if not effects & {'read_external', 'write_external', 'unknown'}:
+                continue
+            node, _, action = key.partition(':')
+            config = (_installed_nodes().get(node) or {}).get('actions', {}).get(action) or {}
+            if config.get('scope', 'project') in ('workspace', 'system'):
+                continue
+            needing.append(key)
+        if not needing:
+            return None
+        import contextlib
+        import io
+        from ibl_routing import resolve_project_path
+        with contextlib.redirect_stdout(io.StringIO()):  # 안전망 WARN 출력은 검사 응답이 아니다
+            if resolve_project_path(project_path, {}):
+                return None
+    except Exception:
+        return None  # 사전경고는 검사를 막지 않는다
+    return {'code': 'PROJECT_CONTEXT', 'severity': 'warning',
+            'message': '요청에 프로젝트 문맥이 없습니다. 프로젝트 경로가 필요한 액션은 실행이 첫 호출에서 거절됩니다: '
+                       + ', '.join(needing),
+            'actions': needing,
+            'hint': '/ibl/execute 요청 body 에 project_id 를 넣으세요(each·병렬 가지까지 전파). '
+                    '문장 인자 project_id 는 그 step 에만 적용됩니다.'}
+
+
+def _installed_nodes():
+    try:
+        from ibl_registry import load_nodes_installed
+        return load_nodes_installed().get('nodes', {}) or {}
+    except Exception:
+        return {}
+
+
 def compact_check(plan):
     """Keep error diagnostics inline and preserve information guards for inspection."""
     import json

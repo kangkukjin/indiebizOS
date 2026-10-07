@@ -124,6 +124,27 @@ def call_resources(spec, contract, args, mode):
     return resources
 
 
+def resource_state(resources):
+    """읽기 영수증의 신선도 지문 — 파일 자원의 [경로, 수정 시각 ns, 크기].
+
+    고친 프로그램이 `reuse` 로 옛 영수증을 빌릴 때 이 지문이 같을 때만 빌린다(긴문장 33회차 L33-2:
+    제자리에서 바뀐 orders.json 을 옛 영수증 값으로 읽어 결과가 조용히 틀렸고 재독 검증도 통과했다).
+    읽기 직전에 찍으므로 읽는 도중 바뀐 파일은 다음 reuse 에서 보수적으로 새로 읽는다.
+    자원 미상(None)·파일 아닌 realm 은 검증 대상이 아니다(종전과 같다)."""
+    if not resources:
+        return None
+    state = []
+    for realm, identity, _inode in resources:
+        if realm != 'file':
+            continue
+        try:
+            stat = os.stat(identity)
+            state.append([identity, stat.st_mtime_ns, stat.st_size])
+        except OSError:
+            state.append([identity, None, None])
+    return state or None
+
+
 def resources_overlap(reads, writes):
     """Unknown footprints conflict; file ancestors and hard links also overlap."""
     if reads == [] or writes == []:

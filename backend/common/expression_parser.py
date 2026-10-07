@@ -236,6 +236,10 @@ class Parser:
                     after = self.tokens[self.i + 1]
                     text = self.t.text + (after.text if after.kind == "name" and after.start == self.t.end else "")
                     self.fail(f'레코드 키는 이름이나 따옴표 문자열입니다. 숫자로 시작하는 키는 따옴표로 쓰세요: {{"{text}": …}}')
+                if self.t.text == "[":
+                    # {[$k]: 값} — 값으로 정한 키는 문법에 없다(긴문장 33회차 L33-1). 고치는 법을 오류가 말한다.
+                    self.fail("레코드 키는 이름이나 따옴표 문자열입니다. 값으로 정한 키({[$k]: …})는 지원하지 않습니다 — "
+                              "{key:$k, value:…} 행 목록으로 두고, 레코드는 keys/values/entries 로 읽으세요.")
                 key = ast.literal_eval(self.pop().text) if self.t.kind == "string" else self.name()
                 if not isinstance(key, str) or key in fields:
                     self.fail("레코드 키는 중복 없는 문자열이어야 합니다.")

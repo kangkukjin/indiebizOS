@@ -71,6 +71,10 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
             from ibl_v2_analysis import compact_check
             checked = compact_check(plan)
             checked['budget'] = {'steps': budget.steps, 'rows': budget.rows}
+            from ibl_v2_analysis import project_context_warning
+            context_warning = project_context_warning(plan, project_path)
+            if context_warning:
+                checked['warnings'] = list(checked.get('warnings') or []) + [context_warning]
             return checked
         if plan.issues:
             return Runtime(plan, inputs).run()

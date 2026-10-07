@@ -913,6 +913,7 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
         merged = compiler.warnings + [w for w in preflight.get('warnings', []) if w not in compiler.warnings]
         preflight['warnings'] = merged[:32]
         preflight['warnings_omitted'] = preflight.get('warnings_omitted', 0) + max(0, len(merged) - 32)
+    preflight['actions'] = sorted(compiler.used_actions)  # 검사 단계의 문맥 사전경고가 읽는다(L33-3)
     return Plan(compiler.source, root, compiler.functions, registry, compiler.inputs,
                 compiler.issues, compiler.guards, compiler.effects, result,
                 digest(dependencies), dependencies, compiler.function_contracts, preflight,

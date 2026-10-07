@@ -5898,7 +5898,7 @@ nodes:
             backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
             backend/common/expression_ops.py: bebda213e12ac8adb67608ecaa7c4e22f4c0ed27863bcc60dc45653555b1f783
-            backend/common/expression_parser.py: 1b7de199a511066b07435687549d546448b58fec8b50975c9e9d39e18308eca5
+            backend/common/expression_parser.py: 421efa628cd098de6022ec25f7341032887ac08bba49571ef9287dd4b8312e36
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
             backend/base/runtime_utils.py: a2cc50cf1dcafb3f83d32c298787dbd3e5fb4ef4276ff0c8bbc77bf449cd1198
             backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
@@ -7901,7 +7901,7 @@ nodes:
         returns: effect
         pipe_in: true
         description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기. 반환은 접수증(task_ref·child_task_id·status_url) — 접수는 완료가 아니다.
-        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본, 접수증 반환·결과는 비동기 보고)/sync(같은 접수 뒤 그 작업을 제한 시간 동안 기다려 response 반환, 파이프라인용 — 시간 초과면 실패로 바꾸지 않고 task_ref·state 반환)/workflow(do=IBL 문장 위임, same 전용). scope: same(기본)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 위임 — 접수 시점에 시스템 작업을 선발급해 접수증 task_ref·status_url 반환, sync 면 그 작업을 기다림, agent_id 불필요). cross/system 의 workflow 는 미지원 오류. 순환 위임(대상이 조상 사슬에 있음)은 접수 거절. 범위 지정(⑨): allowed=허용 노드 목록 — 부모 권한을 좁히기만(밖의 노드는 잘라내고 allowed_clamped 로 알림)·하위 위임에 상속 / role=시스템 AI 위임의 프롬프트 역할(force_role) / context=구조화 맥락(메시지에 JSON 동봉, 64KB 상한).'
+        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본, 접수증 반환·결과는 비동기 보고)/sync(같은 접수 뒤 그 작업을 제한 시간 동안 기다려 response 반환, 파이프라인용 — 시간 초과면 실패로 바꾸지 않고 task_ref·state 반환)/workflow(do=IBL 문장 위임, same 전용). scope: same(기본, 대상 에이전트의 상주 러너가 실행 중이어야 함 — others:agents의 start로 시작)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 위임 — 접수 시점에 시스템 작업을 선발급해 접수증 task_ref·status_url 반환, sync 면 그 작업을 기다림, agent_id 불필요). cross/system 의 workflow 는 미지원 오류. 순환 위임(대상이 조상 사슬에 있음)은 접수 거절. 범위 지정(⑨): allowed=허용 노드 목록 — 부모 권한을 좁히기만(밖의 노드는 잘라내고 allowed_clamped 로 알림)·하위 위임에 상속 / role=시스템 AI 위임의 프롬프트 역할(force_role) / context=구조화 맥락(메시지에 JSON 동봉, 64KB 상한).'
         group: delegation
         target_key: agent_id
         router: system

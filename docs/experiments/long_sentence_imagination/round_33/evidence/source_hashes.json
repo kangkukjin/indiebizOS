@@ -1,0 +1,10 @@
+{
+ "source/base/bom.json": "ec7829aa8033961e19b69eff07f1fd13aae904343e8a788587fc7c96db09a088",
+ "source/base/orders.json": "f124e4e9d7c5a2696d256a8122b4990de02e886c1635f12e85f15314330b1eec",
+ "source/base/parts.json": "4cb8840c50f8a71cd32ab8c0027358c9ea96cd8554896cb1cc47e6f4d6b745b1",
+ "source/base/stock.json": "65a1999a47ea41648924843140b84ab0fa3206a27571c0a1897c94df52d784ff",
+ "source/cycle/bom.json": "e27172db4ca4dfe53357b344c22fd40c253a512903b42c462ff6b28cdb38fb14",
+ "source/cycle/orders.json": "f124e4e9d7c5a2696d256a8122b4990de02e886c1635f12e85f15314330b1eec",
+ "source/cycle/parts.json": "4cb8840c50f8a71cd32ab8c0027358c9ea96cd8554896cb1cc47e6f4d6b745b1",
+ "source/cycle/stock.json": "65a1999a47ea41648924843140b84ab0fa3206a27571c0a1897c94df52d784ff"
+}

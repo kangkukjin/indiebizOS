@@ -1,0 +1,137 @@
+{
+ "base": {
+  "success": true,
+  "elapsed": 1.575,
+  "usage": {
+   "steps": 49452,
+   "rows": 1210,
+   "elapsed_ms": 1361
+  },
+  "verify": [
+   true,
+   []
+  ]
+ },
+ "cycle": {
+  "success": true,
+  "elapsed": 1.524,
+  "usage": {
+   "steps": 48969,
+   "rows": 1222,
+   "elapsed_ms": 1467
+  },
+  "verify": [
+   true,
+   []
+  ]
+ },
+ "change": {
+  "success": true,
+  "elapsed": 1.545,
+  "usage": {
+   "steps": 49452,
+   "rows": 1210,
+   "elapsed_ms": 1493
+  },
+  "verify": [
+   true,
+   []
+  ]
+ },
+ "inplace2": {
+  "first_elapsed": 1.534,
+  "reuse_elapsed": 1.334,
+  "reused_calls": 3,
+  "skipped": [
+   [
+    "self:read",
+    "resource_changed",
+    [
+     "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_33회차/source/inplace2/orders.json"
+    ]
+   ],
+   [
+    "self:read",
+    "overlapping_write",
+    null
+   ]
+  ],
+  "verify": [
+   true,
+   []
+  ]
+ },
+ "check_no_context": {
+  "ok": true,
+  "warnings": [
+   [
+    "PROJECT_CONTEXT",
+    [
+     "self:read",
+     "self:write"
+    ]
+   ]
+  ]
+ },
+ "check_with_context": {
+  "ok": true,
+  "project_warnings": []
+ },
+ "check_v0": {
+  "ok": false,
+  "message": "레코드 키는 이름이나 따옴표 문자열입니다. 값으로 정한 키({[$k]: …})는 지원하지 않습니다 — {key:$k, value:…} 행 목록으로 두고, 레코드는 keys/values/entries 로 읽으세요."
+ },
+ "new": {
+  "success": true,
+  "elapsed": 1.588,
+  "verify": [
+   false,
+   [
+    "requirements_sorted"
+   ]
+  ],
+  "removed_stock": "R001"
+ },
+ "repaired_base": {
+  "success": true,
+  "elapsed": 1.652,
+  "usage": {
+   "steps": 50553,
+   "rows": 1210,
+   "elapsed_ms": 1594
+  },
+  "verify": [
+   true,
+   []
+  ],
+  "error": ""
+ },
+ "repaired_cycle": {
+  "success": true,
+  "elapsed": 1.722,
+  "usage": {
+   "steps": 49837,
+   "rows": 1222,
+   "elapsed_ms": 1664
+  },
+  "verify": [
+   true,
+   []
+  ],
+  "error": ""
+ },
+ "repaired_new": {
+  "success": true,
+  "elapsed": 1.588,
+  "usage": {
+   "steps": 50521,
+   "rows": 1212,
+   "elapsed_ms": 1406
+  },
+  "verify": [
+   true,
+   []
+  ],
+  "error": ""
+ }
+}

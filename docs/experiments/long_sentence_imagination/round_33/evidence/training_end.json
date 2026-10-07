@@ -1,0 +1,88 @@
+{
+ "training_ended_at": "2026-10-07 17:17:19",
+ "head": "4f9cfcb23af812a6379694a54fed0c9a09682b34",
+ "ai_tasks": {
+  "ai_base": {
+   "task_id": null,
+   "state": "succeeded",
+   "status": "completed",
+   "completed_at": "2026-10-07 08:14:19",
+   "run_id": "run_19e81a1c3c66fac65051"
+  },
+  "ai_variant": {
+   "task_id": null,
+   "state": "succeeded",
+   "status": "completed",
+   "completed_at": "2026-10-07 08:16:26",
+   "run_id": "run_7319ad929993f080f9c7"
+  }
+ },
+ "trainer_runs": {
+  "base_exec_v1": {
+   "success": true,
+   "run_id": "e9f7d8071adf43858c452d41622c18e2",
+   "elapsed": 2.846,
+   "usage": {
+    "steps": 49452,
+    "rows": 1210,
+    "elapsed_ms": 2781
+   },
+   "reuse": {}
+  },
+  "cycle_exec_v1": {
+   "success": true,
+   "run_id": "ac280182c2eb4788ade509a70f712761",
+   "elapsed": 2.955,
+   "usage": {
+    "steps": 48969,
+    "rows": 1222,
+    "elapsed_ms": 2888
+   },
+   "reuse": {}
+  },
+  "change_exec_v1_reuse": {
+   "success": true,
+   "run_id": "dbaca437ab944db7852e01dee490a63c",
+   "elapsed": 1.534,
+   "usage": {
+    "steps": 49452,
+    "rows": 1210,
+    "elapsed_ms": 1471
+   },
+   "reuse": {
+    "run_id": "e9f7d8071adf43858c452d41622c18e2",
+    "reused_calls": 0,
+    "candidates": 5,
+    "skipped_total": 5
+   }
+  },
+  "inplace_first": {
+   "success": true,
+   "run_id": "3faae1d7a517478e814b5b09a45e9b21",
+   "elapsed": null,
+   "usage": {
+    "steps": 49452,
+    "rows": 1210,
+    "elapsed_ms": 1321
+   },
+   "reuse": {}
+  },
+  "inplace_reuse": {
+   "success": true,
+   "run_id": "24c6700a4fdd4fedb68649f8451be297",
+   "elapsed": null,
+   "usage": {
+    "steps": 49452,
+    "rows": 1210,
+    "elapsed_ms": 1712
+   },
+   "reuse": {
+    "run_id": "3faae1d7a517478e814b5b09a45e9b21",
+    "reused_calls": 4,
+    "candidates": 5,
+    "skipped_total": 1
+   }
+  }
+ },
+ "all_tasks_terminal": true
+}

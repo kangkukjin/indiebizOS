@@ -21,6 +21,7 @@
 5. 빈값·실패·입력 규모·재개를 설계한 뒤 `check:true`로 검사하고, 통과하면 `execute_args` 그대로 실행한다(원문·`inputs`·`budget` 보존 — 적은 인자만 전체 교체).
    오류는 `issues`를 모아 `location`(원문·정의 속 위치), `call_path`, `expected/actual`, `hint`로 고친 뒤 전체를 재검사한다. 긴 원문은 `revise_args`의 `code_edits`로 조각만 고친다.
    `warnings`의 반복 AI 입력은 의도를 확인한다. `incomplete`는 실행 중 검사할 타입·도구 경계가 있다는 뜻이다.
+   `PROJECT_CONTEXT` 경고는 요청에 프로젝트 문맥이 없어 파일 액션이 첫 호출에서 거절된다는 사전경고다 — HTTP `/ibl/execute`는 body에 `project_id`를 넣는다.
    `UNOBSERVED_FIELD`는 관측된 반환 필드 밖의 이름이다 — `describe`의 `observed_returns`나 작은 실행으로 실제 필드를 본 뒤 쓴다.
 6. 수정 실행은 `continuation.reuse_args`로 같은 읽기·성공 모델 결과를 재사용한다(조건: `ibl_composition_tools.md` 「중단 뒤 이어가기」).
    단계별 입력 연결은 [분할 예제](long_sentence_imagination.md#비싼-추출-결과를-반환한-뒤-계산표현을-바꾸기)를 따른다.
@@ -325,6 +326,7 @@ return {목록:$결과,앞쪽:$결과[:1],표시:join(", ",$결과)}
 `table:filter`는 레코드 행, `filter`는 문자열·숫자·목록도 받는다.
 `format_number`는 f/%·선택 쉼표·소수 0~28자리이며 중간값은 짝수 반올림이다.
 `keys/values/entries`로 레코드를 열거한다. `**` 펼침은 뒤 필드 우선이고 중복 명시 키는 오류다.
+값으로 정한 키로 레코드를 만드는 문법(`{[$k]:…}`)은 없다 — `{key:$k,value:…}` 행 목록으로 두고 `groupby`·`sorted`로 다룬다.
 assert는 작성한 조건을 실제 결과에 대해 검사하며 조건 자체의 충분성은 별도 판단이다.
 메시지와 상세 값은 실패 때만 평가한다. 큰 본문은 삼중 따옴표로 쓰되,
 이미 있는 본문은 파일/결과 참조로 연결하고 다시 생성하지 않는다.

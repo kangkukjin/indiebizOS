@@ -1,0 +1,18 @@
+{
+ "orders": "역순",
+ "O003_qty": 0,
+ "stock_removed": "R001",
+ "stock_added": [
+  "R200",
+  "R199"
+ ],
+ "expected": {
+  "requirements": 68,
+  "unknown_stock": [
+   "R001",
+   "R073",
+   "R114",
+   "R191"
+  ]
+ }
+}

@@ -1,0 +1,59 @@
+#!ibl edition=2
+$docs = [self:read]{path:$source + "/parts.json"} & [self:read]{path:$source + "/bom.json"} & [self:read]{path:$source + "/orders.json"} & [self:read]{path:$source + "/stock.json"}
+$parts = $docs[0].data.items
+$bom = $docs[1].data.items >> [table:compute]{set:($r)=>{part:$r.parent}}
+$orders = $docs[2].data.items
+$stock = $docs[3].data.items
+$frontier = $orders >> [table:each] { return {order_id:$it.order_id,product:$it.product,part:$it.product,qty:$it.qty,level:0,path:[$it.product]} }
+$leaves = []
+$cycles = []
+[repeat:while len($frontier) > 0 and $i < 64] {
+  $ends = [table:join]{left:$frontier,right:$bom,on:"part",how:"anti"}
+  $leaves = $leaves + $ends.items
+  $next = [table:join]{left:$frontier,right:$bom,on:"part",how:"inner"}
+  $step = $next.items >> [table:each] {
+    return {order_id:$it.order_id,product:$it.product,part:$it.child,qty:$it.qty * $it.qty_per,level:$it.level + 1,path:$it.path + [$it.child],cycle:$it.child in $it.path}
+  }
+  $cycles = $cycles + ($step >> [table:filter]{where:($r)=>$r.cycle})
+  $frontier = $step >> [table:filter]{where:($r)=>not $r.cycle}
+}
+assert len($frontier) == 0, "전개 깊이 한도 초과", {remaining:len($frontier)}
+$cycle_orders = unique(map($cycles,($r)=>$r.order_id))
+$good = $leaves >> [table:filter]{where:($r)=>not ($r.order_id in $cycle_orders)}
+$gross = $good >> [table:groupby]{by:"part",agg:{gross:["sum","qty"],paths:["count"]}}
+$withparts = [table:join]{left:$gross,right:$parts,on:"part",how:"left",defaults:{name:null,type:null,unit:null}}
+$withstock = [table:join]{left:$withparts.items,right:$stock,on:"part",how:"left",defaults:{on_hand:null}}
+$requirements = $withstock.items >> [table:each] {
+  $undefined = $it.type == null
+  $leafonly = not $undefined and $it.type != "구매품"
+  $unknown = $it.on_hand == null
+  $status = $undefined ? "정의 없음" : $leafonly ? "구성 없음" : $unknown ? "재고 미상" : $it.gross > $it.on_hand ? "부족" : "충분"
+  $shortage = ($undefined or $leafonly or $unknown) ? null : max($it.gross - $it.on_hand, 0)
+  return {part:$it.part,name:$it.name,type:$it.type,gross:$it.gross,on_hand:$it.on_hand,shortage:$shortage,status:$status}
+} >> [table:sort]{by:"part"}
+$leafcount = $leaves >> [table:groupby]{by:"order_id",agg:{leaf_rows:["count"]}}
+$firstcycle = $cycles >> [table:dedup]{by:"order_id"} >> [table:each] { return {order_id:$it.order_id,cycle_path:$it.path} }
+$o1 = [table:join]{left:$orders,right:$leafcount,on:"order_id",how:"left",defaults:{leaf_rows:0}}
+$o2 = [table:join]{left:$o1.items,right:$firstcycle,on:"order_id",how:"left",defaults:{cycle_path:null}}
+$order_rows = $o2.items >> [table:each] {
+  return {order_id:$it.order_id,product:$it.product,qty:$it.qty,status:$it.order_id in $cycle_orders ? "순환" : "산출",leaf_rows:$it.leaf_rows,cycle_path:$it.cycle_path}
+}
+$depths = $good >> [table:groupby]{by:"product",agg:{depth:["max","level"]}}
+$depth_by_product = $depths.items >> [table:sort]{by:"product"} >> [table:select]{columns:["product","depth"]}
+$max_depth = reduce($depths.items,0,($m,$r)=>max($m,$r.depth))
+$result = {requirements:$requirements,orders:$order_rows,depth_by_product:$depth_by_product,max_depth:$max_depth,events:len($docs[1].data.items)}
+$shortages = $requirements >> [table:filter]{where:($r)=>$r.status == "부족"} >> [table:sort]{by:"shortage",descending:true} >> [table:take]{n:10}
+$order_lines = $order_rows >> [table:each] { return f"| ${$it.order_id} | ${$it.product} | ${$it.qty} | ${$it.status} | ${$it.leaf_rows} |" }
+$short_lines = $shortages >> [table:each] { return f"| ${$it.part} | ${$it.name} | ${$it.gross} | ${$it.on_hand} | ${$it.shortage} |" }
+$flag_lines = $requirements >> [table:filter]{where:($r)=>$r.status == "재고 미상" or $r.status == "정의 없음" or $r.status == "구성 없음"} >> [table:each] { return f"- ${$it.part}: ${$it.status} (gross ${$it.gross})" }
+$cycle_lines = $order_rows >> [table:filter]{where:($r)=>$r.status == "순환"} >> [table:each] { return f"- ${$it.order_id}: ${join(' → ',$it.cycle_path)}" }
+$report = "# 자재 소요량 보고서\n\n## 주문별 상태\n\n| 주문 | 제품 | 수량 | 상태 | 말단 경로 수 |\n| --- | --- | --- | --- | --- |\n" + join("\n",$order_lines) +
+  "\n\n## 부족 상위 10\n\n| 부품 | 이름 | 총소요 | 재고 | 부족 |\n| --- | --- | --- | --- | --- |\n" + join("\n",$short_lines) +
+  "\n\n## 재고 미상·정의 없음·구성 없음\n\n" + (len($flag_lines) == 0 ? "- 없음" : join("\n",$flag_lines)) +
+  "\n\n## 순환 경로\n\n" + (len($cycle_lines) == 0 ? "- 없음" : join("\n",$cycle_lines)) +
+  f"\n\n최대 전개 깊이 ${$max_depth}, 읽은 구성 행 ${len($docs[1].data.items)}\n"
+[self:write]{path:$out + "/result.json",content:json($result)}
+[self:write]{path:$out + "/report.md",content:$report}
+$readback = [self:read]{path:$out + "/result.json"}
+assert $readback.data == $result, "저장 후 값 불일치"
+return {requirements:len($requirements),orders:len($order_rows),cycle_orders:$cycle_orders,max_depth:$max_depth,events:len($docs[1].data.items)}

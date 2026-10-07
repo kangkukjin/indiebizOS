@@ -688,6 +688,10 @@ class Runtime(ExpressionEvaluator):
         footprint = call_resources(spec, contract, args.value, 'write' if state_change else 'read')
         if model_only:
             footprint = []  # All source values are arguments; no hidden external reads.
+        from ibl_run_journal import resource_state
+        # 읽기 직전의 파일 지문 — 영수증에 싣고, 빌릴 때 같은지 본다(L33-2).
+        freshness = resource_state(footprint) if reusable_read and not model_only else None
+        stale = None
         if state_change:
             with self.lock:
                 self.reuse_writes.append(footprint)
@@ -729,6 +733,14 @@ class Runtime(ExpressionEvaluator):
                 hit = self.reusable.get(reuse_key)
                 if model_only and reuse_key in self.consumed_model_receipts:
                     hit = None
+                if hit is not None and "value" in hit and not hit.get("reuse_disabled") and freshness:
+                    old_state = hit.get('resource_state')
+                    if old_state is None:
+                        stale = 'freshness_unknown'      # 지문이 없는 옛 영수증은 빌리지 않는다
+                    elif old_state != freshness:
+                        stale = 'resource_changed'
+                    if stale:
+                        hit = None
                 if hit is not None and "value" in hit and not hit.get("reuse_disabled"):
                     receipt, source = hit, "reuse"
                     if model_only:
@@ -736,6 +748,8 @@ class Runtime(ExpressionEvaluator):
         if receipt is None and self.reuse_run and reusable_read:
             if invalidated:
                 reason = "overlapping_write"
+            elif stale:
+                reason = stale
             elif model_only and not self.reuse_models:
                 reason = "fresh_model_requested"
             elif model_only and reuse_key in self.consumed_model_receipts:
@@ -752,9 +766,13 @@ class Runtime(ExpressionEvaluator):
             with self.lock:
                 self.reuse_skipped_total += 1
                 if len(self.reuse_skipped) < 20:
-                    self.reuse_skipped.append({'action': key, 'location': span(self.plan.source, node),
-                                              'reason': reason, 'candidates': differences[:5],
-                                              'candidates_total': len(differences)})
+                    skipped = {'action': key, 'location': span(self.plan.source, node),
+                               'reason': reason, 'candidates': differences[:5],
+                               'candidates_total': len(differences)}
+                    if stale == 'resource_changed':
+                        old_state = {e[0]: e[1:] for e in (self.reusable.get(reuse_key) or {}).get('resource_state') or []}
+                        skipped['changed_resources'] = [e[0] for e in freshness if old_state.get(e[0]) != e[1:]]
+                    self.reuse_skipped.append(skipped)
         if (receipt is not None and "value" in receipt and source == "journal"
                 and contract.get("deferred_observation") and not self.replay):
             # Restore the staged local checkpoint, but preserve the original
@@ -822,7 +840,8 @@ class Runtime(ExpressionEvaluator):
                 guard(value, contract["result"], f"{key} 반환")
                 if external:
                     receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence,
-                               "action": key, "reuse_key": reuse_key, "reuse_parts": reuse_parts}
+                               "action": key, "reuse_key": reuse_key, "reuse_parts": reuse_parts,
+                               **({"resource_state": freshness} if freshness else {})}
                     if model_only:
                         receipt['model_identity'] = model_identity
                         receipt['reuse_disabled'] = spec.model_identity() != model_identity

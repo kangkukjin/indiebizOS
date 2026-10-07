@@ -3,9 +3,11 @@
 args(JSON stdin):
   op: "pack" | "unpack" | "list"
   pack:   paths:[파일·폴더…] (또는 path / items:[{path|saved_path|src|out}]) · output: 결과 zip 경로
-          (생략 = 첫 대상 옆 `<이름>.zip`) · include: ["*.pdf"] 글로브(파일명 기준, 생략=전부)
+          (생략 = 첫 대상 옆 `<이름>.zip`) · include: ["*.pdf"] 글로브(파일명·ZIP 상대경로, 생략=전부)
           · exclude: 기본 [".DS_Store", "__pycache__", "*.pyc", "Thumbs.db"] · base: 폴더를 묶을 때
           안쪽 경로 기준(생략 = 대상의 부모 — 폴더 이름이 zip 안 첫 칸)
+          exclude는 상대경로·각 부모 폴더에도 적용하며 직접 지정한 파일도 예외가 아니다.
+          예: "internal"은 그 이름의 항목/하위 전체, "*/internal/*"는 해당 경로 아래를 제외.
   unpack: path: zip/tar(.gz/.bz2/.xz) · out_dir: 풀 폴더(생략 = 압축 파일 옆 `<이름>/`)
           · include: ["*.pdf"] 일부만 · overwrite: false(이미 있는 파일은 거절)
           경로 탈출(../, 절대경로) 항목은 거절 — zip slip 차단
@@ -58,8 +60,28 @@ def _match(name: str, patterns) -> bool:
     return any(fnmatch.fnmatch(base, p) or fnmatch.fnmatch(name, p) for p in patterns)
 
 
-def _excluded(rel: str, exclude) -> bool:
-    return any(_match(part, exclude) for part in rel.split("/") if part)
+def _excluded(rel: str, exclude, *, is_dir: bool = False) -> bool:
+    """Apply the same exclusion to a path and its containing directories.
+
+    Testing only path components loses slash-bearing patterns. Directory
+    prefixes also let explicit files obey exclusions of their ancestors, and
+    trailing slashes identify a subtree before os.walk enters it.
+    """
+    parts = [part for part in rel.split("/") if part]
+    for count in range(1, len(parts) + 1):
+        prefix = "/".join(parts[:count])
+        if _match(prefix, exclude):
+            return True
+        if (count < len(parts) or is_dir) and _match(prefix + "/", exclude):
+            return True
+    return False
+
+
+def _archive_name(path: Path, root: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.name
 
 
 def _is_tar(path: Path) -> bool:
@@ -86,25 +108,22 @@ def op_pack(args: dict) -> dict:
     entries: list[tuple[Path, str]] = []
     for t in targets:
         root = base or t.parent
+        if _excluded(_archive_name(t, root), exclude, is_dir=t.is_dir()):
+            continue
         if t.is_dir():
             for dirpath, dirnames, files in os.walk(t):
-                dirnames[:] = [d for d in dirnames if not _match(d, exclude)]
+                dirnames[:] = [d for d in dirnames if not _excluded(
+                    _archive_name(Path(dirpath) / d, root), exclude, is_dir=True)]
                 for f in sorted(files):
                     fp = Path(dirpath) / f
-                    try:
-                        rel = fp.relative_to(root).as_posix()
-                    except ValueError:
-                        rel = fp.name
+                    rel = _archive_name(fp, root)
                     if _excluded(rel, exclude):
                         continue
                     if include and not _match(rel, include):
                         continue
                     entries.append((fp, rel))
         else:
-            try:
-                rel = t.relative_to(root).as_posix()
-            except ValueError:
-                rel = t.name
+            rel = _archive_name(t, root)
             if include and not _match(rel, include):
                 continue
             entries.append((t, rel))

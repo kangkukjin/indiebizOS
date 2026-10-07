@@ -11,7 +11,7 @@ import difflib
 import webbrowser
 import importlib.util
 from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote_plus
 from pathlib import Path
 
@@ -49,6 +49,102 @@ def _fetch_sections(jobs):
     return load_module("web_search_io").fetch_sections(jobs)
 
 
+# 배치 섹션이 단일 호출에서 그대로 넘겨받는 키 — 요청량·상한 조정·경고(행·오류만 꺼내던 2026-10-07 이전 누락 수리)
+_BATCH_KEEP_KEYS = ("clamped", "requested", "message", "warning")
+
+# days(최근 N일)를 보장할 수 있는 소스 — 통화 행에 date 를 싣는 소스만. ddg 는 게시일이 없고,
+# naver 는 news(ISO8601)·blog(YYYY-MM-DD)만 날짜를 싣는다.
+_DATED_SOURCES = {"gnews", "hn", "guardian"}
+_NAVER_DATED_TYPES = {"news", "blog"}
+
+
+def _days_window(tool_input: dict) -> int:
+    raw = tool_input.get("days")
+    if raw in (None, "", False):
+        return 0
+    try:
+        d = int(raw)
+    except (TypeError, ValueError):
+        return 0
+    return d if d > 0 else 0
+
+
+def _days_unsupported(tool_input: dict, source: str):
+    """days 를 보장할 수 없는 소스면 거절문을 돌려준다(실행 전). 보장 가능하면 None."""
+    if not _days_window(tool_input):
+        return None
+    if source in _DATED_SOURCES:
+        return None
+    if source == "naver":
+        t = load_module("tool_naver_search")._normalize_type(str(tool_input.get("type") or "webkr"))
+        if t in _NAVER_DATED_TYPES:
+            return None
+        return (f"naver type:{t} 은 게시일을 주지 않아 days 를 보장할 수 없습니다 — "
+                "type:news/blog 또는 source:gnews/hn/guardian 을 쓰세요.")
+    return (f"source:{source} 는 게시일을 주지 않아 days 를 보장할 수 없습니다 — "
+            "gnews/hn/guardian 또는 naver(type:news/blog)를 쓰세요.")
+
+
+def _parse_row_date(value):
+    """통화 행의 date → (aware datetime, date_only). 파싱 불능이면 None."""
+    if not value:
+        return None
+    text = str(value).strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except (ValueError, TypeError):
+        return None
+    date_only = len(text) == 10
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed, date_only
+
+
+def _apply_days(tool_input: dict, value: dict) -> dict:
+    """[sense:search] 라우터 출구 공통 후처리 — days 를 date 열로 보장한다(2026-10-07, ep4327).
+
+    소스별 라우팅에 심지 않고 한 곳에서: date 있는 행은 기간 밖이면 제외, date 없는 행은 보존하되
+    따로 센다(기간 밖과 날짜 미상을 구별 — 모르는 날짜를 기간 안이라고 주장하지 않는다). hn 은
+    서버측 필터를 이미 받지만 같은 후처리를 지나 신고 모양(days_filter)을 맞춘다. 날짜만 있는
+    행(YYYY-MM-DD)은 일 단위로 비교한다. 배치 sections 건수와 count 는 남은 행으로 다시 센다."""
+    days = _days_window(tool_input)
+    if not days or not isinstance(value, dict) or not isinstance(value.get("items"), list):
+        return value
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    stats = {"days": days, "since": cutoff.isoformat(timespec="seconds"), "kept": 0, "out_of_range": 0, "undated": 0}
+
+    def keep(row, tally=True):
+        parsed = _parse_row_date(row.get("date")) if isinstance(row, dict) else None
+        if parsed is None:
+            if tally:
+                stats["undated"] += 1
+            return True
+        dt, date_only = parsed
+        inside = dt.date() >= cutoff.date() if date_only else dt >= cutoff
+        if tally:
+            stats["out_of_range" if not inside else "kept"] += 1
+        return inside
+
+    value["items"] = [r for r in value["items"] if keep(r)]
+    if isinstance(value.get("pool"), list):   # 편집장이 안 뽑은 나머지도 같은 기간으로 — 신고(days_filter)는 items 기준
+        value["pool"] = [r for r in value["pool"] if keep(r, tally=False)]
+    value["count"] = len(value["items"])
+    if isinstance(value.get("sections"), list):
+        tally = {}
+        for r in value["items"]:
+            if isinstance(r, dict):
+                tally[r.get("query")] = tally.get(r.get("query"), 0) + 1
+        for sec in value["sections"]:
+            if isinstance(sec, dict) and "count" in sec:
+                sec["count"] = tally.get(sec.get("query", sec.get("topic")), 0)
+    value["days_filter"] = stats
+    if stats["undated"]:
+        note = (f"days:{days} 적용 — 기간 밖 {stats['out_of_range']}건 제외, 게시일 미상 {stats['undated']}건은 "
+                "보존(기간 안이라고 보장하지 않음 — date 없는 행은 원문으로 확인).")
+        value["message"] = (str(value["message"]) + " / " + note) if value.get("message") else note
+    return value
+
+
 def _batch_search(tool_input: dict, inner: str, source: str, project_path) -> dict:
     """[sense:search]{queries:[…]} 의 소스 공통 팬아웃 — 검색어마다 같은 소스를 병렬로 돌려 `query` 태그된 행을 한 통화로.
 
@@ -68,14 +164,32 @@ def _batch_search(tool_input: dict, inner: str, source: str, project_path) -> di
         section = {"items": [{**it, "query": q} for it in (r.get("items") or [])]}
         if not r.get("success"):
             section["error"] = r.get("error") or "검색 실패"
+        # 단일 호출이 알리는 상한 조정·경고를 섹션에 그대로 싣는다(2026-10-07 — 배치가 clamped·message 를 잃었다).
+        for k in _BATCH_KEEP_KEYS:
+            if k in r:
+                section[k] = r[k]
         return section
 
     fetched = _fetch_sections([(q, (lambda qq: (lambda: one(qq)))(q)) for q in queries])
     items = [it for sec in fetched for it in sec.get("items") or []]
+    sections = []
+    for q, sec in zip(queries, fetched):
+        row = {"query": q, "count": len(sec.get("items") or [])}
+        row.update({k: sec[k] for k in _BATCH_KEEP_KEYS if k in sec})
+        sections.append(row)
     resp = {"success": True, "source": source, "queries": queries, "count": len(items),
             "_display": {"group_by": "query"},
-            "sections": [{"query": q, "count": len(sec.get("items") or [])} for q, sec in zip(queries, fetched)],
+            "sections": sections,
             "items": items}
+    if any(sec.get("clamped") for sec in fetched):
+        resp["clamped"] = True
+    notes = []
+    for q, sec in zip(queries, fetched):
+        for k in ("message", "warning"):
+            if sec.get(k) and sec[k] not in notes:
+                notes.append(sec[k])
+    if notes:
+        resp["message"] = " / ".join(str(n) for n in notes)
     errors = [{"query": q, "error": sec["error"]} for q, sec in zip(queries, fetched) if sec.get("error")]
     if errors:
         resp.update(success=False, errors=errors, error=f"검색 {len(errors)}개 실패; 다른 검색 결과는 items에 보존")
@@ -874,6 +988,10 @@ def _execute(tool_input: dict, context):
             return format_json({"success": False,
                                 "error": f"알 수 없는 source: {source} (가능: ddg/naver/gnews/hn/guardian)"})
         from types import SimpleNamespace
+        # days 는 date 를 싣는 소스에서만 보장된다 — 묵살하지 말고 실행 전에 거절(2026-10-07, ep4327: gnews days:2 가 2022년 기사를 냈다).
+        unsupported = _days_unsupported(tool_input, source)
+        if unsupported:
+            return format_json({"success": False, "items": [], "error": unsupported})
         # 배치 팬아웃은 소스 공통이다(2026-09-18, ep3854: naver·ddg 검색 26건을 한 건씩 호출 — queries 가 뉴스 소스에만 있었다).
         # gnews·hn 은 자기 배치가 헤드라인·편집장을 겸하므로 그대로 두고, 나머지 소스는 여기서 같은 계약으로 편다.
         if tool_input.get("queries") and source not in ("gnews", "hn"):
@@ -1130,6 +1248,11 @@ def _execute(tool_input: dict, context):
 def execute(tool_input: dict, context):
     result = _execute(tool_input, context)
     if context.tool_name == "search":
+        if _days_window(tool_input):
+            value = json.loads(result) if isinstance(result, str) else result
+            if isinstance(value, dict) and value.get("success") is not False:
+                value = _apply_days(tool_input, value)
+                result = format_json(value) if isinstance(result, str) else value
         notes = load_module("web_search_io").query_notes(tool_input)
         if notes:
             value = json.loads(result) if isinstance(result, str) else result

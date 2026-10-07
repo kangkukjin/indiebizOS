@@ -466,6 +466,7 @@ data/recall_index/
 data/ibl_runs/
 
 !data/idioms/homepage_seeds.json
+!data/idioms/search_then_extract_seeds.json
 
 # Shared lease for managed Python installs and direct-library workers.
 data/runtime/python-environment.lock

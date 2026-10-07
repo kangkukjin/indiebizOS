@@ -1,0 +1,18 @@
+[
+  {"intent": "오송에 주인세대 전세 매물이 나왔는지 블로그 글 본문까지 읽어서 확인해줘", "topic": "부동산",
+   "ibl_code": "[sense:search]{source:\"naver\",type:\"blog\",queries:[\"오송 주인세대 전세\",\"오송 주인집 전세\"],limit:6} >> [fn:주소마다읽기]{개수:6} >> [fn:본문에서찾기]{패턴:\"주인세대|주인집|전세\",문맥:1,개수:20}"},
+  {"intent": "지난 2일간 후티·사우디 관련 뉴스를 찾아 기사 본문에서 공격·휴전 대목만 뽑아줘", "topic": "뉴스",
+   "ibl_code": "[sense:search]{source:\"gnews\",queries:[\"후티 사우디\",\"Houthi Saudi\"],days:2,limit:10} >> [fn:주소마다읽기]{개수:6} >> [fn:본문에서찾기]{패턴:\"공격|휴전|attack|ceasefire\",문맥:1,개수:20}"},
+  {"intent": "새 맥미니를 지금 살 수 있는지 뉴스 본문에서 판매·출시 대목을 찾아 확인해줘", "topic": "쇼핑·중고",
+   "ibl_code": "$뉴스 = [sense:search]{source:\"naver\",type:\"news\",query:\"맥미니 출시 판매\",limit:5} & [sense:search]{source:\"gnews\",query:\"Mac mini available\",days:30,limit:5}; $뉴스 >> [fn:주소마다읽기]{개수:5} >> [fn:본문에서찾기]{패턴:\"판매|출시|available|order\",문맥:1,개수:15}"},
+  {"intent": "국립중앙박물관 공식 안내 본문에서 휴관일·개관 대목을 찾아줘", "topic": "웹 검색·크롤링",
+   "ibl_code": "[sense:search]{source:\"naver\",type:\"webkr\",query:\"국립중앙박물관 휴관일 안내\",limit:5} >> [table:filter]{where:{field:\"url\",op:\"matches\",value:\"museum.go.kr\"}} >> [fn:주소마다읽기]{개수:3} >> [fn:본문에서찾기]{패턴:\"휴관|개관|10월\",문맥:1,개수:15}"},
+  {"intent": "최근 일주일 HN에서 AI agent 글을 찾아 본문에서 benchmark 언급만 모아줘", "topic": "기술",
+   "ibl_code": "[sense:search]{source:\"hn\",query:\"AI agent\",days:7,limit:10} >> [fn:주소마다읽기]{개수:5} >> [fn:본문에서찾기]{패턴:\"benchmark|eval\",문맥:1,개수:15}"},
+  {"intent": "Search the last 3 days of Guardian coverage on the Houthis and pull the paragraphs about strikes or a ceasefire", "topic": "뉴스",
+   "ibl_code": "[sense:search]{source:\"guardian\",query:\"Yemen Houthi\",days:3,limit:8} >> [fn:주소마다읽기]{개수:4} >> [fn:본문에서찾기]{패턴:\"ceasefire|strike\",문맥:1,개수:12}"},
+  {"intent": "애플 공식 사이트에서 맥미니 가격 대목만 찾아줘", "topic": "쇼핑·중고",
+   "ibl_code": "[sense:search]{source:\"ddg\",query:\"Mac mini price site:apple.com\",limit:5} >> [fn:주소마다읽기]{개수:2} >> [fn:본문에서찾기]{패턴:\"price|원|USD\",문맥:0,개수:10}"},
+  {"intent": "오송 전세 카페 글을 찾아 본문에서 보증금 숫자가 있는 문단만 보여줘", "topic": "부동산",
+   "ibl_code": "[sense:search]{source:\"naver\",type:\"cafe\",queries:[\"오송 전세 주인세대\",\"오송읍 전세 매물\"],limit:5} >> [fn:주소마다읽기]{개수:5} >> [fn:본문에서찾기]{패턴:\"보증금|전세가|[0-9]+만\",문맥:1,개수:20}"}
+]

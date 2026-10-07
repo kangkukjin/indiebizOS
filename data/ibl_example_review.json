@@ -1568,7 +1568,7 @@
   "self:task": {
    "fields": {
     "description": "8022d8516550",
-    "target_description": "8dcfc66218ba",
+    "target_description": "bca16c68ddca",
     "implementation": "22e22b80a762",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
@@ -2152,7 +2152,7 @@
   "sense:search": {
    "fields": {
     "description": "de849f0a0855",
-    "target_description": "027186d29eb8",
+    "target_description": "f88d0a3167f7",
     "implementation": "9103edc5f400",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
@@ -2161,8 +2161,8 @@
     "router": "ebbb1532efbc",
     "tool": "6ad21f9d2ea1"
    },
-   "reviewed": "2026-09-18",
-   "examples": 181
+   "reviewed": "2026-10-07",
+   "examples": 211
   },
   "sense:search_shopping": {
    "fields": {

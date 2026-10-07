@@ -79,7 +79,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-10-06", impl: "d025580c3522af03"}  # 재감사 2026-10-06: gnews 표시 정리(제목의 매체 꼬리 제거·meta 현지 시각·요약=관련 보도 목록) — 표시 문자열만, 구조 칸·회원 경로 불변
+        path_audited: {at: "2026-10-07", impl: "2a23119a316304cb"}  # 재감사 2026-10-07: search 라우터 출구 days 공통 후처리(date 로 기간 밖 제외·days_filter 신고·날짜 없는 소스 사전 거절)·배치 섹션의 clamped/requested/message 보존 — 읽기 전용 후처리, 쓰기 없음, 회원 경로(member_web) 불변
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -108,7 +108,7 @@ nodes:
           source=guardian: '[sense:search]{query: "climate policy", source: "guardian", limit: 3}'
         description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
         group: research
-        target_description: 검색어. gnews/hn 정상 0건은 성공한 빈 items이며 HTTP·파싱·시간 초과 오류와 구별한다. 배치 실패는 errors에 남기고 성공한 행은 보존한다. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). ★검색어가 여럿이면 한 호출에 — queries:["…","…"](모든 source 공통 배치 — 병렬로 돌려 행마다 query 태그, sections 에 검색어별 건수, 실패한 검색어만 errors). 소스가 다르면 & 로 잇는다. naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·curate(경량 편집장) 지원. ★hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days(최근 N일) 를 줄 것. hn·gnews·guardian·naver(news) 결과의 date 필드가 ISO8601 aware 게시일, naver(blog)는 날짜만(YYYY-MM-DD) — 발행일 파싱 불능 행은 date 없음. 신선도 술어는 우변도 aware 로 쓸 것 — 예 where "date >= 2026-08-07T00:00:00Z" (날짜만 리터럴은 naive 라 aware 값과 혼합 판정 불능 — ISO 시간 의미론 2026-08-27 판정).
+        target_description: 검색어. gnews/hn 정상 0건은 성공한 빈 items이며 HTTP·파싱·시간 초과 오류와 구별한다. 배치 실패는 errors에 남기고 성공한 행은 보존한다. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). ★검색어가 여럿이면 한 호출에 — queries:["…","…"](모든 source 공통 배치 — 병렬로 돌려 행마다 query 태그, sections 에 검색어별 건수, 실패한 검색어만 errors). 소스가 다르면 & 로 잇는다. naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·curate(경량 편집장) 지원. ★최근 N일로 한정하려면 days — gnews/hn/guardian·naver(news/blog)에서 보장(기간 밖 제외·미상은 보존하고 days_filter 로 신고), ddg 등 날짜 없는 소스는 거절. hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days 를 줄 것. hn·gnews·guardian·naver(news) 결과의 date 필드가 ISO8601 aware 게시일, naver(blog)는 날짜만(YYYY-MM-DD) — 발행일 파싱 불능 행은 date 없음. 신선도 술어는 우변도 aware 로 쓸 것 — 예 where "date >= 2026-08-07T00:00:00Z" (날짜만 리터럴은 naive 라 aware 값과 혼합 판정 불능 — ISO 시간 의미론 2026-08-27 판정).
         router: handler
         tool: search
         implementation: source 분기 단일 도구 — ddg=DuckDuckGo ddgs 라이브러리(키 불요), naver=네이버 개발자센터 API(NAVER_CLIENT_ID/SECRET — 구 web-kr 패키지 흡수), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.
@@ -163,7 +163,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-10-06", impl: "d025580c3522af03"}  # 재감사 2026-10-06: gnews 표시 정리(제목의 매체 꼬리 제거·meta 현지 시각·요약=관련 보도 목록) — 표시 문자열만, 구조 칸·회원 경로 불변
+        path_audited: {at: "2026-10-07", impl: "2a23119a316304cb"}  # 재감사 2026-10-07: search 라우터 출구 days 공통 후처리(date 로 기간 밖 제외·days_filter 신고·날짜 없는 소스 사전 거절)·배치 섹션의 clamped/requested/message 보존 — 읽기 전용 후처리, 쓰기 없음, 회원 경로(member_web) 불변
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -467,7 +467,7 @@ tool_json:
           description: 결과 수 (기본 ddg 5 · naver 5 · gnews 10 · hn 15 · guardian 10. gnews 는 100까지 GET 1회)
         days:
           type: integer
-          description: hn 전용 — 최근 N일로 제한. 미지정이면 전체 기간 인기순이라 몇 년 된 글이 1위로 온다(2026-08-20 실측 — "AI agent" 상위 3건이 2026-02·03·06월). 최신 동향을 볼 때는 days 를 반드시 줄 것(예 days 7). 결과의 date 필드가 ISO8601 게시일.
+          description: 최근 N일로 제한 — 게시일(date)을 싣는 소스에서만 보장(gnews/hn/guardian·naver type:news/blog). hn 은 서버측, 나머지는 라우터가 date 로 걸러 days_filter{kept,out_of_range,undated} 로 신고하고, 게시일 미상 행은 보존하되 기간 안이라고 보장하지 않는다. ddg·naver 다른 type 은 날짜가 없어 days 를 주면 실행 전 거절(2026-10-07 ep4327 — gnews days 묵살 수리). hn 은 미지정이면 전체 기간 인기순이라 몇 년 된 글이 1위로 온다(2026-08-20 실측) — 최신 동향은 days 를 줄 것(예 days 7).
         type:
           type: string
           description: 'naver 전용 — 검색 도메인 (webkr/news/blog/cafe/kin/encyc, 기본 webkr). 자연어 별칭(웹/뉴스/블로그/카페/지식인/백과) 허용. ★book/doc/shop 은 2026-08 네이버 은퇴(SE05).'

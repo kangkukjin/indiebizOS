@@ -99,7 +99,7 @@
           },
           "days": {
             "type": "integer",
-            "description": "hn 전용 — 최근 N일로 제한. 미지정이면 전체 기간 인기순이라 몇 년 된 글이 1위로 온다(2026-08-20 실측 — \"AI agent\" 상위 3건이 2026-02·03·06월). 최신 동향을 볼 때는 days 를 반드시 줄 것(예 days 7). 결과의 date 필드가 ISO8601 게시일."
+            "description": "최근 N일로 제한 — 게시일(date)을 싣는 소스에서만 보장(gnews/hn/guardian·naver type:news/blog). hn 은 서버측, 나머지는 라우터가 date 로 걸러 days_filter{kept,out_of_range,undated} 로 신고하고, 게시일 미상 행은 보존하되 기간 안이라고 보장하지 않는다. ddg·naver 다른 type 은 날짜가 없어 days 를 주면 실행 전 거절(2026-10-07 ep4327 — gnews days 묵살 수리). hn 은 미지정이면 전체 기간 인기순이라 몇 년 된 글이 1위로 온다(2026-08-20 실측) — 최신 동향은 days 를 줄 것(예 days 7)."
           },
           "type": {
             "type": "string",

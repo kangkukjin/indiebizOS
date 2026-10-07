@@ -319,6 +319,8 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 
 **턴 안 재규정 (`cognition/reframe.py`, 감독 통합 2026-09-10)**: 실행자가 `reframe`으로 실제 반증을 제시하면 해당 agent+task의 감독이 같은 의식 역할·중간 검토 예산으로 규정을 바꾼다. 새 규정은 도구 결과로 실행자에게 돌아오며 이미 만든 산출물을 유지한다. 권한은 재규정으로 늘어나지 않는다. 감독 없는 호환 경로에는 기존 `open_turn`과 평가의 `revise_from_eval`이 남는다. IBL 어휘를 추가하지 않고 인지 역할 사이의 내부 도구로 연결한다. 양쪽의 실제 행동·근거·판정·인계·응답 버전은 `supervision.*`, 검수 결과는 `validation.completed` 사건과 작업대 `events.jsonl`에 남는다.
 
+**규정 계승 (`cognition/framing_inheritance.py`, 2026-10-07)**: 의식을 다시 깨우지 않아도 되는 두 자리. ① 정기 — 같은 문장(정규화)의 직전 실행이 ACHIEVED 면 그 규정을 잇는다(30일 창). ② 후속 — 같은 자아의 직전 규정(24시간 창, 히스토리 있는 턴)에 대해 경량 분류(출력 한 단어 CONTINUE/NEW)로 "같은 과제의 후속인가"를 묻고, CONTINUE 면 잇는다(애매하면 NEW=각성). 계승은 베끼기가 아니라 경량 패치다: 직전 규정+새 메시지+오늘 날짜를 경량 모델에 주고 바뀌는 필드만 받는다(정기=시간 의존 표현만, 후속=바뀐 조건·범위·요구만; `data/common_prompts/framing_relation_prompt.md`·`framing_patch_prompt.md`). 권한(needs_repair)·히스토리 요약은 잇지 않고, 과제 연결은 직전 턴의 행 id 로 정규화해 같은 행에 잇는다. 패치 형식·과제 계약 검증에 실패하면 포기하고 각성한다. 저장소 `data/system_ai_state/framing_inherit/<자아>.json`(턴 종료에 유효 규정 기록), 사건 `framing.inherited`/`framing.inherit_declined`, `_framing_source=inherited_repeat|inherited_followup`. 위임 완료 통지(`[task:…] 완료.`)는 분류기 앞 결정론 단서로 CONTEXT_UPDATE(사실 통보 범위). 근거: 10월 실측 — 의식 호출 평균 72초·입력 중앙 11만 토큰, 같은 문장의 세 날 규정이 사실상 동일(ep4297·4330·4357), 후속 턴 각성(ep4352·4359·4364·4388·4390). 수리 턴은 `repair_continuation` 의 계승 경로 그대로.
+
 **에피소딕 메모리**: 에피소드(사용자 명령→최종 응답)별 실행 로그 기록
 - `episode_log` 테이블: 전체 로그 (최근 100개 보존)
 - `episode_summary` 테이블: 인지 품질 지표 영구 보존 (해마 점수, 무의식 판정, 의식 소요시간, 실행 라운드, 평가 결과)
@@ -503,7 +505,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 178 액션** (sense 43·self 59·limbs 14·others 20·engines 19·table 23)
-- backend **.py 549개**(test 제외, git 추적 기준) — 층 디렉토리 `base 76 · datastore 74 · ibl 86 · cognition 85 · services 66 · surface 86`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **93개**(guide_db 등록 **89**)
+- backend **.py 550개**(test 제외, git 추적 기준) — 층 디렉토리 `base 76 · datastore 74 · ibl 86 · cognition 86 · services 66 · surface 86`(+ common 31·providers 14·channels 4·drivers 3). 가이드 **93개**(guide_db 등록 **89**)
 - op 분기 액션 **90개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 25·미선언 94)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)

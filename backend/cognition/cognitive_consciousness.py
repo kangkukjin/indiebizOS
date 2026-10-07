@@ -62,6 +62,14 @@ class CognitiveConsciousnessMixin:
                 and not re.search(r"(?i)#think\b", user_message)):
             from repair_policy import direct_framing
             return direct_framing(user_message)
+        # 규정 계승(2026-10-07): 같은 문장의 정기 실행(직전 ACHIEVED) 또는 같은 과제의 후속 턴은
+        # 직전 규정을 경량 패치로 잇는다 — 의식 각성(≈1분·10만 토큰)을 건너뛴다. 수리 턴은 제외
+        # (수리는 repair_continuation 이 따로 계승한다). 포기하면 아래에서 전과 같이 깨운다.
+        if not repair:
+            from framing_inheritance import inherit
+            inherited_turn = inherit(self, user_message, history)
+            if inherited_turn:
+                return inherited_turn
         from pursuit_bind import run_consciousness
         result = run_consciousness(self, user_message, history, execution_memory, repair)
         if repair and isinstance(result, dict) and get_task_origin() == "user":
@@ -353,6 +361,12 @@ class CognitiveConsciousnessMixin:
         if self._is_repair_cue(message):
             print("[무의식] 분류: REPAIR (결정론 단서 — 직접 수리 요청)")
             return "REPAIR", None
+        # 위임받은 에이전트의 완료 통지(`[task:…] 완료.`)는 사실 통보다 — 분류기가 THINK 로 올려
+        # 의식 29초+상태 조회 5라운드를 돌던 자리(ep4388, 2026-10-07). 통보 범위(turn_scope)로 처리.
+        from framing_inheritance import is_delegation_report
+        if is_delegation_report(message):
+            print("[무의식] 분류: CONTEXT_UPDATE (결정론 단서 — 위임 완료 통지)")
+            return "CONTEXT_UPDATE", None
         if (hippocampus_score or 0) >= self.REFLEX_SCORE_THRESHOLD and top_code:
             # 안전핀 — 점수가 높아도 '한 방에 내보낼 답'이 아니면 반사를 포기하고
             # 무의식 분류로 내려보낸다(THINK 로 갈 기회를 준다). REPAIR 핀과 대칭.

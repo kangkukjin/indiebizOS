@@ -942,6 +942,17 @@ class CognitivePipelineMixin:
                 _packet = _p_finish(final_content, tool_calls_log,
                                     interrupted=not _response_completed or not bool(final_content),
                                     clarification=bool(_clarify_text and not _capability_guard.resumes))
+                # 규정 계승 저장(2026-10-07) — 이 턴의 유효 규정(재규정됐으면 그 판)을 자아별로 적는다.
+                # 다음 턴의 후속·정기 계승 재료. 실패해도 턴을 깨지 않는다.
+                if consciousness_output:
+                    try:
+                        from framing_inheritance import remember as _fi_remember
+                        _effective = (_reframe_channel.current
+                                      if _reframe_channel is not None and _reframe_channel.revised
+                                      else consciousness_output)
+                        _fi_remember(self, message, _effective, completed=_response_completed)
+                    except Exception as exc:
+                        print(f"[규정계승] 저장 실패: {type(exc).__name__}: {exc}")
                 if _response_completed:
                     self._after_response_async(
                         message, final_content,

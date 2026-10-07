@@ -11,9 +11,12 @@ from test_idiom_composition_2026_09_07 import run  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 GUIDE = ROOT / 'data/guides/ibl_composition.md'
+# 2026-10-07 분할: 본편(값·함수·병렬) + 도구·문서·재개. 예제는 두 파일에서 모은다.
+TOOLS_GUIDE = ROOT / 'data/guides/ibl_composition_tools.md'
+GUIDES = (GUIDE, TOOLS_GUIDE)
 FRAGMENTS = ROOT / 'data/common_prompts/fragments'
-EXAMPLES = dict(re.findall(
-    r'<!-- example:(\w+) -->\s*```ibl\n(.*?)\n```', GUIDE.read_text(), re.S))
+EXAMPLES = dict(pair for guide in GUIDES for pair in re.findall(
+    r'<!-- example:(\w+) -->\s*```ibl\n(.*?)\n```', guide.read_text(), re.S))
 
 
 @pytest.fixture
@@ -154,7 +157,7 @@ def test_compact_example_is_executable_and_bounded(current):
     empty = examples[0].replace('[{id:"a",qty:2}]', '[]')
     assert current(empty)['value'] == []
     assert len((FRAGMENTS / '12_ibl_only.md').read_bytes()) <= 36000
-    assert len(GUIDE.read_bytes()) <= 36000
+    assert all(len(guide.read_bytes()) <= 36000 for guide in GUIDES)
     assert len(compact) <= 4200
 
 
@@ -176,13 +179,20 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
     for query in ('ibl_composition.md', 'ibl_v2.md', 'ibl_v2'):
         guide = _search_guide(query, {'read': True})
         assert guide['match'] == 'filename' and guide['content'] == GUIDE.read_text()
+    tools = _search_guide('ibl_composition_tools.md', {'read': True})
+    assert tools['match'] == 'filename' and tools['content'] == TOOLS_GUIDE.read_text()
+    # 상시 프롬프트는 본편만 가리킨다 — 둘째 파일은 본편 머리말이 잇는다(상시 조각을 늘리지 않는다).
+    assert 'read_guide(query="ibl_composition_tools.md")' in GUIDE.read_text().split('## ')[0]
+    assert '(ibl_composition.md)' in TOOLS_GUIDE.read_text().split('## ')[0]
     assert 'ibl_v2' not in [g['id'] for g in _search_guide('', {})['guides']]
     for compact in (True, False):
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
     assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition', 'document_completion', 'value_revision', 'pure_list_transform'}
-    assert len(re.findall(r'```ibl\n', GUIDE.read_text())) == len(EXAMPLES)
+    assert sum(len(re.findall(r'```ibl\n', guide.read_text())) for guide in GUIDES) == len(EXAMPLES)
+    assert {'join_time', 'unary_group', 'document_completion'} == set(
+        re.findall(r'<!-- example:(\w+) -->', TOOLS_GUIDE.read_text()))
 
 
 @pytest.mark.parametrize('body,side_effect,ai_call', [

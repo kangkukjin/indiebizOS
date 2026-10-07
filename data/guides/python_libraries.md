@@ -68,3 +68,20 @@ return [self:script]{id:"python_libraries",args:{receiver:$r,op:"export",format:
 
 세션은 등록 계약 `ibl-script-session/1`로 선택한다. 실행 안에서 같은 ID는 같은 워커를 쓴다.
 기존 일반 Script는 그대로 실행한다. 이 세션 계약은 background·args_file·원격 실행을 지원하지 않는다.
+
+## 전건 검증의 호출 수 줄이기
+
+행마다 Python 함수를 호출하기 전에 같은 검증을 수행하는 일괄 함수가 있는지 확인한다.
+워커를 공유해도 호출마다 계약·전달·기록 비용이 든다. 파일 내용을 비교할 때는
+`filecmp:cmpfiles`에 두 루트와 상대경로 목록을 주고 `shallow:false`로 바이트를 대조한다.
+반환 tuple은 같은 실행 안에서 export해 일치·불일치·읽기 실패를 구분한다.
+
+```ibl
+$r=[self:script]{id:"python_libraries",args:{op:"call",target:"filecmp:cmpfiles",args:[$원본,$복원,$상대경로],kwargs:{shallow:false}}}
+$검사=[self:script]{id:"python_libraries",args:{op:"export",receiver:$r,format:"list"}}
+return {일치:$검사[0],불일치:$검사[1],읽기실패:$검사[2]}
+```
+
+이 함수는 지정 목록의 내용만 검사한다. 누락·추가·중복 파일은 독립 목록으로 대조하며,
+빈 목록의 무검사를 전건 성공으로 세지 않는다. 읽기 실패의 상세 원인이 필요하면 그 항목만
+개별 조회한다. 수정된 파일을 다시 비교할 때는 새 실행을 쓰거나 filecmp의 캐시를 비운다.

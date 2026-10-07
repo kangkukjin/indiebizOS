@@ -51,6 +51,30 @@ def test_unregistered_calls_and_plain_values(registry, target, args, expected):
     assert out['value'] == expected
 
 
+def test_batch_file_comparison_preserves_empty_mismatch_and_missing(registry, tmp_path):
+    import os
+
+    source, restored = tmp_path / 'source', tmp_path / 'restored'
+    source.mkdir()
+    restored.mkdir()
+    for root in (source, restored):
+        (root / 'empty').write_bytes(b'')
+        (root / 'same').write_bytes(b'line\r\n')
+    (source / 'different').write_bytes(b'ab')
+    (restored / 'different').write_bytes(b'cd')
+    stamp = (source / 'different').stat().st_mtime
+    os.utime(restored / 'different', (stamp, stamp))
+    (source / 'missing').write_bytes(b'not restored')
+    code = '''$r=[self:script]{id:"python_libraries",args:{op:"call",target:"filecmp:cmpfiles",
+args:[$source,$restored,$names],kwargs:{shallow:false}}}
+return [self:script]{id:"python_libraries",args:{op:"export",receiver:$r,format:"list"}}'''
+    out = run(code, registry, {'source': str(source), 'restored': str(restored),
+                              'names': ['empty', 'same', 'different', 'missing']})
+    assert out['success'], out
+    assert out['value'] == [['empty', 'same'], ['different'], ['missing']]
+    assert len([e for e in out['evidence'] if e['kind'] == 'invoke']) == 2
+
+
 def test_mutation_alias_and_release(registry):
     out = run('''$a=[self:script]{id:"python_libraries",args:{op:"call",target:"builtins:list",result:"ref"}}
 $b=$a

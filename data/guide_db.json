@@ -17,7 +17,7 @@
     {
       "id": "ibl_composition",
       "name": "IBL 교재 — 값·함수·조합",
-      "description": "입출력 계약부터 변수·함수·관용구를 연결하는 실행 예제. 빈 결과와 장애 구분, 실패 항목만 재시도, 전량 분할·통합, 입력 크기·재개·총 AI 비용 점검.",
+      "description": "입출력 계약부터 변수·함수·관용구를 연결하는 실행 예제. 빈 결과와 장애 구분, 실패 항목만 재시도, 전량 분할·통합, 값 가공과 완료 조건. 도구 결합·문서 읽기·재개는 ibl_composition_tools.md.",
       "keywords": [
         "IBL",
         "IBL 문법",
@@ -47,6 +47,33 @@
         "ibl_v2.md",
         "ibl_v2"
       ]
+    },
+    {
+      "id": "ibl_composition_tools",
+      "name": "IBL 교재 — 도구·문서·재개",
+      "description": "IBL 조합 본편에 이어 도구·스크립트를 붙이는 법(join·merge·groupby), 문서 읽기와 판정·반환 연결, 큰 결과의 미리보기와 전체 값, 중단 뒤 이어가기(result_ref·reuse), 옛 긴 문장 옮기기, Python 라이브러리·CSV 진단.",
+      "keywords": [
+        "IBL",
+        "도구 결합",
+        "join",
+        "merge",
+        "groupby",
+        "문서 읽기",
+        "미리보기",
+        "_preview",
+        "result_ref",
+        "input_args",
+        "재개",
+        "이어가기",
+        "reuse",
+        "partial_reads",
+        "옛 문장 변환",
+        "python_libraries",
+        "CSV",
+        "execution_notes"
+      ],
+      "file": "ibl_composition_tools.md",
+      "topic": "IBL"
     },
     {
       "id": "judgment",

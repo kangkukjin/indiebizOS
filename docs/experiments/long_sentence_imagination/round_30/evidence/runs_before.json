@@ -1,0 +1,236 @@
+[
+  {
+    "label": "main_v0",
+    "started": 1791346002.805238,
+    "ended": 1791346034.6733062,
+    "elapsed": 31.8680682182312,
+    "success": true,
+    "run_status": "completed",
+    "run_id": "ae6cc113f4974c8caa36b4dff8e5de74",
+    "usage": {
+      "steps": 10422,
+      "rows": 313,
+      "elapsed_ms": 31739,
+      "tool_ms_by_line": [
+        {
+          "line": 4,
+          "ms": 30600,
+          "calls": 76,
+          "actions": [
+            "self:script"
+          ]
+        },
+        {
+          "line": 17,
+          "ms": 129,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ]
+        },
+        {
+          "line": 15,
+          "ms": 128,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ]
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "value": {
+      "expected_count": 76,
+      "archive_count": 79,
+      "restored_count": 79,
+      "missing": [],
+      "extra": [
+        "사진/internal/연락.txt",
+        "설치/internal/연락.txt",
+        "영상/internal/연락.txt"
+      ],
+      "duplicate_count": 0,
+      "mismatches": [],
+      "complete": false
+    }
+  },
+  {
+    "label": "variant_v0",
+    "started": 1791346067.891996,
+    "ended": 1791346089.7263591,
+    "elapsed": 21.834363222122192,
+    "success": true,
+    "run_status": "completed",
+    "run_id": "74083860c5124a3a8b2d9e562c130dfa",
+    "usage": {
+      "steps": 8158,
+      "rows": 237,
+      "elapsed_ms": 21725,
+      "tool_ms_by_line": [
+        {
+          "line": 4,
+          "ms": 20481,
+          "calls": 51,
+          "actions": [
+            "self:script"
+          ]
+        },
+        {
+          "line": 16,
+          "ms": 127,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ]
+        },
+        {
+          "line": 15,
+          "ms": 127,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ]
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    },
+    "value": {
+      "expected_count": 51,
+      "archive_count": 53,
+      "restored_count": 53,
+      "missing": [],
+      "extra": [
+        "사진/internal/연락.txt",
+        "영상/internal/연락.txt"
+      ],
+      "duplicate_count": 0,
+      "mismatches": [],
+      "complete": false
+    }
+  },
+  {
+    "label": "probe_exclude",
+    "started": 1791346113.554373,
+    "ended": 1791346113.977469,
+    "elapsed": 0.4230959415435791,
+    "success": true,
+    "run_status": "completed",
+    "run_id": "7dbeb928ccc847808e92680fc223d430",
+    "usage": {
+      "steps": 6,
+      "rows": 0,
+      "elapsed_ms": 406
+    },
+    "value": {
+      "items": [
+        {
+          "name": "사진/internal/연락.txt",
+          "size": 39
+        },
+        {
+          "name": "안내.txt",
+          "size": 86
+        }
+      ],
+      "output": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_30회차/trainer/explicit_exclude.zip",
+      "count": 2,
+      "bytes": 379
+    }
+  },
+  {
+    "label": "batch_probe",
+    "started": 1791346199.687401,
+    "ended": 1791346201.208128,
+    "elapsed": 1.5207269191741943,
+    "success": true,
+    "run_status": "completed",
+    "run_id": "1952791bfcdc4452840f12cc7da178ed",
+    "usage": {
+      "steps": 37,
+      "rows": 0,
+      "elapsed_ms": 1496
+    },
+    "value": [
+      [
+        "사진/검수.txt",
+        "사진/작품 00/설명.txt",
+        "사진/작품 01/설명.txt",
+        "사진/작품 02/설명.txt",
+        "사진/작품 03/설명.txt",
+        "사진/작품 04/설명.txt",
+        "사진/작품 05/설명.txt",
+        "사진/작품 06/설명.txt",
+        "사진/작품 07/설명.txt",
+        "사진/작품 08/설명.txt",
+        "사진/작품 09/설명.txt",
+        "사진/작품 10/설명.txt",
+        "사진/작품 11/설명.txt",
+        "사진/작품 12/설명.txt",
+        "사진/작품 13/설명.txt",
+        "사진/작품 14/설명.txt",
+        "사진/작품 15/설명.txt",
+        "사진/작품 16/설명.txt",
+        "사진/작품 17/설명.txt",
+        "사진/작품 18/설명.txt",
+        "사진/작품 19/설명.txt",
+        "사진/작품 20/설명.txt",
+        "사진/작품 21/설명.txt",
+        "사진/작품 22/설명.txt",
+        "사진/작품 23/설명.txt",
+        "설치/검수.txt",
+        "설치/작품 00/설명.txt",
+        "설치/작품 01/설명.txt",
+        "설치/작품 02/설명.txt",
+        "설치/작품 03/설명.txt",
+        "설치/작품 04/설명.txt",
+        "설치/작품 05/설명.txt",
+        "설치/작품 06/설명.txt",
+        "설치/작품 07/설명.txt",
+        "설치/작품 08/설명.txt",
+        "설치/작품 09/설명.txt",
+        "설치/작품 10/설명.txt",
+        "설치/작품 11/설명.txt",
+        "설치/작품 12/설명.txt",
+        "설치/작품 13/설명.txt",
+        "설치/작품 14/설명.txt",
+        "설치/작품 15/설명.txt",
+        "설치/작품 16/설명.txt",
+        "설치/작품 17/설명.txt",
+        "설치/작품 18/설명.txt",
+        "설치/작품 19/설명.txt",
+        "설치/작품 20/설명.txt",
+        "설치/작품 21/설명.txt",
+        "설치/작품 22/설명.txt",
+        "설치/작품 23/설명.txt",
+        "안내.txt",
+        "영상/검수.txt",
+        "영상/작품 00/설명.txt",
+        "영상/작품 01/설명.txt",
+        "영상/작품 02/설명.txt",
+        "영상/작품 03/설명.txt",
+        "영상/작품 04/설명.txt",
+        "영상/작품 05/설명.txt",
+        "영상/작품 06/설명.txt",
+        "영상/작품 07/설명.txt",
+        "영상/작품 08/설명.txt",
+        "영상/작품 09/설명.txt",
+        "영상/작품 10/설명.txt",
+        "영상/작품 11/설명.txt",
+        "영상/작품 12/설명.txt",
+        "영상/작품 13/설명.txt",
+        "영상/작품 14/설명.txt",
+        "영상/작품 15/설명.txt",
+        "영상/작품 16/설명.txt",
+        "영상/작품 17/설명.txt",
+        "영상/작품 18/설명.txt",
+        "영상/작품 19/설명.txt",
+        "영상/작품 20/설명.txt",
+        "영상/작품 21/설명.txt",
+        "영상/작품 22/설명.txt",
+        "영상/작품 23/설명.txt"
+      ],
+      [],
+      []
+    ]
+  }
+]

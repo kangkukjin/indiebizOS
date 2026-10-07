@@ -1,0 +1,70 @@
+{
+ "checks": [
+  {
+   "check": "새 script 작업 정확히 2",
+   "ok": true,
+   "detail": "2"
+  },
+  {
+   "check": "새 위임 정확히 1",
+   "ok": false,
+   "detail": "0"
+  },
+  {
+   "check": "1차: backend/test_preflight_restart.py 통과 7",
+   "ok": true,
+   "detail": "7"
+  },
+  {
+   "check": "최종: backend/test_preflight_restart.py 통과 7",
+   "ok": true,
+   "detail": "7"
+  },
+  {
+   "check": "1차: backend/test_selfbuild_gate_2026_09_07.py 통과 20",
+   "ok": true,
+   "detail": "20"
+  },
+  {
+   "check": "최종: backend/test_selfbuild_gate_2026_09_07.py 통과 20",
+   "ok": true,
+   "detail": "20"
+  },
+  {
+   "check": "1차: 어휘는 확정 수치 없음(안 끝남)",
+   "ok": true,
+   "detail": "None"
+  },
+  {
+   "check": "최종: backend/test_vocabulary_archive.py 통과 6",
+   "ok": true,
+   "detail": "6"
+  },
+  {
+   "check": "1차: 취소됨을 상태 값으로 주장하지 않음",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "최종: 취소됨을 상태 값으로 주장하지 않음",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "1차: 안 끝난 일의 접수증(script) 보존",
+   "ok": true,
+   "detail": "[('script', '시험-20261007_095755-47a2d8e2285f409b87d093d3943363f6'), ('script', '시험-20261007_095755-f01183e9086d4fefa93ba7abb49aa1f4')]"
+  },
+  {
+   "check": "최종: 위임 요약 글 있음",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "최종: 접수증이 1차와 같은 작업",
+   "ok": true,
+   "detail": "[]"
+  }
+ ],
+ "all_ok": false
+}

@@ -1,0 +1,5 @@
+발표 전 점검을 해줘. 세 가지를 동시에 시작해.
+(가) 시스템 AI 에게 "data/guides/task_receipts.md 를 읽고 핵심을 세 줄로 요약해줘. 파일은 고치지 마." 를 위임
+(나) 등록 스크립트 "시험"으로 backend/test_vocabulary_archive.py 를 백그라운드로
+(다) 등록 스크립트 "시험"으로 backend/test_preflight_restart.py, backend/test_selfbuild_gate_2026_09_07.py 를 백그라운드로
+각 일을 최대 15초만 기다려. 그 안에 끝난 일은 결과를 적고, 안 끝난 일은 취소해줘. 취소가 실제로 됐는지 확인해서 "취소됨 / 취소 요청됨 / 취소 불가(계속 실행 중)"을 구분해 적어. 취소가 안 된 일을 취소됐다고 쓰지 마. 취소 못 한 일은 나중에 회수할 수 있게 접수증을 보고서에 남겨. 1차 보고서를 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_27회차/ai/report_1.json 에 저장하고 다시 읽어서 확인해줘. 같은 일을 두 번 시작하지 마. 저장소 루트는 /Users/kangkukjin/Desktop/AI/indiebizOS 야. 이건 훈련이니까 코드나 설정은 고치지 말고, 다른 실행자의 trainer/harness/drafts/expected 폴더와 정답은 보지 마.

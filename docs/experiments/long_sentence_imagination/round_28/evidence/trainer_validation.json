@@ -1,0 +1,50 @@
+{
+ "checks": [
+  {
+   "check": "스위치 2개 삭제 보고",
+   "ok": true,
+   "detail": "['99acb150', '044e43f9']"
+  },
+  {
+   "check": "switches.json 에 LSI28 없음",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "남은 스위치 목록 = 저장소",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "가: 상태가 접수증의 실제 조회 결과와 일치(unknown→오류)",
+   "ok": true,
+   "detail": "{'name': '가 요약', '상태': '오류', 'state': 'unknown', 'result': None, '취소': None, '사유': '작업 LSI28 을(를) 홍보 저장소에서 찾지 못했습니다', 'task_ref': {'kind': 'delegation', 'task_id': 'LSI28', 'owner': '홍보'}}"
+  },
+  {
+   "check": "가: 접수증 보존",
+   "ok": true,
+   "detail": "{'kind': 'delegation', 'task_id': 'LSI28', 'owner': '홍보'}"
+  },
+  {
+   "check": "가: 취소됨을 주장하지 않음",
+   "ok": true,
+   "detail": "오류"
+  },
+  {
+   "check": "사람 승인 발급 = 보고된 횟수",
+   "ok": false,
+   "detail": "(4, 3)"
+  },
+  {
+   "check": "최소 승인 2회(스위치당 1회) — 초과분은 낭비",
+   "ok": true,
+   "detail": "4"
+  },
+  {
+   "check": "위임 정확히 1회(과제 요구) — 초과분은 재전송 중복",
+   "ok": false,
+   "detail": "4"
+  }
+ ],
+ "all_ok": false
+}

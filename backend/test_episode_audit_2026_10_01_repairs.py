@@ -377,3 +377,17 @@ def test_distillation_recovers_checked_program_source_from_the_check_call():
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_execution_trace_ignores_transport_wait_when_joining_stream_and_store():
+    """긴문장 27회차 L27-5(ep4363): 모델이 붙인 wait 가 스트림 쪽 호출에만 남아 같은 호출이 두 번 실렸다."""
+    import types
+    from final_evaluator import execution_trace
+    texts = {"i1": json.dumps({"code": "return [self:read]{path:\"a\"}", "edition": 2}), "r1": json.dumps({"success": True, "value": 1})}
+    store = types.SimpleNamespace(
+        tool_index=lambda limit=40: [{"name": "execute_ibl", "input": {"id": "i1"}, "result": {"id": "r1"}, "is_error": False}],
+        read_evidence=lambda key, offset=0, limit=None: {"text": texts[key]})
+    stream = [{"name": "mcp__indiebizos__execute_ibl", "result": texts["r1"],
+               "input": {"code": "return [self:read]{path:\"a\"}", "origin": "training", "project_path": "/p", "wait": 1}}]
+    calls = execution_trace(types.SimpleNamespace(store=store), stream)
+    assert len(calls) == 1 and calls[0]["name"] == "execute_ibl"

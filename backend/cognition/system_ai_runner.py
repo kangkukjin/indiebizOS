@@ -21,6 +21,7 @@ from system_ai_memory import (
     create_task,
     get_task,
     complete_task,
+    fail_task,
     decrement_pending_and_update_context
 )
 from prompt_builder import build_system_ai_prompt
@@ -31,6 +32,7 @@ class SystemAIRunner:
 
     # 클래스 변수 (AgentRunner와 공유 가능하도록 설계)
     internal_messages: List[dict] = runtime_work.WorkMessages()  # 시스템 AI 전용 메시지 큐
+    held_reports: List[dict] = []   # 대상 작업의 턴이 살아 있어 붙들어 둔 메시지 — 턴이 끝나면 큐로 돌아간다
     _instance: Optional['SystemAIRunner'] = None  # 싱글톤
     _lock = threading.RLock()
 
@@ -231,8 +233,11 @@ class SystemAIRunner:
                         if SystemAIRunner.internal_messages else None)
 
         from delegation_tasks import received as _received_envelope
+        self._release_held_reports()
         for msg_dict in runtime_work.message_stream(pop):
           self._sync_gear()
+          if self._hold_while_turn_alive(msg_dict):
+              continue
           # 봉투(origin·chain) — 훈련 자식의 완료 보고가 돌아오는 턴도 리허설로 돈다(에피소드·
           # 대화 스레드·CLI 세션). 에피소드 시작보다 먼저 세운다.
           with _received_envelope(msg_dict):
@@ -293,6 +298,12 @@ class SystemAIRunner:
 
                 # 예약이 직접 맡긴 단일 작업의 원장 결과는 판단을 다시 생성하지 않고 전달한다.
                 if extracted_task_id and self._finish_scheduled_report(extracted_task_id):
+                    continue
+
+                # 닫힌 작업에 뒤늦게 닿은 자식 보고 — 부모 턴이 결과를 이미 읽어 갔으면 새 턴을 열지 않는다(29회차 L29-1).
+                # 읽어 가지 않은 응답이 하나라도 있으면 평소대로 전달한다(보고를 버리지 않는다).
+                if extracted_task_id and self._report_already_collected(extracted_task_id):
+                    print(f"[SystemAIRunner] 이미 회수된 보고 — 새 턴 없이 닫음: {extracted_task_id}")
                     continue
 
                 # 위임 컨텍스트 복원
@@ -361,6 +372,7 @@ class SystemAIRunner:
                         except Exception:
                             pass
 
+                    turn_failed = False
                     try:
                         if _is_health_check:
                             # 자가점검 프로브 — 인지 파이프라인 밖(에피소드·태스크 원장에서
@@ -382,7 +394,13 @@ class SystemAIRunner:
                                 reply_to=f"{from_agent}@internal"
                             )
                         else:
-                            response = self._process_via_cognition(ai_message, history, force_role=msg_dict.get('role') or '')
+                            from system_ai_core import SystemAITurnFailed
+                            try:
+                                response = self._process_via_cognition(ai_message, history, force_role=msg_dict.get('role') or '')
+                            except SystemAITurnFailed as failure:
+                                # 응답 없이 오류로 끝난 턴은 작업의 실패다 — 글로 바꿔 성공으로 닫지 않는다.
+                                turn_failed = True
+                                response = f"AI 응답 생성 실패: {failure}"
                         print(f"[SystemAIRunner] 응답 생성: {len(response)}자")
 
                         # 시스템 AI가 에이전트 보고를 받아 처리한 결과는 사용자에게 전달됨
@@ -390,6 +408,9 @@ class SystemAIRunner:
                         # 최종 응답은 _finalize_task()에서 save_conversation("assistant", response)로 기록됨
 
                         called_another = did_call_agent()
+                        if called_another and extracted_task_id and self._nothing_awaited(extracted_task_id):
+                            # 이 턴이 맡긴 자식의 결과를 같은 턴에서 모두 읽어 갔다 — 기다릴 보고가 없으니 지금 닫는다.
+                            called_another = False
 
                         if called_another:
                             # 새 위임이 발생함 → 태스크 유지, 위임 결과 대기
@@ -397,7 +418,7 @@ class SystemAIRunner:
                         else:
                             # 새 위임 없음 → 최종 응답, 태스크 완료 (삭제됨)
                             if extracted_task_id:
-                                self._finalize_task(extracted_task_id, response)
+                                self._finalize_task(extracted_task_id, response, failed=turn_failed)
                             else:
                                 print(f"[SystemAIRunner] 응답 (태스크 없음): {response[:200]}...")
                     finally:
@@ -417,6 +438,61 @@ class SystemAIRunner:
                 import traceback
                 print(f"[SystemAIRunner] 메시지 처리 실패: {e}")
                 traceback.print_exc()
+
+    @staticmethod
+    def _message_task_id(msg_dict: dict):
+        task_id = msg_dict.get('task_id')
+        if not task_id:
+            match = re.search(r'\[task:([^\]]+)\]', msg_dict.get('content') or '')
+            task_id = match.group(1) if match else None
+        return task_id
+
+    def _hold_while_turn_alive(self, msg_dict: dict) -> bool:
+        """대상 작업의 턴이 살아 있으면 메시지를 붙들어 둔다 — 턴이 끝난 뒤 큐로 돌려보낸다(긴문장 29회차 L29-1).
+
+        부모가 자기 턴 안에서 `[self:task]{op: wait}` 로 기다리는 동안 자식의 완료 보고가 도착하면, 옛 구현은 그 보고로
+        같은 작업의 새 턴을 열려다 조향 수명 충돌(RuntimeError)로 죽고 메시지를 버렸다. 같은 작업의 턴은 한 번에 하나다."""
+        from steer_inbox import task_busy
+        task_id = self._message_task_id(msg_dict)
+        if not task_id or not task_busy(task_id):
+            return False
+        if not msg_dict.get('_held'):
+            print(f"[SystemAIRunner] 작업 {task_id} 의 턴이 진행 중 — {msg_dict.get('from_agent', 'unknown')} 의 메시지를 턴 뒤로 미룸")
+            msg_dict['_held'] = True
+        with SystemAIRunner._lock:
+            SystemAIRunner.held_reports.append(msg_dict)
+        return True
+
+    def _release_held_reports(self):
+        """붙들어 둔 메시지 가운데 대상 턴이 끝난 것을 온 순서대로 큐에 돌려놓는다."""
+        from steer_inbox import task_busy
+        with SystemAIRunner._lock:
+            if not SystemAIRunner.held_reports:
+                return
+            held, SystemAIRunner.held_reports = SystemAIRunner.held_reports, []
+        still = []
+        for msg_dict in held:
+            if task_busy(self._message_task_id(msg_dict)):
+                still.append(msg_dict)
+            else:
+                with SystemAIRunner._lock:
+                    SystemAIRunner.internal_messages.append(msg_dict)
+        if still:
+            with SystemAIRunner._lock:
+                SystemAIRunner.held_reports[:0] = still
+
+    @staticmethod
+    def _nothing_awaited(task_id: str) -> bool:
+        """이 사이클의 자식이 모두 응답했고 그 응답을 부모 턴이 전부 읽어 갔는가."""
+        from system_ai_memory import awaited_child_reports
+        state = awaited_child_reports(task_id)
+        return bool(state and not state["pending"] and not state["uncollected"])
+
+    def _report_already_collected(self, task_id: str) -> bool:
+        from system_ai_memory import awaited_child_reports
+        state = awaited_child_reports(task_id)
+        return bool(state and state["status"] in ("completed", "failed", "cancelled")
+                    and not state["pending"] and not state["uncollected"])
 
     def _process_via_cognition(self, ai_message: str, history: list, force_role: str = "") -> str:
         """위임 한 턴을 인지 파이프라인으로 돌린다 (연상→분류→의식→실행→평가→반성→증류).
@@ -457,7 +533,8 @@ class SystemAIRunner:
                 response, _images = process_system_ai_message(ai_message, history,
                                                               utterance_author="agent",
                                                               force_role=force_role or "",
-                                                              allowed_set=get_allowed_nodes())
+                                                              allowed_set=get_allowed_nodes(),
+                                                              raise_on_failure=True)
                 return response
             finally:
                 _restore_provider(runner, original)
@@ -550,8 +627,8 @@ class SystemAIRunner:
             self._finalize_task(task_id, response)
         return True
 
-    def _finalize_task(self, task_id: str, response: str):
-        """태스크 완료 처리 및 사용자에게 응답"""
+    def _finalize_task(self, task_id: str, response: str, failed: bool = False):
+        """태스크 완료 처리 및 사용자에게 응답. failed=True 면 실패로 닫는다(접수증의 state 가 failed 가 된다)."""
         task = get_task(task_id)
         if not task:
             print(f"[SystemAIRunner] task를 찾을 수 없음: {task_id}")
@@ -571,6 +648,10 @@ class SystemAIRunner:
         save_conversation("assistant", response, source=("rehearsal" if _in_rehearsal() else None))
 
         # 태스크 완료 (전문 저장 — 2026-10-05, 작업 조회가 요약밖에 못 주던 것 수리)
+        if failed:
+            fail_task(task_id, response)
+            print(f"[SystemAIRunner] 태스크 실패: {task_id}")
+            return
         complete_task(task_id, response)
         print(f"[SystemAIRunner] 태스크 완료: {task_id}")
 

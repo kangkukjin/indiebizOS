@@ -88,6 +88,44 @@ def test_cancel_reports_only_confirmed_facts():
     assert out["success"] is True and out["state"] == "cancel_requested"
 
 
+def test_cancel_of_a_finished_task_is_a_value_whatever_the_kind():
+    """긴문장 27회차 L27-2: 늦어서 취소하려는 순간 이미 끝난 작업 — 종류의 취소 지원 여부보다 끝난 사실이 먼저다."""
+    _fake_kind("nocancel", {"done": [T.SUCCEEDED], "bad": [T.FAILED], "live": [T.RUNNING]})
+    out = T.cancel(T.ref("nocancel", "done"))
+    assert out["success"] is True and out["state"] == "succeeded" and out["result"] == {"answer": "done"}
+    assert "취소할 것이 없습니다" in out["note"] and "error" not in out
+    out = T.cancel(T.ref("nocancel", "bad"))
+    assert out["success"] is True and out["state"] == "failed" and out["failure"] == "boom"
+    assert T.cancel(T.ref("nocancel", "live"))["success"] is False          # 살아 있는데 못 멈추는 것만 거절
+    # 취소 어댑터가 '이미 끝남'을 돌려준 경합도 값
+    T.register("race", lambda ref: T.view(ref, T.RUNNING), lambda ref: T.view(ref, T.SUCCEEDED, result=7))
+    out = T.cancel(T.ref("race", "1"))
+    assert out["success"] is True and out["state"] == "succeeded" and out["result"] == 7
+    T.register("stuck", lambda ref: T.view(ref, T.RUNNING), lambda ref: T.view(ref, T.RUNNING))
+    assert T.cancel(T.ref("stuck", "1"))["success"] is False
+
+
+def test_wait_then_cancel_program_reports_finished_and_unstoppable_tasks_apart():
+    """27회차 주 과제의 뼈대: 기다리다 늦은 일을 취소 시도 — 그 사이 끝난 일은 결과로, 못 멈춘 일은 '취소 불가'로 갈린다."""
+    _fake_kind("k", {"late": [T.RUNNING, T.SUCCEEDED], "live": [T.RUNNING] * 400})
+    code = (
+        '[def:정리]($ref) {\n'
+        '  $w = [self:task]{op: "wait", ref: $ref, timeout: 0}\n'
+        '  [if:not $w.timed_out] { return {상태: "완료", result: $w.result} }\n'
+        '  [try] {\n'
+        '    $c = [self:task]{op: "cancel", ref: $ref}\n'
+        '    [if:$c.state == "succeeded"] { return {상태: "완료", result: $c.result} }\n'
+        '    return {상태: $c.state, result: null}\n'
+        '  }\n'
+        '  [catch] { return {상태: "취소 불가", result: null, state: $error.details.state} }\n'
+        '}\n'
+        'return [[fn:정리]{ref: $a}, [fn:정리]{ref: $b}]')
+    r = _run(code, {"a": T.ref("k", "late"), "b": T.ref("k", "live")})
+    assert r["success"] is True, r.get("error")
+    assert r["value"] == [{"상태": "완료", "result": {"answer": "late"}},
+                          {"상태": "취소 불가", "result": None, "state": "running"}]
+
+
 def test_self_task_word_waits_two_receipts_and_merges_in_one_program():
     """완료 조건의 핵심: 한 관용구가 두 접수증을 기다려 결과를 합쳐 다음 낱말에 넘긴다."""
     _fake_kind("a", {"x": [T.RUNNING, T.SUCCEEDED]})
@@ -245,3 +283,68 @@ def test_newspaper_adapter_reads_state_file(monkeypatch, tmp_path):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_script_cancel_stops_the_runner_and_its_children(monkeypatch, tmp_path):
+    """27회차 L27-3: 백그라운드 스크립트 취소 — 표식 → 러너가 자식 나무를 끝내고 cancelled 기록 → 투영 cancelled."""
+    import importlib, os, subprocess, sys
+    from pathlib import Path
+    pkg = Path(__file__).resolve().parents[1] / "data/packages/installed/tools/system_essentials"
+    if str(pkg) not in sys.path:
+        sys.path.insert(0, str(pkg))
+    so = importlib.import_module("script_ops")
+    jobs = tmp_path / "jobs"; jobs.mkdir()
+    monkeypatch.setattr(so, "_path", lambda name: {"_JOB_DIR": jobs, "_RUN_DIR": tmp_path}[name])
+    script = tmp_path / "slow.py"
+    script.write_text("import subprocess, sys, time\n"
+                      "kid = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'])\n"
+                      "open(sys.argv[0] + '.kid', 'w').write(str(kid.pid))\n"
+                      "time.sleep(120)\n")
+    def start(jid):
+        (jobs / f"{jid}.json").write_text(json.dumps({
+            "job_id": jid, "id": "s", "status": "starting", "created_epoch": time.time(), "timeout": 120,
+            "log": str(tmp_path / f"{jid}.log"), "interpreter": sys.executable, "script": str(script), "stdin": "{}"}))
+        return subprocess.Popen([sys.executable, str(pkg / "_bg_runner.py"), str(jobs / f"{jid}.json")], cwd=str(pkg),
+                                env={**os.environ, "INDIEBIZ_API_PORT": "9"})      # 완료 알림은 닫힌 포트로
+    runner = start("j1")
+    kid_file = Path(str(script) + ".kid")
+    deadline = time.time() + 20
+    while not kid_file.exists() and time.time() < deadline:
+        time.sleep(0.1)
+    assert so.task_status(T.ref("script", "j1"))["state"] == "running"
+    out = T.cancel(T.ref("script", "j1"))                 # 등록부가 패키지 yaml 에서 취소 어댑터까지 적재한다
+    assert out["success"] is True and out["state"] in ("cancelled", "cancel_requested"), out
+    runner.wait(timeout=20)
+    final = T.status(T.ref("script", "j1"))
+    assert final["state"] == "cancelled" and final["terminal"] is True and final["result"] is None
+    from common import platform_utils
+    kid = int(kid_file.read_text())
+    for _ in range(50):
+        if not platform_utils.pid_alive(kid):
+            break
+        time.sleep(0.1)
+    assert not platform_utils.pid_alive(kid), "스크립트의 자식이 남았다"
+    again = T.cancel(T.ref("script", "j1"))               # 끝난 작업의 재취소는 값
+    assert again["success"] is True and again["state"] == "cancelled"
+    assert so.op_status({"job_id": "j1"})["success"] is False       # 옛 조회 경로도 취소를 성공으로 꾸미지 않는다
+    # 시작 전에 취소된 작업은 스크립트를 띄우지 않는다
+    kid_file.unlink()
+    (jobs / "j2.cancel").write_text("x")
+    start("j2").wait(timeout=20)
+    assert so.task_status(T.ref("script", "j2"))["state"] == "cancelled" and not kid_file.exists()
+
+
+def test_concurrent_first_lookups_wait_for_the_package_adapter(monkeypatch):
+    """긴문장 27회차 L27-7: 어댑터 첫 적재 중에 온 병렬 조회가 실행 중인 작업을 unknown 으로 답하지 않는다."""
+    loads = []
+    def slow_resolve(kind):
+        loads.append(kind)
+        time.sleep(0.3)
+        T.register(kind, lambda ref: T.view(ref, T.RUNNING))
+    monkeypatch.setattr(T, "_resolve_from_packages", slow_resolve)
+    out = []
+    threads = [threading.Thread(target=lambda: out.append(T.status(T.ref("slowkind", "j"))["state"])) for _ in range(4)]
+    for th in threads: th.start()
+    for th in threads: th.join()
+    assert out == ["running"] * 4 and loads == ["slowkind"]
+

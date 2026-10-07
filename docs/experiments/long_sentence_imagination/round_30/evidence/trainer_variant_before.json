@@ -1,0 +1,95 @@
+{
+  "expected_count": 51,
+  "checks": [
+    {
+      "name": "nonempty_expected",
+      "ok": true,
+      "details": 51
+    },
+    {
+      "name": "archive_exists",
+      "ok": true,
+      "details": null
+    },
+    {
+      "name": "unique_members",
+      "ok": true,
+      "details": {}
+    },
+    {
+      "name": "exact_archive_paths",
+      "ok": false,
+      "details": {
+        "missing": [],
+        "extra": [
+          "사진/internal/연락.txt",
+          "영상/internal/연락.txt"
+        ]
+      }
+    },
+    {
+      "name": "archive_bytes",
+      "ok": false,
+      "details": []
+    },
+    {
+      "name": "exact_restored_paths",
+      "ok": false,
+      "details": []
+    },
+    {
+      "name": "restored_bytes",
+      "ok": true,
+      "details": []
+    },
+    {
+      "name": "manifest_exists",
+      "ok": true,
+      "details": null
+    },
+    {
+      "name": "manifest_unique_exact",
+      "ok": true,
+      "details": 51
+    },
+    {
+      "name": "report_exists",
+      "ok": true,
+      "details": null
+    },
+    {
+      "name": "report_completion_is_honest",
+      "ok": true,
+      "details": false
+    },
+    {
+      "name": "report_expected_count",
+      "ok": true,
+      "details": null
+    },
+    {
+      "name": "report_archive_count",
+      "ok": true,
+      "details": null
+    },
+    {
+      "name": "report_restored_count",
+      "ok": true,
+      "details": null
+    }
+  ],
+  "artifact_ok": false,
+  "report": {
+    "expected_count": 51,
+    "archive_count": 53,
+    "restored_count": 53,
+    "missing": [],
+    "extra": [
+      "사진/internal/연락.txt",
+      "영상/internal/연락.txt"
+    ],
+    "duplicate_count": 0,
+    "mismatches": [],
+    "complete": false
+  }
+}

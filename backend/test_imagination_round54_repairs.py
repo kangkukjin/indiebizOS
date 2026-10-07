@@ -280,10 +280,15 @@ def test_B54_3_deliver_result_to_chat_exists_and_reports_both_outcomes(actions_c
     assert "투자" in cm._nm_for_test.calls[0][1]
 
 
-def test_B54_1_owner_run_path_resolves_project_and_keeps_dot_for_system(actions_cm):
+def test_B54_1_owner_run_path_resolves_project_and_system_ai_path_for_ownerless(actions_cm):
+    """소유자 없음·시스템 AI·미존재 = 시스템 AI 정체성 경로(data/). "." 은 라우팅의 '디폴트' 신호라
+    project 스코프 도구가 죽는다(2026-10-07, warehouse_publish_report 05:30 실측)."""
+    from runtime_utils import get_base_path
     cm = actions_cm
-    assert cm._owner_run_path("") == "." and cm._owner_run_path("__system_ai__") == "."
-    assert cm._owner_run_path("없는프로젝트_zz") == "."
+    system_path = str(get_base_path() / "data")
+    assert cm._owner_run_path("") == system_path and cm._owner_run_path("__system_ai__") == system_path
+    assert cm._owner_run_path("없는프로젝트_zz") == system_path
+    assert cm._owner_run_path("") != "."
 
 
 def test_B54_1_legacy_fire_runs_in_owner_project(actions_cm, monkeypatch, tmp_path):
@@ -319,7 +324,10 @@ def test_B54_1_legacy_fire_runs_in_owner_project(actions_cm, monkeypatch, tmp_pa
     assert hist and hist[0]["count"] == 1 and hist[0]["shape"] == "items"
     seen.clear()
     actions_cm._action_run_pipeline(dict(task, owner_project_id=None))
-    assert seen["project_path"] == "."   # 소유자 없는 옛 트리거는 종전 경로
+    from runtime_utils import get_base_path
+    # 소유자 없는 트리거는 시스템 AI 의 정체성 경로(data/)에서 돈다 — "." 은 라우팅의 '디폴트' 신호라
+    # project 스코프 도구가 죽었다(2026-10-07, warehouse_publish_report 05:30 실측).
+    assert seen["project_path"] == str(get_base_path() / "data")
 
 
 # ───────────────────────── 등록 어휘 (schedule · manage_events) ─────────────────────────

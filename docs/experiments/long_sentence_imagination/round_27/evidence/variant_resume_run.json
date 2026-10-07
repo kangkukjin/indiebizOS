@@ -1,0 +1,109 @@
+{
+ "label": "variant_resume",
+ "at": "2026-10-07T09:56:02",
+ "elapsed": 0.33797041699290276,
+ "success": true,
+ "value": {
+  "보고": {
+   "단계": "최종",
+   "남은일": 0,
+   "일": [
+    {
+     "name": "가 요약",
+     "상태": "완료",
+     "state": "succeeded",
+     "result": "긴 작업의 접수는 완료가 아니며, 받은 `task_ref`로 `self:task`의 상태 조회·대기·취소를 수행합니다.\n대기 시간 초과는 실패가 아니고 취소 요청은 취소 완료가 아니므로, 실제 상태와 성공 결과·실패 사유를 구분해야 합니다.\n접수증이 있으면 작업을 중복 시작하지 말고 같은 참조로 이어가며, 새 긴 작업도 공통 접수증·상태 어댑터 규약을 따릅니다.",
+     "취소": null,
+     "task_ref": {
+      "kind": "delegation",
+      "task_id": "task_sysai_165d8388",
+      "owner": "system"
+     }
+    },
+    {
+     "name": "나 어휘",
+     "상태": "완료",
+     "state": "succeeded",
+     "result": {
+      "items": [
+       {
+        "file": "backend/test_vocabulary_archive.py",
+        "ok": true,
+        "passed": 6,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "failures": []
+       }
+      ],
+      "ok": true,
+      "operation_outcome": {
+       "status": "passed",
+       "message": "1파일 · 통과 6 · 실패 0"
+      },
+      "seconds": 29.2,
+      "message": "1파일 · 통과 6 · 실패 0"
+     },
+     "취소": null,
+     "task_ref": {
+      "kind": "script",
+      "task_id": "시험-20261007_095532-2a41e0414145408bbb066c8599088058"
+     }
+    },
+    {
+     "name": "다 빠른",
+     "상태": "완료",
+     "state": "succeeded",
+     "result": {
+      "items": [
+       {
+        "file": "backend/test_preflight_restart.py",
+        "ok": true,
+        "passed": 7,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "failures": []
+       },
+       {
+        "file": "backend/test_selfbuild_gate_2026_09_07.py",
+        "ok": true,
+        "passed": 20,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "failures": []
+       }
+      ],
+      "ok": true,
+      "operation_outcome": {
+       "status": "passed",
+       "message": "2파일 · 통과 27 · 실패 0"
+      },
+      "seconds": 0.8,
+      "message": "2파일 · 통과 27 · 실패 0"
+     },
+     "취소": null,
+     "task_ref": {
+      "kind": "script",
+      "task_id": "시험-20261007_095532-6ea3e901a5ba4b82b1db434c39009593"
+     }
+    }
+   ]
+  },
+  "재독일치": true,
+  "경로": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_27회차/trainer_variant/report_2.json"
+ },
+ "usage": {
+  "steps": 128,
+  "rows": 3,
+  "elapsed_ms": 314
+ },
+ "evidence_summary": {
+  "events": 80,
+  "source_complete": true,
+  "tool_failures": 0,
+  "source_failures": 0
+ },
+ "precheck_warnings": null
+}

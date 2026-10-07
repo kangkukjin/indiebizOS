@@ -1,0 +1,161 @@
+[
+  {
+    "label": "main_after_original",
+    "elapsed": 30.95680809020996,
+    "run_id": "5109db81484d484c871e2e76d0d9f2d8",
+    "run_status": "completed",
+    "value": {
+      "expected_count": 76,
+      "archive_count": 76,
+      "restored_count": 76,
+      "missing": [],
+      "extra": [],
+      "duplicate_count": 0,
+      "mismatches": [],
+      "complete": true
+    },
+    "usage": {
+      "steps": 10370,
+      "rows": 310,
+      "elapsed_ms": 30824,
+      "tool_ms_by_line": [
+        {
+          "line": 4,
+          "ms": 29747,
+          "calls": 76,
+          "actions": [
+            "self:script"
+          ]
+        },
+        {
+          "line": 16,
+          "ms": 129,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ]
+        },
+        {
+          "line": 17,
+          "ms": 126,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ]
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    }
+  },
+  {
+    "label": "main_after_batch",
+    "elapsed": 2.5716679096221924,
+    "run_id": "8e9c4cc85b964abe886104f069f082ab",
+    "run_status": "completed",
+    "value": {
+      "expected_count": 76,
+      "archive_count": 76,
+      "restored_count": 76,
+      "missing": [],
+      "extra": [],
+      "duplicate_count": 0,
+      "mismatches": [],
+      "complete": true
+    },
+    "usage": {
+      "steps": 7108,
+      "rows": 234,
+      "elapsed_ms": 2301
+    }
+  },
+  {
+    "label": "variant_after_original",
+    "elapsed": 23.67012095451355,
+    "run_id": "c25cdaf5af9c4dd5aa80f1132b4f76e1",
+    "run_status": "completed",
+    "value": {
+      "expected_count": 51,
+      "archive_count": 51,
+      "restored_count": 51,
+      "missing": [],
+      "extra": [],
+      "duplicate_count": 0,
+      "mismatches": [],
+      "complete": true
+    },
+    "usage": {
+      "steps": 8141,
+      "rows": 235,
+      "elapsed_ms": 23560,
+      "tool_ms_by_line": [
+        {
+          "line": 4,
+          "ms": 22453,
+          "calls": 51,
+          "actions": [
+            "self:script"
+          ]
+        },
+        {
+          "line": 16,
+          "ms": 130,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ]
+        },
+        {
+          "line": 17,
+          "ms": 129,
+          "calls": 1,
+          "actions": [
+            "self:script"
+          ]
+        }
+      ],
+      "detail": "read_result path [\"usage\"]"
+    }
+  },
+  {
+    "label": "variant_after_batch",
+    "elapsed": 3.3732049465179443,
+    "run_id": "1f0be9470f69490eb8dfa41ac5bc1e02",
+    "run_status": "completed",
+    "value": {
+      "expected_count": 51,
+      "archive_count": 51,
+      "restored_count": 51,
+      "missing": [],
+      "extra": [],
+      "duplicate_count": 0,
+      "mismatches": [],
+      "complete": true
+    },
+    "usage": {
+      "steps": 5964,
+      "rows": 184,
+      "elapsed_ms": 3255
+    }
+  },
+  {
+    "label": "new_reverse",
+    "elapsed": 2.4831771850585938,
+    "run_id": "4dc385a5cea448c4bc6902198f38b2df",
+    "run_status": "completed",
+    "value": {
+      "expected_count": 76,
+      "archive_count": 76,
+      "restored_count": 76,
+      "missing": [],
+      "extra": [],
+      "duplicate_count": 0,
+      "mismatches": [],
+      "complete": true
+    },
+    "usage": {
+      "steps": 7108,
+      "rows": 234,
+      "elapsed_ms": 2376
+    }
+  }
+]

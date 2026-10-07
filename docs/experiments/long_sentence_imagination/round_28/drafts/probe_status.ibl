@@ -1,0 +1,3 @@
+#!ibl edition=2
+[try] { $s = [self:task]{op:"status", ref:{kind:"delegation", task_id:"LSI28", owner:"홍보"}}  return {ok:true, s:$s} }
+[catch] { return {ok:false, msg:$error.message, details:$error.details} }

@@ -1,0 +1,5 @@
+전시 자료 납품 묶음을 만들어줘. 원본 폴더는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_30회차/source야.
+선택 대상은 사진, 설치, 영상 폴더 전체와 안내.txt, 그리고 사진/작품 01/설명.txt야. 마지막 파일은 폴더 선택에도 포함되지만 중요한 자료라 별도로도 선택했어. ZIP에는 같은 상대경로가 정확히 한 번만 들어가야 해.
+모든 .tmp 파일과 이름이 internal인 폴더 아래 자료는 제외해. 그 외 파일은 빈 파일까지 전부 포함하고 폴더별 동명 파일을 덮어 합치지 마. ZIP 안의 경로는 원본 폴더 기준의 상대경로를 유지해.
+납품 ZIP delivery.zip과 manifest.json(각 파일의 상대경로 path와 원본 바이트 크기 size), report.json(예정·ZIP 항목·복원 파일 수, 누락/중복/불일치 목록, 완료 여부)을 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_30회차/ai/main 아래 만들어줘. 같은 폴더의 restored 아래에 실제로 압축을 풀어 원본과 모든 파일의 바이트 일치를 확인해. 오류나 누락은 드러내고 성공으로 감추지 마.
+원본은 읽기만 하고 출력은 위 지정 폴더 안에만 써. 발송·공개·외부 접근은 없어. 다른 실행자의 trainer/harness/drafts/evidence/정답은 보지 마. 네가 만든 산출물과 중간 참조는 재사용할 수 있어. 시스템 코드·설정·가이드는 수정하지 마.

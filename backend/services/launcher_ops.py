@@ -42,6 +42,27 @@ def _ok(result, **extra) -> dict:
     return {"success": True, **extra}
 
 
+# ── 승인 전 대상 존재 확인(requires.exists, 긴문장 28회차 L28-4) — 관문이 사람에게 묻기 전에 부른다 ──
+# 인자는 별칭 정규화 전의 원 인자라 _need 로 별칭까지 읽는다. None = 있음, 실패 봉투 = 핸들러가 냈을 같은 거절.
+
+def switch_exists(params: dict):
+    sid = _need(params or {}, "switch_id", "id")
+    if not sid:
+        return {"success": False, "error": "delete 에는 switch_id 가 필요합니다"}
+    if not _sm().get_switch(sid):
+        return {"success": False, "error": f"스위치 없음: {sid}"}
+    return None
+
+
+def project_exists(params: dict):
+    pid = _need(params or {}, "project_id", "id")
+    if not pid:
+        return {"success": False, "error": "delete 에는 project_id 가 필요합니다"}
+    if not any(p.get("id") == pid for p in _pm().list_projects()):
+        return {"success": False, "error": f"프로젝트 없음: {pid}"}
+    return None
+
+
 # ── 프로젝트 ──────────────────────────────────────────────────────────────────
 
 def project_op(params: dict) -> Any:

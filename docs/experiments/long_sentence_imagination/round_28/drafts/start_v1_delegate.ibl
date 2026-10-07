@@ -1,0 +1,25 @@
+#!ibl edition=2
+[def:관찰]($일, $초) {
+  [try] {
+    $r = [self:task]{op:"wait", ref:$일.task_ref, timeout:$초}
+    [if:$r.timed_out] { return {name:$일.name, 상태:"진행 중", state:$r.state, result:null, 취소:null, task_ref:$일.task_ref} }
+    return {name:$일.name, 상태:"완료", state:$r.state, result:$r.result, 취소:null, task_ref:$일.task_ref}
+  }
+  [catch] { return {name:$일.name, 상태:"오류", state:$error.details.state, result:null, 취소:null, 사유:$error.message, task_ref:$일.task_ref} }
+}
+[def:취소시도]($일) {
+  [if:$일.상태 != "진행 중"] { return $일 }
+  [try] {
+    $c = [self:task]{op:"cancel", ref:$일.task_ref}
+    [if:$c.state == "cancelled"] { return {name:$일.name, 상태:"취소됨", state:$c.state, result:null, 취소:"확인됨", task_ref:$일.task_ref} }
+    [if:$c.state == "cancel_requested"] { return {name:$일.name, 상태:"취소 요청됨", state:$c.state, result:null, 취소:"요청만 남김", task_ref:$일.task_ref} }
+    [if:$c.state == "succeeded"] { return {name:$일.name, 상태:"이미 끝남(성공)", state:$c.state, result:$c.result, 취소:"취소 전에 끝남", task_ref:$일.task_ref} }
+    [if:$c.terminal] { return {name:$일.name, 상태:"이미 끝남(실패)", state:$c.state, result:null, 취소:"취소 전에 끝남", 사유:$c.failure, task_ref:$일.task_ref} }
+    return {name:$일.name, 상태:"취소 불가", state:$c.state, result:null, 취소:"상태 변화 없음", task_ref:$일.task_ref}
+  }
+  [catch] { return {name:$일.name, 상태:"취소 불가", state:$error.details.state, result:null, 취소:$error.message, task_ref:$일.task_ref} }
+}
+$가 = [others:delegate]{agent_id:$agent, message:$message}
+$관찰 = [fn:관찰]{일:{name:"가 요약", task_ref:$가.task_ref}, 초:$first_wait}
+$가결과 = [fn:취소시도]{일:$관찰}
+return {가:$가결과, 접수:$가}

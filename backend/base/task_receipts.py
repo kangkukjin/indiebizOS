@@ -6,9 +6,13 @@
 시트 엔진)는 각자 저장소를 그대로 두고 **어댑터 뒤**에 남는다 — 새 저장소를 만들지 않는다.
 
 접수증(통화 1종) — 모든 긴 작업의 즉시 반환:
-    {success: true, accepted: true, task_ref: {kind, task_id[, owner]}, state: "queued"|"running"[, status_url], …}
+    {success: true, accepted: true, task_ref: {kind, task_id[, owner]}, state: "queued"|"running", accepted_at[, status_url], …}
 투영(status/wait 의 반환) — **항상 같은 칸**(2026-10-07 긴문장 26회차: 칸이 상황마다 달라 작업을 시작한 뒤의 프로그램이 죽었다):
-    {task_ref, state, terminal, timed_out, result(성공일 때만 값·아니면 null), failure(작업의 실패 사유·아니면 null), progress, raw?}
+    {task_ref, state, terminal, timed_out, result(성공일 때만 값·아니면 null), failure(작업의 실패 사유·아니면 null), progress,
+     accepted_at, elapsed_s, raw?}
+    accepted_at(접수 시각)·elapsed_s(접수부터 지금까지, 끝난 작업은 종료까지의 초)는 **접수 기준** 시계다(29회차 L29-3) — wait 의
+    timeout 은 그 호출이 기다린 시간일 뿐이라, 접수와 대기가 다른 프로그램이면 "N초 안에 끝났는가"를 이 칸으로 센다.
+    어댑터가 시각을 모르면 둘 다 null.
     `error` 는 투영의 칸이 아니다 — **이 낱말 호출 자체의 실패**(값을 못 얻음)에만 실린다. 판본 2 는 `error`/`success:false` 를
     도구 실패로 올리므로, 작업의 사정(failure)과 호출의 사정(error)을 한 칸에 섞으면 "실패한 작업의 상태 조회"가 중단이 된다.
 상태 어휘(한 벌) — queued · running · waiting_children · cancel_requested · succeeded · failed · cancelled · interrupted · unknown
@@ -25,6 +29,7 @@ import importlib.util
 import sys
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -37,6 +42,7 @@ WAIT_MAX_SECONDS = 240      # self:script status 의 상한과 같다 — 더 �
 POLL_SECONDS = 1.0
 
 _LOCK = threading.Lock()
+_RESOLVE_LOCK = threading.Lock()   # 패키지 어댑터 첫 적재의 직렬화(_LOCK 과 따로 — 적재 중 register 가 _LOCK 을 잡는다)
 _STATUS: dict = {}     # kind -> fn(ref) -> view
 _CANCEL: dict = {}     # kind -> fn(ref) -> view
 _RESOLVED: set = set()
@@ -47,7 +53,8 @@ def receipt(kind: str, task_id, *, state: str = QUEUED, owner: Optional[str] = N
     """접수증 — 긴 작업을 시작한 낱말이 즉시 돌려주는 통화. 접수는 완료가 아니다."""
     if state not in LIVE:
         raise ValueError(f"접수증 상태는 {sorted(LIVE)} 중 하나입니다 (받음: {state})")
-    out = {"success": True, "accepted": True, "task_ref": ref(kind, task_id, owner), "state": state}
+    out = {"success": True, "accepted": True, "task_ref": ref(kind, task_id, owner), "state": state,
+           "accepted_at": stamp()}
     if status_url:
         out["status_url"] = status_url
     out.update(extra)
@@ -61,12 +68,49 @@ def ref(kind: str, task_id, owner: Optional[str] = None) -> dict:
     return r
 
 
-def view(r: dict, state: str, *, progress=None, result=None, error: Optional[str] = None, raw=None, **extra) -> dict:
-    """어댑터가 돌려주는 투영 — 상태 어휘 밖의 값은 거절(어댑터의 상태 번역 누락을 드러낸다)."""
+def stamp(epoch: Optional[float] = None) -> str:
+    """시각 표기 한 벌 — 이 몸의 지역 시각, 초 단위, UTC 차이 포함(예: 2026-10-07T12:01:08+0900)."""
+    return time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(time.time() if epoch is None else epoch))
+
+
+def _epoch(value) -> Optional[float]:
+    """어댑터가 준 시각(epoch 수 · stamp 표기 · UTC 차이 없는 지역 ISO)을 epoch 로. 못 읽으면 None."""
+    if isinstance(value, bool) or value in (None, ""):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip().replace(" ", "T")
+    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S.%f%z"):
+        try:
+            return datetime.strptime(text, fmt).timestamp()
+        except ValueError:
+            pass
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+        try:
+            return time.mktime(datetime.strptime(text, fmt).timetuple())
+        except (ValueError, OverflowError):
+            pass
+    return None
+
+
+def _clock(state: str, accepted_at, ended_at) -> dict:
+    """접수 기준 시계 두 칸. 살아 있으면 지금까지, 끝났으면 종료까지 — 종료 시각을 모르는 끝난 작업은 elapsed_s 를 지어내지 않는다."""
+    start = _epoch(accepted_at)
+    if start is None:
+        return {"accepted_at": None, "elapsed_s": None}
+    end = _epoch(ended_at) if state in TERMINAL else time.time()
+    return {"accepted_at": stamp(start), "elapsed_s": None if end is None else round(max(0.0, end - start), 1)}
+
+
+def view(r: dict, state: str, *, progress=None, result=None, error: Optional[str] = None, raw=None,
+         accepted_at=None, ended_at=None, **extra) -> dict:
+    """어댑터가 돌려주는 투영 — 상태 어휘 밖의 값은 거절(어댑터의 상태 번역 누락을 드러낸다).
+    accepted_at·ended_at 은 어댑터가 아는 만큼(epoch 수 또는 ISO 글) — 접수 기준 시계 칸이 된다."""
     if state not in STATES:
         raise ValueError(f"상태 어휘 밖: {state} (허용 {sorted(STATES)})")
     out = {"task_ref": dict(r), "state": state, "terminal": state in TERMINAL, "timed_out": False,
-           "result": result if state == SUCCEEDED else None, "failure": error or None, "progress": progress}
+           "result": result if state == SUCCEEDED else None, "failure": error or None, "progress": progress,
+           **_clock(state, accepted_at, ended_at)}
     if raw is not None:
         out["raw"] = raw
     out.update(extra)
@@ -168,9 +212,18 @@ def _adapter(kind: str, table: dict):
         fn = table.get(kind)
         tried = kind in _RESOLVED
     if fn is None and not tried:
-        with _LOCK:
-            _RESOLVED.add(kind)
-        _resolve_from_packages(kind)
+        # 첫 적재는 한 번, 동시에 온 조회는 그 적재가 끝날 때까지 기다린다(27회차 L27-7). 옛 구현은 적재를 시작하며
+        # '시도함'을 먼저 적어, 병렬로 온 둘째 조회가 빈 등록부를 보고 실행 중인 작업을 unknown 으로 답했다
+        # (재기동 직후 [table:each]{parallel} 로 여러 접수증을 기다릴 때).
+        with _RESOLVE_LOCK:
+            with _LOCK:
+                tried = kind in _RESOLVED
+            if not tried:
+                try:
+                    _resolve_from_packages(kind)
+                finally:
+                    with _LOCK:
+                        _RESOLVED.add(kind)
         with _LOCK:
             fn = table.get(kind)
     return fn
@@ -202,6 +255,8 @@ def _stable(r: dict, out: dict) -> dict:
     out.setdefault("progress", None)
     out["result"] = out.get("result") if out["state"] == SUCCEEDED else None
     out["failure"] = out.get("failure") or legacy or None
+    if "elapsed_s" not in out:   # view() 를 거치지 않은 투영 — 시각을 실었으면 같은 시계로, 아니면 null
+        out.update(_clock(out["state"], out.get("accepted_at"), out.pop("ended_at", None)))
     return out
 
 
@@ -238,11 +293,22 @@ def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS) -> dict:
         time.sleep(min(max(poll, 0.1), left))
 
 
+def _nothing_to_cancel(v: dict) -> str:
+    return f"이미 {v['state']} 로 끝난 작업입니다 — 취소할 것이 없습니다."
+
+
 def cancel(r: dict) -> dict:
-    """취소 요청. 어댑터가 확인한 사실만 말한다 — 요청을 남겼으면 cancel_requested, 되돌렸으면 cancelled."""
+    """취소 요청. 어댑터가 확인한 사실만 말한다 — 요청을 남겼으면 cancel_requested, 되돌렸으면 cancelled.
+
+    **이미 끝난 작업은 값으로 답한다**(27회차 L27-2): 기다리다 늦어 취소하려는 순간 작업이 끝나 있는 것은 흔한 경합이고
+    작업의 사정이지 이 호출의 실패가 아니다. 옛 구현은 종류의 취소 지원 여부를 먼저 봐서, 방금 성공한 위임에
+    "취소를 지원하지 않습니다 (현재 succeeded)" 실패를 돌려줬고 프로그램은 끝난 일을 '취소 불가'로 적었다.
+    종료 투영(state·result·failure)을 그대로 싣고 `note` 로 취소할 것이 없었음을 알린다 — 읽는 열쇠는 state 다."""
+    cur = status(r)
+    if cur["state"] in TERMINAL:
+        return {"success": True, **cur, "note": _nothing_to_cancel(cur)}
     fn = _adapter(r["kind"], _CANCEL)
     if fn is None:
-        cur = status(r)
         return {"success": False, **cur, "error": f"작업 종류 '{r['kind']}' 는 취소를 지원하지 않습니다 (현재 {cur['state']})."}
     try:
         out = fn(r)
@@ -255,6 +321,8 @@ def cancel(r: dict) -> dict:
     out = _stable(r, out)
     if out["state"] in (CANCELLED, CANCEL_REQUESTED):
         return {"success": True, **out}
+    if out["state"] in TERMINAL:     # 요청과 종료가 엇갈렸다 — 끝난 사실을 값으로
+        return {"success": True, **out, "note": _nothing_to_cancel(out)}
     return {"success": False, **out, "error": out.get("failure") or f"취소되지 않았습니다 (현재 {out['state']})."}
 
 

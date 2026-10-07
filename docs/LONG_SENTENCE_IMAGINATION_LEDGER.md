@@ -153,10 +153,27 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
+| L29-1 | 구현 결함(경합·메시지 유실) — 부모가 자기 턴에서 wait 하는 동안 도착한 자식 완료 보고가 부모 작업의 새 턴을 시도 → `steer_inbox.task_scope` RuntimeError, 보고 메시지 버려짐·유령 에피소드 3ms | ep task_sysai_21fe9ccb 로그 traceback "이미 실행 중인 조향 대상 작업입니다" + "메시지 처리 실패" | 수리됨(2026-10-07) — 러너가 살아 있는 턴의 작업으로 온 메시지를 붙들었다가 턴 뒤 큐로 돌려보냄(`steer_inbox.task_busy`), 부모 턴이 `[self:task]` 로 읽어 간 응답은 원장에 회수 표식 → 닫힌 작업의 뒤늦은 통지는 새 턴 없이 닫고, 읽지 않은 응답은 평소대로 전달. `/system-ai/chat`·러너는 기다릴 보고가 없으면 턴 끝에 작업을 닫음 | [29회차](experiments/long_sentence_imagination/round_29/report.md) |
+| L29-2 | 언어 함정(검사 침묵) — `$w = [try]{… return}` 이 검사를 통과하나 return 은 함수 전체를 끝냄 | 시스템 AI 1차 보고서에 task_ref·에이전트 칸 누락(자가 보고) | 수리됨 — 대입 오른쪽 블록의 모든 경로가 return 이면 검사 경고 `BIND_RETURNS`(안내: 블록의 값은 마지막 문장 — 뒤가 `return $이름` 뿐인 기존 프로그램이 있어 거절이 아니라 경고). 한쪽만 return 인 이른 반환은 조용히 그대로 | [29회차](experiments/long_sentence_imagination/round_29/report.md) |
+| L29-3 | 설계 공백·보고 정밀도 — 접수증·투영에 접수 시각이 없어 "접수 후 N초"를 셀 수 없고, 대기 기준의 "15초 안에 완료"가 접수 기준 18~22초를 가림 | 접수 11:39:25, 완료 11:39:43·47, 대기 프로그램 시작 ~11:39:40 | 수리됨 — 접수증 `accepted_at`, 투영의 고정 칸 `accepted_at`·`elapsed_s`(접수 기준, 끝난 작업은 종료까지·모르면 null). 위임·script 어댑터가 채움 | [29회차](experiments/long_sentence_imagination/round_29/report.md) |
+| L29-4 | 관측(비용) — 의식 단계 ~30초·102.5K 토큰, `usage.tool_ms_by_line` 이 병렬 호출을 합산(30,024ms vs 벽시계 15초) | ep task_sysai_21fe9ccb 감독비용, trainer start_v0 usage | 수리됨(표시) — 호출이 겹친 줄은 `wall_ms`(겹침을 한 번만 센 시간)를 함께. 의식 단계 비용은 관측 그대로 | — |
+| L28-1 | 구현 결함(접수증 계약 위반) — 같은 프로젝트 async 위임의 접수증이 호출자 task_id 를 싣고 `child_task_id: null` | `round_28/drafts/start_v1_delegate.ibl`: `[self:task]` → unknown "작업 LSI28 을(를) 홍보 저장소에서 찾지 못했습니다", status_url 404, 에이전트는 4회 실제 실행. 원인 `execute_call_agent` 의 `new_task_id or current_task_id` 폴백(부모 행 없음). sync 는 정직 거절 | 수리됨(2026-10-07) — 부모 행이 없으면 부모 없는 자식 행, 행을 못 만들면 접수 거절 | [28회차](experiments/long_sentence_imagination/round_28/report.md) 라이브 task_aa95dff4 회수·완료, 회귀 2 |
+| L28-2 | 구현 결함(완료 불가) — 한 프로그램의 human_confirm 호출 2개는 토큰 1회성·같은 challenge 라 끝낼 수 없음 | start_v0 재전송 2회: A 삭제 → B 같은 challenge 거절 → 재승인 → A "스위치 없음" 막다른 길 | 열림 — challenge 당 n 회 또는 프로그램 단위 승인 후보 | [28회차](experiments/long_sentence_imagination/round_28/report.md) |
+| L28-3 | 낭비(관문 자리·예고 부재) — 승인 재전송 = 프로그램 전체 재실행이라 앞선 부작용(위임) 반복, check 는 human_confirm 을 예고하지 않음, 가이드에 승인 왕복 절차 없음 | 위임 요구 1 → 4회, 승인 최소 2 → 4회. `start_v0_check`: ok·issues 0 | 열림 — check 예고 + 가이드 절 후보 | [28회차](experiments/long_sentence_imagination/round_28/report.md) |
+| L28-4 | 낭비(관문 순서) — 없는 대상의 영구 삭제도 승인을 먼저 요구 | `deadbeef` delete: approval_required → 승인 → "스위치 없음" | 수리됨(2026-10-07) — `requires.exists`(관문이 사람에게 묻기 전 존재 확인), switch·project delete 첫 소비자. 파생 빌드는 다른 세션의 instruments/spreadsheet.yaml 검증 실패로 보류 | [28회차](experiments/long_sentence_imagination/round_28/report.md) 단위 회귀 통과, 라이브는 빌드 뒤 |
+| L28-5 | 환경 결함(탐색 경로) — `find_claude_binary` 가 `<ver>/claude.app` 만 보고 실제 `<ver>/<해시>/claude.app` 를 못 찾음 | 시스템 AI·프로젝트 에이전트 전부 "AI가 초기화되지 않았습니다", 독립 실행 불가(27회차 말미~) | 수리됨(2026-10-07) — `<ver>/<해시>/claude.app` 도 탐색, 최신 판 우선 | [28회차](experiments/long_sentence_imagination/round_28/report.md) 라이브 초기화 완료·위임 턴 실제 응답, 회귀 1 |
+| L28-6 | 발견·학습 — delegate 전제조건(에이전트 실행 중) 미기재 · agents info/start 식별자 해소 불일치 · start result_type 거짓 · 판본 1 파싱 실패 메시지 무위치 | 28회차 시도 0·탐침 | 열림(작음) | — |
+| L27-1 | 발견·학습(거짓 경고) — 접수증의 `task_ref` 를 읽으면 "관측에 없는 이름" 경고 | `round_27/drafts/start_v0.ibl` 검사: UNOBSERVED_FIELD task_ref(관측: queued·target·message). usage 원천 42건 중 21건이 실제 반환 키 누락 | 수리됨(2026-10-07) — 실사용 수확을 최근 성공들의 합집합으로, 시험·훈련 줄 제외, 줄 상한에 닿으면 `more` 로 기권 | [27회차](experiments/long_sentence_imagination/round_27/report.md) 검사 경고 0 |
+| L27-2 | 구현 결함(값 계약) — 이미 끝난 작업의 `cancel` 이 "지원하지 않습니다 (현재 succeeded)" 실패 | start_v0 실행: 성공한 위임이 '취소 불가'·결과 없음으로 보고됨 | 수리됨 — 끝난 작업의 취소는 값(종료 투영 + `note`), 살아 있는데 못 멈추는 종류만 거절 | [27회차](experiments/long_sentence_imagination/round_27/report.md) |
+| L27-3 | 능력 공백 — 백그라운드 script 를 멈출 길이 없음 | "안 끝난 일은 취소해줘" → script·위임 모두 거절 | 수리됨(script) — 표식 → 러너가 스크립트와 자손을 끝내고 `cancelled` 기록. 위임·렌더·신문·노트북은 열림 | [27회차](experiments/long_sentence_imagination/round_27/report.md) 주 과제·새 변형에서 실제 취소, 남은 프로세스 0 |
+| L27-4 | 요구 해석(과제 설계) — 독립 요청이 시스템 AI 의 자기 위임이 됨 | ep4363: 순환 위임 거절(설계), '시작 실패'로 정직하게 보고 | 제품 결함 아님 — 독립 실행의 위임 경로 미검증 | — |
+| L27-5 | 구현 결함 — 평가 원장이 모든 호출을 두 번 셈 | ep4363: 모델이 붙인 `wait: 1` 이 호출 지문을 갈라 8호출 → 16, 위임 2회로 보여 평가 UNKNOWN → 보완 왕복 약 61초 | 수리됨 — 호출 지문에서 전송 인자 `wait` 제외 | [27회차](experiments/long_sentence_imagination/round_27/report.md) 보관 증거로 재현·회귀 |
+| L27-6 | 구현 결함(실패의 정상값 위장) — 오류로 끝난 위임 턴이 `succeeded` | 실행 모델 미초기화 상태의 위임 결과 = "AI 응답 생성 실패: …" 29자·state succeeded | 수리됨 — 응답 없이 오류로 끝난 턴은 작업을 `failed` 로(시스템 AI 러너·프로젝트 에이전트 위임 보고) | [27회차](experiments/long_sentence_imagination/round_27/report.md) 라이브에서 failed·사유 확인 |
+| L27-7 | 구현 결함(경합) — 재기동 직후 병렬 조회가 실행 중인 작업을 `unknown` 으로 | 수리 후 검증 실행: "이 몸이 모르는 작업 종류 'script'" | 수리됨 — 어댑터 첫 적재 직렬화 | [27회차](experiments/long_sentence_imagination/round_27/report.md) 회귀 |
 | L26-1 | 값 계약 공백 — `[self:task]` 투영 칸이 상황마다 달라 작업 시작 뒤 프로그램이 중단 | `round_26/drafts/start_v0.ibl`: 검사 통과 → 작업 4개 시작 → `$r.error` MISSING_FIELD | 수리됨(2026-10-07) — 투영 한 모양·반환 계약 닫힌 Record 선언(`$closed`), 최초 초안은 검사에서 거절 | [26회차](experiments/long_sentence_imagination/round_26/report.md) 원래 전체·새 변형 통과 |
 | L26-2 | 구현 결함(명세 불일치) — 대기 시간 초과가 도구 실패로 올라와 프로그램 종료, catch 에 가를 값 없음 | `round_26/drafts/start_v1.ibl`: TOOL "대기 12초가 끝났습니다 … 실패 아님", `$error.details` 빈 값 | 수리됨 — 시간 초과는 값(`timed_out`), 상태 조회는 실패 작업도 값, 기다린 작업의 실패는 details 에 투영 | [26회차](experiments/long_sentence_imagination/round_26/report.md) |
 | L26-3 | 실행·복구(안내 공백) — 작업을 시작한 프로그램을 고쳐 다시 실행하면 작업 중복 | 훈련자 작업 16개 중 8개 중복. `completed_calls[i].input_args` 로 접수증 회수는 동작 | 안내 보강(`task_receipts.md`), 실행기 변경 없음 | [26회차](experiments/long_sentence_imagination/round_26/report.md) |
-| L26-4 | 발견·학습 — 등록 스크립트의 반환 모양이 계약에 없어 원문을 읽음 | ep4358 `시험.py` 14,694자 읽기 | 열림 — 스크립트 반환 계약 선언 후보 | — |
+| L26-4 | 발견·학습 — 등록 스크립트의 반환 모양이 계약에 없어 원문을 읽음 | ep4358 `시험.py` 14,694자 읽기. 27회차 ep4363 에서 다시 읽음(상대 경로 해석 확인) | 열림 — 스크립트 반환 계약 선언 후보 | — |
 | L19-1 | 과도한 비용(작성) — 품목별 전체 목록 재필터 | P2 v1 100만단계 BUDGET, 주문 필터380,010·입고필터101,207단계 | 훈련 프로그램 수리 — 전체 정렬·품목 경계 누적으로 기본/취소/전부취소 일치 | [19회차](experiments/long_sentence_imagination/round_19/report.md) |
 | L19-2 | 과도한 비용(구현) — 입력 참조의 인증된 전체 봉투 재포장·지문 | 요약만 반환9단계 HTTP4.570초, 입력해소 프로파일4.017중digest3.716초 | 수리됨 — 인증 content ID 활용·구기록 학습 호환, 동일값 중앙값3.352→0.354초, 전체/새변형·전수 통과 | [19회차](experiments/long_sentence_imagination/round_19/report.md) |
 | L18-1 | 과도한 비용(구현) — 순수 도구 호출에서도 인자 전체를 pack·digest 4회, 재사용 지문은 순수 호출에서 미사용 | 18회차 `repro/t_*.ibl`(select 2,040행 회당 0.33초), `repro/profile_p2.py`(digest 38.6초/70.1초, 핸들러 1.47초). 훈련자 P2 61.8·66.5초, ep4337 집계 프로그램 16.6초 | 수리됨(2026-10-05) — 인자 지문 1회·신원은 지문만, 도구 호출 범위의 재고 검증 묶기, `usage.tool_ms_by_line`. 격리 34.5→12.1초, 라이브 P2 61.8→17.7초, 결과 전건 동일 | [18회차 후속 수리](experiments/long_sentence_imagination/round_18/report.md#후속-수리--2026-10-05) |
@@ -437,3 +454,41 @@ L26-1 투영 칸 불안정(반환 계약을 닫힌 Record 로 선언, 최초 초
 모든 작업·에피소드 종료 확인 후 수리, 원래 주 과제·새 변형(순서 반전·5초) 전건 일치. 미수리: L26-4 등록 스크립트의 반환 계약 부재,
 L26-5 의식 단계 45~47초(관측). 승인·취소·위임 접수증은 미검증.
 신규 회귀 3건, 전수 9,260 시험·실패 0·건너뜀 14(183초). 첫 전수의 1실패는 10-06 gnews 표시 수리가 남긴 옛 문자열 고정 시험이라 함께 고쳤다. [보고서](experiments/long_sentence_imagination/round_26/report.md).
+
+## 27회차 — 종류가 다른 접수증의 혼합·취소·정직한 보고·이어받기 (2026-10-07, 훈련·수리 완료)
+
+26회차의 미검증 축. 시스템 AI 위임 + 시험 묶음 둘(느린·빠른)을 동시에 시작, 15초 대기 뒤 안 끝난 일은 취소를 시도해
+"취소됨/취소 요청됨/취소 불가"를 실제 상태대로 적은 1차 보고서, 후속은 남은 일만 같은 접수증으로. 시작 HEAD `051e8f82`, 훈련 실행 약 12분.
+훈련자는 2번째 시도에 달성(수정 주기 1 — 첫 초안은 끝난 위임을 '취소 불가'로 적었다), 변형(첫 대기 240초) 달성, 독립 대조 13검사 통과.
+독립 AI ep4363·4364 는 204.2/108.1초 — 시험 묶음은 달성(취소 불가를 정직하게 표시, 후속 6 통과, 재실행 0), 위임은 자기 위임이라 순환 거절(L27-4, 과제 설계).
+이번에는 `[self:task]` 를 썼다. 주 과제의 약 61초는 평가 원장 이중 집계(L27-5)를 해명하는 왕복이었다.
+수리: L27-1 반환 키 관측 수확(합집합·격리 원천 제외), L27-2 끝난 작업의 취소는 값, L27-3 script 취소(러너가 자손까지 정리),
+L27-5 호출 지문의 전송 인자, L27-6 오류로 끝난 위임 턴은 failed, L27-7 어댑터 첫 적재 경합. 수리 후 주 과제·새 변형에서 스크립트가 실제로 취소됐고 남은 프로세스 0.
+미검증: 위임이 성공하는 경로의 수리 후 재실행(수리 단계 도중 시스템 AI 설정이 claude_code/opus 로 바뀌어 실행 모델이 초기화되지 않음 — 훈련 밖 변화, 손대지 않음),
+시스템 AI 의 수리 후 재실행. 열림: 위임·렌더류 취소, 사람 승인이 낀 작업, L26-4.
+신규 회귀 6건, 전수 9,270 시험·실패 0·건너뜀 19. [보고서](experiments/long_sentence_imagination/round_27/report.md).
+
+## 28회차 — 사람 승인이 낀 영구 삭제 + 프로젝트 에이전트 위임의 접수증 (2026-10-07, 훈련·수리 3건)
+
+27회차가 남긴 두 축. 홍보/홈페이지 에이전트에 요약 위임(15초 대기·취소 시도) + 임시 스위치 2개 영구 삭제(사람 승인) + 보고서 저장·재독. 시작 HEAD `051e8f82`(+27회차 미커밋), 약 7분.
+최초 초안(한 프로그램)은 검사 통과 뒤 승인 거절·재전송 2회로도 끝나지 못했고(L28-2·3), 승인 단위로 셋으로 나눈 뒤 달성(상태는 정직). 위임 요구 1 → 4회, 승인 최소 2 → 4회.
+같은 프로젝트 async 위임의 접수증이 호출자 task_id 를 싣고 있어 `[self:task]` 가 unknown 이었다(L28-1, sync 는 정직 거절). 없는 스위치 삭제도 승인을 먼저 요구(L28-4).
+시스템 AI 독립 실행은 불가 — 번들 CLI 탐색 경로 불일치(L28-5). 살아 있는 위임의 취소 경로는 미검증. 훈련은 발견만, 뒤이은 판정으로 L28-1(고아 task_id 의 자기 행)·L28-4(`requires.exists`, 파생 빌드는 다른 세션 파일 때문에 보류)·L28-5(번들 탐색) 수리, L28-2·3 은 승인 설계 판정 대기. [보고서](experiments/long_sentence_imagination/round_28/report.md).
+
+## 29회차 — 두 에이전트 동시 위임·살아 있는 위임의 취소 시도·이어받아 합치기 (2026-10-07, 훈련·발견 뒤 수리 4건)
+
+홍보/홈페이지·스토리텔러에 요약 위임, 15초 병렬 대기, 안 끝난 일은 취소 시도(위임은 미지원 → "취소 불가" 정직), 후속에서 표로 합침. 시작 HEAD `051e8f82`(+27·28 미커밋), 약 6분.
+훈련자는 최초 초안으로 달성(수정 0, 1차 15.8초·후속 0.36초), 변형(120초) 달성, 대조 9검사 통과. 독립 AI(claude_code/opus, 28회차 L28-5 수리로 복구) 91.9/15.7초 — 요약 2건 실물·재위임 0, 1차 보고서의 접수증 칸 누락을 스스로 보고.
+발견: L29-1 부모 턴 중 도착한 자식 보고가 러너 RuntimeError 로 버려짐(traceback·유령 에피소드), L29-2 `[try]` 를 값으로 쓰는 문법이 검사를 통과하나 return 이 함수를 끝냄, L29-3 접수 시각 부재로 "15초" 기준점이 대기 호출이 됨, L29-4 의식 ~30초·tool_ms 합산. 훈련은 발견만, 뒤이은 사용자 지시로 넷 다 수리(보고서 5절) — L29-1 붙들기·회수 표식, L29-2 `BIND_RETURNS`, L29-3 접수 기준 시계, L29-4 `wall_ms`. 재기동 뒤 독립 요청 재실행에서 L29-1 붙들기·턴 뒤 전달과 `elapsed_s` 사용을 확인. [보고서](experiments/long_sentence_imagination/round_29/report.md).
+
+
+## 30회차 — 전시 납품 ZIP의 선택·제외·복원 검수 (2026-10-07, 훈련·수리 완료)
+
+합성76파일·설치 제외51파일. 겹치는 선택·동명·빈 파일·원문 바이트를 보존하는 ZIP→목록→복원→독립 대조.
+최초 IBL은 검사/실행 성공이나 내부 제외파일3/2개가 추가돼 complete=false, 독립 AI ep4389/4390은 자체 Python으로 전건 달성(177.529/94.661초).
+**L30-1** 압축의 경로 글로브/명시파일 제외 누락을 수리하고 제외 폴더는 순회 전에 생략한다.
+**L30-2** 전건 바이트 비교의 파일별76호출을 기존 일괄 함수+export2호출로 바꿨다. 같은 수리된 구현·동일 품질의 전체 HTTP 기본30.957→2.572초(각1회 관측, 작성/모델 비용 제외).
+**L30-3** 기존 script 미발견·재구현은 등록 목록 탐색/조회 재사용 교재로 보완, 독립 AI 행동·전체 토큰 개선량은 미측정.
+모든 훈련 종료 확인 후 수리. 최초 전체·정책변형·새 순서반전/중복/내부파일명시 변형 전건 통과, 원본·첫 결과 불변.
+신규 압축7실패→통과, 최종 관련172통과(라이브러리 system 포함). backend 전수·frontend 미실행.
+비용·회귀·미검증·재현은 [보고서](experiments/long_sentence_imagination/round_30/report.md). 다른 세션의 기존 미커밋 수리는 이 회차에 포함하지 않는다.

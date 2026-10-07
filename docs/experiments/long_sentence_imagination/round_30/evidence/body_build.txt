@@ -1,0 +1,28 @@
+✓ data/bodies/android.nodes.yaml 파생: 몸-사전 128개 어휘 (남의 어휘 미탑재)
+✓ data/bodies/android.engine.json 파생: 엔진 457 / blocklist 26 / 전체 483  (글롭 제외 규칙 ['migrate_*', 'retire_*', 'test_*'] — 전개하지 않음)
+    blocklist  api                          top-level import: dotenv
+    blocklist  api_bulletin                 force_exclude (프로파일 명시)
+    blocklist  api_config                   force_exclude (프로파일 명시)
+    blocklist  api_env                      via api_config
+    blocklist  api_lecture_workspace        force_exclude (프로파일 명시)
+    blocklist  api_nas_hls                  force_exclude (프로파일 명시)
+    blocklist  api_runtime                  force_exclude (프로파일 명시)
+    blocklist  api_showcase                 via hls_ladder
+    blocklist  api_ytrelay                  force_exclude (프로파일 명시)
+    blocklist  cdn_provision                force_exclude (프로파일 명시)
+    blocklist  channel_poller               via nip17
+    blocklist  data_ownership               force_exclude (프로파일 명시)
+    blocklist  ffmpeg_provision             force_exclude (프로파일 명시)
+    blocklist  hls_ladder                   force_exclude (프로파일 명시)
+    blocklist  ibl_opus_bulk_gen            force_exclude (프로파일 명시)
+    blocklist  ibl_synthetic_generator      top-level import: google
+    blocklist  nip17                        top-level import: pynostr
+    blocklist  nip44                        top-level import: cryptography
+    blocklist  red_apply                    force_exclude (프로파일 명시)
+    blocklist  repair_verdict_distill       force_exclude (프로파일 명시)
+    blocklist  restart_child                force_exclude (프로파일 명시)
+    blocklist  restart_controller           force_exclude (프로파일 명시)
+    blocklist  restart_helper               force_exclude (프로파일 명시)
+    blocklist  restart_process              force_exclude (프로파일 명시)
+    blocklist  restart_red                  force_exclude (프로파일 명시)
+    blocklist  runtime_legacy               force_exclude (프로파일 명시)

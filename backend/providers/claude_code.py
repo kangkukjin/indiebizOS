@@ -71,9 +71,9 @@ def find_claude_binary() -> Optional[str]:
 
     탐색 순서:
     1. PATH의 claude / claude.exe (shutil.which)
-    2. 데스크톱 앱 동봉 번들:
-       - macOS:   ~/Library/Application Support/Claude/claude-code/<ver>/claude.app/Contents/MacOS/claude
-       - Windows: %APPDATA%\\Claude\\claude-code\\<ver>\\claude.exe  (LOCALAPPDATA 폴백)
+    2. 데스크톱 앱 동봉 번들(<ver>/ 바로 아래 또는 <ver>/<빌드 해시>/ 아래, 최신 판부터):
+       - macOS:   ~/Library/Application Support/Claude/claude-code/<ver>[/<해시>]/claude.app/Contents/MacOS/claude
+       - Windows: %APPDATA%\\Claude\\claude-code\\<ver>[\\<해시>]\\claude.exe  (LOCALAPPDATA 폴백)
 
     번들 실행파일은 PATH에 없으므로(설치판) 이 2단계가 없으면 윈도우에선 'claude 못 찾음'
     → init_client 가 False 반환 → provider not-ready → 사용자에겐 '키/인증 없음'으로 보인다.
@@ -89,21 +89,17 @@ def find_claude_binary() -> Optional[str]:
             base = os.environ.get(var)
             if base:
                 roots.append(Path(base) / "Claude" / "claude-code")
-        for root in roots:
-            if root.exists():
-                for version_dir in sorted(
-                    (p for p in root.iterdir() if p.is_dir()), reverse=True
-                ):
-                    candidates.append(version_dir / "claude.exe")
+        rel = Path("claude.exe")
     else:  # macOS 번들
-        root = Path.home() / "Library" / "Application Support" / "Claude" / "claude-code"
+        roots = [Path.home() / "Library" / "Application Support" / "Claude" / "claude-code"]
+        rel = Path("claude.app") / "Contents" / "MacOS" / "claude"
+    for root in roots:
         if root.exists():
-            for version_dir in sorted(
-                (p for p in root.iterdir() if p.is_dir()), reverse=True
-            ):
-                candidates.append(
-                    version_dir / "claude.app" / "Contents" / "MacOS" / "claude"
-                )
+            for version_dir in sorted((p for p in root.iterdir() if p.is_dir()), reverse=True):
+                # 배치는 두 모양이다 — <ver>/claude.app 과 <ver>/<빌드 해시>/claude.app(2.1.288·289 실측,
+                # 긴문장 28회차 L28-5: 한 단계만 보던 탐색이 None 을 돌려줘 provider 전부 미초기화).
+                candidates.append(version_dir / rel)
+                candidates.extend(sub / rel for sub in sorted((p for p in version_dir.iterdir() if p.is_dir()), reverse=True))
 
     for binary in candidates:
         # 윈도우 .exe 는 os.access(X_OK)가 신뢰불가 → 존재만 확인

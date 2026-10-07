@@ -560,6 +560,8 @@ class AgentCommunicationMixin:
                         utterance_author="agent",   # 위임문·보고 회수 = 기계가 짠 글(건축 #7 실측)
                     ))
                     response = _res.get("final") or _res.get("error") or ""
+                    # 응답 없이 오류로 끝난 턴은 자식의 실패다 — 오류 글을 성공 결과로 보고하지 않는다(긴문장 27회차 L27-6).
+                    turn_failed = not _res.get("final") and bool(_res.get("error"))
                     print(f"[AgentRunner] {my_name} 응답 생성: {len(response)}자")
 
                     # 에이전트 간 응답 메시지 DB 기록
@@ -579,7 +581,7 @@ class AgentCommunicationMixin:
                     else:
                         # 직접 처리 완료 → 자동 보고 (태스크 삭제됨)
                         if extracted_task_id:
-                            self._auto_report_to_chain(extracted_task_id, response, from_agent)
+                            self._auto_report_to_chain(extracted_task_id, response, from_agent, failed=turn_failed)
                         else:
                             # 태스크 ID 없이 받은 메시지 - 발신자에게 직접 응답
                             self._send_response_to_sender(from_agent, response)

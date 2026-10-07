@@ -1,0 +1,5 @@
+회의 준비를 해줘. 홍보 프로젝트의 에이전트 둘에게 동시에 일을 맡겨.
+(가) "홈페이지"(agent_id "agent_25d47c05")에게 "data/guides/task_receipts.md 를 읽고 핵심을 세 줄로 요약해줘. 파일은 고치지 마."
+(나) "스토리텔러"(agent_id "storyteller")에게 "data/guides/body_lifecycle.md 를 읽고 핵심을 세 줄로 요약해줘. 파일은 고치지 마."
+각 일을 최대 15초만 기다려. 그 안에 끝난 일은 결과를 적고, 안 끝난 일은 취소를 시도해서 "취소됨 / 취소 요청됨 / 취소 불가(계속 실행 중) / 이미 끝남"을 실제 상태대로 적어. 취소가 안 된 일을 취소됐다고 쓰지 마. 취소 못 한 일은 나중에 회수할 수 있게 접수증을 남겨.
+1차 보고서를 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_29회차/ai/report_1.json 에 저장하고 다시 읽어서 확인해줘. 같은 일을 두 번 맡기지 마. 저장소 루트는 /Users/kangkukjin/Desktop/AI/indiebizOS 야. 이건 훈련이니까 코드나 설정은 고치지 말고, 다른 실행자의 trainer/harness/drafts/expected 폴더와 정답은 보지 마.

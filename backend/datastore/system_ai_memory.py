@@ -842,6 +842,61 @@ def record_child_response(task_id: str, new_response: dict) -> dict:
                 "total": len(delegations), "found": True}
 
 
+def mark_child_collected(task_id: str, child_task_id: str) -> bool:
+    """부모 턴이 자식의 종료를 직접 읽어 갔다(`[self:task]` status·wait) — 그 응답을 '회수됨'으로 적는다 (긴문장 29회차 L29-1).
+
+    비동기 자식의 완료 보고는 부모 러너에도 통지된다. 부모가 같은 턴에서 이미 결과를 손에 넣었다면 그 통지는 할 일이 없다 —
+    러너와 표면이 이 표식으로 가른다(awaited_child_reports). 응답이 아직 원장에 없으면 아무것도 적지 않는다."""
+    import json as _json
+    if not task_id or not child_task_id:
+        return False
+    init_memory_db()
+    with _get_exclusive_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT delegation_context FROM tasks WHERE task_id = ?', (task_id,))
+        row = cursor.fetchone()
+        if not row or not row[0]:
+            return False
+        try:
+            ctx = _json.loads(row[0])
+        except _json.JSONDecodeError:
+            return False
+        changed = False
+        for r in (ctx.get("responses") or []) if isinstance(ctx, dict) else []:
+            if isinstance(r, dict) and r.get("child_task_id") == child_task_id and not r.get("collected"):
+                r["collected"] = True
+                changed = True
+        if changed:
+            cursor.execute("UPDATE tasks SET delegation_context = ? WHERE task_id = ?",
+                           (_json.dumps(ctx, ensure_ascii=False), task_id))
+        return changed
+
+
+def awaited_child_reports(task_id: str) -> Optional[Dict]:
+    """이 작업이 아직 받아야 할 자식 보고 — {"total", "pending", "uncollected", "status"}. 이 사이클에 위임이 없으면 None.
+
+    pending = 아직 응답하지 않은 자식. uncollected = 응답은 원장에 왔으나 부모 턴이 읽어 가지 않은 비동기 자식
+    (그 보고는 러너의 새 턴이 전달한다). 둘 다 0 이면 기다릴 보고가 없다 — 표면은 작업을 닫고, 러너는 닫힌 작업에
+    뒤늦게 닿은 통지로 새 턴을 열지 않는다."""
+    import json as _json
+    task = get_task(task_id) if task_id else None
+    if not task:
+        return None
+    try:
+        ctx = _json.loads(task.get("delegation_context") or "{}")
+    except (ValueError, TypeError):
+        return None
+    delegations = [d for d in (ctx.get("delegations") or []) if isinstance(d, dict)] if isinstance(ctx, dict) else []
+    if not delegations:
+        return None
+    modes = {d.get("child_task_id"): d.get("mode") or "async" for d in delegations}
+    uncollected = sum(1 for r in ctx.get("responses") or []
+                      if isinstance(r, dict) and not r.get("collected")
+                      and modes.get(r.get("child_task_id"), "async") != "sync")
+    return {"total": len(delegations), "pending": task.get("pending_delegations") or 0,
+            "uncollected": uncollected, "status": task.get("status") or "pending"}
+
+
 def settle_sync_delegation(task_id: str, child_task_id: str):
     """동기 대기가 시간 초과로 끝날 때의 원자적 정산 (2026-10-05).
 

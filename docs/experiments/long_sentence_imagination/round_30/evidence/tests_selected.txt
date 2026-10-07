@@ -1,0 +1,29 @@
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [ 41%]
+........................................................................ [ 83%]
+............................                                             [100%]
+=============================== warnings summary ===============================
+backend/test_python_libraries.py::test_mcp_and_http_preserve_value_protocol_negotiation
+  /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: IncompleteFieldDefinitionWarning: Field 'lifespan' has an incomplete definition: its annotation contains an unresolved forward reference, so settings sources may fail to correctly resolve its value. Call `model_rebuild()` on the model where the field is defined, once all the referenced types are defined.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+4.67s call     backend/test_python_libraries.py::test_design_examples_run_real_numpy_pandas
+3.82s call     backend/test_python_libraries.py::test_describe_is_passive_but_get_marks_failing_property_invoked
+2.94s call     backend/test_python_libraries.py::test_mutation_alias_and_release
+2.57s call     backend/test_python_libraries.py::test_dataframe_export_and_attribute
+2.32s call     backend/test_python_libraries.py::test_callable_and_async_results
+2.21s call     backend/test_python_libraries.py::test_modules_describe_and_decimal
+1.85s setup    backend/test_python_libraries.py::test_design_examples_run_real_numpy_pandas
+1.83s setup    backend/test_ibl_composition_teaching.py::test_guide_programs_execute[local_decomposition]
+1.81s setup    backend/test_imagination_round78_79_books.py::test_sort_descending_alias_is_one_table_in_edition_2[desc]
+1.77s call     backend/test_python_libraries.py::test_mutation_evidence_reaches_export_without_expanding_every_prior_event
+1.70s call     backend/test_read_formats_2026_09_15.py::test_image_script_max_kb_and_aspect
+1.67s call     backend/test_python_libraries.py::test_foreign_output_wire_and_expired_scope
+1.58s call     backend/test_python_libraries.py::test_export_bytes_uses_output_gate
+1.31s call     backend/test_python_libraries.py::test_batch_file_comparison_preserves_empty_mismatch_and_missing
+1.29s call     backend/test_python_libraries.py::test_objects_compose_through_local_functions
+172 passed, 1 warning in 47.89s

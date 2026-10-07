@@ -1,0 +1,48 @@
+{
+  "confirmed_at": "2026-10-07T13:11:58.834660",
+  "all_terminal": true,
+  "runs": [
+    {
+      "label": "main_v0",
+      "state": "completed",
+      "ended": 1791346034.6733062,
+      "run_id": "ae6cc113f4974c8caa36b4dff8e5de74",
+      "task_id": null
+    },
+    {
+      "label": "variant_v0",
+      "state": "completed",
+      "ended": 1791346089.7263591,
+      "run_id": "74083860c5124a3a8b2d9e562c130dfa",
+      "task_id": null
+    },
+    {
+      "label": "probe_exclude",
+      "state": "completed",
+      "ended": 1791346113.977469,
+      "run_id": "7dbeb928ccc847808e92680fc223d430",
+      "task_id": null
+    },
+    {
+      "label": "batch_probe",
+      "state": "completed",
+      "ended": 1791346201.208128,
+      "run_id": "1952791bfcdc4452840f12cc7da178ed",
+      "task_id": null
+    },
+    {
+      "label": "ai_main_final",
+      "state": "succeeded",
+      "ended": 1791346129.3823931,
+      "run_id": null,
+      "task_id": "task_sysai_8cfd52bf"
+    },
+    {
+      "label": "ai_variant_final",
+      "state": "succeeded",
+      "ended": 1791346276.461083,
+      "run_id": null,
+      "task_id": "task_sysai_4cd344b0"
+    }
+  ]
+}

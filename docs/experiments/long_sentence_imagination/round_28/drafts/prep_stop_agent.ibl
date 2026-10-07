@@ -1,0 +1,3 @@
+#!ibl edition=2
+$s = [others:agents]{op:"stop", project_id:"홍보", agent_id:"agent_25d47c05"}
+return $s

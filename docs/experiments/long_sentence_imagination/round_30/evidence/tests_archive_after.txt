@@ -1,0 +1,6 @@
+...........                                                              [100%]
+============================= slowest 15 durations =============================
+0.15s call     backend/test_read_formats_2026_09_15.py::test_archive_script_pack_list_unpack_and_zip_slip
+
+(14 durations < 0.1s hidden.)
+11 passed, 15 deselected in 4.86s

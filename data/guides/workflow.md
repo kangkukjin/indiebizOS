@@ -61,5 +61,5 @@
 
 현재 실행은 `resume:{run_id}`와 동일한 코드·inputs·주체·프로젝트로 재개한다.
 완료한 호출은 재사용하고 결과 불명 외부 작업은 자동 반복하지 않는다.
-자세한 조합·실패 처리·재개는 `ibl_composition.md`를 따른다.
+자세한 조합·실패 처리는 `ibl_composition.md`, 재개는 `ibl_composition_tools.md`를 따른다.
 기존 무표기 저장본의 해석은 `docs/compatibility/ibl_workflow_legacy.md`에 보존한다.

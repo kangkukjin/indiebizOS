@@ -254,9 +254,17 @@ def _switch_to_role(runner, role, agent_id: str = None):
 
 # ============ 메시지 처리 (AgentRunner 인지 파이프라인 사용) ============
 
+class SystemAITurnFailed(RuntimeError):
+    """응답 없이 오류로 끝난 턴 — 작업을 닫는 호출자가 성공으로 적지 않게 하는 사실 신호(긴문장 27회차 L27-6).
+
+    옛 경로는 오류를 "AI 응답 생성 실패: …" 글로 바꿔 돌려줬고, 위임 작업은 그 글을 결과로 `completed` 가 됐다 —
+    기다리던 프로그램은 실패한 가지를 정상값으로 받았다. 채팅 표면은 그 글을 그대로 보여 주면 되므로 기본은 옛 동작."""
+
+
 def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None,
                               action_hint: str = None, extra_role: str = "", force_role: str = "",
-                              allowed_set=None, utterance_author: str = None, cancel_check=None):
+                              allowed_set=None, utterance_author: str = None, cancel_check=None,
+                              raise_on_failure: bool = False):
     """시스템 AI 메시지 처리 (동기 모드) — cognitive_stream을 drain하는 블로킹 어댑터.
 
     인지 오케스트레이션(연상→분류→의식→실행→평가→반성→증류)은 전부
@@ -282,6 +290,8 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     ))
     response = result["final"]
     if not response and result.get("error"):
+        if raise_on_failure:
+            raise SystemAITurnFailed(str(result["error"]))
         response = f"AI 응답 생성 실패: {result['error']}"
     if result.get("clarify") or result.get("session_reset"):
         # 실행 에이전트 미호출 — 이전 턴 잔여 도구 이미지가 새어들지 않게 빈 목록

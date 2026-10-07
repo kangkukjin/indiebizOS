@@ -1,0 +1,70 @@
+{
+ "checks": [
+  {
+   "check": "새 script 작업 정확히 2",
+   "ok": true,
+   "detail": "2"
+  },
+  {
+   "check": "새 위임 정확히 1",
+   "ok": true,
+   "detail": "1"
+  },
+  {
+   "check": "1차: backend/test_preflight_restart.py 통과 7",
+   "ok": true,
+   "detail": "7"
+  },
+  {
+   "check": "최종: backend/test_preflight_restart.py 통과 7",
+   "ok": true,
+   "detail": "7"
+  },
+  {
+   "check": "1차: backend/test_selfbuild_gate_2026_09_07.py 통과 20",
+   "ok": true,
+   "detail": "20"
+  },
+  {
+   "check": "최종: backend/test_selfbuild_gate_2026_09_07.py 통과 20",
+   "ok": true,
+   "detail": "20"
+  },
+  {
+   "check": "1차: backend/test_vocabulary_archive.py 통과 6",
+   "ok": true,
+   "detail": "6"
+  },
+  {
+   "check": "최종: backend/test_vocabulary_archive.py 통과 6",
+   "ok": true,
+   "detail": "6"
+  },
+  {
+   "check": "1차: 취소됨을 상태 값으로 주장하지 않음",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "최종: 취소됨을 상태 값으로 주장하지 않음",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "1차: 안 끝난 일의 접수증(script) 보존",
+   "ok": true,
+   "detail": "[('delegation', 'task_sysai_165d8388'), ('script', '시험-20261007_095532-2a41e0414145408bbb066c8599088058'), ('script', '시험-20261007_095532-6ea3e901a5ba4b82b1db434c39009593')]"
+  },
+  {
+   "check": "최종: 위임 요약 글 있음",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "최종: 접수증이 1차와 같은 작업",
+   "ok": true,
+   "detail": "[]"
+  }
+ ],
+ "all_ok": true
+}

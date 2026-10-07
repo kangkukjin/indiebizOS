@@ -1,0 +1,4 @@
+#!ibl edition=2
+$a = [others:agents]{op:"stop", project_id:"홍보", agent_id:"agent_25d47c05"}
+$b = [others:agents]{op:"stop", project_id:"홍보", agent_id:"storyteller"}
+return {a:$a, b:$b}

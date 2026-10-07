@@ -91,6 +91,19 @@ def returned_shape(value):
     return {}
 
 
+def _covered_seconds(spans):
+    """겹치는 구간을 한 번만 센 길이 — 병렬 호출의 벽시계 시간."""
+    total, edge = 0.0, None
+    for start, end in sorted(spans):
+        if edge is None or start > edge:
+            total += end - start
+            edge = end
+        elif end > edge:
+            total += end - edge
+            edge = end
+    return total
+
+
 class Runtime(ExpressionEvaluator):
     def __init__(self, plan, inputs=None, *, cancel_check=None, budget=None,
                  recordings=None, replay=False, journal=None, reusable=None, reuse_run=None,
@@ -113,7 +126,7 @@ class Runtime(ExpressionEvaluator):
         self._next_cancel_check = 0.0   # 첫 걸음에서는 바로 확인한다
         self.budget = budget or Budget()
         self.trace, self.recordings = [], []
-        self.tool_time = {}   # node_id → [호출 수, 초, 액션] — 걸음 수가 세지 않는 도구 시간을 줄별로 보인다
+        self.tool_time = {}   # node_id → [호출 수, 초, 액션, 구간들] — 걸음 수가 세지 않는 도구 시간을 줄별로 보인다
         self.model_usage = []
         self.reuse_models = reuse_models
         self.reused_model_calls = 0
@@ -583,9 +596,11 @@ class Runtime(ExpressionEvaluator):
             return self._invoke(node, args, piped)
         finally:
             with self.lock:
-                cell = self.tool_time.setdefault(node.id, [0, 0.0, f"{node.data['node']}:{node.data['action']}"])
+                ended = time.monotonic()
+                cell = self.tool_time.setdefault(node.id, [0, 0.0, f"{node.data['node']}:{node.data['action']}", []])
                 cell[0] += 1
-                cell[1] += time.monotonic() - started
+                cell[1] += ended - started
+                cell[3].append((started, ended))
 
     def _invoke(self, node, args, piped):
         key = f"{node.data['node']}:{node.data['action']}"
@@ -931,19 +946,27 @@ class Runtime(ExpressionEvaluator):
         out['usage']['steps_by_line'] = [{"line": line, "steps": count, "source_hash": source} for (source, line), count in top]
         # 걸음 수는 식 평가만 센다 — 표 변환·읽기 같은 도구 호출은 한 걸음이어도 행 수만큼 시간이 든다(긴문장 L18-1).
         # 느린 줄은 걸음이 아니라 시간으로 가리킨다. 안쪽 호출을 품은 줄(each 본문 등)은 그 시간을 포함한다.
+        # `ms` 는 호출 시간의 합이라 병렬 가지·each parallel 에서는 벽시계보다 크다(긴문장 L29-4: 15초 대기 둘이 30초로
+        # 읽혔다). 호출이 겹친 줄에는 겹침을 한 번만 센 `wall_ms` 를 함께 싣는다 — 기다린 시간은 wall_ms 다.
         slow = {}
-        for node_id, (calls, seconds, action) in self.tool_time.items():
+        for node_id, (calls, seconds, action, spans) in self.tool_time.items():
             where = self.source_map.get(node_id, {})
             if where.get('line') is not None:
-                cell = slow.setdefault((where.get('source_hash'), where['line']), [0, 0.0, []])
+                cell = slow.setdefault((where.get('source_hash'), where['line']), [0, 0.0, [], []])
                 cell[0] += calls
                 cell[1] += seconds
                 if action not in cell[2]:
                     cell[2].append(action)
-        out['usage']['tool_ms_by_line'] = [
-            {"line": line, "ms": round(seconds * 1000), "calls": calls, "actions": actions, "source_hash": source}
-            for (source, line), (calls, seconds, actions) in
-            sorted(slow.items(), key=lambda item: (-item[1][1], item[0][1]))[:10]]
+                cell[3].extend(spans)
+        rows = []
+        for (source, line), (calls, seconds, actions, spans) in \
+                sorted(slow.items(), key=lambda item: (-item[1][1], item[0][1]))[:10]:
+            row = {"line": line, "ms": round(seconds * 1000), "calls": calls, "actions": actions, "source_hash": source}
+            wall = round(_covered_seconds(spans) * 1000)
+            if wall < row["ms"]:
+                row["wall_ms"] = wall
+            rows.append(row)
+        out['usage']['tool_ms_by_line'] = rows
         notes = [{'event_id': event['id'], 'location': self.source_map.get(event['node_id'], {}),
                   'warning': event['warning'][:1000]}
                  for event in self.trace if event.get('warning')]

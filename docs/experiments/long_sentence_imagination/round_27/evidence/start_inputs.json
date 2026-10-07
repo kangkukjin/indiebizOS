@@ -1,0 +1,12 @@
+{
+ "message": "data/guides/task_receipts.md 를 읽고 핵심을 세 줄로 요약해줘. 파일은 고치지 마.",
+ "slow_files": [
+  "backend/test_vocabulary_archive.py"
+ ],
+ "fast_files": [
+  "backend/test_preflight_restart.py",
+  "backend/test_selfbuild_gate_2026_09_07.py"
+ ],
+ "first_wait": 15,
+ "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_27회차/trainer/report_1.json"
+}

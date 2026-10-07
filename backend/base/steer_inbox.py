@@ -57,6 +57,39 @@ def task_scope(agents, task_id):
             print(f"[조향] 미배달 {left}건 폐기 — 작업 종료")
 
 
+_held: dict = {}    # task_id -> 겹친 수. 턴 뒤 마감(작업 닫기)까지 잇는 표면의 수명
+
+
+@contextmanager
+def turn_hold(task_id):
+    """표면이 한 작업의 턴과 **그 뒤의 마감**까지 쥐고 있음을 알린다(긴문장 29회차 L29-1).
+
+    task_scope 는 모델 턴만 덮는다 — 턴이 끝난 뒤 표면이 작업을 닫기 전의 틈에 같은 작업으로 온 메시지가
+    새 턴을 열면 답이 둘이 된다. 마감까지 한 덩어리로 도는 표면은 이 수명으로 감싼다."""
+    if not task_id:
+        yield
+        return
+    with _lock:
+        _held[task_id] = _held.get(task_id, 0) + 1
+    try:
+        yield
+    finally:
+        with _lock:
+            left = _held.get(task_id, 0) - 1
+            if left > 0:
+                _held[task_id] = left
+            else:
+                _held.pop(task_id, None)
+
+
+def task_busy(task_id) -> bool:
+    """이 작업의 턴이 지금 살아 있는가(모델 턴 또는 표면의 마감). 같은 작업으로 온 메시지는 그동안 새 턴을 열 수 없다."""
+    if not task_id:
+        return False
+    with _lock:
+        return task_id in _held or any(key[1] == task_id for key in _active)
+
+
 def resolve_task(agent_id, task_id=None):
     """외부 조향의 대상 확인. 작업 생략은 활성 작업이 정확히 하나일 때만 허용한다."""
     with _lock:

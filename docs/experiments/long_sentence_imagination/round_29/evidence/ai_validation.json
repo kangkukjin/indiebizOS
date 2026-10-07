@@ -1,0 +1,50 @@
+{
+ "checks": [
+  {
+   "check": "새 위임 정확히 2",
+   "ok": true,
+   "detail": "2"
+  },
+  {
+   "check": "1차: 접수증 2개(delegation)",
+   "ok": false,
+   "detail": "[]"
+  },
+  {
+   "check": "1차: 취소됨을 주장하지 않음",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "1차: 안 끝난 일 표시가 있음(15초 기대) 또는 전부 끝남(변형)",
+   "ok": false,
+   "detail": "[]"
+  },
+  {
+   "check": "1차: 접수증의 행이 실제로 존재",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "최종: 요약 글 2개 이상(비어 있지 않음)",
+   "ok": true,
+   "detail": "2"
+  },
+  {
+   "check": "최종: 두 파일 이름 모두 등장",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "최종: 접수증 작업이 전부 completed",
+   "ok": true,
+   "detail": "[('task_0cb6d926', ('completed',)), ('task_104ba351', ('completed',))]"
+  },
+  {
+   "check": "최종: 접수증이 1차와 같은 작업(새 시작 없음)",
+   "ok": false,
+   "detail": "[('delegation', 'task_0cb6d926', '홍보'), ('delegation', 'task_104ba351', '홍보')]"
+  }
+ ],
+ "all_ok": false
+}

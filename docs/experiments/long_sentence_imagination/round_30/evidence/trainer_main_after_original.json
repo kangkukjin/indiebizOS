@@ -1,0 +1,89 @@
+{
+  "expected_count": 76,
+  "checks": [
+    {
+      "name": "nonempty_expected",
+      "ok": true,
+      "details": 76
+    },
+    {
+      "name": "archive_exists",
+      "ok": true,
+      "details": null
+    },
+    {
+      "name": "unique_members",
+      "ok": true,
+      "details": {}
+    },
+    {
+      "name": "exact_archive_paths",
+      "ok": true,
+      "details": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "name": "archive_bytes",
+      "ok": true,
+      "details": []
+    },
+    {
+      "name": "exact_restored_paths",
+      "ok": true,
+      "details": []
+    },
+    {
+      "name": "restored_bytes",
+      "ok": true,
+      "details": []
+    },
+    {
+      "name": "manifest_exists",
+      "ok": true,
+      "details": null
+    },
+    {
+      "name": "manifest_unique_exact",
+      "ok": true,
+      "details": 76
+    },
+    {
+      "name": "report_exists",
+      "ok": true,
+      "details": null
+    },
+    {
+      "name": "report_completion_is_honest",
+      "ok": true,
+      "details": true
+    },
+    {
+      "name": "report_expected_count",
+      "ok": true,
+      "details": null
+    },
+    {
+      "name": "report_archive_count",
+      "ok": true,
+      "details": null
+    },
+    {
+      "name": "report_restored_count",
+      "ok": true,
+      "details": null
+    }
+  ],
+  "artifact_ok": true,
+  "report": {
+    "expected_count": 76,
+    "archive_count": 76,
+    "restored_count": 76,
+    "missing": [],
+    "extra": [],
+    "duplicate_count": 0,
+    "mismatches": [],
+    "complete": true
+  }
+}

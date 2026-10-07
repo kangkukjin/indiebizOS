@@ -1,0 +1,71 @@
+{
+ "at": "2026-10-07 11:29~11:33",
+ "restart_generation": "98280f6e838698d11ae0e3878df1292c",
+ "L28-5": {
+  "find_claude_binary": "~/Library/Application Support/Claude/claude-code/2.1.289/ee67e3f1ea60/claude.app/Contents/MacOS/claude",
+  "log": [
+   "[ClaudeCode] 시스템 AI: 초기화 완료 (binary=/Users/kangkukjin/Library/Application Support/Claude/claude-code/2.1.289/ee67e3f1ea60/claude.app/Contents/MacOS/claude, model=opus, token=data/claude_code_config.json)",
+   "[ClaudeCode] 에이전트: 초기화 완료 (binary=/Users/kangkukjin/Library/Application Support/Claude/claude-code/2.1.289/ee67e3f1ea60/claude.app/Contents/MacOS/claude, model=opus, token=data/claude_code_config.json)",
+   "[ClaudeCode] 홈페이지: 초기화 완료 (binary=/Users/kangkukjin/Library/Application Support/Claude/claude-code/2.1.289/ee67e3f1ea60/claude.app/Contents/MacOS/claude, model=opus, token=data/claude_code_config.json)"
+  ],
+  "note": "시스템 AI·에이전트 프로바이더 초기화 완료. 위임받은 턴이 실제 요약 781자를 돌려줌(ep 홈페이지, 20.1초)"
+ },
+ "L28-1": {
+  "receipt": {
+   "success": true,
+   "accepted": true,
+   "task_ref": {
+    "kind": "delegation",
+    "task_id": "task_aa95dff4",
+    "owner": "홍보"
+   },
+   "state": "queued",
+   "status_url": "/projects/홍보/agents/agent_25d47c05/tasks/task_aa95dff4",
+   "run_id": "run_64af615abc7783f6cd50",
+   "message": "'홈페이지'에게 작업을 위임했습니다 (task task_aa95dff4). 접수 확인이며 결과는 아직 없습니다 — 비동기 보고로 도착합니다.",
+   "agent": "홈페이지",
+   "child_task_id": "task_aa95dff4",
+   "async": true,
+   "task_id": "task_aa95dff4"
+  },
+  "status": {
+   "success": true,
+   "task_ref": {
+    "kind": "delegation",
+    "task_id": "task_aa95dff4",
+    "owner": "홍보"
+   },
+   "state": "running",
+   "terminal": false,
+   "timed_out": false,
+   "result": null,
+   "failure": null,
+   "progress": {
+    "pending_children": 0,
+    "children": [],
+    "status": "pending"
+   },
+   "status_url": "/projects/홍보/agents/-/tasks/task_aa95dff4",
+   "run_id": "run_64af615abc7783f6cd50"
+  },
+  "wait_15s": {
+   "state": "running",
+   "timed_out": true,
+   "note": "대기 15초가 끝났습니다 — 작업은 running 상태로 계속됩니다(실패 아님). 같은 ref 로 다시 wait 하세요."
+  },
+  "db_row_after": {
+   "task_id": "task_aa95dff4",
+   "status": "completed",
+   "requester_channel": "pipeline",
+   "parent_task_id": null,
+   "completed_at": "2026-10-07 02:29:13",
+   "result_head": "`data/guides/task_receipts.md`의 핵심을 세 줄로 요약했습니다. 파일은 읽기만 하고 고치지 않았습니다.\n\n1. **접수증은 완료가 아닙니다.** 위임, 백그라운드 스크립트, 신문 발행, 렌더처"
+  },
+  "note": "접수증 task_id 가 호출 문맥의 LSI28 이 아니라 새 행 task_aa95dff4. status/wait 가 값으로 답하고, 자동 보고가 행을 닫음(완료 20초, 1차 대기 15초는 시간 초과 값)"
+ },
+ "L28-4": {
+  "source": "data/ibl_nodes_src/self.yaml switch.delete/project.delete 에 exists 선언, action_requires.gate 가 사람에게 묻기 전 호출",
+  "derived_build": "보류 — 다른 세션의 미추적 data/instruments/spreadsheet.yaml 이 빌드 검증(app 템플릿 $table input 없음)을 막아 ibl_nodes.yaml 미갱신. 라이브·회귀(test_switch_delete_of_missing_switch_does_not_ask_for_approval)는 빌드 뒤 확인",
+  "unit": "action_requires.gate 단위 시험 통과(없는 대상 → not_found 봉투, approval_required 없음)"
+ }
+}

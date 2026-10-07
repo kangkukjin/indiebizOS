@@ -1,0 +1,11 @@
+{
+  "committed": false,
+  "head": "c92e3647c86ca843ca936b74e3148869a5c2095a",
+  "gate": "scripts/check_silent_clamp.py",
+  "path": "backend/services/coding_projects.py",
+  "line": 370,
+  "reason": "기존 다른 작업의 미추적 파일이 요청 limit를 1MB로 줄이고 알리지 않아 pre-commit 차단",
+  "training_changes_verified": true,
+  "selected_tests_passed": 172,
+  "full_hook_log": "outputs/long_sentence_imagination/2026-10-07_30회차/commit_output.txt"
+}

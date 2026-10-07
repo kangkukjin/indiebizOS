@@ -376,6 +376,37 @@ def test_same_sync_without_task_context_still_has_a_task_to_wait_on(world):
     assert row["requester_channel"] == "pipeline" and row["parent_task_id"] is None
 
 
+def test_same_async_with_orphan_task_id_gets_its_own_task_row(world):
+    """L28-1(긴문장 28회차): 호출 문맥의 task_id 에 부모 행이 없으면(앱 표면·훈련·직접 호출이 준 임의 id) 접수증이 그 id 를
+    실어 [self:task] 가 unknown 이었다 — 이제 부모 없는 자식 행을 만들고 접수증·메시지·child_task_id 가 전부 그 행을 가리킨다."""
+    from routing_system import _delegate_unified
+    tc.set_current_project_id(PROJECT)
+    tc.set_current_agent_id("caller")
+    tc.set_current_task_id("LSI28_ghost")          # DB 에 없는 작업 id
+    result = _delegate_unified({"mode": "async", "agent_id": AGENT_NAME, "message": "요약해줘"}, world.project_path)
+    result = json.loads(result) if isinstance(result, str) else result   # same·async 는 접수증 JSON 문자열
+    assert result["accepted"] is True, result
+    tid = result["task_ref"]["task_id"]
+    assert tid != "LSI28_ghost" and result["child_task_id"] == tid and result["task_id"] == tid
+    row = world.db.get_task(tid)
+    assert row and row["requester_channel"] == "pipeline" and row["parent_task_id"] is None
+    assert world.runner.sent[0]["task_id"] == tid and world.runner.sent[0]["content"].startswith(f"[task:{tid}]")
+    view = world.dt.task_status(result["task_ref"])
+    assert view["state"] == "running" and view["task_ref"]["task_id"] == tid     # 접수증으로 회수된다
+
+
+def test_same_async_refuses_when_no_task_row_can_be_made(world, monkeypatch):
+    """행을 못 만들면 없는 작업의 접수증 대신 거절 — 메시지도 보내지 않는다."""
+    import system_tools_delegate as S
+    from routing_system import _delegate_unified
+    tc.set_current_project_id(PROJECT)
+    monkeypatch.setattr(S, "_create_standalone_task", lambda *a, **k: None)
+    result = _delegate_unified({"mode": "async", "agent_id": AGENT_NAME, "message": "x"}, world.project_path)
+    result = json.loads(result) if isinstance(result, str) else result
+    assert result["success"] is False and result.get("error_type") == "delegation_task_row", result
+    assert world.runner.sent == []
+
+
 def test_workflow_outside_same_project_is_rejected_in_execution_and_contract(world):
     from routing_system import _delegate_unified
     for scope in ("cross", "system"):
@@ -549,3 +580,27 @@ def test_agent_task_route_checks_stored_owner(world, monkeypatch):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_turn_that_ends_in_error_closes_the_delegated_task_as_failed(world, monkeypatch):
+    """긴문장 27회차 L27-6: 응답 없이 오류로 끝난 턴이 "AI 응답 생성 실패: …" 글을 결과로 succeeded 가 됐다."""
+    import agent_pipeline
+    import system_ai_core as core
+    import system_ai_runner as runner_mod
+    monkeypatch.setattr(core, "get_system_ai_runner", lambda: SimpleNamespace(
+        cognitive_stream=lambda *a, **k: iter(()), ai=SimpleNamespace(get_last_tool_images=lambda: [])))
+    monkeypatch.setattr(agent_pipeline, "drain_stream", lambda stream: {"final": "", "error": "AI가 초기화되지 않았습니다."})
+    # 채팅 표면은 옛 동작(글로 보여 준다), 작업을 닫는 호출자는 사실 신호를 받는다
+    assert core.process_system_ai_message("요약해줘")[0] == "AI 응답 생성 실패: AI가 초기화되지 않았습니다."
+    with pytest.raises(core.SystemAITurnFailed, match="초기화"):
+        core.process_system_ai_message("요약해줘", raise_on_failure=True)
+
+    monkeypatch.setattr(runner_mod, "save_conversation", lambda *a, **k: None)
+    fake = SimpleNamespace(_send_to_gui=lambda *a, **k: None)
+    memory.create_task("t_turn_fail", "u", "api", "o")
+    runner_mod.SystemAIRunner._finalize_task(fake, "t_turn_fail", "AI 응답 생성 실패: AI가 초기화되지 않았습니다.", failed=True)
+    view = world.dt.task_view("system", "t_turn_fail")
+    assert view["state"] == "failed" and "초기화" in view["error"] and view["result"] is None
+    memory.create_task("t_turn_ok", "u", "api", "o")
+    runner_mod.SystemAIRunner._finalize_task(fake, "t_turn_ok", "요약입니다")
+    assert world.dt.task_view("system", "t_turn_ok")["state"] == "succeeded"

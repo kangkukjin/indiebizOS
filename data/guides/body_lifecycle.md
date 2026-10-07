@@ -19,7 +19,7 @@
 | 즐겨찾기 사이트 | `[limbs:launch]` | open_ui · list · add · remove |
 
 ## 규칙
-- **휴지통 먼저**: 프로젝트·폴더·스위치·채팅방·내 창고 항목의 `trash`/`remove` 는 되돌릴 수 있다. 영구 삭제(`delete`·`empty`·`purge`)만 사람 승인 토큰이 필요하다 — 자율 턴에서는 거절되므로 휴지통으로 보내는 것으로 끝내고 보고하라.
+- **휴지통 먼저**: 프로젝트·폴더·스위치·채팅방·내 창고 항목의 `trash`/`remove` 는 되돌릴 수 있다. 영구 삭제(`delete`·`empty`·`purge`)만 사람 승인 토큰이 필요하다 — 자율 턴에서는 거절되므로 휴지통으로 보내는 것으로 끝내고 보고하라. 사람이 영구 삭제를 명시했으면 `approval_required` 거절을 그대로 보고하고, **승인이 필요한 호출은 프로그램 하나에 하나만** 두라(토큰은 요청 하나에 1회) — 없는 대상(스위치·프로젝트)은 승인을 묻지 않고 "없음"으로 거절된다.
 - **접수증**: `[self:switch]{op:"run"}`·`[self:media]{op:"transcode"|"hls"}` 는 즉시 접수증(`task_ref`)을 돌려준다 → `[self:task]{op:"wait", ref: $r.task_ref}`.
 - **이름 규칙**: 런처 폴더(`self:folder`)는 바탕화면의 묶음이고 디스크 폴더는 `self:mkdir`·`self:list`. 내 창고 관리는 `self:warehouse`, 이웃 창고는 `others:warehouse`. 채널 읽기·보내기는 `others:channel_read`·`others:channel_send`, 설정은 `others:channel`.
 - **에이전트 지정**: `agent_id: "프로젝트/에이전트id"` 또는 `project_id` + `agent_id`. 스위치 `create` 는 그 프로젝트의 역할·허용 노드를 복사해 얼린다(모델은 얼리지 않음).

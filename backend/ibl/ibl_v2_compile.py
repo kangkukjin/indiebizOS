@@ -352,6 +352,13 @@ class Compiler:
             name = d["name"]
             if name in readonly or name in RESERVED:
                 self.issue(node, "READONLY", f"읽기 전용 바인딩: ${name}")
+            if self.reachable and self.returns_unconditionally(d["value"]):
+                # 블록을 값으로 받으려다 가지마다 return 을 쓴 모양 — return 은 함수 전체를 끝내 대입이 일어나지 않고
+                # 뒤 문장은 죽은 코드가 된다(긴문장 29회차 L29-2: 검사가 말없이 통과시켜 보고서 칸이 빠졌다).
+                # 뒤가 `return $이름` 뿐이면 결과가 같아 쓰이던 모양이라 거절하지 않고 경고한다.
+                self.warn(node, "BIND_RETURNS",
+                          f"${name} 에 대입하는 블록의 모든 경로가 return 으로 끝납니다 — return 은 블록이 아니라 "
+                          f"함수 전체를 끝내므로 ${name} 은 값을 받지 못하고 이 뒤의 문장은 실행되지 않습니다.", name=name)
             env[name] = sub(d["value"])
             return UNIT_T
         if kind == "assert":

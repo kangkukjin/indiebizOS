@@ -237,7 +237,8 @@ def test_F55_1_harvest_from_health_only_fills_unobserved(tmp_path):
     shapes = {"sense:weather": {"kind": "items", "keys": ["date"], "source": "fixture"}}
     n = _sweep.harvest_from_health(shapes, tmp_path)
     assert n == 1
-    assert shapes["engines:arch_report"] == {"kind": "scalar", "keys": ["coverage_ratio", "building_area"],
+    # 최근 성공들의 합집합(27회차 L27-1) — 가장 최근 한 줄만 적으면 op·mode 로 갈리는 반환의 한 변이만 '관측'이 된다
+    assert shapes["engines:arch_report"] == {"kind": "scalar", "keys": ["coverage_ratio", "building_area", "old"],
                                              "observed": "2026-09-06", "source": "usage"}
     assert shapes["sense:weather"]["keys"] == ["date"]          # fixture 관측이 이긴다
     assert "engines:arch_create" not in shapes                   # 실패 봉투는 수확 안 함
@@ -271,3 +272,24 @@ def test_F55_1_action_health_records_keys(tmp_path, monkeypatch):
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다.
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_L27_1_harvest_unions_real_usage_and_ignores_isolated_sources(tmp_path):
+    """시험 대역이 돌려준 키는 관측이 아니고, 꽉 찬 줄(원장 상한 16키)을 봤으면 목록은 전체가 아니다(more → 검사기 기권)."""
+    (tmp_path / "data").mkdir()
+    conn = sqlite3.connect(str(tmp_path / "data" / "world_pulse.db"))
+    conn.execute("CREATE TABLE action_health (node TEXT, action TEXT, success INTEGER, keys TEXT, shape TEXT, timestamp TEXT, source TEXT)")
+    full = [f"k{i}" for i in range(16)]
+    conn.executemany("INSERT INTO action_health VALUES (?,?,?,?,?,?,?)", [
+        ("others", "delegate", 1, json.dumps(["queued", "task_id", "message"]), "message", "2026-10-07T05:52:16", "test"),
+        ("others", "delegate", 1, json.dumps(["accepted", "task_ref", "state"]), "message", "2026-10-07T05:00:00", "training"),
+        ("others", "delegate", 1, json.dumps(["accepted", "task_ref", "state", "queued"]), "message", "2026-10-06T10:00:00", None),
+        ("others", "delegate", 1, json.dumps(["response", "state"]), "message", "2026-10-05T10:00:00", "usage"),
+        ("engines", "wide", 1, json.dumps(full), "message", "2026-10-06T10:00:00", "usage"),
+    ])
+    conn.commit(); conn.close()
+    shapes = {"others:delegate": {"kind": "scalar", "keys": ["queued", "target", "message"], "source": "usage"}}
+    assert _sweep.harvest_from_health(shapes, tmp_path) == 2
+    assert shapes["others:delegate"]["keys"] == ["accepted", "task_ref", "state", "queued", "response"]
+    assert shapes["others:delegate"]["observed"] == "2026-10-06" and "more" not in shapes["others:delegate"]
+    assert shapes["engines:wide"]["keys"] == full and shapes["engines:wide"]["more"] == 1

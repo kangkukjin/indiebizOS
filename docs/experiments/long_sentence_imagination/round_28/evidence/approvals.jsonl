@@ -1,0 +1,4 @@
+{"at": "10:56:50", "label": "start_v0_resend1", "challenge": "38b56348ccd1c15e8174a534bb22632d", "result": {"success": true, "token": "2040de3452f4a0e5598045f4a64bf072", "expires_in": 120}}
+{"at": "10:57:07", "label": "start_v0_resend2", "challenge": "38b56348ccd1c15e8174a534bb22632d", "result": {"success": true, "token": "fbfc97ffad3ee497402f4c590d86125b", "expires_in": 120}}
+{"at": "10:58:34", "label": "v1_delete_B", "challenge": "aadd8ee9d9019250aada720d91c7cf7e", "result": {"success": true, "token": "d0b475e2b0afb87cd02cdfd3e04fa8ab", "expires_in": 120}}
+{"at": "10:59:14", "label": "variant_delete_none", "challenge": "9808be27a9663a9852a5f3081210d97a", "result": {"success": true, "token": "11e907e2fced244240aaaf8bc8fb09f6", "expires_in": 120}}

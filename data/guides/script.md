@@ -271,6 +271,8 @@ last_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 
 - wait 상한 240초(초과 요청은 신고 후 상한). 더 긴 작업은 status 를 다시 부르거나 트리거에 맡긴다.
 - **접수증(2026-10-05 ③)**: background 반환에 `task_ref: {kind: "script", task_id}` 가 실린다 — 다른 긴 작업(위임·신문·렌더)과 같은 통화라
   `$r = [self:task]{op: "wait", ref: $job.task_ref, timeout: 120}` 로 기다리고 `$r.result` 를 잇는다(`[self:script]{op:"status", job_id}` 도 그대로). 상세 ibl.md '작업 접수증과 대기'.
+- **취소(2026-10-07)**: `[self:task]{op: "cancel", ref: $job.task_ref}` — 러너가 스크립트와 그 자손 프로세스를 끝내고 `cancelled` 를 기록한다(보통 1~2초,
+  아직이면 `cancel_requested`). 이미 끝난 작업이면 그 결과가 값으로 온다. 취소된 작업의 `status` 는 실패로 답한다(결과 없음).
 
 
 ## 입출력 타입을 선언하는 스크립트 계약 (선택)

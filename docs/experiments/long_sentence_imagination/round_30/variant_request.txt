@@ -1,0 +1,1 @@
+납품 정책이 바뀌었어. 설치 분야는 이번 납품에서 빼고 사진·영상과 안내.txt만 포함해줘. 원자료는 바뀌지 않았고 제외 규칙·중복 금지·바이트 보존은 그대로야. 직전 네가 만든 목록·중간 참조·산출물을 재사용해도 돼. 기존 납품본은 그대로 두고 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_30회차/ai/variant에 delivery.zip, manifest.json, report.json, restored를 만들어 같은 기준으로 확인해. 다른 실행자의 자료·정답은 보지 말고 시스템 코드도 고치지 마.

@@ -272,6 +272,12 @@ def chat_with_system_ai(chat: ChatMessage):
     _url = _status_url(SYSTEM_OWNER, task_id)
 
     def _process() -> str:
+        # 턴과 그 뒤의 마감(작업 닫기)을 한 수명으로 쥔다 — 이 작업으로 오는 자식 보고는 그동안 러너가 붙들어 둔다(29회차 L29-1).
+        from steer_inbox import turn_hold
+        with turn_hold(task_id):
+            return _process_turn()
+
+    def _process_turn() -> str:
         """LLM 처리 + 대화 저장. 스레드 컨텍스트(threading.local)가 필요하므로
         동기/백그라운드 모두 이 함수 한 덩어리를 한 스레드에서 실행한다. 응답 텍스트를 반환하고
         (위임 없을 때) assistant 메시지를 대화 로그에 저장한다. 위임이면 최종 결과는
@@ -341,6 +347,15 @@ def chat_with_system_ai(chat: ChatMessage):
                     delegated = bool(_t and (_t.get('pending_delegations') or 0) > 0)
                 except Exception:
                     pass
+            try:
+                # 원장이 있으면 원장이 정한다(29회차 L29-1): 기다릴 보고가 남았으면 위임 중, 이 턴이 자식 결과를 모두
+                # 읽어 갔으면(같은 턴의 [self:task] wait) 뒤따르는 통지는 할 일이 없으니 지금 닫는다.
+                from system_ai_memory import awaited_child_reports
+                _awaited = awaited_child_reports(task_id)
+                if _awaited:
+                    delegated = bool(_awaited["pending"] or _awaited["uncollected"])
+            except Exception as _ledger_err:
+                print(f"[시스템 AI] 위임 원장 확인 실패(계속): {_ledger_err}")
             if delegated:
                 # 위임이 발생함 → 결과는 나중에 _finalize_task 가 저장(폴링/WebSocket이 회수)
                 return f"[위임 중] 프로젝트 에이전트에게 작업을 위임했습니다. 결과는 잠시 후 도착합니다.\n\n{response_text}"

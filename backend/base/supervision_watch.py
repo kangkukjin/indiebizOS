@@ -75,7 +75,7 @@ class JobWatch:
                 self._job_mtime = modified
                 status = row.get("status")
                 self.metadata.update(job_status=status, runner_pid=row.get("runner_pid"), error=row.get("error"))
-                if status in {"done", "failed", "timeout", "lost"}:
+                if status in {"done", "failed", "timeout", "lost", "cancelled"}:
                     self.phase = "complete"
                     changed = True
                     self.last_progress = now

@@ -37,6 +37,11 @@ OUT = ROOT / "data" / "ibl_return_shapes.json"
 # 옛 값 10 은 정적 검사기가 잘린 목록을 전체로 읽게 해 11번째 이후 열을 '없는 열'로 오신고했다(2026-09-18,
 # place.distance·book.loan_count·performance.start_date). 넘겨서 잘리면 `more` 에 버린 수를 적고 검사기는 기권한다.
 MAX_KEYS = 40
+# 실사용 수확의 창(27회차 L27-1) — 옛 수확은 **가장 최근 한 줄**의 키만 적어, op·mode 로 반환이 갈리는 액션은 그 한 변이의
+# 키만 '관측'이 됐고(usage 원천 42건 중 21건이 실제로 돌려준 키를 빠뜨림) 시험 대역이 돌려준 가짜 키까지 섞였다
+# (others:delegate 가 접수증 task_ref 를 돌려주는데 검사는 "관측에 없는 이름"이라 경고). 최근 성공들의 합집합으로 적는다.
+HEALTH_ROWS = 60          # 액션당 최근 실사용 성공 줄 수
+HEALTH_ROW_KEYS = 16      # pulse_db.record_action_health 가 한 줄에 적는 키 상한
 
 
 def _execute(code, timeout=90):
@@ -124,25 +129,24 @@ def harvest_from_health(shapes: dict, root: Path = ROOT) -> int:
         cols = {r[1] for r in conn.execute("PRAGMA table_info(action_health)")}
         if "keys" not in cols:
             return 0
+        # 시험·훈련 줄은 실사용이 아니다(pulse_db.ISOLATED_SOURCES) — 시험 대역의 가짜 반환이 관측이 되면 안 된다.
+        from pulse_db import NOT_ISOLATED_SQL
+        real = f" AND {NOT_ISOLATED_SQL}" if "source" in cols else ""
         rows = conn.execute(
             "SELECT node, action, keys, shape, timestamp FROM action_health "
-            "WHERE success=1 AND keys IS NOT NULL AND keys != '' ORDER BY timestamp DESC").fetchall()
+            f"WHERE success=1 AND keys IS NOT NULL AND keys != ''{real} ORDER BY timestamp DESC").fetchall()
     except Exception:
         return 0
     from ibl_access import document_shape, load_nodes_raw
     nodes = load_nodes_raw().get("nodes", {})
-    n = 0
-    seen = set()
+    merged = {}
     for node, action, keys_json, shape, ts in rows:
         key = f"{node}:{action}"
         if document_shape(key, nodes):
             shapes.pop(key, None)
             continue
-        if key in seen:
-            continue
-        seen.add(key)
         cur = shapes.get(key)
-        if cur and cur.get("source", "fixture") == "fixture":
+        if key not in merged and cur and cur.get("source", "fixture") == "fixture":
             continue  # fixture 관측이 정본
         try:
             keys = json.loads(keys_json)
@@ -150,11 +154,19 @@ def harvest_from_health(shapes: dict, root: Path = ROOT) -> int:
             continue
         if not isinstance(keys, list) or not keys:
             continue
-        shapes[key] = {"kind": "scalar" if shape not in ("items", "table") else shape,
-                       "keys": [str(k) for k in keys][:12],
-                       "observed": str(ts)[:10], "source": "usage"}
-        n += 1
-    return n
+        m = merged.setdefault(key, {"kind": "scalar" if shape not in ("items", "table") else shape,
+                                    "keys": [], "observed": str(ts)[:10], "rows": 0, "capped": False})
+        if m["rows"] >= HEALTH_ROWS:
+            continue
+        m["rows"] += 1
+        m["capped"] = m["capped"] or len(keys) >= HEALTH_ROW_KEYS
+        m["keys"] += [str(k) for k in keys if str(k) not in m["keys"]]
+    for key, m in merged.items():
+        # 원장이 한 줄을 16키에서 자르므로 꽉 찬 줄을 봤으면 목록은 전체가 아니다 — more 를 적어 검사기가 기권하게 한다.
+        more = max(0, len(m["keys"]) - MAX_KEYS) + (1 if m["capped"] else 0)
+        shapes[key] = {"kind": m["kind"], "keys": m["keys"][:MAX_KEYS], "observed": m["observed"], "source": "usage",
+                       **({"more": more} if more else {})}
+    return len(merged)
 
 
 def main():

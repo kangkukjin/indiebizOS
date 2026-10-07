@@ -1,0 +1,182 @@
+{
+ "label": "start_v0",
+ "at": "2026-10-07T09:54:18",
+ "elapsed": 30.985353625379503,
+ "success": true,
+ "value": {
+  "보고": {
+   "단계": "1차",
+   "남은일": 1,
+   "일": [
+    {
+     "name": "가 요약",
+     "상태": "취소 불가",
+     "state": "succeeded",
+     "result": null,
+     "취소": "작업 종류 'delegation' 는 취소를 지원하지 않습니다 (현재 succeeded).",
+     "task_ref": {
+      "kind": "delegation",
+      "task_id": "task_sysai_330062ef",
+      "owner": "system"
+     }
+    },
+    {
+     "name": "나 어휘",
+     "상태": "완료",
+     "state": "succeeded",
+     "result": {
+      "items": [
+       {
+        "file": "backend/test_vocabulary_archive.py",
+        "ok": true,
+        "passed": 6,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "failures": []
+       }
+      ],
+      "ok": true,
+      "operation_outcome": {
+       "status": "passed",
+       "message": "1파일 · 통과 6 · 실패 0"
+      },
+      "seconds": 29.3,
+      "message": "1파일 · 통과 6 · 실패 0"
+     },
+     "취소": null,
+     "task_ref": {
+      "kind": "script",
+      "task_id": "시험-20261007_095347-84f7282a00bf4453a8fc275105c1b5f1"
+     }
+    },
+    {
+     "name": "다 빠른",
+     "상태": "완료",
+     "state": "succeeded",
+     "result": {
+      "items": [
+       {
+        "file": "backend/test_preflight_restart.py",
+        "ok": true,
+        "passed": 7,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "failures": []
+       },
+       {
+        "file": "backend/test_selfbuild_gate_2026_09_07.py",
+        "ok": true,
+        "passed": 20,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "failures": []
+       }
+      ],
+      "ok": true,
+      "operation_outcome": {
+       "status": "passed",
+       "message": "2파일 · 통과 27 · 실패 0"
+      },
+      "seconds": 0.9,
+      "message": "2파일 · 통과 27 · 실패 0"
+     },
+     "취소": null,
+     "task_ref": {
+      "kind": "script",
+      "task_id": "시험-20261007_095347-3b1ce71cac914974be49405a5fbb2323"
+     }
+    }
+   ]
+  },
+  "재독일치": true,
+  "경로": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_27회차/trainer/report_1.json"
+ },
+ "usage": {
+  "steps": 271,
+  "rows": 6,
+  "elapsed_ms": 30954,
+  "tool_ms_by_line": [
+   {
+    "line": 4,
+    "ms": 30037,
+    "calls": 3,
+    "actions": [
+     "self:task"
+    ]
+   },
+   {
+    "line": 13,
+    "ms": 398,
+    "calls": 1,
+    "actions": [
+     "self:task"
+    ]
+   },
+   {
+    "line": 21,
+    "ms": 81,
+    "calls": 1,
+    "actions": [
+     "self:script"
+    ]
+   }
+  ],
+  "detail": "read_result path [\"usage\"]"
+ },
+ "evidence_summary": {
+  "events": 205,
+  "source_complete": false,
+  "tool_failures": 1,
+  "source_failures": 1,
+  "failures": [
+   {
+    "id": 126,
+    "action": "self:task",
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": true
+   }
+  ],
+  "failures_omitted": 0
+ },
+ "precheck_warnings": [
+  {
+   "code": "UNOBSERVED_FIELD",
+   "rule": "UNOBSERVED_FIELD",
+   "severity": "warning",
+   "message": "관측된 반환 필드에 없는 이름입니다: task_ref. 관측 필드: queued, target, message",
+   "source_span": {
+    "source_hash": "b9014c6c99924ae70c3a1e1286c5b14016b2cef09d9ef9d8bc8f0be5d3c6f65b",
+    "start": 1352,
+    "end": 1363,
+    "line": 23,
+    "column": 31
+   },
+   "call_path": [],
+   "facts": {
+    "field": "task_ref",
+    "observed": [
+     "queued",
+     "target",
+     "message"
+    ]
+   },
+   "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+   "location": {
+    "source_hash": "b9014c6c99924ae70c3a1e1286c5b14016b2cef09d9ef9d8bc8f0be5d3c6f65b",
+    "start": 1352,
+    "end": 1363,
+    "line": 23,
+    "column": 31,
+    "source": "<program>",
+    "uri": "ibl://program",
+    "end_line": 23,
+    "end_column": 42,
+    "offset_encoding": "unicode-codepoints"
+   }
+  }
+ ]
+}

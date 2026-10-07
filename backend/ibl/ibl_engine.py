@@ -851,7 +851,8 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     from action_requires import gate as _requires_gate
     from ibl_ops import resolve_op as _resolve_op
     _raw_params = tool_input.get("params") or {}
-    _deny = _requires_gate(node, action, action_config, _resolve_op(action_config, _raw_params if isinstance(_raw_params, dict) else {}))
+    _raw_params = _raw_params if isinstance(_raw_params, dict) else {}
+    _deny = _requires_gate(node, action, action_config, _resolve_op(action_config, _raw_params), _raw_params)
     if _deny:
         return _deny
     from ibl_code_ir import receive_params

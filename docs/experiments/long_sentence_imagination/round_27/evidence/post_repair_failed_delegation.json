@@ -1,0 +1,70 @@
+{
+ "단계": "1차",
+ "남은일": 0,
+ "일": [
+  {
+   "name": "가 요약",
+   "상태": "오류",
+   "state": "failed",
+   "result": null,
+   "취소": null,
+   "사유": "AI 응답 생성 실패: AI가 초기화되지 않았습니다.",
+   "task_ref": {
+    "kind": "delegation",
+    "task_id": "task_sysai_04fb3715",
+    "owner": "system"
+   }
+  },
+  {
+   "name": "나 어휘",
+   "상태": "오류",
+   "state": "unknown",
+   "result": null,
+   "취소": null,
+   "사유": "이 몸이 모르는 작업 종류 'script' — 어댑터 미등록(잠든 패키지이거나 다른 몸의 작업)",
+   "task_ref": {
+    "kind": "script",
+    "task_id": "시험-20261007_101536-72784d68d4dd42db9baebe91cdc6e97f"
+   }
+  },
+  {
+   "name": "다 빠른",
+   "상태": "완료",
+   "state": "succeeded",
+   "result": {
+    "items": [
+     {
+      "file": "backend/test_preflight_restart.py",
+      "ok": true,
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures": []
+     },
+     {
+      "file": "backend/test_selfbuild_gate_2026_09_07.py",
+      "ok": true,
+      "passed": 20,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures": []
+     }
+    ],
+    "ok": true,
+    "operation_outcome": {
+     "status": "passed",
+     "message": "2파일 · 통과 27 · 실패 0"
+    },
+    "seconds": 0.9,
+    "message": "2파일 · 통과 27 · 실패 0"
+   },
+   "취소": null,
+   "task_ref": {
+    "kind": "script",
+    "task_id": "시험-20261007_101536-de7412a2480540fc8c7aecdccb60e717"
+   }
+  }
+ ]
+}

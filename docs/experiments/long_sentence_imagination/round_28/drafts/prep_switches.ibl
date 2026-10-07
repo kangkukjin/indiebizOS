@@ -1,0 +1,6 @@
+#!ibl edition=2
+$a = [self:switch]{op: "create", name: "LSI28_임시A", command: "발표 자료 점검 (임시)", project_id: "홍보", agent_name: "홈페이지", description: "28회차 훈련용 임시 스위치 A"}
+$b = [self:switch]{op: "create", name: "LSI28_임시B", command: "발표 자료 점검 (임시)", project_id: "홍보", agent_name: "홈페이지", description: "28회차 훈련용 임시 스위치 B"}
+$sa = $a.switch
+$sb = $b.switch
+return {a: $sa.id, b: $sb.id}

@@ -1,0 +1,6 @@
+#!ibl edition=2
+$남은 = [self:switch]{op:"list"}
+$보고 = {단계:"1차", 가:$가, 삭제:$삭제, 승인_횟수:$approvals, 남은_스위치:$남은.items}
+$저장 = [self:write]{path:$out, content:json($보고)}
+$재독 = [self:read]{path:$out}
+return {보고:$보고, 재독일치:json($재독.data) == json($보고), 경로:$out}

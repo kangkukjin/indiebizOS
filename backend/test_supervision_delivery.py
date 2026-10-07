@@ -106,7 +106,7 @@ def test_publication_protocol_rejects_paths_outside_owned_workbench(tmp_path, mo
         queue.deliver("forged")
 
 
-def test_report_renderer_writes_private_draft_with_correct_public_target(tmp_path, monkeypatch, capsys):
+def _load_renderer(tmp_path, monkeypatch):
     root = Path(__file__).resolve().parents[1]
     spec = importlib.util.spec_from_file_location("report_renderer_delivery", root / "data/scripts/보고서HTML.py")
     renderer = importlib.util.module_from_spec(spec)
@@ -114,13 +114,33 @@ def test_report_renderer_writes_private_draft_with_correct_public_target(tmp_pat
     monkeypatch.setattr(renderer, "_ROOT", tmp_path)
     monkeypatch.setenv(STAGING_ENV, str(tmp_path / "drafts"))
     (tmp_path / "source.md").write_text("# Report\n\nReviewed **content**.", encoding="utf-8")
+    return renderer
+
+
+def test_report_renderer_review_optin_writes_private_draft_with_correct_public_target(tmp_path, monkeypatch, capsys):
+    """publish:"review" 옵트인만 검수 대기 계약을 쓴다."""
+    renderer = _load_renderer(tmp_path, monkeypatch)
     monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(
-        {"src": "source.md", "dst": "공유창고/report.html"})))
+        {"src": "source.md", "dst": "공유창고/report.html", "publish": "review"})))
     renderer.main()
     out = json.loads(capsys.readouterr().out)
     assert out["publication_pending"]
     assert "<strong>content</strong>" in Path(out["items"][0]["path"]).read_text()
     assert not Path(out["items"][0]["public_target"]).exists()
+
+
+def test_report_renderer_default_publishes_directly_even_in_supervised_turn(tmp_path, monkeypatch, capsys):
+    """기본(publish 생략)은 감독 턴(STAGING_ENV)에서도 완성 즉시 공개 — 2026-10-07 사용자 결정."""
+    renderer = _load_renderer(tmp_path, monkeypatch)
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(
+        {"src": "source.md", "dst": "공유창고/report.html"})))
+    renderer.main()
+    out = json.loads(capsys.readouterr().out)
+    assert "publication_pending" not in out and "public_target" not in out["items"][0]
+    public = tmp_path / "공유창고/report.html"
+    assert Path(out["items"][0]["path"]) == public
+    assert "<strong>content</strong>" in public.read_text()
+    assert not (tmp_path / "drafts").exists() or not list((tmp_path / "drafts").glob("*.publication.json"))
 
 
 def test_supervisor_mcp_tools_rejoin_episode_and_cost(monkeypatch):

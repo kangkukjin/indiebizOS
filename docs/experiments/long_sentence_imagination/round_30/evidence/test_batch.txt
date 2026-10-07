@@ -1,0 +1,7 @@
+.                                                                        [100%]
+============================= slowest 15 durations =============================
+1.68s setup    backend/test_python_libraries.py::test_batch_file_comparison_preserves_empty_mismatch_and_missing
+1.28s call     backend/test_python_libraries.py::test_batch_file_comparison_preserves_empty_mismatch_and_missing
+
+(1 durations < 0.1s hidden.)
+1 passed in 3.13s

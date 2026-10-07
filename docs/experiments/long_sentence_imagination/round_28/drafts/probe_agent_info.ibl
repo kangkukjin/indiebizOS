@@ -1,0 +1,2 @@
+#!ibl edition=2
+[try] { $a = [others:agents]{op:"info", agent_id:"홍보/agent_25d47c05"}  return {ok:true, a:$a} } [catch] { return {ok:false, m:$error.message} }

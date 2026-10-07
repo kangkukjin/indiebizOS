@@ -1,0 +1,3 @@
+#!ibl edition=2
+$d = [self:switch]{op:"delete", switch_id:$switch_id}
+return {deleted:$d.deleted, permanent:$d.permanent}

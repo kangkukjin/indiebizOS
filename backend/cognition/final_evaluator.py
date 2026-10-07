@@ -71,8 +71,11 @@ def execution_trace(controller, tool_calls):
             from ibl_edition import authoring_request
             # MCP는 판본을 보충하고 API는 실행 문맥을 별도로 전달한다.
             # 같은 턴의 두 관측을 연결하되 실제 실행 인자는 전부 비교한다.
+            # wait 는 회수(recover)의 유한 대기 시간이라 실행 인자가 아니다. 모델이 습관적으로 붙이면(wait: 1)
+            # 스트림 쪽에만 남아 지문이 갈렸고, 작업대 기록이 전부 '새 호출'로 덧붙어 원장이 두 배가 됐다
+            # (27회차 ep4363: 위임 1회가 2회로 보여 평가가 UNKNOWN → 보완 왕복 약 60초).
             payload = {k: v for k, v in payload.items()
-                       if k not in {"project_path", "origin"} and v is not None}
+                       if k not in {"project_path", "origin", "wait"} and v is not None}
             source = payload.get("code") or payload.get("pipeline") or ""
             if isinstance(source, str):
                 payload = authoring_request(payload)

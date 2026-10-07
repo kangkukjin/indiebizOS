@@ -1,0 +1,5 @@
+#!ibl edition=2
+$가 = [others:delegate]{agent_id:$agent, message:$message}
+$s = [self:task]{op:"status", ref:$가.task_ref}
+$r = [self:task]{op:"wait", ref:$가.task_ref, timeout:$first_wait}
+return {접수:$가, 상태:$s, 대기:$r}

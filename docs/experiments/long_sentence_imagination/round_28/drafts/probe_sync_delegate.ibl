@@ -1,0 +1,3 @@
+#!ibl edition=2
+$r = [others:delegate]{agent_id:$agent, message:$message, mode:"sync"}
+return $r

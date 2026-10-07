@@ -771,7 +771,7 @@ def op_status(tool_input):
         res['operation_outcomes'] = outcomes
     if job_id and len(items) == 1:
         res["status"] = items[0]["status"]
-        if items[0]["status"] in ("failed", "lost"):
+        if items[0]["status"] in ("failed", "lost", "cancelled"):
             res["success"] = False
             res["error"] = items[0].get("error") or "스크립트 작업 실패"
         if items[0].get("result") is not None:
@@ -787,7 +787,14 @@ def op_status(tool_input):
 
 # ── ③ 접수증 어댑터(kind=script) — system_essentials/ibl_actions.yaml 최상위 task_kinds 가 가리킨다 ──
 TASK_KIND = "script"
-_TASK_STATES = {"starting": "queued", "running": "running", "done": "succeeded", "failed": "failed", "lost": "interrupted"}
+_TASK_STATES = {"starting": "queued", "running": "running", "done": "succeeded", "failed": "failed", "lost": "interrupted",
+                "cancelled": "cancelled"}
+_CANCEL_CONFIRM_SECONDS = 4.0     # 러너가 표식을 보는 주기(1초) + 자식 정리 — 이 안에 확인되면 cancelled, 아니면 cancel_requested
+
+
+def _cancel_marker(job_id):
+    """러너(_bg_runner.cancel_marker)와 같은 자리 — job json 옆 `<job_id>.cancel`."""
+    return _path("_JOB_DIR") / f"{job_id}.cancel"
 
 
 def task_status(ref: dict) -> dict:
@@ -799,5 +806,27 @@ def task_status(ref: dict) -> dict:
         return T.view(ref, T.UNKNOWN, error=res.get("error") or f"job_id 없음: {ref['task_id']}")
     row = rows[0]
     state = _TASK_STATES.get(row.get("status"), T.UNKNOWN)
+    if state in (T.QUEUED, T.RUNNING) and _cancel_marker(ref["task_id"]).exists():
+        state = T.CANCEL_REQUESTED          # 요청은 남았고 러너가 아직 끝을 기록하지 않았다
     return T.view(ref, state, progress={"lines": row.get("progress") or [], "log": row.get("log")},
-                  result=row.get("result"), error=row.get("error"), job=row)
+                  result=row.get("result"), error=row.get("error"), job=row,
+                  accepted_at=row.get("started_at"), ended_at=row.get("ended_at"))
+
+
+def task_status_cancel(ref: dict) -> dict:
+    """취소 어댑터(27회차 L27-3) — 표식을 남기고, 러너가 끝을 기록하면 cancelled, 아직이면 cancel_requested.
+
+    job json 은 러너만 쓴다(조회가 완료 기록을 덮지 않게 한 규칙 그대로) — 그래서 요청은 옆 파일이다.
+    러너는 1초마다 표식을 보고 스크립트와 그 자손을 끝낸 뒤 status=cancelled 를 적는다.
+    이미 끝났거나 모르는 작업이면 표식을 남기지 않고 현재 투영을 돌려준다(등록부가 값·거절로 가른다)."""
+    import task_receipts as T
+    cur = task_status(ref)
+    if cur["state"] not in (T.QUEUED, T.RUNNING, T.CANCEL_REQUESTED):
+        return cur
+    _atomic_write(_cancel_marker(ref["task_id"]), time.strftime("%Y-%m-%dT%H:%M:%S"))
+    deadline = time.monotonic() + _CANCEL_CONFIRM_SECONDS
+    while True:
+        cur = task_status(ref)
+        if cur["state"] != T.CANCEL_REQUESTED or time.monotonic() >= deadline:
+            return cur
+        time.sleep(0.2)

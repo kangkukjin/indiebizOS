@@ -1,0 +1,192 @@
+.FFFFFFF.                                                                [100%]
+=================================== FAILURES ===================================
+____ test_excludes_are_applied_to_direct_and_expanded_paths[internal-True] _____
+
+archive = <module 'archive_script_under_test' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/scripts/압축.py'>
+source = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excludes_are_applied_to_d1/source')
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excludes_are_applied_to_d1')
+explicit = True, pattern = 'internal'
+
+    @pytest.mark.parametrize("explicit", [False, True])
+    @pytest.mark.parametrize("pattern", ["internal", "*/internal/*", "team/internal"])
+    def test_excludes_are_applied_to_direct_and_expanded_paths(archive, source, tmp_path, explicit, pattern):
+        paths = [str(p) for p in source.rglob("*") if p.is_file()] if explicit else [str(source)]
+        result = archive.op_pack({"paths": paths, "base": str(source),
+                                  "exclude": [pattern, "*.tmp"], "output": str(tmp_path / "out.zip")})
+        assert result.get("success", True), result
+        expected = {"team/keep.txt", "team/internal_x/keep.txt", "guide.txt"}
+        with zipfile.ZipFile(result["output"]) as z:
+>           assert set(z.namelist()) == expected
+E           AssertionError: assert {'guide.txt',...eam/keep.txt'} == {'guide.txt',...eam/keep.txt'}
+E
+E             Extra items in the left set:
+E             'team/internal/nested/empty.txt'
+E             'team/internal/note.txt'
+E             'team/draft.tmp'
+E             Use -v to get more diff
+
+backend/test_archive_script.py:41: AssertionError
+__ test_excludes_are_applied_to_direct_and_expanded_paths[*/internal/*-False] __
+
+archive = <module 'archive_script_under_test' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/scripts/압축.py'>
+source = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excludes_are_applied_to_d2/source')
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excludes_are_applied_to_d2')
+explicit = False, pattern = '*/internal/*'
+
+    @pytest.mark.parametrize("explicit", [False, True])
+    @pytest.mark.parametrize("pattern", ["internal", "*/internal/*", "team/internal"])
+    def test_excludes_are_applied_to_direct_and_expanded_paths(archive, source, tmp_path, explicit, pattern):
+        paths = [str(p) for p in source.rglob("*") if p.is_file()] if explicit else [str(source)]
+        result = archive.op_pack({"paths": paths, "base": str(source),
+                                  "exclude": [pattern, "*.tmp"], "output": str(tmp_path / "out.zip")})
+        assert result.get("success", True), result
+        expected = {"team/keep.txt", "team/internal_x/keep.txt", "guide.txt"}
+        with zipfile.ZipFile(result["output"]) as z:
+>           assert set(z.namelist()) == expected
+E           AssertionError: assert {'guide.txt',...eam/keep.txt'} == {'guide.txt',...eam/keep.txt'}
+E
+E             Extra items in the left set:
+E             'team/internal/nested/empty.txt'
+E             'team/internal/note.txt'
+E             Use -v to get more diff
+
+backend/test_archive_script.py:41: AssertionError
+__ test_excludes_are_applied_to_direct_and_expanded_paths[*/internal/*-True] ___
+
+archive = <module 'archive_script_under_test' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/scripts/압축.py'>
+source = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excludes_are_applied_to_d3/source')
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excludes_are_applied_to_d3')
+explicit = True, pattern = '*/internal/*'
+
+    @pytest.mark.parametrize("explicit", [False, True])
+    @pytest.mark.parametrize("pattern", ["internal", "*/internal/*", "team/internal"])
+    def test_excludes_are_applied_to_direct_and_expanded_paths(archive, source, tmp_path, explicit, pattern):
+        paths = [str(p) for p in source.rglob("*") if p.is_file()] if explicit else [str(source)]
+        result = archive.op_pack({"paths": paths, "base": str(source),
+                                  "exclude": [pattern, "*.tmp"], "output": str(tmp_path / "out.zip")})
+        assert result.get("success", True), result
+        expected = {"team/keep.txt", "team/internal_x/keep.txt", "guide.txt"}
+        with zipfile.ZipFile(result["output"]) as z:
+>           assert set(z.namelist()) == expected
+E           AssertionError: assert {'guide.txt',...eam/keep.txt'} == {'guide.txt',...eam/keep.txt'}
+E
+E             Extra items in the left set:
+E             'team/internal/nested/empty.txt'
+E             'team/internal/note.txt'
+E             'team/draft.tmp'
+E             Use -v to get more diff
+
+backend/test_archive_script.py:41: AssertionError
+_ test_excludes_are_applied_to_direct_and_expanded_paths[team/internal-False] __
+
+archive = <module 'archive_script_under_test' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/scripts/압축.py'>
+source = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excludes_are_applied_to_d4/source')
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excludes_are_applied_to_d4')
+explicit = False, pattern = 'team/internal'
+
+    @pytest.mark.parametrize("explicit", [False, True])
+    @pytest.mark.parametrize("pattern", ["internal", "*/internal/*", "team/internal"])
+    def test_excludes_are_applied_to_direct_and_expanded_paths(archive, source, tmp_path, explicit, pattern):
+        paths = [str(p) for p in source.rglob("*") if p.is_file()] if explicit else [str(source)]
+        result = archive.op_pack({"paths": paths, "base": str(source),
+                                  "exclude": [pattern, "*.tmp"], "output": str(tmp_path / "out.zip")})
+        assert result.get("success", True), result
+        expected = {"team/keep.txt", "team/internal_x/keep.txt", "guide.txt"}
+        with zipfile.ZipFile(result["output"]) as z:
+>           assert set(z.namelist()) == expected
+E           AssertionError: assert {'guide.txt',...eam/keep.txt'} == {'guide.txt',...eam/keep.txt'}
+E
+E             Extra items in the left set:
+E             'team/internal/nested/empty.txt'
+E             'team/internal/note.txt'
+E             Use -v to get more diff
+
+backend/test_archive_script.py:41: AssertionError
+__ test_excludes_are_applied_to_direct_and_expanded_paths[team/internal-True] __
+
+archive = <module 'archive_script_under_test' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/scripts/압축.py'>
+source = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excludes_are_applied_to_d5/source')
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excludes_are_applied_to_d5')
+explicit = True, pattern = 'team/internal'
+
+    @pytest.mark.parametrize("explicit", [False, True])
+    @pytest.mark.parametrize("pattern", ["internal", "*/internal/*", "team/internal"])
+    def test_excludes_are_applied_to_direct_and_expanded_paths(archive, source, tmp_path, explicit, pattern):
+        paths = [str(p) for p in source.rglob("*") if p.is_file()] if explicit else [str(source)]
+        result = archive.op_pack({"paths": paths, "base": str(source),
+                                  "exclude": [pattern, "*.tmp"], "output": str(tmp_path / "out.zip")})
+        assert result.get("success", True), result
+        expected = {"team/keep.txt", "team/internal_x/keep.txt", "guide.txt"}
+        with zipfile.ZipFile(result["output"]) as z:
+>           assert set(z.namelist()) == expected
+E           AssertionError: assert {'guide.txt',...eam/keep.txt'} == {'guide.txt',...eam/keep.txt'}
+E
+E             Extra items in the left set:
+E             'team/internal/nested/empty.txt'
+E             'team/internal/note.txt'
+E             'team/draft.tmp'
+E             Use -v to get more diff
+
+backend/test_archive_script.py:41: AssertionError
+____________________ test_excluded_directory_is_not_walked _____________________
+
+archive = <module 'archive_script_under_test' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/scripts/압축.py'>
+source = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excluded_directory_is_not0/source')
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_excluded_directory_is_not0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1091a7550>
+
+    def test_excluded_directory_is_not_walked(archive, source, tmp_path, monkeypatch):
+        real_walk = archive.os.walk
+        visited = []
+
+        def observe(*args, **kwargs):
+            for row in real_walk(*args, **kwargs):
+                visited.append(Path(row[0]).relative_to(source).as_posix())
+                yield row
+
+        monkeypatch.setattr(archive.os, "walk", observe)
+        archive.op_pack({"paths": [str(source)], "base": str(source), "exclude": ["*/internal/*"],
+                         "output": str(tmp_path / "out.zip")})
+>       assert "team/internal" not in visited
+E       AssertionError: assert 'team/internal' not in ['.', 'team', 'team/internal', 'team/internal/nested', 'team/internal_x']
+
+backend/test_archive_script.py:57: AssertionError
+___________________ test_direct_excluded_root_is_not_walked ____________________
+
+archive = <module 'archive_script_under_test' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/scripts/압축.py'>
+source = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_direct_excluded_root_is_n0/source')
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4548/test_direct_excluded_root_is_n0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10927d310>
+
+    def test_direct_excluded_root_is_not_walked(archive, source, tmp_path, monkeypatch):
+        real_walk = archive.os.walk
+        visited = []
+
+        def observe(path, *args, **kwargs):
+            visited.append(Path(path))
+            yield from real_walk(path, *args, **kwargs)
+
+        monkeypatch.setattr(archive.os, "walk", observe)
+        result = archive.op_pack({"paths": [str(source / "team/internal"), str(source / "guide.txt")],
+                                  "base": str(source), "exclude": ["*/internal/*"],
+                                  "output": str(tmp_path / "out.zip")})
+>       assert [r["name"] for r in result["items"]] == ["guide.txt"]
+E       AssertionError: assert ['team/intern..., 'guide.txt'] == ['guide.txt']
+E
+E         At index 0 diff: 'team/internal/note.txt' != 'guide.txt'
+E         Left contains 2 more items, first extra item: 'team/internal/nested/empty.txt'
+E         Use -v to get more diff
+
+backend/test_archive_script.py:73: AssertionError
+============================= slowest 15 durations =============================
+
+(15 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_archive_script.py::test_excludes_are_applied_to_direct_and_expanded_paths[internal-True]
+FAILED backend/test_archive_script.py::test_excludes_are_applied_to_direct_and_expanded_paths[*/internal/*-False]
+FAILED backend/test_archive_script.py::test_excludes_are_applied_to_direct_and_expanded_paths[*/internal/*-True]
+FAILED backend/test_archive_script.py::test_excludes_are_applied_to_direct_and_expanded_paths[team/internal-False]
+FAILED backend/test_archive_script.py::test_excludes_are_applied_to_direct_and_expanded_paths[team/internal-True]
+FAILED backend/test_archive_script.py::test_excluded_directory_is_not_walked
+FAILED backend/test_archive_script.py::test_direct_excluded_root_is_not_walked
+7 failed, 2 passed in 0.31s

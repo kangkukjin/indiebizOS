@@ -288,8 +288,33 @@ def task_status(ref: dict) -> dict:
         return T.view(ref, T.UNKNOWN, error=f"작업 {ref['task_id']} 을(를) {owner} 저장소에서 찾지 못했습니다")
     state = v["state"] if v["state"] in T.STATES else T.RUNNING   # waiting_user 등 수리 대기 = 아직 살아 있음
     progress = {"pending_children": v["pending_children"], "children": v["children"], "status": v["status"]}
+    if state in T.TERMINAL:
+        _note_collected(v.get("parent_task_ref"), ref["task_id"])
     return T.view(ref, state, progress=progress, result=v.get("result"), error=v.get("error"),
+                  accepted_at=_utc_epoch(v.get("created_at")), ended_at=_utc_epoch(v.get("completed_at")),
                   status_url=v["status_url"], run_id=v.get("run_id"))
+
+
+def _note_collected(parent_ref, child_task_id: str) -> None:
+    """부모 **자신의 턴**이 자식의 종료를 읽었으면 부모 원장에 회수 표식을 남긴다(긴문장 29회차 L29-1).
+    다른 작업·화면의 조회는 부모가 결과를 손에 넣은 것이 아니므로 적지 않는다. 표식 실패는 조회를 막지 않는다."""
+    from thread_context import get_current_task_id
+    if not parent_ref or parent_ref.get("owner") != SYSTEM_OWNER or parent_ref.get("task_id") != get_current_task_id():
+        return
+    try:
+        from system_ai_memory import mark_child_collected
+        mark_child_collected(parent_ref["task_id"], child_task_id)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[위임] 회수 표식 실패(계속): {child_task_id} → {parent_ref['task_id']}: {exc}")
+
+
+def _utc_epoch(text):
+    """작업 원장의 시각(SQLite CURRENT_TIMESTAMP = UTC, 'YYYY-MM-DD HH:MM:SS') → epoch. 못 읽으면 None."""
+    import calendar
+    try:
+        return float(calendar.timegm(time.strptime(str(text)[:19].replace("T", " "), "%Y-%m-%d %H:%M:%S")))
+    except (TypeError, ValueError):
+        return None
 
 
 def await_child(parent_owner: str, parent_task_id: str, child_owner: str, child_task_id: str, *,

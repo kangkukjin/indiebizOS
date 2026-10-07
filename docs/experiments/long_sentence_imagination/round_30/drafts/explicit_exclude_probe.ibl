@@ -1,0 +1,2 @@
+#!ibl edition=2
+return [self:script]{id:"압축",args:$args}

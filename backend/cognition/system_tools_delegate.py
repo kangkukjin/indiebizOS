@@ -88,22 +88,25 @@ def _send_to_running_agent(target_runner, message: str, project_path: str,
         # 자식 태스크 생성 (접수 때 mode 를 부모 원장에 기록 — 보고기가 sync 자식은 부모 러너에
         # 통지하지 않고 대기자가 회수하게 가른다)
         new_task_id = _create_child_task(current_task_id, target_name, message, project_path, mode=mode)
-    else:
-        # 작업 문맥이 없는 호출(직접 IBL 탐침 등) — 접수한 작업을 식별·회수할 수 있어야 하므로
-        # 부모 없는 자식 행을 만든다. 보고기는 부모 없는 'pipeline' 채널을 발신자 응답으로 처리한다.
+    if not new_task_id:
+        # 작업 문맥이 없거나(직접 IBL 탐침) 문맥의 task_id 에 부모 행이 없는 호출(앱 표면·훈련·외부 표면이 준 임의 task_id —
+        # 긴문장 28회차 L28-1: 여기서 부모 id 를 접수증에 실어 [self:task] 가 unknown 이었다) — 접수한 작업을 식별·회수할 수
+        # 있어야 하므로 부모 없는 자식 행을 만든다. 보고기는 부모 없는 'pipeline' 채널을 발신자 응답으로 처리한다.
         new_task_id = _create_standalone_task(target_name, message, project_path, from_agent)
+    if not new_task_id:
+        # 접수증은 회수할 수 있는 행을 가리켜야 한다 — 행을 못 만들면 접수하지 않는다(없는 작업의 접수증을 주지 않는다).
+        return json.dumps({"success": False, "error": f"위임 작업 행을 만들지 못해 접수하지 않았습니다 ({target_name}, {project_path})",
+                           "error_type": "delegation_task_row"}, ensure_ascii=False)
 
     # 메시지에 태스크 ID 추가
-    task_for_message = new_task_id if new_task_id else current_task_id
-    if task_for_message:
-        message = f"[task:{task_for_message}] {message}"
+    message = f"[task:{new_task_id}] {message}"
 
     # 메시지 전송
     success = AgentRunner.send_message(
         to_agent_id=target_runner.registry_key,
         message=message,
         from_agent=from_agent,
-        task_id=new_task_id if new_task_id else current_task_id,
+        task_id=new_task_id,
         envelope=envelope,
     )
 
@@ -119,11 +122,11 @@ def _send_to_running_agent(target_runner, message: str, project_path: str,
 
         from delegation_tasks import accepted
         project_id = Path(project_path).name
-        out = accepted(project_id, new_task_id or current_task_id or "", agent_id=target_id,
-                       message=(f"'{target_name}'에게 작업을 위임했습니다 (task {new_task_id or current_task_id}). "
+        out = accepted(project_id, new_task_id, agent_id=target_id,
+                       message=(f"'{target_name}'에게 작업을 위임했습니다 (task {new_task_id}). "
                                 "접수 확인이며 결과는 아직 없습니다 — 비동기 보고로 도착합니다."),
                        agent=target_name, child_task_id=new_task_id, **{"async": True})
-        out["task_id"] = new_task_id if new_task_id else current_task_id
+        out["task_id"] = new_task_id
         return json.dumps(out, ensure_ascii=False)
     else:
         return json.dumps({

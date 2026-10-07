@@ -1,0 +1,31 @@
+#!ibl edition=2
+[def:대조]($row,$source,$restored) {
+  [try] {
+    $same=[self:script]{id:"python_libraries",args:{op:"call",target:"filecmp:cmp",args:[f"${source}/${row.path}",f"${restored}/${row.path}"],kwargs:{shallow:false}}}
+    return {path:$row.path,equal:$same,error:null}
+  } [catch] {
+    return {path:$row.path,equal:false,error:$error.message}
+  }
+}
+$found=[self:file_find]{path:$source,pattern:"**/*",limit:1000}
+$files=$found.items >> [table:filter]{where:($r)=>not $r.is_dir}
+$relative=$files >> [table:each] {return {path:replace($it.path,f"${source}/",""),size:$it.size}}
+$manifest=$relative >> [table:filter]{where:($r)=>(split($r.path,"/")[0] in $teams or $r.path=="안내.txt") and not contains($r.path,"/internal/") and split($r.path,".")[-1]!="tmp"} >> [table:sort]{by:"path"}
+$mw=[self:write]{path:f"${out}/manifest.json",content:json($manifest)}
+$packed=[self:script]{id:"압축",args:{op:"pack",paths:$paths,base:$source,output:f"${out}/delivery.zip",exclude:["*.tmp","*/internal/*"]}}
+$listing=[self:script]{id:"압축",args:{op:"list",path:f"${out}/delivery.zip"}}
+$unpacked=[self:script]{id:"압축",args:{op:"unpack",path:f"${out}/delivery.zip",out_dir:f"${out}/restored"}}
+$checks=$manifest >> [table:each]{parallel:4} {[fn:대조]{row:$it,source:$source,restored:f"${out}/restored"}}
+$bad=$checks >> [table:filter]{where:($r)=>not $r.equal}
+$names=$listing.items >> [table:each]{return $it.name}
+$wanted=$manifest >> [table:each]{return $it.path}
+$missing=difference($wanted,$names)
+$extra=difference($names,$wanted)
+$duplicates=len($names)-len(unique($names))
+$restored=[self:file_find]{path:f"${out}/restored",pattern:"**/*",limit:1000}
+$restored_files=$restored.items >> [table:filter]{where:($r)=>not $r.is_dir}
+$report={expected_count:len($manifest),archive_count:len($names),restored_count:len($restored_files),missing:$missing,extra:$extra,duplicate_count:$duplicates,mismatches:$bad,complete:len($manifest)>0 and len($missing)==0 and len($extra)==0 and $duplicates==0 and len($bad)==0 and len($restored_files)==len($manifest)}
+$rw=[self:write]{path:f"${out}/report.json",content:json($report)}
+$reread=[self:read]{path:$rw.path}
+assert $reread.data==$report,"보고서 저장/재독 불일치"
+return $report

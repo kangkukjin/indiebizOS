@@ -1,0 +1,33 @@
+#!ibl edition=2
+[def:관찰]($일, $초) {
+  [try] {
+    $r = [self:task]{op:"wait", ref:$일.task_ref, timeout:$초}
+    [if:$r.timed_out] { return {name:$일.name, file:$일.file, 상태:"진행 중", state:$r.state, result:null, 취소:null, task_ref:$일.task_ref} }
+    return {name:$일.name, file:$일.file, 상태:"완료", state:$r.state, result:$r.result, 취소:null, task_ref:$일.task_ref}
+  }
+  [catch] { return {name:$일.name, file:$일.file, 상태:"오류", state:$error.details.state, result:null, 취소:null, 사유:$error.message, task_ref:$일.task_ref} }
+}
+[def:취소시도]($일) {
+  [if:$일.상태 != "진행 중"] { return $일 }
+  [try] {
+    $c = [self:task]{op:"cancel", ref:$일.task_ref}
+    [if:$c.state == "cancelled"] { return {name:$일.name, file:$일.file, 상태:"취소됨", state:$c.state, result:null, 취소:"확인됨", task_ref:$일.task_ref} }
+    [if:$c.state == "cancel_requested"] { return {name:$일.name, file:$일.file, 상태:"취소 요청됨", state:$c.state, result:null, 취소:"요청만 남김", task_ref:$일.task_ref} }
+    [if:$c.state == "succeeded"] { return {name:$일.name, file:$일.file, 상태:"이미 끝남(성공)", state:$c.state, result:$c.result, 취소:"취소 전에 끝남", task_ref:$일.task_ref} }
+    [if:$c.terminal] { return {name:$일.name, file:$일.file, 상태:"이미 끝남(실패)", state:$c.state, result:null, 취소:"취소 전에 끝남", 사유:$c.failure, task_ref:$일.task_ref} }
+    return {name:$일.name, file:$일.file, 상태:"취소 불가(계속 실행 중)", state:$c.state, result:null, 취소:"상태 변화 없음", task_ref:$일.task_ref}
+  }
+  [catch] { return {name:$일.name, file:$일.file, 상태:"취소 불가(계속 실행 중)", state:$error.details.state, result:null, 취소:$error.message, task_ref:$일.task_ref} }
+}
+[def:시작]($일) {
+  $접수 = [others:delegate]{agent_id:$일.agent, message:$일.message}
+  return {name:$일.name, file:$일.file, task_ref:$접수.task_ref}
+}
+$접수들 = $jobs >> [table:each] { [fn:시작]{일:$it} }
+$관찰 = $접수들 >> [table:each]{parallel:2} { [fn:관찰]{일:$it, 초:$first_wait} }
+$일들 = $관찰 >> [table:each] { [fn:취소시도]{일:$it} }
+$남음 = len($일들 >> [table:filter]{where:($b)=>$b.상태 == "취소 불가(계속 실행 중)" or $b.상태 == "취소 요청됨"})
+$보고 = {단계:"1차", 남은일:$남음, 일:$일들}
+$저장 = [self:write]{path:$out, content:json($보고)}
+$재독 = [self:read]{path:$out}
+return {보고:$보고, 재독일치:json($재독.data) == json($보고), 경로:$out}

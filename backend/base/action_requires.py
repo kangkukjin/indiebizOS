@@ -7,6 +7,8 @@
          principal: [owner]            # 허용 주체 종류(owner / member / body / portal / anonymous). 생략 = 종류 제한 없음
          min_level: 3                  # member·portal 의 최소 등급(선택)
          human_confirm: true           # 사람 승인 토큰 필요(approval_tokens — 요청 지문에 결속, 1회성)
+         exists: "launcher_ops:switch_exists"   # 사람에게 묻기 전 대상 존재 확인("모듈:함수", params → None | 실패 봉투).
+                                                # 없는 대상은 승인을 묻지 않고 그 봉투로 거절한다(긴문장 28회차 L28-4)
          ops: {activate: {...}}        # op 별 덮어쓰기(op 분기 액션). 없는 op 는 액션 레벨을 따른다
   2. 실행기 관문 한 곳 — ibl_engine.execute_ibl 의 잎에서(판본 1·판본 2 어댑터·fn 전개·each 하위 전부 이 잎을 지난다).
   3. 사람 승인은 /ibl/approve 가 발급한 토큰을 요청에 실어 다시 보내는 것으로 — 매니페스트 변경 없음.
@@ -15,7 +17,7 @@
 from typing import Optional
 
 KINDS = ("owner", "member", "body", "portal", "anonymous")
-KEYS = {"principal", "min_level", "human_confirm", "ops"}
+KEYS = {"principal", "min_level", "human_confirm", "exists", "ops"}
 
 
 def declared(action_cfg: dict, op: Optional[str] = None) -> Optional[dict]:
@@ -46,6 +48,8 @@ def validate(spec, op_values: Optional[set] = None) -> list:
             issues.append(f"{where}min_level 은 0 이상 정수")
         if "human_confirm" in level and type(level["human_confirm"]) is not bool:
             issues.append(f"{where}human_confirm 은 참/거짓")
+        if "exists" in level and not (isinstance(level["exists"], str) and level["exists"].count(":") == 1 and all(level["exists"].split(":"))):
+            issues.append(f"{where}exists 는 '모듈:함수' 문자열")
     check(spec, "")
     ops = spec.get("ops")
     if ops is not None:
@@ -62,12 +66,29 @@ def validate(spec, op_values: Optional[set] = None) -> list:
     return issues
 
 
-def gate(node: str, action: str, action_cfg: dict, op: Optional[str]) -> Optional[dict]:
+def _target_missing(spec: str, params: Optional[dict]) -> Optional[dict]:
+    """`exists: "모듈:함수"` — 함수(params) 가 None 이면 대상이 있다, 실패 봉투면 그대로 거절. 함수를 못 찾으면 거절(fail-closed)."""
+    import importlib
+    mod_name, _, fn_name = spec.partition(":")
+    try:
+        fn = getattr(importlib.import_module(mod_name), fn_name)
+    except (ImportError, AttributeError) as exc:
+        return {"success": False, "error_type": "permission", "denied": True,
+                "error": f"requires.exists '{spec}' 을 찾지 못했습니다: {exc}"}
+    out = fn(params or {})
+    if isinstance(out, dict) and out.get("success") is False:
+        return {"error_type": "not_found", **out}
+    return None
+
+
+def gate(node: str, action: str, action_cfg: dict, op: Optional[str], params: Optional[dict] = None) -> Optional[dict]:
     """실행 직전 관문. 통과면 None, 거절이면 오류 봉투(판본 2 어댑터가 permission Fault 로 바꾼다).
 
     op 는 호출자(ibl 층, ibl_ops.resolve_op)가 해소해 넘긴다 — base 층은 ibl 층을 import 하지 않는다(층 가드).
     human_confirm 거절 봉투에는 approval_required{challenge, action, op, principal} 를 싣는다 — 표면이 사람에게
-    묻고 /ibl/approve 로 토큰을 받아 같은 요청을 approval 과 함께 재전송하면 그 요청 지문에 대해서만 통과한다."""
+    묻고 /ibl/approve 로 토큰을 받아 같은 요청을 approval 과 함께 재전송하면 그 요청 지문에 대해서만 통과한다.
+    `exists` 가 선언돼 있으면 사람에게 묻기 **전에** 대상 존재를 확인한다 — 없는 대상의 승인을 사람에게 묻지 않는다(28회차 L28-4).
+    params 는 호출자가 받은 원 인자(별칭 정규화 전)라 exists 함수는 별칭까지 읽어야 한다."""
     need = declared(action_cfg, op)
     if not need:
         return None
@@ -83,6 +104,10 @@ def gate(node: str, action: str, action_cfg: dict, op: Optional[str]) -> Optiona
         return {"success": False, "error_type": "permission", "denied": True,
                 "error": f"{key} 은 등급 {min_level} 이상 회원만 부를 수 있습니다 (현재 {p.level})."}
     if need.get("human_confirm") is True:
+        if isinstance(need.get("exists"), str):
+            missing = _target_missing(need["exists"], params)
+            if missing:
+                return missing
         from thread_context import get_approval
         import approval_tokens
         token, digest = get_approval()

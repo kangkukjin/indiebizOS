@@ -14,6 +14,30 @@ def _write(path, d):
 
 
 LIVE_MARK = "--- stderr (진행, 실시간) ---\n"
+POLL_SECONDS = 1.0
+
+
+def cancel_marker(job_path):
+    """취소 요청 표식 — job json 의 유일한 작성자는 러너이므로 요청자는 옆 파일로만 말한다([self:task]{op: cancel})."""
+    return Path(job_path).with_suffix(".cancel")
+
+
+def _kill_tree(proc):
+    """스크립트와 그 자손까지 끝낸다 — 직계만 죽이면 시험 러너의 작업자 같은 손자가 남는다."""
+    try:
+        import psutil
+        kids = psutil.Process(proc.pid).children(recursive=True)
+    except Exception:
+        kids = []
+    try:
+        proc.kill()
+    except OSError:
+        pass
+    for kid in kids:
+        try:
+            kid.kill()
+        except Exception:
+            pass
 
 
 def main():
@@ -22,7 +46,8 @@ def main():
     job["status"] = "running"; job["pid"] = job["runner_pid"] = os.getpid()
     _write(job_path, job)
     started = time.time()
-    timed_out = False
+    timed_out = cancelled = False
+    marker = cancel_marker(job_path)
     log_path = Path(job["log"])
     # stderr 는 로그 파일에 **실시간**으로 흘린다(2026-09-10). 종전엔 capture_output 이 둘 다 파이프에
     # 가둬 끝날 때 한 번에 썼고, 그래서 status 는 40분 동안 'running' 밖에 말할 게 없었다.
@@ -33,18 +58,33 @@ def main():
     except OSError:
         log_fh = None
     try:
-        proc = subprocess.Popen([job["interpreter"], job["script"]],
-                                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                stderr=(log_fh if log_fh else subprocess.PIPE), text=True,
-                                cwd=str(Path(job["script"]).parent))
-        try:
-            out, err = proc.communicate(input=job.get("stdin"), timeout=job.get("timeout") or 300)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            out, err = proc.communicate()
-            timed_out = True
-        code = -1 if timed_out else proc.returncode
-        out, err = out or "", err or ""
+        if marker.exists():          # 시작하기도 전에 취소됨 — 스크립트를 띄우지 않는다
+            cancelled, code, out, err = True, -3, "", ""
+        else:
+            proc = subprocess.Popen([job["interpreter"], job["script"]],
+                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                    stderr=(log_fh if log_fh else subprocess.PIPE), text=True,
+                                    cwd=str(Path(job["script"]).parent))
+            deadline = started + (job.get("timeout") or 300)
+            feed = job.get("stdin")
+            # 짧게 끊어 기다리며 취소 표식과 시간 상한을 본다(재시도해도 출력은 잃지 않는다. 입력은 첫 호출에만 준다).
+            while True:
+                try:
+                    out, err = proc.communicate(input=feed, timeout=POLL_SECONDS)
+                    break
+                except subprocess.TimeoutExpired:
+                    feed = None
+                    if marker.exists():
+                        cancelled = True
+                    elif time.time() >= deadline:
+                        timed_out = True
+                    else:
+                        continue
+                    _kill_tree(proc)
+                    out, err = proc.communicate()
+                    break
+            code = -3 if cancelled else -1 if timed_out else proc.returncode
+            out, err = out or "", err or ""
     except OSError as e:
         code, out, err = -2, "", str(e)
     if log_fh:
@@ -60,10 +100,12 @@ def main():
     except OSError:
         pass
     parsed, result_error = parse_output(out)
-    ok = code == 0 and not timed_out and not result_error
-    job.update({"status": "done" if ok else "failed", "exit_code": code, "duration_ms": dur,
+    ok = code == 0 and not timed_out and not cancelled and not result_error
+    job.update({"status": "cancelled" if cancelled else "done" if ok else "failed", "exit_code": code, "duration_ms": dur,
                 "ended_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
-    if not ok:
+    if cancelled:
+        job["error"] = "요청으로 취소됨 — 결과 없음"
+    elif not ok:
         job["error"] = ("타임아웃" if timed_out else result_error or f"exit {code}") + " — " + err[-STDERR_TAIL:]
         if parsed is not None:
             job["result"] = parsed
@@ -96,13 +138,15 @@ def _announce(job):
         outcome = result.get('operation_outcome', {}) if isinstance(result, dict) else {}
         work_failed = isinstance(outcome, dict) and outcome.get('status') == 'failed'
         ok = job.get("status") == "done" and not work_failed
+        stopped = job.get("status") == "cancelled"      # 사람이 멈춘 것은 실패 알림이 아니다
+        word = "완료" if ok else "취소" if stopped else "실패"
         reason = outcome.get('message', '내부 작업 실패') if work_failed else job.get('error', '')
         secs = round((job.get("duration_ms") or 0) / 1000)
-        body = (f"{job.get('id')} {'완료' if ok else '실패'} ({secs}초)"
-                + ("" if ok else " — " + str(reason)[:200])
+        body = (f"{job.get('id')} {word} ({secs}초)"
+                + ("" if ok or stopped else " — " + str(reason)[:200])
                 + f"\n결과: [self:script]{{op: \"status\", job_id: \"{job.get('job_id')}\"}}")
-        payload = json.dumps({"title": "백그라운드 작업 " + ("완료" if ok else "실패"),
-                              "message": body, "type": "info" if ok else "error",
+        payload = json.dumps({"title": "백그라운드 작업 " + word,
+                              "message": body, "type": "info" if ok or stopped else "error",
                               "source": "script"}).encode("utf-8")
         req = urllib.request.Request(f"http://127.0.0.1:{port}/notifications", data=payload,
                                      headers={"Content-Type": "application/json"}, method="POST")

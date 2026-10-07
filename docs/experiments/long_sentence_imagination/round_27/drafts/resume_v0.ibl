@@ -1,0 +1,20 @@
+#!ibl edition=2
+[def:마저]($일, $초) {
+  [if:$일.상태 != "취소 불가" and $일.상태 != "취소 요청됨"] { return $일 }
+  [try] {
+    $r = [self:task]{op:"wait", ref:$일.task_ref, timeout:$초}
+    [if:$r.timed_out] { return {name:$일.name, 상태:"진행 중", state:$r.state, result:null, 취소:$일.취소, task_ref:$일.task_ref} }
+    return {name:$일.name, 상태:"완료", state:$r.state, result:$r.result, 취소:$일.취소, task_ref:$일.task_ref}
+  }
+  [catch] {
+    [if:$error.details.state == "cancelled"] { return {name:$일.name, 상태:"취소됨", state:"cancelled", result:null, 취소:"확인됨", task_ref:$일.task_ref} }
+    return {name:$일.name, 상태:"오류", state:$error.details.state, result:null, 취소:$일.취소, 사유:$error.details.failure, task_ref:$일.task_ref}
+  }
+}
+$이전 = [self:read]{path:$first}
+$일들 = $이전.data.일 >> [table:each] { [fn:마저]{일:$it, 초:$wait} }
+$남음 = len($일들 >> [table:filter]{where:($b)=>$b.상태 == "진행 중"})
+$보고 = {단계:"최종", 남은일:$남음, 일:$일들}
+$저장 = [self:write]{path:$out, content:json($보고)}
+$재독 = [self:read]{path:$out}
+return {보고:$보고, 재독일치:json($재독.data) == json($보고), 경로:$out}

@@ -1,5 +1,5 @@
 {
-  "committed": false,
+  "committed": true,
   "head": "c92e3647c86ca843ca936b74e3148869a5c2095a",
   "gate": "scripts/check_silent_clamp.py",
   "path": "backend/services/coding_projects.py",
@@ -7,5 +7,14 @@
   "reason": "기존 다른 작업의 미추적 파일이 요청 limit를 1MB로 줄이고 알리지 않아 pre-commit 차단",
   "training_changes_verified": true,
   "selected_tests_passed": 172,
-  "full_hook_log": "outputs/long_sentence_imagination/2026-10-07_30회차/commit_output.txt"
+  "full_hook_log": "outputs/long_sentence_imagination/2026-10-07_30회차/commit_output.txt",
+  "first_attempt_committed": false,
+  "resolved": true,
+  "resolution": "다른 에이전트가 차단 원인을 수리하고 30회차 변경을 정본 main에 커밋함. 이후 파일별 git 이력 확인.",
+  "commits": {
+    "training_record": "d9cce4abc3660d4e500982e7e07e3e87d4dbff18",
+    "archive_fix": "2ee51f5dc818c82d04f6ae20f33ccda3ebb8de9a",
+    "batch_guide_and_test": "f6fafcbbc39c88e0a78e078507d29ca619bd93aa",
+    "blocking_coding_app_fix": "660c64f1ad476a1b1cfada7383561b327ce0de98"
+  }
 }

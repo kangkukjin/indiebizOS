@@ -9,7 +9,7 @@
 - `task_framing` (문자열) — 문제·제약·세상의 방식·무게·멈춤선·위해 골격은 그대로 두고 바뀐 줄만 고쳐 전체를 다시 쓴다
 - `achievement_criteria` (문자열) — 새 요구에 맞는 달성 기준
 - `assumptions` (문자열 목록) — 깨진 전제는 빼고 새 전제는 더한다
-- `expert_choice` (문자열, 한 문장, 이름 하나 포함)
+- `expert_choice` (문자열, 한 문장 — 이 분야의 함정 하나, 이름 하나 포함; 세상의 방식 줄을 되풀이하지 않는다)
 - `capability_focus` (객체: `hint` 문자열, `highlight_actions` 는 **IBL 액션 이름만** — `self:read`·`sense:search` 같은 `node:action` 꼴. 직전 규정에 있던 이름을 유지하고, 모르는 이름은 짓지 말고 생략한다. 산문 금지)
 - `guide_files` (문자열 목록)
 - `needs_clarification` (참/거짓), `clarification_question` (문자열)

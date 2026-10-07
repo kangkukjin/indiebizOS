@@ -568,6 +568,8 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
             return _cap("agents_lifecycle")(op, dict(params))
         agent_id = params.get("agent_id", "")
         if agent_id and op != "list":
+            if params.get("project_id"):
+                return _cap("agent_info")(agent_id, project_id=params["project_id"])
             return _cap("agent_info")(agent_id)
         return _cap("list_project_agents")(dict(params))
 

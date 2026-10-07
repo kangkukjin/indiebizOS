@@ -625,7 +625,7 @@
   "others:delegate": {
    "fields": {
     "description": "aa87d2790fbe",
-    "target_description": "05d0c51147a8",
+    "target_description": "9d0b1e5aecb3",
     "implementation": "62dd3e0faa63",
     "returns": "9a5e13f69efc",
     "target_key": "4423a660687c",
@@ -633,7 +633,7 @@
     "aliases": "d84e35f4f510",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-10-05",
+   "reviewed": "2026-10-07",
    "examples": 55
   },
   "others:family_news": {

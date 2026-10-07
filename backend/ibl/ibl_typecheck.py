@@ -195,12 +195,20 @@ def shape_axes(action_def: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _fixture_op(action_def: Dict[str, Any]) -> Optional[str]:
-    """액션 레벨 fixture 문장이 부른 op(없으면 None) — 액션 레벨 관측 열의 출처."""
+    """fixture의 명시 op 또는 무인자 호출의 선언 기본 op — 관측 열의 출처."""
     fx = (action_def or {}).get("fixture")
     if not isinstance(fx, str):
         return None
     m = _FIXTURE_OP_RE.search(fx)
-    return m.group(1) if m else None
+    if m:
+        return m.group(1)
+    # 무인자 fixture도 default op 하나만 관측한다. 이를 모든 op의 반환으로
+    # 빌리면 목록의 items 열이 start/delete 결과에까지 붙는다.
+    # 인자가 있는 암묵 호출은 별도 디스패치일 수 있으므로 여기서 추측하지 않는다.
+    if re.fullmatch(r"\s*\[[^\]]+\]\s*(?:\{\s*\})?\s*", fx):
+        from ibl_ops import default_op
+        return default_op(action_def)
+    return None
 
 
 def _dynamic(v: Any) -> bool:

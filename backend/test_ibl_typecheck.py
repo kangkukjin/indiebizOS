@@ -50,6 +50,22 @@ def _warnings(r):
     return [i for i in r["issues"] if i["severity"] == "warning"]
 
 
+@pytest.mark.parametrize("fixture", ['[test:jobs]{}', '[test:jobs]', '[test:jobs]{op:"list"}'])
+def test_default_fixture_observation_does_not_leak_to_other_ops(monkeypatch, fixture):
+    import ibl_access
+    from ibl_v2_adapters import observed_result
+    from ibl_v2_types import Type
+    observed = {"kind": "items", "keys": ["project", "id", "name"]}
+    monkeypatch.setattr(ibl_access, "_return_shapes", lambda: {"test:jobs": observed})
+    monkeypatch.setattr(TC, "_action_def", lambda *args: {
+        "fixture": fixture, "ops": {"default": "list", "values": {"list": "", "start": ""}}})
+    assert TC.catalog_entry("test", "jobs", {"op": "list"}) == observed
+    assert TC.catalog_entry("test", "jobs", {"op": "start"}) is None
+    contract = {"adapter": {"protocol": "legacy-envelope"}}
+    result = observed_result("test:jobs", contract, {"op": "start"}, Type("Record"))
+    assert result == Type("Record")
+
+
 # ---------------------------------------------------------------- T1 낱말
 def test_t1_word_types_from_declaration_and_catalog():
     r = _tc(SEARCH)

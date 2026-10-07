@@ -200,13 +200,26 @@ execute_ibl(node="system", action="run_pipeline", params={{"steps": {steps_json}
 # 실행기·다른 모델 해소로 돌던 뿌리 제거).
 
 
-def _agent_info(agent_id: str) -> Any:
-    """에이전트 상세 정보 [others:info]{agent_id: "투자/투자컨설팅"} (Phase 11)"""
+def _agent_info(agent_id: str, project_id: str = None) -> Any:
+    """프로젝트와 저장 ID로 조회하며 기존 '프로젝트/표시 이름'도 지원한다."""
     from node_registry import list_nodes
-    nodes = list_nodes(include_agents=True)
-    for n in nodes:
-        if n["type"] == "agent" and n["id"] == agent_id:
-            return n
+    raw = str(agent_id or "").strip()
+    project = str(project_id or "").strip()
+    if "/" in raw:
+        qualified_project, raw = raw.split("/", 1)
+        if project and project != qualified_project:
+            return {"error": "project_id와 agent_id의 프로젝트가 다릅니다."}
+        project = qualified_project
+    if project and raw:
+        nodes = [n for n in list_nodes(include_agents=True)
+                 if n.get("type") == "agent" and n.get("project_id") == project]
+        matches = [n for n in nodes if n.get("agent_id") == raw]
+        if not matches:
+            matches = [n for n in nodes if n.get("id") == f"{project}/{raw}"]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            return {"error": f"에이전트 '{project}/{raw}'의 식별자가 중복되어 선택할 수 없습니다."}
     return {"error": f"에이전트 '{agent_id}'을 찾을 수 없습니다."}
 
 

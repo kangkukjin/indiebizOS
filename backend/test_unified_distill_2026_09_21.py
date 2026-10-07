@@ -17,6 +17,8 @@ from distill_receipts import fingerprint
 def env(tmp_path, monkeypatch):
     import pulse_db
     import forage_memory
+    import thread_context
+    prior_context = thread_context.snapshot()
     db, tree = memory_modules()
     monkeypatch.setattr(pulse_db, 'CONSCIOUSNESS_DB_PATH', tmp_path / 'pulse.db')
     monkeypatch.setattr(forage_memory, '_DB_PATH', str(tmp_path / 'forage.db'))
@@ -29,7 +31,12 @@ def env(tmp_path, monkeypatch):
            'recorded_at': '2026-09-21T10:00:00+09:00', 'timezone': 'KST', 'user_message': '나는 앞으로 존댓말을 선호해.',
            'response': '알겠습니다.', 'write_deep': True, 'tool_calls': [],
            'model': {'provider': 'test', 'model': 'frozen', 'role': 'execution', 'pin_key': 'p:a'}}
-    return SimpleNamespace(job=job, db=db, tree=tree, root=tmp_path, monkeypatch=monkeypatch)
+    try:
+        yield SimpleNamespace(job=job, db=db, tree=tree, root=tmp_path, monkeypatch=monkeypatch)
+    finally:
+        # Direct worker calls adopt the frozen job identity. A pytest worker
+        # is reused by unrelated files, so return its prior identity as well.
+        thread_context.restore(prior_context)
 
 
 def candidate(**extra):

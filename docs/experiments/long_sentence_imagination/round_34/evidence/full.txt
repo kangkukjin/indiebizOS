@@ -1,0 +1,97 @@
+FAILURES ===================================
+_________________ test_codex_session_key_tracks_system_prompt __________________
+[gw7] darwin -- Python 3.13.5 /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python
+
+    def test_codex_session_key_tracks_system_prompt():
+        """시스템 프롬프트가 바뀌면 세션 키가 바뀌어 자동으로 fresh 로 끊긴다.
+    
+        Codex 는 시스템 프롬프트를 fresh 턴 프롬프트 머리로만 받으므로(--append-system-prompt
+        등가물 없음), 키가 그대로면 옛 지침을 문 스레드가 영영 이어진다.
+        """
+        from providers import get_provider
+    
+        a = get_provider("codex", api_key="", model="x", system_prompt="지침 A", agent_id="ag")
+        b = get_provider("codex", api_key="", model="x", system_prompt="지침 B", agent_id="ag")
+        c = get_provider("codex", api_key="", model="x", system_prompt="지침 A", agent_id="ag")
+        ka, kb, kc = a._get_session_key(), b._get_session_key(), c._get_session_key()
+        assert ka != kb, "프롬프트가 바뀌었는데 세션 키가 같다 — 옛 지침 스레드가 이어진다"
+        assert ka == kc, "같은 프롬프트인데 키가 다르다 — 세션이 매번 끊긴다"
+>       assert ka.startswith("ag#"), f"키 형식이 접두 스윕과 안 맞는다: {ka}"
+E       AssertionError: 키 형식이 접두 스윕과 안 맞는다: test-project:test-agent#e74219a9
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x14dc8edd0>('ag#')
+E        +    where <built-in method startswith of str object at 0x14dc8edd0> = 'test-project:test-agent#e74219a9'.startswith
+
+backend/test_cli_provider_gates.py:206: AssertionError
+____________________ test_r2_direct_run_delegates_to_pytest ____________________
+[gw10] darwin -- Python 3.13.5 /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python
+
+    def test_r2_direct_run_delegates_to_pytest():
+        """직접 실행이 시험을 조용히 건너뛰지 못하게 — `__main__` 은 pytest 로 위임한다."""
+        bad = []
+        for name in _battery_files():
+            src = _read(name)
+            if _OPT_OUT_MARK in src:
+                continue                      # 직접 실행 전용이라고 스스로 밝힌 것
+            if not _test_funcs(src):
+                continue                      # R1 이 잡는다
+            if _SCRIPT_BATTERY_MARK in src:
+                # 선언한 이상 계약을 지키는지도 본다 — 다리 없이 표식만 달면 그게 새 침묵이다.
+                assert "subprocess" in src and "__file__" in src, \
+                    f"{name}: script-battery 를 선언했는데 다리 시험(별도 프로세스 실행)이 없다"
+                continue
+            block = _main_block(src)
+            if block is None:
+                bad.append((name, "__main__ 없음 — 직접 실행이 0건 통과(종료코드 0)"))
+            elif not re.search(r"\bpytest\.main\(|_pytest\.main\(", block):
+                bad.append((name, "__main__ 이 pytest 로 위임하지 않는다 — 두 번째 러너는 드리프트한다"))
+>       assert not bad, "거짓 초록 위험:\n" + "\n".join("  %s — %s" % b for b in bad)
+E       AssertionError: 거짓 초록 위험:
+E           test_api_ibl.py — __main__ 없음 — 직접 실행이 0건 통과(종료코드 0)
+E           test_ibl_routing.py — __main__ 없음 — 직접 실행이 0건 통과(종료코드 0)
+E           test_ibl_v2_compat.py — __main__ 없음 — 직접 실행이 0건 통과(종료코드 0)
+E       assert not [('test_api_ibl.py', '__main__ 없음 — 직접 실행이 0건 통과(종료코드 0)'), ('test_ibl_routing.py', '__main__ 없음 — 직접 실행이 0건 통과(종료코드 0)'), ('test_ibl_v2_compat.py', '__main__ 없음 — 직접 실행이 0건 통과(종료코드 0)')]
+
+backend/test_single_runner.py:116: AssertionError
+=============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488: 24 warnings
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488: 24 warnings
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:488: 12 warnings
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: 12 warnings
+  /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: IncompleteFieldDefinitionWarning: Field 'lifespan' has an incomplete definition: its annotation contains an unresolved forward reference, so settings sources may fail to correctly resolve its value. Call `model_rebuild()` on the model where the field is defined, once all the referenced types are defined.
+    warnings.warn(
+
+backend/test_idiom_tier.py: 64 warnings
+backend/test_stale_idiom_overwrite_2026_09_07.py: 11 warnings
+backend/test_fn_zero_rediagnosis_2026_09_07.py: 3 warnings
+backend/test_names_first_recall_2026_09_05.py: 32 warnings
+  /Users/kangkukjin/Desktop/AI/indiebizOS/backend/datastore/hippo_tree.py:427: DeprecationWarning: 'maxsplit' is passed as positional argument
+    base = re.split(r"[.\[]", k, 1)[0]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+66.70s call     backend/test_world_map_atlas.py::test_atlas_names_reach_the_selected_excerpt
+38.74s call     backend/test_vocabulary_bundle_split.py::test_split_archives_register_without_any_original_bundle
+30.73s call     backend/test_spreadsheet_browser_live.py::test_grid_app_edit_save_queue_and_ai
+27.08s call     backend/test_document_browser.py::test_browser_source_workflow
+26.07s call     backend/test_repair_staging.py::test_battery_under_pytest
+24.71s call     backend/test_ibl_v2_contracts.py::test_full_scheduling_program_and_new_policy_preserve_all_results
+17.44s call     backend/test_idiom_exposure_levers_2026_09_09.py::test_validate_catalog_runs_every_producer_example_through_the_gate
+15.79s call     backend/test_long_sentence_round15_repairs.py::test_original_round15_full_program_recovers_without_recollecting
+15.68s call     backend/test_long_sentence_round6_tasks.py::test_full_ledger_and_render_change[triple]
+15.19s call     backend/test_vocabulary_archive.py::test_roundtrip_seed_sleep_wake
+13.64s call     backend/test_vocabulary_archive.py::test_real_cache_reset_updates_catalog_and_gate
+13.04s call     backend/test_imagination_round74_residual.py::test_user_path_effects_gate_is_clean_on_live_tree
+12.66s call     backend/test_event_loop_gate.py::test_repo_has_no_blocking_calls_in_async_bodies
+12.20s call     backend/test_imagination_round58_repairs.py::test_builder_guards_every_unary_flow_without_action_name_list
+10.97s call     backend/test_world_map_browse.py::test_every_entry_reachable_by_browsing_without_names
+=========================== short test summary info ============================
+FAILED backend/test_cli_provider_gates.py::test_codex_session_key_tracks_system_prompt
+FAILED backend/test_single_runner.py::test_r2_direct_run_delegates_to_pytest
+2 failed, 9393 passed, 12 skipped, 182 warnings in 189.85s (0:03:09)

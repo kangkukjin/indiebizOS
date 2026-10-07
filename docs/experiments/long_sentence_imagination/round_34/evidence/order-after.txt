@@ -1,0 +1,11 @@
+......................................................................   [100%]
+============================= slowest 15 durations =============================
+2.31s call     backend/test_ibl_v2_compat.py::test_nested_callable_argument_is_actionable_and_catchable[($rows)=>$rows]
+1.14s call     backend/test_single_runner.py::test_r2_direct_run_delegates_to_pytest
+0.72s call     backend/test_single_runner.py::test_r1_every_battery_is_visible_to_pytest
+0.29s call     backend/test_ibl_v2_compat.py::test_nested_callable_argument_is_actionable_and_catchable[len]
+0.28s call     backend/test_ibl_v2_compat.py::test_native_table_callback_still_runs
+0.11s call     backend/test_api_ibl.py::test_unknown_explicit_project_rejected_before_execution[False]
+
+(9 durations < 0.1s hidden.)
+70 passed in 5.81s

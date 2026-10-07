@@ -1,0 +1,114 @@
+[
+  {
+    "mode": "base",
+    "destination": "trainer/base",
+    "checks": {
+      "all_room_values": true,
+      "all_invalid_rows": true,
+      "all_report_cells": true,
+      "all_report_invalid": true
+    },
+    "all_ok": true,
+    "source_sha256": {
+      "bookings.json": "f747c118e8f1cb48c814be8ba658a9df330d5822c6b7deb607851c99ec6e0e8a",
+      "maintenance.json": "cc93b2af6a2221829182ac1758863d45349aa48f8aa3c32d162cb603cfbc462d",
+      "rooms.json": "22319a2f7a75ff8af0ca6a118484b88cb2aebb22034d8cfabf6c00504f265f68"
+    }
+  },
+  {
+    "mode": "variant",
+    "destination": "trainer/variant",
+    "checks": {
+      "all_room_values": true,
+      "all_invalid_rows": true,
+      "all_report_cells": true,
+      "all_report_invalid": true
+    },
+    "all_ok": true,
+    "source_sha256": {
+      "bookings.json": "34d9125420980cbd99076a712e7f5ad34d40e341e0c565627629e1ebf3d276c7",
+      "maintenance.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "rooms.json": "22319a2f7a75ff8af0ca6a118484b88cb2aebb22034d8cfabf6c00504f265f68"
+    }
+  },
+  {
+    "mode": "base",
+    "destination": "ai/base",
+    "checks": {
+      "all_room_values": true,
+      "all_invalid_rows": true,
+      "all_report_cells": true,
+      "all_report_invalid": true
+    },
+    "all_ok": true,
+    "source_sha256": {
+      "bookings.json": "f747c118e8f1cb48c814be8ba658a9df330d5822c6b7deb607851c99ec6e0e8a",
+      "maintenance.json": "cc93b2af6a2221829182ac1758863d45349aa48f8aa3c32d162cb603cfbc462d",
+      "rooms.json": "22319a2f7a75ff8af0ca6a118484b88cb2aebb22034d8cfabf6c00504f265f68"
+    }
+  },
+  {
+    "mode": "variant",
+    "destination": "ai/variant",
+    "checks": {
+      "all_room_values": true,
+      "all_invalid_rows": true,
+      "all_report_cells": true,
+      "all_report_invalid": true
+    },
+    "all_ok": true,
+    "source_sha256": {
+      "bookings.json": "34d9125420980cbd99076a712e7f5ad34d40e341e0c565627629e1ebf3d276c7",
+      "maintenance.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "rooms.json": "22319a2f7a75ff8af0ca6a118484b88cb2aebb22034d8cfabf6c00504f265f68"
+    }
+  },
+  {
+    "mode": "new",
+    "destination": "trainer/new_repaired",
+    "checks": {
+      "all_room_values": true,
+      "all_invalid_rows": true,
+      "all_report_cells": true,
+      "all_report_invalid": true
+    },
+    "all_ok": true,
+    "source_sha256": {
+      "bookings.json": "a128383e7c6e06fd326b964a63da733f89667074a204b6fa1fa1113a59b483cb",
+      "maintenance.json": "1dbfd9bab3100011e1037736f3f264991e9269d39bfbe4467816227436449530",
+      "rooms.json": "22319a2f7a75ff8af0ca6a118484b88cb2aebb22034d8cfabf6c00504f265f68"
+    }
+  },
+  {
+    "mode": "base",
+    "destination": "trainer/base_repaired",
+    "checks": {
+      "all_room_values": true,
+      "all_invalid_rows": true,
+      "all_report_cells": true,
+      "all_report_invalid": true
+    },
+    "all_ok": true,
+    "source_sha256": {
+      "bookings.json": "f747c118e8f1cb48c814be8ba658a9df330d5822c6b7deb607851c99ec6e0e8a",
+      "maintenance.json": "cc93b2af6a2221829182ac1758863d45349aa48f8aa3c32d162cb603cfbc462d",
+      "rooms.json": "22319a2f7a75ff8af0ca6a118484b88cb2aebb22034d8cfabf6c00504f265f68"
+    }
+  },
+  {
+    "mode": "variant",
+    "destination": "trainer/variant_repaired",
+    "checks": {
+      "all_room_values": true,
+      "all_invalid_rows": true,
+      "all_report_cells": true,
+      "all_report_invalid": true
+    },
+    "all_ok": true,
+    "source_sha256": {
+      "bookings.json": "34d9125420980cbd99076a712e7f5ad34d40e341e0c565627629e1ebf3d276c7",
+      "maintenance.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "rooms.json": "22319a2f7a75ff8af0ca6a118484b88cb2aebb22034d8cfabf6c00504f265f68"
+    }
+  }
+]

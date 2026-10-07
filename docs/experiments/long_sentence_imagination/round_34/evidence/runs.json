@@ -1,0 +1,1436 @@
+[
+  {
+    "name": "ai_start.json",
+    "state": "queued"
+  },
+  {
+    "name": "ai_status.json",
+    "status": "completed",
+    "state": "succeeded",
+    "error": null
+  },
+  {
+    "name": "ai_variant_request_v2.json",
+    "state": "queued"
+  },
+  {
+    "name": "ai_variant_status.json",
+    "status": "completed",
+    "state": "succeeded",
+    "error": null
+  },
+  {
+    "name": "base_original_after.json",
+    "success": true,
+    "executed": true,
+    "resume": {
+      "run_id": "5ad2d7c9977f4244ba7098b889de8324"
+    },
+    "plan_hash": "83244da917235560fa2a1245df890f10e55ae94e125a9c69d5e36a02b60be127",
+    "value": {
+      "rooms": 40,
+      "invalid": 3,
+      "verified": true
+    },
+    "usage": {
+      "steps": 546527,
+      "rows": 3386,
+      "elapsed_ms": 7977,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 273240,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 3,
+          "steps": 45122,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 20,
+          "steps": 27518,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 17,
+          "steps": 23813,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 16,
+          "steps": 23772,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 22,
+          "steps": 23772,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 21,
+          "steps": 23134,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 10,
+          "steps": 21840,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 18,
+          "steps": 21181,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 19,
+          "steps": 20109,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 13,
+          "ms": 3653,
+          "calls": 40,
+          "actions": [
+            "table:groupby"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 14,
+          "ms": 365,
+          "calls": 40,
+          "actions": [
+            "table:sort"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 27,
+          "ms": 323,
+          "calls": 3,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795",
+          "wall_ms": 114
+        },
+        {
+          "line": 38,
+          "ms": 132,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 40,
+          "ms": 119,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 39,
+          "ms": 118,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        }
+      ]
+    }
+  },
+  {
+    "name": "base_repaired.json",
+    "success": true,
+    "executed": true,
+    "resume": {
+      "run_id": "9224bec2618a42798aa42062d5e8dfc1"
+    },
+    "plan_hash": "358f4a31166bb62785e33c06aa13aea13cc7a5b76641e2e2cfd9e06b1008486b",
+    "value": {
+      "rooms": 40,
+      "invalid": 3,
+      "verified": true
+    },
+    "usage": {
+      "steps": 277213,
+      "rows": 3386,
+      "elapsed_ms": 10457,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 3,
+          "steps": 45122,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 20,
+          "steps": 27518,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 17,
+          "steps": 23813,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 16,
+          "steps": 23772,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 22,
+          "steps": 23772,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 21,
+          "steps": 23134,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 10,
+          "steps": 21840,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 18,
+          "steps": 21181,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 19,
+          "steps": 20109,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 8,
+          "steps": 9555,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 13,
+          "ms": 6542,
+          "calls": 40,
+          "actions": [
+            "table:groupby"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 27,
+          "ms": 583,
+          "calls": 3,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1",
+          "wall_ms": 219
+        },
+        {
+          "line": 14,
+          "ms": 348,
+          "calls": 40,
+          "actions": [
+            "table:sort"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 34,
+          "ms": 293,
+          "calls": 2,
+          "actions": [
+            "table:groupby",
+            "table:sort"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 50,
+          "ms": 91,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 54,
+          "ms": 53,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 52,
+          "ms": 51,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 51,
+          "ms": 50,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        }
+      ]
+    }
+  },
+  {
+    "name": "base_repaired_serial.json",
+    "success": true,
+    "executed": true,
+    "resume": {
+      "run_id": "bcc156bb735340e3b163635abbaca812"
+    },
+    "plan_hash": "358f4a31166bb62785e33c06aa13aea13cc7a5b76641e2e2cfd9e06b1008486b",
+    "value": {
+      "rooms": 40,
+      "invalid": 3,
+      "verified": true
+    },
+    "usage": {
+      "steps": 277213,
+      "rows": 3386,
+      "elapsed_ms": 2701,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 3,
+          "steps": 45122,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 20,
+          "steps": 27518,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 17,
+          "steps": 23813,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 16,
+          "steps": 23772,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 22,
+          "steps": 23772,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 21,
+          "steps": 23134,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 10,
+          "steps": 21840,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 18,
+          "steps": 21181,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 19,
+          "steps": 20109,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 8,
+          "steps": 9555,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 13,
+          "ms": 538,
+          "calls": 40,
+          "actions": [
+            "table:groupby"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 27,
+          "ms": 198,
+          "calls": 3,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1",
+          "wall_ms": 78
+        },
+        {
+          "line": 14,
+          "ms": 61,
+          "calls": 40,
+          "actions": [
+            "table:sort"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 34,
+          "ms": 42,
+          "calls": 2,
+          "actions": [
+            "table:groupby",
+            "table:sort"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 51,
+          "ms": 21,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 50,
+          "ms": 19,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 52,
+          "ms": 19,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 54,
+          "ms": 17,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        }
+      ]
+    }
+  },
+  {
+    "name": "base_serial.json",
+    "success": true,
+    "executed": true,
+    "resume": {
+      "run_id": "d0baa1d385dc46a79ad05e4c4d6112d2"
+    },
+    "plan_hash": "83244da917235560fa2a1245df890f10e55ae94e125a9c69d5e36a02b60be127",
+    "value": {
+      "rooms": 40,
+      "invalid": 3,
+      "verified": true
+    },
+    "usage": {
+      "steps": 546527,
+      "rows": 3386,
+      "elapsed_ms": 3672,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 273240,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 3,
+          "steps": 45122,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 20,
+          "steps": 27518,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 17,
+          "steps": 23813,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 16,
+          "steps": 23772,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 22,
+          "steps": 23772,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 21,
+          "steps": 23134,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 10,
+          "steps": 21840,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 18,
+          "steps": 21181,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 19,
+          "steps": 20109,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 13,
+          "ms": 600,
+          "calls": 40,
+          "actions": [
+            "table:groupby"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 27,
+          "ms": 189,
+          "calls": 3,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795",
+          "wall_ms": 79
+        },
+        {
+          "line": 14,
+          "ms": 66,
+          "calls": 40,
+          "actions": [
+            "table:sort"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 38,
+          "ms": 15,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 39,
+          "ms": 14,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 40,
+          "ms": 14,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        }
+      ]
+    }
+  },
+  {
+    "name": "base_v0.json",
+    "success": true,
+    "executed": true,
+    "resume": {
+      "run_id": "d41e486f4e0148da9aa3b2381d676ac2"
+    },
+    "plan_hash": "6821e9c3975dc8da1fd93069f70834ccc4d45f7d5e450fc2bfe14ea6aaf6cbc2",
+    "value": {
+      "rooms": 40,
+      "invalid": 3,
+      "verified": true
+    },
+    "usage": {
+      "steps": 546527,
+      "rows": 3386,
+      "elapsed_ms": 3745,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 273240,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 3,
+          "steps": 45122,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 20,
+          "steps": 27518,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 17,
+          "steps": 23813,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 16,
+          "steps": 23772,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 22,
+          "steps": 23772,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 21,
+          "steps": 23134,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 10,
+          "steps": 21840,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 18,
+          "steps": 21181,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 19,
+          "steps": 20109,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 13,
+          "ms": 617,
+          "calls": 40,
+          "actions": [
+            "table:groupby"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 27,
+          "ms": 212,
+          "calls": 3,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795",
+          "wall_ms": 85
+        },
+        {
+          "line": 14,
+          "ms": 65,
+          "calls": 40,
+          "actions": [
+            "table:sort"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 38,
+          "ms": 20,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 40,
+          "ms": 16,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 39,
+          "ms": 15,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        }
+      ]
+    }
+  },
+  {
+    "name": "check_repaired.json",
+    "ok": true,
+    "executed": false,
+    "status": "incomplete",
+    "issues": [],
+    "warnings": [],
+    "plan_hash": "358f4a31166bb62785e33c06aa13aea13cc7a5b76641e2e2cfd9e06b1008486b"
+  },
+  {
+    "name": "check_v0.json",
+    "success": false,
+    "ok": false,
+    "executed": false,
+    "status": "invalid",
+    "error": "budget은 steps(1~1000000), rows(1~100000) 정수만 지정합니다.",
+    "diagnostic": {
+      "code": "BUDGET_ARGUMENT",
+      "kind": "compile",
+      "message": "budget은 steps(1~1000000), rows(1~100000) 정수만 지정합니다.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [],
+      "details": {},
+      "rule": "BUDGET_ARGUMENT",
+      "severity": "error",
+      "hint": "호출 인자·타입·해당 위치의 계약을 확인하세요."
+    },
+    "issues": [
+      {
+        "code": "BUDGET_ARGUMENT",
+        "kind": "compile",
+        "message": "budget은 steps(1~1000000), rows(1~100000) 정수만 지정합니다.",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "rule": "BUDGET_ARGUMENT",
+        "severity": "error",
+        "hint": "호출 인자·타입·해당 위치의 계약을 확인하세요."
+      }
+    ]
+  },
+  {
+    "name": "check_v0b.json",
+    "ok": true,
+    "executed": false,
+    "status": "incomplete",
+    "issues": [],
+    "warnings": [
+      {
+        "code": "PROJECT_CONTEXT",
+        "severity": "warning",
+        "message": "요청에 프로젝트 문맥이 없습니다. 프로젝트 경로가 필요한 액션은 실행이 첫 호출에서 거절됩니다: self:read, self:write",
+        "actions": [
+          "self:read",
+          "self:write"
+        ],
+        "hint": "/ibl/execute 요청 body 에 project_id 를 넣으세요(each·병렬 가지까지 전파). 문장 인자 project_id 는 그 step 에만 적용됩니다."
+      }
+    ],
+    "plan_hash": "6821e9c3975dc8da1fd93069f70834ccc4d45f7d5e450fc2bfe14ea6aaf6cbc2"
+  },
+  {
+    "name": "check_v0c.json",
+    "ok": true,
+    "executed": false,
+    "status": "incomplete",
+    "issues": [],
+    "warnings": [],
+    "plan_hash": "6821e9c3975dc8da1fd93069f70834ccc4d45f7d5e450fc2bfe14ea6aaf6cbc2"
+  },
+  {
+    "name": "new_repaired.json",
+    "success": true,
+    "executed": true,
+    "resume": {
+      "run_id": "4034ada81a8342e1bfbbf989cda5ea7e"
+    },
+    "plan_hash": "358f4a31166bb62785e33c06aa13aea13cc7a5b76641e2e2cfd9e06b1008486b",
+    "value": {
+      "rooms": 40,
+      "invalid": 1,
+      "verified": true
+    },
+    "usage": {
+      "steps": 11769,
+      "rows": 126,
+      "elapsed_ms": 2721,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 21,
+          "steps": 1462,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 16,
+          "steps": 996,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 22,
+          "steps": 996,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 20,
+          "steps": 854,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 15,
+          "steps": 806,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 17,
+          "steps": 763,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 19,
+          "steps": 755,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 18,
+          "steps": 747,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 48,
+          "steps": 646,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 25,
+          "steps": 600,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 13,
+          "ms": 1649,
+          "calls": 40,
+          "actions": [
+            "table:groupby"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 27,
+          "ms": 430,
+          "calls": 3,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1",
+          "wall_ms": 148
+        },
+        {
+          "line": 14,
+          "ms": 99,
+          "calls": 40,
+          "actions": [
+            "table:sort"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 50,
+          "ms": 69,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 51,
+          "ms": 39,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 52,
+          "ms": 35,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 34,
+          "ms": 34,
+          "calls": 2,
+          "actions": [
+            "table:groupby",
+            "table:sort"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 54,
+          "ms": 32,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        }
+      ]
+    }
+  },
+  {
+    "name": "probe_context.json",
+    "error": "IBL 실행 오류: 스텝 앞에 해석되지 않은 텍스트가 있습니다: 'return'\n  전체: return [self:read]{path:\"/nonexistent-long34.txt\"}"
+  },
+  {
+    "name": "probe_context_repaired.json",
+    "success": false,
+    "ok": false,
+    "executed": false,
+    "status": "invalid",
+    "error": "지정한 프로젝트를 찾을 수 없습니다: l34-unknown-project. 프로젝트 ID를 확인하세요.",
+    "diagnostic": {
+      "code": "PROJECT_NOT_FOUND",
+      "kind": "runtime",
+      "message": "지정한 프로젝트를 찾을 수 없습니다: l34-unknown-project. 프로젝트 ID를 확인하세요.",
+      "details": {
+        "project_id": "l34-unknown-project"
+      }
+    }
+  },
+  {
+    "name": "probe_context_v2.json",
+    "success": false,
+    "executed": true,
+    "error": "활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: read_op. 대상 프로젝트를 params.project_id로 명시하거나 프로젝트 컨텍스트(thread_context.project_id) 안에서 호출하세요. 예: execute_ibl(code='[node:action]{..., project_id: \"컨텐츠\"}') ★each/폴백/병렬 가지 안까지 컨텍스트를 전파하려면 문장 param 대신 /ibl/execute 요청 body의 project_id 필드를 쓰세요 (param 방식은 그 step에만 적용).",
+    "diagnostic": {
+      "code": "TOOL",
+      "kind": "runtime",
+      "message": "활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: read_op. 대상 프로젝트를 params.project_id로 명시하거나 프로젝트 컨텍스트(thread_context.project_id) 안에서 호출하세요. 예: execute_ibl(code='[node:action]{..., project_id: \"컨텐츠\"}') ★each/폴백/병렬 가지 안까지 컨텍스트를 전파하려면 문장 param 대신 /ibl/execute 요청 body의 project_id 필드를 쓰세요 (param 방식은 그 step에만 적용).",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        7
+      ],
+      "details": {},
+      "source_span": {
+        "source_hash": "a8c6c5440bd4ac182fe94a3837dd588bb235fa7c517aef0bc1d483e0fab7fc4e",
+        "start": 7,
+        "end": 50,
+        "line": 1,
+        "column": 8
+      }
+    },
+    "resume": {
+      "run_id": "6e99f8c6fd0e4a6994175dedac766f27"
+    },
+    "plan_hash": "81728e150723d016b63d06798336ed7f55994ef78f073f774896cd53380a1ec9",
+    "usage": {
+      "steps": 5,
+      "rows": 0,
+      "elapsed_ms": 453,
+      "limits": {
+        "steps": 100000,
+        "rows": 10000
+      },
+      "steps_by_line": [
+        {
+          "line": 1,
+          "steps": 5,
+          "source_hash": "a8c6c5440bd4ac182fe94a3837dd588bb235fa7c517aef0bc1d483e0fab7fc4e"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 1,
+          "ms": 19,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "a8c6c5440bd4ac182fe94a3837dd588bb235fa7c517aef0bc1d483e0fab7fc4e"
+        }
+      ]
+    }
+  },
+  {
+    "name": "probe_group.json",
+    "success": false,
+    "error": "Step 2 에러: groupby: 알 수 없는 집계 op '($rows)=>$rows' (가능: avg/count/max/min/sum)",
+    "resume": {
+      "from_step": 2,
+      "prev_ref": {
+        "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/20261007_192444_resume_step2_f745cd.json",
+        "kind": "items",
+        "count": 3,
+        "bytes": 83,
+        "expires_at": "2026-10-08T19:24:44"
+      },
+      "note": "step 2 부터 다시 돌리려면 execute_ibl(code, resume={from_step: 2, prev_ref: \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/20261007_192444_resume_step2_f745cd.json\"}) — 1~1 단은 재실행하지 않습니다(스필 24h 유효)."
+    }
+  },
+  {
+    "name": "probe_group_repaired.json",
+    "success": false,
+    "executed": true,
+    "error": "$args.agg.rows: 이 도구 인자는 JSON 값만 받으며 콜백을 지원하지 않습니다. describe로 인자 계약을 확인하고 함수를 적용한 결과 값을 전달하세요.",
+    "diagnostic": {
+      "code": "ARGUMENT_CONTRACT",
+      "kind": "runtime",
+      "message": "$args.agg.rows: 이 도구 인자는 JSON 값만 받으며 콜백을 지원하지 않습니다. describe로 인자 계약을 확인하고 함수를 적용한 결과 값을 전달하세요.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        19
+      ],
+      "details": {
+        "path": "$args.agg.rows",
+        "actual": "Callable",
+        "expected": "JSON value"
+      },
+      "source_span": {
+        "source_hash": "4722d08283eaf8a3973ccaf297470def3560ca346f344e92f2a654c9495c399c",
+        "start": 53,
+        "end": 105,
+        "line": 1,
+        "column": 54
+      }
+    },
+    "resume": {
+      "run_id": "27f04d63c72f474c8e2ac9d6d4dd77f2"
+    },
+    "plan_hash": "a50cad7ba754eb0c52f1176d4d08b9993ad14dde0cf7feea5049b402b37eb88c",
+    "usage": {
+      "steps": 17,
+      "rows": 0,
+      "elapsed_ms": 603,
+      "limits": {
+        "steps": 100000,
+        "rows": 10000
+      },
+      "steps_by_line": [
+        {
+          "line": 1,
+          "steps": 17,
+          "source_hash": "4722d08283eaf8a3973ccaf297470def3560ca346f344e92f2a654c9495c399c"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 1,
+          "ms": 3,
+          "calls": 1,
+          "actions": [
+            "table:groupby"
+          ],
+          "source_hash": "4722d08283eaf8a3973ccaf297470def3560ca346f344e92f2a654c9495c399c"
+        }
+      ]
+    }
+  },
+  {
+    "name": "probe_group_v2.json",
+    "success": false,
+    "executed": true,
+    "error": "전송할 수 없는 값: Closure",
+    "diagnostic": {
+      "code": "VALUE_PROTOCOL",
+      "kind": "protocol",
+      "message": "전송할 수 없는 값: Closure",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        19
+      ],
+      "details": {},
+      "source_span": {
+        "source_hash": "4722d08283eaf8a3973ccaf297470def3560ca346f344e92f2a654c9495c399c",
+        "start": 53,
+        "end": 105,
+        "line": 1,
+        "column": 54
+      }
+    },
+    "resume": {
+      "run_id": "90c4091ff0494ccf87824d3ba44cec29"
+    },
+    "plan_hash": "7fa1fa0114b08bd50f7dbf3edfa555b524e2b1efdf66ffa463f8ba261eb4b228",
+    "usage": {
+      "steps": 17,
+      "rows": 0,
+      "elapsed_ms": 258,
+      "limits": {
+        "steps": 100000,
+        "rows": 10000
+      },
+      "steps_by_line": [
+        {
+          "line": 1,
+          "steps": 17,
+          "source_hash": "4722d08283eaf8a3973ccaf297470def3560ca346f344e92f2a654c9495c399c"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 1,
+          "ms": 1,
+          "calls": 1,
+          "actions": [
+            "table:groupby"
+          ],
+          "source_hash": "4722d08283eaf8a3973ccaf297470def3560ca346f344e92f2a654c9495c399c"
+        }
+      ]
+    }
+  },
+  {
+    "name": "variant_repaired.json",
+    "success": true,
+    "executed": true,
+    "resume": {
+      "run_id": "2699a8c0ac67437885168489cc569a44"
+    },
+    "plan_hash": "358f4a31166bb62785e33c06aa13aea13cc7a5b76641e2e2cfd9e06b1008486b",
+    "value": {
+      "rooms": 40,
+      "invalid": 3,
+      "verified": true
+    },
+    "usage": {
+      "steps": 244056,
+      "rows": 3009,
+      "elapsed_ms": 12055,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 3,
+          "steps": 38687,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 20,
+          "steps": 23610,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 17,
+          "steps": 21811,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 16,
+          "steps": 21588,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 22,
+          "steps": 21588,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 21,
+          "steps": 21142,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 18,
+          "steps": 19383,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 10,
+          "steps": 18720,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 19,
+          "steps": 16191,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 8,
+          "steps": 8190,
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 13,
+          "ms": 7864,
+          "calls": 40,
+          "actions": [
+            "table:groupby"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 27,
+          "ms": 620,
+          "calls": 3,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1",
+          "wall_ms": 241
+        },
+        {
+          "line": 14,
+          "ms": 258,
+          "calls": 40,
+          "actions": [
+            "table:sort"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 34,
+          "ms": 179,
+          "calls": 2,
+          "actions": [
+            "table:groupby",
+            "table:sort"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 51,
+          "ms": 22,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 52,
+          "ms": 19,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 50,
+          "ms": 19,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        },
+        {
+          "line": 54,
+          "ms": 19,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "7fe294b8ded6b684f29d2869e37bbc25c1e929981486dd624b22fae7349721d1"
+        }
+      ]
+    }
+  },
+  {
+    "name": "variant_v0.json",
+    "success": true,
+    "executed": true,
+    "resume": {
+      "run_id": "b6060d13272d4915859d84af859e1e78"
+    },
+    "plan_hash": "6821e9c3975dc8da1fd93069f70834ccc4d45f7d5e450fc2bfe14ea6aaf6cbc2",
+    "value": {
+      "rooms": 40,
+      "invalid": 3,
+      "verified": true
+    },
+    "usage": {
+      "steps": 474760,
+      "rows": 3009,
+      "elapsed_ms": 3751,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      },
+      "steps_by_line": [
+        {
+          "line": 6,
+          "steps": 234240,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 3,
+          "steps": 38687,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 20,
+          "steps": 23610,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 17,
+          "steps": 21811,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 16,
+          "steps": 21588,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 22,
+          "steps": 21588,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 21,
+          "steps": 21142,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 18,
+          "steps": 19383,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 10,
+          "steps": 18720,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 19,
+          "steps": 16191,
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        }
+      ],
+      "tool_ms_by_line": [
+        {
+          "line": 13,
+          "ms": 953,
+          "calls": 40,
+          "actions": [
+            "table:groupby"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 27,
+          "ms": 197,
+          "calls": 3,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795",
+          "wall_ms": 80
+        },
+        {
+          "line": 14,
+          "ms": 93,
+          "calls": 40,
+          "actions": [
+            "table:sort"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 38,
+          "ms": 15,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 39,
+          "ms": 14,
+          "calls": 1,
+          "actions": [
+            "self:write"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        },
+        {
+          "line": 40,
+          "ms": 13,
+          "calls": 1,
+          "actions": [
+            "self:read"
+          ],
+          "source_hash": "c1fd4f5f39707ec8153a956f39f090646c7b3cebf9ee4f839baeb6de27c0b795"
+        }
+      ]
+    }
+  }
+]

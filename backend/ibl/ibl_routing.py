@@ -186,7 +186,7 @@ def resolve_project_path(project_path: str,
       1) params["project_id"] — 작가가 IBL 코드에 손으로 명시한 대상 프로젝트.
          '이 프로젝트를 뜻함'이라는 의도적 신호이므로, 호출자가 정체성으로
          들고 있는 project_path(예: 위임된 시스템 AI의 data/)보다 우선한다.
-         해석에 실패하면(존재하지 않는 id 등) 조용히 넘어가 2번으로 폴백.
+         해석에 실패하면(존재하지 않는 id 등) 다른 프로젝트로 폴백하지 않는다.
       2) 호출자가 직접 인자로 넘긴 project_path (디폴트 '.' 가 아닐 때)
          — 프로젝트 에이전트 등 컨텍스트가 살아있는 정상 경로
       3) params["project_path"] — 명시 절대/상대 경로 (web-builder처럼 동일
@@ -207,10 +207,7 @@ def resolve_project_path(project_path: str,
     if isinstance(params, dict):
         explicit_id = params.get("project_id")
         if isinstance(explicit_id, str) and explicit_id.strip():
-            resolved = _resolve_project_id(explicit_id)
-            if resolved:
-                return resolved
-            # 해석 실패 시엔 조용히 2번으로 폴백(침묵 오배치 방지)
+            return _resolve_project_id(explicit_id)
 
     # 2) 호출자가 직접 인자로 넘긴 값
     if project_path and project_path.strip() and project_path != ".":
@@ -455,6 +452,10 @@ def _route_handler(mapped_tool: str, params: dict,
                 f"workspace 경로를 확보할 수 없습니다: {mapped_tool}. "
                 "INDIEBIZ_BASE_PATH 환경변수 또는 backend 폴더 구조를 확인하세요."
             )}
+        explicit_id = merged_params.get('project_id')
+        if isinstance(explicit_id, str) and explicit_id.strip():
+            return {"error": f"지정한 프로젝트를 찾을 수 없습니다: {explicit_id}. 프로젝트 ID를 확인하세요.",
+                    "error_type": "not_found", "project_id": explicit_id}
         return {"error": (
             f"활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: {mapped_tool}. "
             "대상 프로젝트를 params.project_id로 명시하거나 "

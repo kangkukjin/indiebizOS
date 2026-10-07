@@ -22,6 +22,7 @@
    오류는 `issues`를 모아 `location`(원문·정의 속 위치), `call_path`, `expected/actual`, `hint`로 고친 뒤 전체를 재검사한다. 긴 원문은 `revise_args`의 `code_edits`로 조각만 고친다.
    `warnings`의 반복 AI 입력은 의도를 확인한다. `incomplete`는 실행 중 검사할 타입·도구 경계가 있다는 뜻이다.
    `PROJECT_CONTEXT` 경고는 요청에 프로젝트 문맥이 없어 파일 액션이 첫 호출에서 거절된다는 사전경고다 — HTTP `/ibl/execute`는 body에 `project_id`를 넣는다.
+   명시한 프로젝트 ID가 해소되지 않으면 다른 프로젝트로 폴백하지 않는다. HTTP는 `PROJECT_NOT_FOUND`로 실행 전에 거절하므로 ID를 바로잡는다.
    `UNOBSERVED_FIELD`는 관측된 반환 필드 밖의 이름이다 — `describe`의 `observed_returns`나 작은 실행으로 실제 필드를 본 뒤 쓴다.
 6. 수정 실행은 `continuation.reuse_args`로 같은 읽기·성공 모델 결과를 재사용한다(조건: `ibl_composition_tools.md` 「중단 뒤 이어가기」).
    단계별 입력 연결은 [분할 예제](long_sentence_imagination.md#비싼-추출-결과를-반환한-뒤-계산표현을-바꾸기)를 따른다.
@@ -309,7 +310,11 @@ return {목록:$결과,앞쪽:$결과[:1],표시:join(", ",$결과)}
 문자열 변환·길이·슬라이싱은 NFC를 사용해 맥의 NFD 한글도 음절 단위로 다룬다.
 파일 접근에는 목록이 반환한 원래 `path`를 사용한다.
 
-`map`은 변환, `filter`는 Bool 필터다. 콜백은 순수식(`groupby` 집계 함수 포함)이며 공통 예산을 쓴다.
+`map`은 변환, `filter`는 Bool 필터다. 콜백은 순수식이며 공통 예산을 쓴다.
+`groupby`를 호출하는 순수 지역 함수도 콜백 안에서 쓸 수 있다.
+`groupby.agg` 자체는 콜백을 받지 않는다. `{합계:["sum","금액"]}`처럼
+count/sum/avg/min/max 집계 명세를 전달한다. JSON 도구 인자 안에 함수를 넣으면
+`ARGUMENT_CONTRACT`의 `details.path`가 지원하지 않는 콜백 위치를 가리킨다.
 <!-- example:pure_list_transform -->
 ```ibl
 [{t:" 강의 , 음악 "}] >> [table:compute]{set:($r)=>{

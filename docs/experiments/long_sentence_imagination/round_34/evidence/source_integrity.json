@@ -1,0 +1,11 @@
+{
+  "new/maintenance.json": true,
+  "new/bookings.json": true,
+  "new/rooms.json": true,
+  "variant/maintenance.json": true,
+  "variant/bookings.json": true,
+  "variant/rooms.json": true,
+  "base/maintenance.json": true,
+  "base/bookings.json": true,
+  "base/rooms.json": true
+}

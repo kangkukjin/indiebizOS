@@ -1,0 +1,1 @@
+{"code": "[{room:\"R1\",n:1},{room:\"R2\",n:2},{room:\"R1\",n:3}] >> [table:groupby]{by:\"room\",agg:{rows:($rows)=>$rows}}", "origin": "training", "edition": 2}

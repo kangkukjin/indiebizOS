@@ -1,0 +1,39 @@
+warnings summary ===============================
+<frozen importlib._bootstrap>:488: 24 warnings
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488: 24 warnings
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:488: 12 warnings
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: 12 warnings
+  /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: IncompleteFieldDefinitionWarning: Field 'lifespan' has an incomplete definition: its annotation contains an unresolved forward reference, so settings sources may fail to correctly resolve its value. Call `model_rebuild()` on the model where the field is defined, once all the referenced types are defined.
+    warnings.warn(
+
+backend/test_idiom_tier.py: 64 warnings
+backend/test_stale_idiom_overwrite_2026_09_07.py: 11 warnings
+backend/test_fn_zero_rediagnosis_2026_09_07.py: 3 warnings
+backend/test_names_first_recall_2026_09_05.py: 32 warnings
+  /Users/kangkukjin/Desktop/AI/indiebizOS/backend/datastore/hippo_tree.py:427: DeprecationWarning: 'maxsplit' is passed as positional argument
+    base = re.split(r"[.\[]", k, 1)[0]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+61.72s call     backend/test_world_map_atlas.py::test_atlas_names_reach_the_selected_excerpt
+35.96s call     backend/test_vocabulary_bundle_split.py::test_split_archives_register_without_any_original_bundle
+30.37s call     backend/test_spreadsheet_browser_live.py::test_grid_app_edit_save_queue_and_ai
+25.91s call     backend/test_document_browser.py::test_browser_source_workflow
+24.18s call     backend/test_repair_staging.py::test_battery_under_pytest
+23.56s call     backend/test_ibl_v2_contracts.py::test_full_scheduling_program_and_new_policy_preserve_all_results
+15.25s call     backend/test_long_sentence_round6_tasks.py::test_full_ledger_and_render_change[triple]
+15.11s call     backend/test_idiom_exposure_levers_2026_09_09.py::test_validate_catalog_runs_every_producer_example_through_the_gate
+15.05s call     backend/test_vocabulary_archive.py::test_roundtrip_seed_sleep_wake
+14.19s call     backend/test_long_sentence_round15_repairs.py::test_original_round15_full_program_recovers_without_recollecting
+13.44s call     backend/test_event_loop_gate.py::test_repo_has_no_blocking_calls_in_async_bodies
+13.25s call     backend/test_memory_success_envelope_2026_09_07.py::test_search_says_success
+12.75s call     backend/test_vocabulary_archive.py::test_real_cache_reset_updates_catalog_and_gate
+11.73s call     backend/test_imagination_round74_residual.py::test_user_path_effects_gate_is_clean_on_live_tree
+11.22s call     backend/test_imagination_round58_repairs.py::test_builder_guards_every_unary_flow_without_action_name_list
+9395 passed, 12 skipped, 182 warnings in 186.32s (0:03:06)

@@ -1,0 +1,27 @@
+{
+  "verified_at": "2026-10-07T19:41:54.360646",
+  "full_suite": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "12",
+    "tests": "9407",
+    "time": "186.182",
+    "timestamp": "2026-10-07T19:37:29.588731+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "related": {
+    "passed": 39,
+    "deselected": 1
+  },
+  "ordered_regression": {
+    "before_failed": 1,
+    "before_passed": 56,
+    "after_passed": 70
+  },
+  "build_ibl_nodes_check": "passed",
+  "body_bundle_android": "regenerated_no_diff",
+  "backend_layers": "passed",
+  "frontend": "unchanged_not_run",
+  "training_completed_before_live_edit": true
+}

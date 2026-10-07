@@ -1,0 +1,21 @@
+{
+  "time": "2026-10-07T19:27:07.605102",
+  "tasks": {
+    "task_sysai_2eb2848f": "succeeded",
+    "task_sysai_30a45574": "succeeded"
+  },
+  "trainer_runs": {
+    "base": {
+      "run_id": "d41e486f4e0148da9aa3b2381d676ac2"
+    },
+    "variant": {
+      "run_id": "b6060d13272d4915859d84af859e1e78"
+    }
+  },
+  "training_complete": true,
+  "gaps": {
+    "L34-1": "잘못된 project_id 경고가 누락처럼 안내; 명시 ID 해소 실패의 경로 폴백 추가 진단",
+    "L34-2": "교재 groupby 집계 함수 표현을 agg 콜백으로 오인; 오류는 VALUE_PROTOCOL Closure, 인자 위치 부재",
+    "L34-3": "훈련자 전체 자료 40회 필터 및 보고서 재독 누락"
+  }
+}

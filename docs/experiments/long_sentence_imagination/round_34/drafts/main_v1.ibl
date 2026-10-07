@@ -1,0 +1,56 @@
+#!ibl edition=2
+[def:검증]($rows,$rooms,$kind) {
+  return map($rows,($r)=>{**$r,kind:$kind,valid:$r.room in $rooms and $r.end != null and $r.start >= 0 and $r.end > $r.start and $r.end <= 1440})
+}
+[def:시설집계]($room,$rows) {
+  $local = $rows
+  $edges = $local >> [table:each]{mode:"flat_map"} {
+    $b = $it.kind == "booking" ? 1 : 0
+    $m = $it.kind == "maintenance" ? 1 : 0
+    return [{t:$it.start,b:$b,m:$m},{t:$it.end,b:0-$b,m:0-$m}]
+  }
+  $edges = $edges + [{t:0,b:0,m:0},{t:1440,b:0,m:0}]
+  $points = $edges >> [table:groupby]{by:"t",agg:{b:["sum","b"],m:["sum","m"]}}
+  $ordered = $points >> [table:sort]{by:"t"}
+  $state = reduce($ordered,{t:0,b:0,m:0,booked:0,conflict:0,maintenance:0,blocked_booking:0,free:0,peak:0},($s,$e)=>{
+    t:$e.t,b:$s.b+$e.b,m:$s.m+$e.m,
+    booked:$s.booked+($s.b>0 ? $e.t-$s.t : 0),
+    conflict:$s.conflict+($s.b>1 ? $e.t-$s.t : 0),
+    maintenance:$s.maintenance+($s.m>0 ? $e.t-$s.t : 0),
+    blocked_booking:$s.blocked_booking+($s.b>0 and $s.m>0 ? $e.t-$s.t : 0),
+    free:$s.free+($s.b==0 and $s.m==0 ? $e.t-$s.t : 0),
+    peak:max($s.peak,$s.b+$e.b)
+  })
+  assert $state.b == 0 and $state.m == 0, "시간 경계 불균형"
+  return {room:$room,booked:$state.booked,conflict:$state.conflict,maintenance:$state.maintenance,blocked_booking:$state.blocked_booking,free:$state.free,peak:$state.peak}
+}
+$docs = [self:read]{path:$source+"/rooms.json"} & [self:read]{path:$source+"/bookings.json"} & [self:read]{path:$source+"/maintenance.json"}
+$rooms = $docs[0].data.items
+$bookings = [fn:검증]{rows:$docs[1].data.items,rooms:$rooms,kind:"booking"}
+$maintenance = [fn:검증]{rows:$docs[2].data.items,rooms:$rooms,kind:"maintenance"}
+$all = $bookings + $maintenance
+$invalid = map(filter($all,($r)=>not $r.valid),($r)=>{id:$r.id,kind:$r.kind})
+$valid = filter($all,($r)=>$r.valid)
+$counts = $valid >> [table:groupby]{by:"room",agg:{n:["count"]}} >> [table:sort]{by:"room"}
+$ordered = sorted($valid,"room")
+$cursor = 0
+$summary = []
+[repeat:len($counts)] {
+  $g = $counts[$i]
+  $end = $cursor + $g.n
+  $summary = $summary + [[fn:시설집계]{room:$g.room,rows:$ordered[$cursor:$end]}]
+  $cursor = $end
+}
+$present = map($counts,($r)=>$r.room)
+$empty = filter($rooms,($r)=>not ($r in $present)) >> [table:each]{ [fn:시설집계]{room:$it,rows:[]} }
+$summary = sorted($summary + $empty,"room")
+$result = {rooms:$summary,invalid:$invalid}
+$lines = map($summary,($r)=>f"| ${$r.room} | ${$r.booked} | ${$r.conflict} | ${$r.maintenance} | ${$r.blocked_booking} | ${$r.free} | ${$r.peak} |")
+$report = "# 시설 예약 감사\n\n시간은 하루 시작부터 분, 구간은 시작 포함·끝 제외입니다.\n\n| 시설 | 예약 | 중복예약 | 점검 | 점검중예약 | 이용가능 | 최대동시예약 |\n| --- | --- | --- | --- | --- | --- | --- |\n" + join("\n",$lines) + "\n\n## 자료 이상\n" + join("\n",map($invalid,($r)=>f"- ${$r.id} (${$r.kind})"))
+[self:write]{path:$out+"/result.json",content:json($result)}
+[self:write]{path:$out+"/report.md",content:$report}
+$back = [self:read]{path:$out+"/result.json"}
+assert $back.data == $result, "저장 후 재독 불일치"
+$report_back = [self:read]{path:$out+"/report.md"}
+assert $report_back.text == $report, "보고서 재독 불일치"
+return {rooms:len($summary),invalid:len($invalid),verified:true}

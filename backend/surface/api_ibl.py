@@ -180,10 +180,19 @@ async def execute_ibl_code(req: IBLRequest):
             p = ProjectManager().get_project_path(req.project_id)
             # 시스템 프로젝트(앱/수동 모드)는 경로 홀더라, 부팅 provisioning이 누락됐거나
             # 폴더가 지워졌어도 여기서 즉석 보장(멱등 mkdir, json 읽기 없음)해 자가 치유한다.
-            if not p.exists() and req.project_id in ProjectManager.SYSTEM_PROJECT_IDS:
+            if p is not None and not p.exists() and req.project_id in ProjectManager.SYSTEM_PROJECT_IDS:
                 p.mkdir(parents=True, exist_ok=True)
-            if p and p.exists():
-                project_path = str(p.resolve())
+            if p is None or not p.is_dir():
+                message = f"지정한 프로젝트를 찾을 수 없습니다: {req.project_id}. 프로젝트 ID를 확인하세요."
+                result = {"success": False, "ok": False, "executed": False,
+                          "status": "invalid", "error": message,
+                          "diagnostic": {"code": "PROJECT_NOT_FOUND", "kind": "runtime",
+                                         "message": message,
+                                         "details": {"project_id": req.project_id}}}
+                if req.ticket:
+                    ticket_finish(req.ticket, result)
+                return result
+            project_path = str(p.resolve())
 
         # 직접조작 표면(앱/수동 모드·직접 호출)은 소유자가 직접 모는 것 = 시스템 운영자.
         # agent_id가 비어 있으면 system_ai 신원으로 채널 발신·수신(메신저 작성·커뮤니티 게시·

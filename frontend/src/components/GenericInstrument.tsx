@@ -589,11 +589,12 @@ type DrillState = { data: Json; action: ActionReq; item: Json; view?: AppViewPri
 
 const isLanding = (m: AppMode) => !!m.auto_run && !(m.inputs || []).length && (m.view || []).some((v) => v.type === 'engine');
 type ModePreset = { values: Record<string, string>; data: Json };
-type Picker = { selectFile?: (opts?: { title?: string; defaultPath?: string }) => Promise<string | null> };
+type Picker = { selectFile?: (opts?: { title?: string; defaultPath?: string }) => Promise<string | null>; selectFolder?: () => Promise<string | null> };
 const picker = () => (window as unknown as { electron?: Picker }).electron;
-const canBrowse = () => !!picker()?.selectFile;
-/* 경로 입력의 파일 창 — 선언의 browse(작업 공간 기준 폴더)를 절대 경로로 풀어 그 폴더에서 연다. 폴더를 못 찾으면 OS 가 기억한 자리에서. */
-async function browseFile(block: AppMode, inp: AppInput): Promise<string | null> {
+const canBrowse = (inp: AppInput) => !!(inp.browse_kind === 'folder' ? picker()?.selectFolder : picker()?.selectFile);
+/* 폴더는 OS 폴더 선택 창, 파일은 browse(작업 공간 기준 폴더)를 시작 위치로 쓴다. */
+async function browsePath(block: AppMode, inp: AppInput): Promise<string | null> {
+  if (inp.browse_kind === 'folder') return (await picker()?.selectFolder?.()) ?? null;
   let defaultPath: string | undefined;
   try {
     const parts = String(inp.browse || '').split('/').filter(Boolean);
@@ -644,8 +645,8 @@ function ModeDialog({ mode, sourceMode, initial, error: firstError, onCancel, on
             <div key={inp.key} className="flex gap-2">
               <input autoFocus={i === 0} value={values[inp.key] || ''} placeholder={inp.placeholder || ''} className={field}
                 onChange={(e) => set(inp.key, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) void submit(); }} />
-              {src.browse && canBrowse() && (
-                <button onClick={async () => { try { const f = await browseFile(sourceMode, src); if (f) set(inp.key, f); } catch { setError('파일 창을 열지 못했습니다 — 앱을 완전히 종료했다가 다시 시작하면 열립니다. 지금은 경로를 직접 적어 주세요.'); } }}
+              {src.browse && canBrowse(src) && (
+                <button onClick={async () => { try { const f = await browsePath(sourceMode, src); if (f) set(inp.key, f); } catch { setError('파일 창을 열지 못했습니다 — 앱을 완전히 종료했다가 다시 시작하면 열립니다. 지금은 경로를 직접 적어 주세요.'); } }}
                   className="shrink-0 px-3 py-2 rounded-lg border border-stone-200 text-sm text-stone-700 hover:border-stone-400">찾아보기…</button>
               )}
             </div>
@@ -976,10 +977,19 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
               <FileInput key={inp.key} inp={inp} value={values[inp.key] || ''}
                 onChange={(v) => setValues((s) => ({ ...s, [inp.key]: v }))} />
             ) : (
-              <input key={inp.key} value={values[inp.key] || ''} placeholder={inp.placeholder || ''}
-                onChange={(e) => setValues((s) => ({ ...s, [inp.key]: e.target.value }))}
-                onKeyDown={(e) => e.key === 'Enter' && run()}
-                className="flex-1 px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400" />
+              <div key={inp.key} className="flex flex-1 min-w-0 gap-2">
+                <input value={values[inp.key] || ''} placeholder={inp.placeholder || ''}
+                  onChange={(e) => setValues((s) => ({ ...s, [inp.key]: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && run()}
+                  className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400" />
+                {inp.browse && canBrowse(inp) && (
+                  <button onClick={async () => {
+                    const src = sourceMode.inputs?.find((input) => input.key === inp.key) || inp;
+                    try { const path = await browsePath(sourceMode, src); if (path) setValues((s) => ({ ...s, [inp.key]: path })); }
+                    catch { setError('파일 창을 열지 못했습니다 — 앱을 완전히 종료했다가 다시 시작하면 열립니다. 지금은 경로를 직접 적어 주세요.'); }
+                  }} className="shrink-0 px-3 py-2 rounded-lg border border-stone-200 text-sm text-stone-700 hover:border-stone-400">찾아보기…</button>
+                )}
+              </div>
             )
           )}
           <button onClick={() => run()}
@@ -1162,11 +1172,11 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
     ins.forEach((inp) => { values[inp.key] = inp.default || ''; });
     const browse = ins.find((inp) => inp.browse);
     const others = ins.filter((inp) => inp !== browse && inp.required);
-    if (!browse || others.length || !canBrowse()) { setMenuOpen(false); setAsking({ idx: i, values }); return; }
+    if (!browse || others.length || !canBrowse(browse)) { setMenuOpen(false); setAsking({ idx: i, values }); return; }
     (async () => {
       let chosen: string | null;
       // 파일 창을 못 띄우면(창만 새로 고쳐져 메인 프로세스에 아직 길이 없을 때 등) 조용히 죽지 않고 작은 창으로 받는다.
-      try { chosen = await browseFile(src, browse); } catch { setMenuOpen(false); setAsking({ idx: i, values }); return; }
+      try { chosen = await browsePath(src, browse); } catch { setMenuOpen(false); setAsking({ idx: i, values }); return; }
       if (!chosen) return;
       const v = { ...values, [browse.key]: chosen };
       const r = await runMode(src, v);
@@ -1201,7 +1211,7 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
       {!folded && (instrument.modes || topButtons.length > 0) && (
         <div className="flex items-center gap-1.5 max-w-2xl mx-auto px-5 pt-4">
           {(instrument.modes || []).map((m, i) => (
-            <button key={i} onClick={() => setModeIdx(i)}
+            <button key={i} onClick={() => (rawModes?.[i]?.inputs || []).some((inp) => inp.browse && inp.browse_kind === 'folder') ? go(i) : setModeIdx(i)}
               className={`px-3.5 py-1.5 rounded-lg text-sm border transition ${
                 i === modeIdx ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}>
               {m.name}

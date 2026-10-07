@@ -108,7 +108,7 @@ modes:
   - name: 기존 폴더 가져오기
     run_label: 가져오기
     inputs:
-      - {key: path, type: text, browse: "~", required: true, placeholder: "코드가 있는 폴더 (git 이 아니어도 된다)"}
+      - {key: path, type: text, browse: "outputs/coding", browse_kind: folder, required: true, placeholder: "코드가 있는 폴더 (git 이 아니어도 된다)"}
     # 목표.md 가 없으면 코드 구조를 읽어 AI 가 초안을 만든다(틈 §6-3). 폴더는 옮기지 않고 등록만.
     action: '[self:workspace]{op: "open", path: $path, kind: "code", register: true}'
     view:

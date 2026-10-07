@@ -68,6 +68,7 @@ modes:
       - key: path
         type: text
         browse: "outputs/coding"
+        browse_kind: folder
         required: true
         placeholder: "코드가 있는 폴더 (git 이 아니어도 됩니다)"
     action: '[self:workspace]{op: "open", path: $path}'

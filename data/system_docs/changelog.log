@@ -2454,3 +2454,5 @@
 [2026-10-07] IBL_COMPOSITION_REPAIR: 호출별 승인·원장 재개/지속 대기, 등록 JSON/명시 값 Script의 동기·백그라운드 계약, 위임 보고 내구 회수·작업별 취소, 내용 지문 재사용·기준별 assert 근거, 기존 부품 계약 후보·실행 기록 연결. 구현/검증: docs/IBL_COMPOSITION_REPAIR_PLAN_2026_10_07.md.
 
 2026-10-07 긴문장34회차: 시설40·예약1173·점검195행 구간 감사와 빈 점검 변형, 독립 AI ep4404/4405 전건 일치. 종료 뒤 명시 프로젝트 ID 해소 실패의 다른 경로 폴백 차단(HTTP PROJECT_NOT_FOUND), JSON 전용 도구 인자의 Callable 오용을 ARGUMENT_CONTRACT·경로로 진단, groupby 교재 모호성 정정. 훈련 IBL 반복 필터 제거·보고서 재독 보완(546527→277213단계). 기존 증류 시험 신원 누출 fixture 복원. 원래/기본/빈 점검/새 경계 변형 검증, 최종 backend9395통과·12건너뜀·실패0. 보고서 docs/experiments/long_sentence_imagination/round_34/report.md.
+
+2026-10-07 코딩 앱 기존 폴더 가져오기: 공통 경로 입력에 browse_kind=folder 선언을 연결해 상단 가져오기·접힌 도구 메뉴에서 macOS 네이티브 폴더 선택 창을 연다. 선택은 기존 workspace open으로 전달하고 취소 시 현재 화면을 보존한다. 경로 입력의 찾아보기와 원격 수동 입력을 유지. 실 Electron에서 폴더 선택 창 열림·취소 복귀 확인, TypeScript 검사 통과.

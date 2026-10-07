@@ -52,6 +52,7 @@ export interface AppInput {
   key: string;
   type: 'text' | 'select' | 'file';   // file: 선택 즉시 /launcher/upload 로 올리고 값=서버 절대경로
   browse?: string;  // text 입력이 파일 경로일 때: 데스크탑은 이 폴더에서 시작하는 파일 창으로 고른다(그 외 표면은 글자 입력 그대로)
+  browse_kind?: 'file' | 'folder';  // 기본 file, folder 는 네이티브 폴더 선택(원격은 경로 입력)
   accept?: string;                     // file 전용 — <input accept> 필터 (예 'image/*,.pdf')
   default?: string;
   placeholder?: string;

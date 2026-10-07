@@ -7,6 +7,13 @@
 args 예:
   {"src":"outputs/x/보고서.md", "dst":"공유창고/0/폴더/이름.html",
    "subtitle":"머리 한 줄", "theme":"card", "drop_lines":["우리 시스템 함의"]}
+
+publish(기본 "direct"): HTML 이 완성되면 dst 에 바로 공개한다(임시 파일 → 원자 교체, 기존 판은
+새 바이트가 완성될 때까지 보존). "review" 를 주면 감독 턴의 검수 대기 계약(supervision_delivery
+stage_artifact)으로 비공개 초안만 만들고 승인 뒤 하네스가 공개한다.
+★2026-10-07 사용자 결정: 보고서 HTML 은 만들었으면 공개한다. 검수 대기 기본값은 "공개 상태: 검수
+대기"라는 보고와 spill 초안 링크만 사용자에게 남겼고(하네스는 80초 뒤 같은 바이트를 공개했다),
+사용자가 공개 여부를 알 수 없었다.
 """
 import io
 import json
@@ -215,11 +222,16 @@ def render(args):
             f'<title>{esc(title)}</title>\n<style>{css}</style>\n</head>\n'
             f'<body>\n<main>\n{head_html}{body}\n</main>\n</body>\n</html>\n')
 
-    # 감독 턴에서는 비공개 초안을 만든다. 하네스가 검수한 바이트를 승인 뒤 공개한다.
-    sys.path.insert(0, str(_ROOT / "backend"))
-    import boot_paths  # noqa: F401
-    from supervision_delivery import stage_artifact
-    publication = stage_artifact(dst, html.encode("utf-8"), _ROOT / "공유창고")
+    publish = str(args.get("publish") or "direct").lower()
+    if publish not in ("direct", "review"):
+        raise ValueError("publish 는 direct|review 중 하나여야 합니다.")
+    publication = None
+    if publish == "review":
+        # 검수 대기 계약(옵트인): 감독 턴에서는 비공개 초안을 만들고 하네스가 승인 뒤 공개한다.
+        sys.path.insert(0, str(_ROOT / "backend"))
+        import boot_paths  # noqa: F401
+        from supervision_delivery import stage_artifact
+        publication = stage_artifact(dst, html.encode("utf-8"), _ROOT / "공유창고")
     if publication:
         output_path = Path(publication["staged"])
     else:

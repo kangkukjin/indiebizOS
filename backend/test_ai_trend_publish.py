@@ -1,4 +1,4 @@
-"""동향 보고서 발행: 최신 선택·원문 보존·공개 대기·실패 시 기존 판 보존."""
+"""동향 보고서 발행: 최신 선택·원문 보존·감독 턴에서도 즉시 공개·실패 시 기존 판 보존."""
 import importlib.util
 from pathlib import Path
 
@@ -59,7 +59,8 @@ def test_latest_source_is_filename_date_and_links_emphasis_survive(publisher):
         assert soup.select_one(link["href"])
 
 
-def test_explicit_saved_source_and_review_queue(publisher, tmp_path, monkeypatch):
+def test_explicit_saved_source_publishes_directly_even_in_supervised_turn(publisher, tmp_path, monkeypatch):
+    """감독 턴(STAGING_ENV)에서도 검수 대기 초안이 아니라 공유창고에 바로 공개한다(2026-10-07 사용자 결정)."""
     mod, folder, target = publisher
     source = folder / "ai_trend_report_2026-10-05.md"
     source.write_text(SOURCE)
@@ -68,10 +69,11 @@ def test_explicit_saved_source_and_review_queue(publisher, tmp_path, monkeypatch
     target.write_text("existing public bytes")
     monkeypatch.setenv(STAGING_ENV, str(tmp_path / "drafts"))
     out = mod.publish({"src": str(source)})
-    assert out["publication_pending"] and not out["published"]
-    assert target.read_text() == "existing public bytes"
-    assert "오늘의 보고서" in Path(out["items"][0]["path"]).read_text()
-    assert out["items"][0]["public_target"] == str(target)
+    assert out["published"] and not out.get("publication_pending")
+    assert out["source"].endswith("2026-10-05.md")
+    assert Path(out["items"][0]["path"]) == target
+    assert "오늘의 보고서" in target.read_text()
+    assert not (tmp_path / "drafts").exists()
 
 
 def test_no_source_or_failed_replace_preserves_public_file(publisher, monkeypatch):

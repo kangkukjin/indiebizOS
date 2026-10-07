@@ -34,3 +34,24 @@ preview와 공개 파일의 바이트가 같다. 두 기존 일정의 시간은 
 기존 파일 보존, PC·모바일·다크 모드와 목차 이동을 검증한다. 실제 10월 6일 보고서를
 1280px·390px로 렌더해 화면을 읽었고 가로 넘침이 없음을 확인했다.
 새 보고서 조사 전체를 다시 실행하거나 backend 전수를 실행한 결과는 아니다.
+
+
+## 2026-10-07 개정 — 검수 대기 폐지, 완성 즉시 공개 (사용자 결정)
+
+10월 7일 04:00 턴은 Markdown·검증 원장·HTML을 모두 만들었지만, 감독 턴의 검수 대기 계약 때문에
+`보고서HTML`이 `data/spill/supervision/…/delivery/` 에 비공개 초안만 두고 `publication_pending:true`
+를 돌려줬다. 실행자는 가이드대로 **"공개 상태: 검수 대기 — 아직 공유창고 공개 완료는 아닙니다"** 와
+spill 초안 링크를 보고했고, 하네스는 80초 뒤(04:11) 같은 바이트를 공개했다. 사용자는 공개 여부를
+알 수 없었다. 사용자 지시: "AI 동향보고서를 쓰고 html 파일을 만들었으면 공유창고에 공개해. 검수대기를 하지 마."
+
+- `보고서HTML` 에 `publish` 인자(기본 `direct`) — 감독 턴에서도 dst 에 바로 원자 교체로 공개한다.
+  `publish:"review"` 를 명시한 호출만 옛 `stage_artifact` 검수 대기 계약을 쓴다(supervision_delivery
+  와 하네스의 승인 공개 경로는 그대로 남아 AI 팁 보고서 등 다른 소비자에 영향 없음).
+- `AI동향발행` 은 기본값대로 즉시 공개, `published` 는 공개 완료 그대로.
+- 가이드 §4 발행 조항·마무리 확인에서 검수 대기 문구를 제거하고 "완성 즉시 공개·공개 파일 경로 전달"로.
+- 05:30 보완 일정 `warehouse_publish_report` 는 소유 프로젝트가 없어 `_owner_run_path` 가 "." 을
+  돌려줬고, project 스코프 `[self:script]` 가 "활성 프로젝트 경로를 확보할 수 없어"로 매일 실패했다
+  (B54-1 수리 뒤에도 소유자 없는 경우는 "."). 소유자 없음·시스템 AI는 시스템 AI 의 정체성 경로
+  `data/` 에서 실행한다 — 시스템 AI 턴이 같은 문장을 돌릴 때와 같은 자리.
+- 회귀: `backend/test_ai_trend_publish.py`(감독 턴 즉시 공개) · `backend/test_supervision_delivery.py`
+  (review 옵트인 / 기본 direct) · `backend/test_imagination_round54_repairs.py` B54-1(소유자 없음 경로).

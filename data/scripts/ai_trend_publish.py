@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""AI 동향 원문을 공유창고의 고정 주소에 발행. 작성 직후와 예약 작업의 공통 경로."""
+"""AI 동향 원문을 공유창고의 고정 주소에 발행. 작성 직후와 예약 작업의 공통 경로.
+
+HTML 이 완성되면 바로 공개한다(보고서HTML publish 기본 direct) — 감독 턴에서도 검수 대기 초안을 만들지
+않는다(2026-10-07 사용자 결정). published 는 공개 완료 여부 그대로다.
+"""
 import json
 import re
 import sys

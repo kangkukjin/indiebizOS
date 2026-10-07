@@ -292,17 +292,24 @@ class CalendarActionsMixin:
 
     @staticmethod
     def _owner_run_path(owner_project_id: str) -> str:
-        """소유 프로젝트 id → 실행 경로. 시스템 AI·미지정·미존재는 "."(종전 동작)."""
-        if not owner_project_id or owner_project_id == "__system_ai__":
-            return "."
-        try:
-            from project_manager import ProjectManager
-            p = ProjectManager().get_project_path(owner_project_id)
-            if p and p.exists():
-                return str(p)
-        except Exception:
-            pass
-        return "."
+        """소유 프로젝트 id → 실행 경로.
+
+        시스템 AI·미지정·미존재는 **시스템 AI 의 정체성 경로(data/)** — 시스템 AI 턴이 같은 문장을
+        돌릴 때와 같은 자리다. ★종전 "." 은 ibl_routing 의 '디폴트' 신호라 project 스코프 도구
+        ([self:script] 등)가 "활성 프로젝트 경로를 확보할 수 없어"로 매일 죽었다(2026-10-07 실측:
+        warehouse_publish_report 05:30 보완 발행이 한 번도 돌지 못함). workspace/system 스코프
+        도구는 경로를 무시하므로 영향 없고, params.project_id 는 여전히 우선한다(resolve_project_path).
+        """
+        if owner_project_id and owner_project_id != "__system_ai__":
+            try:
+                from project_manager import ProjectManager
+                p = ProjectManager().get_project_path(owner_project_id)
+                if p and p.exists():
+                    return str(p)
+            except Exception:
+                pass
+        from runtime_utils import get_base_path
+        return str(get_base_path() / "data")
 
     def _deliver_result_to_chat(self, task: dict, agent_id: str, pipeline: str, result: dict) -> dict:
         """지연/예약 실행의 결과를 소유자에게 전한다 — 알림함 한 통(성공·실패 모두).

@@ -24,11 +24,11 @@ from iblbuild_derive import build_tool_index
 APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list", "map", "calendar", "group", "blocks", "media_player", "engine"}
 # 뷰-이벤트 → 액션 바인딩(상호작용을 데이터로): map 프리미티브가 사용자 조작을 액션으로 흘린다.
 #   marker_click=마커 클릭(IBL 템플릿: 페이로드 $id/$name/$lat/$lng/$url · 또는 {stream: true}=마커 url 을 클라이언트 영상 재생, CCTV) · moveend/center_drag=지도 이동·중심 드래그(자동 재조회, $lat/$lng/$radius/$radius_km) · search_here="이 지역에서 검색" 버튼(사용자가 영역을 잡고 명시적 클릭 시 현재 뷰포트로 재조회, $lat/$lng/$radius/$radius_km)
-# engine(2026-10-05) 뷰-이벤트: selection=편집 표면에서 선택 고정($sel JSON selector·$start/$end/$text·$sheet/$range·$resource/$revision)
+# engine(2026-10-05) 뷰-이벤트: selection=편집 표면에서 선택 고정($sel JSON selector·$start/$end/$text·$sheet/$range·시트는 $table 값 2차원/$text TSV(2026-10-07)·$resource/$revision)
 #   · saved=원본 저장 완료($resource/$revision). 템플릿 'keep' = 페이로드를 $변수로만 남긴다(재조회 없음).
 APP_VIEW_EVENTS = {"marker_click", "moveend", "center_drag", "search_here", "selection", "saved"}
 APP_EVENT_VARS = {"lat", "lng", "id", "name", "radius", "radius_km", "url",
-                  "sel", "resource", "revision", "start", "end", "text", "sheet", "range"}  # 이벤트 페이로드가 액션 템플릿에 주입하는 $변수
+                  "sel", "resource", "revision", "start", "end", "text", "sheet", "range", "table"}  # 이벤트 페이로드가 액션 템플릿에 주입하는 $변수(table=시트 선택 값 2차원, 2026-10-07)
 # engine 뷰 — 외부 편집 엔진 표면을 작업 공간 자료 ID(ref 템플릿)로 바인딩. 어떤 엔진인지는 자료 capabilities 가 정한다.
 APP_ENGINE_EVENTS = {"selection", "saved"}
 APP_MAP_EVENTS = {"marker_click", "moveend", "center_drag", "search_here"}

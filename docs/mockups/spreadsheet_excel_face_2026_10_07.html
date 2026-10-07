@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스프레드시트 — 엑셀 얼굴 목업 (2026-10-07)</title>
+<style>
+  :root { --green:#217346; --green-dark:#185c37; --green-light:#e6f2ec; --line:#d4d4d4; --head:#f3f3f3; --head-sel:#d3f0e0; --text:#222; --muted:#666; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:#fff; color:var(--text); font:13px/1.35 "Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",system-ui,sans-serif; }
+  .app { display:grid; grid-template-rows:34px 30px 92px 28px 1fr 26px 22px; height:100vh; width:100vw; overflow:hidden; }
+  /* 제목줄 */
+  .title { background:var(--green); color:#fff; display:flex; align-items:center; padding:0 10px; gap:14px; font-size:12px; }
+  .title .save { display:flex; align-items:center; gap:6px; } .title .save .dot { width:10px;height:10px;border-radius:50%;background:#9be7bd; display:inline-block; }
+  .title .name { flex:1; text-align:center; font-size:13px; }
+  .title .qat { display:flex; gap:10px; opacity:.9; }
+  /* 리본 탭 */
+  .tabs { display:flex; align-items:flex-end; padding:0 8px; background:#fff; border-bottom:1px solid var(--line); gap:2px; }
+  .tabs .tab { padding:6px 12px 7px; font-size:13px; color:#333; border-bottom:2px solid transparent; }
+  .tabs .tab.file { color:#fff; background:var(--green); border-radius:3px 3px 0 0; margin-right:6px; padding:6px 16px; }
+  .tabs .tab.active { color:var(--green); border-bottom-color:var(--green); font-weight:600; }
+  .tabs .spacer { flex:1; }
+  .tabs .ai { padding:5px 12px 6px; margin-bottom:3px; border:1px solid var(--green); color:var(--green); border-radius:4px; font-weight:600; background:var(--green-light); }
+  /* 리본 */
+  .ribbon { display:flex; background:#fafafa; border-bottom:1px solid var(--line); padding:4px 8px 2px; gap:4px; overflow:hidden; }
+  .group { display:flex; flex-direction:column; justify-content:space-between; padding:0 8px 0 6px; border-right:1px solid #e3e3e3; min-width:max-content; }
+  .group .body { display:flex; align-items:center; gap:4px; height:62px; }
+  .group .label { font-size:11px; color:#555; text-align:center; padding:2px 0 1px; }
+  .big { display:flex; flex-direction:column; align-items:center; justify-content:center; width:52px; height:60px; font-size:11px; gap:3px; border-radius:3px; }
+  .big .ico { width:26px; height:26px; border-radius:4px; background:#e9e9e9; display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .col { display:flex; flex-direction:column; gap:3px; }
+  .row { display:flex; gap:3px; align-items:center; }
+  .btn { height:22px; min-width:22px; padding:0 5px; border:1px solid transparent; border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:12px; background:transparent; }
+  .btn.on { background:#dcdcdc; border-color:#c8c8c8; }
+  .btn:hover { background:#e8e8e8; }
+  .sel { height:22px; border:1px solid #c9c9c9; border-radius:3px; padding:0 6px; display:flex; align-items:center; font-size:12px; background:#fff; gap:6px; }
+  .sel .car { font-size:9px; color:#555; }
+  .swatch { width:14px; height:4px; display:block; margin-top:2px; }
+  /* 수식 입력줄 */
+  .fbar { display:flex; align-items:center; gap:4px; padding:3px 6px; border-bottom:1px solid var(--line); background:#fff; }
+  .namebox { width:92px; height:22px; border:1px solid #c9c9c9; display:flex; align-items:center; justify-content:space-between; padding:0 6px; font-size:12px; }
+  .fx { display:flex; gap:2px; color:#555; font-size:12px; align-items:center; } .fx span { width:22px; text-align:center; }
+  .fx i { font-style:italic; font-family:Georgia,serif; }
+  .formula { flex:1; height:22px; border:1px solid #c9c9c9; padding:0 6px; display:flex; align-items:center; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px; }
+  /* 본문: 격자 + AI 작업창 */
+  .main { display:grid; grid-template-columns:1fr 300px; min-height:0; }
+  .grid { overflow:hidden; position:relative; }
+  table { border-collapse:collapse; table-layout:fixed; width:max-content; }
+  th, td { border:1px solid var(--line); height:21px; padding:0 4px; font-size:12.5px; white-space:nowrap; overflow:hidden; }
+  th { background:var(--head); font-weight:400; color:#444; text-align:center; }
+  th.corner { width:38px; } th.rowh { width:38px; }
+  th.colh { width:92px; } th.colh.w { width:120px; }
+  th.hs { background:var(--head-sel); color:var(--green-dark); font-weight:600; }
+  td { text-align:left; } td.num { text-align:right; } td.head { font-weight:600; background:#f7f7f7; text-align:center; }
+  td.s { background:#e9f3ee; }               /* 선택 범위 */
+  td.active { outline:2px solid var(--green); outline-offset:-2px; background:#fff; }
+  td.pv { background:#fff4d6; }                /* AI 제안 미리보기 */
+  .fill { position:absolute; width:7px; height:7px; background:var(--green); border:1px solid #fff; }
+  .selbox { position:absolute; border:2px solid var(--green); pointer-events:none; }
+  /* AI 작업창 */
+  .pane { border-left:1px solid var(--line); background:#fff; display:flex; flex-direction:column; min-height:0; }
+  .pane .hd { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #eee; font-weight:600; }
+  .pane .hd .x { color:#777; font-weight:400; }
+  .pane .body { padding:10px 12px; display:flex; flex-direction:column; gap:10px; overflow:auto; font-size:12.5px; }
+  .chip { display:inline-block; background:var(--green-light); color:var(--green-dark); border-radius:10px; padding:1px 8px; font-size:11.5px; }
+  .ask { border:1px solid #c9c9c9; border-radius:6px; padding:8px 10px; background:#fafafa; }
+  .ask small { display:block; color:var(--muted); margin-top:4px; }
+  .proposal { border:1px solid #e3e3e3; border-radius:6px; }
+  .proposal .t { padding:6px 10px; background:#f7f7f7; border-bottom:1px solid #e3e3e3; font-weight:600; font-size:12px; }
+  .proposal ul { margin:0; padding:6px 10px 6px 22px; } .proposal li { padding:2px 0; font-family:ui-monospace,Menlo,monospace; font-size:11.5px; }
+  .proposal li b { color:var(--green-dark); font-weight:600; }
+  .acts { display:flex; gap:6px; padding:8px 10px; border-top:1px solid #e3e3e3; }
+  .acts .p { background:var(--green); color:#fff; border:0; border-radius:4px; padding:5px 12px; font-weight:600; }
+  .acts .g { background:#fff; border:1px solid #c9c9c9; border-radius:4px; padding:5px 12px; }
+  .pane .hint { color:var(--muted); font-size:11.5px; line-height:1.5; }
+  /* 시트 탭 */
+  .sheets { display:flex; align-items:center; gap:0; background:#f3f3f3; border-top:1px solid var(--line); padding:0 6px; font-size:12px; }
+  .sheets .nav { color:#777; padding:0 6px; letter-spacing:2px; }
+  .sheets .st { padding:3px 14px; border-right:1px solid #ccc; background:#e9e9e9; }
+  .sheets .st.on { background:#fff; color:var(--green-dark); font-weight:600; border-bottom:2px solid var(--green); }
+  .sheets .add { width:22px; height:22px; border-radius:50%; border:1px solid #bbb; display:flex; align-items:center; justify-content:center; margin-left:8px; color:#555; }
+  /* 상태줄 */
+  .status { display:flex; align-items:center; background:var(--green); color:#fff; font-size:11.5px; padding:0 10px; gap:18px; }
+  .status .sp { flex:1; }
+  .status .z { display:flex; align-items:center; gap:6px; } .status .z .bar { width:90px; height:2px; background:#bfe3cf; position:relative; }
+  .status .z .bar i { position:absolute; left:50%; top:-4px; width:4px; height:10px; background:#fff; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="title">
+    <div class="save"><span class="dot"></span>자동 저장 ● 초안</div>
+    <div class="name">장부_2026.xlsx  —  스프레드시트</div>
+    <div class="qat"><span>↶</span><span>↷</span><span>⤢ 넓게 보기</span></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab file">파일</div>
+    <div class="tab active">홈</div><div class="tab">삽입</div><div class="tab">페이지 레이아웃</div><div class="tab">수식</div><div class="tab">데이터</div><div class="tab">검토</div><div class="tab">보기</div>
+    <div class="spacer"></div>
+    <div class="ai">✦ AI</div>
+  </div>
+
+  <div class="ribbon">
+    <div class="group"><div class="body"><div class="big"><div class="ico">📋</div>붙여넣기</div><div class="col"><div class="btn">✂ 잘라내기</div><div class="btn">⧉ 복사</div><div class="btn">🖌 서식 복사</div></div></div><div class="label">클립보드</div></div>
+    <div class="group"><div class="body"><div class="col"><div class="row"><div class="sel" style="width:120px">맑은 고딕 <span class="car">▼</span></div><div class="sel" style="width:48px">11 <span class="car">▼</span></div><div class="btn">A<sup>+</sup></div><div class="btn">A<sup>−</sup></div></div><div class="row"><div class="btn on"><b>가</b></div><div class="btn"><i>가</i></div><div class="btn"><u>가</u></div><div class="btn">⊞ ▾</div><div class="btn"><span class="col" style="gap:0;align-items:center">◆<span class="swatch" style="background:#ffd966"></span></span>▾</div><div class="btn"><span class="col" style="gap:0;align-items:center">가<span class="swatch" style="background:#c00000"></span></span>▾</div></div></div></div><div class="label">글꼴</div></div>
+    <div class="group"><div class="body"><div class="col"><div class="row"><div class="btn">⤒</div><div class="btn">⇅</div><div class="btn">⤓</div><div class="btn">⟲</div><div class="btn">↵ 자동 줄 바꿈</div></div><div class="row"><div class="btn">≡</div><div class="btn on">☰</div><div class="btn">≡</div><div class="btn">⇤</div><div class="btn">⇥</div><div class="btn">⊟ 병합하고 가운데 맞춤 ▾</div></div></div></div><div class="label">맞춤</div></div>
+    <div class="group"><div class="body"><div class="col"><div class="sel" style="width:120px">회계 <span class="car">▼</span></div><div class="row"><div class="btn">₩ ▾</div><div class="btn">%</div><div class="btn">,</div><div class="btn">.0<sup>+</sup></div><div class="btn">.00<sup>−</sup></div></div></div></div><div class="label">표시 형식</div></div>
+    <div class="group"><div class="body"><div class="col"><div class="btn">▦ 조건부 서식 ▾</div><div class="btn">▤ 표 서식 ▾</div><div class="btn">▣ 셀 스타일 ▾</div></div></div><div class="label">스타일</div></div>
+    <div class="group"><div class="body"><div class="big"><div class="ico">⊕</div>삽입</div><div class="big"><div class="ico">⊖</div>삭제</div><div class="big"><div class="ico">▦</div>서식</div></div><div class="label">셀</div></div>
+    <div class="group" style="border-right:0"><div class="body"><div class="col"><div class="btn">Σ 자동 합계 ▾</div><div class="btn">⇓ 채우기 ▾</div><div class="btn">◌ 지우기 ▾</div></div><div class="big"><div class="ico">⇅</div>정렬 및<br>필터</div><div class="big"><div class="ico">🔍</div>찾기 및<br>선택</div></div><div class="label">편집</div></div>
+  </div>
+
+  <div class="fbar">
+    <div class="namebox">D11 <span class="car" style="font-size:9px;color:#555">▼</span></div>
+    <div class="fx"><span>✗</span><span>✓</span><span><i>fx</i></span></div>
+    <div class="formula">=SUM(D2:D10)</div>
+  </div>
+
+  <div class="main">
+    <div class="grid">
+      <table>
+        <tr><th class="corner"></th><th class="colh">A</th><th class="colh w">B</th><th class="colh">C</th><th class="colh hs">D</th><th class="colh">E</th><th class="colh">F</th><th class="colh">G</th><th class="colh">H</th><th class="colh">I</th><th class="colh">J</th><th class="colh">K</th><th class="colh">L</th><th class="colh">M</th><th class="colh">N</th><th class="colh">O</th><th class="colh">P</th></tr>
+        <tr><th class="rowh">1</th><td class="head">날짜</td><td class="head">거래처</td><td class="head">구분</td><td class="head">수입</td><td class="head">지출</td><td class="head">잔액</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">2</th><td>2026-10-01</td><td>한빛물산</td><td>매출</td><td class="num">1,200,000</td><td class="num">0</td><td class="num">1,200,000</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">3</th><td>2026-10-02</td><td>사무용품 구매</td><td>경비</td><td class="num">0</td><td class="num pv">48,500</td><td class="num">1,151,500</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">4</th><td>2026-10-03</td><td>그린디자인</td><td>매출</td><td class="num">850,000</td><td class="num">0</td><td class="num">2,001,500</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">5</th><td>2026-10-04</td><td>교통비</td><td>경비</td><td class="num">0</td><td class="num pv">32,000</td><td class="num">1,969,500</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">6</th><td>2026-10-05</td><td>온라인 강의료</td><td>매출</td><td class="num">420,000</td><td class="num">0</td><td class="num">2,389,500</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">7</th><td>2026-10-06</td><td>서버 이용료</td><td>경비</td><td class="num">0</td><td class="num pv">99,000</td><td class="num">2,290,500</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">8</th><td>2026-10-06</td><td>북스토어</td><td>매출</td><td class="num">310,000</td><td class="num">0</td><td class="num">2,600,500</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">9</th><td>2026-10-07</td><td>식대</td><td>경비</td><td class="num">0</td><td class="num pv">18,000</td><td class="num">2,582,500</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">10</th><td></td><td></td><td></td><td class="num"></td><td class="num"></td><td class="num"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh hs">11</th><td></td><td class="head">합계</td><td></td><td class="num active"><b>2,780,000</b></td><td class="num">197,500</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">12</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">13</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">14</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">15</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">16</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">17</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">18</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">19</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">20</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">21</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">22</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="rowh">23</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      </table>
+    </div>
+    <aside class="pane">
+      <div class="hd"><span>✦ AI</span><span class="x">✕</span></div>
+      <div class="body">
+        <div><span class="chip">선택: 매출!E3:E9 · 4셀</span></div>
+        <div class="ask">경비 행의 지출 칸이 비어 있어. 구분이 "경비"인 행은 금액을 지출로 옮겨 줘.<small>Enter 전송 · 선택이 없으면 사용 범위 전체</small></div>
+        <div class="proposal">
+          <div class="t">제안 — 바뀌는 셀 4개 (격자에 노란 미리보기)</div>
+          <ul>
+            <li>E3 <b>→ 48,500</b> (비어 있음)</li>
+            <li>E5 <b>→ 32,000</b> (비어 있음)</li>
+            <li>E7 <b>→ 99,000</b> (비어 있음)</li>
+            <li>E9 <b>→ 18,000</b> (비어 있음)</li>
+          </ul>
+          <div class="acts"><button class="p">반영</button><button class="g">닫기</button></div>
+        </div>
+        <div class="hint">반영은 평소 편집과 같은 길입니다 — Ctrl+Z 로 되돌리고, 자동 초안·Ctrl+S 저장을 거칩니다. 요청 뒤 격자가 바뀌면 이 제안은 버려집니다.</div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="sheets">
+    <span class="nav">◂ ▸</span>
+    <span class="st on">매출</span><span class="st">재고</span><span class="st">근태</span>
+    <span class="add">+</span>
+  </div>
+  <div class="status">
+    <span>준비</span><span class="sp"></span>
+    <span>평균: 695,000</span><span>개수: 4</span><span>합계: 2,780,000</span>
+    <span>▦ ▤ ▥</span>
+    <span class="z">−<span class="bar"><i></i></span>+ 100%</span>
+  </div>
+</div>
+</body>
+</html>

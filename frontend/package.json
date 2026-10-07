@@ -36,6 +36,11 @@
     "@rhwp/editor": "0.8.6",
     "@tailwindcss/typography": "^0.5.19",
     "@types/leaflet": "^1.9.21",
+    "@univerjs/preset-sheets-core": "^1.0.3",
+    "@univerjs/preset-sheets-filter": "^1.0.3",
+    "@univerjs/preset-sheets-find-replace": "^1.0.3",
+    "@univerjs/preset-sheets-sort": "^1.0.3",
+    "@univerjs/presets": "^1.0.3",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^0.562.0",
@@ -82,8 +87,14 @@
       "i18n/runtime.mjs"
     ],
     "extraResources": [
-      { "from": "i18n/remote.json", "to": "backend/static/ui_i18n/remote.json" },
-      { "from": "i18n/xray.json", "to": "backend/static/ui_i18n/xray.json" },
+      {
+        "from": "i18n/remote.json",
+        "to": "backend/static/ui_i18n/remote.json"
+      },
+      {
+        "from": "i18n/xray.json",
+        "to": "backend/static/ui_i18n/xray.json"
+      },
       {
         "from": "../backend",
         "to": "backend",

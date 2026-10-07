@@ -154,6 +154,7 @@ OPERATIONS={
     'apply':SpreadsheetWorkspace.apply,'pending':SpreadsheetWorkspace.pending,'receipt':SpreadsheetWorkspace.receipt,
     'save':SpreadsheetWorkspace.save,'export':SpreadsheetWorkspace.export_copy,
     'restore':SpreadsheetWorkspace.restore,'recover':SpreadsheetWorkspace.recover,'close':SpreadsheetWorkspace.close,
+    'grid':SpreadsheetWorkspace.grid,'grid-capture':SpreadsheetWorkspace.grid_capture,  # 격자 엔진 I/O(2026-10-07)
     'engine-config':lambda app,document_id,**args:SpreadsheetEngine(app).config(document_id,**args),
     'engine-capture':lambda app,document_id,**args:SpreadsheetEngine(app).capture(document_id,**args),
 }
@@ -166,7 +167,7 @@ async def command(document_id:str,operation:str,request:Request):
     data=bytearray()
     async for chunk in request.stream():
         data.extend(chunk)
-        if len(data)>5*1024*1024:
+        if len(data)>(64 if operation=='grid-capture' else 5)*1024*1024:
             raise HTTPException(413,'요청 크기 상한을 초과했습니다')
     try:
         body=Command.model_validate_json(data)

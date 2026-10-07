@@ -1,4 +1,4 @@
-import { openPhoto, openPCManager, openLecture, openSpreadsheets, openCoding, openExternalLink } from '../lib/surface-navigation';
+import { openPhoto, openPCManager, openLecture, openCoding, openExternalLink } from '../lib/surface-navigation';
 /**
  * ActionDesktop — 런처의 "앱" 표면 (앱모드)
  *
@@ -72,7 +72,7 @@ const STATIC_DOMAINS: Domain[] = [
   },
   { id: 'lecture', icon: '🎓', label: '강의 만들기', onOpen: () => openLecture(), instruments: [] },
   { id: 'coding', icon: '💻', label: '코딩', onOpen: () => openCoding(), instruments: [] },
-  { id: 'spreadsheets', icon: '📊', label: '스프레드시트', onOpen: () => openSpreadsheets(), instruments: [] },
+  // 스프레드시트 앱 = 매니페스트 계기 `spreadsheet`(data/instruments/spreadsheet.yaml — 옛 시트 창을 흡수, 2026-10-07). 단독 창 #/spreadsheets 도 같은 계기.
   // 문서 앱 = 매니페스트 계기 `document`(data/instruments/document.yaml — 빈노트와 옛 문서 창을 흡수, 2026-10-06).
   // 단독 창 경로(#/documents)는 같은 계기를 한 창에 띄운다(DocumentApp.tsx).
   {
@@ -90,7 +90,7 @@ const STATIC_DOMAINS: Domain[] = [
 // 홈 그리드 기본 배치 순서 (평탄화된 앱 id 기준 — 사용자 레이아웃이 없는 첫 실행/신규 앱의 자동 자리).
 const HOME_ORDER = [
   'realty', 'commercial', 'book', 'obsidian', 'calendar', 'newspaper', 'photo', 'files', 'launch',
-  'lecture', 'document', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic', 'forage',
+  'lecture', 'document', 'spreadsheet', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic', 'forage',
 ];
 
 // STATIC 도메인을 평탄한 앱 목록으로 — instruments 있으면 각각을 앱으로, 없으면(onOpen 도메인)
@@ -132,17 +132,23 @@ function firstFreeSlot(occupied: [number, number][], from = 0): [number, number]
   }
 }
 
-// 빈노트가 문서 앱(document)에 흡수됐다 — 사용자가 빈노트를 두었던 자리·폴더·숨김을 문서 앱이 물려받는다.
+// 흡수된 옛 앱의 자리·폴더·숨김을 새 앱이 물려받는다: 빈노트→문서(2026-10-06), 옛 시트 창→스프레드시트(2026-10-07).
 // 바꿀 것이 없으면 null.
+const INHERIT: [string, string][] = [['binnote', 'document'], ['spreadsheets', 'spreadsheet']];
 function inheritBinnote(l: AppLayout): AppLayout | null {
-  const had = l.positions?.binnote || l.membership?.binnote || l.removed?.includes('binnote');
-  if (!had) return null;
-  const next: AppLayout = { ...l, positions: { ...l.positions }, membership: { ...l.membership }, removed: [...(l.removed || [])] };
-  if (next.positions.binnote && !next.positions.document) next.positions.document = next.positions.binnote;
-  if (next.membership.binnote && !next.membership.document) next.membership.document = next.membership.binnote;
-  if (next.removed.includes('binnote') && !next.removed.includes('document')) next.removed.push('document');
-  delete next.positions.binnote; delete next.membership.binnote;
-  next.removed = next.removed.filter((id) => id !== 'binnote');
+  let next: AppLayout | null = null;
+  for (const [old, now] of INHERIT) {
+    const cur = next || l;
+    const had = cur.positions?.[old] || cur.membership?.[old] || cur.removed?.includes(old);
+    if (!had) continue;
+    const n: AppLayout = { ...cur, positions: { ...cur.positions }, membership: { ...cur.membership }, removed: [...(cur.removed || [])] };
+    if (n.positions[old] && !n.positions[now]) n.positions[now] = n.positions[old];
+    if (n.membership[old] && !n.membership[now]) n.membership[now] = n.membership[old];
+    if (n.removed.includes(old) && !n.removed.includes(now)) n.removed.push(now);
+    delete n.positions[old]; delete n.membership[old];
+    n.removed = n.removed.filter((id) => id !== old);
+    next = n;
+  }
   return next;
 }
 

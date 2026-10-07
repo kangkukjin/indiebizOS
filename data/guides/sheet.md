@@ -121,7 +121,10 @@ LibreOffice가 임시 사본에서 실제로 계산하고 **계산 캐시만 원
 - 출력 생략 시 `<원본명>_calculated.xlsx`. 이 기능이 저장한 파일을 range/read로 읽어야
   갱신된 캐시를 본다. PNG/PDF 화면 검수는 기존 engines:render가 담당한다.
 
-## 스프레드시트 앱의 세션 경로 — [self:workspace] (2026-10-05 개정)
+## 스프레드시트 앱의 세션 경로 — [self:workspace] (2026-10-05 개정 · 2026-10-07 격자 엔진)
+
+앱의 기본 편집 엔진은 브라우저 안 격자(서버 없음)다. `snapshot`·`apply`·`save` 는 편집창에 접수되고 격자가 소비한다 — 계약은 그대로.
+차트·피벗·그림이 있는 통합문서만 사무 엔진(ONLYOFFICE)으로 열린다(`capabilities.engine`: grid/office/none).
 
 열린 통합문서의 스냅샷·범위 읽기·변경 제안·적용·저장·버전·복구는 **`[self:workspace]`** 가 맡는다
 (이 액션의 세션 op 11개를 흡수). 독립 앱은 문서 앱과 같은 OfficeStore·자료 ID·작성 권한·저장/복구 서비스를 쓴다.

@@ -67,7 +67,8 @@
     "instruments": [
       "document",
       "newspaper",
-      "report"
+      "report",
+      "spreadsheet"
     ],
     "scripts": [
       "Cloudflare사용량.py",

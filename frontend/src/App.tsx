@@ -21,7 +21,6 @@ import { PromptCompositionView } from './components/PromptCompositionView';
 import { GuidesView } from './components/GuidesView';
 import { CodingWorkspace } from './components/CodingWorkspace';
 import { DocumentApp } from './components/DocumentApp';
-import { SpreadsheetWorkspace } from './components/SpreadsheetWorkspace';
 import { ExternalUsersView } from './components/ExternalUsersView';
 import { VocabularyView } from './components/VocabularyView';
 import { installVocabularySync } from './components/vocabulary/window-sync';
@@ -236,7 +235,7 @@ function App() {
   if (vocabularyFolder) return <VocabularyView key={vocabularyFolder} folderId={vocabularyFolder} />;
   if (isCoding) return <CodingWorkspace />;
   if (isDocuments) return <DocumentApp />;
-  if (isSpreadsheets) return <SpreadsheetWorkspace />;
+  if (isSpreadsheets) return <DocumentApp id="spreadsheet" label="스프레드시트 앱" />;
 
   // 강의 만들기 워크스페이스 창인 경우
   if (isLectureWorkspace) {

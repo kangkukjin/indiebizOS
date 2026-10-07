@@ -1,4 +1,5 @@
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
+import './spreadsheet.css';  // 사무 편집기(ONLYOFFICE) 경로의 옛 화면 스타일 — 격자 엔진의 보조 엔진으로 남는다(2026-10-07)
 import { openDocuments } from '../../lib/surface-navigation';
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { sheetCommand, sheetRequest, sheetUpload, sessionArgs, type SheetDetail, type Session, type SheetSnapshot } from '../../lib/api-spreadsheets';

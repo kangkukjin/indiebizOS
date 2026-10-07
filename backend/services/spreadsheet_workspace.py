@@ -39,18 +39,68 @@ class SpreadsheetWorkspace(OfficeSessions):
         return [r for r in self.store.list('document') if r['owner']==principal.cache_key() and r.get('app')=='spreadsheet']
 
     def capabilities(self, document_id):
+        """어느 엔진이 여는지는 자료가 정한다(2026-10-07): 격자(브라우저 안, 항상)가 기본, 격자가 그리지 못하는
+        부품(차트·그림·피벗·주석)이 있으면 사무 엔진(ONLYOFFICE, 컨테이너), 외부 연결·매크로는 열람만."""
         d=self._doc(document_id)
-        native=d['source_format']=='xlsx' and document_office.available()
-        blocked=[]
-        if d['source_format'] in {'xlsx','xlsm','xltx','xltm'}:
-            blocked=files.inspect(self.store.bytes(d['source_sha256']))['blocked_parts']
-        native=native and not blocked
+        meta=files.inspect(self.store.bytes(d['source_sha256'])) if d['source_format'] in {'xlsx','xlsm','xltx','xltm'} else {}
+        blocked=meta.get('blocked_parts',[])
+        blockers=meta.get('grid_blockers',[])
+        office_available=document_office.available()
+        grid=d['source_format']=='xlsx' and not blocked and not blockers
+        office=d['source_format']=='xlsx' and not blocked and office_available
+        engine='grid' if grid else 'office' if office else 'none'
+        native=engine!='none'
         session=self.store.get('session',d['session_id']) if d['session_id'] else {}
         can_save=native and session.get('state')!='recovering'
-        return {'engine':'ONLYOFFICE','edit_native':native,'save':can_save,'export_copy':can_save,
-                'reason':'로컬 스프레드시트 편집' if native else '이 형식 또는 외부 연결의 안전한 편집·왕복 검증이 필요합니다. 원본을 보존합니다',
+        if native:
+            reason='브라우저 격자 편집' if engine=='grid' else '격자가 그리지 못하는 부품('+', '.join(blockers)+')이 있어 사무 편집기로 엽니다'
+        elif blockers and not office_available:
+            reason='격자가 그리지 못하는 부품('+', '.join(blockers)+')이 있습니다. 사무 편집 서버를 시작하거나 열람만 합니다'
+        else:
+            reason='이 형식 또는 외부 연결의 안전한 편집·왕복 검증이 필요합니다. 원본을 보존합니다'
+        return {'engine':engine,'grid':grid,'office':office,'office_available':office_available,'grid_blockers':blockers,
+                'empty':bool(meta.get('empty')),'edit_native':native,'save':can_save,'export_copy':can_save,'reason':reason,
                 'blocked_parts':blocked,'release_complete':False,'loss_report':{'status':'unverified'},
                 'unverified':['XLSM VBA 보존','한셀 변환','전체 인수 14개','성능·접근성']}
+
+    # ── 격자 엔진 I/O (docs/SPREADSHEET_APP_ON_IBL_PLAN_2026_10_07.md §4) ──
+    def grid(self, document_id):
+        """현재 초안(세션 blob) 또는 저장본의 격자 투영. 읽기만 — 세션 인자가 필요 없다."""
+        import spreadsheet_grid
+        d=self._doc(document_id)
+        if d['source_format']!='xlsx':
+            raise DocumentUnsupported('격자는 xlsx 통합문서를 엽니다. 다른 형식은 xlsx 사본으로 바꾸세요')
+        s=self.store.get('session',d['session_id']) if d['session_id'] else None
+        blob=s['blob'] if s else d['source_sha256']
+        data=self.store.bytes(blob)
+        meta=files.inspect(data)
+        if meta['blocked_parts'] or meta['grid_blockers']:
+            raise DocumentUnsupported('격자가 열지 못하는 통합문서입니다: '+', '.join(meta['blocked_parts']+meta['grid_blockers']))
+        return {'grid':spreadsheet_grid.to_grid(data),'blob':blob,'document':d,'session':s}
+
+    def grid_capture(self, document_id, session_id, client_id, epoch, expected, operation_id, grid):
+        """격자 → XLSX → 세션 초안(engine-capture 와 같은 자리). 세션 개정 번호를 물고 가므로 겹치면 뒤의 것이 거절된다."""
+        import spreadsheet_grid
+        owner()
+        fingerprint=digest(json.dumps(grid,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode())
+        with self.store.lock():
+            self._doc(document_id)
+            op,cached=self._operation(document_id,operation_id,['grid-capture',session_id,client_id,epoch,expected,fingerprint])
+            if cached is not None:
+                return cached
+            d,s=self._session(document_id,session_id,client_id,epoch,expected)
+            if s.get('state')=='recovering':
+                raise DocumentConflict('실패한 변경의 복구를 먼저 완료하세요')
+            data=spreadsheet_grid.from_grid(self.store.bytes(s['blob']),grid)
+            files.validate(data)
+            s.update(blob=self.store.blob(data),session_revision=expected+1,state='draft' if digest(data)!=d['source_sha256'] else 'saved',engine_id='grid')
+            result={'session':s,'source_sha256':d['source_sha256'],'engine_state':spreadsheet_grid.engine_state(grid)}
+            op['result']={k:v for k,v in result.items() if k!='engine_state'}
+            with self.store.connect() as conn:
+                self.store.put('session',s,conn)
+                self.store.put('operation',op,conn)
+                self.store.event(document_id,{'type':'draft','operation_id':operation_id,'session_revision':s['session_revision'],'engine':'grid'},conn)
+            return result
 
     def validate_output(self, document, data):
         if document['source_format']!='xlsx':
@@ -128,7 +178,7 @@ class SpreadsheetWorkspace(OfficeSessions):
                   'revision_id':d['revision_id'],'session_id':session_id,'engine_epoch':epoch,
                   'session_revision':expected,'blob':s['blob'],'engine_state':engine_state,
                   'engine_state_sha256':digest(engine_state.encode()),'calc_revision':expected,
-                  'calc_status':calculation,'calculation_report':calculation_report,'engine_id':'ONLYOFFICE','created_at':time.time(),
+                  'calc_status':calculation,'calculation_report':calculation_report,'engine_id':s.get('engine_id') or 'ONLYOFFICE','created_at':time.time(),
                   'unsaved':s['blob']!=d['source_sha256']}
             self.store.put('sheet_snapshot',snap)
             return {k:v for k,v in snap.items() if k!='engine_state'}
@@ -142,7 +192,7 @@ class SpreadsheetWorkspace(OfficeSessions):
         return {**result, 'snapshot_id':snapshot_id,'session_revision':s['session_revision'],
                 'calc_revision':s['calc_revision'],'calc_status':s['calc_status'],
                 'resource_id':document_id,'revision_id':s['revision_id'],'unsaved':s['unsaved'],
-                'provenance':{'engine':'ONLYOFFICE','captured_at':s['created_at'],'sha256':s['blob']}}
+                'provenance':{'engine':s.get('engine_id') or 'ONLYOFFICE','captured_at':s['created_at'],'sha256':s['blob']}}
 
     def export_range(self, document_id, snapshot_id, sheet_id, range, format='csv',
                      encoding='utf-8-sig', newline='crlf', text_mode='safe', allow_stale=False):

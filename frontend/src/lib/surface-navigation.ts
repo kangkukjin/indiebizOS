@@ -38,9 +38,6 @@ export function openPromptComposition() {
   openPage('/prompt-composition', window.electron?.openToolWindow?.bind(window.electron, 'prompt-composition'));
 }
 
-export function openSpreadsheets() {
-  openPage('/spreadsheets', window.electron?.openToolWindow?.bind(window.electron, 'spreadsheets'));
-}
 
 export function openDocuments() {
   openPage('/documents', window.electron?.openToolWindow?.bind(window.electron, 'documents'));

@@ -8,21 +8,22 @@ import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 
-export function DocumentApp() {
+/* 단독 창에 계기 하나를 띄운다 — 문서(#/documents)·스프레드시트(#/spreadsheets). 선언은 앱 모드와 같은 한 장. */
+export function DocumentApp({ id = 'document', label = '문서 앱' }: { id?: string; label?: string } = {}) {
   const [instrument, setInstrument] = useState<AppInstrument | null>(null);
   const [missing, setMissing] = useState(false);
   const load = useCallback(async () => {
     const r = await fetch(`${BACKEND_ORIGIN}/launcher/instruments`);
     if (!r.ok) throw new Error(String(r.status));
-    const found = ((await r.json()).instruments as AppInstrument[] || []).find((i) => i.id === 'document') || null;
+    const found = ((await r.json()).instruments as AppInstrument[] || []).find((i) => i.id === id) || null;
     setInstrument((prev) => (prev && JSON.stringify(prev) === JSON.stringify(found) ? prev : found));
     setMissing(!found);
-  }, []);
+  }, [id]);
   const { retrying } = useRetryingLoad(load);
   return (
     <div className="h-screen w-screen overflow-hidden bg-stone-50">
       {instrument ? <GenericInstrument instrument={instrument} />
-        : <p className="p-6 text-sm text-stone-500">{missing ? '문서 앱 선언(document)을 찾지 못했습니다.' : retrying ? '연결 중…' : '문서 앱을 여는 중…'}</p>}
+        : <p className="p-6 text-sm text-stone-500">{missing ? `${label} 선언(${id})을 찾지 못했습니다.` : retrying ? '연결 중…' : `${label}을 여는 중…`}</p>}
     </div>
   );
 }

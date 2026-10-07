@@ -9,16 +9,16 @@
  * ai_dock(2026-10-05, docs/DOCUMENT_APP_ON_BINNOTE_PLAN_2026_10_05.md): 캔버스 아래 AI 한 줄. action 은
  *   $resource/$sel/$start/$end/$text(선택이 없으면 글 전체)/$dock(요청)을 받아 본문을 돌려주고, 반영은 엔진이
  *   사람의 편집으로 캔버스에 넣는다 — 초안·저장·버전은 평소 편집과 같은 길. 지금은 원문 엔진만 독을 띄운다.
- * 편집기 컴포넌트(Office/Hwp/Spreadsheet)는 이 낱말 밑의 바인딩이다 — escape 가 아니다. */
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+ * 편집기 컴포넌트(Office/Hwp/격자 시트)는 이 낱말 밑의 바인딩이다 — escape 가 아니다. */
+import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { AppViewPrim, AppFormField, AppMode, ViewEvent, InstrumentMenu } from './manifest';
 import { jget, tpl, actionRequest, runIBL, suggestionText, InstrumentMenuContext } from './manifest';
 import { AiDockPanel } from './prims-edit';
 import { documentCommand, documentRequest, releaseSession, sessionArgs, PREVIEWABLE, type Detail } from '../../lib/api-documents';
-import { sheetCommand, sheetRequest, type SheetDetail } from '../../lib/api-spreadsheets';
 import { OfficeDocumentEditor } from '../OfficeDocumentEditor';
 import { HwpDocumentEditor } from '../HwpDocumentEditor';
-import { SpreadsheetEditor } from '../spreadsheets/SpreadsheetEditor';
+// 시트 엔진(Univer 격자)은 무겁다 — 시트를 여는 화면에서만 내려받는다(lazy).
+const SheetEngine = lazy(() => import('./sheet/SheetEngine').then((m) => ({ default: m.SheetEngine })));
 import './engine-editors.css';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -61,13 +61,14 @@ export function EnginePrim({ p, data, onViewEvent, vars, block }: {
 }) {
   const ref = tpl(String(p.ref || ''), data).trim();
   const kind = (p.kind ? tpl(String(p.kind), data) : String(jget(data, 'kind') ?? '')).trim();
-  const on = (p.on as Record<string, string> | undefined) || {};
+  const on = useMemo(() => (p.on as Record<string, string> | undefined) || {}, [p.on]);  // 매 렌더 새 객체면 emit 이 바뀌어 자식의 effect 가 재구독된다
   const emit = useCallback((event: 'selection' | 'saved', payload: Payload) => {
     onViewEvent?.(on[event] || 'keep', { resource: ref, ...payload });
   }, [on, onViewEvent, ref]);
   if (!ref) return null;  // 열린 자료가 없으면 자리를 차지하지 않는다 — 같은 화면에 목록과 캔버스를 함께 선언할 수 있게(문서함의 폴더 탐색)
   if (kind === 'code') return <p className="text-sm text-stone-400">코딩 작업 공간은 엔진 표면이 없습니다 — <code>blocks</code>(diff·파일)와 <code>selection</code> 으로 봅니다.</p>;
-  if (kind === 'sheet') return <SheetEngine id={ref} emit={emit} />;
+  // 시트: 엑셀 얼굴 + 격자 엔진(기본)/사무 엔진 — generic/sheet/SheetEngine.tsx (2026-10-07)
+  if (kind === 'sheet') return <Suspense fallback={<p className="text-sm text-stone-400">격자 엔진을 내려받는 중…</p>}><SheetEngine id={ref} emit={emit} host={{ dock: p.ai_dock as Dock | undefined, vars, block, clientId: clientId(), holderAlive }} /></Suspense>;
   return <DocumentEngine id={ref} emit={emit} host={{ dock: p.ai_dock as Dock | undefined, vars, block }} />;
 }
 
@@ -370,47 +371,6 @@ function SourceEngine({ detail, onChange, emit, host }: {
             ask={ask} onApply={applySuggestion} applyLabel={`반영 (${scope} 대체)`} />
         </div>
       )}
-    </div>
-  );
-}
-
-/* ── 시트: 엔진 편집기 + 범위 선택 고정 바 ── */
-function SheetEngine({ id, emit }: { id: string; emit: (e: 'selection' | 'saved', p: Payload) => void }) {
-  const [detail, setDetail] = useState<SheetDetail | null>(null);
-  const [error, setError] = useState('');
-  const [sheet, setSheet] = useState('');
-  const [range, setRange] = useState('A1:D10');
-  const client = useRef(clientId());
-  const capture = useRef<null | (() => Promise<void>)>(null);
-  useEffect(() => {
-    let dead = false;
-    (async () => {
-      try {
-        let d = await sheetRequest<SheetDetail>(`/${encodeURIComponent(id)}`);
-        if (d.capabilities.edit_native && (!d.session || d.session.client_id !== client.current)) {
-          d = await sheetCommand<SheetDetail>(id, 'sessions', { client_id: client.current });
-        }
-        if (!dead) { setDetail(d); setSheet(d.workbook.sheets?.[0]?.name || ''); }
-      } catch (e) { if (!dead) setError(e instanceof Error ? e.message : String(e)); }
-    })();
-    return () => { dead = true; };
-  }, [id]);
-  if (error) return <p role="alert" className="text-sm text-red-600">{error}</p>;
-  if (!detail) return <p className="text-sm text-stone-400">시트 편집 표면을 여는 중…</p>;
-  const fix = () => emit('selection', { sel: { sheet, range }, sheet, range, revision: detail.document.revision_id });
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <select value={sheet} onChange={(e) => setSheet(e.target.value)} className="rounded-lg border border-stone-200 px-2 py-1">
-          {(detail.workbook.sheets || []).map((s) => <option key={s.sheet_id} value={s.name}>{s.name}</option>)}
-        </select>
-        <input value={range} onChange={(e) => setRange(e.target.value)} className="rounded-lg border border-stone-200 px-2 py-1 w-32" aria-label="범위" />
-        <button onClick={fix} className="px-3 py-1.5 rounded-lg border border-stone-300 hover:border-stone-500">범위 선택 고정</button>
-      </div>
-      {detail.capabilities.edit_native
-        ? <SpreadsheetEditor key={detail.document.id} detail={detail} onChange={setDetail} captureRef={capture}
-            onSaved={(d) => emit('saved', { revision: d.document.revision_id })} />
-        : <p className="text-sm text-stone-500">{detail.capabilities.reason} — 범위 읽기·제안은 <code>[self:workspace]</code> 로 할 수 있습니다.</p>}
     </div>
   );
 }

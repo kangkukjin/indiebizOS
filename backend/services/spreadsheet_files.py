@@ -53,8 +53,12 @@ def _inspect_bytes(data):
                 raise ValueError('시트 관계가 올바르지 않습니다')
             sheets.append({'sheet_id':s.get('sheetId'), 'name':s.get('name'), 'path':path, 'state':s.get('state','visible')})
         blocked = []
+        empty = True
         for sheet in sheets:
-            for formula in fromstring(z.read(sheet['path'])).iter(NS+'f'):
+            root = fromstring(z.read(sheet['path']))
+            if empty and (root.find('.//'+NS+'c/'+NS+'v') is not None or root.find('.//'+NS+'c/'+NS+'f') is not None):
+                empty = False
+            for formula in root.iter(NS+'f'):
                 if re.search(r"\[[^\]]+\][A-Za-z0-9 _.']*!|https?:|WEBSERVICE|IMAGE\s*\(|RTD\s*\(|\|",formula.text or '',re.I):
                     blocked.append(sheet['path']+':external-formula')
         for name in z.namelist():
@@ -65,8 +69,10 @@ def _inspect_bytes(data):
                     if r.get('TargetMode') == 'External' and not r.get('Type','').endswith('/hyperlink'):
                         blocked.append(name+':external-resource')
         properties = book.find(NS+'workbookPr')
+        from spreadsheet_grid import grid_blockers
         return {'sheets':sheets,'date_system':'1904' if properties is not None and properties.get('date1904') in ('1','true') else '1900',
-                'blocked_parts':sorted(set(blocked)), 'calc_properties':dict(book.find(NS+'calcPr').attrib) if book.find(NS+'calcPr') is not None else {}}
+                'blocked_parts':sorted(set(blocked)), 'calc_properties':dict(book.find(NS+'calcPr').attrib) if book.find(NS+'calcPr') is not None else {},
+                'grid_blockers':grid_blockers(z.namelist()), 'empty':empty}
 
 
 def validate(data):

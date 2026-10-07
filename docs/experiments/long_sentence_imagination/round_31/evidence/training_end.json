@@ -1,0 +1,49 @@
+{
+  "ended": "2026-10-07T15:31:37.830656+09:00",
+  "head": "709afecf91846905774fe2ccb841fd4828b725b9",
+  "terminals": [
+    {
+      "label": "trainer_main",
+      "task_ref": null,
+      "run_id": "6b9f900cc4de46078c095777decad274",
+      "state": "completed",
+      "elapsed": 1.3654162883758545
+    },
+    {
+      "label": "trainer_variant",
+      "task_ref": null,
+      "run_id": "b03e258a3c0149708ef268372c530d5c",
+      "state": "completed",
+      "elapsed": 1.0806400775909424
+    },
+    {
+      "label": "trainer_mixed_before",
+      "task_ref": null,
+      "run_id": "c7cd987cb8d84ceeb9b542394a8d9395",
+      "state": "completed",
+      "elapsed": 1.0637397766113281
+    },
+    {
+      "label": "ai_main_terminal",
+      "task_ref": {
+        "kind": "delegation",
+        "owner": "system",
+        "task_id": "task_sysai_feb66266"
+      },
+      "run_id": "run_d681b639fc8e37416377",
+      "state": "succeeded",
+      "elapsed": 19.80449104309082
+    },
+    {
+      "label": "ai_variant_done",
+      "task_ref": {
+        "kind": "delegation",
+        "owner": "system",
+        "task_id": "task_sysai_bd8f8b81"
+      },
+      "run_id": "run_893e14f8623657f7c0ad",
+      "state": "succeeded",
+      "elapsed": 10.651378870010376
+    }
+  ]
+}

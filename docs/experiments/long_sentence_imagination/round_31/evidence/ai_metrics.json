@@ -1,0 +1,212 @@
+[
+  {
+    "episode": 4391,
+    "total_ms": 128906,
+    "usage_by_call": [
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 2432,
+        "input": 3095,
+        "latency_ms": 1193,
+        "model": "deepseek-flash",
+        "output": 2,
+        "phase": "classify",
+        "provider": "OpenAI",
+        "role": "oneshot:classify",
+        "round_index": 1
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 53032,
+        "cache_read": 51428,
+        "input": 104464,
+        "latency_ms": 34498,
+        "model": "opus",
+        "output": 3236,
+        "phase": "plan",
+        "provider": "ClaudeCode",
+        "role": "consciousness",
+        "round_index": 2
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 109828,
+        "cache_read": 712814,
+        "input": 822658,
+        "latency_ms": 46875,
+        "model": "opus",
+        "output": 5064,
+        "phase": "execute",
+        "provider": "ClaudeCode",
+        "role": "execution",
+        "round_index": 8
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 22238,
+        "cache_read": 544,
+        "input": 22784,
+        "latency_ms": 10175,
+        "model": "opus",
+        "output": 835,
+        "phase": "evaluate",
+        "provider": "ClaudeCode",
+        "role": "oneshot:evaluate",
+        "round_index": 1
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 20196,
+        "cache_read": 333008,
+        "input": 353214,
+        "latency_ms": 22814,
+        "model": "opus",
+        "output": 2092,
+        "phase": "repair",
+        "provider": "ClaudeCode",
+        "role": "execution",
+        "round_index": 5
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 24299,
+        "cache_read": 5211,
+        "input": 29512,
+        "latency_ms": 4644,
+        "model": "opus",
+        "output": 187,
+        "phase": "evaluate",
+        "provider": "ClaudeCode",
+        "role": "oneshot:evaluate",
+        "round_index": 1
+      }
+    ],
+    "cost": [
+      {
+        "check_rejections": 1,
+        "evaluation_calls": 2,
+        "evaluation_checkpoint_s": 0.001731,
+        "evaluation_model_s": 16.123,
+        "evaluation_prepare_s": 0.019817,
+        "evaluation_visual_s": 0.002761,
+        "evaluation_wait_s": 0.000815,
+        "execution_calls": 9,
+        "execution_failures": 2,
+        "execution_tool_s": 3.3499999999999996,
+        "internal_tool_failures": 0,
+        "request_intent": "task",
+        "source_failures": 0,
+        "supervisor_cache_read": 51428,
+        "supervisor_calls": 1,
+        "supervisor_input": 104464,
+        "supervisor_model_s": 35.246,
+        "supervisor_native_failures": 0,
+        "supervisor_native_tools": 1,
+        "supervisor_output": 3236,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 127.445
+      }
+    ],
+    "compactions": 0,
+    "recall_event_count": 2,
+    "totals": {
+      "input": 1335727,
+      "output": 11416,
+      "cache_read": 1105437,
+      "cache_create": 229593
+    }
+  },
+  {
+    "episode": 4392,
+    "total_ms": 97327,
+    "usage_by_call": [
+      {
+        "accounting": "billable_usage",
+        "cache_create": 0,
+        "cache_read": 2432,
+        "input": 2791,
+        "latency_ms": 923,
+        "model": "deepseek-flash",
+        "output": 3,
+        "phase": "classify",
+        "provider": "OpenAI",
+        "role": "oneshot:classify",
+        "round_index": 1
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 28416,
+        "cache_read": 29072,
+        "input": 57490,
+        "latency_ms": 45922,
+        "model": "opus",
+        "output": 3270,
+        "phase": "plan",
+        "provider": "ClaudeCode",
+        "role": "consciousness",
+        "round_index": 1
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 38900,
+        "cache_read": 724214,
+        "input": 763132,
+        "latency_ms": 43692,
+        "model": "opus",
+        "output": 4228,
+        "phase": "execute",
+        "provider": "ClaudeCode",
+        "role": "execution",
+        "round_index": 9
+      },
+      {
+        "accounting": "billable_usage",
+        "cache_create": 14894,
+        "cache_read": 5211,
+        "input": 20107,
+        "latency_ms": 3442,
+        "model": "opus",
+        "output": 184,
+        "phase": "evaluate",
+        "provider": "ClaudeCode",
+        "role": "oneshot:evaluate",
+        "round_index": 1
+      }
+    ],
+    "cost": [
+      {
+        "check_rejections": 0,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.000783,
+        "evaluation_model_s": 4.309,
+        "evaluation_prepare_s": 0.007907,
+        "evaluation_visual_s": 0.001171,
+        "evaluation_wait_s": 0.000863,
+        "execution_calls": 8,
+        "execution_failures": 2,
+        "execution_tool_s": 2.212,
+        "internal_tool_failures": 0,
+        "request_intent": "task",
+        "source_failures": 0,
+        "supervisor_cache_read": 29072,
+        "supervisor_calls": 1,
+        "supervisor_input": 57490,
+        "supervisor_model_s": 46.593,
+        "supervisor_output": 3270,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 97.306
+      }
+    ],
+    "compactions": 0,
+    "recall_event_count": 2,
+    "totals": {
+      "input": 843520,
+      "output": 7685,
+      "cache_read": 760929,
+      "cache_create": 82210
+    }
+  }
+]

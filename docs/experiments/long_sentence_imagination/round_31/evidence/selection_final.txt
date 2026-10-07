@@ -1,0 +1,8 @@
+변경 4 파일, backend 모듈 1개 → 전이 시험 파일 6/580 (1%)
+  test_episode3507_3510_repairs: import 전이
+  test_fs_grep: 변경된 시험
+  test_grep_counts: 경로 참조 data/packages/installed/tools/system_essentials/fs_grep.py
+  test_memory_final_retention: import 전이
+  test_shell_shadow_gate: 변경된 시험
+  test_supervisor_episode_repairs: import 전이
+backend/test_episode3507_3510_repairs.py backend/test_fs_grep.py backend/test_grep_counts.py backend/test_memory_final_retention.py backend/test_shell_shadow_gate.py backend/test_supervisor_episode_repairs.py

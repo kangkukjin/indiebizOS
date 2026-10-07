@@ -1,0 +1,22 @@
+[
+  {
+    "episode": 4391,
+    "message": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"PIPE_COLLISION\", \"message\": \"[self:edit]은(는) 파이프 입력을 받지 않습니다. 앞 단계 값은 $x = … 로 받아 필요한 인자에 넘기세요(예: {인자: $x.text}).\", \"source_span\": {\"source_hash\": \"6b79795d1e27d75f711dfc2f74c373b49b8ddf5a51ba10e83c495926d569755b\", \"start\": 445, \"end\": 669, \"line\": 1, \"column\": 446}, \"call_path\": [], \"location\": {\"source_hash\": \"6b79795d1e27d75f711dfc2f74c373b49b8ddf5a51ba10e83c495926d569755b\", \"start\": 445, \"end\": 669, \"line\": 1, \"column\": 446, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 1, \"end_column\": 670, \"offset_encoding\": \"unicode-codepoints\"}, \"rule\": \"PIPE_COLLISION\", \"severity\": \"error\", \"hint\": \"파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요.\"}], \"guards\": [], \"guards_total\": 0, \"guards_inner\": 0, \"guards_omitted\": 0, \"result_type\": \"{message: Text}\", \"effects\": [\"write_external\"], \"functions\": {}, \"plan_hash\": \"9ccdd2e011631e4e151db0b92a030783c24f311fc7385e95272badc889e0b5d3\", \"dependenc",
+    "check_rejected": true
+  },
+  {
+    "episode": 4391,
+    "message": "PreToolUse:Bash hook error: [\"/Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3\" \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/base/shell_shadow_gate.py\" \"/Users/kangkukjin/Desktop/AI/indiebizOS\"]: 셸 그림자 거절 — `head -3 audit.py` 은(는) [self:read] 로 표현되는 일입니다. IBL 로:\n  [self:read]{limit: 3, path: \"audit.py\"} — execute_ibl 로 실행한다. 다른 param: path, format, limit, tables, blocks, end, client, mime, ocr, pages, extract_images, max_blocks, max_rows, sheet, numbered, tail, offset. 셸은 IBL 낱말이 없는 일(git·pytest·빌드·등록 스크립트 실행·프로세스 조회)에만. 결과가 잘리면 셸로 갈아타지 말고 같은 낱말의 limit·범위 param 으로 좁혀라.\n",
+    "check_rejected": false
+  },
+  {
+    "episode": 4392,
+    "message": "PreToolUse:Bash hook error: [\"/Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3\" \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/base/shell_shadow_gate.py\" \"/Users/kangkukjin/Desktop/AI/indiebizOS\"]: 셸 그림자 거절 — `ls source` 은(는) [self:list] 로 표현되는 일입니다. IBL 로:\n  [self:list]{path: \"source\"} — execute_ibl 로 실행한다. 다른 param: path, pattern. 셸은 IBL 낱말이 없는 일(git·pytest·빌드·등록 스크립트 실행·프로세스 조회)에만. 결과가 잘리면 셸로 갈아타지 말고 같은 낱말의 limit·범위 param 으로 좁혀라.\n",
+    "check_rejected": false
+  },
+  {
+    "episode": 4392,
+    "message": "PreToolUse:Bash hook error: [\"/Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3\" \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/base/shell_shadow_gate.py\" \"/Users/kangkukjin/Desktop/AI/indiebizOS\"]: 셸 그림자 거절 — `cat source/*.log` 은(는) [self:read] 로 표현되는 일입니다. IBL 로:\n  [self:read]{path: \"source/*.log\"} — execute_ibl 로 실행한다. 다른 param: path, format, limit, tables, blocks, end, client, mime, ocr, pages, extract_images, max_blocks, max_rows, sheet, numbered, tail, offset. 셸은 IBL 낱말이 없는 일(git·pytest·빌드·등록 스크립트 실행·프로세스 조회)에만. 결과가 잘리면 셸로 갈아타지 말고 같은 낱말의 limit·범위 param 으로 좁혀라.\n",
+    "check_rejected": false
+  }
+]

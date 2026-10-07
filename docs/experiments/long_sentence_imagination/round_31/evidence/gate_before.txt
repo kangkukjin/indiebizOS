@@ -1,0 +1,33 @@
+FF.                                                                      [100%]
+=================================== FAILURES ===================================
+_ test_unexpanded_glob_has_no_false_literal_path_prescription[cat source/*.log] _
+
+command = 'cat source/*.log'
+
+    @pytest.mark.parametrize('command', ['cat source/*.log', 'head -3 source/device?.txt'])
+    def test_unexpanded_glob_has_no_false_literal_path_prescription(command):
+        verdict = _judge(command)
+        assert verdict and '셸 그림자 거절' in verdict
+>       assert '실제 파일 목록' in verdict
+E       assert '실제 파일 목록' in '셸 그림자 거절 — `cat source/*.log` 은(는) [self:read] 로 표현되는 일입니다. IBL 로:\n  [self:read]{path: "source/*.log"} — execute_ibl...d, tail, offset. 셸은 IBL 낱말이 없는 일(git·pytest·빌드·등록 스크립트 실행·프로세스 조회)에만. 결과가 잘리면 셸로 갈아타지 말고 같은 낱말의 limit·범위 param 으로 좁혀라.'
+
+backend/test_shell_shadow_gate.py:351: AssertionError
+_ test_unexpanded_glob_has_no_false_literal_path_prescription[head -3 source/device?.txt] _
+
+command = 'head -3 source/device?.txt'
+
+    @pytest.mark.parametrize('command', ['cat source/*.log', 'head -3 source/device?.txt'])
+    def test_unexpanded_glob_has_no_false_literal_path_prescription(command):
+        verdict = _judge(command)
+        assert verdict and '셸 그림자 거절' in verdict
+>       assert '실제 파일 목록' in verdict
+E       assert '실제 파일 목록' in '셸 그림자 거절 — `head -3 source/device?.txt` 은(는) [self:read] 로 표현되는 일입니다. IBL 로:\n  [self:read]{limit: 3, path: "source/d...d, tail, offset. 셸은 IBL 낱말이 없는 일(git·pytest·빌드·등록 스크립트 실행·프로세스 조회)에만. 결과가 잘리면 셸로 갈아타지 말고 같은 낱말의 limit·범위 param 으로 좁혀라.'
+
+backend/test_shell_shadow_gate.py:351: AssertionError
+============================= slowest 15 durations =============================
+
+(9 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_shell_shadow_gate.py::test_unexpanded_glob_has_no_false_literal_path_prescription[cat source/*.log]
+FAILED backend/test_shell_shadow_gate.py::test_unexpanded_glob_has_no_false_literal_path_prescription[head -3 source/device?.txt]
+2 failed, 1 passed, 45 deselected in 0.21s

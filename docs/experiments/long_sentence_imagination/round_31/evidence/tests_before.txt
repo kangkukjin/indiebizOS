@@ -1,0 +1,469 @@
+FFFFFFFFFFFFFF..                                                         [100%]
+=================================== FAILURES ===================================
+_ test_matching_text_preserves_encoding_and_trailing_whitespace[\n-utf-8-True] _
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107579a70>
+use_rg = True, encoding = 'utf-8', ending = '\n'
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert 'ALARM[1] 장비 점검' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검  	
+E         ?               ---
+E         + ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+_ test_matching_text_preserves_encoding_and_trailing_whitespace[\n-utf-8-False] _
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1075789d0>
+use_rg = False, encoding = 'utf-8', ending = '\n'
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert 'ALARM[1] 장비 점검' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검  	
+E         ?               ---
+E         + ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+_ test_matching_text_preserves_encoding_and_trailing_whitespace[\n-cp949-True] _
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1077284d0>
+use_rg = True, encoding = 'cp949', ending = '\n'
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert '' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+_ test_matching_text_preserves_encoding_and_trailing_whitespace[\n-cp949-False] _
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10794d150>
+use_rg = False, encoding = 'cp949', ending = '\n'
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert 'ALARM[1] 장비 점검' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검  	
+E         ?               ---
+E         + ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+_ test_matching_text_preserves_encoding_and_trailing_whitespace[\r\n-utf-8-True] _
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10794d7b0>
+use_rg = True, encoding = 'utf-8', ending = '\r\n'
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert 'ALARM[1] 장비 점검' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검  	
+E         ?               ---
+E         + ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+_ test_matching_text_preserves_encoding_and_trailing_whitespace[\r\n-utf-8-False] _
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1078bf250>
+use_rg = False, encoding = 'utf-8', ending = '\r\n'
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert 'ALARM[1] 장비 점검' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검  	
+E         ?               ---
+E         + ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+_ test_matching_text_preserves_encoding_and_trailing_whitespace[\r\n-cp949-True] _
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e6')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1078bf550>
+use_rg = True, encoding = 'cp949', ending = '\r\n'
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert '' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+_ test_matching_text_preserves_encoding_and_trailing_whitespace[\r\n-cp949-False] _
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1078e7200>
+use_rg = False, encoding = 'cp949', ending = '\r\n'
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert 'ALARM[1] 장비 점검' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검  	
+E         ?               ---
+E         + ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+__ test_matching_text_preserves_encoding_and_trailing_whitespace[-utf-8-True] __
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e8')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1078e75c0>
+use_rg = True, encoding = 'utf-8', ending = ''
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert 'ALARM[1] 장비 점검' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검  	
+E         ?               ---
+E         + ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+_ test_matching_text_preserves_encoding_and_trailing_whitespace[-utf-8-False] __
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e9')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1076f6b30>
+use_rg = False, encoding = 'utf-8', ending = ''
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert 'ALARM[1] 장비 점검' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검  	
+E         ?               ---
+E         + ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+__ test_matching_text_preserves_encoding_and_trailing_whitespace[-cp949-True] __
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e10')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1078a75b0>
+use_rg = True, encoding = 'cp949', ending = ''
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert '' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+_ test_matching_text_preserves_encoding_and_trailing_whitespace[-cp949-False] __
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_matching_text_preserves_e11')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107543860>
+use_rg = False, encoding = 'cp949', ending = ''
+
+    @pytest.mark.parametrize('use_rg', [True, False])
+    @pytest.mark.parametrize('encoding', ['utf-8', 'cp949'])
+    @pytest.mark.parametrize('ending', ['\n', '\r\n', ''])
+    def test_matching_text_preserves_encoding_and_trailing_whitespace(
+        tmp_path, monkeypatch, use_rg, encoding, ending,
+    ):
+        if use_rg and not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        if not use_rg:
+            monkeypatch.setattr(GREP, '_RG_BIN', None)
+        path = tmp_path / 'device.txt'
+        text = 'ALARM[1] 장비 점검  \t'
+        path.write_bytes(('before\n' + text + ending).encode(encoding))
+        result = json.loads(GREP.run({
+            'path': str(path), 'pattern': 'ALARM[1]', 'regex': False, 'context': 1,
+        }, str(tmp_path)))
+        assert result['total'] == 1
+        assert result['total_complete'] is True
+        assert result['truncated'] is False
+>       assert result['items'][0]['내용'] == text
+E       AssertionError: assert 'ALARM[1] 장비 점검' == 'ALARM[1] 장비 점검  \t'
+E         
+E         - ALARM[1] 장비 점검  	
+E         ?               ---
+E         + ALARM[1] 장비 점검
+
+backend/test_fs_grep.py:37: AssertionError
+____________________ test_long_cp949_match_reports_clipping ____________________
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_long_cp949_match_reports_0')
+
+    def test_long_cp949_match_reports_clipping(tmp_path):
+        if not GREP._RG_BIN:
+            pytest.skip('ripgrep unavailable')
+        path = tmp_path / 'device.txt'
+        path.write_bytes(('ALARM ' + '가' * 600 + '\n').encode('cp949'))
+        result = json.loads(GREP.run({'path': str(path), 'pattern': 'ALARM'}, str(tmp_path)))
+>       assert result['items'][0]['내용'].startswith('ALARM 가')
+E       AssertionError: assert False
+E        +  where False = <built-in method startswith of str object at 0x101463318>('ALARM 가')
+E        +    where <built-in method startswith of str object at 0x101463318> = ''.startswith
+
+backend/test_fs_grep.py:47: AssertionError
+_________________ test_context_stops_after_last_requested_line _________________
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4564/test_context_stops_after_last_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1079ac050>
+
+    def test_context_stops_after_last_requested_line(tmp_path, monkeypatch):
+        path = tmp_path / 'large.txt'
+        path.write_text('before\nALARM 한글  \t\nafter\n' + 'unused\n' * 10000)
+        observations = {'lines': 0, 'opens': 0}
+    
+        class WatchedFile:
+            def __init__(self, *args, **kwargs):
+                self.file = builtins.open(*args, **kwargs)
+                observations['opens'] += 1
+    
+            def __enter__(self):
+                return self
+    
+            def __exit__(self, *args):
+                self.file.close()
+    
+            def __iter__(self):
+                return self
+    
+            def __next__(self):
+                line = next(self.file)
+                observations['lines'] += 1
+                return line
+    
+        monkeypatch.setattr(GREP, 'open', WatchedFile, raising=False)
+        cache = {}
+        expected = {2: [(1, 'before'), (2, 'ALARM 한글  \t'), (3, 'after')]}
+        assert GREP._context_windows(str(path), [2], 1, cache) == expected
+>       assert observations == {'lines': 3, 'opens': 1}
+E       AssertionError: assert {'lines': 10003, 'opens': 1} == {'lines': 3, 'opens': 1}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'lines': 10003} != {'lines': 3}
+E         Use -v to get more diff
+
+backend/test_fs_grep.py:80: AssertionError
+============================= slowest 15 durations =============================
+
+(15 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[\n-utf-8-True]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[\n-utf-8-False]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[\n-cp949-True]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[\n-cp949-False]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[\r\n-utf-8-True]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[\r\n-utf-8-False]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[\r\n-cp949-True]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[\r\n-cp949-False]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[-utf-8-True]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[-utf-8-False]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[-cp949-True]
+FAILED backend/test_fs_grep.py::test_matching_text_preserves_encoding_and_trailing_whitespace[-cp949-False]
+FAILED backend/test_fs_grep.py::test_long_cp949_match_reports_clipping - Asse...
+FAILED backend/test_fs_grep.py::test_context_stops_after_last_requested_line
+14 failed, 2 passed in 0.33s

@@ -4,6 +4,7 @@ handler.py 에서 verbatim 이동: [self:grep] 2층 검색(rg --json 고속 경�
 인코딩-인지 폴백) + 전수 계수(_rg_count) + grep_files 분기 본체(run).
 handler 가 fs_meta 선례(_load_sibling)로 위임한다.
 """
+import base64
 import glob
 import json
 import os
@@ -55,26 +56,45 @@ _RG_BIN = _find_rg()
 
 def _context_windows(abs_fp, line_nums, context, cache):
     """매칭 줄 앞뒤 context 줄 — {줄번호: [(n, text), …]} (2026-09-05, grep -A/-B/-C 의 자리).
-    파일은 인코딩 폴백으로 한 번만 읽어 cache 에 둔다(rg·파이썬 두 경로가 같은 창을 낸다)."""
-    lines = cache.get(abs_fp)
-    if lines is None:
-        lines = []
-        for enc, err in _GREP_ENCODINGS:
-            try:
-                with open(abs_fp, 'r', encoding=enc, errors=err) as f:
-                    lines = [l.rstrip("\n").rstrip("\r") for l in f]
-                break
-            except UnicodeDecodeError:
-                continue
-            except (PermissionError, OSError):
-                break
-        cache[abs_fp] = lines
-    out = {}
-    for ln in line_nums:
-        lo = max(1, ln - context)
-        hi = min(len(lines), ln + context)
-        out[ln] = [(n, lines[n - 1]) for n in range(lo, hi + 1)]
+    필요한 줄만 보존하고 마지막 창 뒤는 읽지 않는다. 인코딩 재시도는 부분 결과를 버린다."""
+    key = (abs_fp, tuple(sorted(set(line_nums))), context)
+    if key in cache:
+        return cache[key]
+    wanted = {n for ln in line_nums for n in range(max(1, ln - context), ln + context + 1)}
+    if not wanted:
+        return {}
+    last = max(wanted)
+    lines = {}
+    for enc, err in _GREP_ENCODINGS:
+        lines = {}
+        try:
+            with open(abs_fp, 'r', encoding=enc, errors=err) as f:
+                for n, line in enumerate(f, 1):
+                    if n in wanted:
+                        lines[n] = line.rstrip("\r\n")
+                    if n >= last:
+                        break
+            break
+        except UnicodeDecodeError:
+            continue
+        except (PermissionError, OSError):
+            break
+    out = {ln: [(n, lines[n]) for n in range(max(1, ln - context), ln + context + 1)
+                if n in lines] for ln in line_nums}
+    cache[key] = out
     return out
+
+
+def _rg_line_text(value):
+    """rg JSON은 UTF-8이 아닌 일치 줄을 base64 bytes로 보낸다."""
+    if isinstance(value.get("text"), str):
+        return value["text"]
+    raw = base64.b64decode(value["bytes"])
+    for enc, err in _GREP_ENCODINGS:
+        try:
+            return raw.decode(enc, errors=err)
+        except UnicodeDecodeError:
+            continue
 
 
 def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars, include_logs=False, ignore_case=False):
@@ -124,7 +144,7 @@ def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
             fp = (d.get("path") or {}).get("text")
             if not fp:
                 continue  # 비-utf8 파일명(base64 통보)은 드묾 — 생략
-            snippet = ((d.get("lines") or {}).get("text") or "").rstrip()
+            snippet = _rg_line_text(d["lines"]).rstrip("\r\n")
             rows.append((os.path.abspath(os.path.join(cwd, fp)), d.get("line_number") or 0, snippet))
             total_chars += min(len(snippet), max_line_chars)
             if len(rows) >= max_results or total_chars >= max_total_chars:
@@ -233,7 +253,7 @@ def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
                         # vj-ok: grep 의 -i 는 값 판정이 아니라 검색 옵션(정규식 IGNORECASE 와 같은 층) — 기본은 대소문자 구분 검색
                         matched = regex_pattern.search(line) if use_regex else (lit in (line.lower() if ignore_case else line))
                         if matched:
-                            found.append((ln, line.rstrip()))
+                            found.append((ln, line.rstrip("\r\n")))
                             if len(found) >= max_results:
                                 break
                 return found

@@ -1,0 +1,7 @@
+....................                                                     [100%]
+============================= slowest 15 durations =============================
+1.10s call     backend/test_single_runner.py::test_r2_direct_run_delegates_to_pytest
+0.70s call     backend/test_single_runner.py::test_r1_every_battery_is_visible_to_pytest
+
+(13 durations < 0.1s hidden.)
+20 passed in 2.15s

@@ -1,0 +1,30 @@
+{
+  "main_after": {
+    "passed": true,
+    "devices": 26,
+    "details": 224,
+    "failures": []
+  },
+  "variant_after": {
+    "passed": true,
+    "devices": 26,
+    "details": 166,
+    "failures": []
+  },
+  "mixed_after": {
+    "passed": true,
+    "devices": 26,
+    "details": 224,
+    "failures": []
+  },
+  "new_after": {
+    "passed": true,
+    "devices": 26,
+    "details": 227,
+    "failures": []
+  },
+  "original_unchanged": {
+    "passed": true,
+    "files": 59
+  }
+}

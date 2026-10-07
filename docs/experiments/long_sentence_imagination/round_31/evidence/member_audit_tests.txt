@@ -1,0 +1,24 @@
+...............................................                          [100%]
+=============================== warnings summary ===============================
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+1.76s call     backend/test_member_files_2026_09_14.py::test_actual_ibl_inline_file_and_body_ref
+0.48s call     backend/test_member_isolation_stage1_2026_09_14.py::test_member_runner_prompt_hides_undeclared_words
+0.43s call     backend/test_member_files_2026_09_14.py::test_read_range_and_missing_file_never_falls_back_to_hub
+0.14s call     backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+0.10s call     backend/test_member_isolation_stage1_2026_09_14.py::test_job_result_ownership
+
+(10 durations < 0.1s hidden.)
+47 passed, 5 warnings in 3.69s
+<sys>:0: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

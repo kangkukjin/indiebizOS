@@ -1,0 +1,10 @@
+[build_ibl_nodes] 노드 6개, 액션 178개, 패키지 fragment 62개(+141 액션) (11478줄, 549116바이트)
+[build_ibl_nodes] 검증 통과 ✓ (등록·op enum·default·handler 분기)
+[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/data/ibl_nodes.yaml
+[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/data/phone_manifest.json (폰 패키지 30, runnable 131)
+[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/data/member_manifest.json
+[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/data/package_meta.json
+[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/data/ibl_fixtures.json
+[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/data/shell_shadow.json (셸 그림자 관문표)
+[build_ibl_nodes] tool.json 파생: 47개 패키지 (갱신 0개)
+[build_ibl_nodes] 작성: /Users/kangkukjin/Desktop/AI/indiebizOS/data/core_manifest.json (표준 코어 매니페스트)

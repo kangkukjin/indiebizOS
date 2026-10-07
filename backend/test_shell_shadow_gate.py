@@ -342,3 +342,16 @@ def test_s11_글로브는_경로가_아니라_무늬로_처방된다():
     assert 'path: "%s/outputs"' % ROOT in v, v
     assert 'pattern: "*"' in v, v
     assert 'path: "%s/outputs/' % ROOT not in v, v   # 글로브가 path 에 실리지 않았다
+
+
+@pytest.mark.parametrize('command', ['cat source/*.log', 'head -3 source/device?.txt'])
+def test_unexpanded_glob_has_no_false_literal_path_prescription(command):
+    verdict = _judge(command)
+    assert verdict and '셸 그림자 거절' in verdict
+    assert '실제 파일 목록' in verdict
+    assert '[self:read]{' not in verdict
+    assert '글로브' in verdict
+
+
+def test_glob_prescription_respects_temp_exemption():
+    assert _judge('cat /tmp/*.log') is None

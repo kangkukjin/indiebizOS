@@ -1,0 +1,254 @@
+[
+  {
+    "name": "trainer_main",
+    "started": 1791354372.298802,
+    "ended": 1791354373.6642182,
+    "elapsed_s": 1.3654162883758545,
+    "run_id": "6b9f900cc4de46078c095777decad274",
+    "status": "completed",
+    "value": {
+      "zones": [
+        {
+          "zone": "Z0",
+          "count": 75
+        },
+        {
+          "zone": "Z1",
+          "count": 74
+        },
+        {
+          "zone": "Z2",
+          "count": 75
+        }
+      ],
+      "total": 224,
+      "missing_devices": [
+        "D25"
+      ],
+      "complete": true,
+      "device_count": 26
+    },
+    "usage": {
+      "steps": 56409,
+      "rows": 250,
+      "elapsed_ms": 1276
+    },
+    "plan_hash": "960eaeb2eef29472ac94142c01c00677d313f8af8f4c7e53e905028ff744079e"
+  },
+  {
+    "name": "trainer_variant",
+    "started": 1791354373.724951,
+    "ended": 1791354374.805591,
+    "elapsed_s": 1.0806400775909424,
+    "run_id": "b03e258a3c0149708ef268372c530d5c",
+    "status": "completed",
+    "value": {
+      "zones": [
+        {
+          "zone": "Z0",
+          "count": 55
+        },
+        {
+          "zone": "Z1",
+          "count": 55
+        },
+        {
+          "zone": "Z2",
+          "count": 56
+        }
+      ],
+      "total": 166,
+      "missing_devices": [
+        "D25"
+      ],
+      "complete": true,
+      "device_count": 26
+    },
+    "usage": {
+      "steps": 46375,
+      "rows": 192,
+      "elapsed_ms": 998
+    },
+    "plan_hash": "960eaeb2eef29472ac94142c01c00677d313f8af8f4c7e53e905028ff744079e"
+  },
+  {
+    "name": "trainer_mixed_before",
+    "started": 1791354443.348108,
+    "ended": 1791354444.4118478,
+    "elapsed_s": 1.0637397766113281,
+    "run_id": "c7cd987cb8d84ceeb9b542394a8d9395",
+    "status": "completed",
+    "value": {
+      "zones": [
+        {
+          "zone": "Z0",
+          "count": 75
+        },
+        {
+          "zone": "Z1",
+          "count": 74
+        },
+        {
+          "zone": "Z2",
+          "count": 75
+        }
+      ],
+      "total": 224,
+      "missing_devices": [
+        "D25"
+      ],
+      "complete": true,
+      "device_count": 26
+    },
+    "usage": {
+      "steps": 56409,
+      "rows": 250,
+      "elapsed_ms": 971
+    },
+    "plan_hash": "960eaeb2eef29472ac94142c01c00677d313f8af8f4c7e53e905028ff744079e"
+  },
+  {
+    "name": "trainer_main_after",
+    "started": 1791354895.156547,
+    "ended": 1791354896.112334,
+    "elapsed_s": 0.955786943435669,
+    "run_id": "a2d5ca23b53b4969bda108bd87b5f02b",
+    "status": "completed",
+    "value": {
+      "zones": [
+        {
+          "zone": "Z0",
+          "count": 75
+        },
+        {
+          "zone": "Z1",
+          "count": 74
+        },
+        {
+          "zone": "Z2",
+          "count": 75
+        }
+      ],
+      "total": 224,
+      "missing_devices": [
+        "D25"
+      ],
+      "complete": true,
+      "device_count": 26
+    },
+    "usage": {
+      "steps": 56409,
+      "rows": 250,
+      "elapsed_ms": 852
+    },
+    "plan_hash": "24720b5ff34a9ff1675d3efb128606a7d962b34adadfa5964a86f6e758274fe3"
+  },
+  {
+    "name": "trainer_variant_after",
+    "started": 1791354896.1741529,
+    "ended": 1791354897.014734,
+    "elapsed_s": 0.8405811786651611,
+    "run_id": "5c0e69e28f674622849adf80dab5b844",
+    "status": "completed",
+    "value": {
+      "zones": [
+        {
+          "zone": "Z0",
+          "count": 55
+        },
+        {
+          "zone": "Z1",
+          "count": 55
+        },
+        {
+          "zone": "Z2",
+          "count": 56
+        }
+      ],
+      "total": 166,
+      "missing_devices": [
+        "D25"
+      ],
+      "complete": true,
+      "device_count": 26
+    },
+    "usage": {
+      "steps": 46375,
+      "rows": 192,
+      "elapsed_ms": 754
+    },
+    "plan_hash": "24720b5ff34a9ff1675d3efb128606a7d962b34adadfa5964a86f6e758274fe3"
+  },
+  {
+    "name": "trainer_mixed_after",
+    "started": 1791354897.072404,
+    "ended": 1791354897.9829602,
+    "elapsed_s": 0.9105563163757324,
+    "run_id": "3675a890ffa34b6c848e9f7de602e726",
+    "status": "completed",
+    "value": {
+      "zones": [
+        {
+          "zone": "Z0",
+          "count": 75
+        },
+        {
+          "zone": "Z1",
+          "count": 74
+        },
+        {
+          "zone": "Z2",
+          "count": 75
+        }
+      ],
+      "total": 224,
+      "missing_devices": [
+        "D25"
+      ],
+      "complete": true,
+      "device_count": 26
+    },
+    "usage": {
+      "steps": 56409,
+      "rows": 250,
+      "elapsed_ms": 817
+    },
+    "plan_hash": "24720b5ff34a9ff1675d3efb128606a7d962b34adadfa5964a86f6e758274fe3"
+  },
+  {
+    "name": "trainer_new_after",
+    "started": 1791354898.043709,
+    "ended": 1791354899.14796,
+    "elapsed_s": 1.1042509078979492,
+    "run_id": "5a9a080610a346f298b27b28c830b76f",
+    "status": "completed",
+    "value": {
+      "zones": [
+        {
+          "zone": "Z1",
+          "count": 74
+        },
+        {
+          "zone": "Z0",
+          "count": 75
+        },
+        {
+          "zone": "Z2",
+          "count": 78
+        }
+      ],
+      "total": 227,
+      "missing_devices": [
+        "D25"
+      ],
+      "complete": true,
+      "device_count": 26
+    },
+    "usage": {
+      "steps": 56928,
+      "rows": 253,
+      "elapsed_ms": 1003
+    },
+    "plan_hash": "24720b5ff34a9ff1675d3efb128606a7d962b34adadfa5964a86f6e758274fe3"
+  }
+]

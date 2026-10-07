@@ -578,8 +578,18 @@ def judge_shell(command: str, cwd: Optional[str] = None, root: Optional[str] = N
                 break         # 값을 모르는 경로 — 기권(거짓 처방 금지)
             if all(is_exempt_path(p, cwd) for p in paths):
                 break
-            sentence = _render(word, params, spec)
             shown = " ".join(cmd[:6]) + (" …" if len(cmd) > 6 else "")
+            if any(_GLOB_META_RE.search(p) for p in paths):
+                # 글로브를 받는 어휘는 argmap에서 이미 경로/무늬로 나뉜다.
+                # 남은 글로브를 단일 경로로 번역하면 실행 불가능한 ENOENT 처방이다.
+                return (
+                    f"셸 그림자 거절 — `{shown}`의 파일 작업은 [{word}]로 수행하세요. "
+                    "경로 인자에 아직 펼치지 않은 글로브가 있어 단일 경로 호출을 만들지 않았습니다. "
+                    "먼저 파일 검색·목록 도구로 실제 파일 목록을 확인하고, "
+                    f"각 실제 경로를 [{word}]에 전달하세요. "
+                    "검색 범위·순서·누락 여부를 확인하고 글로브 문자열을 파일 경로로 그대로 넣지 마세요."
+                )
+            sentence = _render(word, params, spec)
             return _deny(shown, word, sentence, spec)
     return None
 

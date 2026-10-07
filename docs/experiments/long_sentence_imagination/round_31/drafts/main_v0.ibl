@@ -1,0 +1,27 @@
+#!ibl edition=2
+[def:장비대사]($inventory,$files,$counts) {
+  $inventory >> [table:each] {
+    $r=$it
+    $exists=any(map($files,($f)=>$f.name==$r.file))
+    $found=filter($counts,($c)=>split($c.파일,"/")[-1]==$r.file)
+    return {device:$r.device,file:$r.file,zone:$r.zone,status:$exists ? "ok" : "missing",count:$exists ? (len($found)>0 ? $found[0]["매칭 수"] : 0) : null}
+  }
+}
+$reads=[self:read]{path:f"${source}/inventory.json"} & [self:list]{path:$source}
+$inventory=$reads[0].data.items
+$search=[self:grep]{path:$source,pattern:$pattern,regex:false,ignore_case:false,include_logs:true,file_pattern:"*.log",output_mode:"count"} & [self:grep]{path:$source,pattern:$pattern,regex:false,ignore_case:false,include_logs:true,file_pattern:"*.log",output_mode:"content",limit:2000,context:1}
+$devices=[fn:장비대사]{inventory:$inventory,files:$reads[1],counts:$search[0].items}
+$details=$search[1].items >> [table:each] {
+  $hit=$it
+  $name=split($hit.파일,"/")[-1]
+  $owner=filter($inventory,($r)=>$r.file==$name)
+  return {device:$owner[0].device,file:$name,line:$hit.줄번호,text:$hit.내용,context:get($hit,"문맥",null)}
+}
+$zones=$devices >> [table:groupby]{by:"zone",agg:{count:["sum","count"]}}
+$total=sum(map($devices,($r)=>$r.count==null ? 0 : $r.count))
+assert $total==len($details),"전체 건수와 상세 줄 수 불일치",{count:$total,details:len($details)}
+$summary={devices:$devices,zones:$zones.items,total:$total,missing_devices:map(filter($devices,($r)=>$r.status=="missing"),($r)=>$r.device),complete:not $search[0].truncated and not $search[1].truncated}
+$saved=[self:write]{path:f"${out}/summary.json",content:json($summary)} & [self:write]{path:f"${out}/details.json",content:json($details)}
+$check=[self:read]{path:$saved[0].path} & [self:read]{path:$saved[1].path}
+assert $check[0].data==$summary and $check[1].data.items==$details,"저장 재독 불일치"
+return $summary

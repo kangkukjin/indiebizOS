@@ -1,0 +1,125 @@
+........................................................................ [ 40%]
+.......................F....FF.......................................... [ 81%]
+................................                                         [100%]
+=================================== FAILURES ===================================
+_______ test_dependency_cache_writable_while_shared_package_is_protected _______
+
+setup = (PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4566/test_dependency_...': 'task', 'worktree': '.worktrees/repair-task', 'status': 'staging', 'created_at': '2026-10-07T15:32:21.462946', ...})
+
+    def test_dependency_cache_writable_while_shared_package_is_protected(setup):
+        from repair_runtime import prepare_dependencies
+        from repair_process import run
+        root, wt, st, sess = setup
+        live = root / "frontend/node_modules"
+        (live / "pkg").mkdir(parents=True)
+        (live / "pkg/index.js").write_text("original")
+        (live / ".tmp").mkdir()
+        (live / ".tmp/previous").write_text("live cache")
+        (wt / "frontend").mkdir()
+        (wt / "frontend/node_modules").symlink_to(live, target_is_directory=True)
+        prepare_dependencies(root, wt)
+        prepare_dependencies(root, wt)
+        code = "from pathlib import Path; Path('frontend/node_modules/.tmp/new').write_text('local'); print('ok')"
+        result = run([sys.executable, "-c", code], wt)
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: sandbox-exec: sandbox_apply: Operation not permitted
+E         
+E       assert 71 == 0
+E        +  where 71 = CompletedProcess(args=['/Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python', '-c', "from pathlib import Path; Pa...ext('local'); print('ok')"], returncode=71, stdout='', stderr='sandbox-exec: sandbox_apply: Operation not permitted\n').returncode
+
+backend/test_repair_execution_capabilities.py:114: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+[수리 스테이징] 격리 사본 개설: .worktrees/repair-task — 라이브는 이 세션이 적용될 때까지 무변경
+_________________ test_typescript_and_vite_build_in_candidate __________________
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4566/test_typescript_and_vite_build0')
+
+    def test_typescript_and_vite_build_in_candidate(tmp_path):
+        from repair_runtime import prepare_dependencies
+        from repair_process import run
+        repo = Path(__file__).resolve().parents[1]
+        if not (repo / "frontend/node_modules/vite").is_dir():
+            pytest.skip("frontend dependencies unavailable")
+        root = tmp_path / "candidate"
+        frontend = root / "frontend"
+        frontend.mkdir(parents=True)
+        (frontend / "package.json").write_text(json.dumps({
+            "type": "module", "scripts": {"build": "tsc --noEmit && vite build"},
+            "devDependencies": {"typescript": "*", "vite": "*"},
+        }))
+        (frontend / "tsconfig.json").write_text(json.dumps({"compilerOptions": {
+            "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler", "types": [],
+            "incremental": True, "tsBuildInfoFile": "./node_modules/.tmp/check.tsbuildinfo",
+        }}))
+        (frontend / "index.html").write_text('<h1>Ready</h1><script type="module" src="/main.ts"></script>')
+        (frontend / "main.ts").write_text('document.title = "Candidate"; export {};')
+        prepare_dependencies(repo, root)
+        result = run(["/bin/sh", "-c", "cd frontend && npm run build"], root, timeout=60)
+>       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: sandbox-exec: sandbox_apply: Operation not permitted
+E         
+E       assert 71 == 0
+E        +  where 71 = CompletedProcess(args=['/bin/sh', '-c', 'cd frontend && npm run build'], returncode=71, stdout='', stderr='sandbox-exec: sandbox_apply: Operation not permitted\n').returncode
+
+backend/test_repair_execution_capabilities.py:201: AssertionError
+_____ test_electron_captures_persistent_image_and_preserves_outer_boundary _____
+
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4566/test_electron_captures_persist0')
+
+    @pytest.mark.system
+    def test_electron_captures_persistent_image_and_preserves_outer_boundary(tmp_path):
+        from repair_process import run
+        package = Path(__file__).resolve().parents[1] / "frontend/node_modules/electron"
+        if not (package / "path.txt").is_file():
+            pytest.skip("Electron unavailable")
+        binary = package / "dist" / (package / "path.txt").read_text().strip()
+        root = tmp_path / "candidate"
+        root.mkdir()
+        outside = tmp_path / "outside.txt"
+        outside.write_text("original")
+        main = root / "main.cjs"
+        main.write_text('''const {app, BrowserWindow}=require('electron');
+    const fs=require('fs'), path=require('path');
+    app.setPath('userData', path.join(__dirname, 'profile'));
+    app.whenReady().then(async()=>{
+      const win=new BrowserWindow({show:false});
+      await win.loadURL('data:text/html,<title>English UI</title><h1>Ready</h1>');
+      const title=await win.webContents.executeJavaScript('document.title');
+      const image=await win.webContents.capturePage();
+      fs.writeFileSync(path.join(__dirname, 'capture.png'), image.toPNG());
+      let protectedOutside=false;
+      try {fs.writeFileSync(process.argv[2], 'bad')} catch(e) {protectedOutside=true;}
+      console.log(JSON.stringify({title, protectedOutside}));
+      app.exit(title==='English UI' && protectedOutside && !image.isEmpty() ? 0 : 2);
+    }).catch(e=>{console.error(e); app.exit(3)});
+    setTimeout(()=>app.exit(4), 15000);
+    ''')
+        result = run([str(binary), str(main), str(outside)], root, timeout=25)
+>       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: sandbox-exec: sandbox_apply: Operation not permitted
+E         
+E       assert 71 == 0
+E        +  where 71 = CompletedProcess(args=['/Users/kangkukjin/Desktop/AI/indiebizOS/frontend/node_modules/electron/dist/Electron.app/Conte...ures_persist0/outside.txt'], returncode=71, stdout='', stderr='sandbox-exec: sandbox_apply: Operation not permitted\n').returncode
+
+backend/test_repair_execution_capabilities.py:235: AssertionError
+============================= slowest 15 durations =============================
+0.97s call     backend/test_grep_edit_topic_gate_2026_09_05.py::test_e1_replace_all_replaces_every_occurrence
+0.93s call     backend/test_exposed_idiom_boundaries.py::test_deliberate_selection_and_zero_pass_current_boundary[0-\uc8fc\uc18c\ub9c8\ub2e4\uc77d\uae30]
+0.70s call     backend/test_exposed_idiom_boundaries.py::test_selection_cannot_hide_preexisting_source_truncation[\uad00\ub828\uc790\ub8cc\uace8\ub77c\uc77d\uae30]
+0.68s call     backend/test_exposed_idiom_boundaries.py::test_distinct_url_spelling_survives_but_exact_duplicate_is_fetched_once[\uad00\ub828\uc790\ub8cc\uace8\ub77c\uc77d\uae30]
+0.68s call     backend/test_exposed_idiom_boundaries.py::test_deliberate_selection_and_zero_pass_current_boundary[1-\uad00\ub828\uc790\ub8cc\uace8\ub77c\uc77d\uae30]
+0.67s call     backend/test_exposed_idiom_boundaries.py::test_deliberate_selection_and_zero_pass_current_boundary[2-\uad00\ub828\uc790\ub8cc\uace8\ub77c\uc77d\uae30]
+0.67s call     backend/test_exposed_idiom_boundaries.py::test_deliberate_selection_and_zero_pass_current_boundary[0-\uad00\ub828\uc790\ub8cc\uace8\ub77c\uc77d\uae30]
+0.67s call     backend/test_exposed_idiom_boundaries.py::test_duplicate_and_beyond_limit_source_errors_are_retained[1-\uad00\ub828\uc790\ub8cc\uace8\ub77c\uc77d\uae30]
+0.66s call     backend/test_exposed_idiom_boundaries.py::test_duplicate_and_beyond_limit_source_errors_are_retained[0-\uad00\ub828\uc790\ub8cc\uace8\ub77c\uc77d\uae30]
+0.51s call     backend/test_exposed_idiom_boundaries.py::test_duplicate_and_beyond_limit_source_errors_are_retained[1-\uc8fc\uc18c\ub9c8\ub2e4\uc77d\uae30]
+0.51s call     backend/test_exposed_idiom_boundaries.py::test_deliberate_selection_and_zero_pass_current_boundary[2-\uc8fc\uc18c\ub9c8\ub2e4\uc77d\uae30]
+0.51s call     backend/test_exposed_idiom_boundaries.py::test_real_crawl_failure_is_not_a_successful_selection
+0.51s call     backend/test_exposed_idiom_boundaries.py::test_deliberate_selection_and_zero_pass_current_boundary[2-\uc758\ubbf8\ub85c\ubcf8\ubb38\ucc3e\uae30]
+0.50s call     backend/test_exposed_idiom_boundaries.py::test_duplicate_and_beyond_limit_source_errors_are_retained[1-\uc758\ubbf8\ub85c\ubcf8\ubb38\ucc3e\uae30]
+0.50s call     backend/test_exposed_idiom_boundaries.py::test_selection_cannot_hide_preexisting_source_truncation[\uc758\ubbf8\ub85c\ubcf8\ubb38\ucc3e\uae30]
+=========================== short test summary info ============================
+FAILED backend/test_repair_execution_capabilities.py::test_dependency_cache_writable_while_shared_package_is_protected
+FAILED backend/test_repair_execution_capabilities.py::test_typescript_and_vite_build_in_candidate
+FAILED backend/test_repair_execution_capabilities.py::test_electron_captures_persistent_image_and_preserves_outer_boundary
+3 failed, 173 passed in 20.44s

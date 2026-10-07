@@ -1,0 +1,10 @@
+........................................................................ [ 60%]
+...............................................                          [100%]
+============================= slowest 15 durations =============================
+1.77s call     backend/test_memory_final_retention.py::test_save_alone_does_not_trigger_final_evaluator
+1.35s call     backend/test_memory_final_retention.py::test_pipeline_queues_only_after_final_delivery[complete]
+0.35s call     backend/test_shell_shadow_gate.py::test_s1_table_derived_from_vocabulary
+0.14s call     backend/test_episode3507_3510_repairs.py::test_slow_directory_request_does_not_block_health
+
+(11 durations < 0.1s hidden.)
+119 passed in 4.94s

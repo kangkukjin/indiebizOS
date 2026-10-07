@@ -1,0 +1,17 @@
+..........................                                               [100%]
+============================= slowest 15 durations =============================
+0.82s call     backend/test_repair_execution_capabilities.py::test_typescript_and_vite_build_in_candidate
+0.76s call     backend/test_repair_execution_capabilities.py::test_electron_captures_persistent_image_and_preserves_outer_boundary
+0.41s call     backend/test_repair_execution_capabilities.py::test_runtime_probe_cannot_write_outside_sandbox
+0.26s call     backend/test_repair_execution_capabilities.py::test_timeout_preserves_child_diagnostics
+0.17s setup    backend/test_repair_execution_capabilities.py::test_dependency_cache_writable_while_shared_package_is_protected
+0.17s setup    backend/test_repair_execution_capabilities.py::test_timeout_preserves_child_diagnostics
+0.17s setup    backend/test_repair_execution_capabilities.py::test_repair_search_reads_candidate_not_live[grep_files-payload0]
+0.16s setup    backend/test_repair_execution_capabilities.py::test_search_cannot_escape_candidate[payload0]
+0.16s setup    backend/test_repair_execution_capabilities.py::test_repair_search_reads_candidate_not_live[glob_files-payload1]
+0.16s setup    backend/test_repair_execution_capabilities.py::test_search_cannot_escape_candidate[payload1]
+0.16s setup    backend/test_repair_execution_capabilities.py::test_search_cannot_escape_candidate[payload2]
+0.14s call     backend/test_repair_execution_capabilities.py::test_dependency_cache_writable_while_shared_package_is_protected
+
+(3 durations < 0.1s hidden.)
+26 passed in 4.01s

@@ -1,0 +1,1 @@
+같은 자료에 대해 검색할 리터럴만 -ALARM[1]로 바꿔줘. 대소문자를 구분하고, 앞선 요구의 모든 산출·검증 조건을 유지해. 출력은 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-07_31회차/ai/variant에 저장해서 첫 결과를 보존해. 네 자신의 직전 결과·중간 참조는 재사용해도 돼. 다른 실행자의 trainer/harness/drafts/evidence/정답은 보지 마.

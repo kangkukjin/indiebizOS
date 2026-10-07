@@ -1,0 +1,4 @@
+변경 2 파일, backend 모듈 0개 → 전이 시험 파일 2/580 (0%)
+  test_fs_grep: 변경된 시험
+  test_grep_counts: 경로 참조 data/packages/installed/tools/system_essentials/fs_grep.py
+backend/test_fs_grep.py backend/test_grep_counts.py

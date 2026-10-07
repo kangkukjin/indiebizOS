@@ -1,0 +1,231 @@
+....FFFFFFF.F.F.............F..................                          [100%]
+=================================== FAILURES ===================================
+___________ test_read_range_and_missing_file_never_falls_back_to_hub ___________
+
+member = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4572/test_read_range_and_missing_fi0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109a2c270>
+
+    def test_read_range_and_missing_file_never_falls_back_to_hub(member, monkeypatch):
+        owner = member / 'owner.txt'; owner.write_text('OWNER SECRET')
+        files = {'phone.txt': b'one\ntwo\nthree\n'}
+        calls = exchange(monkeypatch, files)
+        entry = profile.entry('self', 'read')
+>       assert bridge.execute(entry, {'path': 'phone.txt', 'start_line': 2, 'end_line': 2}) == 'two\n'
+E       AssertionError: assert {'success': False, 'error_type': 'permission', 'error': '회원 변환 재감사가 필요합니다'} == 'two\n'
+E        +  where {'success': False, 'error_type': 'permission', 'error': '회원 변환 재감사가 필요합니다'} = <function execute at 0x109a280e0>({'lands_on': 'body', 'package': 'system_essentials', 'side_effect': False, 'member_transform': 'member_documents:read_document', ...}, {'path': 'phone.txt', 'start_line': 2, 'end_line': 2})
+E        +    where <function execute at 0x109a280e0> = bridge.execute
+
+backend/test_member_files_2026_09_14.py:44: AssertionError
+__________________ test_docx_fill_receipt_and_file_reference ___________________
+
+member = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4572/test_docx_fill_receipt_and_fil0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109b83150>
+
+    def test_docx_fill_receipt_and_file_reference(member, monkeypatch):
+        files = {'template.docx': docx_bytes()}; calls = exchange(monkeypatch, files)
+        result = bridge.execute(profile.entry('self', 'fill'), {'path': 'template.docx', 'data': {'name': 'MEMBER A'}, 'output': 'done.docx'})
+>       assert result['saved'] is True and result['path'] == 'done.docx'
+               ^^^^^^^^^^^^^^^
+E       KeyError: 'saved'
+
+backend/test_member_files_2026_09_14.py:62: KeyError
+_______________ test_csv_write_serializes_before_member_delivery _______________
+
+member = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4572/test_csv_write_serializes_befo0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f5b050>
+
+    def test_csv_write_serializes_before_member_delivery(member, monkeypatch):
+        import csv
+        sent = []
+        monkeypatch.setattr(bridge, 'request', lambda command: sent.append(command) or {'success': True})
+        params = {'path': 'ledger.csv', 'format': 'csv', 'content': [{'x': 'a,b', 'y': '"q"\nline'}]}
+        result = bridge.execute(profile.entry('self', 'write'), params)
+>       assert result['success'] and len(sent) == 1
+E       assert (False)
+
+backend/test_member_files_2026_09_14.py:79: AssertionError
+___________________ test_fill_denied_does_not_claim_delivery ___________________
+
+member = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4572/test_fill_denied_does_not_clai0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f2f890>
+
+    def test_fill_denied_does_not_claim_delivery(member, monkeypatch):
+        files = {'template.docx': docx_bytes()}; exchange(monkeypatch, files, reject=True)
+        result = bridge.execute(profile.entry('self', 'fill'), {'path': 'template.docx', 'data': {'name': 'x'}})
+>       assert result == {'success': False, 'error': 'permission_denied'}
+E       AssertionError: assert {'success': F...환 재감사가 필요합니다'} == {'success': F...ssion_denied'}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'error': '회원 변환 재감사가 필요합니다'} != {'error': 'permission_denied'}
+E         Left contains 1 more item:
+E         {'error_type': 'permission'}
+E         Use -v to get more diff
+
+backend/test_member_files_2026_09_14.py:89: AssertionError
+_____________________ test_pdf_pages_and_xlsx_real_parsers _____________________
+
+member = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4572/test_pdf_pages_and_xlsx_real_p0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f2f980>
+
+    def test_pdf_pages_and_xlsx_real_parsers(member, monkeypatch):
+        import fitz
+        from openpyxl import Workbook
+        doc=fitz.open()
+        for text in ('PAGE ONE', 'PAGE TWO'):
+            doc.new_page().insert_text((40,40),text)
+        pdf=doc.tobytes(); doc.close()
+        wb=Workbook(); wb.active.append(['Name','Count']); wb.active.append(['A',3])
+        buf=io.BytesIO(); wb.save(buf)
+        exchange(monkeypatch, {'a.pdf': pdf, 'a.xlsx': buf.getvalue()})
+        entry=profile.entry('self','read')
+        result=bridge.execute(entry, {'path':'a.pdf','pages':'2'})
+>       assert 'PAGE TWO' in result['text'] and 'PAGE ONE' not in result['text']
+                             ^^^^^^^^^^^^^^
+E       KeyError: 'text'
+
+backend/test_member_files_2026_09_14.py:106: KeyError
+----------------------------- Captured stdout call -----------------------------
+warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+________ test_changed_adapter_is_closed_and_body_binding_still_required ________
+
+member = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4572/test_changed_adapter_is_closed0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ee0be70>
+
+    def test_changed_adapter_is_closed_and_body_binding_still_required(member, monkeypatch):
+        monkeypatch.setattr(profile,'_package_open',lambda *a,**kw:True)
+        monkeypatch.setattr(bridge,'connected',lambda d:False)
+>       assert profile.gate('self','read',{})['error_type']=='no_body'
+E       AssertionError: assert 'permission' == 'no_body'
+E         
+E         - no_body
+E         + permission
+
+backend/test_member_files_2026_09_14.py:114: AssertionError
+____________________ test_cancelled_conversion_cannot_start ____________________
+
+member = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4572/test_cancelled_conversion_cann0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10eeb4bb0>
+
+    def test_cancelled_conversion_cannot_start(member, monkeypatch):
+        MR.current()['cancel'].set()
+        monkeypatch.setattr(bridge,'request',lambda *a,**kw:pytest.fail('device called after cancel'))
+>       assert bridge.execute(profile.entry('self','read'),{'path':'a.docx'})['error_type']=='cancelled'
+E       AssertionError: assert 'permission' == 'cancelled'
+E         
+E         - cancelled
+E         + permission
+
+backend/test_member_files_2026_09_14.py:123: AssertionError
+___________________ test_actual_ibl_inline_file_and_body_ref ___________________
+
+member = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4572/test_actual_ibl_inline_file_an0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bdaf290>
+
+    def test_actual_ibl_inline_file_and_body_ref(member, monkeypatch):
+        from member_runner import MemberRunner
+        monkeypatch.setattr(profile, '_package_open', lambda *a, **kw: True)
+        monkeypatch.setattr(bridge, 'connected', lambda d: True)
+        sent=[]
+        monkeypatch.setattr(bridge, 'request', lambda c, **kw: sent.append(c) or {'success': True, 'path': c.get('path')})
+        runner=MemberRunner.__new__(MemberRunner); runner.project_path=member
+        result=runner._member_tool('execute_ibl', {
+            'edition':1, 'code':'[self:write]{path:"local.txt",content:"$file:0"}', 'files':['inline $text stays literal'],
+            'files_from':['/owner/forbidden']})
+>       assert sent==[{'op':'write','path':'local.txt','content':'inline $text stays literal'}],result
+E       AssertionError: {
+E           "success": false,
+E           "error_type": "permission",
+E           "error": "[self:write] 의 감사 표식이 현재 구현과 다릅니다 — 재감사 전에는 열리지 않습니다.",
+E           "_param_hint": "[self:write] 올바른 사용법: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(message 있으면 산문, 없으면 JSON). format:\"json\" 이면 items와 명시된 원문 본문을 함께 JSON으로 보존. spill:true 면 봉투에 참조(ref)만. — 위 사용법에 맞는 파라미터명/값으로 다시 시도하세요."
+E         }
+E       assert [] == [{'op': 'writ...ays literal'}]
+E         
+E         Right contains one more item: {'op': 'write', 'path': 'local.txt', 'content': 'inline $text stays literal'}
+E         Use -v to get more diff
+
+backend/test_member_files_2026_09_14.py:146: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[IBL_DEBUG] code=[self:write]{path:"local.txt",content:"$file:0"} files#910b6e07
+________________ test_explicit_docx_format_still_checks_archive ________________
+
+member = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4572/test_explicit_docx_format_stil0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ff85de0>
+
+    def test_explicit_docx_format_still_checks_archive(member, monkeypatch):
+        import zipfile
+        buf=io.BytesIO()
+        with zipfile.ZipFile(buf,'w') as archive:
+            archive.writestr('_rels/.rels','<Relationships><Relationship TargetMode="External" Type="image" Target="file:///owner/secret" /></Relationships>')
+        exchange(monkeypatch, {'extensionless':buf.getvalue()})
+        result=bridge.execute(profile.entry('self','read'),{'path':'extensionless','format':'docx'})
+>       assert result['error_type']=='conversion'
+E       AssertionError: assert 'permission' == 'conversion'
+E         
+E         - conversion
+E         + permission
+
+backend/test_member_files_2026_09_14.py:164: AssertionError
+_______________ test_member_runner_prompt_hides_undeclared_words _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1098898d0>
+tmp_path = PosixPath('/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/pytest-of-kangkukjin/pytest-4572/test_member_runner_prompt_hide0')
+
+    def test_member_runner_prompt_hides_undeclared_words(monkeypatch, tmp_path):
+        """부재 층 실증 — 회원 주체에서 세운 러너의 카탈로그에 선언 없는 낱말이 없다."""
+        import member_session as ms
+        from ai_agent import AIAgent
+        monkeypatch.setattr(AIAgent, "_init_provider", lambda self: None)
+        import vocabulary_state as vs
+        real_is_active = vs.is_active
+        monkeypatch.setattr(vs, "is_active", lambda pid, root=None, profile=None: real_is_active(pid, root) if profile == "member" else real_is_active(pid, root))
+        (tmp_path / "data").mkdir(exist_ok=True)
+        monkeypatch.setattr(ms, "_base", lambda: tmp_path)
+        s = ms.MemberSession("A", "devA", 4, "가족A", tmp_path, ms.load_policy(tmp_path))
+        try:
+            with P.narrow(P.member("A", 4, "devA"), "t"):
+                s._ensure_runner()
+                prompt = s.runner.ai.system_prompt
+            # 부재는 카탈로그(<ibl_actions>)의 사실이다 — 개요 산문이 낱말 이름을 언급하는 것과 구별한다.
+            cat = prompt[prompt.index("<ibl_actions>"):prompt.index("</ibl_actions>")]
+>           assert "self:read" in cat and "self:write" in cat
+E           assert ('self:read' in "<ibl_actions>\n# 표기법: '노드:액션 :: 설명' = 액션 한 줄 (호출은 [노드:액션]{...}). 그 아래 들여쓴 '.op이름 설명' = 그 액션의 op (*표 = 기본 op, op 생략 시 ...자(each·reduce) + AI 낱말(ai=의미 변환·brief=산문 종합은 기어 실행 축, judge=Jev 구조화 판정 — ai-ops 패키지·ai_call 고지). 도메인·몸 무관 IBL 문법 계층.\n")
+
+backend/test_member_isolation_stage1_2026_09_14.py:320: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[DB 마이그레이션] messages.delivered 열 추가됨
+[AgentRunner] None: 모델 기어(실행 축 티어) → claude_code/opus (gear:최대|실행→고급)
+=============================== warnings summary ===============================
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+1.36s call     backend/test_member_files_2026_09_14.py::test_actual_ibl_inline_file_and_body_ref
+0.49s call     backend/test_member_isolation_stage1_2026_09_14.py::test_member_runner_prompt_hides_undeclared_words
+0.41s call     backend/test_member_files_2026_09_14.py::test_read_range_and_missing_file_never_falls_back_to_hub
+0.11s call     backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+0.11s call     backend/test_member_isolation_stage1_2026_09_14.py::test_job_result_ownership
+
+(10 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_member_files_2026_09_14.py::test_read_range_and_missing_file_never_falls_back_to_hub
+FAILED backend/test_member_files_2026_09_14.py::test_docx_fill_receipt_and_file_reference
+FAILED backend/test_member_files_2026_09_14.py::test_csv_write_serializes_before_member_delivery
+FAILED backend/test_member_files_2026_09_14.py::test_fill_denied_does_not_claim_delivery
+FAILED backend/test_member_files_2026_09_14.py::test_pdf_pages_and_xlsx_real_parsers
+FAILED backend/test_member_files_2026_09_14.py::test_changed_adapter_is_closed_and_body_binding_still_required
+FAILED backend/test_member_files_2026_09_14.py::test_cancelled_conversion_cannot_start
+FAILED backend/test_member_files_2026_09_14.py::test_actual_ibl_inline_file_and_body_ref
+FAILED backend/test_member_files_2026_09_14.py::test_explicit_docx_format_still_checks_archive
+FAILED backend/test_member_isolation_stage1_2026_09_14.py::test_member_runner_prompt_hides_undeclared_words
+10 failed, 37 passed, 5 warnings in 3.23s
+<sys>:0: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

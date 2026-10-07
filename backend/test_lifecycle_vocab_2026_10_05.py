@@ -53,14 +53,14 @@ def world(tmp_path, monkeypatch):
     tc.restore(prev); P.reset_transport(tok)
 
 
-def _run(code, pp, inputs=None, approval=None):
+def _run(code, pp, inputs=None, approval=None, resume=None):
     from ibl_v2_entry import handle_request
     import approval_tokens as T
     from thread_context import set_approval
     digest = T.request_digest(code, inputs or {}, sorted(inputs or []))
     set_approval(approval, digest)
     try:
-        return handle_request({"code": code, "edition": 2, "inputs": inputs or {}, "declared_inputs": sorted(inputs or [])}, pp, None)
+        return handle_request({"code": code, "edition": 2, "inputs": inputs or {}, "declared_inputs": sorted(inputs or []), **({"resume": resume} if resume else {})}, pp, None)
     finally:
         set_approval(None, None)
 
@@ -97,7 +97,7 @@ def test_project_folder_trash_lifecycle_and_requires(world):
     r = _run('[self:project]{op: "delete", project_id: "연구2"}', pp)
     assert r["success"] is False
     token = _approve(r)
-    r = _run('[self:project]{op: "delete", project_id: "연구2"}', pp, approval=token)
+    r = _run('[self:project]{op: "delete", project_id: "연구2"}', pp, approval=token, resume=r["resume"])
     assert r["success"] is True and r["value"]["permanent"] is True, r.get("error")
     assert not any(p["id"] == "연구2" for p in L.project_op({"op": "list"})["items"])
     # 회원 주체는 list 조차 거절(주인 자원)
@@ -188,7 +188,7 @@ def test_agents_lifecycle_ops(world, monkeypatch):
         assert r["success"] is False
     r = _run(f'[others:agents]{{op: "delete", project_id: "P2", agent_id: "{aid}"}}', pp)
     assert r["success"] is False
-    r = _run(f'[others:agents]{{op: "delete", project_id: "P2", agent_id: "{aid}"}}', pp, approval=_approve(r))
+    r = _run(f'[others:agents]{{op: "delete", project_id: "P2", agent_id: "{aid}"}}', pp, approval=_approve(r), resume=r["resume"])
     assert r["success"] is True and r["value"]["deleted"] == aid
 
 

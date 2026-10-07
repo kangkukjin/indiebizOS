@@ -187,15 +187,20 @@ export async function runIBL(req: ActionReq): Promise<Json> {
   };
   let raw = await post({});
   // 사람 승인(② 권한 연결): human_confirm 액션은 approval_required{challenge} 로 거절한다 — 여기(사람이 보는 표면)서 묻고
-  // /ibl/approve 로 토큰을 받아 **같은 요청**을 approval 과 함께 한 번 재전송한다(토큰은 요청 지문에 묶여 1회).
-  const ask = approvalChallenge(raw);
-  if (ask && typeof window !== 'undefined' && window.confirm(`사람 확인이 필요한 동작입니다:\n${ask.summary || ask.action}\n\n실행할까요?`)) {
+  // 각 호출의 토큰을 받아 같은 resume 원장에서 이어간다(토큰은 정확한 호출 지문에 묶여 1회).
+  const seen = new Set<string>();
+  for (let ask = approvalChallenge(raw); ask && !seen.has(ask.challenge); ask = approvalChallenge(raw)) {
+    if (typeof window === 'undefined' || !window.confirm(`사람 확인이 필요한 동작입니다:\n${ask.summary || ask.action}\n\n실행할까요?`)) break;
+    seen.add(ask.challenge);
     const ok = await fetch(IBL_ENDPOINT.replace(/\/execute$/, '/approve'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...iblSurface, challenge: ask.challenge }),
     });
     if (ok.ok) {
       const t = await ok.json() as { token?: string };
-      if (t.token) raw = await post({ approval: t.token });
+      if (!t.token) break;
+      raw = await post({ approval: t.token, ...(raw.resume ? { resume: raw.resume } : {}) });
+    } else {
+      break;
     }
   }
   // 합성(>>) 액션의 final_result 펼치기는 공용 코어(원격 ibl() 과 같은 규칙)

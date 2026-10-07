@@ -61,8 +61,8 @@ def parse_output(stdout):
 def validate_v2_contract(contract):
     from ibl_v2_adapters import validate_contract
     validate_contract(contract)
-    if contract["adapter"]["protocol"] not in {"ibl-script/2", "ibl-script-session/1"}:
-        raise ValueError("등록 script 프로토콜은 ibl-script/2 또는 ibl-script-session/1입니다.")
+    if contract["adapter"]["protocol"] not in {"ibl-script/2", "ibl-script-session/1", "registered-json/1"}:
+        raise ValueError("등록 script 프로토콜은 registered-json/1, ibl-script/2 또는 ibl-script-session/1입니다.")
     return contract
 
 
@@ -87,17 +87,15 @@ def _v2_json_safe(value):
 def v2_input(entry, args, context=None):
     from ibl_v2_types import guard
     contract = validate_v2_contract(entry.get("callable_contract"))
-    if contract['adapter']['protocol'] != 'ibl-script/2':
+    if contract['adapter']['protocol'] not in ('ibl-script/2', 'registered-json/1'):
         raise ValueError('세션 스크립트는 로컬 IBL 실행 소유 세션으로 호출해야 합니다.')
     if not isinstance(args, dict):
         raise ValueError("script args는 Record입니다.")
-    params = contract["params"]
-    required = contract.get("required", list(params))
-    if any(k not in args for k in required) or any(k not in params for k in args):
-        raise ValueError("script의 명시 인자 계약과 args가 다릅니다.")
-    for key, value in args.items():
-        guard(value, params[key], key)
+    from ibl_callable_contract import checked_values
+    contract, args = checked_values(contract, args)
     _v2_json_safe(args)
+    if contract['adapter']['protocol'] == 'registered-json/1':
+        return args
     return {"protocol": "ibl-script/2", "args": args,
             "context": {"edition": 2, **(context or {})}}
 
@@ -106,6 +104,9 @@ def v2_output(stdout, contract):
     from ibl_v2_types import guard
     from ibl_v2_ir import pack
     try:
+        if contract['adapter']['protocol'] == 'registered-json/1':
+            value, error = legacy_value_output(stdout)
+            return (value, error) if error else (guard(value, contract['result'], 'script 반환'), None)
         envelope = json.loads(stdout)
         if not isinstance(envelope, dict) or envelope.get("protocol") != "ibl-script/2":
             raise ValueError("stdout에 ibl-script/2 봉투가 필요합니다.")
@@ -166,7 +167,7 @@ def member_value_script(params, command, exchange):
     contract = entry.get("callable_contract")
     args = params.get("args") or {}
     command["args"] = v2_input(entry, args) if contract else args
-    command["script_protocol"] = "ibl-script/2" if contract else "registered-json/1"
+    command["script_protocol"] = contract["adapter"]["protocol"] if contract else "registered-json/1"
     result = exchange(command)
     if result.get("success") is False or result.get("error"):
         return result
@@ -178,7 +179,7 @@ def member_value_script(params, command, exchange):
                    if not contract and isinstance(value, dict) and k in value}
         return {**result, **details, "success": False, "error": error}
     out = {**result, "value": value, "script_protocol": command["script_protocol"]}
-    if not contract:
+    if not contract or contract["adapter"]["protocol"] == "registered-json/1":
         from ibl_honesty import merge_into
         merge_into(value, out)
         outcomes = operation_outcomes(value, uuid.uuid4().hex)

@@ -390,6 +390,9 @@ def message_stream(pop):
         try:
             with lease.activate():
                 yield message
+            ack = message.get('_delivery_ack')
+            if callable(ack) and not message.get('_delivery_deferred') and not message.get('_delivery_retry'):
+                ack()
         finally:
             lease.close()
 

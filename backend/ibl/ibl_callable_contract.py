@@ -109,3 +109,21 @@ def validate_extensions(contract):
         from ibl_v2_adapters import validate_contract
         validate_contract({**{k:v for k,v in contract.items() if k!='variants'},
                            **{k:v for k,v in variant.items() if k!='when'}})
+
+
+def checked_values(contract, args):
+    """Resolve aliases/defaults/variants and validate a complete boundary input."""
+    from ibl_v2_types import guard
+    if not isinstance(args, dict):
+        raise ValueError('입력은 Record입니다.')
+    values = {**contract.get('defaults', {}), **normalize(contract, args)}
+    effective = selected(contract, values)
+    errors = problems(effective, values)
+    params = effective['params']
+    errors += [f'필수 인자 누락: {k}' for k in effective.get('required', params) if k not in values]
+    errors += [f'알 수 없는 인자: {k}' for k in values if k not in params]
+    if errors:
+        raise ValueError('; '.join(errors))
+    for key, value in values.items():
+        guard(value, params[key], key)
+    return effective, values

@@ -4,7 +4,7 @@ No legacy asset is upgraded in place. Definition source is pinned by compilation
 subsequent edits cannot change a running plan's function bodies.
 """
 import yaml
-from ibl_v2_ir import Fault
+from ibl_v2_ir import Fault, digest
 from ibl_v2_parser import parse, edition_of
 
 class Library(dict):
@@ -236,7 +236,10 @@ def _action(action_name, params, project_path):
             saved = save_workflow({"id": wf_id, "name": name, "edition": 2,
                                    "code": source, "description": description,
                                    "params_required": [k for k, v in plan.root.data["statements"][0].data["params"].items() if v is None],
-                                   "plan_hash": plan.fingerprint})
+                                   "plan_hash": plan.fingerprint,
+                                   "source_hash": digest(source),
+                                   "capability_contract": plan.function_contracts[plan.root.data['statements'][0].id],
+                                   "dependencies": plan.dependencies})
             return {"success": True, "edition": 2, "workflow_id": saved, "name": name, "check": plan.report()}
         if action_name == "run":
             wf_id = params.get("workflow_id") or _resolve_workflow_id(params.get("name") or params.get("id") or "")

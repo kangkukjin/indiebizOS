@@ -41,8 +41,8 @@ return {report: $ra.result, paper: $rb.result}                       # 둘을 �
   "접수증을 받아 기다리는 프로그램"으로 나누면 이 문제가 생기지 않는다.
 - `cancel` 은 확인된 사실만 말한다 — **`state` 로 읽는다**. `cancelled`(멈춘 것을 확인) · `cancel_requested`(요청만 남음 — 같은 ref 로 `status`/`wait`) ·
   **이미 끝난 작업은 값**(그 종료 투영 그대로: `succeeded` 면 `result` 도 있다. 늦어서 취소하려는 순간 끝나 있는 것은 실패가 아니다) ·
-  살아 있는데 취소를 지원하지 않는 종류(위임·렌더·신문·노트북)만 거절(`[catch]` 의 `$error.details.state` = 현재 상태).
-  지원: `script`(러너가 스크립트와 그 자손을 끝내고 `cancelled` 기록, 보통 1~2초)·`guestpc`(아직 안 가져간 명령).
+  살아 있는데 취소를 지원하지 않는 종류(렌더·신문·노트북)만 거절(`[catch]` 의 `$error.details.state` = 현재 상태).
+  지원: `script`(러너가 스크립트와 그 자손을 끝내고 `cancelled` 기록, 보통 1~2초)·`guestpc`(아직 안 가져간 명령)·`delegation`(개별 작업의 실행 종료 확인)·`ibl_run`(보존된 프로그램).
 ```
 $c = [self:task]{op: "cancel", ref: $job.task_ref}                     # 기다리다 늦은 일을 멈출 때
 [if:$c.state == "succeeded"] { return {상태: "완료", result: $c.result} }   # 그 사이 끝났다 — 결과를 쓴다
@@ -55,3 +55,19 @@ return {상태: $c.state}                                                # cance
 - 시작 낱말은 `task_receipts.receipt(kind, task_id, state=..., ...)` 를 돌려준다(옛 키는 호환으로 함께 실어도 됨).
 - 어댑터 `task_status(ref) -> task_receipts.view(...)` 를 그 패키지 모듈에 두고, `ibl_actions.yaml` 최상위 `task_kinds: {kind: "모듈:함수"}` 로 선언한다.
   취소를 지원하면 `<함수>_cancel`(끝난 작업이면 현재 투영을 그대로 돌려준다 — 등록부가 값으로 답한다). 상태 번역은 **한 벌 어휘**로만(밖의 값은 등록부가 unknown 으로 거절한다).
+
+## HTTP 연결을 넘는 대기와 승인
+
+현재 IBL에서 `[self:task]{op:"wait",ref:$job.task_ref,suspend:true}`는 기본 timeout 0으로
+상태를 보고, 아직 실행 중이면 프로그램을 `suspended`로 보존한다. 반환된 `resume`과
+`task_ref(kind:ibl_run)`를 유지한다. 주인 실행은 백엔드가 자식 종료를 관측하면 같은
+원장으로 재개한다. 재기동해도 대기 기록이 남는다. 회원·손님 실행은 인증된 명시 resume을 사용한다.
+승인 대기는 자동으로 승인하지 않는다. 화면은 호출별로 승인을 받고 같은 resume으로 이어간다.
+완료 영수증이 있는 위임·쓰기는 반복하지 않으며, 응답 불명의 외부 효과는 재실행하지 않는다.
+`catch`·`finally`는 승인/작업 대기 자체에서 실행되지 않고 이후 실제 완료·실패·취소에서 실행된다.
+
+위임 완료 보고는 부모의 기존 delegation_context에 보존하고 처리 또는 명시 회수 뒤 확인한다.
+부모가 동작 중이면 보고를 연기하며, 메모리 큐를 잃어도 미회수 보고를 다시 가져온다.
+처리 중 프로세스가 죽으면 재전달될 수 있다. 원격 효과에 보편적인 exactly-once를 약속하지 않는다.
+취소는 상주 에이전트 전체를 정지하지 않는다. 자식 작업을 취소하려면 그 자식의 접수증으로
+별도 요청한다. 실행기가 실제로 종료를 확인하기 전에는 `cancel_requested`다.

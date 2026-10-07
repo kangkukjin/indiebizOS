@@ -176,6 +176,7 @@ def test_resource_invalidation_sequential_parallel_unknown_and_aliases(tmp_path)
 def test_reuse_after_disjoint_write_and_new_run_mutation(tmp_path):
     calls = []
     path = str(tmp_path / 'a')
+    (tmp_path / 'a').write_text('value')  # Declared file reuse now requires a readable content snapshot.
     other = str(tmp_path / 'b')
     read = Adapter({'version': 1, 'params': {'path': 'Text'}, 'result': 'Text',
                     'effects': ['read_external'], 'read_resources': {'file': 'path'}},

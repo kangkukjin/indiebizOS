@@ -108,13 +108,17 @@ def gate(node: str, action: str, action_cfg: dict, op: Optional[str], params: Op
             missing = _target_missing(need["exists"], params)
             if missing:
                 return missing
-        from thread_context import get_approval
+        from thread_context import get_approval, get_invocation
         import approval_tokens
         token, digest = get_approval()
+        invocation = get_invocation()
+        if invocation:
+            digest = approval_tokens.request_digest("invocation/1", invocation)
         ch = approval_tokens.challenge(p.key(), key, digest or "", op)
         if not approval_tokens.consume(token, ch):
             return {"success": False, "error_type": "permission", "denied": True,
                     "error": f"{key}{'(' + op + ')' if op else ''} 은 사람의 확인이 필요합니다 — 표면에서 승인한 뒤 같은 요청을 다시 보내세요.",
                     "approval_required": {"challenge": ch, "action": key, "op": op, "principal": p.key(),
-                                          "summary": f"[{key}]{{op: {op}}}" if op else f"[{key}]"}}
+                                          **({"invocation": invocation} if invocation else {}),
+                                          "summary": f"[{key}] {str(params or {})[:1200]}"}}
     return None

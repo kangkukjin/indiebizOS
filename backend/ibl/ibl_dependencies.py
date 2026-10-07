@@ -72,11 +72,47 @@ def script_snapshot(args, root=None):
                       if p.is_file() and p.suffix in {'.py', '.sh', '.js'} and '__pycache__' not in p.parts})
     snapshot = {'scope': 'script-namespace' if dynamic else 'script-closure',
                 'registry': digest(registry if dynamic else {sid: entry}), 'files': files}
-    if (entry or {}).get('callable_contract', {}).get('adapter', {}).get('protocol') == 'ibl-script-session/1':
+    if entry and entry.get('interpreter') == 'python':
         from python_environment_lock import fingerprint
         from runtime_utils import get_python_cmd
         snapshot.update(environment=fingerprint(import_root), interpreter=get_python_cmd())
     return snapshot
+
+
+def script_contract(base, args):
+    """Resolve a registered script's value/effect contract for check and run alike.
+
+    Dynamic/remote/file calls retain the conservative outer contract. Background
+    run returns a receipt; only its later task result has the script value type.
+    """
+    from member_runtime import is_member
+    from ibl_callable_contract import UNRESOLVED
+    if is_member() or args.get('op', 'run' if args.get('id') else 'list') != 'run':
+        return base
+    sid = args.get('id')
+    if not isinstance(sid, str) or args.get('background', False) is UNRESOLVED:
+        return base
+    from runtime_utils import get_base_path
+    from thread_context import get_repair_workspace
+    path = Path(get_repair_workspace() or get_base_path()) / 'data/scripts/registry.yaml'
+    registry = yaml.safe_load(path.read_text()) if path.is_file() else {}
+    contract = ((registry or {}).get(sid) or {}).get('callable_contract')
+    if not contract or contract.get('adapter', {}).get('protocol') == 'ibl-script-session/1':
+        return base
+    from ibl_v2_adapters import validate_contract
+    validate_contract(contract)
+    from ibl_callable_contract import normalize, selected
+    nested = args.get('args')
+    if isinstance(nested, dict):
+        contract = selected(contract, normalize(contract, nested))
+    if args.get('background'):
+        return {**base, 'result': 'Record', 'effects': ['write_external'],
+                'nested_contracts': {'args': contract}}
+    # Nested input aliases/defaults use the same boundary resolver as the runner.
+    return {**base, 'nested_contracts': {'args': contract},
+            'result': contract['result'], 'effects': contract['effects'],
+            'per_run': contract.get('per_run', False) or contract['effects'] != ['pure'],
+            'script_contract': contract}
 
 
 def legacy_snapshot(name, assets):

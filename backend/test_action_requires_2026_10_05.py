@@ -111,7 +111,7 @@ def test_engine_leaf_applies_requires_for_edition2_programs(monkeypatch):
         assert ask and ask["action"] == "self:package" and ask["op"] == "activate", r
         assert calls == []
         set_approval(T.issue(ask["challenge"])["token"], digest)
-        r = handle_request({"code": code, "edition": 2, "inputs": {}, "declared_inputs": []}, pp, None)
+        r = handle_request({"code": code, "edition": 2, "inputs": {}, "declared_inputs": [], "resume": r['resume']}, pp, None)
         assert r["success"] is True, r.get("error")
         assert calls == [("record-ops", True, True, "owner")]
     finally:

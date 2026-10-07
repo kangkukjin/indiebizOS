@@ -604,3 +604,71 @@ def test_turn_that_ends_in_error_closes_the_delegated_task_as_failed(world, monk
     memory.create_task("t_turn_ok", "u", "api", "o")
     runner_mod.SystemAIRunner._finalize_task(fake, "t_turn_ok", "요약입니다")
     assert world.dt.task_view("system", "t_turn_ok")["state"] == "succeeded"
+
+
+@pytest.mark.parametrize('owner', ['system', PROJECT])
+def test_durable_reports_survive_queue_loss_and_ack_only_after_parent(world, owner):
+    from steer_inbox import turn_hold
+    import runtime_work
+    dt = world.dt
+    agent = 'system_ai' if owner == 'system' else AGENT_NAME
+    db = memory if owner == 'system' else world.db
+    if owner == 'system':
+        db.create_task('outbox', 'u', 'gui', 'request')
+    else:
+        db.create_task('outbox', 'u', 'gui', 'request', agent)
+    context = {'delegations': [{'child_task_id': 'c', 'mode': 'async'}], 'responses': []}
+    db.update_task_delegation('outbox', json.dumps(context), increment_pending=True)
+    response = {'child_task_id': 'c', 'response': 'durable value', 'delivery_pending': True,
+                'delivery_envelope': {'origin': 'training'}, 'failed': True}
+    db.record_child_response('outbox', response)
+    assert db.record_child_response('outbox', response)['duplicate']
+    with turn_hold('outbox'):
+        assert dt.recover_reports(owner, agent) == []
+    messages = dt.recover_reports(owner, agent)
+    assert len(messages) == 1 and messages[0]['origin'] == 'training'
+    assert '실패' in messages[0]['content']
+    # Queue is thrown away as at a restart; durable outbox still yields it.
+    messages = dt.recover_reports(owner, agent)
+    assert dt.recover_reports(owner, agent, queued=['outbox']) == []
+    for msg in runtime_work.message_stream(lambda: messages.pop(0) if messages else None):
+        assert dt.recover_reports(owner, agent)  # not acked while processing
+    assert dt.recover_reports(owner, agent) == []
+
+
+@pytest.mark.parametrize('owner', ['system', PROJECT])
+def test_task_cancellation_is_request_until_execution_confirms(world, monkeypatch, owner):
+    import task_receipts as T
+    monkeypatch.setenv('INDIEBIZ_RUNTIME_STATE_DIR', str(world.tmp))
+    db = memory if owner == 'system' else world.db
+    if owner == 'system':
+        db.create_task('cancel-one', 'u', 'gui', 'request')
+    else:
+        db.create_task('cancel-one', 'u', 'gui', 'request', AGENT_NAME)
+    ref = T.ref('delegation', 'cancel-one', owner)
+    assert world.dt.task_cancel(ref)['state'] == T.CANCEL_REQUESTED
+    world.dt.confirm_task_cancelled(owner, 'cancel-one')
+    assert world.dt.task_status(ref)['state'] == T.CANCELLED
+    assert world.dt.task_cancel(T.ref('delegation', 'absent', owner))['state'] == T.UNKNOWN
+
+
+@pytest.mark.parametrize('owner', ['system', PROJECT])
+def test_runner_without_ai_does_not_ack_durable_report(world, monkeypatch, owner):
+    import runtime_work
+    calls = []
+    message = {'task_id': 'pending', 'content': 'result', '_delivery_ack': lambda: calls.append('acked')}
+    monkeypatch.setattr(world.dt, 'recover_reports', lambda *a: [message])
+    if owner == 'system':
+        from system_ai_runner import SystemAIRunner
+        monkeypatch.setattr(SystemAIRunner, 'internal_messages', runtime_work.WorkMessages())
+        monkeypatch.setattr(SystemAIRunner, 'held_reports', [])
+        runner = SystemAIRunner.__new__(SystemAIRunner)
+        runner.ai = None
+        runner._check_internal_messages()
+    else:
+        from agent_communication import AgentCommunicationMixin
+        runner = AgentCommunicationMixin()
+        runner.config, runner.project_id = {'name': AGENT_NAME}, PROJECT
+        runner.registry_key, runner.ai = 'fixture-key', None
+        runner._check_internal_messages()
+    assert calls == []

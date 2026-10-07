@@ -806,7 +806,8 @@ class ConversationDB:
             if child_id and any(isinstance(r, dict) and r.get("child_task_id") == child_id for r in responses):
                 return {"remaining": row[1] or 0, "duplicate": True, "mode": mode,
                         "total": len(delegations), "found": True}
-            responses.append(new_response)
+            responses.append({**new_response, 'delivery_pending': mode == 'async'}
+                             if 'delivery_pending' in new_response else new_response)
             cursor.execute("""
                 UPDATE tasks
                 SET delegation_context = ?,

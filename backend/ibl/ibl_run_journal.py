@@ -125,11 +125,11 @@ def call_resources(spec, contract, args, mode):
 
 
 def resource_state(resources):
-    """읽기 영수증의 신선도 지문 — 파일 자원의 [경로, 수정 시각 ns, 크기].
+    """읽기 영수증의 신선도 지문 — 파일 자원의 [경로, 수정 시각 ns, 크기, SHA256].
 
     고친 프로그램이 `reuse` 로 옛 영수증을 빌릴 때 이 지문이 같을 때만 빌린다(긴문장 33회차 L33-2:
     제자리에서 바뀐 orders.json 을 옛 영수증 값으로 읽어 결과가 조용히 틀렸고 재독 검증도 통과했다).
-    읽기 직전에 찍으므로 읽는 도중 바뀐 파일은 다음 reuse 에서 보수적으로 새로 읽는다.
+    읽기 전후 내용 지문을 대조하며 불안정한 원천 영수증은 재사용하지 않는다.
     자원 미상(None)·파일 아닌 realm 은 검증 대상이 아니다(종전과 같다)."""
     if not resources:
         return None
@@ -139,9 +139,15 @@ def resource_state(resources):
             continue
         try:
             stat = os.stat(identity)
-            state.append([identity, stat.st_mtime_ns, stat.st_size])
+            import hashlib
+            with open(identity, 'rb') as stream:
+                content_hash = hashlib.file_digest(stream, 'sha256').hexdigest()
+            after = os.stat(identity)
+            stable = (stat.st_dev, stat.st_ino, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size) == (
+                after.st_dev, after.st_ino, after.st_mtime_ns, after.st_ctime_ns, after.st_size)
+            state.append([identity, stat.st_mtime_ns, stat.st_size, content_hash if stable else None])
         except OSError:
-            state.append([identity, None, None])
+            state.append([identity, None, None, None])
     return state or None
 
 
@@ -292,7 +298,14 @@ class Journal:
                 if row[1] is None:
                     raise Fault("EFFECT_UNCERTAIN", "외부 작업의 완료를 확인할 수 없습니다. 영수증을 확인하기 전에는 재실행하지 않습니다.",
                                 kind="protocol", details={"run_id": self.run_id, "call_id": call_id})
-                return json.loads(row[1])
+                receipt = json.loads(row[1])
+                if receipt.get('suspended'):
+                    # No tool effect occurred at this boundary. Before retrying,
+                    # restore the uncertain marker in case this worker dies.
+                    self.db.execute('UPDATE calls SET receipt=NULL WHERE id=?', (call_id,))
+                    self.db.commit()
+                    return None
+                return receipt
             if cleanup:
                 self.db.execute("UPDATE meta SET blocked=?", ("취소·예산 중단 후 finally가 외부 정리를 시작했습니다. 같은 실행의 재개는 허용하지 않습니다.",))
             # Invalidate reads that preceded this mutation, including unfinished
@@ -322,7 +335,8 @@ class Journal:
         with self.lock:
             blocked = self.db.execute("SELECT blocked FROM meta").fetchone()[0]
             uncertain = self.db.execute("SELECT COUNT(*) FROM calls WHERE receipt IS NULL").fetchone()[0]
-            status = "uncertain" if uncertain else "blocked" if blocked else "completed" if result.get("success") else "interrupted"
+            pending = self.db.execute("SELECT COUNT(*) FROM calls WHERE json_extract(receipt,'$.suspended')=1").fetchone()[0]
+            status = "uncertain" if uncertain else "blocked" if blocked else "suspended" if pending else "completed" if result.get("success") else "interrupted"
             source = result.get('source_complete')
             self.db.execute("UPDATE lifecycle SET updated=?, ended=?, status=?, reason=?, source_complete=?",
                             (time.time(), time.time(), status, blocked or result.get("error"),

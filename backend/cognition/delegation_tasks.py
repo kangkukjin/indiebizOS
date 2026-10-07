@@ -287,6 +287,9 @@ def task_status(ref: dict) -> dict:
     if v is None:
         return T.view(ref, T.UNKNOWN, error=f"작업 {ref['task_id']} 을(를) {owner} 저장소에서 찾지 못했습니다")
     state = v["state"] if v["state"] in T.STATES else T.RUNNING   # waiting_user 등 수리 대기 = 아직 살아 있음
+    from task_cancellation import requested
+    if state not in T.TERMINAL and requested(owner, ref['task_id']):
+        state = T.CANCEL_REQUESTED
     progress = {"pending_children": v["pending_children"], "children": v["children"], "status": v["status"]}
     if state in T.TERMINAL:
         _note_collected(v.get("parent_task_ref"), ref["task_id"])
@@ -295,17 +298,97 @@ def task_status(ref: dict) -> dict:
                   status_url=v["status_url"], run_id=v.get("run_id"))
 
 
+def task_cancel(ref):
+    import task_receipts as T
+    from task_cancellation import request
+    current = task_status(ref)
+    if current['state'] in T.TERMINAL or current['state'] == T.UNKNOWN:
+        return current
+    request(ref.get('owner') or SYSTEM_OWNER, ref['task_id'])
+    return task_status(ref)
+
+
+def confirm_task_cancelled(owner, task_id):
+    """Called only after that task's execution scope has exited."""
+    with _task_connection(owner) as conn:
+        conn.execute("UPDATE tasks SET status='cancelled',completed_at=CURRENT_TIMESTAMP "
+                     "WHERE task_id=? AND status NOT IN ('completed','failed','cancelled')", (task_id,))
+
+
 def _note_collected(parent_ref, child_task_id: str) -> None:
     """부모 **자신의 턴**이 자식의 종료를 읽었으면 부모 원장에 회수 표식을 남긴다(긴문장 29회차 L29-1).
     다른 작업·화면의 조회는 부모가 결과를 손에 넣은 것이 아니므로 적지 않는다. 표식 실패는 조회를 막지 않는다."""
     from thread_context import get_current_task_id
-    if not parent_ref or parent_ref.get("owner") != SYSTEM_OWNER or parent_ref.get("task_id") != get_current_task_id():
+    if not parent_ref or parent_ref.get("task_id") != get_current_task_id():
         return
     try:
-        from system_ai_memory import mark_child_collected
-        mark_child_collected(parent_ref["task_id"], child_task_id)
+        mark_reports_collected(parent_ref['owner'], parent_ref['task_id'], [child_task_id])
     except Exception as exc:  # noqa: BLE001
         print(f"[위임] 회수 표식 실패(계속): {child_task_id} → {parent_ref['task_id']}: {exc}")
+
+
+@contextmanager
+def _task_connection(owner):
+    """The existing task owner keeps delivery state in delegation_context."""
+    if owner == SYSTEM_OWNER:
+        from system_ai_memory import init_memory_db, _get_exclusive_connection
+        init_memory_db()
+        with _get_exclusive_connection() as conn:
+            yield conn
+    else:
+        db = project_db(owner)
+        if db is None:
+            raise ValueError('알 수 없는 작업 소유자')
+        with db.get_exclusive_connection() as conn:
+            yield conn
+
+
+
+def mark_reports_collected(owner, task_id, child_ids):
+    with _task_connection(owner) as conn:
+        row = conn.execute('SELECT delegation_context FROM tasks WHERE task_id=?', (task_id,)).fetchone()
+        if not row:
+            return
+        ctx = json.loads(row[0] or '{}')
+        for response in ctx.get('responses', []):
+            if response.get('child_task_id') in child_ids:
+                response['collected'] = True
+                response['delivery_pending'] = False
+        conn.execute('UPDATE tasks SET delegation_context=? WHERE task_id=?',
+                     (json.dumps(ctx, ensure_ascii=False), task_id))
+
+
+def recover_reports(owner, agent_name, queued=()):
+    """Recover committed, uncollected child reports after queue loss/restart.
+
+    Acknowledgement follows the parent's processing. A crash before that point
+    permits redelivery; child response identity and collection markers dedupe it.
+    """
+    with _task_connection(owner) as conn:
+        rows = conn.execute('SELECT task_id,delegation_context FROM tasks WHERE delegated_to=? '
+                            'AND COALESCE(pending_delegations,0)=0 AND delegation_context LIKE ? LIMIT 100',
+                            (agent_name, '%"delivery_pending": true%')).fetchall()
+    messages = []
+    for task_id, raw in rows:
+        from steer_inbox import task_busy
+        if task_id in queued or task_busy(task_id):
+            continue
+        try:
+            ctx = json.loads(raw)
+            modes = {d.get('child_task_id'): d.get('mode', 'async') for d in ctx.get('delegations', [])}
+            responses = [r for r in ctx.get('responses', []) if r.get('delivery_pending') and not r.get('collected')
+                         and modes.get(r.get('child_task_id')) == 'async']
+        except (ValueError, TypeError, AttributeError):
+            continue
+        if not responses:
+            continue
+        child_ids = [r['child_task_id'] for r in responses]
+        content = '\n\n'.join(f"{r.get('from_agent', '')} ({'실패' if r.get('failed') else '완료'}): {r.get('response', '')}" for r in responses)
+        envelope = responses[0].get('delivery_envelope') or {}
+        messages.append({**envelope, 'content': f'[task:{task_id}] 완료 보고.\n{content}',
+                         'task_id': task_id, 'from_agent': 'delegation', '_report_children': child_ids,
+                         '_delivery_ack': lambda t=task_id, ids=child_ids: mark_reports_collected(owner, t, ids)})
+    return messages
 
 
 def _utc_epoch(text):

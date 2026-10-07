@@ -46,6 +46,19 @@ def _validator_problem(validator, values):
 def value_problems(contract, values, registry=None, definitions=None):
     known = {k: v for k, v in values.items() if v is not UNRESOLVED}
     errors = []
+    for name, nested in contract.get('nested_contracts', {}).items():
+        if name not in known:
+            continue
+        try:
+            from ibl_callable_contract import checked_values
+            checked_values(nested, known[name])
+        except (ValueError, TypeError) as exc:
+            errors.append(f'{name}: {exc}')
+        except Exception as exc:
+            from ibl_v2_ir import Fault
+            if not isinstance(exc, Fault):
+                raise
+            errors.append(f'{name}: {exc}')
     validator = contract.get("value_validator")
     if validator:
         problem = _validator_problem(validator, values)

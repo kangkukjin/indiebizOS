@@ -68,12 +68,17 @@ def run_ibl_as_human(code: str, action_key: str, op: str = None) -> dict:
     from project_manager import ProjectManager
     from ibl_v2_entry import handle_request
     digest = approval_tokens.request_digest(code, {}, [])
-    token = approval_tokens.issue(approval_tokens.challenge(_principal.current().key(), action_key, digest, op))["token"]
     prev = get_approval()
     try:
-        set_approval(token, digest)
-        return handle_request({"code": code, "edition": 2, "inputs": {}, "declared_inputs": []},
-                              str(ProjectManager().get_project_path("앱모드")), None)
+        set_approval(None, digest)
+        request = {"code": code, "edition": 2, "inputs": {}, "declared_inputs": []}
+        path = str(ProjectManager().get_project_path("앱모드"))
+        result = handle_request(request, path, None)
+        ask = (result.get('diagnostic') or {}).get('details', {}).get('approval_required')
+        if ask and ask.get('action') == action_key and ask.get('op') == op and result.get('resume'):
+            token = approval_tokens.issue(ask['challenge'])['token']
+            return handle_request({**request, 'resume': result['resume'], 'approval': token}, path, None)
+        return result
     finally:
         set_approval(*prev)
 

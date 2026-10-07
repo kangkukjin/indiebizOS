@@ -60,12 +60,18 @@ async function ibl(code){
   let r=await send();
   if(!r.ok){ let m='[HTTP '+r.status+']'; try{ const e=await r.json(); if(e&&(e.error||e.detail)) m=window.__ui ? window.__ui.error(e,r.status) : (typeof (e.error||e.detail)==='string' ? e.error||e.detail : (e.error||e.detail).message||JSON.stringify(e.error||e.detail)); }catch(_e){} throw new Error(m); }
   let raw=await r.json();
-  /* 사람 승인(② 권한 연결): approval_required{challenge} 면 여기(사람이 보는 표면)서 묻고 /ibl/approve 토큰으로 같은 요청을 한 번 재전송.
+  /* 사람 승인(② 권한 연결): approval_required{challenge} 면 여기(사람이 보는 표면)서 묻고 /ibl/approve 호출별 토큰으로 같은 실행을 resume.
      포털(손님·회원)은 승인 통로가 없어 거절 봉투 그대로 — 주인 표면(런처 세션)만. */
-  const ask=approvalChallenge(raw);
-  if(ask&&!window.__PORTAL&&confirm('사람 확인이 필요한 동작입니다 — '+(ask.summary||ask.action)+' — 실행할까요?')){
+  const seen=new Set();
+  for(let ask=approvalChallenge(raw);ask&&!window.__PORTAL&&!seen.has(ask.challenge);ask=approvalChallenge(raw)){
+    if(!confirm('사람 확인이 필요한 동작입니다 — '+(ask.summary||ask.action)+' — 실행할까요?'))break;
+    seen.add(ask.challenge);
     const a=await jfetch('/ibl/approve',{method:'POST',body:JSON.stringify({challenge:ask.challenge})});
-    if(a.ok){ const t=await a.json(); if(t&&t.token){ r=await send({approval:t.token}); if(r.ok) raw=await r.json(); } }
+    if(!a.ok)break;
+    const t=await a.json(); if(!t||!t.token)break;
+    r=await send(Object.assign({approval:t.token},raw.resume?{resume:raw.resume}:{}));
+    if(!r.ok)throw new Error('[HTTP '+r.status+']');
+    raw=await r.json();
   }
   /* 합성(>>) 액션은 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 — view의 from/{필드}가 풀리도록.
      펼치는 규칙은 공용 렌더 코어(unwrapFinalResult)가 정본 — 데스크탑 runIBL 과 같은 것. */

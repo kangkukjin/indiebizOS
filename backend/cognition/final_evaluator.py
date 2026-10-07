@@ -153,6 +153,51 @@ def recovered_pages(store, refs, budget=RECOVERED_EVIDENCE_CHARS):
     return [texts[ref] for ref in refs if ref in texts]
 
 
+def assertion_evidence(store, calls, criteria):
+    """Expose checked predicates and their exact value version, not inferred truth.
+
+    A passed assertion covers only its predicate. An id alone cannot inherit a
+    changed criterion; matching text and current source snapshots are explicit.
+    """
+    current = {r['id']: r.get('text') for r in criteria.get('criteria', [])}
+    checks, seen = [], set()
+    for call in calls:
+        raw = call.get('result')
+        try:
+            raw = json.loads(raw) if isinstance(raw, str) else raw
+            if not isinstance(raw, dict):
+                continue
+            ref = (raw.get('result_ref') or {}).get('id')
+            if ref:
+                raw = json.loads(store.read_evidence(ref, 0, None)['text'])
+            verification = raw.get('verification') or {}
+            if not verification:
+                continue
+            identity = (raw.get('resume') or {}).get('run_id') or ref or raw.get('plan_hash')
+            if identity in seen:
+                continue
+            seen.add(identity)
+            from ibl_run_journal import resource_state
+            from ibl_v2_ir import digest
+            snapshots = verification.get('source_snapshots') or []
+            fresh = (all(len(r) == 4 and r[3] is not None and
+                         resource_state([['file', r[0], None]]) == [r] for r in snapshots) if snapshots else None)
+            value_matches = ('value_wire' in raw and digest(raw['value_wire']) == verification.get('value_hash'))
+            for check in verification.get('checks', []):
+                cid = check.get('criterion_id')
+                checks.append({**check, 'run_id': identity, 'result_ref': ref,
+                               'plan_hash': verification.get('plan_hash'), 'value_hash': verification.get('value_hash'),
+                               'criterion_matches': bool(cid in current and current[cid] == check.get('criterion_text')),
+                               'source_complete': verification.get('source_complete'),
+                               'source_snapshots': snapshots, 'sources_unchanged': fresh,
+                               'source_scope': 'declared_file_resources_only',
+                               'value_matches': value_matches,
+                               'scope': check.get('scope') or '해당 assert 조건만; 저장·재독은 내용의 정답을 보증하지 않음'})
+        except (ValueError, TypeError, KeyError, OSError):
+            continue
+    return checks
+
+
 def prepare(controller, tool_calls=None):
     """모델에 넘길 자료와 승인 대상 지문을 고정한다. 모델의 페이지 열람 영수증은 요구하지 않는다."""
     from supervisor_content import discover
@@ -203,6 +248,7 @@ def prepare(controller, tool_calls=None):
                "quantity_checks": {"durations": duration_table(response), "issues": arithmetic_issues(response)},
                "evidence_index": controller.store.tool_index(),
                "jobs": list(controller.job_states.values())}
+    context['assertion_evidence'] = assertion_evidence(controller.store, calls, criteria)
     # 보완 실행자가 원문을 회수했는데 재검수 때 다시 같은 발췌에서 사라지는
     # 순환을 막는다. 작업대가 실제 반환한 증거 페이지만 별도 첨부한다.
     cursor = getattr(controller, "_repair_evidence_since", None)
@@ -244,7 +290,9 @@ def prepare(controller, tool_calls=None):
         "criteria": json.dumps(criteria, ensure_ascii=False),
     }
     controller._evaluation_snapshot = {"response": controller.store.manifest(), "files": snapshots,
-                                       "delivery": delivery}
+                                       "delivery": delivery, "criteria": copy.deepcopy(criteria),
+                                       "assertion_sources": [r for e in context['assertion_evidence']
+                                                             if e['sources_unchanged'] for r in e['source_snapshots']]}
     return controller._evaluation_packet
 
 
@@ -254,6 +302,12 @@ def snapshot_error(controller):
         return "평가 중 응답이 변경됐습니다"
     if snapshot["delivery"] != controller.delivery.manifest():
         return "평가 중 공개 산출물·알림이 변경됐습니다"
+    if 'criteria' in snapshot and snapshot['criteria'] != getattr(controller, '_final_criteria_contract', None):
+        return "평가 중 완료 기준이 변경됐습니다"
+    from ibl_run_journal import resource_state
+    for row in snapshot.get('assertion_sources', []):
+        if resource_state([['file', row[0], None]]) != [row]:
+            return "평가 중 검증 원천이 변경됐습니다"
     for name, fingerprint in snapshot["files"].items():
         try:
             path = Path(name)

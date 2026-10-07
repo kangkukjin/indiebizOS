@@ -25,6 +25,7 @@ class Adapter:
     resource_identity: object = None
     model_identity: object = None
     invocation_dependency: object = None
+    specialize: object = None
 
 
 @dataclass(frozen=True)
@@ -69,7 +70,7 @@ def validate_contract(contract):
     if (not isinstance(envelopes, list)
             or any(not isinstance(key, str) or key not in contract["params"] for key in envelopes)):
         raise ValueError("input_envelopes는 선언된 입력 인자 이름 목록입니다.")
-    if adapter.get("protocol") not in {"core-table/2", "legacy-envelope", "ibl-script/2", "document-value/1", "ibl-script-session/1"}:
+    if adapter.get("protocol") not in {"core-table/2", "legacy-envelope", "ibl-script/2", "registered-json/1", "document-value/1", "ibl-script-session/1"}:
         raise ValueError("지원하지 않는 어댑터 프로토콜입니다.")
     if adapter.get('protocol') == 'ibl-script-session/1' and (
             effects != ['unknown'] or adapter.get('stateful') is not True
@@ -227,6 +228,10 @@ def decode_envelope(raw, adapter, input_values=None):
         # 같은 코드면 프로그램이 문자열로만 구별했다(상상훈련 77회차 F77-2). 생산자는 공통 봉투
         # common.api_client.rate_limited_failure 로 error_type·retry_after 를 싣는다.
         code = {"rate_limited": "RATE_LIMITED", "not_found": "NOT_FOUND"}.get(raw.get("error_type"), "TOOL")
+        if raw.get("approval_required"):
+            code, kind = "APPROVAL_REQUIRED", "suspended"
+        elif raw.get("suspended") and raw.get("task_ref"):
+            code, kind = "TASK_PENDING", "suspended"
         raise Fault(code, str(raw.get("error") or raw.get("message") or "도구 실행 실패"), kind=kind,
                     details={key: raw[key] for key in (
                         "error_type", "errno", "path", "base_path", "hint", "stage",
@@ -420,7 +425,7 @@ def load_registry(project_path=".", agent_id=None):
                 current_allowed = get_allowed_nodes()
                 if (current_allowed is not None and not check_node_access(node, current_allowed)) or not visible(node, action, ac):
                     raise Fault("RECEIPT_ACCESS", "현재 권한으로 이 호출의 영수증을 사용할 수 없습니다.", kind="permission")
-            from ibl_dependencies import script_snapshot
+            from ibl_dependencies import script_snapshot, script_contract
             def reusable(args, ac=action_config):
                 # 조이는 건 자동, 푸는 건 명시(ibl_ops 규칙 그대로): 부작용 없음 + 내부 모델 호출 없음 + 스크립트 아님.
                 if ac.get("ai_call") is True or (ac.get("callable_contract") or {}).get("adapter", {}).get("protocol") == "ibl-script/2":
@@ -447,7 +452,8 @@ def load_registry(project_path=".", agent_id=None):
                                   resource_identity,
                                   (lambda c=contract: model_reuse_identity(c['model_reuse']))
                                   if contract.get('model_reuse') else None,
-                                  invocation_identity if adapter['protocol'] == 'ibl-script/2' else None)
+                                  invocation_identity if adapter['protocol'] == 'ibl-script/2' else None,
+                                  script_contract if adapter['protocol'] == 'ibl-script/2' else None)
     from ibl_v2_compat import function_adapters
     result.update(function_adapters(project_path, agent_id))
     return result

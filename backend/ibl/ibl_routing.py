@@ -904,7 +904,7 @@ def _task_op(params: dict) -> dict:
             return {"success": False, **v, "error": v.get("failure") or "이 몸이 모르는 작업입니다."}
         return {"success": True, **v}
     if op == "wait":
-        return T.wait(r, params.get("timeout", 60))
+        return T.wait(r, params.get("timeout", 0 if params.get('suspend') else 60), suspend=params.get('suspend') is True)
     if op == "cancel":
         return T.cancel(r)
     return {"success": False, "error": f"알 수 없는 op: {op} (status/wait/cancel)"}

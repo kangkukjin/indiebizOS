@@ -1271,6 +1271,10 @@
           "callable_contract": {
             "type": "object",
             "description": "self:script 파라미터"
+          },
+          "query": {
+            "type": "string",
+            "description": "self:script 파라미터"
           }
         }
       }

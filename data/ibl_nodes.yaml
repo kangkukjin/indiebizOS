@@ -3678,6 +3678,7 @@ nodes:
           task_id: string
           owner: string
           timeout: integer
+          suspend: boolean
         callable_contract:
           version: 1
           params:
@@ -3687,6 +3688,7 @@ nodes:
             task_id: Text
             owner: Text
             timeout: Number
+            suspend: Bool
           required: []
           enums:
             op:
@@ -3730,8 +3732,8 @@ nodes:
         returns: scalar
         side_effect: true
         exempt: 접수증(task_ref) 필요 — 고정 fixture 부적합
-        description: 긴 작업 접수증(task_ref)의 공통 관찰·제어 (op 분기). status=현재 상태, wait=끝날 때까지 유한 대기 뒤 result, cancel=취소 요청. 위임·script·guestpc·신문·강의 렌더·노트북·시트가 같은 접수증.
-        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). 반환 칸은 항상 같다: state(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)·terminal·timed_out·result(성공일 때만 값, 아니면 null)·failure(작업의 실패 사유, 아니면 null)·progress. accepted_at·elapsed_s 는 접수 기준 시계(접수부터 지금·끝났으면 종료까지의 초, 모르면 null) — wait 의 timeout 은 그 호출이 기다린 시간일 뿐이라 "접수 후 N초 안에 끝났는가"는 elapsed_s 로 센다. status: 실패한 작업도 값으로 답한다(모르는 작업만 실패). wait: timeout(초, 기본 60·상한 240) 안에 성공하면 result, 시간 초과는 실패가 아니라 값(timed_out: true — [if:$r.timed_out] 로 갈라 같은 ref 로 다시), 작업이 실패·취소·유실로 끝나면 이 호출이 실패하며 [catch] 의 $error.details.state·failure 로 사정을 읽는다. cancel: 어댑터가 확인한 사실만 — state 로 읽는다(cancelled=멈춤 확인, cancel_requested=요청만 남음). 이미 끝난 작업은 실패가 아니라 그 종료 투영을 값으로 돌려준다(state: succeeded 면 result 도 있다). 살아 있는데 취소를 지원하지 않는 종류(위임·렌더)만 거절되며 [catch] 의 $error.details.state 가 현재 상태다. script 백그라운드 작업은 취소된다. 작업을 시작한 낱말을 다시 부르지 말 것 — 접수증으로 이어받는다.'
+        description: 긴 작업 접수증(task_ref)의 공통 관찰·제어 (op 분기). status=현재 상태, wait=끝날 때까지 유한 대기 뒤 result, cancel=취소 요청. 위임·script·guestpc·신문·강의 렌더·노트북·시트·IBL 실행이 같은 접수증.
+        target_description: 'ref 필수 — 접수증의 task_ref({kind, task_id[, owner]}) 그대로(접수증 통째도 됨). 반환 칸은 항상 같다: state(queued/running/waiting_children/cancel_requested/succeeded/failed/cancelled/interrupted/unknown)·terminal·timed_out·result(성공일 때만 값, 아니면 null)·failure(작업의 실패 사유, 아니면 null)·progress. accepted_at·elapsed_s 는 접수 기준 시계(접수부터 지금·끝났으면 종료까지의 초, 모르면 null) — wait 의 timeout 은 그 호출이 기다린 시간일 뿐이라 "접수 후 N초 안에 끝났는가"는 elapsed_s 로 센다. status: 실패한 작업도 값으로 답한다(모르는 작업만 실패). wait: timeout(초, 기본 60·상한 240) 안에 성공하면 result, 시간 초과는 실패가 아니라 값(timed_out: true — [if:$r.timed_out] 로 갈라 같은 ref 로 다시), 현재 IBL에서 suspend:true는 시간 초과 시 프로그램을 중단·보존하며 주인 실행은 자식 종료 뒤 같은 원장에서 자동 재개한다(기본 timeout=0). 승인 대기는 자동 승인하지 않는다. 작업이 실패·취소·유실로 끝나면 이 호출이 실패하며 [catch] 의 $error.details.state·failure 로 사정을 읽는다. cancel: 어댑터가 확인한 사실만 — state 로 읽는다(cancelled=멈춤 확인, cancel_requested=요청만 남음). 이미 끝난 작업은 실패가 아니라 그 종료 투영을 값으로 돌려준다(state: succeeded 면 result 도 있다). 살아 있는데 취소를 지원하지 않는 종류(렌더 등)만 거절되며 [catch] 의 $error.details.state 가 현재 상태다. script 백그라운드·개별 위임·IBL 실행은 취소 요청을 지원한다. 위임은 실행 범위가 끝난 뒤에만 cancelled이며 자식 취소는 해당 접수증으로 별도 요청한다. 작업을 시작한 낱말을 다시 부르지 말 것 — 접수증으로 이어받는다.'
         group: system
         target_key: op
         router: system
@@ -5895,7 +5897,7 @@ nodes:
           dependencies:
             backend/common/expression_eval.py: 539142b9eb7f27ca915f5be9a47ba995516d1ed7302b4a1e737e1145b0473c89
             backend/common/expression_functions.py: 4bdd3a130c760a3e1a0c89b96e634ec22a96b82167c02374727fd6f19efa275e
-            backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
+            backend/common/expression_ir.py: a8f7cdaf84a48dee6a51faf021e151cd66b4c64d77737d11341d82204bd95b2f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
             backend/common/expression_ops.py: bebda213e12ac8adb67608ecaa7c4e22f4c0ed27863bcc60dc45653555b1f783
             backend/common/expression_parser.py: 421efa628cd098de6022ec25f7341032887ac08bba49571ef9287dd4b8312e36
@@ -6147,7 +6149,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-07'
-          impl: 4e5664b66c13fad3
+          impl: 67dc4f1b8863af45
         target_key: path
         aliases:
           offset:
@@ -6160,7 +6162,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-07'
-          impl: 4e5664b66c13fad3
+          impl: 67dc4f1b8863af45
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6237,7 +6239,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-07'
-          impl: 4e5664b66c13fad3
+          impl: 67dc4f1b8863af45
         target_key: path
       list:
         callable_contract:
@@ -6974,11 +6976,13 @@ nodes:
       script:
         params:
           callable_contract: object
+          query: string
         callable_contract:
           version: 1
           params:
             op: Text
             id: Text
+            query: Text
             args: Record
             args_file: Text
             path: Text
@@ -7025,7 +7029,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-07'
-          impl: 4e5664b66c13fad3
+          impl: 67dc4f1b8863af45
         pipe_in: true
         lands_on: body
         limb_op:
@@ -7043,7 +7047,7 @@ nodes:
         fixture: '[self:script]{}'
         description: 파일 Script 실행 — 등록 id 또는 현재 턴의 Python path. 코드는 inputs Text로 write/edit하며 실행은 파일 참조만 받는다. path는 미등록 로컬 실행, 결과 파일의 값이 다음 문장으로 이어진다.
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태, 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 또는 path 중 하나. path는 제한 없는 주인의 ~turn/ 안 Python 파일이며 원장에 등록하지 않는다. inputs Text로 write/edit, args JSON stdin, INDIEBIZ_SCRIPT_RESULT 환경변수의 경로에 JSON 값을 쓴다(원자 교체 권장). stdout/stderr는 진단. 결과 누락=RESULT_MISSING, 잘못된 JSON=RESULT_INVALID, 자동 재시도 없음. timeout ≤3600, 로컬 동기만, id·args_file·interpreter·target·background 병용 불가. 코드/입력/진단 원문은 비공개 7일 보존, 실행 증거의 record로 조회하며 backend/file_script_cli.py로 명시 재현. id 실행은 기존 계약을 유지: args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 self:edit 또는 run_command, 같은 파일이면 재등록 불필요); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태+callable_contract·execution, id 또는 query로 좁힘. 등록 callable_contract의 registered-json/1은 기존 stdin/stdout JSON을 보존하고 ibl-script/2는 명시 값 봉투를 사용한다. 두 계약 모두 동기·background를 지원하며 입력/반환 타입을 검사한다. 목록은 후보 계약이며 check/run이 코드·환경 의존을 다시 검증한다. 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 또는 path 중 하나. path는 제한 없는 주인의 ~turn/ 안 Python 파일이며 원장에 등록하지 않는다. inputs Text로 write/edit, args JSON stdin, INDIEBIZ_SCRIPT_RESULT 환경변수의 경로에 JSON 값을 쓴다(원자 교체 권장). stdout/stderr는 진단. 결과 누락=RESULT_MISSING, 잘못된 JSON=RESULT_INVALID, 자동 재시도 없음. timeout ≤3600, 로컬 동기만, id·args_file·interpreter·target·background 병용 불가. 코드/입력/진단 원문은 비공개 7일 보존, 실행 증거의 record로 조회하며 backend/file_script_cli.py로 명시 재현. id 실행은 기존 계약을 유지: args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 self:edit 또는 run_command, 같은 파일이면 재등록 불필요); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
         router: handler
         tool: script_op
         implementation: path는 backend/base/file_script.py와 ibl_file_script 어댑터, id는 system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).

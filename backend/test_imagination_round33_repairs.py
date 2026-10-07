@@ -98,7 +98,7 @@ def test_resource_state_shape():
     assert resource_state(None) is None and resource_state([]) is None
     assert resource_state([["db", "x", None]]) is None
     state = resource_state([["file", "/nonexistent/round33", None]])
-    assert state == [["/nonexistent/round33", None, None]]
+    assert state == [["/nonexistent/round33", None, None, None]]
 
 
 def test_check_warns_when_project_context_is_missing(tmp_path, monkeypatch):

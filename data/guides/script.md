@@ -163,7 +163,7 @@ stdout 최상위에 `operation_outcome: {status:"passed"|"failed", message:"판�
 새 명시 타입 프로토콜(`callable_contract`의 `ibl-script/2`)은 opt-in이며 기존 스크립트의
 본문·등록을 이 프로토콜로 바꾸지 않아도 현재 IBL에서 호출할 수 있다.
 list/register/remove/status는 관리 결과 Record를 반환한다. 기존 등록의 background 실행은
-job_id 영수증을 반환한다. 새 wire 스크립트의 background는 아직 지원하지 않으며 실행 전에 거절한다.
+job_id 영수증을 반환한다. 등록 JSON·명시 값 스크립트 모두 로컬 background를 지원하고 결과 값을 접수증에서 회수한다.
 list의 등록 목록과 status의 작업 목록은 `.items`로 꺼내 table에 전달한다.
 status의 `.items`는 완료 뒤에도 작업 행이며 스크립트 업무 값은 `.result` 또는 `.items[0].result`다.
 목록·상태는 수정 실행에서도 새로 관측한다.
@@ -296,10 +296,24 @@ stdout은 `{protocol:"ibl-script/2", ok:true, value:{n:6}}` 또는
 입력 이름·반환 타입·JSON·종료 코드를 검사한다. 일반 args 문자열의 몸 경로 별칭은 확장하지 않는다.
 새 계약과 기존 호출의 판본이 다르면 실행 전에 거절한다. 현재 새 프로토콜은 로컬·회원 PC·인증된 원격 기기의 동기 실행을 지원한다.
 원격은 capabilities의 ibl-script-call/1, 회원 PC는 도우미의 ibl-script/2를 확인한 뒤 실행한다.
-새 wire의 background·회원 args_file·직접 연결 불가 기기의 푸시 큐 전송은 지원하지 않는다.
+등록 Script의 로컬 background는 입력 계약과 결과 값을 보존한다. 회원 background·회원 args_file·직접 연결 불가 기기의 푸시 큐 전송은 지원하지 않는다.
 원격 응답이 끊기면 결과 불명으로 남기며 같은 실행을 자동 재전송하지 않는다. 등록 계약을 모르는 script는 순수 캐시 대상으로 간주하지 않는다.
 자세한 언어 계약은 [주 IBL 교재](ibl_composition.md)를 읽는다.
 
+
+## 기존 JSON Script의 계약과 발견
+
+기존 stdin/stdout 형식은 `adapter: {protocol: registered-json/1}`로 유지하면서
+같은 `params`·`required`·`result`·`effects` 계약을 붙인다. `시험`이 이 경로를 사용한다.
+`[self:script]{op:"list",query:"검증"}` 또는 `id`로 후보를 좁혀 `callable_contract`와
+`execution`을 읽는다. 명시 값 봉투의 업무 필드는 실행 성공/실패로 재해석하지 않는다.
+JSON 계약은 기존 `success:false`/`error`와 `operation_outcome` 의미를 유지한다.
+등록 입력의 별칭·기본값·조건부 제약은 공통 계약 해소기로 확인한다.
+
+검사와 실행은 같은 등록 계약을 해소한다. background 시작은 작업 접수증이고,
+선언한 반환 값은 완료 뒤 `self:task`의 `result`에 있다. Python 코드·지역 import·환경
+지문은 실행 의존성에 포함된다. 외부 자원에 의존하는 Script는 보수적으로 새 실행의
+읽기 재사용을 막는다. `pure`는 작성자가 보증하는 명시 계약이며 자동 추론하지 않는다.
 
 ## 실행 안에서 객체를 이어 쓰는 등록 스크립트
 

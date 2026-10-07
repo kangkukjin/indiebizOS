@@ -3,7 +3,9 @@
 인자: job json 경로. 스크립트를 돌리고 로그·종료코드·stdout 통화를 job json 에 기록한다."""
 import json, os, subprocess, sys, time
 from pathlib import Path
-from script_runtime import atomic_write, parse_output
+sys.path.insert(0, str(Path(__file__).resolve().parents[5] / 'backend'))
+import boot_paths  # noqa: F401 — detached workers use the same value contract as foreground
+from script_runtime import atomic_write, parse_output, v2_output, legacy_value_output
 
 STDOUT_TAIL = 8000
 STDERR_TAIL = 2000
@@ -99,7 +101,12 @@ def main():
         log_path.write_text(f"# {job['job_id']} exit={code} {dur}ms\n--- stdout ---\n{out}\n--- stderr ---\n{err}", encoding="utf-8")
     except OSError:
         pass
-    parsed, result_error = parse_output(out)
+    if job.get('callable_contract'):
+        parsed, result_error = v2_output(out, job['callable_contract'])
+    elif job.get('value_edition') == 2:
+        parsed, result_error = legacy_value_output(out)
+    else:
+        parsed, result_error = parse_output(out)
     ok = code == 0 and not timed_out and not cancelled and not result_error
     job.update({"status": "cancelled" if cancelled else "done" if ok else "failed", "exit_code": code, "duration_ms": dur,
                 "ended_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
@@ -110,7 +117,9 @@ def main():
         if parsed is not None:
             job["result"] = parsed
     else:
-        if isinstance(parsed, dict) and (isinstance(parsed.get("items"), list) or isinstance(parsed.get("table"), dict)
+        if job.get('value_edition') == 2 or job.get('callable_contract'):
+            job['result'] = parsed
+        elif isinstance(parsed, dict) and (isinstance(parsed.get("items"), list) or isinstance(parsed.get("table"), dict)
                                          or 'operation_outcome' in parsed):
             job["result"] = parsed
         else:
@@ -135,7 +144,8 @@ def _announce(job):
         import urllib.request
         port = os.environ.get("INDIEBIZ_API_PORT", "8765")
         result = job.get('result')
-        outcome = result.get('operation_outcome', {}) if isinstance(result, dict) else {}
+        plain = (job.get('callable_contract') or {}).get('adapter', {}).get('protocol', 'registered-json/1') == 'registered-json/1'
+        outcome = result.get('operation_outcome', {}) if plain and isinstance(result, dict) else {}
         work_failed = isinstance(outcome, dict) and outcome.get('status') == 'failed'
         ok = job.get("status") == "done" and not work_failed
         stopped = job.get("status") == "cancelled"      # 사람이 멈춘 것은 실패 알림이 아니다

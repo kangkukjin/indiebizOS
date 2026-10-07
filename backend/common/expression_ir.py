@@ -85,7 +85,7 @@ class Fault(Exception):
 
     @property
     def catchable(self):
-        return self.kind not in {"cancelled", "permission", "budget", "compile", "protocol"}
+        return self.kind not in {"cancelled", "permission", "budget", "compile", "protocol", "suspended"}
 
     def view(self, source=""):
         out = {"code": self.code, "kind": self.kind, "message": str(self),

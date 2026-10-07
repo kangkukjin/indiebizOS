@@ -324,6 +324,11 @@ class CognitivePipelineMixin:
             resource_limits = self.config["_member"]["limits"]
         agent_id = get_current_agent_id() or getattr(self.ai, "agent_id", None)
         task_id = episode_task_id() or get_current_task_id() or f"task_{uuid4().hex}"
+        from task_cancellation import requested as task_cancel_requested
+        task_owner = ('system' if getattr(self, 'config', {}).get('_is_system_ai')
+                      else getattr(self, 'project_id', '') or 'system')
+        original_cancel = kwargs.get('cancel_check')
+        kwargs['cancel_check'] = lambda: task_cancel_requested(task_owner, task_id) or bool(original_cancel and original_cancel())
         from steer_inbox import task_scope
         steer_agents = (agent_id, getattr(self.ai, "agent_id", None),
                         getattr(getattr(self.ai, "_provider", None), "agent_id", None), kwargs.get("agent_name"))
@@ -356,6 +361,9 @@ class CognitivePipelineMixin:
                 if _supervisor:
                     _supervisor.close()
                 leave(_ptoken)
+                if task_cancel_requested(task_owner, task_id):
+                    from delegation_tasks import confirm_task_cancelled
+                    confirm_task_cancelled(task_owner, task_id)
 
     def _cognitive_stream_body(
         self,

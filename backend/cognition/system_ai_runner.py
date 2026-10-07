@@ -234,7 +234,17 @@ class SystemAIRunner:
 
         from delegation_tasks import received as _received_envelope
         self._release_held_reports()
+        from delegation_tasks import recover_reports, SYSTEM_OWNER
+        with SystemAIRunner._lock:
+            queued = [self._message_task_id(m) for m in SystemAIRunner.internal_messages + SystemAIRunner.held_reports]
+        reports = recover_reports(SYSTEM_OWNER, 'system_ai', queued)
+        with SystemAIRunner._lock:
+            for report in reports:
+                SystemAIRunner.internal_messages.append(report)
         for msg_dict in runtime_work.message_stream(pop):
+          if msg_dict.get('_delivery_ack') and not getattr(self, 'ai', None):
+              msg_dict['_delivery_retry'] = True
+              continue  # 처리자가 준비되지 않은 보고는 원장에 남긴다.
           self._sync_gear()
           if self._hold_while_turn_alive(msg_dict):
               continue
@@ -436,6 +446,7 @@ class SystemAIRunner:
 
             except Exception as e:
                 import traceback
+                msg_dict['_delivery_retry'] = True
                 print(f"[SystemAIRunner] 메시지 처리 실패: {e}")
                 traceback.print_exc()
 
@@ -460,6 +471,7 @@ class SystemAIRunner:
             print(f"[SystemAIRunner] 작업 {task_id} 의 턴이 진행 중 — {msg_dict.get('from_agent', 'unknown')} 의 메시지를 턴 뒤로 미룸")
             msg_dict['_held'] = True
         with SystemAIRunner._lock:
+            msg_dict['_delivery_deferred'] = True
             SystemAIRunner.held_reports.append(msg_dict)
         return True
 
@@ -475,6 +487,7 @@ class SystemAIRunner:
             if task_busy(self._message_task_id(msg_dict)):
                 still.append(msg_dict)
             else:
+                msg_dict.pop('_delivery_deferred', None)
                 with SystemAIRunner._lock:
                     SystemAIRunner.internal_messages.append(msg_dict)
         if still:
@@ -648,6 +661,11 @@ class SystemAIRunner:
         save_conversation("assistant", response, source=("rehearsal" if _in_rehearsal() else None))
 
         # 태스크 완료 (전문 저장 — 2026-10-05, 작업 조회가 요약밖에 못 주던 것 수리)
+        from task_cancellation import requested
+        if requested('system', task_id):
+            from delegation_tasks import confirm_task_cancelled
+            confirm_task_cancelled('system', task_id)
+            return
         if failed:
             fail_task(task_id, response)
             print(f"[SystemAIRunner] 태스크 실패: {task_id}")

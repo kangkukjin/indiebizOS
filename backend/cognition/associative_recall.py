@@ -501,7 +501,39 @@ def _used_deep(ids, join, ev) -> Dict[str, Any]:
     return {"used": used, "evidence": "+".join(sorted(set(evidence))) or "none", "opened": opened[:5]}
 
 
+def _reusable_capabilities(req, recall):
+    from reusable_catalog import candidates
+    import json
+    rows = candidates(req.message)
+    while rows and len(json.dumps(rows, ensure_ascii=False)) > 5000:
+        rows.pop()
+    if not rows:
+        return None
+    text = '<reusable_capabilities>현재 요청과 관련된 기존 부품 후보입니다. 계약과 효과가 맞을 때 사용하세요. '
+    text += '계약 미상은 self:script list 또는 describe:["fn:이름"]으로 확인합니다.\n'
+    text += json.dumps(rows, ensure_ascii=False) + '\n</reusable_capabilities>'
+    return Block('reusable_capabilities', 'reusable_capabilities', text,
+                 ids=[r['id'] for r in rows], join={'candidates': [r['id'] for r in rows]})
+
+
+def _used_capabilities(ids, join, ev):
+    import json
+    used = set()
+    for call in ev.get('tool_calls') or []:
+        raw = call.get('result')
+        try:
+            raw = json.loads(raw) if isinstance(raw, str) else raw
+        except ValueError:
+            continue
+        if isinstance(raw, dict):
+            used.update(row['id'] for row in raw.get('capability_usage', []) if row.get('success'))
+    actual = sorted(used.intersection(ids))
+    return {'used': actual, 'evidence': 'executed' if actual else 'none',
+            'quality_contribution': 'not_inferred'}
+
+
 USAGE: Dict[str, Callable] = {
+    "reusable_capabilities": _used_capabilities,
     "hippocampus": _used_hippocampus,
     "recalled_memory": _used_deep,
     "method_map": _used_names,
@@ -531,7 +563,7 @@ def record_usage(presented, *, tool_calls=None, response: str = "", deep_touched
     """턴 끝 — 제시된 후보 중 무엇이 쓰였는지 기억별 해석기로 가르고 `recall.used` 사건 하나로 남긴다. 실패는 무시."""
     if not presented:
         return []
-    ev = {"ibl_codes": _ibl_codes(tool_calls), "response": response or "", "deep_touched": list(deep_touched or [])}
+    ev = {"ibl_codes": _ibl_codes(tool_calls), "tool_calls": tool_calls or [], "response": response or "", "deep_touched": list(deep_touched or [])}
     out = []
     for p in presented:
         fn = USAGE.get(p.get("source"))
@@ -561,6 +593,7 @@ def record_usage(presented, *, tool_calls=None, response: str = "", deep_touched
 
 SOURCES = (
     Source("hippocampus", "execution_memory", 1, True, _hippocampus),
+    Source("reusable_capabilities", "reusable_capabilities", 1, True, _reusable_capabilities),
     Source("memory_map", "memory_map", 1, True, _memory_map, needs="deep"),
     Source("recalled_memory", "recalled_memory", 1, True, _recalled_memory, needs="deep"),
     Source("guide_map", "guide_map", 1, True, _guide_map),

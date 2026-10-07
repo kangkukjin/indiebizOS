@@ -264,7 +264,7 @@ def _unfinished(v: dict) -> str:
     return v.get("failure") or f"작업이 {v['state']} 상태입니다 — 결과가 없습니다."
 
 
-def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS) -> dict:
+def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS, *, suspend=False) -> dict:
     """종료 상태가 되거나 timeout 이 끝날 때까지 기다린 뒤 투영.
 
     **시간 초과는 실패가 아니다(대기자의 사정)** — `success: true, timed_out: true` 와 현재 상태를 값으로 돌려준다.
@@ -286,6 +286,9 @@ def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS) -> dict:
             return {"success": False, **v, "error": _unfinished(v)}
         left = deadline - time.monotonic()
         if left <= 0:
+            if suspend:
+                return {"success": False, **v, "suspended": True,
+                        "error": "작업 완료를 기다립니다. 같은 실행 핸들로 이어갑니다."}
             note = f"대기 {int(limit)}초가 끝났습니다 — 작업은 {v['state']} 상태로 계속됩니다(실패 아님). 같은 ref 로 다시 wait 하세요."
             if requested > WAIT_MAX_SECONDS:
                 note += f" (timeout 상한 {WAIT_MAX_SECONDS}초로 줄임)"

@@ -400,6 +400,9 @@ def _entry_item(sid, e, state):
             "last_status": ("ok" if lr.get("ok") else "error") if lr else "none",
             "last_run": str(lr.get("at", "")) if lr else "",
             "runnable": not problems,
+            "execution": {"protocol": (e.get('callable_contract') or {}).get('adapter', {}).get('protocol', 'registered-json/1'),
+                          "foreground": True,
+                          "background": (e.get('callable_contract') or {}).get('adapter', {}).get('protocol') != 'ibl-script-session/1'},
             **({'callable_contract': e['callable_contract']} if e.get('callable_contract') else {})}
 
 
@@ -407,6 +410,11 @@ def op_list(tool_input):
     """등록 목록 + 마지막 실행 상태 (items 통화)."""
     registry, state = _read_registry(), _read_state()
     items = [_entry_item(sid, e, state) for sid, e in sorted(registry.items())]
+    if tool_input.get('id'):
+        items = [row for row in items if row['id'] == tool_input['id']]
+    if tool_input.get('query'):
+        from reusable_catalog import ranked
+        items = ranked(str(tool_input['query']), items, 10)
     return {"success": True, "count": len(items), "items": items,
             **({} if items else {"message": "등록된 스크립트가 없습니다 — op:register 로 등록 (path 필수)."})}
 
@@ -517,10 +525,9 @@ def op_run(tool_input):
     if (entry.get('callable_contract') or {}).get('adapter', {}).get('protocol') == 'ibl-script-session/1':
         return {'success': False, 'error_type': 'capability',
                 'error': '이 등록 스크립트는 현재 로컬 IBL 실행의 세션 계약으로 호출하세요.'}
-    if wire_v2 and not v2:
+    plain_contract = (entry.get('callable_contract') or {}).get('adapter', {}).get('protocol') == 'registered-json/1'
+    if wire_v2 and not v2 and not plain_contract:
         return {"success": False, "error": "이 스크립트는 현재 IBL의 명시 값 호출 계약을 사용합니다."}
-    if v2 and wire_v2 and tool_input.get("background"):
-        return {"success": False, "error": "ibl-script/2는 동기 실행만 지원합니다."}
     p = _script_path(entry)
     if not p.is_file():
         # pre-flight 실패도 상태에 남긴다(⑱) — 안 남기면 list/이력이 이 실패를 영영 모른다
@@ -533,9 +540,12 @@ def op_run(tool_input):
     args, _aerr, _args_src = _stdin_args(tool_input, expand_paths=not v2)
     if _aerr:
         return {"success": False, "error": _aerr}
-    if v2 and wire_v2:
+    if wire_v2 and (v2 or plain_contract):
         try:
             args = _runtime.v2_input(entry, args or {}, tool_input.get("_ibl_context"))
+            from ibl_callable_contract import selected
+            values = args if plain_contract else args['args']
+            entry = {**entry, 'callable_contract': selected(entry['callable_contract'], values)}
         except Exception as exc:
             return {"success": False, "error": f"script 입력 계약 위반: {exc}"}
     stdin_data = json.dumps(args, ensure_ascii=False) if args is not None else None
@@ -548,7 +558,7 @@ def op_run(tool_input):
     log_path = _path("_RUN_DIR") / f"{sid}-{uuid.uuid4().hex}.log"
     interp, interp_note = _resolve_interpreter(entry.get("interpreter"), p.suffix)
     if tool_input.get("background"):
-        job = _run_background(sid, entry, p, stdin_data, timeout, interp, interp_note)
+        job = _run_background(sid, entry, p, stdin_data, timeout, interp, interp_note, v2=v2)
         return {**job, "value": job} if v2 else job
     started = time.time()
     try:
@@ -584,6 +594,8 @@ def op_run(tool_input):
         except ValueError as exc:
             script_value, result_error = None, str(exc)
         parsed = None
+    elif plain_contract:
+        parsed, result_error = _runtime.v2_output(stdout, entry['callable_contract'])
     else:
         parsed, result_error = _runtime.parse_output(stdout)
     ok = (exit_code == 0) and not timed_out and not result_error
@@ -598,7 +610,7 @@ def op_run(tool_input):
     if not ok:
         # Preserve declared legacy failure/permission evidence at the adapter boundary.
         details = {}
-        if v2 and not wire_v2 and isinstance(script_value, dict):
+        if v2 and (not wire_v2 or plain_contract) and isinstance(script_value, dict):
             details = {k: script_value[k] for k in
                        ("blocked", "denied", "permission_denied", "error_type") if k in script_value}
             details["result"] = script_value
@@ -611,7 +623,7 @@ def op_run(tool_input):
 
     res = {"success": True, "id": sid, "exit_code": 0, "duration_ms": duration_ms, "log": str(log_path)}
     # Typed protocol value is arbitrary business data, not a legacy stdout envelope.
-    outcomes = [] if wire_v2 else _runtime.operation_outcomes(script_value if v2 else parsed, log_path)
+    outcomes = [] if wire_v2 and not plain_contract else _runtime.operation_outcomes(script_value if v2 else parsed, log_path)
     if outcomes:
         res['operation_outcomes'] = outcomes
     if interp_note:
@@ -623,7 +635,7 @@ def op_run(tool_input):
         res["args_bytes"] = len(stdin_data or "")
     if v2:
         res["value"] = script_value
-        if not wire_v2:
+        if not wire_v2 or plain_contract:
             from ibl_honesty import merge_into
             merge_into(script_value, res)
             res["script_protocol"] = "registered-json/1"
@@ -669,7 +681,7 @@ def _progress_tail(log_path, n=_PROGRESS_LINES):
     return lines[-n:]
 
 
-def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp_note=None):
+def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp_note=None, *, v2=False):
     """별도 프로세스로 실행 — 즉시 job_id 반환. 상태는 data/script_runs/jobs/<job_id>.json."""
     _path("_JOB_DIR").mkdir(parents=True, exist_ok=True)
     job_id = f"{sid}-{time.strftime('%Y%m%d_%H%M%S')}-{uuid.uuid4().hex}"
@@ -677,7 +689,8 @@ def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp
     log_path = _path("_RUN_DIR") / f"{job_id}.log"
     job = {"job_id": job_id, "id": sid, "status": "starting", "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
            "created_epoch": time.time(), "timeout": timeout, "log": str(log_path), "interpreter": interp,
-           "script": str(script_path), "stdin": stdin_data}
+           "script": str(script_path), "stdin": stdin_data,
+           "value_edition": 2 if v2 else 1, "callable_contract": entry.get('callable_contract')}
     _atomic_write(job_path, json.dumps(job, ensure_ascii=False))
     # 러너는 부모(백엔드)의 죽음·리로드를 넘어 살아야 한다 — 분리 방식은 OS 마다 다르므로
     # 공용 spawn_detached 에 맡긴다(유닉스=새 세션 / 윈도우=DETACHED_PROCESS, 세션 개념 없음).
@@ -757,15 +770,16 @@ def op_status(tool_input):
         row["progress"] = _progress_tail(j.get("log")) or []
         if j.get("error"):
             row["error"] = j["error"]
-        if j.get("status") in ("done", "failed") and j.get("result") is not None:
+        if j.get("status") in ("done", "failed") and "result" in j:
             row["result"] = j["result"]
+        row['value_protocol'] = (j.get('callable_contract') or {}).get('adapter', {}).get('protocol', 'registered-json/1')
         items.append(row)
     still = [r["job_id"] for r in items if r.get("status") in ("starting", "running")]
     text = f"작업 {len(items)}건" + (f" · 진행 중 {len(still)}" if still else "") + (" · " + ", ".join(notes) if notes else "")
     if len(still) == 1 and len(items) == 1 and items[0].get("progress"):
         text += " · " + items[0]["progress"][-1]
     res = {"success": True, "items": items, "count": len(items), "running": still, "text": text}
-    outcomes = [outcome for row in items if row['status'] == 'done'
+    outcomes = [outcome for row in items if row['status'] == 'done' and row['value_protocol'] == 'registered-json/1'
                 for outcome in _runtime.operation_outcomes(row.get('result'), row['job_id'])]
     if outcomes:
         res['operation_outcomes'] = outcomes
@@ -774,7 +788,7 @@ def op_status(tool_input):
         if items[0]["status"] in ("failed", "lost", "cancelled"):
             res["success"] = False
             res["error"] = items[0].get("error") or "스크립트 작업 실패"
-        if items[0].get("result") is not None:
+        if "result" in items[0]:
             res["result"] = items[0]["result"]
             r = items[0]["result"]
             if isinstance(r, dict):

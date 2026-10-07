@@ -13,9 +13,17 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
     resume = request.get('resume')
     stored_scope = (recorded_file_scope(journal_root(project_path), resume)
                     if isinstance(resume, dict) and 'run_id' in resume else None)
-    with request_scope(project_path, agent_id, request.get('resume'), stored_scope):
-        return _handle_request(request, project_path, agent_id, cancel_check,
-                               input_evidence=input_evidence)
+    from thread_context import get_approval, set_approval
+    previous = get_approval()
+    try:
+        if 'approval' in request:
+            from approval_tokens import request_digest
+            set_approval(request.get('approval'), request_digest(request.get('code'), request.get('inputs'), request.get('declared_inputs')))
+        with request_scope(project_path, agent_id, request.get('resume'), stored_scope):
+            return _handle_request(request, project_path, agent_id, cancel_check,
+                                   input_evidence=input_evidence)
+    finally:
+        set_approval(*previous)
 
 
 def _handle_request(request, project_path=".", agent_id=None, cancel_check=None, *, input_evidence=None):
@@ -87,13 +95,18 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
                 journal.db.execute('INSERT INTO file_workspace VALUES(?)', (current_scope(),))
                 journal.db.commit()
             journal.announce(plan.fingerprint)
+            from ibl_continuations import remember, finished
+            remember(journal, request, project_path, agent_id, input_evidence)
             from ibl_edition import source_context
+            original_cancel = cancel_check
+            cancelled = lambda: (journal.root / (journal.run_id + '.cancel')).is_file() or bool(original_cancel and original_cancel())
             with source_context(2):
-                result = Runtime(plan, inputs, cancel_check=cancel_check, journal=journal,
+                result = Runtime(plan, inputs, cancel_check=cancelled, journal=journal,
                                  budget=budget,
                                  reusable=reusable, reuse_run=reuse["run_id"] if reuse else None,
                                  input_evidence=input_evidence, value_protocols=protocols,
                                  reuse_models=reuse.get("models", True) if reuse else True).run()
+            finished(journal, result, project_path)
         try:
             from ibl_v2_learning import record_functions
             record_functions(plan, result)

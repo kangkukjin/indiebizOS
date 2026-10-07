@@ -49,7 +49,7 @@ LAYERS = {
         "phone_jobs", "principal", "approval_tokens", "action_requires", "task_receipts", "warehouse_paths", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
         "selfbuild_gate", "shell_shadow_gate", "supervision_bus", "supervision_watch", "supervision_hook",
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
-        "file_script", "script_process", "script_workspace",
+        "file_script", "script_process", "script_workspace", "task_cancellation",
     },
     "data": {
         "distill_ledger", "repair_continuation", "repair_context",
@@ -69,8 +69,9 @@ LAYERS = {
         "websocket_manager", "xray_stream",
     },
     "ibl": {
+        "reusable_catalog",
         "repair_execution_scope", "ibl_script_session", "ibl_file_script", "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",
-        "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies",
+        "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_continuations", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies",
         "member_bridge", "member_profile", "member_files",
         # ★api_engine·api_pipeline·api_transforms 는 이름만 api_* — FastAPI 라우터가
         # 아니라 api_registry.yaml 실행 엔진이다(APIRouter 0). 프리픽스 규칙보다 이

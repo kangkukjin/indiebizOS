@@ -14,7 +14,7 @@ actions:
       dependencies:
         backend/common/expression_eval.py: 539142b9eb7f27ca915f5be9a47ba995516d1ed7302b4a1e737e1145b0473c89
         backend/common/expression_functions.py: 4bdd3a130c760a3e1a0c89b96e634ec22a96b82167c02374727fd6f19efa275e
-        backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
+        backend/common/expression_ir.py: a8f7cdaf84a48dee6a51faf021e151cd66b4c64d77737d11341d82204bd95b2f # 재감사: suspended Fault의 catch 제외만 변경. 레코드 인증·경로·주체 해소 불변.
         backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
         backend/common/expression_ops.py: bebda213e12ac8adb67608ecaa7c4e22f4c0ed27863bcc60dc45653555b1f783
         backend/common/expression_parser.py: 421efa628cd098de6022ec25f7341032887ac08bba49571ef9287dd4b8312e36   # 재감사 2026-10-07: 값으로 정한 레코드 키 `{[$k]:…}` 의 거절 안내만 추가(L33-1) — 파싱 결과·회원 경계 불변 (10-05: @별칭 노드 지정 파싱, 회원 경로는 adapters 가 주인 전용으로 거절)

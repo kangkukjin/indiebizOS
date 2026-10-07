@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-07", impl: "4e5664b66c13fad3"}  # 31회차 재감사: fs_grep 본문·문맥 처리만 변경. member_documents의 기기 수신/턴 임시경로·script의 기기 exchange 경로는 fs_grep 미사용·불변. 보고서 round_31/report.md
+        path_audited: {at: "2026-10-07", impl: "67dc4f1b8863af45"}  # 조합 계약 재감사: 문서의 기기 경로 격리 불변. member_script는 허브 파일을 읽지 않고 기기 목록/args 교환만 사용, registered-json 값 검증도 기기 stdout만 소비. owner 계약 검색은 회원에서 비활성.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -150,7 +150,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-07", impl: "4e5664b66c13fad3"}  # 31회차 재감사: fs_grep 본문·문맥 처리만 변경. member_documents의 기기 수신/턴 임시경로·script의 기기 exchange 경로는 fs_grep 미사용·불변. 보고서 round_31/report.md
+        path_audited: {at: "2026-10-07", impl: "67dc4f1b8863af45"}  # 조합 계약 재감사: 문서의 기기 경로 격리 불변. member_script는 허브 파일을 읽지 않고 기기 목록/args 교환만 사용, registered-json 값 검증도 기기 stdout만 소비. owner 계약 검색은 회원에서 비활성.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -228,7 +228,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-07", impl: "4e5664b66c13fad3"}  # 31회차 재감사: fs_grep 본문·문맥 처리만 변경. member_documents의 기기 수신/턴 임시경로·script의 기기 exchange 경로는 fs_grep 미사용·불변. 보고서 round_31/report.md
+        path_audited: {at: "2026-10-07", impl: "67dc4f1b8863af45"}  # 조합 계약 재감사: 문서의 기기 경로 격리 불변. member_script는 허브 파일을 읽지 않고 기기 목록/args 교환만 사용, registered-json 값 검증도 기기 stdout만 소비. owner 계약 검색은 회원에서 비활성.
         target_key: path
       list:
         callable_contract:
@@ -869,11 +869,13 @@ nodes:
       script:
         params:
           callable_contract: object  # 선택적 입출력 타입 계약. 기존 등록도 현재 IBL에서 호출 가능.
+          query: string
         callable_contract:
           version: 1
           params:
             op: Text
             id: Text
+            query: Text
             args: Record
             args_file: Text
             path: Text
@@ -914,7 +916,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-07", impl: "4e5664b66c13fad3"}  # 31회차 재감사: fs_grep 본문·문맥 처리만 변경. member_documents의 기기 수신/턴 임시경로·script의 기기 exchange 경로는 fs_grep 미사용·불변. 보고서 round_31/report.md
+        path_audited: {at: "2026-10-07", impl: "67dc4f1b8863af45"}  # 조합 계약 재감사: 문서의 기기 경로 격리 불변. member_script는 허브 파일을 읽지 않고 기기 목록/args 교환만 사용, registered-json 값 검증도 기기 stdout만 소비. owner 계약 검색은 회원에서 비활성.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -925,7 +927,7 @@ nodes:
         fixture: '[self:script]{}'
         description: 파일 Script 실행 — 등록 id 또는 현재 턴의 Python path. 코드는 inputs Text로 write/edit하며 실행은 파일 참조만 받는다. path는 미등록 로컬 실행, 결과 파일의 값이 다음 문장으로 이어진다.
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태, 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 또는 path 중 하나. path는 제한 없는 주인의 ~turn/ 안 Python 파일이며 원장에 등록하지 않는다. inputs Text로 write/edit, args JSON stdin, INDIEBIZ_SCRIPT_RESULT 환경변수의 경로에 JSON 값을 쓴다(원자 교체 권장). stdout/stderr는 진단. 결과 누락=RESULT_MISSING, 잘못된 JSON=RESULT_INVALID, 자동 재시도 없음. timeout ≤3600, 로컬 동기만, id·args_file·interpreter·target·background 병용 불가. 코드/입력/진단 원문은 비공개 7일 보존, 실행 증거의 record로 조회하며 backend/file_script_cli.py로 명시 재현. id 실행은 기존 계약을 유지: args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 self:edit 또는 run_command, 같은 파일이면 재등록 불필요); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태+callable_contract·execution, id 또는 query로 좁힘. 등록 callable_contract의 registered-json/1은 기존 stdin/stdout JSON을 보존하고 ibl-script/2는 명시 값 봉투를 사용한다. 두 계약 모두 동기·background를 지원하며 입력/반환 타입을 검사한다. 목록은 후보 계약이며 check/run이 코드·환경 의존을 다시 검증한다. 반환 .items가 행 목록(.items >> table) / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 또는 path 중 하나. path는 제한 없는 주인의 ~turn/ 안 Python 파일이며 원장에 등록하지 않는다. inputs Text로 write/edit, args JSON stdin, INDIEBIZ_SCRIPT_RESULT 환경변수의 경로에 JSON 값을 쓴다(원자 교체 권장). stdout/stderr는 진단. 결과 누락=RESULT_MISSING, 잘못된 JSON=RESULT_INVALID, 자동 재시도 없음. timeout ≤3600, 로컬 동기만, id·args_file·interpreter·target·background 병용 불가. 코드/입력/진단 원문은 비공개 7일 보존, 실행 증거의 record로 조회하며 backend/file_script_cli.py로 명시 재현. id 실행은 기존 계약을 유지: args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 self:edit 또는 run_command, 같은 파일이면 재등록 불필요); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), 반환 .items가 작업 행 목록. 모든 상태의 행에 progress(관측한 stderr 꼬리, 없으면 [])가 있으며 done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
         router: handler
         tool: script_op
         implementation: path는 backend/base/file_script.py와 ibl_file_script 어댑터, id는 system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).

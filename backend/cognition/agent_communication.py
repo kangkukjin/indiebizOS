@@ -438,7 +438,17 @@ class AgentCommunicationMixin:
                 return messages.pop(0) if messages else None
 
         from delegation_tasks import received as _received_envelope
+        from delegation_tasks import recover_reports
+        with AgentRunner._lock:
+            queued = [m.get('task_id') for m in AgentRunner.internal_messages.get(my_key, [])]
+        reports = recover_reports(self.project_id, my_name, queued)
+        with AgentRunner._lock:
+            for report in reports:
+                AgentRunner.internal_messages.setdefault(my_key, runtime_work.WorkMessages()).append(report)
         for msg_dict in runtime_work.message_stream(pop):
+          if msg_dict.get('_delivery_ack') and not getattr(self, 'ai', None):
+              msg_dict['_delivery_retry'] = True
+              continue  # 처리자가 준비되지 않은 보고는 원장에 남긴다.
           # 봉투(origin·chain)를 처리 동안 세운다 — 에피소드 시작보다 먼저여야 출처가 읽힌다.
           # 훈련(origin=training)이 위임을 지나도 자식이 실사용으로 기록되지 않고, 대화·CLI 세션이
           # 리허설로 갈린다(cli_provider 의 @rehearsal 세션 키·conversation_db 의 rehearsal 스레드).
@@ -598,6 +608,7 @@ class AgentCommunicationMixin:
                         self._auto_report_to_chain(extracted_task_id, f"[실패] {mask_secrets(str(e))}",
                                                    msg_dict.get('from_agent', 'unknown'), failed=True)
                     except Exception as report_err:
+                        msg_dict['_delivery_retry'] = True
                         print(f"[AgentRunner] 실패 보고 실패: {report_err}")
             finally:
                 # 기존엔 예외 시 컨텍스트 정리가 건너뛰어졌음(except 가 잡고 다음 메시지로
@@ -775,7 +786,11 @@ class AgentCommunicationMixin:
 
     def _close_own_task(self, task_id: str, response: str, failed: bool):
         """자기 task 행을 닫는다 — 전문(요약 아님)을 남기고, 실패면 failed 로."""
-        if failed:
+        from task_cancellation import requested
+        if requested(self.project_id, task_id):
+            from delegation_tasks import confirm_task_cancelled
+            confirm_task_cancelled(self.project_id, task_id)
+        elif failed:
             self.db.fail_task(task_id, response)
         else:
             self.db.complete_task(task_id, response)
@@ -855,7 +870,11 @@ class AgentCommunicationMixin:
                                     'response': result_summary,
                                     'completed_at': datetime.now().isoformat(),
                                     'failed': bool(failed),
+                                    'delivery_pending': True,
                                 }
+                                from thread_context import get_task_origin, get_delegation_chain
+                                new_response['delivery_envelope'] = {"origin": get_task_origin(),
+                                    "chain": get_delegation_chain()[:-1] or None}
 
                                 # pending_delegations 감소 및 응답 누적 (원자적·child 별 1회)
                                 if channel == 'system_ai':
@@ -874,41 +893,11 @@ class AgentCommunicationMixin:
                                     self._close_own_task(task_id, response, failed)
                                     return
 
-                                print(f"[자동 보고] 응답 누적: {task_id} → {parent_task_id} (남은 위임: {remaining}/{total_delegations})")
+                                # The parent consumes its durable response outbox.
+                                # No volatile send after this commit is required.
+                                self._close_own_task(task_id, response, failed)
+                                return
 
-                                # 병렬 위임 수집 모드: 동시에 2개 이상 위임이 진행 중일 때만
-                                # 순차 위임: A 완료 → B 위임 → B 완료 (각 시점에서 pending은 항상 0 또는 1)
-                                # 병렬 위임: A, B 동시 위임 → pending=2 → A 완료(pending=1) → B 완료(pending=0)
-                                # 구분 방법: 현재 응답 도착 전 pending이 2 이상이었으면 병렬
-                                pending_before_decrement = remaining + 1  # 감소 전 값
-
-                                if pending_before_decrement >= 2:
-                                    # 병렬 위임 모드 (이 응답 도착 전에 2개 이상 대기 중이었음)
-                                    if remaining > 0:
-                                        print(f"[자동 보고] 병렬 수집 모드 - 대기 중: {remaining}개 응답 더 필요")
-                                        # 현재 태스크 닫고 리턴 (전문 보존)
-                                        self._close_own_task(task_id, response, failed)
-                                        print(f"[자동 보고] 태스크 닫음: {task_id}")
-                                        return  # 아직 다 안 모임 → 보고 스킵
-                                    else:
-                                        print(f"[자동 보고] 병렬 수집 모드 - 모든 응답 도착! 통합 보고 전송")
-                                        # DB에서 최신 컨텍스트를 읽어 모든 응답 통합
-                                        if channel == 'system_ai':
-                                            from system_ai_memory import get_task as get_sys_task
-                                            updated_parent = get_sys_task(parent_task_id)
-                                        else:
-                                            updated_parent = self.db.get_task(parent_task_id)
-                                        if updated_parent and updated_parent.get('delegation_context'):
-                                            updated_ctx = json.loads(updated_parent['delegation_context'])
-                                            all_responses = updated_ctx.get('responses', [])
-                                        else:
-                                            all_responses = [new_response]
-                                        combined_report = "[병렬 위임 결과 통합 보고]\n\n"
-                                        for resp in all_responses:
-                                            mark = " (실패)" if resp.get('failed') else ""
-                                            combined_report += f"◆ {resp.get('from_agent')}{mark}:\n{resp.get('response')}\n\n"
-                                        result_summary = combined_report
-                                # else: 순차 위임 모드 - 각 응답을 개별적으로 보고
                             else:
                                 # 구버전 형식 - 기존 로직 사용
                                 total_delegations = 1

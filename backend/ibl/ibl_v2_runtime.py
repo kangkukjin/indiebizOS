@@ -284,7 +284,13 @@ class Runtime(ExpressionEvaluator):
             return Binding(UNIT)
         if kind == "assert":
             condition = sub(d["condition"])
-            if not boolean(condition.value):
+            passed = boolean(condition.value)
+            from ibl_v2_analysis import constant_value
+            metadata = constant_value(d['details']) if d['details'] is not None else {}
+            metadata = {k: v for k, v in metadata.items() if k in ('criterion_id', 'criterion_text', 'scope') and isinstance(v, str)} if isinstance(metadata, dict) else {}
+            self.event(node, 'assertion', condition.evidence, passed=passed, **metadata,
+                       predicate_hash=digest(self.plan.source[d['condition'].start:d['condition'].end]))
+            if not passed:
                 message = sub(d["message"]) if d["message"] is not None else Binding("조건을 충족하지 못했습니다.")
                 details = sub(d["details"]) if d["details"] is not None else Binding({})
                 if not isinstance(message.value, str) or not isinstance(details.value, dict):
@@ -520,7 +526,7 @@ class Runtime(ExpressionEvaluator):
             error = Fault(first.code, str(first), first.node,
                           kind=first.kind if not first.catchable else "partial",
                           partial=[results[i].value for i in sorted(results)],
-                          details={"coverage": states, "successful_indices": sorted(results),
+                          details={**first.details, "coverage": states, "successful_indices": sorted(results),
                                    "errors": {str(i): self._fault_view(e) for i, e in errors.items()}})
             error.evidence = [eid]
             raise error
@@ -551,7 +557,7 @@ class Runtime(ExpressionEvaluator):
                         env["error"] = old
         except (Fault, Returned) as exc:
             primary = exc
-        if d["final"]:
+        if d["final"] and not (isinstance(primary, Fault) and primary.kind == "suspended"):
             previous_cleanup = getattr(self.local, "cleanup", None)
             if isinstance(primary, Fault) and primary.kind in ("cancelled", "budget"):
                 self.local.cleanup = previous_cleanup or [100, time.monotonic() + 1]
@@ -615,6 +621,8 @@ class Runtime(ExpressionEvaluator):
         if spec.dependency and spec.dependency(node.data['dependency_args']) != node.data['dependency_snapshot']:
             raise Fault('DEFINITION_CHANGED', '참조한 실행 자산이 검사 이후 변경되었습니다.', node, kind='protocol')
         contract = selected(spec.contract, args.value)
+        if spec.specialize and not node.data.get('target'):
+            contract = spec.specialize(contract, args.value)
         from ibl_value_checks import value_problems
         failures = problems(contract, args.value) + value_problems(contract, args.value, self.plan.registry, self.plan.definitions)
         failures += [f"필수 인자 누락: {k}" for k in contract.get("required", contract["params"]) if k not in args.value]
@@ -822,7 +830,9 @@ class Runtime(ExpressionEvaluator):
                 from model_call_context import capture_usage
                 with capture_usage() as usage:
                     try:
-                        with bind_scope(self.commit_scope, observed_at):
+                        from thread_context import invocation_scope
+                        with bind_scope(self.commit_scope, observed_at), invocation_scope(
+                                self.journal.run_id if self.journal else None, call_id, request_hash):
                             value = spec.run(self, copy.deepcopy(args.value), **run_extra)
                     finally:
                         # 호출 뒤 첫 걸음은 바로 취소를 확인한다 — 호출 도중 들어온 취소가
@@ -842,6 +852,12 @@ class Runtime(ExpressionEvaluator):
                     receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence,
                                "action": key, "reuse_key": reuse_key, "reuse_parts": reuse_parts,
                                **({"resource_state": freshness} if freshness else {})}
+                    if freshness:
+                        stable = all(len(r) > 3 and r[3] is not None for r in freshness) and freshness == resource_state(footprint)
+                        receipt['reuse_disabled'] = not stable
+                        tool_evidence = {**tool_evidence, 'source_snapshot': freshness,
+                                         **({'incomplete': True, 'warning': '자료를 읽는 동안 원천이 변경되었거나 내용 지문을 확인하지 못했습니다.'} if not stable else {})}
+                        receipt['evidence'] = tool_evidence
                     if model_only:
                         receipt['model_identity'] = model_identity
                         receipt['reuse_disabled'] = spec.model_identity() != model_identity
@@ -852,6 +868,12 @@ class Runtime(ExpressionEvaluator):
                     with self.lock:
                         self.recordings.append(receipt)
             except Exception as error:
+                if isinstance(error, Fault) and error.kind == "suspended":
+                    if self.journal and external:
+                        self.journal.finish(call_id, {"suspended": True, "request_hash": request_hash,
+                                                     "reason": error.code, "details": projection(error.details)})
+                    self.event(node, "suspended", [eid], reason=error.code)
+                    raise
                 exc = failed(error)
                 receipt = {"request_hash": request_hash, "action": key, "reuse_key": reuse_key,
                            "error": projection(exc.view(self.plan.source)), "partial": pack(exc.partial),
@@ -884,6 +906,9 @@ class Runtime(ExpressionEvaluator):
                 raise exc
         if tool_evidence:
             eid = self.event(node, "tool_evidence", [eid], **tool_evidence)
+        if (contract.get('adapter', {}).get('protocol') == 'ibl-script/2' and isinstance(args.value.get('id'), str)
+                and args.value.get('op', 'run') == 'run'):
+            self.event(node, 'capability_result', [eid], capability_id='script:' + args.value['id'], success=True)
         if stateful:
             self.foreign_evidence = frozenset({eid})
         return Binding(value, frozenset({eid}))
@@ -936,6 +961,8 @@ class Runtime(ExpressionEvaluator):
                    "value_wire": {"protocol": wire_protocol(result.value), "data": wire}}
         except Fault as exc:
             out = {"success": False, "error": str(exc), "diagnostic": projection(exc.view(self.plan.source))}
+            if exc.kind == "suspended":
+                out.update(status="suspended", suspended=True, waiting=projection(exc.details))
             from ibl_v2_analysis import RUNTIME_HINTS
             if exc.code in RUNTIME_HINTS and isinstance(out["diagnostic"], dict):
                 out["diagnostic"].setdefault("hint", RUNTIME_HINTS[exc.code])
@@ -945,6 +972,20 @@ class Runtime(ExpressionEvaluator):
                     "evidence": self.trace, "source_map": self.source_map, "recordings": self.recordings,
                     "usage": {"steps": self.budget.used_steps, "rows": self.budget.used_rows,
                               "elapsed_ms": round((time.monotonic() - self.budget.started) * 1000)}})
+        checks = [e for e in self.trace if e.get('kind') == 'assertion']
+        entries = self.plan.dependencies.get('source_map', [])[1:]
+        used = [{'id': 'fn:' + e['name'], 'success': e['success'], 'source_hash': digest(self.plan.source[source['start']:source['end']])}
+                for e in self.trace if e.get('kind') == 'function_result'
+                for source in entries if source['start'] <= e['definition_start'] < source['end']]
+        used += [{'id': e['capability_id'], 'success': e['success']} for e in self.trace if e.get('kind') == 'capability_result']
+        if used:
+            out['capability_usage'] = used
+        if checks:
+            out['verification'] = {'plan_hash': self.plan.fingerprint,
+                                   'value_hash': digest(out.get('value_wire')),
+                                   'checks': checks,
+                                   'source_snapshots': [r for e in self.trace for r in e.get('source_snapshot', [])],
+                                   'scope': 'declared_assertions', 'source_complete': out['source_complete']}
         if self.model_usage:
             from model_call_context import summarize_usage
             out['usage']['model'] = summarize_usage(self.model_usage)

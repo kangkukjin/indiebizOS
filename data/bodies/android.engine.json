@@ -63,6 +63,7 @@
     "base/supervision_bus",
     "base/supervision_hook",
     "base/supervision_watch",
+    "base/task_cancellation",
     "base/task_receipts",
     "base/thread_context",
     "base/thumbnails",
@@ -242,6 +243,7 @@
     "ibl/ibl_callable_contract",
     "ibl/ibl_code_binding",
     "ibl/ibl_code_ir",
+    "ibl/ibl_continuations",
     "ibl/ibl_control_blocks",
     "ibl/ibl_dependencies",
     "ibl/ibl_document_value",
@@ -303,6 +305,7 @@
     "ibl/package_manager",
     "ibl/pipeline_state",
     "ibl/repair_execution_scope",
+    "ibl/reusable_catalog",
     "ibl/tool_context",
     "ibl/tool_loader",
     "ibl/tool_selector",
@@ -559,8 +562,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 484,
-    "engine": 458,
+    "total": 487,
+    "engine": 461,
     "blocklist": 26
   }
 }

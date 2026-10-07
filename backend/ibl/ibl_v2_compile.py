@@ -615,6 +615,8 @@ class Compiler:
                 d['dependency_args'], d['dependency_snapshot'] = selectors, snapshot
                 self.call_dependencies[node.id] = snapshot
             contract = selected(spec.contract, values)
+            if spec.specialize and not d.get('target'):
+                contract = spec.specialize(contract, values)
             from ibl_value_checks import value_problems
             for problem in ([] if arg_type.open else problems(contract, values)) + value_problems(contract, values, self.registry, self.definitions):
                 self.issue(node, 'ARGUMENT_CONTRACT', problem)
@@ -863,7 +865,7 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
     registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize, v.dependency,
                           getattr(v, "reusable", None), getattr(v, "stateful", None),
                           getattr(v, "resource_identity", None), getattr(v, "model_identity", None),
-                          getattr(v, 'invocation_dependency', None))
+                          getattr(v, 'invocation_dependency', None), getattr(v, 'specialize', None))
                 for k, v in (registry or {}).items()}
     inputs = copy.deepcopy(inputs or {})
     compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}),

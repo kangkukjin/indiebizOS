@@ -217,6 +217,21 @@ def get_approval():
     return getattr(_thread_local, 'approval', (None, None))
 
 
+@contextmanager
+def invocation_scope(run_id, call_id, request_hash):
+    """한 외부 호출의 신원. 승인·중단은 프로그램이 아닌 이 인스턴스에 결속한다."""
+    previous = getattr(_thread_local, 'invocation', None)
+    _thread_local.invocation = {"run_id": run_id, "call_id": call_id, "request_hash": request_hash}
+    try:
+        yield
+    finally:
+        _thread_local.invocation = previous
+
+
+def get_invocation():
+    return getattr(_thread_local, 'invocation', None)
+
+
 def set_progress_ticket(ticket):
     """진행 **신고** 티켓 (2026-09-01) — 좌표 소유권과 분리된 두 번째 슬롯.
 

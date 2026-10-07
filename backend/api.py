@@ -259,6 +259,8 @@ async def lifespan(app: FastAPI):
     # 시스템 AI Runner 자동 시작 (위임 체인 지원)
     from system_ai_runner import start_system_ai_runner, stop_system_ai_runner
     system_ai_runner = start_system_ai_runner()
+    import ibl_continuations
+    ibl_continuations.start()
 
     # Cloudflare 터널 자동 시작 + 공개면 자가검증 — 한 백그라운드 스레드로(순서 보존).
     # ★기동을 lifespan 동기로 두면 내부 sleep(1.5+2)+프로세스 점검이 요청 수신을 막는다
@@ -412,6 +414,7 @@ async def lifespan(app: FastAPI):
         print(f"[증류큐] drain 실패 (무시): {e}")
 
     # 시스템 AI Runner 종료
+    ibl_continuations.stop()
     stop_system_ai_runner()
 
     # 채널 폴러 종료

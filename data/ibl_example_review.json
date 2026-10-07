@@ -1470,18 +1470,18 @@
   "self:script": {
    "fields": {
     "description": "43e64ceb9207",
-    "target_description": "078f7a66e773",
+    "target_description": "b41ebf97d7ce",
     "implementation": "ec321adab984",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "9aa4044afddf",
+    "params": "54434fa489a3",
     "ops": "553aa20ee719",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "5bf697e1053f"
    },
-   "reviewed": "2026-10-01",
+   "reviewed": "2026-10-07",
    "examples": 75
   },
   "self:sheet": {
@@ -1567,12 +1567,12 @@
   },
   "self:task": {
    "fields": {
-    "description": "8022d8516550",
-    "target_description": "8d8e74722243",
+    "description": "d13120846af9",
+    "target_description": "5041f4a2c466",
     "implementation": "22e22b80a762",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
-    "params": "20267f3e8310",
+    "params": "3bada8f4f032",
     "ops": "5d8afb80e081",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"

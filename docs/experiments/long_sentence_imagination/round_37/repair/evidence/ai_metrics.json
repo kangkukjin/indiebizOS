@@ -1,0 +1,196 @@
+{
+  "base": {
+    "episode": {
+      "id": 4447,
+      "task_id": "task_sysai_3962ba26",
+      "started_at": "2026-10-08T11:30:02.500347",
+      "ended_at": "2026-10-08T11:34:52.538017",
+      "total_ms": 290036
+    },
+    "totals": {
+      "input": 2851211,
+      "output": 25342,
+      "cache_read": 2554456,
+      "cache_create": 291103
+    },
+    "roles": {
+      "oneshot:classify:classify": {
+        "input": 5537,
+        "output": 3,
+        "cache_read": 3328,
+        "cache_create": 0
+      },
+      "consciousness:plan": {
+        "input": 118545,
+        "output": 3973,
+        "cache_read": 86409,
+        "cache_create": 32132
+      },
+      "execution:execute": {
+        "input": 2646469,
+        "output": 20506,
+        "cache_read": 2463023,
+        "cache_create": 183412
+      },
+      "oneshot:classify:capability_guard": {
+        "input": 4555,
+        "output": 127,
+        "cache_read": 1152,
+        "cache_create": 0
+      },
+      "oneshot:evaluate:evaluate": {
+        "input": 76105,
+        "output": 733,
+        "cache_read": 544,
+        "cache_create": 75559
+      }
+    },
+    "tools": [
+      "execute_ibl",
+      "execute_ibl",
+      "execute_ibl",
+      "execute_ibl",
+      "execute_ibl",
+      "execute_ibl",
+      "execute_ibl",
+      "execute_ibl",
+      "execute_ibl",
+      "Bash",
+      "execute_ibl",
+      "execute_ibl",
+      "execute_ibl",
+      "execute_ibl",
+      "execute_ibl",
+      "Bash",
+      "Bash"
+    ],
+    "evaluations": [
+      {
+        "decision": {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "ACHIEVED",
+          "response_hash": "9c214c2f06edb89e5302aac8fedb8714ea1661aac01f176a7500566ccdafac42",
+          "response_version": 1,
+          "severity": 0,
+          "status": "APPROVED"
+        },
+        "elapsed_s": 9.885,
+        "seq": 117
+      }
+    ],
+    "cost": {
+      "check_rejections": 2,
+      "evaluation_calls": 1,
+      "evaluation_checkpoint_s": 0.001891,
+      "evaluation_model_s": 9.885,
+      "evaluation_prepare_s": 0.134348,
+      "evaluation_visual_s": 0.004342,
+      "evaluation_wait_s": 0.001673,
+      "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/e41981938b244765a339d60de7e43627/events.jsonl",
+      "execution_calls": 17,
+      "execution_failures": 2,
+      "execution_tool_s": 29.829,
+      "internal_tool_failures": 2,
+      "request_intent": "task",
+      "source_failures": 1,
+      "supervisor_cache_read": 86409,
+      "supervisor_calls": 1,
+      "supervisor_input": 118545,
+      "supervisor_model_s": 40.06,
+      "supervisor_output": 3973,
+      "supervisor_tool_failures": 0,
+      "supervisor_tools": 1,
+      "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+      "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+      "wall_s": 289.194
+    }
+  },
+  "variant": {
+    "episode": {
+      "id": 4449,
+      "task_id": "task_sysai_37974666",
+      "started_at": "2026-10-08T11:38:49.507264",
+      "ended_at": "2026-10-08T11:44:21.133965",
+      "total_ms": 331626
+    },
+    "totals": {
+      "input": 1285732,
+      "output": 23811,
+      "cache_read": 1188096,
+      "cache_create": 86775
+    },
+    "roles": {
+      "oneshot:classify:classify": {
+        "input": 4869,
+        "output": 5,
+        "cache_read": 3456,
+        "cache_create": 0
+      },
+      "oneshot:background:background": {
+        "input": 3550,
+        "output": 1331,
+        "cache_read": 512,
+        "cache_create": 0
+      },
+      "execution:execute": {
+        "input": 1240671,
+        "output": 21380,
+        "cache_read": 1176037,
+        "cache_create": 64624
+      },
+      "oneshot:classify:capability_guard": {
+        "input": 8958,
+        "output": 239,
+        "cache_read": 2560,
+        "cache_create": 0
+      },
+      "oneshot:evaluate:evaluate": {
+        "input": 27684,
+        "output": 856,
+        "cache_read": 5531,
+        "cache_create": 22151
+      }
+    },
+    "tools": [
+      "Bash",
+      "execute_ibl",
+      "execute_ibl",
+      "Bash"
+    ],
+    "evaluations": [
+      {
+        "decision": {
+          "instruction": "",
+          "pursuit_status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: criteria — C4(\"세 파일 저장·재독\")는 세 파일을 새로 저장하라고 요구하지만, 사용자 원문은 \"variant 폴더의 decision.md로 저장·재독해\"와 \"기존 research.md/evidence.json/source_notes.md는 보존해\"입니다. 즉 결과물로 decision.md 한 파일만 요구하고 기존 세 파일은 그대로 두라고 했으므로 기준과 요청이 충돌합니다.",
+          "response_hash": "8f97d249db9adc0a07c6702d5f50584cc3ab8d417f3ee16026c4c14e557c7a8f",
+          "response_version": 1,
+          "severity": 0,
+          "status": "UNKNOWN"
+        },
+        "elapsed_s": 10.436,
+        "seq": 36
+      }
+    ],
+    "cost": {
+      "check_rejections": 0,
+      "evaluation_calls": 1,
+      "evaluation_checkpoint_s": 0.000793,
+      "evaluation_model_s": 10.436,
+      "evaluation_prepare_s": 0.010326,
+      "evaluation_visual_s": 0.00115,
+      "evaluation_wait_s": 0.000724,
+      "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/44d7e7222e7342c9bb39c84a1495b8ec/events.jsonl",
+      "execution_calls": 4,
+      "execution_failures": 0,
+      "execution_tool_s": 2.8480000000000003,
+      "internal_tool_failures": 0,
+      "request_intent": "task",
+      "source_failures": 0,
+      "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+      "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+      "wall_s": 330.715
+    }
+  }
+}

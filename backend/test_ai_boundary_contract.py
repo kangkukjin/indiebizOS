@@ -230,3 +230,25 @@ def test_each_stops_before_remaining_requests_and_downstream_on_partial_response
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+@pytest.mark.parametrize('inspection', [True, False])
+def test_oversized_input_diagnostics_survive_runtime_adapter(transform, inspection):
+    from ibl_v2_adapters import decode_envelope
+    from ibl_v2_ir import Fault
+    params = {'items': [{'raw': '가' * 61000}], 'contract': None}
+    if inspection:
+        params['inspect'] = 'batch'
+    raw = transform(**params)
+    with pytest.raises(Fault) as raised:
+        decode_envelope(raw, {'protocol': 'legacy-envelope'})
+    detail = raised.value.details
+    assert detail['error_type'] == 'input_size'
+    if inspection:
+        assert detail['inspection']['oversized_count'] == 1
+        assert detail['inspection']['limit_chars'] == 60000
+        assert detail['inspection']['model_calls'] == 0
+    else:
+        assert detail['input_chars'] > detail['limit_chars'] == 60000
+        assert detail['input_bytes'] > detail['input_chars']
+    assert 'items' not in detail and not transform.calls

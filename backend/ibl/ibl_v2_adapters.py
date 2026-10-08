@@ -235,6 +235,7 @@ def decode_envelope(raw, adapter, input_values=None):
         raise Fault(code, str(raw.get("error") or raw.get("message") or "도구 실행 실패"), kind=kind,
                     details={key: raw[key] for key in (
                         "error_type", "errno", "path", "base_path", "hint", "stage",
+                        "inspection", "input_chars", "input_bytes", "limit_chars",
                         "usage", "supported_channels", "available_actions", "error_code", "recovery",
                         "input_contract", "failure_origin", "execution_ref", "def", "retry_after",
                         "http_status", "url", "resolved_url", "reason", "stages",

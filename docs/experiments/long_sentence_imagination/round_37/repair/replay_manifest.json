@@ -1,0 +1,48 @@
+{
+  "scope": {
+    "code": "#!ibl edition=2\n$old=[self:read]{path:f\"${base}/evidence.json\"}\n$fixed=$old.data.items >> [table:compute]{set:($r)=>{reading_scope:{selected_indices:$r.reading_scope.selected_indices,selected_units:$r.reading_scope.selected_units,total_units:$r.reading_scope.total_units,unit:\"extraction_item\",note:\"제목과 단락을 포함한 추출 항목 수·인덱스다. PDF 쪽수가 아니다. 물리적 쪽수와 실제 읽은 쪽수는 별도 확인 전 미확인. 미선택 항목·그림·이미지 표는 미검증.\"}}}\n[self:write]{path:f\"${out}/evidence.json\",content:json($fixed)}\nreturn {studies:len($fixed),unit:\"extraction_item\"}\n",
+    "inputs": {
+      "base": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2"
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "base": {
+    "origin": "training",
+    "project_id": "수동모드",
+    "inputs": {
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2",
+      "instruction": "생성형 AI를 도입하면 우리 소프트웨어 개발팀의 개발시간이 적어도 20% 줄어든다고 계획해도 되는지 심층 조사 후 한국어 분석 보고서를 써줘. 조사 기준일은 2025-12-31이며 그때까지 공개된 연구만 사용해. 가상 회사는 개발자20명, 주니어/시니어 절반씩, 신규 기능 개발과 기존 코드 유지보수가 절반씩이야. 회사 자체의 측정 자료는 없으며 공개 연구를 근거로 판단해야 해.\n\n서로 독립인 실증연구를 최소6개 조사하되 최소3개는 소프트웨어 개발을 직접 다룬 연구로 해. 다른 지식노동 연구를 포함하면 개발팀에 적용할 수 있는 부분과 없는 부분을 밝혀. 원논문·연구기관·저자의 직접 발표를 우선하고, 동일 연구의 논문/블로그/보도자료를 별개 연구로 세지 마. 제목·날짜·방법·표본·대상 업무·AI 개입·비교군·주요 효과와 단위·품질 측정·한계·원문 URL·실제 확인한 범위를 연구별로 정리해. 검색 요약만 읽은 자료를 본문을 읽은 것처럼 쓰거나 못 읽은 자료의 수치를 채우지 마.\n\n좋아졌다는 연구와 느려졌거나 품질이 나빠졌다는 결과가 왜 함께 나오는지 비교 조건으로 설명하고, 생산량 증가·시간 단축·자기보고·인과효과를 구별해. 서로 다른 효과값을 단순 평균해 20% 목표를 정당화하지 마. 도입/보류/조건부 도입 중 무엇을 권할지 근거와 남은 불확실성을 제시하고, 품질을 희생하지 않는 6주 사내 실험 계획과 측정·중단 기준을 제안해. 사실·연구 해석·우리 회사에 대한 제안을 구분하고, 핵심 수치와 주장은 가까운 출처 링크로 연결해.\n\n지정한 자기 출력 폴더에 research.md(분석 보고서), evidence.json(연구별 근거 표), source_notes.md(확인 범위와 미확인·실패 자료)를 저장하고 다시 읽어 빠진 조건을 확인해. 웹 조사는 허용하지만 외부 발송·공개는 하지 마. 합성 회사에 대한 훈련이며 실제 회사 정보를 찾아 넣지 마. 다른 실행자의 trainer/harness/drafts·정답은 참조하지 마. 자신의 직전 결과·중간 참조는 재사용해도 돼.\n\n이 단계의 입력은 이미 원문에서 추출한 여섯 독립 연구 근거표다. 웹 추가조사 없이 이 근거로 완성된 한국어 Markdown 분석 보고서 본문만 작성하라. 실제 파일 저장은 호출자가 한다. 연구별 필수 필드 요약표와 근거 링크, 상반된 결과의 조건 비교, 20% 약속 가능 여부, 회사 구성별 적용과 한계, 6주 실험안을 포함하라. 가상회사의 절반/절반이라는 주변분포로 주니어×신규 등 네 교차칸의 비중까지 추정하지 마라. 실험은 무작위화 단위, 층화, 사용불이행 처리(ITT), 티켓 규모/난이도, 인력시간과 달력시간 구별, 리뷰어시간 포함, 반복측정 불확실성, 미완료·이월 티켓, 품질 관찰 지연, 비열등 한계값·중단 규칙·최종20%채택 규칙을 제안값으로 구체화하라. 관측치/해석/제안을 분리하고 표본 작음 때문에 검정력 보장하지 마라. 주제 밖 배경이나 원문 긴 인용은 빼고 4500~7500자 정도로 작성하라."
+    },
+    "budget": {
+      "steps": 1000000,
+      "rows": 100000
+    },
+    "code": "#!ibl edition=2\n$e=[self:read]{path:f\"${out}/evidence.json\"}\n$evidence=$e.data.items\nassert len($evidence)==6, \"연구 여섯 건이 필요합니다\"\n$notes=map($evidence,($row)=>f\"## ${$row.id}\\n원문: ${$row.url}\\n읽은 범위: ${json($row.reading_scope)}\\n판본: ${$row.date_version}\\n미확인·불확실성: ${$row.uncertainty}\\n\")\n$notes_text=f\"# 원문 확인 기록\\n기준일 2025-12-31. 여섯 원문 수집 성공. sources/는 원문 전체, extraction_inputs/는 실제 모델 입력, extracted/는 연구별 추출 결과다. 검색 요약은 근거 수치로 쓰지 않았다. METR 페이지의 2026년 추가 알림은 역사적 판단에서 제외한다. 이미지 표·그래프 및 선택에서 제외한 텍스트는 확인한 것으로 세지 않는다.\\n\\n${join('\\n',$notes)}\"\n[self:write]{path:f\"${out}/source_notes.md\",content:$notes_text}\n$report=$evidence >> [table:brief]{instruction:$instruction}\nassert len($report.message)>2000, \"분석 보고서가 지나치게 짧습니다\"\n[self:write]{path:f\"${out}/research.md\",content:$report.message}\n$r=[self:read]{path:f\"${out}/research.md\"}\n$n=[self:read]{path:f\"${out}/source_notes.md\"}\n$again=[self:read]{path:f\"${out}/evidence.json\"}\nassert $r.text==$report.message, \"보고서 재독 불일치\"\nassert $n.text==$notes_text, \"원문 기록 재독 불일치\"\nassert $again.data.items==$evidence, \"근거 표 재독 불일치\"\nreturn {research:f\"${out}/research.md\",evidence:f\"${out}/evidence.json\",source_notes:f\"${out}/source_notes.md\",studies:len($evidence),report_chars:len($r.text),reread:true}\n"
+  },
+  "variant": {
+    "origin": "training",
+    "project_id": "수동모드",
+    "inputs": {
+      "base": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/variant_v2",
+      "instruction": "같은 회사의 조건이 바뀌었어. 개발자20명 중18명이 시니어이고, 업무의90%가 익숙한 대규모 기존 저장소의 유지보수야. 신규 채용이나 새로운 실증연구를 추가하는 상황은 아니야. 네가 이미 확보한 원문·근거 표를 재사용해서 이 조건에서 개발시간20% 절감을 약속할 수 있는지 다시 판단하고, 대표에게 줄1~2쪽 정도의 의사결정 메모와 수정된6주 실험안을 지정한 variant 폴더의 decision.md로 저장·재독해.\n어느 기존 연구의 적용 비중이 달라졌고 무엇은 그대로인지 출처와 함께 설명해. 기존 research.md/evidence.json/source_notes.md는 보존해. 기존에 실제로 확인한 근거로 충분하면 웹 원문이나 추출을 다시 수행하지 마. 결정에 중요한 근거가 실제로 비어 있을 때만 그 부분을 보충하고 이유를 밝혀. 자신의 직전 결과·중간 참조는 재사용해도 되며 다른 실행자의 trainer/harness/drafts·정답은 참조하지 마. 외부 발송·공개는 하지 마.\n\n이 단계는 제공된 기존 근거표와 보고서를 재사용한다. 새로운 사실을 추측하지 마라. 완료된 한국어 Markdown 메모 본문만 2000~3000자 정도로 쓰고, 실제 파일 저장은 호출자가 한다. 핵심 수치에는 원문 링크를 붙여라. 보고서에서 틀리거나 모호한 표현은 반복하지 말고 불확실성을 유지하라. 제안값을 사실과 구별해라."
+    },
+    "budget": {
+      "steps": 1000000,
+      "rows": 100000
+    },
+    "code": "#!ibl edition=2\n$e=[self:read]{path:f\"${base}/evidence.json\"}\n$r=[self:read]{path:f\"${base}/research.md\"}\nassert len($e.data.items)==6, \"기존 연구 여섯 건이 필요합니다\"\n$memo=[{evidence:$e.data.items,previous_report:$r.text}] >> [table:brief]{instruction:$instruction}\n[self:write]{path:f\"${out}/decision.md\",content:$memo.message}\n$check=[self:read]{path:f\"${out}/decision.md\"}\nassert $check.text==$memo.message, \"의사결정 메모 재독 불일치\"\nreturn {path:f\"${out}/decision.md\",chars:len($check.text),reused_studies:len($e.data.items),reread:true}\n"
+  },
+  "ai_base": {
+    "message": "생성형 AI를 도입하면 우리 소프트웨어 개발팀의 개발시간이 적어도 20% 줄어든다고 계획해도 되는지 심층 조사 후 한국어 분석 보고서를 써줘. 조사 기준일은 2025-12-31이며 그때까지 공개된 연구만 사용해. 가상 회사는 개발자20명, 주니어/시니어 절반씩, 신규 기능 개발과 기존 코드 유지보수가 절반씩이야. 회사 자체의 측정 자료는 없으며 공개 연구를 근거로 판단해야 해.\n\n서로 독립인 실증연구를 최소6개 조사하되 최소3개는 소프트웨어 개발을 직접 다룬 연구로 해. 다른 지식노동 연구를 포함하면 개발팀에 적용할 수 있는 부분과 없는 부분을 밝혀. 원논문·연구기관·저자의 직접 발표를 우선하고, 동일 연구의 논문/블로그/보도자료를 별개 연구로 세지 마. 제목·날짜·방법·표본·대상 업무·AI 개입·비교군·주요 효과와 단위·품질 측정·한계·원문 URL·실제 확인한 범위를 연구별로 정리해. 검색 요약만 읽은 자료를 본문을 읽은 것처럼 쓰거나 못 읽은 자료의 수치를 채우지 마.\n\n좋아졌다는 연구와 느려졌거나 품질이 나빠졌다는 결과가 왜 함께 나오는지 비교 조건으로 설명하고, 생산량 증가·시간 단축·자기보고·인과효과를 구별해. 서로 다른 효과값을 단순 평균해 20% 목표를 정당화하지 마. 도입/보류/조건부 도입 중 무엇을 권할지 근거와 남은 불확실성을 제시하고, 품질을 희생하지 않는 6주 사내 실험 계획과 측정·중단 기준을 제안해. 사실·연구 해석·우리 회사에 대한 제안을 구분하고, 핵심 수치와 주장은 가까운 출처 링크로 연결해.\n\n지정한 자기 출력 폴더에 research.md(분석 보고서), evidence.json(연구별 근거 표), source_notes.md(확인 범위와 미확인·실패 자료)를 저장하고 다시 읽어 빠진 조건을 확인해. 웹 조사는 허용하지만 외부 발송·공개는 하지 마. 합성 회사에 대한 훈련이며 실제 회사 정보를 찾아 넣지 마. 다른 실행자의 trainer/harness/drafts·정답은 참조하지 마. 자신의 직전 결과·중간 참조는 재사용해도 돼.\n\n이번 출력 폴더는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai/base 입니다. 자기 직전 조사 결과는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base 에 있습니다. 이미 확보한 자신의 근거표와 원문 참조를 재사용하고, 기존 파일은 보존하세요. 중요한 근거가 실제로 비었을 때만 추가 조사하세요.",
+    "origin": "training",
+    "background": true
+  },
+  "ai_variant": {
+    "message": "같은 회사의 조건이 바뀌었어. 개발자20명 중18명이 시니어이고, 업무의90%가 익숙한 대규모 기존 저장소의 유지보수야. 신규 채용이나 새로운 실증연구를 추가하는 상황은 아니야. 네가 이미 확보한 원문·근거 표를 재사용해서 이 조건에서 개발시간20% 절감을 약속할 수 있는지 다시 판단하고, 대표에게 줄1~2쪽 정도의 의사결정 메모와 수정된6주 실험안을 지정한 variant 폴더의 decision.md로 저장·재독해.\n어느 기존 연구의 적용 비중이 달라졌고 무엇은 그대로인지 출처와 함께 설명해. 기존 research.md/evidence.json/source_notes.md는 보존해. 기존에 실제로 확인한 근거로 충분하면 웹 원문이나 추출을 다시 수행하지 마. 결정에 중요한 근거가 실제로 비어 있을 때만 그 부분을 보충하고 이유를 밝혀. 자신의 직전 결과·중간 참조는 재사용해도 되며 다른 실행자의 trainer/harness/drafts·정답은 참조하지 마. 외부 발송·공개는 하지 마.\n\n자기 기존 근거와 보고서는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai/base 입니다. 이번 출력 폴더는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai/variant 입니다.",
+    "origin": "training",
+    "background": true
+  }
+}

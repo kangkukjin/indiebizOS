@@ -71,12 +71,23 @@ def reconcile(store, calculations):
 
 
 def discover(controller, response, tool_calls):
-    paths = set(re.findall(r"(?<![\w:])((?:/|outputs/)[^\n`\"'<>]*?\.(?:md|txt|html))(?=[\s)`\"'<>]|$)", response or ""))
+    paths = set(re.findall(r"(?<![\w:])((?:/|outputs/)[^\n`\"'<>]*?\.(?:md|txt|html|json|csv|tsv))(?=[\s)`\"'<>]|$)", response or ""))
     for call in tool_calls or []:
-        if not isinstance(call, dict) or call.get("is_error") or call.get("success") is False:
+        if not isinstance(call, dict):
+            continue
+        # 계산된 경로는 코드 문자열이 아니라 실행 증거에 있다. 부분 실패 전
+        # 저장된 파일도 검사하되, 읽기 대상이나 실행하지 않은 코드는 산출물로 보지 않는다.
+        for invocation in call.get("runtime_calls") or []:
+            if isinstance(invocation, dict) and invocation.get("action") in {"self:write", "self:edit", "self:patch"}:
+                target = (invocation.get("targets") or {}).get("path")
+                if isinstance(target, str):
+                    paths.add(target)
+        if call.get("is_error") or call.get("success") is False:
             continue
         name = call.get("name") or call.get("tool_name") or ""
         inp = call.get("input") or {}
+        if not isinstance(inp, dict):
+            continue
         if name.rsplit("__", 1)[-1] in {"Write", "Edit", "write_file"}:
             paths.update(inp[k] for k in ("path", "file_path") if isinstance(inp.get(k), str))
     artifacts = []
@@ -84,7 +95,7 @@ def discover(controller, response, tool_calls):
         path = Path(name)
         if not path.is_absolute():
             path = Path(controller.project_path) / path
-        if path.suffix.lower() not in {".md", ".txt", ".html"} or not path.is_file():
+        if path.suffix.lower() not in {".md", ".txt", ".html", ".json", ".csv", ".tsv"} or not path.is_file():
             continue
         try:
             content = path.read_text(encoding="utf-8")

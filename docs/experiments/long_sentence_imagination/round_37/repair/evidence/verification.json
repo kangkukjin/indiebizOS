@@ -1,0 +1,26 @@
+{
+  "targeted": 199,
+  "non_system": {
+    "passed": 9358,
+    "skipped": 1,
+    "seconds": 118.96
+  },
+  "related_system": {
+    "passed": 56,
+    "seconds": 134.76
+  },
+  "semantic_cases": {
+    "matched": 7,
+    "total": 7
+  },
+  "checks": [
+    "build_ibl_nodes.py --check",
+    "check_backend_layers.py",
+    "check_file_size.py",
+    "build_body_bundle.py android",
+    "git diff --check"
+  ],
+  "reused_sources": true,
+  "universal_semantic_correctness_proven": false,
+  "total_time_or_token_improvement_proven": false
+}

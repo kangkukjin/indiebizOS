@@ -440,3 +440,29 @@ def test_first_evaluation_receives_round17_checks_without_repair(supervisor, mon
     finish(supervisor, '저장 검증을 확인해 주세요')
     assert len(prompts) == 1
     assert tc.get_goal_eval_outcome()['status'] == 'UNKNOWN'
+
+
+def test_computed_written_artifacts_reach_first_evaluation(supervisor, tmp_path):
+    from final_evaluator import prepare, snapshot_error
+    report = tmp_path / '분석 보고.md'
+    evidence = tmp_path / '근거.json'
+    source = tmp_path / '원문.txt'
+    report.write_text('첫 문단\n' + '중간 내용\n' * 1100 + '적용할 수 없는 부분: 원문에 명시', encoding='utf-8')
+    evidence.write_text(json.dumps({'unconfirmed': '원문에서 확인 불가'}, ensure_ascii=False), encoding='utf-8')
+    source.write_text('읽은 원문은 결과물로 첨부하지 않는다', encoding='utf-8')
+    raw = supervisor.store.evidence(json.dumps({'evidence': [
+        {'kind': 'invoke', 'action': 'self:write', 'targets': {'path': str(report)}},
+        {'kind': 'invoke', 'action': 'self:write', 'targets': {'path': str(evidence)}},
+        {'kind': 'invoke', 'action': 'self:read', 'targets': {'path': str(source)}}]}))
+    key = supervisor._start('execute_ibl', {'code': '[self:write]{path:$out+"/근거.json",content:$data}'})
+    supervisor._finish(key, json.dumps({'edition': 2, 'executed': True, 'result_ref': raw}))
+    supervisor.store.put_response('요청하신 보고서와 근거표를 저장하고 재독했습니다.')
+    packet = prepare(supervisor)
+    snapshot = supervisor._evaluation_snapshot
+    assert report.read_text() in packet['files']
+    assert evidence.read_text() in packet['files']
+    assert source.read_text() not in packet['files']
+    assert set(snapshot['files']) == {str(report), str(evidence)}
+    assert packet['files'].count(report.read_text()) == 1
+    evidence.write_text('{}')
+    assert snapshot_error(supervisor)

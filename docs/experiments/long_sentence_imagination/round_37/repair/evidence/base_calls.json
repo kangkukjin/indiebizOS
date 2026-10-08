@@ -1,0 +1,87 @@
+[
+  {
+    "name": "execute_ibl",
+    "code": "$b = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차\"\n$l1 = [self:list]{path:f\"${b}/ai/base\"}\n$l2 = [self:list]{path:f\"${b}/ai/variant\"} ?? []\n$l3 = [self:list]{path:f\"${b}/repair/ai/base\"} ?? []\nreturn {base:$l1 >> [table:select]{columns:[\"name\",\"size\",\"mtime\"]}, variant:$l2 >> [table:select]{columns:[\"name\",\"size\",\"mtime\"]}, out:$l3}",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "$b = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\"\n$r = [self:read]{path:f\"${b}/research.md\"}\n$s = [self:read]{path:f\"${b}/source_notes.md\"}\n$e = [self:read]{path:f\"${b}/evidence.json\", format:\"text\"}\nreturn {research:$r.text, notes:$s.text, evidence:$e.text}",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "$m = [fn:주소마다읽기]{목록:[{url:\"https://arxiv.org/html/2507.09089v2\"}],개수:1}\n$d = [fn:주소마다읽기]{목록:[{url:\"https://services.google.com/fh/files/misc/2024_final_dora_report.pdf\"}],개수:1}\n$mf = [fn:본문에서찾기]{목록:$m.items,패턴:\"(?i)(confidence interval|CI[: ]|\\\\[\\\\s*-?\\\\d+%|95%)\",문맥:0,개수:8}\n$df = [fn:본문에서찾기]{목록:$d.items,패턴:\"(?i)(respondents|participants|survey takers|professionals)\",문맥:0,개수:10}\nreturn {m_n:len($m.items), d_n:len($d.items), metr:$mf.items >> [table:select]{columns:[\"text\"]}, dora:$df.items >> [table:select]{columns:[\"text\"]}, mi:$mf.match_info, di:$df.match_info}",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "$m = [fn:주소마다읽기]{목록:[{url:\"https://arxiv.org/html/2507.09089v2\"}],개수:1}\n$d = [fn:주소마다읽기]{목록:[{url:\"https://services.google.com/fh/files/misc/2024_final_dora_report.pdf\"}],개수:1}\n$mf = [fn:본문에서찾기]{목록:$m.items,패턴:\"(?i)(\\\\d+%\\\\s*(to|and|,)\\\\s*-?\\\\d+%|D\\\\.1|speedup of|slowdown of|interval of|−?\\\\d+\\\\.?\\\\d*%\\\\s*,\\\\s*−?\\\\d+)\",문맥:0,개수:10}\n$df = [fn:본문에서찾기]{목록:$d.items,patrón:\"x\",패턴:\"(\\\\d{1,2},\\\\d{3}|\\\\d{4}) (respondents|professionals|people|survey|participants)|(?i)(sample size|responses from|nearly \\\\d|over \\\\d)\",문맥:0,개수:10}\nreturn {metr:$mf.items >> [table:select]{columns:[\"text\"]}, dora:$df.items >> [table:select]{columns:[\"text\"]}, mi:$mf.match_info.total_matches, di:$df.match_info.total_matches}",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "$rejected:52df18257f0d1cdbbc57c5719e997e60bb967f1dbfa9fd71a782d83cd274c6ca",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "$mf = [fn:본문에서찾기]{목록:$m.items,패턴:\"(?i)(\\\\d+%\\\\s*(to|and|,)\\\\s*-?\\\\d+%|D\\\\.1|speedup of|slowdown of|interval of|−?\\\\d+\\\\.?\\\\d*%\\\\s*,\\\\s*−?\\\\d+)\",문맥:0,개수:10}\n$df = [fn:본문에서찾기]{목록:$d.items,패턴:\"(?i)((\\\\d{1,2},\\\\d{3}|\\\\d{4}) (respondents|professionals|people|survey|participants)|sample size|responses from|nearly \\\\d|over \\\\d)\",문맥:0,개수:10}\nreturn {metr:$mf.items >> [table:select]{columns:[\"text\"]}, dora:$df.items >> [table:select]{columns:[\"text\"]}, mi:$mf.match_info.total_matches, di:$df.match_info.total_matches}",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "$mf = [fn:본문에서찾기]{목록:$m.items,패턴:\"(?i)(figure 1[3-5]|\\\\[\\\\s*[-−+]?\\\\d+(\\\\.\\\\d+)?\\\\s*%?\\\\s*,|table [1-6]:|significan)\",문맥:1,개수:12}\nreturn {metr:$mf.items >> [table:select]{columns:[\"text\",\"paragraph_index\"]}, mi:$mf.match_info.total_matches}",
+    "command": null
+  },
+  {
+    "name": "Bash",
+    "code": null,
+    "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차\" && shasum -a 256 ai/base/* ai/variant/* | tee /tmp/r37_before.sha"
+  },
+  {
+    "name": "execute_ibl",
+    "code": "#!ibl edition=2\n$src = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\"\n$out = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai/base\"\n$r0 = [self:read]{path:f\"${src}/research.md\"}\n$n0 = [self:read]{path:f\"${src}/source_notes.md\"}\n$e0 = [self:read]{path:f\"${src}/evidence.json\"}\n[def:바꾸기]($글,$옛,$새) {\n  assert contains($글,$옛),\"앵커 없음\",{앵커:$옛}\n  return replace($글,$옛,$새)\n}\n$t = $r0.text\n$t = [fn:바꾸기]{글:$t,옛:\"- 함께 저장한 파일:\",새:\"- 판본: 직전 `ai/base` 보고서를 재검수·보충한 판이다. 직전 판과 달라진 곳은 8절에 모았다.\\n- 함께 저장한 파일:\"}\n$t = [fn:바꾸기]{글:$t,옛:\"| ID | 연구(공개일) | 설계 | 표본 | 과제 성격 | 측정량·주요 효과 | 품질 측정 |\\n|---|---|---|---|---|---|---|\",새:\"| ID | 연구(공개일) | 설계 | 표본 | 과제 성격 | 측정량·주요 효과 | 품질 측정 | 추정 유형 |\\n|---|---|---|---|---|---|---|---|\"}\n$t = [fn:바꾸기]{글:$t,옛:\"| 없음(테스트 통과만) |\",새:\"| 없음(테스트 통과만) | 시간 단축·인과(RCT) |\"}\n$t = [fn:바꾸기]{글:$t,옛:\"Accenture −17.40%(유의) |\",새:\"Accenture −17.40%(유의) | 산출량 증가·인과(IV) |\"}\n$t = [fn:바꾸기]{글:$t,옛:\"| 없음 |\\n| S4\",새:\"| 없음 | 시간 단축·인과(RCT), 유의하지 않음 |\\n| S4\"}\n$t = [fn:바꾸기]{글:$t,옛:\"표준 PR 리뷰 통과(고품질 기준) |\",새:\"표준 PR 리뷰 통과(고품질 기준) | 시간 증가·인과(RCT) |\"}\n$t = [fn:바꾸기]{글:$t,옛:\"복잡도 +41%(지속) |\",새:\"복잡도 +41%(지속) | 산출량 일시 증가·준실험 인과 |\"}\n$t = [fn:바꾸기]{글:$t,옛:\"| 2024 응답자 수 미확인 |\",새:\"| 2024 응답 약 3,000명([PDF 91쪽](https://services.google.com/fh/files/misc/2024_final_dora_report.pdf)) |\"}\n$t = [fn:바꾸기]{글:$t,옛:\"코드 품질 인식 +3.4% |\",새:\"코드 품질 인식 +3.4% | 관찰 연관·자기보고 |\"}\n$t = [fn:바꾸기]{글:$t,옛:\"해결률·고객 감정·NPS |\",새:\"해결률·고객 감정·NPS | 처리량 증가·준실험 인과 |\"}\n$t = [fn:바꾸기]{글:$t,옛:\"| 평가자 채점 |\",새:\"| 평가자 채점 | 시간·품질, 인과(RCT) |\"}\n$t = [fn:바꾸기]{글:$t,옛:\"| 평가자 1~7점 |\",새:\"| 평가자 1~7점 | 시간(자기보고)·인과(RCT) |\"}\n$t = [fn:바꾸기]{글:$t,옛:\"방법·비교군·AI 개입·한계·실제로 확인한 범위\",새:$add_table_note + \"방법·비교군·AI 개입·한계·실제로 확인한 범위\"}\n$t = [fn:바꾸기]{글:$t,옛:\"과잉일반화를 경고했다.\\n\",새:\"과잉일반화를 경고했다.\\n\" + $add_s4}\n$t = [fn:바꾸기]{글:$t,옛:\"- [해석] 서로 다른 단위(시간 %, 산출량 %, SD, 설문 모형 %)를 평균하는 것은 의미가 없다.\",새:$add_33 + \"- [해석] 서로 다른 단위(시간 %, 산출량 %, SD, 설문 모형 %)를 평균하는 것은 의미가 없다.\"}\n$t = [fn:바꾸기]{글:$t,옛:\"- METR의 신뢰구간 수치와 DORA 2024의 응답자 수는 이번에 원문에서 추출하지 못했다(source_notes.md 참조).\",새:$new_52}\n$t = [fn:바꾸기]{글:$t,옛:\"  - 6주 차 말: 1차 분석.\",새:\"  - 6주 차 말: 시간 지표 1차 분석. 품질 판정은 아직 하지 않는다(6주차에 병합된 티켓은 14일 관찰이 끝나지 않았다).\\n  - 8주 차 말(실험 종료 14일 뒤): 모든 실험 티켓의 14일 관찰을 마친 뒤 품질 비열등을 판정하고 6.4절 규칙을 적용한다.\"}\n$t = [fn:바꾸기]{글:$t,옛:\"결과의 신뢰구간이 넓으면 결론을 내리지 않고 기간을 늘린다.\",새:\"결과의 신뢰구간이 넓으면 결론을 내리지 않고 기간을 늘린다. 20명·5주는 세그먼트(4칸)별로는 칸당 약 75~100건이라 칸별 추정은 더 넓다. 칸별 결론은 '추가 관찰'로 남을 수 있음을 미리 받아들인다.\"}\n$t = [fn:바꾸기]{글:$t,옛:\"- **1차 지표(시간):** 티켓당 실작업 시간.\",새:\"- **1차 지표(시간):** 티켓당 실작업 인력시간 = 작성자 시간 + 리뷰어 시간. 리뷰어 시간을 넣는 이유는 AI 생성 코드의 검토 부담이 시니어에게 옮겨 가는 효과를 '단축'으로 잘못 세지 않기 위해서다. 대기까지 포함한 달력 리드타임은 2차 지표로 따로 본다. 작성자 시간의 정의는 다음과 같다.\"}\n$p1 = split($t,\"### 6.4 실험 후 의사결정 규칙\")\nassert len($p1)==2,\"6.4 앵커\",{n:len($p1)}\n$p2 = split($p1[1],\"---\\n\\n## 7. 이 보고서의 한계\")\nassert len($p2)==2,\"7절 앵커\",{n:len($p2)}\n$research = $p1[0] + $new_64 + \"---\\n\\n## 7. 이 보고서의 한계\" + $p2[1] + $sec8\n$ev = $e0.data\n$types = {S1:\"시간 단축(과제 완료시간)·인과(RCT)\",S2:\"산출량 증가(주당 PR)·인과(IV)\",S3:\"시간 단축(과제시간)·인과(RCT), 유의하지 않음\",S4:\"시간 증가(이슈 구현시간)·인과(RCT)\",S5:\"산출량 일시 증가(줄·커밋)·준실험 인과\",S6:\"관찰 연관·자기보고(설문 모형)\",K1:\"처리량 증가(시간당 해결)·준실험 인과\",K2:\"시간 단축·품질 변화·인과(RCT)\",K3:\"시간 단축(자기보고 시간)·인과(RCT)\"}\n$studies = $ev.studies >> [table:each] {\n  $s = {**$it, estimate_type:get($types,$it.id)}\n  $s2 = $it.id==\"S4\" ? {**$s, main_effect:{**$it.main_effect, kind:$s4_kind, robustness:$s4_rob}, quality_measure:$s4_q, read_scope:$s4_scope} : $s\n  return $it.id==\"S6\" ? {**$s2, sample:$s6_sample, read_scope:$s6_scope} : $s2\n}\n$meta = {**$ev.meta, revision:\"repair 판(2026-10-08): ai/base 직전 근거표를 재사용하고 S4·S6 공백만 원문에서 보충. 모든 연구에 estimate_type 추가\", required_fields:[\"title\",\"date\",\"design\",\"sample\",\"task\",\"ai_intervention\",\"comparison\",\"main_effect\",\"quality_measure\",\"limitations\",\"url\",\"read_scope\"]}\n$evidence = {meta:$meta, studies:$studies}\n$notes = $n0.text + $notes_add\n$w1 = [self:write]{path:f\"${out}/research.md\",content:$research}\n$w2 = [self:write]{path:f\"${out}/evidence.json\",content:json($evidence)}\n$w3 = [self:write]{path:f\"${out}/source_notes.md\",content:$notes}\nreturn {w:[$w1.path,$w2.path,$w3.path], chars:[len($research),len($notes)], n:len($studies)}",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "$checked:f47fd8c5cd450a6cb05f7f1547dc66f477cb11a6d2b06f8bd401a59899bd2527",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "#!ibl edition=2\n$out = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai/base\"\n$r = [self:read]{path:f\"${out}/research.md\"}\n$n = [self:read]{path:f\"${out}/source_notes.md\"}\n$e = [self:read]{path:f\"${out}/evidence.json\"}\n$req = $e.data.meta.required_fields\n$missing = $e.data.studies >> [table:each] {\n  $s = $it\n  return {id:$s.id, sw:$s.software_direct, missing:$req >> [table:each]{ return has($s,$it) ? null : $it } >> [table:filter]{where:($x)=>$x != null}, has_type:has($s,\"estimate_type\"), app:has($s,\"applicability_to_dev\")}\n}\n$rows = split($r.text,\"\\n\") >> [table:filter]{where:($l)=>contains($l,\"| S\") or contains($l,\"| K\") }\n$tablerows = $rows >> [table:filter]{where:($l)=>contains($l,\"](http\") and len(split($l,\"|\"))>=9}\n$must = [\"권고: 조건부 도입\",\"3.1 무엇을 쟀는지\",\"3.2 결과를 가르는 조건\",\"3.4 다른 지식노동\",\"6.3 중단 기준\",\"6.4 품질 비열등\",\"8주 차 말\",\"시간 비중\",\"추정 유형\",\"nearly 3,000\",\"## 7. 이 보고서의 한계\",\"## 8. 직전 판\",\"[사실]\",\"[해석]\",\"[제안]\",\"평균하지 않았다\"]\nreturn {studies:$missing, sw_count:len($e.data.studies >> [table:filter]{where:($s)=>$s.software_direct==true}), table_rows:len($tablerows), table_cols:$tablerows >> [table:each]{ return len(split($it,\"|\")) }, must_missing:$must >> [table:filter]{where:($m)=>not contains($r.text,$m)}, note_ok:[contains($n.text,\"## 7. repair\"),contains($n.text,\"미확인 유지\"),contains($n.text,\"## 2. 읽지 못했거나\")], has_variant18:contains($r.text,\"18명\")}",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "$rejected:012054d32a4dca99757fd7a22dee14b7d944628458691b128398421aa3b98176",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "$checked:07f86e312fdcb9917ed48c08874edf71cfca0a83bb86320c5bc91cdacf27af27",
+    "command": null
+  },
+  {
+    "name": "Bash",
+    "code": null,
+    "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차\" && shasum -a 256 -c /tmp/r37_before.sha && ls -la repair/ai/base && python3 -I -c \"import json,sys;d=json.load(open(sys.argv[1]));print(len(d['studies']))\" repair/ai/base/evidence.json"
+  },
+  {
+    "name": "Bash",
+    "code": null,
+    "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차\" && shasum -a 256 -c /tmp/r37_before.sha"
+  }
+]

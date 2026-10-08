@@ -1,0 +1,266 @@
+{
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai/base/evidence.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "544a7c786c96c62d0d27bf2be087edfacf73f2956dd398ad4ebe7c97996e6c4e",
+      "mtime_ns": 1791426844783730528
+    },
+    "after": {
+      "sha256": "544a7c786c96c62d0d27bf2be087edfacf73f2956dd398ad4ebe7c97996e6c4e",
+      "mtime_ns": 1791426844783730528
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai/base/source_notes.md": {
+    "unchanged": true,
+    "before": {
+      "sha256": "39ab724c532b4a9ab8d9ce0eb344badd91c92c3975023c0374b44e5c627491b7",
+      "mtime_ns": 1791426844849900068
+    },
+    "after": {
+      "sha256": "39ab724c532b4a9ab8d9ce0eb344badd91c92c3975023c0374b44e5c627491b7",
+      "mtime_ns": 1791426844849900068
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai/base/research.md": {
+    "unchanged": true,
+    "before": {
+      "sha256": "a9437859752f0b4b0aea7ba5993e94c1ff72ae24c7fd71b4a13253902cc070b3",
+      "mtime_ns": 1791426844712196814
+    },
+    "after": {
+      "sha256": "a9437859752f0b4b0aea7ba5993e94c1ff72ae24c7fd71b4a13253902cc070b3",
+      "mtime_ns": 1791426844712196814
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/evidence.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "f490300a2d18a868afd6a894874e3726b43cc96ac6668a2623b406332b8cc125",
+      "mtime_ns": 1791426984732871786
+    },
+    "after": {
+      "sha256": "f490300a2d18a868afd6a894874e3726b43cc96ac6668a2623b406332b8cc125",
+      "mtime_ns": 1791426984732871786
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extraction_inputs/brynjolfsson2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "385a86e3c5926aea7fd44614653cca5782c990afc9adc06c7f4206c5b4080493",
+      "mtime_ns": 1791424494120892669
+    },
+    "after": {
+      "sha256": "385a86e3c5926aea7fd44614653cca5782c990afc9adc06c7f4206c5b4080493",
+      "mtime_ns": 1791424494120892669
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extraction_inputs/dellacqua2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "02b46bb578a476bbb12c88bcb590130aa853ae9b34f26bff68160d67621b6ee9",
+      "mtime_ns": 1791424490555338422
+    },
+    "after": {
+      "sha256": "02b46bb578a476bbb12c88bcb590130aa853ae9b34f26bff68160d67621b6ee9",
+      "mtime_ns": 1791424490555338422
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extraction_inputs/metr2025.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "be06dab106d3c8330c1bcf4cae8dd6848d99e2f6be15c1175801fafaa0f08735",
+      "mtime_ns": 1791424452630174092
+    },
+    "after": {
+      "sha256": "be06dab106d3c8330c1bcf4cae8dd6848d99e2f6be15c1175801fafaa0f08735",
+      "mtime_ns": 1791424452630174092
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extraction_inputs/cui2025.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "55590b71224637e35c149d7882f3428b7bf76b0448bc842dcb5c0eed9d7f43d5",
+      "mtime_ns": 1791424415685631127
+    },
+    "after": {
+      "sha256": "55590b71224637e35c149d7882f3428b7bf76b0448bc842dcb5c0eed9d7f43d5",
+      "mtime_ns": 1791424415685631127
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extraction_inputs/peng2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "25be73b7a8514a1ccc0c39a34676ff68fdb668b2d71c22d9d974859a4406527c",
+      "mtime_ns": 1791424415683778104
+    },
+    "after": {
+      "sha256": "25be73b7a8514a1ccc0c39a34676ff68fdb668b2d71c22d9d974859a4406527c",
+      "mtime_ns": 1791424415683778104
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extraction_inputs/noy2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "a1e013c2ff84dd6548bf5de2b3d156b9d205a3213e44901c0b5b308ff167b655",
+      "mtime_ns": 1791424454471641631
+    },
+    "after": {
+      "sha256": "a1e013c2ff84dd6548bf5de2b3d156b9d205a3213e44901c0b5b308ff167b655",
+      "mtime_ns": 1791424454471641631
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/sources/brynjolfsson2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "e9dba47155740fc50583397c80b068ec8fd1b9d2f2dce6ce9f85f6b66907c5bd",
+      "mtime_ns": 1791424059069011942
+    },
+    "after": {
+      "sha256": "e9dba47155740fc50583397c80b068ec8fd1b9d2f2dce6ce9f85f6b66907c5bd",
+      "mtime_ns": 1791424059069011942
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/sources/dellacqua2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "557e1a2017a29396bb1ae19e135d5784647db6c8c69eff4c60240e3c95763d05",
+      "mtime_ns": 1791424057779712544
+    },
+    "after": {
+      "sha256": "557e1a2017a29396bb1ae19e135d5784647db6c8c69eff4c60240e3c95763d05",
+      "mtime_ns": 1791424057779712544
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/sources/metr2025.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "cf9dd7602b4ef414901b0f09378bc142561c70498b107373bd820d8f1c5f230f",
+      "mtime_ns": 1791424056168947864
+    },
+    "after": {
+      "sha256": "cf9dd7602b4ef414901b0f09378bc142561c70498b107373bd820d8f1c5f230f",
+      "mtime_ns": 1791424056168947864
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/sources/cui2025.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "4608d6d9e1d09ac05793927f064d9205e22e73b780e337cf32e2d32b51b4a4e1",
+      "mtime_ns": 1791424056724690067
+    },
+    "after": {
+      "sha256": "4608d6d9e1d09ac05793927f064d9205e22e73b780e337cf32e2d32b51b4a4e1",
+      "mtime_ns": 1791424056724690067
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/sources/peng2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "fdecc324fd167abcb5e9a301780241c6feb21849bae9f3d4e338bee0fe829fc7",
+      "mtime_ns": 1791424056727341641
+    },
+    "after": {
+      "sha256": "fdecc324fd167abcb5e9a301780241c6feb21849bae9f3d4e338bee0fe829fc7",
+      "mtime_ns": 1791424056727341641
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/sources/noy2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "a47b0526cf87d0924ea29d1d382a3f46ca116639dcc36dd3f3a652aacd7b60f8",
+      "mtime_ns": 1791424056727427850
+    },
+    "after": {
+      "sha256": "a47b0526cf87d0924ea29d1d382a3f46ca116639dcc36dd3f3a652aacd7b60f8",
+      "mtime_ns": 1791424056727427850
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extracted/brynjolfsson2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "3f7c68dfe6db3426ce6fef65327a12623edabc0b94735073942be806b99d83f8",
+      "mtime_ns": 1791424538491999607
+    },
+    "after": {
+      "sha256": "3f7c68dfe6db3426ce6fef65327a12623edabc0b94735073942be806b99d83f8",
+      "mtime_ns": 1791424538491999607
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extracted/dellacqua2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "37588cf6aa2aad72d556804f5af3ba90cf5df376e5c0742f2f202c86af7e972f",
+      "mtime_ns": 1791424525469754285
+    },
+    "after": {
+      "sha256": "37588cf6aa2aad72d556804f5af3ba90cf5df376e5c0742f2f202c86af7e972f",
+      "mtime_ns": 1791424525469754285
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extracted/metr2025.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "4eb90bcc0c6649d08556ba29685063a417d128296d377774213200c893798937",
+      "mtime_ns": 1791424494068916858
+    },
+    "after": {
+      "sha256": "4eb90bcc0c6649d08556ba29685063a417d128296d377774213200c893798937",
+      "mtime_ns": 1791424494068916858
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extracted/cui2025.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "f29bcd659408894c97d20e35eafba326b0e060c6eb73680cc4b9cd94f0d039ba",
+      "mtime_ns": 1791424454440656830
+    },
+    "after": {
+      "sha256": "f29bcd659408894c97d20e35eafba326b0e060c6eb73680cc4b9cd94f0d039ba",
+      "mtime_ns": 1791424454440656830
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extracted/peng2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "737e29466e72a0ea27ad3023845ea6cde8cc96d8b9c5891bd6e1f6f01347c9fc",
+      "mtime_ns": 1791424452594596567
+    },
+    "after": {
+      "sha256": "737e29466e72a0ea27ad3023845ea6cde8cc96d8b9c5891bd6e1f6f01347c9fc",
+      "mtime_ns": 1791424452594596567
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/extracted/noy2023.json": {
+    "unchanged": true,
+    "before": {
+      "sha256": "c2ba1add1cd2e54d5dc7848764c7535b2edd6bb014b3a33d77c2b339e92cd36e",
+      "mtime_ns": 1791424490510575533
+    },
+    "after": {
+      "sha256": "c2ba1add1cd2e54d5dc7848764c7535b2edd6bb014b3a33d77c2b339e92cd36e",
+      "mtime_ns": 1791424490510575533
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/source_notes.md": {
+    "unchanged": true,
+    "before": {
+      "sha256": "be659d317bed5bb0809d4153bfece779d257f26a0d17612eb7e7130c39ba6c3d",
+      "mtime_ns": 1791427134706485370
+    },
+    "after": {
+      "sha256": "be659d317bed5bb0809d4153bfece779d257f26a0d17612eb7e7130c39ba6c3d",
+      "mtime_ns": 1791427134706485370
+    }
+  },
+  "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/trainer/base_v2/research.md": {
+    "unchanged": true,
+    "before": {
+      "sha256": "6404d91f17d32b57ad57bebda118a9fab232179bd394ad29693c6872b5b7a838",
+      "mtime_ns": 1791427301209213647
+    },
+    "after": {
+      "sha256": "6404d91f17d32b57ad57bebda118a9fab232179bd394ad29693c6872b5b7a838",
+      "mtime_ns": 1791427301209213647
+    }
+  }
+}

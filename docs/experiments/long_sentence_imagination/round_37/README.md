@@ -42,3 +42,8 @@ python3 docs/experiments/long_sentence_imagination/round_37/harness/transport.py
 - trainer의 search/collect/extract_v3/report_v1/variant: completed.
 - 실패한 검사/inspect/report_v0: 기록 보존, 뒤에서 실행 중인 모델 작업 없음.
 - 진행 중 작업, 적용 예약, 외부 발송·공개 없음.
+
+## 후속 수리
+
+[진단·평가 증거·분석 범위 수리 보고](repair/report.md).
+원래 실패 산출물은 보존했고, 수정 코드와 재실행 결과·반례·잔여 한계를 분리해 기록했다.

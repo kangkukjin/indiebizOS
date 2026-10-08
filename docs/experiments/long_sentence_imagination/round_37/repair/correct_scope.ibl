@@ -1,0 +1,5 @@
+#!ibl edition=2
+$old=[self:read]{path:f"${base}/evidence.json"}
+$fixed=$old.data.items >> [table:compute]{set:($r)=>{reading_scope:{selected_indices:$r.reading_scope.selected_indices,selected_units:$r.reading_scope.selected_units,total_units:$r.reading_scope.total_units,unit:"extraction_item",note:"제목과 단락을 포함한 추출 항목 수·인덱스다. PDF 쪽수가 아니다. 물리적 쪽수와 실제 읽은 쪽수는 별도 확인 전 미확인. 미선택 항목·그림·이미지 표는 미검증."}}}
+[self:write]{path:f"${out}/evidence.json",content:json($fixed)}
+return {studies:len($fixed),unit:"extraction_item"}

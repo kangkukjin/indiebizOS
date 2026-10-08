@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Bash",
+    "code": null,
+    "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai\" && shasum -a 256 base/* | tee /tmp/r37v_before.sha; test -e variant/decision.md && echo EXISTS || echo NO_DECISION"
+  },
+  {
+    "name": "execute_ibl",
+    "code": "#!ibl edition=2\n$base = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai/base\"\n$out = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/repair/ai/variant/decision.md\"\n$e = [self:read]{path:f\"${base}/evidence.json\"}\n$s = $e.data.studies\n$by = from_entries($s >> [table:each]{ return [$it.id,$it] })\nassert len($s)==9,\"연구 수\",{n:len($s)}\nassert contains($by.S4.sample,\"110만 줄\") and contains($by.S4.main_effect.value,\"19%\"),\"S4 근거\",{}\nassert contains($by.S4.main_effect.robustness,\"그림 7\"),\"S4 이질성\",{}\nassert contains($by.S2.main_effect.detail,\"시니어에서 유의하지 않음\"),\"S2 이질성\",{}\nassert contains($by.S5.main_effect.detail,\"+41%\") and contains($by.S6.main_effect.value,\"-7.2%\"),\"S5/S6\",{}\n$w = [self:write]{path:$out,content:$memo}\n$r = [self:read]{path:$out}\n$must = [\"약속할 수 없다\",\"S4\",\"S2\",\"S1\",\"S3\",\"S5\",\"S6\",\"K1\",\"K2\",\"K3\",\"[사실]\",\"[해석]\",\"[제안]\",\"16%\",\"중단 기준\",\"비열등\",\"8주 차\",\"평균하지 않\",\"미확인\",\"보충하지 않았다\"]\nreturn {path:$w.path, chars:len($r.text), lines:len(split($r.text,\"\\n\")), missing:$must >> [table:each]{mode:\"flat_map\"}{ return contains($r.text,$it) ? [] : [$it] }, same:$r.text==$memo}",
+    "command": null
+  },
+  {
+    "name": "execute_ibl",
+    "code": "$checked:9010927e4690279c684de24a693af8fefe47747b22d385e02d7d6e423c9de29d",
+    "command": null
+  },
+  {
+    "name": "Bash",
+    "code": null,
+    "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차\" && shasum -a 256 -c /tmp/r37_before.sha && cd repair/ai && shasum -a 256 -c /tmp/r37v_before.sha"
+  }
+]

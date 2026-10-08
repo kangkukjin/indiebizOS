@@ -283,9 +283,11 @@
     "table:structure": "경량 LLM 편집자 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합 (self:ask 동류)"
   },
   "shape_variants": {
+    "self:file_find@hash=true": "[self:file_find]{path:\"~workspace/data/ibl_nodes_src\",pattern:\"table.yaml\",hash:true}",
     "self:finance@query_type=거래": "[self:finance]{op: \"query\", query_type: \"거래\", days: 90}",
     "self:finance@query_type=수입": "[self:finance]{op: \"query\", query_type: \"수입\", days: 90}",
     "self:finance@query_type=지출": "[self:finance]{op: \"query\", query_type: \"지출\", days: 90}",
+    "self:list@hash=true": "[self:list]{path:\"~workspace/data/ibl_nodes_src\",pattern:\"table.yaml\",hash:true}",
     "sense:paper@source=arxiv": "[sense:paper]{op: \"search\", query: \"attention\", source: \"arxiv\", limit: 3}",
     "sense:paper@source=nanet": "[sense:paper]{op: \"search\", query: \"인공지능\", source: \"nanet\", limit: 3}",
     "sense:paper@source=pubmed": "[sense:paper]{op: \"search\", query: \"sleep\", source: \"pubmed\", limit: 3}",

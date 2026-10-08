@@ -863,6 +863,7 @@ def _execute(tool_input: dict, context) -> str:
             return _office.fill_op(tool_input, project_path)
 
         elif tool_name == "list_directory":
+            hash_content = _fs_find.hash_requested(tool_input)
             dir_path = os.path.join(project_path, expand_body_path(tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or "."))
             import unicodedata
             items = sorted(os.listdir(dir_path), key=lambda n: (unicodedata.normalize("NFC", n), n))
@@ -882,7 +883,7 @@ def _execute(tool_input: dict, context) -> str:
             rows = []
             records = []  # records 통화(보편) — 파일=명사. 선언 returns:records와 일치.
             for name in items:
-                record, row = _file_views(os.path.join(dir_path, name))
+                record, row = _file_views(os.path.join(dir_path, name), hash_content=hash_content)
                 records.append(record)
                 rows.append(row)
             table = {"columns": ["이름", "크기", "수정일", "경로"], "rows": rows}
@@ -935,6 +936,7 @@ def _execute(tool_input: dict, context) -> str:
             return json.dumps({"result": answer, "text": answer}, ensure_ascii=False)
 
         elif tool_name == "glob_files":
+            hash_content = _fs_find.hash_requested(tool_input)
             pattern = tool_input.get("pattern")
             if not pattern:  # 메타 검색 모드(구 fs_query 흡수 2026-08-05) — fs_meta.py 분리
                 return _load_sibling("fs_meta").meta_query_or_error(tool_input, project_path)
@@ -989,7 +991,7 @@ def _execute(tool_input: dict, context) -> str:
                 rows = []
                 records = []  # records 통화(보편) — 파일=명사. 선언 returns:records와 일치.
                 for p in absolute_paths:
-                    record, row = _file_views(p)
+                    record, row = _file_views(p, hash_content=hash_content)
                     records.append(record)
                     rows.append(row)
                 table = {"columns": ["이름", "크기", "수정일", "경로"], "rows": rows}
@@ -1465,7 +1467,7 @@ def _execute(tool_input: dict, context) -> str:
             return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
 
     except Exception as e:
-        if tool_name.startswith("read_") or tool_name in {"list_directory", "copy_path", "move_path", "delete_path"}:
+        if tool_name.startswith("read_") or tool_name in {"list_directory", "glob_files", "copy_path", "move_path", "delete_path"}:
             # 읽기 실패도 성공과 같은 JSON 경계를 사용한다. 평문 Error는
             # document 어댑터에서 파일 부재를 봉투 파손으로 오진하게 한다.
             error_type = ("not_found" if isinstance(e, FileNotFoundError) else

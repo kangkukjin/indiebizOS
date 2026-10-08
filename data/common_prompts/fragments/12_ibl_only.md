@@ -221,7 +221,7 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 | table:take | items, n(0 이상 정수) → List |
 | self:read | path → `{text:Text,blocks:List<Record>,data:Record}`. 확장자로 텍스트/PDF/Office를 해소한다. pages/tables/sheet/max_rows 등은 조회한 계약대로 지정하며 표·시트·이미지·범위 원문은 data에 보존한다. |
 | self:write | path, content(Text; 파이프 자리) → 파일 영수증 Record. 기존 쓰기 보호·outputs 경로 규칙 적용. |
-| self:list | path, pattern 선택 → List<Record> |
+| self:list | path, pattern·hash 선택 → List<Record>. 로컬 mtime_ns는 정밀 시각(Text); hash:true는 파일 전체를 읽어 sha256 추가(중간 변경·읽기 실패는 오류). 기본은 내용 미읽기 |
 | self:script | id, args(Record; 파이프 자리) → 등록 계약의 값. 기존 등록은 JSON stdin/stdout을 값으로 연결하며, 새 wire 계약도 지원한다. |
 
 새 사전 항목은 선언된 어댑터로 확장한다. 파서에 업무 액션 이름을 넣지 않는다.

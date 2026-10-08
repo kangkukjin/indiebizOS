@@ -1,0 +1,60 @@
+#!ibl edition=2
+[def:파일처리]($file,$root) {
+  $doc = [self:read]{path:$file.path}
+  $after = [self:list]{path:$root,pattern:$file.name,hash:true}
+  assert len($after) == 1 and $after[0].sha256 == $file.sha256, "읽는 동안 원본 변경", {path:$file.path}
+  $rows = $doc.data.items
+  $contrib = $rows >> [table:groupby]{by:["store","sku","kind"],agg:{amount:["sum","amount"],qty:["sum","qty"]}}
+  return {name:$file.name,mtime:$file.mtime,mtime_ns:$file.mtime_ns,sha256:$file.sha256,size:$file.size,rows:len($rows),contrib:$contrib.items}
+}
+[def:합계]($rows,$key) {
+  $sale = $rows >> [table:filter]{where:($r)=>$r.kind == "sale"} >> [table:groupby]{by:$key,agg:{sale:["sum","amount"],sale_qty:["sum","qty"]}}
+  $refund = $rows >> [table:filter]{where:($r)=>$r.kind == "refund"} >> [table:groupby]{by:$key,agg:{refund:["sum","amount"],refund_qty:["sum","qty"]}}
+  $j = [table:join]{left:$sale.items,right:$refund.items,on:$key,how:"full",defaults:{sale:0,sale_qty:0,refund:0,refund_qty:0}}
+  $j.items >> [table:each] { return {**$it,net:$it.sale - $it.refund,qty:$it.sale_qty - $it.refund_qty} } >> [table:select]{columns:[$key,"sale","refund","net","qty"]} >> [table:sort]{by:$key}
+}
+$files = [self:list]{path:$inbox,pattern:"sales_*.json",hash:true} >> [table:sort]{by:"name"}
+$statefiles = [self:list]{path:$statedir,pattern:"state.json"}
+$prevfiles = []
+[if:len($statefiles) > 0] {
+  $s = [self:read]{path:$statefiles[0].path}
+  $prevfiles = $s.data.files
+}
+$known = $prevfiles >> [table:each] { return {name:$it.name,previous:true,prev_hash:get($it,"sha256",null)} }
+$cmp = [table:join]{left:$files,right:$known,on:"name",how:"left",defaults:{previous:false,prev_hash:null}}
+$new = $cmp.items >> [table:filter]{where:($r)=>not $r.previous}
+$changed = $cmp.items >> [table:filter]{where:($r)=>$r.previous and $r.prev_hash != $r.sha256}
+$unchanged_names = map(filter($cmp.items,($r)=>$r.previous and $r.prev_hash == $r.sha256),($r)=>$r.name)
+$todo = $new + $changed
+$results = $todo >> [table:each]{on_error:"collect"} { [fn:파일처리]{file:$it,root:$inbox} }
+$done = $todo >> [table:each]{mode:"flat_map"} { [if:is_ok($results[$i])] { return [unwrap($results[$i])] } [else] { return [] } }
+$failed = $todo >> [table:each]{mode:"flat_map"} { [if:is_ok($results[$i])] { return [] } [else] { $e = error_of($results[$i]); return [{name:$it.name,reason:$e.message}] } }
+$done_names = map($done,($r)=>$r.name)
+$kept = $prevfiles >> [table:filter]{where:($r)=>$r.name in $unchanged_names}
+$files_state = ($kept + $done) >> [table:sort]{by:"name"}
+$allcontrib = $files_state >> [table:each]{mode:"flat_map"} { return $it.contrib }
+$by_sku = [fn:합계]{rows:$allcontrib,key:"sku"}
+$by_store = [fn:합계]{rows:$allcontrib,key:"store"}
+$run = {processed_new:filter(map($new,($r)=>$r.name),($n)=>$n in $done_names),reprocessed:filter(map($changed,($r)=>$r.name),($n)=>$n in $done_names),failed:$failed,unchanged:$unchanged_names}
+$result = {run:$run,totals_by_sku:$by_sku,totals_by_store:$by_store,files_total:len($files_state),rows_total:sum(map($files_state,($r)=>$r.rows))}
+$contrib_sum = sum(map($allcontrib,($r)=>$r.amount))
+$sku_sum = sum(map($by_sku,($r)=>$r.sale + $r.refund))
+assert $contrib_sum == $sku_sum, "집계와 기여분 합 불일치", {contrib:$contrib_sum,sku:$sku_sum}
+[if:len($statefiles) == 0 or $files_state != $prevfiles] {
+  [self:write]{path:$statedir + "/state.json",content:json({files:$files_state})}
+}
+[self:write]{path:$out + "/result.json",content:json($result)}
+$top = $by_sku >> [table:sort]{by:"net",descending:true} >> [table:take]{n:10}
+$top_lines = $top >> [table:each] { return f"| ${$it.sku} | ${$it.sale} | ${$it.refund} | ${$it.net} | ${$it.qty} |" }
+$store_lines = $by_store >> [table:each] { return f"| ${$it.store} | ${$it.sale} | ${$it.refund} | ${$it.net} | ${$it.qty} |" }
+$fail_lines = $failed >> [table:each] { return f"- ${$it.name}: ${$it.reason}" }
+$head = len($todo) == 0 and $files_state == $prevfiles ? "새 파일 없음 — 집계는 이전과 같다." : f"새 파일 ${len($run.processed_new)}개 처리, 재처리 ${len($run.reprocessed)}개, 실패 ${len($failed)}개, 변화 없음 ${len($unchanged_names)}개."
+$summary = "# 누적 매출 집계\n\n## 이번 실행\n\n" + $head + f"\n\n누적 파일 ${len($files_state)}개, 행 ${$result.rows_total}.\n\n## sku 상위 10 (net)\n\n| sku | sale | refund | net | qty |\n| --- | --- | --- | --- | --- |\n" + join("\n",$top_lines) +
+  "\n\n## store 합계\n\n| store | sale | refund | net | qty |\n| --- | --- | --- | --- | --- |\n" + join("\n",$store_lines) +
+  "\n\n## 실패\n\n" + (len($fail_lines) == 0 ? "- 없음" : join("\n",$fail_lines)) + "\n"
+[self:write]{path:$out + "/summary.md",content:$summary}
+$readback = [self:read]{path:$out + "/result.json"}
+assert $readback.data == $result, "재독 결과 불일치"
+$summary_readback = [self:read]{path:$out + "/summary.md"}
+assert $summary_readback.text == $summary, "재독 보고서 불일치"
+return {new:len($run.processed_new),reprocessed:len($run.reprocessed),failed:len($failed),unchanged:len($unchanged_names),files_total:len($files_state),rows_total:$result.rows_total}

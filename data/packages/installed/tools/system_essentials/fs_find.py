@@ -5,8 +5,10 @@
 handler 에는 분기와 봉투만 남기고, "어떻게 훑는가"는 여기가 안다.
 """
 import fnmatch
+import hashlib
 import os
 import re
+import stat as stat_mode
 import time
 import unicodedata
 from datetime import datetime
@@ -89,23 +91,58 @@ def match_basename(name, pattern):
                               unicodedata.normalize("NFC", pattern).lower())
 
 
-def file_views(path, metadata=None):
+def hash_requested(params):
+    value = params.get('hash', False)
+    if type(value) is not bool:
+        raise ValueError('hash는 Bool(true/false)입니다. true는 선택된 파일의 전체 바이트를 읽습니다.')
+    return value
+
+
+def _stat_identity(info):
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+
+def _content_hash(path, before):
+    """고정 크기 버퍼로 읽으며, 파일 교체·동시 쓰기는 성공 지문으로 내보내지 않는다."""
+    if not stat_mode.S_ISREG(before.st_mode):
+        raise OSError(f'내용 지문은 일반 파일만 지원합니다: {path}')
+    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_BINARY', 0))
+    with os.fdopen(fd, 'rb') as stream:
+        opened = os.fstat(stream.fileno())
+        if not stat_mode.S_ISREG(opened.st_mode) or _stat_identity(before) != _stat_identity(opened):
+            raise OSError(f'내용 지문을 읽기 전에 파일이 변경됐습니다: {path}')
+        digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+        if (_stat_identity(before) != _stat_identity(os.fstat(stream.fileno()))
+                or _stat_identity(before) != _stat_identity(os.stat(path))):
+            raise OSError(f'내용 지문을 읽는 동안 파일이 변경됐습니다: {path}')
+    return digest
+
+
+def file_views(path, metadata=None, *, hash_content=False):
     """list/file_find가 공유하는 파일 통화와 표시용 표 행. 필드는 두 입구에서 같다."""
     path = os.path.abspath(path)
     name = os.path.basename(path)
+    metadata = metadata or {}
+    info = None
     try:
-        stat = os.stat(path) if metadata is None else None
-        is_dir = os.path.isdir(path) if metadata is None else bool(metadata.get("is_dir", os.path.isdir(path)))
-        size = None if is_dir else (stat.st_size if stat else metadata.get("size"))
-        epoch = stat.st_mtime if stat else metadata.get("mtime")
-        mtime = datetime.fromtimestamp(epoch).strftime("%Y-%m-%d %H:%M") if epoch is not None else ""
+        info = os.stat(path)
     except OSError:
-        is_dir, size, mtime = False, None, ""
+        if hash_content:
+            raise
+    is_dir = stat_mode.S_ISDIR(info.st_mode) if info else bool(metadata.get('is_dir', False))
+    size = None if is_dir else (info.st_size if info else metadata.get('size'))
+    epoch = info.st_mtime if info else metadata.get('mtime')
+    mtime_ns = info.st_mtime_ns if info else metadata.get('mtime_ns')
+    # ns epoch는 JSON 안전 정수 범위를 넘는다. join 등 기존 도구 경계에서도 정확히 보존한다.
+    mtime_ns = str(mtime_ns) if mtime_ns is not None else None
+    mtime = datetime.fromtimestamp(epoch).strftime('%Y-%m-%d %H:%M') if epoch is not None else ''
     record = {
         "title": name + ("/" if is_dir else ""),
         "meta": " · ".join(x for x in [
             "디렉터리" if is_dir else (f"{size:,}B" if size is not None else None), mtime or None] if x),
         "summary": "", "url": path, "name": name, "size": size,
-        "mtime": mtime, "path": path, "dir": os.path.dirname(path), "is_dir": is_dir,
+        "mtime": mtime, "mtime_ns": mtime_ns, "path": path, "dir": os.path.dirname(path), "is_dir": is_dir,
     }
+    if hash_content:
+        record['sha256'] = None if is_dir else _content_hash(path, info)
     return record, [name, size if size is not None else "", mtime, path]

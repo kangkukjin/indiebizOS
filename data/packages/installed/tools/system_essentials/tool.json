@@ -62,6 +62,10 @@
           "pattern": {
             "type": "string",
             "description": "self:list 파라미터"
+          },
+          "hash": {
+            "type": "boolean",
+            "description": "self:list 파라미터"
           }
         }
       }
@@ -221,6 +225,10 @@
           "limit": {
             "type": "integer",
             "description": "(메타 검색) 결과 개수 (기본 100)"
+          },
+          "hash": {
+            "type": "boolean",
+            "description": "self:file_find 파라미터"
           }
         }
       }

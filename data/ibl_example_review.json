@@ -959,16 +959,17 @@
   },
   "self:file_find": {
    "fields": {
-    "description": "1bba04a6995c",
-    "target_description": "8e2508911b3d",
+    "description": "282a2407d5c6",
+    "target_description": "c70fe8f9a391",
     "implementation": "7d6895f0778e",
     "returns": "3c22349f8d0b",
     "target_key": "432ced8bd4f7",
+    "params": "79e690630793",
     "aliases": "2823075e76f0",
     "router": "ebbb1532efbc",
     "tool": "c8989e04b8fc"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-10-09",
    "examples": 44
   },
   "self:fill": {
@@ -1166,16 +1167,16 @@
   "self:list": {
    "fields": {
     "description": "7b55e52272cc",
-    "target_description": "47ad8334f7aa",
+    "target_description": "a73e4651ad79",
     "implementation": "8d9150b4de66",
     "returns": "3c22349f8d0b",
     "target_key": "d070c7ecb482",
-    "params": "3582736b2607",
+    "params": "44295effac5c",
     "router": "ebbb1532efbc",
     "tool": "be15d98c09e6"
    },
-   "reviewed": "2026-09-18",
-   "examples": 17
+   "reviewed": "2026-10-09",
+   "examples": 20
   },
   "self:manage_events": {
    "fields": {

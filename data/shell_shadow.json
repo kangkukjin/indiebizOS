@@ -98,6 +98,7 @@
       },
       "params": [
         "pattern",
+        "hash",
         "limit",
         "query",
         "min_size_mb",
@@ -167,7 +168,8 @@
       },
       "params": [
         "path",
-        "pattern"
+        "pattern",
+        "hash"
       ]
     },
     "self:mkdir": {

@@ -103,5 +103,16 @@ def execute(entry, params):
     if command["op"] == "read" and "content" in result:
         return result["content"]
     if command["op"] == "list":
-        return {"items": result.get("items", result.get("files", []))}
+        items = result.get("items", result.get("files", []))
+        # 구형 기기가 모르는 옵션을 무시해도 요청한 내용 지문을 얻었다고 보고하지 않는다.
+        if command.get("hash"):
+            import re
+            if not isinstance(items, list) or any(not isinstance(row, dict) or 'sha256' not in row or
+                   (row.get('sha256') is None and not
+                    (row.get('is_dir') or row.get('dir') is True or row.get('type') == 'directory')) or
+                   (row.get('sha256') is not None and not re.fullmatch(r'[0-9a-f]{64}', str(row['sha256'])))
+                   for row in items):
+                return {"success": False, "error_type": "unsupported",
+                        "error": "이 기기의 파일 목록은 요청한 SHA-256 내용 지문을 제공하지 않았습니다."}
+        return {"items": items}
     return result

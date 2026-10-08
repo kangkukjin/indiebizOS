@@ -227,7 +227,7 @@ reuse는 두 실행에서 이 범위의 충돌을 함께 검사한다. 선언·�
 | self:time | format 선택 → Text. JSON처럼 생긴 포맷도 원문 문자열로 반환한다. |
 | self:read | path → `{text:Text,blocks:List<Record>,data:Unknown}`. 확장자로 텍스트/PDF/Office를 해소한다. pages/tables/sheet/max_rows 등은 조회한 계약대로 지정하며 표·시트·이미지·범위 원문은 data에 보존한다. |
 | self:write | path, content(Text; 파이프 자리) → 파일 영수증 Record. 기존 쓰기 보호·outputs 경로 규칙 적용. |
-| self:list | path, pattern 선택 → List<Record> |
+| self:list | path, pattern·hash 선택 → List<Record>. 로컬 mtime_ns는 정밀 시각(Text); hash:true는 파일 전체를 읽어 sha256 추가(중간 변경·읽기 실패는 오류). 기본은 내용 미읽기 |
 | self:edit | path, new_string, old_string 또는 start_line → 편집 영수증 Record. 줄 번호·별칭·동일 파일 병렬 쓰기를 검사한다. |
 | self:grep | pattern, path, output_mode → items/total/truncated Record. content/count/files_with_matches에 따라 행 필드 계약을 해소한다. |
 | sense:search | query 또는 queries, source; gnews/hn은 headlines 가능 → items Record. source·curate에 따른 요구 입력·모델 효과를 검사한다. |

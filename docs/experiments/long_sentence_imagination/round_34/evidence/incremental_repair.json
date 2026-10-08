@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-09",
+  "scope": "2026-10-08 incremental POS report (duplicate round 34 number)",
+  "baseline": "v0 successful stale totals after same-size exact-ns restored edit; unchanged state write 1",
+  "repaired_runs": [
+    {
+      "run": 1,
+      "business_json_reads": 10,
+      "state_writes": 1,
+      "files": 10,
+      "rows": 2000
+    },
+    {
+      "run": 2,
+      "business_json_reads": 11,
+      "state_writes": 1,
+      "files": 20,
+      "rows": 4000
+    },
+    {
+      "run": 3,
+      "business_json_reads": 0,
+      "state_writes": 0,
+      "files": 20,
+      "rows": 4000
+    },
+    {
+      "run": 4,
+      "business_json_reads": 10,
+      "state_writes": 1,
+      "files": 29,
+      "rows": 5800
+    }
+  ],
+  "variants": [
+    "legacy state migration",
+    "store-kind regroup without business reads or state writes",
+    "corrupt file recovery",
+    "same-size exact-ns restored edit",
+    "deleted file",
+    "empty inbox",
+    "repeated empty inbox"
+  ],
+  "regression": "backend/test_fs_find_incremental.py",
+  "targeted_tests": {
+    "passed": 56
+  },
+  "cost_note": "hash:true reads all selected file bytes every run; business JSON read counts are not disk reads; total token/time savings unmeasured",
+  "limitations": [
+    "no new independent AI training",
+    "no multi-process state concurrency guarantee",
+    "listing and parsing are not an atomic snapshot"
+  ],
+  "final_validation": {
+    "non_system": {
+      "passed": 9410,
+      "skipped": 1,
+      "seconds": 126.46
+    },
+    "related_system": {
+      "passed": 72,
+      "seconds": 104.27
+    },
+    "vocabulary_check": "passed",
+    "body_bundle": "android generated",
+    "live_shape_probes": 4
+  }
+}

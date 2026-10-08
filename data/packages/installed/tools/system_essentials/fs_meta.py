@@ -56,6 +56,7 @@ def _fs_meta_query(tool_input: dict, project_path: str) -> str:
     보편 질의는 단일 출처(backend/file_index.query)에서 한 번만.
     """
     import file_index  # 핸들러는 backend 모듈 경로 확보됨 (runtime_utils 선례)
+    hash_content = _fs_find.hash_requested(tool_input)
 
     min_size_mb = _fs_parse_min_size_mb(tool_input.get("min_size_mb"))
     min_size_bytes = int(min_size_mb * 1024 * 1024) if min_size_mb else None
@@ -84,11 +85,11 @@ def _fs_meta_query(tool_input: dict, project_path: str) -> str:
     records, rows = [], []
     for it in items:
         path = it.get("path") or ""
-        size = it.get("size") or 0
+        record, _ = _fs_find.file_views(path, metadata=it, hash_content=hash_content)
+        size = record.get("size") or 0
         size_mb = round(size / 1048576, 2)
-        mtime = _fs_epoch_to_iso(it.get("mtime"))
+        mtime = record['mtime']
         meta_bits = [f"{size_mb} MB", it.get("kind") or "", mtime]
-        record, _ = _fs_find.file_views(path, metadata=it)
         record.update(meta=" · ".join(b for b in meta_bits if b), size_mb=size_mb,
                       kind=it.get("kind"), ext=it.get("ext"))
         records.append(record)

@@ -180,5 +180,50 @@
       "build_body_bundle android"
     ],
     "reviewed_examples": 60
+  },
+  "parser_diagnostics_live": {
+    "comprehension": {
+      "code": "SYNTAX",
+      "message": "Python 목록 컴프리헨션은 지원하지 않습니다. [x.name for x in $f]는 map($f,($x)=>$x.name)으로 쓰세요. 조건은 filter, 항목마다 도구를 호출할 때는 [table:each]를 사용하세요.",
+      "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+      "location": {
+        "source_hash": "82ddc36310129752c5edf52cc59783995f50377513cbd314ca082dee3e1d20a7",
+        "start": 22,
+        "end": 25,
+        "line": 1,
+        "column": 23,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 1,
+        "end_column": 26,
+        "offset_encoding": "unicode-codepoints"
+      }
+    },
+    "reserved": {
+      "code": "READONLY",
+      "message": "읽기 전용 바인딩: $i",
+      "hint": "$i는 repeat의 반복 인덱스, $it는 table:each의 현재 항목, $error는 catch의 오류입니다. 이 이름들은 해당 블록 밖에서도 예약되어 대입할 수 없습니다. 결과를 저장하려면 $result 또는 $image처럼 다른 이름을 사용하세요. each 본문에서 본 바깥 변수도 새 이름에 받거나 each의 반환으로 모으세요.",
+      "location": {
+        "source_hash": "7f0201c544505afe1b425822cd8c0f675da86e7962e81fca80b8c3cb0ad88b2e",
+        "start": 0,
+        "end": 4,
+        "line": 1,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 1,
+        "end_column": 5,
+        "offset_encoding": "unicode-codepoints"
+      }
+    }
+  },
+  "parser_final_verification": {
+    "passed": 9641,
+    "skipped": 12,
+    "failed": 0,
+    "seconds": 204.2,
+    "system_included": true,
+    "related": 80,
+    "after_dependency_audit": 35
   }
 }

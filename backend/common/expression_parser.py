@@ -216,6 +216,10 @@ class Parser:
         while self.t.text != close:
             out.append(self.expr())
             self.nl()
+            if close == "]" and self.t.text == "for":
+                self.fail("Python 목록 컴프리헨션은 지원하지 않습니다. "
+                          "[x.name for x in $f]는 map($f,($x)=>$x.name)으로 쓰세요. "
+                          "조건은 filter, 항목마다 도구를 호출할 때는 [table:each]를 사용하세요.")
             if not self.accept(","):
                 break
             self.nl()

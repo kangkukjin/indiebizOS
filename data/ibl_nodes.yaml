@@ -5908,7 +5908,7 @@ nodes:
             backend/common/record_contract.py: ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5
             backend/common/row_conditions.py: 154e8ad5edd447ac46996d174a7cb94e6bb1cfa7f4472cf1b6389d227ae9b9ce
             backend/common/safe_expr.py: 393baf8c10b1d7d25fe5ecbf40f5b44b8a1e9e12149e1be6bcda36db8c2cc360
-            backend/common/value_semantics.py: 704636d403a5f37eca941838baac4876def288cd93c9676167e1eaad4e561c17
+            backend/common/value_semantics.py: 9f41216e7a5f508d778e135925baa97013050ebdb69df63ca0c83b079f8796e0
             backend/datastore/record_admin.py: 26d13e5e73c42d56a8d6ed2119a81e0a7738c897c535ca3281311f05fcaa9dab
             backend/datastore/record_assets.py: b2271b04ac857ba746e8d883b756b7219d4ac0e4367f6a8ee718bc7d6caf5da9
             backend/datastore/record_commands.py: 294276901dfa8bc052ae82cbfdeb460e5c2a555c60c75477a6d37093cc832c53

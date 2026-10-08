@@ -1,0 +1,17 @@
+{
+  "finished_at": "2026-10-08T09:00:50.990115+09:00",
+  "suites": [
+    {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "12",
+      "tests": "9419",
+      "time": "187.518",
+      "timestamp": "2026-10-08T08:57:07.375246+09:00",
+      "hostname": "Mac-mini.local"
+    }
+  ],
+  "targeted_passed": 144,
+  "failure_recheck_passed": 57
+}

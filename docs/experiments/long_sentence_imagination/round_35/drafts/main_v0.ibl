@@ -1,0 +1,20 @@
+#!ibl edition=2
+[def:분류]($rows,$cutoff) {
+  $accepted = $rows >> [table:filter]{where:($r)=>$r.at <= $cutoff} >> [table:sort]{by:["at","id"]}
+  $rejected = $rows >> [table:filter]{where:($r)=>$r.at > $cutoff} >> [table:sort]{by:["at","id"]}
+  $groups = $accepted >> [table:groupby]{by:"desk",agg:{count:["count"],seats:["sum","seats"]}}
+  return {accepted:$accepted,rejected:$rejected,summary:sorted($groups.items,"desk")}
+}
+[def:보고서]($result,$cutoff) {
+  $lines=$result.summary >> [table:each]{return f"|${it.desk}|${it.count}|${it.seats}|"}
+  return f"# 접수 감사\n마감: ${cutoff}\n접수: ${len($result.accepted)}\n마감후: ${len($result.rejected)}\n좌석: ${sum($result.accepted >> [table:each]{return $it.seats})}\n\n|desk|count|seats|\n|---|---:|---:|\n" + join("\n",$lines)
+}
+$docs = [self:read]{path:$source + "/events.json"} & [self:read]{path:$source + "/policy.json"}
+$result = [fn:분류]{rows:$docs[0].data.items,cutoff:$docs[1].data.cutoff}
+$report = [fn:보고서]{result:$result,cutoff:$docs[1].data.cutoff}
+[self:write]{path:$out + "/result.json",content:json($result)}
+[self:write]{path:$out + "/report.md",content:$report}
+$reread = [self:read]{path:$out + "/result.json"} & [self:read]{path:$out + "/report.md"}
+assert $reread[0].data == $result, "JSON 저장 불일치"
+assert $reread[1].text == $report, "보고서 저장 불일치"
+return {accepted:len($result.accepted),rejected:len($result.rejected),verified:true}

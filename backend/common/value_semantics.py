@@ -508,11 +508,29 @@ def group_identity(value):
     return freeze_structure(value, _group_scalar_identity)
 
 
+def _moment_microseconds(moment) -> int:
+    """Exact ordering coordinate, including UTC instants outside years 1..9999."""
+    ticks = ((moment.toordinal() * 86400 + moment.hour * 3600
+              + moment.minute * 60 + moment.second) * 1000000
+             + moment.microsecond)
+    offset = moment.utcoffset()
+    if offset is not None:
+        ticks -= ((offset.days * 86400 + offset.seconds) * 1000000
+                  + offset.microseconds)
+    return ticks
+
+
 def _canonical_moment_text(moment) -> str:
     """시각의 정본 키 표기 — aware 는 UTC 로 접고, naive 와는 접두로 영구 분리."""
     if moment.tzinfo is not None:
         from datetime import timezone
-        return "aware:" + moment.astimezone(timezone.utc).replace(tzinfo=None).isoformat()
+        try:
+            return "aware:" + moment.astimezone(timezone.utc).replace(tzinfo=None).isoformat()
+        except OverflowError:
+            # A valid local year 1/9999 can lie outside datetime's UTC range.
+            # Preserve existing persisted keys; only previously unrepresentable
+            # instants use an exact ordinal duration (never a float timestamp).
+            return f"aware:ordinal:{_moment_microseconds(moment)}"
     return "naive:" + moment.isoformat()
 
 
@@ -717,8 +735,9 @@ def value_sort_key(field: str, number_parser=comparison_number):
                 return 0, number, ""
             moment = datetime_value(value)
             if moment is not None:
-                prefix = "0|" if moment.tzinfo is None else "1|"
-                return 1, 0.0, prefix + _canonical_moment_text(moment)
+                # Normalize once, without UTC datetime overflow or floating
+                # timestamp rounding; sort comparisons then use exact integers.
+                return 1, moment.tzinfo is not None, _moment_microseconds(moment)
         classified = classify_value(value)
         text = (classified.text if classified.kind is ValueKind.TEXT
                 else str(value).strip().casefold())
@@ -732,8 +751,11 @@ def sort_records(records, field: str, descending: bool = False,
     key = value_sort_key(field, number_parser)
     buckets = {0: [], 1: [], 2: [], 3: []}
     for row in records:
-        buckets[key(row)[0]].append(row)
-    return (sorted(buckets[0], key=key, reverse=descending)
-            + sorted(buckets[1], key=key, reverse=descending)
-            + sorted(buckets[2], key=key, reverse=descending)
-            + buckets[3])
+        observed = key(row)
+        buckets[observed[0]].append((observed, row))
+    result = []
+    for bucket, entries in buckets.items():
+        if bucket != 3:
+            entries.sort(key=lambda entry: entry[0], reverse=descending)
+        result.extend(row for _, row in entries)
+    return result

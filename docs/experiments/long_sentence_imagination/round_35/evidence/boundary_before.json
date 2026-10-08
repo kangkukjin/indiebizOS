@@ -1,0 +1,45 @@
+{
+  "success": false,
+  "error": "date value out of range",
+  "diagnostic": {
+    "code": "VALUE",
+    "kind": "runtime",
+    "message": "date value out of range",
+    "frames": [
+      {
+        "function": "분류",
+        "call": {
+          "source_hash": "c10c96c8efb1ab31e8a91a552c88f52afccec509d5b79d83a1f67f5f699a624b",
+          "start": 872,
+          "end": 933,
+          "line": 13,
+          "column": 11
+        },
+        "definition": {
+          "source_hash": "c10c96c8efb1ab31e8a91a552c88f52afccec509d5b79d83a1f67f5f699a624b",
+          "start": 16,
+          "end": 424,
+          "line": 2,
+          "column": 1
+        }
+      }
+    ],
+    "has_partial": false,
+    "partial": null,
+    "evidence": [
+      53
+    ],
+    "details": {},
+    "source_span": {
+      "source_hash": "c10c96c8efb1ab31e8a91a552c88f52afccec509d5b79d83a1f67f5f699a624b",
+      "start": 113,
+      "end": 141,
+      "line": 3,
+      "column": 72
+    }
+  },
+  "resume": {
+    "run_id": "d172c20c3245440cbed77dae7551c9a2"
+  },
+  "run_status": "interrupted"
+}

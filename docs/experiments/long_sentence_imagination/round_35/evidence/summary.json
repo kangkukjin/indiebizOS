@@ -1,0 +1,345 @@
+{
+  "trainer": [
+    {
+      "label": "run_base_baseline",
+      "run_id": "f637561948184d169a386441e682922c",
+      "status": "completed",
+      "success": true,
+      "error": null,
+      "value": {
+        "accepted": 602,
+        "rejected": 598,
+        "verified": true
+      },
+      "wall_s": 0.9048488140106201,
+      "steps": 14094,
+      "engine_ms": 607
+    },
+    {
+      "label": "run_base_repaired",
+      "run_id": "556d6480559d452192e031ce1ea3b9be",
+      "status": "completed",
+      "success": true,
+      "error": null,
+      "value": {
+        "accepted": 602,
+        "rejected": 598,
+        "verified": true
+      },
+      "wall_s": 1.517838954925537,
+      "steps": 14094,
+      "engine_ms": 1297
+    },
+    {
+      "label": "run_boundary_baseline",
+      "run_id": "d172c20c3245440cbed77dae7551c9a2",
+      "status": "interrupted",
+      "success": false,
+      "error": "date value out of range",
+      "value": null,
+      "wall_s": 0.3543989658355713,
+      "steps": 59,
+      "engine_ms": 321
+    },
+    {
+      "label": "run_boundary_repaired",
+      "run_id": "4cca811080ab4c93a50ff6ed248a0110",
+      "status": "completed",
+      "success": true,
+      "error": null,
+      "value": {
+        "accepted": 2,
+        "rejected": 2,
+        "verified": true
+      },
+      "wall_s": 1.1172029972076416,
+      "steps": 235,
+      "engine_ms": 1062
+    },
+    {
+      "label": "run_empty_repaired",
+      "run_id": "81dddf9e9f1b4e73818d9e0b9e704e21",
+      "status": "completed",
+      "success": true,
+      "error": null,
+      "value": {
+        "accepted": 0,
+        "rejected": 0,
+        "verified": true
+      },
+      "wall_s": 0.9201760292053223,
+      "steps": 176,
+      "engine_ms": 881
+    },
+    {
+      "label": "run_new_repaired",
+      "run_id": "8c550974875b4c1bb229271fa9be1445",
+      "status": "completed",
+      "success": true,
+      "error": null,
+      "value": {
+        "accepted": 4,
+        "rejected": 2,
+        "verified": true
+      },
+      "wall_s": 1.2496907711029053,
+      "steps": 265,
+      "engine_ms": 1199
+    },
+    {
+      "label": "run_variant_baseline",
+      "run_id": "0f56e823b48e43a3b20baeb21cd77cc4",
+      "status": "completed",
+      "success": true,
+      "error": null,
+      "value": {
+        "accepted": 902,
+        "rejected": 298,
+        "verified": true
+      },
+      "wall_s": 0.714475154876709,
+      "steps": 16194,
+      "engine_ms": 591
+    },
+    {
+      "label": "run_variant_repaired",
+      "run_id": "b9781bc7b6d6434b8f62d9f914468de5",
+      "status": "completed",
+      "success": true,
+      "error": null,
+      "value": {
+        "accepted": 902,
+        "rejected": 298,
+        "verified": true
+      },
+      "wall_s": 1.908214807510376,
+      "steps": 16194,
+      "engine_ms": 1731
+    }
+  ],
+  "ai": [
+    {
+      "id": 4434,
+      "total_ms": 106402,
+      "task_id": "task_sysai_1a67e39d",
+      "source": "training",
+      "run_id": "run_1039ac335e4c1515c1f5",
+      "usage": {
+        "input": 782497,
+        "output": 10756,
+        "cache_read": 563213,
+        "cache_create": 213594
+      },
+      "roles": {
+        "classify": {
+          "input": 4418,
+          "output": 3,
+          "cache_read": 2688,
+          "cache_create": 0
+        },
+        "plan": {
+          "input": 114490,
+          "output": 2788,
+          "cache_read": 55212,
+          "cache_create": 59274
+        },
+        "execute": {
+          "input": 613437,
+          "output": 7385,
+          "cache_read": 504385,
+          "cache_create": 109040
+        },
+        "capability_guard": {
+          "input": 4326,
+          "output": 61,
+          "cache_read": 384,
+          "cache_create": 0
+        },
+        "evaluate": {
+          "input": 45826,
+          "output": 519,
+          "cache_read": 544,
+          "cache_create": 45280
+        }
+      },
+      "tools": [
+        {
+          "name": "execute_ibl",
+          "elapsed_s": 0.503,
+          "check_rejected": false,
+          "is_error": false,
+          "operation_failures": 0
+        },
+        {
+          "name": "execute_ibl",
+          "elapsed_s": 0.291,
+          "check_rejected": false,
+          "is_error": false,
+          "operation_failures": 0
+        },
+        {
+          "name": "Bash",
+          "elapsed_s": 0.882,
+          "check_rejected": false,
+          "is_error": false,
+          "operation_failures": 0
+        },
+        {
+          "name": "Bash",
+          "elapsed_s": 0.182,
+          "check_rejected": false,
+          "is_error": false,
+          "operation_failures": 0
+        },
+        {
+          "name": "execute_ibl",
+          "elapsed_s": 0.428,
+          "check_rejected": false,
+          "is_error": false,
+          "operation_failures": 0
+        }
+      ],
+      "compacted": 0,
+      "cost": {
+        "check_rejections": 0,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.000745,
+        "evaluation_model_s": 6.205,
+        "evaluation_prepare_s": 0.014481,
+        "evaluation_visual_s": 0.00123,
+        "evaluation_wait_s": 0.000735,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/fbbd151b9da140f09b71c144f0fc3b3a/events.jsonl",
+        "execution_calls": 5,
+        "execution_failures": 0,
+        "execution_tool_s": 2.286,
+        "internal_tool_failures": 0,
+        "request_intent": "task",
+        "source_failures": 0,
+        "supervisor_cache_read": 55212,
+        "supervisor_calls": 1,
+        "supervisor_input": 114490,
+        "supervisor_model_s": 29.169,
+        "supervisor_output": 2788,
+        "supervisor_tool_failures": 0,
+        "supervisor_tools": 1,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 106.356
+      }
+    },
+    {
+      "id": 4435,
+      "total_ms": 42156,
+      "task_id": "task_sysai_5302199a",
+      "source": "training",
+      "run_id": "run_50a5ef33f56f1192148a",
+      "usage": {
+        "input": 946470,
+        "output": 4436,
+        "cache_read": 854267,
+        "cache_create": 83753
+      },
+      "roles": {
+        "classify": {
+          "input": 4772,
+          "output": 5,
+          "cache_read": 2688,
+          "cache_create": 0
+        },
+        "background": {
+          "input": 2874,
+          "output": 1286,
+          "cache_read": 512,
+          "cache_create": 0
+        },
+        "execute": {
+          "input": 888887,
+          "output": 2732,
+          "cache_read": 845472,
+          "cache_create": 43403
+        },
+        "capability_guard": {
+          "input": 4374,
+          "output": 5,
+          "cache_read": 384,
+          "cache_create": 0
+        },
+        "evaluate": {
+          "input": 45563,
+          "output": 408,
+          "cache_read": 5211,
+          "cache_create": 40350
+        }
+      },
+      "tools": [
+        {
+          "name": "execute_ibl",
+          "elapsed_s": 0.278,
+          "check_rejected": true,
+          "is_error": true,
+          "operation_failures": 0
+        },
+        {
+          "name": "execute_ibl",
+          "elapsed_s": 0.332,
+          "check_rejected": false,
+          "is_error": false,
+          "operation_failures": 0
+        },
+        {
+          "name": "Bash",
+          "elapsed_s": 0.736,
+          "check_rejected": false,
+          "is_error": false,
+          "operation_failures": 0
+        },
+        {
+          "name": "Bash",
+          "elapsed_s": 0.183,
+          "check_rejected": false,
+          "is_error": false,
+          "operation_failures": 0
+        },
+        {
+          "name": "execute_ibl",
+          "elapsed_s": 0.624,
+          "check_rejected": false,
+          "is_error": false,
+          "operation_failures": 0
+        }
+      ],
+      "compacted": 0,
+      "cost": {
+        "check_rejections": 1,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.000739,
+        "evaluation_model_s": 5.517,
+        "evaluation_prepare_s": 0.016723,
+        "evaluation_visual_s": 0.001036,
+        "evaluation_wait_s": 0.000989,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/a1584c4837a84211a1ec21e6c7717f4b/events.jsonl",
+        "execution_calls": 5,
+        "execution_failures": 1,
+        "execution_tool_s": 2.153,
+        "internal_tool_failures": 0,
+        "request_intent": "task",
+        "source_failures": 0,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 42.111
+      }
+    }
+  ],
+  "source_hashes": {
+    "source/empty/policy.json": "4485a6032b544bd8f4e5be55399cc22a8e2731a2a9ff654ab2b3165fe90304a3",
+    "source/empty/events.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "source/new/policy.json": "4485a6032b544bd8f4e5be55399cc22a8e2731a2a9ff654ab2b3165fe90304a3",
+    "source/new/events.json": "a753983befa8256b0fa4ab303aa69f73ae55193a8346baf2af5a1c8b6257a182",
+    "source/variant/policy.json": "9904f576e4e16e1481364455d516778ec88fc418f0b0f40ef557e4134fc02f7c",
+    "source/variant/events.json": "8d3ddeeb5786c6e04b2751df89199811ae15a9846b9fd409bc076140ef4bfe95",
+    "source/base/policy.json": "4485a6032b544bd8f4e5be55399cc22a8e2731a2a9ff654ab2b3165fe90304a3",
+    "source/base/events.json": "dcaeae1b3bd2e7b47c2f6821c0b9fab2b0a2655c324fbfe0d2cb13d8a8226c79",
+    "source/boundary/policy.json": "4485a6032b544bd8f4e5be55399cc22a8e2731a2a9ff654ab2b3165fe90304a3",
+    "source/boundary/events.json": "9138471a12f48be23fb54371e464f11c9bcc41bc2afc771200177cba77c660c4"
+  }
+}

@@ -1,0 +1,101 @@
+[
+  {
+    "mode": "variant",
+    "dest": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_35회차/ai/variant_baseline",
+    "mismatches": {},
+    "missing_report_rows": [],
+    "report_totals": true,
+    "inputs_unchanged": true,
+    "accepted": 902,
+    "rejected": 298,
+    "seats": 2705
+  },
+  {
+    "mode": "boundary",
+    "dest": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_35회차/trainer/boundary_repaired",
+    "mismatches": {},
+    "missing_report_rows": [],
+    "report_totals": true,
+    "inputs_unchanged": true,
+    "accepted": 2,
+    "rejected": 2,
+    "seats": 3
+  },
+  {
+    "mode": "variant",
+    "dest": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_35회차/trainer/variant_baseline",
+    "mismatches": {},
+    "missing_report_rows": [],
+    "report_totals": true,
+    "inputs_unchanged": true,
+    "accepted": 902,
+    "rejected": 298,
+    "seats": 2705
+  },
+  {
+    "mode": "empty",
+    "dest": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_35회차/trainer/empty_repaired",
+    "mismatches": {},
+    "missing_report_rows": [],
+    "report_totals": true,
+    "inputs_unchanged": true,
+    "accepted": 0,
+    "rejected": 0,
+    "seats": 0
+  },
+  {
+    "mode": "new",
+    "dest": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_35회차/trainer/new_repaired",
+    "mismatches": {},
+    "missing_report_rows": [],
+    "report_totals": true,
+    "inputs_unchanged": true,
+    "accepted": 4,
+    "rejected": 2,
+    "seats": 12
+  },
+  {
+    "mode": "base",
+    "dest": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_35회차/trainer/base_baseline",
+    "mismatches": {},
+    "missing_report_rows": [],
+    "report_totals": true,
+    "inputs_unchanged": true,
+    "accepted": 602,
+    "rejected": 598,
+    "seats": 1805
+  },
+  {
+    "mode": "base",
+    "dest": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_35회차/trainer/base_repaired",
+    "mismatches": {},
+    "missing_report_rows": [],
+    "report_totals": true,
+    "inputs_unchanged": true,
+    "accepted": 602,
+    "rejected": 598,
+    "seats": 1805
+  },
+  {
+    "mode": "variant",
+    "dest": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_35회차/trainer/variant_repaired",
+    "mismatches": {},
+    "missing_report_rows": [],
+    "report_totals": true,
+    "inputs_unchanged": true,
+    "accepted": 902,
+    "rejected": 298,
+    "seats": 2705
+  },
+  {
+    "mode": "base",
+    "dest": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_35회차/ai/base_baseline",
+    "mismatches": {},
+    "missing_report_rows": [],
+    "report_totals": true,
+    "inputs_unchanged": true,
+    "accepted": 602,
+    "rejected": 598,
+    "seats": 1805
+  }
+]

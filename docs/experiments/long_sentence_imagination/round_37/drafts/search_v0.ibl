@@ -1,0 +1,7 @@
+#!ibl edition=2
+[def:탐색]($queries,$out) {
+  $found=[sense:search]{queries:$queries,limit:5,source:"ddg"}
+  [self:write]{path:f"${out}/search.json",content:json($found)}
+  return $found
+}
+return [fn:탐색]{queries:$queries,out:$out}

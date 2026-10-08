@@ -1,0 +1,9 @@
+#!ibl edition=2
+$e=[self:read]{path:f"${base}/evidence.json"}
+$r=[self:read]{path:f"${base}/research.md"}
+assert len($e.data.items)==6, "기존 연구 여섯 건이 필요합니다"
+$memo=[{evidence:$e.data.items,previous_report:$r.text}] >> [table:brief]{instruction:$instruction}
+[self:write]{path:f"${out}/decision.md",content:$memo.message}
+$check=[self:read]{path:f"${out}/decision.md"}
+assert $check.text==$memo.message, "의사결정 메모 재독 불일치"
+return {path:f"${out}/decision.md",chars:len($check.text),reused_studies:len($e.data.items),reread:true}

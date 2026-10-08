@@ -1,0 +1,682 @@
+{
+  "base": [
+    {
+      "id": "b3a00eb9785f4ec1b200dadb43836a14",
+      "name": "execute_ibl",
+      "request": {
+        "code": "[self:mkdir]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\"}\n$u = [{url:\"https://arxiv.org/abs/2302.06590\"},{url:\"https://arxiv.org/abs/2410.12944\"},{url:\"https://arxiv.org/abs/2507.09089\"},{url:\"https://arxiv.org/abs/2511.04427\"}]\n$r = [fn:주소마다읽기]{목록:$u,개수:4}\n[fn:본문에서찾기]{목록:$r,패턴:\"Submitted|\\\\[v[0-9]\\\\]|Abstract|faster|slower|percent|%\",문맥:0,개수:30}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791423942.394641
+    },
+    {
+      "id": "03468ca0160a43f887c440de39f516a6",
+      "name": "execute_ibl",
+      "request": {
+        "code": "[sense:search]{source:\"ddg\", queries:[\"Cui Demirer Jaffe Musolff Peng Salz Effects of Generative AI on High-Skilled Work three field experiments software developers pdf\",\"Brynjolfsson Li Raymond Generative AI at Work NBER w31161\",\"Dell'Acqua Navigating the Jagged Technological Frontier HBS working paper 24-013 pdf\",\"Noy Zhang Experimental evidence on the productivity effects of generative artificial intelligence Science 2023\",\"DORA 2024 Accelerate State of DevOps report AI adoption delivery throughput stability 7.2%\",\"Uplevel Copilot bug rate study 41% developers\"], limit:5} >> [table:select]{columns:[\"title\",\"url\",\"query\"]}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791423950.507644
+    },
+    {
+      "id": "45b7a82719a64626b3bdc2ca6e9ea43e",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$p = [sense:crawl]{url:\"https://arxiv.org/pdf/2302.06590v1\"}\n$g = [sense:crawl]{url:\"https://arxiv.org/pdf/2410.12944v3\"}\n$a = [fn:본문에서찾기]{목록:$p,패턴:\"(?i)recruit|Upwork|95|control group|confidence interval|test suite|success rate|less experience|older|limitation|quality\",문맥:0,개수:25}\n$b = [fn:본문에서찾기]{목록:$g,패턴:\"(?i)randomi|96|task|minutes|confidence interval|quality|limitation|feature|code suggestion|chat|transform\",문맥:0,개수:30}\n{peng:$a.items, google:$b.items, pn:len($p.items), gn:len($g.items)}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791423961.424437
+    },
+    {
+      "id": "c8cd0a60d4da4b3591a9b294a7ebadce",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "e76a3acc68d58253d4397bae3e1cf2a6ad0a2c08cf2b038b9bed0d49f75a2e9d",
+          "path": [
+            "value",
+            "peng"
+          ],
+          "offset": 0,
+          "limit": 19500
+        }
+      },
+      "source": "training",
+      "ts": 1791423968.2528481
+    },
+    {
+      "id": "b5db0b6654d044608bb4d1b24378197d",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "e76a3acc68d58253d4397bae3e1cf2a6ad0a2c08cf2b038b9bed0d49f75a2e9d",
+          "path": [
+            "value",
+            "google"
+          ],
+          "offset": 3000,
+          "limit": 40000
+        }
+      },
+      "source": "training",
+      "ts": 1791423976.89763
+    },
+    {
+      "id": "e54ee69dc67e49f5a99f4c958334bdff",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "e76a3acc68d58253d4397bae3e1cf2a6ad0a2c08cf2b038b9bed0d49f75a2e9d",
+          "path": [
+            "value",
+            "google"
+          ],
+          "offset": 43000,
+          "limit": 7000
+        }
+      },
+      "source": "training",
+      "ts": 1791423980.392315
+    },
+    {
+      "id": "39db154ae35b4f72bbce3effbc34ce77",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$m = [sense:crawl]{url:\"https://arxiv.org/html/2507.09089v2\"}\n$c = [sense:crawl]{url:\"https://arxiv.org/html/2511.04427v2\"}\n$a = [fn:본문에서찾기]{목록:$m,패턴:\"(?i)confidence interval|recruit|stars|lines of code|1\\\\.1 million|issues|\\\\$150|hour|quality|PR review|limitation|we do not|caveat|generaliz|familiar|time spent\",문맥:0,개수:22}\n$b = [fn:본문에서찾기]{목록:$c,패턴:\"(?i)matched|projects|velocity|warnings|complexity|commits|lines added|percent|%|transient|month|SonarQube|limitation|threat\",문맥:0,개수:22}\n{metr:$a.items >> [table:select]{columns:[\"text\",\"paragraph_index\"]}, cursor:$b.items >> [table:select]{columns:[\"text\",\"paragraph_index\"]}, mn:len($m.items), cn:len($c.items)}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791423988.236396
+    },
+    {
+      "id": "c7e8d972cff54cc29932caa4a2e0c7ec",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "9769ac4495948c00c4d96b164ba8f35838c093f6d9816b5998e4ee6c6f36ae17",
+          "path": [
+            "value"
+          ],
+          "offset": 0,
+          "limit": 31000
+        }
+      },
+      "source": "training",
+      "ts": 1791423993.524436
+    },
+    {
+      "id": "3c163aade00141eda8f60d8b227e5e33",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$m = [sense:crawl]{url:\"https://arxiv.org/html/2507.09089v2\"}\n$c = [sense:crawl]{url:\"https://arxiv.org/html/2511.04427v2\"}\n$a = [fn:본문에서찾기]{목록:$m,패턴:\"(?i)CI\\\\b|confidence interval|44%|accept|idle|reviewing AI|we do not provide evidence|do not claim|we caution\",문맥:0,개수:14}\n$b = [fn:본문에서찾기]{목록:$c,patron:\"x\",패턴:\"(?i)threats to validity|limitation|open-source projects may not|proprietary|commits increase|281|lines added increase|duplicate|generaliz\",문맥:0,개수:12}\n{metr:$a.items >> [table:select]{columns:[\"text\",\"paragraph_index\"]}, cursor:$b.items >> [table:select]{columns:[\"text\",\"paragraph_index\"]}}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791423999.407309
+    },
+    {
+      "id": "d1829c65a0c84951b39358a189a7b629",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$rejected:31a70b92ca1a1f1fbb23b132277abde6727012c2764e88e7f3d2908a18f7fde3",
+        "edition": 2,
+        "code_edits": [
+          {
+            "old": "patron:\"x\",",
+            "new": ""
+          }
+        ]
+      },
+      "source": "training",
+      "ts": 1791424001.615683
+    },
+    {
+      "id": "17c49398e30e4f50b663fa120615cff0",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "2e76fbe78ea138389b4f2b23743f941a789e0a2678f541d45977093c1d845e9e",
+          "path": [
+            "value",
+            "metr"
+          ],
+          "offset": 4200,
+          "limit": 3000
+        }
+      },
+      "source": "training",
+      "ts": 1791424005.433065
+    },
+    {
+      "id": "b254ca1ab8db445d9b5cbd0679eac363",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$cui = [sense:crawl]{url:\"https://readwise-assets.s3.amazonaws.com/media/wisereads/articles/the-effects-of-generative-ai-o/4945566.pdf\"}\n$ms = [sense:crawl]{url:\"https://www.microsoft.com/en-us/research/publication/the-effects-of-generative-ai-on-high-skilled-work-evidence-from-three-field-experiments-with-software-developers/\"}\n$a = [fn:본문에서찾기]{목록:$cui,패턴:\"(?i)4,867|26\\\\.08|pull requests|commits|builds|build success|junior|tenure|senior|Accenture|Fortune|first version|this version|SSRN|quality|limitation|caveat\",문맥:0,개수:16}\n$b = [fn:본문에서찾기]{목록:$ms,패턴:\"(?i)Published|2024|2025|26|developers|Abstract\",문맥:0,개수:8}\n{cui:$a.items, ms:$b.items, n:len($cui.items)}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424013.163882
+    },
+    {
+      "id": "65a95c9ce6794f698775f84de26220ea",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "5c3750d18acb61d60008334c07d0bf125fd6ec55037888f63f8cbbbcceb4a131",
+          "path": [
+            "value",
+            "cui"
+          ],
+          "offset": 0,
+          "limit": 30000
+        }
+      },
+      "source": "training",
+      "ts": 1791424022.626345
+    },
+    {
+      "id": "acc3826454c847c98be7b1936c0f9b7a",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$b = [sense:crawl]{url:\"https://www.nber.org/system/files/working_papers/w31161/w31161.pdf\"}\n$d = [sense:crawl]{url:\"https://www.hbs.edu/ris/Publication%20Files/24-013_d9b45b68-9e74-42d6-a1c6-c72fb70c7282.pdf\"}\n$n = [sense:crawl]{url:\"https://economics.mit.edu/sites/default/files/inline-files/Noy_Zhang_1.pdf\"}\n{b:len($b.items), d:len($d.items), n:len($n.items), bt:$b.title, dt:$d.title, nt:$n.title, b0:$b.items[0:2], d0:$d.items[0:2], n0:$n.items[0:2]}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424029.4142258
+    },
+    {
+      "id": "81f6460c5e4343a88c2374deeecaff19",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$k = [sense:crawl]{url:\"https://kalre.com/wp-content/uploads/2024/01/Navigating-the-Jagged-Frontier-24-013.pdf\"}\n$s = [sense:crawl]{url:\"https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4573321\"}\n$sc = [sense:crawl]{url:\"https://www.science.org/doi/10.1126/science.adh2586\"}\n$b = [sense:crawl]{url:\"https://www.nber.org/system/files/working_papers/w31161/w31161.pdf\"}\n$n = [sense:crawl]{url:\"https://economics.mit.edu/sites/default/files/inline-files/Noy_Zhang_1.pdf\"}\n$kk = [fn:본문에서찾기]{목록:$k,패턴:\"(?i)758|12\\\\.2%|25\\\\.1%|40%|19 percentage|outside the frontier|GPT-4|Centaur|Cyborg|limitation\",문맥:0,개수:6}\n$bb = [fn:본문에서찾기]{목록:$b,패턴:\"(?i)difference-in-differences|staggered|Fortune 500|resolution rate|average handle time|chats per hour|customer satisfaction|net promoter|limitation|caveat\",문맥:0,개수:6}\n$nn = [fn:본문에서찾기]{목록:$n,패턴:\"(?i)minutes|grader|evaluat|0\\\\.8|0\\\\.4|second task|limitation|caveat|real-world\",문맥:0,개수:6}\n{k:len($k.items), kt:$k.title, s:$s.items[0:6] >> [table:select]{columns:[\"text\"]}, sc:$sc.items[0:8] >> [table:select]{columns:[\"text\"]}, kk:$kk.items >> [table:select]{columns:[\"text\"]}, bb:$bb.items >> [table:select]{columns:[\"text\"]}, nn:$nn.items >> [table:select]{columns:[\"text\"]}}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424059.244703
+    },
+    {
+      "id": "b2b348f83fc64547a0be1f2fb439a1eb",
+      "name": "execute_ibl",
+      "request": {
+        "code": "[def:읽기]($u) { return [sense:crawl]{url:$u} ?? {items:[], title:\"FAILED\", url:$u} }\n$s = [fn:읽기]{u:\"https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4573321\"}\n$h = [fn:읽기]{u:\"https://www.hbs.edu/faculty/Pages/item.aspx?num=64700\"}\n$sc = [fn:읽기]{u:\"https://www.science.org/doi/10.1126/science.adh2586\"}\n$b = [fn:읽기]{u:\"https://www.nber.org/system/files/working_papers/w31161/w31161.pdf\"}\n$n = [fn:읽기]{u:\"https://economics.mit.edu/sites/default/files/inline-files/Noy_Zhang_1.pdf\"}\n$bb = [fn:본문에서찾기]{목록:$b,패턴:\"(?i)difference-in-differences|staggered|Fortune 500|resolution rate|average handle time|chats per hour|customer satisfaction|net promoter|limitation\",문맥:0,개수:6}\n$nn = [fn:본문에서찾기]{목록:$n,패턴:\"(?i)minutes|grader|evaluat|second task|limitation|real-world\",문맥:0,개수:6}\n{s:$s.title, s1:$s.items[0:10] >> [table:select]{columns:[\"text\"]}, h:$h.title, h1:$h.items[0:10] >> [table:select]{columns:[\"text\"]}, sc:$sc.title, sc1:$sc.items[0:8] >> [table:select]{columns:[\"text\"]}, bb:$bb.items >> [table:select]{columns:[\"text\",\"paragraph_index\"]}, nn:$nn.items >> [table:select]{columns:[\"text\",\"paragraph_index\"]}}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424068.0284941
+    },
+    {
+      "id": "51c7c6e5df074b128872e159d60d0c15",
+      "name": "execute_ibl",
+      "request": {
+        "code": "[def:읽기]($u) { return [sense:crawl]{url:$u} ?? {items:[], title:\"FAILED\", url:$u} }\n$q = [sense:search]{source:\"ddg\", queries:[\"\\\"Navigating the Jagged Technological Frontier\\\" pdf 758 consultants 12.2% 25.1% 40%\",\"Dell'Acqua McFowland Mollick jagged frontier mitsloan pdf\"], limit:8} >> [table:select]{columns:[\"title\",\"url\"]}\n$dora = [fn:읽기]{u:\"https://dora.dev/research/2024/dora-report/\"}\n$dd = [fn:본문에서찾기]{목록:$dora,패턴:\"(?i)AI|throughput|stability|7\\\\.2|1\\\\.5|respondents|39,000|survey\",문맥:0,개수:15}\n{q:$q, dora:$dora.title, dd:$dd.items >> [table:select]{columns:[\"text\"]}}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424077.97002
+    },
+    {
+      "id": "4ef1646fd70743d484c7e029d92b09fe",
+      "name": "execute_ibl",
+      "request": {
+        "code": "[def:읽기]($u) { return [sense:crawl]{url:$u} ?? {items:[], title:\"FAILED\", url:$u} }\n$d = [fn:읽기]{u:\"https://mitsloan.mit.edu/sites/default/files/2023-10/SSRN-id4573321.pdf\"}\n$r = [fn:읽기]{u:\"https://services.google.com/fh/files/misc/2024_final_dora_report.pdf\"}\n$dd = [fn:본문에서찾기]{목록:$d,패턴:\"(?i)758|12\\\\.2|25\\\\.1|40%|19 percentage|outside the frontier|September 2023|GPT-4|limitation\",문맥:0,개수:6}\n$rr = [fn:본문에서찾기]{목록:$r,패턴:\"(?i)7\\\\.2%|1\\\\.5%|39,000|25% increase in AI adoption|code quality|documentation quality|code review speed|cross-sectional|causal\",문맥:0,개수:8}\n{d:$d.title, dn:len($d.items), r:$r.title, rn:len($r.items), dd:$dd.items >> [table:select]{columns:[\"text\",\"paragraph_index\"]}, rr:$rr.items >> [table:select]{columns:[\"text\",\"paragraph_index\"]}}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424089.509289
+    },
+    {
+      "id": "79a3be34812f41cea704f2fd12297f32",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "3baa9a4b58d5b91b42f1c0cfde1ae6cd92d3b04a87c2ffef67cf0494b45d73e2",
+          "path": [
+            "value",
+            "dd",
+            0,
+            "text"
+          ],
+          "offset": 0,
+          "limit": 2300
+        }
+      },
+      "source": "training",
+      "ts": 1791424100.393985
+    },
+    {
+      "id": "1f5dcb0f34784708a94ebc5c480ad850",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "3baa9a4b58d5b91b42f1c0cfde1ae6cd92d3b04a87c2ffef67cf0494b45d73e2",
+          "path": [
+            "value",
+            "rr",
+            0,
+            "text"
+          ],
+          "offset": 0,
+          "limit": 1200
+        }
+      },
+      "source": "training",
+      "ts": 1791424101.787148
+    },
+    {
+      "id": "7fb1628996944599844621e0ce2112c9",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$r = [sense:crawl]{url:\"https://services.google.com/fh/files/misc/2024_final_dora_report.pdf\"}\n$rr = [fn:본문에서찾기]{목록:$r,패턴:\"(?i)2\\\\.1%|individual productivity|survey respondents|participants|3,0[0-9]{2}|causal|cross-sectional|89% uncertainty|valuable work\",문맥:0,개수:10}\n$rr.items >> [table:select]{columns:[\"text\",\"paragraph_index\"]}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424105.7502751
+    },
+    {
+      "id": "473449d8e3f94e299a1fce615a40ba80",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$u = [{url:\"https://arxiv.org/abs/2507.09089v2\"},{url:\"https://arxiv.org/abs/2511.04427v2\"}]\n$r = [fn:주소마다읽기]{목록:$u,개수:2}\n[fn:본문에서찾기]{목록:$r,패턴:\"^Authors:|Comments:\",문맥:0,개수:6}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424112.858262
+    },
+    {
+      "id": "32708c5efcbf4de5a2d568331096f820",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$d = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\"\n[self:write]{path:f\"${d}/evidence.json\", content:json($ev)}",
+        "edition": 2,
+        "inputs": {
+          "ev": {
+            "meta": {
+              "cutoff": "2025-12-31",
+              "built_on": "2026-10-08",
+              "rule": "2025-12-31 이후 판본은 쓰지 않음. 효과값은 측정 단위가 달라 평균하지 않음. 본문을 읽지 못한 수치는 null 또는 '미확인'.",
+              "count_total": 9,
+              "count_software_direct": 6
+            },
+            "studies": [
+              {
+                "id": "S1",
+                "software_direct": true,
+                "title": "The Impact of AI on Developer Productivity: Evidence from GitHub Copilot",
+                "authors": "Sida Peng, Eirini Kalliamvakou, Peter Cihon, Mert Demirer (Microsoft Research, GitHub, MIT Sloan)",
+                "date": "arXiv v1 2023-02-13 (개정판 없음)",
+                "design": "무작위 통제실험(RCT), 개인 단위 무작위 배정, 실험실형 단일 표준 과제",
+                "sample": "Upwork 모집 프리랜서 개발자 95명(처리 45, 통제 50), 과제·설문 완료 35명(논문 표현). 평균 코딩 경력 6년, 주로 25-34세·인도/파키스탄",
+                "task": "JavaScript로 HTTP 서버 구현(신규·자기완결 과제, 템플릿 저장소+12개 테스트)",
+                "ai_intervention": "GitHub Copilot(Codex 기반 코드 완성)+1분 소개 영상",
+                "comparison": "Copilot 없이 인터넷 검색·Stack Overflow 사용 가능",
+                "main_effect": {
+                  "value": "완료 시간 55.8% 단축",
+                  "unit": "과제 완료 시간(첫 12/12 테스트 통과 커밋까지 분), 완료자 조건부",
+                  "detail": "처리 71.17분 vs 통제 160.89분, 95% CI 21-89%, p=0.0017. 성공률 +7%p(유의하지 않음, CI -0.11~0.25). 경력이 적은·하루 코딩시간이 긴 개발자에서 효과가 큼",
+                  "kind": "시간 단축, 인과(RCT)"
+                },
+                "self_report": "참가자 자기추정 생산성 향상 평균 35%(실측 55.8%보다 과소추정)",
+                "quality_measure": "코드 품질은 측정하지 않음(논문이 한계로 명시). 테스트 통과만 완료 기준",
+                "limitations": "표준화된 단일 소규모 과제, 대형 협업 프로젝트 아님, 프리랜서 표본, 품질 미측정, 완료자 조건부 비교",
+                "url": "https://arxiv.org/abs/2302.06590",
+                "read_scope": "본문 전체(PDF v1, 8쪽 본문+그림 주석) 읽음"
+              },
+              {
+                "id": "S2",
+                "software_direct": true,
+                "title": "The Effects of Generative AI on High Skilled Work: Evidence from Three Field Experiments with Software Developers",
+                "authors": "Kevin Zheyuan Cui, Mert Demirer, Sonia Jaffe, Leon Musolff, Sida Peng, Tobias Salz",
+                "date": "2024-09 판(SSRN 4945566). Microsoft Research 소개 페이지는 2025-06 표기 — 2025-06 판 본문은 읽지 않음",
+                "design": "현장 무작위 실험 3건(Microsoft·Accenture·익명 Fortune 100 전자제조사), 배정을 도구변수로 쓴 IV 추정, 정밀도 가중 통합",
+                "sample": "4,867명(Microsoft 1,521 / Accenture 316 / 익명사 3,030), 클러스터 1,438",
+                "task": "실제 업무 전반(신규·유지보수 구분 없음), 개발자-주 단위 GitHub 활동",
+                "ai_intervention": "GitHub Copilot 접근권(코드 완성). 채택률 약 60-70%, 30-40%는 시도조차 안 함",
+                "comparison": "접근권 없는 동료(Microsoft 7개월, Accenture 4개월), 익명사는 접근 시점 무작위(최대 6주 차이)",
+                "main_effect": {
+                  "value": "주간 완료 PR 수 +26.08% (SE 10.3%)",
+                  "unit": "산출량(주당 PR 수), 통제 평균 대비 %",
+                  "detail": "커밋 +13.55%(SE 10.0, 유의X), 빌드 +38.38%(SE 12.55). 중단된 두 번째 Accenture 실험 포함 시 PR +21.34%(SE 9.92). 개별 실험: Microsoft +27.38%(유의), Accenture +17.94%, 익명사 +54.03%(둘 다 유의X). 단기 재직·주니어에서 효과가 크고 장기 재직·시니어에서 유의하지 않음",
+                  "kind": "산출량 증가, 인과(IV, 단 실험 이행 불완전)"
+                },
+                "self_report": "없음(행동 데이터)",
+                "quality_measure": "빌드 성공률: 통합 -5.53%(SE 3.64, 유의X), Accenture -17.40%(유의, p<0.05). 결함·리뷰 재작업은 미측정",
+                "limitations": "PR 크기 변화 미통제(시간 단축으로 직접 환산 불가), 실험이 사업 목적으로 즉흥 설계됨, 통제군 조기 접근·낮은 채택률로 검정력 제한, 큰 표준오차",
+                "url": "https://www.microsoft.com/en-us/research/publication/the-effects-of-generative-ai-on-high-skilled-work-evidence-from-three-field-experiments-with-software-developers/",
+                "url_fulltext_read": "https://readwise-assets.s3.amazonaws.com/media/wisereads/articles/the-effects-of-generative-ai-o/4945566.pdf (SSRN 4945566 2024-09 판의 제3자 사본)",
+                "read_scope": "2024-09 판 본문 1-10쪽(서론·설계·채택·주결과 표2·이질성)과 부록 일부를 제3자 호스팅 PDF로 읽음. MSR 페이지는 초록만. 2025-06 판은 미확인"
+              },
+              {
+                "id": "S3",
+                "software_direct": true,
+                "title": "How much does AI impact development speed? An enterprise-based randomized controlled trial",
+                "authors": "Elise Paradis 외 8명 (Google)",
+                "date": "arXiv v1 2024-10-16, v3 2024-11-11(읽은 판)",
+                "design": "RCT, 개인 단위 무작위, 실험실형 표준 과제(사내 실제 인프라)",
+                "sample": "Google 정규직 엔지니어 96명(48/48), 완료 93명",
+                "task": "기존 CL(10개 파일·474줄)에 로그 서비스 추가: 빌드·데이터구조·테스트 수정 포함, 30분-2.5시간 예상. 참가자는 해당 코드에 익숙하지 않음",
+                "ai_intervention": "사내 AI 코드 완성·Smart Paste·자연어→코드 3기능(2024년 여름)",
+                "comparison": "같은 과제를 AI 기능을 끄고 수행(양쪽 모두 사전 교육)",
+                "main_effect": {
+                  "value": "과제 시간 약 21% 단축(통제변수 포함 최적 모형)",
+                  "unit": "IDE 로그 기반 과제 소요 시간(로그 변환)",
+                  "detail": "원평균 96분(AI) vs 114분(무AI), t검정 p=0.038. 공변량 모형 21-26%, 최적 모형 β=-0.24, 95% CI [-0.51, 0.03], p=0.086(유의하지 않음). 하루 코딩 5시간 이상·고연차일수록 AI로 더 빨랐을 가능성(상호작용 유의X)",
+                  "kind": "시간 단축, 인과(RCT), 신뢰구간 넓음"
+                },
+                "self_report": "사전·사후 설문은 있으나 주효과는 로그 기반",
+                "quality_measure": "별도 품질 측정 없음(모든 테스트 통과=완료)",
+                "limitations": "자사 도구를 자사 연구팀이 평가, 3시간 이내로 설계된 과제, Google 표본의 외적 타당도, 2024년 도구 수준. 본문의 로그 평균값 표기(AI 4.6 vs 무AI 4.3)가 원평균 방향과 반대로 적혀 있어 오기로 보임",
+                "url": "https://arxiv.org/abs/2410.12944",
+                "read_scope": "본문 전체(PDF v3, 1-10쪽 결과·논의까지) 읽음"
+              },
+              {
+                "id": "S4",
+                "software_direct": true,
+                "title": "Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity",
+                "authors": "Joel Becker, Nate Rush, Elizabeth Barnes, David Rein (METR)",
+                "date": "arXiv v1 2025-07-12, v2 2025-07-25(읽은 판)",
+                "design": "RCT, 과제(이슈) 단위 무작위(개발자 내 비교), 실제 저장소 작업",
+                "sample": "숙련 오픈소스 개발자 16명, 실제 이슈 246건(평균 2시간). 저장소 평균 2.3만 스타·110만 줄, 개발자는 해당 저장소 평균 5년·1,500커밋 경험",
+                "task": "자신이 유지하는 성숙한 대형 저장소의 실제 버그 수정·기능·리팩터링 이슈(유지보수 성격이 강함)",
+                "ai_intervention": "AI 허용(주로 Cursor Pro + Claude 3.5/3.7 Sonnet, 2025년 2-6월 최전선 도구). 사용 여부는 개발자 선택",
+                "comparison": "같은 개발자의 AI 금지 이슈(LLM 자동완성도 금지)",
+                "main_effect": {
+                  "value": "완료 시간 19% 증가(느려짐)",
+                  "unit": "이슈당 총 구현 시간(PR 리뷰 전후 포함, 자기보고 시간을 화면녹화로 검증), 사전 난이도 예측으로 보정",
+                  "detail": "개발자 사전 예측 24% 단축, 사후 인식 20% 단축, 경제학자 39%·ML 전문가 38% 단축 예측과 모두 반대. 화면녹화 분석: AI 사용 시 직접 코딩·검색 시간 감소, 프롬프트·대기·AI 출력 검토·유휴 시간 증가",
+                  "kind": "시간 증가, 인과(RCT). 신뢰구간 수치는 이번 추출에서 미확인"
+                },
+                "self_report": "사후 자기인식(20% 단축)과 실측(19% 증가)의 큰 괴리",
+                "quality_measure": "모든 작업이 저장소의 표준 PR 리뷰를 거침(높은 품질 기준). 품질 차이 지표 자체는 이번에 읽은 범위에서 확인 못 함",
+                "limitations": "16명 소표본, 고친숙도·대형·고품질 기준 저장소라는 특수 조건, 저자들이 '그린필드·낯선 코드베이스에서는 상당한 속도 향상과 양립'한다고 과잉일반화를 경계",
+                "url": "https://arxiv.org/abs/2507.09089",
+                "read_scope": "HTML v2 본문 중 초록·서론·설계·측정·화면녹화 분석·과잉일반화 경고 문단을 패턴 발췌로 읽음. 부록(신뢰구간 산정·21개 요인 상세)은 읽지 않음"
+              },
+              {
+                "id": "S5",
+                "software_direct": true,
+                "title": "Does AI-Assisted Coding Deliver? A Difference-in-Differences Study of Cursor's Impact on Software Projects",
+                "authors": "Hao He, Courtney Miller, Shyam Agarwal, Christian Kästner, Bogdan Vasilescu",
+                "date": "arXiv v1 2025-11-06, v2 2025-11-13(읽은 판). v3(2026-01-26)는 기준일 이후라 사용하지 않음",
+                "design": "준실험: 시차 도입 이중차분(Borusyak 추정량)+성향점수 매칭, 패널 GMM",
+                "sample": "Cursor 도입 GitHub 저장소 807개(2024-01~2025-03 도입, 10스타 이상) vs 매칭 비도입 1,380개",
+                "task": "오픈소스 프로젝트 전체 개발(주로 TypeScript·Python·JavaScript)",
+                "ai_intervention": "에이전트형 AI IDE Cursor 도입(.cursorrules 등 설정파일 커밋으로 식별)",
+                "comparison": "도입하지 않은 유사 저장소",
+                "main_effect": {
+                  "value": "도입 첫 달 추가 코드 줄 수 3-5배 증가, 2개월 뒤 소멸",
+                  "unit": "프로젝트-월 단위 개발 속도(커밋 수·추가 줄 수)",
+                  "detail": "정적분석 경고 +30%, 코드 복잡도 +41%가 지속. GMM: 누적된 경고·복잡도가 이후 속도를 낮춤",
+                  "kind": "산출량(줄·커밋) 일시 증가, 준실험적 인과추정"
+                },
+                "self_report": "없음",
+                "quality_measure": "SonarQube 정적분석 경고, 코드 복잡도, 중복 줄 밀도(기술부채 관점). 결함·사용자 영향은 미측정",
+                "limitations": "오픈소스·3개 언어 중심, 사내 비공개 프로젝트로 일반화 불확실, 설정파일 기반 도입 식별의 오분류 가능, 도구 급변기",
+                "url": "https://arxiv.org/abs/2511.04427",
+                "read_scope": "HTML v2의 초록·서론·관련연구·데이터·품질지표·한계 문단을 패턴 발췌로 읽음. 결과 표 수치 전체는 읽지 않음"
+              },
+              {
+                "id": "S6",
+                "software_direct": true,
+                "title": "Accelerate State of DevOps Report 2024 (DORA)",
+                "authors": "Google Cloud DORA 연구팀",
+                "date": "2024년(보고서 판 v.2024.3, 설문은 2024년 초 시행). 정확한 공개 월은 메타데이터로 미확인",
+                "design": "횡단 설문 + 통계 모형(관찰 연구), 심층 인터뷰 보완",
+                "sample": "2024년 응답자 수는 이번에 읽은 범위에서 미확인(보고서의 '39,000명 이상'은 10년 누적)",
+                "task": "팀·조직의 소프트웨어 전달 전반",
+                "ai_intervention": "개인·조직의 AI 채택 정도(자기보고)",
+                "comparison": "AI 채택 정도가 낮은 응답자(모형상 '채택 25% 증가' 시나리오)",
+                "main_effect": {
+                  "value": "AI 채택 25% 증가당 전달 처리량 -1.5%, 전달 안정성 -7.2%",
+                  "unit": "모형 추정 % 변화(89% 불확실성 구간)",
+                  "detail": "같은 단위로 문서 품질 +7.5%, 코드 품질 +3.4%, 코드리뷰 속도 +3.1%, 승인 속도 +1.3%, 코드 복잡도 -1.8%, 팀 성과 +1.4%, 조직 성과 +2.3%. 응답자 75%가 최근 3개월 생산성 향상을 체감",
+                  "kind": "연관(관찰), 상당 부분 자기보고"
+                },
+                "self_report": "생산성·코드 품질 체감 다수가 자기보고",
+                "quality_measure": "전달 안정성(변경 실패율·재작업 등 DORA 지표, 자기보고), 코드 품질 인식",
+                "limitations": "횡단 관찰이라 인과 아님, 지표 대부분 자기보고, 채택 수준의 측정도 자기보고",
+                "url": "https://dora.dev/research/2024/dora-report/",
+                "url_fulltext_read": "https://services.google.com/fh/files/misc/2024_final_dora_report.pdf",
+                "read_scope": "공식 PDF 중 요약·AI 장(채택·인식·하류 영향 그림 9-11) 발췌를 읽음. 방법론 장은 읽지 않음"
+              },
+              {
+                "id": "K1",
+                "software_direct": false,
+                "title": "Generative AI at Work",
+                "authors": "Erik Brynjolfsson, Danielle Li, Lindsey R. Raymond",
+                "date": "NBER Working Paper 31161, 2023-04 (2023-11 개정, 읽은 판). QJE 2025 게재판은 읽지 않음",
+                "design": "준실험: 단계적 도입의 이중차분(상담원-월 패널)",
+                "sample": "고객지원 상담원 5,179명(한 기업)",
+                "task": "고객 채팅 상담",
+                "ai_intervention": "GPT 기반 대화 추천 도우미",
+                "comparison": "아직 도입되지 않은 상담원·도입 전 기간",
+                "main_effect": {
+                  "value": "시간당 해결 건수 +14%(초보·저숙련 +34%, 숙련자 영향 미미)",
+                  "unit": "산출/시간(시간당 해결 건수)",
+                  "detail": "평균 처리시간·시간당 채팅·해결률로 분해",
+                  "kind": "처리량 증가, 준실험적 인과"
+                },
+                "self_report": "없음(운영 데이터)",
+                "quality_measure": "해결률, 고객 감정, 순추천지수(NPS), 이직",
+                "limitations": "단일 기업·단일 직무, 패턴 반복형 업무",
+                "url": "https://www.nber.org/papers/w31161",
+                "read_scope": "NBER PDF 초록·설정·측정·실증전략 절을 읽음. 결과 표 전체는 읽지 않음",
+                "applicability_to_dev": "적용 가능: 경험이 적은 인력에서 이득이 크다는 이질성, 모범사례 확산 메커니즘(주니어 온보딩). 적용 불가: 대화 패턴 매칭형 반복 업무라 코드 설계·장기 품질(기술부채) 위험이 없음, 시간당 해결건수는 개발 리드타임과 다른 단위"
+              },
+              {
+                "id": "K2",
+                "software_direct": false,
+                "title": "Navigating the Jagged Technological Frontier: Field Experimental Evidence of the Effects of AI on Knowledge Worker Productivity and Quality",
+                "authors": "Fabrizio Dell'Acqua 외 (HBS Working Paper 24-013, BCG 협업)",
+                "date": "2023년 워킹페이퍼(SSRN 4573321). 읽은 사본은 MIT Sloan이 2023-10 경로에 올린 SSRN 판. 정확한 첫 게시일은 미확인. HBS의 2026 게재판은 기준일 이후라 제외",
+                "design": "사전등록 RCT 2건(기준선 과제 후 3군 배정)",
+                "sample": "BCG 컨설턴트 758명(개인기여자 약 7%)",
+                "task": "18개 현실형 컨설팅 과제(프런티어 안) + 프런티어 밖 과제 1개",
+                "ai_intervention": "GPT-4 접근, 또는 GPT-4+프롬프트 교육",
+                "comparison": "AI 없음",
+                "main_effect": {
+                  "value": "프런티어 안: 과제 12.2% 더 완료, 25.1% 더 빠름, 품질 40% 이상 향상 / 프런티어 밖: 정답률 19%p 하락",
+                  "unit": "완료 과제 수, 완료 시간, 평가자 채점 품질, 정답 확률",
+                  "detail": "평균 이하 성과자 +43%, 이상 +17%(자기 기준선 대비 점수)",
+                  "kind": "시간·품질, 인과(RCT)"
+                },
+                "self_report": "없음",
+                "quality_measure": "인간 평가자 채점, 정답 여부",
+                "limitations": "5시간 실험 과제, 컨설팅 업무, 2023년 봄 GPT-4",
+                "url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4573321",
+                "url_fulltext_read": "https://mitsloan.mit.edu/sites/default/files/2023-10/SSRN-id4573321.pdf",
+                "read_scope": "초록·서론·방법 절을 읽음. 결과 표·프런티어 밖 과제 상세는 읽지 않음(HBS 공식 PDF는 봇 확인으로 차단)",
+                "applicability_to_dev": "적용 가능: 같은 업무 흐름 안에 AI가 잘하는 과제와 못하는 과제가 섞이며, 못하는 과제에서 AI를 믿으면 정확도가 떨어진다는 구조(코드 리뷰·검증 필요성). 적용 불가: 수치(25.1% 등)는 컨설팅 문서 과제의 값이라 개발시간으로 옮길 수 없음"
+              },
+              {
+                "id": "K3",
+                "software_direct": false,
+                "title": "Experimental Evidence on the Productivity Effects of Generative Artificial Intelligence",
+                "authors": "Shakked Noy, Whitney Zhang (MIT)",
+                "date": "워킹페이퍼 2023-03-02(읽은 판). Science 2023 게재판은 접근 실패로 읽지 않음",
+                "design": "사전등록 온라인 RCT",
+                "sample": "대졸 전문직 444명(워킹페이퍼 기준; Science판 표본 수는 미확인)",
+                "task": "직업별 20-30분 글쓰기 과제 2개(보도자료·보고서·이메일 등)",
+                "ai_intervention": "ChatGPT",
+                "comparison": "두 번째 과제에서 ChatGPT 미노출(통제군 10-20%도 사용)",
+                "main_effect": {
+                  "value": "소요 시간 -0.83 SD(두 번째 과제 평균 27분→17분), 품질 +0.45 SD",
+                  "unit": "자기보고 소요 시간(분, 표준편차 단위), 평가자 1-7점 채점",
+                  "detail": "저성과자에게 이득이 커 격차 축소. 초안 작성 시간 비중이 절반 이하로 감소",
+                  "kind": "시간 단축(자기보고 시간), 인과(RCT)"
+                },
+                "self_report": "소요 시간 자체가 자기보고",
+                "quality_measure": "직업 전문가 평가자 채점",
+                "limitations": "짧고 자기완결적인 글쓰기, 사실 정확성보다 문장 품질 중심",
+                "url": "https://www.science.org/doi/10.1126/science.adh2586",
+                "url_fulltext_read": "https://economics.mit.edu/sites/default/files/inline-files/Noy_Zhang_1.pdf",
+                "read_scope": "MIT 워킹페이퍼 본문(설계·결과 2.1-2.6절) 읽음. Science판 본문 미확인",
+                "applicability_to_dev": "적용 가능: 설계 문서·PR 설명·주석 등 개발팀의 글쓰기 하위 업무, 초안→편집으로의 작업 구조 변화. 적용 불가: 20-30분 자기완결 과제라 코드 정합성·테스트·기존 코드 이해 비용이 없음"
+              }
+            ]
+          }
+        }
+      },
+      "source": "training",
+      "ts": 1791424216.348504
+    },
+    {
+      "id": "3dc456b0828a43a09634eee913755140",
+      "name": "execute_ibl",
+      "request": {
+        "code": "{peng:(160.89-71.17)/160.89, google_raw:(114-96)/114, cui_time_equiv:1-1/1.2608, cui_lo:26.08-1.96*10.3, cui_hi:26.08+1.96*10.3, t_lo:1-1/(1+(26.08-1.96*10.3)/100), t_hi:1-1/(1+(26.08+1.96*10.3)/100), amdahl_05_21:0.5*0.21, amdahl_04_21:0.4*0.21, need_s_at_05:0.20/0.5, metr_slow_in_coding_half:0.5*0.19}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424221.3795571
+    },
+    {
+      "id": "be55dae13a264674b6b9a9cbadae370b",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$d = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\"\n[self:write]{path:f\"${d}/research.md\", content:$r} & [self:write]{path:f\"${d}/source_notes.md\", content:$s}",
+        "edition": 2,
+        "inputs": {
+          "r": "# 생성형 AI 도입으로 개발시간 20% 이상 단축을 계획 전제로 삼아도 되는가\n\n- 조사 기준일: 2025-12-31. 이 날짜까지 공개된 판본만 사용했다. 2026년 판본(Cursor 연구 v3, HBS 2026 게재판)은 제외했다.\n- 대상(가상): 개발자 20명. 주니어와 시니어가 각 10명이고, 업무는 신규 기능 개발과 기존 코드 유지보수가 절반씩이다. 사내 측정 자료는 없다.\n- 함께 저장한 파일: `evidence.json`(연구별 근거 표), `source_notes.md`(실제로 확인한 범위, 미확인·실패 자료)\n- 표기: **[사실]** 원문에서 확인한 내용, **[해석]** 연구들을 비교해 내린 판단, **[제안]** 이 회사에 대한 권고. 각 수치 옆에 출처를 링크했다.\n\n---\n\n## 1. 결론 요약\n\n**권고: 조건부 도입이다. 다만 '개발시간 20% 단축'은 지금 계획 전제로 삼지 말고, 6주 사내 실험으로 검증할 가설로 둔다.**\n\n- [사실] 공개 연구의 효과는 조건에 따라 크게 갈린다. 낯선 신규 과제에서는 55.8% 단축([Peng 외 2023](https://arxiv.org/abs/2302.06590)), 기업 표준 과제에서는 약 21% 단축이지만 통계적으로 유의하지 않았다([Google RCT 2024](https://arxiv.org/abs/2410.12944)). 반면 숙련자가 익숙한 대형 저장소에서 일할 때는 19% 느려졌다([METR 2025](https://arxiv.org/abs/2507.09089)).\n- [사실] 실제 기업 현장 실험에서는 시간이 아니라 산출량(주당 완료 PR 수)이 26.08% 늘었다(SE 10.3%, [Cui 외 2024](https://www.microsoft.com/en-us/research/publication/the-effects-of-generative-ai-on-high-skilled-work-evidence-from-three-field-experiments-with-software-developers/)). 이 효과는 주니어와 단기 재직자에게 몰려 있었다.\n- [사실] 조직·프로젝트 수준에서는 반대 신호도 있다. DORA 2024 설문 모형에서는 AI 채택이 25% 늘 때마다 전달 안정성이 7.2%, 처리량이 1.5% 낮았다([DORA 2024](https://dora.dev/research/2024/dora-report/)). Cursor를 도입한 오픈소스 프로젝트에서는 속도 증가가 2개월 안에 사라졌고, 정적분석 경고(+30%)와 복잡도(+41%)는 계속 남았다([He 외 2025](https://arxiv.org/abs/2511.04427)).\n- [해석] '적어도 20%'를 팀 전체 개발시간의 하한으로 보장하는 근거는 없다. 가장 유리한 현장 추정치(Cui)를 시간으로 바꿔도 강한 가정 아래 약 21%이고, 95% 신뢰구간은 약 6~32%에 걸친다(3.3절). 이 회사의 절반을 차지하는 시니어·유지보수 작업은 METR처럼 느려질 위험이 있는 조건에 가깝다.\n- [제안] 도구는 도입하되 계획은 보수적으로 잡는다. 실험 전 일정·인력 계획은 0%(효과 없음)를 기준으로 하고, 10% 안팎은 '가능성'으로만 둔다. 6주 실험에서 품질이 나빠지지 않은 상태로 시간 단축의 신뢰구간 하한이 확인되면 그 값을 계획에 반영한다.\n\n---\n\n## 2. 조사한 연구(9건, 서로 독립)\n\n소프트웨어 개발을 직접 다룬 연구는 S1~S6의 6건, 다른 지식노동 연구는 K1~K3의 3건이다. 같은 연구의 보도자료·블로그는 따로 세지 않았다. Peng(S1)과 Cui(S2)는 저자가 일부 겹치지만, 표본·실험·데이터가 다른 별개 연구다.\n\n| ID | 연구(공개일) | 설계 | 표본 | 과제 성격 | 측정량·주요 효과 | 품질 측정 |\n|---|---|---|---|---|---|---|\n| S1 | [Peng 외, arXiv 2023-02-13](https://arxiv.org/abs/2302.06590) | RCT(개인) | 프리랜서 95명 | 신규·자기완결(JS HTTP 서버) | **완료시간 −55.8%**(95% CI 21~89%) | 없음(테스트 통과만) |\n| S2 | [Cui 외, SSRN 2024-09](https://www.microsoft.com/en-us/research/publication/the-effects-of-generative-ai-on-high-skilled-work-evidence-from-three-field-experiments-with-software-developers/) | 현장 RCT 3건, IV 추정 | 4,867명(MS·Accenture·익명사) | 실제 업무 전반 | **주당 PR +26.08%**(SE 10.3) | 빌드 성공률 −5.53%(유의X), Accenture −17.40%(유의) |\n| S3 | [Paradis 외(Google), arXiv 2024-10-16/v3 11-11](https://arxiv.org/abs/2410.12944) | RCT(개인) | Google 엔지니어 96명 | 낯선 기존 코드에 기능 추가(기업형) | **과제시간 약 −21%**(CI [−0.51, 0.03] 로그, p=0.086) | 없음 |\n| S4 | [Becker 외(METR), arXiv 2025-07-12/v2 07-25](https://arxiv.org/abs/2507.09089) | RCT(과제 단위) | 숙련 OSS 개발자 16명, 이슈 246건 | 익숙한 대형 저장소의 실제 이슈 | **완료시간 +19%(느려짐)** | 표준 PR 리뷰 통과(고품질 기준) |\n| S5 | [He 외, arXiv 2025-11-06/v2 11-13](https://arxiv.org/abs/2511.04427) | 준실험(시차 DiD+매칭) | 저장소 807 vs 1,380 | 오픈소스 프로젝트 전체 | **추가 줄 3~5배(첫 달), 2개월 뒤 소멸** | 정적분석 경고 +30%, 복잡도 +41%(지속) |\n| S6 | [DORA 2024 보고서](https://dora.dev/research/2024/dora-report/) | 횡단 설문(관찰) | 2024 응답자 수 미확인 | 팀·조직 전달 전반 | **채택 25%↑당 처리량 −1.5%, 안정성 −7.2%** | 안정성(자기보고), 코드 품질 인식 +3.4% |\n| K1 | [Brynjolfsson 외, NBER 2023-04(11월 개정)](https://www.nber.org/papers/w31161) | 준실험(DiD) | 상담원 5,179명 | 고객지원 채팅 | 시간당 해결 +14%(초보 +34%) | 해결률·고객 감정·NPS |\n| K2 | [Dell'Acqua 외, HBS WP 24-013(2023)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4573321) | 사전등록 RCT | BCG 컨설턴트 758명 | 컨설팅 과제 18개+프런티어 밖 1개 | 안: 25.1% 빠름·품질 40%↑ / 밖: 정답률 −19%p | 평가자 채점 |\n| K3 | [Noy·Zhang, MIT WP 2023-03-02](https://economics.mit.edu/sites/default/files/inline-files/Noy_Zhang_1.pdf) | 사전등록 온라인 RCT | 전문직 444명 | 20~30분 글쓰기 | 소요시간 −0.83 SD(27→17분, 자기보고), 품질 +0.45 SD | 평가자 1~7점 |\n\n방법·비교군·AI 개입·한계·실제로 확인한 범위 같은 전체 필드는 `evidence.json`에 있다. 다음은 수치 해석에 중요한 세부 사항이다.\n\n- [사실] S1의 결과는 완료자만 놓고 비교한 값이다(처리군 71.17분, 통제군 160.89분). 저자들은 코드 품질을 측정하지 않았다고 직접 밝혔다([원문](https://arxiv.org/abs/2302.06590)). 참가자들의 자기추정은 35%로, 실측치보다 작았다.\n- [사실] S3의 원평균은 96분 대 114분이었다. 이 차이를 비율로 계산하면 15.8% 단축이다. 통제변수를 넣은 '약 21%'는 p=0.086으로 유의하지 않았다. 저자들도 실험실 효과가 더 넓게 적용되리라고 가정할 수 없다고 적었다([원문](https://arxiv.org/abs/2410.12944)).\n- [사실] S2의 Microsoft 실험에서는 PR 수만 유의했다(+27.38%). Accenture(+17.94%)와 익명사(+54.03%)는 유의하지 않았다. 대상자의 30~40%는 도구를 시도조차 하지 않았다([원문 PDF 사본](https://readwise-assets.s3.amazonaws.com/media/wisereads/articles/the-effects-of-generative-ai-o/4945566.pdf)).\n- [사실] S4에서 AI 사용 이슈를 보면 직접 코딩·검색 시간은 줄었다. 대신 프롬프트 작성, AI 출력 대기·검토, 유휴 시간이 늘었다. 개발자들은 사전에 24% 단축을 예측했고, 사후에도 20% 단축됐다고 인식했다([원문](https://arxiv.org/abs/2507.09089)). 저자들은 이 결과가 '그린필드나 낯선 코드베이스에서 큰 속도 향상'이 나는 것과도 양립한다며 과잉일반화를 경고했다.\n\n---\n\n## 3. 좋아졌다는 연구와 나빠졌다는 연구가 함께 나오는 이유\n\n### 3.1 무엇을 쟀는지가 다르다\n\n| 측정량 | 해당 연구 | 20% 시간 단축 판단에 대한 의미 |\n|---|---|---|\n| 과제 완료 시간(인과) | S1 −55.8%, S3 약 −21%, S4 +19%, K2 −25.1% | 가장 직접적인 근거다. 다만 과제 단위의 값이라 팀 리드타임과는 다르다 |\n| 산출량(PR·커밋·코드 줄) | S2 PR +26%, S5 코드 줄 3~5배 | AI가 작업을 잘게 나누거나 코드를 늘리면 실제 일의 양이 같아도 수치가 커진다(METR 저자의 지적, [S4](https://arxiv.org/abs/2507.09089)). 시간 단축과 같은 것이 아니다 |\n| 자기보고 | S4 참가자 인식 −20%(실측은 +19%), S1 자기추정 35%, DORA 응답자 75%가 생산성 향상을 체감, K3 시간 | 체감과 실측이 반대 방향으로 갈릴 수 있다(S4). 계획 근거로 쓰기에 가장 약하다 |\n| 관찰상 연관 | S6 DORA | 인과로 읽을 수 없다. 다만 하류(배포 안정성)의 위험 신호로는 유효하다 |\n\n### 3.2 결과를 가르는 조건\n\n| 조건 | 빨라진 쪽 | 느려졌거나 품질이 나빠진 쪽 |\n|---|---|---|\n| 과제 유형 | 신규·자기완결 과제(S1), 짧은 표준 과제(S3, K2·K3) | 실제 이슈. 리뷰 기준이 높은 성숙 저장소(S4) |\n| 코드베이스 친숙도 | 낯선 코드(S3 참가자는 해당 코드를 몰랐다) | 평균 5년을 다룬 자기 저장소(S4) |\n| 경력 | 주니어·단기 재직자(S2, S1 저경력, K1 초보 +34%) | 시니어는 S2에서 유의한 효과가 없었고 S4에서는 느려졌다. 단 S3에서는 고연차가 AI로 더 빨랐을 가능성이 있어(유의하지 않음) 결과가 일관되지 않다 |\n| 관찰 기간 | 단기(실험 몇 시간~수개월) | 장기에는 속도 이득이 사라지고 기술부채가 쌓였다(S5, 첫 달 이후) |\n| 분석 수준 | 개인·과제 | 팀 전달 안정성(S6), 프로젝트 품질(S5) |\n| 도구 세대 | 코드 완성형(S1~S3, 2022~2024) | 에이전트형(S4·S5, 2025). 생성량이 커질수록 리뷰·품질보증이 병목이 된다(S5 저자 결론) |\n| 업무가 AI 능력 안에 있는가 | 프런티어 안 과제(K2) | 프런티어 밖 과제에서는 정답률이 19%p 떨어졌다(K2) |\n\n[해석] 연구들은 서로 모순되지 않는다. 각자 다른 조건을 측정했다. 공통점은 다음과 같다. (1) AI는 코드를 '만드는' 시간을 줄인다. (2) 대신 검토·검증·통합 시간을 늘린다. (3) 그 둘의 차이는 코드를 얼마나 잘 아는지, 품질 기준이 얼마나 높은지, 과제가 얼마나 정형화돼 있는지에 따라 부호까지 바뀐다.\n\n### 3.3 과제 단위 효과를 팀 개발시간으로 바로 옮기면 안 되는 이유\n\n- [해석] 리드타임에는 코딩 말고도 요구사항 정리, 리뷰 대기, 테스트, 배포, 장애 대응이 들어 있다. 코딩 단계만 s% 빨라지고 그 단계가 전체 시간의 p를 차지하면, 전체 단축은 대략 p×s다(암달의 법칙). **예시(가정값):** p=0.5, s=21%(S3)이면 10.5%다. p=0.4이면 8.4%다. p=0.5에서 전체 20%를 얻으려면 코딩 단계가 40% 빨라져야 한다. 이 회사의 p는 측정된 적이 없으므로, 이 값들은 예시일 뿐 추정치가 아니다.\n- [해석] Cui의 PR +26.08%는 PR의 크기가 변하지 않았다는 강한 가정을 둬야 시간으로 바꿀 수 있다. 그러면 PR 한 건당 시간이 1−1/1.2608 ≈ 20.7% 줄어든다. 그러나 95% 신뢰구간(26.08±1.96×10.3 = +5.9%~+46.3%)을 같은 방식으로 바꾸면 약 5.6%~31.6%다. 하한이 20%에 크게 못 미친다.\n- [해석] 서로 다른 단위(시간 %, 산출량 %, SD, 설문 모형 %)를 평균하는 것은 의미가 없다. 이 보고서는 평균하지 않았다.\n\n### 3.4 다른 지식노동 연구 중 개발팀에 옮길 수 있는 것과 없는 것\n\n- K1 고객지원: [옮길 수 있음] 초보자에게 이득이 크고, 숙련자의 모범 사례를 퍼뜨리는 효과가 있다. 이는 주니어 온보딩과 연결된다. [옮길 수 없음] 시간당 해결 건수는 반복적인 대화 업무의 지표다. 코드 설계 부채나 리뷰 비용이 반영되지 않는다.\n- K2 컨설턴트: [옮길 수 있음] 같은 업무 흐름 안에서도 AI가 잘하는 과제와 못하는 과제가 섞여 있다. 못하는 과제에서 AI를 믿으면 정확도가 떨어진다. 이는 코드 리뷰를 의무화할 근거다. [옮길 수 없음] 25.1%·40% 같은 수치는 컨설팅 문서 과제에서 나온 값이다.\n- K3 글쓰기: [옮길 수 있음] 설계 문서, PR 설명, 주석처럼 개발팀이 하는 글쓰기 업무가 있다. 작업이 초안 작성에서 편집 중심으로 바뀐다는 점도 해당한다. [옮길 수 없음] 20~30분짜리 자기완결 과제였고 시간은 자기보고였다. 코드 정합성이나 테스트 같은 검증 비용이 없다.\n\n---\n\n## 4. 우리 회사 구성별 적용 [해석]\n\n| 세그먼트(가상) | 가장 가까운 근거 | 기대 방향 | 불확실성 |\n|---|---|---|---|\n| 주니어 × 신규 기능 | S1, S2(주니어), S3, K1 | 단축 가능성이 가장 높다 | 품질(S2 Accenture 빌드 성공률 하락)과 학습 저해 |\n| 주니어 × 유지보수 | S2, S3(낯선 코드) | 단축 가능성이 있다. 낯선 코드를 파악하는 데 도움이 된다 | 잘못된 수정이 리뷰에서 걸러지는지 |\n| 시니어 × 신규 기능 | S3(고연차 경향), S2(시니어 유의X) | 결과가 엇갈린다 | 연구끼리 방향이 다르다 |\n| 시니어 × 유지보수 | S4(익숙한 대형 저장소) | **느려질 위험이 있다** | 이 회사 코드베이스의 규모·품질 기준이 S4와 얼마나 비슷한지 |\n\n[해석] 구성이 정확히 4등분이어도 세그먼트별 효과값으로 가중평균해 20%를 만들 수는 없다. 각 효과가 서로 다른 단위와 조건에서 나왔기 때문이다. 이 표는 실험에서 층화해야 할 축을 정하는 데만 쓴다.\n\n---\n\n## 5. 권고와 남은 불확실성\n\n### 5.1 권고: 조건부 도입 [제안]\n\n1. 도구를 도입하되 6주 실험의 틀 안에서 쓴다. 보안·라이선스 정책(코드 외부 전송 범위)을 먼저 확정한다.\n2. 계획 전제는 '시간 단축 0%'로 둔다. 20%는 검증할 가설로만 쓴다. 인력 감축이나 일정 단축은 실험 결과가 나올 때까지 약속하지 않는다.\n3. AI로 만든 변경도 기존과 같은 리뷰·테스트 기준을 통과해야 한다. 리뷰 부담이 시니어에게 쏠리는지 감시한다(S5 저자의 결론: 품질보증이 병목이다).\n\n**보류가 아닌 이유:** 주니어와 신규·낯선 코드 작업에서는 서로 독립인 여러 RCT와 현장실험이 일관되게 이득을 보였다(S1·S2·S3). 조건이 맞는 영역에서 이득을 놓칠 이유는 없다.\n\n**전면 도입이 아닌 이유:** 효과의 부호가 조건에 따라 바뀌었다(S4). 조직 수준의 안정성·품질 신호도 부정적이었다(S5·S6). '적어도 20%'라는 하한을 공개 근거로 보장할 수 없다.\n\n### 5.2 남은 불확실성\n\n- 이 회사의 코딩 시간 비중(p), 코드베이스 규모, 리뷰 기준, 테스트 자동화 수준이 측정된 적이 없다.\n- 도구 세대가 빠르게 바뀐다. 2022~2025년 연구 결과가 지금 도구에서도 같을지는 알 수 없다(S3·S5 저자도 같은 한계를 밝혔다).\n- 장기 품질 영향(기술부채)은 6주 실험으로는 일부만 보인다(S5에서는 수개월에 걸쳐 나타났다).\n- METR의 신뢰구간 수치와 DORA 2024의 응답자 수는 이번에 원문에서 추출하지 못했다(source_notes.md 참조).\n\n---\n\n## 6. 품질을 희생하지 않는 6주 사내 실험 계획 [제안]\n\n### 6.1 설계\n- **단위:** 티켓(작업) 단위로 무작위 배정한다. 개발자 내 교차설계다(METR 방식, [S4](https://arxiv.org/abs/2507.09089)). 개발자는 각 티켓에 대해 AI 사용 시와 미사용 시의 소요 시간을 먼저 예측하고, 그다음 동전 던지기로 'AI 허용'과 'AI 금지'를 배정한다. 20명이라는 작은 인원에서 개인차를 상쇄하기 위해서다.\n- **층화:** 주니어/시니어 × 신규/유지보수의 4칸으로 나눈다. 각 칸 안에서 배정 비율을 1:1로 맞춘다.\n- **대상 티켓:** 1~8시간 규모의 일반 개발 티켓. 장애 대응 핫픽스와 보안 패치는 제외한다.\n- **일정:**\n  - 1주차: 도구 설치·교육. 계측(티켓 시작·종료, PR, CI 결과, 정적분석) 설정. 분석 계획 사전등록. 집계에서 빼는 연습 티켓 운영.\n  - 2~6주차: 본 실험 5주.\n  - 6주 차 말: 1차 분석.\n  - 이후: 30·90일 품질 추적은 실험 뒤에도 계속한다.\n- **규모:** 개발자 1인당 주 3~4건이면 약 300~400건이다(METR은 246건으로 19% 효과를 추정했다). 결과의 신뢰구간이 넓으면 결론을 내리지 않고 기간을 늘린다.\n\n### 6.2 측정 지표\n- **1차 지표(시간):** 티켓당 실작업 시간. 착수부터 PR 병합까지이며 리뷰 반영 시간을 포함한다. 자기보고와 VCS·IDE 타임스탬프를 교차 확인한다. 사전 예측 시간을 공변량으로 넣는다.\n- **2차 지표(흐름):** PR 리드타임, 리뷰 라운드 수, 리뷰어가 쓴 시간(시니어 부담), 티켓당 PR 크기(산출량 지표의 착시를 확인하는 용도).\n- **품질 가드레일:** CI 실패율, 병합 후 14일 안의 되돌림·핫픽스 비율, PR에 연결된 결함(30·90일 추적), 신규 정적분석 경고와 복잡도 증가분(S5 지표), 테스트 커버리지 변화, 보안 스캔의 신규 고위험 항목.\n- **팀 지표(DORA):** 변경 실패율, 배포 빈도, 변경 리드타임, 복구 시간. 6주로는 추세만 확인한다.\n- **SPACE 관점:** 만족도·인지 부하 설문, 체감 효과(사전·사후 예측)와 실측의 차이(S4에서 확인된 착시를 점검한다).\n\n### 6.3 중단 기준(사전 합의, 수치는 제안값)\n- **즉시 중단:** AI 도구를 통한 비밀정보·고객 코드 유출, 또는 AI 생성 코드가 원인인 보안 사고 1건.\n- **일시 중지 후 원인 검토:**\n  - AI 허용 티켓의 병합 후 14일 내 되돌림·핫픽스 비율이 대조군보다 상대 50% 이상 높고 사건이 3건 이상일 때.\n  - AI 허용 PR의 신규 정적분석 고위험 경고가 대조군의 2배를 넘을 때.\n  - 시니어 리뷰 시간이 기준 주 대비 25% 이상 늘 때.\n- **세그먼트 단위 중지:** 2주 연속으로 특정 칸(예: 시니어 × 유지보수)의 AI 허용 시간이 대조보다 길고(점추정 +10% 이상), 품질도 나쁘지 않을 때. 해당 칸은 'AI 선택 사용'으로 돌리고 나머지 칸은 실험을 계속한다.\n\n### 6.4 실험 후 의사결정 규칙\n- 품질 가드레일이 비열등하고, 시간 단축의 80% 신뢰구간 하한이 20% 이상이면 → 20%를 계획 전제로 채택한다.\n- 하한이 0~20% 사이이면 → 하한값을 계획 전제로 쓰고, 효과가 확인된 세그먼트에만 확대한다.\n- 신뢰구간이 0을 포함하거나 품질이 열등하면 → 계획 전제는 0%로 유지한다. 도구는 효과가 확인된 용도(문서·탐색 등)로 한정한다.\n- 결정과 별도로 90일 품질 추적 결과로 다시 판정한다.\n\n---\n\n## 7. 이 보고서의 한계\n\n- 연구 본문은 핵심 절과 패턴 발췌 위주로 읽었다. 일부는 초록이나 요약 부분만 읽었다. 연구별 범위는 `evidence.json`의 `read_scope`와 `source_notes.md`에 적었다.\n- Cui(S2)의 전문은 SSRN 원본이 아니라 제3자가 올린 사본으로 읽었다. Dell'Acqua(K2)는 MIT Sloan이 올린 SSRN 사본으로 읽었다.\n- 실제 회사 정보는 사용하지 않았다. 모든 회사 수치(20명, 4등분, 코딩 비중 예시)는 가정이다.\n",
+          "s": "# source_notes — 확인 범위, 미확인·실패 자료\n\n기준일은 2025-12-31이다. 조사 실행일은 2026-10-08이다. 도구는 IBL `sense:search`, `sense:crawl`, `fn:본문에서찾기`이다.\n\n## 1. 연구별 실제 확인 범위\n\n| ID | 읽은 원천 | 범위 | 판본·날짜 확인 |\n|---|---|---|---|\n| S1 Peng 외 | arXiv PDF v1 | 본문 전체(1~9쪽, 그림 주석) | abs 페이지에서 v1 2023-02-13만 존재함을 확인 |\n| S2 Cui 외 | 제3자 호스팅 PDF(readwise S3, SSRN 4945566의 2024-09 판) + Microsoft Research 소개 페이지 | 본문 1~10쪽(설계·채택·표1·표2·이질성 서술), 부록 일부. MSR 페이지는 초록만 | 2024-09 판을 사용. MSR 페이지의 2025-06 판은 읽지 않았다. SSRN 원 페이지는 직접 열지 않았다 |\n| S3 Paradis 외(Google) | arXiv PDF v3 | 본문 1~10쪽(설계·한계·결과·논의) | abs 페이지에서 v1 2024-10-16, v2 2024-10-24, v3 2024-11-11 확인. 모두 기준일 이전 |\n| S4 Becker 외(METR) | arXiv HTML v2 | 초록·서론·설계·측정·화면녹화 분석·과잉일반화 경고 문단(패턴 발췌) | v1 2025-07-12, v2 2025-07-25. 기준일 이전 |\n| S5 He 외(Cursor DiD) | arXiv HTML v2 | 초록·서론·관련연구·데이터·품질지표 정의·한계 문단(패턴 발췌) | v1 2025-11-06, v2 2025-11-13은 사용. **v3 2026-01-26은 기준일 이후라 사용하지 않음**(v3 초록 표현은 참고하지 않음) |\n| S6 DORA 2024 | dora.dev 보고서 페이지 + 공식 PDF(services.google.com) | 요약, AI 장(채택·인식·하류 영향 그림 9~11) 발췌 | PDF 판 표기 v.2024.3. 정확한 공개 월은 메타데이터로 확인하지 않음 |\n| K1 Brynjolfsson 외 | NBER PDF(w31161) | 초록, 설정·측정 변수, 실증전략 절 | 2023-04, 2023-11 개정판. QJE 2025 게재판은 읽지 않음 |\n| K2 Dell'Acqua 외 | MIT Sloan 호스팅 SSRN 사본 PDF | 초록·서론·방법 절 | 2023년 WP 24-013. 정확한 첫 게시일은 미확인. **HBS 2026 게재판은 기준일 이후라 제외** |\n| K3 Noy·Zhang | MIT 경제학과 호스팅 WP PDF(2023-03-02) | 설계·결과 2.1~2.6절 | Science 2023 게재판은 접근 실패. 게재판의 수치(표본 수 등)는 사용하지 않음 |\n\n## 2. 읽지 못했거나 실패한 자료\n\n- HBS 공식 PDF(Dell'Acqua): `https://www.hbs.edu/ris/Publication%20Files/24-013_...pdf`. 'Human Verification' 봇 확인 페이지로 차단됐다.\n- kalre.com의 Dell'Acqua 사본: HTTP 404.\n- SSRN 4573321 초록 페이지, HBS 교수 페이지: 크롤 실패(도구 오류).\n- Science 게재판(Noy·Zhang, doi 10.1126/science.adh2586): 크롤 실패. 검색 요약에 나온 '40% 시간 감소·18% 품질 향상' 같은 수치는 본문으로 확인하지 못했으므로 보고서에 쓰지 않았다.\n\n## 3. 원문에서 추출하지 못해 비워 둔 수치\n\n- METR(S4)의 19%에 대한 신뢰구간: 부록 D에 있다고 적혀 있지만 이번 발췌에서는 수치를 얻지 못했다.\n- DORA 2024의 해당 연도 응답자 수: 보고서의 '39,000명 이상'은 10년 누적치라 쓰지 않았다.\n- Cursor 연구(S5)의 커밋 수 효과 크기와 결과 표 전체: 읽지 않았다.\n- Cui(S2)의 재직기간·직급별 수치: 그림 3의 축 라벨만 읽혀 숫자와 막대의 대응을 확정하지 못했다. 보고서에는 본문 서술('단기 재직·주니어에서 유의, 장기·시니어 유의하지 않음')만 썼다.\n\n## 4. 후보였으나 쓰지 않은 자료\n\n- Uplevel의 'Copilot 버그 41% 증가' 주장: 검색 결과가 2차 블로그 위주였다. 원 보고서의 방법을 확인하지 못해 연구 수에 넣지 않았다.\n- GitClear 등 코드 품질 관련 업계 보고서: 원문을 확인하지 않아 제외했다.\n- 검색 결과의 2차 요약(storytell.ai, mezmo, tsukumo 등 블로그): 근거로 쓰지 않았다.\n\n## 5. 원문에서 발견한 주의점\n\n- Google RCT(S3) 본문은 로그 평균값을 'AI 4.6 vs 무AI 4.3'으로 적었다. 이는 원평균(96분 vs 114분) 방향과 맞지 않아 표기 오류로 보인다. 결론에는 원평균과 회귀계수만 썼다.\n- S2 Microsoft 실험에서 처리군과 통제군의 주니어 비율에 차이가 있다(0.61 vs 0.55, p=0.03, 균형표).\n\n## 6. 지킨 제약\n\n- 외부 발송·공개는 하지 않았다. 세 파일 모두 로컬에만 저장했다.\n- 실제 회사 정보는 넣지 않았다. 다른 실행자의 trainer·harness·drafts는 참조하지 않았다.\n"
+        }
+      },
+      "source": "training",
+      "ts": 1791424334.224239
+    },
+    {
+      "id": "2295d68825234620aa0b7da25555038e",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$d = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\"\n$e = [self:read]{path:f\"${d}/evidence.json\"}\n$r = [self:read]{path:f\"${d}/research.md\"}\n$s = [self:read]{path:f\"${d}/source_notes.md\"}\n$etext = has($e,\"text\") ? $e.text : json($e)\n$req = [\"title\",\"date\",\"design\",\"sample\",\"task\",\"ai_intervention\",\"comparison\",\"main_effect\",\"quality_measure\",\"limitations\",\"url\",\"read_scope\"]\n$checks = $req >> [table:each]{ return {field:$it, n:len(split($etext, f\"\\\"${$it}\\\"\"))-1} }\n{fields:$checks, sw:len(split($etext,\"\\\"software_direct\\\": true\"))-1 + len(split($etext,\"\\\"software_direct\\\":true\"))-1, keys_e:keys($e), r_has:{cond:contains($r.text,\"조건부 도입\"), six:contains($r.text,\"6주\"), stop:contains($r.text,\"중단 기준\"), avg:contains($r.text,\"평균하지\"), fact:contains($r.text,\"[사실]\"), interp:contains($r.text,\"[해석]\"), prop:contains($r.text,\"[제안]\"), k_apply:contains($r.text,\"옮길 수 없음\")}, rlen:len($r.text), slen:len($s.text)}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424341.01916
+    },
+    {
+      "id": "53e200a2342b41c0846118f5ade4c172",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$d = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\"\n$a = [self:grep]{pattern:\"적용|미확인|unverified|not_confirmed\", path:f\"${d}/research.md\", regex:true}\n$b = [self:grep]{pattern:\"미확인\", path:f\"${d}/evidence.json\"}\n{r:$a, e:$b}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424373.3131351
+    },
+    {
+      "id": "e4b12b18fb96410987c41010e0de80fd",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$d = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\"\n$a = [self:grep]{pattern:\"적용 가능|적용할 수 없|적용 불가|옮길 수|지식노동\", path:f\"${d}/research.md\", regex:true, context:1}\n$e = [self:read]{path:f\"${d}/evidence.json\"}\n$j = json($e.text)\n$s = $j.studies >> [table:each]{ return {id:$it.id, sw:$it.software_direct, title:$it.title, ks:keys($it), miss:[for $k in keys($it) if contains(text(get($it,$k)),\"미확인\") or get($it,$k)==null]} }\n{r:$a, s:$s}",
+        "edition": 2,
+        "check": true
+      },
+      "source": "training",
+      "ts": 1791424377.516934
+    },
+    {
+      "id": "2d42254c23014c39b29183ce1d60be91",
+      "name": "Bash",
+      "request": {
+        "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\" && python3 -I -c '\nimport json\nj=json.load(open(\"evidence.json\"))\nfor s in j[\"studies\"]:\n    miss=[k for k,v in s.items() if v is None or \"미확인\" in json.dumps(v,ensure_ascii=False)]\n    print(s[\"id\"],s.get(\"software_direct\"),s[\"title\"][:60],\"| keys:\",len(s),\"| 미확인/null:\",miss)\n    for k in (\"applicability\",\"dev_applicability\",\"적용\"):\n        if k in s: print(\"   \",k,\":\",json.dumps(s[k],ensure_ascii=False)[:300])\nprint(sorted(j[\"studies\"][0].keys()))\n' ; python3 -I -c '\nimport re\nt=open(\"research.md\").read()\nfor m in re.finditer(r\"[^\\n]*(적용 가능|적용할 수|적용 불가|옮길 수 없|옮길 수 있)[^\\n]*\",t): print(\"-\",m.group(0)[:400])\n'",
+        "description": "Inspect evidence.json unconfirmed fields and research.md applicability lines"
+      },
+      "source": "training",
+      "ts": 1791424382.7891462
+    },
+    {
+      "id": "fcc4d1e419d349c59f6f14592404d3ef",
+      "name": "Bash",
+      "request": {
+        "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\" && python3 -I -c '\nimport json\nj=json.load(open(\"evidence.json\"))\nd={s[\"id\"]:s for s in j[\"studies\"]}\nfor i,k in [(\"S2\",\"read_scope\"),(\"S4\",\"main_effect\"),(\"S6\",\"date\"),(\"S6\",\"sample\"),(\"K2\",\"date\"),(\"K3\",\"sample\"),(\"K3\",\"read_scope\")]:\n    print(i,k,\":\",json.dumps(d[i][k],ensure_ascii=False)[:260])\n'",
+        "description": "Show unconfirmed field values in evidence.json"
+      },
+      "source": "training",
+      "ts": 1791424386.450618
+    }
+  ],
+  "variant": [
+    {
+      "id": "21532a60cbc54ccbb6ebbbb6f6601931",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$d = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\"\n$r = [self:read]{path:f\"${d}/research.md\"}\nreturn $r.text",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424455.573192
+    },
+    {
+      "id": "ea960a0818bc4e698255bee45f405206",
+      "name": "Bash",
+      "request": {
+        "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\" && python3 -I -c '\nimport json\nj=json.load(open(\"evidence.json\"))\nfor s in j[\"studies\"]:\n  if s[\"id\"] in (\"S2\",\"S3\",\"S4\",\"S5\"):\n    print(\"=====\",s[\"id\"])\n    for k in (\"sample\",\"task\",\"main_effect\",\"quality_measure\",\"limitations\",\"read_scope\"):\n      print(k,\":\",json.dumps(s[k],ensure_ascii=False)[:900])\n'; ls -la ../; ",
+        "description": "Print key evidence fields for S2-S5 and list folder"
+      },
+      "source": "training",
+      "ts": 1791424460.144556
+    },
+    {
+      "id": "549dea09953041ccadaf3056df7d0b26",
+      "name": "Bash",
+      "request": {
+        "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\" && shasum -a 256 research.md evidence.json source_notes.md && stat -f \"%Sm %N\" research.md evidence.json source_notes.md",
+        "description": "Record base file hashes before writing variant"
+      },
+      "source": "training",
+      "ts": 1791424471.7892869
+    },
+    {
+      "id": "7e7ccd53d1cf4151ad50260ec5c79841",
+      "name": "execute_ibl",
+      "request": {
+        "code": "{sm:0.9*0.9, rest:1-0.9*0.9, need:0.2/(1-0.9*0.9), n_lo:18*3*5, n_hi:18*4*5, cui_t:1-1/1.2608}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791424475.185239
+    },
+    {
+      "id": "e21c0ac736b94219b0c183f5b2304a07",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$d = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/variant\"\n[self:mkdir]{path:$d}\n[self:write]{path:f\"${d}/decision.md\", content:$m}\n$r = [self:read]{path:f\"${d}/decision.md\"}\nreturn {chars:len($r.text), head:$r.text[0:200], has_rec:contains($r.text,\"권고: 조건부 도입\"), has_stop:contains($r.text,\"중단 기준\"), has_noweb:contains($r.text,\"새 웹 원문\")}",
+        "edition": 2,
+        "inputs": {
+          "m": "# 의사결정 메모: 생성형 AI 도입 시 '개발시간 20% 절감'을 약속할 수 있는가 (조건 변경판)\n\n- 받는 사람: 대표 / 작성일: 2026-10-08 / 근거 기준일: 2025-12-31까지 공개된 연구\n- 바뀐 조건(가상 회사): 개발자 20명 중 **시니어 18명·주니어 2명**, 업무의 **90%가 익숙한 대규모 기존 저장소의 유지보수**. 신규 채용·새 연구 추가 없음. 사내 측정 자료 없음.\n- 근거: 직전 분석(`../base/research.md`, `../base/evidence.json`, `../base/source_notes.md`)에서 이미 원문으로 확인한 9개 연구를 그대로 재사용했다. **이번 메모를 위해 새 웹 원문 조회·추출은 하지 않았다**(이유는 4절). base의 세 파일은 수정하지 않았다.\n- 표기: **[사실]** 원문에서 확인한 내용 · **[해석]** 연구 비교에서 나온 판단 · **[제안]** 이 회사에 대한 권고.\n\n---\n\n## 1. 결론\n\n**권고: 조건부 도입. 단 '20% 절감'은 약속할 수 없으며, 직전 판단(시니어·주니어 절반, 유지보수 절반)보다 근거가 더 약해졌다. 계획 전제는 0%로 두고, 6주 실험으로 시니어 유지보수 작업의 효과 부호부터 확인한다.**\n\n- [사실] 이번 조건과 가장 비슷한 연구는 METR 2025 RCT다. 숙련 오픈소스 개발자 16명이 **평균 5년·1,500커밋을 다룬 자기 저장소**(평균 2.3만 스타·110만 줄)의 실제 이슈 246건을 처리했고, AI를 허용하자 완료 시간이 **19% 늘었다**. 개발자들은 사전에 24%, 사후에도 20% 빨라졌다고 믿었다([S4, Becker 외 2025](https://arxiv.org/abs/2507.09089)).\n- [사실] 20%에 가까운 수치를 낸 연구들은 이번 조건과 거리가 있다. Google RCT의 약 21% 단축은 참가자가 **익숙하지 않은 코드**에 기능을 추가하는 과제였고 유의하지 않았다(p=0.086, [S3](https://arxiv.org/abs/2410.12944)). 현장 실험의 PR +26.08%는 산출량이며 효과가 **주니어·단기 재직자에 몰리고 시니어·장기 재직자에서는 유의하지 않았다**([S2, Cui 외 2024](https://www.microsoft.com/en-us/research/publication/the-effects-of-generative-ai-on-high-skilled-work-evidence-from-three-field-experiments-with-software-developers/)).\n- [해석] 따라서 이 회사에서 '적어도 20%'를 하한으로 보장할 근거는 없다. 오히려 업무의 대부분이 '느려진' 연구의 조건과 겹친다.\n- [해석] 보류가 아니라 조건부 도입인 이유: METR은 16명 소표본이고 신뢰구간을 이번에 확인하지 못했으며, 저자들도 결과의 과잉일반화를 경고했다([S4](https://arxiv.org/abs/2507.09089)). 낯선 모듈 파악이나 테스트 작성처럼 S3에 가까운 하위 업무에서는 이득이 날 수 있다. 공개 근거로 결론을 내릴 수 없으니 작게 재는 것이 가장 싼 방법이다.\n\n## 2. 어느 연구의 적용 비중이 달라졌나 (출처별)\n\n| 연구 | 이번 조건과의 관계 | 비중 변화 |\n|---|---|---|\n| S4 METR 2025 ([원문](https://arxiv.org/abs/2507.09089)) | 숙련자·익숙한 대형 저장소·실제 유지보수 이슈·높은 리뷰 기준. 결과 +19%(느려짐) | **크게 상승** — 업무 대부분의 대표 근거 |\n| S2 Cui 외 2024 ([원문](https://www.microsoft.com/en-us/research/publication/the-effects-of-generative-ai-on-high-skilled-work-evidence-from-three-field-experiments-with-software-developers/)) | 주니어 효과가 큰 산출량 지표. 시니어 하위집단은 유의하지 않음 | **하락** — 시니어 결과(유의X)만 적용. 주니어 2명에게 해당하는 부분은 팀 전체에 미미 |\n| S3 Google RCT 2024 ([원문](https://arxiv.org/abs/2410.12944)) | 기존 코드 수정이지만 '낯선 코드'. 고연차가 더 빨랐을 가능성(상호작용 유의X) | **하락·부분 유지** — 익숙한 저장소 업무에는 약함. 낯선 모듈 작업 일부에만 적용 |\n| S1 Peng 외 2023 ([원문](https://arxiv.org/abs/2302.06590)) | 신규·자기완결 과제, 프리랜서, 품질 미측정. −55.8% | **크게 하락** — 신규 개발이 10%로 줄어 대표성 낮음 |\n| S5 He 외 2025 ([원문](https://arxiv.org/abs/2511.04427)) | 기존 프로젝트에서 속도 증가 2개월 내 소멸, 정적분석 경고 +30%·복잡도 +41% 지속 | **상승** — 대형 기존 코드베이스를 오래 유지하는 회사에는 부채 누적이 핵심 위험 |\n| S6 DORA 2024 ([원문](https://dora.dev/research/2024/dora-report/)) | 관찰 설문. 채택 25%↑당 안정성 −7.2%·처리량 −1.5% | **유지** — 인과 근거는 아니며 하류 위험 신호로만 사용 |\n| K1 고객지원 ([NBER](https://www.nber.org/papers/w31161)) | 이득이 초보에 집중(+34%), 숙련자 효과 작음 | **하락** — '숙련자는 이득이 작다'는 방향 정보만 남음 |\n| K2 BCG 컨설턴트 ([SSRN](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4573321)) | AI 능력 밖 과제에서 정답률 −19%p | **유지** — 수치는 옮길 수 없지만 '능력 밖 과제에서 AI를 믿으면 품질 저하'는 리뷰 의무화 근거로 그대로 유효 |\n| K3 글쓰기 ([MIT WP](https://economics.mit.edu/sites/default/files/inline-files/Noy_Zhang_1.pdf)) | 20~30분 자기완결 글쓰기, 시간은 자기보고 | **하락** — PR 설명·문서 작성 같은 부수 업무에만 해당 |\n\n**그대로인 것** [해석]: (1) 생산량(PR·코드 줄)·자기보고·관찰 연관을 시간 단축의 인과효과로 읽지 않는다(S2·S4·S6). (2) 서로 단위가 다른 효과값을 평균하거나 가중평균해 20%를 만들지 않는다. (3) 과제 단위 효과는 리드타임 중 코딩 비중만큼만 팀 전체로 전달된다(base 3.3절의 암달 계산). (4) 품질·안정성 가드레일은 시간 효과와 별도로 판정한다.\n\n**산술 예시(가정값, 추정치 아님)** [해석]: 시니어 여부와 업무 유형이 서로 독립이라고 가정하면 '시니어×유지보수' 작업은 약 81%(0.9×0.9)다. 이 부분에서 효과가 0이라면, 나머지 19%에서 시간이 105% 넘게 줄어야 팀 전체 20%가 된다. 이는 불가능하다. 즉 **20% 약속은 사실상 시니어 유지보수 작업에서 큰 단축이 난다는 데 걸려 있고, 그 조건의 유일한 직접 RCT는 반대 방향이다.**\n\n## 3. 남은 불확실성\n\n- METR의 신뢰구간 수치는 base에서 추출하지 못했다(`../base/source_notes.md`). 표본도 16명이다. '느려진다'는 확정이 아니라 '빨라진다고 가정할 근거가 없다' 수준으로 읽어야 한다.\n- 이 회사 저장소의 규모·리뷰 기준·테스트 자동화가 METR 저장소와 얼마나 비슷한지 모른다.\n- 도구 세대가 빠르게 바뀐다. 2025년 이전 결과가 지금 도구에서도 같을지는 알 수 없다.\n- 기술부채 영향(S5)은 수개월에 걸쳐 나타나 6주 실험으로는 일부만 보인다.\n\n## 4. 추가 조사를 하지 않은 이유\n\nMETR의 신뢰구간은 비어 있는 근거지만 결정을 바꾸지 않는다. 구간이 0을 포함하든 안 하든, 이 조건에서 20% 이상 단축을 지지하는 직접 근거는 없다. 따라서 '약속 불가·조건부 도입'이라는 결론은 그대로다. 그래서 새 웹 원문 조회·추출을 하지 않았다. 나머지 수치는 모두 base의 `evidence.json`에 원문 확인 범위와 함께 기록된 값이다.\n\n## 5. 수정된 6주 실험안 [제안]\n\n**목표:** 시니어 × 익숙한 저장소 유지보수 작업에서 AI의 시간 효과 부호와 크기를 품질을 지키며 측정한다.\n\n- **설계:** 티켓 단위 무작위 배정, 개발자 내 교차설계(METR 방식). 착수 전 개발자가 AI 사용 시와 미사용 시의 소요 시간을 각각 예측한 뒤 'AI 허용/금지'를 배정한다.\n- **층화(base의 4칸 → 변경):** 시니어 18명의 유지보수 티켓을 하위 유형으로 나눈다. 버그 수정 / 리팩터링 / 테스트 작성 / 익숙하지 않은 모듈 수정. 티켓마다 '이 코드에 얼마나 익숙한가'를 1~5점으로 먼저 기록한다. 이 점수로 METR 조건(익숙)과 Google 조건(낯섦) 중 어느 쪽이 맞는지 사내에서 직접 가른다. 주니어 2명과 신규 기능 10%는 같은 규칙으로 기록하되 **기술 통계만** 보고, 효과 추정에는 쓰지 않는다(표본이 너무 작다).\n- **일정:** 1주차 도구 설치·보안 정책 확정·계측 설정·분석 계획 사전등록·연습 티켓. 2~6주차 본 실험. 6주 차 말 1차 분석. 30·90일 품질 추적은 이후에도 계속한다.\n- **규모:** 시니어 1인당 주 3~4건 × 5주 ≈ 270~360건. 구간이 넓으면 결론을 미루고 기간을 연장한다.\n- **1차 지표:** 티켓당 실작업 시간(착수~병합, 리뷰 반영 포함). VCS·IDE 타임스탬프로 교차 확인하고 사전 예측을 공변량으로 쓴다.\n- **2차 지표:** 리뷰 라운드, 리뷰어 시간, PR 크기(산출량 착시 확인), 체감과 실측의 차이(S4 착시 점검).\n- **품질 가드레일:** CI 실패율, 병합 후 14일 내 되돌림·핫픽스, 연결 결함(30·90일), 신규 정적분석 경고·복잡도 증가분(S5 지표), 테스트 커버리지, 보안 스캔 고위험 항목.\n\n**중단 기준(사전 합의, 수치는 제안값)**\n- 즉시 중단: AI 도구를 통한 비밀정보·고객 코드 유출, 또는 AI 생성 코드가 원인인 보안 사고 1건.\n- 일시 중지 후 원인 검토: AI 허용 티켓의 14일 내 되돌림·핫픽스가 대조군보다 상대 50% 이상 높고 3건 이상일 때 / 신규 고위험 정적분석 경고가 대조군의 2배를 넘을 때 / 리뷰어 시간이 기준 주보다 25% 이상 늘 때.\n- 하위 유형 단위 중지: 2주 연속 특정 하위 유형에서 AI 허용 시간이 대조보다 10% 이상 길면 그 유형은 'AI 선택 사용'으로 돌리고 나머지는 계속한다.\n\n**실험 후 결정 규칙**\n- 품질이 비열등하고 시간 단축의 80% 신뢰구간 하한이 20% 이상 → 20%를 계획에 반영한다.\n- 하한이 0~20% → 하한값만 계획에 쓰고, 효과가 확인된 하위 유형에만 확대한다.\n- 구간이 0을 포함하거나 품질이 열등 → 계획 전제 0% 유지. 도구는 효과가 확인된 용도(테스트·문서·낯선 모듈 탐색 등)로 한정한다.\n- 90일 품질 추적 결과로 다시 판정한다.\n\n## 6. 대표에게 요청하는 결정\n\n1. 올해 일정·인력 계획에 'AI로 20% 절감'을 넣지 않는다.\n2. 6주 실험과 보안 정책 확정을 승인한다.\n3. 실험 기간 동안 리뷰 기준을 완화하지 않는다는 원칙을 승인한다.\n"
+        }
+      },
+      "source": "training",
+      "ts": 1791424524.120065
+    },
+    {
+      "id": "6ea338ec67e04b65b4bc4a06bbfe2b79",
+      "name": "Bash",
+      "request": {
+        "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/ai/base\" && shasum -a 256 research.md evidence.json source_notes.md",
+        "description": "Verify base files unchanged after writing"
+      },
+      "source": "training",
+      "ts": 1791424527.624415
+    }
+  ]
+}

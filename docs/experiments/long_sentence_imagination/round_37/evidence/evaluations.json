@@ -1,0 +1,62 @@
+[
+  {
+    "stage": "base",
+    "decision": {
+      "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — research.md 본문이 발췌되어 C3(지식노동 연구 3건(Brynjolfsson, Dell'Acqua, Noy·Zhang)의 개발팀 적용 가능·불가 부분 명시)를 확인할 수 없습니다. evidence.json의 필드별 미확인 표기(C2)도 같은 이유로 확인할 수 없습니다. 확인할 증거는 seq 124(research.md·source_notes.md 작성 입력), seq 120(evidence.json 작성 입력), seq 126(재읽기 결과)입니다.",
+      "pursuit_status": "UNKNOWN",
+      "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — research.md 본문이 발췌되어 C3(지식노동 연구 3건(Brynjolfsson, Dell'Acqua, Noy·Zhang)의 개발팀 적용 가능·불가 부분 명시)를 확인할 수 없습니다. evidence.json의 필드별 미확인 표기(C2)도 같은 이유로 확인할 수 없습니다. 확인할 증거는 seq 124(research.md·source_notes.md 작성 입력), seq 120(evidence.json 작성 입력), seq 126(재읽기 결과)입니다.",
+      "recoverable": true,
+      "repair_block_ids": [],
+      "repair_scope": "evidence",
+      "response_hash": "c079912b295cac1830c8707cd1cc1edf279857a23384c341a57179e1484b699c",
+      "response_version": 1,
+      "severity": 0,
+      "status": "UNKNOWN"
+    },
+    "elapsed_s": 10.44,
+    "kind": "evaluation.finished",
+    "phase": "final",
+    "role": "evaluate",
+    "seq": 136,
+    "task_id": "task_sysai_e98dcb65",
+    "time": 1791424369.374351
+  },
+  {
+    "stage": "base",
+    "decision": {
+      "instruction": "",
+      "pursuit_status": "UNKNOWN",
+      "reason": "ACHIEVED",
+      "response_hash": "a2e851b1d3bb31294aa33a4c2a5337603c6cfaa9624b7bfb3fd5cdcda4e76a59",
+      "response_version": 2,
+      "severity": 0,
+      "status": "APPROVED"
+    },
+    "elapsed_s": 5.384,
+    "kind": "evaluation.finished",
+    "phase": "final",
+    "role": "evaluate",
+    "seq": 160,
+    "task_id": "task_sysai_e98dcb65",
+    "time": 1791424400.560729
+  },
+  {
+    "stage": "variant",
+    "decision": {
+      "instruction": "",
+      "pursuit_status": "UNKNOWN",
+      "reason": "ACHIEVED",
+      "response_hash": "59bee2fdb887665b7ff8cf3103304820d8a51428c16af7f76e27754eb5d3750a",
+      "response_version": 1,
+      "severity": 0,
+      "status": "APPROVED"
+    },
+    "elapsed_s": 16.142,
+    "kind": "evaluation.finished",
+    "phase": "final",
+    "role": "evaluate",
+    "seq": 40,
+    "task_id": "task_sysai_7524061e",
+    "time": 1791424560.67571
+  }
+]

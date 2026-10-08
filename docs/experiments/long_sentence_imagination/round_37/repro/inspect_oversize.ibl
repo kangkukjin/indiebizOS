@@ -1,0 +1,2 @@
+#!ibl edition=2
+return [{text:$text}] >> [table:ai]{inspect:"batch",instruction:"본문 요약",schema:"summary(문자열)",preserve_rows:true}

@@ -1,0 +1,178 @@
+{
+  "search": {
+    "program": "drafts/search_v0.ibl",
+    "payload": {
+      "origin": "training",
+      "project_id": "수동모드",
+      "inputs": {
+        "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/trainer/base",
+        "queries": [
+          "AI developer productivity randomized trial GitHub Copilot Peng 2023 paper",
+          "Effects Generative AI High Skilled Work software developers Cui field experiments 2025",
+          "METR experienced open source developer productivity 2025 study",
+          "Noy Zhang 2023 experimental evidence productivity generative artificial intelligence",
+          "Dell Acqua Navigating Jagged Technological Frontier 2023 paper",
+          "Brynjolfsson Li Raymond Generative AI at Work 2025 paper"
+        ]
+      }
+    }
+  },
+  "collect": {
+    "program": "drafts/collect_v0.ibl",
+    "payload": {
+      "origin": "training",
+      "project_id": "수동모드",
+      "inputs": {
+        "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/trainer/base",
+        "sources": [
+          {
+            "id": "peng2023",
+            "url": "https://arxiv.org/pdf/2302.06590",
+            "kind": "software experiment"
+          },
+          {
+            "id": "cui2025",
+            "url": "https://economics.mit.edu/sites/default/files/inline-files/draft_copilot_experiments.pdf",
+            "kind": "software field experiments; verify version date"
+          },
+          {
+            "id": "metr2025",
+            "url": "https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/",
+            "kind": "software randomized trial; original 2025 sections only"
+          },
+          {
+            "id": "noy2023",
+            "url": "https://economics.mit.edu/sites/default/files/inline-files/Noy_Zhang_1.pdf",
+            "kind": "writing experiment; verify working-paper numbers"
+          },
+          {
+            "id": "dellacqua2023",
+            "url": "https://mitsloan.mit.edu/sites/default/files/2023-10/SSRN-id4573321.pdf",
+            "kind": "consulting experiment"
+          },
+          {
+            "id": "brynjolfsson2023",
+            "url": "https://www.nber.org/system/files/working_papers/w31161/w31161.pdf",
+            "kind": "customer support staggered introduction; working-paper version"
+          }
+        ]
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      }
+    }
+  },
+  "extract_v3": {
+    "program": "drafts/extract_v3.ibl",
+    "payload": {
+      "origin": "training",
+      "project_id": "수동모드",
+      "inputs": {
+        "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/trainer/base",
+        "inspect": false,
+        "instruction": "제공한 연구 원문에서만 한국어로 근거표를 추출하라. 검색이나 사전지식을 쓰지 마라. 2025-12-31까지 공개된 판본과 본문만 인정하고 나중 추가된 업데이트는 제외하라. 정확한 제목과 판본 날짜, 방법(RCT/준실험 구별, 무작위화 단위, ITT/IV 사용효과 구별), 배정 표본과 완료자 표본, 업무, 사용 AI/기간, 비교군, 주요 수치·단위·불확실성·분모·근거 위치를 effects 배열 객체로 써라. 근거 위치는 실제 본문의 절/쪽을 찾아 기록하고 추측 금지. 품질 지표가 없거나 간접이면 명시하라. 생산량 증가를 시간 감소로 바꾸지 말고 퍼센트와 퍼센트포인트를 구별하라. 이 판본에서 직접 확인한 결과만 쓰고 유명한 다른 판본의 수치를 섞지 마라. 실험의 한계와 개발팀 적용 범위, 확인 불가능한 부분을 별도 필드로 구별하라. 추출은 상세하지만 불필요한 배경·원문 장문 인용 없이 연구당 한국어 1200~2200자로 작성하라.",
+        "selections": {
+          "cui2025": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            25
+          ],
+          "dellacqua2023": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ],
+          "brynjolfsson2023": [
+            0,
+            1,
+            2,
+            3,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            28,
+            29,
+            53,
+            54,
+            55
+          ]
+        }
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      }
+    }
+  },
+  "report_v1": {
+    "program": "drafts/report_v1.ibl",
+    "payload": {
+      "origin": "training",
+      "project_id": "수동모드",
+      "inputs": {
+        "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/trainer/base",
+        "instruction": "생성형 AI를 도입하면 우리 소프트웨어 개발팀의 개발시간이 적어도 20% 줄어든다고 계획해도 되는지 심층 조사 후 한국어 분석 보고서를 써줘. 조사 기준일은 2025-12-31이며 그때까지 공개된 연구만 사용해. 가상 회사는 개발자20명, 주니어/시니어 절반씩, 신규 기능 개발과 기존 코드 유지보수가 절반씩이야. 회사 자체의 측정 자료는 없으며 공개 연구를 근거로 판단해야 해.\n\n서로 독립인 실증연구를 최소6개 조사하되 최소3개는 소프트웨어 개발을 직접 다룬 연구로 해. 다른 지식노동 연구를 포함하면 개발팀에 적용할 수 있는 부분과 없는 부분을 밝혀. 원논문·연구기관·저자의 직접 발표를 우선하고, 동일 연구의 논문/블로그/보도자료를 별개 연구로 세지 마. 제목·날짜·방법·표본·대상 업무·AI 개입·비교군·주요 효과와 단위·품질 측정·한계·원문 URL·실제 확인한 범위를 연구별로 정리해. 검색 요약만 읽은 자료를 본문을 읽은 것처럼 쓰거나 못 읽은 자료의 수치를 채우지 마.\n\n좋아졌다는 연구와 느려졌거나 품질이 나빠졌다는 결과가 왜 함께 나오는지 비교 조건으로 설명하고, 생산량 증가·시간 단축·자기보고·인과효과를 구별해. 서로 다른 효과값을 단순 평균해 20% 목표를 정당화하지 마. 도입/보류/조건부 도입 중 무엇을 권할지 근거와 남은 불확실성을 제시하고, 품질을 희생하지 않는 6주 사내 실험 계획과 측정·중단 기준을 제안해. 사실·연구 해석·우리 회사에 대한 제안을 구분하고, 핵심 수치와 주장은 가까운 출처 링크로 연결해.\n\n지정한 자기 출력 폴더에 research.md(분석 보고서), evidence.json(연구별 근거 표), source_notes.md(확인 범위와 미확인·실패 자료)를 저장하고 다시 읽어 빠진 조건을 확인해. 웹 조사는 허용하지만 외부 발송·공개는 하지 마. 합성 회사에 대한 훈련이며 실제 회사 정보를 찾아 넣지 마. 다른 실행자의 trainer/harness/drafts·정답은 참조하지 마. 자신의 직전 결과·중간 참조는 재사용해도 돼.\n\n이 단계의 입력은 이미 원문에서 추출한 여섯 독립 연구 근거표다. 웹 추가조사 없이 이 근거로 완성된 한국어 Markdown 분석 보고서 본문만 작성하라. 실제 파일 저장은 호출자가 한다. 연구별 필수 필드 요약표와 근거 링크, 상반된 결과의 조건 비교, 20% 약속 가능 여부, 회사 구성별 적용과 한계, 6주 실험안을 포함하라. 가상회사의 절반/절반이라는 주변분포로 주니어×신규 등 네 교차칸의 비중까지 추정하지 마라. 실험은 무작위화 단위, 층화, 사용불이행 처리(ITT), 티켓 규모/난이도, 인력시간과 달력시간 구별, 리뷰어시간 포함, 반복측정 불확실성, 미완료·이월 티켓, 품질 관찰 지연, 비열등 한계값·중단 규칙·최종20%채택 규칙을 제안값으로 구체화하라. 관측치/해석/제안을 분리하고 표본 작음 때문에 검정력 보장하지 마라. 주제 밖 배경이나 원문 긴 인용은 빼고 4500~7500자 정도로 작성하라."
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      }
+    }
+  },
+  "variant": {
+    "program": "drafts/variant_v0.ibl",
+    "payload": {
+      "origin": "training",
+      "project_id": "수동모드",
+      "inputs": {
+        "base": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/trainer/base",
+        "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_37회차/trainer/variant",
+        "instruction": "같은 회사의 조건이 바뀌었어. 개발자20명 중18명이 시니어이고, 업무의90%가 익숙한 대규모 기존 저장소의 유지보수야. 신규 채용이나 새로운 실증연구를 추가하는 상황은 아니야. 네가 이미 확보한 원문·근거 표를 재사용해서 이 조건에서 개발시간20% 절감을 약속할 수 있는지 다시 판단하고, 대표에게 줄1~2쪽 정도의 의사결정 메모와 수정된6주 실험안을 지정한 variant 폴더의 decision.md로 저장·재독해.\n어느 기존 연구의 적용 비중이 달라졌고 무엇은 그대로인지 출처와 함께 설명해. 기존 research.md/evidence.json/source_notes.md는 보존해. 기존에 실제로 확인한 근거로 충분하면 웹 원문이나 추출을 다시 수행하지 마. 결정에 중요한 근거가 실제로 비어 있을 때만 그 부분을 보충하고 이유를 밝혀. 자신의 직전 결과·중간 참조는 재사용해도 되며 다른 실행자의 trainer/harness/drafts·정답은 참조하지 마. 외부 발송·공개는 하지 마.\n\n이 단계는 제공된 기존 근거표와 보고서를 재사용한다. 새로운 사실을 추측하지 마라. 완료된 한국어 Markdown 메모 본문만 2000~3000자 정도로 쓰고, 실제 파일 저장은 호출자가 한다. 핵심 수치에는 원문 링크를 붙여라. 보고서에서 틀리거나 모호한 표현은 반복하지 말고 불확실성을 유지하라. 제안값을 사실과 구별해라."
+      },
+      "budget": {
+        "steps": 1000000,
+        "rows": 100000
+      }
+    }
+  }
+}

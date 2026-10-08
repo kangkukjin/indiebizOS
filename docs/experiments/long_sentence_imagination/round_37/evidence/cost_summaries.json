@@ -1,0 +1,63 @@
+[
+  {
+    "stage": "base",
+    "cost": {
+      "check_rejections": 2,
+      "evaluation_calls": 2,
+      "evaluation_checkpoint_s": 0.001889,
+      "evaluation_model_s": 15.824,
+      "evaluation_prepare_s": 0.15719899999999998,
+      "evaluation_visual_s": 0.012985,
+      "evaluation_wait_s": 0.000742,
+      "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/4c5dea2354d84e79a5041ed003e697e2/events.jsonl",
+      "execution_calls": 30,
+      "execution_failures": 4,
+      "execution_tool_s": 60.76699999999999,
+      "internal_tool_failures": 5,
+      "request_intent": "task",
+      "source_failures": 5,
+      "supervisor_cache_read": 29292,
+      "supervisor_calls": 1,
+      "supervisor_input": 54946,
+      "supervisor_model_s": 39.616,
+      "supervisor_output": 4036,
+      "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+      "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+      "wall_s": 515.401
+    },
+    "kind": "cost.summary",
+    "phase": "final",
+    "role": "harness",
+    "seq": 163,
+    "task_id": "task_sysai_e98dcb65",
+    "time": 1791424402.048774
+  },
+  {
+    "stage": "variant",
+    "cost": {
+      "check_rejections": 0,
+      "evaluation_calls": 1,
+      "evaluation_checkpoint_s": 0.000837,
+      "evaluation_model_s": 16.142,
+      "evaluation_prepare_s": 0.008568,
+      "evaluation_visual_s": 0.001336,
+      "evaluation_wait_s": 0.001149,
+      "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c5183415c27540df994336670d953457/events.jsonl",
+      "execution_calls": 6,
+      "execution_failures": 0,
+      "execution_tool_s": 1.956,
+      "internal_tool_failures": 0,
+      "request_intent": "task",
+      "source_failures": 0,
+      "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+      "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+      "wall_s": 119.599
+    },
+    "kind": "cost.summary",
+    "phase": "final",
+    "role": "harness",
+    "seq": 43,
+    "task_id": "task_sysai_7524061e",
+    "time": 1791424560.684005
+  }
+]

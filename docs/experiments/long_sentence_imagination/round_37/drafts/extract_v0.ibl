@@ -1,0 +1,22 @@
+#!ibl edition=2
+[def:근거추출]($source,$out,$inspect,$instruction) {
+  $saved=[self:read]{path:$source.path}
+  $doc=$saved.data
+  $rows=[{id:$source.id,url:$source.url,source_title:$doc.title,full_text:$doc.text,reading_scope:f"수집된 텍스트 전문 ${len($doc.text)}자, ${len($doc.items)}개 원문 단위(PDF는 쪽 단위); 그림·이미지 표는 미검증"}]
+  [if $inspect] {
+    $check=$rows >> [table:ai]{inspect:"batch",instruction:$instruction,schema:"title(문자열), date_version(문자열), method(문자열), sample(문자열), work(문자열), intervention(문자열), comparison(문자열), effects(배열), quality(문자열), limitations(문자열), relevance(문자열), uncertainty(문자열)",preserve_rows:true}
+    return {id:$source.id,inspection:$check.inspection}
+  }
+  $facts=$rows >> [table:ai]{instruction:$instruction,schema:"title(문자열), date_version(문자열), method(문자열), sample(문자열), work(문자열), intervention(문자열), comparison(문자열), effects(배열), quality(문자열), limitations(문자열), relevance(문자열), uncertainty(문자열)",preserve_rows:true,fields:["id","url","reading_scope","title","date_version","method","sample","work","intervention","comparison","effects","quality","limitations","relevance","uncertainty"]}
+  assert len($facts.items)==1, "연구 하나에 근거 하나가 필요합니다"
+  [self:write]{path:f"${out}/extracted/${source.id}.json",content:json($facts.items[0])}
+  return $facts.items[0]
+}
+$index=[self:read]{path:f"${out}/source_index.json"}
+$evidence=$index.data >> [table:each]{parallel:2} {
+  return [fn:근거추출]{source:$it,out:$out,inspect:$inspect,instruction:$instruction}
+}
+[if $inspect] { return $evidence }
+assert len($evidence)==6, "여섯 연구의 근거가 모두 필요합니다"
+[self:write]{path:f"${out}/evidence.json",content:json($evidence)}
+return {evidence:$evidence}

@@ -1,0 +1,44 @@
+[
+  {
+    "study": "brynjolfsson2023",
+    "total_pages": 67,
+    "items": 67,
+    "first_item_type": "paragraph",
+    "characters": 126379
+  },
+  {
+    "study": "cui2025",
+    "total_pages": 28,
+    "items": 29,
+    "first_item_type": "heading",
+    "characters": 61492
+  },
+  {
+    "study": "dellacqua2023",
+    "total_pages": 58,
+    "items": 59,
+    "first_item_type": "heading",
+    "characters": 109671
+  },
+  {
+    "study": "metr2025",
+    "total_pages": null,
+    "items": 119,
+    "first_item_type": "heading",
+    "characters": 16672
+  },
+  {
+    "study": "noy2023",
+    "total_pages": 15,
+    "items": 16,
+    "first_item_type": "heading",
+    "characters": 32546
+  },
+  {
+    "study": "peng2023",
+    "total_pages": 19,
+    "items": 20,
+    "first_item_type": "heading",
+    "characters": 20540
+  }
+]

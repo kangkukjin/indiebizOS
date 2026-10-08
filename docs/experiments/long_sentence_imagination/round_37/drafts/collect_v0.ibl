@@ -1,0 +1,16 @@
+#!ibl edition=2
+[def:원문확보]($source,$out) {
+  [try] {
+    $doc=[sense:crawl]{url:$source.url,max_length:12000}
+    $path=f"${out}/sources/${source.id}.json"
+    [self:write]{path:$path,content:json($doc)}
+    return {**$source,status:"collected",path:$path,characters:len($doc.text),paragraphs:len($doc.items)}
+  } [catch] {
+    $failed={**$source,status:"failed",error:$error}
+    [self:write]{path:f"${out}/sources/${source.id}_failure.json",content:json($failed)}
+    return $failed
+  }
+}
+$index=$sources >> [table:each]{parallel:3} { return [fn:원문확보]{source:$it,out:$out} }
+[self:write]{path:f"${out}/source_index.json",content:json($index)}
+return $index

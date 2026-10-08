@@ -1,0 +1,17 @@
+#!ibl edition=2
+$e=[self:read]{path:f"${out}/evidence.json"}
+$evidence=$e.data.items
+assert len($evidence)==6, "연구 여섯 건이 필요합니다"
+$notes=map($evidence,($row)=>f"## ${$row.id}\n원문: ${$row.url}\n읽은 범위: ${json($row.reading_scope)}\n판본: ${$row.date_version}\n미확인·불확실성: ${$row.uncertainty}\n")
+$notes_text=f"# 원문 확인 기록\n기준일 2025-12-31. 여섯 원문 수집 성공. sources/는 원문 전체, extraction_inputs/는 실제 모델 입력, extracted/는 연구별 추출 결과다. 검색 요약은 근거 수치로 쓰지 않았다. METR 페이지의 2026년 추가 알림은 역사적 판단에서 제외한다. 이미지 표·그래프 및 선택에서 제외한 텍스트는 확인한 것으로 세지 않는다.\n\n${join('\n',$notes)}"
+[self:write]{path:f"${out}/source_notes.md",content:$notes_text}
+$report=$evidence >> [table:brief]{instruction:$instruction}
+assert len($report.message)>2000, "분석 보고서가 지나치게 짧습니다"
+[self:write]{path:f"${out}/research.md",content:$report.message}
+$r=[self:read]{path:f"${out}/research.md"}
+$n=[self:read]{path:f"${out}/source_notes.md"}
+$again=[self:read]{path:f"${out}/evidence.json"}
+assert $r.text==$report.message, "보고서 재독 불일치"
+assert $n.text==$notes_text, "원문 기록 재독 불일치"
+assert $again.data.items==$evidence, "근거 표 재독 불일치"
+return {research:f"${out}/research.md",evidence:f"${out}/evidence.json",source_notes:f"${out}/source_notes.md",studies:len($evidence),report_chars:len($r.text),reread:true}

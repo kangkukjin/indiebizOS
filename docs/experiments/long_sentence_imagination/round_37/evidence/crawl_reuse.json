@@ -1,0 +1,371 @@
+[
+  {
+    "stage": "base",
+    "tool_index": 2,
+    "url": "https://arxiv.org/pdf/2302.06590v1",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:46:02.089337+00:00",
+      "reuse_until": "2026-10-08T02:01:02.089337+00:00"
+    },
+    "title": "The Impact of AI on Developer Productivity: Evidence from GitHub Copilot",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 2,
+    "url": "https://arxiv.org/pdf/2410.12944v3",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:46:03.374558+00:00",
+      "reuse_until": "2026-10-08T02:01:03.374558+00:00"
+    },
+    "title": "How much does AI impact development speed? An enterprise-based randomized controlled trial",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 6,
+    "url": "https://arxiv.org/html/2507.09089v2",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:46:29.726459+00:00",
+      "reuse_until": "2026-10-08T02:01:29.726459+00:00"
+    },
+    "title": "Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 6,
+    "url": "https://arxiv.org/html/2511.04427v2",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:46:30.239891+00:00",
+      "reuse_until": "2026-10-08T02:01:30.239891+00:00"
+    },
+    "title": "Does AI-Assisted Coding Deliver? A Difference-in-Differences Study of Cursor’s Impact on Software Projects",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 9,
+    "url": "https://arxiv.org/html/2507.09089v2",
+    "cache": {
+      "hit": true,
+      "fetched_at": "2026-10-08T01:46:29.726459+00:00",
+      "reuse_until": "2026-10-08T02:01:29.726459+00:00"
+    },
+    "title": "Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 9,
+    "url": "https://arxiv.org/html/2511.04427v2",
+    "cache": {
+      "hit": true,
+      "fetched_at": "2026-10-08T01:46:30.239891+00:00",
+      "reuse_until": "2026-10-08T02:01:30.239891+00:00"
+    },
+    "title": "Does AI-Assisted Coding Deliver? A Difference-in-Differences Study of Cursor’s Impact on Software Projects",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 11,
+    "url": "https://readwise-assets.s3.amazonaws.com/media/wisereads/articles/the-effects-of-generative-ai-o/4945566.pdf",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:46:58.114337+00:00",
+      "reuse_until": "2026-10-08T02:01:58.114337+00:00"
+    },
+    "title": "The Effects of Generative AI on High Skilled Work: Evidence from Three Field Experiments with Software Developers*",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 11,
+    "url": "https://www.microsoft.com/en-us/research/publication/the-effects-of-generative-ai-on-high-skilled-work-evidence-from-three-field-experiments-with-software-developers/",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:46:59.040691+00:00",
+      "reuse_until": "2026-10-08T02:01:59.040691+00:00"
+    },
+    "title": "The Effects of Generative AI on High-Skilled Work: Evidence from Three Field Experiments with Software Developers - Microsoft Research",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 13,
+    "url": "https://www.nber.org/system/files/working_papers/w31161/w31161.pdf",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:47:13.268176+00:00",
+      "reuse_until": "2026-10-08T02:02:13.268176+00:00"
+    },
+    "title": "",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 13,
+    "url": "https://www.hbs.edu/ris/Publication%20Files/24-013_d9b45b68-9e74-42d6-a1c6-c72fb70c7282.pdf",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:47:29.780395+00:00",
+      "reuse_until": "2026-10-08T02:02:29.780395+00:00"
+    },
+    "title": "Human Verification",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 13,
+    "url": "https://economics.mit.edu/sites/default/files/inline-files/Noy_Zhang_1.pdf",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:47:30.160153+00:00",
+      "reuse_until": "2026-10-08T02:02:30.160153+00:00"
+    },
+    "title": "Experimental Evidence on the Productivity Effects of Generative Artificial Intelligence",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 14,
+    "url": null,
+    "cache": null,
+    "title": null,
+    "error": {
+      "code": "NOT_FOUND",
+      "kind": "runtime",
+      "message": "HTTP 404: 서버가 HTTP 오류를 반환했습니다.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        4
+      ],
+      "details": {
+        "error_type": "not_found",
+        "http_status": 404,
+        "url": "https://kalre.com/wp-content/uploads/2024/01/Navigating-the-Jagged-Frontier-24-013.pdf",
+        "resolved_url": "https://kalre.com/wp-content/uploads/2024/01/Navigating-the-Jagged-Frontier-24-013.pdf",
+        "reason": "http_error",
+        "stages": [
+          {
+            "stage": "정적(curl_cffi)",
+            "ran": true,
+            "detail": "HTTP 에러: 404"
+          },
+          {
+            "stage": "Chrome MCP",
+            "ran": false,
+            "detail": "건너뜀 — 크롬이 연결돼 있지 않음(자동 연결하지 않는다)"
+          },
+          {
+            "stage": "Playwright",
+            "ran": true,
+            "detail": "Playwright HTTP 상태: 404"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "stage": "base",
+    "tool_index": 15,
+    "url": null,
+    "cache": null,
+    "title": null,
+    "error": {
+      "code": "TOOL",
+      "kind": "runtime",
+      "message": "HTTP 403: 봇 차단으로 본문을 가져오지 못했습니다. 같은 정보를 다루는 다른 소스를 시도하세요.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        7
+      ],
+      "details": {
+        "http_status": 403,
+        "url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4573321",
+        "resolved_url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4573321",
+        "reason": "bot_blocked",
+        "stages": [
+          {
+            "stage": "정적(curl_cffi)",
+            "ran": true,
+            "detail": "HTTP 에러: 403"
+          },
+          {
+            "stage": "Chrome MCP",
+            "ran": false,
+            "detail": "건너뜀 — 크롬이 연결돼 있지 않음(자동 연결하지 않는다)"
+          },
+          {
+            "stage": "Playwright",
+            "ran": true,
+            "detail": "Playwright HTTP 상태: 403"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "stage": "base",
+    "tool_index": 15,
+    "url": null,
+    "cache": null,
+    "title": null,
+    "error": {
+      "code": "TOOL",
+      "kind": "runtime",
+      "message": "HTTP 405: 서버가 HTTP 오류를 반환했습니다.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        23
+      ],
+      "details": {
+        "http_status": 405,
+        "url": "https://www.hbs.edu/faculty/Pages/item.aspx?num=64700",
+        "resolved_url": "https://www.hbs.edu/faculty/Pages/item.aspx?num=64700",
+        "reason": "http_error",
+        "stages": [
+          {
+            "stage": "정적(curl_cffi)",
+            "ran": true,
+            "detail": "HTTP 에러: 405"
+          },
+          {
+            "stage": "Chrome MCP",
+            "ran": false,
+            "detail": "건너뜀 — 크롬이 연결돼 있지 않음(자동 연결하지 않는다)"
+          },
+          {
+            "stage": "Playwright",
+            "ran": true,
+            "detail": "Playwright HTTP 상태: 405"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "stage": "base",
+    "tool_index": 15,
+    "url": null,
+    "cache": null,
+    "title": null,
+    "error": {
+      "code": "TOOL",
+      "kind": "runtime",
+      "message": "HTTP 403: 봇 차단으로 본문을 가져오지 못했습니다. 같은 정보를 다루는 다른 소스를 시도하세요.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        37
+      ],
+      "details": {
+        "http_status": 403,
+        "url": "https://www.science.org/doi/10.1126/science.adh2586",
+        "resolved_url": "https://www.science.org/doi/10.1126/science.adh2586?__cf_chl_rt_tk=X8fsk4kx8ouHOnna_vdWAryi3l4EMRjn4gmUXRGXQvs-1791424069-1.0.1.1-NzjDiWb0al37E5c3U8IBNMQ5eHWawp.HcD80jyt7xWs",
+        "reason": "bot_blocked",
+        "stages": [
+          {
+            "stage": "정적(curl_cffi)",
+            "ran": true,
+            "detail": "HTTP 에러: 403"
+          },
+          {
+            "stage": "Chrome MCP",
+            "ran": false,
+            "detail": "건너뜀 — 크롬이 연결돼 있지 않음(자동 연결하지 않는다)"
+          },
+          {
+            "stage": "Playwright",
+            "ran": true,
+            "detail": "Playwright HTTP 상태: 403"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "stage": "base",
+    "tool_index": 15,
+    "url": "https://www.nber.org/system/files/working_papers/w31161/w31161.pdf",
+    "cache": {
+      "hit": true,
+      "fetched_at": "2026-10-08T01:47:13.268176+00:00",
+      "reuse_until": "2026-10-08T02:02:13.268176+00:00"
+    },
+    "title": "",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 15,
+    "url": "https://economics.mit.edu/sites/default/files/inline-files/Noy_Zhang_1.pdf",
+    "cache": {
+      "hit": true,
+      "fetched_at": "2026-10-08T01:47:30.160153+00:00",
+      "reuse_until": "2026-10-08T02:02:30.160153+00:00"
+    },
+    "title": "Experimental Evidence on the Productivity Effects of Generative Artificial Intelligence",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 16,
+    "url": "https://dora.dev/research/2024/dora-report/",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:48:03.315854+00:00",
+      "reuse_until": "2026-10-08T02:03:03.315854+00:00"
+    },
+    "title": "DORA | Accelerate State of DevOps Report 2024",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 17,
+    "url": "https://mitsloan.mit.edu/sites/default/files/2023-10/SSRN-id4573321.pdf",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:48:10.747556+00:00",
+      "reuse_until": "2026-10-08T02:03:10.747556+00:00"
+    },
+    "title": "Navigating the Jagged Technological Frontier: Field Experimental Evidence of the Effects of AI on Knowledge Worker Productivity and Quality",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 17,
+    "url": "https://services.google.com/fh/files/misc/2024_final_dora_report.pdf",
+    "cache": {
+      "hit": false,
+      "fetched_at": "2026-10-08T01:48:16.330114+00:00",
+      "reuse_until": "2026-10-08T02:03:16.330114+00:00"
+    },
+    "title": "",
+    "error": null
+  },
+  {
+    "stage": "base",
+    "tool_index": 20,
+    "url": "https://services.google.com/fh/files/misc/2024_final_dora_report.pdf",
+    "cache": {
+      "hit": true,
+      "fetched_at": "2026-10-08T01:48:16.330114+00:00",
+      "reuse_until": "2026-10-08T02:03:16.330114+00:00"
+    },
+    "title": "",
+    "error": null
+  }
+]

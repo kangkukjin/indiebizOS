@@ -1,0 +1,88 @@
+{
+  "inspect_oversize": {
+    "request": {
+      "program": "inspect_oversize.ibl",
+      "origin": "training",
+      "text_repeat": {
+        "character": "x",
+        "count": 60010
+      }
+    },
+    "response": {
+      "success": false,
+      "error": "계획된 요청이 입력 상한을 초과합니다.",
+      "diagnostic": {
+        "code": "TOOL",
+        "kind": "runtime",
+        "message": "계획된 요청이 입력 상한을 초과합니다.",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [
+          14
+        ],
+        "details": {
+          "error_type": "input_size"
+        },
+        "source_span": {
+          "source_hash": "773882c82daa47578cb63a3214dff8aab757602eec08cec8d276625c688246fe",
+          "start": 41,
+          "end": 129,
+          "line": 2,
+          "column": 26
+        }
+      },
+      "resume": {
+        "run_id": "7b81cb4f435b49c9b2dce386be7b5e4c"
+      },
+      "run_status": "interrupted"
+    }
+  },
+  "scope_counterexample": {
+    "request": {
+      "program": "scope_counterexample.ibl",
+      "origin": "training"
+    },
+    "response": {
+      "success": true,
+      "error": null,
+      "diagnostic": null,
+      "resume": {
+        "run_id": "f3527c70e43f453fa8c08ac13ddffe27"
+      },
+      "run_status": "completed",
+      "value": {
+        "measured_group_reduction": 0.2,
+        "team_reduction": 0.18,
+        "team_twenty_percent": false
+      }
+    }
+  },
+  "probe_read_v1": {
+    "request": {
+      "program": "probe_read_v1.ibl",
+      "origin": "training"
+    },
+    "response": {
+      "success": true,
+      "error": null,
+      "diagnostic": null,
+      "resume": {
+        "run_id": "14c6112de76c4ea785281d80537e0d84"
+      },
+      "run_status": "completed",
+      "shape": {
+        "keys": [
+          "text",
+          "blocks",
+          "data"
+        ],
+        "data_keys": [
+          "items",
+          "count"
+        ],
+        "items_count": 6
+      }
+    }
+  }
+}

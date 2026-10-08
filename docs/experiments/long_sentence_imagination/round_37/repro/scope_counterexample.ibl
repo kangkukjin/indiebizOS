@@ -1,0 +1,11 @@
+#!ibl edition=2
+# 합성 반례: 유지보수의 시간 비중까지 90%라고 유리하게 가정한다.
+# 그 부분만 20% 절감되고 나머지가 그대로면 회사 전체는 18%다.
+$maintenance_before=900
+$other_before=100
+$maintenance_reduction=0.20
+$before=$maintenance_before+$other_before
+$after=$maintenance_before*(1-$maintenance_reduction)+$other_before
+$team_reduction=1-$after/$before
+assert $team_reduction==0.18, "합성 반례 계산 불일치"
+return {measured_group_reduction:$maintenance_reduction,team_reduction:$team_reduction,team_twenty_percent:$team_reduction>=0.20}

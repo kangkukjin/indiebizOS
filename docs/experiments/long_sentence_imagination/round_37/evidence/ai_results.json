@@ -1,0 +1,729 @@
+{
+  "base": [
+    {
+      "index": 0,
+      "name": "execute_ibl",
+      "elapsed_s": 1.329,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "6c754839ce1c4a8ca3289bc8456bcb29"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 1,
+      "name": "execute_ibl",
+      "elapsed_s": 4.913,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "2bff3968dc9e49b6b1b8e2e89480209f"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 2,
+      "name": "execute_ibl",
+      "elapsed_s": 2.304,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "26765ba3bdfc4346b3618bbc29690536"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 3,
+      "name": "execute_ibl",
+      "elapsed_s": 0.01,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": {
+        "path": [
+          "value",
+          "peng"
+        ],
+        "start": 0,
+        "end": 19419,
+        "total_chars": 19419,
+        "complete": true,
+        "format": "json"
+      }
+    },
+    {
+      "index": 4,
+      "name": "execute_ibl",
+      "elapsed_s": 0.014,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": {
+        "path": [
+          "value",
+          "google"
+        ],
+        "start": 3000,
+        "end": 43000,
+        "total_chars": 64259,
+        "complete": false,
+        "format": "json"
+      }
+    },
+    {
+      "index": 5,
+      "name": "execute_ibl",
+      "elapsed_s": 0.008,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": {
+        "path": [
+          "value",
+          "google"
+        ],
+        "start": 43000,
+        "end": 50000,
+        "total_chars": 64259,
+        "complete": false,
+        "format": "json"
+      }
+    },
+    {
+      "index": 6,
+      "name": "execute_ibl",
+      "elapsed_s": 2.706,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "644e51e3d8f843e88f6d527545890722"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 7,
+      "name": "execute_ibl",
+      "elapsed_s": 0.016,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": {
+        "path": [
+          "value"
+        ],
+        "start": 0,
+        "end": 30560,
+        "total_chars": 30560,
+        "complete": true,
+        "format": "json"
+      }
+    },
+    {
+      "index": 8,
+      "name": "execute_ibl",
+      "elapsed_s": 0.298,
+      "check_rejected": true,
+      "is_error": true,
+      "success": false,
+      "error": "실행 전 검사에서 거절했습니다: 알 수 없는 인자: patron. 사용 가능한 인자: 개수, 목록, 문맥, 패턴 (UNKNOWN_ARGUMENT)",
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 9,
+      "name": "execute_ibl",
+      "elapsed_s": 0.828,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "e86599d1024c4298bffea08d4560e72e"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 10,
+      "name": "execute_ibl",
+      "elapsed_s": 0.011,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": {
+        "path": [
+          "value",
+          "metr"
+        ],
+        "start": 4200,
+        "end": 7098,
+        "total_chars": 7098,
+        "complete": false,
+        "format": "json"
+      }
+    },
+    {
+      "index": 11,
+      "name": "execute_ibl",
+      "elapsed_s": 6.306,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "5bc9a64173e74233aa0e6a029cb97b8a"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 12,
+      "name": "execute_ibl",
+      "elapsed_s": 0.012,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": {
+        "path": [
+          "value",
+          "cui"
+        ],
+        "start": 0,
+        "end": 30000,
+        "total_chars": 42995,
+        "complete": false,
+        "format": "json"
+      }
+    },
+    {
+      "index": 13,
+      "name": "execute_ibl",
+      "elapsed_s": 20.823,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "7bb24197cc974c3295203d65c3f03495"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 14,
+      "name": "execute_ibl",
+      "elapsed_s": 1.726,
+      "check_rejected": false,
+      "is_error": true,
+      "success": false,
+      "error": "HTTP 404: 서버가 HTTP 오류를 반환했습니다.",
+      "run_status": "interrupted",
+      "resume": {
+        "run_id": "5248308d86724565aac30412b1f796dc"
+      },
+      "diagnostic": {
+        "code": "NOT_FOUND",
+        "kind": "runtime",
+        "message": "HTTP 404: 서버가 HTTP 오류를 반환했습니다.",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [
+          7
+        ],
+        "details": {
+          "error_type": "not_found",
+          "http_status": 404,
+          "url": "https://kalre.com/wp-content/uploads/2024/01/Navigating-the-Jagged-Frontier-24-013.pdf",
+          "resolved_url": "https://kalre.com/wp-content/uploads/2024/01/Navigating-the-Jagged-Frontier-24-013.pdf",
+          "reason": "http_error",
+          "stages": [
+            {
+              "stage": "정적(curl_cffi)",
+              "ran": true,
+              "detail": "HTTP 에러: 404"
+            },
+            {
+              "stage": "Chrome MCP",
+              "ran": false,
+              "detail": "건너뜀 — 크롬이 연결돼 있지 않음(자동 연결하지 않는다)"
+            },
+            {
+              "stage": "Playwright",
+              "ran": true,
+              "detail": "Playwright HTTP 상태: 404"
+            }
+          ]
+        },
+        "source_span": {
+          "source_hash": "b253a652b049219eecbe5493be9bc24efea147be07be2d37f662cba5e4773706",
+          "start": 5,
+          "end": 112,
+          "line": 1,
+          "column": 6
+        }
+      },
+      "read_scope": null
+    },
+    {
+      "index": 15,
+      "name": "execute_ibl",
+      "elapsed_s": 1.958,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "bd0d3b1da9fd4f9ca24b529e3a39ddb6"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 16,
+      "name": "execute_ibl",
+      "elapsed_s": 5.471,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "ab9d98cc9f15480487624b63a0b593b9"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 17,
+      "name": "execute_ibl",
+      "elapsed_s": 7.319,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "940def36db324e23a038774c6fac6e6a"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 18,
+      "name": "execute_ibl",
+      "elapsed_s": 0.01,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": {
+        "path": [
+          "value",
+          "dd",
+          0,
+          "text"
+        ],
+        "start": 0,
+        "end": 2232,
+        "total_chars": 2232,
+        "complete": true,
+        "format": "text"
+      }
+    },
+    {
+      "index": 19,
+      "name": "execute_ibl",
+      "elapsed_s": 0.01,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": {
+        "path": [
+          "value",
+          "rr",
+          0,
+          "text"
+        ],
+        "start": 0,
+        "end": 1158,
+        "total_chars": 1158,
+        "complete": true,
+        "format": "text"
+      }
+    },
+    {
+      "index": 20,
+      "name": "execute_ibl",
+      "elapsed_s": 0.628,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "06d2b3f1e6264920bb09e721338ea65a"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 21,
+      "name": "execute_ibl",
+      "elapsed_s": 0.976,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "c0ab0634e1424c838230938ee2c3444d"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 22,
+      "name": "execute_ibl",
+      "elapsed_s": 0.327,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "a11fa2d1209f45519acb2e73d734e856"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 23,
+      "name": "execute_ibl",
+      "elapsed_s": 0.486,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "4896e9cfb60d48d7b566beabaa6e4155"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 24,
+      "name": "execute_ibl",
+      "elapsed_s": 0.323,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "81dd87ba0b76474fb838c3543966160d"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 25,
+      "name": "execute_ibl",
+      "elapsed_s": 0.345,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "f41fb984ce154ea29f1b3dd4f63c4b1e"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 26,
+      "name": "execute_ibl",
+      "elapsed_s": 0.325,
+      "check_rejected": false,
+      "is_error": true,
+      "success": false,
+      "error": "도구의 원천 결과가 불완전합니다. 절단 사유 `일치 줄 본문 절단`.",
+      "run_status": "interrupted",
+      "resume": {
+        "run_id": "390b15bb4829465bbf07e3be4c3330db"
+      },
+      "diagnostic": {
+        "code": "PARTIAL_SOURCE",
+        "kind": "partial",
+        "message": "도구의 원천 결과가 불완전합니다. 절단 사유 `일치 줄 본문 절단`.",
+        "frames": [],
+        "has_partial": true,
+        "partial": {
+          "success": true,
+          "text": "../outputs/long_sentence_imagination/2026-10-08_37회차/ai/base/evidence.json:1: {\"meta\": {\"cutoff\": \"2025-12-31\", \"built_on\": \"2026-10-08\", \"rule\": \"2025-12-31 이후 판본은 쓰지 않음. 효과값은 측정 단위가 달라 평균하지 않음. 본문을 읽지 못한 수치는 null 또는 '미확인'.\", \"count_total\": 9, \"count_software_direct\": 6}, \"studies\": [{\"id\": \"S1\", \"software_direct\": true, \"title\": \"The Impact of AI on Developer Productivity: Evidence from GitHub Copilot\", \"authors\": \"Sida Peng, Eirini Kalliamvakou, Peter Cihon, Mert Demirer (Microsoft Research, GitHub, MIT Sloan)\", \"date\": \"arXiv v1 2023-02-13 (개정판 없음)\", \"design\": \"무작위 통제 …(줄 잘림)",
+          "items": [
+            {
+              "파일": "../outputs/long_sentence_imagination/2026-10-08_37회차/ai/base/evidence.json",
+              "줄번호": 1,
+              "내용": "{\"meta\": {\"cutoff\": \"2025-12-31\", \"built_on\": \"2026-10-08\", \"rule\": \"2025-12-31 이후 판본은 쓰지 않음. 효과값은 측정 단위가 달라 평균하지 않음. 본문을 읽지 못한 수치는 null 또는 '미확인'.\", \"count_total\": 9, \"count_software_direct\": 6}, \"studies\": [{\"id\": \"S1\", \"software_direct\": true, \"title\": \"The Impact of AI on Developer Productivity: Evidence from GitHub Copilot\", \"authors\": \"Sida Peng, Eirini Kalliamvakou, Peter Cihon, Mert Demirer (Microsoft Research, GitHub, MIT Sloan)\", \"date\": \"arXiv v1 2023-02-13 (개정판 없음)\", \"design\": \"무작위 통제 …(줄 잘림)"
+            }
+          ],
+          "total": 1,
+          "excluded": "기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true",
+          "total_files": 1,
+          "truncated": true,
+          "truncations": [
+            {
+              "scope": "source",
+              "reason": "일치 줄 본문 절단"
+            }
+          ],
+          "total_complete": true
+        },
+        "evidence": [
+          20
+        ],
+        "details": {
+          "completion": [],
+          "truncation": {
+            "truncations": [
+              {
+                "scope": "source",
+                "reason": "일치 줄 본문 절단"
+              }
+            ]
+          },
+          "markers": {
+            "truncations": [
+              {
+                "scope": "source",
+                "reason": "일치 줄 본문 절단"
+              }
+            ],
+            "truncated": true
+          }
+        },
+        "source_span": {
+          "source_hash": "555cb19df74b1d8c3de66119a0655dd3eebff9f8e38d3ebb3842b2300cfa0675",
+          "start": 208,
+          "end": 262,
+          "line": 3,
+          "column": 6
+        }
+      },
+      "read_scope": null
+    },
+    {
+      "index": 27,
+      "name": "execute_ibl",
+      "elapsed_s": 0.262,
+      "check_rejected": true,
+      "is_error": true,
+      "success": false,
+      "error": "']'가 필요합니다: $",
+      "run_status": null,
+      "resume": null,
+      "diagnostic": {
+        "code": "SYNTAX",
+        "kind": "compile",
+        "message": "']'가 필요합니다: $",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "source_span": {
+          "source_hash": "5a4597699b47608fea9305d2d083d15fc398e1dd9045364752490852cd035582",
+          "start": 393,
+          "end": 394,
+          "line": 5,
+          "column": 118
+        },
+        "rule": "SYNTAX",
+        "severity": "error",
+        "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+        "location": {
+          "source_hash": "5a4597699b47608fea9305d2d083d15fc398e1dd9045364752490852cd035582",
+          "start": 393,
+          "end": 394,
+          "line": 5,
+          "column": 118,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 5,
+          "end_column": 119,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "read_scope": null
+    },
+    {
+      "index": 28,
+      "name": "Bash",
+      "elapsed_s": 0.869,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 29,
+      "name": "Bash",
+      "elapsed_s": 0.154,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": null
+    }
+  ],
+  "variant": [
+    {
+      "index": 0,
+      "name": "execute_ibl",
+      "elapsed_s": 0.323,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "cd14de92867a41499d95711db8deebe5"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 1,
+      "name": "Bash",
+      "elapsed_s": 0.686,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 2,
+      "name": "Bash",
+      "elapsed_s": 0.168,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 3,
+      "name": "execute_ibl",
+      "elapsed_s": 0.289,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "66d3bf99aa9c46588687bb9664929432"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 4,
+      "name": "execute_ibl",
+      "elapsed_s": 0.353,
+      "check_rejected": false,
+      "is_error": false,
+      "success": true,
+      "error": null,
+      "run_status": "completed",
+      "resume": {
+        "run_id": "ffbb5f2e6746453283859e64cd5f44b0"
+      },
+      "diagnostic": null,
+      "read_scope": null
+    },
+    {
+      "index": 5,
+      "name": "Bash",
+      "elapsed_s": 0.137,
+      "check_rejected": false,
+      "is_error": false,
+      "success": null,
+      "error": null,
+      "run_status": null,
+      "resume": null,
+      "diagnostic": null,
+      "read_scope": null
+    }
+  ]
+}

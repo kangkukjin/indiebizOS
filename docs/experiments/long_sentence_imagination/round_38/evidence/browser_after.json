@@ -1,0 +1,95 @@
+{
+  "playwright": {
+    "success": true,
+    "url": "https://fixture.test/research",
+    "title": "Research",
+    "text": "Research\n\nVerified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body.\n\nif ready:\n    save_backup()\n    check_values()",
+    "length": 537,
+    "truncated": false,
+    "method": "playwright",
+    "http_status": 200,
+    "resolved_url": "https://fixture.test/research",
+    "content_selection": [
+      {
+        "selector": "main, [role=\"main\"]",
+        "regions": 1,
+        "scope": "declared_content",
+        "note": "선택한 본문 영역입니다. HTML 전체는 source_ref에 보존됩니다.",
+        "url": "https://fixture.test/research"
+      }
+    ]
+  },
+  "playwright_broken": {
+    "success": true,
+    "url": "https://fixture.test/research",
+    "title": "Research",
+    "text": "Research\n\nVerified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body.\n\nif ready:\n    save_backup()\n    check_values()",
+    "length": 537,
+    "truncated": false,
+    "method": "playwright",
+    "http_status": 200,
+    "resolved_url": "https://fixture.test/research",
+    "source_complete": false,
+    "partial": true,
+    "errors": [
+      {
+        "source_url": "https://fixture.test/missing-evidence",
+        "error": "frame detached"
+      }
+    ],
+    "reason": "incomplete_content",
+    "content_selection": [
+      {
+        "selector": "main, [role=\"main\"]",
+        "regions": 1,
+        "scope": "declared_content",
+        "note": "선택한 본문 영역입니다. HTML 전체는 source_ref에 보존됩니다.",
+        "url": "https://fixture.test/research"
+      }
+    ]
+  },
+  "chrome": {
+    "success": true,
+    "url": "https://fixture.test/research",
+    "resolved_url": "https://fixture.test/research",
+    "http_status": 200,
+    "title": "Research",
+    "text": "Research\n\nVerified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body. Verified research body.\n\nif ready:\n    save_backup()\n    check_values()",
+    "length": 537,
+    "truncated": false,
+    "method": "chrome_mcp",
+    "content_selection": [
+      {
+        "selector": "main, [role=\"main\"]",
+        "regions": 1,
+        "scope": "declared_content",
+        "note": "선택한 본문 영역입니다. HTML 전체는 source_ref에 보존됩니다.",
+        "url": "https://fixture.test/research"
+      }
+    ]
+  },
+  "chrome_calls": [
+    "tabs_create_mcp",
+    "navigate",
+    "javascript_tool",
+    "javascript_tool",
+    "tabs_close_mcp"
+  ],
+  "checks": {
+    "playwright": {
+      "body_only": true,
+      "code_preserved": true,
+      "missing_frame_reported": false
+    },
+    "playwright_broken": {
+      "body_only": true,
+      "code_preserved": true,
+      "missing_frame_reported": true
+    },
+    "chrome": {
+      "body_only": true,
+      "code_preserved": true,
+      "missing_frame_reported": false
+    }
+  }
+}

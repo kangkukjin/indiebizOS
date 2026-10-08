@@ -40,8 +40,8 @@ def fetch_once(url, fetch, *, refresh=False, project_path=None, op="content"):
     """
     from common.spill import spill_dir, spill_write
     ttl = max(0, int(_policy()["reuse_seconds"]))
-    # 이전 판정으로 성공 캐시된 사람 확인 화면을 정상 본문으로 재사용하지 않는다.
-    key = hashlib.sha256(f"v7|{_scope(project_path)}|{url}".encode()).hexdigest()
+    # 본문 선택·들여쓰기·프레임 누락 판정 이전의 브라우저 캐시는 재사용하지 않는다.
+    key = hashlib.sha256(f"v8|{_scope(project_path)}|{url}".encode()).hexdigest()
     index = os.path.join(spill_dir(), f"crawl_cache_{key}.json")
     with _LOCKS[int(key[:8], 16) % len(_LOCKS)]:
         now = time.time()
@@ -55,6 +55,8 @@ def fetch_once(url, fetch, *, refresh=False, project_path=None, op="content"):
                     if not isinstance(result, dict) or not result.get("success") \
                             or not isinstance(result.get("text"), str) or not isinstance(result.get("items"), list):
                         raise ValueError("크롤 원문 캐시 형식 손상")
+                    if result.get("source_complete") is False:
+                        raise ValueError("불완전한 본문은 다시 수집합니다")
                     if op == "content" and result.get("_structure_only"):
                         raise ValueError("구조 전용 수집은 본문 완전성을 보장하지 않습니다")
                     if op != "content" and result.get("_page_structure", {}).get("errors"):
@@ -75,7 +77,8 @@ def fetch_once(url, fetch, *, refresh=False, project_path=None, op="content"):
             result["_structure_only"] = True
         ref = spill_write(json.dumps(result, ensure_ascii=False), tag="crawl_source")["ref"]
         saved = {"fetched_at": time.time(), "ref": ref}
-        if not result.get("reason") and not result.get("truncated"):
+        if (not result.get("reason") and not result.get("truncated")
+                and result.get("source_complete") is not False):
             tmp = None
             try:
                 with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=spill_dir(),

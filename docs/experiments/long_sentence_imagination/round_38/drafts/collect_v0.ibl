@@ -1,0 +1,13 @@
+#!ibl edition=2
+[def:확보]($source,$out) {
+  [try] {
+    $doc=[sense:crawl]{url:$source.url}
+    $path=f"${out}/sources/${$source.id}.json"
+    [self:write]{path:$path,content:json($doc)}
+    return {**$source,status:"collected",path:$path,title:$doc.title,characters:len($doc.text),units:len($doc.items),selection:get($doc,"content_selection",null)}
+  } [catch] { return {**$source,status:"failed",error:$error} }
+}
+$unique=$sources >> [table:dedup]{by:"url"}
+$index=$unique.items >> [table:each]{parallel:3} { [fn:확보]{source:$it,out:$out} }
+[self:write]{path:f"${out}/source_index.json",content:json($index)}
+return {requested:len($sources),unique:len($unique.items),index:$index}

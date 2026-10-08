@@ -1,0 +1,8 @@
+#!ibl edition=2
+$doc=[self:read]{path:$source}
+assert len(filter($edits,($e)=>contains($doc.text,$e.before)))==len($edits),"정정 대상이 원본에 없음"
+$reviewed=reduce($edits,$doc.text,($text,$e)=>replace($text,$e.before,$e.after))
+[self:write]{path:$out,content:$reviewed}
+$check=[self:read]{path:$out}
+assert $check.text==$reviewed,"검수본 재독 불일치"
+return {path:$out,edits:len($edits),reread:true}

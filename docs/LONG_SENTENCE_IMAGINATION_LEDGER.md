@@ -4,6 +4,23 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 38회차 — 공식 DB 문서 심층 조사·분석 보고 (2026-10-08, 훈련·수리 완료)
+
+정본 main `c0cc0e4c`에서 시작. 12:02:00~12:14:50 KST **12분50초/상한60분**, 수리·회귀 별도.
+SQLite WAL·DuckDB native·PostgreSQL 동시성/백업을 조사하고 NAS 다중호스트 변형을 실행했다.
+훈련자 원문8개, 독립 AI 기본24개+변형4개. 양쪽 정상 종료·저장/재독했지만 의미 검수는 부분 달성.
+**L38-1** 브라우저 실제 본문과 선언 범위 불일치·코드 들여쓰기 손실·중복 텍스트 호출,
+**L38-2** 누락 프레임과 최종 폴백에서 실패 은폐·성공 캐시 오염을 수리했다.
+**L38-3** 기존 결정 전달·검증 절차 교재를 보완하고 원래 전체 흐름과 NAS를 재실행했다.
+의미 오류가 자동으로 모두 사라지지는 않아 검수본을 별도 작성했다. 일반 무검수 정확성은 미해결이다.
+
+관련207통과, 어휘/층/Android 빌드 확인. 빈 입력·중복·부분실패의 원래 collect 전체 Runtime 시험 포함.
+수리 전 보존24파일, 수리 후 NAS에서 기본20파일 불변·재수집/재추출0. 두 동적 문서 입력7154→5706자,
+Chrome 대역 정상 호출6→5. 전체 시간/토큰 절감률은 주장하지 않는다.
+AI 기본432.604초·입력2,470,371/출력42,379, 변형133.843초·845,534/13,558(캐시는 입력 부분집합).
+훈련자 모델10회125,036/28,433; Codex 비용 미측정. 수리 후 자동 보고도 검수 필요, 실DB·전체회귀 미검증.
+[보고서·수리·산출물](experiments/long_sentence_imagination/round_38/report.md).
+
 ## 37회차 — 생성형 AI의 개발 생산성: 심층 조사·분석 보고 (2026-10-08, 훈련 완료·수리 미실시)
 
 정본 main `aa8751be`, 10:42:48~11:01:54 KST **19분6초/상한60분**, 이후 증거·보고 정리.
@@ -197,6 +214,9 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
+| L38-1 | 원문 보존·비용 — 브라우저 body와 main 선언 불일치, 줄 strip으로 코드 손실·중복 IPC | 동일 DOM 대역에서 본문/들여쓰기 불일치, 실제 두 문서 메뉴 혼입 | 수리 — 공통 DOM 파서·정직한 fallback·탐색 잡음 정리. 두 문서20.2% 문자 감소는 전체 비용 절감률 아님 | [38회차](experiments/long_sentence_imagination/round_38/report.md), 전체 기본/NAS·13신규회귀 |
+| L38-2 | 실패 전파 — 프레임 누락과 최종 긴 본문 선택에서 실패 소실·불완전 캐시 | Playwright 누락/Chrome iframe, 긴 정적 fallback으로 source_complete 소실 재현 | 수리 — PARTIAL_SOURCE·partial 근거, 폴백 보존·불완전 캐시 제외·v8 | [38회차](experiments/long_sentence_imagination/round_38/report.md), 원래 collect의 중복/부분실패/빈 입력 Runtime 검증 |
+| L38-3 | 분석·작성 — 기존 결정 미전달, 복구 형식·스냅샷·내용 검증 불일치 | 양쪽 자동 보고의 구체적 절차 오류, 수리 후에도 의미 오해 잔존 | 사례 수리 — 이전 결정 전달·null 처리·공통 조사 교재·별도 검수본. 일반 자동 의미 정확성은 미해결 | [38회차](experiments/long_sentence_imagination/round_38/report.md), report_v2·기본/NAS 검수 정정 목록 |
 | L37-1 | 구현·진단 결함 — oversize inspect의 inspection/상한/초과량이 IBL 오류에서 소실 | 60010자 합성 입력 → TOOL/input_size만. handler는 inspection 반환, v2 adapter 허용 목록에서 탈락 | 열림 — 작은 크기 진단을 오류 경계 끝까지 보존, 모델0 유지 | [37회차](experiments/long_sentence_imagination/round_37/report.md), repro/inspect_oversize.ibl |
 | L37-2 | 분석·검수 공백 — 일부 집단의 절감률로 회사 전체 계획 채택; 원문 단위→PDF 쪽수 오기 | 두 variant의 시니어 유지보수 한정 분석→20% 계획. 합성900/100시간은 전체18%. 실제19쪽을20쪽으로 표시 | 열림 — 대상·분모·단위·근거와 결론/실험 규칙 대조, 구조화 출처 보존 | [37회차](experiments/long_sentence_imagination/round_37/report.md), artifacts·scope_counterexample.ibl·source_scope.json |
 | L37-3 | 평가 근거 전달·비용 공백 — 이미 작성된 설명/미확인 필드가 발췌에서 빠져 재검수 | ep4441 첫 평가UNKNOWN→추가4도구(실패2 포함)·재평가, 내용 변경0. repair입력554695/출력2268(캐시 포함) | 열림 — 기준별 기존 산출물 참조 전달·회수, 생략과 미수행 구별 유지. L36-2 인접 경로 | [37회차](experiments/long_sentence_imagination/round_37/report.md), evaluations.json·ai_calls.json |

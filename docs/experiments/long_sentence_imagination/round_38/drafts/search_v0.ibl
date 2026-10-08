@@ -1,0 +1,4 @@
+#!ibl edition=2
+$found=[sense:search]{queries:$queries,limit:4,source:"ddg"}
+[self:write]{path:f"${out}/search.json",content:json($found)}
+return $found

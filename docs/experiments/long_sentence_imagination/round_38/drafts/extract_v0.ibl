@@ -1,0 +1,22 @@
+#!ibl edition=2
+[def:근거]($source,$out,$instruction,$inspect) {
+  [if:$source.status != "collected"] { return $source }
+  $doc=[self:read]{path:$source.path}
+  $input=[{id:$source.id,product:$source.product,url:$source.url,title:$source.title,text:$doc.data.text}]
+  [if:$inspect] {
+    $plan=$input >> [table:ai]{inspect:"batch",instruction:$instruction,schema:"version(문자열), claims(배열), limitations(배열), uncertainty(문자열)",preserve_rows:true}
+    return {id:$source.id,inspection:$plan.inspection}
+  }
+  [try] {
+    $facts=$input >> [table:ai]{instruction:$instruction,schema:"version(문자열), claims(배열), limitations(배열), uncertainty(문자열)",preserve_rows:true,fields:["id","product","url","title","version","claims","limitations","uncertainty"]}
+    assert len($facts.items)==1,"문서당 근거 한 행 필요"
+    $fact={**$facts.items[0],status:"extracted",scope:{text_chars:len($doc.data.text),units:len($doc.data.items),note:"수집 text 전문을 모델에 전달. 이미지/실DB/성능 실험은 미확인",resolved_url:get($doc.data,"resolved_url",$source.url)}}
+    [self:write]{path:f"${out}/extracted/${$source.id}.json",content:json($fact)}
+    return $fact
+  } [catch] { return {**$source,status:"extraction_failed",error:$error} }
+}
+$index=[self:read]{path:f"${out}/source_index.json"}
+$evidence=$index.data.items >> [table:each]{parallel:3} { [fn:근거]{source:$it,out:$out,instruction:$instruction,inspect:$inspect} }
+[if:$inspect] { return $evidence }
+[self:write]{path:f"${out}/evidence.json",content:json($evidence)}
+return $evidence

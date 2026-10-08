@@ -1,0 +1,255 @@
+{
+  "search": {
+    "code": "#!ibl edition=2\n$found=[sense:search]{queries:$queries,limit:4,source:\"ddg\"}\n[self:write]{path:f\"${out}/search.json\",content:json($found)}\nreturn $found\n",
+    "inputs": {
+      "queries": [
+        "site.sqlite.org WAL backup network filesystem",
+        "site.duckdb.org docs concurrency export database backup",
+        "site.postgresql.org docs current concurrency backup dump continuous archiving"
+      ],
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/trainer/base"
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "collect": {
+    "code": "#!ibl edition=2\n[def:확보]($source,$out) {\n  [try] {\n    $doc=[sense:crawl]{url:$source.url}\n    $path=f\"${out}/sources/${$source.id}.json\"\n    [self:write]{path:$path,content:json($doc)}\n    return {**$source,status:\"collected\",path:$path,title:$doc.title,characters:len($doc.text),units:len($doc.items),selection:get($doc,\"content_selection\",null)}\n  } [catch] { return {**$source,status:\"failed\",error:$error} }\n}\n$unique=$sources >> [table:dedup]{by:\"url\"}\n$index=$unique.items >> [table:each]{parallel:3} { [fn:확보]{source:$it,out:$out} }\n[self:write]{path:f\"${out}/source_index.json\",content:json($index)}\nreturn {requested:len($sources),unique:len($unique.items),index:$index}\n",
+    "inputs": {
+      "sources": [
+        {
+          "id": "sqlite_wal",
+          "product": "SQLite",
+          "url": "https://www.sqlite.org/wal.html"
+        },
+        {
+          "id": "sqlite_backup",
+          "product": "SQLite",
+          "url": "https://www.sqlite.org/backup.html"
+        },
+        {
+          "id": "sqlite_network",
+          "product": "SQLite",
+          "url": "https://www.sqlite.org/useovernet.html"
+        },
+        {
+          "id": "duck_concurrency",
+          "product": "DuckDB",
+          "url": "https://duckdb.org/docs/stable/connect/concurrency"
+        },
+        {
+          "id": "duck_export",
+          "product": "DuckDB",
+          "url": "https://duckdb.org/docs/stable/sql/statements/export"
+        },
+        {
+          "id": "pg_mvcc",
+          "product": "PostgreSQL",
+          "url": "https://www.postgresql.org/docs/current/mvcc-intro.html"
+        },
+        {
+          "id": "pg_dump",
+          "product": "PostgreSQL",
+          "url": "https://www.postgresql.org/docs/current/backup-dump.html"
+        },
+        {
+          "id": "pg_archive",
+          "product": "PostgreSQL",
+          "url": "https://www.postgresql.org/docs/current/continuous-archiving.html"
+        }
+      ],
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/trainer/base"
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "inspect": {
+    "code": "#!ibl edition=2\n[def:근거]($source,$out,$instruction,$inspect) {\n  [if:$source.status != \"collected\"] { return $source }\n  $doc=[self:read]{path:$source.path}\n  $input=[{id:$source.id,product:$source.product,url:$source.url,title:$source.title,text:$doc.data.text}]\n  [if:$inspect] {\n    $plan=$input >> [table:ai]{inspect:\"batch\",instruction:$instruction,schema:\"version(문자열), claims(배열), limitations(배열), uncertainty(문자열)\",preserve_rows:true}\n    return {id:$source.id,inspection:$plan.inspection}\n  }\n  [try] {\n    $facts=$input >> [table:ai]{instruction:$instruction,schema:\"version(문자열), claims(배열), limitations(배열), uncertainty(문자열)\",preserve_rows:true,fields:[\"id\",\"product\",\"url\",\"title\",\"version\",\"claims\",\"limitations\",\"uncertainty\"]}\n    assert len($facts.items)==1,\"문서당 근거 한 행 필요\"\n    $fact={**$facts.items[0],status:\"extracted\",scope:{text_chars:len($doc.data.text),units:len($doc.data.items),note:\"수집 text 전문을 모델에 전달. 이미지/실DB/성능 실험은 미확인\",resolved_url:get($doc.data,\"resolved_url\",$source.url)}}\n    [self:write]{path:f\"${out}/extracted/${$source.id}.json\",content:json($fact)}\n    return $fact\n  } [catch] { return {**$source,status:\"extraction_failed\",error:$error} }\n}\n$index=[self:read]{path:f\"${out}/source_index.json\"}\n$evidence=$index.data.items >> [table:each]{parallel:3} { [fn:근거]{source:$it,out:$out,instruction:$instruction,inspect:$inspect} }\n[if:$inspect] { return $evidence }\n[self:write]{path:f\"${out}/evidence.json\",content:json($evidence)}\nreturn $evidence\n",
+    "inputs": {
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/trainer/base",
+      "instruction": "제공된 공식 기술문서 전문만 근거로 한국어 근거표를 만들어라. title/버전은 실제 문서에 있는 값만; 확인일은 판본 날짜가 아니다. claims 각 원소는 {claim:짧은 사실, section:근거 절, scope:프로세스/스레드/호스트/백업 조건과 한계}로 구성. 동시 읽기쓰기, 장애/잠금/백업 일관성/복구에 관계된 주장과 예외를 빠짐없이 보존하라. native embedded와 별도 서버/확장/저장형식은 명확히 구분. 미래 출시예정은 현재 출시완료로 쓰지 마라. 20GB/사용자수만으로 성능이나 RPO/RTO 보장 금지. 미기재는 미확인. 백업 API 스냅샷이 어느 시점인지 모호하면 단정하지 마라. 네비게이션은 근거에서 제외. 원문 긴 인용 없이 문서당 대략 800~1400자로 작성.",
+      "inspect": true
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "extract": {
+    "code": "#!ibl edition=2\n[def:근거]($source,$out,$instruction,$inspect) {\n  [if:$source.status != \"collected\"] { return $source }\n  $doc=[self:read]{path:$source.path}\n  $input=[{id:$source.id,product:$source.product,url:$source.url,title:$source.title,text:$doc.data.text}]\n  [if:$inspect] {\n    $plan=$input >> [table:ai]{inspect:\"batch\",instruction:$instruction,schema:\"version(문자열), claims(배열), limitations(배열), uncertainty(문자열)\",preserve_rows:true}\n    return {id:$source.id,inspection:$plan.inspection}\n  }\n  [try] {\n    $facts=$input >> [table:ai]{instruction:$instruction,schema:\"version(문자열), claims(배열), limitations(배열), uncertainty(문자열)\",preserve_rows:true,fields:[\"id\",\"product\",\"url\",\"title\",\"version\",\"claims\",\"limitations\",\"uncertainty\"]}\n    assert len($facts.items)==1,\"문서당 근거 한 행 필요\"\n    $fact={**$facts.items[0],status:\"extracted\",scope:{text_chars:len($doc.data.text),units:len($doc.data.items),note:\"수집 text 전문을 모델에 전달. 이미지/실DB/성능 실험은 미확인\",resolved_url:get($doc.data,\"resolved_url\",$source.url)}}\n    [self:write]{path:f\"${out}/extracted/${$source.id}.json\",content:json($fact)}\n    return $fact\n  } [catch] { return {**$source,status:\"extraction_failed\",error:$error} }\n}\n$index=[self:read]{path:f\"${out}/source_index.json\"}\n$evidence=$index.data.items >> [table:each]{parallel:3} { [fn:근거]{source:$it,out:$out,instruction:$instruction,inspect:$inspect} }\n[if:$inspect] { return $evidence }\n[self:write]{path:f\"${out}/evidence.json\",content:json($evidence)}\nreturn $evidence\n",
+    "inputs": {
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/trainer/base",
+      "instruction": "제공된 공식 기술문서 전문만 근거로 한국어 근거표를 만들어라. title/버전은 실제 문서에 있는 값만; 확인일은 판본 날짜가 아니다. claims 각 원소는 {claim:짧은 사실, section:근거 절, scope:프로세스/스레드/호스트/백업 조건과 한계}로 구성. 동시 읽기쓰기, 장애/잠금/백업 일관성/복구에 관계된 주장과 예외를 빠짐없이 보존하라. native embedded와 별도 서버/확장/저장형식은 명확히 구분. 미래 출시예정은 현재 출시완료로 쓰지 마라. 20GB/사용자수만으로 성능이나 RPO/RTO 보장 금지. 미기재는 미확인. 백업 API 스냅샷이 어느 시점인지 모호하면 단정하지 마라. 네비게이션은 근거에서 제외. 원문 긴 인용 없이 문서당 대략 800~1400자로 작성.",
+      "inspect": false
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "report_base": {
+    "code": "#!ibl edition=2\n$read=[self:read]{path:f\"${base}/evidence.json\"}\n$e=$read.data.items\n$good=$e >> [table:filter]{where:($r)=>$r.status==\"extracted\"}\n$failed=$e >> [table:filter]{where:($r)=>$r.status!=\"extracted\"}\nassert len($good)>=6,\"공식 문서6개 이상 직접 근거 필요\"\n$notes=map($e,($r)=>f\"- ${$r.id}: ${$r.url} · ${$r.status} · 판본 ${get($r,'version','미확인')} · 확인범위 ${json(get($r,'scope',null))} · 미확인 ${get($r,'uncertainty','수집/추출 실패')}\")\n$notes_text=\"# 원문 확인 기록\\n\\n기준일 2026-10-08. 아래 판본은 실제 수집 원문 표기이며 검색엔진 current 판본과 다를 수 있다. 원문·근거는 base/sources와 extracted에 보존.\\n\\n\"+join(\"\\n\",$notes)\n$analysis=$e >> [table:brief]{instruction:$instruction}\n[self:write]{path:f\"${out}/${filename}\",content:$analysis.message}\n$check=[self:read]{path:f\"${out}/${filename}\"}\nassert $check.text==$analysis.message,\"보고서 재독 불일치\"\n[if:$filename==\"research.md\"] {\n  [self:write]{path:f\"${out}/source_notes.md\",content:$notes_text}\n  $n=[self:read]{path:f\"${out}/source_notes.md\"}\n  assert $n.text==$notes_text,\"원문 기록 재독 불일치\"\n  $again=[self:read]{path:f\"${base}/evidence.json\"}\n  assert $again.data.items==$e,\"근거 재독 불일치\"\n}\nreturn {path:f\"${out}/${filename}\",sources:len($good),failures:len($failed),reread:true,chars:len($check.text)}\n",
+    "inputs": {
+      "base": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/trainer/base",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/trainer/base",
+      "filename": "research.md",
+      "instruction": "가상의 5명 콘텐츠 연구팀을 위한 데이터 저장·분석 구조를 심층 조사하고 한국어 분석 보고서를 작성해줘. 기준일은 2026-10-08이고 공개 공식 문서만 핵심 근거로 사용해. 현재 한 Linux 컴퓨터의 로컬 SSD에 20GB 데이터가 있고 Python 수집 프로세스 하나가 1분마다 작은 배치로 추가하며, 분석가 4명은 각자 별도 Python 프로세스로 SQL 분석을 동시에 실행해. 원천은 다시 모을 수 있지만 사람의 주석 데이터는 잃으면 안 돼. 실제 DB나 성능 측정 자료는 없는 합성 시나리오야.\nSQLite(WAL), DuckDB(native 파일 기반 embedded 사용), PostgreSQL 서버를 동시 읽기/쓰기의 프로세스 경계, 분석 적합성, 일관된 백업·복구, 운영 복잡성으로 비교해. 공식 원문 최소6개를 직접 확인하고 세 제품의 동시성 및 백업 근거를 모두 포함해. 최신 문서에서 별도 서버 프로토콜/확장/다른 저장 형식을 제안하면 native embedded와 구분하고 성숙도·판본을 확인해. 검색 요약·옛 문서·현 문서가 다르면 이유를 설명하고 읽지 못한 근거는 미확인으로 남겨. 원문에 없는 성능 수치나 손실시간 보장은 만들지 마.\n권고 구조와 대안·도입 조건, 실패 시나리오, 백업과 복구 검증 절차, 아직 측정해야 할 항목을 구체적으로 써줘. 원문 사실과 이 팀에 대한 추론·제안을 분리하고 핵심 주장에 가까운 URL을 붙여. research.md, evidence.json(제품/원문 URL/확인한 범위/주장/제약/불확실성), source_notes.md(확인·실패·판본)를 자기 출력 폴더에 저장하고 재독해. 실제 시스템 설정 변경·DB 생성·외부 발송·공개는 하지 마. 다른 실행자의 trainer/harness/drafts·정답은 보지 말고 자신의 결과와 참조만 재사용해.\n이 단계에서는 입력으로 받은 원문 추출 근거만 활용해 완성된 Markdown 본문을 작성한다. 파일 저장과 재독은 호출자가 한다. 원문에 없는 사실은 추가하지 않는다. 표·URL·제약·불확실성을 포함하되 원문을 길게 인용하지 않는다. 권고와 절차는 제안으로 표시한다. 3500~5500자 내외로 쓴다."
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "report_variant": {
+    "code": "#!ibl edition=2\n$read=[self:read]{path:f\"${base}/evidence.json\"}\n$e=$read.data.items\n$good=$e >> [table:filter]{where:($r)=>$r.status==\"extracted\"}\n$failed=$e >> [table:filter]{where:($r)=>$r.status!=\"extracted\"}\nassert len($good)>=6,\"공식 문서6개 이상 직접 근거 필요\"\n$notes=map($e,($r)=>f\"- ${$r.id}: ${$r.url} · ${$r.status} · 판본 ${get($r,'version','미확인')} · 확인범위 ${json(get($r,'scope',null))} · 미확인 ${get($r,'uncertainty','수집/추출 실패')}\")\n$notes_text=\"# 원문 확인 기록\\n\\n기준일 2026-10-08. 아래 판본은 실제 수집 원문 표기이며 검색엔진 current 판본과 다를 수 있다. 원문·근거는 base/sources와 extracted에 보존.\\n\\n\"+join(\"\\n\",$notes)\n$analysis=$e >> [table:brief]{instruction:$instruction}\n[self:write]{path:f\"${out}/${filename}\",content:$analysis.message}\n$check=[self:read]{path:f\"${out}/${filename}\"}\nassert $check.text==$analysis.message,\"보고서 재독 불일치\"\n[if:$filename==\"research.md\"] {\n  [self:write]{path:f\"${out}/source_notes.md\",content:$notes_text}\n  $n=[self:read]{path:f\"${out}/source_notes.md\"}\n  assert $n.text==$notes_text,\"원문 기록 재독 불일치\"\n  $again=[self:read]{path:f\"${base}/evidence.json\"}\n  assert $again.data.items==$e,\"근거 재독 불일치\"\n}\nreturn {path:f\"${out}/${filename}\",sources:len($good),failures:len($failed),reread:true,chars:len($check.text)}\n",
+    "inputs": {
+      "base": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/trainer/base",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/trainer/variant",
+      "filename": "decision.md",
+      "instruction": "같은 팀의 조건이 바뀌었어. 분석가들은 이제 서로 다른 컴퓨터에서 일하고, 누군가는 NAS/NFS에 둔 하나의 DB 파일을 각 컴퓨터에서 직접 열면 서버 운영을 없앨 수 있다고 제안했어. 수집 프로세스는 계속 쓰고 분석가들은 동시에 읽어야 해. 기존 근거를 재사용해 이 제안과 대안을 검토하고 variant/decision.md로 저장·재독해. 파일시스템 공유와 DB 서버 접속, 단일 호스트와 다중 호스트를 구분하고 기존 권고에서 바뀐 부분을 명시해. 기존 산출물은 보존해. 꼭 필요한 근거가 비어 있을 때만 그 부분을 추가 조사하고 이유를 남겨. 자신의 직전 결과·중간 참조는 재사용해도 되고 다른 실행자의 trainer/harness/drafts·정답은 참조하지 마. 실제 시스템 변경·외부 발송·공개는 하지 마.\n이 단계에서는 입력으로 받은 원문 추출 근거만 활용해 완성된 Markdown 본문을 작성한다. 파일 저장과 재독은 호출자가 한다. 원문에 없는 사실은 추가하지 않는다. 표·URL·제약·불확실성을 포함하되 원문을 길게 인용하지 않는다. 권고와 절차는 제안으로 표시한다. 3500~5500자 내외로 쓴다."
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "repair_collect": {
+    "code": "#!ibl edition=2\n[def:확보]($source,$out) {\n  [try] {\n    $doc=[sense:crawl]{url:$source.url}\n    $path=f\"${out}/sources/${$source.id}.json\"\n    [self:write]{path:$path,content:json($doc)}\n    return {**$source,status:\"collected\",path:$path,title:$doc.title,characters:len($doc.text),units:len($doc.items),selection:get($doc,\"content_selection\",null)}\n  } [catch] { return {**$source,status:\"failed\",error:$error} }\n}\n$unique=$sources >> [table:dedup]{by:\"url\"}\n$index=$unique.items >> [table:each]{parallel:3} { [fn:확보]{source:$it,out:$out} }\n[self:write]{path:f\"${out}/source_index.json\",content:json($index)}\nreturn {requested:len($sources),unique:len($unique.items),index:$index}\n",
+    "inputs": {
+      "sources": [
+        {
+          "id": "sqlite_wal",
+          "product": "SQLite",
+          "url": "https://www.sqlite.org/wal.html"
+        },
+        {
+          "id": "sqlite_backup",
+          "product": "SQLite",
+          "url": "https://www.sqlite.org/backup.html"
+        },
+        {
+          "id": "sqlite_network",
+          "product": "SQLite",
+          "url": "https://www.sqlite.org/useovernet.html"
+        },
+        {
+          "id": "duck_concurrency",
+          "product": "DuckDB",
+          "url": "https://duckdb.org/docs/stable/connect/concurrency"
+        },
+        {
+          "id": "duck_export",
+          "product": "DuckDB",
+          "url": "https://duckdb.org/docs/stable/sql/statements/export"
+        },
+        {
+          "id": "pg_mvcc",
+          "product": "PostgreSQL",
+          "url": "https://www.postgresql.org/docs/current/mvcc-intro.html"
+        },
+        {
+          "id": "pg_dump",
+          "product": "PostgreSQL",
+          "url": "https://www.postgresql.org/docs/current/backup-dump.html"
+        },
+        {
+          "id": "pg_archive",
+          "product": "PostgreSQL",
+          "url": "https://www.postgresql.org/docs/current/continuous-archiving.html"
+        }
+      ],
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/repair/base"
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "repair_extract": {
+    "code": "#!ibl edition=2\n[def:근거]($source,$out,$instruction,$inspect) {\n  [if:$source.status != \"collected\"] { return $source }\n  $doc=[self:read]{path:$source.path}\n  $input=[{id:$source.id,product:$source.product,url:$source.url,title:$source.title,text:$doc.data.text}]\n  [if:$inspect] {\n    $plan=$input >> [table:ai]{inspect:\"batch\",instruction:$instruction,schema:\"version(문자열), claims(배열), limitations(배열), uncertainty(문자열)\",preserve_rows:true}\n    return {id:$source.id,inspection:$plan.inspection}\n  }\n  [try] {\n    $facts=$input >> [table:ai]{instruction:$instruction,schema:\"version(문자열), claims(배열), limitations(배열), uncertainty(문자열)\",preserve_rows:true,fields:[\"id\",\"product\",\"url\",\"title\",\"version\",\"claims\",\"limitations\",\"uncertainty\"]}\n    assert len($facts.items)==1,\"문서당 근거 한 행 필요\"\n    $fact={**$facts.items[0],status:\"extracted\",scope:{text_chars:len($doc.data.text),units:len($doc.data.items),note:\"수집 text 전문을 모델에 전달. 이미지/실DB/성능 실험은 미확인\",resolved_url:get($doc.data,\"resolved_url\",$source.url)}}\n    [self:write]{path:f\"${out}/extracted/${$source.id}.json\",content:json($fact)}\n    return $fact\n  } [catch] { return {**$source,status:\"extraction_failed\",error:$error} }\n}\n$index=[self:read]{path:f\"${out}/source_index.json\"}\n$evidence=$index.data.items >> [table:each]{parallel:3} { [fn:근거]{source:$it,out:$out,instruction:$instruction,inspect:$inspect} }\n[if:$inspect] { return $evidence }\n[self:write]{path:f\"${out}/evidence.json\",content:json($evidence)}\nreturn $evidence\n",
+    "inputs": {
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/repair/base",
+      "instruction": "제공된 공식 기술문서 전문만 근거로 한국어 근거표를 만들어라. title/버전은 실제 문서에 있는 값만; 확인일은 판본 날짜가 아니다. claims 각 원소는 {claim:짧은 사실, section:근거 절, scope:프로세스/스레드/호스트/백업 조건과 한계}로 구성. 동시 읽기쓰기, 장애/잠금/백업 일관성/복구에 관계된 주장과 예외를 빠짐없이 보존하라. native embedded와 별도 서버/확장/저장형식은 명확히 구분. 미래 출시예정은 현재 출시완료로 쓰지 마라. 20GB/사용자수만으로 성능이나 RPO/RTO 보장 금지. 미기재는 미확인. 백업 API 스냅샷이 어느 시점인지 모호하면 단정하지 마라. 네비게이션은 근거에서 제외. 원문 긴 인용 없이 문서당 대략 800~1400자로 작성.",
+      "inspect": false
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "repair_report_v2_base": {
+    "code": "#!ibl edition=2\n$read=[self:read]{path:f\"${base}/evidence.json\"}\n$e=$read.data.items\n$good=$e >> [table:filter]{where:($r)=>$r.status==\"extracted\"}\n$failed=$e >> [table:filter]{where:($r)=>$r.status!=\"extracted\"}\nassert len($good)>=6,\"공식 문서6개 이상 직접 근거 필요\"\n$notes=map($e,($r)=>f\"- ${$r.id}: ${$r.url} · ${$r.status} · 판본 ${get($r,'version',null)==null ? '미확인' : text($r.version)} · 확인범위 ${json(get($r,'scope',null))} · 미확인 ${get($r,'uncertainty',null)==null ? '미확인' : text($r.uncertainty)}\")\n$notes_text=\"# 원문 확인 기록\\n\\n기준일 2026-10-08. 아래 판본은 실제 수집 원문 표기이며 검색엔진 current 판본과 다를 수 있다. 원문·근거는 base/sources와 extracted에 보존.\\n\\n\"+join(\"\\n\",$notes)\n$prior=\"\"\n[if:$filename!=\"research.md\"] {\n  $old=[self:read]{path:f\"${base}/research.md\"}\n  $prior=$old.text\n}\n$analysis=[{evidence:$e,previous_decision:$prior}] >> [table:brief]{instruction:$instruction}\n[self:write]{path:f\"${out}/${filename}\",content:$analysis.message}\n$check=[self:read]{path:f\"${out}/${filename}\"}\nassert $check.text==$analysis.message,\"보고서 재독 불일치\"\n[if:$filename==\"research.md\"] {\n  [self:write]{path:f\"${out}/source_notes.md\",content:$notes_text}\n  $n=[self:read]{path:f\"${out}/source_notes.md\"}\n  assert $n.text==$notes_text,\"원문 기록 재독 불일치\"\n  $again=[self:read]{path:f\"${base}/evidence.json\"}\n  assert $again.data.items==$e,\"근거 재독 불일치\"\n}\nreturn {path:f\"${out}/${filename}\",sources:len($good),failures:len($failed),reread:true,chars:len($check.text)}\n",
+    "inputs": {
+      "base": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/repair/base",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/repair/base",
+      "filename": "research.md",
+      "instruction": "가상의 5명 콘텐츠 연구팀을 위한 데이터 저장·분석 구조를 심층 조사하고 한국어 분석 보고서를 작성해줘. 기준일은 2026-10-08이고 공개 공식 문서만 핵심 근거로 사용해. 현재 한 Linux 컴퓨터의 로컬 SSD에 20GB 데이터가 있고 Python 수집 프로세스 하나가 1분마다 작은 배치로 추가하며, 분석가 4명은 각자 별도 Python 프로세스로 SQL 분석을 동시에 실행해. 원천은 다시 모을 수 있지만 사람의 주석 데이터는 잃으면 안 돼. 실제 DB나 성능 측정 자료는 없는 합성 시나리오야.\nSQLite(WAL), DuckDB(native 파일 기반 embedded 사용), PostgreSQL 서버를 동시 읽기/쓰기의 프로세스 경계, 분석 적합성, 일관된 백업·복구, 운영 복잡성으로 비교해. 공식 원문 최소6개를 직접 확인하고 세 제품의 동시성 및 백업 근거를 모두 포함해. 최신 문서에서 별도 서버 프로토콜/확장/다른 저장 형식을 제안하면 native embedded와 구분하고 성숙도·판본을 확인해. 검색 요약·옛 문서·현 문서가 다르면 이유를 설명하고 읽지 못한 근거는 미확인으로 남겨. 원문에 없는 성능 수치나 손실시간 보장은 만들지 마.\n권고 구조와 대안·도입 조건, 실패 시나리오, 백업과 복구 검증 절차, 아직 측정해야 할 항목을 구체적으로 써줘. 원문 사실과 이 팀에 대한 추론·제안을 분리하고 핵심 주장에 가까운 URL을 붙여. research.md, evidence.json(제품/원문 URL/확인한 범위/주장/제약/불확실성), source_notes.md(확인·실패·판본)를 자기 출력 폴더에 저장하고 재독해. 실제 시스템 설정 변경·DB 생성·외부 발송·공개는 하지 마. 다른 실행자의 trainer/harness/drafts·정답은 보지 말고 자신의 결과와 참조만 재사용해.\n이 단계에서는 입력으로 받은 원문 추출 근거만 활용해 완성된 Markdown 본문을 작성한다. 파일 저장과 재독은 호출자가 한다. 원문에 없는 사실은 추가하지 않는다. 표·URL·제약·불확실성을 포함하되 원문을 길게 인용하지 않는다. 권고와 절차는 제안으로 표시한다. 3500~5500자 내외로 쓴다.\n검수 보완: 주장마다 가까운 Markdown URL을 붙여라. 근거표에 없는 수치/날짜는 추가하지 마라. 이전 결정문이 주어지면 그 실제 권고와 비교하라. 서버는 단일 호스트에서도 가능하다. 서버 운영 불가능/필수 등 절대 명제는 원문이 지지하는 이 구성으로 한정하고 조건부 스냅샷 대안도 구별하라. 백업 검증은 키/행수만이 아니라 주석 본문·수정·삭제 등 전체 필수 값을 같은 스냅샷의 검증 지문과 비교해야 한다. 계속 변하는 원본의 백업 직전/직후 값으로 단순 일치를 요구하지 말고 기준 시점을 확보하지 못하면 미검증으로 판정하라. 파일 완료표시는 원천 트랜잭션 일관성과 다르다. 명령 형식은 pg_dump -Fc → pg_restore, plain SQL → psql로 명시해 서로 혼용하지 않는다. globals는 pg_dumpall --globals-only로 별도 수집하고 복원 순서를 맞춘다. 백업이나 PITR만으로 어떤 장애에서도 주석 손실0을 보장하지 않는다. 이 한계와 추가 요구사항 확인을 명시해라."
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "repair_report_v2_variant_final": {
+    "code": "#!ibl edition=2\n$read=[self:read]{path:f\"${base}/evidence.json\"}\n$e=$read.data.items\n$good=$e >> [table:filter]{where:($r)=>$r.status==\"extracted\"}\n$failed=$e >> [table:filter]{where:($r)=>$r.status!=\"extracted\"}\nassert len($good)>=6,\"공식 문서6개 이상 직접 근거 필요\"\n$notes=map($e,($r)=>f\"- ${$r.id}: ${$r.url} · ${$r.status} · 판본 ${get($r,'version',null)==null ? '미확인' : text($r.version)} · 확인범위 ${json(get($r,'scope',null))} · 미확인 ${get($r,'uncertainty',null)==null ? '미확인' : text($r.uncertainty)}\")\n$notes_text=\"# 원문 확인 기록\\n\\n기준일 2026-10-08. 아래 판본은 실제 수집 원문 표기이며 검색엔진 current 판본과 다를 수 있다. 원문·근거는 base/sources와 extracted에 보존.\\n\\n\"+join(\"\\n\",$notes)\n$prior=\"\"\n[if:$filename!=\"research.md\"] {\n  $old=[self:read]{path:f\"${base}/research.md\"}\n  $prior=$old.text\n}\n$analysis=[{evidence:$e,previous_decision:$prior}] >> [table:brief]{instruction:$instruction}\n[self:write]{path:f\"${out}/${filename}\",content:$analysis.message}\n$check=[self:read]{path:f\"${out}/${filename}\"}\nassert $check.text==$analysis.message,\"보고서 재독 불일치\"\n[if:$filename==\"research.md\"] {\n  [self:write]{path:f\"${out}/source_notes.md\",content:$notes_text}\n  $n=[self:read]{path:f\"${out}/source_notes.md\"}\n  assert $n.text==$notes_text,\"원문 기록 재독 불일치\"\n  $again=[self:read]{path:f\"${base}/evidence.json\"}\n  assert $again.data.items==$e,\"근거 재독 불일치\"\n}\nreturn {path:f\"${out}/${filename}\",sources:len($good),failures:len($failed),reread:true,chars:len($check.text)}\n",
+    "inputs": {
+      "base": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/repair/base",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/repair/variant",
+      "filename": "decision.md",
+      "instruction": "같은 팀의 조건이 바뀌었어. 분석가들은 이제 서로 다른 컴퓨터에서 일하고, 누군가는 NAS/NFS에 둔 하나의 DB 파일을 각 컴퓨터에서 직접 열면 서버 운영을 없앨 수 있다고 제안했어. 수집 프로세스는 계속 쓰고 분석가들은 동시에 읽어야 해. 기존 근거를 재사용해 이 제안과 대안을 검토하고 variant/decision.md로 저장·재독해. 파일시스템 공유와 DB 서버 접속, 단일 호스트와 다중 호스트를 구분하고 기존 권고에서 바뀐 부분을 명시해. 기존 산출물은 보존해. 꼭 필요한 근거가 비어 있을 때만 그 부분을 추가 조사하고 이유를 남겨. 자신의 직전 결과·중간 참조는 재사용해도 되고 다른 실행자의 trainer/harness/drafts·정답은 참조하지 마. 실제 시스템 변경·외부 발송·공개는 하지 마.\n이 단계에서는 입력으로 받은 원문 추출 근거만 활용해 완성된 Markdown 본문을 작성한다. 파일 저장과 재독은 호출자가 한다. 원문에 없는 사실은 추가하지 않는다. 표·URL·제약·불확실성을 포함하되 원문을 길게 인용하지 않는다. 권고와 절차는 제안으로 표시한다. 3500~5500자 내외로 쓴다.\n검수 보완: 주장마다 가까운 Markdown URL을 붙여라. 근거표에 없는 수치/날짜는 추가하지 마라. 이전 결정문이 주어지면 그 실제 권고와 비교하라. 서버는 단일 호스트에서도 가능하다. 서버 운영 불가능/필수 등 절대 명제는 원문이 지지하는 이 구성으로 한정하고 조건부 스냅샷 대안도 구별하라. 백업 검증은 키/행수만이 아니라 주석 본문·수정·삭제 등 전체 필수 값을 같은 스냅샷의 검증 지문과 비교해야 한다. 계속 변하는 원본의 백업 직전/직후 값으로 단순 일치를 요구하지 말고 기준 시점을 확보하지 못하면 미검증으로 판정하라. 파일 완료표시는 원천 트랜잭션 일관성과 다르다. 명령 형식은 pg_dump -Fc → pg_restore, plain SQL → psql로 명시해 서로 혼용하지 않는다. globals는 pg_dumpall --globals-only로 별도 수집하고 복원 순서를 맞춘다. 백업이나 PITR만으로 어떤 장애에서도 주석 손실0을 보장하지 않는다. 이 한계와 추가 요구사항 확인을 명시해라."
+    },
+    "origin": "training",
+    "project_id": "수동모드"
+  },
+  "review_report": {
+    "code": "#!ibl edition=2\n$doc=[self:read]{path:$source}\nassert len(filter($edits,($e)=>contains($doc.text,$e.before)))==len($edits),\"정정 대상이 원본에 없음\"\n$reviewed=reduce($edits,$doc.text,($text,$e)=>replace($text,$e.before,$e.after))\n[self:write]{path:$out,content:$reviewed}\n$check=[self:read]{path:$out}\nassert $check.text==$reviewed,\"검수본 재독 불일치\"\nreturn {path:$out,edits:len($edits),reread:true}\n",
+    "inputs": {
+      "source": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/repair/base/research.md",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/reviewed/research.md",
+      "edits": [
+        {
+          "before": "완료된 WAL 세그먼트만 아카이브되므로 아카이빙이 지연되면 손실이 늘며, archive_timeout으로 상한을 둔다",
+          "after": "완료된 WAL 세그먼트만 아카이브된다. archive_timeout은 세그먼트 전환을 유도하지만 아카이브 전송 실패·지연까지 제한하거나 실제 손실시간을 보장하지 않는다. PITR에는 베이스 백업과 끊기지 않은 필요한 WAL 체인이 함께 있어야 한다"
+        },
+        {
+          "before": "대형 트랜잭션에 대해 \"100MB 초과 시 느리고 1GB 초과 시 실패할 수 있다\"는 서술과 \"3.11.0부터 롤백 모드만큼 효율적\"이라는 서술이 공존한다. 구판 서술이 남은 것으로 보이지만 단정할 수 없다",
+          "after": "대형 트랜잭션 한계의 옛 서술 뒤에 3.11.0부터 개선되었다는 조건이 붙는다. 이를 현행판에 동시에 적용되는 모순이나 현재 용량 한계로 해석하지 않는다"
+        },
+        {
+          "before": "백업 스냅샷 시점을 1절은 복사 시작 시점, 3.1절은 재시작을 거친 완료 시점의 최신 상태로 서술한다. 어느 쪽인지 단정할 수 없다",
+          "after": "백업 개요의 시작 시점 스냅샷 설명과 점진 복사 중 외부 쓰기에 따른 재시작 조건을 함께 적용한다. 첫 호출 이전의 별도 질의 결과와 같다고 가정하지 않고, 실제 백업과 대응하는 검증 기준을 확보한다"
+        },
+        {
+          "before": "**같은 파일을 동시에** 쓰는 구성",
+          "after": "**같은 파일에 동시에 쓰고 읽는** 구성"
+        },
+        {
+          "before": "버그 수정 판본(3.51.3, 3.44.6, 3.50.7 중 하나)을 확인한다",
+          "after": "배포 계열에 해당하는 버그 수정이 포함된 판본인지 확인한다(문서상 수정: 3.51.3, 백포트: 3.44.6·3.50.7; 이후 판본도 릴리스 근거 확인)"
+        },
+        {
+          "before": "**SQLite**: DB 파일과 WAL 파일을 함께 보존하고 ([wal](https://www.sqlite.org/wal.html)), 같은 방식의 지문 비교를 적용한다.",
+          "after": "**SQLite**: Online Backup API 등 문서화된 일관 백업 경로로 사본을 만들고 ([backup](https://www.sqlite.org/backup.html)), 완료 상태를 확인한 뒤 같은 방식의 지문 비교를 적용한다. 실행 중 DB와 WAL을 각각 파일 복사하는 것만으로 일관성을 보장하지 않는다. 원본 이동·파일 복구에서 WAL을 임의 분리하지 않는 규칙과 API로 완성한 백업 사본을 구별한다."
+        }
+      ]
+    },
+    "project_id": "수동모드",
+    "origin": "training"
+  },
+  "review_variant": {
+    "code": "#!ibl edition=2\n$doc=[self:read]{path:$source}\nassert len(filter($edits,($e)=>contains($doc.text,$e.before)))==len($edits),\"정정 대상이 원본에 없음\"\n$reviewed=reduce($edits,$doc.text,($text,$e)=>replace($text,$e.before,$e.after))\n[self:write]{path:$out,content:$reviewed}\n$check=[self:read]{path:$out}\nassert $check.text==$reviewed,\"검수본 재독 불일치\"\nreturn {path:$out,edits:len($edits),reread:true}\n",
+    "inputs": {
+      "source": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/repair/variant/decision.md",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_38회차/reviewed/decision.md",
+      "edits": [
+        {
+          "before": "버그 수정 판본(3.51.3, 3.44.6, 3.50.7 중 하나)을 확인한다",
+          "after": "배포 계열에 해당하는 버그 수정이 포함된 판본인지 확인한다(문서상 수정: 3.51.3, 백포트: 3.44.6·3.50.7; 이후 판본도 릴리스 근거 확인)"
+        },
+        {
+          "before": "원격 다중 호스트에서는 다중 읽기 또는 단일 쓰기만 가능하고, 읽기와 쓰기를 동시에 할 수 없다",
+          "after": "네트워크 FS의 잠금·쓰기 순서·동기화 신뢰성은 구현 의존이며, 공유 파일 안전성을 일반적으로 보장하지 않는다"
+        },
+        {
+          "before": "**SQLite(B안)**: DB 파일과 WAL 파일을 함께 보존한다 ([wal](https://www.sqlite.org/wal.html)). 백업은 DB 호스트에서 수행한다(추론).",
+          "after": "**SQLite(B안)**: DB 호스트에서 Online Backup API 등 일관 백업 경로로 사본을 만들고 완료를 확인한다 ([backup](https://www.sqlite.org/backup.html)). 실행 중 DB와 WAL을 각각 복사하는 것만으로 일관성을 보장하지 않는다. WAL을 임의 분리하지 않는 원본 취급 규칙과 API의 완성된 백업 사본을 구별한다."
+        },
+        {
+          "before": "설정 파일을 따로 백업하고, pg_backup_stop 이후 시점으로 복구 리허설을 한다",
+          "after": "설정 파일을 따로 백업하고, 베이스 백업과 연속된 필요한 WAL 체인을 확보해 해당 베이스 백업 종료 이후의 유효한 시점으로 복구 리허설을 한다"
+        },
+        {
+          "before": "차단이나 오류가 나면 탈락",
+          "after": "트랜잭션 경합·재시도 후의 지연·실패율이 팀이 정한 한계를 넘으면 탈락"
+        }
+      ]
+    },
+    "project_id": "수동모드",
+    "origin": "training"
+  }
+}

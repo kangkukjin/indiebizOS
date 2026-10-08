@@ -1,0 +1,38 @@
+........................................................................ [ 34%]
+........................................................................ [ 69%]
+...............................................................          [100%]
+=============================== warnings summary ===============================
+backend/test_crawl_retention_2026_09_09.py::test_first_crawl_displays_60k_past_eighth_paragraph_and_reaches_providers[False-26]
+  /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: IncompleteFieldDefinitionWarning: Field 'lifespan' has an incomplete definition: its annotation contains an unresolved forward reference, so settings sources may fail to correctly resolve its value. Call `model_rebuild()` on the model where the field is defined, once all the referenced types are defined.
+    warnings.warn(
+
+backend/test_crawl_retention_2026_09_09.py::test_pdf_extraction_preserves_long_text
+backend/test_crawl_retention_2026_09_09.py::test_pdf_extraction_preserves_long_text
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+backend/test_crawl_retention_2026_09_09.py::test_pdf_extraction_preserves_long_text
+backend/test_crawl_retention_2026_09_09.py::test_pdf_extraction_preserves_long_text
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+backend/test_crawl_retention_2026_09_09.py::test_pdf_extraction_preserves_long_text
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+2.20s call     backend/test_crawl_retention_2026_09_09.py::test_saved_full_document_flows_through_ibl_and_next_turn_call
+0.87s call     backend/test_source_capacity.py::test_office_display_is_bounded_but_reference_keeps_tail[docx]
+0.77s call     backend/test_source_capacity.py::test_office_display_is_bounded_but_reference_keeps_tail[xlsx]
+0.74s call     backend/test_source_capacity.py::test_office_display_is_bounded_but_reference_keeps_tail[hwpx]
+0.48s call     backend/test_member_isolation_stage1_2026_09_14.py::test_member_runner_prompt_hides_undeclared_words
+0.45s call     backend/test_source_capacity.py::test_xlsx_aggregate_reads_full_source_or_explicit_rows[-250]
+0.40s call     backend/test_tool_webcrawl.py::test_research_collection_keeps_duplicate_and_partial_source_contract[False]
+0.40s call     backend/test_source_capacity.py::test_document_explicit_selection_still_selects_text[,max_blocks:2]
+0.37s call     backend/test_source_capacity.py::test_invalid_range_does_not_become_complete_default[-1-max_rows]
+0.36s call     backend/test_source_capacity.py::test_document_explicit_selection_still_selects_text[,limit:2]
+0.36s call     backend/test_source_capacity.py::test_xlsx_aggregate_reads_full_source_or_explicit_rows[,max_rows:0-250]
+0.35s call     backend/test_tool_webcrawl.py::test_research_collection_keeps_duplicate_and_partial_source_contract[True]
+0.33s call     backend/test_source_capacity.py::test_invalid_range_does_not_become_complete_default[True-max_blocks]
+0.32s call     backend/test_source_capacity.py::test_invalid_range_does_not_become_complete_default[1.5-max_blocks]
+0.32s call     backend/test_source_capacity.py::test_invalid_range_does_not_become_complete_default[-1-max_blocks]
+207 passed, 6 warnings in 14.57s
+<sys>:0: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

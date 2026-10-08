@@ -13,7 +13,8 @@ UI_SELECTORS = ('nav, footer, aside, script, style, noscript, iframe, form, butt
 NOISE = {'advert', 'advertisement', 'ads', 'sidebar', 'social-share',
          'share-buttons', 'sharing-buttons', 'cookie-banner', 'cookie-consent',
          'newsletter-signup', 'related-posts', 'related-articles', 'comments',
-         'comment-list', 'comment-form'}
+         'comment-list', 'comment-form', 'sidenav', 'sidenavigation',
+         'side-navigation', 'site-navigation', 'site-nav', 'searchoverlay', 'search-overlay'}
 
 
 def regions(soup):

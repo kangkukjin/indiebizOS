@@ -1,0 +1,15 @@
+{
+  "ended": "2026-10-08T12:14:50.828505+09:00",
+  "tasks": {
+    "base": {
+      "state": "succeeded",
+      "status_url": "/system-ai/tasks/task_sysai_65a1fe3a"
+    },
+    "variant": {
+      "state": "succeeded",
+      "status_url": "/system-ai/tasks/task_sysai_792ebb97"
+    }
+  },
+  "head": "c0cc0e4c",
+  "baseline_files_unchanged": 24
+}

@@ -2761,8 +2761,8 @@ nodes:
               - queries
         lands_on: hub
         path_audited:
-          at: '2026-10-07'
-          impl: 2a23119a316304cb
+          at: '2026-10-08'
+          impl: ce878a5e76c014ef
         aliases:
           limit:
           - count
@@ -2877,8 +2877,8 @@ nodes:
               items: List<Record>
         lands_on: hub
         path_audited:
-          at: '2026-10-07'
-          impl: 2a23119a316304cb
+          at: '2026-10-08'
+          impl: ce878a5e76c014ef
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'

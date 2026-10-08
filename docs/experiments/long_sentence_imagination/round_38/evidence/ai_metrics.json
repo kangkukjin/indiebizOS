@@ -1,0 +1,122 @@
+{
+  "base": {
+    "episode": {
+      "id": 4454,
+      "started_at": "2026-10-08T12:02:11.941547",
+      "ended_at": "2026-10-08T12:09:24.546226",
+      "total_ms": 432604,
+      "source": "training",
+      "task_id": "task_sysai_65a1fe3a"
+    },
+    "totals": {
+      "input": 2470371,
+      "output": 42379,
+      "cache_read": 2171632,
+      "cache_create": 292544
+    },
+    "roles": {
+      "oneshot:classify:classify": {
+        "input": 5064,
+        "output": 3,
+        "cache_read": 2944,
+        "cache_create": 0
+      },
+      "consciousness:plan": {
+        "input": 57086,
+        "output": 4294,
+        "cache_read": 29292,
+        "cache_create": 27792
+      },
+      "execution:execute": {
+        "input": 2346765,
+        "output": 37564,
+        "cache_read": 2133225,
+        "cache_create": 213508
+      },
+      "oneshot:classify:capability_guard": {
+        "input": 4679,
+        "output": 141,
+        "cache_read": 640,
+        "cache_create": 0
+      },
+      "oneshot:evaluate:evaluate": {
+        "input": 56777,
+        "output": 377,
+        "cache_read": 5531,
+        "cache_create": 51244
+      }
+    },
+    "tools": 17,
+    "check_rejections": 2,
+    "compressed": 0,
+    "evaluations": 1,
+    "event_sources": [
+      "training"
+    ],
+    "models": [
+      "ClaudeCode/opus",
+      "DeepSeekProvider/deepseek-flash",
+      "OpenAI/deepseek-flash"
+    ]
+  },
+  "variant": {
+    "episode": {
+      "id": 4455,
+      "started_at": "2026-10-08T12:10:13.529880",
+      "ended_at": "2026-10-08T12:12:27.373607",
+      "total_ms": 133843,
+      "source": "training",
+      "task_id": "task_sysai_792ebb97"
+    },
+    "totals": {
+      "input": 845534,
+      "output": 13558,
+      "cache_read": 754570,
+      "cache_create": 80469
+    },
+    "roles": {
+      "oneshot:classify:classify": {
+        "input": 4683,
+        "output": 5,
+        "cache_read": 2688,
+        "cache_create": 0
+      },
+      "oneshot:background:background": {
+        "input": 3616,
+        "output": 1308,
+        "cache_read": 512,
+        "cache_create": 0
+      },
+      "execution:execute": {
+        "input": 804848,
+        "output": 11259,
+        "cache_read": 743023,
+        "cache_create": 61819
+      },
+      "oneshot:classify:capability_guard": {
+        "input": 8204,
+        "output": 292,
+        "cache_read": 2816,
+        "cache_create": 0
+      },
+      "oneshot:evaluate:evaluate": {
+        "input": 24183,
+        "output": 694,
+        "cache_read": 5531,
+        "cache_create": 18650
+      }
+    },
+    "tools": 2,
+    "check_rejections": 0,
+    "compressed": 0,
+    "evaluations": 1,
+    "event_sources": [
+      "training"
+    ],
+    "models": [
+      "ClaudeCode/opus",
+      "DeepSeekProvider/deepseek-flash",
+      "OpenAI/deepseek-flash"
+    ]
+  }
+}

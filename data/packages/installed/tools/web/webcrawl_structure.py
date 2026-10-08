@@ -218,9 +218,12 @@ def project(result, op):
     """같은 불변 수집 스냅샷에서 요청한 보기를 선택한다."""
     out = dict(result)
     structure = out.pop("_page_structure", None)
+    selections = out.pop("_content_selection", None)
     out.pop("_structure_only", None)
     if not out.get("success") or op == "content":
-        if structure and structure.get("content_selections"):
+        if selections is not None:
+            out["content_selection"] = selections
+        elif structure and structure.get("content_selections"):
             out["content_selection"] = structure["content_selections"]
         return out
     if structure is None:

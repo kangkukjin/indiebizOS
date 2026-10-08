@@ -560,17 +560,26 @@ async def _crawl_playwright_async(session, url: str, max_length: int, *, op="con
         except Exception:
             await asyncio.sleep(2)
 
-        # 모든 프레임의 텍스트 수집 (메인 프레임 먼저) — iframe 본문 사이트 대응
-        texts, structures, structure_errors = [], [], []
+        # Read the rendered DOM with the same semantic body/code rules as static HTML.
+        texts, structures, structure_errors, content_errors, selections = [], [], [], [], []
         for frame in page.frames:
+            frame_url = getattr(frame, "url", page.url)
             try:
-                structures.append(_structure().extract(await frame.content(), frame.url))
+                html = await frame.content()
+                _, t = _parse_html(html, frame_url)
+                structure = _structure().extract(html, frame_url)
+                structures.append(structure)
+                selections.extend(structure.get("content_selections", []))
             except Exception as exc:
-                structure_errors.append({"source_url": getattr(frame, "url", page.url), "error": str(exc)})
-            try:
-                t = await frame.inner_text("body")
-            except Exception:
-                continue
+                structure_errors.append({"source_url": frame_url, "error": str(exc)})
+                try:
+                    t = await frame.inner_text("body")
+                    selections.append({"url": frame_url, "selector": "body", "regions": 1,
+                        "scope": "rendered_body_fallback",
+                        "note": "DOM 구조를 읽지 못해 표시된 body 텍스트를 사용했습니다. 본문 영역 선택 미확인."})
+                except Exception as text_exc:
+                    content_errors.append({"source_url": frame_url, "error": str(text_exc)})
+                    continue
             if t and t.strip():
                 texts.append(t)
         text = "\n\n".join(texts)
@@ -588,11 +597,8 @@ async def _crawl_playwright_async(session, url: str, max_length: int, *, op="con
                 result["reason"] = reason
             return result
 
-        # 빈 줄을 **보존**한다 — inner_text 의 블록 경계(빈 줄)가 문단 경계다. 종전의
-        # `if ln.strip()` 필터가 빈 줄을 다 버려 handler._text_to_blocks 의 \n\n 분리가
-        # 가를 곳을 잃었다(2026-08-29 ⑦ 실측: 8,580자가 paragraph 1행). 3연속+만 2로 접는다.
-        lines = [ln.strip() for ln in text.splitlines()]
-        text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+        # Keep preformatted indentation and blank lines; the HTML parser owns normalization.
+        text = text.strip("\n")
         reason = _diagnose(status, final_url, url, text, title)
         if op != "content" and reason == "insufficient_content":
             reason = None
@@ -608,7 +614,11 @@ async def _crawl_playwright_async(session, url: str, max_length: int, *, op="con
             "http_status": status,
             "resolved_url": final_url,
             "_page_structure": _structure().combine(structures, structure_errors),
+            "_content_selection": selections,
         }
+        if content_errors:
+            result.update(source_complete=False, partial=True, errors=content_errors)
+            reason = reason or "incomplete_content"
         if reason:
             result["reason"] = reason
         return result
@@ -660,12 +670,8 @@ async def _crawl_chrome_async(driver, url: str, max_length: int, *, op="content"
                     "method": "chrome_mcp", "http_status": status,
                     "reason": _diagnose(status, final_url, url, "", title),
                     "error": f"Chrome HTTP 에러: {status}"}
-        content = await driver.call_tool("get_page_text", {"tabId": tab_id})
-        text = content.get("text", "") if isinstance(content, dict) else ""
-        reason = _diagnose(status, final_url, url, text, title)
-        if op == "content" and (not text or len(text) < _MIN_CONTENT_LENGTH):
-            return {"success": False, "url": url, "method": "chrome_mcp",
-                    "reason": reason, "error": "Chrome MCP에서도 콘텐츠를 추출하지 못함"}
+        text = ""
+        selections, content_errors = [], []
         structures, structure_errors = [], []
         try:
             html_result = await driver.call_tool("javascript_tool", {
@@ -678,22 +684,42 @@ async def _crawl_chrome_async(driver, url: str, max_length: int, *, op="content"
                 html_result = json.loads(html_result)
             if not isinstance(html_result, dict) or not isinstance(html_result.get("html"), str):
                 raise ValueError("Chrome DOM 구조를 읽지 못했습니다")
-            structures.append(_structure().extract(html_result["html"], final_url))
+            _, text = _parse_html(html_result["html"], final_url)
+            structure = _structure().extract(html_result["html"], final_url)
+            structures.append(structure)
+            selections.extend(structure.get("content_selections", []))
             if html_result.get("frames"):
-                structure_errors.append({"source_url": final_url, "error": "Chrome 구조 정보는 메인 문서만 수집합니다. iframe 구조 미수집."})
+                missing = {"source_url": final_url,
+                           "error": "Chrome은 메인 문서만 수집했습니다. iframe 본문·구조 미수집.",
+                           "frames": html_result["frames"]}
+                structure_errors.append(missing)
+                content_errors.append(missing)
         except Exception as exc:
             structure_errors.append({"source_url": final_url, "error": str(exc)})
+            content = await driver.call_tool("get_page_text", {"tabId": tab_id})
+            text = content.get("text", "") if isinstance(content, dict) else ""
+            selections.append({"url": final_url, "selector": "body", "regions": 1,
+                "scope": "rendered_body_fallback",
+                "note": "DOM 구조를 읽지 못해 표시된 body 텍스트를 사용했습니다. 본문 영역 선택 미확인."})
+        reason = _diagnose(status, final_url, url, text, title)
+        if op == "content" and (not text or len(text) < _MIN_CONTENT_LENGTH):
+            return {"success": False, "url": url, "method": "chrome_mcp",
+                    "reason": reason, "error": "Chrome MCP에서도 콘텐츠를 추출하지 못함"}
         if op != "content" and not structures:
             return {"success": False, "url": url, "reason": "structure_unavailable",
                     "error": "Chrome DOM 구조 수집 실패", "method": "chrome_mcp"}
         if op != "content" and reason == "insufficient_content":
             reason = None
-        text = re.sub(r'\n{3,}', '\n\n', '\n'.join(line.strip() for line in text.splitlines())).strip()
+        text = text.strip("\n")
         text, original_length, truncated = _truncate(text, max_length)
         result = {"success": True, "url": url, "resolved_url": final_url,
                   "http_status": status, "title": title, "text": text,
                   "length": original_length, "truncated": truncated, "method": "chrome_mcp",  # truncation-scope: source — 공개 크롤은 전문 저장; 내부 max_length로 자른 원문은 불완전
-                  "_page_structure": _structure().combine(structures, structure_errors)}
+                  "_page_structure": _structure().combine(structures, structure_errors),
+                  "_content_selection": selections}
+        if content_errors:
+            result.update(source_complete=False, partial=True, errors=content_errors)
+            reason = reason or "incomplete_content"
         if reason:
             result["reason"] = reason
         return result
@@ -936,6 +962,11 @@ def _crawl_website_impl(url: str, max_length: int | None = None, *, op="content"
                 if best is None or a.get("length", 0) > best.get("length", 0):
                     best = a
         if best is not None:
+            # Choosing a longer earlier body cannot erase a later observed frame failure.
+            incomplete = [a for a in attempts if a.get("source_complete") is False]
+            if incomplete:
+                best.update(source_complete=False, partial=True,
+                            errors=[e for a in incomplete for e in a.get("errors", [])])
             if reason:
                 best["reason"] = reason
                 best["note"] = "본문이 짧거나 완전하지 않을 수 있습니다 (JS 렌더링/iframe 폴백이 더 나은 결과를 얻지 못함)."

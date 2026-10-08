@@ -1,0 +1,13 @@
+{
+  "ended": "2026-10-08T12:33:54.145853+09:00",
+  "health": {
+    "status": "healthy",
+    "timestamp": "2026-10-08T12:33:41.679439",
+    "base_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+    "live_turns": [],
+    "live_turns_observation": "known"
+  },
+  "tests_passed": 207,
+  "backend_full_suite_run": false,
+  "frontend_run": false
+}

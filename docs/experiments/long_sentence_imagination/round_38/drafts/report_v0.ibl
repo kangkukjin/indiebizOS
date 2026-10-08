@@ -1,0 +1,20 @@
+#!ibl edition=2
+$read=[self:read]{path:f"${base}/evidence.json"}
+$e=$read.data.items
+$good=$e >> [table:filter]{where:($r)=>$r.status=="extracted"}
+$failed=$e >> [table:filter]{where:($r)=>$r.status!="extracted"}
+assert len($good)>=6,"공식 문서6개 이상 직접 근거 필요"
+$notes=map($e,($r)=>f"- ${$r.id}: ${$r.url} · ${$r.status} · 판본 ${get($r,'version','미확인')} · 확인범위 ${json(get($r,'scope',null))} · 미확인 ${get($r,'uncertainty','수집/추출 실패')}")
+$notes_text="# 원문 확인 기록\n\n기준일 2026-10-08. 아래 판본은 실제 수집 원문 표기이며 검색엔진 current 판본과 다를 수 있다. 원문·근거는 base/sources와 extracted에 보존.\n\n"+join("\n",$notes)
+$analysis=$e >> [table:brief]{instruction:$instruction}
+[self:write]{path:f"${out}/${filename}",content:$analysis.message}
+$check=[self:read]{path:f"${out}/${filename}"}
+assert $check.text==$analysis.message,"보고서 재독 불일치"
+[if:$filename=="research.md"] {
+  [self:write]{path:f"${out}/source_notes.md",content:$notes_text}
+  $n=[self:read]{path:f"${out}/source_notes.md"}
+  assert $n.text==$notes_text,"원문 기록 재독 불일치"
+  $again=[self:read]{path:f"${base}/evidence.json"}
+  assert $again.data.items==$e,"근거 재독 불일치"
+}
+return {path:f"${out}/${filename}",sources:len($good),failures:len($failed),reread:true,chars:len($check.text)}

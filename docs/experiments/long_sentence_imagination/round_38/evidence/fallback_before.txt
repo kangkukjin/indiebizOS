@@ -1,0 +1,33 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______ test_longer_static_fallback_does_not_hide_observed_missing_frame _______
+
+crawl = <module 'tool_webcrawl' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/web/tool_webcrawl.py'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bc38050>
+
+    def test_longer_static_fallback_does_not_hide_observed_missing_frame(crawl, monkeypatch):
+        raw, _ = playwright(crawl, [Frame(), Frame(None, None, URL + '/missing')])
+        static = {'success': True, 'url': URL, 'title': 'Research', 'text': BODY * 3,
+                  'length': len(BODY) * 3, 'reason': 'insufficient_content'}
+        monkeypatch.setattr(crawl, '_crawl_static', lambda *a, **k: static)
+        monkeypatch.setattr(crawl, '_get_chrome_driver', lambda: None)
+        monkeypatch.setattr(crawl, '_get_browser_session', lambda: object())
+
+        async def partial(*args, **kwargs):
+            return raw
+
+        monkeypatch.setattr(crawl, '_crawl_playwright_async', partial)
+        monkeypatch.setattr(crawl, '_run_async', asyncio.run)
+        out = crawl.crawl_website(URL)
+        assert out['text'] == BODY * 3
+>       assert out['source_complete'] is False and out['errors'][0]['source_url'] == URL + '/missing'
+               ^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'source_complete'
+
+backend/test_tool_webcrawl.py:214: KeyError
+============================= slowest 15 durations =============================
+
+(3 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_tool_webcrawl.py::test_longer_static_fallback_does_not_hide_observed_missing_frame
+1 failed, 12 deselected in 0.28s

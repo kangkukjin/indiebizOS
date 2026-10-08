@@ -1,0 +1,9 @@
+.................                                                        [100%]
+============================= slowest 15 durations =============================
+2.35s call     backend/test_tool_webcrawl.py::test_research_collection_keeps_duplicate_and_partial_source_contract[False]
+1.23s call     backend/test_single_runner.py::test_r2_direct_run_delegates_to_pytest
+0.76s call     backend/test_single_runner.py::test_r1_every_battery_is_visible_to_pytest
+0.36s call     backend/test_tool_webcrawl.py::test_research_collection_keeps_duplicate_and_partial_source_contract[True]
+
+(11 durations < 0.1s hidden.)
+17 passed in 5.07s

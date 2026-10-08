@@ -33,8 +33,9 @@ $files_state = ($kept + $done) >> [table:sort]{by:"name"}
 $allcontrib = $files_state >> [table:each]{mode:"flat_map"} { return $it.contrib }
 $by_sku = [fn:합계]{rows:$allcontrib,key:"sku"}
 $by_store = [fn:합계]{rows:$allcontrib,key:"store"}
+$by_store_kind = $allcontrib >> [table:groupby]{by:["store","kind"],agg:{amount:["sum","amount"],qty:["sum","qty"]}} >> [table:sort]{by:["store","kind"]}
 $run = {processed_new:filter(map($new,($r)=>$r.name),($n)=>$n in $done_names),reprocessed:filter(map($changed,($r)=>$r.name),($n)=>$n in $done_names),failed:$failed,unchanged:$unchanged_names}
-$result = {run:$run,totals_by_sku:$by_sku,totals_by_store:$by_store,files_total:len($files_state),rows_total:sum(map($files_state,($r)=>$r.rows))}
+$result = {run:$run,totals_by_sku:$by_sku,totals_by_store:$by_store,totals_by_store_kind:$by_store_kind,files_total:len($files_state),rows_total:sum(map($files_state,($r)=>$r.rows))}
 $contrib_sum = sum(map($allcontrib,($r)=>$r.amount))
 $sku_sum = sum(map($by_sku,($r)=>$r.sale + $r.refund))
 assert $contrib_sum == $sku_sum, "집계와 기여분 합 불일치", {contrib:$contrib_sum,sku:$sku_sum}
@@ -43,10 +44,12 @@ assert $contrib_sum == $sku_sum, "집계와 기여분 합 불일치", {contrib:$
 $top = $by_sku >> [table:sort]{by:"net",descending:true} >> [table:take]{n:10}
 $top_lines = $top >> [table:each] { return f"| ${$it.sku} | ${$it.sale} | ${$it.refund} | ${$it.net} | ${$it.qty} |" }
 $store_lines = $by_store >> [table:each] { return f"| ${$it.store} | ${$it.sale} | ${$it.refund} | ${$it.net} | ${$it.qty} |" }
+$sk_lines = $by_store_kind >> [table:each] { return f"| ${$it.store} | ${$it.kind} | ${$it.amount} | ${$it.qty} |" }
 $fail_lines = $failed >> [table:each] { return f"- ${$it.name}: ${$it.reason}" }
 $head = len($todo) == 0 ? "새 파일 없음 — 집계는 이전과 같다." : f"새 파일 ${len($run.processed_new)}개 처리, 재처리 ${len($run.reprocessed)}개, 실패 ${len($failed)}개, 변화 없음 ${len($unchanged_names)}개."
 $summary = "# 누적 매출 집계\n\n## 이번 실행\n\n" + $head + f"\n\n누적 파일 ${len($files_state)}개, 행 ${$result.rows_total}.\n\n## sku 상위 10 (net)\n\n| sku | sale | refund | net | qty |\n| --- | --- | --- | --- | --- |\n" + join("\n",$top_lines) +
   "\n\n## store 합계\n\n| store | sale | refund | net | qty |\n| --- | --- | --- | --- | --- |\n" + join("\n",$store_lines) +
+  "\n\n## store×kind 합계\n\n| store | kind | amount | qty |\n| --- | --- | --- | --- |\n" + join("\n",$sk_lines) +
   "\n\n## 실패\n\n" + (len($fail_lines) == 0 ? "- 없음" : join("\n",$fail_lines)) + "\n"
 [self:write]{path:$out + "/summary.md",content:$summary}
 $readback = [self:read]{path:$out + "/result.json"}

@@ -1,5 +1,8 @@
 {
-  "time": "2026-10-07T19:21:53.240485",
-  "revision": "4fbde9b0dd790e6a0978a7a082c540b622bd0778",
-  "max_episode": 4403
+ "round": 34,
+ "head": "8992c646f8fa411acef116ffb14d5905368176c0",
+ "started_at": "2026-10-08 23:48:26",
+ "last_episode_before": 4479,
+ "budget_minutes": 60,
+ "mode": "\ubc1c\uacac\ub9cc(\uc218\ub9ac \uc5c6\uc74c)"
 }

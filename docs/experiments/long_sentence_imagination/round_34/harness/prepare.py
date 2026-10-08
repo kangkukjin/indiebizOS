@@ -1,78 +1,124 @@
-"""Synthetic inputs and independent minute-grid oracle (no IBL implementation)."""
+"""34회차 합성 자료·단계 연출·독립 oracle. IBL 과제 계산은 하지 않는다(oracle 은 대조용, AI 입력 사본에서 제외).
+
+사용: prepare.py generate          — source/all 에 30일치 파일 생성
+      prepare.py stage <run> <executor>  — executor(trainer|agent) 의 inbox 를 run 단계로 연출(1=10파일, 2=+10·3일차 수정, 3=변화 없음, 4=+10·1파일 손상)
+      prepare.py oracle <run> <executor> — 그 시점 inbox 의 기대값을 oracle/<executor>_run<run>.json 에 기록
+"""
 import json
+import os
 import random
+import shutil
+import sys
+import time
+from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[5]
-OUT = ROOT / 'outputs/long_sentence_imagination/2026-10-07_34회차'
+OUT = ROOT / 'outputs/long_sentence_imagination/2026-10-08_34회차'
+STORES = ['강남', '홍대', '판교']
+SKUS = [f'SKU{i:02d}' for i in range(1, 21)]
 
 
 def dump(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2))
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=1))
 
 
-def oracle(source):
-    rooms = json.loads((source / 'rooms.json').read_text())
-    bookings = json.loads((source / 'bookings.json').read_text())
-    maintenance = json.loads((source / 'maintenance.json').read_text())
-    good, bad = [], []
-    for kind, rows in [('booking', bookings), ('maintenance', maintenance)]:
-        for row in rows:
-            if (row['room'] not in rooms or row['end'] is None or
-                    not 0 <= row['start'] < row['end'] <= 1440):
-                bad.append({'id': row['id'], 'kind': kind})
-            else:
-                good.append(dict(row, kind=kind))
-    result = []
-    for room in rooms:
-        b, m = [0] * 1440, [0] * 1440
-        for row in good:
-            if row['room'] != room:
-                continue
-            counts = b if row['kind'] == 'booking' else m
-            for minute in range(row['start'], row['end']):
-                counts[minute] += 1
-        result.append({'room': room, 'booked': sum(x > 0 for x in b),
-                       'conflict': sum(x > 1 for x in b),
-                       'maintenance': sum(x > 0 for x in m),
-                       'blocked_booking': sum(x > 0 and y > 0 for x, y in zip(b, m)),
-                       'free': sum(x == 0 and y == 0 for x, y in zip(b, m)),
-                       'peak': max(b)})
-    return {'rooms': result, 'invalid': bad}
+def day_name(d):
+    return f'sales_2026-09-{d:02d}.json'
 
 
-def main():
-    rng = random.Random(3407)
-    rooms = [f'R{i:02}' for i in range(1, 41)]
-    bookings, maintenance = [], []
-    for i, room in enumerate(rooms[:-1]):
-        for j in range(30):
-            start = rng.randrange(0, 1380, 15)
-            bookings.append({'id': f'B{i:02}-{j:02}', 'room': room,
-                             'start': start, 'end': min(1440, start + rng.choice([15, 30, 60, 120]))})
-        for j in range(5):
-            start = rng.randrange(0, 1380, 30)
-            maintenance.append({'id': f'M{i:02}-{j:02}', 'room': room,
-                                'start': start, 'end': min(1440, start + 90)})
-    bookings += [{'id': 'BAD-null', 'room': 'R01', 'start': 30, 'end': None},
-                 {'id': 'BAD-reverse', 'room': 'R02', 'start': 90, 'end': 60},
-                 {'id': 'BAD-room', 'room': 'R99', 'start': 30, 'end': 60}]
-    for variant in ('base', 'variant', 'new'):
-        bs, ms = list(bookings), list(maintenance)
-        if variant == 'variant':
-            ms = []
-            bs = list(reversed(bs))
-        if variant == 'new':
-            bs = [{'id': 'N1', 'room': 'R01', 'start': 0, 'end': 720},
-                  {'id': 'N2', 'room': 'R01', 'start': 720, 'end': 1440},
-                  {'id': 'N3', 'room': 'R02', 'start': 60, 'end': 60}]
-            ms = [{'id': 'MN1', 'room': 'R01', 'start': 600, 'end': 840}]
-        source = OUT / 'source' / variant
-        for name, value in [('rooms', rooms), ('bookings', bs), ('maintenance', ms)]:
-            dump(source / (name + '.json'), value)
-        dump(OUT / ('expected_' + variant + '.json'), oracle(source))
+def generate():
+    rng = random.Random(34)
+    src = OUT / 'source' / 'all'
+    if src.exists():
+        shutil.rmtree(src)
+    for d in range(1, 31):
+        rows = []
+        for i in range(200):
+            kind = 'refund' if rng.random() < 0.12 else 'sale'
+            qty = rng.randint(1, 5)
+            rows.append({'id': f'{d:02d}-{i:04d}', 'store': rng.choice(STORES), 'sku': rng.choice(SKUS),
+                         'kind': kind, 'qty': qty, 'amount': qty * rng.choice([900, 1500, 2500, 4000, 12000])})
+        dump(src / day_name(d), rows)
+    print('generated', src)
+
+
+def inbox(executor):
+    return OUT / 'inbox' / executor
+
+
+def stage(run, executor):
+    src = OUT / 'source' / 'all'
+    box = inbox(executor)
+    box.mkdir(parents=True, exist_ok=True)
+    if run == 1:
+        for f in box.glob('*.json'):
+            f.unlink()
+        for d in range(1, 11):
+            shutil.copy(src / day_name(d), box / day_name(d))
+    elif run == 2:
+        for d in range(11, 21):
+            shutil.copy(src / day_name(d), box / day_name(d))
+        # 3일차 파일 제자리 수정: 첫 행의 amount 를 10배 (크기·mtime 변화)
+        p = box / day_name(3)
+        rows = json.loads(p.read_text())
+        rows[0]['amount'] *= 10
+        time.sleep(1.1)
+        p.write_text(json.dumps(rows, ensure_ascii=False, indent=1))
+    elif run == 3:
+        pass  # 변화 없음
+    elif run == 4:
+        for d in range(21, 31):
+            shutil.copy(src / day_name(d), box / day_name(d))
+        p = box / day_name(25)
+        text = p.read_text()
+        p.write_text(text[: len(text) // 2])  # 손상(절단)
+    else:
+        raise SystemExit('run 1~4')
+    print('staged', run, box)
+
+
+def oracle(run, executor):
+    box = inbox(executor)
+    by_sku = defaultdict(lambda: {'sale': 0, 'refund': 0, 'qty': 0})
+    by_store = defaultdict(lambda: {'sale': 0, 'refund': 0, 'qty': 0})
+    by_store_kind = defaultdict(lambda: {'amount': 0, 'qty': 0})
+    ok, failed, rows_total = [], [], 0
+    for p in sorted(box.glob('sales_*.json')):
+        try:
+            rows = json.loads(p.read_text())
+        except ValueError as exc:
+            failed.append(p.name)
+            continue
+        ok.append(p.name)
+        rows_total += len(rows)
+        for r in rows:
+            for bucket in (by_sku[r['sku']], by_store[r['store']]):
+                bucket[r['kind']] += r['amount']
+                bucket['qty'] += r['qty'] if r['kind'] == 'sale' else -r['qty']
+            by_store_kind[(r['store'], r['kind'])]['amount'] += r['amount']
+            by_store_kind[(r['store'], r['kind'])]['qty'] += r['qty']
+    expect_run = {1: {'processed_new': [day_name(d) for d in range(1, 11)], 'reprocessed': [], 'failed': []},
+                  2: {'processed_new': [day_name(d) for d in range(11, 21)], 'reprocessed': [day_name(3)], 'failed': []},
+                  3: {'processed_new': [], 'reprocessed': [], 'failed': []},
+                  4: {'processed_new': [day_name(d) for d in range(21, 31) if d != 25], 'reprocessed': [], 'failed': [day_name(25)]}}[run]
+    result = {
+        'run': expect_run,
+        'totals_by_sku': [{'sku': k, 'sale': v['sale'], 'refund': v['refund'], 'net': v['sale'] - v['refund'], 'qty': v['qty']} for k, v in sorted(by_sku.items())],
+        'totals_by_store': [{'store': k, 'sale': v['sale'], 'refund': v['refund'], 'net': v['sale'] - v['refund'], 'qty': v['qty']} for k, v in sorted(by_store.items())],
+        'totals_by_store_kind': [{'store': s, 'kind': k, 'amount': v['amount'], 'qty': v['qty']} for (s, k), v in sorted(by_store_kind.items())],
+        'files_total': len(ok), 'rows_total': rows_total, 'processed_files': ok, 'failed_files': failed,
+    }
+    dump(OUT / 'oracle' / f'{executor}_run{run}.json', result)
+    print('oracle', run, executor, 'files', len(ok), 'failed', failed, 'rows', rows_total)
 
 
 if __name__ == '__main__':
-    main()
+    cmd = sys.argv[1]
+    if cmd == 'generate':
+        generate()
+    elif cmd == 'stage':
+        stage(int(sys.argv[2]), sys.argv[3])
+    elif cmd == 'oracle':
+        oracle(int(sys.argv[2]), sys.argv[3])

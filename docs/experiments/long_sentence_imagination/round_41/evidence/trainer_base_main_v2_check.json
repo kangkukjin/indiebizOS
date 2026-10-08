@@ -1,0 +1,107 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 41회차 v2 (수정 2·3: changelog 제목 null 보간 → ?: 안 도구 호출 → 함수, null 가능 숫자 보간 → 함수가 Text row 생성) ← v1 (수정 1: changelog 보간 안 이스케이프 따옴표 SYNTAX → 값을 먼저 꺼냄) ← 최초 초안 — 사용자 실험 연구 보고서. inputs: src(자료 폴더), out(출력 폴더), prev(이전 out 폴더 또는 null)\n\n# ---- 순수 계산 ----\n[def:평균]($xs) { return sum($xs) / len($xs) }\n[def:표준편차]($xs) {\n  $m = [fn:평균]{xs:$xs}\n  return (sum(map($xs,($x)=>($x - $m) * ($x - $m))) / (len($xs) - 1)) ** 0.5\n}\n[def:수인가]($v) {\n  [try] { $x = number($v); return true } [catch] { return false }\n}\n[def:임계]($tc,$df,$col) {\n  $row = get($tc,text(min($df,120)))\n  return $col == \"p05\" ? $row.p05 : $row.p0125\n}\n[def:조건통계]($g,$t,$xs,$tc) {\n  $n = len($xs)\n  [if:$n < 2] { return {group:$g,task:$t,n:$n,mean:$n == 1 ? $xs[0] : null,sd:null,ci_low:null,ci_high:null,half:null,row:f\"| ${g} | ${t} | ${n} | — | — | — |\"} }\n  $m = [fn:평균]{xs:$xs}\n  $s = [fn:표준편차]{xs:$xs}\n  $half = [fn:임계]{tc:$tc,df:$n - 1,col:\"p05\"} * $s / ($n ** 0.5)\n  $mean_r = round($m,3)\n  $sd_r = round($s,3)\n  $lo = round($m - $half,3)\n  $hi = round($m + $half,3)\n  return {group:$g,task:$t,n:$n,mean:$mean_r,sd:$sd_r,ci_low:$lo,ci_high:$hi,half:round($half,3),row:f\"| ${g} | ${t} | ${n} | ${mean_r} | ${sd_r} | ${lo} ~ ${hi} |\"}\n}\n[def:웰치]($xa,$xb,$tc) {\n  $na = len($xa)\n  $nb = len($xb)\n  [if:$na < 8 or $nb < 8] { return {testable:false,n_a:$na,n_b:$nb,row:f\"${na}/${nb} | — | — | — | — | —\"} }\n  $ma = [fn:평균]{xs:$xa}\n  $mb = [fn:평균]{xs:$xb}\n  $sa = [fn:표준편차]{xs:$xa}\n  $sb = [fn:표준편차]{xs:$xb}\n  $va = $sa * $sa / $na\n  $vb = $sb * $sb / $nb\n  $t = ($mb - $ma) / (($va + $vb) ** 0.5)\n  $df = round((($va + $vb) * ($va + $vb)) // ($va * $va / ($na - 1) + $vb * $vb / ($nb - 1)))\n  $pooled = ((($na - 1) * $sa * $sa + ($nb - 1) * $sb * $sb) / ($na + $nb - 2)) ** 0.5\n  $crit = [fn:임계]{tc:$tc,df:$df,col:\"p0125\"}\n  $ma_r = round($ma,3)\n  $mb_r = round($mb,3)\n  $t_r = round($t,4)\n  $d_r = round(($mb - $ma) / $pooled,4)\n  return {testable:true,n_a:$na,n_b:$nb,mean_a:$ma_r,mean_b:$mb_r,t:$t_r,df:$df,t_crit_0125:$crit,significant:abs($t) > $crit,cohen_d:$d_r,row:f\"${na}/${nb} | ${ma_r} / ${mb_r} | ${t_r} | ${df} | ${crit} | ${d_r}\"}\n}\n[def:판정]($h,$w) {\n  [if:not $w.testable] { return \"검정 불가\" }\n  $dir = $w.mean_b < $w.mean_a ? \"B<A\" : \"B>A\"\n  [if:$w.significant] { return $dir == $h.direction ? \"지지\" : \"불지지(반대 방향 유의)\" }\n  return \"불지지(비유의 — 차이 없음 입증 아님)\"\n}\n# 파일 하나의 trial 품질: 상태 {seen, valid, excluded, dup}\n[def:trial검사]($st,$r,$file) {\n  [if:$r.trial_id in $st.seen] { return {**$st,dup:$st.dup + 1,excluded:$st.",
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/trainer/base",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/trainer/out",
+   "prev": null
+  }
+ },
+ "elapsed": 0.569,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards_total": 275,
+  "guards_inner": 0,
+  "guards_omitted": 275,
+  "result_type": "{files: Number, excluded: Number, dup: Unknown, low_n: List<Text>, verdicts: List<Text>, fig1: Bool, fig2: Bool, prev: Bool, cond_changed: Number, hyp_changed: Number}",
+  "effects": [
+   "model",
+   "read_external",
+   "write_external"
+  ],
+  "plan_hash": "59df355643bdee612e2cc8619c4b7dd2cac74c1d97505dcfdade8b403cdcec7d",
+  "source_hash": "5e0a7a4fc960ab6f7e9eb21302e44c8144fbf0a5aa52503bdd552c8ce759c330",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "5e0a7a4fc960ab6f7e9eb21302e44c8144fbf0a5aa52503bdd552c8ce759c330",
+      "start": 3671,
+      "end": 3989,
+      "line": 76,
+      "column": 26,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 80,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "5e0a7a4fc960ab6f7e9eb21302e44c8144fbf0a5aa52503bdd552c8ce759c330",
+      "start": 6006,
+      "end": 6100,
+      "line": 111,
+      "column": 31,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 111,
+      "end_column": 125,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "self:list",
+    "self:read",
+    "self:write",
+    "table:brief",
+    "table:chart"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "실행하려면 execute_args 를 그대로 check 없이 호출하세요 — 프로그램 원문과 검사한 inputs·budget·edition·value_protocols를 재사용하므로 다시 적지 않습니다. 바꿀 인자만 명시하면 그 인자 전체를 교체합니다. 실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.",
+  "guards_ref": {
+   "id": "656cb5a9ee5daef07ecf79951306ac3831507e5135525848a7ac04783f615558",
+   "chars": 256448,
+   "read_args": {
+    "id": "656cb5a9ee5daef07ecf79951306ac3831507e5135525848a7ac04783f615558",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  }
+ }
+}

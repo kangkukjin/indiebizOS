@@ -1,0 +1,815 @@
+{
+ "run_id": "20261009T032342-53daec0dff26",
+ "total_trials": 719,
+ "valid_trials": 715,
+ "excluded_trials": 4,
+ "check_total_eq_valid_plus_excluded": true,
+ "excluded_by_reason": {
+  "duplicate_trial_id": 0,
+  "duration_not_numeric": 0,
+  "duration_le_0": 1,
+  "duration_gt_600": 1,
+  "errors_not_numeric": 2
+ },
+ "expected_trials_by_design": 720,
+ "missing_trial_records": [
+  {
+   "file": "P23.json",
+   "participant": "P23",
+   "task_type": "T3",
+   "rep": 4
+  }
+ ],
+ "missing_note": "파일에 아예 없는 trial 은 제외가 아니라 결측이며 total_trials 에 포함되지 않는다",
+ "reason_rule": "여러 사유가 겹치면 첫 사유(중복→완료시간→errors 순)로 1회만 계수, all_reasons 에 전부 기록",
+ "excluded": [
+  {
+   "file": "P05.json",
+   "participant": "P05",
+   "trial_id": "P05-03",
+   "task_type": "T1",
+   "reason": "duration_le_0",
+   "all_reasons": [
+    "duration_le_0"
+   ],
+   "duration_s": 0,
+   "errors": 0
+  },
+  {
+   "file": "P12.json",
+   "participant": "P12",
+   "trial_id": "P12-08",
+   "task_type": "T2",
+   "reason": "duration_gt_600",
+   "all_reasons": [
+    "duration_gt_600"
+   ],
+   "duration_s": 650.0,
+   "errors": 1
+  },
+  {
+   "file": "P31.json",
+   "participant": "P31",
+   "trial_id": "P31-05",
+   "task_type": "T2",
+   "reason": "errors_not_numeric",
+   "all_reasons": [
+    "errors_not_numeric"
+   ],
+   "duration_s": 98.1,
+   "errors": "NA"
+  },
+  {
+   "file": "P48.json",
+   "participant": "P48",
+   "trial_id": "P48-11",
+   "task_type": "T3",
+   "reason": "errors_not_numeric",
+   "all_reasons": [
+    "errors_not_numeric"
+   ],
+   "duration_s": 116.7,
+   "errors": "NA"
+  }
+ ],
+ "per_participant": [
+  {
+   "participant": "P01",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P02",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P03",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P04",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P05",
+   "group": "A",
+   "total": 12,
+   "valid": 11,
+   "excluded": 1,
+   "valid_by_task": {
+    "T1": 3,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P06",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P07",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P08",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P09",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P10",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P11",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P12",
+   "group": "A",
+   "total": 12,
+   "valid": 11,
+   "excluded": 1,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 3,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P13",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P14",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P15",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P16",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P17",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P18",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P19",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P20",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P21",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P22",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P23",
+   "group": "A",
+   "total": 11,
+   "valid": 11,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 3
+   }
+  },
+  {
+   "participant": "P24",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P25",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P26",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P27",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P28",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P29",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P30",
+   "group": "A",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P31",
+   "group": "B",
+   "total": 12,
+   "valid": 11,
+   "excluded": 1,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 3,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P32",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P33",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P34",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P35",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P36",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P37",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P38",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P39",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P40",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P41",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P42",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P43",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P44",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P45",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P46",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P47",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P48",
+   "group": "B",
+   "total": 12,
+   "valid": 11,
+   "excluded": 1,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 3
+   }
+  },
+  {
+   "participant": "P49",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P50",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P51",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P52",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P53",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P54",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P55",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P56",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P57",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P58",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P59",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  },
+  {
+   "participant": "P60",
+   "group": "B",
+   "total": 12,
+   "valid": 12,
+   "excluded": 0,
+   "valid_by_task": {
+    "T1": 4,
+    "T2": 4,
+    "T3": 4
+   }
+  }
+ ],
+ "participants_without_trial_file": [],
+ "participants_with_no_valid_trial_in_task": [],
+ "group_mismatch_file_vs_roster": [],
+ "survey_missing_participants": [
+  "P17"
+ ],
+ "survey_issues": [],
+ "survey_unknown_participants": [],
+ "min_n_per_condition": 8,
+ "conditions_n": {
+  "A-T1": 30,
+  "A-T2": 30,
+  "A-T3": 30,
+  "B-T1": 30,
+  "B-T2": 30,
+  "B-T3": 30
+ },
+ "conditions_below_min_n": []
+}

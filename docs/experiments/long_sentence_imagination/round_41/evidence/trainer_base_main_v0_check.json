@@ -1,0 +1,109 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 41회차 최초 초안 — 사용자 실험 연구 보고서. inputs: src(자료 폴더), out(출력 폴더), prev(이전 out 폴더 또는 null)\n\n# ---- 순수 계산 ----\n[def:평균]($xs) { return sum($xs) / len($xs) }\n[def:표준편차]($xs) {\n  $m = [fn:평균]{xs:$xs}\n  return (sum(map($xs,($x)=>($x - $m) * ($x - $m))) / (len($xs) - 1)) ** 0.5\n}\n[def:수인가]($v) {\n  [try] { $x = number($v); return true } [catch] { return false }\n}\n[def:임계]($tc,$df,$col) {\n  $row = get($tc,text(min($df,120)))\n  return $col == \"p05\" ? $row.p05 : $row.p0125\n}\n[def:조건통계]($g,$t,$xs,$tc) {\n  $n = len($xs)\n  [if:$n < 2] { return {group:$g,task:$t,n:$n,mean:$n == 1 ? $xs[0] : null,sd:null,ci_low:null,ci_high:null,half:null} }\n  $m = [fn:평균]{xs:$xs}\n  $s = [fn:표준편차]{xs:$xs}\n  $half = [fn:임계]{tc:$tc,df:$n - 1,col:\"p05\"} * $s / ($n ** 0.5)\n  return {group:$g,task:$t,n:$n,mean:round($m,3),sd:round($s,3),ci_low:round($m - $half,3),ci_high:round($m + $half,3),half:round($half,3)}\n}\n[def:웰치]($xa,$xb,$tc) {\n  $na = len($xa)\n  $nb = len($xb)\n  [if:$na < 8 or $nb < 8] { return {testable:false,n_a:$na,n_b:$nb} }\n  $ma = [fn:평균]{xs:$xa}\n  $mb = [fn:평균]{xs:$xb}\n  $sa = [fn:표준편차]{xs:$xa}\n  $sb = [fn:표준편차]{xs:$xb}\n  $va = $sa * $sa / $na\n  $vb = $sb * $sb / $nb\n  $t = ($mb - $ma) / (($va + $vb) ** 0.5)\n  $df = round((($va + $vb) * ($va + $vb)) // ($va * $va / ($na - 1) + $vb * $vb / ($nb - 1)))\n  $pooled = ((($na - 1) * $sa * $sa + ($nb - 1) * $sb * $sb) / ($na + $nb - 2)) ** 0.5\n  $crit = [fn:임계]{tc:$tc,df:$df,col:\"p0125\"}\n  return {testable:true,n_a:$na,n_b:$nb,mean_a:round($ma,3),mean_b:round($mb,3),t:round($t,4),df:$df,t_crit_0125:$crit,significant:abs($t) > $crit,cohen_d:round(($mb - $ma) / $pooled,4)}\n}\n[def:판정]($h,$w) {\n  [if:not $w.testable] { return \"검정 불가\" }\n  $dir = $w.mean_b < $w.mean_a ? \"B<A\" : \"B>A\"\n  [if:$w.significant] { return $dir == $h.direction ? \"지지\" : \"불지지(반대 방향 유의)\" }\n  return \"불지지(비유의 — 차이 없음 입증 아님)\"\n}\n# 파일 하나의 trial 품질: 상태 {seen, valid, excluded, dup}\n[def:trial검사]($st,$r,$file) {\n  [if:$r.trial_id in $st.seen] { return {**$st,dup:$st.dup + 1,excluded:$st.excluded + [{file:$file,trial_id:$r.trial_id,reason:\"duplicate_trial_id\"}]} }\n  $seen = $st.seen + [$r.trial_id]\n  $dur_ok = [fn:수인가]{v:$r.duration_s} and number($r.duration_s) > 0 and number($r.duration_s) <= 600\n  [if:not $dur_ok] { return {**$st,seen:$seen,excluded:$st.excluded + [{file:$file,trial_id:$r.trial_id,reason:\"duration_out_of_range\"}]} }\n  [if:not [fn:수인가]{v:$r.errors}] { return {**$st,seen:$seen,excluded:$st.excluded + [{file:$file,trial_id:$r.trial_id,reason:\"errors_",
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/trainer/base",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/trainer/out",
+   "prev": null
+  }
+ },
+ "elapsed": 0.273,
+ "response": {
+  "edition": 2,
+  "ok": false,
+  "success": false,
+  "executed": false,
+  "status": "invalid",
+  "error": "보간식 안의 이스케이프 따옴표는 해석할 수 없습니다. 바깥과 다른 따옴표 또는 삼중 따옴표를 사용하세요.",
+  "diagnostic": {
+   "code": "SYNTAX",
+   "kind": "compile",
+   "message": "보간식 안의 이스케이프 따옴표는 해석할 수 없습니다. 바깥과 다른 따옴표 또는 삼중 따옴표를 사용하세요.",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [],
+   "details": {},
+   "source_span": {
+    "source_hash": "f1e16d6408488353435c1e881514f684141fc1eae43ef074918ebb90f913d6cf",
+    "start": 12159,
+    "end": 12160,
+    "line": 218,
+    "column": 127
+   },
+   "rule": "SYNTAX",
+   "severity": "error",
+   "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+   "location": {
+    "source_hash": "f1e16d6408488353435c1e881514f684141fc1eae43ef074918ebb90f913d6cf",
+    "start": 12159,
+    "end": 12160,
+    "line": 218,
+    "column": 127,
+    "source": "<program>",
+    "uri": "ibl://program",
+    "end_line": 218,
+    "end_column": 128,
+    "offset_encoding": "unicode-codepoints"
+   }
+  },
+  "issues": [
+   {
+    "code": "SYNTAX",
+    "kind": "compile",
+    "message": "보간식 안의 이스케이프 따옴표는 해석할 수 없습니다. 바깥과 다른 따옴표 또는 삼중 따옴표를 사용하세요.",
+    "frames": [],
+    "has_partial": false,
+    "partial": null,
+    "evidence": [],
+    "details": {},
+    "source_span": {
+     "source_hash": "f1e16d6408488353435c1e881514f684141fc1eae43ef074918ebb90f913d6cf",
+     "start": 12159,
+     "end": 12160,
+     "line": 218,
+     "column": 127
+    },
+    "rule": "SYNTAX",
+    "severity": "error",
+    "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+    "location": {
+     "source_hash": "f1e16d6408488353435c1e881514f684141fc1eae43ef074918ebb90f913d6cf",
+     "start": 12159,
+     "end": 12160,
+     "line": 218,
+     "column": 127,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 218,
+     "end_column": 128,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "source_hash": "f1e16d6408488353435c1e881514f684141fc1eae43ef074918ebb90f913d6cf",
+  "request_inputs": {
+   "input_args": {
+    "src": {
+     "$ref": "900382798da5004803c57e6c75cbce92531710b289054cace4422912694a9d73"
+    },
+    "out": {
+     "$ref": "f387c010a525458afbd5364bb6f00fcca7182c86507505049c546788741272ab"
+    },
+    "prev": {
+     "$ref": "2931339a89fe8f646cfb37f00e6d81a8957fb48033b8131d37681e49ff643ddf"
+    }
+   },
+   "unavailable": {},
+   "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  },
+  "revise_hint": "고칠 조각만 보내세요: revise_args.code 를 그대로 code 에 넣고 code_edits 에 {old, new} 를 적습니다(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 같은 inputs·budget·check 를 함께 보냅니다. 원문 전체를 다시 적지 않습니다."
+ }
+}

@@ -1,0 +1,236 @@
+#!ibl edition=2
+# 41회차 최초 초안 — 사용자 실험 연구 보고서. inputs: src(자료 폴더), out(출력 폴더), prev(이전 out 폴더 또는 null)
+
+# ---- 순수 계산 ----
+[def:평균]($xs) { return sum($xs) / len($xs) }
+[def:표준편차]($xs) {
+  $m = [fn:평균]{xs:$xs}
+  return (sum(map($xs,($x)=>($x - $m) * ($x - $m))) / (len($xs) - 1)) ** 0.5
+}
+[def:수인가]($v) {
+  [try] { $x = number($v); return true } [catch] { return false }
+}
+[def:임계]($tc,$df,$col) {
+  $row = get($tc,text(min($df,120)))
+  return $col == "p05" ? $row.p05 : $row.p0125
+}
+[def:조건통계]($g,$t,$xs,$tc) {
+  $n = len($xs)
+  [if:$n < 2] { return {group:$g,task:$t,n:$n,mean:$n == 1 ? $xs[0] : null,sd:null,ci_low:null,ci_high:null,half:null} }
+  $m = [fn:평균]{xs:$xs}
+  $s = [fn:표준편차]{xs:$xs}
+  $half = [fn:임계]{tc:$tc,df:$n - 1,col:"p05"} * $s / ($n ** 0.5)
+  return {group:$g,task:$t,n:$n,mean:round($m,3),sd:round($s,3),ci_low:round($m - $half,3),ci_high:round($m + $half,3),half:round($half,3)}
+}
+[def:웰치]($xa,$xb,$tc) {
+  $na = len($xa)
+  $nb = len($xb)
+  [if:$na < 8 or $nb < 8] { return {testable:false,n_a:$na,n_b:$nb} }
+  $ma = [fn:평균]{xs:$xa}
+  $mb = [fn:평균]{xs:$xb}
+  $sa = [fn:표준편차]{xs:$xa}
+  $sb = [fn:표준편차]{xs:$xb}
+  $va = $sa * $sa / $na
+  $vb = $sb * $sb / $nb
+  $t = ($mb - $ma) / (($va + $vb) ** 0.5)
+  $df = round((($va + $vb) * ($va + $vb)) // ($va * $va / ($na - 1) + $vb * $vb / ($nb - 1)))
+  $pooled = ((($na - 1) * $sa * $sa + ($nb - 1) * $sb * $sb) / ($na + $nb - 2)) ** 0.5
+  $crit = [fn:임계]{tc:$tc,df:$df,col:"p0125"}
+  return {testable:true,n_a:$na,n_b:$nb,mean_a:round($ma,3),mean_b:round($mb,3),t:round($t,4),df:$df,t_crit_0125:$crit,significant:abs($t) > $crit,cohen_d:round(($mb - $ma) / $pooled,4)}
+}
+[def:판정]($h,$w) {
+  [if:not $w.testable] { return "검정 불가" }
+  $dir = $w.mean_b < $w.mean_a ? "B<A" : "B>A"
+  [if:$w.significant] { return $dir == $h.direction ? "지지" : "불지지(반대 방향 유의)" }
+  return "불지지(비유의 — 차이 없음 입증 아님)"
+}
+# 파일 하나의 trial 품질: 상태 {seen, valid, excluded, dup}
+[def:trial검사]($st,$r,$file) {
+  [if:$r.trial_id in $st.seen] { return {**$st,dup:$st.dup + 1,excluded:$st.excluded + [{file:$file,trial_id:$r.trial_id,reason:"duplicate_trial_id"}]} }
+  $seen = $st.seen + [$r.trial_id]
+  $dur_ok = [fn:수인가]{v:$r.duration_s} and number($r.duration_s) > 0 and number($r.duration_s) <= 600
+  [if:not $dur_ok] { return {**$st,seen:$seen,excluded:$st.excluded + [{file:$file,trial_id:$r.trial_id,reason:"duration_out_of_range"}]} }
+  [if:not [fn:수인가]{v:$r.errors}] { return {**$st,seen:$seen,excluded:$st.excluded + [{file:$file,trial_id:$r.trial_id,reason:"errors_non_numeric"}]} }
+  return {**$st,seen:$seen,valid:$st.valid + [{task:$r.task_type,dur:number($r.duration_s)}]}
+}
+
+# ---- 읽기 ----
+$design = ([self:read]{path:f"${src}/design.json"}).data
+$parts = ([self:read]{path:f"${src}/participants.csv"}).data.items
+$tc_doc = ([self:read]{path:f"${src}/t_critical.json"}).data
+$survey_rows = ([self:read]{path:f"${src}/survey.csv"}).data.items
+$trial_files = sorted([self:list]{path:f"${src}/trials",pattern:"*.json"},"name")
+$tc = from_entries(map($tc_doc.rows,($r)=>[text($r[0]),{p05:$r[1],p0125:$r[2]}]))
+$grp = from_entries(map($parts,($p)=>[$p.id,$p.group]))
+$min_n = $design.min_n_per_condition
+
+# ---- (1) 품질 ----
+$files = $trial_files >> [table:each] {
+  $d = ([self:read]{path:$it.path}).data
+  $st = reduce($d.trials,{seen:[],valid:[],excluded:[],dup:0},($acc,$r)=>[fn:trial검사]{st:$acc,r:$r,file:$it.name})
+  return {participant:$d.participant,group:get($grp,$d.participant),valid:$st.valid,excluded:$st.excluded,dup:$st.dup,valid_count:len($st.valid)}
+}
+$excluded = reduce($files,[],($a,$f)=>$a + $f.excluded)
+$dup_count = sum(map($files,($f)=>$f.dup))
+$per_participant = from_entries(map($files,($f)=>[$f.participant,$f.valid_count]))
+# 참가자×과제 평균(분석 단위)
+$unit = reduce($files,[],($a,$f)=>$a + map(["T1","T2","T3"],($t)=>{participant:$f.participant,group:$f.group,task:$t,
+  xs:map(filter($f.valid,($v)=>$v.task == $t),($v)=>$v.dur)}))
+$unit_ok = filter($unit,($u)=>len($u.xs) > 0)
+$unit_mean = map($unit_ok,($u)=>{**$u,m:sum($u.xs) / len($u.xs)})
+$cond_keys = [{g:"A",t:"T1"},{g:"B",t:"T1"},{g:"A",t:"T2"},{g:"B",t:"T2"},{g:"A",t:"T3"},{g:"B",t:"T3"}]
+$cond_vals = map($cond_keys,($c)=>{**$c,xs:map(filter($unit_mean,($u)=>$u.group == $c.g and $u.task == $c.t),($u)=>$u.m)})
+$conditions = map($cond_vals,($c)=>[fn:조건통계]{g:$c.g,t:$c.t,xs:$c.xs,tc:$tc})
+$low_n = map(filter($conditions,($c)=>$c.n < $min_n),($c)=>f"${c.group}-${c.task}")
+
+# ---- (4) 설문 ----
+$items = $design.survey.items
+$reverse = $design.survey.reverse
+$sat = map($survey_rows,($r)=>{participant:$r.participant,group:get($grp,$r.participant),
+  score:sum(map($items,($q)=>($q in $reverse) ? 6 - number(get($r,$q)) : number(get($r,$q)))) / len($items)})
+$sat_a = map(filter($sat,($s)=>$s.group == "A"),($s)=>$s.score)
+$sat_b = map(filter($sat,($s)=>$s.group == "B"),($s)=>$s.score)
+$survey_missing = filter(map($parts,($p)=>$p.id),($id)=>not ($id in map($sat,($s)=>$s.participant)))
+$sat_stats = {A:{n:len($sat_a),mean:round([fn:평균]{xs:$sat_a},3),sd:round([fn:표준편차]{xs:$sat_a},3)},B:{n:len($sat_b),mean:round([fn:평균]{xs:$sat_b},3),sd:round([fn:표준편차]{xs:$sat_b},3)}}
+
+# ---- (3) 가설 ----
+[def:가설검정]($h,$cond_vals,$sat_a,$sat_b,$tc) {
+  $xa = $h.measure == "duration" ? filter($cond_vals,($c)=>$c.g == "A" and $c.t == $h.task)[0].xs : $sat_a
+  $xb = $h.measure == "duration" ? filter($cond_vals,($c)=>$c.g == "B" and $c.t == $h.task)[0].xs : $sat_b
+  $w = [fn:웰치]{xa:$xa,xb:$xb,tc:$tc}
+  return {id:$h.id,text:$h.text,direction:$h.direction,verdict:[fn:판정]{h:$h,w:$w},**$w}
+}
+$hyps = $design.hypotheses >> [table:each] { return [fn:가설검정]{h:$it,cond_vals:$cond_vals,sat_a:$sat_a,sat_b:$sat_b,tc:$tc} }
+
+# ---- 이전 실행과 비교(changelog) ----
+$prev_list = $prev == null ? [] : [self:list]{path:$prev,pattern:"stats.json"}
+$has_prev = len($prev_list) > 0
+$prev_stats = $has_prev ? ([self:read]{path:$prev_list[0].path}).data : null
+$cond_changed = $has_prev ? filter($conditions,($c)=>not (json(filter($prev_stats.conditions,($p)=>$p.group == $c.group and $p.task == $c.task)) == json([$c]))) : $conditions
+$hyp_changed = $has_prev ? filter($hyps,($h)=>not (json(filter($prev_stats.hypotheses,($p)=>$p.id == $h.id)) == json([$h]))) : $hyps
+$sat_changed = $has_prev ? not (json($prev_stats.satisfaction) == json($sat_stats)) : true
+$fig1_needed = not $has_prev or len($cond_changed) > 0
+$fig2_needed = not $has_prev or $sat_changed
+
+# ---- (5) 그림 ----
+$labels = map($conditions,($c)=>f"${c.group}-${c.task}")
+$means = map($conditions,($c)=>$c.mean == null ? 0 : $c.mean)
+$halves = map($conditions,($c)=>$c.half == null ? 0 : $c.half)
+[def:그림1]($needed,$labels,$means,$halves,$out,$prev) {
+  [if:not $needed] { return {path:f"${prev}/fig_duration.png",regenerated:false} }
+  $r = [table:chart]{title:"조건별 평균 완료시간(초)과 95% 신뢰구간",spec:{data:[{type:"bar",x:$labels,y:$means,error_y:{type:"data",array:$halves,visible:true}}],layout:{title:"조건별 평균 완료시간(초)과 95% 신뢰구간",yaxis:{title:"초"}}},output_path:f"${out}/fig_duration",output_format:"png"}
+  return {path:$r.path,regenerated:true}
+}
+[def:그림2]($needed,$sat_stats,$out,$prev) {
+  [if:not $needed] { return {path:f"${prev}/fig_satisfaction.png",regenerated:false} }
+  $r = [table:chart]{title:"집단별 만족도(1~5)",spec:{data:[{type:"bar",x:["A","B"],y:[$sat_stats.A.mean,$sat_stats.B.mean],error_y:{type:"data",array:[$sat_stats.A.sd,$sat_stats.B.sd],visible:true}}],layout:{title:"집단별 만족도 평균(오차막대 = 표준편차)",yaxis:{title:"점",range:[1,5]}}},output_path:f"${out}/fig_satisfaction",output_format:"png"}
+  return {path:$r.path,regenerated:true}
+}
+$fig1 = [fn:그림1]{needed:$fig1_needed,labels:$labels,means:$means,halves:$halves,out:$out,prev:$prev == null ? "" : $prev}
+$fig2 = [fn:그림2]{needed:$fig2_needed,sat_stats:$sat_stats,out:$out,prev:$prev == null ? "" : $prev}
+
+# ---- 저장: quality·stats ----
+$quality = {excluded:$excluded,excluded_count:len($excluded),duplicate_count:$dup_count,participants_valid_trials:$per_participant,low_n_conditions:$low_n,survey_missing:$survey_missing}
+$stats = {conditions:$conditions,satisfaction:$sat_stats,hypotheses:$hyps}
+[self:write]{path:f"${out}/quality.json",content:json($quality)}
+[self:write]{path:f"${out}/stats.json",content:json($stats)}
+
+# ---- (6) 산문 1회(초록·한계)와 보고서 ----
+$brief_items = map($hyps,($h)=>{id:$h.id,text:$h.text,verdict:$h.verdict,t:get($h,"t"),df:get($h,"df"),cohen_d:get($h,"cohen_d"),n_a:$h.n_a,n_b:$h.n_b})
+$brief = $brief_items >> [table:brief]{instruction:"위 가설 판정 표만 근거로 연구 보고서의 '초록' 한 문단(4문장 이내)과 '한계' 한 문단(3문장 이내)을 한국어로 써라. 숫자는 표에 있는 t·자유도·Cohen's d·n 만 쓰고 새 숫자를 만들지 마라. 비유의 결과를 '차이가 없다'고 단정하지 말고 '유의한 차이를 찾지 못했다'로 써라. 두 문단 사이는 빈 줄 하나. 제목은 쓰지 마라."}
+$prose = $brief.message
+$cond_rows = join("\n",map($conditions,($c)=>f"| ${c.group} | ${c.task} | ${c.n} | ${c.mean} | ${c.sd} | ${c.ci_low} ~ ${c.ci_high} |"))
+$hyp_rows = join("\n",map($hyps,($h)=>$h.testable
+  ? f"| ${h.id} | ${h.text} | ${h.n_a}/${h.n_b} | ${h.mean_a} / ${h.mean_b} | ${h.t} | ${h.df} | ${h.t_crit_0125} | ${h.cohen_d} | **${h.verdict}** |"
+  : f"| ${h.id} | ${h.text} | ${h.n_a}/${h.n_b} | — | — | — | — | — | **${h.verdict}** |"))
+$excl_rows = len($excluded) == 0 ? "- 없음" : join("\n",map($excluded,($e)=>f"- ${e.file} ${e.trial_id}: ${e.reason}"))
+$missing_txt = len($survey_missing) == 0 ? "없음" : join(", ",$survey_missing)
+$low_n_txt = len($low_n) == 0 ? "없음" : join(", ",$low_n)
+$n_excl = len($excluded)
+$n_files = len($files)
+$sat_a_n = $sat_stats.A.n
+$sat_a_m = $sat_stats.A.mean
+$sat_a_sd = $sat_stats.A.sd
+$sat_b_n = $sat_stats.B.n
+$sat_b_m = $sat_stats.B.mean
+$sat_b_sd = $sat_stats.B.sd
+$alpha_adj = $design.correction.alpha_adjusted
+$fig1_path = $fig1.path
+$fig2_path = $fig2.path
+$report = f"""# ${design.title} — 연구 보고서
+
+## 초록·한계(산문)
+${prose}
+
+## 방법
+- 설계: 인터페이스 A/B × 과제 T1~T3, 참가자 ${n_files}명, 각 과제 4회. 사전등록 design.json 의 규칙을 그대로 따랐다.
+- 분석 단위: ${design.unit_of_analysis}. 조건당 최소 n=${min_n}.
+- 제외 규칙: 완료시간 0 이하·600초 초과, errors 비수치, 같은 파일 안 중복 trial_id(첫 것만 유효).
+- 신뢰구간: ${design.ci}. 검정: ${design.test}. 보정 α=${alpha_adj}. 효과크기: ${design.effect_size}.
+- 설문: Q3·Q6 역문항 반전 뒤 7문항 평균 = 만족도.
+
+## 결과
+### 자료 품질
+- 제외된 trial ${n_excl}건, 중복 trial_id ${dup_count}건, 설문 응답 없음: ${missing_txt}, n<${min_n} 조건: ${low_n_txt}
+${excl_rows}
+
+### 조건별 완료시간(초)
+| 인터페이스 | 과제 | n | 평균 | sd | 95% CI |
+|---|---|---:|---:|---:|---|
+${cond_rows}
+
+![조건별 평균 완료시간](${fig1_path})
+
+### 만족도
+| 집단 | n | 평균 | sd |
+|---|---:|---:|---:|
+| A | ${sat_a_n} | ${sat_a_m} | ${sat_a_sd} |
+| B | ${sat_b_n} | ${sat_b_m} | ${sat_b_sd} |
+
+![집단별 만족도](${fig2_path})
+
+### 가설 검정(Welch t, 양측 임계값 p0125)
+| 가설 | 내용 | n(A/B) | 평균 A / B | t | df | 임계값 | Cohen's d | 판정 |
+|---|---|---|---|---:|---:|---:|---:|---|
+${hyp_rows}
+
+## 가설별 결론
+${join("\n",map($hyps,($h)=>f"- ${h.id} ${h.text}: ${h.verdict}"))}
+"""
+[self:write]{path:f"${out}/report.md",content:$report}
+
+# ---- (7) manifest ----
+$input_files = [self:list]{path:$src,pattern:"*.*",hash:true}
+$trial_hashes = [self:list]{path:f"${src}/trials",pattern:"*.json",hash:true}
+$inputs = from_entries(map($input_files,($f)=>[$f.name,$f.sha256]) + map($trial_hashes,($f)=>[f"trials/${f.name}",$f.sha256]))
+$manifest = {inputs_sha256:$inputs,
+  tables:[{name:"quality",sources:["trials/*.json","participants.csv","survey.csv"],rule:"design.exclusion"},
+          {name:"conditions",sources:["trials/*.json","participants.csv","t_critical.json(p05)"],rule:"design.ci"},
+          {name:"satisfaction",sources:["survey.csv","participants.csv"],rule:"design.survey"},
+          {name:"hypotheses",sources:["stats.conditions","stats.satisfaction","t_critical.json(p0125)"],rule:"design.test + design.correction + design.effect_size"}],
+  figures:[{file:$fig1.path,source:"conditions",regenerated:$fig1.regenerated},{file:$fig2.path,source:"satisfaction",regenerated:$fig2.regenerated}],
+  prose:{tool:"table:brief",source:"hypotheses"},prev:$prev,program:"main_v0.ibl"}
+[self:write]{path:f"${out}/manifest.json",content:json($manifest)}
+
+# ---- changelog(이전 실행이 있을 때) ----
+[if:$has_prev] {
+  $cl_cond = len($cond_changed) == 0 ? "- 없음" : join("\n",map($cond_changed,($c)=>f"- 조건 ${c.group}-${c.task}: 평균 ${c.mean}, CI ${c.ci_low} ~ ${c.ci_high}"))
+  $cl_hyp = len($hyp_changed) == 0 ? "- 없음" : join("\n",map($hyp_changed,($h)=>f"- ${h.id}: ${h.verdict} (t ${get($h,\"t\")})"))
+  $cl_fig = join("\n",[f"- 그림 1 재생성: ${fig1.regenerated}",f"- 그림 2 재생성: ${fig2.regenerated}"])
+  $cl_sat = $sat_changed ? "- 만족도 표 바뀜" : "- 만족도 표 변화 없음"
+  [self:write]{path:f"${out}/changelog.md",content:f"""# 변경 기록 (이전: ${prev})
+
+## 바뀐 조건 표
+${cl_cond}
+
+## 바뀐 가설 판정
+${cl_hyp}
+
+## 만족도
+${cl_sat}
+
+## 그림
+${cl_fig}
+"""}
+}
+return {files:$n_files,excluded:$n_excl,dup:$dup_count,low_n:$low_n,verdicts:map($hyps,($h)=>f"${h.id}:${h.verdict}"),fig1:$fig1.regenerated,fig2:$fig2.regenerated,prev:$has_prev,cond_changed:len($cond_changed),hyp_changed:len($hyp_changed)}

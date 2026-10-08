@@ -4,6 +4,13 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 41회차 — 소규모 사용자 실험의 연구 보고서 (2026-10-09, 훈련·발견만)
+
+정본 main `95401585`, 03:13 KST 시작, 상한 60분 중 자료·작성·실행·변형·탐침 약 15분(AI 후속 대기·보존 별도). 축: 자료를 직접 분석하는 연구 보고(통계를 식으로·그림·산문·재현 명세·정정 뒤 changelog).
+합성: 60명×과제 3×4회(719 trial), 사전등록 design.json, t 임계값 표, 설문. 훈련자 검사 거절 2회(이스케이프 따옴표·`?:` 안 도구 호출·null 보간, 전부 줄·규칙·힌트 정확) → 실행에서 **L41-1** chart `output_format` 무시(`.png` 우회) → v3 기본·변형 2(n=6 검정 불가)·3(음수·"NA"·중복) 전건(26초·134K 단계, 통계 oracle 과 일치).
+변형 1 정정 7파일: 다른 폴더는 경로가 달라 reuse 0(설계 실수), 제자리 덮어쓰기(1b)도 reuse 0·`no_matching_receipt` 20 → **L41-3** 쓰기 자원 미선언 도구(`table:chart`) 하나가 "자원 미상은 전체" 규칙으로 프로그램 전체 읽기의 재사용을 조용히 끈다(탐침: 차트 포함 read_calls 0, 차트 제외 2).
+**L41-2** chart bar 의 x/y 목록이 string 선언이라 IBL 목록 거절. 독립 AI ep4491 272.1초(Python analyze.py 432줄·matplotlib, `engines:image_read` 로 자기 그림 확인, 입력 1,535,100/출력 28,601) 전건, 변형 1 ep4492 174.3초(sha 대조로 7파일 식별·그림 2 바이트 복사·"안 바뀐 파일도 다시 읽음" 명시), 변형 2 ep4493 122.0초(검정 불가·결손 97 구분) 전건. 수리 없음. [보고서](experiments/long_sentence_imagination/round_41/report.md).
+
 ## 40회차 — 소규모 제조·유통 회사의 월말 경영 점검 (2026-10-09, 훈련·발견만)
 
 정본 main `11aef5b6`, 02:18 KST 시작, 상한 60분 중 자료·작성·실행·변형·탐침 약 16분(AI 후속 대기·보존 별도). 축: 운영 대사 → 경영 판단(4형식 원천·AI 추출 재사용·메모 숫자 근거 검수).
@@ -239,6 +246,9 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
+| L41-3 | 재사용 공백·침묵(실행기) — 쓰기 자원을 선언하지 않는 도구(`table:chart`)가 한 번이라도 불리면 "자원 미상은 전체" 규칙으로 프로그램의 **모든 읽기**가 재사용 후보에서 빠진다(`continuation.read_calls 0`). 그림이 있는 보고서 프로그램은 자료 정정 뒤 reuse 가 0건·이유 `no_matching_receipt`(원인 미표시) | `round_41/evidence/probe_chartreuse.json`(read_calls 0) vs `probe_writereuse.json`(read_calls 2, 차트만 제거), 전체 프로그램 `trainer_v1b_main_v3_reuse.json`(skipped 20 no_matching_receipt) | 열림 — chart 의 `write_resources`(output_path) 선언, 자원 미상 쓰기가 있을 때 continuation 에 "읽기 제외 이유" 신고 | [41회차](experiments/long_sentence_imagination/round_41/report.md) |
+| L41-1 | 계약 불일치(도구) — `table:chart` 의 `output_format:"png"` 가 무시되고 확장자 없는 `output_path` 를 "Cannot infer image type" 으로 거절(spec·table 형 모두). 설명은 output_path 를 경로 stem 으로 안내 | `round_41/evidence/trainer_base_main_v2.json`(TOOL), `probe_chart_format2.json`(table 형 동일). `.png` 를 붙이면 성공(`trainer_base_main_v3.json`) | 열림 — output_format 을 렌더 경로에 실제 적용하거나 설명을 확장자 필수로 고침 | [41회차](experiments/long_sentence_imagination/round_41/report.md) |
+| L41-2 | 계약 불일치(도구) — `table:chart` bar 의 `x/y 리스트` 가 param 선언에서 string 이라 IBL 목록을 거절("x 에는 string 이 와야 하는데 2개짜리 목록"). 설명과 선언이 어긋남. table 형·spec 만 통함 | `round_41/evidence/probe_chart_format.json` | 열림 — x/y/labels/values 를 array 로 선언(어휘 변경 아님, 선언 정정) | [41회차](experiments/long_sentence_imagination/round_41/report.md) |
 | L40-1 | 진단 공백·비용 — `/ibl/execute` 요청의 미지 최상위 키(`continuation`·`bogus_key`)를 경고 없이 무시. 재사용 의도가 사라져 같은 계약 추출에 모델을 다시 호출(9.5초). 잘못된 run_id 는 `REUSE_ARGUMENT` 로 거절됨(대조군) | `round_40/evidence/probe_unknown_key2.json`(success·warnings null), `trainer_B_main_v0_reuse.json`(reuse null·table:ai 9,564ms) vs `trainer_B_main_v1_reuse.json`(receipt_reused 16·table:ai 6ms) | 열림 — 미지 요청 키를 warnings 로 신고(또는 거절). 교재 문장 "continuation.reuse_args 를 요청에 합친다" 의 뜻(내용을 최상위에 병합)도 예시로 명시 | [40회차](experiments/long_sentence_imagination/round_40/report.md) |
 | L40-2 | AI 추출 비결정성 + 검사 타입 공백 — 같은 계약서 5건 `table:ai` 추출이 실행마다 다름(K03 notice_days 30→null→30). `schema` 에 "숫자" 로 선언해도 null 이 오고 검사 타입은 Unknown 이라 `number(null)` 런타임 실패로만 드러남(A v0). null 분기 뒤의 보간은 검사가 `FORMAT_TYPE`·`TYPE` 으로 잡음(대조군) | `evidence/trainer_A_main_v0.json`(NUMBER_REQUIRED, partial 2행), `trainer_base_main_v0`·`trainer_A_main_v1` 의 contracts.json | 열림 — schema 선언 필드를 Number\|Null 등으로 정적 타입화해 검사에서 null 분기 누락을 미리 경고, `contract` 필수 필드 안내. 작성자 책임 절반(null 대비) | [40회차](experiments/long_sentence_imagination/round_40/report.md) |
 | L39-1 | 구현 결함(원문 보존) — `self:read`(text) 가 CRLF 를 LF 로 조용히 바꿈. `inputs` 문자열은 보존, read→write 왕복만 CR 소실 | `round_39/repro/crlf_read.ibl`: 28자 파일→24자, 쓰면 CR 0개. isolate 탐침 | 수리 — 주인·회원 텍스트 CR/LF/CRLF 보존. 행 범위·왕복 바이트 검증 | [39회차](experiments/long_sentence_imagination/round_39/report.md) |

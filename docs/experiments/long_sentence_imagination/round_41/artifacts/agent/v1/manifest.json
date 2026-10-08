@@ -1,0 +1,460 @@
+{
+ "run_id": "20261009T032750-76d776f7df5c",
+ "run_id_rule": "실행 시각(로컬, %Y%m%dT%H%M%S) + 분석 스크립트 sha256 앞 12자",
+ "generated_at": "2026-10-09T03:27:50",
+ "script": {
+  "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/agent/analyze1.py",
+  "sha256": "76d776f7df5c1221594c09d24a71845d63d306dd320518b0433518f8f31eed72"
+ },
+ "python": "3.13.5",
+ "matplotlib": "3.11.1",
+ "inputs": [
+  {
+   "path": "design.json",
+   "sha256": "06e439492a1fe75a987f70ab1b2cbd9a3594b26bcfbd05d65d6b2eac408704c0",
+   "bytes": 1421
+  },
+  {
+   "path": "participants.csv",
+   "sha256": "6037e3dd774d1eaa52df485284b2e994033a6bbe9522abe973ea9c654e73722e",
+   "bytes": 1218
+  },
+  {
+   "path": "survey.csv",
+   "sha256": "b9620f7fc5fd9c672ecf19ea2648371d27e688580defb5b41a9dbff8f257909f",
+   "bytes": 1155
+  },
+  {
+   "path": "t_critical.json",
+   "sha256": "4e57f8ee44304c38cc18d3ac0b44f76a6847fe42fa7808e54d96e84d62276d6c",
+   "bytes": 2936
+  },
+  {
+   "path": "trials/P01.json",
+   "sha256": "cedba4489b10093cf2720bb18543a999e517fdf0c83d8c5466e155b76ee0df84",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P02.json",
+   "sha256": "52c3bd48e207f650b2f16324c05840ac1105ea8eeb23d683aeb2e05ee824e7ab",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P03.json",
+   "sha256": "3b7ef803e8b930d7e927a044276ad34fe218d0965a8b741e41a30f7dcd6a9ca1",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P04.json",
+   "sha256": "068393b4dd8b4604d860c604fe8c8619acd4b059b7a2273eaa25211d7e39d150",
+   "bytes": 1608
+  },
+  {
+   "path": "trials/P05.json",
+   "sha256": "18b522d35dc61cd6e3273257d4d31bdab3e45b4ec2f55b76de44207266c44b60",
+   "bytes": 1605
+  },
+  {
+   "path": "trials/P06.json",
+   "sha256": "763991c509e965727ab384ac85cdad7fd29764e99d1c892f011654a58c37de52",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P07.json",
+   "sha256": "1371b0d7de8fcf94bca048668929c3a8a595cb96f0cd995fc4a80543768c8b97",
+   "bytes": 1608
+  },
+  {
+   "path": "trials/P08.json",
+   "sha256": "bef54259d3dc13095f68dfb9c43ef63b7cf10cca0c55820bcc423a662e2a6d22",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P09.json",
+   "sha256": "159b907b1278208d5e7db5a6b0b98d2b462c62959004271baa3a2c40f0fbaab3",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P10.json",
+   "sha256": "175d73209d46b6b5dbf2b46a844f39cc46d0379c85d69258f4508f57e5bd0d5d",
+   "bytes": 1607
+  },
+  {
+   "path": "trials/P11.json",
+   "sha256": "f0275aa1d9ad35d10edfcd86cf487d0c67e540900ddd4edaa1f1c2726cdbd188",
+   "bytes": 1608
+  },
+  {
+   "path": "trials/P12.json",
+   "sha256": "427d1de3b3a7311652e1f4ffab32695ebefa1f67b631eea1ff275d13b3908f10",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P13.json",
+   "sha256": "a07d42d34be10c3347cbf60fb8d72881090317b437d095245cfa0d85af113488",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P14.json",
+   "sha256": "45154e6e4f7afb6ae715d86d4eff73801730af7385daedc8970dbf68cfddf546",
+   "bytes": 1608
+  },
+  {
+   "path": "trials/P15.json",
+   "sha256": "aa36552ec54f498fe8f8ebe57321bb22705cd363f3624ff5f89a1d6f724551a8",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P16.json",
+   "sha256": "18899652642311fdbe5686f6e052ac73ac7f183949a497ac7ced7d438b459e8b",
+   "bytes": 1610
+  },
+  {
+   "path": "trials/P17.json",
+   "sha256": "2b54a4d03b060c047d2c0bbf8c9c46016ee615fbecdae4997725387186e8544e",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P18.json",
+   "sha256": "fe0312ce6f84c7ea8b1929a703095f5687ebf489cf7095c23cab2f8a5bda7a3c",
+   "bytes": 1608
+  },
+  {
+   "path": "trials/P19.json",
+   "sha256": "7a05750233e8f9fbcb3e87e7862a0daf9b5718443b1d641e38762eb57f63ca4e",
+   "bytes": 1607
+  },
+  {
+   "path": "trials/P20.json",
+   "sha256": "d887e7af1df704fe6b5808487fbc90b32a032d8c92576fb4ae011351560c8fc8",
+   "bytes": 1606
+  },
+  {
+   "path": "trials/P21.json",
+   "sha256": "499433625357947c40afd739377795b632a995dae0cafa240bfecf604f285e28",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P22.json",
+   "sha256": "f18bb7c74850859d8a6af750ac5aa0e7bcc46e258ecd9ba1115679628b9eed1c",
+   "bytes": 1608
+  },
+  {
+   "path": "trials/P23.json",
+   "sha256": "5e93790681f47ab83b97b4d4ce3d63d32f093b1f9b1a0c29904f43ddd606626c",
+   "bytes": 1478
+  },
+  {
+   "path": "trials/P24.json",
+   "sha256": "6f3d728d78a583bfe8f57c0754cd9996c345fbc7d09a6b920339ec6d46121889",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P25.json",
+   "sha256": "6ca8dfcfb2f0de9259e6b347a2be5cb3d506bfc037d6b17c6a558eefca89be66",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P26.json",
+   "sha256": "c0b825d3dcded1b16f1b5c87be91b9aa49cecfbe14c584731f69d8593c2afa2a",
+   "bytes": 1608
+  },
+  {
+   "path": "trials/P27.json",
+   "sha256": "799c6f39a08dea9d496076c6c2b9eba5ad2682f58c8e10b6e2d23ba8ea4bcea8",
+   "bytes": 1608
+  },
+  {
+   "path": "trials/P28.json",
+   "sha256": "6ab7982b46bec274304a096434d8301c4d0ce8c5ed820cfc03baa69a435bd1c3",
+   "bytes": 1610
+  },
+  {
+   "path": "trials/P29.json",
+   "sha256": "6e76b7fc138ea97cd81e17ace843f583f2009319437d012df6d8ecb09687f50d",
+   "bytes": 1610
+  },
+  {
+   "path": "trials/P30.json",
+   "sha256": "c7b4588a222e055a62874624133870369b1c4fecdec0768e1ddc5b6fade2f1c1",
+   "bytes": 1610
+  },
+  {
+   "path": "trials/P31.json",
+   "sha256": "91f60897c9572e1083f154e6341564ddd13c482c3213a8e0d9a91d30cea01806",
+   "bytes": 1614
+  },
+  {
+   "path": "trials/P32.json",
+   "sha256": "efa836e5851bffe3cfe8ebf382db9e66bd22fa0233899acbe57590f97d343c5c",
+   "bytes": 1611
+  },
+  {
+   "path": "trials/P33.json",
+   "sha256": "d1a1ea395c63b2baf17ac125bf97610d181e7bb20b07918d9123705438801853",
+   "bytes": 1647
+  },
+  {
+   "path": "trials/P34.json",
+   "sha256": "ca2d535f26db119687d260d2cb92b349776fdeabb56da36f14560ff21ab494ed",
+   "bytes": 1608
+  },
+  {
+   "path": "trials/P35.json",
+   "sha256": "f987d42ba7f95306fbad2d6de1b81a76ad843d550a1aeecf3d9c9f7923bba875",
+   "bytes": 1648
+  },
+  {
+   "path": "trials/P36.json",
+   "sha256": "69f9de9c1c31638b24467a4dd70b319dfed60de824013f3948f0736276de3c80",
+   "bytes": 1607
+  },
+  {
+   "path": "trials/P37.json",
+   "sha256": "8cb38b6df017445981e334cae26e9b49200a05b04359378557a1e1302df3fed3",
+   "bytes": 1647
+  },
+  {
+   "path": "trials/P38.json",
+   "sha256": "dbebdd1fee87c2cb6f0e9679a43002434307c276547e2baaa40af0b2b9bf5f13",
+   "bytes": 1610
+  },
+  {
+   "path": "trials/P39.json",
+   "sha256": "d47f0886ae48fdacc03abeea3a76cdfa19fcbece26eb589bed4e1ad1cbdeff84",
+   "bytes": 1648
+  },
+  {
+   "path": "trials/P40.json",
+   "sha256": "4d64c213d14d0d8df9fde7e308afa8f419fd923c93895468d77e940cba6d3bea",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P41.json",
+   "sha256": "e7e5b9bd6f535167d7d54a5db5023a16610113f39a1d39a8f82ac86a34796525",
+   "bytes": 1648
+  },
+  {
+   "path": "trials/P42.json",
+   "sha256": "6cb8218f3e0f120616fa2df211686026bbb46524d27e19aeda58ca144b2cfede",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P43.json",
+   "sha256": "c5104b85b07887895dfb3c477f6e999e207493b88aa3287d9fd35ad196f7fb17",
+   "bytes": 1645
+  },
+  {
+   "path": "trials/P44.json",
+   "sha256": "d12663989627cb327e935ef3c2a9c05f67675cce58adc6ca39d540ace2b53533",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P45.json",
+   "sha256": "3a6a1f89ad399c60f5a4dc65d537e1f89cfc24498ae678be56363bc61312ac45",
+   "bytes": 1648
+  },
+  {
+   "path": "trials/P46.json",
+   "sha256": "4866d16192a3347fb763db90710d47610d6ecb476e09f200eef047818aa000df",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P47.json",
+   "sha256": "991d5b7b756a0981464201441a8790f7a301fe4d3685d1305d76dab07d485e97",
+   "bytes": 1610
+  },
+  {
+   "path": "trials/P48.json",
+   "sha256": "1139e2008a08a928689a536eff394299421dea953671a409d84621b81c09fbb5",
+   "bytes": 1612
+  },
+  {
+   "path": "trials/P49.json",
+   "sha256": "4d83afff32c3a9583432bd788ff53dbd8cc13bde87b2d5c234376c0f0eae0815",
+   "bytes": 1610
+  },
+  {
+   "path": "trials/P50.json",
+   "sha256": "e153ffe1698d6c50fc07662e451de48de25934a98f8565638d4c5bf17b65c38a",
+   "bytes": 1610
+  },
+  {
+   "path": "trials/P51.json",
+   "sha256": "8055deb5de4c7674508f805d4c99659ddf64427252c8795a635ff61f8b99c110",
+   "bytes": 1612
+  },
+  {
+   "path": "trials/P52.json",
+   "sha256": "b39272196b2868515c269a4e237a6ffec8b90996582809300b2ea2e323655a0d",
+   "bytes": 1612
+  },
+  {
+   "path": "trials/P53.json",
+   "sha256": "54bb000864853585c3d3fb6541cd70ae580d63023a0a6cea0247a860551c91fb",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P54.json",
+   "sha256": "a0cdb1adbe38af477426ccd4b532ecc4aa18ba6d3f9bfc677f9583fccbad6156",
+   "bytes": 1608
+  },
+  {
+   "path": "trials/P55.json",
+   "sha256": "41480da29962cd9ec248f9d8103a0e11ac58f8e1a26ee8ef130c87d1590fbb81",
+   "bytes": 1610
+  },
+  {
+   "path": "trials/P56.json",
+   "sha256": "0bf6b37444c6f4df80b631c075786f3f3458146170c55e4d618fb17e66713ff1",
+   "bytes": 1609
+  },
+  {
+   "path": "trials/P57.json",
+   "sha256": "efdd34d9d1639c0b2238973be658c4d68af970d7e22517914c18ce295e7f70fa",
+   "bytes": 1612
+  },
+  {
+   "path": "trials/P58.json",
+   "sha256": "cef979775adaea9812aa1a76bea2a1bdd2bab22a2fd5188ffce84dc368fcf272",
+   "bytes": 1610
+  },
+  {
+   "path": "trials/P59.json",
+   "sha256": "8f13d0eab3120feadf192e90f50a832d4d92f83c2e50e6a5a5862ee3f1eaa605",
+   "bytes": 1612
+  },
+  {
+   "path": "trials/P60.json",
+   "sha256": "e9b0cbb2f0918b8a3cce42495d22b0c7048f56aa2af8f2fc219a04886c3b9454",
+   "bytes": 1611
+  }
+ ],
+ "input_count": 64,
+ "artifacts": [
+  {
+   "name": "자료 품질표",
+   "file": "quality.json",
+   "sources": [
+    "trials/P01.json~P60.json",
+    "participants.csv",
+    "survey.csv",
+    "design.json"
+   ],
+   "rule": "design.json exclusion: duration ≤0 또는 >600, errors 비수치, 파일 내 중복 trial_id 둘째 이후 제외; 참가자별 유효 수; 설문 미응답; 조건 n<min_n"
+  },
+  {
+   "name": "조건 표",
+   "file": "stats.json#conditions",
+   "sources": [
+    "trials/*.json",
+    "participants.csv",
+    "t_critical.json",
+    "design.json"
+   ],
+   "rule": "참가자×과제 유효 trial 평균 → 조건별 n·평균·표본 sd·평균±t(p05,n−1)·sd/√n"
+  },
+  {
+   "name": "만족도 표",
+   "file": "stats.json#satisfaction",
+   "sources": [
+    "survey.csv",
+    "participants.csv",
+    "t_critical.json",
+    "design.json"
+   ],
+   "rule": "Q3·Q6 → 6−x 반전, 7문항 평균, 미응답 제외, 집단별 n·평균·sd·95% CI"
+  },
+  {
+   "name": "가설 표",
+   "file": "stats.json#hypotheses",
+   "sources": [
+    "stats.json#conditions",
+    "stats.json#satisfaction",
+    "t_critical.json",
+    "design.json"
+   ],
+   "rule": "Welch t=(mB−mA)/√(sA²/nA+sB²/nB), df Welch–Satterthwaite 내림, |t|>p0125 임계값, Cohen d pooled sd, 4단계 판정(n<8 검정 불가)"
+  },
+  {
+   "name": "그림 1",
+   "file": "fig1_duration_by_condition.png",
+   "sources": [
+    "stats.json#conditions"
+   ],
+   "rule": "조건별 평균 막대 + 95% CI 오차막대",
+   "action": "drawn: 입력이 바뀌어 다시 그림"
+  },
+  {
+   "name": "그림 2",
+   "file": "fig2_satisfaction_by_group.png",
+   "sources": [
+    "stats.json#satisfaction",
+    "survey.csv"
+   ],
+   "rule": "참가자별 만족도 점 + 집단 평균 ± 95% CI",
+   "action": "copied: 입력 동일, 다시 그리지 않고 이전 PNG 복사"
+  },
+  {
+   "name": "보고서",
+   "file": "report.md",
+   "sources": [
+    "stats.json",
+    "quality.json",
+    "fig1_duration_by_condition.png",
+    "fig2_satisfaction_by_group.png"
+   ],
+   "rule": "저장된 stats.json·quality.json 을 다시 읽어 값 그대로 기재"
+  }
+ ],
+ "outputs": [
+  {
+   "file": "quality.json",
+   "sha256": "7e1862e58317fa91b55b88d6a2900ab27cfe4c8ec7ca72fd20aac1820cd80925"
+  },
+  {
+   "file": "stats.json",
+   "sha256": "f84000434510684ebb9b0caa346e897d47e279af618325c1d63fe3909b640732"
+  },
+  {
+   "file": "report.md",
+   "sha256": "637e03439b2f2a8eda5c501f3585771460f7034a8fa77b366fe2a685daa06727"
+  },
+  {
+   "file": "fig1_duration_by_condition.png",
+   "sha256": "67b6ee27816e04d194fb51aa84dbe9e0620c9337c2c3d6e27b733e9105472ed9"
+  },
+  {
+   "file": "fig2_satisfaction_by_group.png",
+   "sha256": "d2ac93b11769b1d88fc0419c110d800bc39e1bc3ee28fcfa3822c8a06615e94e"
+  },
+  {
+   "file": "changelog.md",
+   "sha256": "7afd68d5610a890248956f80b9cddfeb292a0edd2786d0cfade945aaa439ddfa"
+  }
+ ],
+ "previous_run": {
+  "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/agent/out",
+  "run_id": "20261009T032342-53daec0dff26",
+  "read_files": [
+   "stats.json",
+   "manifest.json",
+   "quality.json",
+   "fig2_satisfaction_by_group.png"
+  ]
+ },
+ "figure_actions": {
+  "fig1_duration_by_condition.png": "drawn: 입력이 바뀌어 다시 그림",
+  "fig2_satisfaction_by_group.png": "copied: 입력 동일, 다시 그리지 않고 이전 PNG 복사"
+ },
+ "changed_inputs_vs_previous": [
+  "trials/P33.json",
+  "trials/P35.json",
+  "trials/P37.json",
+  "trials/P39.json",
+  "trials/P41.json",
+  "trials/P43.json",
+  "trials/P45.json"
+ ],
+ "changelog": "changelog.md — 이전 stats.json 대비 바뀐 표·가설·그림"
+}

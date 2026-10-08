@@ -1,0 +1,80 @@
+{
+ "checks": [
+  [
+   "files exist",
+   true,
+   "[]"
+  ],
+  [
+   "excluded_count",
+   true,
+   "(7, 7)"
+  ],
+  [
+   "duplicate_count",
+   true,
+   "1"
+  ],
+  [
+   "low_n_conditions",
+   true,
+   "[]"
+  ],
+  [
+   "survey_missing",
+   true,
+   "['P17']"
+  ],
+  [
+   "conditions n/mean/ci_low (6)",
+   true,
+   "{}"
+  ],
+  [
+   "satisfaction",
+   true,
+   "{'A': (29.0, 3.379), 'B': (30.0, 4.019)}"
+  ],
+  [
+   "hypotheses verdict+t (4)",
+   true,
+   "{}"
+  ],
+  [
+   "png figures >= 2",
+   true,
+   "['fig_duration.png', 'fig_satisfaction.png']"
+  ],
+  [
+   "report references png",
+   true,
+   "['fig_duration.png', 'fig_satisfaction.png']"
+  ],
+  [
+   "report sections",
+   true,
+   "[]"
+  ],
+  [
+   "report has no \"차이 없음 입증\"-style claim",
+   true,
+   ""
+  ],
+  [
+   "INFO report decimals outside oracle set",
+   true,
+   "[]"
+  ],
+  [
+   "manifest sha256 covers all inputs",
+   true,
+   "(64, 64)"
+  ],
+  [
+   "manifest has tables and figures",
+   true,
+   "['inputs_sha256', 'tables', 'figures', 'prose', 'prev', 'program']"
+  ]
+ ],
+ "ok": true
+}

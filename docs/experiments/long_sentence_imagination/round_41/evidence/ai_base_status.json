@@ -1,0 +1,21 @@
+{
+ "task_ref": {
+  "kind": "delegation",
+  "owner": "system",
+  "task_id": "task_sysai_a659c8b0"
+ },
+ "parent_task_ref": null,
+ "run_id": "run_ee39185095ac2f860a99",
+ "parent_run_id": null,
+ "state": "succeeded",
+ "status": "completed",
+ "delegated_to": "system_ai",
+ "requester_channel": "gui",
+ "created_at": "2026-10-08 18:19:58",
+ "completed_at": "2026-10-08 18:24:30",
+ "pending_children": 0,
+ "children": [],
+ "result": "보고서를 완성해 out 폴더에 저장했습니다. 저장한 파일을 다시 읽어 확인한 네 가지 멈춤선 검산과 원자료 독립 재계산이 모두 통과했습니다.\n\n**결과**\n\n| 가설 | t | df(내림) | 임계값(p0125) | d | 판정 |\n|---|---|---|---|---|---|\n| H1 T1 시간 B<A | −10.1752 | 56 | 2.5809 | −2.6272 | 지지 |\n| H2 T2 시간 B<A | 6.6565 | 57 | 2.5794 | 1.7187 | 불지지(반대 방향 유의): B가 더 느림 |\n| H3 T3 시간 B<A | 0.6415 | 55 | 2.5825 | 0.1656 | 불지지(차이 없음 입증 아님) |\n| H4 만족도 B>A | 8.4674 | 55 | 2.5825 | 2.2101 | 지지 |\n\n판정할 때 가설 방향을 t의 부호와 직접 대조했습니다. H1~H3은 t<0, H4는 t>0일 때 방향이 일치합니다.\n\n**자료 품질**\n- **trial 수:** 719개 = 유효 715개 + 제외 4개.\n- **제외된 trial:**\n  - P05-03: 완료시간 0초\n  - P12-08: 완료시간 650초\n  - P31-05, P48-11: errors가 \"NA\"\n- **중복 trial_id:** 0건.\n- **설문 미응답:** P17 한 명이라 H4는 A 29명, B 30명으로 검정했습니다.\n- **n<8인 조건:** 없습니다. 6개 조건 모두 n=30입니다.\n- **결측 trial:** 설계상 trial은 720개인데 P23.json에는 T3 4회차 기록이 아예 없습니다. 제외가 아니라 결측이므로 제외 건수에 넣지 않고 quality.json과 보고서에 따로 적었습니다.\n\n**검산 결과**\n1. 제외 건수와 유효 건수의 합이 전체 trial 수와 같고, 원자료에서 다시 세어도 같습니다.\n2. 조건 표의 n·평균·sd가 가설 표와 일치합니다.\n3. Welch t·df·임계값·d·판정을 다시 계산해도 같습니다.\n4. 보고서에 있는 소수 숫자는 모두 stats.json·quality.json의 값입니다.\n\n이 밖에 다음도 확인했습니다.\n- manifest.json의 입력 64개 sha256이 실제 파일과 일치합니다.\n- 실행 식별자 `20261009T032342-53daec0dff26`가 세 JSON 파일에서 같습니다.\n- 두 그림 모두 한글 깨짐이나 라벨 잘림이 없습니다.\n\n**덧붙일 점**\n- 사용자 지시와 design.json 사이에 규칙 차이는 없었습니다.\n- `completed` 필드는 제외 규칙에 없어서 쓰지 않았고, 이 점을 한계에 적었습니다.\n- 첫 실행이라 changelog.md는 만들지 않았습니다.\n- 분석 스크립트와 검산 스크립트는 out 바깥(agent 폴더)에 두었습니다.\n\n파일은 `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/agent/` 폴더에 있습니다.\n- out/report.md\n- out/quality.json\n- out/stats.json\n- out/manifest.json\n- out/fig1_duration_by_condition.png\n- out/fig2_satisfaction_by_group.png\n- analyze.py\n- verify.py",
+ "error": null,
+ "status_url": "/system-ai/tasks/task_sysai_a659c8b0"
+}

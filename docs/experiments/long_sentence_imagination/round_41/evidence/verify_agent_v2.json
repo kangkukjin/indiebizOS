@@ -1,0 +1,80 @@
+{
+ "checks": [
+  [
+   "files exist",
+   true,
+   "[]"
+  ],
+  [
+   "excluded_count",
+   true,
+   "(None, 3)"
+  ],
+  [
+   "duplicate_count",
+   true,
+   "None"
+  ],
+  [
+   "low_n_conditions",
+   true,
+   "None"
+  ],
+  [
+   "survey_missing",
+   true,
+   "['P17']"
+  ],
+  [
+   "conditions n/mean/ci_low (6)",
+   true,
+   "{}"
+  ],
+  [
+   "satisfaction",
+   true,
+   "{'A': (29.0, 3.379), 'B': (30.0, 4.019)}"
+  ],
+  [
+   "hypotheses verdict+t (4)",
+   true,
+   "{}"
+  ],
+  [
+   "png figures >= 2 (v1 은 이전 그림 참조 허용)",
+   true,
+   "(['fig1_duration_by_condition.png', 'fig2_satisfaction_by_group.png'], [])"
+  ],
+  [
+   "report references png",
+   true,
+   "['fig1_duration_by_condition.png', 'fig2_satisfaction_by_group.png']"
+  ],
+  [
+   "report sections",
+   true,
+   "[]"
+  ],
+  [
+   "report has no \"차이 없음 입증\"-style claim",
+   true,
+   "[]"
+  ],
+  [
+   "INFO report decimals outside oracle set",
+   true,
+   "[-13.8789, 2.0452, 2.0484, 2.5706, 3.262, 3.3793, 3.4966, 3.9183, 4.1198, 4.8186]"
+  ],
+  [
+   "manifest sha256 covers all inputs",
+   true,
+   "(64, 64)"
+  ],
+  [
+   "manifest has tables and figures",
+   true,
+   "['run_id', 'run_id_rule', 'generated_at', 'script', 'python', 'matplotlib', 'inputs', 'input_count']"
+  ]
+ ],
+ "ok": true
+}

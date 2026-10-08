@@ -1,0 +1,66 @@
+{
+ "training_end_kst": "2026-10-09 03:31",
+ "training_minutes_excl_wait": "~15 (03:13→03:28)",
+ "cap_minutes": 60,
+ "code_changes": 0,
+ "trainer_revisions": 4,
+ "trainer_results": {
+  "v0_check": "SYNTAX",
+  "v1_check": "PURE_EXPRESSION+FORMAT_TYPE",
+  "v2": "TOOL (chart output_format)",
+  "v3_base": "ALL PASS",
+  "v3_v1_other_folder_reuse": "ALL PASS, reuse 0 (path differs)",
+  "v3_v1b_inplace_reuse": "ALL PASS, reuse 0 (L41-3)",
+  "v3_v2": "ALL PASS",
+  "v3_v3": "ALL PASS"
+ },
+ "ai_tasks": {
+  "base": {
+   "task_id": "task_sysai_a659c8b0",
+   "episode": 4491,
+   "state": "succeeded",
+   "total_ms": 272089,
+   "verify": "ALL PASS"
+  },
+  "v1": {
+   "task_id": "task_sysai_ac620a04",
+   "episode": 4492,
+   "state": "succeeded",
+   "total_ms": 174309,
+   "verify": "ALL PASS"
+  },
+  "v2": {
+   "task_id": "task_sysai_7acfb2d3",
+   "episode": 4493,
+   "state": "succeeded",
+   "total_ms": 122036,
+   "verify": "ALL PASS"
+  }
+ },
+ "ai_usage_billable": {
+  "4491": {
+   "input": 1535100,
+   "output": 28601,
+   "cache_read": 1342466,
+   "cache_create": 189828
+  },
+  "4492": {
+   "input": 1426569,
+   "output": 17658,
+   "cache_read": 1345512,
+   "cache_create": 72759
+  },
+  "4493": {
+   "input": 2039055,
+   "output": 12140,
+   "cache_read": 1963726,
+   "cache_create": 71504
+  }
+ },
+ "gaps": [
+  "L41-1",
+  "L41-2",
+  "L41-3"
+ ],
+ "repairs": "none (training only)"
+}

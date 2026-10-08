@@ -1,0 +1,102 @@
+{
+ "trainer_base_main_v0_check": {
+  "http_s": 0.273,
+  "success": false,
+  "ok": false,
+  "steps": null,
+  "elapsed_ms": null,
+  "receipts_reused": 0,
+  "code": "SYNTAX",
+  "message": "보간식 안의 이스케이프 따옴표는 해석할 수 없습니다. 바깥과 다른 따옴표 또는 삼중 따옴표를 사용하세요."
+ },
+ "trainer_base_main_v1_check": {
+  "http_s": 0.413,
+  "success": null,
+  "ok": false,
+  "steps": null,
+  "elapsed_ms": null,
+  "receipts_reused": 0,
+  "code": "PURE_EXPRESSION",
+  "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요."
+ },
+ "trainer_base_main_v2": {
+  "http_s": 3.163,
+  "success": false,
+  "ok": null,
+  "steps": 133073,
+  "elapsed_ms": 2218,
+  "receipts_reused": 0,
+  "code": "TOOL",
+  "message": "spec 렌더 실패: \nCannot infer image type from output path '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/trainer/out/fig_duration'.\nPlease specify the type usin"
+ },
+ "trainer_base_main_v2_check": {
+  "http_s": 0.569,
+  "success": null,
+  "ok": true,
+  "steps": null,
+  "elapsed_ms": null,
+  "receipts_reused": 0,
+  "code": null,
+  "message": ""
+ },
+ "trainer_base_main_v3": {
+  "http_s": 26.17,
+  "success": true,
+  "ok": null,
+  "steps": 134228,
+  "elapsed_ms": 25146,
+  "receipts_reused": 0,
+  "code": null,
+  "message": ""
+ },
+ "trainer_v1_main_v3_reuse": {
+  "http_s": 18.543,
+  "success": true,
+  "ok": null,
+  "steps": 134911,
+  "elapsed_ms": 17531,
+  "receipts_reused": 0,
+  "code": null,
+  "message": ""
+ },
+ "trainer_v2_main_v3": {
+  "http_s": 21.035,
+  "success": true,
+  "ok": null,
+  "steps": 120528,
+  "elapsed_ms": 20083,
+  "receipts_reused": 0,
+  "code": null,
+  "message": ""
+ },
+ "trainer_v3_main_v3": {
+  "http_s": 22.615,
+  "success": true,
+  "ok": null,
+  "steps": 134227,
+  "elapsed_ms": 21547,
+  "receipts_reused": 0,
+  "code": null,
+  "message": ""
+ },
+ "probe_chart_format": {
+  "http_s": 0.292,
+  "success": false,
+  "ok": null,
+  "steps": 14,
+  "elapsed_ms": 275,
+  "receipts_reused": 0,
+  "code": "TOOL",
+  "message": "chart: `x` 에는 string 이 와야 하는데 2개짜리 목록이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다)."
+ },
+ "probe_chart_format2": {
+  "http_s": 0.305,
+  "success": false,
+  "ok": null,
+  "steps": 19,
+  "elapsed_ms": 288,
+  "receipts_reused": 0,
+  "code": "TOOL",
+  "message": "도구 실행 중 오류 발생: \nCannot infer image type from output path '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/probe/table_stem'.\nPlease specify the type using the"
+ }
+}

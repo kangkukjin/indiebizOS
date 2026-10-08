@@ -1,0 +1,95 @@
+{
+ "checks": [
+  [
+   "files exist",
+   true,
+   "[]"
+  ],
+  [
+   "excluded_count",
+   true,
+   "(None, 4)"
+  ],
+  [
+   "duplicate_count",
+   true,
+   "None"
+  ],
+  [
+   "low_n_conditions",
+   true,
+   "None"
+  ],
+  [
+   "survey_missing",
+   true,
+   "['P17']"
+  ],
+  [
+   "conditions n/mean/ci_low (6)",
+   true,
+   "{}"
+  ],
+  [
+   "satisfaction",
+   true,
+   "{'A': (29.0, 3.379), 'B': (30.0, 4.019)}"
+  ],
+  [
+   "hypotheses verdict+t (4)",
+   true,
+   "{}"
+  ],
+  [
+   "png figures >= 2 (v1 은 이전 그림 참조 허용)",
+   true,
+   "(['fig1_duration_by_condition.png', 'fig2_satisfaction_by_group.png'], [])"
+  ],
+  [
+   "report references png",
+   true,
+   "['fig1_duration_by_condition.png', 'fig2_satisfaction_by_group.png']"
+  ],
+  [
+   "report sections",
+   true,
+   "[]"
+  ],
+  [
+   "report has no \"차이 없음 입증\"-style claim",
+   true,
+   "[]"
+  ],
+  [
+   "INFO report decimals outside oracle set",
+   true,
+   "[-10.3789, 1.1022, 2.0452, 2.0484, 3.262, 3.3793, 3.4966, 3.9183, 4.1198, 5.7092]"
+  ],
+  [
+   "manifest sha256 covers all inputs",
+   true,
+   "(64, 64)"
+  ],
+  [
+   "manifest has tables and figures",
+   true,
+   "['run_id', 'run_id_rule', 'generated_at', 'script', 'python', 'matplotlib', 'inputs', 'input_count']"
+  ],
+  [
+   "changelog exists",
+   true,
+   ""
+  ],
+  [
+   "changelog mentions B-T1 and H1, not H4",
+   true,
+   "# changelog — `20261009T032342-53daec0dff26` → `20261009T032750-76d776f7df5c`\n\n비교 기준: 이전 실행 `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/agent/out/stats.json`. 이번 자료: `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_4"
+  ],
+  [
+   "fig2 not regenerated",
+   true,
+   "['fig1_duration_by_condition.png', 'fig2_satisfaction_by_group.png']"
+  ]
+ ],
+ "ok": true
+}

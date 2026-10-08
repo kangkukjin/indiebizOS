@@ -1,0 +1,410 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 41회차 v1 (수정 1: changelog 보간 안 이스케이프 따옴표 SYNTAX → 값을 먼저 꺼냄) ← 최초 초안 — 사용자 실험 연구 보고서. inputs: src(자료 폴더), out(출력 폴더), prev(이전 out 폴더 또는 null)\n\n# ---- 순수 계산 ----\n[def:평균]($xs) { return sum($xs) / len($xs) }\n[def:표준편차]($xs) {\n  $m = [fn:평균]{xs:$xs}\n  return (sum(map($xs,($x)=>($x - $m) * ($x - $m))) / (len($xs) - 1)) ** 0.5\n}\n[def:수인가]($v) {\n  [try] { $x = number($v); return true } [catch] { return false }\n}\n[def:임계]($tc,$df,$col) {\n  $row = get($tc,text(min($df,120)))\n  return $col == \"p05\" ? $row.p05 : $row.p0125\n}\n[def:조건통계]($g,$t,$xs,$tc) {\n  $n = len($xs)\n  [if:$n < 2] { return {group:$g,task:$t,n:$n,mean:$n == 1 ? $xs[0] : null,sd:null,ci_low:null,ci_high:null,half:null} }\n  $m = [fn:평균]{xs:$xs}\n  $s = [fn:표준편차]{xs:$xs}\n  $half = [fn:임계]{tc:$tc,df:$n - 1,col:\"p05\"} * $s / ($n ** 0.5)\n  return {group:$g,task:$t,n:$n,mean:round($m,3),sd:round($s,3),ci_low:round($m - $half,3),ci_high:round($m + $half,3),half:round($half,3)}\n}\n[def:웰치]($xa,$xb,$tc) {\n  $na = len($xa)\n  $nb = len($xb)\n  [if:$na < 8 or $nb < 8] { return {testable:false,n_a:$na,n_b:$nb} }\n  $ma = [fn:평균]{xs:$xa}\n  $mb = [fn:평균]{xs:$xb}\n  $sa = [fn:표준편차]{xs:$xa}\n  $sb = [fn:표준편차]{xs:$xb}\n  $va = $sa * $sa / $na\n  $vb = $sb * $sb / $nb\n  $t = ($mb - $ma) / (($va + $vb) ** 0.5)\n  $df = round((($va + $vb) * ($va + $vb)) // ($va * $va / ($na - 1) + $vb * $vb / ($nb - 1)))\n  $pooled = ((($na - 1) * $sa * $sa + ($nb - 1) * $sb * $sb) / ($na + $nb - 2)) ** 0.5\n  $crit = [fn:임계]{tc:$tc,df:$df,col:\"p0125\"}\n  return {testable:true,n_a:$na,n_b:$nb,mean_a:round($ma,3),mean_b:round($mb,3),t:round($t,4),df:$df,t_crit_0125:$crit,significant:abs($t) > $crit,cohen_d:round(($mb - $ma) / $pooled,4)}\n}\n[def:판정]($h,$w) {\n  [if:not $w.testable] { return \"검정 불가\" }\n  $dir = $w.mean_b < $w.mean_a ? \"B<A\" : \"B>A\"\n  [if:$w.significant] { return $dir == $h.direction ? \"지지\" : \"불지지(반대 방향 유의)\" }\n  return \"불지지(비유의 — 차이 없음 입증 아님)\"\n}\n# 파일 하나의 trial 품질: 상태 {seen, valid, excluded, dup}\n[def:trial검사]($st,$r,$file) {\n  [if:$r.trial_id in $st.seen] { return {**$st,dup:$st.dup + 1,excluded:$st.excluded + [{file:$file,trial_id:$r.trial_id,reason:\"duplicate_trial_id\"}]} }\n  $seen = $st.seen + [$r.trial_id]\n  $dur_ok = [fn:수인가]{v:$r.duration_s} and number($r.duration_s) > 0 and number($r.duration_s) <= 600\n  [if:not $dur_ok] { return {**$st,seen:$seen,excluded:$st.excluded + [{file:$file,trial_id:$r.trial_id,reason:\"duration_out_of_range\"}]} }\n  [if:not [fn:수인가]{v:$r.errors}] { return {**$st,seen:$seen,excluded:$st.excl",
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/trainer/base",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/trainer/out",
+   "prev": null
+  }
+ },
+ "elapsed": 0.413,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 5738,
+     "end": 5782,
+     "line": 106,
+     "column": 35
+    },
+    "call_path": [],
+    "hint": "조건·조건 값(?:)·and/or·람다 본문·기본값에는 효과 있는 호출을 넣지 않습니다(효과 없는 [fn:이름]은 가능). 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.",
+    "location": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 5738,
+     "end": 5782,
+     "line": 106,
+     "column": 35,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 106,
+     "end_column": 79,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 5842,
+     "end": 5878,
+     "line": 108,
+     "column": 28
+    },
+    "call_path": [],
+    "hint": "조건·조건 값(?:)·and/or·람다 본문·기본값에는 효과 있는 호출을 넣지 않습니다(효과 없는 [fn:이름]은 가능). 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.",
+    "location": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 5842,
+     "end": 5878,
+     "line": 108,
+     "column": 28,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 108,
+     "end_column": 64,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Number입니다.",
+    "source_span": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 8724,
+     "end": 8730,
+     "line": 142,
+     "column": 86
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null | Number",
+    "location": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 8724,
+     "end": 8730,
+     "line": 142,
+     "column": 86,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 142,
+     "end_column": 92,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   },
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Number입니다.",
+    "source_span": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 8736,
+     "end": 8740,
+     "line": 142,
+     "column": 98
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null | Number",
+    "location": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 8736,
+     "end": 8740,
+     "line": 142,
+     "column": 98,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 142,
+     "end_column": 102,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   },
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Number입니다.",
+    "source_span": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 8746,
+     "end": 8754,
+     "line": 142,
+     "column": 108
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null | Number",
+    "location": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 8746,
+     "end": 8754,
+     "line": 142,
+     "column": 108,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 142,
+     "end_column": 116,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   },
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Number입니다.",
+    "source_span": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 8760,
+     "end": 8769,
+     "line": 142,
+     "column": 122
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null | Number",
+    "location": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 8760,
+     "end": 8769,
+     "line": 142,
+     "column": 122,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 142,
+     "end_column": 131,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   },
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Number입니다.",
+    "source_span": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 12047,
+     "end": 12053,
+     "line": 217,
+     "column": 117
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null | Number",
+    "location": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 12047,
+     "end": 12053,
+     "line": 217,
+     "column": 117,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 217,
+     "end_column": 123,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   },
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Number입니다.",
+    "source_span": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 12061,
+     "end": 12069,
+     "line": 217,
+     "column": 131
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null | Number",
+    "location": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 12061,
+     "end": 12069,
+     "line": 217,
+     "column": 131,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 217,
+     "end_column": 139,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   },
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Number입니다.",
+    "source_span": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 12075,
+     "end": 12084,
+     "line": 217,
+     "column": 145
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null | Number",
+    "location": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 12075,
+     "end": 12084,
+     "line": 217,
+     "column": 145,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 217,
+     "end_column": 154,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   },
+   {
+    "code": "FORMAT_TYPE",
+    "message": "보간에는 Text·Number·Bool이 필요하지만 Null입니다.",
+    "source_span": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 12526,
+     "end": 12530,
+     "line": 222,
+     "column": 71
+    },
+    "call_path": [],
+    "expected": "Bool | Number | Text",
+    "actual": "Null",
+    "location": {
+     "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+     "start": 12526,
+     "end": 12530,
+     "line": 222,
+     "column": 71,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 222,
+     "end_column": 75,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "FORMAT_TYPE",
+    "severity": "error",
+    "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+   }
+  ],
+  "guards_total": 333,
+  "guards_inner": 0,
+  "guards_omitted": 333,
+  "result_type": "{files: Number, excluded: Number, dup: Unknown, low_n: List<Text>, verdicts: List<Text>, fig1: Bool, fig2: Bool, prev: Bool, cond_changed: Number, hyp_changed: Number}",
+  "effects": [
+   "model",
+   "read_external",
+   "write_external"
+  ],
+  "plan_hash": "578128abf5c6497cc0c61509fd4ab182721037a21e51f217d7c732b8d98139bd",
+  "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+      "start": 3240,
+      "end": 3558,
+      "line": 68,
+      "column": 26,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 72,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "7cd8056ac4cbc3f80c106aa5d494f8991f043dafb46c65b7747e44d1e5b930b3",
+      "start": 5575,
+      "end": 5669,
+      "line": 103,
+      "column": 31,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 103,
+      "end_column": 125,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "self:list",
+    "self:read",
+    "self:write",
+    "table:brief",
+    "table:chart"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "진단 위치를 수정한 뒤 다시 검사하세요.",
+  "guards_ref": {
+   "id": "8692f1b5e0299767028d2c7eb37684dbebc907be8b45fcb7275de2216915704f",
+   "chars": 290267,
+   "read_args": {
+    "id": "8692f1b5e0299767028d2c7eb37684dbebc907be8b45fcb7275de2216915704f",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "request_inputs": {
+   "input_args": {
+    "src": {
+     "$ref": "900382798da5004803c57e6c75cbce92531710b289054cace4422912694a9d73"
+    },
+    "out": {
+     "$ref": "f387c010a525458afbd5364bb6f00fcca7182c86507505049c546788741272ab"
+    },
+    "prev": {
+     "$ref": "2931339a89fe8f646cfb37f00e6d81a8957fb48033b8131d37681e49ff643ddf"
+    }
+   },
+   "unavailable": {},
+   "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  },
+  "revise_hint": "고칠 조각만 보내세요: revise_args.code 를 그대로 code 에 넣고 code_edits 에 {old, new} 를 적습니다(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 같은 inputs·budget·check 를 함께 보냅니다. 원문 전체를 다시 적지 않습니다."
+ }
+}

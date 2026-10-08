@@ -1,0 +1,21 @@
+{
+ "task_ref": {
+  "kind": "delegation",
+  "owner": "system",
+  "task_id": "task_sysai_7acfb2d3"
+ },
+ "parent_task_ref": null,
+ "run_id": "run_64d94418da53e3535fa8",
+ "parent_run_id": null,
+ "state": "succeeded",
+ "status": "completed",
+ "delegated_to": "system_ai",
+ "requester_channel": "gui",
+ "created_at": "2026-10-08 18:28:10",
+ "completed_at": "2026-10-08 18:30:12",
+ "pending_children": 0,
+ "children": [],
+ "result": "v2 자료로 보고서를 만들어 out2 폴더에 저장했습니다. 저장한 파일을 다시 읽어 확인한 네 가지 멈춤선 검산과 원자료 독립 재계산이 모두 통과했습니다. 실행 식별자는 `20261009T032937-46a95def69cf`이고, design.json과 나머지 규칙 파일은 이전 실행과 sha256이 같습니다.\n\n**B-T3이 n<8이 된 이유**\n- P31~P54는 B 집단 24명입니다. 이들의 파일에 T3 기록이 아예 없습니다.\n- 그래서 B-T3에는 유효 참가자가 6명만 남아 최소 n=8에 못 미칩니다.\n- 결측 trial은 이 24명의 T3 96건과 P23의 T3 4회차 1건을 더한 97건입니다. 제외가 아니라 기록이 없는 것이므로 제외 건수에 넣지 않고 따로 적었습니다.\n- trial 수는 설계상 720개 중 기록된 623개이고, 623 = 유효 620 + 제외 3입니다.\n- 제외 3건은 P05-03(완료시간 0초), P12-08(650초), P31-05(errors가 \"NA\")입니다.\n\n**가설 판정**\n\n| 가설 | 판정 |\n|---|---|\n| H1 | 지지 (t=−10.1752, df=56, 임계값 2.5809) |\n| H2 | 불지지(반대 방향 유의): B가 더 느림 |\n| H3 | **검정 불가**: n_A=30, n_B=6. t·df·d를 계산하지 않았습니다 |\n| H4 | 지지 (t=8.4674, df=55, 임계값 2.5825) |\n\n**n<8 조건 처리**\n- **그림:** 그림 1에서 B-T3 막대와 오차막대를 그리지 않았습니다. 빈자리에는 \"n=6<8 / 검정 불가 / (비움)\" 표지만 두었고, 잘리지 않은 것을 확인했습니다.\n- **조건 표:** B-T3의 기술통계(n=6, 평균 118.1375)는 행 이름에 \"검정 불가·그림에서 비움\"을 붙이고 참고용이라고만 적었습니다.\n- **stats.json:** B-T3에 `below_min_n: true`가 있습니다.\n\n그림 1의 표지에서 '<' 기호가 글꼴 때문에 꺾쇠(〈)처럼 보일 수 있습니다. 내용에는 영향이 없습니다.\n\n이번 자료에 맞게 이전 스크립트를 복사해 analyze2.py로 고쳤습니다. 이전 실행과 비교하라는 요청은 없어서 changelog.md는 만들지 않았습니다.\n\n파일은 `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/agent/` 폴더에 있습니다.\n- out2/report.md\n- out2/quality.json\n- out2/stats.json\n- out2/manifest.json\n- out2/fig1_duration_by_condition.png\n- out2/fig2_satisfaction_by_group.png\n- analyze2.py",
+ "error": null,
+ "status_url": "/system-ai/tasks/task_sysai_7acfb2d3"
+}

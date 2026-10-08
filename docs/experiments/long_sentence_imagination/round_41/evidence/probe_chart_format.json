@@ -1,0 +1,430 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$a = [table:chart]{title:\"t1\",chart_type:\"bar\",x:[\"a\",\"b\"],y:[1,2],output_path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/probe/bar_stem\",output_format:\"png\"}\n$b = [table:chart]{title:\"t2\",spec:{data:[{type:\"bar\",x:[\"a\",\"b\"],y:[1,2]}],layout:{title:\"t2\"}},output_path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/probe/spec_ext.png\"}\nreturn {a:$a.path,a_file:get($a,\"file\"),b:$b.path,b_file:get($b,\"file\")}",
+  "origin": "training",
+  "project_id": "수동모드"
+ },
+ "elapsed": 0.292,
+ "response": {
+  "success": false,
+  "error": "chart: `x` 에는 string 이 와야 하는데 2개짜리 목록이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).",
+  "diagnostic": {
+   "code": "TOOL",
+   "kind": "runtime",
+   "message": "chart: `x` 에는 string 이 와야 하는데 2개짜리 목록이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [
+    16
+   ],
+   "details": {},
+   "source_span": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 21,
+    "end": 222,
+    "line": 2,
+    "column": 6
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "fa841ec277c74bbec7c6972ef3452d883754398e6500dc88d316c907e811ea6c",
+  "source_complete": false,
+  "source_map": {
+   "sequence:15:516": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 15,
+    "end": 516,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:222": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 16,
+    "end": 222,
+    "line": 2,
+    "column": 1
+   },
+   "call:21:222": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 21,
+    "end": 222,
+    "line": 2,
+    "column": 6
+   },
+   "record:34:222": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 34,
+    "end": 222,
+    "line": 2,
+    "column": 19
+   },
+   "literal:41:45": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 41,
+    "end": 45,
+    "line": 2,
+    "column": 26
+   },
+   "literal:57:62": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 57,
+    "end": 62,
+    "line": 2,
+    "column": 42
+   },
+   "list:65:74": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 65,
+    "end": 74,
+    "line": 2,
+    "column": 50
+   },
+   "literal:66:69": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 66,
+    "end": 69,
+    "line": 2,
+    "column": 51
+   },
+   "literal:70:73": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 70,
+    "end": 73,
+    "line": 2,
+    "column": 55
+   },
+   "list:77:82": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 77,
+    "end": 82,
+    "line": 2,
+    "column": 62
+   },
+   "literal:78:79": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 78,
+    "end": 79,
+    "line": 2,
+    "column": 63
+   },
+   "literal:80:81": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 80,
+    "end": 81,
+    "line": 2,
+    "column": 65
+   },
+   "literal:95:201": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 95,
+    "end": 201,
+    "line": 2,
+    "column": 80
+   },
+   "literal:216:221": {
+    "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+    "start": 216,
+    "end": 221,
+    "line": 2,
+    "column": 201
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "254c599ed4badf958536da68735682b62a3fbdbe0eb4544b8e257dece4f50dc9",
+    "action": "table:chart",
+    "reuse_key": "a0431a5bc6740b28e5918244d8b8cc122e105595c88a6496b3a634c1d7f2593a",
+    "error": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "chart: `x` 에는 string 이 와야 하는데 2개짜리 목록이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      13
+     ],
+     "details": {}
+    },
+    "partial": [
+     "unit"
+    ],
+    "arguments": [
+     "record",
+     [
+      [
+       "title",
+       [
+        "scalar",
+        "t1"
+       ]
+      ],
+      [
+       "chart_type",
+       [
+        "scalar",
+        "bar"
+       ]
+      ],
+      [
+       "x",
+       [
+        "list",
+        [
+         [
+          "scalar",
+          "a"
+         ],
+         [
+          "scalar",
+          "b"
+         ]
+        ]
+       ]
+      ],
+      [
+       "y",
+       [
+        "list",
+        [
+         [
+          "scalar",
+          1
+         ],
+         [
+          "scalar",
+          2
+         ]
+        ]
+       ]
+      ],
+      [
+       "output_path",
+       [
+        "scalar",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/probe/bar_stem"
+       ]
+      ],
+      [
+       "output_format",
+       [
+        "scalar",
+        "png"
+       ]
+      ]
+     ]
+    ],
+    "argument_evidence": [
+     11
+    ],
+    "argument_incomplete": false
+   }
+  ],
+  "usage": {
+   "steps": 14,
+   "rows": 0,
+   "elapsed_ms": 275,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:222",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 16,
+      "end": 222,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:21:222",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 21,
+      "end": 222,
+      "line": 2,
+      "column": 6
+     }
+    },
+    {
+     "node_id": "list:65:74",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 65,
+      "end": 74,
+      "line": 2,
+      "column": 50
+     }
+    },
+    {
+     "node_id": "list:77:82",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 77,
+      "end": 82,
+      "line": 2,
+      "column": 62
+     }
+    },
+    {
+     "node_id": "literal:216:221",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 216,
+      "end": 221,
+      "line": 2,
+      "column": 201
+     }
+    },
+    {
+     "node_id": "literal:41:45",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 41,
+      "end": 45,
+      "line": 2,
+      "column": 26
+     }
+    },
+    {
+     "node_id": "literal:57:62",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 57,
+      "end": 62,
+      "line": 2,
+      "column": 42
+     }
+    },
+    {
+     "node_id": "literal:66:69",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 66,
+      "end": 69,
+      "line": 2,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "literal:70:73",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 70,
+      "end": 73,
+      "line": 2,
+      "column": 55
+     }
+    },
+    {
+     "node_id": "literal:78:79",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 78,
+      "end": 79,
+      "line": 2,
+      "column": 63
+     }
+    },
+    {
+     "node_id": "literal:80:81",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 80,
+      "end": 81,
+      "line": 2,
+      "column": 65
+     }
+    },
+    {
+     "node_id": "literal:95:201",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 95,
+      "end": 201,
+      "line": 2,
+      "column": 80
+     }
+    },
+    {
+     "node_id": "record:34:222",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 34,
+      "end": 222,
+      "line": 2,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "sequence:15:516",
+     "steps": 1,
+     "location": {
+      "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8",
+      "start": 15,
+      "end": 516,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 13,
+     "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 10,
+     "calls": 1,
+     "actions": [
+      "table:chart"
+     ],
+     "source_hash": "17a54cac116ee396a605624faca7c21d6db6b548d743319b0bfff630481bb0e8"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "34644d494eb846e599673cca167acffa"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "34644d494eb846e599673cca167acffa",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

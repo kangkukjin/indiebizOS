@@ -1,0 +1,21 @@
+{
+ "task_ref": {
+  "kind": "delegation",
+  "owner": "system",
+  "task_id": "task_sysai_ac620a04"
+ },
+ "parent_task_ref": null,
+ "run_id": "run_b5b0c9d3b40272693de6",
+ "parent_run_id": null,
+ "state": "succeeded",
+ "status": "completed",
+ "delegated_to": "system_ai",
+ "requester_channel": "gui",
+ "created_at": "2026-10-08 18:25:15",
+ "completed_at": "2026-10-08 18:28:09",
+ "pending_children": 0,
+ "children": [],
+ "result": "정정 자료로 보고서를 다시 만들어 out1 폴더에 저장했습니다. 저장한 파일을 다시 읽어 확인한 네 가지 멈춤선 검산과 원자료 독립 재계산이 모두 통과했습니다. 실행 식별자는 `20261009T032750-76d776f7df5c`입니다.\n\n**바뀐 입력:** design.json·t_critical.json·participants.csv·survey.csv와 다른 trial 파일 53개는 sha256이 이전과 같아서 규칙도 같습니다. 바뀐 파일은 trials의 P33·P35·P37·P39·P41·P43·P45 7개입니다.\n\n**changelog.md에 적힌 변경**\n- **조건 표:** B-T1 한 행만 바뀌었습니다.\n\n  | 항목 | 이전 | 정정 후 |\n  |---|---|---|\n  | 평균 | 48.5408 | 52.0408 |\n  | sd | 4.8186 | 7.7165 |\n  | 95% CI | 46.7416~50.3401 | 49.1595~54.9222 |\n\n- **가설 H1:** 판정은 '지지' 그대로이고 수치만 바뀌었습니다.\n\n  | 항목 | 이전 | 정정 후 |\n  |---|---|---|\n  | t | −10.1752 | −5.9223 |\n  | df | 56 | 53 |\n  | 임계값 | 2.5809 | 2.5858 |\n  | d | −2.6272 | −1.5291 |\n\n- **그림:** 조건별 완료시간 그림은 통계가 바뀌어 다시 그렸습니다.\n- **바뀌지 않은 것:**\n  - 자료 품질 표는 같습니다. 제외 4건, 결측 1건(P23 T3 4회차), 설문 미응답 P17이 그대로입니다.\n  - 만족도 표와 H2·H3·H4도 같습니다.\n  - 만족도 그림은 다시 그리지 않고 이전 PNG를 복사했습니다. sha256이 이전 파일과 같습니다.\n\n**다시 읽은 파일:** 바뀌지 않은 입력 파일도 다시 읽었습니다. 변경 여부를 판별하는 sha256 대조에 파일 전체가 필요하기 때문입니다. 또 조건 통계와 검정은 모든 참가자 자료로 처음부터 다시 계산해야 하는데, 이전 실행은 참가자별 중간값을 저장하지 않아 재사용할 캐시가 없었습니다. 이전 out에서는 stats.json, manifest.json, quality.json, 만족도 PNG만 읽었고 이전 report.md는 읽지 않았습니다. 이 내용을 changelog.md와 manifest.json에 함께 적었습니다.\n\n이전 스크립트는 그대로 두고 복사본 analyze1.py에 비교 기능을 붙였습니다. 이전 out을 인자로 받아 changelog.md를 만들고, 바뀌지 않은 그림은 복사합니다.\n\n파일은 `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/agent/` 폴더에 있습니다.\n- out1/report.md\n- out1/changelog.md\n- out1/quality.json\n- out1/stats.json\n- out1/manifest.json\n- out1/fig1_duration_by_condition.png\n- out1/fig2_satisfaction_by_group.png\n- analyze1.py",
+ "error": null,
+ "status_url": "/system-ai/tasks/task_sysai_ac620a04"
+}

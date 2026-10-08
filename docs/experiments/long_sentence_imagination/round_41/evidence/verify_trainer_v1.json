@@ -1,0 +1,95 @@
+{
+ "checks": [
+  [
+   "files exist",
+   true,
+   "[]"
+  ],
+  [
+   "excluded_count",
+   true,
+   "(4, 4)"
+  ],
+  [
+   "duplicate_count",
+   true,
+   "0"
+  ],
+  [
+   "low_n_conditions",
+   true,
+   "[]"
+  ],
+  [
+   "survey_missing",
+   true,
+   "['P17']"
+  ],
+  [
+   "conditions n/mean/ci_low (6)",
+   true,
+   "{}"
+  ],
+  [
+   "satisfaction",
+   true,
+   "{'A': (29.0, 3.379), 'B': (30.0, 4.019)}"
+  ],
+  [
+   "hypotheses verdict+t (4)",
+   true,
+   "{}"
+  ],
+  [
+   "png figures >= 2 (v1 은 이전 그림 참조 허용)",
+   true,
+   "(['fig_duration.png'], ['/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/trainer/out1/fig_duration.png', '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/trainer/out/fig_satisfaction.png'])"
+  ],
+  [
+   "report references png",
+   true,
+   "['fig_duration.png']"
+  ],
+  [
+   "report sections",
+   true,
+   "[]"
+  ],
+  [
+   "report has no \"차이 없음 입증\"-style claim",
+   true,
+   ""
+  ],
+  [
+   "INFO report decimals outside oracle set",
+   true,
+   "[]"
+  ],
+  [
+   "manifest sha256 covers all inputs",
+   true,
+   "(64, 64)"
+  ],
+  [
+   "manifest has tables and figures",
+   true,
+   "['inputs_sha256', 'tables', 'figures', 'prose', 'prev', 'program']"
+  ],
+  [
+   "changelog exists",
+   true,
+   ""
+  ],
+  [
+   "changelog mentions B-T1 and H1, not H4",
+   true,
+   "# 변경 기록 (이전: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_41회차/trainer/out)\n\n## 바뀐 조건 표\n- 조건 | B | T1 | 30 | 52.041 | 7.716 | 49.159 ~ 54.922 |\n\n## 바뀐 가설 판정\n- H1: 지지 (30/30 | 62.42 / 52.041 | -5.9223 | 53 | 2.5858 | -1.5291)\n\n## 만족도\n- 만족도 표 변화 없음\n\n## 그림\n- 그림 1"
+  ],
+  [
+   "fig2 not regenerated",
+   true,
+   "['fig_duration.png']"
+  ]
+ ],
+ "ok": true
+}

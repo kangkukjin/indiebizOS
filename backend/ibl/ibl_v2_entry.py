@@ -123,7 +123,8 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
 
 
 def capabilities():
+    from ibl_v2_runtime import Budget
     return {"editions": [1, 2], "default_edition": 1, "model_authoring_edition": 2, "value_protocols": ["ibl-value/1", "ibl-value/2"],
             "v2_resume": True, "resume_protocols": ["ibl-resume/1"], "v2_remote_script": True, "call_protocols": ["ibl-script-call/1"],
             "v2_budget": {"steps": 100000, "rows": 10000, "seconds": None, "depth": 64,
-                          "request_max": {"steps": 1000000, "rows": 100000}}}
+                          "request_max": dict(Budget.REQUEST_LIMITS)}}

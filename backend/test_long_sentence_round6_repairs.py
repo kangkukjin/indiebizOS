@@ -30,7 +30,7 @@ def run(code, registry, inputs=None, **kwargs):
     return Runtime(plan, inputs, **kwargs).run()
 
 
-@pytest.mark.parametrize('value', [{'steps': True}, {'steps': 0}, {'steps': 1000001},
+@pytest.mark.parametrize('value', [{'steps': True}, {'steps': 0}, {'steps': 10000001},
                                     {'rows': 100001}, {'depth': 999}, {'steps': '5'}, []])
 def test_invalid_budget_rejected_before_effect(value):
     result = handle_request({'code': '#!ibl edition=2\nreturn 1', 'budget': value})

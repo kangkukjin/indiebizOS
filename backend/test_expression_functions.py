@@ -156,6 +156,40 @@ def test_from_entries_round33_original_program_against_independent_oracle(tmp_pa
     assert all(section in report for section in ('주문별 상태', '부족 상위', '재고 미상', '순환'))
 
 
+@pytest.mark.parametrize('expression,expected', [
+    ('replace($s,"zzz","y")', '앞 e\u0301 음악 뒤'),
+    ('replace($s,"é","NEW")', '앞 NEW 음악 뒤'),
+    ('join("",split($s,"\\n"))', '앞 e\u0301 음악 뒤'),
+    ('$s[:3]', '앞 e\u0301'),
+    ('$s[2]', 'e\u0301'),
+    ('$s[-1]', '뒤'),
+    ('f"${s}"', '앞 e\u0301 음악 뒤'),
+    ('text($s)+"!"', '앞 e\u0301 음악 뒤!'),
+    ('strip("  "+$s+"  ")', '앞 e\u0301 음악 뒤'),
+    ('replace($s,"음악","새 é")', '앞 e\u0301 새 é 뒤'),
+])
+def test_text_edit_preserves_unmatched_mixed_normalization(expression, expected):
+    inputs = {'s': '앞 e\u0301 음악 뒤'}
+    result = Runtime(compile_program('return ' + expression, {}, inputs), inputs).run()
+    assert result['success'], result
+    assert result['value'] == expected
+    legacy = expression.replace('$s', 's')
+    if not expression.startswith('f"'):
+        assert eval_expr(compile_expr(legacy)[0], inputs) == expected
+
+
+@pytest.mark.parametrize('limit', [-1, 0, 1, 2, 30])
+def test_canonical_text_split_and_empty_replace_limits(limit):
+    text = 'e\u0301-é-e\u0301'
+    assert pure_call('replace', [text, 'é', 'X', limit]) == (
+        text if limit == 0 else 'X-é-e\u0301' if limit == 1 else
+        'X-X-e\u0301' if limit == 2 else 'X-X-X')
+    pieces = pure_call('split', [text, '-', limit])
+    assert '-'.join(pieces) == text
+    assert pure_call('replace', ['abc', '', '!', limit]) == 'abc'.replace('', '!', limit)
+    assert pure_call('split', ['  e\u0301  음악  ', None, limit]) == '  e\u0301  음악  '.split(None, limit)
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

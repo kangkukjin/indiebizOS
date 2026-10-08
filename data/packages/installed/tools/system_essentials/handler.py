@@ -797,8 +797,7 @@ def _execute(tool_input: dict, context) -> str:
             structured = tool_input.get("blocks") and data_format in {"json", "csv", "tsv"}
             content, total, start, end, ranged, truncated = _file_io.read_text_window(
                 path, tool_input, _text_read_bounds,
-                max_chars=None if structured else _file_io.TEXT_PREVIEW_CHARS,
-                preserve_newlines=structured and data_format in {'csv', 'tsv'})
+                max_chars=None if structured else _file_io.TEXT_PREVIEW_CHARS)
             if tool_input.get("blocks") and data_format == "json" and not ranged and not truncated and content.strip():
                 parsed = _file_io.structured_data(content, data_format, path)
                 return json.dumps({"success": True, "text": content, "blocks": [],

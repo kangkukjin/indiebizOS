@@ -59,5 +59,38 @@ def test_regular_relation_keys_keep_persisted_spelling():
     assert values.relation_identity("2026-10-08") == "naive:2026-10-08T00:00:00"
 
 
+@pytest.mark.parametrize('needle', ['\r', '\n', '\t', ' ', '\u00a0', '\r\n'])
+def test_whitespace_search_uses_literal_pattern_on_every_surface(needle):
+    for op in ('contains', 'startswith', 'endswith'):
+        assert not values.text_match(op, 'abc', needle)
+        assert values.text_match(op, needle + 'abc' + needle, needle)
+    assert not values.text_match('in', needle, 'abc')
+    assert values.text_match('in', needle, 'a' + needle + 'b')
+    assert values.negative_text_match('contains', 'abc', needle)
+    assert not values.text_match('contains', None, needle)
+    assert not values.text_match('contains', {}, needle)
+
+
+def test_empty_pattern_and_nonblank_search_keep_existing_policy():
+    assert values.text_match('contains', 'abc', '')
+    assert values.text_match('contains', '  ABC  ', ' b ')
+    assert values.text_match('contains', [' x '], 'X')
+    assert not values.text_match('contains', 'abc\n', '\r')
+
+
+@pytest.mark.parametrize('source', [
+    '음악 café', '\u110b\u1173\u11b7\u110b\u1161\u11a8 cafe\u0301',
+    '앞 e\u0301\u0327 뒤', '\u0344끝', '\u212b!🙂',
+])
+def test_text_view_normalized_positions_and_verbatim_fragments(source):
+    view = values.TextView(source)
+    assert view.select(slice(None)) == source
+    assert view.replace('never-matches', 'new') == source
+    assert view.split('\n') == [source]
+    for start in range(len(view.normalized) + 1):
+        for end in range(start, len(view.normalized) + 1):
+            assert values.normalized_text(view.fragment(start, end)) == view.normalized[start:end]
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

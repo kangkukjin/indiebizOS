@@ -6,7 +6,7 @@ budget; stable list set operations retain the first representative value.
 from functools import cmp_to_key
 from common.expression_ir import Fault
 from common.value_semantics import (values_equal, compare_order, text_match,
-                                    equality_bucket, normalized_text, sort_records)
+                                    equality_bucket, normalized_text, sort_records, TextView)
 
 # name -> (minimum arity, maximum arity, positional types, result type)
 CONTRACTS = {
@@ -45,7 +45,7 @@ CONTRACTS = {
 def text(value):
     if not isinstance(value, str):
         raise Fault('TEXT_REQUIRED', '문자열 연산에는 Text가 필요합니다. 변환은 text()/json()으로 명시하세요.')
-    return normalized_text(value)
+    return value
 
 
 def integer(value):
@@ -129,28 +129,28 @@ def call(name, args, tick, callback=None):
         if name == 'split':
             sep = None if len(args) < 2 or args[1] is None else text(args[1])
             limit = -1 if len(args) < 3 else integer(args[2])
-            result = s.split(sep, limit)
+            result = TextView(s).split(sep, limit)
             for _ in result:
                 tick()
             return result
         if name == 'replace':
-            return normalized_text(s.replace(text(args[1]), text(args[2]), -1 if len(args) < 4 else integer(args[3])))
+            return TextView(s).replace(text(args[1]), text(args[2]), -1 if len(args) < 4 else integer(args[3]))
         if name == 'strip':
-            return s.strip(None if len(args) < 2 or args[1] is None else text(args[1]))
+            return TextView(s).strip(None if len(args) < 2 or args[1] is None else text(args[1]))
         if name in ('upper', 'lower'):
-            return normalized_text(getattr(s, name)())
+            return getattr(s, name)()
         if name == 'contains':
             if len(args) == 3:
                 if type(args[2]) is not bool:
                     raise Fault('BOOL_REQUIRED', 'contains의 세 번째 인자 exact는 true/false입니다.')
                 if args[2]:
-                    return text(args[1]) in s
+                    return normalized_text(text(args[1])) in normalized_text(s)
             return text_match('contains', s, text(args[1]))
         parts = listing(args[1])
         for part in parts:
             tick()
             text(part)
-        return normalized_text(s.join(text(part) for part in parts))
+        return s.join(text(part) for part in parts)
     if name in ('keys', 'values', 'entries'):
         if not isinstance(first, dict):
             raise Fault('RECORD_REQUIRED', 'Record가 필요합니다.')

@@ -12,11 +12,11 @@ actions:
       at: '2026-10-05'
       impl: 3c31b0566918933b
       dependencies:
-        backend/common/expression_eval.py: 539142b9eb7f27ca915f5be9a47ba995516d1ed7302b4a1e737e1145b0473c89
-        backend/common/expression_functions.py: fd1c73586a3b12822a3e7852d57aa57ae4db688eaf8eb9501ec5d8c9924c64af # 재감사 2026-10-08: 순수 from_entries 추가(Text 키·중복 거절·공통 예산). I/O·인증·주체·경로 해소 없음.
+        backend/common/expression_eval.py: 6ade3d9b20d650c655398920e0980ccc124246876ed821a4aba4b9d79e695cdc # 재감사 2026-10-09: 순수 문자열 원문 보존·공백 검색 수리. 값 식만 변경, I/O·인증·주체·경로 접근 추가 없음.
+        backend/common/expression_functions.py: 0d5ef11ac2b3aa49807b08b2a22b927d259f0721af562d186b25a4ce410e1887 # 재감사 2026-10-09: 순수 문자열 원문 보존·공백 검색 수리. 값 식만 변경, I/O·인증·주체·경로 접근 추가 없음.
         backend/common/expression_ir.py: a8f7cdaf84a48dee6a51faf021e151cd66b4c64d77737d11341d82204bd95b2f # 재감사: suspended Fault의 catch 제외만 변경. 레코드 인증·경로·주체 해소 불변.
         backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
-        backend/common/expression_ops.py: bebda213e12ac8adb67608ecaa7c4e22f4c0ed27863bcc60dc45653555b1f783
+        backend/common/expression_ops.py: 815d7f433f24f351e8827cec78f95743b3fb331986c5606695e76e18f34b9c04 # 재감사 2026-10-09: 순수 문자열 원문 보존·공백 검색 수리. 값 식만 변경, I/O·인증·주체·경로 접근 추가 없음.
         backend/common/expression_parser.py: 01935903655cacbf91d63a133962d2b9c5cf322d4a0caa2f004892befc69b431 # 재감사 2026-10-08: 동적 키 거절 안내에 from_entries 대안 추가. 문법·인증·주체·경로 해소 불변.
         backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
         backend/base/runtime_utils.py: a2cc50cf1dcafb3f83d32c298787dbd3e5fb4ef4276ff0c8bbc77bf449cd1198
@@ -25,7 +25,7 @@ actions:
         backend/common/record_contract.py: ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5
         backend/common/row_conditions.py: 154e8ad5edd447ac46996d174a7cb94e6bb1cfa7f4472cf1b6389d227ae9b9ce
         backend/common/safe_expr.py: 393baf8c10b1d7d25fe5ecbf40f5b44b8a1e9e12149e1be6bcda36db8c2cc360
-        backend/common/value_semantics.py: 9f41216e7a5f508d778e135925baa97013050ebdb69df63ca0c83b079f8796e0 # 재감사 2026-10-08: 날짜 정렬·관계 키의 연도 경계 및 키 재계산 수리. 레코드 조회는 권한 투영 후 정렬하며 인증·경로·주체 불변.
+        backend/common/value_semantics.py: e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755 # 재감사 2026-10-09: 순수 문자열 원문 보존·공백 검색 수리. 값 식만 변경, I/O·인증·주체·경로 접근 추가 없음.
         backend/datastore/record_admin.py: 26d13e5e73c42d56a8d6ed2119a81e0a7738c897c535ca3281311f05fcaa9dab
         backend/datastore/record_assets.py: b2271b04ac857ba746e8d883b756b7219d4ac0e4367f6a8ee718bc7d6caf5da9   # 재감사 2026-10-05: 사람 확인 토큰을 공통 승인 토큰(approval_tokens, 주체·self:record·변경 지문 결속 1회)으로 — 회원 권한 범위 불변
         backend/datastore/record_commands.py: 294276901dfa8bc052ae82cbfdeb460e5c2a555c60c75477a6d37093cc832c53   # 재감사 2026-10-05: 사람 확인 토큰을 공통 승인 토큰(approval_tokens, 주체·self:record·변경 지문 결속 1회)으로 — 회원 권한 범위 불변

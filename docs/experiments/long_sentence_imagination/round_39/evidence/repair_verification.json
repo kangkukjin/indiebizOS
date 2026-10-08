@@ -1,0 +1,150 @@
+{
+  "repair_base": "ce3a7c74",
+  "full_regression": {
+    "command": ".venv/bin/python3 -m pytest backend/ -n auto --dist loadfile",
+    "environment": "native macOS; after sandbox permission failures",
+    "passed": 9588,
+    "skipped": 12,
+    "failed": 0,
+    "errors": 0,
+    "elapsed_seconds": 204.114,
+    "skip_details": [
+      {
+        "test": "::backend.test_narration_injection",
+        "reason": "collection skipped"
+      },
+      {
+        "test": "backend.test_spreadsheet_formats::test_live_fods_roundtrip_boolean_formula_and_namespace",
+        "reason": "explicit local conversion test"
+      },
+      {
+        "test": "backend.test_spreadsheet_print_live::test_printable_form_app_save_pdf[singlepage]",
+        "reason": "explicit local app acceptance"
+      },
+      {
+        "test": "backend.test_spreadsheet_print_live::test_printable_form_app_save_pdf[multipage]",
+        "reason": "explicit local app acceptance"
+      },
+      {
+        "test": "backend.test_spreadsheet_print_live::test_printable_form_app_save_pdf[structure]",
+        "reason": "explicit local app acceptance"
+      },
+      {
+        "test": "backend.test_spreadsheet_print_live::test_printable_form_app_save_pdf[manual]",
+        "reason": "explicit local app acceptance"
+      },
+      {
+        "test": "backend.test_spreadsheet_links_live::test_live_linked_report_refresh",
+        "reason": "explicit local engine acceptance"
+      },
+      {
+        "test": "backend.test_spreadsheet_recovery_live::test_live_crash_and_offline_recovery",
+        "reason": "explicit local engine acceptance"
+      },
+      {
+        "test": "backend.test_spreadsheet_scale_live::test_scale_measurements",
+        "reason": "explicit scale measurement"
+      },
+      {
+        "test": "backend.test_document_office_live::test_office_docx_roundtrip",
+        "reason": "로컬 ONLYOFFICE 실인수 명시 실행"
+      },
+      {
+        "test": "backend.test_spreadsheet_engine_live::test_spreadsheet_plugin_roundtrip",
+        "reason": "explicit local engine acceptance"
+      },
+      {
+        "test": "backend.test_spreadsheet_functions_live::test_required_functions",
+        "reason": "explicit engine test"
+      }
+    ]
+  },
+  "isolated_program_runs": {
+    "test_complete_document_revision_program[base]": {
+      "steps": 673402,
+      "rows": 15764,
+      "elapsed_ms": 5193,
+      "limits": {
+        "steps": 3000000,
+        "rows": 100000
+      }
+    },
+    "test_complete_document_revision_program[big]": {
+      "steps": 2692714,
+      "rows": 63056,
+      "elapsed_ms": 21637,
+      "limits": {
+        "steps": 3000000,
+        "rows": 100000
+      }
+    },
+    "test_complete_document_revision_program[nfd_crlf]": {
+      "steps": 674060,
+      "rows": 15764,
+      "elapsed_ms": 5449,
+      "limits": {
+        "steps": 3000000,
+        "rows": 100000
+      }
+    },
+    "test_complete_document_revision_program[bad]": {
+      "steps": 1195,
+      "rows": 36,
+      "elapsed_ms": 785,
+      "limits": {
+        "steps": 3000000,
+        "rows": 100000
+      }
+    },
+    "test_complete_document_revision_program[dry]": {
+      "steps": 672174,
+      "rows": 15692,
+      "elapsed_ms": 3712,
+      "limits": {
+        "steps": 3000000,
+        "rows": 100000
+      }
+    },
+    "test_complete_document_revision_program[empty]": {
+      "steps": 298,
+      "rows": 0,
+      "elapsed_ms": 76,
+      "limits": {
+        "steps": 3000000,
+        "rows": 100000
+      }
+    },
+    "test_complete_document_revision_program[mixed_nfd]": {
+      "steps": 703125,
+      "rows": 15764,
+      "elapsed_ms": 5499,
+      "limits": {
+        "steps": 3000000,
+        "rows": 100000
+      }
+    }
+  },
+  "live_api": {
+    "origin": "training",
+    "text_probe_success": true,
+    "text_values": {
+      "missing": false,
+      "present": true,
+      "no_change": "워크스페이스 유지",
+      "roundtrip": "워크스페이스 유지",
+      "slice": "워크스"
+    },
+    "budget_limits": {
+      "steps": 3000000,
+      "rows": 10000
+    },
+    "file_roundtrip_success": true,
+    "file_bytes_identical": true
+  },
+  "limits": [
+    "L39-4 expands explicitly requested capacity; no step coefficient/time/token improvement claim",
+    "NFC positions retained; a cut inside a normalization segment returns NFC boundary fragments",
+    "Read failures prevent all document writes; multi-file write-failure rollback is not provided",
+    "Original untested Markdown syntax boundaries remain"
+  ]
+}

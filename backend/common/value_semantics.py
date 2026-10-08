@@ -5,6 +5,7 @@
 """
 
 from collections.abc import Callable
+from bisect import bisect_right
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, localcontext
@@ -222,6 +223,91 @@ def normalized_text(value: str) -> str:
     return unicodedata.normalize("NFC", value)
 
 
+class TextView:
+    """NFC positions with original source fragments for text editing.
+
+    A whole normalization segment is returned verbatim. Cutting inside a
+    composed/reordered segment returns only that boundary's NFC characters;
+    unrelated segments are never rewritten. NFC input takes the direct path.
+    """
+
+    def __init__(self, source):
+        self.source = source
+        self.normalized = normalized_text(source)
+        self.segments = []
+        if source == self.normalized:
+            return
+        start, chunk, offset = 0, [], 0
+        for index, char in enumerate(source):
+            # Combining marks belong to the starter. Hangul L/V/T are starters
+            # too, but compose across the boundary and must stay together.
+            if chunk and not unicodedata.combining(char):
+                canonical = normalized_text(''.join(chunk))
+                if normalized_text(canonical + char) == canonical + normalized_text(char):
+                    self.segments.append((offset, offset + len(canonical), start, index, canonical))
+                    offset += len(canonical)
+                    start, chunk = index, []
+            chunk.append(char)
+        if chunk:
+            canonical = normalized_text(''.join(chunk))
+            self.segments.append((offset, offset + len(canonical), start, len(source), canonical))
+        self.ends = [segment[1] for segment in self.segments]
+
+    def fragment(self, start, end):
+        if not self.segments:
+            return self.source[start:end]
+        if start == 0 and end == len(self.normalized):
+            return self.source
+        pieces = []
+        for index in range(bisect_right(self.ends, start), len(self.segments)):
+            lo, hi, raw_lo, raw_hi, canonical = self.segments[index]
+            if lo >= end:
+                break
+            if start <= lo and hi <= end:
+                pieces.append(self.source[raw_lo:raw_hi])
+            else:
+                pieces.append(canonical[max(0, start - lo):min(hi, end) - lo])
+        return ''.join(pieces)
+
+    def select(self, key):
+        if isinstance(key, int):
+            index = key if key >= 0 else len(self.normalized) + key
+            return self.fragment(index, index + 1)
+        start, end, step = key.indices(len(self.normalized))
+        if step == 1:
+            return self.fragment(start, max(start, end))
+        return ''.join(self.fragment(i, i + 1) for i in range(start, end, step))
+
+    def split(self, separator=None, limit=-1):
+        separator = normalized_text(separator) if separator is not None else None
+        parts = self.normalized.split(separator, limit)
+        offset, out = 0, []
+        for part in parts:
+            if separator is None:
+                while offset < len(self.normalized) and self.normalized[offset].isspace():
+                    offset += 1
+            out.append(self.fragment(offset, offset + len(part)))
+            offset += len(part) + (len(separator) if separator is not None else 0)
+        return out
+
+    def replace(self, old, new, count=-1):
+        old = normalized_text(old)
+        if count == 0 or (old and old not in self.normalized):
+            return self.source
+        if old:
+            return new.join(self.split(old, count))
+        # Empty-pattern insertion uses NFC positions, like len/index/slice.
+        limit = len(self.normalized) + 1 if count < 0 else min(count, len(self.normalized) + 1)
+        return ''.join(new + self.fragment(i, i + 1) for i in range(limit - 1)) + (
+            new + self.fragment(limit - 1, len(self.normalized)) if limit else self.source)
+
+    def strip(self, chars=None):
+        chars = normalized_text(chars) if chars is not None else None
+        start = len(self.normalized) - len(self.normalized.lstrip(chars))
+        end = len(self.normalized.rstrip(chars))
+        return self.fragment(start, max(start, end))
+
+
 def datetime_value(value: Any):
     """선언된 ISO 8601 표기(또는 datetime 객체)를 시각으로 읽는다. 아니면 None.
 
@@ -393,6 +479,12 @@ def text_match(op: str, left: Any, right: Any) -> bool:
     left_text, right_text = _partial_text_form(left), _partial_text_form(right)
     if left_text is None or right_text is None:
         return False
+    # Whitespace-only needles are data, not the empty pattern produced by
+    # trim. Keep the existing word-search policy for nonblank needles.
+    needle = left if op == "in" else right
+    if isinstance(needle, str) and needle and not needle.strip():
+        left_text = normalized_text(str(left)).casefold()
+        right_text = normalized_text(str(right)).casefold()
     if op == "contains":
         return right_text in left_text
     if op == "startswith":

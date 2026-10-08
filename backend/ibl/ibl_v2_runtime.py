@@ -19,7 +19,6 @@ from ibl_v2_types import guard
 
 
 from common.expression_eval import Binding, ExpressionEvaluator
-from common.value_semantics import normalized_text
 
 #: 취소 확인 간격(초). 확인 함수가 파일·프로세스를 보는 경로가 있어 걸음마다 부르지 않는다.
 _CANCEL_CHECK_INTERVAL_S = 0.02
@@ -36,6 +35,7 @@ class Returned(BaseException):
 
 @dataclass
 class Budget:
+    REQUEST_LIMITS = {"steps": 10_000_000, "rows": 100_000}
     steps: int = 100000
     rows: int = 10000
     seconds: float | None = None
@@ -50,10 +50,10 @@ class Budget:
     def from_request(cls, value):
         if value is None:
             return cls()
-        limits = {"steps": 1000000, "rows": 100000}
+        limits = cls.REQUEST_LIMITS
         if (not isinstance(value, dict) or set(value) - limits.keys()
                 or any(type(v) is not int or not 1 <= v <= limits[k] for k, v in value.items())):
-            raise Fault("BUDGET_ARGUMENT", "budget은 steps(1~1000000), rows(1~100000) 정수만 지정합니다.", kind="compile")
+            raise Fault("BUDGET_ARGUMENT", f"budget은 steps(1~{limits['steps']}), rows(1~{limits['rows']}) 정수만 지정합니다.", kind="compile")
         return cls(**value)
 
     def tick(self, row=False, depth=0, node_id=None):
@@ -74,9 +74,10 @@ class Budget:
                         for key, (used, limit) in measurements.items()
                         if limit is not None and used > limit}
             if exceeded:
-                hint = ("도구의 필터·검색으로 입력을 좁히거나 전건을 여러 실행으로 나누세요. "
-                        "요청 budget:{steps:...,rows:...}로 한도를 명시할 수도 있습니다(최대 steps 1000000·rows 100000). "
-                        "usage.steps_by_line에서 비싼 줄을 확인하세요. 전건 처리가 필요하면 take로 조용히 잘라내지 마세요.")
+                hint = ("usage.steps_by_line에서 비싼 줄을 확인하고 요청 budget:{steps:...,rows:...}로 한도를 조정하세요"
+                        f"(최대 steps {self.REQUEST_LIMITS['steps']}·rows {self.REQUEST_LIMITS['rows']}). "
+                        "전건 검증 뒤 쓰는 과제는 검증·쓰기 순서를 유지하세요. 독립적으로 완료할 수 있는 작업만 "
+                        "여러 실행으로 나누고, 전건 처리를 take로 조용히 잘라내지 마세요.")
                 dimensions = ", ".join(f"{k} {v['used']:g}/{v['limit']:g}" for k, v in exceeded.items())
                 raise Fault("BUDGET", f"공유 실행 예산을 초과했습니다: {dimensions}. {hint}",
                             kind="budget", details={"exceeded": exceeded, "hint": hint})
@@ -257,7 +258,7 @@ class Runtime(ExpressionEvaluator):
             if kind == "format":
                 parts = [sub(p) if not isinstance(p, str) else Binding(p) for p in d["parts"]]
                 text = "".join("" if p.value is OMITTED else scalar_text(p.value) for p in parts)
-                return Binding(normalized_text(text), self.parents(parts))
+                return Binding(text, self.parents(parts))
         value = self.expression(node, env)
         if value is not NotImplemented:
             if unspecified and kind == "record" and isinstance(value.value, dict) \

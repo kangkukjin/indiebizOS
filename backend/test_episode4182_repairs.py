@@ -135,7 +135,7 @@ def test_rejection_counts_use_preexecution_state(supervisor, boundary, tmp_path,
     from ibl_v2_entry import handle_request
     request = {'edition': 2, 'code': 'return 1', 'check': True}
     if kind == 'budget':
-        request['budget'] = {'steps': 2000000}
+        request['budget'] = {'steps': 20000000}
     elif kind == 'compile':
         request['code'] = 'return $missing'
     result = ({'success': False, 'executed': True, 'error': 'external failure'} if kind == 'runtime'

@@ -78,8 +78,7 @@ def read_document(params, command, exchange, workspace):
             if key in result:
                 result[key] = params['path']
         return result
-    preserve_newlines = p.get('blocks') and fmt in ('csv', 'tsv')
-    with path.open(encoding='utf-8', newline='' if preserve_newlines else None) as stream:
+    with path.open(encoding='utf-8', newline='') as stream:
         lines = stream.read().splitlines(keepends=True)
     start, end, ranged = ranges.text_read_bounds(p, len(lines))
     text = ''.join(lines[start:end])

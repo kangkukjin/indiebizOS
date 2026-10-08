@@ -64,14 +64,14 @@ def test_document_read_and_csv_save_preserve_source(tmp_path, extension, delimit
         assert list(csv.DictReader(stream)) == expected
 
 
-def test_plain_text_window_keeps_existing_line_contract(tmp_path):
+def test_plain_text_window_preserves_original_line_endings(tmp_path):
     path = tmp_path / 'text.txt'
     path.write_bytes(b'first\r\nsecond\rthird\n')
     file_io = module('essentials_file_io')
     bounds = module('fs_read_range').text_read_bounds
     text, total, start, end, ranged, truncated = file_io.read_text_window(
         path, {'offset': 1, 'limit': 1, 'numbered': True}, bounds)
-    assert (text, total, start, end, ranged, truncated) == ('2\tsecond\n', 3, 1, 2, True, False)
+    assert (text, total, start, end, ranged, truncated) == ('2\tsecond\r', 3, 1, 2, True, False)
 
 
 @pytest.mark.parametrize('variant', ['base', 'missing', 'bom_cr', 'empty'])

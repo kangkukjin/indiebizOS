@@ -101,7 +101,12 @@ def test_human_decimal_view_and_typed_wire(registry):
     ('lower($n)', '음악'), ('f"${$n}"', '음악'), ('text($n)', '음악'),
     ('$n+"!"', '음악!'),
 ])
-def test_nfd_text_operations_use_nfc_without_mutating_input(registry, expression, expected):
+def test_nfd_text_operations_preserve_source_at_nfc_positions(registry, expression, expected):
+    # L39-2: position/matching remains NFC; returned source fragments retain NFD.
+    if isinstance(expected, str):
+        expected = unicodedata.normalize('NFD', expected)
+    elif isinstance(expected, list):
+        expected = [unicodedata.normalize('NFD', item) for item in expected]
     original = unicodedata.normalize('NFD', '음악')
     inputs = {'n': original}
     assert value('return ' + expression, registry, inputs) == expected

@@ -140,7 +140,7 @@ def test_effectful_function_is_still_refused_in_pure_slots(registry, tmp_path):
 def test_budget_message_states_the_maximum():
     result = handle_request({'code': '#!ibl edition=2\nreturn $rows >> [table:each]{return $it*2}',
                              'inputs': {'rows': list(range(50))}, 'budget': {'steps': 20}})
-    assert result['diagnostic']['code'] == 'BUDGET' and '1000000' in result['error']
+    assert result['diagnostic']['code'] == 'BUDGET' and '10000000' in result['error']
 
 
 # ── L10-6: 앞 턴이 실행한 프로그램 목록 ──

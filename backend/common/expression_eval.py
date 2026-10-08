@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 import copy
 from common.expression_ir import Fault, UNIT
-from common.value_semantics import integer_value, normalized_text
+from common.value_semantics import integer_value, TextView
 from common.expression_ops import (Builtin, Closure, binary, boolean, number,
                                    scalar_text, pure_call, check_arity, free_names)
 
@@ -103,15 +103,15 @@ class ExpressionEvaluator:
                                      "types": [_value_type(v) for v in bad]})
             if edges[2] == 0:
                 raise Fault("SLICE_STEP", "슬라이스 간격은 0일 수 없습니다.", node)
-            source = normalized_text(base.value) if isinstance(base.value, str) else base.value
-            result = source[slice(*edges)]
-            for _ in result:
+            view = TextView(base.value) if isinstance(base.value, str) else None
+            result = view.select(slice(*edges)) if view else base.value[slice(*edges)]
+            selected = range(*slice(*edges).indices(len(view.normalized))) if view else result
+            for _ in selected:
                 self.expression_tick()
             return Binding(result, self.parents([base, *bounds]))
         if kind in ("field", "index"):
             base = sub(d["base"])
-            if isinstance(base.value, str):
-                base = Binding(normalized_text(base.value), base.evidence)
+            view = TextView(base.value) if isinstance(base.value, str) else None
             key = Binding(d["key"]) if kind == "field" else sub(d["key"])
             if isinstance(base.value, dict) and isinstance(key.value, str):
                 if key.value not in base.value:
@@ -119,7 +119,7 @@ class ExpressionEvaluator:
                                 details={"missing_fields": [key.value], "available_fields": list(base.value)[:20]})
             elif kind == "index" and isinstance(base.value, (str, list, tuple)):
                 position = integer_value(key.value)
-                length = len(base.value)
+                length = len(view.normalized) if view else len(base.value)
                 if position is None or not -length <= position < length:
                     # 어느 값의 몇 번째를 몇 개짜리에서 찾았는지 — 위치만으론 빈 결과인지 오타인지 모른다(77회차 T10·F72-2).
                     # 정수가 아님과 범위 밖을 가른다: 문구·세부가 둘 중 무엇인지 말해야 고칠 방향이 선다(79회차 F79-3).
@@ -138,7 +138,7 @@ class ExpressionEvaluator:
                             details={"field": key.value, "actual_type": type(base.value).__name__})
             if d["base"].kind == "ref" and d["base"].data["name"] == "error" and key.value == "partial":
                 self.event(node, "handled_partial", base.evidence)
-            return Binding(base.value[key.value], self.parents([base, key]))
+            return Binding(view.select(key.value) if view else base.value[key.value], self.parents([base, key]))
         if kind == "unary":
             value = sub(d["value"])
             out = not boolean(value.value) if d["op"] in ("not", "!") else value.value if d.get("legacy") else number(value.value)
@@ -173,7 +173,7 @@ class ExpressionEvaluator:
             return self.callback(fn.value, args)
         if kind == "format":
             parts = [sub(p) if not isinstance(p, str) else Binding(p) for p in d["parts"]]
-            return Binding(normalized_text("".join(scalar_text(p.value) for p in parts)), self.parents(parts))
+            return Binding("".join(scalar_text(p.value) for p in parts), self.parents(parts))
         return NotImplemented
 
     def callback(self, fn, args):

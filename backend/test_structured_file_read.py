@@ -84,6 +84,28 @@ def test_explicit_text_and_line_selection_keep_their_contract(reader, tmp_path):
     assert 'padding' not in selected['value']['data']
 
 
+@pytest.mark.parametrize('ending', ['\r\n', '\n', '\r'])
+def test_plain_text_read_write_and_selected_lines_preserve_bytes(reader, tmp_path, ending):
+    body = ending.join(['첫 e\u0301 줄', '둘째 줄', ''])
+    (tmp_path / 'original.txt').write_bytes(body.encode())
+    _, result = reader('$d=[self:read]{path:"original.txt",format:"text"}; '
+                       '[self:write]{path:$copy,content:$d.text}; return $d.text',
+                       inputs={'copy': str(tmp_path / 'copy.txt')})
+    assert result['success'] and result['value'] == body
+    assert (tmp_path / 'copy.txt').read_bytes() == body.encode()
+    _, selected = reader('return [self:read]{path:"original.txt",offset:1,limit:1}')
+    assert selected['value']['text'] == '둘째 줄' + ending
+
+
+def test_member_plain_text_preserves_mixed_line_endings(tmp_path):
+    member = module('member_documents')
+    body = '첫\r\n둘\n셋\r끝 e\u0301'.encode()
+    def exchange(command):
+        return {'success': True, 'content': base64.b64encode(body).decode()}
+    result = member.read_document({'path': 'device.txt', 'format': 'text'}, None, exchange, tmp_path)
+    assert result == body.decode()
+
+
 def test_large_json_uses_repair_candidate(repair_handler, setup):
     root, candidate, _, _ = setup
     (root / 'rows.json').write_text('{"source":"live"}')

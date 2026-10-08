@@ -108,7 +108,7 @@ def scalar_text(value):
     if integer is not None:
         return str(integer)
     if isinstance(value, (str, int, float, Decimal)):
-        return normalized_text(str(value))
+        return str(value)
     if value is None:
         raise Fault("TEXT_REQUIRED", "Text·Number·Bool만 문자열로 바꿀 수 있습니다. 이 값은 null입니다 — "
                     "보간·text() 앞에서 `$x == null ? '없음' : text($x)`처럼 가르세요.",
@@ -131,7 +131,7 @@ def binary(op, left, right, *, legacy=False):
             raise Fault("LIST_REQUIRED", "in의 오른쪽은 List입니다. 문자열 부분 검색에는 contains(text, part)를 쓰세요.")
         return list_membership(left, right)
     if op == "+" and isinstance(left, str) and isinstance(right, str):
-        return normalized_text(left + right)
+        return left + right
     if op == "+" and isinstance(left, list) and isinstance(right, list):
         return left + right
     operation = {"+": operator.add, "-": operator.sub, "*": operator.mul,

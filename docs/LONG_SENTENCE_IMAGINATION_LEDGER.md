@@ -234,7 +234,7 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 | L34-1 | 실행 대상/진단 결함 — 명시 project_id 해소 실패가 다른 경로로 폴백 | HTTP 검사 “문맥 없음”, fallback 경로 제공 회귀에서 실제 실행 진입 | 수리됨 — HTTP PROJECT_NOT_FOUND·ID와 실행 전 거절, 공통 라우팅 명시 ID 실패 시 폴백 없음 | 34회차 커밋·원래 전체/기본/빈 점검/새 경계 변형 전건 |
 | L34-2 | 교재 모호성·진단 결함 — groupby agg 콜백 시 VALUE_PROTOCOL Closure | `round_34/evidence/probe_group_request.json`, 인자 경로 없음·catch 불가 | 수리됨 — JSON 경계 ARGUMENT_CONTRACT·details.path, 교재에서 집계 명세와 순수 함수 구분 | 34회차 커밋·Closure/Builtin 및 네이티브 콜백 회귀 |
 | L34-3 | 훈련자 낭비/검증 누락 — 전체 표40회 필터·Markdown 재독 없음 | v0 filter 273240단계·JSON만 assert | 프로그램 보완 — 그룹 크기·정렬·슬라이스, 두 파일 재독. 시스템 기능 추가 아님 | 34회차 v1·세 입력 전건 및 단계49.3% 감소 |
-| L33-1 | 문법 공백+진단 — 값으로 정한 레코드 키 `{[$k]:v}` 는 문법에 없고 오류는 "이름이 필요합니다"뿐 | `round_33/drafts/main_v0.ibl` 42행 `{**$acc,[$r.product]:$r.depth}` | 진단 수리됨 — 파서가 지원하지 않는 모양·대안(`{key,value}` 행 목록·keys/values/entries)을 말함. 문법 추가 여부는 사용자 판정 | 33회차 커밋 · v0 검사 새 안내 확인 |
+| L33-1 | 문법 공백+진단 — 값으로 정한 레코드 키 `{[$k]:v}` 는 문법에 없고 오류는 "이름이 필요합니다"뿐 | `round_33/drafts/main_v0.ibl` 42행 `{**$acc,[$r.product]:$r.depth}` | 판정·구현 완료 — aa8751be: from_entries([[Text 키,값],…]) 추가, 중복 키 실패. 동적 키 문법은 추가하지 않음. 파서도 from_entries 안내 | [33회차 후속](experiments/long_sentence_imagination/round_33/report.md) · 원래 v0의 변환 대체 후 기본/순환/변경 전체 검증 |
 | L33-2 | 구현 결함(정직성) — `reuse` 가 같은 경로의 파일을 수정 뒤에도 옛 영수증으로 읽어 결과가 조용히 틀림(재독 검증은 같은 오답끼리 일치) | `source/inplace` 첫 실행 → orders.json O007 수량 2배 → 같은 코드 `reuse:{run_id}`: 읽기 4/5 재사용, O007=102(정답 204), success:true | 수리됨 — 영수증 `resource_state`(읽기 직전 수정 시각 ns·크기), 다르면 `resource_changed`+바뀐 경로, 지문 없는 옛 영수증 `freshness_unknown`. `resume`·웹/모델 원천은 범위 밖 | 33회차 커밋 · inplace2 3 재사용·1 resource_changed·O007=204, 원래 기본·순환·변경·새 변형 전건 |
 | L33-3 | 낭비(검사 침묵) — 프로젝트 문맥 없는 HTTP 요청이 검사 통과 뒤 첫 읽기에서 거절(32회차에도 밟음) | `base_exec_v1` 첫 실행: 읽기 4건 "활성 프로젝트 경로를 확보할 수 없어", 검사 응답엔 경고 0 | 수리됨 — 검사가 사용 액션(preflight.actions)의 scope·효과와 요청 문맥을 대조해 `PROJECT_CONTEXT` 경고 | 33회차 커밋 · 문맥 없음→경고(self:read·self:write), 문맥 있음→없음 |
 | L33-4 | 훈련자 작성 공백 — 재고 중복 행이 1:N 조인으로 소요 행을 복제(join 설명 ★경고를 놓침) | 새 변형 R200 재고 2행 → requirements 에 R200 2행 | 프로그램·oracle 에 `dedup`+행수 집계로 "재고 중복"(on_hand·shortage null). 시스템 수리 아님 | 33회차 커밋 · 새 변형 전건 |
@@ -243,8 +243,8 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 | L29-3 | 설계 공백·보고 정밀도 — 접수증·투영에 접수 시각이 없어 "접수 후 N초"를 셀 수 없고, 대기 기준의 "15초 안에 완료"가 접수 기준 18~22초를 가림 | 접수 11:39:25, 완료 11:39:43·47, 대기 프로그램 시작 ~11:39:40 | 수리됨 — 접수증 `accepted_at`, 투영의 고정 칸 `accepted_at`·`elapsed_s`(접수 기준, 끝난 작업은 종료까지·모르면 null). 위임·script 어댑터가 채움 | [29회차](experiments/long_sentence_imagination/round_29/report.md) |
 | L29-4 | 관측(비용) — 의식 단계 ~30초·102.5K 토큰, `usage.tool_ms_by_line` 이 병렬 호출을 합산(30,024ms vs 벽시계 15초) | ep task_sysai_21fe9ccb 감독비용, trainer start_v0 usage | 수리됨(표시) — 호출이 겹친 줄은 `wall_ms`(겹침을 한 번만 센 시간)를 함께. 의식 단계 비용은 관측 그대로 | — |
 | L28-1 | 구현 결함(접수증 계약 위반) — 같은 프로젝트 async 위임의 접수증이 호출자 task_id 를 싣고 `child_task_id: null` | `round_28/drafts/start_v1_delegate.ibl`: `[self:task]` → unknown "작업 LSI28 을(를) 홍보 저장소에서 찾지 못했습니다", status_url 404, 에이전트는 4회 실제 실행. 원인 `execute_call_agent` 의 `new_task_id or current_task_id` 폴백(부모 행 없음). sync 는 정직 거절 | 수리됨(2026-10-07) — 부모 행이 없으면 부모 없는 자식 행, 행을 못 만들면 접수 거절 | [28회차](experiments/long_sentence_imagination/round_28/report.md) 라이브 task_aa95dff4 회수·완료, 회귀 2 |
-| L28-2 | 구현 결함(완료 불가) — 한 프로그램의 human_confirm 호출 2개는 토큰 1회성·같은 challenge 라 끝낼 수 없음 | start_v0 재전송 2회: A 삭제 → B 같은 challenge 거절 → 재승인 → A "스위치 없음" 막다른 길 | 열림 — challenge 당 n 회 또는 프로그램 단위 승인 후보 | [28회차](experiments/long_sentence_imagination/round_28/report.md) |
-| L28-3 | 낭비(관문 자리·예고 부재) — 승인 재전송 = 프로그램 전체 재실행이라 앞선 부작용(위임) 반복, check 는 human_confirm 을 예고하지 않음, 가이드에 승인 왕복 절차 없음 | 위임 요구 1 → 4회, 승인 최소 2 → 4회. `start_v0_check`: ok·issues 0 | 열림 — check 예고 + 가이드 절 후보 | [28회차](experiments/long_sentence_imagination/round_28/report.md) |
+| L28-2 | 구현 결함(완료 불가) — 한 프로그램의 human_confirm 호출 2개는 토큰 1회성·같은 challenge 라 끝낼 수 없음 | start_v0 재전송 2회: A 삭제 → B 같은 challenge 거절 → 재승인 → A "스위치 없음" 막다른 길 | 설계·구현 완료 — 4fbde9b0: 호출 신원·인자에 결속한 1회 승인과 suspended/resume. 토큰 소비 횟수를 늘리지 않음 | [28회차](experiments/long_sentence_imagination/round_28/report.md) |
+| L28-3 | 낭비(관문 자리·예고 부재) — 승인 재전송 = 프로그램 전체 재실행이라 앞선 부작용(위임) 반복, check 는 human_confirm 을 예고하지 않음, 가이드에 승인 왕복 절차 없음 | 위임 요구 1 → 4회, 승인 최소 2 → 4회. `start_v0_check`: ok·issues 0 | 핵심 수리 — 4fbde9b0: 같은 실행 재개 시 완료 효과는 영수증으로 복원, 위임1·삭제A/B 각1 회귀. 승인 재개 명세·화면 연결 반영; check 사전 예고는 별도 잔여 | [28회차](experiments/long_sentence_imagination/round_28/report.md) |
 | L28-4 | 낭비(관문 순서) — 없는 대상의 영구 삭제도 승인을 먼저 요구 | `deadbeef` delete: approval_required → 승인 → "스위치 없음" | 수리됨(2026-10-07) — `requires.exists`(관문이 사람에게 묻기 전 존재 확인), switch·project delete 첫 소비자. 파생 빌드는 다른 세션의 instruments/spreadsheet.yaml 검증 실패로 보류 | [28회차](experiments/long_sentence_imagination/round_28/report.md) 단위 회귀 통과, 라이브는 빌드 뒤 |
 | L28-5 | 환경 결함(탐색 경로) — `find_claude_binary` 가 `<ver>/claude.app` 만 보고 실제 `<ver>/<해시>/claude.app` 를 못 찾음 | 시스템 AI·프로젝트 에이전트 전부 "AI가 초기화되지 않았습니다", 독립 실행 불가(27회차 말미~) | 수리됨(2026-10-07) — `<ver>/<해시>/claude.app` 도 탐색, 최신 판 우선 | [28회차](experiments/long_sentence_imagination/round_28/report.md) 라이브 초기화 완료·위임 턴 실제 응답, 회귀 1 |
 | L28-6 | 발견·학습 — delegate 전제조건(에이전트 실행 중) 미기재 · agents info/start 식별자 해소 불일치 · start result_type 거짓 · 판본 1 파싱 실패 메시지 무위치 | 28회차 시도 0·탐침 | 열림(작음) | — |
@@ -558,7 +558,7 @@ L27-5 호출 지문의 전송 인자, L27-6 오류로 끝난 위임 턴은 faile
 27회차가 남긴 두 축. 홍보/홈페이지 에이전트에 요약 위임(15초 대기·취소 시도) + 임시 스위치 2개 영구 삭제(사람 승인) + 보고서 저장·재독. 시작 HEAD `051e8f82`(+27회차 미커밋), 약 7분.
 최초 초안(한 프로그램)은 검사 통과 뒤 승인 거절·재전송 2회로도 끝나지 못했고(L28-2·3), 승인 단위로 셋으로 나눈 뒤 달성(상태는 정직). 위임 요구 1 → 4회, 승인 최소 2 → 4회.
 같은 프로젝트 async 위임의 접수증이 호출자 task_id 를 싣고 있어 `[self:task]` 가 unknown 이었다(L28-1, sync 는 정직 거절). 없는 스위치 삭제도 승인을 먼저 요구(L28-4).
-시스템 AI 독립 실행은 불가 — 번들 CLI 탐색 경로 불일치(L28-5). 살아 있는 위임의 취소 경로는 미검증. 훈련은 발견만, 뒤이은 판정으로 L28-1(고아 task_id 의 자기 행)·L28-4(`requires.exists`, 파생 빌드는 다른 세션 파일 때문에 보류)·L28-5(번들 탐색) 수리, L28-2·3 은 승인 설계 판정 대기. [보고서](experiments/long_sentence_imagination/round_28/report.md).
+시스템 AI 독립 실행은 불가 — 번들 CLI 탐색 경로 불일치(L28-5). 살아 있는 위임의 취소 경로는 미검증. 훈련은 발견만, 뒤이은 판정으로 L28-1(고아 task_id 의 자기 행)·L28-4(`requires.exists`, 파생 빌드는 다른 세션 파일 때문에 보류)·L28-5(번들 탐색) 수리. 이후 `4fbde9b0`에서 L28-2·3의 승인 대기·호출별 승인·완료 효과 재생을 구현했다. check 사전 예고는 별도 잔여다. [후속 설계·구현·검증](IBL_COMPOSITION_REPAIR_PLAN_2026_10_07.md). [보고서](experiments/long_sentence_imagination/round_28/report.md).
 
 ## 29회차 — 두 에이전트 동시 위임·살아 있는 위임의 취소 시도·이어받아 합치기 (2026-10-07, 훈련·발견 뒤 수리 4건)
 
@@ -607,7 +607,7 @@ L27-5 호출 지문의 전송 인자, L27-6 오류로 끝난 위임 턴은 faile
 새 축: 깊이를 모르는 트리. 명세가 재귀를 지원하지 않으므로 `[repeat:while]`+join(anti/inner) 한 층씩 전개로 제품10·반제품60·구매품200·구성209행·주문20건을
 전개해 순환을 값으로 멈추고 구매품 총소요량을 재고와 대사. 훈련자 v1 은 수정 1회(값으로 정한 키 L33-1)와 문맥 보충 1회(L33-3) 뒤 기본·순환(8건+경로)·변경 변형 전건 달성(HTTP 2.9초).
 **L33-2** 제자리에서 바꾼 orders.json 을 `reuse` 가 옛 영수증으로 읽어 O007=102(정답 204) 오답을 재독 검증까지 통과 — 읽기 영수증에 파일 지문(수정 시각·크기)을 싣고 다르면 `resource_changed` 로 새로 읽게 수리.
-**L33-3** 검사가 프로젝트 문맥 부재를 알리지 않던 침묵 → `PROJECT_CONTEXT` 사전경고. **L33-1** 파서가 지원하지 않는 키 모양과 대안을 말한다(문법 추가는 사용자 판정).
+**L33-3** 검사가 프로젝트 문맥 부재를 알리지 않던 침묵 → `PROJECT_CONTEXT` 사전경고. **L33-1** 후속 `aa8751be`에서 순수 값 함수 `from_entries`를 추가하고 파서 안내도 갱신했다. 동적 키 `{[$k]:…}` 문법은 추가하지 않는 것으로 판정 완료.
 **L33-4** 새 변형의 재고 중복 행을 1:N 조인으로 복제한 훈련자 작성 공백 → 프로그램·oracle 에 "재고 중복" 판정.
 독립 AI ep4395/4396 은 217.7/109.8초, 자체 Python 으로 소요·순환 전건 일치(라벨·leaf_rows 해석 차이는 요청문 모호). 두 작업 succeeded 회수 후 수리.
 수리 후 원래 v1 기본·순환·변경, 제자리 수정 reuse(3 재사용·1 resource_changed), 새 변형(역순·수량 0·재고 삭제·중복) 전건 일치, 입력 8파일 불변. 신규 회귀 6건.

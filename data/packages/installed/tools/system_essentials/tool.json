@@ -952,6 +952,10 @@
             "type": "string",
             "description": "작성 창 식별자 — 세션을 쥔 창만 적용·저장·내보내기·복구·닫기"
           },
+          "unregister": {
+            "type": "boolean",
+            "description": "close(코딩) — true면 프로젝트 등록만 해제. 폴더·파일·기록·실행 보존, open으로 재등록."
+          },
           "message": {
             "type": "string",
             "description": "save(코딩) — 커밋 메시지(필수)"

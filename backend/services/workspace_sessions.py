@@ -418,8 +418,14 @@ class Workspace:
         result = app.restore(row["id"], revision, **args, operation_id=key)
         return self.head(kind, row, restored=revision, session_revision=result["session"]["session_revision"])
 
-    def close(self, resource, client=None):
+    def close(self, resource, client=None, unregister=False):
+        if not isinstance(unregister, bool):
+            raise ValueError("unregister 는 true/false 입니다")
         kind, app, row = self.resolve(resource)
+        if unregister:
+            if kind != "code":
+                raise DocumentUnsupported("등록 해제는 코딩 프로젝트에만 지원합니다")
+            return self.head(kind, row, **app.projects_api.unregister(row))
         if kind == "code":
             return self.head(kind, row, **app.close(row))
         args = self._session_args(kind, app, row, client, "close")

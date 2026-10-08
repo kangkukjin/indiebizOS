@@ -23,7 +23,7 @@ _ALLOWED = {
     "export": ("resource", "filename", "client"),
     "versions": ("resource",),
     "restore": ("resource", "revision", "client", "path"),
-    "close": ("resource", "client"),
+    "close": ("resource", "client", "unregister"),
     "capabilities": ("resource",),
     "recover": ("resource",),
 }

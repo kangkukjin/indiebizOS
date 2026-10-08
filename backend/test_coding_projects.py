@@ -218,6 +218,36 @@ def test_workspace_word_sees_projects_as_code_resources(tmp_path, folder):
     assert ws.close(r)["closed"] is True
 
 
+@pytest.mark.parametrize("inside_default", [False, True])
+def test_unregister_preserves_files_history_and_runs_and_can_reimport(tmp_path, inside_default, monkeypatch):
+    folder = tmp_path / ("outputs/coding/sample" if inside_default else "external")
+    folder.mkdir(parents=True)
+    (folder / "app.py").write_text("print('kept')\n")
+    store = CodingStore(tmp_path / "coding-state")
+    workspace = Workspace(tmp_path / "office-state", coding_store=store)
+    resource = workspace.open(folder)["resource"]
+    workspace.save(resource, message="원본 기록")
+    before = {str(p.relative_to(folder)): p.read_bytes() for p in folder.rglob("*") if p.is_file()}
+    run = {"id": "run_preserved", "project": resource, "state": "running", "command": "sleep 20"}
+    store.save("run", run)
+    assert workspace.close(resource)["closed"]
+    assert len(workspace.read(kind="code", selector={"projects": True}, root=tmp_path)["items"]) == 1
+
+    # UI와 같은 패키지 입구에서 새 인자가 실제 몸까지 도달하는지 확인한다.
+    ew = _essentials_workspace()
+    monkeypatch.setattr(ew, "service", lambda: workspace)
+    result = ew.op_close({"resource": resource, "unregister": True})
+    assert result["success"] and result["unregistered"] and result["closed"]
+    assert workspace.close(resource, unregister=True)["unregistered"]  # 반복도 안전
+    fresh = Workspace(tmp_path / "office-state", coding_store=CodingStore(store.root))
+    assert fresh.read(kind="code", selector={"projects": True}, root=tmp_path)["items"] == []
+    assert before == {str(p.relative_to(folder)): p.read_bytes() for p in folder.rglob("*") if p.is_file()}
+    assert store.get("run", run["id"]) == run
+    assert fresh.open(folder)["resource"] == resource
+    assert len(fresh.read(kind="code", selector={"projects": True}, root=tmp_path)["items"]) == 1
+    assert fresh.versions(resource)["items"][0]["label"] == "원본 기록"
+
+
 @pytest.mark.skipif(not available(), reason="macOS 샌드박스 필요")
 def test_http_engine_io_run_output_stop(projects, folder, monkeypatch):
     from fastapi import FastAPI

@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-08", impl: "5b4d2fa2df644e28"}  # 검색 안내 수리 재감사: owner 목록의 query/id 검색·빈 결과 안내만 변경. member_script의 기기 교환, read/fill/write 경로 격리와 owner 전용 계약 회상은 불변.
+        path_audited: {at: "2026-10-08", impl: "05c73894e8e290c0"}  # 코딩 등록 해제 재감사: workspace의 owner 관문 뒤 close 인자만 확장. 회원 read/fill/write 경로 격리·member_script 기기 교환은 불변.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -150,7 +150,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-08", impl: "5b4d2fa2df644e28"}  # 검색 안내 수리 재감사: owner 목록의 query/id 검색·빈 결과 안내만 변경. member_script의 기기 교환, read/fill/write 경로 격리와 owner 전용 계약 회상은 불변.
+        path_audited: {at: "2026-10-08", impl: "05c73894e8e290c0"}  # 코딩 등록 해제 재감사: workspace의 owner 관문 뒤 close 인자만 확장. 회원 read/fill/write 경로 격리·member_script 기기 교환은 불변.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -228,7 +228,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-08", impl: "5b4d2fa2df644e28"}  # 검색 안내 수리 재감사: owner 목록의 query/id 검색·빈 결과 안내만 변경. member_script의 기기 교환, read/fill/write 경로 격리와 owner 전용 계약 회상은 불변.
+        path_audited: {at: "2026-10-08", impl: "05c73894e8e290c0"}  # 코딩 등록 해제 재감사: workspace의 owner 관문 뒤 close 인자만 확장. 회원 read/fill/write 경로 격리·member_script 기기 교환은 불변.
         target_key: path
       list:
         callable_contract:
@@ -765,7 +765,7 @@ nodes:
         guides: [document_edit.md]
       workspace:
         description: 범용 작업 공간 — 문서(TXT/MD/HTML/DOCX/PDF/HWP)·스프레드시트·코딩(프로젝트 폴더)을 같은 계약으로 열기·스냅샷·읽기·제안·적용·저장·버전·복구. 종류는 자료가 정하고(resource 하나), 세션 배관은 몸이 숨긴다. 접수(queued)는 완료가 아니다.
-        target_description: 'op — open: path(파일 또는 프로젝트 폴더 — git 이 없으면 조용히 init)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩: 목표 문서가 없을 때 「무엇을 만드나」 로 틀을 만든다) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{project:true}(목표 문서 경로·요약·실행 방법·변경 요약·활성 위임); resource 없이 kind:"code"+selector{projects:true} 는 프로젝트 목록(등록 + outputs/coding 하위 폴더); snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement → proposal. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 기록(폴더의 모든 변경을 한 커밋으로, 바뀐 것이 없으면 state=clean). export: filename 같은 형식 사본. versions/restore(revision — 코딩은 되돌리기 전 상태를 먼저 기록하고 path 로 파일 하나만 되돌릴 수도)/close/capabilities/recover. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다.'
+        target_description: 'op — open: path(파일 또는 프로젝트 폴더 — git 이 없으면 조용히 init)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩: 목표 문서가 없으면 실행법·설명 자동 추론, goal은 설명에 우선) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{project:true}(목표 문서 경로·요약·실행 방법·변경 요약·활성 위임); resource 없이 kind:"code"+selector{projects:true} 는 프로젝트 목록(등록 + outputs/coding 하위 폴더); snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement → proposal. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 기록(폴더의 모든 변경을 한 커밋으로, 바뀐 것이 없으면 state=clean). export: filename 같은 형식 사본. versions/restore(revision — 코딩은 되돌리기 전 상태를 먼저 기록하고 path 로 파일 하나만 되돌릴 수도)/close/capabilities/recover. close에 unregister:true를 주면 코딩 프로젝트 등록만 해제(폴더·파일·기록·실행 보존), 목록과 기본 폴더 자동 발견에서 제외하며 같은 폴더를 open하면 재등록된다. 다른 종류에는 unregister:true를 지원하지 않는다. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다.'
         returns: items
         side_effect: true
         exempt: 실제 파일·저장소 경로 필요 — 임시 작업 공간 회귀(test_workspace_sessions)로 검증
@@ -788,6 +788,7 @@ nodes:
           values: array
           proposal: string
           client: string
+          unregister: boolean
           message: string
           verify: string
           filename: string
@@ -807,7 +808,7 @@ nodes:
             export: 같은 형식의 새 사본 저장
             versions: 저장 버전·복구 초안 목록(코딩은 기록(커밋) 이력)
             restore: 선택 버전을 초안으로 복구(코딩은 그 기록으로 되돌리기 — path 로 파일 하나만도)
-            close: 저장 완료된 작성 세션 닫기
+            close: 저장 완료된 작성 세션 닫기 — 코딩은 unregister:true로 폴더를 보존하고 등록 해제
             capabilities: 자료의 실제 지원·엔진·미지원 사유
             recover: 끊긴 원본 저장 결과를 재쓰기 없이 회수
         keywords: [작업공간, 문서편집, 시트편집, 코딩, 세션, 스냅샷, 저장, 버전, workspace]
@@ -916,7 +917,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-08", impl: "5b4d2fa2df644e28"}  # 검색 안내 수리 재감사: owner 목록의 query/id 검색·빈 결과 안내만 변경. member_script의 기기 교환, read/fill/write 경로 격리와 owner 전용 계약 회상은 불변.
+        path_audited: {at: "2026-10-08", impl: "05c73894e8e290c0"}  # 코딩 등록 해제 재감사: workspace의 owner 관문 뒤 close 인자만 확장. 회원 read/fill/write 경로 격리·member_script 기기 교환은 불변.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -1944,6 +1945,9 @@ tool_json:
         client:
           type: string
           description: 작성 창 식별자 — 세션을 쥔 창만 적용·저장·내보내기·복구·닫기
+        unregister:
+          type: boolean
+          description: close(코딩) — true면 프로젝트 등록만 해제. 폴더·파일·기록·실행 보존, open으로 재등록.
         message:
           type: string
           description: save(코딩) — 커밋 메시지(필수)

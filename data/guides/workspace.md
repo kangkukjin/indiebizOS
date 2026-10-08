@@ -34,11 +34,16 @@ $p = [self:workspace]{op:"propose", resource:$w.resource, selector:{start:0, end
 
 - 시트 `snapshot` 은 편집창 엔진의 응답을 `wait`(≤30초) 기다린다. 닫힌 파일은 저장본에서 고정 투영을 만든다
   (`source: saved_file`). `apply`·`save` 는 편집기에 **접수**된다 — 영수증을 확인한다.
-- 코딩 `open` 은 **프로젝트 폴더**를 연다(git 이 없으면 조용히 init, `goal` 을 주면 목표 문서 `목표.md` 틀을 만든다).
+- 코딩 `open` 은 **프로젝트 폴더**를 연다(git 이 없으면 조용히 init, 목표 문서 `목표.md`가 없으면 설명·실행법을 추론해 만들며 `goal`이 설명에 우선한다).
   `save` 는 **기록** — `message` 필수, 폴더의 모든 변경을 한 커밋으로(바뀐 것이 없으면 `state: clean`). `versions` 가 기록 목록,
   `restore{revision, path?}` 가 그 기록으로 되돌리기(되돌리기 전 상태를 먼저 기록해 둔다). AI 코딩은 이 낱말이 아니라
   `[others:delegate]{scope:"system", role:"coding", context:{project: $path, resource: $resource}}` — 실행 에이전트가 목표 문서대로
   짓고 진행 기록에 한 줄을 남긴다. 프로젝트 명령 실행(개발 서버)은 코딩 앱 실행 탭(엔진 I/O)의 몫.
+
+코딩 프로젝트의 `[self:workspace]{op:"close", resource:$resource, unregister:true}`는 등록만 해제한다.
+폴더·파일·git 기록·진행 중인 실행은 보존한다. 목록과 기본 폴더 자동 발견에서 제외되고,
+같은 폴더를 `open`하면 재등록된다. `unregister`를 생략한 닫기는 등록을 유지하며,
+문서·시트에는 `unregister:true`를 지원하지 않는다.
 
 ## AI 제안은 새 낱말이 아니다
 

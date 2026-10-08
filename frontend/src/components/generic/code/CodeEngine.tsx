@@ -112,6 +112,11 @@ export function CodeEngine({ id, emit, host }: { id: string; emit: Emit; host: C
   });
   const stopCoding = () => run(async () => { if (task) { await ibl.cancel(task.ref); } });
   const openVersions = () => run(async () => { setVersions(await ibl.versions()); });
+  const unregister = () => run(async () => {
+    if (!detail || !window.confirm(`「${detail.name}」의 프로젝트 등록을 해제할까요?\n폴더·파일·기록은 그대로 남고, 진행 중인 작업은 계속됩니다.\n기존 폴더 가져오기로 다시 등록할 수 있습니다.`)) return;
+    await ibl.unregister();
+    menu?.go(0);
+  });
   const restoreTo = (v: Version) => run(async () => {
     if (!window.confirm(`"${v.label}" 시점으로 프로젝트 전체를 되돌릴까요? 지금 상태는 먼저 기록해 둡니다.`)) return;
     await ibl.restore(v.id);
@@ -156,6 +161,7 @@ export function CodeEngine({ id, emit, host }: { id: string; emit: Emit; host: C
           <div className="flex-1" />
           <button className={btn} disabled={busy || !detail.dirty} onClick={() => run(async () => { await ibl.save('직접 기록'); await load(); })}>지금 기록</button>
           <button className={btn} disabled={busy} onClick={openVersions}>이 작업 전으로…</button>
+          {menu && <button className={btn} disabled={busy} onClick={unregister}>등록 해제</button>}
           {typeof window !== 'undefined' && (window as unknown as { electron?: { openPath?: (p: string) => Promise<void> } }).electron?.openPath && (
             <button className={btn} onClick={() => void (window as unknown as { electron: { openPath: (p: string) => Promise<void> } }).electron.openPath(detail.path)}>폴더 열기</button>
           )}

@@ -193,6 +193,7 @@ class CodingProjects:
         except ValueError:
             row = {"id": pid, "path": str(target), "name": target.name, "created_at": time.time()}
         row["opened_at"] = time.time()
+        row["registered"] = True
         if not (target / GOAL_NAME).exists():
             # 가져온 폴더에 목표 문서가 없으면 매니페스트로 추론해 쓴다 — 사용자가 준 goal 이 '무엇을 만드나' 에 우선.
             # 'x' 로 열어 그 사이 생긴 문서도 덮지 않는다.
@@ -205,6 +206,14 @@ class CodingProjects:
             except FileExistsError:
                 pass
         return self.store.save("project", row)
+
+    def unregister(self, row: dict) -> dict:
+        """목록 등록만 해제한다. 폴더·git·실행 기록은 보존하며 다시 open하면 재등록된다."""
+        with self.store.lock("registration:" + row["id"]):
+            current = self.project(row["id"])
+            current["registered"] = False
+            self.store.save("project", current)
+        return {"closed": True, "unregistered": True, "path": row["path"]}
 
     def goal_path(self, row: dict) -> Path:
         return Path(row["path"]) / GOAL_NAME
@@ -252,8 +261,10 @@ class CodingProjects:
 
     def projects(self, root=None) -> list:
         """등록된 프로젝트 + 기본 폴더(outputs/coding)의 하위 폴더. 최근 활동순."""
-        rows = {r["path"]: r for r in self.store.list("project") if Path(r["path"]).is_dir()}
-        items = [self._item(r) for r in rows.values()]
+        # 해제된 행도 유지해 기본 폴더 스캔이 다시 목록에 올리지 않게 한다.
+        rows = {r["path"]: r for r in self.store.list("project")}
+        items = [self._item(r) for r in rows.values()
+                 if r.get("registered", True) and Path(r["path"]).is_dir()]
         base = Path(root).expanduser() if root else None
         folder = (base / DEFAULT_FOLDER) if base else None
         if folder and folder.is_dir():

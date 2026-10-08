@@ -150,6 +150,18 @@ def test_operation_key_is_stable_and_blind_to_plumbing():
     assert a != operation_key("apply", "res", {"proposal": "p1", "expected": 4})
 
 
+def test_unregister_is_explicit_and_code_only(ws, tmp_path):
+    path = tmp_path / "keep.md"
+    path.write_text("keep")
+    resource = ws.open(path)["resource"]
+    with pytest.raises(ValueError, match="true/false"):
+        ws.close(resource, unregister="false")
+    with pytest.raises(DocumentUnsupported, match="코딩 프로젝트"):
+        ws.close(resource, unregister=True)
+    assert path.read_text() == "keep"
+    assert ws.close(resource)["closed"]
+
+
 def test_vocabulary_absorbed_session_ops_into_one_word():
     src = yaml.safe_load((ROOT / "data/packages/installed/tools/system_essentials/ibl_actions.yaml").read_text(encoding="utf-8"))
     actions = src["self"]["actions"] if "self" in src else src["nodes"]["self"]["actions"]

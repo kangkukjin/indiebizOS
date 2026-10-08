@@ -33,6 +33,7 @@ const T = {
   delegate: '[others:delegate]{scope: "system", role: "coding", mode: "async", message: $message, context: {project: $path, resource: $resource, goal: $goal}}',
   status: '[self:task]{op: "status", ref: $ref}',
   cancel: '[self:task]{op: "cancel", ref: $ref}',
+  unregister: '[self:workspace]{op: "close", resource: $resource, unregister: true}',
 };
 
 async function call(block: AppMode | undefined, template: string, inputs: Record<string, unknown>): Promise<Json> {
@@ -60,6 +61,7 @@ export function codeIBL(block: AppMode | undefined, resource: string) {
     delegate: (path: string, goal: string, message: string) => c(T.delegate, { path, goal, message }),
     status: (ref: TaskRef) => c(T.status, { ref }) as Promise<Json & TaskView>,
     cancel: (ref: TaskRef) => c(T.cancel, { ref }),
+    unregister: () => c(T.unregister),
   };
 }
 

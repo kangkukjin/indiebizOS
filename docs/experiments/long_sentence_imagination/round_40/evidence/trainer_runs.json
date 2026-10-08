@@ -1,0 +1,179 @@
+{
+ "trainer_A_main_v0": {
+  "http_s": 11.265,
+  "success": false,
+  "ok": null,
+  "steps": 225717,
+  "elapsed_ms": 11041,
+  "table_ai_ms": [
+   [
+    89,
+    9530
+   ]
+  ],
+  "receipts_reused": 0,
+  "code": "NUMBER_REQUIRED",
+  "value": null
+ },
+ "trainer_A_main_v1": {
+  "http_s": 11.141,
+  "success": true,
+  "ok": null,
+  "steps": 247654,
+  "elapsed_ms": 10714,
+  "table_ai_ms": [
+   [
+    92,
+    9000
+   ]
+  ],
+  "receipts_reused": 0,
+  "code": null,
+  "value": {
+   "balance_ok": false,
+   "open_total": 92850000,
+   "unmatched": 1,
+   "unexplained": 2,
+   "below_min_months": 1,
+   "contract_actions": 3,
+   "fee_mismatch": 1,
+   "revenue_hit": false
+  }
+ },
+ "trainer_B_main_v0_reuse": {
+  "http_s": 12.816,
+  "success": true,
+  "ok": null,
+  "steps": 324315,
+  "elapsed_ms": 12324,
+  "table_ai_ms": [
+   [
+    89,
+    9564
+   ]
+  ],
+  "receipts_reused": 0,
+  "code": null,
+  "value": {
+   "balance_ok": true,
+   "open_total": 55300000,
+   "unmatched": 1,
+   "unexplained": 3,
+   "below_min_months": 2,
+   "contract_actions": 3,
+   "fee_mismatch": 1,
+   "revenue_hit": false
+  }
+ },
+ "trainer_B_main_v1_reuse": {
+  "http_s": 2.424,
+  "success": true,
+  "ok": null,
+  "steps": 324525,
+  "elapsed_ms": 1930,
+  "table_ai_ms": [
+   [
+    92,
+    6
+   ]
+  ],
+  "receipts_reused": 16,
+  "code": null,
+  "value": {
+   "balance_ok": true,
+   "open_total": 55300000,
+   "unmatched": 1,
+   "unexplained": 3,
+   "below_min_months": 2,
+   "contract_actions": 3,
+   "fee_mismatch": 1,
+   "revenue_hit": false
+  }
+ },
+ "trainer_C_main_v0": {
+  "http_s": 12.122,
+  "success": true,
+  "ok": null,
+  "steps": 324310,
+  "elapsed_ms": 11790,
+  "table_ai_ms": [
+   [
+    89,
+    9571
+   ]
+  ],
+  "receipts_reused": 0,
+  "code": null,
+  "value": {
+   "balance_ok": true,
+   "open_total": 55300000,
+   "unmatched": 1,
+   "unexplained": 3,
+   "below_min_months": 2,
+   "contract_actions": 3,
+   "fee_mismatch": 1,
+   "revenue_hit": false
+  }
+ },
+ "trainer_base_main_v0": {
+  "http_s": 10.431,
+  "success": true,
+  "ok": null,
+  "steps": 324310,
+  "elapsed_ms": 9960,
+  "table_ai_ms": [
+   [
+    89,
+    7938
+   ]
+  ],
+  "receipts_reused": 0,
+  "code": null,
+  "value": {
+   "balance_ok": true,
+   "open_total": 55300000,
+   "unmatched": 1,
+   "unexplained": 3,
+   "below_min_months": 2,
+   "contract_actions": 3,
+   "fee_mismatch": 1,
+   "revenue_hit": false
+  }
+ },
+ "trainer_base_main_v0_check": {
+  "http_s": 0.399,
+  "success": null,
+  "ok": true,
+  "steps": null,
+  "elapsed_ms": null,
+  "table_ai_ms": [],
+  "receipts_reused": 0,
+  "code": null,
+  "value": null
+ },
+ "trainer_base_main_v1_reuse": {
+  "http_s": 2.423,
+  "success": true,
+  "ok": null,
+  "steps": 324520,
+  "elapsed_ms": 1892,
+  "table_ai_ms": [
+   [
+    92,
+    3
+   ]
+  ],
+  "receipts_reused": 16,
+  "code": null,
+  "value": {
+   "balance_ok": true,
+   "open_total": 55300000,
+   "unmatched": 1,
+   "unexplained": 3,
+   "below_min_months": 2,
+   "contract_actions": 3,
+   "fee_mismatch": 1,
+   "revenue_hit": false
+  }
+ }
+}

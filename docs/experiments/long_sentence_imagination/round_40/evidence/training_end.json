@@ -1,0 +1,64 @@
+{
+ "training_end_kst": "2026-10-09 02:39",
+ "training_minutes_excl_wait": "~16 (02:18→02:34)",
+ "cap_minutes": 60,
+ "code_changes": 0,
+ "trainer_revisions": 3,
+ "trainer_results": {
+  "base_v0": "ALL PASS",
+  "C_v0": "ALL PASS",
+  "B_v0_wrong_reuse_key": "ALL PASS but model re-called",
+  "A_v0": "NUMBER_REQUIRED",
+  "A_v1": "ALL PASS",
+  "B_v1_reuse": "ALL PASS, receipts 16, model 0",
+  "base_v1_reuse": "ALL PASS"
+ },
+ "ai_tasks": {
+  "base": {
+   "task_id": "task_sysai_c58520ff",
+   "episode": 4488,
+   "state": "succeeded",
+   "total_ms": 345415,
+   "verify": "ALL PASS"
+  },
+  "B": {
+   "task_id": "task_sysai_acea1f37",
+   "episode": 4489,
+   "state": "succeeded",
+   "total_ms": 133894,
+   "verify": "ALL PASS"
+  },
+  "A": {
+   "task_id": "task_sysai_aeabe015",
+   "episode": 4490,
+   "state": "succeeded",
+   "total_ms": 228226,
+   "verify": "ALL PASS"
+  }
+ },
+ "ai_usage_billable": {
+  "4488": {
+   "input": 3621865,
+   "output": 35487,
+   "cache_read": 3275458,
+   "cache_create": 338527
+  },
+  "4489": {
+   "input": 984014,
+   "output": 13888,
+   "cache_read": 853683,
+   "cache_create": 125973
+  },
+  "4490": {
+   "input": 2254263,
+   "output": 24102,
+   "cache_read": 2103765,
+   "cache_create": 148973
+  }
+ },
+ "gaps": [
+  "L40-1",
+  "L40-2"
+ ],
+ "repairs": "none (training only)"
+}

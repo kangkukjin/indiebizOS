@@ -1,0 +1,3175 @@
+{
+ "as_of": "2026-09-30",
+ "interpretations": [
+  "청구서 원장(invoices.json) 전부를 9/1 현재 미결로 본다(8월 이전 입금 자료 없음).",
+  "같은 날짜 입금은 CSV 행 순서로 처리했다.",
+  "정확일치 후보가 여럿이면 만기·id 순 첫 청구를 결제했다. 오래된 순 = 만기·id 순.",
+  "은행 표시명은 bank_names와 글자 그대로 같을 때만 대응했다(정규화 없음).",
+  "입금 메모의 INV 번호는 규칙상 쓰지 않았다. 배분 결과와 다른 경우는 memo_ref_differences에 남겼다.",
+  "선입금은 이후 청구에 자동 상계하지 않고 거래처별 선입금으로 남겼다. 미수 잔액은 총액 기준이며 선입금은 별도 표시.",
+  "출금 대응 순서: 급여(합계 일치) → 4대보험(합계 일치) → 고정비(계약 공급자+9월 실효요금) → 9월 매입(공급처 표시명+금액, 1:1, 매입일·id 순). 매입일과 출금일의 선후는 따지지 않았다.",
+  "계약서 요금은 부가세 별도로 적혀 있으나 대응은 계약서 월 요금(부가세 제외) 그대로 비교했다."
+ ],
+ "deposits": {
+  "count": 64,
+  "total": 108500000,
+  "applied_to_invoices": 107250000,
+  "prepayment_total": 0,
+  "unidentified_total": 1250000,
+  "check_applied+prepay+unidentified=total": true,
+  "by_method": {
+   "정확일치": 51,
+   "오래된순 충당": 12,
+   "미확인 입금": 1
+  },
+  "multiple_exact_candidates": [
+   {
+    "line": 4,
+    "date": "2026-09-03",
+    "counterparty": "바른 유통",
+    "amount": 900000,
+    "candidates": [
+     "INV-0068",
+     "INV-0087"
+    ],
+    "chosen": "INV-0068",
+    "rule": "만기·id 순 첫 청구 선택"
+   },
+   {
+    "line": 36,
+    "date": "2026-09-09",
+    "counterparty": "한빛 주식회사",
+    "amount": 2800000,
+    "candidates": [
+     "INV-0032",
+     "INV-0042"
+    ],
+    "chosen": "INV-0032",
+    "rule": "만기·id 순 첫 청구 선택"
+   },
+   {
+    "line": 71,
+    "date": "2026-09-17",
+    "counterparty": "라온농산",
+    "amount": 2700000,
+    "candidates": [
+     "INV-0015",
+     "INV-0043"
+    ],
+    "chosen": "INV-0015",
+    "rule": "만기·id 순 첫 청구 선택"
+   }
+  ],
+  "log": [
+   {
+    "line": 2,
+    "date": "2026-09-01",
+    "counterparty": "소담 식자재",
+    "amount": 1000000,
+    "memo": "INV-0038 대금",
+    "client_id": "C17",
+    "client": "소담식자재",
+    "allocations": [
+     {
+      "invoice": "INV-0038",
+      "applied": 1000000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0038"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 3,
+    "date": "2026-09-02",
+    "counterparty": "소담 식자재",
+    "amount": 400000,
+    "memo": "INV-0049 대금",
+    "client_id": "C17",
+    "client": "소담식자재",
+    "allocations": [
+     {
+      "invoice": "INV-0049",
+      "applied": 400000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0049"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 4,
+    "date": "2026-09-03",
+    "counterparty": "바른 유통",
+    "amount": 900000,
+    "memo": "INV-0068 대금",
+    "client_id": "C12",
+    "client": "바른유통",
+    "allocations": [
+     {
+      "invoice": "INV-0068",
+      "applied": 900000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0068",
+     "INV-0087"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 5,
+    "date": "2026-09-03",
+    "counterparty": "그린마켓",
+    "amount": 2100000,
+    "memo": "INV-0062 대금",
+    "client_id": "C04",
+    "client": "그린마켓",
+    "allocations": [
+     {
+      "invoice": "INV-0062",
+      "applied": 2100000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0062"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 8,
+    "date": "2026-09-04",
+    "counterparty": "라온농산",
+    "amount": 1700000,
+    "memo": "INV-0029 대금",
+    "client_id": "C11",
+    "client": "라온농산",
+    "allocations": [
+     {
+      "invoice": "INV-0029",
+      "applied": 1700000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0029"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 9,
+    "date": "2026-09-04",
+    "counterparty": "그린마켓",
+    "amount": 2300000,
+    "memo": "INV-0103 대금",
+    "client_id": "C04",
+    "client": "그린마켓",
+    "allocations": [
+     {
+      "invoice": "INV-0028",
+      "applied": 2300000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0028"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 11,
+    "date": "2026-09-05",
+    "counterparty": "제일물산",
+    "amount": 700000,
+    "memo": "INV-0011 대금",
+    "client_id": "C09",
+    "client": "제일물산",
+    "allocations": [
+     {
+      "invoice": "INV-0011",
+      "applied": 700000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0011"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 12,
+    "date": "2026-09-05",
+    "counterparty": "소담 식자재",
+    "amount": 800000,
+    "memo": "대금 일부",
+    "client_id": "C17",
+    "client": "소담식자재",
+    "allocations": [
+     {
+      "invoice": "INV-0013",
+      "applied": 800000,
+      "invoice_balance_after": 800000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 13,
+    "date": "2026-09-05",
+    "counterparty": "동해수산",
+    "amount": 800000,
+    "memo": "INV-0040 대금",
+    "client_id": "C07",
+    "client": "동해수산",
+    "allocations": [
+     {
+      "invoice": "INV-0040",
+      "applied": 800000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0040"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 14,
+    "date": "2026-09-05",
+    "counterparty": "서울포장재",
+    "amount": 2100000,
+    "memo": "INV-0066 대금",
+    "client_id": "C06",
+    "client": "서울포장재",
+    "allocations": [
+     {
+      "invoice": "INV-0066",
+      "applied": 2100000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0066"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 15,
+    "date": "2026-09-05",
+    "counterparty": "라온농산",
+    "amount": 2100000,
+    "memo": "INV-0086 대금",
+    "client_id": "C11",
+    "client": "라온농산",
+    "allocations": [
+     {
+      "invoice": "INV-0016",
+      "applied": 2100000,
+      "invoice_balance_after": 500000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 16,
+    "date": "2026-09-05",
+    "counterparty": "청담베이커리",
+    "amount": 2400000,
+    "memo": "INV-0041 대금",
+    "client_id": "C10",
+    "client": "청담베이커리",
+    "allocations": [
+     {
+      "invoice": "INV-0041",
+      "applied": 2400000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0041"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 23,
+    "date": "2026-09-06",
+    "counterparty": "청담베이커리",
+    "amount": 2000000,
+    "memo": "INV-0030 대금",
+    "client_id": "C10",
+    "client": "청담베이커리",
+    "allocations": [
+     {
+      "invoice": "INV-0030",
+      "applied": 2000000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0030"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 24,
+    "date": "2026-09-06",
+    "counterparty": "우리수산",
+    "amount": 2000000,
+    "memo": "INV-0100 대금",
+    "client_id": "C20",
+    "client": "우리수산",
+    "allocations": [
+     {
+      "invoice": "INV-0010",
+      "applied": 600000,
+      "invoice_balance_after": 0
+     },
+     {
+      "invoice": "INV-0008",
+      "applied": 1400000,
+      "invoice_balance_after": 300000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 26,
+    "date": "2026-09-07",
+    "counterparty": "참좋은마트",
+    "amount": 250000,
+    "memo": "대금 일부",
+    "client_id": "C19",
+    "client": "참좋은마트",
+    "allocations": [
+     {
+      "invoice": "INV-0024",
+      "applied": 250000,
+      "invoice_balance_after": 250000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 27,
+    "date": "2026-09-07",
+    "counterparty": "태양상회",
+    "amount": 1200000,
+    "memo": "INV-0048 대금",
+    "client_id": "C16",
+    "client": "태양상회",
+    "allocations": [
+     {
+      "invoice": "INV-0048",
+      "applied": 1200000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0048"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 29,
+    "date": "2026-09-08",
+    "counterparty": "참좋은마트",
+    "amount": 1100000,
+    "memo": "INV-0058 대금",
+    "client_id": "C19",
+    "client": "참좋은마트",
+    "allocations": [
+     {
+      "invoice": "INV-0058",
+      "applied": 1100000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0058"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 30,
+    "date": "2026-09-08",
+    "counterparty": "그린마켓",
+    "amount": 2000000,
+    "memo": "INV-0085 대금",
+    "client_id": "C04",
+    "client": "그린마켓",
+    "allocations": [
+     {
+      "invoice": "INV-0085",
+      "applied": 2000000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0085"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 34,
+    "date": "2026-09-09",
+    "counterparty": "태양상회",
+    "amount": 1000000,
+    "memo": "INV-0072 대금",
+    "client_id": "C16",
+    "client": "태양상회",
+    "allocations": [
+     {
+      "invoice": "INV-0072",
+      "applied": 1000000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0072"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 35,
+    "date": "2026-09-09",
+    "counterparty": "미래식품(주)",
+    "amount": 1600000,
+    "memo": "INV-0080 대금",
+    "client_id": "C05",
+    "client": "미래식품",
+    "allocations": [
+     {
+      "invoice": "INV-0080",
+      "applied": 1600000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0080"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 36,
+    "date": "2026-09-09",
+    "counterparty": "한빛 주식회사",
+    "amount": 2800000,
+    "memo": "INV-0042 대금",
+    "client_id": "C03",
+    "client": "한빛 주식회사",
+    "allocations": [
+     {
+      "invoice": "INV-0032",
+      "applied": 2800000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0032",
+     "INV-0042"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 38,
+    "date": "2026-09-10",
+    "counterparty": "별빛마트",
+    "amount": 300000,
+    "memo": "INV-0005 대금",
+    "client_id": "C15",
+    "client": "별빛마트",
+    "allocations": [
+     {
+      "invoice": "INV-0005",
+      "applied": 300000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0005"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 41,
+    "date": "2026-09-11",
+    "counterparty": "태양상회",
+    "amount": 2400000,
+    "memo": "INV-0070 대금",
+    "client_id": "C16",
+    "client": "태양상회",
+    "allocations": [
+     {
+      "invoice": "INV-0070",
+      "applied": 2400000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0070"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 43,
+    "date": "2026-09-12",
+    "counterparty": "한빛상사",
+    "amount": 300000,
+    "memo": "INV-0064 대금",
+    "client_id": "C01",
+    "client": "한빛상사",
+    "allocations": [
+     {
+      "invoice": "INV-0064",
+      "applied": 300000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0064"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 44,
+    "date": "2026-09-12",
+    "counterparty": "알수없음무역",
+    "amount": 1250000,
+    "memo": "송금",
+    "status": "미확인 입금",
+    "client_id": null
+   },
+   {
+    "line": 45,
+    "date": "2026-09-12",
+    "counterparty": "(주)한빛",
+    "amount": 1400000,
+    "memo": "대금 일부",
+    "client_id": "C03",
+    "client": "한빛 주식회사",
+    "allocations": [
+     {
+      "invoice": "INV-0022",
+      "applied": 1400000,
+      "invoice_balance_after": 700000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 46,
+    "date": "2026-09-12",
+    "counterparty": "오션푸드",
+    "amount": 1400000,
+    "memo": "INV-0079 대금",
+    "client_id": "C14",
+    "client": "오션푸드",
+    "allocations": [
+     {
+      "invoice": "INV-0079",
+      "applied": 1400000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0079"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 47,
+    "date": "2026-09-12",
+    "counterparty": "별빛마트",
+    "amount": 1400000,
+    "memo": "INV-0107 대금",
+    "client_id": "C15",
+    "client": "별빛마트",
+    "allocations": [
+     {
+      "invoice": "INV-0035",
+      "applied": 1400000,
+      "invoice_balance_after": 1500000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 48,
+    "date": "2026-09-12",
+    "counterparty": "서울포장재",
+    "amount": 2600000,
+    "memo": "INV-0034 대금",
+    "client_id": "C06",
+    "client": "서울포장재",
+    "allocations": [
+     {
+      "invoice": "INV-0034",
+      "applied": 2600000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0034"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 49,
+    "date": "2026-09-12",
+    "counterparty": "우리수산",
+    "amount": 2700000,
+    "memo": "INV-0088 대금",
+    "client_id": "C20",
+    "client": "우리수산",
+    "allocations": [
+     {
+      "invoice": "INV-0088",
+      "applied": 2700000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0088"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 50,
+    "date": "2026-09-12",
+    "counterparty": "서울포장재",
+    "amount": 2800000,
+    "memo": "INV-0045 대금",
+    "client_id": "C06",
+    "client": "서울포장재",
+    "allocations": [
+     {
+      "invoice": "INV-0045",
+      "applied": 2800000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0045"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 51,
+    "date": "2026-09-12",
+    "counterparty": "(주)대성유통",
+    "amount": 2900000,
+    "memo": "INV-0014 대금",
+    "client_id": "C02",
+    "client": "(주)대성유통",
+    "allocations": [
+     {
+      "invoice": "INV-0014",
+      "applied": 2900000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0014"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 53,
+    "date": "2026-09-13",
+    "counterparty": "한빛상사",
+    "amount": 1400000,
+    "memo": "INV-0053 대금",
+    "client_id": "C01",
+    "client": "한빛상사",
+    "allocations": [
+     {
+      "invoice": "INV-0053",
+      "applied": 1400000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0053"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 54,
+    "date": "2026-09-13",
+    "counterparty": "동해수산",
+    "amount": 2800000,
+    "memo": "INV-0023 대금",
+    "client_id": "C07",
+    "client": "동해수산",
+    "allocations": [
+     {
+      "invoice": "INV-0023",
+      "applied": 2800000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0023"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 56,
+    "date": "2026-09-14",
+    "counterparty": "우리수산",
+    "amount": 600000,
+    "memo": "INV-0010 대금",
+    "client_id": "C20",
+    "client": "우리수산",
+    "allocations": [
+     {
+      "invoice": "INV-0008",
+      "applied": 300000,
+      "invoice_balance_after": 0
+     },
+     {
+      "invoice": "INV-0057",
+      "applied": 300000,
+      "invoice_balance_after": 800000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 59,
+    "date": "2026-09-15",
+    "counterparty": "참좋은마트",
+    "amount": 1000000,
+    "memo": "INV-0031 대금",
+    "client_id": "C19",
+    "client": "참좋은마트",
+    "allocations": [
+     {
+      "invoice": "INV-0031",
+      "applied": 1000000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0031"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 60,
+    "date": "2026-09-15",
+    "counterparty": "우리수산",
+    "amount": 1500000,
+    "memo": "INV-0075 대금",
+    "client_id": "C20",
+    "client": "우리수산",
+    "allocations": [
+     {
+      "invoice": "INV-0075",
+      "applied": 1500000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0075"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 61,
+    "date": "2026-09-15",
+    "counterparty": "태양상회",
+    "amount": 1900000,
+    "memo": "INV-0021 대금",
+    "client_id": "C16",
+    "client": "태양상회",
+    "allocations": [
+     {
+      "invoice": "INV-0021",
+      "applied": 1900000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0021"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 62,
+    "date": "2026-09-15",
+    "counterparty": "경기제과",
+    "amount": 2200000,
+    "memo": "INV-0102 대금",
+    "client_id": "C13",
+    "client": "경기제과",
+    "allocations": [
+     {
+      "invoice": "INV-0054",
+      "applied": 2200000,
+      "invoice_balance_after": 200000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 65,
+    "date": "2026-09-16",
+    "counterparty": "태양상회",
+    "amount": 1700000,
+    "memo": "INV-0074 대금",
+    "client_id": "C16",
+    "client": "태양상회",
+    "allocations": [
+     {
+      "invoice": "INV-0074",
+      "applied": 1700000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0074"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 66,
+    "date": "2026-09-17",
+    "counterparty": "한빛상사",
+    "amount": 600000,
+    "memo": "INV-0117 대금",
+    "client_id": "C01",
+    "client": "한빛상사",
+    "allocations": [
+     {
+      "invoice": "INV-0117",
+      "applied": 600000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0117"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 67,
+    "date": "2026-09-17",
+    "counterparty": "미래식품",
+    "amount": 800000,
+    "memo": "INV-0017 대금",
+    "client_id": "C05",
+    "client": "미래식품",
+    "allocations": [
+     {
+      "invoice": "INV-0017",
+      "applied": 800000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0017"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 68,
+    "date": "2026-09-17",
+    "counterparty": "오션푸드",
+    "amount": 1600000,
+    "memo": "INV-0047 대금",
+    "client_id": "C14",
+    "client": "오션푸드",
+    "allocations": [
+     {
+      "invoice": "INV-0047",
+      "applied": 1600000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0047"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 69,
+    "date": "2026-09-17",
+    "counterparty": "경기제과",
+    "amount": 2400000,
+    "memo": "INV-0054 대금",
+    "client_id": "C13",
+    "client": "경기제과",
+    "allocations": [
+     {
+      "invoice": "INV-0054",
+      "applied": 200000,
+      "invoice_balance_after": 0
+     },
+     {
+      "invoice": "INV-0050",
+      "applied": 400000,
+      "invoice_balance_after": 0
+     },
+     {
+      "invoice": "INV-0098",
+      "applied": 500000,
+      "invoice_balance_after": 0
+     },
+     {
+      "invoice": "INV-0102",
+      "applied": 1300000,
+      "invoice_balance_after": 900000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 70,
+    "date": "2026-09-17",
+    "counterparty": "한빛 주식회사",
+    "amount": 2600000,
+    "memo": "대금(선입금 포함)",
+    "client_id": "C03",
+    "client": "한빛 주식회사",
+    "allocations": [
+     {
+      "invoice": "INV-0022",
+      "applied": 700000,
+      "invoice_balance_after": 0
+     },
+     {
+      "invoice": "INV-0042",
+      "applied": 1900000,
+      "invoice_balance_after": 900000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 71,
+    "date": "2026-09-17",
+    "counterparty": "라온농산",
+    "amount": 2700000,
+    "memo": "INV-0015 대금",
+    "client_id": "C11",
+    "client": "라온농산",
+    "allocations": [
+     {
+      "invoice": "INV-0015",
+      "applied": 2700000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0015",
+     "INV-0043"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 72,
+    "date": "2026-09-17",
+    "counterparty": "대성유통",
+    "amount": 3000000,
+    "memo": "INV-0056 대금",
+    "client_id": "C02",
+    "client": "(주)대성유통",
+    "allocations": [
+     {
+      "invoice": "INV-0056",
+      "applied": 3000000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0056"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 75,
+    "date": "2026-09-18",
+    "counterparty": "(주)대성유통",
+    "amount": 900000,
+    "memo": "INV-0007 대금",
+    "client_id": "C02",
+    "client": "(주)대성유통",
+    "allocations": [
+     {
+      "invoice": "INV-0007",
+      "applied": 900000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0007"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 76,
+    "date": "2026-09-18",
+    "counterparty": "미래식품(주)",
+    "amount": 1500000,
+    "memo": "INV-0033 대금",
+    "client_id": "C05",
+    "client": "미래식품",
+    "allocations": [
+     {
+      "invoice": "INV-0033",
+      "applied": 1500000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0033"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 77,
+    "date": "2026-09-18",
+    "counterparty": "그린마켓",
+    "amount": 2900000,
+    "memo": "INV-0026 대금",
+    "client_id": "C04",
+    "client": "그린마켓",
+    "allocations": [
+     {
+      "invoice": "INV-0026",
+      "applied": 2900000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0026"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 80,
+    "date": "2026-09-19",
+    "counterparty": "서울포장재",
+    "amount": 900000,
+    "memo": "INV-0020 대금",
+    "client_id": "C06",
+    "client": "서울포장재",
+    "allocations": [
+     {
+      "invoice": "INV-0020",
+      "applied": 900000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0020"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 81,
+    "date": "2026-09-19",
+    "counterparty": "소담 식자재",
+    "amount": 2500000,
+    "memo": "INV-0018 대금",
+    "client_id": "C17",
+    "client": "소담식자재",
+    "allocations": [
+     {
+      "invoice": "INV-0018",
+      "applied": 2500000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0018"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 82,
+    "date": "2026-09-19",
+    "counterparty": "청담베이커리",
+    "amount": 2500000,
+    "memo": "INV-0116 대금",
+    "client_id": "C10",
+    "client": "청담베이커리",
+    "allocations": [
+     {
+      "invoice": "INV-0116",
+      "applied": 2500000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0116"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 83,
+    "date": "2026-09-20",
+    "counterparty": "한빛 주식회사",
+    "amount": 300000,
+    "memo": "INV-0110 대금",
+    "client_id": "C03",
+    "client": "한빛 주식회사",
+    "allocations": [
+     {
+      "invoice": "INV-0110",
+      "applied": 300000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0110"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 84,
+    "date": "2026-09-20",
+    "counterparty": "(주)대성유통",
+    "amount": 1200000,
+    "memo": "INV-0002 대금",
+    "client_id": "C02",
+    "client": "(주)대성유통",
+    "allocations": [
+     {
+      "invoice": "INV-0002",
+      "applied": 1200000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0002"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 85,
+    "date": "2026-09-20",
+    "counterparty": "별빛마트",
+    "amount": 1200000,
+    "memo": "INV-0025 대금",
+    "client_id": "C15",
+    "client": "별빛마트",
+    "allocations": [
+     {
+      "invoice": "INV-0025",
+      "applied": 1200000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0025"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 86,
+    "date": "2026-09-20",
+    "counterparty": "누리커머스",
+    "amount": 1500000,
+    "memo": "INV-0113 대금",
+    "client_id": "C08",
+    "client": "누리커머스",
+    "allocations": [
+     {
+      "invoice": "INV-0113",
+      "applied": 1500000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0113"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 87,
+    "date": "2026-09-20",
+    "counterparty": "그린마켓",
+    "amount": 2300000,
+    "memo": "INV-0028 대금",
+    "client_id": "C04",
+    "client": "그린마켓",
+    "allocations": [
+     {
+      "invoice": "INV-0103",
+      "applied": 2300000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0103"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 88,
+    "date": "2026-09-22",
+    "counterparty": "서울포장재",
+    "amount": 2700000,
+    "memo": "INV-0052 대금",
+    "client_id": "C06",
+    "client": "서울포장재",
+    "allocations": [
+     {
+      "invoice": "INV-0052",
+      "applied": 2700000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0052"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 93,
+    "date": "2026-09-23",
+    "counterparty": "동해수산",
+    "amount": 400000,
+    "memo": "INV-0060 대금",
+    "client_id": "C07",
+    "client": "동해수산",
+    "allocations": [
+     {
+      "invoice": "INV-0060",
+      "applied": 400000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0060"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 94,
+    "date": "2026-09-23",
+    "counterparty": "우리수산",
+    "amount": 1700000,
+    "memo": "INV-0008 대금",
+    "client_id": "C20",
+    "client": "우리수산",
+    "allocations": [
+     {
+      "invoice": "INV-0057",
+      "applied": 800000,
+      "invoice_balance_after": 0
+     },
+     {
+      "invoice": "INV-0106",
+      "applied": 900000,
+      "invoice_balance_after": 900000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 95,
+    "date": "2026-09-23",
+    "counterparty": "라온농산",
+    "amount": 2600000,
+    "memo": "INV-0016 대금",
+    "client_id": "C11",
+    "client": "라온농산",
+    "allocations": [
+     {
+      "invoice": "INV-0016",
+      "applied": 500000,
+      "invoice_balance_after": 0
+     },
+     {
+      "invoice": "INV-0043",
+      "applied": 2100000,
+      "invoice_balance_after": 600000
+     }
+    ],
+    "method": "오래된순 충당",
+    "prepayment": 0
+   },
+   {
+    "line": 96,
+    "date": "2026-09-23",
+    "counterparty": "별빛마트",
+    "amount": 2900000,
+    "memo": "INV-0077 대금",
+    "client_id": "C15",
+    "client": "별빛마트",
+    "allocations": [
+     {
+      "invoice": "INV-0077",
+      "applied": 2900000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0077"
+    ],
+    "prepayment": 0
+   },
+   {
+    "line": 97,
+    "date": "2026-09-23",
+    "counterparty": "서울포장재",
+    "amount": 3000000,
+    "memo": "INV-0051 대금",
+    "client_id": "C06",
+    "client": "서울포장재",
+    "allocations": [
+     {
+      "invoice": "INV-0051",
+      "applied": 3000000,
+      "invoice_balance_after": 0
+     }
+    ],
+    "method": "정확일치",
+    "exact_candidates": [
+     "INV-0051"
+    ],
+    "prepayment": 0
+   }
+  ],
+  "prepayments": [],
+  "unidentified": [
+   {
+    "line": 44,
+    "date": "2026-09-12",
+    "counterparty": "알수없음무역",
+    "amount": 1250000,
+    "memo": "송금",
+    "status": "미확인 입금",
+    "client_id": null
+   }
+  ],
+  "memo_ref_differences": [
+   {
+    "line": 9,
+    "memo_ref": "INV-0103",
+    "allocated": [
+     "INV-0028"
+    ],
+    "memo_ref_client": "C04",
+    "deposit_client": "C04"
+   },
+   {
+    "line": 15,
+    "memo_ref": "INV-0086",
+    "allocated": [
+     "INV-0016"
+    ],
+    "memo_ref_client": "C11",
+    "deposit_client": "C11"
+   },
+   {
+    "line": 24,
+    "memo_ref": "INV-0100",
+    "allocated": [
+     "INV-0010",
+     "INV-0008"
+    ],
+    "memo_ref_client": "C20",
+    "deposit_client": "C20"
+   },
+   {
+    "line": 36,
+    "memo_ref": "INV-0042",
+    "allocated": [
+     "INV-0032"
+    ],
+    "memo_ref_client": "C03",
+    "deposit_client": "C03"
+   },
+   {
+    "line": 47,
+    "memo_ref": "INV-0107",
+    "allocated": [
+     "INV-0035"
+    ],
+    "memo_ref_client": "C15",
+    "deposit_client": "C15"
+   },
+   {
+    "line": 56,
+    "memo_ref": "INV-0010",
+    "allocated": [
+     "INV-0008",
+     "INV-0057"
+    ],
+    "memo_ref_client": "C20",
+    "deposit_client": "C20"
+   },
+   {
+    "line": 62,
+    "memo_ref": "INV-0102",
+    "allocated": [
+     "INV-0054"
+    ],
+    "memo_ref_client": "C13",
+    "deposit_client": "C13"
+   },
+   {
+    "line": 69,
+    "memo_ref": "INV-0054",
+    "allocated": [
+     "INV-0054",
+     "INV-0050",
+     "INV-0098",
+     "INV-0102"
+    ],
+    "memo_ref_client": "C13",
+    "deposit_client": "C13"
+   },
+   {
+    "line": 87,
+    "memo_ref": "INV-0028",
+    "allocated": [
+     "INV-0103"
+    ],
+    "memo_ref_client": "C04",
+    "deposit_client": "C04"
+   },
+   {
+    "line": 94,
+    "memo_ref": "INV-0008",
+    "allocated": [
+     "INV-0057",
+     "INV-0106"
+    ],
+    "memo_ref_client": "C20",
+    "deposit_client": "C20"
+   },
+   {
+    "line": 95,
+    "memo_ref": "INV-0016",
+    "allocated": [
+     "INV-0016",
+     "INV-0043"
+    ],
+    "memo_ref_client": "C11",
+    "deposit_client": "C11"
+   }
+  ]
+ },
+ "receivables": {
+  "total_open": 92850000,
+  "open_invoice_count": 61,
+  "aging": {
+   "기한내": 44400000,
+   "1-30": 21100000,
+   "31-60": 24300000,
+   "61-90": 3050000,
+   "90+": 0
+  },
+  "check_bucket_sum=total": true,
+  "total_prepayment_credit": 0,
+  "top5_clients": [
+   {
+    "rank": 1,
+    "client_id": "C08",
+    "client": "누리커머스",
+    "balance": 9800000,
+    "count": 7,
+    "overdue": 2700000,
+    "buckets": {
+     "기한내": 7100000,
+     "1-30": 1000000,
+     "31-60": 1700000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "rank": 2,
+    "client_id": "C15",
+    "client": "별빛마트",
+    "balance": 8700000,
+    "count": 5,
+    "overdue": 7300000,
+    "buckets": {
+     "기한내": 1400000,
+     "1-30": 1100000,
+     "31-60": 6200000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "rank": 3,
+    "client_id": "C14",
+    "client": "오션푸드",
+    "balance": 7900000,
+    "count": 4,
+    "overdue": 4000000,
+    "buckets": {
+     "기한내": 3900000,
+     "1-30": 1900000,
+     "31-60": 2100000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "rank": 4,
+    "client_id": "C17",
+    "client": "소담식자재",
+    "balance": 7400000,
+    "count": 5,
+    "overdue": 7400000,
+    "buckets": {
+     "기한내": 0,
+     "1-30": 3000000,
+     "31-60": 4400000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "rank": 5,
+    "client_id": "C11",
+    "client": "라온농산",
+    "balance": 7300000,
+    "count": 4,
+    "overdue": 5200000,
+    "buckets": {
+     "기한내": 2100000,
+     "1-30": 5200000,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   }
+  ],
+  "open_invoices": [
+   {
+    "invoice": "INV-0019",
+    "client_id": "C10",
+    "client": "청담베이커리",
+    "issued": "2026-07-15",
+    "due": "2026-07-30",
+    "amount": 2800000,
+    "balance": 2800000,
+    "days_past_due": 62,
+    "bucket": "61-90",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0024",
+    "client_id": "C19",
+    "client": "참좋은마트",
+    "issued": "2026-07-01",
+    "due": "2026-07-31",
+    "amount": 500000,
+    "balance": 250000,
+    "days_past_due": 61,
+    "bucket": "61-90",
+    "partially_paid": true
+   },
+   {
+    "invoice": "INV-0013",
+    "client_id": "C17",
+    "client": "소담식자재",
+    "issued": "2026-07-04",
+    "due": "2026-08-03",
+    "amount": 1600000,
+    "balance": 800000,
+    "days_past_due": 58,
+    "bucket": "31-60",
+    "partially_paid": true
+   },
+   {
+    "invoice": "INV-0035",
+    "client_id": "C15",
+    "client": "별빛마트",
+    "issued": "2026-07-04",
+    "due": "2026-08-03",
+    "amount": 2900000,
+    "balance": 1500000,
+    "days_past_due": 58,
+    "bucket": "31-60",
+    "partially_paid": true
+   },
+   {
+    "invoice": "INV-0003",
+    "client_id": "C07",
+    "client": "동해수산",
+    "issued": "2026-07-05",
+    "due": "2026-08-04",
+    "amount": 2700000,
+    "balance": 2700000,
+    "days_past_due": 57,
+    "bucket": "31-60",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0009",
+    "client_id": "C02",
+    "client": "(주)대성유통",
+    "issued": "2026-07-06",
+    "due": "2026-08-05",
+    "amount": 2800000,
+    "balance": 2800000,
+    "days_past_due": 56,
+    "bucket": "31-60",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0004",
+    "client_id": "C12",
+    "client": "바른유통",
+    "issued": "2026-07-09",
+    "due": "2026-08-08",
+    "amount": 2600000,
+    "balance": 2600000,
+    "days_past_due": 53,
+    "bucket": "31-60",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0037",
+    "client_id": "C01",
+    "client": "한빛상사",
+    "issued": "2026-07-14",
+    "due": "2026-08-13",
+    "amount": 1800000,
+    "balance": 1800000,
+    "days_past_due": 48,
+    "bucket": "31-60",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0027",
+    "client_id": "C08",
+    "client": "누리커머스",
+    "issued": "2026-07-15",
+    "due": "2026-08-14",
+    "amount": 1700000,
+    "balance": 1700000,
+    "days_past_due": 47,
+    "bucket": "31-60",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0001",
+    "client_id": "C15",
+    "client": "별빛마트",
+    "issued": "2026-07-19",
+    "due": "2026-08-18",
+    "amount": 1900000,
+    "balance": 1900000,
+    "days_past_due": 43,
+    "bucket": "31-60",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0012",
+    "client_id": "C17",
+    "client": "소담식자재",
+    "issued": "2026-07-22",
+    "due": "2026-08-21",
+    "amount": 2900000,
+    "balance": 2900000,
+    "days_past_due": 40,
+    "bucket": "31-60",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0036",
+    "client_id": "C14",
+    "client": "오션푸드",
+    "issued": "2026-07-07",
+    "due": "2026-08-21",
+    "amount": 2100000,
+    "balance": 2100000,
+    "days_past_due": 40,
+    "bucket": "31-60",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0006",
+    "client_id": "C17",
+    "client": "소담식자재",
+    "issued": "2026-07-24",
+    "due": "2026-08-23",
+    "amount": 700000,
+    "balance": 700000,
+    "days_past_due": 38,
+    "bucket": "31-60",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0039",
+    "client_id": "C15",
+    "client": "별빛마트",
+    "issued": "2026-07-26",
+    "due": "2026-08-25",
+    "amount": 2800000,
+    "balance": 2800000,
+    "days_past_due": 36,
+    "bucket": "31-60",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0059",
+    "client_id": "C18",
+    "client": "하나로푸드",
+    "issued": "2026-08-01",
+    "due": "2026-08-31",
+    "amount": 1900000,
+    "balance": 1900000,
+    "days_past_due": 30,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0067",
+    "client_id": "C01",
+    "client": "한빛상사",
+    "issued": "2026-08-01",
+    "due": "2026-08-31",
+    "amount": 2900000,
+    "balance": 2900000,
+    "days_past_due": 30,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0078",
+    "client_id": "C16",
+    "client": "태양상회",
+    "issued": "2026-08-01",
+    "due": "2026-08-31",
+    "amount": 900000,
+    "balance": 900000,
+    "days_past_due": 30,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0044",
+    "client_id": "C08",
+    "client": "누리커머스",
+    "issued": "2026-08-02",
+    "due": "2026-09-01",
+    "amount": 1000000,
+    "balance": 1000000,
+    "days_past_due": 29,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0065",
+    "client_id": "C09",
+    "client": "제일물산",
+    "issued": "2026-08-04",
+    "due": "2026-09-03",
+    "amount": 800000,
+    "balance": 800000,
+    "days_past_due": 27,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0043",
+    "client_id": "C11",
+    "client": "라온농산",
+    "issued": "2026-08-06",
+    "due": "2026-09-05",
+    "amount": 2700000,
+    "balance": 600000,
+    "days_past_due": 25,
+    "bucket": "1-30",
+    "partially_paid": true
+   },
+   {
+    "invoice": "INV-0046",
+    "client_id": "C17",
+    "client": "소담식자재",
+    "issued": "2026-08-08",
+    "due": "2026-09-07",
+    "amount": 900000,
+    "balance": 900000,
+    "days_past_due": 23,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0061",
+    "client_id": "C19",
+    "client": "참좋은마트",
+    "issued": "2026-08-12",
+    "due": "2026-09-11",
+    "amount": 1200000,
+    "balance": 1200000,
+    "days_past_due": 19,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0073",
+    "client_id": "C15",
+    "client": "별빛마트",
+    "issued": "2026-08-16",
+    "due": "2026-09-15",
+    "amount": 1100000,
+    "balance": 1100000,
+    "days_past_due": 15,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0063",
+    "client_id": "C17",
+    "client": "소담식자재",
+    "issued": "2026-08-18",
+    "due": "2026-09-17",
+    "amount": 2100000,
+    "balance": 2100000,
+    "days_past_due": 13,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0076",
+    "client_id": "C11",
+    "client": "라온농산",
+    "issued": "2026-08-18",
+    "due": "2026-09-17",
+    "amount": 3000000,
+    "balance": 3000000,
+    "days_past_due": 13,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0069",
+    "client_id": "C11",
+    "client": "라온농산",
+    "issued": "2026-08-20",
+    "due": "2026-09-19",
+    "amount": 1600000,
+    "balance": 1600000,
+    "days_past_due": 11,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0042",
+    "client_id": "C03",
+    "client": "한빛 주식회사",
+    "issued": "2026-08-06",
+    "due": "2026-09-20",
+    "amount": 2800000,
+    "balance": 900000,
+    "days_past_due": 10,
+    "bucket": "1-30",
+    "partially_paid": true
+   },
+   {
+    "invoice": "INV-0055",
+    "client_id": "C14",
+    "client": "오션푸드",
+    "issued": "2026-08-11",
+    "due": "2026-09-25",
+    "amount": 1900000,
+    "balance": 1900000,
+    "days_past_due": 5,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0094",
+    "client_id": "C10",
+    "client": "청담베이커리",
+    "issued": "2026-09-10",
+    "due": "2026-09-25",
+    "amount": 300000,
+    "balance": 300000,
+    "days_past_due": 5,
+    "bucket": "1-30",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0087",
+    "client_id": "C12",
+    "client": "바른유통",
+    "issued": "2026-09-01",
+    "due": "2026-10-01",
+    "amount": 900000,
+    "balance": 900000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0109",
+    "client_id": "C19",
+    "client": "참좋은마트",
+    "issued": "2026-09-02",
+    "due": "2026-10-02",
+    "amount": 600000,
+    "balance": 600000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0111",
+    "client_id": "C04",
+    "client": "그린마켓",
+    "issued": "2026-09-03",
+    "due": "2026-10-03",
+    "amount": 900000,
+    "balance": 900000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0096",
+    "client_id": "C18",
+    "client": "하나로푸드",
+    "issued": "2026-09-05",
+    "due": "2026-10-05",
+    "amount": 1600000,
+    "balance": 1600000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0089",
+    "client_id": "C05",
+    "client": "미래식품",
+    "issued": "2026-09-06",
+    "due": "2026-10-06",
+    "amount": 2200000,
+    "balance": 2200000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0120",
+    "client_id": "C19",
+    "client": "참좋은마트",
+    "issued": "2026-09-07",
+    "due": "2026-10-07",
+    "amount": 1300000,
+    "balance": 1300000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0071",
+    "client_id": "C06",
+    "client": "서울포장재",
+    "issued": "2026-08-10",
+    "due": "2026-10-09",
+    "amount": 300000,
+    "balance": 300000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0106",
+    "client_id": "C20",
+    "client": "우리수산",
+    "issued": "2026-09-10",
+    "due": "2026-10-10",
+    "amount": 1800000,
+    "balance": 900000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": true
+   },
+   {
+    "invoice": "INV-0112",
+    "client_id": "C16",
+    "client": "태양상회",
+    "issued": "2026-09-10",
+    "due": "2026-10-10",
+    "amount": 2900000,
+    "balance": 2900000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0086",
+    "client_id": "C11",
+    "client": "라온농산",
+    "issued": "2026-09-14",
+    "due": "2026-10-14",
+    "amount": 2100000,
+    "balance": 2100000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0092",
+    "client_id": "C08",
+    "client": "누리커머스",
+    "issued": "2026-09-14",
+    "due": "2026-10-14",
+    "amount": 1800000,
+    "balance": 1800000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0100",
+    "client_id": "C20",
+    "client": "우리수산",
+    "issued": "2026-09-15",
+    "due": "2026-10-15",
+    "amount": 2000000,
+    "balance": 2000000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0101",
+    "client_id": "C08",
+    "client": "누리커머스",
+    "issued": "2026-09-15",
+    "due": "2026-10-15",
+    "amount": 2700000,
+    "balance": 2700000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0093",
+    "client_id": "C03",
+    "client": "한빛 주식회사",
+    "issued": "2026-09-01",
+    "due": "2026-10-16",
+    "amount": 500000,
+    "balance": 500000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0095",
+    "client_id": "C08",
+    "client": "누리커머스",
+    "issued": "2026-09-16",
+    "due": "2026-10-16",
+    "amount": 1400000,
+    "balance": 1400000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0105",
+    "client_id": "C08",
+    "client": "누리커머스",
+    "issued": "2026-09-16",
+    "due": "2026-10-16",
+    "amount": 700000,
+    "balance": 700000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0115",
+    "client_id": "C07",
+    "client": "동해수산",
+    "issued": "2026-09-16",
+    "due": "2026-10-16",
+    "amount": 1600000,
+    "balance": 1600000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0119",
+    "client_id": "C12",
+    "client": "바른유통",
+    "issued": "2026-09-16",
+    "due": "2026-10-16",
+    "amount": 1600000,
+    "balance": 1600000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0102",
+    "client_id": "C13",
+    "client": "경기제과",
+    "issued": "2026-09-17",
+    "due": "2026-10-17",
+    "amount": 2200000,
+    "balance": 900000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": true
+   },
+   {
+    "invoice": "INV-0081",
+    "client_id": "C02",
+    "client": "(주)대성유통",
+    "issued": "2026-09-18",
+    "due": "2026-10-18",
+    "amount": 2700000,
+    "balance": 2700000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0082",
+    "client_id": "C07",
+    "client": "동해수산",
+    "issued": "2026-09-19",
+    "due": "2026-10-19",
+    "amount": 300000,
+    "balance": 300000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0097",
+    "client_id": "C08",
+    "client": "누리커머스",
+    "issued": "2026-09-19",
+    "due": "2026-10-19",
+    "amount": 500000,
+    "balance": 500000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0104",
+    "client_id": "C16",
+    "client": "태양상회",
+    "issued": "2026-09-20",
+    "due": "2026-10-20",
+    "amount": 1800000,
+    "balance": 1800000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0083",
+    "client_id": "C01",
+    "client": "한빛상사",
+    "issued": "2026-09-21",
+    "due": "2026-10-21",
+    "amount": 800000,
+    "balance": 800000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0084",
+    "client_id": "C18",
+    "client": "하나로푸드",
+    "issued": "2026-09-24",
+    "due": "2026-10-24",
+    "amount": 1300000,
+    "balance": 1300000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0090",
+    "client_id": "C13",
+    "client": "경기제과",
+    "issued": "2026-09-24",
+    "due": "2026-10-24",
+    "amount": 2100000,
+    "balance": 2100000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0091",
+    "client_id": "C04",
+    "client": "그린마켓",
+    "issued": "2026-09-24",
+    "due": "2026-10-24",
+    "amount": 500000,
+    "balance": 500000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0107",
+    "client_id": "C15",
+    "client": "별빛마트",
+    "issued": "2026-09-25",
+    "due": "2026-10-25",
+    "amount": 1400000,
+    "balance": 1400000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0099",
+    "client_id": "C20",
+    "client": "우리수산",
+    "issued": "2026-09-28",
+    "due": "2026-10-28",
+    "amount": 400000,
+    "balance": 400000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0118",
+    "client_id": "C14",
+    "client": "오션푸드",
+    "issued": "2026-09-23",
+    "due": "2026-11-07",
+    "amount": 2900000,
+    "balance": 2900000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0108",
+    "client_id": "C14",
+    "client": "오션푸드",
+    "issued": "2026-09-26",
+    "due": "2026-11-10",
+    "amount": 1000000,
+    "balance": 1000000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   },
+   {
+    "invoice": "INV-0114",
+    "client_id": "C06",
+    "client": "서울포장재",
+    "issued": "2026-09-23",
+    "due": "2026-11-22",
+    "amount": 1800000,
+    "balance": 1800000,
+    "days_past_due": 0,
+    "bucket": "기한내",
+    "partially_paid": false
+   }
+  ],
+  "by_client": [
+   {
+    "client_id": "C08",
+    "client": "누리커머스",
+    "balance": 9800000,
+    "count": 7,
+    "overdue": 2700000,
+    "buckets": {
+     "기한내": 7100000,
+     "1-30": 1000000,
+     "31-60": 1700000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C15",
+    "client": "별빛마트",
+    "balance": 8700000,
+    "count": 5,
+    "overdue": 7300000,
+    "buckets": {
+     "기한내": 1400000,
+     "1-30": 1100000,
+     "31-60": 6200000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C14",
+    "client": "오션푸드",
+    "balance": 7900000,
+    "count": 4,
+    "overdue": 4000000,
+    "buckets": {
+     "기한내": 3900000,
+     "1-30": 1900000,
+     "31-60": 2100000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C17",
+    "client": "소담식자재",
+    "balance": 7400000,
+    "count": 5,
+    "overdue": 7400000,
+    "buckets": {
+     "기한내": 0,
+     "1-30": 3000000,
+     "31-60": 4400000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C11",
+    "client": "라온농산",
+    "balance": 7300000,
+    "count": 4,
+    "overdue": 5200000,
+    "buckets": {
+     "기한내": 2100000,
+     "1-30": 5200000,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C16",
+    "client": "태양상회",
+    "balance": 5600000,
+    "count": 3,
+    "overdue": 900000,
+    "buckets": {
+     "기한내": 4700000,
+     "1-30": 900000,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C01",
+    "client": "한빛상사",
+    "balance": 5500000,
+    "count": 3,
+    "overdue": 4700000,
+    "buckets": {
+     "기한내": 800000,
+     "1-30": 2900000,
+     "31-60": 1800000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C02",
+    "client": "(주)대성유통",
+    "balance": 5500000,
+    "count": 2,
+    "overdue": 2800000,
+    "buckets": {
+     "기한내": 2700000,
+     "1-30": 0,
+     "31-60": 2800000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C12",
+    "client": "바른유통",
+    "balance": 5100000,
+    "count": 3,
+    "overdue": 2600000,
+    "buckets": {
+     "기한내": 2500000,
+     "1-30": 0,
+     "31-60": 2600000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C18",
+    "client": "하나로푸드",
+    "balance": 4800000,
+    "count": 3,
+    "overdue": 1900000,
+    "buckets": {
+     "기한내": 2900000,
+     "1-30": 1900000,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C07",
+    "client": "동해수산",
+    "balance": 4600000,
+    "count": 3,
+    "overdue": 2700000,
+    "buckets": {
+     "기한내": 1900000,
+     "1-30": 0,
+     "31-60": 2700000,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C19",
+    "client": "참좋은마트",
+    "balance": 3350000,
+    "count": 4,
+    "overdue": 1450000,
+    "buckets": {
+     "기한내": 1900000,
+     "1-30": 1200000,
+     "31-60": 0,
+     "61-90": 250000,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C20",
+    "client": "우리수산",
+    "balance": 3300000,
+    "count": 3,
+    "overdue": 0,
+    "buckets": {
+     "기한내": 3300000,
+     "1-30": 0,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C10",
+    "client": "청담베이커리",
+    "balance": 3100000,
+    "count": 2,
+    "overdue": 3100000,
+    "buckets": {
+     "기한내": 0,
+     "1-30": 300000,
+     "31-60": 0,
+     "61-90": 2800000,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C13",
+    "client": "경기제과",
+    "balance": 3000000,
+    "count": 2,
+    "overdue": 0,
+    "buckets": {
+     "기한내": 3000000,
+     "1-30": 0,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C05",
+    "client": "미래식품",
+    "balance": 2200000,
+    "count": 1,
+    "overdue": 0,
+    "buckets": {
+     "기한내": 2200000,
+     "1-30": 0,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C06",
+    "client": "서울포장재",
+    "balance": 2100000,
+    "count": 2,
+    "overdue": 0,
+    "buckets": {
+     "기한내": 2100000,
+     "1-30": 0,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C03",
+    "client": "한빛 주식회사",
+    "balance": 1400000,
+    "count": 2,
+    "overdue": 900000,
+    "buckets": {
+     "기한내": 500000,
+     "1-30": 900000,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C04",
+    "client": "그린마켓",
+    "balance": 1400000,
+    "count": 2,
+    "overdue": 0,
+    "buckets": {
+     "기한내": 1400000,
+     "1-30": 0,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   },
+   {
+    "client_id": "C09",
+    "client": "제일물산",
+    "balance": 800000,
+    "count": 1,
+    "overdue": 800000,
+    "buckets": {
+     "기한내": 0,
+     "1-30": 800000,
+     "31-60": 0,
+     "61-90": 0,
+     "90+": 0
+    },
+    "prepayment_credit": 0
+   }
+  ]
+ },
+ "payroll_check": {
+  "net_pay_rows": 12,
+  "net_pay_row_sum": 35236000,
+  "net_pay_total_row": 35236000,
+  "row_sum_equals_total_row": true,
+  "insurance_rows": 12,
+  "insurance_row_sum": 3561900,
+  "insurance_total_row": 3561900,
+  "insurance_row_sum_equals_total_row": true,
+  "insurance_component_vs_total_column_diffs": [
+   {
+    "name": "박지훈",
+    "components_sum": 334799,
+    "회사부담합계": 334800,
+    "diff": 1
+   },
+   {
+    "name": "최수아",
+    "components_sum": 316199,
+    "회사부담합계": 316200,
+    "diff": 1
+   },
+   {
+    "name": "정우진",
+    "components_sum": 306899,
+    "회사부담합계": 306900,
+    "diff": 1
+   },
+   {
+    "name": "강하은",
+    "components_sum": 288299,
+    "회사부담합계": 288300,
+    "diff": 1
+   },
+   {
+    "name": "조현우",
+    "components_sum": 278999,
+    "회사부담합계": 279000,
+    "diff": 1
+   },
+   {
+    "name": "윤서준",
+    "components_sum": 269699,
+    "회사부담합계": 269700,
+    "diff": 1
+   },
+   {
+    "name": "장예린",
+    "components_sum": 260399,
+    "회사부담합계": 260400,
+    "diff": 1
+   },
+   {
+    "name": "임도윤",
+    "components_sum": 260399,
+    "회사부담합계": 260400,
+    "diff": 1
+   },
+   {
+    "name": "한지우",
+    "components_sum": 251099,
+    "회사부담합계": 251100,
+    "diff": 1
+   }
+  ],
+  "note": "합계 행은 데이터 합산에서 제외하고 행별 합을 합계 행과 대조했다. 출금 대응에는 회사부담합계 열을 쓴다."
+ },
+ "withdrawals": {
+  "count": 35,
+  "total": 42032900,
+  "matched_total": 40522900,
+  "unmatched_total": 1510000,
+  "check_matched+unmatched=total": true,
+  "matched_by_category": {
+   "매입": 34700000,
+   "고정비": 2261000,
+   "4대보험": 3561900
+  },
+  "payroll_withdrawal_in_csv": false,
+  "insurance_withdrawal_in_csv": true,
+  "matched": [
+   {
+    "line": 6,
+    "date": "2026-09-03",
+    "counterparty": "세진기계",
+    "amount": 1200000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0908",
+    "purchase_date": "2026-09-01"
+   },
+   {
+    "line": 7,
+    "date": "2026-09-03",
+    "counterparty": "세진기계",
+    "amount": 2000000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0901",
+    "purchase_date": "2026-09-01"
+   },
+   {
+    "line": 10,
+    "date": "2026-09-04",
+    "counterparty": "세진기계",
+    "amount": 200000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0910",
+    "purchase_date": "2026-09-04"
+   },
+   {
+    "line": 18,
+    "date": "2026-09-05",
+    "counterparty": "넷라인",
+    "amount": 231000,
+    "memo": "전용회선 9월",
+    "category": "고정비",
+    "ref": "K05"
+   },
+   {
+    "line": 19,
+    "date": "2026-09-05",
+    "counterparty": "세이프가드",
+    "amount": 350000,
+    "memo": "보안 관제 9월",
+    "category": "고정비",
+    "ref": "K02"
+   },
+   {
+    "line": 20,
+    "date": "2026-09-05",
+    "counterparty": "클라우드원",
+    "amount": 480000,
+    "memo": "ERP 구독 9월",
+    "category": "고정비",
+    "ref": "K01"
+   },
+   {
+    "line": 21,
+    "date": "2026-09-05",
+    "counterparty": "삼일사무",
+    "amount": 500000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0903",
+    "purchase_date": "2026-09-03"
+   },
+   {
+    "line": 22,
+    "date": "2026-09-05",
+    "counterparty": "한솔물류",
+    "amount": 1200000,
+    "memo": "창고 보관 9월",
+    "category": "고정비",
+    "ref": "K03"
+   },
+   {
+    "line": 25,
+    "date": "2026-09-06",
+    "counterparty": "삼일사무",
+    "amount": 1700000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0928",
+    "purchase_date": "2026-09-05"
+   },
+   {
+    "line": 28,
+    "date": "2026-09-07",
+    "counterparty": "한솔물류",
+    "amount": 500000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0917",
+    "purchase_date": "2026-09-07"
+   },
+   {
+    "line": 31,
+    "date": "2026-09-08",
+    "counterparty": "우성운송",
+    "amount": 600000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0925",
+    "purchase_date": "2026-09-08"
+   },
+   {
+    "line": 33,
+    "date": "2026-09-08",
+    "counterparty": "모던포장기",
+    "amount": 1300000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0913",
+    "purchase_date": "2026-09-06"
+   },
+   {
+    "line": 37,
+    "date": "2026-09-09",
+    "counterparty": "청정화학",
+    "amount": 1800000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0920",
+    "purchase_date": "2026-09-08"
+   },
+   {
+    "line": 39,
+    "date": "2026-09-10",
+    "counterparty": "삼일사무",
+    "amount": 2000000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0922",
+    "purchase_date": "2026-09-08"
+   },
+   {
+    "line": 40,
+    "date": "2026-09-10",
+    "counterparty": "국민건강보험공단외",
+    "amount": 3561900,
+    "memo": "4대보험",
+    "category": "4대보험",
+    "ref": "4대보험 회사부담 합계"
+   },
+   {
+    "line": 42,
+    "date": "2026-09-11",
+    "counterparty": "청정화학",
+    "amount": 1700000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0927",
+    "purchase_date": "2026-09-11"
+   },
+   {
+    "line": 52,
+    "date": "2026-09-12",
+    "counterparty": "청정화학",
+    "amount": 1900000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0918",
+    "purchase_date": "2026-09-11"
+   },
+   {
+    "line": 55,
+    "date": "2026-09-13",
+    "counterparty": "우성운송",
+    "amount": 1500000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0907",
+    "purchase_date": "2026-09-12"
+   },
+   {
+    "line": 57,
+    "date": "2026-09-14",
+    "counterparty": "청정화학",
+    "amount": 700000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0924",
+    "purchase_date": "2026-09-13"
+   },
+   {
+    "line": 58,
+    "date": "2026-09-14",
+    "counterparty": "삼일사무",
+    "amount": 1500000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0914",
+    "purchase_date": "2026-09-12"
+   },
+   {
+    "line": 63,
+    "date": "2026-09-15",
+    "counterparty": "에코필름",
+    "amount": 700000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0915",
+    "purchase_date": "2026-09-14"
+   },
+   {
+    "line": 64,
+    "date": "2026-09-15",
+    "counterparty": "청정화학",
+    "amount": 1000000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0909",
+    "purchase_date": "2026-09-15"
+   },
+   {
+    "line": 74,
+    "date": "2026-09-17",
+    "counterparty": "모던포장기",
+    "amount": 1100000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0916",
+    "purchase_date": "2026-09-15"
+   },
+   {
+    "line": 78,
+    "date": "2026-09-18",
+    "counterparty": "모던포장기",
+    "amount": 600000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0911",
+    "purchase_date": "2026-09-17"
+   },
+   {
+    "line": 79,
+    "date": "2026-09-18",
+    "counterparty": "에코필름",
+    "amount": 2300000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0929",
+    "purchase_date": "2026-09-17"
+   },
+   {
+    "line": 89,
+    "date": "2026-09-22",
+    "counterparty": "우성운송",
+    "amount": 200000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0902",
+    "purchase_date": "2026-09-22"
+   },
+   {
+    "line": 90,
+    "date": "2026-09-22",
+    "counterparty": "청정화학",
+    "amount": 1200000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0926",
+    "purchase_date": "2026-09-21"
+   },
+   {
+    "line": 91,
+    "date": "2026-09-22",
+    "counterparty": "모던포장기",
+    "amount": 1400000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0904",
+    "purchase_date": "2026-09-22"
+   },
+   {
+    "line": 92,
+    "date": "2026-09-22",
+    "counterparty": "우성운송",
+    "amount": 1500000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0919",
+    "purchase_date": "2026-09-20"
+   },
+   {
+    "line": 98,
+    "date": "2026-09-23",
+    "counterparty": "코리아펄프",
+    "amount": 1500000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0905",
+    "purchase_date": "2026-09-21"
+   },
+   {
+    "line": 99,
+    "date": "2026-09-23",
+    "counterparty": "세진기계",
+    "amount": 1800000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0921",
+    "purchase_date": "2026-09-23"
+   },
+   {
+    "line": 100,
+    "date": "2026-09-23",
+    "counterparty": "동양잉크",
+    "amount": 2300000,
+    "memo": "매입대금",
+    "category": "매입",
+    "ref": "PO-0930",
+    "purchase_date": "2026-09-21"
+   }
+  ],
+  "unmatched": [
+   {
+    "line": 17,
+    "date": "2026-09-05",
+    "counterparty": "오피스렌탈",
+    "amount": 190000,
+    "memo": "복합기 임대 9월",
+    "reason": "계약 K04 9월 실효 요금 160000와 다름"
+   },
+   {
+    "line": 32,
+    "date": "2026-09-08",
+    "counterparty": "미래카드",
+    "amount": 870000,
+    "memo": "카드대금",
+    "reason": "공급처·계약·급여·4대보험 어디에도 없음"
+   },
+   {
+    "line": 73,
+    "date": "2026-09-17",
+    "counterparty": "현금인출",
+    "amount": 450000,
+    "memo": "ATM",
+    "reason": "공급처·계약·급여·4대보험 어디에도 없음"
+   }
+  ],
+  "september_purchases": {
+   "count": 30,
+   "total": 38200000,
+   "unpaid_in_september": [
+    {
+     "id": "PO-0912",
+     "vendor_id": "V05",
+     "vendor": "에코필름",
+     "date": "2026-09-24",
+     "amount": 600000
+    },
+    {
+     "id": "PO-0923",
+     "vendor_id": "V08",
+     "vendor": "모던포장기",
+     "date": "2026-09-24",
+     "amount": 1400000
+    },
+    {
+     "id": "PO-0906",
+     "vendor_id": "V08",
+     "vendor": "모던포장기",
+     "date": "2026-09-28",
+     "amount": 1500000
+    }
+   ],
+   "unpaid_total": 3500000
+  }
+ },
+ "bank_checks": {
+  "opening_balance_used": 48500000,
+  "csv_deposit_total": 108500000,
+  "csv_withdrawal_total": 42032900,
+  "checks": [
+   {
+    "check": "요약 기초잔고+CSV 입금합−CSV 출금합 vs CSV 마지막 잔고",
+    "computed": 114967100,
+    "csv_last_balance": 114967100,
+    "diff": 0,
+    "ok": true,
+    "status": "일치"
+   },
+   {
+    "check": "CSV 기말잔고 vs 요약 기말잔고",
+    "csv_last_balance": 114967100,
+    "summary_closing_balance": 112681100,
+    "diff": 2286000,
+    "ok": false,
+    "status": "원천 확인 필요"
+   },
+   {
+    "check": "CSV 입금 건수 vs 요약 입금 건수",
+    "csv_deposit_count": 64,
+    "summary_deposit_count": 88,
+    "diff": -24,
+    "ok": false,
+    "status": "원천 확인 필요"
+   },
+   {
+    "check": "(참고) CSV 출금 건수 vs 요약",
+    "csv": 35,
+    "summary": 40,
+    "diff": -5,
+    "ok": false,
+    "status": "원천 확인 필요"
+   },
+   {
+    "check": "(참고) CSV 입금 합 vs 요약",
+    "csv": 108500000,
+    "summary": 147050000,
+    "diff": -38550000,
+    "ok": false,
+    "status": "원천 확인 필요"
+   },
+   {
+    "check": "(참고) CSV 출금 합 vs 요약",
+    "csv": 42032900,
+    "summary": 82868900,
+    "diff": -40836000,
+    "ok": false,
+    "status": "원천 확인 필요"
+   }
+  ],
+  "running_balance_breaks": [],
+  "any_mismatch": true,
+  "csv_first_date": "2026-09-01",
+  "csv_last_date": "2026-09-23",
+  "status": "잔고 검증 불일치·원천 확인 필요",
+  "diagnosis": [
+   "CSV 내부는 일관된다: 행마다 직전 잔고±금액=기록 잔고가 성립하고(연속성 끊김 0행), 기초+입금−출금이 CSV 마지막 잔고와 같다. 따라서 잔고 열 오류 후보는 낮다.",
+   "요약 대비 CSV에 입금 24건 38,550,000원, 출금 5건 40,836,000원이 적다. 그 순액 -2,286,000원이 기말잔고 차이(요약−CSV) -2,286,000원과 같아, 요약 쪽 오류보다 CSV 행 누락 쪽이 더 설명력이 크다(단정 아님).",
+   "요약 자체는 기초+입금합−출금합=112,681,100원으로 요약 기말잔고와 맞는다.",
+   "CSV 마지막 거래일이 2026-09-23(100행)로 월말 전이다. 그 이후 거래가 빠진 후보(내보내기 잘림 등) — 은행에서 9월 전체 거래내역을 다시 받아 확인해야 한다.",
+   "9월 급여 출금이 CSV에 없다(급여 시트 순지급 합계 35,236,000원). 누락 행 후보에 급여 이체가 포함될 수 있다."
+  ]
+ }
+}

@@ -1,0 +1,10 @@
+{
+ "round": 40,
+ "started_kst": "2026-10-09 02:18:34",
+ "head": "11aef5b6",
+ "cap_minutes": 60,
+ "episode_log_max_before": 4487,
+ "backend_phase": "ACTIVE",
+ "first_draft_check": "issues 0 warnings 0",
+ "trainer_revisions": 3
+}

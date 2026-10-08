@@ -4,6 +4,15 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 40회차 — 소규모 제조·유통 회사의 월말 경영 점검 (2026-10-09, 훈련·발견만)
+
+정본 main `11aef5b6`, 02:18 KST 시작, 상한 60분 중 자료·작성·실행·변형·탐침 약 16분(AI 후속 대기·보존 별도). 축: 운영 대사 → 경영 판단(4형식 원천·AI 추출 재사용·메모 숫자 근거 검수).
+합성: 은행 128행·요약, 청구 120, 매입 90, 급여 XLSX 2시트, 계약서 5건, 목표, 지난달 메모. 입금 순차 충당·aging·출금 대사·잔고 검증·3개월 전망·계약 `table:ai` 추출·경영 메모.
+훈련자 최초 초안: 검사 issues 0, 첫 실행 전건 달성(10.4초·324K 단계). 변형 C(CRLF+NFD 계약서) 동일. 변형 A(CSV 절단)에서 AI 추출 null 로 `NUMBER_REQUIRED` → 수정 3회(null 보존, 검사가 null 보간 2회 거절) 뒤 정직한 불일치 표시로 달성.
+변형 B: 잘못된 reuse 키(`continuation.reuse_args`)는 조용히 무시돼 모델 재호출(12.8초), 올바른 `reuse:{run_id}` 는 영수증 16 재사용·모델 0·2.4초.
+독립 AI ep4488 345.4초(Python 3개 파일·IBL 17회, 자작 관문 1회, 입력 3,621,865/출력 35,487) 전건 달성. 변형 B ep4489 133.9초 자기 추출 재사용·계약 충돌 지적, 변형 A ep4490 228.2초 불일치 배너. 셋 다 oracle 전건.
+**L40-1** 실행 요청의 미지 최상위 키 무시(경고 0) → 재사용 의도 소실·비용, **L40-2** AI 추출 실행 간 비결정성(K03 notice_days 30/null/30)과 schema 필드의 검사 타입 공백(null 분기 누락을 실행 전에 못 잡음). 수리 없음. [보고서](experiments/long_sentence_imagination/round_40/report.md).
+
 ## 39회차 — 문서 묶음 용어 개정: 코드 보존·앵커 갱신·깨진 링크·멱등·전부-아니면-무 (2026-10-09, 훈련·후속 수리)
 
 정본 main `36ddcf87`, 01:08 KST 시작, 상한 60분 중 자료·작성·실행·변형·탐침 약 15분(AI 후속 대기·보존 별도). 새 축: 구조 인식 다중 파일 재작성 + 트랜잭션 쓰기.
@@ -230,6 +239,8 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
+| L40-1 | 진단 공백·비용 — `/ibl/execute` 요청의 미지 최상위 키(`continuation`·`bogus_key`)를 경고 없이 무시. 재사용 의도가 사라져 같은 계약 추출에 모델을 다시 호출(9.5초). 잘못된 run_id 는 `REUSE_ARGUMENT` 로 거절됨(대조군) | `round_40/evidence/probe_unknown_key2.json`(success·warnings null), `trainer_B_main_v0_reuse.json`(reuse null·table:ai 9,564ms) vs `trainer_B_main_v1_reuse.json`(receipt_reused 16·table:ai 6ms) | 열림 — 미지 요청 키를 warnings 로 신고(또는 거절). 교재 문장 "continuation.reuse_args 를 요청에 합친다" 의 뜻(내용을 최상위에 병합)도 예시로 명시 | [40회차](experiments/long_sentence_imagination/round_40/report.md) |
+| L40-2 | AI 추출 비결정성 + 검사 타입 공백 — 같은 계약서 5건 `table:ai` 추출이 실행마다 다름(K03 notice_days 30→null→30). `schema` 에 "숫자" 로 선언해도 null 이 오고 검사 타입은 Unknown 이라 `number(null)` 런타임 실패로만 드러남(A v0). null 분기 뒤의 보간은 검사가 `FORMAT_TYPE`·`TYPE` 으로 잡음(대조군) | `evidence/trainer_A_main_v0.json`(NUMBER_REQUIRED, partial 2행), `trainer_base_main_v0`·`trainer_A_main_v1` 의 contracts.json | 열림 — schema 선언 필드를 Number\|Null 등으로 정적 타입화해 검사에서 null 분기 누락을 미리 경고, `contract` 필수 필드 안내. 작성자 책임 절반(null 대비) | [40회차](experiments/long_sentence_imagination/round_40/report.md) |
 | L39-1 | 구현 결함(원문 보존) — `self:read`(text) 가 CRLF 를 LF 로 조용히 바꿈. `inputs` 문자열은 보존, read→write 왕복만 CR 소실 | `round_39/repro/crlf_read.ibl`: 28자 파일→24자, 쓰면 CR 0개. isolate 탐침 | 수리 — 주인·회원 텍스트 CR/LF/CRLF 보존. 행 범위·왕복 바이트 검증 | [39회차](experiments/long_sentence_imagination/round_39/report.md) |
 | L39-2 | 원문 보존 정책 공백 — `replace`(일치 없음)·`split`+`join`·슬라이스가 NFD 입력을 NFC 로 재작성(17→9 코드포인트). read/write/inputs 통과는 바이트 불변 | `round_39/repro/nfd_replace.ibl`, `evidence/probe_isolate.json` | 수리 — NFC 비교·위치 유지, 반환 원문 조각 보존. NFD+CRLF 전건 검증; 혼합 앵커 키는 프로그램 보완 | [39회차](experiments/long_sentence_imagination/round_39/report.md) |
 | L39-3 | 구현 결함 — `contains(text, "\r"/"\n"/"\t"/" "/""/nbsp)` 전부 true(정규화가 찾는 문자열을 비움). CR 검사가 진단을 오도 | `round_39/repro/contains_ws.ibl`, `evidence/probe_contains.json` | 수리 — 공백 전용 검색어는 원문 패턴. 빈 문자열은 정상 빈 패턴으로 참 유지 | [39회차](experiments/long_sentence_imagination/round_39/report.md) |

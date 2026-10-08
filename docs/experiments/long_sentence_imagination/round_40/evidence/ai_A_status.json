@@ -1,0 +1,21 @@
+{
+ "task_ref": {
+  "kind": "delegation",
+  "owner": "system",
+  "task_id": "task_sysai_aeabe015"
+ },
+ "parent_task_ref": null,
+ "run_id": "run_838f732a9d2f92f2482a",
+ "parent_run_id": null,
+ "state": "succeeded",
+ "status": "completed",
+ "delegated_to": "system_ai",
+ "requester_channel": "gui",
+ "created_at": "2026-10-08 17:34:28",
+ "completed_at": "2026-10-08 17:38:16",
+ "pending_children": 0,
+ "children": [],
+ "result": "I re-ran the September check on variantA under the same rules, and the four files are in outA. **The bank CSV doesn't match the bank summary.** `reconciliation.json` (`bank_checks.status`), `forecast.json` (`starting_balance_basis`) and the top banner of `memo.md` all say **\"잔고 검증 불일치·원천 확인 필요\"**. I left the mismatch as is and added no adjusting entries.\n\n**Bank checks (3 items):**\n\n| Check | Result |\n|---|---|\n| Opening balance + CSV deposits − CSV withdrawals vs CSV last balance | Match (114,967,100원) |\n| CSV closing balance vs summary closing balance | **Mismatch**: CSV is 2,286,000원 higher than the summary (112,681,100원) |\n| Deposit count | **Mismatch**: CSV has 64, summary has 88 (24 fewer) |\n\nFor reference, the CSV also has 5 fewer withdrawals (40,836,000원 less) and 38,550,000원 less in deposits than the summary.\n\n**Likely cause (a candidate, not confirmed):**\n- The row-by-row check found no breaks: every row's prior balance ± amount equals its recorded balance, so the CSV is consistent with itself.\n- The summary is also consistent with itself.\n- The net of the missing amounts equals the closing-balance gap exactly.\n- The CSV's last transaction is on **9/23**, and the September payroll withdrawal (35,236,000원) isn't in it.\n\nSo rows after 9/24 look like they're missing from the CSV. Please get the full September transaction history from the bank and check it.\n\n**Effect on the forecast:** following the rule, it starts from the CSV's last balance (114,967,100원). Month-end balances are Oct 122,698,200원, Nov 48,979,300원 and Dec −30,439,600원, so **December falls below the 30,000,000원 minimum**. Starting from the summary balance instead lowers every month by 2,286,000원, but the month that falls below doesn't change. If the deposits missing from the CSV already paid some invoices, the October inflow is overstated, so treat the forecast as provisional.\n\n**Other results (all computed from the CSV, so they share the same limits):**\n- **Receivables:** 92,850,000원 open across 61 invoices, of which 48,450,000원 is overdue. Top 5 clients: 누리커머스, 별빛마트, 오션푸드, 소담식자재, 라온농산.\n- **Unmatched withdrawals:** 3, totalling 1,510,000원 (오피스렌탈 190,000원, 미래카드, 현금인출). The payroll withdrawal is missing from the CSV, and 3 September purchases (3,500,000원) have no matching payment.\n- **Targets:** September revenue 59,000,000원 against 70,000,000원 (84.3%); gross margin 35.25% against a 45% target.\n- **Contracts:**\n  - 만료 30일 내: K01, K02, K05.\n  - 통보 기한 경과: K01, K05.\n  - K04 was charged 30,000원 more than the contract fee.\n- **Last month's two decisions:**\n  - 동해수산: the \"no payment by 9/15\" condition didn't happen, but INV-0003 (2,700,000원) was still unpaid as of 9/23. Whether it was paid after that needs checking against the bank source.\n  - K04 alternative quote: not in the data, so unconfirmed.\n\n**Scripts and checks:**\n- **Inputs:** everything in variantA except the bank CSV has the same SHA-256 as base, contracts included. I reused `contracts_input.json` without re-extracting.",
+ "error": null,
+ "status_url": "/system-ai/tasks/task_sysai_aeabe015"
+}

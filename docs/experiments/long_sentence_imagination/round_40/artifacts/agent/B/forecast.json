@@ -1,0 +1,202 @@
+{
+ "as_of": "2026-09-30",
+ "starting_balance": 112681100,
+ "starting_balance_basis": "CSV 마지막 잔고(2026-09-30 행). 은행 요약 기말잔고 112681100와 일치",
+ "rules": [
+  "유입 = 미결 청구 잔액을 만기 달에, 9/30 이전 만기(연체)는 10월",
+  "유출 = 그 달 활성 계약 월 요금(9월 실효 요금) + 급여 순지급 합계 + 4대보험 회사부담 합계 + 9월 매입 총액",
+  "선입금·미확인 입금은 전망에 넣지 않음",
+  "연체 청구가 10월에 전액 회수된다는 가정은 규칙에 따른 것이며 회수 보장은 아님"
+ ],
+ "contract_activity_assumption": "자동갱신 계약은 해지 통보 확인이 없으므로 갱신되어 계속 활성으로 봤다(K02는 10-11까지 통보 가능). K03은 2027-01-01 만료라 12월까지 활성. 단, 시나리오 B는 K05를 10월까지만 활성으로 본다(사용자 가정). 계약상 K05 통보 기한(2026-09-20)은 이미 지나 자동 갱신 조항과 충돌한다.",
+ "months": [
+  {
+   "month": "2026-10",
+   "opening": 112681100,
+   "inflow_receivables": 51400000,
+   "inflow_invoices": [
+    "INV-0024",
+    "INV-0013",
+    "INV-0035",
+    "INV-0059",
+    "INV-0067",
+    "INV-0078",
+    "INV-0065",
+    "INV-0043",
+    "INV-0046",
+    "INV-0076",
+    "INV-0069",
+    "INV-0042",
+    "INV-0055",
+    "INV-0094",
+    "INV-0087",
+    "INV-0109",
+    "INV-0111",
+    "INV-0096",
+    "INV-0089",
+    "INV-0120",
+    "INV-0071",
+    "INV-0112",
+    "INV-0086",
+    "INV-0092",
+    "INV-0100",
+    "INV-0101",
+    "INV-0093",
+    "INV-0095",
+    "INV-0105",
+    "INV-0115",
+    "INV-0119",
+    "INV-0102",
+    "INV-0081",
+    "INV-0082",
+    "INV-0097",
+    "INV-0104",
+    "INV-0083",
+    "INV-0084",
+    "INV-0107",
+    "INV-0099"
+   ],
+   "outflow": {
+    "contracts": 2421000,
+    "contracts_active": [
+     "K01",
+     "K02",
+     "K03",
+     "K04",
+     "K05"
+    ],
+    "payroll_net": 35236000,
+    "insurance_employer": 3561900,
+    "purchases_(=9월 매입 총액)": 38200000,
+    "total": 79418900
+   },
+   "closing": 84662200,
+   "min_cash_balance": 60000000,
+   "breaks_min_balance": false,
+   "headroom_vs_min": 24662200
+  },
+  {
+   "month": "2026-11",
+   "opening": 84662200,
+   "inflow_receivables": 3900000,
+   "inflow_invoices": [
+    "INV-0118",
+    "INV-0108"
+   ],
+   "outflow": {
+    "contracts": 2190000,
+    "contracts_active": [
+     "K01",
+     "K02",
+     "K03",
+     "K04"
+    ],
+    "payroll_net": 35236000,
+    "insurance_employer": 3561900,
+    "purchases_(=9월 매입 총액)": 38200000,
+    "total": 79187900
+   },
+   "closing": 9374300,
+   "min_cash_balance": 60000000,
+   "breaks_min_balance": true,
+   "headroom_vs_min": -50625700
+  },
+  {
+   "month": "2026-12",
+   "opening": 9374300,
+   "inflow_receivables": 0,
+   "inflow_invoices": [],
+   "outflow": {
+    "contracts": 2190000,
+    "contracts_active": [
+     "K01",
+     "K02",
+     "K03",
+     "K04"
+    ],
+    "payroll_net": 35236000,
+    "insurance_employer": 3561900,
+    "purchases_(=9월 매입 총액)": 38200000,
+    "total": 79187900
+   },
+   "closing": -69813600,
+   "min_cash_balance": 60000000,
+   "breaks_min_balance": true,
+   "headroom_vs_min": -129813600
+  }
+ ],
+ "months_breaking_min": [
+  "2026-11",
+  "2026-12"
+ ],
+ "receivables_due_after_2026_12": [],
+ "check_inflow_sum+beyond=open_ar": true,
+ "scenario": {
+  "name": "B",
+  "min_cash_balance": 60000000,
+  "k05_assumption": "K05 넷라인 전용회선을 2026-11부터 해지한다고 가정: 10월만 9월 실효 요금 231,000원을 유출에 넣고 11·12월은 뺀다",
+  "unchanged": "유입 규칙, 출발 잔고(CSV 기말 112,681,100원), 급여·4대보험·9월 매입 유출, 다른 계약 활성 판단",
+  "source": "직전 out/forecast.json의 월별 유입·유출 항목을 재사용해 계약 유출과 잔고만 재계산"
+ },
+ "comparison_vs_previous": {
+  "previous": {
+   "min_cash_balance": 30000000,
+   "months_breaking_min": [
+    "2026-11",
+    "2026-12"
+   ],
+   "k05": "10~12월 모두 활성"
+  },
+  "months": [
+   {
+    "month": "2026-10",
+    "outflow_prev": 79418900,
+    "outflow_new": 79418900,
+    "outflow_diff": 0,
+    "closing_prev": 84662200,
+    "closing_new": 84662200,
+    "closing_diff": 0,
+    "breaks_prev(min 30,000,000)": false,
+    "breaks_new(min 60,000,000)": false,
+    "headroom_prev": 54662200,
+    "headroom_new": 24662200,
+    "breaks_if_only_min_raised": false,
+    "breaks_if_only_k05_removed": false
+   },
+   {
+    "month": "2026-11",
+    "outflow_prev": 79418900,
+    "outflow_new": 79187900,
+    "outflow_diff": -231000,
+    "closing_prev": 9143300,
+    "closing_new": 9374300,
+    "closing_diff": 231000,
+    "breaks_prev(min 30,000,000)": true,
+    "breaks_new(min 60,000,000)": true,
+    "headroom_prev": -20856700,
+    "headroom_new": -50625700,
+    "breaks_if_only_min_raised": true,
+    "breaks_if_only_k05_removed": true
+   },
+   {
+    "month": "2026-12",
+    "outflow_prev": 79418900,
+    "outflow_new": 79187900,
+    "outflow_diff": -231000,
+    "closing_prev": -70275600,
+    "closing_new": -69813600,
+    "closing_diff": 462000,
+    "breaks_prev(min 30,000,000)": true,
+    "breaks_new(min 60,000,000)": true,
+    "headroom_prev": -100275600,
+    "headroom_new": -129813600,
+    "breaks_if_only_min_raised": true,
+    "breaks_if_only_k05_removed": true
+   }
+  ],
+  "summary": {
+   "months_breaking_min_changed": false,
+   "k05_saving_cumulative_dec": 462000
+  }
+ }
+}

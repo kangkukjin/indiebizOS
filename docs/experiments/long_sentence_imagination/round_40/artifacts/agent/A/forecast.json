@@ -1,0 +1,174 @@
+{
+ "as_of": "2026-09-30",
+ "starting_balance": 114967100,
+ "starting_balance_basis": "CSV 마지막 잔고(2026-09-23, 100행). 은행 요약 기말잔고 112,681,100원과 +2,286,000원 불일치 — 잔고 검증 불일치·원천 확인 필요",
+ "bank_check_status": "잔고 검증 불일치·원천 확인 필요",
+ "sensitivity_if_summary_closing": {
+  "starting_balance": 112681100,
+  "shift": -2286000,
+  "months": [
+   {
+    "month": "2026-10",
+    "closing": 120412200,
+    "breaks_min_balance": false
+   },
+   {
+    "month": "2026-11",
+    "closing": 46693300,
+    "breaks_min_balance": false
+   },
+   {
+    "month": "2026-12",
+    "closing": -32725600,
+    "breaks_min_balance": true
+   }
+  ],
+  "note": "요약 기말잔고에서 출발하면 매월 말 잔고가 이만큼 평행 이동한다. 또 CSV에서 빠진 입금(요약 대비)이 청구를 이미 결제했을 수 있어, 미결 청구로 잡힌 10월 유입이 과대일 수 있다. 빠진 출금이 9월분 급여 등이라면 10월 이후 유출 가정에는 영향이 없다."
+ },
+ "rules": [
+  "유입 = 미결 청구 잔액을 만기 달에, 9/30 이전 만기(연체)는 10월",
+  "유출 = 그 달 활성 계약 월 요금(9월 실효 요금) + 급여 순지급 합계 + 4대보험 회사부담 합계 + 9월 매입 총액",
+  "선입금·미확인 입금은 전망에 넣지 않음",
+  "연체 청구가 10월에 전액 회수된다는 가정은 규칙에 따른 것이며 회수 보장은 아님"
+ ],
+ "contract_activity_assumption": "자동갱신 계약은 해지 통보 확인이 없으므로 갱신되어 계속 활성으로 봤다(K02는 10-11까지 통보 가능). K03은 2027-01-01 만료라 12월까지 활성.",
+ "months": [
+  {
+   "month": "2026-10",
+   "opening": 114967100,
+   "inflow_receivables": 87150000,
+   "inflow_invoices": [
+    "INV-0019",
+    "INV-0024",
+    "INV-0013",
+    "INV-0035",
+    "INV-0003",
+    "INV-0009",
+    "INV-0004",
+    "INV-0037",
+    "INV-0027",
+    "INV-0001",
+    "INV-0012",
+    "INV-0036",
+    "INV-0006",
+    "INV-0039",
+    "INV-0059",
+    "INV-0067",
+    "INV-0078",
+    "INV-0044",
+    "INV-0065",
+    "INV-0043",
+    "INV-0046",
+    "INV-0061",
+    "INV-0073",
+    "INV-0063",
+    "INV-0076",
+    "INV-0069",
+    "INV-0042",
+    "INV-0055",
+    "INV-0094",
+    "INV-0087",
+    "INV-0109",
+    "INV-0111",
+    "INV-0096",
+    "INV-0089",
+    "INV-0120",
+    "INV-0071",
+    "INV-0106",
+    "INV-0112",
+    "INV-0086",
+    "INV-0092",
+    "INV-0100",
+    "INV-0101",
+    "INV-0093",
+    "INV-0095",
+    "INV-0105",
+    "INV-0115",
+    "INV-0119",
+    "INV-0102",
+    "INV-0081",
+    "INV-0082",
+    "INV-0097",
+    "INV-0104",
+    "INV-0083",
+    "INV-0084",
+    "INV-0090",
+    "INV-0091",
+    "INV-0107",
+    "INV-0099"
+   ],
+   "outflow": {
+    "contracts": 2421000,
+    "contracts_active": [
+     "K01",
+     "K02",
+     "K03",
+     "K04",
+     "K05"
+    ],
+    "payroll_net": 35236000,
+    "insurance_employer": 3561900,
+    "purchases_(=9월 매입 총액)": 38200000,
+    "total": 79418900
+   },
+   "closing": 122698200,
+   "min_cash_balance": 30000000,
+   "breaks_min_balance": false
+  },
+  {
+   "month": "2026-11",
+   "opening": 122698200,
+   "inflow_receivables": 5700000,
+   "inflow_invoices": [
+    "INV-0118",
+    "INV-0108",
+    "INV-0114"
+   ],
+   "outflow": {
+    "contracts": 2421000,
+    "contracts_active": [
+     "K01",
+     "K02",
+     "K03",
+     "K04",
+     "K05"
+    ],
+    "payroll_net": 35236000,
+    "insurance_employer": 3561900,
+    "purchases_(=9월 매입 총액)": 38200000,
+    "total": 79418900
+   },
+   "closing": 48979300,
+   "min_cash_balance": 30000000,
+   "breaks_min_balance": false
+  },
+  {
+   "month": "2026-12",
+   "opening": 48979300,
+   "inflow_receivables": 0,
+   "inflow_invoices": [],
+   "outflow": {
+    "contracts": 2421000,
+    "contracts_active": [
+     "K01",
+     "K02",
+     "K03",
+     "K04",
+     "K05"
+    ],
+    "payroll_net": 35236000,
+    "insurance_employer": 3561900,
+    "purchases_(=9월 매입 총액)": 38200000,
+    "total": 79418900
+   },
+   "closing": -30439600,
+   "min_cash_balance": 30000000,
+   "breaks_min_balance": true
+  }
+ ],
+ "months_breaking_min": [
+  "2026-12"
+ ],
+ "receivables_due_after_2026_12": [],
+ "check_inflow_sum+beyond=open_ar": true
+}

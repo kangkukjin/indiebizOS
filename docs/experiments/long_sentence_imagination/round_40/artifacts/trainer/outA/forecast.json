@@ -1,0 +1,1 @@
+{"min_cash": 30000000, "drop_contract": null, "forecast": [{"month": "2026-10", "inflow": 87150000, "outflow": 79418900, "closing": 122698200, "below_min": false}, {"month": "2026-11", "inflow": 5700000, "outflow": 79418900, "closing": 48979300, "below_min": false}, {"month": "2026-12", "inflow": 0, "outflow": 79418900, "closing": -30439600, "below_min": true}]}

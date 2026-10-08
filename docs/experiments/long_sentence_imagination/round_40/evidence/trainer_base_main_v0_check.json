@@ -1,0 +1,127 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 40회차 최초 초안 — 월말 경영 점검. inputs: src(자료 폴더), out(출력 폴더), asof(\"2026-09-30\"), min_cash(선택, null=targets), drop_contract({id,from} 또는 null)\n\n# ---- 순수 계산 ----\n[def:버킷]($days) {\n  return $days <= 0 ? \"기한내\" : $days <= 30 ? \"1-30\" : $days <= 60 ? \"31-60\" : $days <= 90 ? \"61-90\" : \"90+\"\n}\n[def:거래처찾기]($name,$clients) {\n  $hit = filter($clients,($c)=>$name in $c.bank_names)\n  return len($hit) == 0 ? null : $hit[0].id\n}\n# 입금 하나를 미결 청구에 충당: 상태 {balance:{청구id:잔액}, matches:[], unmatched:[], advances:{cid:금액}}\n[def:입금충당]($st,$dep,$clients,$invoices) {\n  $cid = [fn:거래처찾기]{name:$dep.counterparty,clients:$clients}\n  [if:$cid == null] {\n    return {**$st,unmatched:$st.unmatched + [{date:$dep.date,amount:$dep.amount,counterparty:$dep.counterparty}]}\n  }\n  $opens = sorted(filter($invoices,($r)=>$r.client_id == $cid and get($st.balance,$r.id,0) > 0 and $r.issued <= $dep.date),($r)=>f\"${r.due}|${r.id}\")\n  $exact = filter($opens,($r)=>get($st.balance,$r.id,0) == $dep.amount)\n  [if:len($exact) > 0] {\n    $id = $exact[0].id\n    return {**$st,balance:[fn:잔액갱신]{bal:$st.balance,id:$id,new:0},matches:$st.matches + [{deposit_date:$dep.date,invoice:$id,applied:$dep.amount}]}\n  }\n  return [fn:차례충당]{st:$st,opens:$opens,remaining:$dep.amount,cid:$cid,date:$dep.date}\n}\n[def:차례충당]($st,$opens,$remaining,$cid,$date) {\n  $r = reduce($opens,{balance:$st.balance,remaining:$remaining,matches:$st.matches},($acc,$inv)=>\n    $acc.remaining <= 0 ? $acc\n    : {balance:[fn:잔액갱신]{bal:$acc.balance,id:$inv.id,new:get($acc.balance,$inv.id,0) - min($acc.remaining,get($acc.balance,$inv.id,0))},\n       remaining:$acc.remaining - min($acc.remaining,get($acc.balance,$inv.id,0)),\n       matches:$acc.matches + [{deposit_date:$date,invoice:$inv.id,applied:min($acc.remaining,get($acc.balance,$inv.id,0))}]})\n  $adv = $r.remaining > 0 ? [fn:더하기]{rec:$st.advances,key:$cid,amt:$r.remaining} : $st.advances\n  return {**$st,balance:$r.balance,matches:$r.matches,advances:$adv}\n}\n[def:잔액갱신]($bal,$id,$new) {\n  return from_entries(map(entries($bal),($e)=>[$e[0],$e[0] == $id ? $new : $e[1]]))\n}\n[def:더하기]($rec,$key,$amt) {\n  [if:has($rec,$key)] { return from_entries(map(entries($rec),($e)=>[$e[0],$e[0] == $key ? $e[1] + $amt : $e[1]])) }\n  return from_entries(entries($rec) + [[$key,$amt]])\n}\n[def:계약기한]($c,$asof) {\n  $notice = number($c.notice_days)\n  $deadline = date_add($c.renewal_date,0 - $notice)\n  return {**$c,monthly_fee:number($c.monthly_fee),effective_fee_sep:number($c.effective_fee_sep),term_months:number($c.term_months),notice_days:$notice,\n    notice_deadline:$deadline,action_within_30d:date_diff($c.renewal_date,$asof) <= 30,notice_deadline_passed:date_diff($deadline,$asof) < 0}\n}\n\n# ---- 읽기 ----\n$bank = [self:read]{path:f\"${src}/bank_2026-09.csv\"}\n$summary = [self:read]{path:f\"${src}/bank_summary.json\"}\n$invoices_doc = [self:read]{path:f\"${src}/invoices.json\"}\n$purchases_doc = [self:read]{path:f\"${src}/purchases.json\"}\n$clients_doc = [self:read]{path:f\"${src}/clients.json\"}\n$vendors_doc = [s",
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_40회차/trainer/base",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_40회차/trainer/out",
+   "asof": "2026-09-30",
+   "min_cash": null,
+   "drop_contract": null
+  }
+ },
+ "elapsed": 0.399,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards_total": 360,
+  "guards_inner": 0,
+  "guards_omitted": 360,
+  "result_type": "{balance_ok: Bool, open_total: Unknown, unmatched: Number, unexplained: Number, below_min_months: Number, contract_actions: Number, fee_mismatch: Number, revenue_hit: Bool}",
+  "effects": [
+   "model",
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "plan_hash": "2882b0492e5d84ddb26ccfc9a4893b8554bfc25951064ca037428ec6ce61ff66",
+  "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+      "start": 3438,
+      "end": 3537,
+      "line": 61,
+      "column": 37,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 61,
+      "end_column": 136,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+      "start": 3567,
+      "end": 3718,
+      "line": 63,
+      "column": 29,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 63,
+      "end_column": 180,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+      "start": 5870,
+      "end": 5921,
+      "line": 92,
+      "column": 34,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 92,
+      "end_column": 85,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "self:list",
+    "self:read",
+    "self:write",
+    "table:ai",
+    "table:groupby",
+    "table:sort",
+    "table:take"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "실행하려면 execute_args 를 그대로 check 없이 호출하세요 — 프로그램 원문과 검사한 inputs·budget·edition·value_protocols를 재사용하므로 다시 적지 않습니다. 바꿀 인자만 명시하면 그 인자 전체를 교체합니다. 실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.",
+  "guards_ref": {
+   "id": "7d64916dc3344b423ae8d5c87b121c950216ae7474e867891a465c30768d3c31",
+   "chars": 356246,
+   "read_args": {
+    "id": "7d64916dc3344b423ae8d5c87b121c950216ae7474e867891a465c30768d3c31",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  }
+ }
+}

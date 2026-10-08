@@ -1,0 +1,199 @@
+{
+ "as_of": "2026-09-30",
+ "contracts": [
+  {
+   "id": "K01",
+   "supplier": "클라우드원",
+   "service": "ERP 구독 서비스",
+   "base_monthly_fee": 480000,
+   "start": "2025-10-15",
+   "term_months": 12,
+   "auto_renew": true,
+   "notice_days": 30,
+   "notice_applies_to": "갱신 거절",
+   "expiry": "2026-10-15",
+   "fee_clause": null,
+   "sept_effective_fee": 480000,
+   "fee_calc": "각주·인상 조항 없음 → 480,000",
+   "days_to_expiry": 15,
+   "expires_within_30_days": true,
+   "notice_deadline": "2026-09-15",
+   "notice_deadline_passed": true,
+   "notice_note": "만료 30일 전까지 서면 해지 통보 없으면 12개월 자동 갱신",
+   "september_withdrawals": [
+    {
+     "line": 20,
+     "date": "2026-09-05",
+     "amount": 480000,
+     "memo": "ERP 구독 9월"
+    }
+   ],
+   "september_withdrawal_total": 480000,
+   "fee_vs_withdrawal_diff": 0,
+   "fee_matches_withdrawal": true
+  },
+  {
+   "id": "K02",
+   "supplier": "세이프가드",
+   "service": "보안 관제 서비스",
+   "base_monthly_fee": 350000,
+   "start": "2025-10-25",
+   "term_months": 12,
+   "auto_renew": true,
+   "notice_days": 14,
+   "notice_applies_to": "갱신 거절",
+   "expiry": "2026-10-25",
+   "fee_clause": null,
+   "sept_effective_fee": 350000,
+   "fee_calc": "각주·인상 조항 없음 → 350,000",
+   "days_to_expiry": 25,
+   "expires_within_30_days": true,
+   "notice_deadline": "2026-10-11",
+   "notice_deadline_passed": false,
+   "notice_note": "만료 14일 전까지 서면 해지 통보 없으면 12개월 자동 갱신",
+   "september_withdrawals": [
+    {
+     "line": 19,
+     "date": "2026-09-05",
+     "amount": 350000,
+     "memo": "보안 관제 9월"
+    }
+   ],
+   "september_withdrawal_total": 350000,
+   "fee_vs_withdrawal_diff": 0,
+   "fee_matches_withdrawal": true
+  },
+  {
+   "id": "K03",
+   "supplier": "한솔물류",
+   "service": "창고 보관 서비스",
+   "base_monthly_fee": 1200000,
+   "start": "2026-01-01",
+   "term_months": 12,
+   "auto_renew": false,
+   "notice_days": 30,
+   "notice_applies_to": "중도 해지",
+   "expiry": "2027-01-01",
+   "fee_clause": null,
+   "sept_effective_fee": 1200000,
+   "fee_calc": "각주·인상 조항 없음 → 1,200,000",
+   "days_to_expiry": 93,
+   "expires_within_30_days": false,
+   "notice_deadline": null,
+   "notice_deadline_passed": null,
+   "notice_note": "자동갱신 없음(만료 시 종료, 연장은 별도 합의). 30일은 중도 해지 통보 기한이라 만료 기준 통보 기한은 해당 없음",
+   "september_withdrawals": [
+    {
+     "line": 22,
+     "date": "2026-09-05",
+     "amount": 1200000,
+     "memo": "창고 보관 9월"
+    }
+   ],
+   "september_withdrawal_total": 1200000,
+   "fee_vs_withdrawal_diff": 0,
+   "fee_matches_withdrawal": true
+  },
+  {
+   "id": "K04",
+   "supplier": "오피스렌탈",
+   "service": "복합기 임대 서비스",
+   "base_monthly_fee": 160000,
+   "start": "2025-04-01",
+   "term_months": 24,
+   "auto_renew": true,
+   "notice_days": 60,
+   "notice_applies_to": "갱신 거절",
+   "expiry": "2027-04-01",
+   "fee_clause": null,
+   "sept_effective_fee": 160000,
+   "fee_calc": "각주·인상 조항 없음 → 160,000",
+   "days_to_expiry": 183,
+   "expires_within_30_days": false,
+   "notice_deadline": "2027-01-31",
+   "notice_deadline_passed": false,
+   "notice_note": "만료 60일 전까지 서면 해지 통보 없으면 24개월 자동 갱신",
+   "september_withdrawals": [
+    {
+     "line": 17,
+     "date": "2026-09-05",
+     "amount": 190000,
+     "memo": "복합기 임대 9월"
+    }
+   ],
+   "september_withdrawal_total": 190000,
+   "fee_vs_withdrawal_diff": 30000,
+   "fee_matches_withdrawal": false
+  },
+  {
+   "id": "K05",
+   "supplier": "넷라인",
+   "service": "전용회선 서비스",
+   "base_monthly_fee": 220000,
+   "start": "2025-10-20",
+   "term_months": 12,
+   "auto_renew": true,
+   "notice_days": 30,
+   "notice_applies_to": "갱신 거절",
+   "expiry": "2026-10-20",
+   "fee_clause": "각주 [1] 2026년 9월 1일부터 월 요금을 5% 인상한다.",
+   "sept_effective_fee": 231000,
+   "fee_calc": "220,000 × 1.05 = 231,000 (9/1부터 적용)",
+   "days_to_expiry": 20,
+   "expires_within_30_days": true,
+   "notice_deadline": "2026-09-20",
+   "notice_deadline_passed": true,
+   "notice_note": "만료 30일 전까지 서면 해지 통보 없으면 12개월 자동 갱신",
+   "september_withdrawals": [
+    {
+     "line": 18,
+     "date": "2026-09-05",
+     "amount": 231000,
+     "memo": "전용회선 9월"
+    }
+   ],
+   "september_withdrawal_total": 231000,
+   "fee_vs_withdrawal_diff": 0,
+   "fee_matches_withdrawal": true,
+   "scenario_B_assumption": {
+    "terminated_from": "2026-11",
+    "forecast_months_included": [
+     "2026-10"
+    ],
+    "forecast_months_excluded": [
+     "2026-11",
+     "2026-12"
+    ],
+    "basis": "사용자 시나리오 가정(계약서 추출값 아님)",
+    "conflict": "계약 추출값상 갱신 거절 통보 기한 2026-09-20이 기준일 전에 지났다(notice_deadline_passed=true). 계약 조항대로면 2026-10-20 만료 시 12개월 자동 갱신된다. 11월부터 해지하려면 넷라인과 합의가 필요하다. 추출값에 중도 해지 조건 기록은 없다."
+   }
+  }
+ ],
+ "flags": {
+  "expires_within_30_days": [
+   "K01",
+   "K02",
+   "K05"
+  ],
+  "notice_deadline_passed": [
+   "K01",
+   "K05"
+  ],
+  "fee_differs_from_withdrawal": [
+   "K04"
+  ]
+ },
+ "interpretations": [
+  "통보 기한일 = 만료일 − 통보 일수(갱신 거절 통보). 기준일 이전이면 경과.",
+  "실제 출금은 계약 공급자 표시명이면서 메모에 서비스명이 든 9월 출금이다.",
+  "만료 30일 안 = 0 ≤ 만료일−2026-09-30 ≤ 30일."
+ ],
+ "scenario_B": {
+  "k05_terminated_from": "2026-11",
+  "note": "계약서 추출값(요금·만료·자동갱신·통보 기한·flags)은 직전 out/contracts.json 그대로다. 시나리오 가정은 K05의 scenario_B_assumption에만 둔다.",
+  "assumption_conflicts": [
+   "K05"
+  ]
+ },
+ "source": "직전 out/contracts.json(=contracts_input.json 추출값) 재사용. 계약서 재독 없음"
+}

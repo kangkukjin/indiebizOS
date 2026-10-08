@@ -1,0 +1,15 @@
+한빛포장(직원 12명)의 2026년 9월 월말 경영 점검을 해 줘. 자료 폴더에 은행 거래 CSV(bank_2026-09.csv: date,type,amount,counterparty,memo,balance)와 은행 월간 요약(bank_summary.json),
+발행 청구(invoices.json: id,client_id,client,issued,due,amount), 매입(purchases.json: id,vendor_id,vendor,date,amount), 거래처 원장(clients.json: id,name,bank_names,payment_terms_days),
+공급처 원장(vendors.json), 급여 XLSX(payroll_2026-09.xlsx: 시트 "급여" 순지급 열, 시트 "4대보험" 회사부담합계 열 — 두 시트 모두 마지막에 합계 행이 있음),
+고정비 계약서 5건(contracts/*.md), 경영 목표(targets.json: revenue_target, gross_margin_target, min_cash_balance), 지난달 경영 메모(memo_2026-08.md)가 있다. 기준일은 2026-09-30.
+
+할 일:
+1. 입금을 청구와 맞춰 미수금을 뽑아. 규칙: 입금을 날짜순으로 처리하고, 은행 표시명을 clients.json 의 bank_names 로 거래처에 대응시킨다. 그 거래처의 미결 청구(발행일 ≤ 입금일, 만기·id 순) 중 잔액이 입금액과 정확히 같은 것이 있으면 그 청구를 결제하고, 없으면 가장 오래된 미결 청구부터 차례로 충당하고, 남는 금액은 선입금으로 적는다. 거래처를 못 찾은 입금은 미확인 입금이다. 9월 30일 기준 잔액을 기한내/1-30/31-60/61-90/90+ 로 나누고 상위 미수 거래처 5곳을 뽑아.
+2. 출금을 맞춰. 9월 매입은 공급처 표시명+금액이 정확히 같을 때만(같은 금액이 여러 공급처에 있으니 금액만으로 맞추지 마), 급여는 순지급 합계, 4대보험은 회사부담 합계, 고정비는 계약서의 공급자와 9월 실제 적용 월 요금으로. 어디에도 맞지 않는 출금은 전부 나열해.
+3. 은행 요약의 기초 잔고 + 입금 합 − 출금 합이 CSV 마지막 잔고와 맞는지, CSV 기말 잔고·입금 건수가 은행 요약과 맞는지 검증해. 안 맞으면 숨기지 말고 원천 확인 필요로 표시해. 10~12월 현금을 전망해: 유입은 미결 청구 잔액을 만기 달에(이미 연체된 것은 10월), 유출은 활성 계약 월 요금 + 급여 순지급 + 4대보험 + 9월 매입 총액. 최소 잔고를 깨는 달을 표시해.
+4. 계약서 5건에서 공급자·서비스·월 요금·시작일·기간·자동갱신 여부·해지 통보 기한(일)·만료일을 추출하고, 각주나 인상 조항이 있으면 9월에 실제 적용되는 요금을 계산해. 만료가 30일 안인 계약과 통보 기한이 이미 지난 계약을 표시하고, 계약 요금과 실제 출금이 다른 계약을 찾아.
+5. 사장에게 줄 경영 메모(memo.md)를 써: 목표 대비 실적(9월 매출=9월 발행 청구 합, 매출총이익률=(매출−9월 매입)/매출), 미수금과 상위 거래처, 설명 안 되는 출금, 현금 전망, 계약 조치, 지난달 메모의 결정 2건이 이번 달 어떤 상태인지, 리스크 상위 3과 추천 조치, 미확인 항목과 질문. 자료에서 계산한 숫자만 써.
+결과는 out 폴더에 reconciliation.json·forecast.json·contracts.json·memo.md 로 저장해. 자료 생성기·oracle·다른 실행자의 코드·결과는 열지 마.
+
+자료 폴더: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_40회차/agent/base
+out 폴더: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_40회차/agent/out (없으면 만들어)

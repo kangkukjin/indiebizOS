@@ -2343,7 +2343,7 @@
   },
   "sense:world_bank": {
    "fields": {
-    "description": "734e7d183d36",
+    "description": "87ac8e0e6007",
     "target_description": "d42d19048fa4",
     "implementation": "cb1aa36b2225",
     "returns": "3c22349f8d0b",
@@ -2351,8 +2351,8 @@
     "router": "ebbb1532efbc",
     "tool": "63eaa11b6c46"
    },
-   "reviewed": "2026-09-18",
-   "examples": 11
+   "reviewed": "2026-10-08",
+   "examples": 12
   },
   "table:ai": {
    "fields": {

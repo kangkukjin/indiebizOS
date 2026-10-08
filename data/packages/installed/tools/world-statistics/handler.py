@@ -75,6 +75,26 @@ def _resolve_wb_country(country: str) -> str:
     return country
 
 
+_WB_AGGREGATES = None
+
+
+def _wb_aggregate_codes():
+    """지역·소득 합계(World·EU 등) ISO3 코드 집합. 조회 실패면 None(미확인)."""
+    global _WB_AGGREGATES
+    if _WB_AGGREGATES is None:
+        try:
+            resp = requests.get("http://api.worldbank.org/v2/country",
+                                params={"format": "json", "per_page": 400}, timeout=15)
+            resp.raise_for_status()
+            # 지표 응답은 합계 행을 ISO3(HIC) 또는 ISO2(XD)로 싣는다 — 둘 다 담는다
+            _WB_AGGREGATES = {code for c in resp.json()[1]
+                              if (c.get("region") or {}).get("value") == "Aggregates"
+                              for code in (c.get("id"), c.get("iso2Code")) if code}
+        except Exception:
+            return None
+    return _WB_AGGREGATES
+
+
 def _fetch_world_bank_data(tool_input: dict) -> str:
     """World Bank API를 사용하여 국가별 지표 데이터를 가져옵니다."""
     indicator = _resolve_wb_indicator(tool_input.get("indicator"))
@@ -103,10 +123,15 @@ def _fetch_world_bank_data(tool_input: dict) -> str:
                                "error": f"지표 '{indicator}'(국가: {country})에 대한 데이터를 찾을 수 없습니다."},
                               ensure_ascii=False)
 
+        meta = data[0] if isinstance(data[0], dict) else {}
         data_list = data[1]
 
         indicator_name = data_list[0].get("indicator", {}).get("value", indicator)
-        country_name = (data_list[0].get("country", {}) or {}).get("value", country)
+        # 여러 국가(all·세미콜론 목록)면 행마다 국가를 실어야 순위·비교가 가능하다
+        codes = {e.get("countryiso3code") or (e.get("country") or {}).get("id") for e in data_list}
+        multi = len(codes) > 1
+        country_name = "여러 국가" if multi else (data_list[0].get("country", {}) or {}).get("value", country)
+        aggregates = _wb_aggregate_codes() if multi else None
 
         # 표준 테이블 통화 + 사람용 요약을 함께 산출
         rows = []
@@ -114,28 +139,47 @@ def _fetch_world_bank_data(tool_input: dict) -> str:
         for entry in data_list:
             year = entry.get("date")
             value = entry.get("value")
+            name = (entry.get("country") or {}).get("value", "")
+            code = entry.get("countryiso3code") or (entry.get("country") or {}).get("id", "")
+            label = f"{name} {year}" if multi else year
             if value is not None:
-                rows.append([year, value])
+                rows.append([year, value, name, code])
                 if isinstance(value, (int, float)):
                     fv = f"{value:,.2f}".rstrip('0').rstrip('.')
                 else:
                     fv = str(value)
-                summary.append(f"- {year}: {fv}")
+                summary.append(f"- {label}: {fv}")
             else:
-                summary.append(f"- {year}: 데이터 없음")
+                summary.append(f"- {label}: 데이터 없음")
 
         # 연도 오름차순 (차트/표에 자연스러운 시간 순서; WB는 보통 내림차순 반환)
-        rows.sort(key=lambda r: str(r[0]))
+        rows.sort(key=lambda r: (str(r[0]), r[3]))
 
-        return json.dumps({
+        # 단일 통화 items(행 dict) — 첫 키=연도(x축 라벨), 둘째=지표값(수치 시리즈).
+        # 소비자(chart/spreadsheet)가 items→table 재구성(키 순서=열). §3 table 흡수.
+        # 여러 국가면 국가·국가코드·집계(지역 합계 여부, None=미확인)를 뒤에 덧붙인다.
+        items = []
+        for r in rows:
+            item = {"연도": r[0], indicator_name: r[1]}
+            if multi:
+                item["국가"] = r[2]
+                item["국가코드"] = r[3]
+                item["집계"] = None if aggregates is None else r[3] in aggregates
+            items.append(item)
+
+        result = {
             "success": True,
             "indicator": indicator_name,
             "country": country_name,
-            # 단일 통화 items(행 dict) — 첫 키=연도(x축 라벨), 둘째=지표값(수치 시리즈).
-            # 소비자(chart/spreadsheet)가 items→table 재구성(키 순서=열). §3 table 흡수.
-            "items": [{"연도": r[0], indicator_name: r[1]} for r in rows],
+            "items": items,
             "summary": "\n".join(summary),
-        }, ensure_ascii=False)
+        }
+        # API 총 건수 대비 이번 페이지가 모자라면 절단을 신고한다(per_page 기본 50)
+        total = meta.get("total")
+        if isinstance(total, int):
+            result["total"] = total
+            result["truncated"] = total > len(data_list)  # truncation-scope: source — 원천 전체 대비 API 한 페이지의 누락
+        return json.dumps(result, ensure_ascii=False)
 
     except Exception as e:
         return json.dumps({"success": False, "error": f"World Bank API 요청 오류: {str(e)}"}, ensure_ascii=False)

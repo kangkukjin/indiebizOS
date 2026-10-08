@@ -235,10 +235,9 @@ async function jAnalyze(id){
       alert('이 표면에는 시스템 AI 채팅이 없습니다.'); return;
     }
     setSurface('autopilot'); apPickSystem();
-    setTimeout(function(){
-      const inp=document.getElementById('apInput');
-      if(inp){ inp.value=d.prompt||''; inp.focus(); }
-    },80);
+    // 채팅 열기는 동기 처리다. 지연 콜백은 그 사이 열린 다른 상대의 초안을 덮어쓴다.
+    const inp=document.getElementById('apInput');
+    if(inp){ inp.value=d.prompt||''; inp.focus(); }
   }catch(e){ alert('분석 준비 실패: '+e.message); }
 }
 

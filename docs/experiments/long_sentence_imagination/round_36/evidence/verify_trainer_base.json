@@ -1,0 +1,37 @@
+{
+  "who": "trainer",
+  "stage": "base",
+  "checks": {
+    "title": true,
+    "order": true,
+    "alpha_contract": true,
+    "alpha_report": true,
+    "alpha_members": true,
+    "alpha_bytes": true,
+    "alpha_crc": true,
+    "beta_contract": true,
+    "beta_report": true,
+    "beta_members": true,
+    "beta_bytes": true,
+    "beta_crc": true,
+    "gamma_contract": true,
+    "gamma_report": true,
+    "gamma_no_archive": true,
+    "original_inputs_unchanged": true,
+    "source_members": true,
+    "zip_count": true
+  },
+  "archives": {
+    "alpha": {
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/base/alpha.zip",
+      "sha256": "ba5b1712711c9ee2026e2df310a9518271b1b86575adae831a273a900c36b7c0",
+      "mtime_ns": 1791418600512581775
+    },
+    "beta": {
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/base/beta.zip",
+      "sha256": "a5f1ce4a8219a1bafbdda12e84ca65ee9ce4c61efd82fef06ca758257a45cd2a",
+      "mtime_ns": 1791418600530050715
+    }
+  },
+  "passed": true
+}

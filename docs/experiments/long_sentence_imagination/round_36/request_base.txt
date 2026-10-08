@@ -1,0 +1,4 @@
+합성 교육 자료를 alpha·beta·gamma 세 반에 전달할 ZIP과 인계서를 준비한다. source/catalog.json의 kits에 적힌 files가 각 반에 필요한 상대경로 전부다. 자료 루트 기준 상대경로와 파일 바이트를 그대로 보존하고, 목록에 없는 파일은 넣지 않는다. 필요한 파일이 하나라도 없으면 그 반의 ZIP은 만들지 말고 blocked와 정확한 누락 경로를 남긴다. 나머지 반은 끝까지 준비한다. 모든 ZIP의 전건 경로·중복·바이트를 원자료와 대조한다. result.json은 title과 kits 목록을 가지며 각 kit는 id,status(ready|blocked),archive(절대경로 또는 null),files(필요 상대경로 전체),missing(누락 상대경로),verified_count를 포함한다. report.md는 세 반 모두의 상태·필요 수·검증 수·누락·ZIP 경로를 보여준다. 제목은 ‘교육 자료 인계 v1’, 순서는 alpha,beta,gamma다. 원자료는 바꾸지 말고, 외부 발송·공개 없이 지정 출력 폴더에 저장한 뒤 두 파일을 재독한다. 현재 등록되어 적합한 기능이 있다면 찾아 재사용하고, 새 구현이 필요하면 이유를 남긴다.
+입력 자료 위치: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/source
+저장 위치: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/base
+자신의 직전 결과·중간 참조·코드는 재사용해도 된다. 다른 실행자의 trainer/harness/drafts·정답은 참조하지 마. 입력 source와 자신의 ai 출력 폴더, 공개 가이드·계약·현재 등록 기능만 이용해. 합성 훈련이며 외부 발송·공개하지 마.

@@ -1,0 +1,38 @@
+{
+  "success": true,
+  "resume": {
+    "run_id": "435d674e7afd434c85609c235c2a3fd4"
+  },
+  "results": [
+    {
+      "query": "압축",
+      "count": 0,
+      "ids": [],
+      "message": "등록된 스크립트가 없습니다 — op:register 로 등록 (path 필수)."
+    },
+    {
+      "query": "zip",
+      "count": 1,
+      "ids": [
+        "압축"
+      ],
+      "message": null
+    },
+    {
+      "query": "시험",
+      "count": 0,
+      "ids": [],
+      "message": "등록된 스크립트가 없습니다 — op:register 로 등록 (path 필수)."
+    },
+    {
+      "query": "id:압축",
+      "count": 1,
+      "ids": [
+        "압축"
+      ],
+      "message": null
+    }
+  ],
+  "owner": "backend/ibl/reusable_catalog.py:ranked",
+  "cause": "word length 2 is accepted, but score must be >=3; exact id does not override threshold"
+}

@@ -1,0 +1,444 @@
+{
+  "task_id": "task_sysai_a82ecbe5",
+  "episode_id": 4437,
+  "tools": [
+    {
+      "id": "28631bd94e254fbca3c03eb3fb0eb811",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$b = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/base\"\n$r = [self:read]{path: f\"${b}/result.json\"}\n$m = [self:read]{path: f\"${b}/report.md\"}\n$l = [self:list]{path: $b}\n$p = [self:list]{path: \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai\"}\nreturn {result: $r.data, report: $m.text, base_list: $l >> [table:select]{columns:[\"name\",\"size\",\"is_dir\"]}, ai_list: $p >> [table:select]{columns:[\"name\",\"is_dir\"]}}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791418723.245313
+    },
+    {
+      "id": "574ffa55469743df8ff0e68760e76646",
+      "name": "Bash",
+      "request": {
+        "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/base\" && shasum -a 256 alpha.zip beta.zip result.json report.md",
+        "description": "Hash base ZIPs and outputs before writing"
+      },
+      "source": "training",
+      "ts": 1791418726.7457228
+    },
+    {
+      "id": "45dd9a0d3b534fda9f78558debb5e8cd",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$old = $입력.result\n$d = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/presentation\"\n[def:찾기]($kits,$id){ return ($kits >> [table:filter]{where:($k)=>$k.id==$id})[0] }\n$order = [\"gamma\",\"beta\",\"alpha\"]\n$kits = $order >> [table:each]{ return [fn:찾기]{kits:$old.kits,id:$it} }\n$new = {title:\"교육 자료 최종 인계\", kits:$kits}\n[def:행]($k){\n  $miss = len($k.missing)==0 ? \"없음\" : join($k.missing,\", \")\n  $zip = $k.archive == null ? \"(생성 안 함)\" : $k.archive\n  return f\"| ${$k.id} | ${$k.status} | ${len($k.files)} | ${$k.verified_count} | ${$miss} | ${$zip} |\"\n}\n$rows = $kits >> [table:each]{ return [fn:행]{k:$it} }\n$md = join([\n \"# 교육 자료 최종 인계\", \"\",\n \"| 반 | 상태 | 필요 수 | 검증 수 | 누락 | ZIP 경로 |\",\n \"|---|---|---|---|---|---|\",\n join($rows,\"\\n\"), \"\",\n \"- 이 문서는 앞 인계(base/result.json, 제목 '교육 자료 인계 v1')의 제목과 반 순서만 바꾼 개정판이다. 자료와 ZIP 내용은 바뀌지 않았다.\",\n \"- 상태·필요 파일 목록·누락·검증 수·ZIP 경로는 base/result.json 값을 그대로 옮겼다. ZIP은 재압축·복사하지 않았으며 위 경로는 base 폴더의 원래 파일이다.\",\n \"- 검증 근거(앞 인계): ZIP을 다시 열어 항목 이름 집합 = 필요 목록, 중복 0, 디렉터리 항목 0, 항목별 sha256 = 원본 sha256 을 전건 확인했다(base/work/verify_zip.py).\",\n \"- gamma 반은 gamma/lesson07.txt 누락으로 blocked이며 ZIP이 없다.\",\n \"- 필요 파일 전체 목록은 같은 폴더의 result.json kits[].files 에 있다.\", \"\"],\"\\n\")\n[self:mkdir]{path:$d}\n[self:write]{path:f\"${$d}/result.json\", content:json($new)}\n[self:write]{path:f\"${$d}/report.md\", content:$md}\n$rj = ([self:read]{path:f\"${$d}/result.json\"}).data\n$rm = ([self:read]{path:f\"${$d}/report.md\"}).text\n$ids = $rj.kits >> [table:each]{ return $it.id }\n$same = $rj.kits >> [table:each]{\n  $o = [fn:찾기]{kits:$old.kits,id:$it.id}\n  return {id:$it.id, status:$it.status==$o.status, archive:$it.archive==$o.archive, files:$it.files==$o.files, missing:$it.missing==$o.missing, verified:$it.verified_count==$o.verified_count}\n}\nreturn {title:$rj.title, ids:$ids, same:$same, report:$rm}",
+        "edition": 2,
+        "inputs": {
+          "입력": {
+            "$ref": "478537be85618cdbc88edf81ecc5a039c5aa00e8f1d88f14175752712fdc9d5a"
+          }
+        },
+        "check": true
+      },
+      "source": "training",
+      "ts": 1791418737.787136
+    },
+    {
+      "id": "9588232af9744603864a51c554bedce4",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$rejected:1de2246c7317bfa9aa17a18e4e8a54e9e17515092da0d391996a1e27091087f2",
+        "edition": 2,
+        "inputs": {
+          "입력": {
+            "$ref": "1f4efadbfc03a6b9062536d8c5df93a8b39e84d9b626f435cfcc0378a467cc44"
+          }
+        },
+        "code_edits": [
+          {
+            "old": "join($k.missing,\", \")",
+            "new": "join(\", \",$k.missing)"
+          },
+          {
+            "old": "join($rows,\"\\n\")",
+            "new": "join(\"\\n\",$rows)"
+          },
+          {
+            "old": "$md = join([",
+            "new": "$md = join(\"\\n\",["
+          },
+          {
+            "old": "\"- 필요 파일 전체 목록은 같은 폴더의 result.json kits[].files 에 있다.\", \"\"],\"\\n\")",
+            "new": "\"- 필요 파일 전체 목록은 같은 폴더의 result.json kits[].files 에 있다.\", \"\"])"
+          }
+        ],
+        "check": true
+      },
+      "source": "training",
+      "ts": 1791418742.663299
+    },
+    {
+      "id": "3f271bf9a1b2467fba2c28f644712a47",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$checked:3f240a9e0bc0ecbe967f290dc8a605f777f410e922fbbfb27da9e771e28a27a5",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791418744.555585
+    },
+    {
+      "id": "8ed07e4d35e84a7788b92dba227bfb1b",
+      "name": "Bash",
+      "request": {
+        "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai\" && shasum -a 256 base/alpha.zip base/beta.zip base/result.json base/report.md && ls -la presentation base",
+        "description": "Re-hash base files and list both folders"
+      },
+      "source": "training",
+      "ts": 1791418747.189953
+    },
+    {
+      "id": "8b215cb324bc4002a38d018def296b57",
+      "name": "Bash",
+      "request": {
+        "command": "cd \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai\" && shasum -a 256 base/alpha.zip base/beta.zip base/result.json base/report.md",
+        "description": "Re-hash base ZIPs and outputs after writing"
+      },
+      "source": "training",
+      "ts": 1791418749.138985
+    },
+    {
+      "id": "d7e27fcd9afc45ec8d01e68e128c539e",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$a=\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai\"\nreturn {p:[self:list]{path:f\"${$a}/presentation\"} >> [table:select]{columns:[\"name\",\"size\"]}, b:[self:list]{path:f\"${$a}/base\"} >> [table:select]{columns:[\"name\",\"size\"]}}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791418750.3965828
+    },
+    {
+      "id": "ffea30bb2a4f47ecbf06aa6492848a50",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "calls": true
+        }
+      },
+      "source": "training",
+      "ts": 1791418764.805644
+    },
+    {
+      "id": "1c4fd976e0f84094a9dcce7dfeda28f6",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$p = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai\"\n$new = [self:read]{path:f\"${$p}/presentation/result.json\"}\n$old = [self:read]{path:f\"${$p}/base/result.json\"}\n$rep = [self:read]{path:f\"${$p}/presentation/report.md\"}\nreturn {new:$new.text, old:$old.text, report:$rep.text}",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791418766.314006
+    }
+  ],
+  "results": [
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.341,
+      "evidence": {
+        "chars": 6093,
+        "excerpt": "{\"success\": true, \"value\": {\"result\": {\"title\": \"교육 자료 인계 v1\", \"kits\": [{\"id\": \"alpha\", \"status\": \"ready\", \"archive\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/base/alpha.zip\", \"files\": [\"common/guide00.txt\", \"common/guide01.txt\", \"common/guide02.txt\", \"common/guide03.txt\", \"common/guide04.txt\", \"common/guide05.txt\", \"common/guide06.txt\", \"common/guide07.txt\", \"common/guide08.txt\", \"common/guide09.txt\", \"common/guide10.txt\", \"common/guide11.txt\", \"alpha/lesson00.txt\", \"alpha/lesson01.txt\", \"alpha/lesson02.txt\", \"alpha/lesson03.txt\", \"alpha/lesson04.txt\", \"alpha/lesson05.txt\", \"alpha/lesson06.txt\", \"alpha/lesson07.txt\", \"alpha/lesson08.txt\", \"alpha/lesson09.txt\", \"alpha/lesson10.txt\", \"alpha/lesson11.txt\", \"alpha/lesson12.txt\", \"alpha/lesson13.txt\", \"alpha/lesson14.txt\", \"alpha/lesson15.txt\", \"alpha/lesson16.txt\", \"alpha/lesson17.txt\", \"alpha/lesson18.txt\", \"alpha/lesson19.txt\", \"alpha/lesson20.txt\", \"alpha/lesson21.txt\", \"alpha/lesson",
+        "id": "ad23fda2013b7ca0c7c72dafd82a443fbb28e896effb9e2eeef13cdb23371927",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.781,
+      "evidence": {
+        "chars": 372,
+        "excerpt": "ba5b1712711c9ee2026e2df310a9518271b1b86575adae831a273a900c36b7c0  alpha.zip\na5f1ce4a8219a1bafbdda12e84ca65ee9ce4c61efd82fef06ca758257a45cd2a  beta.zip\nda4292105055f6a52a0d665e153cecaf852195bb055f8c8d534c8ba41051354c  result.json\n38c7c622487c3c2c6b39f2433bad1111ccce1a82b6ceaae2640a6723d9a7bae9  report.md\nShell cwd was reset to /Users/kangkukjin/Desktop/AI/indiebizOS/data",
+        "id": "c0b25f5dca08d8f8455ca725543e282a2dcbb7948c8be4a2498fedb08002fee5",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": true,
+      "success": null,
+      "elapsed_s": 0.439,
+      "evidence": {
+        "chars": 11573,
+        "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"TYPE\", \"message\": \"Text가 필요하지만 List<Text>입니다.\", \"source_span\": {\"source_hash\": \"a7aa0b95cda05f65dde16571f4813cb8f57ff85f1be02ab25008c4206f9b5b34\", \"start\": 417, \"end\": 427, \"line\": 8, \"column\": 44}, \"call_path\": [{\"function\": \"행\", \"call\": {\"source_hash\": \"a7aa0b95cda05f65dde16571f4813cb8f57ff85f1be02ab25008c4206f9b5b34\", \"start\": 631, \"end\": 644, \"line\": 12, \"column\": 39, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 12, \"end_column\": 52, \"offset_encoding\": \"unicode-codepoints\"}, \"definition\": {\"source_hash\": \"a7aa0b95cda05f65dde16571f4813cb8f57ff85f1be02ab25008c4206f9b5b34\", \"start\": 361, \"end\": 592, \"line\": 7, \"column\": 1, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 11, \"end_column\": 2, \"offset_encoding\": \"unicode-codepoints\"}}], \"expected\": \"Text\", \"actual\": \"List<Text>\", \"hint\": \"join(Text, List<Text>)의 인자 순서를 확인하세요. 1번째는 Text입니다. join(구분자, 문자열목록) 순서",
+        "id": "bacab6f0299d0358283f20209c46aab43415e55fd96cfe9e79c3be7c3fa1d363",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.301,
+      "evidence": {
+        "chars": 5874,
+        "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": true, \"status\": \"incomplete\", \"issues\": [], \"guards\": [], \"guards_total\": 16, \"guards_inner\": 0, \"guards_omitted\": 16, \"result_type\": \"{title: Unknown, ids: List<Unknown>, same: List<{id: Unknown, status: Bool, archive: Bool, files: Bool, missing: Bool, verified: Bool}>, report: Text}\", \"effects\": [\"pure\", \"read_external\", \"write_external\"], \"functions\": {\"def:131:213\": {\"name\": \"찾기\", \"params\": {\"kits\": \"List<{id: Text, status: Text, archive: Null | Text, files: List<Text>, missing: List<Text>, verified_count: Number}>\", \"id\": \"Unknown\"}, \"required\": [\"kits\", \"id\"], \"pipe_input\": \"kits\", \"default_expressions\": {}, \"effects\": [\"pure\"], \"actions\": [\"table:filter\"], \"source_hash\": \"480193fdd6eef15dd69971e386ac997aa740f395e6f9ab8921330232ca3c6a78\", \"result\": \"{id: Text, status: Text, archive: Null | Text, files: List<Text>, missing: List<Text>, verified_count: Number}\", \"specializations\": [{\"params\": {\"kits\": \"List<{id: Text, status:",
+        "id": "788127aa65775cf94a5cf92e4353c4d11da5b66704f91d0de5948b1047a36349",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.411,
+      "evidence": {
+        "chars": 5249,
+        "excerpt": "{\"success\": true, \"value\": {\"title\": \"교육 자료 최종 인계\", \"ids\": [\"gamma\", \"beta\", \"alpha\"], \"same\": [{\"id\": \"gamma\", \"status\": true, \"archive\": true, \"files\": true, \"missing\": true, \"verified\": true}, {\"id\": \"beta\", \"status\": true, \"archive\": true, \"files\": true, \"missing\": true, \"verified\": true}, {\"id\": \"alpha\", \"status\": true, \"archive\": true, \"files\": true, \"missing\": true, \"verified\": true}], \"report\": \"# 교육 자료 최종 인계\\n\\n| 반 | 상태 | 필요 수 | 검증 수 | 누락 | ZIP 경로 |\\n|---|---|---|---|---|---|\\n| gamma | blocked | 36 | 0 | gamma/lesson07.txt | (생성 안 함) |\\n| beta | ready | 36 | 36 | 없음 | /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/base/beta.zip |\\n| alpha | ready | 36 | 36 | 없음 | /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/base/alpha.zip |\\n\\n- 이 문서는 앞 인계(base/result.json, 제목 '교육 자료 인계 v1')의 제목과 반 순서만 바꾼 개정판이다. 자료와 ZIP 내용은 바뀌지 않았다.\\n- 상태·필요 파일 목록·누락·검증 수·ZIP 경로는 base/result.json 값을 그대로 옮겼다. ZIP은 재압축",
+        "id": "88828572cde93abe173ee4f973e2906f6df4ce07437e9f0f286ed43ccfb92e4f",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.069,
+      "evidence": {
+        "chars": 497,
+        "excerpt": "PreToolUse:Bash hook error: [\"/Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3\" \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/base/shell_shadow_gate.py\" \"/Users/kangkukjin/Desktop/AI/indiebizOS\"]: 셸 그림자 거절 — `ls -la presentation base` 은(는) [self:list] 로 표현되는 일입니다. IBL 로:\n  [self:list]{path: \"presentation\"} & [self:list]{path: \"base\"} — execute_ibl 로 실행한다. 다른 param: path, pattern. 셸은 IBL 낱말이 없는 일(git·pytest·빌드·등록 스크립트 실행·프로세스 조회)에만. 결과가 잘리면 셸로 갈아타지 말고 같은 낱말의 limit·범위 param 으로 좁혀라.\n",
+        "id": "90ad54bdb62c01eee7d85bde05464238a5f7d20366ac5703f3cf7e20ac19b191",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.177,
+      "evidence": {
+        "chars": 392,
+        "excerpt": "ba5b1712711c9ee2026e2df310a9518271b1b86575adae831a273a900c36b7c0  base/alpha.zip\na5f1ce4a8219a1bafbdda12e84ca65ee9ce4c61efd82fef06ca758257a45cd2a  base/beta.zip\nda4292105055f6a52a0d665e153cecaf852195bb055f8c8d534c8ba41051354c  base/result.json\n38c7c622487c3c2c6b39f2433bad1111ccce1a82b6ceaae2640a6723d9a7bae9  base/report.md\nShell cwd was reset to /Users/kangkukjin/Desktop/AI/indiebizOS/data",
+        "id": "347fe41059cbfdd625b8aa46c0ba79219fdf16073d928cadd2f60b5d30a4f819",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.311,
+      "evidence": {
+        "chars": 2834,
+        "excerpt": "{\"success\": true, \"value\": {\"p\": [{\"name\": \"report.md\", \"size\": 1239}, {\"name\": \"result.json\", \"size\": 2942}], \"b\": [{\"name\": \"alpha.zip\", \"size\": 6970}, {\"name\": \"beta.zip\", \"size\": 6898}, {\"name\": \"report.md\", \"size\": 1049}, {\"name\": \"result.json\", \"size\": 2938}, {\"name\": \"work\", \"size\": null}]}, \"value_wire\": {\"protocol\": \"ibl-value/1\", \"data\": [\"record\", [[\"p\", [\"list\", [[\"record\", [[\"name\", [\"scalar\", \"report.md\"]], [\"size\", [\"scalar\", 1239]]]], [\"record\", [[\"name\", [\"scalar\", \"result.json\"]], [\"size\", [\"scalar\", 2942]]]]]]], [\"b\", [\"list\", [[\"record\", [[\"name\", [\"scalar\", \"alpha.zip\"]], [\"size\", [\"scalar\", 6970]]]], [\"record\", [[\"name\", [\"scalar\", \"beta.zip\"]], [\"size\", [\"scalar\", 6898]]]], [\"record\", [[\"name\", [\"scalar\", \"report.md\"]], [\"size\", [\"scalar\", 1049]]]], [\"record\", [[\"name\", [\"scalar\", \"result.json\"]], [\"size\", [\"scalar\", 2938]]]], [\"record\", [[\"name\", [\"scalar\", \"work\"]], [\"size\", [\"scalar\", null]]]]]]]]]}, \"edition\": 2, \"executed\": true, \"plan_hash\": \"3fa616aaa6cbe9",
+        "id": "9dda43bced61881ad8528f8d4f1cad7b7fb43d687c496cd36ae5b28df5bbd246",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.008,
+      "evidence": {
+        "chars": 12305,
+        "excerpt": "{\"turns\": [{\"turn\": \"cc3ba821efeb485db1ead1d64862839d\", \"current\": true, \"calls\": [{\"seq\": 22, \"name\": \"execute_ibl\", \"input\": {\"id\": \"34ab1f7f5089c8974f7980a15c95010053d31a97eb2176f00d858eb09074d143\", \"excerpt\": \"{\\\"code\\\": \\\"$b = \\\\\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/base\\\\\\\"\\\\n$r = [self:read]{path: f\\\\\\\"${b}/result.json\\\\\\\"}\\\\n$m = [self:read]{path: f\\\\\\\"${b}/report.md\\\\\\\"}\\\\n$l = [self:list]{path: $b}\\\\n$p\"}, \"result\": {\"id\": \"ad23fda2013b7ca0c7c72dafd82a443fbb28e896effb9e2eeef13cdb23371927\", \"chars\": 6093}, \"is_error\": false}, {\"seq\": 24, \"name\": \"Bash\", \"input\": {\"id\": \"7f4015823b543810b0a0f5bc3645b5a31d57d946d123424459fffc3833f4296c\", \"excerpt\": \"{\\\"command\\\": \\\"cd \\\\\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/base\\\\\\\" && shasum -a 256 alpha.zip beta.zip result.json report.md\\\", \\\"description\\\": \\\"Hash base ZIPs and outputs before writing\\\"}\"}, \"result\": {\"id\": \"c0b25f5",
+        "id": "56ed1ab12778444401fab7f336a6d3e0e5f53b942df637ddefbe9c41012b62da",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.312,
+      "evidence": {
+        "chars": 9336,
+        "excerpt": "{\"success\": true, \"value\": {\"new\": \"{\\\"title\\\": \\\"교육 자료 최종 인계\\\", \\\"kits\\\": [{\\\"id\\\": \\\"gamma\\\", \\\"status\\\": \\\"blocked\\\", \\\"archive\\\": null, \\\"files\\\": [\\\"common/guide00.txt\\\", \\\"common/guide01.txt\\\", \\\"common/guide02.txt\\\", \\\"common/guide03.txt\\\", \\\"common/guide04.txt\\\", \\\"common/guide05.txt\\\", \\\"common/guide06.txt\\\", \\\"common/guide07.txt\\\", \\\"common/guide08.txt\\\", \\\"common/guide09.txt\\\", \\\"common/guide10.txt\\\", \\\"common/guide11.txt\\\", \\\"gamma/lesson00.txt\\\", \\\"gamma/lesson01.txt\\\", \\\"gamma/lesson02.txt\\\", \\\"gamma/lesson03.txt\\\", \\\"gamma/lesson04.txt\\\", \\\"gamma/lesson05.txt\\\", \\\"gamma/lesson06.txt\\\", \\\"gamma/lesson07.txt\\\", \\\"gamma/lesson08.txt\\\", \\\"gamma/lesson09.txt\\\", \\\"gamma/lesson10.txt\\\", \\\"gamma/lesson11.txt\\\", \\\"gamma/lesson12.txt\\\", \\\"gamma/lesson13.txt\\\", \\\"gamma/lesson14.txt\\\", \\\"gamma/lesson15.txt\\\", \\\"gamma/lesson16.txt\\\", \\\"gamma/lesson17.txt\\\", \\\"gamma/lesson18.txt\\\", \\\"gamma/lesson19.txt\\\", \\\"gamma/lesson20.txt\\\", \\\"gamma/lesson21.txt\\\", \\\"gamma/lesson22.txt\\\", \\\"gamma/",
+        "id": "f8226315449205e919f394c70088b56e24e4b3dde99da760e120382eb45d0a6e",
+        "integrity": "verified"
+      }
+    }
+  ],
+  "recall": [
+    {
+      "kind": "recall.presented",
+      "data": {
+        "blocks": [
+          {
+            "chars": 2224,
+            "ids": [
+              "4738",
+              "2335",
+              "2346",
+              "4013"
+            ],
+            "meta": {
+              "refs": 4,
+              "top_code": ""
+            },
+            "ms": 559.7,
+            "source": "hippocampus",
+            "status": "ok",
+            "tag": "execution_memory"
+          },
+          {
+            "chars": 2437,
+            "ids": [
+              "script:나레이션생성",
+              "script:폴더변화",
+              "script:팁행source중첩"
+            ],
+            "ms": 13.2,
+            "source": "reusable_capabilities",
+            "status": "ok",
+            "tag": "reusable_capabilities"
+          },
+          {
+            "chars": 883,
+            "ids": [],
+            "meta": {
+              "branches": 10
+            },
+            "ms": 10.1,
+            "source": "memory_map",
+            "status": "ok",
+            "tag": "memory_map"
+          },
+          {
+            "chars": 906,
+            "ids": [
+              "480",
+              "301",
+              "339"
+            ],
+            "meta": {
+              "branches": [
+                "indiebizOS/포식 기억",
+                "보고서",
+                "파일·저장공간",
+                "보고서/AI 동향"
+              ],
+              "outside_beats_inside": true
+            },
+            "ms": 43.4,
+            "source": "recalled_memory",
+            "status": "ok",
+            "tag": "recalled_memory"
+          },
+          {
+            "chars": 2262,
+            "ids": [],
+            "meta": {
+              "branches": 43
+            },
+            "ms": 38.6,
+            "source": "guide_map",
+            "status": "ok",
+            "tag": "guide_map"
+          },
+          {
+            "chars": 1420,
+            "ids": [],
+            "ms": 2.1,
+            "source": "decision_ledger",
+            "status": "ok",
+            "tag": "decision_ledger"
+          },
+          {
+            "chars": 2306,
+            "ids": [],
+            "ms": 0.0,
+            "source": "pursuit",
+            "status": "ok",
+            "tag": "pursuit"
+          },
+          {
+            "chars": 93,
+            "ids": [
+              "basics.07.38de236ecca5"
+            ],
+            "ms": 37.5,
+            "source": "method_map",
+            "status": "selected",
+            "tag": "method_map"
+          },
+          {
+            "chars": 627,
+            "ids": [
+              "atlas.information.version_control",
+              "zotero"
+            ],
+            "meta": {
+              "picked": 2
+            },
+            "ms": 81.2,
+            "source": "world_memory",
+            "status": "ok",
+            "tag": "world_map"
+          }
+        ],
+        "channel": "pipeline",
+        "recall_id": "1ef6cbff5e2c46319ba95a478efd96dd",
+        "reflex": {
+          "code": "",
+          "score": 0.702
+        },
+        "request_type": "REPAIR"
+      }
+    },
+    {
+      "kind": "recall.used",
+      "data": {
+        "blocks": [
+          {
+            "evidence": "executed",
+            "ibl_calls": 4,
+            "presented": [
+              "4738",
+              "2335",
+              "2346",
+              "4013"
+            ],
+            "recall_id": "1ef6cbff5e2c46319ba95a478efd96dd",
+            "source": "hippocampus",
+            "used": []
+          },
+          {
+            "evidence": "none",
+            "presented": [
+              "script:나레이션생성",
+              "script:폴더변화",
+              "script:팁행source중첩"
+            ],
+            "quality_contribution": "not_inferred",
+            "recall_id": "1ef6cbff5e2c46319ba95a478efd96dd",
+            "source": "reusable_capabilities",
+            "used": []
+          },
+          {
+            "evidence": "none",
+            "opened": [],
+            "presented": [
+              "480",
+              "301",
+              "339"
+            ],
+            "recall_id": "1ef6cbff5e2c46319ba95a478efd96dd",
+            "source": "recalled_memory",
+            "used": []
+          },
+          {
+            "evidence": "mentioned",
+            "presented": [
+              "basics.07.38de236ecca5"
+            ],
+            "recall_id": "1ef6cbff5e2c46319ba95a478efd96dd",
+            "source": "method_map",
+            "used": []
+          },
+          {
+            "evidence": "mentioned",
+            "presented": [
+              "atlas.information.version_control",
+              "zotero"
+            ],
+            "recall_id": "1ef6cbff5e2c46319ba95a478efd96dd",
+            "source": "world_memory",
+            "used": []
+          }
+        ],
+        "completed": true,
+        "phase": "turn"
+      }
+    }
+  ]
+}

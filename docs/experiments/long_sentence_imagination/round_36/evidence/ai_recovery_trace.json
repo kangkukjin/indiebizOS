@@ -1,0 +1,378 @@
+{
+  "task_id": "task_sysai_bd7ddab9",
+  "episode_id": 4438,
+  "tools": [
+    {
+      "id": "dfafd3ff2bd24198a7acf9e3d2dd8304",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "fb0d96a40cd3250e6d4d3c5e5ae6cc4e41490d6d03ac4819b8370beca15c9dce",
+          "path": [
+            "code"
+          ]
+        }
+      },
+      "source": "training",
+      "ts": 1791418825.977659
+    },
+    {
+      "id": "deb275cf873e463a87a061e715b6131b",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "ec87951a4d24b0cee4ffca47d60e1728af50140b4e00a4e451b157bf5ad577e4"
+        }
+      },
+      "source": "training",
+      "ts": 1791418829.084564
+    },
+    {
+      "id": "d2edd59a10b6442db2075c7c1924130c",
+      "name": "execute_ibl",
+      "request": {
+        "code": "",
+        "edition": 2,
+        "read_result": {
+          "id": "fb0d96a40cd3250e6d4d3c5e5ae6cc4e41490d6d03ac4819b8370beca15c9dce"
+        }
+      },
+      "source": "training",
+      "ts": 1791418830.268349
+    },
+    {
+      "id": "3cc5a12a39714e5d9e2a27872b348aee",
+      "name": "execute_ibl",
+      "request": {
+        "code": "#!ibl edition=2\n$ai = \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai\"\n$src = f\"${$ai}/source\"\n$base = f\"${$ai}/base\"\n$pres = f\"${$ai}/presentation\"\n$rec = f\"${$ai}/recovery\"\n$top = [self:list]{path:$ai} >> [table:each]{return $it.name}\nassert not contains($top, \"recovery\") or len([self:list]{path:$rec}) == 0, \"recovery 폴더가 이미 비어 있지 않음\"\n$vtext = [self:read]{path:f\"${$base}/work/verify_zip.py\"}\n$vf = [self:write]{path:\"~turn/verify_zip.py\", content:$vtext.text}\n$pre_src = [self:script]{path:$vf.path, args:{op:\"hash\", src:$src}}\n$pre_base = [self:script]{path:$vf.path, args:{op:\"hash\", src:$base}}\n$pre_pres = [self:script]{path:$vf.path, args:{op:\"hash\", src:$pres}}\n$old = [self:read]{path:f\"${$base}/result.json\"}\n$cat = [self:read]{path:f\"${$src}/catalog.json\"}\n$names = $pre_src.files >> [table:each]{return $it.rel}\n[def:찾기]($kits,$id){ return ($kits >> [table:filter]{where:($k)=>$k.id==$id})[0] }\n$g = [fn:찾기]{kits:$cat.data.kits, id:\"gamma\"}\n$gold = [fn:찾기]{kits:$old.data.kits, id:\"gamma\"}\nassert $g.files == $gold.files, \"gamma 필요 목록이 직전 결과와 다름\"\n$gmiss = difference($g.files, $names)\nassert len($gmiss) == 0, \"gamma 여전히 누락\", {missing:$gmiss}\n[self:mkdir]{path:$rec}\n$gzip = f\"${$rec}/gamma.zip\"\n$gabs = $g.files >> [table:each]{return f\"${$src}/${$it}\"}\n$pack = [self:script]{op:\"run\", id:\"압축\", args:{op:\"pack\", paths:$gabs, base:$src, output:$gzip, exclude:[], overwrite:false}}\n$vg = [self:script]{path:$vf.path, args:{op:\"verify\", zip:$gzip, src:$src, files:$g.files}}\nassert $vg.ok, \"gamma ZIP 대조 실패\", {verify:$vg}\n$prev = [\"beta\",\"alpha\"] >> [table:each]{\n  $k = [fn:찾기]{kits:$old.data.kits, id:$it}\n  $v = [self:script]{path:$vf.path, args:{op:\"verify\", zip:$k.archive, src:$src, files:$k.files}}\n  assert $v.ok and $v.verified_count == $k.verified_count, f\"${$it} 기존 ZIP 재대조 실패\", {verify:$v}\n  return {kit:$k, check:$v}\n}\n$gkit = {id:\"gamma\", status:\"ready\", archive:$gzip, files:$g.files, missing:[], verified_count:$vg.verified_count}\n$kits = [$gkit, $prev[0].kit, $prev[1].kit]\n$result = {title:\"교육 자료 최종 인계\", kits:$kits}\n$rows = $kits >> [table:each]{return f\"| ${$it.id} | ${$it.status} | ${len($it.files)} | ${$it.verified_count} | ${len($it.missing)==0 ? \"없음\" : join(\", \", $it.missing)} | ${$it.archive} |\"}\n$md = f\"\"\"# 교육 자료 최종 인계\n\n| 반 | 상태 | 필요 수 | 검증 수 | 누락 | ZIP 경로 |\n|---|---|---|---|---|---|\n${join(\"\\n\", $rows)}\n\n- 이 문서는 앞 인계(base/result.json)를 이어받아, 보충된 source/gamma/lesson07.txt로 막혔던 gamma 반만 새로 준비한 완결판이다.\n- gamma: source/catalog.json의 필요 목록 ${len($g.files)}개로 등록 스크립트 `압축`(op:pack, base=source)을 써서 recovery/gamma.zip을 새로 만들었다.\n- alpha·beta: 기존 ZIP(base 폴더)을 재생성·복사·덮어쓰기 하지 않았다. 경로·상태·필요 목록·누락·검증 수는 base/result.json 값 그대로다.\n- 검증(이번 실행, 세 반 전건): ZIP을 열어 항목 이름 집합 = 필요 목록, 중복 0, 디렉터리 항목 0, CRC 이상 없음, 항목별 바이트·sha256 = 현재 source 원본을 확인했다(base/work/verify_zip.py와 같은 코드).\n- 필요 파일 전체 목록은 같은 폴더의 result.json kits[].files에 있다.\n\"\"\"\n$wj = [self:write]{path:f\"${$rec}/result.json\", content:json($result)}\n$wm = [self:write]{path:f\"${$rec}/report.md\", content:$md}\n$rj = [self:read]{path:f\"${$rec}/result.json\"}\n$rm = [self:read]{path:f\"${$rec}/report.md\"}\n$post_src = [self:script]{path:$vf.path, args:{op:\"hash\", src:$src}}\n$post_base = [self:script]{path:$vf.path, args:{op:\"hash\", src:$base}}\n$post_pres = [self:script]{path:$vf.path, args:{op:\"hash\", src:$pres}}\n$reread_ok = $rj.data == $result and $rm.text == $md\nassert $reread_ok, \"재독 불일치\"\nassert $pre_src.digest == $post_src.digest and $pre_base.digest == $post_base.digest and $pre_pres.digest == $post_pres.digest, \"보존 대상 변경 감지\"\n$same_prev = $prev >> [table:each]{\n  $o = [fn:찾기]{kits:$old.data.kits, id:$it.kit.id}\n  $n = [fn:찾기]{kits:$rj.data.kits, id:$it.kit.id}\n  return {id:$o.id, same:$o == $n}\n}\nreturn {order:$rj.data.kits >> [table:each]{return $it.id}, title:$rj.data.title,\n  gamma:{need:len($g.files), has_lesson07:contains($g.files,\"gamma/lesson07.txt\"), verify:$vg},\n  prev_checks:$prev >> [table:each]{return {id:$it.kit.id, ok:$it.check.ok, verified:$it.check.verified_count, entries:$it.check.entries}},\n  same_prev:$same_prev, reread_ok:$reread_ok,\n  digests:{src:$pre_src.digest==$post_src.digest, base:$pre_base.digest==$post_base.digest, pres:$pre_pres.digest==$post_pres.digest},\n  source_files:len($pre_src.files), recovery:[self:list]{path:$rec} >> [table:select]{columns:[\"name\",\"size\"]}, report:$rm.text}",
+        "edition": 2,
+        "check": true
+      },
+      "source": "training",
+      "ts": 1791418860.04784
+    },
+    {
+      "id": "d11c70bc13334fd0b8cf52147cbd4564",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$rejected:c861cee058e7ce4153c587584b1fb6873ce7e503c8cccdd36324b134c432363f",
+        "edition": 2,
+        "code_edits": [
+          {
+            "old": "$rows = $kits >> [table:each]{return f\"| ${$it.id} | ${$it.status} | ${len($it.files)} | ${$it.verified_count} | ${len($it.missing)==0 ? \"없음\" : join(\", \", $it.missing)} | ${$it.archive} |\"}",
+            "new": "$rows = $kits >> [table:each]{\n  $m = len($it.missing)==0 ? \"없음\" : join(\", \", $it.missing)\n  return f\"| ${$it.id} | ${$it.status} | ${len($it.files)} | ${$it.verified_count} | ${$m} | ${$it.archive} |\"\n}"
+          }
+        ],
+        "check": true
+      },
+      "source": "training",
+      "ts": 1791418866.066155
+    },
+    {
+      "id": "cf241e586b56472bbc204fad10d23d0d",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$rejected:462c71b39d643c8df68b9e519b3380bb3019ab3d636eb7999fc3060458c01426",
+        "edition": 2,
+        "code_edits": [
+          {
+            "old": "assert not contains($top, \"recovery\") or len([self:list]{path:$rec}) == 0, \"recovery 폴더가 이미 비어 있지 않음\"",
+            "new": "$rec_files = (\"recovery\" in $top) ? \"\" : \"\"\n[if: \"recovery\" in $top]{\n  $ex = [self:list]{path:$rec}\n  assert len($ex) == 0, \"recovery 폴더가 이미 비어 있지 않음\", {files:$ex}\n}"
+          },
+          {
+            "old": "has_lesson07:contains($g.files,\"gamma/lesson07.txt\")",
+            "new": "has_lesson07:\"gamma/lesson07.txt\" in $g.files"
+          }
+        ],
+        "check": true
+      },
+      "source": "training",
+      "ts": 1791418872.806478
+    },
+    {
+      "id": "4d60857a499942c3b7b200cfa2528565",
+      "name": "execute_ibl",
+      "request": {
+        "code": "$checked:f8da0fd15085027017ce8f723aae2bc1356f5c4d6f4601f99197748761eee8c9",
+        "edition": 2
+      },
+      "source": "training",
+      "ts": 1791418875.7098591
+    }
+  ],
+  "results": [
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.005,
+      "evidence": {
+        "chars": 713,
+        "excerpt": "{\"id\": \"fb0d96a40cd3250e6d4d3c5e5ae6cc4e41490d6d03ac4819b8370beca15c9dce\", \"offset\": 0, \"chars\": 74, \"text\": \"$rejected:9b27bb2a7fd229409d50764f36732e0c6b9dfa4ccb6a6da1263466fd71860170\", \"integrity\": \"verified\", \"from_turn\": \"96301642240e4625b3e6eeb8c071f689\", \"source_chars\": 597, \"path\": [\"code\"], \"next_offset\": null, \"next_read\": null, \"read_scope\": {\"path\": [\"code\"], \"start\": 0, \"end\": 74, \"total_chars\": 74, \"complete\": true, \"format\": \"text\"}, \"read_hint\": \"선택 경로 전체(하위 내용 포함)를 전달했습니다. 현재 문맥에 이 본문이 남아 있으면 하위 경로를 다시 읽지 말고 사용하세요. 가공은 input_args로 연결하세요.\", \"_display\": {\"max_chars\": 60000}, \"input_args\": {\"입력\": {\"$ref\": \"fb0d96a40cd3250e6d4d3c5e5ae6cc4e41490d6d03ac4819b8370beca15c9dce\", \"path\": [\"code\"]}}}",
+        "id": "bd1a45f974811b3b92cb944fd59684eafe4f0dfaefaef03d2b83553752e1a312",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.006,
+      "evidence": {
+        "chars": 6103,
+        "excerpt": "{\"id\": \"ec87951a4d24b0cee4ffca47d60e1728af50140b4e00a4e451b157bf5ad577e4\", \"offset\": 0, \"chars\": 5170, \"text\": \"{\\\"code\\\": \\\"#!ibl edition=2\\\\n$src = \\\\\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/source\\\\\\\"\\\\n$out = \\\\\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/base\\\\\\\"\\\\n[self:mkdir]{path:f\\\\\\\"${out}/work\\\\\\\"}\\\\n$vf = [self:write]{path:f\\\\\\\"${out}/work/verify_zip.py\\\\\\\", content:$verifier}\\\\n$pre = [self:script]{path:$vf.path, args:{op:\\\\\\\"hash\\\\\\\", src:$src}}\\\\n$cat = [self:read]{path:f\\\\\\\"${src}/catalog.json\\\\\\\"}\\\\n$names = $pre.files >> [table:each]{return $it.rel}\\\\n$kits = $cat.data.kits >> [table:each]{\\\\n  $miss = difference($it.files, $names)\\\\n  [if: len($miss) > 0] {\\\\n    return {id:$it.id, status:\\\\\\\"blocked\\\\\\\", archive:null, files:$it.files, missing:$miss, verified_count:0, check:null}\\\\n  }\\\\n  $zip = f\\\\\\\"${out}/${$it.id}.zip\\\\\\\"\\\\n  $abs = $it.files >> [table:each]{re",
+        "id": "6133b9b679c9848cfb0cf8392789db6169996548d384f561ccb1569026ac116c",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.005,
+      "evidence": {
+        "chars": 1263,
+        "excerpt": "{\"id\": \"fb0d96a40cd3250e6d4d3c5e5ae6cc4e41490d6d03ac4819b8370beca15c9dce\", \"offset\": 0, \"chars\": 597, \"text\": \"{\\\"code\\\": \\\"$rejected:9b27bb2a7fd229409d50764f36732e0c6b9dfa4ccb6a6da1263466fd71860170\\\", \\\"edition\\\": 2, \\\"inputs\\\": {\\\"verifier\\\": {\\\"$ref\\\": \\\"e233e57db3beb7a049467ca72d48f77f06fa46f955fa623e35b39e92270674f6\\\"}}, \\\"code_edits\\\": [{\\\"old\\\": \\\"join($it.missing, \\\\\\\", \\\\\\\")\\\", \\\"new\\\": \\\"join(\\\\\\\", \\\\\\\", $it.missing)\\\"}, {\\\"old\\\": \\\"${join($rows, \\\\\\\"\\\\\\\\n\\\\\\\")}\\\", \\\"new\\\": \\\"${join(\\\\\\\"\\\\\\\\n\\\\\\\", $rows)}\\\"}, {\\\"old\\\": \\\"$vf = [self:write]{path:f\\\\\\\"${out}/work/verify_zip.py\\\\\\\", content:$verifier}\\\", \\\"new\\\": \\\"[self:write]{path:f\\\\\\\"${out}/work/verify_zip.py\\\\\\\", content:$verifier}\\\\n$vf = [self:write]{path:\\\\\\\"~turn/verify_zip.py\\\\\\\", content:$verifier}\\\"}]}\", \"integrity\": \"verified\", \"from_turn\": \"96301642240e4625b3e6eeb8c071f689\", \"next_offset\": null, \"next_read\": null, \"read_scope\": {\"path\": [], \"start\": 0, \"end\": 597, \"total_chars\": 597, \"complete\": true, \"format\": \"st",
+        "id": "52e2d42c205d87e1c09239f6b44a2b704f41a19774feef2b36cf06ccc4142bd4",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": true,
+      "success": null,
+      "elapsed_s": 0.259,
+      "evidence": {
+        "chars": 2114,
+        "excerpt": "{\"edition\": 2, \"ok\": false, \"success\": false, \"executed\": false, \"status\": \"invalid\", \"error\": \"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.\", \"diagnostic\": {\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [], \"details\": {}, \"source_span\": {\"source_hash\": \"381d3b153519e83b1cedf03d9e3826c3d221d32e5c7a4f0b32ad81403fb07bf5\", \"start\": 2232, \"end\": 2234, \"line\": 38, \"column\": 139}, \"rule\": \"SYNTAX\", \"severity\": \"error\", \"hint\": \"표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.\", \"location\": {\"source_hash\": \"381d3b153519e83b1cedf03d9e3826c3d221d32e5c7a4f0b32ad81403fb07bf5\", \"start\": 2232, \"end\": 2234, \"line\": 38, \"column\": 139, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 38, \"end_column\": 141, \"offset_encoding\": \"unicode-codepoints\"}}, \"issues\": [{\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"보간의 닫는 }가 없거나 안쪽",
+        "id": "6bbd38246a50f27b2b10d7f9f83be77f6dddb9a5224d24117d57819ca688ea42",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": true,
+      "success": null,
+      "elapsed_s": 0.585,
+      "evidence": {
+        "chars": 9632,
+        "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"PURE_EXPRESSION\", \"message\": \"이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.\", \"source_span\": {\"source_hash\": \"a015e6257fe137e025d4b17e56ba19ac194cb4e9a011c2aff833b5951360f0b9\", \"start\": 328, \"end\": 350, \"line\": 8, \"column\": 46}, \"call_path\": [], \"hint\": \"조건·조건 값(?:)·and/or·람다 본문·기본값에는 효과 있는 호출을 넣지 않습니다(효과 없는 [fn:이름]은 가능). 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.\", \"location\": {\"source_hash\": \"a015e6257fe137e025d4b17e56ba19ac194cb4e9a011c2aff833b5951360f0b9\", \"start\": 328, \"end\": 350, \"line\": 8, \"column\": 46, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 8, \"end_column\": 68, \"offset_encoding\": \"unicode-codepoints\"}, \"rule\": \"PURE_EXPRESSION\", \"severity\": \"error\"}, {\"code\": \"TYPE\", \"message\": \"Text가 필요하지만 List<Unknown>입니다.\", \"source_span\": {\"source_hash\": \"a015e6257fe137e025d4b17e56ba19ac194cb4e9a011c2aff833b5951360f0b9\", \"start\": 303, \"end\": 30",
+        "id": "6ab5362c01f57efca7253fe24b5e26fbcf8d2f9fdb875190217eab76d84da607",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 0.605,
+      "evidence": {
+        "chars": 8187,
+        "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": true, \"status\": \"incomplete\", \"issues\": [], \"guards\": [], \"guards_total\": 98, \"guards_inner\": 0, \"guards_omitted\": 98, \"result_type\": \"{order: List<Unknown>, title: Unknown, gamma: {need: Number, has_lesson07: Bool, verify: Unknown}, prev_checks: List<{id: Unknown, ok: Unknown, verified: Unknown, entries: Unknown}>, same_prev: List<{id: Unknown, same: Bool}>, reread_ok: Bool, digests: {src: Bool, base: Bool, pres: Bool}, source_files: Number, recovery: List<{name: Unknown, size: Unknown}>, report: Text}\", \"effects\": [\"pure\", \"read_external\", \"unknown\", \"write_external\"], \"functions\": {\"def:938:1020\": {\"name\": \"찾기\", \"params\": {\"kits\": \"Unknown\", \"id\": \"Unknown\"}, \"required\": [\"kits\", \"id\"], \"pipe_input\": \"kits\", \"default_expressions\": {}, \"effects\": [\"pure\"], \"actions\": [\"table:filter\"], \"source_hash\": \"480193fdd6eef15dd69971e386ac997aa740f395e6f9ab8921330232ca3c6a78\", \"result\": \"Record\", \"specializations\": [{\"params\": {\"kits\": \"U",
+        "id": "a8852ae145790f576e94c4bef3ecb32880a311d252cb3082419f6211c92f09ee",
+        "integrity": "verified"
+      }
+    },
+    {
+      "check_rejected": false,
+      "success": null,
+      "elapsed_s": 4.05,
+      "evidence": {
+        "chars": 6580,
+        "excerpt": "{\"success\": true, \"value\": {\"order\": [\"gamma\", \"beta\", \"alpha\"], \"title\": \"교육 자료 최종 인계\", \"gamma\": {\"need\": 36, \"has_lesson07\": true, \"verify\": {\"ok\": true, \"entries\": 36, \"names_equal\": true, \"duplicates\": [], \"dir_entries\": [], \"extra\": [], \"absent\": [], \"byte_mismatch\": [], \"crc_bad\": null, \"verified_count\": 36}}, \"prev_checks\": [{\"id\": \"beta\", \"ok\": true, \"verified\": 36, \"entries\": 36}, {\"id\": \"alpha\", \"ok\": true, \"verified\": 36, \"entries\": 36}], \"same_prev\": [{\"id\": \"beta\", \"same\": true}, {\"id\": \"alpha\", \"same\": true}], \"reread_ok\": true, \"digests\": {\"src\": true, \"base\": true, \"pres\": true}, \"source_files\": 91, \"recovery\": [{\"name\": \"gamma.zip\", \"size\": 6970}, {\"name\": \"report.md\", \"size\": 1416}, {\"name\": \"result.json\", \"size\": 3034}], \"report\": \"# 교육 자료 최종 인계\\n\\n| 반 | 상태 | 필요 수 | 검증 수 | 누락 | ZIP 경로 |\\n|---|---|---|---|---|---|\\n| gamma | ready | 36 | 36 | 없음 | /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/recovery/gamma.zip |\\n| beta ",
+        "id": "b8da787ff65e846b11bc7a669d323b6e061be746ccb613d1b576897283ca4c30",
+        "integrity": "verified"
+      }
+    }
+  ],
+  "recall": [
+    {
+      "kind": "recall.presented",
+      "data": {
+        "blocks": [
+          {
+            "chars": 1196,
+            "ids": [
+              "2024"
+            ],
+            "meta": {
+              "refs": 1,
+              "top_code": ""
+            },
+            "ms": 392.9,
+            "source": "hippocampus",
+            "status": "ok",
+            "tag": "execution_memory"
+          },
+          {
+            "chars": 2214,
+            "ids": [
+              "script:나레이션생성",
+              "script:팁행source중첩",
+              "script:영상제작파이프라인"
+            ],
+            "ms": 12.3,
+            "source": "reusable_capabilities",
+            "status": "ok",
+            "tag": "reusable_capabilities"
+          },
+          {
+            "chars": 883,
+            "ids": [],
+            "meta": {
+              "branches": 10
+            },
+            "ms": 9.4,
+            "source": "memory_map",
+            "status": "ok",
+            "tag": "memory_map"
+          },
+          {
+            "chars": 799,
+            "ids": [
+              "339",
+              "450",
+              "301"
+            ],
+            "meta": {
+              "branches": [
+                "indiebizOS/운영·수리",
+                "indiebizOS/포식 기억",
+                "파일·저장공간"
+              ],
+              "outside_beats_inside": false
+            },
+            "ms": 46.1,
+            "source": "recalled_memory",
+            "status": "ok",
+            "tag": "recalled_memory"
+          },
+          {
+            "chars": 2262,
+            "ids": [],
+            "meta": {
+              "branches": 43
+            },
+            "ms": 38.0,
+            "source": "guide_map",
+            "status": "ok",
+            "tag": "guide_map"
+          },
+          {
+            "chars": 1420,
+            "ids": [],
+            "ms": 2.3,
+            "source": "decision_ledger",
+            "status": "ok",
+            "tag": "decision_ledger"
+          },
+          {
+            "chars": 2306,
+            "ids": [],
+            "ms": 0.0,
+            "source": "pursuit",
+            "status": "ok",
+            "tag": "pursuit"
+          },
+          {
+            "chars": 151,
+            "ids": [
+              "basics.07.38de236ecca5",
+              "basics.11.dbd793acffe8",
+              "atlas.movement.recovery"
+            ],
+            "ms": 41.9,
+            "source": "method_map",
+            "status": "selected",
+            "tag": "method_map"
+          },
+          {
+            "chars": 643,
+            "ids": [
+              "delta_debugging",
+              "atlas.software.snapshot_testing"
+            ],
+            "meta": {
+              "picked": 2
+            },
+            "ms": 80.0,
+            "source": "world_memory",
+            "status": "ok",
+            "tag": "world_map"
+          }
+        ],
+        "channel": "pipeline",
+        "recall_id": "b9f13835b99f4c0facf2cdbbc401ef50",
+        "reflex": {
+          "code": "",
+          "score": 0.6669
+        },
+        "request_type": "THINK"
+      }
+    },
+    {
+      "kind": "recall.used",
+      "data": {
+        "blocks": [
+          {
+            "evidence": "executed",
+            "ibl_calls": 1,
+            "presented": [
+              "2024"
+            ],
+            "recall_id": "b9f13835b99f4c0facf2cdbbc401ef50",
+            "source": "hippocampus",
+            "used": []
+          },
+          {
+            "evidence": "none",
+            "presented": [
+              "script:나레이션생성",
+              "script:팁행source중첩",
+              "script:영상제작파이프라인"
+            ],
+            "quality_contribution": "not_inferred",
+            "recall_id": "b9f13835b99f4c0facf2cdbbc401ef50",
+            "source": "reusable_capabilities",
+            "used": []
+          },
+          {
+            "evidence": "none",
+            "opened": [],
+            "presented": [
+              "339",
+              "450",
+              "301"
+            ],
+            "recall_id": "b9f13835b99f4c0facf2cdbbc401ef50",
+            "source": "recalled_memory",
+            "used": []
+          },
+          {
+            "evidence": "mentioned",
+            "presented": [
+              "basics.07.38de236ecca5",
+              "basics.11.dbd793acffe8",
+              "atlas.movement.recovery"
+            ],
+            "recall_id": "b9f13835b99f4c0facf2cdbbc401ef50",
+            "source": "method_map",
+            "used": [
+              "basics.11.dbd793acffe8"
+            ]
+          },
+          {
+            "evidence": "mentioned",
+            "presented": [
+              "delta_debugging",
+              "atlas.software.snapshot_testing"
+            ],
+            "recall_id": "b9f13835b99f4c0facf2cdbbc401ef50",
+            "source": "world_memory",
+            "used": []
+          }
+        ],
+        "completed": true,
+        "phase": "turn"
+      }
+    }
+  ]
+}

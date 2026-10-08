@@ -1,0 +1,68 @@
+[
+  {
+    "who": "trainer",
+    "stage": "base",
+    "all_rows": true,
+    "title": "교육 자료 인계 v1",
+    "order": [
+      "alpha",
+      "beta",
+      "gamma"
+    ]
+  },
+  {
+    "who": "trainer",
+    "stage": "presentation",
+    "all_rows": true,
+    "title": "교육 자료 최종 인계",
+    "order": [
+      "gamma",
+      "beta",
+      "alpha"
+    ]
+  },
+  {
+    "who": "trainer",
+    "stage": "recovery",
+    "all_rows": true,
+    "title": "교육 자료 최종 인계",
+    "order": [
+      "gamma",
+      "beta",
+      "alpha"
+    ]
+  },
+  {
+    "who": "ai",
+    "stage": "base",
+    "all_rows": true,
+    "title": "교육 자료 인계 v1",
+    "order": [
+      "alpha",
+      "beta",
+      "gamma"
+    ]
+  },
+  {
+    "who": "ai",
+    "stage": "presentation",
+    "all_rows": true,
+    "title": "교육 자료 최종 인계",
+    "order": [
+      "gamma",
+      "beta",
+      "alpha"
+    ]
+  },
+  {
+    "who": "ai",
+    "stage": "recovery",
+    "all_rows": true,
+    "title": "교육 자료 최종 인계",
+    "order": [
+      "gamma",
+      "beta",
+      "alpha"
+    ]
+  }
+]

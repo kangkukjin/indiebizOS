@@ -1,0 +1,20 @@
+#!ibl edition=2
+[def:인계]($kits,$title,$order,$out) {
+  $ordered = $order >> [table:each] {
+    $id=$it
+    return filter($kits,($k)=>$k.id==$id)[0]
+  }
+  $lines = $ordered >> [table:each] {
+    $path=$it.archive==null ? "없음" : $it.archive
+    return f"|${it.id}|${it.status}|${len($it.files)}|${it.verified_count}|${join(', ',$it.missing)}|${path}|"
+  }
+  $result={title:$title,kits:$ordered}
+  $report=f"# ${title}\n\n|반|상태|필요 수|검증 수|누락|ZIP 경로|\n|---|---|---:|---:|---|---|\n${join('\n',$lines)}\n"
+  [self:write]{path:f"${out}/result.json",content:json($result)} & [self:write]{path:f"${out}/report.md",content:$report}
+  $saved=[self:read]{path:f"${out}/result.json"} & [self:read]{path:f"${out}/report.md"}
+  assert $saved[0].data==$result, "인계 데이터 재독 불일치"
+  assert $saved[1].text==$report, "인계서 재독 불일치"
+  return $result
+}
+$prior=[self:read]{path:$previous}
+return [fn:인계]{kits:$prior.data.kits,title:$title,order:$order,out:$out}

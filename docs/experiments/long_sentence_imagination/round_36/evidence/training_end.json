@@ -1,0 +1,48 @@
+{
+  "ended_at": "2026-10-08T09:22:58.847329+09:00",
+  "head": "13b821488f048ef11a99afcdf9d20a72efcba069",
+  "ai": {
+    "base": {
+      "task_id": "task_sysai_47d25f53",
+      "state": "succeeded",
+      "status_url": "/system-ai/tasks/task_sysai_47d25f53"
+    },
+    "presentation": {
+      "task_id": "task_sysai_a82ecbe5",
+      "state": "succeeded",
+      "status_url": "/system-ai/tasks/task_sysai_a82ecbe5"
+    },
+    "recovery": {
+      "task_id": "task_sysai_bd7ddab9",
+      "state": "succeeded",
+      "status_url": "/system-ai/tasks/task_sysai_bd7ddab9"
+    }
+  },
+  "script_jobs": [
+    {
+      "task_ref": {
+        "kind": "script",
+        "task_id": "압축-20261008_091640-17dc4bf418024246a8d2a01d5bb7672c"
+      },
+      "state": "succeeded",
+      "terminal": true
+    },
+    {
+      "task_ref": {
+        "kind": "script",
+        "task_id": "압축-20261008_091640-a6d49f1fe67e4c2ea3c4e6d9562b7f60"
+      },
+      "state": "succeeded",
+      "terminal": true
+    },
+    {
+      "task_ref": {
+        "kind": "script",
+        "task_id": "압축-20261008_091800-41426f32eeeb44269e9df77724bd603c"
+      },
+      "state": "succeeded",
+      "terminal": true
+    }
+  ],
+  "live_code_changed": false
+}

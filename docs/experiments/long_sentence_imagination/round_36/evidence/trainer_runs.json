@@ -1,0 +1,368 @@
+{
+  "check_base": {
+    "wall_s": 0.2709841728210449,
+    "ok": false,
+    "run_status": null,
+    "resume": null,
+    "usage": {
+      "steps": null,
+      "rows": null,
+      "elapsed_ms": null,
+      "limits": null
+    },
+    "issues": [
+      {
+        "code": "SYNTAX",
+        "kind": "compile",
+        "message": "이름이 필요합니다.",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "source_span": {
+          "source_hash": "bddb745d2ee8ff5ae58217407073a06af3b18ff8fb5df8c405f6353c109ee159",
+          "start": 1596,
+          "end": 1597,
+          "line": 25,
+          "column": 11
+        },
+        "rule": "SYNTAX",
+        "severity": "error",
+        "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+        "location": {
+          "source_hash": "bddb745d2ee8ff5ae58217407073a06af3b18ff8fb5df8c405f6353c109ee159",
+          "start": 1596,
+          "end": 1597,
+          "line": 25,
+          "column": 11,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 25,
+          "end_column": 12,
+          "offset_encoding": "unicode-codepoints"
+        }
+      }
+    ],
+    "actions": [],
+    "recording_count": 0
+  },
+  "check_base_v1": {
+    "wall_s": 1.197357177734375,
+    "ok": true,
+    "run_status": null,
+    "resume": null,
+    "usage": {
+      "steps": null,
+      "rows": null,
+      "elapsed_ms": null,
+      "limits": null
+    },
+    "issues": [],
+    "actions": [],
+    "recording_count": 0
+  },
+  "run_base_v1": {
+    "wall_s": 5.582998037338257,
+    "ok": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "4ad218bb19a249cfad930f19a9ca8bf1"
+    },
+    "usage": {
+      "steps": 2724,
+      "rows": 12,
+      "elapsed_ms": 5534,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      }
+    },
+    "issues": [],
+    "actions": [
+      {
+        "action": "self:read",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/source/catalog.json"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "python_libraries"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "압축"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "압축"
+        }
+      },
+      {
+        "action": "self:task",
+        "targets": {
+          "op": "wait"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "압축"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "압축"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "python_libraries"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "python_libraries"
+        }
+      },
+      {
+        "action": "self:task",
+        "targets": {
+          "op": "wait"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "압축"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "압축"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "python_libraries"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "python_libraries"
+        }
+      },
+      {
+        "action": "self:write",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/base/result.json"
+        }
+      },
+      {
+        "action": "self:write",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/base/report.md"
+        }
+      },
+      {
+        "action": "self:read",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/base/result.json"
+        }
+      },
+      {
+        "action": "self:read",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/base/report.md"
+        }
+      }
+    ],
+    "recording_count": 18
+  },
+  "check_presentation": {
+    "wall_s": 0.30174899101257324,
+    "ok": true,
+    "run_status": null,
+    "resume": null,
+    "usage": {
+      "steps": null,
+      "rows": null,
+      "elapsed_ms": null,
+      "limits": null
+    },
+    "issues": [],
+    "actions": [],
+    "recording_count": 0
+  },
+  "run_presentation": {
+    "wall_s": 0.44059085845947266,
+    "ok": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "d7a9fbb0e33a403ebf7b51d8924a3c29"
+    },
+    "usage": {
+      "steps": 262,
+      "rows": 6,
+      "elapsed_ms": 416,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      }
+    },
+    "issues": [],
+    "actions": [
+      {
+        "action": "self:read",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/base/result.json"
+        }
+      },
+      {
+        "action": "self:write",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/presentation/result.json"
+        }
+      },
+      {
+        "action": "self:write",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/presentation/report.md"
+        }
+      },
+      {
+        "action": "self:read",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/presentation/result.json"
+        }
+      },
+      {
+        "action": "self:read",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/presentation/report.md"
+        }
+      }
+    ],
+    "recording_count": 5
+  },
+  "check_recovery": {
+    "wall_s": 1.3344628810882568,
+    "ok": true,
+    "run_status": null,
+    "resume": null,
+    "usage": {
+      "steps": null,
+      "rows": null,
+      "elapsed_ms": null,
+      "limits": null
+    },
+    "issues": [],
+    "actions": [],
+    "recording_count": 0
+  },
+  "run_recovery": {
+    "wall_s": 4.446384906768799,
+    "ok": true,
+    "run_status": "completed",
+    "resume": {
+      "run_id": "c92ebdd97e1b44f9b4633bda0a6aa9eb"
+    },
+    "usage": {
+      "steps": 1264,
+      "rows": 12,
+      "elapsed_ms": 4403,
+      "limits": {
+        "steps": 1000000,
+        "rows": 100000
+      }
+    },
+    "issues": [],
+    "actions": [
+      {
+        "action": "self:read",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/presentation/result.json"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "python_libraries"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "압축"
+        }
+      },
+      {
+        "action": "self:task",
+        "targets": {
+          "op": "wait"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "압축"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "압축"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "python_libraries"
+        }
+      },
+      {
+        "action": "self:script",
+        "targets": {
+          "id": "python_libraries"
+        }
+      },
+      {
+        "action": "self:write",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/recovery/result.json"
+        }
+      },
+      {
+        "action": "self:write",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/recovery/report.md"
+        }
+      },
+      {
+        "action": "self:read",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/recovery/result.json"
+        }
+      },
+      {
+        "action": "self:read",
+        "targets": {
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/trainer/recovery/report.md"
+        }
+      }
+    ],
+    "recording_count": 12
+  }
+}

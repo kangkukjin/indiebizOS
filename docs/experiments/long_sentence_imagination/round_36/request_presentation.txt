@@ -1,0 +1,2 @@
+앞 교육 자료 인계의 설명만 바꿔줘. 제목은 “교육 자료 최종 인계”, 반 순서는 gamma,beta,alpha야. 자료와 ZIP 내용은 그대로야. 앞 결과와 검증 근거로 result.json/report.md만 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/ai/presentation에 새로 저장해. 기존 ZIP은 재압축·복사·덮어쓰기 하지 말고 이전 절대경로를 그대로 인계해. 이전 산출물도 보존해. 세 반의 상태·필요 파일 목록·누락·검증 수·ZIP 경로를 유지하고 두 새 파일을 재독해.
+자신의 직전 결과·중간 참조·코드는 재사용해도 된다. 다른 실행자의 trainer/harness/drafts·정답은 참조하지 마. 입력 source와 자신의 ai 출력 폴더, 공개 가이드·계약·현재 등록 기능만 이용해. 합성 훈련이며 외부 발송·공개하지 마.

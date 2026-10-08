@@ -1,0 +1,7 @@
+#!ibl edition=2
+return [
+  {query:"압축",result:[self:script]{op:"list",query:"압축"}},
+  {query:"zip",result:[self:script]{op:"list",query:"zip"}},
+  {query:"시험",result:[self:script]{op:"list",query:"시험"}},
+  {query:"id:압축",result:[self:script]{op:"list",id:"압축"}}
+]

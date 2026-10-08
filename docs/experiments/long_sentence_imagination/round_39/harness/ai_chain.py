@@ -36,8 +36,8 @@ def main():
     last = None
     while time.time() - started < timeout:
         last = get(status_url + ('&' if '?' in status_url else '?') + 'wait=20')
-        st = last.get('status') or last.get('state')
-        if st in ('succeeded', 'failed', 'cancelled'):
+        st = last.get('state') or last.get('status')   # state=succeeded/failed, status=completed 는 종료 신호가 아니었다(39회차 폴러가 안 끝난 원인)
+        if st in ('succeeded', 'failed', 'cancelled') or last.get('status') == 'completed':
             break
         time.sleep(5)   # wait= 가 즉시 반환될 때 빈 루프로 포트를 소진하지 않도록
     (OUT / 'runs' / f'ai_{label}_status.json').write_text(json.dumps(last, ensure_ascii=False, indent=1))

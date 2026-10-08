@@ -2,6 +2,25 @@
 import boot_paths  # noqa: F401
 from reusable_catalog import ranked
 from associative_recall import _used_capabilities
+import pytest
+
+
+@pytest.mark.parametrize('name', ['압축', '시험', 'zip', 'R', '表'])
+@pytest.mark.parametrize('prefix', ['', 'script:', 'fn:'])
+def test_exact_names_are_discoverable_regardless_of_length(name, prefix):
+    exact = {'id': prefix + name, 'description': 'opaque'}
+    related = {'id': 'related', 'description': name + ' helper'}
+    assert ranked(' ' + name.swapcase() + ' ', [related, exact], limit=1) == [exact]
+    assert ranked(prefix + name, [exact]) == [exact]
+
+
+def test_two_character_intent_matches_description_without_one_character_noise():
+    entry = {'id': 'opaque', 'description': '파일 압축과 시험 결과'}
+    assert ranked('압축', [entry]) == [entry]
+    assert ranked('시험', [entry]) == [entry]
+    assert ranked('압', [entry]) == []
+    assert ranked('없는기능', [entry]) == []
+    assert ranked('', [entry]) == []
 
 
 def test_task_without_component_name_finds_contract_and_unrelated_task_does_not():

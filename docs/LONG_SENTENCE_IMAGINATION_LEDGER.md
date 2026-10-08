@@ -4,7 +4,7 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
-## 36회차 — 교육 자료 전달 묶음·설명 변경·부분 복구 (2026-10-08, 훈련 완료·수리 없음)
+## 36회차 — 교육 자료 전달 묶음·설명 변경·부분 복구 (2026-10-08, 훈련 완료·후속 수리)
 
 정본 main `13b82148`에서 시작·실행. 09:11~09:22:58 KST 약12분, 상한60분.
 세 반 각36개 파일을 기존 압축 부품으로 준비: 처음은 alpha/beta ready·gamma 누락1개 blocked,
@@ -18,7 +18,11 @@ AI도 등록 압축을 발견해 긴 IBL에 연결했고 자기 결과/검증 �
 
 **L36-1** 두 글자 정확한 Script명도 query에서0건(score>=3), 빈 검색을 미등록으로 안내.
 **L36-2** 능력 주장 검토가 실제 join 검사 거절을 근거 예산에서 누락해 unsupported로 판정,
-calls·산출물 재조회2회가 추가됨(16회차 근거 전달 문제군의 별도 소비자). 둘 다 미수리.
+calls·산출물 재조회2회가 추가됨(16회차 근거 전달 문제군의 별도 소비자).
+훈련 뒤 명시 요청으로 **둘 다 수리**: 정확명 우선·두 글자 검색과 빈 검색 안내, 관련 거절/다음 시도
+우선 보존. 원본 ep4437 실분류는 e2/e3를 근거로 limited(추가 조회/재개 대상 아님), 대조3건도 정상.
+원래 전체 IBL 기본·설명·복구3개 재실행 전건 통과. 관련 non-system3211·system73통과,
+어휘/층/폰 빌드 확인. 자세한 범위·한계는 보고서 「후속 수리」와 repair_verification.json.
 모든 AI 작업3건·백그라운드 압축3건 succeeded 회수. 장기기억 증류·장시간 suspend·재기동 재개·
 일반 시간/토큰 절감률은 미검증. 최초 초안·후속 프로그램·사전 조건·실제 증거는
 [36회차 보고서](experiments/long_sentence_imagination/round_36/report.md).
@@ -172,8 +176,8 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
-| L36-1 | 기능 발견 결함 — 두 글자 정확한 Script명도 query 점수 기준으로 탈락, 검색0건을 원장 미등록으로 안내 | query 압축/시험=0, query zip/id 압축=1; reusable_catalog.ranked 길이2 허용·점수3 하한 | 미수리 — 정확명·점수와 검색 없음/등록 없음 안내 구분 | [36회차](experiments/long_sentence_imagination/round_36/report.md), discovery_probe.ibl·discovery_gap.json |
-| L36-2 | 검토 근거 전달 결함 — 실제 검사 거절이 예산에서 빠져 참인 수정 이력이 unsupported | ep4437 guard_packet의 omitted_calls4, 실제 join 거절 뒤 calls·산출물 재조회2회 | 미수리 — 주장 관련 오류/수정 근거 보존 또는 필요한 원장 조회. L16-2 인접, 소비자는 capability_guard | [36회차](experiments/long_sentence_imagination/round_36/report.md), 실제 패킷·호출 trace |
+| L36-1 | 기능 발견 결함 — 두 글자 정확한 Script명도 query 점수 기준으로 탈락, 검색0건을 원장 미등록으로 안내 | query 압축/시험=0, query zip/id 압축=1; reusable_catalog.ranked 길이2 허용·점수3 하한 | 수리 — 정확명 우선·두 글자 점수 허용·검색 없음/등록 없음 안내 구분. 라이브 압축/시험 검색 및 원래 전체 프로그램3개 통과 | [36회차](experiments/long_sentence_imagination/round_36/report.md), discovery_probe.ibl·discovery_gap.json |
+| L36-2 | 검토 근거 전달 결함 — 실제 검사 거절이 예산에서 빠져 참인 수정 이력이 unsupported | ep4437 guard_packet의 omitted_calls4, 실제 join 거절 뒤 calls·산출물 재조회2회 | 수리 — 관련 거절과 같은 도구의 다음 시도 우선 보존·생략≠미실행 명시. 원본 실분류 limited(e2/e3), 대조3건 통과. 전체 AI 턴 비용 비교 미실시 | [36회차](experiments/long_sentence_imagination/round_36/report.md), 실제 패킷·호출 trace |
 | L34-1 | 실행 대상/진단 결함 — 명시 project_id 해소 실패가 다른 경로로 폴백 | HTTP 검사 “문맥 없음”, fallback 경로 제공 회귀에서 실제 실행 진입 | 수리됨 — HTTP PROJECT_NOT_FOUND·ID와 실행 전 거절, 공통 라우팅 명시 ID 실패 시 폴백 없음 | 34회차 커밋·원래 전체/기본/빈 점검/새 경계 변형 전건 |
 | L34-2 | 교재 모호성·진단 결함 — groupby agg 콜백 시 VALUE_PROTOCOL Closure | `round_34/evidence/probe_group_request.json`, 인자 경로 없음·catch 불가 | 수리됨 — JSON 경계 ARGUMENT_CONTRACT·details.path, 교재에서 집계 명세와 순수 함수 구분 | 34회차 커밋·Closure/Builtin 및 네이티브 콜백 회귀 |
 | L34-3 | 훈련자 낭비/검증 누락 — 전체 표40회 필터·Markdown 재독 없음 | v0 filter 273240단계·JSON만 assert | 프로그램 보완 — 그룹 크기·정렬·슬라이스, 두 파일 재독. 시스템 기능 추가 아님 | 34회차 v1·세 입력 전건 및 단계49.3% 감소 |

@@ -1,0 +1,219 @@
+{
+  "date": "2026-10-08",
+  "live": {
+    "discovery": {
+      "압축": 2,
+      "zip": 1,
+      "시험": 1,
+      "id:압축": 1
+    },
+    "empty_search": {
+      "success": true,
+      "count": 0,
+      "items": [],
+      "message": "검색 조건에 맞는 스크립트가 없습니다 — query/id를 바꾸거나 조건 없이 목록을 조회하세요."
+    },
+    "stages": [
+      {
+        "stage": "base",
+        "run_id": "74bc74610be842d1ab5ead945067540d",
+        "run_status": "completed",
+        "verification": {
+          "who": "trainer",
+          "stage": "base",
+          "checks": {
+            "title": true,
+            "order": true,
+            "alpha_contract": true,
+            "alpha_report": true,
+            "alpha_members": true,
+            "alpha_bytes": true,
+            "alpha_crc": true,
+            "beta_contract": true,
+            "beta_report": true,
+            "beta_members": true,
+            "beta_bytes": true,
+            "beta_crc": true,
+            "gamma_contract": true,
+            "gamma_report": true,
+            "gamma_no_archive": true,
+            "original_inputs_unchanged": true,
+            "source_members": true,
+            "zip_count": true
+          },
+          "archives": {
+            "alpha": {
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/repair/live/trainer/base/alpha.zip",
+              "sha256": "e3e12ccb02acd190bd1c18a0fbd137288003296c065a8cd9892af043e33b75d0",
+              "mtime_ns": 1791420549489278273
+            },
+            "beta": {
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/repair/live/trainer/base/beta.zip",
+              "sha256": "8a5bb8e9b91e91b383ac73b806daec2a8bac7dad93c5456451719678389d107f",
+              "mtime_ns": 1791420549508218880
+            }
+          },
+          "passed": true
+        },
+        "wall_s": 5.827246904373169,
+        "task_refs": [
+          {
+            "kind": "script",
+            "task_id": "압축-20261008_094909-d56f8cf8459344cea611705211ce5718"
+          },
+          {
+            "kind": "script",
+            "task_id": "압축-20261008_094909-365f123a8fe34312b7e61a4997c93f86"
+          }
+        ],
+        "tasks_observed_succeeded": "원래 프로그램의 self:task wait 뒤 state==succeeded assert 통과"
+      },
+      {
+        "stage": "presentation",
+        "run_id": "23da1c0b0e164ad381525bb276cc950b",
+        "run_status": "completed",
+        "verification": {
+          "who": "trainer",
+          "stage": "presentation",
+          "checks": {
+            "title": true,
+            "order": true,
+            "alpha_contract": true,
+            "alpha_report": true,
+            "alpha_members": true,
+            "alpha_bytes": true,
+            "alpha_crc": true,
+            "beta_contract": true,
+            "beta_report": true,
+            "beta_members": true,
+            "beta_bytes": true,
+            "beta_crc": true,
+            "gamma_contract": true,
+            "gamma_report": true,
+            "gamma_no_archive": true,
+            "prior_archives_unchanged": true,
+            "original_inputs_unchanged": true,
+            "source_members": true,
+            "zip_count": true
+          },
+          "archives": {
+            "alpha": {
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/repair/live/trainer/base/alpha.zip",
+              "sha256": "e3e12ccb02acd190bd1c18a0fbd137288003296c065a8cd9892af043e33b75d0",
+              "mtime_ns": 1791420549489278273
+            },
+            "beta": {
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/repair/live/trainer/base/beta.zip",
+              "sha256": "8a5bb8e9b91e91b383ac73b806daec2a8bac7dad93c5456451719678389d107f",
+              "mtime_ns": 1791420549508218880
+            }
+          },
+          "passed": true
+        },
+        "wall_s": 0.4132101535797119,
+        "task_refs": [
+          {
+            "kind": "script",
+            "task_id": "압축-20261008_094909-365f123a8fe34312b7e61a4997c93f86"
+          },
+          {
+            "kind": "script",
+            "task_id": "압축-20261008_094909-d56f8cf8459344cea611705211ce5718"
+          }
+        ],
+        "tasks_observed_succeeded": "원래 프로그램의 self:task wait 뒤 state==succeeded assert 통과"
+      },
+      {
+        "stage": "recovery",
+        "run_id": "c4337f11f67f4a3190e554dac1ebcd88",
+        "run_status": "completed",
+        "verification": {
+          "who": "trainer",
+          "stage": "recovery",
+          "checks": {
+            "title": true,
+            "order": true,
+            "alpha_contract": true,
+            "alpha_report": true,
+            "alpha_members": true,
+            "alpha_bytes": true,
+            "alpha_crc": true,
+            "beta_contract": true,
+            "beta_report": true,
+            "beta_members": true,
+            "beta_bytes": true,
+            "beta_crc": true,
+            "gamma_contract": true,
+            "gamma_report": true,
+            "gamma_members": true,
+            "gamma_bytes": true,
+            "gamma_crc": true,
+            "prior_archives_unchanged": true,
+            "original_inputs_unchanged": true,
+            "source_members": true,
+            "zip_count": true
+          },
+          "archives": {
+            "alpha": {
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/repair/live/trainer/base/alpha.zip",
+              "sha256": "e3e12ccb02acd190bd1c18a0fbd137288003296c065a8cd9892af043e33b75d0",
+              "mtime_ns": 1791420549489278273
+            },
+            "beta": {
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/repair/live/trainer/base/beta.zip",
+              "sha256": "8a5bb8e9b91e91b383ac73b806daec2a8bac7dad93c5456451719678389d107f",
+              "mtime_ns": 1791420549508218880
+            },
+            "gamma": {
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-08_36회차/repair/live/trainer/recovery/gamma.zip",
+              "sha256": "82479de6105d9c979a0e81441c292fd6903508e1c6af1e19426a4ab9d24f03c0",
+              "mtime_ns": 1791420557015278042
+            }
+          },
+          "passed": true
+        },
+        "wall_s": 4.683760166168213,
+        "task_refs": [
+          {
+            "kind": "script",
+            "task_id": "압축-20261008_094916-54ca5c6221fc45efb585368ebcd6b597"
+          },
+          {
+            "kind": "script",
+            "task_id": "압축-20261008_094909-365f123a8fe34312b7e61a4997c93f86"
+          },
+          {
+            "kind": "script",
+            "task_id": "압축-20261008_094909-d56f8cf8459344cea611705211ce5718"
+          }
+        ],
+        "tasks_observed_succeeded": "원래 프로그램의 self:task wait 뒤 state==succeeded assert 통과"
+      }
+    ]
+  },
+  "tests": {
+    "related": {
+      "tests": "3211",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "108.608"
+    },
+    "system": {
+      "tests": "73",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "98.279"
+    }
+  },
+  "gates": {
+    "ibl_build_check": "passed",
+    "backend_layers": "passed",
+    "android_bundle": "regenerated, no content diff"
+  },
+  "limits": [
+    "backend 전체 미실행; 선택기 전이 소비자 206/594파일과 관련 system만 실행",
+    "실행 AI 전체 턴 전후 비교 미실행; 전체 시간/토큰 절감률 미측정"
+  ]
+}

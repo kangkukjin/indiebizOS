@@ -307,6 +307,8 @@ stdout은 `{protocol:"ibl-script/2", ok:true, value:{n:6}}` 또는
 같은 `params`·`required`·`result`·`effects` 계약을 붙인다. `시험`이 이 경로를 사용한다.
 `[self:script]{op:"list",query:"검증"}` 또는 `id`로 후보를 좁혀 `callable_contract`와
 `execution`을 읽는다. 명시 값 봉투의 업무 필드는 실행 성공/실패로 재해석하지 않는다.
+query는 이름·설명을 검색하며 두 글자 검색어도 반환한다. 정확한 이름은 길이와 무관하게
+우선한다. 검색 결과가 없다는 안내는 빈 등록 원장과 구별되므로, 조건을 바꾸거나 전체 목록을 확인한다.
 JSON 계약은 기존 `success:false`/`error`와 `operation_outcome` 의미를 유지한다.
 등록 입력의 별칭·기본값·조건부 제약은 공통 계약 해소기로 확인한다.
 

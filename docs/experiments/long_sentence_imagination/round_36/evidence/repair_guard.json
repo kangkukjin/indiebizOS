@@ -1,0 +1,119 @@
+{
+  "episode": 4437,
+  "calls": 8,
+  "before_ids": [
+    "e7",
+    "e6",
+    "e5",
+    "e4"
+  ],
+  "after_ids": [
+    "e2",
+    "e3",
+    "e5",
+    "e6"
+  ],
+  "after_input_bytes": 11971,
+  "limit_bytes": 24000,
+  "judgments": [
+    {
+      "case": "original",
+      "claims": [
+        {
+          "candidate_id": "c0",
+          "target": "join 인자 순서 오류로 인한 실행 전 검사 거절",
+          "status": "limited",
+          "evidence_ids": [
+            "e2",
+            "e3"
+          ],
+          "lookup_terms": [
+            "join 인자 순서",
+            "type check rejection",
+            "IBL type error"
+          ],
+          "quote": "작성 중 문자열을 잇는 함수(`join`)의 인자 순서를 잘못 써서 실행 전 검사에서 거절됐습니다."
+        }
+      ],
+      "expected": [
+        "limited"
+      ],
+      "passed": true,
+      "input_bytes": 11971,
+      "note": "최초 실분류 결과를 그대로 보존. 이 관측은 빈 claims가 아니라 e2/e3에 근거한 limited이며 lookup/resume 대상이 아니다."
+    },
+    {
+      "case": "observed_limit",
+      "claims": [
+        {
+          "candidate_id": "c0",
+          "target": "/private/image 파일 읽기",
+          "status": "limited",
+          "evidence_ids": [
+            "e0"
+          ],
+          "lookup_terms": [
+            "file read permission denied",
+            "파일 읽기 권한"
+          ],
+          "quote": "/private/image 파일은 현재 읽기 권한이 없어 열 수 없습니다."
+        }
+      ],
+      "elapsed_s": 1.9175259578041732,
+      "expected": [
+        "limited"
+      ],
+      "passed": true,
+      "input_bytes": 2951
+    },
+    {
+      "case": "unfounded_denial",
+      "claims": [
+        {
+          "candidate_id": "c0",
+          "target": "이미지 열람",
+          "status": "unsupported",
+          "evidence_ids": [],
+          "lookup_terms": [
+            "이미지 열람",
+            "image viewing",
+            "이미지 인식",
+            "image recognition"
+          ],
+          "quote": "저는 눈이 없어서 이미지를 볼 수 없습니다."
+        }
+      ],
+      "elapsed_s": 0.5953099592588842,
+      "expected": [
+        "unsupported"
+      ],
+      "passed": true,
+      "input_bytes": 2753
+    },
+    {
+      "case": "past_and_current",
+      "claims": [
+        {
+          "candidate_id": "c0",
+          "target": "이미지 열람 능력",
+          "status": "unsupported",
+          "evidence_ids": [],
+          "lookup_terms": [
+            "이미지 보기",
+            "image viewing",
+            "vision capability"
+          ],
+          "quote": "하지만 저는 눈이 없어서 이미지를 볼 수 없습니다."
+        }
+      ],
+      "elapsed_s": 0.7391485408879817,
+      "expected": [
+        "unsupported"
+      ],
+      "passed": true,
+      "input_bytes": 9338
+    }
+  ],
+  "model": "DeepSeek/deepseek-flash (configured classify)",
+  "scope": "기존 원본 기록과 합성 대조 3건의 실분류. 실행 AI의 전체 턴 재실행이나 일반 정확도·시간·토큰 개선률 측정은 아님."
+}

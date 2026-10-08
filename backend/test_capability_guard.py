@@ -169,6 +169,57 @@ def test_long_response_tail_is_examined_with_bounded_input():
     assert len((json.dumps(data, ensure_ascii=False) + cg.POLICY).encode()) <= cg.DEFAULTS["input_bytes"]
 
 
+@pytest.mark.parametrize('serialized', [False, True])
+@pytest.mark.parametrize('term', ['join', 'resize', '압축'])
+def test_old_rejection_and_following_attempt_survive_large_recent_results(serialized, term):
+    result = {'ok': False, 'executed': False, 'status': 'invalid',
+              'issues': [{'message': term + ' argument type mismatch'}]}
+    calls = [
+        {'name': 'execute_ibl', 'input': {'code': term + '(wrong)'},
+         'result': json.dumps(result) if serialized else result, 'is_error': False},
+        {'name': 'execute_ibl', 'input': {'code': term + '(correct)'},
+         'result': {'success': True, 'value': 'corrected'}}]
+    calls += [{'name': 'read', 'input': {'path': '/unrelated'},
+               'result': {'value': '큰 결과' * 4000}} for _ in range(12)]
+    response = f'{term} 도구의 인자가 잘못되어 실행할 수 없습니다.'
+    data = cg.packet('작업', response, calls, cg.DEFAULTS)
+    evidence = {row['id']: row for row in data['evidence']}
+    assert evidence['e0']['outcome']['executed'] is False
+    assert term + ' argument type mismatch' in evidence['e0']['result']
+    assert evidence['e1']['outcome']['success'] is True
+    assert data['omitted_calls'] > 0
+    assert len((json.dumps(data, ensure_ascii=False) + cg.POLICY).encode()) <= cg.DEFAULTS['input_bytes']
+
+
+def test_related_observed_failure_beats_unrelated_recent_errors():
+    calls = [{'name': 'read', 'input': {'path': '/private/image'},
+              'result': 'Permission denied', 'is_error': True}]
+    calls += [{'name': 'other', 'input': {}, 'result': 'unrelated ' * 1000,
+               'is_error': True} for _ in range(12)]
+    data = cg.packet('열기', '/private/image 파일은 읽기 권한이 없어 볼 수 없습니다.', calls, cg.DEFAULTS)
+    assert data['evidence'][0]['id'] == 'e0'
+    assert data['evidence'][0]['result'] == 'Permission denied'
+    assert data['evidence'][0]['result_excerpt'] is False
+    assert calls[0]['result'] == 'Permission denied'
+
+
+def test_relevant_observed_limit_does_not_trigger_extra_lookup(monkeypatch):
+    calls = [{'name': 'read', 'input': {'path': '/private/image'},
+              'result': 'Permission denied', 'is_error': True}]
+    calls += [{'name': 'other', 'result': 'recent ' * 1000} for _ in range(12)]
+    response = '/private/image 파일은 읽기 권한이 없어 볼 수 없습니다.'
+
+    def judge(prompt, *args):
+        evidence = json.loads(prompt)['evidence']
+        assert any(row['id'] == 'e0' and row['result'] == 'Permission denied' for row in evidence)
+        return json.dumps({'claims': [claim(response, 'limited', ['e0'])]})
+
+    monkeypatch.setattr(cg, 'judge_once', judge)
+    guard = cg.CapabilityGuard(limits=dict(cg.DEFAULTS))
+    assert drain(guard.adopt(NS(), '열기', response, calls))[1] == response
+    assert guard.lookups == guard.resumes == 0
+
+
 @pytest.mark.parametrize("rows", [[claim("원문에 없는 문장")], [claim(EYES, "limited", ["fake"])],
                                  [claim(EYES, "limited")]])
 def test_fabricated_span_or_receipt_is_not_a_valid_verdict(rows):

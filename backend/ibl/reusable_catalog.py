@@ -9,16 +9,22 @@ from pathlib import Path
 
 
 def ranked(query, entries, limit=3):
+    query = (query or '').strip().casefold()
     words = {w.casefold() for w in re.findall(r'[\w]+', query or '') if len(w) >= 2}
-    if not words:
+    if not query:
         return []
     scored = []
     for row in entries:
-        text = (str(row.get('id', '')) + ' ' + str(row.get('description', ''))).casefold()
+        sid = str(row.get('id', '')).casefold()
+        exact = query in {sid, sid.partition(':')[2]}
+        text = sid + ' ' + str(row.get('description', '')).casefold()
         score = sum(len(w) for w in words if w in text)
-        if score >= 3:
-            scored.append((score, row))
-    return [row for _, row in sorted(scored, key=lambda pair: (-pair[0], str(pair[1]['id'])))[:limit]]
+        # 허용한 두 글자 검색어를 점수 하한에서 다시 버리지 않는다.
+        # 정확명은 길이와 무관하게 우선하며, 한 글자의 광범위 부분 검색은 피한다.
+        if exact or score >= 2:
+            scored.append((exact, score, row))
+    ordered = sorted(scored, key=lambda item: (-item[0], -item[1], str(item[2]['id'])))
+    return [row for _, _, row in ordered[:limit]]
 
 
 def candidates(query, limit=3):

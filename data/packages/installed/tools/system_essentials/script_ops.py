@@ -415,8 +415,12 @@ def op_list(tool_input):
     if tool_input.get('query'):
         from reusable_catalog import ranked
         items = ranked(str(tool_input['query']), items, 10)
-    return {"success": True, "count": len(items), "items": items,
-            **({} if items else {"message": "등록된 스크립트가 없습니다 — op:register 로 등록 (path 필수)."})}
+    result = {"success": True, "count": len(items), "items": items}
+    if not items:
+        result["message"] = (
+            "검색 조건에 맞는 스크립트가 없습니다 — query/id를 바꾸거나 조건 없이 목록을 조회하세요."
+            if registry else "등록된 스크립트가 없습니다 — op:register 로 등록 (path 필수).")
+    return result
 
 
 def op_register(tool_input):

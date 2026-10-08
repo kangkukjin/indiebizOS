@@ -38,6 +38,8 @@ unknown(확인되지 않음을 정직하게 표명), meta 네 가지다.
 도구 기록 하나가 있다는 이유만으로 limited라 하지 않는다. 대상·범위·결과가 주장을 뒷받침해야 한다.
 실행 실패 한 번이나 사전 검색 결과 없음은 일반적인 능력 부재를 증명하지 않는다.
 실행자가 조회/연결/열람을 하지 않았으면 '실패했다'도 지어낸 근거다.
+evidence는 관련 호출을 우선한 발췌다. omitted_calls가 있거나 result_excerpt가 true이면
+보이지 않는 기록을 미실행·근거 부재의 증거로 삼지 마라. 생략 때문에 판정할 수 없으면 unknown이다.
 일반적인 사실·진단·예측의 불확실성은 자기 도구/수단 부족이 아니다. 해당 주장이 없으면 claims는 빈 목록이다.
 과거 답변의 정정·시도의 실패·검색 결과 없음·잔여석 등 외부 사실의 미확인은 능력 부정이 아니다.
 이 관측이 참인지 심사하거나 기능 목록으로 검증하지 마라. '확인할 수 없다'도 외부 사실의 불확실성만
@@ -90,6 +92,54 @@ def excerpt(text, maximum):
     return str(text).encode("utf-8")[:max(0, maximum)].decode("utf-8", errors="ignore")
 
 
+def call_evidence(calls, context, allowance):
+    """관련 실패와 같은 도구의 다음 시도를 먼저 담고, 남은 예산에 관련/최근 호출을 담는다.
+
+    순서는 선택용일 뿐 성공/복구 판정이 아니다. 원래 호출 ID와 관측된 결과를 유지한다.
+    추가 모델·도구 조회 없이 기존 원장만 사용한다.
+    """
+    terms = {word.casefold() for word in re.findall(r"\w{2,}", context)}
+    records, scores, failed = [], [], []
+    for i, row in enumerate(calls):
+        args = json.dumps(row.get("input", {}), ensure_ascii=False, default=str)
+        result = row.get("result", "")
+        if isinstance(result, str):
+            try:
+                result = json.loads(result)
+            except (ValueError, TypeError):
+                pass
+        raw = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False, default=str)
+        text = (str(row.get("name", "")) + " " + args + " " + raw).casefold()
+        scores.append(sum(len(term) for term in terms if term in text))
+        outcome = {k: result[k] for k in ("success", "ok", "executed", "status", "mode")
+                   if isinstance(result, dict) and k in result and
+                   (result[k] is None or type(result[k]) in (bool, int, float) or
+                    isinstance(result[k], str) and len(result[k]) <= 80)}
+        failed.append(bool(row.get("is_error")) or outcome.get("success") is False
+                      or outcome.get("ok") is False)
+        records.append({"id": f"e{i}", "name": row.get("name"),
+                        "input": excerpt(args, 450), "result": excerpt(raw, 1500),
+                        "outcome": outcome, "is_error": bool(row.get("is_error")),
+                        "result_excerpt": len(raw.encode("utf-8")) > 1500})
+    ranked = sorted(range(len(calls)), key=lambda i: (scores[i], i), reverse=True)
+    priority = []
+    for i in ranked:
+        if scores[i] and failed[i]:
+            priority.append(i)
+            following = next((j for j in range(i + 1, len(calls))
+                              if calls[j].get("name") == calls[i].get("name")), None)
+            if following is not None:
+                priority.append(following)
+    chosen = []
+    for i in dict.fromkeys([*priority, *ranked]):
+        record = records[i]
+        size = len(json.dumps(record, ensure_ascii=False).encode("utf-8")) + 2
+        if size <= allowance:
+            chosen.append(record)
+            allowance -= size
+    return sorted(chosen, key=lambda row: int(row["id"][1:]))
+
+
 def packet(message, response, calls, limits):
     # 긴 응답의 끝에 있는 부정도 본다. 앞부분만 잘라 후보를 지우지 않는다.
     budget = max(1000, limits["input_bytes"] - len(POLICY.encode("utf-8")) - 1800)
@@ -103,20 +153,7 @@ def packet(message, response, calls, limits):
             windows.append(value)
     view = response if len(response.encode("utf-8")) <= budget // 3 else "\n[…]\n".join(windows)
     view = excerpt(view, budget // 3)
-    evidence = []
-    # 최근 원장부터, 각 호출의 입력·결과를 같은 ID로 묶는다. 부재와 생략을 구분한다.
-    allowance = budget // 3
-    for i in range(len(calls) - 1, -1, -1):
-        row = calls[i]
-        record = {"id": f"e{i}", "name": row.get("name"),
-                  "input": excerpt(json.dumps(row.get("input", {}), ensure_ascii=False, default=str), 450),
-                  "result": excerpt(json.dumps(row.get("result", ""), ensure_ascii=False, default=str), 1500),
-                  "is_error": bool(row.get("is_error")), "result_excerpt": True}
-        size = len(json.dumps(record, ensure_ascii=False).encode("utf-8"))
-        if size > allowance:
-            continue
-        evidence.append(record)
-        allowance -= size
+    evidence = call_evidence(calls, "\n".join(windows), budget // 3)
     candidates = []
     candidate_budget = budget // 6
     sentences = [part.strip() for line in view.splitlines()

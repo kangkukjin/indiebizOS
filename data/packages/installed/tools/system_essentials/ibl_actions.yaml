@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-07", impl: "67dc4f1b8863af45"}  # 조합 계약 재감사: 문서의 기기 경로 격리 불변. member_script는 허브 파일을 읽지 않고 기기 목록/args 교환만 사용, registered-json 값 검증도 기기 stdout만 소비. owner 계약 검색은 회원에서 비활성.
+        path_audited: {at: "2026-10-08", impl: "5b4d2fa2df644e28"}  # 검색 안내 수리 재감사: owner 목록의 query/id 검색·빈 결과 안내만 변경. member_script의 기기 교환, read/fill/write 경로 격리와 owner 전용 계약 회상은 불변.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -150,7 +150,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-07", impl: "67dc4f1b8863af45"}  # 조합 계약 재감사: 문서의 기기 경로 격리 불변. member_script는 허브 파일을 읽지 않고 기기 목록/args 교환만 사용, registered-json 값 검증도 기기 stdout만 소비. owner 계약 검색은 회원에서 비활성.
+        path_audited: {at: "2026-10-08", impl: "5b4d2fa2df644e28"}  # 검색 안내 수리 재감사: owner 목록의 query/id 검색·빈 결과 안내만 변경. member_script의 기기 교환, read/fill/write 경로 격리와 owner 전용 계약 회상은 불변.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -228,7 +228,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-07", impl: "67dc4f1b8863af45"}  # 조합 계약 재감사: 문서의 기기 경로 격리 불변. member_script는 허브 파일을 읽지 않고 기기 목록/args 교환만 사용, registered-json 값 검증도 기기 stdout만 소비. owner 계약 검색은 회원에서 비활성.
+        path_audited: {at: "2026-10-08", impl: "5b4d2fa2df644e28"}  # 검색 안내 수리 재감사: owner 목록의 query/id 검색·빈 결과 안내만 변경. member_script의 기기 교환, read/fill/write 경로 격리와 owner 전용 계약 회상은 불변.
         target_key: path
       list:
         callable_contract:
@@ -916,7 +916,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-07", impl: "67dc4f1b8863af45"}  # 조합 계약 재감사: 문서의 기기 경로 격리 불변. member_script는 허브 파일을 읽지 않고 기기 목록/args 교환만 사용, registered-json 값 검증도 기기 stdout만 소비. owner 계약 검색은 회원에서 비활성.
+        path_audited: {at: "2026-10-08", impl: "5b4d2fa2df644e28"}  # 검색 안내 수리 재감사: owner 목록의 query/id 검색·빈 결과 안내만 변경. member_script의 기기 교환, read/fill/write 경로 격리와 owner 전용 계약 회상은 불변.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

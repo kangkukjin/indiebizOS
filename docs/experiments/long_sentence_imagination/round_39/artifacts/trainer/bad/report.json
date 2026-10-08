@@ -1,0 +1,1 @@
+{"applied": false, "files_total": 36, "files_changed": [], "written": [], "replacements": 0, "headings_changed": [], "anchors_remapped": 0, "broken_links": [], "failed": [{"file": "guide_07.md", "reason": "'utf-8' codec can't decode byte 0xff in position 2: invalid start byte"}]}

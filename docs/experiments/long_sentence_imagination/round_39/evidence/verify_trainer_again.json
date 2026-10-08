@@ -1,0 +1,30 @@
+{
+ "checks": [
+  [
+   "docs == expected (36)",
+   true,
+   "[]"
+  ],
+  [
+   "report.json exists",
+   true,
+   "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/trainer/out_again"
+  ],
+  [
+   "summary.md exists",
+   true,
+   ""
+  ],
+  [
+   "files_changed",
+   true,
+   "(0, 0)"
+  ],
+  [
+   "broken_links count 5 (new anchors)",
+   true,
+   "5"
+  ]
+ ],
+ "ok": true
+}

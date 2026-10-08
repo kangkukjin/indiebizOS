@@ -1,0 +1,167 @@
+#!ibl edition=2
+# 39회차 v2 (비용 완화: 용어·링크가 없는 줄은 변환·링크 추출·출현 계수를 건너뜀) ← v1 (수정 1: 같은 파일의 중복 제목 → from_entries 중복 키 실패 → unique 로 정리) — 문서 묶음 용어 개정. inputs: docs(폴더), out(보고 폴더), terms([{old,new}]), apply(Bool)
+
+[def:치환]($text,$terms) {
+  return reduce($terms,$text,($acc,$t)=>replace($acc,$t.old,$t.new))
+}
+[def:출현수]($text,$terms) {
+  return reduce($terms,0,($acc,$t)=>$acc + len(split($text,$t.old)) - 1)
+}
+[def:슬러그]($text) {
+  $t = reduce([".",",",":","(",")","!","?","`"],lower(strip($text)),($acc,$ch)=>replace($acc,$ch,""))
+  return replace(strip($t)," ","-")
+}
+[def:제목글]($line) {
+  return strip(join(" ",split($line," ")[1:]))
+}
+[def:대상재매핑]($target,$amap,$cur) {
+  [if:not contains($target,"#")] { return $target }
+  $p = split($target,"#",1)
+  $f = $p[0] == "" ? $cur : $p[0]
+  $anc = $p[1]
+  $key = f"${f}#${anc}"
+  [if:has($amap,$key)] { $new = get($amap,$key); $head = $p[0]; return f"${head}#${new}" }
+  return $target
+}
+[def:링크조각]($part,$terms,$amap,$cur) {
+  [if:not contains($part,")")] { return [fn:치환]{text:$part,terms:$terms} }
+  $sp = split($part,")",1)
+  $target = [fn:대상재매핑]{target:$sp[0],amap:$amap,cur:$cur}
+  $rest = [fn:치환]{text:$sp[1],terms:$terms}
+  return f"${target})${rest}"
+}
+[def:산문변환]($seg,$terms,$amap,$cur) {
+  $parts = split($seg,"](")
+  $head = [fn:치환]{text:$parts[0],terms:$terms}
+  $rest = map($parts[1:],($part)=>[fn:링크조각]{part:$part,terms:$terms,amap:$amap,cur:$cur})
+  return join("](",[$head] + $rest)
+}
+[def:줄변환]($line,$terms,$amap,$cur) {
+  $segs = enumerate(split($line,"`"))
+  $out = map($segs,($p)=>$p[0] % 2 == 0 ? [fn:산문변환]{seg:$p[1],terms:$terms,amap:$amap,cur:$cur} : $p[1])
+  return join("`",$out)
+}
+[def:조각산문]($seg) {
+  $parts = split($seg,"](")
+  return join("\n",[$parts[0]] + map($parts[1:],($x)=>contains($x,")") ? split($x,")",1)[1] : $x))
+}
+[def:줄산문]($line) {
+  $prose = filter(enumerate(split($line,"`")),($p)=>$p[0] % 2 == 0)
+  return join("\n",map($prose,($p)=>[fn:조각산문]{seg:$p[1]}))
+}
+[def:줄링크]($line) {
+  $prose = filter(enumerate(split($line,"`")),($p)=>$p[0] % 2 == 0)
+  return reduce($prose,[],($acc,$p)=>$acc + map(filter(split($p[1],"](")[1:],($x)=>contains($x,")")),($x)=>split($x,")",1)[0]))
+}
+[def:줄표시]($lines) {
+  $st = reduce($lines,{fence:false,rows:[]},($acc,$line)=>
+    $line[:3] == "```" ? {fence:not $acc.fence,rows:$acc.rows + [{text:$line,code:true}]}
+    : {fence:$acc.fence,rows:$acc.rows + [{text:$line,code:$acc.fence}]})
+  return $st.rows
+}
+[def:링크정상]($target,$cur,$names,$known) {
+  $p = split($target,"#",1)
+  $f = $p[0] == "" ? $cur : $p[0]
+  [if:not ($f in $names)] { return false }
+  [if:len($p) == 1] { return true }
+  $anc = $p[1]
+  $key = f"${f}#${anc}"
+  return $key in $known
+}
+[def:재매핑대상]($target,$cur,$amap) {
+  [if:not contains($target,"#")] { return false }
+  $p = split($target,"#",1)
+  $f = $p[0] == "" ? $cur : $p[0]
+  $anc = $p[1]
+  $key = f"${f}#${anc}"
+  return has($amap,$key)
+}
+[def:볼만한]($line,$terms) {
+  return contains($line,"](") or any(map($terms,($t)=>contains($line,$t.old)))
+}
+[def:용어있음]($line,$terms) {
+  return any(map($terms,($t)=>contains($line,$t.old)))
+}
+[def:적용]($대상,$apply) {
+  [if:not $apply] { return [] }
+  return $대상 >> [table:each] { [self:write]{path:$it.path,content:$it.new}; return $it.name }
+}
+[def:재독확인]($대상,$apply) {
+  [if:not $apply] { return [] }
+  return $대상 >> [table:each] { $d = [self:read]{path:$it.path,format:"text"}; return {name:$it.name,ok:$d.text == $it.new} }
+}
+
+# ---- 최상위 조합 ----
+$files = sorted([self:list]{path:$docs,pattern:"*.md"},"name")
+$names = map($files,($f)=>$f.name)
+$읽기 = $files >> [table:each]{on_error:"collect"} {
+  $d = [self:read]{path:$it.path,format:"text"}
+  return {name:$it.name,path:$it.path,text:$d.text}
+}
+$실패 = filter(enumerate($읽기),($p)=>not is_ok($p[1]))
+[if:len($실패) > 0] {
+  $failed = map($실패,($p)=>{file:$files[$p[0]].name,reason:error_of($p[1]).message})
+  $report = {applied:false,files_total:len($files),files_changed:[],written:[],replacements:0,headings_changed:[],anchors_remapped:0,broken_links:[],failed:$failed}
+  [self:write]{path:f"${out}/report.json",content:json($report)}
+  $failed_text = join("\n",map($failed,($x)=>f"- ${x.file}: ${x.reason}"))
+  [self:write]{path:f"${out}/summary.md",content:f"# 용어 개정 중단\n\n읽기 실패 파일이 있어 어떤 문서도 쓰지 않았다.\n\n${failed_text}\n"}
+  return $report
+}
+$docs_read = $읽기 >> [table:each] { return unwrap($it) }
+$parsed = $docs_read >> [table:each] {
+  $rows = [fn:줄표시]{lines:split($it.text,"\n")}
+  $hs = filter($rows,($r)=>not $r.code and $r.text[:1] == "#")
+  $heads = map($hs,($r)=>{file:$it.name,old:[fn:슬러그]{text:[fn:제목글]{line:$r.text}},new:[fn:슬러그]{text:[fn:제목글]{line:[fn:줄변환]{line:$r.text,terms:$terms,amap:{},cur:$it.name}}}})
+  return {name:$it.name,path:$it.path,text:$it.text,rows:$rows,heads:$heads}
+}
+$heads_all = reduce($parsed,[],($acc,$d)=>$acc + $d.heads)
+$hchanged = filter($heads_all,($h)=>$h.old != $h.new)
+$amap = from_entries(unique(map($hchanged,($h)=>[f"${h.file}#${h.old}",$h.new])))
+$known = map($heads_all,($h)=>f"${h.file}#${h.old}")
+$known_after = map($heads_all,($h)=>f"${h.file}#${h.new}")
+
+$변환 = $parsed >> [table:each] {
+  $rows = $it.rows
+  $new_lines = map($rows,($r)=>($r.code or not [fn:볼만한]{line:$r.text,terms:$terms}) ? $r.text : [fn:줄변환]{line:$r.text,terms:$terms,amap:$amap,cur:$it.name})
+  $new_text = join("\n",$new_lines)
+  $changed = len(filter(zip($rows,$new_lines),($z)=>$z[0].text != $z[1]))
+  $links = reduce(enumerate($rows),[],($acc,$p)=>($p[1].code or not contains($p[1].text,"](")) ? $acc : $acc + map([fn:줄링크]{line:$p[1].text},($t)=>{line:$p[0] + 1,target:$t}))
+  $broken = filter($links,($l)=>not [fn:링크정상]{target:$l.target,cur:$it.name,names:$names,known:$known})
+  $remapped = len(filter($links,($l)=>[fn:재매핑대상]{target:$l.target,cur:$it.name,amap:$amap}))
+  $links_after = reduce(enumerate(zip($rows,$new_lines)),[],($acc,$p)=>($p[1][0].code or not contains($p[1][1],"](")) ? $acc : $acc + map([fn:줄링크]{line:$p[1][1]},($t)=>{line:$p[0] + 1,target:$t}))
+  $broken_after = filter($links_after,($l)=>not [fn:링크정상]{target:$l.target,cur:$it.name,names:$names,known:$known_after})
+  $repl = reduce($rows,0,($acc,$r)=>($r.code or not [fn:용어있음]{line:$r.text,terms:$terms}) ? $acc : $acc + [fn:출현수]{text:[fn:줄산문]{line:$r.text},terms:$terms})
+  return {name:$it.name,path:$it.path,old:$it.text,new:$new_text,lines_changed:$changed,
+    broken:map($broken,($l)=>{file:$it.name,line:$l.line,target:$l.target}),
+    broken_after:map($broken_after,($l)=>{file:$it.name,line:$l.line,target:$l.target}),
+    remapped:$remapped,replacements:$repl}
+}
+$바뀜 = filter($변환,($d)=>$d.new != $d.old)
+$written = [fn:적용]{대상:$바뀜,apply:$apply}
+$reread = [fn:재독확인]{대상:$바뀜,apply:$apply}
+$지문 = [self:list]{path:$docs,pattern:"*.md",hash:true}
+$sha = from_entries(map($지문,($f)=>[$f.name,$f.sha256]))
+$broken_links = reduce($변환,[],($a,$d)=>$a + $d.broken)
+$broken_after = reduce($변환,[],($a,$d)=>$a + $d.broken_after)
+$report = {applied:$apply,files_total:len($files),files_changed:map($바뀜,($d)=>$d.name),written:$written,
+  lines_changed_by_file:from_entries(map($바뀜,($d)=>[$d.name,$d.lines_changed])),
+  replacements:sum(map($변환,($d)=>$d.replacements)),headings_changed:$hchanged,
+  anchors_remapped:sum(map($변환,($d)=>$d.remapped)),broken_links:$broken_links,broken_links_after:$broken_after,
+  broken_not_increased:len($broken_after) <= len($broken_links),
+  reread_ok:all(map($reread,($r)=>$r.ok)),failed:[],sha256:$sha}
+[self:write]{path:f"${out}/report.json",content:json($report)}
+$broken_text = join("\n",map($broken_links,($b)=>f"- ${b.file}:${b.line} → ${b.target}"))
+$n_changed = len($바뀜)
+$n_written = len($written)
+$n_repl = $report.replacements
+$n_anc = $report.anchors_remapped
+$n_heads = len($hchanged)
+$n_broken = len($broken_links)
+[self:write]{path:f"${out}/summary.md",content:f"""# 용어 개정 요약
+
+- 적용: ${apply}, 바뀐 파일 ${n_changed}개, 실제 쓴 파일 ${n_written}개
+- 산문 치환 ${n_repl}회, 제목 앵커 변경 ${n_heads}개, 링크 대상 갱신 ${n_anc}건
+- 깨진 링크(변경 전 기준) ${n_broken}건:
+${broken_text}
+"""}
+return {applied:$apply,files_changed:$n_changed,written:$n_written,replacements:$n_repl,headings_changed:$n_heads,anchors_remapped:$n_anc,broken_links:$n_broken,broken_not_increased:$report.broken_not_increased,reread_ok:$report.reread_ok}

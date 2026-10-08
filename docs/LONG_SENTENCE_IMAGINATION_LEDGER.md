@@ -4,6 +4,15 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 39회차 — 문서 묶음 용어 개정: 코드 보존·앵커 갱신·깨진 링크·멱등·전부-아니면-무 (2026-10-09, 훈련·발견만)
+
+정본 main `36ddcf87`, 01:08 KST 시작, 상한 60분 중 자료·작성·실행·변형·탐침 약 15분(AI 후속 대기·보존 별도). 새 축: 구조 인식 다중 파일 재작성 + 트랜잭션 쓰기.
+합성 마크다운 36파일 1,154줄에서 용어 2개를 산문에서만 치환(코드 펜스·인라인 코드·링크 대상 보존), 제목 변경 → 앵커 링크 55건 갱신, 깨진 링크 5개 보고, 바뀐 파일만 덮어쓰기.
+훈련자 최초 초안은 검사 issues 0, 실행에서 같은 파일 중복 제목의 `from_entries` 중복 키 1회 수정(v1) 뒤 기본·멱등 재실행·읽기 실패(무효 UTF-8, 전부-아니면-무)·apply:false 네 모드 전건(36파일 바이트 일치, 673K 단계·HTTP 6.6초).
+독립 AI ep4484 277.3초(377줄 Python 자체 작성, 자작 관문 거절 1회 뒤 재저장, 입력 2,386,288/출력 25,221) 전건 달성 — headings_changed 는 슬러그 대신 제목 원문(요청문 모호). 멱등 ep4485 13.6초·읽기 실패 ep4486 26.1초 달성.
+**L39-1** `self:read`(text) CRLF→LF 조용한 소실, **L39-2** 문자열 함수가 일치 없어도 NFD→NFC 재작성(read/write 원시 왕복은 불변), **L39-3** `contains(x, 공백/제어/빈 문자열)` 항상 true,
+**L39-4** 순수 IBL 텍스트 변환 줄당 410~580 단계 → 4배 규모(144파일 4,616줄)는 최대 예산 100만에서 BUDGET(v1·v2 모두), 단계는 선형. 수리 없음(사용자 지시 없음). [보고서](experiments/long_sentence_imagination/round_39/report.md).
+
 ## 38회차 — 공식 DB 문서 심층 조사·분석 보고 (2026-10-08, 훈련·수리 완료)
 
 정본 main `c0cc0e4c`에서 시작. 12:02:00~12:14:50 KST **12분50초/상한60분**, 수리·회귀 별도.
@@ -221,6 +230,10 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
+| L39-1 | 구현 결함(원문 보존) — `self:read`(text) 가 CRLF 를 LF 로 조용히 바꿈. `inputs` 문자열은 보존, read→write 왕복만 CR 소실 | `round_39/repro/crlf_read.ibl`: 28자 파일→24자, 쓰면 CR 0개. isolate 탐침 | 열림 — 텍스트 읽기의 개행 보존 또는 Document 에 newline 신고. 업무 전용 예외 아님 | [39회차](experiments/long_sentence_imagination/round_39/report.md) |
+| L39-2 | 원문 보존 정책 공백 — `replace`(일치 없음)·`split`+`join`·슬라이스가 NFD 입력을 NFC 로 재작성(17→9 코드포인트). read/write/inputs 통과는 바이트 불변 | `round_39/repro/nfd_replace.ibl`, `evidence/probe_isolate.json` | 열림 — 비교는 NFC, 반환은 원문 조각 잇기. 길이·인덱스 정책은 별도 판정 | [39회차](experiments/long_sentence_imagination/round_39/report.md) |
+| L39-3 | 구현 결함 — `contains(text, "\r"/"\n"/"\t"/" "/""/nbsp)` 전부 true(정규화가 찾는 문자열을 비움). CR 검사가 진단을 오도 | `round_39/repro/contains_ws.ibl`, `evidence/probe_contains.json` | 열림 — 정규화 결과가 빈 문자열이면 원문 비교 또는 거절. `split("\r")` 은 정상 | [39회차](experiments/long_sentence_imagination/round_39/report.md) |
+| L39-4 | 과도한 비용·상한 — 순수 IBL 텍스트 변환 줄당 410~580 단계, 최대 예산 100만에서 144파일 4,616줄 BUDGET 실패(v1·v2). 단계는 선형(reduce 500→4000행 7.5K→60K). 안내 "여러 실행으로 나누라" 는 앵커 맵·전부-아니면-무와 상충 | `evidence/trainer_big_main_v1.json`·`_v2.json`·`probe_scale_4000.json` | 열림 — 순수 내장 호출 단계 계수 재검토·전건 텍스트 변환 저비용 경로·상한 근거. 새 어휘 아님 | [39회차](experiments/long_sentence_imagination/round_39/report.md) |
 | L34-1 | 능력 공백(계약) — `self:list`/`file_find` 의 mtime 이 분 단위 문자열, 초·ns·내용 지문 없음 → 같은 분·같은 크기 수정을 IBL 에서 감지 불가(증분 설계의 근거 상실) | round_34 변형 C: 7일차 amount 24000→42000(크기 동일·mtime 원값) → "변화 없음 29", SKU01 sale 3,009,800 vs 3,027,800. 독립 AI 는 mtime_ns+size+sha256 | 수리(2026-10-09): mtime_ns(Text)·선택 hash:true, 동일 크기/시각 복원 탐지. 기본 내용 미읽기, 무변화 상태 쓰기 제거 | test_fs_find_incremental 전체 재생·새 경계 변형 |
 | L34-4 | 과도한 비용 후보(AI) — run1 194초 중 요청 밖 분기 시험(/tmp 사본)·실 inbox 재실행(`out_rerun_check`)·`agent/bin/` 생성 | ep4480 응답문·폴더 | 판정 유지: 자기 검증·재사용 스크립트는 확정 낭비 아님. 삭제하지 않음. 훈련자 상태 재기록 낭비는 별도 수리 | 2026-10-09 후속 |
 | L38-1 | 원문 보존·비용 — 브라우저 body와 main 선언 불일치, 줄 strip으로 코드 손실·중복 IPC | 동일 DOM 대역에서 본문/들여쓰기 불일치, 실제 두 문서 메뉴 혼입 | 수리 — 공통 DOM 파서·정직한 fallback·탐색 잡음 정리. 두 문서20.2% 문자 감소는 전체 비용 절감률 아님 | [38회차](experiments/long_sentence_imagination/round_38/report.md), 전체 기본/NAS·13신규회귀 |

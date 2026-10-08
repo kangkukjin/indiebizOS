@@ -1,0 +1,27 @@
+{
+ "round": 39,
+ "started_kst": "2026-10-09 01:08:28",
+ "head": "36ddcf874b5bb6c38bb4300bd82cf592a99d5710",
+ "cap_minutes": 60,
+ "episode_log_max_before": 4483,
+ "backend_phase": "ACTIVE",
+ "trainer_runs": [
+  "trainer_base_main_v0 (DUPLICATE_KEY)",
+  "trainer_base_main_v1",
+  "trainer_again_main_v1",
+  "trainer_bad_main_v1",
+  "trainer_dry_main_v1",
+  "trainer_big_main_v1 (BUDGET)",
+  "trainer_dry_main_v2",
+  "trainer_big_main_v2 (BUDGET)"
+ ],
+ "probes": [
+  "probe_crlf_nfd",
+  "probe_isolate",
+  "probe_contains",
+  "probe_scale_500..4000"
+ ],
+ "ai_tasks": {
+  "base": "task_sysai_e7259a2c / ep4484"
+ }
+}

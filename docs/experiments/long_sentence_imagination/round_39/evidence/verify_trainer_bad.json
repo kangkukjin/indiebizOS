@@ -1,0 +1,30 @@
+{
+ "checks": [
+  [
+   "docs unchanged (no writes)",
+   true,
+   "[]"
+  ],
+  [
+   "report.json exists",
+   true,
+   "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/trainer/out_bad"
+  ],
+  [
+   "summary.md exists",
+   true,
+   ""
+  ],
+  [
+   "applied false",
+   true,
+   "False"
+  ],
+  [
+   "failed == [guide_07.md]",
+   true,
+   "['guide_07.md']"
+  ]
+ ],
+ "ok": true
+}

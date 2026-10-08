@@ -1,0 +1,1017 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$t = [self:read]{path:$nfd,format:\"text\"}\n[self:write]{path:$out_raw,content:$t.text}\n[self:write]{path:$out_in,content:$s}\n[self:write]{path:$out_crlf_in,content:$c}\nreturn {len_input_s:len($s),s_back:$s,s_split_join:join(\"\",split($s,\"\\n\")),s_replace_nomatch:replace($s,\"zzz\",\"y\"),s_slice:$s[:3],\n        read_len:len($t.text),read_back:$t.text,read_has_cr:contains($t.text,\"\\r\"),\n        c_back:$c,c_has_cr:contains($c,\"\\r\"),c_len:len($c)}\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "inputs": {
+   "nfd": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/probe/nfd.md",
+   "s": "워크스페이스 유지",
+   "c": "줄1\r\n줄2\r\n",
+   "out_raw": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/probe/nfd_raw_out.md",
+   "out_in": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/probe/nfd_in_out.md",
+   "out_crlf_in": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/probe/crlf_in_out.md"
+  }
+ },
+ "elapsed": 0.354,
+ "response": {
+  "success": true,
+  "value": {
+   "len_input_s": 9,
+   "s_back": "워크스페이스 유지",
+   "s_split_join": "워크스페이스 유지",
+   "s_replace_nomatch": "워크스페이스 유지",
+   "s_slice": "워크스",
+   "read_len": 29,
+   "read_back": "워크스페이스 이름은 유지된다.\n구독 플랜을 바꾼다.\n",
+   "read_has_cr": true,
+   "c_back": "줄1\r\n줄2\r\n",
+   "c_has_cr": true,
+   "c_len": 8
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "2e37cb2983ef835d1114dfd152a11327bac39c9b2d464172314fd73275a8a383",
+  "source_complete": true,
+  "source_map": {
+   "sequence:15:458": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 15,
+    "end": 458,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:57": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 16,
+    "end": 57,
+    "line": 2,
+    "column": 1
+   },
+   "call:21:57": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 21,
+    "end": 57,
+    "line": 2,
+    "column": 6
+   },
+   "record:32:57": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 32,
+    "end": 57,
+    "line": 2,
+    "column": 17
+   },
+   "ref:38:42": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 38,
+    "end": 42,
+    "line": 2,
+    "column": 23
+   },
+   "literal:50:56": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 50,
+    "end": 56,
+    "line": 2,
+    "column": 35
+   },
+   "call:58:101": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 58,
+    "end": 101,
+    "line": 3,
+    "column": 1
+   },
+   "record:70:101": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 70,
+    "end": 101,
+    "line": 3,
+    "column": 13
+   },
+   "ref:76:84": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 76,
+    "end": 84,
+    "line": 3,
+    "column": 19
+   },
+   "field:93:100": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 93,
+    "end": 100,
+    "line": 3,
+    "column": 36
+   },
+   "ref:93:95": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 93,
+    "end": 95,
+    "line": 3,
+    "column": 36
+   },
+   "call:102:139": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 102,
+    "end": 139,
+    "line": 4,
+    "column": 1
+   },
+   "record:114:139": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 114,
+    "end": 139,
+    "line": 4,
+    "column": 13
+   },
+   "ref:120:127": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 120,
+    "end": 127,
+    "line": 4,
+    "column": 19
+   },
+   "ref:136:138": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 136,
+    "end": 138,
+    "line": 4,
+    "column": 35
+   },
+   "call:140:182": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 140,
+    "end": 182,
+    "line": 5,
+    "column": 1
+   },
+   "record:152:182": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 152,
+    "end": 182,
+    "line": 5,
+    "column": 13
+   },
+   "ref:158:170": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 158,
+    "end": 170,
+    "line": 5,
+    "column": 19
+   },
+   "ref:179:181": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 179,
+    "end": 181,
+    "line": 5,
+    "column": 40
+   },
+   "return:183:457": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 183,
+    "end": 457,
+    "line": 6,
+    "column": 1
+   },
+   "record:190:457": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 190,
+    "end": 457,
+    "line": 6,
+    "column": 8
+   },
+   "pure_call:203:210": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 203,
+    "end": 210,
+    "line": 6,
+    "column": 21
+   },
+   "ref:207:209": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 207,
+    "end": 209,
+    "line": 6,
+    "column": 25
+   },
+   "builtin:203:206": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 203,
+    "end": 206,
+    "line": 6,
+    "column": 21
+   },
+   "ref:218:220": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 218,
+    "end": 220,
+    "line": 6,
+    "column": 36
+   },
+   "pure_call:234:257": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 234,
+    "end": 257,
+    "line": 6,
+    "column": 52
+   },
+   "literal:239:241": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 239,
+    "end": 241,
+    "line": 6,
+    "column": 57
+   },
+   "pure_call:242:256": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 242,
+    "end": 256,
+    "line": 6,
+    "column": 60
+   },
+   "ref:248:250": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 248,
+    "end": 250,
+    "line": 6,
+    "column": 66
+   },
+   "literal:251:255": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 251,
+    "end": 255,
+    "line": 6,
+    "column": 69
+   },
+   "builtin:242:247": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 242,
+    "end": 247,
+    "line": 6,
+    "column": 60
+   },
+   "builtin:234:238": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 234,
+    "end": 238,
+    "line": 6,
+    "column": 52
+   },
+   "pure_call:276:297": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 276,
+    "end": 297,
+    "line": 6,
+    "column": 94
+   },
+   "ref:284:286": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 284,
+    "end": 286,
+    "line": 6,
+    "column": 102
+   },
+   "literal:287:292": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 287,
+    "end": 292,
+    "line": 6,
+    "column": 105
+   },
+   "literal:293:296": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 293,
+    "end": 296,
+    "line": 6,
+    "column": 111
+   },
+   "builtin:276:283": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 276,
+    "end": 283,
+    "line": 6,
+    "column": 94
+   },
+   "slice:306:312": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 306,
+    "end": 312,
+    "line": 6,
+    "column": 124
+   },
+   "ref:306:308": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 306,
+    "end": 308,
+    "line": 6,
+    "column": 124
+   },
+   "literal:310:311": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 310,
+    "end": 311,
+    "line": 6,
+    "column": 128
+   },
+   "pure_call:331:343": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 331,
+    "end": 343,
+    "line": 7,
+    "column": 18
+   },
+   "field:335:342": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 335,
+    "end": 342,
+    "line": 7,
+    "column": 22
+   },
+   "ref:335:337": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 335,
+    "end": 337,
+    "line": 7,
+    "column": 22
+   },
+   "builtin:331:334": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 331,
+    "end": 334,
+    "line": 7,
+    "column": 18
+   },
+   "field:354:361": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 354,
+    "end": 361,
+    "line": 7,
+    "column": 41
+   },
+   "ref:354:356": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 354,
+    "end": 356,
+    "line": 7,
+    "column": 41
+   },
+   "pure_call:374:396": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 374,
+    "end": 396,
+    "line": 7,
+    "column": 61
+   },
+   "field:383:390": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 383,
+    "end": 390,
+    "line": 7,
+    "column": 70
+   },
+   "ref:383:385": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 383,
+    "end": 385,
+    "line": 7,
+    "column": 70
+   },
+   "literal:391:395": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 391,
+    "end": 395,
+    "line": 7,
+    "column": 78
+   },
+   "builtin:374:382": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 374,
+    "end": 382,
+    "line": 7,
+    "column": 61
+   },
+   "ref:413:415": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 413,
+    "end": 415,
+    "line": 8,
+    "column": 16
+   },
+   "pure_call:425:442": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 425,
+    "end": 442,
+    "line": 8,
+    "column": 28
+   },
+   "ref:434:436": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 434,
+    "end": 436,
+    "line": 8,
+    "column": 37
+   },
+   "literal:437:441": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 437,
+    "end": 441,
+    "line": 8,
+    "column": 40
+   },
+   "builtin:425:433": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 425,
+    "end": 433,
+    "line": 8,
+    "column": 28
+   },
+   "pure_call:449:456": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 449,
+    "end": 456,
+    "line": 8,
+    "column": 52
+   },
+   "ref:453:455": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 453,
+    "end": 455,
+    "line": 8,
+    "column": 56
+   },
+   "builtin:449:452": {
+    "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+    "start": 449,
+    "end": 452,
+    "line": 8,
+    "column": 52
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "1f94d1c06ca169acdf3e330910fff5681e8365786462b974bfa11215bfe620af",
+    "value": [
+     "record",
+     [
+      [
+       "text",
+       [
+        "scalar",
+        "워크스페이스 이름은 유지된다.\n구독 플랜을 바꾼다.\n"
+       ]
+      ],
+      [
+       "blocks",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "워크스페이스 이름은 유지된다.\n구독 플랜을 바꾼다."
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "data",
+       [
+        "record",
+        []
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/probe/nfd.md"
+     },
+     "source_snapshot": [
+      [
+       "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/probe/nfd.md",
+       1791476253209524332,
+       119,
+       "fc52c9957f1bd8dd714f1db87a206f35416f0eaa849c5810b247f41dd9f51006"
+      ]
+     ]
+    },
+    "action": "self:read",
+    "reuse_key": "514f575fb2c915f1211532b79a0066e583a960883fe0a90cfbe9c774cb3f80bc",
+    "reuse_parts": {
+     "action": "f406b71a167877ab00f5c879bdce9e2548f372ef2d2866dcc258222bfe3f2790",
+     "args": "c36f14dcff278a34a3483d86432d33e163b1f9f7b0980b18fbfb0ea65d7d4293",
+     "contract": "0309915956c9f52bece5246c07c8a2ca1e5b67512b07f412d5e7d9d5cf68280e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "d7f8aea2c1d602e89adcec64c5e27eaededed0a243d0a11ec345e4f4d8a5371e"
+    },
+    "resource_state": [
+     [
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/probe/nfd.md",
+      1791476253209524332,
+      119,
+      "fc52c9957f1bd8dd714f1db87a206f35416f0eaa849c5810b247f41dd9f51006"
+     ]
+    ],
+    "reuse_disabled": false
+   },
+   {
+    "request_hash": "482710ba8e2ef527d29e235c6c3bb4a6e987f6523a0c16361eafcf0e4c9bc080",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/probe/nfd_raw_out.md"
+       ]
+      ],
+      [
+       "size",
+       [
+        "scalar",
+        119
+       ]
+      ],
+      [
+       "chars",
+       [
+        "scalar",
+        45
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:write",
+    "reuse_key": "381c9938c901e0ff8389befed14591e2b43d88d0468493147e544ccbf3de8f7b",
+    "reuse_parts": {
+     "action": "9c874689539f255691f77be58681c012850763d3c7c9466d8002331262480d72",
+     "args": "f83a1c911527ca1f3196c8c5746f686486a0ace9bffe7f88c0dda16377464d76",
+     "contract": "386127cb9e3713b59dab81689953397df1eaf00457652819376330481cff1b17",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "d7f8aea2c1d602e89adcec64c5e27eaededed0a243d0a11ec345e4f4d8a5371e"
+    }
+   },
+   {
+    "request_hash": "45672178a40ca8f00335dc42a0e8203111f94ffc8be1f4d67fd51f75f5630cdc",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/probe/nfd_in_out.md"
+       ]
+      ],
+      [
+       "size",
+       [
+        "scalar",
+        49
+       ]
+      ],
+      [
+       "chars",
+       [
+        "scalar",
+        17
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:write",
+    "reuse_key": "db726e4ae9c973d018d0e0da8c7a660c95e5c43824d59614c3fcb43b695893e7",
+    "reuse_parts": {
+     "action": "9c874689539f255691f77be58681c012850763d3c7c9466d8002331262480d72",
+     "args": "5931ef3cdb8d0951f09273e9f9c74c3caa94a75bc6778adc1c2e0083d2d73ae2",
+     "contract": "386127cb9e3713b59dab81689953397df1eaf00457652819376330481cff1b17",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "d7f8aea2c1d602e89adcec64c5e27eaededed0a243d0a11ec345e4f4d8a5371e"
+    }
+   },
+   {
+    "request_hash": "1a3f9a9190a8ac6caa1d09300126837b2a50491ec373545ab1f0e25a6d7ee57f",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/probe/crlf_in_out.md"
+       ]
+      ],
+      [
+       "size",
+       [
+        "scalar",
+        12
+       ]
+      ],
+      [
+       "chars",
+       [
+        "scalar",
+        8
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:write",
+    "reuse_key": "c47bab011702583f4f69ee5a1ec3e74246d3891ba226b1741538810cd7972369",
+    "reuse_parts": {
+     "action": "9c874689539f255691f77be58681c012850763d3c7c9466d8002331262480d72",
+     "args": "54dca522bb48a256f24fa393a4093d381dca1a633e873402c6fe9ec6539c7fc9",
+     "contract": "386127cb9e3713b59dab81689953397df1eaf00457652819376330481cff1b17",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "d7f8aea2c1d602e89adcec64c5e27eaededed0a243d0a11ec345e4f4d8a5371e"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 72,
+   "rows": 0,
+   "elapsed_ms": 336,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "slice:306:312",
+     "steps": 4,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 306,
+      "end": 312,
+      "line": 6,
+      "column": 124
+     }
+    },
+    {
+     "node_id": "pure_call:234:257",
+     "steps": 3,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 234,
+      "end": 257,
+      "line": 6,
+      "column": 52
+     }
+    },
+    {
+     "node_id": "pure_call:242:256",
+     "steps": 3,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 242,
+      "end": 256,
+      "line": 6,
+      "column": 60
+     }
+    },
+    {
+     "node_id": "pure_call:203:210",
+     "steps": 2,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 203,
+      "end": 210,
+      "line": 6,
+      "column": 21
+     }
+    },
+    {
+     "node_id": "pure_call:276:297",
+     "steps": 2,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 276,
+      "end": 297,
+      "line": 6,
+      "column": 94
+     }
+    },
+    {
+     "node_id": "pure_call:331:343",
+     "steps": 2,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 331,
+      "end": 343,
+      "line": 7,
+      "column": 18
+     }
+    },
+    {
+     "node_id": "pure_call:374:396",
+     "steps": 2,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 374,
+      "end": 396,
+      "line": 7,
+      "column": 61
+     }
+    },
+    {
+     "node_id": "pure_call:425:442",
+     "steps": 2,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 425,
+      "end": 442,
+      "line": 8,
+      "column": 28
+     }
+    },
+    {
+     "node_id": "pure_call:449:456",
+     "steps": 2,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 449,
+      "end": 456,
+      "line": 8,
+      "column": 52
+     }
+    },
+    {
+     "node_id": "bind:16:57",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 16,
+      "end": 57,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "builtin:203:206",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 203,
+      "end": 206,
+      "line": 6,
+      "column": 21
+     }
+    },
+    {
+     "node_id": "builtin:234:238",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 234,
+      "end": 238,
+      "line": 6,
+      "column": 52
+     }
+    },
+    {
+     "node_id": "builtin:242:247",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 242,
+      "end": 247,
+      "line": 6,
+      "column": 60
+     }
+    },
+    {
+     "node_id": "builtin:276:283",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 276,
+      "end": 283,
+      "line": 6,
+      "column": 94
+     }
+    },
+    {
+     "node_id": "builtin:331:334",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 331,
+      "end": 334,
+      "line": 7,
+      "column": 18
+     }
+    },
+    {
+     "node_id": "builtin:374:382",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 374,
+      "end": 382,
+      "line": 7,
+      "column": 61
+     }
+    },
+    {
+     "node_id": "builtin:425:433",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 425,
+      "end": 433,
+      "line": 8,
+      "column": 28
+     }
+    },
+    {
+     "node_id": "builtin:449:452",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 449,
+      "end": 452,
+      "line": 8,
+      "column": 52
+     }
+    },
+    {
+     "node_id": "call:102:139",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 102,
+      "end": 139,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:140:182",
+     "steps": 1,
+     "location": {
+      "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389",
+      "start": 140,
+      "end": 182,
+      "line": 5,
+      "column": 1
+     }
+    }
+   ],
+   "steps_other": 39,
+   "steps_by_line": [
+    {
+     "line": 6,
+     "steps": 30,
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    },
+    {
+     "line": 7,
+     "steps": 13,
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    },
+    {
+     "line": 8,
+     "steps": 10,
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    },
+    {
+     "line": 2,
+     "steps": 5,
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    },
+    {
+     "line": 3,
+     "steps": 5,
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    },
+    {
+     "line": 4,
+     "steps": 4,
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    },
+    {
+     "line": 5,
+     "steps": 4,
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 4,
+     "ms": 18,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    },
+    {
+     "line": 5,
+     "ms": 14,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    },
+    {
+     "line": 3,
+     "ms": 14,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    },
+    {
+     "line": 2,
+     "ms": 12,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "30bc403ce053ba9be1fcfae45e86e13a7c9af3c3975435dc31c4fb867a129389"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "a4fe81b0394745529d23fd21b3b3051d"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "a4fe81b0394745529d23fd21b3b3051d"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "a4fe81b0394745529d23fd21b3b3051d",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

@@ -1,0 +1,129 @@
+{
+ "trainer_base_main_v0": {
+  "http_s": 1.755,
+  "success": false,
+  "steps": 110018,
+  "rows": 4576,
+  "elapsed_ms": 1295,
+  "code": "DUPLICATE_KEY",
+  "value": null
+ },
+ "trainer_base_main_v1": {
+  "http_s": 6.642,
+  "success": true,
+  "steps": 673402,
+  "rows": 15764,
+  "elapsed_ms": 4698,
+  "code": null,
+  "value": {
+   "applied": true,
+   "files_changed": 36,
+   "written": 36,
+   "replacements": 329,
+   "headings_changed": 45,
+   "anchors_remapped": 55,
+   "broken_links": 5,
+   "broken_not_increased": true,
+   "reread_ok": true
+  }
+ },
+ "trainer_again_main_v1": {
+  "http_s": 5.778,
+  "success": true,
+  "steps": 670193,
+  "rows": 15692,
+  "elapsed_ms": 3794,
+  "code": null,
+  "value": {
+   "applied": true,
+   "files_changed": 0,
+   "written": 0,
+   "replacements": 0,
+   "headings_changed": 0,
+   "anchors_remapped": 0,
+   "broken_links": 5,
+   "broken_not_increased": true,
+   "reread_ok": true
+  }
+ },
+ "trainer_bad_main_v1": {
+  "http_s": 0.929,
+  "success": true,
+  "steps": 1195,
+  "rows": 36,
+  "elapsed_ms": 879,
+  "code": null,
+  "value": {
+   "applied": false,
+   "files_total": 36,
+   "files_changed": [],
+   "written": [],
+   "replacements": 0,
+   "headings_changed": [],
+   "anchors_remapped": 0,
+   "broken_links": [],
+   "failed": [
+    {
+     "file": "guide_07.md",
+     "reason": "'utf-8' codec can't decode byte 0xff in position 2: invalid start byte"
+    }
+   ]
+  }
+ },
+ "trainer_dry_main_v1": {
+  "http_s": 6.049,
+  "success": true,
+  "steps": 672174,
+  "rows": 15692,
+  "elapsed_ms": 3907,
+  "code": null,
+  "value": {
+   "applied": false,
+   "files_changed": 36,
+   "written": 0,
+   "replacements": 329,
+   "headings_changed": 45,
+   "anchors_remapped": 55,
+   "broken_links": 5,
+   "broken_not_increased": true,
+   "reread_ok": true
+  }
+ },
+ "trainer_dry_main_v2": {
+  "http_s": 4.346,
+  "success": true,
+  "steps": 479545,
+  "rows": 10918,
+  "elapsed_ms": 3018,
+  "code": null,
+  "value": {
+   "applied": false,
+   "files_changed": 36,
+   "written": 0,
+   "replacements": 329,
+   "headings_changed": 45,
+   "anchors_remapped": 55,
+   "broken_links": 5,
+   "broken_not_increased": true,
+   "reread_ok": true
+  }
+ },
+ "trainer_big_main_v1": {
+  "http_s": 9.674,
+  "success": false,
+  "steps": 1000001,
+  "rows": 29193,
+  "elapsed_ms": 6521,
+  "code": "BUDGET",
+  "value": null
+ },
+ "trainer_big_main_v2": {
+  "http_s": 9.94,
+  "success": false,
+  "steps": 1000001,
+  "rows": 27752,
+  "elapsed_ms": 6793,
+  "code": "BUDGET",
+  "value": null
+ }
+}

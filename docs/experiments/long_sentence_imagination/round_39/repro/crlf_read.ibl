@@ -1,0 +1,7 @@
+#!ibl edition=2
+# inputs: crlf = "줄1\r\n줄2\r\n" 을 담은 파일 경로, c = 같은 문자열(inputs 직접), out1/out2 = 출력 경로
+$t = [self:read]{path:$crlf,format:"text"}
+[self:write]{path:$out1,content:$t.text}
+[self:write]{path:$out2,content:$c}
+return {read_len:len($t.text),input_len:len($c)}
+# 관측(2026-10-09): read_len 은 CR 수만큼 작고 out1 에 CR 0개, out2 는 CR 보존

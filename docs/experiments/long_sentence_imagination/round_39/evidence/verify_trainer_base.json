@@ -1,0 +1,50 @@
+{
+ "checks": [
+  [
+   "docs == expected (36)",
+   true,
+   "[]"
+  ],
+  [
+   "report.json exists",
+   true,
+   "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/trainer/out"
+  ],
+  [
+   "summary.md exists",
+   true,
+   ""
+  ],
+  [
+   "files_changed",
+   true,
+   "(36, 36)"
+  ],
+  [
+   "replacements",
+   true,
+   "(329, 329)"
+  ],
+  [
+   "headings_changed",
+   true,
+   "(45, 45)"
+  ],
+  [
+   "anchors_remapped",
+   true,
+   "(55, 55)"
+  ],
+  [
+   "broken_links",
+   true,
+   "{'missing': [], 'extra': []}"
+  ],
+  [
+   "report sha256 == expected",
+   true,
+   ""
+  ]
+ ],
+ "ok": true
+}

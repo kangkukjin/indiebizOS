@@ -1,0 +1,16 @@
+{
+ "started_at": "2026-10-09T01:23:10+09:00",
+ "docs": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_39회차/agent/docs_bad",
+ "dry_run": false,
+ "files_total": 36,
+ "failed": [
+  {
+   "file": "guide_07.md",
+   "reason": "UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff in position 2: invalid start byte"
+  }
+ ],
+ "applied": false,
+ "files_changed": [],
+ "files_written": 0,
+ "note": "읽기 실패 파일이 있어 어떤 문서도 쓰지 않았다"
+}

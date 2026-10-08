@@ -1,0 +1,65 @@
+{
+ "training_end_kst": "2026-10-09 01:26",
+ "training_minutes_excl_wait": "~15 (01:08→01:23 자료·작성·실행·변형·탐침)",
+ "cap_minutes": 60,
+ "code_changes": 0,
+ "trainer_revisions": 1,
+ "trainer_results": {
+  "base": "ALL PASS",
+  "again": "ALL PASS",
+  "bad": "ALL PASS",
+  "dry": "ALL PASS",
+  "big_v1": "BUDGET",
+  "big_v2": "BUDGET"
+ },
+ "ai_tasks": {
+  "base": {
+   "task_id": "task_sysai_e7259a2c",
+   "episode": 4484,
+   "state": "succeeded",
+   "total_ms": 277293,
+   "verify": "ALL PASS except headings_changed format (text vs slug)"
+  },
+  "again": {
+   "task_id": "task_sysai_7fa783dd",
+   "episode": 4485,
+   "state": "succeeded",
+   "total_ms": 13618,
+   "verify": "ALL PASS"
+  },
+  "bad": {
+   "task_id": "task_sysai_3f339604",
+   "episode": 4486,
+   "state": "succeeded",
+   "total_ms": 26114,
+   "verify": "ALL PASS"
+  }
+ },
+ "ai_usage_billable": {
+  "4484": {
+   "input": 2386288,
+   "output": 25221,
+   "cache_read": 2081063,
+   "cache_create": 304230
+  },
+  "4485": {
+   "input": 524009,
+   "output": 1030,
+   "cache_read": 509487,
+   "cache_create": 12962
+  },
+  "4486": {
+   "input": 1107954,
+   "output": 2658,
+   "cache_read": 1084917,
+   "cache_create": 16556
+  }
+ },
+ "gaps": [
+  "L39-1",
+  "L39-2",
+  "L39-3",
+  "L39-4"
+ ],
+ "repairs": "none (training only)"
+}

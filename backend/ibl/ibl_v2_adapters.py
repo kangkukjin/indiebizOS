@@ -364,6 +364,12 @@ def load_registry(project_path=".", agent_id=None):
                                     "schema_input_fields_param": action_config.get("schema_input_fields_param"),
                                     "schema_param": action_config.get("schema_param"),
                                     "flow": action_config.get("flow", {})}
+            if action_config.get('requires'):
+                # 같은 선언을 관문과 사전 안내가 읽는다. 검사에서는 gate/exists/토큰을 호출하지 않는다.
+                contract['analysis']['approval_policy'] = {
+                    'requires': copy.deepcopy(action_config['requires']),
+                    'ops': copy.deepcopy(action_config.get('ops', {})),
+                }
             adapter = contract["adapter"]
             key = f"{node}:{action}"
             # Capture contract and implementation identities now. A changed

@@ -92,16 +92,17 @@ def test_C3_효과_결과는_원_행이_흐르고_봉투가_말한다():
 
 # ── ③ 실패는 봉투로, 그러나 시끄럽게 ──────────────────────────────────
 
-def test_C4_부분_실패는_통화에_없고_봉투에_있다():
-    calls = {"n": 0}
+@pytest.mark.parametrize("parallel", [1, 3])
+def test_C4_부분_실패는_통화에_없고_봉투에_있다(parallel):
     orig = ibl_engine.execute_ibl
 
     def _fake(ti, pp, agent_id=None, **kw):
-        calls["n"] += 1
-        return dict(CURRENCY) if calls["n"] == 1 else dict(FAIL)
+        # 병렬 스레드의 호출 순서와 실패 행은 무관하다. 검증할 입력으로 실패를 고정한다.
+        return dict(FAIL) if ti["params"]["city"] == "용인" else dict(CURRENCY)
     ibl_engine.execute_ibl = _fake
     try:
-        out = _execute_table_each({"items": PARENTS, "do": "[sense:weather]{city: $it.city}"}, ".")
+        out = _execute_table_each({"items": PARENTS, "do": "[sense:weather]{city: $it.city}",
+                                   "parallel": parallel}, ".")
     finally:
         ibl_engine.execute_ibl = orig
     assert out["success"] is True                 # 부분 실패는 파이프를 끊지 않는다

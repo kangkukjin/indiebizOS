@@ -1,0 +1,115 @@
+{
+  "date": "2026-10-09",
+  "repair": "L28-3 check approval preannouncement",
+  "live_check": [
+    {
+      "case": "round28",
+      "ok": true,
+      "executed": false,
+      "warnings": [
+        {
+          "rule": "human_confirm",
+          "code": "HUMAN_CONFIRM",
+          "severity": "warning",
+          "location": {
+            "source_hash": "70742989de4fb76b1500e54bfc82c5d39dc89c49aa5bf2c6afb0d322c9c17d37",
+            "start": 1579,
+            "end": 1620,
+            "line": 25,
+            "column": 37,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 25,
+            "end_column": 78,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "message": "이 호출은 사람 승인 대상으로 선언돼 있습니다. 호출에 도달하면 권한·대상 확인 후 유효한 사람 승인이 필요합니다.",
+          "hint": "check는 승인 발급·소비·대상 조회를 하지 않습니다. 실행이 suspended이면 승인 후 같은 code·inputs와 resume으로 이어가세요.",
+          "facts": {
+            "action": "self:switch",
+            "op": "delete",
+            "requirement": "declared",
+            "selector_dynamic": false,
+            "conditional": false,
+            "visits_upper_bound": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "dynamic",
+      "ok": true,
+      "executed": false,
+      "warnings": [
+        {
+          "rule": "human_confirm",
+          "code": "HUMAN_CONFIRM",
+          "severity": "warning",
+          "location": {
+            "source_hash": "fc1b6f40983659bf840e65564082c5eae184f0ebae64a14de723f5f4b0dfa4b5",
+            "start": 76,
+            "end": 120,
+            "line": 3,
+            "column": 1,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 3,
+            "end_column": 45,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "message": "op가 동적으로 결정되어 사람 승인이 필요한 연산을 실행할 수 있습니다.",
+          "hint": "check는 승인 발급·소비·대상 조회를 하지 않습니다. 실행이 suspended이면 승인 후 같은 code·inputs와 resume으로 이어가세요.",
+          "facts": {
+            "action": "self:switch",
+            "op": null,
+            "requirement": "possible",
+            "selector_dynamic": true,
+            "conditional": false,
+            "visits_upper_bound": 1,
+            "approval_ops": [
+              "delete"
+            ],
+            "approval_ops_omitted": 0
+          }
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "before_new_regressions": {
+      "failed": 8,
+      "passed": 10
+    },
+    "targeted_final": {
+      "passed": 123
+    },
+    "first_full": {
+      "passed": 9432,
+      "failed": 1,
+      "skipped": 1,
+      "failure": "test_each_currency_contract.py::test_C4: fake selected failed row by shared invocation counter; concurrent scheduling reversed the assumed input order"
+    },
+    "test_repair": "Choose failure by city input; preserve all assertions and cover parallel=1 and parallel=3.",
+    "full_final": {
+      "command": ".venv/bin/python -m pytest backend/ -m 'not system' -n auto --dist loadfile --tb=short",
+      "passed": 9434,
+      "skipped": 1,
+      "warnings": 182
+    },
+    "related_system": {
+      "files": [
+        "backend/test_python_libraries.py",
+        "backend/test_vocabulary_archive.py",
+        "backend/test_vocabulary_bundle_split.py"
+      ],
+      "passed": 72
+    },
+    "build_ibl_nodes_check": "passed",
+    "android_body_bundle": "rebuilt"
+  },
+  "limits": [
+    "No new independent system-AI training run.",
+    "Static approval notices do not grant approval or establish actual approval counts.",
+    "Live requests used check:true; no deletion or delegation was executed."
+  ]
+}

@@ -1,24 +1,74 @@
 """Bounded plan observations over the current AST, with no tool execution.
 
-Only declared model calls and statically known list cardinalities are observed.
+Declared model calls, approval policies and static list cardinalities are observed.
 Unknown cardinalities/definitions are explicitly reported, never counted as zero.
 """
 from dataclasses import dataclass
 
 from ibl_v2_ir import Node, record_fields
 from ibl_v2_analysis import location
+from ibl_callable_contract import UNRESOLVED
 
 
 @dataclass(frozen=True)
 class Facts:
     count: object = None
     dependencies: frozenset = frozenset()
+    value: object = UNRESOLVED
+
+
+def _scalar(value):
+    # Small selector facts only: no arbitrary evaluation or payload copies.
+    return value if value is None or type(value) in (bool, int, str) else UNRESOLVED
+
+
+def _unknown_spread(node):
+    return any(key is None and (value.kind != 'record' or _unknown_spread(value))
+               for key, value in node.data.get('entries', ()))
+
+
+def approval_notice(policy, values, key, where, multiplier, conditional):
+    """Observe declarations with the gate's op/inheritance semantics, without invoking it."""
+    from action_requires import declared
+    from ibl_ops import resolve_op, op_names
+    if not policy or multiplier == 0:
+        return None
+    selector = values.get('op')
+    dynamic = selector is UNRESOLVED
+    if dynamic:
+        candidates = op_names(policy)
+        choices = [(op, (declared(policy, op) or {}).get('human_confirm') is True)
+                   for op in candidates]
+        # Include the base policy for unresolved/invalid op values just as gate does.
+        base = (declared(policy) or {}).get('human_confirm') is True
+        required = [op for op, confirm in choices if confirm]
+        if not base and not required:
+            return None
+        requirement = 'declared' if base and all(confirm for _, confirm in choices) else 'possible'
+        op = None
+    else:
+        op = resolve_op(policy, values)
+        if (declared(policy, op) or {}).get('human_confirm') is not True:
+            return None
+        requirement, required = 'declared', []
+    return {'rule': 'human_confirm', 'code': 'HUMAN_CONFIRM', 'severity': 'warning',
+            'location': where,
+            'message': ('이 호출은 사람 승인 대상으로 선언돼 있습니다. 호출에 도달하면 권한·대상 확인 후 유효한 사람 승인이 필요합니다.'
+                        if requirement == 'declared' else
+                        'op가 동적으로 결정되어 사람 승인이 필요한 연산을 실행할 수 있습니다.'),
+            'hint': 'check는 승인 발급·소비·대상 조회를 하지 않습니다. 실행이 suspended이면 승인 후 같은 code·inputs와 resume으로 이어가세요.',
+            'facts': {'action': key, 'op': op, 'requirement': requirement,
+                      'selector_dynamic': dynamic, 'conditional': conditional,
+                      'visits_upper_bound': multiplier,
+                      **({'approval_ops': required[:32], 'approval_ops_omitted': max(0, len(required) - 32)}
+                         if dynamic else {})}}
 
 
 def analyze(compiler, root, inputs):
     warnings, unknowns = [], []
     visits, steps = 0, 0
     active = set()
+    callers = []
 
     def where(node):
         return location(compiler.source, compiler.source_map, node)
@@ -28,7 +78,7 @@ def analyze(compiler, root, inputs):
         if entry not in unknowns and len(unknowns) < 32:
             unknowns.append(entry)
 
-    def walk(node, env, loops=(), multiplier=1, depth=0):
+    def walk(node, env, loops=(), multiplier=1, depth=0, conditional=False):
         nonlocal visits, steps
         if node is None:
             return Facts()
@@ -37,9 +87,9 @@ def analyze(compiler, root, inputs):
             unknown(node, '분석 예산 초과')
             return Facts()
         d, kind = node.data, node.kind
-        sub = lambda n, e=env: walk(n, e, loops, multiplier, depth)
+        sub = lambda n, e=env: walk(n, e, loops, multiplier, depth, conditional)
         if kind == 'literal':
-            return Facts()
+            return Facts(value=_scalar(d['value']))
         if kind == 'ref':
             return env.get(d['name'], Facts())
         if kind == 'list':
@@ -60,28 +110,42 @@ def analyze(compiler, root, inputs):
                     break
             return result
         if kind == 'pipe':
-            return call(d['right'], env, loops, multiplier, depth, sub(d['left']))
+            return call(d['right'], env, loops, multiplier, depth, sub(d['left']), conditional)
         if kind == 'call':
-            return call(node, env, loops, multiplier, depth)
+            return call(node, env, loops, multiplier, depth, conditional=conditional)
         if kind == 'repeat':
-            count = d['value'].data.get('value') if d['mode'] == 'count' and d['value'].kind == 'literal' else None
+            value = sub(d['value']).value
+            if d['mode'] == 'while' and value is False:
+                return Facts()
+            count = value if d['mode'] == 'count' else None
             count = count if type(count) is int and count >= 0 else None
             if count is None:
                 unknown(node, '동적 반복 횟수')
+            if count == 0:
+                return Facts()
             local = env.copy()
+            from ibl_v2_analysis import assigned_names
+            if count is None or count > 1:
+                for name in assigned_names(d['body']) & local.keys():
+                    local[name] = Facts()
             local['i'] = Facts(dependencies=frozenset({node.id}))
             walk(d['body'], local, (*loops, (node.id, count)),
-                 multiplier * count if multiplier is not None and count is not None else None, depth)
+                 multiplier * count if multiplier is not None and count is not None else None, depth,
+                 conditional or count is None)
             # Repeated mutation is not a proof of an exact post-loop cardinality.
             from ibl_v2_analysis import assigned_names
             for name in assigned_names(d['body']) & env.keys():
                 env[name] = Facts()
             return Facts()
+        if kind == 'if':
+            condition = sub(d['value']).value
+            if type(condition) is bool:
+                return sub(d['body'] if condition else d['otherwise'])
         if kind in ('if', 'case', 'try', 'fallback', 'parallel'):
             # Visit all branches for a conservative bound, but do not assert an
             # exact result cardinality or retain pre-branch mutation facts.
             for child in children(node):
-                sub(child, env.copy())
+                walk(child, env.copy(), loops, multiplier, depth, conditional or kind != 'parallel')
             from ibl_v2_analysis import assigned_names
             for name in assigned_names(node) & env.keys():
                 env[name] = Facts()
@@ -89,24 +153,31 @@ def analyze(compiler, root, inputs):
         dependencies = frozenset().union(*(sub(c).dependencies for c in children(node)))
         return Facts(dependencies=dependencies)
 
-    def call(node, env, loops, multiplier, depth, piped=None):
+    def call(node, env, loops, multiplier, depth, piped=None, conditional=False):
         nonlocal visits
         if node.kind != 'call':
             return Facts()
         d = node.data
         if 'entries' in d['params'].data:
             unknown(node, '펼침 인자의 값·효과는 실행 시 해소합니다.')
-        args = {k: walk(v, env, loops, multiplier, depth)
+        args = {k: walk(v, env, loops, multiplier, depth, conditional)
                 for k, v in record_fields(d['params']).items()}
         key = d['node'] + ':' + d['action']
         if key == 'table:each':
             items = piped if piped is not None else args.get('items', Facts())
             if items.count is None:
                 unknown(node, 'each 입력 건수 미상')
+            if items.count == 0:
+                return Facts(0)
             local = {**env, 'it': Facts(dependencies=frozenset({node.id})),
                      'i': Facts(dependencies=frozenset({node.id}))}
+            from ibl_v2_analysis import assigned_names
+            if items.count is None or items.count > 1:
+                for name in assigned_names(d['body']) & env.keys():
+                    local[name] = Facts()
             walk(d['body'], local, (*loops, (node.id, items.count)),
-                 multiplier * items.count if multiplier is not None and items.count is not None else None, depth)
+                 multiplier * items.count if multiplier is not None and items.count is not None else None, depth,
+                 conditional or items.count is None)
             mode = record_fields(d['params']).get('mode')
             return Facts(items.count if mode is None or mode.data.get('value') == 'map' else None,
                          items.dependencies)
@@ -120,11 +191,14 @@ def analyze(compiler, root, inputs):
             if piped is not None and params:
                 args[next(iter(params))] = piped
             for name, default in params.items():
-                args.setdefault(name, walk(default, {}, loops, multiplier, depth))
+                if name not in args:
+                    args[name] = walk(default, {}, loops, multiplier, depth, conditional)
             active.add(sid)
+            callers.append(where(node))
             try:
-                return walk(fn.data['body'], args, loops, multiplier, depth + 1)
+                return walk(fn.data['body'], args, loops, multiplier, depth + 1, conditional)
             finally:
+                callers.pop()
                 active.remove(sid)
         spec = compiler.registry.get(key)
         if spec is None:
@@ -145,6 +219,18 @@ def analyze(compiler, root, inputs):
             args[receiver] = piped
         effects = contract.get('effects', [])
         analysis = spec.contract.get('analysis', {})
+        fixed = spec.contract.get('adapter', {}).get('fixed_params', {})
+        approval_values = {**spec.contract.get('defaults', {}), **{k: v.value for k, v in args.items()}, **fixed}
+        if 'op' not in args and 'op' not in fixed and (_unknown_spread(d['params']) or
+                ('op' not in approval_values and spec.contract.get('adapter', {}).get('protocol') == 'ibl-script/2')):
+            approval_values['op'] = UNRESOLVED
+        notice = approval_notice(analysis.get('approval_policy'), approval_values, key, where(node),
+                                 multiplier, conditional)
+        if notice:
+            if callers:
+                notice['facts']['callers'] = list(callers)
+            if notice not in warnings:
+                warnings.append(notice)
         inspect_param = analysis.get('ai_inspect_param')
         inspect_only = bool(inspect_param and values.get(inspect_param) in ('batch', 'each'))
         is_model = not inspect_only and ('model' in effects or analysis.get('ai_call') is True)
@@ -175,13 +261,13 @@ def analyze(compiler, root, inputs):
             unknown(node, '호환·스크립트 경계 내부의 모델 호출은 미상')
         return Facts(dependencies=frozenset().union(*(v.dependencies for v in args.values())))
 
-    env = {k: Facts(len(v) if isinstance(v, list) else None) for k, v in inputs.items()}
+    env = {k: Facts(len(v) if isinstance(v, list) else None, value=_scalar(v)) for k, v in inputs.items()}
     walk(root, env)
     return {'status': 'partial' if unknowns else 'analyzed',
             'declared_ai_visits_upper_bound': None if unknowns else visits,
             'unknowns': unknowns, 'warnings': warnings[:32],
             'warnings_omitted': max(0, len(warnings) - 32),
-            'note': '선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다.'}
+            'note': '선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.'}
 
 
 def children(node):

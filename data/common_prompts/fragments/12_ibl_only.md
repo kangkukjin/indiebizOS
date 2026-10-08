@@ -86,6 +86,7 @@ return $결과
 `invalid`(확정 오류), `incomplete`(미확정 타입의 실행 시 검사 필요), `failed`(검사 기반 오류)다.
 `ok`는 업무 품질·모델 정확성·전건 완료를 보장하지 않는다. source_span의 offset/line/column으로 고친다.
 검사 통과도 미실행이다. 통과한 검사의 `execute_args.code`(`"$checked:…"`)를 code에 넣고 같은 inputs·budget으로 호출하면 원문을 다시 적지 않고 실행된다. 거절된 긴 프로그램은 응답의 `revise_args.code`(`"$rejected:…"`)와 `code_edits:[{old,new}]`로 고칠 조각만 보낸다(짧은 코드는 새로 적는다). 실행·쓰기 영수증을 확인한 뒤 산출물을 읽는다.
+`warnings.HUMAN_CONFIRM`은 선언된 사람 승인 대상의 사전 안내다. `facts.requirement`는 연산이 정해진 `declared` 또는 동적 연산의 `possible`; `conditional`·`visits_upper_bound`는 조건부 호출·방문 상한이며 실제 승인 횟수가 아니다. check는 승인·대상 조회를 하지 않는다. 실행이 suspended이면 승인 후 같은 code·inputs와 resume으로 이어간다.
 `warnings`의 `UNOBSERVED_FIELD`는 관측된 반환 필드 밖의 이름이다 — 오류가 아니므로 `describe`나 작은 실행으로 실제 필드를 확인한다.
 함수와 라이브러리의 자유 변수는 오류다. 인자를 명시하며 첫 인자가 파이프 자리다.
 파이프 입력과 같은 인자를 동시에 쓰면 null·빈 목록이어도 충돌이다. 재귀는 지원하지 않는다.

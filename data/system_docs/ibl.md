@@ -39,6 +39,7 @@ return $결과
 `ok`는 업무 품질·모델 정확성·전건 완료를 보장하지 않는다. 진단의 `location`은 제출 원문 또는
 저장 함수 안의 위치이며, `call_path`는 함수 호출 경로다. 기존 `source_span`은 연결 원문의 위치를 유지한다.
 `issues`의 확정 오류를 모아 고친 뒤 전체를 재검사하고, `warnings`는 의도에 비춰 검토한다.
+`warnings.HUMAN_CONFIRM`은 선언된 사람 승인 대상의 사전 안내다. `facts.requirement`는 연산이 정해진 `declared` 또는 동적 연산의 `possible`; `conditional`·`visits_upper_bound`는 조건부 호출·방문 상한이며 실제 승인 횟수가 아니다. check는 승인·대상 조회를 하지 않는다. 실행이 suspended이면 승인 후 같은 code·inputs와 resume으로 이어간다.
 `warnings`의 `UNOBSERVED_FIELD`는 fixture·실사용에서 관측된 반환 필드(`data/ibl_return_shapes.json`) 밖의 이름을 읽는다는 뜻이다. 선언이 아니라 흔적과의 불일치이므로 오류가 아니며, `describe`나 작은 실행으로 실제 필드를 확인한다.
 `preflight`는 선언된 AI 방문 상한과 미상을 구분한다. `source_hash`는 제출 원문, `plan_hash`는 의존 계획의 지문이다.
 검사·실행은 같은 컴파일러를 사용하며 검사 결과를 실행 승인 토큰으로 쓰지 않는다.

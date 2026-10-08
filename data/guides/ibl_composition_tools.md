@@ -116,6 +116,13 @@ stdout은 진단, 결과 파일은 값이다. 수정·재현·권한은 [Script 
 `read_scope`는 이번 응답의 경로·문자 범위이고 `format:"text"`는 문자열 원문, `"json"`은 구조 값의 JSON이다.
 `complete:true`면 하위까지 전달됐으니 재독하지 않는다. `next_read:null`은 중간 offset에서 읽은 끝 페이지일 수도 있다.
 
+`check:true`의 `warnings`에서 `HUMAN_CONFIRM`을 확인한다. 승인 선언이 있는 호출의 위치와
+연산을 알리고, op가 동적이면 `facts.requirement:"possible"`로 표시한다. 알려진 연산은
+`"declared"`이며, 분기·반복 여부는 `conditional`·`visits_upper_bound`에 따로 남긴다.
+방문 상한은 실제 승인 횟수가 아니다. 함수 호출 경로는 `facts.callers`로 구분한다.
+검사는 도구·대상 존재 확인·토큰 발급/소비를 실행하지 않는다. 안내가 없어도 불투명한
+스크립트 내부나 분석 예산 밖의 승인이 불필요하다는 뜻은 아니다. 실제 승인은 실행 관문에서 결정한다.
+
 실행 응답의 `resume:{run_id}`와 동일 `code`·`inputs`를 다음 execute_ibl 호출에 보낸다.
 완료한 도구 호출은 저장된 값으로 복원한다. 반복의 같은 인자도 서로 다른 호출로 기록한다.
 코드·입력·도구 구현이 달라지거나 외부 작업의 완료를 확인하지 못하면 재개하지 않는다.

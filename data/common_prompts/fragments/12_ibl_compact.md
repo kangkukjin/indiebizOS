@@ -1,17 +1,17 @@
 <ibl_executor>
-IBL은 도구를 어휘로 사용하는 언어다. execute_ibl은 현재 명시 값·함수 문법으로 실행한다.
+IBL은 도구를 어휘로 사용하는 언어다. execute_ibl은 명시 값·함수 문법을 쓴다.
 주 조합 교재: read_guide(query="ibl_composition.md"). 문법 전문은 [self:read]{path:"data/common_prompts/fragments/12_ibl_only.md"}의 text다.
 액션·op·입출력은 execute_ibl(code="",describe=["node:action"])으로 1~6개씩 조회한다.
 과거 가이드의 목적·품질 조건은 보존하고 현재 문법으로 작성한다.
 
 <!-- MEMBER_GRAMMAR:START -->
-현재 명시 값 IBL이 작성 기본값이다. inputs로 값을 전달하고 check:true로 검사한다.
+inputs로 값을 전달하고 check:true로 검사한다.
 호출: [node:action]{key:"값",number:3,flag:true}. 큰따옴표 검색은 {query:'"구절" 추가어'}.
 주석은 #. 문자열은 문자 그대로이며 f"${변수}"만 보간한다. 구조의 문자열화는 json($값).
 <!-- GRAMMAR_OPERATORS:START -->
 `>>`: 성공 값 전달; `&`: 독립 병렬·순서 보존 목록; `??`: 실패만 대체(0건은 유지); `;`: 문장 경계·실패 즉시 중단.
 <!-- GRAMMAR_OPERATORS:END -->
-변수는 값 그 자체다. 목록에 가상 .items/.count는 없다. len($목록)을 사용한다.
+변수는 값이다. 목록에 가상 .items/.count는 없다. len($목록)을 사용한다.
 도구가 Record를 반환한 경우에만 계약에 명시된 .items/.text 등을 읽는다.
 이전 호출의 변수는 자동 상속하지 않는다. inputs로 외부 값을 전달하고 정해진 절차는 한 프로그램으로 묶는다.
 큰 본문은 self:read로 읽은 .text를 전달한다. 파일 수정은 필요한 범위만 바꾸고 전체를 다시 생성하지 않는다.
@@ -35,11 +35,11 @@ $행 = [{id:"a",qty:2}]
 [fn:환산]{목록:$행,단가:3}
 ```
 함수의 인자는 명시한다. 첫 인자가 파이프 자리다. return은 현재 프로그램·함수·each에서 즉시 반환한다.
-if/try는 반환 프레임을 만들지 않는다. 빈 목록은 정상 값이며 ??로 대체되지 않는다.
+if/try는 반환 프레임을 만들지 않는다. 빈 목록은 정상 값이다.
 [if:len($목록)==0]{...}[else]{...}로 빈값을 다룬다. [try]{...}[catch]{...}는 잡을 수 있는 실패를 처리한다.
 문자열 가공: split/replace/strip/upper/lower/contains/join(Text 입력; 변환은 text/json으로 명시).
 목록: unique/union/intersection/difference(순서 보존·기존 동등성), zip/enumerate, any/all(Bool 목록),
-sorted($목록,"키",true), keys/values/entries. 날짜: date_add(날짜,일수)·date_diff(a,b)·month_end(날짜)(ISO 표기). 슬라이스 $목록[1:3], 펼침 {**$기본,k:값}(뒤 필드 우선).
+sorted($목록,"키",true), keys/values/entries, from_entries([[Text키,값],…])→Record(중복 키 실패). 날짜: date_add(날짜,일수)·date_diff(a,b)·month_end(날짜)(ISO 표기). 슬라이스 $목록[1:3], 펼침 {**$기본,k:값}(뒤 필드 우선).
 실제 여러 줄은 삼중 따옴표. assert 조건,"메시지",{상세:값}은 실패 시 ASSERTION_FAILED와 근거를 남긴다.
 각 값의 필드는 has/get으로 확인한다. get(객체,키)는 누락 시 null, 셋째 인자는 기본값이다.
 호출은 연산·내장 함수 인자·보간에도 쓴다. 조건·람다·?:·and/or·기본값에는 효과 없는 지역 함수만 호출한다.

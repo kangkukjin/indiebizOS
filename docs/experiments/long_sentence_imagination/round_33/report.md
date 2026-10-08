@@ -94,3 +94,24 @@
 - `build_ibl_nodes.py --check` 정합, 층 가드·파일 크기 예산 통과. frontend 미변경·미실행.
 
 훈련 종료 이후 수리·검증·보고서 벽시계는 약 25분(17:17~17:42). [검증 영수증](evidence/post_validation.json).
+
+## 2026-10-08 후속 — 동적 키 문법 대신 from_entries
+
+사용자 판정으로 순수 값 함수 `from_entries([[Text 키, 값],…])`를 추가했다.
+`{[$k]:…}` 문법은 추가하지 않는다. 정확히 두 원소인 쌍만 받고, 빈 목록은 빈 Record,
+중복 키는 `DUPLICATE_KEY`로 실패한다. 키 원문·입력 순서·값을 보존하고 공통 실행 예산을 쓴다.
+반환은 관측 필드가 없는 열린 Record이므로 필드 미상만으로 `UNOBSERVED_FIELD`를 내지 않는다.
+다른 레코드에 펼치면 타입 약화가 이어질 수 있으며, 내부 조회와 출력 변환 모두에 사용한다.
+
+원래 `main_v0.ibl`은 증거로 보존했다. 회귀에서 동적 키 reduce 한 줄만
+`from_entries(map($depths.items,($r)=>[$r.product,$r.depth]))`로 교체하여 전체 프로그램을
+임시 폴더에서 실행했다. 기본·순환·O007 수량 두 배 입력 모두 독립 Python oracle과
+소요량·주문 상태·제품별 깊이·최대 깊이·구성 행 수가 일치했고, 순환 경로와 저장 후 재독도 확인했다.
+시험: `backend/test_expression_functions.py::test_from_entries_round33_original_program_against_independent_oracle`.
+
+최종 검증: backend non-system 전수 **9,355 통과·1 건너뜀**(109.09초), 관련 시스템
+`test_python_libraries.py`·`test_vocabulary_archive.py`·`test_vocabulary_bundle_split.py`
+**72 통과**(47.73초). 초기 검사에서 함수 전수 예제·프롬프트 길이·시험 직접 실행 진입점을
+보완했으며, 로컬 소켓·브라우저·자식 프로세스를 차단하는 샌드박스 밖에서 최종 검증했다.
+어휘 빌드 정합·층·파일 크기·Android 번들 검사 통과. 라이브 `/ibl/execute`에서도 정상 생성과
+중복 키 실패 확인. 전체 system 묶음·frontend 검사는 실행하지 않았다.

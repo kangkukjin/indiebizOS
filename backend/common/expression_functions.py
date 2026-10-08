@@ -34,6 +34,7 @@ CONTRACTS = {
     'keys': (1, 1, ('Record',), 'List<Text>'),
     'values': (1, 1, ('Record',), 'List'),
     'entries': (1, 1, ('Record',), 'List<List>'),
+    'from_entries': (1, 1, ('List<List>',), 'Record'),
     # 날짜 산술(2026-09-29 언어 개정, 상상훈련 75회차 G75-1·사용자 판정): ISO 8601 표기를 받는 순수 함수.
     'date_add': (2, 2, ('Text', 'Number'), 'Text'),
     'date_diff': (2, 2, ('Text', 'Text'), 'Number'),
@@ -157,6 +158,24 @@ def call(name, args, tick, callback=None):
             tick()
         return list(first) if name == 'keys' else list(first.values()) if name == 'values' else [list(x) for x in first.items()]
     rows = listing(first)
+    if name == 'from_entries':
+        out = {}
+        for index, pair in enumerate(rows):
+            tick()
+            details = {'list_index': index}
+            if not isinstance(pair, list) or len(pair) != 2:
+                raise Fault('TYPE', 'from_entries의 각 항목은 [Text 키, 값] 두 원소 목록이어야 합니다.',
+                            details=details)
+            key, value = pair
+            if not isinstance(key, str):
+                raise Fault('TEXT_REQUIRED', 'from_entries의 키는 Text여야 합니다. 자동 변환하지 않습니다.',
+                            details=details)
+            # Record 키는 원문 그대로다(entries/get/인덱싱과 같은 계약).
+            if key in out:
+                raise Fault('DUPLICATE_KEY', f'from_entries에 중복 키가 있습니다: {key!r}. 먼저 중복을 정리하세요.',
+                            details={**details, 'key': key})
+            out[key] = value
+        return out
     if name in ('map', 'filter'):
         from common.expression_ops import Builtin, Closure
         if callback is None or not isinstance(args[1], (Builtin, Closure)):

@@ -21,7 +21,7 @@ AI 기본432.604초·입력2,470,371/출력42,379, 변형133.843초·845,534/13,
 훈련자 모델10회125,036/28,433; Codex 비용 미측정. 수리 후 자동 보고도 검수 필요, 실DB·전체회귀 미검증.
 [보고서·수리·산출물](experiments/long_sentence_imagination/round_38/report.md).
 
-## 37회차 — 생성형 AI의 개발 생산성: 심층 조사·분석 보고 (2026-10-08, 훈련 완료·수리 미실시)
+## 37회차 — 생성형 AI의 개발 생산성: 심층 조사·분석 보고 (2026-10-08, 훈련·후속 수리 완료, 의미 검수 잔여)
 
 정본 main `aa8751be`, 10:42:48~11:01:54 KST **19분6초/상한60분**, 이후 증거·보고 정리.
 개발시간20% 절감 전제를 공개 실증연구로 조사하고 시니어18/20·익숙한 대형 저장소 유지보수90%로 변경했다.
@@ -39,8 +39,15 @@ AI ep4441/4442는515.912/119.627초, 입력5,619,989/908,576·출력45,034/11,74
 기본 검사거절2·실행실패2, 변형거절0. 훈련자 내부 모델8회 입력175,454·출력36,112,
 Codex 작성/검수 비용은 미측정이므로 전체 비용 절감 비교 불가.
 양쪽 변형은 웹 재수집·재추출0, base의 trainer23·AI3파일 SHA-256/mtime 불변.
-모든 task 종료 확인, 제품 수리·reload·예약·자동 등록0. 원문 도표/추가3연구 전수 대조는 미검증.
-[보고서·재현·산출물](experiments/long_sentence_imagination/round_37/report.md).
+최초 훈련에서는 모든 task 종료 확인, 제품 수리·reload·예약·자동 등록0이었다.
+이후 정본 `c0cc0e4c`에서 **L37-1 진단 소실·L37-3 평가 파일 누락을 수리**하고,
+**L37-2 작성/평가 가드와 원천 범위 설명을 보완**했다. 실제 평가 7사례 기대 판정,
+원래 기본·조건 변경 재생, 관련199·일반9358(1건너뜀)·시스템/전체 재생56 통과를 수리 보고서에 기록했다.
+기본 평가 왕복2→1, 증거 보충 왕복0. 일반적인 의미 정확성·전체 시간/토큰 절감의 보증은 아니다.
+원문 도표/추가3연구 전수 대조와 수리 보고서에 명시한 추정 대상·불확실성 표현은 잔여다.
+[최초 보고서·재현·산출물](experiments/long_sentence_imagination/round_37/report.md) ·
+[후속 수리·검증·잔여](experiments/long_sentence_imagination/round_37/repair/report.md).
+2026-10-09 기록 정정: 후속 수리 커밋이 있었으나 이 원장의 ‘미실시/열림’ 갱신이 누락돼 있었다.
 
 ## 36회차 — 교육 자료 전달 묶음·설명 변경·부분 복구 (2026-10-08, 훈련 완료·후속 수리)
 
@@ -219,9 +226,9 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 | L38-1 | 원문 보존·비용 — 브라우저 body와 main 선언 불일치, 줄 strip으로 코드 손실·중복 IPC | 동일 DOM 대역에서 본문/들여쓰기 불일치, 실제 두 문서 메뉴 혼입 | 수리 — 공통 DOM 파서·정직한 fallback·탐색 잡음 정리. 두 문서20.2% 문자 감소는 전체 비용 절감률 아님 | [38회차](experiments/long_sentence_imagination/round_38/report.md), 전체 기본/NAS·13신규회귀 |
 | L38-2 | 실패 전파 — 프레임 누락과 최종 긴 본문 선택에서 실패 소실·불완전 캐시 | Playwright 누락/Chrome iframe, 긴 정적 fallback으로 source_complete 소실 재현 | 수리 — PARTIAL_SOURCE·partial 근거, 폴백 보존·불완전 캐시 제외·v8 | [38회차](experiments/long_sentence_imagination/round_38/report.md), 원래 collect의 중복/부분실패/빈 입력 Runtime 검증 |
 | L38-3 | 분석·작성 — 기존 결정 미전달, 복구 형식·스냅샷·내용 검증 불일치 | 양쪽 자동 보고의 구체적 절차 오류, 수리 후에도 의미 오해 잔존 | 사례 수리 — 이전 결정 전달·null 처리·공통 조사 교재·별도 검수본. 일반 자동 의미 정확성은 미해결 | [38회차](experiments/long_sentence_imagination/round_38/report.md), report_v2·기본/NAS 검수 정정 목록 |
-| L37-1 | 구현·진단 결함 — oversize inspect의 inspection/상한/초과량이 IBL 오류에서 소실 | 60010자 합성 입력 → TOOL/input_size만. handler는 inspection 반환, v2 adapter 허용 목록에서 탈락 | 열림 — 작은 크기 진단을 오류 경계 끝까지 보존, 모델0 유지 | [37회차](experiments/long_sentence_imagination/round_37/report.md), repro/inspect_oversize.ibl |
-| L37-2 | 분석·검수 공백 — 일부 집단의 절감률로 회사 전체 계획 채택; 원문 단위→PDF 쪽수 오기 | 두 variant의 시니어 유지보수 한정 분석→20% 계획. 합성900/100시간은 전체18%. 실제19쪽을20쪽으로 표시 | 열림 — 대상·분모·단위·근거와 결론/실험 규칙 대조, 구조화 출처 보존 | [37회차](experiments/long_sentence_imagination/round_37/report.md), artifacts·scope_counterexample.ibl·source_scope.json |
-| L37-3 | 평가 근거 전달·비용 공백 — 이미 작성된 설명/미확인 필드가 발췌에서 빠져 재검수 | ep4441 첫 평가UNKNOWN→추가4도구(실패2 포함)·재평가, 내용 변경0. repair입력554695/출력2268(캐시 포함) | 열림 — 기준별 기존 산출물 참조 전달·회수, 생략과 미수행 구별 유지. L36-2 인접 경로 | [37회차](experiments/long_sentence_imagination/round_37/report.md), evaluations.json·ai_calls.json |
+| L37-1 | 구현·진단 결함 — oversize inspect의 inspection/상한/초과량이 IBL 오류에서 소실 | 60010자 합성 입력 → TOOL/input_size만. handler는 inspection 반환, v2 adapter 허용 목록에서 탈락 | 수리 — c0cc0e4c, inspection/입력 문자·바이트/상한을 오류 상세에 보존, 실제 초과 입력 모델0 확인 | [37회차 수리](experiments/long_sentence_imagination/round_37/repair/report.md), repro/inspect_oversize.ibl |
+| L37-2 | 분석·검수 공백 — 일부 집단의 절감률로 회사 전체 계획 채택; 원문 단위→PDF 쪽수 오기 | 두 variant의 시니어 유지보수 한정 분석→20% 계획. 합성900/100시간은 전체18%. 실제19쪽을20쪽으로 표시 | 보완·잔여 — c0cc0e4c, 작성/평가 가드·범위 설명 수정, 실제 모델7사례 검증. 의미 정확성의 일반 보증은 미해결 | [37회차 수리](experiments/long_sentence_imagination/round_37/repair/report.md), artifacts·scope_counterexample.ibl·source_scope.json |
+| L37-3 | 평가 근거 전달·비용 공백 — 이미 작성된 설명/미확인 필드가 발췌에서 빠져 재검수 | ep4441 첫 평가UNKNOWN→추가4도구(실패2 포함)·재평가, 내용 변경0. repair입력554695/출력2268(캐시 포함) | 수리 — c0cc0e4c, 실제 쓰기 경로·JSON/CSV/TSV를 평가 파일/지문에 포함. 기본 평가2→1·증거 보충0, 전체 비용 개선 미보증 | [37회차 수리](experiments/long_sentence_imagination/round_37/repair/report.md), evaluations.json·ai_calls.json |
 | L36-1 | 기능 발견 결함 — 두 글자 정확한 Script명도 query 점수 기준으로 탈락, 검색0건을 원장 미등록으로 안내 | query 압축/시험=0, query zip/id 압축=1; reusable_catalog.ranked 길이2 허용·점수3 하한 | 수리 — 정확명 우선·두 글자 점수 허용·검색 없음/등록 없음 안내 구분. 라이브 압축/시험 검색 및 원래 전체 프로그램3개 통과 | [36회차](experiments/long_sentence_imagination/round_36/report.md), discovery_probe.ibl·discovery_gap.json |
 | L36-2 | 검토 근거 전달 결함 — 실제 검사 거절이 예산에서 빠져 참인 수정 이력이 unsupported | ep4437 guard_packet의 omitted_calls4, 실제 join 거절 뒤 calls·산출물 재조회2회 | 수리 — 관련 거절과 같은 도구의 다음 시도 우선 보존·생략≠미실행 명시. 원본 실분류 limited(e2/e3), 대조3건 통과. 전체 AI 턴 비용 비교 미실시 | [36회차](experiments/long_sentence_imagination/round_36/report.md), 실제 패킷·호출 trace |
 | L34-1 | 실행 대상/진단 결함 — 명시 project_id 해소 실패가 다른 경로로 폴백 | HTTP 검사 “문맥 없음”, fallback 경로 제공 회귀에서 실제 실행 진입 | 수리됨 — HTTP PROJECT_NOT_FOUND·ID와 실행 전 거절, 공통 라우팅 명시 ID 실패 시 폴백 없음 | 34회차 커밋·원래 전체/기본/빈 점검/새 경계 변형 전건 |

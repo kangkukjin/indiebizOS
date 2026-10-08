@@ -87,3 +87,20 @@ XLSX 는 `.data.table.rows` 에 헤더·합계 행이 함께 와서 이름으로
 ## 6. 종료와 다음 수리 범위
 
 훈련 종료 시점의 코드·설정·어휘 변경 0. 수리는 별도 요청(L40-1 → L40-2 순 제안). AI 작업 3건 종료 상태는 `evidence/training_end.json`.
+
+## 7. 후속 수리 — 2026-10-09
+
+사용자의 수리 요청으로 정본 main에서 두 갭을 수정했다. 위 표와 원래 초안은 발견 당시의 증거로 보존한다.
+
+- **L40-1**: HTTP `/ibl/execute`의 미지 최상위 키는 422로 실행 전에 거절한다. `continuation`·`bogus_key`·`reues`를 넣은 요청은 실행기에 닿지 않는다. 이미 은퇴한 표시 옵션 `verbose`만 기존 저장 클라이언트의 호환을 위해 제거하며, 모델 도구 스키마에는 다시 노출하지 않는다. 올바른 `reuse_args`의 최상위 병합·전달을 검사했고, 주 교재와 도구 교재에 요청 JSON 예시를 추가했다. 중첩 `inputs`의 사용자 데이터 키는 제한하지 않는다.
+- **L40-2**: `common.record_schema`가 이름·명시적 스칼라 타입을 함께 해석한다. 두 개 이상 필드를 나열한 schema에서 정확한 `숫자/Number/number`, `문자열/Text/text/string`, `불리언/Bool/bool/boolean` 설명은 각각 nullable 타입이다(`또는 null`·`|Null` 허용). 날짜·단위·자유 설명과 기존 단일 자유 라벨은 타입으로 추측하지 않는다. 판본 2 검사기는 함수·each·필드 투영을 지나 이 타입을 보존하고, 산술·보간의 null 분기 누락을 기존 진단으로 거절한다. 검사 전용 `inspect`는 실제 모델 변환처럼 입력 타입을 바꾸지 않는다.
+- **같은 실행 계약**: `self:struct`와 `table:ai`의 모델 지시와 응답 검사가 같은 해석기를 사용한다. 필드 누락뿐 아니라 명시한 타입과 다른 비null 값도 schema 오류다. 숫자 문자열·Bool을 숫자로 몰래 변환하지 않으며, 미확인은 null로 보존한다. 이 검사 때문에 모델을 추가 호출하지 않는다. `contract.covers[].required`는 이미 모델 지시에 필수 비null 필드로 전달되고 출력에서도 검사되므로 그 경로는 유지하고 교재에 범위를 명시했다.
+
+원래 `main_v0.ibl`을 검사하면 이전의 실행 중 `NUMBER_REQUIRED` 대신 43·45행의 null 산술 4건이 실행 전에 드러난다([정적 증거](evidence/repair_preflight.json)). 활성 API에서도 미지 키 422, 무분기 숫자 변환 `ARITHMETIC`, null 분기를 넣은 코드 `ok:true`·`Null | Number`를 확인했다([요청·응답](evidence/repair_live.json)). 이 활성 확인은 모델을 호출하지 않았다.
+
+회귀의 계약 집: `backend/test_api_ibl.py`, `backend/test_record_schema.py`, `backend/test_ibl_v2_analysis.py`.
+3회차 전체 보고서 재생은 원래 초안을 보존한 채 시험에서 해설 null 표시만 보완했다. 정상 결과·원문 읽기 6회·모델 7회·재사용 13건이라는 기존 assertions를 유지했다. 용례 25건을 전문 재검토했으며, 이번에 명시 타입으로 해석되는 schema를 쓰지 않아 용례 본문 변경은 필요 없었다.
+
+한계: 모델의 추출 비결정성과 사실 판정 자체를 제거한 것은 아니다. 자유 설명의 정적 타입·전체 토큰 개선·실제 모델을 쓴 월말 과제의 새 성능은 미측정이다. 이전 영수증은 구현 지문이 달라지면 재사용되지 않는 기존 규칙을 따른다.
+
+검증 완료: 선택기는 변경 7파일에서 548/602개 시험 파일(91%)과 허브 `ibl_v2_analysis`·`record_schema`를 지목하여 전수를 실행했다. 정상 macOS 권한에서 `.venv/bin/python3 -m pytest backend/ -n auto --dist loadfile` **9,618 passed · 12 skipped · 0 failed · 0 errors**, 203.93초, 종료 코드 0. 최초 제한 샌드박스 실행은 로컬 서버·브라우저·하위 샌드박스 차단으로 실패하여 통과 근거로 사용하지 않았다. 전수 중 드러난 은퇴 표시 옵션 호환·과거 보고서 null 보간·시험 직접 실행 진입점도 보완한 후 위 전수를 통과했다. 어휘 파생 `--check`, 층 구조, 은퇴 계약, Android 번들 재생성 통과. 재사용·원문·보고서 품질 assertions는 약화하지 않았다. 전수의 실행 횟수·결과 요약은 [수리 검증](evidence/repair_verification.json)에 보존한다.

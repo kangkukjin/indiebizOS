@@ -5,6 +5,41 @@ import boot_paths  # noqa: F401
 import pytest
 
 
+@pytest.mark.parametrize('extra', [
+    {'continuation': {'reuse_args': {'reuse': {'run_id': 'previous'}}}},
+    {'bogus_key': 1}, {'reues': {'run_id': 'previous'}},
+])
+def test_unknown_execute_keys_rejected_before_any_execution(monkeypatch, extra):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import api_ibl
+
+    monkeypatch.setattr('system_tools._execute_ibl_unified',
+                        lambda *a, **k: pytest.fail('invalid request executed'))
+    app = FastAPI()
+    app.include_router(api_ibl.router)
+    with TestClient(app) as client:
+        response = client.post('/ibl/execute', json={'code': 'return 1', **extra})
+    assert response.status_code == 422
+    errors = response.json()['detail']
+    assert {e['loc'][-1] for e in errors if e['type'] == 'extra_forbidden'} == set(extra)
+
+
+def test_reuse_args_merge_reaches_executor(tmp_path, monkeypatch):
+    from api_ibl import IBLRequest, execute_ibl_code
+    captured = []
+
+    def execute(request, *args, **kwargs):
+        captured.append(request)
+        return {'success': True}
+
+    monkeypatch.setattr('system_tools._execute_ibl_unified', execute)
+    continuation = {'reuse_args': {'reuse': {'run_id': 'previous', 'models': False}}}
+    request = {'code': 'return 1', 'project_path': str(tmp_path), **continuation['reuse_args']}
+    assert asyncio.run(execute_ibl_code(IBLRequest(**request)))['success']
+    assert captured[0]['reuse'] == {'run_id': 'previous', 'models': False}
+
+
 @pytest.mark.parametrize('check', [False, True])
 def test_unknown_explicit_project_rejected_before_execution(tmp_path, monkeypatch, check):
     from api_ibl import IBLRequest, execute_ibl_code

@@ -1,0 +1,27 @@
+{
+  "command": ".venv/bin/python3 -m pytest backend/ -n auto --dist loadfile",
+  "environment": "native macOS (sandbox restrictions lifted for process/browser tests)",
+  "passed": 9618,
+  "skipped": 12,
+  "failed": 0,
+  "errors": 0,
+  "elapsed_seconds": 203.93,
+  "exit_code": 0,
+  "gates": [
+    "build_ibl_nodes.py --check",
+    "check_backend_layers.py",
+    "check_retired_contracts.py",
+    "build_body_bundle.py android"
+  ],
+  "examples_reviewed": {
+    "self:struct": 9,
+    "table:ai": 16
+  },
+  "live": "repair_live.json",
+  "original_draft_preflight": "repair_preflight.json",
+  "limitations": [
+    "model nondeterminism unchanged",
+    "no new paid-model month-end task run",
+    "total token benefit unmeasured"
+  ]
+}

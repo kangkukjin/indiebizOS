@@ -5,7 +5,7 @@ import re
 import unicodedata
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, model_validator
 
 router = APIRouter(prefix="/ibl", tags=["ibl"])
 from api_pursuits import router as pursuits_router
@@ -14,6 +14,18 @@ from api_supervision import router as supervision_router
 router.include_router(supervision_router)
 
 class IBLRequest(BaseModel):
+    # An ignored reuse/approval typo can execute a different, costly request.
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="before")
+    @classmethod
+    def discard_retired_display_option(cls, value):
+        # Saved clients may still send the retired display-only switch. It has
+        # no execution semantics; every other undeclared key remains an error.
+        if isinstance(value, dict) and "verbose" in value:
+            return {key: item for key, item in value.items() if key != "verbose"}
+        return value
+
     code: str
     edition: Optional[int] = None
     inputs: Optional[dict] = None

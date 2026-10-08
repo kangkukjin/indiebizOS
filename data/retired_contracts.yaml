@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: ai-schema-names-only
+    retired: 2026-10-09
+    reason: AI 추출 schema의 명시적 스칼라 타입이 검사에서 Unknown으로 소실되어 null 산술 실패를 실행 전에 찾지 못했다.
+    instead: 명시적 숫자·문자열·불리언은 nullable 타입으로 검사하고 같은 공통 schema 해석기로 모델 출력 타입을 검증한다. 자유 설명은 Unknown이다.
+    phrases: ['The schema declares names, not types', '선언된 이름의 누락만 모델 호출 없이 검사한다']
   - id: repair-agent-only-grant
     retired: 2026-10-04
     reason: 같은 에이전트의 다른 작업이 수리 권한과 사본을 공유했다.

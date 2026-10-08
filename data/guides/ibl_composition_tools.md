@@ -129,7 +129,11 @@ stdout은 진단, 결과 파일은 값이다. 수정·재현·권한은 [Script 
 `RESUME_DIVERGED`의 `details.changed/fingerprints`는 변경 차원의 지문이다. 옛 기록은 `dimensions_known:false`다.
 취소 후 finally가 외부 정리를 수행한 경우도 새 작업 계획이 필요하다. 확인된 실패를 몰래 재시도하지 않는다.
 회원 기록은 사적 세션의 수명을 따르고, 주인 기록은 백엔드 재기동 후에도 남는다.
-코드를 고쳤고 이전 읽기를 이어 쓸 의도라면 `continuation.reuse_args`를 요청에 합친다.
+코드를 고쳤고 이전 읽기를 이어 쓸 의도라면 응답의 `continuation.reuse_args` 안쪽 키를 요청의 **최상위**에 합친다.
+예를 들어 `reuse_args`가 `{"reuse":{"run_id":"이전 실행 ID"}}`이면 새 요청은
+`{"code":"고친 코드", "inputs":{}, "reuse":{"run_id":"이전 실행 ID"}}`이다.
+`continuation`이나 `reuse_args`라는 키로 감싸서 보내지 않는다. `/ibl/execute`는 미지 최상위 키를
+HTTP 422로 실행 전에 거절하며, 응답 `detail`의 위치가 잘못된 키를 가리킨다.
 파일 읽기 영수증에는 읽기 직전의 파일 지문(수정 시각·크기)이 실린다. 같은 경로의 파일이 그사이 바뀌었으면 빌리지 않고
 새로 읽으며 `reuse.skipped`에 `resource_changed`와 바뀐 경로를 남긴다(지문 없는 옛 영수증은 `freshness_unknown`).
 웹·모델처럼 지문을 찍을 수 없는 원천은 종전대로 작성자가 신선도를 판단한다.
@@ -138,6 +142,19 @@ stdout은 진단, 결과 파일은 값이다. 수정·재현·권한은 [Script 
 쓰기와 겹치는 이전·동시 읽기는 제외한다(자원 미상은 전체).
 `per_run:true`(시계)는 새로 읽는다.
 최신 자료는 새로 조회한다. `resume`은 실패도 복원한다.
+
+### AI 추출값의 결측과 타입
+
+`table:ai`와 `self:struct`의 `schema:"amount(숫자), label(문자열), active(불리언)"`는
+각 필드를 `Number|Null`, `Text|Null`, `Bool|Null`로 검사한다. 괄호 안의 정확한 타입명
+`Number/number`, `Text/text/string`, `Bool/bool/boolean`도 같고 `또는 null`·`|Null`을 덧붙일 수 있다.
+그 밖의 설명·단위·날짜 형식은 타입으로 추측하지 않는다. 기존의 단일 자유 라벨도 그대로다.
+명시된 타입과 다른 비null 모델 출력은 schema 오류이며 자동 변환·재호출하지 않는다.
+원문에서 값을 확인하지 못하면 null이다. 숫자 선언은 값의 존재나 사실 정확성을 보증하지 않는다.
+계산·보간 전에 `$n == null ? null : number($n)`처럼 같은 값을 직접 검사한다.
+0으로 대신할지는 업무 기준으로 결정하고, 미확인과 0을 섞지 않는다.
+`contract.covers[].required`는 중첩 응답의 **비null 필수 필드**이며 지시와 응답 검사에 함께 적용된다.
+누락을 보존해야 하는 선택 필드는 required에 넣지 않는다. 같은 추출을 유지하려면 위의 `reuse`를 사용한다.
 
 ### 읽기·판정·반환을 한 프로그램에서 연결하기
 

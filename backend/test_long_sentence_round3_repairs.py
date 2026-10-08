@@ -223,6 +223,9 @@ def test_full_report_and_six_source_reuse(registry, tmp_path, monkeypatch, varia
     code = code.replace('get($p,"paragraph_index",null)', '$p.paragraph_index')
     code = code.replace('get($p,"text","")', '$p.text')
     code = code.replace('get($it,"paragraph_index",null)', '$it.paragraph_index')
+    # Historical drafts predate nullable schema types. Keep their evidence
+    # unchanged; render an unknown explanation explicitly in the current replay.
+    code = code.replace('${$h.해설}', "${$h.해설 == null ? '해설 미확인' : $h.해설}")
     with Journal(tmp_path / 'runs', 'main') as journal:
         first = execute(code, reg, inputs, journal=journal)
         run_id = journal.run_id
@@ -231,6 +234,7 @@ def test_full_report_and_six_source_reuse(registry, tmp_path, monkeypatch, varia
     assert len(crawls) == 6 and len(requests) == 7
     assert 'Amazon' in Path(inputs['출력']).read_text()
     other = (FIXTURE / 'drafts/varB_v1.ibl').read_text() if variant else code
+    other = other.replace('${$h.해설}', "${$h.해설 == null ? '해설 미확인' : $h.해설}")
     second = execute(other, reg, {**inputs, '출력': str(tmp_path / 'changed.md')},
                      reusable=reusable_receipts(tmp_path / 'runs', run_id), reuse_run=run_id)
     assert second['success'] and second['value']['저장일치'], second

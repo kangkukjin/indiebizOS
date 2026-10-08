@@ -1,0 +1,235 @@
+{
+  "original_draft": "drafts/main_v0.ibl",
+  "executed": false,
+  "issues": [
+    {
+      "code": "ARITHMETIC",
+      "message": "산술로 관측할 수 없는 타입: Null",
+      "source_span": {
+        "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+        "start": 2318,
+        "end": 2332,
+        "line": 43,
+        "column": 20
+      },
+      "call_path": [
+        {
+          "function": "계약기한",
+          "call": {
+            "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+            "start": 5892,
+            "end": 5919,
+            "line": 92,
+            "column": 56,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 92,
+            "end_column": 83,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "definition": {
+            "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+            "start": 2276,
+            "end": 2682,
+            "line": 42,
+            "column": 1,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 47,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          }
+        }
+      ],
+      "expected": "Number",
+      "actual": "Null",
+      "hint": "null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: $값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. null 처리 결과는 과제 기준으로 정하세요.",
+      "location": {
+        "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+        "start": 2318,
+        "end": 2332,
+        "line": 43,
+        "column": 20,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 43,
+        "end_column": 34,
+        "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "ARITHMETIC",
+      "severity": "error"
+    },
+    {
+      "code": "ARITHMETIC",
+      "message": "산술로 관측할 수 없는 타입: Null",
+      "source_span": {
+        "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+        "start": 2420,
+        "end": 2434,
+        "line": 45,
+        "column": 35
+      },
+      "call_path": [
+        {
+          "function": "계약기한",
+          "call": {
+            "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+            "start": 5892,
+            "end": 5919,
+            "line": 92,
+            "column": 56,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 92,
+            "end_column": 83,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "definition": {
+            "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+            "start": 2276,
+            "end": 2682,
+            "line": 42,
+            "column": 1,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 47,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          }
+        }
+      ],
+      "expected": "Number",
+      "actual": "Null",
+      "hint": "null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: $값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. null 처리 결과는 과제 기준으로 정하세요.",
+      "location": {
+        "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+        "start": 2420,
+        "end": 2434,
+        "line": 45,
+        "column": 35,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 45,
+        "end_column": 49,
+        "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "ARITHMETIC",
+      "severity": "error"
+    },
+    {
+      "code": "ARITHMETIC",
+      "message": "산술로 관측할 수 없는 타입: Null",
+      "source_span": {
+        "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+        "start": 2461,
+        "end": 2481,
+        "line": 45,
+        "column": 76
+      },
+      "call_path": [
+        {
+          "function": "계약기한",
+          "call": {
+            "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+            "start": 5892,
+            "end": 5919,
+            "line": 92,
+            "column": 56,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 92,
+            "end_column": 83,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "definition": {
+            "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+            "start": 2276,
+            "end": 2682,
+            "line": 42,
+            "column": 1,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 47,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          }
+        }
+      ],
+      "expected": "Number",
+      "actual": "Null",
+      "hint": "null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: $값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. null 처리 결과는 과제 기준으로 정하세요.",
+      "location": {
+        "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+        "start": 2461,
+        "end": 2481,
+        "line": 45,
+        "column": 76,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 45,
+        "end_column": 96,
+        "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "ARITHMETIC",
+      "severity": "error"
+    },
+    {
+      "code": "ARITHMETIC",
+      "message": "산술로 관측할 수 없는 타입: Null",
+      "source_span": {
+        "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+        "start": 2502,
+        "end": 2516,
+        "line": 45,
+        "column": 117
+      },
+      "call_path": [
+        {
+          "function": "계약기한",
+          "call": {
+            "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+            "start": 5892,
+            "end": 5919,
+            "line": 92,
+            "column": 56,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 92,
+            "end_column": 83,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "definition": {
+            "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+            "start": 2276,
+            "end": 2682,
+            "line": 42,
+            "column": 1,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 47,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          }
+        }
+      ],
+      "expected": "Number",
+      "actual": "Null",
+      "hint": "null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: $값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. null 처리 결과는 과제 기준으로 정하세요.",
+      "location": {
+        "source_hash": "a82833187af758a9cad1ca13a469b7a4b0ca5df32e03bfec96fa24ce0134d69a",
+        "start": 2502,
+        "end": 2516,
+        "line": 45,
+        "column": 117,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 45,
+        "end_column": 131,
+        "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "ARITHMETIC",
+      "severity": "error"
+    }
+  ],
+  "result_type": "{balance_ok: Bool, open_total: Unknown, unmatched: Number, unexplained: Number, below_min_months: Number, contract_actions: Number, fee_mismatch: Number, revenue_hit: Bool}"
+}

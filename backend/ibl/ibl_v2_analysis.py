@@ -349,7 +349,7 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
         source = dict(source.fields).get('items', UNKNOWN)
     schema_param = flow.get('schema_param') or contract.get('analysis', {}).get('schema_param')
     if schema_param:
-        from common.record_schema import schema_fields
+        from common.record_schema import schema_fields, schema_types
         from ibl_callable_contract import UNRESOLVED
         inspect_param = contract.get('analysis', {}).get('ai_inspect_param')
         inspecting = values.get(inspect_param) if inspect_param else None
@@ -360,6 +360,7 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
             return result
         try:
             columns = schema_fields(values.get(schema_param))
+            scalar_types = schema_types(values.get(schema_param))
             from common.record_schema import hidden_schema_fields, hidden_schema_message
             input_param = contract.get('analysis', {}).get('schema_input_fields_param')
             known_fields = set()
@@ -376,12 +377,15 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
             return result
         projection = values.get(flow.get('columns_param'))
         if columns or isinstance(projection, list) and projection:
-            # The schema declares names, not types; unknown values may be null.
-            # Models can replace visible input fields, so never retain their types.
+            # Explicit scalar labels share the runtime schema guard. Extraction
+            # can still return null; prose and overwritten input types stay Unknown.
             known = dict(source.item.fields) if source.kind == 'List' and source.item.kind == 'Record' else {}
             keys = list(projection) if isinstance(projection, list) and projection else list(dict.fromkeys([*known, *(columns or [])]))
             if all(isinstance(k, str) for k in keys):
-                row = Type('Record', fields=tuple((k, UNKNOWN) for k in keys), open=False)
+                from ibl_v2_types import NULL, declared
+                row = Type('Record', fields=tuple(
+                    (k, join(declared(scalar_types[k]), NULL) if k in scalar_types else UNKNOWN)
+                    for k in keys), open=False)
                 return Type('Record', fields=tuple({**dict(result.fields), 'items': Type('List', item=row)}.items()), open=True)
     if source.kind != 'List' or flow.get('accepts') != 'items':
         return result

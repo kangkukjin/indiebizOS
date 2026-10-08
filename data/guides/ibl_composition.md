@@ -24,7 +24,7 @@
    `PROJECT_CONTEXT` 경고는 요청에 프로젝트 문맥이 없어 파일 액션이 첫 호출에서 거절된다는 사전경고다 — HTTP `/ibl/execute`는 body에 `project_id`를 넣는다.
    명시한 프로젝트 ID가 해소되지 않으면 다른 프로젝트로 폴백하지 않는다. HTTP는 `PROJECT_NOT_FOUND`로 실행 전에 거절하므로 ID를 바로잡는다.
    `UNOBSERVED_FIELD`는 관측된 반환 필드 밖의 이름이다 — `describe`의 `observed_returns`나 작은 실행으로 실제 필드를 본 뒤 쓴다.
-6. 수정 실행은 `continuation.reuse_args`로 같은 읽기·성공 모델 결과를 재사용한다(조건: `ibl_composition_tools.md` 「중단 뒤 이어가기」).
+6. 수정 실행은 응답 `continuation.reuse_args`의 키를 요청 최상위에 합쳐(`reuse:{run_id:…}`) 같은 읽기·성공 모델 결과를 재사용한다(조건: `ibl_composition_tools.md` 「중단 뒤 이어가기」).
    단계별 입력 연결은 [분할 예제](long_sentence_imagination.md#비싼-추출-결과를-반환한-뒤-계산표현을-바꾸기)를 따른다.
    `$ref`는 출처·불완전성을 보존하며 `evidence($입력)`으로 확인한다.
 

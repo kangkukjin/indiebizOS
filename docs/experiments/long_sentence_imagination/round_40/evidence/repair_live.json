@@ -1,0 +1,104 @@
+{
+  "unknown": {
+    "request": {
+      "code": "return 1",
+      "continuation": {
+        "reuse_args": {
+          "reuse": {
+            "run_id": "invalid"
+          }
+        }
+      },
+      "bogus_key": 1
+    },
+    "http_status": 422,
+    "response": {
+      "detail": [
+        {
+          "type": "extra_forbidden",
+          "loc": [
+            "body",
+            "continuation"
+          ],
+          "msg": "Extra inputs are not permitted",
+          "input": {
+            "reuse_args": {
+              "reuse": {
+                "run_id": "invalid"
+              }
+            }
+          }
+        },
+        {
+          "type": "extra_forbidden",
+          "loc": [
+            "body",
+            "bogus_key"
+          ],
+          "msg": "Extra inputs are not permitted",
+          "input": 1
+        }
+      ]
+    }
+  },
+  "nullable": {
+    "request": {
+      "code": "$r=[table:ai]{items:[{text:\"source\"}],instruction:\"extract\",schema:\"n(숫자), label(문자열)\"}; return number($r.items[0].n)",
+      "check": true,
+      "edition": 2
+    },
+    "http_status": 200,
+    "response": {
+      "ok": false,
+      "executed": false,
+      "status": "invalid",
+      "issues": [
+        {
+          "code": "ARITHMETIC",
+          "message": "산술로 관측할 수 없는 타입: Null",
+          "source_span": {
+            "source_hash": "aa974fd1461a9ee3cc6a2bf2bfe7fea92ccb5b0ae8545a30baa6c28178561557",
+            "start": 103,
+            "end": 116,
+            "line": 1,
+            "column": 104
+          },
+          "call_path": [],
+          "expected": "Number",
+          "actual": "Null",
+          "hint": "null일 수 있는 피연산자는 같은 값을 직접 검사해 분기하세요: $값 == null ? null : $값 * 2. 별도 상태 변수의 문자열 판정은 원래 필드의 non-null 조건으로 연결해 추론하지 않습니다. null 처리 결과는 과제 기준으로 정하세요.",
+          "location": {
+            "source_hash": "aa974fd1461a9ee3cc6a2bf2bfe7fea92ccb5b0ae8545a30baa6c28178561557",
+            "start": 103,
+            "end": 116,
+            "line": 1,
+            "column": 104,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 1,
+            "end_column": 117,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "rule": "ARITHMETIC",
+          "severity": "error"
+        }
+      ],
+      "result_type": "Number"
+    }
+  },
+  "guarded": {
+    "request": {
+      "code": "$r=[table:ai]{items:[{text:\"source\"}],instruction:\"extract\",schema:\"n(숫자), label(문자열)\"}; $n=$r.items[0].n; return $n == null ? null : number($n)",
+      "check": true,
+      "edition": 2
+    },
+    "http_status": 200,
+    "response": {
+      "ok": true,
+      "executed": false,
+      "status": "incomplete",
+      "issues": [],
+      "result_type": "Null | Number"
+    }
+  }
+}

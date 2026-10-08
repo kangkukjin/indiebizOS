@@ -1,6 +1,8 @@
 """동향 보고서 발행: 최신 선택·원문 보존·감독 턴에서도 즉시 공개·실패 시 기존 판 보존."""
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
+from urllib.parse import parse_qs, urlsplit
 
 import boot_paths  # noqa: F401
 import pytest
@@ -35,6 +37,7 @@ def publisher(tmp_path, monkeypatch):
     spec.loader.exec_module(module)
     monkeypatch.setattr(module, "ROOT", tmp_path)
     monkeypatch.setattr(module.renderer, "_ROOT", tmp_path)
+    monkeypatch.setattr(module, "_core", lambda: SimpleNamespace(load_state=lambda: {}))
     monkeypatch.delenv(STAGING_ENV, raising=False)
     folder = tmp_path / "outputs/ai_trend_reports"
     folder.mkdir(parents=True)
@@ -93,6 +96,51 @@ def test_no_source_or_failed_replace_preserves_public_file(publisher, monkeypatc
         mod.publish({})
     assert target.read_text() == "existing public bytes"
     assert list(target.parent.glob("*.tmp")) == []
+
+
+def test_publication_returns_canonical_file_link_without_claiming_access(publisher, monkeypatch):
+    mod, folder, target = publisher
+    (folder / "ai_trend_report_2026-10-09.md").write_text(SOURCE)
+    monkeypatch.setattr(mod, "_core", lambda: SimpleNamespace(
+        load_state=lambda: {"public_base": "https://warehouse.example/"}))
+    result = mod.publish({})
+    url = urlsplit(result["public_url"])
+    assert result["published"] and target.exists()
+    assert url.scheme == "https" and url.netloc == "warehouse.example"
+    assert url.path == "/f"
+    assert parse_qs(url.query) == {"path": ["오늘의 AI 보고서.html"]}
+    assert " " not in result["public_url"]
+    assert result["public_url_status"] == "configured"
+    assert result["public_url_checked"] is False
+
+
+@pytest.mark.parametrize("base,status", [
+    ("", "unconfigured"),
+    ("file:///tmp/site", "invalid_configuration"),
+    ("https://user:secret@example.com", "invalid_configuration"),
+    ("https://example.com/?token=secret", "invalid_configuration"),
+])
+def test_missing_or_invalid_address_does_not_undo_local_publication(publisher, monkeypatch, base, status):
+    mod, folder, target = publisher
+    (folder / "ai_trend_report_2026-10-09.md").write_text(SOURCE)
+    monkeypatch.setattr(mod, "_core", lambda: SimpleNamespace(load_state=lambda: {"public_base": base}))
+    result = mod.publish({})
+    assert result["published"] and target.exists()
+    assert result["public_url"] is None and result["public_url_status"] == status
+    assert result["public_url_checked"] is False
+
+
+def test_unavailable_public_settings_preserve_publication(publisher, monkeypatch):
+    mod, folder, target = publisher
+    (folder / "ai_trend_report_2026-10-09.md").write_text(SOURCE)
+
+    def unavailable():
+        raise OSError("portal not installed")
+
+    monkeypatch.setattr(mod, "_core", unavailable)
+    result = mod.publish({})
+    assert result["published"] and target.exists()
+    assert result["public_url"] is None and result["public_url_status"] == "unavailable"
 
 
 @pytest.mark.parametrize("width", [390, 1280])

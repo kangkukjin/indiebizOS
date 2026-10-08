@@ -179,7 +179,7 @@ python_libraries:
   registered_at: '2026-08-28T07:10:03'
   timeout: 120
 AI동향발행:
-  description: '저장한 AI 동향 보고서를 공유창고/0/오늘의 AI 보고서.html에 목차·요약·기사 구획을 갖춘 HTML로 발행한다. args: src(선택, 생략하면 파일명 날짜가 가장 최근인 원문). 기존 공유판은 새 HTML이 완성된 뒤 원자 교체하며, 감독 턴에서도 검수 대기 없이 바로 공개한다(published:true). 보고서 조사·작성·알림은 하지 않는다.'
+  description: '저장한 AI 동향 보고서를 공유창고/0/오늘의 AI 보고서.html에 목차·요약·기사 구획을 갖춘 HTML로 발행한다. args: src(선택, 생략하면 파일명 날짜가 가장 최근인 원문). 기존 공유판은 새 HTML이 완성된 뒤 원자 교체하며, 감독 턴에서도 검수 대기 없이 바로 공개한다(published:true). public_url은 공개 사이트 설정의 정식 파일 링크이며 public_url_checked:false는 접속 미검증이다. 주소가 없으면 public_url_status로 미설정·설정 오류·조회 실패를 구분한다. 보고서 조사·작성·알림은 하지 않는다.'
   file: ai_trend_publish.py
   interpreter: python
   registered_at: '2026-10-06T09:00:00'

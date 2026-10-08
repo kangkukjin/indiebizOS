@@ -39,6 +39,8 @@ $p = [self:workspace]{op:"propose", resource:$w.resource, selector:{start:0, end
   `restore{revision, path?}` 가 그 기록으로 되돌리기(되돌리기 전 상태를 먼저 기록해 둔다). AI 코딩은 이 낱말이 아니라
   `[others:delegate]{scope:"system", role:"coding", context:{project: $path, resource: $resource}}` — 실행 에이전트가 목표 문서대로
   짓고 진행 기록에 한 줄을 남긴다. 프로젝트 명령 실행(개발 서버)은 코딩 앱 실행 탭(엔진 I/O)의 몫.
+  콘솔 프로그램이 값을 요청하면 출력 아래 입력칸에 적고 Enter 또는 **입력 보내기**를 누른다.
+  입력 연결이 없다는 안내가 나오면 중지한 뒤 다시 실행한다.
 
 코딩 프로젝트의 `[self:workspace]{op:"close", resource:$resource, unregister:true}`는 등록만 해제한다.
 폴더·파일·git 기록·진행 중인 실행은 보존한다. 목록과 기본 폴더 자동 발견에서 제외되고,

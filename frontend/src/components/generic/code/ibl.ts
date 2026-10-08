@@ -18,7 +18,7 @@ export type TaskView = { state: string; terminal: boolean; result?: unknown; fai
 export type FileItem = { path: string; size: number; changed: string };
 export type FileText = { path: string; text: string; fingerprint: string; binary: boolean; lines: number };
 export type Version = { id: string; short: string; created_at: number; label: string };
-export type RunRecord = { id: string; command: string; state: string; exit_code: number | null; started_at: number; finished_at: number | null; serve: boolean };
+export type RunRecord = { id: string; command: string; state: string; exit_code: number | null; started_at: number; finished_at: number | null; serve: boolean; stdin?: boolean };
 
 const T = {
   detail: '[self:workspace]{op: "read", resource: $resource, selector: {project: true}}',
@@ -65,7 +65,7 @@ export function codeIBL(block: AppMode | undefined, resource: string) {
   };
 }
 
-/* 실행 탭의 엔진 I/O — 프로젝트 명령의 샌드박스 프로세스(시작·출력·중지). 선언이 부르지 않는 길. */
+/* 실행 탭의 엔진 I/O — 프로젝트 명령의 샌드박스 프로세스(시작·출력·입력·중지). 선언이 부르지 않는 길. */
 async function codingRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const r = await fetch(`${BACKEND_ORIGIN}/coding${path}`, {
     method, credentials: 'include', headers: { 'Content-Type': 'application/json' },
@@ -81,6 +81,7 @@ export const runIO = {
   latest: (resource: string) => codingRequest<{ run: RunRecord | null }>(`/projects/${encodeURIComponent(resource)}/runs`),
   output: (runId: string, offset: number) => codingRequest<{ run: RunRecord; text: string; offset: number }>(`/runs/${encodeURIComponent(runId)}?offset=${offset}`),
   stop: (runId: string) => codingRequest<RunRecord>(`/runs/${encodeURIComponent(runId)}/stop`, 'POST'),
+  input: (runId: string, text: string) => codingRequest<{ accepted: boolean }>(`/runs/${encodeURIComponent(runId)}/input`, 'POST', { text }),
 };
 
 /** 실행 에이전트에게 보내는 코딩 위임문 — 목표 문서가 지시이고, 폴더 밖은 손대지 않으며, 끝나면 진행 기록 한 줄. */

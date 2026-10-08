@@ -1,4 +1,4 @@
-"""코딩 앱의 엔진 I/O — 프로젝트 명령 실행(시작·출력 스트림·중지)만 남았다 (2026-10-07).
+"""코딩 앱의 엔진 I/O — 프로젝트 명령 실행(시작·출력 스트림·입력·중지).
 
 화면의 나머지(프로젝트 목록·열기·파일·기록·되돌리기)는 선언(data/instruments/coding.yaml)과 코드 엔진이
 `[self:workspace]` 로 부른다 — 여기는 선언이 부르지 않는 길이다(문서 앱의 `/documents/engine/*` 과 같은 기준).
@@ -48,6 +48,10 @@ class RunRequest(BaseModel):
     serve: bool = False   # 서버형 실행(포트를 연다) — 샌드박스가 로컬 네트워크를 허용한다
 
 
+class InputRequest(BaseModel):
+    text: str = Field(max_length=511)
+
+
 @router.post("/projects/{resource}/run")
 def start_run(resource: str, body: RunRequest):
     app = service()
@@ -72,3 +76,8 @@ def run_output(run_id: str, offset: int = Query(0, ge=0), limit: int = Query(200
 @router.post("/runs/{run_id}/stop")
 def stop_run(run_id: str):
     return invoke(service().stop, run_id)
+
+
+@router.post("/runs/{run_id}/input")
+def send_input(run_id: str, body: InputRequest):
+    return invoke(service().send_input, run_id, body.text)

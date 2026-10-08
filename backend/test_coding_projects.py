@@ -274,6 +274,100 @@ def test_http_engine_io_run_output_stop(projects, folder, monkeypatch):
         assert client.post(f"/coding/projects/{row['id']}/run", json={"command": "   "}).status_code == 400
 
 
+def _wait_for(check):
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        if check():
+            return
+        time.sleep(0.05)
+    assert check(), "프로그램 응답 시간 초과"
+
+
+@pytest.mark.skipif(not available(), reason="macOS 샌드박스 필요")
+def test_http_input_retries_unicode_empty_and_exit(projects, folder, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import api_coding
+    import principal
+    monkeypatch.setattr(api_coding, "service", lambda: projects)
+    monkeypatch.setattr(principal, "is_owner", lambda: True)
+    (folder / "app.py").write_text(
+        "print('입력 시험')\n"
+        "for _ in range(3):\n"
+        "    value = input('값: ')\n"
+        "    print('받음=' + repr(value))\n", encoding="utf-8")
+    row = projects.open(folder)
+    app = FastAPI()
+    app.include_router(api_coding.router)
+    with TestClient(app) as client:
+        run = client.post(f"/coding/projects/{row['id']}/run", json={"command": "python3 app.py"}).json()["run"]
+        url = f"/coding/runs/{run['id']}/input"
+        try:
+            _wait_for(lambda: "값: " in projects.output(run["id"])["text"])
+            assert projects.output(run["id"])["run"]["stdin"]
+            assert client.post(url, json={"text": "3"}, headers={"Origin": "https://other.example"}).status_code == 403
+            monkeypatch.setattr(principal, "is_owner", lambda: False)
+            assert client.post(url, json={"text": "3"}).status_code == 403
+            monkeypatch.setattr(principal, "is_owner", lambda: True)
+            assert client.post(url, json={"text": "한" * 200}).status_code == 400
+            assert client.post(url, json={"text": "한\n줄"}).status_code == 400
+            assert client.post(url, json={"text": "x" * 512}).status_code == 422
+            for value in ("사과", "", "3"):
+                assert client.post(url, json={"text": value}).json()["accepted"]
+                _wait_for(lambda: "받음=" + repr(value) in projects.output(run["id"])["text"])
+            _wait_for(lambda: projects.run_status(run["id"])["state"] == "passed")
+            assert not projects.output(run["id"])["run"]["stdin"]
+            assert client.post(url, json={"text": "4"}).status_code == 409
+        finally:
+            projects.stop(run["id"])
+
+
+@pytest.mark.skipif(not available(), reason="macOS 샌드박스 필요")
+def test_input_backpressure_stop_and_replacement(projects, folder):
+    from coding_projects import ACTIVE, ACTIVE_LOCK
+    row = projects.open(folder)
+    run = projects.run(row, "echo ready; sleep 30")
+    with ACTIVE_LOCK:
+        controller = ACTIVE[run["id"]]
+    try:
+        _wait_for(lambda: "ready\n" in projects.output(run["id"])["text"])
+        start = time.monotonic()
+        with pytest.raises(CodingConflict, match="이전 입력"):
+            for _ in range(4096):
+                projects.send_input(run["id"], "x" * 511)
+        assert time.monotonic() - start < 5
+        replacement = projects.run(row, "echo next; sleep 30")
+        try:
+            with pytest.raises(CodingConflict):
+                projects.send_input(run["id"], "old")
+            _wait_for(lambda: controller.processes[0].stdin.closed)
+            # 재기동으로 입력 연결을 잃은 실행은 capability도 거절도 일치한다.
+            with ACTIVE_LOCK:
+                live = ACTIVE.pop(replacement["id"])
+            try:
+                assert not projects.output(replacement["id"])["run"]["stdin"]
+                with pytest.raises(CodingConflict, match="다시 실행"):
+                    projects.send_input(replacement["id"], "lost")
+            finally:
+                with ACTIVE_LOCK:
+                    ACTIVE[replacement["id"]] = live
+        finally:
+            projects.stop(replacement["id"])
+    finally:
+        projects.stop(run["id"])
+
+
+@pytest.mark.skipif(not available(), reason="macOS 샌드박스 필요")
+def test_input_closed_by_running_program(projects, folder):
+    run = projects.run(projects.open(folder), "exec 0<&-; echo closed; sleep 30")
+    try:
+        _wait_for(lambda: "closed\n" in projects.output(run["id"])["text"])
+        with pytest.raises(CodingConflict, match="입력이 닫혔"):
+            projects.send_input(run["id"], "3")
+    finally:
+        projects.stop(run["id"])
+
+
 def _essentials_workspace():
     import importlib.util
     import sys

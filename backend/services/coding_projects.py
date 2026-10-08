@@ -241,7 +241,7 @@ class CodingProjects:
     def latest_run(self, row: dict):
         for r in self.store.list("run"):
             if r.get("project") == row["id"]:
-                return r
+                return self.run_status(r["id"])
         return None
 
     def _item(self, row: dict, registered: bool = True) -> dict:
@@ -444,15 +444,26 @@ class CodingProjects:
         out = log.open("ab")
         out.write(("$ " + command.strip() + "\n").encode())
         out.flush()
-        proc = controller.spawn(["/bin/sh", "-c", command], stdout=out, stderr=subprocess.STDOUT)
+        try:
+            proc = controller.spawn(["/bin/sh", "-c", command], stdin=subprocess.PIPE, bufsize=0,
+                                    stdout=out, stderr=subprocess.STDOUT,
+                                    env={**os.environ, "PYTHONUNBUFFERED": "1"})
+            # 원자적 한 줄 쓰기: 읽지 않는 프로그램 때문에 HTTP 작업자가 멈추지 않는다.
+            os.set_blocking(proc.stdin.fileno(), False)
+        except Exception:
+            out.close()
+            controller.close()
+            raise
         rec = {"id": run_id, "project": row["id"], "command": command.strip(), "serve": bool(serve), "state": "running",
-               "pid": proc.pid, "started_at": time.time(), "finished_at": None, "exit_code": None, "output": str(log)}
+               "pid": proc.pid, "stdin": True, "started_at": time.time(), "finished_at": None, "exit_code": None, "output": str(log)}
         self.store.save("run", rec)
         with ACTIVE_LOCK:
             ACTIVE[run_id] = controller
 
         def wait():
             code = proc.wait()
+            with controller.lock:
+                proc.stdin.close()
             out.close()
             fresh = self.store.get("run", run_id)
             if fresh["state"] == "running":
@@ -468,10 +479,38 @@ class CodingProjects:
         return rec
 
     def run_status(self, run_id: str) -> dict:
-        return self.store.get("run", run_id)
+        rec = self.store.get("run", run_id)
+        with ACTIVE_LOCK:
+            controller = ACTIVE.get(run_id)
+        rec["stdin"] = bool(rec["state"] == "running" and controller and not controller.cancelled.is_set())
+        return rec
+
+    def send_input(self, run_id: str, text: str) -> dict:
+        """사용자의 한 줄을 해당 실행의 표준 입력으로 보낸다(개행 포함 최대 512바이트)."""
+        if not isinstance(text, str) or "\n" in text or "\r" in text:
+            raise ValueError("입력은 한 줄로 보내세요")
+        data = (text + "\n").encode("utf-8")
+        if len(data) > 512:  # POSIX PIPE_BUF 하한 — 부분 전송 없이 성공하거나 재시도한다.
+            raise ValueError("입력이 너무 깁니다 — 한 줄은 UTF-8 511바이트까지 보낼 수 있습니다")
+        rec = self.store.get("run", run_id)
+        with ACTIVE_LOCK:
+            controller = ACTIVE.get(run_id)
+        if rec["state"] != "running" or controller is None:
+            raise CodingConflict("입력할 수 없는 실행입니다. 프로그램을 다시 실행하세요")
+        with controller.lock:
+            proc = controller.processes[0]
+            if controller.cancelled.is_set() or proc.poll() is not None or not proc.stdin or proc.stdin.closed:
+                raise CodingConflict("프로그램이 종료되어 입력할 수 없습니다")
+            try:
+                os.write(proc.stdin.fileno(), data)
+            except BlockingIOError as exc:
+                raise CodingConflict("프로그램이 아직 이전 입력을 읽지 않았습니다. 잠시 후 다시 보내세요") from exc
+            except BrokenPipeError as exc:
+                raise CodingConflict("프로그램의 입력이 닫혔습니다. 다시 실행하세요") from exc
+        return {"id": run_id, "accepted": True}
 
     def output(self, run_id: str, offset: int = 0, limit: int = 200000) -> dict:
-        rec = self.store.get("run", run_id)
+        rec = self.run_status(run_id)
         requested = int(limit or OUTPUT_READ_MAX)
         limit = max(1, min(OUTPUT_READ_MAX, requested))
         try:

@@ -13,6 +13,12 @@ export function RunTab({ resource, detail }: { resource: string; detail: Project
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const [inputNotice, setInputNotice] = useState('');
+  const inputPending = useRef(false);
+  const currentRun = useRef(run?.id);
+  currentRun.current = run?.id;
   const [previewKey, setPreviewKey] = useState(0);
   const offset = useRef(0);
   const out = useRef<HTMLPreElement>(null);
@@ -22,13 +28,13 @@ export function RunTab({ resource, detail }: { resource: string; detail: Project
   useEffect(() => {
     if (!run) return;
     let dead = false;
-    offset.current = 0; setText('');
+    offset.current = 0; setText(''); setInput(''); setInputNotice('');
     const pull = async () => {
       try {
         const r = await runIO.output(run.id, offset.current);
         if (dead) return;
         if (r.text) { setText((t) => t + r.text); offset.current = r.offset; }
-        if (r.run.state !== run.state) setRun(r.run);
+        setRun(r.run);
         return r.run.state;
       } catch (e) { if (!dead) setError(e instanceof Error ? e.message : String(e)); return 'failed'; }
     };
@@ -50,6 +56,18 @@ export function RunTab({ resource, detail }: { resource: string; detail: Project
     try { setRun(await runIO.stop(run.id)); } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   };
   const running = run?.state === 'running';
+  const canInput = running && !!run.stdin;
+  const sendInput = async () => {
+    if (!run || !canInput || inputPending.current) return;
+    const runId = run.id;
+    inputPending.current = true; setSending(true); setError(''); setInputNotice('');
+    try {
+      await runIO.input(runId, input);
+      if (currentRun.current === runId) { setInput(''); setInputNotice('입력을 보냈습니다.'); }
+    } catch (e) {
+      if (currentRun.current === runId) setError(e instanceof Error ? e.message : String(e));
+    } finally { inputPending.current = false; setSending(false); }
+  };
   return (
     <div className="flex flex-col rounded-xl border border-stone-200 bg-white overflow-hidden min-h-[calc(100vh-170px-var(--app-chrome,0px))]">
       <div className="flex flex-wrap items-center gap-2 px-4 h-12 border-b border-stone-200">
@@ -68,9 +86,25 @@ export function RunTab({ resource, detail }: { resource: string; detail: Project
       </div>
       {error && <p role="alert" className="px-4 py-2 text-sm text-red-600">{error}</p>}
       <div className={`flex-1 grid ${serve ? 'grid-cols-2' : 'grid-cols-1'} min-h-0`}>
-        <pre ref={out} className="m-0 p-4 overflow-auto bg-stone-900 text-stone-200 text-[12.5px] leading-[1.6] font-mono whitespace-pre-wrap">
-          {text || (run ? '' : '실행하면 출력이 여기에 흐릅니다.')}
-        </pre>
+        <div className="flex flex-col min-w-0 min-h-0">
+          <pre ref={out} className="flex-1 m-0 p-4 overflow-auto bg-stone-900 text-stone-200 text-[12.5px] leading-[1.6] font-mono whitespace-pre-wrap">
+            {text || (run ? '' : '실행하면 출력이 여기에 흐릅니다.')}
+          </pre>
+          <div className="px-4 py-3 border-t border-stone-200 bg-stone-50">
+            <div className="flex items-center gap-2">
+              <input aria-label="프로그램 입력" aria-describedby="coding-input-help" value={input} disabled={!canInput} readOnly={sending} maxLength={511}
+                onChange={(e) => { setInput(e.target.value); setInputNotice(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) { e.preventDefault(); void sendInput(); } }}
+                placeholder="프로그램이 요청한 값을 입력하세요"
+                className="flex-1 min-w-0 h-9 px-3 rounded-lg border border-stone-200 bg-white font-mono text-sm outline-none focus:border-teal-300 disabled:opacity-40" />
+              <button className={primary} disabled={!canInput || sending} onClick={sendInput}>{sending ? '전송 중…' : '입력 보내기'}</button>
+            </div>
+            <p id="coding-input-help" className="mt-1.5 text-xs text-stone-500">
+              {running && !canInput ? '입력 연결이 없습니다. 중지한 뒤 다시 실행하세요.' : '숫자나 글자를 적고 Enter 또는 입력 보내기를 누르세요.'}
+              <span role="status" className="ml-2 text-teal-700">{inputNotice}</span>
+            </p>
+          </div>
+        </div>
         {serve && (
           <div className="flex flex-col border-l border-stone-200">
             <div className="h-8 flex items-center gap-2 px-3 border-b border-stone-200 text-xs text-stone-500 font-mono">🌐 {detail.run_url}<span className="flex-1" />

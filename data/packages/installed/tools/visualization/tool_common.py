@@ -172,7 +172,7 @@ def save_figure(fig, output_path: str = None, output_format: str = "png"):
                 timestamp = dt.now().strftime("%Y%m%d_%H%M%S")
                 output_path = os.path.join(output_path, f"chart_{timestamp}.png")
             os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-        fig.savefig(output_path, dpi=150, bbox_inches='tight',
+        fig.savefig(output_path, format="png", dpi=150, bbox_inches='tight',
                     facecolor='white', edgecolor='none')
         plt.close(fig)
         # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
@@ -245,7 +245,7 @@ def save_plotly_figure(fig, output_path: str = None, output_format: str = "png")
                 timestamp = dt.now().strftime("%Y%m%d_%H%M%S")
                 output_path = os.path.join(output_path, f"chart_{timestamp}.png")
             os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-        fig.write_image(output_path, scale=2)
+        fig.write_image(output_path, format="png", scale=2)
         # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
         abs_path = os.path.abspath(output_path)
         return {"format": "png", "path": abs_path, "image_tag": f"[IMAGE:{abs_path}]"}

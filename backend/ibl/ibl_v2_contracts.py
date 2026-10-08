@@ -139,6 +139,19 @@ def handler_contract(node, action, config, schema_keys=None):
             "compatibility": "legacy-envelope/1",
             "adapter": {"protocol": "legacy-envelope", "value_path": ""}}
 
+    # Legacy aliases reach the handler after normalization. Canonicalize them here
+    # too so resource identity and receipt keys observe the actual argument.
+    for canonical, aliases in (config.get("aliases") or {}).items():
+        if canonical in contract["params"]:
+            for alias in aliases:
+                contract["params"].pop(alias, None)
+    contract = project_aliases(contract, config)
+
+    # Inferred adapters retain the same resource declarations as explicit contracts.
+    for name in ("read_resources", "write_resources"):
+        if name in config:
+            contract[name] = copy.deepcopy(config[name])
+
     # pipe_in is the existing producer/consumer declaration, not a second list
     # of action names. Preserve the legacy input envelope instead of unwrapping.
     if config.get("pipe_in"):

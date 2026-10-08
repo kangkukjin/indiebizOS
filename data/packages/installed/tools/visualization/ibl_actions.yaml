@@ -6,8 +6,9 @@ actions:
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
       items: [array, object]
-      x: string
+      x: [string, array]
       y: [string, array]
+      values: array
       # 2026-08-29 구현-읽기 감사 상환 — chart_type 별 옵션 knob 전체를 선언(전부 handler 렌더러가 읽음).
       spec: object            # Plotly figure JSON {data, layout} 그대로 렌더 — chart_type knob 밖 롱테일용.
       horizontal: boolean     # bar 전용 — 가로 막대(기본 false).
@@ -29,6 +30,7 @@ actions:
       # 쓰면 검수가 '미인식 파라미터' 로 경고만 하고 파일은 딴 데 떨어졌다. (29회차 F29-1)
       # 별칭은 데이터로 — 어휘 이름을 핸들러 코드에 심지 않는다(IBL 헌법 '명사의 자리').
       output_path: [path]
+    write_resources: {file: output_path}
     returns: effect
     pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
     runs_on: pc_only
@@ -41,7 +43,7 @@ actions:
 
       - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
 
-      - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
+      - bar: x(범주)·y(값) 같은 길이의 리스트. x가 문자열이면 입력 표의 열 이름, y는 값 열 이름 또는 열 이름 목록. horizontal/stacked 옵션. 시간축은 line.
 
       - pie: labels·values 리스트. donut 옵션으로 도넛.
 
@@ -59,7 +61,7 @@ actions:
     group: chart
     router: handler
     tool: chart
-    implementation: chart_type으로 Plotly 차트 생성(기본 line). output_format 미지정 시 .html/.htm 경로는 HTML, 그 외 PNG. 명시 형식과 확장자 충돌은 오류. matplotlib 폴백 내장.
+    implementation: chart_type으로 Plotly 차트 생성(기본 line). output_format 미지정 시 .html/.htm 경로는 HTML, 그 외 PNG. 명시 형식과 확장자 충돌은 오류. 확장자 없는 경로에도 지정 형식으로 저장하며 경로를 그대로 반환. matplotlib 폴백 내장.
     target_key: title
     keywords:
     - 차트
@@ -147,7 +149,7 @@ tool_json:
           enum:
           - png
           - html
-          description: 미지정 시 output_path가 .html/.htm이면 html, 그 외 png. 명시 형식과 파일 확장자는 일치해야 함.
+          description: 미지정 시 output_path가 .html/.htm이면 html, 그 외 png. 명시 형식과 파일 확장자는 일치해야 함. 확장자 없는 경로는 그대로 지정 형식으로 저장.
         output_path:
           type: string
           description: 출력 파일 경로 (선택, path 로도 부를 수 있다). bare 파일명은 프로젝트 outputs/로, 디렉토리를 적으면 그 자리에(형제 emitter 공통 규약).

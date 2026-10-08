@@ -73,7 +73,7 @@
               "png",
               "html"
             ],
-            "description": "미지정 시 output_path가 .html/.htm이면 html, 그 외 png. 명시 형식과 파일 확장자는 일치해야 함."
+            "description": "미지정 시 output_path가 .html/.htm이면 html, 그 외 png. 명시 형식과 파일 확장자는 일치해야 함. 확장자 없는 경로는 그대로 지정 형식으로 저장."
           },
           "output_path": {
             "type": "string",
@@ -94,7 +94,10 @@
             "description": "table:chart 파라미터"
           },
           "x": {
-            "type": "string",
+            "type": [
+              "string",
+              "array"
+            ],
             "description": "table:chart 파라미터"
           },
           "y": {
@@ -102,6 +105,10 @@
               "string",
               "array"
             ],
+            "description": "table:chart 파라미터"
+          },
+          "values": {
+            "type": "array",
             "description": "table:chart 파라미터"
           },
           "spec": {

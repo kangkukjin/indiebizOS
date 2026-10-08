@@ -48,7 +48,11 @@ def test_source_mutation_order_and_overlap(tmp_path, order, expected):
                'overlap_write_first': [begin_write, begin_read, finish_write, finish_read]}
         for op in ops[order]:
             op()
-        assert j.reuse_summary() == {'read_calls': expected, 'state_change_possible': True}
+        summary = {'read_calls': expected, 'state_change_possible': True}
+        if expected == 0:
+            summary.update(read_exclusions=[{'reason': 'unknown_write_resources',
+                'write_call_id': 'w', 'excluded_calls': 1}], read_exclusions_total=1)
+        assert j.reuse_summary() == summary
         j.complete({'success': True, 'source_complete': True})
     assert len(reusable_receipts(tmp_path, j.run_id)) == expected
 

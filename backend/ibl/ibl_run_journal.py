@@ -223,6 +223,8 @@ class Journal:
                     ('calls', 'state_change', 'INTEGER NOT NULL DEFAULT 1'),
                     ('calls', 'resources', 'TEXT'),
                     ('calls', 'request_parts', 'TEXT'),
+                    ('calls', 'call_info', 'TEXT'),
+                    ('calls', 'reuse_exclusion', 'TEXT'),
                     ('lifecycle', 'source_complete', 'INTEGER')):
                 if column not in {r[1] for r in self.db.execute(f'PRAGMA table_info({table})')}:
                     self.db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {declaration}')
@@ -278,7 +280,7 @@ class Journal:
 
     @durable
     def begin(self, call_id, request_hash, cleanup=False, *, reusable=False, state_change=True,
-              resources=None, request_parts=None):
+              resources=None, request_parts=None, call_info=None):
         with self.lock:
             row = self.db.execute("SELECT request,receipt,request_parts FROM calls WHERE id=?", (call_id,)).fetchone()
             if row:
@@ -313,12 +315,19 @@ class Journal:
             if state_change:
                 for old_id, footprint in self.db.execute('SELECT id,resources FROM calls WHERE reusable=1').fetchall():
                     if resources_overlap(json.loads(footprint) if footprint else None, resources):
-                        self.db.execute('UPDATE calls SET reusable=0 WHERE id=?', (old_id,))
-            pending_write = any(resources_overlap(resources, json.loads(row[0]) if row[0] else None)
-                                for row in self.db.execute('SELECT resources FROM calls WHERE state_change=1 AND receipt IS NULL'))
-            self.db.execute("INSERT INTO calls(id,request,receipt,reusable,state_change,resources,request_parts) VALUES(?,?,NULL,?,?,?,?)",
+                        reason = 'unknown_write_resources' if resources is None else 'overlapping_write'
+                        self.db.execute('UPDATE calls SET reusable=0,reuse_exclusion=? WHERE id=?',
+                                        (json.dumps({'reason': reason, 'write_call_id': call_id}), old_id))
+            pending_write = next(((wid, json.loads(raw) if raw else None)
+                                  for wid, raw in self.db.execute(
+                                      'SELECT id,resources FROM calls WHERE state_change=1 AND receipt IS NULL')
+                                  if resources_overlap(resources, json.loads(raw) if raw else None)), None)
+            exclusion = ({'reason': 'unknown_write_resources' if pending_write[1] is None else 'overlapping_write',
+                          'write_call_id': pending_write[0]} if reusable and pending_write else None)
+            self.db.execute("INSERT INTO calls(id,request,receipt,reusable,state_change,resources,request_parts,call_info,reuse_exclusion) VALUES(?,?,NULL,?,?,?,?,?,?)",
                             (call_id, request_hash, int(reusable and not pending_write), int(state_change),
-                             json.dumps(resources), json.dumps(request_parts) if request_parts is not None else None))
+                             json.dumps(resources), json.dumps(request_parts) if request_parts is not None else None,
+                             json.dumps(call_info), json.dumps(exclusion) if exclusion else None))
             self.db.execute("UPDATE lifecycle SET updated=?", (time.time(),))
             self.db.commit()
             return None
@@ -355,10 +364,19 @@ class Journal:
                 "AND json_type(receipt,'$.model_identity') IS NOT NULL "
                 "AND COALESCE(json_extract(receipt,'$.reuse_disabled'),0)=0 "
                 "GROUP BY json_extract(receipt,'$.reuse_key')").fetchall()
+            exclusions = self.db.execute(
+                "SELECT c.reuse_exclusion,w.call_info,COUNT(*) FROM calls c "
+                "LEFT JOIN calls w ON w.id=json_extract(c.reuse_exclusion,'$.write_call_id') "
+                "WHERE c.reuse_exclusion IS NOT NULL GROUP BY c.reuse_exclusion,w.call_info "
+                "ORDER BY MIN(c.rowid)").fetchall()
+        excluded = [{**json.loads(reason), **((json.loads(info) if info else None) or {}),
+                     'excluded_calls': count} for reason, info, count in exclusions]
         models = sum(count == 1 for (count,) in groups)
         return {'read_calls': safe - sum(count for (count,) in groups),
                 **({'model_calls': models} if models else {}),
-                'state_change_possible': bool(changed)}
+                'state_change_possible': bool(changed),
+                **({'read_exclusions': excluded[:20], 'read_exclusions_total': len(excluded)}
+                   if excluded else {})}
 
 
 def identity(plan, inputs, project_path, agent_id, *, input_evidence=None):

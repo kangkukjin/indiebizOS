@@ -723,7 +723,8 @@ class Runtime(ExpressionEvaluator):
         if self.journal and external:
             receipt = self.journal.begin(call_id, request_hash, getattr(self.local, "cleanup", None) is not None,
                                          reusable=reusable_read, state_change=state_change, resources=footprint,
-                                         request_parts=request_fingerprints(request))
+                                         request_parts=request_fingerprints(request),
+                                         call_info={"action": key, "location": span(self.plan.source, node)})
         if self.replay and external and receipt is None:
             with self.lock:
                 receipt = next((r for r in self.recorded if r["request_hash"] == request_hash), None)

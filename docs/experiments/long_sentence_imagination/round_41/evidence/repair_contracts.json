@@ -1,0 +1,184 @@
+{
+  "baseline_commit": "eaa706ec",
+  "execution": "Original main_v3.ibl, fresh synthetic seed 41 in isolated temporary paths; real file/chart/statistics handlers; only table:brief prose model replaced with deterministic text; no time/token improvement claim.",
+  "cases": [
+    {
+      "case": "original",
+      "value": {
+        "files": 60,
+        "excluded": 4,
+        "dup": 0,
+        "low_n": [],
+        "verdicts": [
+          "H1:지지",
+          "H2:불지지(반대 방향 유의)",
+          "H3:불지지(비유의 — 차이 없음 입증 아님)",
+          "H4:지지"
+        ],
+        "fig1": true,
+        "fig2": true,
+        "prev": false,
+        "cond_changed": 6,
+        "hyp_changed": 4
+      },
+      "read_candidates": 64,
+      "model_candidates": 1,
+      "reused_calls": 0,
+      "changed_read_calls": 0,
+      "exclusions": [
+        {
+          "reason": "overlapping_write",
+          "action": "table:chart",
+          "location": {
+            "source_hash": "e8dc2770c503f74a1c1fd3f1c09fea348a9e7fc4e9cace155c194ba4feb0e179",
+            "start": 7400,
+            "end": 7641,
+            "line": 138,
+            "column": 8
+          },
+          "excluded_calls": 1
+        },
+        {
+          "reason": "overlapping_write",
+          "action": "self:write",
+          "location": {
+            "source_hash": "e8dc2770c503f74a1c1fd3f1c09fea348a9e7fc4e9cace155c194ba4feb0e179",
+            "start": 12162,
+            "end": 12228,
+            "line": 228,
+            "column": 1
+          },
+          "excluded_calls": 2
+        }
+      ]
+    },
+    {
+      "case": "seven_file_correction",
+      "value": {
+        "files": 60,
+        "excluded": 4,
+        "dup": 0,
+        "low_n": [],
+        "verdicts": [
+          "H1:지지",
+          "H2:불지지(반대 방향 유의)",
+          "H3:불지지(비유의 — 차이 없음 입증 아님)",
+          "H4:지지"
+        ],
+        "fig1": true,
+        "fig2": false,
+        "prev": true,
+        "cond_changed": 1,
+        "hyp_changed": 1
+      },
+      "read_candidates": 65,
+      "model_candidates": 1,
+      "reused_calls": 57,
+      "changed_read_calls": 7,
+      "exclusions": [
+        {
+          "reason": "overlapping_write",
+          "action": "table:chart",
+          "location": {
+            "source_hash": "e8dc2770c503f74a1c1fd3f1c09fea348a9e7fc4e9cace155c194ba4feb0e179",
+            "start": 7400,
+            "end": 7641,
+            "line": 138,
+            "column": 8
+          },
+          "excluded_calls": 2
+        },
+        {
+          "reason": "overlapping_write",
+          "action": "self:write",
+          "location": {
+            "source_hash": "e8dc2770c503f74a1c1fd3f1c09fea348a9e7fc4e9cace155c194ba4feb0e179",
+            "start": 12162,
+            "end": 12228,
+            "line": 228,
+            "column": 1
+          },
+          "excluded_calls": 2
+        }
+      ]
+    },
+    {
+      "case": "new_survey_correction",
+      "value": {
+        "files": 60,
+        "excluded": 4,
+        "dup": 0,
+        "low_n": [],
+        "verdicts": [
+          "H1:지지",
+          "H2:불지지(반대 방향 유의)",
+          "H3:불지지(비유의 — 차이 없음 입증 아님)",
+          "H4:지지"
+        ],
+        "fig1": false,
+        "fig2": true,
+        "prev": true,
+        "cond_changed": 0,
+        "hyp_changed": 1
+      },
+      "read_candidates": 65,
+      "model_candidates": 1,
+      "reused_calls": 63,
+      "changed_read_calls": 1,
+      "exclusions": [
+        {
+          "reason": "overlapping_write",
+          "action": "table:chart",
+          "location": {
+            "source_hash": "e8dc2770c503f74a1c1fd3f1c09fea348a9e7fc4e9cace155c194ba4feb0e179",
+            "start": 7822,
+            "end": 8125,
+            "line": 143,
+            "column": 8
+          },
+          "excluded_calls": 2
+        },
+        {
+          "reason": "overlapping_write",
+          "action": "self:write",
+          "location": {
+            "source_hash": "e8dc2770c503f74a1c1fd3f1c09fea348a9e7fc4e9cace155c194ba4feb0e179",
+            "start": 12162,
+            "end": 12228,
+            "line": 228,
+            "column": 1
+          },
+          "excluded_calls": 2
+        }
+      ]
+    }
+  ],
+  "live_api": {
+    "run_id": "b44b9f2a68de414c87a0127a581bcb48",
+    "success": true,
+    "reused_calls": 2,
+    "png_signature": true,
+    "request": {
+      "edition": 2,
+      "code": "$a=[self:read]{path:$a};$b=[self:read]{path:$b};[table:chart]{title:\"L41 repair\",chart_type:\"bar\",x:[\"a\",\"b\"],y:[1,2],output_format:\"png\",path:$chart};return [$a,$b]",
+      "inputs": "Two text files and extensionless output path in outputs/round41-repair-live"
+    }
+  },
+  "verification": {
+    "backend_all": {
+      "passed": 9634,
+      "skipped": 12,
+      "failed": 0,
+      "seconds": 208.87,
+      "system_included": true
+    },
+    "related_after_first_full": 67,
+    "gates": [
+      "build_ibl_nodes --check",
+      "check_backend_layers",
+      "check_retired_contracts",
+      "build_body_bundle android"
+    ],
+    "reviewed_examples": 60
+  }
+}

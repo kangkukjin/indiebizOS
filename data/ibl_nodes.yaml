@@ -11399,10 +11399,13 @@ nodes:
           items:
           - array
           - object
-          x: string
+          x:
+          - string
+          - array
           y:
           - string
           - array
+          values: array
           spec: object
           horizontal: boolean
           stacked: boolean
@@ -11421,6 +11424,8 @@ nodes:
           - type
           output_path:
           - path
+        write_resources:
+          file: output_path
         returns: effect
         pipe_in: true
         runs_on: pc_only
@@ -11433,7 +11438,7 @@ nodes:
 
           - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
 
-          - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
+          - bar: x(범주)·y(값) 같은 길이의 리스트. x가 문자열이면 입력 표의 열 이름, y는 값 열 이름 또는 열 이름 목록. horizontal/stacked 옵션. 시간축은 line.
 
           - pie: labels·values 리스트. donut 옵션으로 도넛.
 
@@ -11451,7 +11456,7 @@ nodes:
         group: chart
         router: handler
         tool: chart
-        implementation: chart_type으로 Plotly 차트 생성(기본 line). output_format 미지정 시 .html/.htm 경로는 HTML, 그 외 PNG. 명시 형식과 확장자 충돌은 오류. matplotlib 폴백 내장.
+        implementation: chart_type으로 Plotly 차트 생성(기본 line). output_format 미지정 시 .html/.htm 경로는 HTML, 그 외 PNG. 명시 형식과 확장자 충돌은 오류. 확장자 없는 경로에도 지정 형식으로 저장하며 경로를 그대로 반환. matplotlib 폴백 내장.
         target_key: title
         keywords:
         - 차트

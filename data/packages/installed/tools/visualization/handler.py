@@ -376,7 +376,25 @@ def _execute(tool_input: dict, context):
                 return {"success": False, "rows_in": 0, "error": "차트 data는 스칼라가 아닌 행 목록이어야 합니다."}
             if _maybe == []:
                 return {"success": False, "rows_in": 0, "error": "입력 0행 — 그릴 내용이 없습니다."}
-            if tool_input.get("x") is not None or tool_input.get("y") is not None:
+            # Lists are coordinates; a text x selects columns from incoming rows.
+            x, y = tool_input.get("x"), tool_input.get("y")
+            if isinstance(x, list):
+                if chart_type not in {"line", "bar", "scatter"}:
+                    raise ValueError("x/y 좌표 목록은 line/bar/scatter 차트에서 사용합니다.")
+                if not isinstance(y, list) or not x or len(x) != len(y):
+                    raise ValueError("x/y는 비어 있지 않은 같은 길이의 목록이어야 합니다.")
+                keys = ("label", "value") if chart_type == "bar" else ("x", "y")
+                tool_input["data"] = [dict(zip(keys, pair)) for pair in zip(x, y)]
+                tool_input.pop("table", None)
+            elif chart_type == "pie" and "values" in tool_input:
+                labels, values = tool_input.get("labels"), tool_input["values"]
+                if (not isinstance(labels, list) or not isinstance(values, list)
+                        or not labels or len(labels) != len(values)):
+                    raise ValueError("labels/values는 비어 있지 않은 같은 길이의 목록이어야 합니다.")
+                tool_input["data"] = [{"label": label, "value": value}
+                                      for label, value in zip(labels, values)]
+                tool_input.pop("table", None)
+            elif x is not None or y is not None:
                 from common.currency import coerce_items_payload
                 rows = coerce_items_payload(tool_input.get("data") if tool_input.get("data") is not None else tool_input.get("items", tool_input.get("_prev_result")))
                 table = tool_input.get("table")

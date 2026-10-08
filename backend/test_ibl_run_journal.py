@@ -162,3 +162,24 @@ def test_content_change_with_preserved_metadata_forces_new_read_but_presentation
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('during', [False, True])
+def test_unknown_writer_exclusion_is_durable_and_located(tmp_path, during):
+    from ibl_run_journal import reusable_receipts
+    with Journal(tmp_path, 'test') as journal:
+        run_id = journal.run_id
+        if during:
+            journal.begin('write', 'w', call_info={'action': 't:write', 'location': {'line': 7}})
+        journal.begin('read', 'r', reusable=True, state_change=False, resources=[['file', '/input', None]])
+        journal.finish('read', {'value': 'data', 'reuse_key': 'r'})
+        if not during:
+            journal.begin('write', 'w', call_info={'action': 't:write', 'location': {'line': 7}})
+        journal.finish('write', {'value': 'ok'})
+        summary = journal.reuse_summary()
+        assert summary['read_calls'] == 0
+        assert summary['read_exclusions'] == [{'reason': 'unknown_write_resources',
+            'write_call_id': 'write', 'action': 't:write', 'location': {'line': 7}, 'excluded_calls': 1}]
+    assert not reusable_receipts(tmp_path, run_id)
+    with Journal(tmp_path, 'test', {'run_id': run_id}) as journal:
+        assert journal.reuse_summary() == summary

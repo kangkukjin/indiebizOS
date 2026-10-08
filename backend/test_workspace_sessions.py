@@ -124,6 +124,7 @@ def test_code_workspace_shares_the_contract(ws, repo):
     r = opened["resource"]
     assert opened["kind"] == "code" and r.startswith("coding_") and opened["capabilities"]["save"] is True
     assert ws.open(repo)["resource"] == r
+    assert (repo / "목표.md").is_file()          # 목표 문서 없는 폴더를 가져오면 추론한 목표 문서가 생긴다
     files = ws.read(r)
     assert any(f["path"] == "a.txt" for f in files["items"])
     piece = ws.read(r, {"path": "a.txt", "start_line": 2, "end_line": 2})
@@ -133,11 +134,11 @@ def test_code_workspace_shares_the_contract(ws, repo):
     assert applied["applied"] is True and applied["path"] == "a.txt"
     assert ws.read(r, {"path": "a.txt"})["text"] == "line1\nLINE2\nline3"
     diff = ws.read(r, {"diff": True})
-    assert diff["paths"] == ["a.txt"] and "+LINE2" in diff["patch"]
+    assert diff["paths"] == ["a.txt", "목표.md"] and "+LINE2" in diff["patch"]
     with pytest.raises(ValueError, match="message"):
         ws.save(r)
     saved = ws.save(r, message="줄 수정")
-    assert saved["state"] == "committed" and saved["commit"] and saved["paths"] == ["a.txt"]
+    assert saved["state"] == "committed" and saved["commit"] and set(saved["paths"]) == {"a.txt", "목표.md"}
     assert ws.versions(r)["items"][0]["label"] == "줄 수정"
     with pytest.raises(DocumentUnsupported):
         ws.export(r, "copy.txt")

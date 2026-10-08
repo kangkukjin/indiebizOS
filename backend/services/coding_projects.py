@@ -67,6 +67,93 @@ def parse_goal(text: str) -> dict:
             "log": body.get("진행 기록", "")}
 
 
+# 개발 서버 프레임워크 → (실행 파일 이름, 기본 포트). 주소는 고른 스크립트가 그 실행 파일을 부를 때만 쓴다 —
+# run_url 이 있으면 실행 샌드박스가 로컬 포트를 열기 때문에 추측 포트는 적지 않는다.
+_JS_SERVERS = (("next", "next", 3000), ("vite", "vite", 5173), ("react-scripts", "react-scripts", 3000),
+               ("nuxt", "nuxt", 3000), ("astro", "astro", 4321), ("@angular/cli", "ng", 4200), ("gatsby", "gatsby", 8000))
+_LOCKS = (("pnpm-lock.yaml", "pnpm"), ("yarn.lock", "yarn"), ("bun.lockb", "bun"), ("bun.lock", "bun"))
+
+
+def _readme_summary(folder: Path) -> str:
+    """README 의 첫 산문 문단 한 줄 — 제목·배지·코드·HTML 은 건너뛰고 링크는 글자만 남긴다."""
+    for name in ("README.md", "README.markdown", "README.txt", "README", "readme.md"):
+        try:
+            text = (folder / name).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        para, fence = [], False
+        for line in text.splitlines():
+            s = line.strip()
+            if s.startswith("```"):
+                fence = not fence
+                continue
+            if fence or s.startswith(("#", "<", "![", "[![", "|", "---", "===")):
+                if para:
+                    break
+                continue
+            if not s:
+                if para:
+                    break
+                continue
+            para.append(s)
+        if para:
+            return re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", " ".join(para)).replace("`", "")[:300]
+    return ""
+
+
+def infer_goal(folder) -> dict:
+    """가져온 폴더의 매니페스트에서 목표 문서의 '무엇을 만드나'·'실행 방법' 을 결정적으로 추론한다(모델 호출 없음).
+    package.json(scripts dev>start + 프레임워크 기본 포트) · Django manage.py · Streamlit · Python 진입 파일 ·
+    정적 index.html 만 안다. 추론 못 한 칸은 넣지 않는다 — goal_template 이 자리표시로 채운다."""
+    folder = Path(folder)
+    body, what, run = {}, "", ""
+    pkg = None
+    try:
+        pkg = json.loads((folder / "package.json").read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError):
+        pkg = None
+    if isinstance(pkg, dict):
+        if isinstance(pkg.get("description"), str):
+            what = pkg["description"].strip()
+        scripts = pkg.get("scripts") if isinstance(pkg.get("scripts"), dict) else {}
+        script = next((s for s in ("dev", "start") if isinstance(scripts.get(s), str) and scripts[s].strip()), "")
+        if script:
+            pm = next((tool for lock, tool in _LOCKS if (folder / lock).exists()), "npm")
+            command = f"{pm} start" if script == "start" and pm == "npm" else f"{pm} run {script}"
+            line = scripts[script]
+            deps = {k for key in ("dependencies", "devDependencies") if isinstance(pkg.get(key), dict) for k in pkg[key]}
+            port = next((p for dep, binary, p in _JS_SERVERS if dep in deps and re.search(rf"(^|[\s/]){re.escape(binary)}(\s|$)", line)), None)
+            explicit = re.search(r"(?:--port[ =]|-p\s+)(\d{2,5})\b", line)
+            if explicit and port:
+                port = int(explicit.group(1))
+            run = f"`{command}`" + (f" → http://localhost:{port}" if port else "")
+    elif (folder / "manage.py").is_file():
+        run = "`python manage.py runserver` → http://localhost:8000"
+    else:
+        manifests = {}
+        for name in ("requirements.txt", "pyproject.toml"):
+            try:
+                manifests[name] = (folder / name).read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                manifests[name] = ""
+        reqs = "\n".join(manifests.values()).lower()
+        entry = next((n for n in ("app.py", "main.py", "streamlit_app.py") if (folder / n).is_file()), "")
+        if entry and "streamlit" in reqs:
+            run = f"`streamlit run {entry}` → http://localhost:8501"
+        elif entry:
+            run = f"`python3 {entry}`"
+        elif (folder / "index.html").is_file():
+            run = "`python3 -m http.server 8000` → http://localhost:8000"
+        m = re.search(r'(?m)^description\s*=\s*"([^"\n]+)"', manifests["pyproject.toml"])
+        what = m.group(1).strip() if m else ""
+    what = what or _readme_summary(folder)
+    if what:
+        body["무엇을 만드나"] = what
+    if run:
+        body["실행 방법"] = run
+    return body
+
+
 class CodingProjects:
     def __init__(self, store=None):
         self.store = store or CodingStore()
@@ -106,8 +193,17 @@ class CodingProjects:
         except ValueError:
             row = {"id": pid, "path": str(target), "name": target.name, "created_at": time.time()}
         row["opened_at"] = time.time()
-        if goal and not (target / GOAL_NAME).exists():
-            (target / GOAL_NAME).write_text(goal_template(target.name, {"무엇을 만드나": str(goal)}), encoding="utf-8")
+        if not (target / GOAL_NAME).exists():
+            # 가져온 폴더에 목표 문서가 없으면 매니페스트로 추론해 쓴다 — 사용자가 준 goal 이 '무엇을 만드나' 에 우선.
+            # 'x' 로 열어 그 사이 생긴 문서도 덮지 않는다.
+            body = infer_goal(target)
+            if goal:
+                body["무엇을 만드나"] = str(goal)
+            try:
+                with (target / GOAL_NAME).open("x", encoding="utf-8") as stream:
+                    stream.write(goal_template(target.name, body))
+            except FileExistsError:
+                pass
         return self.store.save("project", row)
 
     def goal_path(self, row: dict) -> Path:

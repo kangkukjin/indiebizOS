@@ -3,6 +3,7 @@
 실제 git·실제 파일. 목표 문서 틀·목록·읽기·직접 편집(제안/적용)·기록(커밋)·되돌리기·실행(샌드박스 프로세스)·
 [self:workspace] 어댑터 계약·엔진 I/O(HTTP). 실행자(AI)는 여기 없다 — 위임 한 문장이라 모델 호출이 없다.
 """
+import json
 import os
 import time
 from pathlib import Path
@@ -12,7 +13,7 @@ import pytest
 
 from coding_git import CodingConflict, git
 from coding_process import available
-from coding_projects import GOAL_NAME, CodingProjects, goal_template, parse_goal
+from coding_projects import GOAL_NAME, GOAL_SECTIONS, CodingProjects, goal_template, infer_goal, parse_goal
 from coding_store import CodingStore
 from runtime_utils import get_base_path
 from workspace_sessions import Workspace
@@ -52,6 +53,68 @@ def test_open_initialises_git_and_goal_and_is_idempotent(projects, folder):
     detail = projects.detail(row)
     assert detail["goal_exists"] and detail["summary"].startswith("사과 개수") and detail["dirty"] is True and detail["head"] == ""
     assert {f["path"] for f in projects.files(row)} == {"app.py", GOAL_NAME}
+
+
+def _next_app(root: Path) -> Path:
+    root.mkdir(parents=True)
+    (root / "package.json").write_text(json.dumps({"name": "tetris-game", "private": True,
+        "scripts": {"dev": "next dev", "build": "next build", "start": "next start"},
+        "dependencies": {"next": "16.2.1", "react": "19.2.4"}}), encoding="utf-8")
+    (root / "README.md").write_text("This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://x).\n\n## Getting Started\n", encoding="utf-8")
+    return root
+
+
+def test_import_without_goal_writes_inferred_goal(projects, tmp_path):
+    app = _next_app(tmp_path / "tetris-game")
+    projects.open(app)
+    text = (app / GOAL_NAME).read_text(encoding="utf-8")
+    assert all(f"## {s}" in text for s in GOAL_SECTIONS)
+    g = parse_goal(text)
+    assert g["run_command"] == "npm run dev" and g["run_url"] == "http://localhost:3000"
+    assert g["summary"] == "This is a Next.js project bootstrapped with create-next-app."
+
+
+def test_import_without_manifest_writes_placeholder_goal(projects, folder, tmp_path):
+    bare = tmp_path / "빈폴더"
+    bare.mkdir()
+    (bare / "data.csv").write_text("a,b\n", encoding="utf-8")
+    row = projects.open(bare)
+    assert (bare / GOAL_NAME).read_text(encoding="utf-8") == goal_template("빈폴더")
+    detail = projects.detail(row)
+    assert detail["goal_exists"] and detail["run_command"] == "" and detail["run_url"] == "" and detail["summary"] == ""
+    projects.open(folder)                       # app.py 만 있는 폴더 — 명령만, 주소는 추측하지 않는다
+    g = parse_goal((folder / GOAL_NAME).read_text(encoding="utf-8"))
+    assert g["run_command"] == "python3 app.py" and g["run_url"] == ""
+
+
+def test_import_keeps_existing_goal_bytes_and_user_goal_wins(projects, tmp_path):
+    app = _next_app(tmp_path / "있음")
+    original = "# 내 문서\n\n손으로 쓴 목표 — 건드리지 마라.\n".encode("utf-8")
+    (app / GOAL_NAME).write_bytes(original)
+    projects.open(app, goal="덮어쓰면 안 됨")
+    projects.open(app)
+    assert (app / GOAL_NAME).read_bytes() == original
+    other = _next_app(tmp_path / "새것")
+    projects.open(other, goal="블록을 쌓는 게임")
+    g = parse_goal((other / GOAL_NAME).read_text(encoding="utf-8"))
+    assert g["summary"] == "블록을 쌓는 게임" and g["run_command"] == "npm run dev" and g["run_url"] == "http://localhost:3000"
+
+
+@pytest.mark.parametrize("files, command, url", [
+    ({"package.json": {"description": "할 일 목록", "scripts": {"dev": "vite --port 4000"}, "devDependencies": {"vite": "5"}},
+      "yarn.lock": ""}, "yarn run dev", "http://localhost:4000"),
+    ({"package.json": {"scripts": {"start": "node server.js"}}}, "npm start", ""),       # 프레임워크 밖 서버 — 주소 추측 안 함
+    ({"package.json": {"scripts": {"dev": "next dev"}}}, "npm run dev", ""),           # next 의존성 없음 — 주소 추측 안 함
+    ({"package.json": "{깨진 json"}, "", ""),
+    ({"manage.py": ""}, "python manage.py runserver", "http://localhost:8000"),
+    ({"requirements.txt": "streamlit\n", "app.py": ""}, "streamlit run app.py", "http://localhost:8501"),
+    ({"index.html": "<html></html>"}, "python3 -m http.server 8000", "http://localhost:8000"),
+])
+def test_infer_goal_table(tmp_path, files, command, url):
+    for name, content in files.items():
+        (tmp_path / name).write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8")
+    g = parse_goal(goal_template("x", infer_goal(tmp_path)))
+    assert g["run_command"] == command and g["run_url"] == url
 
 
 def test_projects_lists_registered_and_unregistered_folders(projects, folder, tmp_path):

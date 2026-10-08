@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import unicodedata
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -237,8 +238,13 @@ async def execute_ibl_code(req: IBLRequest):
             # 신고 슬롯은 실행 중 엔진이 채운다(claim) — 들어올 때 비워 두고 나갈 때
             # 되돌린다. 풀 스레드 재사용이라 잔류하면 남의 티켓에 진행을 쓴다.
             set_progress_ticket(None)
-            if req.project_id:
-                set_current_project_id(req.project_id)
+            # project_id 를 안 실은 호출(claude_code MCP 재진입은 project_path 만 보낸다)도 경로의
+            # 프로젝트를 세운다 — 비워 두면 풀 스레드의 남은 값이나 빈 값으로 행위자 열쇠
+            # (red_report.current_owner = 프로젝트:에이전트)가 어긋나 자기 수리 세션 apply 가
+            # '소유자 불일치'로 거절됐다(2026-10-08). 프로젝트 밖 경로는 "" 로 비운다.
+            from trigger_engine import project_id_of_path
+            set_current_project_id(unicodedata.normalize(
+                "NFC", req.project_id or project_id_of_path(project_path)))
             set_current_surface(req.surface)
             # 호출 통로 (action_health.channel): req.agent_id 명시 = 에이전트 신원이 실린
             # 호출(claude_code MCP 재진입 등) / 비어 있음 = 앱·조종실·원격·포털 직접 실행.

@@ -42,10 +42,11 @@ h3{font-size:1.08rem;margin:1.8rem 0 .6rem;color:var(--acc)}
 blockquote{margin:1.2rem 0;padding:.85rem 1.1rem;background:var(--card);border-left:3px solid var(--acc);border-radius:0 6px 6px 0;color:var(--mut);font-size:.94rem}
 blockquote p{margin:.3rem 0}
 table{width:100%%;border-collapse:collapse;margin:1.2rem 0;font-size:.9rem;display:block;overflow-x:auto}
-th,td{padding:.5rem .65rem;border-bottom:1px solid var(--line);text-align:left;white-space:normal;overflow-wrap:anywhere;vertical-align:top}
+th,td{padding:.5rem .65rem;border-bottom:1px solid var(--line);text-align:left;white-space:normal;word-break:keep-all;overflow-wrap:break-word;vertical-align:top}
 th{background:var(--card);font-weight:600}
 a{color:var(--acc)}
 hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+hr+h2{border-top:0;padding-top:0;margin-top:0}
 ul,ol{padding-left:1.25rem}li{margin:.4rem 0}
 code{background:var(--card);padding:.12em .4em;border-radius:4px;font-size:.88em}
 pre{background:var(--card);padding:14px 16px;border-radius:10px;overflow-x:auto;font-size:.86em;line-height:1.6}

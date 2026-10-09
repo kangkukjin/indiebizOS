@@ -2494,3 +2494,5 @@
 
 [2026-10-09] 긴문장 45회차 L45-1·L45-2 수리: browser select value/values/label 계약과 표시명 실행 일치, Chrome 단일 선택 밖 명시 거절. screen 현재 AX 포커스 조회·snapshot 세대/PID 참조·expect_app 입력 가드·유한 wait 추가. 가이드/수리 프로그램/원장 동기화.
   검증: 전이 소비자 74/615 파일, 1419 passed·1 skipped; 관련 시스템 30 passed(44·45 전체 프로그램 포함); 최종 screen 계약 22 passed(중복). 어휘 --check·Android 번들 완료. 전수 backend·실제 계산기 루프·독립 AI 선택 개선은 미검증. 근거: docs/experiments/long_sentence_imagination/round_45/report.md §7.
+
+2026-10-09 자기수리: 미완료 #repair 후속의 원래 기준·사본 계승, 명시한 outputs 산출물의 검사·충돌보호·Git 제외 배치, 바이너리 추가/삭제 각인과 적용 후 각인 재개 수리. 구형 인텔맥 헬퍼 빌드·발급 경로 연결. 검증·한계는 SELF_REPAIR_WORKSPACE_COMPLETION_DESIGN_2026_10_03.md 후속 기록.

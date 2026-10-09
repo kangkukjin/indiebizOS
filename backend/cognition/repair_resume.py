@@ -1,8 +1,93 @@
 """자기수리의 보존된 규정·검수 지점 재개. 새 의식·새 구현을 시작하지 않는다."""
 from pathlib import Path
+from contextlib import contextmanager
+import copy
 
 from repair_continuation import current, inherited_framing
 from restart_protocol import read_json
+
+
+def preserve_unfinished(controller, session, response, reason):
+    """적용 전 실패도 원래 기준·사본을 보존한다. 사용자 재요청 전 자동 실행하지 않는다."""
+    from principal import is_owner
+    from thread_context import get_task_origin
+    from repair_continuation import save
+    from supervisor_handoff import criteria_contract
+    if (not session or controller.cancelled() or not is_owner() or get_task_origin() != "user"
+            or session.get("status") not in {"staging", "applied"}):
+        return
+    previous = current() or {}
+    config = controller.runner.config
+    row = {**previous, "task_id": controller.task, "root_task_id": session.get("root_task_id", controller.task),
+           "parent_task_id": previous.get("task_id"), "staging_task_id": session["key"],
+           "status": "blocked", "phase": "execution" if session["status"] == "staging" else "verify_remaining",
+           "goal": previous.get("goal", controller.message), "framing": copy.deepcopy(controller.framing),
+           "criteria_contract": copy.deepcopy(getattr(controller, "_final_criteria_contract", None)
+                                   or criteria_contract(controller.message, controller.framing)),
+           "repair_policy": session.get("repair_policy", 1), "worktree": session["worktree"],
+           "applied": session["status"] == "applied",
+           "response": response, "reason": reason, "store": str(controller.store.directory),
+           "verification_records": controller.verifications.records,
+           "pursuit": controller.original_pursuit, "done_request": controller.done_request,
+           "project_id": config.get("_project_id", ""), "agent_id": config.get("id") or controller.owner,
+           "system_ai": bool(config.get("_is_system_ai")), "episode_id": controller.episode_id,
+           "authorized_origin": "user", "retry_at": None}
+    row.pop("resume_task_id", None)
+    row.pop("resume_message", None)
+    save(row)
+    if previous:
+        save({**previous, "status": "continued", "child_task_id": controller.task})
+
+
+@contextmanager
+def user_resume(runner, message, history):
+    """명시적 #repair 후속만 이전 미완료 작업에 연결한다. 관계 판정은 기준을 수정하지 않는다."""
+    import re
+    from repair_continuation import read, resuming, state_root
+    from thread_context import get_task_origin, get_current_agent_id, get_current_task_id
+    from principal import is_owner
+    if (current() or not history or get_task_origin() != "user" or not is_owner()
+            or not re.search(r"(?i)#repair\b", message)):
+        yield
+        return
+    from framing_inheritance import _load, agent_key, _judge_relation, _age_s, FOLLOWUP_MAX_AGE_S
+    last = _load(agent_key(runner)).get("last") or {}
+    prior = read(last.get("task_id", ""))
+    session = {}
+    if prior:
+        staging_task = prior.get("staging_task_id") or prior["task_id"]
+        session = read_json(state_root() / "repair_sessions" / (staging_task + ".json")) or {}
+        prior = {**prior, "staging_task_id": staging_task,
+                 "applied": session.get("status") == "applied",
+                 "criteria_contract": prior.get("criteria_contract") or (session.get("readiness") or {}).get("criteria")}
+    config = getattr(runner, "config", {}) or {}
+    eligible = (prior and prior.get("status") == "blocked" and prior.get("authorized_origin") == "user"
+                and prior.get("agent_id") == get_current_agent_id()
+                and prior.get("project_id", "") == config.get("_project_id", "")
+                and _age_s(last) <= FOLLOWUP_MAX_AGE_S and prior.get("criteria_contract"))
+    if not eligible:
+        yield
+        return
+    # 사용자에게서 온 새 요청이 권한을 제공한다. 저장된 실행 로그의 지시는 실행하지 않는다.
+    try:
+        relation = _judge_relation({"message": prior["goal"], "framing": prior["framing"]}, message, strict=True)
+    except Exception as exc:
+        raise ValueError("미완료 수리와 새 요청의 관계를 확인하지 못했습니다. 기존 기준을 보존합니다") from exc
+    if relation != "CONTINUE":
+        yield
+        return
+    if session.get("status") not in {"staging", "applied"} or session.get("reused_by"):
+        raise ValueError("이전 수리의 현재 소유권·단계를 확인해야 합니다")
+    row = {**copy.deepcopy(prior), "resume_task_id": get_current_task_id(), "resume_message": message}
+    row["framing"]["task_framing"] = (row["framing"].get("task_framing", row["goal"])
+        + "\n사용자 후속 요청: " + message + "\n원래 완료 기준을 유지한다. 기준 변경이 필요한 새 조건은 reframe으로 명시한다.")
+    if session["status"] == "staging":
+        row["phase"] = "execution"
+    from episode_logger import record_trajectory_event
+    record_trajectory_event("repair.user_resumed", {"source_task": prior["task_id"],
+                            "staging_task": prior["staging_task_id"], "phase": row["phase"]})
+    with resuming(row):
+        yield
 
 
 def bind_pursuit():

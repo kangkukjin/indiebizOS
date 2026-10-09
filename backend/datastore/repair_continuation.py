@@ -67,7 +67,8 @@ def inherited_framing(message):
     from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
     if (not is_owner() or get_task_origin() != "user" or row.get("authorized_origin") != "user"
             or row.get("resume_task_id") != get_current_task_id()
-            or row.get("agent_id") != get_current_agent_id() or row.get("goal") != message):
+            or row.get("agent_id") != get_current_agent_id()
+            or row.get("resume_message", row.get("goal")) != message):
         raise ValueError("수리 재개의 목표·행위자·승인 신원이 일치하지 않습니다")
     framing = copy.deepcopy(row.get("framing"))
     if not isinstance(framing, dict) or not (framing.get("criteria") or framing.get("achievement_criteria")):
@@ -122,7 +123,8 @@ def defer(controller, response, base=None):
            "pending_delivery": bool(controller.delivery.manifest()),
            "phase": "apply", "pursuit": controller.original_pursuit, "done_request": controller.done_request,
            "verification_records": controller.verifications.records,
-           "criteria_contract": getattr(controller, "_final_criteria_contract", None) or previous.get("criteria_contract"),
+           "criteria_contract": (getattr(controller, "_final_criteria_contract", None) or previous.get("criteria_contract")
+                                 or (session.get("readiness") or {}).get("criteria")),
            "criteria_state": previous.get("criteria_state", []),
            "execution_progress": previous.get("execution_progress", []),
            "execution_round": previous.get("execution_round", 0),

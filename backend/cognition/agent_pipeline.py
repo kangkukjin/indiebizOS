@@ -332,7 +332,9 @@ class CognitivePipelineMixin:
         from steer_inbox import task_scope
         steer_agents = (agent_id, getattr(self.ai, "agent_id", None),
                         getattr(getattr(self.ai, "_provider", None), "agent_id", None), kwargs.get("agent_name"))
+        from repair_resume import user_resume
         with self.turn_ai_scope(), actor_context(agent_id=agent_id, task_id=task_id), \
+                user_resume(self, message, history), \
                 task_scope(steer_agents, task_id), \
                 turn_token_scope(agent_id, task_id, (getattr(self.ai, "agent_id", None),),
                                  hard_token_limit=resource_limits.get("hard_token_limit"),

@@ -567,6 +567,13 @@
               ]
             }
           },
+          "artifact_paths": {
+            "type": "array",
+            "description": "(apply) 사본에서 완성한 outputs/ 아래 상대 파일 경로 목록. 명시한 파일만 코드와 함께 검증·충돌 검사·적용하며 Git에는 넣지 않는다. 기존 설정·키는 목록에 넣지 않으면 보존된다. 사본 내용과 배치 계획을 검사하고 적용 후 실제 바이트를 확인한다.",
+            "items": {
+              "type": "string"
+            }
+          },
           "active_verify_cmd": {
             "type": "string",
             "description": "(apply) ACTIVE 이후 읽기 전용 활성 확인 명령. 결과 불명 실행은 자동 반복하지 않는다. 수리 델타 커밋은 신뢰된 기존 각인 서비스가 맡는다."

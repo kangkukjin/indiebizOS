@@ -9,7 +9,7 @@ from repair_test_results import invocation, summary
 def execute(repo, session, candidate, command, controller=None, timeout=300):
     from repair_process import run
     wt = Path(repo) / session["worktree"]
-    before = candidate.inventory(wt)
+    before = candidate.collect(repo, session)
     env = candidate.environment(wt)
     spec = invocation(command, wt)
     def cancelled():
@@ -46,7 +46,7 @@ def check(repo, session, candidate, command, controller):
     wt = Path(repo) / session["worktree"]
     if not isinstance(command, str) or len(command) > 4000 or invocation(command, wt) is None:
         return {"status": "unverified", "error": "기능 검사는 단일 pytest 또는 node --test 명령으로 지정하세요. 일반 명령은 의미 검토 자료입니다."}
-    current = candidate.digest(candidate.inventory(wt))
+    current = candidate.digest(candidate.collect(repo, session))
     env = candidate.environment(wt)
     prior = next((r for r in reversed(session.get("execution_checks", []))
                   if r.get("command") == command and r.get("candidate_hash") == current

@@ -253,3 +253,27 @@ def test_status_details_survive_items_projection(repair):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_code_and_artifact_share_verified_apply_but_output_is_not_in_git(repair):
+    import subprocess
+    root, wt, st, session, controller = repair
+    for directory in (root, wt):
+        with (directory / '.gitignore').open('a') as f:
+            f.write('outputs/\n')
+    st._candidate.refresh(str(root), session)
+    st._save_session(str(root), session)
+    (wt / 'a.txt').write_text('fixed')
+    (wt / 'outputs').mkdir()
+    (wt / 'outputs/helper').write_bytes(b'\0binary')
+    cmd = command(wt, 'assert __import__("pathlib").Path("outputs/helper").read_bytes() == b"\\0binary"')
+    result = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
+                         'artifact_paths': ['outputs/helper'],
+                         'verification_plan': [{'criterion_id': 'C1', 'method': 'test', 'command': cmd}]})
+    assert result.get('complete'), result
+    saved = st.read_session(str(root), session['key'])
+    assert policy.completion(saved, {}, root)[0]
+    assert (root / 'outputs/helper').read_bytes() == b'\0binary'
+    assert subprocess.check_output(['git', 'ls-tree', '-r', 'HEAD', '--', 'outputs'], cwd=root) == b''
+    (root / 'outputs/helper').unlink()
+    assert not policy.completion(saved, {}, root)[0]

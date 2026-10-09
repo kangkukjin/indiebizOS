@@ -34,7 +34,7 @@ def progress(session):
         result["error"] = ("정본 반영 후 활성 확인 미완료: " + field + " (" + record.get("state", "pending") + ")"
                            + (" — " + (receipt.get("output") or record.get("error") or "")[:2000]))
     elif applied and not complete:
-        result["error"] = "정본 반영 후 각인 미완료: " + str(commit.get("error") or "커밋 영수증이 없습니다")
+        result["error"] = "정본 반영 후 각인 미완료: " + str(commit.get("error") or commit.get("message") or "커밋 영수증이 없습니다")
     return result
 
 

@@ -491,12 +491,9 @@ def _hub_address():
 
 
 def _issue_root() -> str:
-    """USB 페이로드·헬퍼 dist 의 루트. limb_keys(backend/..)에서 얻는다 — 핸들러 위치에서
-    dirname 을 세면 패키지 깊이가 바뀔 때 조용히 어긋난다(실제로 data/ 를 루트로 잡던 버그)."""
-    import limb_keys
-    base_path = os.environ.get("INDIEBIZ_BASE_PATH")
-    return base_path if base_path else os.path.dirname(
-        os.path.dirname(os.path.abspath(limb_keys.__file__)))
+    """USB 페이로드와 dist는 런타임 루트 기준. backend 층별 파일 깊이에 의존하지 않는다."""
+    from runtime_utils import get_base_path
+    return str(get_base_path())
 
 
 def _issue_parent() -> str:
@@ -573,9 +570,12 @@ def _issue(tool_input: dict) -> dict:
     target_os = (tool_input.get("os") or "").strip().lower()
     bin_map = {
         "win": ["indiebiz-helper-win.exe"], "windows": ["indiebiz-helper-win.exe"],
-        "mac": ["indiebiz-helper-mac-arm64", "indiebiz-helper-mac-amd64"],
-        "macos": ["indiebiz-helper-mac-arm64", "indiebiz-helper-mac-amd64"],
-        "darwin": ["indiebiz-helper-mac-arm64", "indiebiz-helper-mac-amd64"],
+        "mac": ["indiebiz-helper-mac-arm64", "indiebiz-helper-mac-amd64",
+                  "indiebiz-helper-mac-amd64-legacy"],
+        "macos": ["indiebiz-helper-mac-arm64", "indiebiz-helper-mac-amd64",
+                  "indiebiz-helper-mac-amd64-legacy"],
+        "darwin": ["indiebiz-helper-mac-arm64", "indiebiz-helper-mac-amd64",
+                  "indiebiz-helper-mac-amd64-legacy"],
         "linux": ["indiebiz-helper-linux"],
     }
     dist_dir = os.path.join(root, "helper", "dist")
@@ -621,7 +621,10 @@ def _issue_readme(minted: dict, base: str, copied) -> str:
         run_line = ("그 PC 의 OS 에 맞는 실행파일을 실행하세요:\n"
                     "     윈도우      → indiebiz-helper-win.exe (더블클릭)\n"
                     "     맥(M1~)     → indiebiz-helper-mac-arm64\n"
-                    "     맥(인텔)    → indiebiz-helper-mac-amd64\n"
+                    "     맥(인텔)    → indiebiz-helper-mac-amd64 (macOS 12 이상)\n"
+                    "     맥(인텔, macOS 11 이하 — Catalina 10.15 등)\n"
+                    "                 → indiebiz-helper-mac-amd64-legacy\n"
+                    "       ('Symbol not found: _SecTrustCopyCertificateChain' 으로 꺼지면 이쪽)\n"
                     "     리눅스      → indiebiz-helper-linux")
     else:
         run_line = "헬퍼 실행파일(indiebiz-helper)을 이 폴더에 함께 두고 실행하세요."
@@ -636,6 +639,7 @@ def _issue_readme(minted: dict, base: str, copied) -> str:
         "   (indiebiz-helper.json 이 실행파일과 같은 폴더에 있어야 합니다.)\n"
         "   · 맥/리눅스에서 더블클릭이 안 되면 터미널에서:  chmod +x 실행파일 && ./실행파일\n"
         "     (USB(FAT/exFAT)에서는 실행 권한이 빠질 수 있습니다.)\n"
+        "   · 맥에서 '확인되지 않은 개발자'로 막히면:  xattr -d com.apple.quarantine 실행파일\n"
         "3) 헬퍼가 붙으면 바로 쓸 수 있습니다(자동 연결). 폰/런처에서\n"
         f"   '{minted['alias']} 에서 ○○ 해줘' 라고 이름을 붙여 명령하면 그 PC 에서 실행됩니다.\n"
         "4) 볼일이 끝나면 '그 PC 손발 해제해줘' 또는 그 PC 에서 창 닫기.\n"

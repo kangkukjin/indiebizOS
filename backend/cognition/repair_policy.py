@@ -167,6 +167,9 @@ def semantic_review(controller, contract, criteria, session, evidence):
         packet["context"].update(criteria_contract=limited, evaluation_target="repair_semantic",
                                   workspace=session["worktree"], workspace_evidence=[{**r, "output": r.get("output", "")[:15000] + "\n" + r.get("output", "")[-15000:]} for r in evidence],
                                   workspace_files=[r["rel"] for r in session["files"].values()])
+        from red_apply import _load_handler
+        candidate = _load_handler({"repo": str(__import__("runtime_utils").get_base_path())})._staging_mod()._candidate
+        packet["context"].update(candidate.artifact_review_context(session))
         result = json.loads(invoke(controller, phase="semantic"))
         # 원문 부족이면 이미 저장된 같은 턴 증거만 한 번 보충한다. 새 개발은 시작하지 않는다.
         if result.get("recoverable"):
@@ -221,6 +224,9 @@ def finalize(controller, response):
         "status": status, "reason": reason, "validator": "repair_receipts", "original_goal": controller.message,
         "episode_id": controller.episode_id, "learning": "eligible" if passed else "deferred"}, ensure_ascii=False))
     print(f"[RepairCheck] 최종 판정: {status}")
+    if not passed:
+        from repair_resume import preserve_unfinished
+        preserve_unfinished(controller, session, response, reason)
     return response + ("" if passed else "\n\n[수리 미완료] " + reason)
 
 
@@ -230,6 +236,8 @@ def completion(session, row, base):
     import subprocess
     ready = session.get("readiness") or {}
     committed = session.get("commit") or {}
+    if session.get("status") == "applied" and not committed.get("success") and committed:
+        return False, "정본 반영 후 각인 실패: " + str(committed.get("error") or committed.get("message") or "커밋 미확인")
     if (session.get("repair_policy") != VERSION or session.get("status") != "applied"
             or not session.get("verified") or not committed.get("success")
             or ready.get("version") != VERSION
@@ -249,14 +257,19 @@ def completion(session, row, base):
                      and row["active_verify"].get("command_sha256") == expected)):
             continue
         return False, "활성 확인 영수증이 없습니다: " + field
+    sealed = session.get("sealed") or {}
+    artifacts_only = bool(sealed) and all(item.get("artifact") for item in sealed.values())
     commit = committed.get("commit", "")
-    if not __import__("re").fullmatch(r"[a-f0-9]{7,64}", commit):
+    if artifacts_only and (not committed.get("artifacts_only") or committed.get("bundle_hash") != ready.get("bundle_hash")):
+        return False, "산출물 적용 영수증이 일치하지 않습니다"
+    if not artifacts_only and not __import__("re").fullmatch(r"[a-f0-9]{7,64}", commit):
         return False, "유효한 커밋 식별자가 없습니다"
-    resolved = subprocess.run(["git", "rev-parse", "--verify", commit + "^{commit}"],
+    if not artifacts_only:
+        resolved = subprocess.run(["git", "rev-parse", "--verify", commit + "^{commit}"],
                               cwd=base, capture_output=True, text=True, timeout=30)
-    if resolved.returncode:
-        return False, "커밋이 존재하지 않습니다"
-    commit = resolved.stdout.strip()
+        if resolved.returncode:
+            return False, "커밋이 존재하지 않습니다"
+        commit = resolved.stdout.strip()
     from red_apply import _load_handler
     candidate = _load_handler({"repo": str(base)})._staging_mod()._candidate
     sealed = session.get("sealed") or {}
@@ -265,6 +278,8 @@ def completion(session, row, base):
     for rel, item in sealed.items():
         if candidate.fingerprint(candidate.target(base, rel)) != item["after"]:
             return False, "적용 후 정본이 변경됐습니다: " + rel
+        if item.get("artifact"):
+            continue
         actual = subprocess.run(["git", "show", commit + ":" + rel], cwd=base, capture_output=True, timeout=30)
         if item["after"] is None:
             if actual.returncode == 0:

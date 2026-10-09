@@ -204,10 +204,12 @@ def _oneshot(prompt: str, system_prompt: str, role: str) -> str:
     return raw if isinstance(raw, str) else ""
 
 
-def _judge_relation(previous: dict, message: str) -> str:
+def _judge_relation(previous: dict, message: str, *, strict=False) -> str:
     """CONTINUE / NEW — 출력 한 단어. 어긋난 답은 NEW(계승하지 않음)."""
     system_prompt = _prompt(_RELATION_PROMPT)
     if not system_prompt:
+        if strict:
+            raise ValueError("관계 판정 프롬프트가 없습니다")
         return "NEW"
     body = json.dumps({
         "previous_message": (previous.get("message") or "")[:800],
@@ -215,6 +217,8 @@ def _judge_relation(previous: dict, message: str) -> str:
         "new_message": (message or "")[:1500],
     }, ensure_ascii=False)
     answer = _oneshot(body, system_prompt, "classify").strip().upper()
+    if strict and answer not in {"CONTINUE", "NEW"}:
+        raise ValueError("관계 판정 응답을 확인하지 못했습니다")
     return "CONTINUE" if answer == "CONTINUE" else "NEW"
 
 

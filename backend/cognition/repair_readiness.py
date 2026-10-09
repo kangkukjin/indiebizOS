@@ -82,6 +82,7 @@ def prepare(controller, repo, session, verify, candidate):
                                   activation_commands=session.get("activation_commands", {}),
                                   workspace_evidence=evidence,
                                   workspace_files=[r["rel"] for r in session["files"].values()])
+        packet["context"].update(candidate.artifact_review_context(session))
         # 관측된 근거는 신뢰된 서비스의 실행 결과다. 실행자의 Boolean을 근거로 받지 않는다.
         decision = json.loads(invoke(controller, phase="workspace"))
         rows = decision.get("workspace_coverage", [])

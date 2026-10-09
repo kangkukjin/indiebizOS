@@ -52,15 +52,62 @@ def fingerprint(path):
             "mode": stat.S_IMODE(path.stat().st_mode)}
 
 
-def inventory(root):
+def inventory(root, artifacts=()):
     p = subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
                        cwd=root, capture_output=True, timeout=120)
     if p.returncode:
         raise ValueError("수리 사본의 파일 목록을 읽지 못했습니다")
     names = {os.fsdecode(x) for x in p.stdout.split(b"\0") if x}
+    names.update(name for name in artifacts if target(root, name).exists())
     return {name: fingerprint(Path(root) / name) for name in sorted(names)
             if not any(name == p or name.startswith(p + "/") for p in PRIVATE)
             and not set(Path(name).parts) & {"__pycache__", ".pytest_cache", "node_modules", ".venv"}}
+
+
+def register_artifacts(repo, session, paths):
+    """명시한 outputs 파일만 적용 대상에 포함한다. 키·기존 폴더 전체는 복제하지 않는다."""
+    if not isinstance(paths, list) or any(not isinstance(p, str) for p in paths):
+        raise ValueError("artifact_paths는 outputs/ 아래 상대 파일 경로 목록이어야 합니다")
+    if session.get("status") != "staging":
+        raise ValueError("예약·적용 이후에는 산출물 목록을 바꿀 수 없습니다")
+    registered = set(session.get("artifact_paths", []))
+    wt = Path(repo) / session["worktree"]
+    additions = {}
+    for rel in paths:
+        if not rel.startswith("outputs/") or Path(rel).as_posix() != rel:
+            raise ValueError("산출물은 outputs/ 아래 정규 상대 경로만 지원합니다: " + rel)
+        live, staged = target(repo, rel), target(wt, rel)
+        if not staged.is_file() or staged.stat().st_nlink != 1:
+            raise ValueError("사본에 완성된 일반 산출물 파일이 필요합니다: " + rel)
+        if rel in session["baseline"] and rel not in registered:
+            raise ValueError("Git 추적 파일은 일반 수리 델타로 적용합니다: " + rel)
+        if rel not in registered:
+            additions[rel] = fingerprint(live)
+    for rel, before in additions.items():
+        if before is not None:
+            session["baseline"][rel] = before
+    removed = registered - set(paths)
+    for rel in removed:
+        session["baseline"].pop(rel, None)
+    if additions or removed:
+        session["artifact_paths"] = sorted(set(paths))
+        invalidate(session)
+
+
+def artifact_manifest(session):
+    """평가자는 사본의 내용·배치 계획을, 완료자는 적용된 바이트를 확인한다."""
+    return [{"path": r["rel"], "candidate": r["candidate"], "before": r["base"],
+             "phase": "apply", "git_commit": False}
+            for r in session.get("files", {}).values()
+            if r["rel"] in session.get("artifact_paths", [])]
+
+
+def artifact_review_context(session):
+    return {"workspace_artifacts": artifact_manifest(session), "artifact_policy":
+            "workspace_artifacts는 같은 고정 묶음으로 실제 대상에 배치될 파일이다. "
+            "이 단계에서는 사본의 내용·권한과 명시된 배치 경로를 검사한다. "
+            "적용 전 실제 대상 변경을 요구하지 않는다. 전체 완료는 적용 뒤 같은 바이트인지 별도로 대조한다. "
+            "명시되지 않은 파일·설정·키의 변경이나 복사는 이 계획에 포함되지 않는다."}
 
 
 def initialize(repo, session):
@@ -102,7 +149,9 @@ def collect(repo, session):
         raise ValueError("기준 지문 없는 옛 수리 사본입니다. 새 기준으로 다시 준비해야 합니다")
     root = Path(repo).resolve()
     wt = root / session["worktree"]
-    current = inventory(wt)
+    if any(not target(wt, p).is_file() for p in session.get("artifact_paths", [])):
+        raise ValueError("등록된 배치 산출물이 사본에서 사라졌습니다")
+    current = inventory(wt, session.get("artifact_paths", []))
     files = {}
     for rel in sorted(set(baseline) | set(current)):
         before, after = baseline.get(rel), current.get(rel)
@@ -122,8 +171,8 @@ def collect(repo, session):
 
 
 def conflicts(repo, session, current=None):
-    current = current if current is not None else inventory(Path(repo) / session["worktree"])
-    live = inventory(repo)
+    current = current if current is not None else inventory(Path(repo) / session["worktree"], session.get("artifact_paths", []))
+    live = inventory(repo, session.get("artifact_paths", []))
     # 보수적 의존 범위: 사본의 전체 추적/비무시 입력. 예약 후 조용한 동기화는 없다.
     return [p for p in set(session["baseline"]) | set(live)
             if live.get(p) != session["baseline"].get(p)]
@@ -137,7 +186,7 @@ def invalidate(session):
 def refresh(repo, session):
     """준비 이전에만 미수정 의존 파일을 동기화한다. 수리 델타와 충돌하면 보존한다."""
     current = collect(repo, session)
-    live = inventory(repo)
+    live = inventory(repo, session.get("artifact_paths", []))
     baseline = session["baseline"]
     changed = [p for p in set(live) | set(baseline) if live.get(p) != baseline.get(p)]
     collisions = [p for p in changed if current.get(p) not in (baseline.get(p), live.get(p))]
@@ -188,6 +237,8 @@ def seal(repo, session, checks, decision, criteria):
                                "before_data": base64.b64encode(Path(repo, rec["rel"]).read_bytes()).decode()
                                if rec["base"] else None,
                                "data": base64.b64encode(data).decode() if data is not None else None}
+        if rec["rel"] in session.get("artifact_paths", []):
+            payload[rec["rel"]]["artifact"] = True
     for rel, item in payload.items():
         if item["before_data"] is not None and hashlib.sha256(base64.b64decode(item["before_data"])).hexdigest() != item["before"]["sha"]:
             raise ValueError("고정 중 정본이 변경됐습니다: " + rel)
@@ -216,7 +267,7 @@ def validate(repo, session):
         raise ValueError("취소된 수리입니다")
     if ignored_source_files(Path(repo) / session["worktree"]):
         raise ValueError("검증 이후 적용 묶음에 없는 소스가 생겼습니다")
-    current = inventory(Path(repo) / session["worktree"])
+    current = inventory(Path(repo) / session["worktree"], session.get("artifact_paths", []))
     if digest(current) != ready["candidate_hash"]:
         raise ValueError("검증 이후 사본이 변경됐습니다. 준비 판정이 무효입니다")
     if environment(Path(repo) / session["worktree"]) != ready.get("environment_hash"):
@@ -249,32 +300,34 @@ def commit(repo, session, body):
     for rel, item in payload.items():
         if fingerprint(target(repo, rel)) != item["after"]:
             return {"success": False, "error": "적용 후 정본 변경: " + rel}
+    payload = {rel: item for rel, item in payload.items() if not item.get("artifact")}
+    if not payload:
+        return {"success": True, "artifacts_only": True,
+                "bundle_hash": session["readiness"]["bundle_hash"]}
     marker = "Repair-Attempt: " + session["root_task_id"] + ":" + session["readiness"]["bundle_hash"]
     found = subprocess.run(["git", "log", "-1", "--format=%H", "--fixed-strings", "--grep=" + marker],
                            cwd=repo, capture_output=True, text=True, timeout=30)
     if found.returncode == 0 and found.stdout.strip():
         return {"success": True, "commit": found.stdout.strip(), "recovered": True}
     with tempfile.TemporaryDirectory(prefix="repair-commit-") as directory:
-        root = Path(directory)
-        (root / "old").mkdir()
-        (root / "new").mkdir()
-        for rel, item in payload.items():
-            for side, field, state in (("old", "before_data", "before"), ("new", "data", "after")):
-                if item[field] is not None:
-                    data = base64.b64decode(item[field], validate=True)
-                    p = root / side / rel
-                    p.parent.mkdir(parents=True, exist_ok=True)
-                    p.write_bytes(data)
-                    p.chmod(item[state]["mode"])
-                    subprocess.run(["git", "hash-object", "-w", "--stdin"], input=data,
-                                   cwd=repo, capture_output=True, check=True, timeout=30)
-        diff = subprocess.run(["git", "diff", "--no-index", "--binary", "old", "new"],
-                              cwd=root, capture_output=True, text=True, timeout=30)
-        if diff.returncode not in (0, 1):
-            return {"success": False, "error": diff.stderr}
-        patch = "".join(line.replace("a/old/", "a/").replace("b/new/", "b/")
-                        if line.startswith(("diff --git ", "--- ", "+++ ")) else line
-                        for line in diff.stdout.splitlines(keepends=True))
+        env = {**os.environ, "GIT_INDEX_FILE": str(Path(directory) / "index")}
+        def git(*args, data=None):
+            return subprocess.run(["git", *args], cwd=repo, env=env, input=data,
+                                  capture_output=True, check=True, timeout=30).stdout
+        # Git 자체가 경로·인용·바이너리 패치를 만든다. no-index 임시 폴더 접두를
+        # 손으로 바꾸면 추가/삭제의 diff 헤더가 서로 다른 경로로 남는다.
+        trees = []
+        for field, state in (("before_data", "before"), ("data", "after")):
+            git("read-tree", "--empty")
+            for rel, item in payload.items():
+                if item[field] is None:
+                    continue
+                data = base64.b64decode(item[field], validate=True)
+                blob = git("hash-object", "-w", "--stdin", data=data).decode().strip()
+                mode = "100755" if item[state]["mode"] & 0o111 else "100644"
+                git("update-index", "--add", "--cacheinfo", mode, blob, rel)
+            trees.append(git("write-tree").decode().strip())
+        patch = git("diff", "--binary", "--no-renames", *trees).decode()
         result = body.op_commit({"paths": list(payload), "message": "수리 사본 검증 후 반영\n\n" + marker},
                                 index_patch=patch, trusted_root=str(repo))
         if result.get("success"):

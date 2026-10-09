@@ -51,6 +51,19 @@ def test_scheduled_repair_is_pending_and_never_calls_final_model(supervisor, mon
     assert journal.task_state(supervisor.task, tmp_path) == "waiting"
 
 
+def test_defer_preserves_sealed_criteria_when_final_contract_is_not_set(supervisor, tmp_path):
+    path = scheduled(tmp_path, supervisor.task).with_name(supervisor.task + ".json")
+    contract = {"user_goal": supervisor.message, "criteria": [
+        {"id": "C1", "text": "build"}, {"id": "C2", "text": "deliver without changing key"}]}
+    atomic_json(path, {"status": "apply_scheduled", "repair_policy": 2,
+                       "readiness": {"criteria": contract}})
+    tc.set_task_origin("user")
+    supervisor.repair_granted = True
+    supervisor._final_criteria_contract = None
+    supervisor.runner.config = {"id": "agent", "_project_id": "project"}
+    assert journal.defer(supervisor, "draft", tmp_path)["criteria_contract"] == contract
+
+
 @pytest.mark.parametrize("origin,granted,cancelled", [("training", True, False), (None, True, False),
                                                      ("user", False, False), ("user", True, True)])
 def test_no_continuation_without_live_user_authorization(supervisor, monkeypatch, tmp_path, origin, granted, cancelled):

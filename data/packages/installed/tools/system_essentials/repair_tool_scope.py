@@ -87,7 +87,7 @@ def run_shell(handler, command, timeout):
                 "output": record["output"],
                 "verification": {k: v for k, v in record.items() if k != "output"}, "worktree": str(wt),
                 "repository_baseline": sess.get("repository_baseline")}, current())
-    before = candidate.digest(candidate.inventory(wt))
+    before = candidate.digest(candidate.collect(repo, sess))
     before_env = candidate.environment(wt)
     controller = current()
     def check():

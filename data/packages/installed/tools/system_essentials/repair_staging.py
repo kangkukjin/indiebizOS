@@ -895,6 +895,8 @@ def op_apply(ti):
                               f"기록만 남은 죽은 제안입니다. 다시 propose 하세요.")}
     if sess:
         try:
+            if "artifact_paths" in ti:
+                _candidate.register_artifacts(repo, sess, ti["artifact_paths"])
             _candidate.collect(repo, sess)
         except (ValueError, OSError) as exc:
             return {"success": False, "applied": False, "error": str(exc)}
@@ -951,7 +953,8 @@ def op_apply(ti):
 def _complete_immediate(repo, sess, result, ti):
     if not result.get("applied"):
         return result
-    if _reload_triggering(sess):
+    from repair_continuation import current
+    if _reload_triggering(sess) and ((current() or {}).get("result") or {}).get("outcome") != "healthy":
         return {**result, "complete": False, "message": "기존 적용 영수증의 활성 확인을 기다립니다"}
     sess = read_session(repo, sess["key"]) or sess
     for field in ("verify_cmd", "active_verify_cmd"):
@@ -1146,6 +1149,7 @@ def op_status(ti):
         out["repository_baseline"] = own.get("repository_baseline")
         out["repair_policy"] = own.get("repair_policy", 1)
         out["verification_plan"] = own.get("verification_plan", [])
+        out["artifacts"] = _candidate.artifact_manifest(own)
         out["last_preparation"] = own.get("preparation_result", {}).get("result")
         out["execution_checks"] = [{k: v for k, v in r.items() if k != "output"}
                                     for r in own.get("execution_checks", [])[-8:]]

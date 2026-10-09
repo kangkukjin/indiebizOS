@@ -186,5 +186,15 @@ USB 를 잃어버려도 이 키 하나만 폐기하면 끝 — 허브 로그인�
 ```
 cd helper && ./build.sh      # Go 설치 필요
 ```
-```
+- **구형 인텔 맥(macOS 10.15~11)**: Go 1.25+ 산출물은 최소 macOS 12 라 Catalina 에서
+  `dyld: Symbol not found: _SecTrustCopyCertificateChain` 으로 꺼진다. build.sh 가
+  Go 1.22(10.15 지원 마지막) + `go.legacy.mod`(그 툴체인이 받는 의존성 고정)로
+  `indiebiz-helper-mac-amd64-legacy` 를 따로 굽고, 맥 발급 묶음에 함께 실린다.
+  의존성을 올릴 때 go.legacy.mod 는 Go 1.22 가 받는 버전에 남겨 둘 것.
 
+## 실측 기록 (자동 누적)
+
+> 실행 에이전트가 턴 종료 후 덧붙인다.
+- 2026-10-09 실측: helper/go.mod 가 Go 1.25 이상을 요구해 Go 1.26.5 로 빌드된 helper/dist 의 mac-amd64 는 otool minos 12.0 이다. 이 파일은 macOS 10.15(Catalina) 인텔맥에서 _SecTrustCopyCertificateChain 심볼을 찾지 못해 시작하자마자 종료된다. 가이드에는 '빌드된 실행파일이 있으면 동봉'이라고만 적혀 있어 이 함정이 드러나지 않는다.
+- 2026-10-09 실측: Catalina 용 레거시 헬퍼는 Go 1.22.12(10.15 를 지원하는 마지막 Go)와 helper/go.legacy.mod(의존성 고정, 예: sqlite v1.34.5)로 따로 빌드하면 된다. 결과는 minos 10.13 이고 nm -u 에 _SecTrustCopyCertificateChain 이 없어 정적 검증을 통과했다. 헬퍼 코드는 고칠 곳이 없었다.
+- 2026-10-09 후속: 레거시 빌드 산출물을 정본에 반영하고 맥12 발급 폴더와 ZIP을 기존 키로 복원했다. 실제 Catalina 기기 실행은 미검증이다. 자기수리에서 기존 발급 폴더를 갱신할 때는 사본에서 실행파일·사용법만 준비하고 self:patch apply의 artifact_paths로 두 경로를 명시한다. indiebiz-helper.json은 재발급·교체하지 않는다.

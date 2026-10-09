@@ -318,7 +318,8 @@ def _receipt_completion(row, base):
     if not passed:
         return {"response": reason, "evaluation": {"achieved": False, "status": "UNKNOWN",
                 "reason": reason, "method": "repair_receipts"}}
-    response = row.get("response", "") + "\n\n[수리 완료] " + reason + " (" + session["commit"]["commit"][:12] + ")"
+    commit = session.get("commit", {}).get("commit", "")
+    response = row.get("response", "") + "\n\n[수리 완료] " + reason + (" (" + commit[:12] + ")" if commit else "")
     if row.get("system_ai"):
         from system_ai_memory import save_conversation
         save_conversation("assistant", response)

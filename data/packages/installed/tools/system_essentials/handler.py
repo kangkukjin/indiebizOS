@@ -393,6 +393,11 @@ def _staging_key():
     if not grant or _REPO_ROOT is None:
         return None
     try:
+        from repair_context import activation_only
+        from repair_continuation import current
+        if activation_only():
+            row = current() or {}
+            return _staging_mod().task_key(row.get("staging_task_id") or row.get("task_id"))
         return _staging_mod().task_key(grant.get("task_id") or "notask")
     except Exception:
         return None

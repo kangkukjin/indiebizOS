@@ -10,4 +10,4 @@ def active():
 def activation_only():
     from repair_continuation import current
     row = current() or {}
-    return (row.get("result") or {}).get("outcome") == "healthy"
+    return bool(row.get("applied")) or (row.get("result") or {}).get("outcome") == "healthy"

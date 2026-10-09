@@ -185,6 +185,8 @@ def op_since(prev, params, get_items, emit_items,
         conn.close()
 
     result = emit_items(env, out, population=True)
+    result["state_committed"] = False if peek else (True if scope is None else None)
+    result["state_commit_status"] = "peek" if peek else "committed" if scope is None else "pending"
     result["since_key"] = key
     result["since_by"] = by
     result["baseline_total"] = baseline
@@ -196,7 +198,7 @@ def op_since(prev, params, get_items, emit_items,
             # ★P1 (2026-08-20, B15-2): 기계 판별용 플래그 — note 산문만으론 트리거·후속
             # 파이프가 "첫 회라 0행"과 "고장이라 0행"을 구별할 수 없다. 2회차부턴 미표기.
             result["seeded"] = True
-            result["note"] = (f"첫 검침 — 기준선 {len(rows)}행 저장(스트림 '{key}'). "
+            result["note"] = (f"첫 검침 — 기준선 {len(rows)}행 {'저장 대기' if scope is not None else '저장'}(스트림 '{key}'). "
                               "다음 호출부터 지난 검침 이후 새 행만 흐릅니다.")
     elif not out:
         result["note"] = f"지난 검침 이후 새 항목 없음 (기준선 {baseline}행)."
@@ -207,4 +209,6 @@ def op_since(prev, params, get_items, emit_items,
         result["note"] += f" (기준선 상한 {_SINCE_CAP} 초과 — 오래 안 보인 {trimmed}키 정리)"
     if peek and not first_run:
         result["note"] += " (peek — 기준선 안 올림)"
+    if not peek and scope is not None:
+        result["note"] += " 기준선 확정 여부는 전체 실행 응답의 state_commit을 확인하세요."
     return result

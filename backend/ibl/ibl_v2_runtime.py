@@ -1040,6 +1040,7 @@ class Runtime(ExpressionEvaluator):
                 self.commit_scope.commit()
             except Exception as exc:
                 out.update(success=False, error=f"관측 원장 확정 실패: {exc}")
+        self.commit_scope.report(out, owner=self.owns_commit_scope)
         if self.plan.preflight.get('warnings'):
             out['precheck_warnings'] = self.plan.preflight['warnings']
         if self.reuse_run:

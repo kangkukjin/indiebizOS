@@ -60,7 +60,7 @@
 | 일 | 어휘 |
 |----|------|
 | 자사·경쟁사 사이트 분석 | `[sense:crawl]`, `[sense:search]` |
-| 고객이 검색하는 말(검색어 근거) | 검색어마다 **단건** `[sense:search]{source:"naver", type:"blog"\|"cafe"\|"kin", query:"…", limit:1}` 의 `total_estimate`(네이버 전체 결과 추정 건수)를 비교 — 배치 `queries:[…]` 의 `sections.count` 는 반환 행수(limit 상한)라 쓸모없다(43회차 L43-1). 검색량·트렌드 소스(데이터랩 등)는 아직 없다, "이미 쓰인 글 수" 간접 추정임을 브리프에 적는다 |
+| 고객이 검색하는 말(검색어 근거) | `[sense:search]{source:"naver",type:"blog",queries:["…","…"],limit:1}`의 `sections[].total_estimate`를 비교한다(단건 query는 최상위 total_estimate). `count`는 반환 행수(limit 상한)이며 전체 추정 건수가 아니다. 추정치 미제공은 미확인, 0은 0으로 구분한다. 검색량·트렌드 소스(데이터랩 등)는 아직 없다. "이미 쓰인 글 수" 간접 추정이며 기간 필터 전 전체 검색 추정임을 브리프에 적는다 |
 | 고객 목소리 리서치 | `[sense:search]{source:"naver"}` (후기·카페), `[sense:used]`·커뮤니티 관찰 |
 | 소재 이미지 생성 | `[engines:image_gemini]` (브리프의 톤·컬러 파라미터에 반영) |
 | 카드뉴스·슬라이드 | `[self:slide]` (aesthetic을 브랜드 톤에 맞춤) |

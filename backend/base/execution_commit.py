@@ -17,12 +17,33 @@ class CommitScope:
         self.lock = RLock()
         self.state = {}
         self.actions = {}
+        self.committed = 0
+        self.commit_failed = False
+
+    def report(self, result, *, owner=True):
+        total = self.committed + len(self.actions)
+        if total:
+            result["state_commit"] = {
+                "status": ("failed" if self.commit_failed else "committed" if self.committed == total else "pending" if not owner
+                           else "partial" if self.committed else "not_committed"),
+                "actions": total, "committed": self.committed,
+                "reason": ("commit_failed" if self.commit_failed else "" if self.committed == total else "outer_program" if not owner
+                           else "partial_source" if not result.get("source_complete", True)
+                           else "program_failed"),
+            }
 
     def commit(self):
         with self.lock:
-            for action in self.actions.values():
-                action()
-            self.actions.clear()
+            self.commit_failed = False
+            for key, action in list(self.actions.items()):
+                try:
+                    action()
+                except Exception:
+                    # 한 action 내부에서도 앞 쓰기가 반영됐을 수 있다. 미확정과 구별한다.
+                    self.commit_failed = True
+                    raise
+                self.committed += 1
+                del self.actions[key]
 
 
 def current_scope():
@@ -53,5 +74,6 @@ def committed_program(fn):
             result = fn(*args, **kwargs)
             if inherited is None and result.get("success") and result.get("source_complete", True):
                 scope.commit()
+            scope.report(result, owner=inherited is None)
             return result
     return wrapped

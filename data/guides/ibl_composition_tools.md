@@ -236,3 +236,18 @@ legacy-envelope 액션의 구판 전용 설명에는 소스의 `target_descripti
 `$행 >> [self:write]{path:$출력,format:"csv"}`는 특수문자를 인용한다. `columns:["이름","금액"]`은 열 선택·순서이며 빈 입력에 필수다. null/결측은 빈 셀, 중첩 값은 사전 변환한다.
 집계 제외 건수는 `aggregation_skips`, 중간 도구 경고는 `.items` 투영 뒤에도 `execution_notes`로 확인한다.
 `reuse.skipped`는 미복원 이유·위치·변경 지문 차원(옛 기록은 자료 부재)을 보여준다.
+
+### JSON 원장과 검침 상태
+
+`[self:write]{content:json($rows)}`는 format 생략 시 맨 배열 원문을 저장한다.
+`format:"json"`을 명시하면 목록도 `{items,count}` 봉투로 저장한다. `원장에누적`의
+현재 함수는 전자를 쓴다. `self:ledger`의 select/append/upsert는 맨 배열에 target을
+생략하고, 봉투에는 `target:"items"`를 지정한다. 실패의 root_type·target·hint로
+경로를 바로잡으며 원래 파일 모양을 임의로 갈아쓰지 않는다.
+
+`table:since`의 `seeded:true`는 첫 관측임을 뜻한다. 실행 중 반환의
+`state_committed:null`·`state_commit_status:"pending"`은 저장 대기다. 전체 실행 봉투의
+`state_commit.status`가 `committed`여야 기준선이 확정됐다. 잡힌 실패로
+`source_complete:false`인 프로그램은 기준선을 확정하지 않는다(`not_committed`).
+`failed`는 저장 중 실패이며 일부 쓰기가 남을 수 있다. committed 수는 확정한 action 묶음 수이며 실패 묶음의 부분 효과는 알 수 없다. `partial`은 일부 묶음만 확정된 상태다. 전체 롤백을 뜻하지 않는다. `peek`은 저장하지 않는다.
+스트림 정리는 자동으로 하지 않으며, 기존 DB를 별도 관리할 때는 백업과 정확한 키를 확인한다.

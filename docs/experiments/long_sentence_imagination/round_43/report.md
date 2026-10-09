@@ -104,3 +104,50 @@
 새 코드·어휘·설정 적용이나 예약은 없다. 훈련 전 보강한 `marketing.md` 2행 가운데 검색어 행은 L43-1 에 따라 정정이 필요하다(훈련 종료 뒤 문서 1행 정정 — 커밋에 포함).
 
 재현: `harness/prepare.py` 로 입력·oracle 생성 → `harness/run.py base --draft main_v0.ibl --check` → 같은 명령에서 `--check` 제거 → `_staging/reactions` 를 `trainer/input/reactions` 로 복사 → `run.py react --draft react_v1.ibl` → `harness/verify.py <out> <input> <_oracle> qa.json [--react]`. 독립 AI 는 `harness/ai_chain.py base evidence/request_base.txt`, 변형은 `ai_chain.py variant evidence/request_variant.txt`(반응 자료를 `agent/input/reactions` 로 복사한 뒤). 이미지 바이트·AI 문안은 결정론 정답이 아니다.
+
+
+## 7. 후속 수리 (2026-10-09)
+
+사용자 수리 요청에 따라 정본 main의 `de6e9ba2`에서 진행했다. 기존 기본·변형 작업의
+보존 status가 모두 `succeeded`/`completed`임을 확인한 뒤 구현을 수정했다.
+최초 실행·산출물·발견 문장은 보존한다.
+
+| 발견 | 공통 소유자와 변경 | 검증 |
+|---|---|---|
+| L43-1 | web 배치 병합이 원천 `total_estimate`를 각 sections에 보존한다. count는 반환 행수, 추정치 0과 미제공은 구별한다. 어휘와 마케팅 교재에 단건/배치 위치·기간 필터 이전 전체 검색 추정이라는 한계를 명시 | 제한된 반환 1행/추정59515, 추정0, 미제공, 부분 검색 실패의 병합 시험 |
+| L43-2 | ledger의 루트 모양 불일치가 root_type·target·hint를 반환하고 IBL 오류 상세까지 보존된다. 배열/봉투의 target을 명시하게 하며 오류 시 파일을 바꾸지 않는다. 쓰기 교재에 두 저장 형식을 구별 | select/append/upsert × 배열/봉투 오류6건, 파일 바이트 불변·올바른 target으로 재실행 |
+| L43-3 | framing_inheritance의 경량 패치 입력·허용 필드에 구조화 criteria를 포함. 후속 요청은 현재 criteria와 achievement_criteria를 함께 명시해야 계승되며, 누락·빈 기준은 재요청 후 일반 의식 규정으로 돌아간다. 정기 실행의 변경 없는 기준은 유지 | 변경 기준이 최종 평가 계약에 도달하고 user_quote·fallback을 보존하는 시험, 불완전 패치 거절·정기 실행 보존 |
+| L43-4 | since는 프로그램 실행 중 저장 대기라고 반환하고, 실행 소유자가 최종 state_commit에 committed/not_committed/partial/failed/pending과 확정 수를 신고한다. 잡힌 도구 실패의 source_complete:false에서는 기존처럼 기준선을 올리지 않는다 | 정상·잡힌 실패·실패 종료·peek·중첩 실행·부분 저장 실패, 실제 임시 SQLite와 후속 새 행 비교 |
+
+**L43-2 최초 원인 설명 정정.** 판본2 `원장에누적`은 어댑터가 format을 잃은 것이 아니다.
+정본 `data/idioms/legacy_port_seeds.json`의 함수가 애초에
+`[self:write]{content:json($합.items)}`로 배열 원문을 쓴다. format:"json"을 명시한
+직접 목록 쓰기는 `{items,count}` 봉투를 저장한다. 기존 관용구 파일 모양을 바꾸거나
+명시 target을 자동 교정하지 않고, 실제 계약을 가이드와 진단에서 드러냈다.
+
+**전체 프로그램 재생의 범위.** 원래 main_v0와 react_v1을 처음부터 실행하되 모델·검색의
+보존 영수증을 공급하고, 미디어 생성은 보관된 정사각 PNG로 대체했다. 현재 날짜는 훈련일로
+고정했다. 로컬 파일 읽기·쓰기·표 계산·관용구 본문은 실제 구현, ledger는 실제 구현과 공통
+인자 변환, since는 실제 구현과 임시 SQLite를 사용했다. 원래 변형의 target 오류·폴백·
+미확정을 그대로 재현한다. 새 변형은 반응 입력 행을 역순으로 바꾸고 배열 원장의 target을
+생략하여, 배열 형식 보존·원장 갱신·기준선 확정을 검증한다. 기본14·변형11 검수 조건을
+각각 대조한다. 회귀의 집은 `backend/test_execution_commit.py`의 전체 프로그램 시험이다.
+
+보존 결과 재생은 실시간 네이버 조회·새 이미지 생성·독립 AI의 작성 행동 검증이 아니다.
+새 검색 추정치는 별도 생산자 배치 시험으로 확인했으며, 이전 검색 영수증에 값을 지어넣지 않았다.
+전체 토큰/시간 절감이나 새 모델의 의미 판단 품질 향상은 측정하지 않았다.
+원래 출력·입력·운영 검침 스트림은 수정·삭제하지 않았다. 스트림 폐기는 기존 DB 관리 범위이며
+새 어휘·예약·자동 삭제를 추가하지 않았다.
+
+### 최종 검증
+
+- 직접 관련 39검사 통과(전체 프로그램 재생2 포함). 각 기본14·변형11 검수 조건이 두 재생에서 모두 일치했다.
+- 영향 선택기: 변경7파일 → 전이 시험564/612(92%), execution_commit·ibl_v2_adapters·ibl_v2_runtime 허브로 전수 권고.
+- 최종 backend non-system: **9,555 통과·1 건너뜀·실패0**, 121.22초.
+- 추가 관련 묶음(Python 라이브러리·어휘 배포/분리·기존 긴문장 전체 재생·이번 검침 시험): **86 통과**, 49.54초. 위 직접 검사와 겹치는 항목이 있어 두 수를 고유 검사 수로 합산하지 않는다.
+- 회원 경로/권한 포함 관련36검사, 용례 검토 관문4검사, 어휘 --check·층·은퇴 계약·Android 매니페스트 재생성·diff 공백 검사 통과. frontend는 변경하지 않았고 TypeScript 검사는 실행하지 않았다.
+- 용례: ledger14·write95·search211·since38의 호출 표면을 검토했다. 새 반환 메타와 진단을 추가했으며 기존 호출 인자·행 반환·저장 형식은 유지한다. 실제 배열 관용구 #4889와 봉투 저장 예제 #4453의 차이를 교재에 명시했다.
+- 최초 샌드박스 전수는 로컬 소켓·브라우저·자식 프로세스 제한 및 용례 재검토 미완료로 실패했다. 용례 원장을 갱신하고 승인된 권한으로 전수를 다시 실행한 결과가 위 최종 수치다.
+- 활성 백엔드 ACTIVE·코드 지문 일치 확인. 실제 HTTP 검증에서 배열 root_type/hint 전달·target 교정 upsert·배열 형식 보존, since peek 미저장을 확인했다. 별도 실제 네이버 배치 조회2건은 각각 count=1, total_estimate=59515/105635였다. [활성 확인 증거](evidence/repair_live.json). 최초 확인 요청은 판본2 선언 누락으로 실행 전 거절됐고 선언을 보충한 요청만 성공 검증으로 셌다.
+
+새 독립 AI 턴의 기준 작성/판정 정확도와 전체 시간·토큰 개선은 미측정이다. 미디어 대역을 쓴 재생으로 새 이미지의 시각 품질을 보증하지 않는다.

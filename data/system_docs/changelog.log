@@ -2486,3 +2486,5 @@
 2026-10-09 에피소드4495 확정 오류 수리: AI 동향 검색 가이드가 최상위 date 대신 dates 객체를 선택하도록 실행 예제·반환 계약 안내 보완(원천 간 날짜 충돌·null 보존). AI동향발행은 기존 공개면 설정에서 레벨 없는 /f?path= 정식 URL을 반환하고 주소 설정 상태·접속 미검증을 로컬 발행 성공과 구분. 보고서 원문의 아람코 제외 조건 복원 후 HTML 재발행, 외부 HTTP200·로컬 바이트 일치 확인(설명형 UA 사용). 관련 backend131건·관용구11건 통과, 파일명 충돌 해소 뒤 새 날짜 시험과 관용구12건 재확인, 가이드 예산 내 압축 후 관련33건 통과. Android 매니페스트 재생성 변화 없음. backend 전수 미실행·시간/토큰 절감 미측정. 산출물은 기존 미추적 정책 유지, 이전 원문·HTML=data/_backups/2026-10-09_episode4495_report_correction/.
 
 [2026-10-09 12:14:17] BUG_FIX: 긴문장42 영상 제작 — PNG 누락의 PARTIAL_SOURCE 동기/상태/task 전파, 틀의 제목 충돌 거절·실제 메타 반환. 원래 전체·누락/복구·새 역순/특수문자 변형 및 관련439검사 검증. docs/experiments/long_sentence_imagination/round_42/repair.md
+
+2026-10-09 긴문장43회차 수리: 배치 sections의 total_estimate 보존·count와 구별, 원장 배열/봉투 target 오류의 root_type·hint를 IBL까지 전달, 후속 규정의 구조화 criteria 교체와 누락 거절, 검침 저장 대기·실행 종료 state_commit·저장 실패를 구분. 기존 파일 형식·부분 원천 미확정 정책 유지. 원래 전체/원장 경로교정·역순 변형을 보존 모델·미디어 대역과 실제 파일/SQLite로 재생; 직접39검사·non-system9555통과1건너뜀·추가관련86통과. 활성 HTTP 원장/peek·실제 네이버 배치 추정치 확인. 용례/어휘/층/은퇴/Android 관문 통과, 새 모델 품질·전체토큰 개선 미측정. 상세=docs/experiments/long_sentence_imagination/round_43/report.md §7.

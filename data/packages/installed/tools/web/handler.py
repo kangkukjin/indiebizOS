@@ -50,7 +50,7 @@ def _fetch_sections(jobs):
 
 
 # 배치 섹션이 단일 호출에서 그대로 넘겨받는 키 — 요청량·상한 조정·경고(행·오류만 꺼내던 2026-10-07 이전 누락 수리)
-_BATCH_KEEP_KEYS = ("clamped", "requested", "message", "warning")
+_BATCH_KEEP_KEYS = ("clamped", "requested", "message", "warning", "total_estimate")
 
 # days(최근 N일)를 보장할 수 있는 소스 — 통화 행에 date 를 싣는 소스만. ddg 는 게시일이 없고,
 # naver 는 news(ISO8601)·blog(YYYY-MM-DD)만 날짜를 싣는다.

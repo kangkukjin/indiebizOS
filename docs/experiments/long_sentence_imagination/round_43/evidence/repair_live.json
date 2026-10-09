@@ -1,0 +1,24 @@
+{
+  "ledger": {
+    "success": true,
+    "root_type": "array",
+    "corrected_update": true,
+    "shape": "array"
+  },
+  "since_peek": {
+    "state_committed": false,
+    "status": "peek"
+  },
+  "naver_batch": [
+    {
+      "query": "옷 수선 배우기",
+      "count": 1,
+      "total_estimate": 59515
+    },
+    {
+      "query": "단추 달기 방법",
+      "count": 1,
+      "total_estimate": 105635
+    }
+  ]
+}

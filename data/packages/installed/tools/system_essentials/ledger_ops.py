@@ -60,9 +60,24 @@ def _slot(root, parts, create=False):
     return current, (parts[-1] if parts else None)
 
 
+class TargetShapeError(ValueError):
+    def __init__(self, root, parts):
+        root_type = "array" if isinstance(root, list) else "object" if isinstance(root, dict) else type(root).__name__
+        hint = ("루트가 배열입니다. target을 생략하세요." if isinstance(root, list) else
+                '루트가 items 배열을 가진 객체입니다. target:"items"를 지정하세요.'
+                if isinstance(root, dict) and isinstance(root.get("items"), list) else
+                "JSON 루트와 target을 확인하고 배열 경로를 지정하세요.")
+        self.diagnostic = {"root_type": root_type, "target": ".".join(parts), "hint": hint}
+        super().__init__("원장 target은 JSON 배열이어야 합니다. " + hint)
+
+
 def _get_target(root, parts, create_list=False):
     if not parts:
+        if not isinstance(root, list):
+            raise TargetShapeError(root, parts)
         return root
+    if isinstance(root, list):
+        raise TargetShapeError(root, parts)
     parent, key = _slot(root, parts, create=create_list)
     if not isinstance(parent, dict):
         raise ValueError("target의 부모가 객체가 아닙니다.")
@@ -183,7 +198,7 @@ def _require_object_rows(rows, label):
 
 
 def _fail(exc):
-    return {"success": False, "items": [], "error": str(exc)}
+    return {"success": False, "items": [], "error": str(exc), **getattr(exc, "diagnostic", {})}
 
 
 def op_select(tool_input):

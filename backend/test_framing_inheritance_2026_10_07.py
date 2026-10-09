@@ -102,7 +102,7 @@ def test_followup_new_wakes_and_continue_inherits(monkeypatch):
 
     r2 = Runner()
     seen2 = _calls(monkeypatch, relation="CONTINUE",
-                   patch='{"patch": {"task_framing": "문제: 직전 결과의 빈틈 확인", "assumptions": []}}')
+                   patch='{"patch": {"task_framing": "문제: 직전 결과의 빈틈 확인", "assumptions": [], "achievement_criteria": "빈틈 확인", "criteria": [{"text": "빈틈 확인"}]}}')
     with actor_context(agent_id="agent_t", task_id="t2"):
         out2 = r2._run_consciousness_or_reuse("찾을 수 있는 소스를 다 찾은 건가?", [{"role": "user", "content": "x"}], "")
     assert r2.calls == 0 and seen2 == ["classify", "background"]

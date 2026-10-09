@@ -1132,7 +1132,7 @@
   "self:ledger": {
    "fields": {
     "description": "e3384b57e6a4",
-    "target_description": "d812c137109d",
+    "target_description": "7a37d20a4a45",
     "implementation": "234a00fb8e13",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1143,8 +1143,8 @@
     "router": "ebbb1532efbc",
     "tool": "05e436585182"
    },
-   "reviewed": "2026-09-18",
-   "examples": 11
+   "reviewed": "2026-10-09",
+   "examples": 14
   },
   "self:limb": {
    "fields": {
@@ -1691,7 +1691,7 @@
   "self:write": {
    "fields": {
     "description": "6138ddd9ffd5",
-    "target_description": "fe9626c3d7d6",
+    "target_description": "7b83d086ad50",
     "implementation": "5011cee6a0e9",
     "returns": "9a5e13f69efc",
     "returns_variants": "13977aefed92",
@@ -1700,8 +1700,8 @@
     "router": "ebbb1532efbc",
     "tool": "1377afcca699"
    },
-   "reviewed": "2026-09-30",
-   "examples": 94
+   "reviewed": "2026-10-09",
+   "examples": 95
   },
   "sense:book": {
    "fields": {
@@ -2153,7 +2153,7 @@
   "sense:search": {
    "fields": {
     "description": "de849f0a0855",
-    "target_description": "f88d0a3167f7",
+    "target_description": "16dd39b49bb4",
     "implementation": "9103edc5f400",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
@@ -2162,7 +2162,7 @@
     "router": "ebbb1532efbc",
     "tool": "6ad21f9d2ea1"
    },
-   "reviewed": "2026-10-07",
+   "reviewed": "2026-10-09",
    "examples": 211
   },
   "sense:search_shopping": {
@@ -2609,7 +2609,7 @@
   "table:since": {
    "fields": {
     "description": "4637561bdbe2",
-    "target_description": "8d43fffad837",
+    "target_description": "5333b6d04674",
     "implementation": "22fa706bb509",
     "returns": "5450ffb2cf8a",
     "target_key": "c0c1baf2fa65",
@@ -2619,7 +2619,7 @@
     "router": "ebbb1532efbc",
     "tool": "0e17c410575f"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-10-09",
    "examples": 38
   },
   "table:sort": {

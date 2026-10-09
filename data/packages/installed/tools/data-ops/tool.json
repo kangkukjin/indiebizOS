@@ -254,7 +254,7 @@
     },
     {
       "name": "data_since",
-      "description": "records → 지난 호출 이후 새 행만(검침). 첫 호출=기준선 저장+빈 결과(note). 새 행=_since:\"new\", watch 필드 변화 행=_since:\"changed\"(+_since_prev). >> 앞 통화를 받음.",
+      "description": "records → 지난 호출 이후 새 행만(검침). 첫 호출=기준선 저장 대기+빈 결과(note). 프로그램 종료 뒤 state_commit에서 확정 여부를 확인한다. 새 행=_since:\"new\", watch 필드 변화 행=_since:\"changed\"(+_since_prev). >> 앞 통화를 받음.",
       "input_schema": {
         "type": "object",
         "properties": {

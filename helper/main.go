@@ -224,6 +224,25 @@ func connect(cfg *Config, host string) error {
 var sessionID string
 
 func loop(cfg *Config) {
+	delivery, err := openJobDelivery(cfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "작업 기록 저장소를 열 수 없습니다: %v\n", err)
+		return
+	}
+	stopDelivery := make(chan struct{})
+	defer close(stopDelivery)
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			delivery.flush(func(id string, result map[string]interface{}) error { return postResult(cfg, id, result) })
+			select {
+			case <-stopDelivery:
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
 	backoff := time.Second
 	for {
 		jobs, approved, err := poll(cfg)
@@ -254,9 +273,13 @@ func loop(cfg *Config) {
 			// 실행 중에도 폴 루프가 계속 돌아 liveness 가 유지되고, 다음 명령도 받는다.
 			var c Command
 			if json.Unmarshal([]byte(j.Code), &c) == nil && c.Op == "exit" {
-				res := runJob(j)
+				res := delivery.execute(j, runJob)
+				if res == nil {
+					continue
+				}
 				for attempt := 0; attempt < 3; attempt++ {
 					if err := postResult(cfg, j.ID, res); err == nil {
+						delivery.acknowledge(j.ID)
 						break
 					}
 					time.Sleep(time.Duration(attempt+1) * 2 * time.Second)
@@ -264,14 +287,15 @@ func loop(cfg *Config) {
 				return // 허브가 해제 — loop 종료(main 이 마무리 안내)
 			}
 			go func(j Job) {
-				res := runJob(j)
-				// 실행은 이미 끝났으므로 회신만 실패하면 결과가 유실된다 — 짧게 재시도.
-				for attempt := 0; attempt < 3; attempt++ {
-					if err := postResult(cfg, j.ID, res); err == nil {
-						break
-					}
-					time.Sleep(time.Duration(attempt+1) * 2 * time.Second)
+				res := delivery.execute(j, runJob)
+				if res == nil {
+					return
 				}
+				// 즉시 1회 회신, 실패해도 영속 outbox가 확인될 때까지 재시도한다.
+				if postResult(cfg, j.ID, res) == nil {
+					delivery.acknowledge(j.ID)
+				}
+
 			}(j)
 		}
 	}

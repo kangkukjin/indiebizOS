@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: guestpc-volatile-results
+    retired: 2026-10-09
+    reason: 기기 작업의 메모리 큐와 5분 회수 제한이 재기동·긴 작업에서 실행과 유실을 구분하지 못했다.
+    instead: SQLite 원장에 소유·전달·결과를 보존하고 self:task로 상태를 관측한다. 완료 기록은 7일 보존하며 전달한 명령은 자동 재전송하지 않는다.
+    phrases: ['RESULT_TTL 5분', 'RESULT_TTL(5분)', '완료 후 5분이 지났거나 백엔드가 재시작됐으면 결과가 유실된 것']
   - id: browser-silent-confirm-and-global-session
     retired: 2026-10-09
     reason: 확인창 자동 취소를 성공으로 보고했고 동시 작업이 같은 페이지를 조작했다.

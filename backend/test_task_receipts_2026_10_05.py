@@ -246,7 +246,7 @@ def test_guestpc_adapter_reads_phone_jobs_nondestructively():
     gh = importlib.import_module("handler")
     jid = phone_jobs.enqueue("dev-test", "{}")
     ref = T.ref("guestpc", jid)
-    assert gh.task_status(ref)["state"] == "running"
+    assert gh.task_status(ref)["state"] == "queued"
     phone_jobs.set_partial(jid, {"tail": "…"})
     assert gh.task_status(ref)["progress"] == {"tail": "…"}
     phone_jobs.set_result(jid, {"exit_code": 0})

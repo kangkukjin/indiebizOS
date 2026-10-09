@@ -484,3 +484,13 @@ Vite `uiCatalogPlugin`(`frontend/scripts/ui-catalog.mjs`·`ui-compiler.mjs`)이 
 ### 회귀 시험 실행 (2026-10-04)
 
 일상 회귀는 병렬(pytest-xdist)로 돌고, 전체 재생이 필요한 고비용 검사는 `system` 표지로 분리돼 있다. 변경한 파일에서 관련 시험을 고르는 선택기는 `scripts/select_tests.py`. 시험은 런타임 저장소·스필 루트를 워커 단위 임시 경로로 격리하며, 시험이 추적 파일이나 실제 저장소에 쓰면 세션 관문이 실패시킨다. 규약 정본: `docs/REGRESSION_TESTING.md`.
+
+### 기기 작업 전달과 재기동
+
+손발·폰의 접속/등록·폴·진행·결과 회신은 재기동 드레인에서 유지하고 새 실행 접수는 닫는다.
+`phone_jobs`는 SQLite 원장(`data/phone_jobs.db`, 테스트는 `INDIEBIZ_RUNTIME_STATE_DIR`)에
+접수·전달·완료·회수·취소·만료를 보존한다. 미전달 10분 만료, 완료 기록 7일 보존이며
+전달한 명령은 재기동 뒤 자동 재실행하지 않는다. 실행 불명과 늦은 결과 수신을 구분한다.
+새 Go 헬퍼는 호스트 로컬 수신/결과 기록으로 중복 실행을 막고 확인까지 결과를 재전송하며,
+macOS의 작업 실행 중에만 유휴 잠자기를 막는다. 구형 USB 바이너리는 교체해야 적용된다.
+사용법과 경로는 [손발 가이드](../guides/guest_helper.md)의 긴 명령 절을 따른다.

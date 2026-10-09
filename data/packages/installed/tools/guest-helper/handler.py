@@ -282,7 +282,7 @@ _SYNC_WAIT_CAP = 100.0
 def _job_result(tool_input: dict) -> dict:
     """op=result — 백그라운드/시간초과 셸 명령의 결과를 job_id 로 회수.
 
-    결과는 헬퍼가 회신한 뒤 phone_jobs 에 RESULT_TTL(5분)간 보존되고, 회수는 1회(pop)다.
+    결과는 헬퍼가 회신한 뒤 phone_jobs 에 RESULT_TTL(7일)간 보존되고, 회수는 1회(pop)다.
     아직 없으면 pending — 명령이 그 PC 에서 계속 실행 중일 수 있다."""
     import phone_jobs
     job_id = (tool_input.get("job") or tool_input.get("job_id") or "").strip()
@@ -290,19 +290,9 @@ def _job_result(tool_input: dict) -> dict:
         return {"success": False, "error": "result 엔 job(작업 ID)이 필요합니다 — shell 응답의 job_id 를 넣으세요."}
     result = phone_jobs.wait_result(job_id, timeout=float(tool_input.get("wait") or 5.0))
     if result is None:
-        # 중간 경과가 있으면 함께 준다 — '돌고 있음'과 '멎었음'을 구별하게 하는 유일한 단서다.
-        # 이게 없으면 AI 가 판단 못 해 같은 명령을 재전송(이중 실행)하기 쉽다.
-        partial = phone_jobs.get_partial(job_id)
-        out = {"success": False, "op": "result", "job_id": job_id, "pending": True,
-               "message": ("아직 결과가 없습니다 — 명령이 그 PC 에서 실행 중이면 잠시 후 같은 op 로 "
-                           "다시 확인하세요. (완료 후 5분이 지났거나 백엔드가 재시작됐으면 결과가 유실된 것 — "
-                           "상태 확인 명령을 새로 보내세요.)")}
-        if partial:
-            out["progress"] = partial          # {tail, bytes, running}
-            out["message"] = (f"실행 중입니다(출력 {partial.get('bytes', 0)}바이트까지 나옴). "
-                              "아래 progress.tail 이 지금까지의 출력 꼬리입니다. "
-                              "진행이 멈춘 것 같으면 잠시 후 다시 확인하세요.")
-        return out
+        status = task_status({"kind": "guestpc", "task_id": job_id})
+        return {**status, "op": "result", "job_id": job_id,
+                "pending": status["state"] in {"queued", "running"}}
     return {"success": True, "op": "result", "job_id": job_id, "result": result}
 
 
@@ -754,12 +744,18 @@ def task_status(ref: dict) -> dict:
         if got.get("consumed"):
             return T.view(ref, T.SUCCEEDED, result=None, note="결과는 이미 op=result 로 회수(pop)됐습니다 — 회수한 쪽이 들고 있습니다")
         return T.view(ref, T.SUCCEEDED, result=got["result"])   # succeeded = 손발이 결과를 회신했다(내용의 성패는 result 안)
-    partial = phone_jobs.get_partial(jid)
-    if partial:
-        return T.view(ref, T.RUNNING, progress=partial)
-    if phone_jobs.owner_of(jid):
-        return T.view(ref, T.RUNNING, note="결과·경과 없음 — 기기가 실행 중이거나 아직 가져가지 않았습니다")
-    return T.view(ref, T.UNKNOWN, error="모르는 작업 — 결과가 이미 회수(pop)됐거나 보존 시간(5분)·재기동으로 유실")
+    status = phone_jobs.job_status(jid)
+    state = status["state"]
+    if state == "queued":
+        return T.view(ref, T.QUEUED, note="접수됨 — 기기 전달 대기")
+    if state == "dispatched":
+        return T.view(ref, T.RUNNING, progress=phone_jobs.get_partial(jid),
+                      note="기기에 전달됨 — 결과 대기")
+    if state == "cancelled":
+        return T.view(ref, T.CANCELLED)
+    if state == "expired":
+        return T.view(ref, T.FAILED, error="전달 전에 유효기간이 만료됨 — 실행하지 않음")
+    return T.view(ref, T.UNKNOWN, error="실행 결과 미확인 — 같은 명령을 재전송하지 말고 기기 상태를 확인하세요")
 
 
 def task_status_cancel(ref: dict) -> dict:

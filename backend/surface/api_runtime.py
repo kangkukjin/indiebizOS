@@ -83,6 +83,13 @@ async def control(action: str, request: Request):
     return result
 
 
+# 기존 기기 작업의 전달/회수 통로. 새 명령 실행 API와 구분한다.
+_DEVICE_TRANSPORT = frozenset({
+    "/limb/connect", "/limb/poll", "/limb/progress", "/limb/result",
+    "/nodes/register", "/nodes/heartbeat", "/nodes/job-result",
+})
+
+
 class RuntimeAdmission:
     """HTTP 제출 수명. 제어/조회/취소와 MCP 세션 운용은 drain 중에도 유지한다.
 
@@ -98,6 +105,7 @@ class RuntimeAdmission:
         path = scope.get("path", "")
         safe = (scope.get("method") in {"GET", "HEAD", "OPTIONS"}
                 or path.startswith(("/runtime/", "/mcp"))
+                or (scope.get("method") == "POST" and path in _DEVICE_TRANSPORT)
                 or path in {"/ibl/recover", "/ibl/guide", "/ibl/read-guide", "/ibl/reframe",
                             "/ibl/supervision", "/ibl/supervision/boundary"}
                 or any(p in {"cancel", "cancel_all", "steer", "stop", "stop_all", "interrupt", "recover"}

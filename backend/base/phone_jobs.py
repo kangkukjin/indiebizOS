@@ -1,175 +1,184 @@
-"""phone_jobs.py — 맥→폰 푸시 작업 큐 (LTE/CGNAT 우회 반전 전달).
+"""기기 작업 전달 원장. 접수·전달·결과를 재기동 너머 보존한다.
 
-폰이 LTE(통신사 NAT) 뒤에 있으면 맥이 폰의 등록 URL 로 직접 못 들어간다(인바운드 차단).
-그래서 방향을 뒤집는다: 폰의 기존 heartbeat(/nodes/heartbeat)가 롱폴로 승격돼
-"작업 있어?" 를 물으며 hold 하고, 맥은 여기 큐에 작업을 넣어 그 응답에 실어 내려보낸다.
-폰이 실행 결과를 /nodes/job-result 로 회신하면, 대기 중이던 포워드(wait_result)가
-동기적으로 받아간다 → ibl_engine.forward_to_phone 의 동기 의미가 큐 경로에서도 보존된다.
-
-동기화는 threading 프리미티브: 엔진 포워드는 동기 스레드에서 돌고, FastAPI 핸들러는
-anyio.to_thread 로 워커 스레드에서 pull_blocking 을 hold 한다(이벤트 루프 비차단).
-큐는 인메모리 — 백엔드 재시작 시 유실되지만 푸시 op(클립보드·알림)는 재시도가 싸다.
+전달한 명령은 재전송하지 않는다: 응답 유실 때 실행 여부를 알 수 없으므로
+상태를 unknown으로 관측하고 같은 job의 늦은 결과를 받아 확정한다.
 """
 import json
+import os
+import sqlite3
 import threading
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from contextlib import contextmanager
+from pathlib import Path
 
-_LOCK = threading.Lock()
-_QUEUES: Dict[str, List[dict]] = {}          # device_id -> 대기 작업
-_JOB_EVENTS: Dict[str, threading.Event] = {}  # device_id -> 작업 도착 신호
-_RESULTS: Dict[str, dict] = {}                # job_id -> {result, ts}
-_RESULT_EVENTS: Dict[str, threading.Event] = {}
-_PARTIALS: Dict[str, dict] = {}               # job_id -> {partial, ts} — 실행 중 경과
-_OWNERS: Dict[str, tuple] = {}                # job_id -> (device_id, ts) — 회신 귀속 검사(2026-09-14)
-
-JOB_TTL = 600.0     # 폰이 이 시간 안에 안 당겨가면 작업 폐기(낡은 클립보드 밀어넣기 방지)
-RESULT_TTL = 300.0  # 대기자가 이미 떠난 결과의 보존 시간
+JOB_TTL = 600.0             # 아직 전달하지 않은 명령의 유효기간
+RESULT_TTL = 7 * 86400.0    # 완료/회수 기록 보존
+_GENERATION = uuid.uuid4().hex
+_WAKE = threading.Condition()
 
 
-def _job_event(device_id: str) -> threading.Event:
-    with _LOCK:
-        ev = _JOB_EVENTS.get(device_id)
-        if ev is None:
-            ev = _JOB_EVENTS[device_id] = threading.Event()
-        return ev
+def _db_path():
+    from runtime_utils import get_base_path
+    root = os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR")
+    return (Path(root) if root else get_base_path() / "data") / "phone_jobs.db"
 
 
-def _gc_locked(now: float) -> None:
-    """_LOCK 보유 상태에서 호출 — 낡은 결과/작업 정리."""
-    stale = [k for k, v in _RESULTS.items() if now - v.get("ts", 0) > RESULT_TTL]
-    for k in stale:
-        _RESULTS.pop(k, None)
-        _RESULT_EVENTS.pop(k, None)
-    for did, q in list(_QUEUES.items()):
-        _QUEUES[did] = [j for j in q if now - j.get("ts", 0) <= JOB_TTL]
-
-
-def enqueue(device_id: str, code: str, agent_id: Optional[str] = None) -> str:
-    """폰이 당겨갈 작업 적재. code = 폰 /ibl/execute 에 그대로 넘길 IBL 코드."""
-    job = {"id": uuid.uuid4().hex[:12], "code": code, "ts": time.time()}
-    if agent_id:
-        job["agent_id"] = agent_id
-    with _LOCK:
-        _gc_locked(job["ts"])
-        _QUEUES.setdefault(device_id, []).append(job)
-        _OWNERS[job["id"]] = (device_id, job["ts"])
-        for k in [k for k, (_, ts) in _OWNERS.items() if job["ts"] - ts > JOB_TTL + RESULT_TTL]:
-            _OWNERS.pop(k, None)
-    _job_event(device_id).set()
-    return job["id"]
-
-
-def pull_blocking(device_id: str, wait: float = 0.0, member_session=None) -> List[dict]:
-    """대기 작업 전량 회수. wait>0 이면 작업 도착까지 최대 wait초 hold(롱폴).
-
-    신호 유실 방지: 이벤트를 먼저 clear 한 뒤 큐를 확인한다 — 확인 후 도착한
-    작업은 set() 이 wait 를 즉시 깨운다.
-    """
-    deadline = time.time() + max(0.0, float(wait))
-    ev = _job_event(device_id)
-    while True:
-        ev.clear()
+@contextmanager
+def _db():
+    path = _db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(path), timeout=15)
+    os.chmod(path, 0o600)
+    conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("""CREATE TABLE IF NOT EXISTS jobs (
+            id TEXT PRIMARY KEY, device TEXT NOT NULL, code TEXT NOT NULL,
+            agent TEXT, created REAL NOT NULL, updated REAL NOT NULL,
+            state TEXT NOT NULL, generation TEXT, deadline REAL,
+            result TEXT, partial TEXT, consumed INTEGER NOT NULL DEFAULT 0)""")
+        conn.execute("CREATE INDEX IF NOT EXISTS jobs_device_state ON jobs(device,state)")
+        conn.execute("BEGIN IMMEDIATE")
         now = time.time()
-        with _LOCK:
-            q = _QUEUES.get(device_id) or []
-            alive = [j for j in q if now - j.get("ts", 0) <= JOB_TTL]
-            if member_session is None:
-                fresh = alive
-                _QUEUES[device_id] = []
-            else:
-                # 새로고침 전 롱폴은 새 세대 명령을 집어가지 않는다. 선택과 제거를 같은 잠금에서 수행.
-                def belongs(job):
-                    try:
-                        command = json.loads(job.get("code", ""))
-                        return isinstance(command, dict) and command.get("member") is True and command.get("body_session") == member_session
-                    except (ValueError, TypeError):
-                        return False
-                fresh = [j for j in alive if belongs(j)]
-                selected = {j['id'] for j in fresh}
-                _QUEUES[device_id] = [j for j in alive if j['id'] not in selected]
-        if fresh or now >= deadline:
+        conn.execute("UPDATE jobs SET state='expired',updated=? WHERE state='queued' AND created<?",
+                     (now, now - JOB_TTL))
+        # 실행 중 소유 정보는 TTL로 버리지 않는다. 늦은 결과도 받아 확정한다.
+        conn.execute("UPDATE jobs SET state='unknown',updated=? WHERE state='dispatched' AND deadline<?",
+                     (now, now))
+        conn.execute("DELETE FROM jobs WHERE state IN ('completed','cancelled','expired') AND updated<?",
+                     (now - RESULT_TTL,))
+        yield conn
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _wake():
+    with _WAKE:
+        _WAKE.notify_all()
+
+
+def _pause(seconds):
+    # 짧은 상한은 다른 프로세스의 회신도 관측하게 한다. 정상 same-process는 즉시 깨어난다.
+    with _WAKE:
+        _WAKE.wait(min(0.25, max(0.0, seconds)))
+
+
+def enqueue(device_id, code, agent_id=None):
+    now = time.time()
+    jid = uuid.uuid4().hex[:12]
+    with _db() as conn:
+        conn.execute("INSERT INTO jobs(id,device,code,agent,created,updated,state) VALUES(?,?,?,?,?,?,'queued')",
+                     (jid, device_id, code, agent_id, now, now))
+    _wake()
+    return jid
+
+
+def pull_blocking(device_id, wait=0.0, member_session=None):
+    deadline = time.monotonic() + max(0.0, float(wait))
+    while True:
+        fresh = []
+        with _db() as conn:
+            for row in conn.execute("SELECT * FROM jobs WHERE device=? AND state='queued' ORDER BY created,id",
+                                    (device_id,)).fetchall():
+                try:
+                    command = json.loads(row['code'])
+                except (ValueError, TypeError):
+                    command = {}
+                if not isinstance(command, dict):
+                    command = {}
+                if member_session is not None and not (command.get('member') is True
+                        and command.get('body_session') == member_session):
+                    continue
+                try:
+                    timeout = max(120.0, float(command.get('timeout') or 1800))
+                except (ValueError, TypeError):
+                    timeout = 1800.0
+                now = time.time()
+                conn.execute("UPDATE jobs SET state='dispatched',generation=?,updated=?,deadline=? WHERE id=?",
+                             (_GENERATION, now, now + timeout + 3600, row['id']))
+                job = {'id': row['id'], 'code': row['code'], 'ts': row['created']}
+                if row['agent']:
+                    job['agent_id'] = row['agent']
+                fresh.append(job)
+        if fresh or time.monotonic() >= deadline:
             return fresh
-        ev.wait(timeout=max(0.05, deadline - time.time()))
+        _pause(deadline - time.monotonic())
 
 
-def owner_of(job_id: str) -> Optional[str]:
-    """이 작업을 발급받은 기기(device_id). 모르는 작업이면 None — 회신 귀속 검사는 None 도 거절한다."""
-    with _LOCK:
-        entry = _OWNERS.get(job_id)
-        return entry[0] if entry else None
+def owner_of(job_id):
+    with _db() as conn:
+        row = conn.execute("SELECT device FROM jobs WHERE id=?", (job_id,)).fetchone()
+        return row['device'] if row else None
 
 
-def set_result(job_id: str, result: Any) -> None:
-    """폰의 실행 결과 회신 — 대기 중인 wait_result 를 깨운다."""
-    with _LOCK:
-        _RESULTS[job_id] = {"result": result, "ts": time.time()}
-        _PARTIALS.pop(job_id, None)   # 끝났으니 경과는 버린다
-        ev = _RESULT_EVENTS.get(job_id)
-        _gc_locked(time.time())
-    if ev:
-        ev.set()
+def set_result(job_id, result):
+    """재전송된 결과는 최초 확정 내용을 보존한다. 임의 job 생성은 하지 않는다."""
+    with _db() as conn:
+        conn.execute("""UPDATE jobs SET result=?,state='completed',partial=NULL,updated=?
+                        WHERE id=? AND state IN ('queued','dispatched','unknown')""",
+                     (json.dumps(result, ensure_ascii=False), time.time(), job_id))
+    _wake()
 
 
-def set_partial(job_id: str, partial: dict) -> None:
-    """실행 **중인** 작업의 중간 경과 저장(손발의 진행 중계).
-
-    최종 결과(_RESULTS)와 별도 보관이다: 결과는 1회 pop 이지만 경과는 여러 번 읽히고,
-    끝나면 버려진다. 이게 없으면 긴 설치·빌드가 도는 동안 허브는 깜깜해서 '돌고 있음'과
-    '멎었음'을 구별할 수 없다(그 구별 실패가 같은 명령 재전송=이중 실행으로 이어졌다)."""
-    with _LOCK:
-        _PARTIALS[job_id] = {"partial": partial, "ts": time.time()}
-        stale = [k for k, v in _PARTIALS.items() if time.time() - v.get("ts", 0) > RESULT_TTL]
-        for k in stale:
-            _PARTIALS.pop(k, None)
+def set_partial(job_id, partial):
+    with _db() as conn:
+        conn.execute("""UPDATE jobs SET partial=?,state='dispatched',generation=?,updated=?
+                        WHERE id=? AND state IN ('queued','dispatched','unknown')""",
+                     (json.dumps(partial, ensure_ascii=False), _GENERATION, time.time(), job_id))
+    _wake()
 
 
-def get_partial(job_id: str) -> Optional[dict]:
-    """중간 경과 조회(비파괴 — 여러 번 물어볼 수 있다)."""
-    with _LOCK:
-        entry = _PARTIALS.get(job_id)
-        return dict(entry["partial"]) if entry else None
+def get_partial(job_id):
+    with _db() as conn:
+        row = conn.execute("SELECT partial FROM jobs WHERE id=?", (job_id,)).fetchone()
+        return json.loads(row['partial']) if row and row['partial'] else None
 
 
-_CONSUMED: dict = {}   # job_id -> 회수(pop) 시각 — 회수된 작업을 '아직 실행 중'으로 오판하지 않게(접수증 관찰)
+def job_status(job_id):
+    with _db() as conn:
+        row = conn.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+        if not row:
+            return {'state': 'unknown', 'reason': 'unknown_job'}
+        state = row['state']
+        if state == 'dispatched' and row['generation'] != _GENERATION:
+            state = 'unknown'
+        return {'state': state, 'reason': 'delivery_unconfirmed' if state == 'unknown' else state,
+                'consumed': bool(row['consumed']), 'updated': row['updated']}
 
 
-def peek_result(job_id: str) -> Optional[dict]:
-    """결과를 **비파괴**로 본다 — {"result": …} / {"consumed": True}(이미 wait_result 가 회수) / None. 접수증 관찰
-    (task_receipts guestpc 어댑터)이 쓴다: status 는 여러 번 읽히므로 pop 하지 않는다(회수 pop 은 wait_result 그대로)."""
-    with _LOCK:
-        entry = _RESULTS.get(job_id)
-        if entry:
-            return {"result": entry.get("result")}
-        ts = _CONSUMED.get(job_id)
-        if ts is not None and time.time() - ts <= RESULT_TTL:
-            return {"consumed": True}
-        return None
+def peek_result(job_id):
+    with _db() as conn:
+        row = conn.execute("SELECT result,consumed,state FROM jobs WHERE id=?", (job_id,)).fetchone()
+        if not row or row['state'] != 'completed':
+            return None
+        return {'consumed': True} if row['consumed'] else {'result': json.loads(row['result'])}
 
 
-def wait_result(job_id: str, timeout: float = 20.0) -> Any:
-    """작업 결과를 동기 대기. 시간 내 미도착이면 None(호출부가 queued 로 응답)."""
-    with _LOCK:
-        if job_id in _RESULTS:
-            _CONSUMED[job_id] = time.time()
-            return _RESULTS.pop(job_id).get("result")
-        ev = _RESULT_EVENTS.setdefault(job_id, threading.Event())
-    hit = ev.wait(timeout=timeout)
-    with _LOCK:
-        _RESULT_EVENTS.pop(job_id, None)
-        entry = _RESULTS.pop(job_id, None)
-        if hit and entry:
-            _CONSUMED[job_id] = time.time()
-    return entry.get("result") if (hit and entry) else None
+def wait_result(job_id, timeout=20.0):
+    deadline = time.monotonic() + max(0.0, timeout)
+    while True:
+        with _db() as conn:
+            row = conn.execute("SELECT state,result,consumed FROM jobs WHERE id=?", (job_id,)).fetchone()
+            if row and row['state'] == 'completed':
+                if row['consumed']:
+                    return None
+                conn.execute("UPDATE jobs SET consumed=1 WHERE id=?", (job_id,))
+                return json.loads(row['result'])
+            if not row or row['state'] in ('cancelled', 'expired'):
+                return None
+        if time.monotonic() >= deadline:
+            return None
+        _pause(deadline - time.monotonic())
 
 
-def cancel_pending(job_id: str) -> bool:
-    """아직 기기가 가져가지 않은 작업만 취소. 실행된 것으로 추정하지 않는다."""
-    with _LOCK:
-        for device, queue in _QUEUES.items():
-            remaining = [j for j in queue if j["id"] != job_id]
-            if len(remaining) != len(queue):
-                _QUEUES[device] = remaining
-                return True
-    return False
+def cancel_pending(job_id):
+    with _db() as conn:
+        changed = conn.execute("UPDATE jobs SET state='cancelled',updated=? WHERE id=? AND state='queued'",
+                               (time.time(), job_id)).rowcount
+    _wake()
+    return bool(changed)

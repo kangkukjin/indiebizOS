@@ -2506,3 +2506,5 @@
 
 2026-10-10 외부 PC 헬퍼 관용구: 외부PC준비·외부PC작업실행·외부PC작업확인·외부PC작업마무리를 기존 self:limb/limbs:guestpc/self:task 조합으로 추가. 대상·작업폴더 명시, 접수 뒤 참조 보존, 재전송 없는 조회, 종료 코드와 회신 구분, 전달받은 작업의 종료 확인 후 명시적 해제. 가이드에 호출·재개·반환 계약과 검사 범위 한계 추가. 정의 4개·호출 예제 4개를 해마/의미 색인에 등록(always_on=false), 라이브 이름 조회 4/4 확인.
   검증: 관용구·가이드·등록 소비자·task 접수증·카탈로그 관련 65 passed. 샌드박스 내 기존 프로세스 종료 검사 시간 초과는 권한 허용 환경에서 단독 및 묶음 재실행 통과. 어휘 --check 통과, Android 번들 재생성(변경 없음). 외부 PC 실명령·전체 backend 회귀·시간/토큰 개선은 미검증.
+
+2026-10-10 긴문장48회차 L48-1~7 수리: Playwright 페이지/컨텍스트 사건을 공통 영수증(opened_tabs/closed_tabs/navigated/downloads/file_chooser/page_errors)으로 결합. snapshot 탭 신원 고정, 자동 닫힘 복귀와 context 보존, 실제 다운로드 바이트 저장·미저장 실패·HTTP 미노출 명시, 슬라이더 범위/키 안내. 새 어휘 없음. 1,315 passed·1 skipped + 전체 브라우저/어휘 배포 46 passed, 원본/수리본 6조건 검수 전항목 통과. 정상 재기동 후 실 IBL API 새 탭·자동 복귀·이진 Blob 저장 확인. 전체 backend·새 독립 AI/토큰 성능·Chrome 사건 전수 미검증. 보고서=docs/experiments/long_sentence_imagination/round_48/report.md §9.

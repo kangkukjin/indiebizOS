@@ -95,7 +95,10 @@ $first = [limbs:browser]{op: "navigate", url: "site-a.com"}  # 첫 탭 ID 보존
 ```
 
 ### 팝업/새 탭 자동 감지
-링크 클릭으로 새 탭이 열리면 자동으로 감지되어 세션에 등록됨. `[limbs:browser]{op: "tab", mode: "list"}`로 확인.
+Playwright에서 새 탭이 열리면 등록 후 활성 탭으로 전환한다. 조작 영수증의
+`opened_tabs:[{tab_id,url}]`와 `active_tab_changed:{from,to}`로 확인하고 새 snapshot을 읽는다.
+스스로 닫힌 팝업은 `closed_tabs`에 남으며 살아 있는 마지막 탭으로 복귀한다.
+snapshot의 `tab_id`·`url`은 같은 관측 탭의 값이다. 관측 중 전환은 `SNAPSHOT_TAB_CHANGED`로 재조회를 안내한다.
 
 ### 주의사항
 - 탭 전환 시 ref가 초기화됨 → 전환 후 반드시 `[limbs:browser]{op: "snapshot"}` 호출
@@ -441,3 +444,45 @@ Playwright는 세션 시작부터 각 탭의 HTTP 응답과 응답 없는 요청
 기록은 세션의 최근 500건 중 기본 50건을 반환한다(`capacity`, `retained_count`, `count`).
 진행 중 요청은 아직 없을 수 있으며 이 목록만으로 전체 요청 성공을 단정하지 않는다.
 `capturing:false`는 빈 성공이 아니라 `NETWORK_CAPTURE_INACTIVE` 실패다. 새 세션은 새로 수집한다.
+
+
+## 조작 중 브라우저 사건과 다운로드 (Playwright)
+
+click·press_key·evaluate 등은 같은 사건 수집기를 쓴다. 관측된 사건만 `opened_tabs`,
+`closed_tabs`, `navigated`(이전/새 URL, 관측된 문서 status_code), `downloads`,
+`file_chooser`, `page_errors`에 담고 활성 변경은 `active_tab_changed`로 알린다.
+`page_errors`는 `logs mode:"console"`에도 `source:"pageerror"`로 남는다.
+`file_chooser`가 보이면 snapshot으로 파일 입력을 찾아 `upload_file`에 ref/selector와 path를 준다.
+파일 선택창을 열었다고 업로드가 완료된 것은 아니다.
+
+영수증은 그때까지 **관측한** 사실이다(`event_scope:"pending_and_during_operation"`).
+클릭·입력 등의 반환 전 짧은 사건 전달 유예(80ms)가 있으며 페이지 안정화나 인과관계를 보장하지 않는다.
+더 늦은 사건은 다음 조작/조회 영수증에 남고, 필요한 화면 조건은 `wait`로 기다린다.
+보류 사건은 최근 256건이며 초과량은 `events_omitted`로 알린다.
+입력 중 탭이 닫혀 키 해제를 끝내지 못하면 `verification:"page_closed_during_input"`,
+`input_completed:false`로 닫힘 관측을 돌려준다. 남은 탭에서 결과를 확인한다.
+
+```ibl
+$받음 = [limbs:browser]{op:"click", selector:"a[download]", path:"outputs/export.bin", driver:"playwright"}
+return $받음.downloads
+```
+
+click·press_key·evaluate·type의 `path`는 내려받기 저장 위치로 쓸 수 있다. 생략하면
+`outputs/browser_downloads/<고유번호>/<서버 파일명>`에 저장한다. 같은 조작에서 여러 파일이면
+명시 경로의 두 번째 파일부터 `_2`, `_3`를 붙인다. 텍스트·이진·Blob 파일 모두 브라우저가 받은
+바이트를 저장하며, 서버 파일명은 기본 경로의 파일명 부분으로만 사용한다.
+`downloads`의 `saved:true`·`path`·`size`가 저장 영수증이다. 저장 완료는 최대 30초 기다리며
+실패는 `DOWNLOAD_NOT_SAVED`와 파일별 오류로 반환한다. 늦게 시작된 내려받기는 다음 영수증에
+실리고, 조작의 path 지정이 끝난 뒤 시작됐다면 기본 위치에 저장한다.
+세션을 닫아도 저장된 파일은 남는다. 파일의 업무 내용은 필요에 따라 재독·대조한다.
+
+네트워크는 컨텍스트에서 수집하므로 새 탭의 첫 요청도 포함한다. 내려받기 HTTP 응답이
+브라우저에서 노출되지 않는 경우 상태코드를 만들어내지 않는다(`coverage_limits`).
+`logs mode:"network"`의 `download_history`는 최근 100건의 저장 결과를 별도로 제공한다.
+파일 전환 때 문서 요청이 `net::ERR_ABORTED`로 끝날 수 있으므로 같은 URL의 저장 영수증과
+함께 해석한다. Blob 내려받기에는 HTTP 요청 자체가 없다.
+
+슬라이더는 `type` 대상이 아니다. snapshot의 `value`, `min`, `max`, `step`을 읽고 click으로
+초점을 준 뒤 `press_key`의 Home/End·ArrowRight/ArrowLeft로 조절하고 값을 다시 읽는다.
+HTML range는 min/max/step(생략 시 0/100/1)을 표시한다. 사용자 정의 ARIA slider는
+공개한 min/max만 표시할 수 있으며 step을 추정하지 않는다.

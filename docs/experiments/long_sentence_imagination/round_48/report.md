@@ -141,3 +141,80 @@
 4. **상시 관문** — 이 조사를 회귀 시험으로 옮긴다: 사건 종류 목록 × 조작 방식마다 "영수증에 그 사건이 실렸는가" 를 기본 pytest 경로(`backend/test_browser_*.py`)에서 돌려, 새 op·새 사건이 들어올 때 빠진 칸이 시험 실패로 드러나게 한다. 사건 목록은 Playwright 의 페이지·컨텍스트 이벤트 이름에서 기계로 뽑는다.
 
 슬라이더(L48-3)는 사건이 아니라 안내 문제라 이 묶음 밖이다.
+
+
+## 9. 후속 수리 — 사건 수집·영수증·탭 수명의 공통 경계 (2026-10-10)
+
+위 최초 훈련·조사 증거는 보존했다. §6의 모든 작업 종료 기록을 확인하고 수리를 시작했다.
+수리 시작 정본 main은 `15f6700d`, 개발 중 외부 PC 관용구 커밋 `7dd8ac4e`가 합쳐졌다.
+다른 세션의 보고서 계기·화면 번역 수정은 이번 커밋에서 제외한다.
+
+**근원**은 조작 함수가 화면 부가 정보를 제각각 읽으면서 브라우저의 비동기 수명과
+혼합하던 구조다. 이벤트 소유자는 `browser_session`의 페이지/컨텍스트 등록이고,
+`browser_events`가 세션별 보류 사건·다운로드 저장·공통 영수증을 소유한다.
+`handler`의 기존 작업 잠금 안에서 모든 Playwright op가 같은 수집기를 통과한다.
+새 낱말·op·도메인 분기는 추가하지 않았다.
+
+- **L48-1**: `opened_tabs`·`active_tab_changed`를 반환한다. snapshot은 시작할 때의 Page와 tab_id를
+  함께 고정하고 도중 전환 시 잘못된 ref를 폐기해 `SNAPSHOT_TAB_CHANGED`로 재조회를 안내한다.
+  새 탭 때문에 ref가 지워져도 클릭한 요소 이름은 조작 전에 보존한다.
+- **L48-2**: 세션 쿠키가 적용된 첨부 파일·Blob 파일을 원래 바이트로 저장하고
+  `downloads:{saved,path,size,suggested_filename}`를 반환한다. 기본 위치는 고유한 outputs 경로,
+  click/press_key/evaluate/type은 기존 path로 목적지를 지정한다. 여러 파일은 경로를 나눈다.
+  공통 경로 게이트를 통과한 임시 파일을 저장 후 교체하고, 실패는 `DOWNLOAD_NOT_SAVED`다.
+- **L48-3**: HTML range의 min/max/step을 snapshot에 추가했다. 거절·가이드는 초점 후
+  Home/End·화살표와 값 재독을 안내한다. ARIA slider의 알 수 없는 step은 추정하지 않는다.
+- **L48-4**: page별 response/requestfailed 리스너를 context로 옮겨 새 탭 첫 문서 요청을 수집한다.
+  내려받기는 HTTP 응답이 노출되지 않을 수 있음을 `coverage_limits`로 밝히고,
+  `download_history`를 별도로 제공한다. HTTP 상태를 가짜 값으로 채우지 않는다.
+  문서 이동 status_code는 해당 frame의 실제 응답에만 결합한다(같은 URL의 과거 기록 재사용 금지).
+- **L48-5**: close 사건에서 닫힌 탭을 제거하고 남은 마지막 탭으로 복귀한다.
+  실제 닫기 실패는 탭을 제거하지 않는다. 마지막 탭을 닫아도 연결된 context·쿠키를 유지해
+  다음 navigate에서 새 탭을 연다. 클릭 후 title 조회 실패는 조작 실패로 바꾸지 않는다.
+  키 입력 중 탭이 닫혀 key-up까지 확인하지 못한 경우에는 닫힘 관측과 `input_completed:false`를
+  함께 반환한다. 남은 탭에서 업무 결과를 확인해야 한다.
+- **L48-6·7**: pageerror는 공통 `page_errors`와 콘솔 기록에 남고,
+  filechooser는 `file_chooser`와 명시적 upload_file 안내를 반환한다.
+
+**조사 증거 정정:** §8 Blob 시험 버튼의 인라인 핸들러에는 `URL.createObjectURL`이 있다.
+인라인 핸들러의 이름 해석에서 `URL`이 document.URL 문자열을 가리켜 실제로는 다운로드 전에
+예외가 났다. 따라서 이 한 칸은 최초 증거만으로 Blob 전송 유실을 확정할 수 없다.
+새 회귀는 `window.URL.createObjectURL`로 실제 파일을 생성했고, 세 조작 방식 모두
+`00 ff 0d 0a 80` 이진 바이트가 저장됨을 검사한다. 원래 시험·증거를 수정해 덮지 않았다.
+
+### 검증
+
+회귀 정본은 [test_browser_events.py](../../../../backend/test_browser_events.py)다.
+클릭·Enter·evaluate 세 방식으로 새 탭/창·자동 닫힘·첨부/Blob 다운로드·파일 선택창·예외·
+확인창·동일 탭 이동/404·pushState를 확인한다. 늦은 사건 보존, 다중 파일, 저장 거절,
+snapshot 도중 전환, 마지막 탭 수명과 Chrome의 명시 path 미지원도 검사한다.
+
+[전체 수리 프로그램](drafts/shop_repaired.ibl)은 원본의 새 탭 목록 폴링과 fetch→self:write 우회를
+각각 opened_tabs와 click의 다운로드 영수증으로 바꾼다. 저장 재시도·진열 재독·CSV 대조는 보존했다.
+원본 `shop_v1.ibl`과 수리본 모두 기본·첫 저장 500·방침 B에서 실행되어 각 **16/17/16 검수**를 통과했다.
+CSV 내용뿐 아니라 BOM·CRLF 바이트까지 서버 oracle과 대조했다.
+
+최종 검사: 변경 영향 선택기의 전이 소비자에 브라우저·크롤러·파일 저장 경계를 더해
+**1,315 passed / 1 skipped**. 44~48회차 전체 브라우저 프로그램과 어휘 보관·분리 배포
+system 묶음 **46 passed**. 앞선 실패는 초기 세션 정리와 확장된 세션을 반영하지 못한
+시험 모형을 수정한 뒤 같은 관련 묶음 전체를 다시 확인했다. 모든 backend 검사를 실행한 것은 아니다.
+
+정상 재기동(`outcome:restarted`, generation `37d126bfd578f359eead33527d8d0a1e`) 뒤 실제
+`/ibl/execute`에서도 [검증 프로그램](drafts/live_repaired.ibl)의 새 탭 식별·snapshot 일치·
+팝업 닫힘 후 복귀·Blob 저장 5바이트·network의 download_history·세션 종료를 확인했다.
+[검사·라이브 영수증 요약](evidence/repair_verification.json)에 실행 근거를 남겼다.
+
+### 비용과 남은 경계
+
+사건 수집·저장은 모델 호출을 추가하지 않는다. 원본과 수리본의 재생은 모두 모델 0회이며,
+검증 때 수리본은 새 탭 폴링과 파일 본문을 IBL로 반환·쓰기 하는 경로를 쓰지 않았다.
+작성자 토큰과 새 독립 AI 실행을 측정하지 않았으므로 전체 시간·토큰 절감률은 주장하지 않는다.
+관측을 위해 클릭·Enter·evaluate 등에는 80ms 전달 유예가 추가된다(일반 화살표 키에는 없음).
+
+영수증은 인과관계나 페이지 안정화의 증명이 아니다. `event_scope`는 이전 응답 뒤 보류된 사건과
+이번 조작 중 관측을 함께 뜻한다. 80ms보다 늦게 온 사건은 다음 호출에 남기고, 명시적 조건은
+wait로 기다린다. 보류 256건을 넘으면 누락 수를 보고하며 내려받기 이력은 최근 100건이다.
+내려받기 완료는 최대 30초 기다린다. 늦게 시작되어 조작의 path 지정 수명이 끝난 다운로드는
+기본 위치에 저장된다. Chrome의 공통 사건 처리, crash/websocket/worker·권한 창·beforeunload
+전수, 모든 Playwright 이벤트의 자동 열거는 이번 검증 범위 밖이다.
+실패 기억과 수리 사실의 연상 연결은 별도 인지 계층 과제로 남고, 이 수리의 효과로 주장하지 않는다.

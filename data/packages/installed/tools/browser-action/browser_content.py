@@ -443,6 +443,9 @@ async def browser_network_logs(params: dict) -> dict:
             "scope": "session", "capacity": session._network_logs.maxlen,
             "retained_count": len(session._network_logs),
             "coverage": "recent_responses_and_failures",
+            "coverage_limits": ["download events have no HTTP status", "bounded recent history"],
+            "download_history": [{k: v for k, v in row.items() if k != "kind"}
+                          for row in session.events.downloads],
         }
         if not session._capture_network:
             result.update(error_code="NETWORK_CAPTURE_INACTIVE",

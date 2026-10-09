@@ -219,16 +219,22 @@ async def browser_click(params: dict) -> dict:
     if loc_err:
         return loc_err
 
+    label = _element_label(session, params)
     try:
+        raw_page = session.raw_page
         await locator.click(timeout=ACTION_TIMEOUT)
         await _wait_navigation(page)
 
         result = {
             "success": True,
-            "clicked": _element_label(session, params),
+            "clicked": label,
             "url": page.url,
-            "title": await session.raw_page.title()
         }
+        try:
+            if not raw_page.is_closed():
+                result["title"] = await raw_page.title()
+        except Exception:
+            pass  # Optional metadata cannot turn an observed gesture into failure.
         _stale_warning(session, params.get("ref", ""), result)
         return result
     except Exception as e:
@@ -248,12 +254,13 @@ async def browser_dblclick(params: dict) -> dict:
     if loc_err:
         return loc_err
 
+    label = _element_label(session, params)
     try:
         await locator.dblclick(timeout=ACTION_TIMEOUT)
 
         result = {
             "success": True,
-            "double_clicked": _element_label(session, params),
+            "double_clicked": label,
             "url": page.url,
         }
         _stale_warning(session, params.get("ref", ""), result)
@@ -275,12 +282,13 @@ async def browser_rightclick(params: dict) -> dict:
     if loc_err:
         return loc_err
 
+    label = _element_label(session, params)
     try:
         await locator.click(button="right", timeout=ACTION_TIMEOUT)
 
         result = {
             "success": True,
-            "right_clicked": _element_label(session, params),
+            "right_clicked": label,
         }
         _stale_warning(session, params.get("ref", ""), result)
         return result
@@ -317,13 +325,15 @@ async def browser_type(params: dict) -> dict:
                 return {
                     "success": False,
                     "error": f"ref '{ref}'는 입력 가능한 요소가 아닙니다 (role={ref_role}). "
-                             f"textbox, searchbox 등의 입력 필드 ref를 사용하세요."
+                             + ("슬라이더는 click으로 초점을 준 뒤 press_key의 Home/End·ArrowRight/ArrowLeft로 조절하고 snapshot의 value·min·max·step을 확인하세요."
+                              if ref_role == "slider" else "textbox, searchbox 등의 입력 필드 ref를 사용하세요.")
                 }
 
     locator, loc_err = await _resolve_locator(session, page, params, input_mode=True)
     if loc_err:
         return loc_err
 
+    label = _element_label(session, params)
     try:
         if clear:
             await locator.clear()
@@ -337,7 +347,7 @@ async def browser_type(params: dict) -> dict:
         result = {
             "success": True,
             "typed": text,
-            "element": _element_label(session, params),
+            "element": label,
             "submitted": submit,
             "url": page.url
         }
@@ -366,6 +376,7 @@ async def browser_select_option(params: dict) -> dict:
     if loc_err:
         return loc_err
 
+    label = _element_label(session, params)
     try:
         selected = await locator.select_option(label=values) if mode == "label" else await locator.select_option(values)
 
@@ -373,7 +384,7 @@ async def browser_select_option(params: dict) -> dict:
             "success": True,
             "selected": selected,
             "requested": values,
-            "element": _element_label(session, params)
+            "element": label
         }
         _stale_warning(session, params.get("ref", ""), result)
         return result
@@ -396,6 +407,7 @@ async def browser_check(params: dict) -> dict:
     if loc_err:
         return loc_err
 
+    label = _element_label(session, params)
     try:
         if checked:
             await locator.check(timeout=ACTION_TIMEOUT)
@@ -405,7 +417,7 @@ async def browser_check(params: dict) -> dict:
         result = {
             "success": True,
             "checked": checked,
-            "element": _element_label(session, params)
+            "element": label
         }
         _stale_warning(session, params.get("ref", ""), result)
         return result
@@ -436,13 +448,14 @@ async def browser_upload_file(params: dict) -> dict:
     if loc_err:
         return loc_err
 
+    label = _element_label(session, params)
     try:
         await locator.set_input_files(files)
 
         return {
             "success": True,
             "uploaded": files,
-            "element": _element_label(session, params)
+            "element": label
         }
     except Exception as e:
         return {"success": False, "error": f"파일 업로드 실패: {str(e)}"}
@@ -463,12 +476,13 @@ async def browser_hover(params: dict) -> dict:
     if loc_err:
         return loc_err
 
+    label = _element_label(session, params)
     try:
         await locator.hover(timeout=ACTION_TIMEOUT)
 
         result = {
             "success": True,
-            "hovered": _element_label(session, params)
+            "hovered": label
         }
         _stale_warning(session, params.get("ref", ""), result)
         return result
@@ -538,4 +552,8 @@ async def browser_press_key(params: dict) -> dict:
         await page.keyboard.press(key)
         return {"success": True, "pressed": key}
     except Exception as e:
+        from playwright._impl._errors import TargetClosedError
+        if isinstance(e, TargetClosedError):
+            return {"success": False, "error_code": "TARGET_CLOSED_DURING_ACTION",
+                    "error": str(e), "pressed": key}
         return {"success": False, "error": f"키 입력 실패: {str(e)}"}

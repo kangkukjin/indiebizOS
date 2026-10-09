@@ -326,14 +326,24 @@ async def _owned_execute(params, context, owner):
             chrome = driver == "chrome" or (driver == "auto" and _is_chrome_connected())
             if chrome and any(key in params for key in ("dialog", "dialog_text", "wait")):
                 return json.dumps({"success": False, "error": "dialog/dialog_text/wait는 driver:playwright 전용입니다."})
+            op = params.get("op", context.tool_name.removeprefix("browser_"))
+            if chrome and op in {"click", "press_key", "evaluate", "type"} and "path" in params:
+                return json.dumps({"success": False, "error_code": "UNSUPPORTED_OPERATION",
+                                   "error": "내려받기 path 저장은 driver:playwright 전용입니다."})
             session._dialog_policy = policy
             session._dialog_text = params.get("dialog_text", "")
             session._operation_dialogs = []
+            if not chrome:
+                session.events.begin(params, context.project_path)
+            settle = op in {
+                "click", "evaluate", "type", "check", "select", "hover", "drag", "upload_file"
+            } or (op == "press_key" and params.get("key") in {"Enter", "Space", " "})
             try:
                 result = json.loads(await _execute(params, context))
                 if not chrome:
                     result.setdefault("session_owner", owner)
-                    result.setdefault("tab_id", session.active_tab_id)
+                    result.setdefault("tab_id", session.events.before_tab or session.active_tab_id)
+                    result = await session.events.finish(result, settle=settle)
                     dialogs = list(session._operation_dialogs)
                     if dialogs:
                         result["dialogs"] = dialogs
@@ -343,6 +353,7 @@ async def _owned_execute(params, context, owner):
                             result.update(success=False, error="확인창이 승인되지 않았습니다. 대상 상태를 확인하고 필요한 조작에 dialog:accept를 명시하세요.", error_code="DIALOG_NOT_ACCEPTED")
                 return json.dumps(result, ensure_ascii=False)
             finally:
+                session.events.destination = None
                 session._dialog_policy = "dismiss"
                 session._dialog_text = ""
                 if session._playwright is not None:

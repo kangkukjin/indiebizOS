@@ -64,6 +64,10 @@ async def _extract_selectors_via_cdp(raw_page, ax_nodes, cdp=None):
                     node = desc.get("node", {})
                     attrs = node.get("attributes", [])
                     tag = node.get("localName", "")
+                    attributes = dict(zip(attrs[::2], attrs[1::2]))
+                    if attributes.get("type") == "range":
+                        ax_node = next(n for n in ax_nodes if n.get("backendDOMNodeId") == backend_id)
+                        ax_node["range"] = {key: attributes.get(key, default) for key, default in (("min", "0"), ("max", "100"), ("step", "1"))}
                     css_id = ""
                     css_class = ""
                     for i in range(0, len(attrs) - 1, 2):
@@ -148,6 +152,7 @@ async def browser_snapshot(params: dict) -> dict:
         return err
     session = BrowserSession.get_instance()
     page, raw_page = session.page, session.raw_page
+    tab_id = session.active_tab_id
     cdp = None
     try:
         session.clear_refs()
@@ -176,6 +181,11 @@ async def browser_snapshot(params: dict) -> dict:
         title = await asyncio.wait_for(page.title(), timeout=CDP_TOTAL_TIMEOUT)
         result = _finalize_snapshot(elements, page.url, title)
         result["frame"] = frame
+        result["tab_id"] = tab_id
+        if session.active_tab_id != tab_id:
+            session.clear_refs()
+            result.update(success=False, error_code="SNAPSHOT_TAB_CHANGED",
+                          error="스냅샷 중 활성 탭이 바뀌었습니다. 현재 탭에서 snapshot을 다시 호출하세요.")
         if not ax_nodes:
             result["message"] = "접근성 요소가 없습니다. content/evaluate로 현재 프레임을 확인하세요."
         return result
@@ -287,6 +297,10 @@ def _extract_elements(ax_nodes: list, session, selectors: dict = None) -> list:
                 "name": name[:100] if name else "",
             }
 
+            if ax_node.get("range"):
+                element_info.update(ax_node["range"])
+            elif role_lower == "slider":
+                element_info.update({key: props[name] for key, name in (("min", "valuemin"), ("max", "valuemax")) if name in props})
             if value:
                 element_info["value"] = value[:100]
             if props.get("focused"):

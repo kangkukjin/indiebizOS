@@ -1,0 +1,16 @@
+#!ibl edition=2
+$cleanup = [limbs:browser]{op:"close",driver:"playwright"}
+$start = [limbs:browser]{op:"navigate",url:"about:blank",driver:"playwright",wait:"load"}
+$setup = [limbs:browser]{op:"evaluate",expression:"document.body.innerHTML='<button id=\"popup\">Popup</button>';document.querySelector('#popup').onclick=()=>{const w=window.open('about:blank');w.document.write('<title>Child</title><button id=\"close\" onclick=\"window.close()\">Close</button>');}; void 0;"}
+$popup = [limbs:browser]{op:"click",selector:"#popup"}
+assert len($popup.opened_tabs)==1, "popup receipt missing", $popup
+$snapshot = [limbs:browser]{op:"snapshot"}
+assert $snapshot.tab_id==$popup.opened_tabs[0].tab_id, "mixed snapshot", $snapshot
+$focus = [limbs:browser]{op:"evaluate",expression:"document.querySelector('#close').focus()"}
+$closed = [limbs:browser]{op:"press_key",key:"Enter"}
+assert $closed.active_tab==$start.tab_id, "popup did not return", $closed
+$download = [limbs:browser]{op:"evaluate",expression:"let a=document.createElement('a');a.href=window.URL.createObjectURL(new Blob([new Uint8Array([0,255,13,10,128])]));a.download='live.bin';a.click();",path:"outputs/repair48/live.bin"}
+assert $download.downloads[0].saved, "file not saved", $download
+$logs = [limbs:browser]{op:"logs",mode:"network"}
+$end = [limbs:browser]{op:"close"}
+return {popup:$popup, snapshot:{tab_id:$snapshot.tab_id,url:$snapshot.url},closed:$closed,download:$download,network:$logs,ended:$end.success}

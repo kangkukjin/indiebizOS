@@ -841,3 +841,10 @@ retired:
       - '_autoDismissCookieConsent'
       - '대상 부재·중복 오류가 나면 snapshot을 다시 읽어 현재 ref로 호출한다.'
       - '대상이 없거나 중복이면 새 snapshot이 필요하다.'
+
+  - id: browser-unreported-popup-events
+    retired: 2026-10-10
+    reason: L48-1~7 — 조작별 부가 조회로는 새 탭·다운로드·자동 닫힘·예외를 일관되게 보고할 수 없었다.
+    instead: Playwright 공통 사건 영수증과 같은 탭의 snapshot 신원, 컨텍스트 네트워크 수집, 저장 영수증을 사용한다.
+    phrases:
+      - '링크 클릭으로 새 탭이 열리면 자동으로 감지되어 세션에 등록됨.'

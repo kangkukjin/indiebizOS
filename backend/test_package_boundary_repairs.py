@@ -21,8 +21,11 @@ TOOLS = ROOT / 'data/packages/installed/tools'
 
 def browser_session_stub(raw_page):
     """File-sink double includes the public dispatcher's operation ownership boundary."""
-    return NS(raw_page=raw_page, _operation_lock=asyncio.Lock(), active_tab_id='fixture-tab',
-              _reset_timer=lambda: None, _playwright=None)
+    from browser_events import BrowserEvents
+    session = NS(raw_page=raw_page, _operation_lock=asyncio.Lock(), active_tab_id='fixture-tab',
+                 _reset_timer=lambda: None, _playwright=None, _pages={}, _network_logs=[])
+    session.events = BrowserEvents(session)
+    return session
 
 
 def module(package, name='handler'):

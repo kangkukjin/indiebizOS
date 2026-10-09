@@ -100,7 +100,7 @@ def test_selector_timeout_preserves_accessibility_identity(browser, monkeypatch)
             return {'nodes': [{'role': {'value': 'checkbox'}, 'name': {'value': 'Keep AX identity'}}]}
         async def detach(self): pass
     page = Page()
-    session = SimpleNamespace(page=page, raw_page=page, clear_refs=lambda: None,
+    session = SimpleNamespace(page=page, raw_page=page, active_tab_id='fixture-tab', clear_refs=lambda: None,
                               add_ref=lambda info: 'e1')
     async def cdp(*args): return CDP(), False
     async def timeout(*args): raise asyncio.TimeoutError()

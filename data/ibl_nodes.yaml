@@ -7343,7 +7343,7 @@ nodes:
         returns: effect
         runs_on: pc_only
         description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
-        target_description: op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. Playwright는 이름·역할을 유지하는 유일 후보만 선택하며 대상 부재는 새 snapshot, 동명 중복(REF_AMBIGUOUS·candidate_count)은 행/링크 주소를 확인한 고유 selector로 해소한다. DOM 동의 버튼은 자동 클릭하지 않는다. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장). Playwright는 작업·주체별 세션이며 결과에 session_owner·tab_id를 반환한다. dialog:accept|dismiss는 현재 조작의 확인창 정책(기본 취소, 미지정 취소는 실패), dialog_text는 prompt 응답이다. navigate의 wait:stable(기본)|load(추가 대기 없음)|idle, session_started로 기동 여부를 알린다. iframe은 name/id/index/url로 찾고 index:0이 첫 iframe이다. snapshot은 현재 프레임과 frame 문맥을 반환하며 navigate는 메인 프레임으로 복귀한다. tab switch/close는 list의 tab_id를 받는다. switch는 index(0부터)도 받는다.
+        target_description: op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. Playwright는 이름·역할을 유지하는 유일 후보만 선택하며 대상 부재는 새 snapshot, 동명 중복(REF_AMBIGUOUS·candidate_count)은 행/링크 주소를 확인한 고유 selector로 해소한다. DOM 동의 버튼은 자동 클릭하지 않는다. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장). Playwright는 작업·주체별 세션이며 결과에 session_owner·tab_id를 반환한다. dialog:accept|dismiss는 현재 조작의 확인창 정책(기본 취소, 미지정 취소는 실패), dialog_text는 prompt 응답이다. navigate의 wait:stable(기본)|load(추가 대기 없음)|idle, session_started로 기동 여부를 알린다. iframe은 name/id/index/url로 찾고 index:0이 첫 iframe이다. snapshot은 현재 프레임과 frame 문맥을 반환하며 navigate는 메인 프레임으로 복귀한다. tab switch/close는 list의 tab_id를 받는다. switch는 index(0부터)도 받는다. Playwright 조작은 opened_tabs·closed_tabs·active_tab_changed·navigated·downloads·file_chooser·page_errors 영수증을 공통 반환한다. click/press_key/evaluate/type의 path는 내려받기 저장 위치이며 생략 시 outputs/browser_downloads에 저장한다. downloads의 saved/path/size로 확인하고 미저장은 DOWNLOAD_NOT_SAVED다. 늦은 사건은 다음 영수증, pageerror는 console 로그에도 남는다. 상세·관측 한계는 browser_action 가이드.
         group: browser
         target_key: op
         router: handler
@@ -7373,7 +7373,7 @@ nodes:
             snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여. 표시 예산 선택은 selection으로 표시하고 전체/표시 개수를 보존(클릭/입력 전 필수)
             navigate: 페이지 이동 (mode goto|back|forward; goto는 url, wait stable|load|idle)
             click: 요소 클릭 (ref; mode single|double|right)
-            type: 입력 필드에 텍스트 입력 (ref, text)
+            type: 입력 필드 텍스트 (ref, text). slider는 초점 후 Home/End·화살표, 값은 snapshot.
             press_key: 키보드 키 입력 (Enter/Tab/Escape 등)
             hover: 요소에 마우스 호버 (ref)
             drag: 드래그 (source_ref→target_ref, Playwright). 화면 안 대상·시작 신원·스크롤 검사. 저장 결과는 재조회.

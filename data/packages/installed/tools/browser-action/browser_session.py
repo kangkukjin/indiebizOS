@@ -21,7 +21,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from urllib.parse import urlparse
+from common.pkg_utils import load_singleton
+
 from runtime_work import AdmissionClosed, scope, service_scope
+
+BrowserEvents = load_singleton(__file__, "browser_events").BrowserEvents
 
 _session_owner = ContextVar("browser_session_owner", default="")
 
@@ -146,6 +150,7 @@ class BrowserSession:
 
         # Dialog 기록
         self._last_dialog: Optional[dict] = None
+        self.events = BrowserEvents(self)
 
     @classmethod
     def get_instance(cls):
@@ -200,7 +205,12 @@ class BrowserSession:
         self._close_generation += 1
 
         if not self._pages or self._active_tab_id not in self._pages:
-            await self._start_browser(headless)
+            if self._context and self._browser and self._browser.is_connected() and self._headless == headless:
+                await self.new_tab()
+            else:
+                if self._browser is not None or self._playwright is not None:
+                    await self._close_internal()
+                await self._start_browser(headless)
         elif not self.is_active:
             await self._close_internal()
             await self._start_browser(headless)
@@ -214,6 +224,7 @@ class BrowserSession:
     async def _start_browser(self, headless=True):
         self._headless = headless
         self._capture_network = True
+        self.events.downloads.clear()
         async_playwright = _get_playwright()
 
         if self._playwright is None:
@@ -252,6 +263,8 @@ class BrowserSession:
 
         # 새 탭(팝업) 자동 감지
         self._context.on("page", self._on_new_page)
+        self._context.on("response", self._on_response)
+        self._context.on("requestfailed", self._on_request_failed)
 
         # 첫 번째 페이지 생성
         page = await self._context.new_page()
@@ -277,8 +290,8 @@ class BrowserSession:
         """페이지에 콘솔/네트워크/Dialog 훅 설정"""
         page.on("console", self._on_console_message)
         page.on("dialog", self._on_dialog)
-        page.on("response", self._on_response)
-        page.on("requestfailed", self._on_request_failed)
+        tab_id = next(key for key, value in self._pages.items() if value is page)
+        self.events.page_hooks(page, tab_id)
 
     def _on_new_page(self, page):
         """새 탭/팝업 자동 감지 핸들러 — 직접 생성과 이벤트의 중복 등록을 막는다."""
@@ -289,7 +302,9 @@ class BrowserSession:
         self._pages[tab_id] = page
         self._active_tab_id = tab_id
         self._active_frame = None
+        self.clear_refs()
         self._setup_page_hooks(page)
+        self.events.record("opened_tabs", tab_id=tab_id, url=page.url)
         print(f"[브라우저] 새 탭 감지: {tab_id}")
 
     def _on_console_message(self, msg):
@@ -322,6 +337,7 @@ class BrowserSession:
 
     def _on_response(self, response):
         """네트워크 응답 캡처"""
+        self.events.response(response)
         if not self._capture_network:
             return
         try:
@@ -446,15 +462,9 @@ class BrowserSession:
                 await page.close()
         except Exception:
             pass
-        del self._pages[target_id]
-
-        if target_id == self._active_tab_id:
-            self._active_frame = None
-            if self._pages:
-                self._active_tab_id = list(self._pages.keys())[-1]
-            else:
-                self._active_tab_id = ""
-            self.clear_refs()
+        if not page.is_closed():
+            return False
+        self.events.closed(page, target_id)
 
         return True
 
@@ -513,6 +523,7 @@ class BrowserSession:
         self._cleanup_task = None
         if cleanup and cleanup is not asyncio.current_task() and not cleanup.done():
             cleanup.cancel()
+        await self.events.cancel_downloads()
         # 응답하지 않는 브라우저가 finalizer를 영구 점유하지 않도록 단계별 제한.
         # context.close가 모든 탭을 닫으므로 탭 수만큼 대기하지 않는다.
         try:

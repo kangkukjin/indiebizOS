@@ -1,0 +1,15 @@
+{
+ "extended": [
+  "L01"
+ ],
+ "attempts": [
+  {
+   "id": "L01",
+   "ok": true,
+   "reason": null
+  }
+ ],
+ "logins": 1,
+ "requests": 31,
+ "page2_hits": 0
+}

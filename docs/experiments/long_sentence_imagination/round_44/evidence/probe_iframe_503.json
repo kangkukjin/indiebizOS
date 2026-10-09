@@ -1,0 +1,121 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$n=[limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8939/notice\"}\n$fl=[limbs:browser]{op:\"iframe\", mode:\"list\"}\n$sw=[limbs:browser]{op:\"iframe\", mode:\"switch\", name:\"notice\"}\n$c=[limbs:browser]{op:\"content\", mode:\"text\"}\n$rs=[limbs:browser]{op:\"iframe\", mode:\"reset\"}\n$n2=[limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8938/login\"}\n$s=[limbs:browser]{op:\"snapshot\"}\n$t1=[limbs:browser]{op:\"type\", ref:\"e5\", text:\"lsi44_reader\"}\n$t2=[limbs:browser]{op:\"type\", ref:\"e6\", text:\"lsi44-pass-9x\", submit:true}\n$p2=[try]{ [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8938/loans?page=2\"} } [catch]{ {err:$error.message, code:$error.code} }\n$c2=[limbs:browser]{op:\"content\", mode:\"text\"}\nreturn {frames:$fl, switch:$sw, notice_text:$c.text, p2_nav:$p2, p2_text:$c2.text}",
+  "origin": "training",
+  "project_id": "수동모드"
+ },
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "UNKNOWN_ARGUMENT",
+    "message": "알 수 없는 인자: name. 비슷한 인자: mode. 사용 가능한 인자: checked, criteria, direction, driver, element, expression, full_page, headless, height, id, index, key, label, mode, op, path, project_id, query, ref, scope, selector, source_ref, submit, target, target_ref, text, timeout, url, value, width",
+    "source_span": {
+     "source_hash": "849ec0a5b85b13eeb8bb929675f0f9c59dbe94e137a263be72f8c3d821b707bd",
+     "start": 136,
+     "end": 194,
+     "line": 4,
+     "column": 5
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "849ec0a5b85b13eeb8bb929675f0f9c59dbe94e137a263be72f8c3d821b707bd",
+     "start": 136,
+     "end": 194,
+     "line": 4,
+     "column": 5,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 4,
+     "end_column": 63,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "UNKNOWN_ARGUMENT",
+    "severity": "error",
+    "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 15,
+  "guards_inner": 0,
+  "guards_omitted": 15,
+  "result_type": "{frames: Record, switch: Record, notice_text: Unknown, p2_nav: Record, p2_text: Unknown}",
+  "effects": [
+   "read_external",
+   "write_external"
+  ],
+  "functions": {},
+  "plan_hash": "e9ced97c256d6bcfc7b0c7f2ea81166f5d2ea47616a084aa849d52477538d87c",
+  "dependencies": {
+   "source": "849ec0a5b85b13eeb8bb929675f0f9c59dbe94e137a263be72f8c3d821b707bd",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 795
+    }
+   ],
+   "contracts": "7e3084aaceb799d9f995f65fea1bd53ac6f8675c664480b8fd8a48075356ec83",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755",
+   "expressions": "8b1374449bdb861758d2d12b149fae44ebb72cfde1919d26ea2d1cdeae740050",
+   "core": "0f9fd52e6915bbe50ec190eb519a704bc5ca28977e3d3b1d8c4d52436dfb4953"
+  },
+  "source_hash": "849ec0a5b85b13eeb8bb929675f0f9c59dbe94e137a263be72f8c3d821b707bd",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "limbs:browser"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "진단 위치를 수정한 뒤 다시 검사하세요.",
+  "runtime_checks": {
+   "total": 15,
+   "informative": 11
+  },
+  "guards_ref": {
+   "id": "c706f8b9bc6680c30b20162dbe5a91ca3a633a6103e2f466c398a20f8d7a9b9c",
+   "chars": 10425,
+   "read_args": {
+    "id": "c706f8b9bc6680c30b20162dbe5a91ca3a633a6103e2f466c398a20f8d7a9b9c",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "success": false,
+  "error": "실행 전 검사에서 거절했습니다: 알 수 없는 인자: name. 비슷한 인자: mode. 사용 가능한 인자: checked, criteria, direction, driver, element, expression, full_page, headless, height, id, index, key, label, mode, op, path, project_id, query, ref, scope, selector, source_ref, submit, target, target_ref, text, timeout, url, value, width (UNKNOWN_ARGUMENT)",
+  "revise_args": {
+   "code": "$rejected:5c31112d62a241fdb586c68b3fe28b5cbd1ddf75a91d6f0af7312d8aa98e2232",
+   "code_edits": [
+    {
+     "old": "<고칠 원문 조각>",
+     "new": "<바꿀 글>"
+    }
+   ]
+  },
+  "revise_hint": "고칠 조각만 보내세요: revise_args.code 를 그대로 code 에 넣고 code_edits 에 {old, new} 를 적습니다(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 같은 inputs·budget·check 를 함께 보냅니다. 원문 전체를 다시 적지 않습니다."
+ },
+ "elapsed": 0.47631406784057617
+}

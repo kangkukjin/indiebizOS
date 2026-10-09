@@ -1,0 +1,1778 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$h=[sense:host]{op:\"status\"}\n$info=[limbs:screen]{op:\"screen_info\"}\n$s=[limbs:screen]{op:\"screenshot\"}\nreturn {host:$h, info:$info, shot_keys:keys($s), shot_small:{path:get($s,\"path\"), file_path:get($s,\"file_path\"), size:get($s,\"size\")}}",
+  "origin": "training",
+  "project_id": "수동모드"
+ },
+ "response": {
+  "success": true,
+  "value": {
+   "host": {
+    "success": true,
+    "body": "Mac",
+    "frontmost_app": "Finder",
+    "cpu_percent": 4.9,
+    "memory": {
+     "used_gb": 12.3,
+     "total_gb": 25.8,
+     "percent": 59.7
+    },
+    "disk_root": {
+     "free_gb": 196.1,
+     "total_gb": 494.4,
+     "percent": 6.1
+    },
+    "battery": null,
+    "uptime_hours": 866.2,
+    "load_avg": [
+     1.14,
+     2.04,
+     2.94
+    ],
+    "process_count": 667,
+    "items": [
+     {
+      "title": "Mac",
+      "cpu_percent": 4.9,
+      "memory_percent": 59.7,
+      "memory_used_gb": 12.3,
+      "disk_percent": 6.1,
+      "disk_free_gb": 196.1,
+      "battery_percent": null,
+      "uptime_hours": 866.2,
+      "process_count": 667
+     }
+    ]
+   },
+   "info": {
+    "success": true,
+    "virtual_resolution": {
+     "width": 1280,
+     "height": 800
+    },
+    "actual_resolution": {
+     "width": 1920,
+     "height": 1080
+    },
+    "scale_factor": 1.5,
+    "platform": "Darwin",
+    "failsafe": "마우스를 화면 모서리로 이동하면 긴급 정지됩니다",
+    "screenshot_permission": "OK",
+    "note": "시스템 환경설정 > 개인정보 보호 > 화면 기록 & 손쉬운 사용에서 Python에 권한을 부여하세요"
+   },
+   "shot_keys": [
+    "success",
+    "content",
+    "images",
+    "details"
+   ],
+   "shot_small": {
+    "path": null,
+    "file_path": null,
+    "size": null
+   }
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "host",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "body",
+         [
+          "scalar",
+          "Mac"
+         ]
+        ],
+        [
+         "frontmost_app",
+         [
+          "scalar",
+          "Finder"
+         ]
+        ],
+        [
+         "cpu_percent",
+         [
+          "scalar",
+          4.9
+         ]
+        ],
+        [
+         "memory",
+         [
+          "record",
+          [
+           [
+            "used_gb",
+            [
+             "scalar",
+             12.3
+            ]
+           ],
+           [
+            "total_gb",
+            [
+             "scalar",
+             25.8
+            ]
+           ],
+           [
+            "percent",
+            [
+             "scalar",
+             59.7
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "disk_root",
+         [
+          "record",
+          [
+           [
+            "free_gb",
+            [
+             "scalar",
+             196.1
+            ]
+           ],
+           [
+            "total_gb",
+            [
+             "scalar",
+             494.4
+            ]
+           ],
+           [
+            "percent",
+            [
+             "scalar",
+             6.1
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "battery",
+         [
+          "scalar",
+          null
+         ]
+        ],
+        [
+         "uptime_hours",
+         [
+          "scalar",
+          866.2
+         ]
+        ],
+        [
+         "load_avg",
+         [
+          "list",
+          [
+           [
+            "scalar",
+            1.14
+           ],
+           [
+            "scalar",
+            2.04
+           ],
+           [
+            "scalar",
+            2.94
+           ]
+          ]
+         ]
+        ],
+        [
+         "process_count",
+         [
+          "scalar",
+          667
+         ]
+        ],
+        [
+         "items",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "title",
+              [
+               "scalar",
+               "Mac"
+              ]
+             ],
+             [
+              "cpu_percent",
+              [
+               "scalar",
+               4.9
+              ]
+             ],
+             [
+              "memory_percent",
+              [
+               "scalar",
+               59.7
+              ]
+             ],
+             [
+              "memory_used_gb",
+              [
+               "scalar",
+               12.3
+              ]
+             ],
+             [
+              "disk_percent",
+              [
+               "scalar",
+               6.1
+              ]
+             ],
+             [
+              "disk_free_gb",
+              [
+               "scalar",
+               196.1
+              ]
+             ],
+             [
+              "battery_percent",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "uptime_hours",
+              [
+               "scalar",
+               866.2
+              ]
+             ],
+             [
+              "process_count",
+              [
+               "scalar",
+               667
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "info",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "virtual_resolution",
+         [
+          "record",
+          [
+           [
+            "width",
+            [
+             "scalar",
+             1280
+            ]
+           ],
+           [
+            "height",
+            [
+             "scalar",
+             800
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "actual_resolution",
+         [
+          "record",
+          [
+           [
+            "width",
+            [
+             "scalar",
+             1920
+            ]
+           ],
+           [
+            "height",
+            [
+             "scalar",
+             1080
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "scale_factor",
+         [
+          "scalar",
+          1.5
+         ]
+        ],
+        [
+         "platform",
+         [
+          "scalar",
+          "Darwin"
+         ]
+        ],
+        [
+         "failsafe",
+         [
+          "scalar",
+          "마우스를 화면 모서리로 이동하면 긴급 정지됩니다"
+         ]
+        ],
+        [
+         "screenshot_permission",
+         [
+          "scalar",
+          "OK"
+         ]
+        ],
+        [
+         "note",
+         [
+          "scalar",
+          "시스템 환경설정 > 개인정보 보호 > 화면 기록 & 손쉬운 사용에서 Python에 권한을 부여하세요"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "shot_keys",
+      [
+       "list",
+       [
+        [
+         "scalar",
+         "success"
+        ],
+        [
+         "scalar",
+         "content"
+        ],
+        [
+         "scalar",
+         "images"
+        ],
+        [
+         "scalar",
+         "details"
+        ]
+       ]
+      ]
+     ],
+     [
+      "shot_small",
+      [
+       "record",
+       [
+        [
+         "path",
+         [
+          "scalar",
+          null
+         ]
+        ],
+        [
+         "file_path",
+         [
+          "scalar",
+          null
+         ]
+        ],
+        [
+         "size",
+         [
+          "scalar",
+          null
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "28b0ad166f764f784ebaaacb69c4602bf9449728162b867f21ffb0fd47e4d1e4",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:35:43",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "record:31:44",
+    "invocation_id": 2,
+    "kind": "record",
+    "parents": [
+     1
+    ]
+   },
+   {
+    "id": 3,
+    "node_id": "call:19:44",
+    "invocation_id": 3,
+    "kind": "invoke",
+    "parents": [
+     2
+    ],
+    "action": "sense:host",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "8a1555a0d00c302c4244aa9c20b066a768dc6974530500d0dbfe0df0635981cd",
+    "targets": {
+     "op": "status"
+    }
+   },
+   {
+    "id": 4,
+    "node_id": "call:19:44",
+    "invocation_id": 4,
+    "kind": "tool_evidence",
+    "parents": [
+     3
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 5,
+    "node_id": "call:19:44",
+    "invocation_id": 5,
+    "kind": "call",
+    "parents": [
+     2,
+     3,
+     4
+    ]
+   },
+   {
+    "id": 6,
+    "node_id": "bind:16:44",
+    "invocation_id": 6,
+    "kind": "bind",
+    "parents": [
+     5
+    ]
+   },
+   {
+    "id": 7,
+    "node_id": "literal:69:82",
+    "invocation_id": 7,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 8,
+    "node_id": "record:65:83",
+    "invocation_id": 8,
+    "kind": "record",
+    "parents": [
+     7
+    ]
+   },
+   {
+    "id": 9,
+    "node_id": "call:51:83",
+    "invocation_id": 9,
+    "kind": "invoke",
+    "parents": [
+     8
+    ],
+    "action": "limbs:screen",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "7342959b33f8670d485eb68218bfdc645297ceed63e7f4912fd845e99e8937c7",
+    "targets": {
+     "op": "screen_info"
+    }
+   },
+   {
+    "id": 10,
+    "node_id": "call:51:83",
+    "invocation_id": 10,
+    "kind": "tool_evidence",
+    "parents": [
+     9
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 11,
+    "node_id": "call:51:83",
+    "invocation_id": 11,
+    "kind": "call",
+    "parents": [
+     8,
+     9,
+     10
+    ]
+   },
+   {
+    "id": 12,
+    "node_id": "bind:45:83",
+    "invocation_id": 12,
+    "kind": "bind",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "literal:105:117",
+    "invocation_id": 13,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 14,
+    "node_id": "record:101:118",
+    "invocation_id": 14,
+    "kind": "record",
+    "parents": [
+     13
+    ]
+   },
+   {
+    "id": 15,
+    "node_id": "call:87:118",
+    "invocation_id": 15,
+    "kind": "invoke",
+    "parents": [
+     14
+    ],
+    "action": "limbs:screen",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "8fe3799865a0e0dd241a9e6ca02de0be325b9be599ab08c406112292cc2a51cc",
+    "targets": {
+     "op": "screenshot"
+    }
+   },
+   {
+    "id": 16,
+    "node_id": "call:87:118",
+    "invocation_id": 16,
+    "kind": "tool_evidence",
+    "parents": [
+     15
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 17,
+    "node_id": "call:87:118",
+    "invocation_id": 17,
+    "kind": "call",
+    "parents": [
+     14,
+     15,
+     16
+    ]
+   },
+   {
+    "id": 18,
+    "node_id": "bind:84:118",
+    "invocation_id": 18,
+    "kind": "bind",
+    "parents": [
+     17
+    ]
+   },
+   {
+    "id": 19,
+    "node_id": "ref:132:134",
+    "invocation_id": 19,
+    "kind": "ref",
+    "parents": [
+     5
+    ]
+   },
+   {
+    "id": 20,
+    "node_id": "ref:141:146",
+    "invocation_id": 20,
+    "kind": "ref",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 21,
+    "node_id": "ref:163:165",
+    "invocation_id": 21,
+    "kind": "ref",
+    "parents": [
+     17
+    ]
+   },
+   {
+    "id": 22,
+    "node_id": "builtin:158:162",
+    "invocation_id": 22,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 23,
+    "node_id": "pure_call:158:166",
+    "invocation_id": 23,
+    "kind": "pure_call",
+    "parents": [
+     21,
+     22
+    ]
+   },
+   {
+    "id": 24,
+    "node_id": "ref:189:191",
+    "invocation_id": 24,
+    "kind": "ref",
+    "parents": [
+     17
+    ]
+   },
+   {
+    "id": 25,
+    "node_id": "literal:192:198",
+    "invocation_id": 25,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 26,
+    "node_id": "builtin:185:188",
+    "invocation_id": 26,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 27,
+    "node_id": "pure_call:185:199",
+    "invocation_id": 27,
+    "kind": "pure_call",
+    "parents": [
+     24,
+     25,
+     26
+    ]
+   },
+   {
+    "id": 28,
+    "node_id": "ref:215:217",
+    "invocation_id": 28,
+    "kind": "ref",
+    "parents": [
+     17
+    ]
+   },
+   {
+    "id": 29,
+    "node_id": "literal:218:229",
+    "invocation_id": 29,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 30,
+    "node_id": "builtin:211:214",
+    "invocation_id": 30,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 31,
+    "node_id": "pure_call:211:230",
+    "invocation_id": 31,
+    "kind": "pure_call",
+    "parents": [
+     28,
+     29,
+     30
+    ]
+   },
+   {
+    "id": 32,
+    "node_id": "ref:241:243",
+    "invocation_id": 32,
+    "kind": "ref",
+    "parents": [
+     17
+    ]
+   },
+   {
+    "id": 33,
+    "node_id": "literal:244:250",
+    "invocation_id": 33,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 34,
+    "node_id": "builtin:237:240",
+    "invocation_id": 34,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 35,
+    "node_id": "pure_call:237:251",
+    "invocation_id": 35,
+    "kind": "pure_call",
+    "parents": [
+     32,
+     33,
+     34
+    ]
+   },
+   {
+    "id": 36,
+    "node_id": "record:179:252",
+    "invocation_id": 36,
+    "kind": "record",
+    "parents": [
+     27,
+     31,
+     35
+    ]
+   },
+   {
+    "id": 37,
+    "node_id": "record:126:253",
+    "invocation_id": 37,
+    "kind": "record",
+    "parents": [
+     19,
+     20,
+     23,
+     36
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:253": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 15,
+    "end": 253,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:44": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 16,
+    "end": 44,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:44": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 19,
+    "end": 44,
+    "line": 2,
+    "column": 4
+   },
+   "record:31:44": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 31,
+    "end": 44,
+    "line": 2,
+    "column": 16
+   },
+   "literal:35:43": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 35,
+    "end": 43,
+    "line": 2,
+    "column": 20
+   },
+   "bind:45:83": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 45,
+    "end": 83,
+    "line": 3,
+    "column": 1
+   },
+   "call:51:83": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 51,
+    "end": 83,
+    "line": 3,
+    "column": 7
+   },
+   "record:65:83": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 65,
+    "end": 83,
+    "line": 3,
+    "column": 21
+   },
+   "literal:69:82": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 69,
+    "end": 82,
+    "line": 3,
+    "column": 25
+   },
+   "bind:84:118": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 84,
+    "end": 118,
+    "line": 4,
+    "column": 1
+   },
+   "call:87:118": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 87,
+    "end": 118,
+    "line": 4,
+    "column": 4
+   },
+   "record:101:118": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 101,
+    "end": 118,
+    "line": 4,
+    "column": 18
+   },
+   "literal:105:117": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 105,
+    "end": 117,
+    "line": 4,
+    "column": 22
+   },
+   "return:119:253": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 119,
+    "end": 253,
+    "line": 5,
+    "column": 1
+   },
+   "record:126:253": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 126,
+    "end": 253,
+    "line": 5,
+    "column": 8
+   },
+   "ref:132:134": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 132,
+    "end": 134,
+    "line": 5,
+    "column": 14
+   },
+   "ref:141:146": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 141,
+    "end": 146,
+    "line": 5,
+    "column": 23
+   },
+   "pure_call:158:166": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 158,
+    "end": 166,
+    "line": 5,
+    "column": 40
+   },
+   "ref:163:165": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 163,
+    "end": 165,
+    "line": 5,
+    "column": 45
+   },
+   "builtin:158:162": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 158,
+    "end": 162,
+    "line": 5,
+    "column": 40
+   },
+   "record:179:252": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 179,
+    "end": 252,
+    "line": 5,
+    "column": 61
+   },
+   "pure_call:185:199": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 185,
+    "end": 199,
+    "line": 5,
+    "column": 67
+   },
+   "ref:189:191": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 189,
+    "end": 191,
+    "line": 5,
+    "column": 71
+   },
+   "literal:192:198": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 192,
+    "end": 198,
+    "line": 5,
+    "column": 74
+   },
+   "builtin:185:188": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 185,
+    "end": 188,
+    "line": 5,
+    "column": 67
+   },
+   "pure_call:211:230": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 211,
+    "end": 230,
+    "line": 5,
+    "column": 93
+   },
+   "ref:215:217": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 215,
+    "end": 217,
+    "line": 5,
+    "column": 97
+   },
+   "literal:218:229": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 218,
+    "end": 229,
+    "line": 5,
+    "column": 100
+   },
+   "builtin:211:214": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 211,
+    "end": 214,
+    "line": 5,
+    "column": 93
+   },
+   "pure_call:237:251": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 237,
+    "end": 251,
+    "line": 5,
+    "column": 119
+   },
+   "ref:241:243": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 241,
+    "end": 243,
+    "line": 5,
+    "column": 123
+   },
+   "literal:244:250": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 244,
+    "end": 250,
+    "line": 5,
+    "column": 126
+   },
+   "builtin:237:240": {
+    "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+    "start": 237,
+    "end": 240,
+    "line": 5,
+    "column": 119
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "8a1555a0d00c302c4244aa9c20b066a768dc6974530500d0dbfe0df0635981cd",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "body",
+       [
+        "scalar",
+        "Mac"
+       ]
+      ],
+      [
+       "frontmost_app",
+       [
+        "scalar",
+        "Finder"
+       ]
+      ],
+      [
+       "cpu_percent",
+       [
+        "scalar",
+        4.9
+       ]
+      ],
+      [
+       "memory",
+       [
+        "record",
+        [
+         [
+          "used_gb",
+          [
+           "scalar",
+           12.3
+          ]
+         ],
+         [
+          "total_gb",
+          [
+           "scalar",
+           25.8
+          ]
+         ],
+         [
+          "percent",
+          [
+           "scalar",
+           59.7
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "disk_root",
+       [
+        "record",
+        [
+         [
+          "free_gb",
+          [
+           "scalar",
+           196.1
+          ]
+         ],
+         [
+          "total_gb",
+          [
+           "scalar",
+           494.4
+          ]
+         ],
+         [
+          "percent",
+          [
+           "scalar",
+           6.1
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "battery",
+       [
+        "scalar",
+        null
+       ]
+      ],
+      [
+       "uptime_hours",
+       [
+        "scalar",
+        866.2
+       ]
+      ],
+      [
+       "load_avg",
+       [
+        "list",
+        [
+         [
+          "scalar",
+          1.14
+         ],
+         [
+          "scalar",
+          2.04
+         ],
+         [
+          "scalar",
+          2.94
+         ]
+        ]
+       ]
+      ],
+      [
+       "process_count",
+       [
+        "scalar",
+        667
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "title",
+            [
+             "scalar",
+             "Mac"
+            ]
+           ],
+           [
+            "cpu_percent",
+            [
+             "scalar",
+             4.9
+            ]
+           ],
+           [
+            "memory_percent",
+            [
+             "scalar",
+             59.7
+            ]
+           ],
+           [
+            "memory_used_gb",
+            [
+             "scalar",
+             12.3
+            ]
+           ],
+           [
+            "disk_percent",
+            [
+             "scalar",
+             6.1
+            ]
+           ],
+           [
+            "disk_free_gb",
+            [
+             "scalar",
+             196.1
+            ]
+           ],
+           [
+            "battery_percent",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "uptime_hours",
+            [
+             "scalar",
+             866.2
+            ]
+           ],
+           [
+            "process_count",
+            [
+             "scalar",
+             667
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "sense:host",
+    "reuse_key": "d3cbc2b5a1a39807122e91dbd129e7050759a3a536cc112a8cd909e304688b91",
+    "reuse_parts": {
+     "action": "d87936778f9ecbdb0d0e18a6345207eed956f9181fb74da9bc0de54c944b6d7e",
+     "args": "5846446a22b0e16664c3e921272d2ff87fc2fd44b4b407e602b62aa9e492a1f2",
+     "contract": "82f06b8b502683c0a99eecb326127a92ddfc9c9d3f16fd4bf1f2a540c4dd9a5d",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "7342959b33f8670d485eb68218bfdc645297ceed63e7f4912fd845e99e8937c7",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "virtual_resolution",
+       [
+        "record",
+        [
+         [
+          "width",
+          [
+           "scalar",
+           1280
+          ]
+         ],
+         [
+          "height",
+          [
+           "scalar",
+           800
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "actual_resolution",
+       [
+        "record",
+        [
+         [
+          "width",
+          [
+           "scalar",
+           1920
+          ]
+         ],
+         [
+          "height",
+          [
+           "scalar",
+           1080
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "scale_factor",
+       [
+        "scalar",
+        1.5
+       ]
+      ],
+      [
+       "platform",
+       [
+        "scalar",
+        "Darwin"
+       ]
+      ],
+      [
+       "failsafe",
+       [
+        "scalar",
+        "마우스를 화면 모서리로 이동하면 긴급 정지됩니다"
+       ]
+      ],
+      [
+       "screenshot_permission",
+       [
+        "scalar",
+        "OK"
+       ]
+      ],
+      [
+       "note",
+       [
+        "scalar",
+        "시스템 환경설정 > 개인정보 보호 > 화면 기록 & 손쉬운 사용에서 Python에 권한을 부여하세요"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:screen",
+    "reuse_key": "1abf87eb03ffe51b58efaeae64ecd56d103c645ba218c0404db5c3f8f527f68e",
+    "reuse_parts": {
+     "action": "2778dd1b451d3791c47a80e3e599279751ef28838788f929c79d1f8dc9ac99d0",
+     "args": "e1690dd2ffa72313ee2a7f2b89f6c80df9744132f0d404ecc51e7186707bb15e",
+     "contract": "c77e7e18ee27434b7e3a870b0173057e890c6edce8eaaddb7d0acdf4581cc50c",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "8fe3799865a0e0dd241a9e6ca02de0be325b9be599ab08c406112292cc2a51cc",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "content",
+       [
+        "scalar",
+        "현재 화면 스크린샷입니다 (1280x800). 이미지를 분석하여 UI 요소의 위치를 파악하세요."
+       ]
+      ],
+      [
+       "images",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "base64",
+            [
+             "scalar",
+             "<stripped base64 PNG>"
+            ]
+           ],
+           [
+            "media_type",
+            [
+             "scalar",
+             "image/png"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "details",
+       [
+        "record",
+        [
+         [
+          "resolution",
+          [
+           "scalar",
+           "1280x800"
+          ]
+         ],
+         [
+          "actual_resolution",
+          [
+           "scalar",
+           "1920x1080"
+          ]
+         ],
+         [
+          "has_region",
+          [
+           "scalar",
+           false
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:screen",
+    "reuse_key": "b95c62bcc59304a1d93663104f5cd87bceb2f3423d7bf74d68e1c52c0b3313ec",
+    "reuse_parts": {
+     "action": "2778dd1b451d3791c47a80e3e599279751ef28838788f929c79d1f8dc9ac99d0",
+     "args": "967aadc0a7d9691e880c92ad18e651c7efebe917cff74ec97179d97b64a3be94",
+     "contract": "c77e7e18ee27434b7e3a870b0173057e890c6edce8eaaddb7d0acdf4581cc50c",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 41,
+   "rows": 0,
+   "elapsed_ms": 1484,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "pure_call:158:166",
+     "steps": 6,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 158,
+      "end": 166,
+      "line": 5,
+      "column": 40
+     }
+    },
+    {
+     "node_id": "pure_call:185:199",
+     "steps": 2,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 185,
+      "end": 199,
+      "line": 5,
+      "column": 67
+     }
+    },
+    {
+     "node_id": "pure_call:211:230",
+     "steps": 2,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 211,
+      "end": 230,
+      "line": 5,
+      "column": 93
+     }
+    },
+    {
+     "node_id": "pure_call:237:251",
+     "steps": 2,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 237,
+      "end": 251,
+      "line": 5,
+      "column": 119
+     }
+    },
+    {
+     "node_id": "bind:16:44",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 16,
+      "end": 44,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:45:83",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 45,
+      "end": 83,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:84:118",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 84,
+      "end": 118,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "builtin:158:162",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 158,
+      "end": 162,
+      "line": 5,
+      "column": 40
+     }
+    },
+    {
+     "node_id": "builtin:185:188",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 185,
+      "end": 188,
+      "line": 5,
+      "column": 67
+     }
+    },
+    {
+     "node_id": "builtin:211:214",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 211,
+      "end": 214,
+      "line": 5,
+      "column": 93
+     }
+    },
+    {
+     "node_id": "builtin:237:240",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 237,
+      "end": 240,
+      "line": 5,
+      "column": 119
+     }
+    },
+    {
+     "node_id": "call:19:44",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 19,
+      "end": 44,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:51:83",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 51,
+      "end": 83,
+      "line": 3,
+      "column": 7
+     }
+    },
+    {
+     "node_id": "call:87:118",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 87,
+      "end": 118,
+      "line": 4,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "literal:105:117",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 105,
+      "end": 117,
+      "line": 4,
+      "column": 22
+     }
+    },
+    {
+     "node_id": "literal:192:198",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 192,
+      "end": 198,
+      "line": 5,
+      "column": 74
+     }
+    },
+    {
+     "node_id": "literal:218:229",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 218,
+      "end": 229,
+      "line": 5,
+      "column": 100
+     }
+    },
+    {
+     "node_id": "literal:244:250",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 244,
+      "end": 250,
+      "line": 5,
+      "column": 126
+     }
+    },
+    {
+     "node_id": "literal:35:43",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 35,
+      "end": 43,
+      "line": 2,
+      "column": 20
+     }
+    },
+    {
+     "node_id": "literal:69:82",
+     "steps": 1,
+     "location": {
+      "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63",
+      "start": 69,
+      "end": 82,
+      "line": 3,
+      "column": 25
+     }
+    }
+   ],
+   "steps_other": 13,
+   "steps_by_line": [
+    {
+     "line": 5,
+     "steps": 28,
+     "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63"
+    },
+    {
+     "line": 2,
+     "steps": 4,
+     "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63"
+    },
+    {
+     "line": 3,
+     "steps": 4,
+     "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63"
+    },
+    {
+     "line": 4,
+     "steps": 4,
+     "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 4,
+     "ms": 446,
+     "calls": 1,
+     "actions": [
+      "limbs:screen"
+     ],
+     "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63"
+    },
+    {
+     "line": 2,
+     "ms": 377,
+     "calls": 1,
+     "actions": [
+      "sense:host"
+     ],
+     "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63"
+    },
+    {
+     "line": 3,
+     "ms": 348,
+     "calls": 1,
+     "actions": [
+      "limbs:screen"
+     ],
+     "source_hash": "cffa7f6273a0770d7d75c292dd5b2d3681a4469b179022487ecaf5c046fd9e63"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "e57ff21cb11c42409ee105a17b1d19e3"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "e57ff21cb11c42409ee105a17b1d19e3"
+    }
+   },
+   "read_calls": 3,
+   "state_change_possible": false,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "e57ff21cb11c42409ee105a17b1d19e3",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ },
+ "elapsed": 1.5163421630859375
+}

@@ -1,0 +1,1811 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$n2=[limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8938/login\"}\n$s=[limbs:browser]{op:\"snapshot\"}\n$t1=[limbs:browser]{op:\"type\", ref:\"e5\", text:\"lsi44_reader\"}\n$t2=[limbs:browser]{op:\"type\", ref:\"e6\", text:\"lsi44-pass-9x\", submit:true}\n$p2=[try]{ [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8938/loans?page=2\"} } [catch]{ {err:$error.message, code:$error.code} }\n$c2=[limbs:browser]{op:\"content\", mode:\"text\"}\nreturn {p2_nav:$p2, p2_text:$c2.text}",
+  "origin": "training",
+  "project_id": "수동모드"
+ },
+ "response": {
+  "success": true,
+  "value": {
+   "p2_nav": {
+    "success": true,
+    "title": "일시적 오류 - 가상 동네도서관",
+    "url": "http://127.0.0.1:8938/loans?page=2",
+    "status_code": 503,
+    "tab_id": "t1",
+    "content_length": 103,
+    "warning": "HTTP 503 에러가 발생했습니다."
+   },
+   "p2_text": "가상 동네도서관 이용자 포털\n\n오늘: 2026.10.09\n\n대출 현황 · 공지 · 로그아웃\n일시적인 오류가 발생했습니다\n\n잠시 후 다시 시도해 주세요.\n\n가상 포털 — 훈련용 합성 자료"
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "p2_nav",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "title",
+         [
+          "scalar",
+          "일시적 오류 - 가상 동네도서관"
+         ]
+        ],
+        [
+         "url",
+         [
+          "scalar",
+          "http://127.0.0.1:8938/loans?page=2"
+         ]
+        ],
+        [
+         "status_code",
+         [
+          "scalar",
+          503
+         ]
+        ],
+        [
+         "tab_id",
+         [
+          "scalar",
+          "t1"
+         ]
+        ],
+        [
+         "content_length",
+         [
+          "scalar",
+          103
+         ]
+        ],
+        [
+         "warning",
+         [
+          "scalar",
+          "HTTP 503 에러가 발생했습니다."
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "p2_text",
+      [
+       "scalar",
+       "가상 동네도서관 이용자 포털\n\n오늘: 2026.10.09\n\n대출 현황 · 공지 · 로그아웃\n일시적인 오류가 발생했습니다\n\n잠시 후 다시 시도해 주세요.\n\n가상 포털 — 훈련용 합성 자료"
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "17bf83e43b1150a529df07d286a6fb67d8cf7e8e5f8b947f90c81fde5116fa69",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:39:49",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:55:84",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "record:35:85",
+    "invocation_id": 3,
+    "kind": "record",
+    "parents": [
+     1,
+     2
+    ]
+   },
+   {
+    "id": 4,
+    "node_id": "call:20:85",
+    "invocation_id": 4,
+    "kind": "invoke",
+    "parents": [
+     3
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "7442f4ab0450675e78a7915174b4004c04f7006f93649838b4ab6fbef2ca51d5",
+    "targets": {
+     "op": "navigate",
+     "url": "http://127.0.0.1:8938/login"
+    }
+   },
+   {
+    "id": 5,
+    "node_id": "call:20:85",
+    "invocation_id": 5,
+    "kind": "tool_evidence",
+    "parents": [
+     4
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 6,
+    "node_id": "call:20:85",
+    "invocation_id": 6,
+    "kind": "call",
+    "parents": [
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "id": 7,
+    "node_id": "bind:16:85",
+    "invocation_id": 7,
+    "kind": "bind",
+    "parents": [
+     6
+    ]
+   },
+   {
+    "id": 8,
+    "node_id": "literal:108:118",
+    "invocation_id": 8,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 9,
+    "node_id": "record:104:119",
+    "invocation_id": 9,
+    "kind": "record",
+    "parents": [
+     8
+    ]
+   },
+   {
+    "id": 10,
+    "node_id": "call:89:119",
+    "invocation_id": 10,
+    "kind": "invoke",
+    "parents": [
+     9
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "32c9564c401dc207a0a56e063447a4b8ee73ced639db4ef67cdc699257dd6f0a",
+    "targets": {
+     "op": "snapshot"
+    }
+   },
+   {
+    "id": 11,
+    "node_id": "call:89:119",
+    "invocation_id": 11,
+    "kind": "tool_evidence",
+    "parents": [
+     10
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 12,
+    "node_id": "call:89:119",
+    "invocation_id": 12,
+    "kind": "call",
+    "parents": [
+     9,
+     10,
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "bind:86:119",
+    "invocation_id": 13,
+    "kind": "bind",
+    "parents": [
+     12
+    ]
+   },
+   {
+    "id": 14,
+    "node_id": "literal:143:149",
+    "invocation_id": 14,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 15,
+    "node_id": "literal:155:159",
+    "invocation_id": 15,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 16,
+    "node_id": "literal:166:180",
+    "invocation_id": 16,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 17,
+    "node_id": "record:139:181",
+    "invocation_id": 17,
+    "kind": "record",
+    "parents": [
+     14,
+     15,
+     16
+    ]
+   },
+   {
+    "id": 18,
+    "node_id": "call:124:181",
+    "invocation_id": 18,
+    "kind": "invoke",
+    "parents": [
+     17
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "86cb9d37296a33c86bb0c2f132aa56ae3e84f5751a02c53533c04717d315a3d4",
+    "targets": {
+     "op": "type",
+     "ref": "e5",
+     "text": "lsi44_reader"
+    }
+   },
+   {
+    "id": 19,
+    "node_id": "call:124:181",
+    "invocation_id": 19,
+    "kind": "tool_evidence",
+    "parents": [
+     18
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 20,
+    "node_id": "call:124:181",
+    "invocation_id": 20,
+    "kind": "call",
+    "parents": [
+     17,
+     18,
+     19
+    ]
+   },
+   {
+    "id": 21,
+    "node_id": "bind:120:181",
+    "invocation_id": 21,
+    "kind": "bind",
+    "parents": [
+     20
+    ]
+   },
+   {
+    "id": 22,
+    "node_id": "literal:205:211",
+    "invocation_id": 22,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 23,
+    "node_id": "literal:217:221",
+    "invocation_id": 23,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 24,
+    "node_id": "literal:228:243",
+    "invocation_id": 24,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 25,
+    "node_id": "literal:252:256",
+    "invocation_id": 25,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 26,
+    "node_id": "record:201:257",
+    "invocation_id": 26,
+    "kind": "record",
+    "parents": [
+     22,
+     23,
+     24,
+     25
+    ]
+   },
+   {
+    "id": 27,
+    "node_id": "call:186:257",
+    "invocation_id": 27,
+    "kind": "invoke",
+    "parents": [
+     26
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "dc2d6dc0db613443586008a04be4e463535033671a0ac7dc99aace4515aca8d0",
+    "targets": {
+     "op": "type",
+     "ref": "e6",
+     "text": "lsi44-pass-9x"
+    }
+   },
+   {
+    "id": 28,
+    "node_id": "call:186:257",
+    "invocation_id": 28,
+    "kind": "tool_evidence",
+    "parents": [
+     27
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 29,
+    "node_id": "call:186:257",
+    "invocation_id": 29,
+    "kind": "call",
+    "parents": [
+     26,
+     27,
+     28
+    ]
+   },
+   {
+    "id": 30,
+    "node_id": "bind:182:257",
+    "invocation_id": 30,
+    "kind": "bind",
+    "parents": [
+     29
+    ]
+   },
+   {
+    "id": 31,
+    "node_id": "literal:288:298",
+    "invocation_id": 31,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 32,
+    "node_id": "literal:304:340",
+    "invocation_id": 32,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 33,
+    "node_id": "record:284:341",
+    "invocation_id": 33,
+    "kind": "record",
+    "parents": [
+     31,
+     32
+    ]
+   },
+   {
+    "id": 34,
+    "node_id": "call:269:341",
+    "invocation_id": 34,
+    "kind": "invoke",
+    "parents": [
+     33
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "39f797fa9ae755be85a695cdebb8d94da53faa1bd84abcdbfd959a1fd8b39f8b",
+    "targets": {
+     "op": "navigate",
+     "url": "http://127.0.0.1:8938/loans?page=2"
+    }
+   },
+   {
+    "id": 35,
+    "node_id": "call:269:341",
+    "invocation_id": 35,
+    "kind": "tool_evidence",
+    "parents": [
+     34
+    ],
+    "markers": {},
+    "attachments": {},
+    "warning": "HTTP 503 에러가 발생했습니다."
+   },
+   {
+    "id": 36,
+    "node_id": "call:269:341",
+    "invocation_id": 36,
+    "kind": "call",
+    "parents": [
+     33,
+     34,
+     35
+    ]
+   },
+   {
+    "id": 37,
+    "node_id": "sequence:269:341",
+    "invocation_id": 37,
+    "kind": "sequence",
+    "parents": [
+     36
+    ]
+   },
+   {
+    "id": 38,
+    "node_id": "try:262:393",
+    "invocation_id": 38,
+    "kind": "try",
+    "parents": [
+     37
+    ]
+   },
+   {
+    "id": 39,
+    "node_id": "bind:258:393",
+    "invocation_id": 39,
+    "kind": "bind",
+    "parents": [
+     38
+    ]
+   },
+   {
+    "id": 40,
+    "node_id": "literal:417:426",
+    "invocation_id": 40,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 41,
+    "node_id": "literal:433:439",
+    "invocation_id": 41,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 42,
+    "node_id": "record:413:440",
+    "invocation_id": 42,
+    "kind": "record",
+    "parents": [
+     40,
+     41
+    ]
+   },
+   {
+    "id": 43,
+    "node_id": "call:398:440",
+    "invocation_id": 43,
+    "kind": "invoke",
+    "parents": [
+     42
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "10747ec71b58ff72c4c93555b57f179a7bbaa5fabd07ed2c6a5291dd8a759574",
+    "targets": {
+     "op": "content",
+     "mode": "text"
+    }
+   },
+   {
+    "id": 44,
+    "node_id": "call:398:440",
+    "invocation_id": 44,
+    "kind": "tool_evidence",
+    "parents": [
+     43
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 45,
+    "node_id": "call:398:440",
+    "invocation_id": 45,
+    "kind": "call",
+    "parents": [
+     42,
+     43,
+     44
+    ]
+   },
+   {
+    "id": 46,
+    "node_id": "bind:394:440",
+    "invocation_id": 46,
+    "kind": "bind",
+    "parents": [
+     45
+    ]
+   },
+   {
+    "id": 47,
+    "node_id": "ref:456:459",
+    "invocation_id": 47,
+    "kind": "ref",
+    "parents": [
+     38
+    ]
+   },
+   {
+    "id": 48,
+    "node_id": "ref:469:472",
+    "invocation_id": 48,
+    "kind": "ref",
+    "parents": [
+     45
+    ]
+   },
+   {
+    "id": 49,
+    "node_id": "field:469:477",
+    "invocation_id": 49,
+    "kind": "field",
+    "parents": [
+     48
+    ]
+   },
+   {
+    "id": 50,
+    "node_id": "record:448:478",
+    "invocation_id": 50,
+    "kind": "record",
+    "parents": [
+     47,
+     49
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:478": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 15,
+    "end": 478,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:85": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 16,
+    "end": 85,
+    "line": 2,
+    "column": 1
+   },
+   "call:20:85": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 20,
+    "end": 85,
+    "line": 2,
+    "column": 5
+   },
+   "record:35:85": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 35,
+    "end": 85,
+    "line": 2,
+    "column": 20
+   },
+   "literal:39:49": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 39,
+    "end": 49,
+    "line": 2,
+    "column": 24
+   },
+   "literal:55:84": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 55,
+    "end": 84,
+    "line": 2,
+    "column": 40
+   },
+   "bind:86:119": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 86,
+    "end": 119,
+    "line": 3,
+    "column": 1
+   },
+   "call:89:119": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 89,
+    "end": 119,
+    "line": 3,
+    "column": 4
+   },
+   "record:104:119": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 104,
+    "end": 119,
+    "line": 3,
+    "column": 19
+   },
+   "literal:108:118": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 108,
+    "end": 118,
+    "line": 3,
+    "column": 23
+   },
+   "bind:120:181": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 120,
+    "end": 181,
+    "line": 4,
+    "column": 1
+   },
+   "call:124:181": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 124,
+    "end": 181,
+    "line": 4,
+    "column": 5
+   },
+   "record:139:181": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 139,
+    "end": 181,
+    "line": 4,
+    "column": 20
+   },
+   "literal:143:149": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 143,
+    "end": 149,
+    "line": 4,
+    "column": 24
+   },
+   "literal:155:159": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 155,
+    "end": 159,
+    "line": 4,
+    "column": 36
+   },
+   "literal:166:180": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 166,
+    "end": 180,
+    "line": 4,
+    "column": 47
+   },
+   "bind:182:257": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 182,
+    "end": 257,
+    "line": 5,
+    "column": 1
+   },
+   "call:186:257": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 186,
+    "end": 257,
+    "line": 5,
+    "column": 5
+   },
+   "record:201:257": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 201,
+    "end": 257,
+    "line": 5,
+    "column": 20
+   },
+   "literal:205:211": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 205,
+    "end": 211,
+    "line": 5,
+    "column": 24
+   },
+   "literal:217:221": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 217,
+    "end": 221,
+    "line": 5,
+    "column": 36
+   },
+   "literal:228:243": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 228,
+    "end": 243,
+    "line": 5,
+    "column": 47
+   },
+   "literal:252:256": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 252,
+    "end": 256,
+    "line": 5,
+    "column": 71
+   },
+   "bind:258:393": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 258,
+    "end": 393,
+    "line": 6,
+    "column": 1
+   },
+   "try:262:393": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 262,
+    "end": 393,
+    "line": 6,
+    "column": 5
+   },
+   "sequence:269:341": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 269,
+    "end": 341,
+    "line": 6,
+    "column": 12
+   },
+   "call:269:341": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 269,
+    "end": 341,
+    "line": 6,
+    "column": 12
+   },
+   "record:284:341": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 284,
+    "end": 341,
+    "line": 6,
+    "column": 27
+   },
+   "literal:288:298": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 288,
+    "end": 298,
+    "line": 6,
+    "column": 31
+   },
+   "literal:304:340": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 304,
+    "end": 340,
+    "line": 6,
+    "column": 47
+   },
+   "bind:394:440": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 394,
+    "end": 440,
+    "line": 7,
+    "column": 1
+   },
+   "call:398:440": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 398,
+    "end": 440,
+    "line": 7,
+    "column": 5
+   },
+   "record:413:440": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 413,
+    "end": 440,
+    "line": 7,
+    "column": 20
+   },
+   "literal:417:426": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 417,
+    "end": 426,
+    "line": 7,
+    "column": 24
+   },
+   "literal:433:439": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 433,
+    "end": 439,
+    "line": 7,
+    "column": 40
+   },
+   "return:441:478": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 441,
+    "end": 478,
+    "line": 8,
+    "column": 1
+   },
+   "record:448:478": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 448,
+    "end": 478,
+    "line": 8,
+    "column": 8
+   },
+   "ref:456:459": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 456,
+    "end": 459,
+    "line": 8,
+    "column": 16
+   },
+   "field:469:477": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 469,
+    "end": 477,
+    "line": 8,
+    "column": 29
+   },
+   "ref:469:472": {
+    "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+    "start": 469,
+    "end": 472,
+    "line": 8,
+    "column": 29
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "7442f4ab0450675e78a7915174b4004c04f7006f93649838b4ab6fbef2ca51d5",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "title",
+       [
+        "scalar",
+        "로그인 - 가상 동네도서관"
+       ]
+      ],
+      [
+       "url",
+       [
+        "scalar",
+        "http://127.0.0.1:8938/login"
+       ]
+      ],
+      [
+       "status_code",
+       [
+        "scalar",
+        200
+       ]
+      ],
+      [
+       "tab_id",
+       [
+        "scalar",
+        "t1"
+       ]
+      ],
+      [
+       "content_length",
+       [
+        "scalar",
+        76
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:browser",
+    "reuse_key": "b24e33097faace891261266d18a93e5284f6819920275b5802cdd7fa96967acb",
+    "reuse_parts": {
+     "action": "221b1c8957c1ecfa4169b94e8aef7599251913f60eec8250f674e6bbb27fafac",
+     "args": "e85e0b96ded91a25f23cbdcd057819ca274f5a7a31289868fafc2ce408711798",
+     "contract": "ae48acab7a4055e61be7e8a37bb1ff1b53919dfff1c6fb6ae552e7f04778039f",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "32c9564c401dc207a0a56e063447a4b8ee73ced639db4ef67cdc699257dd6f0a",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "snapshot",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "ref",
+            [
+             "scalar",
+             "e3"
+            ]
+           ],
+           [
+            "role",
+            [
+             "scalar",
+             "link"
+            ]
+           ],
+           [
+            "name",
+            [
+             "scalar",
+             "로그인"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "ref",
+            [
+             "scalar",
+             "e4"
+            ]
+           ],
+           [
+            "role",
+            [
+             "scalar",
+             "button"
+            ]
+           ],
+           [
+            "name",
+            [
+             "scalar",
+             "로그인"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "ref",
+            [
+             "scalar",
+             "e5"
+            ]
+           ],
+           [
+            "role",
+            [
+             "scalar",
+             "textbox"
+            ]
+           ],
+           [
+            "name",
+            [
+             "scalar",
+             "이용자 ID "
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "ref",
+            [
+             "scalar",
+             "e6"
+            ]
+           ],
+           [
+            "role",
+            [
+             "scalar",
+             "textbox"
+            ]
+           ],
+           [
+            "name",
+            [
+             "scalar",
+             "비밀번호 "
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "ref",
+            [
+             "scalar",
+             "e1"
+            ]
+           ],
+           [
+            "role",
+            [
+             "scalar",
+             "heading"
+            ]
+           ],
+           [
+            "name",
+            [
+             "scalar",
+             "가상 동네도서관 이용자 포털"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "ref",
+            [
+             "scalar",
+             "e2"
+            ]
+           ],
+           [
+            "role",
+            [
+             "scalar",
+             "heading"
+            ]
+           ],
+           [
+            "name",
+            [
+             "scalar",
+             "로그인"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "element_count",
+       [
+        "scalar",
+        6
+       ]
+      ],
+      [
+       "shown_count",
+       [
+        "scalar",
+        6
+       ]
+      ],
+      [
+       "url",
+       [
+        "scalar",
+        "http://127.0.0.1:8938/login"
+       ]
+      ],
+      [
+       "title",
+       [
+        "scalar",
+        "로그인 - 가상 동네도서관"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:browser",
+    "reuse_key": "9623e78f1cff70e77499ed711ff1200d86b3bacfd840234947604ac513c59a95",
+    "reuse_parts": {
+     "action": "221b1c8957c1ecfa4169b94e8aef7599251913f60eec8250f674e6bbb27fafac",
+     "args": "bb6e5cfb1993ffeb6944ee47ab0bf5ce1eea3af046106ce3871957985f522791",
+     "contract": "c13364442ca9c167d5d7dde25cb4a9cc7ae352d9368117df627e9242f5a29588",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "86cb9d37296a33c86bb0c2f132aa56ae3e84f5751a02c53533c04717d315a3d4",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "typed",
+       [
+        "scalar",
+        "lsi44_reader"
+       ]
+      ],
+      [
+       "element",
+       [
+        "scalar",
+        " (e5)"
+       ]
+      ],
+      [
+       "submitted",
+       [
+        "scalar",
+        false
+       ]
+      ],
+      [
+       "url",
+       [
+        "scalar",
+        "http://127.0.0.1:8938/login"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:browser",
+    "reuse_key": "b96f6748dc64b4923f17955f023b8a69ab589551753d7f74d37a73ed586c4397",
+    "reuse_parts": {
+     "action": "221b1c8957c1ecfa4169b94e8aef7599251913f60eec8250f674e6bbb27fafac",
+     "args": "60c3417db170d52df1fc65dfab59aa899d115648a86f7f66b5efe8c8a67b2e91",
+     "contract": "ae48acab7a4055e61be7e8a37bb1ff1b53919dfff1c6fb6ae552e7f04778039f",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "dc2d6dc0db613443586008a04be4e463535033671a0ac7dc99aace4515aca8d0",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "typed",
+       [
+        "scalar",
+        "lsi44-pass-9x"
+       ]
+      ],
+      [
+       "element",
+       [
+        "scalar",
+        " (e6)"
+       ]
+      ],
+      [
+       "submitted",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "url",
+       [
+        "scalar",
+        "http://127.0.0.1:8938/loans?page=1"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:browser",
+    "reuse_key": "79fe7a9097367cdb104fa291ab100302bb8a7f5d95b9239a5d5f06e6c71b762d",
+    "reuse_parts": {
+     "action": "221b1c8957c1ecfa4169b94e8aef7599251913f60eec8250f674e6bbb27fafac",
+     "args": "1920238b0b68db10a0dfa16d5b0d4b1a698e2868919f32048b0cf41c3d0d8101",
+     "contract": "ae48acab7a4055e61be7e8a37bb1ff1b53919dfff1c6fb6ae552e7f04778039f",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "39f797fa9ae755be85a695cdebb8d94da53faa1bd84abcdbfd959a1fd8b39f8b",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "title",
+       [
+        "scalar",
+        "일시적 오류 - 가상 동네도서관"
+       ]
+      ],
+      [
+       "url",
+       [
+        "scalar",
+        "http://127.0.0.1:8938/loans?page=2"
+       ]
+      ],
+      [
+       "status_code",
+       [
+        "scalar",
+        503
+       ]
+      ],
+      [
+       "tab_id",
+       [
+        "scalar",
+        "t1"
+       ]
+      ],
+      [
+       "content_length",
+       [
+        "scalar",
+        103
+       ]
+      ],
+      [
+       "warning",
+       [
+        "scalar",
+        "HTTP 503 에러가 발생했습니다."
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {},
+     "warning": "HTTP 503 에러가 발생했습니다."
+    },
+    "action": "limbs:browser",
+    "reuse_key": "021848bff004281620f2fea8aca66690ccb2b311138054f8fc63566acfaab07c",
+    "reuse_parts": {
+     "action": "221b1c8957c1ecfa4169b94e8aef7599251913f60eec8250f674e6bbb27fafac",
+     "args": "35a8f81dae23a3df070c89bf291dae0e9f059c4eca9b801946c4e3f50d8fdf6a",
+     "contract": "ae48acab7a4055e61be7e8a37bb1ff1b53919dfff1c6fb6ae552e7f04778039f",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "10747ec71b58ff72c4c93555b57f179a7bbaa5fabd07ed2c6a5291dd8a759574",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "title",
+       [
+        "scalar",
+        "일시적 오류 - 가상 동네도서관"
+       ]
+      ],
+      [
+       "url",
+       [
+        "scalar",
+        "http://127.0.0.1:8938/loans?page=2"
+       ]
+      ],
+      [
+       "text",
+       [
+        "scalar",
+        "가상 동네도서관 이용자 포털\n\n오늘: 2026.10.09\n\n대출 현황 · 공지 · 로그아웃\n일시적인 오류가 발생했습니다\n\n잠시 후 다시 시도해 주세요.\n\n가상 포털 — 훈련용 합성 자료"
+       ]
+      ],
+      [
+       "length",
+       [
+        "scalar",
+        103
+       ]
+      ],
+      [
+       "method",
+       [
+        "scalar",
+        "playwright_inner_text"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:browser",
+    "reuse_key": "0083e0fec5fcaac4aa70a7653a30e234395eaf1bce6ba36275e346288d313b1e",
+    "reuse_parts": {
+     "action": "221b1c8957c1ecfa4169b94e8aef7599251913f60eec8250f674e6bbb27fafac",
+     "args": "3fcdc57cf8b75ea780187fdbd39a14749d93507a64223cd78d9b717ebf95b235",
+     "contract": "c13364442ca9c167d5d7dde25cb4a9cc7ae352d9368117df627e9242f5a29588",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 40,
+   "rows": 0,
+   "elapsed_ms": 1691,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:120:181",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 120,
+      "end": 181,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:16:85",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 16,
+      "end": 85,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:182:257",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 182,
+      "end": 257,
+      "line": 5,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:258:393",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 258,
+      "end": 393,
+      "line": 6,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:394:440",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 394,
+      "end": 440,
+      "line": 7,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:86:119",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 86,
+      "end": 119,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:124:181",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 124,
+      "end": 181,
+      "line": 4,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:186:257",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 186,
+      "end": 257,
+      "line": 5,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:20:85",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 20,
+      "end": 85,
+      "line": 2,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:269:341",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 269,
+      "end": 341,
+      "line": 6,
+      "column": 12
+     }
+    },
+    {
+     "node_id": "call:398:440",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 398,
+      "end": 440,
+      "line": 7,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:89:119",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 89,
+      "end": 119,
+      "line": 3,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "field:469:477",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 469,
+      "end": 477,
+      "line": 8,
+      "column": 29
+     }
+    },
+    {
+     "node_id": "literal:108:118",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 108,
+      "end": 118,
+      "line": 3,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "literal:143:149",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 143,
+      "end": 149,
+      "line": 4,
+      "column": 24
+     }
+    },
+    {
+     "node_id": "literal:155:159",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 155,
+      "end": 159,
+      "line": 4,
+      "column": 36
+     }
+    },
+    {
+     "node_id": "literal:166:180",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 166,
+      "end": 180,
+      "line": 4,
+      "column": 47
+     }
+    },
+    {
+     "node_id": "literal:205:211",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 205,
+      "end": 211,
+      "line": 5,
+      "column": 24
+     }
+    },
+    {
+     "node_id": "literal:217:221",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 217,
+      "end": 221,
+      "line": 5,
+      "column": 36
+     }
+    },
+    {
+     "node_id": "literal:228:243",
+     "steps": 1,
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 228,
+      "end": 243,
+      "line": 5,
+      "column": 47
+     }
+    }
+   ],
+   "steps_other": 20,
+   "steps_by_line": [
+    {
+     "line": 5,
+     "steps": 7,
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 6,
+     "steps": 7,
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 4,
+     "steps": 6,
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 2,
+     "steps": 5,
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 7,
+     "steps": 5,
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 8,
+     "steps": 5,
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 3,
+     "steps": 4,
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 6,
+     "ms": 523,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 2,
+     "ms": 521,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 3,
+     "ms": 213,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 5,
+     "ms": 33,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 4,
+     "ms": 27,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    },
+    {
+     "line": 7,
+     "ms": 18,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a"
+    }
+   ]
+  },
+  "execution_notes": [
+   {
+    "event_id": 35,
+    "location": {
+     "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+     "start": 269,
+     "end": 341,
+     "line": 6,
+     "column": 12
+    },
+    "warning": "HTTP 503 에러가 발생했습니다."
+   }
+  ],
+  "execution_notes_omitted": 0,
+  "resume": {
+   "run_id": "c3dcff793beb48be923015b3965b1ff2"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "c3dcff793beb48be923015b3965b1ff2"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": true,
+   "read_exclusions": [
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "93726f6b1f8b49d89ae521460bd4ce041cb42980abda2144c1c646c6bb40761b",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "f481dd6a80e738f011daac9ed8ffb248f0914c35b733cb24d9d1e13227d5801a",
+      "start": 124,
+      "end": 181,
+      "line": 4,
+      "column": 5
+     },
+     "excluded_calls": 1
+    }
+   ],
+   "read_exclusions_total": 1,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "c3dcff793beb48be923015b3965b1ff2",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ },
+ "elapsed": 1.7004528045654297
+}

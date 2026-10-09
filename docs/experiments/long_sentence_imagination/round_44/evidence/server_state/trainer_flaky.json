@@ -1,0 +1,26 @@
+{
+ "extended": [
+  "L01",
+  "L04"
+ ],
+ "attempts": [
+  {
+   "id": "L01",
+   "ok": true,
+   "reason": null
+  },
+  {
+   "id": "L03",
+   "ok": false,
+   "reason": "연장 횟수 초과"
+  },
+  {
+   "id": "L04",
+   "ok": true,
+   "reason": null
+  }
+ ],
+ "logins": 1,
+ "requests": 17,
+ "page2_hits": 2
+}

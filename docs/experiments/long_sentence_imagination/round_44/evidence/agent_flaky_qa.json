@@ -1,0 +1,177 @@
+{
+ "passed": 23,
+ "total": 23,
+ "checks": {
+  "result_json_exists": true,
+  "report_md_exists": true,
+  "loans_12": true,
+  "pages_3": true,
+  "today": true,
+  "portal_only_L08": true,
+  "mine_only_L99": true,
+  "due_mismatch_L05_L11": true,
+  "urgent_4": true,
+  "extend_ok_ids": true,
+  "L02_not_attempted": true,
+  "new_due_reread": true,
+  "L03_failed_with_reason": true,
+  "page2_retried": true,
+  "server_extended": true,
+  "server_no_L02_attempt": true,
+  "server_attempt_counts": true,
+  "shots_before_after": true,
+  "desktop_png": true,
+  "frontmost_app": true,
+  "notice_exact": true,
+  "report_mentions_all": true,
+  "report_mentions_L03_fail": true
+ },
+ "detail": {
+  "loan_ids": [
+   "L01",
+   "L02",
+   "L03",
+   "L04",
+   "L05",
+   "L06",
+   "L07",
+   "L08",
+   "L09",
+   "L10",
+   "L11",
+   "L12"
+  ],
+  "due_mismatch": [
+   {
+    "id": "L05",
+    "title": "작은 가게 회계",
+    "my_due": "2026-10-14",
+    "portal_due": "2026-10-13"
+   },
+   {
+    "id": "L11",
+    "title": "마을회관 운영기",
+    "my_due": "2026-10-24",
+    "portal_due": "2026-10-25"
+   }
+  ],
+  "extensions": [
+   {
+    "id": "L01",
+    "attempted": true,
+    "ok": true,
+    "reason": null,
+    "due_before": "2026-10-09",
+    "due_after": "2026-10-23"
+   },
+   {
+    "id": "L02",
+    "attempted": false,
+    "ok": false,
+    "reason": "목록 상태가 '연장 불가 (예약 대기 1명)' — 신청하지 않음",
+    "due_before": null,
+    "due_after": null
+   },
+   {
+    "id": "L03",
+    "attempted": true,
+    "ok": false,
+    "reason": "연장할 수 없습니다: 연장 횟수 초과",
+    "due_before": "2026-10-11",
+    "due_after": "2026-10-11"
+   },
+   {
+    "id": "L04",
+    "attempted": true,
+    "ok": true,
+    "reason": null,
+    "due_before": "2026-10-12",
+    "due_after": "2026-10-26"
+   }
+  ],
+  "server_state": {
+   "extended": [
+    "L01",
+    "L04"
+   ],
+   "attempts": [
+    {
+     "id": "L01",
+     "ok": true,
+     "reason": null
+    },
+    {
+     "id": "L03",
+     "ok": false,
+     "reason": "연장 횟수 초과"
+    },
+    {
+     "id": "L04",
+     "ok": true,
+     "reason": null
+    }
+   ],
+   "logins": 1,
+   "requests": 26,
+   "page2_hits": 3
+  },
+  "shots": {
+   "L01_before": {
+    "exists": true,
+    "size": [
+     1000,
+     700
+    ],
+    "bytes": 30209
+   },
+   "L01_after": {
+    "exists": true,
+    "size": [
+     1000,
+     700
+    ],
+    "bytes": 31202
+   },
+   "L04_before": {
+    "exists": true,
+    "size": [
+     1000,
+     700
+    ],
+    "bytes": 30262
+   },
+   "L04_after": {
+    "exists": true,
+    "size": [
+     1000,
+     700
+    ],
+    "bytes": 36447
+   },
+   "L03_before": {
+    "exists": true,
+    "size": [
+     1000,
+     700
+    ],
+    "bytes": 31621
+   },
+   "L03_after": {
+    "exists": true,
+    "size": [
+     1000,
+     700
+    ],
+    "bytes": 31621
+   }
+  },
+  "desktop": {
+   "exists": true,
+   "size": [
+    1920,
+    1080
+   ],
+   "bytes": 1327655
+  }
+ }
+}

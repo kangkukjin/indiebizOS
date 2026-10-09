@@ -1,0 +1,547 @@
+{
+  "request": {
+    "code": "#!ibl edition=2\n# 44회차 최초 초안 — 컴퓨터 유즈: 가상 도서관 포털 대출 목록 읽기·내 목록 대조·반납 임박 연장·화면 증거. inputs: src(입력 폴더), out(출력 폴더)\n# 흐름: 계정·내 목록 읽기 → 로그인(snapshot 으로 입력칸 ref) → '오늘'·총 페이지 → 전체 페이지 읽기(503 은 1회 재시도) → 표 행 파싱(탭 구분)\n#       → 대조(difference·join) → 3일 이내 연장(불가는 사유만, 확인창은 evaluate 로 승인) → 공지 iframe 본문 → 데스크톱 캡처(base64→PNG)·맨 앞 앱 → result.json·report.md\n# 참고: 훈련 가이드·조합 교재 2권·문법 전문·browser_action.md·desktop.md·python_libraries.md·describe 8개·소실행 탐침(evidence/probe_*.json)\n\n[def:줄찾기]($text,$key) {\n  $ls = filter(split($text,\"\\n\"),($l)=>contains($l,$key))\n  return len($ls)>0 ? $ls[0] : null\n}\n[def:참조]($snap,$role,$name) {\n  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}\n  return len($m)>0 ? $m[0].ref : null\n}\n[def:날짜]($dot) { return replace(strip($dot),\".\",\"-\") }\n[def:열기]($url) {\n  $r = [limbs:browser]{op:\"navigate\", url:$url, driver:\"playwright\"}\n  [if:$r.status_code != 200] {\n    $w = [limbs:browser]{op:\"wait\", timeout:1500}\n    $r2 = [limbs:browser]{op:\"navigate\", url:$url, driver:\"playwright\"}\n    return {ok:$r2.status_code == 200, status:$r2.status_code, retried:true, url:$url}\n  }\n  return {ok:true, status:$r.status_code, retried:false, url:$url}\n}\n[def:표행]($text) {\n  $rows = filter(split($text,\"\\n\"),($l)=>len(split($l,\"\\t\"))==5 and $l[:1]==\"L\")\n  return map($rows,($l)=>{id:split($l,\"\\t\")[0], title:split($l,\"\\t\")[1], author:split($l,\"\\t\")[2], due:[fn:날짜]{dot:split($l,\"\\t\")[3]}, status:split($l,\"\\t\")[4]})\n}\n\n# 1. 입력\n$acct = [self:read]{path:f\"${src}/account.json\"}\n$portal = $acct.data.portal_url\n$mine = [self:read]{path:f\"${src}/my_books.csv\"}\n$내목록 = $mine.data.items\n$mk = [self:mkdir]{path:f\"${out}/shots\"}\n\n# 2. 로그인 → 기준일·총 페이지\n$l0 = [fn:열기]{url:f\"${portal}login\"}\n$snap0 = [limbs:browser]{op:\"snapshot\"}\n$refid = [fn:참조]{snap:$snap0, role:\"textbox\", name:\"이용자 ID\"}\n$refpw = [fn:참조]{snap:$snap0, role:\"textbox\", name:\"비밀번호\"}\nassert $refid != null and $refpw != null, \"로그인 입력칸을 찾지 못했습니다\", {snapshot:$snap0}\n$t1 = [limbs:browser]{op:\"type\", ref:$refid, text:$acct.data.user}\n$t2 = [limbs:browser]{op:\"type\", ref:$refpw, text:$acct.data.password, submit:true}\n$c1 = [limbs:browser]{op:\"content\", mode:\"text\"}\nassert contains($c1.url,\"/loans\"), \"로그인 뒤 대출 현황으로 이동하지 않았습니다\", {url:$c1.url}\n$오늘줄 = [fn:줄찾기]{text:$c1.text, key:\"오늘:\"}\nassert $오늘줄 != null, \"화면에서 '오늘' 을 찾지 못했습니다\", {text:$c1.text}\n$오늘 = [fn:날짜]{dot:split($오늘줄,\":\")[1]}\n$페이지줄 = [fn:줄찾기]{text:$c1.text, key:\"페이지\"}\nassert $페이지줄 != null, \"총 페이지 표시를 찾지 못했습니다\", {text:$c1.text}\n$pages = number(split(split($페이지줄,\"/\")[1],\" \")[0])\n\n# 3. 전체 페이지 읽기 (1페이지는 로그인 직후 화면, 나머지는 주소로 이동·503 은 1회 재시도)\n$rows = [fn:표행]{text:$c1.text}\n$page_fail = []\n[repeat:while $i < $pages - 1] {\n  $p = $i + 2\n  $nav = [fn:열기]{url:f\"${portal}loans?page=${p}\"}\n  [if:$nav.ok] {\n    $cp = [limbs:browser]{op:\"content\", mode:\"text\"}\n    $rows = $rows + [fn:표행]{text:$cp.text}\n  } [else] { $page_fail = $page_fail + [$nav] }\n}\n\n# 4. 내 목록과 대조\n$portal_ids = map($rows,($r)=>$r.id)\n$mine_ids = map($내목록,($r)=>$r.id)\n$portal_only = difference($portal_ids,$mine_ids)\n$mine_only = difference($mine_ids,$portal_ids)\n$공통 = [table:join]{left:$rows, right:$내목록, on:\"id\", how:\"inner\"}\n$불일치 = $공통.items >> [table:filter]{where:($r)=>$r.due != $r.due_2} >> [table:select]{columns:[\"id\",\"due\",\"due_2\"]}\n\n# 5. 3일 이내 연장 (연장 불가는 신청하지 않음, 확인창은 승인으로 패치, 전·후 화면 저장, 새 반납일은 화면에서 재독)\n$긴급 = $rows >> [table:filter]{where:($r)=>date_diff($r.due,$오늘) <= 3}\n$연장 = $긴급 >> [table:each] {\n  [if:contains($it.status,\"연장 불가\")] {\n    return {id:$it.id, title:$it.title, attempted:false, ok:false, reason:$it.status, due_before:$it.due, due_after:null, shots:[], line:f\"- ${it.id} ${it.title}: 신청 안 함 — ${it.status}\"}\n  }\n  [try] {\n    $d = [fn:열기]{url:f\"${portal}loans/${it.id}\"}\n    $before = f\"${out}/shots/${it.id}_before.png\"\n    $s1 = [limbs:browser]{op:\"screenshot\", path:$before}\n    $ev = [limbs:browser]{op:\"evaluate\", expression:\"window.confirm = () => true; 'ok'\"}\n    $sn = [limbs:browser]{op:\"snapshot\"}\n    $btn = [fn:참조]{snap:$sn, role:\"button\", name:\"연장 신청\"}\n    assert $btn != null, \"연장 신청 버튼이 없습니다\", {id:$it.id, snapshot:$sn}\n    $k = [limbs:browser]{op:\"click\", ref:$btn}\n    $c = [limbs:browser]{op:\"content\", mode:\"text\"}\n    $after = f\"${out}/shots/${it.id}_after.png\"\n    $s2 = [limbs:browser]{op:\"screenshot\", path:$after}\n    $완료 = [fn:줄찾기]{text:$c.text, key:\"연장이 완료되었습니다\"}\n    $거절 = [fn:줄찾기]{text:$c.text, key:\"연장할 수 없습니다\"}\n    $ok = $완료 != null\n    $새반납 = $ok ? [fn:날짜]{dot:split($완료,\"새 반납일:\")[1]} : null\n    $사유 = $ok ? null : ($거절 == null ? \"포털이 완료·거절 어느 문구도 보이지 않음\" : $거절)\n    $line = $ok ? f\"- ${it.id} ${it.title}: 연장 성공 — 반납일 ${it.due} → ${새반납}\" : f\"- ${it.id} ${it.title}: 연장 실패 — ${사유}\"\n    return {id:$it.id, title:$it.title, attempted:true, ok:$ok, reason:$사유, due_before:$it.due, due_after:$새반납, shots:[$before,$after], line:$line}\n  } [catch] {\n    return {id:$it.id, title:$it.title, attempted:true, ok:false, reason:$error.message, due_before:$it.due, due_after:null, shots:[], line:f\"- ${it.id} ${it.title}: 연장 실패(오류) — ${error.message}\"}\n  }\n}\n\n# 6. 공지 iframe 의 휴관일 문장\n$n0 = [fn:열기]{url:f\"${portal}notice\"}\n$fr = [limbs:browser]{op:\"iframe\", mode:\"list\"}\nassert $fr.count > 0, \"공지 페이지에 프레임이 없습니다\", {frames:$fr}\n$sw = [limbs:browser]{op:\"iframe\", mode:\"switch\", url:$fr.iframes[0].url}\n$cn = [limbs:browser]{op:\"content\", mode:\"text\"}\n$rs = [limbs:browser]{op:\"iframe\", mode:\"reset\"}\n$휴관 = [fn:줄찾기]{text:$cn.text, key:\"휴관일 안내\"}\n\n# 7. 데스크톱 캡처(읽기만)·맨 앞 앱\n$host = [sense:host]{op:\"status\"}\n$desk = [try] {\n  $shot = [limbs:screen]{op:\"screenshot\"}\n  $bytes = [self:script]{id:\"python_libraries\", args:{op:\"call\", target:\"base64:b64decode\", args:[$shot.images[0].base64], result:\"ref\"}}\n  $saved = [self:script]{id:\"python_libraries\", args:{receiver:$bytes, op:\"export\", format:\"bytes\", options:{path:f\"${out}/desktop.png\"}}}\n  {ok:true, path:f\"${out}/desktop.png\", resolution:$shot.details.resolution}\n} [catch] { {ok:false, path:null, error:$error.message} }\n\n# 8. 결과 파일\n$result = {today:$오늘, pages:$pages, page_failures:$page_fail, loans:$rows,\n  compare:{portal_only:$portal_only, mine_only:$mine_only, due_mismatch:$불일치},\n  urgent:map($긴급,($r)=>$r.id), extensions:$연장, notice_holiday:$휴관, frontmost_app:$host.frontmost_app, desktop:$desk}\n$w1 = [self:write]{path:f\"${out}/result.json\", content:json($result)}\n$po = len($portal_only)==0 ? \"없음\" : join(\", \",$portal_only)\n$mo = len($mine_only)==0 ? \"없음\" : join(\", \",$mine_only)\n$mm = map($불일치,($r)=>f\"- ${r.id}: 포털 ${r.due} / 내 목록 ${r.due_2}\")\n$휴관문 = $휴관 == null ? \"미확인 — 공지 본문에서 '휴관일 안내' 문장을 찾지 못함\" : $휴관\n$deskline = $desk.ok ? f\"- 데스크톱 캡처: ${desk.path} (${desk.resolution})\" : f\"- 데스크톱 캡처: 실패 — ${desk.error}\"\n$report = join(\"\\n\", [\"# 도서관 포털 점검 보고\", f\"- 기준일(포털 '오늘'): ${오늘}\", f\"- 대출 ${len(rows)}권 · ${pages}페이지 · 읽기 실패 페이지 ${len(page_fail)}건\",\n  \"\", \"## 내 목록과 대조\", f\"- 포털에만 있는 책: ${po}\", f\"- 내 목록에만 있는 책: ${mo}\", \"- 반납일이 다른 책:\"] + (len($mm)==0 ? [\"  - 없음\"] : $mm) +\n  [\"\", \"## 3일 이내 반납 도서 연장\"] + map($연장,($e)=>$e.line) +\n  [\"\", \"## 공지\", f\"- ${휴관문}\", \"\", \"## 내 컴퓨터\", f\"- 맨 앞 앱: ${host.frontmost_app}\", $deskline])\n$w2 = [self:write]{path:f\"${out}/report.md\", content:$report}\n$files = [self:list]{path:f\"${out}/shots\", pattern:\"*.png\"}\nreturn {today:$오늘, loans:len($rows), pages:$pages, page_failures:len($page_fail), portal_only:$portal_only, mine_only:$mine_only, due_mismatch:len($불일치),\n  urgent:map($긴급,($r)=>$r.id), extended_ok:map($연장 >> [table:filter]{where:($e)=>$e.ok},($e)=>$e.id), not_ok:map($연장 >> [table:filter]{where:($e)=>not $e.ok},($e)=>$e.id),\n  shots:len($files), notice_found:$휴관 != null, frontmost_app:$host.frontmost_app, desktop_ok:$desk.ok, files:[$w1.path,$w2.path]}\n",
+    "origin": "training",
+    "project_id": "수동모드",
+    "check": true,
+    "budget": {
+      "steps": 1000000,
+      "rows": 100000
+    },
+    "inputs": {
+      "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_44회차/trainer/input",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_44회차/trainer/out"
+    }
+  },
+  "endpoint": "/ibl/execute",
+  "started": 1791520803.2315378,
+  "ended": 1791520804.2460768,
+  "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+      {
+        "code": "TYPE",
+        "message": "Text가 필요하지만 Null | Text입니다.",
+        "source_span": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 2379,
+          "end": 2383,
+          "line": 49,
+          "column": 25
+        },
+        "call_path": [],
+        "expected": "Text",
+        "actual": "Null | Text",
+        "hint": "split(Text, Text|Null, Number)의 인자 순서를 확인하세요. 1번째는 Text입니다.",
+        "location": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 2379,
+          "end": 2383,
+          "line": 49,
+          "column": 25,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 49,
+          "end_column": 29,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error"
+      },
+      {
+        "code": "TYPE",
+        "message": "Text가 필요하지만 Null | Text입니다.",
+        "source_span": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 2524,
+          "end": 2529,
+          "line": 52,
+          "column": 29
+        },
+        "call_path": [],
+        "expected": "Text",
+        "actual": "Null | Text",
+        "hint": "split(Text, Text|Null, Number)의 인자 순서를 확인하세요. 1번째는 Text입니다.",
+        "location": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 2524,
+          "end": 2529,
+          "line": 52,
+          "column": 29,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 52,
+          "end_column": 34,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error"
+      },
+      {
+        "code": "TYPE",
+        "message": "Text가 필요하지만 Null | Text입니다.",
+        "source_span": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 4462,
+          "end": 4465,
+          "line": 95,
+          "column": 36
+        },
+        "call_path": [],
+        "expected": "Text",
+        "actual": "Null | Text",
+        "hint": "split(Text, Text|Null, Number)의 인자 순서를 확인하세요. 1번째는 Text입니다.",
+        "location": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 4462,
+          "end": 4465,
+          "line": 95,
+          "column": 36,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 95,
+          "end_column": 39,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "TYPE",
+        "severity": "error"
+      },
+      {
+        "code": "FORMAT_TYPE",
+        "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Text입니다.",
+        "source_span": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 4628,
+          "end": 4631,
+          "line": 97,
+          "column": 71
+        },
+        "call_path": [],
+        "expected": "Bool | Number | Text",
+        "actual": "Null | Text",
+        "location": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 4628,
+          "end": 4631,
+          "line": 97,
+          "column": 71,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 97,
+          "end_column": 74,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "FORMAT_TYPE",
+        "severity": "error",
+        "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+      },
+      {
+        "code": "FORMAT_TYPE",
+        "message": "보간에는 Text·Number·Bool이 필요하지만 Null | Text입니다.",
+        "source_span": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 4672,
+          "end": 4674,
+          "line": 97,
+          "column": 115
+        },
+        "call_path": [],
+        "expected": "Bool | Number | Text",
+        "actual": "Null | Text",
+        "location": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 4672,
+          "end": 4674,
+          "line": 97,
+          "column": 115,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 97,
+          "end_column": 117,
+          "offset_encoding": "unicode-codepoints"
+        },
+        "rule": "FORMAT_TYPE",
+        "severity": "error",
+        "hint": "보간에는 Text·Number·Bool만 넣습니다. 목록은 join(\", \", 목록), 레코드는 필드를 골라 넣고, Unit·null일 수 있는 값은 먼저 분기하세요."
+      }
+    ],
+    "guards": [],
+    "guards_total": 207,
+    "guards_inner": 0,
+    "guards_omitted": 207,
+    "result_type": "{today: Text, loans: Number, pages: Number, page_failures: Number, portal_only: List<Unknown>, mine_only: List<Unknown>, due_mismatch: Number, urgent: List<Unknown>, extended_ok: List<Unknown>, not_ok: List<Unknown>, shots: Number, notice_found: Bool, frontmost_app: Unknown, desktop_ok: Bool, files: List<Unknown>}",
+    "effects": [
+      "pure",
+      "read_external",
+      "unknown",
+      "write_external"
+    ],
+    "functions": {
+      "def:809:1207": {
+        "name": "열기",
+        "params": {
+          "url": "Text"
+        },
+        "required": [
+          "url"
+        ],
+        "pipe_input": "url",
+        "default_expressions": {},
+        "effects": [
+          "write_external"
+        ],
+        "actions": [
+          "limbs:browser"
+        ],
+        "source_hash": "e4585a6e5d4d9d4cc188b0e54230a977b0071f61baf46e030d53a90dd48cbfde",
+        "result": "{ok: Bool, status: Unknown, retried: Bool, url: Text} | {ok: Bool, status: Unknown, retried: Bool, url: Text}",
+        "specializations": [
+          {
+            "params": {
+              "url": "Text"
+            },
+            "result": "{ok: Bool, status: Unknown, retried: Bool, url: Text} | {ok: Bool, status: Unknown, retried: Bool, url: Text}"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 809,
+          "end": 1207,
+          "line": 16,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 24,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:588:753": {
+        "name": "참조",
+        "params": {
+          "snap": "Record",
+          "role": "Text",
+          "name": "Text"
+        },
+        "required": [
+          "snap",
+          "role",
+          "name"
+        ],
+        "pipe_input": "snap",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [
+          "table:filter"
+        ],
+        "source_hash": "6ccfdcb8feef01a5a61b312ed39f8add5fd8554c2c1b5ecea19e2150aa4b160f",
+        "result": "Unknown",
+        "specializations": [
+          {
+            "params": {
+              "snap": "Record",
+              "role": "Text",
+              "name": "Text"
+            },
+            "result": "Unknown"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 588,
+          "end": 753,
+          "line": 11,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 14,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:468:587": {
+        "name": "줄찾기",
+        "params": {
+          "text": "Unknown",
+          "key": "Text"
+        },
+        "required": [
+          "text",
+          "key"
+        ],
+        "pipe_input": "text",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [],
+        "source_hash": "fb2d02cd5093eb355a104db073524f6f4130d6d91fe8080bc957c993f322eeee",
+        "result": "Null | Text",
+        "specializations": [
+          {
+            "params": {
+              "text": "Unknown",
+              "key": "Text"
+            },
+            "result": "Null | Text"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 468,
+          "end": 587,
+          "line": 7,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 10,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:754:808": {
+        "name": "날짜",
+        "params": {
+          "dot": "Text"
+        },
+        "required": [
+          "dot"
+        ],
+        "pipe_input": "dot",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [],
+        "source_hash": "b7206edb00be260d3455232e9aec132924784d7fc3985b7201e480130bf6df59",
+        "result": "Text",
+        "specializations": [
+          {
+            "params": {
+              "dot": "Text"
+            },
+            "result": "Text"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 754,
+          "end": 808,
+          "line": 15,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 15,
+          "end_column": 55,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:1208:1470": {
+        "name": "표행",
+        "params": {
+          "text": "Unknown"
+        },
+        "required": [
+          "text"
+        ],
+        "pipe_input": "text",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [],
+        "source_hash": "b15f533c5b6be2ea09a2ac0062faa8db2936062661f9fba1d2181a13c8f5c5c9",
+        "result": "List<{id: Text, title: Text, author: Text, due: Text, status: Text}>",
+        "specializations": [
+          {
+            "params": {
+              "text": "Unknown"
+            },
+            "result": "List<{id: Text, title: Text, author: Text, due: Text, status: Text}>"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+          "start": 1208,
+          "end": 1470,
+          "line": 25,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 28,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      }
+    },
+    "plan_hash": "eeddefbc7592267f8245c2ae6d6a5768c4cfd74a6b792ffdf7a06fe3932e9043",
+    "dependencies": {
+      "source": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+      "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+      "calls": {
+        "call:5553:5679": "817f42e439d40e042efe9ffff383a393536151cb729db085604d4f3325176a86",
+        "call:5691:5818": "817f42e439d40e042efe9ffff383a393536151cb729db085604d4f3325176a86"
+      },
+      "input_types": {
+        "src": "Text",
+        "out": "Text"
+      },
+      "source_map": [
+        {
+          "name": "<program>",
+          "start": 0,
+          "end": 7638
+        }
+      ],
+      "contracts": "b5b7778981b2205c7036fc26ddcf10db541e032ec7a11afe9189e6e73a14c608",
+      "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+      "semantics": "e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755",
+      "expressions": "8b1374449bdb861758d2d12b149fae44ebb72cfde1919d26ea2d1cdeae740050",
+      "core": "0f9fd52e6915bbe50ec190eb519a704bc5ca28977e3d3b1d8c4d52436dfb4953"
+    },
+    "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+    "capabilities": [
+      "ibl-edition/2",
+      "ibl-value/1"
+    ],
+    "preflight": {
+      "status": "partial",
+      "declared_ai_visits_upper_bound": null,
+      "unknowns": [
+        {
+          "location": {
+            "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+            "start": 2654,
+            "end": 2913,
+            "line": 57,
+            "column": 1,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 64,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "reason": "동적 반복 횟수"
+        },
+        {
+          "location": {
+            "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+            "start": 3432,
+            "end": 5041,
+            "line": 76,
+            "column": 14,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 102,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "reason": "each 입력 건수 미상"
+        },
+        {
+          "location": {
+            "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+            "start": 5553,
+            "end": 5679,
+            "line": 117,
+            "column": 12,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 117,
+            "end_column": 138,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+        },
+        {
+          "location": {
+            "source_hash": "e7a7d05522d52e22b34a88efe3a0c6ea2db89b5f36212f125ec80c54b51726cc",
+            "start": 5691,
+            "end": 5818,
+            "line": 118,
+            "column": 12,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 118,
+            "end_column": 139,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+        }
+      ],
+      "warnings": [],
+      "warnings_omitted": 0,
+      "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+      "actions": [
+        "limbs:browser",
+        "limbs:screen",
+        "self:list",
+        "self:mkdir",
+        "self:read",
+        "self:script",
+        "self:write",
+        "sense:host",
+        "table:filter",
+        "table:join",
+        "table:select"
+      ]
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+    "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+    "next_action": "진단 위치를 수정한 뒤 다시 검사하세요.",
+    "runtime_checks": {
+      "total": 207,
+      "informative": 127
+    },
+    "guards_ref": {
+      "id": "6a2e00107c769a54a77d2fe8460b8801802b0982afc89517e8d66d420bd804ba",
+      "chars": 169379,
+      "read_args": {
+        "id": "6a2e00107c769a54a77d2fe8460b8801802b0982afc89517e8d66d420bd804ba",
+        "path": [
+          "guards"
+        ],
+        "offset": 0,
+        "limit": 60000
+      }
+    },
+    "budget": {
+      "steps": 1000000,
+      "rows": 100000
+    },
+    "request_inputs": {
+      "input_args": {
+        "src": {
+          "$ref": "a9680c9717d15dabbbdc450f2a6e7c87433613d67ceb63d2ad28c0b923fd1cde"
+        },
+        "out": {
+          "$ref": "6c9a691174c4cada4196951203b71882f051406a2cfabc2a63d8ff4851d3c9e4"
+        }
+      },
+      "unavailable": {},
+      "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+    },
+    "revise_args": {
+      "code": "$rejected:9074a6fd1a6ef783de9c4827e2104249ea2274efda40b0d39bd398a1e3554a92",
+      "code_edits": [
+        {
+          "old": "<고칠 원문 조각>",
+          "new": "<바꿀 글>"
+        }
+      ]
+    },
+    "revise_hint": "고칠 조각만 보내세요: revise_args.code 를 그대로 code 에 넣고 code_edits 에 {old, new} 를 적습니다(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 같은 inputs·budget·check 를 함께 보냅니다. 원문 전체를 다시 적지 않습니다."
+  }
+}

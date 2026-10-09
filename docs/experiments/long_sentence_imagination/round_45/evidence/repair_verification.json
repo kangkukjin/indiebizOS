@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-09",
+  "base_commit": "69efdf23",
+  "scope": [
+    "L45-1 select contract",
+    "L45-2 frontmost snapshot and guarded desktop input"
+  ],
+  "verification": {
+    "selected_regression": {
+      "files": 74,
+      "available_files": 615,
+      "passed": 1419,
+      "skipped": 1,
+      "seconds": 33.34,
+      "command": ".venv/bin/python3 -m pytest $(.venv/bin/python3 scripts/select_tests.py) -m 'not system' -n auto --dist loadfile"
+    },
+    "system_regression": {
+      "passed": 30,
+      "seconds": 48.88,
+      "command": ".venv/bin/python3 -m pytest backend/test_vocabulary_archive.py backend/test_vocabulary_bundle_split.py backend/test_browser_session.py -m system -n auto --dist loadfile"
+    },
+    "final_desktop_contracts": {
+      "passed": 22,
+      "seconds": 5.01,
+      "command": ".venv/bin/python3 -m pytest backend/test_computer_use.py"
+    },
+    "round45_full_program": {
+      "passed": 3,
+      "seconds": 15.77,
+      "scenarios": [
+        "original main_v3 desk:false",
+        "main_repaired + values course selection",
+        "main_repaired + values + transient failure + full capacity"
+      ],
+      "oracle": [
+        "server applications",
+        "upload SHA256",
+        "prompt code",
+        "PDF receipt contents",
+        "fees",
+        "report",
+        "retry reason"
+      ]
+    },
+    "build_ibl_nodes_check": "passed",
+    "android_body_bundle": "rebuilt",
+    "full_backend": "not run"
+  },
+  "live_desktop": {
+    "input_sent": false,
+    "capture_performed": false,
+    "ax_probe": "AX -25204 (focus unavailable)",
+    "system_events_probe": "loginwindow observed, frontmost query failed -1728",
+    "conclusion": "Live Calculator loop remains unverified; fail-closed behavior covered by synthetic tests."
+  },
+  "remaining": [
+    "Independent AI choice/recall R5 not evaluated again",
+    "Chrome select label/multi-select unsupported explicitly; no live Chrome MCP run",
+    "No claim of end-to-end time or token savings"
+  ],
+  "example_review": {
+    "browser_reviewed": 254,
+    "screen_reviewed": 54,
+    "old_unexecuted_examples_retired": 4,
+    "new_examples_seeded": 3,
+    "method": "add_examples_batch; embeddings verified before retirement",
+    "evidence": "repaired_examples.json"
+  },
+  "runtime_activation": {
+    "phase": "ACTIVE",
+    "loaded_matches_disk": true
+  }
+}

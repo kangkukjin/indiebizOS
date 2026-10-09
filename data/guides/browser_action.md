@@ -200,10 +200,12 @@ Chrome MCP는 사용자의 실제 Chrome 브라우저를 WebSocket으로 원격 
 ### 드롭다운(select) 선택
 ```
 [limbs:browser]{op: "snapshot"}                                    # select 요소의 ref 확인 (role: combobox)
-[limbs:browser]{op: "select", ref: "e5", values: ["옵션텍스트"]}           # 옵션 선택
+[limbs:browser]{op: "select", ref: "e5", label: "옵션텍스트"}           # 옵션 선택
 ```
 - `[limbs:browser]{op: "evaluate"}`로 JS 직접 조작하지 말 것 — Playwright의 select_option이 프레임워크 호환성 높음
-- `values`에는 옵션의 **텍스트** 또는 **value** 사용 가능
+- `label`은 화면에 보이는 표시명 정확 일치(Playwright), `value`는 단일 값, `values`는 목록이다. 셋 중 하나만 지정한다.
+- Playwright의 기존 `value`·`values`는 value 또는 표시명 매칭을 유지한다. `values:[]`는 선택 해제, 다중 선택은 multiple select에서만 가능하다. 반환 `selected`는 실제 선택된 value 목록이다.
+- Chrome MCP는 단일 value만 지원한다. label·다중 선택·선택 해제는 실행 전에 명시적으로 거절한다.
 
 ### 연계 select (시/도 → 시/군/구 → 읍/면/동)
 상위 선택에 따라 하위 옵션이 동적으로 바뀌는 cascading dropdown:

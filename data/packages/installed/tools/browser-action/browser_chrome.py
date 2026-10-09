@@ -418,7 +418,14 @@ async def browser_select_option(params: dict) -> dict:
     d = _get_driver()
     ref = params.get("ref")
     selector = params.get("selector")
-    values = params.get("values", [])
+    from browser_session import select_request
+    try:
+        mode, values = select_request(params)
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
+    if mode == "label" or len(values) != 1:
+        return {"success": False, "error": "Chrome select는 단일 value만 지원합니다. 표시명·다중 선택·선택 해제는 driver:playwright를 사용하세요.",
+                "error_code": "UNSUPPORTED_OPERATION", "driver": "chrome"}
 
     try:
         target_ref = d._to_chrome_ref(ref) if ref else selector

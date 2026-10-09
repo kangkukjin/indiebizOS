@@ -793,3 +793,19 @@ def format_snapshot_text(elements: List[dict]) -> str:
         lines.append(" ".join(parts))
 
     return "\n".join(lines)
+
+
+def select_request(params):
+    """공통 select 입력: 표시명 label 또는 기존 value/values (value·표시명 매칭)."""
+    keys = [key for key in ("value", "values", "label") if params.get(key) is not None]
+    if len(keys) != 1:
+        raise ValueError("select는 value, values, label 중 하나만 지정하세요.")
+    key = keys[0]
+    value = params[key]
+    if key == "values":
+        if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+            raise ValueError("values는 문자열 목록이어야 합니다 (빈 목록은 선택 해제).")
+        return key, value
+    if not isinstance(value, str):
+        raise ValueError(f"{key}는 문자열이어야 합니다.")
+    return key, [value]

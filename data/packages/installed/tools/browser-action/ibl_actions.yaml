@@ -58,7 +58,7 @@ actions:
         press_key: 키보드 키 입력 (Enter/Tab/Escape 등)
         hover: 요소에 마우스 호버 (ref)
         drag: 드래그 앤 드롭 (source_ref→target_ref)
-        select: select 박스 옵션 선택 (ref, value/label)
+        select: 옵션 선택 (ref/selector; value·values·label 중 하나, label은 Playwright 표시명)
         check: 체크박스·라디오 토글 (ref)
         upload_file: 파일 input에 업로드 (ref, path)
         scroll: 페이지 스크롤 (up/down)
@@ -164,10 +164,15 @@ tool_json:
           description: 전체 페이지 스크린샷 여부
         value:
           type: string
-          description: select 옵션 value
+          description: select 단일 옵션 value 또는 표시명 (Chrome은 value만)
+        values:
+          type: array
+          items:
+            type: string
+          description: select 단일 옵션 value 또는 표시명 (Chrome은 value만) 또는 표시명 목록 (빈 목록은 선택 해제, 다중 선택은 Playwright)
         label:
           type: string
-          description: select 옵션 label
+          description: select 표시명 정확 일치 (Playwright 전용)
         key:
           type: string
           description: 키 입력 (press_key, 예 Enter)

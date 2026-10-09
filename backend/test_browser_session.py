@@ -214,6 +214,131 @@ def test_idle_close_keeps_identity_for_waiting_operation(browser, monkeypatch):
     asyncio.run(run())
 
 
+
+
+
+
+def test_select_labels_values_and_async_options(browser, tmp_path):
+    handler, module = browser
+    async def run():
+        context = ToolContext(str(tmp_path), 'browser_op', task_id='select')
+        async def call(**params):
+            return json.loads(await handler.execute({'driver': 'playwright', **params}, context))
+        try:
+            assert (await call(op='navigate', url='about:blank', wait='load'))['success']
+            html = '<select id="city"><option value="">선택</option><option value="suwon">가상 수원체육센터</option></select><select id="multi" multiple><option value="a">서울</option><option value="b">부산</option></select>'
+            assert (await call(op='evaluate', expression=f'document.body.innerHTML={json.dumps(html)}'))['success']
+            for args in ({'value': 'suwon'}, {'value': '가상 수원체육센터'}, {'values': ['suwon']}, {'label': '가상 수원체육센터'}):
+                result = await call(op='select', selector='#city', **args)
+                assert result['success'] and result['selected'] == ['suwon'], result
+            result = await call(op='select', selector='#multi', values=['a', '부산'])
+            assert result['success'] and result['selected'] == ['a', 'b'], result
+            assert (await call(op='select', selector='#multi', values=[]))['selected'] == []
+            await call(op='evaluate', expression="setTimeout(() => document.querySelector('#city').add(new Option('늦은 옵션', 'later')), 100)")
+            assert (await call(op='select', selector='#city', label='늦은 옵션'))['selected'] == ['later']
+            for args in ({'value': 'suwon', 'label': '다름'}, {'values': 'suwon'}, {}):
+                assert not (await call(op='select', selector='#city', **args))['success']
+        finally:
+            await call(op='close')
+    asyncio.run(run())
+
+
+def test_chrome_select_never_silently_discards_selection(browser, monkeypatch):
+    handler, _ = browser
+    chrome = handler._load('browser_chrome')
+    calls = []
+    async def invoke(name, args):
+        calls.append((name, args))
+        return {}
+    monkeypatch.setattr(chrome, '_get_driver', lambda: SimpleNamespace(
+        _tab_id='tab', _to_chrome_ref=lambda ref: ref, call_tool=invoke))
+    async def run():
+        for args in ({'value': 'a'}, {'values': ['a']}):
+            assert (await chrome.browser_select_option({'ref': 'e1', **args}))['success']
+        for args in ({'label': '서울'}, {'values': ['a', 'b']}, {'values': []}):
+            assert (await chrome.browser_select_option({'ref': 'e1', **args}))['error_code'] == 'UNSUPPORTED_OPERATION'
+        assert len(calls) == 2 and all(args['value'] == 'a' for _, args in calls)
+    asyncio.run(run())
+
+
+def test_guide_select_and_screen_contracts_compile():
+    import re
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    registry = load_registry()
+    guide = (ROOT / 'data/guides/browser_action.md').read_text()
+    cases = re.findall(r'\[limbs:browser\]\{op: "select"[^\n]+?\}', guide)
+    assert cases
+    cases += ['[limbs:browser]{op:"select",ref:"e1",label:"표시명"}',
+              '[limbs:screen]{op:"wait",expect_app:"Calculator",timeout:200,idle_seconds:1}',
+              '[limbs:screen]{op:"key",key:"enter",expect_app:"Calculator"}']
+    for code in cases:
+        plan = compile_program(code, registry)
+        assert not plan.issues, (code, plan.report())
+
+
+@pytest.mark.system
+@pytest.mark.parametrize('repaired,flaky', [(False, False), (True, False), (True, True)])
+def test_complete_registration_program(browser, monkeypatch, tmp_path, repaired, flaky):
+    """45회차 원본/표시명 수리/일시 오류·마감: PDF·업로드·서버 접수까지 대조."""
+    import threading
+    from dataclasses import replace
+    from http.server import ThreadingHTTPServer
+    from ibl_v2_adapters import load_registry, Adapted, decode_envelope
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime, Budget
+    harness = ROOT / 'docs/experiments/long_sentence_imagination/round_45/harness'
+    def load(name):
+        spec = importlib.util.spec_from_file_location('registration_test_' + name, harness / (name + '.py'))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    prepare, portal, verify = load('prepare'), load('site_server'), load('verify')
+    prepare.OUT = tmp_path / 'fixture'
+    prepare.main()
+    site = prepare.OUT / '_site/trainer'
+    app = portal.App(site / 'data.json', site / 'state.json', flaky)
+    server = ThreadingHTTPServer(('127.0.0.1', 0), type('RegistrationPortal', (portal.Handler,), {'app': app}))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    inp, out = prepare.OUT / 'trainer/input', prepare.OUT / 'trainer/out'
+    (inp / 'account.json').write_text(json.dumps({**prepare.ACCOUNT, 'portal_url': f'http://127.0.0.1:{server.server_port}/'}))
+    code = (harness.parent / 'drafts' / ('main_repaired.ibl' if repaired else 'main_v3.ibl')).read_text()
+    if repaired:
+        # 값 목록도 전체 프로그램에서 연결; 표시명 label은 수리 프로그램 본문에 있다.
+        code = code.replace('value:$a.course', 'values:[$a.course]')
+    handler, _ = browser
+    registry = load_registry(str(tmp_path))
+    context = ToolContext(str(tmp_path), 'browser_op', task_id='registration')
+    loop = asyncio.new_event_loop()
+    def browser_call(runtime, args):
+        result = loop.run_until_complete(handler.execute({'driver': 'playwright', **args}, context))
+        value, evidence = decode_envelope(result, registry['limbs:browser'].contract['adapter'])
+        return Adapted(value, evidence)
+    registry['limbs:browser'] = replace(registry['limbs:browser'], run=browser_call)
+    registry['sense:host'] = replace(registry['sense:host'], run=lambda runtime, args: {'frontmost_app': 'Synthetic desktop'})
+    def no_desktop(*args):
+        pytest.fail('desk:false must never read or manipulate the user desktop')
+    registry['limbs:screen'] = replace(registry['limbs:screen'], run=no_desktop)
+    try:
+        values = {'src': str(inp), 'out': str(out), 'desk': False, 'only': None}
+        plan = compile_program(code, registry, values)
+        assert not plan.issues, plan.report()
+        result = Runtime(plan, values, budget=Budget(steps=1_000_000, rows=100_000)).run()
+        assert result['success'] and result['source_complete'], result
+        qa_path = tmp_path / 'qa.json'
+        monkeypatch.setattr('sys.argv', ['verify', str(out), str(site / 'state.json'), str(prepare.OUT / '_oracle'), str(qa_path)] + (['--flaky'] if flaky else []))
+        verify.main()
+        qa = json.loads(qa_path.read_text())
+        assert qa['passed'] == qa['total'], qa
+    finally:
+        loop.run_until_complete(handler.execute({'op': 'close', 'driver': 'playwright'}, context))
+        loop.close()
+        server.shutdown()
+        server.server_close()
+        thread.join(2)
+
+
 if __name__ == "__main__":
     import sys
     import pytest

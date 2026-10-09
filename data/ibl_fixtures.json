@@ -187,6 +187,7 @@
     "limbs:radio#status": "재생 기기 상태 — 상시 가용 아님",
     "limbs:screen#screenshot": "사용자 화면 캡처 — 무인 점검이 매일 화면을 찍을 이유 없음",
     "limbs:screen#snapshot": "사용자 화면 OCR 독해 — 무인 점검이 매일 화면을 읽을 이유 없음",
+    "limbs:screen#wait": "사용자 앱 포커스 대기 — 무인 실행하지 않음",
     "others:agents#info": "agent_id 필요(list 결과) — 고정 fixture 부적합",
     "others:agents#note": "agent_id 필요 — 고정 fixture 부적합",
     "others:agents#role": "agent_id 필요 — 고정 fixture 부적합",

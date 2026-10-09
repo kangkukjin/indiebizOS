@@ -7376,7 +7376,7 @@ nodes:
             press_key: 키보드 키 입력 (Enter/Tab/Escape 등)
             hover: 요소에 마우스 호버 (ref)
             drag: 드래그 앤 드롭 (source_ref→target_ref)
-            select: select 박스 옵션 선택 (ref, value/label)
+            select: 옵션 선택 (ref/selector; value·values·label 중 하나, label은 Playwright 표시명)
             check: 체크박스·라디오 토글 (ref)
             upload_file: 파일 input에 업로드 (ref, path)
             scroll: 페이지 스크롤 (up/down)
@@ -7440,6 +7440,9 @@ nodes:
         - Pages
       screen:
         params:
+          expect_app: string
+          timeout: number
+          idle_seconds: number
           amount: integer
           button: string
           clicks: integer
@@ -7460,7 +7463,7 @@ nodes:
         returns: effect
         runs_on: pc_only
         description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
-        target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: path(PNG 저장, 지정하면 images 없이 file_path·bytes 반환), x,y,width,height(옵션). path 생략 시 images(base64·media_type) 반환. 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
+        target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: path(PNG 저장, 지정하면 images 없이 file_path·bytes 반환), x,y,width,height(옵션). path 생략 시 images(base64·media_type) 반환. 좌표는 1280x800 가상 기준. expect_app은 입력 직전 앱 이름 또는 bundle ID 가드이며 불일치·조회 실패는 입력 거절. ref는 snapshot 세대·소유 PID가 일치할 때만 동작. wait는 expect_app 앱의 포커스를 timeout 밀리초 동안 대기하며 idle_seconds로 입력 유휴 조건을 추가한다. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
         group: desktop
         target_key: op
         router: handler
@@ -7468,11 +7471,13 @@ nodes:
         ops:
           side_effect:
             snapshot: false
+            wait: false
             screenshot: true
             cursor_position: false
             screen_info: false
           returns:
             snapshot: scalar
+            wait: scalar
             screenshot: scalar
             cursor_position: scalar
             screen_info: scalar
@@ -7480,9 +7485,11 @@ nodes:
             cursor_position: '[limbs:screen]{op: "cursor_position"}'
             screen_info: '[limbs:screen]{op: "screen_info"}'
           exempt:
+            wait: 사용자 앱 포커스 대기 — 무인 실행하지 않음
             snapshot: 사용자 화면 OCR 독해 — 무인 점검이 매일 화면을 읽을 이유 없음
             screenshot: 사용자 화면 캡처 — 무인 점검이 매일 화면을 찍을 이유 없음
           values:
+            wait: 앱 포커스 대기 (expect_app 필수, timeout 밀리초 기본 5000·최대 60000, idle_seconds 선택)
             snapshot: 화면 독해 — UI 요소(역할/이름)+글자(OCR)+클릭좌표. 클릭 전 화면 파악 (브라우저 snapshot의 데스크톱 판)
             screenshot: 화면 캡처 (path 지정 시 PNG 파일, 생략 시 images; x,y,width,height 옵션)
             click: 마우스 클릭 (x,y)

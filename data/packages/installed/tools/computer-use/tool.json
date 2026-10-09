@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "computer_op",
-      "description": "macOS 데스크톱 자동화 단일 디스패처. op 파라미터로 9개 동작 분기 (screenshot/click/type/key/mouse_move/drag/scroll/cursor_position/screen_info). 좌표는 1280x800 가상 해상도 기준.",
+      "description": "macOS 데스크톱 자동화 단일 디스패처. op 파라미터로 snapshot/wait/screenshot/click/type/key/mouse_move/drag/scroll/cursor_position/screen_info 분기. 좌표는 1280x800 가상 해상도 기준.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -15,6 +15,7 @@
             "type": "string",
             "description": "수행할 동작 (snapshot=화면 독해: AX 요소+OCR 글자+클릭좌표)",
             "enum": [
+              "wait",
               "snapshot",
               "screenshot",
               "click",
@@ -30,6 +31,18 @@
           "ref": {
             "type": "string",
             "description": "snapshot이 부여한 요소 ref(예 e3). click/type에서 좌표 없이 요소 직접 조작(AXPress/AXValue). 권장 1순위, OCR 글자는 ref 없어 x,y 사용."
+          },
+          "expect_app": {
+            "type": "string",
+            "description": "limbs:screen 파라미터"
+          },
+          "timeout": {
+            "type": "number",
+            "description": "limbs:screen 파라미터"
+          },
+          "idle_seconds": {
+            "type": "number",
+            "description": "limbs:screen 파라미터"
           },
           "amount": {
             "type": "integer",

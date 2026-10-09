@@ -20,6 +20,9 @@ import platform
 import subprocess
 import tempfile
 import os
+import math
+import uuid
+import threading
 
 # ── 상수 ──
 VIRTUAL_WIDTH = 1280
@@ -220,6 +223,7 @@ def _click_by_ref(ref, tool_input):
         ti = dict(tool_input)
         ti["x"], ti["y"] = info["center"]
         ti.pop("ref", None)
+        ti["_expect_pid"] = info["pid"]
         return _do_click(ti)
     return json.dumps({
         "success": False,
@@ -229,6 +233,7 @@ def _click_by_ref(ref, tool_input):
 
 def _do_click(tool_input):
     """computer_click: 요소 ref(좌표 0) 우선, 없으면 가상좌표(x,y)."""
+    _guard_input(tool_input)
     ref = (tool_input.get("ref") or "").strip()
     if ref:
         return _click_by_ref(ref, tool_input)
@@ -240,6 +245,7 @@ def _do_click(tool_input):
 
     _validate_coords(vx, vy)
     ax, ay = _virtual_to_actual(vx, vy)
+    _guard_input(tool_input)
     pag.click(ax, ay, clicks=clicks, button=button)
 
     action_desc = f"({vx},{vy}) {button}클릭" + (f" x{clicks}" if clicks > 1 else "")
@@ -258,6 +264,7 @@ def _do_click(tool_input):
 
 def _do_type(tool_input):
     """computer_type: 입력칸 ref면 AXValue 직접 설정(좌표 0), 아니면 현재 포커스에 키 입력."""
+    _guard_input(tool_input)
     ref = (tool_input.get("ref") or "").strip()
     if ref:
         info = _AX_SESSION.get(ref)
@@ -270,11 +277,14 @@ def _do_type(tool_input):
                                   ensure_ascii=False)
             # 폴백: 요소를 눌러 포커스 후 키 입력
             if info.get("center"):
-                _do_click({"x": info["center"][0], "y": info["center"][1], "screenshot_after": False})
+                _do_click({"x": info["center"][0], "y": info["center"][1], "screenshot_after": False,
+                           "expect_app": tool_input.get("expect_app"), "_expect_pid": info["pid"]})
+                _guard_input(tool_input)
             else:
                 return json.dumps({"success": False, "error": f"ref {ref} 입력 실패: 요소에 값을 쓰거나 포커스를 옮길 수 없습니다."}, ensure_ascii=False)
         tool_input = dict(tool_input)
         tool_input.pop("ref", None)
+        tool_input["_expect_pid"] = info["pid"]
     pag = _get_pyautogui()
     text = tool_input["text"]
     interval = tool_input.get("interval", 0.02)
@@ -283,8 +293,10 @@ def _do_type(tool_input):
     # macOS에서 한글/유니코드: pbcopy + Cmd+V
     if platform.system() == "Darwin" and any(ord(c) > 127 for c in text):
         subprocess.run(["pbcopy"], input=text.encode("utf-8"), check=True)
+        _guard_input(tool_input)
         pag.hotkey("command", "v")
     else:
+        _guard_input(tool_input)
         pag.write(text, interval=interval)
 
     result_text = f"'{text[:50]}{'...' if len(text) > 50 else ''}' 입력 완료 ({len(text)}자)"
@@ -303,6 +315,7 @@ def _do_type(tool_input):
 
 def _do_key(tool_input):
     """computer_key: 단축키/특수키"""
+    _guard_input(tool_input)
     pag = _get_pyautogui()
     key_combo = tool_input["key"]
     screenshot_after = tool_input.get("screenshot_after", False)
@@ -316,6 +329,7 @@ def _do_key(tool_input):
 
     parts = [key_map.get(k.strip().lower(), k.strip().lower()) for k in key_combo.split("+")]
 
+    _guard_input(tool_input)
     if len(parts) == 1:
         pag.press(parts[0])
     else:
@@ -337,12 +351,14 @@ def _do_key(tool_input):
 
 def _do_mouse_move(tool_input):
     """computer_mouse_move: 마우스 이동"""
+    _guard_input(tool_input)
     pag = _get_pyautogui()
     vx, vy = tool_input["x"], tool_input["y"]
     duration = tool_input.get("duration", 0.3)
 
     _validate_coords(vx, vy)
     ax, ay = _virtual_to_actual(vx, vy)
+    _guard_input(tool_input)
     pag.moveTo(ax, ay, duration=duration)
 
     return json.dumps({"success": True, "action": "move", "virtual": {"x": vx, "y": vy}}, ensure_ascii=False)
@@ -350,6 +366,7 @@ def _do_mouse_move(tool_input):
 
 def _do_drag(tool_input):
     """computer_drag: 마우스 드래그"""
+    _guard_input(tool_input)
     pag = _get_pyautogui()
     sx, sy = tool_input["start_x"], tool_input["start_y"]
     ex, ey = tool_input["end_x"], tool_input["end_y"]
@@ -363,7 +380,9 @@ def _do_drag(tool_input):
     asx, asy = _virtual_to_actual(sx, sy)
     aex, aey = _virtual_to_actual(ex, ey)
 
+    _guard_input(tool_input)
     pag.moveTo(asx, asy, duration=0.1)
+    _guard_input(tool_input)
     pag.drag(aex - asx, aey - asy, duration=duration, button=button)
 
     action_desc = f"({sx},{sy}) → ({ex},{ey}) 드래그"
@@ -382,6 +401,7 @@ def _do_drag(tool_input):
 
 def _do_scroll(tool_input):
     """computer_scroll: 스크롤"""
+    _guard_input(tool_input)
     pag = _get_pyautogui()
     direction = tool_input.get("direction", "down")
     amount = tool_input.get("amount", 3)
@@ -393,9 +413,11 @@ def _do_scroll(tool_input):
     if vx is not None and vy is not None:
         _validate_coords(vx, vy)
         ax, ay = _virtual_to_actual(vx, vy)
+        _guard_input(tool_input)
         pag.moveTo(ax, ay, duration=0.1)
 
     # 스크롤 실행
+    _guard_input(tool_input)
     if direction == "up":
         pag.scroll(amount)
     elif direction == "down":
@@ -477,6 +499,8 @@ _AX_ROLES = {
 # snapshot이 부여한 ref → AX 요소 핸들 (브라우저 세션과 동형, 호출 간 유지).
 # 좌표 없이 요소를 직접 누르기/입력하기 위한 저장소. snapshot마다 초기화.
 _AX_SESSION = {}
+_SCREEN_LOCK = threading.RLock()
+_AX_GENERATION = ""
 
 
 def _ax_press(el):
@@ -526,9 +550,76 @@ def _ax_refind(pid, role, title):
 
 
 def _frontmost_app():
-    from AppKit import NSWorkspace
-    a = NSWorkspace.sharedWorkspace().frontmostApplication()
-    return {"name": a.localizedName(), "pid": int(a.processIdentifier())}
+    """이벤트 루프가 없는 worker에서도 AX 서버의 현재 포커스를 매번 조회한다.
+
+    NSWorkspace.frontmostApplication은 daemon에서 활성 변경 알림이 처리되지
+    않으면 오래된 앱을 돌려준다. 캐시 대신 system-wide AXFocusedApplication 사용.
+    """
+    from ApplicationServices import (
+        AXUIElementCreateSystemWide, AXUIElementCopyAttributeValue, AXUIElementGetPid,
+    )
+    from AppKit import NSRunningApplication
+    err, focused = AXUIElementCopyAttributeValue(
+        AXUIElementCreateSystemWide(), "AXFocusedApplication", None)
+    if err or focused is None:
+        raise RuntimeError(f"현재 앱 조회 실패 (AX {err}). 손쉬운 사용 권한을 확인하세요.")
+    err, pid = AXUIElementGetPid(focused, None)
+    if err or not pid:
+        raise RuntimeError(f"현재 앱 PID 조회 실패 (AX {err})")
+    app = NSRunningApplication.runningApplicationWithProcessIdentifier_(pid)
+    if app is None:
+        raise RuntimeError("현재 앱이 종료되었습니다. snapshot으로 다시 확인하세요.")
+    return {"name": str(app.localizedName()), "pid": int(pid),
+            "bundle_id": str(app.bundleIdentifier() or "")}
+
+
+def _guard_input(tool_input):
+    """입력 직전 앱 이름/번들 ID와 ref 소유 PID 확인; 모르면 입력하지 않는다."""
+    expected = tool_input.get("expect_app")
+    ref = tool_input.get("ref")
+    expected_pid = tool_input.get("_expect_pid")
+    if expected is None and not ref and expected_pid is None:
+        return
+    if expected is not None and (not isinstance(expected, str) or not expected.strip()):
+        raise ValueError("expect_app은 비어 있지 않은 앱 이름 또는 bundle ID여야 합니다.")
+    current = _frontmost_app()
+    if expected is not None and expected not in (current["name"], current.get("bundle_id")):
+        raise ValueError(f"APP_MISMATCH: 기대 앱 {expected}, 현재 앱 {current['name']}. 입력을 보내지 않았습니다.")
+    if expected_pid is not None and expected_pid != current["pid"]:
+        raise ValueError("APP_MISMATCH: 입력 대상 PID가 바뀌었습니다.")
+    if ref:
+        info = _AX_SESSION.get(ref)
+        if not info or info.get("pid") != current["pid"]:
+            raise ValueError("STALE_REF: 현재 앱과 ref 소유 앱이 다르거나 만료된 ref입니다. snapshot으로 다시 읽으세요.")
+
+
+def _idle_seconds():
+    import Quartz
+    return Quartz.CGEventSourceSecondsSinceLastEventType(
+        Quartz.kCGEventSourceStateCombinedSessionState, Quartz.kCGAnyInputEventType)
+
+
+def _do_wait(tool_input):
+    """앱 포커스(선택: 입력 유휴 시간)를 기다린다. 앱 실행·활성화는 하지 않는다."""
+    expected = tool_input.get("expect_app")
+    if not isinstance(expected, str) or not expected.strip():
+        raise ValueError("wait는 expect_app이 필요합니다.")
+    timeout = tool_input.get("timeout", 5000)
+    idle = tool_input.get("idle_seconds", 0)
+    for name, value, maximum in (("timeout", timeout, 60000), ("idle_seconds", idle, 60)):
+        if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= maximum:
+            raise ValueError(f"{name}은 0~{maximum}의 유한한 숫자여야 합니다.")
+    start = time.monotonic()
+    while True:
+        app = _frontmost_app()
+        if expected in (app["name"], app.get("bundle_id")) and (not idle or _idle_seconds() >= idle):
+            return json.dumps({"success": True, "app": app["name"], "pid": app["pid"],
+                               "bundle_id": app.get("bundle_id"), "waited_ms": round((time.monotonic()-start)*1000)})
+        remaining = timeout / 1000 - (time.monotonic() - start)
+        if remaining <= 0:
+            return json.dumps({"success": False, "error_code": "WAIT_TIMEOUT",
+                               "error": f"앱 대기 시간 초과: {expected}", "app": app["name"]}, ensure_ascii=False)
+        time.sleep(min(0.1, remaining))
 
 
 def _ax_elements(pid, max_elems=80, max_depth=18):
@@ -576,7 +667,7 @@ def _ax_elements(pid, max_elems=80, max_depth=18):
             if pos and sz:
                 center = list(_actual_to_virtual(pos[0] + sz[0] / 2, pos[1] + sz[1] / 2))
             t = title if isinstance(title, str) else None
-            ref = f"e{len(_AX_SESSION)}"
+            ref = f"{_AX_GENERATION}:e{len(_AX_SESSION)}"
             _AX_SESSION[ref] = {"el": el, "pid": pid, "role": role, "title": t, "center": center}
             out.append({
                 "ref": ref,
@@ -631,7 +722,10 @@ def _capture_png():
 
 def _do_snapshot(tool_input):
     """computer_snapshot: 화면 독해 — AX 구조 + OCR 글자. 요소엔 ref(좌표 없이 누르기용)."""
+    global _AX_GENERATION
     _AX_SESSION.clear()  # 이전 snapshot의 ref 무효화
+    _AX_GENERATION = uuid.uuid4().hex[:12]
+    app = None
     result = {
         "app": None, "elements": [], "elements_note": None,
         "ocr_lines": [], "ocr_note": None,
@@ -641,7 +735,7 @@ def _do_snapshot(tool_input):
     }
     try:
         app = _frontmost_app()
-        result["app"] = app["name"]
+        result.update(app=app["name"], pid=app["pid"], bundle_id=app.get("bundle_id"))
         try:
             els = _ax_elements(app["pid"])
             result["elements"] = els
@@ -664,6 +758,16 @@ def _do_snapshot(tool_input):
                 os.unlink(png)
             except Exception:
                 pass
+    if app:
+        try:
+            current = _frontmost_app()
+            if current["pid"] != app["pid"]:
+                raise RuntimeError("화면을 읽는 동안 앱이 바뀌었습니다. snapshot으로 다시 읽으세요.")
+        except Exception as exc:
+            _AX_SESSION.clear()
+            result.update(success=False, error_code="FOCUS_CHANGED", error=str(exc), elements=[], ocr_lines=[])
+    else:
+        result.update(success=False, error=result["elements_note"])
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -671,6 +775,7 @@ def _do_snapshot(tool_input):
 
 _TOOLS = {
     "computer_snapshot": _do_snapshot,
+    "computer_wait": _do_wait,
     "computer_screenshot": _do_screenshot,
     "computer_click": _do_click,
     "computer_type": _do_type,
@@ -687,6 +792,7 @@ _TOOLS = {
 _OP_DISPATCHERS = {
     "computer_op": {
         "snapshot": "computer_snapshot",
+        "wait": "computer_wait",
         "screenshot": "computer_screenshot",
         "click": "computer_click",
         "type": "computer_type",
@@ -702,7 +808,7 @@ _OP_DISPATCHERS = {
 
 
 def _do_op(tool_input: dict):
-    """단일 액션 통합 디스패처. op 파라미터로 9개 함수에 위임."""
+    """단일 액션 통합 디스패처. op 파라미터로 화면 동작 함수에 위임."""
     op = (tool_input.get("op") or "").strip()
     mapping = _OP_DISPATCHERS["computer_op"]
     if not op:
@@ -742,7 +848,8 @@ def execute(tool_input: dict, context) -> str | dict:
             destination = context.resolve_output_path(str(Path(tool_input["path"]).with_suffix(".png")))
             if destination.get("error"):
                 return json.dumps({"success": False, "error": destination["error"]}, ensure_ascii=False)
-        result = handler(tool_input)
+        with _SCREEN_LOCK:
+            result = handler(tool_input)
         if destination and isinstance(result, dict) and result.get("images"):
             image = result["images"][0]
             data = base64.b64decode(image["base64"], validate=True)

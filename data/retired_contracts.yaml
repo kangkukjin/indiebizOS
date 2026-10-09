@@ -815,3 +815,10 @@ retired:
     phrases:
       - '텍스트 변환·len·인덱스·슬라이스·보간은 NFC 관점으로 동작한다.'
       - '문자열 변환·길이·슬라이싱은 NFC를 사용해'
+
+  - id: screen-workspace-frontmost-cache
+    retired: 2026-10-09
+    reason: L45-2 — 이벤트 루프 없는 worker의 NSWorkspace 캐시가 이전 앱을 현재 앱으로 보고했다.
+    instead: AXFocusedApplication을 매번 조회하고 snapshot 세대·PID 및 expect_app으로 입력 대상을 확인한다.
+    phrases:
+      - 'op 파라미터로 9개 동작 분기'

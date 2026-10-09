@@ -86,11 +86,18 @@
           },
           "value": {
             "type": "string",
-            "description": "select 옵션 value"
+            "description": "select 단일 옵션 value 또는 표시명 (Chrome은 value만)"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "select 단일 옵션 value 또는 표시명 (Chrome은 value만) 또는 표시명 목록 (빈 목록은 선택 해제, 다중 선택은 Playwright)"
           },
           "label": {
             "type": "string",
-            "description": "select 옵션 label"
+            "description": "select 표시명 정확 일치 (Playwright 전용)"
           },
           "key": {
             "type": "string",

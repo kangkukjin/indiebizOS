@@ -218,13 +218,11 @@ async def browser_select_option(params: dict) -> dict:
     if err:
         return err
 
-    values = params.get("values")
-    if values is None and params.get("value") is not None:  # 단수 value → 배열 래핑(자연어 호환)
-        values = params["value"]
-    if isinstance(values, str):
-        values = [values]
-    if not values:
-        return {"success": False, "error": "values(또는 value)가 필요합니다."}
+    from browser_session import select_request
+    try:
+        mode, values = select_request(params)
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
 
     session = BrowserSession.get_instance()
     page = session.page
@@ -234,11 +232,12 @@ async def browser_select_option(params: dict) -> dict:
         return loc_err
 
     try:
-        await locator.select_option(values)
+        selected = await locator.select_option(label=values) if mode == "label" else await locator.select_option(values)
 
         result = {
             "success": True,
-            "selected": values,
+            "selected": selected,
+            "requested": values,
             "element": f"{params.get('element', '')} ({params.get('ref', params.get('selector', ''))})"
         }
         _stale_warning(session, params.get("ref", ""), result)

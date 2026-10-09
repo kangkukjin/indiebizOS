@@ -2491,3 +2491,6 @@
 
 2026-10-09 긴문장44회차 수리: Playwright 확인창 조작별 승인/취소·미승인 오류, iframe name/0-기반 계약, 데스크톱 path PNG 원자 저장, 앱 대용량 recordings 원문 참조, navigate 대기 선택·기동 신고, 주체/작업별 세션·쿠키·탭/ref 격리 및 유휴 종료 경합 보존. 원래 전체 기본/오류와 새 역순/특수문자 변형 기존 검수 통과(실제 Chromium/합성 포털, 데스크톱 픽셀 대역). 관련55·backend 전수9691통과/12건너뜀. 새 모델 실행·전체토큰 개선 미측정. 상세=docs/experiments/long_sentence_imagination/round_44/report.md §7.
 활성 재기동 후 실제 IBL API 동시 실행 격리·같은 task_id 연속성·80,000자 영수증 참조/원문 복원 확인. 임시 빈 페이지 종료, 사용자 데스크톱 촬영·조작 없음.
+
+[2026-10-09] 긴문장 45회차 L45-1·L45-2 수리: browser select value/values/label 계약과 표시명 실행 일치, Chrome 단일 선택 밖 명시 거절. screen 현재 AX 포커스 조회·snapshot 세대/PID 참조·expect_app 입력 가드·유한 wait 추가. 가이드/수리 프로그램/원장 동기화.
+  검증: 전이 소비자 74/615 파일, 1419 passed·1 skipped; 관련 시스템 30 passed(44·45 전체 프로그램 포함); 최종 screen 계약 22 passed(중복). 어휘 --check·Android 번들 완료. 전수 backend·실제 계산기 루프·독립 AI 선택 개선은 미검증. 근거: docs/experiments/long_sentence_imagination/round_45/report.md §7.

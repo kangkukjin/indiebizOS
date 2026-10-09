@@ -20,6 +20,11 @@
 [limbs:screen]{op: "snapshot"}                      # 결과 재확인
 ```
 
+snapshot의 `app`·`pid`·`bundle_id`는 AX 서버에서 읽은 현재 포커스 앱이다. 읽는 도중 앱이 바뀌면 실패하고 요소를 버린다.
+ref는 해당 snapshot 세대와 앱 PID에 묶인다. 새 snapshot을 읽었거나 다른 앱으로 전환했으면 이전 ref를 쓰지 않는다.
+입력 op(click/type/key/mouse_move/drag/scroll)에 `expect_app`을 지정하면 동작 직전 앱 이름 또는 bundle ID를 대조한다. 불일치·조회 실패면 입력을 보내지 않는다. 생략한 좌표·키 입력은 기존처럼 현재 포커스로 간다.
+`wait`는 앱을 실행하거나 앞으로 가져오지 않는다. 사용자가 앱을 열고 앞에 둔 뒤 `wait` → `snapshot` → 보호된 입력으로 이어간다. 유휴 시간은 자리 비움의 증명이 아니며, 호출 사이·입력 도중 OS 포커스를 잠그는 기능도 아니다.
+
 원칙: **불확실하면 snapshot.** 매 동작 후 결과 검증도 snapshot이 기본이다.
 AX가 0개면(권한 미부여/앱 a11y 미노출) `ocr_lines`로 폴백한다 — 손쉬운 사용 권한을 켜면 AX 구조독해가 살아난다(클릭과 같은 권한).
 
@@ -41,10 +46,12 @@ AX가 0개면(권한 미부여/앱 a11y 미노출) `ocr_lines`로 폴백한다 �
 
 ---
 
-## 9개 op 사양
+## op 사양
 
 | op | 필수 파라미터 | 선택 파라미터 | 용도 |
 |---|---|---|---|
+| `snapshot` | (없음) | — | 현재 포커스 앱의 AX 요소·ref와 화면 OCR |
+| `wait` | `expect_app` | `timeout` (밀리초, 기본 5000·최대 60000), `idle_seconds` (입력 유휴 초) | 해당 앱이 앞에 올 때까지 대기 |
 | `screenshot` | (없음) | `x, y, width, height` | 전체 또는 영역 캡처 |
 | `click` | `x, y` | `button` (left/right/middle), `clicks` (1/2), `screenshot_after` | 좌표 클릭 |
 | `type` | `text` | `interval` (키 간격, 초), `screenshot_after` | 텍스트 입력 (한글 OK) |
@@ -146,12 +153,14 @@ AX가 0개면(권한 미부여/앱 a11y 미노출) `ocr_lines`로 폴백한다 �
 
 ## 조합 예시
 
-### Spotlight로 앱 실행
+### 사용자가 열어 둔 계산기에서 입력
 ```
-[limbs:screen]{op: "key", key: "cmd+space"}
-[limbs:screen]{op: "type", text: "Calculator"}
-[limbs:screen]{op: "key", key: "enter"}
+[limbs:screen]{op: "wait", expect_app: "com.apple.calculator", timeout: 5000}
+[limbs:screen]{op: "snapshot"}
+[limbs:screen]{op: "type", text: "45000+72000=", expect_app: "com.apple.calculator"}
+[limbs:screen]{op: "snapshot"}
 ```
+앱이 다르면 자동 활성화하거나 입력을 반복하지 말고 보류한다.
 
 ### Finder에서 파일 복사 → 다른 폴더에 붙여넣기
 ```

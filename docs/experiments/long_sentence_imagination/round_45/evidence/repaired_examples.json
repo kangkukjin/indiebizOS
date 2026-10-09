@@ -1,0 +1,50 @@
+{
+  "retired": [
+    {
+      "id": 2384,
+      "intent": "화면 읽고 로그인 버튼 눌러",
+      "ibl_code": "[limbs:screen]{op: \"snapshot\"} >> [limbs:screen]{op: \"click\", x: 640, y: 400}",
+      "success_count": 0,
+      "fail_count": 0
+    },
+    {
+      "id": 2386,
+      "intent": "화면 읽고 로그인 버튼 눌러",
+      "ibl_code": "[limbs:screen]{op: \"snapshot\"} >> [limbs:screen]{op: \"click\", ref: \"e3\"}",
+      "success_count": 0,
+      "fail_count": 0
+    },
+    {
+      "id": 2387,
+      "intent": "저장 버튼 클릭해",
+      "ibl_code": "[limbs:screen]{op: \"snapshot\"} >> [limbs:screen]{op: \"click\", ref: \"e5\"}",
+      "success_count": 0,
+      "fail_count": 0
+    },
+    {
+      "id": 2388,
+      "intent": "검색창에 텍스트 입력해",
+      "ibl_code": "[limbs:screen]{op: \"snapshot\"} >> [limbs:screen]{op: \"type\", ref: \"e2\", text: \"검색어\"}",
+      "success_count": 0,
+      "fail_count": 0
+    }
+  ],
+  "replacement": [
+    {
+      "id": 5003,
+      "intent": "화면 읽고 로그인 버튼 눌러",
+      "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\n$targets = filter($s.elements, ($e)=>$e.title == \"로그인\" and $e.role == \"AXButton\")\nassert len($targets) == 1, \"대상을 유일하게 찾지 못했습니다. 화면을 다시 확인하세요.\"\nreturn [limbs:screen]{op:\"click\",ref:$targets[0].ref,expect_app:$s.app}"
+    },
+    {
+      "id": 5004,
+      "intent": "저장 버튼 클릭해",
+      "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\n$targets = filter($s.elements, ($e)=>$e.title == \"저장\" and $e.role == \"AXButton\")\nassert len($targets) == 1, \"대상을 유일하게 찾지 못했습니다. 화면을 다시 확인하세요.\"\nreturn [limbs:screen]{op:\"click\",ref:$targets[0].ref,expect_app:$s.app}"
+    },
+    {
+      "id": 5005,
+      "intent": "검색창에 텍스트 입력해",
+      "ibl_code": "#!ibl edition=2\n$s = [limbs:screen]{op:\"snapshot\"}\n$targets = filter($s.elements, ($e)=>$e.title == \"검색\" and $e.role == \"AXTextField\")\nassert len($targets) == 1, \"대상을 유일하게 찾지 못했습니다. 화면을 다시 확인하세요.\"\nreturn [limbs:screen]{op:\"type\",ref:$targets[0].ref,expect_app:$s.app,text:\"검색어\"}"
+    }
+  ],
+  "validation": "All replacements compiled and ran against synthetic snapshot/ref targets; embeddings indexed before old rows retired."
+}

@@ -86,3 +86,18 @@
 종료 이유: 기본·변형 A·변형 B·독립 AI 2실행이 브라우저 완료 조건을 채웠고, 데스크톱 다리는 L45-2 로 성공 증거를 남길 수 없어 미달로 닫았다(사용자가 자리에서 앱을 오가는 중이라 재시도도 방해가 된다). 15:15:56 시작 → 15:38:56 서버 7개 종료(약 23분/상한 60분, AI 대기 포함). 서버 최종 상태는 [evidence/server_state](evidence/server_state/).
 재현: `harness/prepare.py` → `site_server.py --port 8941 --data _site/trainer/data.json --state …`(변형 `--flaky`) → `run.py base|flaky --draft main_v3.ibl [--desk] [--only 이름 --port-override 8945]` → `verify.py`. 독립 AI 는 `ai_chain.py base runs/ai_request_base.txt`. 계정·코드는 합성 값.
 다음 회차 후보: L45-2 수리 뒤 데스크톱 루프 재시험(사용자 입회·`expect_app` 가드); 독립 AI 가 수리된 IBL 어휘를 **고르게** 하는 경로(회상에 browser 용례·가이드 노출) 실험; `driver:"chrome"`; 두 신청자를 `task_id` 묶음으로 같은 세션에서 처리하는 시험.
+
+
+## 7. 후속 수리 (2026-10-09)
+
+정본 main에서 L45-1·L45-2의 구현·계약·교재를 수리했다. 최초 훈련의 관측·실패 기록은 위에 보존한다.
+
+- **L45-1**: `values` 목록을 닫힌 계약에 추가하고 `label`을 Playwright 표시명 선택에 연결했다. `value`·`values`의 기존 값/표시명 매칭은 유지한다. 셋을 섞으면 실행 전에 거절하며, 빈 목록은 선택 해제다. `selected`는 실제 선택된 value 목록이다. Chrome은 단일 value를 정상 전달하고, 표시명·다중 선택·선택 해제를 첫 값으로 잘라 처리하지 않고 지원 범위 오류로 돌려준다.
+- **L45-2**: 이벤트 루프 알림에 의존하는 `NSWorkspace.frontmostApplication` 대신 system-wide `AXFocusedApplication`의 PID로 트리를 읽고 앱 이름·PID·bundle ID를 반환한다. snapshot 도중 앱 전환은 실패하며 결과 요소를 폐기한다. ref는 snapshot 세대·PID에 묶고, 같은 프로세스의 화면 호출은 잠금으로 직렬화한다. 입력 `expect_app`은 앱 이름 또는 bundle ID를 동작 직전에 확인한다. AX 입력 실패 후 좌표/키보드 폴백에도 PID 검사를 유지한다. `wait`는 앱 포커스와 선택적 입력 유휴 조건을 유한 시간 대기한다.
+- **교재·재생본**: 브라우저·데스크톱 가이드와 어휘 원본/파생물을 동기화했다. [수리 프로그램](drafts/main_repaired.ibl)은 센터 표시명 `label`을 사용하고, 데스크톱을 켜도 사용자가 연 계산기를 기다린 후 보호된 입력만 보낸다. Spotlight 입력과 자동 종료는 제거했다. 가이드의 select 예제를 실제 컴파일하는 회귀를 추가했다. 기존 browser 254건·screen 54건의 용례를 검토했고, 한 번도 실행되지 않은 고정 좌표/ref 예제 4건을 백업한 뒤 현재 snapshot에서 유일한 역할·이름을 찾아 보호된 입력을 하는 판본 2 예제 3건으로 교체했다. 시딩은 add_examples_batch로 수행하고 임베딩 등록을 확인한 뒤 옛 행을 회수했다. [용례 전후 증거](evidence/repaired_examples.json).
+
+검증: [기계 요약](evidence/repair_verification.json). 선택기 74/615 파일(12%)의 비시스템 검사 **1,419 통과·1 건너뜀**, 어휘 설치/배포와 44·45회차 전체 재생 시스템 검사 **30 통과**. 마지막 데스크톱 계약 검사 **22 통과**(앞 검사와 중복 포함). 어휘 `--check` 통과, Android 몸 번들 재생성. 전체 backend 전수는 실행하지 않았다.
+
+45회차 원본 `main_v3`(desk:false), 수리본(센터 label·강좌 values), 일시 오류/정원 마감 변형을 실제 로컬 포털·Chromium에서 재생하여 서버 접수·업로드 SHA·코드·PDF·수강료·보고서·재시도 사유를 전건 대조했다. 기존 44회차 재생 4가지도 통과했다. 데스크톱은 합성 AX/입력 장치로 앱 전환, 조회 실패, snapshot 세대 만료, 폴백 직전 포커스 변경, 대기 성공/시간 초과를 검증했다. 사용자 화면으로 키·클릭을 보내지 않았다.
+
+**잔여·한계**: 실제 읽기 전용 탐침은 AX -25204, System Events는 loginwindow 관측과 frontmost 조회 실패를 반환했다. 따라서 실제 계산기 입력→화면값 대조는 아직 미검증이다. `expect_app`은 호출 시점 검사이며 OS 포커스를 입력 도중 잠그지는 않는다. 기존 expect_app 없는 좌표/키 입력은 기존 동작을 유지한다. Chrome MCP 실실행, 독립 AI의 수리 어휘 선택(R5), 셸 관문 관측과 거절 코드 부분 수정 경로는 이번 두 결함 수리의 검증 범위에 포함하지 않았다. 시간·토큰 절감도 주장하지 않는다.

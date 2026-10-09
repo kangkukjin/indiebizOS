@@ -71,74 +71,11 @@ STEALTH_UA = (
     "Chrome/131.0.0.0 Safari/537.36"
 )
 
-# Stealth + 쿠키 동의 팝업 자동 처리 init script
+# 초기화는 환경 호환성만 담당한다. 동의·약관 버튼은 명시적 조작으로만 누른다.
 STEALTH_INIT_SCRIPT = """
-    // --- Stealth ---
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
     Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
     window.chrome = { runtime: {} };
-
-    // --- 쿠키 동의 팝업 자동 닫기 ---
-    // 페이지 로드 후 주요 쿠키 동의 버튼들을 자동 클릭
-    const _autoDismissCookieConsent = () => {
-        const selectors = [
-            // YouTube / Google
-            'button[aria-label*="Accept"]',
-            'button[aria-label*="동의"]',
-            'button[aria-label*="모두 수락"]',
-            'tp-yt-paper-button#button[aria-label*="Accept"]',
-            'form[action*="consent"] button[type="submit"]',
-            '[data-consent-accept]',
-            // 일반적인 쿠키 배너
-            'button[id*="accept"]',
-            'button[class*="accept"]',
-            'button[class*="consent"]',
-            'button[class*="agree"]',
-            'a[id*="accept"]',
-            '[class*="cookie"] button:first-child',
-            '[class*="consent"] button:first-child',
-            '[id*="cookie-banner"] button',
-            '[id*="consent-banner"] button',
-            // GDPR 스타일
-            '.fc-cta-consent',
-            '#onetrust-accept-btn-handler',
-            '.cc-btn.cc-dismiss',
-        ];
-        for (const sel of selectors) {
-            try {
-                const btn = document.querySelector(sel);
-                if (btn && btn.offsetParent !== null) {
-                    btn.click();
-                    return true;
-                }
-            } catch(e) {}
-        }
-        return false;
-    };
-    // 로드 후 시도 (여러 타이밍)
-    if (document.readyState === 'complete') {
-        setTimeout(_autoDismissCookieConsent, 500);
-        setTimeout(_autoDismissCookieConsent, 2000);
-    } else {
-        window.addEventListener('load', () => {
-            setTimeout(_autoDismissCookieConsent, 500);
-            setTimeout(_autoDismissCookieConsent, 2000);
-        });
-    }
-    // DOM 변경 감지로 늦게 나타나는 팝업도 처리
-    const _cookieObserver = new MutationObserver(() => {
-        _autoDismissCookieConsent();
-    });
-    if (document.body) {
-        _cookieObserver.observe(document.body, { childList: true, subtree: true });
-        // 10초 후 옵저버 정리
-        setTimeout(() => _cookieObserver.disconnect(), 10000);
-    } else {
-        document.addEventListener('DOMContentLoaded', () => {
-            _cookieObserver.observe(document.body, { childList: true, subtree: true });
-            setTimeout(() => _cookieObserver.disconnect(), 10000);
-        });
-    }
 """
 
 # Playwright lazy import
@@ -322,7 +259,7 @@ class BrowserSession:
             self._on_new_page(page)
         self._active_frame = None
 
-        # Stealth + 쿠키 동의 팝업 자동 처리
+        # 환경 호환성 초기화(자동 클릭 없음)
         await page.add_init_script(STEALTH_INIT_SCRIPT)
 
         # 콘솔/네트워크/Dialog 훅은 페이지 등록 시 한 번만 설치한다.

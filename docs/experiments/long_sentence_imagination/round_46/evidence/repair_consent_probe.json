@@ -1,0 +1,10 @@
+{
+  "before": {
+    "automatic_clicks": 1,
+    "buttons_remaining": 0
+  },
+  "after": {
+    "automatic_clicks": 0,
+    "buttons_remaining": 1
+  }
+}

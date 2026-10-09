@@ -81,7 +81,8 @@ def test_real_snapshot_disclosure_click_and_identity_guards(monkeypatch):
                 row = await capture('<details><summary>더 보기</summary>A</details>'
                                     '<details><summary>더 보기</summary>B</details>', '더 보기')
                 result = await interact.browser_click({'ref': row['ref']})
-                assert result['error_code'] == 'REF_NOT_RESOLVED'
+                assert result['error_code'] == 'REF_AMBIGUOUS'
+                assert result['candidate_count'] == 2
                 assert await page.locator('details[open]').count() == 0
                 row = await capture('<details><summary id="first">더 보기</summary>A</details>'
                                     '<details><summary id="second">더 보기</summary>B</details>', '더 보기')

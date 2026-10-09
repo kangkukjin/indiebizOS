@@ -83,11 +83,14 @@ async def browser_tab_switch(params: dict) -> dict:
     if err:
         return err
 
+    session = BrowserSession.get_instance()
     tab_id = params.get("tab_id", "")
     if not tab_id:
-        return {"success": False, "error": "tab_id가 필요합니다. browser_tab_list로 탭 목록을 확인하세요."}
-
-    session = BrowserSession.get_instance()
+        index = params.get("index")
+        if type(index) is not int or not 0 <= index < len(session.tab_ids):
+            return {"success": False, "error": "tab list의 tab_id 또는 유효한 index(0부터)가 필요합니다.",
+                    "available_tabs": session.tab_ids}
+        tab_id = session.tab_ids[index]
 
     if session.switch_tab(tab_id):
         page = session.page

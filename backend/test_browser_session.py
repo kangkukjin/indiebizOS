@@ -86,7 +86,7 @@ def test_load_wait_skips_dynamic_polling_and_invalid_wait_fails(browser, monkeyp
     page = Page()
     async def ensure(**kwargs): return page
     fake = SimpleNamespace(is_active=True, _headless=True, ensure_browser=ensure,
-                           clear_refs=lambda: None, raw_page=page, active_tab_id='t1')
+                           reset_frame=lambda: None, raw_page=page, active_tab_id='t1')
     monkeypatch.setattr(module.BrowserSession, 'get_instance', lambda: fake)
     async def stable(*args): events.append('stable')
     monkeypatch.setattr(nav, '_wait_for_dynamic_content', stable)

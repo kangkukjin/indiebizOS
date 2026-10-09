@@ -1,0 +1,115 @@
+{
+  "before_revision": "5c6c9c4ac2dd8efcae61a7ea7359aafae6735912",
+  "apply_started": "2026-10-09T18:27:56.784128+09:00",
+  "trainer": [
+    {
+      "evidence": "trainer_b_call1_compare_v2_reuse.json",
+      "task_id": "lsi46_trainer_b",
+      "run_id": "b5cb0c88dce447569bcfe6fe9961d996",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evidence": "trainer_b_call2_hold_v3.json",
+      "task_id": "lsi46_trainer_b",
+      "run_id": "bb787d4a17ad49389bcee1b1351a0904",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evidence": "trainer_base_call1_compare_v2.json",
+      "task_id": "lsi46_trainer_base",
+      "run_id": "79630c42f9364c4896e38f809d0c74cb",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evidence": "trainer_base_call2_hold_v3.json",
+      "task_id": "lsi46_trainer_base",
+      "run_id": "0012cc4342d947e9a809602e5a80fa90",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evidence": "trainer_exp_call1_compare_v2.json",
+      "task_id": "lsi46_trainer_exp",
+      "run_id": "2ee641eb347f4d70a472846f45787a94",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evidence": "trainer_exp_call1_compare_v2_2.json",
+      "task_id": "lsi46_trainer_exp2",
+      "run_id": "732f13d2d2d84cc2867ce3ccef4e0d59",
+      "status": "interrupted",
+      "error": "TOOL"
+    },
+    {
+      "evidence": "trainer_exp_call1_compare_v2_3.json",
+      "task_id": "lsi46_trainer_exp3",
+      "run_id": "dcb34b29b444449a871be0aec881dda5",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evidence": "trainer_exp_call1_compare_v2_4.json",
+      "task_id": "lsi46_trainer_exp4",
+      "run_id": "8b0a2df3eabf4406ae0ae96c4b760d17",
+      "status": "interrupted",
+      "error": "TOOL"
+    },
+    {
+      "evidence": "trainer_exp_call2_hold_v3.json",
+      "task_id": "lsi46_trainer_exp",
+      "run_id": "b8cde8c08951481badee9bf7d198ce29",
+      "status": "interrupted",
+      "error": "TOOL"
+    },
+    {
+      "evidence": "trainer_exp_call2_hold_v4.json",
+      "task_id": "lsi46_trainer_exp2",
+      "run_id": "658837ed49024c93b9b072ea53a624e5",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evidence": "trainer_exp_call2_hold_v4_3.json",
+      "task_id": "lsi46_trainer_exp3",
+      "run_id": "2efdd8caa7d647f6be918777a94b23db",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evidence": "trainer_flaky_call1_compare_v2.json",
+      "task_id": "lsi46_trainer_flaky",
+      "run_id": "4a0807254af64bb0a2b0c5feb4397b95",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evidence": "trainer_flaky_call2_hold_v3.json",
+      "task_id": "lsi46_trainer_flaky",
+      "run_id": "9e6eae0214a14b35ab5af8016c1b9ec3",
+      "status": "completed",
+      "error": null
+    }
+  ],
+  "independent_ai": [
+    {
+      "label": "condA",
+      "state": "succeeded",
+      "receipt": {
+        "task_id": "task_sysai_eefa713e",
+        "status_url": "/system-ai/tasks/task_sysai_eefa713e"
+      }
+    },
+    {
+      "label": "condB",
+      "state": "succeeded",
+      "receipt": {
+        "task_id": "task_sysai_db772d89",
+        "status_url": "/system-ai/tasks/task_sysai_db772d89"
+      }
+    }
+  ]
+}

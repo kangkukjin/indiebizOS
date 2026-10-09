@@ -890,13 +890,16 @@ async def browser_tab_switch(params: dict) -> dict:
         result = await d.call_tool("tabs_context_mcp", {})
         tabs = result.get("tabs", []) if isinstance(result, dict) else []
 
-        # tN 인덱스에서 N 추출
-        idx = 0
-        if tab_id.startswith("t"):
-            try:
-                idx = int(tab_id[1:]) - 1
-            except ValueError:
-                idx = 0
+        # 명시 tab_id(tN) 또는 list 순서의 0-based index. 잘못된 ID를 첫 탭으로 바꾸지 않는다.
+        if tab_id:
+            if not isinstance(tab_id, str) or not re.fullmatch(r"t[1-9][0-9]*", tab_id):
+                return {"success": False, "error": "tab list의 tab_id(tN)가 필요합니다."}
+            idx = int(tab_id[1:]) - 1
+        else:
+            idx = params.get("index")
+            if type(idx) is not int:
+                return {"success": False, "error": "tab_id 또는 index(0부터)가 필요합니다."}
+            tab_id = f"t{idx + 1}"
 
         if 0 <= idx < len(tabs):
             chrome_id = tabs[idx].get("id") or tabs[idx]

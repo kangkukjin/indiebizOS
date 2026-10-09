@@ -1,0 +1,28 @@
+{
+  "observed_at": 1791538919.724092,
+  "task_id": "codex-l46-smoke-5245e44d141a429a90e3347a4d576156",
+  "success": true,
+  "run_status": "completed",
+  "task_ref": {
+    "kind": "ibl_run",
+    "task_id": "36b3b00aa84b4f49b75c1bcf5c7dc1ab",
+    "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  },
+  "value": {
+    "frame": {
+      "kind": "iframe",
+      "name": "terms",
+      "url": "about:srcdoc"
+    },
+    "element": {
+      "ref": "e1",
+      "role": "checkbox",
+      "name": "Terms",
+      "checked": "false"
+    },
+    "main": "main",
+    "tab_switched": true
+  },
+  "result": null,
+  "diagnostic": null
+}

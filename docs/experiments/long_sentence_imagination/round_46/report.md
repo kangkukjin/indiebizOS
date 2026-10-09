@@ -96,3 +96,35 @@
 종료 이유: 기본·변형 A·B 와 독립 AI 두 조건이 브라우저 완료 조건을 채웠고 발견 5건의 최소 재현을 확보했다. 세션 만료 변형은 같은 원인(L46-4) 두 주기 무진전으로 중단(미달). 데스크톱 다리는 권한·기본 앱 때문에 미실행 — **사용자 조치 필요**: 백엔드 Python(`/opt/homebrew/…/python@3.13`)에 '손쉬운 사용' 권한, 미리보기(또는 PDFgear) 창 닫기. 서버 16개 종료, 상태 사본 [evidence/server_state](evidence/server_state/).
 재현: `prepare.py` → `site_server.py --site A|B --port … --state … --account …`(변형 `--flaky`, `--expire N`) → `run.py base 1 --draft compare_v2.ibl --task-id T` → `run.py base 2 --draft hold_v3.ibl --task-id T [--desk]` → `verify.py`. 독립 AI 는 `ai_chain.py condA|condB runs/ai_request_A|B.txt`. 계정·코드 합성, 증거의 비밀번호는 `<password>` 로 치환.
 다음 회차 후보: 권한 부여 뒤 데스크톱 루프 재시험(expect_app·wait·snapshot 프레임 복귀 포함); L46-1~5 수리 뒤 같은 프로그램 재생(원래 전체 흐름·exp 변형 포함); 독립 AI 가 제약 없이도 IBL 을 고르게 하는 경로(회상에 조건 B 의 성공 경로 노출) 실험.
+
+## 7. 후속 수리 (2026-10-09)
+
+이 절은 최초 훈련 관측과 분리한 수리 기록이다. 적용 전 정본 main은 `5c6c9c4a`.
+훈련자 기본·변형의 응답과 실패 진단, 독립 AI 두 작업의 `succeeded` 영수증을
+확인한 뒤 적용했다. 작업 ID·실행 ID·적용 시작 시각은
+[evidence/repair_terminal_audit.json](evidence/repair_terminal_audit.json)에 보존했다.
+
+| 갭 | 수리와 확인 |
+|---|---|
+| L46-1 | 닫힌 계약에 `tab_id` 추가. Playwright/Chrome의 switch는 기존 계약·회상 용례에 있던 `index`도 0부터 해소한다. 잘못된 Chrome ID를 첫 탭으로 보내던 폴백은 거절한다. 판본 2 검사와 실제 탭 왕복, 잘못된 인덱스/ID 거절 확인. |
+| L46-2 | snapshot이 선택한 프레임의 CDP 접근성 트리를 읽고 `frame:{kind,name,url}`을 반환한다. 이름·URL이 같은 두 프레임도 실행 문맥으로 식별한다. 다른 사이트의 분리 프레임은 해당 target에서 AX·selector를 조회한다. 실제 Chromium에서 프레임별 체크박스를 ref로 선택하고 부모 요소가 섞이지 않음을 확인했다. selector 추출 시간 초과가 이미 얻은 AX 이름·역할을 버리지 않도록 했다. |
+| L46-3 | 동명 요소를 임의로 선택하지 않는 기존 신원 보호를 유지하고, `REF_AMBIGUOUS`·`candidate_count`와 행/링크 주소를 확인한 고유 selector 안내를 반환한다. 중복에 새 snapshot만 반복하라는 안내를 수정했다. **동명 ref의 자동 구분 구현은 아니다.** |
+| L46-4 | **원인 정정:** click 구현에는 성공 뒤 요소를 다시 해소하는 코드가 없었다. `STEALTH_INIT_SCRIPT`의 DOM observer·타이머가 동의 버튼을 먼저 자동 클릭했다. 이를 제거해 명시 click과의 경쟁을 없앴다. 이전 초기화 코드/수리 코드 격리 재현에서 자동 클릭은 **1→0**, 버튼 잔존은 **0→1**이었다([증거](evidence/repair_consent_probe.json)). 페이지 이동만 보고 성공을 추정하거나 효과를 재시도하지 않는다. |
+| L46-5 | navigate(goto/back/forward)가 메인 프레임으로 복귀하고 ref를 비운다. 실제 이동 시도가 실패해도 복귀 상태를 유지한다. 호출마다 reset하지 않으므로 같은 작업의 여러 호출로 iframe switch→snapshot→check를 이어갈 수 있다. |
+
+검증 코드는 `backend/test_browser_navigation.py`·`test_browser_session.py`와 기존
+ref 신원·snapshot 경계 검사에 있다. 첫 실행은 시험자료의 문자 인코딩/iframe 로딩 순서
+오류를 발견해 보정했다. 최신 검증은 별도 임시 서버·Chromium에서 실행하며 사용자의
+데스크톱에 키 입력·창 열기·실제 예약을 보내지 않았다.
+
+- 원래 `compare_v2.ibl` + `hold_v3.ibl`의 기본·요금 인상·조식 변형을 PDF 재독과 기존 oracle까지 재생: 각각 **17/17·18/18·17/17**.
+- `hold_v4.ibl` 세션 만료 복구: 비교 후 세션을 만료 직전으로 만들어 신청 단계 만료→재로그인→보류 1건·PDF 대조 **17/17**. 새 로그인은 8요청 동안 유효하다.
+- 새 변형: 비교 뒤 다른 탭을 활성화하고 닫기 우회를 `tab_id` 전환으로 교체. **17/17**, 두 탭 모두 유지.
+- 원래 5요청 만료 조건도 재생: **보류 실패·서버 보류 0건을 정확히 보고**. favicon 제외만으로 해결되지 않는다. 새 로그인 이후 검색(1)→동의 POST(2)→검색(3)→보류(4)→약관(5)→신청 POST(6)→완료(7)여서 5요청으로는 완료 자체가 불가능하다. 이를 성공 변형으로 세지 않는다.
+- 기존 44회차 전체 프로그램 4조건과 45회차 3조건도 통과. 선택기가 고른 전이 소비자와 어휘 배포 검사를 포함한 종합 **396 passed**, 마지막 snapshot 예외 경계 보강 후 관련 검사 **65 passed**(범위 중복). backend 전수는 이번 변경에서 실행하지 않았다.
+
+라이브 허브도 수정 소스와 같은 digest로 ACTIVE·ready임을 확인했다. HTTP IBL 한 프로그램으로 탭 전환→iframe snapshot→ref 체크→navigate 메인 복귀→세션 닫기를 실행해 completed를 회수했다([증거](evidence/repair_live_smoke.json)).
+
+잔여: 실제 데스크톱의 손쉬운 사용 권한·기본 PDF 앱은 이 수리로 바뀌지 않았다.
+미리보기 다리와 독립 AI의 자발적 IBL 선택은 재검증하지 않았고, 전체 시간·토큰 절감도
+측정하지 않았다. 가이드·용례 계약 검토·파생 어휘 및 은퇴 계약 관문은 함께 갱신했다.

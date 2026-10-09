@@ -10,7 +10,7 @@ Version: 4.0.0
 import asyncio
 from browser_session import (
     BrowserSession, ensure_active, check_stale_ref, find_locator, find_by_selector,
-    ACTION_TIMEOUT, LOCATOR_TIMEOUT,
+    ACTION_TIMEOUT, LOCATOR_TIMEOUT, _identity_locator,
 )
 
 
@@ -41,6 +41,22 @@ async def _resolve_locator(session, page, params: dict, input_mode: bool = False
     element_info = session.get_ref(ref)
     locator = await find_locator(page, element_info, input_mode=input_mode)
     if locator is None:
+        # 반복 행의 동일 이름은 새 snapshot으로도 구분되지 않는다. 임의 nth 선택 금지.
+        role, name = element_info.get("role", ""), element_info.get("name", "")
+        count = 0
+        if role and name:
+            try:
+                count = await _identity_locator(page, role, name).count()
+            except Exception:
+                pass
+        if count > 1:
+            return None, {
+                "success": False, "error_code": "REF_AMBIGUOUS",
+                "error": f"같은 이름·역할의 요소가 {count}개입니다 (ref={ref}). "
+                         "content/evaluate로 행·링크 주소를 확인하고 고유한 selector로 지정하세요.",
+                "candidate_count": count,
+                "recovery": {"reason": "동명 요소 중복", "use": "selector", "candidate_count": count},
+            }
         desc = params.get("element", "")
         return None, {
             "success": False,

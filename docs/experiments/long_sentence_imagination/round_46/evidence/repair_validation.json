@@ -1,0 +1,19 @@
+{
+  "selection": {
+    "test_files": 28,
+    "total_test_files": 621,
+    "hub": false
+  },
+  "runs": [
+    {
+      "name": "selected_with_system",
+      "summary": "396 passed, 11 warnings in 46.89s"
+    },
+    {
+      "name": "final_browser_boundaries",
+      "summary": "65 passed, 6 warnings in 65.68s (0:01:05)"
+    }
+  ],
+  "full_backend_suite": "not run; selection and relevant system suites only",
+  "live": "repair_live_smoke.json"
+}

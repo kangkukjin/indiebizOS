@@ -376,7 +376,7 @@ $first = [limbs:browser]{op: "navigate", url: "site-a.com/product"}
 
 ## 대상이 사라졌을 때
 
-Playwright는 ref의 이름·역할을 유지하는 유일한 요소만 조작한다. 같은 역할의 첫 버튼·입력칸으로 대체하지 않는다. 대상 부재·중복 오류가 나면 snapshot을 다시 읽어 현재 ref로 호출한다.
+Playwright는 ref의 이름·역할을 유지하는 유일한 요소만 조작한다. 같은 역할의 첫 버튼·입력칸으로 대체하지 않는다. 대상이 사라지면 snapshot을 다시 읽는다. 동명 요소가 여럿이면 `REF_AMBIGUOUS`와 `candidate_count`가 반환된다. 새 snapshot만으로 중복은 해소되지 않는다. content/evaluate로 행·링크 주소를 확인한 뒤 고유한 `selector`로 지정한다(예: 관측한 객실의 `a[href^="/hold/B1?"]`).
 
 
 ## 작업별 Playwright 세션·확인창·이동 대기
@@ -408,3 +408,13 @@ navigate의 `wait_for`는 goto 완료 조건(domcontentloaded/load/networkidle),
 이번 이동에 브라우저 기동이 포함됐다는 뜻이다.
 iframe list와 switch의 index는 메인 프레임을 제외한 0부터의 같은 목록이다.
 name/id는 정확 일치, url은 부분 일치이며 메인으로 복귀할 때는 mode:reset을 쓴다.
+
+
+DOM 동의·약관 버튼은 자동 클릭하지 않는다. snapshot으로 내용을 읽고 필요한 버튼을
+명시적으로 click한다. 클릭 성공은 도구 조작의 완료이며 업무 성공은 완료 화면·산출물로 확인한다.
+iframe switch 뒤 snapshot도 그 프레임만 읽으며 `frame:{kind,name,url}`을 반환한다.
+프레임은 명시적인 reset 또는 navigate(goto/back/forward)까지 유지된다. navigate는
+실패하더라도 메인 프레임으로 복귀한다. 여러 호출에 걸쳐 switch→snapshot→check를
+이어 쓸 수 있으며, 실패 후 새 페이지로 이동할 때 이전 프레임 문맥이 남지 않는다.
+
+탭 전환은 `tab list`의 `tab_id`를 사용한다. `mode:"switch", index:0`은 현재 목록의 첫 탭이다. 오래 유지하는 연결에는 위치보다 tab_id를 사용한다.

@@ -15,6 +15,7 @@ Version: 5.0.0
 
 import asyncio
 import json
+import uuid
 
 from browser_session import (
     BrowserSession, ensure_active,
@@ -32,15 +33,17 @@ CDP_PER_NODE_TIMEOUT = 0.5   # 개별 노드 조회 최대 시간
 CDP_MAX_SELECTOR_NODES = 100 # selector 추출 최대 노드 수
 
 
-async def _extract_selectors_via_cdp(raw_page, ax_nodes):
+async def _extract_selectors_via_cdp(raw_page, ax_nodes, cdp=None):
     """
     CDP를 사용하여 접근성 노드들의 CSS selector를 추출.
     전체 작업에 타임아웃이 적용되며, 실패 시 빈 dict 반환 (graceful degradation).
     """
     selectors = {}
+    owned = cdp is None
 
     try:
-        cdp = await raw_page.context.new_cdp_session(raw_page)
+        if owned:
+            cdp = await raw_page.context.new_cdp_session(raw_page)
         try:
             # backendDOMNodeId 수집
             dom_node_ids = []
@@ -80,7 +83,8 @@ async def _extract_selectors_via_cdp(raw_page, ax_nodes):
                     continue
         finally:
             try:
-                await cdp.detach()
+                if owned:
+                    await cdp.detach()
             except Exception:
                 pass
     except Exception as e:
@@ -89,73 +93,100 @@ async def _extract_selectors_via_cdp(raw_page, ax_nodes):
     return selectors
 
 
-async def browser_snapshot(params: dict) -> dict:
-    """현재 페이지의 Accessibility Snapshot 캡처."""
-    err = ensure_active()
-    if err:
-        return err
+async def _frame_cdp(raw_page, frame):
+    """OOPIF는 자신의 target, 같은 프로세스의 frame은 페이지 target을 쓴다."""
+    if frame is not raw_page:
+        try:
+            return await raw_page.context.new_cdp_session(frame), True
+        except Exception:
+            pass
+    return await raw_page.context.new_cdp_session(raw_page), False
 
-    session = BrowserSession.get_instance()
-    page = session.page
 
+async def _read_frame_tree(cdp, page, raw_page, dedicated=False):
+    """실제 Frame의 기본 실행 문맥으로 frameId를 찾는다(URL·이름 중복에도 안전)."""
+    if page is raw_page or dedicated:
+        return await cdp.send("Accessibility.getFullAXTree")
+    marker = "__ibl_snapshot_" + uuid.uuid4().hex
+    contexts = []
+
+    def created(event):
+        context = event["context"]
+        if context.get("auxData", {}).get("isDefault"):
+            contexts.append(context)
+    cdp.on("Runtime.executionContextCreated", created)
     try:
-        session.clear_refs()
-
-        raw_page = session.raw_page
-
-        # CDP로 접근성 트리 가져오기 (타임아웃 적용)
-        ax_nodes = []
-        try:
-            cdp = await raw_page.context.new_cdp_session(raw_page)
+        await page.evaluate("key => { globalThis[key] = true; }", marker)
+        await cdp.send("Runtime.enable")
+        for context in contexts:
             try:
-                result = await asyncio.wait_for(
-                    cdp.send("Accessibility.getFullAXTree"),
-                    timeout=CDP_TOTAL_TIMEOUT
-                )
-                ax_nodes = result.get("nodes", [])
-            finally:
-                try:
-                    await cdp.detach()
-                except Exception:
-                    pass
-        except asyncio.TimeoutError:
-            print(f"[browser_snapshot] Accessibility.getFullAXTree 타임아웃 ({CDP_TOTAL_TIMEOUT}초)")
-            # 폴백: JS로 간이 접근성 트리 생성
-            ax_nodes = await _fallback_snapshot_js(page)
-        except Exception as e:
-            print(f"[browser_snapshot] CDP 접근성 트리 실패: {e}")
-            ax_nodes = await _fallback_snapshot_js(page)
-
-        if not ax_nodes:
-            return {
-                "success": True,
-                "snapshot": [],
-                "url": page.url,
-                "title": await raw_page.title(),
-                "message": "페이지에 접근성 요소가 없습니다. browser_get_content 또는 browser_evaluate를 사용하세요."
-            }
-
-        # CSS selector 추출 (별도 타임아웃, 실패해도 계속)
-        selectors = {}
+                result = await cdp.send("Runtime.evaluate", {
+                    "contextId": context["id"],
+                    "expression": f"globalThis[{json.dumps(marker)}] === true",
+                    "returnByValue": True,
+                })
+                if result.get("result", {}).get("value") is True:
+                    return await cdp.send("Accessibility.getFullAXTree", {
+                        "frameId": context["auxData"]["frameId"],
+                    })
+            except Exception:
+                continue
+        raise RuntimeError("활성 iframe의 접근성 문맥을 찾지 못했습니다")
+    finally:
+        cdp.remove_listener("Runtime.executionContextCreated", created)
         try:
-            selectors = await asyncio.wait_for(
-                _extract_selectors_via_cdp(raw_page, ax_nodes),
-                timeout=CDP_TOTAL_TIMEOUT
-            )
-        except asyncio.TimeoutError:
-            print(f"[browser_snapshot] selector 추출 타임아웃 (무시하고 계속)")
+            await asyncio.wait_for(
+                page.evaluate("key => { delete globalThis[key]; }", marker), timeout=1)
         except Exception:
             pass
 
+
+async def browser_snapshot(params: dict) -> dict:
+    """현재 선택한 페이지/iframe의 접근성 트리와 프레임 문맥을 반환한다."""
+    err = ensure_active()
+    if err:
+        return err
+    session = BrowserSession.get_instance()
+    page, raw_page = session.page, session.raw_page
+    cdp = None
+    try:
+        session.clear_refs()
+        frame = {"kind": "main" if page is raw_page else "iframe",
+                 "name": "" if page is raw_page else page.name, "url": page.url}
+        selectors = {}
+        try:
+            cdp, dedicated = await asyncio.wait_for(
+                _frame_cdp(raw_page, page), timeout=CDP_TOTAL_TIMEOUT)
+            result = await asyncio.wait_for(
+                _read_frame_tree(cdp, page, raw_page, dedicated), timeout=CDP_TOTAL_TIMEOUT)
+            ax_nodes = result.get("nodes", [])
+        except Exception as exc:
+            print(f"[browser_snapshot] CDP 실패, 현재 프레임 JS 폴백: {exc}")
+            ax_nodes = await asyncio.wait_for(_fallback_snapshot_js(page), timeout=CDP_TOTAL_TIMEOUT)
+        else:
+            # selector 추출 실패는 이미 얻은 AX 신원을 버릴 이유가 아니다.
+            try:
+                selectors = await asyncio.wait_for(
+                    _extract_selectors_via_cdp(raw_page, ax_nodes, cdp),
+                    timeout=CDP_TOTAL_TIMEOUT)
+            except Exception:
+                pass
         elements = _extract_elements(ax_nodes, session, selectors)
-
         session._snapshot_url = page.url
-        page_title = await raw_page.title()
-
-        # 출력 '크기'에 묶어 반환 — 요소 개수와 무관하게 항상 토큰 한도 안쪽
-        return _finalize_snapshot(elements, page.url, page_title)
-    except Exception as e:
-        return {"success": False, "error": f"스냅샷 캡처 실패: {str(e)}"}
+        title = await asyncio.wait_for(page.title(), timeout=CDP_TOTAL_TIMEOUT)
+        result = _finalize_snapshot(elements, page.url, title)
+        result["frame"] = frame
+        if not ax_nodes:
+            result["message"] = "접근성 요소가 없습니다. content/evaluate로 현재 프레임을 확인하세요."
+        return result
+    except Exception as exc:
+        return {"success": False, "error": f"스냅샷 캡처 실패: {exc}"}
+    finally:
+        if cdp is not None:
+            try:
+                await asyncio.wait_for(cdp.detach(), timeout=1)
+            except Exception:
+                pass
 
 
 async def _fallback_snapshot_js(page):

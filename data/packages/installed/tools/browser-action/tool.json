@@ -140,6 +140,10 @@
             "type": "boolean",
             "description": "limbs:browser 파라미터"
           },
+          "tab_id": {
+            "type": "string",
+            "description": "limbs:browser 파라미터"
+          },
           "id": {
             "type": "string",
             "description": "limbs:browser 파라미터"

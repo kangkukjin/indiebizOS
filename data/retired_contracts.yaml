@@ -827,3 +827,12 @@ retired:
     instead: AXFocusedApplication을 매번 조회하고 snapshot 세대·PID 및 expect_app으로 입력 대상을 확인한다.
     phrases:
       - 'op 파라미터로 9개 동작 분기'
+
+  - id: browser-implicit-consent-and-ambiguous-ref-retry
+    retired: 2026-10-09
+    reason: L46-3/4 — 자동 동의 클릭이 명시 조작과 경합했고 동명 요소는 새 snapshot만으로 해소되지 않았다.
+    instead: DOM 동의는 명시 click. 동명 중복은 개수를 보고하고 행·링크의 고유 selector로 지정한다.
+    phrases:
+      - '_autoDismissCookieConsent'
+      - '대상 부재·중복 오류가 나면 snapshot을 다시 읽어 현재 ref로 호출한다.'
+      - '대상이 없거나 중복이면 새 snapshot이 필요하다.'

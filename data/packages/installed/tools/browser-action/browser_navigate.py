@@ -85,7 +85,7 @@ async def browser_navigate(params: dict, project_path: str = ".") -> dict:
         session_started = not session.is_active or session._headless != headless
         page = await session.ensure_browser(headless=headless)
 
-        session.clear_refs()
+        session.reset_frame()
 
         # 리다이렉트 체인 추적
         redirects = []
@@ -115,7 +115,7 @@ async def browser_navigate(params: dict, project_path: str = ".") -> dict:
             if "closed" in err_msg or "disposed" in err_msg or "crashed" in err_msg:
                 await session._close_internal()
                 page = await session.ensure_browser(headless=headless)
-                session.clear_refs()
+                session.reset_frame()
                 page_raw = session.raw_page
                 response = await page_raw.goto(url, wait_until=wait_for, timeout=NAVIGATE_TIMEOUT)
                 if response:
@@ -201,7 +201,7 @@ async def browser_navigate_back(params: dict) -> dict:
     try:
         session = BrowserSession.get_instance()
         page = session.raw_page
-        session.clear_refs()
+        session.reset_frame()
 
         response = await page.go_back(wait_until="domcontentloaded", timeout=NAVIGATE_TIMEOUT)
 
@@ -224,7 +224,7 @@ async def browser_navigate_forward(params: dict) -> dict:
     try:
         session = BrowserSession.get_instance()
         page = session.raw_page
-        session.clear_refs()
+        session.reset_frame()
 
         response = await page.go_forward(wait_until="domcontentloaded", timeout=NAVIGATE_TIMEOUT)
 

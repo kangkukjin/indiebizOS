@@ -1,0 +1,114 @@
+{
+ "code": "#!ibl edition=2\n$n = [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8989/products\", driver:\"playwright\", wait:\"load\"}\n$s = [limbs:browser]{op:\"snapshot\"}\n$q = ($s.snapshot >> [table:filter]{where:($e)=>$e.role==\"combobox\"})\n$t = [limbs:browser]{op:\"type\", ref:$q[0].ref, text:\"호두\"}\n$w = [limbs:browser]{op:\"wait\", selector:\"#sug li\"}\n$s2 = [limbs:browser]{op:\"snapshot\"}\n$opts = $s2.snapshot >> [table:filter]{where:($e)=>$e.role==\"option\"}\n$k1 = [limbs:browser]{op:\"press_key\", key:\"ArrowDown\"}\n$k2 = [limbs:browser]{op:\"press_key\", key:\"Enter\"}\n$c = [limbs:browser]{op:\"content\", mode:\"text\"}\n$s3 = [limbs:browser]{op:\"snapshot\"}\n$lk = $s3.snapshot >> [table:filter]{where:($e)=>$e.role==\"link\" and contains($e.name,\"편집\")}\n$ck = [limbs:browser]{op:\"click\", ref:$lk[0].ref}\n$tabs = [limbs:browser]{op:\"tab\", mode:\"list\"}\nreturn {nav:$n, q:$q, type:$t, wait:$w, opts:$opts, k2:$k2, text:$c.text, link:$lk, click:$ck, tabs:$tabs, snapkeys:keys($s)}\n",
+ "task_id": "lsi48-p1",
+ "elapsed": 1.62,
+ "response": {
+  "success": true,
+  "value": {
+   "nav": {
+    "success": true,
+    "title": "상품 관리 — 가상 상점 관리",
+    "url": "http://127.0.0.1:8989/products",
+    "status_code": 200,
+    "tab_id": "8aacc66f60b4-t1",
+    "content_length": 600,
+    "wait": "load",
+    "session_started": true,
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f"
+   },
+   "q": [
+    {
+     "ref": "e6",
+     "role": "combobox",
+     "name": "상품 검색",
+     "expanded": false
+    }
+   ],
+   "type": {
+    "success": true,
+    "typed": "호두",
+    "element": "상품 검색 (e6)",
+    "submitted": false,
+    "url": "http://127.0.0.1:8989/products",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   },
+   "wait": {
+    "success": true,
+    "waited_for": "selector: #sug li (state=visible)",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   },
+   "opts": [
+    {
+     "ref": "e7",
+     "role": "option",
+     "name": "호두 도마"
+    },
+    {
+     "ref": "e8",
+     "role": "option",
+     "name": "호두 트레이"
+    },
+    {
+     "ref": "e9",
+     "role": "option",
+     "name": "호두 수저 세트"
+    }
+   ],
+   "k2": {
+    "success": true,
+    "pressed": "Enter",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   },
+   "text": "상품 관리\n상품진열내보내기\n\n상품 검색 \n\n선택: 호두 도마 (P-01) — 전체 보기\n\n번호\t상품명\t판매가\t\nP-01\t호두 도마\t38,000원\t편집",
+   "link": [
+    {
+     "ref": "e18",
+     "role": "link",
+     "name": "호두 도마 편집"
+    }
+   ],
+   "click": {
+    "success": true,
+    "clicked": "호두 도마 편집 (e18)",
+    "url": "http://127.0.0.1:8989/products?pick=P-01",
+    "title": "상품 관리 — 가상 상점 관리",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   },
+   "tabs": {
+    "success": true,
+    "tabs": [
+     {
+      "tab_id": "8aacc66f60b4-t1",
+      "title": "상품 관리 — 가상 상점 관리",
+      "url": "http://127.0.0.1:8989/products?pick=P-01",
+      "active": true
+     }
+    ],
+    "count": 1,
+    "active_tab": "8aacc66f60b4-t1",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   },
+   "snapkeys": [
+    "success",
+    "snapshot",
+    "element_count",
+    "shown_count",
+    "url",
+    "title",
+    "truncated",
+    "truncations",
+    "omitted_count",
+    "guide",
+    "frame",
+    "session_owner",
+    "tab_id"
+   ]
+  },
+  "executed": true
+ }
+}

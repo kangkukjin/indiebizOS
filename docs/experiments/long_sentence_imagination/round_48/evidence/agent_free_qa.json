@@ -1,0 +1,255 @@
+{
+ "passed": 17,
+ "total": 17,
+ "checks": [
+  {
+   "check": "서버: 방침 가격·문구 저장",
+   "ok": true,
+   "detail": {
+    "P-01": [
+     42000,
+     "가을 한정 — 10/17까지 무료 각인"
+    ],
+    "P-05": [
+     28000,
+     "재입고 기념 특가"
+    ]
+   }
+  },
+  {
+   "check": "서버: 다른 상품 변경 0",
+   "ok": true,
+   "detail": [
+    "P-01",
+    "P-05"
+   ]
+  },
+  {
+   "check": "편집 화면은 방침 상품만",
+   "ok": true,
+   "detail": [
+    "P-01",
+    "P-01",
+    "P-01",
+    "P-05",
+    "P-05",
+    "P-05",
+    "P-01",
+    "P-05"
+   ]
+  },
+  {
+   "check": "자동완성 사용·선택이 방침 상품",
+   "ok": true,
+   "detail": {
+    "suggest": [
+     "호두",
+     "호두 도마",
+     "유리 화병 대"
+    ],
+    "picks": [
+     "P-01",
+     "P-01",
+     "P-05"
+    ]
+   }
+  },
+  {
+   "check": "서버: 진열 순서 = 방침",
+   "ok": true,
+   "detail": [
+    "P-05",
+    "P-18",
+    "P-01",
+    "P-09",
+    "P-22",
+    "P-11",
+    "P-07",
+    "P-24"
+   ]
+  },
+  {
+   "check": "내보내기·내려받기 성공 기록",
+   "ok": true,
+   "detail": {
+    "exports": 1,
+    "downloads": 1,
+    "denied": 0
+   }
+  },
+  {
+   "check": "display.csv 내용 = 서버 파일(8행)",
+   "ok": true,
+   "detail": {
+    "bytes": 558
+   }
+  },
+  {
+   "check": "display.csv 바이트까지 같음(BOM·CRLF)",
+   "ok": true,
+   "detail": {
+    "got": 558,
+    "server": 558,
+    "bom": true,
+    "crlf": true
+   }
+  },
+  {
+   "check": "보고: CSV 대조 결과",
+   "ok": true,
+   "detail": {
+    "match": true,
+    "rows": 8
+   }
+  },
+  {
+   "check": "보고: 파일로 확인 못 한 상품",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "뒤로 가기 뒤 순서 확인",
+   "ok": true,
+   "detail": "http://127.0.0.1:8984/display"
+  },
+  {
+   "check": "서버: 첫 저장 500 뒤 재시도 성공",
+   "ok": true,
+   "detail": [
+    false,
+    true
+   ]
+  },
+  {
+   "check": "보고: 시도 2회",
+   "ok": true,
+   "detail": [
+    [
+     "P-01",
+     1
+    ],
+    [
+     "P-05",
+     2
+    ]
+   ]
+  },
+  {
+   "check": "보고: 네트워크 기록의 500",
+   "ok": true,
+   "detail": [
+    {
+     "t": 1.7,
+     "method": "POST",
+     "url": "http://127.0.0.1:8984/api/save",
+     "status": 500,
+     "ok": false,
+     "failure": null
+    }
+   ]
+  },
+  {
+   "check": "보고: 판정 완료",
+   "ok": true,
+   "detail": "완료(성공)"
+  },
+  {
+   "check": "끝날 때 탭 1개",
+   "ok": true,
+   "detail": 1
+  },
+  {
+   "check": "결과 파일",
+   "ok": true,
+   "detail": null
+  }
+ ],
+ "server": {
+  "suggest": [
+   "호두",
+   "호두 도마",
+   "유리 화병 대"
+  ],
+  "picks": [
+   "P-01",
+   "P-01",
+   "P-05"
+  ],
+  "edit_views": [
+   "P-01",
+   "P-01",
+   "P-01",
+   "P-05",
+   "P-05",
+   "P-05",
+   "P-01",
+   "P-05"
+  ],
+  "saves": [
+   {
+    "id": "P-01",
+    "price": 42000,
+    "desc": "가을 한정 — 10/17까지 무료 각인",
+    "ok": true
+   },
+   {
+    "id": "P-05",
+    "price": 28000,
+    "desc": "재입고 기념 특가",
+    "ok": false
+   },
+   {
+    "id": "P-05",
+    "price": 28000,
+    "desc": "재입고 기념 특가",
+    "ok": true
+   }
+  ],
+  "orders": [
+   [
+    "P-05",
+    "P-09",
+    "P-01",
+    "P-22",
+    "P-11",
+    "P-07",
+    "P-18",
+    "P-24"
+   ],
+   [
+    "P-05",
+    "P-18",
+    "P-09",
+    "P-01",
+    "P-22",
+    "P-11",
+    "P-07",
+    "P-24"
+   ],
+   [
+    "P-05",
+    "P-18",
+    "P-01",
+    "P-09",
+    "P-22",
+    "P-11",
+    "P-07",
+    "P-24"
+   ]
+  ],
+  "exports": 1,
+  "display": [
+   "P-05",
+   "P-18",
+   "P-01",
+   "P-09",
+   "P-22",
+   "P-11",
+   "P-07",
+   "P-24"
+  ],
+  "display_views": 4,
+  "downloads": 1,
+  "denied": 0
+ }
+}

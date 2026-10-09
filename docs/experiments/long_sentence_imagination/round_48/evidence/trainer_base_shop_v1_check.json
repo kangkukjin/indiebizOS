@@ -1,0 +1,25 @@
+{
+ "request": {
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/input",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/out"
+  }
+ },
+ "draft": "drafts/shop_v1.ibl",
+ "elapsed": 0.7,
+ "response": {
+  "status": "incomplete",
+  "ok": true,
+  "issues": [],
+  "plan_hash": "2bf4f83be61ed874d1661d9f65b63269bb92f0ac5901c87b94d0d54ff5a3a151",
+  "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a",
+  "usage": {}
+ }
+}

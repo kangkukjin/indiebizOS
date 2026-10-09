@@ -1,0 +1,50 @@
+{
+ "request": {
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/input",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/out"
+  }
+ },
+ "draft": "drafts/shop_v0.ibl",
+ "elapsed": 0.69,
+ "response": {
+  "status": "invalid",
+  "ok": false,
+  "issues": [
+   {
+    "code": "READONLY",
+    "message": "읽기 전용 바인딩: $i",
+    "call_path": [],
+    "rule": "READONLY",
+    "severity": "error",
+    "hint": "$i는 repeat의 반복 인덱스, $it는 table:each의 현재 항목, $error는 catch의 오류입니다. 이 이름들은 해당 블록 밖에서도 예약되어 대입할 수 없습니다. 결과를 저장하려면 $result 또는 $image처럼 다른 이름을 사용하세요. each 본문에서 본 바깥 변수도 새 이름에 받거나 each의 반환으로 모으세요."
+   },
+   {
+    "code": "READONLY",
+    "message": "읽기 전용 바인딩: $i",
+    "call_path": [],
+    "rule": "READONLY",
+    "severity": "error",
+    "hint": "$i는 repeat의 반복 인덱스, $it는 table:each의 현재 항목, $error는 catch의 오류입니다. 이 이름들은 해당 블록 밖에서도 예약되어 대입할 수 없습니다. 결과를 저장하려면 $result 또는 $image처럼 다른 이름을 사용하세요. each 본문에서 본 바깥 변수도 새 이름에 받거나 each의 반환으로 모으세요."
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리의 [fn:진열] 호출은 효과가 없어야 합니다(이 함수의 효과: write_external). 조건·조건 값·and/or·람다 본문·기본값은 실행 여부나 횟수가 갈리는 자리입니다.",
+    "call_path": [],
+    "hint": "효과가 있는 호출은 앞 문장에서 $이름=[fn:…]{…}으로 받거나, 행마다 필요하면 table:each 본문에서 호출하세요.",
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   }
+  ],
+  "plan_hash": "0edcde5aad5fd9b9aa98c98a8b35382ae857939e1167b78a8ee1ae97c5092b1a",
+  "source_hash": "d1932a2efb974974edd93cbdf28631d50c3711ab7a2fbe07380ef05e98582e5d",
+  "usage": {}
+ }
+}

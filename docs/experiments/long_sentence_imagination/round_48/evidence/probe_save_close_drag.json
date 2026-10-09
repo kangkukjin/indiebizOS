@@ -1,0 +1,105 @@
+{
+ "code": "#!ibl edition=2\n$sv = [limbs:browser]{op:\"click\", ref:\"e7\"}\n$w = [limbs:browser]{op:\"wait\", text:\"저장됨\"}\n$c = [limbs:browser]{op:\"content\", mode:\"text\"}\n$cl = [limbs:browser]{op:\"tab\", mode:\"close\"}\n$tabs = [limbs:browser]{op:\"tab\", mode:\"list\"}\n$n = [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8989/display\", wait:\"load\"}\n$s = [limbs:browser]{op:\"snapshot\"}\n$items = $s.snapshot >> [table:filter]{where:($e)=>contains($e.name,\"진열 항목\")}\n$src = filter($items, ($e)=>contains($e.name,\"유리 화병 대\"))[0]\n$dst = filter($items, ($e)=>contains($e.name,\"황동 촛대\"))[0]\n$d = [limbs:browser]{op:\"drag\", source_ref:$src.ref, target_ref:$dst.ref}\n$o = [limbs:browser]{op:\"evaluate\", expression:\"[...document.querySelectorAll('#list li')].map(li=>li.dataset.id).join(',') + ' | ' + document.getElementById('st').textContent\"}\nreturn {wait:$w, text:$c.text, close:$cl, tabs:$tabs.tabs, items:$items, drag:$d, order:$o.result}\n",
+ "task_id": "lsi48-p1",
+ "elapsed": 1.0,
+ "response": {
+  "success": true,
+  "value": {
+   "wait": {
+    "success": true,
+    "waited_for": "text: 저장됨",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t2"
+   },
+   "text": "상품 편집 — 호두 도마\n상품진열내보내기\n\n상품번호 P-01\n\n판매가  16,000원\n\n진열 문구\n\n가을 한정 — 10/17까지 무료 각인\n\n저장 저장됨 — 판매가 16,000원",
+   "close": {
+    "success": true,
+    "closed_tab": "8aacc66f60b4-t2",
+    "active_tab": "8aacc66f60b4-t1",
+    "remaining_tabs": 1,
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   },
+   "tabs": [
+    {
+     "tab_id": "8aacc66f60b4-t1",
+     "title": "상품 관리 — 가상 상점 관리",
+     "url": "http://127.0.0.1:8989/products?pick=P-01",
+     "active": true
+    }
+   ],
+   "items": [
+    {
+     "ref": "e5",
+     "role": "button",
+     "name": "황동 촛대 진열 항목"
+    },
+    {
+     "ref": "e6",
+     "role": "button",
+     "name": "호두 도마 진열 항목"
+    },
+    {
+     "ref": "e7",
+     "role": "button",
+     "name": "편백 도마 진열 항목"
+    },
+    {
+     "ref": "e8",
+     "role": "button",
+     "name": "유리 화병 대 진열 항목"
+    },
+    {
+     "ref": "e9",
+     "role": "button",
+     "name": "도자 머그 백 진열 항목"
+    },
+    {
+     "ref": "e10",
+     "role": "button",
+     "name": "린넨 앞치마 진열 항목"
+    },
+    {
+     "ref": "e11",
+     "role": "button",
+     "name": "밀랍 초 2P 진열 항목"
+    },
+    {
+     "ref": "e12",
+     "role": "button",
+     "name": "옻칠 젓가락 진열 항목"
+    }
+   ],
+   "drag": {
+    "success": true,
+    "scrolled_during_drag": false,
+    "observation": {
+     "scrolled": false,
+     "wrong_source": false,
+     "wrong_target": false,
+     "started": true,
+     "html5": false,
+     "actual_source": "유리 화병 대 진열 항목",
+     "detached": false
+    },
+    "verification": "gesture_only",
+    "snapshot_hint": "조작 완료는 저장 성공을 뜻하지 않습니다. 화면과 저장 결과를 다시 읽어 확인하세요.",
+    "source": {
+     "ref": "e8",
+     "name": "유리 화병 대 진열 항목",
+     "role": "button"
+    },
+    "target": {
+     "ref": "e5",
+     "name": "황동 촛대 진열 항목",
+     "role": "button"
+    },
+    "dragged": "유리 화병 대 진열 항목 (e8) → 황동 촛대 진열 항목 (e5)",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   },
+   "order": "P-05,P-09,P-01,P-22,P-11,P-07,P-18,P-24 | 순서 저장 중…"
+  },
+  "executed": true
+ }
+}

@@ -1,0 +1,164 @@
+#!ibl edition=2
+# 48회차 브라우저 액트 2 — 상점 관리 콘솔 주간 진열 개편 v0 — inputs: src(console.json·policy.json), out
+# 흐름: 상품마다 [검색창 입력 → 늦게 뜨는 제안 중 정확한 이름 클릭 → '편집'(새 탭) → 새 탭이 목록에 뜰 때까지 기다려 전환 → 슬라이더를 키로 맞춤 → 글상자 → 저장(실패면 재시도) → 탭 닫기]
+#   → 진열 화면에서 방침 순서대로 위로 끌기(끌 때마다 순서를 다시 읽음) → 새로 불러 저장된 순서 → 내보내기 시작·완료 대기 → 파일은 페이지 안 fetch 로 받아 저장(내려받기 op 없음, 탐침 export_click)
+#   → CSV 대조 → 뒤로 가기로 진열 화면 재확인 → 네트워크 기록 → result.json·report.md
+[def:참조]($snap,$role,$name) {
+  $m = filter($snap.snapshot, ($e)=>$e.role==$role and $e.name==$name)
+  return len($m)>0 ? $m[0].ref : "none"
+}
+[def:슬라이더값]() {
+  $ev = [limbs:browser]{op:"evaluate", expression:"(()=>{const p=document.querySelector('input[type=range]');return {value:Number(p.value),min:Number(p.min),max:Number(p.max),step:Number(p.step)}})()"}
+  return $ev.result
+}
+[def:진열]() {
+  $ev = [limbs:browser]{op:"evaluate", expression:"[...document.querySelectorAll('#list li')].map(li=>({id:li.dataset.id,name:li.getAttribute('aria-label').replace(' 진열 항목','')}))"}
+  return $ev.result
+}
+[def:상품편집]($e,$url) {
+  $n = [limbs:browser]{op:"navigate", url:f"${url}products", driver:"playwright", wait:"load"}
+  $s = [limbs:browser]{op:"snapshot"}
+  $t = [limbs:browser]{op:"type", ref:[fn:참조]{snap:$s, role:"combobox", name:"상품 검색"}, text:split($e.name," ")[0]}
+  $w = [limbs:browser]{op:"wait", selector:"#sug li"}
+  $s2 = [limbs:browser]{op:"snapshot"}
+  $제안 = map(filter($s2.snapshot, ($x)=>$x.role=="option"), ($x)=>$x.name)
+  $opt = [fn:참조]{snap:$s2, role:"option", name:$e.name}
+  assert $opt != "none", "자동완성 제안에 정확한 상품명이 없음", {name:$e.name, suggestions:$제안}
+  $ck = [limbs:browser]{op:"click", ref:$opt}
+  $c = [limbs:browser]{op:"content", mode:"text"}
+  $선택줄 = filter(split($c.text,"\n"), ($l)=>contains($l,"선택: "))
+  assert len($선택줄)==1 and contains($선택줄[0], f"선택: ${e.name} ("), "선택된 상품이 방침 상품이 아님", {line:$선택줄}
+  $id = split(split($선택줄[0],"(")[1],")")[0]
+  $s3 = [limbs:browser]{op:"snapshot"}
+  $lk = [fn:참조]{snap:$s3, role:"link", name:f"${e.name} 편집"}
+  assert $lk != "none", "편집 링크를 찾지 못함", {name:$e.name}
+  $ck2 = [limbs:browser]{op:"click", ref:$lk}
+  # 새 탭은 클릭 직후 목록에 없을 수 있다(탐침 search_popup) — 뜰 때까지 짧게 기다린다
+  $새탭 = []
+  $기다림 = 0
+  [repeat:until len($새탭)>0 or $기다림 >= 10] {
+    $wt = [limbs:browser]{op:"wait", timeout:150}
+    $tl = [limbs:browser]{op:"tab", mode:"list"}
+    $새탭 = filter($tl.tabs, ($x)=>contains($x.url, f"/edit/${id}"))
+    $기다림 = $기다림 + 1
+  }
+  assert len($새탭)>0, "편집 새 탭이 열리지 않음", {id:$id}
+  $sw = [limbs:browser]{op:"tab", mode:"switch", tab_id:$새탭[0].tab_id}
+  $s4 = [limbs:browser]{op:"snapshot"}
+  $sl = [fn:슬라이더값]{}
+  assert $e.price >= $sl.min and $e.price <= $sl.max and ($e.price - $sl.min) % $sl.step == 0, "방침 가격을 슬라이더로 맞출 수 없음", {price:$e.price, slider:$sl}
+  # 슬라이더: type 은 거절(role=slider) — 눌러 초점을 주고 Home 뒤 화살표로 센다. 끝나고 값을 읽어 확인한다
+  $fc = [limbs:browser]{op:"click", ref:[fn:참조]{snap:$s4, role:"slider", name:"판매가"}}
+  $hm = [limbs:browser]{op:"press_key", key:"Home"}
+  $칸 = ($e.price - $sl.min) / $sl.step
+  $k = 0
+  [repeat:until $k >= $칸] {
+    $ar = [limbs:browser]{op:"press_key", key:"ArrowRight"}
+    $k = $k + 1
+  }
+  $sl2 = [fn:슬라이더값]{}
+  assert $sl2.value == $e.price, "슬라이더 값이 방침 가격과 다름", {want:$e.price, got:$sl2.value}
+  $ty = [limbs:browser]{op:"type", ref:[fn:참조]{snap:$s4, role:"textbox", name:"진열 문구"}, text:$e.desc}
+  $시도 = 0
+  $결과글 = ""
+  [repeat:until contains($결과글,"저장됨") or $시도 >= 3] {
+    $s5 = [limbs:browser]{op:"snapshot"}
+    $sv = [limbs:browser]{op:"click", ref:[fn:참조]{snap:$s5, role:"button", name:"저장"}}
+    $wt2 = [limbs:browser]{op:"wait", timeout:400}
+    $c2 = [limbs:browser]{op:"content", mode:"text"}
+    $줄 = filter(split($c2.text,"\n"), ($l)=>contains($l,"저장됨") or contains($l,"저장 실패"))
+    $결과글 = len($줄)>0 ? $줄[0] : ""
+    $시도 = $시도 + 1
+  }
+  $cl = [limbs:browser]{op:"tab", mode:"close"}
+  return {name:$e.name, id:$id, price:$e.price, desc:$e.desc, slider_value:$sl2.value, saved:contains($결과글,"저장됨"), attempts:$시도, message:$결과글, suggestions:$제안, tabs_after_close:$cl.remaining_tabs}
+}
+
+$site = ([self:read]{path:f"${src}/console.json"}).data
+$pol = ([self:read]{path:f"${src}/policy.json"}).data
+$url = $site.url
+
+# 1) 상품 편집(새 탭)
+$편집 = $pol.edits >> [table:each] { [fn:상품편집]{e:$it, url:$url} }
+
+# 2) 진열 순서 — 방침 상품을 차례로 맨 위부터
+$nd = [limbs:browser]{op:"navigate", url:f"${url}display", wait:"load"}
+$처음 = [fn:진열]{}
+$없는것 = filter($pol.display_top, ($n)=>len(filter($처음, ($x)=>$x.name==$n))==0)
+assert len($없는것)==0, "방침의 진열 상품이 진열 목록에 없음", {missing:$없는것}
+$기대 = $pol.display_top + map(filter($처음, ($x)=>len(filter($pol.display_top, ($n)=>$n==$x.name))==0), ($x)=>$x.name)
+$now = $처음
+$끌기 = []
+$i = 0
+[repeat:until $i >= len($pol.display_top)] {
+  $want = $pol.display_top[$i]
+  $try = 0
+  [repeat:until $now[$i].name == $want or $try >= 3] {
+    $sd = [limbs:browser]{op:"snapshot"}
+    $d = [limbs:browser]{op:"drag", source_ref:[fn:참조]{snap:$sd, role:"button", name:f"${want} 진열 항목"}, target_ref:[fn:참조]{snap:$sd, role:"button", name:f"${now[$i].name} 진열 항목"}}
+    $wd = [limbs:browser]{op:"wait", timeout:300}
+    $now = [fn:진열]{}
+    $try = $try + 1
+    $끌기 = $끌기 + [{want:$want, to_index:$i, try:$try, actual_source:$d.observation.actual_source, landed:$now[$i].name == $want}]
+  }
+  $i = $i + 1
+}
+$화면순서 = map($now, ($x)=>$x.name)
+$nd2 = [limbs:browser]{op:"navigate", url:f"${url}display", wait:"load"}
+$저장 = [fn:진열]{}
+$저장순서 = map($저장, ($x)=>$x.name)
+$순서맞음 = json($저장순서) == json($기대)
+
+# 3) 내보내기 → 완료 대기 → 파일 받기(브라우저 세션으로 fetch; BOM 을 지키려고 바이트로 읽어 풀기) → 저장·재독·대조
+$se = [limbs:browser]{op:"snapshot"}
+$ge = [limbs:browser]{op:"click", ref:[fn:참조]{snap:$se, role:"link", name:"내보내기"}}
+$se2 = [limbs:browser]{op:"snapshot"}
+$st = [limbs:browser]{op:"click", ref:[fn:참조]{snap:$se2, role:"button", name:"내보내기 시작"}}
+$wx = [limbs:browser]{op:"wait", text:"내보내기 완료", timeout:10000}
+$fx = [limbs:browser]{op:"evaluate", expression:"(async()=>{const a=document.querySelector('#dl a');const r=await fetch(a.href);const b=await r.arrayBuffer();return {status:r.status,href:a.href,bytes:b.byteLength,disposition:r.headers.get('Content-Disposition'),text:new TextDecoder('utf-8',{ignoreBOM:true}).decode(b)}})()"}
+$파일 = $fx.result
+assert $파일.status == 200, "진열표 파일을 받지 못함", {status:$파일.status, href:$파일.href}
+$wf = [self:write]{path:f"${out}/display.csv", content:$파일.text}
+$rf = [self:read]{path:f"${out}/display.csv"}
+$행 = $rf.data.items
+$csv순서 = map($행, ($r)=>get($r,"상품명"))
+$csv대조 = $편집 >> [table:each] {
+  $r = filter($행, ($x)=>get($x,"상품번호")==$it.id)
+  $있음 = len($r)>0
+  $가격 = $있음 ? number(get($r[0],"판매가")) : null
+  $문구 = $있음 ? get($r[0],"진열 문구") : null
+  return {name:$it.name, id:$it.id, in_csv:$있음, csv_price:$가격, csv_desc:$문구, match:$있음 and $가격==$it.price and $문구==$it.desc}
+}
+$csv밖 = filter($csv대조, ($r)=>not $r.in_csv)
+$csv맞음 = json($csv순서)==json($기대) and all(map(filter($csv대조, ($r)=>$r.in_csv), ($r)=>$r.match))
+
+# 4) 뒤로 가기 → 진열 화면 순서 재확인
+$bk = [limbs:browser]{op:"navigate", mode:"back"}
+$뒤 = contains($bk.url,"/display") ? map([fn:진열]{}, ($x)=>$x.name) : []
+$뒤맞음 = json($뒤)==json($저장순서)
+
+# 5) 네트워크 기록·탭
+$망 = [limbs:browser]{op:"logs", mode:"network"}
+$실패요청 = map(filter($망.logs, ($l)=>$l.status==null or $l.status>=400), ($l)=>{status:$l.status, method:$l.method, url:$l.url})
+$탭 = [limbs:browser]{op:"tab", mode:"list"}
+$cz = [limbs:browser]{op:"close"}
+
+# 6) 판정·기록
+$전부저장 = all(map($편집, ($r)=>$r.saved))
+$완료 = $전부저장 and $순서맞음 and $csv맞음 and $뒤맞음
+$판정 = $완료 ? "개편 완료 — 저장·순서·내보낸 파일 일치" : "개편 미완 — 아래 불일치 확인 필요"
+$result = {edits:$편집, order_before:map($처음, ($x)=>$x.name), order_expected:$기대, order_screen:$화면순서, order_saved:$저장순서, order_ok:$순서맞음, drags:$끌기,
+  export:{downloaded:true, method:"브라우저 세션 fetch(내려받기 링크 클릭은 파일을 남기지 않음)", href:$파일.href, bytes:$파일.bytes, disposition:$파일.disposition, path:$wf.path, rows:len($행), order:$csv순서, edits:$csv대조, not_in_csv:map($csv밖, ($r)=>$r.name), match:$csv맞음},
+  back:{url:$bk.url, order:$뒤, match:$뒤맞음},
+  network:{capturing:$망.capturing, count:$망.count, retained:$망.retained_count, failed:$실패요청},
+  tabs_open_at_end:$탭.count, verdict:$판정}
+$w1 = [self:write]{path:f"${out}/result.json", content:json($result)}
+$편집글 = join("\n", map($편집, ($r)=>f"  - ${r.name}(${r.id}): ${r.message} · 시도 ${r.attempts}회"))
+$실패글 = len($실패요청)==0 ? "없음" : join(" / ", map($실패요청, ($l)=>f"${l.method} ${l.url} → ${l.status}"))
+$밖글 = len($csv밖)==0 ? "없음" : join(", ", map($csv밖, ($r)=>$r.name))
+$순서글 = $순서맞음 ? "방침과 일치" : "방침과 다름"
+$csv글 = $csv맞음 ? "순서·가격·문구 일치" : "불일치 있음"
+$뒤글 = $뒤맞음 ? "순서 그대로" : "순서가 다르거나 진열 화면이 아님"
+$md = join("\n", ["# 주간 진열 개편", f"- 판정: ${판정}", "- 상품 편집:", $편집글, f"- 진열 순서(새로 불러 확인): ${join(' > ', $저장순서)} — ${순서글}", f"- 내보낸 파일 ${len($행)}행: ${csv글} (진열에 없어 파일로 확인 못 한 상품: ${밖글})", f"- 뒤로 가기 뒤 진열 화면: ${뒤글}", f"- 네트워크 실패 요청: ${실패글} (기록 ${망.count}건)", f"- 끝날 때 열린 탭: ${탭.count}개"])
+$w2 = [self:write]{path:f"${out}/report.md", content:$md}
+return {verdict:$판정, edits:map($편집, ($r)=>{id:$r.id, saved:$r.saved, attempts:$r.attempts}), order_ok:$순서맞음, drags:len($끌기), csv_match:$csv맞음, csv_rows:len($행), back_match:$뒤맞음, failed_requests:$실패요청, tabs:$탭.count, files:[$w1.path,$w2.path,$wf.path]}

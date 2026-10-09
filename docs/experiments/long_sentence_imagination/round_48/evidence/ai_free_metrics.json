@@ -1,0 +1,154 @@
+{
+  "episode": {
+    "id": 4524,
+    "total_ms": 243582,
+    "source": "training",
+    "run_id": "run_cf5f52dd9bd93b540889"
+  },
+  "usage": {
+    "input": 2708265,
+    "output": 22703,
+    "cache_read": 2444534,
+    "cache_create": 257092
+  },
+  "roles": {
+    "oneshot:classify": {
+      "input": 9925,
+      "output": 81,
+      "cache_read": 3328,
+      "cache_create": 0
+    },
+    "consciousness": {
+      "input": 60199,
+      "output": 3295,
+      "cache_read": 0,
+      "cache_create": 60197
+    },
+    "execution": {
+      "input": 2600912,
+      "output": 19140,
+      "cache_read": 2440662,
+      "cache_create": 160212
+    },
+    "oneshot:evaluate": {
+      "input": 37229,
+      "output": 187,
+      "cache_read": 544,
+      "cache_create": 36683
+    }
+  },
+  "events": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 8,
+    "supervision.recall.finished": 8,
+    "model.call_started": 6,
+    "model.input": 6,
+    "model.round": 24,
+    "model.usage": 6,
+    "model.call_finished": 6,
+    "knowledge_catalog.selected": 2,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "framing.inherit_declined": 1,
+    "supervision.model.started": 1,
+    "model.response_snapshot": 39,
+    "supervision.model.finished": 1,
+    "supervision.framing": 1,
+    "supervision.tool.started": 18,
+    "ibl.started": 14,
+    "ibl.checkpoint": 10,
+    "ibl.finished": 14,
+    "supervision.tool.finished": 18,
+    "seam": 8,
+    "side_effect.write": 5,
+    "capability.judged": 1,
+    "cognition.evaluation": 1,
+    "supervision.evaluation.stage_started": 4,
+    "supervision.evaluation.stage_finished": 4,
+    "supervision.evaluation.started": 1,
+    "supervision.evaluation.finished": 1,
+    "supervision.decision": 1,
+    "validation.completed": 1,
+    "supervision.response.delivered": 1,
+    "recall.used": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+  },
+  "tool_names": {
+    "execute_ibl": 14,
+    "Bash": 4
+  },
+  "tool_failures": 0,
+  "recall_used": [
+    {
+      "blocks": [
+        {
+          "evidence": "executed",
+          "ibl_calls": 11,
+          "presented": [
+            "3744",
+            "3742"
+          ],
+          "recall_id": "f99593c8c82441d0b75eb291befad8bf",
+          "source": "hippocampus",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "presented": [
+            "script:나레이션생성",
+            "script:폴더변화",
+            "script:나레이션원고추출"
+          ],
+          "quality_contribution": "not_inferred",
+          "recall_id": "f99593c8c82441d0b75eb291befad8bf",
+          "source": "reusable_capabilities",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "opened": [],
+          "presented": [
+            "452",
+            "325",
+            "339"
+          ],
+          "recall_id": "f99593c8c82441d0b75eb291befad8bf",
+          "source": "recalled_memory",
+          "used": []
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "basics.05.74ca8db3a8d7",
+            "playwright",
+            "basics.14.87b0acef85a7",
+            "basics.09.bfa42cf6a12e"
+          ],
+          "recall_id": "f99593c8c82441d0b75eb291befad8bf",
+          "source": "method_map",
+          "used": [
+            "playwright",
+            "basics.14.87b0acef85a7"
+          ]
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "atlas.information.faceted_classification",
+            "atlas.data.database_indexing"
+          ],
+          "recall_id": "f99593c8c82441d0b75eb291befad8bf",
+          "source": "world_memory",
+          "used": []
+        }
+      ],
+      "completed": true,
+      "phase": "turn"
+    }
+  ],
+  "compacted": 0
+}

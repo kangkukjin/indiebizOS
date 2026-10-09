@@ -1,0 +1,148 @@
+{
+ "request": {
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": false,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/input",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/out"
+  },
+  "task_id": "lsi48-base-1"
+ },
+ "draft": "drafts/shop_v1.ibl",
+ "elapsed": 10.36,
+ "response": {
+  "success": true,
+  "value": {
+   "verdict": "개편 완료 — 저장·순서·내보낸 파일 일치",
+   "edits": [
+    {
+     "id": "P-01",
+     "saved": true,
+     "attempts": 1
+    },
+    {
+     "id": "P-05",
+     "saved": true,
+     "attempts": 1
+    }
+   ],
+   "order_ok": true,
+   "drags": 3,
+   "csv_match": true,
+   "csv_rows": 8,
+   "back_match": true,
+   "failed_requests": [],
+   "tabs": 1,
+   "files": [
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/out/result.json",
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/out/report.md",
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/out/display.csv"
+   ]
+  },
+  "plan_hash": "2bf4f83be61ed874d1661d9f65b63269bb92f0ac5901c87b94d0d54ff5a3a151",
+  "run_status": "completed",
+  "recordings_count": 129,
+  "usage": {
+   "steps": 10201,
+   "rows": 64,
+   "elapsed_ms": 10219,
+   "tool_ms_by_line": [
+    {
+     "line": 117,
+     "ms": 1629,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 99,
+     "ms": 1036,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 56,
+     "ms": 968,
+     "calls": 50,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 98,
+     "ms": 905,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 67,
+     "ms": 833,
+     "calls": 2,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 22,
+     "ms": 635,
+     "calls": 2,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 40,
+     "ms": 379,
+     "calls": 2,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 148,
+     "ms": 350,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 19,
+     "ms": 320,
+     "calls": 2,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 15,
+     "ms": 159,
+     "calls": 6,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    }
+   ]
+  }
+ }
+}

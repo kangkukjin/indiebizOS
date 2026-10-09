@@ -1,0 +1,154 @@
+{
+ "request": {
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": false,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/input_flaky",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/out_flaky"
+  },
+  "task_id": "lsi48-flaky-1"
+ },
+ "draft": "drafts/shop_v1.ibl",
+ "elapsed": 10.0,
+ "response": {
+  "success": true,
+  "value": {
+   "verdict": "개편 완료 — 저장·순서·내보낸 파일 일치",
+   "edits": [
+    {
+     "id": "P-01",
+     "saved": true,
+     "attempts": 1
+    },
+    {
+     "id": "P-05",
+     "saved": true,
+     "attempts": 2
+    }
+   ],
+   "order_ok": true,
+   "drags": 3,
+   "csv_match": true,
+   "csv_rows": 8,
+   "back_match": true,
+   "failed_requests": [
+    {
+     "status": 500,
+     "method": "POST",
+     "url": "http://127.0.0.1:8983/api/save"
+    }
+   ],
+   "tabs": 1,
+   "files": [
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/out_flaky/result.json",
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/out_flaky/report.md",
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_48회차/trainer/out_flaky/display.csv"
+   ]
+  },
+  "plan_hash": "2bf4f83be61ed874d1661d9f65b63269bb92f0ac5901c87b94d0d54ff5a3a151",
+  "run_status": "completed",
+  "recordings_count": 133,
+  "usage": {
+   "steps": 10518,
+   "rows": 65,
+   "elapsed_ms": 9872,
+   "tool_ms_by_line": [
+    {
+     "line": 117,
+     "ms": 1632,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 67,
+     "ms": 1244,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 99,
+     "ms": 1020,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 98,
+     "ms": 837,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 56,
+     "ms": 794,
+     "calls": 50,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 22,
+     "ms": 662,
+     "calls": 2,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 40,
+     "ms": 365,
+     "calls": 2,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 19,
+     "ms": 279,
+     "calls": 2,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 35,
+     "ms": 198,
+     "calls": 2,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    },
+    {
+     "line": 97,
+     "ms": 176,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "21baf0e4452ff64e013da9b14d3972ce0f87038d3071cb1cc50e7854a9dafa2a"
+    }
+   ]
+  }
+ }
+}

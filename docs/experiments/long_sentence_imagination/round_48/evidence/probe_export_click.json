@@ -1,0 +1,151 @@
+{
+ "code": "#!ibl edition=2\n$s0 = [limbs:browser]{op:\"snapshot\"}\n$lk = filter($s0.snapshot, ($e)=>$e.role==\"link\" and $e.name==\"내보내기\")[0]\n$go = [limbs:browser]{op:\"click\", ref:$lk.ref}\n$s = [limbs:browser]{op:\"snapshot\"}\n$b = filter($s.snapshot, ($e)=>$e.role==\"button\")[0]\n$c1 = [limbs:browser]{op:\"click\", ref:$b.ref}\n$w = [limbs:browser]{op:\"wait\", text:\"내보내기 완료\", timeout:8000}\n$s2 = [limbs:browser]{op:\"snapshot\"}\n$dl = filter($s2.snapshot, ($e)=>$e.role==\"link\" and contains($e.name,\"내려받기\"))[0]\n$href = [limbs:browser]{op:\"evaluate\", expression:\"document.querySelector('#dl a').href\"}\n$ck = [limbs:browser]{op:\"click\", ref:$dl.ref}\n$w2 = [limbs:browser]{op:\"wait\", timeout:800}\n$tabs = [limbs:browser]{op:\"tab\", mode:\"list\"}\n$net = [limbs:browser]{op:\"logs\", mode:\"network\"}\nreturn {go:$go, wait:$w, dl:$dl, href:$href.result, click:$ck, tabs:$tabs.tabs, net:$net}\n",
+ "task_id": "lsi48-p1",
+ "elapsed": 3.09,
+ "response": {
+  "success": true,
+  "value": {
+   "go": {
+    "success": true,
+    "clicked": "내보내기 (e4)",
+    "url": "http://127.0.0.1:8989/export",
+    "title": "내보내기 — 가상 상점 관리",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   },
+   "wait": {
+    "success": true,
+    "waited_for": "text: 내보내기 완료",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   },
+   "dl": {
+    "ref": "e6",
+    "role": "link",
+    "name": "진열표 내려받기"
+   },
+   "href": "http://127.0.0.1:8989/files/471fa6f0e58c.csv",
+   "click": {
+    "success": true,
+    "clicked": "진열표 내려받기 (e6)",
+    "url": "http://127.0.0.1:8989/export",
+    "title": "내보내기 — 가상 상점 관리",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   },
+   "tabs": [
+    {
+     "tab_id": "8aacc66f60b4-t1",
+     "title": "내보내기 — 가상 상점 관리",
+     "url": "http://127.0.0.1:8989/export",
+     "active": true
+    }
+   ],
+   "net": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8989/products",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:29:03.557602"
+     },
+     {
+      "url": "http://127.0.0.1:8989/api/suggest?q=%ED%98%B8%EB%91%90",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:29:03.994408"
+     },
+     {
+      "url": "http://127.0.0.1:8989/products?pick=P-01",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:29:04.116495"
+     },
+     {
+      "url": "http://127.0.0.1:8989/api/save",
+      "status": 200,
+      "method": "POST",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:29:49.084310"
+     },
+     {
+      "url": "http://127.0.0.1:8989/display",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:29:49.181573"
+     },
+     {
+      "url": "http://127.0.0.1:8989/api/order",
+      "status": 200,
+      "method": "POST",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:29:49.449120"
+     },
+     {
+      "url": "http://127.0.0.1:8989/export",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:30:05.484785"
+     },
+     {
+      "url": "http://127.0.0.1:8989/api/export",
+      "status": 200,
+      "method": "POST",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:30:05.581974"
+     },
+     {
+      "url": "http://127.0.0.1:8989/api/export/status?job=91b0fd4f",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:30:05.583502"
+     },
+     {
+      "url": "http://127.0.0.1:8989/api/export/status?job=91b0fd4f",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:30:05.986270"
+     },
+     {
+      "url": "http://127.0.0.1:8989/api/export/status?job=91b0fd4f",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:30:06.389007"
+     },
+     {
+      "url": "http://127.0.0.1:8989/api/export/status?job=91b0fd4f",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:30:06.792297"
+     },
+     {
+      "url": "http://127.0.0.1:8989/api/export/status?job=91b0fd4f",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:30:07.194359"
+     }
+    ],
+    "count": 13,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 13,
+    "coverage": "recent_responses_and_failures",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f",
+    "tab_id": "8aacc66f60b4-t1"
+   }
+  },
+  "executed": true
+ }
+}

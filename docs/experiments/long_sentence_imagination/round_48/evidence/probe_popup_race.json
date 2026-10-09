@@ -1,0 +1,57 @@
+{
+ "code": "#!ibl edition=2\n$n = [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8989/products?pick=P-09\", driver:\"playwright\", wait:\"load\"}\n$s = [limbs:browser]{op:\"snapshot\"}\n$lk = filter($s.snapshot, ($e)=>$e.role==\"link\" and contains($e.name,\"편집\"))[0]\n$ck = [limbs:browser]{op:\"click\", ref:$lk.ref}\n$s1 = [limbs:browser]{op:\"snapshot\"}\n$t1 = [limbs:browser]{op:\"tab\", mode:\"list\"}\n$w = [limbs:browser]{op:\"wait\", timeout:400}\n$s2 = [limbs:browser]{op:\"snapshot\"}\n$t2 = [limbs:browser]{op:\"tab\", mode:\"list\"}\n$sl = filter($s2.snapshot, ($e)=>$e.role==\"slider\")\n$ty = {skipped:true}\n[if:len($sl)>0] {\n  [try]{ $ty = [limbs:browser]{op:\"type\", ref:$sl[0].ref, text:\"42000\"} }[catch]{ $ty = {caught:$error.message} }\n}\n$net = [limbs:browser]{op:\"logs\", mode:\"network\"}\n$cz = [limbs:browser]{op:\"close\"}\nreturn {click:$ck, right_after:{snapshot_url:$s1.url, snapshot_tab:$s1.tab_id, tabs:map($t1.tabs, ($t)=>{id:$t.tab_id, url:$t.url, active:$t.active})}, after_400ms:{snapshot_url:$s2.url, snapshot_tab:$s2.tab_id, tabs:map($t2.tabs, ($t)=>{id:$t.tab_id, url:$t.url, active:$t.active})}, type_on_slider:$ty, network_urls:map($net.logs, ($l)=>f\"${l.status} ${l.method} ${l.url}\")}\n",
+ "task_id": "lsi48-p2",
+ "elapsed": 1.47,
+ "response": {
+  "success": true,
+  "value": {
+   "click": {
+    "success": true,
+    "clicked": "황동 촛대 편집 (e18)",
+    "url": "http://127.0.0.1:8989/products?pick=P-09",
+    "title": "상품 관리 — 가상 상점 관리",
+    "session_owner": "27a3082a1e30fcb3c3546b84312749bf0c1fd5657d032984e95020ff747e2004",
+    "tab_id": "27a3082a1e30-t1"
+   },
+   "right_after": {
+    "snapshot_url": "http://127.0.0.1:8989/products?pick=P-09",
+    "snapshot_tab": "27a3082a1e30-t2",
+    "tabs": [
+     {
+      "id": "27a3082a1e30-t1",
+      "url": "http://127.0.0.1:8989/products?pick=P-09",
+      "active": false
+     },
+     {
+      "id": "27a3082a1e30-t2",
+      "url": "http://127.0.0.1:8989/edit/P-09",
+      "active": true
+     }
+    ]
+   },
+   "after_400ms": {
+    "snapshot_url": "http://127.0.0.1:8989/edit/P-09",
+    "snapshot_tab": "27a3082a1e30-t2",
+    "tabs": [
+     {
+      "id": "27a3082a1e30-t1",
+      "url": "http://127.0.0.1:8989/products?pick=P-09",
+      "active": false
+     },
+     {
+      "id": "27a3082a1e30-t2",
+      "url": "http://127.0.0.1:8989/edit/P-09",
+      "active": true
+     }
+    ]
+   },
+   "type_on_slider": {
+    "caught": "ref 'e6'는 입력 가능한 요소가 아닙니다 (role=slider). textbox, searchbox 등의 입력 필드 ref를 사용하세요."
+   },
+   "network_urls": [
+    "200 GET http://127.0.0.1:8989/products?pick=P-09"
+   ]
+  },
+  "executed": true
+ }
+}

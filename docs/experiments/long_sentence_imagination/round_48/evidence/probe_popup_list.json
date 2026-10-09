@@ -1,0 +1,73 @@
+{
+ "code": "#!ibl edition=2\n$tabs = [limbs:browser]{op:\"tab\", mode:\"list\"}\n$new = filter($tabs.tabs, ($t)=>contains($t.url,\"/edit/\"))\n$sw = {none:true}\n[if:len($new)>0] { $sw = [limbs:browser]{op:\"tab\", mode:\"switch\", tab_id:$new[0].tab_id} }\n$s = [limbs:browser]{op:\"snapshot\"}\nreturn {tabs:$tabs.tabs, sw:$sw, snap:$s.snapshot, url:$s.url}\n",
+ "task_id": "lsi48-p1",
+ "elapsed": 0.38,
+ "response": {
+  "success": true,
+  "value": {
+   "tabs": [
+    {
+     "tab_id": "8aacc66f60b4-t1",
+     "title": "상품 관리 — 가상 상점 관리",
+     "url": "http://127.0.0.1:8989/products?pick=P-01",
+     "active": false
+    },
+    {
+     "tab_id": "8aacc66f60b4-t2",
+     "title": "상품 편집 — 호두 도마 — 가상 상점 관리",
+     "url": "http://127.0.0.1:8989/edit/P-01",
+     "active": true
+    }
+   ],
+   "sw": {
+    "success": true,
+    "tab_id": "8aacc66f60b4-t2",
+    "title": "상품 편집 — 호두 도마 — 가상 상점 관리",
+    "url": "http://127.0.0.1:8989/edit/P-01",
+    "snapshot_hint": "탭 전환 후 browser_snapshot을 호출하여 새 탭의 구조를 파악하세요.",
+    "session_owner": "8aacc66f60b4356be7fd4ff46d7b5d4a3d6d39cde3a1b95ce1b68767f20a812f"
+   },
+   "snap": [
+    {
+     "ref": "e2",
+     "role": "textbox",
+     "name": "진열 문구",
+     "value": "호두 도마 기본 문구"
+    },
+    {
+     "ref": "e3",
+     "role": "link",
+     "name": "상품"
+    },
+    {
+     "ref": "e4",
+     "role": "link",
+     "name": "진열"
+    },
+    {
+     "ref": "e5",
+     "role": "link",
+     "name": "내보내기"
+    },
+    {
+     "ref": "e6",
+     "role": "slider",
+     "name": "판매가",
+     "value": "38000"
+    },
+    {
+     "ref": "e7",
+     "role": "button",
+     "name": "저장"
+    },
+    {
+     "ref": "e1",
+     "role": "heading",
+     "name": "상품 편집 — 호두 도마"
+    }
+   ],
+   "url": "http://127.0.0.1:8989/edit/P-01"
+  },
+  "executed": true
+ }
+}

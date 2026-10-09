@@ -73,6 +73,32 @@ def test_existing_limb_job_finishes_during_drain_with_auth(monkeypatch):
         assert reg.snapshot()['owners'] == []
 
 
+@pytest.mark.parametrize('operation', ['result', 'progress', 'phone_result'])
+def test_device_storage_does_not_block_event_loop(monkeypatch, operation):
+    import threading
+    import api_limb
+    import api_nodes
+    import phone_jobs
+    loop_thread = threading.get_ident()
+    seen = []
+    def store(*args):
+        assert threading.get_ident() != loop_thread
+        seen.append(args)
+        return True
+    monkeypatch.setattr(api_limb.limb_keys, 'validate', lambda key: {'device_id': 'pc'})
+    monkeypatch.setattr(api_limb, '_job_owned', store)
+    monkeypatch.setattr(phone_jobs, 'set_result', store)
+    monkeypatch.setattr(phone_jobs, 'set_partial', store)
+    if operation == 'progress':
+        call = api_limb.limb_progress(api_limb.ProgressRequest(key='test', job_id='j'))
+    elif operation == 'result':
+        call = api_limb.limb_result(api_limb.ResultRequest(key='test', job_id='j'))
+    else:
+        call = api_nodes.node_job_result(api_nodes.JobResultRequest(job_id='j'))
+    assert asyncio.run(call)['success']
+    assert seen
+
+
 if __name__ == "__main__":
     import sys
     import pytest

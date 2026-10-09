@@ -108,7 +108,8 @@ async def node_heartbeat(req: HeartbeatRequest):
 async def node_job_result(req: JobResultRequest):
     """폰이 푸시 작업 실행 결과를 회신 — 대기 중인 포워드(wait_result)를 깨운다."""
     import phone_jobs
-    phone_jobs.set_result(req.job_id, req.result)
+    import anyio
+    await anyio.to_thread.run_sync(phone_jobs.set_result, req.job_id, req.result)
     return {"success": True}
 
 

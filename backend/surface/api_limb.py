@@ -188,9 +188,9 @@ async def limb_progress(req: ProgressRequest):
     rec = limb_keys.validate(req.key)
     if not rec:
         return {"success": False, "error": "invalid_or_expired_key"}
-    if not _job_owned(req.job_id, rec):
+    if not await anyio.to_thread.run_sync(_job_owned, req.job_id, rec):
         return {"success": False, "error": "job_not_owned"}
-    phone_jobs.set_partial(req.job_id, {
+    await anyio.to_thread.run_sync(phone_jobs.set_partial, req.job_id, {
         "tail": req.tail, "bytes": req.bytes, "running": req.running})
     return {"success": True}
 
@@ -203,9 +203,9 @@ async def limb_result(req: ResultRequest):
         return {"success": False, "error": "invalid_or_expired_key"}
     if req.session and req.session != rec.get("session"):
         return {"success": False, "error": "stale_browser_session"}
-    if not _job_owned(req.job_id, rec):
+    if not await anyio.to_thread.run_sync(_job_owned, req.job_id, rec):
         return {"success": False, "error": "job_not_owned"}
-    phone_jobs.set_result(req.job_id, req.result)
+    await anyio.to_thread.run_sync(phone_jobs.set_result, req.job_id, req.result)
     return {"success": True}
 
 

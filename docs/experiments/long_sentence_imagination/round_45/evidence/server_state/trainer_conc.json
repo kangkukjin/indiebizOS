@@ -1,0 +1,64 @@
+{
+ "applications": [
+  {
+   "id": "R001",
+   "name": "강가상",
+   "birth": "1988-03-14",
+   "course": "C03",
+   "course_name": "배드민턴 C반",
+   "center_name": "가상 마포체육센터",
+   "fee": 45000,
+   "upload_name": "cert_강가상.png",
+   "upload_bytes": 3778,
+   "upload_sha256": "01cbe52acceaa0e85fc549c25ad2ed6bda396fbd90ce1e05b4f3ae541c389935",
+   "code": "MP-4471",
+   "at": "2026-10-09 15:24:43"
+  },
+  {
+   "id": "R002",
+   "name": "이합성",
+   "birth": "2014-11-02",
+   "course": "C28",
+   "course_name": "수영 중급 D반",
+   "center_name": "가상 수원체육센터",
+   "fee": 72000,
+   "upload_name": "cert_이합성.png",
+   "upload_bytes": 3640,
+   "upload_sha256": "605c024fc5c4ba108f0c69c8cb59de55c5d12d656b49b6090a804df1c83b95e9",
+   "code": "SW-9025",
+   "at": "2026-10-09 15:24:43"
+  }
+ ],
+ "rejections": [],
+ "uploads": [
+  {
+   "name": "cert_강가상.png",
+   "sha256": "01cbe52acceaa0e85fc549c25ad2ed6bda396fbd90ce1e05b4f3ae541c389935"
+  },
+  {
+   "name": "cert_이합성.png",
+   "sha256": "605c024fc5c4ba108f0c69c8cb59de55c5d12d656b49b6090a804df1c83b95e9"
+  }
+ ],
+ "logins": 2,
+ "requests": 16,
+ "courses_reads": 2,
+ "api_calls": [
+  {
+   "api": "centers",
+   "region": "서울"
+  },
+  {
+   "api": "centers",
+   "region": "경기"
+  },
+  {
+   "api": "courses",
+   "center": "S1"
+  },
+  {
+   "api": "courses",
+   "center": "G2"
+  }
+ ]
+}

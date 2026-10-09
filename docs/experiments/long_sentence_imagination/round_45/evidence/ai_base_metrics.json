@@ -1,0 +1,164 @@
+{
+  "episode": {
+    "id": 4505,
+    "total_ms": 379192,
+    "source": "training",
+    "run_id": "run_5cc2878c7ff8e9da1ec3"
+  },
+  "usage": {
+    "input": 4988697,
+    "output": 30615,
+    "cache_read": 4701560,
+    "cache_create": 280183
+  },
+  "roles": {
+    "oneshot:classify": {
+      "input": 10074,
+      "output": 58,
+      "cache_read": 3200,
+      "cache_create": 0
+    },
+    "consciousness": {
+      "input": 88049,
+      "output": 4522,
+      "cache_read": 32619,
+      "cache_create": 55426
+    },
+    "oneshot:execution": {
+      "input": 25504,
+      "output": 636,
+      "cache_read": 15794,
+      "cache_create": 9702
+    },
+    "execution": {
+      "input": 4820128,
+      "output": 24963,
+      "cache_read": 4648486,
+      "cache_create": 171576
+    },
+    "oneshot:evaluate": {
+      "input": 44942,
+      "output": 436,
+      "cache_read": 1461,
+      "cache_create": 43479
+    }
+  },
+  "events": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 8,
+    "supervision.recall.finished": 8,
+    "model.call_started": 9,
+    "model.input": 9,
+    "model.round": 43,
+    "model.usage": 9,
+    "model.call_finished": 9,
+    "knowledge_catalog.selected": 2,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "framing.inherit_declined": 1,
+    "supervision.model.started": 2,
+    "model.response_snapshot": 80,
+    "supervision.model.finished": 2,
+    "supervision.framing": 1,
+    "supervision.tool.started": 33,
+    "ibl.started": 16,
+    "ibl.checkpoint": 14,
+    "ibl.finished": 16,
+    "supervision.tool.finished": 33,
+    "seam": 14,
+    "side_effect.write": 4,
+    "supervision.decision": 2,
+    "supervision.review.trigger_retired": 2,
+    "model.image_route": 2,
+    "context.input_ref_resolved": 1,
+    "capability.judged": 1,
+    "cognition.evaluation": 1,
+    "supervision.evaluation.stage_started": 4,
+    "supervision.evaluation.stage_finished": 4,
+    "supervision.evaluation.started": 1,
+    "supervision.evaluation.finished": 1,
+    "validation.completed": 1,
+    "supervision.response.delivered": 1,
+    "recall.used": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+  },
+  "tool_names": {
+    "execute_ibl": 16,
+    "Bash": 17
+  },
+  "tool_failures": 0,
+  "recall_used": [
+    {
+      "blocks": [
+        {
+          "evidence": "executed",
+          "ibl_calls": 14,
+          "presented": [
+            "4802",
+            "4013"
+          ],
+          "recall_id": "c49f10dae41643ed898988e1321614da",
+          "source": "hippocampus",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "presented": [
+            "script:나레이션생성",
+            "script:폴더변화",
+            "script:웹앱작업"
+          ],
+          "quality_contribution": "not_inferred",
+          "recall_id": "c49f10dae41643ed898988e1321614da",
+          "source": "reusable_capabilities",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "opened": [],
+          "presented": [
+            "464",
+            "483",
+            "339"
+          ],
+          "recall_id": "c49f10dae41643ed898988e1321614da",
+          "source": "recalled_memory",
+          "used": []
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "playwright",
+            "basics.03.770eb9e292c1",
+            "basics.11.e7a241debad5",
+            "paddleocr"
+          ],
+          "recall_id": "c49f10dae41643ed898988e1321614da",
+          "source": "method_map",
+          "used": [
+            "playwright",
+            "basics.03.770eb9e292c1",
+            "basics.11.e7a241debad5"
+          ]
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "card_sorting",
+            "atlas.design.progressive_disclosure"
+          ],
+          "recall_id": "c49f10dae41643ed898988e1321614da",
+          "source": "world_memory",
+          "used": []
+        }
+      ],
+      "completed": true,
+      "phase": "turn"
+    }
+  ],
+  "compacted": 0
+}

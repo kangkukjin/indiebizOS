@@ -1,0 +1,65 @@
+{
+ "applications": [
+  {
+   "id": "R001",
+   "name": "강가상",
+   "birth": "1988-03-14",
+   "course": "C03",
+   "course_name": "배드민턴 C반",
+   "center_name": "가상 마포체육센터",
+   "fee": 45000,
+   "upload_name": "cert_강가상.png",
+   "upload_bytes": 3778,
+   "upload_sha256": "01cbe52acceaa0e85fc549c25ad2ed6bda396fbd90ce1e05b4f3ae541c389935",
+   "code": "MP-4471",
+   "at": "2026-10-09 15:31:50"
+  }
+ ],
+ "rejections": [
+  {
+   "name": "강가상",
+   "course": "C03",
+   "reason": "접수 코드를 확인하지 못했습니다(일시 오류). 다시 제출해 주세요"
+  },
+  {
+   "name": "이합성",
+   "course": "C28",
+   "reason": "정원 마감"
+  }
+ ],
+ "uploads": [
+  {
+   "name": "cert_강가상.png",
+   "sha256": "01cbe52acceaa0e85fc549c25ad2ed6bda396fbd90ce1e05b4f3ae541c389935"
+  }
+ ],
+ "logins": 2,
+ "requests": 71,
+ "courses_reads": 5,
+ "api_calls": [
+  {
+   "api": "centers",
+   "region": "서울"
+  },
+  {
+   "api": "courses",
+   "center": "S1"
+  },
+  {
+   "api": "centers",
+   "region": "서울"
+  },
+  {
+   "api": "courses",
+   "center": "S1"
+  },
+  {
+   "api": "centers",
+   "region": "경기"
+  },
+  {
+   "api": "courses",
+   "center": "G2"
+  }
+ ]
+}

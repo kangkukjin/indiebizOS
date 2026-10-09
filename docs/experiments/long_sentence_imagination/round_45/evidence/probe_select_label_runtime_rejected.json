@@ -1,0 +1,1246 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$n=[limbs:browser]{op:\"navigate\", url:f\"${base}login\", driver:\"playwright\", wait:\"load\"}\n$s=[limbs:browser]{op:\"snapshot\"}\n$t1=[limbs:browser]{op:\"type\", ref:\"e5\", text:\"lsi45_family\"}\n$t2=[limbs:browser]{op:\"type\", ref:\"e6\", text:\"lsi45-pass-7q\", submit:true}\n$cl=[limbs:browser]{op:\"navigate\", url:f\"${base}courses\", wait:\"load\"}\n$ct=[limbs:browser]{op:\"content\", mode:\"text\"}\n$ap=[limbs:browser]{op:\"navigate\", url:f\"${base}apply\", wait:\"load\"}\n$as=[limbs:browser]{op:\"snapshot\"}\n$r1=[limbs:browser]{op:\"select\", ref:\"e8\", label:\"서울\"}\n$w1=[try]{ [limbs:browser]{op:\"wait\", text:\"센터 선택\"} } [catch]{ {err:$error.message} }\n$s1=[limbs:browser]{op:\"snapshot\"}\n$r2=[limbs:browser]{op:\"select\", ref:\"e9\", label:\"가상 마포체육센터\"}\n$w2=[try]{ [limbs:browser]{op:\"wait\", text:\"강좌 선택\"} } [catch]{ {err:$error.message} }\n$s2=[limbs:browser]{op:\"snapshot\"}\n$r3=[limbs:browser]{op:\"select\", ref:\"e10\", value:\"C03\"}\n$n1=[limbs:browser]{op:\"type\", ref:\"e11\", text:\"강가상\"}\n$n2=[limbs:browser]{op:\"type\", ref:\"e12\", text:\"1988-03-14\"}\n$up=[limbs:browser]{op:\"upload_file\", ref:\"e13\", path:$cert}\n$ck=[limbs:browser]{op:\"check\", ref:\"e6\"}\n$sub=[limbs:browser]{op:\"click\", ref:\"e7\", dialog:\"accept\", dialog_text:\"MP-4471\"}\n$c=[limbs:browser]{op:\"content\", mode:\"text\"}\n$pdf=[limbs:browser]{op:\"pdf\", path:$pdfpath}\n$rd=[self:read]{path:$pdfpath}\n$opts1 = $s1.snapshot >> [table:filter]{where:($e)=>$e.role==\"option\"}\nreturn {courses_text:$ct.text, r1:$r1, w1:$w1, s1_opts:$opts1, r2:$r2, w2:$w2, r3:$r3, up:$up, ck:$ck, sub:$sub, after_url:$c.url, after_text:$c.text, pdf:$pdf, pdf_text:$rd.text}\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "inputs": {
+   "base": "http://127.0.0.1:8949/",
+   "cert": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/input/cert_강가상.png",
+   "pdfpath": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/_site/probe/receipt_probe.pdf"
+  }
+ },
+ "response": {
+  "success": false,
+  "error": "values(또는 value)가 필요합니다.",
+  "diagnostic": {
+   "code": "TOOL",
+   "kind": "runtime",
+   "message": "values(또는 value)가 필요합니다.",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [
+    73
+   ],
+   "details": {},
+   "source_span": {
+    "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+    "start": 503,
+    "end": 553,
+    "line": 10,
+    "column": 5
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "422e48f612ac3fe40bb890fbaf3348b76f160ad00777a3a5877a853802c0e669",
+  "source_complete": false,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:38:48",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "ref:58:62",
+    "invocation_id": 2,
+    "kind": "ref",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "format:54:69",
+    "invocation_id": 3,
+    "kind": "format",
+    "parents": [
+     2
+    ]
+   },
+   {
+    "id": 4,
+    "node_id": "literal:78:90",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:97:103",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "record:34:104",
+    "invocation_id": 6,
+    "kind": "record",
+    "parents": [
+     1,
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "id": 7,
+    "node_id": "call:19:104",
+    "invocation_id": 7,
+    "kind": "invoke",
+    "parents": [
+     6
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "155faa6aa8db0d7fee190f1c4d5f52168d0f5125ae3f76a6fcb4763e82b5557f",
+    "targets": {
+     "op": "navigate",
+     "url": "http://127.0.0.1:8949/login",
+     "driver": "playwright",
+     "wait": "load"
+    }
+   },
+   {
+    "id": 8,
+    "node_id": "call:19:104",
+    "invocation_id": 8,
+    "kind": "tool_evidence",
+    "parents": [
+     7
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 9,
+    "node_id": "call:19:104",
+    "invocation_id": 9,
+    "kind": "call",
+    "parents": [
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "id": 10,
+    "node_id": "bind:16:104",
+    "invocation_id": 10,
+    "kind": "bind",
+    "parents": [
+     9
+    ]
+   },
+   {
+    "id": 11,
+    "node_id": "literal:127:137",
+    "invocation_id": 11,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 12,
+    "node_id": "record:123:138",
+    "invocation_id": 12,
+    "kind": "record",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "call:108:138",
+    "invocation_id": 13,
+    "kind": "invoke",
+    "parents": [
+     12
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "89017d0523679567e4a3cec2e65953314dadd5829fbf639307c0dd9fcb34104e",
+    "targets": {
+     "op": "snapshot"
+    }
+   },
+   {
+    "id": 14,
+    "node_id": "call:108:138",
+    "invocation_id": 14,
+    "kind": "tool_evidence",
+    "parents": [
+     13
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 15,
+    "node_id": "call:108:138",
+    "invocation_id": 15,
+    "kind": "call",
+    "parents": [
+     12,
+     13,
+     14
+    ]
+   },
+   {
+    "id": 16,
+    "node_id": "bind:105:138",
+    "invocation_id": 16,
+    "kind": "bind",
+    "parents": [
+     15
+    ]
+   },
+   {
+    "id": 17,
+    "node_id": "literal:162:168",
+    "invocation_id": 17,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 18,
+    "node_id": "literal:174:178",
+    "invocation_id": 18,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 19,
+    "node_id": "literal:185:199",
+    "invocation_id": 19,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 20,
+    "node_id": "record:158:200",
+    "invocation_id": 20,
+    "kind": "record",
+    "parents": [
+     17,
+     18,
+     19
+    ]
+   },
+   {
+    "id": 21,
+    "node_id": "call:143:200",
+    "invocation_id": 21,
+    "kind": "invoke",
+    "parents": [
+     20
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "2559c10419084b9afe79a1225d51855c1bec59558e26fdc5b2c34175718afa9a",
+    "targets": {
+     "op": "type",
+     "ref": "e5",
+     "text": "lsi45_family"
+    }
+   },
+   {
+    "id": 22,
+    "node_id": "call:143:200",
+    "invocation_id": 22,
+    "kind": "tool_evidence",
+    "parents": [
+     21
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 23,
+    "node_id": "call:143:200",
+    "invocation_id": 23,
+    "kind": "call",
+    "parents": [
+     20,
+     21,
+     22
+    ]
+   },
+   {
+    "id": 24,
+    "node_id": "bind:139:200",
+    "invocation_id": 24,
+    "kind": "bind",
+    "parents": [
+     23
+    ]
+   },
+   {
+    "id": 25,
+    "node_id": "literal:224:230",
+    "invocation_id": 25,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 26,
+    "node_id": "literal:236:240",
+    "invocation_id": 26,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 27,
+    "node_id": "literal:247:262",
+    "invocation_id": 27,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 28,
+    "node_id": "literal:271:275",
+    "invocation_id": 28,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 29,
+    "node_id": "record:220:276",
+    "invocation_id": 29,
+    "kind": "record",
+    "parents": [
+     25,
+     26,
+     27,
+     28
+    ]
+   },
+   {
+    "id": 30,
+    "node_id": "call:205:276",
+    "invocation_id": 30,
+    "kind": "invoke",
+    "parents": [
+     29
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "96473abc0a40b36f59c5f3d1dde0bf843beaf8b7e0eda36f03ab6ad1a6d603c7",
+    "targets": {
+     "op": "type",
+     "ref": "e6",
+     "text": "lsi45-pass-7q"
+    }
+   },
+   {
+    "id": 31,
+    "node_id": "call:205:276",
+    "invocation_id": 31,
+    "kind": "tool_evidence",
+    "parents": [
+     30
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 32,
+    "node_id": "call:205:276",
+    "invocation_id": 32,
+    "kind": "call",
+    "parents": [
+     29,
+     30,
+     31
+    ]
+   },
+   {
+    "id": 33,
+    "node_id": "bind:201:276",
+    "invocation_id": 33,
+    "kind": "bind",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 34,
+    "node_id": "literal:300:310",
+    "invocation_id": 34,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 35,
+    "node_id": "ref:320:324",
+    "invocation_id": 35,
+    "kind": "ref",
+    "parents": []
+   },
+   {
+    "id": 36,
+    "node_id": "format:316:333",
+    "invocation_id": 36,
+    "kind": "format",
+    "parents": [
+     35
+    ]
+   },
+   {
+    "id": 37,
+    "node_id": "literal:340:346",
+    "invocation_id": 37,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 38,
+    "node_id": "record:296:347",
+    "invocation_id": 38,
+    "kind": "record",
+    "parents": [
+     34,
+     36,
+     37
+    ]
+   },
+   {
+    "id": 39,
+    "node_id": "call:281:347",
+    "invocation_id": 39,
+    "kind": "invoke",
+    "parents": [
+     38
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "76a908834904bf02c7b1ddd27edb354587ae4aefa0f5947cd51278c268c045e6",
+    "targets": {
+     "op": "navigate",
+     "url": "http://127.0.0.1:8949/courses",
+     "wait": "load"
+    }
+   },
+   {
+    "id": 40,
+    "node_id": "call:281:347",
+    "invocation_id": 40,
+    "kind": "tool_evidence",
+    "parents": [
+     39
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 41,
+    "node_id": "call:281:347",
+    "invocation_id": 41,
+    "kind": "call",
+    "parents": [
+     38,
+     39,
+     40
+    ]
+   },
+   {
+    "id": 42,
+    "node_id": "bind:277:347",
+    "invocation_id": 42,
+    "kind": "bind",
+    "parents": [
+     41
+    ]
+   },
+   {
+    "id": 43,
+    "node_id": "literal:371:380",
+    "invocation_id": 43,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 44,
+    "node_id": "literal:387:393",
+    "invocation_id": 44,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 45,
+    "node_id": "record:367:394",
+    "invocation_id": 45,
+    "kind": "record",
+    "parents": [
+     43,
+     44
+    ]
+   },
+   {
+    "id": 46,
+    "node_id": "call:352:394",
+    "invocation_id": 46,
+    "kind": "invoke",
+    "parents": [
+     45
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "bbb283e21a5fb12016e3bfbff1bd41f76161ce5d109ee205960e2e219a6884f0",
+    "targets": {
+     "op": "content",
+     "mode": "text"
+    }
+   },
+   {
+    "id": 47,
+    "node_id": "call:352:394",
+    "invocation_id": 47,
+    "kind": "tool_evidence",
+    "parents": [
+     46
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 48,
+    "node_id": "call:352:394",
+    "invocation_id": 48,
+    "kind": "call",
+    "parents": [
+     45,
+     46,
+     47
+    ]
+   },
+   {
+    "id": 49,
+    "node_id": "bind:348:394",
+    "invocation_id": 49,
+    "kind": "bind",
+    "parents": [
+     48
+    ]
+   },
+   {
+    "id": 50,
+    "node_id": "literal:418:428",
+    "invocation_id": 50,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 51,
+    "node_id": "ref:438:442",
+    "invocation_id": 51,
+    "kind": "ref",
+    "parents": []
+   },
+   {
+    "id": 52,
+    "node_id": "format:434:449",
+    "invocation_id": 52,
+    "kind": "format",
+    "parents": [
+     51
+    ]
+   },
+   {
+    "id": 53,
+    "node_id": "literal:456:462",
+    "invocation_id": 53,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 54,
+    "node_id": "record:414:463",
+    "invocation_id": 54,
+    "kind": "record",
+    "parents": [
+     50,
+     52,
+     53
+    ]
+   },
+   {
+    "id": 55,
+    "node_id": "call:399:463",
+    "invocation_id": 55,
+    "kind": "invoke",
+    "parents": [
+     54
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "3a4676fe663c092466bbc20d3a35f07a04077ddec5d303d0c10966b7f1016519",
+    "targets": {
+     "op": "navigate",
+     "url": "http://127.0.0.1:8949/apply",
+     "wait": "load"
+    }
+   },
+   {
+    "id": 56,
+    "node_id": "call:399:463",
+    "invocation_id": 56,
+    "kind": "tool_evidence",
+    "parents": [
+     55
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 57,
+    "node_id": "call:399:463",
+    "invocation_id": 57,
+    "kind": "call",
+    "parents": [
+     54,
+     55,
+     56
+    ]
+   },
+   {
+    "id": 58,
+    "node_id": "bind:395:463",
+    "invocation_id": 58,
+    "kind": "bind",
+    "parents": [
+     57
+    ]
+   },
+   {
+    "id": 59,
+    "node_id": "literal:487:497",
+    "invocation_id": 59,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 60,
+    "node_id": "record:483:498",
+    "invocation_id": 60,
+    "kind": "record",
+    "parents": [
+     59
+    ]
+   },
+   {
+    "id": 61,
+    "node_id": "call:468:498",
+    "invocation_id": 61,
+    "kind": "invoke",
+    "parents": [
+     60
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "89017d0523679567e4a3cec2e65953314dadd5829fbf639307c0dd9fcb34104e",
+    "targets": {
+     "op": "snapshot"
+    }
+   },
+   {
+    "id": 62,
+    "node_id": "call:468:498",
+    "invocation_id": 62,
+    "kind": "tool_evidence",
+    "parents": [
+     61
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 63,
+    "node_id": "call:468:498",
+    "invocation_id": 63,
+    "kind": "call",
+    "parents": [
+     60,
+     61,
+     62
+    ]
+   },
+   {
+    "id": 64,
+    "node_id": "bind:464:498",
+    "invocation_id": 64,
+    "kind": "bind",
+    "parents": [
+     63
+    ]
+   },
+   {
+    "id": 65,
+    "node_id": "literal:522:530",
+    "invocation_id": 65,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 66,
+    "node_id": "literal:536:540",
+    "invocation_id": 66,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 67,
+    "node_id": "literal:548:552",
+    "invocation_id": 67,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 68,
+    "node_id": "record:518:553",
+    "invocation_id": 68,
+    "kind": "record",
+    "parents": [
+     65,
+     66,
+     67
+    ]
+   },
+   {
+    "id": 69,
+    "node_id": "call:503:553",
+    "invocation_id": 69,
+    "kind": "invoke",
+    "parents": [
+     68
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "f3c8e6546bb7b9511863a19d6e0c253cb5e203bcdaba3fa2411efb21a8241a79",
+    "targets": {
+     "op": "select",
+     "ref": "e8",
+     "label": "서울"
+    }
+   },
+   {
+    "id": 70,
+    "node_id": "call:503:553",
+    "invocation_id": 70,
+    "kind": "tool_failure",
+    "parents": [
+     69
+    ],
+    "action": "limbs:browser",
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": true
+   },
+   {
+    "id": 71,
+    "node_id": "call:503:553",
+    "invocation_id": 71,
+    "kind": "failure",
+    "parents": [
+     68,
+     69,
+     70
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 72,
+    "node_id": "bind:499:553",
+    "invocation_id": 72,
+    "kind": "failure",
+    "parents": [
+     71
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 73,
+    "node_id": "sequence:15:1590",
+    "invocation_id": 73,
+    "kind": "failure",
+    "parents": [
+     10,
+     16,
+     24,
+     33,
+     42,
+     49,
+     58,
+     64,
+     72
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   }
+  ],
+  "usage": {
+   "steps": 55,
+   "rows": 0,
+   "elapsed_ms": 1091,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:105:138",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 105,
+      "end": 138,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:139:200",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 139,
+      "end": 200,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:16:104",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 16,
+      "end": 104,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:201:276",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 201,
+      "end": 276,
+      "line": 5,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:277:347",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 277,
+      "end": 347,
+      "line": 6,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:348:394",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 348,
+      "end": 394,
+      "line": 7,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:395:463",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 395,
+      "end": 463,
+      "line": 8,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:464:498",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 464,
+      "end": 498,
+      "line": 9,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:499:553",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 499,
+      "end": 553,
+      "line": 10,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:108:138",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 108,
+      "end": 138,
+      "line": 3,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:143:200",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 143,
+      "end": 200,
+      "line": 4,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:19:104",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 19,
+      "end": 104,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:205:276",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 205,
+      "end": 276,
+      "line": 5,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:281:347",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 281,
+      "end": 347,
+      "line": 6,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:352:394",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 352,
+      "end": 394,
+      "line": 7,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:399:463",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 399,
+      "end": 463,
+      "line": 8,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:468:498",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 468,
+      "end": 498,
+      "line": 9,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:503:553",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 503,
+      "end": 553,
+      "line": 10,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "format:316:333",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 316,
+      "end": 333,
+      "line": 6,
+      "column": 40
+     }
+    },
+    {
+     "node_id": "format:434:449",
+     "steps": 1,
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 434,
+      "end": 449,
+      "line": 8,
+      "column": 40
+     }
+    }
+   ],
+   "steps_other": 35,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 8,
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 5,
+     "steps": 7,
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 6,
+     "steps": 7,
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 8,
+     "steps": 7,
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 4,
+     "steps": 6,
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 10,
+     "steps": 6,
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 7,
+     "steps": 5,
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 3,
+     "steps": 4,
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 9,
+     "steps": 4,
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 253,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 4,
+     "ms": 51,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 5,
+     "ms": 48,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 8,
+     "ms": 42,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 9,
+     "ms": 38,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 10,
+     "ms": 32,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 3,
+     "ms": 26,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 7,
+     "ms": 22,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    },
+    {
+     "line": 6,
+     "ms": 21,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "4da8eda3c1ae44218c46f3248619ce95"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "read_exclusions": [
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "f029e6825dcb06c10238bbe98053ec9874e097fe58554bc47509f080c2550308",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 143,
+      "end": 200,
+      "line": 4,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "892718ed478b8d2006ce182dc5fb6c3a695f9e899cd60f6f8cd984c0436c7c49",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 399,
+      "end": 463,
+      "line": 8,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "50b51cbe99d7eee886423515b390f060782bb821349fc6e4f84d2406268b41ff",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "eb86ee86e3efe182cda4a7e0190a4a5c1db2276b00ad497865ec90e84f17734c",
+      "start": 503,
+      "end": 553,
+      "line": 10,
+      "column": 5
+     },
+     "excluded_calls": 1
+    }
+   ],
+   "read_exclusions_total": 3,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "4da8eda3c1ae44218c46f3248619ce95",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  },
+  "request_inputs": {
+   "input_args": {
+    "base": {
+     "$ref": "f7eb6ebec01d4a588c6b789652ac42a774102ebde2f438246db77ffa157b339b"
+    },
+    "cert": {
+     "$ref": "a3afe6e95c5ef837201da38c3b6b305708abc8f42ac920499755027da7208cfc"
+    },
+    "pdfpath": {
+     "$ref": "5c8b09848217c85e21b0560fa4a7a2dfb5ddbb9b04d8be2da158dd0f5ea2e778"
+    }
+   },
+   "unavailable": {},
+   "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  }
+ },
+ "elapsed": 1.1148650646209717
+}

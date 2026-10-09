@@ -1,0 +1,721 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 45회차 v3 (v2 + inputs.desk: 데스크톱 계산기 다리를 명시 입력(desk:true)으로만 켠다 — 기본 실행에서 Spotlight 입력이 다른 앱에 들어간 뒤 변형·동시 실행의 안전 조치) — 컴퓨터 유즈 2: 체육센터 강좌 신청 두 사람 몫. inputs: src(입력 폴더), out(출력 폴더), only(신청자 이름 또는 null)\n# 흐름: 계정·신청자·코드 읽기 → 로그인(wait:load) → 강좌 목록(큰 페이지: snapshot 상한 관측, content 로 수강료·정원) → 신청자마다\n#       [지역→센터→강좌 연쇄 select(wait text)] → 이름·생년월일·증명서 upload·약관 check → 제출(click dialog:accept + dialog_text=코드)\n#       → 접수 화면 판독(일시 오류면 1회 재제출, 거절은 사유) → 영수증 pdf → self:read 대조 → 합계 → 계산기(잠김/부재면 미실행) → result.json·report.md\n# 참고: 수리된 browser_action.md(작업별 세션·dialog·wait)·desktop.md·교재 2권·describe 4개·탐침 evidence/probe_apply_*.json(select 는 values/label 거절 → value)\n\n[def:줄찾기]($text,$key) {\n  $ls = filter(split($text,\"\\n\"),($l)=>contains($l,$key))\n  return len($ls)>0 ? $ls[0] : null\n}\n[def:글]($v,$대신) { return $v == null ? $대신 : $v }\n[def:참조]($snap,$role,$name) {\n  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}\n  return len($m)>0 ? $m[0].ref : null\n}\n[def:표값]($text,$key) {\n  $l = [fn:줄찾기]{text:$text, key:f\"${key}\\t\"}\n  return $l == null ? null : split($l,\"\\t\")[1]\n}\n[def:원]($s) { return number(replace(replace(strip($s),\",\",\"\"),\"원\",\"\")) }\n[def:목록행]($text) {\n  $rows = filter(split($text,\"\\n\"),($l)=>len(split($l,\"\\t\"))>=6 and $l[:1]==\"C\")\n  return map($rows,($l)=>{id:split($l,\"\\t\")[0], name:split($l,\"\\t\")[1], center:split($l,\"\\t\")[2], fee:[fn:원]{s:split($l,\"\\t\")[4]}, seats:split($l,\"\\t\")[5]})\n}\n# 신청 화면을 처음부터 채워 제출하고 결과 화면을 돌려준다(일시 오류 재제출용으로 분리)\n[def:제출]($portal,$src,$a,$code) {\n  $ap = [limbs:browser]{op:\"navigate\", url:f\"${portal}apply\", wait:\"load\"}\n  $s0 = [limbs:browser]{op:\"snapshot\"}\n  $r지역 = [fn:참조]{snap:$s0, role:\"combobox\", name:\"지역\"}\n  $r센터 = [fn:참조]{snap:$s0, role:\"combobox\", name:\"센터\"}\n  $r강좌 = [fn:참조]{snap:$s0, role:\"combobox\", name:\"강좌\"}\n  $r이름 = [fn:참조]{snap:$s0, role:\"textbox\", name:\"신청자 이름\"}\n  $r생년 = [fn:참조]{snap:$s0, role:\"textbox\", name:\"생년월일\"}\n  $r파일 = [fn:참조]{snap:$s0, role:\"button\", name:\"증명서\"}\n  $r동의 = [fn:참조]{snap:$s0, role:\"checkbox\", name:\"환불\"}\n  $r제출 = [fn:참조]{snap:$s0, role:\"button\", name:\"신청 제출\"}\n  assert $r지역 != null and $r센터 != null and $r강좌 != null and $r이름 != null and $r생년 != null and $r파일 != null and $r동의 != null and $r제출 != null, \"신청 화면 요소를 찾지 못했습니다\", {snapshot:$s0}\n  $x1 = [limbs:browser]{op:\"select\", ref:$r지역, value:$a.region}\n  $w1 = [limbs:browser]{op:\"wait\", text:\"센터 선택\"}\n  $x2 = [limbs:browser]{op:\"select\", ref:$r센터, value:$a.center}\n  $w2 = [limbs:browser]{op:\"wait\", text:\"강좌 선택\"}\n  $x3 = [limbs:browser]{op:\"select\", ref:$r강좌, value:$a.course}\n  $x4 = [limbs:browser]{op:\"type\", ref:$r이름, text:$a.name}\n  $x5 = [limbs:browser]{op:\"type\", ref:$r생년, text:$a.birth}\n  $x6 = [limbs:browser]{op:\"upload_file\", ref:$r파일, path:f\"${src}/${a.cert}\"}\n  $x7 = [limbs:browser]{op:\"check\", ref:$r동의}\n  $x8 = [limbs:browser]{op:\"click\", ref:$r제출, dialog:\"accept\", dialog_text:$code}\n  $c = [limbs:browser]{op:\"content\", mode:\"text\"}\n  return {url:$c.url, text:$c.text, selected:[$x1.selected,$x2.selected,$x3.selected], dialogs:$x8.dialogs, session_owner:$c.session_owner, tab_id:$c.tab_id}\n}\n\n# 1. 입력\n$acct = [self:read]{path:f\"${src}/account.json\"}\n$portal = $acct.data.portal_url\n$모두 = [self:read]{path:f\"${src}/applicants.json\"}\n$codes = [self:read]{path:f\"${src}/codes.json\"}\n$신청자 = $모두.data.items\n[if:$only != null] { $신청자 = $모두.data.items >> [table:filter]{where:($r)=>$r.name==$only} }\nassert len($신청자) > 0, \"신청자가 없습니다\", {only:$only}\n$mk = [self:mkdir]{path:f\"${out}/receipts\"}\n\n# 2. 로그인\n$l0 = [limbs:browser]{op:\"navigate\", url:f\"${portal}login\", driver:\"playwright\", wait:\"load\"}\n$snap0 = [limbs:browser]{op:\"snapshot\"}\n$refid = [fn:참조]{snap:$snap0, role:\"textbox\", name:\"이용자 ID\"}\n$refpw = [fn:참조]{snap:$snap0, role:\"textbox\", name:\"비밀번호\"}\nassert $refid != null and $refpw != null, \"로그인 입력칸을 찾지 못했습니다\", {snapshot:$snap0}\n$t1 = [limbs:browser]{op:\"type\", ref:$refid, text:$acct.data.user}\n$t2 = [limbs:browser]{op:\"type\", ref:$refpw, text:$acct.data.password, submit:true}\n$c0 = [limbs:browser]{op:\"content\", mode:\"text\"}\nassert contains($c0.url,\"/courses\"), \"로그인 뒤 강좌 목록으로 이동하지 않았습니다\", {url:$c0.url}\n\n# 3. 강좌 목록 — 큰 페이지: snapshot 상한 관측, 실제 값은 content 로\n$ls = [limbs:browser]{op:\"snapshot\"}\n$관측 = {element_count:$ls.element_count, shown_count:$ls.shown_count, truncated:get($ls,\"truncated\"), omitted_count:get($ls,\"omitted_count\")}\n$목록 = [fn:목록행]{text:$c0.text}\nassert len($목록) > 0, \"강좌 목록을 읽지 못했습니다\", {text:$c0.text}\n$사전확인 = $신청자 >> [table:each] {\n  $row = $목록 >> [table:filter]{where:($r)=>$r.id==$it.course}\n  [if:len($row)==0] { return {name:$it.name, course:$it.course, found:false, fee:null, seats:null} }\n  return {name:$it.name, course:$it.course, found:true, fee:$row[0].fee, seats:$row[0].seats, course_name:$row[0].name, center:$row[0].center}\n}\n\n# 4. 신청자마다 신청 → 판독 → (일시 오류 1회 재제출) → 영수증 PDF → 대조\n$결과 = $신청자 >> [table:each] {\n  $code = get($codes.data, $it.name)\n  $pre = ($사전확인 >> [table:filter]{where:($p)=>$p.name==$it.name})[0]\n  [try] {\n    assert $code != null, \"접수 코드가 없습니다\", {name:$it.name}\n    $r = [fn:제출]{portal:$portal, src:$src, a:$it, code:[fn:글]{v:$code,대신:\"\"}}\n    $일시 = [fn:줄찾기]{text:$r.text, key:\"일시 오류\"}\n    $r2 = $r\n    $retried = $일시 != null\n    [if:$retried] { $r2 = [fn:제출]{portal:$portal, src:$src, a:$it, code:[fn:글]{v:$code,대신:\"\"}} }\n    $접수 = contains($r2.url,\"/receipt/\")\n    [if:not $접수] {\n      $err = [fn:글]{v:[fn:줄찾기]{text:$r2.text, key:\"error\"}, 대신:\"\"}\n      $사유 = [fn:글]{v:[fn:줄찾기]{text:$r2.text, key:\"마감\"} ?? null, 대신:\"\"}\n      $사유2 = len($사유) > 0 ? $사유 : [fn:글]{v:[fn:줄찾기]{text:$r2.text, key:\"확인\"}, 대신:\"포털이 접수 화면을 보이지 않음\"}\n      return {name:$it.name, course:$it.course, ok:false, retried:$retried, receipt_id:null, reason:$사유2, fee:null, pdf:null, pdf_checks:null, session:{owner:$r2.session_owner, tab:$r2.tab_id}, line:f\"- ${it.name} ${it.course}: 실패 — ${사유2}\"}\n    }\n    $접수번호 = [fn:글]{v:[fn:표값]{text:$r2.text, key:\"접수번호\"}, 대신:\"\"}\n    $화면수강료 = [fn:원]{s:[fn:글]{v:[fn:표값]{text:$r2.text, key:\"수강료\"}, 대신:\"0원\"}}\n    $화면이름 = [fn:글]{v:[fn:표값]{text:$r2.text, key:\"신청자\"}, 대신:\"\"}\n    $pdfpath = f\"${out}/receipts/${it.name}.pdf\"\n    $pdf = [limbs:browser]{op:\"pdf\", path:$pdfpath}\n    $rd = [self:read]{path:$pdfpath}\n    $fee_text = format_number($화면수강료, \",.0f\")\n    $checks = {name_in_pdf:contains($rd.text,$it.name), course_in_pdf:contains($rd.text,$it.course), fee_in_pdf:contains($rd.text,f\"${fee_text}원\"), receipt_in_pdf:contains($rd.text,$접수번호),\n               fee_matches_list:$pre.found and $pre.fee == $화면수강료, name_matches:$화면이름 == $it.name}\n    $all_ok = $checks.name_in_pdf and $checks.course_in_pdf and $checks.fee_in_pdf and $checks.receipt_in_pdf and $checks.fee_matches_list and $checks.name_matches\n    $대조글 = $all_ok ? \"전건 일치\" : \"불일치 있음\"\n    $재제출글 = $retried ? \" (일시 오류 뒤 재제출)\" : \"\"\n    return {name:$it.name, course:$it.course, ok:true, retried:$retried, receipt_id:$접수번호, reason:null, fee:$화면수강료, pdf:$pdf.file_path, pdf_checks:$checks, all_checks_ok:$all_ok, session:{owner:$r2.session_owner, tab:$r2.tab_id}, line:f\"- ${it.name} ${it.course}: 접수 ${접수번호}, 수강료 ${화면수강료}원, PDF 대조 ${대조글}${재제출글}\"}\n  } [catch] {\n    return {name:$it.name, course:$it.course, ok:false, retried:false, receipt_id:null, reason:f\"오류: ${error.message}\", fee:null, pdf:null, pdf_checks:null, session:null, line:f\"- ${it.name} ${it.course}: 실패 — 오류: ${error.message}\"}\n  }\n}\n\n# 5. 합계\n$성공 = $결과 >> [table:filter]{where:($r)=>$r.ok}\n$실패 = $결과 >> [table:filter]{where:($r)=>not $r.ok}\n$합계 = reduce($성공, 0, ($s,$r)=>$s + $r.fee)\n\n# 6. 계산기 대조 — 화면 잠김(loginwindow)·사용자 부재면 미실행\n$host = [sense:host]{op:\"status\"}\n$calc = [try] {\n  [if:$desk != true or $host.frontmost_app == \"loginwindow\" or len($성공) == 0] {\n    {done:false, reason:$desk != true ? \"desk 입력 꺼짐 — 미실행\" : ($host.frontmost_app == \"loginwindow\" ? \"화면 잠김(loginwindow) — 미실행\" : \"성공 신청 없음 — 미실행\"), screen_value:null, matches:null}\n  } [else] {\n    $k1 = [limbs:screen]{op:\"key\", key:\"cmd+space\"}\n    $k2 = [limbs:screen]{op:\"type\", text:\"Calculator\"}\n    $k3 = [limbs:screen]{op:\"key\", key:\"enter\"}\n    $sn1 = [limbs:screen]{op:\"snapshot\"}\n    $식 = join(\"+\", map($성공, ($r)=>text($r.fee)))\n    $k4 = [limbs:screen]{op:\"type\", text:f\"${식}=\"}\n    $sn2 = [limbs:screen]{op:\"snapshot\"}\n    $k5 = [limbs:screen]{op:\"key\", key:\"cmd+q\"}\n    $vals = filter(map($sn2.elements, ($e)=>text(get($e,\"value\"))), ($v)=>contains($v, format_number($합계, \",.0f\")) or contains($v, text($합계)))\n    {done:true, reason:null, expression:$식, screen_value:len($vals)>0 ? $vals[0] : null, matches:len($vals)>0, app:get($sn2,\"app\")}\n  }\n} [catch] { {done:false, reason:f\"계산기 오류: ${error.message}\", screen_value:null, matches:null} }\n\n# 7. 결과 파일\n$result = {portal:$portal, applicants:map($신청자,($a)=>$a.name), precheck:$사전확인, list_snapshot:$관측, results:$결과,\n  fee_total_success:$합계, succeeded:map($성공,($r)=>$r.name), failed:map($실패,($r)=>{name:$r.name, reason:$r.reason}), calculator:$calc,\n  session:{login_owner:$l0.session_owner, login_tab:$l0.tab_id, session_started:get($l0,\"session_started\")}}\n$w1 = [self:write]{path:f\"${out}/result.json\", content:json($result)}\n$lines = map($결과, ($r)=>$r.line)\n$calc화면 = [fn:글]{v:$calc.screen_value, 대신:\"미판독\"}\n$calc일치 = $calc.matches == true ? \"일치\" : \"불일치\"\n$calc식 = [fn:글]{v:get($calc,\"expression\"), 대신:\"\"}\n$calc사유 = [fn:글]{v:$calc.reason, 대신:\"\"}\n$calcline = $calc.done ? f\"- 계산기: ${calc식} → 화면 ${calc화면} (${calc일치})\" : f\"- 계산기: ${calc사유}\"\n$owner글 = [fn:글]{v:$l0.session_owner, 대신:\"없음\"}\n$tab글 = [fn:글]{v:$l0.tab_id, 대신:\"없음\"}\n$report = join(\"\\n\", [\"# 체육센터 수강 신청 보고\", f\"- 포털: ${portal}\", f\"- 강좌 목록 ${len(목록)}개 (snapshot ${관측.shown_count}/${관측.element_count} 표시)\", \"\", \"## 신청 결과\"] + $lines +\n  [\"\", f\"- 수강료 합계(성공분): ${합계}원\", $calcline, \"\", \"## 세션\", f\"- session_owner ${owner글} · tab ${tab글}\"])\n$w2 = [self:write]{path:f\"${out}/report.md\", content:$report}\nreturn {applicants:len($신청자), ok:map($성공,($r)=>$r.name), failed:map($실패,($r)=>$r.name), fee_total:$합계, list_snapshot:$관측, calculator:$calc.done, calc_reason:$calc.reason, session_owner:$l0.session_owner, files:[$w1.path,$w2.path]}\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": false,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/input_flaky",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/out_flaky",
+   "only": null,
+   "desk": false
+  }
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1791527161.572022,
+ "ended": 1791527172.1369789,
+ "response": {
+  "success": true,
+  "value": {
+   "applicants": 2,
+   "ok": [
+    "강가상"
+   ],
+   "failed": [
+    "이합성"
+   ],
+   "fee_total": 45000,
+   "list_snapshot": {
+    "element_count": 413,
+    "shown_count": 144,
+    "truncated": true,
+    "omitted_count": 269
+   },
+   "calculator": false,
+   "calc_reason": "desk 입력 꺼짐 — 미실행",
+   "session_owner": "a1de26f3aa7b0a9effbb24600c0ab277855dde4d7e523ea549d0e8176020bdc6",
+   "files": [
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/out_flaky/result.json",
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/out_flaky/report.md"
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "366a68fd2ec56f4ebde71b77c42962c2229cdcf0b7dc436e3162629d66a54aa0",
+  "source_complete": true,
+  "usage": {
+   "steps": 11262,
+   "rows": 5,
+   "elapsed_ms": 10325,
+   "limits": {
+    "steps": 1000000,
+    "rows": 100000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "binary:932:946",
+     "steps": 468,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 932,
+      "end": 946,
+      "line": 14,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "binary:932:974",
+     "steps": 468,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 932,
+      "end": 974,
+      "line": 14,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "field:932:939",
+     "steps": 468,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 932,
+      "end": 939,
+      "line": 14,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "ref:932:934",
+     "steps": 468,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 932,
+      "end": 934,
+      "line": 14,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "ref:941:946",
+     "steps": 468,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 941,
+      "end": 946,
+      "line": 14,
+      "column": 62
+     }
+    },
+    {
+     "node_id": "pure_call:1270:1284",
+     "steps": 390,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1270,
+      "end": 1284,
+      "line": 23,
+      "column": 46
+     }
+    },
+    {
+     "node_id": "pure_call:1335:1349",
+     "steps": 360,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1335,
+      "end": 1349,
+      "line": 24,
+      "column": 30
+     }
+    },
+    {
+     "node_id": "pure_call:1359:1373",
+     "steps": 360,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1359,
+      "end": 1373,
+      "line": 24,
+      "column": 54
+     }
+    },
+    {
+     "node_id": "pure_call:1385:1399",
+     "steps": 360,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1385,
+      "end": 1399,
+      "line": 24,
+      "column": 80
+     }
+    },
+    {
+     "node_id": "pure_call:1417:1431",
+     "steps": 360,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1417,
+      "end": 1431,
+      "line": 24,
+      "column": 112
+     }
+    },
+    {
+     "node_id": "pure_call:1443:1457",
+     "steps": 360,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1443,
+      "end": 1457,
+      "line": 24,
+      "column": 138
+     }
+    },
+    {
+     "node_id": "pure_call:744:761",
+     "steps": 300,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 744,
+      "end": 761,
+      "line": 9,
+      "column": 40
+     }
+    },
+    {
+     "node_id": "pure_call:713:762",
+     "steps": 164,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 713,
+      "end": 762,
+      "line": 9,
+      "column": 9
+     }
+    },
+    {
+     "node_id": "pure_call:720:737",
+     "steps": 164,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 720,
+      "end": 737,
+      "line": 9,
+      "column": 16
+     }
+    },
+    {
+     "node_id": "builtin:744:752",
+     "steps": 150,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 744,
+      "end": 752,
+      "line": 9,
+      "column": 40
+     }
+    },
+    {
+     "node_id": "ref:753:755",
+     "steps": 150,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 753,
+      "end": 755,
+      "line": 9,
+      "column": 49
+     }
+    },
+    {
+     "node_id": "ref:756:760",
+     "steps": 150,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 756,
+      "end": 760,
+      "line": 9,
+      "column": 52
+     }
+    },
+    {
+     "node_id": "pure_call:951:974",
+     "steps": 116,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 951,
+      "end": 974,
+      "line": 14,
+      "column": 72
+     }
+    },
+    {
+     "node_id": "pure_call:1266:1285",
+     "steps": 96,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1266,
+      "end": 1285,
+      "line": 23,
+      "column": 42
+     }
+    },
+    {
+     "node_id": "pure_call:1154:1203",
+     "steps": 82,
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1154,
+      "end": 1203,
+      "line": 21,
+      "column": 22
+     }
+    }
+   ],
+   "steps_other": 5360,
+   "steps_by_line": [
+    {
+     "line": 24,
+     "steps": 2966,
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 14,
+     "steps": 2870,
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 23,
+     "steps": 1174,
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 9,
+     "steps": 1120,
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 21,
+     "steps": 780,
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 80,
+     "steps": 412,
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 15,
+     "steps": 312,
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 38,
+     "steps": 96,
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 12,
+     "steps": 92,
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 10,
+     "steps": 73,
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 42,
+     "ms": 1949,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 40,
+     "ms": 1436,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 127,
+     "ms": 532,
+     "calls": 1,
+     "actions": [
+      "sense:host"
+     ],
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 48,
+     "ms": 513,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 29,
+     "ms": 455,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 39,
+     "ms": 427,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 64,
+     "ms": 341,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 44,
+     "ms": 323,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 47,
+     "ms": 294,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    },
+    {
+     "line": 28,
+     "ms": 265,
+     "calls": 3,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e"
+    }
+   ]
+  },
+  "verification": {
+   "plan_hash": "366a68fd2ec56f4ebde71b77c42962c2229cdcf0b7dc436e3162629d66a54aa0",
+   "value_hash": "97f8b62eaefe7d44e5c9260a2be7f96655e9da7375ab8f2d0a78fff28bddab71",
+   "checks": [
+    {
+     "id": 46,
+     "node_id": "assert:3413:3460",
+     "invocation_id": 46,
+     "kind": "assertion",
+     "parents": [
+      45
+     ],
+     "passed": true,
+     "predicate_hash": "2fcbc4166a187409263e830f9d014aa2393dfa16c7b4dbc49e04e01d0f228b89"
+    },
+    {
+     "id": 142,
+     "node_id": "assert:3769:3849",
+     "invocation_id": 142,
+     "kind": "assertion",
+     "parents": [
+      141
+     ],
+     "passed": true,
+     "predicate_hash": "d8eed0908778a4c3c01297d52e77e67de3512040370e440447a690b30760ffed"
+    },
+    {
+     "id": 177,
+     "node_id": "assert:4050:4128",
+     "invocation_id": 177,
+     "kind": "assertion",
+     "parents": [
+      176
+     ],
+     "passed": true,
+     "predicate_hash": "5d7717fb040718f57f4d1f39b687c45fcde97813115365c8dc631692618aa8d3"
+    },
+    {
+     "id": 401,
+     "node_id": "assert:4390:4445",
+     "invocation_id": 401,
+     "kind": "assertion",
+     "parents": [
+      400
+     ],
+     "passed": true,
+     "predicate_hash": "58a88382243b9d16901aeee5853241a8daee993f5bd4aef907c35f146b4eb987"
+    },
+    {
+     "id": 495,
+     "node_id": "assert:4986:5038",
+     "invocation_id": 495,
+     "kind": "assertion",
+     "parents": [
+      494
+     ],
+     "passed": true,
+     "predicate_hash": "922d5c9d8a4692dc9bf26e50bf7847bf162b01a70f8566ad6ea24d5d7b8f017c"
+    },
+    {
+     "id": 781,
+     "node_id": "assert:2110:2286",
+     "invocation_id": 781,
+     "kind": "assertion",
+     "parents": [
+      780
+     ],
+     "passed": true,
+     "predicate_hash": "0dac092409039c7565078d2166a2cd72aa16cb2d9b5ad9f111c47b7e675d9d17"
+    },
+    {
+     "id": 1224,
+     "node_id": "assert:2110:2286",
+     "invocation_id": 1224,
+     "kind": "assertion",
+     "parents": [
+      1223
+     ],
+     "passed": true,
+     "predicate_hash": "0dac092409039c7565078d2166a2cd72aa16cb2d9b5ad9f111c47b7e675d9d17"
+    },
+    {
+     "id": 1607,
+     "node_id": "assert:4986:5038",
+     "invocation_id": 1607,
+     "kind": "assertion",
+     "parents": [
+      494
+     ],
+     "passed": true,
+     "predicate_hash": "922d5c9d8a4692dc9bf26e50bf7847bf162b01a70f8566ad6ea24d5d7b8f017c"
+    },
+    {
+     "id": 1854,
+     "node_id": "assert:2110:2286",
+     "invocation_id": 1854,
+     "kind": "assertion",
+     "parents": [
+      1853
+     ],
+     "passed": true,
+     "predicate_hash": "0dac092409039c7565078d2166a2cd72aa16cb2d9b5ad9f111c47b7e675d9d17"
+    }
+   ],
+   "source_snapshots": [
+    [
+     "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/input_flaky/account.json",
+     1791526643943316902,
+     98,
+     "c3e6530fa2669d6534e94a057bebc5679a66bca39c040831a525dffde9ca081a"
+    ],
+    [
+     "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/input_flaky/applicants.json",
+     1791526643943394939,
+     338,
+     "355f3c80e80d14bea493121da92bcba4f16e8e9fcdb62be61c658f277082152f"
+    ],
+    [
+     "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/input_flaky/codes.json",
+     1791526643943455769,
+     52,
+     "b85e92acfaa79a321ccf0dcad4ab8f3eb59bc59796cc4a2edbab2cbed1714bee"
+    ],
+    [
+     "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/out_flaky/receipts/강가상.pdf",
+     1791527168681334033,
+     102220,
+     "52a5db115e756d0ab93a14879c5b7d8011ebd108547c46a4cfd279320dcf34eb"
+    ]
+   ],
+   "scope": "declared_assertions",
+   "source_complete": true
+  },
+  "resume": {
+   "run_id": "3114b33f2f334b5bb7fec2f114a24155"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "read_exclusions": [
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "855fff50bd63c101810f131030055993072350416d3f0fe760159708b195c003",
+     "action": "self:mkdir",
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 3467,
+      "end": 3504,
+      "line": 61,
+      "column": 7
+     },
+     "excluded_calls": 3
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "aa05e09475965f6f3069eb546ac579dc5b65b00a6edd669eebf2832b190d6126",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 3856,
+      "end": 3916,
+      "line": 69,
+      "column": 7
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "b34306586d1cdd4ce24c52dbb66fb376fa61611d5662ecd877b8eb9c02e66ba2",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1558,
+      "end": 1624,
+      "line": 28,
+      "column": 9
+     },
+     "excluded_calls": 2
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "317009253cca19256b7e914af9dc7c89eb95341d6b50de5f2771ca347cc90edb",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 2295,
+      "end": 2350,
+      "line": 39,
+      "column": 9
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "1c491081290fca410fd50bec3b0402f4f0f08466cf6a5c75aeb22309b0e61122",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1558,
+      "end": 1624,
+      "line": 28,
+      "column": 9
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "5135aa070ce1d446b33dd91f0996581ccd2c9b587d55eab758c6d9afcde65f1e",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 2295,
+      "end": 2350,
+      "line": 39,
+      "column": 9
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "f8b1a323ba06b26f0d4c483a5e6eeeda4dcc3dd3875342ee7eacdea4a05c5cc3",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 6110,
+      "end": 6150,
+      "line": 107,
+      "column": 12
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "124c62c8f8a068071289315ea7a397bf43551b3ee6caaa2de583616f0953271c",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 1558,
+      "end": 1624,
+      "line": 28,
+      "column": 9
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "41131e87cb946458a4e7e5b3a1e9551a33fd23cfe14f1b278e00e0439c713065",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 2295,
+      "end": 2350,
+      "line": 39,
+      "column": 9
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "overlapping_write",
+     "write_call_id": "29c5234d3c53454debacca5f975d494c88f90f55bf32ee6c9e040003ba0ec610",
+     "action": "self:write",
+     "location": {
+      "source_hash": "989f9273df0aee9e2a3d5d8823fa69e69960e4099faee513e5a6e3ab055b067e",
+      "start": 8990,
+      "end": 9053,
+      "line": 149,
+      "column": 7
+     },
+     "excluded_calls": 2
+    }
+   ],
+   "read_exclusions_total": 10,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "3114b33f2f334b5bb7fec2f114a24155",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  },
+  "recordings_ref": {
+   "items": [],
+   "ref": {
+    "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/20261009_152611_recordings_3a74c3.json",
+    "kind": "list",
+    "count": 54,
+    "bytes": 90402,
+    "expires_at": "2026-10-10T15:26:11"
+   },
+   "_spilled": true
+  },
+  "recordings_count": 54,
+  "recordings_note": "실행 영수증 원문은 recordings_ref에 보존했습니다. 재생 시 원문 목록을 읽으세요."
+ }
+}

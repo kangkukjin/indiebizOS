@@ -1,0 +1,523 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 45회차 v1 (v0 수정 1회: 보간 안의 따옴표 삼항 SYNTAX → 문구를 변수로 먼저 계산) — 컴퓨터 유즈 2: 체육센터 강좌 신청 두 사람 몫. inputs: src(입력 폴더), out(출력 폴더), only(신청자 이름 또는 null)\n# 흐름: 계정·신청자·코드 읽기 → 로그인(wait:load) → 강좌 목록(큰 페이지: snapshot 상한 관측, content 로 수강료·정원) → 신청자마다\n#       [지역→센터→강좌 연쇄 select(wait text)] → 이름·생년월일·증명서 upload·약관 check → 제출(click dialog:accept + dialog_text=코드)\n#       → 접수 화면 판독(일시 오류면 1회 재제출, 거절은 사유) → 영수증 pdf → self:read 대조 → 합계 → 계산기(잠김/부재면 미실행) → result.json·report.md\n# 참고: 수리된 browser_action.md(작업별 세션·dialog·wait)·desktop.md·교재 2권·describe 4개·탐침 evidence/probe_apply_*.json(select 는 values/label 거절 → value)\n\n[def:줄찾기]($text,$key) {\n  $ls = filter(split($text,\"\\n\"),($l)=>contains($l,$key))\n  return len($ls)>0 ? $ls[0] : null\n}\n[def:글]($v,$대신) { return $v == null ? $대신 : $v }\n[def:참조]($snap,$role,$name) {\n  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}\n  return len($m)>0 ? $m[0].ref : null\n}\n[def:표값]($text,$key) {\n  $l = [fn:줄찾기]{text:$text, key:f\"${key}\\t\"}\n  return $l == null ? null : split($l,\"\\t\")[1]\n}\n[def:원]($s) { return number(replace(replace(strip($s),\",\",\"\"),\"원\",\"\")) }\n[def:목록행]($text) {\n  $rows = filter(split($text,\"\\n\"),($l)=>len(split($l,\"\\t\"))>=6 and $l[:1]==\"C\")\n  return map($rows,($l)=>{id:split($l,\"\\t\")[0], name:split($l,\"\\t\")[1], center:split($l,\"\\t\")[2], fee:[fn:원]{s:split($l,\"\\t\")[4]}, seats:split($l,\"\\t\")[5]})\n}\n# 신청 화면을 처음부터 채워 제출하고 결과 화면을 돌려준다(일시 오류 재제출용으로 분리)\n[def:제출]($portal,$src,$a,$code) {\n  $ap = [limbs:browser]{op:\"navigate\", url:f\"${portal}apply\", wait:\"load\"}\n  $s0 = [limbs:browser]{op:\"snapshot\"}\n  $r지역 = [fn:참조]{snap:$s0, role:\"combobox\", name:\"지역\"}\n  $r센터 = [fn:참조]{snap:$s0, role:\"combobox\", name:\"센터\"}\n  $r강좌 = [fn:참조]{snap:$s0, role:\"combobox\", name:\"강좌\"}\n  $r이름 = [fn:참조]{snap:$s0, role:\"textbox\", name:\"신청자 이름\"}\n  $r생년 = [fn:참조]{snap:$s0, role:\"textbox\", name:\"생년월일\"}\n  $r파일 = [fn:참조]{snap:$s0, role:\"button\", name:\"증명서\"}\n  $r동의 = [fn:참조]{snap:$s0, role:\"checkbox\", name:\"환불\"}\n  $r제출 = [fn:참조]{snap:$s0, role:\"button\", name:\"신청 제출\"}\n  assert $r지역 != null and $r센터 != null and $r강좌 != null and $r이름 != null and $r생년 != null and $r파일 != null and $r동의 != null and $r제출 != null, \"신청 화면 요소를 찾지 못했습니다\", {snapshot:$s0}\n  $x1 = [limbs:browser]{op:\"select\", ref:$r지역, value:$a.region}\n  $w1 = [limbs:browser]{op:\"wait\", text:\"센터 선택\"}\n  $x2 = [limbs:browser]{op:\"select\", ref:$r센터, value:$a.center}\n  $w2 = [limbs:browser]{op:\"wait\", text:\"강좌 선택\"}\n  $x3 = [limbs:browser]{op:\"select\", ref:$r강좌, value:$a.course}\n  $x4 = [limbs:browser]{op:\"type\", ref:$r이름, text:$a.name}\n  $x5 = [limbs:browser]{op:\"type\", ref:$r생년, text:$a.birth}\n  $x6 = [limbs:browser]{op:\"upload_file\", ref:$r파일, path:f\"${src}/${a.cert}\"}\n  $x7 = [limbs:browser]{op:\"check\", ref:$r동의}\n  $x8 = [limbs:browser]{op:\"click\", ref:$r제출, dialog:\"accept\", dialog_text:$code}\n  $c = [limbs:browser]{op:\"content\", mode:\"text\"}\n  return {url:$c.url, text:$c.text, selected:[$x1.selected,$x2.selected,$x3.selected], dialogs:$x8.dialogs, session_owner:$c.session_owner, tab_id:$c.tab_id}\n}\n\n# 1. 입력\n$acct = [self:read]{path:f\"${src}/account.json\"}\n$portal = $acct.data.portal_url\n$모두 = [self:read]{path:f\"${src}/applicants.json\"}\n$codes = [self:read]{path:f\"${src}/codes.json\"}\n$신청자 = $only == null ? $모두.data.items : ($모두.data.items >> [table:filter]{where:($r)=>$r.name==$only})\nassert len($신청자) > 0, \"신청자가 없습니다\", {only:$only}\n$mk = [self:mkdir]{path:f\"${out}/receipts\"}\n\n# 2. 로그인\n$l0 = [limbs:browser]{op:\"navigate\", url:f\"${portal}login\", driver:\"playwright\", wait:\"load\"}\n$snap0 = [limbs:browser]{op:\"snapshot\"}\n$refid = [fn:참조]{snap:$snap0, role:\"textbox\", name:\"이용자 ID\"}\n$refpw = [fn:참조]{snap:$snap0, role:\"textbox\", name:\"비밀번호\"}\nassert $refid != null and $refpw != null, \"로그인 입력칸을 찾지 못했습니다\", {snapshot:$snap0}\n$t1 = [limbs:browser]{op:\"type\", ref:$refid, text:$acct.data.user}\n$t2 = [limbs:browser]{op:\"type\", ref:$refpw, text:$acct.data.password, submit:true}\n$c0 = [limbs:browser]{op:\"content\", mode:\"text\"}\nassert contains($c0.url,\"/courses\"), \"로그인 뒤 강좌 목록으로 이동하지 않았습니다\", {url:$c0.url}\n\n# 3. 강좌 목록 — 큰 페이지: snapshot 상한 관측, 실제 값은 content 로\n$ls = [limbs:browser]{op:\"snapshot\"}\n$관측 = {element_count:$ls.element_count, shown_count:$ls.shown_count, truncated:get($ls,\"truncated\"), omitted_count:get($ls,\"omitted_count\")}\n$목록 = [fn:목록행]{text:$c0.text}\nassert len($목록) > 0, \"강좌 목록을 읽지 못했습니다\", {text:$c0.text}\n$사전확인 = $신청자 >> [table:each] {\n  $row = $목록 >> [table:filter]{where:($r)=>$r.id==$it.course}\n  [if:len($row)==0] { return {name:$it.name, course:$it.course, found:false, fee:null, seats:null} }\n  return {name:$it.name, course:$it.course, found:true, fee:$row[0].fee, seats:$row[0].seats, course_name:$row[0].name, center:$row[0].center}\n}\n\n# 4. 신청자마다 신청 → 판독 → (일시 오류 1회 재제출) → 영수증 PDF → 대조\n$결과 = $신청자 >> [table:each] {\n  $code = get($codes.data, $it.name)\n  $pre = ($사전확인 >> [table:filter]{where:($p)=>$p.name==$it.name})[0]\n  [try] {\n    assert $code != null, \"접수 코드가 없습니다\", {name:$it.name}\n    $r = [fn:제출]{portal:$portal, src:$src, a:$it, code:[fn:글]{v:$code,대신:\"\"}}\n    $일시 = [fn:줄찾기]{text:$r.text, key:\"일시 오류\"}\n    $r2 = $일시 != null ? [fn:제출]{portal:$portal, src:$src, a:$it, code:[fn:글]{v:$code,대신:\"\"}} : $r\n    $retried = $일시 != null\n    $접수 = contains($r2.url,\"/receipt/\")\n    [if:not $접수] {\n      $err = [fn:글]{v:[fn:줄찾기]{text:$r2.text, key:\"error\"}, 대신:\"\"}\n      $사유 = [fn:글]{v:[fn:줄찾기]{text:$r2.text, key:\"마감\"} ?? null, 대신:\"\"}\n      $사유2 = len($사유) > 0 ? $사유 : [fn:글]{v:[fn:줄찾기]{text:$r2.text, key:\"확인\"}, 대신:\"포털이 접수 화면을 보이지 않음\"}\n      return {name:$it.name, course:$it.course, ok:false, retried:$retried, receipt_id:null, reason:$사유2, fee:null, pdf:null, pdf_checks:null, session:{owner:$r2.session_owner, tab:$r2.tab_id}, line:f\"- ${it.name} ${it.course}: 실패 — ${사유2}\"}\n    }\n    $접수번호 = [fn:글]{v:[fn:표값]{text:$r2.text, key:\"접수번호\"}, 대신:\"\"}\n    $화면수강료 = [fn:원]{s:[fn:글]{v:[fn:표값]{text:$r2.text, key:\"수강료\"}, 대신:\"0원\"}}\n    $화면이름 = [fn:글]{v:[fn:표값]{text:$r2.text, key:\"신청자\"}, 대신:\"\"}\n    $pdfpath = f\"${out}/receipts/${it.name}.pdf\"\n    $pdf = [limbs:browser]{op:\"pdf\", path:$pdfpath}\n    $rd = [self:read]{path:$pdfpath}\n    $fee_text = format_number($화면수강료, \",.0f\")\n    $checks = {name_in_pdf:contains($rd.text,$it.name), course_in_pdf:contains($rd.text,$it.course), fee_in_pdf:contains($rd.text,f\"${fee_text}원\"), receipt_in_pdf:contains($rd.text,$접수번호),\n               fee_matches_list:$pre.found and $pre.fee == $화면수강료, name_matches:$화면이름 == $it.name}\n    $all_ok = $checks.name_in_pdf and $checks.course_in_pdf and $checks.fee_in_pdf and $checks.receipt_in_pdf and $checks.fee_matches_list and $checks.name_matches\n    $대조글 = $all_ok ? \"전건 일치\" : \"불일치 있음\"\n    $재제출글 = $retried ? \" (일시 오류 뒤 재제출)\" : \"\"\n    return {name:$it.name, course:$it.course, ok:true, retried:$retried, receipt_id:$접수번호, reason:null, fee:$화면수강료, pdf:$pdf.file_path, pdf_checks:$checks, all_checks_ok:$all_ok, session:{owner:$r2.session_owner, tab:$r2.tab_id}, line:f\"- ${it.name} ${it.course}: 접수 ${접수번호}, 수강료 ${화면수강료}원, PDF 대조 ${대조글}${재제출글}\"}\n  } [catch] {\n    return {name:$it.name, course:$it.course, ok:false, retried:false, receipt_id:null, reason:f\"오류: ${error.message}\", fee:null, pdf:null, pdf_checks:null, session:null, line:f\"- ${it.name} ${it.course}: 실패 — 오류: ${error.message}\"}\n  }\n}\n\n# 5. 합계\n$성공 = $결과 >> [table:filter]{where:($r)=>$r.ok}\n$실패 = $결과 >> [table:filter]{where:($r)=>not $r.ok}\n$합계 = reduce($성공, 0, ($s,$r)=>$s + $r.fee)\n\n# 6. 계산기 대조 — 화면 잠김(loginwindow)·사용자 부재면 미실행\n$host = [sense:host]{op:\"status\"}\n$calc = [try] {\n  [if:$host.frontmost_app == \"loginwindow\" or len($성공) == 0] {\n    {done:false, reason:$host.frontmost_app == \"loginwindow\" ? \"화면 잠김(loginwindow) — 미실행\" : \"성공 신청 없음 — 미실행\", screen_value:null, matches:null}\n  } [else] {\n    $k1 = [limbs:screen]{op:\"key\", key:\"cmd+space\"}\n    $k2 = [limbs:screen]{op:\"type\", text:\"Calculator\"}\n    $k3 = [limbs:screen]{op:\"key\", key:\"enter\"}\n    $sn1 = [limbs:screen]{op:\"snapshot\"}\n    $식 = join(\"+\", map($성공, ($r)=>text($r.fee)))\n    $k4 = [limbs:screen]{op:\"type\", text:f\"${식}=\"}\n    $sn2 = [limbs:screen]{op:\"snapshot\"}\n    $k5 = [limbs:screen]{op:\"key\", key:\"cmd+q\"}\n    $vals = filter(map($sn2.elements, ($e)=>text(get($e,\"value\"))), ($v)=>contains($v, format_number($합계, \",.0f\")) or contains($v, text($합계)))\n    {done:true, reason:null, expression:$식, screen_value:len($vals)>0 ? $vals[0] : null, matches:len($vals)>0, app:get($sn2,\"app\")}\n  }\n} [catch] { {done:false, reason:f\"계산기 오류: ${error.message}\", screen_value:null, matches:null} }\n\n# 7. 결과 파일\n$result = {portal:$portal, applicants:map($신청자,($a)=>$a.name), precheck:$사전확인, list_snapshot:$관측, results:$결과,\n  fee_total_success:$합계, succeeded:map($성공,($r)=>$r.name), failed:map($실패,($r)=>{name:$r.name, reason:$r.reason}), calculator:$calc,\n  session:{login_owner:$l0.session_owner, login_tab:$l0.tab_id, session_started:get($l0,\"session_started\")}}\n$w1 = [self:write]{path:f\"${out}/result.json\", content:json($result)}\n$lines = map($결과, ($r)=>$r.line)\n$calc화면 = [fn:글]{v:$calc.screen_value, 대신:\"미판독\"}\n$calc일치 = $calc.matches == true ? \"일치\" : \"불일치\"\n$calc식 = [fn:글]{v:get($calc,\"expression\"), 대신:\"\"}\n$calc사유 = [fn:글]{v:$calc.reason, 대신:\"\"}\n$calcline = $calc.done ? f\"- 계산기: ${calc식} → 화면 ${calc화면} (${calc일치})\" : f\"- 계산기: ${calc사유}\"\n$owner글 = [fn:글]{v:$l0.session_owner, 대신:\"없음\"}\n$tab글 = [fn:글]{v:$l0.tab_id, 대신:\"없음\"}\n$report = join(\"\\n\", [\"# 체육센터 수강 신청 보고\", f\"- 포털: ${portal}\", f\"- 강좌 목록 ${len(목록)}개 (snapshot ${관측.shown_count}/${관측.element_count} 표시)\", \"\", \"## 신청 결과\"] + $lines +\n  [\"\", f\"- 수강료 합계(성공분): ${합계}원\", $calcline, \"\", \"## 세션\", f\"- session_owner ${owner글} · tab ${tab글}\"])\n$w2 = [self:write]{path:f\"${out}/report.md\", content:$report}\nreturn {applicants:len($신청자), ok:map($성공,($r)=>$r.name), failed:map($실패,($r)=>$r.name), fee_total:$합계, list_snapshot:$관측, calculator:$calc.done, calc_reason:$calc.reason, session_owner:$l0.session_owner, files:[$w1.path,$w2.path]}\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/input",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/out",
+   "only": null
+  }
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1791526857.528953,
+ "ended": 1791526858.4304378,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 3281,
+     "end": 3341,
+     "line": 58,
+     "column": 42
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 3281,
+     "end": 3341,
+     "line": 58,
+     "column": 42,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 58,
+     "end_column": 102,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   },
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리의 [fn:제출] 호출은 효과가 없어야 합니다(이 함수의 효과: read_external, write_external). 조건·조건 값·and/or·람다 본문·기본값은 실행 여부나 횟수가 갈리는 자리입니다.",
+    "source_span": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 5117,
+     "end": 5185,
+     "line": 92,
+     "column": 25
+    },
+    "call_path": [],
+    "hint": "효과가 있는 호출은 앞 문장에서 $이름=[fn:…]{…}으로 받거나, 행마다 필요하면 table:each 본문에서 호출하세요.",
+    "location": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 5117,
+     "end": 5185,
+     "line": 92,
+     "column": 25,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 92,
+     "end_column": 93,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   }
+  ],
+  "guards": [],
+  "guards_total": 326,
+  "guards_inner": 0,
+  "guards_omitted": 326,
+  "result_type": "{applicants: Number, ok: List<Unknown>, failed: List<Unknown>, fee_total: Unknown, list_snapshot: {element_count: Unknown, shown_count: Unknown, truncated: Unknown, omitted_count: Unknown}, calculator: Bool, calc_reason: Null | Text, session_owner: Unknown, files: List<Unknown>}",
+  "effects": [
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "functions": {
+   "def:790:955": {
+    "name": "참조",
+    "params": {
+     "snap": "Record",
+     "role": "Text",
+     "name": "Text"
+    },
+    "required": [
+     "snap",
+     "role",
+     "name"
+    ],
+    "pipe_input": "snap",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "6ccfdcb8feef01a5a61b312ed39f8add5fd8554c2c1b5ecea19e2150aa4b160f",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "snap": "Record",
+       "role": "Text",
+       "name": "Text"
+      },
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 790,
+     "end": 955,
+     "line": 13,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 16,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1073:1145": {
+    "name": "원",
+    "params": {
+     "s": "Text"
+    },
+    "required": [
+     "s"
+    ],
+    "pipe_input": "s",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "897c126d820f4ecf946c6279f364a7ff8e18d9fd7d3acb8ae27aa46ba791741d",
+    "result": "Number",
+    "specializations": [
+     {
+      "params": {
+       "s": "Text"
+      },
+      "result": "Number"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 1073,
+     "end": 1145,
+     "line": 21,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 21,
+     "end_column": 73,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1146:1404": {
+    "name": "목록행",
+    "params": {
+     "text": "Unknown"
+    },
+    "required": [
+     "text"
+    ],
+    "pipe_input": "text",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "a861b88fcc8836552c7246701eba04bd523f36bd5899ae66397d10234858e5fa",
+    "result": "List<{id: Text, name: Text, center: Text, fee: Number, seats: Text}>",
+    "specializations": [
+     {
+      "params": {
+       "text": "Unknown"
+      },
+      "result": "List<{id: Text, name: Text, center: Text, fee: Number, seats: Text}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 1146,
+     "end": 1404,
+     "line": 22,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 25,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:741:789": {
+    "name": "글",
+    "params": {
+     "v": "Unknown",
+     "대신": "Text"
+    },
+    "required": [
+     "v",
+     "대신"
+    ],
+    "pipe_input": "v",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "863d0e4f81fc5d64a5d74bc92decdb2c89844b82dbef962560d5a3701eef73d7",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "v": "Unknown",
+       "대신": "Text"
+      },
+      "result": "Unknown"
+     },
+     {
+      "params": {
+       "v": "Null | Text",
+       "대신": "Text"
+      },
+      "result": "Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 741,
+     "end": 789,
+     "line": 12,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 12,
+     "end_column": 49,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1456:3051": {
+    "name": "제출",
+    "params": {
+     "portal": "Unknown",
+     "src": "Text",
+     "a": "Unknown",
+     "code": "Unknown"
+    },
+    "required": [
+     "portal",
+     "src",
+     "a",
+     "code"
+    ],
+    "pipe_input": "portal",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:browser",
+     "table:filter"
+    ],
+    "source_hash": "6387d161345e065ab17a803a6765e320d8dd34d910be92af30b42fbbd8586cf6",
+    "result": "{url: Unknown, text: Unknown, selected: List<Unknown>, dialogs: Unknown, session_owner: Unknown, tab_id: Unknown}",
+    "specializations": [
+     {
+      "params": {
+       "portal": "Unknown",
+       "src": "Text",
+       "a": "Unknown",
+       "code": "Unknown"
+      },
+      "result": "{url: Unknown, text: Unknown, selected: List<Unknown>, dialogs: Unknown, session_owner: Unknown, tab_id: Unknown}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 1456,
+     "end": 3051,
+     "line": 27,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 51,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:621:740": {
+    "name": "줄찾기",
+    "params": {
+     "text": "Unknown",
+     "key": "Text"
+    },
+    "required": [
+     "text",
+     "key"
+    ],
+    "pipe_input": "text",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "fb2d02cd5093eb355a104db073524f6f4130d6d91fe8080bc957c993f322eeee",
+    "result": "Null | Text",
+    "specializations": [
+     {
+      "params": {
+       "text": "Unknown",
+       "key": "Text"
+      },
+      "result": "Null | Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 621,
+     "end": 740,
+     "line": 8,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 11,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:956:1072": {
+    "name": "표값",
+    "params": {
+     "text": "Unknown",
+     "key": "Text"
+    },
+    "required": [
+     "text",
+     "key"
+    ],
+    "pipe_input": "text",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "ff49a394dd37f7f75c49f89c24ba17a01225b5786e059d307e9803e98f2113a5",
+    "result": "Null | Text",
+    "specializations": [
+     {
+      "params": {
+       "text": "Unknown",
+       "key": "Text"
+      },
+      "result": "Null | Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+     "start": 956,
+     "end": 1072,
+     "line": 17,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 20,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "a50f199fa25937370f923ef84320d931515ca53fb4d31e8b18cfaf31c865d867",
+  "dependencies": {
+   "source": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "src": "Text",
+    "out": "Text",
+    "only": "Null"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 9872
+    }
+   ],
+   "contracts": "c2553dd1112132a3d192c0a03bf137e2ece58403d411e613515940e8edd7b41b",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755",
+   "expressions": "8b1374449bdb861758d2d12b149fae44ebb72cfde1919d26ea2d1cdeae740050",
+   "core": "0f9fd52e6915bbe50ec190eb519a704bc5ca28977e3d3b1d8c4d52436dfb4953"
+  },
+  "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+      "start": 4392,
+      "end": 4714,
+      "line": 78,
+      "column": 17,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 82,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "af92c812ef1ed988108314991e94ffe52840c6c1a299c9793108022d68a69925",
+      "start": 4781,
+      "end": 7255,
+      "line": 85,
+      "column": 15,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 117,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "limbs:browser",
+    "limbs:screen",
+    "self:mkdir",
+    "self:read",
+    "self:write",
+    "sense:host",
+    "table:filter"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "진단 위치를 수정한 뒤 다시 검사하세요.",
+  "runtime_checks": {
+   "total": 326,
+   "informative": 237
+  },
+  "guards_ref": {
+   "id": "83c934c6a50c9da6057b9fb6e2f316d22688b32d83db04e6c535ac0bd86dc538",
+   "chars": 371045,
+   "read_args": {
+    "id": "83c934c6a50c9da6057b9fb6e2f316d22688b32d83db04e6c535ac0bd86dc538",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "request_inputs": {
+   "input_args": {
+    "src": {
+     "$ref": "19365a33533995c3992dd61d1c3c0aaf5f90cee29518da9391d51feabeb4bc8c"
+    },
+    "out": {
+     "$ref": "3d285784a1e1f6406ba4b171180cad1baaeb0821d8db269b4a32ab1090fb8f46"
+    },
+    "only": {
+     "$ref": "2931339a89fe8f646cfb37f00e6d81a8957fb48033b8131d37681e49ff643ddf"
+    }
+   },
+   "unavailable": {},
+   "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  },
+  "revise_args": {
+   "code": "$rejected:df1a61329c25b1b8c1aac693f41fd0801d9ef3e382e0a6977d74676defeb4229",
+   "code_edits": [
+    {
+     "old": "<고칠 원문 조각>",
+     "new": "<바꿀 글>"
+    }
+   ]
+  },
+  "revise_hint": "고칠 조각만 보내세요: revise_args.code 를 그대로 code 에 넣고 code_edits 에 {old, new} 를 적습니다(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 같은 inputs·budget·check 를 함께 보냅니다. 원문 전체를 다시 적지 않습니다."
+ }
+}

@@ -1,0 +1,58 @@
+{
+ "passed": 21,
+ "total": 21,
+ "checks": {
+  "result_json": true,
+  "report_md": true,
+  "ok_names": true,
+  "fail_names": true,
+  "server_applications": true,
+  "server_course_fee": true,
+  "server_upload_sha": true,
+  "server_code": true,
+  "rej_temp_error_once": true,
+  "rej_full_once": true,
+  "fail_reason_reported": true,
+  "retry_recorded": true,
+  "receipt_ids_match": true,
+  "pdf_exists_and_matches": true,
+  "fee_reported": true,
+  "fee_total": true,
+  "precheck_fees": true,
+  "snapshot_limit_observed": true,
+  "session_fields": true,
+  "calculator_reported": true,
+  "report_mentions": true
+ },
+ "detail": {
+  "rejections": [
+   {
+    "name": "강가상",
+    "course": "C03",
+    "reason": "접수 코드를 확인하지 못했습니다(일시 오류). 다시 제출해 주세요"
+   },
+   {
+    "name": "이합성",
+    "course": "C28",
+    "reason": "정원 마감"
+   }
+  ],
+  "pdf": {
+   "강가상": {
+    "pdf": "outputs/long_sentence_imagination/2026-10-09_45회차/trainer/out_flaky/receipts/강가상.pdf",
+    "receipt_id_match": true,
+    "name": true,
+    "course": true,
+    "fee": true,
+    "receipt": true,
+    "fee_reported": true
+   }
+  },
+  "calculator": {
+   "done": false,
+   "reason": "desk 입력 꺼짐 — 미실행",
+   "screen_value": null,
+   "matches": null
+  }
+ }
+}

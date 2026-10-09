@@ -1,0 +1,2769 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$n=[limbs:browser]{op:\"navigate\", url:f\"${base}login\", driver:\"playwright\", wait:\"load\"}\n$s=[limbs:browser]{op:\"snapshot\"}\n$t1=[limbs:browser]{op:\"type\", ref:\"e5\", text:\"lsi45_family\"}\n$t2=[limbs:browser]{op:\"type\", ref:\"e6\", text:\"lsi45-pass-7q\", submit:true}\n$cl=[limbs:browser]{op:\"navigate\", url:f\"${base}courses\", wait:\"load\"}\n$ct=[limbs:browser]{op:\"content\", mode:\"text\"}\n$ap=[limbs:browser]{op:\"navigate\", url:f\"${base}apply\", wait:\"load\"}\n$as=[limbs:browser]{op:\"snapshot\"}\n$r1=[limbs:browser]{op:\"select\", ref:\"e8\", value:\"서울\"}\n$w1=[try]{ [limbs:browser]{op:\"wait\", text:\"센터 선택\"} } [catch]{ {err:$error.message} }\n$s1=[limbs:browser]{op:\"snapshot\"}\n$r2=[limbs:browser]{op:\"select\", ref:\"e9\", value:\"S1\"}\n$w2=[try]{ [limbs:browser]{op:\"wait\", text:\"강좌 선택\"} } [catch]{ {err:$error.message} }\n$s2=[limbs:browser]{op:\"snapshot\"}\n$r3=[limbs:browser]{op:\"select\", ref:\"e10\", value:\"C03\"}\n$n1=[limbs:browser]{op:\"type\", ref:\"e11\", text:\"강가상\"}\n$n2=[limbs:browser]{op:\"type\", ref:\"e12\", text:\"1988-03-14\"}\n$up=[limbs:browser]{op:\"upload_file\", ref:\"e13\", path:$cert}\n$ck=[limbs:browser]{op:\"check\", ref:\"e6\"}\n$sub=[limbs:browser]{op:\"click\", ref:\"e7\", dialog:\"accept\", dialog_text:\"MP-4471\"}\n$c=[limbs:browser]{op:\"content\", mode:\"text\"}\n$pdf=[limbs:browser]{op:\"pdf\", path:$pdfpath}\n$rd=[self:read]{path:$pdfpath}\n$opts1 = $s1.snapshot >> [table:filter]{where:($e)=>$e.role==\"option\"}\nreturn {courses_text:$ct.text, r1:$r1, w1:$w1, s1_opts:$opts1, r2:$r2, w2:$w2, r3:$r3, up:$up, ck:$ck, sub:$sub, after_url:$c.url, after_text:$c.text, pdf:$pdf, pdf_text:$rd.text}\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "inputs": {
+   "base": "http://127.0.0.1:8949/",
+   "cert": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/input/cert_강가상.png",
+   "pdfpath": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/_site/probe/receipt_probe.pdf"
+  }
+ },
+ "response": {
+  "success": true,
+  "value": {
+   "courses_text": "가상 구민체육센터 수강 신청\n강좌 목록 · 수강 신청 · 로그아웃\n강좌 목록\n\n총 40개 강좌\n\n번호\t강좌\t센터\t시간\t수강료\t정원\t\nC01\t수영 중급 A반\t가상 마포체육센터\t월수금 19:00\t72,000원\t잔여 5\t신청\nC02\t필라테스 B반\t가상 마포체육센터\t토 14:00\t90,000원\t잔여 5\t신청\nC03\t배드민턴 C반\t가상 마포체육센터\t월수금 19:00\t45,000원\t잔여 5\t신청\nC04\t줌바 D반\t가상 마포체육센터\t토 14:00\t72,000원\t잔여 3\t신청\nC05\t실버 체조 E반\t가상 마포체육센터\t월수금 19:00\t45,000원\t잔여 5\t신청\nC06\t수영 중급 F반\t가상 마포체육센터\t토 14:00\t45,000원\t잔여 3\t신청\nC07\t필라테스 G반\t가상 마포체육센터\t월수금 19:00\t72,000원\t잔여 3\t신청\nC08\t배드민턴 H반\t가상 마포체육센터\t토 14:00\t72,000원\t잔여 8\t신청\nC09\t실버 체조 A반\t가상 성북체육센터\t월수금 19:00\t45,000원\t잔여 8\t신청\nC10\t수영 중급 B반\t가상 성북체육센터\t토 14:00\t45,000원\t잔여 3\t신청\nC11\t필라테스 C반\t가상 성북체육센터\t월수금 19:00\t72,000원\t잔여 8\t신청\nC12\t배드민턴 D반\t가상 성북체육센터\t토 14:00\t60,000원\t잔여 3\t신청\nC13\t줌바 E반\t가상 성북체육센터\t월수금 19:00\t90,000원\t잔여 3\t신청\nC14\t실버 체조 F반\t가상 성북체육센터\t토 14:00\t120,000원\t잔여 5\t신청\nC15\t수영 중급 G반\t가상 성북체육센터\t월수금 19:00\t60,000원\t잔여 8\t신청\nC16\t필라테스 H반\t가상 성북체육센터\t토 14:00\t45,000원\t잔여 3\t신청\nC17\t줌바 A반\t가상 고양체육센터\t월수금 19:00\t60,000원\t잔여 5\t신청\nC18\t실버 체조 B반\t가상 고양체육센터\t토 14:00\t72,000원\t잔여 5\t신청\nC19\t수영 중급 C반\t가상 고양체육센터\t월수금 19:00\t72,000원\t잔여 3\t신청\nC20\t필라테스 D반\t가상 고양체육센터\t토 14:00\t90,000원\t잔여 3\t신청\nC21\t배드민턴 E반\t가상 고양체육센터\t월수금 19:00\t45,000원\t잔여 5\t신청\nC22\t줌바 F반\t가상 고양체육센터\t토 14:00\t72,000원\t잔여 5\t신청\nC23\t실버 체조 G반\t가상 고양체육센터\t월수금 19:00\t120,000원\t잔여 8\t신청\nC24\t수영 중급 H반\t가상 고양체육센터\t토 14:00\t120,000원\t잔여 8\t신청\nC25\t배드민턴 A반\t가상 수원체육센터\t월수금 19:00\t120,000원\t잔여 8\t신청\nC26\t줌바 B반\t가상 수원체육센터\t토 14:00\t72,000원\t잔여 8\t신청\nC27\t실버 체조 C반\t가상 수원체육센터\t월수금 19:00\t45,000원\t잔여 5\t신청\nC28\t수영 중급 D반\t가상 수원체육센터\t토 14:00\t72,000원\t잔여 3\t신청\nC29\t필라테스 E반\t가상 수원체육센터\t월수금 19:00\t72,000원\t잔여 3\t신청\nC30\t배드민턴 F반\t가상 수원체육센터\t토 14:00\t45,000원\t잔여 3\t신청\nC31\t줌바 G반\t가상 수원체육센터\t월수금 19:00\t90,000원\t잔여 8\t신청\nC32\t실버 체조 H반\t가상 수원체육센터\t토 14:00\t120,000원\t잔여 5\t신청\nC33\t필라테스 A반\t가상 부평체육센터\t월수금 19:00\t72,000원\t잔여 3\t신청\nC34\t배드민턴 B반\t가상 부평체육센터\t토 14:00\t90,000원\t잔여 5\t신청\nC35\t줌바 C반\t가상 부평체육센터\t월수금 19:00\t90,000원\t잔여 3\t신청\nC36\t실버 체조 D반\t가상 부평체육센터\t토 14:00\t120,000원\t잔여 5\t신청\nC37\t수영 중급 E반\t가상 부평체육센터\t월수금 19:00\t120,000원\t잔여 3\t신청\nC38\t필라테스 F반\t가상 부평체육센터\t토 14:00\t120,000원\t잔여 5\t신청\nC39\t배드민턴 G반\t가상 부평체육센터\t월수금 19:00\t45,000원\t잔여 8\t신청\nC40\t줌바 H반\t가상 부평체육센터\t토 14:00\t120,000원\t잔여 3\t신청\n가상 포털 — 훈련용 합성 자료",
+   "r1": {
+    "success": true,
+    "selected": [
+     "서울"
+    ],
+    "element": " (e8)",
+    "session_owner": "e3069dfe25ba16883052203b6cdb21eed77c098794e08d115567055accd20ad7",
+    "tab_id": "e3069dfe25ba-t1"
+   },
+   "w1": {
+    "success": true,
+    "waited_for": "text: 센터 선택",
+    "session_owner": "e3069dfe25ba16883052203b6cdb21eed77c098794e08d115567055accd20ad7",
+    "tab_id": "e3069dfe25ba-t1"
+   },
+   "s1_opts": [
+    {
+     "ref": "e14",
+     "role": "option",
+     "name": "지역 선택"
+    },
+    {
+     "ref": "e15",
+     "role": "option",
+     "name": "서울",
+     "selected": true
+    },
+    {
+     "ref": "e16",
+     "role": "option",
+     "name": "경기"
+    },
+    {
+     "ref": "e17",
+     "role": "option",
+     "name": "인천"
+    },
+    {
+     "ref": "e18",
+     "role": "option",
+     "name": "센터 선택",
+     "selected": true
+    },
+    {
+     "ref": "e19",
+     "role": "option",
+     "name": "가상 마포체육센터"
+    },
+    {
+     "ref": "e20",
+     "role": "option",
+     "name": "가상 성북체육센터"
+    },
+    {
+     "ref": "e21",
+     "role": "option",
+     "name": "센터를 먼저 고르세요",
+     "selected": true
+    }
+   ],
+   "r2": {
+    "success": true,
+    "selected": [
+     "S1"
+    ],
+    "element": " (e9)",
+    "session_owner": "e3069dfe25ba16883052203b6cdb21eed77c098794e08d115567055accd20ad7",
+    "tab_id": "e3069dfe25ba-t1"
+   },
+   "w2": {
+    "success": true,
+    "waited_for": "text: 강좌 선택",
+    "session_owner": "e3069dfe25ba16883052203b6cdb21eed77c098794e08d115567055accd20ad7",
+    "tab_id": "e3069dfe25ba-t1"
+   },
+   "r3": {
+    "success": true,
+    "selected": [
+     "C03"
+    ],
+    "element": " (e10)",
+    "session_owner": "e3069dfe25ba16883052203b6cdb21eed77c098794e08d115567055accd20ad7",
+    "tab_id": "e3069dfe25ba-t1"
+   },
+   "up": {
+    "success": true,
+    "uploaded": [
+     "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/input/cert_강가상.png"
+    ],
+    "element": " (e13)",
+    "session_owner": "e3069dfe25ba16883052203b6cdb21eed77c098794e08d115567055accd20ad7",
+    "tab_id": "e3069dfe25ba-t1"
+   },
+   "ck": {
+    "success": true,
+    "checked": true,
+    "element": " (e6)",
+    "session_owner": "e3069dfe25ba16883052203b6cdb21eed77c098794e08d115567055accd20ad7",
+    "tab_id": "e3069dfe25ba-t1"
+   },
+   "sub": {
+    "success": true,
+    "clicked": " (e7)",
+    "url": "http://127.0.0.1:8949/receipt/R001",
+    "title": "접수 완료 - 가상 구민체육센터",
+    "session_owner": "e3069dfe25ba16883052203b6cdb21eed77c098794e08d115567055accd20ad7",
+    "tab_id": "e3069dfe25ba-t1",
+    "dialogs": [
+     {
+      "type": "prompt",
+      "message": "접수 코드를 입력하세요",
+      "default_value": "",
+      "timestamp": "2026-10-09T15:18:55.458563",
+      "action": "accept",
+      "handled": true
+     }
+    ],
+    "dialog_dismissed": false
+   },
+   "after_url": "http://127.0.0.1:8949/receipt/R001",
+   "after_text": "가상 구민체육센터 수강 신청\n강좌 목록 · 수강 신청 · 로그아웃\n접수 완료\n\n신청이 접수되었습니다.\n\n접수번호\tR001\n신청자\t강가상\n생년월일\t1988-03-14\n강좌\tC03 배드민턴 C반\n센터\t가상 마포체육센터\n수강료\t45,000원\n증명서\tcert_강가상.png (3778 bytes)\n접수 시각\t2026-10-09 15:18:55\n\n다른 신청\n\n가상 포털 — 훈련용 합성 자료",
+   "pdf": {
+    "success": true,
+    "file_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/_site/probe/receipt_probe.pdf",
+    "session_owner": "e3069dfe25ba16883052203b6cdb21eed77c098794e08d115567055accd20ad7",
+    "tab_id": "e3069dfe25ba-t1"
+   },
+   "pdf_text": "가상 구민체육센터 수강 신청\n강좌 목록 · 수강 신청 · 로그아웃\n접수 완료\n신청이 접수되었습니다.\n접수번호R001\n신청자\n강가상\n생년월일1988-03-14\n강좌\nC03 배드민턴 C반\n센터\n가상 마포체육센터\n수강료\n45,000원\n증명서\ncert_강가상.png (3778 bytes)\n접수 시각2026-10-09 15:18:55\n다른 신청\n가상 포털 — 훈련용 합성 자료\n"
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "bf7d6e74784e6434a7d9c2d8f565bf759388f0792604dc529b862b29c671611c",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:38:48",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "ref:58:62",
+    "invocation_id": 2,
+    "kind": "ref",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "format:54:69",
+    "invocation_id": 3,
+    "kind": "format",
+    "parents": [
+     2
+    ]
+   },
+   {
+    "id": 4,
+    "node_id": "literal:78:90",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:97:103",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "record:34:104",
+    "invocation_id": 6,
+    "kind": "record",
+    "parents": [
+     1,
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "id": 7,
+    "node_id": "call:19:104",
+    "invocation_id": 7,
+    "kind": "invoke",
+    "parents": [
+     6
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "d661b7dbdac046139a1f13bfc7e4a66d0d3d8b702ddddeea5fd523e4a9b038c5",
+    "targets": {
+     "op": "navigate",
+     "url": "http://127.0.0.1:8949/login",
+     "driver": "playwright",
+     "wait": "load"
+    }
+   },
+   {
+    "id": 8,
+    "node_id": "call:19:104",
+    "invocation_id": 8,
+    "kind": "tool_evidence",
+    "parents": [
+     7
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 9,
+    "node_id": "call:19:104",
+    "invocation_id": 9,
+    "kind": "call",
+    "parents": [
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "id": 10,
+    "node_id": "bind:16:104",
+    "invocation_id": 10,
+    "kind": "bind",
+    "parents": [
+     9
+    ]
+   },
+   {
+    "id": 11,
+    "node_id": "literal:127:137",
+    "invocation_id": 11,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 12,
+    "node_id": "record:123:138",
+    "invocation_id": 12,
+    "kind": "record",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "call:108:138",
+    "invocation_id": 13,
+    "kind": "invoke",
+    "parents": [
+     12
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "a0b54d3bf9f975002a3d34fff29058534fe3bd4767aea55589a7ce98173f43d2",
+    "targets": {
+     "op": "snapshot"
+    }
+   },
+   {
+    "id": 14,
+    "node_id": "call:108:138",
+    "invocation_id": 14,
+    "kind": "tool_evidence",
+    "parents": [
+     13
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 15,
+    "node_id": "call:108:138",
+    "invocation_id": 15,
+    "kind": "call",
+    "parents": [
+     12,
+     13,
+     14
+    ]
+   },
+   {
+    "id": 16,
+    "node_id": "bind:105:138",
+    "invocation_id": 16,
+    "kind": "bind",
+    "parents": [
+     15
+    ]
+   },
+   {
+    "id": 17,
+    "node_id": "literal:162:168",
+    "invocation_id": 17,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 18,
+    "node_id": "literal:174:178",
+    "invocation_id": 18,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 19,
+    "node_id": "literal:185:199",
+    "invocation_id": 19,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 20,
+    "node_id": "record:158:200",
+    "invocation_id": 20,
+    "kind": "record",
+    "parents": [
+     17,
+     18,
+     19
+    ]
+   },
+   {
+    "id": 21,
+    "node_id": "call:143:200",
+    "invocation_id": 21,
+    "kind": "invoke",
+    "parents": [
+     20
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "6d8efb701366c214e2586e813b72a17745ecadc8289fb6b8886f916d6ea67296",
+    "targets": {
+     "op": "type",
+     "ref": "e5",
+     "text": "lsi45_family"
+    }
+   },
+   {
+    "id": 22,
+    "node_id": "call:143:200",
+    "invocation_id": 22,
+    "kind": "tool_evidence",
+    "parents": [
+     21
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 23,
+    "node_id": "call:143:200",
+    "invocation_id": 23,
+    "kind": "call",
+    "parents": [
+     20,
+     21,
+     22
+    ]
+   },
+   {
+    "id": 24,
+    "node_id": "bind:139:200",
+    "invocation_id": 24,
+    "kind": "bind",
+    "parents": [
+     23
+    ]
+   },
+   {
+    "id": 25,
+    "node_id": "literal:224:230",
+    "invocation_id": 25,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 26,
+    "node_id": "literal:236:240",
+    "invocation_id": 26,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 27,
+    "node_id": "literal:247:262",
+    "invocation_id": 27,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 28,
+    "node_id": "literal:271:275",
+    "invocation_id": 28,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 29,
+    "node_id": "record:220:276",
+    "invocation_id": 29,
+    "kind": "record",
+    "parents": [
+     25,
+     26,
+     27,
+     28
+    ]
+   },
+   {
+    "id": 30,
+    "node_id": "call:205:276",
+    "invocation_id": 30,
+    "kind": "invoke",
+    "parents": [
+     29
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "29a36a94cc90fa4a9c95e6cb412cbdf40c3d52cffb257a1642253f4bb2b96c2a",
+    "targets": {
+     "op": "type",
+     "ref": "e6",
+     "text": "lsi45-pass-7q"
+    }
+   },
+   {
+    "id": 31,
+    "node_id": "call:205:276",
+    "invocation_id": 31,
+    "kind": "tool_evidence",
+    "parents": [
+     30
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 32,
+    "node_id": "call:205:276",
+    "invocation_id": 32,
+    "kind": "call",
+    "parents": [
+     29,
+     30,
+     31
+    ]
+   },
+   {
+    "id": 33,
+    "node_id": "bind:201:276",
+    "invocation_id": 33,
+    "kind": "bind",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 34,
+    "node_id": "literal:300:310",
+    "invocation_id": 34,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 35,
+    "node_id": "ref:320:324",
+    "invocation_id": 35,
+    "kind": "ref",
+    "parents": []
+   },
+   {
+    "id": 36,
+    "node_id": "format:316:333",
+    "invocation_id": 36,
+    "kind": "format",
+    "parents": [
+     35
+    ]
+   },
+   {
+    "id": 37,
+    "node_id": "literal:340:346",
+    "invocation_id": 37,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 38,
+    "node_id": "record:296:347",
+    "invocation_id": 38,
+    "kind": "record",
+    "parents": [
+     34,
+     36,
+     37
+    ]
+   },
+   {
+    "id": 39,
+    "node_id": "call:281:347",
+    "invocation_id": 39,
+    "kind": "invoke",
+    "parents": [
+     38
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "67b78ce84f2528ea2545be45f315e2292e353658f3dbd256c4d220fc16f10600",
+    "targets": {
+     "op": "navigate",
+     "url": "http://127.0.0.1:8949/courses",
+     "wait": "load"
+    }
+   },
+   {
+    "id": 40,
+    "node_id": "call:281:347",
+    "invocation_id": 40,
+    "kind": "tool_evidence",
+    "parents": [
+     39
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 41,
+    "node_id": "call:281:347",
+    "invocation_id": 41,
+    "kind": "call",
+    "parents": [
+     38,
+     39,
+     40
+    ]
+   },
+   {
+    "id": 42,
+    "node_id": "bind:277:347",
+    "invocation_id": 42,
+    "kind": "bind",
+    "parents": [
+     41
+    ]
+   },
+   {
+    "id": 43,
+    "node_id": "literal:371:380",
+    "invocation_id": 43,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 44,
+    "node_id": "literal:387:393",
+    "invocation_id": 44,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 45,
+    "node_id": "record:367:394",
+    "invocation_id": 45,
+    "kind": "record",
+    "parents": [
+     43,
+     44
+    ]
+   },
+   {
+    "id": 46,
+    "node_id": "call:352:394",
+    "invocation_id": 46,
+    "kind": "invoke",
+    "parents": [
+     45
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "061b8bac4e0c3b98de1cb7106265b4a1761f200ceea36a16ea32c6afb0fe2607",
+    "targets": {
+     "op": "content",
+     "mode": "text"
+    }
+   },
+   {
+    "id": 47,
+    "node_id": "call:352:394",
+    "invocation_id": 47,
+    "kind": "tool_evidence",
+    "parents": [
+     46
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 48,
+    "node_id": "call:352:394",
+    "invocation_id": 48,
+    "kind": "call",
+    "parents": [
+     45,
+     46,
+     47
+    ]
+   },
+   {
+    "id": 49,
+    "node_id": "bind:348:394",
+    "invocation_id": 49,
+    "kind": "bind",
+    "parents": [
+     48
+    ]
+   },
+   {
+    "id": 50,
+    "node_id": "literal:418:428",
+    "invocation_id": 50,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 51,
+    "node_id": "ref:438:442",
+    "invocation_id": 51,
+    "kind": "ref",
+    "parents": []
+   },
+   {
+    "id": 52,
+    "node_id": "format:434:449",
+    "invocation_id": 52,
+    "kind": "format",
+    "parents": [
+     51
+    ]
+   },
+   {
+    "id": 53,
+    "node_id": "literal:456:462",
+    "invocation_id": 53,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 54,
+    "node_id": "record:414:463",
+    "invocation_id": 54,
+    "kind": "record",
+    "parents": [
+     50,
+     52,
+     53
+    ]
+   },
+   {
+    "id": 55,
+    "node_id": "call:399:463",
+    "invocation_id": 55,
+    "kind": "invoke",
+    "parents": [
+     54
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "46cdcf115286a5f8feede3be2b813676bb54fd5f1b6074e6c15afe1b742c34a2",
+    "targets": {
+     "op": "navigate",
+     "url": "http://127.0.0.1:8949/apply",
+     "wait": "load"
+    }
+   },
+   {
+    "id": 56,
+    "node_id": "call:399:463",
+    "invocation_id": 56,
+    "kind": "tool_evidence",
+    "parents": [
+     55
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 57,
+    "node_id": "call:399:463",
+    "invocation_id": 57,
+    "kind": "call",
+    "parents": [
+     54,
+     55,
+     56
+    ]
+   },
+   {
+    "id": 58,
+    "node_id": "bind:395:463",
+    "invocation_id": 58,
+    "kind": "bind",
+    "parents": [
+     57
+    ]
+   },
+   {
+    "id": 59,
+    "node_id": "literal:487:497",
+    "invocation_id": 59,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 60,
+    "node_id": "record:483:498",
+    "invocation_id": 60,
+    "kind": "record",
+    "parents": [
+     59
+    ]
+   },
+   {
+    "id": 61,
+    "node_id": "call:468:498",
+    "invocation_id": 61,
+    "kind": "invoke",
+    "parents": [
+     60
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "a0b54d3bf9f975002a3d34fff29058534fe3bd4767aea55589a7ce98173f43d2",
+    "targets": {
+     "op": "snapshot"
+    }
+   },
+   {
+    "id": 62,
+    "node_id": "call:468:498",
+    "invocation_id": 62,
+    "kind": "tool_evidence",
+    "parents": [
+     61
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 63,
+    "node_id": "call:468:498",
+    "invocation_id": 63,
+    "kind": "call",
+    "parents": [
+     60,
+     61,
+     62
+    ]
+   },
+   {
+    "id": 64,
+    "node_id": "bind:464:498",
+    "invocation_id": 64,
+    "kind": "bind",
+    "parents": [
+     63
+    ]
+   },
+   {
+    "id": 65,
+    "node_id": "literal:522:530",
+    "invocation_id": 65,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 66,
+    "node_id": "literal:536:540",
+    "invocation_id": 66,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 67,
+    "node_id": "literal:548:552",
+    "invocation_id": 67,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 68,
+    "node_id": "record:518:553",
+    "invocation_id": 68,
+    "kind": "record",
+    "parents": [
+     65,
+     66,
+     67
+    ]
+   },
+   {
+    "id": 69,
+    "node_id": "call:503:553",
+    "invocation_id": 69,
+    "kind": "invoke",
+    "parents": [
+     68
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "3a5b89649876148ecf86f1585e953dffca3572e7fa216ec0f1a2ff7897f8e9ce",
+    "targets": {
+     "op": "select",
+     "ref": "e8",
+     "value": "서울"
+    }
+   },
+   {
+    "id": 70,
+    "node_id": "call:503:553",
+    "invocation_id": 70,
+    "kind": "tool_evidence",
+    "parents": [
+     69
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 71,
+    "node_id": "call:503:553",
+    "invocation_id": 71,
+    "kind": "call",
+    "parents": [
+     68,
+     69,
+     70
+    ]
+   },
+   {
+    "id": 72,
+    "node_id": "bind:499:553",
+    "invocation_id": 72,
+    "kind": "bind",
+    "parents": [
+     71
+    ]
+   },
+   {
+    "id": 73,
+    "node_id": "literal:584:590",
+    "invocation_id": 73,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 74,
+    "node_id": "literal:597:604",
+    "invocation_id": 74,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 75,
+    "node_id": "record:580:605",
+    "invocation_id": 75,
+    "kind": "record",
+    "parents": [
+     73,
+     74
+    ]
+   },
+   {
+    "id": 76,
+    "node_id": "call:565:605",
+    "invocation_id": 76,
+    "kind": "invoke",
+    "parents": [
+     75
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "50891cc5779120d5cf9c22a90ef1784554d02014e00153c9943c5a90052859b4",
+    "targets": {
+     "op": "wait",
+     "text": "센터 선택"
+    }
+   },
+   {
+    "id": 77,
+    "node_id": "call:565:605",
+    "invocation_id": 77,
+    "kind": "tool_evidence",
+    "parents": [
+     76
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 78,
+    "node_id": "call:565:605",
+    "invocation_id": 78,
+    "kind": "call",
+    "parents": [
+     75,
+     76,
+     77
+    ]
+   },
+   {
+    "id": 79,
+    "node_id": "sequence:565:605",
+    "invocation_id": 79,
+    "kind": "sequence",
+    "parents": [
+     78
+    ]
+   },
+   {
+    "id": 80,
+    "node_id": "try:558:639",
+    "invocation_id": 80,
+    "kind": "try",
+    "parents": [
+     79
+    ]
+   },
+   {
+    "id": 81,
+    "node_id": "bind:554:639",
+    "invocation_id": 81,
+    "kind": "bind",
+    "parents": [
+     80
+    ]
+   },
+   {
+    "id": 82,
+    "node_id": "literal:663:673",
+    "invocation_id": 82,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 83,
+    "node_id": "record:659:674",
+    "invocation_id": 83,
+    "kind": "record",
+    "parents": [
+     82
+    ]
+   },
+   {
+    "id": 84,
+    "node_id": "call:644:674",
+    "invocation_id": 84,
+    "kind": "invoke",
+    "parents": [
+     83
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "a0b54d3bf9f975002a3d34fff29058534fe3bd4767aea55589a7ce98173f43d2",
+    "targets": {
+     "op": "snapshot"
+    }
+   },
+   {
+    "id": 85,
+    "node_id": "call:644:674",
+    "invocation_id": 85,
+    "kind": "tool_evidence",
+    "parents": [
+     84
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 86,
+    "node_id": "call:644:674",
+    "invocation_id": 86,
+    "kind": "call",
+    "parents": [
+     83,
+     84,
+     85
+    ]
+   },
+   {
+    "id": 87,
+    "node_id": "bind:640:674",
+    "invocation_id": 87,
+    "kind": "bind",
+    "parents": [
+     86
+    ]
+   },
+   {
+    "id": 88,
+    "node_id": "literal:698:706",
+    "invocation_id": 88,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 89,
+    "node_id": "literal:712:716",
+    "invocation_id": 89,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 90,
+    "node_id": "literal:724:728",
+    "invocation_id": 90,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 91,
+    "node_id": "record:694:729",
+    "invocation_id": 91,
+    "kind": "record",
+    "parents": [
+     88,
+     89,
+     90
+    ]
+   },
+   {
+    "id": 92,
+    "node_id": "call:679:729",
+    "invocation_id": 92,
+    "kind": "invoke",
+    "parents": [
+     91
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "68bcf33592d46b1b3f1d08c167432cfaa3988ca625a5aecb85b19eb819b7671b",
+    "targets": {
+     "op": "select",
+     "ref": "e9",
+     "value": "S1"
+    }
+   },
+   {
+    "id": 93,
+    "node_id": "call:679:729",
+    "invocation_id": 93,
+    "kind": "tool_evidence",
+    "parents": [
+     92
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 94,
+    "node_id": "call:679:729",
+    "invocation_id": 94,
+    "kind": "call",
+    "parents": [
+     91,
+     92,
+     93
+    ]
+   },
+   {
+    "id": 95,
+    "node_id": "bind:675:729",
+    "invocation_id": 95,
+    "kind": "bind",
+    "parents": [
+     94
+    ]
+   },
+   {
+    "id": 96,
+    "node_id": "literal:760:766",
+    "invocation_id": 96,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 97,
+    "node_id": "literal:773:780",
+    "invocation_id": 97,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 98,
+    "node_id": "record:756:781",
+    "invocation_id": 98,
+    "kind": "record",
+    "parents": [
+     96,
+     97
+    ]
+   },
+   {
+    "id": 99,
+    "node_id": "call:741:781",
+    "invocation_id": 99,
+    "kind": "invoke",
+    "parents": [
+     98
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "295c78d6032c0ceab5d535d2879d5086be30c2d2a1be24e3ff1bb59f7a0df50f",
+    "targets": {
+     "op": "wait",
+     "text": "강좌 선택"
+    }
+   },
+   {
+    "id": 100,
+    "node_id": "call:741:781",
+    "invocation_id": 100,
+    "kind": "tool_evidence",
+    "parents": [
+     99
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 101,
+    "node_id": "call:741:781",
+    "invocation_id": 101,
+    "kind": "call",
+    "parents": [
+     98,
+     99,
+     100
+    ]
+   },
+   {
+    "id": 102,
+    "node_id": "sequence:741:781",
+    "invocation_id": 102,
+    "kind": "sequence",
+    "parents": [
+     101
+    ]
+   },
+   {
+    "id": 103,
+    "node_id": "try:734:815",
+    "invocation_id": 103,
+    "kind": "try",
+    "parents": [
+     102
+    ]
+   },
+   {
+    "id": 104,
+    "node_id": "bind:730:815",
+    "invocation_id": 104,
+    "kind": "bind",
+    "parents": [
+     103
+    ]
+   },
+   {
+    "id": 105,
+    "node_id": "literal:839:849",
+    "invocation_id": 105,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 106,
+    "node_id": "record:835:850",
+    "invocation_id": 106,
+    "kind": "record",
+    "parents": [
+     105
+    ]
+   },
+   {
+    "id": 107,
+    "node_id": "call:820:850",
+    "invocation_id": 107,
+    "kind": "invoke",
+    "parents": [
+     106
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "a0b54d3bf9f975002a3d34fff29058534fe3bd4767aea55589a7ce98173f43d2",
+    "targets": {
+     "op": "snapshot"
+    }
+   },
+   {
+    "id": 108,
+    "node_id": "call:820:850",
+    "invocation_id": 108,
+    "kind": "tool_evidence",
+    "parents": [
+     107
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 109,
+    "node_id": "call:820:850",
+    "invocation_id": 109,
+    "kind": "call",
+    "parents": [
+     106,
+     107,
+     108
+    ]
+   },
+   {
+    "id": 110,
+    "node_id": "bind:816:850",
+    "invocation_id": 110,
+    "kind": "bind",
+    "parents": [
+     109
+    ]
+   },
+   {
+    "id": 111,
+    "node_id": "literal:874:882",
+    "invocation_id": 111,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 112,
+    "node_id": "literal:888:893",
+    "invocation_id": 112,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 113,
+    "node_id": "literal:901:906",
+    "invocation_id": 113,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 114,
+    "node_id": "record:870:907",
+    "invocation_id": 114,
+    "kind": "record",
+    "parents": [
+     111,
+     112,
+     113
+    ]
+   },
+   {
+    "id": 115,
+    "node_id": "call:855:907",
+    "invocation_id": 115,
+    "kind": "invoke",
+    "parents": [
+     114
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "5034fa7ef169ebec57d520e243698e84d19551a35c3174e01363433e87bc3eca",
+    "targets": {
+     "op": "select",
+     "ref": "e10",
+     "value": "C03"
+    }
+   },
+   {
+    "id": 116,
+    "node_id": "call:855:907",
+    "invocation_id": 116,
+    "kind": "tool_evidence",
+    "parents": [
+     115
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 117,
+    "node_id": "call:855:907",
+    "invocation_id": 117,
+    "kind": "call",
+    "parents": [
+     114,
+     115,
+     116
+    ]
+   },
+   {
+    "id": 118,
+    "node_id": "bind:851:907",
+    "invocation_id": 118,
+    "kind": "bind",
+    "parents": [
+     117
+    ]
+   },
+   {
+    "id": 119,
+    "node_id": "literal:931:937",
+    "invocation_id": 119,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 120,
+    "node_id": "literal:943:948",
+    "invocation_id": 120,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 121,
+    "node_id": "literal:955:960",
+    "invocation_id": 121,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 122,
+    "node_id": "record:927:961",
+    "invocation_id": 122,
+    "kind": "record",
+    "parents": [
+     119,
+     120,
+     121
+    ]
+   },
+   {
+    "id": 123,
+    "node_id": "call:912:961",
+    "invocation_id": 123,
+    "kind": "invoke",
+    "parents": [
+     122
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "43a361d0ca260cd83667c3022980c4269f0b259e80c88a13b372ce9fd7c72111",
+    "targets": {
+     "op": "type",
+     "ref": "e11",
+     "text": "강가상"
+    }
+   },
+   {
+    "id": 124,
+    "node_id": "call:912:961",
+    "invocation_id": 124,
+    "kind": "tool_evidence",
+    "parents": [
+     123
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 125,
+    "node_id": "call:912:961",
+    "invocation_id": 125,
+    "kind": "call",
+    "parents": [
+     122,
+     123,
+     124
+    ]
+   },
+   {
+    "id": 126,
+    "node_id": "bind:908:961",
+    "invocation_id": 126,
+    "kind": "bind",
+    "parents": [
+     125
+    ]
+   },
+   {
+    "id": 127,
+    "node_id": "literal:985:991",
+    "invocation_id": 127,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 128,
+    "node_id": "literal:997:1002",
+    "invocation_id": 128,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 129,
+    "node_id": "literal:1009:1021",
+    "invocation_id": 129,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 130,
+    "node_id": "record:981:1022",
+    "invocation_id": 130,
+    "kind": "record",
+    "parents": [
+     127,
+     128,
+     129
+    ]
+   },
+   {
+    "id": 131,
+    "node_id": "call:966:1022",
+    "invocation_id": 131,
+    "kind": "invoke",
+    "parents": [
+     130
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "5fa38f441cf0b934cf55d9ad5a3965f92243584101239ed365d7e01ccbb699a0",
+    "targets": {
+     "op": "type",
+     "ref": "e12",
+     "text": "1988-03-14"
+    }
+   },
+   {
+    "id": 132,
+    "node_id": "call:966:1022",
+    "invocation_id": 132,
+    "kind": "tool_evidence",
+    "parents": [
+     131
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 133,
+    "node_id": "call:966:1022",
+    "invocation_id": 133,
+    "kind": "call",
+    "parents": [
+     130,
+     131,
+     132
+    ]
+   },
+   {
+    "id": 134,
+    "node_id": "bind:962:1022",
+    "invocation_id": 134,
+    "kind": "bind",
+    "parents": [
+     133
+    ]
+   },
+   {
+    "id": 135,
+    "node_id": "literal:1046:1059",
+    "invocation_id": 135,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 136,
+    "node_id": "literal:1065:1070",
+    "invocation_id": 136,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 137,
+    "node_id": "ref:1077:1082",
+    "invocation_id": 137,
+    "kind": "ref",
+    "parents": []
+   },
+   {
+    "id": 138,
+    "node_id": "record:1042:1083",
+    "invocation_id": 138,
+    "kind": "record",
+    "parents": [
+     135,
+     136,
+     137
+    ]
+   },
+   {
+    "id": 139,
+    "node_id": "call:1027:1083",
+    "invocation_id": 139,
+    "kind": "invoke",
+    "parents": [
+     138
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "243a6864b1714c61c5549bfcdb960ee62d97f391f00a9b2c07264314cf94426d",
+    "targets": {
+     "op": "upload_file",
+     "ref": "e13",
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/trainer/input/cert_강가상.png"
+    }
+   },
+   {
+    "id": 140,
+    "node_id": "call:1027:1083",
+    "invocation_id": 140,
+    "kind": "tool_evidence",
+    "parents": [
+     139
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 141,
+    "node_id": "call:1027:1083",
+    "invocation_id": 141,
+    "kind": "call",
+    "parents": [
+     138,
+     139,
+     140
+    ]
+   },
+   {
+    "id": 142,
+    "node_id": "bind:1023:1083",
+    "invocation_id": 142,
+    "kind": "bind",
+    "parents": [
+     141
+    ]
+   },
+   {
+    "id": 143,
+    "node_id": "literal:1107:1114",
+    "invocation_id": 143,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 144,
+    "node_id": "literal:1120:1124",
+    "invocation_id": 144,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 145,
+    "node_id": "record:1103:1125",
+    "invocation_id": 145,
+    "kind": "record",
+    "parents": [
+     143,
+     144
+    ]
+   },
+   {
+    "id": 146,
+    "node_id": "call:1088:1125",
+    "invocation_id": 146,
+    "kind": "invoke",
+    "parents": [
+     145
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "5e84e3bf91b8844e2f32b4266165a9648b40e7e566249e8f79d05adf1d1c29ea",
+    "targets": {
+     "op": "check",
+     "ref": "e6"
+    }
+   },
+   {
+    "id": 147,
+    "node_id": "call:1088:1125",
+    "invocation_id": 147,
+    "kind": "tool_evidence",
+    "parents": [
+     146
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 148,
+    "node_id": "call:1088:1125",
+    "invocation_id": 148,
+    "kind": "call",
+    "parents": [
+     145,
+     146,
+     147
+    ]
+   },
+   {
+    "id": 149,
+    "node_id": "bind:1084:1125",
+    "invocation_id": 149,
+    "kind": "bind",
+    "parents": [
+     148
+    ]
+   },
+   {
+    "id": 150,
+    "node_id": "literal:1150:1157",
+    "invocation_id": 150,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 151,
+    "node_id": "literal:1163:1167",
+    "invocation_id": 151,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 152,
+    "node_id": "literal:1176:1184",
+    "invocation_id": 152,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 153,
+    "node_id": "literal:1198:1207",
+    "invocation_id": 153,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 154,
+    "node_id": "record:1146:1208",
+    "invocation_id": 154,
+    "kind": "record",
+    "parents": [
+     150,
+     151,
+     152,
+     153
+    ]
+   },
+   {
+    "id": 155,
+    "node_id": "call:1131:1208",
+    "invocation_id": 155,
+    "kind": "invoke",
+    "parents": [
+     154
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "f8db8403fd7752cb91be0ea4f508d52482f9f557ce6222133a938982b6b2870b",
+    "targets": {
+     "op": "click",
+     "ref": "e7",
+     "dialog": "accept",
+     "dialog_text": "MP-4471"
+    }
+   },
+   {
+    "id": 156,
+    "node_id": "call:1131:1208",
+    "invocation_id": 156,
+    "kind": "tool_evidence",
+    "parents": [
+     155
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 157,
+    "node_id": "call:1131:1208",
+    "invocation_id": 157,
+    "kind": "call",
+    "parents": [
+     154,
+     155,
+     156
+    ]
+   },
+   {
+    "id": 158,
+    "node_id": "bind:1126:1208",
+    "invocation_id": 158,
+    "kind": "bind",
+    "parents": [
+     157
+    ]
+   },
+   {
+    "id": 159,
+    "node_id": "literal:1231:1240",
+    "invocation_id": 159,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 160,
+    "node_id": "literal:1247:1253",
+    "invocation_id": 160,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 161,
+    "node_id": "record:1227:1254",
+    "invocation_id": 161,
+    "kind": "record",
+    "parents": [
+     159,
+     160
+    ]
+   },
+   {
+    "id": 162,
+    "node_id": "call:1212:1254",
+    "invocation_id": 162,
+    "kind": "invoke",
+    "parents": [
+     161
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "061b8bac4e0c3b98de1cb7106265b4a1761f200ceea36a16ea32c6afb0fe2607",
+    "targets": {
+     "op": "content",
+     "mode": "text"
+    }
+   },
+   {
+    "id": 163,
+    "node_id": "call:1212:1254",
+    "invocation_id": 163,
+    "kind": "tool_evidence",
+    "parents": [
+     162
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 164,
+    "node_id": "call:1212:1254",
+    "invocation_id": 164,
+    "kind": "call",
+    "parents": [
+     161,
+     162,
+     163
+    ]
+   },
+   {
+    "id": 165,
+    "node_id": "bind:1209:1254",
+    "invocation_id": 165,
+    "kind": "bind",
+    "parents": [
+     164
+    ]
+   },
+   {
+    "id": 166,
+    "node_id": "literal:1279:1284",
+    "invocation_id": 166,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 167,
+    "node_id": "ref:1291:1299",
+    "invocation_id": 167,
+    "kind": "ref",
+    "parents": []
+   },
+   {
+    "id": 168,
+    "node_id": "record:1275:1300",
+    "invocation_id": 168,
+    "kind": "record",
+    "parents": [
+     166,
+     167
+    ]
+   },
+   {
+    "id": 169,
+    "node_id": "call:1260:1300",
+    "invocation_id": 169,
+    "kind": "invoke",
+    "parents": [
+     168
+    ],
+    "action": "limbs:browser",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "98d1ebdbbed7656c5a4050ba449554eeae7ba4d00693ef596a2ca3f71e01a300",
+    "targets": {
+     "op": "pdf",
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/_site/probe/receipt_probe.pdf"
+    }
+   },
+   {
+    "id": 170,
+    "node_id": "call:1260:1300",
+    "invocation_id": 170,
+    "kind": "tool_evidence",
+    "parents": [
+     169
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 171,
+    "node_id": "call:1260:1300",
+    "invocation_id": 171,
+    "kind": "call",
+    "parents": [
+     168,
+     169,
+     170
+    ]
+   },
+   {
+    "id": 172,
+    "node_id": "bind:1255:1300",
+    "invocation_id": 172,
+    "kind": "bind",
+    "parents": [
+     171
+    ]
+   },
+   {
+    "id": 173,
+    "node_id": "ref:1322:1330",
+    "invocation_id": 173,
+    "kind": "ref",
+    "parents": []
+   },
+   {
+    "id": 174,
+    "node_id": "record:1316:1331",
+    "invocation_id": 174,
+    "kind": "record",
+    "parents": [
+     173
+    ]
+   },
+   {
+    "id": 175,
+    "node_id": "call:1305:1331",
+    "invocation_id": 175,
+    "kind": "invoke",
+    "parents": [
+     174
+    ],
+    "action": "self:read",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "7b15106762a482b8d60d73c6e8477e82f4c88cfc7e3cbb659af48368f202a318",
+    "targets": {
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/_site/probe/receipt_probe.pdf"
+    }
+   },
+   {
+    "id": 176,
+    "node_id": "call:1305:1331",
+    "invocation_id": 176,
+    "kind": "tool_evidence",
+    "parents": [
+     175
+    ],
+    "markers": {},
+    "attachments": {},
+    "source_snapshot": [
+     [
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_45회차/_site/probe/receipt_probe.pdf",
+      1791526735535809033,
+      102223,
+      "02d02cf7fd7361f21a718c2744c27531a4f77123c8faa14e5946ace943342a27"
+     ]
+    ]
+   },
+   {
+    "id": 177,
+    "node_id": "call:1305:1331",
+    "invocation_id": 177,
+    "kind": "call",
+    "parents": [
+     174,
+     175,
+     176
+    ]
+   },
+   {
+    "id": 178,
+    "node_id": "bind:1301:1331",
+    "invocation_id": 178,
+    "kind": "bind",
+    "parents": [
+     177
+    ]
+   },
+   {
+    "id": 179,
+    "node_id": "ref:1341:1344",
+    "invocation_id": 179,
+    "kind": "ref",
+    "parents": [
+     86
+    ]
+   },
+   {
+    "id": 180,
+    "node_id": "field:1341:1353",
+    "invocation_id": 180,
+    "kind": "field",
+    "parents": [
+     179
+    ]
+   },
+   {
+    "id": 181,
+    "node_id": "lambda:1378:1401",
+    "invocation_id": 181,
+    "kind": "lambda",
+    "parents": []
+   },
+   {
+    "id": 182,
+    "node_id": "record:1371:1402",
+    "invocation_id": 182,
+    "kind": "record",
+    "parents": [
+     181
+    ]
+   },
+   {
+    "id": 183,
+    "node_id": "call:1357:1402",
+    "invocation_id": 183,
+    "kind": "invoke",
+    "parents": [
+     180,
+     182
+    ],
+    "action": "table:filter",
+    "effects": [
+     "pure"
+    ],
+    "request_hash": "43a944e279dc5ac9d3a35654c4984af93a38c5601af7b950b656673e19ca6e5c"
+   },
+   {
+    "id": 184,
+    "node_id": "ref:1384:1386",
+    "invocation_id": 184,
+    "kind": "ref",
+    "parents": [],
+    "evaluations": 21
+   },
+   {
+    "id": 185,
+    "node_id": "field:1384:1391",
+    "invocation_id": 185,
+    "kind": "field",
+    "parents": [
+     184
+    ],
+    "evaluations": 21
+   },
+   {
+    "id": 186,
+    "node_id": "literal:1393:1401",
+    "invocation_id": 186,
+    "kind": "literal",
+    "parents": [],
+    "evaluations": 21
+   },
+   {
+    "id": 187,
+    "node_id": "binary:1384:1401",
+    "invocation_id": 187,
+    "kind": "binary",
+    "parents": [
+     185,
+     186
+    ],
+    "evaluations": 21
+   },
+   {
+    "id": 188,
+    "node_id": "call:1357:1402",
+    "invocation_id": 188,
+    "kind": "call",
+    "parents": [
+     182,
+     183,
+     187
+    ]
+   },
+   {
+    "id": 189,
+    "node_id": "pipe:1341:1402",
+    "invocation_id": 189,
+    "kind": "pipe",
+    "parents": [
+     180,
+     188
+    ]
+   },
+   {
+    "id": 190,
+    "node_id": "bind:1332:1402",
+    "invocation_id": 190,
+    "kind": "bind",
+    "parents": [
+     189
+    ]
+   },
+   {
+    "id": 191,
+    "node_id": "ref:1424:1427",
+    "invocation_id": 191,
+    "kind": "ref",
+    "parents": [
+     48
+    ]
+   },
+   {
+    "id": 192,
+    "node_id": "field:1424:1432",
+    "invocation_id": 192,
+    "kind": "field",
+    "parents": [
+     191
+    ]
+   },
+   {
+    "id": 193,
+    "node_id": "ref:1437:1440",
+    "invocation_id": 193,
+    "kind": "ref",
+    "parents": [
+     71
+    ]
+   },
+   {
+    "id": 194,
+    "node_id": "ref:1445:1448",
+    "invocation_id": 194,
+    "kind": "ref",
+    "parents": [
+     80
+    ]
+   },
+   {
+    "id": 195,
+    "node_id": "ref:1458:1464",
+    "invocation_id": 195,
+    "kind": "ref",
+    "parents": [
+     189
+    ]
+   },
+   {
+    "id": 196,
+    "node_id": "ref:1469:1472",
+    "invocation_id": 196,
+    "kind": "ref",
+    "parents": [
+     94
+    ]
+   },
+   {
+    "id": 197,
+    "node_id": "ref:1477:1480",
+    "invocation_id": 197,
+    "kind": "ref",
+    "parents": [
+     103
+    ]
+   },
+   {
+    "id": 198,
+    "node_id": "ref:1485:1488",
+    "invocation_id": 198,
+    "kind": "ref",
+    "parents": [
+     117
+    ]
+   },
+   {
+    "id": 199,
+    "node_id": "ref:1493:1496",
+    "invocation_id": 199,
+    "kind": "ref",
+    "parents": [
+     141
+    ]
+   },
+   {
+    "id": 200,
+    "node_id": "ref:1501:1504",
+    "invocation_id": 200,
+    "kind": "ref",
+    "parents": [
+     148
+    ]
+   },
+   {
+    "id": 201,
+    "node_id": "ref:1510:1514",
+    "invocation_id": 201,
+    "kind": "ref",
+    "parents": [
+     157
+    ]
+   },
+   {
+    "id": 202,
+    "node_id": "ref:1526:1528",
+    "invocation_id": 202,
+    "kind": "ref",
+    "parents": [
+     164
+    ]
+   },
+   {
+    "id": 203,
+    "node_id": "field:1526:1532",
+    "invocation_id": 203,
+    "kind": "field",
+    "parents": [
+     202
+    ]
+   },
+   {
+    "id": 204,
+    "node_id": "ref:1545:1547",
+    "invocation_id": 204,
+    "kind": "ref",
+    "parents": [
+     164
+    ]
+   },
+   {
+    "id": 205,
+    "node_id": "field:1545:1552",
+    "invocation_id": 205,
+    "kind": "field",
+    "parents": [
+     204
+    ]
+   },
+   {
+    "id": 206,
+    "node_id": "ref:1558:1562",
+    "invocation_id": 206,
+    "kind": "ref",
+    "parents": [
+     171
+    ]
+   },
+   {
+    "id": 207,
+    "node_id": "ref:1573:1576",
+    "invocation_id": 207,
+    "kind": "ref",
+    "parents": [
+     177
+    ]
+   },
+   {
+    "id": 208,
+    "node_id": "field:1573:1581",
+    "invocation_id": 208,
+    "kind": "field",
+    "parents": [
+     207
+    ]
+   },
+   {
+    "id": 209,
+    "node_id": "record:1410:1582",
+    "invocation_id": 209,
+    "kind": "record",
+    "parents": [
+     192,
+     193,
+     194,
+     195,
+     196,
+     197,
+     198,
+     199,
+     200,
+     201,
+     203,
+     205,
+     206,
+     208
+    ]
+   }
+  ],
+  "usage": {
+   "steps": 244,
+   "rows": 0,
+   "elapsed_ms": 2588,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "binary:1384:1401",
+     "steps": 21,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1384,
+      "end": 1401,
+      "line": 25,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "field:1384:1391",
+     "steps": 21,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1384,
+      "end": 1391,
+      "line": 25,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "literal:1393:1401",
+     "steps": 21,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1393,
+      "end": 1401,
+      "line": 25,
+      "column": 62
+     }
+    },
+    {
+     "node_id": "ref:1384:1386",
+     "steps": 21,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1384,
+      "end": 1386,
+      "line": 25,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "bind:1023:1083",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1023,
+      "end": 1083,
+      "line": 19,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:105:138",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 105,
+      "end": 138,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1084:1125",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1084,
+      "end": 1125,
+      "line": 20,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1126:1208",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1126,
+      "end": 1208,
+      "line": 21,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1209:1254",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1209,
+      "end": 1254,
+      "line": 22,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1255:1300",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1255,
+      "end": 1300,
+      "line": 23,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1301:1331",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1301,
+      "end": 1331,
+      "line": 24,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1332:1402",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1332,
+      "end": 1402,
+      "line": 25,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:139:200",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 139,
+      "end": 200,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:16:104",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 16,
+      "end": 104,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:201:276",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 201,
+      "end": 276,
+      "line": 5,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:277:347",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 277,
+      "end": 347,
+      "line": 6,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:348:394",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 348,
+      "end": 394,
+      "line": 7,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:395:463",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 395,
+      "end": 463,
+      "line": 8,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:464:498",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 464,
+      "end": 498,
+      "line": 9,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:499:553",
+     "steps": 1,
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 499,
+      "end": 553,
+      "line": 10,
+      "column": 1
+     }
+    }
+   ],
+   "steps_other": 144,
+   "steps_by_line": [
+    {
+     "line": 25,
+     "steps": 91,
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 26,
+     "steps": 20,
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 2,
+     "steps": 8,
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 5,
+     "steps": 7,
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 6,
+     "steps": 7,
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 8,
+     "steps": 7,
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 11,
+     "steps": 7,
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 14,
+     "steps": 7,
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 21,
+     "steps": 7,
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 4,
+     "steps": 6,
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 14,
+     "ms": 621,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 11,
+     "ms": 394,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 2,
+     "ms": 263,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 24,
+     "ms": 73,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 9,
+     "ms": 65,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 15,
+     "ms": 61,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 5,
+     "ms": 59,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 12,
+     "ms": 57,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 21,
+     "ms": 57,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    },
+    {
+     "line": 3,
+     "ms": 55,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "a17863091d4f4ebc9a56a7d0e3479996"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "a17863091d4f4ebc9a56a7d0e3479996"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": true,
+   "read_exclusions": [
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "f029e6825dcb06c10238bbe98053ec9874e097fe58554bc47509f080c2550308",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 143,
+      "end": 200,
+      "line": 4,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "892718ed478b8d2006ce182dc5fb6c3a695f9e899cd60f6f8cd984c0436c7c49",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 399,
+      "end": 463,
+      "line": 8,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "50b51cbe99d7eee886423515b390f060782bb821349fc6e4f84d2406268b41ff",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 503,
+      "end": 553,
+      "line": 10,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "6a62fa980868139d71c1a50c9e5f620568d2293ddc017798c59c98e14731022d",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 679,
+      "end": 729,
+      "line": 13,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "f5c21c25507336b38c3fb92efc05bd6bb87a777dd6b257005615b4bd035e9b9e",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 855,
+      "end": 907,
+      "line": 16,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "d53eb2baaf734accc14170a7b48a724f4cee1f48d19d1c998e28e8217860e8b4",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "6efc17af72e6371420df645c690c356e5f1847eebcc0e2777b8879af635583ce",
+      "start": 1260,
+      "end": 1300,
+      "line": 23,
+      "column": 6
+     },
+     "excluded_calls": 1
+    }
+   ],
+   "read_exclusions_total": 6,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "a17863091d4f4ebc9a56a7d0e3479996",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ },
+ "elapsed": 2.620842933654785
+}

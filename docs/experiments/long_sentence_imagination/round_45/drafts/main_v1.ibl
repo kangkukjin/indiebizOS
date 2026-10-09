@@ -1,0 +1,159 @@
+#!ibl edition=2
+# 45회차 v1 (v0 수정 1회: 보간 안의 따옴표 삼항 SYNTAX → 문구를 변수로 먼저 계산) — 컴퓨터 유즈 2: 체육센터 강좌 신청 두 사람 몫. inputs: src(입력 폴더), out(출력 폴더), only(신청자 이름 또는 null)
+# 흐름: 계정·신청자·코드 읽기 → 로그인(wait:load) → 강좌 목록(큰 페이지: snapshot 상한 관측, content 로 수강료·정원) → 신청자마다
+#       [지역→센터→강좌 연쇄 select(wait text)] → 이름·생년월일·증명서 upload·약관 check → 제출(click dialog:accept + dialog_text=코드)
+#       → 접수 화면 판독(일시 오류면 1회 재제출, 거절은 사유) → 영수증 pdf → self:read 대조 → 합계 → 계산기(잠김/부재면 미실행) → result.json·report.md
+# 참고: 수리된 browser_action.md(작업별 세션·dialog·wait)·desktop.md·교재 2권·describe 4개·탐침 evidence/probe_apply_*.json(select 는 values/label 거절 → value)
+
+[def:줄찾기]($text,$key) {
+  $ls = filter(split($text,"\n"),($l)=>contains($l,$key))
+  return len($ls)>0 ? $ls[0] : null
+}
+[def:글]($v,$대신) { return $v == null ? $대신 : $v }
+[def:참조]($snap,$role,$name) {
+  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}
+  return len($m)>0 ? $m[0].ref : null
+}
+[def:표값]($text,$key) {
+  $l = [fn:줄찾기]{text:$text, key:f"${key}\t"}
+  return $l == null ? null : split($l,"\t")[1]
+}
+[def:원]($s) { return number(replace(replace(strip($s),",",""),"원","")) }
+[def:목록행]($text) {
+  $rows = filter(split($text,"\n"),($l)=>len(split($l,"\t"))>=6 and $l[:1]=="C")
+  return map($rows,($l)=>{id:split($l,"\t")[0], name:split($l,"\t")[1], center:split($l,"\t")[2], fee:[fn:원]{s:split($l,"\t")[4]}, seats:split($l,"\t")[5]})
+}
+# 신청 화면을 처음부터 채워 제출하고 결과 화면을 돌려준다(일시 오류 재제출용으로 분리)
+[def:제출]($portal,$src,$a,$code) {
+  $ap = [limbs:browser]{op:"navigate", url:f"${portal}apply", wait:"load"}
+  $s0 = [limbs:browser]{op:"snapshot"}
+  $r지역 = [fn:참조]{snap:$s0, role:"combobox", name:"지역"}
+  $r센터 = [fn:참조]{snap:$s0, role:"combobox", name:"센터"}
+  $r강좌 = [fn:참조]{snap:$s0, role:"combobox", name:"강좌"}
+  $r이름 = [fn:참조]{snap:$s0, role:"textbox", name:"신청자 이름"}
+  $r생년 = [fn:참조]{snap:$s0, role:"textbox", name:"생년월일"}
+  $r파일 = [fn:참조]{snap:$s0, role:"button", name:"증명서"}
+  $r동의 = [fn:참조]{snap:$s0, role:"checkbox", name:"환불"}
+  $r제출 = [fn:참조]{snap:$s0, role:"button", name:"신청 제출"}
+  assert $r지역 != null and $r센터 != null and $r강좌 != null and $r이름 != null and $r생년 != null and $r파일 != null and $r동의 != null and $r제출 != null, "신청 화면 요소를 찾지 못했습니다", {snapshot:$s0}
+  $x1 = [limbs:browser]{op:"select", ref:$r지역, value:$a.region}
+  $w1 = [limbs:browser]{op:"wait", text:"센터 선택"}
+  $x2 = [limbs:browser]{op:"select", ref:$r센터, value:$a.center}
+  $w2 = [limbs:browser]{op:"wait", text:"강좌 선택"}
+  $x3 = [limbs:browser]{op:"select", ref:$r강좌, value:$a.course}
+  $x4 = [limbs:browser]{op:"type", ref:$r이름, text:$a.name}
+  $x5 = [limbs:browser]{op:"type", ref:$r생년, text:$a.birth}
+  $x6 = [limbs:browser]{op:"upload_file", ref:$r파일, path:f"${src}/${a.cert}"}
+  $x7 = [limbs:browser]{op:"check", ref:$r동의}
+  $x8 = [limbs:browser]{op:"click", ref:$r제출, dialog:"accept", dialog_text:$code}
+  $c = [limbs:browser]{op:"content", mode:"text"}
+  return {url:$c.url, text:$c.text, selected:[$x1.selected,$x2.selected,$x3.selected], dialogs:$x8.dialogs, session_owner:$c.session_owner, tab_id:$c.tab_id}
+}
+
+# 1. 입력
+$acct = [self:read]{path:f"${src}/account.json"}
+$portal = $acct.data.portal_url
+$모두 = [self:read]{path:f"${src}/applicants.json"}
+$codes = [self:read]{path:f"${src}/codes.json"}
+$신청자 = $only == null ? $모두.data.items : ($모두.data.items >> [table:filter]{where:($r)=>$r.name==$only})
+assert len($신청자) > 0, "신청자가 없습니다", {only:$only}
+$mk = [self:mkdir]{path:f"${out}/receipts"}
+
+# 2. 로그인
+$l0 = [limbs:browser]{op:"navigate", url:f"${portal}login", driver:"playwright", wait:"load"}
+$snap0 = [limbs:browser]{op:"snapshot"}
+$refid = [fn:참조]{snap:$snap0, role:"textbox", name:"이용자 ID"}
+$refpw = [fn:참조]{snap:$snap0, role:"textbox", name:"비밀번호"}
+assert $refid != null and $refpw != null, "로그인 입력칸을 찾지 못했습니다", {snapshot:$snap0}
+$t1 = [limbs:browser]{op:"type", ref:$refid, text:$acct.data.user}
+$t2 = [limbs:browser]{op:"type", ref:$refpw, text:$acct.data.password, submit:true}
+$c0 = [limbs:browser]{op:"content", mode:"text"}
+assert contains($c0.url,"/courses"), "로그인 뒤 강좌 목록으로 이동하지 않았습니다", {url:$c0.url}
+
+# 3. 강좌 목록 — 큰 페이지: snapshot 상한 관측, 실제 값은 content 로
+$ls = [limbs:browser]{op:"snapshot"}
+$관측 = {element_count:$ls.element_count, shown_count:$ls.shown_count, truncated:get($ls,"truncated"), omitted_count:get($ls,"omitted_count")}
+$목록 = [fn:목록행]{text:$c0.text}
+assert len($목록) > 0, "강좌 목록을 읽지 못했습니다", {text:$c0.text}
+$사전확인 = $신청자 >> [table:each] {
+  $row = $목록 >> [table:filter]{where:($r)=>$r.id==$it.course}
+  [if:len($row)==0] { return {name:$it.name, course:$it.course, found:false, fee:null, seats:null} }
+  return {name:$it.name, course:$it.course, found:true, fee:$row[0].fee, seats:$row[0].seats, course_name:$row[0].name, center:$row[0].center}
+}
+
+# 4. 신청자마다 신청 → 판독 → (일시 오류 1회 재제출) → 영수증 PDF → 대조
+$결과 = $신청자 >> [table:each] {
+  $code = get($codes.data, $it.name)
+  $pre = ($사전확인 >> [table:filter]{where:($p)=>$p.name==$it.name})[0]
+  [try] {
+    assert $code != null, "접수 코드가 없습니다", {name:$it.name}
+    $r = [fn:제출]{portal:$portal, src:$src, a:$it, code:[fn:글]{v:$code,대신:""}}
+    $일시 = [fn:줄찾기]{text:$r.text, key:"일시 오류"}
+    $r2 = $일시 != null ? [fn:제출]{portal:$portal, src:$src, a:$it, code:[fn:글]{v:$code,대신:""}} : $r
+    $retried = $일시 != null
+    $접수 = contains($r2.url,"/receipt/")
+    [if:not $접수] {
+      $err = [fn:글]{v:[fn:줄찾기]{text:$r2.text, key:"error"}, 대신:""}
+      $사유 = [fn:글]{v:[fn:줄찾기]{text:$r2.text, key:"마감"} ?? null, 대신:""}
+      $사유2 = len($사유) > 0 ? $사유 : [fn:글]{v:[fn:줄찾기]{text:$r2.text, key:"확인"}, 대신:"포털이 접수 화면을 보이지 않음"}
+      return {name:$it.name, course:$it.course, ok:false, retried:$retried, receipt_id:null, reason:$사유2, fee:null, pdf:null, pdf_checks:null, session:{owner:$r2.session_owner, tab:$r2.tab_id}, line:f"- ${it.name} ${it.course}: 실패 — ${사유2}"}
+    }
+    $접수번호 = [fn:글]{v:[fn:표값]{text:$r2.text, key:"접수번호"}, 대신:""}
+    $화면수강료 = [fn:원]{s:[fn:글]{v:[fn:표값]{text:$r2.text, key:"수강료"}, 대신:"0원"}}
+    $화면이름 = [fn:글]{v:[fn:표값]{text:$r2.text, key:"신청자"}, 대신:""}
+    $pdfpath = f"${out}/receipts/${it.name}.pdf"
+    $pdf = [limbs:browser]{op:"pdf", path:$pdfpath}
+    $rd = [self:read]{path:$pdfpath}
+    $fee_text = format_number($화면수강료, ",.0f")
+    $checks = {name_in_pdf:contains($rd.text,$it.name), course_in_pdf:contains($rd.text,$it.course), fee_in_pdf:contains($rd.text,f"${fee_text}원"), receipt_in_pdf:contains($rd.text,$접수번호),
+               fee_matches_list:$pre.found and $pre.fee == $화면수강료, name_matches:$화면이름 == $it.name}
+    $all_ok = $checks.name_in_pdf and $checks.course_in_pdf and $checks.fee_in_pdf and $checks.receipt_in_pdf and $checks.fee_matches_list and $checks.name_matches
+    $대조글 = $all_ok ? "전건 일치" : "불일치 있음"
+    $재제출글 = $retried ? " (일시 오류 뒤 재제출)" : ""
+    return {name:$it.name, course:$it.course, ok:true, retried:$retried, receipt_id:$접수번호, reason:null, fee:$화면수강료, pdf:$pdf.file_path, pdf_checks:$checks, all_checks_ok:$all_ok, session:{owner:$r2.session_owner, tab:$r2.tab_id}, line:f"- ${it.name} ${it.course}: 접수 ${접수번호}, 수강료 ${화면수강료}원, PDF 대조 ${대조글}${재제출글}"}
+  } [catch] {
+    return {name:$it.name, course:$it.course, ok:false, retried:false, receipt_id:null, reason:f"오류: ${error.message}", fee:null, pdf:null, pdf_checks:null, session:null, line:f"- ${it.name} ${it.course}: 실패 — 오류: ${error.message}"}
+  }
+}
+
+# 5. 합계
+$성공 = $결과 >> [table:filter]{where:($r)=>$r.ok}
+$실패 = $결과 >> [table:filter]{where:($r)=>not $r.ok}
+$합계 = reduce($성공, 0, ($s,$r)=>$s + $r.fee)
+
+# 6. 계산기 대조 — 화면 잠김(loginwindow)·사용자 부재면 미실행
+$host = [sense:host]{op:"status"}
+$calc = [try] {
+  [if:$host.frontmost_app == "loginwindow" or len($성공) == 0] {
+    {done:false, reason:$host.frontmost_app == "loginwindow" ? "화면 잠김(loginwindow) — 미실행" : "성공 신청 없음 — 미실행", screen_value:null, matches:null}
+  } [else] {
+    $k1 = [limbs:screen]{op:"key", key:"cmd+space"}
+    $k2 = [limbs:screen]{op:"type", text:"Calculator"}
+    $k3 = [limbs:screen]{op:"key", key:"enter"}
+    $sn1 = [limbs:screen]{op:"snapshot"}
+    $식 = join("+", map($성공, ($r)=>text($r.fee)))
+    $k4 = [limbs:screen]{op:"type", text:f"${식}="}
+    $sn2 = [limbs:screen]{op:"snapshot"}
+    $k5 = [limbs:screen]{op:"key", key:"cmd+q"}
+    $vals = filter(map($sn2.elements, ($e)=>text(get($e,"value"))), ($v)=>contains($v, format_number($합계, ",.0f")) or contains($v, text($합계)))
+    {done:true, reason:null, expression:$식, screen_value:len($vals)>0 ? $vals[0] : null, matches:len($vals)>0, app:get($sn2,"app")}
+  }
+} [catch] { {done:false, reason:f"계산기 오류: ${error.message}", screen_value:null, matches:null} }
+
+# 7. 결과 파일
+$result = {portal:$portal, applicants:map($신청자,($a)=>$a.name), precheck:$사전확인, list_snapshot:$관측, results:$결과,
+  fee_total_success:$합계, succeeded:map($성공,($r)=>$r.name), failed:map($실패,($r)=>{name:$r.name, reason:$r.reason}), calculator:$calc,
+  session:{login_owner:$l0.session_owner, login_tab:$l0.tab_id, session_started:get($l0,"session_started")}}
+$w1 = [self:write]{path:f"${out}/result.json", content:json($result)}
+$lines = map($결과, ($r)=>$r.line)
+$calc화면 = [fn:글]{v:$calc.screen_value, 대신:"미판독"}
+$calc일치 = $calc.matches == true ? "일치" : "불일치"
+$calc식 = [fn:글]{v:get($calc,"expression"), 대신:""}
+$calc사유 = [fn:글]{v:$calc.reason, 대신:""}
+$calcline = $calc.done ? f"- 계산기: ${calc식} → 화면 ${calc화면} (${calc일치})" : f"- 계산기: ${calc사유}"
+$owner글 = [fn:글]{v:$l0.session_owner, 대신:"없음"}
+$tab글 = [fn:글]{v:$l0.tab_id, 대신:"없음"}
+$report = join("\n", ["# 체육센터 수강 신청 보고", f"- 포털: ${portal}", f"- 강좌 목록 ${len(목록)}개 (snapshot ${관측.shown_count}/${관측.element_count} 표시)", "", "## 신청 결과"] + $lines +
+  ["", f"- 수강료 합계(성공분): ${합계}원", $calcline, "", "## 세션", f"- session_owner ${owner글} · tab ${tab글}"])
+$w2 = [self:write]{path:f"${out}/report.md", content:$report}
+return {applicants:len($신청자), ok:map($성공,($r)=>$r.name), failed:map($실패,($r)=>$r.name), fee_total:$합계, list_snapshot:$관측, calculator:$calc.done, calc_reason:$calc.reason, session_owner:$l0.session_owner, files:[$w1.path,$w2.path]}

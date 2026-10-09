@@ -1,0 +1,86 @@
+{
+ "passed": 18,
+ "total": 18,
+ "checks": {
+  "result_json": true,
+  "report_md": true,
+  "ok_names": true,
+  "fail_names": true,
+  "server_applications": true,
+  "server_course_fee": true,
+  "server_upload_sha": true,
+  "server_code": true,
+  "no_rejections": true,
+  "receipt_ids_match": true,
+  "pdf_exists_and_matches": true,
+  "fee_reported": true,
+  "fee_total": true,
+  "precheck_fees": true,
+  "snapshot_limit_observed": true,
+  "session_fields": true,
+  "calculator_reported": true,
+  "report_mentions": true
+ },
+ "detail": {
+  "rejections": [],
+  "pdf": {
+   "강가상": {
+    "pdf": "outputs/long_sentence_imagination/2026-10-09_45회차/agent/out_norm/receipts/강가상.pdf",
+    "receipt_id_match": true,
+    "name": true,
+    "course": true,
+    "fee": true,
+    "receipt": true,
+    "fee_reported": true
+   },
+   "이합성": {
+    "pdf": "outputs/long_sentence_imagination/2026-10-09_45회차/agent/out_norm/receipts/이합성.pdf",
+    "receipt_id_match": true,
+    "name": true,
+    "course": true,
+    "fee": true,
+    "receipt": true,
+    "fee_reported": true
+   }
+  },
+  "calculator": {
+   "done": false,
+   "status": "미실행",
+   "reason": "사용자가 자리에 있고 화면도 잠기지 않았지만, 사용자가 다른 앱을 계속 오가며 쓰고 있었다. 숫자 입력 직전의 맨 앞 앱 확인을 통과하지 못해 계산기에 숫자를 하나도 넣지 않았다.",
+   "presence_check": {
+    "at": "2026-10-09T15:26:04+09:00",
+    "IOConsoleLocked": "No",
+    "kCGSSessionOnConsoleKey": true,
+    "HIDIdleTime_s": 3,
+    "judgement": "자리에 있음·잠기지 않음"
+   },
+   "front_checks": [
+    {
+     "step": "open -a Calculator 직후 osascript",
+     "front": "Calculator"
+    },
+    {
+     "step": "화면 캡처 판독(evidence/calc_before.png)",
+     "front": "ChatGPT(Codex 창) — 계산기는 뒤에 가려짐"
+    },
+    {
+     "step": "계산기 activate 뒤 limbs:screen snapshot app 필드",
+     "front": "Electron — 같은 시각 osascript는 Calculator로 답해 서로 엇갈림(판정에 쓰지 않음)"
+    },
+    {
+     "step": "화면 캡처 판독(evidence/calc_front_check2.png)",
+     "front": "계산기가 맨 앞에 보였고 표시부에는 원래 값 1.41×0.73×3=3.0879가 있었음"
+    },
+    {
+     "step": "입력 직전 확인(같은 osascript 안에서 확인 뒤 입력하도록 묶음)",
+     "front": "Claude → ABORT, 키 입력 0회"
+    }
+   ],
+   "keys_sent": 0,
+   "other_apps_touched": "없음(다른 앱은 조작·종료하지 않음). 계산기 앱은 이번에 실행한 것이며 열린 채로 둠",
+   "program_total": 117000,
+   "calculator_total": null,
+   "match": null
+  }
+ }
+}

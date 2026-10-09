@@ -1,0 +1,170 @@
+{
+  "episode": {
+    "id": 4506,
+    "total_ms": 458185,
+    "source": "training",
+    "run_id": "run_a705b75c202654fe4a33"
+  },
+  "usage": {
+    "input": 5686809,
+    "output": 50468,
+    "cache_read": 5465616,
+    "cache_create": 211794
+  },
+  "roles": {
+    "oneshot:classify": {
+      "input": 9406,
+      "output": 60,
+      "cache_read": 3328,
+      "cache_create": 0
+    },
+    "oneshot:background": {
+      "input": 4167,
+      "output": 2239,
+      "cache_read": 896,
+      "cache_create": 0
+    },
+    "oneshot:execution": {
+      "input": 12761,
+      "output": 230,
+      "cache_read": 8711,
+      "cache_create": 4046
+    },
+    "consciousness": {
+      "input": 40026,
+      "output": 918,
+      "cache_read": 6142,
+      "cache_create": 33882
+    },
+    "execution": {
+      "input": 5580863,
+      "output": 46830,
+      "cache_read": 5441008,
+      "cache_create": 139813
+    },
+    "oneshot:evaluate": {
+      "input": 39586,
+      "output": 191,
+      "cache_read": 5531,
+      "cache_create": 34053
+    }
+  },
+  "events": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 8,
+    "supervision.recall.finished": 8,
+    "model.call_started": 8,
+    "model.input": 8,
+    "model.round": 29,
+    "model.usage": 8,
+    "model.call_finished": 8,
+    "knowledge_catalog.selected": 2,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "framing.inherited": 1,
+    "supervision.framing": 1,
+    "model.response_snapshot": 51,
+    "supervision.tool.started": 20,
+    "ibl.started": 14,
+    "ibl.checkpoint": 7,
+    "ibl.finished": 14,
+    "supervision.tool.finished": 20,
+    "seam": 8,
+    "model.image_route": 1,
+    "supervision.model.started": 1,
+    "supervision.model.finished": 1,
+    "supervision.decision": 2,
+    "context.input_ref_resolved": 3,
+    "side_effect.write": 3,
+    "supervision.review.trigger_retired": 1,
+    "capability.judged": 1,
+    "cognition.evaluation": 1,
+    "supervision.evaluation.stage_started": 4,
+    "supervision.evaluation.stage_finished": 4,
+    "supervision.evaluation.started": 1,
+    "supervision.evaluation.finished": 1,
+    "validation.completed": 1,
+    "supervision.response.delivered": 1,
+    "recall.used": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+  },
+  "tool_names": {
+    "execute_ibl": 15,
+    "Bash": 5
+  },
+  "tool_failures": 0,
+  "recall_used": [
+    {
+      "blocks": [
+        {
+          "evidence": "executed",
+          "ibl_calls": 13,
+          "presented": [
+            "1847",
+            "3695",
+            "3169",
+            "3174",
+            "3173"
+          ],
+          "recall_id": "936f28e4f1eb4775af023a626067ba97",
+          "source": "hippocampus",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "presented": [
+            "script:나레이션생성",
+            "script:폴더변화",
+            "script:에피소드통계"
+          ],
+          "quality_contribution": "not_inferred",
+          "recall_id": "936f28e4f1eb4775af023a626067ba97",
+          "source": "reusable_capabilities",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "opened": [],
+          "presented": [
+            "339",
+            "450",
+            "464"
+          ],
+          "recall_id": "936f28e4f1eb4775af023a626067ba97",
+          "source": "recalled_memory",
+          "used": []
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "basics.11.e7a241debad5",
+            "basics.09.bfa42cf6a12e"
+          ],
+          "recall_id": "936f28e4f1eb4775af023a626067ba97",
+          "source": "method_map",
+          "used": [
+            "basics.11.e7a241debad5"
+          ]
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "atlas.security.input_validation",
+            "atlas.data.idempotency",
+            "atlas.networks.exponential_backoff"
+          ],
+          "recall_id": "936f28e4f1eb4775af023a626067ba97",
+          "source": "world_memory",
+          "used": []
+        }
+      ],
+      "completed": true,
+      "phase": "turn"
+    }
+  ],
+  "compacted": 0
+}

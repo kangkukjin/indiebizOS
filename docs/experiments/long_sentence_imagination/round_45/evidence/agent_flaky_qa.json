@@ -1,0 +1,85 @@
+{
+ "passed": 21,
+ "total": 21,
+ "checks": {
+  "result_json": true,
+  "report_md": true,
+  "ok_names": true,
+  "fail_names": true,
+  "server_applications": true,
+  "server_course_fee": true,
+  "server_upload_sha": true,
+  "server_code": true,
+  "rej_temp_error_once": true,
+  "rej_full_once": true,
+  "fail_reason_reported": true,
+  "retry_recorded": true,
+  "receipt_ids_match": true,
+  "pdf_exists_and_matches": true,
+  "fee_reported": true,
+  "fee_total": true,
+  "precheck_fees": true,
+  "snapshot_limit_observed": true,
+  "session_fields": true,
+  "calculator_reported": true,
+  "report_mentions": true
+ },
+ "detail": {
+  "rejections": [
+   {
+    "name": "강가상",
+    "course": "C03",
+    "reason": "접수 코드를 확인하지 못했습니다(일시 오류). 다시 제출해 주세요"
+   },
+   {
+    "name": "이합성",
+    "course": "C28",
+    "reason": "정원 마감"
+   }
+  ],
+  "pdf": {
+   "강가상": {
+    "pdf": "outputs/long_sentence_imagination/2026-10-09_45회차/agent/out_flaky_norm/receipts/강가상.pdf",
+    "receipt_id_match": true,
+    "name": true,
+    "course": true,
+    "fee": true,
+    "receipt": true,
+    "fee_reported": true
+   }
+  },
+  "calculator": {
+   "done": false,
+   "status": "미실행",
+   "reason": "사용자는 자리에 있고 화면도 잠기지 않았지만 다른 앱(ChatGPT)을 쓰는 중이었다. 계산기를 앞으로 가져와 화면으로 확인했으나, 숫자 입력 직전 같은 osascript 안의 맨 앞 앱 확인에서 ChatGPT로 바뀌어 있어 중단했다. 키 입력은 0회.",
+   "presence_check": {
+    "at": "2026-10-09T15:32:05+09:00",
+    "IOConsoleLocked": "No",
+    "kCGSSessionOnConsoleKey": true,
+    "HIDIdleTime_s": 11,
+    "front_app_at_check": "ChatGPT",
+    "judgement": "자리에 있음·잠기지 않음"
+   },
+   "front_checks": [
+    {
+     "step": "open -a Calculator 직후 osascript",
+     "front": "Calculator"
+    },
+    {
+     "step": "화면 캡처 판독(evidence/calc_front_check.png)",
+     "front": "계산기가 맨 앞에 보이고 가려지지 않음, 표시부 1.41×0.73×3=3.0879(원래 값)"
+    },
+    {
+     "step": "입력 직전 확인(확인과 입력을 한 osascript로 묶음)",
+     "front": "ChatGPT → ABORT, 키 입력 0회"
+    }
+   ],
+   "keys_sent": 0,
+   "intended_input": "45000=",
+   "other_apps_touched": "없음. 계산기는 직전 회차에 연 상태 그대로 열려 있음",
+   "calculator_total": null,
+   "match": null,
+   "program_total": 45000
+  }
+ }
+}

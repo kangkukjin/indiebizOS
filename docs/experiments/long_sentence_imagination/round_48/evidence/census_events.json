@@ -1,0 +1,5226 @@
+[
+ {
+  "trigger": "popup_blank",
+  "op": "click",
+  "elapsed": 1.84,
+  "server_hits": [
+   "/t",
+   "/p?x=blank"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#popup_blank)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "1fe53d86c609-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "1fe53d86c609-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "1fe53d86c609-t1",
+     "tab_id": "1fe53d86c609-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=blank",
+    "snap_tab": "1fe53d86c609-t2",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "1fe53d86c609-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": false
+      },
+      {
+       "tab_id": "1fe53d86c609-t2",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=blank",
+       "active": true
+      }
+     ],
+     "count": 2,
+     "active_tab": "1fe53d86c609-t2",
+     "tab_id": "1fe53d86c609-t2"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=blank",
+    "snap_tab": "1fe53d86c609-t2",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "1fe53d86c609-t2"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "1fe53d86c609-t2"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:24.441635"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "1fe53d86c609-t2"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "1fe53d86c609-t2"
+   }
+  }
+ },
+ {
+  "trigger": "popup_blank",
+  "op": "key",
+  "elapsed": 1.81,
+  "server_hits": [
+   "/t",
+   "/p?x=blank"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "3fd9a3786a80-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "3fd9a3786a80-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "3fd9a3786a80-t1",
+     "tab_id": "3fd9a3786a80-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=blank",
+    "snap_tab": "3fd9a3786a80-t2",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "3fd9a3786a80-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": false
+      },
+      {
+       "tab_id": "3fd9a3786a80-t2",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=blank",
+       "active": true
+      }
+     ],
+     "count": 2,
+     "active_tab": "3fd9a3786a80-t2",
+     "tab_id": "3fd9a3786a80-t2"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=blank",
+    "snap_tab": "3fd9a3786a80-t2",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "3fd9a3786a80-t2"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "3fd9a3786a80-t2"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:26.290096"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "3fd9a3786a80-t2"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "3fd9a3786a80-t2"
+   }
+  }
+ },
+ {
+  "trigger": "popup_blank",
+  "op": "eval",
+  "elapsed": 1.94,
+  "server_hits": [
+   "/t",
+   "/p?x=blank"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "a342bdd14de6-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "a342bdd14de6-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "a342bdd14de6-t1",
+     "tab_id": "a342bdd14de6-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=blank",
+    "snap_tab": "a342bdd14de6-t2",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "a342bdd14de6-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": false
+      },
+      {
+       "tab_id": "a342bdd14de6-t2",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=blank",
+       "active": true
+      }
+     ],
+     "count": 2,
+     "active_tab": "a342bdd14de6-t2",
+     "tab_id": "a342bdd14de6-t2"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=blank",
+    "snap_tab": "a342bdd14de6-t2",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "a342bdd14de6-t2"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "a342bdd14de6-t2"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:28.261350"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "a342bdd14de6-t2"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "a342bdd14de6-t2"
+   }
+  }
+ },
+ {
+  "trigger": "popup_open",
+  "op": "click",
+  "elapsed": 1.89,
+  "server_hits": [
+   "/t",
+   "/p?x=open"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#popup_open)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "1a24a1a96272-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "1a24a1a96272-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": false
+      },
+      {
+       "tab_id": "1a24a1a96272-t2",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=open",
+       "active": true
+      }
+     ],
+     "count": 2,
+     "active_tab": "1a24a1a96272-t2",
+     "tab_id": "1a24a1a96272-t2"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=open",
+    "snap_tab": "1a24a1a96272-t2",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "1a24a1a96272-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": false
+      },
+      {
+       "tab_id": "1a24a1a96272-t2",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=open",
+       "active": true
+      }
+     ],
+     "count": 2,
+     "active_tab": "1a24a1a96272-t2",
+     "tab_id": "1a24a1a96272-t2"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=open",
+    "snap_tab": "1a24a1a96272-t2",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "1a24a1a96272-t2"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "1a24a1a96272-t2"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:30.061812"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "1a24a1a96272-t2"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "1a24a1a96272-t2"
+   }
+  }
+ },
+ {
+  "trigger": "popup_open",
+  "op": "key",
+  "elapsed": 1.8,
+  "server_hits": [
+   "/t",
+   "/p?x=open"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "9e5083d48d08-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "9e5083d48d08-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": false
+      },
+      {
+       "tab_id": "9e5083d48d08-t2",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=open",
+       "active": true
+      }
+     ],
+     "count": 2,
+     "active_tab": "9e5083d48d08-t2",
+     "tab_id": "9e5083d48d08-t2"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=open",
+    "snap_tab": "9e5083d48d08-t2",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "9e5083d48d08-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": false
+      },
+      {
+       "tab_id": "9e5083d48d08-t2",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=open",
+       "active": true
+      }
+     ],
+     "count": 2,
+     "active_tab": "9e5083d48d08-t2",
+     "tab_id": "9e5083d48d08-t2"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=open",
+    "snap_tab": "9e5083d48d08-t2",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "9e5083d48d08-t2"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "9e5083d48d08-t2"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:31.933149"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "9e5083d48d08-t2"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "9e5083d48d08-t2"
+   }
+  }
+ },
+ {
+  "trigger": "popup_open",
+  "op": "eval",
+  "elapsed": 1.83,
+  "server_hits": [
+   "/t",
+   "/p?x=open"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "3665ac091628-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "3665ac091628-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": false
+      },
+      {
+       "tab_id": "3665ac091628-t2",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=open",
+       "active": true
+      }
+     ],
+     "count": 2,
+     "active_tab": "3665ac091628-t2",
+     "tab_id": "3665ac091628-t2"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=open",
+    "snap_tab": "3665ac091628-t2",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "3665ac091628-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": false
+      },
+      {
+       "tab_id": "3665ac091628-t2",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=open",
+       "active": true
+      }
+     ],
+     "count": 2,
+     "active_tab": "3665ac091628-t2",
+     "tab_id": "3665ac091628-t2"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=open",
+    "snap_tab": "3665ac091628-t2",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "3665ac091628-t2"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "3665ac091628-t2"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:33.785253"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "3665ac091628-t2"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "3665ac091628-t2"
+   }
+  }
+ },
+ {
+  "trigger": "download_link",
+  "op": "click",
+  "elapsed": 1.88,
+  "server_hits": [
+   "/t",
+   "/dl"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#download_link)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "076ded5936d8-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "076ded5936d8-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "076ded5936d8-t1",
+     "tab_id": "076ded5936d8-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "076ded5936d8-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "076ded5936d8-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "076ded5936d8-t1",
+     "tab_id": "076ded5936d8-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "076ded5936d8-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "076ded5936d8-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "076ded5936d8-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:35.572962"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "076ded5936d8-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "076ded5936d8-t1"
+   }
+  }
+ },
+ {
+  "trigger": "download_link",
+  "op": "key",
+  "elapsed": 1.84,
+  "server_hits": [
+   "/t",
+   "/dl"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "019781bd58c8-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "019781bd58c8-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "019781bd58c8-t1",
+     "tab_id": "019781bd58c8-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "019781bd58c8-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "019781bd58c8-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "019781bd58c8-t1",
+     "tab_id": "019781bd58c8-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "019781bd58c8-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "019781bd58c8-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "019781bd58c8-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:37.463459"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "019781bd58c8-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "019781bd58c8-t1"
+   }
+  }
+ },
+ {
+  "trigger": "download_link",
+  "op": "eval",
+  "elapsed": 1.8,
+  "server_hits": [
+   "/t",
+   "/dl"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "7cb6e5d68e03-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "7cb6e5d68e03-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "7cb6e5d68e03-t1",
+     "tab_id": "7cb6e5d68e03-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "7cb6e5d68e03-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "7cb6e5d68e03-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "7cb6e5d68e03-t1",
+     "tab_id": "7cb6e5d68e03-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "7cb6e5d68e03-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "7cb6e5d68e03-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "7cb6e5d68e03-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:39.289245"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "7cb6e5d68e03-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "7cb6e5d68e03-t1"
+   }
+  }
+ },
+ {
+  "trigger": "download_blob",
+  "op": "click",
+  "elapsed": 1.87,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#download_blob)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "05ae40474f5e-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "05ae40474f5e-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "05ae40474f5e-t1",
+     "tab_id": "05ae40474f5e-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "05ae40474f5e-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "05ae40474f5e-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "05ae40474f5e-t1",
+     "tab_id": "05ae40474f5e-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "05ae40474f5e-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "05ae40474f5e-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "05ae40474f5e-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:41.097074"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "05ae40474f5e-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "05ae40474f5e-t1"
+   }
+  }
+ },
+ {
+  "trigger": "download_blob",
+  "op": "key",
+  "elapsed": 1.85,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "0e6c81c325ce-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "0e6c81c325ce-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "0e6c81c325ce-t1",
+     "tab_id": "0e6c81c325ce-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "0e6c81c325ce-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "0e6c81c325ce-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "0e6c81c325ce-t1",
+     "tab_id": "0e6c81c325ce-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "0e6c81c325ce-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "0e6c81c325ce-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "0e6c81c325ce-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:42.966514"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "0e6c81c325ce-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "0e6c81c325ce-t1"
+   }
+  }
+ },
+ {
+  "trigger": "download_blob",
+  "op": "eval",
+  "elapsed": 1.85,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "4fa7ecbe8c3d-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "4fa7ecbe8c3d-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "4fa7ecbe8c3d-t1",
+     "tab_id": "4fa7ecbe8c3d-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "4fa7ecbe8c3d-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "4fa7ecbe8c3d-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "4fa7ecbe8c3d-t1",
+     "tab_id": "4fa7ecbe8c3d-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "4fa7ecbe8c3d-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "4fa7ecbe8c3d-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "4fa7ecbe8c3d-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:44.867024"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "4fa7ecbe8c3d-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "4fa7ecbe8c3d-t1"
+   }
+  }
+ },
+ {
+  "trigger": "filechooser",
+  "op": "click",
+  "elapsed": 2.05,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#filechooser)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "208c4c54f700-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "208c4c54f700-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "208c4c54f700-t1",
+     "tab_id": "208c4c54f700-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "208c4c54f700-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "208c4c54f700-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "208c4c54f700-t1",
+     "tab_id": "208c4c54f700-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "208c4c54f700-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "208c4c54f700-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "208c4c54f700-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:46.873493"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "208c4c54f700-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "208c4c54f700-t1"
+   }
+  }
+ },
+ {
+  "trigger": "filechooser",
+  "op": "key",
+  "elapsed": 1.85,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "fe7830e32f98-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "fe7830e32f98-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "fe7830e32f98-t1",
+     "tab_id": "fe7830e32f98-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "fe7830e32f98-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "fe7830e32f98-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "fe7830e32f98-t1",
+     "tab_id": "fe7830e32f98-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "fe7830e32f98-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "fe7830e32f98-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "fe7830e32f98-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:48.735809"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "fe7830e32f98-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "fe7830e32f98-t1"
+   }
+  }
+ },
+ {
+  "trigger": "filechooser",
+  "op": "eval",
+  "elapsed": 1.83,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "b574e458a12f-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "b574e458a12f-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "b574e458a12f-t1",
+     "tab_id": "b574e458a12f-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "b574e458a12f-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "b574e458a12f-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "b574e458a12f-t1",
+     "tab_id": "b574e458a12f-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "b574e458a12f-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "b574e458a12f-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "b574e458a12f-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:50.581751"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "b574e458a12f-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "b574e458a12f-t1"
+   }
+  }
+ },
+ {
+  "trigger": "nav_ok",
+  "op": "click",
+  "elapsed": 1.82,
+  "server_hits": [
+   "/t",
+   "/p?x=nav"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#nav_ok)",
+    "url": "http://127.0.0.1:8990/p?x=nav",
+    "title": "도착 화면",
+    "tab_id": "63cb884b4fc3-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "63cb884b4fc3-t1",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=nav",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "63cb884b4fc3-t1",
+     "tab_id": "63cb884b4fc3-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=nav",
+    "snap_tab": "63cb884b4fc3-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "63cb884b4fc3-t1",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=nav",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "63cb884b4fc3-t1",
+     "tab_id": "63cb884b4fc3-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=nav",
+    "snap_tab": "63cb884b4fc3-t1",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "63cb884b4fc3-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "63cb884b4fc3-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:52.407823"
+     },
+     {
+      "url": "http://127.0.0.1:8990/p?x=nav",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:52.477632"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "63cb884b4fc3-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "63cb884b4fc3-t1"
+   }
+  }
+ },
+ {
+  "trigger": "nav_ok",
+  "op": "key",
+  "elapsed": 1.82,
+  "server_hits": [
+   "/t",
+   "/p?x=nav"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "c8e2f312dd83-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "c8e2f312dd83-t1",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=nav",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "c8e2f312dd83-t1",
+     "tab_id": "c8e2f312dd83-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=nav",
+    "snap_tab": "c8e2f312dd83-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "c8e2f312dd83-t1",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=nav",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "c8e2f312dd83-t1",
+     "tab_id": "c8e2f312dd83-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=nav",
+    "snap_tab": "c8e2f312dd83-t1",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "c8e2f312dd83-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "c8e2f312dd83-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:54.253845"
+     },
+     {
+      "url": "http://127.0.0.1:8990/p?x=nav",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:54.294347"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "c8e2f312dd83-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "c8e2f312dd83-t1"
+   }
+  }
+ },
+ {
+  "trigger": "nav_ok",
+  "op": "eval",
+  "elapsed": 1.78,
+  "server_hits": [
+   "/t",
+   "/p?x=nav"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "5e3f494a5e21-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "5e3f494a5e21-t1",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=nav",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "5e3f494a5e21-t1",
+     "tab_id": "5e3f494a5e21-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=nav",
+    "snap_tab": "5e3f494a5e21-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "5e3f494a5e21-t1",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=nav",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "5e3f494a5e21-t1",
+     "tab_id": "5e3f494a5e21-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=nav",
+    "snap_tab": "5e3f494a5e21-t1",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "5e3f494a5e21-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "5e3f494a5e21-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:56.052986"
+     },
+     {
+      "url": "http://127.0.0.1:8990/p?x=nav",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:56.080303"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "5e3f494a5e21-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "5e3f494a5e21-t1"
+   }
+  }
+ },
+ {
+  "trigger": "nav_404",
+  "op": "click",
+  "elapsed": 1.93,
+  "server_hits": [
+   "/t",
+   "/missing"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#nav_404)",
+    "url": "http://127.0.0.1:8990/missing",
+    "title": "없음",
+    "tab_id": "be462773fed2-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "be462773fed2-t1",
+       "title": "없음",
+       "url": "http://127.0.0.1:8990/missing",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "be462773fed2-t1",
+     "tab_id": "be462773fed2-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/missing",
+    "snap_tab": "be462773fed2-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "be462773fed2-t1",
+       "title": "없음",
+       "url": "http://127.0.0.1:8990/missing",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "be462773fed2-t1",
+     "tab_id": "be462773fed2-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/missing",
+    "snap_tab": "be462773fed2-t1",
+    "snap_title": "없음",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "be462773fed2-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "timestamp": "2026-10-10T00:51:57.999767"
+     }
+    ],
+    "count": 1,
+    "tab_id": "be462773fed2-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:57.925379"
+     },
+     {
+      "url": "http://127.0.0.1:8990/missing",
+      "status": 404,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:57.998622"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "be462773fed2-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "be462773fed2-t1"
+   }
+  }
+ },
+ {
+  "trigger": "nav_404",
+  "op": "key",
+  "elapsed": 1.81,
+  "server_hits": [
+   "/t",
+   "/missing"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "48f27116e046-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "48f27116e046-t1",
+       "title": "없음",
+       "url": "http://127.0.0.1:8990/missing",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "48f27116e046-t1",
+     "tab_id": "48f27116e046-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/missing",
+    "snap_tab": "48f27116e046-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "48f27116e046-t1",
+       "title": "없음",
+       "url": "http://127.0.0.1:8990/missing",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "48f27116e046-t1",
+     "tab_id": "48f27116e046-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/missing",
+    "snap_tab": "48f27116e046-t1",
+    "snap_title": "없음",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "48f27116e046-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "timestamp": "2026-10-10T00:51:59.824518"
+     }
+    ],
+    "count": 1,
+    "tab_id": "48f27116e046-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:59.779086"
+     },
+     {
+      "url": "http://127.0.0.1:8990/missing",
+      "status": 404,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:51:59.823261"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "48f27116e046-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "48f27116e046-t1"
+   }
+  }
+ },
+ {
+  "trigger": "nav_404",
+  "op": "eval",
+  "elapsed": 1.79,
+  "server_hits": [
+   "/t",
+   "/missing"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "19d42728d43d-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "19d42728d43d-t1",
+       "title": "없음",
+       "url": "http://127.0.0.1:8990/missing",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "19d42728d43d-t1",
+     "tab_id": "19d42728d43d-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/missing",
+    "snap_tab": "19d42728d43d-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "19d42728d43d-t1",
+       "title": "없음",
+       "url": "http://127.0.0.1:8990/missing",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "19d42728d43d-t1",
+     "tab_id": "19d42728d43d-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/missing",
+    "snap_tab": "19d42728d43d-t1",
+    "snap_title": "없음",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "19d42728d43d-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "timestamp": "2026-10-10T00:52:01.613317"
+     }
+    ],
+    "count": 1,
+    "tab_id": "19d42728d43d-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:01.585778"
+     },
+     {
+      "url": "http://127.0.0.1:8990/missing",
+      "status": 404,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:01.612759"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "19d42728d43d-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "19d42728d43d-t1"
+   }
+  }
+ },
+ {
+  "trigger": "pageerror",
+  "op": "click",
+  "elapsed": 1.87,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#pageerror)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "4aa0cfe1a1d6-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "4aa0cfe1a1d6-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "4aa0cfe1a1d6-t1",
+     "tab_id": "4aa0cfe1a1d6-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "4aa0cfe1a1d6-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "4aa0cfe1a1d6-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "4aa0cfe1a1d6-t1",
+     "tab_id": "4aa0cfe1a1d6-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "4aa0cfe1a1d6-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "4aa0cfe1a1d6-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "4aa0cfe1a1d6-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:03.368768"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "4aa0cfe1a1d6-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "4aa0cfe1a1d6-t1"
+   }
+  }
+ },
+ {
+  "trigger": "pageerror",
+  "op": "key",
+  "elapsed": 2.05,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "a5f3dd7028af-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "a5f3dd7028af-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "a5f3dd7028af-t1",
+     "tab_id": "a5f3dd7028af-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "a5f3dd7028af-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "a5f3dd7028af-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "a5f3dd7028af-t1",
+     "tab_id": "a5f3dd7028af-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "a5f3dd7028af-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "a5f3dd7028af-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "a5f3dd7028af-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:05.431906"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "a5f3dd7028af-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "a5f3dd7028af-t1"
+   }
+  }
+ },
+ {
+  "trigger": "pageerror",
+  "op": "eval",
+  "elapsed": 1.89,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "f77d90171341-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "f77d90171341-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "f77d90171341-t1",
+     "tab_id": "f77d90171341-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "f77d90171341-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "f77d90171341-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "f77d90171341-t1",
+     "tab_id": "f77d90171341-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "f77d90171341-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "f77d90171341-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "f77d90171341-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:07.311079"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "f77d90171341-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "f77d90171341-t1"
+   }
+  }
+ },
+ {
+  "trigger": "console_error",
+  "op": "click",
+  "elapsed": 1.95,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#console_error)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "99046439ec18-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "99046439ec18-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "99046439ec18-t1",
+     "tab_id": "99046439ec18-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "99046439ec18-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "99046439ec18-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "99046439ec18-t1",
+     "tab_id": "99046439ec18-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "99046439ec18-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "99046439ec18-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "census-console",
+      "timestamp": "2026-10-10T00:52:09.274809"
+     }
+    ],
+    "count": 1,
+    "tab_id": "99046439ec18-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:09.203250"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "99046439ec18-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "99046439ec18-t1"
+   }
+  }
+ },
+ {
+  "trigger": "console_error",
+  "op": "key",
+  "elapsed": 1.89,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "1f6c0f88da9f-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "1f6c0f88da9f-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "1f6c0f88da9f-t1",
+     "tab_id": "1f6c0f88da9f-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "1f6c0f88da9f-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "1f6c0f88da9f-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "1f6c0f88da9f-t1",
+     "tab_id": "1f6c0f88da9f-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "1f6c0f88da9f-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "1f6c0f88da9f-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "census-console",
+      "timestamp": "2026-10-10T00:52:11.210726"
+     }
+    ],
+    "count": 1,
+    "tab_id": "1f6c0f88da9f-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:11.165592"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "1f6c0f88da9f-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "1f6c0f88da9f-t1"
+   }
+  }
+ },
+ {
+  "trigger": "console_error",
+  "op": "eval",
+  "elapsed": 1.9,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "8dda3e1a8020-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "8dda3e1a8020-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "8dda3e1a8020-t1",
+     "tab_id": "8dda3e1a8020-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "8dda3e1a8020-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "8dda3e1a8020-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "8dda3e1a8020-t1",
+     "tab_id": "8dda3e1a8020-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "8dda3e1a8020-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "8dda3e1a8020-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "census-console",
+      "timestamp": "2026-10-10T00:52:13.132353"
+     }
+    ],
+    "count": 1,
+    "tab_id": "8dda3e1a8020-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:13.111875"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "8dda3e1a8020-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "8dda3e1a8020-t1"
+   }
+  }
+ },
+ {
+  "trigger": "alert",
+  "op": "click",
+  "elapsed": 1.89,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#alert)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "cbd5b5264303-t1",
+    "dialogs": [
+     {
+      "type": "alert",
+      "message": "census-alert",
+      "default_value": "",
+      "timestamp": "2026-10-10T00:52:14.999640",
+      "action": "dismiss",
+      "handled": true
+     }
+    ],
+    "dialog_dismissed": false
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "cbd5b5264303-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "cbd5b5264303-t1",
+     "tab_id": "cbd5b5264303-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "cbd5b5264303-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "cbd5b5264303-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "cbd5b5264303-t1",
+     "tab_id": "cbd5b5264303-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "cbd5b5264303-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "alert 뒤"
+     },
+     "tab_id": "cbd5b5264303-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "cbd5b5264303-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:14.930760"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "cbd5b5264303-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": {
+     "type": "alert",
+     "message": "census-alert",
+     "default_value": "",
+     "timestamp": "2026-10-10T00:52:14.999640",
+     "action": "dismiss",
+     "handled": true
+    },
+    "tab_id": "cbd5b5264303-t1"
+   }
+  }
+ },
+ {
+  "trigger": "alert",
+  "op": "key",
+  "elapsed": 1.89,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "f4daa0fd3a89-t1",
+    "dialogs": [
+     {
+      "type": "alert",
+      "message": "census-alert",
+      "default_value": "",
+      "timestamp": "2026-10-10T00:52:16.898972",
+      "action": "dismiss",
+      "handled": true
+     }
+    ],
+    "dialog_dismissed": false
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "f4daa0fd3a89-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "f4daa0fd3a89-t1",
+     "tab_id": "f4daa0fd3a89-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "f4daa0fd3a89-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "f4daa0fd3a89-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "f4daa0fd3a89-t1",
+     "tab_id": "f4daa0fd3a89-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "f4daa0fd3a89-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "alert 뒤"
+     },
+     "tab_id": "f4daa0fd3a89-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "f4daa0fd3a89-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:16.854252"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "f4daa0fd3a89-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": {
+     "type": "alert",
+     "message": "census-alert",
+     "default_value": "",
+     "timestamp": "2026-10-10T00:52:16.898972",
+     "action": "dismiss",
+     "handled": true
+    },
+    "tab_id": "f4daa0fd3a89-t1"
+   }
+  }
+ },
+ {
+  "trigger": "alert",
+  "op": "eval",
+  "elapsed": 1.89,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "1bbbdd53c15f-t1",
+    "dialogs": [
+     {
+      "type": "alert",
+      "message": "census-alert",
+      "default_value": "",
+      "timestamp": "2026-10-10T00:52:18.783945",
+      "action": "dismiss",
+      "handled": true
+     }
+    ],
+    "dialog_dismissed": false
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "1bbbdd53c15f-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "1bbbdd53c15f-t1",
+     "tab_id": "1bbbdd53c15f-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "1bbbdd53c15f-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "1bbbdd53c15f-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "1bbbdd53c15f-t1",
+     "tab_id": "1bbbdd53c15f-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "1bbbdd53c15f-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "alert 뒤"
+     },
+     "tab_id": "1bbbdd53c15f-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "1bbbdd53c15f-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:18.757103"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "1bbbdd53c15f-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": {
+     "type": "alert",
+     "message": "census-alert",
+     "default_value": "",
+     "timestamp": "2026-10-10T00:52:18.783945",
+     "action": "dismiss",
+     "handled": true
+    },
+    "tab_id": "1bbbdd53c15f-t1"
+   }
+  }
+ },
+ {
+  "trigger": "confirm",
+  "op": "click",
+  "elapsed": 1.93,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "raised": "확인창이 승인되지 않았습니다. 대상 상태를 확인하고 필요한 조작에 dialog:accept를 명시하세요."
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "8cbd119a8b1f-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "8cbd119a8b1f-t1",
+     "tab_id": "8cbd119a8b1f-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "8cbd119a8b1f-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "8cbd119a8b1f-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "8cbd119a8b1f-t1",
+     "tab_id": "8cbd119a8b1f-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "8cbd119a8b1f-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "confirm=false"
+     },
+     "tab_id": "8cbd119a8b1f-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "8cbd119a8b1f-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:20.638702"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "8cbd119a8b1f-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": {
+     "type": "confirm",
+     "message": "census-confirm",
+     "default_value": "",
+     "timestamp": "2026-10-10T00:52:20.710929",
+     "action": "dismiss",
+     "handled": true
+    },
+    "tab_id": "8cbd119a8b1f-t1"
+   }
+  }
+ },
+ {
+  "trigger": "confirm",
+  "op": "key",
+  "elapsed": 2.16,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "raised": "확인창이 승인되지 않았습니다. 대상 상태를 확인하고 필요한 조작에 dialog:accept를 명시하세요."
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "d452c2ba2afa-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "d452c2ba2afa-t1",
+     "tab_id": "d452c2ba2afa-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "d452c2ba2afa-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "d452c2ba2afa-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "d452c2ba2afa-t1",
+     "tab_id": "d452c2ba2afa-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "d452c2ba2afa-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "confirm=false"
+     },
+     "tab_id": "d452c2ba2afa-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "d452c2ba2afa-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:22.616884"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "d452c2ba2afa-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": {
+     "type": "confirm",
+     "message": "census-confirm",
+     "default_value": "",
+     "timestamp": "2026-10-10T00:52:22.666061",
+     "action": "dismiss",
+     "handled": true
+    },
+    "tab_id": "d452c2ba2afa-t1"
+   }
+  }
+ },
+ {
+  "trigger": "confirm",
+  "op": "eval",
+  "elapsed": 1.89,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "raised": "확인창이 승인되지 않았습니다. 대상 상태를 확인하고 필요한 조작에 dialog:accept를 명시하세요."
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "75c7f27000e5-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "75c7f27000e5-t1",
+     "tab_id": "75c7f27000e5-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "75c7f27000e5-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "75c7f27000e5-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "75c7f27000e5-t1",
+     "tab_id": "75c7f27000e5-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "75c7f27000e5-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "confirm=false"
+     },
+     "tab_id": "75c7f27000e5-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "75c7f27000e5-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:24.722216"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "75c7f27000e5-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": {
+     "type": "confirm",
+     "message": "census-confirm",
+     "default_value": "",
+     "timestamp": "2026-10-10T00:52:24.747446",
+     "action": "dismiss",
+     "handled": true
+    },
+    "tab_id": "75c7f27000e5-t1"
+   }
+  }
+ },
+ {
+  "trigger": "fetch_500",
+  "op": "click",
+  "elapsed": 1.95,
+  "server_hits": [
+   "/t",
+   "/fail"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#fetch_500)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "7d82acc63337-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "7d82acc63337-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "7d82acc63337-t1",
+     "tab_id": "7d82acc63337-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "7d82acc63337-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "7d82acc63337-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "7d82acc63337-t1",
+     "tab_id": "7d82acc63337-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "7d82acc63337-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "fetch 500"
+     },
+     "tab_id": "7d82acc63337-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "timestamp": "2026-10-10T00:52:26.688675"
+     }
+    ],
+    "count": 1,
+    "tab_id": "7d82acc63337-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:26.616407"
+     },
+     {
+      "url": "http://127.0.0.1:8990/fail",
+      "status": 500,
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:52:26.688564"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "7d82acc63337-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "7d82acc63337-t1"
+   }
+  }
+ },
+ {
+  "trigger": "fetch_500",
+  "op": "key",
+  "elapsed": 1.93,
+  "server_hits": [
+   "/t",
+   "/fail"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "6de295d4ec4b-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "6de295d4ec4b-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "6de295d4ec4b-t1",
+     "tab_id": "6de295d4ec4b-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "6de295d4ec4b-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "6de295d4ec4b-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "6de295d4ec4b-t1",
+     "tab_id": "6de295d4ec4b-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "6de295d4ec4b-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "fetch 500"
+     },
+     "tab_id": "6de295d4ec4b-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "timestamp": "2026-10-10T00:52:28.653332"
+     }
+    ],
+    "count": 1,
+    "tab_id": "6de295d4ec4b-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:28.604960"
+     },
+     {
+      "url": "http://127.0.0.1:8990/fail",
+      "status": 500,
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:52:28.653236"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "6de295d4ec4b-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "6de295d4ec4b-t1"
+   }
+  }
+ },
+ {
+  "trigger": "fetch_500",
+  "op": "eval",
+  "elapsed": 1.88,
+  "server_hits": [
+   "/t",
+   "/fail"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "751b62a8a59b-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "751b62a8a59b-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "751b62a8a59b-t1",
+     "tab_id": "751b62a8a59b-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "751b62a8a59b-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "751b62a8a59b-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "751b62a8a59b-t1",
+     "tab_id": "751b62a8a59b-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "751b62a8a59b-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "fetch 500"
+     },
+     "tab_id": "751b62a8a59b-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "timestamp": "2026-10-10T00:52:30.542510"
+     }
+    ],
+    "count": 1,
+    "tab_id": "751b62a8a59b-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:30.515767"
+     },
+     {
+      "url": "http://127.0.0.1:8990/fail",
+      "status": 500,
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2026-10-10T00:52:30.542382"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "751b62a8a59b-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "751b62a8a59b-t1"
+   }
+  }
+ },
+ {
+  "trigger": "fetch_refused",
+  "op": "click",
+  "elapsed": 1.98,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#fetch_refused)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "ea1a2b97cd54-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "ea1a2b97cd54-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "ea1a2b97cd54-t1",
+     "tab_id": "ea1a2b97cd54-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "ea1a2b97cd54-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "ea1a2b97cd54-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "ea1a2b97cd54-t1",
+     "tab_id": "ea1a2b97cd54-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "ea1a2b97cd54-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "fetch 연결 실패"
+     },
+     "tab_id": "ea1a2b97cd54-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_UNSAFE_PORT",
+      "timestamp": "2026-10-10T00:52:32.518572"
+     }
+    ],
+    "count": 1,
+    "tab_id": "ea1a2b97cd54-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:32.429733"
+     },
+     {
+      "url": "http://127.0.0.1:1/x",
+      "status": null,
+      "method": "GET",
+      "resource_type": "fetch",
+      "failure": "net::ERR_UNSAFE_PORT",
+      "timestamp": "2026-10-10T00:52:32.517589"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "ea1a2b97cd54-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "ea1a2b97cd54-t1"
+   }
+  }
+ },
+ {
+  "trigger": "fetch_refused",
+  "op": "key",
+  "elapsed": 1.87,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "ea2e6595aac8-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "ea2e6595aac8-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "ea2e6595aac8-t1",
+     "tab_id": "ea2e6595aac8-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "ea2e6595aac8-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "ea2e6595aac8-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "ea2e6595aac8-t1",
+     "tab_id": "ea2e6595aac8-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "ea2e6595aac8-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "fetch 연결 실패"
+     },
+     "tab_id": "ea2e6595aac8-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_UNSAFE_PORT",
+      "timestamp": "2026-10-10T00:52:34.393489"
+     }
+    ],
+    "count": 1,
+    "tab_id": "ea2e6595aac8-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:34.346587"
+     },
+     {
+      "url": "http://127.0.0.1:1/x",
+      "status": null,
+      "method": "GET",
+      "resource_type": "fetch",
+      "failure": "net::ERR_UNSAFE_PORT",
+      "timestamp": "2026-10-10T00:52:34.393396"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "ea2e6595aac8-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "ea2e6595aac8-t1"
+   }
+  }
+ },
+ {
+  "trigger": "fetch_refused",
+  "op": "eval",
+  "elapsed": 1.87,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "c974b1560520-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "c974b1560520-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "c974b1560520-t1",
+     "tab_id": "c974b1560520-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "c974b1560520-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "c974b1560520-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "c974b1560520-t1",
+     "tab_id": "c974b1560520-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "c974b1560520-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "fetch 연결 실패"
+     },
+     "tab_id": "c974b1560520-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [
+     {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_UNSAFE_PORT",
+      "timestamp": "2026-10-10T00:52:36.267201"
+     }
+    ],
+    "count": 1,
+    "tab_id": "c974b1560520-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:36.241520"
+     },
+     {
+      "url": "http://127.0.0.1:1/x",
+      "status": null,
+      "method": "GET",
+      "resource_type": "fetch",
+      "failure": "net::ERR_UNSAFE_PORT",
+      "timestamp": "2026-10-10T00:52:36.267084"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "c974b1560520-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "c974b1560520-t1"
+   }
+  }
+ },
+ {
+  "trigger": "dom_remove",
+  "op": "click",
+  "elapsed": 1.86,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#dom_remove)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "6091f148098a-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "6091f148098a-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "6091f148098a-t1",
+     "tab_id": "6091f148098a-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "6091f148098a-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "6091f148098a-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "6091f148098a-t1",
+     "tab_id": "6091f148098a-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "6091f148098a-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "6091f148098a-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "6091f148098a-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:38.086861"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "6091f148098a-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "6091f148098a-t1"
+   }
+  }
+ },
+ {
+  "trigger": "dom_remove",
+  "op": "key",
+  "elapsed": 2.1,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "9dedce5b2e04-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "9dedce5b2e04-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "9dedce5b2e04-t1",
+     "tab_id": "9dedce5b2e04-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "9dedce5b2e04-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "9dedce5b2e04-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "9dedce5b2e04-t1",
+     "tab_id": "9dedce5b2e04-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "9dedce5b2e04-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "9dedce5b2e04-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "9dedce5b2e04-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:40.197112"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "9dedce5b2e04-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "9dedce5b2e04-t1"
+   }
+  }
+ },
+ {
+  "trigger": "dom_remove",
+  "op": "eval",
+  "elapsed": 1.86,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "2819f2c3a687-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "2819f2c3a687-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "2819f2c3a687-t1",
+     "tab_id": "2819f2c3a687-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "2819f2c3a687-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "2819f2c3a687-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "2819f2c3a687-t1",
+     "tab_id": "2819f2c3a687-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "2819f2c3a687-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "2819f2c3a687-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "2819f2c3a687-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:42.069490"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "2819f2c3a687-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "2819f2c3a687-t1"
+   }
+  }
+ },
+ {
+  "trigger": "scroll_jump",
+  "op": "click",
+  "elapsed": 1.9,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#scroll_jump)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "b4e0f99ad236-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "b4e0f99ad236-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "b4e0f99ad236-t1",
+     "tab_id": "b4e0f99ad236-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "b4e0f99ad236-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "b4e0f99ad236-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "b4e0f99ad236-t1",
+     "tab_id": "b4e0f99ad236-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "b4e0f99ad236-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 3000,
+      "out": "대기"
+     },
+     "tab_id": "b4e0f99ad236-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "b4e0f99ad236-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:43.910109"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "b4e0f99ad236-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "b4e0f99ad236-t1"
+   }
+  }
+ },
+ {
+  "trigger": "scroll_jump",
+  "op": "key",
+  "elapsed": 2.14,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "44cda983cc5a-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "44cda983cc5a-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "44cda983cc5a-t1",
+     "tab_id": "44cda983cc5a-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "44cda983cc5a-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "44cda983cc5a-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "44cda983cc5a-t1",
+     "tab_id": "44cda983cc5a-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "44cda983cc5a-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 3000,
+      "out": "대기"
+     },
+     "tab_id": "44cda983cc5a-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "44cda983cc5a-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:45.879108"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "44cda983cc5a-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "44cda983cc5a-t1"
+   }
+  }
+ },
+ {
+  "trigger": "scroll_jump",
+  "op": "eval",
+  "elapsed": 2.35,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "431e09d85eec-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "431e09d85eec-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "431e09d85eec-t1",
+     "tab_id": "431e09d85eec-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "431e09d85eec-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "431e09d85eec-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "431e09d85eec-t1",
+     "tab_id": "431e09d85eec-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "431e09d85eec-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 3000,
+      "out": "대기"
+     },
+     "tab_id": "431e09d85eec-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "431e09d85eec-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:48.405839"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "431e09d85eec-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "431e09d85eec-t1"
+   }
+  }
+ },
+ {
+  "trigger": "history_push",
+  "op": "click",
+  "elapsed": 2.1,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#history_push)",
+    "url": "http://127.0.0.1:8990/t?pushed=1",
+    "title": "사건 시험",
+    "tab_id": "5036628ea131-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "5036628ea131-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t?pushed=1",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "5036628ea131-t1",
+     "tab_id": "5036628ea131-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t?pushed=1",
+    "snap_tab": "5036628ea131-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "5036628ea131-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t?pushed=1",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "5036628ea131-t1",
+     "tab_id": "5036628ea131-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t?pushed=1",
+    "snap_tab": "5036628ea131-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "5036628ea131-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "5036628ea131-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:50.510873"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "5036628ea131-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "5036628ea131-t1"
+   }
+  }
+ },
+ {
+  "trigger": "history_push",
+  "op": "key",
+  "elapsed": 1.9,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "7baeed1d6b19-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "7baeed1d6b19-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t?pushed=1",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "7baeed1d6b19-t1",
+     "tab_id": "7baeed1d6b19-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t?pushed=1",
+    "snap_tab": "7baeed1d6b19-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "7baeed1d6b19-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t?pushed=1",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "7baeed1d6b19-t1",
+     "tab_id": "7baeed1d6b19-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t?pushed=1",
+    "snap_tab": "7baeed1d6b19-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "7baeed1d6b19-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "7baeed1d6b19-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:52.419487"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "7baeed1d6b19-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "7baeed1d6b19-t1"
+   }
+  }
+ },
+ {
+  "trigger": "history_push",
+  "op": "eval",
+  "elapsed": 1.86,
+  "server_hits": [
+   "/t"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "8869673a08e3-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "8869673a08e3-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t?pushed=1",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "8869673a08e3-t1",
+     "tab_id": "8869673a08e3-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t?pushed=1",
+    "snap_tab": "8869673a08e3-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "8869673a08e3-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t?pushed=1",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "8869673a08e3-t1",
+     "tab_id": "8869673a08e3-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t?pushed=1",
+    "snap_tab": "8869673a08e3-t1",
+    "snap_title": "사건 시험",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": "대기"
+     },
+     "tab_id": "8869673a08e3-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "8869673a08e3-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:54.303079"
+     }
+    ],
+    "count": 1,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 1,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "8869673a08e3-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "8869673a08e3-t1"
+   }
+  }
+ },
+ {
+  "trigger": "delayed_nav",
+  "op": "click",
+  "elapsed": 1.88,
+  "server_hits": [
+   "/t",
+   "/p?x=late"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "clicked": "요소 (#delayed_nav)",
+    "url": "http://127.0.0.1:8990/t",
+    "title": "사건 시험",
+    "tab_id": "10c1a721ad14-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "10c1a721ad14-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "10c1a721ad14-t1",
+     "tab_id": "10c1a721ad14-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "10c1a721ad14-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "10c1a721ad14-t1",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=late",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "10c1a721ad14-t1",
+     "tab_id": "10c1a721ad14-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=late",
+    "snap_tab": "10c1a721ad14-t1",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "10c1a721ad14-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "10c1a721ad14-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:56.162074"
+     },
+     {
+      "url": "http://127.0.0.1:8990/p?x=late",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:56.930590"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "10c1a721ad14-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "10c1a721ad14-t1"
+   }
+  }
+ },
+ {
+  "trigger": "delayed_nav",
+  "op": "key",
+  "elapsed": 1.85,
+  "server_hits": [
+   "/t",
+   "/p?x=late"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "pressed": "Enter",
+    "tab_id": "a311b53bff93-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "a311b53bff93-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "a311b53bff93-t1",
+     "tab_id": "a311b53bff93-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "a311b53bff93-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "a311b53bff93-t1",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=late",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "a311b53bff93-t1",
+     "tab_id": "a311b53bff93-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=late",
+    "snap_tab": "a311b53bff93-t1",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "a311b53bff93-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "a311b53bff93-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:58.047306"
+     },
+     {
+      "url": "http://127.0.0.1:8990/p?x=late",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:58.792636"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "a311b53bff93-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "a311b53bff93-t1"
+   }
+  }
+ },
+ {
+  "trigger": "delayed_nav",
+  "op": "eval",
+  "elapsed": 1.87,
+  "server_hits": [
+   "/t",
+   "/p?x=late"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "d09499645430-t1"
+   },
+   "right_after": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "d09499645430-t1",
+       "title": "사건 시험",
+       "url": "http://127.0.0.1:8990/t",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "d09499645430-t1",
+     "tab_id": "d09499645430-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/t",
+    "snap_tab": "d09499645430-t1",
+    "snap_raised": null
+   },
+   "after_1s": {
+    "tabs": {
+     "success": true,
+     "tabs": [
+      {
+       "tab_id": "d09499645430-t1",
+       "title": "도착 화면",
+       "url": "http://127.0.0.1:8990/p?x=late",
+       "active": true
+      }
+     ],
+     "count": 1,
+     "active_tab": "d09499645430-t1",
+     "tab_id": "d09499645430-t1"
+    },
+    "snap_url": "http://127.0.0.1:8990/p?x=late",
+    "snap_tab": "d09499645430-t1",
+    "snap_title": "도착 화면",
+    "snap_raised": null,
+    "page": {
+     "success": true,
+     "result": {
+      "y": 0,
+      "out": null
+     },
+     "tab_id": "d09499645430-t1"
+    }
+   },
+   "console": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "tab_id": "d09499645430-t1"
+   },
+   "network": {
+    "success": true,
+    "logs": [
+     {
+      "url": "http://127.0.0.1:8990/t",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:52:59.895967"
+     },
+     {
+      "url": "http://127.0.0.1:8990/p?x=late",
+      "status": 200,
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2026-10-10T00:53:00.629626"
+     }
+    ],
+    "count": 2,
+    "capturing": true,
+    "scope": "session",
+    "capacity": 500,
+    "retained_count": 2,
+    "coverage": "recent_responses_and_failures",
+    "tab_id": "d09499645430-t1"
+   },
+   "dialog_info": {
+    "success": true,
+    "dialog": null,
+    "message": "감지된 dialog가 없습니다.",
+    "tab_id": "d09499645430-t1"
+   }
+  }
+ },
+ {
+  "trigger": "self_close",
+  "op": "click",
+  "elapsed": 1.5,
+  "server_hits": [
+   "/t",
+   "/p?x=open"
+  ],
+  "observed": {
+   "receipt": {
+    "raised": "클릭 실패: Page.title: Target page, context or browser has been closed"
+   },
+   "right_after": {
+    "tabs": {
+     "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+    },
+    "snap_url": null,
+    "snap_tab": null,
+    "snap_raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   },
+   "after_1s": {
+    "tabs": {
+     "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+    },
+    "snap_url": null,
+    "snap_tab": null,
+    "snap_title": null,
+    "snap_raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요.",
+    "page": {
+     "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+    }
+   },
+   "console": {
+    "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   },
+   "network": {
+    "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   },
+   "dialog_info": {
+    "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   }
+  }
+ },
+ {
+  "trigger": "self_close",
+  "op": "key",
+  "elapsed": 1.49,
+  "server_hits": [
+   "/t",
+   "/p?x=open"
+  ],
+  "observed": {
+   "receipt": {
+    "raised": "키 입력 실패: Keyboard.press: Target page, context or browser has been closed"
+   },
+   "right_after": {
+    "tabs": {
+     "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+    },
+    "snap_url": null,
+    "snap_tab": null,
+    "snap_raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   },
+   "after_1s": {
+    "tabs": {
+     "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+    },
+    "snap_url": null,
+    "snap_tab": null,
+    "snap_title": null,
+    "snap_raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요.",
+    "page": {
+     "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+    }
+   },
+   "console": {
+    "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   },
+   "network": {
+    "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   },
+   "dialog_info": {
+    "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   }
+  }
+ },
+ {
+  "trigger": "self_close",
+  "op": "eval",
+  "elapsed": 1.5,
+  "server_hits": [
+   "/t",
+   "/p?x=open"
+  ],
+  "observed": {
+   "receipt": {
+    "success": true,
+    "result": null,
+    "tab_id": "a35feb200d1e-t2"
+   },
+   "right_after": {
+    "tabs": {
+     "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+    },
+    "snap_url": null,
+    "snap_tab": null,
+    "snap_raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   },
+   "after_1s": {
+    "tabs": {
+     "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+    },
+    "snap_url": null,
+    "snap_tab": null,
+    "snap_title": null,
+    "snap_raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요.",
+    "page": {
+     "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+    }
+   },
+   "console": {
+    "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   },
+   "network": {
+    "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   },
+   "dialog_info": {
+    "raised": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요."
+   }
+  }
+ }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "intent": "헬퍼로 연결한 외부 PC의 이름을 확인하고 OS·권한·셸·설치 도구·GUI 환경을 조회한다. 준비 성공은 작업에 필요한 도구의 설치를 보장하지 않는다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC준비]($PC) {\n  [if:len($PC)==0] { return {ok:false,status:\"invalid_input\",reason:\"PC 이름 또는 device_id가 필요합니다\"} }\n  $목록 = [self:limb]{op:\"list\"}\n  $대상 = $목록.items >> [table:filter]{where:($행)=>$행.alias==$PC or $행.device_id==$PC}\n  [if:len($대상)!=1] { return {ok:false,status:\"target_not_unique\",reason:\"대상이 없거나 중복됩니다\",items:$대상} }\n  $손발 = $대상[0]\n  [if:get($손발,\"connected\",false)==false] {\n    return {ok:false,status:\"offline\",limb:$손발.device_id,limb_name:$손발.alias,reason:\"대상 PC에서 헬퍼를 실행하세요\"}\n  }\n  $정보 = [limbs:guestpc]{op:\"info\",limb:$손발.device_id}\n  return {ok:true,status:\"ready\",limb:$정보.limb,limb_name:$정보.limb_name,env:$정보.result}\n}",
+    "alias": "외부PC준비",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "헬퍼로 연결한 외부 PC의 이름을 확인하고 OS·권한·셸·설치 도구·GUI 환경을 조회한다. 준비 성공은 작업에 필요한 도구의 설치를 보장하지 않는다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC준비]{PC:\"사무실PC\"}",
+    "category": "composition"
+  },
+  {
+    "intent": "외부 PC에 이미 제출한 작업의 진행·결과·종료 코드를 확인한다. 실행 또는 이전 확인의 반환값을 작업으로 받고 명령을 재전송하지 않는다. 대기 기본 0초, 최대 240초.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC작업확인]($작업,$대기=0) {\n  $참조 = get($작업,\"task_ref\",{})\n  [if:get($참조,\"kind\",\"\")!=\"guestpc\" or len(get($참조,\"task_id\",\"\"))==0 or len(get($작업,\"limb\",\"\"))==0 or len(get($작업,\"limb_name\",\"\"))==0 or $대기<0 or $대기>240] {\n    return {ok:false,status:\"invalid_input\",task:$작업,reason:\"외부PC작업실행의 반환값과 0~240초 대기가 필요합니다\",settled:false,command_ok:null}\n  }\n  [try] {\n    $관측 = [self:task]{op:\"wait\",ref:$참조,timeout:$대기}\n    $결과 = $관측.result\n    $종료 = null\n    $성공 = null\n    [if:$관측.state==\"succeeded\" and $결과!=null] {\n      $종료 = get($결과,\"exit\",null)\n      [if:$종료!=null] { $성공 = $종료==0 and get($결과,\"timeout\",false)==false and len(get($결과,\"error\",\"\"))==0 }\n    }\n    return {ok:true,status:$관측.state,limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$참조,\n      settled:$관측.state in [\"succeeded\",\"failed\",\"cancelled\"],command_ok:$성공,exit:$종료,\n      timed_out:$관측.timed_out,progress:$관측.progress,result:$결과,failure:$관측.failure}\n  } [catch] {\n    return {ok:false,status:\"observation_failed\",limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$참조,\n      settled:false,command_ok:null,reason:$error.message}\n  }\n}",
+    "alias": "외부PC작업확인",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "외부 PC에 이미 제출한 작업의 진행·결과·종료 코드를 확인한다. 실행 또는 이전 확인의 반환값을 작업으로 받고 명령을 재전송하지 않는다. 대기 기본 0초, 최대 240초.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC작업확인]{작업:{limb:\"guest-fixture\",limb_name:\"사무실PC\",task_ref:{kind:\"guestpc\",task_id:\"예시작업ID\"}},대기:30}",
+    "category": "composition"
+  },
+  {
+    "intent": "헬퍼 외부 PC의 명시한 작업 폴더에서 셸 명령을 한 번 제출하고 대상·작업 참조를 반환한다. background 실행, 대기 기본 0초. ok는 접수 여부이며 observation.command_ok로 명령 성공을 확인한다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC작업실행]($PC,$명령,$작업폴더,$셸=\"\",$실행제한=1800,$대기=0,$입력=\"\",$환경초기화=false) {\n  [if:len($PC)==0 or len($명령)==0 or len($작업폴더)==0 or $실행제한<1 or $대기<0 or $대기>240] {\n    return {ok:false,status:\"invalid_input\",reason:\"PC·명령·작업폴더, 1초 이상 실행제한, 0~240초 대기가 필요합니다\"}\n  }\n  $접수 = [limbs:guestpc]{op:\"shell\",limb:$PC,cmd:$명령,cwd:$작업폴더,shell:$셸,\n    timeout:$실행제한,background:true,stdin:$입력,reset:$환경초기화}\n  $작업 = {limb:$접수.limb,limb_name:$접수.limb_name,task_ref:$접수.task_ref}\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:$대기}\n  return {ok:true,status:\"accepted\",limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$작업.task_ref,\n    cwd:$작업폴더,observation:$확인}\n}",
+    "alias": "외부PC작업실행",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "헬퍼 외부 PC의 명시한 작업 폴더에서 셸 명령을 한 번 제출하고 대상·작업 참조를 반환한다. background 실행, 대기 기본 0초. ok는 접수 여부이며 observation.command_ok로 명령 성공을 확인한다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC작업실행]{PC:\"사무실PC\",명령:\"python --version\",작업폴더:\"C:/Users/Public\",대기:0}",
+    "category": "composition"
+  },
+  {
+    "intent": "외부 PC의 전달받은 작업 목록을 재확인하고 산출물 경로를 정리한다. 진행·불명 작업이 있으면 해제하지 않는다. 해제:true일 때만 종료된 작업들의 대상 헬퍼를 해제한다. 전체 큐 검사나 산출물 검증은 아니다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC작업마무리]($PC,$작업들,$산출물=[],$해제=false) {\n  [if:len($PC)==0 or len($작업들)==0] {\n    return {ok:false,status:\"invalid_input\",detached:false,reason:\"PC와 확인할 작업 목록이 필요합니다\"}\n  }\n  $첫작업 = $작업들[0]\n  $다른대상 = $작업들 >> [table:filter]{where:($행)=>get($행,\"limb\",\"\")!=get($첫작업,\"limb\",\"\")}\n  [if:len(get($첫작업,\"limb\",\"\"))==0 or len($다른대상)>0 or ($PC!=$첫작업.limb and $PC!=$첫작업.limb_name)] {\n    return {ok:false,status:\"target_mismatch\",detached:false,reason:\"모든 작업과 마무리 대상 PC가 같아야 합니다\"}\n  }\n  $확인들 = $작업들 >> [table:each] { [fn:외부PC작업확인]{작업:$it,대기:0} }\n  $미확정 = $확인들 >> [table:filter]{where:($행)=>$행.settled==false}\n  $미성공 = $확인들 >> [table:filter]{where:($행)=>$행.command_ok!=true}\n  [if:len($미확정)>0] {\n    return {ok:false,status:\"unfinished\",limb:$첫작업.limb,detached:false,items:$확인들,artifacts:$산출물,artifacts_verified:false}\n  }\n  $해제결과 = null\n  $종료확인 = false\n  [if:$해제] {\n    [try] {\n      $해제결과 = [limbs:guestpc]{op:\"detach\",limb:$첫작업.limb}\n      $종료확인 = get($해제결과,\"helper_exited\",false)\n    } [catch] { $해제결과 = {reason:$error.message} }\n  }\n  return {ok:len($미성공)==0 and ($해제==false or $종료확인),status:\"settled\",limb:$첫작업.limb,\n    commands_ok:len($미성공)==0,detached:$종료확인,detach_result:$해제결과,\n    items:$확인들,artifacts:$산출물,artifacts_verified:false}\n}",
+    "alias": "외부PC작업마무리",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "외부 PC의 전달받은 작업 목록을 재확인하고 산출물 경로를 정리한다. 진행·불명 작업이 있으면 해제하지 않는다. 해제:true일 때만 종료된 작업들의 대상 헬퍼를 해제한다. 전체 큐 검사나 산출물 검증은 아니다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC작업마무리]{PC:\"사무실PC\",작업들:[{limb:\"guest-fixture\",limb_name:\"사무실PC\",task_ref:{kind:\"guestpc\",task_id:\"예시작업ID\"}}],산출물:[],해제:false}",
+    "category": "composition"
+  }
+]

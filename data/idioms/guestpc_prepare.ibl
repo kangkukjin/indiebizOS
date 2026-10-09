@@ -1,0 +1,13 @@
+#!ibl edition=2
+[def:외부PC준비]($PC) {
+  [if:len($PC)==0] { return {ok:false,status:"invalid_input",reason:"PC 이름 또는 device_id가 필요합니다"} }
+  $목록 = [self:limb]{op:"list"}
+  $대상 = $목록.items >> [table:filter]{where:($행)=>$행.alias==$PC or $행.device_id==$PC}
+  [if:len($대상)!=1] { return {ok:false,status:"target_not_unique",reason:"대상이 없거나 중복됩니다",items:$대상} }
+  $손발 = $대상[0]
+  [if:get($손발,"connected",false)==false] {
+    return {ok:false,status:"offline",limb:$손발.device_id,limb_name:$손발.alias,reason:"대상 PC에서 헬퍼를 실행하세요"}
+  }
+  $정보 = [limbs:guestpc]{op:"info",limb:$손발.device_id}
+  return {ok:true,status:"ready",limb:$정보.limb,limb_name:$정보.limb_name,env:$정보.result}
+}

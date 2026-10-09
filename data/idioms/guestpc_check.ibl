@@ -1,0 +1,23 @@
+#!ibl edition=2
+[def:외부PC작업확인]($작업,$대기=0) {
+  $참조 = get($작업,"task_ref",{})
+  [if:get($참조,"kind","")!="guestpc" or len(get($참조,"task_id",""))==0 or len(get($작업,"limb",""))==0 or len(get($작업,"limb_name",""))==0 or $대기<0 or $대기>240] {
+    return {ok:false,status:"invalid_input",task:$작업,reason:"외부PC작업실행의 반환값과 0~240초 대기가 필요합니다",settled:false,command_ok:null}
+  }
+  [try] {
+    $관측 = [self:task]{op:"wait",ref:$참조,timeout:$대기}
+    $결과 = $관측.result
+    $종료 = null
+    $성공 = null
+    [if:$관측.state=="succeeded" and $결과!=null] {
+      $종료 = get($결과,"exit",null)
+      [if:$종료!=null] { $성공 = $종료==0 and get($결과,"timeout",false)==false and len(get($결과,"error",""))==0 }
+    }
+    return {ok:true,status:$관측.state,limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$참조,
+      settled:$관측.state in ["succeeded","failed","cancelled"],command_ok:$성공,exit:$종료,
+      timed_out:$관측.timed_out,progress:$관측.progress,result:$결과,failure:$관측.failure}
+  } [catch] {
+    return {ok:false,status:"observation_failed",limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$참조,
+      settled:false,command_ok:null,reason:$error.message}
+  }
+}

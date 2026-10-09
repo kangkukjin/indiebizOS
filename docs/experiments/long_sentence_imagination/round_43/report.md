@@ -100,7 +100,7 @@
 ## 6. 종료와 재현
 
 접수 작업 2개(`task_sysai_dd650b8e` 기본, 변형 task id 는 [receipt](evidence/ai_variant_receipt.json))는 `state:succeeded` 로 회수했다([기본 status](evidence/ai_base_status.json)·[변형 status](evidence/ai_variant_status.json)). 훈련자 실행 2건은 동기 완료. 탐침 7건은 전부 종료.
-남은 것: `data/table_since.db` 에 독립 AI 스트림 3개와 탐침 스트림 `LSI43_probe_alone` 1개가 남음(폐기 어휘 없음 — 사용자 결정 시 sqlite 로 삭제). `outputs/…/_probe/` 탐침 파일은 로컬. 모델 교체·설정 변경 없음.
+정리(사용자 지시 "필요없으면 지워", 12:55 KST): `data/table_since.db` 의 독립 AI 스트림 3개와 탐침 스트림 `LSI43_probe_alone` 을 sqlite 로 삭제했다(폐기 어휘가 없어 직접 삭제 — L43-4). 기존 `F20_3_판정검증_20260822` 25행은 보존. `outputs/…/_probe/` 탐침 파일 삭제(증거 사본은 evidence/ 에 있음). 모델 교체·설정 변경 없음.
 새 코드·어휘·설정 적용이나 예약은 없다. 훈련 전 보강한 `marketing.md` 2행 가운데 검색어 행은 L43-1 에 따라 정정이 필요하다(훈련 종료 뒤 문서 1행 정정 — 커밋에 포함).
 
 재현: `harness/prepare.py` 로 입력·oracle 생성 → `harness/run.py base --draft main_v0.ibl --check` → 같은 명령에서 `--check` 제거 → `_staging/reactions` 를 `trainer/input/reactions` 로 복사 → `run.py react --draft react_v1.ibl` → `harness/verify.py <out> <input> <_oracle> qa.json [--react]`. 독립 AI 는 `harness/ai_chain.py base evidence/request_base.txt`, 변형은 `ai_chain.py variant evidence/request_variant.txt`(반응 자료를 `agent/input/reactions` 로 복사한 뒤). 이미지 바이트·AI 문안은 결정론 정답이 아니다.

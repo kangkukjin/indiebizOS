@@ -1,0 +1,7 @@
+가상 동네 수리교실의 홍보를 한 바퀴 준비해 줘. 입력 폴더는 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/input 이고, 결과는 전부 /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out 아래에 저장해 줘(다른 곳에 쓰지 마). 입력 폴더의 company.json(자사 정보·톤·금지어·컬러·실재 근거·KPI), competitors/(경쟁사 안내문 2건, 크롤 사본), voice/reviews.csv(고객 목소리 123행 — 광고·무관 글 섞임), search_terms.json(검색어 후보 3) 을 써서:
+1) 고객 목소리를 페인포인트 축으로 분류해 축별 건수와 대표 인용(원문 그대로) 2건씩을 뽑고, 광고·무관 글은 제외 수로 보고해. 경쟁사 2곳의 소구 포인트(가격·형식·강점 표현)를 뽑아 우리 USP 와 겹치는지 표시해. 검색어 후보는 네이버 blog/cafe/kin 결과 건수로 간접 비교하되, 조회가 안 되면 "미확인" 으로 적어(추정으로 메우지 마).
+2) 마케팅 가이드의 브리프 양식(한 줄 정의·USP·타겟과 페인포인트·톤·컬러·실재 근거(RTB, verified 만)·메인 카피 후보 3~5) 으로 brief.md 와 brief.json 을 써.
+3) 건수 상위 3개 페인포인트 축마다 소재 1벌: 후킹(고객 문제로 시작, 브랜드명 금지)·해결(USP)·CTA(지금 해야 하는 이유 포함) 3문장 + 1:1 소재 이미지 1장(브랜드 컬러 반영) + 카드뉴스 PNG 1장(후킹·해결·이미지·CTA). 금지어가 들어가면 그 소재를 "검수 필요" 로 표시해(몰래 고치지 마).
+4) 발행 직전 묶음 bundle/ 에 Nostr 장문 초안(markdown)·사용자 확인 체크리스트·채널별 발행 안내를 두되 실제 발행·게시·발송은 하지 마. 발행 결정은 사용자 몫.
+5) campaign_ledger.json 에 소재마다 한 행(asset_id A1~A3=축 순위 순, 축·후킹·파일 경로·상태 draft·성과 칸은 null) 을 중복 없이 누적해.
+6) 끝에 축별 건수·제외 수·금지어 검수 수·생성 파일 확인·검색어 근거 상태를 알려줘.

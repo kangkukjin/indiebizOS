@@ -1,0 +1,374 @@
+{
+  "request": {
+    "code": "#!ibl edition=2\n# 43회차 변형 최초 초안 — 반응 자료 도착 뒤: 소재별 집계 → KPI 대비 → 성과 리포트(팩트/제안 분리) → 원장 갱신(upsert 시도, 실패 시 정직 폴백) → 감시 등록. inputs: src, out\n\n[def:비율]($a,$b) { return $b == 0 ? null : round($a / $b,4) }\n[def:표시]($v) { return $v == null ? \"미측정\" : text($v) }\n[def:상태]($inq,$max,$total) {\n  [if:$inq == $max] { return \"proposal_focus\" }\n  [if:$total > 0 and $inq * 20 < $total] { return \"proposal_pause\" }\n  return \"proposal_keep\"\n}\n\n# ---- 읽기 ----\n$company = ([self:read]{path:f\"${src}/company.json\"}).data\n$reacts = ([self:read]{path:f\"${src}/reactions/reactions.csv\"}).data.items\n$ledger_path = f\"${out}/campaign_ledger.json\"\n$ledger = ([self:read]{path:$ledger_path}).data.items\n$today = [self:time]{format:\"%Y-%m-%d\"}\n$kpi = $company.kpi\n$target = $kpi.inquiries_target\n$window = $kpi.window_days\n$name = $company.name\n\n# ---- 수치화·일별 ----\n$rows = map($reacts,($r)=>{date:$r.date,asset_id:$r.asset_id,channel:$r.channel,impressions:number($r.impressions),clicks:number($r.clicks),inquiries:number($r.inquiries)})\n$daily = map($rows,($r)=>{**$r,ctr:[fn:비율]{a:$r.clicks,b:$r.impressions}})\n$zero_days = filter($daily,($r)=>$r.impressions == 0)\n$dates = sorted(unique(map($rows,($r)=>$r.date)))\n$keys = map($rows,($r)=>f\"${r.asset_id}|${r.channel}|${r.date}\")\n$pairs = unique(map($rows,($r)=>f\"${r.asset_id}|${r.channel}\"))\n$missing = reduce($pairs,[],($acc,$p)=>$acc + map(filter($dates,($d)=>not (f\"${p}|${d}\" in $keys)),($d)=>{pair:$p,date:$d}))\n$first_date = $dates[0]\n$last_date = $dates[-1]\n$measured_channels = unique(map($rows,($r)=>$r.channel))\n$unmeasured = filter($company.publish_channels,($c)=>len(filter($measured_channels,($m)=>contains($c,$m))) == 0)\n\n# ---- 소재별·채널별 집계 ----\n$by_asset_raw = ($rows >> [table:groupby]{by:\"asset_id\",agg:{impressions:[\"sum\",\"impressions\"],clicks:[\"sum\",\"clicks\"],inquiries:[\"sum\",\"inquiries\"],days:[\"count\"]}}).items\n$by_asset = sorted(map($by_asset_raw,($a)=>{**$a,ctr:[fn:비율]{a:$a.clicks,b:$a.impressions},inq_per_click:[fn:비율]{a:$a.inquiries,b:$a.clicks}}),\"asset_id\")\n$by_channel = ($rows >> [table:groupby]{by:\"channel\",agg:{impressions:[\"sum\",\"impressions\"],clicks:[\"sum\",\"clicks\"],inquiries:[\"sum\",\"inquiries\"]}}).items\n$total_inq = sum(map($by_asset,($a)=>$a.inquiries))\n$total_imp = sum(map($by_asset,($a)=>$a.impressions))\n$total_clk = sum(map($by_asset,($a)=>$a.clicks))\n$max_inq = max(map($by_asset,($a)=>$a.inquiries))\n$kpi_met = $total_inq >= $target\n$focus = filter($by_asset,($a)=>$a.inquiries == $max_inq)[0].asset_id\n\n# ---- 원장과 결합 ----\n$merged = map($ledger,($l)=>{**$l,**(len(filter($by_asset,($a)=>$a.asset_id == $l.asset_id)) == 0 ? {impressions:null,clicks:null,inquiries:null,ctr:null,inq_per_click:null,status:\"unmeasured\"} : {**filter($by_asset,($a)=>$a.asset_id == $l.asset_id)[0],status:[fn:상태]{inq:filter($by_asset,($a)=>$a.asset_id == $l.asset_id)[0].inquiries,max:$max_inq,total:$total_inq}}),measured_through:$last_date,updated:$today})\n$unmatched_assets = filter($by_asset,($a)=>len(filter($ledger,($l)=>$l.asset_id == $a.asset_id)) == 0)\n\n# ---- 제안 산문 (AI 1회, 표만 근거) ----\n$brief_items = map($merged,($m)=>{asset_id:$m.asset_id,label:$m.label,copy:$m.copy,impressions:$m.impressions,clicks:$m.clicks,inquiries:$m.inquiries,ctr:$m.ctr,inq_per_click:$m.inq_per_click,status:$m.status})\n$brief = $brief_items >> [table:brief]{instruction:f\"위 표만 근거로 홍보 성과의 '제안' 한 문단(4문장 이내)을 한국어로 써라. 어느 앵글로 좁힐지(status proposal_focus)와 중단 후보(proposal_pause)를 제안으로만 말하고 결정은 사용자 몫이라고 적어라. 표에 없는 숫자·이유를 만들지 마라. 유료 광고 집행 여부는 표에 없으므로 언급하지 마라. KPI 는 ${window}일 문의 ${target}건이다.\"}\n$proposal = $brief.message\n\n# ---- 리포트 ----\n$asset_rows = join(\"\\n\",map($merged,($m)=>f\"| ${m.asset_id} | ${m.label} | ${[fn:표시]{v:$m.impressions}} | ${[fn:표시]{v:$m.clicks}} | ${[fn:표시]{v:$m.inquiries}} | ${[fn:표시]{v:$m.ctr}} | ${[fn:표시]{v:$m.inq_per_click}} | ${m.status} |\"))\n$channel_rows = join(\"\\n\",map($by_channel,($c)=>f\"| ${c.channel} | ${c.impressions} | ${c.clicks} | ${c.inquiries} |\"))\n$missing_md = len($missing) == 0 ? \"- 없음\" : join(\"\\n\",map($missing,($m)=>f\"- ${m.pair} ${m.date}\"))\n$zero_md = len($zero_days) == 0 ? \"- 없음\" : join(\"\\n\",map($zero_days,($z)=>f\"- ${z.asset_id} ${z.channel} ${z.date} (노출 0 → CTR null)\"))\n$unmeasured_md = len($unmeasured) == 0 ? \"- 없음\" : join(\"\\n\",map($unmeasured,($u)=>f\"- ${u}: 집계 수단 없음 — 미측정\"))\n$n_rows = len($rows)\n$n_missing = len($missing)\n$n_zero = len($zero_days)\n$kpi_txt = $kpi_met ? \"달성\" : \"미달\"\n$report = f\"\"\"# 홍보 성과 리포트 — ${name} (${first_date} ~ ${last_date}, 작성 ${today})\n\n## 1. 현황 팩트\n- 반응 행 ${n_rows}건, 측정 채널: ${join(\", \",$measured_channels)}\n- 결측일 ${n_missing}건\n${missing_md}\n- 노출 0인 날 ${n_zero}건\n${zero_md}\n- 미측정 채널\n${unmeasured_md}\n\n### 채널별\n| 채널 | 노출 | 클릭 | 문의 |\n|---|---:|---:|---:|\n${channel_rows}\n\n## 2. KPI 대비\n- KPI: ${window}일 문의 ${target}건 — 실적 문의 ${total_inq}건 → **${kpi_txt}** (노출 ${total_imp}, 클릭 ${total_clk})\n- 미측정 채널의 반응은 이 수치에 없다.\n\n## 3. 소재별 성과\n| 소재 | 앵글 | 노출 | 클릭 | 문의 | CTR | 문의/클릭 | 상태(제안) |\n|---|---|---:|---:|---:|---:|---:|---|\n${asset_rows}\n\n## 4. 제안 (결정은 사용자)\n${proposal}\n\n- 규칙 기준: 좁히기 후보 = 문의 최다 소재(${focus}), 중단 후보 = 문의가 전체의 5% 미만인 소재. 되돌리기 어려운 조정은 사용자 확인 뒤에.\n\"\"\"\n[self:write]{path:f\"${out}/performance.md\",content:$report}\n[self:write]{path:f\"${out}/performance.json\",content:json({period:[$first_date,$last_date],rows:$n_rows,by_asset:$by_asset,by_channel:$by_channel,total_inquiries:$total_inq,kpi:$kpi,kpi_met:$kpi_met,focus:$focus,missing:$missing,zero_days:$zero_days,unmeasured_channels:$unmeasured,unmatched_assets:$unmatched_assets})}\n\n# ---- 원장 갱신: self:ledger upsert 시도 → 실패하면 정직 폴백(전체 재저장) ----\n$ledger_update = [try] {\n  $u = [self:ledger]{op:\"upsert\",path:$ledger_path,target:\"items\",key:\"asset_id\",items:$merged}\n  return {method:\"self:ledger upsert\",ok:true,detail:json(get($u,\"count\",null))}\n} [catch] {\n  $w = $merged >> [self:write]{path:$ledger_path,format:\"json\"}\n  return {method:\"fallback self:write\",ok:false,detail:$error.message}\n}\n$ledger_back = ([self:read]{path:$ledger_path}).data.items\n\n# ---- 감시 등록 (첫 호출 = 기준선) ----\n$watch = [try] {\n  $s = [sense:search]{source:\"naver\",type:\"blog\",query:$name,limit:10} >> [table:since]{key:\"LSI43_후기감시\",by:\"url\"}\n  return {ok:true,new_rows:len($s.items),note:json(get($s,\"note\",null))}\n} [catch] {\n  return {ok:false,new_rows:0,note:$error.message}\n}\n\nreturn {\n  rows:$n_rows,\n  by_asset:map($by_asset,($a)=>f\"${a.asset_id}: 노출 ${a.impressions} 클릭 ${a.clicks} 문의 ${a.inquiries}\"),\n  total_inquiries:$total_inq,\n  kpi_met:$kpi_met,\n  focus:$focus,\n  statuses:map($merged,($m)=>f\"${m.asset_id}:${m.status}\"),\n  missing_days:$n_missing,\n  zero_impression_days:$n_zero,\n  unmeasured_channels:$unmeasured,\n  ledger_update:$ledger_update,\n  ledger_rows:len($ledger_back),\n  ledger_statuses:map($ledger_back,($l)=>get($l,\"status\",null)),\n  watch:$watch\n}\n",
+    "origin": "training",
+    "project_id": "수동모드",
+    "check": true,
+    "budget": {
+      "steps": 1000000,
+      "rows": 100000
+    },
+    "inputs": {
+      "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/trainer/input",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/trainer/out"
+    }
+  },
+  "endpoint": "/ibl/execute",
+  "started": 1791516727.158323,
+  "ended": 1791516727.748189,
+  "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "guards": [],
+    "guards_total": 169,
+    "guards_inner": 0,
+    "guards_omitted": 169,
+    "result_type": "Record",
+    "effects": [
+      "model",
+      "pure",
+      "read_external",
+      "unknown",
+      "write_external"
+    ],
+    "functions": {
+      "def:139:199": {
+        "name": "비율",
+        "params": {
+          "a": "Unknown",
+          "b": "Unknown"
+        },
+        "required": [
+          "a",
+          "b"
+        ],
+        "pipe_input": "a",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [],
+        "source_hash": "1fa7932c82da0426db28597aaa0794af01980d2a7cfbb7c7e4af6b03bde13d0e",
+        "result": "Null | Number",
+        "specializations": [
+          {
+            "params": {
+              "a": "Unknown",
+              "b": "Unknown"
+            },
+            "result": "Null | Number"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+          "start": 139,
+          "end": 199,
+          "line": 4,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 4,
+          "end_column": 61,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:254:426": {
+        "name": "상태",
+        "params": {
+          "inq": "Unknown",
+          "max": "Unknown",
+          "total": "Unknown"
+        },
+        "required": [
+          "inq",
+          "max",
+          "total"
+        ],
+        "pipe_input": "inq",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [],
+        "source_hash": "0199af6c9d7c2b8acc2e933a3aa2b7ab01a3ffa2e5fc0b46073824e74e8a2586",
+        "result": "Text",
+        "specializations": [
+          {
+            "params": {
+              "inq": "Unknown",
+              "max": "Unknown",
+              "total": "Unknown"
+            },
+            "result": "Text"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+          "start": 254,
+          "end": 426,
+          "line": 6,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 10,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:200:253": {
+        "name": "표시",
+        "params": {
+          "v": "Unknown"
+        },
+        "required": [
+          "v"
+        ],
+        "pipe_input": "v",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [],
+        "source_hash": "81e4bd7b26436a77c804bfe651392225ec93e9c719dda021d8452b475e0841f4",
+        "result": "Text",
+        "specializations": [
+          {
+            "params": {
+              "v": "Unknown"
+            },
+            "result": "Text"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+          "start": 200,
+          "end": 253,
+          "line": 5,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 5,
+          "end_column": 54,
+          "offset_encoding": "unicode-codepoints"
+        }
+      }
+    },
+    "plan_hash": "2d832af0fc6501236b03b40b591cbdce89255c449caa5d7cdcb8c009faf55a2a",
+    "dependencies": {
+      "source": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+      "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+      "calls": {},
+      "input_types": {
+        "src": "Text",
+        "out": "Text"
+      },
+      "source_map": [
+        {
+          "name": "<program>",
+          "start": 0,
+          "end": 6732
+        }
+      ],
+      "contracts": "ac7da0e2cf060dcb71020c34c091851490916a7e9efd9a5daef9962c3fefecd3",
+      "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+      "semantics": "e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755",
+      "expressions": "8b1374449bdb861758d2d12b149fae44ebb72cfde1919d26ea2d1cdeae740050",
+      "core": "bc139eddb5277cf55497ad4d77aaefc0d9143543b84a46a4ed014db8a871fa70"
+    },
+    "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+    "capabilities": [
+      "ibl-edition/2",
+      "ibl-value/1"
+    ],
+    "preflight": {
+      "status": "partial",
+      "declared_ai_visits_upper_bound": null,
+      "unknowns": [
+        {
+          "location": {
+            "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+            "start": 6056,
+            "end": 6096,
+            "line": 111,
+            "column": 75,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 111,
+            "end_column": 115,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+        }
+      ],
+      "warnings": [
+        {
+          "code": "BIND_RETURNS",
+          "rule": "BIND_RETURNS",
+          "severity": "warning",
+          "message": "$ledger_update 에 대입하는 블록의 모든 경로가 return 으로 끝납니다 — return 은 블록이 아니라 함수 전체를 끝내므로 $ledger_update 은 값을 받지 못하고 이 뒤의 문장은 실행되지 않습니다.",
+          "source_span": {
+            "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+            "start": 5523,
+            "end": 5873,
+            "line": 100,
+            "column": 1
+          },
+          "call_path": [],
+          "facts": {
+            "name": "ledger_update"
+          },
+          "hint": "블록([try]·[if:]·[case:])의 값은 마지막 문장입니다. 값으로 받으려면 가지 끝의 return 을 떼고 값만 두세요(예: $w = [try] { …; {칸: 값} } [catch] { {칸: 값} }). 함수를 끝내려던 것이면 대입을 떼고 블록만 쓰세요.",
+          "location": {
+            "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+            "start": 5523,
+            "end": 5873,
+            "line": 100,
+            "column": 1,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 106,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          }
+        },
+        {
+          "code": "BIND_RETURNS",
+          "rule": "BIND_RETURNS",
+          "severity": "warning",
+          "message": "$watch 에 대입하는 블록의 모든 경로가 return 으로 끝납니다 — return 은 블록이 아니라 함수 전체를 끝내므로 $watch 은 값을 받지 못하고 이 뒤의 문장은 실행되지 않습니다.",
+          "source_span": {
+            "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+            "start": 5965,
+            "end": 6234,
+            "line": 110,
+            "column": 1
+          },
+          "call_path": [],
+          "facts": {
+            "name": "watch"
+          },
+          "hint": "블록([try]·[if:]·[case:])의 값은 마지막 문장입니다. 값으로 받으려면 가지 끝의 return 을 떼고 값만 두세요(예: $w = [try] { …; {칸: 값} } [catch] { {칸: 값} }). 함수를 끝내려던 것이면 대입을 떼고 블록만 쓰세요.",
+          "location": {
+            "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+            "start": 5965,
+            "end": 6234,
+            "line": 110,
+            "column": 1,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 115,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          }
+        }
+      ],
+      "warnings_omitted": 0,
+      "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+      "actions": [
+        "self:ledger",
+        "self:read",
+        "self:time",
+        "self:write",
+        "sense:search",
+        "table:brief",
+        "table:groupby",
+        "table:since"
+      ]
+    },
+    "warnings": [
+      {
+        "code": "BIND_RETURNS",
+        "rule": "BIND_RETURNS",
+        "severity": "warning",
+        "message": "$ledger_update 에 대입하는 블록의 모든 경로가 return 으로 끝납니다 — return 은 블록이 아니라 함수 전체를 끝내므로 $ledger_update 은 값을 받지 못하고 이 뒤의 문장은 실행되지 않습니다.",
+        "source_span": {
+          "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+          "start": 5523,
+          "end": 5873,
+          "line": 100,
+          "column": 1
+        },
+        "call_path": [],
+        "facts": {
+          "name": "ledger_update"
+        },
+        "hint": "블록([try]·[if:]·[case:])의 값은 마지막 문장입니다. 값으로 받으려면 가지 끝의 return 을 떼고 값만 두세요(예: $w = [try] { …; {칸: 값} } [catch] { {칸: 값} }). 함수를 끝내려던 것이면 대입을 떼고 블록만 쓰세요.",
+        "location": {
+          "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+          "start": 5523,
+          "end": 5873,
+          "line": 100,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 106,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      {
+        "code": "BIND_RETURNS",
+        "rule": "BIND_RETURNS",
+        "severity": "warning",
+        "message": "$watch 에 대입하는 블록의 모든 경로가 return 으로 끝납니다 — return 은 블록이 아니라 함수 전체를 끝내므로 $watch 은 값을 받지 못하고 이 뒤의 문장은 실행되지 않습니다.",
+        "source_span": {
+          "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+          "start": 5965,
+          "end": 6234,
+          "line": 110,
+          "column": 1
+        },
+        "call_path": [],
+        "facts": {
+          "name": "watch"
+        },
+        "hint": "블록([try]·[if:]·[case:])의 값은 마지막 문장입니다. 값으로 받으려면 가지 끝의 return 을 떼고 값만 두세요(예: $w = [try] { …; {칸: 값} } [catch] { {칸: 값} }). 함수를 끝내려던 것이면 대입을 떼고 블록만 쓰세요.",
+        "location": {
+          "source_hash": "8e524f9d2e4de06aa35075743eec1fbabd127b708a437af07b0c7b1347ca470a",
+          "start": 5965,
+          "end": 6234,
+          "line": 110,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 115,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      }
+    ],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+    "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+    "next_action": "실행하려면 execute_args 를 그대로 check 없이 호출하세요 — 프로그램 원문과 검사한 inputs·budget·edition·value_protocols를 재사용하므로 다시 적지 않습니다. 바꿀 인자만 명시하면 그 인자 전체를 교체합니다. 실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.",
+    "runtime_checks": {
+      "total": 169,
+      "informative": 147
+    },
+    "guards_ref": {
+      "id": "090f6887592fb1d423dd429d86aa79e6aabe0ee1f4d1469d01f8043cecd115c5",
+      "chars": 116612,
+      "read_args": {
+        "id": "090f6887592fb1d423dd429d86aa79e6aabe0ee1f4d1469d01f8043cecd115c5",
+        "path": [
+          "guards"
+        ],
+        "offset": 0,
+        "limit": 60000
+      }
+    },
+    "budget": {
+      "steps": 1000000,
+      "rows": 100000
+    },
+    "execute_args": {
+      "code": "$checked:cb1e79539692b6b577a712372798c5a95edfbb014e764a1881533e9a3a96fe17"
+    }
+  }
+}

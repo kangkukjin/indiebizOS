@@ -1,0 +1,203 @@
+#!ibl edition=2
+# 43회차 최초 초안 — 가상 동네 수리교실 홍보 한 바퀴. inputs: src(입력 폴더), out(출력 폴더)
+# 흐름: 읽기 → 고객 목소리 분류(AI 1회) → 경쟁사 소구 추출(AI 1회) → 검색어 근거(네이버, 실패=미확인)
+#       → 브리프 → 앵글 3 소재(AI 1회: 카피·후킹·해결·CTA·그림 지시) → 이미지 3 + 카드뉴스 3 → 금지어 검수(결정론)
+#       → 발행 직전 묶음(발행 없음) → 캠페인 원장 누적(관용구) → 파일 실존 확인 → 요약 반환
+
+# ---- 순수 보조 ----
+[def:글]($v,$대신) { return $v == null ? $대신 : $v }
+[def:금지어검사]($text,$banned) { return filter($banned,($w)=>contains($text,$w)) }
+[def:축건수]($rows,$key) {
+  $c = filter($rows,($r)=>$r.pain == $key)
+  [if:len($c) == 0] { return 0 } [else] { return $c[0].건수 }
+}
+[def:대표인용]($rows,$key) {
+  $f = $rows >> [table:filter]{where:($r)=>$r.pain == $key} >> [table:take]{n:2}
+  return map($f,($r)=>{id:$r.id,text:$r.text})
+}
+[def:검색근거]($queries,$type) {
+  [try] {
+    $r = [sense:search]{source:"naver",type:$type,queries:$queries,limit:10}
+    return {type:$type,status:"ok",rows:len($r.items),sections:json(get($r,"sections",null))}
+  } [catch] {
+    return {type:$type,status:"미확인",rows:0,sections:$error.message}
+  }
+}
+[def:옛원장]($path,$dir) {
+  $l = [self:list]{path:$dir,pattern:"campaign_ledger.json"}
+  [if:len($l) == 0] { return [] } [else] { $d = [self:read]{path:$path}; return $d.data.items }
+}
+
+# ---- 읽기 ----
+$company = ([self:read]{path:f"${src}/company.json"}).data
+$reviews = ([self:read]{path:f"${src}/voice/reviews.csv"}).data.items
+$terms = ([self:read]{path:f"${src}/search_terms.json"}).data
+$comp_files = sorted([self:list]{path:f"${src}/competitors",pattern:"*.txt"},"name")
+$competitors = $comp_files >> [table:each] {
+  $d = [self:read]{path:$it.path,format:"text"}
+  return {name:$it.name,text:$d.text}
+}
+$today = [self:time]{format:"%Y-%m-%d"}
+[self:mkdir]{path:f"${out}/research"}
+[self:mkdir]{path:f"${out}/assets"}
+[self:mkdir]{path:f"${out}/bundle"}
+
+$axes = [{key:"time",label:"시간이 없다"},{key:"confidence",label:"손재주가 없다·자신이 없다"},{key:"cost_waste",label:"버리기 아깝다·비용 부담"},{key:"noise",label:"무관·광고"}]
+$known_keys = ["time","confidence","cost_waste","noise"]
+$banned = $company.tone.banned_words
+$usp_txt = join(" / ",$company.usp)
+$rtb_rows = filter($company.rtb,($r)=>$r.verified)
+$rtb_txt = join(" / ",map($rtb_rows,($r)=>$r.fact))
+$offer_txt = join(", ",map($company.offer,($o)=>f"${o.item} ${o.price_krw}원"))
+$primary = $company.colors.primary
+$secondary = $company.colors.secondary
+$banned_txt = join(", ",$banned)
+$tone_txt = $company.tone.style
+$name = $company.name
+$where = $company.when_where
+
+# ---- (1) 고객 목소리 분류 (AI 1회, 행 보존) ----
+$classified = $reviews >> [table:ai]{instruction:"각 행의 text 는 동네 옷 수선 교실의 잠재 고객이 남긴 글이다. 어떤 페인포인트인지 pain 하나로 분류한다. pain 은 정확히 다음 네 값 중 하나: time(시간·일정·장기 과정 부담·한 번만 체험하고 싶음), confidence(손재주 없음·초보·실패 두려움·옆에서 봐줄 사람 필요), cost_waste(수선비·학원비 부담·멀쩡한 옷 버리기 아까움·환경), noise(광고·판매·무관한 글·다른 수업 문의). 원문 text 는 고치지 않는다.",schema:"pain(문자열)",input_fields:["id","text"],preserve_rows:true}
+$rows = $classified.items
+$count_rows = ($rows >> [table:groupby]{by:"pain",agg:{건수:["count"]}}).items
+$axis_stats = map($axes,($a)=>{key:$a.key,label:$a.label,count:[fn:축건수]{rows:$count_rows,key:$a.key}})
+$unknown = filter($rows,($r)=>not ($r.pain in $known_keys))
+$noise_count = [fn:축건수]{rows:$count_rows,key:"noise"}
+$ranked = sorted(filter($axis_stats,($a)=>$a.key != "noise"),"count",true)
+$top3 = $ranked[:3]
+$angles = $top3 >> [table:each] {
+  $q = [fn:대표인용]{rows:$rows,key:$it.key}
+  return {rank:$i + 1,key:$it.key,label:$it.label,count:$it.count,quotes:$q,quote_text:join(" | ",map($q,($x)=>$x.text))}
+}
+[self:write]{path:f"${out}/research/classified.json",content:json({rows:$rows,unknown:$unknown,axis_stats:$axis_stats,noise:$noise_count})}
+
+# ---- (1b) 경쟁사 소구 추출 (AI 1회) ----
+$comp = $competitors >> [table:ai]{instruction:f"각 행의 text 는 경쟁 수선·바느질 수업의 안내문이다. 가격 표현(price_text), 수업 형식(format_text: 기간·시간·온/오프라인), 강점 주장(strength_claims: 안내문에 있는 소구 표현을 그대로, 쉼표로 이어서)을 뽑고, 우리 USP(${usp_txt})와 같은 소구를 하는지 overlaps_our_usp 와 그 이유 overlap_reason 을 적는다. 안내문에 없는 말은 만들지 않는다.",schema:"price_text(문자열), format_text(문자열), strength_claims(문자열), overlaps_our_usp(불리언), overlap_reason(문자열)",input_fields:["name","text"],preserve_rows:true}
+$comp_rows = map($comp.items,($r)=>{name:$r.name,price_text:[fn:글]{v:$r.price_text,대신:"미확인"},format_text:[fn:글]{v:$r.format_text,대신:"미확인"},strength_claims:[fn:글]{v:$r.strength_claims,대신:"미확인"},overlaps:$r.overlaps_our_usp == null ? "미확인" : text($r.overlaps_our_usp),overlap_reason:[fn:글]{v:$r.overlap_reason,대신:"미확인"}})
+[self:write]{path:f"${out}/research/competitors.json",content:json($comp_rows)}
+
+# ---- (1c) 검색어 근거 (실제 네이버, 실패=미확인) ----
+$search_evidence = ["blog","cafe","kin"] >> [table:each] { [fn:검색근거]{queries:$terms.queries,type:$it} }
+$search_ok = len(filter($search_evidence,($e)=>$e.status == "ok"))
+[self:write]{path:f"${out}/research/search_terms.json",content:json({queries:$terms.queries,note:$terms.note,evidence:$search_evidence})}
+
+# ---- (3) 앵글 3 소재 문안 (AI 1회) ----
+$creative = $angles >> [table:ai]{instruction:f"각 행은 '${name}'(${where}, ${offer_txt})의 홍보 앵글이다. label 이 고객의 페인포인트, quote_text 가 고객 원문 인용이다. 행마다 다음을 한국어로 쓴다. hook: 고객의 문제로 시작하는 한 문장(브랜드명·교실 이름 금지, 제품 기능 나열 금지). solution: 우리 USP(${usp_txt}) 가운데 이 페인포인트를 푸는 것 한 문장(여기서 비로소 교실이 등장). cta: 행동 지시 + 지금 해야 하는 이유 한 문장(제공 가격·토요일을 써도 좋다). copy: 메인 카피 후보 한 줄(15자 안팎). image_prompt: 영어로, 글자 없는 단순한 평면 일러스트 묘사 한 문장. 톤: ${tone_txt}. 금지어: ${banned_txt}. 실재 근거만 쓸 수 있다: ${rtb_txt}. 지어낸 숫자·후기 금지.",schema:"hook(문자열), solution(문자열), cta(문자열), copy(문자열), image_prompt(문자열)",input_fields:["rank","label","count","quote_text"],preserve_rows:true}
+
+# ---- 소재 제작: 이미지 1:1 + 카드뉴스 PNG + 금지어 검수 ----
+$assets = $creative.items >> [table:each] {
+  $k = $it.rank
+  $hook = [fn:글]{v:$it.hook,대신:"(후킹 미생성)"}
+  $solution = [fn:글]{v:$it.solution,대신:"(해결 미생성)"}
+  $cta = [fn:글]{v:$it.cta,대신:"(CTA 미생성)"}
+  $copy = [fn:글]{v:$it.copy,대신:"(카피 미생성)"}
+  $ip = [fn:글]{v:$it.image_prompt,대신:"sewing needle and thread on a folded shirt"}
+  $img_path = f"${out}/assets/A${k}_image.png"
+  $img = [engines:image_gemini]{prompt:f"${ip}. Flat minimal vector illustration, palette ${primary} (deep green) and ${secondary} (cream), soft shapes, no text, no letters, no logo.",aspect_ratio:"1:1",image_size:"1K",output_path:$img_path}
+  $card = [table:document]{title:$copy,meta:$name,blocks:[{type:"heading",level:1,text:$hook},{type:"paragraph",text:$solution},{type:"image",src:$img_path,caption:$copy},{type:"paragraph",text:$cta}],format:"png",filename:f"${out}/assets/A${k}_card"}
+  $hits = [fn:금지어검사]{text:join(" ",[$copy,$hook,$solution,$cta]),banned:$banned}
+  return {asset_id:f"A${k}",rank:$k,pain:$it.key,label:$it.label,count:$it.count,copy:$copy,hook:$hook,solution:$solution,cta:$cta,image:$img_path,image_result:json(get($img,"path",null)),card:$card.path,banned_hits:$hits,review_needed:len($hits) > 0,status:"draft",impressions:null,clicks:null,inquiries:null,created:$today}
+}
+$review_needed = len(filter($assets,($a)=>$a.review_needed))
+
+# ---- (2) 브리프 ----
+$angle_rows = join("\n",map($assets,($a)=>f"| ${a.rank} | ${a.label} | ${a.count} | ${a.copy} |"))
+$quote_rows = join("\n",map($angles,($a)=>f"- **${a.label}** (${a.count}건): ${a.quote_text}"))
+$comp_md = join("\n",map($comp_rows,($c)=>f"- ${c.name}: 가격 ${c.price_text} / 형식 ${c.format_text} / 소구 ${c.strength_claims} / USP 겹침 ${c.overlaps} — ${c.overlap_reason}"))
+$search_md = join("\n",map($search_evidence,($e)=>f"- naver ${e.type}: ${e.status} (행 ${e.rows}) ${e.sections}"))
+$rtb_md = join("\n",map($rtb_rows,($r)=>f"- ${r.fact} (출처: ${r.source})"))
+$usp_md = join("\n",map($company.usp,($u)=>f"- ${u}"))
+$one_line = $company.one_line
+$avoid_txt = join(", ",$company.colors.avoid)
+$total = len($rows)
+$unknown_n = len($unknown)
+$brief_md = f"""# 브랜드 브리프 — ${name} (${today})
+
+| 항목 | 내용 |
+|---|---|
+| 한 줄 정의 | ${one_line} |
+| 톤 | ${tone_txt}. 쓰지 않는 표현: ${banned_txt} |
+| 컬러 | 주 ${primary}, 보조 ${secondary}. 피할 색: ${avoid_txt} |
+| 제공 | ${offer_txt} — ${where} |
+
+## USP
+${usp_md}
+
+## 타겟과 페인포인트 (고객 목소리 ${total}건 분류, 무관·광고 ${noise_count}건 제외, 분류 불능 ${unknown_n}건)
+${quote_rows}
+
+## 경쟁사 소구 (같은 말을 하면 묻힌다)
+${comp_md}
+
+## 검색어 근거 (네이버 결과 건수 비교 — 간접 추정, 검색량 소스 없음)
+${search_md}
+
+## 사회적 증거(RTB) — 실재 확인된 것만
+${rtb_md}
+
+## 메인 카피 후보 (사용자가 고른다)
+| 순위 | 앵글 | 건수 | 카피 후보 |
+|---|---|---:|---|
+${angle_rows}
+"""
+[self:write]{path:f"${out}/brief.md",content:$brief_md}
+[self:write]{path:f"${out}/brief.json",content:json({company:$name,one_line:$one_line,usp:$company.usp,tone:$company.tone,colors:$company.colors,angles:$angles,competitors:$comp_rows,search_evidence:$search_evidence,rtb:$rtb_rows,copy_candidates:map($assets,($a)=>$a.copy),classified_total:$total,noise:$noise_count,unknown:$unknown_n,date:$today})}
+
+# ---- (4) 발행 직전 묶음 — 발행·게시·발송 없음 ----
+$asset_md = join("\n\n",map($assets,($a)=>f"""### ${a.rank}. ${a.copy}
+${a.hook}
+${a.solution}
+${a.cta}
+![소재](${a.image})  카드뉴스: ${a.card}
+금지어 검수: ${len($a.banned_hits) == 0 ? "통과" : "검수 필요"}"""))
+$nip23 = f"""# ${one_line}
+
+${asset_md}
+
+---
+근거: ${rtb_txt}
+(초안 — 발행 전 사용자 확인 필요. 이 파일은 발행되지 않았다.)
+"""
+[self:write]{path:f"${out}/bundle/nip23_draft.md",content:$nip23}
+$channels = $company.publish_channels
+$channel_md = join("\n",map($channels,($c)=>f"- ${c}: 사용자가 직접 올린다. 올린 뒤 campaign_ledger 의 해당 행 status 를 published 로 바꾼다."))
+[self:write]{path:f"${out}/bundle/publish_guide.md",content:f"""# 발행 안내 (실행하지 않음)
+
+${channel_md}
+
+측정: 포털은 사용 기록(audit) 로, 게시판·쇼케이스·Nostr 는 조회수 집계 수단이 없어 미측정이다. 리포트에는 미측정으로 적는다.
+"""}
+[self:write]{path:f"${out}/bundle/checklist.json",content:json({items:[
+  {check:"메인 카피 후보 가운데 하나를 고른다",owner:"user",done:false},
+  {check:"금지어 검수 필요 소재를 손본다",owner:"user",done:false,count:$review_needed},
+  {check:"RTB 가 실재하는지 재확인한다",owner:"user",done:false,rtb:map($rtb_rows,($r)=>$r.fact)},
+  {check:"발행 채널을 고르고 직접 올린다",owner:"user",done:false,channels:$channels},
+  {check:"발행 뒤 원장 status 를 published 로 바꾼다",owner:"user",done:false}
+],published:false,sent:false})}
+
+# ---- (5) 캠페인 원장 누적 (관용구) ----
+$ledger_path = f"${out}/campaign_ledger.json"
+$old = [fn:옛원장]{path:$ledger_path,dir:$out}
+$ledger = [fn:원장에누적]{옛것:$old,새것:$assets,키:"asset_id",원장:$ledger_path}
+
+# ---- (6) 파일 실존 확인과 요약 ----
+$pngs = [self:list]{path:f"${out}/assets",pattern:"*.png"}
+$bundle_files = [self:list]{path:f"${out}/bundle",pattern:"*.*"}
+$ledger_back = ([self:read]{path:$ledger_path}).data
+return {
+  classified_total:$total,
+  axis_counts:map($axis_stats,($a)=>f"${a.key}:${a.count}"),
+  noise_excluded:$noise_count,
+  unknown_labels:$unknown_n,
+  angle_order:map($top3,($a)=>$a.key),
+  review_needed:$review_needed,
+  banned_hits:map($assets,($a)=>$a.banned_hits),
+  png_files:len($pngs),
+  png_expected:len($assets) * 2,
+  bundle_files:len($bundle_files),
+  ledger_rows:len($ledger_back.items),
+  ledger_added:$ledger.added,
+  search_evidence:map($search_evidence,($e)=>f"${e.type}:${e.status}"),
+  search_ok:$search_ok,
+  published:false
+}

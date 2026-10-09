@@ -1,0 +1,50 @@
+{
+  "checks": {
+    "by_asset_totals": true,
+    "ctr_match": true,
+    "total_inquiries": true,
+    "kpi_met": true,
+    "focus_A2": true,
+    "missing_day_1": true,
+    "zero_day_ctr_null": true,
+    "unmeasured_2": true,
+    "ledger_statuses": true,
+    "report_sections": true,
+    "report_mentions_unmeasured": true
+  },
+  "all_pass": true,
+  "detail": {
+    "ledger_status": {
+      "A1": "proposal_keep",
+      "A2": "proposal_focus",
+      "A3": "proposal_pause"
+    },
+    "perf": {
+      "total_inquiries": 109,
+      "kpi_met": true,
+      "focus": "A2",
+      "missing": [
+        {
+          "pair": "A1|포털",
+          "date": "2026-10-15"
+        }
+      ],
+      "zero_days": [
+        {
+          "date": "2026-10-12",
+          "asset_id": "A3",
+          "channel": "포털",
+          "impressions": 0,
+          "clicks": 0,
+          "inquiries": 0,
+          "ctr": null
+        }
+      ],
+      "unmeasured_channels": [
+        "쇼케이스(/s/)",
+        "Nostr 장문"
+      ]
+    }
+  },
+  "scope": "Deterministic artifact QA against synthetic oracle; copy quality and image content are not judged here."
+}

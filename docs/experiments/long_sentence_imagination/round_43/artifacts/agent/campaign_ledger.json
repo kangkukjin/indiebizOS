@@ -1,0 +1,78 @@
+{
+  "campaign": "가상 동네 수리교실 홍보 1회차",
+  "rows": [
+    {
+      "asset_id": "A1",
+      "axis_rank": 1,
+      "axis": "P1",
+      "axis_name": "시간 부족 (평일 불가·짧은 시간만 가능)",
+      "axis_count": 31,
+      "hook": "평일엔 시간이 안 나서, 고칠 옷만 옷장에 쌓이고 있나요?",
+      "files": {
+        "copy": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A1/copy.json",
+        "image": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A1/image.png",
+        "card_png": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A1/card.png",
+        "card_html": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A1/card.html"
+      },
+      "status": "draft",
+      "review": "통과",
+      "performance": {
+        "impressions": null,
+        "clicks": null,
+        "inquiries": null,
+        "measured_at": null
+      },
+      "created_at": "2026-10-09T12:39:42+09:00",
+      "updated_at": "2026-10-09T12:40:58+09:00"
+    },
+    {
+      "asset_id": "A2",
+      "axis_rank": 2,
+      "axis": "P2",
+      "axis_name": "초보 불안 (해 본 적 없음·손재주·실패 두려움)",
+      "axis_count": 24,
+      "hook": "바느질을 한 번도 안 해 봐서, 가도 민폐일까 망설여지나요?",
+      "files": {
+        "copy": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A2/copy.json",
+        "image": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A2/image.png",
+        "card_png": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A2/card.png",
+        "card_html": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A2/card.html"
+      },
+      "status": "draft",
+      "review": "통과",
+      "performance": {
+        "impressions": null,
+        "clicks": null,
+        "inquiries": null,
+        "measured_at": null
+      },
+      "created_at": "2026-10-09T12:39:42+09:00",
+      "updated_at": "2026-10-09T12:40:58+09:00"
+    },
+    {
+      "asset_id": "A3",
+      "axis_rank": 3,
+      "axis": "P3",
+      "axis_name": "긴 과정·등록 부담 (한 번 해 보고 정하고 싶음)",
+      "axis_count": 18,
+      "hook": "8주 등록부터 해야 하는 수업이라 시작을 미루고 있나요?",
+      "files": {
+        "copy": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A3/copy.json",
+        "image": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A3/image.png",
+        "card_png": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A3/card.png",
+        "card_html": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/assets/A3/card.html"
+      },
+      "status": "draft",
+      "review": "통과",
+      "performance": {
+        "impressions": null,
+        "clicks": null,
+        "inquiries": null,
+        "measured_at": null
+      },
+      "created_at": "2026-10-09T12:39:42+09:00",
+      "updated_at": "2026-10-09T12:40:58+09:00"
+    }
+  ],
+  "updated_at": "2026-10-09T12:40:58+09:00"
+}

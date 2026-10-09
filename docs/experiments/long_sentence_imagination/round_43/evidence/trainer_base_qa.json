@@ -1,0 +1,156 @@
+{
+  "checks": {
+    "rows_123": true,
+    "text_preserved": true,
+    "angle_order": true,
+    "quotes_exact": true,
+    "quotes_match_axis": true,
+    "competitor_price_format": true,
+    "rtb_verified_only": true,
+    "ledger_3_unique": true,
+    "banned_deterministic_match": true,
+    "png_6_valid": true,
+    "image_square": true,
+    "bundle_3": true,
+    "not_published": true,
+    "hook_no_brand": true
+  },
+  "all_pass": true,
+  "detail": {
+    "agreement": {
+      "agree": 123,
+      "total": 123,
+      "rate": 1.0,
+      "disagreements": []
+    },
+    "angle_order": [
+      "time",
+      "confidence",
+      "cost_waste"
+    ],
+    "axis_counts": [
+      {
+        "key": "time",
+        "label": "시간이 없다",
+        "count": 49
+      },
+      {
+        "key": "confidence",
+        "label": "손재주가 없다·자신이 없다",
+        "count": 37
+      },
+      {
+        "key": "cost_waste",
+        "label": "버리기 아깝다·비용 부담",
+        "count": 25
+      },
+      {
+        "key": "noise",
+        "label": "무관·광고",
+        "count": 12
+      }
+    ],
+    "competitor_keywords": {
+      "competitor_a": [
+        "8주",
+        "120,000",
+        "전문 강사",
+        "수료증"
+      ],
+      "competitor_b": [
+        "9,900",
+        "무제한",
+        "영상",
+        "국내 최대"
+      ]
+    },
+    "banned": {
+      "A1": [],
+      "A2": [],
+      "A3": []
+    },
+    "pngs": {
+      "A1": {
+        "image": {
+          "exists": true,
+          "size": [
+            1024,
+            1024
+          ],
+          "bytes": 543876
+        },
+        "card": {
+          "exists": true,
+          "size": [
+            900,
+            1237
+          ],
+          "bytes": 622822
+        }
+      },
+      "A2": {
+        "image": {
+          "exists": true,
+          "size": [
+            1024,
+            1024
+          ],
+          "bytes": 568600
+        },
+        "card": {
+          "exists": true,
+          "size": [
+            900,
+            1237
+          ],
+          "bytes": 710424
+        }
+      },
+      "A3": {
+        "image": {
+          "exists": true,
+          "size": [
+            1024,
+            1024
+          ],
+          "bytes": 338204
+        },
+        "card": {
+          "exists": true,
+          "size": [
+            900,
+            1237
+          ],
+          "bytes": 446845
+        }
+      }
+    },
+    "bundle": [
+      "checklist.json",
+      "nip23_draft.md",
+      "publish_guide.md"
+    ],
+    "hook_with_brand": [],
+    "search_evidence": [
+      {
+        "type": "blog",
+        "status": "ok",
+        "rows": 30,
+        "sections": "[{\"query\": \"옷 수선 배우기\", \"count\": 10}, {\"query\": \"바느질 기초 클래스\", \"count\": 10}, {\"query\": \"단추 달기 방법\", \"count\": 10}]"
+      },
+      {
+        "type": "cafe",
+        "status": "ok",
+        "rows": 30,
+        "sections": "[{\"query\": \"옷 수선 배우기\", \"count\": 10}, {\"query\": \"바느질 기초 클래스\", \"count\": 10}, {\"query\": \"단추 달기 방법\", \"count\": 10}]"
+      },
+      {
+        "type": "kin",
+        "status": "ok",
+        "rows": 30,
+        "sections": "[{\"query\": \"옷 수선 배우기\", \"count\": 10}, {\"query\": \"바느질 기초 클래스\", \"count\": 10}, {\"query\": \"단추 달기 방법\", \"count\": 10}]"
+      }
+    ]
+  },
+  "scope": "Deterministic artifact QA against synthetic oracle; copy quality and image content are not judged here."
+}

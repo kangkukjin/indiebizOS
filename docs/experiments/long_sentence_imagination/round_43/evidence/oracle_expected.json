@@ -1,0 +1,83 @@
+{
+  "review_rows": 123,
+  "label_counts": {
+    "cost_waste": 25,
+    "noise": 12,
+    "time": 49,
+    "confidence": 37
+  },
+  "expected_angle_order": [
+    "time",
+    "confidence",
+    "cost_waste"
+  ],
+  "banned_words": [
+    "최고",
+    "1등",
+    "완벽",
+    "혁신",
+    "프리미엄",
+    "국내 유일"
+  ],
+  "competitor_expected": {
+    "competitor_a": [
+      "8주",
+      "120,000",
+      "전문 강사",
+      "수료증"
+    ],
+    "competitor_b": [
+      "9,900",
+      "무제한",
+      "영상",
+      "국내 최대"
+    ]
+  },
+  "reactions": {
+    "rows": 83,
+    "by_asset": {
+      "A1": {
+        "impressions": 3773,
+        "clicks": 114,
+        "inquiries": 25,
+        "rows": 27,
+        "ctr": 0.0302,
+        "inq_per_click": 0.2193
+      },
+      "A2": {
+        "impressions": 3818,
+        "clicks": 204,
+        "inquiries": 83,
+        "rows": 28,
+        "ctr": 0.0534,
+        "inq_per_click": 0.4069
+      },
+      "A3": {
+        "impressions": 3544,
+        "clicks": 62,
+        "inquiries": 1,
+        "rows": 28,
+        "ctr": 0.0175,
+        "inq_per_click": 0.0161
+      }
+    },
+    "total_inquiries": 109,
+    "kpi_target": 20,
+    "kpi_met": true,
+    "winning_by_inquiries": "A2",
+    "unmeasured_channels": [
+      "쇼케이스(/s/)",
+      "Nostr 장문"
+    ],
+    "missing_day": {
+      "asset_id": "A1",
+      "channel": "포털",
+      "date": "2026-10-15"
+    },
+    "zero_impression_row": {
+      "asset_id": "A3",
+      "channel": "포털",
+      "date": "2026-10-12"
+    }
+  }
+}

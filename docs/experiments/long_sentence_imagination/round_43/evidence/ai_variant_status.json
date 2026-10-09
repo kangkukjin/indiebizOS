@@ -1,0 +1,21 @@
+{
+ "task_ref": {
+  "kind": "delegation",
+  "owner": "system",
+  "task_id": "task_sysai_9e0256d2"
+ },
+ "parent_task_ref": null,
+ "run_id": "run_53e36faf2e7bbd0b3b5b",
+ "parent_run_id": null,
+ "state": "succeeded",
+ "status": "completed",
+ "delegated_to": "system_ai",
+ "requester_channel": "gui",
+ "created_at": "2026-10-09 03:43:30",
+ "completed_at": "2026-10-09 03:47:54",
+ "pending_children": 0,
+ "children": [],
+ "result": "반응 자료를 원장과 합쳐 성과 리포트를 쓰고, 원장 성과 칸을 갱신하고, 블로그 감시를 등록했습니다. 실제 발행·중단·교체는 하지 않았습니다. 리포트는 `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/performance.md` 이고, 순서는 현황 팩트 → KPI 대비 → 소재별 → 제안입니다.\n\n**KPI: 달성.** 14일 문의 20건 목표에 실측 109건(545%)입니다. 게시판·포털에서 측정된 것만 센 값이고, 빠진 1행은 더하지 않아 낮게 잡힌 쪽입니다. 다만 문의자가 서로 다른 사람인지, 문의가 실제 참가로 이어졌는지는 자료에 없습니다.\n\n**소재별 (10-10~10-23, 게시판+포털 합계)**\n\n| 소재 | 앵글 | 노출 | 클릭 | 문의 | CTR | 문의/클릭 |\n|---|---|---|---|---|---|---|\n| A1 | 시간 부족 | 3,773 | 114 | 25 | 3.02% | 21.93% |\n| A2 | 초보 불안 | 3,818 | 204 | 83 | 5.34% | 40.69% |\n| A3 | 등록 부담 | 3,544 | 62 | 1 | 1.75% | 1.61% |\n\n- 비율은 합계끼리 나눈 값이고, 분모가 0이면 null입니다. 따로 table:groupby로 다시 집계해 본 결과도 같았습니다.\n- 채널별로는 비율 차이가 거의 없습니다. 차이는 채널이 아니라 소재에서 났습니다.\n\n**결측과 미측정 채널** (리포트에 명시함)\n- 결측: 10-15 A1 포털 행이 없습니다(84행 중 83행). 0으로 채우지 않고 집계에서 뺐습니다.\n- 노출 0인 날: 10-12 A3 포털이고, 그날 CTR은 null입니다.\n- 미측정 채널: 쇼케이스는 집계 수단이 없어 행이 없고, Nostr 장문은 발행 여부와 지표 모두 자료에 없습니다.\n\n**제안** (결정은 하지 않았습니다)\n- **A2로 앵글을 좁히기:** 문의·CTR·문의/클릭 세 지표 모두 1위입니다. 좁힌 뒤에는 이 앵글 안에서 후킹 문구를 2~3개로 바꿔 시험해 보는 것을 제안합니다.\n- **A3은 중단 후보:** 문의가 1건뿐입니다. 아예 끄는 대신 '등록 없음' 문구를 A2의 CTA에 덧붙이는 대안도 있습니다.\n- **A1은 유지하며 관찰:** 문의 25건으로 중간입니다.\n- **KPI 다시 정하기 검토:** 목표를 크게 넘었으므로, 수업 정원을 먼저 확인하고 다음 목표를 문의 수가 아니라 참가 확정 수로 두는 것을 검토해 보시면 좋겠습니다.\n\n원장 `campaign_ledger.json`의 성과 칸을 채웠고, status는 A1 `proposal_keep_observe`, A2 `proposal_focus`, A3 `proposal_stop_candidate`로 적었습니다. 행은 3개 그대로이며, 다시 읽어 JSON 파싱까지 확인했습니다.\n\n**블로그 새 글 감시:** 쓸 감시는 하나뿐이고, 등록이 처음 의도대로 되지 않아 두 번 다시 했습니다.\n- 그대로 검색하면 네이버가 낱말 단위로 아무 글이나 맞춰서, 기준선 30건 중 교실 이름이 든 글이 0건이었습니다.\n- 따옴표로 묶은 구절 검색도 결과가 똑같아, 구절 일치는 적용되지 않는 것으로 보입니다.\n- 그래서 최신순 100건을 가져와 제목·요약에 '수리교실'이 든 글만 남기는 감시(`가상동네수리교실_naver_blog_named`)를 쓸 감시로 정했습니다. 첫 호출의 기준선은 0건입니다.\n- 앞의 두 감시는 쓰지 않는다고 `watch/naver_blog_watch_baseline.json`에 기록했지만, 시스템의 감시 상태 기록에는 남아 있습니다.\n- 정기 실행 트리거는 등록하지 않았습니다. 다시 확인하려면 같은 감시를 한 번 더 실행해야 합니다.\n\n새로 만든 파일은 모두 out 폴더 아래에 있습니다.\n- performance.md\n- analysis/performance.json\n- analysis/reactions_daily.csv\n- watch/naver_blog_watch_baseline.json\n- scripts/performance_calc.py\n- scripts/build_performance.py\n\n[평가 검수 미승인] 평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: criteria — C1(축별 건수·대표 인용), C2(검색어 3개 네이버 blog/cafe/kin 건수), C3(상위 3축 소재·이미지·카드뉴스 PNG), C4(bundle/ 초안·체크리스트)는 직전 과제의 기준이며, 현재 요청과 맞지 않습니다. 현재 요청은 \"reactions.csv … campaign_ledger.json 과 합쳐 소재별 노출·클릭·문의·CTR·문의/클릭을 내고, KPI(14일 문의 20건) 대비를 판정하고 … performance.md 로 써 … 원장의 성과 칸을 갱신하고(status 는 proposal_* 로), … 네이버 블로그 새 글 감시를 한 번 등록해\"입니다. 이 기준으로 판정하면 현재 요청의 산출물(성과 리포트·KPI 판정·null CTR·결측 명시·감시 등록)을 검증하지 못합니다. C5만 현재 과제와 관련이 있으며, 원장 3행(A1~A3) 유지가 확인됐습니다.",
+ "error": null,
+ "status_url": "/system-ai/tasks/task_sysai_9e0256d2"
+}

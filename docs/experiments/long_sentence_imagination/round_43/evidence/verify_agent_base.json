@@ -1,0 +1,112 @@
+{
+  "checks": {
+    "rows_123": true,
+    "text_preserved": true,
+    "quotes_exact": true,
+    "excluded_12": true,
+    "rtb_no_unverified": true,
+    "banned_absent_in_assets": true,
+    "ledger_3_unique": true,
+    "png_6_valid": true,
+    "image_square": true,
+    "bundle_3": true,
+    "search_total_found": true
+  },
+  "all_pass": true,
+  "detail": {
+    "agreement_coarse": {
+      "agree": 123,
+      "total": 123,
+      "rate": 1.0,
+      "disagreements": []
+    },
+    "axes": [
+      [
+        "P1",
+        31
+      ],
+      [
+        "P2",
+        24
+      ],
+      [
+        "P3",
+        18
+      ],
+      [
+        "P4",
+        13
+      ],
+      [
+        "P5",
+        13
+      ],
+      [
+        "P6",
+        12
+      ]
+    ],
+    "ledger_ids": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "pngs": {
+      "A1": {
+        "image.png": [
+          1024,
+          1024
+        ],
+        "card.png": [
+          1080,
+          1080
+        ]
+      },
+      "A2": {
+        "image.png": [
+          1024,
+          1024
+        ],
+        "card.png": [
+          1080,
+          1080
+        ]
+      },
+      "A3": {
+        "image.png": [
+          1024,
+          1024
+        ],
+        "card.png": [
+          1080,
+          1080
+        ]
+      }
+    },
+    "bundle": [
+      "channel_guide.md",
+      "checklist.md",
+      "nostr_longform_draft.md"
+    ],
+    "search_rows": [
+      {
+        "query": "옷 수선 배우기",
+        "blog": 59515,
+        "cafe": 47835,
+        "kin": 5321
+      },
+      {
+        "query": "바느질 기초 클래스",
+        "blog": 13422,
+        "cafe": 1261,
+        "kin": 44
+      },
+      {
+        "query": "단추 달기 방법",
+        "blog": 105633,
+        "cafe": 63721,
+        "kin": 17702
+      }
+    ]
+  }
+}

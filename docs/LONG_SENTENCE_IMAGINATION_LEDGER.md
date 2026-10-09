@@ -4,6 +4,14 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 43회차 — 홍보 한 바퀴: 고객 목소리→브리프→앵글 소재→발행 직전 묶음→원장→반응 좁히기 (2026-10-09, 훈련·발견만)
+
+정본 main `e6b3a90c`(+`marketing.md` 2행 보강 미커밋), 12:23 KST 시작, 상한 60분 중 자료·작성·실행·변형·탐침 약 25분(독립 AI 대기 포함 약 35분). 축: 사전 조사(`docs/PROMOTION_VOCAB_SURVEY_2026_10_09.md`)가 가른 "만들기 충분·유통/측정 공백" 을 한 프로그램으로 잇고 발행 직전까지만(외부 공개 0).
+합성: 고객 목소리 123행(time 49·confidence 37·cost_waste 25·noise 12, 경계 표본 3), 경쟁사 안내문 2, 자사 JSON(톤·금지어·RTB verified/false·KPI), 검색어 3, 변형 반응 83행(결측일 1·노출 0 행 1·미측정 채널 2). 정답은 `_oracle/`.
+훈련자 기본 최초 초안: 검사 issues 0·경고 0, 첫 실행 전건(80.1초·4,608단계, table:ai 3·image_gemini 3·table:document 3, 분류 oracle 123/123, 결정론 검수 14/14). 변형 react v0 는 `$x=[try]{return …}` 로 `BIND_RETURNS` 경고 2(29회차 수리가 정확히 짚음) → v1 전건(12.2초·검수 11/11). 둘 다 발행·발송 액션 0.
+독립 AI ep4498 695.9초(도구 29 — `table:ai` 0, 키워드 규칙 Python 분류 6축·자기 HTML 카드 틀·`engines:image_read` 자가 채점, 입력 5,681,138/출력 66,585) 거친 축 123/123 달성·`total_estimate` 로 검색어 표 완성; 변형 ep4499 263.6초(입력 3,990,116/출력 25,404) 전건 달성, 그러나 평가 경로 UNKNOWN(**L43-3**: 후속 요청에 직전 턴 기준 상속).
+**L43-1** 네이버 배치 경로의 `sections.count` 는 limit 상한의 반환 행수라 검색어 건수 비교 불가, 단건 봉투에만 `total_estimate` 가 있고 계약에 없음(훈련자 표 정보량 0). **L43-2** `self:write format:json` 이 관용구 어댑터 경로에선 맨 배열, 직접 목록 입력에선 `{items,count}` 봉투를 써 원장 모양이 뒤집히고, `self:ledger` 오류는 루트 모양을 말하지 않음(폴백 재저장으로 모양 재변경). **L43-4** 잡힌 실패가 있는 실행(`source_complete:false`)에서 `table:since` 기준선 커밋이 취소되는데 note 는 "저장" — 최소 재현 2건. 수리 없음. [보고서](experiments/long_sentence_imagination/round_43/report.md).
+
 ## 42회차 — 동영상 제작: 장면·음성·자막·부분 실패 (2026-10-09, 훈련·수리 완료)
 
 합성 4장면 홍보영상. 최초 전체 IBL은 검사 거절·수정 0회, HTTP 113.008초·319단계로 27.84초 H.264 1280×720/AAC·구운 자막 8큐를 생성했다. 원고와 자막은 전건 일치하나 제목 마침표 추가와 하단 서명으로 **부분 달성**. 독립 AI ep4496은 기존 `슬라이드틀적용`을 회상·재사용하고 서명 제거 뒤 완성(345.103초, 입력3,970,504/출력30,745; 캐시 입력 포함).
@@ -254,6 +262,10 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
+| L43-1 | 계약 공백(도구)·발견 마찰 — 네이버 `sense:search` 배치(`queries`) 봉투의 `sections.count` 는 반환 행수(limit 상한)이고 전체 결과 추정 `total_estimate` 는 단건 `query` 봉투에만 있으며 describe·설명에 없음. 가이드는 배치를 ★권장 | `round_43/evidence/probe_naver_total_single.json`(단건 keys 에 total_estimate 59,515·배치 keys 에 없음), 훈련자 브리프 검색어 표 전부 count 10 | 열림 — 배치 sections 에 total_estimate 동반, 계약·관측 반환에 필드 명시. marketing.md 검색어 행은 43회차 뒤 단건 경로로 정정(문서만) | [43회차](experiments/long_sentence_imagination/round_43/report.md) |
+| L43-2 | 계약 불일치(도구 간)·진단 공백 — `self:write format:"json"` 이 관용구 어댑터 경로(`원장에누적`)에선 맨 배열, 직접 목록 입력에선 `{items,count}` 봉투를 씀. `self:ledger` 는 맨 배열 루트 또는 target 배열만 받고 거절 메시지(`target의 부모가 객체가 아닙니다`/`select target 은 JSON 배열이어야 합니다`, details `{}`)가 루트 모양·권장 target 을 안 알림 | `probe_write_json_shape.json`(pipe_list·content_list=봉투, idiom=맨 배열), `probe_ledger_origin.json`(tiny·fresh ok, 봉투 파일 거절), 변형 v1 실행(upsert 거절→폴백 재저장으로 원장 모양 변경) | 열림 — 쓰기 모양 규칙 단일화 또는 설명 명시, self:ledger 가 봉투 루트의 items 자동 인식 또는 details 에 루트 타입·제안 target | [43회차](experiments/long_sentence_imagination/round_43/report.md) |
+| L43-3 | 관측·축적 공백(평가 경로) — 같은 대화의 후속 요청에서 평가기가 직전 턴 기준(C1~C4)을 상속해 "현재 요청과 맞지 않는다" 며 달성 판정 UNKNOWN | ep4499 응답 꼬리 `[평가 검수 미승인] … UNKNOWN_REASON: criteria — C1…C4 는 직전 과제의 기준` (`round_43/evidence/ai_variant_status.json`) | 열림 — 요청 문장이 바뀌면 기준 재도출 또는 상속 기준의 현재 요청 적합성 검사 선행 | [43회차](experiments/long_sentence_imagination/round_43/report.md) |
+| L43-4 | 구현 결함(실행 커밋·정직 보고) — `table:since` 기준선 쓰기가 실행 커밋 scope 지연 action 이고 `committed_program` 은 `success and source_complete` 일 때만 커밋. 잡힌 도구 실패로 `source_complete:false` 인 실행에서 기준선이 영속되지 않는데 note 는 "첫 검침 — 기준선 N행 저장". 검침 스트림 폐기 어휘 없음 | `probe_since_alone.json`(DB 에 5행 영속) vs `probe_since_aftercatch.json`(같은 note, DB 부재); 변형 v1 `LSI43_후기감시` 부재 | 열림 — 커밋 보류를 결과에 신고(`state_committed:false`/note 교체), 봉투에 지연 action 커밋 여부; 스트림 폐기는 어휘 증식 판정 뒤 | [43회차](experiments/long_sentence_imagination/round_43/report.md) |
 | L42-1 | 부분 결과 전파·완료 계약 — PNG 누락 1장에도 렌더 success:true, slides:3, skipped:[s003], IBL source_complete:true | 기본 4장 덱에서 s003 PNG만 이동, 동일 렌더 3장/자막6큐; 양쪽 실행 재현. 별도 완료 조건은 false | 수리 완료. 누락 이유·부분 파일을 보존하고 동기/check/task 모두 PARTIAL_SOURCE 전파. 실강 미노출·무노트 구분 | [42회차](experiments/long_sentence_imagination/round_42/report.md) |
 | L42-2 | 작성·생성물 검수 — 입력 title을 실제 결과처럼 기록; 실제 제목에는 마침표 추가, 하단25% 비우기에도 테마 서명 잔존 | 훈련자 deck.json/표본 프레임 대조; 독립 AI도 최초 서명을 발견한 뒤 자기 공통 틀에서 제거 | 수리 완료(작성·틀 경로). 실제 저장 메타 반환·제목 충돌 거절, 전체 프로그램의 실제 대조·여백 검수. 임의 생성형 화면의 전역 보장은 아님 | [42회차](experiments/long_sentence_imagination/round_42/report.md) |
 | L41-4 | 진단 안내 공백(파서) — 독립 AI 의 검사 거절 2건은 `for` 문법 요구가 아니었다: ① Python 컴프리헨션 `[x.name for x in $f]` → "']'가 필요합니다: for" 만(대안 `map($f,($x)=>$x.name)` 안내 없음) ② `$i = [engines:image_read]…` → "읽기 전용 바인딩: $i"(예약 이름·대안 미안내, repeat 밖에서도 예약) | ep4491 trajectory seq 50/53·131/134 (`data/spill/supervision/2660fc4f…/events.jsonl`) | 수리 — 목록 컴프리헨션 오류에 map/filter/each 대안과 for 위치를 안내. READONLY에 예약 바인딩 역할·블록 밖 예약·새 변수 이름을 안내. 문법/실행 의미 유지·관련80건 통과 | [41회차](experiments/long_sentence_imagination/round_41/report.md) |

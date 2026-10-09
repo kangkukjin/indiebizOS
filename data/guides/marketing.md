@@ -60,12 +60,14 @@
 | 일 | 어휘 |
 |----|------|
 | 자사·경쟁사 사이트 분석 | `[sense:crawl]`, `[sense:search]` |
+| 고객이 검색하는 말(검색어 근거) | 검색어마다 **단건** `[sense:search]{source:"naver", type:"blog"\|"cafe"\|"kin", query:"…", limit:1}` 의 `total_estimate`(네이버 전체 결과 추정 건수)를 비교 — 배치 `queries:[…]` 의 `sections.count` 는 반환 행수(limit 상한)라 쓸모없다(43회차 L43-1). 검색량·트렌드 소스(데이터랩 등)는 아직 없다, "이미 쓰인 글 수" 간접 추정임을 브리프에 적는다 |
 | 고객 목소리 리서치 | `[sense:search]{source:"naver"}` (후기·카페), `[sense:used]`·커뮤니티 관찰 |
 | 소재 이미지 생성 | `[engines:image_gemini]` (브리프의 톤·컬러 파라미터에 반영) |
 | 카드뉴스·슬라이드 | `[self:slide]` (aesthetic을 브랜드 톤에 맞춤) |
 | 홍보 영상(쇼폼) | `[self:deck]{op:"video"}` — 스토리보드 공식대로 슬라이드 구성 후 영상화 |
 | 발행 채널 | 블로그(vault), 공유창고, 포털, 게시판 `[others:bulletin]`, 웹앱 `[self:webapp]` |
 | 정기 리포트 | 스케줄러 + `[others:delegate]{scope:"system"}` |
+| 성과 측정(도달·조회) | 포털 사용 기록 `[others:portal]{op:"audit"}` 와 내 채널 공개 지표 `[sense:video]{op:"channel"}` 뿐 — 게시판·쇼케이스·블로그 조회수와 플랫폼 애널리틱스 어휘는 없다. 측정 불가는 성과 리포트에 "미측정" 으로 정직하게 적고 추정치로 메우지 않는다 |
 
 **주의**: 홍보능력 = 콘텐츠 품질 × 유통 × 꾸준함. 이 가이드는 품질만 다룬다. 유통(도달할 독자)은 채널의 꾸준한 발행으로만 쌓인다 — 한 번의 잘 만든 소재보다 지속 발행이 이긴다.
 

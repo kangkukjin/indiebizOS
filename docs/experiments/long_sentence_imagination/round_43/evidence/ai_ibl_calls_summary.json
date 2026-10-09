@@ -1,0 +1,105 @@
+{
+ "base": {
+  "execute_ibl": 24,
+  "describe_in_excerpt": 1,
+  "check_in_excerpt": 0,
+  "actions_in_excerpts": {
+   "self:list": 3,
+   "self:read": 17,
+   "sense:search": 6,
+   "table:each": 4,
+   "self:write": 11,
+   "self:script": 4,
+   "self:install_lib": 1,
+   "table:groupby": 2,
+   "engines:render": 2,
+   "engines:image_read": 2,
+   "self:edit": 4,
+   "self:file_find": 1,
+   "table:select": 2
+  },
+  "other_tools": [
+   "Bash: {\"command\": \"O=\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\"; I=\\\"/Users/kangkukjin/Desktop/",
+   "Bash: {\"command\": \"O=\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\"; I=\\\"/Users/kangkukjin/Desktop/",
+   "Bash: {\"command\": \"O=\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\"; I=\\\"/Users/kangkukjin/Desktop/",
+   "Bash: {\"command\": \"O=\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\"; I=\\\"/Users/kangkukjin/Desktop/",
+   "Bash: {\"command\": \"O=\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\"; I=\\\"/Users/kangkukjin/Desktop/"
+  ],
+  "failures": [
+   "{\"success\": true, \"value\": [{\"$ibl\": \"result\", \"ok\": true, \"value\": {\"query\": \"옷 수선 배우기\", \"type\": \"blog\", \"total_estimate\": 59515, \"returned\": 1, \"success\": true}, \"error\": null}, {\"$ibl\": \"result\", \"ok\": true, \"value\": {\"query\": \"옷 수선 배우기\", \"type\": \"cafe\", \"total_estimate\": 47835, \"returned\": 1, \"s",
+   "{\"success\": false, \"error\": \"path는 현재 ~turn 작업 폴더 안의 실존 Python 파일이어야 합니다.\", \"diagnostic\": {\"code\": \"SCRIPT_PATH\", \"kind\": \"permission\", \"message\": \"path는 현재 ~turn 작업 폴더 안의 실존 Python 파일이어야 합니다.\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [19], \"details\": {}, \"source_span\": {\"so",
+   "{\"success\": false, \"error\": \"[자작 관문] 이 턴에 새 구현 코드 170줄(2개 파일)을 썼는데 세상의 도구를 한 번도 확인하지 않았다. 이 일을 업으로 하는 사람이 쓰는 도구가 이미 있다면 지금이 갈림길이다 — 표준 라이브러리로 다시 짠 것은 대개 장난감이 된다.\\n다음 한 걸음(둘 중 하나면 관문이 걷힌다):\\n  [self:read]{path: \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/world_tools.md\\\"}   # 이 일을 잘하는 도구가 표",
+   "{\"success\": false, \"executed\": false, \"error\": \"read_result는 code·pipeline과 함께 사용할 수 없습니다\"}",
+   "{\"success\": false, \"error\": \"groupby: 'n' 필드가 어느 행에도 없습니다. 사용 가능한 필드: ['id', 'source', 'date', 'text', 'verdict', 'exclude_reason', 'axis', 'axis_name', 'evidence'] 원본열 없이 그룹 행수를 새 열 이름으로 내려면 {n: [\\\"count\\\"]} (1원소 리스트 형)로 쓰세요.\", \"diagnostic\": {\"code\": \"TOOL\", \"kind\": \"runtime\", \"message\": \"groupby: ",
+   "{\"success\": true, \"value\": [{\"$ibl\": \"result\", \"ok\": true, \"value\": {\"id\": \"A1\", \"overflow\": 0, \"passed\": true, \"score\": 8, \"issues\": []}, \"error\": null}, {\"$ibl\": \"result\", \"ok\": true, \"value\": {\"id\": \"A2\", \"overflow\": 0, \"passed\": true, \"score\": 8, \"issues\": [\"체크 2번 경미 — 일러스트 오른쪽 위 손이 두 겹으로 겹쳐 손가락"
+  ],
+  "truncated_inputs": 9,
+  "codes_head": [
+   "{\"code\": \"#!ibl edition=2 $base = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/input\\\"",
+   "{\"code\": \"#!ibl edition=2 $base = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/input\\\"",
+   "{\"code\": \"#!ibl edition=2 $q = [\\\"옷 수선 배우기\\\",\\\"바느질 기초 클래스\\\",\\\"단추 달기 방법\\\"] $b = [sense:search]{source:\\\"naver\\\",type:\\\"blog\\\",queries:$q,li",
+   "{\"code\": \"#!ibl edition=2 $b = [sense:search]{source:\\\"naver\\\",type:\\\"blog\\\",query:\\\"옷 수선 배우기\\\",limit:100} return {keys:keys($b),count:get",
+   "{\"code\": \"#!ibl edition=2 $pairs = [[\\\"옷 수선 배우기\\\",\\\"blog\\\"],[\\\"옷 수선 배우기\\\",\\\"cafe\\\"],[\\\"옷 수선 배우기\\\",\\\"kin\\\"],[\\\"바느질 기초 클래스\\\",\\\"blog\\\"],[\\\"바느질",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" [",
+   "{\"code\": \"\", \"edition\": 2, \"describe\": [\"self:script\", \"engines:render\", \"engines:image_read\"]}",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $",
+   "{\"code\": \"#!ibl edition=2 return [self:install_lib]{package:\\\"pandas\\\",check:true}\"}",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $",
+   "{\"code\": \"$rejected:placeholder\", \"edition\": 2, \"read_result\": {\"calls\": true}}",
+   "{\"code\": \"\", \"edition\": 2, \"read_result\": {\"calls\": true, \"limit\": 6000}}",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" [",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" r",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" r",
+   "{\"code\": \"#!ibl edition=2 $p = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/script",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" r",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $",
+   "{\"code\": \"#!ibl edition=2 $p = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out/script",
+   "{\"code\": \"#!ibl edition=2 $out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $"
+  ]
+ },
+ "variant": {
+  "execute_ibl": 12,
+  "describe_in_excerpt": 1,
+  "check_in_excerpt": 0,
+  "actions_in_excerpts": {
+   "self:list": 1,
+   "self:read": 7,
+   "table:select": 4,
+   "self:write": 3,
+   "table:compute": 1,
+   "table:groupby": 1,
+   "sense:search": 4,
+   "table:since": 4,
+   "table:filter": 3,
+   "self:install_lib": 1,
+   "table:each": 1
+  },
+  "other_tools": [
+   "Bash: {\"command\": \"O=\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\"; I=\\\"/Users/kangkukjin/Desktop/",
+   "Bash: {\"command\": \"O=\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\"\\npython3 -I \\\"$O/scripts/build_",
+   "Bash: {\"command\": \"O=\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\"\\npython3 -I \\\"$O/scripts/build_"
+  ],
+  "failures": [
+   "{\"success\": false, \"error\": \"[자작 관문] 이 턴에 새 구현 코드 158줄(2개 파일)을 썼는데 세상의 도구를 한 번도 확인하지 않았다. 이 일을 업으로 하는 사람이 쓰는 도구가 이미 있다면 지금이 갈림길이다 — 표준 라이브러리로 다시 짠 것은 대개 장난감이 된다.\\n다음 한 걸음(둘 중 하나면 관문이 걷힌다):\\n  [self:read]{path: \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/world_tools.md\\\"}   # 이 일을 잘하는 도구가 표"
+  ],
+  "truncated_inputs": 5,
+  "codes_head": [
+   "{\"code\": \"#!ibl edition=2 $i = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/input\\\" $",
+   "{\"code\": \"$rejected:990dff1e69ea5c4e9dde0799c55b95d8011dfc1fc2e123d2bb81464d46f0efed\", \"edition\": 2, \"code_edits\": [{\"old\": \"$i =\", \"new\": \"",
+   "{\"code\": \"#!ibl edition=2 return [self:read]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43",
+   "{\"code\": \"#!ibl edition=2 [self:write]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/age",
+   "{\"code\": \"#!ibl edition=2 $o = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $d ",
+   "{\"code\": \"$rejected:dddbf6cab4031f47aa75c791603fddff4c0b7b646b99f074caca862c063c42aa\", \"edition\": 2, \"code_edits\": [{\"old\": \"int(\", \"new\": \"",
+   "{\"code\": \"#!ibl edition=2 $b = [self:read]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차",
+   "{\"code\": \"#!ibl edition=2 $o = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $ra",
+   "{\"code\": \"#!ibl edition=2 $o = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $ra",
+   "{\"code\": \"#!ibl edition=2 [self:write]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/age",
+   "{\"code\": \"#!ibl edition=2 $c = [self:install_lib]{package:\\\"pandas\\\",check:true} $w = [self:write]{path:\\\"/Users/kangkukjin/Desktop/AI/ind",
+   "{\"code\": \"#!ibl edition=2 $o = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/agent/out\\\" $md"
+  ]
+ }
+}

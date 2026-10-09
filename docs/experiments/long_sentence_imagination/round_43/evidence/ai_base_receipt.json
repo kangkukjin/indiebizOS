@@ -1,0 +1,9 @@
+{
+ "response": "작업을 시작했습니다.",
+ "timestamp": "2026-10-09T12:30:55.135508",
+ "provider": "claude_code",
+ "model": "opus",
+ "task_id": "task_sysai_dd650b8e",
+ "state": "queued",
+ "status_url": "/system-ai/tasks/task_sysai_dd650b8e"
+}

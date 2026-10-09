@@ -1,0 +1,486 @@
+{
+  "request": {
+    "code": "#!ibl edition=2\n# 43회차 최초 초안 — 가상 동네 수리교실 홍보 한 바퀴. inputs: src(입력 폴더), out(출력 폴더)\n# 흐름: 읽기 → 고객 목소리 분류(AI 1회) → 경쟁사 소구 추출(AI 1회) → 검색어 근거(네이버, 실패=미확인)\n#       → 브리프 → 앵글 3 소재(AI 1회: 카피·후킹·해결·CTA·그림 지시) → 이미지 3 + 카드뉴스 3 → 금지어 검수(결정론)\n#       → 발행 직전 묶음(발행 없음) → 캠페인 원장 누적(관용구) → 파일 실존 확인 → 요약 반환\n\n# ---- 순수 보조 ----\n[def:글]($v,$대신) { return $v == null ? $대신 : $v }\n[def:금지어검사]($text,$banned) { return filter($banned,($w)=>contains($text,$w)) }\n[def:축건수]($rows,$key) {\n  $c = filter($rows,($r)=>$r.pain == $key)\n  [if:len($c) == 0] { return 0 } [else] { return $c[0].건수 }\n}\n[def:대표인용]($rows,$key) {\n  $f = $rows >> [table:filter]{where:($r)=>$r.pain == $key} >> [table:take]{n:2}\n  return map($f,($r)=>{id:$r.id,text:$r.text})\n}\n[def:검색근거]($queries,$type) {\n  [try] {\n    $r = [sense:search]{source:\"naver\",type:$type,queries:$queries,limit:10}\n    return {type:$type,status:\"ok\",rows:len($r.items),sections:json(get($r,\"sections\",null))}\n  } [catch] {\n    return {type:$type,status:\"미확인\",rows:0,sections:$error.message}\n  }\n}\n[def:옛원장]($path,$dir) {\n  $l = [self:list]{path:$dir,pattern:\"campaign_ledger.json\"}\n  [if:len($l) == 0] { return [] } [else] { $d = [self:read]{path:$path}; return $d.data.items }\n}\n\n# ---- 읽기 ----\n$company = ([self:read]{path:f\"${src}/company.json\"}).data\n$reviews = ([self:read]{path:f\"${src}/voice/reviews.csv\"}).data.items\n$terms = ([self:read]{path:f\"${src}/search_terms.json\"}).data\n$comp_files = sorted([self:list]{path:f\"${src}/competitors\",pattern:\"*.txt\"},\"name\")\n$competitors = $comp_files >> [table:each] {\n  $d = [self:read]{path:$it.path,format:\"text\"}\n  return {name:$it.name,text:$d.text}\n}\n$today = [self:time]{format:\"%Y-%m-%d\"}\n[self:mkdir]{path:f\"${out}/research\"}\n[self:mkdir]{path:f\"${out}/assets\"}\n[self:mkdir]{path:f\"${out}/bundle\"}\n\n$axes = [{key:\"time\",label:\"시간이 없다\"},{key:\"confidence\",label:\"손재주가 없다·자신이 없다\"},{key:\"cost_waste\",label:\"버리기 아깝다·비용 부담\"},{key:\"noise\",label:\"무관·광고\"}]\n$known_keys = [\"time\",\"confidence\",\"cost_waste\",\"noise\"]\n$banned = $company.tone.banned_words\n$usp_txt = join(\" / \",$company.usp)\n$rtb_rows = filter($company.rtb,($r)=>$r.verified)\n$rtb_txt = join(\" / \",map($rtb_rows,($r)=>$r.fact))\n$offer_txt = join(\", \",map($company.offer,($o)=>f\"${o.item} ${o.price_krw}원\"))\n$primary = $company.colors.primary\n$secondary = $company.colors.secondary\n$banned_txt = join(\", \",$banned)\n$tone_txt = $company.tone.style\n$name = $company.name\n$where = $company.when_where\n\n# ---- (1) 고객 목소리 분류 (AI 1회, 행 보존) ----\n$classified = $reviews >> [table:ai]{instruction:\"각 행의 text 는 동네 옷 수선 교실의 잠재 고객이 남긴 글이다. 어떤 페인포인트인지 pain 하나로 분류한다. pain 은 정확히 다음 네 값 중 하나: time(시간·일정·장기 과정 부담·한 번만 체험하고 싶음), confidence(손재주 없음·초보·실패 두려움·옆에서 봐줄 사람 필요), cost_waste(수선비·학원비 부담·멀쩡한 옷 버리기 아까움·환경), noise(광고·판매·무관한 글·다른 수업 문의). 원문 text 는 고치지 않는다.\",schema:\"pain(문자열)\",input_fields:[\"id\",\"text\"],preserve_rows:true}\n$rows = $classified.items\n$count_rows = ($rows >> [table:groupby]{by:\"pain\",agg:{건수:[\"count\"]}}).items\n$axis_stats = map($axes,($a)=>{key:$a.key,label:$a.label,count:[fn:축건수]{rows:$count_rows,key:$a.key}})\n$unknown = filter($rows,($r)=>not ($r.pain in $known_keys))\n$noise_count = [fn:축건수]{rows:$count_rows,key:\"noise\"}\n$ranked = sorted(filter($axis_stats,($a)=>$a.key != \"noise\"),\"count\",true)\n$top3 = $ranked[:3]\n$angles = $top3 >> [table:each] {\n  $q = [fn:대표인용]{rows:$rows,key:$it.key}\n  return {rank:$i + 1,key:$it.key,label:$it.label,count:$it.count,quotes:$q,quote_text:join(\" | \",map($q,($x)=>$x.text))}\n}\n[self:write]{path:f\"${out}/research/classified.json\",content:json({rows:$rows,unknown:$unknown,axis_stats:$axis_stats,noise:$noise_count})}\n\n# ---- (1b) 경쟁사 소구 추출 (AI 1회) ----\n$comp = $competitors >> [table:ai]{instruction:f\"각 행의 text 는 경쟁 수선·바느질 수업의 안내문이다. 가격 표현(price_text), 수업 형식(format_text: 기간·시간·온/오프라인), 강점 주장(strength_claims: 안내문에 있는 소구 표현을 그대로, 쉼표로 이어서)을 뽑고, 우리 USP(${usp_txt})와 같은 소구를 하는지 overlaps_our_usp 와 그 이유 overlap_reason 을 적는다. 안내문에 없는 말은 만들지 않는다.\",schema:\"price_text(문자열), format_text(문자열), strength_claims(문자열), overlaps_our_usp(불리언), overlap_reason(문자열)\",input_fields:[\"name\",\"text\"],preserve_rows:true}\n$comp_rows = map($comp.items,($r)=>{name:$r.name,price_text:[fn:글]{v:$r.price_text,대신:\"미확인\"},format_text:[fn:글]{v:$r.format_text,대신:\"미확인\"},strength_claims:[fn:글]{v:$r.strength_claims,대신:\"미확인\"},overlaps:$r.overlaps_our_usp == null ? \"미확인\" : text($r.overlaps_our_usp),overlap_reason:[fn:글]{v:$r.overlap_reason,대신:\"미확인\"}})\n[self:write]{path:f\"${out}/research/competitors.json\",content:json($comp_rows)}\n\n# ---- (1c) 검색어 근거 (실제 네이버, 실패=미확인) ----\n$search_evidence = [\"blog\",\"cafe\",\"kin\"] >> [table:each] { [fn:검색근거]{queries:$terms.queries,type:$it} }\n$search_ok = len(filter($search_evidence,($e)=>$e.status == \"ok\"))\n[self:write]{path:f\"${out}/research/search_terms.json\",content:json({queries:$terms.queries,note:$terms.note,evidence:$search_evidence})}\n\n# ---- (3) 앵글 3 소재 문안 (AI 1회) ----\n$creative = $angles >> [table:ai]{instruction:f\"각 행은 '${name}'(${where}, ${offer_txt})의 홍보 앵글이다. label 이 고객의 페인포인트, quote_text 가 고객 원문 인용이다. 행마다 다음을 한국어로 쓴다. hook: 고객의 문제로 시작하는 한 문장(브랜드명·교실 이름 금지, 제품 기능 나열 금지). solution: 우리 USP(${usp_txt}) 가운데 이 페인포인트를 푸는 것 한 문장(여기서 비로소 교실이 등장). cta: 행동 지시 + 지금 해야 하는 이유 한 문장(제공 가격·토요일을 써도 좋다). copy: 메인 카피 후보 한 줄(15자 안팎). image_prompt: 영어로, 글자 없는 단순한 평면 일러스트 묘사 한 문장. 톤: ${tone_txt}. 금지어: ${banned_txt}. 실재 근거만 쓸 수 있다: ${rtb_txt}. 지어낸 숫자·후기 금지.\",schema:\"hook(문자열), solution(문자열), cta(문자열), copy(문자열), image_prompt(문자열)\",input_fields:[\"rank\",\"label\",\"count\",\"quote_text\"],preserve_rows:true}\n\n# ---- 소재 제작: 이미지 1:1 + 카드뉴스 PNG + 금지어 검수 ----\n$assets = $creative.items >> [table:each] {\n  $k = $it.rank\n  $hook = [fn:글]{v:$it.hook,대신:\"(후킹 미생성)\"}\n  $solution = [fn:글]{v:$it.solution,대신:\"(해결 미생성)\"}\n  $cta = [fn:글]{v:$it.cta,대신:\"(CTA 미생성)\"}\n  $copy = [fn:글]{v:$it.copy,대신:\"(카피 미생성)\"}\n  $ip = [fn:글]{v:$it.image_prompt,대신:\"sewing needle and thread on a folded shirt\"}\n  $img_path = f\"${out}/assets/A${k}_image.png\"\n  $img = [engines:image_gemini]{prompt:f\"${ip}. Flat minimal vector illustration, palette ${primary} (deep green) and ${secondary} (cream), soft shapes, no text, no letters, no logo.\",aspect_ratio:\"1:1\",image_size:\"1K\",output_path:$img_path}\n  $card = [table:document]{title:$copy,meta:$name,blocks:[{type:\"heading\",level:1,text:$hook},{type:\"paragraph\",text:$solution},{type:\"image\",src:$img_path,caption:$copy},{type:\"paragraph\",text:$cta}],format:\"png\",filename:f\"${out}/assets/A${k}_card\"}\n  $hits = [fn:금지어검사]{text:join(\" \",[$copy,$hook,$solution,$cta]),banned:$banned}\n  return {asset_id:f\"A${k}\",rank:$k,pain:$it.key,label:$it.label,count:$it.count,copy:$copy,hook:$hook,solution:$solution,cta:$cta,image:$img_path,image_result:json(get($img,\"path\",null)),card:$card.path,banned_hits:$hits,review_needed:len($hits) > 0,status:\"draft\",impressions:null,clicks:null,inquiries:null,created:$today}\n}\n$review_needed = len(filter($assets,($a)=>$a.review_needed))\n\n# ---- (2) 브리프 ----\n$angle_rows = join(\"\\n\",map($assets,($a)=>f\"| ${a.rank} | ${a.label} | ${a.count} | ${a.copy} |\"))\n$quote_rows = join(\"\\n\",map($angles,($a)=>f\"- **${a.label}** (${a.count}건): ${a.quote_text}\"))\n$comp_md = join(\"\\n\",map($comp_rows,($c)=>f\"- ${c.name}: 가격 ${c.price_text} / 형식 ${c.format_text} / 소구 ${c.strength_claims} / USP 겹침 ${c.overlaps} — ${c.overlap_reason}\"))\n$search_md = join(\"\\n\",map($search_evidence,($e)=>f\"- naver ${e.type}: ${e.status} (행 ${e.rows}) ${e.sections}\"))\n$rtb_md = join(\"\\n\",map($rtb_rows,($r)=>f\"- ${r.fact} (출처: ${r.source})\"))\n$usp_md = join(\"\\n\",map($company.usp,($u)=>f\"- ${u}\"))\n$one_line = $company.one_line\n$avoid_txt = join(\", \",$company.colors.avoid)\n$total = len($rows)\n$unknown_n = len($unknown)\n$brief_md = f\"\"\"# 브랜드 브리프 — ${name} (${today})\n\n| 항목 | 내용 |\n|---|---|\n| 한 줄 정의 | ${one_line} |\n| 톤 | ${tone_txt}. 쓰지 않는 표현: ${banned_txt} |\n| 컬러 | 주 ${primary}, 보조 ${secondary}. 피할 색: ${avoid_txt} |\n| 제공 | ${offer_txt} — ${where} |\n\n## USP\n${usp_md}\n\n## 타겟과 페인포인트 (고객 목소리 ${total}건 분류, 무관·광고 ${noise_count}건 제외, 분류 불능 ${unknown_n}건)\n${quote_rows}\n\n## 경쟁사 소구 (같은 말을 하면 묻힌다)\n${comp_md}\n\n## 검색어 근거 (네이버 결과 건수 비교 — 간접 추정, 검색량 소스 없음)\n${search_md}\n\n## 사회적 증거(RTB) — 실재 확인된 것만\n${rtb_md}\n\n## 메인 카피 후보 (사용자가 고른다)\n| 순위 | 앵글 | 건수 | 카피 후보 |\n|---|---|---:|---|\n${angle_rows}\n\"\"\"\n[self:write]{path:f\"${out}/brief.md\",content:$brief_md}\n[self:write]{path:f\"${out}/brief.json\",content:json({company:$name,one_line:$one_line,usp:$company.usp,tone:$company.tone,colors:$company.colors,angles:$angles,competitors:$comp_rows,search_evidence:$search_evidence,rtb:$rtb_rows,copy_candidates:map($assets,($a)=>$a.copy),classified_total:$total,noise:$noise_count,unknown:$unknown_n,date:$today})}\n\n# ---- (4) 발행 직전 묶음 — 발행·게시·발송 없음 ----\n$asset_md = join(\"\\n\\n\",map($assets,($a)=>f\"\"\"### ${a.rank}. ${a.copy}\n${a.hook}\n${a.solution}\n${a.cta}\n![소재](${a.image})  카드뉴스: ${a.card}\n금지어 검수: ${len($a.banned_hits) == 0 ? \"통과\" : \"검수 필요\"}\"\"\"))\n$nip23 = f\"\"\"# ${one_line}\n\n${asset_md}\n\n---\n근거: ${rtb_txt}\n(초안 — 발행 전 사용자 확인 필요. 이 파일은 발행되지 않았다.)\n\"\"\"\n[self:write]{path:f\"${out}/bundle/nip23_draft.md\",content:$nip23}\n$channels = $company.publish_channels\n$channel_md = join(\"\\n\",map($channels,($c)=>f\"- ${c}: 사용자가 직접 올린다. 올린 뒤 campaign_ledger 의 해당 행 status 를 published 로 바꾼다.\"))\n[self:write]{path:f\"${out}/bundle/publish_guide.md\",content:f\"\"\"# 발행 안내 (실행하지 않음)\n\n${channel_md}\n\n측정: 포털은 사용 기록(audit) 로, 게시판·쇼케이스·Nostr 는 조회수 집계 수단이 없어 미측정이다. 리포트에는 미측정으로 적는다.\n\"\"\"}\n[self:write]{path:f\"${out}/bundle/checklist.json\",content:json({items:[\n  {check:\"메인 카피 후보 가운데 하나를 고른다\",owner:\"user\",done:false},\n  {check:\"금지어 검수 필요 소재를 손본다\",owner:\"user\",done:false,count:$review_needed},\n  {check:\"RTB 가 실재하는지 재확인한다\",owner:\"user\",done:false,rtb:map($rtb_rows,($r)=>$r.fact)},\n  {check:\"발행 채널을 고르고 직접 올린다\",owner:\"user\",done:false,channels:$channels},\n  {check:\"발행 뒤 원장 status 를 published 로 바꾼다\",owner:\"user\",done:false}\n],published:false,sent:false})}\n\n# ---- (5) 캠페인 원장 누적 (관용구) ----\n$ledger_path = f\"${out}/campaign_ledger.json\"\n$old = [fn:옛원장]{path:$ledger_path,dir:$out}\n$ledger = [fn:원장에누적]{옛것:$old,새것:$assets,키:\"asset_id\",원장:$ledger_path}\n\n# ---- (6) 파일 실존 확인과 요약 ----\n$pngs = [self:list]{path:f\"${out}/assets\",pattern:\"*.png\"}\n$bundle_files = [self:list]{path:f\"${out}/bundle\",pattern:\"*.*\"}\n$ledger_back = ([self:read]{path:$ledger_path}).data\nreturn {\n  classified_total:$total,\n  axis_counts:map($axis_stats,($a)=>f\"${a.key}:${a.count}\"),\n  noise_excluded:$noise_count,\n  unknown_labels:$unknown_n,\n  angle_order:map($top3,($a)=>$a.key),\n  review_needed:$review_needed,\n  banned_hits:map($assets,($a)=>$a.banned_hits),\n  png_files:len($pngs),\n  png_expected:len($assets) * 2,\n  bundle_files:len($bundle_files),\n  ledger_rows:len($ledger_back.items),\n  ledger_added:$ledger.added,\n  search_evidence:map($search_evidence,($e)=>f\"${e.type}:${e.status}\"),\n  search_ok:$search_ok,\n  published:false\n}\n",
+    "origin": "training",
+    "project_id": "수동모드",
+    "check": true,
+    "budget": {
+      "steps": 1000000,
+      "rows": 100000
+    },
+    "inputs": {
+      "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/trainer/input",
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_43회차/trainer/out"
+    }
+  },
+  "endpoint": "/ibl/execute",
+  "started": 1791516611.881664,
+  "ended": 1791516612.462634,
+  "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "guards": [],
+    "guards_total": 169,
+    "guards_inner": 4,
+    "guards_omitted": 169,
+    "result_type": "{classified_total: Number, axis_counts: List<Text>, noise_excluded: Unknown, unknown_labels: Number, angle_order: List<Text>, review_needed: Number, banned_hits: List<List<Unknown>>, png_files: Number, png_expected: Number, bundle_files: Number, ledger_rows: Number, ledger_added: Number, search_evidence: List<Text>, search_ok: Number, published: Bool}",
+    "effects": [
+      "model",
+      "pure",
+      "read_external",
+      "write_external"
+    ],
+    "functions": {
+      "def:442:570": {
+        "name": "축건수",
+        "params": {
+          "rows": "List<Unknown>",
+          "key": "Unknown"
+        },
+        "required": [
+          "rows",
+          "key"
+        ],
+        "pipe_input": "rows",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [],
+        "source_hash": "7d9a4691635169d91d0bf1f4b4f97ff64c86116443d15628dd0dc5d7fa7be411",
+        "result": "Unknown",
+        "specializations": [
+          {
+            "params": {
+              "rows": "List<Unknown>",
+              "key": "Unknown"
+            },
+            "result": "Unknown"
+          },
+          {
+            "params": {
+              "rows": "List<Unknown>",
+              "key": "Text"
+            },
+            "result": "Unknown"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "64d148fc80fb03b35f1e92e230ea65695897abe70834ac1a1bbc8f50a9979645",
+          "start": 442,
+          "end": 570,
+          "line": 10,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 13,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:571:725": {
+        "name": "대표인용",
+        "params": {
+          "rows": "List<Unknown>",
+          "key": "Text"
+        },
+        "required": [
+          "rows",
+          "key"
+        ],
+        "pipe_input": "rows",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [
+          "table:filter",
+          "table:take"
+        ],
+        "source_hash": "6cea5372e6adf7633243f6e3483f54b7531e4badacfd626566d0c95f816089cf",
+        "result": "List<{id: Unknown, text: Unknown}>",
+        "specializations": [
+          {
+            "params": {
+              "rows": "List<Unknown>",
+              "key": "Text"
+            },
+            "result": "List<{id: Unknown, text: Unknown}>"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "64d148fc80fb03b35f1e92e230ea65695897abe70834ac1a1bbc8f50a9979645",
+          "start": 571,
+          "end": 725,
+          "line": 14,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 17,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:314:362": {
+        "name": "글",
+        "params": {
+          "v": "Unknown",
+          "대신": "Text"
+        },
+        "required": [
+          "v",
+          "대신"
+        ],
+        "pipe_input": "v",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [],
+        "source_hash": "863d0e4f81fc5d64a5d74bc92decdb2c89844b82dbef962560d5a3701eef73d7",
+        "result": "Unknown",
+        "specializations": [
+          {
+            "params": {
+              "v": "Unknown",
+              "대신": "Text"
+            },
+            "result": "Unknown"
+          },
+          {
+            "params": {
+              "v": "Null | Text",
+              "대신": "Text"
+            },
+            "result": "Text"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "64d148fc80fb03b35f1e92e230ea65695897abe70834ac1a1bbc8f50a9979645",
+          "start": 314,
+          "end": 362,
+          "line": 8,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 8,
+          "end_column": 49,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:726:1023": {
+        "name": "검색근거",
+        "params": {
+          "queries": "Unknown",
+          "type": "Text"
+        },
+        "required": [
+          "queries",
+          "type"
+        ],
+        "pipe_input": "queries",
+        "default_expressions": {},
+        "effects": [
+          "read_external"
+        ],
+        "actions": [
+          "sense:search"
+        ],
+        "source_hash": "070736adf9ac9f8b4d38b92391036c77511d59c28cd475dc86438f1016a9ea75",
+        "result": "{type: Text, status: Text, rows: Number, sections: Unknown}",
+        "specializations": [
+          {
+            "params": {
+              "queries": "Unknown",
+              "type": "Text"
+            },
+            "result": "{type: Text, status: Text, rows: Number, sections: Unknown}"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "64d148fc80fb03b35f1e92e230ea65695897abe70834ac1a1bbc8f50a9979645",
+          "start": 726,
+          "end": 1023,
+          "line": 18,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 25,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:363:441": {
+        "name": "금지어검사",
+        "params": {
+          "text": "Text",
+          "banned": "Unknown"
+        },
+        "required": [
+          "text",
+          "banned"
+        ],
+        "pipe_input": "text",
+        "default_expressions": {},
+        "effects": [
+          "pure"
+        ],
+        "actions": [],
+        "source_hash": "f8ec9705d3f4a5310b6d126bb46a8eed71e6664bba66ceb0f637d8d8fdbccb11",
+        "result": "List<Unknown>",
+        "specializations": [
+          {
+            "params": {
+              "text": "Text",
+              "banned": "Unknown"
+            },
+            "result": "List<Unknown>"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "64d148fc80fb03b35f1e92e230ea65695897abe70834ac1a1bbc8f50a9979645",
+          "start": 363,
+          "end": 441,
+          "line": 9,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 9,
+          "end_column": 79,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:1024:1206": {
+        "name": "옛원장",
+        "params": {
+          "path": "Text",
+          "dir": "Text"
+        },
+        "required": [
+          "path",
+          "dir"
+        ],
+        "pipe_input": "path",
+        "default_expressions": {},
+        "effects": [
+          "read_external"
+        ],
+        "actions": [
+          "self:list",
+          "self:read"
+        ],
+        "source_hash": "b4a8f7bda49c38a968a10b633cbcec3abb450983562d33ad1d79162cd7b1b17c",
+        "result": "Unknown",
+        "specializations": [
+          {
+            "params": {
+              "path": "Text",
+              "dir": "Text"
+            },
+            "result": "Unknown"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "64d148fc80fb03b35f1e92e230ea65695897abe70834ac1a1bbc8f50a9979645",
+          "start": 1024,
+          "end": 1206,
+          "line": 26,
+          "column": 1,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 29,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "def:10796:10993": {
+        "name": "원장에누적",
+        "params": {
+          "옛것": "Unknown",
+          "새것": "List<{asset_id: Text, rank: Unknown, pain: Unknown, label: Unknown, count: Unknown, copy: Text, hook: Text, solution: Text, cta: Text, image: Text, image_result: Text, card: Unknown, banned_hits: List<Unknown>, review_needed: Bool, status: Text, impressions: Null, clicks: Null, inquiries: Null, created: Text}>",
+          "키": "Text",
+          "원장": "Text"
+        },
+        "required": [
+          "옛것",
+          "새것",
+          "키",
+          "원장"
+        ],
+        "pipe_input": "옛것",
+        "default_expressions": {},
+        "effects": [
+          "write_external"
+        ],
+        "actions": [
+          "self:write",
+          "table:dedup"
+        ],
+        "source_hash": "c59953b509279ff224624e8b3ae40da1b4670097052a295e8b893aed5dc90180",
+        "result": "{path: Text, count: Number, added: Number}",
+        "specializations": [
+          {
+            "params": {
+              "옛것": "Unknown",
+              "새것": "List<{asset_id: Text, rank: Unknown, pain: Unknown, label: Unknown, count: Unknown, copy: Text, hook: Text, solution: Text, cta: Text, image: Text, image_result: Text, card: Unknown, banned_hits: List<Unknown>, review_needed: Bool, status: Text, impressions: Null, clicks: Null, inquiries: Null, created: Text}>",
+              "키": "Text",
+              "원장": "Text"
+            },
+            "result": "{path: Text, count: Number, added: Number}"
+          }
+        ],
+        "specializations_omitted": 0,
+        "definition": {
+          "source_hash": "f34e9d706d665692d01de1d39a0786980c432afb8c1a7ad129286a2cdd47a5d8",
+          "start": 16,
+          "end": 213,
+          "line": 2,
+          "column": 1,
+          "source": "원장에누적",
+          "uri": "ibl://function/%EC%9B%90%EC%9E%A5%EC%97%90%EB%88%84%EC%A0%81",
+          "end_line": 6,
+          "end_column": 2,
+          "offset_encoding": "unicode-codepoints"
+        }
+      }
+    },
+    "plan_hash": "e675fd8f5abb286ab6b7b580f8e25cf18df72d033778e0e5e41e1a834d1199c4",
+    "dependencies": {
+      "source": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525",
+      "libraries": "51bd341c35681f9161e082280c0958536c9c261dac421a840da86dcdd3aef72d",
+      "calls": {},
+      "input_types": {
+        "src": "Text",
+        "out": "Text"
+      },
+      "source_map": [
+        {
+          "name": "<program>",
+          "start": 0,
+          "end": 10779
+        },
+        {
+          "name": "원장에누적",
+          "start": 10780,
+          "end": 10993
+        }
+      ],
+      "contracts": "de7ea0bab384930600fae9450835c8933c2678f56bebd9a50dd2073b0736246d",
+      "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+      "semantics": "e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755",
+      "expressions": "8b1374449bdb861758d2d12b149fae44ebb72cfde1919d26ea2d1cdeae740050",
+      "core": "bc139eddb5277cf55497ad4d77aaefc0d9143543b84a46a4ed014db8a871fa70"
+    },
+    "source_hash": "64d148fc80fb03b35f1e92e230ea65695897abe70834ac1a1bbc8f50a9979645",
+    "capabilities": [
+      "ibl-edition/2",
+      "ibl-value/1"
+    ],
+    "preflight": {
+      "status": "partial",
+      "declared_ai_visits_upper_bound": null,
+      "unknowns": [
+        {
+          "location": {
+            "source_hash": "64d148fc80fb03b35f1e92e230ea65695897abe70834ac1a1bbc8f50a9979645",
+            "start": 1529,
+            "end": 1631,
+            "line": 36,
+            "column": 31,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 39,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "reason": "each 입력 건수 미상"
+        },
+        {
+          "location": {
+            "source_hash": "64d148fc80fb03b35f1e92e230ea65695897abe70834ac1a1bbc8f50a9979645",
+            "start": 3282,
+            "end": 3461,
+            "line": 68,
+            "column": 20,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 71,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "reason": "each 입력 건수 미상"
+        },
+        {
+          "location": {
+            "source_hash": "64d148fc80fb03b35f1e92e230ea65695897abe70834ac1a1bbc8f50a9979645",
+            "start": 5576,
+            "end": 6818,
+            "line": 88,
+            "column": 30,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 100,
+            "end_column": 2,
+            "offset_encoding": "unicode-codepoints"
+          },
+          "reason": "each 입력 건수 미상"
+        }
+      ],
+      "warnings": [],
+      "warnings_omitted": 0,
+      "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+      "actions": [
+        "engines:image_gemini",
+        "self:list",
+        "self:mkdir",
+        "self:read",
+        "self:time",
+        "self:write",
+        "sense:search",
+        "table:ai",
+        "table:dedup",
+        "table:document",
+        "table:filter",
+        "table:groupby",
+        "table:take"
+      ]
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+    "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+    "next_action": "실행하려면 execute_args 를 그대로 check 없이 호출하세요 — 프로그램 원문과 검사한 inputs·budget·edition·value_protocols를 재사용하므로 다시 적지 않습니다. 바꿀 인자만 명시하면 그 인자 전체를 교체합니다. 실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.",
+    "runtime_checks": {
+      "total": 169,
+      "informative": 165
+    },
+    "guards_ref": {
+      "id": "d5018ffbf821fd463e7fa1e3126f525da2b520ff579bf118f45432d58ef7db50",
+      "chars": 119607,
+      "read_args": {
+        "id": "d5018ffbf821fd463e7fa1e3126f525da2b520ff579bf118f45432d58ef7db50",
+        "path": [
+          "guards"
+        ],
+        "offset": 0,
+        "limit": 60000
+      }
+    },
+    "budget": {
+      "steps": 1000000,
+      "rows": 100000
+    },
+    "execute_args": {
+      "code": "$checked:9e7c4f514a73454c3fbfd1e61282e3baad214b0af587e3c68d7ed885c5520683"
+    }
+  }
+}

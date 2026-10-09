@@ -1,0 +1,257 @@
+{
+ "base": {
+  "elapsed_s": 80.091,
+  "steps": 4608,
+  "requests": 3,
+  "totals": {
+   "input": 25090,
+   "output": 5031,
+   "cache_read": 1632,
+   "cache_create": 23452,
+   "reasoning": 1422,
+   "elapsed_ms": 43239
+  },
+  "calls": [
+   {
+    "role": "oneshot:execution",
+    "provider": "ClaudeCode",
+    "model": "opus",
+    "elapsed_ms": 21715,
+    "input": 13116,
+    "output": 2846,
+    "cache_read": 544,
+    "cache_create": 12570
+   },
+   {
+    "role": "oneshot:execution",
+    "provider": "ClaudeCode",
+    "model": "opus",
+    "elapsed_ms": 13972,
+    "input": 5881,
+    "output": 1504,
+    "cache_read": 544,
+    "cache_create": 5335
+   },
+   {
+    "role": "oneshot:execution",
+    "provider": "ClaudeCode",
+    "model": "opus",
+    "elapsed_ms": 7552,
+    "input": 6093,
+    "output": 681,
+    "cache_read": 544,
+    "cache_create": 5547
+   }
+  ],
+  "tool_ms_by_line": [
+   {
+    "line": 96,
+    "ms": 29764,
+    "calls": 3,
+    "actions": [
+     "engines:image_gemini"
+    ],
+    "source_hash": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525"
+   },
+   {
+    "line": 60,
+    "ms": 22050,
+    "calls": 1,
+    "actions": [
+     "table:ai"
+    ],
+    "source_hash": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525"
+   },
+   {
+    "line": 75,
+    "ms": 14507,
+    "calls": 1,
+    "actions": [
+     "table:ai"
+    ],
+    "source_hash": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525"
+   },
+   {
+    "line": 85,
+    "ms": 8086,
+    "calls": 1,
+    "actions": [
+     "table:ai"
+    ],
+    "source_hash": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525"
+   },
+   {
+    "line": 97,
+    "ms": 3974,
+    "calls": 3,
+    "actions": [
+     "table:document"
+    ],
+    "source_hash": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525"
+   },
+   {
+    "line": 20,
+    "ms": 682,
+    "calls": 3,
+    "actions": [
+     "sense:search"
+    ],
+    "source_hash": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525"
+   },
+   {
+    "line": 208,
+    "ms": 35,
+    "calls": 1,
+    "actions": [
+     "self:write"
+    ],
+    "source_hash": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525"
+   },
+   {
+    "line": 207,
+    "ms": 27,
+    "calls": 1,
+    "actions": [
+     "table:dedup"
+    ],
+    "source_hash": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525"
+   },
+   {
+    "line": 33,
+    "ms": 26,
+    "calls": 1,
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525"
+   },
+   {
+    "line": 27,
+    "ms": 26,
+    "calls": 1,
+    "actions": [
+     "self:list"
+    ],
+    "source_hash": "2edb1b4d34c60905b7d55fd0522aa897720dc2717d8882c9cff80eee880c3525"
+   }
+  ]
+ },
+ "react": {
+  "elapsed_s": 12.229,
+  "steps": 9977,
+  "requests": 1,
+  "totals": {
+   "input": 5492,
+   "output": 1068,
+   "cache_read": 544,
+   "cache_create": 4946,
+   "reasoning": 631,
+   "elapsed_ms": 10776
+  },
+  "calls": [
+   {
+    "role": "oneshot:execution",
+    "provider": "ClaudeCode",
+    "model": "opus",
+    "elapsed_ms": 10776,
+    "input": 5492,
+    "output": 1068,
+    "cache_read": 544,
+    "cache_create": 4946
+   }
+  ],
+  "tool_ms_by_line": [
+   {
+    "line": 53,
+    "ms": 11314,
+    "calls": 1,
+    "actions": [
+     "table:brief"
+    ],
+    "source_hash": "39b4b5519f4a588d4c2b5cb25aa54ef42adf28c72e5506045e351cca0e432455"
+   },
+   {
+    "line": 111,
+    "ms": 194,
+    "calls": 2,
+    "actions": [
+     "sense:search",
+     "table:since"
+    ],
+    "source_hash": "39b4b5519f4a588d4c2b5cb25aa54ef42adf28c72e5506045e351cca0e432455"
+   },
+   {
+    "line": 101,
+    "ms": 26,
+    "calls": 1,
+    "actions": [
+     "self:ledger"
+    ],
+    "source_hash": "39b4b5519f4a588d4c2b5cb25aa54ef42adf28c72e5506045e351cca0e432455"
+   },
+   {
+    "line": 14,
+    "ms": 25,
+    "calls": 1,
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "39b4b5519f4a588d4c2b5cb25aa54ef42adf28c72e5506045e351cca0e432455"
+   },
+   {
+    "line": 104,
+    "ms": 23,
+    "calls": 1,
+    "actions": [
+     "self:write"
+    ],
+    "source_hash": "39b4b5519f4a588d4c2b5cb25aa54ef42adf28c72e5506045e351cca0e432455"
+   },
+   {
+    "line": 107,
+    "ms": 23,
+    "calls": 1,
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "39b4b5519f4a588d4c2b5cb25aa54ef42adf28c72e5506045e351cca0e432455"
+   },
+   {
+    "line": 16,
+    "ms": 22,
+    "calls": 1,
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "39b4b5519f4a588d4c2b5cb25aa54ef42adf28c72e5506045e351cca0e432455"
+   },
+   {
+    "line": 96,
+    "ms": 20,
+    "calls": 1,
+    "actions": [
+     "self:write"
+    ],
+    "source_hash": "39b4b5519f4a588d4c2b5cb25aa54ef42adf28c72e5506045e351cca0e432455"
+   },
+   {
+    "line": 13,
+    "ms": 16,
+    "calls": 1,
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "39b4b5519f4a588d4c2b5cb25aa54ef42adf28c72e5506045e351cca0e432455"
+   },
+   {
+    "line": 37,
+    "ms": 15,
+    "calls": 1,
+    "actions": [
+     "table:groupby"
+    ],
+    "source_hash": "39b4b5519f4a588d4c2b5cb25aa54ef42adf28c72e5506045e351cca0e432455"
+   }
+  ]
+ }
+}

@@ -1,0 +1,131 @@
+#!ibl edition=2
+# 43회차 변형 v1 (수정 1: $x = [try]{return …} → 블록 값은 마지막 문장, BIND_RETURNS 경고 2건) ← 최초 초안 — 반응 자료 도착 뒤: 소재별 집계 → KPI 대비 → 성과 리포트(팩트/제안 분리) → 원장 갱신(upsert 시도, 실패 시 정직 폴백) → 감시 등록. inputs: src, out
+
+[def:비율]($a,$b) { return $b == 0 ? null : round($a / $b,4) }
+[def:표시]($v) { return $v == null ? "미측정" : text($v) }
+[def:상태]($inq,$max,$total) {
+  [if:$inq == $max] { return "proposal_focus" }
+  [if:$total > 0 and $inq * 20 < $total] { return "proposal_pause" }
+  return "proposal_keep"
+}
+
+# ---- 읽기 ----
+$company = ([self:read]{path:f"${src}/company.json"}).data
+$reacts = ([self:read]{path:f"${src}/reactions/reactions.csv"}).data.items
+$ledger_path = f"${out}/campaign_ledger.json"
+$ledger = ([self:read]{path:$ledger_path}).data.items
+$today = [self:time]{format:"%Y-%m-%d"}
+$kpi = $company.kpi
+$target = $kpi.inquiries_target
+$window = $kpi.window_days
+$name = $company.name
+
+# ---- 수치화·일별 ----
+$rows = map($reacts,($r)=>{date:$r.date,asset_id:$r.asset_id,channel:$r.channel,impressions:number($r.impressions),clicks:number($r.clicks),inquiries:number($r.inquiries)})
+$daily = map($rows,($r)=>{**$r,ctr:[fn:비율]{a:$r.clicks,b:$r.impressions}})
+$zero_days = filter($daily,($r)=>$r.impressions == 0)
+$dates = sorted(unique(map($rows,($r)=>$r.date)))
+$keys = map($rows,($r)=>f"${r.asset_id}|${r.channel}|${r.date}")
+$pairs = unique(map($rows,($r)=>f"${r.asset_id}|${r.channel}"))
+$missing = reduce($pairs,[],($acc,$p)=>$acc + map(filter($dates,($d)=>not (f"${p}|${d}" in $keys)),($d)=>{pair:$p,date:$d}))
+$first_date = $dates[0]
+$last_date = $dates[-1]
+$measured_channels = unique(map($rows,($r)=>$r.channel))
+$unmeasured = filter($company.publish_channels,($c)=>len(filter($measured_channels,($m)=>contains($c,$m))) == 0)
+
+# ---- 소재별·채널별 집계 ----
+$by_asset_raw = ($rows >> [table:groupby]{by:"asset_id",agg:{impressions:["sum","impressions"],clicks:["sum","clicks"],inquiries:["sum","inquiries"],days:["count"]}}).items
+$by_asset = sorted(map($by_asset_raw,($a)=>{**$a,ctr:[fn:비율]{a:$a.clicks,b:$a.impressions},inq_per_click:[fn:비율]{a:$a.inquiries,b:$a.clicks}}),"asset_id")
+$by_channel = ($rows >> [table:groupby]{by:"channel",agg:{impressions:["sum","impressions"],clicks:["sum","clicks"],inquiries:["sum","inquiries"]}}).items
+$total_inq = sum(map($by_asset,($a)=>$a.inquiries))
+$total_imp = sum(map($by_asset,($a)=>$a.impressions))
+$total_clk = sum(map($by_asset,($a)=>$a.clicks))
+$max_inq = max(map($by_asset,($a)=>$a.inquiries))
+$kpi_met = $total_inq >= $target
+$focus = filter($by_asset,($a)=>$a.inquiries == $max_inq)[0].asset_id
+
+# ---- 원장과 결합 ----
+$merged = map($ledger,($l)=>{**$l,**(len(filter($by_asset,($a)=>$a.asset_id == $l.asset_id)) == 0 ? {impressions:null,clicks:null,inquiries:null,ctr:null,inq_per_click:null,status:"unmeasured"} : {**filter($by_asset,($a)=>$a.asset_id == $l.asset_id)[0],status:[fn:상태]{inq:filter($by_asset,($a)=>$a.asset_id == $l.asset_id)[0].inquiries,max:$max_inq,total:$total_inq}}),measured_through:$last_date,updated:$today})
+$unmatched_assets = filter($by_asset,($a)=>len(filter($ledger,($l)=>$l.asset_id == $a.asset_id)) == 0)
+
+# ---- 제안 산문 (AI 1회, 표만 근거) ----
+$brief_items = map($merged,($m)=>{asset_id:$m.asset_id,label:$m.label,copy:$m.copy,impressions:$m.impressions,clicks:$m.clicks,inquiries:$m.inquiries,ctr:$m.ctr,inq_per_click:$m.inq_per_click,status:$m.status})
+$brief = $brief_items >> [table:brief]{instruction:f"위 표만 근거로 홍보 성과의 '제안' 한 문단(4문장 이내)을 한국어로 써라. 어느 앵글로 좁힐지(status proposal_focus)와 중단 후보(proposal_pause)를 제안으로만 말하고 결정은 사용자 몫이라고 적어라. 표에 없는 숫자·이유를 만들지 마라. 유료 광고 집행 여부는 표에 없으므로 언급하지 마라. KPI 는 ${window}일 문의 ${target}건이다."}
+$proposal = $brief.message
+
+# ---- 리포트 ----
+$asset_rows = join("\n",map($merged,($m)=>f"| ${m.asset_id} | ${m.label} | ${[fn:표시]{v:$m.impressions}} | ${[fn:표시]{v:$m.clicks}} | ${[fn:표시]{v:$m.inquiries}} | ${[fn:표시]{v:$m.ctr}} | ${[fn:표시]{v:$m.inq_per_click}} | ${m.status} |"))
+$channel_rows = join("\n",map($by_channel,($c)=>f"| ${c.channel} | ${c.impressions} | ${c.clicks} | ${c.inquiries} |"))
+$missing_md = len($missing) == 0 ? "- 없음" : join("\n",map($missing,($m)=>f"- ${m.pair} ${m.date}"))
+$zero_md = len($zero_days) == 0 ? "- 없음" : join("\n",map($zero_days,($z)=>f"- ${z.asset_id} ${z.channel} ${z.date} (노출 0 → CTR null)"))
+$unmeasured_md = len($unmeasured) == 0 ? "- 없음" : join("\n",map($unmeasured,($u)=>f"- ${u}: 집계 수단 없음 — 미측정"))
+$n_rows = len($rows)
+$n_missing = len($missing)
+$n_zero = len($zero_days)
+$kpi_txt = $kpi_met ? "달성" : "미달"
+$report = f"""# 홍보 성과 리포트 — ${name} (${first_date} ~ ${last_date}, 작성 ${today})
+
+## 1. 현황 팩트
+- 반응 행 ${n_rows}건, 측정 채널: ${join(", ",$measured_channels)}
+- 결측일 ${n_missing}건
+${missing_md}
+- 노출 0인 날 ${n_zero}건
+${zero_md}
+- 미측정 채널
+${unmeasured_md}
+
+### 채널별
+| 채널 | 노출 | 클릭 | 문의 |
+|---|---:|---:|---:|
+${channel_rows}
+
+## 2. KPI 대비
+- KPI: ${window}일 문의 ${target}건 — 실적 문의 ${total_inq}건 → **${kpi_txt}** (노출 ${total_imp}, 클릭 ${total_clk})
+- 미측정 채널의 반응은 이 수치에 없다.
+
+## 3. 소재별 성과
+| 소재 | 앵글 | 노출 | 클릭 | 문의 | CTR | 문의/클릭 | 상태(제안) |
+|---|---|---:|---:|---:|---:|---:|---|
+${asset_rows}
+
+## 4. 제안 (결정은 사용자)
+${proposal}
+
+- 규칙 기준: 좁히기 후보 = 문의 최다 소재(${focus}), 중단 후보 = 문의가 전체의 5% 미만인 소재. 되돌리기 어려운 조정은 사용자 확인 뒤에.
+"""
+[self:write]{path:f"${out}/performance.md",content:$report}
+[self:write]{path:f"${out}/performance.json",content:json({period:[$first_date,$last_date],rows:$n_rows,by_asset:$by_asset,by_channel:$by_channel,total_inquiries:$total_inq,kpi:$kpi,kpi_met:$kpi_met,focus:$focus,missing:$missing,zero_days:$zero_days,unmeasured_channels:$unmeasured,unmatched_assets:$unmatched_assets})}
+
+# ---- 원장 갱신: self:ledger upsert 시도 → 실패하면 정직 폴백(전체 재저장) ----
+$ledger_update = [try] {
+  $u = [self:ledger]{op:"upsert",path:$ledger_path,target:"items",key:"asset_id",items:$merged}
+  {method:"self:ledger upsert",ok:true,detail:json(get($u,"count",null))}
+} [catch] {
+  $w = $merged >> [self:write]{path:$ledger_path,format:"json"}
+  {method:"fallback self:write",ok:false,detail:$error.message}
+}
+$ledger_back = ([self:read]{path:$ledger_path}).data.items
+
+# ---- 감시 등록 (첫 호출 = 기준선) ----
+$watch = [try] {
+  $s = [sense:search]{source:"naver",type:"blog",query:$name,limit:10} >> [table:since]{key:"LSI43_후기감시",by:"url"}
+  {ok:true,new_rows:len($s.items),note:json(get($s,"note",null))}
+} [catch] {
+  {ok:false,new_rows:0,note:$error.message}
+}
+
+return {
+  rows:$n_rows,
+  by_asset:map($by_asset,($a)=>f"${a.asset_id}: 노출 ${a.impressions} 클릭 ${a.clicks} 문의 ${a.inquiries}"),
+  total_inquiries:$total_inq,
+  kpi_met:$kpi_met,
+  focus:$focus,
+  statuses:map($merged,($m)=>f"${m.asset_id}:${m.status}"),
+  missing_days:$n_missing,
+  zero_impression_days:$n_zero,
+  unmeasured_channels:$unmeasured,
+  ledger_update:$ledger_update,
+  ledger_rows:len($ledger_back),
+  ledger_statuses:map($ledger_back,($l)=>get($l,"status",null)),
+  watch:$watch
+}

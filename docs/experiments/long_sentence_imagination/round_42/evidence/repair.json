@@ -1,0 +1,1419 @@
+{
+  "baseline_revision": "0136fffb",
+  "runs": [
+    {
+      "label": "repair_original",
+      "request": {
+        "code": "#!ibl edition=2\n[def:장면만들기]($scene,$lecture) {\n  $slide = [self:slide]{op:\"create\",lecture_id:$lecture,render:\"html\",instruction:f\"훈련용 홍보영상 한 장. 제목을 정확히 표시: ${scene.title}. ${scene.visual}. 먹과 주황 톤, 단순 도형 중심, 하단 25%는 자막을 위해 비워 두세요. 다른 사실이나 날짜를 추가하지 마세요.\",content:$scene.note}\n  [self:slide]{op:\"note\",lecture_id:$lecture,slide_id:$slide.slide_id,note:$scene.note}\n  return {key:$scene.key,slide_id:$slide.slide_id,title:$scene.title,note:$scene.note,png:$slide.png_path}\n}\n[def:영상만들기]($lecture,$name) {\n  return [self:deck]{op:\"video\",lecture_id:$lecture,engine:\"edge\",voice:\"ko-KR-SunHiNeural\",rate:\"+0%\",captions:true,width:1280,height:720,transition:\"fade\",output_filename:$name,wait:true}\n}\n[def:기록하기]($out,$name,$record) {\n  $path = f\"${out}/${name}.json\"\n  [self:write]{path:$path,content:json($record)}\n  $again = [self:read]{path:$path,format:\"json\"}\n  return $again.data\n}\n$source = [self:read]{path:$input,format:\"json\"}\n$lecture = [self:lecture]{op:\"create\",title:\"훈련42 훈련자 동네 수리교실\",audience:\"바느질 입문자\",thesis:\"버리기 전에 함께 수선해요\",design_system:\"ink_orange\"}\n$scenes = $source.data.scenes >> [table:each] { return [fn:장면만들기]{scene:$it,lecture:$lecture.lecture_id} }\n$order = map($scenes,($s)=>$s.slide_id)\n[self:deck]{op:\"reorder\",lecture_id:$lecture.lecture_id,order:$order}\n$prepared = [fn:기록하기]{out:$out,name:\"prepared\",record:{lecture_id:$lecture.lecture_id,scenes:$scenes,order:$order}}\n$render = [fn:영상만들기]{lecture:$lecture.lecture_id,name:\"round42_base.mp4\"}\n$captions = [self:read]{path:$render.caption_file,format:\"text\"}\n$audio = [sense:listen]{op:\"inspect\",path:$render.output}\n$report = {lecture_id:$lecture.lecture_id,scenes:$scenes,render:$render,caption_source:$captions.text,audio:$audio,review_scope:\"음성은 기계적 신호 검사. 프레임·원고·스트림·발음은 후속 검수 필요.\"}\nreturn [fn:기록하기]{out:$out,name:\"production\",record:$report}\n",
+        "origin": "training",
+        "project_id": "수동모드",
+        "inputs": {
+          "input": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/input/scenes.json",
+          "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/original"
+        },
+        "budget": {
+          "steps": 1000000,
+          "rows": 10000
+        }
+      },
+      "elapsed_sec": 107.222,
+      "raw_record": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/runs/repair_original.json",
+      "raw_sha256": "c7be72731e00f358482316ebbd36277db7286f991c7d2935dadfc6886846bd82",
+      "response": {
+        "success": true,
+        "executed": true,
+        "source_complete": true,
+        "run_status": "completed",
+        "task_ref": {
+          "kind": "ibl_run",
+          "task_id": "0ad05c8e55014f56bbc6c0bce90e56cf",
+          "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+        },
+        "resume": {
+          "run_id": "0ad05c8e55014f56bbc6c0bce90e56cf"
+        },
+        "value": {
+          "lecture_id": "hunryeon42-hunryeonja-dongne-surigyosil-2",
+          "scenes": [
+            {
+              "key": "opening",
+              "slide_id": "s001",
+              "title": "버리기 전에, 함께 고쳐요",
+              "note": "버리기 전에, 함께 고쳐요. 동네 수리교실에서 작은 수선을 시작합니다.",
+              "png": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-hunryeonja-dongne-surigyosil-2/slides/s001.png"
+            },
+            {
+              "key": "learn",
+              "slide_id": "s002",
+              "title": "단추 하나부터 천천히",
+              "note": "떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다. 처음이어도 괜찮아요.",
+              "png": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-hunryeonja-dongne-surigyosil-2/slides/s002.png"
+            },
+            {
+              "key": "prepare",
+              "slide_id": "s003",
+              "title": "가져올 것은 세 가지",
+              "note": "깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을 가져오세요.",
+              "png": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-hunryeonja-dongne-surigyosil-2/slides/s003.png"
+            },
+            {
+              "key": "closing",
+              "slide_id": "s004",
+              "title": "토요일 두 시, 가상 마을회관",
+              "note": "토요일 오후 두 시, 가상 마을회관에서 만나요. 이 영상은 훈련용 가상 행사 안내입니다.",
+              "png": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-hunryeonja-dongne-surigyosil-2/slides/s004.png"
+            }
+          ],
+          "render": {
+            "success": true,
+            "output": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-hunryeonja-dongne-surigyosil-2/video/round42_base.mp4",
+            "slides": 4,
+            "narrated": 4,
+            "preset_narration": 0,
+            "missing_notes": [],
+            "skipped": [],
+            "expected_scenes": 4,
+            "rendered_slide_ids": [
+              "s001",
+              "s002",
+              "s003",
+              "s004"
+            ],
+            "source_complete": true,
+            "errors": [],
+            "captions": 8,
+            "caption_file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-hunryeonja-dongne-surigyosil-2/video/round42_base.captions.ass",
+            "caption_burned": true
+          },
+          "caption_source": "[Script Info]\nTitle: 훈련42 훈련자 동네 수리교실\nScriptType: v4.00+\nPlayResX: 1280\nPlayResY: 720\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Caption,Noto Sans CJK KR,40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H59000000,-1,0,0,0,100,100,0,0,3,1,0,2,120,120,36,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:00.00,0:00:03.07,Caption,,0,0,0,,버리기 전에, 함께 고쳐요.\nDialogue: 0,0:00:02.87,0:00:06.77,Caption,,0,0,0,,동네 수리교실에서 작은 수선을 시작합니다.\nDialogue: 0,0:00:06.77,0:00:11.40,Caption,,0,0,0,,떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다.\nDialogue: 0,0:00:11.20,0:00:13.63,Caption,,0,0,0,,처음이어도 괜찮아요.\nDialogue: 0,0:00:13.63,0:00:18.25,Caption,,0,0,0,,깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을\nDialogue: 0,0:00:18.05,0:00:19.58,Caption,,0,0,0,,가져오세요.\nDialogue: 0,0:00:19.58,0:00:24.29,Caption,,0,0,0,,토요일 오후 두 시, 가상 마을회관에서 만나요.\nDialogue: 0,0:00:24.09,0:00:27.84,Caption,,0,0,0,,이 영상은 훈련용 가상 행사 안내입니다.\n",
+          "audio": {
+            "success": true,
+            "status": "completed",
+            "source": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-hunryeonja-dongne-surigyosil-2/video/round42_base.mp4",
+            "source_hash": "7a4229f245a543b6aa6dea338f2fd18d4fba059e8c342115748e9303d8026871",
+            "op": "inspect",
+            "metadata": {
+              "duration": 27.84,
+              "sample_rate": 44100,
+              "channels": 2,
+              "codec": "aac"
+            },
+            "requested_ranges": [
+              [
+                0.0,
+                27.84
+              ]
+            ],
+            "completed_ranges": [
+              [
+                0.0,
+                27.84
+              ]
+            ],
+            "coverage": "whole_file",
+            "items": [
+              {
+                "start": 0.0,
+                "end": 27.84,
+                "kind": "signal",
+                "channels": [
+                  {
+                    "channel": 1,
+                    "max_sample_difference": 0.236375,
+                    "peak_dbfs": -6.533652,
+                    "rms_dbfs": -21.131642
+                  },
+                  {
+                    "channel": 2,
+                    "max_sample_difference": 0.236375,
+                    "peak_dbfs": -6.533652,
+                    "rms_dbfs": -21.131651
+                  }
+                ],
+                "silences": [
+                  {
+                    "start": 2.222449,
+                    "end": 3.229002
+                  },
+                  {
+                    "start": 5.869116,
+                    "end": 6.981293
+                  },
+                  {
+                    "start": 8.388118,
+                    "end": 8.716531
+                  },
+                  {
+                    "start": 10.313719,
+                    "end": 11.319546
+                  },
+                  {
+                    "start": 12.75873,
+                    "end": 13.834308
+                  },
+                  {
+                    "start": 14.910794,
+                    "end": 15.25059
+                  },
+                  {
+                    "start": 16.186871,
+                    "end": 16.537211
+                  },
+                  {
+                    "start": 18.713855,
+                    "end": 19.792268
+                  },
+                  {
+                    "start": 21.136553,
+                    "end": 21.454059
+                  },
+                  {
+                    "start": 23.249342,
+                    "end": 24.243605
+                  },
+                  {
+                    "start": 26.925692,
+                    "end": 27.84
+                  }
+                ],
+                "silence_threshold_dbfs": -50,
+                "silence_min_s": 0.3,
+                "note": "무음은 신호 임계값 판정입니다. 대화 유무·음악의 자연스러움은 판정하지 않습니다."
+              }
+            ],
+            "result_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/audio_cache/7a4229f245a543b6aa6dea338f2fd18d4fba059e8c342115748e9303d8026871/d380c7687a1bbc5aea2ab5a38d31cf0486e8ad8a465c1b75d5533e0f150cbfb3.result.json",
+            "cached_chunks": 0,
+            "model_calls": 0,
+            "usage_this_call": {
+              "input": 0,
+              "output": 0
+            },
+            "elapsed_s": 0.103,
+            "total_items": 1,
+            "truncated": false
+          },
+          "review_scope": "음성은 기계적 신호 검사. 프레임·원고·스트림·발음은 후속 검수 필요."
+        }
+      }
+    },
+    {
+      "label": "repair_full_check",
+      "request": {
+        "code": "#!ibl edition=2\n[def:기록하기]($out,$name,$record) {\n  $path = f\"${out}/${name}.json\"\n  [self:write]{path:$path,content:json($record)}\n  $again = [self:read]{path:$path,format:\"json\"}\n  return $again.data\n}\n$source = [self:read]{path:$input,format:\"json\"}\n$designs = [self:read]{path:$contents,format:\"json\"}\n[if:len($source.data.scenes) != len($designs.data.items)] {\n  return {complete:false,reason:\"원고와 시각 자료의 장면 수 불일치\"}\n}\n$rows = map(zip($source.data.scenes,$designs.data.items),($p)=>{id:$p[1].id,title:$p[0].title,speaker_note:$p[0].note,fields:$p[1].fields})\n[self:write]{path:f\"${out}/contents.json\",content:json($rows)}\n$lecture = [self:lecture]{op:\"create\",title:$title,audience:\"바느질 입문자\",thesis:\"버리기 전에 함께 수선해요\",design_system:\"ink_orange\"}\n$created = [self:script]{op:\"run\",id:\"슬라이드틀적용\",args:{lecture_id:$lecture.lecture_id,template_path:$template,contents_path:f\"${out}/contents.json\"}}\n$mismatches = filter(zip($created.items,$rows),($p)=>$p[0].id != $p[1].id or $p[0].title != $p[1].title or $p[0].speaker_note != $p[1].speaker_note)\n[if:len($created.items) != len($rows) or len($mismatches) > 0] {\n  return [fn:기록하기]{out:$out,name:\"rejected\",record:{complete:false,actual:$created.items,expected:$rows,reason:\"실제 저장 결과 불일치\"}}\n}\n$order = map($created.items,($s)=>$s.id)\n[self:deck]{op:\"reorder\",lecture_id:$lecture.lecture_id,order:$order}\n$prepared = [fn:기록하기]{out:$out,name:\"prepared\",record:{lecture_id:$lecture.lecture_id,scenes:$created.items,order:$order,expected:$rows}}\n$render = [self:deck]{op:\"video\",lecture_id:$lecture.lecture_id,engine:\"edge\",voice:\"ko-KR-SunHiNeural\",rate:\"+0%\",captions:true,width:1280,height:720,transition:\"fade\",output_filename:\"round42_repaired.mp4\",wait:true}\n$captions = [self:read]{path:$render.caption_file,format:\"text\"}\n$audio = [sense:listen]{op:\"inspect\",path:$render.output}\n$report = {lecture_id:$lecture.lecture_id,scenes:$created.items,render:$render,caption_source:$captions.text,audio:$audio,complete:$render.source_complete and $render.slides == len($rows),review_scope:\"실제 덱 제목·노트 대조 완료. 화면·자막 여백과 발음은 별도 검수.\"}\nreturn [fn:기록하기]{out:$out,name:\"production\",record:$report}\n",
+        "origin": "training",
+        "project_id": "수동모드",
+        "inputs": {
+          "input": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/input/scenes.json",
+          "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full",
+          "contents": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_42/artifacts/agent/contents.json",
+          "template": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_42/artifacts/agent/template.html",
+          "title": "훈련42 수리검증 동네 수리교실"
+        },
+        "budget": {
+          "steps": 1000000,
+          "rows": 10000
+        },
+        "check": true
+      },
+      "elapsed_sec": 0.523,
+      "raw_record": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/runs/repair_full_check.json",
+      "raw_sha256": "812bf05fa672e3826e8a9739f942754ecbaa39127cc48a03f26b850030fb3de8",
+      "response": {
+        "ok": true,
+        "executed": false,
+        "status": "incomplete",
+        "issues": []
+      }
+    },
+    {
+      "label": "repair_full",
+      "request": {
+        "code": "#!ibl edition=2\n[def:기록하기]($out,$name,$record) {\n  $path = f\"${out}/${name}.json\"\n  [self:write]{path:$path,content:json($record)}\n  $again = [self:read]{path:$path,format:\"json\"}\n  return $again.data\n}\n$source = [self:read]{path:$input,format:\"json\"}\n$designs = [self:read]{path:$contents,format:\"json\"}\n[if:len($source.data.scenes) != len($designs.data.items)] {\n  return {complete:false,reason:\"원고와 시각 자료의 장면 수 불일치\"}\n}\n$rows = map(zip($source.data.scenes,$designs.data.items),($p)=>{id:$p[1].id,title:$p[0].title,speaker_note:$p[0].note,fields:$p[1].fields})\n[self:write]{path:f\"${out}/contents.json\",content:json($rows)}\n$lecture = [self:lecture]{op:\"create\",title:$title,audience:\"바느질 입문자\",thesis:\"버리기 전에 함께 수선해요\",design_system:\"ink_orange\"}\n$created = [self:script]{op:\"run\",id:\"슬라이드틀적용\",args:{lecture_id:$lecture.lecture_id,template_path:$template,contents_path:f\"${out}/contents.json\"}}\n$mismatches = filter(zip($created.items,$rows),($p)=>$p[0].id != $p[1].id or $p[0].title != $p[1].title or $p[0].speaker_note != $p[1].speaker_note)\n[if:len($created.items) != len($rows) or len($mismatches) > 0] {\n  return [fn:기록하기]{out:$out,name:\"rejected\",record:{complete:false,actual:$created.items,expected:$rows,reason:\"실제 저장 결과 불일치\"}}\n}\n$order = map($created.items,($s)=>$s.id)\n[self:deck]{op:\"reorder\",lecture_id:$lecture.lecture_id,order:$order}\n$prepared = [fn:기록하기]{out:$out,name:\"prepared\",record:{lecture_id:$lecture.lecture_id,scenes:$created.items,order:$order,expected:$rows}}\n$render = [self:deck]{op:\"video\",lecture_id:$lecture.lecture_id,engine:\"edge\",voice:\"ko-KR-SunHiNeural\",rate:\"+0%\",captions:true,width:1280,height:720,transition:\"fade\",output_filename:\"round42_repaired.mp4\",wait:true}\n$captions = [self:read]{path:$render.caption_file,format:\"text\"}\n$audio = [sense:listen]{op:\"inspect\",path:$render.output}\n$report = {lecture_id:$lecture.lecture_id,scenes:$created.items,render:$render,caption_source:$captions.text,audio:$audio,complete:$render.source_complete and $render.slides == len($rows),review_scope:\"실제 덱 제목·노트 대조 완료. 화면·자막 여백과 발음은 별도 검수.\"}\nreturn [fn:기록하기]{out:$out,name:\"production\",record:$report}\n",
+        "origin": "training",
+        "project_id": "수동모드",
+        "inputs": {
+          "input": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/input/scenes.json",
+          "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full",
+          "contents": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_42/artifacts/agent/contents.json",
+          "template": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_42/artifacts/agent/template.html",
+          "title": "훈련42 수리검증 동네 수리교실"
+        },
+        "budget": {
+          "steps": 1000000,
+          "rows": 10000
+        }
+      },
+      "elapsed_sec": 25.88,
+      "raw_record": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/runs/repair_full.json",
+      "raw_sha256": "56be838d7c723131ed69659b3607251615562ce15f7025e38a7280748ec167e1",
+      "response": {
+        "success": true,
+        "executed": true,
+        "source_complete": true,
+        "run_status": "completed",
+        "task_ref": {
+          "kind": "ibl_run",
+          "task_id": "d9257fd072a54498a493b769eb452341",
+          "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+        },
+        "resume": {
+          "run_id": "d9257fd072a54498a493b769eb452341"
+        },
+        "value": {
+          "lecture_id": "hunryeon42-surigeomjeung-dongne-surigyosil",
+          "scenes": [
+            {
+              "id": "s001",
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/slides/s001.png",
+              "reused": false,
+              "title": "버리기 전에, 함께 고쳐요",
+              "speaker_note": "버리기 전에, 함께 고쳐요. 동네 수리교실에서 작은 수선을 시작합니다."
+            },
+            {
+              "id": "s002",
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/slides/s002.png",
+              "reused": false,
+              "title": "단추 하나부터 천천히",
+              "speaker_note": "떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다. 처음이어도 괜찮아요."
+            },
+            {
+              "id": "s003",
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/slides/s003.png",
+              "reused": false,
+              "title": "가져올 것은 세 가지",
+              "speaker_note": "깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을 가져오세요."
+            },
+            {
+              "id": "s004",
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/slides/s004.png",
+              "reused": false,
+              "title": "토요일 두 시, 가상 마을회관",
+              "speaker_note": "토요일 오후 두 시, 가상 마을회관에서 만나요. 이 영상은 훈련용 가상 행사 안내입니다."
+            }
+          ],
+          "render": {
+            "success": true,
+            "output": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/round42_repaired.mp4",
+            "slides": 4,
+            "narrated": 4,
+            "preset_narration": 0,
+            "missing_notes": [],
+            "skipped": [],
+            "expected_scenes": 4,
+            "rendered_slide_ids": [
+              "s001",
+              "s002",
+              "s003",
+              "s004"
+            ],
+            "source_complete": true,
+            "errors": [],
+            "captions": 8,
+            "caption_file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/round42_repaired.captions.ass",
+            "caption_burned": true
+          },
+          "caption_source": "[Script Info]\nTitle: 훈련42 수리검증 동네 수리교실\nScriptType: v4.00+\nPlayResX: 1280\nPlayResY: 720\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Caption,Noto Sans CJK KR,40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H59000000,-1,0,0,0,100,100,0,0,3,1,0,2,120,120,36,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:00.00,0:00:03.07,Caption,,0,0,0,,버리기 전에, 함께 고쳐요.\nDialogue: 0,0:00:02.87,0:00:06.77,Caption,,0,0,0,,동네 수리교실에서 작은 수선을 시작합니다.\nDialogue: 0,0:00:06.77,0:00:11.40,Caption,,0,0,0,,떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다.\nDialogue: 0,0:00:11.20,0:00:13.63,Caption,,0,0,0,,처음이어도 괜찮아요.\nDialogue: 0,0:00:13.63,0:00:18.25,Caption,,0,0,0,,깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을\nDialogue: 0,0:00:18.05,0:00:19.58,Caption,,0,0,0,,가져오세요.\nDialogue: 0,0:00:19.58,0:00:24.29,Caption,,0,0,0,,토요일 오후 두 시, 가상 마을회관에서 만나요.\nDialogue: 0,0:00:24.09,0:00:27.84,Caption,,0,0,0,,이 영상은 훈련용 가상 행사 안내입니다.\n",
+          "audio": {
+            "success": true,
+            "status": "completed",
+            "source": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/round42_repaired.mp4",
+            "source_hash": "4f3ce5b5e9192e6348a03c40919ebb618a455e77984eb6a653d77b82ea7bc95a",
+            "op": "inspect",
+            "metadata": {
+              "duration": 27.84,
+              "sample_rate": 44100,
+              "channels": 2,
+              "codec": "aac"
+            },
+            "requested_ranges": [
+              [
+                0.0,
+                27.84
+              ]
+            ],
+            "completed_ranges": [
+              [
+                0.0,
+                27.84
+              ]
+            ],
+            "coverage": "whole_file",
+            "items": [
+              {
+                "start": 0.0,
+                "end": 27.84,
+                "kind": "signal",
+                "channels": [
+                  {
+                    "channel": 1,
+                    "max_sample_difference": 0.23632,
+                    "peak_dbfs": -6.617482,
+                    "rms_dbfs": -21.128909
+                  },
+                  {
+                    "channel": 2,
+                    "max_sample_difference": 0.23632,
+                    "peak_dbfs": -6.617482,
+                    "rms_dbfs": -21.128895
+                  }
+                ],
+                "silences": [
+                  {
+                    "start": 2.222449,
+                    "end": 3.229002
+                  },
+                  {
+                    "start": 5.869116,
+                    "end": 6.981293
+                  },
+                  {
+                    "start": 8.388231,
+                    "end": 8.716531
+                  },
+                  {
+                    "start": 10.313719,
+                    "end": 11.319546
+                  },
+                  {
+                    "start": 12.75873,
+                    "end": 13.834308
+                  },
+                  {
+                    "start": 14.910794,
+                    "end": 15.250499
+                  },
+                  {
+                    "start": 16.186848,
+                    "end": 16.537211
+                  },
+                  {
+                    "start": 18.713855,
+                    "end": 19.792268
+                  },
+                  {
+                    "start": 21.135329,
+                    "end": 21.454082
+                  },
+                  {
+                    "start": 23.249342,
+                    "end": 24.243605
+                  },
+                  {
+                    "start": 26.925692,
+                    "end": 27.84
+                  }
+                ],
+                "silence_threshold_dbfs": -50,
+                "silence_min_s": 0.3,
+                "note": "무음은 신호 임계값 판정입니다. 대화 유무·음악의 자연스러움은 판정하지 않습니다."
+              }
+            ],
+            "result_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/audio_cache/4f3ce5b5e9192e6348a03c40919ebb618a455e77984eb6a653d77b82ea7bc95a/b36e57a83c7e155f34874c7de2a1643ca95842b6179472d93d055cbcc23edfb1.result.json",
+            "cached_chunks": 0,
+            "model_calls": 0,
+            "usage_this_call": {
+              "input": 0,
+              "output": 0
+            },
+            "elapsed_s": 0.105,
+            "total_items": 1,
+            "truncated": false
+          },
+          "complete": true,
+          "review_scope": "실제 덱 제목·노트 대조 완료. 화면·자막 여백과 발음은 별도 검수."
+        }
+      }
+    },
+    {
+      "label": "repair_missing",
+      "request": {
+        "code": "#!ibl edition=2\n$prepared = [self:read]{path:$prepared_path,format:\"json\"}\n$render = [self:deck]{op:\"video\",lecture_id:$prepared.data.lecture_id,engine:\"edge\",voice:\"ko-KR-SunHiNeural\",rate:\"+0%\",captions:true,width:1280,height:720,transition:\"fade\",output_filename:$name,wait:true}\n$captions = [self:read]{path:$render.caption_file,format:\"text\"}\n$audio = [sense:listen]{op:\"inspect\",path:$render.output}\n$report = {render:$render,caption_source:$captions.text,audio:$audio,expected_slides:len($prepared.data.scenes),complete:$render.slides == len($prepared.data.scenes) and len($render.skipped) == 0}\n[self:write]{path:$report_path,content:json($report)}\nreturn [self:read]{path:$report_path,format:\"json\"}\n",
+        "origin": "training",
+        "project_id": "수동모드",
+        "inputs": {
+          "prepared_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/prepared.json",
+          "name": "repair_missing.mp4",
+          "report_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/repair_missing.json"
+        }
+      },
+      "elapsed_sec": 10.244,
+      "raw_record": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/runs/repair_missing.json",
+      "raw_sha256": "725cfabbd97b2b79a7938ebd37dd7b5b80d5be162ec426335fad423e4d7ae056",
+      "response": {
+        "success": false,
+        "executed": true,
+        "error": "도구의 원천 결과가 불완전합니다. 원천 안내: 슬라이드 PNG 1개 누락 — 부분 영상입니다: s003",
+        "source_complete": false,
+        "run_status": "interrupted",
+        "task_ref": {
+          "kind": "ibl_run",
+          "task_id": "44523ec668b74a08b7cb257de2cb5e02",
+          "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+        },
+        "resume": {
+          "run_id": "44523ec668b74a08b7cb257de2cb5e02"
+        }
+      }
+    },
+    {
+      "label": "repair_check_partial",
+      "request": {
+        "code": "[try]{ return [self:deck]{op:\"video\",lecture_id:$lecture,check:true} }[catch]{ return {code:$error.code,partial:$error.partial} }",
+        "origin": "training",
+        "project_id": "수동모드",
+        "inputs": {
+          "lecture": "hunryeon42-surigeomjeung-dongne-surigyosil"
+        }
+      },
+      "elapsed_sec": 0.023,
+      "raw_record": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/runs/repair_check_partial.json",
+      "raw_sha256": "5b31e058c5b5b37e894b6263684a6b8f7ad858c45efa5dfb445dded3da09a4ce",
+      "response": {
+        "success": false,
+        "ok": false,
+        "executed": false,
+        "status": "invalid",
+        "error": "inputs는 판본 2에서만 사용할 수 있습니다.",
+        "issues": [
+          {
+            "code": "EDITION_ARGUMENT",
+            "kind": "compile",
+            "message": "inputs는 판본 2에서만 사용할 수 있습니다.",
+            "frames": [],
+            "has_partial": false,
+            "partial": null,
+            "evidence": [],
+            "details": {},
+            "rule": "EDITION_ARGUMENT",
+            "severity": "error",
+            "hint": "호출 인자·타입·해당 위치의 계약을 확인하세요."
+          }
+        ]
+      }
+    },
+    {
+      "label": "repair_check_partial_v2",
+      "request": {
+        "code": "[try]{ return [self:deck]{op:\"video\",lecture_id:$lecture,check:true} }[catch]{ return {code:$error.code,partial:$error.partial} }",
+        "origin": "training",
+        "project_id": "수동모드",
+        "inputs": {
+          "lecture": "hunryeon42-surigeomjeung-dongne-surigyosil"
+        },
+        "edition": 2
+      },
+      "elapsed_sec": 0.367,
+      "raw_record": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/runs/repair_check_partial_v2.json",
+      "raw_sha256": "c10ef8a8f6ef4571f261fc681acc46f3d473f6ac4b359632a43368a6e653a4e1",
+      "response": {
+        "success": true,
+        "executed": true,
+        "source_complete": false,
+        "run_status": "completed",
+        "task_ref": {
+          "kind": "ibl_run",
+          "task_id": "e72abdfd145446819c0b1de123b45256",
+          "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+        },
+        "resume": {
+          "run_id": "e72abdfd145446819c0b1de123b45256"
+        },
+        "value": {
+          "code": "PARTIAL_SOURCE",
+          "partial": {
+            "success": true,
+            "status": "done",
+            "output": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/repair_missing.mp4",
+            "slides": 3,
+            "narrated": 3,
+            "preset_narration": 0,
+            "missing_notes": [],
+            "skipped": [
+              "s003"
+            ],
+            "expected_scenes": 4,
+            "rendered_slide_ids": [
+              "s001",
+              "s002",
+              "s004"
+            ],
+            "source_complete": false,
+            "errors": [
+              {
+                "slide_id": "s003",
+                "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/slides/s003.png",
+                "reason": "png_not_file"
+              }
+            ],
+            "warning": "슬라이드 PNG 1개 누락 — 부분 영상입니다: s003",
+            "captions": 6,
+            "caption_file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/repair_missing.captions.ass",
+            "caption_burned": true,
+            "updated_at": "2026-10-09T12:10:08",
+            "state_file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video_state.json"
+          }
+        }
+      }
+    },
+    {
+      "label": "repair_recovered",
+      "request": {
+        "code": "#!ibl edition=2\n$prepared = [self:read]{path:$prepared_path,format:\"json\"}\n$render = [self:deck]{op:\"video\",lecture_id:$prepared.data.lecture_id,engine:\"edge\",voice:\"ko-KR-SunHiNeural\",rate:\"+0%\",captions:true,width:1280,height:720,transition:\"fade\",output_filename:$name,wait:true}\n$captions = [self:read]{path:$render.caption_file,format:\"text\"}\n$audio = [sense:listen]{op:\"inspect\",path:$render.output}\n$report = {render:$render,caption_source:$captions.text,audio:$audio,expected_slides:len($prepared.data.scenes),complete:$render.slides == len($prepared.data.scenes) and len($render.skipped) == 0}\n[self:write]{path:$report_path,content:json($report)}\nreturn [self:read]{path:$report_path,format:\"json\"}\n",
+        "origin": "training",
+        "project_id": "수동모드",
+        "inputs": {
+          "prepared_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/prepared.json",
+          "name": "repair_recovered.mp4",
+          "report_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/repair_recovered.json"
+        }
+      },
+      "elapsed_sec": 13.378,
+      "raw_record": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/runs/repair_recovered.json",
+      "raw_sha256": "13e48d5d117c0faeb4a7a8a39bea30a4749e6a638e60b1dde5f74aac10dc8ea8",
+      "response": {
+        "success": true,
+        "executed": true,
+        "source_complete": true,
+        "run_status": "completed",
+        "task_ref": {
+          "kind": "ibl_run",
+          "task_id": "8a419ce978544c1f9ce150294069b549",
+          "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+        },
+        "resume": {
+          "run_id": "8a419ce978544c1f9ce150294069b549"
+        },
+        "value": {
+          "text": "{\"render\": {\"success\": true, \"output\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/repair_recovered.mp4\", \"slides\": 4, \"narrated\": 4, \"preset_narration\": 0, \"missing_notes\": [], \"skipped\": [], \"expected_scenes\": 4, \"rendered_slide_ids\": [\"s001\", \"s002\", \"s003\", \"s004\"], \"source_complete\": true, \"errors\": [], \"captions\": 8, \"caption_file\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/repair_recovered.captions.ass\", \"caption_burned\": true}, \"caption_source\": \"[Script Info]\\nTitle: 훈련42 수리검증 동네 수리교실\\nScriptType: v4.00+\\nPlayResX: 1280\\nPlayResY: 720\\nWrapStyle: 2\\nScaledBorderAndShadow: yes\\n\\n[V4+ Styles]\\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\\nStyle: Caption,Noto Sans CJK KR,40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H59000000,-1,0,0,0,100,100,0,0,3,1,0,2,120,120,36,1\\n\\n[Events]\\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\\nDialogue: 0,0:00:00.00,0:00:03.07,Caption,,0,0,0,,버리기 전에, 함께 고쳐요.\\nDialogue: 0,0:00:02.87,0:00:06.77,Caption,,0,0,0,,동네 수리교실에서 작은 수선을 시작합니다.\\nDialogue: 0,0:00:06.77,0:00:11.40,Caption,,0,0,0,,떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다.\\nDialogue: 0,0:00:11.20,0:00:13.63,Caption,,0,0,0,,처음이어도 괜찮아요.\\nDialogue: 0,0:00:13.63,0:00:18.25,Caption,,0,0,0,,깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을\\nDialogue: 0,0:00:18.05,0:00:19.58,Caption,,0,0,0,,가져오세요.\\nDialogue: 0,0:00:19.58,0:00:24.29,Caption,,0,0,0,,토요일 오후 두 시, 가상 마을회관에서 만나요.\\nDialogue: 0,0:00:24.09,0:00:27.84,Caption,,0,0,0,,이 영상은 훈련용 가상 행사 안내입니다.\\n\", \"audio\": {\"success\": true, \"status\": \"completed\", \"source\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/repair_recovered.mp4\", \"source_hash\": \"6c480ce21684129c17515cf326e8f7e49393949e5a73379debfcf6342b863c1e\", \"op\": \"inspect\", \"metadata\": {\"duration\": 27.84, \"sample_rate\": 44100, \"channels\": 2, \"codec\": \"aac\"}, \"requested_ranges\": [[0.0, 27.84]], \"completed_ranges\": [[0.0, 27.84]], \"coverage\": \"whole_file\", \"items\": [{\"start\": 0.0, \"end\": 27.84, \"kind\": \"signal\", \"channels\": [{\"channel\": 1, \"max_sample_difference\": 0.257644, \"peak_dbfs\": -6.514278, \"rms_dbfs\": -21.131143}, {\"channel\": 2, \"max_sample_difference\": 0.252654, \"peak_dbfs\": -6.514278, \"rms_dbfs\": -21.131144}], \"silences\": [{\"start\": 2.222449, \"end\": 3.229002}, {\"start\": 5.869116, \"end\": 6.981293}, {\"start\": 8.388209, \"end\": 8.716531}, {\"start\": 10.313719, \"end\": 11.319546}, {\"start\": 12.758776, \"end\": 13.834308}, {\"start\": 14.914286, \"end\": 15.250476}, {\"start\": 16.186848, \"end\": 16.537211}, {\"start\": 18.713832, \"end\": 19.792268}, {\"start\": 21.135329, \"end\": 21.454082}, {\"start\": 23.249342, \"end\": 24.243605}, {\"start\": 26.925692, \"end\": 27.84}], \"silence_threshold_dbfs\": -50, \"silence_min_s\": 0.3, \"note\": \"무음은 신호 임계값 판정입니다. 대화 유무·음악의 자연스러움은 판정하지 않습니다.\"}], \"result_path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/audio_cache/6c480ce21684129c17515cf326e8f7e49393949e5a73379debfcf6342b863c1e/b4020b6a0e732174f966cae696b9d44a5dac2b19a3923d6f4ea1b3ecff0af8e7.result.json\", \"cached_chunks\": 0, \"model_calls\": 0, \"usage_this_call\": {\"input\": 0, \"output\": 0}, \"elapsed_s\": 0.116, \"total_items\": 1, \"truncated\": false}, \"expected_slides\": 4, \"complete\": true}",
+          "blocks": [],
+          "data": {
+            "render": {
+              "success": true,
+              "output": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/repair_recovered.mp4",
+              "slides": 4,
+              "narrated": 4,
+              "preset_narration": 0,
+              "missing_notes": [],
+              "skipped": [],
+              "expected_scenes": 4,
+              "rendered_slide_ids": [
+                "s001",
+                "s002",
+                "s003",
+                "s004"
+              ],
+              "source_complete": true,
+              "errors": [],
+              "captions": 8,
+              "caption_file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/repair_recovered.captions.ass",
+              "caption_burned": true
+            },
+            "caption_source": "[Script Info]\nTitle: 훈련42 수리검증 동네 수리교실\nScriptType: v4.00+\nPlayResX: 1280\nPlayResY: 720\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Caption,Noto Sans CJK KR,40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H59000000,-1,0,0,0,100,100,0,0,3,1,0,2,120,120,36,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:00.00,0:00:03.07,Caption,,0,0,0,,버리기 전에, 함께 고쳐요.\nDialogue: 0,0:00:02.87,0:00:06.77,Caption,,0,0,0,,동네 수리교실에서 작은 수선을 시작합니다.\nDialogue: 0,0:00:06.77,0:00:11.40,Caption,,0,0,0,,떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다.\nDialogue: 0,0:00:11.20,0:00:13.63,Caption,,0,0,0,,처음이어도 괜찮아요.\nDialogue: 0,0:00:13.63,0:00:18.25,Caption,,0,0,0,,깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을\nDialogue: 0,0:00:18.05,0:00:19.58,Caption,,0,0,0,,가져오세요.\nDialogue: 0,0:00:19.58,0:00:24.29,Caption,,0,0,0,,토요일 오후 두 시, 가상 마을회관에서 만나요.\nDialogue: 0,0:00:24.09,0:00:27.84,Caption,,0,0,0,,이 영상은 훈련용 가상 행사 안내입니다.\n",
+            "audio": {
+              "success": true,
+              "status": "completed",
+              "source": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/repair_recovered.mp4",
+              "source_hash": "6c480ce21684129c17515cf326e8f7e49393949e5a73379debfcf6342b863c1e",
+              "op": "inspect",
+              "metadata": {
+                "duration": 27.84,
+                "sample_rate": 44100,
+                "channels": 2,
+                "codec": "aac"
+              },
+              "requested_ranges": [
+                [
+                  0.0,
+                  27.84
+                ]
+              ],
+              "completed_ranges": [
+                [
+                  0.0,
+                  27.84
+                ]
+              ],
+              "coverage": "whole_file",
+              "items": [
+                {
+                  "start": 0.0,
+                  "end": 27.84,
+                  "kind": "signal",
+                  "channels": [
+                    {
+                      "channel": 1,
+                      "max_sample_difference": 0.257644,
+                      "peak_dbfs": -6.514278,
+                      "rms_dbfs": -21.131143
+                    },
+                    {
+                      "channel": 2,
+                      "max_sample_difference": 0.252654,
+                      "peak_dbfs": -6.514278,
+                      "rms_dbfs": -21.131144
+                    }
+                  ],
+                  "silences": [
+                    {
+                      "start": 2.222449,
+                      "end": 3.229002
+                    },
+                    {
+                      "start": 5.869116,
+                      "end": 6.981293
+                    },
+                    {
+                      "start": 8.388209,
+                      "end": 8.716531
+                    },
+                    {
+                      "start": 10.313719,
+                      "end": 11.319546
+                    },
+                    {
+                      "start": 12.758776,
+                      "end": 13.834308
+                    },
+                    {
+                      "start": 14.914286,
+                      "end": 15.250476
+                    },
+                    {
+                      "start": 16.186848,
+                      "end": 16.537211
+                    },
+                    {
+                      "start": 18.713832,
+                      "end": 19.792268
+                    },
+                    {
+                      "start": 21.135329,
+                      "end": 21.454082
+                    },
+                    {
+                      "start": 23.249342,
+                      "end": 24.243605
+                    },
+                    {
+                      "start": 26.925692,
+                      "end": 27.84
+                    }
+                  ],
+                  "silence_threshold_dbfs": -50,
+                  "silence_min_s": 0.3,
+                  "note": "무음은 신호 임계값 판정입니다. 대화 유무·음악의 자연스러움은 판정하지 않습니다."
+                }
+              ],
+              "result_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/audio_cache/6c480ce21684129c17515cf326e8f7e49393949e5a73379debfcf6342b863c1e/b4020b6a0e732174f966cae696b9d44a5dac2b19a3923d6f4ea1b3ecff0af8e7.result.json",
+              "cached_chunks": 0,
+              "model_calls": 0,
+              "usage_this_call": {
+                "input": 0,
+                "output": 0
+              },
+              "elapsed_s": 0.116,
+              "total_items": 1,
+              "truncated": false
+            },
+            "expected_slides": 4,
+            "complete": true
+          }
+        }
+      }
+    },
+    {
+      "label": "repair_variant",
+      "request": {
+        "code": "#!ibl edition=2\n[def:기록하기]($out,$name,$record) {\n  $path = f\"${out}/${name}.json\"\n  [self:write]{path:$path,content:json($record)}\n  $again = [self:read]{path:$path,format:\"json\"}\n  return $again.data\n}\n$source = [self:read]{path:$input,format:\"json\"}\n$designs = [self:read]{path:$contents,format:\"json\"}\n[if:len($source.data.scenes) != len($designs.data.items)] {\n  return {complete:false,reason:\"원고와 시각 자료의 장면 수 불일치\"}\n}\n$rows = map(zip($source.data.scenes,$designs.data.items),($p)=>{id:$p[1].id,title:$p[0].title,speaker_note:$p[0].note,fields:$p[1].fields})\n[self:write]{path:f\"${out}/contents.json\",content:json($rows)}\n$lecture = [self:lecture]{op:\"create\",title:$title,audience:\"바느질 입문자\",thesis:\"버리기 전에 함께 수선해요\",design_system:\"ink_orange\"}\n$created = [self:script]{op:\"run\",id:\"슬라이드틀적용\",args:{lecture_id:$lecture.lecture_id,template_path:$template,contents_path:f\"${out}/contents.json\"}}\n$mismatches = filter(zip($created.items,$rows),($p)=>$p[0].id != $p[1].id or $p[0].title != $p[1].title or $p[0].speaker_note != $p[1].speaker_note)\n[if:len($created.items) != len($rows) or len($mismatches) > 0] {\n  return [fn:기록하기]{out:$out,name:\"rejected\",record:{complete:false,actual:$created.items,expected:$rows,reason:\"실제 저장 결과 불일치\"}}\n}\n$order = map($created.items,($s)=>$s.id)\n[self:deck]{op:\"reorder\",lecture_id:$lecture.lecture_id,order:$order}\n$prepared = [fn:기록하기]{out:$out,name:\"prepared\",record:{lecture_id:$lecture.lecture_id,scenes:$created.items,order:$order,expected:$rows}}\n$render = [self:deck]{op:\"video\",lecture_id:$lecture.lecture_id,engine:\"edge\",voice:\"ko-KR-SunHiNeural\",rate:\"+0%\",captions:true,width:1280,height:720,transition:\"fade\",output_filename:\"round42_repaired.mp4\",wait:true}\n$captions = [self:read]{path:$render.caption_file,format:\"text\"}\n$audio = [sense:listen]{op:\"inspect\",path:$render.output}\n$report = {lecture_id:$lecture.lecture_id,scenes:$created.items,render:$render,caption_source:$captions.text,audio:$audio,complete:$render.source_complete and $render.slides == len($rows),review_scope:\"실제 덱 제목·노트 대조 완료. 화면·자막 여백과 발음은 별도 검수.\"}\nreturn [fn:기록하기]{out:$out,name:\"production\",record:$report}\n",
+        "origin": "training",
+        "project_id": "수동모드",
+        "inputs": {
+          "input": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/source.json",
+          "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant",
+          "contents": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/designs.json",
+          "template": "/Users/kangkukjin/Desktop/AI/indiebizOS/docs/experiments/long_sentence_imagination/round_42/artifacts/agent/template.html",
+          "title": "훈련42 수리 새변형 역순 특수문자"
+        },
+        "budget": {
+          "steps": 1000000,
+          "rows": 10000
+        }
+      },
+      "elapsed_sec": 24.642,
+      "raw_record": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/runs/repair_variant.json",
+      "raw_sha256": "5bab0731846b57f1416c4b4fba6db1c42c98156a7b9de74275b7834ca4465a5f",
+      "response": {
+        "success": true,
+        "executed": true,
+        "source_complete": true,
+        "run_status": "completed",
+        "task_ref": {
+          "kind": "ibl_run",
+          "task_id": "5fe6462a70b742c5a67264a1addb67cb",
+          "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+        },
+        "resume": {
+          "run_id": "5fe6462a70b742c5a67264a1addb67cb"
+        },
+        "value": {
+          "lecture_id": "hunryeon42-suri-saebyeonhyeong-yeogsun-teugsumunja",
+          "scenes": [
+            {
+              "id": "s004",
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-suri-saebyeonhyeong-yeogsun-teugsumunja/slides/s004.png",
+              "reused": false,
+              "title": "토요일 두 시, 가상 마을회관",
+              "speaker_note": "토요일 오후 두 시, 가상 마을회관에서 만나요. 이 영상은 훈련용 가상 행사 안내입니다."
+            },
+            {
+              "id": "s003",
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-suri-saebyeonhyeong-yeogsun-teugsumunja/slides/s003.png",
+              "reused": false,
+              "title": "가져올 것은 세 가지",
+              "speaker_note": "깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을 가져오세요."
+            },
+            {
+              "id": "s002",
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-suri-saebyeonhyeong-yeogsun-teugsumunja/slides/s002.png",
+              "reused": false,
+              "title": "단추 하나부터 천천히",
+              "speaker_note": "떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다. 처음이어도 괜찮아요."
+            },
+            {
+              "id": "s001",
+              "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-suri-saebyeonhyeong-yeogsun-teugsumunja/slides/s001.png",
+              "reused": false,
+              "title": "<함께 & 수선>",
+              "speaker_note": "버리기 전에, 함께 고쳐요. 동네 수리교실에서 작은 수선을 시작합니다."
+            }
+          ],
+          "render": {
+            "success": true,
+            "output": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-suri-saebyeonhyeong-yeogsun-teugsumunja/video/round42_repaired.mp4",
+            "slides": 4,
+            "narrated": 4,
+            "preset_narration": 0,
+            "missing_notes": [],
+            "skipped": [],
+            "expected_scenes": 4,
+            "rendered_slide_ids": [
+              "s004",
+              "s003",
+              "s002",
+              "s001"
+            ],
+            "source_complete": true,
+            "errors": [],
+            "captions": 8,
+            "caption_file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-suri-saebyeonhyeong-yeogsun-teugsumunja/video/round42_repaired.captions.ass",
+            "caption_burned": true
+          },
+          "caption_source": "[Script Info]\nTitle: 훈련42 수리 새변형 역순 특수문자\nScriptType: v4.00+\nPlayResX: 1280\nPlayResY: 720\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Caption,Noto Sans CJK KR,40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H59000000,-1,0,0,0,100,100,0,0,3,1,0,2,120,120,36,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:00.00,0:00:04.71,Caption,,0,0,0,,토요일 오후 두 시, 가상 마을회관에서 만나요.\nDialogue: 0,0:00:04.51,0:00:08.26,Caption,,0,0,0,,이 영상은 훈련용 가상 행사 안내입니다.\nDialogue: 0,0:00:08.26,0:00:12.88,Caption,,0,0,0,,깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을\nDialogue: 0,0:00:12.68,0:00:14.21,Caption,,0,0,0,,가져오세요.\nDialogue: 0,0:00:14.21,0:00:18.84,Caption,,0,0,0,,떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다.\nDialogue: 0,0:00:18.64,0:00:21.07,Caption,,0,0,0,,처음이어도 괜찮아요.\nDialogue: 0,0:00:21.07,0:00:24.14,Caption,,0,0,0,,버리기 전에, 함께 고쳐요.\nDialogue: 0,0:00:23.94,0:00:27.84,Caption,,0,0,0,,동네 수리교실에서 작은 수선을 시작합니다.\n",
+          "audio": {
+            "success": true,
+            "status": "completed",
+            "source": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-suri-saebyeonhyeong-yeogsun-teugsumunja/video/round42_repaired.mp4",
+            "source_hash": "5dec053fb6d98372897acfabf1e731bea78011224cdd83478bb677364f345fa2",
+            "op": "inspect",
+            "metadata": {
+              "duration": 27.84,
+              "sample_rate": 44100,
+              "channels": 2,
+              "codec": "aac"
+            },
+            "requested_ranges": [
+              [
+                0.0,
+                27.84
+              ]
+            ],
+            "completed_ranges": [
+              [
+                0.0,
+                27.84
+              ]
+            ],
+            "coverage": "whole_file",
+            "items": [
+              {
+                "start": 0.0,
+                "end": 27.84,
+                "kind": "signal",
+                "channels": [
+                  {
+                    "channel": 1,
+                    "max_sample_difference": 0.269337,
+                    "peak_dbfs": -6.566465,
+                    "rms_dbfs": -21.126263
+                  },
+                  {
+                    "channel": 2,
+                    "max_sample_difference": 0.274863,
+                    "peak_dbfs": -6.566465,
+                    "rms_dbfs": -21.126266
+                  }
+                ],
+                "silences": [
+                  {
+                    "start": 1.555306,
+                    "end": 1.873673
+                  },
+                  {
+                    "start": 3.669342,
+                    "end": 4.66356
+                  },
+                  {
+                    "start": 7.345692,
+                    "end": 8.464626
+                  },
+                  {
+                    "start": 9.544263,
+                    "end": 9.880249
+                  },
+                  {
+                    "start": 10.816848,
+                    "end": 11.167211
+                  },
+                  {
+                    "start": 13.341338,
+                    "end": 14.421293
+                  },
+                  {
+                    "start": 15.828209,
+                    "end": 16.156531
+                  },
+                  {
+                    "start": 17.753719,
+                    "end": 18.759546
+                  },
+                  {
+                    "start": 20.198753,
+                    "end": 21.284422
+                  },
+                  {
+                    "start": 23.292517,
+                    "end": 24.299002
+                  },
+                  {
+                    "start": 26.939093,
+                    "end": 27.84
+                  }
+                ],
+                "silence_threshold_dbfs": -50,
+                "silence_min_s": 0.3,
+                "note": "무음은 신호 임계값 판정입니다. 대화 유무·음악의 자연스러움은 판정하지 않습니다."
+              }
+            ],
+            "result_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/audio_cache/5dec053fb6d98372897acfabf1e731bea78011224cdd83478bb677364f345fa2/7bbbc9c3561aeabfed6be522501a34f7a8419aa7fd886f2a49267deeb49d9ec1.result.json",
+            "cached_chunks": 0,
+            "model_calls": 0,
+            "usage_this_call": {
+              "input": 0,
+              "output": 0
+            },
+            "elapsed_s": 0.102,
+            "total_items": 1,
+            "truncated": false
+          },
+          "complete": true,
+          "review_scope": "실제 덱 제목·노트 대조 완료. 화면·자막 여백과 발음은 별도 검수."
+        }
+      }
+    }
+  ],
+  "qa": {
+    "full": {
+      "checks": {
+        "res_1280x720": true,
+        "h264": true,
+        "aac": true,
+        "one_video_one_audio": true,
+        "duration_20_70": true,
+        "all_notes_match_captions": true,
+        "deck_notes_match": true,
+        "deck_titles_match": true,
+        "srt_matches_ass": true,
+        "slides_bottom_empty": true,
+        "captions_in_bottom_25pct": true,
+        "captions_inside_frame": true,
+        "rendered_html_titles_exact": true
+      },
+      "duration_sec": 27.84,
+      "files": {
+        "mp4": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/video.mp4",
+        "mp4_sha256": "4f3ce5b5e9192e6348a03c40919ebb618a455e77984eb6a653d77b82ea7bc95a",
+        "mp4_bytes": 700234,
+        "ass": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/captions.ass",
+        "srt": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/captions.srt",
+        "source_mp4_sha256": "4f3ce5b5e9192e6348a03c40919ebb618a455e77984eb6a653d77b82ea7bc95a"
+      },
+      "html_headings": [
+        "버리기 전에, 함께 고쳐요",
+        "단추 하나부터 천천히",
+        "가져올 것은 세 가지",
+        "토요일 두 시, 가상 마을회관"
+      ],
+      "slide_checks": [
+        {
+          "slide_id": "s001",
+          "size": [
+            1280,
+            720
+          ],
+          "bg_rgb": [
+            243,
+            234,
+            216
+          ],
+          "bottom_nonbg_pixels": 0,
+          "top_content_pixels": 27796
+        },
+        {
+          "slide_id": "s002",
+          "size": [
+            1280,
+            720
+          ],
+          "bg_rgb": [
+            243,
+            234,
+            216
+          ],
+          "bottom_nonbg_pixels": 0,
+          "top_content_pixels": 23276
+        },
+        {
+          "slide_id": "s003",
+          "size": [
+            1280,
+            720
+          ],
+          "bg_rgb": [
+            243,
+            234,
+            216
+          ],
+          "bottom_nonbg_pixels": 0,
+          "top_content_pixels": 29652
+        },
+        {
+          "slide_id": "s004",
+          "size": [
+            1280,
+            720
+          ],
+          "bg_rgb": [
+            243,
+            234,
+            216
+          ],
+          "bottom_nonbg_pixels": 0,
+          "top_content_pixels": 31568
+        }
+      ],
+      "frames": [
+        {
+          "cue": 1,
+          "scene": "opening",
+          "time": 1.53,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/frames/cue01_opening_1.53s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 619,
+          "caption_bottom_y": 683,
+          "caption_left_x": 419,
+          "caption_right_x": 860,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 2,
+          "scene": "opening",
+          "time": 4.92,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/frames/cue02_opening_4.92s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 620,
+          "caption_bottom_y": 683,
+          "caption_left_x": 280,
+          "caption_right_x": 999,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 3,
+          "scene": "learn",
+          "time": 9.09,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/frames/cue03_learn_9.09s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 619,
+          "caption_bottom_y": 683,
+          "caption_left_x": 265,
+          "caption_right_x": 1014,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 4,
+          "scene": "learn",
+          "time": 12.52,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/frames/cue04_learn_12.52s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 619,
+          "caption_bottom_y": 683,
+          "caption_left_x": 451,
+          "caption_right_x": 827,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 5,
+          "scene": "prepare",
+          "time": 15.94,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/frames/cue05_prepare_15.94s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 619,
+          "caption_bottom_y": 683,
+          "caption_left_x": 180,
+          "caption_right_x": 1099,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 6,
+          "scene": "prepare",
+          "time": 18.91,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/frames/cue06_prepare_18.91s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 620,
+          "caption_bottom_y": 683,
+          "caption_left_x": 526,
+          "caption_right_x": 753,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 7,
+          "scene": "closing",
+          "time": 21.93,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/frames/cue07_closing_21.93s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 619,
+          "caption_bottom_y": 683,
+          "caption_left_x": 265,
+          "caption_right_x": 1014,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 8,
+          "scene": "closing",
+          "time": 26.06,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/full/qa/frames/cue08_closing_26.06s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 620,
+          "caption_bottom_y": 683,
+          "caption_left_x": 309,
+          "caption_right_x": 969,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        }
+      ],
+      "scope": "All slide PNGs and caption-midpoint frames; no human pronunciation approval."
+    },
+    "variant": {
+      "checks": {
+        "res_1280x720": true,
+        "h264": true,
+        "aac": true,
+        "one_video_one_audio": true,
+        "duration_20_70": true,
+        "all_notes_match_captions": true,
+        "deck_notes_match": true,
+        "deck_titles_match": true,
+        "srt_matches_ass": true,
+        "slides_bottom_empty": true,
+        "captions_in_bottom_25pct": true,
+        "captions_inside_frame": true,
+        "rendered_html_titles_exact": true
+      },
+      "duration_sec": 27.84,
+      "files": {
+        "mp4": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/video.mp4",
+        "mp4_sha256": "5dec053fb6d98372897acfabf1e731bea78011224cdd83478bb677364f345fa2",
+        "mp4_bytes": 704404,
+        "ass": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/captions.ass",
+        "srt": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/captions.srt",
+        "source_mp4_sha256": "5dec053fb6d98372897acfabf1e731bea78011224cdd83478bb677364f345fa2"
+      },
+      "html_headings": [
+        "토요일 두 시, 가상 마을회관",
+        "가져올 것은 세 가지",
+        "단추 하나부터 천천히",
+        "<함께 & 수선>"
+      ],
+      "slide_checks": [
+        {
+          "slide_id": "s004",
+          "size": [
+            1280,
+            720
+          ],
+          "bg_rgb": [
+            243,
+            234,
+            216
+          ],
+          "bottom_nonbg_pixels": 0,
+          "top_content_pixels": 31568
+        },
+        {
+          "slide_id": "s003",
+          "size": [
+            1280,
+            720
+          ],
+          "bg_rgb": [
+            243,
+            234,
+            216
+          ],
+          "bottom_nonbg_pixels": 0,
+          "top_content_pixels": 29652
+        },
+        {
+          "slide_id": "s002",
+          "size": [
+            1280,
+            720
+          ],
+          "bg_rgb": [
+            243,
+            234,
+            216
+          ],
+          "bottom_nonbg_pixels": 0,
+          "top_content_pixels": 23276
+        },
+        {
+          "slide_id": "s001",
+          "size": [
+            1280,
+            720
+          ],
+          "bg_rgb": [
+            243,
+            234,
+            216
+          ],
+          "bottom_nonbg_pixels": 0,
+          "top_content_pixels": 20630
+        }
+      ],
+      "frames": [
+        {
+          "cue": 1,
+          "scene": "closing",
+          "time": 2.35,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/frames/cue01_closing_2.35s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 619,
+          "caption_bottom_y": 683,
+          "caption_left_x": 265,
+          "caption_right_x": 1014,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 2,
+          "scene": "closing",
+          "time": 6.48,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/frames/cue02_closing_6.48s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 620,
+          "caption_bottom_y": 683,
+          "caption_left_x": 309,
+          "caption_right_x": 969,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 3,
+          "scene": "prepare",
+          "time": 10.57,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/frames/cue03_prepare_10.57s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 619,
+          "caption_bottom_y": 683,
+          "caption_left_x": 180,
+          "caption_right_x": 1099,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 4,
+          "scene": "prepare",
+          "time": 13.55,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/frames/cue04_prepare_13.55s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 620,
+          "caption_bottom_y": 683,
+          "caption_left_x": 526,
+          "caption_right_x": 753,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 5,
+          "scene": "learn",
+          "time": 16.52,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/frames/cue05_learn_16.52s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 619,
+          "caption_bottom_y": 683,
+          "caption_left_x": 265,
+          "caption_right_x": 1014,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 6,
+          "scene": "learn",
+          "time": 19.95,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/frames/cue06_learn_19.95s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 619,
+          "caption_bottom_y": 683,
+          "caption_left_x": 451,
+          "caption_right_x": 827,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 7,
+          "scene": "opening",
+          "time": 22.61,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/frames/cue07_opening_22.61s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 619,
+          "caption_bottom_y": 683,
+          "caption_left_x": 419,
+          "caption_right_x": 860,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        },
+        {
+          "cue": 8,
+          "scene": "opening",
+          "time": 25.99,
+          "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/variant/qa/frames/cue08_opening_25.99s.png",
+          "size": [
+            1280,
+            720
+          ],
+          "caption_top_y": 620,
+          "caption_bottom_y": 683,
+          "caption_left_x": 280,
+          "caption_right_x": 999,
+          "caption_in_bottom_25pct": true,
+          "caption_inside_frame": true
+        }
+      ],
+      "scope": "All slide PNGs and caption-midpoint frames; no human pronunciation approval."
+    },
+    "original": {
+      "checks": {
+        "video_h264_1280x720": true,
+        "audio_aac": true,
+        "duration_20_to_70": true,
+        "captions_exact": true,
+        "deck_notes_exact": true,
+        "deck_titles_exact": true
+      },
+      "duration": 27.84,
+      "sha256": "7a4229f245a543b6aa6dea338f2fd18d4fba059e8c342115748e9303d8026871",
+      "frames": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/original_qa_frames",
+      "scope": "Deterministic metadata and text QA. Frame visual review is separate; no pronunciation approval."
+    },
+    "recovered": {
+      "checks": {
+        "video_h264_1280x720": true,
+        "audio_aac": true,
+        "duration_20_to_70": true,
+        "captions_exact": true,
+        "deck_notes_exact": true,
+        "deck_titles_exact": true
+      },
+      "duration": 27.84,
+      "sha256": "6c480ce21684129c17515cf326e8f7e49393949e5a73379debfcf6342b863c1e",
+      "frames": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/repair/recovered_qa_frames",
+      "scope": "Deterministic metadata and text QA. Frame visual review is separate; no pronunciation approval."
+    }
+  },
+  "preserved": {
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/input/scenes.json": true,
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/trainer/round42_base.mp4": true,
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/trainer/round42_base.captions.ass": true,
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.mp4": true,
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.captions.ass": true,
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/slides/s003.png": true,
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/round42_repaired.mp4": true,
+    "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-surigeomjeung-dongne-surigyosil/video/round42_repaired.captions.ass": true
+  },
+  "tests": {
+    "new_tests": 12,
+    "related_unique_tests": 439,
+    "initial": "432 passed, 1 failed (process cancellation timeout), 2 errors (sandbox socket bind)",
+    "retry": "23 passed without sandbox; all 3 earlier failures passed",
+    "full_backend_suite": false,
+    "entrypoint_followup": "Pre-commit found missing pytest delegation in two new files. Added __main__ delegation; new12 + single_runner4 = 16 passed."
+  },
+  "limits": [
+    "No fresh independent AI run after repair.",
+    "No human pronunciation approval.",
+    "Original free-generation main remains a different path from fixed-title template."
+  ]
+}

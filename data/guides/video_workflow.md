@@ -24,6 +24,17 @@
 HTML 삽입이 필요한 부분만 {{visual_html}}처럼 이름을 붙인다. 일반 문자열은 자동 escape한다.
 이 경로는 AI 호출 없이 기존 슬라이드 렌더러를 사용한다. 이미지 중심의 창작을 임의로 HTML로
 대체하라는 뜻은 아니다. 같은 틀이 이미 선택된 작업에서 바깥 HTML 재생성을 없애는 경로다.
+확정 제목은 행의 `title` 하나로 둔다. `fields.title`이 다르면 쓰기 전에 거절한다.
+반환 행의 `title`·`speaker_note`는 입력 복사가 아니라 저장된 덱의 실제 값이며, 재사용한 장의
+사용자 수정도 그대로 드러낸다. 렌더 전에 이 값과 확정 원고를 대조한다. custom의 덱 title만
+같다고 화면 제목까지 같다고 보장되지는 않으므로 화면도 확인한다.
+
+정확한 문구와 자막 여백이 계약이면 공통 틀의 `{{title}}`에 제목을 연결하고 본문 높이를
+명시한다(1280×720의 하단25% 확보라면 본문540px·빈 띠180px). 테마 공통 장식도 검사한다.
+현재 HTML 테마는 `.slide-container::after`에 서명을 추가하므로 완전히 빈 하단이 필요한 틀에는
+`<style>.slide-container::after{content:none !important;display:none !important}</style>`을 넣는다.
+이 CSS가 본문 도형까지 치워 주지는 않는다. 렌더된 모든 PNG의 여백과 제목을 확인한 뒤 영상화한다.
+생성 지시의 준수나 입력 메타 재독을 실제 산출물 검증으로 대신하지 않는다.
 
 ## 흐름 — "동영상 만들어줘" 의 결정론 경로
 
@@ -89,6 +100,13 @@ $굽기 = [self:script]{op:"run", id:"나레이션생성", args:{texts_file:"$�
   신호 측정만으로 자연스러움을 확정하거나 일부 구간만 확인하고 영상 전체를 검사했다고 쓰지 않는다.
 
 - **품질은 덱에서 나온다** — 슬라이드 큐레이션(slides.md §1)과 스피커 노트 퇴고가 영상 품질의 전부다. 렌더는 결정론.
+- **부분 렌더**: PNG가 없는 장은 `skipped`와 사유가 있는 `errors`로 보고하고, `expected_scenes`와
+  `rendered_slide_ids`를 보존한다. MP4가 생겨도 `source_complete:false`이며 IBL에서는
+  `PARTIAL_SOURCE`가 된다. `[catch]`의 `$error.partial`에 부분 파일·자막·누락 정보가 있다.
+  `check:true`와 `self:task`의 status/wait/cancel도 이 완전성을 전달한다. 작업 상태 succeeded는
+  렌더 프로세스 종료이고 전건 달성은 아니다. task 경로의 partial은 투영이므로 파일은 `.result.output`이다.
+  복구 뒤 새 파일명으로 다시 렌더하고 원본은 보존한다. 실강 녹음에서 안 띄운 `unrecorded`와
+  의도적으로 노트가 없는 장은 PNG 접근 실패가 아니므로 구분한다.
 - 실패한 렌더는 `check: true` 의 error 를 읽고 원인(TTS 실패·PNG 누락 등)을 고친 뒤 재호출.
   `interrupted` = 렌더가 끝나기 전에 끊긴 것(프로세스 사망) — 원인 로그는 `video/render.log`, 그냥 다시 부르면 된다.
 - **폴링은 상태 파일을 직접 긁지 말고 `check: true` 로** — 파일만 보면 죽은 렌더의 `building` 을 그대로 믿게 된다

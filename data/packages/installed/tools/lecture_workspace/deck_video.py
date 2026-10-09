@@ -82,6 +82,9 @@ def status(lecture_id: str) -> dict:
     구별되지 않으면 부르는 쪽은 영원히 기다린다.
     """
     st = read_state(lecture_id)
+    if st.get("status") == "done":
+        # 예전 상태 파일도 skipped가 있으면 완전한 원천으로 되살리지 않는다.
+        return {**st, **_completion(st)}
     if st.get("status") != "building":
         return st
 
@@ -101,6 +104,18 @@ def status(lecture_id: str) -> dict:
     st = {**st, "status": "interrupted", "error": f"{why} — 렌더가 끝나기 전에 끊겼습니다."}
     write_state(lecture_id, st)
     return st
+
+
+def _completion(result: dict) -> dict:
+    """렌더 종료와 원천 완전성은 별개. 부분 파일은 기존 반환에 보존한다."""
+    skipped = result.get("skipped") or []
+    complete = not skipped and result.get("source_complete") is not False
+    out = {"source_complete": complete, "errors": result.get("errors") or []}
+    if not complete:
+        out["warning"] = result.get("warning") or (
+            f"슬라이드 PNG {len(skipped)}개 누락 — 부분 영상입니다: {', '.join(skipped)}"
+        )
+    return out
 
 
 def _load_media_handler():
@@ -217,28 +232,34 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
     slides = deck.get("slides") or {}
 
     scenes, narrations, missing_notes, skipped = [], [], [], []
+    errors, rendered_ids = [], []
     preset_audio = []
     live_info: dict = {}
 
-    def _scene(png_path: Path, duration: float) -> None:
+    def _scene(sid: str, duration: float) -> bool:
+        meta = slides.get(sid) or {}
+        png_path = lecture_dir_path / (meta.get("png_file") or "")
+        if not meta.get("png_file") or not png_path.is_file():
+            skipped.append(sid)
+            errors.append({"slide_id": sid, "path": str(png_path),
+                           "reason": "png_not_file" if meta.get("png_file") else "png_path_missing"})
+            return False
         scenes.append({
             "html": _scene_html_from_png(png_path, width, height),
             "duration": float(duration),
             # ★덱 슬라이드는 정지 PNG 한 장이다 — 렌더러가 재볼 필요가 없다(프로브 비용 0).
             "static": True,
         })
+        rendered_ids.append(sid)
+        return True
 
     live = live_recording(lecture_id)
     if live:
         # ── 실강 녹음 경로 — 씬 길이도 순서도 녹음 타임라인이 정한다 ──
         segs = slice_recording(live, on_progress=on_progress)
         for seg in segs:
-            meta = slides.get(seg["slide_id"]) or {}
-            png = lecture_dir_path / (meta.get("png_file") or "")
-            if not meta.get("png_file") or not png.exists():
-                skipped.append(seg["slide_id"])
+            if not _scene(seg["slide_id"], seg["duration"]):
                 continue
-            _scene(png, seg["duration"])
             narrations.append("")                    # TTS 를 타지 않는다
             preset_audio.append(seg["path"])
         shown = {s["slide_id"] for s in segs}
@@ -256,11 +277,8 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
         narration_dir = lecture_dir_path / "narration"
         for sid in order:
             meta = slides.get(sid) or {}
-            png = lecture_dir_path / (meta.get("png_file") or "")
-            if not meta.get("png_file") or not png.exists():
-                skipped.append(sid)
+            if not _scene(sid, float(opts.get("duration_per_scene") or 5)):
                 continue
-            _scene(png, float(opts.get("duration_per_scene") or 5))
             note = (meta.get("speaker_note") or "").strip()
             narrations.append(note)      # 빈 노트 = 무나레이션 씬 (html_video 가 기본 길이로 처리)
             ready = narration_dir / f"{sid}.wav"
@@ -380,6 +398,9 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
         "narrated": len(scenes) - len(missing_notes),
         "preset_narration": sum(1 for p in preset_audio if p),   # 미리 구운 오디오를 쓴 장 수
         "missing_notes": missing_notes, "skipped": skipped,
+        "expected_scenes": len(scenes) + len(skipped),
+        "rendered_slide_ids": rendered_ids,
+        **_completion({"skipped": skipped, "errors": errors}),
         **caption_info, **live_info,
     }
 
@@ -455,5 +476,8 @@ def task_status(ref: dict) -> dict:
         return T.view(ref, T.UNKNOWN, error=f"강의 '{ref['task_id']}' 의 렌더 상태 기록이 없습니다")
     state = _TASK_STATES.get(st.get("status"), T.UNKNOWN)
     progress = {k: st.get(k) for k in ("stage", "index", "total", "detail", "alive", "age_sec") if k in st}
+    # 어댑터가 아는 결과 경계만 승계한다. 일반 task 값의 내부 필드를 재귀 해석하지 않는다.
+    completion = _completion(st) if state == T.SUCCEEDED else {}
     return T.view(ref, state, progress=progress or None, result=st if state == T.SUCCEEDED else None,
-                  error=st.get("error") if state in (T.FAILED, T.INTERRUPTED) else None, raw=st)
+                  error=st.get("error") if state in (T.FAILED, T.INTERRUPTED) else None, raw=st,
+                  **completion)

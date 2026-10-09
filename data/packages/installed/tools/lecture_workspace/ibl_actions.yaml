@@ -106,7 +106,7 @@ actions:
     runs_on: pc_only
     description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기 / 나레이션 동영상 렌더.
     group: lecture
-    target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx|images). video는 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 동영상(MP4)으로 — 기본 백그라운드(별도 프로세스, 즉시 반환), 진행 확인은 check:true, wait:true=동기. 옵션 engine/voice/style/rate/transition/bgm_path/output_filename/captions (captions=true면 스피커 노트 기반 자막을 영상에 합성하고 ASS 원본도 보존, 기본 false). 나레이션 기본 = Gemini TTS Charon. 노트 없는 장은 무나레이션 씬.
+    target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx|images). video는 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 동영상(MP4)으로 — 기본 백그라운드(별도 프로세스, 즉시 반환), 진행 확인은 check:true, wait:true=동기. 옵션 engine/voice/style/rate/transition/bgm_path/output_filename/captions (captions=true면 스피커 노트 기반 자막을 영상에 합성하고 ASS 원본도 보존, 기본 false). 나레이션 기본 = Gemini TTS Charon. 노트 없는 장은 무나레이션 씬. PNG 누락은 부분 파일·skipped·errors·expected_scenes·rendered_slide_ids를 보존하고 source_complete:false로 신고한다. IBL은 PARTIAL_SOURCE의 partial로 회수하며 동기·check·task 조회에 같은 완전성 표지가 적용된다.
     target_key: op
     router: handler
     tool: deck_op
@@ -323,7 +323,7 @@ tool_json:
 
       - export: PDF/PPTX/이미지 폴더로 내보내기 (lecture_id, format). outputs/lectures/{id}/exports/ 저장.
 
-      - video: 나레이션 동영상 렌더 (lecture_id) — 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 MP4 로. captions=true면 libass 없이 자막을 영상에 합성하고 ASS 원본도 저장(기본 false). 기본 백그라운드(별도 프로세스라 백엔드 리로드에 안 죽음, 즉시 반환), 진행=check:true 또는 video_state.json, wait:true=동기. lecture_dir/video/ 저장.'
+      - video: 나레이션 동영상 렌더 (lecture_id) — 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 MP4 로. captions=true면 libass 없이 자막을 영상에 합성하고 ASS 원본도 저장(기본 false). 기본 백그라운드(별도 프로세스라 백엔드 리로드에 안 죽음, 즉시 반환), 진행=check:true 또는 video_state.json, wait:true=동기. lecture_dir/video/ 저장. PNG 누락은 부분 산출물을 보존하고 source_complete:false(PARTIAL_SOURCE)로 전달한다.'
     input_schema:
       type: object
       properties:

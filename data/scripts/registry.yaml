@@ -219,7 +219,7 @@ AI동향발행:
   description: '공통 HTML 틀 한 벌 + 장별 JSON을 AI 호출 없이 덱에 적용. args: lecture_id, lecture_dir(선택),
     template_path({{slot}} 틀 파일), contents_path([{id,title,speaker_note,fields:{...}}]
     파일), inspect. 문자열은 HTML escape, *_html 슬롯만 명시적 HTML 삽입. 변경된 장만 렌더. 창작 그림/SVG는
-    내용 JSON에 따로 제작하고 바깥 HTML을 반복 생성하지 않음.'
+    내용 JSON에 따로 제작하고 바깥 HTML을 반복 생성하지 않음. title과 fields.title 충돌은 거절. 반환 title/speaker_note는 저장된 덱의 실제 값(사용자 수정 포함).'
   file: 슬라이드틀적용.py
   interpreter: python
   registered_at: '2026-09-11T00:00:00'

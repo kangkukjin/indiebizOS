@@ -887,7 +887,7 @@
   "self:deck": {
    "fields": {
     "description": "86a9f2bdf7f1",
-    "target_description": "a1dc5694d791",
+    "target_description": "d786700af7c1",
     "implementation": "d922d9e1860f",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
@@ -896,8 +896,8 @@
     "router": "ebbb1532efbc",
     "tool": "2705c1619ee0"
    },
-   "reviewed": "2026-09-18",
-   "examples": 13
+   "reviewed": "2026-10-09",
+   "examples": 14
   },
   "self:delete": {
    "fields": {

@@ -4,11 +4,13 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
-## 42회차 — 동영상 제작: 장면·음성·자막·부분 실패 (2026-10-09, 훈련 완료·수리 없음)
+## 42회차 — 동영상 제작: 장면·음성·자막·부분 실패 (2026-10-09, 훈련·수리 완료)
 
 합성 4장면 홍보영상. 최초 전체 IBL은 검사 거절·수정 0회, HTTP 113.008초·319단계로 27.84초 H.264 1280×720/AAC·구운 자막 8큐를 생성했다. 원고와 자막은 전건 일치하나 제목 마침표 추가와 하단 서명으로 **부분 달성**. 독립 AI ep4496은 기존 `슬라이드틀적용`을 회상·재사용하고 서명 제거 뒤 완성(345.103초, 입력3,970,504/출력30,745; 캐시 입력 포함).
 PNG 1장 누락 시 양쪽 렌더러가 3장·21.89초·skipped=[s003]을 success:true로 반환. **L42-1** 훈련자 실행의 source_complete도 true인 부분 결과 전파 공백. 별도 조건/AI 판단은 미완료로 식별했다. 훈련자 복구는 prepared 참조→렌더만13.491초, 독립 AI ep4497은 자기 틀로 s003만 복구(297.494초, 입력2,333,617/출력24,886). 기본 MP4/ASS 지문 불변, 모든 작업 종료 확인.
 **L42-2** 입력 목표를 결과 메타처럼 기록하고 실제 제목·테마 공통 장식 제약을 늦게 대조한 작성/검수 공백. 훈련자 내부 저작모델4회44,459/8,189, Codex 자체 비용 미측정. 독립 AI는 IBL+등록 Script+자체 검수 Python으로 수행했으며 단일 전체 IBL 독립 작성 성공과 구별한다. 발음 청취 미검증·전수 회귀 미실행, 구현 변경 없음. [보고서·증거·프로그램](experiments/long_sentence_imagination/round_42/report.md).
+
+후속 수리: L42-1 누락 PNG의 source_complete:false/PARTIAL_SOURCE를 동기·상태·작업 경계에 연결. L42-2 실제 덱 메타 반환·제목 충돌 거절·공통 틀과 결과 대조를 보강했다. 최초 전체·수정 전체·누락/복구·새 역순/특수문자 변형 실검증, 관련 고유439검사 확인(권한 제한 재시도23통과 포함). 기본/변형27.84초 영상의 제목·여백·자막13항목 통과. [수리 증거와 한계](experiments/long_sentence_imagination/round_42/repair.md).
 
 ## 41회차 — 소규모 사용자 실험의 연구 보고서 (2026-10-09, 후속 수리)
 
@@ -252,8 +254,8 @@ AI 기본401.741초·도구18·입력1,866,084/출력10,458, 변형358.943초·�
 
 | ID | 원인 분류·막힌 연결 | 최소 재현·관측 근거 | 상태·다음 조치 | 수리 커밋·전체/변형 검증 |
 | --- | --- | --- | --- | --- |
-| L42-1 | 부분 결과 전파·완료 계약 — PNG 누락 1장에도 렌더 success:true, slides:3, skipped:[s003], IBL source_complete:true | 기본 4장 덱에서 s003 PNG만 이동, 동일 렌더 3장/자막6큐; 양쪽 실행 재현. 별도 완료 조건은 false | 열림·수리 없음. 누락 이유/부분 파일을 보존해 공통 불완전성 표지로 전달하고 명시 제외와 구분 | [42회차](experiments/long_sentence_imagination/round_42/report.md) |
-| L42-2 | 작성·생성물 검수 — 입력 title을 실제 결과처럼 기록; 실제 제목에는 마침표 추가, 하단25% 비우기에도 테마 서명 잔존 | 훈련자 deck.json/표본 프레임 대조; 독립 AI도 최초 서명을 발견한 뒤 자기 공통 틀에서 제거 | 열림·시스템 수리 없음. 확정 필드와 자유 저작 분리, 생성물 대조·공통 장식 제약 명시. 독립 AI 산출물만 보완 | [42회차](experiments/long_sentence_imagination/round_42/report.md) |
+| L42-1 | 부분 결과 전파·완료 계약 — PNG 누락 1장에도 렌더 success:true, slides:3, skipped:[s003], IBL source_complete:true | 기본 4장 덱에서 s003 PNG만 이동, 동일 렌더 3장/자막6큐; 양쪽 실행 재현. 별도 완료 조건은 false | 수리 완료. 누락 이유·부분 파일을 보존하고 동기/check/task 모두 PARTIAL_SOURCE 전파. 실강 미노출·무노트 구분 | [42회차](experiments/long_sentence_imagination/round_42/report.md) |
+| L42-2 | 작성·생성물 검수 — 입력 title을 실제 결과처럼 기록; 실제 제목에는 마침표 추가, 하단25% 비우기에도 테마 서명 잔존 | 훈련자 deck.json/표본 프레임 대조; 독립 AI도 최초 서명을 발견한 뒤 자기 공통 틀에서 제거 | 수리 완료(작성·틀 경로). 실제 저장 메타 반환·제목 충돌 거절, 전체 프로그램의 실제 대조·여백 검수. 임의 생성형 화면의 전역 보장은 아님 | [42회차](experiments/long_sentence_imagination/round_42/report.md) |
 | L41-4 | 진단 안내 공백(파서) — 독립 AI 의 검사 거절 2건은 `for` 문법 요구가 아니었다: ① Python 컴프리헨션 `[x.name for x in $f]` → "']'가 필요합니다: for" 만(대안 `map($f,($x)=>$x.name)` 안내 없음) ② `$i = [engines:image_read]…` → "읽기 전용 바인딩: $i"(예약 이름·대안 미안내, repeat 밖에서도 예약) | ep4491 trajectory seq 50/53·131/134 (`data/spill/supervision/2660fc4f…/events.jsonl`) | 수리 — 목록 컴프리헨션 오류에 map/filter/each 대안과 for 위치를 안내. READONLY에 예약 바인딩 역할·블록 밖 예약·새 변수 이름을 안내. 문법/실행 의미 유지·관련80건 통과 | [41회차](experiments/long_sentence_imagination/round_41/report.md) |
 | L41-3 | 재사용 공백·침묵(실행기) — 쓰기 자원을 선언하지 않는 도구(`table:chart`)가 한 번이라도 불리면 "자원 미상은 전체" 규칙으로 프로그램의 **모든 읽기**가 재사용 후보에서 빠진다(`continuation.read_calls 0`). 그림이 있는 보고서 프로그램은 자료 정정 뒤 reuse 가 0건·이유 `no_matching_receipt`(원인 미표시) | `round_41/evidence/probe_chartreuse.json`(read_calls 0) vs `probe_writereuse.json`(read_calls 2, 차트만 제거), 전체 프로그램 `trainer_v1b_main_v3_reuse.json`(skipped 20 no_matching_receipt) | 수리 — chart 쓰기 자원·별칭 해소, continuation 제외 원인·위치·건수 영속 신고. 전체 프로그램 57/64·새 변형 63/64 재사용 | [41회차](experiments/long_sentence_imagination/round_41/report.md) |
 | L41-1 | 계약 불일치(도구) — `table:chart` 의 `output_format:"png"` 가 무시되고 확장자 없는 `output_path` 를 "Cannot infer image type" 으로 거절(spec·table 형 모두). 설명은 output_path 를 경로 stem 으로 안내 | `round_41/evidence/trainer_base_main_v2.json`(TOOL), `probe_chart_format2.json`(table 형 동일). `.png` 를 붙이면 성공(`trainer_base_main_v3.json`) | 수리 — 두 PNG 저장기가 format 명시, stem 경로 자체에 저장·반환. 실제 spec/table PNG 검사 통과 | [41회차](experiments/long_sentence_imagination/round_41/report.md) |

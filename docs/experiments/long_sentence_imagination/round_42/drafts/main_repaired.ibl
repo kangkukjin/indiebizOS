@@ -1,0 +1,28 @@
+#!ibl edition=2
+[def:기록하기]($out,$name,$record) {
+  $path = f"${out}/${name}.json"
+  [self:write]{path:$path,content:json($record)}
+  $again = [self:read]{path:$path,format:"json"}
+  return $again.data
+}
+$source = [self:read]{path:$input,format:"json"}
+$designs = [self:read]{path:$contents,format:"json"}
+[if:len($source.data.scenes) != len($designs.data.items)] {
+  return {complete:false,reason:"원고와 시각 자료의 장면 수 불일치"}
+}
+$rows = map(zip($source.data.scenes,$designs.data.items),($p)=>{id:$p[1].id,title:$p[0].title,speaker_note:$p[0].note,fields:$p[1].fields})
+[self:write]{path:f"${out}/contents.json",content:json($rows)}
+$lecture = [self:lecture]{op:"create",title:$title,audience:"바느질 입문자",thesis:"버리기 전에 함께 수선해요",design_system:"ink_orange"}
+$created = [self:script]{op:"run",id:"슬라이드틀적용",args:{lecture_id:$lecture.lecture_id,template_path:$template,contents_path:f"${out}/contents.json"}}
+$mismatches = filter(zip($created.items,$rows),($p)=>$p[0].id != $p[1].id or $p[0].title != $p[1].title or $p[0].speaker_note != $p[1].speaker_note)
+[if:len($created.items) != len($rows) or len($mismatches) > 0] {
+  return [fn:기록하기]{out:$out,name:"rejected",record:{complete:false,actual:$created.items,expected:$rows,reason:"실제 저장 결과 불일치"}}
+}
+$order = map($created.items,($s)=>$s.id)
+[self:deck]{op:"reorder",lecture_id:$lecture.lecture_id,order:$order}
+$prepared = [fn:기록하기]{out:$out,name:"prepared",record:{lecture_id:$lecture.lecture_id,scenes:$created.items,order:$order,expected:$rows}}
+$render = [self:deck]{op:"video",lecture_id:$lecture.lecture_id,engine:"edge",voice:"ko-KR-SunHiNeural",rate:"+0%",captions:true,width:1280,height:720,transition:"fade",output_filename:"round42_repaired.mp4",wait:true}
+$captions = [self:read]{path:$render.caption_file,format:"text"}
+$audio = [sense:listen]{op:"inspect",path:$render.output}
+$report = {lecture_id:$lecture.lecture_id,scenes:$created.items,render:$render,caption_source:$captions.text,audio:$audio,complete:$render.source_complete and $render.slides == len($rows),review_scope:"실제 덱 제목·노트 대조 완료. 화면·자막 여백과 발음은 별도 검수."}
+return [fn:기록하기]{out:$out,name:"production",record:$report}

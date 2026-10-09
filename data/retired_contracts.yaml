@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: deck-missing-png-complete
+    retired: 2026-10-09
+    reason: PNG가 없는 장을 건너뛴 부분 영상이 IBL에서 완전한 원천으로 통과했다.
+    instead: 부분 파일과 누락 이유를 보존하고 source_complete:false를 동기·check·task 결과 경계에 전달한다. 작업 종료와 전건 달성은 별개다.
+    phrases: ['PNG 누락을 건너뛴 영상도 완전한 성공이다']
   - id: ai-schema-names-only
     retired: 2026-10-09
     reason: AI 추출 schema의 명시적 스칼라 타입이 검사에서 Unknown으로 소실되어 null 산술 실패를 실행 전에 찾지 못했다.

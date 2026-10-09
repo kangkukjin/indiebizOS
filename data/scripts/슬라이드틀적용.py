@@ -4,6 +4,8 @@ args: lecture_id, lecture_dir(선택), template_path, contents_path, inspect(기
 contents=[{id,title,speaker_note,fields:{subtitle,visual_html,...}}].
 speaker_note는 새 슬라이드 노트의 초깃값이다. 기존 노트는 보존하며 정본 원고는 영상제작파이프라인으로 적용한다.
 틀의 {{slot}}은 일반 문자열을 HTML escape, *_html만 명시적 HTML로 삽입한다.
+title은 행의 확정 제목이며 fields.title이 다른 값이면 쓰기 전에 거절한다.
+반환 title/speaker_note는 저장된 덱에서 읽은 실제 값이다(재사용·사용자 수정 포함).
 """
 from filelock import FileLock
 import hashlib
@@ -34,7 +36,10 @@ def specs(template, rows):
         if not re.fullmatch(r"s[0-9]{3,6}", sid) or sid in seen:
             raise ValueError("슬라이드 ID 중복 또는 잘못된 형식")
         seen.add(sid)
-        fields = {"title": row["title"], **row.get("fields", {})}
+        supplied = row.get("fields", {})
+        if "title" in supplied and supplied["title"] != row["title"]:
+            raise ValueError(f"{sid}: fields.title은 행의 title과 같아야 합니다")
+        fields = {**supplied, "title": row["title"]}
         if names - fields.keys() or any(not isinstance(fields[n], str) for n in names):
             raise ValueError(f"{sid}: 슬롯이 없거나 문자열이 아닙니다: {sorted(names - fields.keys())}")
         def replace(match):
@@ -80,7 +85,9 @@ def apply(args):
                 tmp_state = state_path.with_suffix(".json.tmp")
                 tmp_state.write_text(json.dumps(state, ensure_ascii=False))
                 tmp_state.replace(state_path)
-            items.append({"id": sid, "path": str(png), "reused": reused})
+            saved = lecture_store.read_deck(lecture_id)["slides"][sid]
+            items.append({"id": sid, "path": str(png), "reused": reused,
+                          "title": saved["title"], "speaker_note": saved.get("speaker_note", "")})
         return {"success": True, "items": items, "model_calls": 0}
 
 

@@ -1,0 +1,530 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n[def:참조]($snap,$role,$name) {\n  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}\n  return len($m)>0 ? $m[0].ref : null\n}\n$tl0=[limbs:browser]{op:\"tab\", mode:\"list\"}\n$sw_idx=[try]{ [limbs:browser]{op:\"tab\", mode:\"switch\", index:1} } [catch]{ {err:$error.message} }\n$sw_url=[try]{ [limbs:browser]{op:\"tab\", mode:\"switch\", url:\"8969\"} } [catch]{ {err:$error.message} }\n$tl1=[limbs:browser]{op:\"tab\", mode:\"list\"}\n$s=[limbs:browser]{op:\"snapshot\"}\n$t1=[limbs:browser]{op:\"type\", ref:[fn:참조]{snap:$s, role:\"textbox\", name:\"이용자 ID\"}, text:\"lsi46_traveler\"}\n$t2=[limbs:browser]{op:\"type\", ref:[fn:참조]{snap:$s, role:\"textbox\", name:\"비밀번호\"}, text:\"<password>\", submit:true}\n$s1=[limbs:browser]{op:\"snapshot\"}\n$cons=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s1, role:\"button\", name:\"필수만 동의\"}}\n$s2=[limbs:browser]{op:\"snapshot\"}\n$cal=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s2, role:\"button\", name:\"날짜 선택\"}}\n$s3=[limbs:browser]{op:\"snapshot\"}\n$day=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s3, role:\"button\", name:\"2026-11-14\"}}\n$nt=[limbs:browser]{op:\"select\", ref:[fn:참조]{snap:$s3, role:\"combobox\", name:\"박수\"}, label:\"2박\"}\n$plus=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s3, role:\"button\", name:\"인원 늘리기\"}}\n$s4=[limbs:browser]{op:\"snapshot\"}\n$go=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s4, role:\"button\", name:\"검색\"}}\n$c=[limbs:browser]{op:\"content\", mode:\"text\"}\n$s5=[limbs:browser]{op:\"snapshot\"}\n$links=$s5.snapshot >> [table:filter]{where:($e)=>$e.role==\"link\" and contains($e.name,\"예약 보류\")}\n$hold=[limbs:browser]{op:\"click\", ref:$links[0].ref}\n$c2=[limbs:browser]{op:\"content\", mode:\"text\"}\n$fl=[limbs:browser]{op:\"iframe\", mode:\"list\"}\n$fs=[limbs:browser]{op:\"iframe\", mode:\"switch\", name:\"terms\"}\n$s6=[limbs:browser]{op:\"snapshot\"}\n$ck=[limbs:browser]{op:\"check\", ref:[fn:참조]{snap:$s6, role:\"checkbox\", name:\"약관\"}}\n$fr=[limbs:browser]{op:\"iframe\", mode:\"reset\"}\n$s7=[limbs:browser]{op:\"snapshot\"}\n$sub=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s7, role:\"button\", name:\"예약 보류 신청\"}, dialog:\"accept\"}\n$c3=[limbs:browser]{op:\"content\", mode:\"text\"}\n$pdf=[limbs:browser]{op:\"pdf\", path:$pdfpath}\n$rd=[self:read]{path:$pdfpath}\nreturn {tabs0:$tl0.count, switch_index:$sw_idx, switch_url:$sw_url, active_after:$tl1.active_tab, login_url:$s1.url, rooms_text:$c.text, hold_url:$c2.url, hold_text:$c2.text, frames:$fl, check:$ck, submit:$sub, done_url:$c3.url, done_text:$c3.text, pdf:$pdf, pdf_text:$rd.text}\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "task_id": "lsi46_probe",
+  "inputs": {
+   "tab2": "a98f0a5063e5-t2",
+   "pdfpath": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_46회차/_site/probe_B/hold_probe.pdf"
+  }
+ },
+ "response": {
+  "success": false,
+  "error": "요소를 찾을 수 없습니다:  (ref=e37). 화면 변경 후에는 browser_snapshot을 다시 호출하고 새 ref를 선택하세요.",
+  "diagnostic": {
+   "code": "TOOL",
+   "kind": "runtime",
+   "message": "요소를 찾을 수 없습니다:  (ref=e37). 화면 변경 후에는 browser_snapshot을 다시 호출하고 새 ref를 선택하세요.",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [
+    394
+   ],
+   "details": {
+    "error_code": "REF_NOT_RESOLVED",
+    "recovery": {
+     "op": "snapshot",
+     "reason": "요소가 사라졌거나 신원을 유일하게 확인할 수 없습니다."
+    }
+   },
+   "source_span": {
+    "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+    "start": 1579,
+    "end": 1625,
+    "line": 26,
+    "column": 7
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "ce8cda9b4196d0eebe86727b5a64ff1f70485e25bd85501c8fd0edbb6202ec45",
+  "source_complete": false,
+  "usage": {
+   "steps": 1988,
+   "rows": 0,
+   "elapsed_ms": 1755,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "binary:98:112",
+     "steps": 186,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 98,
+      "end": 112,
+      "line": 3,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "binary:98:140",
+     "steps": 186,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 98,
+      "end": 140,
+      "line": 3,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "field:98:105",
+     "steps": 186,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 98,
+      "end": 105,
+      "line": 3,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "ref:107:112",
+     "steps": 186,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 107,
+      "end": 112,
+      "line": 3,
+      "column": 62
+     }
+    },
+    {
+     "node_id": "ref:98:100",
+     "steps": 186,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 98,
+      "end": 100,
+      "line": 3,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "pure_call:117:140",
+     "steps": 174,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 117,
+      "end": 140,
+      "line": 3,
+      "column": 72
+     }
+    },
+    {
+     "node_id": "builtin:117:125",
+     "steps": 87,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 117,
+      "end": 125,
+      "line": 3,
+      "column": 72
+     }
+    },
+    {
+     "node_id": "field:126:133",
+     "steps": 87,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 126,
+      "end": 133,
+      "line": 3,
+      "column": 81
+     }
+    },
+    {
+     "node_id": "ref:126:128",
+     "steps": 87,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 126,
+      "end": 128,
+      "line": 3,
+      "column": 81
+     }
+    },
+    {
+     "node_id": "ref:134:139",
+     "steps": 87,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 134,
+      "end": 139,
+      "line": 3,
+      "column": 89
+     }
+    },
+    {
+     "node_id": "binary:1526:1541",
+     "steps": 38,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 1526,
+      "end": 1541,
+      "line": 25,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "binary:1526:1571",
+     "steps": 38,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 1526,
+      "end": 1571,
+      "line": 25,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "field:1526:1533",
+     "steps": 38,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 1526,
+      "end": 1533,
+      "line": 25,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "literal:1535:1541",
+     "steps": 38,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 1535,
+      "end": 1541,
+      "line": 25,
+      "column": 60
+     }
+    },
+    {
+     "node_id": "ref:1526:1528",
+     "steps": 38,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 1526,
+      "end": 1528,
+      "line": 25,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "pure_call:151:158",
+     "steps": 16,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 151,
+      "end": 158,
+      "line": 4,
+      "column": 10
+     }
+    },
+    {
+     "node_id": "pure_call:1546:1571",
+     "steps": 10,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 1546,
+      "end": 1571,
+      "line": 25,
+      "column": 71
+     }
+    },
+    {
+     "node_id": "binary:151:160",
+     "steps": 8,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 151,
+      "end": 160,
+      "line": 4,
+      "column": 10
+     }
+    },
+    {
+     "node_id": "bind:48:141",
+     "steps": 8,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 48,
+      "end": 141,
+      "line": 3,
+      "column": 3
+     }
+    },
+    {
+     "node_id": "builtin:151:154",
+     "steps": 8,
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 151,
+      "end": 154,
+      "line": 4,
+      "column": 10
+     }
+    }
+   ],
+   "steps_other": 296,
+   "steps_by_line": [
+    {
+     "line": 3,
+     "steps": 1508,
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 25,
+     "steps": 227,
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 4,
+     "steps": 96,
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 7,
+     "steps": 12,
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 8,
+     "steps": 12,
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 12,
+     "steps": 11,
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 11,
+     "steps": 10,
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 19,
+     "steps": 10,
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 2,
+     "steps": 9,
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 14,
+     "steps": 9,
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 26,
+     "ms": 518,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 14,
+     "ms": 86,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 17,
+     "ms": 48,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 22,
+     "ms": 47,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 19,
+     "ms": 46,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 16,
+     "ms": 40,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 12,
+     "ms": 39,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 24,
+     "ms": 38,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 13,
+     "ms": 35,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    },
+    {
+     "line": 20,
+     "ms": 31,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "c4091382c3344f0abcf604a3476cc64d"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "read_exclusions": [
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "e1f07d18515738f01c3a0e0f4aeedfd4ac2bb1f01238e1ba10cf996f35d21af2",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 509,
+      "end": 611,
+      "line": 11,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "3ba465918e386044042b138e5d087948b12eed00754304a33b471f58618088cc",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 770,
+      "end": 850,
+      "line": 14,
+      "column": 7
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "6c6ff09a711411f273f77d4604b2b42fd176a39590800b2eabb77216ecae28cf",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 891,
+      "end": 970,
+      "line": 16,
+      "column": 6
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "0612743990f1b0a2bc8cfab553216c2b1a8a4e4aec4748bd0bfd5107cf6fcb15",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 1011,
+      "end": 1095,
+      "line": 18,
+      "column": 6
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "a4823505613e108db3aa56bc52e1919ed73d77f4009f92f0ab78c4b9a700a01e",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 1318,
+      "end": 1394,
+      "line": 22,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "9e539203c067de952f9f10153445e98f8764d273a5d3561caaac62fe12920a80",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "f9173a516a5994b5252bae8bac5afb4366c1481f601e11c9572cab0ee876ce7f",
+      "start": 1579,
+      "end": 1625,
+      "line": 26,
+      "column": 7
+     },
+     "excluded_calls": 2
+    }
+   ],
+   "read_exclusions_total": 6,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "c4091382c3344f0abcf604a3476cc64d",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  },
+  "request_inputs": {
+   "input_args": {
+    "tab2": {
+     "$ref": "7e7b9bfbe291d307acb9f259d6d7c48092f49159d68c9f218bd83a0c348f2d0b"
+    },
+    "pdfpath": {
+     "$ref": "a62b515d40354c1d879d0ef2a68da61bee85cb94063e3584dc0ca009594902be"
+    }
+   },
+   "unavailable": {},
+   "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  }
+ },
+ "elapsed": 1.791398048400879
+}

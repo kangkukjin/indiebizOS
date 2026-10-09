@@ -1,0 +1,191 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n[def:참조]($snap,$role,$name) {\n  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}\n  return len($m)>0 ? $m[0].ref : null\n}\n$tl0=[limbs:browser]{op:\"tab\", mode:\"list\"}\n$sw=[limbs:browser]{op:\"tab\", mode:\"switch\", tab_id:$tab2}\n$s=[limbs:browser]{op:\"snapshot\"}\n$t1=[limbs:browser]{op:\"type\", ref:[fn:참조]{snap:$s, role:\"textbox\", name:\"이용자 ID\"}, text:\"lsi46_traveler\"}\n$t2=[limbs:browser]{op:\"type\", ref:[fn:참조]{snap:$s, role:\"textbox\", name:\"비밀번호\"}, text:\"<password>\", submit:true}\n$s1=[limbs:browser]{op:\"snapshot\"}\n$cons=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s1, role:\"button\", name:\"필수만 동의\"}}\n$s2=[limbs:browser]{op:\"snapshot\"}\n$cal=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s2, role:\"button\", name:\"날짜 선택\"}}\n$s3=[limbs:browser]{op:\"snapshot\"}\n$day=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s3, role:\"button\", name:\"2026-11-14\"}}\n$nt=[limbs:browser]{op:\"select\", ref:[fn:참조]{snap:$s3, role:\"combobox\", name:\"박수\"}, label:\"2박\"}\n$plus=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s3, role:\"button\", name:\"인원 늘리기\"}}\n$s4=[limbs:browser]{op:\"snapshot\"}\n$go=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s4, role:\"button\", name:\"검색\"}}\n$c=[limbs:browser]{op:\"content\", mode:\"text\"}\n$s5=[limbs:browser]{op:\"snapshot\"}\n$links=$s5.snapshot >> [table:filter]{where:($e)=>$e.role==\"link\" and contains($e.name,\"예약 보류\")}\n$hold=[limbs:browser]{op:\"click\", ref:$links[0].ref}\n$c2=[limbs:browser]{op:\"content\", mode:\"text\"}\n$fl=[limbs:browser]{op:\"iframe\", mode:\"list\"}\n$fs=[limbs:browser]{op:\"iframe\", mode:\"switch\", name:\"terms\"}\n$s6=[limbs:browser]{op:\"snapshot\"}\n$ck=[limbs:browser]{op:\"check\", ref:[fn:참조]{snap:$s6, role:\"checkbox\", name:\"약관\"}}\n$fr=[limbs:browser]{op:\"iframe\", mode:\"reset\"}\n$s7=[limbs:browser]{op:\"snapshot\"}\n$sub=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s7, role:\"button\", name:\"예약 보류 신청\"}, dialog:\"accept\"}\n$c3=[limbs:browser]{op:\"content\", mode:\"text\"}\n$pdf=[limbs:browser]{op:\"pdf\", path:$pdfpath}\n$rd=[self:read]{path:$pdfpath}\nreturn {tabs0:$tl0.count, switch:$sw, login_url:$s1.url, rooms_text:$c.text, hold_url:$c2.url, hold_text:$c2.text, frames:$fl, check:$ck, submit:$sub, done_url:$c3.url, done_text:$c3.text, pdf:$pdf, pdf_text:$rd.text}\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "task_id": "lsi46_probe",
+  "inputs": {
+   "tab2": "a98f0a5063e5-t2",
+   "pdfpath": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_46회차/_site/probe_B/hold_probe.pdf"
+  }
+ },
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "UNKNOWN_ARGUMENT",
+    "message": "알 수 없는 인자: tab_id. 비슷한 인자: project_id, id. 사용 가능한 인자: checked, criteria, dialog, dialog_text, direction, driver, element, expression, full_page, headless, height, id, index, key, label, mode, name, op, path, project_id, query, ref, scope, selector, source_ref, submit, target, target_ref, text, timeout, url, value, values, wait, wait_for, width",
+    "source_span": {
+     "source_hash": "10f9ad947a8f48e7ce4ffa118729ff7f781cc441adca892f9e34f470fb6e384c",
+     "start": 230,
+     "end": 284,
+     "line": 7,
+     "column": 5
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "10f9ad947a8f48e7ce4ffa118729ff7f781cc441adca892f9e34f470fb6e384c",
+     "start": 230,
+     "end": 284,
+     "line": 7,
+     "column": 5,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 7,
+     "end_column": 59,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "UNKNOWN_ARGUMENT",
+    "severity": "error",
+    "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 112,
+  "guards_inner": 0,
+  "guards_omitted": 112,
+  "result_type": "{tabs0: Unknown, switch: Record, login_url: Unknown, rooms_text: Unknown, hold_url: Unknown, hold_text: Unknown, frames: Record, check: Record, submit: Record, done_url: Unknown, done_text: Unknown, pdf: Record, pdf_text: Text}",
+  "effects": [
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "functions": {
+   "def:16:181": {
+    "name": "참조",
+    "params": {
+     "snap": "Record",
+     "role": "Text",
+     "name": "Text"
+    },
+    "required": [
+     "snap",
+     "role",
+     "name"
+    ],
+    "pipe_input": "snap",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "6ccfdcb8feef01a5a61b312ed39f8add5fd8554c2c1b5ecea19e2150aa4b160f",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "snap": "Record",
+       "role": "Text",
+       "name": "Text"
+      },
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "10f9ad947a8f48e7ce4ffa118729ff7f781cc441adca892f9e34f470fb6e384c",
+     "start": 16,
+     "end": 181,
+     "line": 2,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 5,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "985bbff9c3c1d6a092ceace2879151417891970e75f4d8a1c8d2ad845b677972",
+  "dependencies": {
+   "source": "10f9ad947a8f48e7ce4ffa118729ff7f781cc441adca892f9e34f470fb6e384c",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "tab2": "Text",
+    "pdfpath": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 2242
+    }
+   ],
+   "contracts": "934c57844af0963444d251ce62ae9bd82c6d298124319409b63e74df25fbe18b",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755",
+   "expressions": "8b1374449bdb861758d2d12b149fae44ebb72cfde1919d26ea2d1cdeae740050",
+   "core": "0f9fd52e6915bbe50ec190eb519a704bc5ca28977e3d3b1d8c4d52436dfb4953"
+  },
+  "source_hash": "10f9ad947a8f48e7ce4ffa118729ff7f781cc441adca892f9e34f470fb6e384c",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "limbs:browser",
+    "self:read",
+    "table:filter"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "진단 위치를 수정한 뒤 다시 검사하세요.",
+  "runtime_checks": {
+   "total": 112,
+   "informative": 72
+  },
+  "guards_ref": {
+   "id": "cd41b42ac7d22cf0be5a07fa09ddef5b6dc715ba25b5d3c15713c7b930c40e60",
+   "chars": 106648,
+   "read_args": {
+    "id": "cd41b42ac7d22cf0be5a07fa09ddef5b6dc715ba25b5d3c15713c7b930c40e60",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "success": false,
+  "error": "실행 전 검사에서 거절했습니다: 알 수 없는 인자: tab_id. 비슷한 인자: project_id, id. 사용 가능한 인자: checked, criteria, dialog, dialog_text, direction, driver, element, expression, full_page, headless, height, id, index, key, label, mode, name, op, path, project_id, query, ref, scope, selector, source_ref, submit, target, target_ref, text, timeout, url, value, values, wait, wait_for, width (UNKNOWN_ARGUMENT)",
+  "request_inputs": {
+   "input_args": {
+    "tab2": {
+     "$ref": "7e7b9bfbe291d307acb9f259d6d7c48092f49159d68c9f218bd83a0c348f2d0b"
+    },
+    "pdfpath": {
+     "$ref": "a62b515d40354c1d879d0ef2a68da61bee85cb94063e3584dc0ca009594902be"
+    }
+   },
+   "unavailable": {},
+   "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  },
+  "revise_args": {
+   "code": "$rejected:2383bb444d720107a84ebf0e205dee001f4dc7f98bec9105418a9bbafa02bd0d",
+   "code_edits": [
+    {
+     "old": "<고칠 원문 조각>",
+     "new": "<바꿀 글>"
+    }
+   ]
+  },
+  "revise_hint": "고칠 조각만 보내세요: revise_args.code 를 그대로 code 에 넣고 code_edits 에 {old, new} 를 적습니다(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 같은 inputs·budget·check 를 함께 보냅니다. 원문 전체를 다시 적지 않습니다."
+ },
+ "elapsed": 0.5321578979492188
+}

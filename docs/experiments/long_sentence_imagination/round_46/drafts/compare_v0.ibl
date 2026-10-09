@@ -1,0 +1,75 @@
+#!ibl edition=2
+# 46회차 1차 호출(비교) 최초 초안 — inputs: src(입력 폴더), out(출력 폴더). 같은 task_id 의 2차 호출(hold_v0.ibl)이 탭·세션을 이어받는다.
+# 흐름: 조건·포털·계정 읽기 → 포털마다 [탭(첫 포털은 현재 탭, 둘째는 tab new) → 로그인 → 동의 모달 '필수만 동의' → 달력 열어 날짜 → 박수 select → 인원 + → 검색 → 객실 표 파싱]
+#       → 비교표 → 기준(예산 안 총액 최저, 마감 제외)으로 선택·이유 → compare.json·compare.md → 비교 결과 반환(2차 호출 입력)
+# 참고: 수리된 browser_action.md(세션·dialog·wait·select label)·교재·describe 3·탐침 evidence/probe_flow_call1.json(모달·달력·스테퍼·탭)
+
+[def:참조]($snap,$role,$name) {
+  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}
+  return len($m)>0 ? $m[0].ref : null
+}
+[def:글]($v,$대신) { return $v == null ? $대신 : $v }
+[def:원]($s) { return number(replace(replace(strip($s),",",""),"원","")) }
+[def:객실행]($text,$portal) {
+  $rows = filter(split($text,"\n"),($l)=>len(split($l,"\t"))>=6 and ($l[:1]=="A" or $l[:1]=="B"))
+  return map($rows,($l)=>{portal:$portal, id:split($l,"\t")[0], name:split($l,"\t")[1], breakfast:split($l,"\t")[2]=="포함", nightly:[fn:원]{s:split($l,"\t")[3]}, total:[fn:원]{s:split($l,"\t")[4]}, left:split($l,"\t")[5], closed:contains(split($l,"\t")[5],"마감")})
+}
+# 한 포털: 로그인 → 동의 → 검색 → 객실 표. 탭은 호출자가 미리 만든다(현재 활성 탭에서 동작).
+[def:포털읽기]($portal,$acct,$trip) {
+  $n = [limbs:browser]{op:"navigate", url:f"${portal.url}login", driver:"playwright", wait:"load"}
+  $s = [limbs:browser]{op:"snapshot"}
+  $rid = [fn:참조]{snap:$s, role:"textbox", name:"이용자 ID"}
+  $rpw = [fn:참조]{snap:$s, role:"textbox", name:"비밀번호"}
+  assert $rid != null and $rpw != null, "로그인 입력칸 없음", {portal:$portal.name, snapshot:$s}
+  $t1 = [limbs:browser]{op:"type", ref:$rid, text:$acct.user}
+  $t2 = [limbs:browser]{op:"type", ref:$rpw, text:$acct.password, submit:true}
+  $s1 = [limbs:browser]{op:"snapshot"}
+  $rcons = [fn:참조]{snap:$s1, role:"button", name:"필수만 동의"}
+  $consented = $rcons != null
+  [if:$consented] { $k = [limbs:browser]{op:"click", ref:$rcons} }
+  $s2 = [limbs:browser]{op:"snapshot"}
+  $rcal = [fn:참조]{snap:$s2, role:"button", name:"날짜 선택"}
+  assert $rcal != null, "날짜 선택 버튼 없음", {portal:$portal.name, url:$s2.url}
+  $k1 = [limbs:browser]{op:"click", ref:$rcal}
+  $s3 = [limbs:browser]{op:"snapshot"}
+  $rday = [fn:참조]{snap:$s3, role:"button", name:$trip.checkin}
+  assert $rday != null, "달력에 체크인 날짜 없음", {portal:$portal.name, checkin:$trip.checkin}
+  $k2 = [limbs:browser]{op:"click", ref:$rday}
+  $k3 = [limbs:browser]{op:"select", ref:[fn:참조]{snap:$s3, role:"combobox", name:"박수"}, label:f"${trip.nights}박"}
+  $rplus = [fn:참조]{snap:$s3, role:"button", name:"인원 늘리기"}
+  [repeat:while $i < $trip.guests - 1] { $kp = [limbs:browser]{op:"click", ref:$rplus} }
+  $s4 = [limbs:browser]{op:"snapshot"}
+  $k4 = [limbs:browser]{op:"click", ref:[fn:참조]{snap:$s4, role:"button", name:"검색"}}
+  $c = [limbs:browser]{op:"content", mode:"text"}
+  assert contains($c.url,"/rooms"), "검색 결과 화면이 아님", {portal:$portal.name, url:$c.url}
+  $head = [fn:글]{v:(filter(split($c.text,"\n"),($l)=>contains($l,"체크인")))[0] ?? null, 대신:""}
+  return {portal:$portal.name, url:$portal.url, rooms_url:$c.url, header:$head, consented:$consented, rooms:[fn:객실행]{text:$c.text, portal:$portal.name}, tab_id:$c.tab_id, session_owner:$c.session_owner}
+}
+
+$trip = ([self:read]{path:f"${src}/trip.json"}).data
+$acct = ([self:read]{path:f"${src}/account.json"}).data
+$portals = ([self:read]{path:f"${src}/portals.json"}).data.items
+assert len($portals) == 2, "포털은 두 곳이어야 합니다", {n:len($portals)}
+$mk = [self:mkdir]{path:$out}
+
+$첫 = [fn:포털읽기]{portal:$portals[0], acct:$acct, trip:$trip}
+$tb = [limbs:browser]{op:"tab", mode:"new", url:f"${portals[1].url}login"}
+$둘 = [fn:포털읽기]{portal:$portals[1], acct:$acct, trip:$trip}
+$tabs = [limbs:browser]{op:"tab", mode:"list"}
+
+$전체 = $첫.rooms + $둘.rooms
+assert len($전체) >= 2, "객실을 읽지 못했습니다", {first:len($첫.rooms), second:len($둘.rooms)}
+$후보 = $전체 >> [table:filter]{where:($r)=>not $r.closed and $r.total <= $trip.budget_total}
+$조식 = contains($trip.criterion,"조식 포함")
+$후보2 = $조식 ? ($후보 >> [table:filter]{where:($r)=>$r.breakfast}) : $후보
+$정렬 = $후보2 >> [table:sort]{by:"total"}
+$선택 = len($정렬) > 0 ? $정렬[0] : null
+$이유 = $선택 == null ? "조건(예산·마감·조식)에 맞는 객실이 없음" : f"마감 제외·예산 ${trip.budget_total}원 안에서 총액 최저(${선택.total}원)${조식 ? ", 조식 포함 조건" : ""}"
+$비교 = {trip:$trip, portals:[{name:$첫.portal, rooms_url:$첫.rooms_url, header:$첫.header, consented:$첫.consented, tab_id:$첫.tab_id}, {name:$둘.portal, rooms_url:$둘.rooms_url, header:$둘.header, consented:$둘.consented, tab_id:$둘.tab_id}],
+        rooms:$전체, candidates:$후보2, choice:$선택, reason:$이유, tabs:$tabs.tabs, session_owner:$둘.session_owner}
+$w1 = [self:write]{path:f"${out}/compare.json", content:json($비교)}
+$lines = map($전체, ($r)=>f"| ${r.portal} | ${r.id} ${r.name} | ${r.breakfast ? "포함" : "불포함"} | ${r.nightly} | ${r.total} | ${r.left} |")
+$선택글 = $선택 == null ? "선택 없음" : f"${선택.portal} ${선택.id} ${선택.name} 총액 ${선택.total}원"
+$md = join("\n", ["# 숙소 비교", f"- 조건: 체크인 ${trip.checkin}, ${trip.nights}박, ${trip.guests}명, 예산 ${trip.budget_total}원", f"- 기준: ${trip.criterion}", "", "| 포털 | 객실 | 조식 | 1박 | 총액 | 잔여 |", "|---|---|---|---|---|---|"] + $lines + ["", f"**선택**: ${선택글}", f"이유: ${이유}"])
+$w2 = [self:write]{path:f"${out}/compare.md", content:$md}
+return $비교

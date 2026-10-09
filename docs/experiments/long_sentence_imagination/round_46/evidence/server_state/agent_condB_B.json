@@ -1,0 +1,23 @@
+{
+ "site": "B",
+ "logins": 1,
+ "requests": 10,
+ "expired_sessions": 0,
+ "rooms_reads": 1,
+ "holds": [
+  {
+   "id": "HB001",
+   "room": "B1",
+   "room_name": "통나무 캐빈",
+   "checkin": "2026-11-14",
+   "nights": 2,
+   "guests": 2,
+   "total": 176000,
+   "breakfast": false,
+   "at": "2026-10-09 16:16:40"
+  }
+ ],
+ "rejections": [],
+ "consents": 1,
+ "price_bumped": false
+}

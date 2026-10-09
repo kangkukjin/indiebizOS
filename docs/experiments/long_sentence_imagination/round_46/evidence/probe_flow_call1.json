@@ -1,0 +1,572 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n[def:참조]($snap,$role,$name) {\n  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}\n  return len($m)>0 ? $m[0].ref : null\n}\n$n=[limbs:browser]{op:\"navigate\", url:f\"${a}login\", driver:\"playwright\", wait:\"load\"}\n$s=[limbs:browser]{op:\"snapshot\"}\n$t1=[limbs:browser]{op:\"type\", ref:[fn:참조]{snap:$s, role:\"textbox\", name:\"이용자 ID\"}, text:\"lsi46_traveler\"}\n$t2=[limbs:browser]{op:\"type\", ref:[fn:참조]{snap:$s, role:\"textbox\", name:\"비밀번호\"}, text:\"<password>\", submit:true}\n$s1=[limbs:browser]{op:\"snapshot\"}\n$cons=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s1, role:\"button\", name:\"필수만 동의\"}}\n$s2=[limbs:browser]{op:\"snapshot\"}\n$cal=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s2, role:\"button\", name:\"날짜 선택\"}}\n$s3=[limbs:browser]{op:\"snapshot\"}\n$day=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s3, role:\"button\", name:\"2026-11-14\"}}\n$nt=[limbs:browser]{op:\"select\", ref:[fn:참조]{snap:$s3, role:\"combobox\", name:\"박수\"}, label:\"2박\"}\n$plus=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s3, role:\"button\", name:\"인원 늘리기\"}}\n$s4=[limbs:browser]{op:\"snapshot\"}\n$go=[limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s4, role:\"button\", name:\"검색\"}}\n$c=[limbs:browser]{op:\"content\", mode:\"text\"}\n$tb=[limbs:browser]{op:\"tab\", mode:\"new\", url:f\"${b}login\"}\n$tl=[limbs:browser]{op:\"tab\", mode:\"list\"}\nreturn {login_snap_count:$s.element_count, consent:$cons, after_consent_url:$s2.url, cal_buttons:len($s3.snapshot), day:$day, nights:$nt, plus:$plus, go:$go, rooms_url:$c.url, rooms_text:$c.text, tab_new:$tb, tabs:$tl}\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "task_id": "lsi46_probe",
+  "inputs": {
+   "a": "http://127.0.0.1:8959/",
+   "b": "http://127.0.0.1:8969/"
+  }
+ },
+ "response": {
+  "success": true,
+  "value": {
+   "login_snap_count": 6,
+   "consent": {
+    "success": true,
+    "clicked": " (e12)",
+    "url": "http://127.0.0.1:8959/search",
+    "title": "객실 검색 - 가상 바다숙소",
+    "session_owner": "a98f0a5063e5d78c6da8507db09df9f8b18041d816a23cbc3c6f8c661e58ee4b",
+    "tab_id": "a98f0a5063e5-t1"
+   },
+   "after_consent_url": "http://127.0.0.1:8959/search",
+   "cal_buttons": 44,
+   "day": {
+    "success": true,
+    "clicked": " (e22)",
+    "url": "http://127.0.0.1:8959/search",
+    "title": "객실 검색 - 가상 바다숙소",
+    "session_owner": "a98f0a5063e5d78c6da8507db09df9f8b18041d816a23cbc3c6f8c661e58ee4b",
+    "tab_id": "a98f0a5063e5-t1"
+   },
+   "nights": {
+    "success": true,
+    "selected": [
+     "2"
+    ],
+    "requested": [
+     "2박"
+    ],
+    "element": " (e39)",
+    "session_owner": "a98f0a5063e5d78c6da8507db09df9f8b18041d816a23cbc3c6f8c661e58ee4b",
+    "tab_id": "a98f0a5063e5-t1"
+   },
+   "plus": {
+    "success": true,
+    "clicked": " (e41)",
+    "url": "http://127.0.0.1:8959/search",
+    "title": "객실 검색 - 가상 바다숙소",
+    "session_owner": "a98f0a5063e5d78c6da8507db09df9f8b18041d816a23cbc3c6f8c661e58ee4b",
+    "tab_id": "a98f0a5063e5-t1"
+   },
+   "go": {
+    "success": true,
+    "clicked": " (e6)",
+    "url": "http://127.0.0.1:8959/rooms?checkin=2026-11-14&nights=2&guests=2",
+    "title": "객실 요금 - 가상 바다숙소",
+    "session_owner": "a98f0a5063e5d78c6da8507db09df9f8b18041d816a23cbc3c6f8c661e58ee4b",
+    "tab_id": "a98f0a5063e5-t1"
+   },
+   "rooms_url": "http://127.0.0.1:8959/rooms?checkin=2026-11-14&nights=2&guests=2",
+   "rooms_text": "가상 바다숙소\n검색 · 로그아웃\n객실 요금 — 체크인 2026-11-14, 2박, 2명\n번호\t객실\t조식\t1박 요금\t총액\t잔여\t\nA1\t스탠다드 더블\t불포함\t95,000원\t190,000원\t잔여 4\t예약 보류\nA2\t디럭스 오션뷰\t포함\t125,000원\t250,000원\t잔여 2\t예약 보류\nA3\t스위트\t포함\t210,000원\t420,000원\t잔여 1\t예약 보류\n\n← 검색\n\n가상 포털 — 훈련용 합성 자료",
+   "tab_new": {
+    "success": true,
+    "tab_id": "a98f0a5063e5-t2",
+    "title": "로그인 - 가상 산장숙소",
+    "url": "http://127.0.0.1:8969/login",
+    "snapshot_hint": "페이지 구조를 파악하려면 browser_snapshot을 호출하세요.",
+    "session_owner": "a98f0a5063e5d78c6da8507db09df9f8b18041d816a23cbc3c6f8c661e58ee4b"
+   },
+   "tabs": {
+    "success": true,
+    "tabs": [
+     {
+      "tab_id": "a98f0a5063e5-t1",
+      "title": "객실 요금 - 가상 바다숙소",
+      "url": "http://127.0.0.1:8959/rooms?checkin=2026-11-14&nights=2&guests=2",
+      "active": false
+     },
+     {
+      "tab_id": "a98f0a5063e5-t2",
+      "title": "로그인 - 가상 산장숙소",
+      "url": "http://127.0.0.1:8969/login",
+      "active": true
+     }
+    ],
+    "count": 2,
+    "active_tab": "a98f0a5063e5-t2",
+    "session_owner": "a98f0a5063e5d78c6da8507db09df9f8b18041d816a23cbc3c6f8c661e58ee4b",
+    "tab_id": "a98f0a5063e5-t2"
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "612300376218741ea02a193357e90035bd67ad4700f1610465b8fae48dfd11c1",
+  "source_complete": true,
+  "usage": {
+   "steps": 1757,
+   "rows": 0,
+   "elapsed_ms": 1364,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "binary:98:112",
+     "steps": 186,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 98,
+      "end": 112,
+      "line": 3,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "binary:98:140",
+     "steps": 186,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 98,
+      "end": 140,
+      "line": 3,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "field:98:105",
+     "steps": 186,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 98,
+      "end": 105,
+      "line": 3,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "ref:107:112",
+     "steps": 186,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 107,
+      "end": 112,
+      "line": 3,
+      "column": 62
+     }
+    },
+    {
+     "node_id": "ref:98:100",
+     "steps": 186,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 98,
+      "end": 100,
+      "line": 3,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "pure_call:117:140",
+     "steps": 174,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 117,
+      "end": 140,
+      "line": 3,
+      "column": 72
+     }
+    },
+    {
+     "node_id": "builtin:117:125",
+     "steps": 87,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 117,
+      "end": 125,
+      "line": 3,
+      "column": 72
+     }
+    },
+    {
+     "node_id": "field:126:133",
+     "steps": 87,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 126,
+      "end": 133,
+      "line": 3,
+      "column": 81
+     }
+    },
+    {
+     "node_id": "ref:126:128",
+     "steps": 87,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 126,
+      "end": 128,
+      "line": 3,
+      "column": 81
+     }
+    },
+    {
+     "node_id": "ref:134:139",
+     "steps": 87,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 134,
+      "end": 139,
+      "line": 3,
+      "column": 89
+     }
+    },
+    {
+     "node_id": "pure_call:151:158",
+     "steps": 16,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 151,
+      "end": 158,
+      "line": 4,
+      "column": 10
+     }
+    },
+    {
+     "node_id": "binary:151:160",
+     "steps": 8,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 151,
+      "end": 160,
+      "line": 4,
+      "column": 10
+     }
+    },
+    {
+     "node_id": "bind:48:141",
+     "steps": 8,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 48,
+      "end": 141,
+      "line": 3,
+      "column": 3
+     }
+    },
+    {
+     "node_id": "builtin:151:154",
+     "steps": 8,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 151,
+      "end": 154,
+      "line": 4,
+      "column": 10
+     }
+    },
+    {
+     "node_id": "call:71:141",
+     "steps": 8,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 71,
+      "end": 141,
+      "line": 3,
+      "column": 26
+     }
+    },
+    {
+     "node_id": "conditional:151:179",
+     "steps": 8,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 151,
+      "end": 179,
+      "line": 4,
+      "column": 10
+     }
+    },
+    {
+     "node_id": "field:163:172",
+     "steps": 8,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 163,
+      "end": 172,
+      "line": 4,
+      "column": 22
+     }
+    },
+    {
+     "node_id": "field:53:67",
+     "steps": 8,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 53,
+      "end": 67,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "index:163:168",
+     "steps": 8,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 163,
+      "end": 168,
+      "line": 4,
+      "column": 22
+     }
+    },
+    {
+     "node_id": "lambda:92:140",
+     "steps": 8,
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 92,
+      "end": 140,
+      "line": 3,
+      "column": 47
+     }
+    }
+   ],
+   "steps_other": 217,
+   "steps_by_line": [
+    {
+     "line": 3,
+     "steps": 1508,
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 4,
+     "steps": 96,
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 23,
+     "steps": 22,
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 9,
+     "steps": 11,
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 8,
+     "steps": 10,
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 16,
+     "steps": 10,
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 2,
+     "steps": 9,
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 11,
+     "steps": 9,
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 13,
+     "steps": 9,
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 15,
+     "steps": 9,
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 6,
+     "ms": 296,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 11,
+     "ms": 85,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 21,
+     "ms": 75,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 9,
+     "ms": 56,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 15,
+     "ms": 51,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 14,
+     "ms": 45,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 19,
+     "ms": 43,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 17,
+     "ms": 42,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 13,
+     "ms": 38,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    },
+    {
+     "line": 10,
+     "ms": 37,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "6ac99bbf909241da99595f6bdc0fef09"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "read_exclusions": [
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "34b73efb46225e61213c007f1cffaa82697bbe079e81ac0c4bbc796d2a6578dc",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 306,
+      "end": 408,
+      "line": 8,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "f858f81260d518eff0f5a7a987ca390b1b55dd2b43cca19088ad4cfd52b37aae",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 567,
+      "end": 647,
+      "line": 11,
+      "column": 7
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "cf36b28b51cdc52031ba7fb0902346902280f364d64c0118ec3dffaedd195865",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 688,
+      "end": 767,
+      "line": 13,
+      "column": 6
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "3593b165418f423986e54efa75cb2a382f8f4c43496d53c4bf9a81e8b5902bae",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 808,
+      "end": 892,
+      "line": 15,
+      "column": 6
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "ee2a4528d21961347af3f1d3d158699d9fba578dfdcc3211aa8ef1f012fe97a5",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 1115,
+      "end": 1191,
+      "line": 19,
+      "column": 5
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "f5e8c468aefffddb2be9dc85d72cce2cb900100deb6e209effa53b8ade7758ee",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "5ea129e73310021454972221e1242b6c567b152a5300b913e711e66c94e81170",
+      "start": 1242,
+      "end": 1297,
+      "line": 21,
+      "column": 5
+     },
+     "excluded_calls": 1
+    }
+   ],
+   "read_exclusions_total": 6,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "6ac99bbf909241da99595f6bdc0fef09",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ },
+ "elapsed": 1.3980281352996826
+}

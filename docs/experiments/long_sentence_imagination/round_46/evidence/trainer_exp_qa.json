@@ -1,0 +1,54 @@
+{
+ "passed": 12,
+ "total": 17,
+ "checks": {
+  "compare_json": true,
+  "result_json": true,
+  "report_md": true,
+  "six_rooms": true,
+  "totals_match": true,
+  "b3_closed": true,
+  "choice": true,
+  "server_hold_B1": false,
+  "server_hold_A_none": true,
+  "consent_essential": true,
+  "hold_number_match": false,
+  "totals_consistent": false,
+  "pdf_has_hold_number": false,
+  "pdf_has_total": false,
+  "same_session_two_calls": true,
+  "two_tabs": true,
+  "preview_reported": true
+ },
+ "detail": {
+  "choice": {
+   "portal": "가상 산장숙소",
+   "id": "B1",
+   "name": "통나무 캐빈",
+   "breakfast": false,
+   "nightly": 88000,
+   "total": 176000,
+   "left": "잔여 3",
+   "closed": false
+  },
+  "preview": {
+   "done": false,
+   "reason": "desk 입력 꺼짐 — 미실행",
+   "found": null
+  },
+  "server": {
+   "A": {
+    "logins": 1,
+    "expired_sessions": 0,
+    "consents": 1
+   },
+   "B": {
+    "logins": 2,
+    "expired_sessions": 2,
+    "consents": 2
+   },
+   "B_holds": [],
+   "A_holds": []
+  }
+ }
+}

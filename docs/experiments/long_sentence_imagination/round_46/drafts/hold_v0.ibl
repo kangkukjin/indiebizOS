@@ -1,0 +1,110 @@
+#!ibl edition=2
+# 46회차 2차 호출(보류·확인·미리보기) 최초 초안 — inputs: src, out, compare(1차 결과 $ref 또는 compare.json 과 같은 Record), choice(객실 id 또는 null=1차 선택), desk(true 면 미리보기 다리)
+# 같은 task_id 로 1차의 세션·탭을 이어받는다. 흐름: 선택 확정 → 활성 탭이 그 포털이 아니면 활성 탭 닫기(자동 전환; tab switch 는 계약상 불가 — 탐침 L46-1)
+#   → 보류 화면(세션 만료면 재로그인·동의 뒤 재진입) → iframe 약관(selector 로 check — 프레임 안 snapshot 은 메인을 읽음, 탐침) → reset → 신청(dialog:accept)
+#   → 완료 화면 판독(아니면 1회 재시도) → pdf → self:read 대조 → 미리보기(desk) → result.json·report.md
+[def:참조]($snap,$role,$name) {
+  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}
+  return len($m)>0 ? $m[0].ref : null
+}
+[def:글]($v,$대신) { return $v == null ? $대신 : $v }
+[def:줄찾기]($text,$key) {
+  $ls = filter(split($text,"\n"),($l)=>contains($l,$key))
+  return len($ls)>0 ? $ls[0] : null
+}
+[def:표값]($text,$key) {
+  $l = [fn:줄찾기]{text:$text, key:f"${key}\t"}
+  return $l == null ? null : split($l,"\t")[1]
+}
+[def:원]($s) { return number(replace(replace(strip($s),",",""),"원","")) }
+[def:재로그인]($url,$acct) {
+  $s = [limbs:browser]{op:"snapshot"}
+  $t1 = [limbs:browser]{op:"type", ref:[fn:글]{v:[fn:참조]{snap:$s, role:"textbox", name:"이용자 ID"}, 대신:"none"}, text:$acct.user}
+  $t2 = [limbs:browser]{op:"type", ref:[fn:글]{v:[fn:참조]{snap:$s, role:"textbox", name:"비밀번호"}, 대신:"none"}, text:$acct.password, submit:true}
+  $s1 = [limbs:browser]{op:"snapshot"}
+  $rc = [fn:참조]{snap:$s1, role:"button", name:"필수만 동의"}
+  [if:$rc != null] { $k = [limbs:browser]{op:"click", ref:$rc} }
+  return {relogged:true, consented:$rc != null}
+}
+# 보류 한 번 시도: 보류 화면 → 약관 → 신청 → 결과 화면 텍스트
+[def:보류시도]($url,$acct,$room,$trip) {
+  $hold_url = f"${url}hold/${room}?checkin=${trip.checkin}&nights=${trip.nights}&guests=${trip.guests}"
+  $n = [limbs:browser]{op:"navigate", url:$hold_url, wait:"load"}
+  $c0 = [limbs:browser]{op:"content", mode:"text"}
+  $relog = {relogged:false, consented:false}
+  [if:contains($c0.url,"login")] {
+    $relog = [fn:재로그인]{url:$url, acct:$acct}
+    $n2 = [limbs:browser]{op:"navigate", url:$hold_url, wait:"load"}
+  }
+  $c1 = [limbs:browser]{op:"content", mode:"text"}
+  assert contains($c1.url,"/hold/"), "보류 화면에 들어가지 못함", {url:$c1.url}
+  $화면총액 = [fn:원]{s:[fn:글]{v:split([fn:글]{v:[fn:줄찾기]{text:$c1.text, key:"총액"}, 대신:"총액 0원"},"총액 ")[1], 대신:"0원"}}
+  $fs = [limbs:browser]{op:"iframe", mode:"switch", name:"terms"}
+  $ck = [limbs:browser]{op:"check", selector:"#agree"}
+  $fr = [limbs:browser]{op:"iframe", mode:"reset"}
+  $s7 = [limbs:browser]{op:"snapshot"}
+  $rb = [fn:참조]{snap:$s7, role:"button", name:"예약 보류 신청"}
+  assert $rb != null, "신청 버튼 없음", {snapshot:$s7}
+  $sub = [limbs:browser]{op:"click", ref:$rb, dialog:"accept"}
+  $c3 = [limbs:browser]{op:"content", mode:"text"}
+  return {done:contains($c3.url,"/hold/done/"), url:$c3.url, text:$c3.text, hold_page_total:$화면총액, relogin:$relog, dialogs:get($sub,"dialogs"), session_owner:$c3.session_owner, tab_id:$c3.tab_id}
+}
+
+$trip = $compare.trip
+$acct = ([self:read]{path:f"${src}/account.json"}).data
+$선택 = $choice == null ? $compare.choice : ($compare.rooms >> [table:filter]{where:($r)=>$r.id==$choice})[0]
+assert $선택 != null, "보류할 객실이 없습니다(1차 선택 없음)", {choice:$choice}
+$포털 = ($compare.portals >> [table:filter]{where:($p)=>$p.name==$선택.portal})[0]
+$url = split($포털.rooms_url,"rooms")[0]
+
+# 탭: 활성 탭이 선택 포털의 탭이 아니면 활성 탭을 닫아 이전 탭으로(switch 는 계약에 tab_id 가 없어 불가)
+$tabs0 = [limbs:browser]{op:"tab", mode:"list"}
+$탭조치 = "none"
+[if:$tabs0.active_tab != $포털.tab_id] {
+  $cl = [limbs:browser]{op:"tab", mode:"close"}
+  $탭조치 = "active_closed"
+}
+$tabs1 = [limbs:browser]{op:"tab", mode:"list"}
+
+# 보류(최대 2회 — 세션 만료가 신청 도중에 오면 한 번 더)
+$r1 = [fn:보류시도]{url:$url, acct:$acct, room:$선택.id, trip:$trip}
+$r = $r1
+$retried = false
+[if:not $r1.done] {
+  $r = [fn:보류시도]{url:$url, acct:$acct, room:$선택.id, trip:$trip}
+  $retried = true
+}
+$보류번호 = [fn:글]{v:[fn:표값]{text:$r.text, key:"보류번호"}, 대신:""}
+$완료총액 = $r.done ? [fn:원]{s:[fn:글]{v:[fn:표값]{text:$r.text, key:"총액"}, 대신:"0원"}} : null
+$완료체크인 = [fn:글]{v:[fn:표값]{text:$r.text, key:"체크인"}, 대신:""}
+$완료객실 = [fn:글]{v:[fn:표값]{text:$r.text, key:"객실"}, 대신:""}
+$pdfpath = f"${out}/hold.pdf"
+$pdf = $r.done ? [limbs:browser]{op:"pdf", path:$pdfpath} : null
+$pdf_text = $r.done ? ([self:read]{path:$pdfpath}).text : ""
+$대조 = {hold_number_in_pdf:len($보류번호)>0 and contains($pdf_text,$보류번호), room_match:contains($완료객실,$선택.id), checkin_match:$완료체크인 == $trip.checkin,
+         total_match:$완료총액 == $선택.total, compare_total:$선택.total, hold_total:$완료총액, pdf_has_total:$완료총액 == null ? false : contains($pdf_text, format_number($완료총액, ",.0f"))}
+$판정 = not $r.done ? "보류 실패" : ($대조.total_match and $대조.room_match and $대조.checkin_match ? "보류 완료·비교표와 일치" : "보류는 됐으나 비교표와 다름 — 사용자 재결정 요청")
+
+# 미리보기 다리(desk:true 일 때만): os_open → 미리보기 포커스 대기 → snapshot 에서 보류번호 → cmd+w(expect_app)
+$preview = [try] {
+  [if:$desk != true or not $r.done] {
+    {done:false, reason:$desk != true ? "desk 입력 꺼짐 — 미실행" : "보류 PDF 없음 — 미실행", found:null}
+  } [else] {
+    $op = [limbs:os_open]{path:$pdfpath}
+    $w = [limbs:screen]{op:"wait", expect_app:"com.apple.Preview", timeout:8000}
+    $sn = [limbs:screen]{op:"snapshot"}
+    $hits = filter(map(get($sn,"elements") ?? [], ($e)=>text(get($e,"value") ?? "") + " " + text(get($e,"title") ?? "")), ($v)=>contains($v,$보류번호))
+    $ocr = filter(map(get($sn,"ocr_lines") ?? [], ($e)=>text(get($e,"text") ?? "")), ($v)=>contains($v,$보류번호))
+    $k = [limbs:screen]{op:"key", key:"cmd+w", expect_app:"com.apple.Preview"}
+    {done:true, reason:null, app:get($sn,"app"), found:len($hits)+len($ocr) > 0, ax_hits:len($hits), ocr_hits:len($ocr)}
+  }
+} [catch] { {done:false, reason:f"미리보기 오류: ${error.message}", found:null} }
+
+$result = {choice:$선택, reason_choice:$compare.reason, tab_action:$탭조치, tabs_before:$tabs0.tabs, tabs_after:$tabs1.tabs, hold:{done:$r.done, url:$r.url, number:$보류번호, retried:$retried, relogin:$r.relogin, dialogs:$r.dialogs, hold_page_total:$r.hold_page_total},
+  compare_check:$대조, verdict:$판정, pdf:$pdfpath, preview:$preview, session:{owner:$r.session_owner, tab:$r.tab_id, compare_owner:$compare.session_owner, same_session:$r.session_owner == $compare.session_owner}}
+$w1 = [self:write]{path:f"${out}/result.json", content:json($result)}
+$relog글 = $r.relogin.relogged ? "세션 만료 → 재로그인함" : "재로그인 없음"
+$pv글 = $preview.done ? f"미리보기 대조: ${preview.found ? "보류번호 확인" : "보류번호 못 찾음"}" : f"미리보기: ${preview.reason}"
+$md = join("\n", ["# 예약 보류 결과", f"- 선택: ${선택.portal} ${선택.id} ${선택.name} (비교표 총액 ${선택.total}원)", f"- 이유: ${compare.reason}", f"- 탭 조치: ${탭조치}", f"- 보류: ${판정}", f"- 보류번호: ${보류번호}", f"- 완료 화면 총액: ${글}", f"- ${relog글}", f"- ${pv글}", f"- 세션: ${r.session_owner} (1차와 같음: ${r.session_owner == compare.session_owner})"])
+$w2 = [self:write]{path:f"${out}/report.md", content:$md}
+return {verdict:$판정, hold_number:$보류번호, hold_total:$완료총액, compare_total:$선택.total, retried:$retried, relogin:$r.relogin, tab_action:$탭조치, preview:$preview, same_session:$r.session_owner == $compare.session_owner, files:[$w1.path,$w2.path]}

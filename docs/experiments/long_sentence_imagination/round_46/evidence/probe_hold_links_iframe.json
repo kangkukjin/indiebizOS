@@ -1,0 +1,514 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n$n=[limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8969/rooms?checkin=2026-11-14&nights=2&guests=2\", wait:\"load\"}\n$s5=[limbs:browser]{op:\"snapshot\"}\n$links=$s5.snapshot >> [table:filter]{where:($e)=>$e.role==\"link\" and contains($e.name,\"예약 보류\")}\n$byref=[try]{ [limbs:browser]{op:\"click\", ref:$links[0].ref} } [catch]{ {err:$error.message, code:$error.code} }\n$c1=[try]{ [limbs:browser]{op:\"content\", mode:\"text\"} } [catch]{ {err:$error.message, url:null} }\n$bysel=[try]{ [limbs:browser]{op:\"click\", selector:\"a[href^='/hold/B1']\"} } [catch]{ {err:$error.message} }\n$c2=[try]{ [limbs:browser]{op:\"content\", mode:\"text\"} } [catch]{ {err:$error.message, url:null} }\n$fl=[limbs:browser]{op:\"iframe\", mode:\"list\"}\n$fs=[try]{ [limbs:browser]{op:\"iframe\", mode:\"switch\", name:\"terms\"} } [catch]{ {err:$error.message} }\n$s6=[try]{ [limbs:browser]{op:\"snapshot\"} } [catch]{ {err:$error.message} }\n$cf=[try]{ [limbs:browser]{op:\"content\", mode:\"text\"} } [catch]{ {err:$error.message} }\nreturn {links:$links, byref:$byref, c1:$c1, bysel:$bysel, c2:$c2, frames:$fl, switch:$fs, frame_snap:$s6, frame_content:$cf}\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "task_id": "lsi46_probe"
+ },
+ "response": {
+  "success": true,
+  "value": {
+   "links": [],
+   "byref": {
+    "err": "인덱스 0 가 범위를 벗어났습니다(길이 0, 빈 값).",
+    "code": "INDEX"
+   },
+   "c1": {
+    "err": "페이지에서 텍스트를 추출할 수 없습니다.",
+    "url": null
+   },
+   "bysel": {
+    "err": "selector로 요소를 찾을 수 없습니다: a[href^='/hold/B1']"
+   },
+   "c2": {
+    "err": "페이지에서 텍스트를 추출할 수 없습니다.",
+    "url": null
+   },
+   "frames": {
+    "success": true,
+    "iframes": [],
+    "count": 0,
+    "current_frame": "iframe",
+    "session_owner": "a98f0a5063e5d78c6da8507db09df9f8b18041d816a23cbc3c6f8c661e58ee4b",
+    "tab_id": "a98f0a5063e5-t2"
+   },
+   "switch": {
+    "err": "지정한 iframe을 찾을 수 없습니다."
+   },
+   "frame_snap": {
+    "success": true,
+    "snapshot": [
+     {
+      "ref": "e3",
+      "role": "link",
+      "name": "로그인"
+     },
+     {
+      "ref": "e4",
+      "role": "button",
+      "name": "로그인"
+     },
+     {
+      "ref": "e5",
+      "role": "textbox",
+      "name": "이용자 ID "
+     },
+     {
+      "ref": "e6",
+      "role": "textbox",
+      "name": "비밀번호 "
+     },
+     {
+      "ref": "e1",
+      "role": "heading",
+      "name": "가상 산장숙소"
+     },
+     {
+      "ref": "e2",
+      "role": "heading",
+      "name": "로그인"
+     }
+    ],
+    "element_count": 6,
+    "shown_count": 6,
+    "url": "http://127.0.0.1:8969/terms_frame",
+    "title": "로그인 - 가상 산장숙소",
+    "session_owner": "a98f0a5063e5d78c6da8507db09df9f8b18041d816a23cbc3c6f8c661e58ee4b",
+    "tab_id": "a98f0a5063e5-t2"
+   },
+   "frame_content": {
+    "err": "페이지에서 텍스트를 추출할 수 없습니다."
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "2d58c4b91a571f4d2eb8e6ade2e4969bb5abc677aece30001164308b4f99466f",
+  "source_complete": false,
+  "usage": {
+   "steps": 150,
+   "rows": 0,
+   "elapsed_ms": 3558,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "binary:220:235",
+     "steps": 6,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 220,
+      "end": 235,
+      "line": 4,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "binary:220:265",
+     "steps": 6,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 220,
+      "end": 265,
+      "line": 4,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "field:220:227",
+     "steps": 6,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 220,
+      "end": 227,
+      "line": 4,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "literal:229:235",
+     "steps": 6,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 229,
+      "end": 235,
+      "line": 4,
+      "column": 60
+     }
+    },
+    {
+     "node_id": "ref:220:222",
+     "steps": 6,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 220,
+      "end": 222,
+      "line": 4,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "pure_call:240:265",
+     "steps": 2,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 240,
+      "end": 265,
+      "line": 4,
+      "column": 71
+     }
+    },
+    {
+     "node_id": "bind:135:169",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 135,
+      "end": 169,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:16:134",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 16,
+      "end": 134,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:170:266",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 170,
+      "end": 266,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:267:379",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 267,
+      "end": 379,
+      "line": 5,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:380:477",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 380,
+      "end": 477,
+      "line": 6,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:478:585",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 478,
+      "end": 585,
+      "line": 7,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:586:683",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 586,
+      "end": 683,
+      "line": 8,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:684:729",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 684,
+      "end": 729,
+      "line": 9,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:730:832",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 730,
+      "end": 832,
+      "line": 10,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:833:908",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 833,
+      "end": 908,
+      "line": 11,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:909:996",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 909,
+      "end": 996,
+      "line": 12,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "builtin:240:248",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 240,
+      "end": 248,
+      "line": 4,
+      "column": 71
+     }
+    },
+    {
+     "node_id": "call:139:169",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 139,
+      "end": 169,
+      "line": 3,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:193:266",
+     "steps": 1,
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 193,
+      "end": 266,
+      "line": 4,
+      "column": 24
+     }
+    }
+   ],
+   "steps_other": 104,
+   "steps_by_line": [
+    {
+     "line": 4,
+     "steps": 43,
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 5,
+     "steps": 16,
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 6,
+     "steps": 12,
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 8,
+     "steps": 12,
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 10,
+     "steps": 12,
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 7,
+     "steps": 11,
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 12,
+     "steps": 11,
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 13,
+     "steps": 11,
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 2,
+     "steps": 6,
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 11,
+     "steps": 6,
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 8,
+     "ms": 1019,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 6,
+     "ms": 1017,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 12,
+     "ms": 1015,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 3,
+     "ms": 25,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 11,
+     "ms": 22,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 2,
+     "ms": 21,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 10,
+     "ms": 15,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 7,
+     "ms": 11,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 9,
+     "ms": 11,
+     "calls": 1,
+     "actions": [
+      "limbs:browser"
+     ],
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    },
+    {
+     "line": 4,
+     "ms": 9,
+     "calls": 1,
+     "actions": [
+      "table:filter"
+     ],
+     "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "b3f9a6f9e280413a8674e134ca2fafb5"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "b3f9a6f9e280413a8674e134ca2fafb5"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": true,
+   "read_exclusions": [
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "204cb47d0030034b4eb82fe26bff9ca257acb268cbfbdfbbd9c261019601f900",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 492,
+      "end": 551,
+      "line": 7,
+      "column": 15
+     },
+     "excluded_calls": 2
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "018f51f20f330888e55f8deb4442da91087abca3d605d32d1319c0ca3005d28d",
+     "action": "limbs:browser",
+     "location": {
+      "source_hash": "16aa382222ebfbec78ad6af2f26068178837c56242ee5cbfa0a7931ca1d04f28",
+      "start": 688,
+      "end": 729,
+      "line": 9,
+      "column": 5
+     },
+     "excluded_calls": 1
+    }
+   ],
+   "read_exclusions_total": 2,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "b3f9a6f9e280413a8674e134ca2fafb5",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ },
+ "elapsed": 3.5805909633636475
+}

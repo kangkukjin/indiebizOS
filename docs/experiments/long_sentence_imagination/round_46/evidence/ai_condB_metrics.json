@@ -1,0 +1,164 @@
+{
+  "episode": {
+    "id": 4510,
+    "total_ms": 383143,
+    "source": "training",
+    "run_id": "run_6688463b90282eace6f0"
+  },
+  "usage": {
+    "input": 7132611,
+    "output": 30496,
+    "cache_read": 6827667,
+    "cache_create": 300083
+  },
+  "roles": {
+    "oneshot:classify": {
+      "input": 10649,
+      "output": 128,
+      "cache_read": 5888,
+      "cache_create": 0
+    },
+    "consciousness": {
+      "input": 169537,
+      "output": 5641,
+      "cache_read": 94247,
+      "cache_create": 75284
+    },
+    "oneshot:execution": {
+      "input": 25829,
+      "output": 1629,
+      "cache_read": 17575,
+      "cache_create": 8246
+    },
+    "execution": {
+      "input": 6872051,
+      "output": 22868,
+      "cache_read": 6703508,
+      "cache_create": 168459
+    },
+    "oneshot:evaluate": {
+      "input": 54545,
+      "output": 230,
+      "cache_read": 6449,
+      "cache_create": 48094
+    }
+  },
+  "events": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 8,
+    "supervision.recall.finished": 8,
+    "model.call_started": 9,
+    "model.input": 9,
+    "model.round": 53,
+    "model.usage": 9,
+    "model.call_finished": 9,
+    "knowledge_catalog.selected": 2,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "framing.inherit_declined": 1,
+    "supervision.model.started": 2,
+    "model.response_snapshot": 102,
+    "supervision.tool.supervisor": 1,
+    "supervision.model.finished": 2,
+    "supervision.framing": 1,
+    "supervision.tool.started": 40,
+    "ibl.started": 40,
+    "ibl.checkpoint": 33,
+    "ibl.finished": 40,
+    "supervision.tool.finished": 40,
+    "context.input_ref_resolved": 3,
+    "side_effect.write": 4,
+    "supervision.progress": 3,
+    "supervision.decision": 2,
+    "supervision.instruction.delivered": 1,
+    "context.result_projected": 1,
+    "supervision.review.trigger_retired": 1,
+    "model.image_route": 2,
+    "capability.judged": 1,
+    "cognition.evaluation": 1,
+    "supervision.evaluation.stage_started": 4,
+    "supervision.evaluation.stage_finished": 4,
+    "supervision.evaluation.started": 1,
+    "supervision.evaluation.finished": 1,
+    "validation.completed": 1,
+    "supervision.response.delivered": 1,
+    "recall.used": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+  },
+  "tool_names": {
+    "execute_ibl": 40
+  },
+  "tool_failures": 0,
+  "recall_used": [
+    {
+      "blocks": [
+        {
+          "evidence": "executed",
+          "ibl_calls": 39,
+          "presented": [
+            "4771",
+            "4080"
+          ],
+          "recall_id": "018770c1a069413bb70a948d3067a999",
+          "source": "hippocampus",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "presented": [
+            "script:나레이션생성",
+            "script:폴더변화",
+            "script:에피소드통계"
+          ],
+          "quality_contribution": "not_inferred",
+          "recall_id": "018770c1a069413bb70a948d3067a999",
+          "source": "reusable_capabilities",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "opened": [],
+          "presented": [
+            "464",
+            "156",
+            "174"
+          ],
+          "recall_id": "018770c1a069413bb70a948d3067a999",
+          "source": "recalled_memory",
+          "used": []
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "playwright",
+            "basics.09.df1b33bc83ac",
+            "opencv"
+          ],
+          "recall_id": "018770c1a069413bb70a948d3067a999",
+          "source": "method_map",
+          "used": [
+            "playwright",
+            "basics.09.df1b33bc83ac"
+          ]
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "card_sorting",
+            "atlas.design.progressive_disclosure"
+          ],
+          "recall_id": "018770c1a069413bb70a948d3067a999",
+          "source": "world_memory",
+          "used": []
+        }
+      ],
+      "completed": true,
+      "phase": "turn"
+    }
+  ],
+  "compacted": 0
+}

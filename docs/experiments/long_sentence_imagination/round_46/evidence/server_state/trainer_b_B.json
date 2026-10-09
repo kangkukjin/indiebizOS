@@ -1,0 +1,23 @@
+{
+ "site": "B",
+ "logins": 1,
+ "requests": 11,
+ "expired_sessions": 0,
+ "rooms_reads": 1,
+ "holds": [
+  {
+   "id": "HB001",
+   "room": "B2",
+   "room_name": "로지 트윈",
+   "checkin": "2026-11-14",
+   "nights": 2,
+   "guests": 2,
+   "total": 236000,
+   "breakfast": true,
+   "at": "2026-10-09 16:12:49"
+  }
+ ],
+ "rejections": [],
+ "consents": 1,
+ "price_bumped": false
+}

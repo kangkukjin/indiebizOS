@@ -1,0 +1,396 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 46회차 1차 호출(비교) v1 — v0 수정 1회: f-string 보간 안의 따옴표 삼항(SYNTAX, 45회차와 같은 작성 오류)을 변수로 — inputs: src(입력 폴더), out(출력 폴더). 같은 task_id 의 2차 호출(hold_v0.ibl)이 탭·세션을 이어받는다.\n# 흐름: 조건·포털·계정 읽기 → 포털마다 [탭(첫 포털은 현재 탭, 둘째는 tab new) → 로그인 → 동의 모달 '필수만 동의' → 달력 열어 날짜 → 박수 select → 인원 + → 검색 → 객실 표 파싱]\n#       → 비교표 → 기준(예산 안 총액 최저, 마감 제외)으로 선택·이유 → compare.json·compare.md → 비교 결과 반환(2차 호출 입력)\n# 참고: 수리된 browser_action.md(세션·dialog·wait·select label)·교재·describe 3·탐침 evidence/probe_flow_call1.json(모달·달력·스테퍼·탭)\n\n[def:참조]($snap,$role,$name) {\n  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}\n  return len($m)>0 ? $m[0].ref : null\n}\n[def:글]($v,$대신) { return $v == null ? $대신 : $v }\n[def:원]($s) { return number(replace(replace(strip($s),\",\",\"\"),\"원\",\"\")) }\n[def:객실행]($text,$portal) {\n  $rows = filter(split($text,\"\\n\"),($l)=>len(split($l,\"\\t\"))>=6 and ($l[:1]==\"A\" or $l[:1]==\"B\"))\n  return map($rows,($l)=>{portal:$portal, id:split($l,\"\\t\")[0], name:split($l,\"\\t\")[1], breakfast:split($l,\"\\t\")[2]==\"포함\", nightly:[fn:원]{s:split($l,\"\\t\")[3]}, total:[fn:원]{s:split($l,\"\\t\")[4]}, left:split($l,\"\\t\")[5], closed:contains(split($l,\"\\t\")[5],\"마감\")})\n}\n# 한 포털: 로그인 → 동의 → 검색 → 객실 표. 탭은 호출자가 미리 만든다(현재 활성 탭에서 동작).\n[def:포털읽기]($portal,$acct,$trip) {\n  $n = [limbs:browser]{op:\"navigate\", url:f\"${portal.url}login\", driver:\"playwright\", wait:\"load\"}\n  $s = [limbs:browser]{op:\"snapshot\"}\n  $rid = [fn:참조]{snap:$s, role:\"textbox\", name:\"이용자 ID\"}\n  $rpw = [fn:참조]{snap:$s, role:\"textbox\", name:\"비밀번호\"}\n  assert $rid != null and $rpw != null, \"로그인 입력칸 없음\", {portal:$portal.name, snapshot:$s}\n  $t1 = [limbs:browser]{op:\"type\", ref:$rid, text:$acct.user}\n  $t2 = [limbs:browser]{op:\"type\", ref:$rpw, text:$acct.password, submit:true}\n  $s1 = [limbs:browser]{op:\"snapshot\"}\n  $rcons = [fn:참조]{snap:$s1, role:\"button\", name:\"필수만 동의\"}\n  $consented = $rcons != null\n  [if:$consented] { $k = [limbs:browser]{op:\"click\", ref:$rcons} }\n  $s2 = [limbs:browser]{op:\"snapshot\"}\n  $rcal = [fn:참조]{snap:$s2, role:\"button\", name:\"날짜 선택\"}\n  assert $rcal != null, \"날짜 선택 버튼 없음\", {portal:$portal.name, url:$s2.url}\n  $k1 = [limbs:browser]{op:\"click\", ref:$rcal}\n  $s3 = [limbs:browser]{op:\"snapshot\"}\n  $rday = [fn:참조]{snap:$s3, role:\"button\", name:$trip.checkin}\n  assert $rday != null, \"달력에 체크인 날짜 없음\", {portal:$portal.name, checkin:$trip.checkin}\n  $k2 = [limbs:browser]{op:\"click\", ref:$rday}\n  $k3 = [limbs:browser]{op:\"select\", ref:[fn:참조]{snap:$s3, role:\"combobox\", name:\"박수\"}, label:f\"${trip.nights}박\"}\n  $rplus = [fn:참조]{snap:$s3, role:\"button\", name:\"인원 늘리기\"}\n  [repeat:while $i < $trip.guests - 1] { $kp = [limbs:browser]{op:\"click\", ref:$rplus} }\n  $s4 = [limbs:browser]{op:\"snapshot\"}\n  $k4 = [limbs:browser]{op:\"click\", ref:[fn:참조]{snap:$s4, role:\"button\", name:\"검색\"}}\n  $c = [limbs:browser]{op:\"content\", mode:\"text\"}\n  assert contains($c.url,\"/rooms\"), \"검색 결과 화면이 아님\", {portal:$portal.name, url:$c.url}\n  $head = [fn:글]{v:(filter(split($c.text,\"\\n\"),($l)=>contains($l,\"체크인\")))[0] ?? null, 대신:\"\"}\n  return {portal:$portal.name, url:$portal.url, rooms_url:$c.url, header:$head, consented:$consented, rooms:[fn:객실행]{text:$c.text, portal:$portal.name}, tab_id:$c.tab_id, session_owner:$c.session_owner}\n}\n\n$trip = ([self:read]{path:f\"${src}/trip.json\"}).data\n$acct = ([self:read]{path:f\"${src}/account.json\"}).data\n$portals = ([self:read]{path:f\"${src}/portals.json\"}).data.items\nassert len($portals) == 2, \"포털은 두 곳이어야 합니다\", {n:len($portals)}\n$mk = [self:mkdir]{path:$out}\n\n$첫 = [fn:포털읽기]{portal:$portals[0], acct:$acct, trip:$trip}\n$tb = [limbs:browser]{op:\"tab\", mode:\"new\", url:f\"${portals[1].url}login\"}\n$둘 = [fn:포털읽기]{portal:$portals[1], acct:$acct, trip:$trip}\n$tabs = [limbs:browser]{op:\"tab\", mode:\"list\"}\n\n$전체 = $첫.rooms + $둘.rooms\nassert len($전체) >= 2, \"객실을 읽지 못했습니다\", {first:len($첫.rooms), second:len($둘.rooms)}\n$후보 = $전체 >> [table:filter]{where:($r)=>not $r.closed and $r.total <= $trip.budget_total}\n$조식 = contains($trip.criterion,\"조식 포함\")\n$후보2 = $조식 ? ($후보 >> [table:filter]{where:($r)=>$r.breakfast}) : $후보\n$정렬 = $후보2 >> [table:sort]{by:\"total\"}\n$선택 = len($정렬) > 0 ? $정렬[0] : null\n$조식글 = $조식 ? \", 조식 포함 조건\" : \"\"\n$선택총액 = $선택 == null ? 0 : $선택.total\n$이유 = $선택 == null ? \"조건(예산·마감·조식)에 맞는 객실이 없음\" : f\"마감 제외·예산 ${trip.budget_total}원 안에서 총액 최저(${선택총액}원)${조식글}\"\n$비교 = {trip:$trip, portals:[{name:$첫.portal, rooms_url:$첫.rooms_url, header:$첫.header, consented:$첫.consented, tab_id:$첫.tab_id}, {name:$둘.portal, rooms_url:$둘.rooms_url, header:$둘.header, consented:$둘.consented, tab_id:$둘.tab_id}],\n        rooms:$전체, candidates:$후보2, choice:$선택, reason:$이유, tabs:$tabs.tabs, session_owner:$둘.session_owner}\n$w1 = [self:write]{path:f\"${out}/compare.json\", content:json($비교)}\n$표 = $전체 >> [table:compute]{set:($r)=>{bf:$r.breakfast ? \"포함\" : \"불포함\"}}\n$lines = map($표, ($r)=>f\"| ${r.portal} | ${r.id} ${r.name} | ${r.bf} | ${r.nightly} | ${r.total} | ${r.left} |\")\n$선택글 = $선택 == null ? \"선택 없음\" : f\"${선택.portal} ${선택.id} ${선택.name} 총액 ${선택.total}원\"\n$md = join(\"\\n\", [\"# 숙소 비교\", f\"- 조건: 체크인 ${trip.checkin}, ${trip.nights}박, ${trip.guests}명, 예산 ${trip.budget_total}원\", f\"- 기준: ${trip.criterion}\", \"\", \"| 포털 | 객실 | 조식 | 1박 | 총액 | 잔여 |\", \"|---|---|---|---|---|---|\"] + $lines + [\"\", f\"**선택**: ${선택글}\", f\"이유: ${이유}\"])\n$w2 = [self:write]{path:f\"${out}/compare.md\", content:$md}\nreturn $비교\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_46회차/trainer/input",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_46회차/trainer/out"
+  },
+  "task_id": "lsi46_trainer_base"
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1791529718.482594,
+ "ended": 1791529719.211786,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "PURE_EXPRESSION",
+    "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+    "source_span": {
+     "source_hash": "3d4532b48ce4aaad7173b5a65d8791ffb22c263e84e2594f228b73e096e960ad",
+     "start": 3991,
+     "end": 4038,
+     "line": 64,
+     "column": 15
+    },
+    "call_path": [],
+    "hint": "파이프 전체를 앞 문장 $변환 = 목록 >> [table:each]{...}에 받고 현재 식에는 $변환을 쓰세요. 람다 안의 순수 목록 변환은 reduce($목록,[],($누적,$행)=>$누적+[$행.필드])로 표현할 수 있습니다.",
+    "location": {
+     "source_hash": "3d4532b48ce4aaad7173b5a65d8791ffb22c263e84e2594f228b73e096e960ad",
+     "start": 3991,
+     "end": 4038,
+     "line": 64,
+     "column": 15,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 64,
+     "end_column": 62,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "PURE_EXPRESSION",
+    "severity": "error"
+   }
+  ],
+  "guards": [],
+  "guards_total": 274,
+  "guards_inner": 0,
+  "guards_omitted": 274,
+  "result_type": "{trip: Unknown, portals: List<{name: Unknown, rooms_url: Unknown, header: Text, consented: Bool, tab_id: Unknown}>, rooms: List<{portal: Unknown, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool}>, candidates: List<{portal: Unknown, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool}>, choice: Null | {portal: Unknown, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool}, reason: Text, tabs: Unknown, session_owner: Unknown}",
+  "effects": [
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "functions": {
+   "def:513:678": {
+    "name": "참조",
+    "params": {
+     "snap": "Record",
+     "role": "Text",
+     "name": "Unknown"
+    },
+    "required": [
+     "snap",
+     "role",
+     "name"
+    ],
+    "pipe_input": "snap",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "6ccfdcb8feef01a5a61b312ed39f8add5fd8554c2c1b5ecea19e2150aa4b160f",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "snap": "Record",
+       "role": "Text",
+       "name": "Text"
+      },
+      "result": "Unknown"
+     },
+     {
+      "params": {
+       "snap": "Record",
+       "role": "Text",
+       "name": "Unknown"
+      },
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "3d4532b48ce4aaad7173b5a65d8791ffb22c263e84e2594f228b73e096e960ad",
+     "start": 513,
+     "end": 678,
+     "line": 7,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 10,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:679:727": {
+    "name": "글",
+    "params": {
+     "v": "Null | Text",
+     "대신": "Text"
+    },
+    "required": [
+     "v",
+     "대신"
+    ],
+    "pipe_input": "v",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "863d0e4f81fc5d64a5d74bc92decdb2c89844b82dbef962560d5a3701eef73d7",
+    "result": "Text",
+    "specializations": [
+     {
+      "params": {
+       "v": "Null | Text",
+       "대신": "Text"
+      },
+      "result": "Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "3d4532b48ce4aaad7173b5a65d8791ffb22c263e84e2594f228b73e096e960ad",
+     "start": 679,
+     "end": 727,
+     "line": 11,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 11,
+     "end_column": 49,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:728:800": {
+    "name": "원",
+    "params": {
+     "s": "Text"
+    },
+    "required": [
+     "s"
+    ],
+    "pipe_input": "s",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "897c126d820f4ecf946c6279f364a7ff8e18d9fd7d3acb8ae27aa46ba791741d",
+    "result": "Number",
+    "specializations": [
+     {
+      "params": {
+       "s": "Text"
+      },
+      "result": "Number"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "3d4532b48ce4aaad7173b5a65d8791ffb22c263e84e2594f228b73e096e960ad",
+     "start": 728,
+     "end": 800,
+     "line": 12,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 12,
+     "end_column": 73,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:801:1188": {
+    "name": "객실행",
+    "params": {
+     "text": "Unknown",
+     "portal": "Unknown"
+    },
+    "required": [
+     "text",
+     "portal"
+    ],
+    "pipe_input": "text",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "107d931735baaf30390c0399f50de0c3bd33015d407b6f7701cf225280000caa",
+    "result": "List<{portal: Unknown, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool}>",
+    "specializations": [
+     {
+      "params": {
+       "text": "Unknown",
+       "portal": "Unknown"
+      },
+      "result": "List<{portal: Unknown, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "3d4532b48ce4aaad7173b5a65d8791ffb22c263e84e2594f228b73e096e960ad",
+     "start": 801,
+     "end": 1188,
+     "line": 13,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 16,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1249:3228": {
+    "name": "포털읽기",
+    "params": {
+     "portal": "Unknown",
+     "acct": "Unknown",
+     "trip": "Unknown"
+    },
+    "required": [
+     "portal",
+     "acct",
+     "trip"
+    ],
+    "pipe_input": "portal",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:browser",
+     "table:filter"
+    ],
+    "source_hash": "7603f370431037b3dd86b87f1b8b2052581bfa0c0727912457c4fa99db91969f",
+    "result": "{portal: Unknown, url: Unknown, rooms_url: Unknown, header: Text, consented: Bool, rooms: List<{portal: Unknown, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool}>, tab_id: Unknown, session_owner: Unknown}",
+    "specializations": [
+     {
+      "params": {
+       "portal": "Unknown",
+       "acct": "Unknown",
+       "trip": "Unknown"
+      },
+      "result": "{portal: Unknown, url: Unknown, rooms_url: Unknown, header: Text, consented: Bool, rooms: List<{portal: Unknown, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool}>, tab_id: Unknown, session_owner: Unknown}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "3d4532b48ce4aaad7173b5a65d8791ffb22c263e84e2594f228b73e096e960ad",
+     "start": 1249,
+     "end": 3228,
+     "line": 18,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 47,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "b9210c44025f5fb438877db38c9e139827d3c6e2b40784ea8c16c63643dd2208",
+  "dependencies": {
+   "source": "3d4532b48ce4aaad7173b5a65d8791ffb22c263e84e2594f228b73e096e960ad",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "src": "Text",
+    "out": "Text"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 5307
+    }
+   ],
+   "contracts": "7d5ed144e341a3b16f619ffeccfc346db8d0f15a1ed8c44145c3eeb899d49142",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755",
+   "expressions": "8b1374449bdb861758d2d12b149fae44ebb72cfde1919d26ea2d1cdeae740050",
+   "core": "0f9fd52e6915bbe50ec190eb519a704bc5ca28977e3d3b1d8c4d52436dfb4953"
+  },
+  "source_hash": "3d4532b48ce4aaad7173b5a65d8791ffb22c263e84e2594f228b73e096e960ad",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "3d4532b48ce4aaad7173b5a65d8791ffb22c263e84e2594f228b73e096e960ad",
+      "start": 2584,
+      "end": 2670,
+      "line": 40,
+      "column": 3,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 40,
+      "end_column": 89,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "동적 반복 횟수"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "limbs:browser",
+    "self:mkdir",
+    "self:read",
+    "self:write",
+    "table:compute",
+    "table:filter",
+    "table:sort"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "진단 위치를 수정한 뒤 다시 검사하세요.",
+  "runtime_checks": {
+   "total": 274,
+   "informative": 206
+  },
+  "guards_ref": {
+   "id": "173da34bd6526b3bc2c526ab302e02b4e7024b84f0bb3b879caa0959e1d1d062",
+   "chars": 359621,
+   "read_args": {
+    "id": "173da34bd6526b3bc2c526ab302e02b4e7024b84f0bb3b879caa0959e1d1d062",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "request_inputs": {
+   "input_args": {
+    "src": {
+     "$ref": "181c2eef542cfcf7f46d36156f412eddc5a80a7f5de210ae5ed961586d106756"
+    },
+    "out": {
+     "$ref": "aecfd6283f71c8df6befc28f74710e90e543d372af33318151cc4a4df8025690"
+    }
+   },
+   "unavailable": {},
+   "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  },
+  "revise_args": {
+   "code": "$rejected:6a600996fc4e2873ebed25e3fdd57fdd591780b54e7567e316618b5c49341160",
+   "code_edits": [
+    {
+     "old": "<고칠 원문 조각>",
+     "new": "<바꿀 글>"
+    }
+   ]
+  },
+  "revise_hint": "고칠 조각만 보내세요: revise_args.code 를 그대로 code 에 넣고 code_edits 에 {old, new} 를 적습니다(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 같은 inputs·budget·check 를 함께 보냅니다. 원문 전체를 다시 적지 않습니다."
+ }
+}

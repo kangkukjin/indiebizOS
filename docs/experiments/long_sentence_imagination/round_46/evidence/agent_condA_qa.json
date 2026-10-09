@@ -1,0 +1,81 @@
+{
+ "passed": 17,
+ "total": 17,
+ "checks": {
+  "compare_json": true,
+  "result_json": true,
+  "report_md": true,
+  "six_rooms": true,
+  "totals_match": true,
+  "b3_closed": true,
+  "choice": true,
+  "server_hold_B1": true,
+  "server_hold_A_none": true,
+  "consent_essential": true,
+  "hold_number_match": true,
+  "totals_consistent": true,
+  "pdf_has_hold_number": true,
+  "pdf_has_total": true,
+  "same_session_two_calls": true,
+  "two_tabs": true,
+  "preview_reported": true
+ },
+ "detail": {
+  "choice": {
+   "id": "B1",
+   "total": 176000
+  },
+  "preview": {
+   "done": true,
+   "status": "부분 실행",
+   "lock_state": "잠금 아님(CGSSessionScreenIsLocked=0)",
+   "idle_seconds_before_open": 1,
+   "user_present": true,
+   "open": "open -a Preview hold.pdf → 1초 후 osascript frontmost=com.apple.Preview, Preview 앞 창 이름 hold.pdf",
+   "screen_capture": "evidence/preview_screen.png (메뉴 막대 활성 앱 '미리보기', 창 제목 hold.pdf 확인)",
+   "screen_hold_number": "HB001",
+   "pdf_hold_number": "HB001",
+   "match": true,
+   "ocr_caveat": "화면 판독은 가운데 글자가 숫자 0인지 영문 O인지 작은 글자라 '모양상 0'이라고 단서 — PDF 텍스트는 HB001",
+   "close_attempts": [
+    {
+     "via": "[limbs:screen]{op:key,key:cmd+w,expect_app:com.apple.Preview}",
+     "result": "입력 전 거절 — 현재 앱 조회 실패(AX -25204, 손쉬운 사용 권한). 키 미전송"
+    },
+    {
+     "via": "osascript System Events: frontmost 확인과 keystroke를 한 스크립트에서(직전 frontmost=com.apple.Preview)",
+     "result": "'SENT' 반환했으나 3초 뒤에도 Preview 창 hold.pdf 남아 있음 → 키가 실제로 전달되지 않은 것으로 판단(손쉬운 사용 권한 부족 추정)"
+    }
+   ],
+   "window_closed": false,
+   "other_apps_touched": false,
+   "note": "창 닫기 미완료. 추가 키 전송·다른 방법의 강제 종료는 하지 않았다. hold.pdf 창은 미리보기에 열린 채로 남아 있다."
+  },
+  "server": {
+   "A": {
+    "logins": 3,
+    "expired_sessions": 0,
+    "consents": 2
+   },
+   "B": {
+    "logins": 3,
+    "expired_sessions": 0,
+    "consents": 2
+   },
+   "B_holds": [
+    {
+     "id": "HB001",
+     "room": "B1",
+     "room_name": "통나무 캐빈",
+     "checkin": "2026-11-14",
+     "nights": 2,
+     "guests": 2,
+     "total": 176000,
+     "breakfast": false,
+     "at": "2026-10-09 16:15:49"
+    }
+   ],
+   "A_holds": []
+  }
+ }
+}

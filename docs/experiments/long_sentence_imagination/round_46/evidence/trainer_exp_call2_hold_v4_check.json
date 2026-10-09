@@ -1,0 +1,594 @@
+{
+ "request": {
+  "code": "#!ibl edition=2\n# 46회차 2차 호출(보류·확인·미리보기) v2 — v0→v1 보간 따옴표 SYNTAX / v1→v2 PURE_EXPRESSION 6 / v2→v3 Null 합집합 / v3→v4(변경 용이성·견고성): 세션 만료가 iframe 로드에서 오면 URL 검사로는 안 보여 #agree 실패로 중단되던 것을 — 시도를 try 로 감싸고 프레임 본문의 '만료' 를 보고 재로그인 뒤 재시도 — inputs: src, out, compare(1차 결과 $ref 또는 compare.json 과 같은 Record), choice(객실 id 또는 null=1차 선택), desk(true 면 미리보기 다리)\n# 같은 task_id 로 1차의 세션·탭을 이어받는다. 흐름: 선택 확정 → 활성 탭이 그 포털이 아니면 활성 탭 닫기(자동 전환; tab switch 는 계약상 불가 — 탐침 L46-1)\n#   → 보류 화면(세션 만료면 재로그인·동의 뒤 재진입) → iframe 약관(selector 로 check — 프레임 안 snapshot 은 메인을 읽음, 탐침) → reset → 신청(dialog:accept)\n#   → 완료 화면 판독(아니면 1회 재시도) → pdf → self:read 대조 → 미리보기(desk) → result.json·report.md\n[def:참조]($snap,$role,$name) {\n  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}\n  return len($m)>0 ? $m[0].ref : null\n}\n[def:글]($v,$대신) { return $v == null ? $대신 : $v }\n[def:줄찾기]($text,$key) {\n  $ls = filter(split($text,\"\\n\"),($l)=>contains($l,$key))\n  return len($ls)>0 ? $ls[0] : null\n}\n[def:표값]($text,$key) {\n  $l = [fn:줄찾기]{text:$text, key:f\"${key}\\t\"}\n  return $l == null ? null : split($l,\"\\t\")[1]\n}\n[def:원]($s) { return number(replace(replace(strip($s),\",\",\"\"),\"원\",\"\")) }\n[def:재로그인]($url,$acct) {\n  $s = [limbs:browser]{op:\"snapshot\"}\n  $t1 = [limbs:browser]{op:\"type\", ref:[fn:글]{v:[fn:참조]{snap:$s, role:\"textbox\", name:\"이용자 ID\"}, 대신:\"none\"}, text:$acct.user}\n  $t2 = [limbs:browser]{op:\"type\", ref:[fn:글]{v:[fn:참조]{snap:$s, role:\"textbox\", name:\"비밀번호\"}, 대신:\"none\"}, text:$acct.password, submit:true}\n  $s1 = [limbs:browser]{op:\"snapshot\"}\n  $rc = [fn:참조]{snap:$s1, role:\"button\", name:\"필수만 동의\"}\n  [if:$rc != null] { $k = [limbs:browser]{op:\"click\", ref:$rc} }\n  return {relogged:true, consented:$rc != null}\n}\n# 보류 한 번 시도: 보류 화면 → 약관 → 신청 → 결과 화면 텍스트\n[def:보류시도]($url,$acct,$room,$trip) {\n  $hold_url = f\"${url}hold/${room}?checkin=${trip.checkin}&nights=${trip.nights}&guests=${trip.guests}\"\n  $n = [limbs:browser]{op:\"navigate\", url:$hold_url, wait:\"load\"}\n  $c0 = [limbs:browser]{op:\"content\", mode:\"text\"}\n  $relog = {relogged:false, consented:false}\n  [if:contains($c0.url,\"login\")] {\n    $relog = [fn:재로그인]{url:$url, acct:$acct}\n    $n2 = [limbs:browser]{op:\"navigate\", url:$hold_url, wait:\"load\"}\n  }\n  $c1 = [limbs:browser]{op:\"content\", mode:\"text\"}\n  assert contains($c1.url,\"/hold/\"), \"보류 화면에 들어가지 못함\", {url:$c1.url}\n  $화면총액 = [fn:원]{s:[fn:글]{v:split([fn:글]{v:[fn:줄찾기]{text:$c1.text, key:\"총액\"}, 대신:\"총액 0원\"},\"총액 \")[1], 대신:\"0원\"}}\n  $fs = [limbs:browser]{op:\"iframe\", mode:\"switch\", name:\"terms\"}\n  $cf = [limbs:browser]{op:\"content\", mode:\"text\"}\n  [if:contains($cf.text,\"만료\") or contains($cf.text,\"비밀번호\")] {\n    $fr0 = [limbs:browser]{op:\"iframe\", mode:\"reset\"}\n    return {done:false, expired:true, url:$c1.url, text:$cf.text, hold_page_total:$화면총액, relogin:$relog, dialogs:null, session_owner:$c1.session_owner, tab_id:$c1.tab_id}\n  }\n  $ck = [limbs:browser]{op:\"check\", selector:\"#agree\"}\n  $fr = [limbs:browser]{op:\"iframe\", mode:\"reset\"}\n  $s7 = [limbs:browser]{op:\"snapshot\"}\n  $rb = [fn:참조]{snap:$s7, role:\"button\", name:\"예약 보류 신청\"}\n  assert $rb != null, \"신청 버튼 없음\", {snapshot:$s7}\n  $sub = [limbs:browser]{op:\"click\", ref:$rb, dialog:\"accept\"}\n  $c3 = [limbs:browser]{op:\"content\", mode:\"text\"}\n  return {done:contains($c3.url,\"/hold/done/\"), expired:contains($c3.url,\"login\"), url:$c3.url, text:$c3.text, hold_page_total:$화면총액, relogin:$relog, dialogs:get($sub,\"dialogs\"), session_owner:$c3.session_owner, tab_id:$c3.tab_id}\n}\n\n$trip = $compare.trip\n$acct = ([self:read]{path:f\"${src}/account.json\"}).data\n$선택 = $compare.choice\n[if:$choice != null] {\n  $고른 = $compare.rooms >> [table:filter]{where:($r)=>$r.id==$choice}\n  assert len($고른) > 0, \"지정한 객실이 비교표에 없습니다\", {choice:$choice}\n  $선택 = $고른[0]\n}\n$포털 = ($compare.portals >> [table:filter]{where:($p)=>$p.name==$선택.portal})[0]\n$url = split($포털.rooms_url,\"rooms\")[0]\n\n# 탭: 활성 탭이 선택 포털의 탭이 아니면 활성 탭을 닫아 이전 탭으로(switch 는 계약에 tab_id 가 없어 불가)\n$tabs0 = [limbs:browser]{op:\"tab\", mode:\"list\"}\n$탭조치 = \"none\"\n[if:$tabs0.active_tab != $포털.tab_id] {\n  $cl = [limbs:browser]{op:\"tab\", mode:\"close\"}\n  $탭조치 = \"active_closed\"\n}\n$tabs1 = [limbs:browser]{op:\"tab\", mode:\"list\"}\n\n# 보류(최대 2회 — 세션 만료가 신청 도중에 오면 한 번 더)\n$r1 = [try] { [fn:보류시도]{url:$url, acct:$acct, room:$선택.id, trip:$trip} } [catch] { {done:false, expired:true, url:\"\", text:f\"오류: ${error.message}\", hold_page_total:null, relogin:{relogged:false, consented:false}, dialogs:null, session_owner:null, tab_id:null} }\n$r = $r1\n$retried = false\n[if:not $r1.done] {\n  $fr1 = [limbs:browser]{op:\"iframe\", mode:\"reset\"}\n  $n1 = [limbs:browser]{op:\"navigate\", url:f\"${url}login\", wait:\"load\"}\n  $c1x = [limbs:browser]{op:\"content\", mode:\"text\"}\n  [if:contains($c1x.url,\"login\")] { $rl = [fn:재로그인]{url:$url, acct:$acct} }\n  $r = [try] { [fn:보류시도]{url:$url, acct:$acct, room:$선택.id, trip:$trip} } [catch] { {done:false, expired:false, url:\"\", text:f\"오류: ${error.message}\", hold_page_total:null, relogin:{relogged:false, consented:false}, dialogs:null, session_owner:null, tab_id:null} }\n  $retried = true\n}\n$보류번호 = [fn:글]{v:[fn:표값]{text:$r.text, key:\"보류번호\"}, 대신:\"\"}\n$완료총액 = $r.done ? [fn:원]{s:[fn:글]{v:[fn:표값]{text:$r.text, key:\"총액\"}, 대신:\"0원\"}} : null\n$완료체크인 = [fn:글]{v:[fn:표값]{text:$r.text, key:\"체크인\"}, 대신:\"\"}\n$완료객실 = [fn:글]{v:[fn:표값]{text:$r.text, key:\"객실\"}, 대신:\"\"}\n$pdfpath = f\"${out}/hold.pdf\"\n$pdf = null\n$pdf_text = \"\"\n[if:$r.done] {\n  $pdf = [limbs:browser]{op:\"pdf\", path:$pdfpath}\n  $rd = [self:read]{path:$pdfpath}\n  $pdf_text = $rd.text\n}\n$대조 = {hold_number_in_pdf:len($보류번호)>0 and contains($pdf_text,$보류번호), room_match:contains($완료객실,$선택.id), checkin_match:$완료체크인 == $trip.checkin,\n         total_match:$완료총액 == $선택.total, compare_total:$선택.total, hold_total:$완료총액, pdf_has_total:$완료총액 == null ? false : contains($pdf_text, format_number($완료총액, \",.0f\"))}\n$판정 = not $r.done ? \"보류 실패\" : ($대조.total_match and $대조.room_match and $대조.checkin_match ? \"보류 완료·비교표와 일치\" : \"보류는 됐으나 비교표와 다름 — 사용자 재결정 요청\")\n\n# 미리보기 다리(desk:true 일 때만): os_open → 미리보기 포커스 대기 → snapshot 에서 보류번호 → cmd+w(expect_app)\n$preview = [try] {\n  [if:$desk != true or not $r.done] {\n    {done:false, reason:$desk != true ? \"desk 입력 꺼짐 — 미실행\" : \"보류 PDF 없음 — 미실행\", found:null}\n  } [else] {\n    $op = [limbs:os_open]{path:$pdfpath}\n    $w = [limbs:screen]{op:\"wait\", expect_app:\"com.apple.Preview\", timeout:8000}\n    $sn = [limbs:screen]{op:\"snapshot\"}\n    $els = [fn:글]{v:get($sn,\"elements\"), 대신:[]}\n    $ocrs = [fn:글]{v:get($sn,\"ocr_lines\"), 대신:[]}\n    $hits = filter(map($els, ($e)=>text([fn:글]{v:get($e,\"value\"), 대신:\"\"}) + \" \" + text([fn:글]{v:get($e,\"title\"), 대신:\"\"})), ($v)=>contains($v,$보류번호))\n    $ocr = filter(map($ocrs, ($e)=>text([fn:글]{v:get($e,\"text\"), 대신:\"\"})), ($v)=>contains($v,$보류번호))\n    $k = [limbs:screen]{op:\"key\", key:\"cmd+w\", expect_app:\"com.apple.Preview\"}\n    {done:true, reason:null, app:get($sn,\"app\"), found:len($hits)+len($ocr) > 0, ax_hits:len($hits), ocr_hits:len($ocr)}\n  }\n} [catch] { {done:false, reason:f\"미리보기 오류: ${error.message}\", found:null} }\n\n$result = {choice:$선택, reason_choice:$compare.reason, tab_action:$탭조치, tabs_before:$tabs0.tabs, tabs_after:$tabs1.tabs, hold:{done:$r.done, url:$r.url, number:$보류번호, retried:$retried, relogin:$r.relogin, dialogs:$r.dialogs, hold_page_total:$r.hold_page_total},\n  compare_check:$대조, verdict:$판정, attempts:[{done:$r1.done, expired:$r1.expired, url:$r1.url}] + ($retried ? [{done:$r.done, expired:$r.expired, url:$r.url}] : []), pdf:$pdfpath, preview:$preview, session:{owner:$r.session_owner, tab:$r.tab_id, compare_owner:$compare.session_owner, same_session:$r.session_owner == $compare.session_owner}}\n$w1 = [self:write]{path:f\"${out}/result.json\", content:json($result)}\n$완료총액글 = $완료총액 == null ? \"없음\" : text($완료총액)\n$relog글 = ($r.relogin.relogged or $retried) ? \"세션 만료 → 재로그인·재시도함\" : \"재로그인 없음\"\n$pv찾음 = $preview.found == true ? \"보류번호 확인\" : \"보류번호 못 찾음\"\n$pv사유 = [fn:글]{v:$preview.reason, 대신:\"\"}\n$pv글 = $preview.done ? f\"미리보기 대조: ${pv찾음}\" : f\"미리보기: ${pv사유}\"\n$md = join(\"\\n\", [\"# 예약 보류 결과\", f\"- 선택: ${선택.portal} ${선택.id} ${선택.name} (비교표 총액 ${선택.total}원)\", f\"- 이유: ${compare.reason}\", f\"- 탭 조치: ${탭조치}\", f\"- 보류: ${판정}\", f\"- 보류번호: ${보류번호}\", f\"- 완료 화면 총액: ${완료총액글}\", f\"- ${relog글}\", f\"- ${pv글}\", f\"- 세션: ${r.session_owner} (1차와 같음: ${r.session_owner == compare.session_owner})\"])\n$w2 = [self:write]{path:f\"${out}/report.md\", content:$md}\nreturn {verdict:$판정, hold_number:$보류번호, hold_total:$완료총액, compare_total:$선택.total, retried:$retried, relogin:$r.relogin, tab_action:$탭조치, preview:$preview, same_session:$r.session_owner == $compare.session_owner, files:[$w1.path,$w2.path]}\n",
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_46회차/trainer/input_exp",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_46회차/trainer/out_exp",
+   "desk": false,
+   "choice": null,
+   "compare": {
+    "trip": {
+     "checkin": "2026-11-14",
+     "nights": 2,
+     "guests": 2,
+     "budget_total": 260000,
+     "criterion": "예산 안에서 총액이 가장 싼 객실(조식 무관)"
+    },
+    "portals": [
+     {
+      "name": "가상 바다숙소",
+      "rooms_url": "http://127.0.0.1:8957/rooms?checkin=2026-11-14&nights=2&guests=2",
+      "header": "객실 요금 — 체크인 2026-11-14, 2박, 2명",
+      "consented": true,
+      "tab_id": "43f2c81e2d27-t1"
+     },
+     {
+      "name": "가상 산장숙소",
+      "rooms_url": "http://127.0.0.1:8967/rooms?checkin=2026-11-14&nights=2&guests=2",
+      "header": "객실 요금 — 체크인 2026-11-14, 2박, 2명",
+      "consented": true,
+      "tab_id": "43f2c81e2d27-t2"
+     }
+    ],
+    "rooms": [
+     {
+      "portal": "가상 바다숙소",
+      "id": "A1",
+      "name": "스탠다드 더블",
+      "breakfast": false,
+      "nightly": 95000,
+      "total": 190000,
+      "left": "잔여 4",
+      "closed": false
+     },
+     {
+      "portal": "가상 바다숙소",
+      "id": "A2",
+      "name": "디럭스 오션뷰",
+      "breakfast": true,
+      "nightly": 125000,
+      "total": 250000,
+      "left": "잔여 2",
+      "closed": false
+     },
+     {
+      "portal": "가상 바다숙소",
+      "id": "A3",
+      "name": "스위트",
+      "breakfast": true,
+      "nightly": 210000,
+      "total": 420000,
+      "left": "잔여 1",
+      "closed": false
+     },
+     {
+      "portal": "가상 산장숙소",
+      "id": "B1",
+      "name": "통나무 캐빈",
+      "breakfast": false,
+      "nightly": 88000,
+      "total": 176000,
+      "left": "잔여 3",
+      "closed": false
+     },
+     {
+      "portal": "가상 산장숙소",
+      "id": "B2",
+      "name": "로지 트윈",
+      "breakfast": true,
+      "nightly": 118000,
+      "total": 236000,
+      "left": "잔여 2",
+      "closed": false
+     },
+     {
+      "portal": "가상 산장숙소",
+      "id": "B3",
+      "name": "패밀리 룸",
+      "breakfast": true,
+      "nightly": 150000,
+      "total": 300000,
+      "left": "마감",
+      "closed": true
+     }
+    ],
+    "candidates": [
+     {
+      "portal": "가상 바다숙소",
+      "id": "A1",
+      "name": "스탠다드 더블",
+      "breakfast": false,
+      "nightly": 95000,
+      "total": 190000,
+      "left": "잔여 4",
+      "closed": false
+     },
+     {
+      "portal": "가상 바다숙소",
+      "id": "A2",
+      "name": "디럭스 오션뷰",
+      "breakfast": true,
+      "nightly": 125000,
+      "total": 250000,
+      "left": "잔여 2",
+      "closed": false
+     },
+     {
+      "portal": "가상 산장숙소",
+      "id": "B1",
+      "name": "통나무 캐빈",
+      "breakfast": false,
+      "nightly": 88000,
+      "total": 176000,
+      "left": "잔여 3",
+      "closed": false
+     },
+     {
+      "portal": "가상 산장숙소",
+      "id": "B2",
+      "name": "로지 트윈",
+      "breakfast": true,
+      "nightly": 118000,
+      "total": 236000,
+      "left": "잔여 2",
+      "closed": false
+     }
+    ],
+    "choice": {
+     "portal": "가상 산장숙소",
+     "id": "B1",
+     "name": "통나무 캐빈",
+     "breakfast": false,
+     "nightly": 88000,
+     "total": 176000,
+     "left": "잔여 3",
+     "closed": false
+    },
+    "reason": "마감 제외·예산 260000원 안에서 총액 최저(176000원)",
+    "tabs": [
+     {
+      "tab_id": "43f2c81e2d27-t1",
+      "title": "객실 요금 - 가상 바다숙소",
+      "url": "http://127.0.0.1:8957/rooms?checkin=2026-11-14&nights=2&guests=2",
+      "active": false
+     },
+     {
+      "tab_id": "43f2c81e2d27-t2",
+      "title": "객실 요금 - 가상 산장숙소",
+      "url": "http://127.0.0.1:8967/rooms?checkin=2026-11-14&nights=2&guests=2",
+      "active": true
+     }
+    ],
+    "session_owner": "43f2c81e2d2712d2b7fae4242a5ddf29b9ba7c5c8e70b662ca3a54dc998e374c"
+   }
+  },
+  "task_id": "lsi46_trainer_exp2"
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1791530140.1294458,
+ "ended": 1791530144.054709,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 216,
+  "guards_inner": 0,
+  "guards_omitted": 216,
+  "result_type": "{verdict: Text, hold_number: Text, hold_total: Null | Number, compare_total: Number, retried: Bool, relogin: {relogged: Bool, consented: Bool} | {relogged: Bool, consented: Bool}, tab_action: Text, preview: {done: Bool, reason: Null, app: Unknown, found: Bool, ax_hits: Number, ocr_hits: Number} | {done: Bool, reason: Text, found: Null}, same_session: Bool, files: List<Unknown>}",
+  "effects": [
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "functions": {
+   "def:663:828": {
+    "name": "참조",
+    "params": {
+     "snap": "Record",
+     "role": "Text",
+     "name": "Text"
+    },
+    "required": [
+     "snap",
+     "role",
+     "name"
+    ],
+    "pipe_input": "snap",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "6ccfdcb8feef01a5a61b312ed39f8add5fd8554c2c1b5ecea19e2150aa4b160f",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "snap": "Record",
+       "role": "Text",
+       "name": "Text"
+      },
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "cdff796025091fa583112930cc105415c7668d810c2fb22492142cece75e5d64",
+     "start": 663,
+     "end": 828,
+     "line": 6,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:829:877": {
+    "name": "글",
+    "params": {
+     "v": "Unknown",
+     "대신": "Unknown"
+    },
+    "required": [
+     "v",
+     "대신"
+    ],
+    "pipe_input": "v",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "863d0e4f81fc5d64a5d74bc92decdb2c89844b82dbef962560d5a3701eef73d7",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "v": "Unknown",
+       "대신": "Text"
+      },
+      "result": "Unknown"
+     },
+     {
+      "params": {
+       "v": "Null | Text",
+       "대신": "Text"
+      },
+      "result": "Text"
+     },
+     {
+      "params": {
+       "v": "Text",
+       "대신": "Text"
+      },
+      "result": "Text"
+     },
+     {
+      "params": {
+       "v": "Unknown",
+       "대신": "List<Unknown>"
+      },
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "cdff796025091fa583112930cc105415c7668d810c2fb22492142cece75e5d64",
+     "start": 829,
+     "end": 877,
+     "line": 10,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 10,
+     "end_column": 49,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1188:1727": {
+    "name": "재로그인",
+    "params": {
+     "url": "Text",
+     "acct": "Unknown"
+    },
+    "required": [
+     "url",
+     "acct"
+    ],
+    "pipe_input": "url",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:browser",
+     "table:filter"
+    ],
+    "source_hash": "528f9817b1809f8a2c967e3bcce370370c15b3155a6c2764dffa173f89b85a4d",
+    "result": "{relogged: Bool, consented: Bool}",
+    "specializations": [
+     {
+      "params": {
+       "url": "Text",
+       "acct": "Unknown"
+      },
+      "result": "{relogged: Bool, consented: Bool}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "cdff796025091fa583112930cc105415c7668d810c2fb22492142cece75e5d64",
+     "start": 1188,
+     "end": 1727,
+     "line": 20,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 28,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:878:997": {
+    "name": "줄찾기",
+    "params": {
+     "text": "Unknown",
+     "key": "Text"
+    },
+    "required": [
+     "text",
+     "key"
+    ],
+    "pipe_input": "text",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "fb2d02cd5093eb355a104db073524f6f4130d6d91fe8080bc957c993f322eeee",
+    "result": "Null | Text",
+    "specializations": [
+     {
+      "params": {
+       "text": "Unknown",
+       "key": "Text"
+      },
+      "result": "Null | Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "cdff796025091fa583112930cc105415c7668d810c2fb22492142cece75e5d64",
+     "start": 878,
+     "end": 997,
+     "line": 11,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 14,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1115:1187": {
+    "name": "원",
+    "params": {
+     "s": "Text"
+    },
+    "required": [
+     "s"
+    ],
+    "pipe_input": "s",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "897c126d820f4ecf946c6279f364a7ff8e18d9fd7d3acb8ae27aa46ba791741d",
+    "result": "Number",
+    "specializations": [
+     {
+      "params": {
+       "s": "Text"
+      },
+      "result": "Number"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "cdff796025091fa583112930cc105415c7668d810c2fb22492142cece75e5d64",
+     "start": 1115,
+     "end": 1187,
+     "line": 19,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 19,
+     "end_column": 73,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1769:3462": {
+    "name": "보류시도",
+    "params": {
+     "url": "Text",
+     "acct": "Unknown",
+     "room": "Text",
+     "trip": "{checkin: Text, nights: Number, guests: Number, budget_total: Number, criterion: Text}"
+    },
+    "required": [
+     "url",
+     "acct",
+     "room",
+     "trip"
+    ],
+    "pipe_input": "url",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:browser",
+     "table:filter"
+    ],
+    "source_hash": "84be0a7b7a5b009a1ba4b5128b5cbd8bd7738924bee43c42d495299192a6e979",
+    "result": "{done: Bool, expired: Bool, url: Unknown, text: Unknown, hold_page_total: Number, relogin: {relogged: Bool, consented: Bool} | {relogged: Bool, consented: Bool}, dialogs: Unknown, session_owner: Unknown, tab_id: Unknown}",
+    "specializations": [
+     {
+      "params": {
+       "url": "Text",
+       "acct": "Unknown",
+       "room": "Text",
+       "trip": "{checkin: Text, nights: Number, guests: Number, budget_total: Number, criterion: Text}"
+      },
+      "result": "{done: Bool, expired: Bool, url: Unknown, text: Unknown, hold_page_total: Number, relogin: {relogged: Bool, consented: Bool} | {relogged: Bool, consented: Bool}, dialogs: Unknown, session_owner: Unknown, tab_id: Unknown}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "cdff796025091fa583112930cc105415c7668d810c2fb22492142cece75e5d64",
+     "start": 1769,
+     "end": 3462,
+     "line": 30,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 56,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:998:1114": {
+    "name": "표값",
+    "params": {
+     "text": "Unknown",
+     "key": "Text"
+    },
+    "required": [
+     "text",
+     "key"
+    ],
+    "pipe_input": "text",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "ff49a394dd37f7f75c49f89c24ba17a01225b5786e059d307e9803e98f2113a5",
+    "result": "Null | Text",
+    "specializations": [
+     {
+      "params": {
+       "text": "Unknown",
+       "key": "Text"
+      },
+      "result": "Null | Text"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "cdff796025091fa583112930cc105415c7668d810c2fb22492142cece75e5d64",
+     "start": 998,
+     "end": 1114,
+     "line": 15,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 18,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "28484201dc362cf0774e73676ca0c85a8c158b798e9e5b123b8215a131d80029",
+  "dependencies": {
+   "source": "cdff796025091fa583112930cc105415c7668d810c2fb22492142cece75e5d64",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {
+    "src": "Text",
+    "out": "Text",
+    "desk": "Bool",
+    "choice": "Null",
+    "compare": "{trip: {checkin: Text, nights: Number, guests: Number, budget_total: Number, criterion: Text}, portals: List<{name: Text, rooms_url: Text, header: Text, consented: Bool, tab_id: Text}>, rooms: List<{portal: Text, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool} | {portal: Text, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool} | {portal: Text, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool}>, candidates: List<{portal: Text, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool} | {portal: Text, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool}>, choice: {portal: Text, id: Text, name: Text, breakfast: Bool, nightly: Number, total: Number, left: Text, closed: Bool}, reason: Text, tabs: List<{tab_id: Text, title: Text, url: Text, active: Bool} | {tab_id: Text, title: Text, url: Text, active: Bool}>, session_owner: Text}"
+   },
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 8541
+    }
+   ],
+   "contracts": "57c8aae97fb775615455f7a11e1f3ced85ada3ef533d39512c0f18b23785991b",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755",
+   "expressions": "8b1374449bdb861758d2d12b149fae44ebb72cfde1919d26ea2d1cdeae740050",
+   "core": "0f9fd52e6915bbe50ec190eb519a704bc5ca28977e3d3b1d8c4d52436dfb4953"
+  },
+  "source_hash": "cdff796025091fa583112930cc105415c7668d810c2fb22492142cece75e5d64",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "limbs:browser",
+    "limbs:os_open",
+    "limbs:screen",
+    "self:read",
+    "self:write",
+    "table:filter"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "실행하려면 execute_args 를 그대로 check 없이 호출하세요 — 프로그램 원문과 검사한 inputs·budget·edition·value_protocols를 재사용하므로 다시 적지 않습니다. 바꿀 인자만 명시하면 그 인자 전체를 교체합니다. 실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.",
+  "runtime_checks": {
+   "total": 216,
+   "informative": 144
+  },
+  "guards_ref": {
+   "id": "12ff92c1a5c363258b0ed8bd2d7355ab19f50c432d02c7bd04aa9104190f0bee",
+   "chars": 292483,
+   "read_args": {
+    "id": "12ff92c1a5c363258b0ed8bd2d7355ab19f50c432d02c7bd04aa9104190f0bee",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "execute_args": {
+   "code": "$checked:a43acadc0e9c9faffaa1e30ecab743ff0948efbe4c0f7500ac0632467bb5908c"
+  }
+ }
+}

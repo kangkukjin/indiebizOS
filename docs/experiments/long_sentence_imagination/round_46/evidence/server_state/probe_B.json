@@ -1,0 +1,11 @@
+{
+ "site": "B",
+ "logins": 3,
+ "requests": 28,
+ "expired_sessions": 2,
+ "rooms_reads": 5,
+ "holds": [],
+ "rejections": [],
+ "consents": 3,
+ "price_bumped": false
+}

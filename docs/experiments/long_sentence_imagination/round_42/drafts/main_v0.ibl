@@ -1,0 +1,26 @@
+#!ibl edition=2
+[def:장면만들기]($scene,$lecture) {
+  $slide = [self:slide]{op:"create",lecture_id:$lecture,render:"html",instruction:f"훈련용 홍보영상 한 장. 제목을 정확히 표시: ${scene.title}. ${scene.visual}. 먹과 주황 톤, 단순 도형 중심, 하단 25%는 자막을 위해 비워 두세요. 다른 사실이나 날짜를 추가하지 마세요.",content:$scene.note}
+  [self:slide]{op:"note",lecture_id:$lecture,slide_id:$slide.slide_id,note:$scene.note}
+  return {key:$scene.key,slide_id:$slide.slide_id,title:$scene.title,note:$scene.note,png:$slide.png_path}
+}
+[def:영상만들기]($lecture,$name) {
+  return [self:deck]{op:"video",lecture_id:$lecture,engine:"edge",voice:"ko-KR-SunHiNeural",rate:"+0%",captions:true,width:1280,height:720,transition:"fade",output_filename:$name,wait:true}
+}
+[def:기록하기]($out,$name,$record) {
+  $path = f"${out}/${name}.json"
+  [self:write]{path:$path,content:json($record)}
+  $again = [self:read]{path:$path,format:"json"}
+  return $again.data
+}
+$source = [self:read]{path:$input,format:"json"}
+$lecture = [self:lecture]{op:"create",title:"훈련42 훈련자 동네 수리교실",audience:"바느질 입문자",thesis:"버리기 전에 함께 수선해요",design_system:"ink_orange"}
+$scenes = $source.data.scenes >> [table:each] { return [fn:장면만들기]{scene:$it,lecture:$lecture.lecture_id} }
+$order = map($scenes,($s)=>$s.slide_id)
+[self:deck]{op:"reorder",lecture_id:$lecture.lecture_id,order:$order}
+$prepared = [fn:기록하기]{out:$out,name:"prepared",record:{lecture_id:$lecture.lecture_id,scenes:$scenes,order:$order}}
+$render = [fn:영상만들기]{lecture:$lecture.lecture_id,name:"round42_base.mp4"}
+$captions = [self:read]{path:$render.caption_file,format:"text"}
+$audio = [sense:listen]{op:"inspect",path:$render.output}
+$report = {lecture_id:$lecture.lecture_id,scenes:$scenes,render:$render,caption_source:$captions.text,audio:$audio,review_scope:"음성은 기계적 신호 검사. 프레임·원고·스트림·발음은 후속 검수 필요."}
+return [fn:기록하기]{out:$out,name:"production",record:$report}

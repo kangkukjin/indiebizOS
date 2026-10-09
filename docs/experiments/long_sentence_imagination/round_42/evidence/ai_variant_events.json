@@ -1,0 +1,863 @@
+[
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 2432,
+      "call_id": "86a5d03f54044023a2bde13b1361b6fd",
+      "event": "usage",
+      "input": 2969,
+      "latency_ms": 668,
+      "model": "deepseek-flash",
+      "output": 2,
+      "parent_call_id": null,
+      "phase": "classify",
+      "provider": "OpenAI",
+      "role": "oneshot:classify",
+      "round_index": 1,
+      "source": "gear:최대|분류→경량",
+      "tier": "경량"
+    }
+  },
+  {
+    "kind": "recall.presented",
+    "data": {
+      "blocks": [
+        {
+          "chars": 1682,
+          "ids": [
+            "1492",
+            "4071"
+          ],
+          "meta": {
+            "refs": 2,
+            "top_code": ""
+          },
+          "ms": 1111.5,
+          "source": "hippocampus",
+          "status": "ok",
+          "tag": "execution_memory"
+        },
+        {
+          "chars": 2337,
+          "ids": [
+            "script:나레이션생성",
+            "script:AI팁보고서",
+            "script:AI동향발행"
+          ],
+          "ms": 14.0,
+          "source": "reusable_capabilities",
+          "status": "ok",
+          "tag": "reusable_capabilities"
+        },
+        {
+          "chars": 883,
+          "ids": [],
+          "meta": {
+            "branches": 10
+          },
+          "ms": 14.1,
+          "source": "memory_map",
+          "status": "ok",
+          "tag": "memory_map"
+        },
+        {
+          "chars": 804,
+          "ids": [
+            "339",
+            "450",
+            "301"
+          ],
+          "meta": {
+            "branches": [
+              "파일·저장공간",
+              "indiebizOS/운영·수리",
+              "미디어",
+              "indiebizOS/포식 기억"
+            ],
+            "outside_beats_inside": true
+          },
+          "ms": 228.3,
+          "source": "recalled_memory",
+          "status": "ok",
+          "tag": "recalled_memory"
+        },
+        {
+          "chars": 2262,
+          "ids": [],
+          "meta": {
+            "branches": 43
+          },
+          "ms": 69.3,
+          "source": "guide_map",
+          "status": "ok",
+          "tag": "guide_map"
+        },
+        {
+          "chars": 1218,
+          "ids": [],
+          "ms": 2.1,
+          "source": "decision_ledger",
+          "status": "ok",
+          "tag": "decision_ledger"
+        },
+        {
+          "chars": 2425,
+          "ids": [],
+          "ms": 0.0,
+          "source": "pursuit",
+          "status": "ok",
+          "tag": "pursuit"
+        },
+        {
+          "chars": 130,
+          "ids": [
+            "basics.13.59f83bc301eb",
+            "whisper"
+          ],
+          "ms": 58.1,
+          "source": "method_map",
+          "status": "selected",
+          "tag": "method_map"
+        },
+        {
+          "chars": 620,
+          "ids": [
+            "atlas.film.nonlinear_editing",
+            "ffmpeg"
+          ],
+          "meta": {
+            "picked": 2
+          },
+          "ms": 96.2,
+          "source": "world_memory",
+          "status": "ok",
+          "tag": "world_map"
+        }
+      ],
+      "channel": "pipeline",
+      "recall_id": "ea7704c1157148d29e6fa21fe62d0e67",
+      "reflex": {
+        "code": "",
+        "score": 0.6781
+      },
+      "request_type": "THINK"
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 256,
+      "call_id": "1df001d3d6354fe5807fcc3a9609e56e",
+      "event": "usage",
+      "input": 1642,
+      "latency_ms": 756,
+      "model": "deepseek-flash",
+      "output": 3,
+      "parent_call_id": null,
+      "phase": "classify",
+      "provider": "OpenAI",
+      "role": "oneshot:classify",
+      "round_index": 1,
+      "source": "gear:최대|분류→경량",
+      "tier": "경량"
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 640,
+      "call_id": "9805ac78103946e2be31c505cb33ae73",
+      "event": "usage",
+      "input": 3445,
+      "latency_ms": 7114,
+      "model": "deepseek-flash",
+      "output": 1657,
+      "parent_call_id": null,
+      "phase": "background",
+      "provider": "OpenAI",
+      "role": "oneshot:background",
+      "round_index": 1,
+      "source": "gear:최대|분류→경량",
+      "tier": "경량"
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "id": "7d451d8045d848ff8944195fae95be53",
+      "input": {
+        "chars": 588,
+        "excerpt": "{\"code\": \"$a = [self:file_find]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent\\\", pattern:\\\"suri_class_promo*\\\", hash:true}\\n$s = [self:list]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/slides\\\"}\\n$d = [self:lecture]{op:\\\"load\\\", lecture_id:\\\"hunryeon42-dogribai-dongne-surigyosil\\\"}\\nreturn {agent:$a, slides:$s >> [table:select]{columns:[\\\"name\\\",\\\"size\\\",\\\"mtime\\\"]}, deck:$d.items >> [table:select]{columns:[\\\"순번\\\",\\\"slide_id\\\",\\\"png_file\\\",\\\"layout\\\"]}}\", \"edition\": 2}",
+        "id": "ffa9ca596ca7dceb7a80efccaa277a7271c3b5bf6830ac58347a4bb64cdbf3e9",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 19,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791513918.819851
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "check_rejected": false,
+      "elapsed_s": 0.363,
+      "evidence": {
+        "chars": 6300,
+        "excerpt": "{\"success\": true, \"value\": {\"agent\": {\"success\": true, \"text\": \"3개 매칭 | root: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent\\n/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.captions.ass\\n/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.captions.srt\\n/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.mp4\", \"table\": {\"columns\": [\"이름\", \"크기\", \"수정일\", \"경로\"], \"rows\": [[\"suri_class_promo.captions.ass\", 1412, \"2026-10-09 11:17\", \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.captions.ass\"], [\"suri_class_promo.captions.srt\", 665, \"2026-10-09 11:19\", \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.captions.srt\"], [\"suri_class_pro",
+        "id": "634bbbd355c4811601cad140f06ecc86c0f4b15a736e6f49470d66350b291ff1",
+        "integrity": "verified"
+      },
+      "id": "7d451d8045d848ff8944195fae95be53",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 20,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791513919.182703
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "id": "6f8aa9a03b9b4450b5ca3aa8dbd21e05",
+      "input": {
+        "chars": 303,
+        "excerpt": "{\"code\": \"[try]{ return [self:deck]{op:\\\"video\\\", lecture_id:\\\"hunryeon42-dogribai-dongne-surigyosil\\\", engine:\\\"edge\\\", voice:\\\"ko-KR-SunHiNeural\\\", captions:true, width:1280, height:720, output_filename:\\\"variant_missing.mp4\\\", wait:true} }[catch]{ return {failed:true, error:$error} }\", \"edition\": 2}",
+        "id": "dbc648ba2e1b1dc352740afcfe87427c84266de1d136b8c61f49cc32b1eb12c7",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 21,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791513923.092808
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "check_rejected": false,
+      "elapsed_s": 10.244,
+      "evidence": {
+        "chars": 3054,
+        "excerpt": "{\"success\": true, \"value\": {\"success\": true, \"output\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/video/variant_missing.mp4\", \"slides\": 3, \"narrated\": 3, \"preset_narration\": 0, \"missing_notes\": [], \"skipped\": [\"s003\"], \"captions\": 6, \"caption_file\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/video/variant_missing.captions.ass\", \"caption_burned\": true}, \"value_wire\": {\"protocol\": \"ibl-value/1\", \"data\": [\"record\", [[\"success\", [\"scalar\", true]], [\"output\", [\"scalar\", \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/video/variant_missing.mp4\"]], [\"slides\", [\"scalar\", 3]], [\"narrated\", [\"scalar\", 3]], [\"preset_narration\", [\"scalar\", 0]], [\"missing_notes\", [\"list\", []]], [\"skipped\", [\"list\", [[\"scalar\", \"s003\"]]]], [\"captions\", [\"scalar\", 6]], [\"caption_file\", [\"scalar\", \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-d",
+        "id": "de1648841878b6d0c9a064a8507745fe5ef433db734704ce2e88b1b849601139",
+        "integrity": "verified"
+      },
+      "id": "6f8aa9a03b9b4450b5ca3aa8dbd21e05",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 22,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791513933.3361049
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "id": "4a6c734a89a94cfd94dd90797053f3f3",
+      "input": {
+        "chars": 595,
+        "excerpt": "{\"code\": \"$w = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/work\\\"\\n$r = [self:script]{op:\\\"run\\\", id:\\\"슬라이드틀적용\\\", args:{lecture_id:\\\"hunryeon42-dogribai-dongne-surigyosil\\\", template_path:f\\\"${w}/template.html\\\", contents_path:f\\\"${w}/contents.json\\\"}}\\n$h = [self:file_find]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/slides\\\", pattern:\\\"*.png\\\", hash:true}\\nreturn {apply:$r.items, pngs:$h.items >> [table:select]{columns:[\\\"name\\\",\\\"size\\\",\\\"mtime\\\",\\\"sha256\\\"]}}\", \"edition\": 2}",
+        "id": "b7241724dd401648987e017beeec667c0b94b13140440d9b1f391d1bd5758e75",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 23,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791513938.934529
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "check_rejected": false,
+      "elapsed_s": 3.579,
+      "evidence": {
+        "chars": 5079,
+        "excerpt": "{\"success\": true, \"value\": {\"apply\": [{\"id\": \"s001\", \"path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/slides/s001.png\", \"reused\": true}, {\"id\": \"s002\", \"path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/slides/s002.png\", \"reused\": true}, {\"id\": \"s003\", \"path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/slides/s003.png\", \"reused\": false}, {\"id\": \"s004\", \"path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/slides/s004.png\", \"reused\": true}], \"pngs\": [{\"name\": \"s001.png\", \"size\": 38643, \"mtime\": \"2026-10-09 11:17\", \"sha256\": \"6b8d000e717bb6ed02c61642bb6bc2ea4d93a8e55f460aeec2de462cd3956b3a\"}, {\"name\": \"s002.png\", \"size\": 36076, \"mtime\": \"2026-10-09 11:17\", \"sha256\": \"c6da3dd1d43d599d95dd25fddebb470edba858bddf70ea8c64b2469594093567\"}, {\"name\": \"s003.png\", \"size\": 33039, \"mtime\": \"2",
+        "id": "c84d67be48c9e02751f714b0e3c340ea2c92fbf39d3afd418e3674133aaca1ff",
+        "integrity": "verified"
+      },
+      "id": "4a6c734a89a94cfd94dd90797053f3f3",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 24,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791513942.512619
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "id": "dc8f40ac41ba4603b32ed43f5060d5f2",
+      "input": {
+        "chars": 244,
+        "excerpt": "{\"code\": \"[self:deck]{op:\\\"video\\\", lecture_id:\\\"hunryeon42-dogribai-dongne-surigyosil\\\", engine:\\\"edge\\\", voice:\\\"ko-KR-SunHiNeural\\\", captions:true, width:1280, height:720, output_filename:\\\"variant_recovered.mp4\\\", wait:true}\", \"edition\": 2}",
+        "id": "33195d8dffcea8b6b22c3c2eec93e6c193c1ce788ae79fd1b7e85a0f969dcf62",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 25,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791513945.148014
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "check_rejected": false,
+      "elapsed_s": 12.41,
+      "evidence": {
+        "chars": 3038,
+        "excerpt": "{\"success\": true, \"value\": {\"success\": true, \"output\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/video/variant_recovered.mp4\", \"slides\": 4, \"narrated\": 4, \"preset_narration\": 0, \"missing_notes\": [], \"skipped\": [], \"captions\": 8, \"caption_file\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/video/variant_recovered.captions.ass\", \"caption_burned\": true}, \"value_wire\": {\"protocol\": \"ibl-value/1\", \"data\": [\"record\", [[\"success\", [\"scalar\", true]], [\"output\", [\"scalar\", \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/video/variant_recovered.mp4\"]], [\"slides\", [\"scalar\", 4]], [\"narrated\", [\"scalar\", 4]], [\"preset_narration\", [\"scalar\", 0]], [\"missing_notes\", [\"list\", []]], [\"skipped\", [\"list\", []]], [\"captions\", [\"scalar\", 8]], [\"caption_file\", [\"scalar\", \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-sur",
+        "id": "2fce6cf2743f1f7b598ff8a806d86d8a2542cda4518729aaa7e01ce6ba8550be",
+        "integrity": "verified"
+      },
+      "id": "dc8f40ac41ba4603b32ed43f5060d5f2",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 26,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791513957.557837
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "id": "521cd0972e8b4cba8f1320c8bc1bab51",
+      "input": {
+        "chars": 10821,
+        "excerpt": "{\"code\": \"$p = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/variant/work/verify_variant.py\\\"\\n[self:write]{path:$p, content:$src} ; $w = [self:write]{path:\\\"~turn/verify_variant.py\\\", content:$src} ; return $w.path\", \"edition\": 2, \"inputs\": {\"src\": \"#!/usr/bin/env python3\\n\\\"\\\"\\\"훈련42 입력 실패 변형 검증: variant_missing / variant_recovered 실측. 결과는 variant/work/verify_variant_result.json.\\\"\\\"\\\"\\nimport json, re, shutil, subprocess, hashlib\\nfrom pathlib import Path\\nfrom PIL import Image, ImageChops, ImageStat\\n\\nAGENT = Path(\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent\\\")\\nVAR = AGENT / \\\"variant\\\"\\nWORK = VAR / \\\"work\\\"\\nINPUT = AGENT.parent / \\\"input\\\" / \\\"scenes.json\\\"\\nLEC = Path(\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil\\\")\\nW, H, SAFE_Y = 1280, 720, 540\\nORIG = {  # 이전 턴 agent 폴더 최종본 sha256 (보존 확인용)\\n    \\\"suri_class_promo.mp4\\\": ",
+        "id": "7c6b2a90f8cbe4c9062b1314d8cad7c6e79dc5ce2a8f35f5322cb75ddcc6ab86",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 27,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791514013.4504042
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "check_rejected": false,
+      "elapsed_s": 0.34,
+      "evidence": {
+        "chars": 2226,
+        "excerpt": "{\"success\": true, \"value\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/transient/a6dfe85c24866b58e1525344d8ac0b51d8b5e9737c70da51079165e97ae2164c/work/verify_variant.py\", \"value_wire\": {\"protocol\": \"ibl-value/1\", \"data\": [\"scalar\", \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/transient/a6dfe85c24866b58e1525344d8ac0b51d8b5e9737c70da51079165e97ae2164c/work/verify_variant.py\"]}, \"edition\": 2, \"executed\": true, \"plan_hash\": \"0aa5f32a5ac4babda3929de29bffb113c5502f2f408819dd1c4bde0d6feb40e0\", \"source_complete\": true, \"usage\": {\"steps\": 15, \"rows\": 0, \"elapsed_ms\": 329}, \"resume\": {\"run_id\": \"87fef0ba4118407886caa2131ed17d6a\"}, \"resumed\": false, \"run_status\": \"completed\", \"continuation\": {\"read_calls\": 0, \"state_change_possible\": true, \"hint\": \"프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 ",
+        "id": "d02e20af86d3b24422beb037c8e9f7f3963d42deca51fec8b1712c654037a86c",
+        "integrity": "verified"
+      },
+      "id": "521cd0972e8b4cba8f1320c8bc1bab51",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 28,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791514013.787783
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "id": "f8e858bcbf714773b6a9f950e075767d",
+      "input": {
+        "chars": 1338,
+        "excerpt": "{\"code\": \"[try]{ [self:script]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/transient/a6dfe85c24866b58e1525344d8ac0b51d8b5e9737c70da51079165e97ae2164c/work/verify_variant.py\\\", args:{}} }[catch]{ 0 }\\n$t = [self:read]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/variant/work/verify_variant_result.json\\\"}\\n$r = $t.data\\n$f = [\\\"scene_mapping\\\",\\\"screen_scene_runs\\\",\\\"cue_frames\\\",\\\"streams\\\",\\\"silences\\\"]\\nreturn {top:{order:$r.deck_order, notes:$r.deck_notes_match, titles:$r.deck_titles_match, s3:$r.recovered_s003, orig:$r.originals_preserved},\\n missing:{dur:$r.missing.duration_sec, cues:$r.missing.cue_count, cap_scenes:$r.missing.scenes_in_captions, screen:$r.missing.screen_scene_runs, checks:$r.missing.checks, streams:$r.missing.streams, sha:$r.missing.mp4_sha256},\\n rec:{dur:$r.recovered.duration_sec, cues:$r.recovered.cue_count, map:$r.recovered.scene_mapping, screen:$r.recovered.screen_scene_runs, checks",
+        "id": "d621c1bbc23974180a8e77ecd550b8fa0bf19570d25ceeb2535e6673fd22900e",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 29,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791514019.819541
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "check_rejected": false,
+      "elapsed_s": 5.543,
+      "evidence": {
+        "chars": 7145,
+        "excerpt": "{\"success\": true, \"value\": {\"top\": {\"order\": [\"s001\", \"s002\", \"s003\", \"s004\"], \"notes\": [true, true, true, true], \"titles\": [true, true, true, true], \"s3\": {\"path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-dogribai-dongne-surigyosil/slides/s003.png\", \"sha256\": \"635dde26f44d4b9d1c87f9754be94f600fbad1a5c63168370cb8cfb2a13bf555\", \"size\": [1280, 720], \"bottom_nonbg_pixels\": 0}, \"orig\": {\"suri_class_promo.mp4\": true, \"suri_class_promo.captions.ass\": true, \"suri_class_promo.captions.srt\": true}}, \"missing\": {\"dur\": 21.89, \"cues\": 6, \"cap_scenes\": [\"opening\", \"learn\", \"closing\"], \"screen\": [{\"slide\": \"s001\", \"from\": 0.12, \"to\": 6.88, \"frames\": 28}, {\"slide\": \"s002\", \"from\": 7.12, \"to\": 13.88, \"frames\": 28}, {\"slide\": \"s004\", \"from\": 14.12, \"to\": 21.88, \"frames\": 32}], \"checks\": {\"res_1280x720\": true, \"h264\": true, \"aac\": true, \"one_video_one_audio\": true, \"duration_20_70\": true, \"all_four_scenes_in_captions\": false, \"screen_sequence_is_s001_to_s004\": false, \"captio",
+        "id": "50c8cb0540e4ef0bb2a98a182dc640b5fe014d575c227f7b0147bcb8889cd55f",
+        "integrity": "verified"
+      },
+      "id": "f8e858bcbf714773b6a9f950e075767d",
+      "internal_tool_failures": 1,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 30,
+      "source_failures": 1,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791514025.3616
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "id": "34a9a30549bf4ef1859737a1229722db",
+      "input": {
+        "chars": 1103,
+        "excerpt": "{\"code\": \"$fd = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/variant/frames_variant_recovered/\\\"\\n$q = \\\"이 영상 프레임(1280×720)에서 ①큰 제목 문구를 글자 그대로 ②하단 자막 문구를 글자 그대로 ③자막이 본문(제목·그림)과 겹치는지 ④자막이나 제목이 화면 가장자리에서 잘렸는지. 보이는 것만 답해.\\\"\\n$files = [\\\"cue01_opening_1.53s.png\\\",\\\"cue03_learn_9.09s.png\\\",\\\"cue05_prepare_15.94s.png\\\",\\\"cue08_closing_26.06s.png\\\"]\\n$v = $files >> [table:each]{parallel:4}{ return {file:$it, answer:([engines:image_read]{op:\\\"read\\\", path:f\\\"${fd}${$it}\\\", question:$q}).answer} }\\n$m = [engines:image_read]{op:\\\"read\\\", path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/variant/frames_variant_missing/cue05_closing_15.79s.png\\\", question:\\\"큰 제목 문구와 하단 자막 문구를 글자 그대로 알려줘.\\\"} ?? {answer:\\\"frame name mismatch\\\"}\\n$stt = [sense:listen]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/variant/variant_recovered.mp4\\\", op:\\\"transc",
+        "id": "62ed50a31d0aced4bd25a5850542ad81b0a313327a87b024eb633ec06b91b16e",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 31,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791514033.4570901
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 3894,
+      "cache_read": 8697,
+      "call_id": "a7adb6e181d84a9cbdaea503ba0ef377",
+      "event": "usage",
+      "input": 12595,
+      "latency_ms": 7261,
+      "model": "opus",
+      "output": 497,
+      "parent_call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "phase": "execution",
+      "provider": "ClaudeCode",
+      "reasoning": 0,
+      "role": "oneshot:execution",
+      "round_index": 2
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 3892,
+      "cache_read": 8696,
+      "call_id": "0640db24e44f458c96a875f466db3700",
+      "event": "usage",
+      "input": 12592,
+      "latency_ms": 8800,
+      "model": "opus",
+      "output": 661,
+      "parent_call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "phase": "execution",
+      "provider": "ClaudeCode",
+      "reasoning": 0,
+      "role": "oneshot:execution",
+      "round_index": 2
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 3894,
+      "cache_read": 8697,
+      "call_id": "5ef817ef874f47ce88f1f8586ad42c28",
+      "event": "usage",
+      "input": 12595,
+      "latency_ms": 9116,
+      "model": "opus",
+      "output": 436,
+      "parent_call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "phase": "execution",
+      "provider": "ClaudeCode",
+      "reasoning": 0,
+      "role": "oneshot:execution",
+      "round_index": 2
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 3894,
+      "cache_read": 8697,
+      "call_id": "33b8991b592643fda1487248325e9031",
+      "event": "usage",
+      "input": 12595,
+      "latency_ms": 10985,
+      "model": "opus",
+      "output": 465,
+      "parent_call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "phase": "execution",
+      "provider": "ClaudeCode",
+      "reasoning": 0,
+      "role": "oneshot:execution",
+      "round_index": 2
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 0,
+      "call_id": "1a55869215324231b6ad8ed7ce554a1e",
+      "event": "usage",
+      "input": 697,
+      "latency_ms": 2450,
+      "model": "gemini-3.5-transcribe",
+      "output": 0,
+      "parent_call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "phase": "execute",
+      "provider": "Gemini audio",
+      "role": "execution",
+      "round_index": 0
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "check_rejected": false,
+      "elapsed_s": 14.5,
+      "evidence": {
+        "chars": 6796,
+        "excerpt": "{\"success\": true, \"value\": {\"visual\": [{\"file\": \"cue01_opening_1.53s.png\", \"answer\": \"① 큰 제목: **버리기 전에, 함께 고쳐요**\\n(제목 위 작은 글씨는 \\\"동네 수리교실 · 01\\\", 아래 부제는 \\\"가상 마을의 작은 수선 모임\\\"이에요.)\\n\\n② 하단 자막: **버리기 전에, 함께 고쳐요.** (끝에 마침표가 있어요.)\\n\\n③ 겹치지 않아요. 자막은 어두운 박스 안에 들어 있고, 위치는 대략 y≈620–683이에요. 제목, 부제, 오른쪽 바늘·천 그림은 모두 y≈420 위쪽에 있어서 그 사이가 크게 비어 있어요.\\n\\n④ 잘리지 않았어요. 자막 박스는 가로 중앙(x≈420–860)에 있고 아래 가장자리와 여백이 있어요. 제목과 부제도 왼쪽 여백(x≈90)을 두고 온전히 보여요. 왼쪽 위 작은 원형 아이콘도 잘리지 않았어요.\"}, {\"file\": \"cue03_learn_9.09s.png\", \"answer\": \"① **큰 제목:** 「단추 하나부터 천천히」\\n(제목 위의 작은 라벨: 「배우는 것 · 02」 / 제목 아래 부제: 「단추 달기 → 실 꿰기 → 구멍 꿰매기」)\\n\\n② **하단 자막:** 「떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다.」\\n\\n③ **겹침 없음.** 자막 박스는 화면 아래쪽 y≈620–685에 있습니다. 부제와 그림 아래 숫자 1·2·3은 y≈375 근처에서 끝납니다. 그 사이는 비어 있어서 자막이 본문과 겹치지 않습니다.\\n\\n④ **잘림 없음.** 제목, 부제, 라벨, 그림, 자막 박스 모두 화면 안쪽에 들어와 있습니다. 가장자리에서 잘린 글자나 요소는 보이지 않습니다.\"}, {\"file\": \"cue05_prepare_15.94s.png\", \"answer\": \"① 큰 제목: **가져올 것은 세 가지**\\n(제목 위 작은 글씨는 \\\"준비물 · 03\\\", 아래 부제는 \\\"옷 · 바느질 도구 · 배우고 싶은 마음\\\"입니다.)\\n\\n② 하단 자막: **깨끗한 ",
+        "id": "43dd247c5a90f3df10e0f8030c073f0e3e79c2358db56fe927c7ce2113715278",
+        "integrity": "verified"
+      },
+      "id": "34a9a30549bf4ef1859737a1229722db",
+      "internal_tool_failures": 1,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 36,
+      "source_failures": 1,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791514047.956463
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "id": "5e4443c5c9bc4816872704c7edbd7c0f",
+      "input": {
+        "chars": 5647,
+        "excerpt": "{\"code\": \"$p = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/variant/variant_report.md\\\"\\n[self:write]{path:$p, content:$md} ; $r = [self:read]{path:$p} ; $ls = [self:list]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/variant\\\"}\\nreturn {chars:len($r.text), tail:$r.text[-250:], files:$ls >> [table:select]{columns:[\\\"name\\\",\\\"size\\\"]}}\", \"edition\": 2, \"inputs\": {\"md\": \"# 검증 보고서 — 훈련42 입력 실패 변형 (s003 PNG 누락 → 복구)\\n\\n작성: 2026-10-09 · 덱 `hunryeon42-dogribai-dongne-surigyosil` · 합성 훈련 자료, 공개·발송·예약 없음\\n\\n## 요약\\n| | variant_missing.mp4 | variant_recovered.mp4 |\\n|---|---|---|\\n| 렌더 종료상태 | `success:true` (예외 없음) **하지만 부분 결과** — `slides:3`, `skipped:[\\\"s003\\\"]` | `success:true`, `slides:4`, `skipped:[]` |\\n| 실제 포함 장면 | **3/4** (opening·learn·closing), **prepare(s003) 누락** | **4/4** opening→learn→prepare→closing |\\n| 자막 큐 | 6 (prepare 원고 없음) | 8 (네 note 전문과 완전 일치) |\\n| 길이 | 21.89 s | 27.",
+        "id": "db3bd52a6349f303d75d4c622a04f8b3e00b9f30470cfe15a62a974f15bff01d",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 37,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791514178.2115252
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "check_rejected": false,
+      "elapsed_s": 0.369,
+      "evidence": {
+        "chars": 4062,
+        "excerpt": "{\"success\": true, \"value\": {\"chars\": 5084, \"tail\": \"t_*.mp4·.ass 원본 렌더). 이전 렌더 `video/suri_class_promo.*`는 다른 파일명을 써서 건드리지 않았다.\\n- 다른 실행자의 trainer·drafts·harness·정답·보고서는 열지 않았다. 숨겨진 원본 PNG도 찾지 않았다. 외부 게시·전송·예약 호출은 0건이다.\\n- 검증 스크립트와 원시 결과는 `work/verify_variant.py`와 `work/verify_variant_result.json`에 있다.\\n\", \"files\": [{\"name\": \"frames_variant_missing\", \"size\": null}, {\"name\": \"frames_variant_recovered\", \"size\": null}, {\"name\": \"variant_missing.captions.ass\", \"size\": 1217}, {\"name\": \"variant_missing.captions.srt\", \"size\": 504}, {\"name\": \"variant_missing.mp4\", \"size\": 565531}, {\"name\": \"variant_recovered.captions.ass\", \"size\": 1412}, {\"name\": \"variant_recovered.captions.srt\", \"size\": 665}, {\"name\": \"variant_recovered.mp4\", \"size\": 721202}, {\"name\": \"variant_report.md\", \"size\": 7854}, {\"name\": \"work\", \"size\": null}]}, \"value_wire\": {\"protocol\": \"ibl-value/1\", \"data\": [\"record\", [[\"chars\", [\"scalar\", 5084]], [\"tail\", [\"scalar\", \"t_*.mp4·.ass 원본 렌더). 이전 렌더 `video/suri_class_promo.*`는 다른 파일명을 ",
+        "id": "c14f6e2c1cc144aabcfd30c55c85755845003bf80c21f9f3a08026923fce12e1",
+        "integrity": "verified"
+      },
+      "id": "5e4443c5c9bc4816872704c7edbd7c0f",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 38,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791514178.579207
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 76609,
+      "cache_read": 2133103,
+      "call_id": "e9faa8bac41f4752a8b3efda860f5afe",
+      "event": "usage",
+      "input": 2209730,
+      "latency_ms": 278998,
+      "model": "opus",
+      "output": 20868,
+      "parent_call_id": null,
+      "phase": "execute",
+      "provider": "ClaudeCode",
+      "reasoning": 1273,
+      "role": "execution",
+      "round_index": 9,
+      "source": "gear:최대|실행→고급",
+      "tier": "고급"
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 512,
+      "call_id": "f4aa6f0afcfa49cf9df20c403b00b43e",
+      "event": "usage",
+      "input": 4459,
+      "latency_ms": 818,
+      "model": "deepseek-flash",
+      "output": 5,
+      "parent_call_id": null,
+      "phase": "capability_guard",
+      "provider": "DeepSeekProvider",
+      "role": "oneshot:classify",
+      "round_index": 1,
+      "source": "gear:최대|분류→경량",
+      "tier": "경량"
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 24459,
+      "cache_read": 35835,
+      "call_id": "ab07c099a9744e008ee807d7a6b01f76",
+      "event": "usage",
+      "input": 60298,
+      "latency_ms": 5476,
+      "model": "opus",
+      "output": 292,
+      "parent_call_id": null,
+      "phase": "evaluate",
+      "provider": "ClaudeCode",
+      "reasoning": 182,
+      "role": "oneshot:evaluate",
+      "round_index": 2
+    }
+  },
+  {
+    "kind": "recall.used",
+    "data": {
+      "blocks": [
+        {
+          "evidence": "executed",
+          "ibl_calls": 8,
+          "presented": [
+            "1492",
+            "4071"
+          ],
+          "recall_id": "ea7704c1157148d29e6fa21fe62d0e67",
+          "source": "hippocampus",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "presented": [
+            "script:나레이션생성",
+            "script:AI팁보고서",
+            "script:AI동향발행"
+          ],
+          "quality_contribution": "not_inferred",
+          "recall_id": "ea7704c1157148d29e6fa21fe62d0e67",
+          "source": "reusable_capabilities",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "opened": [],
+          "presented": [
+            "339",
+            "450",
+            "301"
+          ],
+          "recall_id": "ea7704c1157148d29e6fa21fe62d0e67",
+          "source": "recalled_memory",
+          "used": []
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "basics.13.59f83bc301eb",
+            "whisper"
+          ],
+          "recall_id": "ea7704c1157148d29e6fa21fe62d0e67",
+          "source": "method_map",
+          "used": []
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "atlas.film.nonlinear_editing",
+            "ffmpeg"
+          ],
+          "recall_id": "ea7704c1157148d29e6fa21fe62d0e67",
+          "source": "world_memory",
+          "used": []
+        }
+      ],
+      "completed": true,
+      "phase": "turn"
+    }
+  },
+  {
+    "kind": "supervision.cost.summary",
+    "data": {
+      "cost": {
+        "check_rejections": 0,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.001022,
+        "evaluation_model_s": 5.977,
+        "evaluation_prepare_s": 0.027833,
+        "evaluation_visual_s": 0.003371,
+        "evaluation_wait_s": 0.00077,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5/events.jsonl",
+        "execution_calls": 8,
+        "execution_failures": 0,
+        "execution_tool_s": 47.348,
+        "internal_tool_failures": 2,
+        "request_intent": "task",
+        "source_failures": 2,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 297.454
+      },
+      "kind": "cost.summary",
+      "phase": "final",
+      "role": "harness",
+      "seq": 51,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c3d4668b17b8403ebef6784404f53bb5",
+      "task_id": "task_sysai_564bc324",
+      "time": 1791514200.72847
+    }
+  }
+]

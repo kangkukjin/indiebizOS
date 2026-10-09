@@ -1,0 +1,22 @@
+[Script Info]
+Title: 훈련42 훈련자 동네 수리교실
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Caption,Noto Sans CJK KR,40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H59000000,-1,0,0,0,100,100,0,0,3,1,0,2,120,120,36,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:03.07,Caption,,0,0,0,,버리기 전에, 함께 고쳐요.
+Dialogue: 0,0:00:02.87,0:00:06.77,Caption,,0,0,0,,동네 수리교실에서 작은 수선을 시작합니다.
+Dialogue: 0,0:00:06.77,0:00:11.40,Caption,,0,0,0,,떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다.
+Dialogue: 0,0:00:11.20,0:00:13.63,Caption,,0,0,0,,처음이어도 괜찮아요.
+Dialogue: 0,0:00:13.63,0:00:18.25,Caption,,0,0,0,,깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을
+Dialogue: 0,0:00:18.05,0:00:19.58,Caption,,0,0,0,,가져오세요.
+Dialogue: 0,0:00:19.58,0:00:24.29,Caption,,0,0,0,,토요일 오후 두 시, 가상 마을회관에서 만나요.
+Dialogue: 0,0:00:24.09,0:00:27.84,Caption,,0,0,0,,이 영상은 훈련용 가상 행사 안내입니다.

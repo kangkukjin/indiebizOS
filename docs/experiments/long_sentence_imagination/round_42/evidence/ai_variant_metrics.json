@@ -1,0 +1,90 @@
+{
+  "episode": {
+    "id": 4497,
+    "total_ms": 297494,
+    "source": "training",
+    "run_id": "run_df75b3a1ed2159365b22"
+  },
+  "usage": {
+    "input": 2333617,
+    "output": 24886,
+    "cache_read": 2207565,
+    "cache_create": 116642
+  },
+  "roles": {
+    "oneshot:classify": {
+      "input": 9070,
+      "output": 10,
+      "cache_read": 3200,
+      "cache_create": 0
+    },
+    "oneshot:background": {
+      "input": 3445,
+      "output": 1657,
+      "cache_read": 640,
+      "cache_create": 0
+    },
+    "oneshot:execution": {
+      "input": 50377,
+      "output": 2059,
+      "cache_read": 34787,
+      "cache_create": 15574
+    },
+    "execution": {
+      "input": 2210427,
+      "output": 20868,
+      "cache_read": 2133103,
+      "cache_create": 76609
+    },
+    "oneshot:evaluate": {
+      "input": 60298,
+      "output": 292,
+      "cache_read": 35835,
+      "cache_create": 24459
+    }
+  },
+  "events": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 8,
+    "supervision.recall.finished": 8,
+    "model.call_started": 11,
+    "model.input": 10,
+    "model.round": 23,
+    "model.usage": 11,
+    "model.call_finished": 11,
+    "knowledge_catalog.selected": 2,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "framing.inherited": 1,
+    "supervision.framing": 1,
+    "model.response_snapshot": 33,
+    "supervision.tool.started": 8,
+    "ibl.started": 8,
+    "ibl.checkpoint": 8,
+    "ibl.finished": 8,
+    "supervision.tool.finished": 8,
+    "side_effect.write": 3,
+    "model.image_route": 4,
+    "supervision.progress": 4,
+    "audio.progress": 4,
+    "audio.model.finished": 1,
+    "capability.judged": 1,
+    "cognition.evaluation": 1,
+    "supervision.evaluation.stage_started": 4,
+    "supervision.evaluation.stage_finished": 4,
+    "supervision.evaluation.started": 1,
+    "supervision.evaluation.finished": 1,
+    "supervision.decision": 1,
+    "validation.completed": 1,
+    "supervision.response.delivered": 1,
+    "recall.used": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+  },
+  "tool_names": {
+    "execute_ibl": 8
+  }
+}

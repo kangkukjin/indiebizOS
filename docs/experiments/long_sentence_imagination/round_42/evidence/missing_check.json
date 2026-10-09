@@ -1,0 +1,13 @@
+{
+  "started": 1791513981.878191,
+  "ended": 1791513982.23369,
+  "response": {
+    "executed": false,
+    "status": "incomplete",
+    "ok": true,
+    "issues": [],
+    "warnings": [],
+    "usage": {},
+    "tool_calls": []
+  }
+}

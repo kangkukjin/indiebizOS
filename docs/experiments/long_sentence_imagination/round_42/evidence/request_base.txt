@@ -1,0 +1,4 @@
+가상의 동네 수리교실 홍보 동영상을 만들어 줘. scenes.json의 네 장면을 opening, learn, prepare, closing 순서로 모두 담고, 각 title은 화면에, note 전문은 한국어 나레이션과 구워진 자막에 그대로 반영해 줘. 제공된 visual은 장면 구성 참고야. 화면은 1280×720, H.264와 AAC MP4, 전체 길이는 20~70초로 만들고, 편집할 수 있는 자막 원본도 남겨 줘. 목소리는 edge의 ko-KR-SunHiNeural, 기본 속도로 통일하고 배경음악은 넣지 마. HTML 방식 슬라이드로 만들고 하단 25%는 자막용 여백으로 비워 줘. 최종 MP4, 자막 원본, 장면 순서·원고·실측 재생 길이·영상/음성 스트림·누락 여부·실제로 검수한 범위를 담은 제작 보고서를 저장해 줘. 실제로 생성된 파일과 자막 원문을 검증하고 내용·발음 검수의 범위를 정직하게 적어 줘. 이것은 합성 자료의 훈련이고 공개·발송·예약은 하지 마.
+입력: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/input/scenes.json
+출력: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent
+새 훈련 덱 제목은 훈련42 독립AI 동네 수리교실로 해 줘. 자신의 결과·참조는 재사용해도 되지만 다른 실행자의 trainer, drafts, harness, 정답·보고서를 읽지 마. 필요한 공개 교재·계약은 조회해도 돼. 사용자 확인 없이 이 합성 훈련을 끝까지 실행해 줘.

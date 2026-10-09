@@ -1,0 +1,8 @@
+#!ibl edition=2
+$prepared = [self:read]{path:$prepared_path,format:"json"}
+$render = [self:deck]{op:"video",lecture_id:$prepared.data.lecture_id,engine:"edge",voice:"ko-KR-SunHiNeural",rate:"+0%",captions:true,width:1280,height:720,transition:"fade",output_filename:$name,wait:true}
+$captions = [self:read]{path:$render.caption_file,format:"text"}
+$audio = [sense:listen]{op:"inspect",path:$render.output}
+$report = {render:$render,caption_source:$captions.text,audio:$audio,expected_slides:len($prepared.data.scenes),complete:$render.slides == len($prepared.data.scenes) and len($render.skipped) == 0}
+[self:write]{path:$report_path,content:json($report)}
+return [self:read]{path:$report_path,format:"json"}

@@ -1,0 +1,59 @@
+{
+  "ended": "2026-10-09T11:53:14.401347+09:00",
+  "revision": "b61324807ee0fcfee851fd1ce2b792ab9fb71db6",
+  "code_settings_vocabulary_changed": false,
+  "trainer_runs": [
+    {
+      "label": "base",
+      "run_id": "92d0f635c7094764843e55af8e053583",
+      "state": "completed",
+      "success": true
+    },
+    {
+      "label": "missing",
+      "run_id": "b2cdd2df467742b3a62f816212823ca7",
+      "state": "completed",
+      "success": true
+    },
+    {
+      "label": "recovered",
+      "run_id": "ea7d593525b147cd959bf077f9e1a662",
+      "state": "completed",
+      "success": true
+    }
+  ],
+  "agent_tasks": [
+    {
+      "label": "base",
+      "task_ref": {
+        "kind": "delegation",
+        "owner": "system",
+        "task_id": "task_sysai_4dcfd1fe"
+      },
+      "state": "succeeded",
+      "completed_at": "2026-10-09 02:20:53"
+    },
+    {
+      "label": "variant",
+      "task_ref": {
+        "kind": "delegation",
+        "owner": "system",
+        "task_id": "task_sysai_564bc324"
+      },
+      "state": "succeeded",
+      "completed_at": "2026-10-09 02:50:00"
+    }
+  ],
+  "preservation": {
+    "trainer": {
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-hunryeonja-dongne-surigyosil/video/round42_base.mp4": true,
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/lectures/hunryeon42-hunryeonja-dongne-surigyosil/video/round42_base.captions.ass": true
+    },
+    "agent": {
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.mp4": true,
+      "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.captions.ass": true
+    }
+  },
+  "trainer_png_restored": true,
+  "agent_png_restored": true
+}

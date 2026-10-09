@@ -1,0 +1,21 @@
+{
+ "task_ref": {
+  "kind": "delegation",
+  "owner": "system",
+  "task_id": "task_sysai_564bc324"
+ },
+ "parent_task_ref": null,
+ "run_id": "run_df75b3a1ed2159365b22",
+ "parent_run_id": null,
+ "state": "succeeded",
+ "status": "completed",
+ "delegated_to": "system_ai",
+ "requester_channel": "gui",
+ "created_at": "2026-10-09 02:45:03",
+ "completed_at": "2026-10-09 02:50:00",
+ "pending_children": 0,
+ "children": [],
+ "result": "s003이 빠진 상태로 렌더한 `variant_missing.mp4`는 부분 실패였고, 내 틀로 s003 PNG만 복구해 다시 만든 `variant_recovered.mp4`는 네 장면을 모두 갖추고 확인한 항목을 모두 통과했습니다.\n\n**1. variant_missing.mp4 — 부분 실패**\n- **종료 상태:** 렌더러는 오류 없이 `success:true`를 돌려줬습니다. 하지만 같은 응답에 `slides:3`, `skipped:[\"s003\"]`가 있어서 사실상 부분 결과입니다. PNG가 없는 장을 조용히 건너뛰고 성공으로 끝난 것입니다.\n- **포함된 장면:** 실제로는 3/4개입니다. 0.25초 간격으로 뽑은 프레임 88장을 슬라이드 4장과 비교했더니 화면이 opening → learn → closing으로 이어졌고, s003과 맞는 프레임은 한 장도 없었습니다.\n- **자막·나레이션:** 자막은 6개뿐이고 prepare 원고가 없습니다. 렌더러 기록상 나레이션도 3장면분만 만들어졌습니다. 이 파일은 받아쓰기로 직접 확인하지는 않았습니다.\n- **길이:** 21.89초입니다. 화면 크기, 코덱, 길이 범위는 맞지만 장면과 원고가 하나씩 빠져 요구를 충족하지 못합니다.\n\n**2. s003 복구**\n- 숨겨진 원본 PNG는 찾지 않았습니다. 이전 턴에 저장해 둔 내 HTML 틀과 장면 내용 파일을 같은 스크립트에 다시 넣었습니다.\n- s003만 새로 그려졌고, s001·s002·s004는 기존 파일을 그대로 다시 썼습니다.\n- 복구한 s003.png는 1280×720이고, 아래 25%(y 540~719)에는 배경 말고 아무것도 없습니다.\n\n**3. variant_recovered.mp4 — 통과**\n- **스트림·길이:** H.264 비디오 1개(1280×720)와 AAC 오디오 1개, 길이 27.84초입니다.\n- **장면 순서:** 프레임 비교로 s001 → s002 → s003 → s004 순서를 확인했습니다. 장면별 길이는 6.77 / 6.86 / 5.95 / 8.26초입니다.\n- **자막 원문:** 자막 8개를 장면별로 이어 붙이면 네 장면의 원고와 한 글자도 다르지 않습니다.\n- **자막 위치:** 8개 모두 y 619~683 안에 있어 아래 25% 여백을 벗어나지 않고, 화면 밖으로 잘린 것도 없습니다.\n- **화면 확인:** 장면마다 프레임 1장씩, 4장을 이미지 판독으로 봤습니다. 제목이 원고 그대로 보이고 자막과 겹치거나 잘린 곳은 없었습니다.\n- **목소리·배경음악:** edge ko-KR-SunHiNeural 기본 속도 한 목소리이고 배경음악은 넣지 않았습니다.\n- **받아쓰기:** 영상 전체를 받아써 보니 네 원고 문장이 순서대로 모두 나왔고, 다른 점은 띄어쓰기와 숫자 표기뿐이었습니다.\n- **발음:** 사람이 귀로 듣는 검수는 하지 않았습니다. \"두 시\"가 실제로 어떻게 읽혔는지도 확인하지 않았습니다.\n\n**검수 공백 하나:** variant_missing 프레임을 이미지 판독으로 보려 했는데 파일명을 잘못 줘서 실패했습니다. 그래서 그 파일의 장면 판정은 위의 픽셀 비교로만 했습니다. 보고서에도 이렇게 적어 두었습니다.\n\n**보존:** 기존 agent 폴더의 `suri_class_promo.mp4`와 자막 두 파일은 이전에 기록한 sha256과 같아 바뀌지 않았습니다. 다른 실행자의 자료는 열지 않았고 공개·발송·예약도 하지 않았습니다.\n\n`agent/variant/` 폴더에 저장한 파일:\n- variant_missing.mp4\n- variant_missing.captions.ass\n- variant_missing.captions.srt\n- variant_recovered.mp4\n- variant_recovered.captions.ass\n- variant_recovered.captions.srt\n- variant_report.md\n- frames_variant_missing/\n- frames_variant_recovered/\n- work/",
+ "error": null,
+ "status_url": "/system-ai/tasks/task_sysai_564bc324"
+}

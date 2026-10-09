@@ -1,0 +1,94 @@
+{
+  "episode": {
+    "id": 4496,
+    "total_ms": 345103,
+    "source": "training",
+    "run_id": "run_573f050de48b131164e5"
+  },
+  "usage": {
+    "input": 3970504,
+    "output": 30745,
+    "cache_read": 3642872,
+    "cache_create": 326156
+  },
+  "roles": {
+    "oneshot:classify": {
+      "input": 3127,
+      "output": 3,
+      "cache_read": 2432,
+      "cache_create": 0
+    },
+    "consciousness": {
+      "input": 120645,
+      "output": 3735,
+      "cache_read": 59944,
+      "cache_create": 60697
+    },
+    "oneshot:execution": {
+      "input": 75367,
+      "output": 4077,
+      "cache_read": 50463,
+      "cache_create": 24880
+    },
+    "execution": {
+      "input": 3679225,
+      "output": 22441,
+      "cache_read": 3484573,
+      "cache_create": 193903
+    },
+    "oneshot:evaluate": {
+      "input": 92140,
+      "output": 489,
+      "cache_read": 45460,
+      "cache_create": 46676
+    }
+  },
+  "events": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 8,
+    "supervision.recall.finished": 8,
+    "model.call_started": 11,
+    "model.input": 10,
+    "model.round": 43,
+    "model.usage": 11,
+    "model.call_finished": 11,
+    "knowledge_catalog.selected": 2,
+    "recall.presented": 1,
+    "cognition.route": 2,
+    "supervision.model.started": 1,
+    "model.response_snapshot": 79,
+    "supervision.model.native_tool": 2,
+    "supervision.model.finished": 1,
+    "supervision.framing": 1,
+    "supervision.tool.started": 25,
+    "ibl.started": 24,
+    "ibl.checkpoint": 23,
+    "ibl.finished": 24,
+    "supervision.tool.finished": 25,
+    "side_effect.write": 5,
+    "model.image_route": 6,
+    "seam": 2,
+    "supervision.review.trigger_retired": 1,
+    "supervision.progress": 4,
+    "audio.progress": 4,
+    "audio.model.finished": 1,
+    "cognition.evaluation": 1,
+    "supervision.evaluation.stage_started": 4,
+    "supervision.evaluation.stage_finished": 4,
+    "supervision.evaluation.started": 1,
+    "supervision.evaluation.finished": 1,
+    "supervision.decision": 1,
+    "validation.completed": 1,
+    "supervision.response.delivered": 1,
+    "recall.used": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+  },
+  "tool_names": {
+    "execute_ibl": 24,
+    "Bash": 1
+  }
+}

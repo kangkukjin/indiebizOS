@@ -1,0 +1,10 @@
+{
+  "trainer": {
+    "pcm_sha256": "6a93da2bf7ed46bf11565e52b6c41d07aac918093cc477e9a7d1ad2c656f0c8c",
+    "pcm_bytes": 4911104
+  },
+  "agent": {
+    "pcm_sha256": "caf65168314236693d93e8a89b0921d46c68b18c9d5088e404894308cfd5033d",
+    "pcm_bytes": 4911104
+  }
+}

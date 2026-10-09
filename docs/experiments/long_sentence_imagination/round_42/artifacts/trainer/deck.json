@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "lecture_id": "hunryeon42-hunryeonja-dongne-surigyosil",
+  "title": "훈련42 훈련자 동네 수리교실",
+  "audience": "바느질 입문자",
+  "thesis": "버리기 전에 함께 수선해요",
+  "duration_minutes": 0,
+  "design_system": "ink_orange",
+  "created_at": "2026-10-09T11:44:00",
+  "updated_at": "2026-10-09T11:45:39",
+  "slide_order": [
+    "s001",
+    "s002",
+    "s003",
+    "s004"
+  ],
+  "slides": {
+    "s001": {
+      "id": "s001",
+      "title": "버리기 전에, 함께 고쳐요.",
+      "layout": "custom",
+      "spec_file": "slides/s001.json",
+      "png_file": "slides/s001.png",
+      "created_at": "2026-10-09T11:44:17",
+      "updated_at": "2026-10-09T11:44:17",
+      "speaker_note": "버리기 전에, 함께 고쳐요. 동네 수리교실에서 작은 수선을 시작합니다."
+    },
+    "s002": {
+      "id": "s002",
+      "title": "단추 하나부터 천천히",
+      "layout": "custom",
+      "spec_file": "slides/s002.json",
+      "png_file": "slides/s002.png",
+      "created_at": "2026-10-09T11:44:40",
+      "updated_at": "2026-10-09T11:44:40",
+      "speaker_note": "떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다. 처음이어도 괜찮아요."
+    },
+    "s003": {
+      "id": "s003",
+      "title": "가져올 것은 세 가지",
+      "layout": "custom",
+      "spec_file": "slides/s003.json",
+      "png_file": "slides/s003.png",
+      "created_at": "2026-10-09T11:45:15",
+      "updated_at": "2026-10-09T11:45:15",
+      "speaker_note": "깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을 가져오세요."
+    },
+    "s004": {
+      "id": "s004",
+      "title": "토요일 두 시, 가상 마을회관",
+      "layout": "custom",
+      "spec_file": "slides/s004.json",
+      "png_file": "slides/s004.png",
+      "created_at": "2026-10-09T11:45:39",
+      "updated_at": "2026-10-09T11:45:39",
+      "speaker_note": "토요일 오후 두 시, 가상 마을회관에서 만나요. 이 영상은 훈련용 가상 행사 안내입니다."
+    }
+  },
+  "lecture_memo": "",
+  "cumulative_memo": {
+    "tone_preferred": [],
+    "tone_rejected": [],
+    "metaphors_adopted": [
+      "수선 바늘과 천 — 단순 선화",
+      "단추와 실 — 원과 선의 단순 도형, 실은 주황",
+      "준비물 세 칸 — 셔츠·바늘·하트 단순 도형, 마음 칸만 주황 테두리",
+      "달력과 시계 — 사각·원의 단순 도형, 달력 머리와 시침만 주황"
+    ],
+    "decisions": []
+  },
+  "materials": []
+}

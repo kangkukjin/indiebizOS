@@ -1,0 +1,422 @@
+{
+  "files": {
+    "mp4": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.mp4",
+    "mp4_sha256": "177b05e306a72110f33266728b1f1857bd6af936e2cd323484a5a7710ac88faa",
+    "mp4_bytes": 721886,
+    "ass": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.captions.ass",
+    "srt": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/suri_class_promo.captions.srt",
+    "source_mp4_sha256": "177b05e306a72110f33266728b1f1857bd6af936e2cd323484a5a7710ac88faa"
+  },
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "index": 0,
+        "codec_name": "h264",
+        "profile": "High",
+        "codec_type": "video",
+        "width": 1280,
+        "height": 720,
+        "pix_fmt": "yuv420p",
+        "r_frame_rate": "24/1",
+        "duration": "27.708333",
+        "bit_rate": "89154"
+      },
+      {
+        "index": 1,
+        "codec_name": "aac",
+        "profile": "LC",
+        "codec_type": "audio",
+        "sample_rate": "44100",
+        "channels": 2,
+        "channel_layout": "stereo",
+        "r_frame_rate": "0/0",
+        "duration": "27.840000",
+        "bit_rate": "112074"
+      }
+    ],
+    "format": {
+      "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+      "duration": "27.840000",
+      "size": "721886",
+      "bit_rate": "207438"
+    }
+  },
+  "duration_sec": 27.84,
+  "video_streams": 1,
+  "audio_streams": 1,
+  "checks": {
+    "res_1280x720": true,
+    "h264": true,
+    "aac": true,
+    "one_video_one_audio": true,
+    "duration_20_70": true,
+    "all_notes_match_captions": true,
+    "deck_notes_match": true,
+    "deck_titles_match": true,
+    "srt_matches_ass": true,
+    "slides_bottom_empty": true,
+    "captions_in_bottom_25pct": true,
+    "captions_inside_frame": true
+  },
+  "scene_order": [
+    "s001",
+    "s002",
+    "s003",
+    "s004"
+  ],
+  "compare": [
+    {
+      "key": "opening",
+      "cue_indices": [
+        1,
+        2
+      ],
+      "joined": "버리기 전에, 함께 고쳐요. 동네 수리교실에서 작은 수선을 시작합니다.",
+      "equals_scene_note": true,
+      "deck_note_equals_scene_note": true,
+      "deck_title_equals_scene_title": true,
+      "scene_start": 0.0,
+      "caption_end": 6.77,
+      "scene_end": 6.77,
+      "scene_span_sec": 6.77
+    },
+    {
+      "key": "learn",
+      "cue_indices": [
+        3,
+        4
+      ],
+      "joined": "떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다. 처음이어도 괜찮아요.",
+      "equals_scene_note": true,
+      "deck_note_equals_scene_note": true,
+      "deck_title_equals_scene_title": true,
+      "scene_start": 6.77,
+      "caption_end": 13.63,
+      "scene_end": 13.63,
+      "scene_span_sec": 6.86
+    },
+    {
+      "key": "prepare",
+      "cue_indices": [
+        5,
+        6
+      ],
+      "joined": "깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을 가져오세요.",
+      "equals_scene_note": true,
+      "deck_note_equals_scene_note": true,
+      "deck_title_equals_scene_title": true,
+      "scene_start": 13.63,
+      "caption_end": 19.58,
+      "scene_end": 19.58,
+      "scene_span_sec": 5.95
+    },
+    {
+      "key": "closing",
+      "cue_indices": [
+        7,
+        8
+      ],
+      "joined": "토요일 오후 두 시, 가상 마을회관에서 만나요. 이 영상은 훈련용 가상 행사 안내입니다.",
+      "equals_scene_note": true,
+      "deck_note_equals_scene_note": true,
+      "deck_title_equals_scene_title": true,
+      "scene_start": 19.58,
+      "caption_end": 27.84,
+      "scene_end": 27.84,
+      "scene_span_sec": 8.26
+    }
+  ],
+  "leftover_cues": 0,
+  "cues": [
+    {
+      "n": 1,
+      "start": 0.0,
+      "end": 3.07,
+      "text": "버리기 전에, 함께 고쳐요."
+    },
+    {
+      "n": 2,
+      "start": 2.87,
+      "end": 6.77,
+      "text": "동네 수리교실에서 작은 수선을 시작합니다."
+    },
+    {
+      "n": 3,
+      "start": 6.77,
+      "end": 11.4,
+      "text": "떨어진 단추를 달고, 작은 구멍을 꿰매 봅니다."
+    },
+    {
+      "n": 4,
+      "start": 11.2,
+      "end": 13.63,
+      "text": "처음이어도 괜찮아요."
+    },
+    {
+      "n": 5,
+      "start": 13.63,
+      "end": 18.25,
+      "text": "깨끗한 옷 한 벌, 바느질 도구, 그리고 배우고 싶은 마음을"
+    },
+    {
+      "n": 6,
+      "start": 18.05,
+      "end": 19.58,
+      "text": "가져오세요."
+    },
+    {
+      "n": 7,
+      "start": 19.58,
+      "end": 24.29,
+      "text": "토요일 오후 두 시, 가상 마을회관에서 만나요."
+    },
+    {
+      "n": 8,
+      "start": 24.09,
+      "end": 27.84,
+      "text": "이 영상은 훈련용 가상 행사 안내입니다."
+    }
+  ],
+  "silences": [
+    {
+      "start": 1.003,
+      "end": 1.304
+    },
+    {
+      "start": 2.219,
+      "end": 3.23
+    },
+    {
+      "start": 5.861,
+      "end": 6.984
+    },
+    {
+      "start": 8.384,
+      "end": 8.717
+    },
+    {
+      "start": 10.306,
+      "end": 11.321
+    },
+    {
+      "start": 12.753,
+      "end": 13.835
+    },
+    {
+      "start": 14.91,
+      "end": 15.251
+    },
+    {
+      "start": 16.172,
+      "end": 16.537
+    },
+    {
+      "start": 18.706,
+      "end": 19.792
+    },
+    {
+      "start": 21.13,
+      "end": 21.454
+    },
+    {
+      "start": 23.246,
+      "end": 24.247
+    },
+    {
+      "start": 26.913,
+      "end": 27.841
+    }
+  ],
+  "mean_volume_db": -21.1,
+  "max_volume_db": -6.6,
+  "slide_checks": [
+    {
+      "slide_id": "s001",
+      "size": [
+        1280,
+        720
+      ],
+      "bg_rgb": [
+        243,
+        234,
+        216
+      ],
+      "bottom_nonbg_pixels": 0,
+      "top_content_pixels": 21847
+    },
+    {
+      "slide_id": "s002",
+      "size": [
+        1280,
+        720
+      ],
+      "bg_rgb": [
+        243,
+        234,
+        216
+      ],
+      "bottom_nonbg_pixels": 0,
+      "top_content_pixels": 18571
+    },
+    {
+      "slide_id": "s003",
+      "size": [
+        1280,
+        720
+      ],
+      "bg_rgb": [
+        243,
+        234,
+        216
+      ],
+      "bottom_nonbg_pixels": 0,
+      "top_content_pixels": 25006
+    },
+    {
+      "slide_id": "s004",
+      "size": [
+        1280,
+        720
+      ],
+      "bg_rgb": [
+        243,
+        234,
+        216
+      ],
+      "bottom_nonbg_pixels": 0,
+      "top_content_pixels": 25010
+    }
+  ],
+  "frames": [
+    {
+      "cue": 1,
+      "scene": "opening",
+      "time": 1.53,
+      "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/frames/cue01_opening_1.53s.png",
+      "size": [
+        1280,
+        720
+      ],
+      "caption_top_y": 619,
+      "caption_bottom_y": 683,
+      "caption_left_x": 419,
+      "caption_right_x": 860,
+      "caption_in_bottom_25pct": true,
+      "caption_inside_frame": true
+    },
+    {
+      "cue": 2,
+      "scene": "opening",
+      "time": 4.92,
+      "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/frames/cue02_opening_4.92s.png",
+      "size": [
+        1280,
+        720
+      ],
+      "caption_top_y": 620,
+      "caption_bottom_y": 683,
+      "caption_left_x": 280,
+      "caption_right_x": 999,
+      "caption_in_bottom_25pct": true,
+      "caption_inside_frame": true
+    },
+    {
+      "cue": 3,
+      "scene": "learn",
+      "time": 9.09,
+      "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/frames/cue03_learn_9.09s.png",
+      "size": [
+        1280,
+        720
+      ],
+      "caption_top_y": 619,
+      "caption_bottom_y": 683,
+      "caption_left_x": 265,
+      "caption_right_x": 1014,
+      "caption_in_bottom_25pct": true,
+      "caption_inside_frame": true
+    },
+    {
+      "cue": 4,
+      "scene": "learn",
+      "time": 12.52,
+      "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/frames/cue04_learn_12.52s.png",
+      "size": [
+        1280,
+        720
+      ],
+      "caption_top_y": 619,
+      "caption_bottom_y": 683,
+      "caption_left_x": 451,
+      "caption_right_x": 827,
+      "caption_in_bottom_25pct": true,
+      "caption_inside_frame": true
+    },
+    {
+      "cue": 5,
+      "scene": "prepare",
+      "time": 15.94,
+      "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/frames/cue05_prepare_15.94s.png",
+      "size": [
+        1280,
+        720
+      ],
+      "caption_top_y": 619,
+      "caption_bottom_y": 683,
+      "caption_left_x": 180,
+      "caption_right_x": 1099,
+      "caption_in_bottom_25pct": true,
+      "caption_inside_frame": true
+    },
+    {
+      "cue": 6,
+      "scene": "prepare",
+      "time": 18.91,
+      "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/frames/cue06_prepare_18.91s.png",
+      "size": [
+        1280,
+        720
+      ],
+      "caption_top_y": 620,
+      "caption_bottom_y": 683,
+      "caption_left_x": 526,
+      "caption_right_x": 753,
+      "caption_in_bottom_25pct": true,
+      "caption_inside_frame": true
+    },
+    {
+      "cue": 7,
+      "scene": "closing",
+      "time": 21.93,
+      "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/frames/cue07_closing_21.93s.png",
+      "size": [
+        1280,
+        720
+      ],
+      "caption_top_y": 619,
+      "caption_bottom_y": 683,
+      "caption_left_x": 265,
+      "caption_right_x": 1014,
+      "caption_in_bottom_25pct": true,
+      "caption_inside_frame": true
+    },
+    {
+      "cue": 8,
+      "scene": "closing",
+      "time": 26.06,
+      "frame": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_42회차/agent/frames/cue08_closing_26.06s.png",
+      "size": [
+        1280,
+        720
+      ],
+      "caption_top_y": 620,
+      "caption_bottom_y": 683,
+      "caption_left_x": 309,
+      "caption_right_x": 969,
+      "caption_in_bottom_25pct": true,
+      "caption_inside_frame": true
+    }
+  ]
+}

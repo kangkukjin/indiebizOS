@@ -19,6 +19,12 @@ ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / 'data/packages/installed/tools'
 
 
+def browser_session_stub(raw_page):
+    """File-sink double includes the public dispatcher's operation ownership boundary."""
+    return NS(raw_page=raw_page, _operation_lock=asyncio.Lock(), active_tab_id='fixture-tab',
+              _reset_timer=lambda: None, _playwright=None)
+
+
 def module(package, name='handler'):
     spec = importlib.util.spec_from_file_location('boundary_repair_' + package.replace('-', '_') + name,
                                                 TOOLS / package / (name + '.py'))
@@ -85,7 +91,7 @@ def test_screenshot_dispatch_resolves_paths(driver, raw, expected, path_scope, m
     async def chrome_call(*args):
         return {'image_data': base64.b64encode(b'fixture PNG').decode()}
     monkeypatch.setattr(content, 'ensure_active', lambda: None)
-    monkeypatch.setattr(content.BrowserSession, 'get_instance', lambda: NS(raw_page=NS(screenshot=screenshot)))
+    monkeypatch.setattr(content.BrowserSession, 'get_instance', lambda: browser_session_stub(NS(screenshot=screenshot)))
     monkeypatch.setattr(chrome, '_get_driver', lambda: NS(call_tool=chrome_call, _tab_id=1))
     result = json.loads(asyncio.run(handler.execute(
         {'op': 'screenshot', 'driver': driver, 'path': raw},
@@ -103,7 +109,7 @@ def test_pdf_path_and_options_reach_page(path_scope, monkeypatch):
         calls.append(kwargs)
         Path(kwargs['path']).write_bytes(b'%PDF-fixture')
     monkeypatch.setattr(mod, 'ensure_active', lambda: None)
-    monkeypatch.setattr(mod.BrowserSession, 'get_instance', lambda: NS(raw_page=NS(pdf=pdf)))
+    monkeypatch.setattr(mod.BrowserSession, 'get_instance', lambda: browser_session_stub(NS(pdf=pdf)))
     result = json.loads(asyncio.run(handler.execute(
         {'op': 'pdf', 'driver': 'playwright', 'path': '~workspace/reports/report.pdf',
          'landscape': True, 'print_background': False},
@@ -135,7 +141,7 @@ def test_browser_refused_path_never_captures(driver, path_scope, monkeypatch):
     async def fail(*args, **kwargs):
         pytest.fail('refused write must not capture')
     monkeypatch.setattr(mod, 'ensure_active', lambda: None)
-    monkeypatch.setattr(mod.BrowserSession, 'get_instance', lambda: NS(raw_page=NS(screenshot=fail)))
+    monkeypatch.setattr(mod.BrowserSession, 'get_instance', lambda: browser_session_stub(NS(screenshot=fail)))
     monkeypatch.setattr(chrome, '_get_driver', lambda: NS(call_tool=fail, _tab_id=1))
     result = json.loads(asyncio.run(handler.execute(
         {'op': 'screenshot', 'driver': driver, 'path': '/outside-fixture/refused.png'},
@@ -238,7 +244,7 @@ def test_real_playwright_pdf_and_png(path_scope, monkeypatch):
                 page = await browser.new_page()
                 await page.set_content('<h1>Package boundary repair</h1><p>Local fixture</p>')
                 monkeypatch.setattr(content, 'ensure_active', lambda: None)
-                monkeypatch.setattr(content.BrowserSession, 'get_instance', lambda: NS(raw_page=page))
+                monkeypatch.setattr(content.BrowserSession, 'get_instance', lambda: browser_session_stub(page))
                 for op, suffix in [('pdf', 'pdf'), ('screenshot', 'png')]:
                     raw = await handler.execute(
                         {'op': op, 'driver': 'playwright', 'path': f'~workspace/reports/actual.{suffix}'},

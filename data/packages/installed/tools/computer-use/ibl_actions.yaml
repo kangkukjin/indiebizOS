@@ -15,6 +15,7 @@ actions:
       interval: number
       key: string
       region: object
+      path: string
       screenshot_after: boolean
       start_x: integer
       start_y: integer
@@ -24,7 +25,7 @@ actions:
     returns: effect
     runs_on: pc_only
     description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
-    target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
+    target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: path(PNG 저장, 지정하면 images 없이 file_path·bytes 반환), x,y,width,height(옵션). path 생략 시 images(base64·media_type) 반환. 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
     group: desktop
     target_key: op
     router: handler
@@ -32,7 +33,7 @@ actions:
     ops:
       side_effect:
         snapshot: false
-        screenshot: false
+        screenshot: true  # path 지정 시 파일 쓰기 — 캡처 자체는 읽기지만 선택적 저장 효과가 있다.
         cursor_position: false
         screen_info: false
       returns:
@@ -48,7 +49,7 @@ actions:
         screenshot: '사용자 화면 캡처 — 무인 점검이 매일 화면을 찍을 이유 없음'
       values:
         snapshot: 화면 독해 — UI 요소(역할/이름)+글자(OCR)+클릭좌표. 클릭 전 화면 파악 (브라우저 snapshot의 데스크톱 판)
-        screenshot: 화면 캡처 이미지 (x,y,width,height 옵션)
+        screenshot: 화면 캡처 (path 지정 시 PNG 파일, 생략 시 images; x,y,width,height 옵션)
         click: 마우스 클릭 (x,y)
         type: 텍스트 입력 (text)
         key: 키 입력 (key)

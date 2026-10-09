@@ -6,6 +6,7 @@ Version: 6.0.0
 """
 
 import json
+import hashlib
 import os
 import sys
 from pathlib import Path
@@ -215,7 +216,7 @@ _OP_SELECTOR = {
 }
 
 
-async def execute(tool_input: dict, context):
+async def _execute(tool_input: dict, context):
     """메인 핸들러 (ToolContext 기반 신규 시그니처, async) — driver 파라미터로 Playwright/Chrome 분기"""
     tool_name = context.tool_name
     proj_path = context.project_path
@@ -297,3 +298,54 @@ async def execute(tool_input: dict, context):
             "success": False,
             "error": f"도구 실행 실패 ({tool_name}, driver={driver}): {str(e)}"
         }, ensure_ascii=False)
+
+
+def execute(tool_input: dict, context):
+    """Capture trusted identity before dispatch moves from a worker to the async loop."""
+    from principal import cache_key
+    from episode_logger import current_trajectory_identity
+    from thread_context import get_invocation
+    trace = current_trajectory_identity()
+    run = (getattr(context, "task_id", None) or trace.get("run_id")
+           or (get_invocation() or {}).get("run_id") or "manual")
+    identity = [cache_key(), context.project_path, getattr(context, "agent_id", None), run]
+    owner = hashlib.sha256(json.dumps(identity).encode()).hexdigest()
+    return _owned_execute(dict(tool_input), context, owner)
+
+
+async def _owned_execute(params, context, owner):
+    module = _load("browser_session")
+    with module.owner_scope(owner):
+        session = module.BrowserSession.get_instance()
+        async with session._operation_lock:
+            policy = params.get("dialog", "dismiss")
+            if policy not in ("accept", "dismiss"):
+                return json.dumps({"success": False, "error": "dialog는 accept 또는 dismiss입니다."})
+            # Chrome does not implement this policy; never silently ignore an approval request.
+            driver = params.get("driver", "auto")
+            chrome = driver == "chrome" or (driver == "auto" and _is_chrome_connected())
+            if chrome and any(key in params for key in ("dialog", "dialog_text", "wait")):
+                return json.dumps({"success": False, "error": "dialog/dialog_text/wait는 driver:playwright 전용입니다."})
+            session._dialog_policy = policy
+            session._dialog_text = params.get("dialog_text", "")
+            session._operation_dialogs = []
+            try:
+                result = json.loads(await _execute(params, context))
+                if not chrome:
+                    result.setdefault("session_owner", owner)
+                    result.setdefault("tab_id", session.active_tab_id)
+                    dialogs = list(session._operation_dialogs)
+                    if dialogs:
+                        result["dialogs"] = dialogs
+                        dismissed = any(d["action"] == "dismiss" and d["type"] in ("confirm", "prompt", "beforeunload") for d in dialogs)
+                        result["dialog_dismissed"] = dismissed
+                        if any(not d.get("handled") for d in dialogs) or (dismissed and "dialog" not in params):
+                            result.update(success=False, error="확인창이 승인되지 않았습니다. 대상 상태를 확인하고 필요한 조작에 dialog:accept를 명시하세요.", error_code="DIALOG_NOT_ACCEPTED")
+                return json.dumps(result, ensure_ascii=False)
+            finally:
+                session._dialog_policy = "dismiss"
+                session._dialog_text = ""
+                if session._playwright is not None:
+                    session._reset_timer()
+                # Weak registry keeps the same instance while queued calls hold it.
+                # Closed instances without callers disappear without a timer.

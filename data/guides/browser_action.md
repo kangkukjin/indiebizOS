@@ -83,14 +83,14 @@ Chrome 연결 실패에는 중첩 예외의 실제 원인이 포함된다. 연�
 
 ## 다중 탭 사용법
 
-탭 관리는 **단일 액션 `[limbs:browser]{op: "tab", op}`** — list / new / switch / close.
+탭 관리는 **단일 액션 `[limbs:browser]{op: "tab", mode}`** — list / new / switch / close.
 
 ### 기본 흐름
 ```
-[limbs:browser]{op: "navigate", url: "site-a.com"}        # t1 탭에서 열림
+$first = [limbs:browser]{op: "navigate", url: "site-a.com"}  # 첫 탭 ID 보존
 [limbs:browser]{op: "tab", mode: "new", url: "site-b.com"}          # t2 탭 생성 + 자동 전환
 [limbs:browser]{op: "tab", mode: "list"}                            # 열린 탭 목록 확인
-[limbs:browser]{op: "tab", mode: "switch", tab_id: "t1"}            # t1로 복귀
+[limbs:browser]{op: "tab", mode: "switch", tab_id: $first.tab_id}            # 처음 탭으로 복귀
 [limbs:browser]{op: "tab", mode: "close"}                           # 현재 탭 닫기
 ```
 
@@ -100,13 +100,13 @@ Chrome 연결 실패에는 중첩 예외의 실제 원인이 포함된다. 연�
 ### 주의사항
 - 탭 전환 시 ref가 초기화됨 → 전환 후 반드시 `[limbs:browser]{op: "snapshot"}` 호출
 - 활성 탭을 닫으면 가장 최근 탭으로 자동 전환
-- `tab_id`는 `t1`, `t2` 등 문자열 (`list` 결과에서 확인)
+- `tab_id`는 세션에 속한 불투명 문자열이다. navigate/new/list 결과를 그대로 사용한다.
 
 ---
 
 ## iframe 작업
 
-iframe 관리는 **단일 액션 `[limbs:browser]{op: "iframe", op}`** — list / switch / reset.
+iframe 관리는 **단일 액션 `[limbs:browser]{op: "iframe", mode}`** — list / switch / reset.
 
 ### 기본 흐름
 ```
@@ -335,11 +335,11 @@ Chrome MCP는 사용자의 실제 Chrome 브라우저를 WebSocket으로 원격 
 
 ### 여러 사이트 동시 비교
 ```
-[limbs:browser]{op: "navigate", url: "site-a.com/product"}     # t1
+$first = [limbs:browser]{op: "navigate", url: "site-a.com/product"}
 [limbs:browser]{op: "content"}                                  # 정보 수집
 [limbs:browser]{op: "tab", mode: "new", url: "site-b.com/product"}       # t2 생성 + 자동 전환
 [limbs:browser]{op: "content"}                                  # 정보 수집
-[limbs:browser]{op: "tab", mode: "switch", tab_id: "t1"}                 # 필요시 t1로 복귀
+[limbs:browser]{op: "tab", mode: "switch", tab_id: $first.tab_id}                 # 필요시 처음 탭으로 복귀
 ```
 
 ### Chrome MCP로 실제 브라우저 시연
@@ -375,3 +375,34 @@ Chrome MCP는 사용자의 실제 Chrome 브라우저를 WebSocket으로 원격 
 ## 대상이 사라졌을 때
 
 Playwright는 ref의 이름·역할을 유지하는 유일한 요소만 조작한다. 같은 역할의 첫 버튼·입력칸으로 대체하지 않는다. 대상 부재·중복 오류가 나면 snapshot을 다시 읽어 현재 ref로 호출한다.
+
+
+## 작업별 Playwright 세션·확인창·이동 대기
+
+Playwright 세션은 주체·프로젝트·에이전트·작업별로 격리된다. 작업 ID가 없는 직접
+IBL 실행은 실행마다 새 세션이다. 여러 HTTP 호출을 한 작업으로 잇는 호출자는 같은
+`task_id`를 요청 봉투에 보낸다. 서로 독립인 작업에는 다른 ID를 쓴다. 같은 작업의
+여러 탭은 순서대로 전환하며, 병렬로 하나의 활성 탭을 조작하지 않는다.
+`session_owner`·`tab_id`가 결과에 실리고 다른 세션의 탭 ID는 전환할 수 없다.
+새 세션은 공용 자동 쿠키 파일을 읽거나 덮지 않는다. 로그인 재사용은 기존
+`cookies save/load`로 명시한다. 180초 유휴 종료 뒤에는 다시 navigate해야 한다.
+Chrome MCP는 사용자의 공유 브라우저이며 이 격리·dialog·wait 옵션을 지원하지 않는다.
+
+```ibl
+[limbs:browser]{op:"navigate",url:"https://example.com",driver:"playwright",wait:"load"}
+[limbs:browser]{op:"click",ref:"관측한_ref",driver:"playwright",dialog:"accept"}
+[limbs:browser]{op:"press_key",key:"Enter",driver:"playwright",dialog:"accept",dialog_text:"응답"}
+```
+
+`dialog`는 **그 조작 한 번에만** 적용된다. 기본은 dismiss이며 confirm/prompt를
+자동 취소하면 `DIALOG_NOT_ACCEPTED` 실패와 `dialogs`·`dialog_dismissed`를 반환한다.
+명시적 dismiss도 취소 사실을 반환한다. 실제 업무 성공은 변경된 화면에서 다시 확인한다.
+`dialog_info`는 마지막 기록을 읽으며 이미 닫힌 확인창을 뒤늦게 승인하는 명령이 아니다.
+
+navigate의 `wait_for`는 goto 완료 조건(domcontentloaded/load/networkidle), `wait`는
+그 뒤의 대기다. `stable`(기본)은 기존 동적 안정화, `load`는 추가 대기 생략,
+`idle`은 networkidle까지 기다리되 시간 초과는 실패다. 정적 화면에는 load를 쓰고
+동적 화면은 stable 또는 후속 wait(selector/text)로 확인한다. `session_started:true`는
+이번 이동에 브라우저 기동이 포함됐다는 뜻이다.
+iframe list와 switch의 index는 메인 프레임을 제외한 0부터의 같은 목록이다.
+name/id는 정확 일치, url은 부분 일치이며 메인으로 복귀할 때는 mode:reset을 쓴다.

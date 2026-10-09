@@ -96,3 +96,41 @@
 종료 이유: 기본·변형·독립 AI 2실행이 완료 조건을 채웠고 발견 5건의 최소 재현이 확보됐다. 서버 6개(8931~8934·8938·8939)는 종료, 서버 최종 상태는 [evidence/server_state](evidence/server_state/)에 사본.
 재현: `harness/prepare.py` → `site_server.py --port 8931 --data _site/trainer/loans.json --state …`(변형은 `--flaky`) → `run.py base|flaky --draft main_v1.ibl` → `verify.py`. 독립 AI 는 `ai_chain.py base runs/ai_request_base.txt`(요청문은 task.md 의 자연어 + 경로). 개인정보: 데스크톱 캡처(사용자 실제 화면)는 로컬 outputs 에만, 계정은 합성 값.
 다음 회차 후보: 같은 과제를 `driver:"chrome"`(실제 Chrome)으로; `limbs:screen` 조작(사용자 입회)으로 네이티브 앱 한 바퀴; 동시 실행 2개의 브라우저 격리 시험(L44-5 수리 뒤); 로그인 세션 `cookies save/load` 로 재방문 비용.
+
+
+## 7. 후속 수리 (2026-10-09)
+
+훈련·독립 AI·서버 종료가 기록된 §6을 확인한 뒤, 정본 main `800c6709`에서 수리했다.
+최초 관측은 그대로 두고 [수리 후 전체 프로그램](drafts/main_repaired.ibl)을 별도로 보존한다.
+새 어휘·관용구는 추가하지 않았다.
+
+| 갭 | 구현과 계약 | 검증 |
+|---|---|---|
+| L44-1 | Playwright 조작별 `dialog:accept/dismiss`, prompt 응답 `dialog_text`. 기본 취소한 confirm/prompt는 `DIALOG_NOT_ACCEPTED`, 실제 dialogs·취소 여부 보존. 승인은 다음 조작에 이월되지 않는다. | 실제 Chromium confirm·prompt 승인/기본취소, 응답 문자열, 승인 비지속성. 합성 포털 실제 POST와 반납일 재독. |
+| L44-2 | `name`을 닫힌 인자 계약에 추가. list/switch 모두 메인 제외 0부터, 이름·URL 선택에서도 메인 제외. 메인 복귀는 reset. | index:0/name 전환 후 iframe 본문, 메인 URL 선택 거절, 전체 프로그램 공지 원문 검수. |
+| L44-3 | screenshot의 `path`는 공통 쓰기 범위 검사를 먼저 거쳐 PNG 원자 저장, 파일 참조·바이트수·details 반환. path 없으면 images 유지. 앱 경계에서 64,000자 초과 recordings는 기존 spill 참조로 옮기고 총수를 신고. 원문 목록·런타임 값·저널 보존, 모델 경계는 기존 결과 참조 경로 유지. | 정확한 바이트 저장·범위 거절 시 촬영 안 함, 큰 영수증 원문 복원. 전체 프로그램에서 base64 변환 script 2호출 제거. |
+| L44-4 | goto의 wait_for와 추가 `wait:stable/load/idle` 분리. 기본 stable 유지, load는 추가 대기 생략, idle 실패는 오류. `session_started`로 기동 포함 여부 반환. | load에서 동적 대기 함수 호출 0, 기본 stable/idle 호출 검증, 정적 포털 전체 재생. |
+| L44-5 | Playwright는 주체·프로젝트·에이전트·작업(없으면 실행)별 세션·쿠키·ref를 분리. 호출 전에 신원을 잡고 async 문맥으로 전달. session_owner·세션에 속한 tab_id 반환, 다른 작업의 탭 접근 거절. 조작 잠금과 유휴 종료가 같은 객체를 유지하며 자원을 정리한다. | 실제 동시 Chromium 두 세션의 marker·탭 격리, 유휴 종료와 대기 호출 경합, 기존 서비스 수명 검사. |
+
+**전체 과제 검증**: `backend/test_browser_session.py::test_complete_portal_program`은 원래
+main_v1 기본·503/연장 거절 변형, main_repaired 기본·**도서 역순/따옴표·앰퍼샌드·꺾쇠·한글 제목 + 503/연장 거절**
+새 변형을 실행한다. 기존 verify.py 그대로 기본 20/20, 오류 변형 23/23을 대조한다.
+로그인·목록·confirm 폼·iframe·페이지 PNG는 실제 Chromium/HTTP 서버다.
+사용자 데스크톱을 무인 촬영하지 않기 위해 캡처 픽셀과 맨 앞 앱만 합성 대역으로 두었고,
+그 이후의 PNG 저장·읽기·결과 파일·서버 연장 상태 대조는 실제 경로를 사용했다.
+
+**회귀**: 관련 55건 통과. backend 전수(system 포함) **9,691 통과·12 건너뜀·실패 0**,
+214.5초. 최초 전수에서는 새 시험 3파일의 `__main__` 누락을 단일 러너 관문이 발견했고,
+pytest 진입점 추가 뒤 관련 검사와 전수를 재실행했다. 유휴 정리와 대기 호출의 신원 보존 시험도 추가했다.
+증거 요약: [repair_verification.json](evidence/repair_verification.json).
+어휘 빌드·용례 재검토(browser 254/screen 54)·층 구조·은퇴 계약·Android 번들 관문을 적용한다.
+
+**동작 범위와 잔여**: 작업 ID 없는 직접 HTTP 호출은 프로그램마다 새 세션이다. 여러 호출을
+한 작업으로 잇는 호출자는 같은 task_id를 쓰며 독립 작업에는 다른 ID를 쓴다.
+같은 작업 안의 활성 탭을 여러 병렬 가지가 번갈아 조작하는 흐름은 순차로 구성한다.
+공유 자동 쿠키 파일은 작업 세션에서 사용하지 않고 로그인 재사용은 cookies save/load로 명시한다.
+Chrome MCP는 사용자 공유 브라우저이므로 이번 Playwright 격리·dialog/wait 기능의 대상이 아니다.
+대기 비용과 변환 호출은 줄였지만, 독립 AI를 재실행한 품질·전체 시간/토큰 절감률은 미측정이다.
+타입 좁힘·예약 바인딩 등 §4의 '갭 아님' 작성 마찰은 이번 5건 수리 범위에 포함하지 않았다.
+
+**활성 확인**: 정상 재기동(`d109fb209e30fbd8ee7a27b6eb85d58c`, interrupted 없음) 뒤 실제 `/ibl/execute` 동시 두 프로그램에서 서로 다른 owner/tab과 각자 marker 11/22를 보존했다. 같은 task_id의 두 HTTP 프로그램은 같은 세션을 이어 썼다. evaluate의 80,000자 원문은 기록 참조로 회수됐고 최종 봉투는 15,302바이트, 내부 len 결과는 80,000을 유지했다. 임시 about:blank 페이지는 검증 후 닫았다. 로컬 전문 증거는 `outputs/long_sentence_imagination/2026-10-09_44회차/repair/`, 비민감 요약은 위 repair_verification.json이다.

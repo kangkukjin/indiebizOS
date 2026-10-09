@@ -137,6 +137,26 @@
             "type": "string",
             "description": "limbs:browser 파라미터"
           },
+          "name": {
+            "type": "string",
+            "description": "limbs:browser 파라미터"
+          },
+          "dialog": {
+            "type": "string",
+            "description": "limbs:browser 파라미터"
+          },
+          "dialog_text": {
+            "type": "string",
+            "description": "limbs:browser 파라미터"
+          },
+          "wait": {
+            "type": "string",
+            "description": "limbs:browser 파라미터"
+          },
+          "wait_for": {
+            "type": "string",
+            "description": "limbs:browser 파라미터"
+          },
           "index": {
             "type": "integer",
             "description": "limbs:browser 파라미터"
@@ -166,6 +186,15 @@
             "type": "boolean",
             "default": true,
             "description": "헤드리스 모드 (Playwright 전용)"
+          },
+          "wait": {
+            "type": "string",
+            "enum": [
+              "stable",
+              "load",
+              "idle"
+            ],
+            "description": "추가 대기. stable은 기존 동적 안정화, load는 goto 조건까지만, idle은 networkidle."
           },
           "wait_for": {
             "type": "string",

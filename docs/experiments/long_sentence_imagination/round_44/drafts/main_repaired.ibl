@@ -1,0 +1,140 @@
+#!ibl edition=2
+# 44회차 수리 후 (v0 수정: 검사가 assert/?: 로 null 을 좁히지 않아 Null|Text 를 [fn:글] 로 Text 확정 — TYPE 3·FORMAT_TYPE 2) — 컴퓨터 유즈: 가상 도서관 포털 대출 목록 읽기·내 목록 대조·반납 임박 연장·화면 증거. inputs: src(입력 폴더), out(출력 폴더)
+# 흐름: 계정·내 목록 읽기 → 로그인(snapshot 으로 입력칸 ref) → '오늘'·총 페이지 → 전체 페이지 읽기(503 은 1회 재시도) → 표 행 파싱(탭 구분)
+#       → 대조(difference·join) → 3일 이내 연장(불가는 사유만, 확인창은 dialog:accept로 승인) → 공지 iframe 본문 → 데스크톱 캡처(path→PNG)·맨 앞 앱 → result.json·report.md
+# 참고: 훈련 가이드·조합 교재 2권·문법 전문·browser_action.md·desktop.md·python_libraries.md·describe 8개·소실행 탐침(evidence/probe_*.json)
+
+[def:줄찾기]($text,$key) {
+  $ls = filter(split($text,"\n"),($l)=>contains($l,$key))
+  return len($ls)>0 ? $ls[0] : null
+}
+[def:참조]($snap,$role,$name) {
+  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}
+  return len($m)>0 ? $m[0].ref : null
+}
+[def:날짜]($dot) { return replace(strip($dot),".","-") }
+[def:글]($v,$대신) { return $v == null ? $대신 : $v }
+[def:열기]($url) {
+  $r = [limbs:browser]{op:"navigate", url:$url, driver:"playwright", wait:"load"}
+  [if:$r.status_code != 200] {
+    $w = [limbs:browser]{op:"wait", timeout:1500}
+    $r2 = [limbs:browser]{op:"navigate", url:$url, driver:"playwright", wait:"load"}
+    return {ok:$r2.status_code == 200, status:$r2.status_code, retried:true, url:$url}
+  }
+  return {ok:true, status:$r.status_code, retried:false, url:$url}
+}
+[def:표행]($text) {
+  $rows = filter(split($text,"\n"),($l)=>len(split($l,"\t"))==5 and $l[:1]=="L")
+  return map($rows,($l)=>{id:split($l,"\t")[0], title:split($l,"\t")[1], author:split($l,"\t")[2], due:[fn:날짜]{dot:split($l,"\t")[3]}, status:split($l,"\t")[4]})
+}
+
+# 1. 입력
+$acct = [self:read]{path:f"${src}/account.json"}
+$portal = $acct.data.portal_url
+$mine = [self:read]{path:f"${src}/my_books.csv"}
+$내목록 = $mine.data.items
+$mk = [self:mkdir]{path:f"${out}/shots"}
+
+# 2. 로그인 → 기준일·총 페이지
+$l0 = [fn:열기]{url:f"${portal}login"}
+$snap0 = [limbs:browser]{op:"snapshot"}
+$refid = [fn:참조]{snap:$snap0, role:"textbox", name:"이용자 ID"}
+$refpw = [fn:참조]{snap:$snap0, role:"textbox", name:"비밀번호"}
+assert $refid != null and $refpw != null, "로그인 입력칸을 찾지 못했습니다", {snapshot:$snap0}
+$t1 = [limbs:browser]{op:"type", ref:$refid, text:$acct.data.user}
+$t2 = [limbs:browser]{op:"type", ref:$refpw, text:$acct.data.password, submit:true}
+$c1 = [limbs:browser]{op:"content", mode:"text"}
+assert contains($c1.url,"/loans"), "로그인 뒤 대출 현황으로 이동하지 않았습니다", {url:$c1.url}
+$오늘줄 = [fn:줄찾기]{text:$c1.text, key:"오늘:"}
+assert $오늘줄 != null, "화면에서 '오늘' 을 찾지 못했습니다", {text:$c1.text}
+$오늘 = [fn:날짜]{dot:split([fn:글]{v:$오늘줄,대신:""},":")[1]}
+$페이지줄 = [fn:줄찾기]{text:$c1.text, key:"페이지"}
+assert $페이지줄 != null, "총 페이지 표시를 찾지 못했습니다", {text:$c1.text}
+$pages = number(split(split([fn:글]{v:$페이지줄,대신:""},"/")[1]," ")[0])
+
+# 3. 전체 페이지 읽기 (1페이지는 로그인 직후 화면, 나머지는 주소로 이동·503 은 1회 재시도)
+$rows = [fn:표행]{text:$c1.text}
+$page_fail = []
+[repeat:while $i < $pages - 1] {
+  $p = $i + 2
+  $nav = [fn:열기]{url:f"${portal}loans?page=${p}"}
+  [if:$nav.ok] {
+    $cp = [limbs:browser]{op:"content", mode:"text"}
+    $rows = $rows + [fn:표행]{text:$cp.text}
+  } [else] { $page_fail = $page_fail + [$nav] }
+}
+
+# 4. 내 목록과 대조
+$portal_ids = map($rows,($r)=>$r.id)
+$mine_ids = map($내목록,($r)=>$r.id)
+$portal_only = difference($portal_ids,$mine_ids)
+$mine_only = difference($mine_ids,$portal_ids)
+$공통 = [table:join]{left:$rows, right:$내목록, on:"id", how:"inner"}
+$불일치 = $공통.items >> [table:filter]{where:($r)=>$r.due != $r.due_2} >> [table:select]{columns:["id","due","due_2"]}
+
+# 5. 3일 이내 연장 (연장 불가는 신청하지 않음, 확인창은 해당 클릭에서 승인, 전·후 화면 저장, 새 반납일은 화면에서 재독)
+$긴급 = $rows >> [table:filter]{where:($r)=>date_diff($r.due,$오늘) <= 3}
+$연장 = $긴급 >> [table:each] {
+  [if:contains($it.status,"연장 불가")] {
+    return {id:$it.id, title:$it.title, attempted:false, ok:false, reason:$it.status, due_before:$it.due, due_after:null, shots:[], line:f"- ${it.id} ${it.title}: 신청 안 함 — ${it.status}"}
+  }
+  [try] {
+    $d = [fn:열기]{url:f"${portal}loans/${it.id}"}
+    $before = f"${out}/shots/${it.id}_before.png"
+    $s1 = [limbs:browser]{op:"screenshot", path:$before}
+    $sn = [limbs:browser]{op:"snapshot"}
+    $btn = [fn:참조]{snap:$sn, role:"button", name:"연장 신청"}
+    assert $btn != null, "연장 신청 버튼이 없습니다", {id:$it.id, snapshot:$sn}
+    $k = [limbs:browser]{op:"click", ref:$btn, dialog:"accept"}
+    $c = [limbs:browser]{op:"content", mode:"text"}
+    $after = f"${out}/shots/${it.id}_after.png"
+    $s2 = [limbs:browser]{op:"screenshot", path:$after}
+    $완료 = [fn:줄찾기]{text:$c.text, key:"연장이 완료되었습니다"}
+    $거절 = [fn:줄찾기]{text:$c.text, key:"연장할 수 없습니다"}
+    $ok = $완료 != null
+    $새반납 = $ok ? [fn:날짜]{dot:split([fn:글]{v:$완료,대신:""},"새 반납일:")[1]} : null
+    $새반납글 = [fn:글]{v:$새반납,대신:"없음"}
+    $사유 = $ok ? null : ($거절 == null ? "포털이 완료·거절 어느 문구도 보이지 않음" : $거절)
+    $사유글 = [fn:글]{v:$사유,대신:"없음"}
+    $line = $ok ? f"- ${it.id} ${it.title}: 연장 성공 — 반납일 ${it.due} → ${새반납글}" : f"- ${it.id} ${it.title}: 연장 실패 — ${사유글}"
+    return {id:$it.id, title:$it.title, attempted:true, ok:$ok, reason:$사유, due_before:$it.due, due_after:$새반납, shots:[$before,$after], line:$line}
+  } [catch] {
+    return {id:$it.id, title:$it.title, attempted:true, ok:false, reason:$error.message, due_before:$it.due, due_after:null, shots:[], line:f"- ${it.id} ${it.title}: 연장 실패(오류) — ${error.message}"}
+  }
+}
+
+# 6. 공지 iframe 의 휴관일 문장
+$n0 = [fn:열기]{url:f"${portal}notice"}
+$fr = [limbs:browser]{op:"iframe", mode:"list"}
+assert $fr.count > 0, "공지 페이지에 프레임이 없습니다", {frames:$fr}
+$sw = [limbs:browser]{op:"iframe", mode:"switch", name:"notice"}
+$cn = [limbs:browser]{op:"content", mode:"text"}
+$rs = [limbs:browser]{op:"iframe", mode:"reset"}
+$휴관 = [fn:줄찾기]{text:$cn.text, key:"휴관일 안내"}
+
+# 7. 데스크톱 캡처(읽기만)·맨 앞 앱
+$host = [sense:host]{op:"status"}
+$desk = [try] {
+  $shot = [limbs:screen]{op:"screenshot", path:f"${out}/desktop.png"}
+  {ok:true, path:f"${out}/desktop.png", resolution:$shot.details.resolution}
+} [catch] { {ok:false, path:null, error:$error.message} }
+
+# 8. 결과 파일
+$result = {today:$오늘, pages:$pages, page_failures:$page_fail, loans:$rows,
+  compare:{portal_only:$portal_only, mine_only:$mine_only, due_mismatch:$불일치},
+  urgent:map($긴급,($r)=>$r.id), extensions:$연장, notice_holiday:$휴관, frontmost_app:$host.frontmost_app, desktop:$desk}
+$w1 = [self:write]{path:f"${out}/result.json", content:json($result)}
+$po = len($portal_only)==0 ? "없음" : join(", ",$portal_only)
+$mo = len($mine_only)==0 ? "없음" : join(", ",$mine_only)
+$mm = map($불일치,($r)=>f"- ${r.id}: 포털 ${r.due} / 내 목록 ${r.due_2}")
+$휴관문 = $휴관 == null ? "미확인 — 공지 본문에서 '휴관일 안내' 문장을 찾지 못함" : $휴관
+$deskline = $desk.ok ? f"- 데스크톱 캡처: ${desk.path} (${desk.resolution})" : f"- 데스크톱 캡처: 실패 — ${desk.error}"
+$report = join("\n", ["# 도서관 포털 점검 보고", f"- 기준일(포털 '오늘'): ${오늘}", f"- 대출 ${len(rows)}권 · ${pages}페이지 · 읽기 실패 페이지 ${len(page_fail)}건",
+  "", "## 내 목록과 대조", f"- 포털에만 있는 책: ${po}", f"- 내 목록에만 있는 책: ${mo}", "- 반납일이 다른 책:"] + (len($mm)==0 ? ["  - 없음"] : $mm) +
+  ["", "## 3일 이내 반납 도서 연장"] + map($연장,($e)=>$e.line) +
+  ["", "## 공지", f"- ${휴관문}", "", "## 내 컴퓨터", f"- 맨 앞 앱: ${host.frontmost_app}", $deskline])
+$w2 = [self:write]{path:f"${out}/report.md", content:$report}
+$files = [self:list]{path:f"${out}/shots", pattern:"*.png"}
+return {today:$오늘, loans:len($rows), pages:$pages, page_failures:len($page_fail), portal_only:$portal_only, mine_only:$mine_only, due_mismatch:len($불일치),
+  urgent:map($긴급,($r)=>$r.id), extended_ok:map($연장 >> [table:filter]{where:($e)=>$e.ok},($e)=>$e.id), not_ok:map($연장 >> [table:filter]{where:($e)=>not $e.ok},($e)=>$e.id),
+  shots:len($files), notice_found:$휴관 != null, frontmost_app:$host.frontmost_app, desktop_ok:$desk.ok, files:[$w1.path,$w2.path]}

@@ -132,3 +132,22 @@ def fit_tool_result(raw: str, budget: int) -> str:
     if len(text) > budget:
         raise ValueError(f"전송 한도 {budget}자로는 상태·원문 참조를 전달할 수 없습니다. 호스트 한도를 늘리세요.")
     return text
+
+
+def compact_recordings(result, threshold=64_000):
+    """Keep bulky replay receipts off the wire, with lossless existing spill retrieval.
+
+    Runtime/journal values remain intact. This applies to app and model envelopes;
+    recordings_ref points to the complete list for replay, including image bytes.
+    """
+    records = result.get("recordings")
+    if not isinstance(records, list) or not records:
+        return result
+    raw = json.dumps(records, ensure_ascii=False)
+    if len(raw) <= threshold:
+        return result
+    from common.spill import spill_write
+    reference = spill_write(raw, tag="recordings")
+    return {**result, "recordings": [], "recordings_ref": reference,
+            "recordings_count": len(records),
+            "recordings_note": "실행 영수증 원문은 recordings_ref에 보존했습니다. 재생 시 원문 목록을 읽으세요."}

@@ -735,7 +735,28 @@ def execute(tool_input: dict, context) -> str | dict:
         return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
 
     try:
-        return handler(tool_input)
+        screenshot = tool_name == "computer_screenshot" or (tool_name == "computer_op" and tool_input.get("op") == "screenshot")
+        destination = None
+        if screenshot and tool_input.get("path"):
+            from pathlib import Path
+            destination = context.resolve_output_path(str(Path(tool_input["path"]).with_suffix(".png")))
+            if destination.get("error"):
+                return json.dumps({"success": False, "error": destination["error"]}, ensure_ascii=False)
+        result = handler(tool_input)
+        if destination and isinstance(result, dict) and result.get("images"):
+            image = result["images"][0]
+            data = base64.b64decode(image["base64"], validate=True)
+            fd, temporary = tempfile.mkstemp(dir=os.path.dirname(destination["path"]), suffix=".png")
+            try:
+                with os.fdopen(fd, "wb") as output:
+                    output.write(data)
+                os.replace(temporary, destination["path"])
+            finally:
+                if os.path.exists(temporary):
+                    os.unlink(temporary)
+            return {"success": True, "path": destination["path"], "file_path": destination["path"],
+                    "media_type": image["media_type"], "bytes": len(data), "details": result["details"]}
+        return result
     except Exception as e:
         error_type = type(e).__name__
         if "FailSafe" in error_type:

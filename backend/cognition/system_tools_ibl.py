@@ -433,7 +433,8 @@ def _preview_boundary(result, tool_input: dict):
     try:
         from thread_context import get_call_channel
         if get_call_channel() == "app":
-            return result
+            from ibl_result_transport import compact_recordings
+            return compact_recordings(result)
         from model_result_view import project_result
         return project_result(result)
     except Exception as exc:

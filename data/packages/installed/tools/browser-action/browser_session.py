@@ -1,5 +1,5 @@
 """
-browser_session.py - BrowserSession 싱글톤 + 공통 유틸리티
+browser_session.py - 작업별 BrowserSession + 공통 유틸리티
 
 브라우저 세션 관리, ref 매핑, locator 탐색, 출력 경로 등
 모든 브라우저 도구 모듈이 공유하는 핵심 컴포넌트.
@@ -12,12 +12,28 @@ import re
 import json
 import asyncio
 import time
+from weakref import WeakValueDictionary
+from contextvars import ContextVar
+from contextlib import contextmanager
+
 from collections import deque
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from urllib.parse import urlparse
 from runtime_work import AdmissionClosed, scope, service_scope
+
+_session_owner = ContextVar("browser_session_owner", default="")
+
+
+@contextmanager
+def owner_scope(owner):
+    token = _session_owner.set(owner)
+    try:
+        yield
+    finally:
+        _session_owner.reset(token)
+
 
 # ─────────────────────────────────────────────
 # 상수
@@ -43,11 +59,9 @@ def normalize_url(url: str) -> str:
         return stripped
     return "https://" + stripped
 
-# 로그인 상태(쿠키+localStorage) 자동 영속 파일 — 시작 시 복원, 종료 시 저장.
-# 사람이 headless:false로 한 번 로그인해 두면 이후 headless 크롤도 같은 세션으로
-# 로그인 벽(네이버 카페 등)을 통과한다. launch_persistent_context 대신 storage_state를
-# 쓰는 이유: webcrawl과 browser-action이 각자 브라우저를 띄울 수 있어 프로필 디렉토리
-# 공유 시 Chromium ProcessSingleton 락 충돌이 나기 때문.
+# 내부 기본 세션 전용 자동 상태 파일. 작업별 세션은 이 파일을 공유하지 않는다.
+# 내부 크롤러의 로그인 상태를 보존한다. 작업 세션은 cookies save/load를 명시한다.
+# storage_state를 사용해 Chromium 프로필 디렉터리 잠금 충돌을 피한다.
 AUTO_STATE_FILENAME = "_auto_state.json"
 
 # Stealth User-Agent (일반 Chrome처럼 보이도록)
@@ -141,7 +155,7 @@ def _get_playwright():
 
 class BrowserSession:
     """
-    싱글톤 브라우저 세션. v4.0
+    작업별 브라우저 세션(내부 직접 소비자의 기본 세션 별도).
 
     - 180초 비활성 시 자동 종료
     - 다중 탭 관리 (tab_id → Page)
@@ -151,12 +165,18 @@ class BrowserSession:
     - 네트워크 요청 캡처
     - Dialog(alert/confirm/prompt) 자동 처리
     - Stealth 모드 (봇 감지 우회)
-    - 로그인 상태 자동 영속 (data/browser_cookies/_auto_state.json — 시작 시 복원, 종료 시 저장)
+    - 작업별 쿠키 격리. 공용 자동 상태 파일은 내부 기본 세션만 사용한다.
     """
 
     _instance = None
+    _sessions = WeakValueDictionary()
 
     def __init__(self):
+        self.owner = _session_owner.get()
+        self._operation_lock = asyncio.Lock()
+        self._dialog_policy = "dismiss"
+        self._dialog_text = ""
+        self._operation_dialogs = []
         self._playwright = None
         self._browser = None
         self._context = None
@@ -192,6 +212,13 @@ class BrowserSession:
 
     @classmethod
     def get_instance(cls):
+        owner = _session_owner.get()
+        if owner:
+            session = cls._sessions.get(owner)
+            if session is None:
+                session = cls()
+                cls._sessions[owner] = session
+            return session
         if cls._instance is None:
             cls._instance = BrowserSession()
         return cls._instance
@@ -212,7 +239,7 @@ class BrowserSession:
 
     async def _auto_close(self, generation: int):
         await asyncio.sleep(self._timeout_seconds)
-        async with self._ensure_lock:
+        async with self._operation_lock, self._ensure_lock:
             if generation != self._close_generation:
                 return
             if time.time() - self._last_activity >= self._timeout_seconds:
@@ -276,7 +303,7 @@ class BrowserSession:
         )
         # 저장된 로그인 상태(쿠키+localStorage) 자동 복원
         state_path = get_cookies_dir() / AUTO_STATE_FILENAME
-        if state_path.exists():
+        if not self.owner and state_path.exists():
             context_kwargs["storage_state"] = str(state_path)
         try:
             self._context = await self._browser.new_context(**context_kwargs)
@@ -319,7 +346,7 @@ class BrowserSession:
         if any(existing is page for existing in self._pages.values()):
             return
         self._tab_counter += 1
-        tab_id = f"t{self._tab_counter}"
+        tab_id = f"{self.owner[:12]}-t{self._tab_counter}" if self.owner else f"t{self._tab_counter}"
         self._pages[tab_id] = page
         self._active_tab_id = tab_id
         self._active_frame = None
@@ -333,8 +360,8 @@ class BrowserSession:
             "timestamp": datetime.now().isoformat(),
         })
 
-    def _on_dialog(self, dialog):
-        """Alert/Confirm/Prompt 자동 처리 — 기본 dismiss, 내용 기록"""
+    async def _on_dialog(self, dialog):
+        """조작 한 번에 지정한 정책만 적용하고 실제 승인·취소를 반환한다."""
         self._last_dialog = {
             "type": dialog.type,
             "message": dialog.message,
@@ -342,8 +369,17 @@ class BrowserSession:
             "timestamp": datetime.now().isoformat(),
         }
         print(f"[브라우저] Dialog 감지 ({dialog.type}): {dialog.message[:100]}")
-        # 비동기로 dismiss (accept도 가능하지만 기본은 dismiss)
-        asyncio.ensure_future(dialog.dismiss())
+        record = self._last_dialog
+        record["action"] = self._dialog_policy
+        self._operation_dialogs.append(record)
+        try:
+            if self._dialog_policy == "accept":
+                await dialog.accept(self._dialog_text if dialog.type == "prompt" else None)
+            else:
+                await dialog.dismiss()
+            record["handled"] = True
+        except Exception as exc:
+            record.update(handled=False, error=str(exc))
 
     def _on_response(self, response):
         """네트워크 응답 캡처"""
@@ -502,8 +538,8 @@ class BrowserSession:
     # ── 로그인 상태 영속 ──
 
     async def save_storage_state(self):
-        """로그인 상태(쿠키+localStorage)를 자동 상태 파일로 저장. 다음 시작 시 복원된다."""
-        if not self._context:
+        """내부 기본 세션만 자동 저장한다. 작업별 세션은 명시 cookies save/load를 쓴다."""
+        if not self._context or self.owner:
             return
         try:
             path = get_cookies_dir() / AUTO_STATE_FILENAME

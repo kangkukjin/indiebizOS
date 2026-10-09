@@ -157,7 +157,7 @@ async def browser_iframe_list(params: dict) -> dict:
     page = session.raw_page
 
     try:
-        frames = page.frames
+        frames = [frame for frame in page.frames if frame != page.main_frame]
         iframe_list = []
 
         for i, frame in enumerate(frames):
@@ -202,7 +202,7 @@ async def browser_iframe_switch(params: dict) -> dict:
     page = session.raw_page
 
     try:
-        frames = page.frames
+        frames = [frame for frame in page.frames if frame != page.main_frame]
         target_frame = None
 
         # 우선순위: name(정확) → id(HTML id 속성) → index(위치) → url(부분일치).

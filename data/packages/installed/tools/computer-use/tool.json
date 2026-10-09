@@ -71,6 +71,10 @@
             "type": "object",
             "description": "limbs:screen 파라미터"
           },
+          "path": {
+            "type": "string",
+            "description": "limbs:screen 파라미터"
+          },
           "screenshot_after": {
             "type": "boolean",
             "description": "limbs:screen 파라미터"

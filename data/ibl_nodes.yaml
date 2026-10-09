@@ -7326,6 +7326,11 @@ nodes:
           direction: string
           headless: boolean
           id: string
+          name: string
+          dialog: string
+          dialog_text: string
+          wait: string
+          wait_for: string
           index: integer
           submit: boolean
           timeout: number
@@ -7337,7 +7342,7 @@ nodes:
         returns: effect
         runs_on: pc_only
         description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
-        target_description: op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. Playwright는 이름·역할을 유지하는 유일 후보만 선택하며 대상이 없거나 중복이면 새 snapshot이 필요하다. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).
+        target_description: op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. Playwright는 이름·역할을 유지하는 유일 후보만 선택하며 대상이 없거나 중복이면 새 snapshot이 필요하다. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장). Playwright는 작업·주체별 세션이며 결과에 session_owner·tab_id를 반환한다. dialog:accept|dismiss는 현재 조작의 확인창 정책(기본 취소, 미지정 취소는 실패), dialog_text는 prompt 응답이다. navigate의 wait:stable(기본)|load(추가 대기 없음)|idle, session_started로 기동 여부를 알린다. iframe은 name/id/index/url로 찾고 index:0이 첫 iframe이다.
         group: browser
         target_key: op
         router: handler
@@ -7365,7 +7370,7 @@ nodes:
             dialog_info: 라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패
           values:
             snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여. 표시 예산 선택은 selection으로 표시하고 전체/표시 개수를 보존(클릭/입력 전 필수)
-            navigate: 페이지 이동 (mode goto|back|forward; goto는 url)
+            navigate: 페이지 이동 (mode goto|back|forward; goto는 url, wait stable|load|idle)
             click: 요소 클릭 (ref; mode single|double|right)
             type: 입력 필드에 텍스트 입력 (ref, text)
             press_key: 키보드 키 입력 (Enter/Tab/Escape 등)
@@ -7445,6 +7450,7 @@ nodes:
           interval: number
           key: string
           region: object
+          path: string
           screenshot_after: boolean
           start_x: integer
           start_y: integer
@@ -7454,7 +7460,7 @@ nodes:
         returns: effect
         runs_on: pc_only
         description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
-        target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
+        target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: path(PNG 저장, 지정하면 images 없이 file_path·bytes 반환), x,y,width,height(옵션). path 생략 시 images(base64·media_type) 반환. 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
         group: desktop
         target_key: op
         router: handler
@@ -7462,7 +7468,7 @@ nodes:
         ops:
           side_effect:
             snapshot: false
-            screenshot: false
+            screenshot: true
             cursor_position: false
             screen_info: false
           returns:
@@ -7478,7 +7484,7 @@ nodes:
             screenshot: 사용자 화면 캡처 — 무인 점검이 매일 화면을 찍을 이유 없음
           values:
             snapshot: 화면 독해 — UI 요소(역할/이름)+글자(OCR)+클릭좌표. 클릭 전 화면 파악 (브라우저 snapshot의 데스크톱 판)
-            screenshot: 화면 캡처 이미지 (x,y,width,height 옵션)
+            screenshot: 화면 캡처 (path 지정 시 PNG 파일, 생략 시 images; x,y,width,height 옵션)
             click: 마우스 클릭 (x,y)
             type: 텍스트 입력 (text)
             key: 키 입력 (key)

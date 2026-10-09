@@ -1,0 +1,88 @@
+{
+  "base_revision": "800c6709",
+  "full_backend": {
+    "tests": "9703",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "12",
+    "time": "214.528",
+    "passed": 9691
+  },
+  "focused": {
+    "tests": "55",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "26.434"
+  },
+  "portal_cases": [
+    {
+      "name": "test_real_isolated_sessions_dialogs_and_frames",
+      "seconds": "0.856",
+      "passed": true
+    },
+    {
+      "name": "test_load_wait_skips_dynamic_polling_and_invalid_wait_fails",
+      "seconds": "0.035",
+      "passed": true
+    },
+    {
+      "name": "test_complete_portal_program[False-False-False]",
+      "seconds": "10.591",
+      "passed": true
+    },
+    {
+      "name": "test_complete_portal_program[False-True-False]",
+      "seconds": "11.845",
+      "passed": true
+    },
+    {
+      "name": "test_complete_portal_program[True-False-False]",
+      "seconds": "3.017",
+      "passed": true
+    },
+    {
+      "name": "test_complete_portal_program[True-True-True]",
+      "seconds": "4.361",
+      "passed": true
+    },
+    {
+      "name": "test_idle_close_keeps_identity_for_waiting_operation",
+      "seconds": "0.007",
+      "passed": true
+    }
+  ],
+  "limits": [
+    "실제 Chromium·합성 HTTP 포털. 데스크톱 픽셀/맨 앞 앱은 대역.",
+    "실제 외부 사이트·Chrome MCP·독립 시스템 AI 재실행 및 전체 모델 토큰 개선은 미검증."
+  ],
+  "active_api": {
+    "restart_request_id": "d109fb209e30fbd8ee7a27b6eb85d58c",
+    "restart_outcome": "restarted",
+    "parallel_run_values": [
+      {
+        "owner": "c8fcc4ef49abb57b5c8fd76b91210a306babc8e453eecc2998c0b99e53a0b6c2",
+        "tab": "c8fcc4ef49ab-t1",
+        "marker": 11,
+        "started": true
+      },
+      {
+        "owner": "ae010af3019944bc9682a54ec8d90af2e7790dfa104f4ce3ceb09e4ec8029170",
+        "tab": "ae010af30199-t1",
+        "marker": 22,
+        "started": true
+      }
+    ],
+    "same_task_continuity": true,
+    "large_receipt": {
+      "value": {
+        "size": 80000
+      },
+      "inline_recordings": 0,
+      "recordings_count": 3,
+      "reference_bytes": 83265,
+      "retrieved_original_characters": 80000,
+      "envelope_bytes": 15302
+    }
+  }
+}

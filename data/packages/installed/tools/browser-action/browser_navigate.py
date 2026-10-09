@@ -66,6 +66,9 @@ async def browser_navigate(params: dict, project_path: str = ".") -> dict:
     url = params.get("url", "")
     headless = params.get("headless", True)
     wait_for = params.get("wait_for", "domcontentloaded")
+    wait = params.get("wait", "stable")
+    if wait not in ("load", "idle", "stable"):
+        return {"success": False, "error": "wait는 load, idle, stable 중 하나입니다."}
 
     if not url:
         return {"success": False, "error": "URL이 필요합니다."}
@@ -79,6 +82,7 @@ async def browser_navigate(params: dict, project_path: str = ".") -> dict:
 
     try:
         session = BrowserSession.get_instance()
+        session_started = not session.is_active or session._headless != headless
         page = await session.ensure_browser(headless=headless)
 
         session.clear_refs()
@@ -128,7 +132,10 @@ async def browser_navigate(params: dict, project_path: str = ".") -> dict:
                 pass
 
         # 동적 콘텐츠 대기 (SPA, JS 렌더링 페이지 대응)
-        await _wait_for_dynamic_content(page_raw)
+        if wait == "stable":
+            await _wait_for_dynamic_content(page_raw)
+        elif wait == "idle":
+            await page_raw.wait_for_load_state("networkidle", timeout=DYNAMIC_CONTENT_WAIT)
 
         title = await page_raw.title()
         final_url = page_raw.url
@@ -147,6 +154,8 @@ async def browser_navigate(params: dict, project_path: str = ".") -> dict:
             "status_code": status_code,
             "tab_id": session.active_tab_id,
             "content_length": content_length,
+            "wait": wait,
+            "session_started": session_started,
         }
 
         if redirects:

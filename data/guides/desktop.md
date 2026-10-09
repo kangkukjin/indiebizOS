@@ -185,3 +185,14 @@ AX가 0개면(권한 미부여/앱 a11y 미노출) `ocr_lines`로 폴백한다 �
 | `desktop_scroll` | `scroll` |
 | `cursor_position` | `cursor_position` |
 | `desktop_screen_info` | `screen_info` |
+
+
+## 캡처 파일 저장
+
+`[limbs:screen]{op:"screenshot",path:"outputs/evidence/desktop.png"}`는 공통 쓰기
+범위 검사 후 PNG를 저장하고 `file_path`·`path`·`bytes`·`media_type`·`details`만
+반환한다. 별도 base64 변환 스크립트가 필요 없다. 파일명만 주면 프로젝트 outputs,
+디렉터리를 주면 프로젝트 상대경로, 절대경로·~workspace는 공통 경로 규약을 따른다.
+path를 생략하면 기존 `images:[{base64,media_type}]` 시각 입력을 유지한다.
+큰 실행 영수증은 전달 봉투의 `recordings_ref`에 원문 목록으로 보존된다.
+프로그램 내부 값·재개 저널에는 원본이 유지되며 외부 재생은 참조의 원문을 먼저 읽는다.

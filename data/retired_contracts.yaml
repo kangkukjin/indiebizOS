@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: browser-silent-confirm-and-global-session
+    retired: 2026-10-09
+    reason: 확인창 자동 취소를 성공으로 보고했고 동시 작업이 같은 페이지를 조작했다.
+    instead: Playwright 작업·주체별 세션과 조작별 dialog 정책을 사용한다. iframe index는 메인 제외 0부터다.
+    phrases: ['확인창 취소도 항상 클릭 성공', '모든 작업이 하나의 브라우저 탭을 공유한다', 'iframe index:0은 메인 프레임']
   - id: deck-missing-png-complete
     retired: 2026-10-09
     reason: PNG가 없는 장을 건너뛴 부분 영상이 IBL에서 완전한 원천으로 통과했다.

@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: browser-cookie-load-login-guarantee
+    retired: 2026-10-09
+    reason: 쿠키 적용과 현재 주소 리로드만으로 목적 화면 로그인 성공을 보장할 수 없다.
+    instead: navigate로 열기→cookies load 적용 수·경고 확인→목적 화면 navigate→URL과 snapshot 확인.
+    phrases: ['상태 복원 완료. 로그인 상태가 유지됩니다.', '자동으로 페이지 리로드되며 로그인 상태 복원']
   - id: guestpc-volatile-results
     retired: 2026-10-09
     reason: 기기 작업의 메모리 큐와 5분 회수 제한이 재기동·긴 작업에서 실행과 유실을 구분하지 못했다.

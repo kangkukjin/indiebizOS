@@ -1,0 +1,11 @@
+#!ibl edition=2
+$nav = [limbs:browser]{op:"navigate",url:"about:blank",driver:"playwright",wait:"load"}
+$setup = [limbs:browser]{op:"evaluate",expression:"window.moved=null;document.body.innerHTML=\"<button id=\\\"src\\\" draggable=\\\"true\\\" ondragstart=\\\"event.dataTransfer.setData('text/plain','source')\\\">\\uc218\\ub9ac \\ud655\\uc778 \\uce74\\ub4dc</button><div role=\\\"region\\\" aria-label=\\\"\\uc218\\ub9ac \\ud655\\uc778 \\uc601\\uc5ed\\\" style=\\\"margin-left:250px;height:1400px;width:200px;background:#ddd\\\" ondragover=\\\"event.preventDefault()\\\" ondrop=\\\"event.preventDefault();window.moved=event.dataTransfer.getData('text/plain')\\\">\\ub3c4\\ucc29</div>\""}
+$snap = [limbs:browser]{op:"snapshot"}
+$src = filter($snap.snapshot,($e)=>$e.role=="button" and $e.name=="수리 확인 카드")[0].ref
+$dst = filter($snap.snapshot,($e)=>$e.role=="region" and $e.name=="수리 확인 영역")[0].ref
+$drag = [limbs:browser]{op:"drag",source_ref:$src,target_ref:$dst}
+$state = [limbs:browser]{op:"evaluate",expression:"window.moved"}
+$logs = [limbs:browser]{op:"logs",mode:"network"}
+$closed = [limbs:browser]{op:"close"}
+return {drag:$drag,moved:$state.result,network:$logs,closed:$closed.success}

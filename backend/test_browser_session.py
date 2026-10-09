@@ -343,3 +343,45 @@ if __name__ == "__main__":
     import sys
     import pytest
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_network_capture_lifecycle_and_failed_requests(browser, tmp_path):
+    handler, module = browser
+    async def run():
+        context = ToolContext(str(tmp_path), 'browser_op', task_id='network')
+        async def call(**params):
+            return json.loads(await handler.execute({'driver':'playwright', **params}, context))
+        try:
+            await call(op='navigate', url='about:blank', wait='load')
+            session = next(iter(module.BrowserSession._sessions.values()))
+            # Real response/requestfailed hooks; intercept HTTP locally, no external traffic.
+            await session.raw_page.route('**/conflict', lambda route: route.fulfill(status=409, body='conflict'))
+            await session.raw_page.route('**/broken', lambda route: route.abort('connectionfailed'))
+            await call(op='navigate', url='http://synthetic.test/conflict', wait='load')
+            logs = await call(op='logs', mode='network')
+            assert logs['success'] and logs['capturing']
+            assert any(x['status']==409 for x in logs['logs']), logs
+            await call(op='evaluate', expression="fetch('/broken').catch(()=>null)")
+            logs = await call(op='logs', mode='network')
+            assert any(x['status'] is None and x['failure'] for x in logs['logs']), logs
+            session.stop_network_capture()
+            stopped = await call(op='logs', mode='network')
+            assert not stopped['success'] and stopped['error_code']=='NETWORK_CAPTURE_INACTIVE'
+            assert stopped['logs']  # preserve earlier evidence
+            await call(op='close')
+            await call(op='navigate', url='about:blank', wait='load')
+            fresh = await call(op='logs', mode='network')
+            assert fresh['success'] and fresh['capturing'] and fresh['logs']==[]
+        finally:
+            await call(op='close')
+    asyncio.run(run())
+
+
+def test_chrome_drag_does_not_send_placeholder_coordinates(browser, monkeypatch):
+    handler, _ = browser
+    chrome = handler._load('browser_chrome')
+    def unexpected():
+        pytest.fail('Unsupported drag must not touch Chrome')
+    monkeypatch.setattr(chrome, '_get_driver', unexpected)
+    result = asyncio.run(chrome.browser_drag({'source_ref':'e1','target_ref':'e2'}))
+    assert not result['success'] and result['error_code']=='UNSUPPORTED_OPERATION'

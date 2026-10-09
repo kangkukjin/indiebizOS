@@ -485,29 +485,9 @@ async def browser_hover(params: dict) -> dict:
 
 
 async def browser_drag(params: dict) -> dict:
-    d = _get_driver()
-    source_ref = params.get("source_ref")
-    target_ref = params.get("target_ref")
-
-    if not source_ref or not target_ref:
-        return {"success": False, "error": "source_ref와 target_ref 필요"}
-
-    try:
-        chrome_source = d._to_chrome_ref(source_ref)
-        chrome_target = d._to_chrome_ref(target_ref)
-
-        # 드래그는 좌표 기반이므로 요소 위치를 먼저 파악해야 함
-        # Chrome MCP의 computer tool은 coordinate 기반 드래그 지원
-        await d.call_tool("computer", {
-            "action": "left_click_drag",
-            "start_coordinate": [0, 0],  # 실제로는 요소 좌표 필요
-            "coordinate": [0, 0],
-            "ref": chrome_source,  # ref 기반 시도
-            "tabId": d._tab_id
-        })
-        return {"success": True, "action": "drag", "driver": "chrome"}
-    except Exception as e:
-        return {"success": False, "error": f"드래그 실패: {e}"}
+    # 임시 0,0 좌표는 target_ref를 무시한 조작이므로 실행하지 않는다.
+    return {"success": False, "driver": "chrome", "error_code": "UNSUPPORTED_OPERATION",
+            "error": "Chrome 드라이버는 두 ref의 드래그 좌표를 확인할 수 없습니다. Playwright 세션에서 새 snapshot으로 대상을 선택하세요."}
 
 
 async def browser_press_key(params: dict) -> dict:

@@ -133,7 +133,7 @@ iframe 관리는 **단일 액션 `[limbs:browser]{op: "iframe", mode}`** — lis
 
 ## 쿠키/로그인 상태 관리
 
-쿠키 관리는 **단일 액션 `[limbs:browser]{op: "cookies", op}`** — save / load.
+쿠키 관리는 **단일 액션 `[limbs:browser]{op: "cookies", mode}`** — save / load.
 
 ### 저장
 ```
@@ -147,15 +147,18 @@ iframe 관리는 **단일 액션 `[limbs:browser]{op: "iframe", mode}`** — lis
 
 ### 복원
 ```
-# 새 세션에서
-[limbs:browser]{op: "navigate", url: "naver.com"}
-[limbs:browser]{op: "cookies", mode: "load", name: "naver"}
-# → 자동으로 페이지 리로드되며 로그인 상태 복원
+# 먼저 브라우저를 연다(닫힌 상태에서는 load 불가).
+[limbs:browser]{op: "navigate", url: "about:blank", driver: "playwright", wait: "load"}
+$restore = [limbs:browser]{op: "cookies", mode: "load", name: "naver"}
+# 적용 수·warnings를 확인한 뒤 목적 화면으로 이동한다.
+[limbs:browser]{op: "navigate", url: "https://www.naver.com/", wait: "load"}
+[limbs:browser]{op: "snapshot"}
+# URL·화면으로 로그인 여부 확인. load 자체는 인증 성공을 보장하지 않는다.
 ```
 
 ### 주의사항
 - 쿠키 파일에 인증 토큰이 포함되므로 Git에 커밋하지 말 것
-- localStorage 복원은 같은 도메인에서만 작동 (다른 도메인이면 자동으로 해당 URL로 이동 후 복원)
+- localStorage는 저장된 origin(scheme·host·port)에만 적용한다. 다른 origin이면 저장 URL로 이동하며, 리다이렉트로 origin이 달라지거나 적용에 실패하면 부분 복원 오류와 실제 적용 수를 반환한다.
 - 일부 사이트는 서버측 세션이 만료되면 쿠키만으로 복원 불가
 - Chrome 드라이버에서는 쿠키 복원이 보통 불필요 (실제 Chrome이 이미 로그인 상태 유지)
 
@@ -418,3 +421,23 @@ iframe switch 뒤 snapshot도 그 프레임만 읽으며 `frame:{kind,name,url}`
 이어 쓸 수 있으며, 실패 후 새 페이지로 이동할 때 이전 프레임 문맥이 남지 않는다.
 
 탭 전환은 `tab list`의 `tab_id`를 사용한다. `mode:"switch", index:0`은 현재 목록의 첫 탭이다. 오래 유지하는 연결에는 위치보다 tab_id를 사용한다.
+
+
+## 드래그와 조작 결과 확인
+
+`[limbs:browser]{op:"drag", source_ref:"e1", target_ref:"e2", driver:"playwright"}`는
+snapshot의 이름·역할을 영수증 `source`·`target`에 남긴다. 놓는 자리는 화면 안의 작은 요소나
+칸 제목을 권장한다. 긴 영역은 보이는 부분에서 실제로 닿는 점을 고르고, 두 대상을 한 화면에
+놓을 수 없거나 가려졌으면 `DRAG_NOT_IN_VIEW`로 조작 전에 거절한다. 누른 뒤 스크롤·시작 대상
+변경은 `DRAG_TARGET_UNVERIFIED`와 관측으로 반환한다. 성공도 `verification:gesture_only`이며
+서버 저장 성공의 증거는 아니다. 화면과 새로 읽은 저장 결과를 대조하고 실패한 항목을 보존한다.
+Chrome 드라이버는 두 ref의 드래그 좌표 연결을 지원하지 않아 명시 오류를 반환한다.
+
+## 네트워크 기록
+
+Playwright는 세션 시작부터 각 탭의 HTTP 응답과 응답 없는 요청 실패를 수집한다.
+`[limbs:browser]{op:"logs", mode:"network"}`로 조회한다. `status:409` 같은 HTTP 오류와
+`status:null`·`failure`가 있는 연결 실패를 구분한다. 요청/응답 본문·헤더는 수집하지 않는다.
+기록은 세션의 최근 500건 중 기본 50건을 반환한다(`capacity`, `retained_count`, `count`).
+진행 중 요청은 아직 없을 수 있으며 이 목록만으로 전체 요청 성공을 단정하지 않는다.
+`capturing:false`는 빈 성공이 아니라 `NETWORK_CAPTURE_INACTIVE` 실패다. 새 세션은 새로 수집한다.

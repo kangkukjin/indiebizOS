@@ -410,7 +410,7 @@ async def browser_console_logs(params: dict) -> dict:
 
 
 async def browser_network_logs(params: dict) -> dict:
-    """네트워크 요청 로그 조회/제어"""
+    """세션 시작부터 수집한 응답·연결 실패 조회. 내부 소비자는 수집 제어도 가능."""
     err = ensure_active()
     if err:
         return err
@@ -435,12 +435,19 @@ async def browser_network_logs(params: dict) -> dict:
         limit = params.get("limit", 50)
         logs = session.get_network_logs(url_pattern=url_filter, limit=limit)
 
-        return {
-            "success": True,
+        result = {
+            "success": session._capture_network,
             "logs": logs,
             "count": len(logs),
             "capturing": session._capture_network,
+            "scope": "session", "capacity": session._network_logs.maxlen,
+            "retained_count": len(session._network_logs),
+            "coverage": "recent_responses_and_failures",
         }
+        if not session._capture_network:
+            result.update(error_code="NETWORK_CAPTURE_INACTIVE",
+                          error="네트워크 수집이 중지돼 있습니다. 반환된 과거 기록만으로 요청 성공/실패를 판단하지 마세요.")
+        return result
 
 
 async def browser_dialog_info(params: dict) -> dict:

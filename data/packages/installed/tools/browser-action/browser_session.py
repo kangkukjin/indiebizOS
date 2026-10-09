@@ -213,6 +213,7 @@ class BrowserSession:
 
     async def _start_browser(self, headless=True):
         self._headless = headless
+        self._capture_network = True
         async_playwright = _get_playwright()
 
         if self._playwright is None:
@@ -277,6 +278,7 @@ class BrowserSession:
         page.on("console", self._on_console_message)
         page.on("dialog", self._on_dialog)
         page.on("response", self._on_response)
+        page.on("requestfailed", self._on_request_failed)
 
     def _on_new_page(self, page):
         """새 탭/팝업 자동 감지 핸들러 — 직접 생성과 이벤트의 중복 등록을 막는다."""
@@ -332,6 +334,15 @@ class BrowserSession:
             })
         except Exception:
             pass
+
+    def _on_request_failed(self, request):
+        """HTTP 응답 없는 연결/취소 실패도 요청 기록에 남긴다. 본문·헤더는 수집하지 않는다."""
+        if self._capture_network:
+            self._network_logs.append({
+                "url": request.url, "status": None, "method": request.method,
+                "resource_type": request.resource_type, "failure": request.failure,
+                "timestamp": datetime.now().isoformat(),
+            })
 
     @property
     def page(self):

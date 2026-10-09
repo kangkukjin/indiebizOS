@@ -69,6 +69,125 @@ async def _resolve_locator(session, page, params: dict, input_mode: bool = False
     return locator, None
 
 
+def _element_label(session, params):
+    """호출자가 설명을 생략해도 snapshot의 대상 이름을 영수증에 남긴다."""
+    ref = params.get("ref", "")
+    info = session.get_ref(ref) if ref else {}
+    name = params.get("element") or (info or {}).get("name") or (info or {}).get("role") or "요소"
+    return f"{name} ({ref or params.get('selector', '')})"
+
+
+async def _visible_drag_point(locator, raw_page):
+    """메인 viewport 안에서 실제 대상에 닿는 점. 긴 영역은 보이는 부분만 사용."""
+    box = await locator.bounding_box()
+    if not box:
+        return None
+    viewport = await raw_page.evaluate("({width:innerWidth,height:innerHeight})")
+    left, top = max(1, box["x"]), max(1, box["y"])
+    right = min(viewport["width"] - 1, box["x"] + box["width"])
+    bottom = min(viewport["height"] - 1, box["y"] + box["height"])
+    if right <= left or bottom <= top:
+        return None
+    for fx, fy in ((.5, .5), (.5, .15), (.5, .85), (.15, .5), (.85, .5)):
+        x, y = left + (right - left) * fx, top + (bottom - top) * fy
+        hit = await locator.evaluate("""(el, offset) => {
+            const r = el.getBoundingClientRect();
+            const hit = el.ownerDocument.elementFromPoint(r.x + offset.x, r.y + offset.y);
+            return el.isConnected && (hit === el || el.contains(hit));
+        }""", {"x": x - box["x"], "y": y - box["y"]})
+        if hit:
+            return {"x": x, "y": y}
+    return None
+
+
+async def _guarded_drag(session, source, target):
+    """좌표를 확정한 뒤 자동 스크롤 없이 조작하고 실제 시작 대상·스크롤을 감시."""
+    raw_page = session.raw_page
+    await source.scroll_into_view_if_needed(timeout=ACTION_TIMEOUT)
+    if not await _visible_drag_point(target, raw_page):
+        await target.scroll_into_view_if_needed(timeout=ACTION_TIMEOUT)
+    start = await _visible_drag_point(source, raw_page)
+    end = await _visible_drag_point(target, raw_page)
+    if not start or not end:
+        return {"success": False, "error_code": "DRAG_NOT_IN_VIEW",
+                "error": "출발점과 도착점을 한 화면에서 확인할 수 없습니다. 화면 안의 작은 대상이나 칸 제목을 선택하세요."}
+
+    target_handle = await target.element_handle()
+    guard = await source.evaluate_handle("""(el, target) => {
+        const doc = el.ownerDocument;
+        const state = {scrolled:false, wrong_source:false, wrong_target:false, started:false, html5:false,
+                       actual_source:null};
+        const scrolls = [];
+        for (const node of [el,target])
+            for (let p=node; p; p=p.parentElement) scrolls.push([p,p.scrollLeft,p.scrollTop]);
+        const win = doc.defaultView, x=win.scrollX, y=win.scrollY;
+        const changed = () => win.scrollX!==x || win.scrollY!==y ||
+            scrolls.some(([p,x,y])=>p.scrollLeft!==x || p.scrollTop!==y);
+        const scroll = () => {state.scrolled ||= changed();};
+        const check = e => {
+            state.scrolled ||= changed();
+            if (e.type==='pointerdown' || e.type==='mousedown' || e.type==='dragstart') {
+                const valid = e.target===el || el.contains(e.target) ||
+                    (e.type==='dragstart' && e.target===el.closest('[draggable="true"]'));
+                state.wrong_source ||= !valid;
+                state.started ||= valid;
+                state.html5 ||= e.type==='dragstart';
+                state.actual_source = e.target.getAttribute('aria-label') ||
+                    e.target.id || (e.target.textContent || '').trim().slice(0,200);
+            }
+            if (e.type==='drop') state.wrong_target ||= !(e.target===target || target.contains(e.target));
+            if (state.scrolled || state.wrong_source || state.wrong_target || !el.isConnected || !target.isConnected) {
+                e.preventDefault(); e.stopImmediatePropagation();
+            }
+        };
+        const types=['pointerdown','mousedown','dragstart','dragover','drop','pointerup'];
+        doc.addEventListener('scroll',scroll,true);
+        types.forEach(t=>doc.addEventListener(t,check,true));
+        return {read:()=>({...state,scrolled:state.scrolled||changed(),
+                            detached:!el.isConnected || !target.isConnected}),
+                cleanup:()=>{doc.removeEventListener('scroll',scroll,true);
+                    types.forEach(t=>doc.removeEventListener(t,check,true));}};
+    }""", target_handle)
+    await target_handle.dispose()
+    pressed = False
+    completed = False
+    try:
+        await raw_page.mouse.move(**start)
+        pressed = True
+        await raw_page.mouse.down()
+        await raw_page.mouse.move(**end, steps=12)
+        # HTML5 dragover is dispatched on a second move on all supported Chromium versions.
+        await raw_page.mouse.move(**end)
+        observed = await guard.evaluate("g=>g.read()")
+        if any(observed[k] for k in ("scrolled", "wrong_source", "wrong_target", "detached")) or not observed["started"]:
+            return {"success": False, "error_code": "DRAG_TARGET_UNVERIFIED",
+                    "error": "드래그 중 스크롤 또는 시작 대상 불일치를 감지했습니다. 상태를 다시 읽고 대상을 선택하세요.",
+                    "scrolled_during_drag": observed["scrolled"], "observation": observed}
+        await raw_page.mouse.up()
+        pressed = False
+        completed = True
+        observed = await guard.evaluate("g=>g.read()")
+        if any(observed[k] for k in ("scrolled", "wrong_source", "wrong_target", "detached")):
+            return {"success": False, "error_code": "DRAG_TARGET_UNVERIFIED",
+                    "error": "드래그 중 화면이 변경됐습니다. 실제 결과를 다시 확인하세요.",
+                    "scrolled_during_drag": observed["scrolled"], "observation": observed}
+        return {"success": True, "scrolled_during_drag": False, "observation": observed,
+                "verification": "gesture_only", "snapshot_hint": "조작 완료는 저장 성공을 뜻하지 않습니다. 화면과 저장 결과를 다시 읽어 확인하세요."}
+    finally:
+        try:
+            if not completed:
+                await raw_page.keyboard.press("Escape")
+        finally:
+            try:
+                if pressed:
+                    await raw_page.mouse.up()
+            finally:
+                try:
+                    await guard.evaluate("g=>g.cleanup()")
+                finally:
+                    await guard.dispose()
+
+
 def _stale_warning(session, ref: str, result: dict):
     """ref의 stale warning이 있으면 result에 추가"""
     if ref:
@@ -106,7 +225,7 @@ async def browser_click(params: dict) -> dict:
 
         result = {
             "success": True,
-            "clicked": f"{params.get('element', '')} ({params.get('ref', params.get('selector', ''))})",
+            "clicked": _element_label(session, params),
             "url": page.url,
             "title": await session.raw_page.title()
         }
@@ -134,7 +253,7 @@ async def browser_dblclick(params: dict) -> dict:
 
         result = {
             "success": True,
-            "double_clicked": f"{params.get('element', '')} ({params.get('ref', params.get('selector', ''))})",
+            "double_clicked": _element_label(session, params),
             "url": page.url,
         }
         _stale_warning(session, params.get("ref", ""), result)
@@ -161,7 +280,7 @@ async def browser_rightclick(params: dict) -> dict:
 
         result = {
             "success": True,
-            "right_clicked": f"{params.get('element', '')} ({params.get('ref', params.get('selector', ''))})",
+            "right_clicked": _element_label(session, params),
         }
         _stale_warning(session, params.get("ref", ""), result)
         return result
@@ -218,7 +337,7 @@ async def browser_type(params: dict) -> dict:
         result = {
             "success": True,
             "typed": text,
-            "element": f"{params.get('element', '')} ({params.get('ref', params.get('selector', ''))})",
+            "element": _element_label(session, params),
             "submitted": submit,
             "url": page.url
         }
@@ -254,7 +373,7 @@ async def browser_select_option(params: dict) -> dict:
             "success": True,
             "selected": selected,
             "requested": values,
-            "element": f"{params.get('element', '')} ({params.get('ref', params.get('selector', ''))})"
+            "element": _element_label(session, params)
         }
         _stale_warning(session, params.get("ref", ""), result)
         return result
@@ -286,7 +405,7 @@ async def browser_check(params: dict) -> dict:
         result = {
             "success": True,
             "checked": checked,
-            "element": f"{params.get('element', '')} ({params.get('ref', params.get('selector', ''))})"
+            "element": _element_label(session, params)
         }
         _stale_warning(session, params.get("ref", ""), result)
         return result
@@ -323,7 +442,7 @@ async def browser_upload_file(params: dict) -> dict:
         return {
             "success": True,
             "uploaded": files,
-            "element": f"{params.get('element', '')} ({params.get('ref', params.get('selector', ''))})"
+            "element": _element_label(session, params)
         }
     except Exception as e:
         return {"success": False, "error": f"파일 업로드 실패: {str(e)}"}
@@ -349,7 +468,7 @@ async def browser_hover(params: dict) -> dict:
 
         result = {
             "success": True,
-            "hovered": f"{params.get('element', '')} ({params.get('ref', params.get('selector', ''))})"
+            "hovered": _element_label(session, params)
         }
         _stale_warning(session, params.get("ref", ""), result)
         return result
@@ -389,12 +508,13 @@ async def browser_drag(params: dict) -> dict:
         if not target_locator:
             return {"success": False, "error": f"타겟 요소를 찾을 수 없습니다 (ref={target_ref})"}
 
-        await source_locator.drag_to(target_locator)
-
-        return {
-            "success": True,
-            "dragged": f"{params.get('source_element', '')} → {params.get('target_element', '')}"
-        }
+        result = await _guarded_drag(session, source_locator, target_locator)
+        result.update(
+            source={"ref": source_ref, "name": source_info.get("name", ""), "role": source_info.get("role", "")},
+            target={"ref": target_ref, "name": target_info.get("name", ""), "role": target_info.get("role", "")},
+            dragged=f"{_element_label(session, {'ref': source_ref})} → {_element_label(session, {'ref': target_ref})}",
+        )
+        return result
     except Exception as e:
         return {"success": False, "error": f"드래그 실패: {str(e)}"}
 

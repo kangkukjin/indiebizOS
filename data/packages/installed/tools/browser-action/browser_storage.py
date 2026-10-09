@@ -94,10 +94,11 @@ async def browser_cookies_save(params: dict, project_path: str = ".") -> dict:
 
 
 async def browser_cookies_load(params: dict, project_path: str = ".") -> dict:
-    """저장된 쿠키와 localStorage를 브라우저에 복원"""
+    """열린 브라우저에 저장 상태를 적용한다. 목적 화면·로그인 여부는 별도 확인."""
     err = ensure_active()
     if err:
-        return err
+        return {**err, "recovery": {"op": "navigate", "url": "about:blank"},
+                "hint": "navigate로 브라우저를 연 뒤 cookies load, 목적 화면 navigate 순서로 복원하세요."}
 
     name = params.get("name", "")
     if not name:
@@ -153,52 +154,55 @@ async def browser_cookies_load(params: dict, project_path: str = ".") -> dict:
         if cookies:
             await page.context.add_cookies(cookies)
 
-        # localStorage 복원 (같은 도메인에서만 작동)
-        if local_storage and saved_url:
-            current_url = page.url
-            saved_domain = urlparse(saved_url).netloc
-            current_domain = urlparse(current_url).netloc
-
-            if saved_domain == current_domain:
-                for key, value in local_storage.items():
-                    try:
-                        await page.evaluate(
-                            "(args) => localStorage.setItem(args.key, args.value)",
-                            {"key": key, "value": value}
-                        )
-                    except Exception:
-                        pass
+        # localStorage는 scheme/host/port가 같은 origin에만 적용한다.
+        loaded_keys = 0
+        warnings = []
+        if local_storage:
+            saved = urlparse(saved_url)
+            current = urlparse(page.url)
+            def origin(parsed):
+                port = parsed.port or (443 if parsed.scheme == "https" else 80)
+                return parsed.scheme, parsed.hostname, port
+            if saved.scheme not in {"http", "https"}:
+                warnings.append("localStorage의 저장 origin을 확인할 수 없습니다.")
             else:
-                # 도메인이 다르면 먼저 해당 URL로 이동
                 try:
-                    await page.goto(saved_url, wait_until="load", timeout=30000)
-                    for key, value in local_storage.items():
-                        try:
+                    if origin(saved) != origin(current):
+                        await page.goto(saved_url, wait_until="load", timeout=30000)
+                    if origin(saved) != origin(urlparse(page.url)):
+                        warnings.append("다른 origin으로 이동하여 localStorage를 적용하지 않았습니다.")
+                    else:
+                        for key, value in local_storage.items():
                             await page.evaluate(
                                 "(args) => localStorage.setItem(args.key, args.value)",
-                                {"key": key, "value": value}
+                                {"key": key, "value": value},
                             )
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
+                            loaded_keys += 1
+                except Exception as exc:
+                    warnings.append(f"localStorage 적용 실패: {exc}")
 
-        # 페이지 리로드
+        # 현재 주소의 리로드는 목적 화면 이동이나 인증 검증이 아니다.
         try:
             await page.reload(wait_until="load", timeout=30000)
-        except Exception:
-            pass
+        except Exception as exc:
+            warnings.append(f"현재 화면 리로드 실패: {exc}")
 
         session.clear_refs()
 
-        return {
-            "success": True,
+        result = {
+            "success": not warnings,
             "name": name,
             "cookies_loaded": len(cookies),
-            "local_storage_loaded": len(local_storage),
+            "local_storage_loaded": loaded_keys,
+            "warnings": warnings,
             "url": page.url,
-            "message": f"'{name}' 상태 복원 완료. 로그인 상태가 유지됩니다.",
-            "snapshot_hint": "페이지 구조를 파악하려면 browser_snapshot을 호출하세요."
+            "message": f"'{name}' 쿠키 {len(cookies)}개 적용 — 목적 화면을 다시 여세요. 로그인 성공 여부는 아직 확인하지 않았습니다.",
+            "authentication_verified": False,
+            "snapshot_hint": "navigate로 목적 화면을 연 뒤 URL과 snapshot으로 로그인 상태를 확인하세요."
         }
+        if warnings:
+            result.update(error_code="STORAGE_RESTORE_INCOMPLETE",
+                          error="일부 저장 상태나 화면을 복원하지 못했습니다. 적용 수와 warnings를 확인하세요.")
+        return result
     except Exception as e:
         return {"success": False, "error": f"쿠키 복원 실패: {str(e)}"}

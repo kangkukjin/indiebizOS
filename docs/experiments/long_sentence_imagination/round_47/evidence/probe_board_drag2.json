@@ -1,0 +1,33 @@
+{
+ "code": "#!ibl edition=2\n$e0 = [limbs:browser]{op:\"evaluate\", expression:\"Array.from(document.querySelectorAll('.col')).filter(c=>['지연','오늘 처리'].includes(c.dataset.col)).map(c=>c.dataset.col+':'+Array.from(c.querySelectorAll('.card')).map(x=>x.dataset.id+'@'+Math.round(x.getBoundingClientRect().top)).join(',')).join(' | ') + ' scrollY=' + window.scrollY\"}\n$s = [limbs:browser]{op:\"snapshot\"}\n$card = ($s.snapshot >> [table:filter]{where:($e)=>contains($e.name,\"W-1011\")})\n$today = ($s.snapshot >> [table:filter]{where:($e)=>$e.role==\"region\" and contains($e.name,\"오늘 처리\")})\n$d = [try] { [limbs:browser]{op:\"drag\", source_ref:$card[0].ref, target_ref:$today[0].ref} } [catch] { {failed:true, code:$error.code, message:$error.message} }\n$e1 = [limbs:browser]{op:\"evaluate\", expression:\"Array.from(document.querySelectorAll('.col')).filter(c=>['지연','오늘 처리'].includes(c.dataset.col)).map(c=>c.dataset.col+':'+Array.from(c.querySelectorAll('.card')).map(x=>x.dataset.id).join(',')).join(' | ')\"}\nreturn {before:$e0.result, card:$card, today:$today, drag:$d, after:$e1.result}\n",
+ "task_id": "lsi47_probe1",
+ "elapsed": 0.51,
+ "response": {
+  "success": true,
+  "value": {
+   "before": "지연:W-1004@68,W-1011@126,W-1017@184,W-1026@242 | 오늘 처리:W-1033@68 scrollY=237",
+   "card": [
+    {
+     "ref": "e40",
+     "role": "button",
+     "name": "W-1011 김서연 삼나무 선반 12개"
+    }
+   ],
+   "today": [
+    {
+     "ref": "e6",
+     "role": "region",
+     "name": "오늘 처리 칸"
+    }
+   ],
+   "drag": {
+    "success": true,
+    "dragged": " → ",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "after": "지연:W-1004,W-1017,W-1026 | 오늘 처리:W-1033,W-1011"
+  },
+  "executed": true
+ }
+}

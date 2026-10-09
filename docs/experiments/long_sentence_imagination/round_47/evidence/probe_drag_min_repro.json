@@ -1,0 +1,66 @@
+{
+ "code": "#!ibl edition=2\n$u = \"http://127.0.0.1:8979/\"\n$n = [limbs:browser]{op:\"navigate\", url:f\"${u}login\", driver:\"playwright\", wait:\"load\"}\n$tu = [limbs:browser]{op:\"type\", selector:\"input[name=user]\", text:\"lsi47_staff\"}\n$tp = [limbs:browser]{op:\"type\", selector:\"input[name=password]\", text:\"pw\", submit:true}\n$nb = [limbs:browser]{op:\"navigate\", url:f\"${u}board\", wait:\"load\"}\n$geo = [limbs:browser]{op:\"evaluate\", expression:\"(()=>{const r=e=>{const b=e.getBoundingClientRect();return {top:Math.round(b.top),bottom:Math.round(b.bottom),cy:Math.round(b.top+b.height/2)}};return {scrollY:window.scrollY,vh:window.innerHeight,card_W1004:r(document.querySelector('.card[data-id=\\\"W-1004\\\"]')),card_W1033:r(document.querySelector('.card[data-id=\\\"W-1033\\\"]')),region_today:r(document.querySelector('.col[data-col=\\\"오늘 처리\\\"]'))}})()\"}\n$s = [limbs:browser]{op:\"snapshot\"}\n$card = ($s.snapshot >> [table:filter]{where:($e)=>contains($e.name,\"W-1004\")})[0]\n$region = ($s.snapshot >> [table:filter]{where:($e)=>$e.role==\"region\" and contains($e.name,\"오늘 처리\")})[0]\n$d = [limbs:browser]{op:\"drag\", source_ref:$card.ref, target_ref:$region.ref}\n$after = [limbs:browser]{op:\"evaluate\", expression:\"({scrollY:window.scrollY, today:Array.from(document.querySelectorAll('.col[data-col=\\\"오늘 처리\\\"] .card')).map(x=>x.dataset.id), late:Array.from(document.querySelectorAll('.col[data-col=\\\"지연\\\"] .card')).map(x=>x.dataset.id)})\"}\n$cl = [limbs:browser]{op:\"close\"}\nreturn {asked_source:$card, asked_target:$region, geometry_before:$geo.result, drag_result:$d, after:$after.result}\n",
+ "task_id": "lsi47_probe3",
+ "elapsed": 1.09,
+ "response": {
+  "success": true,
+  "value": {
+   "asked_source": {
+    "ref": "e39",
+    "role": "button",
+    "name": "W-1004 최지호 참나무 트레이 3개"
+   },
+   "asked_target": {
+    "ref": "e6",
+    "role": "region",
+    "name": "오늘 처리 칸"
+   },
+   "geometry_before": {
+    "scrollY": 0,
+    "vh": 720,
+    "card_W1004": {
+     "top": 305,
+     "bottom": 357,
+     "cy": 331
+    },
+    "card_W1033": {
+     "top": 537,
+     "bottom": 589,
+     "cy": 563
+    },
+    "region_today": {
+     "top": 237,
+     "bottom": 1183,
+     "cy": 710
+    }
+   },
+   "drag_result": {
+    "success": true,
+    "dragged": " → ",
+    "session_owner": "cf56e2ff39e0143e6dafcff4a65a03d99be1de6bd7ae7e9d08d0521007b9162c",
+    "tab_id": "cf56e2ff39e0-t1"
+   },
+   "after": {
+    "scrollY": 237,
+    "today": [
+     "W-1033"
+    ],
+    "late": [
+     "W-1004",
+     "W-1011",
+     "W-1017",
+     "W-1026"
+    ]
+   }
+  },
+  "executed": true
+ },
+ "server_moves": [
+  {
+   "id": "W-1033",
+   "from": "지연",
+   "to": "오늘 처리",
+   "ok": true
+  }
+ ]
+}

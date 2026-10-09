@@ -1,0 +1,86 @@
+{
+ "code": "#!ibl edition=2\n$s = [limbs:browser]{op:\"snapshot\"}\n$card = ($s.snapshot >> [table:filter]{where:($e)=>contains($e.name,\"W-1004\")})[0]\n$dc = [limbs:browser]{op:\"click\", ref:$card.ref, mode:\"double\"}\n$s2 = [limbs:browser]{op:\"snapshot\"}\n$inp = $s2.snapshot >> [table:filter]{where:($e)=>$e.role==\"textbox\"}\n$ty = [limbs:browser]{op:\"type\", ref:$inp[0].ref, text:\"탐침 메모\"}\n$en = [limbs:browser]{op:\"press_key\", key:\"Enter\"}\n$w = [limbs:browser]{op:\"wait\", text:\"메모: 탐침 메모\"}\n$s3 = [limbs:browser]{op:\"snapshot\"}\n$card3 = ($s3.snapshot >> [table:filter]{where:($e)=>contains($e.name,\"W-1004\")})\n$rc = [limbs:browser]{op:\"click\", ref:$card3[0].ref, mode:\"right\"}\n$s4 = [limbs:browser]{op:\"snapshot\"}\n$menu = $s4.snapshot >> [table:filter]{where:($e)=>$e.role==\"menuitem\" or $e.role==\"menu\"}\n$mk = [limbs:browser]{op:\"click\", ref:($menu >> [table:filter]{where:($e)=>contains($e.name,\"우선\")})[0].ref}\n$t = [limbs:browser]{op:\"evaluate\", expression:\"document.querySelector('.card[data-id=\\\"W-1004\\\"]').innerText + ' | ctx=' + !!document.getElementById('ctx')\"}\nreturn {dbl:$dc, inp:$inp, typed:$ty, enter:$en, wait:$w, card3:$card3, right:$rc, menu:$menu, menuclick:$mk, card_text:$t.result}\n",
+ "task_id": "lsi47_probe1",
+ "elapsed": 0.88,
+ "response": {
+  "success": true,
+  "value": {
+   "dbl": {
+    "success": true,
+    "double_clicked": " (e44)",
+    "url": "http://127.0.0.1:8979/board",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "inp": [
+    {
+     "ref": "e56",
+     "role": "textbox",
+     "name": "W-1004 메모 입력",
+     "focused": true
+    }
+   ],
+   "typed": {
+    "success": true,
+    "typed": "탐침 메모",
+    "element": " (e56)",
+    "submitted": false,
+    "url": "http://127.0.0.1:8979/board",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "enter": {
+    "success": true,
+    "pressed": "Enter",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "wait": {
+    "success": true,
+    "waited_for": "text: 메모: 탐침 메모",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "card3": [
+    {
+     "ref": "e44",
+     "role": "button",
+     "name": "W-1004 최지호 참나무 트레이 3개"
+    }
+   ],
+   "right": {
+    "success": true,
+    "right_clicked": " (e44)",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "menu": [
+    {
+     "ref": "e9",
+     "role": "menuitem",
+     "name": "우선 처리 표시"
+    },
+    {
+     "ref": "e10",
+     "role": "menuitem",
+     "name": "메뉴 닫기"
+    },
+    {
+     "ref": "e1",
+     "role": "menu",
+     "name": "W-1004 카드 메뉴"
+    }
+   ],
+   "menuclick": {
+    "success": true,
+    "clicked": " (e9)",
+    "url": "http://127.0.0.1:8979/board",
+    "title": "보드 - 가상 공방 주문 콘솔",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "card_text": "W-1004 · 참나무 트레이 3개 ★우선\n메모: 탐침 메모 | ctx=false"
+  },
+  "executed": true
+ }
+}

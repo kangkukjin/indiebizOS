@@ -1,0 +1,26 @@
+{
+ "code": "#!ibl edition=2\n$n0 = [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8979/board\", driver:\"playwright\", wait:\"load\"}\n$ld = [try] { [limbs:browser]{op:\"cookies\", mode:\"load\", name:\"lsi47_probe\"} } [catch] { {failed:$error.message, code:$error.code} }\n$c = [limbs:browser]{op:\"content\", mode:\"text\"}\n$n = [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8979/board\", wait:\"load\"}\n$cl = [limbs:browser]{op:\"close\"}\nreturn {first_url:$n0.url, load:$ld, after_load_url:$c.url, nav_url:$n.url, owner:$n.session_owner}\n",
+ "task_id": "lsi47_probe2",
+ "elapsed": 0.75,
+ "response": {
+  "success": true,
+  "value": {
+   "first_url": "http://127.0.0.1:8979/login",
+   "load": {
+    "success": true,
+    "name": "lsi47_probe",
+    "cookies_loaded": 1,
+    "local_storage_loaded": 0,
+    "url": "http://127.0.0.1:8979/login",
+    "message": "'lsi47_probe' 상태 복원 완료. 로그인 상태가 유지됩니다.",
+    "snapshot_hint": "페이지 구조를 파악하려면 browser_snapshot을 호출하세요.",
+    "session_owner": "4e3417b6e742cb00a90aa5b7bb54920594365bfe9159fe0ae710918049f4a9db",
+    "tab_id": "4e3417b6e742-t1"
+   },
+   "after_load_url": "http://127.0.0.1:8979/login",
+   "nav_url": "http://127.0.0.1:8979/board",
+   "owner": "4e3417b6e742cb00a90aa5b7bb54920594365bfe9159fe0ae710918049f4a9db"
+  },
+  "executed": true
+ }
+}

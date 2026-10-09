@@ -1,0 +1,54 @@
+{
+ "logins": 1,
+ "requests": 5,
+ "orders_pages": 1,
+ "api_orders": [],
+ "late_views": 0,
+ "board_views": 1,
+ "summary_views": 0,
+ "moves": [
+  {
+   "id": "W-1033",
+   "from": "지연",
+   "to": "오늘 처리",
+   "ok": true
+  }
+ ],
+ "memos": [],
+ "flags": [],
+ "locked": null,
+ "final": {
+  "W-1004": {
+   "status": "지연",
+   "memo": "",
+   "flag": false
+  },
+  "W-1011": {
+   "status": "지연",
+   "memo": "",
+   "flag": false
+  },
+  "W-1017": {
+   "status": "지연",
+   "memo": "",
+   "flag": false
+  },
+  "W-1026": {
+   "status": "지연",
+   "memo": "",
+   "flag": false
+  },
+  "W-1033": {
+   "status": "오늘 처리",
+   "memo": "",
+   "flag": false
+  }
+ },
+ "counts": {
+  "접수": 10,
+  "제작 중": 15,
+  "지연": 4,
+  "오늘 처리": 1,
+  "출고": 10
+ }
+}

@@ -1,0 +1,107 @@
+{
+ "code": "#!ibl edition=2\n$n = [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8979/board\", wait:\"load\"}\n$s = [limbs:browser]{op:\"snapshot\"}\n$roles = unique(map($s.snapshot, ($e)=>$e.role))\n$regions = $s.snapshot >> [table:filter]{where:($e)=>$e.role==\"region\" or $e.role==\"heading\"}\n$card = ($s.snapshot >> [table:filter]{where:($e)=>contains($e.name,\"W-1004\")})\n$today = ($s.snapshot >> [table:filter]{where:($e)=>contains($e.name,\"오늘 처리\")})\n$d = [try] { [limbs:browser]{op:\"drag\", source_ref:$card[0].ref, target_ref:$today[0].ref} } [catch] { {failed:true, code:$error.code, message:$error.message} }\n$e = [limbs:browser]{op:\"evaluate\", expression:\"Array.from(document.querySelectorAll('.col')).map(c=>c.dataset.col+':'+c.querySelectorAll('.card').length).join(' ')\"}\nreturn {count:$s.element_count, shown:$s.shown_count, roles:$roles, regions:$regions, card:$card, today:$today, drag:$d, after:$e.result}\n",
+ "task_id": "lsi47_probe1",
+ "elapsed": 0.57,
+ "response": {
+  "success": true,
+  "value": {
+   "count": 55,
+   "shown": 55,
+   "roles": [
+    "link",
+    "button",
+    "heading",
+    "region"
+   ],
+   "regions": [
+    {
+     "ref": "e1",
+     "role": "heading",
+     "name": "가상 공방 주문 콘솔"
+    },
+    {
+     "ref": "e2",
+     "role": "heading",
+     "name": "보드"
+    },
+    {
+     "ref": "e3",
+     "role": "region",
+     "name": "접수 칸"
+    },
+    {
+     "ref": "e4",
+     "role": "region",
+     "name": "제작 중 칸"
+    },
+    {
+     "ref": "e5",
+     "role": "region",
+     "name": "지연 칸"
+    },
+    {
+     "ref": "e6",
+     "role": "region",
+     "name": "오늘 처리 칸"
+    },
+    {
+     "ref": "e7",
+     "role": "region",
+     "name": "출고 칸"
+    },
+    {
+     "ref": "e11",
+     "role": "heading",
+     "name": "접수 10건"
+    },
+    {
+     "ref": "e22",
+     "role": "heading",
+     "name": "제작 중 15건"
+    },
+    {
+     "ref": "e38",
+     "role": "heading",
+     "name": "지연 5건"
+    },
+    {
+     "ref": "e44",
+     "role": "heading",
+     "name": "오늘 처리 0건"
+    },
+    {
+     "ref": "e45",
+     "role": "heading",
+     "name": "출고 10건"
+    }
+   ],
+   "card": [
+    {
+     "ref": "e39",
+     "role": "button",
+     "name": "W-1004 최지호 참나무 트레이 3개"
+    }
+   ],
+   "today": [
+    {
+     "ref": "e6",
+     "role": "region",
+     "name": "오늘 처리 칸"
+    },
+    {
+     "ref": "e44",
+     "role": "heading",
+     "name": "오늘 처리 0건"
+    }
+   ],
+   "drag": {
+    "success": true,
+    "dragged": " → ",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "after": "접수:10 제작 중:15 지연:4 오늘 처리:1 출고:10"
+  },
+  "executed": true
+ }
+}

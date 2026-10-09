@@ -1,0 +1,65 @@
+{
+ "code": "#!ibl edition=2\n$a = [try] { [limbs:browser]{op:\"logs\", mode:\"network\", value:\"start\"} } [catch] { {failed:$error.message} }\n$b = [try] { [limbs:browser]{op:\"logs\", mode:\"network\", scope:\"start\"} } [catch] { {failed:$error.message} }\n$c = [try] { [limbs:browser]{op:\"logs\", mode:\"network\", target:\"start\"} } [catch] { {failed:$error.message} }\n$d = [try] { [limbs:browser]{op:\"logs\", mode:\"network\", query:\"start\"} } [catch] { {failed:$error.message} }\n$n = [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8979/summary\", wait:\"load\"}\n$w = [limbs:browser]{op:\"wait\", text:\"요약 준비됨\"}\n$ln = [limbs:browser]{op:\"logs\", mode:\"network\"}\n$lc = [limbs:browser]{op:\"logs\", mode:\"console\"}\nreturn {a:$a, b:$b, c:$c, d:$d, net:$ln, con_count:$lc.count, con:$lc.logs}\n",
+ "task_id": "lsi47_probe1",
+ "elapsed": 0.48,
+ "response": {
+  "success": true,
+  "value": {
+   "a": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "capturing": false,
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "b": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "capturing": false,
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "c": {
+    "param_warning": "'target' 는 이 액션의 문서화된 파라미터가 아니고 용례에도 없습니다 — 'target_ref' 를 의도했나요? (핸들러가 읽지 않는 키는 조용히 무시됩니다.) 이 액션의 주요 키: ['checked', 'dialog', 'dialog_text', 'direction', 'driver', 'element', 'expression', 'from_ref', 'full_page', 'headless', 'height', 'id', 'index', 'key', 'label', 'mode', 'name', 'op', 'path', 'query', 'ref', 'selector', 'source_ref', 'submit', 'tab_id', 'target_ref', 'text', 'timeout', 'to_ref', 'url', 'value', 'values', 'wait', 'wait_for', 'width'].",
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "capturing": false,
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "d": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "capturing": false,
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "net": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "capturing": false,
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "con_count": 2,
+   "con": [
+    {
+     "type": "warning",
+     "text": "재고 경고: 호두나무 원목 잔량 2장",
+     "timestamp": "2026-10-09T20:15:21.263749"
+    },
+    {
+     "type": "warning",
+     "text": "재고 경고: 호두나무 원목 잔량 2장",
+     "timestamp": "2026-10-09T20:15:34.036379"
+    }
+   ]
+  },
+  "executed": true
+ }
+}

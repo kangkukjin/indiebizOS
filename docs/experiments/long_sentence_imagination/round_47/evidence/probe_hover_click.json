@@ -1,0 +1,21 @@
+{
+ "code": "#!ibl edition=2\n$s1 = [limbs:browser]{op:\"snapshot\"}\n$late = $s1.snapshot >> [table:filter]{where:($e)=>$e.role==\"link\" and $e.name==\"지연만\"}\n[if:len($late)==0] { return {step:\"no link after previous call hover\", links:($s1.snapshot >> [table:filter]{where:($e)=>$e.role==\"link\"})} }\n$c = [limbs:browser]{op:\"click\", ref:$late[0].ref}\n$t = [limbs:browser]{op:\"content\", mode:\"text\"}\nreturn {click:$c, url:$t.url, text:$t.text}\n",
+ "task_id": "lsi47_probe1",
+ "elapsed": 0.46,
+ "response": {
+  "success": true,
+  "value": {
+   "click": {
+    "success": true,
+    "clicked": " (e33)",
+    "url": "http://127.0.0.1:8979/orders?view=late",
+    "title": "지연 주문 - 가상 공방 주문 콘솔",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "url": "http://127.0.0.1:8979/orders?view=late",
+   "text": "가상 공방 주문 콘솔\n주문 목록 · 보드 · 요약\n지연 주문\n보기 ▾\n\n지연 5건\n\n번호\t고객\t품목\t수량\t상태\t납기\nW-1004\t최지호\t참나무 트레이\t3\t지연\t2026-10-11\nW-1011\t김서연\t삼나무 선반\t12\t지연\t2026-10-12\nW-1017\t조은우\t호두 도마\t10\t지연\t2026-10-12\nW-1026\t강민재\t물푸레 스툴\t7\t지연\t2026-10-09\nW-1033\t박하린\t호두 도마\t25\t지연\t2026-10-10\n훈련용 합성 자료"
+  },
+  "executed": true
+ }
+}

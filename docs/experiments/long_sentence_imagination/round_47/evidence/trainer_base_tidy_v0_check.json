@@ -1,0 +1,351 @@
+{
+ "request": {
+  "code": "(drafts/ 참조)",
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_47회차/trainer/input",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_47회차/trainer/out"
+  }
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1791544632.755554,
+ "ended": 1791544633.50073,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "TYPE",
+    "message": "List<Unknown>가 필요하지만 {items: List<Unknown>}입니다. 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요.",
+    "source_span": {
+     "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+     "start": 5824,
+     "end": 5827,
+     "line": 112,
+     "column": 53
+    },
+    "call_path": [],
+    "expected": "List<Unknown>",
+    "actual": "{items: List<Unknown>}",
+    "hint": "filter(List, Callable)의 인자 순서를 확인하세요. 1번째는 List입니다.",
+    "location": {
+     "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+     "start": 5824,
+     "end": 5827,
+     "line": 112,
+     "column": 53,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 112,
+     "end_column": 56,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "TYPE",
+    "severity": "error"
+   }
+  ],
+  "guards": [],
+  "guards_total": 242,
+  "guards_inner": 0,
+  "guards_omitted": 242,
+  "result_type": "{verdict: Text, total: Number, late: Number, not_moved: List<Text>, ui_only: List<Text>, console_errors: Number, network_capturing: Unknown, summary_match: Bool, restored: Bool, recheck: Bool, files: List<Unknown>}",
+  "effects": [
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "functions": {
+   "def:490:657": {
+    "name": "참조",
+    "params": {
+     "snap": "Record",
+     "role": "Text",
+     "name": "Text"
+    },
+    "required": [
+     "snap",
+     "role",
+     "name"
+    ],
+    "pipe_input": "snap",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "254ecde0cb3f86406589b7260eda58f2411f93be3d3b78f7a670184d67ed75ab",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "snap": "Record",
+       "role": "Text",
+       "name": "Text"
+      },
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+     "start": 490,
+     "end": 657,
+     "line": 6,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:658:939": {
+    "name": "주문행",
+    "params": {
+     "text": "Unknown"
+    },
+    "required": [
+     "text"
+    ],
+    "pipe_input": "text",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "57daf82ae667cae04008c25683b72f186566943ce99e02ca6104c6191ce852f6",
+    "result": "List<{id: Text, customer: Text, item: Text, qty: Number, status: Text, due: Text}>",
+    "specializations": [
+     {
+      "params": {
+       "text": "Unknown"
+      },
+      "result": "List<{id: Text, customer: Text, item: Text, qty: Number, status: Text, due: Text}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+     "start": 658,
+     "end": 939,
+     "line": 10,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 13,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1218:2507": {
+    "name": "카드정리",
+    "params": {
+     "o": "{id: Text, customer: Text, item: Text, qty: Number, status: Text, due: Text}",
+     "pol": "Unknown"
+    },
+    "required": [
+     "o",
+     "pol"
+    ],
+    "pipe_input": "o",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:browser",
+     "table:filter"
+    ],
+    "source_hash": "fcd7460000568681e6c8961b003be453417d8a406c3965eab4e6e1d1b2dc365a",
+    "result": "{id: Text, qty: Number, dragged: Unknown, flag_wanted: Bool}",
+    "specializations": [
+     {
+      "params": {
+       "o": "{id: Text, customer: Text, item: Text, qty: Number, status: Text, due: Text}",
+       "pol": "Unknown"
+      },
+      "result": "{id: Text, qty: Number, dragged: Unknown, flag_wanted: Bool}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+     "start": 1218,
+     "end": 2507,
+     "line": 18,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 43,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:940:1217": {
+    "name": "보드상태",
+    "params": {},
+    "required": [],
+    "pipe_input": null,
+    "default_expressions": {},
+    "effects": [
+     "write_external"
+    ],
+    "actions": [
+     "limbs:browser"
+    ],
+    "source_hash": "dbe351655fd9307dfc5a3ac98bf0f91af93612feb3023177b32671f0a47d176c",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {},
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+     "start": 940,
+     "end": 1217,
+     "line": 14,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 17,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "779bc253c89d21d27cd78b95b41d857696a1932f4c319abc6fed24650dd17b3a",
+  "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+      "start": 3081,
+      "end": 3328,
+      "line": 57,
+      "column": 1,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 63,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "동적 반복 횟수"
+    },
+    {
+     "location": {
+      "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+      "start": 4207,
+      "end": 4250,
+      "line": 82,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 82,
+      "end_column": 57,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+      "start": 4500,
+      "end": 4861,
+      "line": 90,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 95,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "6e66ef370859ede0f28518c452c7705fb525376de82e2ec962892a8d3521e22e",
+      "start": 5757,
+      "end": 5940,
+      "line": 111,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 114,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "limbs:browser",
+    "self:read",
+    "self:write",
+    "table:filter",
+    "table:groupby"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "진단 위치를 수정한 뒤 다시 검사하세요.",
+  "runtime_checks": {
+   "total": 242,
+   "informative": 186
+  },
+  "guards_ref": {
+   "id": "3a5d441594646dfe81523ba4d3600b2e1f8e25159479821212781bc8a42e987b",
+   "chars": 230734,
+   "read_args": {
+    "id": "3a5d441594646dfe81523ba4d3600b2e1f8e25159479821212781bc8a42e987b",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "request_inputs": {
+   "input_args": {
+    "src": {
+     "$ref": "be583c48efc6fdf960558653f1f1f5e4b44dde4a1092bc6e4ad0a02a4840f1a1"
+    },
+    "out": {
+     "$ref": "17caa66444dc9b205f348c1e80d2aed005cbf7a41fb4009952b8abfc8fe09046"
+    }
+   },
+   "unavailable": {},
+   "hint": "수정 호출의 inputs로 input_args를 사용하세요. unavailable 이름은 원천에서 다시 공급해야 합니다. 입력 참조는 도구 재실행을 막지 않으므로 이전 실행은 continuation도 확인하세요."
+  },
+  "revise_hint": "고칠 조각만 보내세요: revise_args.code 를 그대로 code 에 넣고 code_edits 에 {old, new} 를 적습니다(old 는 원문에 정확히 한 번 나오는 조각, 여러 곳이면 all:true). 같은 inputs·budget·check 를 함께 보냅니다. 원문 전체를 다시 적지 않습니다."
+ }
+}

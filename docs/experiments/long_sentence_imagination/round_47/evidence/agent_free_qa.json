@@ -1,0 +1,225 @@
+{
+ "passed": 17,
+ "total": 18,
+ "checks": [
+  {
+   "check": "목록 40건·offset 전부",
+   "ok": true,
+   "detail": [
+    12,
+    24,
+    36
+   ]
+  },
+  {
+   "check": "상태별 건수",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "지연 5건 식별",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "지연만 보기 사용",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "서버: 대상 카드만 이동 기록",
+   "ok": true,
+   "detail": [
+    "W-1033",
+    "W-1011",
+    "W-1017",
+    "W-1026",
+    "W-1033",
+    "W-1017",
+    "W-1004"
+   ]
+  },
+  {
+   "check": "서버: 이동 저장(잠긴 카드 제외 4)",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "서버: 메모 5건",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "서버: 우선 표시 정확",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "보고: 저장 안 된 카드 W-1017",
+   "ok": true,
+   "detail": [
+    {
+     "id": "W-1017",
+     "field": "move",
+     "reason": "POST /api/move 409 Conflict (첫 시도·재시도 모두). 화면에는 '오늘 처리'로 보였으나 새로 불러오면 '지연'",
+     "memo_saved": true,
+     "flag_saved": true
+    }
+   ]
+  },
+  {
+   "check": "보고: 화면만 옮겨짐 구별",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "콘솔 오류 근거(409)",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "네트워크 기록 정직 보고",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "콘솔 경고 보고",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "요약 스크린샷 폭 390",
+   "ok": true,
+   "detail": {
+    "w": 390,
+    "h": 844
+   }
+  },
+  {
+   "check": "요약 숫자 = 서버",
+   "ok": true,
+   "detail": {
+    "접수": 10,
+    "제작 중": 15,
+    "지연": 1,
+    "오늘 처리": 4,
+    "출고": 10
+   }
+  },
+  {
+   "check": "새 브라우저 복원(마지막 확인에 재로그인 없음)",
+   "ok": true,
+   "detail": {
+    "logins": 4
+   }
+  },
+  {
+   "check": "결과 파일",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "드래그 오동작 원인 진단 정확(다른 카드가 끌림)",
+   "ok": false,
+   "detail": "playwright drag 도구가 success를 반환했으나 화면에서도 카드가 '지연'에 그대로 남음(drop 미발생, /api/move 요청 없음)"
+  }
+ ],
+ "server": {
+  "logins": 4,
+  "moves": [
+   {
+    "id": "W-1033",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": true
+   },
+   {
+    "id": "W-1011",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": true
+   },
+   {
+    "id": "W-1017",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": false
+   },
+   {
+    "id": "W-1026",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": true
+   },
+   {
+    "id": "W-1033",
+    "from": "오늘 처리",
+    "to": "오늘 처리",
+    "ok": true
+   },
+   {
+    "id": "W-1017",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": false
+   },
+   {
+    "id": "W-1004",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": true
+   }
+  ],
+  "memos": [
+   {
+    "id": "W-1004",
+    "memo": "10/10 오전 우선 제작"
+   },
+   {
+    "id": "W-1011",
+    "memo": "10/10 오전 우선 제작"
+   },
+   {
+    "id": "W-1017",
+    "memo": "10/10 오전 우선 제작"
+   },
+   {
+    "id": "W-1026",
+    "memo": "10/10 오전 우선 제작"
+   },
+   {
+    "id": "W-1033",
+    "memo": "10/10 오전 우선 제작"
+   }
+  ],
+  "flags": [
+   {
+    "id": "W-1011",
+    "flag": true
+   },
+   {
+    "id": "W-1017",
+    "flag": true
+   },
+   {
+    "id": "W-1033",
+    "flag": true
+   }
+  ],
+  "counts": {
+   "접수": 10,
+   "제작 중": 15,
+   "지연": 1,
+   "오늘 처리": 4,
+   "출고": 10
+  },
+  "board_views": 7,
+  "late_views": 1,
+  "summary_views": 3,
+  "api_orders": [
+   12,
+   24,
+   36
+  ]
+ }
+}

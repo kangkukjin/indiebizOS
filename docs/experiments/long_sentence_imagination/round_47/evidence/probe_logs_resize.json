@@ -1,0 +1,82 @@
+{
+ "code": "#!ibl edition=2\n$ln0 = [limbs:browser]{op:\"logs\", mode:\"network\"}\n$lc0 = [limbs:browser]{op:\"logs\", mode:\"console\"}\n$n = [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8979/summary\", wait:\"load\"}\n$w = [limbs:browser]{op:\"wait\", text:\"요약 준비됨\"}\n$c1 = [limbs:browser]{op:\"content\", mode:\"text\"}\n$rz = [limbs:browser]{op:\"resize\", width:390, height:844}\n$c2 = [limbs:browser]{op:\"content\", mode:\"text\"}\n$sh = [limbs:browser]{op:\"screenshot\", path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_47회차/runs/probe_mobile.png\", full_page:true}\n$ln = [limbs:browser]{op:\"logs\", mode:\"network\"}\n$lc = [limbs:browser]{op:\"logs\", mode:\"console\"}\n$rz2 = [limbs:browser]{op:\"resize\", width:1280, height:720}\n$ck = [limbs:browser]{op:\"cookies\", mode:\"save\", name:\"lsi47_probe\"}\nreturn {net0_keys:keys($ln0), net0:$ln0, con0:$lc0, wide:$c1.text, resize:$rz, narrow:$c2.text, shot:$sh, net:$ln, con:$lc, cookies:$ck}\n",
+ "task_id": "lsi47_probe1",
+ "elapsed": 0.57,
+ "response": {
+  "success": true,
+  "value": {
+   "net0_keys": [
+    "success",
+    "logs",
+    "count",
+    "capturing",
+    "session_owner",
+    "tab_id"
+   ],
+   "net0": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "capturing": false,
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "con0": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "wide": "가상 공방 주문 콘솔\n주문 목록 · 보드 · 요약\n요약\n\n요약 준비됨\n\n칸\t건수\n접수\t10\n제작 중\t15\n지연\t2\n오늘 처리\t3\n출고\t10\n우선 표시\t1\n훈련용 합성 자료",
+   "resize": {
+    "success": true,
+    "viewport": {
+     "width": 390,
+     "height": 844
+    },
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "narrow": "가상 공방 주문 콘솔\n주문 목록 · 보드 · 요약\n요약\n\n요약 준비됨\n\n모바일 요약\n접수 10건\n제작 중 15건\n지연 2건\n오늘 처리 3건\n출고 10건\n우선 표시 1건\n훈련용 합성 자료",
+   "shot": {
+    "success": true,
+    "file_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_47회차/runs/probe_mobile.png",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "net": {
+    "success": true,
+    "logs": [],
+    "count": 0,
+    "capturing": false,
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "con": {
+    "success": true,
+    "logs": [
+     {
+      "type": "warning",
+      "text": "재고 경고: 호두나무 원목 잔량 2장",
+      "timestamp": "2026-10-09T20:15:21.263749"
+     }
+    ],
+    "count": 1,
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "cookies": {
+    "success": true,
+    "name": "lsi47_probe",
+    "file_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/browser_cookies/lsi47_probe.json",
+    "cookies_count": 1,
+    "local_storage_keys": 0,
+    "message": "'lsi47_probe' 상태 저장 완료. browser_cookies_load(name='lsi47_probe')로 복원 가능합니다.",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   }
+  },
+  "executed": true
+ }
+}

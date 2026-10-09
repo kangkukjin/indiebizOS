@@ -1,0 +1,308 @@
+{
+ "request": {
+  "code": "(drafts/ 참조)",
+  "origin": "training",
+  "project_id": "수동모드",
+  "check": true,
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  },
+  "inputs": {
+   "src": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_47회차/trainer/input",
+   "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-09_47회차/trainer/out"
+  }
+ },
+ "endpoint": "/ibl/execute",
+ "started": 1791544640.896845,
+ "ended": 1791544641.7552261,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": true,
+  "status": "incomplete",
+  "issues": [],
+  "guards": [],
+  "guards_total": 242,
+  "guards_inner": 0,
+  "guards_omitted": 242,
+  "result_type": "{verdict: Text, total: Number, late: Number, not_moved: List<Text>, ui_only: List<Text>, console_errors: Number, network_capturing: Unknown, summary_match: Bool, restored: Bool, recheck: Bool, files: List<Unknown>}",
+  "effects": [
+   "pure",
+   "read_external",
+   "write_external"
+  ],
+  "functions": {
+   "def:526:693": {
+    "name": "참조",
+    "params": {
+     "snap": "Record",
+     "role": "Text",
+     "name": "Text"
+    },
+    "required": [
+     "snap",
+     "role",
+     "name"
+    ],
+    "pipe_input": "snap",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [
+     "table:filter"
+    ],
+    "source_hash": "254ecde0cb3f86406589b7260eda58f2411f93be3d3b78f7a670184d67ed75ab",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {
+       "snap": "Record",
+       "role": "Text",
+       "name": "Text"
+      },
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "82b121c28bdb8cddac710cfa3761e255122a8a861277724164bc69e6cfded61b",
+     "start": 526,
+     "end": 693,
+     "line": 6,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 9,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:694:975": {
+    "name": "주문행",
+    "params": {
+     "text": "Unknown"
+    },
+    "required": [
+     "text"
+    ],
+    "pipe_input": "text",
+    "default_expressions": {},
+    "effects": [
+     "pure"
+    ],
+    "actions": [],
+    "source_hash": "57daf82ae667cae04008c25683b72f186566943ce99e02ca6104c6191ce852f6",
+    "result": "List<{id: Text, customer: Text, item: Text, qty: Number, status: Text, due: Text}>",
+    "specializations": [
+     {
+      "params": {
+       "text": "Unknown"
+      },
+      "result": "List<{id: Text, customer: Text, item: Text, qty: Number, status: Text, due: Text}>"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "82b121c28bdb8cddac710cfa3761e255122a8a861277724164bc69e6cfded61b",
+     "start": 694,
+     "end": 975,
+     "line": 10,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 13,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:1254:2543": {
+    "name": "카드정리",
+    "params": {
+     "o": "{id: Text, customer: Text, item: Text, qty: Number, status: Text, due: Text}",
+     "pol": "Unknown"
+    },
+    "required": [
+     "o",
+     "pol"
+    ],
+    "pipe_input": "o",
+    "default_expressions": {},
+    "effects": [
+     "read_external",
+     "write_external"
+    ],
+    "actions": [
+     "limbs:browser",
+     "table:filter"
+    ],
+    "source_hash": "fcd7460000568681e6c8961b003be453417d8a406c3965eab4e6e1d1b2dc365a",
+    "result": "{id: Text, qty: Number, dragged: Unknown, flag_wanted: Bool}",
+    "specializations": [
+     {
+      "params": {
+       "o": "{id: Text, customer: Text, item: Text, qty: Number, status: Text, due: Text}",
+       "pol": "Unknown"
+      },
+      "result": "{id: Text, qty: Number, dragged: Unknown, flag_wanted: Bool}"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "82b121c28bdb8cddac710cfa3761e255122a8a861277724164bc69e6cfded61b",
+     "start": 1254,
+     "end": 2543,
+     "line": 18,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 43,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   "def:976:1253": {
+    "name": "보드상태",
+    "params": {},
+    "required": [],
+    "pipe_input": null,
+    "default_expressions": {},
+    "effects": [
+     "write_external"
+    ],
+    "actions": [
+     "limbs:browser"
+    ],
+    "source_hash": "dbe351655fd9307dfc5a3ac98bf0f91af93612feb3023177b32671f0a47d176c",
+    "result": "Unknown",
+    "specializations": [
+     {
+      "params": {},
+      "result": "Unknown"
+     }
+    ],
+    "specializations_omitted": 0,
+    "definition": {
+     "source_hash": "82b121c28bdb8cddac710cfa3761e255122a8a861277724164bc69e6cfded61b",
+     "start": 976,
+     "end": 1253,
+     "line": 14,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 17,
+     "end_column": 2,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  },
+  "plan_hash": "60d7ceec69561c84d590894828981f26913cf24d977e800b41d849ca6a62c9c4",
+  "source_hash": "82b121c28bdb8cddac710cfa3761e255122a8a861277724164bc69e6cfded61b",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "partial",
+   "declared_ai_visits_upper_bound": null,
+   "unknowns": [
+    {
+     "location": {
+      "source_hash": "82b121c28bdb8cddac710cfa3761e255122a8a861277724164bc69e6cfded61b",
+      "start": 3117,
+      "end": 3364,
+      "line": 57,
+      "column": 1,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 63,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "동적 반복 횟수"
+    },
+    {
+     "location": {
+      "source_hash": "82b121c28bdb8cddac710cfa3761e255122a8a861277724164bc69e6cfded61b",
+      "start": 4251,
+      "end": 4294,
+      "line": 82,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 82,
+      "end_column": 57,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "82b121c28bdb8cddac710cfa3761e255122a8a861277724164bc69e6cfded61b",
+      "start": 4544,
+      "end": 4905,
+      "line": 90,
+      "column": 14,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 95,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    },
+    {
+     "location": {
+      "source_hash": "82b121c28bdb8cddac710cfa3761e255122a8a861277724164bc69e6cfded61b",
+      "start": 5809,
+      "end": 5992,
+      "line": 111,
+      "column": 16,
+      "source": "<program>",
+      "uri": "ibl://program",
+      "end_line": 114,
+      "end_column": 2,
+      "offset_encoding": "unicode-codepoints"
+     },
+     "reason": "each 입력 건수 미상"
+    }
+   ],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "limbs:browser",
+    "self:read",
+    "self:write",
+    "table:filter",
+    "table:groupby"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "실행하려면 execute_args 를 그대로 check 없이 호출하세요 — 프로그램 원문과 검사한 inputs·budget·edition·value_protocols를 재사용하므로 다시 적지 않습니다. 바꿀 인자만 명시하면 그 인자 전체를 교체합니다. 실행 결과의 success·executed와 쓰기 영수증을 확인한 뒤 산출물을 읽으세요.",
+  "runtime_checks": {
+   "total": 242,
+   "informative": 186
+  },
+  "guards_ref": {
+   "id": "48efb59b18fbde8283da20f73cb618d504c8e82a67f607f569d7e309fa5af28d",
+   "chars": 230734,
+   "read_args": {
+    "id": "48efb59b18fbde8283da20f73cb618d504c8e82a67f607f569d7e309fa5af28d",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "budget": {
+   "steps": 1000000,
+   "rows": 100000
+  }
+ }
+}

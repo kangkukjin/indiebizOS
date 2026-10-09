@@ -1,0 +1,33 @@
+{
+ "code": "#!ibl edition=2\n$n = [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8979/board\", wait:\"load\"}\n$s = [limbs:browser]{op:\"snapshot\"}\n$card = ($s.snapshot >> [table:filter]{where:($e)=>contains($e.name,\"W-1004\")})\n$head = ($s.snapshot >> [table:filter]{where:($e)=>$e.role==\"heading\" and contains($e.name,\"오늘 처리\")})\n$y0 = [limbs:browser]{op:\"evaluate\", expression:\"window.scrollY\"}\n$d = [limbs:browser]{op:\"drag\", source_ref:$card[0].ref, target_ref:$head[0].ref}\n$e1 = [limbs:browser]{op:\"evaluate\", expression:\"Array.from(document.querySelectorAll('.col')).filter(c=>['지연','오늘 처리'].includes(c.dataset.col)).map(c=>c.dataset.col+':'+Array.from(c.querySelectorAll('.card')).map(x=>x.dataset.id).join(',')).join(' | ') + ' scrollY=' + window.scrollY\"}\nreturn {y0:$y0.result, card:$card, head:$head, drag:$d, after:$e1.result}\n",
+ "task_id": "lsi47_probe1",
+ "elapsed": 0.7,
+ "response": {
+  "success": true,
+  "value": {
+   "y0": 0,
+   "card": [
+    {
+     "ref": "e39",
+     "role": "button",
+     "name": "W-1004 최지호 참나무 트레이 3개"
+    }
+   ],
+   "head": [
+    {
+     "ref": "e42",
+     "role": "heading",
+     "name": "오늘 처리 2건"
+    }
+   ],
+   "drag": {
+    "success": true,
+    "dragged": " → ",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "after": "지연:W-1017,W-1026 | 오늘 처리:W-1011,W-1033,W-1004 scrollY=0"
+  },
+  "executed": true
+ }
+}

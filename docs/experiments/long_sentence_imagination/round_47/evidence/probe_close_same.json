@@ -1,0 +1,24 @@
+{
+ "code": "#!ibl edition=2\n$cl = [limbs:browser]{op:\"close\"}\n$ld = [try] { [limbs:browser]{op:\"cookies\", mode:\"load\", name:\"lsi47_probe\", driver:\"playwright\"} } [catch] { {failed:$error.message, code:$error.code} }\n$n = [limbs:browser]{op:\"navigate\", url:\"http://127.0.0.1:8979/board\", driver:\"playwright\", wait:\"load\"}\nreturn {close:$cl, load_before_nav:$ld, nav_url:$n.url, started:get($n,\"session_started\"), owner:$n.session_owner}\n",
+ "task_id": "lsi47_probe1",
+ "elapsed": 0.63,
+ "response": {
+  "success": true,
+  "value": {
+   "close": {
+    "success": true,
+    "message": "브라우저 종료 완료",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": ""
+   },
+   "load_before_nav": {
+    "failed": "브라우저가 열려있지 않습니다(아직 시작 전이거나, 창이 닫혔거나, 180초 비활성으로 자동 종료). [limbs:browser]{op: \"navigate\", url: \"…\"} 로 먼저 여세요.",
+    "code": "TOOL"
+   },
+   "nav_url": "http://127.0.0.1:8979/login",
+   "started": true,
+   "owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1"
+  },
+  "executed": true
+ }
+}

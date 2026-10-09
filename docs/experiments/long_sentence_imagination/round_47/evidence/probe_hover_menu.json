@@ -1,0 +1,79 @@
+{
+ "code": "#!ibl edition=2\n$s0 = [limbs:browser]{op:\"snapshot\"}\n$before = $s0.snapshot >> [table:filter]{where:($e)=>$e.role==\"link\" or $e.role==\"button\"}\n$mb = ($s0.snapshot >> [table:filter]{where:($e)=>$e.role==\"button\" and contains($e.name,\"보기\")})[0]\n$h = [limbs:browser]{op:\"hover\", ref:$mb.ref}\n$s1 = [limbs:browser]{op:\"snapshot\"}\n$after = $s1.snapshot >> [table:filter]{where:($e)=>$e.role==\"link\" or $e.role==\"button\"}\n$late = $s1.snapshot >> [table:filter]{where:($e)=>$e.role==\"link\" and $e.name==\"지연만\"}\n$ck = len($late)>0 ? \"found\" : \"missing\"\nreturn {before:$before, hover:$h, after:$after, late:$late, ck:$ck}\n",
+ "task_id": "lsi47_probe1",
+ "elapsed": 0.54,
+ "response": {
+  "success": true,
+  "value": {
+   "before": [
+    {
+     "ref": "e3",
+     "role": "link",
+     "name": "주문 목록"
+    },
+    {
+     "ref": "e4",
+     "role": "link",
+     "name": "보드"
+    },
+    {
+     "ref": "e5",
+     "role": "link",
+     "name": "요약"
+    },
+    {
+     "ref": "e6",
+     "role": "button",
+     "name": "보기 ▾"
+    }
+   ],
+   "hover": {
+    "success": true,
+    "hovered": " (e6)",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "after": [
+    {
+     "ref": "e3",
+     "role": "link",
+     "name": "주문 목록"
+    },
+    {
+     "ref": "e4",
+     "role": "link",
+     "name": "보드"
+    },
+    {
+     "ref": "e5",
+     "role": "link",
+     "name": "요약"
+    },
+    {
+     "ref": "e6",
+     "role": "button",
+     "name": "보기 ▾"
+    },
+    {
+     "ref": "e32",
+     "role": "link",
+     "name": "전체"
+    },
+    {
+     "ref": "e33",
+     "role": "link",
+     "name": "지연만"
+    }
+   ],
+   "late": [
+    {
+     "ref": "e33",
+     "role": "link",
+     "name": "지연만"
+    }
+   ],
+   "ck": "found"
+  },
+  "executed": true
+ }
+}

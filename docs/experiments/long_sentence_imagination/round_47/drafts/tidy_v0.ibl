@@ -1,0 +1,150 @@
+#!ibl edition=2
+# 47회차 브라우저 액트 — 공방 주문 콘솔 아침 정리 v0 — inputs: src(console.json·account.json·policy.json), out
+# 흐름: 로그인 → 목록 끝까지 스크롤(12건씩 더 불러옴) → '보기' 메뉴 hover → '지연만' → 보드에서 지연 카드마다 [끌어다 놓기 → 더블클릭 메모·Enter → (수량 기준) 오른쪽 클릭 '우선 처리 표시']
+#   → 화면이 말하는 상태 기록 → 새로 불러 저장된 상태와 대조 → 네트워크·콘솔 기록 → 요약 화면을 390×844 로 줄여 읽기·스크린샷 → 쿠키 저장 → 닫기 → 새 브라우저에서 쿠키 복원 → 보드 재확인 → result.json·report.md
+# 끌어다 놓는 자리는 칸 영역(region)이 아니라 칸 제목(heading): 영역은 화면 아래까지 길어 놓기 전에 화면이 스크롤되고, 그러면 다른 카드가 끌린다(탐침 board_drag).
+[def:참조]($snap,$role,$name) {
+  $m = $snap.snapshot >> [table:filter]{where:($e)=>$e.role==$role and contains($e.name,$name)}
+  return len($m)>0 ? $m[0].ref : "none"
+}
+[def:주문행]($text) {
+  $ls = filter(split($text,"\n"), ($l)=>contains($l,"\t") and contains($l,"W-"))
+  return map($ls, ($l)=>{id:split($l,"\t")[0], customer:split($l,"\t")[1], item:split($l,"\t")[2], qty:number(split($l,"\t")[3]), status:split($l,"\t")[4], due:split($l,"\t")[5]})
+}
+[def:보드상태]() {
+  $ev = [limbs:browser]{op:"evaluate", expression:"Array.from(document.querySelectorAll('.card')).map(c=>({id:c.dataset.id,col:c.closest('.col').dataset.col,memo:c.querySelector('.memo').dataset.memo||'',flag:!!c.querySelector('.flag')}))"}
+  return $ev.result
+}
+[def:카드정리]($o,$pol) {
+  $s = [limbs:browser]{op:"snapshot"}
+  $card = [fn:참조]{snap:$s, role:"button", name:$o.id}
+  $head = [fn:참조]{snap:$s, role:"heading", name:f"${pol.to} "}
+  assert $card != "none" and $head != "none", "카드나 대상 칸 제목을 찾지 못함", {id:$o.id}
+  $d = [limbs:browser]{op:"drag", source_ref:$card, target_ref:$head}
+  $s2 = [limbs:browser]{op:"snapshot"}
+  $dc = [limbs:browser]{op:"click", ref:[fn:참조]{snap:$s2, role:"button", name:$o.id}, mode:"double"}
+  $s3 = [limbs:browser]{op:"snapshot"}
+  $inp = [fn:참조]{snap:$s3, role:"textbox", name:f"${o.id} 메모 입력"}
+  assert $inp != "none", "메모 입력칸이 열리지 않음", {id:$o.id}
+  $ty = [limbs:browser]{op:"type", ref:$inp, text:$pol.memo}
+  $en = [limbs:browser]{op:"press_key", key:"Enter"}
+  $wt = [limbs:browser]{op:"wait", timeout:300}
+  $flagged = false
+  [if:$o.qty >= $pol.flag_min_qty] {
+    $s4 = [limbs:browser]{op:"snapshot"}
+    $rc = [limbs:browser]{op:"click", ref:[fn:참조]{snap:$s4, role:"button", name:$o.id}, mode:"right"}
+    $s5 = [limbs:browser]{op:"snapshot"}
+    $mi = [fn:참조]{snap:$s5, role:"menuitem", name:"우선 처리 표시"}
+    assert $mi != "none", "카드 메뉴가 열리지 않음", {id:$o.id}
+    $mk = [limbs:browser]{op:"click", ref:$mi}
+    $flagged = true
+  }
+  return {id:$o.id, qty:$o.qty, dragged:$d.success, flag_wanted:$flagged}
+}
+
+$site = ([self:read]{path:f"${src}/console.json"}).data
+$acct = ([self:read]{path:f"${src}/account.json"}).data
+$pol = ([self:read]{path:f"${src}/policy.json"}).data
+$url = $site.url
+
+# 1) 로그인 → 목록 끝까지
+$n0 = [limbs:browser]{op:"navigate", url:f"${url}login", driver:"playwright", wait:"load"}
+$s0 = [limbs:browser]{op:"snapshot"}
+$t1 = [limbs:browser]{op:"type", ref:[fn:참조]{snap:$s0, role:"textbox", name:"담당자 ID"}, text:$acct.user}
+$t2 = [limbs:browser]{op:"type", ref:[fn:참조]{snap:$s0, role:"textbox", name:"비밀번호"}, text:$acct.password, submit:true}
+$목록글 = ""
+$스크롤 = 0
+[repeat:until contains($목록글,"모두 불러왔습니다") or $스크롤 >= 15] {
+  $sc = [limbs:browser]{op:"scroll", direction:"down"}
+  $wt = [limbs:browser]{op:"wait", timeout:600}
+  $c = [limbs:browser]{op:"content", mode:"text"}
+  $목록글 = $c.text
+  $스크롤 = $스크롤 + 1
+}
+assert contains($목록글,"모두 불러왔습니다"), "목록을 끝까지 불러오지 못함", {scrolls:$스크롤}
+$전체 = [fn:주문행]{text:$목록글}
+$상태별 = $전체 >> [table:groupby]{by:"status", agg:{n:["count","id"]}}
+
+# 2) '보기' 메뉴(hover) → '지연만'
+$sm = [limbs:browser]{op:"snapshot"}
+$hv = [limbs:browser]{op:"hover", ref:[fn:참조]{snap:$sm, role:"button", name:"보기"}}
+$sm2 = [limbs:browser]{op:"snapshot"}
+$lk = [fn:참조]{snap:$sm2, role:"link", name:"지연만"}
+assert $lk != "none", "hover 뒤에도 '지연만' 이 보이지 않음"
+$ck = [limbs:browser]{op:"click", ref:$lk}
+$cl = [limbs:browser]{op:"content", mode:"text"}
+$지연 = [fn:주문행]{text:$cl.text} >> [table:filter]{where:($r)=>$r.status==$pol.from}
+$목록지연 = $전체 >> [table:filter]{where:($r)=>$r.status==$pol.from}
+assert len($지연)==len($목록지연), "지연만 보기와 전체 목록의 지연 건수가 다름", {view:len($지연), list:len($목록지연)}
+
+# 3) 보드에서 카드마다 정리
+$nb = [limbs:browser]{op:"navigate", url:f"${url}board", wait:"load"}
+$작업 = $지연 >> [table:each] { [fn:카드정리]{o:$it, pol:$pol} }
+
+# 4) 화면이 말하는 상태 → 새로 불러 저장된 상태
+$화면 = [fn:보드상태]{}
+$콘솔 = [limbs:browser]{op:"logs", mode:"console"}
+$망 = [limbs:browser]{op:"logs", mode:"network"}
+$nb2 = [limbs:browser]{op:"navigate", url:f"${url}board", wait:"load"}
+$저장 = [fn:보드상태]{}
+$대조 = $작업 >> [table:each] {
+  $u = filter($화면, ($c)=>$c.id==$it.id)[0]
+  $v = filter($저장, ($c)=>$c.id==$it.id)[0]
+  return {id:$it.id, qty:$it.qty, ui_col:$u.col, saved_col:$v.col, moved:$v.col==$pol.to, ui_only:$u.col==$pol.to and $v.col!=$pol.to,
+          memo_saved:$v.memo==$pol.memo, flag_wanted:$it.flag_wanted, flag_saved:$v.flag, flag_ok:$v.flag==$it.flag_wanted}
+}
+$안옮겨짐 = $대조 >> [table:filter]{where:($r)=>not $r.moved}
+$오류기록 = $콘솔.logs >> [table:filter]{where:($l)=>$l.type=="error"}
+$경고기록 = $콘솔.logs >> [table:filter]{where:($l)=>$l.type=="warning"}
+
+# 5) 요약 화면(휴대폰 폭) — 읽기·스크린샷·대조
+$ns = [limbs:browser]{op:"navigate", url:f"${url}summary", wait:"load"}
+$ws = [limbs:browser]{op:"wait", text:"요약 준비됨"}
+$rz = [limbs:browser]{op:"resize", width:390, height:844}
+$cs = [limbs:browser]{op:"content", mode:"text"}
+$shot = [limbs:browser]{op:"screenshot", path:f"${out}/summary_mobile.png", full_page:true}
+$모바일 = contains($cs.text,"모바일 요약")
+$요약줄 = filter(split($cs.text,"\n"), ($l)=>contains($l,"건") and not contains($l,"모바일"))
+$요약 = map($요약줄, ($l)=>{name:strip(replace($l, split($l," ")[-1], "")), n:number(replace(split($l," ")[-1],"건",""))})
+$내셈 = $저장 >> [table:groupby]{by:"col", agg:{n:["count","id"]}}
+$우선수 = len(filter($저장, ($c)=>$c.flag))
+$요약대조 = $요약 >> [table:each] {
+  $mine = $it.name=="우선 표시" ? $우선수 : sum(map(filter($내셈, ($g)=>$g.col==$it.name), ($g)=>$g.n))
+  return {name:$it.name, summary:$it.n, mine:$mine, match:$it.n==$mine}
+}
+$콘솔2 = [limbs:browser]{op:"logs", mode:"console"}
+$경고2 = $콘솔2.logs >> [table:filter]{where:($l)=>$l.type=="warning"}
+$rz2 = [limbs:browser]{op:"resize", width:1280, height:720}
+
+# 6) 로그인 상태 저장 → 닫기 → 새 브라우저에서 복원 → 보드 재확인
+$sv = [limbs:browser]{op:"cookies", mode:"save", name:$site.cookie_name}
+$close1 = [limbs:browser]{op:"close"}
+$nn = [limbs:browser]{op:"navigate", url:f"${url}board", driver:"playwright", wait:"load"}
+$새창첫주소 = $nn.url
+$ld = [limbs:browser]{op:"cookies", mode:"load", name:$site.cookie_name}
+$nn2 = [limbs:browser]{op:"navigate", url:f"${url}board", wait:"load"}
+$복원됨 = contains($nn2.url,"/board")
+$재확인 = []
+[if:$복원됨] { $재확인 = [fn:보드상태]{} }
+$재확인일치 = $복원됨 and len(filter($대조, ($r)=>len(filter($재확인, ($c)=>$c.id==$r.id and $c.col==$r.saved_col and $c.flag==$r.flag_saved))==0))==0
+$close2 = [limbs:browser]{op:"close"}
+
+# 7) 판정·기록
+$전부저장 = len($안옮겨짐)==0 and all(map($대조, ($r)=>$r.memo_saved and $r.flag_ok))
+$판정 = $전부저장 ? "정리 완료 — 전부 저장됨" : "일부 저장 안 됨 — 화면과 저장 상태가 다름"
+$result = {total:len($전체), by_status:$상태별, late:$지연, policy:$pol, work:$대조, not_moved:map($안옮겨짐, ($r)=>$r.id), ui_only:map(filter($대조, ($r)=>$r.ui_only), ($r)=>$r.id),
+  network:{capturing:$망.capturing, count:$망.count, note:$망.capturing ? "네트워크 기록 확인" : "네트워크 기록이 수집되지 않아 실패 요청을 이 기록으로는 확인하지 못함"},
+  console:{errors:map($오류기록, ($l)=>$l.text), warnings:unique(map($경고기록 + $경고2, ($l)=>$l.text))},
+  summary:{mobile_layout:$모바일, viewport:$rz.viewport, rows:$요약대조, all_match:all(map($요약대조, ($r)=>$r.match)), screenshot:$shot.file_path},
+  session:{cookie_saved:$sv.cookies_count, new_browser_first_url:$새창첫주소, restored:$복원됨, recheck_match:$재확인일치, scrolls:$스크롤},
+  verdict:$판정}
+$w1 = [self:write]{path:f"${out}/result.json", content:json($result)}
+$안옮김글 = len($안옮겨짐)==0 ? "없음" : join(", ", map($안옮겨짐, ($r)=>$r.id))
+$오류글 = len($오류기록)==0 ? "없음" : join(" / ", map($오류기록, ($l)=>$l.text))
+$경고글 = join(" / ", $result.console.warnings)
+$망글 = $result.network.note
+$요약글 = $result.summary.all_match ? "요약 숫자와 내 집계 일치" : "요약 숫자와 내 집계 불일치"
+$복원글 = $복원됨 ? "다시 로그인하지 않고 보드 진입" : "복원 실패 — 로그인 화면"
+$md = join("\n", ["# 주문 콘솔 아침 정리", f"- 전체 ${len($전체)}건, ${pol.from} ${len($지연)}건", f"- 판정: ${판정}", f"- 저장 안 된 카드: ${안옮김글}", f"- 콘솔 오류: ${오류글}", f"- 콘솔 경고: ${경고글}", f"- 네트워크: ${망글}", f"- 요약(휴대폰 폭): ${요약글}", f"- 새 브라우저: ${복원글}"])
+$w2 = [self:write]{path:f"${out}/report.md", content:$md}
+return {verdict:$판정, total:len($전체), late:len($지연), not_moved:$result.not_moved, ui_only:$result.ui_only, console_errors:len($오류기록), network_capturing:$망.capturing, summary_match:$result.summary.all_match, restored:$복원됨, recheck:$재확인일치, files:[$w1.path,$w2.path,$shot.file_path]}

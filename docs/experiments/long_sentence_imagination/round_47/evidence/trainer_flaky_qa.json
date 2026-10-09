@@ -1,0 +1,251 @@
+{
+ "passed": 20,
+ "total": 20,
+ "checks": [
+  {
+   "check": "목록 40건 전부 읽음",
+   "ok": true,
+   "detail": {
+    "total": 40,
+    "api": [
+     12,
+     24,
+     36
+    ]
+   }
+  },
+  {
+   "check": "상태별 건수",
+   "ok": true,
+   "detail": {
+    "접수": 10,
+    "제작 중": 15,
+    "출고": 10,
+    "지연": 5
+   }
+  },
+  {
+   "check": "지연 5건 식별",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "지연만 보기 사용",
+   "ok": true,
+   "detail": 1
+  },
+  {
+   "check": "서버: 대상 카드만 이동(다른 카드 0)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "서버: 이동 저장",
+   "ok": true,
+   "detail": [
+    "W-1004",
+    "W-1011",
+    "W-1026",
+    "W-1033"
+   ]
+  },
+  {
+   "check": "서버: 메모 저장",
+   "ok": true,
+   "detail": {
+    "W-1004": "10/10 오전 우선 제작",
+    "W-1011": "10/10 오전 우선 제작",
+    "W-1017": "10/10 오전 우선 제작",
+    "W-1026": "10/10 오전 우선 제작",
+    "W-1033": "10/10 오전 우선 제작"
+   }
+  },
+  {
+   "check": "서버: 우선 표시 정확",
+   "ok": true,
+   "detail": [
+    "W-1011",
+    "W-1017",
+    "W-1033"
+   ]
+  },
+  {
+   "check": "보고: 저장 안 된 카드",
+   "ok": true,
+   "detail": [
+    "W-1017"
+   ]
+  },
+  {
+   "check": "보고: 화면만 옮겨짐을 구별",
+   "ok": true,
+   "detail": [
+    "W-1017"
+   ]
+  },
+  {
+   "check": "보고: 판정이 완료가 아님",
+   "ok": true,
+   "detail": "일부 저장 안 됨 — 화면과 저장 상태가 다름"
+  },
+  {
+   "check": "콘솔 오류로 실패 근거",
+   "ok": true,
+   "detail": [
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "move failed W-1017 409"
+   ]
+  },
+  {
+   "check": "네트워크 기록 정직 보고",
+   "ok": true,
+   "detail": {
+    "capturing": false,
+    "count": 0,
+    "note": "네트워크 기록이 수집되지 않아 실패 요청을 이 기록으로는 확인하지 못함"
+   }
+  },
+  {
+   "check": "콘솔 경고 보고",
+   "ok": true,
+   "detail": [
+    "재고 경고: 호두나무 원목 잔량 2장"
+   ]
+  },
+  {
+   "check": "요약 휴대폰 폭 스크린샷",
+   "ok": true,
+   "detail": {
+    "w": 390,
+    "h": 844
+   }
+  },
+  {
+   "check": "요약 모바일 배치 읽음·대조",
+   "ok": true,
+   "detail": {
+    "mobile": true,
+    "match": true
+   }
+  },
+  {
+   "check": "요약 숫자 = 서버",
+   "ok": true,
+   "detail": {
+    "접수": 10,
+    "제작 중": 15,
+    "지연": 1,
+    "오늘 처리": 4,
+    "출고": 10
+   }
+  },
+  {
+   "check": "로그인 1회·새 브라우저 복원",
+   "ok": true,
+   "detail": {
+    "logins": 1,
+    "cookie_saved": 1,
+    "new_browser_first_url": "http://127.0.0.1:8973/login",
+    "restored": true,
+    "recheck_match": true,
+    "scrolls": 5
+   }
+  },
+  {
+   "check": "복원 뒤 재확인 일치",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "결과 파일",
+   "ok": true,
+   "detail": null
+  }
+ ],
+ "server": {
+  "logins": 1,
+  "moves": [
+   {
+    "id": "W-1004",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": true
+   },
+   {
+    "id": "W-1011",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": true
+   },
+   {
+    "id": "W-1017",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": false
+   },
+   {
+    "id": "W-1026",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": true
+   },
+   {
+    "id": "W-1033",
+    "from": "지연",
+    "to": "오늘 처리",
+    "ok": true
+   }
+  ],
+  "memos": [
+   {
+    "id": "W-1004",
+    "memo": "10/10 오전 우선 제작"
+   },
+   {
+    "id": "W-1011",
+    "memo": "10/10 오전 우선 제작"
+   },
+   {
+    "id": "W-1017",
+    "memo": "10/10 오전 우선 제작"
+   },
+   {
+    "id": "W-1026",
+    "memo": "10/10 오전 우선 제작"
+   },
+   {
+    "id": "W-1033",
+    "memo": "10/10 오전 우선 제작"
+   }
+  ],
+  "flags": [
+   {
+    "id": "W-1011",
+    "flag": true
+   },
+   {
+    "id": "W-1017",
+    "flag": true
+   },
+   {
+    "id": "W-1033",
+    "flag": true
+   }
+  ],
+  "counts": {
+   "접수": 10,
+   "제작 중": 15,
+   "지연": 1,
+   "오늘 처리": 4,
+   "출고": 10
+  },
+  "board_views": 3,
+  "late_views": 1,
+  "summary_views": 1,
+  "api_orders": [
+   12,
+   24,
+   36
+  ]
+ }
+}

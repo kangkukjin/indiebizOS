@@ -1,0 +1,106 @@
+{
+ "code": "#!ibl edition=2\n$u = \"http://127.0.0.1:8979/\"\n$n = [limbs:browser]{op:\"navigate\", url:f\"${u}login\", driver:\"playwright\", wait:\"load\"}\n$s = [limbs:browser]{op:\"snapshot\"}\n$tu = [limbs:browser]{op:\"type\", selector:\"input[name=user]\", text:\"lsi47_staff\"}\n$tp = [limbs:browser]{op:\"type\", selector:\"input[name=password]\", text:\"pw\", submit:true}\n$c0 = [limbs:browser]{op:\"content\", mode:\"text\"}\n$sc1 = [limbs:browser]{op:\"scroll\", direction:\"down\"}\n$w1 = [limbs:browser]{op:\"wait\", text:\"24 / 40건\"}\n$e1 = [limbs:browser]{op:\"evaluate\", expression:\"document.getElementById('status').textContent + ' | rows=' + document.querySelectorAll('#rows tr').length + ' | y=' + window.scrollY + ' | h=' + document.body.offsetHeight + ' | vh=' + window.innerHeight\"}\nreturn {nav:$n, snap_keys:keys($s), snap_head:$s.snapshot[:6], tu:$tu, tp:$tp, c0_url:$c0.url, c0_len:len($c0.text), sc1:$sc1, w1:$w1, e1:$e1}\n",
+ "task_id": "lsi47_probe1",
+ "elapsed": 1.07,
+ "response": {
+  "success": true,
+  "value": {
+   "nav": {
+    "success": true,
+    "title": "로그인 - 가상 공방 주문 콘솔",
+    "url": "http://127.0.0.1:8979/login",
+    "status_code": 200,
+    "tab_id": "0d60d3e01c76-t1",
+    "content_length": 47,
+    "wait": "load",
+    "session_started": true,
+    "warning": "페이지 텍스트가 매우 짧습니다 (47자). JS 렌더링 페이지이거나 봇 차단일 수 있습니다. browser_evaluate로 직접 확인하세요.",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1"
+   },
+   "snap_keys": [
+    "success",
+    "snapshot",
+    "element_count",
+    "shown_count",
+    "url",
+    "title",
+    "frame",
+    "session_owner",
+    "tab_id"
+   ],
+   "snap_head": [
+    {
+     "ref": "e3",
+     "role": "link",
+     "name": "로그인"
+    },
+    {
+     "ref": "e4",
+     "role": "button",
+     "name": "로그인"
+    },
+    {
+     "ref": "e5",
+     "role": "textbox",
+     "name": "담당자 ID "
+    },
+    {
+     "ref": "e6",
+     "role": "textbox",
+     "name": "비밀번호 "
+    },
+    {
+     "ref": "e1",
+     "role": "heading",
+     "name": "가상 공방 주문 콘솔"
+    },
+    {
+     "ref": "e2",
+     "role": "heading",
+     "name": "로그인"
+    }
+   ],
+   "tu": {
+    "success": true,
+    "typed": "lsi47_staff",
+    "element": " (input[name=user])",
+    "submitted": false,
+    "url": "http://127.0.0.1:8979/login",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "tp": {
+    "success": true,
+    "typed": "pw",
+    "element": " (input[name=password])",
+    "submitted": true,
+    "url": "http://127.0.0.1:8979/orders",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "c0_url": "http://127.0.0.1:8979/orders",
+   "c0_len": 514,
+   "sc1": {
+    "success": true,
+    "scroll_position": 500,
+    "page_height": 1235,
+    "viewport_height": 720,
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "w1": {
+    "success": true,
+    "waited_for": "text: 24 / 40건",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   },
+   "e1": {
+    "success": true,
+    "result": "24 / 40건 표시 — 아래로 스크롤하면 더 불러옵니다 | rows=24 | y=500 | h=2087 | vh=720",
+    "session_owner": "0d60d3e01c7618256d8ad9605990fcee5926b0d6336ee84469d391d2384469c1",
+    "tab_id": "0d60d3e01c76-t1"
+   }
+  },
+  "executed": true
+ }
+}

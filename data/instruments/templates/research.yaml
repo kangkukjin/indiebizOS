@@ -6,11 +6,7 @@ name: 연구 프로젝트
 modes:
 - name: 대화
   auto_run: true
-  inputs:
-  - key: query
-    type: text
-    placeholder: 주제 이름 검색
-  action: '[self:project]{op: "thread_list", project_ref: "__PROJECT_REF__", query: $query, limit: 100}'
+  action: '[self:project]{op: "thread_list", project_ref: "__PROJECT_REF__", limit: 100}'
   view:
   - &id007
     type: card_list

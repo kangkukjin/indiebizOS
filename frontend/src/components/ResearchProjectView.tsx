@@ -18,7 +18,7 @@ export function ResearchProjectView({ project }: { project: Project }) {
   }, [project.id, project.project_uid]);
   useRetryingLoad(load);
   return <div className="h-full flex flex-col bg-stone-50">
-    <div className="px-5 py-3 border-b bg-white font-semibold">📚 {project.name}<span className="ml-3 text-xs text-stone-500">연구 프로젝트</span></div>
+    <div className="drag select-none shrink-0 pl-20 pr-5 py-3 border-b bg-white font-semibold">📚 {project.name}<span className="ml-3 text-xs text-stone-500">연구 프로젝트</span></div>
     <div className="flex-1 min-h-0 overflow-auto">{error ? <p role="alert" className="p-5 text-red-600">{error}</p> : instrument ?
       <GenericInstrument key={project.project_uid || project.id} instrument={instrument} /> : <p className="p-5">자료실을 여는 중…</p>}</div>
   </div>;

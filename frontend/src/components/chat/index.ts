@@ -7,6 +7,7 @@ export * from './useFileAttachments';
 export { ToolHistoryPanel } from './ToolHistoryPanel';
 export { TodoPanel } from './TodoPanel';
 export { MessageContent } from './MessageContent';
+export { MessageBubble } from './MessageBubble';
 export { ChatInputArea } from './ChatInputArea';
 export { ActionGrimoire } from './ActionGrimoire';
 export { QuestionPanel } from './QuestionPanel';

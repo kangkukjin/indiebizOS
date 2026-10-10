@@ -358,7 +358,7 @@ project_ref와 thread_ref를 바인딩한 GenericInstrument로 표시한다. 새
 
 첫 사용 가능한 구현은 기존 `self:project`와 `self:notebook`의 op 확장으로 연결했다.
 연구 창은 대화 목록과 선택한 대화를 표시하고, 일반 프로젝트의 `ChatInputArea`,
-`useFileAttachments`, `MessageContent`, `CameraPreview`를 재사용한다. 새 대화는 목록 하단에,
+`useFileAttachments`, `MessageBubble`, `CameraPreview`를 재사용한다. 메시지 말풍선·복사·시간·본문 표시는 일반 프로젝트와 한 구현을 사용하며 연구 전용 첨부 링크와 실행 상태만 부가 내용으로 넣는다. 새 대화는 목록 하단에,
 자료실은 대화 상단에 둔다. 자료 관리·설정은 대화 신원을 바인딩한
 `data/instruments/templates/research.yaml`과 GenericInstrument로 연다.
 대화 원문과 첨부 참조를 DB에 보존하며 실행 중 갱신한다. 요청 신원으로 중복 전송을 막는다.

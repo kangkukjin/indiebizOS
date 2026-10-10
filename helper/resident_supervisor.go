@@ -82,6 +82,6 @@ func residentSupervise(ctx context.Context, cmd *exec.Cmd, root, jid string) (*e
 	release := func() { once.Do(func() { _ = lease.Close(); _ = os.Remove(path) }) }
 	configureResidentDetached(supervisor)
 	supervisor.Cancel = func() error { release(); return nil }
-	supervisor.WaitDelay = 5 * time.Second
+	supervisor.WaitDelay = 2 * time.Second
 	return supervisor, release, nil
 }

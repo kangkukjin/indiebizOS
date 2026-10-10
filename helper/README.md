@@ -88,7 +88,7 @@ USB 등록 키는 등록 전용이며 각 설치에 별도 실행 자격을 발�
 - 연결은 HTTPS/WSS 아웃바운드다. 지속 WebSocket이 막히면 HTTPS 롱폴로 돌아간다.
   중앙 주소는 `/limb/*`와 `/remote-pcs/*`를 직접 전달하는 터널 호스트여야 한다.
   기존 Cloudflare Tunnel을 사용할 수 있으며 별도 공유기 포트 개방을 요구하지 않는다.
-- 기본 작업은 별도 workspace·프로세스·환경으로 실행한다. 동시 작업 상한은 2개, 로그는 작업당
+- 기본 작업은 별도 workspace·프로세스·환경으로 실행한다. 일반 동시 작업 상한은 2개이며 info/list/read와 명시한 짧은 확인 셸(mode:observe, timeout 1~10초)은 별도 자리 1개를 쓴다. 자리별 접수 순서를 보존하며 observe는 셸의 읽기 전용 보안 보장이 아니다. 로그는 작업당
   16 MiB 이후 `log_gap`으로 알린다. CPU/메모리 하드 제한이나 OS 보안 샌드박스를 제공하는 것은
   아니다. 현재 사용자의 파일·프로그램 권한을 그대로 사용한다.
 - 중앙의 작업·이벤트는 기존 작업 DB에 보존한다. 기기는 미확인 이벤트를 디스크에 저장하고
@@ -110,3 +110,5 @@ USB 등록 키는 등록 전용이며 각 설치에 별도 실행 자격을 발�
 개발 검증: `go test -race ./...`, `bash build.sh`,
 `python -m pytest backend/test_resident_pcs.py`(마지막 system 검사는 OS 설치 없이 임시 중앙 서버와
 빌드한 네이티브 실행파일을 연결한다). 실기기 설치·제거·WOL 시험은 별도로 필요하다.
+
+셸이 정상 종료해도 백그라운드 자식이 출력 파이프를 잡고 있으면 2초 뒤 수집을 끝내고 exit:0과 output_incomplete·warning을 돌려준다. 다시 실행하지 말고 자식 상태를 확인한다. 장기 자식은 `nohup command >server.log 2>&1 </dev/null &`로 입출력을 분리한다.

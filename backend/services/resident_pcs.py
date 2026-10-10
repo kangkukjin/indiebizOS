@@ -44,6 +44,9 @@ def submit(target, command, request_id=None):
         raise ValueError("needs_interactive")
     if not isinstance(command.get("timeout", 1800), int) or not 1 <= command.get("timeout", 1800) <= 86400:
         raise ValueError("timeout must be 1..86400")
+    if command.get("mode") == "observe":
+        if op != "shell" or isinstance(command.get("timeout"), bool) or not 1 <= command.get("timeout", 1800) <= 10:
+            raise ValueError("mode:observe requires shell with explicit timeout:1..10; use it for short checks")
     command = {**command, "op": op, "mode": command.get("mode", "background")}
     if len(json.dumps(command).encode()) > 256 * 1024:
         raise ValueError("command_too_large_use_transfer")

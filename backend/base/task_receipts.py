@@ -271,7 +271,8 @@ def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS, *, suspend=
     프로그램은 `[if:$r.timed_out]` 로 갈라 같은 ref 로 다시 기다린다. 옛 구현은 success:false 라 판본 2 에서 프로그램
     전체가 중단됐고(이미 시작한 작업만 남긴 채), catch 에서도 시간 초과와 작업 실패를 가를 값이 없었다(26회차 L26-2).
     작업이 성공 아닌 종료(failed·cancelled·interrupted)·unknown 이면 **기다린 값을 못 얻은 것**이라 success:false —
-    투영 칸(state·failure·task_ref)은 그대로 실려 `$error.details` 로 읽힌다."""
+    기존 투영 칸(state·failure·task_ref)은 `$error.details` 로, 어댑터 확장을 포함한 전체 관측은
+    `$error.details.task_observation` 으로 읽힌다. 성공 결과 계약(result)은 그대로 유지한다."""
     try:
         requested = float(timeout if timeout is not None else 60.0)
     except (TypeError, ValueError):
@@ -283,7 +284,9 @@ def wait(r: dict, timeout: float = 60.0, poll: float = POLL_SECONDS, *, suspend=
         if v["state"] == SUCCEEDED:
             return {"success": True, **v}
         if v["state"] in TERMINAL or v["state"] == UNKNOWN:
-            return {"success": False, **v, "error": _unfinished(v)}
+            # Preserve adapter extensions as one observation across the fault
+            # boundary; copying selected fields loses new timing/evidence slots.
+            return {"success": False, **v, "task_observation": v, "error": _unfinished(v)}
         left = deadline - time.monotonic()
         if left <= 0:
             if suspend:

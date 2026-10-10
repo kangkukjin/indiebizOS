@@ -284,6 +284,44 @@ def test_resident_binary_roundtrip_crash(tmp_path, monkeypatch):
         assert got['result']['output'] == 'resident-ok', got
         latency = round((time.monotonic() - start) * 1000)
         assert pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'printf resident-ok', 'timeout': 10}, 'smoke-once')['job_id'] == job['job_id']
+        inherited = pcs.submit(rec['device_id'], {'op': 'shell',
+            'cmd': 'sleep 4 & echo started', 'timeout': 10}, 'inherited-output')
+        inherited_result = wait(inherited['job_id'])
+        assert inherited_result['state'] == 'succeeded', inherited_result
+        assert inherited_result['result']['exit'] == 0
+        assert inherited_result['result']['output_incomplete'] is True
+        assert 'Do not resubmit' in inherited_result['result']['warning']
+        assert 'started' in inherited_result['result']['output']
+        assert inherited_result['seconds'] < 4
+        # Non-zero commands remain failed even with a surviving pipe holder.
+        nonzero = pcs.submit(rec['device_id'], {'op': 'shell',
+            'cmd': 'sleep 4 & echo reason; exit 7', 'timeout': 10}, 'nonzero-output')
+        nonzero_result = wait(nonzero['job_id'])
+        assert nonzero_result['state'] == 'failed' and nonzero_result['result']['exit'] == 7
+        busy = [pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'sleep 6', 'timeout': 15},
+                           f'busy-{i}') for i in range(2)]
+        deadline = time.monotonic() + 5
+        while not all(resident_store.history(job=j['job_id'])['tasks'][0]['state'] == 'running' for j in busy):
+            assert time.monotonic() < deadline
+            time.sleep(0.05)
+        queued = pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'echo queued', 'timeout': 10}, 'queued-work')
+        observe = pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'echo observed',
+            'mode': 'observe', 'timeout': 2}, 'check-during-work')
+        observed = wait(observe['job_id'])
+        assert observed['state'] == 'succeeded' and observed['result']['output'].strip() == 'observed'
+        listing = pcs.submit(rec['device_id'], {'op': 'list', 'path': str(worker)}, 'list-during-work')
+        assert wait(listing['job_id'])['state'] == 'succeeded'
+        assert resident_store.history(job=queued['job_id'])['tasks'][0]['state'] == 'queued'
+        for job in busy:
+            finished = wait(job['job_id'])
+            assert observed['ended_at'] < finished['ended_at']
+        assert wait(queued['job_id'])['state'] == 'succeeded'
+        limited = pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'sleep 20',
+            'mode': 'observe', 'timeout': 1}, 'limited-check')
+        limited_result = wait(limited['job_id'])
+        assert limited_result['outcome'] == 'timeout' and limited_result['result']['timeout']
+        print(json.dumps({'inherited_pipe_seconds': inherited_result['seconds'],
+                          'observation_queue_seconds': observed['started_at'] - observed['created']}, ensure_ascii=False))
         payload = bytes(range(256)) * 5000
         src = work / 'source.bin'
         src.write_bytes(payload)
@@ -414,3 +452,16 @@ def test_failed_transfer_new_attempt_reuses_blob_and_request_is_still_idempotent
     assert retry['job_id'] != first['job_id'] and retry['transfer_id'] == first['transfer_id']
     assert pcs.transfer_local(rec['device_id'], retry_args)['job_id'] == retry['job_id']
     assert resident_store.history(job=first['job_id'])['tasks'][0]['state'] == 'failed'
+
+
+@pytest.mark.parametrize('command', [
+    {'op': 'shell', 'mode': 'observe'},
+    {'op': 'shell', 'mode': 'observe', 'timeout': 11},
+    {'op': 'write', 'mode': 'observe', 'timeout': 1},
+    {'op': 'shell', 'mode': 'observe', 'timeout': True},
+])
+def test_observation_requires_bounded_shell(registry, command):
+    rec = registry()
+    with pytest.raises(ValueError, match='mode:observe'):
+        pcs.submit(rec['device_id'], command)
+    assert not resident_store.history()['tasks']

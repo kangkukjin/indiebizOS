@@ -1,0 +1,93 @@
+{
+  "basis": "9755d480 / round_50",
+  "targeted": {
+    "passed": 88,
+    "seconds": 93.76,
+    "log": "/tmp/r50-targeted.log"
+  },
+  "go_race": {
+    "passed": true,
+    "seconds": 6.623
+  },
+  "binary_integration": {
+    "passed": true,
+    "seconds": 22.67,
+    "inherited_pipe_seconds": 2.0202319622039795,
+    "observation_queue_seconds": 0.4684929847717285,
+    "log": "/tmp/r50-binary-test.log"
+  },
+  "selector": {
+    "changed": 5,
+    "selected": 588,
+    "total": 636,
+    "percent": 92,
+    "hubs": [
+      "ibl_v2_adapters",
+      "task_receipts"
+    ]
+  },
+  "seed_registration": {
+    "revised": [
+      "외부PC작업확인",
+      "외부PC작업실행"
+    ],
+    "semantic_indexed": 18
+  },
+  "full_backend": {
+    "passed": 10004,
+    "skipped": 13,
+    "failed": 0,
+    "seconds": 226.33,
+    "includes_system": true
+  },
+  "additional_regression_repairs": {
+    "passed": 75,
+    "seconds": 7.71,
+    "notes": [
+      "현재 앱 권한에 기대던 시험 대역을 PID·앱 신원으로 고정",
+      "브라우저 대역에 현재 탭 신원 추가",
+      "압축 name_encoding 교재 누락 보완",
+      "용례 45건 검토 기록"
+    ]
+  },
+  "live_mac12": {
+    "installed_sha256": "e97790f416c0a0c01c87ca59934d4a03c7e114e67b469e4c9d43bfc1547d8c29",
+    "previous_sha256": "81c434277add905e29c354d2c40023cda32e63e15bc25ee9b7ecbdda8f721bd4",
+    "same_registration": true,
+    "observation_parallel": 1,
+    "observation_finished_before_both_work_jobs": true,
+    "observation_seconds": 0.06556200981140137,
+    "first_batch_delivery_delay_seconds": 13.974725246429443,
+    "first_wait_expired_then_same_receipt_reobserved": true,
+    "results": {
+      "inherited": {
+        "status": "succeeded",
+        "outcome": "succeeded",
+        "command_ok": true,
+        "seconds": 2.064807891845703
+      },
+      "failed": {
+        "status": "failed",
+        "outcome": "failed",
+        "command_ok": false,
+        "seconds": 0.05629706382751465
+      },
+      "timeout": {
+        "status": "failed",
+        "outcome": "timeout",
+        "command_ok": false,
+        "seconds": 1.0219311714172363
+      },
+      "cancelled": {
+        "status": "cancelled",
+        "outcome": "cancelled",
+        "command_ok": false,
+        "seconds": 1.4327311515808105
+      }
+    },
+    "central_backup": "data/_backups/2026-10-11_r50_mac12_helper",
+    "remote_backup": "/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/data/_backups/2026-10-11_r50-helper/indiebiz-helper",
+    "platform": "macOS 10.15.8 / amd64 / Go 1.22 legacy binary",
+    "service_note": "기존 헬퍼는 LaunchAgent 미적재 상태였다. 등록·키·plist는 바꾸지 않고 기존 실행 방식을 유지했다."
+  }
+}

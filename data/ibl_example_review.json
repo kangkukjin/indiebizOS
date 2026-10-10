@@ -339,7 +339,7 @@
   "limbs:guestpc": {
    "fields": {
     "description": "a7d3058aa081",
-    "target_description": "5035249a0b6d",
+    "target_description": "df6404d30424",
     "implementation": "11bd2c55aa6e",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
@@ -350,7 +350,7 @@
     "router": "ebbb1532efbc",
     "tool": "9c98c80a5fd1"
    },
-   "reviewed": "2026-10-10",
+   "reviewed": "2026-10-11",
    "examples": 45
   },
   "limbs:launch": {

@@ -36,9 +36,14 @@ def test_screen_ref_failure_never_types_in_current_focus(monkeypatch, known):
     writes = []
     monkeypatch.setattr(mod, '_get_pyautogui', lambda: NS(write=lambda *a, **k: writes.append(a)))
     monkeypatch.setattr(mod, '_ax_set_value', lambda *a: False)
-    monkeypatch.setattr(mod, '_AX_SESSION', {'r1': {'el': object()}} if known else {})
-    result = json.loads(mod._do_type({'ref': 'r1', 'text': 'secret'}))
-    assert result['success'] is False
+    monkeypatch.setattr(mod, '_frontmost_app', lambda: {'name': 'fixture', 'pid': 42})
+    monkeypatch.setattr(mod, '_AX_SESSION', {'r1': {'el': object(), 'pid': 42}} if known else {})
+    if known:
+        result = json.loads(mod._do_type({'ref': 'r1', 'text': 'secret'}))
+        assert result['success'] is False
+    else:
+        with pytest.raises(ValueError, match='STALE_REF'):
+            mod._do_type({'ref': 'r1', 'text': 'secret'})
     assert writes == []
 
 

@@ -106,7 +106,7 @@ def observe(rec, events):
             if kind == "result" and row["result"] is None:
                 state = ("cancelled" if payload.get("cancelled") else
                          "unknown" if payload.get("unknown") else
-                         "failed" if payload.get("error") or payload.get("exit", 0) != 0 else "succeeded")
+                         "failed" if payload.get("timeout") or payload.get("error") or payload.get("exit", 0) != 0 else "succeeded")
                 encoded = json.dumps(payload, ensure_ascii=False)
                 db.execute("UPDATE resident_tasks SET state=?,result=? WHERE id=?", (state, encoded, jid))
                 db.execute("UPDATE jobs SET state='completed',result=?,partial=NULL,updated=? WHERE id=?",
@@ -185,6 +185,8 @@ def history(device=None, job=None, cursor=0, limit=100, *, tail=False):
             task["started_at"], task["ended_at"] = times["started"], times["result"]
             task["seconds"] = (times["result"] - times["started"]
                                if all(v is not None for v in times.values()) else None)
+            task["outcome"] = ("timeout" if (task["result"] or {}).get("timeout")
+                               and task["state"] == "failed" else task["state"])
             task.pop("fingerprint", None)
         ev_where, ev_params = ["cursor> ?"], [max(0, int(cursor))]
         for key, value in (("device", device), ("job", job)):

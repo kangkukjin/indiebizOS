@@ -243,7 +243,7 @@ AI동향발행:
   description: 'zip 묶기·풀기·목록 — args: op(pack|unpack|list). pack: paths(또는 path/items)·output(생략=첫
     대상 옆 <이름>.zip)·include/exclude(글로브, 기본 .DS_Store·__pycache__ 제외)·base. unpack:
     path(zip/tar.gz)·out_dir(생략=옆 <이름>/)·include·overwrite(false=기존 파일 건너뜀). 경로 탈출(../)
-    항목 거절, 암호 zip 거절. list: 항목 items(name·size·compressed·modified). 2026-09-15 어휘
+    항목 거절, 암호 zip 거절. unpack/list: name_encoding(선택, UTF-8 플래그 없는 ZIP 이름의 인코딩). list: 항목 items(name·size·compressed·modified). 2026-09-15 어휘
     후보 10번을 스크립트로 먼저 얼림'
   file: 압축.py
   interpreter: python

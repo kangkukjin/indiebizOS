@@ -339,6 +339,8 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
             return receipt
         job_id = receipt["job_id"]
     else:
+        if tool_input.get("mode") == "observe":
+            return {"success": False, "error": "mode:observe는 상주 PC 헬퍼에서만 지원합니다"}
         job_id = phone_jobs.enqueue(device_id, json.dumps(envelope, ensure_ascii=False))
 
     # 백그라운드 모드(설치·빌드 등 오래 걸리는 셸) — 즉시 job_id 반환, 결과는 op=result 로.
@@ -860,6 +862,8 @@ def task_status(ref: dict) -> dict:
                       progress_scope="recent_5_events", history_cursor=history["cursor"],
                       history_args={"op": "history", "limb": task["device"], "job": jid, "cursor": 0},
                       started_at=task["started_at"], ended_at=task["ended_at"], seconds=task["seconds"],
+                      outcome=task["outcome"],
+                      execution_result=task["result"] if state != T.SUCCEEDED else None,
                       error=(task["result"] or {}).get("error"), accepted_at=task["created"])
         return {**view, "ended_at": task["ended_at"]}
     got = phone_jobs.peek_result(jid)

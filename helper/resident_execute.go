@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -116,6 +117,9 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 	}
 	if !extra.Resident || extra.Generation != r.cfg.Generation {
 		return errResult("stale_registration", "")
+	}
+	if extra.Mode == "observe" && (c.Op != "shell" || c.Timeout < 1 || c.Timeout > 10) {
+		return errResult("invalid_observation", "mode:observe requires shell with explicit timeout:1..10")
 	}
 	if c.Timeout <= 0 {
 		c.Timeout = 1800
@@ -269,12 +273,17 @@ func (r *residentRuntime) process(ctx context.Context, jid string, cmd *exec.Cmd
 	cmd.Stderr = log
 	e := cmd.Run()
 	result := map[string]interface{}{"exit": exitCode(e), "output": string(log.tail), "log_truncated": log.gap, "cwd": workingDir}
-	if ctx.Err() != nil {
+	// ErrWaitDelay means the command exited successfully, but inherited output
+	// pipes never closed. Re-running it could duplicate an already running server.
+	if errors.Is(e, exec.ErrWaitDelay) && cmd.ProcessState != nil && cmd.ProcessState.Success() {
+		result["exit"] = cmd.ProcessState.ExitCode()
+		result["output_incomplete"] = true
+		result["warning"] = "command exited successfully; inherited output pipes remained open (a background child may still be running). Do not resubmit. Redirect background stdin/stdout/stderr, e.g. nohup command >server.log 2>&1 </dev/null &; verify the process separately."
+	} else if ctx.Err() != nil {
 		result["cancelled"] = ctx.Err() == context.Canceled
 		result["timeout"] = ctx.Err() == context.DeadlineExceeded
 		result["error"] = ctx.Err().Error()
-	}
-	if e != nil {
+	} else if e != nil {
 		result["error"] = e.Error()
 	}
 	if log.failure != nil {

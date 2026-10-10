@@ -348,3 +348,16 @@ def test_concurrent_first_lookups_wait_for_the_package_adapter(monkeypatch):
     for th in threads: th.join()
     assert out == ["running"] * 4 and loads == ["slowkind"]
 
+
+
+@pytest.mark.parametrize('state', [T.FAILED, T.CANCELLED, T.INTERRUPTED, T.UNKNOWN])
+def test_wait_fault_preserves_complete_adapter_observation(state):
+    observed = T.view(T.ref('extension', 'one'), state, error='ended',
+                      accepted_at=100, ended_at=110, started_at=102, seconds=8,
+                      evidence={'custom_adapter_field': ['partial', 3]})
+    T.register('extension', lambda ref: observed)
+    result = _run('[try] { [self:task]{op:"wait",ref:$ref,timeout:0} } '
+                  '[catch] { return $error.details.task_observation }',
+                  {'ref': T.ref('extension', 'one')})
+    assert result['success'], result
+    assert result['value'] == observed

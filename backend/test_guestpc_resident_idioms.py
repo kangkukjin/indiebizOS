@@ -305,7 +305,14 @@ def test_sync_duplicate_and_background_observation_share_durable_result(pc, monk
     assert len(pc.history()) == 1
 
 
-def test_noisy_job_timing_and_bounded_progress_remain_complete_in_history(pc):
+@pytest.mark.parametrize('payload,outcome', [
+    ({'exit': 0, 'output': 'done'}, 'succeeded'),
+    ({'exit': 7, 'output': 'reason'}, 'failed'),
+    ({'exit': 125, 'cancelled': True}, 'cancelled'),
+    ({'exit': 125, 'timeout': True}, 'timeout'),
+    ({'unknown': True, 'error': 'helper restarted'}, 'unknown'),
+])
+def test_noisy_job_timing_and_bounded_progress_remain_complete_in_history(pc, payload, outcome):
     import resident_pcs
     import resident_store
     job = shell(pc)
@@ -316,14 +323,17 @@ def test_noisy_job_timing_and_bounded_progress_remain_complete_in_history(pc):
     events += [{'job_id': jid, 'event_id': f'log{i}', 'kind': 'log', 'occurred_at': start+1+i,
                 'payload': {'text': '한글'*4000}} for i in range(140)]
     events += [{'job_id': jid, 'event_id': 'end', 'kind': 'result', 'occurred_at': start+150,
-                'payload': {'exit': 0, 'output': 'done'}}]
+                'payload': payload}]
     for offset in range(0, len(events), 64):
         resident_pcs.sync(pc.rec['key'], 'a'*32, events[offset:offset+64])
     page = resident_store.history(job=jid)
     assert len(page['events']) == 100 and page['tasks'][0]['seconds'] == 150
+    pc.calls.clear()
     done = pc('[fn:외부PC작업확인]{작업:$job}', job=job)
+    assert [action for action, _ in pc.calls] == ['self:task']
+    assert done['outcome'] == outcome
     assert done['started_at'] == start and done['ended_at'] == start+150 and done['seconds'] == 150
-    assert done['result']['output'] == 'done' and len(done['progress']) == 5
+    assert done['result'] == payload and len(done['progress']) == 5
     assert len(str(done['progress'])) < 9000
     rest = resident_store.history(job=jid, cursor=page['cursor'])
     assert rest['events'][-1]['kind'] == 'result'
@@ -360,3 +370,17 @@ def test_large_read_explains_supported_file_recovery(pc, monkeypatch):
     assert 'transfer' in result['warning'] and 'collect' in result['warning']
     from ibl_v2_adapters import _partial_message
     assert 'transfer' in _partial_message(result, {'truncations': [{'scope': 'source'}]})
+
+
+def test_observation_shell_mode_preserved_and_invalid_budget_not_submitted(pc):
+    out = pc.handler._op_shell({'limb': pc.rec['device_id'], 'cmd': 'ps',
+        'mode': 'observe', 'timeout': 5, 'background': True, 'request_id': 'observe-1'})
+    assert out['accepted'] and pc.history()[0]['summary']['mode'] == 'observe'
+    again = pc.handler._op_shell({'limb': pc.rec['device_id'], 'cmd': 'ps',
+        'mode': 'observe', 'background': True, 'request_id': 'observe-1'})
+    assert again['job_id'] == out['job_id']
+    for timeout in (None, 11):
+        bad = pc.handler._op_shell({'limb': pc.rec['device_id'], 'cmd': 'ps',
+            'mode': 'observe', 'timeout': timeout, 'background': True})
+        assert bad['success'] is False and '1..10' in bad['error']
+    assert len(pc.history()) == 1

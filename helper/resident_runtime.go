@@ -25,14 +25,16 @@ type residentEvent struct {
 	Occurred float64                `json:"occurred_at"`
 }
 type residentRecord struct {
-	Job    Job                    `json:"job"`
-	State  string                 `json:"state"`
-	Result map[string]interface{} `json:"result,omitempty"`
+	Job      Job                    `json:"job"`
+	State    string                 `json:"state"`
+	Result   map[string]interface{} `json:"result,omitempty"`
+	QueuedAt int64                  `json:"queued_at,omitempty"`
 }
 type residentRuntime struct {
 	cfg         *Config
 	mu          sync.Mutex
 	active      map[string]context.CancelFunc
+	observing   int
 	stopping    bool
 	localPaused bool
 	wg          sync.WaitGroup
@@ -44,13 +46,16 @@ func (r *residentRuntime) event(jid, kind string, payload map[string]interface{}
 	return residentSave(path, e)
 }
 func (r *residentRuntime) record(v residentRecord) error {
+	if v.State == "queued" && v.QueuedAt == 0 {
+		v.QueuedAt = time.Now().UnixNano()
+	}
 	return residentSave(filepath.Join(r.cfg.DataDir, "spool", "jobs", v.Job.ID+".json"), v)
 }
 func (r *residentRuntime) capabilities() map[string]interface{} {
 	hostname, _ := os.Hostname()
 	_, mpv := exec.LookPath("mpv")
 	_, afplay := exec.LookPath("afplay")
-	return map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv == nil || afplay == nil, "interactive": true, "max_parallel": 2, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
+	return map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv == nil || afplay == nil, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
 }
 func startResident(cfg *Config) error {
 	if len(cfg.InstallationID) != 32 || cfg.Generation == "" || cfg.DataDir == "" {
@@ -237,59 +242,6 @@ func (r *residentRuntime) cancelQueued(jid string) {
 	if r.record(v) == nil {
 		_ = r.event(jid, "result", v.Result)
 	}
-}
-func (r *residentRuntime) schedule() error {
-	paths, _ := filepath.Glob(filepath.Join(r.cfg.DataDir, "spool", "jobs", "*.json"))
-	sort.Strings(paths)
-	for _, p := range paths {
-		r.mu.Lock()
-		if len(r.active) >= 2 || r.stopping {
-			r.mu.Unlock()
-			break
-		}
-		b, e := os.ReadFile(p)
-		if e != nil {
-			r.mu.Unlock()
-			return e
-		}
-		var v residentRecord
-		if e = json.Unmarshal(b, &v); e != nil {
-			r.mu.Unlock()
-			return e
-		}
-		if v.State != "queued" {
-			r.mu.Unlock()
-			continue
-		}
-		v.State = "running"
-		if e = r.record(v); e != nil {
-			r.mu.Unlock()
-			return e
-		}
-		if e = r.event(v.Job.ID, "started", map[string]interface{}{}); e != nil {
-			r.mu.Unlock()
-			return e
-		}
-		ctx, cancel := context.WithCancel(context.Background())
-		r.active[v.Job.ID] = cancel
-		r.wg.Add(1)
-		r.mu.Unlock()
-		go func(v residentRecord) {
-			defer r.wg.Done()
-			defer cancel()
-			result := r.execute(ctx, v.Job)
-			v.State = "done"
-			v.Result = result
-			// Keep the running record on persistence failure; recovery reports unknown.
-			if e = r.event(v.Job.ID, "result", result); e == nil {
-				_ = r.record(v)
-			}
-			r.mu.Lock()
-			delete(r.active, v.Job.ID)
-			r.mu.Unlock()
-		}(v)
-	}
-	return nil
 }
 func (r *residentRuntime) stop() {
 	r.mu.Lock()

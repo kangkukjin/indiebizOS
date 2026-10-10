@@ -12,6 +12,7 @@ import pytest
 class Refs:
     def __init__(self, page):
         self.page = self.raw_page = page
+        self.active_tab_id = 'fixture-tab'
         self._snapshot_url = None
         self.clear_refs()
 

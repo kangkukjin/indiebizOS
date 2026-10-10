@@ -258,7 +258,7 @@
     "self:notebook#versions": "연구 project_ref와 source_ref 필요",
     "self:package#activate": "사람 승인 토큰 필요 — 고정 fixture 부적합",
     "self:package#deactivate": "사람 승인 토큰 필요 — 고정 fixture 부적합",
-    "self:project#research_view": "연구 project_ref가 필요하다",
+    "self:project#research_view": "연구 project_ref와 thread_ref가 필요하다",
     "self:project#thread_list": "연구 project_ref가 필요하다",
     "self:project#thread_messages": "연구 project_ref와 thread_ref가 필요하다",
     "self:project#thread_search": "연구 project_ref와 query가 필요하다",

@@ -123,6 +123,72 @@ def test_ffmpeg_overgeneralization_is_replaced_not_appended(monkeypatch):
     assert (guard.judgments, guard.lookups, guard.resumes) == (1, 1, 1)
 
 
+@pytest.mark.parametrize("supplement", ["앞 답변의 표는 유지하며, 이미지는 고양이로 확인했습니다.",
+                                        "이 파일은 현재 계정의 읽기 권한이 없어 열 수 없습니다."])
+def test_resume_preserves_report_around_corrected_claim(monkeypatch, supplement):
+    report = "## 분석\n처우와 배치가 주원인입니다.\n\n| 원인 | 근거 |\n|---|---|\n| 처우 | 채용 미달 |"
+    sources = "\n\n출처: 기존 조사 원문."
+    original = report + "\n\n" + EYES + sources
+    replies = [[claim(EYES)]]
+    calls = [{"name": "read_image", "result": "Permission denied", "is_error": True}]
+    if supplement == LIMITED:
+        replies.append([claim(LIMITED, "limited", ["e0"])])
+    inputs = install_judge(monkeypatch, replies)
+    install_lookup(monkeypatch)
+    guard = cg.CapabilityGuard(limits=dict(cg.DEFAULTS))
+
+    def resume(*args):
+        yield from ()
+        return supplement
+
+    _, result = drain(guard.adopt(NS(ai=NS()), "분석해줘", original, calls, resume=resume))
+    assert result.startswith(report) and sources in result
+    assert result.endswith(supplement) and result.count("**보충·정정**") == 1
+    assert EYES not in result
+    # 보존 본문 때문에 재판정 입력·호출을 늘리지 않고, 다시 채택해도 중복하지 않는다.
+    assert len(inputs) == (2 if supplement == LIMITED else 1)
+    assert drain(guard.adopt(NS(), "분석해줘", result, calls))[1] == result
+
+
+@pytest.mark.parametrize("tail", ["", "   ", None])
+def test_resume_keeps_nonempty_final_before_empty_tail(monkeypatch, tail):
+    install_judge(monkeypatch, [[claim(EYES)]])
+    install_lookup(monkeypatch)
+    original = "이전 분석과 출처입니다.\n" + EYES
+
+    def execute(**kwargs):
+        assert "나머지 본문은 사용자에게 보존" in kwargs["message_content"]
+        yield {"type": "text", "content": "앞 분석에 더해 고양이를 확인했습니다."}
+        yield {"type": "final", "content": "앞 분석에 더해 고양이를 확인했습니다."}
+        yield {"type": "final", "content": tail}
+
+    runner = NS(ai=NS(process_message_stream=execute))
+    events, result = drain(cg.adopt_response(
+        cg.CapabilityGuard(limits=dict(cg.DEFAULTS)), runner, "분석", original, [], [], collect=lambda e: None))
+    assert result.startswith("이전 분석과 출처입니다.")
+    assert result.endswith("앞 분석에 더해 고양이를 확인했습니다.")
+    assert not any(e["type"] == "final" for e in events)
+
+
+@pytest.mark.parametrize("outcome", [None, "", "   ", "same", "error"])
+def test_empty_or_failed_resume_keeps_report_without_duplicate(monkeypatch, outcome):
+    original = "완료한 분석과 출처입니다.\n" + EYES
+    install_judge(monkeypatch, [[claim(EYES)], [claim(EYES)]])
+    install_lookup(monkeypatch)
+
+    def resume(*args):
+        yield from ()
+        if outcome == "error":
+            raise RuntimeError("실행 실패")
+        return original if outcome == "same" else outcome
+
+    _, result = drain(cg.CapabilityGuard(limits=dict(cg.DEFAULTS)).adopt(
+        NS(ai=NS()), "분석", original, [], resume=resume))
+    assert result.startswith("완료한 분석과 출처입니다.")
+    assert result.count("완료한 분석과 출처입니다.") == 1
+    assert "보충·정정" not in result and EYES not in result
+
+
 def test_second_unsupported_response_ends_without_third_model_call(monkeypatch):
     install_judge(monkeypatch, [[claim(EYES)], [claim(EYES)]])
     install_lookup(monkeypatch)
@@ -309,6 +375,7 @@ def test_pipeline_adopts_one_final_and_saves_same_body(supervisor, monkeypatch, 
     from agent_pipeline import CognitivePipelineMixin
     saved, requests, traces = [], [], []
     corrected = "이미지를 확인했습니다. 고양이가 있습니다."
+    original = "기존 분석과 출처는 유지됩니다.\n" + EYES
     install_judge(monkeypatch, [[claim(EYES)]])
     install_lookup(monkeypatch)
 
@@ -320,7 +387,7 @@ def test_pipeline_adopts_one_final_and_saves_same_body(supervisor, monkeypatch, 
         _run_consciousness_or_reuse = lambda *a, **kw: {"task_framing": "이미지 확인",
             **({"achievement_criteria": "이미지 설명"} if route in {"criteria", "legacy"} else {})}
         _consciousness_needs_repair = lambda *a: False
-        _consciousness_clarification = lambda *a: EYES if route == "clarify" else None
+        _consciousness_clarification = lambda *a: original if route == "clarify" else None
         _extract_achievement_criteria = lambda *a: "이미지 설명" if route in {"criteria", "legacy"} else ""
         _refresh_execution_prompt = lambda *a, **kw: "이미지를 설명해줘"
         _apply_consciousness_to_history = lambda self, h, c: h
@@ -335,7 +402,7 @@ def test_pipeline_adopts_one_final_and_saves_same_body(supervisor, monkeypatch, 
     def execute(**kwargs):
         requests.append(kwargs)
         resuming = "current_capabilities" in kwargs["message_content"]
-        text = corrected if resuming else ("평가 전 정상 본문" if route == "legacy" else EYES)
+        text = corrected if resuming else ("평가 전 정상 본문" if route == "legacy" else original)
         yield {"type": "text", "content": text}
         if resuming:
             yield {"type": "tool_start", "id": "image", "name": "read_image", "input": {"path": "fixture"}}
@@ -359,7 +426,8 @@ def test_pipeline_adopts_one_final_and_saves_same_body(supervisor, monkeypatch, 
     assert len(finals) == 1 and finals == saved
     assert EYES not in finals[0]
     if route != "legacy":
-        assert finals == [corrected]
+        assert finals[0].startswith("기존 분석과 출처는 유지됩니다.")
+        assert finals[0].endswith(corrected)
         assert sum("current_capabilities" in r["message_content"] for r in requests) == 1
         meta = next(e for e in events if e["type"] == "_turn_meta")
         assert any(t["tool_name"] == "read_image" and t["success"] for t in meta["tool_calls"])

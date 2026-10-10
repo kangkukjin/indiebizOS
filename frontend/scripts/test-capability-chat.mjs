@@ -13,6 +13,8 @@ const python = readdirSync(lib).find(name => name.startsWith('python'));
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || path.join(lib, python, 'site-packages/playwright/driver/package'));
 const denied = '저는 눈이 없어서 이미지를 볼 수 없습니다.';
 const corrected = '이미지를 확인했습니다. 고양이가 있습니다.';
+const report = '처우와 배치가 주원인이라는 앞선 분석과 출처입니다.';
+const adopted = report + '\n\n현재 이미지 열람의 가능 여부를 재확인합니다.\n\n---\n\n**보충·정정**\n\n' + corrected;
 const previous = '이전 대화는 보존합니다.';
 const saved = [{ id: 1, is_agent: true, content: previous, timestamp: '2026-09-15T09:00:00' }];
 const server = await createServer({ root: frontend,
@@ -68,27 +70,29 @@ try {
   await page.getByText(previous, { exact: true }).waitFor();
   const emit = value => page.evaluate(value => window.__emit(value), value);
   await emit({ type: 'start' });
-  await emit({ type: 'stream_chunk', content: denied });
+  await emit({ type: 'stream_chunk', content: report + '\n\n' + denied });
   await page.getByText(denied, { exact: true }).waitFor();
   await emit({ type: 'tool_start', id: 'img', name: 'read_image', input: {} });
   await page.getByText(denied, { exact: true }).waitFor(); // 초안이 별도 말풍선이 된 경로
   await emit({ type: 'tool_result', id: 'img', name: 'read_image', result: '고양이' });
-  saved.push({ id: 2, is_agent: true, content: corrected, timestamp: '2026-09-15T09:01:00' });
-  await emit({ type: 'response', message_id: 2, content: corrected });
+  saved.push({ id: 2, is_agent: true, content: adopted, timestamp: '2026-09-15T09:01:00' });
+  await emit({ type: 'response', message_id: 2, content: adopted });
   await page.getByText(corrected, { exact: true }).waitFor();
   assert.equal(await page.getByText(denied, { exact: true }).count(), 0);
   assert.equal(await page.getByText(previous, { exact: true }).count(), 1);
-  await emit({ type: 'response', message_id: 2, content: corrected });
+  assert.equal(await page.getByText(report, { exact: true }).count(), 1);
+  await emit({ type: 'response', message_id: 2, content: adopted });
   assert.equal(await page.getByText(corrected, { exact: true }).count(), 1);
   await page.reload();
   await page.getByText(corrected, { exact: true }).waitFor();
   assert.equal(await page.getByText(denied, { exact: true }).count(), 0);
   assert.equal(await page.getByText(previous, { exact: true }).count(), 1);
+  assert.equal(await page.getByText(report, { exact: true }).count(), 1);
   assert.deepEqual(errors, []);
   const out = path.join(frontend, '../outputs/capability_guard');
   mkdirSync(out, { recursive: true });
   await page.screenshot({ path: path.join(out, 'chat-adopted.png'), fullPage: true });
-  console.log('PASS: 실제 ChatView 초안 교체·중복 방지·이력 재로드 일치');
+  console.log('PASS: 실제 ChatView 기존 본문·보충 보존·초안 교체·중복 방지·이력 재로드 일치');
 } finally {
   await browser?.close();
   await server.close();

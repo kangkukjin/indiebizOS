@@ -1,0 +1,38 @@
+{
+  "baseline_revision": "bfb736f5",
+  "related_tests": {
+    "passed": 1309,
+    "skipped": 1
+  },
+  "system_and_integration_tests": {
+    "passed": 100
+  },
+  "go": "go test -race ./... passed",
+  "binaries_built": [
+    "windows",
+    "windows-resident",
+    "darwin-arm64",
+    "darwin-amd64",
+    "darwin-amd64-legacy",
+    "linux-amd64"
+  ],
+  "live_read_only": {
+    "pc": "guestpc-7a440e9daf61",
+    "ready": true,
+    "state": "succeeded",
+    "progress_count": 5,
+    "scope": "recent_5_events",
+    "started": 1791638221.9998279,
+    "ended": 1791638272.810857,
+    "seconds": 50.81102919578552,
+    "history": {
+      "op": "history",
+      "limb": "guestpc-7a440e9daf61",
+      "job": "241798a91c0544c7bd3c51575f062877",
+      "cursor": 0
+    }
+  },
+  "original_v0_zip_korean_names": 47,
+  "remote_installed_helper_updated": false,
+  "independent_ai_rerun": false
+}

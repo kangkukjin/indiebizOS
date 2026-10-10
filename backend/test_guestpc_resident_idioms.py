@@ -35,6 +35,7 @@ def pc(registry, monkeypatch, tmp_path):
     monkeypatch.setattr(task_receipts, '_STATUS', {'guestpc': handler.task_status})
     monkeypatch.setattr(task_receipts, '_CANCEL', {'guestpc': handler.task_status_cancel})
     calls = []
+    real_execute = ibl_engine.execute_ibl
 
     def leaf(step, *args, **kwargs):
         key, p = f"{step['_node']}:{step['action']}", step['params']
@@ -45,6 +46,8 @@ def pc(registry, monkeypatch, tmp_path):
             return handler._OP_DISPATCHERS['limb_op'][p['op']](p)
         if key == 'limbs:guestpc':
             return handler._OP_DISPATCHERS['guestpc_op'][p['op']](p)
+        if getattr(run, "real_local_tools", False):
+            return real_execute(step, *args, **kwargs)
         raise AssertionError((key, p))
 
     monkeypatch.setattr(ibl_engine, 'execute_ibl', leaf)
@@ -56,7 +59,7 @@ def pc(registry, monkeypatch, tmp_path):
         plan = compile_program(code, adapters, definitions=definitions, inputs=inputs)
         assert not plan.issues, plan.issues
         with source_context(2):
-            result = Runtime(plan, inputs).run()
+            result = Runtime(plan, inputs, **getattr(run, 'runtime_options', {})).run()
         assert result['success'], {k: result.get(k) for k in ('error', 'diagnostic')}
         return result['value']
 
@@ -268,3 +271,92 @@ def test_guide_and_all_seed_examples_compile(pc):
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_alias_ignores_revoked_and_expired_registrations(pc, monkeypatch):
+    original = pc.handler._OP_DISPATCHERS['limb_op']['list']
+    def with_stale(args):
+        out = original(args)
+        out['items'] = [*out['items'],
+            {'alias': '시험PC', 'device_id': 'old', 'revoked': True},
+            {'alias': '시험PC', 'device_id': 'expired', 'expired': True}]
+        return out
+    monkeypatch.setitem(pc.handler._OP_DISPATCHERS['limb_op'], 'list', with_stale)
+    out = pc('[fn:외부PC준비]{PC:"시험PC",환경조회:false}')
+    assert out['ok'] and out['limb'] == pc.rec['device_id']
+    assert not pc('[fn:외부PC준비]{PC:"old",환경조회:false}')['ok']
+
+
+def test_sync_duplicate_and_background_observation_share_durable_result(pc, monkeypatch):
+    import resident_pcs
+    import phone_jobs
+    original = resident_pcs.submit
+    def completed(*args, **kwargs):
+        job = original(*args, **kwargs)
+        pc.complete(job, {'exit': 0, 'output': 'one execution'})
+        return job
+    monkeypatch.setattr(resident_pcs, 'submit', completed)
+    args = {'limb': pc.rec['device_id'], 'cmd': 'echo once', 'request_id': 'sync-once'}
+    first = pc.handler._op_shell(args)
+    again = pc.handler._op_shell(args)
+    job = pc.handler._op_shell({**args, 'background': True})
+    assert first['result'] == again['result'] == pc.handler.task_status(job['task_ref'])['result']
+    assert not phone_jobs.job_status(job['job_id'])['consumed']
+    assert len(pc.history()) == 1
+
+
+def test_noisy_job_timing_and_bounded_progress_remain_complete_in_history(pc):
+    import resident_pcs
+    import resident_store
+    job = shell(pc)
+    jid = job['job_id']
+    import time
+    start = time.time()
+    events = [{'job_id': jid, 'event_id': 'start', 'kind': 'started', 'occurred_at': start, 'payload': {}}]
+    events += [{'job_id': jid, 'event_id': f'log{i}', 'kind': 'log', 'occurred_at': start+1+i,
+                'payload': {'text': '한글'*4000}} for i in range(140)]
+    events += [{'job_id': jid, 'event_id': 'end', 'kind': 'result', 'occurred_at': start+150,
+                'payload': {'exit': 0, 'output': 'done'}}]
+    for offset in range(0, len(events), 64):
+        resident_pcs.sync(pc.rec['key'], 'a'*32, events[offset:offset+64])
+    page = resident_store.history(job=jid)
+    assert len(page['events']) == 100 and page['tasks'][0]['seconds'] == 150
+    done = pc('[fn:외부PC작업확인]{작업:$job}', job=job)
+    assert done['started_at'] == start and done['ended_at'] == start+150 and done['seconds'] == 150
+    assert done['result']['output'] == 'done' and len(done['progress']) == 5
+    assert len(str(done['progress'])) < 9000
+    rest = resident_store.history(job=jid, cursor=page['cursor'])
+    assert rest['events'][-1]['kind'] == 'result'
+    assert rest['events'][0]['payload']['text'] == '한글'*4000
+
+
+def test_transfer_idiom_can_resume_terminal_failure_without_restarting_bytes(pc):
+    (pc.path / 'local.bin').write_bytes(b'resume same transfer')
+    first = transfer_call(pc, 'send')
+    pc.complete(first, {'error': 'transfer_failed'})
+    retry = transfer_call(pc, 'send', 요청ID='send-retry-1', 전송ID=first['transfer_id'])
+    assert retry['transfer_id'] == first['transfer_id']
+    assert retry['task_ref'] != first['task_ref']
+    assert transfer_call(pc, 'send', 요청ID='send-retry-1', 전송ID=first['transfer_id'])['task_ref'] == retry['task_ref']
+
+
+def test_pre_upgrade_sync_default_is_recovered_with_same_request(pc):
+    import resident_pcs
+    old = resident_pcs.submit(pc.rec['device_id'], {'op': 'shell', 'cmd': 'echo old', 'timeout': 120}, 'old-sync')
+    pc.complete(old, {'exit': 0, 'output': 'old'})
+    got = pc.handler._op_shell({'limb': pc.rec['device_id'], 'cmd': 'echo old', 'request_id': 'old-sync'})
+    assert got['result']['output'] == 'old' and len(pc.history()) == 1
+
+
+def test_large_read_explains_supported_file_recovery(pc, monkeypatch):
+    import resident_pcs
+    original = resident_pcs.submit
+    def complete(*args, **kwargs):
+        job = original(*args, **kwargs)
+        pc.complete(job, {'op': 'read', 'content': 'partial', 'truncated': True})
+        return job
+    monkeypatch.setattr(resident_pcs, 'submit', complete)
+    result = pc.handler._op_read({'limb': pc.rec['device_id'], 'path': '/remote/large'})
+    assert 'transfer' in result['warning'] and 'collect' in result['warning']
+    from ibl_v2_adapters import _partial_message
+    assert 'transfer' in _partial_message(result, {'truncations': [{'scope': 'source'}]})

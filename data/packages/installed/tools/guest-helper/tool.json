@@ -51,7 +51,7 @@
           },
           "timeout": {
             "type": "integer",
-            "description": "셸 타임아웃 초 (op=shell, 기본 120 — background 면 기본 1800)"
+            "description": "셸 실행 제한 초 (op=shell, 상주형 기본 1800; 휴대형 동기 120·background 1800)"
           },
           "shell": {
             "type": "string",

@@ -5,16 +5,40 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
+	"time"
 )
 
-func (r *residentRuntime) transferCall(tid string, body map[string]interface{}) (map[string]interface{}, error) {
+// Only idempotent transfer protocol messages are retried, never shell effects.
+func (r *residentRuntime) transferCall(ctx context.Context, tid string, body map[string]interface{}) (map[string]interface{}, error) {
 	body["key"] = r.cfg.Key
 	body["installation_id"] = r.cfg.InstallationID
-	return residentPost(r.cfg.Base+"/limb/resident/transfers/"+tid, body)
+	for attempt := 0; ; attempt++ {
+		out, err := residentPostContext(ctx, r.cfg.Base+"/limb/resident/transfers/"+tid, body)
+		if err == nil || ctx.Err() != nil || attempt >= 4 || !transferTransient(err) {
+			return out, err
+		}
+		timer := time.NewTimer(time.Duration(1<<attempt) * 200 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
+func transferTransient(err error) bool {
+	var httpErr *residentHTTPError
+	if errors.As(err, &httpErr) {
+		return httpErr.status == 408 || httpErr.status == 429 || httpErr.status >= 500
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr) || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)
 }
 func fileDigest(path string) (string, int64, error) {
 	f, e := os.Open(path)
@@ -46,7 +70,7 @@ func (r *residentRuntime) transfer(ctx context.Context, c Command, tid string) m
 	return res
 }
 func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid string) (map[string]interface{}, error) {
-	meta, e := r.transferCall(tid, map[string]interface{}{})
+	meta, e := r.transferCall(ctx, tid, map[string]interface{}{})
 	if e != nil {
 		return nil, e
 	}
@@ -59,7 +83,7 @@ func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid strin
 		if e != nil {
 			return nil, e
 		}
-		meta, e = r.transferCall(tid, map[string]interface{}{"action": "meta", "size": size, "sha256": hash})
+		meta, e = r.transferCall(ctx, tid, map[string]interface{}{"action": "meta", "size": size, "sha256": hash})
 		if e != nil {
 			return nil, e
 		}
@@ -75,7 +99,7 @@ func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid strin
 		if _, e = f.Seek(offset, 0); e != nil {
 			return nil, e
 		}
-		buf := make([]byte, 512*1024)
+		buf := make([]byte, 128*1024)
 		for offset < size {
 			if e = ctx.Err(); e != nil {
 				return nil, e
@@ -84,13 +108,17 @@ func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid strin
 			if e != nil {
 				return nil, e
 			}
-			next, e := r.transferCall(tid, map[string]interface{}{"action": "write", "offset": offset, "data": base64.StdEncoding.EncodeToString(buf[:n])})
+			next, e := r.transferCall(ctx, tid, map[string]interface{}{"action": "write", "offset": offset, "data": base64.StdEncoding.EncodeToString(buf[:n])})
 			if e != nil {
 				return nil, e
 			}
-			offset = int64(next["offset"].(float64))
+			acknowledged, ok := next["offset"].(float64)
+			if !ok || int64(acknowledged) != offset+int64(n) {
+				return nil, fmt.Errorf("invalid_chunk_ack")
+			}
+			offset += int64(n)
 		}
-		return r.transferCall(tid, map[string]interface{}{"action": "commit"})
+		return r.transferCall(ctx, tid, map[string]interface{}{"action": "commit"})
 	}
 	if meta["state"] != "committed" {
 		return nil, fmt.Errorf("source_not_committed")
@@ -129,7 +157,7 @@ func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid strin
 		if e = ctx.Err(); e != nil {
 			return nil, e
 		}
-		chunk, e := r.transferCall(tid, map[string]interface{}{"action": "read", "offset": offset})
+		chunk, e := r.transferCall(ctx, tid, map[string]interface{}{"action": "read", "offset": offset, "chunk_size": 128 * 1024})
 		if e != nil {
 			return nil, e
 		}

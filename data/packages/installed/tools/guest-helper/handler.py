@@ -327,7 +327,8 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
     """공용 후처리 — 봉투 enqueue → (셸 백그라운드 단락) → 동기 대기 → 결과 마무리."""
     import phone_jobs
     import limb_keys
-    if (limb_keys.get_by_device(device_id) or {}).get("registration"):
+    resident = bool((limb_keys.get_by_device(device_id) or {}).get("registration"))
+    if resident:
         import resident_pcs
         try:
             envelope.update({k: tool_input[k] for k in ("mode", "env") if k in tool_input})
@@ -350,7 +351,11 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
                                               f'[self:task]{{op: "wait", ref: $r.task_ref}} 또는 '
                                               f'[limbs:guestpc]{{op: "result", job: "{job_id}"}} 로 확인하세요.'))
 
-    result = phone_jobs.wait_result(job_id, timeout=wait)
+    if resident:
+        import resident_store
+        result = resident_store.wait_result(job_id, timeout=wait)
+    else:
+        result = phone_jobs.wait_result(job_id, timeout=wait)
     if result is None:
         # ★실패 단정 금지: 명령은 그 PC 에서 계속 실행 중일 수 있다(오프라인과 구별 불가).
         #   같은 명령 재전송은 이중 실행 위험 — job_id 로 결과를 회수하는 게 정도(正道).
@@ -359,10 +364,14 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
                 "task_ref": task_receipts.ref(TASK_KIND, job_id), "state": task_receipts.RUNNING,
                 "message": (f"손발 '{alias}' 의 응답을 {wait:.0f}초 안에 못 받았습니다 — 명령이 오래 걸리는 "
                             f"중이거나(설치·빌드 등) 손발이 오프라인입니다. ★같은 명령을 다시 보내지 말고 "
-                            f'[limbs:guestpc]{{op: "result", job: "{job_id}"}} 로 결과를 확인하세요. '
+                            f'[self:task]{{op: "wait", ref: {{kind: "guestpc", task_id: "{job_id}"}}}} 로 결과를 확인하세요. '
                             f'오래 걸릴 명령은 처음부터 background: true 로 보내는 게 좋습니다.')}
     if op == "screen" or op in _INPUT_OPS:
         return _finish_visual(result, device_id, alias, op)
+    if op == "read" and result.get("truncated"):
+        return {"success": True, "limb": device_id, "limb_name": alias, "result": result,
+                "warning": '원격 read 크기 제한입니다. 상주 PC는 transfer action:"receive" 후 '
+                           'collect로 파일을 가져오세요. read에는 offset·limit 인자가 없습니다.'}
     # limb_name 을 항상 실어 어느 PC 에서 돌았는지 결과에 명시(오배송 사후 인지).
     return {"success": True, "limb": device_id, "limb_name": alias, "result": result}
 
@@ -393,7 +402,16 @@ def _op_shell(tool_input: dict) -> dict:
     # 명시 120s 기본을 그대로 두면 설치·빌드가 헬퍼 쪽에서 잘린다.
     background = bool(tool_input.get("background"))
     to = tool_input.get("timeout")
-    to = int(to) if to else (1800 if background else 120)
+    import limb_keys
+    resident = bool((limb_keys.get_by_device(device_id) or {}).get("registration"))
+    if to is None and resident and tool_input.get("request_id"):
+        import resident_pcs
+        import resident_store
+        previous = resident_store.find_request(resident_pcs.resolve(device_id), tool_input["request_id"])
+        if previous:
+            # Preserve defaults captured before upgrade when recovering an old request.
+            to = previous["summary"].get("timeout")
+    to = int(to) if to else (1800 if background or resident else 120)
     envelope["timeout"] = to
     # 명령 실행시간 + 왕복 여유 — 단, MCP 층이 120s 에 먼저 끊으므로 상한을 둔다.
     wait = min(float(to) + 25.0, _SYNC_WAIT_CAP)
@@ -825,12 +843,25 @@ def task_status(ref: dict) -> dict:
     import task_receipts as T
     jid = ref["task_id"]
     import resident_store
-    history = resident_store.history(job=jid)
+    history = resident_store.history(job=jid, limit=5, tail=True)
     if history["tasks"]:
         task = history["tasks"][0]
         state = T.FAILED if task["state"] == "expired" else task["state"]
-        return T.view(ref, state, result=task["result"], progress=history["events"],
+        events = []
+        for event in history["events"]:
+            # Results/commands have their own fields; progress is a bounded preview.
+            item = {k: event[k] for k in ("cursor", "kind", "occurred")}
+            if event["kind"] in {"log", "log_gap"}:
+                payload = json.dumps(event["payload"], ensure_ascii=False)
+                item["preview"] = payload[-2000:]
+                item["preview_truncated"] = len(payload) > 2000
+            events.append(item)
+        view = T.view(ref, state, result=task["result"], progress=events,
+                      progress_scope="recent_5_events", history_cursor=history["cursor"],
+                      history_args={"op": "history", "limb": task["device"], "job": jid, "cursor": 0},
+                      started_at=task["started_at"], ended_at=task["ended_at"], seconds=task["seconds"],
                       error=(task["result"] or {}).get("error"), accepted_at=task["created"])
+        return {**view, "ended_at": task["ended_at"]}
     got = phone_jobs.peek_result(jid)
     if got is not None:
         if got.get("consumed"):

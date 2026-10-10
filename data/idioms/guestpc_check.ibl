@@ -34,5 +34,7 @@
   }
   return {**$작업,ok:true,status:$상태,limb_name:get($작업,"limb_name",$작업.limb),
     settled:$상태 in ["succeeded","failed","cancelled","interrupted"],command_ok:$성공,exit:$종료,
+    started_at:get($관측,"started_at",null),ended_at:get($관측,"ended_at",null),seconds:get($관측,"seconds",null),
+    history_args:get($관측,"history_args",null),progress_scope:get($관측,"progress_scope",null),
     timed_out:get($관측,"timed_out",false),progress:$진행,result:$결과,failure:$실패}
 }

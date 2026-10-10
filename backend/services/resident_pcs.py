@@ -194,6 +194,14 @@ def transfer_write(tid, offset, data):
         row = db.execute("SELECT * FROM resident_transfers WHERE id=?", (tid,)).fetchone()
         if not row or row["state"] == "committed" or row["size"] is None:
             raise ValueError("transfer_not_writable")
+        if not isinstance(offset, int) or offset < 0:
+            raise ValueError("offset_conflict")
+        if offset < row["offset"] and offset + len(data) <= row["offset"]:
+            with transfer_path(tid, True).open("rb") as previous:
+                previous.seek(offset)
+                if previous.read(len(data)) == data:
+                    return {"offset": offset + len(data)}
+            raise ValueError("offset_conflict")
         if offset != row["offset"] or offset + len(data) > row["size"]:
             raise ValueError("offset_conflict")
         path = transfer_path(tid, True)

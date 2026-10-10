@@ -173,9 +173,12 @@ def transfer_action(tid, req, device=False):
         offset = req.get('offset', 0)
         if not isinstance(offset, int) or not 0 <= offset <= row['size']:
             raise HTTPException(400, 'invalid_offset')
+        chunk_size = req.get('chunk_size', 512 * 1024)
+        if not isinstance(chunk_size, int) or not 1 <= chunk_size <= 512 * 1024:
+            raise HTTPException(400, 'invalid_chunk_size')
         with pcs.transfer_path(tid).open('rb') as f:
             f.seek(offset)
-            data = f.read(512 * 1024)
+            data = f.read(chunk_size)
         return {'data': base64.b64encode(data).decode(), 'offset': offset + len(data)}
     if action != 'info':
         raise HTTPException(400, 'invalid_transfer_action')

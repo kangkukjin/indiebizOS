@@ -386,3 +386,31 @@ def test_usb_folder_all_platforms_no_preassigned_pc_and_stable_key(registry, mon
         assert cfg['key'] not in listing.text and out.json()['key'] not in listing.text
         assert client.get('/remote-pcs/app', follow_redirects=False).headers['location'] == '/launcher/app'
         assert client.post('/remote-pcs/usb/revoke').json()['ready'] is False
+
+
+def test_chunk_response_loss_is_idempotent_and_conflicting_bytes_rejected(registry):
+    rec = registry()
+    data = b'abcdef'
+    row = pcs.transfer_create(rec['device_id'], 'from_pc', 'data', len(data), hashlib.sha256(data).hexdigest())
+    tid = row['id']
+    assert pcs.transfer_write(tid, 0, data[:3]) == pcs.transfer_write(tid, 0, data[:3])
+    with pytest.raises(ValueError, match='offset_conflict'):
+        pcs.transfer_write(tid, 0, b'xxx')
+    pcs.transfer_write(tid, 3, data[3:])
+    assert pcs.transfer_commit(tid)['state'] == 'committed'
+    assert pcs.transfer_path(tid).read_bytes() == data
+
+
+def test_failed_transfer_new_attempt_reuses_blob_and_request_is_still_idempotent(registry, tmp_path):
+    rec = registry()
+    source = tmp_path / 'source.bin'
+    source.write_bytes(b'resume')
+    args = {'action': 'send', 'local_path': str(source), 'path': '/remote/data', 'request_id': 'first'}
+    first = pcs.transfer_local(rec['device_id'], args)
+    pcs.sync(rec['key'], 'a'*32, [event(first['job_id'], payload={'error': 'transfer_failed'})])
+    assert pcs.transfer_local(rec['device_id'], args)['job_id'] == first['job_id']
+    retry_args = {**args, 'request_id': 'retry-1', 'transfer_id': first['transfer_id']}
+    retry = pcs.transfer_local(rec['device_id'], retry_args)
+    assert retry['job_id'] != first['job_id'] and retry['transfer_id'] == first['transfer_id']
+    assert pcs.transfer_local(rec['device_id'], retry_args)['job_id'] == retry['job_id']
+    assert resident_store.history(job=first['job_id'])['tasks'][0]['state'] == 'failed'

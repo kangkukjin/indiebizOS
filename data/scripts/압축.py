@@ -11,6 +11,8 @@ args(JSON stdin):
   unpack: path: zip/tar(.gz/.bz2/.xz) · out_dir: 풀 폴더(생략 = 압축 파일 옆 `<이름>/`)
           · include: ["*.pdf"] 일부만 · overwrite: false(이미 있는 파일은 거절)
           경로 탈출(../, 절대경로) 항목은 거절 — zip slip 차단
+  ZIP 이름: name_encoding 기본 auto(UTF-8 표시 또는 유효한 UTF-8, 아니면 CP437).
+          모호한 옛 파일은 cp437/cp949 등 명시. 목록·필터·풀기에 같은 해석 적용.
   list:   path: zip/tar → 항목 items(name·size·compressed·is_dir·modified)
 출력: pack → {"items":[{name,size}], "output", "count", "bytes"} / unpack → {"items":[{name,out,size}], "out_dir", "count"}
       / list → {"items":[…], "count", "total_size"}. 실패는 success:false + error.
@@ -143,6 +145,19 @@ def op_pack(args: dict) -> dict:
     return {"items": items, "output": str(output), "count": len(items), "bytes": output.stat().st_size}
 
 
+def _zip_name(info, encoding="auto"):
+    """Unflagged Info-ZIP/macOS names can be UTF-8; retain CP437 otherwise."""
+    if info.flag_bits & 0x800:
+        return info.filename
+    raw = info.filename.encode("cp437")
+    if encoding != "auto":
+        return raw.decode(encoding)
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return info.filename
+
+
 # ---------------------------------------------------------------- unpack
 
 def _safe_dest(out_dir: Path, name: str) -> Path | None:
@@ -174,7 +189,7 @@ def op_unpack(args: dict) -> dict:
             if enc:
                 return {"success": False, "error": f"암호가 걸린 항목이 있어 풀지 못합니다: {enc[:5]}"}
             for info in zf.infolist():
-                name = info.filename
+                name = _zip_name(info, args.get("name_encoding", "auto"))
                 if info.is_dir():
                     continue
                 if include and not _match(name, include):
@@ -242,7 +257,7 @@ def op_list(args: dict) -> dict:
     if zipfile.is_zipfile(str(src)):
         with zipfile.ZipFile(str(src)) as zf:
             for i in zf.infolist():
-                items.append({"name": i.filename, "size": i.file_size, "compressed": i.compress_size,
+                items.append({"name": _zip_name(i, args.get("name_encoding", "auto")), "size": i.file_size, "compressed": i.compress_size,
                               "is_dir": i.is_dir(), "modified": datetime(*i.date_time).isoformat(),
                               "encrypted": bool(i.flag_bits & 0x1)})
     elif _is_tar(src):

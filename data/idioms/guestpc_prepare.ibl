@@ -2,7 +2,10 @@
 [def:외부PC준비]($PC,$환경조회=true) {
   [if:len($PC)==0] { return {ok:false,status:"invalid_input",reason:"PC 이름 또는 device_id가 필요합니다"} }
   $목록 = [self:limb]{op:"list"}
-  $대상 = $목록.items >> [table:filter]{where:($행)=>$행.alias==$PC or $행.device_id==$PC}
+  $대상 = $목록.items >> [table:filter]{where:($행)=>$행.device_id==$PC}
+  [if:len($대상)==0] {
+    $대상 = $목록.items >> [table:filter]{where:($행)=>$행.alias==$PC and get($행,"revoked",false)==false and get($행,"expired",false)==false and (get($행,"registration",null)==null or get($행.registration,"state","active")!="removed")}
+  }
   [if:len($대상)!=1] { return {ok:false,status:"target_not_unique",reason:"대상이 없거나 중복됩니다",items:$대상} }
   $손발 = $대상[0]
   $등록 = get($손발,"registration",{})

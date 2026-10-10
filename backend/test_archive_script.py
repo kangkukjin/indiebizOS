@@ -91,3 +91,27 @@ def test_overlap_include_and_empty_files_still_roundtrip(archive, source, tmp_pa
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('raw,expected', [
+    ('바다 아침.jpg'.encode(), '바다 아침.jpg'),
+    ('café.jpg'.encode('cp437'), 'café.jpg'),
+    (b'../' + '밖.txt'.encode(), '../밖.txt'),
+])
+def test_unflagged_zip_names_list_filter_and_extract(archive, tmp_path, raw, expected):
+    class LegacyName(zipfile.ZipInfo):
+        def _encodeFilenameFlags(self):
+            return raw, 0
+    src = tmp_path / 'legacy.zip'
+    with zipfile.ZipFile(src, 'w') as z:
+        z.writestr(LegacyName('placeholder'), b'\x00\xff\r\n')
+    listed = archive.op_list({'path': str(src)})
+    assert listed['items'][0]['name'] == expected
+    out = tmp_path / 'out'
+    result = archive.op_unpack({'path': str(src), 'out_dir': str(out), 'include': [expected]})
+    if expected.startswith('../'):
+        assert result['rejected_unsafe'] == [expected]
+        assert not (tmp_path / '밖.txt').exists()
+    else:
+        assert (out / expected).read_bytes() == b'\x00\xff\r\n'
+        assert result['items'][0]['name'] == expected

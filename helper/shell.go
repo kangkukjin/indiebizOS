@@ -377,19 +377,29 @@ func doInfo() map[string]interface{} {
 		"op": "info", "os": runtime.GOOS, "arch": runtime.GOARCH,
 		"hostname": host, "cwd": cwd,
 		"user": osUser(), "home": userHome(),
-		"os_version": osVersion(),
-		"admin":      isAdmin(),
-		"shells":     whichOf(shellCandidates()),
-		"package_managers": whichOf([]string{
-			"winget", "choco", "scoop", "brew", "apt", "dnf", "pacman", "zypper"}),
-		"tools": whichOf([]string{"git", "python3", "python", "node", "curl", "docker"}),
-		"gui":   guiCapabilities(),
-		"path":  os.Getenv("PATH"),
+		"os_version":       osVersion(),
+		"admin":            isAdmin(),
+		"shells":           whichOf(shellCandidates()),
+		"package_managers": whichOf(packageManagerCandidates(runtime.GOOS)),
+		"tools":            whichOf([]string{"git", "python3", "python", "node", "curl", "docker", "zip", "unzip", "tar", "shasum", "sha256sum", "sips", "ditto"}),
+		"gui":              guiCapabilities(),
+		"path":             os.Getenv("PATH"),
 	}
 	if n := len(getSessionEnv()); n > 0 {
 		info["session_env"] = getSessionEnv() // 지금 이어지고 있는 환경(venv 등)
 	}
 	return info
+}
+
+func packageManagerCandidates(osName string) []string {
+	switch osName {
+	case "darwin":
+		return []string{"brew", "port"}
+	case "windows":
+		return []string{"winget", "choco", "scoop"}
+	default:
+		return []string{"apt", "dnf", "pacman", "zypper", "apk", "brew"}
+	}
 }
 
 func shellCandidates() []string {

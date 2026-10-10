@@ -525,7 +525,7 @@ func doList(c Command) map[string]interface{} {
 	if err != nil {
 		return errResult("list_failed", err.Error())
 	}
-	var files []map[string]interface{}
+	files := make([]map[string]interface{}, 0, len(entries))
 	for _, e := range entries {
 		info, _ := e.Info()
 		var size int64

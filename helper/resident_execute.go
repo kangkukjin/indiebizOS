@@ -18,12 +18,22 @@ import (
 	"time"
 )
 
+type residentHTTPError struct {
+	status int
+	body   string
+}
+
+func (e *residentHTTPError) Error() string { return fmt.Sprintf("HTTP %d: %s", e.status, e.body) }
+
 func residentPost(url string, body interface{}) (map[string]interface{}, error) {
+	return residentPostContext(context.Background(), url, body)
+}
+func residentPostContext(ctx context.Context, url string, body interface{}) (map[string]interface{}, error) {
 	b, e := json.Marshal(body)
 	if e != nil {
 		return nil, e
 	}
-	req, e := http.NewRequest("POST", url, bytes.NewReader(b))
+	req, e := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
 	if e != nil {
 		return nil, e
 	}
@@ -41,7 +51,7 @@ func residentPost(url string, body interface{}) (map[string]interface{}, error) 
 		return nil, e
 	}
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP %d: %s", res.StatusCode, string(data))
+		return nil, &residentHTTPError{res.StatusCode, string(data)}
 	}
 	var out map[string]interface{}
 	e = json.Unmarshal(data, &out)

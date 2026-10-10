@@ -19,6 +19,7 @@ def schema(db):
         event_id TEXT NOT NULL, kind TEXT NOT NULL, occurred REAL NOT NULL,
         received REAL NOT NULL, payload TEXT NOT NULL, UNIQUE(device,event_id))""")
     db.execute("CREATE INDEX IF NOT EXISTS resident_events_job ON resident_events(job,cursor)")
+    db.execute("CREATE INDEX IF NOT EXISTS resident_events_kind ON resident_events(job,kind,cursor)")
 
 
 def _event(db, device, job, event_id, kind, payload, occurred=None):
@@ -139,7 +140,22 @@ def cancellations(device):
                                        "AND cancel_requested=1 AND result IS NULL", (device,))]
 
 
-def history(device=None, job=None, cursor=0, limit=100):
+def wait_result(job, timeout):
+    deadline = time.monotonic() + max(0, timeout)
+    while True:
+        with phone_jobs._db() as db:
+            schema(db)
+            task = db.execute("SELECT state,result FROM resident_tasks WHERE id=?", (job,)).fetchone()
+        if not task:
+            return None
+        if task["result"] is not None:
+            return json.loads(task["result"])
+        if task["state"] in {"cancelled", "expired", "unknown"} or time.monotonic() >= deadline:
+            return None
+        phone_jobs._pause(deadline - time.monotonic())
+
+
+def history(device=None, job=None, cursor=0, limit=100, *, tail=False):
     limit = int(limit)
     if not 1 <= limit <= 200:
         raise ValueError("limit must be 1..200")
@@ -161,6 +177,14 @@ def history(device=None, job=None, cursor=0, limit=100):
             current = db.execute("SELECT state FROM jobs WHERE id=?", (task["id"],)).fetchone()
             if current and current[0] in {"expired", "unknown"} and task["result"] is None:
                 task["state"] = current[0]
+            times = {}
+            for kind in ("started", "result"):
+                event = db.execute("SELECT occurred FROM resident_events WHERE job=? AND kind=? "
+                                   "ORDER BY cursor LIMIT 1", (task["id"], kind)).fetchone()
+                times[kind] = event[0] if event else None
+            task["started_at"], task["ended_at"] = times["started"], times["result"]
+            task["seconds"] = (times["result"] - times["started"]
+                               if all(v is not None for v in times.values()) else None)
             task.pop("fingerprint", None)
         ev_where, ev_params = ["cursor> ?"], [max(0, int(cursor))]
         for key, value in (("device", device), ("job", job)):
@@ -168,7 +192,9 @@ def history(device=None, job=None, cursor=0, limit=100):
                 ev_where.append(key + "=?")
                 ev_params.append(value)
         events = [dict(r) for r in db.execute("SELECT * FROM resident_events WHERE " +
-                    " AND ".join(ev_where) + " ORDER BY cursor LIMIT ?", (*ev_params, limit))]
+                    " AND ".join(ev_where) + (" ORDER BY cursor DESC LIMIT ?" if tail else " ORDER BY cursor LIMIT ?"), (*ev_params, limit))]
+        if tail:
+            events.reverse()
         for e in events:
             e["payload"] = json.loads(e["payload"])
         return {"tasks": tasks, "events": events,

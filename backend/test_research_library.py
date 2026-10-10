@@ -173,5 +173,51 @@ def test_docx_uses_existing_converter_without_chat_truncation(lib, tmp_path):
     assert lib.version(receipt['version_ref'])['index_state'] == 'pending'
 
 
+
+def test_web_snapshot_indexes_body_and_preserves_raw_and_old_citations(lib, tmp_path):
+    from notebook_store import _paragraphs_with_loc
+    body = '교육 자료의 깨끗한 기사 본문입니다. ' * 100
+    payload = {'text': body, 'url': 'https://example.org/article',
+               '_page_structure': {'html': '<nav>메뉴전용잡음</nav>' * 100}}
+    raw = json.dumps(payload, ensure_ascii=False)
+    path = tmp_path / 'crawl.json'
+    path.write_text(raw)
+    # 이전 버전이 JSON 전체를 추출한 경우를 재현한다.
+    receipt = lib.capture(raw, title='crawl.json', origin=str(path), kind='file', mime='application/json',
+                          paragraphs=_paragraphs_with_loc(raw))
+    old_version = receipt['version_ref']
+    lib.index_pending()
+    assert lib.store.blob(lib.version(old_version)['blob']).decode() == raw
+    assert '메뉴전용잡음' in lib.read(old_version, revision=1)['text']
+    current = lib.read(old_version)
+    assert current['extraction_revision'] == 2 and '기사 본문' in current['text']
+    assert '메뉴전용잡음' not in current['text']
+    lib.prepare_index()
+    assert lib.read(old_version)['extraction_revision'] == 2  # 재시작/중복 실행 안전
+    assert not lib.search('메뉴전용잡음')['items']
+    assert lib.search('기사 본문')['items']
+    # 새 수집은 처음부터 본문을 추출한다.
+    new_path = tmp_path / 'new.json'; new_path.write_text(raw + ' ')
+    new = lib.add_file(new_path)
+    assert '메뉴전용잡음' not in lib.read(new['version_ref'])['text']
+    ordinary = tmp_path / 'user.json'
+    ordinary.write_text(json.dumps({'text': '사용자 본문', 'other': '다른 중요 필드'}, ensure_ascii=False))
+    uploaded = lib.add_file(ordinary)
+    assert '다른 중요 필드' in lib.read(uploaded['version_ref'])['text']
+
+
+
+def test_explicit_add_in_agent_turn_inherits_capture_run(lib, tmp_path):
+    tid = lib.store.create_thread('교육')['id']
+    run, _ = lib.store.begin_run(tid, '자료 보존', 'request')
+    path = tmp_path / 'article.txt'; path.write_text('교육 기사 본문')
+    with scope({'project_uid': lib.store.uid, 'thread_id': tid, 'run_id': run}):
+        ResearchLibrary(lib.store).add_file(path)
+    ResearchLibrary(lib.store, tid).capture('사용자의 수동 추가', title='수동')
+    with lib.store.connect() as db:
+        rows = db.execute('SELECT run_id FROM research_captures ORDER BY rowid').fetchall()
+    assert [r[0] for r in rows] == [run, 'manual']
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

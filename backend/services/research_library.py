@@ -27,7 +27,7 @@ class ResearchLibrary:
         self.index = NotebookStore(store.root / 'index.db')
 
     def capture(self, data, *, title, origin='', kind='text', mime='text/plain', coverage='full',
-                thread=None, run='manual', call=None, item='0', paragraphs=None, acquired_result=None):
+                thread=None, run=None, call=None, item='0', paragraphs=None, acquired_result=None):
         if coverage not in {'full', 'partial', 'snippet', 'unknown'}:
             raise ValueError('잘못된 확보 범위')
         if isinstance(data, str):
@@ -35,6 +35,11 @@ class ResearchLibrary:
         if self.thread and thread and thread != self.thread:
             raise PermissionError('다른 대화에 자료를 저장할 수 없습니다')
         thread = self.thread or thread
+        if run is None:
+            from research_context import current
+            context = current() or {}
+            run = (context.get('run_id') if context.get('project_uid') == self.store.uid
+                   and context.get('thread_id') == thread else None) or 'manual'
         blob = self.store.put_blob(data)
         result_blob = self.store.put_blob(json_text(acquired_result)) if acquired_result is not None else None
         call = call or identifier()
@@ -87,7 +92,7 @@ class ResearchLibrary:
         snapshot.parent.mkdir(exist_ok=True)
         try:
             snapshot.write_bytes(raw)
-            paras, error = extract_file(str(snapshot))
+            paras, error = _extract_file(snapshot)
             if error:
                 self._job_state(receipt['version_ref'], 'unsupported', error)
             else:
@@ -166,10 +171,27 @@ class ResearchLibrary:
         raise ValueError('원본은 보존됐지만 텍스트를 추출하지 못했습니다')
 
     def prepare_index(self):
+        self._upgrade_web_snapshots()
         if not self.index.db_path.exists():
             with self.store.connect(True) as db:
                 self.store.check_epoch(db)
                 db.execute("UPDATE research_jobs SET state='pending',index_source=NULL WHERE state='ready'")
+
+    def _upgrade_web_snapshots(self):
+        """옛 웹 원본 JSON의 검색 추출본만 새 판본으로 교체한다. 원문·옛 인용은 보존한다."""
+        migration = 'web-snapshot-body-v1'
+        with self.store.connect() as db:
+            if db.execute('SELECT 1 FROM research_migrations WHERE name=?', (migration,)).fetchone():
+                return
+            versions = db.execute("SELECT v.id,v.blob FROM research_versions v JOIN research_sources s ON s.id=v.source_id "
+                                  "WHERE s.kind='file' AND v.mime='application/json'").fetchall()
+        for row in versions:
+            body = _web_snapshot_body(self.store.blob(row['blob']))
+            if body is not None:
+                self._extraction(row['id'], _paragraphs_with_loc(body))
+        with self.store.connect(True) as db:
+            self.store.check_epoch(db)
+            db.execute('INSERT OR IGNORE INTO research_migrations(name) VALUES (?)', (migration,))
 
     def retry(self, version):
         v = self.version(version)
@@ -181,7 +203,7 @@ class ResearchLibrary:
             snapshot.parent.mkdir(exist_ok=True)
             try:
                 snapshot.write_bytes(self.store.blob(v['blob']))
-                paras, error = extract_file(str(snapshot))
+                paras, error = _extract_file(snapshot)
                 if error:
                     self._job_state(version, 'unsupported', error)
                     return {**self._receipt(v), 'message': error}
@@ -351,7 +373,7 @@ class ResearchLibrary:
                 snapshot = self.store.root / 'staging' / (identifier() + '.pdf')
                 try:
                     snapshot.write_bytes(raw)
-                    paras, error = extract_file(str(snapshot))
+                    paras, error = _extract_file(snapshot)
                     if error:
                         raise ValueError(error)
                 finally:
@@ -367,3 +389,23 @@ class ResearchLibrary:
         except Exception as exc:
             self._job_state(receipt['version_ref'], 'unsupported', str(exc))
         return receipt
+
+
+def _web_snapshot_body(raw):
+    """수집기의 구조화된 웹 스냅샷을 알아본다. 일반 JSON 첨부의 필드는 버리지 않는다."""
+    try:
+        obj = json.loads(raw)
+    except (ValueError, TypeError, UnicodeDecodeError):
+        return None
+    if (isinstance(obj, dict) and isinstance(obj.get('text'), str) and obj['text'].strip()
+            and ('_page_structure' in obj or ('resolved_url' in obj and 'method' in obj))):
+        return obj['text']
+    return None
+
+
+def _extract_file(path):
+    if path.suffix.lower() == '.json':
+        body = _web_snapshot_body(path.read_bytes())
+        if body is not None:
+            return _paragraphs_with_loc(body), ''
+    return extract_file(str(path))

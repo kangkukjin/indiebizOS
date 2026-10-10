@@ -196,5 +196,39 @@ def test_independent_research_cannot_delegate():
         before({'router': 'handler', 'tool': 'search'}, {'query': 'education'})
 
 
+def test_topic_title_is_agent_name_and_role_template_survives_rename(tmp_path, monkeypatch):
+    import threading
+    from episode_logger import EpisodeLogger
+    (tmp_path / 'agents.yaml').write_text('agents:\n  - id: agent_001\n    name: 집사\n')
+    (tmp_path / 'agent_집사_role.txt').write_text('기본 역할의 공통 지침')
+    store = ResearchStore(tmp_path, 'display-name')
+    tid = store.create_thread('교육')['id']
+    seen = []
+    monkeypatch.setattr(research_runner, '_search', None)
+    def init(runner):
+        assert '기본 역할의 공통 지침' in runner._load_role()
+        runner.ai = SimpleNamespace(agent_id=None, _provider=None)
+    def cognitive(runner, message, history, **kwargs):
+        assert runner.config['name'] == thread_context.get_current_agent_name() == kwargs['agent_name']
+        seen.append((runner.config['name'], runner.config['id'], runner.config['_selected_agent']))
+        yield {'type': 'final', 'content': '답변'}
+    logged = []
+    monkeypatch.setattr(research_runner.ResearchRunner, '_init_ai', init)
+    monkeypatch.setattr(research_runner.ResearchRunner, 'cognitive_stream', cognitive)
+    monkeypatch.setattr(EpisodeLogger, 'start_episode', lambda name, *args, **kw: logged.append(name))
+    monkeypatch.setattr(EpisodeLogger, 'end_episode', lambda: None)
+    try:
+        for title in ('교육', '교육 정책'):
+            store.update_thread(tid, title=title)
+            run, _ = store.begin_run(tid, '계속', title)
+            list(research_runner.stream(store, tid, run, '계속', threading.Event()))
+            store.write_response(tid, run, '답변', 'completed')
+        assert logged == ['교육', '교육 정책']
+        assert seen[0][1] == seen[1][1]  # 표시 이름 변경은 기억·CLI 신원을 바꾸지 않는다.
+        assert seen[0][2] == seen[1][2] == 'agent_001'
+    finally:
+        thread_context.clear_all_context()
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

@@ -46,7 +46,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 파일·등록/임시 스크립트는 사본에서 실행하고 적용·재기동은 기존 제어자가 소유한다.
 [수리 환경 능력 연결](../../docs/SELF_REPAIR_WORKSPACE_COMPLETION_DESIGN_2026_10_03.md#수리-사본의-목적과-능력-연결-4295-후속).
 
-**연구 프로젝트**는 런처에서 여러 주제 대화와 공용 자료실을 함께 만드는 유형으로 설계했다. 조사 중 확보한 원문·버전을 자동 보존하고 관련 자료를 회수하며 추가 조사를 이어가는 구조다. 런처의 새 프로젝트에서 연구 유형을 고르면 주제별 대화·자료실이 열린다. 정본은 프로젝트의 conversations.db와 research/objects, 검색 색인은 재생성 가능하다. API 모델의 IBL 자료 획득을 자동 보존하며 CLI 모델 설정은 API 보조 모델로 실행한다. [설계와 구현 범위](../../docs/RESEARCH_PROJECT_DESIGN_2026_10_10.md), [사용·복구 가이드](../guides/research_project.md)를 따른다.
+**연구 프로젝트**는 런처에서 여러 주제 대화와 각 대화의 독립 자료실을 만드는 유형으로 설계했다. 조사 중 확보한 원문·버전을 자동 보존하고 관련 자료를 회수하며 추가 조사를 이어가는 구조다. 런처의 새 프로젝트에서 연구 유형을 고르면 주제별 대화·자료실이 열린다. 정본은 프로젝트의 conversations.db와 research/objects, 검색 색인은 재생성 가능하다. API 모델의 IBL 자료 획득을 자동 보존하며 CLI 모델 설정은 API 보조 모델로 실행한다. [설계와 구현 범위](../../docs/RESEARCH_PROJECT_DESIGN_2026_10_10.md), [사용·복구 가이드](../guides/research_project.md)를 따른다.
 
 **작업 공간 앱 — 문서·스프레드시트·코딩**(2026-10-02~). 앱 표면에는 결정화된 IBL 계기 말고도, 파일과 저장소를 사람과 AI가 같은 자리에서 다루는 독립 창 셋이 있다.
 - **문서**(`/documents`): 소스 원문과 Markdown 미리보기, 로컬 ONLYOFFICE 편집 서버의 DOCX/ODT/RTF/PDF 원형 편집, 로컬 RHWP 엔진의 HWP/HWPX 원형 편집, PDF 쪽 회전·삭제·재정렬과 OCR 교정 사본.

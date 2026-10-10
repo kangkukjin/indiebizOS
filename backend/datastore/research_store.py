@@ -50,13 +50,22 @@ class ResearchStore:
                 db.execute('ALTER TABLE research_project ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1')
             columns = {r[1] for r in db.execute('PRAGMA table_info(messages)')}
             for name, declaration in [('thread_id', 'TEXT'), ('research_run', 'TEXT'),
-                                      ('research_role', 'TEXT'), ('research_status', "TEXT DEFAULT 'complete'")]:
+                                      ('research_role', 'TEXT'), ('research_status', "TEXT DEFAULT 'complete'"),
+                                      ('research_attachments', "TEXT NOT NULL DEFAULT '[]'")]:
                 if name not in columns:
                     db.execute(f'ALTER TABLE messages ADD COLUMN {name} {declaration}')
             if 'extraction_revision' not in {r[1] for r in db.execute('PRAGMA table_info(research_citations)')}:
                 db.execute('ALTER TABLE research_citations ADD COLUMN extraction_revision INTEGER NOT NULL DEFAULT 1')
             if 'result_blob' not in {r[1] for r in db.execute('PRAGMA table_info(research_captures)')}:
                 db.execute("ALTER TABLE research_captures ADD COLUMN result_blob TEXT")
+            # 옛 공용 수동 자료는 버리지 않고 별도 대화에 보존한다. 자동 수집 자료는 원래 thread_id 유지.
+            if not db.execute("SELECT 1 FROM research_migrations WHERE name='thread-libraries'").fetchone():
+                if db.execute('SELECT 1 FROM research_captures WHERE thread_id IS NULL').fetchone():
+                    legacy = identifier()
+                    db.execute('INSERT INTO research_threads(id,title,created_at,updated_at) VALUES (?,?,?,?)',
+                               (legacy, '이전 공용 자료', now(), now()))
+                    db.execute('UPDATE research_captures SET thread_id=? WHERE thread_id IS NULL', (legacy,))
+                db.execute("INSERT INTO research_migrations(name) VALUES ('thread-libraries')")
             db.execute('CREATE INDEX IF NOT EXISTS messages_thread ON messages(thread_id,id)')
             db.commit()
 
@@ -137,6 +146,25 @@ class ResearchStore:
             raise IOError('저장 원문 손상')
         return data
 
+    def material_path(self, digest, mime):
+        """확장자를 요구하는 기존 이미지/문서 도구용 사본. 정본 blob에서 재생성 가능하다."""
+        import mimetypes
+        suffix = mimetypes.guess_extension(mime) or '.bin'
+        if len(digest) != 64 or any(c not in '0123456789abcdef' for c in digest):
+            raise ValueError('잘못된 원문 참조')
+        path = self.root / 'files' / (digest + suffix)
+        with project_lock(self.path):
+            if not path.exists():
+                data = self.blob(digest)
+                path.parent.mkdir(exist_ok=True)
+                tmp = path.with_name(identifier())
+                try:
+                    tmp.write_bytes(data)
+                    os.replace(tmp, path)
+                finally:
+                    tmp.unlink(missing_ok=True)
+        return str(path)
+
     def create_thread(self, title, agent='', mode='research'):
         if not str(title).strip() or mode not in {'research', 'library'}:
             raise ValueError('대화 제목과 조사 모드를 확인하세요')
@@ -195,12 +223,13 @@ class ResearchStore:
         self.thread(tid)
         with self.connect() as db:
             rows = db.execute('SELECT id,content,message_time,research_role AS role,research_status AS status,'
-                              'research_run AS run_id FROM messages WHERE thread_id=? AND id<? AND content LIKE ? '
+                              'research_run AS run_id,research_attachments FROM messages WHERE thread_id=? AND id<? AND content LIKE ? '
                               'ORDER BY id DESC LIMIT ?', (tid, before or 9223372036854775807,
                                                          '%' + query + '%', limit + 1)).fetchall()
             result = []
             for row in reversed(rows[:limit]):
                 item = dict(row)
+                item['attachments'] = json.loads(item.pop('research_attachments') or '[]')
                 item['mine'] = row['role'] == 'user'
                 item['citations'] = [dict(r) for r in db.execute(
                     'SELECT * FROM research_citations WHERE message_id=?', (row['id'],))]
@@ -208,8 +237,8 @@ class ResearchStore:
         return {'items': result, 'next_cursor': str(rows[limit - 1]['id']) if len(rows) > limit else None,
                 'pages': [{'title': '이전 대화 읽기', 'thread_ref': tid, 'cursor': str(rows[limit - 1]['id'])}] if len(rows) > limit else []}
 
-    def begin_run(self, tid, message, request_id):
-        if not message.strip() or not request_id:
+    def begin_run(self, tid, message, request_id, attachments=()):
+        if (not message.strip() and not attachments) or not request_id:
             raise ValueError('메시지와 요청 신원이 필요합니다')
         with self.connect(True) as db:
             self.check_epoch(db)
@@ -220,7 +249,8 @@ class ResearchStore:
             old = db.execute('SELECT task_id,original_request FROM tasks WHERE requester_channel=?',
                              ('research:' + tid + ':' + request_id,)).fetchone()
             if old:
-                if old['original_request'] != message:
+                prior = db.execute("SELECT research_attachments FROM messages WHERE research_run=? AND research_role='user'", (old['task_id'],)).fetchone()
+                if old['original_request'] != message or json.loads(prior[0] or '[]') != list(attachments):
                     raise ResearchConflict('같은 요청 신원으로 다른 메시지를 보낼 수 없습니다')
                 return old['task_id'], False
             if row['active_run'] or row['trashed'] or row['archived']:
@@ -229,8 +259,8 @@ class ResearchStore:
             db.execute('INSERT INTO tasks(task_id,requester,requester_channel,original_request,delegated_to,status) '
                        'VALUES (?,?,?,?,?,?)', (run, 'user@gui', 'research:' + tid + ':' + request_id,
                                                message, row['agent'], 'running'))
-            db.execute("INSERT INTO messages(from_agent_id,to_agent_id,content,contact_type,thread_id,research_run,research_role) "
-                       "VALUES (?,?,?,'research',?,?,'user')", (user, agent, message, tid, run))
+            db.execute("INSERT INTO messages(from_agent_id,to_agent_id,content,contact_type,thread_id,research_run,research_role,research_attachments) "
+                       "VALUES (?,?,?,'research',?,?,'user',?)", (user, agent, message, tid, run, json_text(list(attachments))))
             db.execute("INSERT INTO messages(from_agent_id,to_agent_id,content,contact_type,thread_id,research_run,research_role,research_status) "
                        "VALUES (?,?,'','research',?,?,'assistant','running')", (agent, user, tid, run))
             db.execute('UPDATE research_threads SET active_run=?,updated_at=? WHERE id=?', (run, now(), tid))
@@ -266,6 +296,10 @@ class ResearchStore:
 
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS research_migrations(name TEXT PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS research_thread_sources(
+ thread_id TEXT NOT NULL REFERENCES research_threads(id),source_id TEXT NOT NULL REFERENCES research_sources(id),
+ excluded INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(thread_id,source_id));
 CREATE TABLE IF NOT EXISTS research_project(uid TEXT PRIMARY KEY,epoch INTEGER NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS research_threads(
  id TEXT PRIMARY KEY,title TEXT NOT NULL,agent TEXT NOT NULL DEFAULT '',mode TEXT NOT NULL DEFAULT 'research',
@@ -285,6 +319,7 @@ CREATE TABLE IF NOT EXISTS research_captures(
  id TEXT PRIMARY KEY,version_id TEXT NOT NULL REFERENCES research_versions(id),thread_id TEXT,
  run_id TEXT,call_id TEXT NOT NULL,item_key TEXT NOT NULL,created_at TEXT NOT NULL,result_blob TEXT,
  UNIQUE(run_id,call_id,item_key));
+CREATE INDEX IF NOT EXISTS research_capture_scope ON research_captures(thread_id,version_id);
 CREATE TABLE IF NOT EXISTS research_jobs(
  version_id TEXT PRIMARY KEY REFERENCES research_versions(id),state TEXT NOT NULL DEFAULT 'pending',
  error TEXT NOT NULL DEFAULT '',index_source INTEGER,updated_at TEXT NOT NULL);

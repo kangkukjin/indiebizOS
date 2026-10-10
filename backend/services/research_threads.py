@@ -51,7 +51,7 @@ def active_project(path):
         return any(str(Path(path).resolve()) == entry['path'] for entry in _active.values())
 
 
-def start(store, tid, message, request_id):
+def start(store, tid, message, request_id, attachments=()):
     global _pool
     if not _run_stream:
         raise RuntimeError('연구 실행기가 초기화되지 않았습니다')
@@ -60,7 +60,7 @@ def start(store, tid, message, request_id):
     lease = runtime_work.reserve('research-chat')
     with _lock:
         try:
-            run, fresh = store.begin_run(tid, message, request_id)
+            run, fresh = store.begin_run(tid, message, request_id, attachments)
         except BaseException:
             lease.close()
             raise
@@ -164,13 +164,17 @@ def project_operation(params):
     row, store = resolve(params.get('project_ref') or params.get('project_id'))
     op = params.get('op')
     tid = params.get('thread_ref')
+    from research_context import current
+    context = current() or {}
+    if context.get('thread_id') and (tid != context['thread_id'] or op in {'thread_list', 'thread_create'}):
+        raise PermissionError('현재 대화의 기록만 사용할 수 있습니다')
     limit = int(params.get('limit') or 50)
     if not 1 <= limit <= 100:
         raise ValueError('limit은 1~100이어야 합니다')
     cursor = int(params.get('cursor') or 0)
     if op == 'research_view':
         from research_view import manifest
-        return {'success': True, 'manifest': manifest(store.uid, row['name']), 'items': []}
+        return {'success': True, 'manifest': manifest(store.uid, row['name'], store.thread(tid)['id']), 'items': []}
     if op == 'thread_list':
         return store.threads(bool(params.get('archived')), params.get('query') or '', cursor, limit)
     if op == 'thread_create':
@@ -193,6 +197,8 @@ def project_operation(params):
         labels = {'complete': '', 'completed': '', 'running': '답변 중', 'cancelled': '중단', 'interrupted': '재시작으로 중단', 'failed': '실패'}
         for item in out['items']:
             item['status_label'] = labels.get(item['status'], item['status'])
+            for attachment in item['attachments']:
+                attachment['path'] = store.material_path(attachment['blob'], attachment['mime'])
         return {**out, **thread, 'materials': materials, 'citations': [dict(c, version_ref=c['version_id']) for m in out['items'] for c in m['citations']], 'project_ref': store.uid,
                 'controls': [{'title': '', 'thread_ref': tid}] if thread['active_run'] else [],
                 'run_status': '조사 중 — 확보한 자료는 순서대로 저장됩니다' if thread['active_run'] else '질문을 이어갈 수 있습니다'}
@@ -204,7 +210,9 @@ def project_operation(params):
     if op == 'thread_search':
         return store.messages(tid, cursor or None, limit, params.get('query') or '')
     if op == 'thread_send':
-        return start(store, tid, str(params.get('message') or ''), params.get('request_id') or identifier())
+        request = params.get('request_id') or identifier()
+        attachments = prepare_attachments(store, tid, params.get('attachments') or [], request)
+        return start(store, tid, str(params.get('message') or ''), request, attachments)
     if op == 'thread_cancel':
         run = thread['active_run']
         return cancel_task(task_receipts.ref('research', run, store.uid)) if run else {'items': [], 'message': '진행 중인 실행이 없습니다'}
@@ -215,7 +223,11 @@ def notebook_operation(params):
     if params.get('name') and params.get('project_ref'):
         raise ValueError('name과 project_ref는 함께 지정할 수 없습니다')
     _, store = resolve(params.get('project_ref'))
-    lib = ResearchLibrary(store)
+    from research_context import current
+    tid = params.get('thread_ref') or (current() or {}).get('thread_id')
+    if not tid:
+        raise ValueError('대화 자료실의 thread_ref를 지정하세요')
+    lib = ResearchLibrary(store, tid)
     op = params.get('op') or 'sources'
     if op == 'sources':
         return lib.sources(params.get('query') or '', int(params.get('cursor') or 0), include_excluded=bool(params.get('include_excluded')))
@@ -247,3 +259,24 @@ def notebook_operation(params):
         schedule_index(store.path)
         return {'items': [result], 'message': '원문을 저장했습니다. 검색 색인을 준비합니다.'}
     raise ValueError('연구 자료실은 sources/search/read/versions/add/remove를 사용하세요')
+
+
+def prepare_attachments(store, tid, attachments, request):
+    """공통 업로드 경로의 원문을 대화 자료실에 보존하고 메시지에 고정 참조를 남긴다."""
+    if not isinstance(attachments, list) or len(attachments) > 20:
+        raise ValueError('첨부파일은 한 번에 20개까지 보낼 수 있습니다')
+    lib = ResearchLibrary(store, tid)
+    saved = []
+    for i, item in enumerate(attachments):
+        if not isinstance(item, dict) or not item.get('path'):
+            raise ValueError('첨부파일 경로가 필요합니다')
+        path = Path(item['path']).expanduser().resolve(strict=True)
+        if path.stat().st_size > 25 * 1024 * 1024:
+            raise ValueError('첨부파일은 25MB 이하로 보내세요')
+        receipt = lib.add_file(path, title=str(item.get('name') or path.name), run='attachment:' + tid + ':' + request, call=str(i))
+        version = lib.version(receipt['version_ref'])
+        saved.append({'name': str(item.get('name') or path.name), 'version_ref': receipt['version_ref'],
+                      'mime': version['mime'], 'blob': version['blob']})
+    if saved:
+        schedule_index(store.path)
+    return saved

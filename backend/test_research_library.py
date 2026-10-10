@@ -138,5 +138,40 @@ def test_capture_copies_expiring_source_and_ignores_display_changes(lib, monkeyp
     assert full in lib.store.blob(saved['blob']).decode()
 
 
+
+
+def test_thread_library_filters_before_ranking_versions_and_exclusion(lib):
+    a = lib.store.create_thread('교육')['id']
+    b = lib.store.create_thread('경제')['id']
+    first, second = ResearchLibrary(lib.store, a), ResearchLibrary(lib.store, b)
+    old = first.capture('교육 공동 자료의 첫 판본입니다. ' * 20, title='공동 주소', origin='https://example.org/shared')
+    new = second.capture('교육 공동 자료의 수정 판본입니다. ' * 20, title='공동 주소', origin='https://example.org/shared')
+    for i in range(40):
+        second.capture('교육 교육 교육 다른 대화의 자료입니다. ' * 20, title=f'외부 {i}')
+    lib.index_pending(limit=100)
+    assert first.sources()['items'][0]['version_ref'] == old['version_ref']
+    assert [v['version_ref'] for v in first.versions(old['source_ref'])['items']] == [old['version_ref']]
+    assert first.search('교육', 1)['items'][0]['version_ref'] == old['version_ref']
+    with pytest.raises(ValueError): first.read(new['version_ref'])
+    first.exclude(old['source_ref'])
+    assert not first.search('교육')['items']
+    assert second.search('교육')['items']
+    assert not second.version(new['version_ref'])['excluded']
+    with scope({'project_uid':lib.store.uid,'thread_id':a,'run_id':'scope'}):
+        assert not ResearchLibrary(lib.store).sources()['items']
+        with pytest.raises(PermissionError): ResearchLibrary(lib.store, b)
+        with pytest.raises(PermissionError): first.capture('혼입', title='거부', thread=b)
+
+
+def test_docx_uses_existing_converter_without_chat_truncation(lib, tmp_path):
+    from docx import Document
+    document = Document(); document.add_paragraph('문서 첨부로 전달하는 교육 자료입니다. ' * 7000)
+    path = tmp_path / '보고서.docx'; document.save(path)
+    receipt = lib.add_file(path)
+    paragraphs, _ = lib.paragraphs(receipt['version_ref'])
+    assert sum(len(t) for _, t in paragraphs) > 100000
+    assert lib.version(receipt['version_ref'])['index_state'] == 'pending'
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

@@ -6,7 +6,7 @@ from pathlib import Path
 MAX_CHARS = 100_000  # ~25k 토큰
 
 
-def convert_document(file_path: str) -> dict:
+def convert_document(file_path: str, max_chars=MAX_CHARS) -> dict:
     """
     문서 파일을 텍스트로 변환.
     Returns: {"text": str, "error": str|None}
@@ -26,8 +26,8 @@ def convert_document(file_path: str) -> dict:
         return {"text": "", "error": f"지원하지 않는 형식: {ext}"}
 
     # 길이 제한
-    if result.get("text") and len(result["text"]) > MAX_CHARS:
-        result["text"] = result["text"][:MAX_CHARS] + f"\n\n[... 문서가 너무 길어 {MAX_CHARS}자까지만 포함됨 ...]"
+    if max_chars is not None and result.get("text") and len(result["text"]) > max_chars:
+        result["text"] = result["text"][:max_chars] + f"\n\n[... 문서가 너무 길어 {max_chars}자까지만 포함됨 ...]"
 
     return result
 

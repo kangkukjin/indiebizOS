@@ -4,12 +4,14 @@ from pathlib import Path
 import yaml
 
 
-def manifest(project_uid, name):
+def manifest(project_uid, name, thread_ref=None):
     path = Path(__file__).resolve().parents[2] / 'data/instruments/templates/research.yaml'
     raw = yaml.safe_load(path.read_text(encoding='utf-8'))
     # 신원은 서버에서 생성한 UUID. 사용자 이름은 실행 코드에 넣지 않는다.
     data = json.loads(json.dumps(raw, ensure_ascii=False).replace('__PROJECT_REF__', project_uid))
     data['name'] = name
+    if thread_ref:
+        data = json.loads(json.dumps(data, ensure_ascii=False).replace('__THREAD_REF__', thread_ref))
     for mode in data.get('modes', []):
         mode['edition'] = 2
     return data

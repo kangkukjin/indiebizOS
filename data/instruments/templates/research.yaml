@@ -4,125 +4,57 @@ edition: 2
 icon: 📚
 name: 연구 프로젝트
 modes:
-- name: 대화
-  auto_run: true
-  action: '[self:project]{op: "thread_list", project_ref: "__PROJECT_REF__", limit: 100}'
-  view:
-  - &id001
-    type: card_list
-    master_detail: true
-    from: items
-    empty: 새 대화 탭에서 첫 주제를 만드세요.
-    item_click:
-      action: '[self:project]{op: "thread_messages", project_ref: "__PROJECT_REF__", thread_ref: $item.thread_ref, limit: 100}'
-      poll:
-        while: active_run
-        interval_ms: 1500
-      view:
-      - type: card_list
-        from: pages
-        empty: ' '
-        item_click:
-          action: '[self:project]{op: "thread_messages", project_ref: "__PROJECT_REF__", thread_ref: $item.thread_ref, cursor: $item.cursor, limit: 100}'
-          recursive: true
-        card:
-          title: '{title}'
-          lines:
-          - ''
-      - type: thread
-        from: items
-        text: '{content}'
-        mine: mine
-        meta: '{status_label}'
-        time: '{message_time}'
-        empty: 첫 질문으로 조사를 시작하세요.
-      - type: list_action
-        title: '{title}'
-        button:
-          label: 응답 중단
-          action: '[self:project]{op: "thread_cancel", project_ref: "__PROJECT_REF__", thread_ref: $item.thread_ref}'
-          refresh: true
-        from: controls
-        empty: ' '
-      compose:
-        placeholder: 메시지를 입력하세요…
-        button: 보내기
-        action: '[self:project]{op: "thread_send", project_ref: "__PROJECT_REF__", thread_ref: $item.thread_ref, message: $text, request_id: $request_id}'
-    card:
-      title: '{title}'
-      lines:
-      - '{updated_label}'
-- name: 새 대화
-  action: '[self:project]{op: "thread_list", project_ref: "__PROJECT_REF__"}'
-  view:
-  - type: form
-    title: 새 주제
-    fields:
-    - key: title
-      type: text
-      label: 주제 이름
-      placeholder: '예: 교육'
-    action: '[self:project]{op: "thread_create", project_ref: "__PROJECT_REF__", title: $title}'
-    button: 만들기
-  - *id001
-  auto_run: true
 - name: 자료실
   auto_run: true
   inputs:
   - key: query
     type: text
     placeholder: 자료 제목 검색
-  action: '[self:notebook]{op: "sources", project_ref: "__PROJECT_REF__", query: $query, include_excluded: true}'
+  action: '[self:notebook]{op: "sources", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__", query: $query, include_excluded: true}'
   view:
-  - &id003
+  - &id002
     type: card_list
     from: items
     empty: 아직 저장한 자료가 없습니다. 대화에서 조사하거나 자료를 추가하세요.
-    item_click: &id002
-      action: '[self:notebook]{op: "read", project_ref: "__PROJECT_REF__", version_ref: $item.version_ref}'
+    item_click: &id001
+      action: '[self:notebook]{op: "read", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__", version_ref: $item.version_ref}'
       view:
-      - &id004
-        type: kv
+      - type: kv
         rows:
         - k: 자료
           v: '{title}'
-      - &id005
-        type: kv
+      - type: kv
         rows:
         - k: 출처 · 확보 범위
           v: '{origin} · {coverage_label}'
-      - &id006
-        type: kv
+      - type: kv
         rows:
         - k: 판본 식별자
           v: '{version_ref}'
-      - &id007
-        type: blocks
+      - type: blocks
         from: blocks
-      - &id008
-        type: card_list
+      - type: card_list
         from: pages
         empty: ' '
         item_click:
-          action: '[self:notebook]{op: "read", project_ref: "__PROJECT_REF__", version_ref: $item.version_ref, cursor: $item.cursor, extraction_revision:
-            $item.extraction_revision}'
+          action: '[self:notebook]{op: "read", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__", version_ref: $item.version_ref, cursor:
+            $item.cursor, extraction_revision: $item.extraction_revision}'
           recursive: true
         card:
           title: '{title}'
           lines:
           - ''
-      - &id009
-        type: form
+      - type: form
         fields:
         - key: excluded
           label: 검색에서 제외 (원문은 보존)
           type: toggle
           value: '{excluded}'
-        action: '[self:notebook]{op:"remove",project_ref:"__PROJECT_REF__",source_ref:$item.source_ref,excluded:$excluded}'
+        action: '[self:notebook]{op:"remove",project_ref:"__PROJECT_REF__", thread_ref: "__THREAD_REF__",source_ref:$item.source_ref,excluded:$excluded}'
         button: 자료 설정 저장
         actions:
         - label: 텍스트 추출·검색 준비 재시도
-          action: '[self:notebook]{op: "add", project_ref: "__PROJECT_REF__", version_ref: $item.version_ref}'
+          action: '[self:notebook]{op: "add", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__", version_ref: $item.version_ref}'
           refresh: true
     card:
       title: '{title}'
@@ -134,12 +66,12 @@ modes:
     type: text
     required: true
     placeholder: 저장 자료의 내용 검색
-  action: '[self:notebook]{op: "search", project_ref: "__PROJECT_REF__", query: $query}'
+  action: '[self:notebook]{op: "search", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__", query: $query}'
   view:
   - type: card_list
     from: items
     empty: 아직 저장한 자료가 없습니다. 대화에서 조사하거나 자료를 추가하세요.
-    item_click: *id002
+    item_click: *id001
     card:
       title: '{title} · {citation}'
       lines:
@@ -151,7 +83,7 @@ modes:
     - key: pick
       label: 파일 추가
       type: files
-      add_action: '[self:notebook]{op: "add", project_ref: "__PROJECT_REF__", path: $path}'
+      add_action: '[self:notebook]{op: "add", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__", path: $path}'
     - key: path
       label: 파일 경로 또는 웹 URL
       type: text
@@ -161,35 +93,11 @@ modes:
     - key: text
       label: 본문 붙여넣기
       type: textarea
-    action: '[self:notebook]{op: "add", project_ref: "__PROJECT_REF__", path: $path, title: $title, text: $text}'
+    action: '[self:notebook]{op: "add", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__", path: $path, title: $title, text: $text}'
     button: 보존하기
-  - *id003
+  - *id002
   auto_run: true
-  action: '[self:notebook]{op: "sources", project_ref: "__PROJECT_REF__"}'
-- name: 대화 기록 검색
-  inputs:
-  - key: query
-    type: text
-    required: true
-    placeholder: 전체 주제의 메시지 검색
-  action: '[self:project]{op: "thread_search", project_ref: "__PROJECT_REF__", query: $query}'
-  view:
-  - type: thread
-    from: items
-    text: '{content}'
-    meta: '{thread_title} · {role}'
-    time: '{message_time}'
-- name: 보관한 대화
-  auto_run: true
-  action: '[self:project]{op: "thread_list", project_ref: "__PROJECT_REF__", archived: true}'
-  view:
-  - type: list_action
-    from: items
-    title: '{title}'
-    button:
-      label: 보관 해제
-      action: '[self:project]{op: "thread_archive", project_ref: "__PROJECT_REF__", thread_ref: $item.thread_ref, archived: false}'
-      refresh: true
+  action: '[self:notebook]{op: "sources", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__"}'
 - name: 원문 읽기
   note: 자료실의 자료 식별자와 다음 위치로 긴 원문을 계속 읽을 수 있습니다.
   inputs:
@@ -201,7 +109,7 @@ modes:
     type: text
     default: '0'
     placeholder: 읽기 위치
-  action: '[self:notebook]{op: "read", project_ref: "__PROJECT_REF__", version_ref: $version, cursor: $cursor}'
+  action: '[self:notebook]{op: "read", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__", version_ref: $version, cursor: $cursor}'
   view:
   - type: kv
     rows:
@@ -217,74 +125,36 @@ modes:
     rows:
     - k: 다음 읽기 위치
       v: '{next_cursor}'
-- name: 대화 관리
+- name: 대화 설정
   auto_run: true
-  action: '[self:project]{op: "thread_list", project_ref: "__PROJECT_REF__", limit: 100}'
+  action: '[self:project]{op:"thread_messages",project_ref:"__PROJECT_REF__", thread_ref: "__THREAD_REF__"}'
   view:
-  - type: card_list
-    master_detail: true
-    from: items
-    empty: 새 대화 탭에서 첫 주제를 만드세요.
-    item_click:
-      action: '[self:project]{op: "thread_messages", project_ref: "__PROJECT_REF__", thread_ref: $item.thread_ref, limit: 100}'
-      tabs:
-      - name: 대화 설정
-        view:
-        - type: form
-          fields:
-          - key: title
-            label: 주제 이름
-            type: text
-            value: '{title}'
-          - key: mode
-            label: 조사 방식
-            type: select
-            value: '{mode}'
-            options:
-            - value: research
-              label: 저장 자료 + 추가 조사
-            - value: library
-              label: 저장 자료만
-          - key: notes
-            label: 계속 기억할 연구 방향
-            type: textarea
-            value: '{notes}'
-          action: '[self:project]{op: "thread_update", project_ref: "__PROJECT_REF__", thread_ref: $item.thread_ref, expected_revision: $item.revision,
-            title: $title, mode: $mode, notes: $notes}'
-          button: 저장
-          actions:
-          - label: 대화 보관
-            action: '[self:project]{op: "thread_archive", project_ref: "__PROJECT_REF__", thread_ref: $item.thread_ref, archived: true}'
-            back: true
-      - name: 확보한 자료
-        view:
-        - type: card_list
-          from: materials
-          empty: 아직 저장한 자료가 없습니다. 대화에서 조사하거나 자료를 추가하세요.
-          item_click: *id002
-          master_detail: false
-          card:
-            title: '{title}'
-            lines:
-            - '{coverage_label} · {index_label} · {origin}'
-      - name: 인용 근거
-        view:
-        - type: card_list
-          from: citations
-          item_click:
-            action: '[self:notebook]{op: "read", project_ref: "__PROJECT_REF__", version_ref: $item.version_ref, extraction_revision: $item.extraction_revision}'
-            view:
-            - *id004
-            - *id005
-            - *id006
-            - *id007
-            - *id008
-            - *id009
-          card:
-            title: '{locator}'
-            lines:
-            - '{quote}'
-    card:
-      title: '{title}'
-      lines:
-      - '{updated_label} · {mode_label}'
+  - type: form
+    fields:
+    - key: title
+      label: 주제 이름
+      type: text
+      value: '{title}'
+    - key: mode
+      label: 조사 방식
+      type: select
+      value: '{mode}'
+      options:
+      - value: research
+        label: 저장 자료 + 추가 조사
+      - value: library
+        label: 저장 자료만
+    - key: notes
+      label: 계속 기억할 연구 방향
+      type: textarea
+      value: '{notes}'
+    action: '[self:project]{op: "thread_update", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__", expected_revision: $item.revision,
+      title: $title, mode: $mode, notes: $notes}'
+    button: 저장
+    actions:
+    - label: 대화 보관
+      action: '[self:project]{op:"thread_archive",project_ref:"__PROJECT_REF__",thread_ref:"__THREAD_REF__",archived:true}'
+      refresh: true
+    - label: 보관 해제
+      action: '[self:project]{op:"thread_archive",project_ref:"__PROJECT_REF__",thread_ref:"__THREAD_REF__",archived:false}'
+      refresh: true

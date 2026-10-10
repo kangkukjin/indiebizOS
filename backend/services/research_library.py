@@ -14,7 +14,15 @@ INDEX_LABELS = {'pending': '검색 준비 중', 'ready': '검색 가능', 'faile
 
 
 class ResearchLibrary:
-    def __init__(self, store):
+    def __init__(self, store, thread=None):
+        from research_context import current
+        context = current() or {}
+        active = context.get('thread_id') if context.get('project_uid') == store.uid else None
+        if active and thread and active != thread:
+            raise PermissionError('다른 대화의 자료실에는 접근할 수 없습니다')
+        self.thread = thread or active
+        if self.thread:
+            store.thread(self.thread)
         self.store = store
         self.index = NotebookStore(store.root / 'index.db')
 
@@ -24,6 +32,9 @@ class ResearchLibrary:
             raise ValueError('잘못된 확보 범위')
         if isinstance(data, str):
             data = data.encode('utf-8')
+        if self.thread and thread and thread != self.thread:
+            raise PermissionError('다른 대화에 자료를 저장할 수 없습니다')
+        thread = self.thread or thread
         blob = self.store.put_blob(data)
         result_blob = self.store.put_blob(json_text(acquired_result)) if acquired_result is not None else None
         call = call or identifier()
@@ -65,12 +76,12 @@ class ResearchLibrary:
         return {'source_ref': version['source_id'], 'version_ref': version['id'],
                 'project_ref': self.store.uid, 'preservation': 'stored', 'coverage': version['coverage'], 'coverage_label': COVERAGE_LABELS[version['coverage']]}
 
-    def add_file(self, path, **context):
+    def add_file(self, path, *, title=None, **context):
         path = Path(path).resolve(strict=True)
         raw = path.read_bytes()
         mime = mimetypes.guess_type(path.name)[0] or 'application/octet-stream'
         # 바이트를 먼저 보존한다. 파서 실패가 원문 보존을 취소하지 않는다.
-        receipt = self.capture(raw, title=path.name, origin=str(path), kind='file', mime=mime, **context)
+        receipt = self.capture(raw, title=title or path.name, origin=str(path), kind='file', mime=mime, **context)
         suffix = path.suffix.lower()
         snapshot = self.store.root / 'staging' / (identifier() + suffix)
         snapshot.parent.mkdir(exist_ok=True)
@@ -109,9 +120,34 @@ class ResearchLibrary:
             row = db.execute('SELECT v.*,s.title,s.origin,s.kind,s.excluded,j.state AS index_state,j.error '
                              'FROM research_versions v JOIN research_sources s ON s.id=v.source_id '
                              'LEFT JOIN research_jobs j ON j.version_id=v.id WHERE v.id=?', (version,)).fetchone()
-        if not row:
-            raise ValueError('이 프로젝트에 자료 버전이 없습니다')
-        return dict(row)
+        if not row or not self._visible(version):
+            raise ValueError('이 대화에 자료 버전이 없습니다')
+        result = dict(row)
+        if self.thread:
+            with self.store.connect() as db:
+                flag = db.execute('SELECT excluded FROM research_thread_sources WHERE thread_id=? AND source_id=?', (self.thread, result['source_id'])).fetchone()
+            if flag:
+                result['excluded'] = flag[0]
+        return result
+
+    def _visible(self, version):
+        if not self.thread:
+            return True  # 내부 색인 작업만 프로젝트 전체를 사용한다.
+        with self.store.connect() as db:
+            return bool(db.execute('SELECT 1 FROM research_captures WHERE thread_id=? AND version_id=?',
+                                   (self.thread, version)).fetchone())
+
+    def _scope_sql(self, alias='v'):
+        if not self.thread:
+            return '1', []
+        return (f'EXISTS (SELECT 1 FROM research_captures c WHERE c.version_id={alias}.id AND c.thread_id=?)',
+                [self.thread])
+
+    def _excluded_sql(self):
+        if not self.thread:
+            return 's.excluded', []
+        return ('COALESCE((SELECT x.excluded FROM research_thread_sources x WHERE x.source_id=s.id AND x.thread_id=?),s.excluded)',
+                [self.thread])
 
     def paragraphs(self, version, revision=None):
         self.version(version)
@@ -192,20 +228,26 @@ class ResearchLibrary:
                 self._job_state(vid, 'failed', str(exc))
 
     def sources(self, query='', offset=0, limit=100, include_excluded=False):
+        visible, args = self._scope_sql()
+        latest, latest_args = self._scope_sql('x')
+        excluded, excluded_args = self._excluded_sql()
         with self.store.connect() as db:
-            rows = db.execute('SELECT s.*,v.id AS version_ref,v.coverage,v.created_at AS fetched_at,j.state AS index_state,j.error '
+            rows = db.execute(f'SELECT s.*,v.id AS version_ref,v.coverage,v.created_at AS fetched_at,j.state AS index_state,j.error '
                               'FROM research_sources s JOIN research_versions v ON v.source_id=s.id '
                               'LEFT JOIN research_jobs j ON j.version_id=v.id '
-                              'WHERE (? OR s.excluded=0) AND s.title LIKE ? AND v.rowid=(SELECT MAX(x.rowid) FROM research_versions x WHERE x.source_id=s.id) '
-                              'ORDER BY v.rowid DESC LIMIT ? OFFSET ?', (int(include_excluded), '%' + query + '%', limit + 1, offset)).fetchall()
+                              f'WHERE {visible} AND (? OR {excluded}=0) AND s.title LIKE ? '
+                              f'AND v.rowid=(SELECT MAX(x.rowid) FROM research_versions x WHERE x.source_id=s.id AND {latest}) '
+                              'ORDER BY v.rowid DESC LIMIT ? OFFSET ?',
+                              (*args, int(include_excluded), *excluded_args, '%' + query + '%', *latest_args, limit + 1, offset)).fetchall()
         return {'items': [{**dict(r), 'source_ref': r['id'], 'project_ref': self.store.uid,
                            'coverage_label': COVERAGE_LABELS[r['coverage']], 'index_label': INDEX_LABELS.get(r['index_state'], r['index_state'])} for r in rows[:limit]],
                 'next_cursor': str(offset + limit) if len(rows) > limit else None,
                 'pages': [{'title': '다음 자료 보기', 'cursor': str(offset + limit), 'query': query}] if len(rows) > limit else []}
 
     def versions(self, source):
+        visible, args = self._scope_sql()
         with self.store.connect() as db:
-            rows = db.execute('SELECT * FROM research_versions WHERE source_id=? ORDER BY rowid DESC', (source,)).fetchall()
+            rows = db.execute(f'SELECT v.* FROM research_versions v WHERE source_id=? AND {visible} ORDER BY rowid DESC', (source, *args)).fetchall()
         return {'items': [self._receipt(dict(r)) | {'created_at': r['created_at']} for r in rows]}
 
     def read(self, version, offset=0, limit=12000, revision=None):
@@ -215,7 +257,7 @@ class ResearchLibrary:
         except ValueError:
             if revision is not None:
                 raise
-            return {**self._receipt(v), 'title': v['title'], 'origin': v['origin'], 'blocks': [{'type': 'paragraph', 'text': v['error'] or '텍스트 추출을 지원하지 않는 형식입니다. 원문 파일은 보존되어 있습니다.'}], 'raw_path': str(self.store.root / 'objects' / v['blob'][:2] / v['blob'])}
+            return {**self._receipt(v), 'title': v['title'], 'origin': v['origin'], 'blocks': [{'type': 'paragraph', 'text': v['error'] or '텍스트 추출을 지원하지 않는 형식입니다. 원문 파일은 보존되어 있습니다.'}], 'raw_path': self.store.material_path(v['blob'], v['mime'])}
         text = '\n\n'.join(f'[자료:{version}:{loc}] {body}' for loc, body in paras)
         visible = text[offset:offset + limit]
         # 실제 반환한 문장만 근거 원장에 남긴다. 전체 문서를 읽었다고 승격하지 않는다.
@@ -230,15 +272,21 @@ class ResearchLibrary:
                 'blocks': [{'type': 'paragraph', 'text': visible}]}
 
     def search(self, query, limit=12):
-        out = self.index.call('search_chunks', self.store.uid, query, top_k=limit * 3)
-        if not out.get('success'):
-            return {'items': [], 'search_state': 'not_ready', 'error_detail': out.get('error')}
+        visible, args = self._scope_sql()
+        latest, latest_args = self._scope_sql('x')
+        excluded, excluded_args = self._excluded_sql()
         with self.store.connect() as db:
             mapping = {r['index_source']: dict(r) for r in db.execute(
                 'SELECT j.index_source,v.id AS version_id,v.source_id,s.title,(SELECT MAX(revision) FROM research_extractions e WHERE e.version_id=v.id) AS extraction_revision FROM research_jobs j '
                 'JOIN research_versions v ON v.id=j.version_id JOIN research_sources s ON s.id=v.source_id '
-                'WHERE s.excluded=0 AND v.rowid=(SELECT MAX(x.rowid) FROM research_versions x WHERE x.source_id=s.id)')}
-            pending = db.execute("SELECT COUNT(*) FROM research_jobs WHERE state!='ready'").fetchone()[0]
+                f'WHERE {visible} AND {excluded}=0 AND v.rowid=(SELECT MAX(x.rowid) FROM research_versions x WHERE x.source_id=s.id AND {latest})',
+                (*args, *excluded_args, *latest_args))}
+            pending = db.execute(f"SELECT COUNT(*) FROM research_jobs j JOIN research_versions v ON v.id=j.version_id WHERE state!='ready' AND {visible}", args).fetchone()[0]
+        # 후보 선정 전에 제한한다. 다른 대화의 상위 결과가 현재 대화 자료를 밀어내지 않는다.
+        out = self.index.call('search_chunks', self.store.uid, query, top_k=limit,
+                              source_ids=[sid for sid in mapping if sid is not None])
+        if not out.get('success'):
+            return {'items': [], 'search_state': 'not_ready', 'error_detail': out.get('error')}
         items = []
         for hit in out.get('results', []):
             v = mapping.get(hit['source_id'])
@@ -246,16 +294,19 @@ class ResearchLibrary:
                 self.access(v['version_id'], v['extraction_revision'], hit['loc'], hit['text'])
                 items.append({**hit, **v, 'version_ref': v['version_id'], 'source_ref': v['source_id'],
                               'citation': f"[자료:{v['version_id']}:{hit['loc']}]"})
-            if len(items) >= limit:
-                break
         return {'items': items, 'search_type': out.get('search_type'), 'pending': pending}
 
     def exclude(self, source, excluded=True):
+        if not self.versions(source)['items']:
+            raise ValueError('이 대화에 자료가 없습니다')
         with self.store.connect(True) as db:
             self.store.check_epoch(db)
-            changed = db.execute('UPDATE research_sources SET excluded=? WHERE id=?', (int(excluded), source)).rowcount
-            if not changed:
-                raise ValueError('이 프로젝트에 자료가 없습니다')
+            if self.thread:
+                db.execute('INSERT INTO research_thread_sources(thread_id,source_id,excluded) VALUES (?,?,?) '
+                           'ON CONFLICT(thread_id,source_id) DO UPDATE SET excluded=excluded.excluded',
+                           (self.thread, source, int(excluded)))
+            else:
+                db.execute('UPDATE research_sources SET excluded=? WHERE id=?', (int(excluded), source))
         return {'source_ref': source, 'excluded': excluded}
 
     def access(self, version, revision, loc, quote):

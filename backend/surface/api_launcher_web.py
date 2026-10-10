@@ -27,7 +27,10 @@ CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "da
 # 원격=런처 세션 게이트 뒤(is_public_remote_path 미등록), 로컬=신뢰. raw body(멀티파트 아님 —
 # family-news 선례). 반환 path(절대경로)를 계기가 $key 로 액션에 실어 핸들러가 그대로 연다.
 _UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "data", "launcher_uploads")
-_UPLOAD_EXTS = {'.txt', '.md', '.csv', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf', '.xlsx', '.xls'}
+_UPLOAD_EXTS = {'.txt', '.md', '.csv', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf', '.xlsx', '.xls',
+                '.docx', '.pages', '.json', '.yaml', '.yml', '.xml', '.log', '.py', '.js', '.ts',
+                '.tsx', '.jsx', '.html', '.css', '.sql', '.sh', '.env', '.ini', '.conf', '.toml',
+                '.bmp', '.heic', '.heif', '.tiff', '.tif', '.avif'}
 _UPLOAD_MAX = 25 * 1024 * 1024
 _IMG_MAGIC = {  # 이미지 확장자는 매직바이트까지 검사 (bulletin/family-news 선례)
     '.png': (b'\x89PNG',), '.jpg': (b'\xff\xd8\xff',), '.jpeg': (b'\xff\xd8\xff',),

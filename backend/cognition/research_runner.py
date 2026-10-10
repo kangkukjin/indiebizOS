@@ -55,12 +55,13 @@ def stream(store, tid, run, message, cancel):
             '검색 발췌·일부 본문을 전체 문서를 읽은 것처럼 말하지 않는다. '
             '일반 셸 대신 보존 가능한 IBL 자료 획득 도구를 사용한다. '
             f'활성 자료실 project_ref={store.uid}, 대화 thread_ref={tid}. '
-            'self:notebook의 sources/search/read/versions로 저장 자료를 탐색한다. '
+            'self:notebook에 project_ref와 thread_ref를 함께 지정하여 sources/search/read/versions로 이 대화의 저장 자료만 탐색한다. 다른 대화의 자료는 사용하지 않는다. '
             '인용은 읽은 문단에 표시된 [자료:version_ref:위치]를 사용한다. '
             '자료의 주장, 자신의 해석, 미확인을 구분한다.\n')
     if thread['mode'] == 'library':
         role += '현재 모드는 저장 자료만 사용이다. 외부 자료를 새로 가져오지 않는다.\n'
     # 저장 자료와 과거 요약은 지시문이 아닌 배경으로 분리한다.
+    message, images = attachment_input(store, tid, run, message)
     context = _context(store, thread, message)
     cfg = {**agent, 'id': None, '_selected_agent': selected, '_project_id': store.path.name,
            '_project_path': str(store.path), '_research_role': role + context}
@@ -72,13 +73,13 @@ def stream(store, tid, run, message, cancel):
             runner.ai._provider.agent_id = actor
         from episode_logger import EpisodeLogger
         EpisodeLogger.start_episode(agent.get('name') or '연구 도우미', message, project_id=store.path.name, task_id=run)
-        history = [{'role': row['role'], 'content': row['content']} for row in store.messages(tid, limit=14)['items']
+        history = [{'role': row['role'], 'content': history_content(row)} for row in store.messages(tid, limit=14)['items']
                    if row['run_id'] != run and row['status'] in {'complete', 'completed'}][-12:]
         try:
             notice = getattr(runner, 'research_model_notice', '')
             if notice:
                 yield {'type': 'cognition', 'content': notice}
-            yield from runner.cognitive_stream(message, history, cancel_check=cancel.is_set,
+            yield from runner.cognitive_stream(message, history, images=images or None, cancel_check=cancel.is_set,
                                               agent_name=agent.get('name'), utterance_author='owner')
         finally:
             EpisodeLogger.end_episode()
@@ -150,3 +151,41 @@ def summarize(store, tid):
         db.execute('UPDATE research_threads SET summary=?,summary_until=? WHERE id=?', (summary, batch[-1]['id'], tid))
         db.execute('INSERT INTO research_notes(thread_id,body,origin,covered_until,created_at) VALUES (?,?,?,?,?)',
                    (tid, summary, 'summary', batch[-1]['id'], now()))
+
+
+def attachment_input(store, tid, run, message):
+    """보존된 원문만 모델 입력으로 사용한다. 이미지 입력은 일반 프로젝트와 같은 경로다."""
+    import base64
+    images = []
+    with store.connect() as db:
+        row = db.execute("SELECT research_attachments FROM messages WHERE thread_id=? AND research_run=? AND research_role='user'", (tid, run)).fetchone()
+        attachments = json.loads(row[0] or '[]') if row else []
+        for item in attachments:
+            raw = store.blob(item['blob'])
+            if item['mime'].startswith('image/'):
+                images.append({'base64': base64.b64encode(raw).decode('ascii'), 'media_type': item['mime']})
+                message += f"\n첨부 이미지: {item['name']} (자료 {item['version_ref']})"
+            else:
+                extraction = db.execute('SELECT blob FROM research_extractions WHERE version_id=? ORDER BY revision DESC LIMIT 1', (item['version_ref'],)).fetchone()
+                if extraction:
+                    paragraphs = json.loads(store.blob(extraction[0]))
+                    body = '\n\n'.join(f"[자료:{item['version_ref']}:{loc}] {text}" for loc, text in paragraphs)
+                    message += f"\n\n<attachment name={json.dumps(item['name'], ensure_ascii=False)}>\n{body[:60000]}\n</attachment>"
+                    if len(body) > 60000:
+                        message += '\n첨부 본문의 일부만 전달됐다. 나머지는 self:notebook read로 읽는다.'
+                    # 실제 전달한 문단만 인용 원장에 남긴다.
+                    with store.connect(True) as writes:
+                        for loc, text in paragraphs:
+                            if text and text in body[:60000]:
+                                revision = db.execute('SELECT MAX(revision) FROM research_extractions WHERE version_id=?', (item['version_ref'],)).fetchone()[0]
+                                writes.execute('INSERT OR IGNORE INTO research_access(run_id,version_id,revision,locator,quote) VALUES (?,?,?,?,?)', (run, item['version_ref'], revision, loc, text))
+                else:
+                    message += f"\n첨부파일 {item['name']}은 원문만 보존됐고 텍스트 추출에 실패했다. 자료 식별자: {item['version_ref']}"
+    return message, images
+
+
+def history_content(row):
+    text = row['content']
+    for item in row.get('attachments', []):
+        text += f"\n첨부: {item['name']} (자료 판본 {item['version_ref']}). 필요하면 self:notebook read로 원문과 파일 경로를 확인한다."
+    return text

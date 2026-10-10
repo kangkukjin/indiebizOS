@@ -52,7 +52,7 @@ CHUNK_HARD_MAX = 1100
 # 이 글자 수를 넘는 소스는 색인을 백그라운드로 (도구 60s 타임아웃 방어, family-news 선례)
 BACKGROUND_THRESHOLD_CHARS = 150_000
 
-TEXT_EXTS = {".md", ".txt", ".text", ".markdown", ".csv", ".log", ".json", ".yaml", ".yml", ".html", ".htm"}
+TEXT_EXTS = {".xml", ".py", ".js", ".ts", ".tsx", ".jsx", ".css", ".sql", ".sh", ".env", ".ini", ".conf", ".toml", ".md", ".txt", ".text", ".markdown", ".csv", ".log", ".json", ".yaml", ".yml", ".html", ".htm"}
 
 _write_lock = threading.RLock()        # 쓰기 직렬화 (in-process)
 _bg_threads: Dict[int, threading.Thread] = {}   # source_id → 색인 스레드
@@ -223,6 +223,10 @@ def _strip_html(text: str) -> str:
 def extract_file(path: str) -> Tuple[List[Tuple[str, str]], str]:
     """파일 → ([(loc, 문단텍스트)...], error). PDF=페이지 단위 loc, 텍스트=문단 번호 loc."""
     ext = Path(path).suffix.lower()
+    if ext in {'.docx', '.pages'}:
+        from document_converter import convert_document
+        result = convert_document(path, max_chars=None)
+        return _paragraphs_with_loc(result.get('text') or ''), result.get('error') or ''
     if ext == ".pdf":
         return _extract_pdf(path)
     if ext in TEXT_EXTS or ext == "":
@@ -851,7 +855,7 @@ def _combine(sem: List[Tuple[int, float]], fts: List[Tuple[int, float]], alpha: 
 
 # clamp-ok: 순위 상위 N — 근거 청크 관련도 순위라 모집단이 의미 없음
 def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_ALPHA,
-                  source: Any = None) -> Dict[str, Any]:
+                  source: Any = None, source_ids=None) -> Dict[str, Any]:
     """노트북 스코프 하이브리드 검색 → 청크 목록 (LLM 0 — search op 및 ask의 재료).
     source: 소스 좁히기(소스 id 또는 제목 부분일치) — 포식 기억(어느 문서가 무엇인가)을 보고 고른 뒤 그 안에서만."""
     nb = get_notebook(name)
@@ -862,7 +866,7 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
         return {"success": False, "error": "q(질문/검색어)가 필요합니다.", "results": []}
 
     _src = str(source).strip() if source not in (None, "") else ""
-    filters = {}
+    filters = {'source_ids': list(source_ids)} if source_ids is not None else {}
     if _src:
         from common.value_semantics import text_match, values_equal
         conn = _connect()
@@ -870,9 +874,9 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
             sources = conn.execute("SELECT id,title FROM sources WHERE notebook_id=?", (nb["id"],)).fetchall()
         finally:
             conn.close()
-        source_ids = [r["id"] for r in sources
+        selected_ids = [r["id"] for r in sources
                       if values_equal(str(r["id"]), _src) or text_match("contains", r["title"], _src)]
-        filters["source_ids"] = source_ids
+        filters["source_ids"] = [sid for sid in selected_ids if source_ids is None or sid in source_ids]
     over = max(top_k * 2, 12)
     sem = _search_semantic(nb["id"], query, over, **filters) if alpha > 0 else []
     fts = _search_fts(nb["id"], query, over, **filters)

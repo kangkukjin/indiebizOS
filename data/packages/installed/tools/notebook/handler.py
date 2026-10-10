@@ -1021,6 +1021,7 @@ def _op_research(tool_input, context):
         return _json({"success": False, "error": "연구 자료실의 project_ref가 필요합니다"})
     return _json(notebook_operation({
         "op": tool_input.get("op", "sources"), "project_ref": tool_input.get("project_ref"),
+        "thread_ref": tool_input.get("thread_ref"),
         "name": tool_input.get("name"), "path": tool_input.get("path"), "text": tool_input.get("text"),
         "title": tool_input.get("title"), "query": tool_input.get("query"), "top_k": tool_input.get("top_k"),
         "source_ref": tool_input.get("source_ref"), "version_ref": tool_input.get("version_ref"),

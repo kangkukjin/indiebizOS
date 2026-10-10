@@ -3779,6 +3779,7 @@ nodes:
           notes: string
           agent_id: string
           request_id: string
+          attachments: array
           expected_revision: integer
           archived: boolean
           cursor: string
@@ -3804,7 +3805,7 @@ nodes:
               exists: launcher_ops:project_exists
         fixture: '[self:project]{op: "list"}'
         description: 런처 프로젝트 생애주기 (op 분기). list/templates/create/rename/copy/move(폴더로)/trash(휴지통)/delete(영구, 사람 승인). 주인 전용.
-        target_description: 연구 프로젝트는 create+project_kind:"research"로 만든다. project_ref는 생성된 불변 project_uid. thread_create(title), thread_list(query·archived), thread_messages(thread_ref·cursor), thread_send(thread_ref·message·request_id), thread_cancel(thread_ref), thread_update(thread_ref·expected_revision·title/mode/notes), thread_archive(thread_ref·archived), thread_search(query·thread_ref 선택), research_view로 주제 대화를 관리한다. thread_send는 task_ref로 상태를 조회한다. list·templates — 파라미터 없음. create — name 필수, template(기본 "기본")·parent_folder 선택. rename — project_id+new_name. copy — project_id(+new_name·parent_folder). move — project_id+folder_id(없으면 폴더 밖으로). trash — project_id(휴지통, 복구는 [self:trash]). delete — project_id, 영구 삭제라 사람 승인 토큰 필요.
+        target_description: 연구 프로젝트는 create+project_kind:"research"로 만든다. project_ref는 생성된 불변 project_uid. thread_create(title), thread_list(query·archived), thread_messages(thread_ref·cursor), thread_send(thread_ref·message·request_id·attachments[{path,name}]), thread_cancel(thread_ref), thread_update(thread_ref·expected_revision·title/mode/notes), thread_archive(thread_ref·archived), thread_search(query·thread_ref 선택), research_view(thread_ref)로 선택한 대화의 자료실 화면을 연다. thread_send는 task_ref로 상태를 조회한다. list·templates — 파라미터 없음. create — name 필수, template(기본 "기본")·parent_folder 선택. rename — project_id+new_name. copy — project_id(+new_name·parent_folder). move — project_id+folder_id(없으면 폴더 밖으로). trash — project_id(휴지통, 복구는 [self:trash]). delete — project_id, 영구 삭제라 사람 승인 토큰 필요.
         guides:
         - research_project.md
         group: system
@@ -3829,21 +3830,21 @@ nodes:
             list: false
             templates: false
           exempt:
-            research_view: 연구 project_ref가 필요하다
+            research_view: 연구 project_ref와 thread_ref가 필요하다
             thread_list: 연구 project_ref가 필요하다
             thread_messages: 연구 project_ref와 thread_ref가 필요하다
             thread_search: 연구 project_ref와 query가 필요하다
           fixture:
             templates: '[self:project]{op: "templates"}'
           values:
-            research_view: 연구 프로젝트 화면 선언 조회 (project_ref)
+            research_view: 선택한 대화의 자료실 화면 선언 조회 (project_ref, thread_ref)
             thread_list: 주제 대화 목록 (project_ref)
             thread_create: 새 주제 대화 (project_ref, title)
             thread_update: 대화 제목·조사 모드·고정 메모 변경 (project_ref, thread_ref)
             thread_archive: 대화 보관 또는 해제 (project_ref, thread_ref, archived)
             thread_messages: 대화 원문과 수집 자료 조회 (project_ref, thread_ref, cursor)
             thread_search: 대화 원문 검색 (project_ref, thread_ref, query)
-            thread_send: 연구 대화 실행 접수 (project_ref, thread_ref, message, request_id). self:task로 상태 조회
+            thread_send: 본문·첨부로 연구 대화 실행 접수. task_ref로 상태 조회
             thread_cancel: 현재 연구 실행 중단 요청 (project_ref, thread_ref)
             list: 휴지통 밖 프로젝트 목록
             templates: 만들 때 고를 수 있는 템플릿 목록
@@ -5523,8 +5524,8 @@ nodes:
         side_effect: true
         fixture: '[self:notebook]{op: "list"}'
         runs_on: pc_only
-        description: 근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진 문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.
-        target_description: '연구 자료실은 name 대신 project_ref 사용. add+version_ref는 보존 자료의 추출·색인 재시도. sources/search/read/versions/add/remove 지원, read는 version_ref로 당시 원문 조회, remove는 검색 제외(excluded:false로 복원). op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 또는 text 붙여넣기, title 옵션 — path=파일 경로[상대 경로=프로젝트 기준, 없으면 저장소 루트 폴백]·웹 URL·유튜브 URL[자막을 타임스탬프 loc으로 색인, 자막 없으면 정직 거부]. 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12, source 옵션=후보 검색 전 소스 좁히기) — 답+citations[{n,source,loc,quote}]+items; 문서 단위 답변은 실제로 읽은 소스·loc를 검증하고 quote를 원문에서 추출하며, 무효 인용 또는 인용 부재면 success:false로 답을 보류한다. 노트북 포식 기억 문서가 있으면 답 생성의 지도로 함께 읽힌다 / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
+        description: 근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트·DOCX·Pages)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진 문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.
+        target_description: '연구 자료실은 대화마다 독립. name 대신 project_ref+thread_ref 사용(연구 실행 중 thread_ref 생략 시 현재 대화). 다른 대화의 자료 조회·검색은 거부한다. add+version_ref는 보존 자료의 추출·색인 재시도. sources/search/read/versions/add/remove 지원, read는 version_ref로 당시 원문 조회, remove는 검색 제외(excluded:false로 복원). op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 또는 text 붙여넣기, title 옵션 — path=파일 경로[상대 경로=프로젝트 기준, 없으면 저장소 루트 폴백]·웹 URL·유튜브 URL[자막을 타임스탬프 loc으로 색인, 자막 없으면 정직 거부]. 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12, source 옵션=후보 검색 전 소스 좁히기) — 답+citations[{n,source,loc,quote}]+items; 문서 단위 답변은 실제로 읽은 소스·loc를 검증하고 quote를 원문에서 추출하며, 무효 인용 또는 인용 부재면 success:false로 답을 보류한다. 노트북 포식 기억 문서가 있으면 답 생성의 지도로 함께 읽힌다 / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
         target_key: op
         group: notebook
         router: handler
@@ -5540,6 +5541,7 @@ nodes:
           - file
         params:
           project_ref: string
+          thread_ref: string
           source_ref: string
           version_ref: string
           extraction_revision: integer
@@ -5588,8 +5590,8 @@ nodes:
             remove: source_id 필요 + 부작용
             delete: 노트북을 지운다 — 부작용
           values:
-            read: 연구 자료의 고정 원문 읽기 (project_ref, version_ref, cursor)
-            versions: 연구 자료 판본 목록 (project_ref, source_ref)
+            read: 대화 자료의 고정 원문 읽기 (project_ref, thread_ref, version_ref, cursor)
+            versions: 대화가 확보한 자료 판본 목록 (project_ref, thread_ref, source_ref)
             create: 노트북 생성 (name + note 목적) — 등록되면 시스템 AI 에 포식 기억 조사가 자동 위임된다(add 도 같음, 10분 디바운스)
             add: 소스 넣기 (path=파일·웹 URL·유튜브 URL[자막] / text 붙여넣기, 재add=재색인)
             ask: 근거 고정 질문 (기본) — 지도로 문서를 골라 통째로 읽고 답, 인용 [#소스 자리]

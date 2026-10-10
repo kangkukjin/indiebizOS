@@ -160,5 +160,23 @@ syncUserData({resourcesPath: process.argv[1], userDataPath: process.argv[2], log
     assert (user / 'data/instruments/templates/personal.yaml').read_text() == 'my personal'
 
 
+
+
+def test_legacy_unassigned_materials_preserved_in_separate_thread(tmp_path):
+    from research_library import ResearchLibrary
+    store = ResearchStore(tmp_path, 'legacy-project')
+    tid = store.create_thread('교육')['id']
+    lib = ResearchLibrary(store)
+    linked = lib.capture('교육에서 수집한 자료', title='교육 자료', thread=tid)
+    manual = lib.capture('대화 연결이 없는 옛 수동 자료', title='수동 자료')
+    with store.connect(True) as db:
+        db.execute("DELETE FROM research_migrations WHERE name='thread-libraries'")
+    reopened = ResearchStore(tmp_path)
+    legacy = next(t for t in reopened.threads()['items'] if t['title'] == '이전 공용 자료')
+    assert [s['version_ref'] for s in ResearchLibrary(reopened, tid).sources()['items']] == [linked['version_ref']]
+    assert [s['version_ref'] for s in ResearchLibrary(reopened, legacy['id']).sources()['items']] == [manual['version_ref']]
+    assert len(ResearchStore(tmp_path).threads()['items']) == 2
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

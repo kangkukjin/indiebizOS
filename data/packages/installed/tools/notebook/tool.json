@@ -73,6 +73,10 @@
             "type": "string",
             "description": "self:notebook 파라미터"
           },
+          "thread_ref": {
+            "type": "string",
+            "description": "self:notebook 파라미터"
+          },
           "source_ref": {
             "type": "string",
             "description": "self:notebook 파라미터"

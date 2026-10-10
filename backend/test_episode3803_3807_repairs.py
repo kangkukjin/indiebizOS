@@ -36,6 +36,7 @@ def test_repair_candidate_can_return_to_normal_execution(supervisor, monkeypatch
         _run_consciousness_or_reuse = lambda *a, **kw: framing
         _consciousness_clarification = lambda *a: None
         _extract_achievement_criteria = lambda *a: ""
+        _load_role = lambda self: ""
         _build_system_prompt_split = lambda *a: ("stable", "")
         _apply_consciousness_to_history = lambda self, history, co: history
         _after_response_async = lambda *a, **kw: None

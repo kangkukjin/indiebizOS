@@ -44,6 +44,7 @@ def test_real_pipeline_resumes_without_recall_classifier_or_planner(supervisor, 
         _associate = lambda *a, **k: pytest.fail("재연상")
         _decide_request_type = lambda *a, **k: pytest.fail("재분류")
         _run_consciousness = lambda *a, **k: pytest.fail("재규정")
+        _load_role = lambda self: ""
         _build_system_prompt_split = lambda *a: ("stable", "")
         _apply_consciousness_to_history = lambda self, history, co: history
         _after_response_async = lambda *a, **kw: None

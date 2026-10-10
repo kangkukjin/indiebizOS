@@ -270,5 +270,31 @@ def test_library_mode_allows_only_same_thread_perspective_updates():
         with pytest.raises(PermissionError):
             before({}, params)
 
+
+@pytest.mark.parametrize('reflex_hint', [None, '저장 자료를 확인한다'])
+def test_execution_refresh_keeps_research_role_sources_and_perspective(tmp_path, monkeypatch, reflex_hint):
+    store = ResearchStore(tmp_path, 'prompt-delivery')
+    tid = store.create_thread('교육')['id']
+    store.update_thread(tid, notes='사용자의 고유한 교육 관점')
+    monkeypatch.setattr(research_runner, '_search', lambda *a: {'items': [
+        {'text': '저장한 원문에서 가져온 고유한 문단', 'citation': '[자료:sample:¶1]'}]})
+    cfg = {'name': '교육', '_project_id': 'prompt-delivery', '_project_path': str(tmp_path),
+           '_research_base_role': '상속한 기본 역할'}
+    runner = research_runner.ResearchRunner(cfg)
+    runner.ai = SimpleNamespace(system_prompt='', _provider=SimpleNamespace(system_prompt=''))
+    for perspective in ('사용자의 고유한 교육 관점', '사용자가 정정한 새 관점'):
+        store.update_thread(tid, notes=perspective)
+        runner.config['_research_role'] = research_runner.PERSPECTIVE_ROLE + research_runner._context(store, store.thread(tid), '질문')
+        # 초기화 시 포함됐어도 실제 호출 직전 조립에서 사라지면 회귀다.
+        runner.ai.system_prompt = runner._build_system_prompt(runner._load_role())
+        message = runner._refresh_execution_prompt('이번 질문', reflex_hint=reflex_hint)
+        delivered = runner.ai._provider.system_prompt + message
+        assert '상속한 기본 역할' in delivered
+        assert perspective in delivered
+        assert '저장한 원문에서 가져온 고유한 문단' in delivered
+        assert '[자료:sample:¶1]' in delivered
+        assert 'expected_revision' in delivered
+        assert runner.ai.system_prompt == runner.ai._provider.system_prompt
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

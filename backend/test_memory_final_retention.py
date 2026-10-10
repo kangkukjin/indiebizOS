@@ -60,6 +60,7 @@ def test_pipeline_queues_only_after_final_delivery(supervisor, monkeypatch, endi
         _consciousness_needs_repair = lambda *a: False
         _consciousness_clarification = lambda *a: None
         _extract_achievement_criteria = lambda *a: "기준"
+        _load_role = lambda self: ""
         _build_system_prompt_split = lambda *a: ("stable", "")
         _apply_consciousness_to_history = lambda self, history, co: history
         _after_response_async = lambda self, user, response, **kw: queued.append((user, response))

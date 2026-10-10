@@ -439,6 +439,7 @@ def test_pipeline_connects_in_current_model_without_preflight(tmp_path, monkeypa
             return {'task_framing': '부산만 조회한다', 'achievement_criteria': '', 'assumptions': ['대상 부산'],
                     'pursuit_id': row['id'], 'pursuit_reason': '사용자의 대상 정정'}
         def _consciousness_needs_repair(self, out): return False
+        def _load_role(self): return ''
         def _build_system_prompt_split(self, role, out, memory): return 'system', memory
         def _apply_consciousness_to_history(self, history, out): return history
         def _extract_achievement_criteria(self, out): return ''

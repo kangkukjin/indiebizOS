@@ -320,6 +320,7 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
         _consciousness_clarification = lambda *a: None
         _extract_achievement_criteria = lambda *a: "" if lane == "NO_CRITERIA" else "기준"
         _run_goal_evaluation_stream = lambda self, **kw: calls.append(1) or iter(())
+        _load_role = lambda self: ""
         _build_system_prompt_split = lambda *a: ("stable", "")
         _apply_consciousness_to_history = lambda self, history, co: history
         _after_response_async = lambda *a, **kw: None

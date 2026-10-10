@@ -182,9 +182,8 @@ class CognitivePipelineMixin:
                 extra_role=extra_role, allowed_set=allowed_set,
             )
         else:
-            name = self.config.get("name", "에이전트")
-            role_file = self.project_path / f"agent_{name}_role.txt"
-            role = role_file.read_text(encoding="utf-8") if role_file.exists() else ""
+            # 초기화와 같은 역할 공급자를 사용한다. 연구 대화의 자료·관점도 이 계약에 포함된다.
+            role = self._load_role()
             memory = execution_memory or ""
             if reflex_hint and not consciousness_output:
                 memory += (

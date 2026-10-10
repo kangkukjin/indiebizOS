@@ -122,7 +122,7 @@ export function LimbSwitch() {
         <details className="mt-2 text-[11px] text-stone-400">
           <summary className="cursor-pointer">USB를 분실했을 때</summary>
           <p className="my-1">USB 등록 키를 폐기하면 그 USB로 새 PC를 등록할 수 없습니다. 이미 등록된 PC는 계속 연결됩니다. 새 USB는 폴더를 다시 준비해 복사하세요.</p>
-          <button onClick={() => void revokeUSB()} disabled={busy !== null || !usb?.ready} className="rounded border border-stone-200 px-2 py-1 text-stone-500 disabled:opacity-50">USB 등록 키 폐기</button>
+          <button onClick={() => void revokeUSB()} disabled={busy !== null || !usb} className="rounded border border-stone-200 px-2 py-1 text-stone-500 disabled:opacity-50">USB 등록 키 폐기</button>
         </details>
         {err && <div role="alert" className="mt-2 rounded bg-red-50 px-2 py-1 text-[11px] text-red-600">{err}</div>}
       </div>}

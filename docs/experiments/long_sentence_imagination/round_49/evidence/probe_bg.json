@@ -1,0 +1,4880 @@
+{
+ "code": "#!ibl edition=2\n$bg=[limbs:guestpc]{op:\"shell\",limb:\"guestpc-7a440e9daf61\",cmd:\"echo start; sleep 8; echo end\",cwd:\"/Users/kangkukjin/indiebiz-training/r49/probe\",background:true,request_id:\"r49-probe-bg-1\",timeout:60}\n$dup=[limbs:guestpc]{op:\"shell\",limb:\"guestpc-7a440e9daf61\",cmd:\"echo start; sleep 8; echo end\",cwd:\"/Users/kangkukjin/indiebiz-training/r49/probe\",background:true,request_id:\"r49-probe-bg-1\",timeout:60}\n$w1={}\n[try] { $w1=[self:task]{op:\"wait\",ref:$bg.task_ref,timeout:3} } [catch] { $w1={caught:$error} }\n$w2=[self:task]{op:\"wait\",ref:$bg.task_ref,timeout:20}\n$hs=[limbs:guestpc]{op:\"history\",limb:\"guestpc-7a440e9daf61\",job:$bg.task_ref.task_id}\nreturn {bg:$bg,dup:$dup,w1:$w1,w2:$w2,hs:$hs}",
+ "elapsed": 9.392,
+ "response": {
+  "success": true,
+  "value": {
+   "bg": {
+    "success": true,
+    "accepted": true,
+    "task_ref": {
+     "kind": "guestpc",
+     "task_id": "7deb5ae417144b99aadd1cf6004e745e"
+    },
+    "state": "queued",
+    "accepted_at": "2026-10-10T21:43:02+0900",
+    "limb": "guestpc-7a440e9daf61",
+    "limb_name": "맥12",
+    "helper_mode": "resident",
+    "op": "shell",
+    "job_id": "7deb5ae417144b99aadd1cf6004e745e",
+    "request_id": "r49-probe-bg-1"
+   },
+   "dup": {
+    "success": true,
+    "accepted": true,
+    "task_ref": {
+     "kind": "guestpc",
+     "task_id": "7deb5ae417144b99aadd1cf6004e745e"
+    },
+    "state": "queued",
+    "accepted_at": "2026-10-10T21:43:02+0900",
+    "limb": "guestpc-7a440e9daf61",
+    "limb_name": "맥12",
+    "helper_mode": "resident",
+    "op": "shell",
+    "job_id": "7deb5ae417144b99aadd1cf6004e745e",
+    "request_id": "r49-probe-bg-1"
+   },
+   "w1": {
+    "success": true,
+    "task_ref": {
+     "kind": "guestpc",
+     "task_id": "7deb5ae417144b99aadd1cf6004e745e"
+    },
+    "state": "running",
+    "terminal": false,
+    "timed_out": true,
+    "result": null,
+    "failure": null,
+    "progress": [
+     {
+      "cursor": 95,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "submitted:7deb5ae417144b99aadd1cf6004e745e",
+      "kind": "queued",
+      "occurred": 1791636182.016872,
+      "received": 1791636182.016872,
+      "payload": {
+       "op": "shell",
+       "cmd": "echo start; sleep 8; echo end",
+       "cwd": "/Users/kangkukjin/indiebiz-training/r49/probe",
+       "timeout": 60,
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 96,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "f83a2cdb95affe48f0397a0ecb636ce2",
+      "kind": "started",
+      "occurred": 1791636182.465445,
+      "received": 1791636182.690964,
+      "payload": {}
+     },
+     {
+      "cursor": 97,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "924c80b88ed0992b27a92d12f82b8cfb",
+      "kind": "log",
+      "occurred": 1791636182.5173109,
+      "received": 1791636184.827067,
+      "payload": {
+       "text": "start\n"
+      }
+     }
+    ],
+    "accepted_at": "2026-10-10T21:43:02+0900",
+    "elapsed_s": 3.0,
+    "note": "대기 3초가 끝났습니다 — 작업은 running 상태로 계속됩니다(실패 아님). 같은 ref 로 다시 wait 하세요."
+   },
+   "w2": {
+    "success": true,
+    "task_ref": {
+     "kind": "guestpc",
+     "task_id": "7deb5ae417144b99aadd1cf6004e745e"
+    },
+    "state": "succeeded",
+    "terminal": true,
+    "timed_out": false,
+    "result": {
+     "cwd": "/Users/kangkukjin/indiebiz-training/r49/probe",
+     "exit": 0,
+     "log_truncated": false,
+     "output": "start\nend\n"
+    },
+    "failure": null,
+    "progress": [
+     {
+      "cursor": 95,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "submitted:7deb5ae417144b99aadd1cf6004e745e",
+      "kind": "queued",
+      "occurred": 1791636182.016872,
+      "received": 1791636182.016872,
+      "payload": {
+       "op": "shell",
+       "cmd": "echo start; sleep 8; echo end",
+       "cwd": "/Users/kangkukjin/indiebiz-training/r49/probe",
+       "timeout": 60,
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 96,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "f83a2cdb95affe48f0397a0ecb636ce2",
+      "kind": "started",
+      "occurred": 1791636182.465445,
+      "received": 1791636182.690964,
+      "payload": {}
+     },
+     {
+      "cursor": 97,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "924c80b88ed0992b27a92d12f82b8cfb",
+      "kind": "log",
+      "occurred": 1791636182.5173109,
+      "received": 1791636184.827067,
+      "payload": {
+       "text": "start\n"
+      }
+     },
+     {
+      "cursor": 98,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "2c59ff7acd6376cb2028a225262b623c",
+      "kind": "log",
+      "occurred": 1791636190.525513,
+      "received": 1791636190.8254259,
+      "payload": {
+       "text": "end\n"
+      }
+     },
+     {
+      "cursor": 99,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "f178157be15e63982e00993bc22dfa22",
+      "kind": "result",
+      "occurred": 1791636190.5407429,
+      "received": 1791636190.8254552,
+      "payload": {
+       "cwd": "/Users/kangkukjin/indiebiz-training/r49/probe",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "start\nend\n"
+      }
+     }
+    ],
+    "accepted_at": "2026-10-10T21:43:02+0900",
+    "elapsed_s": null
+   },
+   "hs": {
+    "success": true,
+    "tasks": [
+     {
+      "id": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "generation": "6f4ef43f3dccc3f4670e45ca20253d14",
+      "request_id": "r49-probe-bg-1",
+      "summary": {
+       "op": "shell",
+       "cmd": "echo start; sleep 8; echo end",
+       "cwd": "/Users/kangkukjin/indiebiz-training/r49/probe",
+       "timeout": 60,
+       "mode": "background"
+      },
+      "created": 1791636182.0168462,
+      "state": "succeeded",
+      "result": {
+       "cwd": "/Users/kangkukjin/indiebiz-training/r49/probe",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "start\nend\n"
+      },
+      "cancel_requested": 0
+     }
+    ],
+    "events": [
+     {
+      "cursor": 95,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "submitted:7deb5ae417144b99aadd1cf6004e745e",
+      "kind": "queued",
+      "occurred": 1791636182.016872,
+      "received": 1791636182.016872,
+      "payload": {
+       "op": "shell",
+       "cmd": "echo start; sleep 8; echo end",
+       "cwd": "/Users/kangkukjin/indiebiz-training/r49/probe",
+       "timeout": 60,
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 96,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "f83a2cdb95affe48f0397a0ecb636ce2",
+      "kind": "started",
+      "occurred": 1791636182.465445,
+      "received": 1791636182.690964,
+      "payload": {}
+     },
+     {
+      "cursor": 97,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "924c80b88ed0992b27a92d12f82b8cfb",
+      "kind": "log",
+      "occurred": 1791636182.5173109,
+      "received": 1791636184.827067,
+      "payload": {
+       "text": "start\n"
+      }
+     },
+     {
+      "cursor": 98,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "2c59ff7acd6376cb2028a225262b623c",
+      "kind": "log",
+      "occurred": 1791636190.525513,
+      "received": 1791636190.8254259,
+      "payload": {
+       "text": "end\n"
+      }
+     },
+     {
+      "cursor": 99,
+      "job": "7deb5ae417144b99aadd1cf6004e745e",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "f178157be15e63982e00993bc22dfa22",
+      "kind": "result",
+      "occurred": 1791636190.5407429,
+      "received": 1791636190.8254552,
+      "payload": {
+       "cwd": "/Users/kangkukjin/indiebiz-training/r49/probe",
+       "exit": 0,
+       "log_truncated": false,
+       "output": "start\nend\n"
+      }
+     }
+    ],
+    "cursor": 99
+   }
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "bg",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "accepted",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "task_ref",
+         [
+          "record",
+          [
+           [
+            "kind",
+            [
+             "scalar",
+             "guestpc"
+            ]
+           ],
+           [
+            "task_id",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "state",
+         [
+          "scalar",
+          "queued"
+         ]
+        ],
+        [
+         "accepted_at",
+         [
+          "scalar",
+          "2026-10-10T21:43:02+0900"
+         ]
+        ],
+        [
+         "limb",
+         [
+          "scalar",
+          "guestpc-7a440e9daf61"
+         ]
+        ],
+        [
+         "limb_name",
+         [
+          "scalar",
+          "맥12"
+         ]
+        ],
+        [
+         "helper_mode",
+         [
+          "scalar",
+          "resident"
+         ]
+        ],
+        [
+         "op",
+         [
+          "scalar",
+          "shell"
+         ]
+        ],
+        [
+         "job_id",
+         [
+          "scalar",
+          "7deb5ae417144b99aadd1cf6004e745e"
+         ]
+        ],
+        [
+         "request_id",
+         [
+          "scalar",
+          "r49-probe-bg-1"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "dup",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "accepted",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "task_ref",
+         [
+          "record",
+          [
+           [
+            "kind",
+            [
+             "scalar",
+             "guestpc"
+            ]
+           ],
+           [
+            "task_id",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "state",
+         [
+          "scalar",
+          "queued"
+         ]
+        ],
+        [
+         "accepted_at",
+         [
+          "scalar",
+          "2026-10-10T21:43:02+0900"
+         ]
+        ],
+        [
+         "limb",
+         [
+          "scalar",
+          "guestpc-7a440e9daf61"
+         ]
+        ],
+        [
+         "limb_name",
+         [
+          "scalar",
+          "맥12"
+         ]
+        ],
+        [
+         "helper_mode",
+         [
+          "scalar",
+          "resident"
+         ]
+        ],
+        [
+         "op",
+         [
+          "scalar",
+          "shell"
+         ]
+        ],
+        [
+         "job_id",
+         [
+          "scalar",
+          "7deb5ae417144b99aadd1cf6004e745e"
+         ]
+        ],
+        [
+         "request_id",
+         [
+          "scalar",
+          "r49-probe-bg-1"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "w1",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "task_ref",
+         [
+          "record",
+          [
+           [
+            "kind",
+            [
+             "scalar",
+             "guestpc"
+            ]
+           ],
+           [
+            "task_id",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "state",
+         [
+          "scalar",
+          "running"
+         ]
+        ],
+        [
+         "terminal",
+         [
+          "scalar",
+          false
+         ]
+        ],
+        [
+         "timed_out",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "result",
+         [
+          "scalar",
+          null
+         ]
+        ],
+        [
+         "failure",
+         [
+          "scalar",
+          null
+         ]
+        ],
+        [
+         "progress",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               95
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "submitted:7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "queued"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636182.016872
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636182.016872
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               [
+                [
+                 "op",
+                 [
+                  "scalar",
+                  "shell"
+                 ]
+                ],
+                [
+                 "cmd",
+                 [
+                  "scalar",
+                  "echo start; sleep 8; echo end"
+                 ]
+                ],
+                [
+                 "cwd",
+                 [
+                  "scalar",
+                  "/Users/kangkukjin/indiebiz-training/r49/probe"
+                 ]
+                ],
+                [
+                 "timeout",
+                 [
+                  "scalar",
+                  60
+                 ]
+                ],
+                [
+                 "mode",
+                 [
+                  "scalar",
+                  "background"
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               96
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "f83a2cdb95affe48f0397a0ecb636ce2"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "started"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636182.465445
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636182.690964
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               []
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               97
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "924c80b88ed0992b27a92d12f82b8cfb"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "log"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636182.5173109
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636184.827067
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               [
+                [
+                 "text",
+                 [
+                  "scalar",
+                  "start\n"
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "accepted_at",
+         [
+          "scalar",
+          "2026-10-10T21:43:02+0900"
+         ]
+        ],
+        [
+         "elapsed_s",
+         [
+          "scalar",
+          3.0
+         ]
+        ],
+        [
+         "note",
+         [
+          "scalar",
+          "대기 3초가 끝났습니다 — 작업은 running 상태로 계속됩니다(실패 아님). 같은 ref 로 다시 wait 하세요."
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "w2",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "task_ref",
+         [
+          "record",
+          [
+           [
+            "kind",
+            [
+             "scalar",
+             "guestpc"
+            ]
+           ],
+           [
+            "task_id",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "state",
+         [
+          "scalar",
+          "succeeded"
+         ]
+        ],
+        [
+         "terminal",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "timed_out",
+         [
+          "scalar",
+          false
+         ]
+        ],
+        [
+         "result",
+         [
+          "record",
+          [
+           [
+            "cwd",
+            [
+             "scalar",
+             "/Users/kangkukjin/indiebiz-training/r49/probe"
+            ]
+           ],
+           [
+            "exit",
+            [
+             "scalar",
+             0
+            ]
+           ],
+           [
+            "log_truncated",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "output",
+            [
+             "scalar",
+             "start\nend\n"
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "failure",
+         [
+          "scalar",
+          null
+         ]
+        ],
+        [
+         "progress",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               95
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "submitted:7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "queued"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636182.016872
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636182.016872
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               [
+                [
+                 "op",
+                 [
+                  "scalar",
+                  "shell"
+                 ]
+                ],
+                [
+                 "cmd",
+                 [
+                  "scalar",
+                  "echo start; sleep 8; echo end"
+                 ]
+                ],
+                [
+                 "cwd",
+                 [
+                  "scalar",
+                  "/Users/kangkukjin/indiebiz-training/r49/probe"
+                 ]
+                ],
+                [
+                 "timeout",
+                 [
+                  "scalar",
+                  60
+                 ]
+                ],
+                [
+                 "mode",
+                 [
+                  "scalar",
+                  "background"
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               96
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "f83a2cdb95affe48f0397a0ecb636ce2"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "started"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636182.465445
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636182.690964
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               []
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               97
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "924c80b88ed0992b27a92d12f82b8cfb"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "log"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636182.5173109
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636184.827067
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               [
+                [
+                 "text",
+                 [
+                  "scalar",
+                  "start\n"
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               98
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "2c59ff7acd6376cb2028a225262b623c"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "log"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636190.525513
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636190.8254259
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               [
+                [
+                 "text",
+                 [
+                  "scalar",
+                  "end\n"
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               99
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "f178157be15e63982e00993bc22dfa22"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "result"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636190.5407429
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636190.8254552
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               [
+                [
+                 "cwd",
+                 [
+                  "scalar",
+                  "/Users/kangkukjin/indiebiz-training/r49/probe"
+                 ]
+                ],
+                [
+                 "exit",
+                 [
+                  "scalar",
+                  0
+                 ]
+                ],
+                [
+                 "log_truncated",
+                 [
+                  "scalar",
+                  false
+                 ]
+                ],
+                [
+                 "output",
+                 [
+                  "scalar",
+                  "start\nend\n"
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "accepted_at",
+         [
+          "scalar",
+          "2026-10-10T21:43:02+0900"
+         ]
+        ],
+        [
+         "elapsed_s",
+         [
+          "scalar",
+          null
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "hs",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "tasks",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "id",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "generation",
+              [
+               "scalar",
+               "6f4ef43f3dccc3f4670e45ca20253d14"
+              ]
+             ],
+             [
+              "request_id",
+              [
+               "scalar",
+               "r49-probe-bg-1"
+              ]
+             ],
+             [
+              "summary",
+              [
+               "record",
+               [
+                [
+                 "op",
+                 [
+                  "scalar",
+                  "shell"
+                 ]
+                ],
+                [
+                 "cmd",
+                 [
+                  "scalar",
+                  "echo start; sleep 8; echo end"
+                 ]
+                ],
+                [
+                 "cwd",
+                 [
+                  "scalar",
+                  "/Users/kangkukjin/indiebiz-training/r49/probe"
+                 ]
+                ],
+                [
+                 "timeout",
+                 [
+                  "scalar",
+                  60
+                 ]
+                ],
+                [
+                 "mode",
+                 [
+                  "scalar",
+                  "background"
+                 ]
+                ]
+               ]
+              ]
+             ],
+             [
+              "created",
+              [
+               "scalar",
+               1791636182.0168462
+              ]
+             ],
+             [
+              "state",
+              [
+               "scalar",
+               "succeeded"
+              ]
+             ],
+             [
+              "result",
+              [
+               "record",
+               [
+                [
+                 "cwd",
+                 [
+                  "scalar",
+                  "/Users/kangkukjin/indiebiz-training/r49/probe"
+                 ]
+                ],
+                [
+                 "exit",
+                 [
+                  "scalar",
+                  0
+                 ]
+                ],
+                [
+                 "log_truncated",
+                 [
+                  "scalar",
+                  false
+                 ]
+                ],
+                [
+                 "output",
+                 [
+                  "scalar",
+                  "start\nend\n"
+                 ]
+                ]
+               ]
+              ]
+             ],
+             [
+              "cancel_requested",
+              [
+               "scalar",
+               0
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "events",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               95
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "submitted:7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "queued"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636182.016872
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636182.016872
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               [
+                [
+                 "op",
+                 [
+                  "scalar",
+                  "shell"
+                 ]
+                ],
+                [
+                 "cmd",
+                 [
+                  "scalar",
+                  "echo start; sleep 8; echo end"
+                 ]
+                ],
+                [
+                 "cwd",
+                 [
+                  "scalar",
+                  "/Users/kangkukjin/indiebiz-training/r49/probe"
+                 ]
+                ],
+                [
+                 "timeout",
+                 [
+                  "scalar",
+                  60
+                 ]
+                ],
+                [
+                 "mode",
+                 [
+                  "scalar",
+                  "background"
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               96
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "f83a2cdb95affe48f0397a0ecb636ce2"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "started"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636182.465445
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636182.690964
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               []
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               97
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "924c80b88ed0992b27a92d12f82b8cfb"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "log"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636182.5173109
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636184.827067
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               [
+                [
+                 "text",
+                 [
+                  "scalar",
+                  "start\n"
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               98
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "2c59ff7acd6376cb2028a225262b623c"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "log"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636190.525513
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636190.8254259
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               [
+                [
+                 "text",
+                 [
+                  "scalar",
+                  "end\n"
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cursor",
+              [
+               "scalar",
+               99
+              ]
+             ],
+             [
+              "job",
+              [
+               "scalar",
+               "7deb5ae417144b99aadd1cf6004e745e"
+              ]
+             ],
+             [
+              "device",
+              [
+               "scalar",
+               "guestpc-7a440e9daf61"
+              ]
+             ],
+             [
+              "event_id",
+              [
+               "scalar",
+               "f178157be15e63982e00993bc22dfa22"
+              ]
+             ],
+             [
+              "kind",
+              [
+               "scalar",
+               "result"
+              ]
+             ],
+             [
+              "occurred",
+              [
+               "scalar",
+               1791636190.5407429
+              ]
+             ],
+             [
+              "received",
+              [
+               "scalar",
+               1791636190.8254552
+              ]
+             ],
+             [
+              "payload",
+              [
+               "record",
+               [
+                [
+                 "cwd",
+                 [
+                  "scalar",
+                  "/Users/kangkukjin/indiebiz-training/r49/probe"
+                 ]
+                ],
+                [
+                 "exit",
+                 [
+                  "scalar",
+                  0
+                 ]
+                ],
+                [
+                 "log_truncated",
+                 [
+                  "scalar",
+                  false
+                 ]
+                ],
+                [
+                 "output",
+                 [
+                  "scalar",
+                  "start\nend\n"
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "cursor",
+         [
+          "scalar",
+          99
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "012a16cb3a469cc399dd97333c4c748f5b9f583b5e42b7e594d6dea3cc61b879",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:39:46",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:52:74",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "literal:79:110",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "literal:115:162",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:174:178",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "literal:190:206",
+    "invocation_id": 6,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 7,
+    "node_id": "literal:215:217",
+    "invocation_id": 7,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 8,
+    "node_id": "record:35:218",
+    "invocation_id": 8,
+    "kind": "record",
+    "parents": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ]
+   },
+   {
+    "id": 9,
+    "node_id": "call:20:218",
+    "invocation_id": 9,
+    "kind": "invoke",
+    "parents": [
+     8
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "ea4f16c32c4f300ecad9391b98b259a4e28fa3fc02059856fa4c1af534bdf143",
+    "targets": {
+     "op": "shell",
+     "limb": "guestpc-7a440e9daf61",
+     "cmd": "echo start; sleep 8; echo end",
+     "cwd": "/Users/kangkukjin/indiebiz-training/r49/probe",
+     "request_id": "r49-probe-bg-1"
+    }
+   },
+   {
+    "id": 10,
+    "node_id": "call:20:218",
+    "invocation_id": 10,
+    "kind": "tool_evidence",
+    "parents": [
+     9
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 11,
+    "node_id": "call:20:218",
+    "invocation_id": 11,
+    "kind": "call",
+    "parents": [
+     8,
+     9,
+     10
+    ]
+   },
+   {
+    "id": 12,
+    "node_id": "bind:16:218",
+    "invocation_id": 12,
+    "kind": "bind",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "literal:243:250",
+    "invocation_id": 13,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 14,
+    "node_id": "literal:256:278",
+    "invocation_id": 14,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 15,
+    "node_id": "literal:283:314",
+    "invocation_id": 15,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 16,
+    "node_id": "literal:319:366",
+    "invocation_id": 16,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 17,
+    "node_id": "literal:378:382",
+    "invocation_id": 17,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 18,
+    "node_id": "literal:394:410",
+    "invocation_id": 18,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 19,
+    "node_id": "literal:419:421",
+    "invocation_id": 19,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 20,
+    "node_id": "record:239:422",
+    "invocation_id": 20,
+    "kind": "record",
+    "parents": [
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19
+    ]
+   },
+   {
+    "id": 21,
+    "node_id": "call:224:422",
+    "invocation_id": 21,
+    "kind": "invoke",
+    "parents": [
+     20
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "ea4f16c32c4f300ecad9391b98b259a4e28fa3fc02059856fa4c1af534bdf143",
+    "targets": {
+     "op": "shell",
+     "limb": "guestpc-7a440e9daf61",
+     "cmd": "echo start; sleep 8; echo end",
+     "cwd": "/Users/kangkukjin/indiebiz-training/r49/probe",
+     "request_id": "r49-probe-bg-1"
+    }
+   },
+   {
+    "id": 22,
+    "node_id": "call:224:422",
+    "invocation_id": 22,
+    "kind": "tool_evidence",
+    "parents": [
+     21
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 23,
+    "node_id": "call:224:422",
+    "invocation_id": 23,
+    "kind": "call",
+    "parents": [
+     20,
+     21,
+     22
+    ]
+   },
+   {
+    "id": 24,
+    "node_id": "bind:219:422",
+    "invocation_id": 24,
+    "kind": "bind",
+    "parents": [
+     23
+    ]
+   },
+   {
+    "id": 25,
+    "node_id": "record:427:429",
+    "invocation_id": 25,
+    "kind": "record",
+    "parents": []
+   },
+   {
+    "id": 26,
+    "node_id": "bind:423:429",
+    "invocation_id": 26,
+    "kind": "bind",
+    "parents": [
+     25
+    ]
+   },
+   {
+    "id": 27,
+    "node_id": "literal:457:463",
+    "invocation_id": 27,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 28,
+    "node_id": "ref:468:471",
+    "invocation_id": 28,
+    "kind": "ref",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 29,
+    "node_id": "field:468:480",
+    "invocation_id": 29,
+    "kind": "field",
+    "parents": [
+     28
+    ]
+   },
+   {
+    "id": 30,
+    "node_id": "literal:489:490",
+    "invocation_id": 30,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 31,
+    "node_id": "record:453:491",
+    "invocation_id": 31,
+    "kind": "record",
+    "parents": [
+     27,
+     29,
+     30
+    ]
+   },
+   {
+    "id": 32,
+    "node_id": "call:442:491",
+    "invocation_id": 32,
+    "kind": "invoke",
+    "parents": [
+     31
+    ],
+    "action": "self:task",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "c01d5c696c197708c3b6850885dbd5871c322d72017a0b2f8d3c20d03782fc11",
+    "targets": {
+     "op": "wait"
+    }
+   },
+   {
+    "id": 33,
+    "node_id": "call:442:491",
+    "invocation_id": 33,
+    "kind": "tool_evidence",
+    "parents": [
+     32
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 34,
+    "node_id": "call:442:491",
+    "invocation_id": 34,
+    "kind": "call",
+    "parents": [
+     31,
+     32,
+     33
+    ]
+   },
+   {
+    "id": 35,
+    "node_id": "bind:438:491",
+    "invocation_id": 35,
+    "kind": "bind",
+    "parents": [
+     34
+    ]
+   },
+   {
+    "id": 36,
+    "node_id": "sequence:438:491",
+    "invocation_id": 36,
+    "kind": "sequence",
+    "parents": [
+     35
+    ]
+   },
+   {
+    "id": 37,
+    "node_id": "try:430:525",
+    "invocation_id": 37,
+    "kind": "try",
+    "parents": [
+     36
+    ]
+   },
+   {
+    "id": 38,
+    "node_id": "literal:545:551",
+    "invocation_id": 38,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 39,
+    "node_id": "ref:556:559",
+    "invocation_id": 39,
+    "kind": "ref",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 40,
+    "node_id": "field:556:568",
+    "invocation_id": 40,
+    "kind": "field",
+    "parents": [
+     39
+    ]
+   },
+   {
+    "id": 41,
+    "node_id": "literal:577:579",
+    "invocation_id": 41,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 42,
+    "node_id": "record:541:580",
+    "invocation_id": 42,
+    "kind": "record",
+    "parents": [
+     38,
+     40,
+     41
+    ]
+   },
+   {
+    "id": 43,
+    "node_id": "call:530:580",
+    "invocation_id": 43,
+    "kind": "invoke",
+    "parents": [
+     42
+    ],
+    "action": "self:task",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "852e1e6df1819748ab15dbd5c7d4a4ce4abda3d0ab600707a9215bb9714b6920",
+    "targets": {
+     "op": "wait"
+    }
+   },
+   {
+    "id": 44,
+    "node_id": "call:530:580",
+    "invocation_id": 44,
+    "kind": "tool_evidence",
+    "parents": [
+     43
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 45,
+    "node_id": "call:530:580",
+    "invocation_id": 45,
+    "kind": "call",
+    "parents": [
+     42,
+     43,
+     44
+    ]
+   },
+   {
+    "id": 46,
+    "node_id": "bind:526:580",
+    "invocation_id": 46,
+    "kind": "bind",
+    "parents": [
+     45
+    ]
+   },
+   {
+    "id": 47,
+    "node_id": "literal:604:613",
+    "invocation_id": 47,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 48,
+    "node_id": "literal:619:641",
+    "invocation_id": 48,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 49,
+    "node_id": "ref:646:649",
+    "invocation_id": 49,
+    "kind": "ref",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 50,
+    "node_id": "field:646:658",
+    "invocation_id": 50,
+    "kind": "field",
+    "parents": [
+     49
+    ]
+   },
+   {
+    "id": 51,
+    "node_id": "field:646:666",
+    "invocation_id": 51,
+    "kind": "field",
+    "parents": [
+     50
+    ]
+   },
+   {
+    "id": 52,
+    "node_id": "record:600:667",
+    "invocation_id": 52,
+    "kind": "record",
+    "parents": [
+     47,
+     48,
+     51
+    ]
+   },
+   {
+    "id": 53,
+    "node_id": "call:585:667",
+    "invocation_id": 53,
+    "kind": "invoke",
+    "parents": [
+     52
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "dd85a53a428d8b99ab1cd5eacc09ea32226aed381b27205d452dbf980168823f",
+    "targets": {
+     "op": "history",
+     "limb": "guestpc-7a440e9daf61",
+     "job": "7deb5ae417144b99aadd1cf6004e745e"
+    }
+   },
+   {
+    "id": 54,
+    "node_id": "call:585:667",
+    "invocation_id": 54,
+    "kind": "tool_evidence",
+    "parents": [
+     53
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 55,
+    "node_id": "call:585:667",
+    "invocation_id": 55,
+    "kind": "call",
+    "parents": [
+     52,
+     53,
+     54
+    ]
+   },
+   {
+    "id": 56,
+    "node_id": "bind:581:667",
+    "invocation_id": 56,
+    "kind": "bind",
+    "parents": [
+     55
+    ]
+   },
+   {
+    "id": 57,
+    "node_id": "ref:679:682",
+    "invocation_id": 57,
+    "kind": "ref",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 58,
+    "node_id": "ref:687:691",
+    "invocation_id": 58,
+    "kind": "ref",
+    "parents": [
+     23
+    ]
+   },
+   {
+    "id": 59,
+    "node_id": "ref:695:698",
+    "invocation_id": 59,
+    "kind": "ref",
+    "parents": [
+     34
+    ]
+   },
+   {
+    "id": 60,
+    "node_id": "ref:702:705",
+    "invocation_id": 60,
+    "kind": "ref",
+    "parents": [
+     45
+    ]
+   },
+   {
+    "id": 61,
+    "node_id": "ref:709:712",
+    "invocation_id": 61,
+    "kind": "ref",
+    "parents": [
+     55
+    ]
+   },
+   {
+    "id": 62,
+    "node_id": "record:675:713",
+    "invocation_id": 62,
+    "kind": "record",
+    "parents": [
+     57,
+     58,
+     59,
+     60,
+     61
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:713": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 15,
+    "end": 713,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:218": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 16,
+    "end": 218,
+    "line": 2,
+    "column": 1
+   },
+   "call:20:218": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 20,
+    "end": 218,
+    "line": 2,
+    "column": 5
+   },
+   "record:35:218": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 35,
+    "end": 218,
+    "line": 2,
+    "column": 20
+   },
+   "literal:39:46": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 39,
+    "end": 46,
+    "line": 2,
+    "column": 24
+   },
+   "literal:52:74": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 52,
+    "end": 74,
+    "line": 2,
+    "column": 37
+   },
+   "literal:79:110": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 79,
+    "end": 110,
+    "line": 2,
+    "column": 64
+   },
+   "literal:115:162": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 115,
+    "end": 162,
+    "line": 2,
+    "column": 100
+   },
+   "literal:174:178": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 174,
+    "end": 178,
+    "line": 2,
+    "column": 159
+   },
+   "literal:190:206": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 190,
+    "end": 206,
+    "line": 2,
+    "column": 175
+   },
+   "literal:215:217": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 215,
+    "end": 217,
+    "line": 2,
+    "column": 200
+   },
+   "bind:219:422": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 219,
+    "end": 422,
+    "line": 3,
+    "column": 1
+   },
+   "call:224:422": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 224,
+    "end": 422,
+    "line": 3,
+    "column": 6
+   },
+   "record:239:422": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 239,
+    "end": 422,
+    "line": 3,
+    "column": 21
+   },
+   "literal:243:250": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 243,
+    "end": 250,
+    "line": 3,
+    "column": 25
+   },
+   "literal:256:278": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 256,
+    "end": 278,
+    "line": 3,
+    "column": 38
+   },
+   "literal:283:314": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 283,
+    "end": 314,
+    "line": 3,
+    "column": 65
+   },
+   "literal:319:366": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 319,
+    "end": 366,
+    "line": 3,
+    "column": 101
+   },
+   "literal:378:382": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 378,
+    "end": 382,
+    "line": 3,
+    "column": 160
+   },
+   "literal:394:410": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 394,
+    "end": 410,
+    "line": 3,
+    "column": 176
+   },
+   "literal:419:421": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 419,
+    "end": 421,
+    "line": 3,
+    "column": 201
+   },
+   "bind:423:429": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 423,
+    "end": 429,
+    "line": 4,
+    "column": 1
+   },
+   "record:427:429": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 427,
+    "end": 429,
+    "line": 4,
+    "column": 5
+   },
+   "try:430:525": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 430,
+    "end": 525,
+    "line": 5,
+    "column": 1
+   },
+   "sequence:438:491": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 438,
+    "end": 491,
+    "line": 5,
+    "column": 9
+   },
+   "bind:438:491": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 438,
+    "end": 491,
+    "line": 5,
+    "column": 9
+   },
+   "call:442:491": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 442,
+    "end": 491,
+    "line": 5,
+    "column": 13
+   },
+   "record:453:491": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 453,
+    "end": 491,
+    "line": 5,
+    "column": 24
+   },
+   "literal:457:463": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 457,
+    "end": 463,
+    "line": 5,
+    "column": 28
+   },
+   "field:468:480": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 468,
+    "end": 480,
+    "line": 5,
+    "column": 39
+   },
+   "ref:468:471": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 468,
+    "end": 471,
+    "line": 5,
+    "column": 39
+   },
+   "literal:489:490": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 489,
+    "end": 490,
+    "line": 5,
+    "column": 60
+   },
+   "bind:526:580": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 526,
+    "end": 580,
+    "line": 6,
+    "column": 1
+   },
+   "call:530:580": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 530,
+    "end": 580,
+    "line": 6,
+    "column": 5
+   },
+   "record:541:580": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 541,
+    "end": 580,
+    "line": 6,
+    "column": 16
+   },
+   "literal:545:551": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 545,
+    "end": 551,
+    "line": 6,
+    "column": 20
+   },
+   "field:556:568": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 556,
+    "end": 568,
+    "line": 6,
+    "column": 31
+   },
+   "ref:556:559": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 556,
+    "end": 559,
+    "line": 6,
+    "column": 31
+   },
+   "literal:577:579": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 577,
+    "end": 579,
+    "line": 6,
+    "column": 52
+   },
+   "bind:581:667": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 581,
+    "end": 667,
+    "line": 7,
+    "column": 1
+   },
+   "call:585:667": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 585,
+    "end": 667,
+    "line": 7,
+    "column": 5
+   },
+   "record:600:667": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 600,
+    "end": 667,
+    "line": 7,
+    "column": 20
+   },
+   "literal:604:613": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 604,
+    "end": 613,
+    "line": 7,
+    "column": 24
+   },
+   "literal:619:641": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 619,
+    "end": 641,
+    "line": 7,
+    "column": 39
+   },
+   "field:646:666": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 646,
+    "end": 666,
+    "line": 7,
+    "column": 66
+   },
+   "field:646:658": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 646,
+    "end": 658,
+    "line": 7,
+    "column": 66
+   },
+   "ref:646:649": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 646,
+    "end": 649,
+    "line": 7,
+    "column": 66
+   },
+   "return:668:713": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 668,
+    "end": 713,
+    "line": 8,
+    "column": 1
+   },
+   "record:675:713": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 675,
+    "end": 713,
+    "line": 8,
+    "column": 8
+   },
+   "ref:679:682": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 679,
+    "end": 682,
+    "line": 8,
+    "column": 12
+   },
+   "ref:687:691": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 687,
+    "end": 691,
+    "line": 8,
+    "column": 20
+   },
+   "ref:695:698": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 695,
+    "end": 698,
+    "line": 8,
+    "column": 28
+   },
+   "ref:702:705": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 702,
+    "end": 705,
+    "line": 8,
+    "column": 35
+   },
+   "ref:709:712": {
+    "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+    "start": 709,
+    "end": 712,
+    "line": 8,
+    "column": 42
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "ea4f16c32c4f300ecad9391b98b259a4e28fa3fc02059856fa4c1af534bdf143",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "accepted",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "7deb5ae417144b99aadd1cf6004e745e"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "queued"
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T21:43:02+0900"
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "helper_mode",
+       [
+        "scalar",
+        "resident"
+       ]
+      ],
+      [
+       "op",
+       [
+        "scalar",
+        "shell"
+       ]
+      ],
+      [
+       "job_id",
+       [
+        "scalar",
+        "7deb5ae417144b99aadd1cf6004e745e"
+       ]
+      ],
+      [
+       "request_id",
+       [
+        "scalar",
+        "r49-probe-bg-1"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "b1bb68bfad290315edf097607cf71ab4eba60f898481f2e25216477e59e80824",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "0d2c2cec04097f2d16f843bf335ebae6a69870f15e2cb1736e092f7a7691db59",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "ea4f16c32c4f300ecad9391b98b259a4e28fa3fc02059856fa4c1af534bdf143",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "accepted",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "7deb5ae417144b99aadd1cf6004e745e"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "queued"
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T21:43:02+0900"
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "helper_mode",
+       [
+        "scalar",
+        "resident"
+       ]
+      ],
+      [
+       "op",
+       [
+        "scalar",
+        "shell"
+       ]
+      ],
+      [
+       "job_id",
+       [
+        "scalar",
+        "7deb5ae417144b99aadd1cf6004e745e"
+       ]
+      ],
+      [
+       "request_id",
+       [
+        "scalar",
+        "r49-probe-bg-1"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "b1bb68bfad290315edf097607cf71ab4eba60f898481f2e25216477e59e80824",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "0d2c2cec04097f2d16f843bf335ebae6a69870f15e2cb1736e092f7a7691db59",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "c01d5c696c197708c3b6850885dbd5871c322d72017a0b2f8d3c20d03782fc11",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "7deb5ae417144b99aadd1cf6004e745e"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "running"
+       ]
+      ],
+      [
+       "terminal",
+       [
+        "scalar",
+        false
+       ]
+      ],
+      [
+       "timed_out",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "result",
+       [
+        "scalar",
+        null
+       ]
+      ],
+      [
+       "failure",
+       [
+        "scalar",
+        null
+       ]
+      ],
+      [
+       "progress",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             95
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "submitted:7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "queued"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636182.016872
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636182.016872
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "op",
+               [
+                "scalar",
+                "shell"
+               ]
+              ],
+              [
+               "cmd",
+               [
+                "scalar",
+                "echo start; sleep 8; echo end"
+               ]
+              ],
+              [
+               "cwd",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/probe"
+               ]
+              ],
+              [
+               "timeout",
+               [
+                "scalar",
+                60
+               ]
+              ],
+              [
+               "mode",
+               [
+                "scalar",
+                "background"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             96
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "f83a2cdb95affe48f0397a0ecb636ce2"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "started"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636182.465445
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636182.690964
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             []
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             97
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "924c80b88ed0992b27a92d12f82b8cfb"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "log"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636182.5173109
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636184.827067
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "text",
+               [
+                "scalar",
+                "start\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T21:43:02+0900"
+       ]
+      ],
+      [
+       "elapsed_s",
+       [
+        "scalar",
+        3.0
+       ]
+      ],
+      [
+       "note",
+       [
+        "scalar",
+        "대기 3초가 끝났습니다 — 작업은 running 상태로 계속됩니다(실패 아님). 같은 ref 로 다시 wait 하세요."
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:task",
+    "reuse_key": "c611202a44866d845657e5e47292fb162506d295794414bc5c60fd288ec62e61",
+    "reuse_parts": {
+     "action": "7183833719e26e5be84885765368aae9a6cc51b803c18bae46c7afd161de9288",
+     "args": "9ecc1707942fb299a5a921e7882d36df8be4e7cbdfa3826bd5b748e25453a057",
+     "contract": "8f9e24183c1c15d94940392bc79bdba6bf32d8b7aaff06ea9a6b6e6042eec2c9",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "852e1e6df1819748ab15dbd5c7d4a4ce4abda3d0ab600707a9215bb9714b6920",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "7deb5ae417144b99aadd1cf6004e745e"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "succeeded"
+       ]
+      ],
+      [
+       "terminal",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "timed_out",
+       [
+        "scalar",
+        false
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "cwd",
+          [
+           "scalar",
+           "/Users/kangkukjin/indiebiz-training/r49/probe"
+          ]
+         ],
+         [
+          "exit",
+          [
+           "scalar",
+           0
+          ]
+         ],
+         [
+          "log_truncated",
+          [
+           "scalar",
+           false
+          ]
+         ],
+         [
+          "output",
+          [
+           "scalar",
+           "start\nend\n"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "failure",
+       [
+        "scalar",
+        null
+       ]
+      ],
+      [
+       "progress",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             95
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "submitted:7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "queued"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636182.016872
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636182.016872
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "op",
+               [
+                "scalar",
+                "shell"
+               ]
+              ],
+              [
+               "cmd",
+               [
+                "scalar",
+                "echo start; sleep 8; echo end"
+               ]
+              ],
+              [
+               "cwd",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/probe"
+               ]
+              ],
+              [
+               "timeout",
+               [
+                "scalar",
+                60
+               ]
+              ],
+              [
+               "mode",
+               [
+                "scalar",
+                "background"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             96
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "f83a2cdb95affe48f0397a0ecb636ce2"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "started"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636182.465445
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636182.690964
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             []
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             97
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "924c80b88ed0992b27a92d12f82b8cfb"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "log"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636182.5173109
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636184.827067
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "text",
+               [
+                "scalar",
+                "start\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             98
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "2c59ff7acd6376cb2028a225262b623c"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "log"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636190.525513
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636190.8254259
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "text",
+               [
+                "scalar",
+                "end\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             99
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "f178157be15e63982e00993bc22dfa22"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "result"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636190.5407429
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636190.8254552
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "cwd",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/probe"
+               ]
+              ],
+              [
+               "exit",
+               [
+                "scalar",
+                0
+               ]
+              ],
+              [
+               "log_truncated",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "output",
+               [
+                "scalar",
+                "start\nend\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T21:43:02+0900"
+       ]
+      ],
+      [
+       "elapsed_s",
+       [
+        "scalar",
+        null
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:task",
+    "reuse_key": "6c238524e1a2d9d9d7f89a23e1c7fbf9fe34699961601b0996483b29548e6ae6",
+    "reuse_parts": {
+     "action": "7183833719e26e5be84885765368aae9a6cc51b803c18bae46c7afd161de9288",
+     "args": "29d4d90856a46f3edbfb5150cb03d35e8fe3279635c258c9199df1a63fab906d",
+     "contract": "8f9e24183c1c15d94940392bc79bdba6bf32d8b7aaff06ea9a6b6e6042eec2c9",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "dd85a53a428d8b99ab1cd5eacc09ea32226aed381b27205d452dbf980168823f",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "tasks",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "id",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "generation",
+            [
+             "scalar",
+             "6f4ef43f3dccc3f4670e45ca20253d14"
+            ]
+           ],
+           [
+            "request_id",
+            [
+             "scalar",
+             "r49-probe-bg-1"
+            ]
+           ],
+           [
+            "summary",
+            [
+             "record",
+             [
+              [
+               "op",
+               [
+                "scalar",
+                "shell"
+               ]
+              ],
+              [
+               "cmd",
+               [
+                "scalar",
+                "echo start; sleep 8; echo end"
+               ]
+              ],
+              [
+               "cwd",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/probe"
+               ]
+              ],
+              [
+               "timeout",
+               [
+                "scalar",
+                60
+               ]
+              ],
+              [
+               "mode",
+               [
+                "scalar",
+                "background"
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "created",
+            [
+             "scalar",
+             1791636182.0168462
+            ]
+           ],
+           [
+            "state",
+            [
+             "scalar",
+             "succeeded"
+            ]
+           ],
+           [
+            "result",
+            [
+             "record",
+             [
+              [
+               "cwd",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/probe"
+               ]
+              ],
+              [
+               "exit",
+               [
+                "scalar",
+                0
+               ]
+              ],
+              [
+               "log_truncated",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "output",
+               [
+                "scalar",
+                "start\nend\n"
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "cancel_requested",
+            [
+             "scalar",
+             0
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "events",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             95
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "submitted:7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "queued"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636182.016872
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636182.016872
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "op",
+               [
+                "scalar",
+                "shell"
+               ]
+              ],
+              [
+               "cmd",
+               [
+                "scalar",
+                "echo start; sleep 8; echo end"
+               ]
+              ],
+              [
+               "cwd",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/probe"
+               ]
+              ],
+              [
+               "timeout",
+               [
+                "scalar",
+                60
+               ]
+              ],
+              [
+               "mode",
+               [
+                "scalar",
+                "background"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             96
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "f83a2cdb95affe48f0397a0ecb636ce2"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "started"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636182.465445
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636182.690964
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             []
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             97
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "924c80b88ed0992b27a92d12f82b8cfb"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "log"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636182.5173109
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636184.827067
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "text",
+               [
+                "scalar",
+                "start\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             98
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "2c59ff7acd6376cb2028a225262b623c"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "log"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636190.525513
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636190.8254259
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "text",
+               [
+                "scalar",
+                "end\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             99
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "7deb5ae417144b99aadd1cf6004e745e"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "f178157be15e63982e00993bc22dfa22"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "result"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791636190.5407429
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791636190.8254552
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "cwd",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/probe"
+               ]
+              ],
+              [
+               "exit",
+               [
+                "scalar",
+                0
+               ]
+              ],
+              [
+               "log_truncated",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "output",
+               [
+                "scalar",
+                "start\nend\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "cursor",
+       [
+        "scalar",
+        99
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "98ce0fba19f210921a3d7ea4501de03e9410a5cdb752c9f7047ae1c5d563abab",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "0ad543478ab7f21b5b4d317afdf1f9e8a99d55e9bbd46a5b73c8839ba0ed129d",
+     "contract": "fb13c564d04a8af77ee9d357bfd192c50bdbca0ed11ddab1b3751ca5be66d9ba",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 54,
+   "rows": 0,
+   "elapsed_ms": 9369,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:218",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 16,
+      "end": 218,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:219:422",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 219,
+      "end": 422,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:423:429",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 423,
+      "end": 429,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:438:491",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 438,
+      "end": 491,
+      "line": 5,
+      "column": 9
+     }
+    },
+    {
+     "node_id": "bind:526:580",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 526,
+      "end": 580,
+      "line": 6,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:581:667",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 581,
+      "end": 667,
+      "line": 7,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:20:218",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 20,
+      "end": 218,
+      "line": 2,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:224:422",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 224,
+      "end": 422,
+      "line": 3,
+      "column": 6
+     }
+    },
+    {
+     "node_id": "call:442:491",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 442,
+      "end": 491,
+      "line": 5,
+      "column": 13
+     }
+    },
+    {
+     "node_id": "call:530:580",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 530,
+      "end": 580,
+      "line": 6,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "call:585:667",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 585,
+      "end": 667,
+      "line": 7,
+      "column": 5
+     }
+    },
+    {
+     "node_id": "field:468:480",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 468,
+      "end": 480,
+      "line": 5,
+      "column": 39
+     }
+    },
+    {
+     "node_id": "field:556:568",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 556,
+      "end": 568,
+      "line": 6,
+      "column": 31
+     }
+    },
+    {
+     "node_id": "field:646:658",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 646,
+      "end": 658,
+      "line": 7,
+      "column": 66
+     }
+    },
+    {
+     "node_id": "field:646:666",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 646,
+      "end": 666,
+      "line": 7,
+      "column": 66
+     }
+    },
+    {
+     "node_id": "literal:115:162",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 115,
+      "end": 162,
+      "line": 2,
+      "column": 100
+     }
+    },
+    {
+     "node_id": "literal:174:178",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 174,
+      "end": 178,
+      "line": 2,
+      "column": 159
+     }
+    },
+    {
+     "node_id": "literal:190:206",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 190,
+      "end": 206,
+      "line": 2,
+      "column": 175
+     }
+    },
+    {
+     "node_id": "literal:215:217",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 215,
+      "end": 217,
+      "line": 2,
+      "column": 200
+     }
+    },
+    {
+     "node_id": "literal:243:250",
+     "steps": 1,
+     "location": {
+      "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef",
+      "start": 243,
+      "end": 250,
+      "line": 3,
+      "column": 25
+     }
+    }
+   ],
+   "steps_other": 34,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 10,
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 3,
+     "steps": 10,
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 5,
+     "steps": 9,
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 7,
+     "steps": 8,
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 6,
+     "steps": 7,
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 8,
+     "steps": 7,
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 4,
+     "steps": 2,
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 6,
+     "ms": 6029,
+     "calls": 1,
+     "actions": [
+      "self:task"
+     ],
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 5,
+     "ms": 3006,
+     "calls": 1,
+     "actions": [
+      "self:task"
+     ],
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 7,
+     "ms": 20,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 2,
+     "ms": 13,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    },
+    {
+     "line": 3,
+     "ms": 11,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "4eb21775b5639c368d9ac6dffa654c2aab7cb53bbe45fdc09c224b77b12525ef"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "f52ec09334a74ca698c7783c72782ed1"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "f52ec09334a74ca698c7783c72782ed1"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "f52ec09334a74ca698c7783c72782ed1",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

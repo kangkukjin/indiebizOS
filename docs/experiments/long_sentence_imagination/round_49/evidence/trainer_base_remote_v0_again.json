@@ -1,0 +1,70 @@
+{
+ "label": "trainer_base_remote_v0_again",
+ "elapsed": 4.31,
+ "success": false,
+ "error": "출력 zip 이 이미 있습니다(overwrite:true 로 허용): /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/base/out/_stage/photos.zip",
+ "value": null,
+ "usage": {
+  "steps": 1546,
+  "rows": 1,
+  "elapsed_ms": 4222
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 200,
+   "ms": 1875,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "1ab17c9e25ddc1f0a2f813737df3a414e353cfb06c9bba151b22884b379fe3dc"
+  },
+  {
+   "line": 62,
+   "ms": 277,
+   "calls": 1,
+   "actions": [
+    "self:script"
+   ],
+   "source_hash": "1ab17c9e25ddc1f0a2f813737df3a414e353cfb06c9bba151b22884b379fe3dc"
+  },
+  {
+   "line": 36,
+   "ms": 107,
+   "calls": 1,
+   "actions": [
+    "self:list"
+   ],
+   "source_hash": "1ab17c9e25ddc1f0a2f813737df3a414e353cfb06c9bba151b22884b379fe3dc"
+  },
+  {
+   "line": 34,
+   "ms": 30,
+   "calls": 1,
+   "actions": [
+    "self:read"
+   ],
+   "source_hash": "1ab17c9e25ddc1f0a2f813737df3a414e353cfb06c9bba151b22884b379fe3dc"
+  },
+  {
+   "line": 183,
+   "ms": 30,
+   "calls": 1,
+   "actions": [
+    "self:limb"
+   ],
+   "source_hash": "1ab17c9e25ddc1f0a2f813737df3a414e353cfb06c9bba151b22884b379fe3dc"
+  },
+  {
+   "line": 222,
+   "ms": 29,
+   "calls": 3,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "1ab17c9e25ddc1f0a2f813737df3a414e353cfb06c9bba151b22884b379fe3dc"
+  }
+ ],
+ "diagnostic": {},
+ "issues": null
+}

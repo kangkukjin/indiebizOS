@@ -1,0 +1,1545 @@
+{
+ "code": "#!ibl edition=2\n$r=[limbs:guestpc]{op:\"shell\",limb:\"guestpc-7a440e9daf61\",cmd:\"B=$(python3 -c \\\"import json,glob,os;fs=glob.glob(os.path.expanduser(\\\\\\\"~/Library/Application Support/IndieBiz/resident-*/*.json\\\\\\\"));print([json.load(open(f)).get(\\\\\\\"base\\\\\\\") for f in fs if \\\\\\\"base\\\\\\\" in json.load(open(f))][0])\\\"); echo BASE=$B; for i in 1 2 3; do curl -s -m 50 -o /dev/null -w \\\"hub-big code=%{http_code} bytes=%{size_download} sec=%{time_total} bps=%{speed_download}\\\\n\\\" \\\"$B/launcher/ui/assets/SheetEngine-BL-r0mU-.js\\\"; done; curl -s -m 20 -o /dev/null -w \\\"hub-small code=%{http_code} bytes=%{size_download} sec=%{time_total}\\\\n\\\" \\\"$B/launcher/app\\\"\",cwd:\"/tmp\",timeout:200,request_id:\"r49-verify-hubspeed-1\",background:true}\n$w=[self:task]{op:\"wait\",ref:$r.task_ref,timeout:200}\nreturn $w.result.output",
+ "elapsed": 69.812,
+ "response": {
+  "success": true,
+  "value": "BASE=https://<허브 주소 가림>\nhub-big code=200 bytes=5361538 sec=50.002107 bps=107226.000\nhub-big code=200 bytes=6910775 sec=7.119978 bps=970750.000\nhub-big code=200 bytes=6910775 sec=7.271395 bps=950457.000\nhub-small code=200 bytes=1405547 sec=2.729768\n",
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "scalar",
+    "BASE=https://<허브 주소 가림>\nhub-big code=200 bytes=5361538 sec=50.002107 bps=107226.000\nhub-big code=200 bytes=6910775 sec=7.119978 bps=970750.000\nhub-big code=200 bytes=6910775 sec=7.271395 bps=950457.000\nhub-small code=200 bytes=1405547 sec=2.729768\n"
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "6091ff39c3d00c6a9d12a1fd5333749e9f6fe3d3957c6908a52593e64efc3325",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:38:45",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:51:73",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "literal:78:660",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "literal:665:671",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:680:683",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "literal:695:718",
+    "invocation_id": 6,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 7,
+    "node_id": "literal:730:734",
+    "invocation_id": 7,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 8,
+    "node_id": "record:34:735",
+    "invocation_id": 8,
+    "kind": "record",
+    "parents": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ]
+   },
+   {
+    "id": 9,
+    "node_id": "call:19:735",
+    "invocation_id": 9,
+    "kind": "invoke",
+    "parents": [
+     8
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "501a6a6cbdac272f968685660128bd49b2ba6046ebb6c04a109703d75e655579",
+    "targets": {
+     "op": "shell",
+     "limb": "guestpc-7a440e9daf61",
+     "cwd": "/tmp",
+     "request_id": "r49-verify-hubspeed-1"
+    }
+   },
+   {
+    "id": 10,
+    "node_id": "call:19:735",
+    "invocation_id": 10,
+    "kind": "tool_evidence",
+    "parents": [
+     9
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 11,
+    "node_id": "call:19:735",
+    "invocation_id": 11,
+    "kind": "call",
+    "parents": [
+     8,
+     9,
+     10
+    ]
+   },
+   {
+    "id": 12,
+    "node_id": "bind:16:735",
+    "invocation_id": 12,
+    "kind": "bind",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "literal:754:760",
+    "invocation_id": 13,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 14,
+    "node_id": "ref:765:767",
+    "invocation_id": 14,
+    "kind": "ref",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 15,
+    "node_id": "field:765:776",
+    "invocation_id": 15,
+    "kind": "field",
+    "parents": [
+     14
+    ]
+   },
+   {
+    "id": 16,
+    "node_id": "literal:785:788",
+    "invocation_id": 16,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 17,
+    "node_id": "record:750:789",
+    "invocation_id": 17,
+    "kind": "record",
+    "parents": [
+     13,
+     15,
+     16
+    ]
+   },
+   {
+    "id": 18,
+    "node_id": "call:739:789",
+    "invocation_id": 18,
+    "kind": "invoke",
+    "parents": [
+     17
+    ],
+    "action": "self:task",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "5cd6637b6a0761847eb8cabfedf977fa2ca3989798559dbb6fb2c63e67025aab",
+    "targets": {
+     "op": "wait"
+    }
+   },
+   {
+    "id": 19,
+    "node_id": "call:739:789",
+    "invocation_id": 19,
+    "kind": "tool_evidence",
+    "parents": [
+     18
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 20,
+    "node_id": "call:739:789",
+    "invocation_id": 20,
+    "kind": "call",
+    "parents": [
+     17,
+     18,
+     19
+    ]
+   },
+   {
+    "id": 21,
+    "node_id": "bind:736:789",
+    "invocation_id": 21,
+    "kind": "bind",
+    "parents": [
+     20
+    ]
+   },
+   {
+    "id": 22,
+    "node_id": "ref:797:799",
+    "invocation_id": 22,
+    "kind": "ref",
+    "parents": [
+     20
+    ]
+   },
+   {
+    "id": 23,
+    "node_id": "field:797:806",
+    "invocation_id": 23,
+    "kind": "field",
+    "parents": [
+     22
+    ]
+   },
+   {
+    "id": 24,
+    "node_id": "field:797:813",
+    "invocation_id": 24,
+    "kind": "field",
+    "parents": [
+     23
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:813": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 15,
+    "end": 813,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:735": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 16,
+    "end": 735,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:735": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 19,
+    "end": 735,
+    "line": 2,
+    "column": 4
+   },
+   "record:34:735": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 34,
+    "end": 735,
+    "line": 2,
+    "column": 19
+   },
+   "literal:38:45": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 38,
+    "end": 45,
+    "line": 2,
+    "column": 23
+   },
+   "literal:51:73": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 51,
+    "end": 73,
+    "line": 2,
+    "column": 36
+   },
+   "literal:78:660": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 78,
+    "end": 660,
+    "line": 2,
+    "column": 63
+   },
+   "literal:665:671": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 665,
+    "end": 671,
+    "line": 2,
+    "column": 650
+   },
+   "literal:680:683": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 680,
+    "end": 683,
+    "line": 2,
+    "column": 665
+   },
+   "literal:695:718": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 695,
+    "end": 718,
+    "line": 2,
+    "column": 680
+   },
+   "literal:730:734": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 730,
+    "end": 734,
+    "line": 2,
+    "column": 715
+   },
+   "bind:736:789": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 736,
+    "end": 789,
+    "line": 3,
+    "column": 1
+   },
+   "call:739:789": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 739,
+    "end": 789,
+    "line": 3,
+    "column": 4
+   },
+   "record:750:789": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 750,
+    "end": 789,
+    "line": 3,
+    "column": 15
+   },
+   "literal:754:760": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 754,
+    "end": 760,
+    "line": 3,
+    "column": 19
+   },
+   "field:765:776": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 765,
+    "end": 776,
+    "line": 3,
+    "column": 30
+   },
+   "ref:765:767": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 765,
+    "end": 767,
+    "line": 3,
+    "column": 30
+   },
+   "literal:785:788": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 785,
+    "end": 788,
+    "line": 3,
+    "column": 50
+   },
+   "return:790:813": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 790,
+    "end": 813,
+    "line": 4,
+    "column": 1
+   },
+   "field:797:813": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 797,
+    "end": 813,
+    "line": 4,
+    "column": 8
+   },
+   "field:797:806": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 797,
+    "end": 806,
+    "line": 4,
+    "column": 8
+   },
+   "ref:797:799": {
+    "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+    "start": 797,
+    "end": 799,
+    "line": 4,
+    "column": 8
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "501a6a6cbdac272f968685660128bd49b2ba6046ebb6c04a109703d75e655579",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "accepted",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "144a3cb1c8474b9dafc730c98dea79c3"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "queued"
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T22:07:08+0900"
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "helper_mode",
+       [
+        "scalar",
+        "resident"
+       ]
+      ],
+      [
+       "op",
+       [
+        "scalar",
+        "shell"
+       ]
+      ],
+      [
+       "job_id",
+       [
+        "scalar",
+        "144a3cb1c8474b9dafc730c98dea79c3"
+       ]
+      ],
+      [
+       "request_id",
+       [
+        "scalar",
+        "r49-verify-hubspeed-1"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "302cbcadb79b698eb24951dc943f0abc461bc702b08a0575ba8e305286e97c9d",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "5b52119a6e8e71081a2779800f3a5402945072bc7d82480b978bd260f880476b",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "5cd6637b6a0761847eb8cabfedf977fa2ca3989798559dbb6fb2c63e67025aab",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "144a3cb1c8474b9dafc730c98dea79c3"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "succeeded"
+       ]
+      ],
+      [
+       "terminal",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "timed_out",
+       [
+        "scalar",
+        false
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "cwd",
+          [
+           "scalar",
+           "/tmp"
+          ]
+         ],
+         [
+          "exit",
+          [
+           "scalar",
+           0
+          ]
+         ],
+         [
+          "log_truncated",
+          [
+           "scalar",
+           false
+          ]
+         ],
+         [
+          "output",
+          [
+           "scalar",
+           "BASE=https://<허브 주소 가림>\nhub-big code=200 bytes=5361538 sec=50.002107 bps=107226.000\nhub-big code=200 bytes=6910775 sec=7.119978 bps=970750.000\nhub-big code=200 bytes=6910775 sec=7.271395 bps=950457.000\nhub-small code=200 bytes=1405547 sec=2.729768\n"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "failure",
+       [
+        "scalar",
+        null
+       ]
+      ],
+      [
+       "progress",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             384
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "144a3cb1c8474b9dafc730c98dea79c3"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "submitted:144a3cb1c8474b9dafc730c98dea79c3"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "queued"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791637628.5147362
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791637628.5147362
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "op",
+               [
+                "scalar",
+                "shell"
+               ]
+              ],
+              [
+               "cmd",
+               [
+                "scalar",
+                "B=$(python3 -c \"import json,glob,os;fs=glob.glob(os.path.expanduser(\\\"~/Library/Application Support/IndieBiz/resident-*/*.json\\\"));print([json.load(open(f)).get(\\\"base\\\") for f in fs if \\\"base\\\" in json.load(open(f))][0])\"); echo BASE=$B; for i in 1 2 3; do curl -s -m 50 -o /dev/null -w \"hub-big code=%{http_code} bytes=%{size_download} sec=%{time_total} bps=%{speed_download}\\n\" \"$B/launcher/ui/assets/SheetEngine-BL-r0mU-.js\"; done; curl -s -m 20 -o /dev/null -w \"hub-small code=%{http_code} bytes=%{size_download} sec=%{time_total}\\n\" \"$B/launcher/app\""
+               ]
+              ],
+              [
+               "cwd",
+               [
+                "scalar",
+                "/tmp"
+               ]
+              ],
+              [
+               "timeout",
+               [
+                "scalar",
+                200
+               ]
+              ],
+              [
+               "mode",
+               [
+                "scalar",
+                "background"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             385
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "144a3cb1c8474b9dafc730c98dea79c3"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "3e177703b88d4d46e0944c679c90a730"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "started"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791637628.80598
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791637628.974899
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             []
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             386
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "144a3cb1c8474b9dafc730c98dea79c3"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "8f3924fcc3481eeec552cf9e66547f03"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "log"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791637629.099505
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791637629.816864
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "text",
+               [
+                "scalar",
+                "BASE=https://<허브 주소 가림>\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             387
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "144a3cb1c8474b9dafc730c98dea79c3"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "27ece5f91f83b8461f2ebf5b1d9919cf"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "log"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791637679.114802
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791637679.8877451
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "text",
+               [
+                "scalar",
+                "hub-big code=200 bytes=5361538 sec=50.002107 bps=107226.000\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             388
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "144a3cb1c8474b9dafc730c98dea79c3"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "6887da6fda5efa82bbb6b55eb0e05050"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "log"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791637686.247676
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791637687.099038
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "text",
+               [
+                "scalar",
+                "hub-big code=200 bytes=6910775 sec=7.119978 bps=970750.000\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             389
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "144a3cb1c8474b9dafc730c98dea79c3"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "40359fff785be3358428852539205d3c"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "log"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791637693.530545
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791637694.231207
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "text",
+               [
+                "scalar",
+                "hub-big code=200 bytes=6910775 sec=7.271395 bps=950457.000\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             390
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "144a3cb1c8474b9dafc730c98dea79c3"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "084048e1e29a6ab76f9555e96a0089ad"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "log"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791637696.274972
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791637696.8627
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "text",
+               [
+                "scalar",
+                "hub-small code=200 bytes=1405547 sec=2.729768\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cursor",
+            [
+             "scalar",
+             391
+            ]
+           ],
+           [
+            "job",
+            [
+             "scalar",
+             "144a3cb1c8474b9dafc730c98dea79c3"
+            ]
+           ],
+           [
+            "device",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "event_id",
+            [
+             "scalar",
+             "0dc0b97d28a192907099f11fdbc8a06d"
+            ]
+           ],
+           [
+            "kind",
+            [
+             "scalar",
+             "result"
+            ]
+           ],
+           [
+            "occurred",
+            [
+             "scalar",
+             1791637696.286598
+            ]
+           ],
+           [
+            "received",
+            [
+             "scalar",
+             1791637696.8627279
+            ]
+           ],
+           [
+            "payload",
+            [
+             "record",
+             [
+              [
+               "cwd",
+               [
+                "scalar",
+                "/tmp"
+               ]
+              ],
+              [
+               "exit",
+               [
+                "scalar",
+                0
+               ]
+              ],
+              [
+               "log_truncated",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "output",
+               [
+                "scalar",
+                "BASE=https://<허브 주소 가림>\nhub-big code=200 bytes=5361538 sec=50.002107 bps=107226.000\nhub-big code=200 bytes=6910775 sec=7.119978 bps=970750.000\nhub-big code=200 bytes=6910775 sec=7.271395 bps=950457.000\nhub-small code=200 bytes=1405547 sec=2.729768\n"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T22:07:08+0900"
+       ]
+      ],
+      [
+       "elapsed_s",
+       [
+        "scalar",
+        null
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:task",
+    "reuse_key": "d11d44d9313131c17c198f6097c4b149b5c522ce71304bc5d8224fce168aa02b",
+    "reuse_parts": {
+     "action": "7183833719e26e5be84885765368aae9a6cc51b803c18bae46c7afd161de9288",
+     "args": "012787740e228182cd9f878305b0e435d4242dc4a2b7728d17010a430893f838",
+     "contract": "8f9e24183c1c15d94940392bc79bdba6bf32d8b7aaff06ea9a6b6e6042eec2c9",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 22,
+   "rows": 0,
+   "elapsed_ms": 69793,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:735",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 16,
+      "end": 735,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:736:789",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 736,
+      "end": 789,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:19:735",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 19,
+      "end": 735,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:739:789",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 739,
+      "end": 789,
+      "line": 3,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "field:765:776",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 765,
+      "end": 776,
+      "line": 3,
+      "column": 30
+     }
+    },
+    {
+     "node_id": "field:797:806",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 797,
+      "end": 806,
+      "line": 4,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "field:797:813",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 797,
+      "end": 813,
+      "line": 4,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "literal:38:45",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 38,
+      "end": 45,
+      "line": 2,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "literal:51:73",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 51,
+      "end": 73,
+      "line": 2,
+      "column": 36
+     }
+    },
+    {
+     "node_id": "literal:665:671",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 665,
+      "end": 671,
+      "line": 2,
+      "column": 650
+     }
+    },
+    {
+     "node_id": "literal:680:683",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 680,
+      "end": 683,
+      "line": 2,
+      "column": 665
+     }
+    },
+    {
+     "node_id": "literal:695:718",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 695,
+      "end": 718,
+      "line": 2,
+      "column": 680
+     }
+    },
+    {
+     "node_id": "literal:730:734",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 730,
+      "end": 734,
+      "line": 2,
+      "column": 715
+     }
+    },
+    {
+     "node_id": "literal:754:760",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 754,
+      "end": 760,
+      "line": 3,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "literal:785:788",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 785,
+      "end": 788,
+      "line": 3,
+      "column": 50
+     }
+    },
+    {
+     "node_id": "literal:78:660",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 78,
+      "end": 660,
+      "line": 2,
+      "column": 63
+     }
+    },
+    {
+     "node_id": "record:34:735",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 34,
+      "end": 735,
+      "line": 2,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "record:750:789",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 750,
+      "end": 789,
+      "line": 3,
+      "column": 15
+     }
+    },
+    {
+     "node_id": "ref:765:767",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 765,
+      "end": 767,
+      "line": 3,
+      "column": 30
+     }
+    },
+    {
+     "node_id": "ref:797:799",
+     "steps": 1,
+     "location": {
+      "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20",
+      "start": 797,
+      "end": 799,
+      "line": 4,
+      "column": 8
+     }
+    }
+   ],
+   "steps_other": 2,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 10,
+     "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20"
+    },
+    {
+     "line": 3,
+     "steps": 7,
+     "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20"
+    },
+    {
+     "line": 4,
+     "steps": 4,
+     "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 3,
+     "ms": 69302,
+     "calls": 1,
+     "actions": [
+      "self:task"
+     ],
+     "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20"
+    },
+    {
+     "line": 2,
+     "ms": 18,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "6c3432af1c8cf1a06d74cb8c6e88f2f9f51e84926b4f4f9abcf212b4acdeba20"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "d24fd6536fd642b589efc4394969dc20"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "d24fd6536fd642b589efc4394969dc20",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

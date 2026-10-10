@@ -1,0 +1,97 @@
+{
+ "label": "trainer_base_remote_v3_again",
+ "elapsed": 6.5,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "완료 — 변환·검사·회수·지문 일치",
+  "key": "r49v2-trainer_base-800-80-48-7261492",
+  "layers": {
+   "accepted": true,
+   "state": "succeeded",
+   "exit": 0,
+   "command_ok": true,
+   "inspected": true,
+   "collected": true
+  },
+  "polls": 2,
+  "runs": 1,
+  "converted": 47,
+  "skipped": 1,
+  "failed": [],
+  "inspected": 47,
+  "collected": true,
+  "originals_match": true,
+  "name_missing": 0,
+  "isolation": true,
+  "folder_absent": true,
+  "connected": true,
+  "files": [
+   "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/base/out/result.json",
+   "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/base/out/report.md"
+  ]
+ },
+ "usage": {
+  "steps": 53896,
+  "rows": 76,
+  "elapsed_ms": 5827
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 177,
+   "ms": 1422,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  },
+  {
+   "line": 226,
+   "ms": 1178,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  },
+  {
+   "line": 148,
+   "ms": 277,
+   "calls": 1,
+   "actions": [
+    "self:script"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  },
+  {
+   "line": 248,
+   "ms": 214,
+   "calls": 35,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  },
+  {
+   "line": 209,
+   "ms": 102,
+   "calls": 8,
+   "actions": [
+    "self:limb"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  },
+  {
+   "line": 235,
+   "ms": 86,
+   "calls": 7,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  }
+ ],
+ "diagnostic": null,
+ "issues": null
+}

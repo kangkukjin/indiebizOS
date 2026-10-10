@@ -1,0 +1,545 @@
+{
+ "code": "#!ibl edition=2\n$r=[limbs:guestpc]{op:\"shell\",limb:\"guestpc-7a440e9daf61\",cmd:\"date +%T; curl -s -m 40 -o /dev/null -w \\\"down1MB code=%{http_code} bytes=%{size_download} sec=%{time_total} bps=%{speed_download}\\\\n\\\" \\\"https://speed.cloudflare.com/__down?bytes=1000000\\\"; curl -s -m 40 -o /dev/null -w \\\"down1MB code=%{http_code} bytes=%{size_download} sec=%{time_total} bps=%{speed_download}\\\\n\\\" \\\"https://speed.cloudflare.com/__down?bytes=1000000\\\"; ping -c 20 -i 0.2 -t 6 192.168.x.1 | tail -2\",cwd:\"/tmp\",timeout:110,request_id:\"r49-verify-speed-1\"}\nreturn $r.result.output",
+ "elapsed": 8.149,
+ "response": {
+  "success": true,
+  "value": "22:06:16\ndown1MB code=200 bytes=1000000 sec=1.121016 bps=892060.000\ndown1MB code=200 bytes=1000000 sec=1.001343 bps=999000.000\n20 packets transmitted, 20 packets received, 0.0% packet loss\nround-trip min/avg/max/stddev = 1.524/14.667/207.394/44.581 ms\n",
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "scalar",
+    "22:06:16\ndown1MB code=200 bytes=1000000 sec=1.121016 bps=892060.000\ndown1MB code=200 bytes=1000000 sec=1.001343 bps=999000.000\n20 packets transmitted, 20 packets received, 0.0% packet loss\nround-trip min/avg/max/stddev = 1.524/14.667/207.394/44.581 ms\n"
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "dc83fea07fd727ca5f9608e978eb9c3c4b79dabfea81fbd9366fa2ff7dd36f89",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:38:45",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:51:73",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "literal:78:496",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "literal:501:507",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:516:519",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "literal:531:551",
+    "invocation_id": 6,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 7,
+    "node_id": "record:34:552",
+    "invocation_id": 7,
+    "kind": "record",
+    "parents": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
+   },
+   {
+    "id": 8,
+    "node_id": "call:19:552",
+    "invocation_id": 8,
+    "kind": "invoke",
+    "parents": [
+     7
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "d619b8c1f4835fb677c13e85238b3aa0e1076be55fe626faf9668e804f4ace47",
+    "targets": {
+     "op": "shell",
+     "limb": "guestpc-7a440e9daf61",
+     "cwd": "/tmp",
+     "request_id": "r49-verify-speed-1"
+    }
+   },
+   {
+    "id": 9,
+    "node_id": "call:19:552",
+    "invocation_id": 9,
+    "kind": "tool_evidence",
+    "parents": [
+     8
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 10,
+    "node_id": "call:19:552",
+    "invocation_id": 10,
+    "kind": "call",
+    "parents": [
+     7,
+     8,
+     9
+    ]
+   },
+   {
+    "id": 11,
+    "node_id": "bind:16:552",
+    "invocation_id": 11,
+    "kind": "bind",
+    "parents": [
+     10
+    ]
+   },
+   {
+    "id": 12,
+    "node_id": "ref:560:562",
+    "invocation_id": 12,
+    "kind": "ref",
+    "parents": [
+     10
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "field:560:569",
+    "invocation_id": 13,
+    "kind": "field",
+    "parents": [
+     12
+    ]
+   },
+   {
+    "id": 14,
+    "node_id": "field:560:576",
+    "invocation_id": 14,
+    "kind": "field",
+    "parents": [
+     13
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:576": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 15,
+    "end": 576,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:552": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 16,
+    "end": 552,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:552": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 19,
+    "end": 552,
+    "line": 2,
+    "column": 4
+   },
+   "record:34:552": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 34,
+    "end": 552,
+    "line": 2,
+    "column": 19
+   },
+   "literal:38:45": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 38,
+    "end": 45,
+    "line": 2,
+    "column": 23
+   },
+   "literal:51:73": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 51,
+    "end": 73,
+    "line": 2,
+    "column": 36
+   },
+   "literal:78:496": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 78,
+    "end": 496,
+    "line": 2,
+    "column": 63
+   },
+   "literal:501:507": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 501,
+    "end": 507,
+    "line": 2,
+    "column": 486
+   },
+   "literal:516:519": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 516,
+    "end": 519,
+    "line": 2,
+    "column": 501
+   },
+   "literal:531:551": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 531,
+    "end": 551,
+    "line": 2,
+    "column": 516
+   },
+   "return:553:576": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 553,
+    "end": 576,
+    "line": 3,
+    "column": 1
+   },
+   "field:560:576": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 560,
+    "end": 576,
+    "line": 3,
+    "column": 8
+   },
+   "field:560:569": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 560,
+    "end": 569,
+    "line": 3,
+    "column": 8
+   },
+   "ref:560:562": {
+    "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+    "start": 560,
+    "end": 562,
+    "line": 3,
+    "column": 8
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "d619b8c1f4835fb677c13e85238b3aa0e1076be55fe626faf9668e804f4ace47",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "cwd",
+          [
+           "scalar",
+           "/tmp"
+          ]
+         ],
+         [
+          "exit",
+          [
+           "scalar",
+           0
+          ]
+         ],
+         [
+          "log_truncated",
+          [
+           "scalar",
+           false
+          ]
+         ],
+         [
+          "output",
+          [
+           "scalar",
+           "22:06:16\ndown1MB code=200 bytes=1000000 sec=1.121016 bps=892060.000\ndown1MB code=200 bytes=1000000 sec=1.001343 bps=999000.000\n20 packets transmitted, 20 packets received, 0.0% packet loss\nround-trip min/avg/max/stddev = 1.524/14.667/207.394/44.581 ms\n"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "eec6b678a12af052907e60eb330fe057fab465a335fbfb1da3ab737d9e097b59",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "7aa982d62ad923d8a8fb90ecbf90557c11acd76871167cf6892119edc942610f",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 14,
+   "rows": 0,
+   "elapsed_ms": 8131,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:552",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 16,
+      "end": 552,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:19:552",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 19,
+      "end": 552,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "field:560:569",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 560,
+      "end": 569,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "field:560:576",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 560,
+      "end": 576,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "literal:38:45",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 38,
+      "end": 45,
+      "line": 2,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "literal:501:507",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 501,
+      "end": 507,
+      "line": 2,
+      "column": 486
+     }
+    },
+    {
+     "node_id": "literal:516:519",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 516,
+      "end": 519,
+      "line": 2,
+      "column": 501
+     }
+    },
+    {
+     "node_id": "literal:51:73",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 51,
+      "end": 73,
+      "line": 2,
+      "column": 36
+     }
+    },
+    {
+     "node_id": "literal:531:551",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 531,
+      "end": 551,
+      "line": 2,
+      "column": 516
+     }
+    },
+    {
+     "node_id": "literal:78:496",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 78,
+      "end": 496,
+      "line": 2,
+      "column": 63
+     }
+    },
+    {
+     "node_id": "record:34:552",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 34,
+      "end": 552,
+      "line": 2,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "ref:560:562",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 560,
+      "end": 562,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "return:553:576",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 553,
+      "end": 576,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "sequence:15:576",
+     "steps": 1,
+     "location": {
+      "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304",
+      "start": 15,
+      "end": 576,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 9,
+     "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304"
+    },
+    {
+     "line": 3,
+     "steps": 4,
+     "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 7849,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "404aac4ed2b6ef4dfd5ada9e3d4f805a2bf895aa5c8cc424efc187ba73db0304"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "bd324d9b2c4743fdabfdde5c4dc42a5a"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "bd324d9b2c4743fdabfdde5c4dc42a5a",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

@@ -1,0 +1,123 @@
+{
+ "label": "trainer_base_remote_v2",
+ "elapsed": 371.67,
+ "success": false,
+ "error": "보낸 파일이 원격에 같은 내용으로 도착하지 않음",
+ "value": null,
+ "usage": {
+  "steps": 6260,
+  "rows": 9,
+  "elapsed_ms": 371296
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 248,
+   "ms": 365678,
+   "calls": 11,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "1f63353f7e517d6822275e7764cde1e2206d64289a1c1df516ebbe41d9d7aabc"
+  },
+  {
+   "line": 226,
+   "ms": 1482,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "1f63353f7e517d6822275e7764cde1e2206d64289a1c1df516ebbe41d9d7aabc"
+  },
+  {
+   "line": 83,
+   "ms": 620,
+   "calls": 1,
+   "actions": [
+    "self:script"
+   ],
+   "source_hash": "1f63353f7e517d6822275e7764cde1e2206d64289a1c1df516ebbe41d9d7aabc"
+  },
+  {
+   "line": 287,
+   "ms": 191,
+   "calls": 4,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "1f63353f7e517d6822275e7764cde1e2206d64289a1c1df516ebbe41d9d7aabc"
+  },
+  {
+   "line": 209,
+   "ms": 149,
+   "calls": 5,
+   "actions": [
+    "self:limb"
+   ],
+   "source_hash": "1f63353f7e517d6822275e7764cde1e2206d64289a1c1df516ebbe41d9d7aabc"
+  },
+  {
+   "line": 55,
+   "ms": 64,
+   "calls": 1,
+   "actions": [
+    "self:list"
+   ],
+   "source_hash": "1f63353f7e517d6822275e7764cde1e2206d64289a1c1df516ebbe41d9d7aabc"
+  }
+ ],
+ "diagnostic": {
+  "zip": {
+   "central_sha": "c4f0e9b635fa61c1ca2a710a926906d0a2ea5938225bc0224137cfa0d0fa41d9",
+   "remote_sha": null,
+   "tries": [
+    {
+     "request_id": "r49v2-trainer_base-800-80-48-7261492-send-zip",
+     "job": "a07c0027cc9d43499fd544e02a19f51d",
+     "ok": false,
+     "status": "failed",
+     "error": {
+      "error": "transfer_failed",
+      "message": "context deadline exceeded (Client.Timeout or context cancellation while reading body)"
+     }
+    },
+    {
+     "request_id": "r49v2-trainer_base-800-80-48-7261492-send-zip-try2",
+     "job": "235d9cef2ac243e4aa35b7345b57e8d2",
+     "ok": false,
+     "status": "failed",
+     "error": {
+      "error": "transfer_failed",
+      "message": "context deadline exceeded (Client.Timeout or context cancellation while reading body)"
+     }
+    },
+    {
+     "request_id": "r49v2-trainer_base-800-80-48-7261492-send-zip-try3",
+     "job": "8f24d6a0369d4da69ff8fca987b14453",
+     "ok": false,
+     "status": "failed",
+     "error": {
+      "error": "transfer_failed",
+      "message": "context deadline exceeded (Client.Timeout or context cancellation while reading body)"
+     }
+    }
+   ]
+  },
+  "script": {
+   "tries": [
+    {
+     "request_id": "r49v2-trainer_base-800-80-48-7261492-send-sh",
+     "job": "c295d919672b4e759e9ea08c53aafc95",
+     "ok": true,
+     "status": "delivered",
+     "error": {
+      "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/convert.sh",
+      "sha256": "cc4067abc0e2b1696933754b948ceb84429f03476d8a6f57a9b6968a9fed21d6",
+      "size": 908,
+      "state": "committed"
+     }
+    }
+   ]
+  }
+ },
+ "issues": null
+}

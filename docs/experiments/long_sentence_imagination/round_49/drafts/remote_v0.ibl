@@ -1,0 +1,178 @@
+#!ibl edition=2
+# 49회차 원격 PC 조종 — 사진 변환 일을 원격 PC 에 맡기고 회수 v0 — inputs: src(job.json·photos/), out
+# 흐름: 대상 찾기(이름이 겹치면 살아 있는 등록만) → 준비·도구 확인 → 묶어 보내기·지문 대조·풀기 → 변환(긴 작업)+지문 목록 병렬 → 원격 검사 → 묶어 가져오기·지문 대조
+#   → 원본 지문 대조 → 작업 기록의 시각 → 원격 폴더 삭제·연결 확인 → result.json·report.md
+# 재부탁: 원격에 닿는 모든 호출이 요청ID 를 갖는다(값 = 일감에서 계산). 같은 일감이면 중앙 원장이 옛 접수증을 돌려주므로 원격에서 다시 돌지 않는다.
+#   그래서 요청ID 가 없는 직접 write/read 는 쓰지 않고, 원격 스크립트는 파일 보내기로, 목록·검사 결과는 작업 출력으로 받는다.
+[def:지켜보기]($작업,$한번,$최대) {
+  $본 = [fn:외부PC작업확인]{작업:$작업,대기:$한번}
+  $횟수 = 1
+  [repeat:until $본.settled or $본.ok==false or $본.status=="unknown" or $횟수 >= $최대] {
+    $본 = [fn:외부PC작업확인]{작업:$작업,대기:$한번}
+    $횟수 = $횟수 + 1
+  }
+  return {seen:$본, polls:$횟수}
+}
+[def:시키기]($pc,$cmd,$cwd,$rid,$env,$한번,$최대) {
+  $접수 = [fn:외부PC작업실행]{PC:$pc,명령:$cmd,작업폴더:$cwd,요청ID:$rid,환경:$env,실행제한:1800,대기:0}
+  $w = [fn:지켜보기]{작업:$접수,한번:$한번,최대:$최대}
+  $r = get($w.seen,"result",null)
+  $출력 = ""
+  [if:$r != null] { $출력 = get($r,"output","") }
+  return {rid:$rid, job:get($접수,"job_id",""), state:$w.seen.status, settled:$w.seen.settled, command_ok:$w.seen.command_ok, exit:$w.seen.exit, polls:$w.polls, output:$출력, receipt:$접수}
+}
+[def:시각]($pc,$t) {
+  $h = [limbs:guestpc]{op:"history",limb:$pc,job:$t.job}
+  $st = filter($h.events, ($e)=>$e.kind=="started")
+  $en = filter($h.events, ($e)=>$e.kind=="result")
+  $s = len($st)>0 ? $st[0].occurred : null
+  $e2 = len($en)>0 ? $en[0].occurred : null
+  $걸림 = ($s != null and $e2 != null) ? $e2 - $s : null
+  return {name:$t.name, request_id:$t.rid, job:$t.job, state:len($h.tasks)>0 ? $h.tasks[0].state : "기록 없음", queued:len($h.events)>0 ? $h.events[0].occurred : null, started:$s, ended:$e2, seconds:$걸림, events:len($h.events)}
+}
+
+$job = ([self:read]{path:f"${src}/job.json"}).data
+$rd = $job.remote_dir
+$원본 = [self:list]{path:f"${src}/photos",pattern:"*.png",hash:true}
+$키 = f"r49-${split($rd,'/')[len(split($rd,'/'))-1]}-${job.long_side}-${job.quality}-${len($원본)}-${sum(map($원본, ($f)=>$f.size))}"
+
+# 1) 대상·준비·도구
+$손발 = [self:limb]{op:"list"}
+$같은이름 = filter($손발.items, ($r)=>$r.alias==$job.pc)
+$살아있음 = filter($같은이름, ($r)=>$r.revoked==false and $r.expired==false)
+assert len($살아있음)==1, "이름으로 대상 PC 를 하나로 정할 수 없음", {pc:$job.pc, same_name:len($같은이름), alive:len($살아있음)}
+$pc = $살아있음[0].device_id
+$준비 = [fn:외부PC준비]{PC:$pc}
+[if:$준비.ok==false] {
+  $멈춤 = {verdict:"중단 — 원격 PC 가 일을 받을 수 없음", target:{name:$job.pc, device:$pc}, ready:{ok:false, status:$준비.status}}
+  $wm = [self:write]{path:f"${out}/result.json", content:json($멈춤)}
+  $wm2 = [self:write]{path:f"${out}/report.md", content:f"# 원격 사진 변환\n- 판정: ${멈춤.verdict} (${준비.status})"}
+  return $멈춤
+}
+$t도구 = [fn:시키기]{pc:$pc, cmd:"for t in sips zip unzip shasum awk; do if command -v $t >/dev/null 2>&1; then echo \"OK $t\"; else echo \"MISSING $t\"; fi; done", cwd:"/tmp", rid:f"${키}-tools", env:{}, 한번:30, 최대:4}
+$없는도구 = map(filter(split(strip($t도구.output),"\n"), ($l)=>contains($l,"MISSING ")), ($l)=>replace($l,"MISSING ",""))
+[if:$t도구.command_ok != true or len($없는도구)>0] {
+  $멈춤2 = {verdict:"중단 — 원격 PC 에 필요한 도구가 없음", target:{name:$job.pc, device:$pc}, ready:{ok:true, status:$준비.status}, tools:{checked:$t도구.output, missing:$없는도구, state:$t도구.state}}
+  $wn = [self:write]{path:f"${out}/result.json", content:json($멈춤2)}
+  $wn2 = [self:write]{path:f"${out}/report.md", content:f"# 원격 사진 변환\n- 판정: ${멈춤2.verdict}: ${join(', ', $없는도구)}"}
+  return $멈춤2
+}
+
+# 2) 묶어 보내기 → 도착 지문 = 보낸 지문 → 풀기. 변환 스크립트도 파일로 보낸다
+$묶음 = [self:script]{id:"압축",args:{op:"pack",paths:[f"${src}/photos"],base:$src,output:f"${out}/_stage/photos.zip"}}
+$묶음지문 = ([self:list]{path:f"${out}/_stage",pattern:"photos.zip",hash:true})[0].sha256
+$sh = join("\n", [
+  "#!/bin/sh",
+  "# 환경: LONG Q MINB PREFIX PACE RID — 실행될 때마다 runs.log 에 한 줄",
+  "echo \"$$ $(date +%s) ${RID:-none}\" >> runs.log",
+  "mkdir -p out",
+  ": > convert.log",
+  "ok=0; skip=0; fail=0",
+  "for f in in/photos/*.png; do",
+  "  b=$(basename \"$f\" .png)",
+  "  n=$(wc -c < \"$f\" | tr -d ' ')",
+  "  if [ \"$n\" -lt \"$MINB\" ]; then echo \"SKIP small|$b.png\" | tee -a convert.log; skip=$((skip+1)); continue; fi",
+  "  if [ -n \"$PREFIX\" ]; then case \"$b\" in \"$PREFIX\"*) echo \"SKIP prefix|$b.png\" | tee -a convert.log; skip=$((skip+1)); continue;; esac; fi",
+  "  if sips -Z \"$LONG\" -s format jpeg -s formatOptions \"$Q\" \"$f\" --out \"out/$b.jpg\" >> convert.log 2>&1 && [ -s \"out/$b.jpg\" ]; then echo \"OK|$b.png\" | tee -a convert.log; ok=$((ok+1)); else rm -f \"out/$b.jpg\"; echo \"FAIL|$b.png\" | tee -a convert.log; fail=$((fail+1)); fi",
+  "  sleep \"$PACE\"",
+  "done",
+  "echo \"DONE ok=$ok skip=$skip fail=$fail\" | tee -a convert.log",
+  "[ \"$fail\" -eq 0 ] || exit 3",
+  ""])
+$ws = [self:write]{path:f"${out}/_stage/convert.sh", content:$sh}
+$보냄 = [fn:외부PC파일보내기]{PC:$pc,중앙경로:f"${out}/_stage/photos.zip",원격경로:f"${rd}/photos.zip",요청ID:f"${키}-send-zip",대기:120}
+[if:$보냄.ok==false and get($보냄,"settled",false)==false] { $보냄 = [fn:외부PC파일보내기]{PC:$pc,중앙경로:f"${out}/_stage/photos.zip",원격경로:f"${rd}/photos.zip",요청ID:f"${키}-send-zip",대기:240,작업:$보냄} }
+$보냄2 = [fn:외부PC파일보내기]{PC:$pc,중앙경로:f"${out}/_stage/convert.sh",원격경로:f"${rd}/convert.sh",요청ID:f"${키}-send-sh",대기:60}
+$도착맞음 = $보냄.ok and get($보냄,"sha256","")==$묶음지문
+assert $도착맞음 and $보냄2.ok, "보낸 파일이 원격에 같은 내용으로 도착하지 않음", {zip:{ok:$보냄.ok, status:$보냄.status, remote_sha:get($보냄,"sha256",null), central_sha:$묶음지문}, script:{ok:$보냄2.ok, status:$보냄2.status}}
+$t풀기 = [fn:시키기]{pc:$pc, cmd:"unzip -q -o photos.zip -d in && ls in/photos | wc -l", cwd:$rd, rid:f"${키}-unzip", env:{}, 한번:60, 최대:4}
+assert $t풀기.command_ok == true and number(strip($t풀기.output)) == len($원본), "원격에서 풀린 파일 수가 보낸 수와 다름", {state:$t풀기.state, output:$t풀기.output, sent:len($원본)}
+
+# 3) (가) 변환 — 접수만 하고 (나) 지문 목록을 같이 돌린 뒤 (가) 를 지켜본다. 작업마다 폴더·환경이 따로다(나 의 출력 첫 두 줄로 확인)
+$환경 = {LONG:text($job.long_side), Q:text($job.quality), MINB:text($job.skip.min_bytes), PREFIX:$job.skip.name_prefix, PACE:text($job.pace_ms/1000), RID:f"${키}-convert"}
+$접수가 = [fn:외부PC작업실행]{PC:$pc,명령:"cd . && export SCRATCH=from-convert && sh convert.sh",작업폴더:$rd,요청ID:f"${키}-convert",환경:$환경,실행제한:3600,대기:0}
+$t나 = [fn:시키기]{pc:$pc, cmd:"cd in/photos && pwd && echo \"LONG=${LONG:-unset} SCRATCH=${SCRATCH:-unset}\" && shasum -a 256 *", cwd:$rd, rid:f"${키}-hashes", env:{}, 한번:60, 최대:4}
+$w가 = [fn:지켜보기]{작업:$접수가,한번:60,최대:12}
+$가 = $w가.seen
+$가결과 = get($가,"result",null)
+$가출력 = ""
+[if:$가결과 != null] { $가출력 = get($가결과,"output","") }
+$가줄 = split(strip($가출력),"\n")
+$실패사진 = map(filter($가줄, ($l)=>contains($l,"FAIL|",true)), ($l)=>replace($l,"FAIL|",""))
+$건너뜀 = map(filter($가줄, ($l)=>contains($l,"SKIP ",true)), ($l)=>split($l,"|")[1])
+$변환됨 = map(filter($가줄, ($l)=>contains($l,"OK|",true)), ($l)=>replace($l,"OK|",""))
+assert $가.settled, "변환이 정해진 시간 안에 끝나지 않음 — 다시 시키지 말고 같은 접수증으로 확인", {state:$가.status, polls:$w가.polls, receipt:$접수가.task_ref}
+
+# 4) 원격 검사(장수·긴 변·형식·실행 횟수) → 통과하면 묶어서 가져오기
+$t검사 = [fn:시키기]{pc:$pc, cmd:"echo RUNS=$(wc -l < runs.log | tr -d ' '); echo COUNT=$(ls out | wc -l | tr -d ' '); cd out && for f in *.jpg; do echo \"IMG|$(sips -g pixelWidth -g pixelHeight -g format \"$f\" | awk 'NR>1{printf \"%s|\", $2}')$f\"; done", cwd:$rd, rid:f"${키}-inspect", env:{}, 한번:120, 최대:4}
+$검사줄 = split(strip($t검사.output),"\n")
+$사진 = map(filter($검사줄, ($l)=>contains($l,"IMG|",true)), ($l)=>{w:number(split($l,"|")[1]), h:number(split($l,"|")[2]), format:split($l,"|")[3], name:split($l,"|")[4]})
+$실행횟수 = number(replace(filter($검사줄, ($l)=>contains($l,"RUNS=",true))[0],"RUNS=",""))
+$규격밖 = filter($사진, ($p)=>$p.w > $job.long_side or $p.h > $job.long_side or $p.format != $job.format)
+$기대장수 = len($원본) - len($건너뜀) - len($실패사진)
+$검사통과 = $t검사.command_ok == true and len($사진) == $기대장수 and len($사진) == len($변환됨) and len($규격밖) == 0
+$가져옴 = {ok:false, status:"검사 미통과로 가져오지 않음"}
+$가져옴2 = {ok:false, status:"검사 미통과로 가져오지 않음"}
+$원격지문 = {zip:null, log:null}
+$중앙장수 = 0
+[if:$검사통과] {
+  $t묶기 = [fn:시키기]{pc:$pc, cmd:"rm -f result.zip && zip -q -r result.zip out && shasum -a 256 result.zip convert.log", cwd:$rd, rid:f"${키}-bundle", env:{}, 한번:120, 최대:4}
+  $지문줄 = split(strip($t묶기.output),"\n")
+  $원격지문 = {zip:split(filter($지문줄, ($l)=>contains($l,"result.zip"))[0]," ")[0], log:split(filter($지문줄, ($l)=>contains($l,"convert.log"))[0]," ")[0]}
+  $가져옴 = [fn:외부PC파일가져오기]{PC:$pc,중앙경로:f"${out}/${job.bundle}.zip",원격경로:f"${rd}/result.zip",요청ID:f"${키}-recv-zip",대기:120}
+  $가져옴2 = [fn:외부PC파일가져오기]{PC:$pc,중앙경로:f"${out}/convert.log",원격경로:f"${rd}/convert.log",요청ID:f"${키}-recv-log",대기:60}
+  [if:$가져옴.ok] {
+    $안 = [self:script]{id:"압축",args:{op:"list",path:f"${out}/${job.bundle}.zip"}}
+    $중앙장수 = len(filter($안.items, ($e)=>$e.is_dir==false))
+  }
+}
+$회수맞음 = $가져옴.ok and $가져옴2.ok and get($가져옴,"sha256","")==$원격지문.zip and get($가져옴2,"sha256","")==$원격지문.log and $중앙장수 == len($사진)
+
+# 5) 원본 지문 대조 — 원격 목록(작업 출력)의 이름·지문을 중앙 원본과 맞춘다
+$나줄 = split(strip($t나.output),"\n")
+$원격목록 = map(filter($나줄, ($l)=>len($l)>66 and contains($l,".png")), ($l)=>{sha256:split($l,"  ")[0], name:replace($l, split($l,"  ")[0] + "  ", "")})
+$대조 = $원본 >> [table:each] {
+  $m = filter($원격목록, ($r)=>$r.name==$it.name)
+  return {name:$it.name, found:len($m)==1, same:len($m)==1 and $m[0].sha256==$it.sha256}
+}
+$이름없음 = map(filter($대조, ($r)=>not $r.found), ($r)=>$r.name)
+$달라짐 = map(filter($대조, ($r)=>$r.found and not $r.same), ($r)=>$r.name)
+$지문맞음 = len($원격목록)==len($원본) and len($이름없음)==0 and len($달라짐)==0
+$격리 = {hash_job_cwd:$나줄[0], hash_job_env:$나줄[1], separate:contains($나줄[1],"LONG=unset SCRATCH=unset")}
+
+# 6) 작업 기록의 시각
+$시킨일 = [{name:"도구 확인", rid:$t도구.rid, job:$t도구.job}, {name:"묶음 보내기", rid:f"${키}-send-zip", job:get($보냄,"job_id","")}, {name:"스크립트 보내기", rid:f"${키}-send-sh", job:get($보냄2,"job_id","")}, {name:"풀기", rid:$t풀기.rid, job:$t풀기.job},
+  {name:"변환", rid:f"${키}-convert", job:get($접수가,"job_id","")}, {name:"원본 지문 목록", rid:$t나.rid, job:$t나.job}, {name:"결과 검사", rid:$t검사.rid, job:$t검사.job}]
+$기록 = $시킨일 >> [table:each] { [fn:시각]{pc:$pc, t:$it} }
+
+# 7) 원격 작업 폴더 삭제(이 폴더 하나) → 없음 확인 → 연결 확인
+$t치움 = [fn:시키기]{pc:$pc, cmd:f"rm -rf \"${rd}\" && echo REMOVED", cwd:"/tmp", rid:f"${키}-cleanup", env:{}, 한번:60, 최대:4}
+$부모 = join("/", split($rd,"/")[0:len(split($rd,"/"))-1])
+$남음 = [limbs:guestpc]{op:"list",limb:$pc,path:$부모}
+$폴더없음 = len(filter($남음.result.files, ($f)=>$f.path==$rd))==0
+$손발뒤 = filter(([self:limb]{op:"list"}).items, ($r)=>$r.device_id==$pc)
+$연결유지 = len($손발뒤)==1 and $손발뒤[0].connected==true and $손발뒤[0].revoked==false
+
+# 8) 판정 — 층을 나눠 적는다
+$변환성공 = $가.command_ok == true
+$부분 = $가.status=="failed" and get($가,"exit",null)==3 and len($실패사진)>0
+$완료 = $지문맞음 and $검사통과 and $회수맞음 and $실행횟수==1 and $폴더없음 and $연결유지
+$판정 = "미완 — 아래 불일치 확인 필요"
+[if:$완료 and $변환성공] { $판정 = "완료 — 변환·검사·회수·지문 일치" }
+[if:$완료 and $부분] { $판정 = f"부분 완료 — ${len($실패사진)}장 변환 실패, 나머지 ${len($사진)}장 회수" }
+$result = {verdict:$판정, key:$키, target:{name:$job.pc, device:$pc, same_name_entries:len($같은이름), mode:$준비.helper_mode, os:get($준비.env,"os_version",null)}, tools:{missing:$없는도구},
+  sent:{files:len($원본), bytes:$묶음.bytes, central_sha256:$묶음지문, remote_sha256:get($보냄,"sha256",null), match:$도착맞음, unzipped:number(strip($t풀기.output))},
+  convert:{layers:{accepted:$접수가.ok, state:$가.status, exit:get($가,"exit",null), command_ok:$가.command_ok, inspected:$검사통과, collected:$회수맞음}, polls:$w가.polls, remote_runs:$실행횟수, converted:len($변환됨), skipped:$건너뜀, failed:$실패사진, failure_text:filter($가줄, ($l)=>contains($l,"FAIL|",true) or contains($l,"Error") or contains($l,"DONE "))},
+  inspect:{count:len($사진), expected:$기대장수, out_of_spec:$규격밖, long_side:$job.long_side, format:$job.format},
+  collect:{zip:{path:get($가져옴,"path",null), sha256:get($가져옴,"sha256",null), remote_sha256:$원격지문.zip, entries:$중앙장수}, log:{path:get($가져옴2,"path",null), sha256:get($가져옴2,"sha256",null), remote_sha256:$원격지문.log}, match:$회수맞음},
+  originals:{central:len($원본), remote_listed:len($원격목록), name_missing:$이름없음, changed:$달라짐, match:$지문맞음}, isolation:$격리,
+  history:$기록, cleanup:{state:$t치움.state, output:strip($t치움.output), folder_absent:$폴더없음, still_connected:$연결유지}}
+$w1 = [self:write]{path:f"${out}/result.json", content:json($result)}
+$기록글 = join("\n", map($기록, ($r)=>f"  - ${r.name}: ${r.state} · ${r.seconds == null ? '시각 없음' : format_number($r.seconds, '.1f') + '초'}"))
+$md = join("\n", ["# 원격 사진 변환", f"- 판정: ${판정}", f"- 대상: ${job.pc} (${pc}) — 같은 이름의 등록 ${len($같은이름)}건 중 살아 있는 1건",
+  f"- 보내기: ${len($원본)}장 ${묶음.bytes}바이트 — 도착 지문 ${도착맞음 ? '일치' : '불일치'}", f"- 변환: 접수됨 → 상태 ${가.status} · 종료 코드 ${text(get($가,'exit',null))} · 확인 ${w가.polls}회 · 원격 실행 ${실행횟수}회",
+  f"- 변환 ${len($변환됨)}장 / 건너뜀 ${len($건너뜀)}장 / 실패 ${len($실패사진)}장${len($실패사진)>0 ? ' (' + join(', ', $실패사진) + ')' : ''}", f"- 원격 검사: ${len($사진)}장(기대 ${기대장수}) · 규격 밖 ${len($규격밖)}장 — ${검사통과 ? '통과' : '미통과'}",
+  f"- 회수: 묶음 ${중앙장수}장 · 지문 ${회수맞음 ? '원격과 일치' : '불일치 또는 미회수'}", f"- 원본 지문 대조: ${len($원격목록)}/${len($원본)} — 이름 못 찾음 ${len($이름없음)} · 달라짐 ${len($달라짐)}",
+  f"- 작업 분리: ${격리.hash_job_env}", "- 작업 기록:", $기록글, f"- 뒷정리: 원격 폴더 ${폴더없음 ? '없음' : '남아 있음'} · 연결 ${연결유지 ? '유지' : '확인 안 됨'}"])
+$w2 = [self:write]{path:f"${out}/report.md", content:$md}
+return {verdict:$판정, key:$키, layers:$result.convert.layers, polls:$w가.polls, runs:$실행횟수, converted:len($변환됨), skipped:len($건너뜀), failed:$실패사진, inspected:len($사진), collected:$회수맞음, originals_match:$지문맞음, name_missing:len($이름없음), isolation:$격리.separate, folder_absent:$폴더없음, connected:$연결유지, files:[$w1.path,$w2.path]}

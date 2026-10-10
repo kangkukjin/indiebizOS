@@ -1,0 +1,261 @@
+{
+ "passed": 16,
+ "total": 17,
+ "checks": [
+  {
+   "check": "보낸 묶음 지문 = 중앙 묶음(보고값·실파일)",
+   "ok": true,
+   "detail": "dbe2ba10fb66a61cf291bcb787dbdfa8083933d577be657cb60f2b7e6b7b743c"
+  },
+  {
+   "check": "원본 지문 대조 전건(이름 누락 0)",
+   "ok": true,
+   "detail": {
+    "central": 144,
+    "remote_listed": 144,
+    "name_missing": [],
+    "changed": [],
+    "match": true
+   }
+  },
+  {
+   "check": "회수 묶음: 기대 사진 전부·그것만(이름이 읽히는 글자)",
+   "ok": true,
+   "detail": {
+    "got": 131,
+    "want": 131,
+    "sample": [
+     "가을 들판 (1)",
+     "가을 들판 (10)"
+    ],
+    "zips": [
+     "thumb 480 (웹용).zip"
+    ]
+   }
+  },
+  {
+   "check": "회수 사진 전부 JPEG·긴 변 규격(중앙에서 직접 엶)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "회수 묶음·로그 지문 = 보고된 원격 지문",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "원장: 변환 작업 1건(중복 실행 없음)",
+   "ok": true,
+   "detail": [
+    [
+     "r49v2-trainer_b-480-60-144-22059615-convert",
+     "succeeded"
+    ]
+   ]
+  },
+  {
+   "check": "보고: 원격 실행 횟수 1(runs.log)",
+   "ok": true,
+   "detail": 1
+  },
+  {
+   "check": "원장: 변환 상태 succeeded·종료 0",
+   "ok": true,
+   "detail": [
+    [
+     "succeeded",
+     0
+    ]
+   ]
+  },
+  {
+   "check": "보고: 층 구분(접수·상태·종료·검사·회수)",
+   "ok": true,
+   "detail": {
+    "accepted": true,
+    "state": "succeeded",
+    "exit": 0,
+    "command_ok": true,
+    "inspected": true,
+    "collected": true
+   }
+  },
+  {
+   "check": "보고: 판정 완료",
+   "ok": true,
+   "detail": "완료 — 변환·검사·회수·지문 일치"
+  },
+  {
+   "check": "보고: 건너뛴 사진 = 제외 규칙",
+   "ok": true,
+   "detail": [
+    "가을 들판 (14).png",
+    "초안_공방 선반 (12).png",
+    "초안_시장 골목 (12).png",
+    "초안_옥상 저녁 (12).png",
+    "초안_호두 도마 (12).png",
+    "초안_공방 선반 (18).png",
+    "초안_시장 골목 (18).png",
+    "초안_옥상 저녁 (18).png",
+    "초안_호두 도마 (18).png",
+    "초안_공방 선반 (6).png",
+    "초안_시장 골목 (6).png",
+    "초안_옥상 저녁 (6).png",
+    "초안_호두 도마 (6).png"
+   ]
+  },
+  {
+   "check": "보고: 작업별 시작·종료·소요가 원장과 같음",
+   "ok": false,
+   "detail": [
+    [
+     "도구 확인",
+     "succeeded",
+     0.077117919921875
+    ],
+    [
+     "묶음 보내기",
+     "succeeded",
+     44.33506393432617
+    ],
+    [
+     "스크립트 보내기",
+     "succeeded",
+     0.642571210861206
+    ],
+    [
+     "풀기",
+     "succeeded",
+     0.518629789352417
+    ],
+    [
+     "변환",
+     "succeeded",
+     null
+    ],
+    [
+     "원본 지문 목록",
+     "succeeded",
+     0.3565518856048584
+    ],
+    [
+     "결과 검사",
+     "succeeded",
+     null
+    ]
+   ]
+  },
+  {
+   "check": "두 작업의 폴더·환경 분리 확인",
+   "ok": true,
+   "detail": {
+    "hash_job_cwd": "/Users/kangkukjin/indiebiz-training/r49/trainer_b/in/photos",
+    "hash_job_env": "LONG=unset SCRATCH=unset",
+    "separate": true
+   }
+  },
+  {
+   "check": "맥12 디스크: 작업 폴더 없음",
+   "ok": true,
+   "detail": "ls: /Users/kangkukjin/indiebiz-training/r49/trainer_b: No such file or directory\n---\nprobe\n"
+  },
+  {
+   "check": "맥12 등록·연결 그대로",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "원장: 훈련 폴더 밖 경로·sudo·화면·재생 0",
+   "ok": true,
+   "detail": [
+    "shell",
+    "transfer"
+   ]
+  },
+  {
+   "check": "결과 파일",
+   "ok": true,
+   "detail": null
+  }
+ ],
+ "ledger": [
+  {
+   "id": "9bf67c83c17e46c5bec170190ac0b3e5",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-cleanup",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791638302.744142
+  },
+  {
+   "id": "a5f599ba40284953bbfdacf5837b3f17",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-recv-log",
+   "state": "succeeded",
+   "op": "transfer",
+   "created": 1791638298.2334578
+  },
+  {
+   "id": "23bb86bae9794e6da96caf0e1e454f9b",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-recv-zip",
+   "state": "succeeded",
+   "op": "transfer",
+   "created": 1791638285.097708
+  },
+  {
+   "id": "c5a9a894a629448ca355d28a9c16bc09",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-bundle",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791638283.032084
+  },
+  {
+   "id": "33473e7bd31b4b77b230cbf76078c13c",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-inspect",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791638273.886533
+  },
+  {
+   "id": "07b6515e18ff47568e87053d7f8b73bf",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-hashes",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791638221.4953868
+  },
+  {
+   "id": "241798a91c0544c7bd3c51575f062877",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-convert",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791638221.4764612
+  },
+  {
+   "id": "3434b888e2f442b889d6221c066e6933",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-unzip",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791638219.433037
+  },
+  {
+   "id": "3555b910d4474ce982e206982819f141",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-send-sh",
+   "state": "succeeded",
+   "op": "transfer",
+   "created": 1791638217.38148
+  },
+  {
+   "id": "986c3fd580774ca49ad30c7b8f711143",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-send-zip",
+   "state": "succeeded",
+   "op": "transfer",
+   "created": 1791638171.0430348
+  },
+  {
+   "id": "d3f61302630543748ab92cb783253871",
+   "request_id": "r49v2-trainer_b-480-60-144-22059615-tools",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791638167.26832
+  }
+ ],
+ "disk": "ls: /Users/kangkukjin/indiebiz-training/r49/trainer_b: No such file or directory\n---\nprobe\n"
+}

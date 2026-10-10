@@ -1,0 +1,945 @@
+{
+ "code": "#!ibl edition=2\n$a=[limbs:guestpc]{op:\"transfer\",action:\"send\",limb:\"guestpc-7a440e9daf61\",local_path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/base/out/_stage/photos.zip\",path:\"/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip\",transfer_id:\"a584ed78908a44ff9d5c0d8a21a087f0\",request_id:\"r49-probe-resume-1\"}\n$w=[self:task]{op:\"wait\",ref:$a.task_ref,timeout:150}\nreturn {a:$a,state:$w.state,result:$w.result,timed_out:$w.timed_out}",
+ "elapsed": 47.539,
+ "response": {
+  "success": false,
+  "error": "transfer_failed",
+  "diagnostic": {
+   "code": "TOOL",
+   "kind": "runtime",
+   "message": "transfer_failed",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [
+    22
+   ],
+   "details": {
+    "state": "failed",
+    "terminal": true,
+    "task_ref": {
+     "kind": "guestpc",
+     "task_id": "9f4f8eb7c5744a3e88f06489a5573bcc"
+    },
+    "timed_out": false,
+    "failure": "transfer_failed",
+    "progress": [
+     {
+      "cursor": 340,
+      "job": "9f4f8eb7c5744a3e88f06489a5573bcc",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "submitted:9f4f8eb7c5744a3e88f06489a5573bcc",
+      "kind": "queued",
+      "occurred": 1791637236.694978,
+      "received": 1791637236.694978,
+      "payload": {
+       "op": "transfer",
+       "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+       "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+       "timeout": 86400,
+       "mode": "background"
+      }
+     },
+     {
+      "cursor": 341,
+      "job": "9f4f8eb7c5744a3e88f06489a5573bcc",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "f45d42f983d81859bc923872f9499ea8",
+      "kind": "started",
+      "occurred": 1791637236.8859751,
+      "received": 1791637237.040231,
+      "payload": {}
+     },
+     {
+      "cursor": 342,
+      "job": "9f4f8eb7c5744a3e88f06489a5573bcc",
+      "device": "guestpc-7a440e9daf61",
+      "event_id": "b7451cf49c67451fdd656285cfe0f43a",
+      "kind": "result",
+      "occurred": 1791637283.129052,
+      "received": 1791637283.872864,
+      "payload": {
+       "error": "transfer_failed",
+       "message": "context deadline exceeded (Client.Timeout or context cancellation while reading body)"
+      }
+     }
+    ],
+    "accepted_at": "2026-10-10T22:00:36+0900",
+    "elapsed_s": null
+   },
+   "source_span": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 383,
+    "end": 433,
+    "line": 3,
+    "column": 4
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "5b5f8202d75a8e127a1a4e6da859137691d77380564c5edd112f09f902afed13",
+  "source_complete": false,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:38:48",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:56:62",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "literal:68:90",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "literal:102:228",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:234:299",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "literal:312:346",
+    "invocation_id": 6,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 7,
+    "node_id": "literal:358:378",
+    "invocation_id": 7,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 8,
+    "node_id": "record:34:379",
+    "invocation_id": 8,
+    "kind": "record",
+    "parents": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ]
+   },
+   {
+    "id": 9,
+    "node_id": "call:19:379",
+    "invocation_id": 9,
+    "kind": "invoke",
+    "parents": [
+     8
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "d5d7ba26dd5d1e56547a71b011614334bee4caea990fc3e66b5620f12ca73a29",
+    "targets": {
+     "op": "transfer",
+     "action": "send",
+     "limb": "guestpc-7a440e9daf61",
+     "local_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/base/out/_stage/photos.zip",
+     "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+     "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+     "request_id": "r49-probe-resume-1"
+    }
+   },
+   {
+    "id": 10,
+    "node_id": "call:19:379",
+    "invocation_id": 10,
+    "kind": "tool_evidence",
+    "parents": [
+     9
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 11,
+    "node_id": "call:19:379",
+    "invocation_id": 11,
+    "kind": "call",
+    "parents": [
+     8,
+     9,
+     10
+    ]
+   },
+   {
+    "id": 12,
+    "node_id": "bind:16:379",
+    "invocation_id": 12,
+    "kind": "bind",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "literal:398:404",
+    "invocation_id": 13,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 14,
+    "node_id": "ref:409:411",
+    "invocation_id": 14,
+    "kind": "ref",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 15,
+    "node_id": "field:409:420",
+    "invocation_id": 15,
+    "kind": "field",
+    "parents": [
+     14
+    ]
+   },
+   {
+    "id": 16,
+    "node_id": "literal:429:432",
+    "invocation_id": 16,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 17,
+    "node_id": "record:394:433",
+    "invocation_id": 17,
+    "kind": "record",
+    "parents": [
+     13,
+     15,
+     16
+    ]
+   },
+   {
+    "id": 18,
+    "node_id": "call:383:433",
+    "invocation_id": 18,
+    "kind": "invoke",
+    "parents": [
+     17
+    ],
+    "action": "self:task",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "1db05f791ec8608311572af482daba9e6a7dacb1d75fa7b9277793ea26ab18a5",
+    "targets": {
+     "op": "wait"
+    }
+   },
+   {
+    "id": 19,
+    "node_id": "call:383:433",
+    "invocation_id": 19,
+    "kind": "tool_failure",
+    "parents": [
+     18
+    ],
+    "action": "self:task",
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": true
+   },
+   {
+    "id": 20,
+    "node_id": "call:383:433",
+    "invocation_id": 20,
+    "kind": "failure",
+    "parents": [
+     17,
+     18,
+     19
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 21,
+    "node_id": "bind:380:433",
+    "invocation_id": 21,
+    "kind": "failure",
+    "parents": [
+     20
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 22,
+    "node_id": "sequence:15:502",
+    "invocation_id": 22,
+    "kind": "failure",
+    "parents": [
+     12,
+     21
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   }
+  ],
+  "source_map": {
+   "sequence:15:502": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 15,
+    "end": 502,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:379": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 16,
+    "end": 379,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:379": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 19,
+    "end": 379,
+    "line": 2,
+    "column": 4
+   },
+   "record:34:379": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 34,
+    "end": 379,
+    "line": 2,
+    "column": 19
+   },
+   "literal:38:48": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 38,
+    "end": 48,
+    "line": 2,
+    "column": 23
+   },
+   "literal:56:62": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 56,
+    "end": 62,
+    "line": 2,
+    "column": 41
+   },
+   "literal:68:90": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 68,
+    "end": 90,
+    "line": 2,
+    "column": 53
+   },
+   "literal:102:228": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 102,
+    "end": 228,
+    "line": 2,
+    "column": 87
+   },
+   "literal:234:299": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 234,
+    "end": 299,
+    "line": 2,
+    "column": 219
+   },
+   "literal:312:346": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 312,
+    "end": 346,
+    "line": 2,
+    "column": 297
+   },
+   "literal:358:378": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 358,
+    "end": 378,
+    "line": 2,
+    "column": 343
+   },
+   "bind:380:433": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 380,
+    "end": 433,
+    "line": 3,
+    "column": 1
+   },
+   "call:383:433": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 383,
+    "end": 433,
+    "line": 3,
+    "column": 4
+   },
+   "record:394:433": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 394,
+    "end": 433,
+    "line": 3,
+    "column": 15
+   },
+   "literal:398:404": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 398,
+    "end": 404,
+    "line": 3,
+    "column": 19
+   },
+   "field:409:420": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 409,
+    "end": 420,
+    "line": 3,
+    "column": 30
+   },
+   "ref:409:411": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 409,
+    "end": 411,
+    "line": 3,
+    "column": 30
+   },
+   "literal:429:432": {
+    "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+    "start": 429,
+    "end": 432,
+    "line": 3,
+    "column": 50
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "d5d7ba26dd5d1e56547a71b011614334bee4caea990fc3e66b5620f12ca73a29",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "accepted",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "9f4f8eb7c5744a3e88f06489a5573bcc"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "queued"
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T22:00:36+0900"
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "helper_mode",
+       [
+        "scalar",
+        "resident"
+       ]
+      ],
+      [
+       "op",
+       [
+        "scalar",
+        "transfer"
+       ]
+      ],
+      [
+       "job_id",
+       [
+        "scalar",
+        "9f4f8eb7c5744a3e88f06489a5573bcc"
+       ]
+      ],
+      [
+       "request_id",
+       [
+        "scalar",
+        "r49-probe-resume-1"
+       ]
+      ],
+      [
+       "transfer_id",
+       [
+        "scalar",
+        "a584ed78908a44ff9d5c0d8a21a087f0"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "cdffbb114bea8de8fa2f63c9f8a629d76e76894552599f2ef1e479b659d4013d",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "16fcfb352032f199dc2c7d3cd8921523f04b79c28e1be18777a0007e1ff9d199",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "1db05f791ec8608311572af482daba9e6a7dacb1d75fa7b9277793ea26ab18a5",
+    "action": "self:task",
+    "reuse_key": "624412d433dbd843d387376f2f583870b228d9434b0401471d2f787e1b713fa2",
+    "error": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "transfer_failed",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      19
+     ],
+     "details": {
+      "state": "failed",
+      "terminal": true,
+      "task_ref": {
+       "kind": "guestpc",
+       "task_id": "9f4f8eb7c5744a3e88f06489a5573bcc"
+      },
+      "timed_out": false,
+      "failure": "transfer_failed",
+      "progress": [
+       {
+        "cursor": 340,
+        "job": "9f4f8eb7c5744a3e88f06489a5573bcc",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "submitted:9f4f8eb7c5744a3e88f06489a5573bcc",
+        "kind": "queued",
+        "occurred": 1791637236.694978,
+        "received": 1791637236.694978,
+        "payload": {
+         "op": "transfer",
+         "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+         "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+         "timeout": 86400,
+         "mode": "background"
+        }
+       },
+       {
+        "cursor": 341,
+        "job": "9f4f8eb7c5744a3e88f06489a5573bcc",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "f45d42f983d81859bc923872f9499ea8",
+        "kind": "started",
+        "occurred": 1791637236.8859751,
+        "received": 1791637237.040231,
+        "payload": {}
+       },
+       {
+        "cursor": 342,
+        "job": "9f4f8eb7c5744a3e88f06489a5573bcc",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "b7451cf49c67451fdd656285cfe0f43a",
+        "kind": "result",
+        "occurred": 1791637283.129052,
+        "received": 1791637283.872864,
+        "payload": {
+         "error": "transfer_failed",
+         "message": "context deadline exceeded (Client.Timeout or context cancellation while reading body)"
+        }
+       }
+      ],
+      "accepted_at": "2026-10-10T22:00:36+0900",
+      "elapsed_s": null
+     }
+    },
+    "partial": [
+     "unit"
+    ],
+    "arguments": [
+     "record",
+     [
+      [
+       "op",
+       [
+        "scalar",
+        "wait"
+       ]
+      ],
+      [
+       "ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "9f4f8eb7c5744a3e88f06489a5573bcc"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "timeout",
+       [
+        "scalar",
+        150
+       ]
+      ]
+     ]
+    ],
+    "argument_evidence": [
+     17
+    ],
+    "argument_incomplete": false
+   }
+  ],
+  "usage": {
+   "steps": 18,
+   "rows": 0,
+   "elapsed_ms": 47520,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:379",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 16,
+      "end": 379,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:380:433",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 380,
+      "end": 433,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:19:379",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 19,
+      "end": 379,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:383:433",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 383,
+      "end": 433,
+      "line": 3,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "field:409:420",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 409,
+      "end": 420,
+      "line": 3,
+      "column": 30
+     }
+    },
+    {
+     "node_id": "literal:102:228",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 102,
+      "end": 228,
+      "line": 2,
+      "column": 87
+     }
+    },
+    {
+     "node_id": "literal:234:299",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 234,
+      "end": 299,
+      "line": 2,
+      "column": 219
+     }
+    },
+    {
+     "node_id": "literal:312:346",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 312,
+      "end": 346,
+      "line": 2,
+      "column": 297
+     }
+    },
+    {
+     "node_id": "literal:358:378",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 358,
+      "end": 378,
+      "line": 2,
+      "column": 343
+     }
+    },
+    {
+     "node_id": "literal:38:48",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 38,
+      "end": 48,
+      "line": 2,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "literal:398:404",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 398,
+      "end": 404,
+      "line": 3,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "literal:429:432",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 429,
+      "end": 432,
+      "line": 3,
+      "column": 50
+     }
+    },
+    {
+     "node_id": "literal:56:62",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 56,
+      "end": 62,
+      "line": 2,
+      "column": 41
+     }
+    },
+    {
+     "node_id": "literal:68:90",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 68,
+      "end": 90,
+      "line": 2,
+      "column": 53
+     }
+    },
+    {
+     "node_id": "record:34:379",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 34,
+      "end": 379,
+      "line": 2,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "record:394:433",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 394,
+      "end": 433,
+      "line": 3,
+      "column": 15
+     }
+    },
+    {
+     "node_id": "ref:409:411",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 409,
+      "end": 411,
+      "line": 3,
+      "column": 30
+     }
+    },
+    {
+     "node_id": "sequence:15:502",
+     "steps": 1,
+     "location": {
+      "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916",
+      "start": 15,
+      "end": 502,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 10,
+     "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916"
+    },
+    {
+     "line": 3,
+     "steps": 7,
+     "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 3,
+     "ms": 47217,
+     "calls": 1,
+     "actions": [
+      "self:task"
+     ],
+     "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916"
+    },
+    {
+     "line": 2,
+     "ms": 17,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "fa1ebf287b938a713093c5dde662b81dd3938548e2ba05b6d904be4915d95916"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "18c27c90eace4ddf981f0fd39430ffa9"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "18c27c90eace4ddf981f0fd39430ffa9",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

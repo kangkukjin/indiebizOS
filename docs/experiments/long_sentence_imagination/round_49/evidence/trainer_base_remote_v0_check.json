@@ -1,0 +1,15 @@
+{
+ "label": "trainer_base_remote_v0_check",
+ "elapsed": 2.2,
+ "success": null,
+ "error": null,
+ "value": null,
+ "usage": {
+  "steps": null,
+  "rows": null,
+  "elapsed_ms": null
+ },
+ "tool_ms_by_line": [],
+ "diagnostic": null,
+ "issues": []
+}

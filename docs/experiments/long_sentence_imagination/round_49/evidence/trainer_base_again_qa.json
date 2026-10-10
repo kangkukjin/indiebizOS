@@ -1,0 +1,270 @@
+{
+ "passed": 17,
+ "total": 17,
+ "checks": [
+  {
+   "check": "보낸 묶음 지문 = 중앙 묶음(보고값·실파일)",
+   "ok": true,
+   "detail": "c4f0e9b635fa61c1ca2a710a926906d0a2ea5938225bc0224137cfa0d0fa41d9"
+  },
+  {
+   "check": "원본 지문 대조 전건(이름 누락 0)",
+   "ok": true,
+   "detail": {
+    "central": 48,
+    "remote_listed": 48,
+    "name_missing": [],
+    "changed": [],
+    "match": true
+   }
+  },
+  {
+   "check": "회수 묶음: 기대 사진 전부·그것만(이름이 읽히는 글자)",
+   "ok": true,
+   "detail": {
+    "got": 47,
+    "want": 47,
+    "sample": [
+     "가을 들판 (1)",
+     "가을 들판 (2)"
+    ],
+    "zips": [
+     "가을사진_800.zip"
+    ]
+   }
+  },
+  {
+   "check": "회수 사진 전부 JPEG·긴 변 규격(중앙에서 직접 엶)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "회수 묶음·로그 지문 = 보고된 원격 지문",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "원장: 변환 작업 1건(중복 실행 없음)",
+   "ok": true,
+   "detail": [
+    [
+     "r49v2-trainer_base-800-80-48-7261492-convert",
+     "succeeded"
+    ]
+   ]
+  },
+  {
+   "check": "보고: 원격 실행 횟수 1(runs.log)",
+   "ok": true,
+   "detail": 1
+  },
+  {
+   "check": "원장: 변환 상태 succeeded·종료 0",
+   "ok": true,
+   "detail": [
+    [
+     "succeeded",
+     0
+    ]
+   ]
+  },
+  {
+   "check": "보고: 층 구분(접수·상태·종료·검사·회수)",
+   "ok": true,
+   "detail": {
+    "accepted": true,
+    "state": "succeeded",
+    "exit": 0,
+    "command_ok": true,
+    "inspected": true,
+    "collected": true
+   }
+  },
+  {
+   "check": "보고: 판정 완료",
+   "ok": true,
+   "detail": "완료 — 변환·검사·회수·지문 일치"
+  },
+  {
+   "check": "보고: 건너뛴 사진 = 제외 규칙",
+   "ok": true,
+   "detail": [
+    "가을 들판 (6).png"
+   ]
+  },
+  {
+   "check": "보고: 작업별 시작·종료·소요가 원장과 같음",
+   "ok": true,
+   "detail": [
+    [
+     "도구 확인",
+     "succeeded",
+     0.07267999649047852
+    ],
+    [
+     "묶음 보내기",
+     "succeeded",
+     15.718751907348633
+    ],
+    [
+     "스크립트 보내기",
+     "succeeded",
+     1.6578576564788818
+    ],
+    [
+     "풀기",
+     "succeeded",
+     0.18046116828918457
+    ],
+    [
+     "변환",
+     "succeeded",
+     75.31864380836487
+    ],
+    [
+     "원본 지문 목록",
+     "succeeded",
+     0.19149494171142578
+    ],
+    [
+     "결과 검사",
+     "succeeded",
+     1.4137592315673828
+    ]
+   ]
+  },
+  {
+   "check": "두 작업의 폴더·환경 분리 확인",
+   "ok": true,
+   "detail": {
+    "hash_job_cwd": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/in/photos",
+    "hash_job_env": "LONG=unset SCRATCH=unset",
+    "separate": true
+   }
+  },
+  {
+   "check": "맥12 디스크: 작업 폴더 없음",
+   "ok": true,
+   "detail": "ls: /Users/kangkukjin/indiebiz-training/r49/trainer_base: No such file or directory\n---\nprobe\n"
+  },
+  {
+   "check": "맥12 등록·연결 그대로",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "원장: 훈련 폴더 밖 경로·sudo·화면·재생 0",
+   "ok": true,
+   "detail": [
+    "shell",
+    "transfer"
+   ]
+  },
+  {
+   "check": "결과 파일",
+   "ok": true,
+   "detail": null
+  }
+ ],
+ "ledger": [
+  {
+   "id": "b553512f3c5d4480b008bf5242818df9",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-cleanup",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791637852.7181718
+  },
+  {
+   "id": "5ff9e6f2e170485fb2dbff8dad238ad5",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-recv-log",
+   "state": "succeeded",
+   "op": "transfer",
+   "created": 1791637846.924588
+  },
+  {
+   "id": "33a7130d59dd48a6bfb74a17e0567cb3",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-recv-zip",
+   "state": "succeeded",
+   "op": "transfer",
+   "created": 1791637816.7334971
+  },
+  {
+   "id": "22e5a878e2e14b1482e5c68a366fa183",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-bundle",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791637813.664383
+  },
+  {
+   "id": "cd932cd6f69d4e889a2c22d36f384099",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-inspect",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791637810.586737
+  },
+  {
+   "id": "915ac8dfb826488bbf0fac7e9ea9cac4",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-hashes",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791637732.430457
+  },
+  {
+   "id": "f9ca66d1aa8f41e6ae9ca4636354e220",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-convert",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791637732.41128
+  },
+  {
+   "id": "dea5e7c976bc4218bfe0c11e70c2022a",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-unzip",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791637730.36707
+  },
+  {
+   "id": "f4481af44ede4d96bb2fde7448073fd0",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-send-zip-try4",
+   "state": "succeeded",
+   "op": "transfer",
+   "created": 1791637713.0816178
+  },
+  {
+   "id": "c295d919672b4e759e9ea08c53aafc95",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-send-sh",
+   "state": "succeeded",
+   "op": "transfer",
+   "created": 1791637204.071701
+  },
+  {
+   "id": "8f24d6a0369d4da69ff8fca987b14453",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-send-zip-try3",
+   "state": "failed",
+   "op": "transfer",
+   "created": 1791637107.4565609
+  },
+  {
+   "id": "235d9cef2ac243e4aa35b7345b57e8d2",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-send-zip-try2",
+   "state": "failed",
+   "op": "transfer",
+   "created": 1791636891.944016
+  },
+  {
+   "id": "a07c0027cc9d43499fd544e02a19f51d",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-send-zip",
+   "state": "failed",
+   "op": "transfer",
+   "created": 1791636844.329559
+  },
+  {
+   "id": "5c373c070fca4702a1f580aa7647d4eb",
+   "request_id": "r49v2-trainer_base-800-80-48-7261492-tools",
+   "state": "succeeded",
+   "op": "shell",
+   "created": 1791636840.272056
+  }
+ ],
+ "disk": "ls: /Users/kangkukjin/indiebiz-training/r49/trainer_base: No such file or directory\n---\nprobe\n"
+}

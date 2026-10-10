@@ -1,0 +1,545 @@
+{
+ "code": "#!ibl edition=2\n$r=[limbs:guestpc]{op:\"shell\",limb:\"guestpc-7a440e9daf61\",cmd:\"ls -l /Users/kangkukjin/indiebiz-training/r49/trainer_base | awk \\\"{print \\\\$5, \\\\$9}\\\"; echo GW; ping -c 10 -i 0.3 -t 6 192.168.x.1 | tail -2; echo NET; ping -c 10 -i 0.3 -t 6 1.1.1.1 | tail -2; /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I | grep -E \\\"agrCtlRSSI|agrCtlNoise|lastTxRate|channel\\\"; pmset -g log | grep -E \\\" (Sleep|Wake|DarkWake) \\\" | grep -v Acks | tail -3 | cut -c1-120\",cwd:\"/tmp\",timeout:60,request_id:\"r49-verify-net-1\"}\nreturn $r.result.output",
+ "elapsed": 9.746,
+ "response": {
+  "success": true,
+  "value": " \n908 convert.sh\n524288 photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part\n2621440 photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part\n0 photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part\nGW\n10 packets transmitted, 9 packets received, 10.0% packet loss\nround-trip min/avg/max/stddev = 1.404/5.208/14.355/3.953 ms\nNET\n10 packets transmitted, 9 packets received, 10.0% packet loss\nround-trip min/avg/max/stddev = 5.955/8.072/12.491/2.081 ms\n     agrCtlRSSI: -70\n    agrCtlNoise: -82\n     lastTxRate: 7\n        channel: 3\n2026-10-10 21:34:57 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Charge:100%) 9\n2026-10-10 21:34:58 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14490 wakeAt=2026-10-11 01:3\n2026-10-10 21:36:33 +0900 Wake                \tWake from Safe Sleep [CDNVA] : due to RTC/UserActivity Assertion Using AC\n",
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "scalar",
+    " \n908 convert.sh\n524288 photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part\n2621440 photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part\n0 photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part\nGW\n10 packets transmitted, 9 packets received, 10.0% packet loss\nround-trip min/avg/max/stddev = 1.404/5.208/14.355/3.953 ms\nNET\n10 packets transmitted, 9 packets received, 10.0% packet loss\nround-trip min/avg/max/stddev = 5.955/8.072/12.491/2.081 ms\n     agrCtlRSSI: -70\n    agrCtlNoise: -82\n     lastTxRate: 7\n        channel: 3\n2026-10-10 21:34:57 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Charge:100%) 9\n2026-10-10 21:34:58 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14490 wakeAt=2026-10-11 01:3\n2026-10-10 21:36:33 +0900 Wake                \tWake from Safe Sleep [CDNVA] : due to RTC/UserActivity Assertion Using AC\n"
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "96ab81d5054dffbd8466e0cb319447a6530c4d2b7ebddba79abf0659563fa00a",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:38:45",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:51:73",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "literal:78:515",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "literal:520:526",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:535:537",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "literal:549:567",
+    "invocation_id": 6,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 7,
+    "node_id": "record:34:568",
+    "invocation_id": 7,
+    "kind": "record",
+    "parents": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
+   },
+   {
+    "id": 8,
+    "node_id": "call:19:568",
+    "invocation_id": 8,
+    "kind": "invoke",
+    "parents": [
+     7
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "53b09b6424fcfe24e3408ab1d7308decc89b400d9195a8eb02c7904a007b9afa",
+    "targets": {
+     "op": "shell",
+     "limb": "guestpc-7a440e9daf61",
+     "cwd": "/tmp",
+     "request_id": "r49-verify-net-1"
+    }
+   },
+   {
+    "id": 9,
+    "node_id": "call:19:568",
+    "invocation_id": 9,
+    "kind": "tool_evidence",
+    "parents": [
+     8
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 10,
+    "node_id": "call:19:568",
+    "invocation_id": 10,
+    "kind": "call",
+    "parents": [
+     7,
+     8,
+     9
+    ]
+   },
+   {
+    "id": 11,
+    "node_id": "bind:16:568",
+    "invocation_id": 11,
+    "kind": "bind",
+    "parents": [
+     10
+    ]
+   },
+   {
+    "id": 12,
+    "node_id": "ref:576:578",
+    "invocation_id": 12,
+    "kind": "ref",
+    "parents": [
+     10
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "field:576:585",
+    "invocation_id": 13,
+    "kind": "field",
+    "parents": [
+     12
+    ]
+   },
+   {
+    "id": 14,
+    "node_id": "field:576:592",
+    "invocation_id": 14,
+    "kind": "field",
+    "parents": [
+     13
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:592": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 15,
+    "end": 592,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:568": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 16,
+    "end": 568,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:568": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 19,
+    "end": 568,
+    "line": 2,
+    "column": 4
+   },
+   "record:34:568": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 34,
+    "end": 568,
+    "line": 2,
+    "column": 19
+   },
+   "literal:38:45": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 38,
+    "end": 45,
+    "line": 2,
+    "column": 23
+   },
+   "literal:51:73": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 51,
+    "end": 73,
+    "line": 2,
+    "column": 36
+   },
+   "literal:78:515": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 78,
+    "end": 515,
+    "line": 2,
+    "column": 63
+   },
+   "literal:520:526": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 520,
+    "end": 526,
+    "line": 2,
+    "column": 505
+   },
+   "literal:535:537": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 535,
+    "end": 537,
+    "line": 2,
+    "column": 520
+   },
+   "literal:549:567": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 549,
+    "end": 567,
+    "line": 2,
+    "column": 534
+   },
+   "return:569:592": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 569,
+    "end": 592,
+    "line": 3,
+    "column": 1
+   },
+   "field:576:592": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 576,
+    "end": 592,
+    "line": 3,
+    "column": 8
+   },
+   "field:576:585": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 576,
+    "end": 585,
+    "line": 3,
+    "column": 8
+   },
+   "ref:576:578": {
+    "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+    "start": 576,
+    "end": 578,
+    "line": 3,
+    "column": 8
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "53b09b6424fcfe24e3408ab1d7308decc89b400d9195a8eb02c7904a007b9afa",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "cwd",
+          [
+           "scalar",
+           "/tmp"
+          ]
+         ],
+         [
+          "exit",
+          [
+           "scalar",
+           0
+          ]
+         ],
+         [
+          "log_truncated",
+          [
+           "scalar",
+           false
+          ]
+         ],
+         [
+          "output",
+          [
+           "scalar",
+           " \n908 convert.sh\n524288 photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part\n2621440 photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part\n0 photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part\nGW\n10 packets transmitted, 9 packets received, 10.0% packet loss\nround-trip min/avg/max/stddev = 1.404/5.208/14.355/3.953 ms\nNET\n10 packets transmitted, 9 packets received, 10.0% packet loss\nround-trip min/avg/max/stddev = 5.955/8.072/12.491/2.081 ms\n     agrCtlRSSI: -70\n    agrCtlNoise: -82\n     lastTxRate: 7\n        channel: 3\n2026-10-10 21:34:57 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Charge:100%) 9\n2026-10-10 21:34:58 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14490 wakeAt=2026-10-11 01:3\n2026-10-10 21:36:33 +0900 Wake                \tWake from Safe Sleep [CDNVA] : due to RTC/UserActivity Assertion Using AC\n"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "28bd6caefd9cc2ab6d97e323944f8db49052d982cb0efe0eb5be4e2fc7384580",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "8a44573954d53f9d36c00a7b3395f9c7b6ef0741cc43e2a3e06d34f2335ecc7d",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 14,
+   "rows": 0,
+   "elapsed_ms": 9728,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:568",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 16,
+      "end": 568,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:19:568",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 19,
+      "end": 568,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "field:576:585",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 576,
+      "end": 585,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "field:576:592",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 576,
+      "end": 592,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "literal:38:45",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 38,
+      "end": 45,
+      "line": 2,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "literal:51:73",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 51,
+      "end": 73,
+      "line": 2,
+      "column": 36
+     }
+    },
+    {
+     "node_id": "literal:520:526",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 520,
+      "end": 526,
+      "line": 2,
+      "column": 505
+     }
+    },
+    {
+     "node_id": "literal:535:537",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 535,
+      "end": 537,
+      "line": 2,
+      "column": 520
+     }
+    },
+    {
+     "node_id": "literal:549:567",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 549,
+      "end": 567,
+      "line": 2,
+      "column": 534
+     }
+    },
+    {
+     "node_id": "literal:78:515",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 78,
+      "end": 515,
+      "line": 2,
+      "column": 63
+     }
+    },
+    {
+     "node_id": "record:34:568",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 34,
+      "end": 568,
+      "line": 2,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "ref:576:578",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 576,
+      "end": 578,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "return:569:592",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 569,
+      "end": 592,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "sequence:15:592",
+     "steps": 1,
+     "location": {
+      "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad",
+      "start": 15,
+      "end": 592,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 9,
+     "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad"
+    },
+    {
+     "line": 3,
+     "steps": 4,
+     "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 9450,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "3521029247342b45a26fea4049ec2435d2d6fc2f60189cfaaf2a631f5a8056ad"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "be2ca7ca18894a48b7b1b57719284ebc"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "be2ca7ca18894a48b7b1b57719284ebc",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

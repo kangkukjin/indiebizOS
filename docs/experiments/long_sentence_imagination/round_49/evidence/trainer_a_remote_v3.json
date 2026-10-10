@@ -1,0 +1,99 @@
+{
+ "label": "trainer_a_remote_v3",
+ "elapsed": 262.16,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "부분 완료 — 1장 변환 실패, 나머지 46장 회수",
+  "key": "r49v2-trainer_a-800-80-48-7084694",
+  "layers": {
+   "accepted": true,
+   "state": "failed",
+   "exit": 3,
+   "command_ok": false,
+   "inspected": true,
+   "collected": true
+  },
+  "polls": 3,
+  "runs": 1,
+  "converted": 46,
+  "skipped": 1,
+  "failed": [
+   "바닷가 아침 (3).png"
+  ],
+  "inspected": 46,
+  "collected": true,
+  "originals_match": true,
+  "name_missing": 0,
+  "isolation": true,
+  "folder_absent": true,
+  "connected": true,
+  "files": [
+   "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/a/out/result.json",
+   "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/a/out/report.md"
+  ]
+ },
+ "usage": {
+  "steps": 50086,
+  "rows": 71,
+  "elapsed_ms": 261598
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 248,
+   "ms": 255962,
+   "calls": 30,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  },
+  {
+   "line": 226,
+   "ms": 1825,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  },
+  {
+   "line": 177,
+   "ms": 634,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  },
+  {
+   "line": 83,
+   "ms": 364,
+   "calls": 1,
+   "actions": [
+    "self:script"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  },
+  {
+   "line": 148,
+   "ms": 273,
+   "calls": 1,
+   "actions": [
+    "self:script"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  },
+  {
+   "line": 235,
+   "ms": 96,
+   "calls": 7,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "0ebc2f2d961e4e6a8a587f49196a509738ffb7ac3351f9a16ff05c6d3dff0d17"
+  }
+ ],
+ "diagnostic": null,
+ "issues": null
+}

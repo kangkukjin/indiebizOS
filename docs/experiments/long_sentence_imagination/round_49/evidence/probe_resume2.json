@@ -1,0 +1,6330 @@
+{
+ "code": "#!ibl edition=2\n$out=[]\n$n=1\n$done=false\n[repeat:until $done or $n > 4] {\n  $a=[limbs:guestpc]{op:\"transfer\",action:\"send\",limb:\"guestpc-7a440e9daf61\",local_path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/base/out/_stage/photos.zip\",path:\"/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip\",transfer_id:\"a584ed78908a44ff9d5c0d8a21a087f0\",request_id:f\"r49-probe-resume2-${n}\"}\n  $st=\"\"\n  [try] { $w=[self:task]{op:\"wait\",ref:$a.task_ref,timeout:200}\n    $st=$w.state } [catch] { $st=f\"caught: ${error.message}\" }\n  $sz=[limbs:guestpc]{op:\"list\",limb:\"guestpc-7a440e9daf61\",path:\"/Users/kangkukjin/indiebiz-training/r49/trainer_base\"}\n  $out=$out+[{n:$n,state:$st,files:map($sz.result.files,($f)=>f\"${f.name}=${f.bytes}\")}]\n  $done=$st==\"succeeded\"\n  $n=$n+1\n}\nreturn $out",
+ "elapsed": 230.957,
+ "response": {
+  "success": true,
+  "value": [
+   {
+    "n": 1,
+    "state": "caught: transfer_failed",
+    "files": [
+     "convert.sh=908",
+     "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part=524288",
+     "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part=2621440",
+     "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part=0"
+    ]
+   },
+   {
+    "n": 2,
+    "state": "caught: transfer_failed",
+    "files": [
+     "convert.sh=908",
+     "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part=524288",
+     "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part=2621440",
+     "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part=0"
+    ]
+   },
+   {
+    "n": 3,
+    "state": "caught: transfer_failed",
+    "files": [
+     "convert.sh=908",
+     "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part=524288",
+     "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part=2621440",
+     "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part=0"
+    ]
+   },
+   {
+    "n": 4,
+    "state": "caught: transfer_failed",
+    "files": [
+     "convert.sh=908",
+     "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part=524288",
+     "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part=2621440",
+     "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part=0"
+    ]
+   }
+  ],
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "list",
+    [
+     [
+      "record",
+      [
+       [
+        "n",
+        [
+         "scalar",
+         1
+        ]
+       ],
+       [
+        "state",
+        [
+         "scalar",
+         "caught: transfer_failed"
+        ]
+       ],
+       [
+        "files",
+        [
+         "list",
+         [
+          [
+           "scalar",
+           "convert.sh=908"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part=524288"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part=2621440"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part=0"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "record",
+      [
+       [
+        "n",
+        [
+         "scalar",
+         2
+        ]
+       ],
+       [
+        "state",
+        [
+         "scalar",
+         "caught: transfer_failed"
+        ]
+       ],
+       [
+        "files",
+        [
+         "list",
+         [
+          [
+           "scalar",
+           "convert.sh=908"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part=524288"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part=2621440"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part=0"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "record",
+      [
+       [
+        "n",
+        [
+         "scalar",
+         3
+        ]
+       ],
+       [
+        "state",
+        [
+         "scalar",
+         "caught: transfer_failed"
+        ]
+       ],
+       [
+        "files",
+        [
+         "list",
+         [
+          [
+           "scalar",
+           "convert.sh=908"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part=524288"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part=2621440"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part=0"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "record",
+      [
+       [
+        "n",
+        [
+         "scalar",
+         4
+        ]
+       ],
+       [
+        "state",
+        [
+         "scalar",
+         "caught: transfer_failed"
+        ]
+       ],
+       [
+        "files",
+        [
+         "list",
+         [
+          [
+           "scalar",
+           "convert.sh=908"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part=524288"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part=2621440"
+          ],
+          [
+           "scalar",
+           "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part=0"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "8409ca79942a52bc5ca4dbefe9916cf809eb68710845a1d9e1a00e98bc8b06a7",
+  "source_complete": false,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "list:21:23",
+    "invocation_id": 1,
+    "kind": "list",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "bind:16:23",
+    "invocation_id": 2,
+    "kind": "bind",
+    "parents": [
+     1
+    ]
+   },
+   {
+    "id": 3,
+    "node_id": "literal:27:28",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "bind:24:28",
+    "invocation_id": 4,
+    "kind": "bind",
+    "parents": [
+     3
+    ]
+   },
+   {
+    "id": 5,
+    "node_id": "literal:35:40",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "bind:29:40",
+    "invocation_id": 6,
+    "kind": "bind",
+    "parents": [
+     5
+    ]
+   },
+   {
+    "id": 7,
+    "node_id": "literal:98:108",
+    "invocation_id": 7,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 8,
+    "node_id": "literal:116:122",
+    "invocation_id": 8,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 9,
+    "node_id": "literal:128:150",
+    "invocation_id": 9,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 10,
+    "node_id": "literal:162:288",
+    "invocation_id": 10,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 11,
+    "node_id": "literal:294:359",
+    "invocation_id": 11,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 12,
+    "node_id": "literal:372:406",
+    "invocation_id": 12,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 13,
+    "node_id": "ref:440:441",
+    "invocation_id": 13,
+    "kind": "ref",
+    "parents": [
+     3
+    ]
+   },
+   {
+    "id": 14,
+    "node_id": "format:418:443",
+    "invocation_id": 14,
+    "kind": "format",
+    "parents": [
+     13
+    ]
+   },
+   {
+    "id": 15,
+    "node_id": "record:94:444",
+    "invocation_id": 15,
+    "kind": "record",
+    "parents": [
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     14
+    ]
+   },
+   {
+    "id": 16,
+    "node_id": "call:79:444",
+    "invocation_id": 16,
+    "kind": "invoke",
+    "parents": [
+     15
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "c3f0bea29af29ed013a08fee7f6ce747c4421706c1c5d36adfcaa47b0eef2d3d",
+    "targets": {
+     "op": "transfer",
+     "action": "send",
+     "limb": "guestpc-7a440e9daf61",
+     "local_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/base/out/_stage/photos.zip",
+     "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+     "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+     "request_id": "r49-probe-resume2-1"
+    }
+   },
+   {
+    "id": 17,
+    "node_id": "call:79:444",
+    "invocation_id": 17,
+    "kind": "tool_evidence",
+    "parents": [
+     16
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 18,
+    "node_id": "call:79:444",
+    "invocation_id": 18,
+    "kind": "call",
+    "parents": [
+     15,
+     16,
+     17
+    ]
+   },
+   {
+    "id": 19,
+    "node_id": "bind:76:444",
+    "invocation_id": 19,
+    "kind": "bind",
+    "parents": [
+     18
+    ]
+   },
+   {
+    "id": 20,
+    "node_id": "literal:451:453",
+    "invocation_id": 20,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 21,
+    "node_id": "bind:447:453",
+    "invocation_id": 21,
+    "kind": "bind",
+    "parents": [
+     20
+    ]
+   },
+   {
+    "id": 22,
+    "node_id": "literal:482:488",
+    "invocation_id": 22,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 23,
+    "node_id": "ref:493:495",
+    "invocation_id": 23,
+    "kind": "ref",
+    "parents": [
+     18
+    ]
+   },
+   {
+    "id": 24,
+    "node_id": "field:493:504",
+    "invocation_id": 24,
+    "kind": "field",
+    "parents": [
+     23
+    ]
+   },
+   {
+    "id": 25,
+    "node_id": "literal:513:516",
+    "invocation_id": 25,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 26,
+    "node_id": "record:478:517",
+    "invocation_id": 26,
+    "kind": "record",
+    "parents": [
+     22,
+     24,
+     25
+    ]
+   },
+   {
+    "id": 27,
+    "node_id": "call:467:517",
+    "invocation_id": 27,
+    "kind": "invoke",
+    "parents": [
+     26
+    ],
+    "action": "self:task",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "d16a1dc24103f7c82b1267b54d5ac851012f71a1c21e7a0d50c591a674e9e72d",
+    "targets": {
+     "op": "wait"
+    }
+   },
+   {
+    "id": 28,
+    "node_id": "call:467:517",
+    "invocation_id": 28,
+    "kind": "tool_failure",
+    "parents": [
+     27
+    ],
+    "action": "self:task",
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": true
+   },
+   {
+    "id": 29,
+    "node_id": "call:467:517",
+    "invocation_id": 29,
+    "kind": "failure",
+    "parents": [
+     26,
+     27,
+     28
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 30,
+    "node_id": "bind:464:517",
+    "invocation_id": 30,
+    "kind": "failure",
+    "parents": [
+     29
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 31,
+    "node_id": "sequence:464:534",
+    "invocation_id": 31,
+    "kind": "failure",
+    "parents": [
+     30
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 32,
+    "node_id": "try:456:580",
+    "invocation_id": 32,
+    "kind": "recovered",
+    "parents": [
+     31
+    ],
+    "code": "TOOL"
+   },
+   {
+    "id": 33,
+    "node_id": "ref:563:568",
+    "invocation_id": 33,
+    "kind": "ref",
+    "parents": [
+     31,
+     32
+    ]
+   },
+   {
+    "id": 34,
+    "node_id": "field:563:576",
+    "invocation_id": 34,
+    "kind": "field",
+    "parents": [
+     32,
+     33
+    ]
+   },
+   {
+    "id": 35,
+    "node_id": "format:551:578",
+    "invocation_id": 35,
+    "kind": "format",
+    "parents": [
+     32,
+     34
+    ]
+   },
+   {
+    "id": 36,
+    "node_id": "bind:547:578",
+    "invocation_id": 36,
+    "kind": "bind",
+    "parents": [
+     32,
+     35
+    ]
+   },
+   {
+    "id": 37,
+    "node_id": "sequence:547:578",
+    "invocation_id": 37,
+    "kind": "sequence",
+    "parents": [
+     32,
+     36
+    ]
+   },
+   {
+    "id": 38,
+    "node_id": "try:456:580",
+    "invocation_id": 38,
+    "kind": "try",
+    "parents": [
+     31,
+     32,
+     37
+    ]
+   },
+   {
+    "id": 39,
+    "node_id": "literal:606:612",
+    "invocation_id": 39,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 40,
+    "node_id": "literal:618:640",
+    "invocation_id": 40,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 41,
+    "node_id": "literal:646:700",
+    "invocation_id": 41,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 42,
+    "node_id": "record:602:701",
+    "invocation_id": 42,
+    "kind": "record",
+    "parents": [
+     39,
+     40,
+     41
+    ]
+   },
+   {
+    "id": 43,
+    "node_id": "call:587:701",
+    "invocation_id": 43,
+    "kind": "invoke",
+    "parents": [
+     42
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "c0e0196a4342fde276880d075a43ca184e6931204f0feb23a3f0264ec3803e73",
+    "targets": {
+     "op": "list",
+     "limb": "guestpc-7a440e9daf61",
+     "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base"
+    }
+   },
+   {
+    "id": 44,
+    "node_id": "call:587:701",
+    "invocation_id": 44,
+    "kind": "tool_evidence",
+    "parents": [
+     43
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 45,
+    "node_id": "call:587:701",
+    "invocation_id": 45,
+    "kind": "call",
+    "parents": [
+     42,
+     43,
+     44
+    ]
+   },
+   {
+    "id": 46,
+    "node_id": "bind:583:701",
+    "invocation_id": 46,
+    "kind": "bind",
+    "parents": [
+     45
+    ]
+   },
+   {
+    "id": 47,
+    "node_id": "ref:709:713",
+    "invocation_id": 47,
+    "kind": "ref",
+    "parents": [
+     1
+    ]
+   },
+   {
+    "id": 48,
+    "node_id": "ref:718:720",
+    "invocation_id": 48,
+    "kind": "ref",
+    "parents": [
+     3
+    ]
+   },
+   {
+    "id": 49,
+    "node_id": "ref:727:730",
+    "invocation_id": 49,
+    "kind": "ref",
+    "parents": [
+     35
+    ]
+   },
+   {
+    "id": 50,
+    "node_id": "ref:741:744",
+    "invocation_id": 50,
+    "kind": "ref",
+    "parents": [
+     45
+    ]
+   },
+   {
+    "id": 51,
+    "node_id": "field:741:751",
+    "invocation_id": 51,
+    "kind": "field",
+    "parents": [
+     50
+    ]
+   },
+   {
+    "id": 52,
+    "node_id": "field:741:757",
+    "invocation_id": 52,
+    "kind": "field",
+    "parents": [
+     51
+    ]
+   },
+   {
+    "id": 53,
+    "node_id": "lambda:758:787",
+    "invocation_id": 53,
+    "kind": "lambda",
+    "parents": []
+   },
+   {
+    "id": 54,
+    "node_id": "builtin:737:740",
+    "invocation_id": 54,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 55,
+    "node_id": "ref:768:769",
+    "invocation_id": 55,
+    "kind": "ref",
+    "parents": [
+     52,
+     53
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 56,
+    "node_id": "field:768:774",
+    "invocation_id": 56,
+    "kind": "field",
+    "parents": [
+     55
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 57,
+    "node_id": "ref:778:779",
+    "invocation_id": 57,
+    "kind": "ref",
+    "parents": [
+     52,
+     53
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 58,
+    "node_id": "field:778:785",
+    "invocation_id": 58,
+    "kind": "field",
+    "parents": [
+     57
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 59,
+    "node_id": "format:764:787",
+    "invocation_id": 59,
+    "kind": "format",
+    "parents": [
+     56,
+     58
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 60,
+    "node_id": "pure_call:737:788",
+    "invocation_id": 60,
+    "kind": "pure_call",
+    "parents": [
+     52,
+     53,
+     54,
+     59
+    ]
+   },
+   {
+    "id": 61,
+    "node_id": "record:715:789",
+    "invocation_id": 61,
+    "kind": "record",
+    "parents": [
+     48,
+     49,
+     60
+    ]
+   },
+   {
+    "id": 62,
+    "node_id": "list:714:790",
+    "invocation_id": 62,
+    "kind": "list",
+    "parents": [
+     61
+    ]
+   },
+   {
+    "id": 63,
+    "node_id": "binary:709:790",
+    "invocation_id": 63,
+    "kind": "binary",
+    "parents": [
+     47,
+     62
+    ]
+   },
+   {
+    "id": 64,
+    "node_id": "bind:704:790",
+    "invocation_id": 64,
+    "kind": "bind",
+    "parents": [
+     63
+    ]
+   },
+   {
+    "id": 65,
+    "node_id": "ref:799:802",
+    "invocation_id": 65,
+    "kind": "ref",
+    "parents": [
+     35
+    ]
+   },
+   {
+    "id": 66,
+    "node_id": "literal:804:815",
+    "invocation_id": 66,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 67,
+    "node_id": "binary:799:815",
+    "invocation_id": 67,
+    "kind": "binary",
+    "parents": [
+     65,
+     66
+    ]
+   },
+   {
+    "id": 68,
+    "node_id": "bind:793:815",
+    "invocation_id": 68,
+    "kind": "bind",
+    "parents": [
+     67
+    ]
+   },
+   {
+    "id": 69,
+    "node_id": "ref:821:823",
+    "invocation_id": 69,
+    "kind": "ref",
+    "parents": [
+     3
+    ]
+   },
+   {
+    "id": 70,
+    "node_id": "literal:824:825",
+    "invocation_id": 70,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 71,
+    "node_id": "binary:821:825",
+    "invocation_id": 71,
+    "kind": "binary",
+    "parents": [
+     69,
+     70
+    ]
+   },
+   {
+    "id": 72,
+    "node_id": "bind:818:825",
+    "invocation_id": 72,
+    "kind": "bind",
+    "parents": [
+     71
+    ]
+   },
+   {
+    "id": 73,
+    "node_id": "sequence:73:826",
+    "invocation_id": 73,
+    "kind": "sequence",
+    "parents": [
+     19,
+     21,
+     38,
+     46,
+     64,
+     68,
+     72
+    ]
+   },
+   {
+    "id": 74,
+    "node_id": "ref:55:60",
+    "invocation_id": 74,
+    "kind": "ref",
+    "parents": [
+     67
+    ]
+   },
+   {
+    "id": 75,
+    "node_id": "ref:64:66",
+    "invocation_id": 75,
+    "kind": "ref",
+    "parents": [
+     71
+    ]
+   },
+   {
+    "id": 76,
+    "node_id": "literal:69:70",
+    "invocation_id": 76,
+    "kind": "literal",
+    "parents": [],
+    "evaluations": 4
+   },
+   {
+    "id": 77,
+    "node_id": "binary:64:70",
+    "invocation_id": 77,
+    "kind": "binary",
+    "parents": [
+     75,
+     76
+    ]
+   },
+   {
+    "id": 78,
+    "node_id": "binary:55:70",
+    "invocation_id": 78,
+    "kind": "binary",
+    "parents": [
+     74,
+     77
+    ]
+   },
+   {
+    "id": 79,
+    "node_id": "literal:98:108",
+    "invocation_id": 79,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 80,
+    "node_id": "literal:116:122",
+    "invocation_id": 80,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 81,
+    "node_id": "literal:128:150",
+    "invocation_id": 81,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 82,
+    "node_id": "literal:162:288",
+    "invocation_id": 82,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 83,
+    "node_id": "literal:294:359",
+    "invocation_id": 83,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 84,
+    "node_id": "literal:372:406",
+    "invocation_id": 84,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 85,
+    "node_id": "ref:440:441",
+    "invocation_id": 85,
+    "kind": "ref",
+    "parents": [
+     71,
+     73,
+     78
+    ]
+   },
+   {
+    "id": 86,
+    "node_id": "format:418:443",
+    "invocation_id": 86,
+    "kind": "format",
+    "parents": [
+     73,
+     78,
+     85
+    ]
+   },
+   {
+    "id": 87,
+    "node_id": "record:94:444",
+    "invocation_id": 87,
+    "kind": "record",
+    "parents": [
+     73,
+     78,
+     79,
+     80,
+     81,
+     82,
+     83,
+     84,
+     86
+    ]
+   },
+   {
+    "id": 88,
+    "node_id": "call:79:444",
+    "invocation_id": 88,
+    "kind": "invoke",
+    "parents": [
+     87
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "f1168c39a6f806aa5385acd5fd61723d0c1ec8271d8da6c66997630a26f8c675",
+    "targets": {
+     "op": "transfer",
+     "action": "send",
+     "limb": "guestpc-7a440e9daf61",
+     "local_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/base/out/_stage/photos.zip",
+     "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+     "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+     "request_id": "r49-probe-resume2-2"
+    }
+   },
+   {
+    "id": 89,
+    "node_id": "call:79:444",
+    "invocation_id": 89,
+    "kind": "tool_evidence",
+    "parents": [
+     88
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 90,
+    "node_id": "call:79:444",
+    "invocation_id": 90,
+    "kind": "call",
+    "parents": [
+     73,
+     78,
+     87,
+     88,
+     89
+    ]
+   },
+   {
+    "id": 91,
+    "node_id": "bind:76:444",
+    "invocation_id": 91,
+    "kind": "bind",
+    "parents": [
+     73,
+     78,
+     90
+    ]
+   },
+   {
+    "id": 92,
+    "node_id": "literal:451:453",
+    "invocation_id": 92,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 93,
+    "node_id": "bind:447:453",
+    "invocation_id": 93,
+    "kind": "bind",
+    "parents": [
+     73,
+     78,
+     92
+    ]
+   },
+   {
+    "id": 94,
+    "node_id": "literal:482:488",
+    "invocation_id": 94,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 95,
+    "node_id": "ref:493:495",
+    "invocation_id": 95,
+    "kind": "ref",
+    "parents": [
+     73,
+     78,
+     90
+    ]
+   },
+   {
+    "id": 96,
+    "node_id": "field:493:504",
+    "invocation_id": 96,
+    "kind": "field",
+    "parents": [
+     73,
+     78,
+     95
+    ]
+   },
+   {
+    "id": 97,
+    "node_id": "literal:513:516",
+    "invocation_id": 97,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 98,
+    "node_id": "record:478:517",
+    "invocation_id": 98,
+    "kind": "record",
+    "parents": [
+     73,
+     78,
+     94,
+     96,
+     97
+    ]
+   },
+   {
+    "id": 99,
+    "node_id": "call:467:517",
+    "invocation_id": 99,
+    "kind": "invoke",
+    "parents": [
+     98
+    ],
+    "action": "self:task",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "49f40e79b7abcec21f3583e1431be427a6dc99e0511c19670336396fbc56b753",
+    "targets": {
+     "op": "wait"
+    }
+   },
+   {
+    "id": 100,
+    "node_id": "call:467:517",
+    "invocation_id": 100,
+    "kind": "tool_failure",
+    "parents": [
+     99
+    ],
+    "action": "self:task",
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": true
+   },
+   {
+    "id": 101,
+    "node_id": "call:467:517",
+    "invocation_id": 101,
+    "kind": "failure",
+    "parents": [
+     73,
+     78,
+     98,
+     99,
+     100
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 102,
+    "node_id": "bind:464:517",
+    "invocation_id": 102,
+    "kind": "failure",
+    "parents": [
+     73,
+     78,
+     101
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 103,
+    "node_id": "sequence:464:534",
+    "invocation_id": 103,
+    "kind": "failure",
+    "parents": [
+     73,
+     78,
+     102
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 104,
+    "node_id": "try:456:580",
+    "invocation_id": 104,
+    "kind": "recovered",
+    "parents": [
+     103
+    ],
+    "code": "TOOL"
+   },
+   {
+    "id": 105,
+    "node_id": "ref:563:568",
+    "invocation_id": 105,
+    "kind": "ref",
+    "parents": [
+     73,
+     78,
+     103,
+     104
+    ]
+   },
+   {
+    "id": 106,
+    "node_id": "field:563:576",
+    "invocation_id": 106,
+    "kind": "field",
+    "parents": [
+     73,
+     78,
+     104,
+     105
+    ]
+   },
+   {
+    "id": 107,
+    "node_id": "format:551:578",
+    "invocation_id": 107,
+    "kind": "format",
+    "parents": [
+     73,
+     78,
+     104,
+     106
+    ]
+   },
+   {
+    "id": 108,
+    "node_id": "bind:547:578",
+    "invocation_id": 108,
+    "kind": "bind",
+    "parents": [
+     73,
+     78,
+     104,
+     107
+    ]
+   },
+   {
+    "id": 109,
+    "node_id": "sequence:547:578",
+    "invocation_id": 109,
+    "kind": "sequence",
+    "parents": [
+     73,
+     78,
+     104,
+     108
+    ]
+   },
+   {
+    "id": 110,
+    "node_id": "try:456:580",
+    "invocation_id": 110,
+    "kind": "try",
+    "parents": [
+     73,
+     78,
+     103,
+     104,
+     109
+    ]
+   },
+   {
+    "id": 111,
+    "node_id": "literal:606:612",
+    "invocation_id": 111,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 112,
+    "node_id": "literal:618:640",
+    "invocation_id": 112,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 113,
+    "node_id": "literal:646:700",
+    "invocation_id": 113,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 114,
+    "node_id": "record:602:701",
+    "invocation_id": 114,
+    "kind": "record",
+    "parents": [
+     73,
+     78,
+     111,
+     112,
+     113
+    ]
+   },
+   {
+    "id": 115,
+    "node_id": "call:587:701",
+    "invocation_id": 115,
+    "kind": "invoke",
+    "parents": [
+     114
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "c0e0196a4342fde276880d075a43ca184e6931204f0feb23a3f0264ec3803e73",
+    "targets": {
+     "op": "list",
+     "limb": "guestpc-7a440e9daf61",
+     "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base"
+    }
+   },
+   {
+    "id": 116,
+    "node_id": "call:587:701",
+    "invocation_id": 116,
+    "kind": "tool_evidence",
+    "parents": [
+     115
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 117,
+    "node_id": "call:587:701",
+    "invocation_id": 117,
+    "kind": "call",
+    "parents": [
+     73,
+     78,
+     114,
+     115,
+     116
+    ]
+   },
+   {
+    "id": 118,
+    "node_id": "bind:583:701",
+    "invocation_id": 118,
+    "kind": "bind",
+    "parents": [
+     73,
+     78,
+     117
+    ]
+   },
+   {
+    "id": 119,
+    "node_id": "ref:709:713",
+    "invocation_id": 119,
+    "kind": "ref",
+    "parents": [
+     63,
+     73,
+     78
+    ]
+   },
+   {
+    "id": 120,
+    "node_id": "ref:718:720",
+    "invocation_id": 120,
+    "kind": "ref",
+    "parents": [
+     71,
+     73,
+     78
+    ]
+   },
+   {
+    "id": 121,
+    "node_id": "ref:727:730",
+    "invocation_id": 121,
+    "kind": "ref",
+    "parents": [
+     73,
+     78,
+     107
+    ]
+   },
+   {
+    "id": 122,
+    "node_id": "ref:741:744",
+    "invocation_id": 122,
+    "kind": "ref",
+    "parents": [
+     73,
+     78,
+     117
+    ]
+   },
+   {
+    "id": 123,
+    "node_id": "field:741:751",
+    "invocation_id": 123,
+    "kind": "field",
+    "parents": [
+     73,
+     78,
+     122
+    ]
+   },
+   {
+    "id": 124,
+    "node_id": "field:741:757",
+    "invocation_id": 124,
+    "kind": "field",
+    "parents": [
+     73,
+     78,
+     123
+    ]
+   },
+   {
+    "id": 125,
+    "node_id": "lambda:758:787",
+    "invocation_id": 125,
+    "kind": "lambda",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 126,
+    "node_id": "builtin:737:740",
+    "invocation_id": 126,
+    "kind": "builtin",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 127,
+    "node_id": "ref:768:769",
+    "invocation_id": 127,
+    "kind": "ref",
+    "parents": [
+     73,
+     78,
+     124,
+     125
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 128,
+    "node_id": "field:768:774",
+    "invocation_id": 128,
+    "kind": "field",
+    "parents": [
+     73,
+     78,
+     127
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 129,
+    "node_id": "ref:778:779",
+    "invocation_id": 129,
+    "kind": "ref",
+    "parents": [
+     73,
+     78,
+     124,
+     125
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 130,
+    "node_id": "field:778:785",
+    "invocation_id": 130,
+    "kind": "field",
+    "parents": [
+     73,
+     78,
+     129
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 131,
+    "node_id": "format:764:787",
+    "invocation_id": 131,
+    "kind": "format",
+    "parents": [
+     73,
+     78,
+     128,
+     130
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 132,
+    "node_id": "pure_call:737:788",
+    "invocation_id": 132,
+    "kind": "pure_call",
+    "parents": [
+     73,
+     78,
+     124,
+     125,
+     126,
+     131
+    ]
+   },
+   {
+    "id": 133,
+    "node_id": "record:715:789",
+    "invocation_id": 133,
+    "kind": "record",
+    "parents": [
+     73,
+     78,
+     120,
+     121,
+     132
+    ]
+   },
+   {
+    "id": 134,
+    "node_id": "list:714:790",
+    "invocation_id": 134,
+    "kind": "list",
+    "parents": [
+     73,
+     78,
+     133
+    ]
+   },
+   {
+    "id": 135,
+    "node_id": "binary:709:790",
+    "invocation_id": 135,
+    "kind": "binary",
+    "parents": [
+     73,
+     78,
+     119,
+     134
+    ]
+   },
+   {
+    "id": 136,
+    "node_id": "bind:704:790",
+    "invocation_id": 136,
+    "kind": "bind",
+    "parents": [
+     73,
+     78,
+     135
+    ]
+   },
+   {
+    "id": 137,
+    "node_id": "ref:799:802",
+    "invocation_id": 137,
+    "kind": "ref",
+    "parents": [
+     73,
+     78,
+     107
+    ]
+   },
+   {
+    "id": 138,
+    "node_id": "literal:804:815",
+    "invocation_id": 138,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 139,
+    "node_id": "binary:799:815",
+    "invocation_id": 139,
+    "kind": "binary",
+    "parents": [
+     73,
+     78,
+     137,
+     138
+    ]
+   },
+   {
+    "id": 140,
+    "node_id": "bind:793:815",
+    "invocation_id": 140,
+    "kind": "bind",
+    "parents": [
+     73,
+     78,
+     139
+    ]
+   },
+   {
+    "id": 141,
+    "node_id": "ref:821:823",
+    "invocation_id": 141,
+    "kind": "ref",
+    "parents": [
+     71,
+     73,
+     78
+    ]
+   },
+   {
+    "id": 142,
+    "node_id": "literal:824:825",
+    "invocation_id": 142,
+    "kind": "literal",
+    "parents": [
+     73,
+     78
+    ]
+   },
+   {
+    "id": 143,
+    "node_id": "binary:821:825",
+    "invocation_id": 143,
+    "kind": "binary",
+    "parents": [
+     73,
+     78,
+     141,
+     142
+    ]
+   },
+   {
+    "id": 144,
+    "node_id": "bind:818:825",
+    "invocation_id": 144,
+    "kind": "bind",
+    "parents": [
+     73,
+     78,
+     143
+    ]
+   },
+   {
+    "id": 145,
+    "node_id": "sequence:73:826",
+    "invocation_id": 145,
+    "kind": "sequence",
+    "parents": [
+     73,
+     78,
+     91,
+     93,
+     110,
+     118,
+     136,
+     140,
+     144
+    ]
+   },
+   {
+    "id": 146,
+    "node_id": "ref:55:60",
+    "invocation_id": 146,
+    "kind": "ref",
+    "parents": [
+     139
+    ]
+   },
+   {
+    "id": 147,
+    "node_id": "ref:64:66",
+    "invocation_id": 147,
+    "kind": "ref",
+    "parents": [
+     143
+    ]
+   },
+   {
+    "id": 148,
+    "node_id": "binary:64:70",
+    "invocation_id": 148,
+    "kind": "binary",
+    "parents": [
+     76,
+     147
+    ]
+   },
+   {
+    "id": 149,
+    "node_id": "binary:55:70",
+    "invocation_id": 149,
+    "kind": "binary",
+    "parents": [
+     146,
+     148
+    ]
+   },
+   {
+    "id": 150,
+    "node_id": "literal:98:108",
+    "invocation_id": 150,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 151,
+    "node_id": "literal:116:122",
+    "invocation_id": 151,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 152,
+    "node_id": "literal:128:150",
+    "invocation_id": 152,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 153,
+    "node_id": "literal:162:288",
+    "invocation_id": 153,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 154,
+    "node_id": "literal:294:359",
+    "invocation_id": 154,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 155,
+    "node_id": "literal:372:406",
+    "invocation_id": 155,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 156,
+    "node_id": "ref:440:441",
+    "invocation_id": 156,
+    "kind": "ref",
+    "parents": [
+     143,
+     145,
+     149
+    ]
+   },
+   {
+    "id": 157,
+    "node_id": "format:418:443",
+    "invocation_id": 157,
+    "kind": "format",
+    "parents": [
+     145,
+     149,
+     156
+    ]
+   },
+   {
+    "id": 158,
+    "node_id": "record:94:444",
+    "invocation_id": 158,
+    "kind": "record",
+    "parents": [
+     145,
+     149,
+     150,
+     151,
+     152,
+     153,
+     154,
+     155,
+     157
+    ]
+   },
+   {
+    "id": 159,
+    "node_id": "call:79:444",
+    "invocation_id": 159,
+    "kind": "invoke",
+    "parents": [
+     158
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "c2d7f43797689c113b34e1e668d9376c53a98a3adce7236bad0cddd486ce7a4a",
+    "targets": {
+     "op": "transfer",
+     "action": "send",
+     "limb": "guestpc-7a440e9daf61",
+     "local_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/base/out/_stage/photos.zip",
+     "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+     "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+     "request_id": "r49-probe-resume2-3"
+    }
+   },
+   {
+    "id": 160,
+    "node_id": "call:79:444",
+    "invocation_id": 160,
+    "kind": "tool_evidence",
+    "parents": [
+     159
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 161,
+    "node_id": "call:79:444",
+    "invocation_id": 161,
+    "kind": "call",
+    "parents": [
+     145,
+     149,
+     158,
+     159,
+     160
+    ]
+   },
+   {
+    "id": 162,
+    "node_id": "bind:76:444",
+    "invocation_id": 162,
+    "kind": "bind",
+    "parents": [
+     145,
+     149,
+     161
+    ]
+   },
+   {
+    "id": 163,
+    "node_id": "literal:451:453",
+    "invocation_id": 163,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 164,
+    "node_id": "bind:447:453",
+    "invocation_id": 164,
+    "kind": "bind",
+    "parents": [
+     145,
+     149,
+     163
+    ]
+   },
+   {
+    "id": 165,
+    "node_id": "literal:482:488",
+    "invocation_id": 165,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 166,
+    "node_id": "ref:493:495",
+    "invocation_id": 166,
+    "kind": "ref",
+    "parents": [
+     145,
+     149,
+     161
+    ]
+   },
+   {
+    "id": 167,
+    "node_id": "field:493:504",
+    "invocation_id": 167,
+    "kind": "field",
+    "parents": [
+     145,
+     149,
+     166
+    ]
+   },
+   {
+    "id": 168,
+    "node_id": "literal:513:516",
+    "invocation_id": 168,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 169,
+    "node_id": "record:478:517",
+    "invocation_id": 169,
+    "kind": "record",
+    "parents": [
+     145,
+     149,
+     165,
+     167,
+     168
+    ]
+   },
+   {
+    "id": 170,
+    "node_id": "call:467:517",
+    "invocation_id": 170,
+    "kind": "invoke",
+    "parents": [
+     169
+    ],
+    "action": "self:task",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "4cccbcdf3eae6ad75cf868f807107c03d1e13dbf82d46cb0f5b727fbadc57752",
+    "targets": {
+     "op": "wait"
+    }
+   },
+   {
+    "id": 171,
+    "node_id": "call:467:517",
+    "invocation_id": 171,
+    "kind": "tool_failure",
+    "parents": [
+     170
+    ],
+    "action": "self:task",
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": true
+   },
+   {
+    "id": 172,
+    "node_id": "call:467:517",
+    "invocation_id": 172,
+    "kind": "failure",
+    "parents": [
+     145,
+     149,
+     169,
+     170,
+     171
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 173,
+    "node_id": "bind:464:517",
+    "invocation_id": 173,
+    "kind": "failure",
+    "parents": [
+     145,
+     149,
+     172
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 174,
+    "node_id": "sequence:464:534",
+    "invocation_id": 174,
+    "kind": "failure",
+    "parents": [
+     145,
+     149,
+     173
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 175,
+    "node_id": "try:456:580",
+    "invocation_id": 175,
+    "kind": "recovered",
+    "parents": [
+     174
+    ],
+    "code": "TOOL"
+   },
+   {
+    "id": 176,
+    "node_id": "ref:563:568",
+    "invocation_id": 176,
+    "kind": "ref",
+    "parents": [
+     145,
+     149,
+     174,
+     175
+    ]
+   },
+   {
+    "id": 177,
+    "node_id": "field:563:576",
+    "invocation_id": 177,
+    "kind": "field",
+    "parents": [
+     145,
+     149,
+     175,
+     176
+    ]
+   },
+   {
+    "id": 178,
+    "node_id": "format:551:578",
+    "invocation_id": 178,
+    "kind": "format",
+    "parents": [
+     145,
+     149,
+     175,
+     177
+    ]
+   },
+   {
+    "id": 179,
+    "node_id": "bind:547:578",
+    "invocation_id": 179,
+    "kind": "bind",
+    "parents": [
+     145,
+     149,
+     175,
+     178
+    ]
+   },
+   {
+    "id": 180,
+    "node_id": "sequence:547:578",
+    "invocation_id": 180,
+    "kind": "sequence",
+    "parents": [
+     145,
+     149,
+     175,
+     179
+    ]
+   },
+   {
+    "id": 181,
+    "node_id": "try:456:580",
+    "invocation_id": 181,
+    "kind": "try",
+    "parents": [
+     145,
+     149,
+     174,
+     175,
+     180
+    ]
+   },
+   {
+    "id": 182,
+    "node_id": "literal:606:612",
+    "invocation_id": 182,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 183,
+    "node_id": "literal:618:640",
+    "invocation_id": 183,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 184,
+    "node_id": "literal:646:700",
+    "invocation_id": 184,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 185,
+    "node_id": "record:602:701",
+    "invocation_id": 185,
+    "kind": "record",
+    "parents": [
+     145,
+     149,
+     182,
+     183,
+     184
+    ]
+   },
+   {
+    "id": 186,
+    "node_id": "call:587:701",
+    "invocation_id": 186,
+    "kind": "invoke",
+    "parents": [
+     185
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "c0e0196a4342fde276880d075a43ca184e6931204f0feb23a3f0264ec3803e73",
+    "targets": {
+     "op": "list",
+     "limb": "guestpc-7a440e9daf61",
+     "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base"
+    }
+   },
+   {
+    "id": 187,
+    "node_id": "call:587:701",
+    "invocation_id": 187,
+    "kind": "tool_evidence",
+    "parents": [
+     186
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 188,
+    "node_id": "call:587:701",
+    "invocation_id": 188,
+    "kind": "call",
+    "parents": [
+     145,
+     149,
+     185,
+     186,
+     187
+    ]
+   },
+   {
+    "id": 189,
+    "node_id": "bind:583:701",
+    "invocation_id": 189,
+    "kind": "bind",
+    "parents": [
+     145,
+     149,
+     188
+    ]
+   },
+   {
+    "id": 190,
+    "node_id": "ref:709:713",
+    "invocation_id": 190,
+    "kind": "ref",
+    "parents": [
+     135,
+     145,
+     149
+    ]
+   },
+   {
+    "id": 191,
+    "node_id": "ref:718:720",
+    "invocation_id": 191,
+    "kind": "ref",
+    "parents": [
+     143,
+     145,
+     149
+    ]
+   },
+   {
+    "id": 192,
+    "node_id": "ref:727:730",
+    "invocation_id": 192,
+    "kind": "ref",
+    "parents": [
+     145,
+     149,
+     178
+    ]
+   },
+   {
+    "id": 193,
+    "node_id": "ref:741:744",
+    "invocation_id": 193,
+    "kind": "ref",
+    "parents": [
+     145,
+     149,
+     188
+    ]
+   },
+   {
+    "id": 194,
+    "node_id": "field:741:751",
+    "invocation_id": 194,
+    "kind": "field",
+    "parents": [
+     145,
+     149,
+     193
+    ]
+   },
+   {
+    "id": 195,
+    "node_id": "field:741:757",
+    "invocation_id": 195,
+    "kind": "field",
+    "parents": [
+     145,
+     149,
+     194
+    ]
+   },
+   {
+    "id": 196,
+    "node_id": "lambda:758:787",
+    "invocation_id": 196,
+    "kind": "lambda",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 197,
+    "node_id": "builtin:737:740",
+    "invocation_id": 197,
+    "kind": "builtin",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 198,
+    "node_id": "ref:768:769",
+    "invocation_id": 198,
+    "kind": "ref",
+    "parents": [
+     145,
+     149,
+     195,
+     196
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 199,
+    "node_id": "field:768:774",
+    "invocation_id": 199,
+    "kind": "field",
+    "parents": [
+     145,
+     149,
+     198
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 200,
+    "node_id": "ref:778:779",
+    "invocation_id": 200,
+    "kind": "ref",
+    "parents": [
+     145,
+     149,
+     195,
+     196
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 201,
+    "node_id": "field:778:785",
+    "invocation_id": 201,
+    "kind": "field",
+    "parents": [
+     145,
+     149,
+     200
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 202,
+    "node_id": "format:764:787",
+    "invocation_id": 202,
+    "kind": "format",
+    "parents": [
+     145,
+     149,
+     199,
+     201
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 203,
+    "node_id": "pure_call:737:788",
+    "invocation_id": 203,
+    "kind": "pure_call",
+    "parents": [
+     145,
+     149,
+     195,
+     196,
+     197,
+     202
+    ]
+   },
+   {
+    "id": 204,
+    "node_id": "record:715:789",
+    "invocation_id": 204,
+    "kind": "record",
+    "parents": [
+     145,
+     149,
+     191,
+     192,
+     203
+    ]
+   },
+   {
+    "id": 205,
+    "node_id": "list:714:790",
+    "invocation_id": 205,
+    "kind": "list",
+    "parents": [
+     145,
+     149,
+     204
+    ]
+   },
+   {
+    "id": 206,
+    "node_id": "binary:709:790",
+    "invocation_id": 206,
+    "kind": "binary",
+    "parents": [
+     145,
+     149,
+     190,
+     205
+    ]
+   },
+   {
+    "id": 207,
+    "node_id": "bind:704:790",
+    "invocation_id": 207,
+    "kind": "bind",
+    "parents": [
+     145,
+     149,
+     206
+    ]
+   },
+   {
+    "id": 208,
+    "node_id": "ref:799:802",
+    "invocation_id": 208,
+    "kind": "ref",
+    "parents": [
+     145,
+     149,
+     178
+    ]
+   },
+   {
+    "id": 209,
+    "node_id": "literal:804:815",
+    "invocation_id": 209,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 210,
+    "node_id": "binary:799:815",
+    "invocation_id": 210,
+    "kind": "binary",
+    "parents": [
+     145,
+     149,
+     208,
+     209
+    ]
+   },
+   {
+    "id": 211,
+    "node_id": "bind:793:815",
+    "invocation_id": 211,
+    "kind": "bind",
+    "parents": [
+     145,
+     149,
+     210
+    ]
+   },
+   {
+    "id": 212,
+    "node_id": "ref:821:823",
+    "invocation_id": 212,
+    "kind": "ref",
+    "parents": [
+     143,
+     145,
+     149
+    ]
+   },
+   {
+    "id": 213,
+    "node_id": "literal:824:825",
+    "invocation_id": 213,
+    "kind": "literal",
+    "parents": [
+     145,
+     149
+    ]
+   },
+   {
+    "id": 214,
+    "node_id": "binary:821:825",
+    "invocation_id": 214,
+    "kind": "binary",
+    "parents": [
+     145,
+     149,
+     212,
+     213
+    ]
+   },
+   {
+    "id": 215,
+    "node_id": "bind:818:825",
+    "invocation_id": 215,
+    "kind": "bind",
+    "parents": [
+     145,
+     149,
+     214
+    ]
+   },
+   {
+    "id": 216,
+    "node_id": "sequence:73:826",
+    "invocation_id": 216,
+    "kind": "sequence",
+    "parents": [
+     145,
+     149,
+     162,
+     164,
+     181,
+     189,
+     207,
+     211,
+     215
+    ]
+   },
+   {
+    "id": 217,
+    "node_id": "ref:55:60",
+    "invocation_id": 217,
+    "kind": "ref",
+    "parents": [
+     210
+    ]
+   },
+   {
+    "id": 218,
+    "node_id": "ref:64:66",
+    "invocation_id": 218,
+    "kind": "ref",
+    "parents": [
+     214
+    ]
+   },
+   {
+    "id": 219,
+    "node_id": "binary:64:70",
+    "invocation_id": 219,
+    "kind": "binary",
+    "parents": [
+     76,
+     218
+    ]
+   },
+   {
+    "id": 220,
+    "node_id": "binary:55:70",
+    "invocation_id": 220,
+    "kind": "binary",
+    "parents": [
+     217,
+     219
+    ]
+   },
+   {
+    "id": 221,
+    "node_id": "literal:98:108",
+    "invocation_id": 221,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 222,
+    "node_id": "literal:116:122",
+    "invocation_id": 222,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 223,
+    "node_id": "literal:128:150",
+    "invocation_id": 223,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 224,
+    "node_id": "literal:162:288",
+    "invocation_id": 224,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 225,
+    "node_id": "literal:294:359",
+    "invocation_id": 225,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 226,
+    "node_id": "literal:372:406",
+    "invocation_id": 226,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 227,
+    "node_id": "ref:440:441",
+    "invocation_id": 227,
+    "kind": "ref",
+    "parents": [
+     214,
+     216,
+     220
+    ]
+   },
+   {
+    "id": 228,
+    "node_id": "format:418:443",
+    "invocation_id": 228,
+    "kind": "format",
+    "parents": [
+     216,
+     220,
+     227
+    ]
+   },
+   {
+    "id": 229,
+    "node_id": "record:94:444",
+    "invocation_id": 229,
+    "kind": "record",
+    "parents": [
+     216,
+     220,
+     221,
+     222,
+     223,
+     224,
+     225,
+     226,
+     228
+    ]
+   },
+   {
+    "id": 230,
+    "node_id": "call:79:444",
+    "invocation_id": 230,
+    "kind": "invoke",
+    "parents": [
+     229
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "b8f3ced534a29f61ec6f73e2549900fa9920a312fdb658ada299791216fefd7f",
+    "targets": {
+     "op": "transfer",
+     "action": "send",
+     "limb": "guestpc-7a440e9daf61",
+     "local_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_49회차/trainer/base/out/_stage/photos.zip",
+     "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+     "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+     "request_id": "r49-probe-resume2-4"
+    }
+   },
+   {
+    "id": 231,
+    "node_id": "call:79:444",
+    "invocation_id": 231,
+    "kind": "tool_evidence",
+    "parents": [
+     230
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 232,
+    "node_id": "call:79:444",
+    "invocation_id": 232,
+    "kind": "call",
+    "parents": [
+     216,
+     220,
+     229,
+     230,
+     231
+    ]
+   },
+   {
+    "id": 233,
+    "node_id": "bind:76:444",
+    "invocation_id": 233,
+    "kind": "bind",
+    "parents": [
+     216,
+     220,
+     232
+    ]
+   },
+   {
+    "id": 234,
+    "node_id": "literal:451:453",
+    "invocation_id": 234,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 235,
+    "node_id": "bind:447:453",
+    "invocation_id": 235,
+    "kind": "bind",
+    "parents": [
+     216,
+     220,
+     234
+    ]
+   },
+   {
+    "id": 236,
+    "node_id": "literal:482:488",
+    "invocation_id": 236,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 237,
+    "node_id": "ref:493:495",
+    "invocation_id": 237,
+    "kind": "ref",
+    "parents": [
+     216,
+     220,
+     232
+    ]
+   },
+   {
+    "id": 238,
+    "node_id": "field:493:504",
+    "invocation_id": 238,
+    "kind": "field",
+    "parents": [
+     216,
+     220,
+     237
+    ]
+   },
+   {
+    "id": 239,
+    "node_id": "literal:513:516",
+    "invocation_id": 239,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 240,
+    "node_id": "record:478:517",
+    "invocation_id": 240,
+    "kind": "record",
+    "parents": [
+     216,
+     220,
+     236,
+     238,
+     239
+    ]
+   },
+   {
+    "id": 241,
+    "node_id": "call:467:517",
+    "invocation_id": 241,
+    "kind": "invoke",
+    "parents": [
+     240
+    ],
+    "action": "self:task",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "5c909446cfdb9f4a49e63679ec2fd4f01ff2663d6906159516315e8556d4f1ec",
+    "targets": {
+     "op": "wait"
+    }
+   },
+   {
+    "id": 242,
+    "node_id": "call:467:517",
+    "invocation_id": 242,
+    "kind": "tool_failure",
+    "parents": [
+     241
+    ],
+    "action": "self:task",
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": true
+   },
+   {
+    "id": 243,
+    "node_id": "call:467:517",
+    "invocation_id": 243,
+    "kind": "failure",
+    "parents": [
+     216,
+     220,
+     240,
+     241,
+     242
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 244,
+    "node_id": "bind:464:517",
+    "invocation_id": 244,
+    "kind": "failure",
+    "parents": [
+     216,
+     220,
+     243
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 245,
+    "node_id": "sequence:464:534",
+    "invocation_id": 245,
+    "kind": "failure",
+    "parents": [
+     216,
+     220,
+     244
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 246,
+    "node_id": "try:456:580",
+    "invocation_id": 246,
+    "kind": "recovered",
+    "parents": [
+     245
+    ],
+    "code": "TOOL"
+   },
+   {
+    "id": 247,
+    "node_id": "ref:563:568",
+    "invocation_id": 247,
+    "kind": "ref",
+    "parents": [
+     216,
+     220,
+     245,
+     246
+    ]
+   },
+   {
+    "id": 248,
+    "node_id": "field:563:576",
+    "invocation_id": 248,
+    "kind": "field",
+    "parents": [
+     216,
+     220,
+     246,
+     247
+    ]
+   },
+   {
+    "id": 249,
+    "node_id": "format:551:578",
+    "invocation_id": 249,
+    "kind": "format",
+    "parents": [
+     216,
+     220,
+     246,
+     248
+    ]
+   },
+   {
+    "id": 250,
+    "node_id": "bind:547:578",
+    "invocation_id": 250,
+    "kind": "bind",
+    "parents": [
+     216,
+     220,
+     246,
+     249
+    ]
+   },
+   {
+    "id": 251,
+    "node_id": "sequence:547:578",
+    "invocation_id": 251,
+    "kind": "sequence",
+    "parents": [
+     216,
+     220,
+     246,
+     250
+    ]
+   },
+   {
+    "id": 252,
+    "node_id": "try:456:580",
+    "invocation_id": 252,
+    "kind": "try",
+    "parents": [
+     216,
+     220,
+     245,
+     246,
+     251
+    ]
+   },
+   {
+    "id": 253,
+    "node_id": "literal:606:612",
+    "invocation_id": 253,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 254,
+    "node_id": "literal:618:640",
+    "invocation_id": 254,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 255,
+    "node_id": "literal:646:700",
+    "invocation_id": 255,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 256,
+    "node_id": "record:602:701",
+    "invocation_id": 256,
+    "kind": "record",
+    "parents": [
+     216,
+     220,
+     253,
+     254,
+     255
+    ]
+   },
+   {
+    "id": 257,
+    "node_id": "call:587:701",
+    "invocation_id": 257,
+    "kind": "invoke",
+    "parents": [
+     256
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "c0e0196a4342fde276880d075a43ca184e6931204f0feb23a3f0264ec3803e73",
+    "targets": {
+     "op": "list",
+     "limb": "guestpc-7a440e9daf61",
+     "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base"
+    }
+   },
+   {
+    "id": 258,
+    "node_id": "call:587:701",
+    "invocation_id": 258,
+    "kind": "tool_evidence",
+    "parents": [
+     257
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 259,
+    "node_id": "call:587:701",
+    "invocation_id": 259,
+    "kind": "call",
+    "parents": [
+     216,
+     220,
+     256,
+     257,
+     258
+    ]
+   },
+   {
+    "id": 260,
+    "node_id": "bind:583:701",
+    "invocation_id": 260,
+    "kind": "bind",
+    "parents": [
+     216,
+     220,
+     259
+    ]
+   },
+   {
+    "id": 261,
+    "node_id": "ref:709:713",
+    "invocation_id": 261,
+    "kind": "ref",
+    "parents": [
+     206,
+     216,
+     220
+    ]
+   },
+   {
+    "id": 262,
+    "node_id": "ref:718:720",
+    "invocation_id": 262,
+    "kind": "ref",
+    "parents": [
+     214,
+     216,
+     220
+    ]
+   },
+   {
+    "id": 263,
+    "node_id": "ref:727:730",
+    "invocation_id": 263,
+    "kind": "ref",
+    "parents": [
+     216,
+     220,
+     249
+    ]
+   },
+   {
+    "id": 264,
+    "node_id": "ref:741:744",
+    "invocation_id": 264,
+    "kind": "ref",
+    "parents": [
+     216,
+     220,
+     259
+    ]
+   },
+   {
+    "id": 265,
+    "node_id": "field:741:751",
+    "invocation_id": 265,
+    "kind": "field",
+    "parents": [
+     216,
+     220,
+     264
+    ]
+   },
+   {
+    "id": 266,
+    "node_id": "field:741:757",
+    "invocation_id": 266,
+    "kind": "field",
+    "parents": [
+     216,
+     220,
+     265
+    ]
+   },
+   {
+    "id": 267,
+    "node_id": "lambda:758:787",
+    "invocation_id": 267,
+    "kind": "lambda",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 268,
+    "node_id": "builtin:737:740",
+    "invocation_id": 268,
+    "kind": "builtin",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 269,
+    "node_id": "ref:768:769",
+    "invocation_id": 269,
+    "kind": "ref",
+    "parents": [
+     216,
+     220,
+     266,
+     267
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 270,
+    "node_id": "field:768:774",
+    "invocation_id": 270,
+    "kind": "field",
+    "parents": [
+     216,
+     220,
+     269
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 271,
+    "node_id": "ref:778:779",
+    "invocation_id": 271,
+    "kind": "ref",
+    "parents": [
+     216,
+     220,
+     266,
+     267
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 272,
+    "node_id": "field:778:785",
+    "invocation_id": 272,
+    "kind": "field",
+    "parents": [
+     216,
+     220,
+     271
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 273,
+    "node_id": "format:764:787",
+    "invocation_id": 273,
+    "kind": "format",
+    "parents": [
+     216,
+     220,
+     270,
+     272
+    ],
+    "evaluations": 4
+   },
+   {
+    "id": 274,
+    "node_id": "pure_call:737:788",
+    "invocation_id": 274,
+    "kind": "pure_call",
+    "parents": [
+     216,
+     220,
+     266,
+     267,
+     268,
+     273
+    ]
+   },
+   {
+    "id": 275,
+    "node_id": "record:715:789",
+    "invocation_id": 275,
+    "kind": "record",
+    "parents": [
+     216,
+     220,
+     262,
+     263,
+     274
+    ]
+   },
+   {
+    "id": 276,
+    "node_id": "list:714:790",
+    "invocation_id": 276,
+    "kind": "list",
+    "parents": [
+     216,
+     220,
+     275
+    ]
+   },
+   {
+    "id": 277,
+    "node_id": "binary:709:790",
+    "invocation_id": 277,
+    "kind": "binary",
+    "parents": [
+     216,
+     220,
+     261,
+     276
+    ]
+   },
+   {
+    "id": 278,
+    "node_id": "bind:704:790",
+    "invocation_id": 278,
+    "kind": "bind",
+    "parents": [
+     216,
+     220,
+     277
+    ]
+   },
+   {
+    "id": 279,
+    "node_id": "ref:799:802",
+    "invocation_id": 279,
+    "kind": "ref",
+    "parents": [
+     216,
+     220,
+     249
+    ]
+   },
+   {
+    "id": 280,
+    "node_id": "literal:804:815",
+    "invocation_id": 280,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 281,
+    "node_id": "binary:799:815",
+    "invocation_id": 281,
+    "kind": "binary",
+    "parents": [
+     216,
+     220,
+     279,
+     280
+    ]
+   },
+   {
+    "id": 282,
+    "node_id": "bind:793:815",
+    "invocation_id": 282,
+    "kind": "bind",
+    "parents": [
+     216,
+     220,
+     281
+    ]
+   },
+   {
+    "id": 283,
+    "node_id": "ref:821:823",
+    "invocation_id": 283,
+    "kind": "ref",
+    "parents": [
+     214,
+     216,
+     220
+    ]
+   },
+   {
+    "id": 284,
+    "node_id": "literal:824:825",
+    "invocation_id": 284,
+    "kind": "literal",
+    "parents": [
+     216,
+     220
+    ]
+   },
+   {
+    "id": 285,
+    "node_id": "binary:821:825",
+    "invocation_id": 285,
+    "kind": "binary",
+    "parents": [
+     216,
+     220,
+     283,
+     284
+    ]
+   },
+   {
+    "id": 286,
+    "node_id": "bind:818:825",
+    "invocation_id": 286,
+    "kind": "bind",
+    "parents": [
+     216,
+     220,
+     285
+    ]
+   },
+   {
+    "id": 287,
+    "node_id": "sequence:73:826",
+    "invocation_id": 287,
+    "kind": "sequence",
+    "parents": [
+     216,
+     220,
+     233,
+     235,
+     252,
+     260,
+     278,
+     282,
+     286
+    ]
+   },
+   {
+    "id": 288,
+    "node_id": "ref:55:60",
+    "invocation_id": 288,
+    "kind": "ref",
+    "parents": [
+     281
+    ]
+   },
+   {
+    "id": 289,
+    "node_id": "ref:64:66",
+    "invocation_id": 289,
+    "kind": "ref",
+    "parents": [
+     285
+    ]
+   },
+   {
+    "id": 290,
+    "node_id": "binary:64:70",
+    "invocation_id": 290,
+    "kind": "binary",
+    "parents": [
+     76,
+     289
+    ]
+   },
+   {
+    "id": 291,
+    "node_id": "binary:55:70",
+    "invocation_id": 291,
+    "kind": "binary",
+    "parents": [
+     288,
+     290
+    ]
+   },
+   {
+    "id": 292,
+    "node_id": "repeat:41:827",
+    "invocation_id": 292,
+    "kind": "repeat",
+    "parents": [
+     73,
+     78,
+     145,
+     149,
+     216,
+     220,
+     287,
+     291
+    ]
+   },
+   {
+    "id": 293,
+    "node_id": "ref:835:839",
+    "invocation_id": 293,
+    "kind": "ref",
+    "parents": [
+     277,
+     287,
+     291
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:839": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 15,
+    "end": 839,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:23": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 16,
+    "end": 23,
+    "line": 2,
+    "column": 1
+   },
+   "list:21:23": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 21,
+    "end": 23,
+    "line": 2,
+    "column": 6
+   },
+   "bind:24:28": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 24,
+    "end": 28,
+    "line": 3,
+    "column": 1
+   },
+   "literal:27:28": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 27,
+    "end": 28,
+    "line": 3,
+    "column": 4
+   },
+   "bind:29:40": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 29,
+    "end": 40,
+    "line": 4,
+    "column": 1
+   },
+   "literal:35:40": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 35,
+    "end": 40,
+    "line": 4,
+    "column": 7
+   },
+   "repeat:41:827": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 41,
+    "end": 827,
+    "line": 5,
+    "column": 1
+   },
+   "sequence:73:826": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 73,
+    "end": 826,
+    "line": 5,
+    "column": 33
+   },
+   "bind:76:444": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 76,
+    "end": 444,
+    "line": 6,
+    "column": 3
+   },
+   "call:79:444": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 79,
+    "end": 444,
+    "line": 6,
+    "column": 6
+   },
+   "record:94:444": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 94,
+    "end": 444,
+    "line": 6,
+    "column": 21
+   },
+   "literal:98:108": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 98,
+    "end": 108,
+    "line": 6,
+    "column": 25
+   },
+   "literal:116:122": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 116,
+    "end": 122,
+    "line": 6,
+    "column": 43
+   },
+   "literal:128:150": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 128,
+    "end": 150,
+    "line": 6,
+    "column": 55
+   },
+   "literal:162:288": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 162,
+    "end": 288,
+    "line": 6,
+    "column": 89
+   },
+   "literal:294:359": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 294,
+    "end": 359,
+    "line": 6,
+    "column": 221
+   },
+   "literal:372:406": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 372,
+    "end": 406,
+    "line": 6,
+    "column": 299
+   },
+   "format:418:443": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 418,
+    "end": 443,
+    "line": 6,
+    "column": 345
+   },
+   "ref:440:441": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 440,
+    "end": 441,
+    "line": 6,
+    "column": 367
+   },
+   "bind:447:453": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 447,
+    "end": 453,
+    "line": 7,
+    "column": 3
+   },
+   "literal:451:453": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 451,
+    "end": 453,
+    "line": 7,
+    "column": 7
+   },
+   "try:456:580": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 456,
+    "end": 580,
+    "line": 8,
+    "column": 3
+   },
+   "sequence:464:534": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 464,
+    "end": 534,
+    "line": 8,
+    "column": 11
+   },
+   "bind:464:517": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 464,
+    "end": 517,
+    "line": 8,
+    "column": 11
+   },
+   "call:467:517": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 467,
+    "end": 517,
+    "line": 8,
+    "column": 14
+   },
+   "record:478:517": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 478,
+    "end": 517,
+    "line": 8,
+    "column": 25
+   },
+   "literal:482:488": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 482,
+    "end": 488,
+    "line": 8,
+    "column": 29
+   },
+   "field:493:504": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 493,
+    "end": 504,
+    "line": 8,
+    "column": 40
+   },
+   "ref:493:495": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 493,
+    "end": 495,
+    "line": 8,
+    "column": 40
+   },
+   "literal:513:516": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 513,
+    "end": 516,
+    "line": 8,
+    "column": 60
+   },
+   "sequence:547:578": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 547,
+    "end": 578,
+    "line": 9,
+    "column": 30
+   },
+   "bind:547:578": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 547,
+    "end": 578,
+    "line": 9,
+    "column": 30
+   },
+   "format:551:578": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 551,
+    "end": 578,
+    "line": 9,
+    "column": 34
+   },
+   "field:563:576": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 563,
+    "end": 576,
+    "line": 9,
+    "column": 46
+   },
+   "ref:563:568": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 563,
+    "end": 568,
+    "line": 9,
+    "column": 46
+   },
+   "bind:583:701": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 583,
+    "end": 701,
+    "line": 10,
+    "column": 3
+   },
+   "call:587:701": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 587,
+    "end": 701,
+    "line": 10,
+    "column": 7
+   },
+   "record:602:701": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 602,
+    "end": 701,
+    "line": 10,
+    "column": 22
+   },
+   "literal:606:612": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 606,
+    "end": 612,
+    "line": 10,
+    "column": 26
+   },
+   "literal:618:640": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 618,
+    "end": 640,
+    "line": 10,
+    "column": 38
+   },
+   "literal:646:700": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 646,
+    "end": 700,
+    "line": 10,
+    "column": 66
+   },
+   "bind:704:790": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 704,
+    "end": 790,
+    "line": 11,
+    "column": 3
+   },
+   "binary:709:790": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 709,
+    "end": 790,
+    "line": 11,
+    "column": 8
+   },
+   "ref:709:713": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 709,
+    "end": 713,
+    "line": 11,
+    "column": 8
+   },
+   "list:714:790": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 714,
+    "end": 790,
+    "line": 11,
+    "column": 13
+   },
+   "record:715:789": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 715,
+    "end": 789,
+    "line": 11,
+    "column": 14
+   },
+   "ref:718:720": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 718,
+    "end": 720,
+    "line": 11,
+    "column": 17
+   },
+   "ref:727:730": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 727,
+    "end": 730,
+    "line": 11,
+    "column": 26
+   },
+   "pure_call:737:788": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 737,
+    "end": 788,
+    "line": 11,
+    "column": 36
+   },
+   "field:741:757": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 741,
+    "end": 757,
+    "line": 11,
+    "column": 40
+   },
+   "field:741:751": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 741,
+    "end": 751,
+    "line": 11,
+    "column": 40
+   },
+   "ref:741:744": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 741,
+    "end": 744,
+    "line": 11,
+    "column": 40
+   },
+   "lambda:758:787": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 758,
+    "end": 787,
+    "line": 11,
+    "column": 57
+   },
+   "builtin:737:740": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 737,
+    "end": 740,
+    "line": 11,
+    "column": 36
+   },
+   "format:764:787": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 764,
+    "end": 787,
+    "line": 11,
+    "column": 63
+   },
+   "field:768:774": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 768,
+    "end": 774,
+    "line": 11,
+    "column": 67
+   },
+   "ref:768:769": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 768,
+    "end": 769,
+    "line": 11,
+    "column": 67
+   },
+   "field:778:785": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 778,
+    "end": 785,
+    "line": 11,
+    "column": 77
+   },
+   "ref:778:779": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 778,
+    "end": 779,
+    "line": 11,
+    "column": 77
+   },
+   "bind:793:815": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 793,
+    "end": 815,
+    "line": 12,
+    "column": 3
+   },
+   "binary:799:815": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 799,
+    "end": 815,
+    "line": 12,
+    "column": 9
+   },
+   "ref:799:802": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 799,
+    "end": 802,
+    "line": 12,
+    "column": 9
+   },
+   "literal:804:815": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 804,
+    "end": 815,
+    "line": 12,
+    "column": 14
+   },
+   "bind:818:825": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 818,
+    "end": 825,
+    "line": 13,
+    "column": 3
+   },
+   "binary:821:825": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 821,
+    "end": 825,
+    "line": 13,
+    "column": 6
+   },
+   "ref:821:823": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 821,
+    "end": 823,
+    "line": 13,
+    "column": 6
+   },
+   "literal:824:825": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 824,
+    "end": 825,
+    "line": 13,
+    "column": 9
+   },
+   "binary:55:70": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 55,
+    "end": 70,
+    "line": 5,
+    "column": 15
+   },
+   "ref:55:60": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 55,
+    "end": 60,
+    "line": 5,
+    "column": 15
+   },
+   "binary:64:70": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 64,
+    "end": 70,
+    "line": 5,
+    "column": 24
+   },
+   "ref:64:66": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 64,
+    "end": 66,
+    "line": 5,
+    "column": 24
+   },
+   "literal:69:70": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 69,
+    "end": 70,
+    "line": 5,
+    "column": 29
+   },
+   "return:828:839": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 828,
+    "end": 839,
+    "line": 15,
+    "column": 1
+   },
+   "ref:835:839": {
+    "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+    "start": 835,
+    "end": 839,
+    "line": 15,
+    "column": 8
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "c3f0bea29af29ed013a08fee7f6ce747c4421706c1c5d36adfcaa47b0eef2d3d",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "accepted",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "1235dda4636b461aae80aa6facf566ce"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "queued"
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T22:02:01+0900"
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "helper_mode",
+       [
+        "scalar",
+        "resident"
+       ]
+      ],
+      [
+       "op",
+       [
+        "scalar",
+        "transfer"
+       ]
+      ],
+      [
+       "job_id",
+       [
+        "scalar",
+        "1235dda4636b461aae80aa6facf566ce"
+       ]
+      ],
+      [
+       "request_id",
+       [
+        "scalar",
+        "r49-probe-resume2-1"
+       ]
+      ],
+      [
+       "transfer_id",
+       [
+        "scalar",
+        "a584ed78908a44ff9d5c0d8a21a087f0"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "71b1426d81577c8a44cdece4a34cfe296cc51699192e7a54301796d6e96be67b",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "7b5516084ef9c03d2004210319c9f7fded874790833cba82f6356bb7b60e4aa2",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "d16a1dc24103f7c82b1267b54d5ac851012f71a1c21e7a0d50c591a674e9e72d",
+    "action": "self:task",
+    "reuse_key": "fc1fe5f21af669bff4cd7e1489809a7d97527dff00a7a72f23d6d71e770542d0",
+    "error": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "transfer_failed",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      28
+     ],
+     "details": {
+      "state": "failed",
+      "terminal": true,
+      "task_ref": {
+       "kind": "guestpc",
+       "task_id": "1235dda4636b461aae80aa6facf566ce"
+      },
+      "timed_out": false,
+      "failure": "transfer_failed",
+      "progress": [
+       {
+        "cursor": 353,
+        "job": "1235dda4636b461aae80aa6facf566ce",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "submitted:1235dda4636b461aae80aa6facf566ce",
+        "kind": "queued",
+        "occurred": 1791637321.168843,
+        "received": 1791637321.168843,
+        "payload": {
+         "op": "transfer",
+         "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+         "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+         "timeout": 86400,
+         "mode": "background"
+        }
+       },
+       {
+        "cursor": 354,
+        "job": "1235dda4636b461aae80aa6facf566ce",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "a14b2075b36bb9625e78e5e360cf5d18",
+        "kind": "started",
+        "occurred": 1791637321.8918378,
+        "received": 1791637322.104481,
+        "payload": {}
+       },
+       {
+        "cursor": 355,
+        "job": "1235dda4636b461aae80aa6facf566ce",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "11139490865f0b186da58c92f01bda55",
+        "kind": "result",
+        "occurred": 1791637369.18616,
+        "received": 1791637369.719923,
+        "payload": {
+         "error": "transfer_failed",
+         "message": "context deadline exceeded (Client.Timeout or context cancellation while reading body)"
+        }
+       }
+      ],
+      "accepted_at": "2026-10-10T22:02:01+0900",
+      "elapsed_s": null
+     }
+    },
+    "partial": [
+     "unit"
+    ],
+    "arguments": [
+     "record",
+     [
+      [
+       "op",
+       [
+        "scalar",
+        "wait"
+       ]
+      ],
+      [
+       "ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "1235dda4636b461aae80aa6facf566ce"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "timeout",
+       [
+        "scalar",
+        200
+       ]
+      ]
+     ]
+    ],
+    "argument_evidence": [
+     26
+    ],
+    "argument_incomplete": false
+   },
+   {
+    "request_hash": "c0e0196a4342fde276880d075a43ca184e6931204f0feb23a3f0264ec3803e73",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "files",
+          [
+           "list",
+           [
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                908
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T22:00:05+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "convert.sh"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/convert.sh"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                524288
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:59:17+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                2621440
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:57:41+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                0
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:54:05+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "op",
+          [
+           "scalar",
+           "list"
+          ]
+         ],
+         [
+          "path",
+          [
+           "scalar",
+           "/Users/kangkukjin/indiebiz-training/r49/trainer_base"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "1a36af8f6b31c6928b8b39acce0dc764717f8399d54f4194da810124551be14f",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "abf77e9b0c81c68fa14e67ead1d3a3f13aed994e0b6906242ee8d69c71a6cfb1",
+     "contract": "fb13c564d04a8af77ee9d357bfd192c50bdbca0ed11ddab1b3751ca5be66d9ba",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "f1168c39a6f806aa5385acd5fd61723d0c1ec8271d8da6c66997630a26f8c675",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "accepted",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "a25603cc4a4148d5b60f057eb690e124"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "queued"
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T22:02:52+0900"
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "helper_mode",
+       [
+        "scalar",
+        "resident"
+       ]
+      ],
+      [
+       "op",
+       [
+        "scalar",
+        "transfer"
+       ]
+      ],
+      [
+       "job_id",
+       [
+        "scalar",
+        "a25603cc4a4148d5b60f057eb690e124"
+       ]
+      ],
+      [
+       "request_id",
+       [
+        "scalar",
+        "r49-probe-resume2-2"
+       ]
+      ],
+      [
+       "transfer_id",
+       [
+        "scalar",
+        "a584ed78908a44ff9d5c0d8a21a087f0"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "7ee2221ed1115d791e44d72aad585d4d977e90d669d21fe9171eda9867bd090e",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "5cb5d7870efab5b35a4aed14f76bccb2fa127cfb51f21e1b9879f100c2f56a91",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "49f40e79b7abcec21f3583e1431be427a6dc99e0511c19670336396fbc56b753",
+    "action": "self:task",
+    "reuse_key": "868abc077b3c22e3be811ad28621505c42ed21f880fbf97ae3d60fa34c0a186c",
+    "error": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "transfer_failed",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      100
+     ],
+     "details": {
+      "state": "failed",
+      "terminal": true,
+      "task_ref": {
+       "kind": "guestpc",
+       "task_id": "a25603cc4a4148d5b60f057eb690e124"
+      },
+      "timed_out": false,
+      "failure": "transfer_failed",
+      "progress": [
+       {
+        "cursor": 359,
+        "job": "a25603cc4a4148d5b60f057eb690e124",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "submitted:a25603cc4a4148d5b60f057eb690e124",
+        "kind": "queued",
+        "occurred": 1791637372.458876,
+        "received": 1791637372.458876,
+        "payload": {
+         "op": "transfer",
+         "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+         "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+         "timeout": 86400,
+         "mode": "background"
+        }
+       },
+       {
+        "cursor": 360,
+        "job": "a25603cc4a4148d5b60f057eb690e124",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "3642163240f81a4e3b75e0a295443db1",
+        "kind": "started",
+        "occurred": 1791637373.411312,
+        "received": 1791637373.567971,
+        "payload": {}
+       },
+       {
+        "cursor": 361,
+        "job": "a25603cc4a4148d5b60f057eb690e124",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "b2b45ff6bead2e8aecacee91138cca12",
+        "kind": "result",
+        "occurred": 1791637425.35968,
+        "received": 1791637426.097682,
+        "payload": {
+         "error": "transfer_failed",
+         "message": "context deadline exceeded (Client.Timeout or context cancellation while reading body)"
+        }
+       }
+      ],
+      "accepted_at": "2026-10-10T22:02:52+0900",
+      "elapsed_s": null
+     }
+    },
+    "partial": [
+     "unit"
+    ],
+    "arguments": [
+     "record",
+     [
+      [
+       "op",
+       [
+        "scalar",
+        "wait"
+       ]
+      ],
+      [
+       "ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "a25603cc4a4148d5b60f057eb690e124"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "timeout",
+       [
+        "scalar",
+        200
+       ]
+      ]
+     ]
+    ],
+    "argument_evidence": [
+     98
+    ],
+    "argument_incomplete": true
+   },
+   {
+    "request_hash": "c0e0196a4342fde276880d075a43ca184e6931204f0feb23a3f0264ec3803e73",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "files",
+          [
+           "list",
+           [
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                908
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T22:00:05+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "convert.sh"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/convert.sh"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                524288
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:59:17+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                2621440
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:57:41+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                0
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:54:05+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "op",
+          [
+           "scalar",
+           "list"
+          ]
+         ],
+         [
+          "path",
+          [
+           "scalar",
+           "/Users/kangkukjin/indiebiz-training/r49/trainer_base"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "1a36af8f6b31c6928b8b39acce0dc764717f8399d54f4194da810124551be14f",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "abf77e9b0c81c68fa14e67ead1d3a3f13aed994e0b6906242ee8d69c71a6cfb1",
+     "contract": "fb13c564d04a8af77ee9d357bfd192c50bdbca0ed11ddab1b3751ca5be66d9ba",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "c2d7f43797689c113b34e1e668d9376c53a98a3adce7236bad0cddd486ce7a4a",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "accepted",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "41fe5e338ab34fc28fa110519f79f527"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "queued"
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T22:03:48+0900"
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "helper_mode",
+       [
+        "scalar",
+        "resident"
+       ]
+      ],
+      [
+       "op",
+       [
+        "scalar",
+        "transfer"
+       ]
+      ],
+      [
+       "job_id",
+       [
+        "scalar",
+        "41fe5e338ab34fc28fa110519f79f527"
+       ]
+      ],
+      [
+       "request_id",
+       [
+        "scalar",
+        "r49-probe-resume2-3"
+       ]
+      ],
+      [
+       "transfer_id",
+       [
+        "scalar",
+        "a584ed78908a44ff9d5c0d8a21a087f0"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "72dd5bf1285efc88c752bd25ce96859e00585c28f9c4de37fbb4c3dcbc91f73f",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "f76d329c76e9be6eaedb4f1b50baf1964b96f0e74bb23a254411641db373d0e8",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "4cccbcdf3eae6ad75cf868f807107c03d1e13dbf82d46cb0f5b727fbadc57752",
+    "action": "self:task",
+    "reuse_key": "e524d5b558e0f6311c48fd286d7a0711ddb64139759f89407b1d3c25eaa1a140",
+    "error": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "transfer_failed",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      171
+     ],
+     "details": {
+      "state": "failed",
+      "terminal": true,
+      "task_ref": {
+       "kind": "guestpc",
+       "task_id": "41fe5e338ab34fc28fa110519f79f527"
+      },
+      "timed_out": false,
+      "failure": "transfer_failed",
+      "progress": [
+       {
+        "cursor": 365,
+        "job": "41fe5e338ab34fc28fa110519f79f527",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "submitted:41fe5e338ab34fc28fa110519f79f527",
+        "kind": "queued",
+        "occurred": 1791637428.427555,
+        "received": 1791637428.427555,
+        "payload": {
+         "op": "transfer",
+         "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+         "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+         "timeout": 86400,
+         "mode": "background"
+        }
+       },
+       {
+        "cursor": 366,
+        "job": "41fe5e338ab34fc28fa110519f79f527",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "9c04228326f798fde444cf35fec176c3",
+        "kind": "started",
+        "occurred": 1791637429.644017,
+        "received": 1791637429.8001332,
+        "payload": {}
+       },
+       {
+        "cursor": 367,
+        "job": "41fe5e338ab34fc28fa110519f79f527",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "1440d0cdd929a3bae48c42de9acb9700",
+        "kind": "result",
+        "occurred": 1791637483.8316522,
+        "received": 1791637484.8064861,
+        "payload": {
+         "error": "transfer_failed",
+         "message": "context deadline exceeded (Client.Timeout or context cancellation while reading body)"
+        }
+       }
+      ],
+      "accepted_at": "2026-10-10T22:03:48+0900",
+      "elapsed_s": null
+     }
+    },
+    "partial": [
+     "unit"
+    ],
+    "arguments": [
+     "record",
+     [
+      [
+       "op",
+       [
+        "scalar",
+        "wait"
+       ]
+      ],
+      [
+       "ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "41fe5e338ab34fc28fa110519f79f527"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "timeout",
+       [
+        "scalar",
+        200
+       ]
+      ]
+     ]
+    ],
+    "argument_evidence": [
+     169
+    ],
+    "argument_incomplete": true
+   },
+   {
+    "request_hash": "c0e0196a4342fde276880d075a43ca184e6931204f0feb23a3f0264ec3803e73",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "files",
+          [
+           "list",
+           [
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                908
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T22:00:05+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "convert.sh"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/convert.sh"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                524288
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:59:17+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                2621440
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:57:41+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                0
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:54:05+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "op",
+          [
+           "scalar",
+           "list"
+          ]
+         ],
+         [
+          "path",
+          [
+           "scalar",
+           "/Users/kangkukjin/indiebiz-training/r49/trainer_base"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "1a36af8f6b31c6928b8b39acce0dc764717f8399d54f4194da810124551be14f",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "abf77e9b0c81c68fa14e67ead1d3a3f13aed994e0b6906242ee8d69c71a6cfb1",
+     "contract": "fb13c564d04a8af77ee9d357bfd192c50bdbca0ed11ddab1b3751ca5be66d9ba",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "b8f3ced534a29f61ec6f73e2549900fa9920a312fdb658ada299791216fefd7f",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "accepted",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "task_ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "b828452f5cb847dc94601dd82f5ba076"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "state",
+       [
+        "scalar",
+        "queued"
+       ]
+      ],
+      [
+       "accepted_at",
+       [
+        "scalar",
+        "2026-10-10T22:04:46+0900"
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "helper_mode",
+       [
+        "scalar",
+        "resident"
+       ]
+      ],
+      [
+       "op",
+       [
+        "scalar",
+        "transfer"
+       ]
+      ],
+      [
+       "job_id",
+       [
+        "scalar",
+        "b828452f5cb847dc94601dd82f5ba076"
+       ]
+      ],
+      [
+       "request_id",
+       [
+        "scalar",
+        "r49-probe-resume2-4"
+       ]
+      ],
+      [
+       "transfer_id",
+       [
+        "scalar",
+        "a584ed78908a44ff9d5c0d8a21a087f0"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "2f36994ed83b12b310e6c450a9b071188106f8050c1158d0c34077c5f409d470",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "8bbc52d958e4bae3f6f02e3d6bd35e1c093ce848a788c7247bb94141b5602a74",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "5c909446cfdb9f4a49e63679ec2fd4f01ff2663d6906159516315e8556d4f1ec",
+    "action": "self:task",
+    "reuse_key": "6aa707f2f20d3a8deba9b02406f9f8890ce48ada72482e4db1ad0f031c6b7325",
+    "error": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "transfer_failed",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      242
+     ],
+     "details": {
+      "state": "failed",
+      "terminal": true,
+      "task_ref": {
+       "kind": "guestpc",
+       "task_id": "b828452f5cb847dc94601dd82f5ba076"
+      },
+      "timed_out": false,
+      "failure": "transfer_failed",
+      "progress": [
+       {
+        "cursor": 371,
+        "job": "b828452f5cb847dc94601dd82f5ba076",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "submitted:b828452f5cb847dc94601dd82f5ba076",
+        "kind": "queued",
+        "occurred": 1791637486.8020961,
+        "received": 1791637486.8020961,
+        "payload": {
+         "op": "transfer",
+         "transfer_id": "a584ed78908a44ff9d5c0d8a21a087f0",
+         "path": "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip",
+         "timeout": 86400,
+         "mode": "background"
+        }
+       },
+       {
+        "cursor": 372,
+        "job": "b828452f5cb847dc94601dd82f5ba076",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "ddb903de9c9f3241ed2878e1925d4a8a",
+        "kind": "started",
+        "occurred": 1791637487.786803,
+        "received": 1791637487.9470022,
+        "payload": {}
+       },
+       {
+        "cursor": 373,
+        "job": "b828452f5cb847dc94601dd82f5ba076",
+        "device": "guestpc-7a440e9daf61",
+        "event_id": "07c9a812a4a047b426a7e602d651bb47",
+        "kind": "result",
+        "occurred": 1791637548.7016819,
+        "received": 1791637549.370118,
+        "payload": {
+         "error": "transfer_failed",
+         "message": "context deadline exceeded (Client.Timeout or context cancellation while reading body)"
+        }
+       }
+      ],
+      "accepted_at": "2026-10-10T22:04:46+0900",
+      "elapsed_s": null
+     }
+    },
+    "partial": [
+     "unit"
+    ],
+    "arguments": [
+     "record",
+     [
+      [
+       "op",
+       [
+        "scalar",
+        "wait"
+       ]
+      ],
+      [
+       "ref",
+       [
+        "record",
+        [
+         [
+          "kind",
+          [
+           "scalar",
+           "guestpc"
+          ]
+         ],
+         [
+          "task_id",
+          [
+           "scalar",
+           "b828452f5cb847dc94601dd82f5ba076"
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "timeout",
+       [
+        "scalar",
+        200
+       ]
+      ]
+     ]
+    ],
+    "argument_evidence": [
+     240
+    ],
+    "argument_incomplete": true
+   },
+   {
+    "request_hash": "c0e0196a4342fde276880d075a43ca184e6931204f0feb23a3f0264ec3803e73",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "files",
+          [
+           "list",
+           [
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                908
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T22:00:05+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "convert.sh"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/convert.sh"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                524288
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:59:17+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-9758dfb8a6ef42e881516df3a0189dee.part"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                2621440
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:57:41+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-a584ed78908a44ff9d5c0d8a21a087f0.part"
+               ]
+              ]
+             ]
+            ],
+            [
+             "record",
+             [
+              [
+               "bytes",
+               [
+                "scalar",
+                0
+               ]
+              ],
+              [
+               "dir",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "mtime",
+               [
+                "scalar",
+                "2026-10-10T21:54:05+09:00"
+               ]
+              ],
+              [
+               "name",
+               [
+                "scalar",
+                "photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part"
+               ]
+              ],
+              [
+               "path",
+               [
+                "scalar",
+                "/Users/kangkukjin/indiebiz-training/r49/trainer_base/photos.zip.indiebiz-c9c7a35e586f4f6c8e779c5cf4ef357c.part"
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "op",
+          [
+           "scalar",
+           "list"
+          ]
+         ],
+         [
+          "path",
+          [
+           "scalar",
+           "/Users/kangkukjin/indiebiz-training/r49/trainer_base"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "1a36af8f6b31c6928b8b39acce0dc764717f8399d54f4194da810124551be14f",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "abf77e9b0c81c68fa14e67ead1d3a3f13aed994e0b6906242ee8d69c71a6cfb1",
+     "contract": "fb13c564d04a8af77ee9d357bfd192c50bdbca0ed11ddab1b3751ca5be66d9ba",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 354,
+   "rows": 4,
+   "elapsed_ms": 230927,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "pure_call:737:788",
+     "steps": 24,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 737,
+      "end": 788,
+      "line": 11,
+      "column": 36
+     }
+    },
+    {
+     "node_id": "field:768:774",
+     "steps": 16,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 768,
+      "end": 774,
+      "line": 11,
+      "column": 67
+     }
+    },
+    {
+     "node_id": "field:778:785",
+     "steps": 16,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 778,
+      "end": 785,
+      "line": 11,
+      "column": 77
+     }
+    },
+    {
+     "node_id": "format:764:787",
+     "steps": 16,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 764,
+      "end": 787,
+      "line": 11,
+      "column": 63
+     }
+    },
+    {
+     "node_id": "ref:768:769",
+     "steps": 16,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 768,
+      "end": 769,
+      "line": 11,
+      "column": 67
+     }
+    },
+    {
+     "node_id": "ref:778:779",
+     "steps": 16,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 778,
+      "end": 779,
+      "line": 11,
+      "column": 77
+     }
+    },
+    {
+     "node_id": "binary:55:70",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 55,
+      "end": 70,
+      "line": 5,
+      "column": 15
+     }
+    },
+    {
+     "node_id": "binary:64:70",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 64,
+      "end": 70,
+      "line": 5,
+      "column": 24
+     }
+    },
+    {
+     "node_id": "binary:709:790",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 709,
+      "end": 790,
+      "line": 11,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "binary:799:815",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 799,
+      "end": 815,
+      "line": 12,
+      "column": 9
+     }
+    },
+    {
+     "node_id": "binary:821:825",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 821,
+      "end": 825,
+      "line": 13,
+      "column": 6
+     }
+    },
+    {
+     "node_id": "bind:447:453",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 447,
+      "end": 453,
+      "line": 7,
+      "column": 3
+     }
+    },
+    {
+     "node_id": "bind:464:517",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 464,
+      "end": 517,
+      "line": 8,
+      "column": 11
+     }
+    },
+    {
+     "node_id": "bind:547:578",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 547,
+      "end": 578,
+      "line": 9,
+      "column": 30
+     }
+    },
+    {
+     "node_id": "bind:583:701",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 583,
+      "end": 701,
+      "line": 10,
+      "column": 3
+     }
+    },
+    {
+     "node_id": "bind:704:790",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 704,
+      "end": 790,
+      "line": 11,
+      "column": 3
+     }
+    },
+    {
+     "node_id": "bind:76:444",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 76,
+      "end": 444,
+      "line": 6,
+      "column": 3
+     }
+    },
+    {
+     "node_id": "bind:793:815",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 793,
+      "end": 815,
+      "line": 12,
+      "column": 3
+     }
+    },
+    {
+     "node_id": "bind:818:825",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 818,
+      "end": 825,
+      "line": 13,
+      "column": 3
+     }
+    },
+    {
+     "node_id": "builtin:737:740",
+     "steps": 4,
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 737,
+      "end": 740,
+      "line": 11,
+      "column": 36
+     }
+    }
+   ],
+   "steps_other": 194,
+   "steps_by_line": [
+    {
+     "line": 11,
+     "steps": 152,
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 6,
+     "steps": 44,
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 8,
+     "steps": 36,
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 5,
+     "steps": 25,
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 10,
+     "steps": 24,
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 9,
+     "steps": 20,
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 12,
+     "steps": 16,
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 13,
+     "steps": 16,
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 7,
+     "steps": 8,
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 2,
+     "steps": 2,
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 8,
+     "ms": 223208,
+     "calls": 4,
+     "actions": [
+      "self:task"
+     ],
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 10,
+     "ms": 7242,
+     "calls": 4,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    },
+    {
+     "line": 6,
+     "ms": 160,
+     "calls": 4,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "6d4cb2aa3f7244a78d8b0ac6686dae07"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "6d4cb2aa3f7244a78d8b0ac6686dae07"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": true,
+   "read_exclusions": [
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "dd6b57ddfe70c6f62832f9e07ad0602f17260c7cbf305c6b7f2839326799b2a5",
+     "action": "limbs:guestpc",
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 79,
+      "end": 444,
+      "line": 6,
+      "column": 6
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "aa64ea2fede39cca83d8494ae4e9594a93144040799c6c66100c75a15fef3c59",
+     "action": "limbs:guestpc",
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 79,
+      "end": 444,
+      "line": 6,
+      "column": 6
+     },
+     "excluded_calls": 1
+    },
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "16883d2d965ce48e208e9930eead0203eafb6aff2b5b176cbab3674294529c56",
+     "action": "limbs:guestpc",
+     "location": {
+      "source_hash": "2e21ea3c1793a0a22585c95a86614655c27d570c5406dafef6921aafb2df8433",
+      "start": 79,
+      "end": 444,
+      "line": 6,
+      "column": 6
+     },
+     "excluded_calls": 1
+    }
+   ],
+   "read_exclusions_total": 3,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "6d4cb2aa3f7244a78d8b0ac6686dae07",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

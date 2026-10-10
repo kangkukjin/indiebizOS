@@ -1,0 +1,81 @@
+{
+ "label": "trainer_base_remote_v1",
+ "elapsed": 154.38,
+ "success": false,
+ "error": "보낸 파일이 원격에 같은 내용으로 도착하지 않음",
+ "value": null,
+ "usage": {
+  "steps": 3329,
+  "rows": 1,
+  "elapsed_ms": 154216
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 230,
+   "ms": 149411,
+   "calls": 6,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "5a79e8b7cabd814b768d36440d660f7280b03d594982cb69963813d755c368a4"
+  },
+  {
+   "line": 208,
+   "ms": 1444,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "5a79e8b7cabd814b768d36440d660f7280b03d594982cb69963813d755c368a4"
+  },
+  {
+   "line": 64,
+   "ms": 548,
+   "calls": 1,
+   "actions": [
+    "self:script"
+   ],
+   "source_hash": "5a79e8b7cabd814b768d36440d660f7280b03d594982cb69963813d755c368a4"
+  },
+  {
+   "line": 191,
+   "ms": 102,
+   "calls": 3,
+   "actions": [
+    "self:limb"
+   ],
+   "source_hash": "5a79e8b7cabd814b768d36440d660f7280b03d594982cb69963813d755c368a4"
+  },
+  {
+   "line": 269,
+   "ms": 85,
+   "calls": 2,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "5a79e8b7cabd814b768d36440d660f7280b03d594982cb69963813d755c368a4"
+  },
+  {
+   "line": 243,
+   "ms": 61,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "5a79e8b7cabd814b768d36440d660f7280b03d594982cb69963813d755c368a4"
+  }
+ ],
+ "diagnostic": {
+  "zip": {
+   "ok": false,
+   "status": "failed",
+   "remote_sha": null,
+   "central_sha": "c4f0e9b635fa61c1ca2a710a926906d0a2ea5938225bc0224137cfa0d0fa41d9"
+  },
+  "script": {
+   "ok": true,
+   "status": "delivered"
+  }
+ },
+ "issues": null
+}

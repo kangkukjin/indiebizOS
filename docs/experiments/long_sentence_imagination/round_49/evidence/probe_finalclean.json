@@ -1,0 +1,5336 @@
+{
+ "code": "#!ibl edition=2\n$r=[limbs:guestpc]{op:\"shell\",limb:\"guestpc-7a440e9daf61\",cmd:\"ls -R /Users/kangkukjin/indiebiz-training | head -20; rm -rf /Users/kangkukjin/indiebiz-training && echo REMOVED; ls -d /Users/kangkukjin/indiebiz-training 2>&1\",cwd:\"/tmp\",request_id:\"r49-verify-finalclean-1\"}\n$l=filter(([self:limb]{op:\"list\"}).items, ($x)=>$x.device_id==\"guestpc-7a440e9daf61\")\nreturn {out:$r.result.output, connected:$l[0].connected, state:$l[0].registration.state}",
+ "elapsed": 2.153,
+ "response": {
+  "success": true,
+  "value": {
+   "out": "r49\n\n/Users/kangkukjin/indiebiz-training/r49:\nprobe\n\n/Users/kangkukjin/indiebiz-training/r49/probe:\nnote.txt\nsub\n\n/Users/kangkukjin/indiebiz-training/r49/probe/sub:\n새 폴더\n\n/Users/kangkukjin/indiebiz-training/r49/probe/sub/새 폴더:\nbig.txt\nREMOVED\nls: /Users/kangkukjin/indiebiz-training: No such file or directory\n",
+   "connected": true,
+   "state": "active"
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "out",
+      [
+       "scalar",
+       "r49\n\n/Users/kangkukjin/indiebiz-training/r49:\nprobe\n\n/Users/kangkukjin/indiebiz-training/r49/probe:\nnote.txt\nsub\n\n/Users/kangkukjin/indiebiz-training/r49/probe/sub:\n새 폴더\n\n/Users/kangkukjin/indiebiz-training/r49/probe/sub/새 폴더:\nbig.txt\nREMOVED\nls: /Users/kangkukjin/indiebiz-training: No such file or directory\n"
+      ]
+     ],
+     [
+      "connected",
+      [
+       "scalar",
+       true
+      ]
+     ],
+     [
+      "state",
+      [
+       "scalar",
+       "active"
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "146eb9b2e44267368104518c0eba855a461ea667c6e22904881f247f58d6c219",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:38:45",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:51:73",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "literal:78:240",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "literal:245:251",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:263:288",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "record:34:289",
+    "invocation_id": 6,
+    "kind": "record",
+    "parents": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "id": 7,
+    "node_id": "call:19:289",
+    "invocation_id": 7,
+    "kind": "invoke",
+    "parents": [
+     6
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "d4397cd5753751a4e131c944f31d3df4d7ee43167732ac68bd581bc20060c1fb",
+    "targets": {
+     "op": "shell",
+     "limb": "guestpc-7a440e9daf61",
+     "cmd": "ls -R /Users/kangkukjin/indiebiz-training | head -20; rm -rf /Users/kangkukjin/indiebiz-training && echo REMOVED; ls -d /Users/kangkukjin/indiebiz-training 2>&1",
+     "cwd": "/tmp",
+     "request_id": "r49-verify-finalclean-1"
+    }
+   },
+   {
+    "id": 8,
+    "node_id": "call:19:289",
+    "invocation_id": 8,
+    "kind": "tool_evidence",
+    "parents": [
+     7
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 9,
+    "node_id": "call:19:289",
+    "invocation_id": 9,
+    "kind": "call",
+    "parents": [
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "id": 10,
+    "node_id": "bind:16:289",
+    "invocation_id": 10,
+    "kind": "bind",
+    "parents": [
+     9
+    ]
+   },
+   {
+    "id": 11,
+    "node_id": "literal:316:322",
+    "invocation_id": 11,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 12,
+    "node_id": "record:312:323",
+    "invocation_id": 12,
+    "kind": "record",
+    "parents": [
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "call:301:323",
+    "invocation_id": 13,
+    "kind": "invoke",
+    "parents": [
+     12
+    ],
+    "action": "self:limb",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "25d1aef865cba7e2ad462e36a47289fdd38b55de49b71feeecde96d00a15f4d4",
+    "targets": {
+     "op": "list"
+    }
+   },
+   {
+    "id": 14,
+    "node_id": "call:301:323",
+    "invocation_id": 14,
+    "kind": "tool_evidence",
+    "parents": [
+     13
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 15,
+    "node_id": "call:301:323",
+    "invocation_id": 15,
+    "kind": "call",
+    "parents": [
+     12,
+     13,
+     14
+    ]
+   },
+   {
+    "id": 16,
+    "node_id": "field:301:330",
+    "invocation_id": 16,
+    "kind": "field",
+    "parents": [
+     15
+    ]
+   },
+   {
+    "id": 17,
+    "node_id": "lambda:332:374",
+    "invocation_id": 17,
+    "kind": "lambda",
+    "parents": []
+   },
+   {
+    "id": 18,
+    "node_id": "builtin:293:299",
+    "invocation_id": 18,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 19,
+    "node_id": "ref:338:340",
+    "invocation_id": 19,
+    "kind": "ref",
+    "parents": [
+     16,
+     17
+    ],
+    "evaluations": 15
+   },
+   {
+    "id": 20,
+    "node_id": "field:338:350",
+    "invocation_id": 20,
+    "kind": "field",
+    "parents": [
+     19
+    ],
+    "evaluations": 15
+   },
+   {
+    "id": 21,
+    "node_id": "literal:352:374",
+    "invocation_id": 21,
+    "kind": "literal",
+    "parents": [],
+    "evaluations": 15
+   },
+   {
+    "id": 22,
+    "node_id": "binary:338:374",
+    "invocation_id": 22,
+    "kind": "binary",
+    "parents": [
+     20,
+     21
+    ],
+    "evaluations": 15
+   },
+   {
+    "id": 23,
+    "node_id": "pure_call:293:375",
+    "invocation_id": 23,
+    "kind": "pure_call",
+    "parents": [
+     16,
+     17,
+     18,
+     22
+    ]
+   },
+   {
+    "id": 24,
+    "node_id": "bind:290:375",
+    "invocation_id": 24,
+    "kind": "bind",
+    "parents": [
+     23
+    ]
+   },
+   {
+    "id": 25,
+    "node_id": "ref:388:390",
+    "invocation_id": 25,
+    "kind": "ref",
+    "parents": [
+     9
+    ]
+   },
+   {
+    "id": 26,
+    "node_id": "field:388:397",
+    "invocation_id": 26,
+    "kind": "field",
+    "parents": [
+     25
+    ]
+   },
+   {
+    "id": 27,
+    "node_id": "field:388:404",
+    "invocation_id": 27,
+    "kind": "field",
+    "parents": [
+     26
+    ]
+   },
+   {
+    "id": 28,
+    "node_id": "ref:416:418",
+    "invocation_id": 28,
+    "kind": "ref",
+    "parents": [
+     23
+    ]
+   },
+   {
+    "id": 29,
+    "node_id": "literal:419:420",
+    "invocation_id": 29,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 30,
+    "node_id": "index:416:421",
+    "invocation_id": 30,
+    "kind": "index",
+    "parents": [
+     28,
+     29
+    ]
+   },
+   {
+    "id": 31,
+    "node_id": "field:416:431",
+    "invocation_id": 31,
+    "kind": "field",
+    "parents": [
+     30
+    ]
+   },
+   {
+    "id": 32,
+    "node_id": "ref:439:441",
+    "invocation_id": 32,
+    "kind": "ref",
+    "parents": [
+     23
+    ]
+   },
+   {
+    "id": 33,
+    "node_id": "literal:442:443",
+    "invocation_id": 33,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 34,
+    "node_id": "index:439:444",
+    "invocation_id": 34,
+    "kind": "index",
+    "parents": [
+     32,
+     33
+    ]
+   },
+   {
+    "id": 35,
+    "node_id": "field:439:457",
+    "invocation_id": 35,
+    "kind": "field",
+    "parents": [
+     34
+    ]
+   },
+   {
+    "id": 36,
+    "node_id": "field:439:463",
+    "invocation_id": 36,
+    "kind": "field",
+    "parents": [
+     35
+    ]
+   },
+   {
+    "id": 37,
+    "node_id": "record:383:464",
+    "invocation_id": 37,
+    "kind": "record",
+    "parents": [
+     27,
+     31,
+     36
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:464": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 15,
+    "end": 464,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:289": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 16,
+    "end": 289,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:289": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 19,
+    "end": 289,
+    "line": 2,
+    "column": 4
+   },
+   "record:34:289": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 34,
+    "end": 289,
+    "line": 2,
+    "column": 19
+   },
+   "literal:38:45": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 38,
+    "end": 45,
+    "line": 2,
+    "column": 23
+   },
+   "literal:51:73": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 51,
+    "end": 73,
+    "line": 2,
+    "column": 36
+   },
+   "literal:78:240": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 78,
+    "end": 240,
+    "line": 2,
+    "column": 63
+   },
+   "literal:245:251": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 245,
+    "end": 251,
+    "line": 2,
+    "column": 230
+   },
+   "literal:263:288": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 263,
+    "end": 288,
+    "line": 2,
+    "column": 248
+   },
+   "bind:290:375": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 290,
+    "end": 375,
+    "line": 3,
+    "column": 1
+   },
+   "pure_call:293:375": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 293,
+    "end": 375,
+    "line": 3,
+    "column": 4
+   },
+   "field:301:330": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 301,
+    "end": 330,
+    "line": 3,
+    "column": 12
+   },
+   "call:301:323": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 301,
+    "end": 323,
+    "line": 3,
+    "column": 12
+   },
+   "record:312:323": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 312,
+    "end": 323,
+    "line": 3,
+    "column": 23
+   },
+   "literal:316:322": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 316,
+    "end": 322,
+    "line": 3,
+    "column": 27
+   },
+   "lambda:332:374": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 332,
+    "end": 374,
+    "line": 3,
+    "column": 43
+   },
+   "builtin:293:299": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 293,
+    "end": 299,
+    "line": 3,
+    "column": 4
+   },
+   "binary:338:374": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 338,
+    "end": 374,
+    "line": 3,
+    "column": 49
+   },
+   "field:338:350": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 338,
+    "end": 350,
+    "line": 3,
+    "column": 49
+   },
+   "ref:338:340": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 338,
+    "end": 340,
+    "line": 3,
+    "column": 49
+   },
+   "literal:352:374": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 352,
+    "end": 374,
+    "line": 3,
+    "column": 63
+   },
+   "return:376:464": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 376,
+    "end": 464,
+    "line": 4,
+    "column": 1
+   },
+   "record:383:464": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 383,
+    "end": 464,
+    "line": 4,
+    "column": 8
+   },
+   "field:388:404": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 388,
+    "end": 404,
+    "line": 4,
+    "column": 13
+   },
+   "field:388:397": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 388,
+    "end": 397,
+    "line": 4,
+    "column": 13
+   },
+   "ref:388:390": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 388,
+    "end": 390,
+    "line": 4,
+    "column": 13
+   },
+   "field:416:431": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 416,
+    "end": 431,
+    "line": 4,
+    "column": 41
+   },
+   "index:416:421": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 416,
+    "end": 421,
+    "line": 4,
+    "column": 41
+   },
+   "ref:416:418": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 416,
+    "end": 418,
+    "line": 4,
+    "column": 41
+   },
+   "literal:419:420": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 419,
+    "end": 420,
+    "line": 4,
+    "column": 44
+   },
+   "field:439:463": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 439,
+    "end": 463,
+    "line": 4,
+    "column": 64
+   },
+   "field:439:457": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 439,
+    "end": 457,
+    "line": 4,
+    "column": 64
+   },
+   "index:439:444": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 439,
+    "end": 444,
+    "line": 4,
+    "column": 64
+   },
+   "ref:439:441": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 439,
+    "end": 441,
+    "line": 4,
+    "column": 64
+   },
+   "literal:442:443": {
+    "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+    "start": 442,
+    "end": 443,
+    "line": 4,
+    "column": 67
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "d4397cd5753751a4e131c944f31d3df4d7ee43167732ac68bd581bc20060c1fb",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "cwd",
+          [
+           "scalar",
+           "/tmp"
+          ]
+         ],
+         [
+          "error",
+          [
+           "scalar",
+           "exit status 1"
+          ]
+         ],
+         [
+          "exit",
+          [
+           "scalar",
+           1
+          ]
+         ],
+         [
+          "log_truncated",
+          [
+           "scalar",
+           false
+          ]
+         ],
+         [
+          "output",
+          [
+           "scalar",
+           "r49\n\n/Users/kangkukjin/indiebiz-training/r49:\nprobe\n\n/Users/kangkukjin/indiebiz-training/r49/probe:\nnote.txt\nsub\n\n/Users/kangkukjin/indiebiz-training/r49/probe/sub:\n새 폴더\n\n/Users/kangkukjin/indiebiz-training/r49/probe/sub/새 폴더:\nbig.txt\nREMOVED\nls: /Users/kangkukjin/indiebiz-training: No such file or directory\n"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "9deb1dc4fdc781f1b8df2720d86c3ad0aa1b89c5333ae9024bcfaae51520a9b4",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "e03932309a764fe520ef74d69fec1e8d66df78d8c0a1d7dd3bc6b34cfdd70a88",
+     "contract": "3a14c90d921d737ac8bd1e4365ba10a0c24fabb996431d5799d6be85d432a62e",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   },
+   {
+    "request_hash": "25d1aef865cba7e2ad462e36a47289fdd38b55de49b71feeecde96d00a15f4d4",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "op",
+       [
+        "scalar",
+        "list"
+       ]
+      ],
+      [
+       "limbs",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-3b30e8afd4b4"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_5…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784757104.313617
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-6c0531639d37"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_f…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784757174.819988
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784770583.623198
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "테스트2"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-041a4c6b0eef"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_n…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784770614.839193
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             1784857014.839193
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784770624.752759
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-3d6fe5ada44a"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_c…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784770694.4533608
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "기본값테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0a2fa003ec3e"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_4…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771318.349937
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "p0"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0cf0e5150587"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_8…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771417.022827
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784833930.804278
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "DESKTOP-VQJGB71 (windows/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/limb_issue/p0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "삭제테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0d9656caa47a"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb__…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771675.2505112
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "공유테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-d8bf0f27fd31"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_W…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771688.0330691
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "공유테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0c0f14d3b9bf"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_u…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771688.080322
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "측정손발"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-6d9de21d26d6"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_G…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784809831.27546
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784836399.364608
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "측정 (linux/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "눈검증"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-a00367aed41e"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_r…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1785750111.5628622
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1785751657.036959
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "정밀검증"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-a38aabe001d8"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_6…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1785753100.715452
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1785753775.989258
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "os_version",
+               [
+                "scalar",
+                "macOS 26.5.2"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "Mac-mini.local"
+               ]
+              ],
+              [
+               "user",
+               [
+                "scalar",
+                "kangkukjin"
+               ]
+              ],
+              [
+               "admin",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "gui",
+               [
+                "record",
+                [
+                 [
+                  "input",
+                  [
+                   "scalar",
+                   "osascript(System Events) — 손쉬운 사용 권한 필요"
+                  ]
+                 ],
+                 [
+                  "resolution",
+                  [
+                   "scalar",
+                   "1920x1080"
+                  ]
+                 ],
+                 [
+                  "screen",
+                  [
+                   "scalar",
+                   "screencapture"
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "김희정 테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-cf04e5ce8f67"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_V…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1789396740.301779
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             36
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "맥12"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-9b01f0848912"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_F…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1791530401.911241
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1791560224.8509052
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "kang-old-MacBook-Air.local (darwin/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "os_version",
+               [
+                "scalar",
+                "macOS 10.15.8"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "kang-old-MacBook-Air.local"
+               ]
+              ],
+              [
+               "user",
+               [
+                "scalar",
+                "kangkukjin"
+               ]
+              ],
+              [
+               "admin",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "gui",
+               [
+                "record",
+                [
+                 [
+                  "input",
+                  [
+                   "scalar",
+                   "osascript(System Events) — 손쉬운 사용 권한 필요"
+                  ]
+                 ],
+                 [
+                  "resolution",
+                  [
+                   "scalar",
+                   "1920x1080"
+                  ]
+                 ],
+                 [
+                  "screen",
+                  [
+                   "scalar",
+                   "screencapture"
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "맥12"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_4…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1791614149.852257
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "kang-old-MacBook-Air.local"
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "record",
+             [
+              [
+               "installation_id",
+               [
+                "scalar",
+                "45e1e7d030124b7afd1cab2078ce887d"
+               ]
+              ],
+              [
+               "generation",
+               [
+                "scalar",
+                "6f4ef43f3dccc3f4670e45ca20253d14"
+               ]
+              ],
+              [
+               "kind",
+               [
+                "scalar",
+                "pc"
+               ]
+              ],
+              [
+               "adapter",
+               [
+                "scalar",
+                "resident-v1"
+               ]
+              ],
+              [
+               "state",
+               [
+                "scalar",
+                "active"
+               ]
+              ],
+              [
+               "paused",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "wake",
+               [
+                "record",
+                [
+                 [
+                  "mac",
+                  [
+                   "scalar",
+                   "<가림>"
+                  ]
+                 ],
+                 [
+                  "broadcast",
+                  [
+                   "scalar",
+                   "192.168.x.255"
+                  ]
+                 ],
+                 [
+                  "relay",
+                  [
+                   "scalar",
+                   "central"
+                  ]
+                 ],
+                 [
+                  "tested",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ]
+                ]
+               ]
+              ],
+              [
+               "last_seen",
+               [
+                "scalar",
+                1791639054.644001
+               ]
+              ],
+              [
+               "capabilities",
+               [
+                "record",
+                [
+                 [
+                  "adapter",
+                  [
+                   "scalar",
+                   "resident-v1"
+                  ]
+                 ],
+                 [
+                  "arch",
+                  [
+                   "scalar",
+                   "amd64"
+                  ]
+                 ],
+                 [
+                  "cpu_hard_limit",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ],
+                 [
+                  "generation",
+                  [
+                   "scalar",
+                   "6f4ef43f3dccc3f4670e45ca20253d14"
+                  ]
+                 ],
+                 [
+                  "hostname",
+                  [
+                   "scalar",
+                   "kang-old-MacBook-Air.local"
+                  ]
+                 ],
+                 [
+                  "interactive",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "kind",
+                  [
+                   "scalar",
+                   "pc"
+                  ]
+                 ],
+                 [
+                  "max_parallel",
+                  [
+                   "scalar",
+                   2
+                  ]
+                 ],
+                 [
+                  "media",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "memory_hard_limit",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ],
+                 [
+                  "os",
+                  [
+                   "scalar",
+                   "darwin"
+                  ]
+                 ],
+                 [
+                  "service_scope",
+                  [
+                   "scalar",
+                   "user_login"
+                  ]
+                 ],
+                 [
+                  "shell",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "transfer",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "wake_relay",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-3b30e8afd4b4"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_5…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784757104.313617
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-6c0531639d37"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_f…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784757174.819988
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784770583.623198
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "테스트2"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-041a4c6b0eef"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_n…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784770614.839193
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             1784857014.839193
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784770624.752759
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-3d6fe5ada44a"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_c…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784770694.4533608
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "기본값테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0a2fa003ec3e"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_4…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771318.349937
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "p0"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0cf0e5150587"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_8…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771417.022827
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784833930.804278
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "DESKTOP-VQJGB71 (windows/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/limb_issue/p0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "삭제테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0d9656caa47a"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb__…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771675.2505112
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "공유테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-d8bf0f27fd31"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_W…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771688.0330691
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "공유테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0c0f14d3b9bf"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_u…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771688.080322
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "측정손발"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-6d9de21d26d6"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_G…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784809831.27546
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784836399.364608
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "측정 (linux/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "눈검증"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-a00367aed41e"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_r…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1785750111.5628622
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1785751657.036959
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "정밀검증"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-a38aabe001d8"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_6…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1785753100.715452
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1785753775.989258
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "os_version",
+               [
+                "scalar",
+                "macOS 26.5.2"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "Mac-mini.local"
+               ]
+              ],
+              [
+               "user",
+               [
+                "scalar",
+                "kangkukjin"
+               ]
+              ],
+              [
+               "admin",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "gui",
+               [
+                "record",
+                [
+                 [
+                  "input",
+                  [
+                   "scalar",
+                   "osascript(System Events) — 손쉬운 사용 권한 필요"
+                  ]
+                 ],
+                 [
+                  "resolution",
+                  [
+                   "scalar",
+                   "1920x1080"
+                  ]
+                 ],
+                 [
+                  "screen",
+                  [
+                   "scalar",
+                   "screencapture"
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "김희정 테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-cf04e5ce8f67"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_V…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1789396740.301779
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             36
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "맥12"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-9b01f0848912"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_F…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1791530401.911241
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1791560224.8509052
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "kang-old-MacBook-Air.local (darwin/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "os_version",
+               [
+                "scalar",
+                "macOS 10.15.8"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "kang-old-MacBook-Air.local"
+               ]
+              ],
+              [
+               "user",
+               [
+                "scalar",
+                "kangkukjin"
+               ]
+              ],
+              [
+               "admin",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "gui",
+               [
+                "record",
+                [
+                 [
+                  "input",
+                  [
+                   "scalar",
+                   "osascript(System Events) — 손쉬운 사용 권한 필요"
+                  ]
+                 ],
+                 [
+                  "resolution",
+                  [
+                   "scalar",
+                   "1920x1080"
+                  ]
+                 ],
+                 [
+                  "screen",
+                  [
+                   "scalar",
+                   "screencapture"
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "맥12"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_4…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1791614149.852257
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "kang-old-MacBook-Air.local"
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "record",
+             [
+              [
+               "installation_id",
+               [
+                "scalar",
+                "45e1e7d030124b7afd1cab2078ce887d"
+               ]
+              ],
+              [
+               "generation",
+               [
+                "scalar",
+                "6f4ef43f3dccc3f4670e45ca20253d14"
+               ]
+              ],
+              [
+               "kind",
+               [
+                "scalar",
+                "pc"
+               ]
+              ],
+              [
+               "adapter",
+               [
+                "scalar",
+                "resident-v1"
+               ]
+              ],
+              [
+               "state",
+               [
+                "scalar",
+                "active"
+               ]
+              ],
+              [
+               "paused",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "wake",
+               [
+                "record",
+                [
+                 [
+                  "mac",
+                  [
+                   "scalar",
+                   "<가림>"
+                  ]
+                 ],
+                 [
+                  "broadcast",
+                  [
+                   "scalar",
+                   "192.168.x.255"
+                  ]
+                 ],
+                 [
+                  "relay",
+                  [
+                   "scalar",
+                   "central"
+                  ]
+                 ],
+                 [
+                  "tested",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ]
+                ]
+               ]
+              ],
+              [
+               "last_seen",
+               [
+                "scalar",
+                1791639054.644001
+               ]
+              ],
+              [
+               "capabilities",
+               [
+                "record",
+                [
+                 [
+                  "adapter",
+                  [
+                   "scalar",
+                   "resident-v1"
+                  ]
+                 ],
+                 [
+                  "arch",
+                  [
+                   "scalar",
+                   "amd64"
+                  ]
+                 ],
+                 [
+                  "cpu_hard_limit",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ],
+                 [
+                  "generation",
+                  [
+                   "scalar",
+                   "6f4ef43f3dccc3f4670e45ca20253d14"
+                  ]
+                 ],
+                 [
+                  "hostname",
+                  [
+                   "scalar",
+                   "kang-old-MacBook-Air.local"
+                  ]
+                 ],
+                 [
+                  "interactive",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "kind",
+                  [
+                   "scalar",
+                   "pc"
+                  ]
+                 ],
+                 [
+                  "max_parallel",
+                  [
+                   "scalar",
+                   2
+                  ]
+                 ],
+                 [
+                  "media",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "memory_hard_limit",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ],
+                 [
+                  "os",
+                  [
+                   "scalar",
+                   "darwin"
+                  ]
+                 ],
+                 [
+                  "service_scope",
+                  [
+                   "scalar",
+                   "user_login"
+                  ]
+                 ],
+                 [
+                  "shell",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "transfer",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "wake_relay",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "connected_count",
+       [
+        "scalar",
+        1
+       ]
+      ],
+      [
+       "helper_dist_dir",
+       [
+        "scalar",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/helper/dist"
+       ]
+      ],
+      [
+       "issue_parent_dir",
+       [
+        "scalar",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/limb_issue"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:limb",
+    "reuse_key": "bb0679a8188b1351231e1bc91f81ecd545393da29ecaacb4668aabd22c894a9f",
+    "reuse_parts": {
+     "action": "a94d5bea634c208eaf25cce333fecfd448a00d93b5383a406fcfc56ec4483532",
+     "args": "a9380e8c7a9bba9c7e59aa14d1a4364f597ccca66201a77e2b23b5f41fdfa1d9",
+     "contract": "7a63c0792ebc8a0439965cc9463b280883fea48eab858f5db41b5150b8450833",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 107,
+   "rows": 0,
+   "elapsed_ms": 2130,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "pure_call:293:375",
+     "steps": 17,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 293,
+      "end": 375,
+      "line": 3,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "binary:338:374",
+     "steps": 15,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 338,
+      "end": 374,
+      "line": 3,
+      "column": 49
+     }
+    },
+    {
+     "node_id": "field:338:350",
+     "steps": 15,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 338,
+      "end": 350,
+      "line": 3,
+      "column": 49
+     }
+    },
+    {
+     "node_id": "literal:352:374",
+     "steps": 15,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 352,
+      "end": 374,
+      "line": 3,
+      "column": 63
+     }
+    },
+    {
+     "node_id": "ref:338:340",
+     "steps": 15,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 338,
+      "end": 340,
+      "line": 3,
+      "column": 49
+     }
+    },
+    {
+     "node_id": "bind:16:289",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 16,
+      "end": 289,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:290:375",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 290,
+      "end": 375,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "builtin:293:299",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 293,
+      "end": 299,
+      "line": 3,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:19:289",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 19,
+      "end": 289,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:301:323",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 301,
+      "end": 323,
+      "line": 3,
+      "column": 12
+     }
+    },
+    {
+     "node_id": "field:301:330",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 301,
+      "end": 330,
+      "line": 3,
+      "column": 12
+     }
+    },
+    {
+     "node_id": "field:388:397",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 388,
+      "end": 397,
+      "line": 4,
+      "column": 13
+     }
+    },
+    {
+     "node_id": "field:388:404",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 388,
+      "end": 404,
+      "line": 4,
+      "column": 13
+     }
+    },
+    {
+     "node_id": "field:416:431",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 416,
+      "end": 431,
+      "line": 4,
+      "column": 41
+     }
+    },
+    {
+     "node_id": "field:439:457",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 439,
+      "end": 457,
+      "line": 4,
+      "column": 64
+     }
+    },
+    {
+     "node_id": "field:439:463",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 439,
+      "end": 463,
+      "line": 4,
+      "column": 64
+     }
+    },
+    {
+     "node_id": "index:416:421",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 416,
+      "end": 421,
+      "line": 4,
+      "column": 41
+     }
+    },
+    {
+     "node_id": "index:439:444",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 439,
+      "end": 444,
+      "line": 4,
+      "column": 64
+     }
+    },
+    {
+     "node_id": "lambda:332:374",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 332,
+      "end": 374,
+      "line": 3,
+      "column": 43
+     }
+    },
+    {
+     "node_id": "literal:245:251",
+     "steps": 1,
+     "location": {
+      "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+      "start": 245,
+      "end": 251,
+      "line": 2,
+      "column": 230
+     }
+    }
+   ],
+   "steps_other": 15,
+   "steps_by_line": [
+    {
+     "line": 3,
+     "steps": 84,
+     "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5"
+    },
+    {
+     "line": 4,
+     "steps": 14,
+     "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5"
+    },
+    {
+     "line": 2,
+     "steps": 8,
+     "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 1773,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5"
+    },
+    {
+     "line": 3,
+     "ms": 22,
+     "calls": 1,
+     "actions": [
+      "self:limb"
+     ],
+     "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5"
+    }
+   ]
+  },
+  "precheck_warnings": [
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: registration. 관측 필드: alias, device_id, key_hint, created_at, expires_at, revoked, expired, approved, last_used, last_host, env, neighbor_id, connected",
+    "source_span": {
+     "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+     "start": 439,
+     "end": 457,
+     "line": 4,
+     "column": 64
+    },
+    "call_path": [],
+    "facts": {
+     "field": "registration",
+     "observed": [
+      "alias",
+      "device_id",
+      "key_hint",
+      "created_at",
+      "expires_at",
+      "revoked",
+      "expired",
+      "approved",
+      "last_used",
+      "last_host",
+      "env",
+      "neighbor_id",
+      "connected"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "08020d083092aac8aa613acb2430019d0e1900a77ceba4d893c2f98d161e11f5",
+     "start": 439,
+     "end": 457,
+     "line": 4,
+     "column": 64,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 4,
+     "end_column": 82,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "resume": {
+   "run_id": "204bda7ac7634e66aac2ac62b7bb1ccd"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "204bda7ac7634e66aac2ac62b7bb1ccd"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "204bda7ac7634e66aac2ac62b7bb1ccd",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

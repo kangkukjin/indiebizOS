@@ -150,10 +150,10 @@ export function LimbSwitch() {
         }}>
         {copiedPath === path ? <Check size={12} /> : <Copy size={12} />}
       </button>
-      {window.electron?.openPath && (
+      {window.electron?.openPCManagerWindow && (
         <button type="button" title="폴더 열기" className="rounded border border-stone-200 px-1.5 py-1 hover:bg-stone-100"
           onClick={async () => {
-            try { await window.electron?.openPath(path); }
+            try { await window.electron?.openPCManagerWindow(path); }
             catch { setErr('폴더를 열지 못했습니다. 표시된 경로를 확인하세요.'); }
           }}><FolderOpen size={12} /></button>
       )}

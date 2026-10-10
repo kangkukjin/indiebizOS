@@ -48,6 +48,7 @@
     "base/repair_runtime",
     "base/repair_test_results",
     "base/repeat_guard",
+    "base/resident_store",
     "base/restart_protocol",
     "base/result_read_contract",
     "base/runtime_utils",
@@ -369,6 +370,7 @@
     "services/record_adapters",
     "services/record_dispatch",
     "services/report_html",
+    "services/resident_pcs",
     "services/resource_links",
     "services/scheduler",
     "services/spreadsheet_changes",
@@ -422,6 +424,7 @@
     "surface/api_records",
     "surface/api_repair_continuation",
     "surface/api_report",
+    "surface/api_resident_pcs",
     "surface/api_scheduler",
     "surface/api_spreadsheets",
     "surface/api_supervision",
@@ -562,8 +565,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 487,
-    "engine": 461,
+    "total": 490,
+    "engine": 464,
     "blocklist": 26
   }
 }

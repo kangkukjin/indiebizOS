@@ -72,12 +72,16 @@ def _load() -> Dict:
 
 
 def _save() -> None:
+    global _cache
     p = _store_path()
     try:
         p.parent.mkdir(parents=True, exist_ok=True)
         tmp = p.with_suffix(".json.tmp")
         with open(tmp, "w", encoding="utf-8") as f:
+            os.chmod(tmp, 0o600)
             json.dump(_cache or {"keys": {}}, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
         os.replace(tmp, p)
         # 쓰기 관문 원장 — 손발 자격 발급·폐기는 보안 사건(관측, 실패 무해)
         try:
@@ -86,7 +90,8 @@ def _save() -> None:
         except Exception:
             pass
     except Exception as e:
-        print(f"[limb_keys] 저장 실패: {e}")
+        _cache = None
+        raise OSError("limb credential persistence failed") from e
 
 
 def _expired(rec: Dict, now: Optional[float] = None) -> bool:
@@ -112,8 +117,10 @@ def _public(rec: Dict, now: Optional[float] = None) -> Dict:
         "last_host": rec.get("last_host"),
         # 접속 때 헬퍼가 올린 환경 프로브 — 그 PC 가 어떤 기계인지 왕복 없이 보이게.
         # (키 원문과 달리 민감하지 않고, 이게 없으면 프로브를 저장해둔 뜻이 없다.)
-        "env": rec.get("env"),
+        "env": rec.get("env") or (rec.get("registration") or {}).get("capabilities"),
         "neighbor_id": rec.get("neighbor_id"),
+        "registration": rec.get("registration"),
+        "invitation": bool(rec.get("invitation")),
     }
 
 
@@ -162,7 +169,7 @@ def validate(key: str) -> Optional[Dict]:
         rec = _load()["keys"].get(key)
         if not rec:
             return None
-        if rec.get("revoked") or _expired(rec):
+        if rec.get("revoked") or _expired(rec) or rec.get("invitation") or rec.get("registration"):
             return None
         return dict(rec)
 
@@ -229,7 +236,7 @@ def _find_locked(data: Dict, target: str) -> Optional[Dict]:
     keys = data["keys"]
     if target in keys:
         return keys[target]
-    for rec in keys.values():
+    for rec in sorted(keys.values(), key=lambda item: bool(item.get("invitation"))):
         if rec.get("device_id") == target or rec.get("alias") == target:
             return rec
     return None
@@ -257,3 +264,81 @@ def invalidate():
     global _cache
     with _lock:
         _cache = None
+
+
+def resident_invite(alias, ttl_days=0):
+    """One-use installation invitation; never a command credential."""
+    import math
+    days = float(ttl_days)
+    if isinstance(ttl_days, bool) or not math.isfinite(days) or days < 0:
+        raise ValueError("ttl_days must be a finite nonnegative number")
+    with _lock:
+        issued = mint(alias, ttl_days=0)
+        rec = _load()["keys"][issued["key"]]
+        rec.update(invitation=True, invite_until=_now() + 86400,
+                   resident_days=days)
+        _save()
+        return issued
+
+
+def resident_enroll(invitation, installation_id):
+    import re
+    if not re.fullmatch(r"[a-f0-9]{32}", installation_id):
+        raise ValueError("invalid_installation_id")
+    with _lock:
+        data = _load()
+        rec = data["keys"].get(invitation)
+        if not rec or not rec.get("invitation") or rec.get("revoked"):
+            raise ValueError("invalid_invitation")
+        if rec.get("bound_installation"):
+            if rec["bound_installation"] != installation_id:
+                raise ValueError("invitation_used")
+            bound = data["keys"].get(rec["bound_key"])
+            if not bound or bound.get("revoked") or _expired(bound) or bound["registration"]["state"] != "active":
+                raise ValueError("registration_closed")
+            return dict(bound)
+        if _now() > rec["invite_until"]:
+            raise ValueError("invitation_expired")
+        issued = mint(rec["alias"], rec["resident_days"])
+        bound = data["keys"][issued["key"]]
+        bound["approved"] = True
+        bound["registration"] = {"installation_id": installation_id, "generation": secrets.token_hex(16),
+                                 "kind": "pc", "adapter": "resident-v1", "state": "active",
+                                 "paused": False, "wake": None}
+        rec.update(bound_installation=installation_id, bound_key=issued["key"])
+        _save()
+        return dict(bound)
+
+
+def resident_update(device, **changes):
+    allowed = {"state", "paused", "wake", "capabilities", "last_seen", "removal_receipt"}
+    if changes.keys() - allowed:
+        raise ValueError("invalid_registration_field")
+    with _lock:
+        rec = _find_locked(_load(), device)
+        if not rec or not rec.get("registration"):
+            raise ValueError("resident_not_found")
+        reg = rec["registration"]
+        if reg["state"] != "active" and changes.get("state") == "active":
+            raise ValueError("registration_closed")
+        if reg["state"] == "removed" and changes.get("state", "removed") != "removed":
+            raise ValueError("registration_closed")
+        reg.update(changes)
+        _save()
+        return _public(rec)
+
+
+def resident_auth(key, installation_id, cleanup=False):
+    """Removal-only traffic may authenticate after expiry, never after hard revoke."""
+    with _lock:
+        rec = _load()["keys"].get(key)
+        reg = (rec or {}).get("registration") or {}
+        if (not rec or rec.get("revoked") or reg.get("installation_id") != installation_id
+                or not reg or (reg.get("state") == "removed" and not cleanup)):
+            raise ValueError("invalid_registration")
+        if _expired(rec) and reg["state"] == "active":
+            reg["state"] = "removal_pending"
+            _save()
+        if not cleanup and (reg["state"] != "active" or reg.get("paused")):
+            raise ValueError("registration_unavailable")
+        return dict(rec)

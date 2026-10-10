@@ -88,6 +88,11 @@
     ],
     "extraResources": [
       {
+        "from": "../helper/dist",
+        "to": "helper/dist",
+        "filter": ["indiebiz-helper-*"]
+      },
+      {
         "from": "i18n/remote.json",
         "to": "backend/static/ui_i18n/remote.json"
       },

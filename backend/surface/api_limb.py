@@ -214,3 +214,7 @@ def _job_owned(job_id: str, rec: dict) -> bool:
     수 있다 — 회원 B 의 헬퍼가 회원 A 의 결과를 덮어쓰지 못한다. 모르는 작업도 거절(귀속 불명=거절)."""
     owner = phone_jobs.owner_of(job_id)
     return bool(owner) and owner == rec.get("device_id")
+
+
+from api_resident_pcs import router as resident_router
+router.include_router(resident_router)

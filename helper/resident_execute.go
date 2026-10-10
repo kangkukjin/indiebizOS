@@ -1,0 +1,267 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
+	"time"
+)
+
+func residentPost(url string, body interface{}) (map[string]interface{}, error) {
+	b, e := json.Marshal(body)
+	if e != nil {
+		return nil, e
+	}
+	req, e := http.NewRequest("POST", url, bytes.NewReader(b))
+	if e != nil {
+		return nil, e
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if req.URL.Scheme != "https" && req.URL.Hostname() != "127.0.0.1" && req.URL.Hostname() != "localhost" {
+		return nil, fmt.Errorf("HTTPS required")
+	}
+	res, e := residentHTTP.Do(req)
+	if e != nil {
+		return nil, e
+	}
+	defer res.Body.Close()
+	data, e := io.ReadAll(io.LimitReader(res.Body, 16*1024*1024))
+	if e != nil {
+		return nil, e
+	}
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("HTTP %d: %s", res.StatusCode, string(data))
+	}
+	var out map[string]interface{}
+	e = json.Unmarshal(data, &out)
+	return out, e
+}
+
+var residentHTTP = &http.Client{Timeout: 45 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}
+
+type residentLog struct {
+	r       *residentRuntime
+	jid     string
+	mu      sync.Mutex
+	tail    []byte
+	written int
+	gap     bool
+	failure error
+}
+
+func (w *residentLog) Write(b []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	n := len(b)
+	w.tail = append(w.tail, b...)
+	if len(w.tail) > 32768 {
+		w.tail = w.tail[len(w.tail)-32768:]
+	}
+	for len(b) > 0 {
+		size := len(b)
+		if size > 16384 {
+			size = 16384
+		}
+		piece := b[:size]
+		b = b[size:]
+		if w.written >= 16*1024*1024 {
+			if !w.gap {
+				w.failure = w.r.event(w.jid, "log_gap", map[string]interface{}{"reason": "per_job_log_limit", "limit_bytes": 16 * 1024 * 1024})
+				w.gap = true
+			}
+			continue
+		}
+		if e := w.r.event(w.jid, "log", map[string]interface{}{"text": string(piece)}); e != nil {
+			w.failure = e
+			return 0, e
+		}
+		w.written += size
+	}
+	return n, nil
+}
+func (r *residentRuntime) execute(parent context.Context, j Job) map[string]interface{} {
+	var c Command
+	var extra struct {
+		Resident   bool              `json:"resident"`
+		Generation string            `json:"generation"`
+		Mode       string            `json:"mode"`
+		Env        map[string]string `json:"env"`
+		TransferID string            `json:"transfer_id"`
+		MAC        string            `json:"mac"`
+		Broadcast  string            `json:"broadcast"`
+	}
+	if json.Unmarshal([]byte(j.Code), &c) != nil || json.Unmarshal([]byte(j.Code), &extra) != nil {
+		return errResult("invalid_command", "")
+	}
+	if !extra.Resident || extra.Generation != r.cfg.Generation {
+		return errResult("stale_registration", "")
+	}
+	if c.Timeout <= 0 {
+		c.Timeout = 1800
+	}
+	if c.Timeout > 86400 {
+		return errResult("timeout_too_large", "")
+	}
+	ctx, cancel := context.WithTimeout(parent, time.Duration(c.Timeout)*time.Second)
+	defer cancel()
+	c.ctx = ctx
+	c.JobID = j.ID
+	dir := filepath.Join(r.cfg.DataDir, "workspaces", j.ID)
+	if e := os.MkdirAll(dir, 0700); e != nil {
+		return errResult("workspace", e.Error())
+	}
+	if c.Cwd != "" {
+		if !filepath.IsAbs(c.Cwd) {
+			return errResult("absolute_cwd_required", "")
+		}
+		dir = c.Cwd
+	}
+	c.Cwd = dir
+	if c.Path != "" && !filepath.IsAbs(c.Path) {
+		c.Path = filepath.Join(dir, c.Path)
+	}
+	switch c.Op {
+	case "shell":
+		var cmd *exec.Cmd
+		if runtime.GOOS == "windows" {
+			if c.Shell == "powershell" || c.Shell == "pwsh" || c.Shell == "ps" {
+				cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", c.Cmd)
+			} else {
+				cmd = exec.CommandContext(ctx, "cmd", "/D", "/S", "/C", c.Cmd)
+			}
+		} else {
+			cmd = exec.CommandContext(ctx, "/bin/sh", "-c", c.Cmd)
+		}
+		cmd.Dir = dir
+		cmd.Env = os.Environ()
+		for k, v := range extra.Env {
+			if strings.ContainsAny(k, "=\x00") {
+				return errResult("invalid_env", "")
+			}
+			cmd.Env = append(cmd.Env, k+"="+v)
+		}
+		cmd.Stdin = strings.NewReader(c.Stdin)
+		return r.process(ctx, j.ID, cmd)
+	case "info":
+		info := doInfo()
+		info["resident"] = r.capabilities()
+		return info
+	case "transfer":
+		return r.transfer(ctx, c, extra.TransferID)
+	case "wake":
+		mac, e := net.ParseMAC(extra.MAC)
+		if e != nil || len(mac) != 6 {
+			return errResult("invalid_mac", "")
+		}
+		ip := net.ParseIP(extra.Broadcast)
+		if ip == nil || ip.To4() == nil {
+			return errResult("invalid_broadcast", "")
+		}
+		conn, e := net.DialUDP("udp4", nil, &net.UDPAddr{IP: ip, Port: 9})
+		if e != nil {
+			return errResult("wake_failed", e.Error())
+		}
+		defer conn.Close()
+		packet := bytes.Repeat([]byte{255}, 6)
+		for i := 0; i < 16; i++ {
+			packet = append(packet, mac...)
+		}
+		_, e = conn.Write(packet)
+		if e != nil {
+			return errResult("wake_failed", e.Error())
+		}
+		return map[string]interface{}{"state": "signal_sent", "ready": false}
+	case "media":
+		if c.Action != "play" && c.Action != "" {
+			return errResult("unsupported_media_action", "재생 작업 ID를 cancel 하여 중지하세요")
+		}
+		source := c.Path
+		if source == "" {
+			source = c.URL
+		}
+		if source == "" {
+			return errResult("media_source_required", "")
+		}
+		if strings.HasPrefix(source, "-") {
+			return errResult("invalid_media_source", "")
+		}
+		var cmd *exec.Cmd
+		if mpv, e := exec.LookPath("mpv"); e == nil {
+			args := []string{"--no-config", "--no-terminal"}
+			if extra.Mode != "interactive" {
+				args = append(args, "--no-video")
+			}
+			if c.Volume != nil {
+				args = append(args, fmt.Sprintf("--volume=%g", *c.Volume))
+			}
+			args = append(args, "--", source)
+			cmd = exec.CommandContext(ctx, mpv, args...)
+		} else if runtime.GOOS == "darwin" && extra.Mode != "interactive" && !strings.Contains(source, "://") {
+			cmd = exec.CommandContext(ctx, "/usr/bin/afplay", source)
+		} else {
+			return errResult("needs_media_player", "mpv 설치 및 로그인한 사용자의 오디오 세션이 필요합니다")
+		}
+		result := r.process(ctx, j.ID, cmd)
+		result["media_source"] = source
+		return result
+	case "read":
+		return doRead(c)
+	case "write":
+		return doWrite(c)
+	case "list":
+		if c.Path == "" {
+			c.Path = dir
+		}
+		return doList(c)
+	case "screen", "click", "move", "type", "key", "scroll", "drag":
+		if extra.Mode != "interactive" {
+			return errResult("needs_interactive", "")
+		}
+		if c.Op == "screen" {
+			return doScreen(c)
+		}
+		return doInput(c)
+	default:
+		return errResult("unsupported_resident_operation", c.Op)
+	}
+}
+func (r *residentRuntime) process(ctx context.Context, jid string, cmd *exec.Cmd) map[string]interface{} {
+	workingDir := cmd.Dir
+	if !strings.HasSuffix(os.Args[0], ".test") {
+		supervised, release, e := residentSupervise(ctx, cmd, r.cfg.DataDir, jid)
+		if e != nil {
+			return errResult("process_supervisor", e.Error())
+		}
+		defer release()
+		cmd = supervised
+	} else {
+		configureResidentProcess(cmd)
+	}
+	log := &residentLog{r: r, jid: jid}
+	cmd.Stdout = log
+	cmd.Stderr = log
+	e := cmd.Run()
+	result := map[string]interface{}{"exit": exitCode(e), "output": string(log.tail), "log_truncated": log.gap, "cwd": workingDir}
+	if ctx.Err() != nil {
+		result["cancelled"] = ctx.Err() == context.Canceled
+		result["timeout"] = ctx.Err() == context.DeadlineExceeded
+		result["error"] = ctx.Err().Error()
+	}
+	if e != nil {
+		result["error"] = e.Error()
+	}
+	if log.failure != nil {
+		result["error"] = "log_persistence_failed"
+	}
+	return result
+}

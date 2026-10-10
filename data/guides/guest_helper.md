@@ -306,3 +306,54 @@ cd helper && ./build.sh      # Go 설치 필요
 - 2026-10-09 실측: helper/go.mod 가 Go 1.25 이상을 요구해 Go 1.26.5 로 빌드된 helper/dist 의 mac-amd64 는 otool minos 12.0 이다. 이 파일은 macOS 10.15(Catalina) 인텔맥에서 _SecTrustCopyCertificateChain 심볼을 찾지 못해 시작하자마자 종료된다. 가이드에는 '빌드된 실행파일이 있으면 동봉'이라고만 적혀 있어 이 함정이 드러나지 않는다.
 - 2026-10-09 실측: Catalina 용 레거시 헬퍼는 Go 1.22.12(10.15 를 지원하는 마지막 Go)와 helper/go.legacy.mod(의존성 고정, 예: sqlite v1.34.5)로 따로 빌드하면 된다. 결과는 minos 10.13 이고 nm -u 에 _SecTrustCopyCertificateChain 이 없어 정적 검증을 통과했다. 헬퍼 코드는 고칠 곳이 없었다.
 - 2026-10-09 후속: 레거시 빌드 산출물을 정본에 반영하고 맥12 발급 폴더와 ZIP을 기존 키로 복원했다. 실제 Catalina 기기 실행은 미검증이다. 자기수리에서 기존 발급 폴더를 갱신할 때는 사본에서 실행파일·사용법만 준비하고 self:patch apply의 artifact_paths로 두 경로를 명시한다. indiebiz-helper.json은 재발급·교체하지 않는다.
+
+
+## 상주 PC — 설치 후 계속 쓰는 원격 자원
+
+휴대 USB의 `issue`와 별개로 `[self:limb]{op:"register"}` 또는 런처 **원격 PC**에서
+OS별 설치 ZIP을 받는다. PC 이름은 중복 없이 정하고, 대상 PC의 설치 화면에서 등록한다.
+등록 기간 0일은 무기한, 양수는 설치 시점부터의 유효기간이다. 설치 후 USB를 제거할 수 있다.
+기존 회원·폰의 연결 방식은 바뀌지 않는다. Android/iPhone/iPad 신규 등록은 후속 범위다.
+
+```ibl
+[self:limb]{op:"list"}
+[limbs:guestpc]{op:"shell",limb:"맥12-상주",cmd:"pwd; uname -s",background:true,request_id:"맥12-첫확인"}
+[limbs:guestpc]{op:"history",limb:"맥12-상주"}
+```
+
+상주 셸은 **매 작업의 cwd·env가 분리**된다. 앞 작업의 `cd`·venv를 기억하지 않으므로
+공용 프로젝트는 절대 `cwd`를 주고 venv 경로를 명시한다. `request_id`가 같은 동일 요청은
+기존 접수증을 돌려준다. 응답 유실 시 새 ID를 만들어 부작용을 반복하지 않는다.
+`[self:task]`는 실제 종료 코드에 따라 succeeded/failed를 구분하며, cancel은 실행 중 자식까지
+중지한다. helper 재시작 중 결과를 잃은 작업은 unknown으로 보존한다.
+
+```ibl
+[limbs:guestpc]{op:"transfer",limb:"맥12-상주",action:"send",local_path:"/중앙/음악/song.mp3",path:"/원격/음악/song.mp3"}
+[limbs:guestpc]{op:"transfer",limb:"맥12-상주",action:"receive",path:"/원격/결과.bin"}
+```
+
+전송은 작업 접수증과 `transfer_id`를 돌려준다. 먼저 작업 완료를 확인한다. receive 완료 뒤
+`[limbs:guestpc]{op:"transfer",action:"collect",transfer_id:"받은 ID",local_path:"/중앙/결과.bin"}`로
+중앙 파일을 확정한다. 큰 파일은 메모리에 한꺼번에 올리지 않는다. 재개할 때 동일 transfer_id를
+주며, 대상 파일이 이미 다른 내용이면 덮어쓰지 않는다. 폴더는 압축 파일로 묶어 전송한다.
+
+```ibl
+[limbs:guestpc]{op:"wake",limb:"맥12-상주",mac:"00:11:22:33:44:55",broadcast:"192.168.20.255",relay:"원격지중계PC"}
+[limbs:guestpc]{op:"wake",limb:"맥12-상주"}
+[limbs:guestpc]{op:"media",limb:"맥12-상주",path:"/원격/음악/song.mp3",timeout:86400}
+```
+
+첫 wake는 **경로 설정**, 다음 호출이 신호 전송이다. relay는 대상 네트워크에서 항상 켜진 PC의
+ID/이름이다. 중앙 PC가 같은 네트워크에 있는 경우에만 `central`을 쓴다. 깨우기 신호 후 등록 목록의
+재접속을 확인하고 파일 전송·재생을 한다. WOL·동면·전원 꺼짐 지원 여부는 기기별로 시험한다.
+재생은 로그인한 사용자의 오디오 장치와 mpv(Mac 로컬 오디오는 afplay도 가능)가 필요하다.
+화면이 필요한 영상·사진과 screen/click/type 등은 `mode:"interactive"`를 명시한다.
+재생 중지는 `[limbs:guestpc]{op:"cancel",job:"재생 작업 ID"}`다.
+
+`[self:limb]{op:"pause",target:"맥12-상주",paused:true}`는 새 작업을 중지하고 false는 재개한다.
+`[self:limb]{op:"remove",target:"맥12-상주"}`는 등록 해제·헬퍼 제거다. **remove 접수는 제거 완료가
+아니다**. 오프라인이면 removal_pending으로 남고, 제거 확인 뒤 removed가 된다. 작업 폴더와 USB
+원본은 남긴다. 상주 PC의 detach도 remove를 요청하며, 휴대 USB의 detach는 이전처럼 프로세스 종료다.
+
+실시간 기록·파일·재생·깨우기는 중앙 `/remote-pcs/app` 화면에서도 조작한다. 자세한 설치 경로와
+macOS 12 첫 시험 순서는 `helper/README.md`와 `docs/REMOTE_PC_RESOURCE_DESIGN_2026_10_10.md`에 있다.

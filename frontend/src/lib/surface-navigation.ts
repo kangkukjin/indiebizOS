@@ -135,3 +135,8 @@ export function openResultImage(path: string) {
   if (window.electron?.openExternal) window.electron.openExternal(`file://${path}`);
   else window.open(`${BACKEND_ORIGIN}/image?path=${encodeURIComponent(path)}`, '_blank', 'noopener');
 }
+
+/** Desktop and mobile use the same authenticated resident-PC surface. */
+export function openRemotePCs() {
+  openExternalLink(`${BACKEND_ORIGIN}/remote-pcs/app`);
+}

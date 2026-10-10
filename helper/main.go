@@ -32,12 +32,15 @@ import (
 
 // 옆에 놓인 설정 파일 — 발급기([self:limb]{op:issue})가 USB 에 써 넣는다.
 type Config struct {
-	Mode      string   `json:"mode"`
-	DataDir   string   `json:"data_dir"`
-	AutoAllow []string `json:"auto_allow"`
-	Base      string   `json:"base"`  // 내 몸(허브)의 공개 주소, 예 https://mac.tailxxxx.ts.net
-	Key       string   `json:"key"`   // limb key (허브 비밀번호가 아니다)
-	Alias     string   `json:"alias"` // 표시용 이름
+	InstallationID string   `json:"installation_id,omitempty"`
+	Generation     string   `json:"generation,omitempty"`
+	ExpiresAt      float64  `json:"expires_at,omitempty"`
+	Mode           string   `json:"mode"`
+	DataDir        string   `json:"data_dir"`
+	AutoAllow      []string `json:"auto_allow"`
+	Base           string   `json:"base"`  // 내 몸(허브)의 공개 주소, 예 https://mac.tailxxxx.ts.net
+	Key            string   `json:"key"`   // limb key (허브 비밀번호가 아니다)
+	Alias          string   `json:"alias"` // 표시용 이름
 }
 
 // 허브가 큐(job.code)에 싣는 셸 봉투. 헬퍼가 자기 코드로 해석한다.
@@ -114,6 +117,16 @@ const (
 var client = &http.Client{Timeout: 90 * time.Second}
 
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == "--resident-process" {
+		os.Exit(residentProcessMain(os.Args[2]))
+	}
+	if len(os.Args) == 3 && os.Args[1] == "--resident-cleanup" {
+		if e := residentCleanup(os.Args[2]); e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
+		return
+	}
 	enableUTF8Console() // 한국어 윈도우 CP949 콘솔에서 한글 안내문 깨짐 방지
 	cfg, err := loadConfig()
 	if err != nil {
@@ -124,6 +137,26 @@ func main() {
 	}
 	cfg.Base = strings.TrimRight(cfg.Base, "/")
 	hubCfg = cfg
+	if cfg.Mode == "cleanup" {
+		if e := residentCleanup(cfg.DataDir); e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
+		return
+	}
+	if cfg.Mode == "enroll" || cfg.Mode == "resident" {
+		var e error
+		if cfg.Mode == "enroll" {
+			e = residentSetup(cfg)
+		} else {
+			e = startResident(cfg)
+		}
+		if e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
+		return
+	}
 	if cfg.Mode != "" && cfg.Mode != "limb" && cfg.Mode != "member" {
 		fmt.Fprintln(os.Stderr, "잘못된 mode")
 		os.Exit(1)

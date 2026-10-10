@@ -1,4 +1,4 @@
-# indiebiz-helper — USB 손발(게스트 PC 헬퍼)
+# indiebiz-helper — USB·상주 PC 헬퍼
 
 USB 로 낯선 PC 에 꽂아 실행하는 **얇은 손발**(Go 단일 실행파일, 런타임 불필요).
 두뇌가 아니다 — 옆의 `indiebiz-helper.json` 에서 내 몸(허브) 주소와 limb key 를 읽어 허브에
@@ -23,7 +23,7 @@ cd helper && ./build.sh
 
 - `base` 내 몸(허브)의 공개 주소 — `/limb/*` 가 백엔드에 직접 닿는 direct host.
 - `key` limb key (허브 비밀번호 아님. 이 손발 하나만 인가).
-- 첫 접속은 승인 대기 → 허브에서 `[self:limb]{op:approve}` 승인 후 명령 시작.
+- 휴대 모드는 유효한 키로 자동 연결한다. 상주 등록은 아래의 별도 설치 화면을 사용한다.
 - 창을 닫으면 손발이 떨어진다.
 
 ## 프로토콜
@@ -35,7 +35,7 @@ cd helper && ./build.sh
 | 상행 | `POST {base}/limb/result` | `{key, job_id, result}` |
 
 셸 봉투 op: `shell`(cmd/cwd/timeout) · `read`(path) · `write`(path/content) · `list`(path) · `info`.
-1단계는 셸/파일만 — 화면 캡처·GUI 조작 없음(눈 없음).
+휴대 모드는 화면 캡처·입력도 지원한다. 상주 모드의 화면 작업은 `mode:interactive`가 필요하다.
 
 
 ## 회원 모드 (2026-09-14)
@@ -65,3 +65,45 @@ resources는 프로그램 폴더 안의 자원 상대경로, dependencies는 필
 
 회원 승인 화면은 접속한 허브에서 받아 실행하지 않는다. scripts/build_member_shell.py가 공통 member_shell/launcher_app_common을
 PC 바이너리와 APK의 정적 자산으로 파생한다. /m/app은 별도 웹 폴백이다. `build_member_shell.py --check`로 번들 드리프트를 검사한다.
+
+
+## 상주 PC 등록 (resident-v1)
+
+런처 안경 메뉴의 **원격 PC** 또는 중앙 주소의 `/remote-pcs/app`에서 이름·OS·기간을
+선택하고 설치 ZIP을 받는다. 폰의 원격 런처에서도 같은 화면을 사용한다. ZIP을 USB 등으로
+대상 PC에 옮기고 실행파일을 실행한 다음, 로컬 설치 화면에서 **이 PC를 등록하고 시작**을 누른다.
+초대는 24시간 이내 한 설치에만 사용하며, PC 자격은 초대와 별도로 발급된다.
+
+- macOS: 사용자 LaunchAgent. macOS 12는 `mac-arm64`(Apple Silicon) 또는 `mac-amd64`(Intel).
+  `mac-amd64-legacy`는 10.15~11용 별도 빌드다. 실제 OS 지원 판정은 실기기 시험을 거친다.
+- Windows: 현재 사용자의 로그인 예약 작업. Linux: systemd 사용자 서비스.
+  모두 사용자 로그인 범위다. 로그인 전 실행·관리자 권한 서비스는 설치하지 않는다.
+- 프로그램·설정은 사용자 설정 폴더의 `IndieBiz/resident-…`에 복사한다. USB를 빼도 실행한다.
+  설치한 실행파일을 다시 열면 로컬 관리 화면이 열린다. Linux는 systemd 사용자 세션이 필요하다.
+- 서명·공증된 설치 패키지는 아니다. OS가 확인되지 않은 개발자로 표시하면 사용자가 해당
+  실행파일의 실행을 허용해야 한다. 설치 확인이나 OS 권한을 원격에서 우회하지 않는다.
+- 연결은 HTTPS/WSS 아웃바운드다. 지속 WebSocket이 막히면 HTTPS 롱폴로 돌아간다.
+  중앙 주소는 `/limb/*`와 `/remote-pcs/*`를 직접 전달하는 터널 호스트여야 한다.
+  기존 Cloudflare Tunnel을 사용할 수 있으며 별도 공유기 포트 개방을 요구하지 않는다.
+- 기본 작업은 별도 workspace·프로세스·환경으로 실행한다. 동시 작업 상한은 2개, 로그는 작업당
+  16 MiB 이후 `log_gap`으로 알린다. CPU/메모리 하드 제한이나 OS 보안 샌드박스를 제공하는 것은
+  아니다. 현재 사용자의 파일·프로그램 권한을 그대로 사용한다.
+- 중앙의 작업·이벤트는 기존 작업 DB에 보존한다. 기기는 미확인 이벤트를 디스크에 저장하고
+  중앙의 ACK 뒤 지운다. 실행 중 재시작은 `unknown`이며 자동으로 같은 부작용을 재실행하지 않는다.
+  별도 감독 프로세스가 헬퍼의 생존 파이프를 감시하여 헬퍼가 죽어도 자식 작업을 종료한다.
+- 파일 전송은 바이너리 청크·offset 재개·SHA-256 검사·대상 덮어쓰기 거절을 사용한다.
+  폴더는 ZIP 등으로 묶어 전송한다. 브라우저는 512 MiB까지이며 더 큰 파일은 IBL 전송을 사용한다.
+- `media`는 mpv를 사용한다. Mac 로컬 오디오는 afplay로도 재생한다. 영상·사진은 mpv와
+  `interactive` 모드가 필요하다. 로그인·오디오 장치·macOS 화면/손쉬운 사용 권한은 OS가 관리한다.
+- 깨우기는 **대상 LAN에 켜진 중계 PC**의 UDP magic packet이다. 같은 집·동일 LAN을 가정하지 않는다.
+  중계기는 원격지에 있어도 된다. 신호 전송 성공은 부팅·로그인·재생 준비 완료가 아니다.
+
+등록 해제는 중앙에서 즉시 새 작업을 차단하고 `removal_pending`으로 기록한다. 기기가 연결되면
+작업을 취소하고 로그를 보내며 실행파일·자동 시작·자격을 제거한다. 작업 폴더는 보존한다.
+제거기는 본 프로세스와 별개이며 확인 수신 뒤 자신을 지운다(Windows는 별도 삭제 프로세스).
+중앙과 통신할 수 없으면 제거 확인은 대기 상태다. 로컬 제거도 가능하며 중앙 응답 전에는
+제거용 자격·미전송 로그·제거기가 남을 수 있다. USB 원본은 자동 삭제하지 않는다.
+
+개발 검증: `go test -race ./...`, `bash build.sh`,
+`python -m pytest backend/test_resident_pcs.py`(마지막 system 검사는 OS 설치 없이 임시 중앙 서버와
+빌드한 네이티브 실행파일을 연결한다). 실기기 설치·제거·WOL 시험은 별도로 필요하다.

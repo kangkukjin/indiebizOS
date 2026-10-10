@@ -85,6 +85,7 @@ async def control(action: str, request: Request):
 
 # 기존 기기 작업의 전달/회수 통로. 새 명령 실행 API와 구분한다.
 _DEVICE_TRANSPORT = frozenset({
+    "/limb/resident/sync", "/limb/resident/removed", "/limb/resident/local-state",
     "/limb/connect", "/limb/poll", "/limb/progress", "/limb/result",
     "/nodes/register", "/nodes/heartbeat", "/nodes/job-result",
 })

@@ -32,6 +32,14 @@ def _resolve_limb(target: str):
     '어? 손발이 둘이네?' 하고 유출을 알아채는 신호가 된다."""
     import device_registry as dr
     import limb_keys
+    if target:
+        registered = [r for r in limb_keys.list_keys() if r.get("registration") and
+                      target in (r["device_id"], r["alias"])]
+        if len(registered) == 1:
+            r = registered[0]
+            return r["device_id"], r["alias"], None
+        if len(registered) > 1:
+            return None, None, "PC 이름이 중복입니다. device_id를 지정하세요."
     live = dr.live_with_capability(limb_keys.GUEST_PC_CLASS)
     if target:
         for e in live:
@@ -56,6 +64,9 @@ def _notify_limb(device_id: str, text: str):
     """헬퍼 콘솔에 서사 한 줄({op:note, text}) — fire-and-forget(결과 안 기다림).
     옛 헬퍼 바이너리는 unknown_op 로 조용히 무시하므로 혼합 버전에도 안전."""
     try:
+        import limb_keys
+        if (limb_keys.get_by_device(device_id) or {}).get("registration"):
+            return
         import phone_jobs
         phone_jobs.enqueue(device_id, json.dumps({"op": "note", "text": text}, ensure_ascii=False))
     except Exception:
@@ -106,6 +117,10 @@ def _detach(tool_input: dict) -> dict:
     if not device_id:
         return {"success": False, "error": err}
 
+    import limb_keys
+    if (limb_keys.get_by_device(device_id) or {}).get("registration"):
+        import resident_pcs
+        return {"success": True, "registration": resident_pcs.remove(device_id)}
     job_id = phone_jobs.enqueue(device_id, json.dumps({"op": "exit"}, ensure_ascii=False))
     result = phone_jobs.wait_result(job_id, timeout=12.0)
     exited = result is not None
@@ -311,7 +326,19 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
                envelope: dict, wait: float) -> dict:
     """공용 후처리 — 봉투 enqueue → (셸 백그라운드 단락) → 동기 대기 → 결과 마무리."""
     import phone_jobs
-    job_id = phone_jobs.enqueue(device_id, json.dumps(envelope, ensure_ascii=False))
+    import limb_keys
+    if (limb_keys.get_by_device(device_id) or {}).get("registration"):
+        import resident_pcs
+        try:
+            envelope.update({k: tool_input[k] for k in ("mode", "env") if k in tool_input})
+            receipt = resident_pcs.submit(device_id, envelope, tool_input.get("request_id"))
+        except ValueError as exc:
+            return {"success": False, "error": str(exc)}
+        if tool_input.get("background"):
+            return receipt
+        job_id = receipt["job_id"]
+    else:
+        job_id = phone_jobs.enqueue(device_id, json.dumps(envelope, ensure_ascii=False))
 
     # 백그라운드 모드(설치·빌드 등 오래 걸리는 셸) — 즉시 job_id 반환, 결과는 op=result 로.
     if bool(tool_input.get("background")) and op == "shell":
@@ -646,7 +673,7 @@ def _limb_list(tool_input: dict) -> dict:
     import limb_keys
     import device_registry as dr
     live_ids = {e.get("device_id") for e in dr.live_with_capability(limb_keys.GUEST_PC_CLASS)}
-    rows = limb_keys.list_keys()
+    rows = [r for r in limb_keys.list_keys() if not r.get("invitation")]
     for r in rows:
         r["connected"] = r["device_id"] in live_ids
         # 접속 때 수확한 환경 프로브 요약 — 어떤 PC 인지 왕복 없이 알아보게.
@@ -687,6 +714,51 @@ def _limb_approve(tool_input: dict) -> dict:
     return {"success": True, "op": "approve", "limb": r}
 
 
+
+def _resident_operation(tool_input):
+    """상주 PC: media/wake/history/cancel/transfer. 전송은 파일 바이트를 별도 통로로 보낸다."""
+    import resident_pcs
+    import resident_store
+    op = tool_input.get("op")
+    target = tool_input.get("limb") or tool_input.get("target")
+    try:
+        if op == "history":
+            return {"success": True, **resident_store.history(
+                device=resident_pcs.resolve(target, active=False)["device_id"] if target else None,
+                job=tool_input.get("job"), cursor=tool_input.get("cursor", 0))}
+        if op == "cancel":
+            return {"success": True, "cancel_requested": resident_store.cancel(tool_input.get("job"))}
+        if op == "wake":
+            if tool_input.get("mac"):
+                return {"success": True, "registration": resident_pcs.configure_wake(
+                    target, tool_input["mac"], tool_input["broadcast"], tool_input["relay"])}
+            return resident_pcs.wake(target)
+        if op == "transfer":
+            return resident_pcs.transfer_local(target, tool_input)
+        command = {k: v for k, v in tool_input.items() if k not in {"limb", "target", "request_id"}}
+        return resident_pcs.submit(target, command, tool_input.get("request_id"))
+    except (ValueError, OSError, KeyError) as exc:
+        return {"success": False, "error": str(exc)}
+
+
+def _resident_registration(tool_input):
+    """상주 등록 관리 화면·해제·일시 중지. 설치 ZIP은 인증된 관리 화면에서 발급."""
+    import resident_pcs
+    import limb_keys
+    op = tool_input.get("op")
+    target = tool_input.get("target")
+    try:
+        if op == "register":
+            return {"success": True, "url": resident_pcs.public_base().rstrip("/") + "/remote-pcs/app",
+                    "message": "원격 PC 화면에서 이름·OS·기간을 정해 설치 ZIP을 받으세요. 대상 PC에서 설치를 확인합니다."}
+        if op == "remove":
+            return {"success": True, "registration": resident_pcs.remove(target)}
+        rec = resident_pcs.resolve(target, active=False)
+        return {"success": True, "registration": limb_keys.resident_update(
+            rec["device_id"], paused=bool(tool_input.get("paused", True)))}
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
+
 # === 디스패처 (진짜 함수 참조 — --check 가 이 dict 키로 src.ops.values 와 정확 비교) ===
 
 _OP_DISPATCHERS = {
@@ -705,9 +777,17 @@ _OP_DISPATCHERS = {
         "drag": _op_drag,
         "result": _job_result,   # job_id 전역 조회 — 손발 해소·liveness 불요
         "detach": _detach,
+        "media": _resident_operation,
+        "transfer": _resident_operation,
+        "wake": _resident_operation,
+        "history": _resident_operation,
+        "cancel": _resident_operation,
     },
     "limb_op": {
         "issue": _issue,
+        "register": _resident_registration,
+        "remove": _resident_registration,
+        "pause": _resident_registration,
         "list": _limb_list,
         "revoke": _limb_revoke,
         "approve": _limb_approve,
@@ -739,6 +819,13 @@ def task_status(ref: dict) -> dict:
     import phone_jobs
     import task_receipts as T
     jid = ref["task_id"]
+    import resident_store
+    history = resident_store.history(job=jid)
+    if history["tasks"]:
+        task = history["tasks"][0]
+        state = T.FAILED if task["state"] == "expired" else task["state"]
+        return T.view(ref, state, result=task["result"], progress=history["events"],
+                      error=(task["result"] or {}).get("error"), accepted_at=task["created"])
     got = phone_jobs.peek_result(jid)
     if got is not None:
         if got.get("consumed"):
@@ -762,6 +849,10 @@ def task_status_cancel(ref: dict) -> dict:
     """기기가 아직 가져가지 않은 작업만 되돌린다 — 실행된 것으로 추정하지 않는다."""
     import phone_jobs
     import task_receipts as T
+    import resident_store
+    if resident_store.history(job=ref["task_id"])["tasks"]:
+        resident_store.cancel(ref["task_id"])
+        return task_status(ref)
     if phone_jobs.cancel_pending(ref["task_id"]):
         return T.view(ref, T.CANCELLED)
     cur = task_status(ref)

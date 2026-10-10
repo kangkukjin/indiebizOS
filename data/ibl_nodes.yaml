@@ -4804,6 +4804,7 @@ nodes:
       limb:
         params:
           key: string
+          paused: boolean
         aliases:
           target:
           - device_id
@@ -4811,7 +4812,7 @@ nodes:
         side_effect: true
         fixture: '[self:limb]{op: "list"}'
         description: USB 손발 자격 원장 관리 (op 분기) — 발급·목록·폐기·승인. USB 에 담아 낯선 PC 에 꽂는 헬퍼의 인가는 허브 로그인 비밀번호가 아니라 여기서 발급하는 limb key. 발급하면 USB 페이로드(헬퍼 설정+안내)를 만들어 경로를 돌려준다.
-        target_description: 'op=issue(기본): 새 손발 키 발급 + USB 페이로드 생성 — alias(손발 이름, 명령할 때 이 이름으로 대상 지정)만 정하면 된다. ttl_days(유효기간, 기본 0=무기한)·os(win/mac/linux — 지정 시 그 OS 실행파일만, 기본은 생략=빌드된 전 OS 동봉=휴대용) 선택. neighbor_id(기존 회원 이웃 id)를 주면 **회원 열쇠**로 발급 — 그 이웃에 기기를 결합해 외부 서비스 앱(/m/chat)이 그 사람 주체·레벨로 열린다(기기≠사람: 한 사람이 여러 기기). list: 발급한 손발과 연결 상태. revoke: target(키·device_id·별칭) 폐기(영구 차단). approve: target 을 수동으로 잠그거나(approved=false) 다시 열기 — 붙으면 자동승인이므로 평소엔 불필요, 특정 손발 일시 차단용.'
+        target_description: 'register는 상주 PC 등록 화면 URL을 돌려준다(OS별 설치 ZIP·기간 선택). remove(target)는 접근을 즉시 차단하고 원격 헬퍼 자체 제거를 요청한다. 오프라인이면 removal_pending, 제거 확인 후 removed. pause(target,paused:true/false)는 새 작업 중지/재개. Android/iPhone/iPad 등록은 아직 지원하지 않는다. op=issue(기본): 새 손발 키 발급 + USB 페이로드 생성 — alias(손발 이름, 명령할 때 이 이름으로 대상 지정)만 정하면 된다. ttl_days(유효기간, 기본 0=무기한)·os(win/mac/linux — 지정 시 그 OS 실행파일만, 기본은 생략=빌드된 전 OS 동봉=휴대용) 선택. neighbor_id(기존 회원 이웃 id)를 주면 **회원 열쇠**로 발급 — 그 이웃에 기기를 결합해 외부 서비스 앱(/m/chat)이 그 사람 주체·레벨로 열린다(기기≠사람: 한 사람이 여러 기기). list: 발급한 손발과 연결 상태. revoke: target(키·device_id·별칭) 폐기(영구 차단). approve: target 을 수동으로 잠그거나(approved=false) 다시 열기 — 붙으면 자동승인이므로 평소엔 불필요, 특정 손발 일시 차단용.'
         group: identity
         target_key: op
         router: handler
@@ -4827,6 +4828,9 @@ nodes:
           side_effect:
             list: false
           values:
+            register: 상주 PC 등록 관리 화면 열기 (OS별 설치 ZIP 발급)
+            remove: 상주 PC 등록 해제·헬퍼 자체 제거 요청 (target)
+            pause: 상주 PC 새 작업 중지·재개 (target, paused)
             issue: 새 손발 키 발급 + USB 페이로드 생성 (alias 만 필수, 기본=전 OS·무기한 휴대용)
             list: 발급한 손발 자격과 지금 연결 상태
             revoke: 손발 키 폐기 — 영구 차단 (target = 키·device_id·별칭)
@@ -7519,14 +7523,27 @@ nodes:
         - 화면분석
         - 버튼찾기
       guestpc:
+        params:
+          mode: string
+          env: object
+          request_id: string
+          action: string
+          local_path: string
+          transfer_id: string
+          url: string
+          volume: number
+          mac: string
+          broadcast: string
+          relay: string
+          cursor: integer
         aliases:
           limit:
           - display
           job:
           - job_id
         returns: effect
-        description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 + 화면 보기 실행 (op 분기) — 허브에서 명령을 내려보낸다. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
-        target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초)·shell(윈도우: cmd 기본 | powershell) 선택. ★cwd 를 생략하면 **직전 명령이 끝난 자리에서 이어진다**(cd 가 유지됨 — 결과의 cwd 필드가 지금 위치). **환경변수·venv 활성화도 이어진다**(source .venv/bin/activate 를 한 번 하면 다음 명령부터 그 파이썬이 쓰인다 — 결과의 session_env 가 이어지는 변수 개수). 단 **셸 함수·별칭은 안 이어진다**(상주 셸이 아니라 매번 새 셸에 환경만 다시 깔기 때문) — 그래서 `deactivate` 같은 *함수*는 부를 수 없고, venv 를 벗으려면 `reset: true` 를 쓴다(기억한 디렉토리·환경을 버리고 그 PC 원래 환경으로). stdin 으로 비밀번호·y/n 같은 프롬프트 입력을 미리 물릴 수 있다(대화형 명령이 멈추지 않게). ★오래 걸리는 명령(설치·빌드·다운로드)은 background: true 로 — 즉시 job_id 가 돌아오고 결과는 op=result 로 회수(같은 명령 재전송 금지=이중 실행 위험). result: job(작업 ID)의 결과 회수 — 아직이면 pending 이면서 **progress.tail(지금까지의 출력 꼬리)** 를 함께 준다(길게 도는 설치·빌드가 진행 중인지 멎었는지 이걸로 판단. 재전송 금지). read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC 신상 한 방 — os·버전·사용자·관리자여부·PATH·설치된 셸/패키지매니저/도구·GUI 가능여부·화면 해상도. **낯선 PC 에서 첫 명령으로 부를 것**(문법·패키지매니저를 추측해 실패하는 왕복을 없앤다). 접속 때 이미 한 번 수확돼 있어 [self:limb]{op:list} 의 env 로도 볼 수 있다. screen: 그 PC 화면을 캡처해 **직접 본다** — 셸 결과 시각 확인·GUI 상태 파악용(max_width 기본 1280·format png|jpeg|auto·display 다중 모니터 인덱스). 설치 마법사·에러 팝업처럼 셸로 안 보이는 것은 screen 으로 확인할 것. ★GUI 조작(손) — click(x,y[,button,clicks])·move·type(text)·key(key)·scroll(direction,amount)·drag(x,y→x2,y2): **x·y 는 반드시 직전 screen 이 보낸 이미지 위의 좌표**다(원본 해상도로 환산할 필요 없음 — 헬퍼가 배율을 안다). 그래서 순서가 곧 규율이다: screen 으로 보고 → 좌표를 정해 click → 결과 확인. 눈대중 좌표 금지. 입력 op 는 기본으로 조작 후 화면을 다시 찍어 돌려주므로(shot:false 로 끔) 한 번의 호출에 조작과 확인이 함께 온다. type 은 **현재 포커스**에 들어가니 먼저 클릭해 포커스를 잡을 것. 셸로 되는 일은 셸이 더 정확하다 — GUI 조작은 셸로 안 되는 일(설치 마법사·로그인 창·GUI 전용 앱)에 쓸 것. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
+        description: USB·상주 PC 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 + 화면 보기 실행 (op 분기) — 허브에서 명령을 내려보낸다. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
+        target_description: '상주 등록 PC: 작업별 cwd·env가 분리되며 GUI는 mode:interactive 필수. media(path 또는 url, mode:background=오디오/interactive=영상·사진)는 재생 작업 접수, 중지는 cancel(job). transfer(action:send|receive|collect, local_path, path, transfer_id 선택)는 바이너리 양방향 전송; receive 결과의 transfer_id로 collect(local_path)하여 중앙 저장. wake는 저장된 중계 경로로 깨우기; mac/broadcast/relay 지정 시 경로 설정, relay는 대상 LAN에 켜진 PC의 ID 또는 central. history(limb/job/cursor)는 중앙 보존 기록. cancel(job)은 실행 중 작업 중지 요청. request_id를 재사용하면 동일 명령 중복 접수를 막는다. 아래 cd·환경 유지 설명은 휴대 USB 모드만 해당한다. op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초)·shell(윈도우: cmd 기본 | powershell) 선택. ★cwd 를 생략하면 **직전 명령이 끝난 자리에서 이어진다**(cd 가 유지됨 — 결과의 cwd 필드가 지금 위치). **환경변수·venv 활성화도 이어진다**(source .venv/bin/activate 를 한 번 하면 다음 명령부터 그 파이썬이 쓰인다 — 결과의 session_env 가 이어지는 변수 개수). 단 **셸 함수·별칭은 안 이어진다**(상주 셸이 아니라 매번 새 셸에 환경만 다시 깔기 때문) — 그래서 `deactivate` 같은 *함수*는 부를 수 없고, venv 를 벗으려면 `reset: true` 를 쓴다(기억한 디렉토리·환경을 버리고 그 PC 원래 환경으로). stdin 으로 비밀번호·y/n 같은 프롬프트 입력을 미리 물릴 수 있다(대화형 명령이 멈추지 않게). ★오래 걸리는 명령(설치·빌드·다운로드)은 background: true 로 — 즉시 job_id 가 돌아오고 결과는 op=result 로 회수(같은 명령 재전송 금지=이중 실행 위험). result: job(작업 ID)의 결과 회수 — 아직이면 pending 이면서 **progress.tail(지금까지의 출력 꼬리)** 를 함께 준다(길게 도는 설치·빌드가 진행 중인지 멎었는지 이걸로 판단. 재전송 금지). read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC 신상 한 방 — os·버전·사용자·관리자여부·PATH·설치된 셸/패키지매니저/도구·GUI 가능여부·화면 해상도. **낯선 PC 에서 첫 명령으로 부를 것**(문법·패키지매니저를 추측해 실패하는 왕복을 없앤다). 접속 때 이미 한 번 수확돼 있어 [self:limb]{op:list} 의 env 로도 볼 수 있다. screen: 그 PC 화면을 캡처해 **직접 본다** — 셸 결과 시각 확인·GUI 상태 파악용(max_width 기본 1280·format png|jpeg|auto·display 다중 모니터 인덱스). 설치 마법사·에러 팝업처럼 셸로 안 보이는 것은 screen 으로 확인할 것. ★GUI 조작(손) — click(x,y[,button,clicks])·move·type(text)·key(key)·scroll(direction,amount)·drag(x,y→x2,y2): **x·y 는 반드시 직전 screen 이 보낸 이미지 위의 좌표**다(원본 해상도로 환산할 필요 없음 — 헬퍼가 배율을 안다). 그래서 순서가 곧 규율이다: screen 으로 보고 → 좌표를 정해 click → 결과 확인. 눈대중 좌표 금지. 입력 op 는 기본으로 조작 후 화면을 다시 찍어 돌려주므로(shot:false 로 끔) 한 번의 호출에 조작과 확인이 함께 온다. type 은 **현재 포커스**에 들어가니 먼저 클릭해 포커스를 잡을 것. 셸로 되는 일은 셸이 더 정확하다 — GUI 조작은 셸로 안 되는 일(설치 마법사·로그인 창·GUI 전용 앱)에 쓸 것. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
         group: device
         target_key: op
         router: handler
@@ -7539,16 +7556,19 @@ nodes:
             read: false
             list: false
             info: false
+            history: false
             result: false
           returns:
             read: scalar
             list: scalar
             info: scalar
+            history: scalar
             result: scalar
           exempt:
             read: USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)
             list: USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)
             info: USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)
+            history: 상주 PC 등록·기록 의존
             result: USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)
           values:
             shell: 셸 명령 실행 (cmd. cd·환경변수 유지. 긴 명령은 background:true)
@@ -7564,6 +7584,11 @@ nodes:
             scroll: 스크롤 (direction up·down·left·right, amount, x·y 로 위치 지정 선택)
             drag: 드래그 (x·y 출발 → x2·y2 도착. 맥은 cliclick 필요)
             result: 백그라운드 명령의 결과 회수 (job=작업 ID, 아직이면 중간 출력 progress)
+            media: 상주 PC 미디어 재생 접수 (path/url, mode, timeout)
+            transfer: 상주 PC 파일 전송 (action send/receive/collect, local_path, path, transfer_id)
+            wake: 상주 PC 깨우기 또는 중계 경로 설정 (mac, broadcast, relay)
+            history: 중앙에 보존된 상주 PC 작업·이벤트 (limb, job, cursor)
+            cancel: 상주 PC 작업 취소 요청 (job)
             detach: 손발 해제 — 헬퍼 종료 (그 PC 무잔류, 재실행 시 자동 재연결)
         implementation: 허브 handler(guestpc_op)가 셸 봉투 JSON 을 phone_jobs 큐에 넣고(대상 손발 device_id) wait_result 로 결과를 동기 대기(상한 100s — MCP 층 120s 아래). screen 은 헬퍼가 OS 기본 캡처 도구(mac=screencapture, win=PowerShell System.Drawing, linux=grim/scrot/import)로 PNG 를 얻어 stdlib 만으로 축소(박스 평균)·인코딩(auto=PNG 우선, 420KB 초과 시 JPEG)해 base64 로 회신 → 허브가 outputs/limb_screens/<별칭>/ 에 저장(최근 20장)하고 image_data 봉투로 싣는다. 그 봉투는 system_tools.execute_tool 의 이미지 관문(_pluck_image_envelopes)이 수확해 프로바이더의 진짜 이미지 블록으로 바꾸고 본문에서 base64 를 제거한다. 시간 초과·background:true 면 job_id 를 돌려주고 op=result 가 phone_jobs 결과(SQLite 원장 보존 7일, 호환 1회 pop; 반복 조회는 self:task)를 회수. background 기본 timeout=1800s(동기 기본 120s). 손발(Go 헬퍼)이 /limb/poll 롱폴로 당겨가 고루틴으로 병렬 실행(긴 명령 중에도 폴링=heartbeat 지속) 후 /limb/result 회신. 접수는 queued·전달은 running·재기동 뒤 실행 불명은 unknown으로 구분. 전달한 명령은 자동 재전송하지 않고 늦은 결과를 받음. detach 는 exit 봉투 하달로 헬퍼 종료(자동승인 체제라 승인 상태는 안 건드림 — 재실행 시 자동 재연결). 접속=자동승인은 api_limb.limb_connect(approve_if_pending), 오배송 방어는 _resolve_limb 이름 강제. shell 은 헬퍼가 명령을 감싸(wrapScript) 끝난 자리의 PWD 를 표식과 함께 받아 다음 명령에 물려준다(상주 셸이 아닌 이유=명령이 고루틴 병렬 실행이라 셸 하나를 공유하면 출력이 섞인다). 종료 코드는 표식 출력에 덮이지 않게 보존한다. 입력 op 는 헬퍼가 mac=osascript(System Events)/cliclick, win=PowerShell user32, linux=xdotool/ydotool 로 주입하고 기본으로 재캡처해 조작 결과를 함께 돌려준다. 좌표는 직전 캡처의 배율(shotFrame)로 이미지 좌표→입력 좌표 환산.
         keywords:

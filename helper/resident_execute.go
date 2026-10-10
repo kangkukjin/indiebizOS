@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -114,6 +115,9 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 	}
 	ctx, cancel := context.WithTimeout(parent, time.Duration(c.Timeout)*time.Second)
 	defer cancel()
+	if ctx.Err() != nil {
+		return map[string]interface{}{"cancelled": true, "error": ctx.Err().Error()}
+	}
 	c.ctx = ctx
 	c.JobID = j.ID
 	dir := filepath.Join(r.cfg.DataDir, "workspaces", j.ID)
@@ -160,6 +164,9 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		return r.transfer(ctx, c, extra.TransferID)
 	case "wake":
 		mac, e := net.ParseMAC(extra.MAC)
+		if e != nil && len(extra.MAC) == 12 {
+			mac, e = hex.DecodeString(extra.MAC)
+		}
 		if e != nil || len(mac) != 6 {
 			return errResult("invalid_mac", "")
 		}

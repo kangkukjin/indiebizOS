@@ -185,3 +185,26 @@ func TestResidentWebsocketReuseAndHTTPFallback(t *testing.T) {
 		t.Fatal(connections, fallback)
 	}
 }
+
+func TestResidentWakeAcceptsHubCompactMAC(t *testing.T) {
+	r := residentTestRuntime(t)
+	j := residentTestJob(t, map[string]interface{}{"op": "wake", "mac": "001122334455", "broadcast": "127.0.0.1"})
+	got := r.execute(context.Background(), j)
+	if got["state"] != "signal_sent" || got["ready"] != false {
+		t.Fatal(got)
+	}
+}
+
+func TestResidentCancelledBeforeLaunchDoesNotExecute(t *testing.T) {
+	r := residentTestRuntime(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	j := residentTestJob(t, map[string]interface{}{"op": "write", "path": filepath.Join(r.cfg.DataDir, "unexpected"), "content": "should not write"})
+	got := r.execute(ctx, j)
+	if got["cancelled"] != true {
+		t.Fatal(got)
+	}
+	if _, e := os.Stat(filepath.Join(r.cfg.DataDir, "unexpected")); !os.IsNotExist(e) {
+		t.Fatal("cancelled work ran")
+	}
+}

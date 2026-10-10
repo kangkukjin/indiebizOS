@@ -407,7 +407,7 @@ self:task/history를 사용하고 실시간 조작은 런처에서 한다. 이 �
   같은 Mac의 loopback 시험에서 첫 셸 접수→결과 관측은 약 0.56초였다. 외부 네트워크나
   macOS 12 실측값·기존 버전 대비 개선율을 뜻하지 않는다.
 - Go `go test -race ./...` 통과. Windows amd64, Mac arm64·amd64, Mac Intel legacy,
-  Linux amd64 실행파일 빌드 성공. TypeScript 검사·Vite 빌드 성공.
+  Linux amd64 실행파일 빌드 성공. Windows 상주 ZIP은 로그인 시 콘솔을 띄우지 않는 GUI-subsystem 전용 빌드를 사용한다. TypeScript 검사·Vite 빌드 성공.
 - 관련 시스템 묶음(재기동·어휘 배포·async/사용자 경로 관문): **48개 통과**.
 - 종합 비-system 회귀: **9,704개 통과, 1개 건너뜀, 3개 실패**. 전수 통과로 표기하지 않는다.
   실패는 `test_ibl_rank51_60_repairs.py`의 현재 앱 조회 2건(AX -25204, macOS 손쉬운 사용 권한),

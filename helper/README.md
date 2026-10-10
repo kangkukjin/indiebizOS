@@ -76,7 +76,7 @@ PC 바이너리와 APK의 정적 자산으로 파생한다. /m/app은 별도 웹
 
 - macOS: 사용자 LaunchAgent. macOS 12는 `mac-arm64`(Apple Silicon) 또는 `mac-amd64`(Intel).
   `mac-amd64-legacy`는 10.15~11용 별도 빌드다. 실제 OS 지원 판정은 실기기 시험을 거친다.
-- Windows: 현재 사용자의 로그인 예약 작업. Linux: systemd 사용자 서비스.
+- Windows: 콘솔 창이 없는 `win-resident.exe`와 현재 사용자의 로그인 예약 작업. Linux: systemd 사용자 서비스.
   모두 사용자 로그인 범위다. 로그인 전 실행·관리자 권한 서비스는 설치하지 않는다.
 - 프로그램·설정은 사용자 설정 폴더의 `IndieBiz/resident-…`에 복사한다. USB를 빼도 실행한다.
   설치한 실행파일을 다시 열면 로컬 관리 화면이 열린다. Linux는 systemd 사용자 세션이 필요하다.

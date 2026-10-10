@@ -70,6 +70,9 @@ def remove(target):
 
 def sync(key, installation_id, events=None, capabilities=None, wait=0):
     rec = limb_keys.resident_auth(key, installation_id, cleanup=True)
+    if rec["registration"]["state"] == "removed":
+        return {"success": True, "ack": [], "jobs": [], "cancel": [],
+                "generation": rec["registration"]["generation"], "state": "removed", "paused": True}
     ack = resident_store.observe(rec, events or [])
     updates = {"last_seen": time.time()}
     if capabilities is not None:
@@ -77,8 +80,9 @@ def sync(key, installation_id, events=None, capabilities=None, wait=0):
             raise ValueError("capabilities_too_large")
         updates["capabilities"] = capabilities
     public = limb_keys.resident_update(rec["device_id"], **updates)
-    device_registry.register(rec["device_id"], rec["alias"], [limb_keys.GUEST_PC_CLASS], "",
-                             auth="limb_key", owner="self", primary=False)
+    if public["registration"]["state"] == "active":
+        device_registry.register(rec["device_id"], rec["alias"], [limb_keys.GUEST_PC_CLASS], "",
+                                 auth="limb_key", owner="self", primary=False)
     reg = public["registration"]
     jobs = []
     if reg["state"] == "active" and not reg.get("paused"):

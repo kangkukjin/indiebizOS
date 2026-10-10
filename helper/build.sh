@@ -8,6 +8,9 @@ python3 ../scripts/build_member_shell.py
 
 echo "▶ windows/amd64"
 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/indiebiz-helper-win.exe .
+# 상주 설치는 로그인 예약 작업에서도 콘솔 창을 띄우지 않는 GUI-subsystem 실행파일.
+echo "▶ windows/amd64 resident (no console)"
+GOOS=windows GOARCH=amd64 go build -ldflags="-H=windowsgui -s -w" -o dist/indiebiz-helper-win-resident.exe .
 echo "▶ darwin/arm64"
 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/indiebiz-helper-mac-arm64 .
 echo "▶ darwin/amd64"

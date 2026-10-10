@@ -99,7 +99,7 @@ def bundle(req: dict):
     base = req.get('base') or pcs.public_base()
     if not base or not base.startswith('https://'):
         raise HTTPException(400, '외부 PC가 접속할 HTTPS 중앙 주소를 설정하세요')
-    names = {'windows': 'win.exe', 'mac-arm64': 'mac-arm64', 'mac-amd64': 'mac-amd64',
+    names = {'windows': 'win-resident.exe', 'mac-arm64': 'mac-arm64', 'mac-amd64': 'mac-amd64',
              'mac-legacy': 'mac-amd64-legacy', 'linux': 'linux'}
     suffix = names.get(req.get('platform'))
     binary = Path(__file__).resolve().parents[2] / 'helper' / 'dist' / ('indiebiz-helper-' + (suffix or 'missing'))

@@ -36,7 +36,12 @@ func (r *residentRuntime) transfer(ctx context.Context, c Command, tid string) m
 	}
 	res, e := r.transferFile(ctx, c, tid)
 	if e != nil {
-		return errResult("transfer_failed", e.Error())
+		failure := errResult("transfer_failed", e.Error())
+		if ctx.Err() != nil {
+			failure["cancelled"] = ctx.Err() == context.Canceled
+			failure["timeout"] = ctx.Err() == context.DeadlineExceeded
+		}
+		return failure
 	}
 	return res
 }

@@ -16,6 +16,12 @@ LTE(CGNAT) 뒤에서 명령을 당겨가는 구조(phone_jobs)를 그대로 쓴�
 
 ## 1) 발급 — USB 만들기
 
+조종실의 **손발 (USB)** 에서 실행파일 원본(`helper/dist`)과 발급 폴더
+(`outputs/limb_issue`)의 절대 경로를 확인하고 복사하거나 열 수 있다.
+기존 발급 항목에도 해당 폴더 위치가 표시된다. USB에는 손발 이름의 폴더를 통째로
+복사해 실행파일과 `indiebiz-helper.json`을 함께 옮긴다. 상주 설치는 런처의
+**원격 PC → 설치 ZIP 받기**를 이용한다.
+
 ```
 [self:limb]{op: "issue", alias: "사무실PC", ttl_days: 14, os: "win"}
 ```

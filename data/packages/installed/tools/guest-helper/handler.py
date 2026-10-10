@@ -676,6 +676,9 @@ def _limb_list(tool_input: dict) -> dict:
     rows = [r for r in limb_keys.list_keys() if not r.get("invitation")]
     for r in rows:
         r["connected"] = r["device_id"] in live_ids
+        if not r.get("registration"):
+            payload_dir = _payload_dir_for(r.get("alias", ""), r["device_id"])
+            r["payload_dir"] = payload_dir if os.path.isdir(payload_dir) else None
         # 접속 때 수확한 환경 프로브 요약 — 어떤 PC 인지 왕복 없이 알아보게.
         # 전체(PATH·도구 목록까지)는 [limbs:guestpc]{op:"info"} 로 다시 물으면 된다.
         env = r.get("env") or {}
@@ -686,7 +689,9 @@ def _limb_list(tool_input: dict) -> dict:
     # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유·같은 방식.
     # `limbs` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
     return {"success": True, "op": "list", "limbs": rows, "items": rows,
-            "connected_count": len(live_ids)}
+            "connected_count": len(live_ids),
+            "helper_dist_dir": os.path.join(_issue_root(), "helper", "dist"),
+            "issue_parent_dir": _issue_parent()}
 
 
 def _limb_revoke(tool_input: dict) -> dict:

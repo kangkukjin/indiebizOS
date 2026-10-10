@@ -9,7 +9,7 @@
  * 원장(limb_keys.py)을 조작한다 — 별도 REST 없이 어휘 하나로 전 표면이 같은 걸 부른다.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Usb, Loader2, Plus, Check, ShieldCheck, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Usb, Loader2, Plus, Check, ShieldCheck, Trash2, ChevronDown, ChevronRight, Copy, FolderOpen } from 'lucide-react';
 import { api } from '../../lib/api';
 import { iblFailure } from '../../lib/instrument';
 
@@ -25,6 +25,8 @@ interface Limb {
   expired?: boolean;
   last_host?: string | null;
   expires_at?: number | null;
+  payload_dir?: string | null;
+  registration?: unknown;
 }
 
 interface IssueResult {
@@ -72,6 +74,8 @@ export function LimbSwitch() {
   const [os, setOs] = useState('');          // 빈값 = 전 OS(휴대용)
   const [issuing, setIssuing] = useState(false);
   const [issued, setIssued] = useState<IssueResult | null>(null);
+  const [folders, setFolders] = useState({ helper: '', issued: '' });
+  const [copiedPath, setCopiedPath] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,6 +83,10 @@ export function LimbSwitch() {
       const res = await runLimb('list');
       const rows = deepFind<Limb[]>(res, 'limbs');
       setLimbs(Array.isArray(rows) ? rows : []);
+      setFolders({
+        helper: deepFind<string>(res, 'helper_dist_dir') || '',
+        issued: deepFind<string>(res, 'issue_parent_dir') || '',
+      });
       setErr(null);
     } catch (e) {
       setErr(e instanceof Error ? e.message : '손발 목록을 불러오지 못했습니다');
@@ -132,6 +140,26 @@ export function LimbSwitch() {
   const active = limbs.filter((l) => !l.revoked);
   const connectedCount = active.filter((l) => l.connected).length;
 
+  const folderPath = (path: string) => (
+    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+      <code className="min-w-0 flex-1 select-text break-all text-[11px]">{path}</code>
+      <button type="button" title="경로 복사" className="rounded border border-stone-200 px-1.5 py-1 hover:bg-stone-100"
+        onClick={async () => {
+          try { await navigator.clipboard.writeText(path); setCopiedPath(path); }
+          catch { setErr('경로를 복사하지 못했습니다. 표시된 경로를 직접 복사하세요.'); }
+        }}>
+        {copiedPath === path ? <Check size={12} /> : <Copy size={12} />}
+      </button>
+      {window.electron?.openPath && (
+        <button type="button" title="폴더 열기" className="rounded border border-stone-200 px-1.5 py-1 hover:bg-stone-100"
+          onClick={async () => {
+            try { await window.electron?.openPath(path); }
+            catch { setErr('폴더를 열지 못했습니다. 표시된 경로를 확인하세요.'); }
+          }}><FolderOpen size={12} /></button>
+      )}
+    </div>
+  );
+
   const statusText = (l: Limb): string => {
     if (l.revoked) return '폐기됨';
     if (l.expired) return '만료';
@@ -166,6 +194,18 @@ export function LimbSwitch() {
             붙으면 바로 쓸 수 있고(자동 연결), 명령할 땐 <b>손발 이름</b>으로 대상을 부릅니다("사무실PC 에서 …").
             USB 엔 맥 비밀번호가 아니라 폐기 가능한 키 하나만 실립니다.
           </p>
+
+          {folders.helper && (
+            <div className="mb-3 rounded border border-stone-200 bg-stone-50 px-2.5 py-2 text-[11px] text-stone-600">
+              <div className="font-medium">헬퍼 실행파일 원본 폴더</div>
+              {folderPath(folders.helper)}
+              <p className="mt-1">macOS 12: Intel은 mac-amd64, Apple Silicon은 mac-arm64 파일을 사용하세요.</p>
+              <div className="mt-2 font-medium">USB에 복사할 발급 폴더</div>
+              {folderPath(folders.issued)}
+              <p className="mt-1">아래 손발 이름에 해당하는 폴더를 통째로 복사하세요. 실행파일과 indiebiz-helper.json 설정 파일이 함께 필요합니다.</p>
+              <p className="mt-1">상주 설치는 런처의 원격 PC에서 설치 ZIP을 받아 옮기세요.</p>
+            </div>
+          )}
 
           {/* 발급 폼 */}
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
@@ -211,14 +251,13 @@ export function LimbSwitch() {
               {issued.payload_dir && (
                 <div className="mt-1 break-all">
                   USB 에 이 폴더를 복사하세요:
-                  <br />
-                  <code className="text-emerald-700">{issued.payload_dir}</code>
+                  {folderPath(issued.payload_dir)}
                 </div>
               )}
               <div className="mt-0.5 text-emerald-700">
                 주소: {issued.address || '(미설정)'} ·{' '}
                 {issued.binary_included && issued.binary_included.length
-                  ? `헬퍼 실행파일 ${issued.binary_included.length}종 동봉(모든 OS)`
+                  ? `헬퍼 실행파일 ${issued.binary_included.length}종 동봉`
                   : '헬퍼 실행파일은 별도 빌드 필요(helper/build.sh)'}
               </div>
               {issued.warning && <div className="mt-1 text-amber-700">⚠ {issued.warning}</div>}
@@ -252,6 +291,9 @@ export function LimbSwitch() {
                       {statusText(l)}
                       {l.last_host ? ` · ${l.last_host}` : ''}
                     </div>
+                    {l.payload_dir ? folderPath(l.payload_dir) : !l.registration && (
+                      <div className="mt-1 text-[10px] text-stone-400">이 PC에 발급 폴더가 없습니다.</div>
+                    )}
                   </div>
                   {/* 자동승인이라 평소엔 버튼이 없다. approved=false 는 수동 '잠금'뿐이라 여는 버튼만 둔다. */}
                   {l.connected && !l.approved && (

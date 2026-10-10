@@ -33,6 +33,25 @@ def test_thread_messages_never_mix_and_legacy_history_excludes_research(project)
     assert not store.conversations.get_history_for_ai(agent, user)
 
 
+def test_reopen_thread_retains_paginated_history_and_can_continue(project):
+    store = project[2]
+    tid = store.create_thread('교육')['id']
+    for i in range(55):
+        run, _ = store.begin_run(tid, f'질문 {i}', f'request-{i}')
+        store.write_response(tid, run, f'답변 {i}', 'completed')
+    reopened = ResearchStore(store.path)
+    recent = reopened.messages(tid, limit=100)
+    older = reopened.messages(tid, before=int(recent['next_cursor']), limit=100)
+    history = older['items'] + recent['items']
+    assert len(history) == 110
+    assert len({m['id'] for m in history}) == 110
+    assert history[0]['content'] == '질문 0'
+    assert history[-1]['content'] == '답변 54'
+    run, _ = reopened.begin_run(tid, '이어서 조사해줘', 'continue')
+    reopened.write_response(tid, run, '이어서 답변', 'completed')
+    assert ResearchStore(store.path).messages(tid)['items'][-1]['content'] == '이어서 답변'
+
+
 def test_idempotent_send_and_one_active_turn(project):
     store = project[2]
     tid = store.create_thread('교육')['id']

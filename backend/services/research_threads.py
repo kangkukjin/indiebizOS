@@ -194,7 +194,7 @@ def project_operation(params):
         for item in out['items']:
             item['status_label'] = labels.get(item['status'], item['status'])
         return {**out, **thread, 'materials': materials, 'citations': [dict(c, version_ref=c['version_id']) for m in out['items'] for c in m['citations']], 'project_ref': store.uid,
-                'controls': [{'title': '조사 실행', 'thread_ref': tid}],
+                'controls': [{'title': '', 'thread_ref': tid}] if thread['active_run'] else [],
                 'run_status': '조사 중 — 확보한 자료는 순서대로 저장됩니다' if thread['active_run'] else '질문을 이어갈 수 있습니다'}
     if op == 'thread_update':
         changes = {k: params[k] for k in ('title', 'mode', 'notes') if k in params}

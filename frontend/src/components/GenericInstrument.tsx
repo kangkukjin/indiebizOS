@@ -696,6 +696,8 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
   const [sending, setSending] = useState(false);
   const composeRequest = useRef({ key: '', id: '' });
   const requestVersion = useRef(0);
+  const conversationScroll = useRef<HTMLDivElement>(null);
+  const followConversation = useRef(true);
   const valuesRef = useRef(values);
   valuesRef.current = values;
   // 뷰-이벤트가 남긴 $변수(keep 규약) — 타입 보존(좌표 Number·selection Record). 입력값(values)과 합쳐 요청에 실린다.
@@ -737,6 +739,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
     const dc = p.item_click as { action: string; poll?: { while: string; interval_ms?: number }; recursive?: boolean; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] } | undefined;
     if (!dc) return;
     const version = ++requestVersion.current;
+    followConversation.current = !dc.recursive;
     setLoading(true); setError(null); setComposeText(''); setComposeCh(''); setTabIdx(0);
     try {
       // 드릴 액션의 $입력(현재 다이얼 값) + {필드}(클릭 행) 둘 다 치환 — realty 추이처럼
@@ -849,6 +852,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
   const composeSend = useCallback(async (cmp: AppCompose) => {
     const text = composeText.trim();
     if (!text || sending) return;
+    followConversation.current = true;
     const destination = drill?.action;
     const key = JSON.stringify([destination, text]);
     if (composeRequest.current.key !== key) composeRequest.current = { key, id: crypto.randomUUID() };
@@ -937,6 +941,12 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
   const activeCompose = drill
     ? (drillTabs ? drillTabs[Math.min(tabIdx, drillTabs.length - 1)]?.compose : drill.compose)
     : mode.compose;
+
+  // 대화를 다시 열면 최신 메시지를 보여주고, 과거를 읽는 동안에는 스크롤을 빼앗지 않는다.
+  useEffect(() => {
+    const el = conversationScroll.current;
+    if (projectStyle && activeCompose && el && followConversation.current) el.scrollTop = el.scrollHeight;
+  }, [projectStyle, activeCompose, drill?.data]);
 
   const composeBarEl = (cmp?: AppCompose) => {
     if (!cmp || loading) return null;
@@ -1121,7 +1131,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, pr
                   className="md:hidden self-start text-xs text-stone-500 hover:text-stone-800 mb-2">‹ 목록</button>
                 {projectStyle && <div className="instrument-detail-title">{String(drill.item.title || '')}</div>}
                 {drillTabsEl}
-                <div className="instrument-detail-body flex-1 min-h-0 md:overflow-y-auto">{drillViewEl}</div>
+                <div ref={conversationScroll} onScroll={(e) => { const el = e.currentTarget; followConversation.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }} className="instrument-detail-body flex-1 min-h-0 md:overflow-y-auto">{drillViewEl}</div>
                 {composeBarEl(activeCompose)}
               </>
             ) : (

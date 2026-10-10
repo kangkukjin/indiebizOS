@@ -5,24 +5,26 @@
   }
   $첫작업 = $작업들[0]
   $다른대상 = $작업들 >> [table:filter]{where:($행)=>get($행,"limb","")!=get($첫작업,"limb","")}
-  [if:len(get($첫작업,"limb",""))==0 or len($다른대상)>0 or ($PC!=$첫작업.limb and $PC!=$첫작업.limb_name)] {
+  [if:len(get($첫작업,"limb",""))==0 or len($다른대상)>0 or ($PC!=$첫작업.limb and $PC!=get($첫작업,"limb_name",""))] {
     return {ok:false,status:"target_mismatch",detached:false,reason:"모든 작업과 마무리 대상 PC가 같아야 합니다"}
   }
   $확인들 = $작업들 >> [table:each] { [fn:외부PC작업확인]{작업:$it,대기:0} }
   $미확정 = $확인들 >> [table:filter]{where:($행)=>$행.settled==false}
   $미성공 = $확인들 >> [table:filter]{where:($행)=>$행.command_ok!=true}
-  [if:len($미확정)>0] {
-    return {ok:false,status:"unfinished",limb:$첫작업.limb,detached:false,items:$확인들,artifacts:$산출물,artifacts_verified:false}
+  $기본 = {limb:$첫작업.limb,commands_ok:len($미성공)==0,items:$확인들,artifacts:$산출물,artifacts_verified:false,detached:false}
+  [if:len($미확정)>0] { return {**$기본,ok:false,status:"unfinished"} }
+  [if:$해제==false] { return {**$기본,ok:len($미성공)==0,status:"settled"} }
+  $목록 = [self:limb]{op:"list"}
+  $대상 = $목록.items >> [table:filter]{where:($행)=>$행.device_id==$첫작업.limb}
+  [if:len($대상)!=1] { return {**$기본,ok:false,status:"target_not_unique"} }
+  [if:get($대상[0],"registration",null)!=null] {
+    return {**$기본,ok:false,status:"detach_not_supported",reason:"상주 PC는 유지합니다. 제거가 목적일 때만 self:limb remove를 별도로 호출하세요"}
   }
   $해제결과 = null
   $종료확인 = false
-  [if:$해제] {
-    [try] {
-      $해제결과 = [limbs:guestpc]{op:"detach",limb:$첫작업.limb}
-      $종료확인 = get($해제결과,"helper_exited",false)
-    } [catch] { $해제결과 = {reason:$error.message} }
-  }
-  return {ok:len($미성공)==0 and ($해제==false or $종료확인),status:"settled",limb:$첫작업.limb,
-    commands_ok:len($미성공)==0,detached:$종료확인,detach_result:$해제결과,
-    items:$확인들,artifacts:$산출물,artifacts_verified:false}
+  [try] {
+    $해제결과 = [limbs:guestpc]{op:"detach",limb:$첫작업.limb}
+    $종료확인 = get($해제결과,"helper_exited",false)
+  } [catch] { $해제결과 = {reason:$error.message} }
+  return {**$기본,ok:len($미성공)==0 and $종료확인,status:"settled",detached:$종료확인,detach_result:$해제결과}
 }

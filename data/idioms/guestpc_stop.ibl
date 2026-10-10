@@ -1,0 +1,10 @@
+#!ibl edition=2
+[def:외부PC작업중지확인]($작업,$대기=0) {
+  [if:$대기<0 or $대기>240] { return {ok:false,status:"invalid_input",stopped:false} }
+  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:0}
+  [if:$확인.ok==false or $확인.settled or $확인.status=="unknown"] { return {**$확인,stopped:$확인.status=="cancelled"} }
+  [try] { $취소 = [self:task]{op:"cancel",ref:$작업.task_ref} }
+  [catch] { return {**$확인,ok:false,stopped:false,cancel_error:$error.message} }
+  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:$대기}
+  return {**$확인,stopped:$확인.status=="cancelled",cancel_observation:$취소}
+}

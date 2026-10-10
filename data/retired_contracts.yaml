@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: resident-detach-uninstall
+    retired: 2026-10-10
+    reason: 일상 작업 마무리의 detach가 상주 헬퍼를 제거하고도 detached:false를 반환했다.
+    instead: detach는 휴대형만 허용. 상주형은 연결 유지, 일시 중지는 pause, 명시적 등록 해제·제거는 self:limb remove.
+    phrases: ['상주 PC의 detach도 remove를 요청', '상주형 detach는 remove와 같다']
   - id: resident-pc-separate-install-app
     retired: 2026-10-10
     reason: 등록·해제는 조종실에 모으고 작업은 중앙 AI의 자연어 요청으로 실행한다.

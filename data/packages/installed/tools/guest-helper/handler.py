@@ -120,8 +120,7 @@ def _detach(tool_input: dict) -> dict:
 
     import limb_keys
     if (limb_keys.get_by_device(device_id) or {}).get("registration"):
-        import resident_pcs
-        return {"success": True, "registration": resident_pcs.remove(device_id)}
+        return {"success": False, "error": "상주 PC는 작업 후 detach하지 않습니다. 새 작업 일시 중지는 self:limb pause, 등록 해제·헬퍼 제거는 명시적으로 self:limb remove를 사용하세요."}
     job_id = phone_jobs.enqueue(device_id, json.dumps({"op": "exit"}, ensure_ascii=False))
     result = phone_jobs.wait_result(job_id, timeout=12.0)
     exited = result is not None

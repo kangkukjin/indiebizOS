@@ -1,0 +1,19 @@
+#!ibl edition=2
+[def:외부PC깨워준비]($PC,$요청ID,$대기=30,$작업={}) {
+  [if:len($PC)==0 or len($요청ID)==0 or $대기<0 or $대기>240] { return {ok:false,status:"invalid_input",reason:"PC·요청ID와 0~240초 대기가 필요합니다"} }
+  $접수 = $작업
+  [if:len($작업)==0] {
+    $준비 = [fn:외부PC준비]{PC:$PC,환경조회:false}
+    [if:$준비.ok==false and $준비.status!="offline"] { return $준비 }
+    [if:get($준비,"helper_mode","")!="resident"] { return {ok:false,status:"resident_required"} }
+    $깨우기 = null
+    [if:$준비.status=="offline"] { $깨우기 = [limbs:guestpc]{op:"wake",limb:get($준비,"limb","")} }
+    $접수 = [limbs:guestpc]{op:"info",limb:get($준비,"limb",""),background:true,request_id:$요청ID}
+    $접수 = {**$접수,pc_request:$PC,wake_receipt:$깨우기}
+  }
+  [if:get($접수,"pc_request","")!=$PC or get($접수,"request_id","")!=$요청ID or get($접수,"op","")!="info"] { return {ok:false,status:"resume_mismatch",task:$작업} }
+  $확인 = [fn:외부PC작업확인]{작업:$접수,대기:$대기}
+  $준비됨 = false
+  [if:get($확인,"command_ok",false)==true] { $준비됨 = len(get($확인.result,"os",""))>0 }
+  return {**$확인,ok:$준비됨,ready:$준비됨,env:get($확인,"result",null)}
+}

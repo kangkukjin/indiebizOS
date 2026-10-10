@@ -1,23 +1,38 @@
 #!ibl edition=2
 [def:외부PC작업확인]($작업,$대기=0) {
   $참조 = get($작업,"task_ref",{})
-  [if:get($참조,"kind","")!="guestpc" or len(get($참조,"task_id",""))==0 or len(get($작업,"limb",""))==0 or len(get($작업,"limb_name",""))==0 or $대기<0 or $대기>240] {
-    return {ok:false,status:"invalid_input",task:$작업,reason:"외부PC작업실행의 반환값과 0~240초 대기가 필요합니다",settled:false,command_ok:null}
+  [if:get($참조,"kind","")!="guestpc" or len(get($참조,"task_id",""))==0 or len(get($작업,"limb",""))==0 or $대기<0 or $대기>240] {
+    return {ok:false,status:"invalid_input",task:$작업,reason:"guestpc 접수증과 0~240초 대기가 필요합니다",settled:false,command_ok:null}
   }
-  [try] {
-    $관측 = [self:task]{op:"wait",ref:$참조,timeout:$대기}
-    $결과 = $관측.result
-    $종료 = null
-    $성공 = null
-    [if:$관측.state=="succeeded" and $결과!=null] {
-      $종료 = get($결과,"exit",null)
-      [if:$종료!=null] { $성공 = $종료==0 and get($결과,"timeout",false)==false and len(get($결과,"error",""))==0 }
+  $관측 = {}
+  [try] { $관측 = [self:task]{op:"wait",ref:$참조,timeout:$대기} }
+  [catch] {
+    $관측 = get($error,"details",{})
+    [if:get($관측,"task_ref",{})!=$참조 or len(get($관측,"state",""))==0] {
+      return {**$작업,ok:false,status:"observation_failed",settled:false,command_ok:null,reason:$error.message}
     }
-    return {ok:true,status:$관측.state,limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$참조,
-      settled:$관측.state in ["succeeded","failed","cancelled"],command_ok:$성공,exit:$종료,
-      timed_out:$관측.timed_out,progress:$관측.progress,result:$결과,failure:$관측.failure}
-  } [catch] {
-    return {ok:false,status:"observation_failed",limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$참조,
-      settled:false,command_ok:null,reason:$error.message}
   }
+  $상태 = $관측.state
+  $결과 = get($관측,"result",null)
+  $진행 = get($관측,"progress",null)
+  $실패 = get($관측,"failure",null)
+  [if:$결과==null and $상태 in ["failed","cancelled","unknown","interrupted"] and get($작업,"helper_mode","")=="resident"] {
+    [try] {
+      $기록 = [limbs:guestpc]{op:"history",limb:$작업.limb,job:$참조.task_id}
+      [if:len($기록.tasks)==1] { $결과 = $기록.tasks[0].result }
+    } [catch] { $실패 = {task_failure:$실패,history_failure:$error.message} }
+  }
+  $종료 = null
+  $성공 = null
+  [if:$상태 in ["failed","cancelled","interrupted"]] { $성공 = false }
+  [if:$결과!=null] {
+    $종료 = get($결과,"exit",null)
+    [if:$상태=="succeeded"] {
+      [if:$종료!=null] { $성공 = $종료==0 and get($결과,"timeout",false)==false and len(get($결과,"error",""))==0 }
+      [if:$종료==null and get($작업,"op","shell") in ["transfer","info","wake"]] { $성공 = len(get($결과,"error",""))==0 }
+    }
+  }
+  return {**$작업,ok:true,status:$상태,limb_name:get($작업,"limb_name",$작업.limb),
+    settled:$상태 in ["succeeded","failed","cancelled","interrupted"],command_ok:$성공,exit:$종료,
+    timed_out:get($관측,"timed_out",false),progress:$진행,result:$결과,failure:$실패}
 }

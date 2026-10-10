@@ -59,6 +59,19 @@ def submit(rec, command, request_id, owner=None):
     return jid
 
 
+def find_request(rec, request_id):
+    """Recover an existing receipt in the same installation generation."""
+    with phone_jobs._db() as db:
+        schema(db)
+        row = db.execute("SELECT * FROM resident_tasks WHERE device=? AND generation=? AND request_id=?",
+                         (rec['device_id'], rec['registration']['generation'], request_id)).fetchone()
+        if row is None:
+            return None
+        out = dict(row)
+        out['summary'] = json.loads(out['summary'])
+        return out
+
+
 def observe(rec, events):
     if len(events) > 64:
         raise ValueError("too_many_events")

@@ -1,13 +1,24 @@
 #!ibl edition=2
-[def:외부PC준비]($PC) {
+[def:외부PC준비]($PC,$환경조회=true) {
   [if:len($PC)==0] { return {ok:false,status:"invalid_input",reason:"PC 이름 또는 device_id가 필요합니다"} }
   $목록 = [self:limb]{op:"list"}
   $대상 = $목록.items >> [table:filter]{where:($행)=>$행.alias==$PC or $행.device_id==$PC}
   [if:len($대상)!=1] { return {ok:false,status:"target_not_unique",reason:"대상이 없거나 중복됩니다",items:$대상} }
   $손발 = $대상[0]
-  [if:get($손발,"connected",false)==false] {
-    return {ok:false,status:"offline",limb:$손발.device_id,limb_name:$손발.alias,reason:"대상 PC에서 헬퍼를 실행하세요"}
+  $등록 = get($손발,"registration",{})
+  [if:$등록==null] { $등록 = {} }
+  $모드 = "portable"
+  [if:len($등록)>0] { $모드 = "resident" }
+  $기본 = {limb:$손발.device_id,limb_name:$손발.alias,helper_mode:$모드,registration:$등록,env:get($손발,"env",{})}
+  [if:get($손발,"revoked",false) or get($손발,"expired",false) or get($등록,"state","active")!="active"] {
+    return {**$기본,ok:false,status:"unavailable",reason:"폐기 또는 제거된 PC입니다"}
   }
+  [if:get($등록,"paused",false)] { return {**$기본,ok:false,status:"paused",reason:"PC의 새 작업이 일시 중지돼 있습니다"} }
+  [if:get($손발,"connected",false)==false] {
+    return {**$기본,ok:false,status:"offline",reason:"PC 연결을 확인하세요. 상주 PC는 설정된 wake 경로로 깨울 수 있습니다"}
+  }
+  [if:$환경조회==false] { return {**$기본,ok:true,status:"connected"} }
   $정보 = [limbs:guestpc]{op:"info",limb:$손발.device_id}
-  return {ok:true,status:"ready",limb:$정보.limb,limb_name:$정보.limb_name,env:$정보.result}
+  [if:len(get($정보.result,"error",""))>0] { return {**$기본,ok:false,status:"probe_failed",env:$정보.result} }
+  return {**$기본,ok:true,status:"ready",env:$정보.result}
 }

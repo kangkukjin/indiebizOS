@@ -1,17 +1,17 @@
 [
   {
-    "intent": "헬퍼로 연결한 외부 PC의 이름을 확인하고 OS·권한·셸·설치 도구·GUI 환경을 조회한다. 준비 성공은 작업에 필요한 도구의 설치를 보장하지 않는다.",
+    "intent": "헬퍼 외부 PC의 대상·상주/휴대 모드·일시정지·제거·연결 상태를 확인한다. 기본은 info로 OS·권한·도구를 조회하고 환경조회:false는 목록만 확인한다.",
     "nodes": "self,limbs,table",
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
     "topic": "외부 PC 헬퍼",
-    "ibl_code": "#!ibl edition=2\n[def:외부PC준비]($PC) {\n  [if:len($PC)==0] { return {ok:false,status:\"invalid_input\",reason:\"PC 이름 또는 device_id가 필요합니다\"} }\n  $목록 = [self:limb]{op:\"list\"}\n  $대상 = $목록.items >> [table:filter]{where:($행)=>$행.alias==$PC or $행.device_id==$PC}\n  [if:len($대상)!=1] { return {ok:false,status:\"target_not_unique\",reason:\"대상이 없거나 중복됩니다\",items:$대상} }\n  $손발 = $대상[0]\n  [if:get($손발,\"connected\",false)==false] {\n    return {ok:false,status:\"offline\",limb:$손발.device_id,limb_name:$손발.alias,reason:\"대상 PC에서 헬퍼를 실행하세요\"}\n  }\n  $정보 = [limbs:guestpc]{op:\"info\",limb:$손발.device_id}\n  return {ok:true,status:\"ready\",limb:$정보.limb,limb_name:$정보.limb_name,env:$정보.result}\n}",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC준비]($PC,$환경조회=true) {\n  [if:len($PC)==0] { return {ok:false,status:\"invalid_input\",reason:\"PC 이름 또는 device_id가 필요합니다\"} }\n  $목록 = [self:limb]{op:\"list\"}\n  $대상 = $목록.items >> [table:filter]{where:($행)=>$행.alias==$PC or $행.device_id==$PC}\n  [if:len($대상)!=1] { return {ok:false,status:\"target_not_unique\",reason:\"대상이 없거나 중복됩니다\",items:$대상} }\n  $손발 = $대상[0]\n  $등록 = get($손발,\"registration\",{})\n  [if:$등록==null] { $등록 = {} }\n  $모드 = \"portable\"\n  [if:len($등록)>0] { $모드 = \"resident\" }\n  $기본 = {limb:$손발.device_id,limb_name:$손발.alias,helper_mode:$모드,registration:$등록,env:get($손발,\"env\",{})}\n  [if:get($손발,\"revoked\",false) or get($손발,\"expired\",false) or get($등록,\"state\",\"active\")!=\"active\"] {\n    return {**$기본,ok:false,status:\"unavailable\",reason:\"폐기 또는 제거된 PC입니다\"}\n  }\n  [if:get($등록,\"paused\",false)] { return {**$기본,ok:false,status:\"paused\",reason:\"PC의 새 작업이 일시 중지돼 있습니다\"} }\n  [if:get($손발,\"connected\",false)==false] {\n    return {**$기본,ok:false,status:\"offline\",reason:\"PC 연결을 확인하세요. 상주 PC는 설정된 wake 경로로 깨울 수 있습니다\"}\n  }\n  [if:$환경조회==false] { return {**$기본,ok:true,status:\"connected\"} }\n  $정보 = [limbs:guestpc]{op:\"info\",limb:$손발.device_id}\n  [if:len(get($정보.result,\"error\",\"\"))>0] { return {**$기본,ok:false,status:\"probe_failed\",env:$정보.result} }\n  return {**$기본,ok:true,status:\"ready\",env:$정보.result}\n}",
     "alias": "외부PC준비",
     "category": "phrase",
     "returns": "Record"
   },
   {
-    "intent": "헬퍼로 연결한 외부 PC의 이름을 확인하고 OS·권한·셸·설치 도구·GUI 환경을 조회한다. 준비 성공은 작업에 필요한 도구의 설치를 보장하지 않는다.",
+    "intent": "헬퍼 외부 PC의 대상·상주/휴대 모드·일시정지·제거·연결 상태를 확인한다. 기본은 info로 OS·권한·도구를 조회하고 환경조회:false는 목록만 확인한다.",
     "nodes": "self,limbs,table",
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
@@ -20,18 +20,18 @@
     "category": "composition"
   },
   {
-    "intent": "외부 PC에 이미 제출한 작업의 진행·결과·종료 코드를 확인한다. 실행 또는 이전 확인의 반환값을 작업으로 받고 명령을 재전송하지 않는다. 대기 기본 0초, 최대 240초.",
+    "intent": "외부 PC 접수증으로 진행·성공·실패·취소·불명을 구분하고 상주 실패 원문을 회수한다. 대기 기본 0초 최대 240초. 명령 재전송 없이 접수증 메타데이터를 보존한다.",
     "nodes": "self,limbs,table",
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
     "topic": "외부 PC 헬퍼",
-    "ibl_code": "#!ibl edition=2\n[def:외부PC작업확인]($작업,$대기=0) {\n  $참조 = get($작업,\"task_ref\",{})\n  [if:get($참조,\"kind\",\"\")!=\"guestpc\" or len(get($참조,\"task_id\",\"\"))==0 or len(get($작업,\"limb\",\"\"))==0 or len(get($작업,\"limb_name\",\"\"))==0 or $대기<0 or $대기>240] {\n    return {ok:false,status:\"invalid_input\",task:$작업,reason:\"외부PC작업실행의 반환값과 0~240초 대기가 필요합니다\",settled:false,command_ok:null}\n  }\n  [try] {\n    $관측 = [self:task]{op:\"wait\",ref:$참조,timeout:$대기}\n    $결과 = $관측.result\n    $종료 = null\n    $성공 = null\n    [if:$관측.state==\"succeeded\" and $결과!=null] {\n      $종료 = get($결과,\"exit\",null)\n      [if:$종료!=null] { $성공 = $종료==0 and get($결과,\"timeout\",false)==false and len(get($결과,\"error\",\"\"))==0 }\n    }\n    return {ok:true,status:$관측.state,limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$참조,\n      settled:$관측.state in [\"succeeded\",\"failed\",\"cancelled\"],command_ok:$성공,exit:$종료,\n      timed_out:$관측.timed_out,progress:$관측.progress,result:$결과,failure:$관측.failure}\n  } [catch] {\n    return {ok:false,status:\"observation_failed\",limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$참조,\n      settled:false,command_ok:null,reason:$error.message}\n  }\n}",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC작업확인]($작업,$대기=0) {\n  $참조 = get($작업,\"task_ref\",{})\n  [if:get($참조,\"kind\",\"\")!=\"guestpc\" or len(get($참조,\"task_id\",\"\"))==0 or len(get($작업,\"limb\",\"\"))==0 or $대기<0 or $대기>240] {\n    return {ok:false,status:\"invalid_input\",task:$작업,reason:\"guestpc 접수증과 0~240초 대기가 필요합니다\",settled:false,command_ok:null}\n  }\n  $관측 = {}\n  [try] { $관측 = [self:task]{op:\"wait\",ref:$참조,timeout:$대기} }\n  [catch] {\n    $관측 = get($error,\"details\",{})\n    [if:get($관측,\"task_ref\",{})!=$참조 or len(get($관측,\"state\",\"\"))==0] {\n      return {**$작업,ok:false,status:\"observation_failed\",settled:false,command_ok:null,reason:$error.message}\n    }\n  }\n  $상태 = $관측.state\n  $결과 = get($관측,\"result\",null)\n  $진행 = get($관측,\"progress\",null)\n  $실패 = get($관측,\"failure\",null)\n  [if:$결과==null and $상태 in [\"failed\",\"cancelled\",\"unknown\",\"interrupted\"] and get($작업,\"helper_mode\",\"\")==\"resident\"] {\n    [try] {\n      $기록 = [limbs:guestpc]{op:\"history\",limb:$작업.limb,job:$참조.task_id}\n      [if:len($기록.tasks)==1] { $결과 = $기록.tasks[0].result }\n    } [catch] { $실패 = {task_failure:$실패,history_failure:$error.message} }\n  }\n  $종료 = null\n  $성공 = null\n  [if:$상태 in [\"failed\",\"cancelled\",\"interrupted\"]] { $성공 = false }\n  [if:$결과!=null] {\n    $종료 = get($결과,\"exit\",null)\n    [if:$상태==\"succeeded\"] {\n      [if:$종료!=null] { $성공 = $종료==0 and get($결과,\"timeout\",false)==false and len(get($결과,\"error\",\"\"))==0 }\n      [if:$종료==null and get($작업,\"op\",\"shell\") in [\"transfer\",\"info\",\"wake\"]] { $성공 = len(get($결과,\"error\",\"\"))==0 }\n    }\n  }\n  return {**$작업,ok:true,status:$상태,limb_name:get($작업,\"limb_name\",$작업.limb),\n    settled:$상태 in [\"succeeded\",\"failed\",\"cancelled\",\"interrupted\"],command_ok:$성공,exit:$종료,\n    timed_out:get($관측,\"timed_out\",false),progress:$진행,result:$결과,failure:$실패}\n}",
     "alias": "외부PC작업확인",
     "category": "phrase",
     "returns": "Record"
   },
   {
-    "intent": "외부 PC에 이미 제출한 작업의 진행·결과·종료 코드를 확인한다. 실행 또는 이전 확인의 반환값을 작업으로 받고 명령을 재전송하지 않는다. 대기 기본 0초, 최대 240초.",
+    "intent": "외부 PC 접수증으로 진행·성공·실패·취소·불명을 구분하고 상주 실패 원문을 회수한다. 대기 기본 0초 최대 240초. 명령 재전송 없이 접수증 메타데이터를 보존한다.",
     "nodes": "self,limbs,table",
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
@@ -40,43 +40,143 @@
     "category": "composition"
   },
   {
-    "intent": "헬퍼 외부 PC의 명시한 작업 폴더에서 셸 명령을 한 번 제출하고 대상·작업 참조를 반환한다. background 실행, 대기 기본 0초. ok는 접수 여부이며 observation.command_ok로 명령 성공을 확인한다.",
+    "intent": "외부 PC의 명시한 폴더에서 셸 명령을 접수한다. 상주 PC는 요청ID로 중복 접수를 막고 환경을 명시한다. ok는 접수이며 observation.command_ok가 명령 성공이다.",
     "nodes": "self,limbs,table",
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
     "topic": "외부 PC 헬퍼",
-    "ibl_code": "#!ibl edition=2\n[def:외부PC작업실행]($PC,$명령,$작업폴더,$셸=\"\",$실행제한=1800,$대기=0,$입력=\"\",$환경초기화=false) {\n  [if:len($PC)==0 or len($명령)==0 or len($작업폴더)==0 or $실행제한<1 or $대기<0 or $대기>240] {\n    return {ok:false,status:\"invalid_input\",reason:\"PC·명령·작업폴더, 1초 이상 실행제한, 0~240초 대기가 필요합니다\"}\n  }\n  $접수 = [limbs:guestpc]{op:\"shell\",limb:$PC,cmd:$명령,cwd:$작업폴더,shell:$셸,\n    timeout:$실행제한,background:true,stdin:$입력,reset:$환경초기화}\n  $작업 = {limb:$접수.limb,limb_name:$접수.limb_name,task_ref:$접수.task_ref}\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:$대기}\n  return {ok:true,status:\"accepted\",limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$작업.task_ref,\n    cwd:$작업폴더,observation:$확인}\n}",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC작업실행]($PC,$명령,$작업폴더,$셸=\"\",$실행제한=1800,$대기=0,$입력=\"\",$환경초기화=false,$요청ID=\"\",$환경={}) {\n  [if:len($PC)==0 or len($명령)==0 or len($작업폴더)==0 or $실행제한<1 or $실행제한>86400 or $대기<0 or $대기>240] {\n    return {ok:false,status:\"invalid_input\",reason:\"PC·명령·작업폴더, 1~86400초 실행제한, 0~240초 대기가 필요합니다\"}\n  }\n  $접수 = [limbs:guestpc]{op:\"shell\",limb:$PC,cmd:$명령,cwd:$작업폴더,shell:$셸,\n    timeout:$실행제한,background:true,stdin:$입력,reset:$환경초기화,request_id:$요청ID,env:$환경}\n  $작업 = {**$접수,limb_name:get($접수,\"limb_name\",$PC),op:\"shell\"}\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:$대기}\n  return {**$작업,ok:true,status:\"accepted\",cwd:$작업폴더,observation:$확인}\n}",
     "alias": "외부PC작업실행",
     "category": "phrase",
     "returns": "Record"
   },
   {
-    "intent": "헬퍼 외부 PC의 명시한 작업 폴더에서 셸 명령을 한 번 제출하고 대상·작업 참조를 반환한다. background 실행, 대기 기본 0초. ok는 접수 여부이며 observation.command_ok로 명령 성공을 확인한다.",
+    "intent": "외부 PC의 명시한 폴더에서 셸 명령을 접수한다. 상주 PC는 요청ID로 중복 접수를 막고 환경을 명시한다. ok는 접수이며 observation.command_ok가 명령 성공이다.",
     "nodes": "self,limbs,table",
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
     "topic": "외부 PC 헬퍼",
-    "ibl_code": "#!ibl edition=2\n[fn:외부PC작업실행]{PC:\"사무실PC\",명령:\"python --version\",작업폴더:\"C:/Users/Public\",대기:0}",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC작업실행]{PC:\"사무실PC\",명령:\"python --version\",작업폴더:\"C:/Users/Public\",요청ID:\"환경조회-예시-1\",대기:0}",
     "category": "composition"
   },
   {
-    "intent": "외부 PC의 전달받은 작업 목록을 재확인하고 산출물 경로를 정리한다. 진행·불명 작업이 있으면 해제하지 않는다. 해제:true일 때만 종료된 작업들의 대상 헬퍼를 해제한다. 전체 큐 검사나 산출물 검증은 아니다.",
+    "intent": "외부 PC의 전달받은 작업 목록을 재확인하고 산출물 경로를 취합한다. 미종료·불명은 보류한다. 해제:true는 휴대형에만 허용하며 상주 PC는 제거하지 않는다. 전체 큐·산출물 검증은 아니다.",
     "nodes": "self,limbs,table",
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
     "topic": "외부 PC 헬퍼",
-    "ibl_code": "#!ibl edition=2\n[def:외부PC작업마무리]($PC,$작업들,$산출물=[],$해제=false) {\n  [if:len($PC)==0 or len($작업들)==0] {\n    return {ok:false,status:\"invalid_input\",detached:false,reason:\"PC와 확인할 작업 목록이 필요합니다\"}\n  }\n  $첫작업 = $작업들[0]\n  $다른대상 = $작업들 >> [table:filter]{where:($행)=>get($행,\"limb\",\"\")!=get($첫작업,\"limb\",\"\")}\n  [if:len(get($첫작업,\"limb\",\"\"))==0 or len($다른대상)>0 or ($PC!=$첫작업.limb and $PC!=$첫작업.limb_name)] {\n    return {ok:false,status:\"target_mismatch\",detached:false,reason:\"모든 작업과 마무리 대상 PC가 같아야 합니다\"}\n  }\n  $확인들 = $작업들 >> [table:each] { [fn:외부PC작업확인]{작업:$it,대기:0} }\n  $미확정 = $확인들 >> [table:filter]{where:($행)=>$행.settled==false}\n  $미성공 = $확인들 >> [table:filter]{where:($행)=>$행.command_ok!=true}\n  [if:len($미확정)>0] {\n    return {ok:false,status:\"unfinished\",limb:$첫작업.limb,detached:false,items:$확인들,artifacts:$산출물,artifacts_verified:false}\n  }\n  $해제결과 = null\n  $종료확인 = false\n  [if:$해제] {\n    [try] {\n      $해제결과 = [limbs:guestpc]{op:\"detach\",limb:$첫작업.limb}\n      $종료확인 = get($해제결과,\"helper_exited\",false)\n    } [catch] { $해제결과 = {reason:$error.message} }\n  }\n  return {ok:len($미성공)==0 and ($해제==false or $종료확인),status:\"settled\",limb:$첫작업.limb,\n    commands_ok:len($미성공)==0,detached:$종료확인,detach_result:$해제결과,\n    items:$확인들,artifacts:$산출물,artifacts_verified:false}\n}",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC작업마무리]($PC,$작업들,$산출물=[],$해제=false) {\n  [if:len($PC)==0 or len($작업들)==0] {\n    return {ok:false,status:\"invalid_input\",detached:false,reason:\"PC와 확인할 작업 목록이 필요합니다\"}\n  }\n  $첫작업 = $작업들[0]\n  $다른대상 = $작업들 >> [table:filter]{where:($행)=>get($행,\"limb\",\"\")!=get($첫작업,\"limb\",\"\")}\n  [if:len(get($첫작업,\"limb\",\"\"))==0 or len($다른대상)>0 or ($PC!=$첫작업.limb and $PC!=get($첫작업,\"limb_name\",\"\"))] {\n    return {ok:false,status:\"target_mismatch\",detached:false,reason:\"모든 작업과 마무리 대상 PC가 같아야 합니다\"}\n  }\n  $확인들 = $작업들 >> [table:each] { [fn:외부PC작업확인]{작업:$it,대기:0} }\n  $미확정 = $확인들 >> [table:filter]{where:($행)=>$행.settled==false}\n  $미성공 = $확인들 >> [table:filter]{where:($행)=>$행.command_ok!=true}\n  $기본 = {limb:$첫작업.limb,commands_ok:len($미성공)==0,items:$확인들,artifacts:$산출물,artifacts_verified:false,detached:false}\n  [if:len($미확정)>0] { return {**$기본,ok:false,status:\"unfinished\"} }\n  [if:$해제==false] { return {**$기본,ok:len($미성공)==0,status:\"settled\"} }\n  $목록 = [self:limb]{op:\"list\"}\n  $대상 = $목록.items >> [table:filter]{where:($행)=>$행.device_id==$첫작업.limb}\n  [if:len($대상)!=1] { return {**$기본,ok:false,status:\"target_not_unique\"} }\n  [if:get($대상[0],\"registration\",null)!=null] {\n    return {**$기본,ok:false,status:\"detach_not_supported\",reason:\"상주 PC는 유지합니다. 제거가 목적일 때만 self:limb remove를 별도로 호출하세요\"}\n  }\n  $해제결과 = null\n  $종료확인 = false\n  [try] {\n    $해제결과 = [limbs:guestpc]{op:\"detach\",limb:$첫작업.limb}\n    $종료확인 = get($해제결과,\"helper_exited\",false)\n  } [catch] { $해제결과 = {reason:$error.message} }\n  return {**$기본,ok:len($미성공)==0 and $종료확인,status:\"settled\",detached:$종료확인,detach_result:$해제결과}\n}",
     "alias": "외부PC작업마무리",
     "category": "phrase",
     "returns": "Record"
   },
   {
-    "intent": "외부 PC의 전달받은 작업 목록을 재확인하고 산출물 경로를 정리한다. 진행·불명 작업이 있으면 해제하지 않는다. 해제:true일 때만 종료된 작업들의 대상 헬퍼를 해제한다. 전체 큐 검사나 산출물 검증은 아니다.",
+    "intent": "외부 PC의 전달받은 작업 목록을 재확인하고 산출물 경로를 취합한다. 미종료·불명은 보류한다. 해제:true는 휴대형에만 허용하며 상주 PC는 제거하지 않는다. 전체 큐·산출물 검증은 아니다.",
     "nodes": "self,limbs,table",
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
     "topic": "외부 PC 헬퍼",
-    "ibl_code": "#!ibl edition=2\n[fn:외부PC작업마무리]{PC:\"사무실PC\",작업들:[{limb:\"guest-fixture\",limb_name:\"사무실PC\",task_ref:{kind:\"guestpc\",task_id:\"예시작업ID\"}}],산출물:[],해제:false}",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC작업마무리]{PC:\"사무실PC\",작업들:[{limb:\"guest-fixture\",limb_name:\"사무실PC\",task_ref:{kind:\"guestpc\",task_id:\"예시작업ID\"}}],해제:false}",
+    "category": "composition"
+  },
+  {
+    "intent": "상주 PC에 바이너리 파일을 보내고 원격 저장 완료를 확인할 때. PC·중앙경로·원격경로·요청ID 필수. 대기 후 미완료면 반환값을 작업으로 다시 전달하며 새 명령을 제출하지 않는다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC파일보내기]($PC,$중앙경로,$원격경로,$요청ID,$대기=0,$작업={}) {\n  [if:len($PC)==0 or len($중앙경로)==0 or len($원격경로)==0 or len($요청ID)==0 or $대기<0 or $대기>240] { return {ok:false,status:\"invalid_input\",reason:\"PC·중앙경로·원격경로·요청ID와 0~240초 대기가 필요합니다\"} }\n  $접수 = $작업\n  [if:len($작업)==0] {\n    $준비 = [fn:외부PC준비]{PC:$PC,환경조회:false}\n    [if:$준비.ok==false] { return $준비 }\n    [if:$준비.helper_mode!=\"resident\"] { return {ok:false,status:\"resident_required\"} }\n    $접수 = [limbs:guestpc]{op:\"transfer\",action:\"send\",limb:$준비.limb,local_path:$중앙경로,path:$원격경로,request_id:$요청ID}\n    $접수 = {**$접수,pc_request:$PC,local_path:$중앙경로,remote_path:$원격경로,transfer_action:\"send\"}\n  }\n  [if:get($접수,\"pc_request\",\"\")!=$PC or get($접수,\"local_path\",\"\")!=$중앙경로 or get($접수,\"remote_path\",\"\")!=$원격경로 or get($접수,\"request_id\",\"\")!=$요청ID or get($접수,\"transfer_action\",\"\")!=\"send\"] { return {ok:false,status:\"resume_mismatch\",task:$작업} }\n  $확인 = [fn:외부PC작업확인]{작업:$접수,대기:$대기}\n  [if:$확인.ok==false] { return $확인 }\n  [if:$확인.command_ok==true and get($확인.result,\"state\",\"\")==\"committed\" and len(get($확인.result,\"sha256\",\"\"))==64 and get($확인.result,\"path\",\"\")==$원격경로] { return {**$확인,ok:true,status:\"delivered\",path:$원격경로,sha256:get($확인.result,\"sha256\",null),verified:true} }\n  return {**$확인,ok:false,verified:false}\n}",
+    "alias": "외부PC파일보내기",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "상주 PC에 바이너리 파일을 보내고 원격 저장 완료를 확인할 때. PC·중앙경로·원격경로·요청ID 필수. 대기 후 미완료면 반환값을 작업으로 다시 전달하며 새 명령을 제출하지 않는다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC파일보내기]{PC:\"사무실PC\",중앙경로:\"/central/input.zip\",원격경로:\"/remote/input.zip\",요청ID:\"자료전송-예시-1\",대기:30}",
+    "category": "composition"
+  },
+  {
+    "intent": "상주 PC의 결과 파일을 중앙으로 전송하고 collect까지 확정할 때. PC·중앙경로·원격경로·요청ID 필수. 반환값을 작업으로 재개하며 다른 내용의 기존 파일은 덮어쓰지 않는다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC파일가져오기]($PC,$중앙경로,$원격경로,$요청ID,$대기=0,$작업={}) {\n  [if:len($PC)==0 or len($중앙경로)==0 or len($원격경로)==0 or len($요청ID)==0 or $대기<0 or $대기>240] { return {ok:false,status:\"invalid_input\",reason:\"PC·중앙경로·원격경로·요청ID와 0~240초 대기가 필요합니다\"} }\n  $접수 = $작업\n  [if:len($작업)==0] {\n    $준비 = [fn:외부PC준비]{PC:$PC,환경조회:false}\n    [if:$준비.ok==false] { return $준비 }\n    [if:$준비.helper_mode!=\"resident\"] { return {ok:false,status:\"resident_required\"} }\n    $접수 = [limbs:guestpc]{op:\"transfer\",action:\"receive\",limb:$준비.limb,local_path:$중앙경로,path:$원격경로,request_id:$요청ID}\n    $접수 = {**$접수,pc_request:$PC,local_path:$중앙경로,remote_path:$원격경로,transfer_action:\"receive\"}\n  }\n  [if:get($접수,\"pc_request\",\"\")!=$PC or get($접수,\"local_path\",\"\")!=$중앙경로 or get($접수,\"remote_path\",\"\")!=$원격경로 or get($접수,\"request_id\",\"\")!=$요청ID or get($접수,\"transfer_action\",\"\")!=\"receive\"] { return {ok:false,status:\"resume_mismatch\",task:$작업} }\n  $확인 = [fn:외부PC작업확인]{작업:$접수,대기:$대기}\n  [if:$확인.ok==false] { return $확인 }\n  [if:$확인.command_ok!=true] { return {**$확인,ok:false,collected:false} }\n  [try] {\n    $파일 = [limbs:guestpc]{op:\"transfer\",action:\"collect\",limb:$접수.limb,transfer_id:$접수.transfer_id,local_path:$중앙경로}\n    return {**$확인,ok:true,status:\"collected\",collected:true,path:$파일.path,sha256:$파일.sha256,verified:true}\n  } [catch] { return {**$확인,ok:false,status:\"collect_failed\",collected:false,reason:$error.message} }\n}",
+    "alias": "외부PC파일가져오기",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "상주 PC의 결과 파일을 중앙으로 전송하고 collect까지 확정할 때. PC·중앙경로·원격경로·요청ID 필수. 반환값을 작업으로 재개하며 다른 내용의 기존 파일은 덮어쓰지 않는다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC파일가져오기]{PC:\"사무실PC\",중앙경로:\"/central/result.zip\",원격경로:\"/remote/result.zip\",요청ID:\"결과회수-예시-1\",대기:30}",
+    "category": "composition"
+  },
+  {
+    "intent": "상주 PC가 오프라인이면 이미 설정된 WOL 경로로 깨우고 info 작업의 실제 회신으로 준비를 확인할 때. 신호 전송은 준비 완료가 아니다. 미완료 반환값을 작업으로 재개한다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC깨워준비]($PC,$요청ID,$대기=30,$작업={}) {\n  [if:len($PC)==0 or len($요청ID)==0 or $대기<0 or $대기>240] { return {ok:false,status:\"invalid_input\",reason:\"PC·요청ID와 0~240초 대기가 필요합니다\"} }\n  $접수 = $작업\n  [if:len($작업)==0] {\n    $준비 = [fn:외부PC준비]{PC:$PC,환경조회:false}\n    [if:$준비.ok==false and $준비.status!=\"offline\"] { return $준비 }\n    [if:get($준비,\"helper_mode\",\"\")!=\"resident\"] { return {ok:false,status:\"resident_required\"} }\n    $깨우기 = null\n    [if:$준비.status==\"offline\"] { $깨우기 = [limbs:guestpc]{op:\"wake\",limb:get($준비,\"limb\",\"\")} }\n    $접수 = [limbs:guestpc]{op:\"info\",limb:get($준비,\"limb\",\"\"),background:true,request_id:$요청ID}\n    $접수 = {**$접수,pc_request:$PC,wake_receipt:$깨우기}\n  }\n  [if:get($접수,\"pc_request\",\"\")!=$PC or get($접수,\"request_id\",\"\")!=$요청ID or get($접수,\"op\",\"\")!=\"info\"] { return {ok:false,status:\"resume_mismatch\",task:$작업} }\n  $확인 = [fn:외부PC작업확인]{작업:$접수,대기:$대기}\n  $준비됨 = false\n  [if:get($확인,\"command_ok\",false)==true] { $준비됨 = len(get($확인.result,\"os\",\"\"))>0 }\n  return {**$확인,ok:$준비됨,ready:$준비됨,env:get($확인,\"result\",null)}\n}",
+    "alias": "외부PC깨워준비",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "상주 PC가 오프라인이면 이미 설정된 WOL 경로로 깨우고 info 작업의 실제 회신으로 준비를 확인할 때. 신호 전송은 준비 완료가 아니다. 미완료 반환값을 작업으로 재개한다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC깨워준비]{PC:\"사무실PC\",요청ID:\"기동확인-예시-1\",대기:30}",
+    "category": "composition"
+  },
+  {
+    "intent": "외부 PC의 셸·전송·재생 작업을 취소하고 실제 중지를 확인할 때. stopped:true만 중지 확인이며 cancel_requested는 진행 중이다. 작업 재전송 없이 같은 접수증으로 재확인한다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC작업중지확인]($작업,$대기=0) {\n  [if:$대기<0 or $대기>240] { return {ok:false,status:\"invalid_input\",stopped:false} }\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:0}\n  [if:$확인.ok==false or $확인.settled or $확인.status==\"unknown\"] { return {**$확인,stopped:$확인.status==\"cancelled\"} }\n  [try] { $취소 = [self:task]{op:\"cancel\",ref:$작업.task_ref} }\n  [catch] { return {**$확인,ok:false,stopped:false,cancel_error:$error.message} }\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:$대기}\n  return {**$확인,stopped:$확인.status==\"cancelled\",cancel_observation:$취소}\n}",
+    "alias": "외부PC작업중지확인",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "외부 PC의 셸·전송·재생 작업을 취소하고 실제 중지를 확인할 때. stopped:true만 중지 확인이며 cancel_requested는 진행 중이다. 작업 재전송 없이 같은 접수증으로 재확인한다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC작업중지확인]{작업:{limb:\"guest-fixture\",task_ref:{kind:\"guestpc\",task_id:\"예시작업ID\"}},대기:30}",
+    "category": "composition"
+  },
+  {
+    "intent": "상주 PC의 원격 파일이나 HTTP(S) 주소를 재생하고 중지 가능한 접수증을 보존할 때. 요청ID로 중복 접수를 막는다. background는 오디오, interactive는 영상·사진이며 실제 소리/화면 재생은 별도 확인한다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC재생]($PC,$소스,$요청ID,$모드=\"background\",$실행제한=86400,$작업={}) {\n  [if:len($PC)==0 or len($소스)==0 or len($요청ID)==0 or not ($모드 in [\"background\",\"interactive\"]) or $실행제한<1 or $실행제한>86400] { return {ok:false,status:\"invalid_input\"} }\n  $접수 = $작업\n  [if:len($작업)==0] {\n    $준비 = [fn:외부PC준비]{PC:$PC,환경조회:false}\n    [if:$준비.ok==false] { return $준비 }\n    [if:$준비.helper_mode!=\"resident\"] { return {ok:false,status:\"resident_required\"} }\n    $인자 = {op:\"media\",limb:$준비.limb,mode:$모드,timeout:$실행제한,request_id:$요청ID}\n    [if:$소스[:8]==\"https://\" or $소스[:7]==\"http://\"] { $인자 = {**$인자,url:$소스} }\n    [else] { $인자 = {**$인자,path:$소스} }\n    $접수 = [limbs:guestpc]{**$인자}\n    $접수 = {**$접수,pc_request:$PC,media_source:$소스,media_mode:$모드,media_timeout:$실행제한}\n  }\n  [if:get($접수,\"pc_request\",\"\")!=$PC or get($접수,\"media_source\",\"\")!=$소스 or get($접수,\"request_id\",\"\")!=$요청ID or get($접수,\"media_mode\",\"\")!=$모드 or get($접수,\"media_timeout\",0)!=$실행제한] { return {ok:false,status:\"resume_mismatch\",task:$작업} }\n  $확인 = [fn:외부PC작업확인]{작업:$접수,대기:0}\n  return {**$확인,playback_verified:false,reason:\"접수·작업 상태만 확인합니다. running은 실제 소리가 들린다는 증명이 아닙니다\"}\n}",
+    "alias": "외부PC재생",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "상주 PC의 원격 파일이나 HTTP(S) 주소를 재생하고 중지 가능한 접수증을 보존할 때. 요청ID로 중복 접수를 막는다. background는 오디오, interactive는 영상·사진이며 실제 소리/화면 재생은 별도 확인한다.",
+    "nodes": "self,limbs,table",
+    "source": "manual_seed",
+    "tags": "manual,guestpc,helper,외부PC",
+    "topic": "외부 PC 헬퍼",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC재생]{PC:\"사무실PC\",소스:\"/remote/song.mp3\",요청ID:\"음악재생-예시-1\"}",
     "category": "composition"
   }
 ]

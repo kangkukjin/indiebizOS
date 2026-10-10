@@ -1,0 +1,18 @@
+#!ibl edition=2
+[def:외부PC재생]($PC,$소스,$요청ID,$모드="background",$실행제한=86400,$작업={}) {
+  [if:len($PC)==0 or len($소스)==0 or len($요청ID)==0 or not ($모드 in ["background","interactive"]) or $실행제한<1 or $실행제한>86400] { return {ok:false,status:"invalid_input"} }
+  $접수 = $작업
+  [if:len($작업)==0] {
+    $준비 = [fn:외부PC준비]{PC:$PC,환경조회:false}
+    [if:$준비.ok==false] { return $준비 }
+    [if:$준비.helper_mode!="resident"] { return {ok:false,status:"resident_required"} }
+    $인자 = {op:"media",limb:$준비.limb,mode:$모드,timeout:$실행제한,request_id:$요청ID}
+    [if:$소스[:8]=="https://" or $소스[:7]=="http://"] { $인자 = {**$인자,url:$소스} }
+    [else] { $인자 = {**$인자,path:$소스} }
+    $접수 = [limbs:guestpc]{**$인자}
+    $접수 = {**$접수,pc_request:$PC,media_source:$소스,media_mode:$모드,media_timeout:$실행제한}
+  }
+  [if:get($접수,"pc_request","")!=$PC or get($접수,"media_source","")!=$소스 or get($접수,"request_id","")!=$요청ID or get($접수,"media_mode","")!=$모드 or get($접수,"media_timeout",0)!=$실행제한] { return {ok:false,status:"resume_mismatch",task:$작업} }
+  $확인 = [fn:외부PC작업확인]{작업:$접수,대기:0}
+  return {**$확인,playback_verified:false,reason:"접수·작업 상태만 확인합니다. running은 실제 소리가 들린다는 증명이 아닙니다"}
+}

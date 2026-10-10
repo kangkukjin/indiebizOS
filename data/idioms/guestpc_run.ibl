@@ -1,12 +1,11 @@
 #!ibl edition=2
-[def:외부PC작업실행]($PC,$명령,$작업폴더,$셸="",$실행제한=1800,$대기=0,$입력="",$환경초기화=false) {
-  [if:len($PC)==0 or len($명령)==0 or len($작업폴더)==0 or $실행제한<1 or $대기<0 or $대기>240] {
-    return {ok:false,status:"invalid_input",reason:"PC·명령·작업폴더, 1초 이상 실행제한, 0~240초 대기가 필요합니다"}
+[def:외부PC작업실행]($PC,$명령,$작업폴더,$셸="",$실행제한=1800,$대기=0,$입력="",$환경초기화=false,$요청ID="",$환경={}) {
+  [if:len($PC)==0 or len($명령)==0 or len($작업폴더)==0 or $실행제한<1 or $실행제한>86400 or $대기<0 or $대기>240] {
+    return {ok:false,status:"invalid_input",reason:"PC·명령·작업폴더, 1~86400초 실행제한, 0~240초 대기가 필요합니다"}
   }
   $접수 = [limbs:guestpc]{op:"shell",limb:$PC,cmd:$명령,cwd:$작업폴더,shell:$셸,
-    timeout:$실행제한,background:true,stdin:$입력,reset:$환경초기화}
-  $작업 = {limb:$접수.limb,limb_name:$접수.limb_name,task_ref:$접수.task_ref}
+    timeout:$실행제한,background:true,stdin:$입력,reset:$환경초기화,request_id:$요청ID,env:$환경}
+  $작업 = {**$접수,limb_name:get($접수,"limb_name",$PC),op:"shell"}
   $확인 = [fn:외부PC작업확인]{작업:$작업,대기:$대기}
-  return {ok:true,status:"accepted",limb:$작업.limb,limb_name:$작업.limb_name,task_ref:$작업.task_ref,
-    cwd:$작업폴더,observation:$확인}
+  return {**$작업,ok:true,status:"accepted",cwd:$작업폴더,observation:$확인}
 }

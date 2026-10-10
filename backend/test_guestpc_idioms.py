@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES = dict(zip(
-    ('외부PC준비', '외부PC작업확인', '외부PC작업실행', '외부PC작업마무리'),
-    ('guestpc_prepare.ibl', 'guestpc_check.ibl', 'guestpc_run.ibl', 'guestpc_finish.ibl')))
+FILES = {row['alias']: next(p.name for p in (ROOT / 'data/idioms').glob('guestpc_*.ibl')
+          if f"[def:{row['alias']}]" in p.read_text())
+         for row in json.loads((ROOT / 'data/idioms/guestpc_seeds.json').read_text()) if row.get('alias')}
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def remote(monkeypatch, tmp_path):
         if action == 'self:limb':
             assert p['op'] == 'list'
             return {'success': True, 'items': [
-                {'device_id': job['limb'], 'alias': job['limb_name'], 'connected': state['connected']},
+                {'device_id': job['limb'], 'alias': job['limb_name'], 'connected': state['connected'], 'registration': None},
                 {'device_id': 'other', 'alias': '다른PC', 'connected': True}]}
         if action == 'limbs:guestpc':
             assert p['limb'] in (job['limb'], job['limb_name'])
@@ -103,7 +103,7 @@ def test_submit_once_and_resume_after_failed_observation(remote):
 
 @pytest.mark.parametrize('state,result,settled,command_ok', [
     ('running', None, False, None), ('unknown', None, False, None),
-    ('failed', None, True, None), ('cancelled', None, True, None),
+    ('failed', None, True, False), ('cancelled', None, True, False),
     ('succeeded', None, True, None), ('succeeded', {'exit': 0}, True, True),
     ('succeeded', {'exit': 7}, True, False),
     ('succeeded', {'exit': 0, 'timeout': True}, True, False),
@@ -184,7 +184,7 @@ def test_guide_examples_execute_with_real_ibl_adapters(remote, name):
     assert out['ok']
 
 
-@pytest.mark.parametrize('patch', [{'limb_name': ''}, {'task_ref': {'kind': 'script', 'task_id': '1'}},
+@pytest.mark.parametrize('patch', [{'limb': ''}, {'task_ref': {'kind': 'script', 'task_id': '1'}},
                                  {'task_ref': {'kind': 'guestpc', 'task_id': ''}}])
 def test_invalid_receipt_is_not_observed(remote, patch):
     out = remote('[fn:외부PC작업확인]{작업:$job}', job={**remote.job, **patch})

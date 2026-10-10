@@ -1,0 +1,20 @@
+#!ibl edition=2
+[def:외부PC파일가져오기]($PC,$중앙경로,$원격경로,$요청ID,$대기=0,$작업={}) {
+  [if:len($PC)==0 or len($중앙경로)==0 or len($원격경로)==0 or len($요청ID)==0 or $대기<0 or $대기>240] { return {ok:false,status:"invalid_input",reason:"PC·중앙경로·원격경로·요청ID와 0~240초 대기가 필요합니다"} }
+  $접수 = $작업
+  [if:len($작업)==0] {
+    $준비 = [fn:외부PC준비]{PC:$PC,환경조회:false}
+    [if:$준비.ok==false] { return $준비 }
+    [if:$준비.helper_mode!="resident"] { return {ok:false,status:"resident_required"} }
+    $접수 = [limbs:guestpc]{op:"transfer",action:"receive",limb:$준비.limb,local_path:$중앙경로,path:$원격경로,request_id:$요청ID}
+    $접수 = {**$접수,pc_request:$PC,local_path:$중앙경로,remote_path:$원격경로,transfer_action:"receive"}
+  }
+  [if:get($접수,"pc_request","")!=$PC or get($접수,"local_path","")!=$중앙경로 or get($접수,"remote_path","")!=$원격경로 or get($접수,"request_id","")!=$요청ID or get($접수,"transfer_action","")!="receive"] { return {ok:false,status:"resume_mismatch",task:$작업} }
+  $확인 = [fn:외부PC작업확인]{작업:$접수,대기:$대기}
+  [if:$확인.ok==false] { return $확인 }
+  [if:$확인.command_ok!=true] { return {**$확인,ok:false,collected:false} }
+  [try] {
+    $파일 = [limbs:guestpc]{op:"transfer",action:"collect",limb:$접수.limb,transfer_id:$접수.transfer_id,local_path:$중앙경로}
+    return {**$확인,ok:true,status:"collected",collected:true,path:$파일.path,sha256:$파일.sha256,verified:true}
+  } [catch] { return {**$확인,ok:false,status:"collect_failed",collected:false,reason:$error.message} }
+}

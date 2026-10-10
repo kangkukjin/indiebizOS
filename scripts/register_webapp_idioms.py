@@ -29,7 +29,7 @@ def insert_seeds(db, seeds, backup):
     return added
 
 
-def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json'):
+def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json', revise_reason=''):
     from ibl_usage_db import IBLUsageDB
     from ibl_v2_store import definitions, definition_name
     from ibl_v2_learning import check_source
@@ -44,7 +44,7 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json'):
         if definition_name(row['ibl_code']) != name:
             raise ValueError('등록 이름과 정의가 다릅니다')
         old = db.find_phrase_by_alias(name, edition=2)
-        if old and old['ibl_code'].strip() != row['ibl_code'].strip():
+        if old and old['ibl_code'].strip() != row['ibl_code'].strip() and not revise_reason.strip():
             raise ValueError(f'{name}: 이미 다른 정의가 있습니다. 명시적 개정이 필요합니다')
         library[name] = row['ibl_code']
         why = check_source(row['ibl_code'], True, library=library)
@@ -82,6 +82,14 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json'):
         raise RuntimeError('임베딩 모델을 준비하지 못했습니다')
     if not db._check_sqlite_vec():
         raise RuntimeError('sqlite_vec가 없습니다. .venv 파이썬으로 실행하세요')
+    revised = []
+    if revise_reason.strip():
+        from register_idiom import update_idiom
+        for row in functions:
+            if db.find_phrase_by_alias(row['alias'], edition=2):
+                if update_idiom(db, row['alias'], row['ibl_code'], revise_reason,
+                                when=row['intent'], resign=True):
+                    revised.append(row['alias'])
     added = insert_seeds(db, functions + calls, backup)
     rows = []
     with db._get_connection() as conn:
@@ -105,7 +113,7 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json'):
             raise RuntimeError('의미 검색 색인이 미완료입니다')
     finally:
         vec.close()
-    return {'inserted': added, 'ids': {r['alias']: r['id'] for r in rows if r['alias']},
+    return {'inserted': added, 'revised': revised, 'ids': {r['alias']: r['id'] for r in rows if r['alias']},
             'always_on': False, 'semantic_indexed': len(rows), 'backup': str(backup)}
 
 
@@ -113,9 +121,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--apply', action='store_true')
     parser.add_argument('--local-encoder', action='store_true')
+    parser.add_argument('--revise-reason', default='',
+                        help='기존 정의를 개정할 명시적 이유. 백업 후 개정 원장에 옛 본문·통계를 보존한다.')
     parser.add_argument('--seed-file', default='webapp_seeds.json',
                         choices=['webapp_seeds.json', 'homepage_seeds.json', 'housing_seeds.json',
                                  'ai_trend_seeds.json', 'code_read_seeds.json', 'legacy_port_seeds.json',
                                  'workspace_seeds.json', 'guestpc_seeds.json'])
     args = parser.parse_args()
-    print(json.dumps(register(args.apply, args.local_encoder, args.seed_file), ensure_ascii=False, indent=2))
+    print(json.dumps(register(args.apply, args.local_encoder, args.seed_file, args.revise_reason), ensure_ascii=False, indent=2))

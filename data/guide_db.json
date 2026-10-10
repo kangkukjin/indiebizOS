@@ -1200,8 +1200,8 @@
     },
     {
       "id": "guest_helper",
-      "name": "USB 손발(게스트 PC 헬퍼) 가이드",
-      "description": "USB 를 낯선 PC 에 꽂아 그 PC 를 조종하는 손발 시스템. [self:limb]{op:issue/list/revoke/approve} 발급·승인·폐기 + [limbs:guestpc]{op:shell/read/write/list/info/screen/click/move/type/key/scroll/drag/result} 조작 — screen 으로 그 PC 화면을 직접 보고 click·type 으로 GUI 를 조작한다(좌표는 직전 screen 이미지 기준, 조작 후 자동 재캡처). 셸은 cd 가 유지되고 info 가 그 PC 신상(권한·패키지매니저·GUI 가능여부)을 준다. 오래 걸리는 명령은 background:true → op:result 회수. 두뇌·신원은 허브(내 PC), USB 엔 limb key 하나.",
+      "name": "원격 PC 헬퍼 — 상주 PC·휴대 USB",
+      "description": "원격 PC의 등록·셸·파일 전송·깨우기·재생·화면 조작. 상주형은 작업별 cwd/env 분리, GUI mode:interactive 필수, request_id로 중복 방지. 등록 관용구 아홉 개로 준비·실행·상태 확인·마무리·파일 보내기/가져오기·깨워 준비·중지 확인·재생을 조합한다. 상주 PC의 detach는 거절하며 제거는 self:limb remove. 작업 확인은 self:task, 실패 원문은 history.",
       "keywords": [
         "USB",
         "손발",
@@ -1225,7 +1225,17 @@
         "마우스",
         "키보드",
         "설치마법사",
-        "권한"
+        "권한",
+        "상주PC",
+        "파일전송",
+        "파일가져오기",
+        "깨우기",
+        "WOL",
+        "원격재생",
+        "작업중지",
+        "외부PC준비",
+        "외부PC작업실행",
+        "외부PC파일가져오기"
       ],
       "file": "guest_helper.md",
       "topic": "손발·이웃 몸"

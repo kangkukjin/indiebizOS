@@ -1,36 +1,20 @@
-# guest-helper — USB 손발(게스트 PC 헬퍼)
+# guest-helper — 상주 PC·휴대 USB 손발
 
-낯선 PC 에 **USB 를 꽂아** 그 PC 에서 셸·파일 작업을 시키는 얇은 손발 시스템.
-두뇌·신원은 내 몸(허브)에 남고, USB 엔 허브 비밀번호가 아니라 **limb key 하나**만 실린다.
+중앙 허브의 명령을 원격 PC에서 실행하는 Go 헬퍼다. 신규 등록은
+`[self:limb]{op:"register"}` 또는 조종실 손발 (USB)의 공용 폴더 준비로 시작한다.
+폴더를 USB에 복사해 대상 PC에서 이름을 정하고 설치한다. 로그인 시 자동 시작하며
+USB를 빼도 연결을 유지한다. 기존 `issue` 휴대형·회원 모드는 별도로 유지한다.
 
-## 어휘
+- `[limbs:guestpc]`: 셸·파일·화면·입력, 상주형 파일 전송·재생·깨우기·기록·취소.
+- `[self:limb]`: 목록·등록·새 작업 일시 중지·명시적 제거·기존 키 관리.
+- 상주형은 작업별 cwd/env 분리, request_id 중복 방지, GUI mode:interactive 필수다.
+- 긴 작업은 접수증을 보존해 self:task로 확인한다. 실패 원문은 history에 남는다.
+- detach는 휴대형 프로세스 종료만 허용한다. 상주형 제거는 self:limb remove이며
+  removal_pending과 기기의 실제 removed 확인은 다르다.
 
-- `[self:limb]{op: issue/list/revoke/approve}` — 손발 자격 원장. `issue` 는 USB 페이로드
-  (`outputs/limb_issue/<alias>/`)를 만든다.
-- `[limbs:guestpc]{op: shell/read/write/list/info}` — 붙은 손발 조작(허브에서 하달).
+배관: backend/surface/api_resident_pcs.py 및 api_limb.py,
+backend/services/resident_pcs.py, backend/base/resident_store.py·limb_keys.py·phone_jobs.py.
+헬퍼 소스·빌드: helper/README.md, helper/build.sh.
 
-## 흐름
-
-```
-발급  [self:limb]{op:issue}  → USB 페이로드(주소+키+헬퍼)
-실행  그 PC 에서 헬퍼 더블클릭 → 허브에 아웃바운드 접속(승인 대기)
-승인  [self:limb]{op:approve}  → 몰래 실행 방어
-명령  [limbs:guestpc]{op:shell,...} → 그 PC 에서 실행 → 결과 회신
-폐기  [self:limb]{op:revoke}   → USB 분실 시 이 키만 폐기
-```
-
-## 배관
-
-- 수신 API: `backend/api_limb.py` (`/limb/connect·poll·result`, limb key 자체 인증).
-- 자격 원장: `backend/limb_keys.py` (`data/limb_keys.json`, 무-flock 원자쓰기 = 윈도우 안전).
-- 중계 큐: `backend/phone_jobs.py` 재사용(폰 LTE 푸시와 같은 롱폴). 큐엔 IBL 이 아니라
-  셸 봉투 JSON 을 싣는다 — 손발은 IBL 엔진 없는 얇은 몸.
-- 헬퍼 소스: `helper/` (Go 단일 파일, 크로스컴파일 → win/mac/linux).
-
-## 경계
-
-- **눈 없음(1단계)**: 셸/파일만. GUI 전용 앱·화면 확인은 미지원(후속 op).
-- 손발은 신뢰 원장 이웃으로 자동 등록되지 않는다 — 인가는 limb key + 승인뿐(고권한 방어).
-- 허브가 켜져 있고 터널이 살아 있어야 한다(본체 의존).
-
-자세한 사용법: `data/guides/guest_helper.md`.
+반복 절차는 data/idioms/guestpc_*.ibl의 등록 함수 아홉 개를 쓴다.
+사용법·입력·재개·한계의 정본은 data/guides/guest_helper.md다.

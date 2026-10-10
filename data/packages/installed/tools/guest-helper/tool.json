@@ -2,12 +2,12 @@
   "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "guest-helper",
   "name": "Guest PC Helper (USB 손발)",
-  "description": "USB 로 낯선 PC 에 꽂는 얇은 손발(헬퍼) — 허브가 셸/파일 명령을 하달해 그 PC 에서 실행. 발급([self:limb])과 조작([limbs:guestpc]).",
+  "description": "USB로 설치하는 상주 PC 및 휴대형 손발 헬퍼 — 원격 셸·파일 전송·재생·화면 조작. 발급([self:limb])과 조작([limbs:guestpc]).",
   "version": "1.0.0",
   "tools": [
     {
       "name": "guestpc_op",
-      "description": "게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/screen/click/move/type/key/scroll/drag/result/detach 분기 (기본 shell). screen=그 PC 화면을 봄, click·type 등=GUI 조작(좌표는 직전 screen 이미지 기준, 조작 후 자동 재캡처). 긴 셸 명령은 background:true→op=result 회수.",
+      "description": "원격 PC 디스패처. shell/read/write/list/info·screen/입력·transfer/media/wake/history/cancel·result/detach. 상주형은 작업별 환경 분리와 request_id 중복 방지, GUI mode:interactive 필수. 긴 작업은 background:true 접수증→self:task 관측. detach는 휴대형만. 상세는 guest_helper.md.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -63,11 +63,11 @@
           },
           "reset": {
             "type": "boolean",
-            "description": "실행 전 세션(기억한 디렉토리·환경) 초기화 (op=shell — venv 벗기·환경 꼬였을 때)"
+            "description": "휴대형 실행 전 세션(기억한 디렉토리·환경) 초기화 (op=shell — venv 벗기·환경 꼬였을 때)"
           },
           "background": {
             "type": "boolean",
-            "description": "true 면 즉시 job_id 반환, 결과는 op=result 로 회수 (op=shell — 설치·빌드 등 오래 걸리는 명령)"
+            "description": "true 면 즉시 task_ref·job_id 반환, self:task로 관측 (op=shell — 설치·빌드 등 오래 걸리는 명령)"
           },
           "job": {
             "type": "string",
@@ -202,7 +202,7 @@
     },
     {
       "name": "limb_op",
-      "description": "USB 손발 자격 원장 디스패처. op으로 issue/list/revoke/approve 분기 (기본 issue).",
+      "description": "PC 헬퍼 자격 원장. register/list/pause/remove는 상주 PC 관리, issue/revoke/approve는 기존 휴대형 발급·관리 (기본 issue).",
       "input_schema": {
         "type": "object",
         "properties": {

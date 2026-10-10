@@ -49,10 +49,13 @@ def submit(target, command, request_id=None):
         raise ValueError("command_too_large_use_transfer")
     with limb_keys._lock:
         rec = limb_keys.resident_auth(rec["key"], rec["registration"]["installation_id"])
-        jid = resident_store.submit(rec, command, request_id or uuid.uuid4().hex)
+        request_id = request_id or uuid.uuid4().hex
+        jid = resident_store.submit(rec, command, request_id)
     import task_receipts
     return task_receipts.receipt("guestpc", jid, state=task_receipts.QUEUED,
-                                 limb=rec["device_id"], job_id=jid, accepted=True)
+                                 limb=rec["device_id"], limb_name=rec["alias"],
+                                 helper_mode="resident", op=op, job_id=jid,
+                                 request_id=request_id)
 
 
 def remove(target):
@@ -239,15 +242,45 @@ def transfer_local(target, args):
     tid = args.get('transfer_id')
     if action == 'collect':
         row = transfer_info(tid)
+        if target and row['device'] != resolve(target, active=False)['device_id']:
+            raise ValueError('transfer_source_conflict')
         if row['direction'] != 'from_pc' or row['state'] != 'committed':
             raise ValueError('transfer_not_ready')
         dest = Path(args['local_path']).expanduser()
         if not dest.is_absolute():
             raise ValueError('absolute_local_path_required')
+        # Repeating collect after a lost reply is safe, but never overwrites
+        # an unrelated file. Commit a complete, verified copy without clobbering.
         import shutil
-        with transfer_path(tid).open('rb') as src, dest.open('xb') as dst:
-            shutil.copyfileobj(src, dst, 1024 * 1024)
+        import tempfile
+        if dest.exists():
+            if dest.is_file() and _file_sha256(dest) == row['sha256']:
+                return {'success': True, 'path': str(dest), 'sha256': row['sha256'], 'size': row['size']}
+            raise ValueError('destination_exists')
+        fd, staged_name = tempfile.mkstemp(dir=dest.parent, prefix='.indiebiz-')
+        staged_path = Path(staged_name)
+        try:
+            with os.fdopen(fd, 'wb') as staged:
+                with transfer_path(tid).open('rb') as src:
+                    shutil.copyfileobj(src, staged, 1024 * 1024)
+                staged.flush()
+                os.fsync(staged.fileno())
+            # Close before reopening/linking: Windows also permits this path.
+            if _file_sha256(staged_path) != row['sha256']:
+                raise ValueError('hash_mismatch')
+            os.link(staged_path, dest)
+        finally:
+            staged_path.unlink(missing_ok=True)
         return {'success': True, 'path': str(dest), 'sha256': row['sha256']}
+    # Resolve a lost submission reply by its original request, before creating
+    # another transfer. submit() still checks the complete command fingerprint.
+    if args.get('request_id'):
+        previous = resident_store.find_request(resolve(target), args['request_id'])
+        if previous:
+            old_tid = previous['summary'].get('transfer_id')
+            if not old_tid or (tid and tid != old_tid):
+                raise ValueError('request_id_conflict')
+            tid = old_tid
     if action == 'send':
         source = Path(args['local_path']).expanduser()
         digest = hashlib.sha256()
@@ -274,6 +307,14 @@ def transfer_local(target, args):
     receipt = submit(target, {'op': 'transfer', 'transfer_id': row['id'], 'path': args['path'],
                               'timeout': args.get('timeout', 86400)}, args.get('request_id'))
     return {**receipt, 'transfer_id': row['id']}
+
+
+def _file_sha256(path):
+    digest = hashlib.sha256()
+    with path.open('rb') as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def public_base():

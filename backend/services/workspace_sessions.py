@@ -39,6 +39,8 @@ def operation_key(op: str, resource: str, args: dict) -> str:
 
 
 def kind_of_path(path: Path) -> str:
+    if path.suffix.lower() == ".pages":
+        return "document"
     if path.is_dir():
         return "code"   # 폴더 = 코딩 프로젝트. git 이 없으면 coding_projects.open 이 조용히 init 한다(2026-10-07)
     return "sheet" if path.suffix.lower() in SHEET_SUFFIXES else "document"
@@ -101,7 +103,7 @@ class Workspace:
         return out
 
     # ── open ────────────────────────────────────────────────────────────────
-    def open(self, path, encoding=None, kind=None, goal=None):
+    def open(self, path, encoding=None, kind=None, goal=None, conversion="auto", request_id=None, working_resource=None):
         target = Path(path).expanduser()
         kind = kind or kind_of_path(target)
         if kind not in KINDS:
@@ -110,9 +112,10 @@ class Workspace:
             task = self.code().open(target, goal)
             return self.head("code", task, capabilities=self.code().capabilities(task))
         app = self.sheets() if kind == "sheet" else self.documents()
-        detail = app.open(target) if kind == "sheet" else app.open(target, encoding)
+        detail = app.open(target) if kind == "sheet" else app.open(target, encoding, conversion=conversion, request_id=request_id, working_resource=working_resource)
         row = detail["document"]
-        return self.head(kind, row, capabilities=self.capabilities(row["id"]), session=self._session_summary(detail.get("session")))
+        return self.head(kind, row, capabilities=self.capabilities(row["id"]), session=self._session_summary(detail.get("session")),
+                         **{k: detail[k] for k in ("conversion", "conversion_candidates") if k in detail})
 
     @staticmethod
     def _session_summary(session):

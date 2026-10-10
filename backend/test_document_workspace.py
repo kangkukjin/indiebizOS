@@ -180,7 +180,12 @@ def test_office_not_falsely_reported_supported(tmp_path):
     file = tmp_path / "form.pages"
     file.write_bytes(b"not a real office document")
     app = DocumentWorkspace(tmp_path / "state")
-    d = app.open(file)["document"]
+    with pytest.raises(DocumentUnsupported, match="invalid_pages"):
+        app.open(file)
+    import zipfile
+    with zipfile.ZipFile(file, "w") as archive:
+        archive.writestr("Index/Document.iwa", b"fixture")
+    d = app.open(file, conversion="source")["document"]
     assert not app.capabilities(d["id"])["edit_native"]
     with pytest.raises(DocumentUnsupported):
         app.acquire(d["id"], "w")

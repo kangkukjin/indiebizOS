@@ -90,20 +90,26 @@ class DocumentWorkspace(OfficeSessions):
         hwp = d["source_format"] in document_hwp.FORMATS and document_hwp.available()
         engine = "source" if source else "rhwp" if d["source_format"] in document_hwp.FORMATS else "office"
         reason = "소스 원문 편집" if source else "로컬 한글 문서 편집" if hwp else "로컬 사무 문서 편집" if office else "이 형식의 편집 엔진을 연결해야 합니다"
-        return {"engine": engine, "edit_native": source or office or hwp, "save": source or office or hwp,
+        from document_formats import engine_status
+        return {**(engine_status() if engine == "office" else {}), "engine": engine, "edit_native": source or office or hwp, "save": source or office or hwp,
                 "export_copy": source or office or hwp,
                 "ai_text_replace": source or (office and d["source_format"] != "pdf"),
                 "structural_edit": office or hwp, "reason": reason,
                 "loss_report": {"status": "unverified", "items": []},
                 "unavailable": ([] if hwp or engine != "rhwp" else ["hwp_editor"]) + ["epub_edit", "latex_compile", "project_assets"],
-                "ocr_correction": d["source_format"] == "pdf", "format_export": engine != "rhwp"}
+                "ocr_correction": d["source_format"] == "pdf", "format_export": engine != "rhwp",
+                "conversion_available": d["source_format"] in {"pages", "doc", "dotx", "ott", "epub"},
+                "engine_configured": document_office.available() if engine == "office" else None}
 
-    def open(self, path, encoding=None):
+    def open(self, path, encoding=None, conversion="auto", request_id=None, working_resource=None):
         owner()
         original = Path(path).expanduser()
         if original.is_symlink():
             raise ValueError("심볼릭 링크 대신 실제 문서 경로를 선택하세요")
         path = original.resolve(strict=True)
+        if path.suffix.lower() == ".pages":
+            from document_imports import open_pages
+            return open_pages(self, path, conversion, request_id, working_resource)
         data = read_bytes(path)
         with self.store.lock():
             for row in self.list():
@@ -122,6 +128,12 @@ class DocumentWorkspace(OfficeSessions):
         d = self._doc(document_id)
         session = self.store.get("session", d["session_id"]) if d["session_id"] else None
         result = {"document": d, "session": session, "capabilities": self.capabilities(document_id)}
+        if d.get("provenance", {}).get("source_format") == "pages":
+            from document_imports import describe
+            result["conversion"] = describe(self, d)
+        if d["source_format"] == "pages":
+            from document_imports import candidates
+            result["conversion_candidates"] = candidates(self, d["id"])
         if session and d["encoding"]:
             result["text"] = self.store.bytes(session["blob"]).decode(d["encoding"])
         return result

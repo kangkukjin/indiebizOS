@@ -14,7 +14,7 @@ def service():
 
 
 _ALLOWED = {
-    "open": ("path", "encoding", "kind", "goal"),
+    "open": ("path", "encoding", "kind", "goal", "conversion", "request_id", "working_resource"),
     "snapshot": ("resource", "client", "wait"),
     "read": ("resource", "selector", "snapshot", "kind"),
     "propose": ("resource", "selector", "replacement", "values", "kind", "snapshot"),

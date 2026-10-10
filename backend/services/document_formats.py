@@ -61,22 +61,8 @@ def convert(app, document_id, output_format, expected_revision, session_id=None,
             if source_format == output_format:
                 result_data = data
             else:
-                cfg = settings()
-                if not cfg:
-                    raise DocumentUnsupported("로컬 문서 변환 엔진을 시작하세요")
-                conversion = {"id": identifier(), "token": secrets.token_urlsafe(32),
-                    "document_id": document_id, "blob": app.store.blob(data), "expires": time.time()+600}
-                app.store.put("conversion", conversion)
-                url = cfg["callback_origin"].rstrip("/")+"/documents/convert-io/"+conversion["id"]+"?ticket="+conversion["token"]
-                request = {"async": False, "filetype": source_format, "outputtype": output_format,
-                           "key": conversion["id"], "url": url, "title": d["title"]}
-                request["token"] = jwt.encode(request, cfg["secret"], algorithm="HS256")
-                response = httpx.post(cfg["url"].rstrip("/")+"/converter", json=request,
-                    headers={"Accept":"application/json"}, timeout=180, trust_env=False)
-                response.raise_for_status(); result = response.json()
-                if not result.get("endConvert") or not result.get("fileUrl"):
-                    raise DocumentUnsupported("변환 엔진이 이 문서를 출력하지 못했습니다: " + str(result.get("error", "변환 미완료")))
-                result_data = download(result["fileUrl"], cfg)
+                result_data = convert_bytes(app, document_id, data, source_format,
+                                            output_format, d["title"])
     if output_format in {"docx", "pdf", "odt", "rtf"}:
         validate(result_data, output_format)
     from document_creation import import_bytes
@@ -95,3 +81,74 @@ def content(app, conversion_id, ticket):
     if row["expires"] < time.time() or not secrets.compare_digest(row["token"], ticket):
         raise PermissionError("변환 자료 접근 자격이 만료됐습니다")
     return app.store.bytes(row["blob"])
+
+
+def convert_bytes(app, document_id, data, source_format, output_format, title, metadata=None):
+    """Shared engine transport for explicit exports and automatic import copies."""
+    from document_pages import ImportFailure
+    cfg = settings()
+    if not cfg:
+        raise ImportFailure("engine_unconfigured", "로컬 문서 엔진 설치가 필요합니다")
+    if metadata is not None:
+        metadata.update(probe_engine(cfg))
+        if not metadata['engine_ready']:
+            raise ImportFailure("engine_unreachable", "문서 엔진에 연결하지 못했습니다. 편집 서버 시작 후 다시 시도하세요")
+    conversion = {"id": identifier(), "token": secrets.token_urlsafe(32),
+                  "document_id": document_id, "blob": app.store.blob(data),
+                  "expires": time.time() + 600}
+    app.store.put("conversion", conversion)
+    url = (cfg["callback_origin"].rstrip("/") + "/documents/convert-io/"
+           + conversion["id"] + "?ticket=" + conversion["token"])
+    request = {"async": False, "filetype": source_format, "outputtype": output_format,
+               "key": conversion["id"], "url": url, "title": title}
+    request["token"] = jwt.encode(request, cfg["secret"], algorithm="HS256")
+    try:
+        response = httpx.post(cfg["url"].rstrip("/") + "/converter", json=request,
+                              headers={"Accept": "application/json"}, timeout=180, trust_env=False)
+        response.raise_for_status()
+        result = response.json()
+        if not result.get("endConvert") or not result.get("fileUrl"):
+            error = result.get("error")
+            if error == -5:
+                raise ImportFailure("password_required", "암호 문서는 Pages에서 DOCX로 내보낸 뒤 여세요")
+            if error == -10:
+                raise ImportFailure("input_too_large", "문서 엔진의 변환 크기 상한을 초과했습니다")
+            if error == -2:
+                raise ImportFailure("conversion_timeout", "문서 변환 시간이 초과됐습니다. 다시 시도하세요")
+            raise ImportFailure("conversion_failed", f"문서 엔진이 변환하지 못했습니다 (코드 {error})")
+        output = download(result["fileUrl"], cfg)
+    except httpx.TimeoutException as exc:
+        raise ImportFailure("conversion_timeout", "문서 변환 시간이 초과됐습니다. 다시 시도하세요") from exc
+    except httpx.HTTPError as exc:
+        raise ImportFailure("engine_unreachable", "문서 엔진에 연결하지 못했습니다. 편집 서버 시작 후 다시 시도하세요") from exc
+    return output
+
+
+_ENGINE_STATUS = {}
+
+
+def probe_engine(cfg):
+    """Version command is also a readiness probe; no document bytes are sent."""
+    key = cfg['url']
+    command = {'c': 'version'}
+    command['token'] = jwt.encode(command, cfg['secret'], algorithm='HS256')
+    try:
+        response = httpx.post(key.rstrip('/') + '/command', json=command,
+                              timeout=5, trust_env=False)
+        response.raise_for_status()
+        value = response.json()
+        ready = value.get('error') == 0
+        result = {'engine_ready': ready, 'engine_version': value.get('version', 'unknown'),
+                  'engine_checked_at': time.time()}
+    except (httpx.HTTPError, ValueError):
+        result = {'engine_ready': False, 'engine_version': 'unknown', 'engine_checked_at': time.time()}
+    _ENGINE_STATUS[key] = result
+    return result
+
+
+def engine_status():
+    cfg = settings()
+    if not cfg:
+        return {'engine_ready': False}
+    last = _ENGINE_STATUS.get(cfg['url'], {})
+    return last if time.time() - last.get('engine_checked_at', 0) < 30 else {'engine_ready': None}

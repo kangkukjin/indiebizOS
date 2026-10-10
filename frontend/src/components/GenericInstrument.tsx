@@ -27,6 +27,7 @@
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.
  */
 import './generic/project-presentation.css';
+import { DocumentOpenRecovery } from './DocumentOpenRecovery';
 import { useState, useEffect, useRef, useCallback, useMemo, useContext, type ReactNode } from 'react';
 import { ui, useLocale } from '../i18n/ui';
 import { StreamPlayer, loadHls } from './StreamPlayer';
@@ -614,12 +615,15 @@ async function runMode(block: AppMode, values: Record<string, string>): Promise<
 }
 
 /* 접힌 메뉴의 작은 창 — 그 모드의 입력을 받아 실행하고, 성공했을 때만 결과를 넘긴다(실패는 여기서 보여 주고 머문다). */
-function ModeDialog({ mode, sourceMode, initial, error: firstError, onCancel, onDone }: {
-  mode: AppMode; sourceMode: AppMode; initial: Record<string, string>; error?: string;
-  onCancel: () => void; onDone: (values: Record<string, string>, data: Json) => void;
+function ModeDialog({ mode, sourceMode, initial, error: firstError, autoRun, onCancel, onDone }: {
+  mode: AppMode; sourceMode: AppMode; initial: Record<string, string>; error?: string; autoRun?: boolean;
+  onCancel: () => void; onDone: (values: Record<string, string>, data: Json) => Promise<void>;
 }) {
   const [values, setValues] = useState(initial);
   const [error, setError] = useState(firstError || '');
+  const alive = useRef(true);
+  const started = useRef(false);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const [busy, setBusy] = useState(false);
   const set = (key: string, v: string) => setValues((s) => ({ ...s, [key]: v }));
   const submit = async () => {
@@ -627,15 +631,26 @@ function ModeDialog({ mode, sourceMode, initial, error: firstError, onCancel, on
     const missing = (sourceMode.inputs || []).find((inp) => inp.required && !values[inp.key]);
     if (missing) { setError(`${missing.placeholder || missing.key} — 비어 있습니다`); return; }
     setBusy(true); setError('');
-    const r = await runMode(sourceMode, values);
-    setBusy(false);
-    if (r.error) setError(r.error); else onDone(values, r.data);
+    try {
+      let r = await runMode(sourceMode, values);
+      const until = Date.now() + 360000;
+      while (alive.current && r.error?.includes('conversion_in_progress') && Date.now() < until) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (!alive.current) return;
+        r = await runMode(sourceMode, values);
+      }
+      if (!alive.current) return;
+      if (r.error) setError(r.error); else await onDone(values, r.data);
+    } catch (e) { if (alive.current) setError(e instanceof Error ? e.message : String(e)); }
+    finally { if (alive.current) setBusy(false); }
   };
+  useEffect(() => { if (autoRun && !started.current) { started.current = true; void submit(); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const cancel = () => { alive.current = false; onCancel(); };
   const field = 'w-full px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400';
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={cancel}>
       <div role="dialog" aria-label={mode.name} className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-stone-200 p-5 flex flex-col gap-2.5"
-        onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') onCancel(); }}>
+        onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') cancel(); }}>
         <div className="font-semibold text-stone-800">{mode.name}</div>
         {mode.note && <div className="text-xs text-stone-500">{mode.note}</div>}
         {(mode.inputs || []).map((inp, i) => {
@@ -653,9 +668,13 @@ function ModeDialog({ mode, sourceMode, initial, error: firstError, onCancel, on
             </div>
           );
         })}
+        {busy && <p role="status" className="text-sm text-stone-600">문서를 여는 중… 필요한 형식 변환을 진행합니다.</p>}
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        <DocumentOpenRecovery error={error} path={values.path} onError={setError} onReady={async d => {
+          if (alive.current) await onDone(values, { resource: d.document.id, kind: 'document', title: d.document.title });
+        }} />
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onCancel} className="px-4 py-2 rounded-lg text-sm text-stone-600 hover:bg-stone-100">취소</button>
+          <button onClick={cancel} className="px-4 py-2 rounded-lg text-sm text-stone-600 hover:bg-stone-100">취소</button>
           <button disabled={busy} onClick={() => void submit()} className="px-4 py-2 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40">{busy ? '…' : (mode.run_label || '실행')}</button>
         </div>
       </div>
@@ -1212,15 +1231,25 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
   const [menuOpen, setMenuOpen] = useState(false);
   const claim = useCallback(() => { setClaims((c) => c + 1); return () => setClaims((c) => c - 1); }, []);
   const [preset, setPreset] = useState<ModePreset | undefined>(undefined);
-  const [asking, setAsking] = useState<{ idx: number; values: Record<string, string>; error?: string } | null>(null);
-  const enter = useCallback((i: number, p?: ModePreset) => { setModeIdx(i); setPreset(p); setNonce((n) => n + 1); setMenuOpen(false); setAsking(null); }, []);
+  const [asking, setAsking] = useState<{ idx: number; values: Record<string, string>; error?: string; autoRun?: boolean } | null>(null);
+  const leaveGuards = useRef(new Set<() => Promise<unknown>>());
+  const transition = useRef(0);
+  useEffect(() => () => { transition.current++; }, []);
+  const registerLeave = useCallback((fn: () => Promise<unknown>) => { leaveGuards.current.add(fn); return () => { leaveGuards.current.delete(fn); }; }, []);
+  const enter = useCallback(async (i: number, p?: ModePreset) => {
+    const ticket = transition.current;
+    for (const guard of [...leaveGuards.current]) await guard();
+    if (ticket !== transition.current) return;
+    setModeIdx(i); setPreset(p); setNonce((n) => n + 1); setMenuOpen(false); setAsking(null);
+  }, []);
   // 접힌 메뉴에서 탭을 고르면 화면을 옮기지 않는다 — 입력이 필요한 모드는 작은 창에서 받고(경로 입력은 데스크탑이면
   // 파일 창으로 바로), 실행이 성공했을 때만 그 결과로 화면을 바꾼다. 취소·실패는 지금 글을 그대로 둔다.
   const rawModes = rawInstrument.modes;
   const go = useCallback((i: number) => {
+    const ticket = ++transition.current;
     const src = (rawModes || [])[i];
     const ins = src?.inputs || [];
-    if (!src || !ins.length) { enter(i); return; }
+    if (!src || !ins.length) { void enter(i).catch(e => setTopMsg(String(e))); return; }
     const values: Record<string, string> = {};
     ins.forEach((inp) => { values[inp.key] = inp.default || ''; });
     const browse = ins.find((inp) => inp.browse);
@@ -1229,17 +1258,15 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
     (async () => {
       let chosen: string | null;
       // 파일 창을 못 띄우면(창만 새로 고쳐져 메인 프로세스에 아직 길이 없을 때 등) 조용히 죽지 않고 작은 창으로 받는다.
-      try { chosen = await browsePath(src, browse); } catch { setMenuOpen(false); setAsking({ idx: i, values }); return; }
-      if (!chosen) return;
+      try { chosen = await browsePath(src, browse); } catch { if (ticket !== transition.current) return; setMenuOpen(false); setAsking({ idx: i, values }); return; }
+      if (!chosen || ticket !== transition.current) return;
       const v = { ...values, [browse.key]: chosen };
-      const r = await runMode(src, v);
-      if (r.error) setAsking({ idx: i, values: v, error: r.error });
-      else enter(i, { values: v, data: r.data });
+      setAsking({ idx: i, values: v, autoRun: true });
     })();
   }, [rawModes, enter]);
   // 여는 즉시 캔버스로 가는 모드(입력 없는 auto_run + engine 뷰)는 앱의 첫 화면이지 메뉴 항목이 아니다 — 이름을 비워 메뉴에서 뺀다.
   const modeNames = useMemo(() => (instrument.modes || []).map((m) => (isLanding(m) ? '' : m.name || '')), [instrument]);
-  const menu = useMemo<InstrumentMenu>(() => ({ modes: modeNames, idx: modeIdx, go, claim, claimed: claims > 0 }), [modeNames, modeIdx, go, claim, claims]);
+  const menu = useMemo<InstrumentMenu>(() => ({ modes: modeNames, idx: modeIdx, go, claim, claimed: claims > 0, registerLeave }), [modeNames, modeIdx, go, claim, claims, registerLeave]);
   const bare = !!instrument.modes && isLanding(mode);
   const folded = topButtons.length === 0 && (claims > 0 || bare);
 
@@ -1290,8 +1317,8 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
       )}
       {topMsg && <div className="max-w-2xl mx-auto px-5 pt-2 text-sm text-emerald-700">{topMsg}</div>}
       {asking && rawModes?.[asking.idx] && (
-        <ModeDialog mode={modes[asking.idx]} sourceMode={rawModes[asking.idx]} initial={asking.values} error={asking.error}
-          onCancel={() => setAsking(null)} onDone={(values, data) => enter(asking.idx, { values, data })} />
+        <ModeDialog mode={modes[asking.idx]} sourceMode={rawModes[asking.idx]} key={transition.current} initial={asking.values} error={asking.error} autoRun={asking.autoRun}
+          onCancel={() => { transition.current++; setAsking(null); }} onDone={(values, data) => enter(asking.idx, { values, data })} />
       )}
       <ModePane projectStyle={presentation === 'project'} key={nonce} preset={preset} mode={mode} sourceMode={(rawInstrument.modes || [rawInstrument])[Math.min(modeIdx, modes.length - 1)]} openNeighborId={openNeighborId} onDeepLinkDone={onDeepLinkDone} />
     </div>

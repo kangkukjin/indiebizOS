@@ -258,5 +258,5 @@ export const audioUrl = (u: string) => resolveMediaUrl(u, IMAGE_BASE);
 /* 계기 메뉴(모드 탭)를 캔버스가 맡는 통로 — 편집 캔버스(engine 뷰의 문서 엔진)가 서 있는 동안 모드 탭 줄은
  * 화면에서 빠지고 캔버스의 ⚙ 안에 접힌다(글 쓰는 자리가 화면의 대부분이어야 한다). 캔버스가 claim 하면
  * GenericInstrument 가 탭 줄을 걷고, 캔버스는 modes/go 로 같은 탭을 ⚙ 패널에 그린다. 선언에는 키가 없다. */
-export interface InstrumentMenu { modes: string[]; idx: number; go: (i: number) => void; claim: () => () => void; claimed: boolean }
+export interface InstrumentMenu { modes: string[]; idx: number; go: (i: number) => void; claim: () => () => void; claimed: boolean; registerLeave?: (fn: () => Promise<unknown>) => () => void }
 export const InstrumentMenuContext = createContext<InstrumentMenu | null>(null);

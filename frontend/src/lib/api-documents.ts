@@ -2,7 +2,9 @@ import { BACKEND_ORIGIN } from './backend-origin';
 
 export type Document = { id: string; title: string; source_uri: string; source_format: string; source_sha256: string; revision_id: string; encoding: string | null };
 export type Session = { id: string; client_id: string; engine_epoch: string; session_revision: number; state: string; blob: string };
-export type Detail = { document: Document; session: Session | null; text?: string; capabilities: { edit_native: boolean; save: boolean; export_copy: boolean; reason: string; engine: string } };
+export type DocumentConversion = { state: string; source_resource: string; source_revision: string; source_path: string;
+  source_format: string; working_format: string; source_changed: boolean | null; reused?: boolean; created_at?: number; fidelity: string };
+export type Detail = { document: Document; session: Session | null; text?: string; conversion?: DocumentConversion; conversion_candidates?: {resource:string;title:string;path:string}[]; capabilities: { edit_native: boolean; save: boolean; export_copy: boolean; reason: string; engine: string; conversion_available?: boolean; engine_configured?: boolean | null } };
 export type Snapshot = { id: string; session_revision: number; blob: string };
 export type Proposal = { id: string; snapshot_id: string };
 /** 캔버스에서 미리보기를 낼 수 있는 원문 형식 */

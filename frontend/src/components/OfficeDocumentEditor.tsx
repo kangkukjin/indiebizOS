@@ -17,7 +17,10 @@ function loadScript(url: string) {
   return scriptPromise;
 }
 
-export function OfficeDocumentEditor({ tabs, detail, onChange, captureRef, onSelection, onSaved }: { tabs?: ReactNode; detail: Detail; onChange: (detail: Detail) => void; captureRef: MutableRefObject<(() => Promise<Session>) | null>; onSelection?: (sel: { text: string; bookmark: string }) => void; onSaved?: (detail: Detail) => void }) {
+export function OfficeDocumentEditor({ tabs, detail, onChange, captureRef, onSelection, onSaved, onConverted }: { tabs?: ReactNode; detail: Detail; onChange: (detail: Detail) => void; captureRef: MutableRefObject<(() => Promise<Session>) | null>; onSelection?: (sel: { text: string; bookmark: string }) => void; onSaved?: (detail: Detail) => void; onConverted?: (detail: Detail) => void }) {
+  const converted = detail.conversion;
+  const saveLabel = converted ? 'DOCX 저장' : '원본 저장';
+  const refreshRequest = useRef(crypto.randomUUID());
   const [tools, setTools] = useState(false);
   const [message, setMessage] = useState('편집기를 여는 중…');
   const [error, setError] = useState('');
@@ -57,10 +60,10 @@ export function OfficeDocumentEditor({ tabs, detail, onChange, captureRef, onSel
         onDocumentReady: () => { ready.current = true; setMessage('편집 준비 완료'); },
         onDocumentStateChange: (event: { data: boolean }) => {
           dirty.current = event.data;
-          setMessage(event.data ? '편집 중 · 변경 내용을 편집기에 전달 중' : '편집기 반영됨 · 원본 저장으로 파일을 확정하세요');
+          setMessage(event.data ? '편집 중 · 변경 내용을 편집기에 전달 중' : `편집기 반영됨 · ${saveLabel}으로 파일을 확정하세요`);
         },
         onError: (event: { data: { errorDescription: string } }) => setError(event.data.errorDescription),
-        onRequestClose: () => setMessage('원본 저장을 완료한 뒤 다른 문서로 이동하세요'),
+        onRequestClose: () => setMessage(`${saveLabel}을 완료한 뒤 다른 문서로 이동하세요`),
       } });
     };
     const receive = (event:MessageEvent) => {
@@ -122,7 +125,7 @@ export function OfficeDocumentEditor({ tabs, detail, onChange, captureRef, onSel
     await documentCommand(d.document.id, 'save', { ...sessionArgs(session),
       operation_id: crypto.randomUUID(), expected_revision: d.document.revision_id });
     const next = await documentRequest<Detail>(`/${d.document.id}`); current.current = next; onChange(next);
-    setMessage('저장됨 · 원본 파일 기록 확인');
+    setMessage(converted ? `DOCX 저장됨 · ${next.document.source_uri}` : '저장됨 · 원본 파일 기록 확인');
     onSaved?.(next);
   });
   const copy = () => run(async () => {
@@ -134,19 +137,35 @@ export function OfficeDocumentEditor({ tabs, detail, onChange, captureRef, onSel
   });
   // 화면에는 ⚙ 도구 한 줄과 편집기만 둔다 — 편집기가 자기 메뉴를 갖고 있으므로 저장·버전·사본·내보내기·선택 수정(AI)·PDF 쪽
   // 작업은 ⚙ 안에 접는다. 계기 탭(새 문서·열기…)도 같은 패널 맨 위에 선다(tabs).
-  return <div className="office-document">
+  return <div className={`office-document${converted ? " pages-converted" : ""}`}>
     <div className="document-toolbar">
       <button onClick={() => setTools(v => !v)} aria-expanded={tools}>⚙ 도구</button>
       <p role="status">{busy ? '저장 확인 중…' : message}</p>
     </div>
+    {converted && <div className="text-sm text-stone-600 px-2" aria-label="Pages 변환 정보">
+      <span>Pages에서 변환한 작업 사본 · 원본 유지 · {detail.document.title}</span>
+      {converted.source_changed && <strong> · Pages 원본이 변경됨</strong>}
+      {converted.source_changed && <button disabled={busy} onClick={() => void run(async () => {
+        await capture();
+        const made = await documentCommand<Detail>(converted.source_resource, 'open-copy',
+          { conversion: 'refresh', request_id: refreshRequest.current });
+        refreshRequest.current = crypto.randomUUID();
+        onConverted?.(made);
+      })}>변경된 원본으로 새 사본 만들기</button>}
+      <p>서식·쪽 배치는 원본과 다를 수 있으며, 표의 셀 병합이 풀릴 수 있습니다.</p>
+      {tools && <div><p>Pages 원본: {converted.source_path}</p><p>DOCX 작업 사본: {detail.document.source_uri}</p>
+        {converted.created_at && <p>변환 일시: {new Date(converted.created_at * 1000).toLocaleString()}</p>}
+        {window.electron?.openPath && <button onClick={() => void window.electron?.openPath(detail.document.source_uri.replace(/[\\/][^\\/]+$/, ''))}>위치 열기</button>}
+      </div>}
+    </div>}
     {error && <p role="alert">{error} {/엔진|편집 서버/.test(error) && <button disabled={busy} onClick={() => void run(async () => {
       const result = await documentRequest<{ message: string }>('/engine/start', 'POST');
       setError(''); setMessage(result.message); setGeneration(v => v + 1);
     })}>편집 서버 시작</button>}</p>}
-    {tools && <>
+    {tools && <div className="office-tools">
       {tabs}
     <div className="document-toolbar">
-      <button disabled={busy} onClick={save}>원본 저장</button>
+      <button disabled={busy} onClick={save}>{saveLabel}</button>
       <button disabled={busy} onClick={() => void run(async () => { await capture(); setMessage('복구 초안 저장됨'); })}>작업 저장</button>
       <button disabled={busy} onClick={() => void run(async () => {
         const result = await documentRequest<{ items: { id: string; created_at: number; label?: string }[] }>(`/${detail.document.id}/versions`); setVersions(result.items);
@@ -197,7 +216,7 @@ export function OfficeDocumentEditor({ tabs, detail, onChange, captureRef, onSel
       })}>PDF 쪽 변경</button></div>
       <DocumentOCR detail={detail}/>
     </>}
-    </>}
+    </div>}
     <div className="office-frame"><div id={slot.current} /></div>
   </div>;
 }

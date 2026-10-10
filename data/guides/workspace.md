@@ -63,3 +63,11 @@ $fix = [table:ai]{items:[{text:$r.text}], instruction:"문장의 뜻을 유지�
 - DOCX 사본 편집(변경 추적·주석)은 `[self:document]{op:"edit"}`, 새 문서 생성은 `[table:document]`, 양식은 `[self:fill]`,
   엑셀 파일 작업(행 찾기·추가·범위 쓰기·재계산)은 `[self:sheet]`. 이 낱말은 **열린 자료의 세션·버전**을 맡는다.
 - 실행 코드·사전 경로의 저장은 거절한다(수리 격리 경로). 범위 밖 경로도 거절한다.
+
+## Pages 문서 열기
+
+`[self:workspace]{op:"open", path:"보고서.pages"}`는 Pages 원본을 보존하고 DOCX 작업 사본을 자동으로 열어 `resource`로 반환한다. 이후 읽기·스냅샷·저장은 이 DOCX 자료 ID에 대해 수행한다. 사무 문서의 선택 수정은 기존 문서 앱 편집 표면을 사용한다.
+
+같은 원본을 다시 열면 작업 사본과 초안을 이어 쓴다. `conversion.source_changed`가 true이면 Pages 원본이 바뀐 것이며 기존 DOCX 편집은 유지된다. 변경된 원본으로 새 사본을 만들려면 `conversion:"refresh", request_id:"고유한 재시도 식별자"`를 지정한다. 같은 request_id의 재시도는 같은 사본을 반환한다. `conversion:"source"`는 원본만 등록하고 편집하지 않는다. 기존 변환 사본이 여러 개면 원본 정보의 후보에서 `working_resource`를 선택한다.
+
+문서 앱에서는 파일 선택 한 번으로 변환하며 “DOCX 저장”으로 작업 사본을 확정한다. Pages 원본과 사본 경로는 도구 패널에 표시한다. `.pages` 출력은 제공하지 않는다. 로컬 ONLYOFFICE가 필요하며 엔진 중단·암호·손상·지원하지 않는 판본은 실패 원인을 표시한다. 단일 파일과 디렉터리형 Pages 패키지를 처리한다. 채팅·노트북 첨부의 `textutil` 읽기는 별도 경로다.

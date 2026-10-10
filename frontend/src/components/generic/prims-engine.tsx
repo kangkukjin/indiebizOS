@@ -115,6 +115,7 @@ function DocumentEngine({ id: given, emit, host }: { id: string; emit: (e: 'sele
     let dead = false;
     (async () => {
       try {
+        setDetail(null); setError('');
         await leaving;
         let d = await documentRequest<Detail>(`/${encodeURIComponent(id)}`);
         if (d.capabilities.edit_native) {
@@ -145,21 +146,31 @@ function DocumentEngine({ id: given, emit, host }: { id: string; emit: (e: 'sele
     window.addEventListener('pagehide', release);
     return () => { window.removeEventListener('pagehide', release); release(); };
   }, [id, me]);
+  useEffect(() => menu?.registerLeave?.(async () => {
+    if (latest.current?.capabilities.edit_native && ['office', 'rhwp'].includes(latest.current.capabilities.engine)) {
+      if (!capture.current) throw new Error('편집기가 준비될 때까지 기다리세요');
+      await capture.current();
+    }
+  }), [menu?.registerLeave]);
   if (error) return <><MenuBar menu={menu} /><p role="alert" className="text-sm text-red-600">{error}</p></>;
   if (!detail) return <><MenuBar menu={menu} /><p className="text-sm text-stone-400">편집 표면을 여는 중…</p></>;
   const onChange = (d: Detail) => setDetail(d);
-  const saved = (d: Detail) => emit('saved', { revision: d.document.revision_id });
+  const saved = (d: Detail) => emit('saved', { resource: d.document.id, revision: d.document.revision_id });
   if (!detail.capabilities.edit_native) return (
     <>
       <MenuBar menu={menu} />
       <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600">
-        <span>{detail.document.title} — 이 형식(.{detail.document.source_format})은 편집기가 직접 열지 못합니다. 워드(.docx) 사본으로 바꿔 열 수 있습니다(원본은 그대로).</span>
+        {!detail.capabilities.conversion_available && <span>{detail.document.title} — {detail.capabilities.reason}</span>}
+        {detail.capabilities.engine === 'office' && !detail.capabilities.engine_configured && <button onClick={() => {
+          documentRequest('/engine/start', 'POST').then(() => documentRequest<Detail>(`/${id}`)).then(setDetail, e => setError(String(e)));
+        }}>편집 서버 시작</button>}
+        {detail.capabilities.conversion_available && <><span>{detail.document.title} — 이 형식(.{detail.document.source_format})은 편집기가 직접 열지 못합니다. 워드(.docx) 사본으로 바꿔 열 수 있습니다(원본은 그대로).</span>
         <button disabled={converting} className="px-3 py-1.5 rounded-lg border border-stone-300 hover:border-stone-500 disabled:opacity-40" onClick={() => {
           setConverting(true);
           documentCommand<Detail>(detail.document.id, 'convert', { output_format: 'docx', expected_revision: detail.document.revision_id })
             .then((made) => { setDetail(null); setSwap({ from: given, to: made.document.id }); }, (e) => setError(e instanceof Error ? e.message : String(e)))
             .finally(() => setConverting(false));
-        }}>{converting ? '바꾸는 중…' : '.docx 사본으로 열기'}</button>
+        }}>{converting ? '바꾸는 중…' : '.docx 사본으로 열기'}</button></>}
       </div>
     </>
   );
@@ -180,7 +191,8 @@ function DocumentEngine({ id: given, emit, host }: { id: string; emit: (e: 'sele
   if (detail.capabilities.engine === 'office')
     return <div className="engine-editor"><OfficeDocumentEditor key={detail.document.id} detail={detail} onChange={onChange} captureRef={capture as never}
       tabs={menu && menu.modes.some(Boolean) ? <MenuTabs menu={menu} /> : undefined}
-      onSelection={(sel) => emit('selection', { sel: { bookmark: sel.bookmark }, text: sel.text, revision: detail.document.revision_id })}
+      onConverted={(made) => { setDetail(null); setSwap({ from: given, to: made.document.id }); }}
+      onSelection={(sel) => emit('selection', { resource: detail.document.id, sel: { bookmark: sel.bookmark }, text: sel.text, revision: detail.document.revision_id })}
       onSaved={saved} /></div>;
   return <SourceEngine detail={detail} onChange={onChange} emit={emit} host={{ ...host, menu }} />;
 }
@@ -244,6 +256,11 @@ function SourceEngine({ detail, onChange, emit, host }: {
     chain.current = task;
     return task;
   }, [onChange]);
+
+  useEffect(() => host.menu?.registerLeave?.(async () => {
+    if (composing.current) throw new Error('글자 입력을 마친 뒤 문서를 이동하세요');
+    if (writable) await draft();
+  }), [host.menu?.registerLeave, writable, draft]);
 
   // 자동 초안 — 창을 잘못 닫아도 글이 남는다(서버 초안. 원본은 그대로).
   useEffect(() => {

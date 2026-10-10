@@ -57,6 +57,9 @@ def invoke(function, *args, **kwargs):
 class OpenRequest(BaseModel):
     path: str = Field(min_length=1, max_length=4096)
     encoding: str | None = None
+    conversion: str = "auto"
+    request_id: str | None = None
+    working_resource: str | None = None
 
 
 class Command(BaseModel):
@@ -68,6 +71,7 @@ OPERATIONS = {
     "pdf-pages": document_pdf.change_pages,
     "ocr": document_pdf.ocr, "ocr-correct": document_pdf.correct, "ocr-export": document_pdf.export,
     "convert": document_formats.convert,
+    "open-copy": lambda app, document_id, **args: app.open(app._doc(document_id)["source_uri"], **args),
     "office-proposal": document_office_ai.propose,
     "office-approve": document_office_ai.approve,
     "engine-config": lambda app, document_id, **args: OfficeEngine(app).config(document_id, **args),

@@ -81,7 +81,7 @@ modes:
         type: text
         browse: "outputs/binnote"   # 데스크탑: 문서함 폴더에서 시작하는 파일 창으로 고른다
         required: true
-        placeholder: "문서 경로 — txt·md·html·tex·typ · docx·odt·rtf · hwp·hwpx · pdf"
+        placeholder: "문서 경로 — txt·md·html·tex·typ · pages(자동 변환)·docx·odt·rtf · hwp·hwpx · pdf"
       - key: encoding
         type: select
         default: ""

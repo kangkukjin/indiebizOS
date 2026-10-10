@@ -345,8 +345,10 @@
     "services/document_creation",
     "services/document_formats",
     "services/document_hwp",
+    "services/document_imports",
     "services/document_office",
     "services/document_office_ai",
+    "services/document_pages",
     "services/document_pdf",
     "services/document_workspace",
     "services/execution_trace",
@@ -574,8 +576,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 499,
-    "engine": 473,
+    "total": 501,
+    "engine": 475,
     "blocklist": 26
   }
 }

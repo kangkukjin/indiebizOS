@@ -32,3 +32,8 @@
 .engine-editor section[aria-label="자료 연결"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
 .engine-editor section[aria-label="자료 연결"]>h3{display:none}
 .engine-editor section[aria-label="자료 연결"]>p,.engine-editor section[aria-label="자료 연결"]>div{width:100%}
+
+/* 변환 출처와 도구 패널을 펼쳐도 Pages 편집기가 화면 밖으로 밀려나지 않는다. */
+.engine-editor .pages-converted{height:calc(100vh - 32px - var(--app-chrome,0px));min-height:480px}
+.engine-editor .pages-converted .office-tools{max-height:34vh;overflow:auto;flex-shrink:0}
+.engine-editor .pages-converted .office-frame{flex:1;min-height:260px;height:auto}

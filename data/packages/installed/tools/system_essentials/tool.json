@@ -943,6 +943,23 @@
             "type": "string",
             "description": "open — 파일 또는 git 폴더 경로"
           },
+          "conversion": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "source",
+              "refresh"
+            ],
+            "description": "open(Pages) — auto는 DOCX 작업 사본으로 열기, source는 원본 등록만, refresh는 새 사본"
+          },
+          "request_id": {
+            "type": "string",
+            "description": "open conversion=refresh의 재시도 식별자"
+          },
+          "working_resource": {
+            "type": "string",
+            "description": "open(Pages) — 기존 변환 사본 중 이어 쓸 자료 ID"
+          },
           "resource": {
             "type": "string",
             "description": "open 이 돌려준 자료 ID (이후 op 공통)"

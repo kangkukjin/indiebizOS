@@ -15,16 +15,18 @@ export function ResearchProjectView({ project }: { project: Project }) {
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
-  const [archived, setArchived] = useState(false);
   const load = useCallback(async () => {
-    let cursor: string | null = null;
-    const all: ResearchThread[] = [];
-    do {
-      const result = await researchCall(uid, 'thread_list', { limit: 100, archived, ...(cursor ? { cursor } : {}) });
-      all.push(...result.items as ResearchThread[]); cursor = result.next_cursor as string | null;
-    } while (cursor);
-    setThreads(all); setError('');
-  }, [uid, archived]);
+    const groups = await Promise.all([false, true].map(async archived => {
+      let cursor: string | null = null;
+      const items: ResearchThread[] = [];
+      do {
+        const result = await researchCall(uid, 'thread_list', { limit: 100, archived, ...(cursor ? { cursor } : {}) });
+        items.push(...result.items as ResearchThread[]); cursor = result.next_cursor as string | null;
+      } while (cursor);
+      return items;
+    }));
+    setThreads(groups.flat()); setError('');
+  }, [uid]);
   useRetryingLoad(load);
   const refresh = useCallback(() => { void load().catch(e => setError(String(e))); }, [load]);
   useEffect(() => {
@@ -38,7 +40,7 @@ export function ResearchProjectView({ project }: { project: Project }) {
     try {
       const result = await researchCall(uid, 'thread_create', { title: title.trim() });
       const item = (result.items as ResearchThread[])[0];
-      setSelected(item.id); setCreating(false); setTitle(''); setArchived(false); if (!archived) await load();
+      setSelected(item.id); setCreating(false); setTitle(''); await load();
     } catch (e) { setError(String(e)); }
   };
   return <div className="h-full flex flex-col bg-[#F5F1EB] text-[#4A4035]">
@@ -48,16 +50,15 @@ export function ResearchProjectView({ project }: { project: Project }) {
       <aside className="w-64 max-w-[32%] shrink-0 flex flex-col border-r border-[#E5DFD5] bg-[#F0EBE3]">
         <div className="flex-1 overflow-y-auto p-3">
           {threads.map(thread => <button key={thread.id} onClick={() => setSelected(thread.id)} className={`block w-full text-left px-3 py-3 rounded-xl mb-1 ${selected === thread.id ? 'bg-white border border-[#D97706]/40 shadow-sm' : 'hover:bg-white/60 border border-transparent'}`}>
-            <span className="block font-medium truncate">{thread.title}</span><span className="block text-xs text-[#A09080] mt-1">{thread.updated_label}</span>
+            <span className="block font-medium truncate">{thread.title}</span><span className="block text-xs text-[#A09080] mt-1">{thread.updated_label}{thread.archived ? ' · 보관됨' : ''}</span>
           </button>)}
-          {!threads.length && <p className="p-3 text-sm text-[#A09080]">{archived ? '보관한 대화가 없습니다.' : '새 대화를 만들어 시작하세요.'}</p>}
+          {!threads.length && <p className="p-3 text-sm text-[#A09080]">새 대화를 만들어 시작하세요.</p>}
         </div>
-        <div className="p-3 border-t border-[#E5DFD5]">
+        <div className="px-4 pb-3 pt-1">
           {creating ? <form onSubmit={e => { e.preventDefault(); void create(); }} className="mb-2">
             <input autoFocus aria-label="새 대화 이름" placeholder="예: 교육" value={title} onChange={e => setTitle(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-[#E5DFD5] outline-none focus:border-[#D97706]" />
             <div className="flex gap-2 mt-2"><button disabled={!title.trim()} className="px-3 py-2 rounded-lg bg-[#D97706] text-white disabled:opacity-50">만들기</button><button type="button" onClick={() => setCreating(false)}>취소</button></div>
-          </form> : <button onClick={() => setCreating(true)} className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-[#D97706] hover:bg-[#B45309] text-white"><Plus size={17} />새 대화</button>}
-          <button className="block mx-auto mt-3 text-xs text-[#8B7D6B]" onClick={() => setArchived(v => !v)}>{archived ? '대화 목록으로' : '보관한 대화'}</button>
+          </form> : <button onClick={() => setCreating(true)} className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-xs text-[#8B7D6B] hover:bg-white/40 hover:text-[#4A4035] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8B7D6B]"><Plus size={14} />새 대화</button>}
         </div>
       </aside>
       {threads.filter(t => opened.includes(t.id)).map(thread => <ResearchConversation key={thread.id} project={uid} thread={thread} visible={selected === thread.id} onChange={refresh} />)}

@@ -1,0 +1,61 @@
+/* 프로젝트 창의 공통 팔레트. 계기의 실행·자료 계약은 그대로 두고 배치만 바꾼다. */
+.instrument-project {
+  --color-stone-50: #F5F1EB;
+  --color-stone-100: #EAE4DA;
+  --color-stone-200: #E5DFD5;
+  --color-stone-400: #A09080;
+  --color-stone-500: #8B7B6B;
+  --color-stone-600: #6B5B4F;
+  --color-stone-700: #6B5B4F;
+  --color-stone-800: #4A4035;
+  --color-stone-900: #4A4035;
+  background: #F5F1EB;
+  color: #4A4035;
+}
+.instrument-project button.bg-stone-800 {
+  background: #D97706;
+  border-color: #D97706;
+}
+.instrument-project button.bg-stone-800:hover { background: #B45309; }
+.instrument-project button:focus-visible,
+.instrument-project summary:focus-visible { outline: 2px solid #D97706; outline-offset: 2px; }
+.instrument-navigation {
+  min-height: 56px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #E5DFD5;
+  background: #EAE4DA;
+}
+.instrument-more summary { list-style: none; }
+.instrument-more summary::-webkit-details-marker { display: none; }
+.instrument-pane { flex: 1; min-height: 0; overflow: auto; padding: 20px; }
+.instrument-pane-split { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.instrument-master > .instrument-inputs {
+  flex: 0 0 auto;
+  margin: 0 0 12px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid #E5DFD5;
+  background: #EAE4DA;
+}
+.instrument-project .instrument-split { flex: 1; min-height: 0; height: auto; gap: 0; }
+.instrument-project .instrument-master { width: 272px; padding: 12px; background: #EAE4DA; }
+.instrument-project .instrument-detail { padding: 0; overflow: hidden; }
+.instrument-detail-title { padding: 12px 20px 6px; font-weight: 600; }
+.instrument-project .instrument-detail-tabs { margin: 0; padding: 6px 20px 12px; border-bottom: 1px solid #E5DFD5; }
+.instrument-project .instrument-detail-body { padding: 16px 24px; overflow-y: auto; }
+.instrument-project .instrument-kv { padding: 0 4px; margin-bottom: 8px; background: transparent; border: 0; }
+.instrument-project .instrument-actions { padding: 8px 0; background: transparent; border: 0; }
+.instrument-project .instrument-thread { gap: 18px; padding: 12px 0; }
+.instrument-project .instrument-bubble { font-size: 16px; padding: 12px 16px; }
+.instrument-project .instrument-bubble[data-mine="true"] { background: #3B82F6; }
+.instrument-project .instrument-bubble[data-mine="false"] { background: #E5DFD5; border-color: #E5DFD5; }
+.instrument-project .instrument-compose { margin: 0; padding: 12px 20px; background: #EAE4DA; }
+.instrument-project .instrument-compose button { border-radius: 8px; align-self: flex-end; min-height: 44px; }
+@media (max-width: 767px) {
+  .instrument-project .instrument-master { width: 100%; overflow-y: auto; }
+  .instrument-project .instrument-detail { flex: 1; }
+  .instrument-project .instrument-detail-body { padding: 12px; }
+  .instrument-project .instrument-detail-tabs { padding: 6px 12px; }
+  .instrument-project .instrument-compose { padding: 10px 12px; }
+  .instrument-navigation { padding: 8px; gap: 4px; }
+  .instrument-navigation > button { padding: 6px 10px; }
+}

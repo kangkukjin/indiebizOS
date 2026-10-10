@@ -30,10 +30,10 @@ export function linkify(text: string): React.ReactNode {
   return out;
 }
 
-export function Card({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
+export function Card({ children, onClick, className = '' }: { children: React.ReactNode; onClick?: () => void; className?: string }) {
   return (
     <div onClick={onClick}
-      className={`bg-white rounded-xl border border-stone-200 p-4 mb-3 ${onClick ? 'cursor-pointer hover:border-stone-400 transition' : ''}`}>
+      className={`${className} bg-white rounded-xl border border-stone-200 p-4 mb-3 ${onClick ? 'cursor-pointer hover:border-stone-400 transition' : ''}`}>
       {children}
     </div>
   );

@@ -26,6 +26,7 @@
  * 더 풍부한 데스크탑 전용 계기(도서·투자·라디오 등)는 ActionDesktop의
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.
  */
+import './generic/project-presentation.css';
 import { useState, useEffect, useRef, useCallback, useMemo, useContext, type ReactNode } from 'react';
 import { ui, useLocale } from '../i18n/ui';
 import { StreamPlayer, loadHls } from './StreamPlayer';
@@ -138,7 +139,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
 
   if (p.type === 'kv') {
     return (
-      <Card>
+      <Card className="instrument-kv">
         {p.title != null && <div className="text-xs font-semibold text-stone-400 uppercase mb-1">{String(p.title)}</div>}
         {((p.rows as { k: string; v: string }[]) || []).map((r, i) => (
           <KvRow key={i} k={tpl(r.k, data)} v={tpl(r.v, data)} />
@@ -259,7 +260,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
     let ibRe: RegExp | null = null;
     try { ibRe = ib?.match && ib?.action ? new RegExp(ib.match, 'i') : null; } catch { ibRe = null; }
     return (
-      <div className="flex flex-col gap-1.5 py-1">
+      <div className="instrument-thread flex flex-col gap-1.5 py-1">
         {arr.map((it, i) => {
           const mine = p.mine ? !!jget(it, p.mine as string) : false;
           const meta = p.meta ? tpl(p.meta, it) : '';
@@ -271,7 +272,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
           const rowKey = `${p.type}-ib-${i}`;
           return (
             <div key={i} className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
-              <div className={`max-w-[78%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+              <div data-mine={mine} className={`instrument-bubble max-w-[78%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
                 mine ? 'bg-stone-800 text-white rounded-br-sm' : 'bg-white border border-stone-200 text-stone-800 rounded-bl-sm'}`}>
                 {text}
               </div>
@@ -400,7 +401,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
           const rowKey2 = `${p.type}-${i}-2`;
           const rowKeyS = `${p.type}-${i}-sel`;
           return (
-            <Card key={i} onClick={p.item_click ? () => onDrill(p, it) : undefined}>
+            <Card className="instrument-actions" key={i} onClick={p.item_click ? () => onDrill(p, it) : undefined}>
               <div className="flex items-center gap-3">
                 {p.icon != null && <span className="text-lg">{String(p.icon)}</span>}
                 <div className="flex-1 min-w-0">
@@ -662,7 +663,8 @@ function ModeDialog({ mode, sourceMode, initial, error: firstError, onCancel, on
   );
 }
 
-function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: {
+function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone, projectStyle = false }: {
+  projectStyle?: boolean;
   preset?: ModePreset;  // 메뉴의 작은 창에서 이미 받은 입력과 실행 결과 — 그대로 세우고 다시 실행하지 않는다
   mode: AppMode;
   sourceMode: AppMode; // Execution identity is independent of display language.
@@ -944,7 +946,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
       // 두 줄 — 발신 채널(어디로 보내나)이 윗줄, 입력+전송이 아랫줄. 셋을 한 줄에 두면 채널 칩이
       // 바의 40%를 먹어 정작 쓸 자리가 좁다(실측 635px 바에서 채널 263 · 입력 291).
       // 원격 런처(.composebar chanrow/sendrow)와 같은 배치 — 좁은 패널에선 거기서 아예 넘쳤다.
-      <div className="sticky bottom-0 mt-2 px-1 py-2.5 bg-stone-50/95 backdrop-blur border-t border-stone-200 flex flex-col gap-1.5 shrink-0">
+      <div className="instrument-compose sticky bottom-0 mt-2 px-1 py-2.5 bg-stone-50/95 backdrop-blur border-t border-stone-200 flex flex-col gap-1.5 shrink-0">
         {/* 어디로 보내는지는 항상 보인다 — 후보가 하나뿐이어도 칩으로 표시(고를 게 없을 뿐 숨길 이유는 없음) */}
         {chOpts.length >= 2 ? (
           <select value={selKey} onChange={(e) => setComposeCh(e.target.value)}
@@ -959,10 +961,14 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
           </span>
         ) : null}
         <div className="flex gap-2">
+          {projectStyle ? <textarea value={composeText} rows={3} aria-label="메시지"
+            onChange={(e) => setComposeText(e.target.value)} placeholder={cmp.placeholder || '메시지 입력…'}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); if (!sending) composeSend(cmp); } }}
+            className="flex-1 min-w-0 resize-none px-3.5 py-3 rounded-lg border border-stone-200 bg-white text-base text-stone-900 focus:outline-none focus:border-amber-600" /> :
           <input value={composeText} onChange={(e) => setComposeText(e.target.value)}
             placeholder={cmp.placeholder || '메시지 입력…'}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !sending) composeSend(cmp); }}
-            className="flex-1 min-w-0 px-3.5 py-2 rounded-full border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400" />
+            onKeyDown={(e) => { if (e.key === 'Enter' && !sending && !e.nativeEvent.isComposing) composeSend(cmp); }}
+            className="flex-1 min-w-0 px-3.5 py-2 rounded-full border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400" />}
           <button disabled={sending || !composeText.trim()} onClick={() => composeSend(cmp)}
             className="px-4 py-2 rounded-full bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40 shrink-0">
             {sending ? '…' : (cmp.button || '전송')}
@@ -973,7 +979,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
   };
 
   const drillTabsEl = drillTabs && drillTabs.length > 0 ? (
-    <div className="flex gap-1.5 mb-3 shrink-0">
+    <div className="instrument-detail-tabs flex flex-wrap gap-1.5 mb-3 shrink-0">
       {drillTabs.map((t, i) => (
         <button key={i} onClick={() => { setTabIdx(i); setComposeText(''); setComposeCh(''); }}
           className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-sm border transition ${
@@ -990,15 +996,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
       data={drill.data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} vars={{ ...values, ...eventVars }} block={sourceMode} />
   ) : null;
 
-  return (
-    <div className={canvasUp ? 'px-3 pt-2' : `${isSplit || isCanvas ? 'max-w-5xl' : 'max-w-2xl'} mx-auto p-5`}>
-      {mode.note && !canvasUp && (
-        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-          {mode.note}
-        </div>
-      )}
-
-      {inputs.length > 0 && (
+  const inputsEl = inputs.length > 0 && (
         <div className="instrument-inputs flex gap-2 mb-2">
           {inputs.map((inp) =>
             inp.type === 'select' ? (
@@ -1026,7 +1024,17 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
           <button onClick={() => run()}
             className="px-4 py-2 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700">{mode.run_label || '조회'}</button>
         </div>
+      );
+
+  return (
+    <div className={projectStyle ? `instrument-pane ${isSplit ? 'instrument-pane-split' : ''}` : canvasUp ? 'px-3 pt-2' : `${isSplit || isCanvas ? 'max-w-5xl' : 'max-w-2xl'} mx-auto p-5`}>
+      {mode.note && !canvasUp && (
+        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+          {mode.note}
+        </div>
       )}
+
+      {(!projectStyle || !isSplit) && inputsEl}
 
       {inputs.filter((i) => i.chips?.length).map((inp) => (
         <div key={inp.key} className="flex flex-wrap gap-1.5 mb-3">
@@ -1101,17 +1109,19 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
 
       {/* === master-detail 반응형: PC=2분할(리스트+상세 동시) / 폰=드릴(선택→상세→뒤로) === */}
       {isSplit && !loading && data && (
-        <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-210px)]">
-          <div className={`md:w-72 md:shrink-0 md:overflow-y-auto md:pr-1 ${drill ? 'hidden md:block' : 'block'}`}>
+        <div className="instrument-split flex flex-col md:flex-row gap-3 md:h-[calc(100vh-210px)]">
+          <div className={`instrument-master md:w-72 md:shrink-0 md:overflow-y-auto md:pr-1 ${drill ? 'hidden md:block' : 'block'}`}>
+            {projectStyle && <><div className="mb-3 text-sm font-semibold text-stone-600">{mode.name}</div>{inputsEl}</>}
             <ViewRenderer view={mode.view || []} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} vars={{ ...values, ...eventVars }} block={sourceMode} />
           </div>
-          <div className={`flex-1 min-w-0 md:border-l md:border-stone-200 md:pl-4 ${drill ? 'flex flex-col min-h-0' : 'hidden md:flex md:flex-col'}`}>
+          <div className={`instrument-detail flex-1 min-w-0 md:border-l md:border-stone-200 md:pl-4 ${drill ? 'flex flex-col min-h-0' : 'hidden md:flex md:flex-col'}`}>
             {drill ? (
               <>
                 <button onClick={() => { setDrill(null); setComposeText(''); setComposeCh(''); }}
                   className="md:hidden self-start text-xs text-stone-500 hover:text-stone-800 mb-2">‹ 목록</button>
+                {projectStyle && <div className="instrument-detail-title">{String(drill.item.title || '')}</div>}
                 {drillTabsEl}
-                <div className="flex-1 min-h-0 md:overflow-y-auto">{drillViewEl}</div>
+                <div className="instrument-detail-body flex-1 min-h-0 md:overflow-y-auto">{drillViewEl}</div>
                 {composeBarEl(activeCompose)}
               </>
             ) : (
@@ -1155,7 +1165,9 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
   );
 }
 
-export function GenericInstrument({ instrument: rawInstrument, openNeighborId, onDeepLinkDone }: {
+export function GenericInstrument({ instrument: rawInstrument, openNeighborId, onDeepLinkDone, presentation, primaryModeCount }: {
+  presentation?: 'project';
+  primaryModeCount?: number;
   instrument: AppInstrument;
   openNeighborId?: number | null;
   onDeepLinkDone?: () => void;
@@ -1228,7 +1240,7 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
 
   return (
     <InstrumentMenuContext.Provider value={menu}>
-    <div className="h-full w-full overflow-auto bg-stone-50">
+    <div className={presentation === 'project' ? 'instrument-project h-full w-full flex flex-col overflow-hidden' : 'h-full w-full overflow-auto bg-stone-50'}>
       {folded && claims === 0 && (
         <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
           <button onClick={() => setMenuOpen((v) => !v)}
@@ -1240,14 +1252,24 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
         </div>
       )}
       {!folded && (instrument.modes || topButtons.length > 0) && (
-        <div className="flex flex-wrap items-center gap-1.5 max-w-5xl mx-auto px-5 pt-4">
-          {(instrument.modes || []).map((m, i) => (
+        <div className={presentation === 'project' ? 'instrument-navigation flex items-center gap-2 shrink-0' : 'flex flex-wrap items-center gap-1.5 max-w-5xl mx-auto px-5 pt-4'}>
+          {(instrument.modes || []).slice(0, primaryModeCount).map((m, i) => (
             <button key={i} onClick={() => (rawModes?.[i]?.inputs || []).some((inp) => inp.browse && inp.browse_kind === 'folder') ? go(i) : setModeIdx(i)}
               className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-sm border transition ${
                 i === modeIdx ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}>
               {m.name}
             </button>
           ))}
+          {primaryModeCount !== undefined && modes.length > primaryModeCount && <details className="instrument-more relative ml-auto">
+            <summary className="cursor-pointer px-3 py-1.5 rounded-lg text-sm text-stone-600 hover:bg-stone-200">
+              {modeIdx >= primaryModeCount ? mode.name : '도구'} ▾
+            </summary>
+            <div className="absolute right-0 top-full mt-2 z-30 w-52 p-1.5 rounded-xl border border-stone-200 bg-white shadow-lg">
+              {modes.slice(primaryModeCount).map((m, i) => <button key={i}
+                onClick={(e) => { setModeIdx(i + primaryModeCount); e.currentTarget.closest('details')?.removeAttribute('open'); }}
+                className="block w-full text-left px-3 py-2 rounded-lg text-sm text-stone-700 hover:bg-stone-100">{m.name}</button>)}
+            </div>
+          </details>}
           {topButtons.map((b, i) => (
             <button key={'t' + i} onClick={() => fireTop(b)} disabled={topBusy}
               className={`${i === 0 ? 'ml-auto' : ''} px-3.5 py-1.5 rounded-lg text-sm font-semibold border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition`}>
@@ -1261,7 +1283,7 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
         <ModeDialog mode={modes[asking.idx]} sourceMode={rawModes[asking.idx]} initial={asking.values} error={asking.error}
           onCancel={() => setAsking(null)} onDone={(values, data) => enter(asking.idx, { values, data })} />
       )}
-      <ModePane key={nonce} preset={preset} mode={mode} sourceMode={(rawInstrument.modes || [rawInstrument])[Math.min(modeIdx, modes.length - 1)]} openNeighborId={openNeighborId} onDeepLinkDone={onDeepLinkDone} />
+      <ModePane projectStyle={presentation === 'project'} key={nonce} preset={preset} mode={mode} sourceMode={(rawInstrument.modes || [rawInstrument])[Math.min(modeIdx, modes.length - 1)]} openNeighborId={openNeighborId} onDeepLinkDone={onDeepLinkDone} />
     </div>
     </InstrumentMenuContext.Provider>
   );

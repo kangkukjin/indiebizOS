@@ -39,6 +39,8 @@ export interface Project {
   id: string;
   name: string;
   type: 'project' | 'folder';
+  project_kind?: 'general' | 'research';
+  project_uid?: string;
   path?: string;
   created_at: string;
   icon_position: [number, number];

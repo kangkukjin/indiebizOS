@@ -9,7 +9,7 @@ interface NewProjectDialogProps {
   show: boolean;
   name: string;
   onNameChange: (name: string) => void;
-  onSubmit: (templateName: string) => void;
+  onSubmit: (templateName: string, projectKind: 'general' | 'research') => void;
   onClose: () => void;
 }
 
@@ -20,6 +20,7 @@ export function NewProjectDialog({
   onSubmit,
   onClose,
 }: NewProjectDialogProps) {
+  const [projectKind, setProjectKind] = useState<'general' | 'research'>('general');
   const [templates, setTemplates] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState('기본');
   const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +48,7 @@ export function NewProjectDialog({
   if (!show) return null;
 
   const handleSubmit = () => {
-    onSubmit(selectedTemplate);
+    onSubmit(selectedTemplate, projectKind);
   };
 
   return (
@@ -55,6 +56,15 @@ export function NewProjectDialog({
       <div className="bg-white rounded-xl p-6 w-96 shadow-2xl">
         <h2 className="text-xl font-bold mb-4 text-gray-800">새 프로젝트</h2>
 
+        <label className="block text-sm text-gray-600 mb-4">
+          프로젝트 유형
+          <select aria-label="프로젝트 유형" value={projectKind} onChange={e => setProjectKind(e.target.value as 'general' | 'research')}
+            className="w-full mt-1 p-2 border rounded-lg text-gray-800">
+            <option value="general">일반 프로젝트</option>
+            <option value="research">연구 프로젝트</option>
+          </select>
+          {projectKind === 'research' && <p className="mt-2 text-xs">주제별로 대화하며 조사한 자료를 프로젝트 자료실에 계속 모읍니다.</p>}
+        </label>
         {/* 프로젝트 이름 입력 */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-600 mb-1">

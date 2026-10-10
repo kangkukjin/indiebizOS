@@ -68,6 +68,9 @@ def project_exists(params: dict):
 def project_op(params: dict) -> Any:
     op = (params.get("op") or "list").strip()
     pm = _pm()
+    if op.startswith("thread_") or op == "research_view":
+        from research_threads import project_operation
+        return project_operation(params)
     if op == "list":
         rows = [p for p in pm.list_projects() if not p.get("in_trash") and p.get("type", "project") != "folder"]
         return _items(rows)
@@ -79,7 +82,7 @@ def project_op(params: dict) -> Any:
             return {"success": False, "error": "name 이 필요합니다"}
         try:
             row = pm.create_project(name, parent_folder=params.get("parent_folder") or None,
-                                    template_name=params.get("template") or "기본")
+                                    template_name=params.get("template") or "기본", project_kind=params.get("project_kind") or "general")
         except (ValueError, FileExistsError) as exc:
             return {"success": False, "error": str(exc)}
         try:

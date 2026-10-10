@@ -115,6 +115,7 @@ async def get_messages(project_id: str, agent_id: str, limit: int = 50, offset: 
                 FROM messages
                 WHERE (from_agent_id = ? OR to_agent_id = ?)
                   AND (COALESCE(contact_type, 'gui') = 'rehearsal') = ?
+                  AND COALESCE(contact_type, 'gui') != 'research'
                 ORDER BY message_time DESC
                 LIMIT ? OFFSET ?
             """, (num_id, num_id, int(rehearsal), limit, offset))
@@ -167,7 +168,7 @@ async def get_conversation_partners(project_id: str, agent_id: int):
                     message_time
                     FROM messages
                     WHERE (from_agent_id = ? OR to_agent_id = ?)
-                      AND COALESCE(contact_type, 'gui') != 'rehearsal'
+                      AND COALESCE(contact_type, 'gui') NOT IN ('rehearsal', 'research')
                 ) m ON a.id = m.partner_id
                 GROUP BY a.id, a.name, a.type
                 ORDER BY last_message_time DESC
@@ -242,7 +243,7 @@ async def get_messages_between(project_id: str, agent1_id: int, agent2_id: int, 
                 FROM messages
                 WHERE ((from_agent_id = ? AND to_agent_id = ?)
                    OR (from_agent_id = ? AND to_agent_id = ?))
-                  AND COALESCE(contact_type, 'gui') != 'rehearsal'
+                  AND COALESCE(contact_type, 'gui') NOT IN ('rehearsal', 'research')
                 ORDER BY message_time DESC
                 LIMIT ? OFFSET ?
             """, (agent1_id, agent2_id, agent2_id, agent1_id, limit, offset))

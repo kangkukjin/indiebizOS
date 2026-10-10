@@ -13,6 +13,7 @@ class ProjectCreate(BaseModel):
     icon_position: Optional[tuple] = None
     parent_folder: Optional[str] = None
     template_name: str = "기본"
+    project_kind: str = "general"
 
 
 class FolderCreate(BaseModel):

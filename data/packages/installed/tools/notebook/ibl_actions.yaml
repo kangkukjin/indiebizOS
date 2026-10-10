@@ -5,12 +5,14 @@ nodes:
   self:
     actions:
       notebook:
+        research_capture: false
+        research_local: true
         returns: items
         side_effect: true    # create/add/remove/delete 가 노트북 원장을 쓴다
         fixture: '[self:notebook]{op: "list"}'
         runs_on: pc_only     # 임베딩 모델·sqlite-vec 는 데스크톱만. 폰은 [others:ask]로 부탁.
         description: '근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진 문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.'
-        target_description: 'op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 또는 text 붙여넣기, title 옵션 — path=파일 경로[상대 경로=프로젝트 기준, 없으면 저장소 루트 폴백]·웹 URL·유튜브 URL[자막을 타임스탬프 loc으로 색인, 자막 없으면 정직 거부]. 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12, source 옵션=후보 검색 전 소스 좁히기) — 답+citations[{n,source,loc,quote}]+items; 문서 단위 답변은 실제로 읽은 소스·loc를 검증하고 quote를 원문에서 추출하며, 무효 인용 또는 인용 부재면 success:false로 답을 보류한다. 노트북 포식 기억 문서가 있으면 답 생성의 지도로 함께 읽힌다 / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
+        target_description: '연구 자료실은 name 대신 project_ref 사용. add+version_ref는 보존 자료의 추출·색인 재시도. sources/search/read/versions/add/remove 지원, read는 version_ref로 당시 원문 조회, remove는 검색 제외(excluded:false로 복원). op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 또는 text 붙여넣기, title 옵션 — path=파일 경로[상대 경로=프로젝트 기준, 없으면 저장소 루트 폴백]·웹 URL·유튜브 URL[자막을 타임스탬프 loc으로 색인, 자막 없으면 정직 거부]. 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12, source 옵션=후보 검색 전 소스 좁히기) — 답+citations[{n,source,loc,quote}]+items; 문서 단위 답변은 실제로 읽은 소스·loc를 검증하고 quote를 원문에서 추출하며, 무효 인용 또는 인용 부재면 success:false로 답을 보류한다. 노트북 포식 기억 문서가 있으면 답 생성의 지도로 함께 읽힌다 / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
         target_key: op
         group: notebook
         router: handler
@@ -20,6 +22,13 @@ nodes:
           top_k: [limit]
           path: [url, file]
         params:
+          project_ref: string
+          source_ref: string
+          version_ref: string
+          extraction_revision: integer
+          cursor: string
+          excluded: boolean
+          include_excluded: boolean
           force: boolean   # card — 기존 카드도 다시 쓴다
           chunks: boolean  # ask — 문서 단위 경로 대신 옛 발췌 검색 경로 강제
         ops:
@@ -31,6 +40,8 @@ nodes:
             delete: effect
             card_save: effect
           side_effect:
+            read: false
+            versions: false
             ask: false
             digest: false
             map: false
@@ -45,6 +56,8 @@ nodes:
           fixture:
             list: '[self:notebook]{op: "list"}'
           exempt:
+            read: 연구 project_ref와 version_ref 필요
+            versions: 연구 project_ref와 source_ref 필요
             ask: '노트북 name+질문 필요 — 고정 fixture 부적합'
             digest: '노트북 name(+source) 필요 · 소스 전체를 읽는 LLM n회 — 고정 fixture 부적합'
             card: '노트북 name 필요 · 소스마다 LLM 1회 — 고정 fixture 부적합'
@@ -58,6 +71,8 @@ nodes:
             remove: 'source_id 필요 + 부작용'
             delete: '노트북을 지운다 — 부작용'
           values:
+            read: 연구 자료의 고정 원문 읽기 (project_ref, version_ref, cursor)
+            versions: 연구 자료 판본 목록 (project_ref, source_ref)
             create: 노트북 생성 (name + note 목적) — 등록되면 시스템 AI 에 포식 기억 조사가 자동 위임된다(add 도 같음, 10분 디바운스)
             add: 소스 넣기 (path=파일·웹 URL·유튜브 URL[자막] / text 붙여넣기, 재add=재색인)
             ask: 근거 고정 질문 (기본) — 지도로 문서를 골라 통째로 읽고 답, 인용 [#소스 자리]

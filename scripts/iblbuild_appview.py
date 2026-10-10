@@ -283,7 +283,7 @@ def _block_local_keys(blk: dict) -> set:
 
     def from_compose(c):
         if isinstance(c, dict) and c.get("action"):
-            keys.add("text")
+            keys.update(("text", "request_id"))
             if isinstance(c.get("channels"), dict):  # 채널 선택 → action 의 $channel_type/$to 주입
                 keys.update(("channel_type", "to"))
 
@@ -690,7 +690,7 @@ def validate_standalone_instruments(data: dict) -> list[str]:
         for n, nd in nodes.items() if isinstance(nd, dict)
         for a in (nd.get("actions") or {})
     }
-    for fp in sorted(glob.glob(os.path.join(inst_dir, "*.yaml"))):
+    for fp in sorted(glob.glob(os.path.join(inst_dir, "**", "*.yaml"), recursive=True)):
         name = os.path.basename(fp)
         try:
             with open(fp, "r", encoding="utf-8") as f:
@@ -918,7 +918,7 @@ def validate_app_template_params(data: dict, root: Path) -> list[str]:
                     templates.append((qualified, tmpl))
     inst_dir = os.path.join(os.path.dirname(__file__), "..", "data", "instruments")
     if os.path.isdir(inst_dir):
-        for fp in sorted(glob.glob(os.path.join(inst_dir, "*.yaml"))):
+        for fp in sorted(glob.glob(os.path.join(inst_dir, "**", "*.yaml"), recursive=True)):
             try:
                 with open(fp, "r", encoding="utf-8") as f:
                     mani = yaml.safe_load(f) or {}
@@ -1003,7 +1003,7 @@ def _edition2_blocks(data: dict) -> list[tuple[str, dict]]:
                 if _block_edition(blk, inherited)[0] == 2:
                     out.append((label, blk))
     inst_dir = os.path.join(os.path.dirname(__file__), "..", "data", "instruments")
-    for fp in sorted(glob.glob(os.path.join(inst_dir, "*.yaml"))):
+    for fp in sorted(glob.glob(os.path.join(inst_dir, "**", "*.yaml"), recursive=True)):
         try:
             with open(fp, "r", encoding="utf-8") as f:
                 m = yaml.safe_load(f) or {}

@@ -1292,20 +1292,20 @@
   "self:notebook": {
    "fields": {
     "description": "b001dbd476c7",
-    "target_description": "442909eed6f7",
+    "target_description": "bfc688f47807",
     "implementation": "8a586911c997",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "2b9d8c564e20",
+    "params": "8a30601f7128",
     "aliases": "6a8150287dd5",
-    "ops": "3457f5b5d5d8",
+    "ops": "8c36ac2c2d1f",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "a38f142fa92b"
    },
-   "reviewed": "2026-09-29",
-   "examples": 0
+   "reviewed": "2026-10-10",
+   "examples": 16
   },
   "self:notify_user": {
    "fields": {
@@ -1398,18 +1398,18 @@
   "self:project": {
    "fields": {
     "description": "fa88e1ef5fae",
-    "target_description": "230eae0b769b",
+    "target_description": "f271138d2dac",
     "implementation": "e209c3b0dbe9",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "c9f6cd2a0dbe",
+    "params": "9206180f0a8d",
     "aliases": "a6dbc1fbf73f",
-    "ops": "5c4baf16d1b4",
+    "ops": "9565c6a93d27",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-10-05",
-   "examples": 0
+   "reviewed": "2026-10-10",
+   "examples": 8
   },
   "self:read": {
    "fields": {

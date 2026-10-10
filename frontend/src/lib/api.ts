@@ -97,12 +97,13 @@ class APIClientBase {
     return data.projects;
   }
 
-  async createProject(name: string, templateName = '기본', parentFolder?: string) {
+  async createProject(name: string, templateName = '기본', parentFolder?: string, projectKind: 'general' | 'research' = 'general') {
     return this.request<Project>('/projects', {
       method: 'POST',
       body: JSON.stringify({
         name,
         template_name: templateName,
+        project_kind: projectKind,
         parent_folder: parentFolder,
       }),
     });

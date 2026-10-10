@@ -141,6 +141,11 @@ def wire_local_subsystems(profile: str = None) -> dict:
                                       "media_op": media_ops.media_op})
         task_receipts.register(media_ops.TRANSCODE_KIND, media_ops.task_status)
         task_receipts.register(media_ops.HLS_KIND, media_ops.task_status)
+        from research_threads import install as install_research
+        from research_runner import stream, summarize, install_search
+        from research_library import ResearchLibrary
+        install_search(lambda store, query: ResearchLibrary(store).search(query))
+        install_research(stream, summarize)
         results["noun_capabilities"] = True
     except Exception as e:
         print(f"{tag} 명사 생애주기 능력 등록 실패: {e}")

@@ -69,7 +69,8 @@
       "document",
       "newspaper",
       "report",
-      "spreadsheet"
+      "spreadsheet",
+      "templates/research"
     ],
     "scripts": [
       "Cloudflare사용량.py",

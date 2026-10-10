@@ -421,7 +421,7 @@ class ConversationDB:
             cursor.execute("""
                 SELECT id, from_agent_id, to_agent_id, content, message_time
                 FROM messages
-                WHERE from_agent_id = ? AND to_agent_id = ? AND delivered = 0
+                WHERE from_agent_id = ? AND to_agent_id = ? AND delivered = 0 AND COALESCE(contact_type, 'gui') != 'research'
                 ORDER BY message_time ASC
             """, (agent_id, user_id))
             return [{
@@ -454,7 +454,7 @@ class ConversationDB:
                 SELECT id, from_agent_id, to_agent_id, content, message_time
                 FROM messages
                 WHERE (from_agent_id = ? OR to_agent_id = ?)
-                  AND COALESCE(contact_type, 'gui') != 'rehearsal'
+                  AND COALESCE(contact_type, 'gui') NOT IN ('rehearsal', 'research')
                 ORDER BY message_time DESC
                 LIMIT ? OFFSET ?
             """, (agent_id, agent_id, limit, offset))
@@ -519,6 +519,7 @@ class ConversationDB:
                 WHERE ((from_agent_id = ? AND to_agent_id = ?)
                    OR (from_agent_id = ? AND to_agent_id = ?))
                   AND (COALESCE(contact_type, 'gui') = 'rehearsal') = ?
+                  AND COALESCE(contact_type, 'gui') != 'research'
                 ORDER BY message_time DESC
                 LIMIT ?
             """, (agent_id, user_id, user_id, agent_id, int(rehearsal), limit))

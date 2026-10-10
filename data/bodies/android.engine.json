@@ -48,6 +48,7 @@
     "base/repair_runtime",
     "base/repair_test_results",
     "base/repeat_guard",
+    "base/research_context",
     "base/resident_store",
     "base/restart_protocol",
     "base/result_read_contract",
@@ -137,6 +138,7 @@
     "cognition/repair_policy",
     "cognition/repair_readiness",
     "cognition/repair_resume",
+    "cognition/research_runner",
     "cognition/routing_system",
     "cognition/supervisor_content",
     "cognition/supervisor_handoff",
@@ -193,6 +195,7 @@
     "datastore/knowledge_graph",
     "datastore/multi_chat_db",
     "datastore/node_registry",
+    "datastore/notebook_store",
     "datastore/notification_manager",
     "datastore/notify_dispatch",
     "datastore/office_store",
@@ -214,6 +217,8 @@
     "datastore/red_watchdog",
     "datastore/repair_context",
     "datastore/repair_continuation",
+    "datastore/research_lifecycle",
+    "datastore/research_store",
     "datastore/schema_migrations",
     "datastore/service_status",
     "datastore/store_waste_audit",
@@ -370,6 +375,10 @@
     "services/record_adapters",
     "services/record_dispatch",
     "services/report_html",
+    "services/research_capture",
+    "services/research_library",
+    "services/research_threads",
+    "services/research_view",
     "services/resident_pcs",
     "services/resource_links",
     "services/scheduler",
@@ -565,8 +574,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 490,
-    "engine": 464,
+    "total": 499,
+    "engine": 473,
     "blocklist": 26
   }
 }

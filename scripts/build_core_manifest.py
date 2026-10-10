@@ -174,9 +174,9 @@ def build_manifest() -> dict:
     tools = _core_package_names("tools")
     extensions = _core_package_names("extensions")
 
-    # 앱(계기) 매니페스트: data/instruments/*.yaml 중 추적 & opt-out 안 한 것의 basename
+    # 앱과 프로젝트 화면 템플릿: 하위 폴더를 보존해야 설치본 갱신이 같은 파일을 찾는다.
     instruments = sorted(
-        Path(f).stem
+        Path(f).relative_to('data/instruments').with_suffix('').as_posix()
         for f in _git_tracked("data/instruments")
         if f.endswith(".yaml") and not _yaml_opted_out(f)
     )

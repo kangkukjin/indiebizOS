@@ -1015,8 +1015,24 @@ def _excerpt_items(excerpts: list) -> list:
 
 # ── 디스패처 (--check가 이 dict 키로 src.ops.values와 정확 비교 — 키 집합 주의) ──
 
+def _op_research(tool_input, context):
+    from research_threads import notebook_operation
+    if not tool_input.get("project_ref"):
+        return _json({"success": False, "error": "연구 자료실의 project_ref가 필요합니다"})
+    return _json(notebook_operation({
+        "op": tool_input.get("op", "sources"), "project_ref": tool_input.get("project_ref"),
+        "name": tool_input.get("name"), "path": tool_input.get("path"), "text": tool_input.get("text"),
+        "title": tool_input.get("title"), "query": tool_input.get("query"), "top_k": tool_input.get("top_k"),
+        "source_ref": tool_input.get("source_ref"), "version_ref": tool_input.get("version_ref"),
+        "cursor": tool_input.get("cursor"), "extraction_revision": tool_input.get("extraction_revision"),
+        "excluded": tool_input.get("excluded", True), "include_excluded": tool_input.get("include_excluded", False),
+    }))
+
+
 _OP_DISPATCHERS = {
     "notebook_op": {
+        "read": _op_research,
+        "versions": _op_research,
         "create": _op_create,
         "add": _op_add,
         "ask": _op_ask,
@@ -1039,6 +1055,8 @@ _OP_DEFAULTS = {"notebook_op": "ask"}
 def execute(tool_input: dict, context) -> str:
     tool_name = context.tool_name
     try:
+        if tool_input.get("project_ref"):
+            return _op_research(tool_input, context)
         if tool_name in _OP_DISPATCHERS:
             op = (tool_input.get("op") or "").strip() or _OP_DEFAULTS.get(tool_name, "")
             fn = _OP_DISPATCHERS[tool_name].get(op)

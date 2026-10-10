@@ -5,6 +5,7 @@ IndieBiz OS Core
 
 import json
 import shutil
+from research_lifecycle import lifecycle
 from pathlib import Path
 from datetime import datetime
 
@@ -49,8 +50,12 @@ class ProjectManager:
         """모든 프로젝트 목록 반환"""
         return self._load_projects_list()
 
-    def create_project(self, name: str, icon_position: tuple = None, parent_folder: str = None, template_name: str = "기본") -> dict:
+    def create_project(self, name: str, icon_position: tuple = None, parent_folder: str = None, template_name: str = "기본", project_kind: str = "general") -> dict:
         """새 프로젝트 생성"""
+        if project_kind not in {"general", "research"}:
+            raise ValueError("프로젝트 유형은 general 또는 research입니다")
+        if not name or Path(name).name != name or name in {".", ".."}:
+            raise ValueError("프로젝트 이름에 경로를 사용할 수 없습니다")
         projects = self._load_projects_list()
         for p in projects:
             if p["name"] == name and p.get("parent_folder") == parent_folder:
@@ -75,6 +80,15 @@ class ProjectManager:
             "parent_folder": parent_folder,
             "last_opened": None
         }
+
+        if project_kind == "research":
+            from research_store import ResearchStore, identifier
+            project_info.update(project_kind="research", project_uid=identifier())
+            try:
+                ResearchStore(project_path, project_info["project_uid"])
+            except BaseException:
+                shutil.rmtree(project_path)
+                raise
 
         projects.append(project_info)
         self._save_projects_list(projects)
@@ -153,6 +167,7 @@ agents:
 """
         (project_path / "agents.yaml").write_text(agents_content, encoding='utf-8')
 
+    @lifecycle
     def delete_project(self, name: str, move_to_trash: bool = True):
         """프로젝트/폴더 삭제"""
         projects = self._load_projects_list()
@@ -347,6 +362,7 @@ agents:
         projects = self._load_projects_list()
         return [item for item in projects if item.get("parent_folder") == folder_id]
 
+    @lifecycle
     def move_to_trash(self, item_id: str) -> dict:
         """프로젝트 또는 폴더를 휴지통으로 이동"""
         projects = self._load_projects_list()
@@ -363,6 +379,7 @@ agents:
 
         raise ValueError(f"'{item_id}'을(를) 찾을 수 없습니다.")
 
+    @lifecycle
     def restore_from_trash(self, item_id: str) -> dict:
         """휴지통에서 프로젝트 또는 폴더 복원"""
         projects = self._load_projects_list()
@@ -415,6 +432,7 @@ agents:
                 pass
         return None
 
+    @lifecycle
     def empty_trash(self):
         """휴지통 비우기 (영구 삭제).
         폴더를 휴지통에 넣으면 그 안의 자식 프로젝트는 in_trash 플래그가 안 켜진 채
@@ -456,12 +474,15 @@ agents:
         self._save_projects_list(projects)
         print(f"[ProjectManager] 휴지통 비우기 완료: 항목 {len(remove_ids)}개, 폴더 삭제 {deleted} / 실패 {failed} / 이미없음 {missing}")
 
+    @lifecycle
     def rename_item(self, item_id: str, new_name: str) -> dict:
         """프로젝트 또는 폴더 이름 변경"""
         if not new_name or not new_name.strip():
             raise ValueError("새 이름을 입력해주세요.")
 
         new_name = new_name.strip()
+        if Path(new_name).name != new_name or new_name in {".", ".."}:
+            raise ValueError("프로젝트 이름에 경로를 사용할 수 없습니다")
         projects = self._load_projects_list()
 
         original = None
@@ -518,6 +539,7 @@ agents:
 
         return original
 
+    @lifecycle
     def copy_item(self, item_id: str, new_name: str = None, parent_folder: str = None) -> dict:
         """프로젝트 또는 폴더 복사"""
         projects = self._load_projects_list()
@@ -543,6 +565,9 @@ agents:
             if p["name"] == new_name and p.get("parent_folder") == parent_folder:
                 raise ValueError(f"같은 위치에 '{new_name}'이(가) 이미 존재합니다.")
 
+        if Path(new_name).name != new_name or new_name in {".", ".."}:
+            raise ValueError("프로젝트 이름에 경로를 사용할 수 없습니다")
+
         # 아이콘 위치 오프셋 (복사본이 원본과 겹치지 않도록)
         original_pos = original.get("icon_position", (100, 100))
         offset_pos = (original_pos[0] + 30, original_pos[1] + 30)
@@ -560,7 +585,14 @@ agents:
             if dst_path.exists():
                 raise ValueError(f"프로젝트 '{new_name}'이(가) 이미 존재합니다.")
 
-            shutil.copytree(src_path, dst_path)
+            research_uid = None
+            if original.get('project_kind') == 'research':
+                from research_store import identifier
+                from research_lifecycle import copy_project
+                research_uid = identifier()
+                copy_project(src_path, dst_path, research_uid)
+            else:
+                shutil.copytree(src_path, dst_path)
 
             copied = {
                 "id": new_name,
@@ -573,6 +605,8 @@ agents:
                 "last_opened": None
             }
 
+            if research_uid:
+                copied.update(project_kind='research', project_uid=research_uid)
             projects = self._load_projects_list()
             projects.append(copied)
             self._save_projects_list(projects)

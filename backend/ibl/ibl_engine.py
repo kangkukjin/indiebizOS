@@ -902,6 +902,9 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
             if k not in params:
                 params[k] = v
 
+    from research_context import before as research_before
+    research_before(action_config, params)
+
     # === 다중 노드 분산 라우팅 ===
     # 능력(runs_on)으로 로컬/원격을 판정하고, 원격이면 "지금 연결된" 노드 중 대상을 고른다
     # (명시 @주소 > 자기-가능 > 후보1대 > 주(主)기기 > 모호하면 되물음). 폰 수를 고정하지 않음 —
@@ -913,7 +916,8 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     if _dist is not None:
         _census_log(node, action, tool_input.get("target_node"), agent_id,
                     project_path, _dist)  # Phase 0 인구조사(관찰 전용)
-        return _attach_param_warning(_dist, _param_warning)
+        from research_context import observe
+        return _attach_param_warning(observe(action_config, params, _dist), _param_warning)
 
     # 라우터별 실행 + 개별 액션 기록 (X-Ray용)
     import time as _time
@@ -953,6 +957,9 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
             result = _run_router_safely(_route_driver, driver_type, node, action, params, project_path, driver_node=dn)
         else:
             return {"error": f"알 수 없는 라우터: {router}"}
+
+        from research_context import observe
+        result = observe(action_config, params, result)
 
         # 모든 라우터가 공유하는 공개 결과 계약. 파이프 다음 step이 읽기 전에 막아
         # NaN/Infinity가 계산·분기·저장으로 전염되지 않게 한다.

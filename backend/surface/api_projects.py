@@ -52,7 +52,8 @@ async def create_project(project: ProjectCreate):
             name=project.name,
             icon_position=project.icon_position,
             parent_folder=project.parent_folder,
-            template_name=project.template_name
+            template_name=project.template_name,
+            project_kind=project.project_kind
         )
         # 시스템 문서 업데이트
         all_projects = project_manager.list_projects()

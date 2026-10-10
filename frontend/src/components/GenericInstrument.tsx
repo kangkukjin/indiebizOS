@@ -585,7 +585,7 @@ function SelectInput({ inp, values, onChange, block }: { inp: AppInput; values: 
 }
 
 type DrillTab = { name: string; view: AppViewPrim[]; compose?: AppCompose };
-type DrillState = { data: Json; action: ActionReq; item: Json; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] };  // action: 재조회용 실행 요청(구형 문자열 또는 판본 2 봉투)
+type DrillState = { poll?: { while: string; interval_ms?: number }; data: Json; action: ActionReq; item: Json; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] };  // action: 재조회용 실행 요청(구형 문자열 또는 판본 2 봉투)
 
 const isLanding = (m: AppMode) => !!m.auto_run && !(m.inputs || []).length && (m.view || []).some((v) => v.type === 'engine');
 type ModePreset = { values: Record<string, string>; data: Json };
@@ -692,6 +692,8 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
   const [composeText, setComposeText] = useState('');
   const [composeCh, setComposeCh] = useState('');  // 선택된 발신 채널 키 (빈값=첫 후보)
   const [sending, setSending] = useState(false);
+  const composeRequest = useRef({ key: '', id: '' });
+  const requestVersion = useRef(0);
   const valuesRef = useRef(values);
   valuesRef.current = values;
   // 뷰-이벤트가 남긴 $변수(keep 규약) — 타입 보존(좌표 Number·selection Record). 입력값(values)과 합쳐 요청에 실린다.
@@ -709,9 +711,11 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
     if (!sourceMode.action) return;
     const vals = override || valuesRef.current;
     for (const inp of sourceMode.inputs || []) if (inp.required && !vals[inp.key]) return;
+    const version = ++requestVersion.current;
     setLoading(true); setError(null); setDrill(null); setCatFilter(null);
     try {
-      setData(await runIBL(actionRequest(sourceMode, sourceMode.action, { ...vals, ...eventVarsRef.current })));
+      const next = await runIBL(actionRequest(sourceMode, sourceMode.action, { ...vals, ...eventVarsRef.current }));
+      if (version === requestVersion.current) setData(next);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -721,26 +725,29 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
 
   // 모드 진입 시 초기화 + auto_run
   useEffect(() => {
+    ++requestVersion.current;
     const v = { ...initVals(), ...(preset?.values || {}) };
     setValues(v); setEventVars({}); setData(preset?.data ?? null); setDrill(null); setError(null); setComposeText(''); setComposeCh(''); setCatFilter(null);
     if (sourceMode.auto_run && !preset) run(v);
   }, [sourceMode, initVals, run, preset]);
 
   const onDrill = useCallback(async (p: AppViewPrim, item: Json) => {
-    const dc = p.item_click as { action: string; recursive?: boolean; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] } | undefined;
+    const dc = p.item_click as { action: string; poll?: { while: string; interval_ms?: number }; recursive?: boolean; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] } | undefined;
     if (!dc) return;
+    const version = ++requestVersion.current;
     setLoading(true); setError(null); setComposeText(''); setComposeCh(''); setTabIdx(0);
     try {
       // 드릴 액션의 $입력(현재 다이얼 값) + {필드}(클릭 행) 둘 다 치환 — realty 추이처럼
       // "현재 지역·유형 + 클릭한 단지"를 합쳐 묻는 드릴을 지원.
       const code = actionRequest(sourceMode, dc.action, allVars(), item);
       const d = await runIBL(code);
+      if (version !== requestVersion.current) return;
       if (d && typeof d === 'object') (d as Json)._item = item; // 드릴 뷰에서 클릭 행 참조용
       // recursive: 지금 보고 있는 드릴 화면(뷰 또는 탭)을 그대로 다시 쓴다 — 깊이를 모르는
       // 트리(폴더 등)를 한 벌 선언으로 무제한 탐색. 선언에 view/tabs 가 있으면 그것이 이긴다.
       const inh = dc.recursive ? drillRef.current : null;
       setDrill({
-        data: d, action: code, item, compose: dc.compose,
+        data: d, action: code, item, compose: dc.compose, poll: dc.poll,
         view: dc.view ?? inh?.view,
         tabs: dc.tabs ?? inh?.tabs,
       });
@@ -772,7 +779,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
     if (drill) {
       const nd = await runIBL(drill.action);
       if (nd && typeof nd === 'object') (nd as Json)._item = drill.item;
-      setDrill((s) => (s ? { ...s, data: nd } : s));
+      setDrill((s) => (s?.action === drill.action ? { ...s, data: nd } : s));
       // ★마스터 목록도 함께 갱신 — 드릴 폼 저장이 바꾼 값(비즈니스 레벨 등)이 왼쪽 목록에
       //   바로 반영되게. run()은 setDrill(null)로 드릴을 닫아버리므로 데이터만 조용히 다시 당긴다.
       if (mode.action) {
@@ -786,6 +793,27 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
       run();
     }
   }, [drill, run, mode, sourceMode]);
+
+  const pollEnabled = drill?.poll ? !!jget(drill.data, drill.poll.while) : false;
+  // 선언형 비동기 상세 조회: 이전 화면의 응답은 버리고, 작성 중인 입력은 유지한다.
+  useEffect(() => {
+    const target = drillRef.current;
+    if (!target?.poll || !pollEnabled || target.tabs?.[tabIdx]?.view.some(v => v.type === 'form')) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const nd = await runIBL(target.action);
+        if (stopped || drillRef.current?.action !== target.action) return;
+        if (nd.error || nd.success === false) throw new Error(String(nd.error || nd.message));
+        nd._item = target.item;
+        setDrill(s => s?.action === target.action ? { ...s, data: nd } : s);
+      } catch (e) { if (!stopped) setError(String(e)); }
+      if (!stopped) timer = setTimeout(poll, Math.max(1000, target.poll?.interval_ms || 2000));
+    };
+    timer = setTimeout(poll, Math.max(1000, target.poll.interval_ms || 2000));
+    return () => { stopped = true; clearTimeout(timer); };
+  }, [drill?.action, drill?.poll, pollEnabled, tabIdx]);
 
   // 액션 실행기: $field 치환 + {path}(rowContext, 기본 드릴 데이터) 치환 → 실행 → 새로고침
   const dispatch = useCallback<Dispatch>(async (template, fieldValues, rowContext, opts) => {
@@ -818,15 +846,18 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
   // 작성바 전송 — $text + {path}(드릴 데이터) 치환 → 실행 → 새로고침
   const composeSend = useCallback(async (cmp: AppCompose) => {
     const text = composeText.trim();
-    if (!text) return;
+    if (!text || sending) return;
+    const destination = drill?.action;
+    const key = JSON.stringify([destination, text]);
+    if (composeRequest.current.key !== key) composeRequest.current = { key, id: crypto.randomUUID() };
     setSending(true);
     const opts = composeChannelOptions(cmp, drill?.data);
     const sel = opts.find((o) => o.key === composeCh) || opts[0];
     const extra: Record<string, string> = sel ? { channel_type: sel.channel_type, to: sel.to } : {};
-    const ok = await dispatch(cmp.action, { text, ...extra });
-    if (ok) setComposeText('');
+    const ok = await dispatch(cmp.action, { text, request_id: composeRequest.current.id, ...extra });
+    if (ok && drillRef.current?.action === destination) { setComposeText(''); composeRequest.current = { key: '', id: '' }; }
     setSending(false);
-  }, [composeText, composeCh, drill, dispatch]);
+  }, [composeText, composeCh, drill, dispatch, sending]);
 
   const onRowAction = useCallback(async (action: string, item: Json, rowKey: string, refresh?: boolean) => {
     setBusyRow(rowKey);
@@ -945,7 +976,7 @@ function ModePane({ mode, sourceMode, preset, openNeighborId, onDeepLinkDone }: 
     <div className="flex gap-1.5 mb-3 shrink-0">
       {drillTabs.map((t, i) => (
         <button key={i} onClick={() => { setTabIdx(i); setComposeText(''); setComposeCh(''); }}
-          className={`px-3.5 py-1.5 rounded-lg text-sm border transition ${
+          className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-sm border transition ${
             i === tabIdx ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}>
           {t.name}
         </button>
@@ -1209,10 +1240,10 @@ export function GenericInstrument({ instrument: rawInstrument, openNeighborId, o
         </div>
       )}
       {!folded && (instrument.modes || topButtons.length > 0) && (
-        <div className="flex items-center gap-1.5 max-w-2xl mx-auto px-5 pt-4">
+        <div className="flex flex-wrap items-center gap-1.5 max-w-5xl mx-auto px-5 pt-4">
           {(instrument.modes || []).map((m, i) => (
             <button key={i} onClick={() => (rawModes?.[i]?.inputs || []).some((inp) => inp.browse && inp.browse_kind === 'folder') ? go(i) : setModeIdx(i)}
-              className={`px-3.5 py-1.5 rounded-lg text-sm border transition ${
+              className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-sm border transition ${
                 i === modeIdx ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}>
               {m.name}
             </button>

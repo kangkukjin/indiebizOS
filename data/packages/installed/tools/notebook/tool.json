@@ -15,6 +15,8 @@
             "type": "string",
             "description": "수행할 작업",
             "enum": [
+              "read",
+              "versions",
               "create",
               "add",
               "ask",
@@ -66,6 +68,34 @@
           "top_k": {
             "type": "integer",
             "description": "옵션 — ask 발췌 수(기본 12) / search 결과 수(기본 8)"
+          },
+          "project_ref": {
+            "type": "string",
+            "description": "self:notebook 파라미터"
+          },
+          "source_ref": {
+            "type": "string",
+            "description": "self:notebook 파라미터"
+          },
+          "version_ref": {
+            "type": "string",
+            "description": "self:notebook 파라미터"
+          },
+          "extraction_revision": {
+            "type": "integer",
+            "description": "self:notebook 파라미터"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "self:notebook 파라미터"
+          },
+          "excluded": {
+            "type": "boolean",
+            "description": "self:notebook 파라미터"
+          },
+          "include_excluded": {
+            "type": "boolean",
+            "description": "self:notebook 파라미터"
           },
           "force": {
             "type": "boolean",

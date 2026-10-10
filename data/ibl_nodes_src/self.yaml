@@ -504,7 +504,30 @@
         # ⑩ 몸의 명사 생애주기(2026-10-05): 런처 항목(프로젝트)은 파일이 아니라 projects.json 의 행 — 파일 낱말이 닿지 못해
         # 매니저·런처가 REST 로만 열려 있었다. 구현은 조종실 라우트와 같은 project_manager 함수(ibl_launcher_ops).
         open_params: false
-        params: {op: string, project_id: string, name: string, new_name: string, template: string, parent_folder: string, folder_id: string}
+        research_capture: false
+        research_local: true
+        params:
+          op: string
+          project_id: string
+          project_ref: string
+          project_kind: string
+          thread_ref: string
+          title: string
+          message: string
+          query: string
+          mode: string
+          notes: string
+          agent_id: string
+          request_id: string
+          expected_revision: integer
+          archived: boolean
+          cursor: string
+          limit: integer
+          name: string
+          new_name: string
+          template: string
+          parent_folder: string
+          folder_id: string
         aliases:
           project_id: [id]
         returns: items
@@ -515,7 +538,9 @@
             delete: {principal: [owner], human_confirm: true, exists: "launcher_ops:project_exists"}
         fixture: '[self:project]{op: "list"}'
         description: 런처 프로젝트 생애주기 (op 분기). list/templates/create/rename/copy/move(폴더로)/trash(휴지통)/delete(영구, 사람 승인). 주인 전용.
-        target_description: 'list·templates — 파라미터 없음. create — name 필수, template(기본 "기본")·parent_folder 선택. rename — project_id+new_name. copy — project_id(+new_name·parent_folder). move — project_id+folder_id(없으면 폴더 밖으로). trash — project_id(휴지통, 복구는 [self:trash]). delete — project_id, 영구 삭제라 사람 승인 토큰 필요.'
+        # 연구 대화: project_ref는 불변 uid. thread_send는 접수 후 task_ref 반환.
+        target_description: '연구 프로젝트는 create+project_kind:"research"로 만든다. project_ref는 생성된 불변 project_uid. thread_create(title), thread_list(query·archived), thread_messages(thread_ref·cursor), thread_send(thread_ref·message·request_id), thread_cancel(thread_ref), thread_update(thread_ref·expected_revision·title/mode/notes), thread_archive(thread_ref·archived), thread_search(query·thread_ref 선택), research_view로 주제 대화를 관리한다. thread_send는 task_ref로 상태를 조회한다. list·templates — 파라미터 없음. create — name 필수, template(기본 "기본")·parent_folder 선택. rename — project_id+new_name. copy — project_id(+new_name·parent_folder). move — project_id+folder_id(없으면 폴더 밖으로). trash — project_id(휴지통, 복구는 [self:trash]). delete — project_id, 영구 삭제라 사람 승인 토큰 필요.'
+        guides: [research_project.md]
         group: system
         target_key: op
         router: system
@@ -531,11 +556,29 @@
             trash: effect
             delete: effect
           side_effect:
+            research_view: false
+            thread_list: false
+            thread_messages: false
+            thread_search: false
             list: false
             templates: false
+          exempt:
+            research_view: 연구 project_ref가 필요하다
+            thread_list: 연구 project_ref가 필요하다
+            thread_messages: 연구 project_ref와 thread_ref가 필요하다
+            thread_search: 연구 project_ref와 query가 필요하다
           fixture:
             templates: '[self:project]{op: "templates"}'
           values:
+            research_view: 연구 프로젝트 화면 선언 조회 (project_ref)
+            thread_list: 주제 대화 목록 (project_ref)
+            thread_create: 새 주제 대화 (project_ref, title)
+            thread_update: 대화 제목·조사 모드·고정 메모 변경 (project_ref, thread_ref)
+            thread_archive: 대화 보관 또는 해제 (project_ref, thread_ref, archived)
+            thread_messages: 대화 원문과 수집 자료 조회 (project_ref, thread_ref, cursor)
+            thread_search: 대화 원문 검색 (project_ref, thread_ref, query)
+            thread_send: 연구 대화 실행 접수 (project_ref, thread_ref, message, request_id). self:task로 상태 조회
+            thread_cancel: 현재 연구 실행 중단 요청 (project_ref, thread_ref)
             list: 휴지통 밖 프로젝트 목록
             templates: 만들 때 고를 수 있는 템플릿 목록
             create: 새 프로젝트 (name 필수, template·parent_folder 선택)
@@ -545,6 +588,8 @@
             trash: 휴지통으로 (project_id — 복구는 [self:trash])
             delete: 영구 삭제 (project_id, 사람 승인 토큰 필요)
         keywords:
+        - 연구 프로젝트
+        - 주제 대화
         - 프로젝트
         - 프로젝트 만들기
         - 프로젝트 삭제

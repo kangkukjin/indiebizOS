@@ -437,11 +437,11 @@ export function Launcher() {
     return () => window.removeEventListener('indiebiz:open-forage-url', openForageUrl);
   }, []);
 
-  const handleCreateProject = async (templateName: string) => {
+  const handleCreateProject = async (templateName: string, projectKind: 'general' | 'research') => {
     if (!newProjectName.trim()) return;
 
     try {
-      await api.createProject(newProjectName, templateName);
+      await api.createProject(newProjectName, templateName, undefined, projectKind);
       setNewProjectName('');
       setShowNewProjectDialog(false);
       loadProjects();
@@ -964,7 +964,7 @@ export function Launcher() {
             {displayProjects.map((project) => (
               <DraggableIcon
                 key={project.id}
-                icon={project.type === 'folder' ? <Folder size={40} /> : '📁'}
+                icon={project.type === 'folder' ? <Folder size={40} /> : project.project_kind === 'research' ? '📚' : '📁'}
                 label={project.name}
                 position={project.icon_position}
                 onDoubleClick={() => handleOpenProject(project)}

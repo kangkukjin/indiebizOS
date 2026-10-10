@@ -39,6 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
+        "research_context",
         "coding_process", "repair_process", "repair_runtime", "repair_test_results", "repair_live_probe",
         "execution_commit", "embedding_guard", "python_environment_lock", "tool_completion", "completion_lease", "history_excerpt", "distill_receipts", "trajectory_payload", "corpus_policy",
         "audit_lifecycle", "execution_workers", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
@@ -52,6 +53,7 @@ LAYERS = {
         "file_script", "script_process", "script_workspace", "task_cancellation",
     },
     "data": {
+        "research_store", "notebook_store", "research_lifecycle",
         "distill_ledger", "repair_continuation", "repair_context",
         "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
         "record_admin", "record_assets", "record_facade",
@@ -90,6 +92,7 @@ LAYERS = {
         "workflow_binding", "workflow_verdict", "workflow_store", "pipeline_state",
     },
     "cognition": {
+        "research_runner",
         "agent_lifecycle",   # ⑩ 몸의 명사 생애주기(2026-10-05)
         "unified_distill", "distill_memory_adapters",
         "catalog_recall", "world_context", "associative_recall",
@@ -111,6 +114,7 @@ LAYERS = {
         "world_pulse", "world_pulse_collectors", "world_pulse_health",
     },
     "services": {
+        "research_library", "research_capture", "research_threads", "research_view",
         "resident_pcs",
         "launcher_ops", "chat_room_ops", "warehouse_ops", "warehouse_admin", "channel_settings_ops", "media_ops",   # ⑩ 몸의 명사 생애주기(2026-10-05)
         "spreadsheet_grid", "spreadsheet_templates", "spreadsheet_conversion_types", "spreadsheet_formats", "spreadsheet_changes", "spreadsheet_imports", "spreadsheet_workspace", "spreadsheet_files", "document_hwp", "document_pdf", "document_formats", "document_office_ai", "document_creation", "document_office", "resource_links", "office_resources", "office_sessions", "document_workspace", "coding_git", "coding_projects", "workspace_sessions",

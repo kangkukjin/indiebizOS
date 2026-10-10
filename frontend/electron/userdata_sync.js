@@ -180,7 +180,7 @@ function makeCoreForceOverwrite(manifest) {
     const norm = destPath.split(path.sep).join('/');
     const base = path.basename(norm);
     if (vocabArtifacts.has(base)) return true;
-    const instMatch = norm.match(/\/data\/instruments\/([^/]+)\.yaml$/);
+    const instMatch = norm.match(/\/data\/instruments\/(.+)\.yaml$/);
     if (instMatch && coreInstruments.has(instMatch[1])) return true;
     if (base === 'ibl_actions.yaml') {
       const pkgMatch = norm.match(/\/packages\/(?:installed|not_installed)\/(?:tools|extensions)\/([^/]+)\//);

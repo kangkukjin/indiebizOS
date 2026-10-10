@@ -295,7 +295,7 @@ function renderPrim(p,vi,data){
     // wide 카드=화면 폭 반응형 그리드(폰 1열·넓으면 2~4열, 유튜브 홈) — 전폭 1열 고정이면 데스크탑서 썸네일 과대
     const wideOpen=c.wide?'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:start">':'';
     return wideOpen+arr.map((it,ri)=>{
-      const click=p.item_click?' onclick="rowDrill('+vi+','+ri+')" style="cursor:pointer"':'';
+      const click=p.item_click?' onclick="rowDrill('+vi+','+ri+','+(SPLIT&&VIEW_CTX&&data===VIEW_CTX.data?'true':'false')+')" style="cursor:pointer"':'';
       let body='<div class="t">'+tpl(c.title,it)+'</div><div class="m">'+(c.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div>';
       if(c.link&&c.link.href){
         const href=tpl(c.link.href,it);
@@ -483,7 +483,7 @@ function renderPrim(p,vi,data){
     if(!arr.length) return emptyMsg(p,data);
     const click=p.item_click?' style="cursor:pointer"':'';
     return arr.map((it,ri)=>
-      '<div class="card sw-item"'+(p.item_click?' onclick="rowDrill('+vi+','+ri+')"':'')+click+'>'+(p.icon?'<span>'+esc(p.icon)+'</span>':'')+
+      '<div class="card sw-item"'+(p.item_click?' onclick="rowDrill('+vi+','+ri+','+(SPLIT&&VIEW_CTX&&data===VIEW_CTX.data?'true':'false')+')"':'')+click+'>'+(p.icon?'<span>'+esc(p.icon)+'</span>':'')+
       '<div style="flex:1"><div class="nm">'+tpl(p.title,it)+'</div><div class="pr">'+tpl(p.sub,it)+'</div></div>'+
       (p.select&&p.select.action?'<select class="btn2" onclick="event.stopPropagation()" onchange="event.stopPropagation();rowSel('+vi+','+ri+',this)">'+(p.select.options||[]).map(function(o){var sv=String(o.value);return '<option value="'+esc(sv)+'"'+(String(tpl(p.select.value,it))===sv?' selected':'')+'>'+esc(o.label)+'</option>';}).join('')+'</select>':'')+
       (p.button?'<button class="btn2" onclick="event.stopPropagation();rowBtn('+vi+','+ri+',this)">'+esc(p.button.label||'▶')+'</button>':'')+
@@ -564,7 +564,8 @@ function activeView(){ return (VIEW_CTX&&(VIEW_CTX._activeView||VIEW_CTX.view))|
 /* 드릴 새로고침 — 드릴이면 드릴 액션 재실행 후 재렌더, 아니면 모드 재실행 */
 async function refreshCurrent(){
   if(VIEW_CTX&&VIEW_CTX.refresh==='drill'){
-    const nd=await ibl(VIEW_CTX.action); if(nd&&typeof nd==='object') nd._item=VIEW_CTX.item;
+    const target=VIEW_CTX; const nd=await ibl(target.action); if(VIEW_CTX!==target) return;
+    if(nd&&typeof nd==='object') nd._item=target.item;
     VIEW_CTX.data=nd; renderDrill();
     /* ★SPLIT(master_detail)이면 왼쪽 목록도 조용히 갱신 — 드릴 폼 저장이 바꾼 값(비즈니스 레벨 등)이
        목록에 바로 반영되게. runMode()는 드릴을 닫으므로 데이터만 다시 당겨 mdList 만 재렌더. */
@@ -597,6 +598,24 @@ async function dispatchAction(template,fieldValues,rowContext,opts){
 }
 
 /* 드릴 렌더 — 탭(대화/정보) + 활성 view + 활성 compose */
+let detailPollTimer=null;
+function scheduleDetailPoll(){
+  clearTimeout(detailPollTimer);
+  const target=VIEW_CTX;
+  if(!target||!target.poll||!jget(target.data,target.poll.while)||activeView().some(v=>v.type==='form')) return;
+  detailPollTimer=setTimeout(async()=>{
+    if(VIEW_CTX!==target) return;
+    try {
+      const nd=await ibl(target.action);
+      if(VIEW_CTX!==target) return;
+      const input=document.getElementById('composeInput'); const draft=input?input.value:'';
+      const focus=document.activeElement===input;
+      nd._item=target.item; target.data=nd; renderDrill();
+      const next=document.getElementById('composeInput'); if(next){next.value=draft;if(focus)next.focus();}
+    }catch(e){ if(VIEW_CTX===target) scheduleDetailPoll(); }
+  },Math.max(1000,target.poll.interval_ms||2000));
+}
+let composeRequest={key:'',id:''};
 function renderDrill(){
   const out = SPLIT ? document.getElementById('mdDetail') : document.getElementById('instOut');
   if(!out||!VIEW_CTX) return;
@@ -610,7 +629,7 @@ function renderDrill(){
   } else { av=VIEW_CTX.view; ac=VIEW_CTX.compose; }
   VIEW_CTX._activeView=av; VIEW_CTX._activeCompose=ac;
   out.innerHTML=h+renderView(av,VIEW_CTX.data)+renderComposeBar(ac);
-  initMaps();
+  initMaps(); scheduleDetailPoll();
 }
 function drillTab(i){ if(VIEW_CTX){ VIEW_CTX.activeTab=i; renderDrill(); } }
 function mdBack(){ const s=document.getElementById('mdSplit'); if(s) s.classList.remove('has-detail'); }
@@ -618,11 +637,13 @@ function mdBack(){ const s=document.getElementById('mdSplit'); if(s) s.classList
 async function composeSend(btn){
   const cmp=VIEW_CTX&&(VIEW_CTX._activeCompose||VIEW_CTX.compose); if(!cmp) return;
   const inp=document.getElementById('composeInput'); const text=inp?inp.value.trim():''; if(!text) return;
-  const fields={text};
+  const key=JSON.stringify([VIEW_CTX.action,text]);
+  if(composeRequest.key!==key) composeRequest={key,id:crypto.randomUUID()};
+  const fields={text,request_id:composeRequest.id};
   const opts=composeChannelOptions(cmp, VIEW_CTX&&VIEW_CTX.data);
   if(opts.length){ const selEl=document.getElementById('composeChannel'); const key=selEl?selEl.value:opts[0].key; const sel=opts.filter(o=>o.key===key)[0]||opts[0]; fields.channel_type=sel.channel_type; fields.to=sel.to; }
   btn.disabled=true;
-  try{ await dispatchAction(cmp.action,fields); }
+  try{ if(await dispatchAction(cmp.action,fields)) composeRequest={key:'',id:''}; }
   catch(e){ alert('전송 실패: '+e.message); }
   finally{ btn.disabled=false; }
 }
@@ -849,15 +870,15 @@ window.addEventListener('popstate', function(){
   const _inst=document.getElementById('appInst');
   if(_inst && _inst.style.display!=='none'){ appBackHome(); return; }  // 3) 계기 → 앱 그리드
 });
-async function rowDrill(vi,ri){
+async function rowDrill(vi,ri,inDetail=false){
   // split이면 리스트(LIST)에서 행을 찾아 상세 패널(#mdDetail)로, 아니면 현재 view(VIEW_CTX)에서 instOut으로.
-  const src = SPLIT ? LIST : VIEW_CTX; if(!src) return;
+  const src = SPLIT && !inDetail ? LIST : VIEW_CTX; if(!src) return;
   /* ★탭 드릴이면 활성 탭 view(_activeView)에서 찾는다 — 드릴이 tabs 로만 구성되면
      src.view 가 없어 행 클릭이 조용히 죽던 버그(음악 폴더 2단계에서 멈춤). vi 는
      renderDrill 이 renderView(av)에 넘긴 활성 view 배열 기준이라 activeView()와 정합. */
-  const p=(SPLIT?(src.view||[]):activeView())[vi]; if(!p||!p.item_click) return;
+  const p=(SPLIT&&!inDetail?(src.view||[]):activeView())[vi]; if(!p||!p.item_click) return;
   // 동적 카테고리 필터가 활성이면 카드가 필터된 배열로 렌더되므로 ri 도 그 기준 → 같은 필터 적용 후 인덱싱(비분할만; split=master_detail 은 동적필터 없음).
-  const drillData = SPLIT ? src.data : applyCatFilter(CUR.mode, src.data);
+  const drillData = SPLIT || inDetail ? src.data : applyCatFilter(CUR.mode, src.data);
   const item=viewList(drillData,p.from)[ri]; if(item==null) return;
   const dc=p.item_click;
   const detail = SPLIT ? document.getElementById('mdDetail') : document.getElementById('instOut');
@@ -869,10 +890,10 @@ async function rowDrill(vi,ri){
     /* recursive: 지금 보고 있는 드릴 화면(뷰 또는 탭)을 그대로 재사용 — 깊이를 모르는
        트리(폴더 등)를 한 벌 선언으로 무제한 탐색(데스크탑 onDrill 과 같은 규칙).
        선언 view/tabs 가 이긴다. */
-    const inh = (dc.recursive && !SPLIT && VIEW_CTX) ? VIEW_CTX : null;
+    const inh = (dc.recursive && (!SPLIT || inDetail) && VIEW_CTX) ? VIEW_CTX : null;
     const dview = dc.view || (inh ? inh.view : null);
     const dtabs = dc.tabs || (inh ? inh.tabs : null);
-    VIEW_CTX={view:dview,tabs:dtabs,activeTab:0,data:d,action:code,item:item,compose:dc.compose,refresh:'drill'};
+    VIEW_CTX={view:dview,tabs:dtabs,activeTab:0,data:d,action:code,item:item,compose:dc.compose,poll:dc.poll,refresh:'drill'};
     if(SPLIT){ const s=document.getElementById('mdSplit'); if(s) s.classList.add('has-detail'); }
     renderDrill();
   }catch(e){ detail.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }

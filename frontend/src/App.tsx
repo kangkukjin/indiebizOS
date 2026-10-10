@@ -6,6 +6,7 @@ import { BACKEND_ORIGIN } from './lib/backend-origin';
 import { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from './stores/appStore';
 import { Launcher } from './components/Launcher';
+import { ResearchProjectView } from './components/ResearchProjectView';
 import { Manager } from './components/Manager';
 import { FolderView } from './components/FolderView';
 import { CommunityInstrumentView } from './components/CommunityInstrumentView';
@@ -129,7 +130,7 @@ function parseHash(hash: string): HashRoute {
 }
 
 function App() {
-  const { currentView, setCurrentProject, setIsConnected, setError } = useAppStore();
+  const { currentView, currentProject, setCurrentProject, setIsConnected, setError } = useAppStore();
   const [route, setRoute] = useState<HashRoute>(() => parseHash(window.location.hash));
   const {
     projectId, initialAgent, folderId, multiChatRoomId, projectPanel, projectPanelProjectId,
@@ -332,7 +333,7 @@ function App() {
     return (
       <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
         <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
-          <Manager initialAgent={initialAgent} />
+          {currentProject?.id !== projectId ? <div className="p-6">프로젝트를 여는 중…</div> : currentProject.project_kind === 'research' ? <ResearchProjectView project={currentProject} /> : <Manager initialAgent={initialAgent} />}
         </div>
       </div>
     );
@@ -342,7 +343,7 @@ function App() {
     <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
       <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
         {currentView === 'launcher' && <Launcher />}
-        {currentView === 'manager' && <Manager />}
+        {currentView === 'manager' && (currentProject?.project_kind === 'research' ? <ResearchProjectView project={currentProject} /> : <Manager />)}
       </div>
     </div>
   );

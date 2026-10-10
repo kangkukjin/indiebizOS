@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -203,6 +204,9 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		}
 		return map[string]interface{}{"state": "signal_sent", "ready": false}
 	case "media":
+		if c.Volume != nil && (math.IsNaN(*c.Volume) || math.IsInf(*c.Volume, 0) || *c.Volume < 0 || *c.Volume > 100) {
+			return errResult("invalid_volume", "volume must be 0..100")
+		}
 		if c.Action != "play" && c.Action != "" {
 			return errResult("unsupported_media_action", "재생 작업 ID를 cancel 하여 중지하세요")
 		}
@@ -228,12 +232,16 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 			args = append(args, "--", source)
 			cmd = exec.CommandContext(ctx, mpv, args...)
 		} else if runtime.GOOS == "darwin" && extra.Mode != "interactive" && !strings.Contains(source, "://") {
-			cmd = exec.CommandContext(ctx, "/usr/bin/afplay", source)
+			cmd = exec.CommandContext(ctx, "/usr/bin/afplay", residentAfplayArgs(source, c.Volume)...)
 		} else {
 			return errResult("needs_media_player", "mpv 설치 및 로그인한 사용자의 오디오 세션이 필요합니다")
 		}
 		result := r.process(ctx, j.ID, cmd)
 		result["media_source"] = source
+		result["player"] = filepath.Base(cmd.Path)
+		if c.Volume != nil {
+			result["volume"] = *c.Volume
+		}
 		return result
 	case "read":
 		return doRead(c)
@@ -290,4 +298,13 @@ func (r *residentRuntime) process(ctx context.Context, jid string, cmd *exec.Cmd
 		result["error"] = "log_persistence_failed"
 	}
 	return result
+}
+
+// Public volume is percent; afplay's per-process gain uses 0..1.
+func residentAfplayArgs(source string, volume *float64) []string {
+	args := []string{}
+	if volume != nil {
+		args = append(args, "-v", fmt.Sprintf("%g", *volume/100))
+	}
+	return append(args, source)
 }

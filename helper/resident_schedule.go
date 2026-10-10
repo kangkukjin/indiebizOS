@@ -19,7 +19,7 @@ func residentObservation(j Job) bool {
 	if json.Unmarshal([]byte(j.Code), &c) != nil {
 		return false
 	}
-	return c.Op == "info" || c.Op == "list" || c.Op == "read" ||
+	return c.Op == "screen" || c.Op == "info" || c.Op == "list" || c.Op == "read" ||
 		(c.Op == "shell" && c.Mode == "observe" && c.Timeout >= 1 && c.Timeout <= 10)
 }
 

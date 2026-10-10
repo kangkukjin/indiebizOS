@@ -155,7 +155,7 @@ def wait_result(job, timeout):
         phone_jobs._pause(deadline - time.monotonic())
 
 
-def history(device=None, job=None, cursor=0, limit=100, *, tail=False):
+def history(device=None, job=None, cursor=0, limit=100, *, tail=False, include_images=False):
     limit = int(limit)
     if not 1 <= limit <= 200:
         raise ValueError("limit must be 1..200")
@@ -187,6 +187,8 @@ def history(device=None, job=None, cursor=0, limit=100, *, tail=False):
                                if all(v is not None for v in times.values()) else None)
             task["outcome"] = ("timeout" if (task["result"] or {}).get("timeout")
                                and task["state"] == "failed" else task["state"])
+            if not include_images:
+                task["result"] = _image_summary(task["result"], task["id"])
             task.pop("fingerprint", None)
         ev_where, ev_params = ["cursor> ?"], [max(0, int(cursor))]
         for key, value in (("device", device), ("job", job)):
@@ -199,5 +201,16 @@ def history(device=None, job=None, cursor=0, limit=100, *, tail=False):
             events.reverse()
         for e in events:
             e["payload"] = json.loads(e["payload"])
+            if not include_images and e["kind"] == "result":
+                e["payload"] = _image_summary(e["payload"], e["job"])
         return {"tasks": tasks, "events": events,
                 "cursor": events[-1]["cursor"] if events else int(cursor)}
+
+
+def _image_summary(result, job):
+    """History is an index; full image bytes remain in durable task results."""
+    if not isinstance(result, dict) or "b64" not in result:
+        return result
+    return {**{k: v for k, v in result.items() if k != "b64"},
+            "image_omitted": True,
+            "image_task_ref": {"kind": "guestpc", "task_id": job}}

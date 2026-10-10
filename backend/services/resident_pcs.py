@@ -2,6 +2,7 @@
 import hashlib
 import ipaddress
 import json
+import math
 import os
 import re
 import socket
@@ -47,6 +48,11 @@ def submit(target, command, request_id=None):
     if command.get("mode") == "observe":
         if op != "shell" or isinstance(command.get("timeout"), bool) or not 1 <= command.get("timeout", 1800) <= 10:
             raise ValueError("mode:observe requires shell with explicit timeout:1..10; use it for short checks")
+    volume = command.get("volume")
+    if op == "media" and volume is not None and (
+            isinstance(volume, bool) or not isinstance(volume, (int, float))
+            or not math.isfinite(volume) or not 0 <= volume <= 100):
+        raise ValueError("volume must be 0..100")
     command = {**command, "op": op, "mode": command.get("mode", "background")}
     if len(json.dumps(command).encode()) > 256 * 1024:
         raise ValueError("command_too_large_use_transfer")

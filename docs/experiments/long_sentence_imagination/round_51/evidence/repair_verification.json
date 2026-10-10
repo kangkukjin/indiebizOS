@@ -1,0 +1,144 @@
+{
+  "helper_sha256": "381b38da5d527c60f63735823e0329e15cb402c7452f93bd0c96c326c038f04b",
+  "previous_sha256": "e97790f416c0a0c01c87ca59934d4a03c7e114e67b469e4c9d43bfc1547d8c29",
+  "remote_backup": "/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/data/_backups/2026-10-11_r51-helper/indiebiz-helper",
+  "screen_submit_to_start_seconds": 2.8164899349212646,
+  "screen_submit_to_end_seconds": 3.514725923538208,
+  "screen_during_both_jobs": true,
+  "screen": {
+    "success": true,
+    "observation": "uniform",
+    "warning": "단색 캡처(RGBA=0,0,0,0)입니다. 화면 전원 꺼짐·잠금·권한 문제인지 실제 단색 화면인지는 이 이미지로 확인할 수 없습니다.",
+    "bytes": 2054
+  },
+  "tasks": [
+    {
+      "id": "ce20b624129b490a9455050b19ea01e6",
+      "device": "guestpc-7a440e9daf61",
+      "generation": "6f4ef43f3dccc3f4670e45ca20253d14",
+      "request_id": "r51-repair-volume-zero",
+      "summary": {
+        "op": "media",
+        "mode": "background",
+        "timeout": 86400,
+        "volume": 0,
+        "path": "/tmp/indiebiz-r51-volume-check.wav"
+      },
+      "created": 1791651775.275007,
+      "state": "succeeded",
+      "result": {
+        "cwd": "",
+        "exit": 0,
+        "log_truncated": false,
+        "media_source": "/tmp/indiebiz-r51-volume-check.wav",
+        "output": "",
+        "player": "afplay",
+        "volume": 0
+      },
+      "cancel_requested": 0,
+      "started_at": 1791651776.691377,
+      "ended_at": 1791651785.4371479,
+      "seconds": 8.745770931243896,
+      "outcome": "succeeded"
+    },
+    {
+      "id": "9414fbf9485c468fb054f6f0f06424fa",
+      "device": "guestpc-7a440e9daf61",
+      "generation": "6f4ef43f3dccc3f4670e45ca20253d14",
+      "request_id": "r51-repair-screen",
+      "summary": {
+        "op": "screen",
+        "max_width": 800,
+        "mode": "interactive"
+      },
+      "created": 1791651744.987405,
+      "state": "succeeded",
+      "result": {
+        "bytes": 2054,
+        "height": 450,
+        "image_observation": "uniform",
+        "media_type": "image/png",
+        "op": "screen",
+        "orig_height": 1080,
+        "orig_width": 1920,
+        "tool": "screencapture",
+        "warning": "단색 캡처(RGBA=0,0,0,0)입니다. 화면 전원 꺼짐·잠금·권한 문제인지 실제 단색 화면인지는 이 이미지로 확인할 수 없습니다.",
+        "width": 800,
+        "image_omitted": true,
+        "image_task_ref": {
+          "kind": "guestpc",
+          "task_id": "9414fbf9485c468fb054f6f0f06424fa"
+        }
+      },
+      "cancel_requested": 0,
+      "started_at": 1791651747.803895,
+      "ended_at": 1791651748.502131,
+      "seconds": 0.6982359886169434,
+      "outcome": "succeeded"
+    },
+    {
+      "id": "a19ff72ceff841948eeeeee9dafa2356",
+      "device": "guestpc-7a440e9daf61",
+      "generation": "6f4ef43f3dccc3f4670e45ca20253d14",
+      "request_id": "r51-repair-busy-b",
+      "summary": {
+        "op": "shell",
+        "cmd": "sleep 20",
+        "timeout": 25,
+        "mode": "background"
+      },
+      "created": 1791651742.9527218,
+      "state": "succeeded",
+      "result": {
+        "cwd": "/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/workspaces/a19ff72ceff841948eeeeee9dafa2356",
+        "exit": 0,
+        "log_truncated": false,
+        "output": ""
+      },
+      "cancel_requested": 0,
+      "started_at": 1791651747.774483,
+      "ended_at": 1791651767.857435,
+      "seconds": 20.08295202255249,
+      "outcome": "succeeded"
+    },
+    {
+      "id": "680ec1fa32264a5e929d16a0cead1131",
+      "device": "guestpc-7a440e9daf61",
+      "generation": "6f4ef43f3dccc3f4670e45ca20253d14",
+      "request_id": "r51-repair-busy-a",
+      "summary": {
+        "op": "shell",
+        "cmd": "sleep 20",
+        "timeout": 25,
+        "mode": "background"
+      },
+      "created": 1791651742.940058,
+      "state": "succeeded",
+      "result": {
+        "cwd": "/Users/kangkukjin/Library/Application Support/IndieBiz/resident-bea793f6b0acaba4/workspaces/680ec1fa32264a5e929d16a0cead1131",
+        "exit": 0,
+        "log_truncated": false,
+        "output": ""
+      },
+      "cancel_requested": 0,
+      "started_at": 1791651744.281367,
+      "ended_at": 1791651764.341148,
+      "seconds": 20.059780836105347,
+      "outcome": "succeeded"
+    }
+  ],
+  "player_command": "/usr/bin/afplay -v 0 /tmp/indiebiz-r51-volume-check.wav",
+  "cleanup_exit": 0,
+  "tests": {
+    "initial_targeted_passed": 70,
+    "selected_passed": 1283,
+    "selected_skipped": 1,
+    "not_system_passed": 9857,
+    "not_system_failed_then_fixed": 2,
+    "not_system_skipped": 1,
+    "final_related_and_system_passed": 179,
+    "go_race": "passed",
+    "cross_builds": 6,
+    "vocabulary_check": "passed"
+  }
+}

@@ -165,7 +165,7 @@ def _finish_visual(result: dict, device_id: str, alias: str, op: str) -> dict:
     모델이 못 본다."""
     b64 = result.get("b64") or ""
     meta = {k: result.get(k) for k in
-            ("width", "height", "orig_width", "orig_height", "bytes", "tool", "did")
+            ("width", "height", "orig_width", "orig_height", "bytes", "tool", "did", "image_observation", "warning")
             if result.get(k) is not None}
 
     if not b64:
@@ -359,6 +359,15 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
     else:
         result = phone_jobs.wait_result(job_id, timeout=wait)
     if result is None:
+        if op == "screen":
+            import task_receipts
+            cancelled = (resident_store.cancel(job_id) if resident
+                         else phone_jobs.cancel_pending(job_id))
+            return {"success": False, "accepted": True, "job_id": job_id,
+                    "task_ref": task_receipts.ref(TASK_KIND, job_id),
+                    "cancel_requested": cancelled, "timed_out": True,
+                    "message": "화면 대기가 끝나 촬영 취소를 요청했습니다. 이미 시작했거나 완료했을 수 있으니 "
+                               "같은 task_ref로 self:task status/wait를 확인하세요. 취소 확인 전 재접수하지 마세요."}
         # ★실패 단정 금지: 명령은 그 PC 에서 계속 실행 중일 수 있다(오프라인과 구별 불가).
         #   같은 명령 재전송은 이중 실행 위험 — job_id 로 결과를 회수하는 게 정도(正道).
         import task_receipts
@@ -367,6 +376,7 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
                 "message": (f"손발 '{alias}' 의 응답을 {wait:.0f}초 안에 못 받았습니다 — 명령이 오래 걸리는 "
                             f"중이거나(설치·빌드 등) 손발이 오프라인입니다. ★같은 명령을 다시 보내지 말고 "
                             f'[self:task]{{op: "wait", ref: {{kind: "guestpc", task_id: "{job_id}"}}}} 로 결과를 확인하세요. '
+                            f'포기하려면 같은 task_ref로 self:task cancel을 요청하고 종료를 확인하세요. '
                             f'오래 걸릴 명령은 처음부터 background: true 로 보내는 게 좋습니다.')}
     if op == "screen" or op in _INPUT_OPS:
         return _finish_visual(result, device_id, alias, op)
@@ -845,7 +855,7 @@ def task_status(ref: dict) -> dict:
     import task_receipts as T
     jid = ref["task_id"]
     import resident_store
-    history = resident_store.history(job=jid, limit=5, tail=True)
+    history = resident_store.history(job=jid, limit=5, tail=True, include_images=True)
     if history["tasks"]:
         task = history["tasks"][0]
         state = T.FAILED if task["state"] == "expired" else task["state"]

@@ -384,3 +384,35 @@ def test_observation_shell_mode_preserved_and_invalid_budget_not_submitted(pc):
             'mode': 'observe', 'timeout': timeout, 'background': True})
         assert bad['success'] is False and '1..10' in bad['error']
     assert len(pc.history()) == 1
+
+
+def test_media_volume_zero_survives_idiom_and_resume(pc):
+    code = '[fn:외부PC재생]{PC:"시험PC",소스:"/remote/song.mp3",요청ID:"volume-zero",음량:$volume,작업:$job}'
+    job = pc(code, volume=0, job={})
+    assert pc.history()[0]['summary']['volume'] == 0
+    assert pc(code, volume=0, job=job)['task_ref'] == job['task_ref']
+    assert pc(code, volume=25, job=job)['status'] == 'resume_mismatch'
+    assert len(pc.history()) == 1
+
+
+def test_screen_timeout_cancels_undelivered_capture_only(pc, monkeypatch):
+    import resident_store
+    import resident_pcs
+    monkeypatch.setattr(resident_store, 'wait_result', lambda *a, **k: None)
+    out = pc.handler._send_wait({'mode': 'interactive'}, pc.rec['device_id'], '시험PC',
+                                'screen', {'op': 'screen'}, 0)
+    assert out['timed_out'] and out['cancel_requested']
+    assert resident_store.history(job=out['job_id'])['tasks'][0]['state'] == 'cancelled'
+    assert resident_pcs.sync(pc.rec['key'], 'a' * 32)['jobs'] == []
+    out = pc.handler._send_wait({}, pc.rec['device_id'], '시험PC',
+                                'shell', {'op': 'shell', 'cmd': 'echo done'}, 0)
+    assert 'cancel_requested' not in out
+    assert resident_store.history(job=out['job_id'])['tasks'][0]['state'] == 'queued'
+
+
+def test_visual_warning_survives_handler(pc, monkeypatch):
+    monkeypatch.setattr(pc.handler, "_screens_dir", lambda *args: str(pc.path / "screens"))
+    out = pc.handler._finish_visual({'b64': 'AA==', 'image_observation': 'uniform',
+                                    'warning': 'cannot infer cause'}, pc.rec['device_id'], '시험PC', 'screen')
+    assert out['success'] and out['image_observation'] == 'uniform'
+    assert out['warning'] == 'cannot infer cause'

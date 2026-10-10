@@ -55,7 +55,7 @@ func (r *residentRuntime) capabilities() map[string]interface{} {
 	hostname, _ := os.Hostname()
 	_, mpv := exec.LookPath("mpv")
 	_, afplay := exec.LookPath("afplay")
-	return map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv == nil || afplay == nil, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
+	return map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv == nil || afplay == nil, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "screen_observation": true, "screen_cancel": true, "media_volume": true, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
 }
 func startResident(cfg *Config) error {
 	if len(cfg.InstallationID) != 32 || cfg.Generation == "" || cfg.DataDir == "" {
@@ -173,16 +173,6 @@ func startResident(cfg *Config) error {
 			r.stop()
 			return fmt.Errorf("registration generation mismatch")
 		}
-		r.mu.Lock()
-		cancels, _ := resp["cancel"].([]interface{})
-		for _, id := range cancels {
-			jid, _ := id.(string)
-			if cancel := r.active[jid]; cancel != nil {
-				cancel()
-			}
-			r.cancelQueued(jid)
-		}
-		r.mu.Unlock()
 		jobs, _ := resp["jobs"].([]interface{})
 		for _, raw := range jobs {
 			b, _ := json.Marshal(raw)
@@ -200,6 +190,16 @@ func startResident(cfg *Config) error {
 				}
 			}
 		}
+		r.mu.Lock()
+		cancels, _ := resp["cancel"].([]interface{})
+		for _, id := range cancels {
+			jid, _ := id.(string)
+			if cancel := r.active[jid]; cancel != nil {
+				cancel()
+			}
+			r.cancelQueued(jid)
+		}
+		r.mu.Unlock()
 		r.mu.Lock()
 		localPaused := r.localPaused
 		r.mu.Unlock()

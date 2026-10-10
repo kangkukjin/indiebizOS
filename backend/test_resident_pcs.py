@@ -465,3 +465,26 @@ def test_observation_requires_bounded_shell(registry, command):
     with pytest.raises(ValueError, match='mode:observe'):
         pcs.submit(rec['device_id'], command)
     assert not resident_store.history()['tasks']
+
+
+@pytest.mark.parametrize('volume', [-1, 101, True, '0', float('nan'), float('inf')])
+def test_media_invalid_volume_rejected_before_submission(registry, volume):
+    rec = registry()
+    with pytest.raises(ValueError, match='volume'):
+        pcs.submit(rec['device_id'], {'op': 'media', 'path': '/audio.wav', 'volume': volume})
+    assert not resident_store.history()['tasks']
+
+
+def test_history_omits_image_bytes_but_retains_recovery_and_evidence(registry):
+    rec = registry()
+    job = pcs.submit(rec['device_id'], {'op': 'screen', 'mode': 'interactive'})['job_id']
+    payload = {'b64': 'A' * 500000, 'width': 800, 'image_observation': 'uniform', 'warning': 'unknown cause'}
+    pcs.sync(rec['key'], 'a' * 32, [event(job, payload=payload)])
+    page = resident_store.history(job=job)
+    assert len(json.dumps(page)) < 5000
+    for result in [page['tasks'][0]['result'], page['events'][-1]['payload']]:
+        assert 'b64' not in result and result['image_omitted']
+        assert result['image_task_ref']['task_id'] == job
+        assert result['warning'] == 'unknown cause'
+    assert resident_store.wait_result(job, 0) == payload
+    assert resident_store.history(job=job, include_images=True)['tasks'][0]['result'] == payload

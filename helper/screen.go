@@ -59,10 +59,13 @@ type shotFrame struct {
 }
 
 var lastShot shotFrame
+var shotMu sync.RWMutex
 
 // mapPoint — 이미지 좌표(AI 가 본 것) → 입력 좌표(그 PC). 캡처 이력이 없으면 그대로 쓴다.
 func mapPoint(x, y int) (int, int) {
+	shotMu.RLock()
 	s := lastShot
+	shotMu.RUnlock()
 	if !s.valid || s.imgW <= 0 || s.imgH <= 0 {
 		return x, y
 	}
@@ -131,8 +134,15 @@ func doScreen(c Command) map[string]interface{} {
 	tmp.Close()
 	defer os.Remove(path)
 
-	tool, err := captureScreen(path, c.Display)
+	ctx := c.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	tool, err := captureScreen(ctx, path, c.Display)
 	if err != nil {
+		if ctx.Err() != nil {
+			return map[string]interface{}{"error": ctx.Err().Error(), "cancelled": ctx.Err() == context.Canceled, "timeout": ctx.Err() == context.DeadlineExceeded}
+		}
 		return errResult("capture_failed", err.Error())
 	}
 
@@ -166,14 +176,20 @@ func doScreen(c Command) map[string]interface{} {
 
 	// 이 그림이 곧 AI 의 좌표계가 된다 — 입력 op 가 참조하도록 배율을 기록.
 	pw, ph := logicalScreenSize(ow, oh)
+	shotMu.Lock()
 	lastShot = shotFrame{imgW: w, imgH: h, pointW: pw, pointH: ph, valid: true}
+	shotMu.Unlock()
 
-	return map[string]interface{}{
+	result := map[string]interface{}{
 		"op": "screen", "b64": base64.StdEncoding.EncodeToString(data),
 		"media_type": media, "width": w, "height": h,
 		"orig_width": ow, "orig_height": oh,
 		"bytes": len(data), "tool": tool,
 	}
+	for k, v := range screenImageObservation(img) {
+		result[k] = v
+	}
+	return result
 }
 
 // encodeBounded — maxImageBytes 안에 들어올 때까지 인코딩. format 이 auto(기본)면
@@ -275,7 +291,7 @@ func downscale(src image.Image, maxW int) image.Image {
 }
 
 // captureScreen — OS 기본 도구로 path 에 PNG 를 남긴다. 반환값 = 쓴 도구 이름(감사용).
-func captureScreen(path string, display int) (string, error) {
+func captureScreen(ctx context.Context, path string, display int) (string, error) {
 	switch runtime.GOOS {
 	case "darwin":
 		// -x 무음(셔터음 없음), -C 커서 제외 안 함(기본), -t png
@@ -284,20 +300,20 @@ func captureScreen(path string, display int) (string, error) {
 			args = append(args, "-D", strconv.Itoa(display))
 		}
 		args = append(args, path)
-		if err := runCapture("screencapture", args...); err != nil {
+		if err := runCapture(ctx, "screencapture", args...); err != nil {
 			return "", fmt.Errorf("screencapture 실패: %w — %s", err, screenPermissionHint())
 		}
 		return "screencapture", nil
 	case "windows":
-		return "powershell", captureWindows(path)
+		return "powershell", captureWindows(ctx, path)
 	default:
-		return captureLinux(path)
+		return captureLinux(ctx, path)
 	}
 }
 
 // captureWindows — .NET System.Drawing 으로 가상 화면(다중 모니터 전체)을 PNG 로.
 // OS 기본 탑재라 추가 설치가 없다. 백슬래시·따옴표를 피해 한 줄로 넘긴다.
-func captureWindows(path string) error {
+func captureWindows(ctx context.Context, path string) error {
 	ps := "Add-Type -AssemblyName System.Windows.Forms,System.Drawing; " +
 		"$b = [System.Windows.Forms.SystemInformation]::VirtualScreen; " +
 		"$bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height; " +
@@ -305,7 +321,7 @@ func captureWindows(path string) error {
 		"$g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size); " +
 		"$bmp.Save('" + path + "', [System.Drawing.Imaging.ImageFormat]::Png); " +
 		"$g.Dispose(); $bmp.Dispose()"
-	if err := runCapture("powershell", "-NoProfile", "-NonInteractive", "-Command", ps); err != nil {
+	if err := runCapture(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", ps); err != nil {
 		return fmt.Errorf("PowerShell 캡처 실패: %w (세션 0 서비스나 잠긴 화면에서는 캡처가 검게 나올 수 있습니다)", err)
 	}
 	return nil
@@ -313,7 +329,7 @@ func captureWindows(path string) error {
 
 // captureLinux — 배포판·디스플레이 서버(X11/Wayland)마다 도구가 달라 있는 것을 찾는다.
 // 하나도 없으면 정직하게 실패하고 설치 안내를 준다(있는 척하지 않는다).
-func captureLinux(path string) (string, error) {
+func captureLinux(ctx context.Context, path string) (string, error) {
 	type cand struct {
 		bin  string
 		args []string
@@ -331,7 +347,7 @@ func captureLinux(path string) (string, error) {
 			continue
 		}
 		tried = append(tried, c.bin)
-		if err := runCapture(c.bin, c.args...); err == nil {
+		if err := runCapture(ctx, c.bin, c.args...); err == nil {
 			if st, err := os.Stat(path); err == nil && st.Size() > 0 {
 				return c.bin, nil
 			}
@@ -343,8 +359,8 @@ func captureLinux(path string) (string, error) {
 	return "", fmt.Errorf("캡처 도구(%v)를 실행했지만 이미지를 얻지 못했습니다(Wayland 권한이나 헤드리스 세션일 수 있습니다)", tried)
 }
 
-func runCapture(bin string, args ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), captureTimeout)
+func runCapture(parent context.Context, bin string, args ...string) error {
+	ctx, cancel := context.WithTimeout(parent, captureTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, bin, args...)
 	var stderr bytes.Buffer

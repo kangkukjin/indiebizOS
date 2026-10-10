@@ -277,6 +277,7 @@ async def execute_ibl_code(req: IBLRequest):
             # 실리게 한다. 신원이 안 실린 직접 호출은 종전대로(초크포인트가 run 을 세움).
             from contextlib import nullcontext
             from providers.base import adopt_turn_token_ledger
+            from research_context import adopt_execution
             _adopt = nullcontext()
             if req.episode_id is not None or req.parent_run_id:
                 from episode_logger import trajectory_scope
@@ -322,7 +323,8 @@ async def execute_ibl_code(req: IBLRequest):
                     from completion_lease import channel_cancelled
                     cancel_check = (lambda: channel_cancelled(req.completion_channel)) if req.completion_channel else None
                     call = lambda: _execute_ibl_unified(_ti, project_path, agent_id=agent_id, **({"cancel_check": cancel_check} if cancel_check else {}))
-                    return supervisor.run_tool("execute_ibl", _ti, call) if supervisor else call()
+                    with adopt_execution(agent_id, req.task_id, project_path):
+                        return supervisor.run_tool("execute_ibl", _ti, call) if supervisor else call()
                 finally:
                     set_current_project_id(_prev_pid)
                     set_current_surface(_prev_surface)

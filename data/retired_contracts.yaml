@@ -853,3 +853,11 @@ retired:
     instead: Playwright 공통 사건 영수증과 같은 탭의 snapshot 신원, 컨텍스트 네트워크 수집, 저장 영수증을 사용한다.
     phrases:
       - '링크 클릭으로 새 탭이 열리면 자동으로 감지되어 세션에 등록됨.'
+
+  - id: research-api-only-execution
+    retired: 2026-10-10
+    reason: 연구 대화가 선택한 실행 기어를 API 보조 모델로 덮어써 CLI 설정에서 시작하지 못했다.
+    instead: 일반 프로젝트와 같은 실행 기어를 사용하고 MCP 재진입에 대화별 자료 보존 맥락을 연결한다.
+    phrases:
+      - '연구 대화에는 API 모델 설정이 필요합니다.'
+      - '원문 보존을 지원하는 API 보조 모델로'

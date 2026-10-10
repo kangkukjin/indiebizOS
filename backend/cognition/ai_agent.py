@@ -70,8 +70,6 @@ class AIAgent:
         execute_tool_func: Callable = None,
         role: str = "execution",
     ):
-        from research_context import model_config
-        ai_config = model_config(ai_config)
         self.config = ai_config
         self.system_prompt = system_prompt
         self.agent_name = agent_name

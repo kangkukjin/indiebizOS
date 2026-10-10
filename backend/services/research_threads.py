@@ -115,8 +115,6 @@ def _work(store, tid, run, message, cancel, lease, snapshot):
             valid = {(c['version_id'], c['locator']) for c in citations}
             import re
             text = re.sub(r'\[자료:([a-f0-9]{32}):([^\]]+)\]', lambda m: m.group(0) if (m[1], m[2]) in valid else '[확인되지 않은 인용]', text)
-            if context.get('model_notice'):
-                text += '\n\n' + context['model_notice']
             store.write_response(tid, run, text, state, citations)
             if state == 'completed' and _summarize:
                 try:

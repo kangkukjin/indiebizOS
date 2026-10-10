@@ -11,14 +11,7 @@ import thread_context
 
 class ResearchRunner(AgentRunner):
     def _resolve_execution_config(self, ai_config, agent_id):
-        result = super()._resolve_execution_config(ai_config, self.config.get('_selected_agent'))
-        if str(result.get('provider', '')).replace('-', '_') in {'codex', 'codex_cli', 'claude_code', 'claudecode'}:
-            from model_resolver import resolve
-            result = resolve('evaluate')
-            self.research_model_notice = '원문 보존을 지원하는 API 보조 모델로 연구 대화를 실행합니다.'
-        if str(result.get('provider', '')).replace('-', '_') in {'codex', 'codex_cli', 'claude_code', 'claudecode'}:
-            raise ValueError('연구 대화에는 API 모델 설정이 필요합니다. 조종실에서 보조 모델을 설정하세요.')
-        return result
+        return super()._resolve_execution_config(ai_config, self.config.get('_selected_agent'))
 
     def _sync_execution_gear(self):
         return  # 각 연구 턴마다 새 실행자를 만들고 모델을 해소한다.
@@ -27,10 +20,9 @@ class ResearchRunner(AgentRunner):
         return super()._load_role() + '\n\n' + self.config.get('_research_role', '')
 
     def _build_ibl_tools(self):
-        return [t for t in super()._build_ibl_tools() if t['name'] != 'run_command']
-
-    def _get_available_tools(self):
-        return [t for t in super()._get_available_tools() if t != 'run_command']
+        from research_context import library_only
+        return [tool for tool in super()._build_ibl_tools()
+                if not library_only() or tool['name'] != 'run_command']
 
 
 def stream(store, tid, run, message, cancel):
@@ -41,7 +33,7 @@ def stream(store, tid, run, message, cancel):
     agents = (configured or {}).get('agents') or [{'name': '연구 도우미'}]
     agent = next((a for a in agents if a.get('id') == thread['agent']), agents[0])
     selected = agent.get('id')
-    actor = f"research:{store.uid}:{tid}:{selected or 'default'}"
+    actor = f"research:{store.uid}:{tid}"
     thread_context.set_current_project_id(store.path.name)
     thread_context.set_current_agent_id(actor)
     thread_context.set_current_agent_name(agent.get('name') or '연구 도우미')
@@ -76,11 +68,10 @@ def stream(store, tid, run, message, cancel):
         history = [{'role': row['role'], 'content': history_content(row)} for row in store.messages(tid, limit=14)['items']
                    if row['run_id'] != run and row['status'] in {'complete', 'completed'}][-12:]
         try:
-            notice = getattr(runner, 'research_model_notice', '')
-            if notice:
-                yield {'type': 'cognition', 'content': notice}
-            yield from runner.cognitive_stream(message, history, images=images or None, cancel_check=cancel.is_set,
-                                              agent_name=agent.get('name'), utterance_author='owner')
+            from research_context import capture_stream
+            yield from capture_stream(runner.cognitive_stream(
+                message, history, images=images or None, cancel_check=cancel.is_set,
+                agent_name=agent.get('name'), utterance_author='owner'))
         finally:
             EpisodeLogger.end_episode()
 
@@ -95,7 +86,9 @@ def _registered_runner(runner):
         AgentRunner.agent_registry[key] = runner
         AgentRunner.internal_messages[key] = runtime_work.WorkMessages()
     try:
-        yield
+        from research_context import bind_execution
+        with bind_execution(thread_context.get_current_agent_id(), thread_context.get_current_task_id()):
+            yield
     finally:
         with AgentRunner._lock:
             if AgentRunner.agent_registry.get(key) is runner:

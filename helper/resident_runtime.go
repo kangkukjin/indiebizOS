@@ -203,7 +203,7 @@ func startResident(cfg *Config) error {
 				return e
 			}
 		}
-		if wait == 0 {
+		if wait == 0 || resp["paused"] == true {
 			time.Sleep(500 * time.Millisecond)
 		}
 	}

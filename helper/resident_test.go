@@ -208,3 +208,30 @@ func TestResidentCancelledBeforeLaunchDoesNotExecute(t *testing.T) {
 		t.Fatal("cancelled work ran")
 	}
 }
+
+func TestResidentPausedPollingDoesNotSpin(t *testing.T) {
+	r := residentTestRuntime(t)
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/limb/resident/sync" {
+			http.NotFound(w, req)
+			return
+		}
+		calls++
+		generation := "generation"
+		if calls >= 4 {
+			generation = "stop-test"
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "state": "active", "paused": true, "generation": generation, "jobs": []Job{}, "ack": []string{}, "cancel": []string{}})
+	}))
+	defer server.Close()
+	r.cfg.Base = server.URL
+	started := time.Now()
+	e := startResident(r.cfg)
+	if e == nil || !strings.Contains(e.Error(), "generation mismatch") {
+		t.Fatal(e)
+	}
+	if time.Since(started) < time.Second {
+		t.Fatal("paused helper spun without backoff")
+	}
+}

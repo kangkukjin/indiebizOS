@@ -1,0 +1,303 @@
+{
+ "passed": 7,
+ "total": 15,
+ "checks": [
+  {
+   "check": "저녁: 문진 — 뚜껑 닫힘·어댑터·안 잠듦·화면 1대·못 본 항목 0",
+   "ok": false,
+   "detail": {
+    "lid_closed": null,
+    "power_source": null,
+    "sleep_minutes": null,
+    "displays": {
+     "attached": [
+      {
+       "name": "LF27T450F",
+       "kind": "외부",
+       "resolution": "1920x1080@60Hz",
+       "main": true,
+       "online": true,
+       "asleep": true
+      }
+     ],
+     "internal": "목록에 없음(뚜껑 닫힘)",
+     "on": false,
+     "evidence": [
+      "system_profiler SPDisplaysDataType: Display Asleep: Yes",
+      "IODisplayWrangler CurrentPowerState=0 (MaxPowerState=4)"
+     ],
+     "note": "붙어 있지만 꺼진(잠든) 화면"
+    },
+    "display_on": null,
+    "idle_seconds": null,
+    "free_gb": null,
+    "wifi_rssi": null,
+    "not_seen": null
+   }
+  },
+  {
+   "check": "저녁: 시계 차이 ±2초 안",
+   "ok": false,
+   "detail": null
+  },
+  {
+   "check": "저녁: 맡길지 판단과 근거",
+   "ok": false,
+   "detail": null
+  },
+  {
+   "check": "원장: 밤일 접수 수 = 기대(다시 맡긴 것 없음)",
+   "ok": true,
+   "detail": [
+    [
+     "r51-agent_base-night-1",
+     "succeeded"
+    ]
+   ]
+  },
+  {
+   "check": "접수증: 작업 번호가 원장의 밤일과 같음",
+   "ok": false,
+   "detail": []
+  },
+  {
+   "check": "원장: 깨우기 신호 0·화면 입력 0·sudo 0",
+   "ok": true,
+   "detail": [
+    "media",
+    "screen",
+    "shell",
+    "transfer"
+   ]
+  },
+  {
+   "check": "저녁: 소리 — 접수·멈춤·남은 재생 0·\"소리 확인 안 됨\"",
+   "ok": false,
+   "detail": {
+    "accepted": null,
+    "running_seen": null,
+    "volume_zero_applied": null,
+    "stopped": null,
+    "processes_left": null
+   }
+  },
+  {
+   "check": "저녁: 화면 한 장의 결과와 읽기",
+   "ok": false,
+   "detail": {
+    "captured": true,
+    "bytes": 4224,
+    "reading": null
+   }
+  },
+  {
+   "check": "아침: 일마다 종결이 기대와 같음",
+   "ok": false,
+   "detail": {}
+  },
+  {
+   "check": "아침: 시작·종료·소요가 원장과 같음",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "check": "아침: 결과(끝난 일)·중간 기록(끊긴 일) 회수와 내용",
+   "ok": true,
+   "detail": {
+    "night.json": 72
+   }
+  },
+  {
+   "check": "아침: 잠들거나 멈춘 적 없음으로 판정",
+   "ok": false,
+   "detail": null
+  },
+  {
+   "check": "맥12: 표식 프로세스 0",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "맥12: 작업 폴더 없음",
+   "ok": true,
+   "detail": "ls: /Users/kangkukjin/indiebiz-training/r51/agent_base: No such file or directory\n"
+  },
+  {
+   "check": "맥12 등록·연결 그대로",
+   "ok": true,
+   "detail": null
+  }
+ ],
+ "ledger": [
+  {
+   "id": "30833e3b86674314b81566a11efba80b",
+   "request_id": "r51-agent_base-mkdir-1",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "background",
+   "cmd": "mkdir -p /Users/kangkukjin/indiebiz-training/r51/agent_base/jobs && ls -la /User",
+   "created": 1791648536.076421,
+   "started_at": 1791648536.523517,
+   "ended_at": 1791648536.595567,
+   "seconds": 0.07205009460449219
+  },
+  {
+   "id": "a789c1ad5310429d856e03b44aa5e50c",
+   "request_id": "r51-agent_base-send-night_sh-1",
+   "state": "succeeded",
+   "op": "transfer",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791648537.732252,
+   "started_at": 1791648539.33524,
+   "ended_at": 1791648543.773901,
+   "seconds": 4.438661098480225
+  },
+  {
+   "id": "c249d778434041afb74e877f3bd83a58",
+   "request_id": "r51-agent_base-send-summary_py-1",
+   "state": "succeeded",
+   "op": "transfer",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791648544.814938,
+   "started_at": 1791648547.805556,
+   "ended_at": 1791648549.888576,
+   "seconds": 2.083019971847534
+  },
+  {
+   "id": "8e0c35f90edd45febaacbe30cb08af32",
+   "request_id": "r51-agent_base-send-silence_wav-1",
+   "state": "succeeded",
+   "op": "transfer",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791648551.93603,
+   "started_at": 1791648552.718412,
+   "ended_at": 1791648557.6036701,
+   "seconds": 4.885258197784424
+  },
+  {
+   "id": "7ea766bc7cae45ba93507d3a53ef350d",
+   "request_id": "r51-agent_base-night-1",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "background",
+   "cmd": "sh jobs/night.sh R51=agent_base-night",
+   "created": 1791648571.832832,
+   "started_at": 1791648573.3037262,
+   "ended_at": 1791648934.623159,
+   "seconds": 361.3194327354431
+  },
+  {
+   "id": "fdc82507b7aa452f95669b1e8168896b",
+   "request_id": "r51-agent_base-screen-1",
+   "state": "succeeded",
+   "op": "screen",
+   "mode": "interactive",
+   "cmd": "",
+   "created": 1791648576.983381,
+   "started_at": 1791648578.765961,
+   "ended_at": 1791648579.051148,
+   "seconds": 0.2851870059967041
+  },
+  {
+   "id": "3b4aaffdd0294f8a9dc1557d8dfa9037",
+   "request_id": "r51-agent_base-media-silence-1",
+   "state": "cancelled",
+   "op": "media",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791648584.948571,
+   "started_at": 1791648587.436676,
+   "ended_at": 1791648603.977358,
+   "seconds": 16.540682077407837
+  },
+  {
+   "id": "1ae468142b2f424bad0f9191ef9189fd",
+   "request_id": "r51-evening-obs-media-ps",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "observe",
+   "cmd": "ps -axo pid,ppid,etime,command | grep -E 'afplay|mpv|silence' | grep -v grep; ec",
+   "created": 1791648591.7372448,
+   "started_at": 1791648592.145133,
+   "ended_at": 1791648592.502583,
+   "seconds": 0.357450008392334
+  },
+  {
+   "id": "c7876135fe3544c59267770bfbf233c1",
+   "request_id": "r51-morning-obs-ls",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "observe",
+   "cmd": "ls -laR /Users/kangkukjin/indiebiz-training/r51/agent_base; shasum -a 256 /Users",
+   "created": 1791648983.1335082,
+   "started_at": 1791648987.105833,
+   "ended_at": 1791648987.228989,
+   "seconds": 0.12315583229064941
+  },
+  {
+   "id": "b6bb3939829f412f8ab86f04be7c9d78",
+   "request_id": "r51-agent_base-recv-night_json-1",
+   "state": "succeeded",
+   "op": "transfer",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791648988.340417,
+   "started_at": 1791648990.492964,
+   "ended_at": 1791648998.585763,
+   "seconds": 8.092798948287964
+  },
+  {
+   "id": "6b482c4818e8411c8efda2ffa3d9186e",
+   "request_id": "r51-agent_base-recv-night_beat-1",
+   "state": "succeeded",
+   "op": "transfer",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791649000.4682791,
+   "started_at": 1791649001.251283,
+   "ended_at": 1791649006.965777,
+   "seconds": 5.714493989944458
+  },
+  {
+   "id": "dda286768506456499230329bfc70834",
+   "request_id": "r51-agent_base-cleanup-1",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "background",
+   "cmd": "pgrep -f 'agent_base' >/dev/null && echo STILL_RUNNING && exit 3; rm -rf '/Users",
+   "created": 1791649033.158417,
+   "started_at": 1791649033.798986,
+   "ended_at": 1791649033.8859332,
+   "seconds": 0.08694720268249512
+  },
+  {
+   "id": "b13bbf8eaed1414bac0bc6c0bc56e749",
+   "request_id": "r51-morning-obs-after-rm",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "observe",
+   "cmd": "ls -la '/Users/kangkukjin/indiebiz-training/r51/agent_base' 2>&1; ls -la /Users/",
+   "created": 1791649035.076925,
+   "started_at": 1791649038.5594618,
+   "ended_at": 1791649038.633704,
+   "seconds": 0.07424211502075195
+  },
+  {
+   "id": "f47891eafbc4441a9bfeacaf9555380f",
+   "request_id": "d1ebd8f810204980b4aed2e0401a45bd",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "observe",
+   "cmd": "ls -a \"/Users/kangkukjin/indiebiz-training/r51/agent_base\" 2>&1 | head -6",
+   "created": 1791649091.656339,
+   "started_at": 1791649095.854353,
+   "ended_at": 1791649095.923028,
+   "seconds": 0.06867504119873047
+  }
+ ],
+ "left": [],
+ "disk": "ls: /Users/kangkukjin/indiebiz-training/r51/agent_base: No such file or directory\n"
+}

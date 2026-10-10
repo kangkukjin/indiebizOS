@@ -1,0 +1,93 @@
+{
+ "label": "trainer_b_morning_v1",
+ "elapsed": 19.56,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "night: 시간 초과로 끊김",
+  "jobs": [
+   {
+    "id": "night",
+    "outcome": "시간 초과로 끊김",
+    "state": "failed",
+    "beats": 30,
+    "gap": 6,
+    "power": 0,
+    "running_s": null,
+    "seconds": 150.00967121124268,
+    "collected": "night.beat",
+    "match": true
+   }
+  ],
+  "slept_or_stalled": false,
+  "cleanup": {
+   "done": true,
+   "reason": "",
+   "procs_left": 0,
+   "folder_absent": true,
+   "still_connected": true
+  }
+ },
+ "usage": {
+  "steps": 3468,
+  "rows": 1,
+  "elapsed_ms": 19331
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 90,
+   "ms": 4031,
+   "calls": 2,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 68,
+   "ms": 3550,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 67,
+   "ms": 3137,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 37,
+   "ms": 2886,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 70,
+   "ms": 2886,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 50,
+   "ms": 2179,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  }
+ ],
+ "issues": null
+}

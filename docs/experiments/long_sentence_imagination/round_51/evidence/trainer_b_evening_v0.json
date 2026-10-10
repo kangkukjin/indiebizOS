@@ -1,0 +1,96 @@
+{
+ "label": "trainer_b_evening_v0",
+ "elapsed": 145.42,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "밤일 1건을 맡기고 접수증을 남김",
+  "lid_closed": true,
+  "power": "AC Power",
+  "display_on": false,
+  "sleep": 0,
+  "idle_h": 3.4419444444444443,
+  "clock_diff": 1.0,
+  "not_seen": [],
+  "failed_conditions": [],
+  "accepted": [
+   {
+    "id": "night",
+    "job": "ce96a59c3c4b42ea9ac3e684c30fa997",
+    "state": "queued"
+   }
+  ],
+  "screen": "찍히지 않음",
+  "screen_bytes": null,
+  "sound": {
+   "accepted": true,
+   "running": false,
+   "volume_zero_applied": false,
+   "stopped": true,
+   "left": 0,
+   "error": ""
+  }
+ },
+ "usage": {
+  "steps": 10417,
+  "rows": 1,
+  "elapsed_ms": 145254
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 181,
+   "ms": 74147,
+   "calls": 7,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 98,
+   "ms": 60017,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 50,
+   "ms": 3619,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 85,
+   "ms": 3114,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 113,
+   "ms": 1668,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 116,
+   "ms": 1330,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  }
+ ],
+ "issues": null
+}

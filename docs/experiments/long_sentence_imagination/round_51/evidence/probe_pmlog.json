@@ -1,0 +1,546 @@
+{
+ "code": "#!ibl edition=2\n$r=[limbs:guestpc]{op:\"shell\",limb:\"guestpc-7a440e9daf61\",cmd:\"date \\\"+%F %T\\\"; pmset -g log | grep -E \\\" (Sleep|Wake|DarkWake) \\\" | grep -v Acks | tail -8 | cut -c1-150; echo ---; pmset -g log | tail -4 | cut -c1-150\",cwd:\"/tmp\",mode:\"observe\",timeout:8}\nreturn $r.result.output",
+ "elapsed": 3.684,
+ "response": {
+  "success": true,
+  "value": "2026-10-11 00:58:10\n2026-10-10 21:31:01 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14414 wakeAt=2026-10-11 01:31:15 info=\"com.apple.dasd:0:co\n2026-10-10 21:32:51 +0900 DarkWake            \tDarkWake from Safe Sleep [CDNP] : due to /Network Using AC (Charge:100%) 45 secs   \n2026-10-10 21:33:36 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Charge:100%) 35 secs   \n2026-10-10 21:33:37 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14283 wakeAt=2026-10-11 01:31:40 info=\"com.apple.dasd:0:co\n2026-10-10 21:34:11 +0900 DarkWake            \tDarkWake from Safe Sleep [CDNP] : due to /Network Using AC (Charge:100%) 46 secs   \n2026-10-10 21:34:57 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Charge:100%) 96 secs   \n2026-10-10 21:34:58 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14490 wakeAt=2026-10-11 01:36:28 info=\"com.apple.dasd:0:co\n2026-10-10 21:36:33 +0900 Wake                \tWake from Safe Sleep [CDNVA] : due to RTC/UserActivity Assertion Using AC (Charge:100%)           \n---\nListed by owning process:\n   pid 149(powerd): [0x00011c7a00088210] 1766:08:15 ExternalMedia named: \"com.apple.powermanagement.externalmediamounted\"  \nKernel Assertions: 0x4=USB\n   id=635  level=255 0x4=USB mod= description=com.apple.usb.externaldevice.14400000 owner=Expansion HDD\n",
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "scalar",
+    "2026-10-11 00:58:10\n2026-10-10 21:31:01 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14414 wakeAt=2026-10-11 01:31:15 info=\"com.apple.dasd:0:co\n2026-10-10 21:32:51 +0900 DarkWake            \tDarkWake from Safe Sleep [CDNP] : due to /Network Using AC (Charge:100%) 45 secs   \n2026-10-10 21:33:36 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Charge:100%) 35 secs   \n2026-10-10 21:33:37 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14283 wakeAt=2026-10-11 01:31:40 info=\"com.apple.dasd:0:co\n2026-10-10 21:34:11 +0900 DarkWake            \tDarkWake from Safe Sleep [CDNP] : due to /Network Using AC (Charge:100%) 46 secs   \n2026-10-10 21:34:57 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Charge:100%) 96 secs   \n2026-10-10 21:34:58 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14490 wakeAt=2026-10-11 01:36:28 info=\"com.apple.dasd:0:co\n2026-10-10 21:36:33 +0900 Wake                \tWake from Safe Sleep [CDNVA] : due to RTC/UserActivity Assertion Using AC (Charge:100%)           \n---\nListed by owning process:\n   pid 149(powerd): [0x00011c7a00088210] 1766:08:15 ExternalMedia named: \"com.apple.powermanagement.externalmediamounted\"  \nKernel Assertions: 0x4=USB\n   id=635  level=255 0x4=USB mod= description=com.apple.usb.externaldevice.14400000 owner=Expansion HDD\n"
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "5c6bb85e2def63e1704287a48c29d18d0f2a7485d3de68f2600306746eb51e47",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:38:45",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:51:73",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "literal:78:234",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "literal:239:245",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:251:260",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "literal:269:270",
+    "invocation_id": 6,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 7,
+    "node_id": "record:34:271",
+    "invocation_id": 7,
+    "kind": "record",
+    "parents": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
+   },
+   {
+    "id": 8,
+    "node_id": "call:19:271",
+    "invocation_id": 8,
+    "kind": "invoke",
+    "parents": [
+     7
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "f1bf3bf40f8a9d9c518b0b1b80a920a1ffdac123022a9436bba687af448a065a",
+    "targets": {
+     "op": "shell",
+     "limb": "guestpc-7a440e9daf61",
+     "cmd": "date \"+%F %T\"; pmset -g log | grep -E \" (Sleep|Wake|DarkWake) \" | grep -v Acks | tail -8 | cut -c1-150; echo ---; pmset -g log | tail -4 | cut -c1-150",
+     "cwd": "/tmp",
+     "mode": "observe"
+    }
+   },
+   {
+    "id": 9,
+    "node_id": "call:19:271",
+    "invocation_id": 9,
+    "kind": "tool_evidence",
+    "parents": [
+     8
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 10,
+    "node_id": "call:19:271",
+    "invocation_id": 10,
+    "kind": "call",
+    "parents": [
+     7,
+     8,
+     9
+    ]
+   },
+   {
+    "id": 11,
+    "node_id": "bind:16:271",
+    "invocation_id": 11,
+    "kind": "bind",
+    "parents": [
+     10
+    ]
+   },
+   {
+    "id": 12,
+    "node_id": "ref:279:281",
+    "invocation_id": 12,
+    "kind": "ref",
+    "parents": [
+     10
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "field:279:288",
+    "invocation_id": 13,
+    "kind": "field",
+    "parents": [
+     12
+    ]
+   },
+   {
+    "id": 14,
+    "node_id": "field:279:295",
+    "invocation_id": 14,
+    "kind": "field",
+    "parents": [
+     13
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:295": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 15,
+    "end": 295,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:271": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 16,
+    "end": 271,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:271": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 19,
+    "end": 271,
+    "line": 2,
+    "column": 4
+   },
+   "record:34:271": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 34,
+    "end": 271,
+    "line": 2,
+    "column": 19
+   },
+   "literal:38:45": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 38,
+    "end": 45,
+    "line": 2,
+    "column": 23
+   },
+   "literal:51:73": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 51,
+    "end": 73,
+    "line": 2,
+    "column": 36
+   },
+   "literal:78:234": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 78,
+    "end": 234,
+    "line": 2,
+    "column": 63
+   },
+   "literal:239:245": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 239,
+    "end": 245,
+    "line": 2,
+    "column": 224
+   },
+   "literal:251:260": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 251,
+    "end": 260,
+    "line": 2,
+    "column": 236
+   },
+   "literal:269:270": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 269,
+    "end": 270,
+    "line": 2,
+    "column": 254
+   },
+   "return:272:295": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 272,
+    "end": 295,
+    "line": 3,
+    "column": 1
+   },
+   "field:279:295": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 279,
+    "end": 295,
+    "line": 3,
+    "column": 8
+   },
+   "field:279:288": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 279,
+    "end": 288,
+    "line": 3,
+    "column": 8
+   },
+   "ref:279:281": {
+    "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+    "start": 279,
+    "end": 281,
+    "line": 3,
+    "column": 8
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "f1bf3bf40f8a9d9c518b0b1b80a920a1ffdac123022a9436bba687af448a065a",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "cwd",
+          [
+           "scalar",
+           "/tmp"
+          ]
+         ],
+         [
+          "exit",
+          [
+           "scalar",
+           0
+          ]
+         ],
+         [
+          "log_truncated",
+          [
+           "scalar",
+           false
+          ]
+         ],
+         [
+          "output",
+          [
+           "scalar",
+           "2026-10-11 00:58:10\n2026-10-10 21:31:01 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14414 wakeAt=2026-10-11 01:31:15 info=\"com.apple.dasd:0:co\n2026-10-10 21:32:51 +0900 DarkWake            \tDarkWake from Safe Sleep [CDNP] : due to /Network Using AC (Charge:100%) 45 secs   \n2026-10-10 21:33:36 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Charge:100%) 35 secs   \n2026-10-10 21:33:37 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14283 wakeAt=2026-10-11 01:31:40 info=\"com.apple.dasd:0:co\n2026-10-10 21:34:11 +0900 DarkWake            \tDarkWake from Safe Sleep [CDNP] : due to /Network Using AC (Charge:100%) 46 secs   \n2026-10-10 21:34:57 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Charge:100%) 96 secs   \n2026-10-10 21:34:58 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14490 wakeAt=2026-10-11 01:36:28 info=\"com.apple.dasd:0:co\n2026-10-10 21:36:33 +0900 Wake                \tWake from Safe Sleep [CDNVA] : due to RTC/UserActivity Assertion Using AC (Charge:100%)           \n---\nListed by owning process:\n   pid 149(powerd): [0x00011c7a00088210] 1766:08:15 ExternalMedia named: \"com.apple.powermanagement.externalmediamounted\"  \nKernel Assertions: 0x4=USB\n   id=635  level=255 0x4=USB mod= description=com.apple.usb.externaldevice.14400000 owner=Expansion HDD\n"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "39407c00ab92daf364d645069c9ca41b98915cfc2dec2fc78ab66a401756e288",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "2aa7a5051c929fecb73670fcc5241c8158815a6f8f750deb6cd37c8a92559311",
+     "contract": "6732500f456841aa4f900a75f92b17b402a3988aa51cd05a294745956e2e9c15",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 14,
+   "rows": 0,
+   "elapsed_ms": 3668,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:271",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 16,
+      "end": 271,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:19:271",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 19,
+      "end": 271,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "field:279:288",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 279,
+      "end": 288,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "field:279:295",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 279,
+      "end": 295,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "literal:239:245",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 239,
+      "end": 245,
+      "line": 2,
+      "column": 224
+     }
+    },
+    {
+     "node_id": "literal:251:260",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 251,
+      "end": 260,
+      "line": 2,
+      "column": 236
+     }
+    },
+    {
+     "node_id": "literal:269:270",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 269,
+      "end": 270,
+      "line": 2,
+      "column": 254
+     }
+    },
+    {
+     "node_id": "literal:38:45",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 38,
+      "end": 45,
+      "line": 2,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "literal:51:73",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 51,
+      "end": 73,
+      "line": 2,
+      "column": 36
+     }
+    },
+    {
+     "node_id": "literal:78:234",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 78,
+      "end": 234,
+      "line": 2,
+      "column": 63
+     }
+    },
+    {
+     "node_id": "record:34:271",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 34,
+      "end": 271,
+      "line": 2,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "ref:279:281",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 279,
+      "end": 281,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "return:272:295",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 272,
+      "end": 295,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "sequence:15:295",
+     "steps": 1,
+     "location": {
+      "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca",
+      "start": 15,
+      "end": 295,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 9,
+     "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca"
+    },
+    {
+     "line": 3,
+     "steps": 4,
+     "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 3407,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "5033712ad4a843a9f65b6d0db2b226d730ee3702124ca6d178655c5042c4ceca"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "ce1b3f13d21f4d04995cdbbf95d49e08"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "ce1b3f13d21f4d04995cdbbf95d49e08",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

@@ -1,0 +1,81 @@
+#!ibl edition=2
+# 51회차 [아침] — 접수증 파일만 보고 어제 맡긴 밤일을 찾아 확인·회수한다 v0 — inputs: out(receipt.json 이 있는 폴더). 저녁의 변수·결과 참조는 쓰지 않는다
+# 도는 중이면 읽기만 하고 그대로 둔다(새 접수 0). 끝났으면 결과를, 끊겼으면 중간 기록을 가져온다. 정리는 전부 끝난 경우에만
+[def:수]($글) {
+  [try] { return number($글) } [catch] { return null }
+}
+[def:값]($줄,$이름) {
+  $m = filter($줄, ($l)=>len($l) > len($이름) and split($l,"=")[0]==$이름)
+  return len($m)>0 ? strip(replace($m[0], $이름 + "=", "", 1)) : ""
+}
+$rc = ([self:read]{path:f"${out}/receipt.json"}).data
+[if:len($rc.accepted)==0] {
+  $없음 = {verdict:f"맡긴 일이 없음 — 저녁에 맡기지 않았다: ${join(' / ', $rc.reasons)}", jobs:[], slept_or_stalled:null, cleanup:null, new_submissions:0}
+  $w0 = [self:write]{path:f"${out}/morning.json", content:json($없음)}
+  $w00 = [self:write]{path:f"${out}/report.md", content:f"# 맥12 밤일\n- ${없음.verdict}"}
+  return $없음
+}
+$pc = $rc.device
+$rd = $rc.remote_dir
+$표식 = replace($rc.mark,"R51=","R51[=]")
+$일 = $rc.accepted >> [table:each] {
+  $작업 = {task_ref:{kind:"guestpc",task_id:$it.job_id}, limb:$pc, limb_name:$rc.pc, helper_mode:"resident", op:"shell", job_id:$it.job_id, request_id:$it.request_id}
+  $본 = [fn:외부PC작업확인]{작업:$작업,대기:0}
+  $r = get($본,"result",null)
+  $끊김 = get($본,"outcome","")=="timeout"
+  [if:$r != null] { $끊김 = $끊김 or get($r,"timeout",false)==true }
+  $종결 = "확인 못 함"
+  [if:$본.ok and not $본.settled] { $종결 = "도는 중" }
+  [if:$본.ok and $본.settled and $본.status=="succeeded" and $본.command_ok==true] { $종결 = "끝남" }
+  [if:$본.ok and $본.settled and $본.status=="cancelled"] { $종결 = "누가 멈춤" }
+  [if:$본.ok and $본.settled and $끊김] { $종결 = "시간 초과로 끊김" }
+  [if:$본.ok and $본.settled and $종결=="확인 못 함"] { $종결 = "실패" }
+  # 맥박 기록 — 도는 중이면 지금 값(요청ID 없이 매번 새로), 끝났으면 그 일의 최종 값(요청ID 로 한 번)
+  $명령 = f"B='${it.partial}'; echo BEATS=$(wc -l < \"$B\" | tr -d ' '); echo GAP=$(awk 'NR>1{g=$1-p; if(g>m)m=g}{p=$1}END{print m+0}' \"$B\"); echo FIRST=$(head -1 \"$B\" | cut -d' ' -f1); echo LASTBEAT=$(tail -1 \"$B\" | cut -d' ' -f1); echo NOW=$(date +%s); S=$(date -r $(head -1 \"$B\" | cut -d' ' -f1) '+%F %T'); echo SLEEPS=$(pmset -g log | grep -E ' (Sleep|Wake|DarkWake) ' | grep -v Acks | awk -v s=\"$S\" '($1\" \"$2)>=s' | wc -l | tr -d ' '); echo PROCS=$(ps -axo pid,command | grep '${표식}-${it.id}' | wc -l | tr -d ' ')"
+  $읽기 = {}
+  [if:$종결=="도는 중"] { $읽기 = [limbs:guestpc]{op:"shell",limb:$pc,cmd:$명령,cwd:$rd,mode:"observe",timeout:8} }
+  [if:$종결!="도는 중" and $종결!="확인 못 함"] { $읽기 = [limbs:guestpc]{op:"shell",limb:$pc,cmd:$명령,cwd:$rd,timeout:20,request_id:f"${rc.key}-final-${it.id}"} }
+  $줄 = split(strip(get(get($읽기,"result",{}),"output","")),"\n")
+  $beats = [fn:수]{글:[fn:값]{줄:$줄,이름:"BEATS"}}
+  $first = [fn:수]{글:[fn:값]{줄:$줄,이름:"FIRST"}}
+  $now = [fn:수]{글:[fn:값]{줄:$줄,이름:"NOW"}}
+  $last = [fn:수]{글:[fn:값]{줄:$줄,이름:"LASTBEAT"}}
+  # 가져오기 — 끝났으면 결과, 끊기거나 실패했으면 중간 기록
+  $가져올 = ""
+  [if:$종결=="끝남"] { $가져올 = $it.result }
+  [if:$종결=="시간 초과로 끊김" or $종결=="실패" or $종결=="누가 멈춤"] { $가져올 = $it.partial }
+  $회수 = {file:null, ok:false, match:false, content:null}
+  [if:$가져올 != ""] {
+    $이름 = split($가져올,"/")[len(split($가져올,"/"))-1]
+    $sha = [limbs:guestpc]{op:"shell",limb:$pc,cmd:f"shasum -a 256 '${가져올}' | cut -d' ' -f1",cwd:$rd,timeout:20,request_id:f"${rc.key}-sha-${it.id}"}
+    $g = [fn:외부PC파일가져오기]{PC:$rc.pc,중앙경로:f"${out}/${이름}",원격경로:f"${rd}/${가져올}",요청ID:f"${rc.key}-recv-${it.id}",대기:60}
+    $내용 = null
+    [if:$g.ok and $종결=="끝남"] { $내용 = ([self:read]{path:f"${out}/${이름}"}).data }
+    $회수 = {file:$이름, ok:$g.ok, match:$g.ok and get($g,"sha256","")==strip(get($sha.result,"output","")), content:$내용}
+  }
+  return {id:$it.id, job_id:$it.job_id, request_id:$it.request_id, outcome:$종결, state:get($본,"status",null), exit:get($본,"exit",null), accepted_at:$it.accepted_at, started_at:get($본,"started_at",null), ended_at:get($본,"ended_at",null), seconds:get($본,"seconds",null),
+    running_for_s:($종결=="도는 중" and $first != null and $now != null) ? $now - $first : null, planned_minutes:$it.minutes, limit_s:$it.limit_s, beats:$beats, max_gap_s:[fn:수]{글:[fn:값]{줄:$줄,이름:"GAP"}}, last_beat_age_s:($last != null and $now != null and $종결=="도는 중") ? $now - $last : null,
+    power_events:[fn:수]{글:[fn:값]{줄:$줄,이름:"SLEEPS"}}, procs:[fn:수]{글:[fn:값]{줄:$줄,이름:"PROCS"}}, collected:$회수}
+}
+# 8) 잠들거나 멈춘 적 — 맥박의 빈 구간(5초 간격이니 15초 넘으면 멈췄던 것)과 전원 기록 둘 다로
+$본것 = filter($일, ($j)=>$j.max_gap_s != null and $j.power_events != null)
+$멈춘적 = len($본것)==len($일) ? (len(filter($일, ($j)=>$j.max_gap_s > 15 or $j.power_events > 0)) > 0) : null
+# 9) 정리 — 전부 끝난 경우에만
+$도는것 = filter($일, ($j)=>$j.outcome=="도는 중" or $j.outcome=="확인 못 함")
+$정리 = {done:false, reason:"아직 도는 일이 있어 그대로 둠", procs_left:null, folder_absent:null, still_connected:null}
+[if:len($도는것)==0] {
+  $ps = [limbs:guestpc]{op:"shell",limb:$pc,cmd:f"ps -axo pid,command | grep '${표식}-' | wc -l | tr -d ' '",cwd:"/tmp",timeout:20,request_id:f"${rc.key}-ps-end"}
+  $rm = [limbs:guestpc]{op:"shell",limb:$pc,cmd:f"rm -rf \"${rd}\" && echo REMOVED",cwd:"/tmp",timeout:20,request_id:f"${rc.key}-cleanup"}
+  $부모 = join("/", split($rd,"/")[0:len(split($rd,"/"))-1])
+  $ls = [limbs:guestpc]{op:"list",limb:$pc,path:$부모}
+  $뒤 = [fn:외부PC준비]{PC:$rc.pc,환경조회:false}
+  $정리 = {done:true, reason:"", procs_left:[fn:수]{글:strip(get($ps.result,"output",""))}, folder_absent:len(filter($ls.result.files, ($f)=>$f.path==$rd))==0, still_connected:$뒤.ok}
+}
+$글 = map($일, ($j)=>f"${j.id}: ${j.outcome}${j.outcome=='도는 중' ? ' · ' + format_number($j.running_for_s == null ? 0 : $j.running_for_s/60, '.1f') + '분째' : ''}")
+$판정 = join(" / ", $글)
+$result = {verdict:$판정, receipt:{key:$rc.key, written_at:$rc.written_at, decision:$rc.decision}, jobs:$일, slept_or_stalled:$멈춘적, slept_basis:"맥박 기록의 가장 긴 빈 구간(15초 초과면 멈춤) + 맥12 전원 기록의 잠·깸 줄 수(밤일 시작 뒤)", cleanup:$정리, new_submissions:0}
+$w1 = [self:write]{path:f"${out}/morning.json", content:json($result)}
+$md = join("\n", ["# 맥12 밤일", f"- 판정: ${판정}", f"- 접수증: ${rc.written_at} 저녁 작성 · ${rc.decision}"] + map($일, ($j)=>f"- ${j.id}: ${j.outcome} · 상태 ${j.state} · 맥박 ${j.beats == null ? '못 봄' : j.beats}번 · 가장 긴 빈 구간 ${j.max_gap_s == null ? '못 봄' : j.max_gap_s}초 · 전원 기록 ${j.power_events == null ? '못 봄' : j.power_events}줄 · 걸린 ${j.seconds == null ? '-' : format_number($j.seconds,'.1f')}초 · 가져온 파일 ${j.collected.file == null ? '없음' : j.collected.file}(${j.collected.match ? '지문 일치' : '미확인'})") + [
+  f"- 밤사이 잠들거나 멈춘 적: ${멈춘적 == null ? '확인 못 함' : (멈춘적 ? '있음' : '없음')}", f"- 정리: ${정리.done ? '남은 프로세스 ' + ($정리.procs_left == null ? '못 봄' : text($정리.procs_left)) + '개 · 폴더 ' + ($정리.folder_absent ? '없음' : '남음') + ' · 연결 ' + text($정리.still_connected) : 정리.reason}"])
+$w2 = [self:write]{path:f"${out}/report.md", content:$md}
+return {verdict:$판정, jobs:map($일, ($j)=>{id:$j.id, outcome:$j.outcome, state:$j.state, beats:$j.beats, gap:$j.max_gap_s, power:$j.power_events, running_s:$j.running_for_s, seconds:$j.seconds, collected:$j.collected.file, match:$j.collected.match}), slept_or_stalled:$멈춘적, cleanup:$정리}

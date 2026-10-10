@@ -1,0 +1,84 @@
+{
+ "label": "trainer_base_morning_v0_early",
+ "elapsed": 3.57,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "night: 도는 중 · 3.7분째",
+  "jobs": [
+   {
+    "id": "night",
+    "outcome": "도는 중",
+    "state": "running",
+    "beats": 45,
+    "gap": 5,
+    "power": 13,
+    "running_s": 222,
+    "seconds": null,
+    "collected": null,
+    "match": false
+   }
+  ],
+  "slept_or_stalled": true,
+  "cleanup": {
+   "done": false,
+   "reason": "아직 도는 일이 있어 그대로 둠",
+   "procs_left": null,
+   "folder_absent": null,
+   "still_connected": null
+  }
+ },
+ "usage": {
+  "steps": 2049,
+  "rows": 1,
+  "elapsed_ms": 3519
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 36,
+   "ms": 3033,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "97cb5fba457e26d4223363db242fd677517351740cecaae06559f1f87dd59a8e"
+  },
+  {
+   "line": 77,
+   "ms": 20,
+   "calls": 1,
+   "actions": [
+    "self:write"
+   ],
+   "source_hash": "97cb5fba457e26d4223363db242fd677517351740cecaae06559f1f87dd59a8e"
+  },
+  {
+   "line": 80,
+   "ms": 19,
+   "calls": 1,
+   "actions": [
+    "self:write"
+   ],
+   "source_hash": "97cb5fba457e26d4223363db242fd677517351740cecaae06559f1f87dd59a8e"
+  },
+  {
+   "line": 11,
+   "ms": 13,
+   "calls": 1,
+   "actions": [
+    "self:read"
+   ],
+   "source_hash": "97cb5fba457e26d4223363db242fd677517351740cecaae06559f1f87dd59a8e"
+  },
+  {
+   "line": 90,
+   "ms": 5,
+   "calls": 1,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "97cb5fba457e26d4223363db242fd677517351740cecaae06559f1f87dd59a8e"
+  }
+ ],
+ "issues": null
+}

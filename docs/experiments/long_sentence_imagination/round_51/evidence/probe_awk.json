@@ -1,0 +1,684 @@
+{
+ "code": "#!ibl edition=2\n$명령 = \"B=results/night.beat; S=$(date -r $(head -1 \\\"$B\\\" | cut -d\\\" \\\" -f1) \\\"+%F %T\\\"); echo \\\"S=[$S]\\\"; pmset -g log | grep -E \\\" (Sleep|Wake|DarkWake) \\\" | grep -v Acks | awk -v s=\\\"$S\\\" \\x27($1\\\" \\\"$2)>=s\\x27 | wc -l; pmset -g log | grep -E \\\" (Sleep|Wake|DarkWake) \\\" | grep -v Acks | wc -l; pmset -g log | grep -E \\\" (Sleep|Wake|DarkWake) \\\" | grep -v Acks | awk -v s=\\\"$S\\\" \\x27{k=$1\\\" \\\"$2; if (k\\\"\\\" >= s\\\"\\\") n++} END{print n+0}\\x27\"\n$r=[limbs:guestpc]{op:\"shell\",limb:\"guestpc-7a440e9daf61\",cmd:$명령,cwd:\"/Users/kangkukjin/indiebiz-training/r51/trainer_base\",mode:\"observe\",timeout:8}\nreturn {cmd:$명령,out:$r.result}",
+ "elapsed": 6.194,
+ "response": {
+  "success": true,
+  "value": {
+   "cmd": "B=results/night.beat; S=$(date -r $(head -1 \"$B\" | cut -d\" \" -f1) \"+%F %T\"); echo \"S=[$S]\"; pmset -g log | grep -E \" (Sleep|Wake|DarkWake) \" | grep -v Acks | awk -v s=\"$S\" '($1\" \"$2)>=s' | wc -l; pmset -g log | grep -E \" (Sleep|Wake|DarkWake) \" | grep -v Acks | wc -l; pmset -g log | grep -E \" (Sleep|Wake|DarkWake) \" | grep -v Acks | awk -v s=\"$S\" '{k=$1\" \"$2; if (k\"\" >= s\"\") n++} END{print n+0}'",
+   "out": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r51/trainer_base",
+    "exit": 0,
+    "log_truncated": false,
+    "output": "S=[2026-10-11 00:54:17]\n      13\n     344\n13\n"
+   }
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "cmd",
+      [
+       "scalar",
+       "B=results/night.beat; S=$(date -r $(head -1 \"$B\" | cut -d\" \" -f1) \"+%F %T\"); echo \"S=[$S]\"; pmset -g log | grep -E \" (Sleep|Wake|DarkWake) \" | grep -v Acks | awk -v s=\"$S\" '($1\" \"$2)>=s' | wc -l; pmset -g log | grep -E \" (Sleep|Wake|DarkWake) \" | grep -v Acks | wc -l; pmset -g log | grep -E \" (Sleep|Wake|DarkWake) \" | grep -v Acks | awk -v s=\"$S\" '{k=$1\" \"$2; if (k\"\" >= s\"\") n++} END{print n+0}'"
+      ]
+     ],
+     [
+      "out",
+      [
+       "record",
+       [
+        [
+         "cwd",
+         [
+          "scalar",
+          "/Users/kangkukjin/indiebiz-training/r51/trainer_base"
+         ]
+        ],
+        [
+         "exit",
+         [
+          "scalar",
+          0
+         ]
+        ],
+        [
+         "log_truncated",
+         [
+          "scalar",
+          false
+         ]
+        ],
+        [
+         "output",
+         [
+          "scalar",
+          "S=[2026-10-11 00:54:17]\n      13\n     344\n13\n"
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "6e6c7065ce02eaab55e396952f401d3c9433f5325e95c95079a35af2cfa95f29",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:22:460",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "bind:16:460",
+    "invocation_id": 2,
+    "kind": "bind",
+    "parents": [
+     1
+    ]
+   },
+   {
+    "id": 3,
+    "node_id": "literal:483:490",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "literal:496:518",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "ref:523:526",
+    "invocation_id": 5,
+    "kind": "ref",
+    "parents": [
+     1
+    ]
+   },
+   {
+    "id": 6,
+    "node_id": "literal:531:585",
+    "invocation_id": 6,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 7,
+    "node_id": "literal:591:600",
+    "invocation_id": 7,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 8,
+    "node_id": "literal:609:610",
+    "invocation_id": 8,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 9,
+    "node_id": "record:479:611",
+    "invocation_id": 9,
+    "kind": "record",
+    "parents": [
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "id": 10,
+    "node_id": "call:464:611",
+    "invocation_id": 10,
+    "kind": "invoke",
+    "parents": [
+     9
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "808d42ba70482dcca44557e04279e0ddd9aa662764f450dfa210f846c5a27cbd",
+    "targets": {
+     "op": "shell",
+     "limb": "guestpc-7a440e9daf61",
+     "cwd": "/Users/kangkukjin/indiebiz-training/r51/trainer_base",
+     "mode": "observe"
+    }
+   },
+   {
+    "id": 11,
+    "node_id": "call:464:611",
+    "invocation_id": 11,
+    "kind": "tool_evidence",
+    "parents": [
+     10
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 12,
+    "node_id": "call:464:611",
+    "invocation_id": 12,
+    "kind": "call",
+    "parents": [
+     9,
+     10,
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "bind:461:611",
+    "invocation_id": 13,
+    "kind": "bind",
+    "parents": [
+     12
+    ]
+   },
+   {
+    "id": 14,
+    "node_id": "ref:624:627",
+    "invocation_id": 14,
+    "kind": "ref",
+    "parents": [
+     1
+    ]
+   },
+   {
+    "id": 15,
+    "node_id": "ref:632:634",
+    "invocation_id": 15,
+    "kind": "ref",
+    "parents": [
+     12
+    ]
+   },
+   {
+    "id": 16,
+    "node_id": "field:632:641",
+    "invocation_id": 16,
+    "kind": "field",
+    "parents": [
+     15
+    ]
+   },
+   {
+    "id": 17,
+    "node_id": "record:619:642",
+    "invocation_id": 17,
+    "kind": "record",
+    "parents": [
+     14,
+     16
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:642": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 15,
+    "end": 642,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:460": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 16,
+    "end": 460,
+    "line": 2,
+    "column": 1
+   },
+   "literal:22:460": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 22,
+    "end": 460,
+    "line": 2,
+    "column": 7
+   },
+   "bind:461:611": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 461,
+    "end": 611,
+    "line": 3,
+    "column": 1
+   },
+   "call:464:611": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 464,
+    "end": 611,
+    "line": 3,
+    "column": 4
+   },
+   "record:479:611": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 479,
+    "end": 611,
+    "line": 3,
+    "column": 19
+   },
+   "literal:483:490": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 483,
+    "end": 490,
+    "line": 3,
+    "column": 23
+   },
+   "literal:496:518": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 496,
+    "end": 518,
+    "line": 3,
+    "column": 36
+   },
+   "ref:523:526": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 523,
+    "end": 526,
+    "line": 3,
+    "column": 63
+   },
+   "literal:531:585": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 531,
+    "end": 585,
+    "line": 3,
+    "column": 71
+   },
+   "literal:591:600": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 591,
+    "end": 600,
+    "line": 3,
+    "column": 131
+   },
+   "literal:609:610": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 609,
+    "end": 610,
+    "line": 3,
+    "column": 149
+   },
+   "return:612:642": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 612,
+    "end": 642,
+    "line": 4,
+    "column": 1
+   },
+   "record:619:642": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 619,
+    "end": 642,
+    "line": 4,
+    "column": 8
+   },
+   "ref:624:627": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 624,
+    "end": 627,
+    "line": 4,
+    "column": 13
+   },
+   "field:632:641": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 632,
+    "end": 641,
+    "line": 4,
+    "column": 21
+   },
+   "ref:632:634": {
+    "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+    "start": 632,
+    "end": 634,
+    "line": 4,
+    "column": 21
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "808d42ba70482dcca44557e04279e0ddd9aa662764f450dfa210f846c5a27cbd",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "cwd",
+          [
+           "scalar",
+           "/Users/kangkukjin/indiebiz-training/r51/trainer_base"
+          ]
+         ],
+         [
+          "exit",
+          [
+           "scalar",
+           0
+          ]
+         ],
+         [
+          "log_truncated",
+          [
+           "scalar",
+           false
+          ]
+         ],
+         [
+          "output",
+          [
+           "scalar",
+           "S=[2026-10-11 00:54:17]\n      13\n     344\n13\n"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "4158709539271eb379a1d77326d01d6b31b90b12a8c50eb3fbee60f2f21672b8",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "f2b23514295564efa29b3e6e7bb79f68c96846127c07891a22dcff4f3000bab8",
+     "contract": "6732500f456841aa4f900a75f92b17b402a3988aa51cd05a294745956e2e9c15",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 17,
+   "rows": 0,
+   "elapsed_ms": 6177,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:460",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 16,
+      "end": 460,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:461:611",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 461,
+      "end": 611,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:464:611",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 464,
+      "end": 611,
+      "line": 3,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "field:632:641",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 632,
+      "end": 641,
+      "line": 4,
+      "column": 21
+     }
+    },
+    {
+     "node_id": "literal:22:460",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 22,
+      "end": 460,
+      "line": 2,
+      "column": 7
+     }
+    },
+    {
+     "node_id": "literal:483:490",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 483,
+      "end": 490,
+      "line": 3,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "literal:496:518",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 496,
+      "end": 518,
+      "line": 3,
+      "column": 36
+     }
+    },
+    {
+     "node_id": "literal:531:585",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 531,
+      "end": 585,
+      "line": 3,
+      "column": 71
+     }
+    },
+    {
+     "node_id": "literal:591:600",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 591,
+      "end": 600,
+      "line": 3,
+      "column": 131
+     }
+    },
+    {
+     "node_id": "literal:609:610",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 609,
+      "end": 610,
+      "line": 3,
+      "column": 149
+     }
+    },
+    {
+     "node_id": "record:479:611",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 479,
+      "end": 611,
+      "line": 3,
+      "column": 19
+     }
+    },
+    {
+     "node_id": "record:619:642",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 619,
+      "end": 642,
+      "line": 4,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "ref:523:526",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 523,
+      "end": 526,
+      "line": 3,
+      "column": 63
+     }
+    },
+    {
+     "node_id": "ref:624:627",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 624,
+      "end": 627,
+      "line": 4,
+      "column": 13
+     }
+    },
+    {
+     "node_id": "ref:632:634",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 632,
+      "end": 634,
+      "line": 4,
+      "column": 21
+     }
+    },
+    {
+     "node_id": "return:612:642",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 612,
+      "end": 642,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "sequence:15:642",
+     "steps": 1,
+     "location": {
+      "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c",
+      "start": 15,
+      "end": 642,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 3,
+     "steps": 9,
+     "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c"
+    },
+    {
+     "line": 4,
+     "steps": 5,
+     "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c"
+    },
+    {
+     "line": 2,
+     "steps": 2,
+     "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 3,
+     "ms": 5920,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "ca287c320352c57c98f87d779b20b8499f40e7bf60cae62b506dcc9dbfb6ff1c"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "7fdb763b6dc0447d86937a71d649727e"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "7fdb763b6dc0447d86937a71d649727e",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

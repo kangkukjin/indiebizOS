@@ -1,0 +1,603 @@
+[
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 2432,
+      "call_id": "c73c3ea5068c4279a4a05e9ab4ec5d02",
+      "event": "usage",
+      "input": 2944,
+      "latency_ms": 911,
+      "model": "deepseek-flash",
+      "output": 2,
+      "parent_call_id": null,
+      "phase": "classify",
+      "provider": "OpenAI",
+      "role": "oneshot:classify",
+      "round_index": 1,
+      "source": "gear:최대|분류→경량",
+      "tier": "경량"
+    }
+  },
+  {
+    "kind": "recall.presented",
+    "data": {
+      "blocks": [
+        {
+          "chars": 2474,
+          "ids": [
+            "5006",
+            "5030",
+            "5021"
+          ],
+          "meta": {
+            "refs": 3,
+            "top_code": ""
+          },
+          "ms": 303.1,
+          "source": "hippocampus",
+          "status": "ok",
+          "tag": "execution_memory"
+        },
+        {
+          "chars": 2437,
+          "ids": [
+            "script:나레이션생성",
+            "script:폴더변화",
+            "script:팁행source중첩"
+          ],
+          "ms": 13.0,
+          "source": "reusable_capabilities",
+          "status": "ok",
+          "tag": "reusable_capabilities"
+        },
+        {
+          "chars": 883,
+          "ids": [],
+          "meta": {
+            "branches": 10
+          },
+          "ms": 14.9,
+          "source": "memory_map",
+          "status": "ok",
+          "tag": "memory_map"
+        },
+        {
+          "chars": 797,
+          "ids": [
+            "339",
+            "450",
+            "464"
+          ],
+          "meta": {
+            "branches": [
+              "indiebizOS/운영·수리",
+              "보고서",
+              "보고서/AI 동향",
+              "보고서/부동산 발굴"
+            ],
+            "outside_beats_inside": false
+          },
+          "ms": 49.6,
+          "source": "recalled_memory",
+          "status": "ok",
+          "tag": "recalled_memory"
+        },
+        {
+          "chars": 2262,
+          "ids": [],
+          "meta": {
+            "branches": 43
+          },
+          "ms": 48.7,
+          "source": "guide_map",
+          "status": "ok",
+          "tag": "guide_map"
+        },
+        {
+          "chars": 237,
+          "ids": [
+            "맥12"
+          ],
+          "ms": 1.6,
+          "source": "connected_limbs",
+          "status": "ok",
+          "tag": "connected_limbs"
+        },
+        {
+          "chars": 1067,
+          "ids": [],
+          "ms": 2.1,
+          "source": "decision_ledger",
+          "status": "ok",
+          "tag": "decision_ledger"
+        },
+        {
+          "chars": 2625,
+          "ids": [],
+          "ms": 0.0,
+          "source": "pursuit",
+          "status": "ok",
+          "tag": "pursuit"
+        },
+        {
+          "chars": 105,
+          "ids": [
+            "basics.11.81960fefe87d"
+          ],
+          "ms": 38.2,
+          "source": "method_map",
+          "status": "selected",
+          "tag": "method_map"
+        },
+        {
+          "chars": 620,
+          "ids": [
+            "atlas.networks.circuit_breaker",
+            "atlas.psychology.working_memory",
+            "atlas.psychology.cognitive_load"
+          ],
+          "meta": {
+            "picked": 3
+          },
+          "ms": 74.3,
+          "source": "world_memory",
+          "status": "ok",
+          "tag": "world_map"
+        }
+      ],
+      "channel": "pipeline",
+      "recall_id": "b24522c0163e4b78a58e652b571b3ac4",
+      "reflex": {
+        "code": "",
+        "score": 0.6484
+      },
+      "request_type": "THINK"
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 256,
+      "call_id": "b5debd225c31428bb6246550ef7621ca",
+      "event": "usage",
+      "input": 1702,
+      "latency_ms": 679,
+      "model": "deepseek-flash",
+      "output": 3,
+      "parent_call_id": null,
+      "phase": "classify",
+      "provider": "OpenAI",
+      "role": "oneshot:classify",
+      "round_index": 1,
+      "source": "gear:최대|분류→경량",
+      "tier": "경량"
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 896,
+      "call_id": "8ce613dbd14f4879af057032fcc066b7",
+      "event": "usage",
+      "input": 3867,
+      "latency_ms": 6521,
+      "model": "deepseek-flash",
+      "output": 1470,
+      "parent_call_id": null,
+      "phase": "background",
+      "provider": "OpenAI",
+      "role": "oneshot:background",
+      "round_index": 1,
+      "source": "gear:최대|분류→경량",
+      "tier": "경량"
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "id": "489eea242151470ab6919a4700a41814",
+      "input": {
+        "chars": 643,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$O = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_51회차/agent/base/out\\\"\\n$준비 = [fn:외부PC준비]{PC:\\\"맥12\\\",환경조회:false}\\n$rc = [self:read]{path:f\\\"${O}/receipt.json\\\"}\\n$st = [self:task]{op:\\\"status\\\",ref:$rc.data.task_ref}\\n$h = [limbs:guestpc]{op:\\\"history\\\",limb:\\\"맥12\\\",job:$rc.data.job_id}\\n$now = [self:time]{format:\\\"%Y-%m-%dT%H:%M:%S%z\\\"}\\nreturn {준비:{status:$준비.status,paused:$준비.registration.paused,state:$준비.registration.state},rc:{rid:$rc.data.request_id,job:$rc.data.job_id,acc:$rc.data.accepted_at,rd:$rc.data.remote_dir,lim:$rc.data.limit_s},st:$st,h:$h,now:$now}\"}",
+        "id": "25d3c7a134cbef93dacc2ecfad3023eb1c67172f8550b14f6356a1bbfdc730f4",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 19,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791648967.655972
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "check_rejected": true,
+      "elapsed_s": 0.296,
+      "evidence": {
+        "chars": 10217,
+        "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"MISSING_FIELD\", \"message\": \"선언된 필드가 없습니다: registration. 선택 필드는 has/get을 쓰세요.\", \"source_span\": {\"source_hash\": \"84f9687aedbf1c31dbe91db98b3622c9b9daa4aa3f5b3d473548b4b07d02f0b6\", \"start\": 417, \"end\": 433, \"line\": 8, \"column\": 38}, \"call_path\": [], \"location\": {\"source_hash\": \"b196815cb1e6a4a4ba357f01b010d48a1b1f559013305f22e487001e25591f1a\", \"start\": 417, \"end\": 433, \"line\": 8, \"column\": 38, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 8, \"end_column\": 54, \"offset_encoding\": \"unicode-codepoints\"}, \"rule\": \"MISSING_FIELD\", \"severity\": \"error\", \"hint\": \"입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요.\"}, {\"code\": \"MISSING_FIELD\", \"message\": \"선언된 필드가 없습니다: registration. 선택 필드는 has/get을 쓰세요.\", \"source_span\": {\"source_hash\": \"84f9687aedbf1c31dbe91db98b3622c9b9daa4aa3f5b3d473548b4b07d02f0b6\", \"start\": 447, \"end\": 463, \"line\": 8, \"column\": 68}, \"call_path\": [], \"location\": {\"source_h",
+        "id": "566a4c625a07280d84a2b2585bacb5bb908ed52339163241a30a1b1fc019354f",
+        "integrity": "verified"
+      },
+      "id": "489eea242151470ab6919a4700a41814",
+      "internal_tool_failures": 0,
+      "is_error": true,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 20,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791648967.951228
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "id": "6e3345a687c94508a10e126b5252a036",
+      "input": {
+        "chars": 268,
+        "excerpt": "{\"code\": \"$rejected:579ada7e52479f631967e0b43fdba188a6770c9cffbbf53b26f909aec7825d09\", \"edition\": 2, \"code_edits\": [{\"old\": \"{status:$준비.status,paused:$준비.registration.paused,state:$준비.registration.state}\", \"new\": \"{status:$준비.status,reg:get($준비,\\\"registration\\\")}\"}]}",
+        "id": "6d6087cacd09817d6ba1af120ecf5d7eed2272d1f0f831412f234f03f2a389af",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 21,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791648970.734167
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "check_rejected": false,
+      "elapsed_s": 0.41,
+      "evidence": {
+        "chars": 16030,
+        "excerpt": "{\"success\": true, \"value\": {\"준비\": {\"status\": \"connected\", \"reg\": {\"installation_id\": \"<가림>\", \"generation\": \"6f4ef43f3dccc3f4670e45ca20253d14\", \"kind\": \"pc\", \"adapter\": \"resident-v1\", \"state\": \"active\", \"paused\": false, \"wake\": {\"mac\": \"<가림>\", \"broadcast\": \"192.168.x.255\", \"relay\": \"central\", \"tested\": false}, \"last_seen\": 1791648957.454536, \"capabilities\": {\"adapter\": \"resident-v1\", \"arch\": \"amd64\", \"cpu_hard_limit\": false, \"generation\": \"6f4ef43f3dccc3f4670e45ca20253d14\", \"hostname\": \"kang-old-MacBook-Air.local\", \"interactive\": true, \"kind\": \"pc\", \"max_parallel\": 2, \"media\": true, \"memory_hard_limit\": false, \"observation_parallel\": 1, \"observation_shell_timeout\": 10, \"os\": \"darwin\", \"service_scope\": \"user_login\", \"shell\": true, \"transfer\": true, \"wake_relay\": true}}}, \"rc\": {\"rid\": \"r51-agent_base-night-1\", \"job\": \"7ea766bc7cae45ba93507d3a53ef350d\", \"acc\": \"2026-10-11T01:09:31+0900\", \"rd\": \"/Users/kangkukjin/indiebiz-training/r51/agent_base\", \"lim\":",
+        "id": "8a455bc9a3ba9976e24af682f68902aa1ff716fbb6cb19983ccee3695001275f",
+        "integrity": "verified"
+      },
+      "id": "6e3345a687c94508a10e126b5252a036",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 22,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791648971.1439402
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "id": "904b62ca40cb426f928cd01ada6c20bb",
+      "input": {
+        "chars": 1654,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$O = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_51회차/agent/base/out\\\"\\n$R = \\\"/Users/kangkukjin/indiebiz-training/r51/agent_base\\\"\\n[def:관측]($id,$cmd) {\\n  [try] { return [limbs:guestpc]{op:\\\"shell\\\",limb:\\\"맥12\\\",cmd:$cmd,cwd:\\\"/tmp\\\",mode:\\\"observe\\\",timeout:10,request_id:f\\\"r51-morning-obs-${id}\\\"} } [catch] { return {failed:true,error:$error} }\\n}\\n$ls = [fn:관측]{id:\\\"ls\\\",cmd:f\\\"ls -laR ${R}; shasum -a 256 ${R}/results/*; cat ${R}/results/night.json; echo; wc -l ${R}/results/night.beat; head -2 ${R}/results/night.beat; tail -2 ${R}/results/night.beat\\\"}\\n$g1 = [fn:외부PC파일가져오기]{PC:\\\"맥12\\\",중앙경로:f\\\"${O}/night.json\\\",원격경로:f\\\"${R}/results/night.json\\\",요청ID:\\\"r51-agent_base-recv-night_json-1\\\",대기:60}\\n$g2 = [fn:외부PC파일가져오기]{PC:\\\"맥12\\\",중앙경로:f\\\"${O}/night.beat\\\",원격경로:f\\\"${R}/results/night.beat\\\",요청ID:\\\"r51-agent_base-recv-night_beat-1\\\",대기:60}\\n$ps = [fn:관측]{id:\\\"ps\\\",cmd:\\\"pgrep -fl 'night.sh|summary.py|R51=agent_base' ; ",
+        "id": "a60245dccaaab3aec4faddc0aaeca5faa0b84d55f15d6d507df351f68bd00e58",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 23,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791648982.635629
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "check_rejected": false,
+      "elapsed_s": 39.903,
+      "evidence": {
+        "chars": 19831,
+        "excerpt": "{\"success\": true, \"value\": {\"ls\": {\"success\": true, \"limb\": \"guestpc-7a440e9daf61\", \"limb_name\": \"맥12\", \"result\": {\"cwd\": \"/tmp\", \"exit\": 0, \"log_truncated\": false, \"output\": \"total 472\\ndrwxr-xr-x  5 kangkukjin  staff     160 10 11 01:09 .\\ndrwx------  4 kangkukjin  staff     128 10 11 01:08 ..\\ndrwxr-xr-x  4 kangkukjin  staff     128 10 11 01:09 jobs\\ndrwxr-xr-x  4 kangkukjin  staff     128 10 11 01:15 results\\n-rw-------  1 kangkukjin  staff  240044 10 11 01:09 silence.wav\\n\\n/Users/kangkukjin/indiebiz-training/r51/agent_base/jobs:\\ntotal 16\\ndrwxr-xr-x  4 kangkukjin  staff  128 10 11 01:09 .\\ndrwxr-xr-x  5 kangkukjin  staff  160 10 11 01:09 ..\\n-rw-------  1 kangkukjin  staff  521 10 11 01:09 night.sh\\n-rw-------  1 kangkukjin  staff  306 10 11 01:09 summary.py\\n\\n/Users/kangkukjin/indiebiz-training/r51/agent_base/results:\\ntotal 16\\ndrwxr-xr-x  4 kangkukjin  staff  128 10 11 01:15 .\\ndrwxr-xr-x  5 kangkukjin  staff  160 10 11 01:09 ..\\n-rw-r--r--  1 kangkukjin  staff  999 10 11 01",
+        "id": "0ce1239d753608707ea9e69c808e8d0ecd3b62b9dfa82c1728aeb82c831b0ebd",
+        "integrity": "verified"
+      },
+      "id": "904b62ca40cb426f928cd01ada6c20bb",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 24,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791649022.538924
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "id": "ed4324157b1d49c984b2981e0090e5c2",
+      "input": {
+        "chars": 623,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$R = \\\"/Users/kangkukjin/indiebiz-training/r51/agent_base\\\"\\n$rm = [limbs:guestpc]{op:\\\"shell\\\",limb:\\\"맥12\\\",cmd:f\\\"pgrep -f 'agent_base' >/dev/null && echo STILL_RUNNING && exit 3; rm -rf '${R}' && echo removed\\\",cwd:\\\"/tmp\\\",timeout:30,request_id:\\\"r51-agent_base-cleanup-1\\\"}\\n$chk = [limbs:guestpc]{op:\\\"shell\\\",limb:\\\"맥12\\\",cmd:f\\\"ls -la '${R}' 2>&1; ls -la /Users/kangkukjin/indiebiz-training/r51 2>&1\\\",cwd:\\\"/tmp\\\",mode:\\\"observe\\\",timeout:10,request_id:\\\"r51-morning-obs-after-rm\\\"}\\n$p = [fn:외부PC준비]{PC:\\\"맥12\\\",환경조회:false}\\nreturn {rm:$rm.result,chk:$chk.result.output,conn:$p.status}\"}",
+        "id": "ada45e14f4a9d4fc9cf90f38d4bc4ed41bb0aa319849c8d62fa35e05cd25f6fd",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 25,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791649032.690423
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "check_rejected": false,
+      "elapsed_s": 7.105,
+      "evidence": {
+        "chars": 4342,
+        "excerpt": "{\"success\": true, \"value\": {\"rm\": {\"cwd\": \"/tmp\", \"exit\": 0, \"log_truncated\": false, \"output\": \"removed\\n\"}, \"chk\": \"ls: /Users/kangkukjin/indiebiz-training/r51/agent_base: No such file or directory\\ntotal 0\\ndrwx------  3 kangkukjin  staff  96 10 11 01:17 .\\ndrwx------  3 kangkukjin  staff  96 10 11 00:54 ..\\ndrwx------  3 kangkukjin  staff  96 10 11 00:59 trainer_c\\n\", \"conn\": \"connected\"}, \"value_wire\": {\"protocol\": \"ibl-value/1\", \"data\": [\"record\", [[\"rm\", [\"record\", [[\"cwd\", [\"scalar\", \"/tmp\"]], [\"exit\", [\"scalar\", 0]], [\"log_truncated\", [\"scalar\", false]], [\"output\", [\"scalar\", \"removed\\n\"]]]]], [\"chk\", [\"scalar\", \"ls: /Users/kangkukjin/indiebiz-training/r51/agent_base: No such file or directory\\ntotal 0\\ndrwx------  3 kangkukjin  staff  96 10 11 01:17 .\\ndrwx------  3 kangkukjin  staff  96 10 11 00:54 ..\\ndrwx------  3 kangkukjin  staff  96 10 11 00:59 trainer_c\\n\"]], [\"conn\", [\"scalar\", \"connected\"]]]]}, \"edition\": 2, \"executed\": true, \"plan_hash\": \"f45a469c4632c522df71fad9e1c6",
+        "id": "618a6a1a5b9fb5cbdb9a41cb7bc860188874672eb5988f49ba917922a2c7d60f",
+        "integrity": "verified"
+      },
+      "id": "ed4324157b1d49c984b2981e0090e5c2",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 26,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791649039.795433
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "id": "726a278af316473cb94279cebf4ecfb8",
+      "input": {
+        "chars": 3943,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$O = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_51회차/agent/base/out\\\"\\n$m = {\\n checked_at:\\\"2026-10-11T01:16~01:17+0900\\\",\\n source:{receipt:f\\\"${O}/receipt.json\\\",request_id:\\\"r51-agent_base-night-1\\\",job_id:\\\"7ea766bc7cae45ba93507d3a53ef350d\\\",how:\\\"self:task status + guestpc history(job) — 둘 다 같은 결과\\\"},\\n note_on_timing:\\\"접수(01:09:31)부터 확인(01:16)까지 실제 경과는 약 7분이다. '밤사이' 조사는 접수~확인 구간 기준이며 그 앞 기록도 함께 봤다.\\\",\\n job:{final_state:\\\"완료(succeeded)\\\",exit:0,outcome:\\\"succeeded\\\",started_at:\\\"2026-10-11T01:09:33+0900 (epoch 1791648573.30)\\\",ended_at:\\\"2026-10-11T01:15:34+0900 (epoch 1791648934.62)\\\",seconds:361.3,limit_s:900,within_limit:true,stdout_last:\\\"DONE night\\\",beats_logged:\\\"beat 1/72 … beat 72/72\\\"},\\n results_saved:[\\n  {remote:\\\"/Users/kangkukjin/indiebiz-training/r51/agent_base/results/night.json\\\",local:f\\\"${O}/night.json\\\",sha256:\\\"aff317355b95330f5a3400c2d0b4e0e412a3f590308f32bab1af294e8aa5a1fe\\\",size:102,v",
+        "id": "52a39a97ffe821cc34dad5bea8aa45447e69735307957c23b266a3a743d6ce82",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 27,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791649064.319507
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "check_rejected": false,
+      "elapsed_s": 0.343,
+      "evidence": {
+        "chars": 2841,
+        "excerpt": "{\"success\": true, \"value\": {\"j\": {\"final_state\": \"완료(succeeded)\", \"exit\": 0, \"outcome\": \"succeeded\", \"started_at\": \"2026-10-11T01:09:33+0900 (epoch 1791648573.30)\", \"ended_at\": \"2026-10-11T01:15:34+0900 (epoch 1791648934.62)\", \"seconds\": 361.3, \"limit_s\": 900, \"within_limit\": true, \"stdout_last\": \"DONE night\", \"beats_logged\": \"beat 1/72 … beat 72/72\"}, \"md_len\": 928}, \"value_wire\": {\"protocol\": \"ibl-value/1\", \"data\": [\"record\", [[\"j\", [\"record\", [[\"final_state\", [\"scalar\", \"완료(succeeded)\"]], [\"exit\", [\"scalar\", 0]], [\"outcome\", [\"scalar\", \"succeeded\"]], [\"started_at\", [\"scalar\", \"2026-10-11T01:09:33+0900 (epoch 1791648573.30)\"]], [\"ended_at\", [\"scalar\", \"2026-10-11T01:15:34+0900 (epoch 1791648934.62)\"]], [\"seconds\", [\"scalar\", 361.3]], [\"limit_s\", [\"scalar\", 900]], [\"within_limit\", [\"scalar\", true]], [\"stdout_last\", [\"scalar\", \"DONE night\"]], [\"beats_logged\", [\"scalar\", \"beat 1/72 … beat 72/72\"]]]]], [\"md_len\", [\"scalar\", 928]]]]}, \"edition\": 2, \"executed\": true, \"plan_hash\": \"7d8bb8b8",
+        "id": "f85387d22e713b2df3c5317541351fd3765bfdc15dcb7d2b2639357b6cf526c0",
+        "integrity": "verified"
+      },
+      "id": "726a278af316473cb94279cebf4ecfb8",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 28,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791649064.660361
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 69768,
+      "cache_read": 1148076,
+      "call_id": "a204ea320dd44d9093f8a3a4bd166d46",
+      "event": "usage",
+      "input": 1217856,
+      "latency_ms": 111389,
+      "model": "opus",
+      "output": 6337,
+      "parent_call_id": null,
+      "phase": "execute",
+      "provider": "ClaudeCode",
+      "reasoning": 594,
+      "role": "execution",
+      "round_index": 6,
+      "source": "gear:최대|실행→고급",
+      "tier": "고급"
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 25720,
+      "cache_read": 544,
+      "call_id": "dd5c6ef614104a688529f0dc22f100c7",
+      "event": "usage",
+      "input": 26266,
+      "latency_ms": 4843,
+      "model": "opus",
+      "output": 344,
+      "parent_call_id": null,
+      "phase": "evaluate",
+      "provider": "ClaudeCode",
+      "reasoning": 335,
+      "role": "oneshot:evaluate",
+      "round_index": 1,
+      "source": "gear:최대|평가→고급",
+      "tier": "고급"
+    }
+  },
+  {
+    "kind": "recall.used",
+    "data": {
+      "blocks": [
+        {
+          "evidence": "executed",
+          "ibl_calls": 5,
+          "presented": [
+            "5006",
+            "5030",
+            "5021"
+          ],
+          "recall_id": "b24522c0163e4b78a58e652b571b3ac4",
+          "source": "hippocampus",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "presented": [
+            "script:나레이션생성",
+            "script:폴더변화",
+            "script:팁행source중첩"
+          ],
+          "quality_contribution": "not_inferred",
+          "recall_id": "b24522c0163e4b78a58e652b571b3ac4",
+          "source": "reusable_capabilities",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "opened": [],
+          "presented": [
+            "339",
+            "450",
+            "464"
+          ],
+          "recall_id": "b24522c0163e4b78a58e652b571b3ac4",
+          "source": "recalled_memory",
+          "used": []
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "basics.11.81960fefe87d"
+          ],
+          "recall_id": "b24522c0163e4b78a58e652b571b3ac4",
+          "source": "method_map",
+          "used": [
+            "basics.11.81960fefe87d"
+          ]
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "atlas.networks.circuit_breaker",
+            "atlas.psychology.working_memory",
+            "atlas.psychology.cognitive_load"
+          ],
+          "recall_id": "b24522c0163e4b78a58e652b571b3ac4",
+          "source": "world_memory",
+          "used": []
+        }
+      ],
+      "completed": true,
+      "phase": "turn"
+    }
+  },
+  {
+    "kind": "supervision.cost.summary",
+    "data": {
+      "cost": {
+        "check_rejections": 1,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.000703,
+        "evaluation_model_s": 5.684,
+        "evaluation_prepare_s": 0.021204,
+        "evaluation_visual_s": 0.001913,
+        "evaluation_wait_s": 0.00116,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61/events.jsonl",
+        "execution_calls": 5,
+        "execution_failures": 1,
+        "execution_tool_s": 48.057,
+        "internal_tool_failures": 0,
+        "request_intent": "task",
+        "source_failures": 0,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 126.907
+      },
+      "kind": "cost.summary",
+      "phase": "final",
+      "role": "harness",
+      "seq": 41,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/3d0c3b3e975746c7a756538ada269d61",
+      "task_id": "task_sysai_d3da0277",
+      "time": 1791649079.987714
+    }
+  }
+]

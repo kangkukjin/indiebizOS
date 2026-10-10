@@ -1,0 +1,156 @@
+{
+ "passed": 13,
+ "total": 14,
+ "checks": [
+  {
+   "check": "저녁: 문진 — 뚜껑 닫힘·어댑터·안 잠듦·화면 1대·못 본 항목 0",
+   "ok": true,
+   "detail": {
+    "lid_closed": true,
+    "power_source": "AC Power",
+    "sleep_minutes": 0,
+    "displays": 1,
+    "display_on": false,
+    "idle_seconds": 12643,
+    "free_gb": 151,
+    "wifi_rssi": -74,
+    "not_seen": []
+   }
+  },
+  {
+   "check": "저녁: 시계 차이 ±2초 안",
+   "ok": true,
+   "detail": -0.5
+  },
+  {
+   "check": "저녁: 맡길지 판단과 근거",
+   "ok": true,
+   "detail": [
+    "디스크 여유(GB): 필요 500, 관측 151",
+    "사람 손이 닿은 뒤(시간): 필요 12, 관측 3.5119444444444445"
+   ]
+  },
+  {
+   "check": "원장: 밤일 접수 수 = 기대(다시 맡긴 것 없음)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "접수증: 작업 번호가 원장의 밤일과 같음",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "원장: 깨우기 신호 0·화면 입력 0·sudo 0",
+   "ok": true,
+   "detail": [
+    "info",
+    "media",
+    "shell",
+    "transfer"
+   ]
+  },
+  {
+   "check": "저녁: 소리 — 접수·멈춤·남은 재생 0·\"소리 확인 안 됨\"",
+   "ok": true,
+   "detail": {
+    "accepted": true,
+    "running_seen": true,
+    "volume_zero_applied": false,
+    "stopped": true,
+    "processes_left": 0
+   }
+  },
+  {
+   "check": "저녁: 화면 한 장의 결과와 읽기",
+   "ok": true,
+   "detail": {
+    "captured": true,
+    "bytes": 2054,
+    "reading": "그림은 왔지만 화면 전원이 꺼져 있었다 — 꺼진 화면(내용 없음)으로 읽어야 한다"
+   }
+  },
+  {
+   "check": "아침: 일마다 종결이 기대와 같음",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "check": "아침: 시작·종료·소요가 원장과 같음",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "check": "아침: 결과(끝난 일)·중간 기록(끊긴 일) 회수와 내용",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "check": "맥12: 표식 프로세스 0",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "맥12: 작업 폴더 없음",
+   "ok": false,
+   "detail": ".\n..\nsilence.wav\n"
+  },
+  {
+   "check": "맥12 등록·연결 그대로",
+   "ok": true,
+   "detail": null
+  }
+ ],
+ "ledger": [
+  {
+   "id": "4b8aa5349d48470790aa3b7828eed603",
+   "request_id": "r51-trainer_c-ready",
+   "state": "succeeded",
+   "op": "info",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791647933.221453,
+   "started_at": 1791647935.237924,
+   "ended_at": 1791647935.272465,
+   "seconds": 0.03454089164733887
+  },
+  {
+   "id": "6f418ee51aec4c97ad4264fa9c8a9063",
+   "request_id": "r51-trainer_c-send-wav",
+   "state": "succeeded",
+   "op": "transfer",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791647941.337594,
+   "started_at": 1791647942.8744042,
+   "ended_at": 1791647944.440286,
+   "seconds": 1.5658817291259766
+  },
+  {
+   "id": "94ab3987f7d5421e988390ff34c5c6cb",
+   "request_id": "r51-trainer_c-media",
+   "state": "cancelled",
+   "op": "media",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791647948.418766,
+   "started_at": 1791647949.363862,
+   "ended_at": 1791647956.495517,
+   "seconds": 7.131654977798462
+  },
+  {
+   "id": "da63327f360d4ee6a386d3a1375b30ae",
+   "request_id": "ff5b336c94e7484abb94b22c5dc389ba",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "observe",
+   "cmd": "ls -a \"/Users/kangkukjin/indiebiz-training/r51/trainer_c\" 2>&1 | head -6",
+   "created": 1791648268.670895,
+   "started_at": 1791648270.090234,
+   "ended_at": 1791648270.151789,
+   "seconds": 0.061554908752441406
+  }
+ ],
+ "left": [],
+ "disk": ".\n..\nsilence.wav\n"
+}

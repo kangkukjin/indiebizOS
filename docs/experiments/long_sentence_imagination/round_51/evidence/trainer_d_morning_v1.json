@@ -1,0 +1,105 @@
+{
+ "label": "trainer_d_morning_v1",
+ "elapsed": 46.23,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "tidy: 끝남 / index: 끝남",
+  "jobs": [
+   {
+    "id": "tidy",
+    "outcome": "끝남",
+    "state": "succeeded",
+    "beats": 24,
+    "gap": 6,
+    "power": 0,
+    "running_s": null,
+    "seconds": 120.6640419960022,
+    "collected": "tidy.json",
+    "match": true
+   },
+   {
+    "id": "index",
+    "outcome": "끝남",
+    "state": "succeeded",
+    "beats": 36,
+    "gap": 6,
+    "power": 0,
+    "running_s": null,
+    "seconds": 180.76858019828796,
+    "collected": "index.json",
+    "match": true
+   }
+  ],
+  "slept_or_stalled": false,
+  "cleanup": {
+   "done": true,
+   "reason": "",
+   "procs_left": 0,
+   "folder_absent": true,
+   "still_connected": true
+  }
+ },
+ "usage": {
+  "steps": 6287,
+  "rows": 2,
+  "elapsed_ms": 46084
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 90,
+   "ms": 16153,
+   "calls": 4,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 37,
+   "ms": 10685,
+   "calls": 2,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 50,
+   "ms": 6977,
+   "calls": 2,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 70,
+   "ms": 6116,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 67,
+   "ms": 2724,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 68,
+   "ms": 2599,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  }
+ ],
+ "issues": null
+}

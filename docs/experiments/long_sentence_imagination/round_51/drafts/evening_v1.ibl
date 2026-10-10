@@ -1,0 +1,127 @@
+#!ibl edition=2
+# 51회차 [저녁] — 닫힌 노트북의 몸 상태를 묻고, 맡겨도 되면 밤일을 맡기고 접수증을 남긴 채 끝낸다 v1(v0→v1 수정 1회: 소리 확인에 쓴 무음 파일을 지우지 않아, 밤일을 맡기지 않은 날에도 맥12 에 폴더가 남았다 — 확인 뒤 파일을 지우고 빈 폴더면 폴더도 지운다) — inputs: src(night.json·jobs/·silence.wav), out
+# 관측(문진·화면·남은 프로세스)은 매번 새로 본다(요청ID 없음). 효과가 있는 호출(보내기·밤일·재생)만 요청ID 아래에 둔다.
+[def:초]() {
+  $hms = split(split([self:time]{}," ")[1],":")
+  return number($hms[0])*3600 + number($hms[1])*60 + number($hms[2])
+}
+[def:값]($줄,$이름) {
+  $m = filter($줄, ($l)=>len($l) > len($이름) and split($l,"=")[0]==$이름)
+  return len($m)>0 ? strip(replace($m[0], $이름 + "=", "", 1)) : ""
+}
+[def:수]($글) {
+  [try] { return number($글) } [catch] { return null }
+}
+
+$q = ([self:read]{path:f"${src}/night.json"}).data
+$rd = $q.remote_dir
+$실행 = split($rd,"/")[len(split($rd,"/"))-1]
+$키 = f"r51-${실행}"
+
+# 1) 연결 — 깨어 있으면 신호를 보내지 않는 가지
+$준비 = [fn:외부PC깨워준비]{PC:$q.pc,요청ID:f"${키}-ready",대기:20}
+[if:$준비.ok==false or get($준비,"ready",false)!=true] {
+  $멈춤 = {verdict:"중단 — 맥12 가 응답하지 않음", ready:{ok:$준비.ok, status:$준비.status}, receipt:{accepted:[]}}
+  $wr0 = [self:write]{path:f"${out}/receipt.json", content:json({pc:$q.pc, key:$키, remote_dir:$rd, mark:$q.mark, decision:"맡기지 않음", reasons:["맥12 응답 없음"], accepted:[]})}
+  $we0 = [self:write]{path:f"${out}/evening.json", content:json($멈춤)}
+  return $멈춤
+}
+$pc = $준비.limb
+
+# 1) 문진 — 맥12 에서 직접 읽는다. 값이 비면 '못 봄'
+$명령 = join("\n", [
+  "echo TOD=$(date +%H:%M:%S)",
+  "echo CLAM=$(ioreg -r -k AppleClamshellState -d 4 | grep AppleClamshellState | head -1 | awk '{print $NF}')",
+  "echo POWER=$(pmset -g batt | head -1 | cut -d\"'\" -f2)",
+  "echo BATT=$(pmset -g batt | grep -o '[0-9]*%' | head -1)",
+  "echo DISPLAYS=$(system_profiler SPDisplaysDataType | grep -c 'Resolution:')",
+  "echo RES=$(system_profiler SPDisplaysDataType | grep 'Resolution:' | head -1 | sed 's/^ *Resolution: //')",
+  "echo DISPLAY_POWER=$(ioreg -n IODisplayWrangler | grep -o '\"CurrentPowerState\"=[0-9]' | head -1 | cut -d= -f2)",
+  "echo SLEEP=$(pmset -g | awk '$1==\"sleep\"{print $2}')",
+  "echo DISPLAYSLEEP=$(pmset -g | awk '$1==\"displaysleep\"{print $2}')",
+  "echo IDLE=$(ioreg -c IOHIDSystem | awk '/HIDIdleTime/{print int($NF/1000000000); exit}')",
+  "echo LOAD=$(sysctl -n vm.loadavg | awk '{print $2}')",
+  "echo CPU_LIMIT=$(pmset -g therm | awk '/CPU_Speed_Limit/{print $3}')",
+  "echo FREE_GB=$(df -g / | awk 'NR==2{print $4}')",
+  "echo RSSI=$(/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I | awk '/agrCtlRSSI/{print $2}')",
+  "echo VOLUME=$(osascript -e 'output volume of (get volume settings)' 2>/dev/null)",
+  "echo MUTED=$(osascript -e 'output muted of (get volume settings)' 2>/dev/null)"])
+$앞 = [fn:초]{}
+$문진 = [limbs:guestpc]{op:"shell",limb:$pc,cmd:$명령,cwd:"/tmp",timeout:40}
+$뒤 = [fn:초]{}
+$줄 = split(strip(get($문진.result,"output","")),"\n")
+$v = {tod:[fn:값]{줄:$줄,이름:"TOD"}, clam:[fn:값]{줄:$줄,이름:"CLAM"}, power:[fn:값]{줄:$줄,이름:"POWER"}, batt:[fn:값]{줄:$줄,이름:"BATT"}, displays:[fn:값]{줄:$줄,이름:"DISPLAYS"}, res:[fn:값]{줄:$줄,이름:"RES"},
+  dpower:[fn:값]{줄:$줄,이름:"DISPLAY_POWER"}, sleep:[fn:값]{줄:$줄,이름:"SLEEP"}, dsleep:[fn:값]{줄:$줄,이름:"DISPLAYSLEEP"}, idle:[fn:값]{줄:$줄,이름:"IDLE"}, load:[fn:값]{줄:$줄,이름:"LOAD"}, limit:[fn:값]{줄:$줄,이름:"CPU_LIMIT"},
+  free:[fn:값]{줄:$줄,이름:"FREE_GB"}, rssi:[fn:값]{줄:$줄,이름:"RSSI"}, volume:[fn:값]{줄:$줄,이름:"VOLUME"}, muted:[fn:값]{줄:$줄,이름:"MUTED"}}
+$원격초 = null
+[if:len(split($v.tod,":"))==3] { $원격초 = number(split($v.tod,":")[0])*3600 + number(split($v.tod,":")[1])*60 + number(split($v.tod,":")[2]) }
+$시계차 = $원격초 != null ? $원격초 - ($앞 + $뒤)/2 : null
+$못봄 = map(filter([["뚜껑",$v.clam],["전원",$v.power],["배터리",$v.batt],["화면 수",$v.displays],["화면 전원",$v.dpower],["잠들기 설정",$v.sleep],["마지막 입력",$v.idle],["부하",$v.load],["열 제한",$v.limit],["디스크 여유",$v.free],["무선 신호",$v.rssi],["맥12 시계",$v.tod]], ($p)=>$p[1]==""), ($p)=>$p[0])
+$몸 = {lid_closed:$v.clam=="" ? null : $v.clam=="Yes", power_source:$v.power=="" ? null : $v.power, battery:$v.batt=="" ? null : $v.batt, displays:[fn:수]{글:$v.displays}, display_resolution:$v.res=="" ? null : $v.res,
+  display_on:$v.dpower=="" ? null : number($v.dpower) >= 4, display_power_state:[fn:수]{글:$v.dpower}, sleep_minutes:[fn:수]{글:$v.sleep}, displaysleep_minutes:[fn:수]{글:$v.dsleep}, idle_seconds:[fn:수]{글:$v.idle}, load:[fn:수]{글:$v.load},
+  cpu_speed_limit:[fn:수]{글:$v.limit}, free_gb:[fn:수]{글:$v.free}, wifi_rssi:[fn:수]{글:$v.rssi}, remote_time:$v.tod=="" ? null : $v.tod, clock_diff_seconds:$시계차, round_trip_seconds:$뒤 - $앞, output_volume:[fn:수]{글:$v.volume}, output_muted:$v.muted=="" ? null : $v.muted=="true", not_seen:$못봄}
+
+# 2) 맡겨도 되는가 — 조건마다 필요·관측·판정. 관측을 못 한 조건은 통과로 치지 않는다
+$req = $q.requires
+$가장긴분 = max(map($q.jobs, ($j)=>$j.minutes))
+$조건 = []
+[if:get($req,"ac_power",false)] { $조건 = $조건 + [{name:"전원 어댑터", need:"AC Power", got:$몸.power_source, ok:$몸.power_source=="AC Power"}] }
+[if:get($req,"min_free_gb",0) > 0] { $조건 = $조건 + [{name:"디스크 여유(GB)", need:$req.min_free_gb, got:$몸.free_gb, ok:$몸.free_gb != null and $몸.free_gb >= $req.min_free_gb}] }
+[if:get($req,"no_thermal_limit",false)] { $조건 = $조건 + [{name:"열 제한 없음", need:100, got:$몸.cpu_speed_limit, ok:$몸.cpu_speed_limit == 100}] }
+[if:get($req,"sleep_never_or_longer_than_job",false)] { $조건 = $조건 + [{name:"잠들기 설정(분, 0=안 잠듦)", need:f"0 또는 ${가장긴분}분 초과", got:$몸.sleep_minutes, ok:$몸.sleep_minutes != null and ($몸.sleep_minutes == 0 or $몸.sleep_minutes > $가장긴분)}] }
+[if:get($req,"min_idle_hours",0) > 0] { $조건 = $조건 + [{name:"사람 손이 닿은 뒤(시간)", need:$req.min_idle_hours, got:$몸.idle_seconds != null ? $몸.idle_seconds/3600 : null, ok:$몸.idle_seconds != null and $몸.idle_seconds/3600 >= $req.min_idle_hours}] }
+$안맞음 = filter($조건, ($c)=>not $c.ok)
+$맡김 = len($안맞음)==0
+
+# 3) 맡기고 접수증만 남긴다
+$접수들 = []
+$보냄 = {ok:false, status:"보내지 않음"}
+[if:$맡김] {
+  $있던묶음 = []
+  [try] { $있던묶음 = [self:list]{path:f"${out}/_stage",pattern:"jobs.zip"} } [catch] { $있던묶음 = [] }
+  [if:len($있던묶음)==0] { $새묶음 = [self:script]{id:"압축",args:{op:"pack",paths:[f"${src}/jobs"],base:$src,output:f"${out}/_stage/jobs.zip"}} }
+  $보냄 = [fn:외부PC파일보내기]{PC:$q.pc,중앙경로:f"${out}/_stage/jobs.zip",원격경로:f"${rd}/jobs.zip",요청ID:f"${키}-send",대기:60}
+  assert $보냄.ok, "밤일 스크립트를 보내지 못함", {status:$보냄.status}
+  $풀기 = [limbs:guestpc]{op:"shell",limb:$pc,cmd:"unzip -q -o jobs.zip && ls jobs | wc -l",cwd:$rd,timeout:30,request_id:f"${키}-unzip"}
+  assert get($풀기.result,"exit",1)==0, "맥12 에서 밤일 스크립트를 풀지 못함", {result:$풀기.result}
+  $접수들 = $q.jobs >> [table:each] {
+    $a = [fn:외부PC작업실행]{PC:$pc,명령:$it.cmd,작업폴더:$rd,요청ID:f"${키}-job-${it.id}",환경:$it.env,실행제한:$it.limit_s,대기:0}
+    return {id:$it.id, job_id:get($a,"job_id",""), request_id:f"${키}-job-${it.id}", accepted_at:get($a,"accepted_at",null), state_at_handoff:$a.observation.status, minutes:$it.minutes, limit_s:$it.limit_s, result:$it.result, partial:$it.partial}
+  }
+}
+$접수증 = {pc:$q.pc, device:$pc, key:$키, remote_dir:$rd, mark:$q.mark, written_at:[self:time]{}, decision:$맡김 ? "맡김" : "맡기지 않음", reasons:map($안맞음, ($c)=>f"${c.name}: 필요 ${c.need}, 관측 ${c.got == null ? '못 봄' : c.got}"), accepted:$접수들}
+$wr = [self:write]{path:f"${out}/receipt.json", content:json($접수증)}
+
+# 4) 화면 한 장 — 만지지 않는다. 그림이 왔다는 것과 볼 것이 있다는 것은 다르다(화면 전원 상태와 함께 적는다)
+$화면 = {captured:false, reason:"", path:null, bytes:null, width:null, height:null}
+[try] {
+  $sc = [limbs:guestpc]{op:"screen",limb:$pc,mode:"interactive",max_width:800}
+  $화면 = {captured:true, reason:"", path:get($sc,"path",null), bytes:get($sc,"bytes",null), width:get($sc,"width",null), height:get($sc,"height",null)}
+} [catch] { $화면 = {captured:false, reason:$error.message, path:null, bytes:null, width:null, height:null} }
+$화면읽기 = "찍히지 않음"
+[if:$화면.captured and $몸.display_on==false] { $화면읽기 = "그림은 왔지만 화면 전원이 꺼져 있었다 — 꺼진 화면(내용 없음)으로 읽어야 한다" }
+[if:$화면.captured and $몸.display_on==true] { $화면읽기 = "켜진 화면이 찍힘" }
+[if:$화면.captured and $몸.display_on==null] { $화면읽기 = "그림은 왔지만 화면이 켜져 있었는지는 못 봄" }
+
+# 5) 소리 없이 재생 접수 → 도는 중 관측 → 멈춤. 무음 파일이고, 음량 0 을 요청한다
+$wav = f"${rd}/silence.wav"
+$재생 = {accepted:false, status:"", playing_seen:false, player:"", volume_arg_seen:false, stopped:false, left:null, error:""}
+[try] {
+  $sw = [fn:외부PC파일보내기]{PC:$q.pc,중앙경로:f"${src}/silence.wav",원격경로:$wav,요청ID:f"${키}-send-wav",대기:60}
+  $md = [limbs:guestpc]{op:"media",limb:$pc,path:$wav,volume:0,mode:"background",timeout:60,request_id:f"${키}-media"}
+  $mc = [fn:외부PC작업확인]{작업:{**$md,op:"media"},대기:4}
+  $ps = [limbs:guestpc]{op:"shell",limb:$pc,cmd:"ps -axo pid,etime,command | grep 'silence[.]wav' | cut -c1-200; true",cwd:"/tmp",mode:"observe",timeout:5}
+  $psout = strip(get($ps.result,"output",""))
+  $st = [fn:외부PC작업중지확인]{작업:{**$md,op:"media"},대기:15}
+  $ps2 = [limbs:guestpc]{op:"shell",limb:$pc,cmd:"ps -axo pid,command | grep 'silence[.]wav' | wc -l | tr -d ' '",cwd:"/tmp",mode:"observe",timeout:5}
+  $치움 = [limbs:guestpc]{op:"shell",limb:$pc,cmd:f"rm -f '${wav}'; rmdir '${rd}' 2>/dev/null; true",cwd:"/tmp",timeout:20,request_id:f"${키}-rm-wav"}
+  $재생 = {accepted:get($md,"accepted",false), status:$mc.status, playing_seen:len($psout)>0, player:$psout, volume_arg_seen:contains($psout,"-v 0",true) or contains($psout,"--volume=0",true), stopped:get($st,"stopped",false), left:[fn:수]{글:strip(get($ps2.result,"output",""))}, error:""}
+} [catch] { $재생 = {**$재생, error:$error.message} }
+$소리 = {request:"무음 파일 + 음량 0", accepted:$재생.accepted, running_seen:$재생.playing_seen, player_command:$재생.player, volume_zero_applied:$재생.volume_arg_seen, system_muted:$몸.output_muted, system_volume:$몸.output_volume, stopped:$재생.stopped, processes_left:$재생.left,
+  audible_sound_verified:false, note:"재생 접수·프로세스 관측까지가 확인한 것이다. 실제로 소리가 났는지는 확인할 수 없다(파일이 무음이라 났어도 들리지 않는다)", error:$재생.error}
+
+# 6) 기록
+$판정 = $맡김 ? f"밤일 ${len($접수들)}건을 맡기고 접수증을 남김" : f"맡기지 않음 — ${join(' / ', $접수증.reasons)}"
+$result = {verdict:$판정, body:$몸, decision:{entrust:$맡김, conditions:$조건, longest_job_minutes:$가장긴분}, receipt_path:$wr.path, accepted:$접수들, wake:{status:$준비.status, signal_needed:false}, screen:{**$화면, reading:$화면읽기, input_events_sent:0}, sound:$소리}
+$we = [self:write]{path:f"${out}/evening.json", content:json($result)}
+return {verdict:$판정, lid_closed:$몸.lid_closed, power:$몸.power_source, display_on:$몸.display_on, sleep:$몸.sleep_minutes, idle_h:$몸.idle_seconds != null ? $몸.idle_seconds/3600 : null, clock_diff:$시계차, not_seen:$못봄, failed_conditions:$접수증.reasons, accepted:map($접수들, ($a)=>{id:$a.id, job:$a.job_id, state:$a.state_at_handoff}), screen:$화면읽기, screen_bytes:$화면.bytes, sound:{accepted:$소리.accepted, running:$소리.running_seen, volume_zero_applied:$소리.volume_zero_applied, stopped:$소리.stopped, left:$소리.processes_left, error:$소리.error}}

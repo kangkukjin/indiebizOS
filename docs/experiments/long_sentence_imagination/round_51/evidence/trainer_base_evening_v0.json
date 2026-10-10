@@ -1,0 +1,96 @@
+{
+ "label": "trainer_base_evening_v0",
+ "elapsed": 63.59,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "밤일 1건을 맡기고 접수증을 남김",
+  "lid_closed": true,
+  "power": "AC Power",
+  "display_on": false,
+  "sleep": 0,
+  "idle_h": 3.4244444444444446,
+  "clock_diff": -1.0,
+  "not_seen": [],
+  "failed_conditions": [],
+  "accepted": [
+   {
+    "id": "night",
+    "job": "c42844a28b7540dbbb518d2e615f448f",
+    "state": "queued"
+   }
+  ],
+  "screen": "그림은 왔지만 화면 전원이 꺼져 있었다 — 꺼진 화면(내용 없음)으로 읽어야 한다",
+  "screen_bytes": 2054,
+  "sound": {
+   "accepted": true,
+   "running": true,
+   "volume_zero_applied": false,
+   "stopped": true,
+   "left": 0,
+   "error": ""
+  }
+ },
+ "usage": {
+  "steps": 10521,
+  "rows": 1,
+  "elapsed_ms": 63419
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 181,
+   "ms": 42334,
+   "calls": 7,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 50,
+   "ms": 7910,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 98,
+   "ms": 4259,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 116,
+   "ms": 2795,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 113,
+   "ms": 2426,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 85,
+   "ms": 2322,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  }
+ ],
+ "issues": null
+}

@@ -1,0 +1,93 @@
+{
+ "label": "trainer_c_evening_v0",
+ "elapsed": 27.13,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "맡기지 않음 — 디스크 여유(GB): 필요 500, 관측 151 / 사람 손이 닿은 뒤(시간): 필요 12, 관측 3.5119444444444445",
+  "lid_closed": true,
+  "power": "AC Power",
+  "display_on": false,
+  "sleep": 0,
+  "idle_h": 3.5119444444444445,
+  "clock_diff": -0.5,
+  "not_seen": [],
+  "failed_conditions": [
+   "디스크 여유(GB): 필요 500, 관측 151",
+   "사람 손이 닿은 뒤(시간): 필요 12, 관측 3.5119444444444445"
+  ],
+  "accepted": [],
+  "screen": "그림은 왔지만 화면 전원이 꺼져 있었다 — 꺼진 화면(내용 없음)으로 읽어야 한다",
+  "screen_bytes": 2054,
+  "sound": {
+   "accepted": true,
+   "running": true,
+   "volume_zero_applied": false,
+   "stopped": true,
+   "left": 0,
+   "error": ""
+  }
+ },
+ "usage": {
+  "steps": 9326,
+  "rows": 0,
+  "elapsed_ms": 26993
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 181,
+   "ms": 17158,
+   "calls": 5,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 50,
+   "ms": 2860,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 113,
+   "ms": 2386,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 98,
+   "ms": 2100,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 116,
+   "ms": 1556,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  },
+  {
+   "line": 150,
+   "ms": 27,
+   "calls": 2,
+   "actions": [
+    "self:limb"
+   ],
+   "source_hash": "6afdb7c9f925e5b82a01b0e09269f3fc994ff938e0ef714484557872e4c8e33e"
+  }
+ ],
+ "issues": null
+}

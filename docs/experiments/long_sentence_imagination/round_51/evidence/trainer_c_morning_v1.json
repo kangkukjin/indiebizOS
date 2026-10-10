@@ -1,0 +1,48 @@
+{
+ "label": "trainer_c_morning_v1",
+ "elapsed": 0.49,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "맡긴 일이 없음 — 저녁에 맡기지 않았다: 디스크 여유(GB): 필요 500, 관측 151 / 사람 손이 닿은 뒤(시간): 필요 12, 관측 3.5119444444444445",
+  "jobs": [],
+  "slept_or_stalled": null,
+  "cleanup": null,
+  "new_submissions": 0
+ },
+ "usage": {
+  "steps": 52,
+  "rows": 0,
+  "elapsed_ms": 466
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 14,
+   "ms": 14,
+   "calls": 1,
+   "actions": [
+    "self:write"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 15,
+   "ms": 14,
+   "calls": 1,
+   "actions": [
+    "self:write"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  },
+  {
+   "line": 11,
+   "ms": 12,
+   "calls": 1,
+   "actions": [
+    "self:read"
+   ],
+   "source_hash": "541852690cef97b8b92868ab2cfa1f989b0f6a912c3b40d751bdf3ab1f237b4b"
+  }
+ ],
+ "issues": null
+}

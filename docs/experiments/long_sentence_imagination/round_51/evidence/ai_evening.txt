@@ -1,0 +1,11 @@
+맥12 는 다른 방에 뚜껑이 닫힌 채 있고 가 볼 사람이 없어. 그 PC 가 혼자 못 돌아올 일은 하지 마(재우기·잠들기 설정 변경·헬퍼 재시작·sudo·등록 해제나 일시 중지·화면 입력 금지).
+1) 맥12 의 지금 몸 상태를 봐 줘: 뚜껑, 전원과 배터리, 어떤 화면이 붙어 있고 켜져 있는지, 잠들기 설정, 사람이 마지막으로 만진 지 얼마나 됐는지, 부하와 열 제한, 디스크 여유, 무선 신호, 여기 시계와 맥12 시계의 차이. 못 본 건 못 봤다고 적어.
+2) 입력 폴더의 night.json 에 있는 밤일을 그 상태로 맡겨도 되는지 판단해. night.json 의 requires 에 밤일이 필요로 하는 조건이 적혀 있어. 안 되면 맡기지 말고 이유를 알려 줘.
+3) 되면 입력 폴더의 jobs 폴더를 맥12 의 remote_dir 아래로 보내고, 밤일(jobs 의 cmd 를 remote_dir 에서, env 와 limit_s 대로)을 맡겨. 끝나길 기다리지 말고, 나중에 누가 봐도(이 대화를 모르는 사람도) 그 일을 찾을 수 있게 접수증을 출력 폴더의 receipt.json 에 적어 두고 끝내.
+4) 화면을 한 장 찍어 봐. 만지지는 마. 찍히면 켜진 화면인지 꺼진 화면인지, 안 찍히면 왜인지.
+5) 소리가 나지 않게 재생이 되는지 확인하고 멈춰. 입력 폴더의 silence.wav 는 무음 파일이야. 음량도 0 으로 요청해. 재생이 접수됐다는 것과 실제로 소리가 났다는 것은 구분해서 적어.
+6) 출력 폴더에 evening.json 으로 남겨.
+
+입력 폴더: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_51회차/agent/base/input
+출력 폴더: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_51회차/agent/base/out
+맥12 는 등록된 상주 원격 PC 야. 맥12 의 remote_dir 밖 파일은 건드리지 마. 다른 실행자의 trainer/harness/drafts 폴더나 정답 파일(_oracle)은 참조하지 마.

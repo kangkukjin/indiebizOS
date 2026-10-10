@@ -1,0 +1,310 @@
+{
+ "passed": 16,
+ "total": 16,
+ "checks": [
+  {
+   "check": "저녁: 문진 — 뚜껑 닫힘·어댑터·안 잠듦·화면 1대·못 본 항목 0",
+   "ok": true,
+   "detail": {
+    "lid_closed": true,
+    "power_source": "AC Power",
+    "sleep_minutes": 0,
+    "displays": 1,
+    "display_on": false,
+    "idle_seconds": 12328,
+    "free_gb": 151,
+    "wifi_rssi": -74,
+    "not_seen": []
+   }
+  },
+  {
+   "check": "저녁: 시계 차이 ±2초 안",
+   "ok": true,
+   "detail": -1.0
+  },
+  {
+   "check": "저녁: 맡길지 판단과 근거",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "원장: 밤일 접수 수 = 기대(다시 맡긴 것 없음)",
+   "ok": true,
+   "detail": [
+    [
+     "r51-trainer_base-job-night",
+     "succeeded"
+    ]
+   ]
+  },
+  {
+   "check": "접수증: 작업 번호가 원장의 밤일과 같음",
+   "ok": true,
+   "detail": [
+    "c42844a28b7540dbbb518d2e615f448f"
+   ]
+  },
+  {
+   "check": "저녁 실행은 밤일이 끝나기 전에 끝남",
+   "ok": true,
+   "detail": [
+    338.5
+   ]
+  },
+  {
+   "check": "원장: 깨우기 신호 0·화면 입력 0·sudo 0",
+   "ok": true,
+   "detail": [
+    "info",
+    "media",
+    "shell",
+    "transfer"
+   ]
+  },
+  {
+   "check": "저녁: 소리 — 접수·멈춤·남은 재생 0·\"소리 확인 안 됨\"",
+   "ok": true,
+   "detail": {
+    "accepted": true,
+    "running_seen": true,
+    "volume_zero_applied": false,
+    "stopped": true,
+    "processes_left": 0
+   }
+  },
+  {
+   "check": "저녁: 화면 한 장의 결과와 읽기",
+   "ok": true,
+   "detail": {
+    "captured": true,
+    "bytes": 2054,
+    "reading": "그림은 왔지만 화면 전원이 꺼져 있었다 — 꺼진 화면(내용 없음)으로 읽어야 한다"
+   }
+  },
+  {
+   "check": "아침: 일마다 종결이 기대와 같음",
+   "ok": true,
+   "detail": {
+    "night": "끝남"
+   }
+  },
+  {
+   "check": "아침: 시작·종료·소요가 원장과 같음",
+   "ok": true,
+   "detail": {
+    "night": 361.3316159248352
+   }
+  },
+  {
+   "check": "아침: 결과(끝난 일)·중간 기록(끊긴 일) 회수와 내용",
+   "ok": true,
+   "detail": {
+    "night.json": 72
+   }
+  },
+  {
+   "check": "아침: 잠들거나 멈춘 적 없음으로 판정",
+   "ok": true,
+   "detail": false
+  },
+  {
+   "check": "맥12: 표식 프로세스 0",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "맥12: 작업 폴더 없음",
+   "ok": true,
+   "detail": "ls: /Users/kangkukjin/indiebiz-training/r51/trainer_base: No such file or directory\n"
+  },
+  {
+   "check": "맥12 등록·연결 그대로",
+   "ok": true,
+   "detail": null
+  }
+ ],
+ "ledger": [
+  {
+   "id": "ea4c2dd2d750422f9baaf3a0f85b5ef3",
+   "request_id": "r51-trainer_base-ready",
+   "state": "succeeded",
+   "op": "info",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791647617.158974,
+   "started_at": 1791647617.675429,
+   "ended_at": 1791647617.708985,
+   "seconds": 0.03355598449707031
+  },
+  {
+   "id": "a3a71e60e9a34c52aabb6a172146e671",
+   "request_id": "r51-trainer_base-send",
+   "state": "succeeded",
+   "op": "transfer",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791647627.500007,
+   "started_at": 1791647646.087716,
+   "ended_at": 1791647649.2929978,
+   "seconds": 3.2052817344665527
+  },
+  {
+   "id": "71e3ab46529d457e86297edd04de8fe4",
+   "request_id": "r51-trainer_base-unzip",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "background",
+   "cmd": "unzip -q -o jobs.zip && ls jobs | wc -l",
+   "created": 1791647651.719264,
+   "started_at": 1791647652.690309,
+   "ended_at": 1791647652.757289,
+   "seconds": 0.06697988510131836
+  },
+  {
+   "id": "c42844a28b7540dbbb518d2e615f448f",
+   "request_id": "r51-trainer_base-job-night",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "background",
+   "cmd": "sh jobs/night.sh R51=trainer_base-night",
+   "created": 1791647654.043993,
+   "started_at": 1791647657.044266,
+   "ended_at": 1791648018.375882,
+   "seconds": 361.3316159248352
+  },
+  {
+   "id": "8bd45241b0d04d48b5d0cdbd9342b9f2",
+   "request_id": "r51-trainer_base-send-wav",
+   "state": "succeeded",
+   "op": "transfer",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791647658.381973,
+   "started_at": 1791647659.982621,
+   "ended_at": 1791647665.174767,
+   "seconds": 5.192146062850952
+  },
+  {
+   "id": "4de18770f6ad46b5866cf3f5b5c70c6d",
+   "request_id": "r51-trainer_base-media",
+   "state": "cancelled",
+   "op": "media",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791647666.4608462,
+   "started_at": 1791647667.959082,
+   "ended_at": 1791647675.912931,
+   "seconds": 7.9538490772247314
+  },
+  {
+   "id": "4cc523b1f5d247ca92321934e04061ca",
+   "request_id": "92d8abc512da4e3098417f4ba487c23c",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "observe",
+   "cmd": "B='results/night.beat'; echo BEATS=$(wc -l < \"$B\" | tr -d ' '); echo GAP=$(awk '",
+   "created": 1791647877.7306418,
+   "started_at": 1791647879.0158982,
+   "ended_at": 1791647879.923896,
+   "seconds": 0.9079978466033936
+  },
+  {
+   "id": "6f124718560c476abc2ffd540f5230d2",
+   "request_id": "8d46da4e88124faa91d9ee3d59f8d2ec",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "observe",
+   "cmd": "B=results/night.beat; S=$(date -r $(head -1 \"$B\" | cut -d\" \" -f1) \"+%F %T\"); ech",
+   "created": 1791647913.874919,
+   "started_at": 1791647917.1143942,
+   "ended_at": 1791647918.967076,
+   "seconds": 1.8526818752288818
+  },
+  {
+   "id": "a38188046fdf439885a4fc7958944c9b",
+   "request_id": "f1cbadb592c54bf7b8063d61c5cc5045",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "observe",
+   "cmd": "B='results/night.beat'; echo BEATS=$(wc -l < \"$B\" | tr -d ' '); echo GAP=$(awk '",
+   "created": 1791647980.387359,
+   "started_at": 1791647981.106962,
+   "ended_at": 1791647981.821642,
+   "seconds": 0.7146799564361572
+  },
+  {
+   "id": "222738b387ab4d0da8cecbd961b7df2f",
+   "request_id": "r51-trainer_base-final-night",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "background",
+   "cmd": "B='results/night.beat'; echo BEATS=$(wc -l < \"$B\" | tr -d ' '); echo GAP=$(awk '",
+   "created": 1791648032.9474812,
+   "started_at": 1791648033.498352,
+   "ended_at": 1791648034.206541,
+   "seconds": 0.7081890106201172
+  },
+  {
+   "id": "da069bee3d214556baaaa29a5949d983",
+   "request_id": "r51-trainer_base-sha-night",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "background",
+   "cmd": "shasum -a 256 'results/night.json' | cut -d' ' -f1",
+   "created": 1791648035.5957482,
+   "started_at": 1791648037.537108,
+   "ended_at": 1791648037.6210968,
+   "seconds": 0.08398890495300293
+  },
+  {
+   "id": "8e4464f87c7a404aa16ed5f62af0eeb0",
+   "request_id": "r51-trainer_base-recv-night",
+   "state": "succeeded",
+   "op": "transfer",
+   "mode": "background",
+   "cmd": "",
+   "created": 1791648040.5303848,
+   "started_at": 1791648042.446984,
+   "ended_at": 1791648044.024116,
+   "seconds": 1.577131986618042
+  },
+  {
+   "id": "93e7164c5ca94e61af80040fe41d52cd",
+   "request_id": "r51-trainer_base-ps-end",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "background",
+   "cmd": "ps -axo pid,command | grep 'R51[=]trainer_base-' | wc -l | tr -d ' '",
+   "created": 1791648047.631561,
+   "started_at": 1791648048.5885801,
+   "ended_at": 1791648048.682423,
+   "seconds": 0.09384298324584961
+  },
+  {
+   "id": "710398a034124397992edbe47ffa6740",
+   "request_id": "r51-trainer_base-cleanup",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "background",
+   "cmd": "rm -rf \"/Users/kangkukjin/indiebiz-training/r51/trainer_base\" && echo REMOVED",
+   "created": 1791648051.8715599,
+   "started_at": 1791648053.506279,
+   "ended_at": 1791648053.5827148,
+   "seconds": 0.07643580436706543
+  },
+  {
+   "id": "9dc769a36f314443b96c2468b7857113",
+   "request_id": "09b8fc70467a408285dfc8a89567c820",
+   "state": "succeeded",
+   "op": "shell",
+   "mode": "observe",
+   "cmd": "ls -a \"/Users/kangkukjin/indiebiz-training/r51/trainer_base\" 2>&1 | head -6",
+   "created": 1791648258.434892,
+   "started_at": 1791648259.739207,
+   "ended_at": 1791648259.806344,
+   "seconds": 0.06713700294494629
+  }
+ ],
+ "left": [],
+ "disk": "ls: /Users/kangkukjin/indiebiz-training/r51/trainer_base: No such file or directory\n"
+}

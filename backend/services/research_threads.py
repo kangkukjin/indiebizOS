@@ -194,6 +194,9 @@ def project_operation(params):
             materials = [dict(r) for r in db.execute('SELECT DISTINCT v.id AS version_ref,s.title,v.coverage,s.origin FROM research_captures c '
                                                     'JOIN research_versions v ON v.id=c.version_id JOIN research_sources s ON s.id=v.source_id '
                                                     'WHERE c.thread_id=? ORDER BY c.created_at DESC LIMIT 50', (tid,))]
+        with store.connect() as db:
+            perspective_history = [dict(r) for r in db.execute(
+                "SELECT id,body,origin,created_at FROM research_notes WHERE thread_id=? AND origin IN ('user','agent') ORDER BY id DESC LIMIT 20", (tid,))]
         labels = {'complete': '', 'completed': '', 'running': '답변 중', 'cancelled': '중단', 'interrupted': '재시작으로 중단', 'failed': '실패'}
         for item in out['items']:
             item['status_label'] = labels.get(item['status'], item['status'])
@@ -201,12 +204,26 @@ def project_operation(params):
                 item.update(chat_activity(store, tid, item['run_id']))
             for attachment in item['attachments']:
                 attachment['path'] = store.material_path(attachment['blob'], attachment['mime'])
-        return {**out, **thread, 'materials': materials, 'citations': [dict(c, version_ref=c['version_id']) for m in out['items'] for c in m['citations']], 'project_ref': store.uid,
+        return {**out, **thread, 'perspective_history': perspective_history, 'materials': materials, 'citations': [dict(c, version_ref=c['version_id']) for m in out['items'] for c in m['citations']], 'project_ref': store.uid,
                 'controls': [{'title': '', 'thread_ref': tid}] if thread['active_run'] else [],
                 'run_status': '조사 중 — 확보한 자료는 순서대로 저장됩니다' if thread['active_run'] else '질문을 이어갈 수 있습니다'}
     if op == 'thread_update':
         changes = {k: params[k] for k in ('title', 'mode', 'notes') if k in params}
-        return {'items': [store.update_thread(tid, params.get('expected_revision'), **changes)]}
+        if 'notes' in changes:
+            notes = changes['notes']
+            if not isinstance(notes, str) or len(notes) > 12000:
+                raise ValueError('사용자의 관점은 12000자 이내의 문서로 정리하세요')
+            if context.get('thread_id'):
+                if params.get('expected_revision') is None:
+                    raise ValueError('최신 문서의 revision을 expected_revision으로 지정하세요')
+                import re
+                refs = {int(value) for value in re.findall(r'\[발언:(\d+)\]', notes)}
+                with store.connect() as db:
+                    valid = {r[0] for r in db.execute("SELECT id FROM messages WHERE thread_id=? AND research_role='user'", (tid,))}
+                if not refs or not refs <= valid:
+                    raise ValueError('이 대화의 사용자 발언만 [발언:메시지ID]로 연결하세요')
+        return {'items': [store.update_thread(tid, params.get('expected_revision'),
+                                              notes_origin='agent' if context.get('thread_id') else 'user', **changes)]}
     if op == 'thread_archive':
         return {'items': [store.update_thread(tid, archived=bool(params.get('archived', True)))]}
     if op == 'thread_search':

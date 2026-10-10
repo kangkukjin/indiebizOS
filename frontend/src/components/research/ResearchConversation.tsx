@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { BookOpen, ArrowLeft } from 'lucide-react';
+import { BookOpen, ArrowLeft, FileText } from 'lucide-react';
 import { ChatView } from '../chat/ChatView';
 import { GenericInstrument, type AppInstrument } from '../GenericInstrument';
 import { researchCall, type ResearchThread } from './api';
+import { ResearchPerspective } from './ResearchPerspective';
 import { useResearchSession } from './useResearchSession';
 
 /** 일반 프로젝트의 대화창에 대화별 자료실만 더한다. */
@@ -12,6 +13,7 @@ export function ResearchConversation({ project, thread, visible, onChange }: {
   const session = useResearchSession(project, thread.id, visible, onChange);
   const [library, setLibrary] = useState<AppInstrument | null>(null);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [showPerspective, setShowPerspective] = useState(false);
   const [error, setError] = useState('');
   const openLibrary = async () => {
     try {
@@ -21,11 +23,12 @@ export function ResearchConversation({ project, thread, visible, onChange }: {
   };
   return <section className={`${visible ? 'flex' : 'hidden'} flex-col flex-1 min-h-0 min-w-0`}>
     {error && <p role="alert" className="px-4 py-2 text-sm text-red-600">{error}</p>}
-    <div className={`${showLibrary ? 'hidden' : 'flex'} flex-col flex-1 min-h-0`}>
+    <div className={`${showLibrary || showPerspective ? 'hidden' : 'flex'} flex-col flex-1 min-h-0`}>
       <ChatView chatTarget={{ type: 'session', id: `${project}:${thread.id}`, title: thread.title }}
-        session={session} active={visible && !showLibrary}
-        headerActions={<button onClick={openLibrary} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm"><BookOpen size={17} />자료실</button>} />
+        session={session} active={visible && !showLibrary && !showPerspective}
+        headerActions={<><button onClick={() => setShowPerspective(true)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm"><FileText size={17} />사용자의 관점</button><button onClick={openLibrary} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#DDD5C8] text-sm"><BookOpen size={17} />자료실</button></>} />
     </div>
+    {showPerspective && <ResearchPerspective project={project} thread={thread.id} title={thread.title} onBack={() => setShowPerspective(false)} onChange={onChange} />}
     {showLibrary && library && <>
       <header className="h-14 shrink-0 px-4 flex items-center justify-between border-b border-[#E5DFD5] bg-[#EAE4DA]">
         <span className="font-medium truncate">{thread.title} · 자료실</span>

@@ -145,7 +145,7 @@ modes:
       - value: library
         label: 저장 자료만
     - key: notes
-      label: 계속 기억할 연구 방향
+      label: 사용자의 관점
       type: textarea
       value: '{notes}'
     action: '[self:project]{op: "thread_update", project_ref: "__PROJECT_REF__", thread_ref: "__THREAD_REF__", expected_revision: $item.revision,

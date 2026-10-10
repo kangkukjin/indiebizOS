@@ -235,3 +235,48 @@ def test_steering_reuses_active_agent_inbox_and_retry_does_not_duplicate(tmp_pat
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_perspective_update_requires_own_user_evidence_and_preserves_edits(world, monkeypatch):
+    import research_threads as service
+    from research_store import ResearchStore, ResearchConflict
+    from research_context import scope
+    from project_manager import ProjectManager
+    monkeypatch.setattr(service, 'schedule_index', lambda *a: None)
+    row = ProjectManager().create_project('관점 연구', project_kind='research')
+    store = ResearchStore(row['path'])
+    tid = store.create_thread('교육')['id']
+    other = store.create_thread('경제')['id']
+    run, _ = store.begin_run(tid, '교육의 목적은 취업만이 아니다', 'first')
+    store.write_response(tid, run, 'AI만의 주장', 'completed')
+    foreign, _ = store.begin_run(other, '다른 대화의 주장', 'second')
+    store.write_response(other, foreign, '다른 응답', 'completed')
+    messages = store.messages(tid)['items']
+    uid, aid = messages[0]['id'], messages[1]['id']
+    fid = store.messages(other)['items'][0]['id']
+    base = {'op': 'thread_update', 'project_ref': store.uid, 'thread_ref': tid}
+    revision = store.thread(tid)['revision']
+    with scope({'project_uid': store.uid, 'thread_id': tid, 'run_id': run, 'mode': 'library'}):
+        for note in ('근거 없는 단정', f'AI 주장을 사용자 주장으로 [발언:{aid}]', f'다른 대화 [발언:{fid}]'):
+            with pytest.raises(ValueError):
+                service.project_operation({**base, 'expected_revision': revision, 'notes': note})
+        with pytest.raises(ValueError):
+            service.project_operation({**base, 'notes': f'관점 [발언:{uid}]'})
+        doc = f'# 사용자의 관점\n교육의 목적을 취업만으로 한정하지 않는다. [발언:{uid}]'
+        result = _run('[self:project]{op:"thread_update",project_ref:$project,thread_ref:$thread,expected_revision:$revision,notes:$notes}',
+                      row['path'], {'project': store.uid, 'thread': tid, 'revision': revision, 'notes': doc})
+        assert result.get('success') is not False, result
+        assert store.thread(tid)['notes'] == doc
+    # 직접 정정과 늦은 에이전트 저장이 겹쳐도 정정을 덮지 않는다.
+    revision = store.thread(tid)['revision']
+    corrected = doc + '\n취업 준비의 가치도 인정한다.'
+    service.project_operation({**base, 'expected_revision': revision, 'notes': corrected})
+    with scope({'project_uid': store.uid, 'thread_id': tid, 'run_id': run}):
+        with pytest.raises(ResearchConflict):
+            service.project_operation({**base, 'expected_revision': revision, 'notes': doc})
+    reopened = ResearchStore(row['path'])
+    assert reopened.thread(tid)['notes'] == corrected
+    assert reopened.thread(other)['notes'] == ''
+    view = service.project_operation({'op': 'thread_messages', 'project_ref': store.uid, 'thread_ref': tid})
+    assert [item['origin'] for item in view['perspective_history']] == ['user', 'agent']
+    assert view['perspective_history'][1]['body'] == doc

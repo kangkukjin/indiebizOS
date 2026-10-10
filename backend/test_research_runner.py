@@ -230,5 +230,45 @@ def test_topic_title_is_agent_name_and_role_template_survives_rename(tmp_path, m
         thread_context.clear_all_context()
 
 
+
+def test_perspective_is_always_context_and_user_statements_are_bounded(tmp_path, monkeypatch):
+    import json
+    store = ResearchStore(tmp_path, 'perspective-context')
+    tid = store.create_thread('교육')['id']
+    other = store.create_thread('경제')['id']
+    store.update_thread(tid, notes='기존에 직접 쓴 관점')
+    for i in range(22):
+        run, _ = store.begin_run(tid, f'사용자 주장 {i}', str(i))
+        store.write_response(tid, run, 'AI의 독자적인 주장', 'completed')
+    run, _ = store.begin_run(other, '다른 대화의 비공개 관점', 'other')
+    store.write_response(other, run, '다른 답변', 'completed')
+    monkeypatch.setattr(research_runner, '_search', None)
+    context = research_runner._context(store, store.thread(tid), '질문')
+    data = json.loads(context.split('\n')[2])
+    assert data['user_perspective']['document'] == '기존에 직접 쓴 관점'
+    assert data['user_perspective']['revision'] == store.thread(tid)['revision']
+    assert len(data['perspective_user_messages']) == 20
+    assert data['earlier_user_messages_available']
+    assert 'AI의 독자적인 주장' not in context
+    assert '다른 대화의 비공개 관점' not in context
+    run, _ = store.begin_run(tid, '긴 주장' * 6000, 'long')
+    data = json.loads(research_runner._context(store, store.thread(tid), '질문').split('\n')[2])
+    assert sum(len(item['content']) for item in data['perspective_user_messages']) <= 16000
+    assert data['perspective_user_messages'][-1]['truncated']
+
+
+def test_library_mode_allows_only_same_thread_perspective_updates():
+    from research_context import before
+    local = {'research_local': True}
+    params = {'op': 'thread_update', 'project_ref': 'p', 'thread_ref': 't', 'expected_revision': 1, 'notes': '관점'}
+    with scope({'project_uid': 'p', 'thread_id': 't', 'mode': 'library'}):
+        before(local, params)
+        for invalid in ({**params, 'mode': 'research'}, {**params, 'thread_ref': 'other'},
+                        {**params, 'title': '다른 제목'}, {**params, 'project_ref': 'other'}):
+            with pytest.raises(PermissionError):
+                before(local, invalid)
+        with pytest.raises(PermissionError):
+            before({}, params)
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

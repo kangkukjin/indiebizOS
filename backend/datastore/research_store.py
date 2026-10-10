@@ -196,7 +196,7 @@ class ResearchStore:
                 'next_cursor': str(offset + limit) if len(rows) > limit else None,
                 'pages': [{'title': '다음 대화 목록', 'cursor': str(offset + limit), 'query': query, 'archived': archived}] if len(rows) > limit else []}
 
-    def update_thread(self, tid, expected=None, **changes):
+    def update_thread(self, tid, expected=None, *, notes_origin='user', **changes):
         allowed = {'title', 'agent', 'mode', 'notes', 'archived', 'trashed'}
         if not changes or set(changes) - allowed:
             raise ValueError('변경할 대화 필드를 확인하세요')
@@ -212,8 +212,10 @@ class ResearchStore:
             if row['active_run'] and any(k in changes for k in ('mode', 'agent', 'trashed')):
                 raise ResearchConflict('진행 중인 대화를 먼저 중단하세요')
             if 'notes' in changes:
+                if notes_origin not in {'user', 'agent'}:
+                    raise ValueError('잘못된 문서 작성자')
                 db.execute('INSERT INTO research_notes(thread_id,body,origin,created_at) VALUES (?,?,?,?)',
-                           (tid, str(changes['notes']), 'user', now()))
+                           (tid, str(changes['notes']), notes_origin, now()))
             fields = ','.join(k + '=?' for k in changes)
             db.execute(f'UPDATE research_threads SET {fields},revision=revision+1,updated_at=? WHERE id=?',
                        (*changes.values(), now(), tid))

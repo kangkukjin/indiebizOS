@@ -2510,3 +2510,6 @@
 2026-10-10 긴문장48회차 L48-1~7 수리: Playwright 페이지/컨텍스트 사건을 공통 영수증(opened_tabs/closed_tabs/navigated/downloads/file_chooser/page_errors)으로 결합. snapshot 탭 신원 고정, 자동 닫힘 복귀와 context 보존, 실제 다운로드 바이트 저장·미저장 실패·HTTP 미노출 명시, 슬라이더 범위/키 안내. 새 어휘 없음. 1,315 passed·1 skipped + 전체 브라우저/어휘 배포 46 passed, 원본/수리본 6조건 검수 전항목 통과. 정상 재기동 후 실 IBL API 새 탭·자동 복귀·이진 Blob 저장 확인. 전체 backend·새 독립 AI/토큰 성능·Chrome 사건 전수 미검증. 보고서=docs/experiments/long_sentence_imagination/round_48/report.md §9.
 
 2026-10-10 조종실 손발 폴더 안내: 발급 직후뿐 아니라 다시 연 목록에도 기존 USB 발급 폴더의 절대 경로를 표시한다. 실행파일 원본·발급 루트 안내와 경로 복사·폴더 열기를 추가하고 상주 ZIP 발급 경로를 구분했다. 실제 맥12 폴더 조회, 관련 검사 39 passed(실기기 system 1 deselected), frontend 타입 검사·빌드 통과. Electron 실창 버튼 조작과 전체 backend 회귀는 미실행.
+
+2026-10-10 PC 헬퍼 등록 흐름 정리: 런처의 별도 원격 PC 메뉴·작업 앱을 제거하고 조종실 손발 (USB)에 공용 폴더 준비·등록 목록·해제를 통합했다. outputs/pc-helper의 전 OS 실행파일과 중앙 설정을 USB에 통째로 복사하고 대상 PC에서 이름을 정해 등록한다. 공용 키는 등록 전용, 각 설치의 실행 자격은 별도이며 USB 키 폐기는 이미 등록된 PC를 끊지 않는다. 등록 해제 후 이름 재사용·설치 응답 재시도·중복 이름 거절을 검증했다. 기존 휴대/회원 및 단기 초대 API는 호환 유지. 자연어 작업은 기존 guestpc/task/history 경로를 사용한다.
+  검증: 관련 backend 62 passed, Go race 검사 통과, 6개 OS/아키텍처 바이너리 빌드. 임시 허브+네이티브 헬퍼의 셸·1.28MB 양방향 전송·재시작 검사 1 passed. 타입 검사·Vite 빌드 통과(외부 번역 전송 없이 로컬 번역 메모리 재사용). 실제 빌드 화면을 모의 API로 열어 폴더 준비/열기·이름 표시·해제 대기를 검사했고 JS 오류 0. 실기기 설치·자동 시작·제거·WOL과 전체 backend 회귀는 미실행.

@@ -235,3 +235,33 @@ func TestResidentPausedPollingDoesNotSpin(t *testing.T) {
 		t.Fatal("paused helper spun without backoff")
 	}
 }
+
+func TestUSBSetupNamesAtRemoteAndDoesNotMutateSharedConfig(t *testing.T) {
+	cfg := &Config{Mode: "enroll", Base: "https://central.example", Key: "usb-registration"}
+	done := make(chan error, 1)
+	var installed []Config
+	handler := residentSetupHandler(cfg, func(c *Config) error { installed = append(installed, *c); return nil }, done, "secret")
+	request := func(method, token, body string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(method, "/?token="+token, strings.NewReader(body))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, r)
+		return w
+	}
+	page := request("GET", "secret", "")
+	if !strings.Contains(page.Body.String(), `name="alias"`) {
+		t.Fatal(page.Body.String())
+	}
+	if request("POST", "wrong", "alias=Mac12").Code != 403 {
+		t.Fatal("missing token accepted")
+	}
+	if request("POST", "secret", "alias=+").Code != 400 {
+		t.Fatal("empty name accepted")
+	}
+	if request("POST", "secret", "alias=Mac12").Code != 200 {
+		t.Fatal("registration failed")
+	}
+	if len(installed) != 1 || installed[0].Alias != "Mac12" || cfg.Alias != "" || cfg.Key != "usb-registration" {
+		t.Fatal(installed, cfg)
+	}
+}

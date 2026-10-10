@@ -281,7 +281,29 @@ def resident_invite(alias, ttl_days=0):
         return issued
 
 
-def resident_enroll(invitation, installation_id):
+def resident_installer():
+    """Reusable USB enrollment credential, never accepted for execution."""
+    with _lock:
+        for rec in _load()["keys"].values():
+            if rec.get("installer") and not rec.get("revoked"):
+                return dict(rec)
+        issued = mint("USB PC 등록", ttl_days=0)
+        rec = _load()["keys"][issued["key"]]
+        rec.update(invitation=True, installer=True, installations={}, resident_days=0)
+        _save()
+        return dict(rec)
+
+
+def resident_installer_revoke():
+    """Stop future USB enrollments without revoking installed PCs."""
+    with _lock:
+        for rec in _load()["keys"].values():
+            if rec.get("installer"):
+                rec["revoked"] = True
+        _save()
+
+
+def resident_enroll(invitation, installation_id, alias=None):
     import re
     if not re.fullmatch(r"[a-f0-9]{32}", installation_id):
         raise ValueError("invalid_installation_id")
@@ -290,22 +312,36 @@ def resident_enroll(invitation, installation_id):
         rec = data["keys"].get(invitation)
         if not rec or not rec.get("invitation") or rec.get("revoked"):
             raise ValueError("invalid_invitation")
-        if rec.get("bound_installation"):
-            if rec["bound_installation"] != installation_id:
+        if rec.get("installer"):
+            bound_key = rec.get("installations", {}).get(installation_id)
+        else:
+            bound_key = rec.get("bound_key")
+        if bound_key:
+            if not rec.get("installer") and rec["bound_installation"] != installation_id:
                 raise ValueError("invitation_used")
-            bound = data["keys"].get(rec["bound_key"])
+            bound = data["keys"].get(bound_key)
             if not bound or bound.get("revoked") or _expired(bound) or bound["registration"]["state"] != "active":
                 raise ValueError("registration_closed")
             return dict(bound)
-        if _now() > rec["invite_until"]:
+        if not rec.get("installer") and _now() > rec["invite_until"]:
             raise ValueError("invitation_expired")
-        issued = mint(rec["alias"], rec["resident_days"])
+        name = alias if alias is not None else ("" if rec.get("installer") else rec["alias"])
+        if not isinstance(name, str) or not 1 <= len(name.strip()) <= 80 or any(ord(c) < 32 for c in name):
+            raise ValueError("PC 이름을 1~80자로 입력하세요")
+        name = name.strip()
+        if any(r.get("registration", {}).get("state") != "removed" and r.get("registration")
+               and not r.get("revoked") and r.get("alias") == name for r in data["keys"].values()):
+            raise ValueError("이미 등록된 PC 이름입니다. 다른 이름을 입력하세요")
+        issued = mint(name, rec["resident_days"])
         bound = data["keys"][issued["key"]]
         bound["approved"] = True
         bound["registration"] = {"installation_id": installation_id, "generation": secrets.token_hex(16),
                                  "kind": "pc", "adapter": "resident-v1", "state": "active",
                                  "paused": False, "wake": None}
-        rec.update(bound_installation=installation_id, bound_key=issued["key"])
+        if rec.get("installer"):
+            rec["installations"][installation_id] = issued["key"]
+        else:
+            rec.update(bound_installation=installation_id, bound_key=issued["key"])
         _save()
         return dict(bound)
 

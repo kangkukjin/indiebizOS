@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, WebSocket
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, Field
 
 import limb_keys
@@ -22,6 +22,7 @@ class DeviceMessage(BaseModel):
     events: list[dict] = Field(default_factory=list, max_length=64)
     capabilities: dict | None = None
     wait: float = 0
+    alias: str | None = Field(default=None, max_length=80)
 
 
 def checked(fn, *args, **kwargs):
@@ -33,7 +34,7 @@ def checked(fn, *args, **kwargs):
 
 @router.post('/limb/resident/enroll')
 def enroll(req: DeviceMessage):
-    rec = checked(limb_keys.resident_enroll, req.key, req.installation_id)
+    rec = checked(limb_keys.resident_enroll, req.key, req.installation_id, req.alias)
     return {k: rec[k] for k in ('key', 'device_id', 'alias', 'expires_at', 'registration')}
 
 
@@ -61,7 +62,19 @@ def local_state(req: dict):
 
 @router.get('/remote-pcs')
 def devices():
-    return {'items': pcs.devices(), 'hardware_extensions': ['android', 'ios', 'ipados', 'web']}
+    return {'items': pcs.devices(), 'usb': pcs.usb_status(),
+            'hardware_extensions': ['android', 'ios', 'ipados', 'web']}
+
+
+@router.post('/remote-pcs/usb')
+def prepare_usb():
+    return checked(pcs.prepare_usb)
+
+
+@router.post('/remote-pcs/usb/revoke')
+def revoke_usb():
+    limb_keys.resident_installer_revoke()
+    return pcs.usb_status()
 
 
 @router.get('/remote-pcs/history')
@@ -179,9 +192,10 @@ def owner_transfer(tid: str, req: dict):
     return transfer_action(tid, req)
 
 
-@router.get('/remote-pcs/app', response_class=HTMLResponse)
+@router.get('/remote-pcs/app', include_in_schema=False)
 def app():
-    return (Path(__file__).with_name('resident_pcs.html')).read_text(encoding='utf-8')
+    # Previously shared links now return to the launcher; no parallel operations app.
+    return RedirectResponse('/launcher/app')
 
 
 @router.websocket('/limb/resident/ws')

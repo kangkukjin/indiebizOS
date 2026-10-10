@@ -34,7 +34,8 @@ def _resolve_limb(target: str):
     import limb_keys
     if target:
         registered = [r for r in limb_keys.list_keys() if r.get("registration") and
-                      target in (r["device_id"], r["alias"])]
+                      (target == r["device_id"] or (target == r["alias"] and not r.get("revoked")
+                       and r["registration"]["state"] != "removed"))]
         if len(registered) == 1:
             r = registered[0]
             return r["device_id"], r["alias"], None
@@ -48,7 +49,7 @@ def _resolve_limb(target: str):
         # 라이브가 아니어도 원장에 있으면 오프라인 안내
         return None, None, f"'{target}' 손발이 지금 연결돼 있지 않습니다."
     if not live:
-        return None, None, "연결된 손발이 없습니다. USB 헬퍼를 그 PC 에서 실행하세요([self:limb]{op:issue}로 발급)."
+        return None, None, "연결된 손발이 없습니다. 조종실 손발 (USB) 또는 [self:limb]{op:register}로 공용 폴더를 준비하고 대상 PC에서 헬퍼를 실행해 등록하세요."
     if len(live) > 1:
         names = ", ".join(e.get("alias", "?") for e in live)
         return None, None, f"손발이 여럿 연결돼 있습니다({names}). limb 로 대상 이름을 지정하세요."
@@ -747,15 +748,15 @@ def _resident_operation(tool_input):
 
 
 def _resident_registration(tool_input):
-    """상주 등록 관리 화면·해제·일시 중지. 설치 ZIP은 인증된 관리 화면에서 발급."""
+    """공용 USB 폴더 준비·상주 PC 해제·일시 중지."""
     import resident_pcs
     import limb_keys
     op = tool_input.get("op")
     target = tool_input.get("target")
     try:
         if op == "register":
-            return {"success": True, "url": resident_pcs.public_base().rstrip("/") + "/remote-pcs/app",
-                    "message": "원격 PC 화면에서 이름·OS·기간을 정해 설치 ZIP을 받으세요. 대상 PC에서 설치를 확인합니다."}
+            return {"success": True, **resident_pcs.prepare_usb(),
+                    "message": "이 폴더를 통째로 USB에 복사하세요. 대상 PC에서 맞는 헬퍼를 실행하고 이름을 정해 등록합니다. 목록·해제는 조종실의 손발 (USB)에 있습니다."}
         if op == "remove":
             return {"success": True, "registration": resident_pcs.remove(target)}
         rec = resident_pcs.resolve(target, active=False)

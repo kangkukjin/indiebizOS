@@ -1,331 +1,131 @@
-/**
- * LimbSwitch — USB 손발(게스트 PC 헬퍼) 발급·승인·폐기 스위치 (조종실 계기)
- *
- * 이건 앱이 아니라 *시스템의 일부*다 — 앱모드 아이콘이 아니라 조종실(ManualMode)의
- * 시스템 컨트롤로 산다(모델 기어 레버·시스템 상태와 같은 자리). USB 를 낯선 PC 에 꽂아
- * 그 PC 를 내 몸의 착탈식 손발로 붙이는 자격을 여기서 발급·관리한다.
- *
- * 어휘: [self:limb]{op: issue/list/revoke/approve}. IBL 실행(api.executeIBL)으로 백엔드
- * 원장(limb_keys.py)을 조작한다 — 별도 REST 없이 어휘 하나로 전 표면이 같은 걸 부른다.
- */
+/** PC registration belongs to the cockpit; tasks are requested through the central AI. */
 import { useCallback, useEffect, useState } from 'react';
-import { Usb, Loader2, Plus, Check, ShieldCheck, Trash2, ChevronDown, ChevronRight, Copy, FolderOpen } from 'lucide-react';
+import { Usb, Loader2, Check, Trash2, ChevronDown, ChevronRight, Copy, FolderOpen, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
-import { iblFailure } from '../../lib/instrument';
 
-const MANUAL_PROJECT_ID = '수동모드';
-
-interface Limb {
-  alias: string;
-  device_id: string;
-  key_hint?: string;
-  connected?: boolean;
-  approved?: boolean;
-  revoked?: boolean;
-  expired?: boolean;
-  last_host?: string | null;
-  expires_at?: number | null;
-  payload_dir?: string | null;
-  registration?: unknown;
-}
-
-interface IssueResult {
-  alias?: string;
-  address?: string;
-  payload_dir?: string;
-  binary_included?: string[] | null;
-  note?: string;
-  warning?: string | null;
-}
-
-// /ibl/execute 응답 봉투가 중첩될 수 있어, 키를 재귀로 찾는다(엔벨로프에 안 얽매인다).
-function deepFind<T = unknown>(obj: unknown, key: string): T | undefined {
-  if (!obj || typeof obj !== 'object') return undefined;
-  if (key in (obj as Record<string, unknown>)) return (obj as Record<string, T>)[key];
-  for (const v of Object.values(obj as Record<string, unknown>)) {
-    const hit = deepFind<T>(v, key);
-    if (hit !== undefined) return hit;
-  }
-  return undefined;
-}
-
-async function runLimb(op: string, extra: Record<string, unknown> = {}): Promise<unknown> {
-  const parts = Object.entries({ op, ...extra })
-    .filter(([, v]) => v !== undefined && v !== '' && v !== null)
-    .map(([k, v]) => `${k}: ${typeof v === 'string' ? JSON.stringify(v) : v}`)
-    .join(', ');
-  const res = await api.executeIBL(`[self:limb]{${parts}}`, MANUAL_PROJECT_ID);
-  // 발급·폐기·잠금의 거절을 성공으로 넘기지 않는다 — 폐기가 안 됐는데 된 것처럼 보이면 열쇠가 살아 있다
-  const fail = iblFailure(res);
-  if (fail) throw new Error(fail);
-  return res;
-}
+type Registration = {
+  state: 'active' | 'removal_pending' | 'removed';
+  paused?: boolean;
+  capabilities?: { os?: string; hostname?: string };
+};
+type PC = { alias: string; device_id: string; connected: boolean; revoked?: boolean; registration: Registration };
+type USB = { folder: string; ready: boolean };
+type PCList = { items: PC[]; usb: USB };
 
 export function LimbSwitch() {
   const [open, setOpen] = useState(false);
-  const [limbs, setLimbs] = useState<Limb[]>([]);
+  const [pcs, setPCs] = useState<PC[]>([]);
+  const [usb, setUSB] = useState<USB | null>(null);
   const [loading, setLoading] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);   // device_id 진행 표시
+  const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-
-  // 발급 폼 — 기본값 = 휴대용(전 OS 동봉·무기한). 이름만 정하면 된다.
-  const [alias, setAlias] = useState('');
-  const [ttl, setTtl] = useState('');        // 빈값 = 무기한
-  const [os, setOs] = useState('');          // 빈값 = 전 OS(휴대용)
-  const [issuing, setIssuing] = useState(false);
-  const [issued, setIssued] = useState<IssueResult | null>(null);
-  const [folders, setFolders] = useState({ helper: '', issued: '' });
-  const [copiedPath, setCopiedPath] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await runLimb('list');
-      const rows = deepFind<Limb[]>(res, 'limbs');
-      setLimbs(Array.isArray(rows) ? rows : []);
-      setFolders({
-        helper: deepFind<string>(res, 'helper_dist_dir') || '',
-        issued: deepFind<string>(res, 'issue_parent_dir') || '',
-      });
+      const data = await api.request<PCList>('/remote-pcs');
+      setPCs(data.items);
+      setUSB(data.usb);
       setErr(null);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : '손발 목록을 불러오지 못했습니다');
-    } finally {
-      setLoading(false);
-    }
+      setErr(e instanceof Error ? e.message : '등록 PC 목록을 불러오지 못했습니다.');
+    } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (open) load(); }, [open, load]);
+  useEffect(() => {
+    if (!open) return;
+    void load();
+    const timer = window.setInterval(() => { void load(); }, 15000);
+    return () => window.clearInterval(timer);
+  }, [open, load]);
 
-  const handleIssue = async () => {
-    if (issuing) return;
-    setIssuing(true);
-    setErr(null);
-    setIssued(null);
+  const prepare = async () => {
+    setBusy('usb'); setErr(null);
+    try { setUSB(await api.request<USB>('/remote-pcs/usb', { method: 'POST' })); }
+    catch (e) { setErr(e instanceof Error ? e.message : 'USB 폴더 준비 실패'); }
+    finally { setBusy(null); }
+  };
+  const remove = async (pc: PC) => {
+    setBusy(pc.device_id); setErr(null);
     try {
-      const res = await runLimb('issue', {
-        alias: alias.trim() || undefined,
-        ttl_days: ttl.trim() ? Number(ttl) : undefined,
-        os: os || undefined,
-      });
-      const address = deepFind<string>(res, 'address');
-      const payload_dir = deepFind<string>(res, 'payload_dir');
-      const note = deepFind<string>(res, 'note');
-      const warning = deepFind<string>(res, 'warning');
-      const binary_included = deepFind<string[]>(res, 'binary_included');
-      const outAlias = deepFind<string>(res, 'alias');
-      setIssued({ alias: outAlias, address, payload_dir, note, warning, binary_included });
-      setAlias('');
+      await api.request('/remote-pcs/state', { method: 'POST', body: JSON.stringify({ target: pc.device_id, remove: true }) });
       await load();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : '발급 실패');
-    } finally {
-      setIssuing(false);
-    }
+    } catch (e) { setErr(e instanceof Error ? e.message : '등록 해제 실패'); }
+    finally { setBusy(null); }
   };
-
-  const rowAction = async (op: string, l: Limb) => {
-    setBusy(l.device_id);
-    setErr(null);
-    try {
-      await runLimb(op, { target: l.device_id });
-      await load();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : `${op} 실패`);
-    } finally {
-      setBusy(null);
-    }
+  const revokeUSB = async () => {
+    setBusy('usb'); setErr(null);
+    try { setUSB(await api.request<USB>('/remote-pcs/usb/revoke', { method: 'POST' })); }
+    catch (e) { setErr(e instanceof Error ? e.message : 'USB 등록 키 폐기 실패'); }
+    finally { setBusy(null); }
   };
-
-  const active = limbs.filter((l) => !l.revoked);
-  const connectedCount = active.filter((l) => l.connected).length;
-
-  const folderPath = (path: string) => (
-    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-      <code className="min-w-0 flex-1 select-text break-all text-[11px]">{path}</code>
-      <button type="button" title="경로 복사" className="rounded border border-stone-200 px-1.5 py-1 hover:bg-stone-100"
-        onClick={async () => {
-          try { await navigator.clipboard.writeText(path); setCopiedPath(path); }
-          catch { setErr('경로를 복사하지 못했습니다. 표시된 경로를 직접 복사하세요.'); }
-        }}>
-        {copiedPath === path ? <Check size={12} /> : <Copy size={12} />}
-      </button>
-      {window.electron?.openPCManagerWindow && (
-        <button type="button" title="폴더 열기" className="rounded border border-stone-200 px-1.5 py-1 hover:bg-stone-100"
-          onClick={async () => {
-            try { await window.electron?.openPCManagerWindow(path); }
-            catch { setErr('폴더를 열지 못했습니다. 표시된 경로를 확인하세요.'); }
-          }}><FolderOpen size={12} /></button>
-      )}
-    </div>
-  );
-
-  const statusText = (l: Limb): string => {
-    if (l.revoked) return '폐기됨';
-    if (l.expired) return '만료';
-    if (!l.connected) return '오프라인';
-    // 자동승인 — 붙으면 바로 사용 가능. approved=false 는 수동 잠금뿐.
-    return l.approved ? '연결됨 · 사용 가능' : '연결됨 · 잠금';
-  };
+  const active = pcs.filter((pc) => !pc.revoked && pc.registration.state !== 'removed');
+  const status = (pc: PC) => pc.registration.state === 'removal_pending'
+    ? '해제 요청됨 · PC가 연결되면 헬퍼 제거'
+    : pc.registration.paused ? '작업 중지됨' : pc.connected ? '연결됨' : '오프라인';
 
   return (
     <div className="rounded-lg border border-stone-200 bg-white/60 text-[12px]">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-stone-600 hover:text-stone-800"
-      >
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 px-3 py-2 text-stone-600 hover:text-stone-800">
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        <Usb size={14} className="shrink-0" />
-        <span className="font-medium">손발 (USB)</span>
-        {connectedCount > 0 && (
-          <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
-            {connectedCount} 연결
-          </span>
-        )}
-        {active.length > 0 && (
-          <span className="ml-auto text-[11px] text-stone-400">{active.length}개 발급됨</span>
-        )}
+        <Usb size={14} /><span className="font-medium">손발 (USB)</span>
+        {active.length > 0 && <span className="ml-auto text-[11px] text-stone-400">{active.length}대 등록됨</span>}
       </button>
-
-      {open && (
-        <div className="border-t border-stone-100 px-3 py-2.5">
-          <p className="mb-2 text-[11px] leading-relaxed text-stone-500">
-            USB 를 낯선 PC 에 꽂아 그 PC 에서 셸·파일 작업을 시킵니다. 발급하면 USB 에 담을 폴더가 만들어집니다.
-            붙으면 바로 쓸 수 있고(자동 연결), 명령할 땐 <b>손발 이름</b>으로 대상을 부릅니다("사무실PC 에서 …").
-            USB 엔 맥 비밀번호가 아니라 폐기 가능한 키 하나만 실립니다.
-          </p>
-
-          {folders.helper && (
-            <div className="mb-3 rounded border border-stone-200 bg-stone-50 px-2.5 py-2 text-[11px] text-stone-600">
-              <div className="font-medium">헬퍼 실행파일 원본 폴더</div>
-              {folderPath(folders.helper)}
-              <p className="mt-1">macOS 12: Intel은 mac-amd64, Apple Silicon은 mac-arm64 파일을 사용하세요.</p>
-              <div className="mt-2 font-medium">USB에 복사할 발급 폴더</div>
-              {folderPath(folders.issued)}
-              <p className="mt-1">아래 손발 이름에 해당하는 폴더를 통째로 복사하세요. 실행파일과 indiebiz-helper.json 설정 파일이 함께 필요합니다.</p>
-              <p className="mt-1">상주 설치는 런처의 원격 PC에서 설치 ZIP을 받아 옮기세요.</p>
-            </div>
-          )}
-
-          {/* 발급 폼 */}
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <input
-              value={alias}
-              onChange={(e) => setAlias(e.target.value)}
-              placeholder="이름 (예: 사무실PC)"
-              className="min-w-0 flex-1 rounded border border-stone-200 px-2 py-1 text-[12px] outline-none focus:border-stone-400"
-            />
-            <input
-              value={ttl}
-              onChange={(e) => setTtl(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder="무기한"
-              className="w-16 rounded border border-stone-200 px-2 py-1 text-center text-[12px] outline-none focus:border-stone-400"
-              title="유효기간(일). 비우면 무기한"
-            />
-            <span className="text-[11px] text-stone-400">일</span>
-            <select
-              value={os}
-              onChange={(e) => setOs(e.target.value)}
-              className="rounded border border-stone-200 px-1.5 py-1 text-[12px] outline-none focus:border-stone-400"
-              title="어느 PC에 쓸지 — 전체=모든 OS 헬퍼를 한 폴더에(휴대용)"
-            >
-              <option value="">전체 (휴대용)</option>
-              <option value="win">Windows</option>
-              <option value="mac">Mac</option>
-              <option value="linux">Linux</option>
-            </select>
-            <button
-              onClick={handleIssue}
-              disabled={issuing || !alias.trim()}
-              title={!alias.trim() ? '손발 이름을 먼저 지어주세요' : '발급'}
-              className="flex items-center gap-1 rounded bg-stone-800 px-2.5 py-1 text-[12px] font-medium text-white hover:bg-stone-700 disabled:opacity-50"
-            >
-              {issuing ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-              발급
+      {open && <div className="border-t border-stone-100 px-3 py-3">
+        <p className="mb-2 text-[11px] leading-relaxed text-stone-500">
+          아래 폴더를 통째로 USB에 복사하고, 대상 PC에서 맞는 헬퍼를 실행하세요. PC 이름은 그곳에서 정합니다.
+          같은 USB로 여러 PC를 등록할 수 있고, 등록 후에는 USB를 빼도 됩니다.
+        </p>
+        <div className="rounded border border-stone-200 bg-stone-50 px-2.5 py-2 text-stone-600">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">USB에 복사할 공용 헬퍼 폴더</span>
+            <button onClick={prepare} disabled={busy !== null} className="ml-auto rounded bg-stone-800 px-2 py-1 text-[11px] text-white disabled:opacity-50">
+              {busy === 'usb' ? '준비 중…' : usb?.ready ? '폴더 갱신' : '폴더 준비'}
             </button>
           </div>
-
-          {issued && (
-            <div className="mb-2 rounded border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[11px] leading-relaxed text-emerald-900">
-              <div className="font-medium">✅ {issued.alias} 발급 완료</div>
-              {issued.payload_dir && (
-                <div className="mt-1 break-all">
-                  USB 에 이 폴더를 복사하세요:
-                  {folderPath(issued.payload_dir)}
-                </div>
-              )}
-              <div className="mt-0.5 text-emerald-700">
-                주소: {issued.address || '(미설정)'} ·{' '}
-                {issued.binary_included && issued.binary_included.length
-                  ? `헬퍼 실행파일 ${issued.binary_included.length}종 동봉`
-                  : '헬퍼 실행파일은 별도 빌드 필요(helper/build.sh)'}
-              </div>
-              {issued.warning && <div className="mt-1 text-amber-700">⚠ {issued.warning}</div>}
-              <div className="mt-1 text-emerald-600">그 PC 에서 헬퍼를 실행하면 자동으로 연결됩니다. 명령할 땐 '{issued.alias}' 이름으로 대상을 부르세요.</div>
-            </div>
-          )}
-
-          {err && <div className="mb-2 rounded bg-red-50 px-2 py-1 text-[11px] text-red-600">{err}</div>}
-
-          {/* 손발 목록 */}
-          {loading ? (
-            <div className="flex items-center gap-1.5 py-2 text-stone-400">
-              <Loader2 size={13} className="animate-spin" /> 불러오는 중…
-            </div>
-          ) : active.length === 0 ? (
-            <div className="py-1.5 text-[11px] text-stone-400">아직 발급한 손발이 없습니다.</div>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {active.map((l) => (
-                <li
-                  key={l.device_id}
-                  className="flex items-center gap-2 rounded border border-stone-100 bg-white px-2 py-1.5"
-                >
-                  <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${l.connected ? 'bg-emerald-500' : 'bg-stone-300'}`}
-                    aria-hidden="true"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-stone-700">{l.alias}</div>
-                    <div className="truncate text-[10px] text-stone-400">
-                      {statusText(l)}
-                      {l.last_host ? ` · ${l.last_host}` : ''}
-                    </div>
-                    {l.payload_dir ? folderPath(l.payload_dir) : !l.registration && (
-                      <div className="mt-1 text-[10px] text-stone-400">이 PC에 발급 폴더가 없습니다.</div>
-                    )}
-                  </div>
-                  {/* 자동승인이라 평소엔 버튼이 없다. approved=false 는 수동 '잠금'뿐이라 여는 버튼만 둔다. */}
-                  {l.connected && !l.approved && (
-                    <button
-                      onClick={() => rowAction('approve', l)}
-                      disabled={busy === l.device_id}
-                      className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-                      title="이 손발을 다시 사용 가능하게 (잠금 해제)"
-                    >
-                      {busy === l.device_id ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />}
-                      열기
-                    </button>
-                  )}
-                  {l.connected && l.approved && (
-                    <span className="flex items-center gap-0.5 text-[10px] text-emerald-600">
-                      <Check size={12} /> 사용 가능
-                    </span>
-                  )}
-                  <button
-                    onClick={() => rowAction('revoke', l)}
-                    disabled={busy === l.device_id}
-                    className="flex items-center gap-1 rounded border border-stone-200 px-1.5 py-1 text-[11px] text-stone-500 hover:border-red-300 hover:text-red-600 disabled:opacity-50"
-                    title="이 키 폐기 (USB 분실 시)"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          {usb && <div className="mt-2 flex flex-wrap items-center gap-2">
+            <code className="min-w-0 flex-1 select-text break-all text-[11px]">{usb.folder}</code>
+            <button title="경로 복사" onClick={async () => {
+              try { await navigator.clipboard.writeText(usb.folder); setCopied(true); }
+              catch { setErr('경로를 복사하지 못했습니다. 표시된 경로를 직접 복사하세요.'); }
+            }} className="rounded border border-stone-200 p-1.5">{copied ? <Check size={13} /> : <Copy size={13} />}</button>
+            {usb.ready && window.electron?.openPCManagerWindow && <button title="폴더 열기" onClick={async () => {
+              try { await window.electron?.openPCManagerWindow(usb.folder); }
+              catch { setErr('폴더를 열지 못했습니다. 표시된 경로를 확인하세요.'); }
+            }} className="rounded border border-stone-200 p-1.5"><FolderOpen size={13} /></button>}
+          </div>}
+          <p className="mt-2 text-[11px] text-stone-500">Windows · Mac Intel · Mac Apple Silicon · Linux 실행파일과 연결 설정이 함께 들어 있습니다.</p>
+          {usb && !usb.ready && <p className="mt-1 text-[11px] text-amber-700">폴더 준비를 누른 뒤 USB에 복사하세요.</p>}
         </div>
-      )}
+        <div className="mt-3 flex items-center gap-2 font-medium text-stone-700">
+          등록된 PC
+          <button title="목록 새로고침" onClick={() => void load()} disabled={loading} className="ml-auto p-1">
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+          </button>
+        </div>
+        {!active.length && <p className="py-2 text-[11px] text-stone-400">아직 등록된 PC가 없습니다. 대상 PC에서 등록하면 여기에 표시됩니다.</p>}
+        <ul className="mt-1 space-y-1">
+          {active.map((pc) => <li key={pc.device_id} className="flex items-center gap-2 rounded border border-stone-100 bg-white px-2 py-2">
+            <span className={`h-2 w-2 shrink-0 rounded-full ${pc.connected && pc.registration.state === 'active' ? 'bg-emerald-500' : 'bg-stone-300'}`} />
+            <div className="min-w-0 flex-1">
+              <div className="break-all font-medium text-stone-700">{pc.alias}</div>
+              <div className="text-[10px] text-stone-400">{status(pc)}{pc.registration.capabilities?.os ? ` · ${pc.registration.capabilities.os}` : ''}</div>
+            </div>
+            <button onClick={() => void remove(pc)} disabled={busy !== null || pc.registration.state !== 'active'}
+              title="등록 해제 및 원격 헬퍼 제거" className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-500 hover:text-red-600 disabled:opacity-50">
+              {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}해제
+            </button>
+          </li>)}
+        </ul>
+        <p className="mt-3 text-[11px] leading-relaxed text-stone-500">작업은 중앙 AI에게 “맥12에 음악 틀어줘”, “맥12에서 파일 가져와”처럼 부탁하세요. 해제하면 헬퍼와 자동 시작 설정이 제거되며 작업 파일은 남습니다.</p>
+        <details className="mt-2 text-[11px] text-stone-400">
+          <summary className="cursor-pointer">USB를 분실했을 때</summary>
+          <p className="my-1">USB 등록 키를 폐기하면 그 USB로 새 PC를 등록할 수 없습니다. 이미 등록된 PC는 계속 연결됩니다. 새 USB는 폴더를 다시 준비해 복사하세요.</p>
+          <button onClick={() => void revokeUSB()} disabled={busy !== null || !usb?.ready} className="rounded border border-stone-200 px-2 py-1 text-stone-500 disabled:opacity-50">USB 등록 키 폐기</button>
+        </details>
+        {err && <div role="alert" className="mt-2 rounded bg-red-50 px-2 py-1 text-[11px] text-red-600">{err}</div>}
+      </div>}
     </div>
   );
 }

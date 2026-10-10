@@ -172,8 +172,22 @@ func residentSetup(cfg *Config) error {
 	defer listener.Close()
 	token := residentID()
 	done := make(chan error, 1)
+	mux := residentSetupHandler(cfg, residentInstall, done, token)
+	server := &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	go server.Serve(listener)
+	url := "http://" + listener.Addr().String() + "/?token=" + token
+	fmt.Println("설치 화면:", url)
+	residentOpen(url)
+	return <-done
+}
+
+func residentSetupHandler(cfg *Config, install func(*Config) error, done chan error, token string) http.Handler {
 	mux := http.NewServeMux()
 	var installing sync.Mutex
+	name := cfg.Alias
+	if name == "" {
+		name, _ = os.Hostname()
+	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("token") != token {
 			http.Error(w, "forbidden", 403)
@@ -183,26 +197,28 @@ func residentSetup(cfg *Config) error {
 		if r.Method == "POST" {
 			installing.Lock()
 			defer installing.Unlock()
-			e := residentInstall(cfg)
+			alias := strings.TrimSpace(r.FormValue("alias"))
+			if alias == "" || len([]rune(alias)) > 80 || strings.ContainsAny(alias, "\r\n\t") {
+				http.Error(w, "PC 이름을 1~80자로 입력하세요.", 400)
+				return
+			}
+			candidate := *cfg
+			candidate.Alias = alias
+			e := install(&candidate)
 			if e != nil {
 				http.Error(w, e.Error(), 500)
 				return
 			}
-			fmt.Fprint(w, "등록했습니다. USB를 분리해도 됩니다. 중앙 런처의 원격 PC에서 관리하세요.")
+			fmt.Fprint(w, "등록했습니다. USB를 분리해도 됩니다. 중앙 조종실의 손발 (USB)에서 확인·해제하고, AI에게 PC 이름으로 작업을 부탁하세요.")
 			select {
 			case done <- nil:
 			default:
 			}
 			return
 		}
-		fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><title>IndieBiz PC 등록</title><h1>이 PC 상주 등록</h1><p>%s · 중앙 주소 %s</p><p>현재 사용자 권한으로 파일과 명령을 실행하며 로그인 시 자동 시작합니다. 중앙 런처와 로컬 관리 화면에서 중지·제거할 수 있습니다. 작업 폴더는 제거 후에도 보존합니다.</p><form method="post"><button>이 PC를 등록하고 시작</button></form>`, template.HTMLEscapeString(cfg.Alias), template.HTMLEscapeString(cfg.Base))
+		fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IndieBiz PC 등록</title><style>body{font:16px system-ui;max-width:560px;margin:8vh auto;padding:24px;line-height:1.7;background:#faf9f6;color:#302e29}input,button{font:inherit;padding:10px;margin:8px 0;box-sizing:border-box;width:100%%}button{background:#302e29;color:white;border:0;border-radius:6px}input{border:1px solid #ccc;border-radius:6px}</style><h1>이 PC 등록</h1><p>중앙 주소: %s</p><p>현재 사용자 권한으로 작업하며 로그인 시 자동 시작합니다. 중앙 조종실의 손발 (USB)에서 해제하면 헬퍼가 제거됩니다. 작업 파일은 보존합니다.</p><form method="post"><label>중앙 AI에게 부를 PC 이름<input name="alias" value="%s" maxlength="80" required placeholder="예: 맥12"></label><button>등록하고 시작</button></form>`, template.HTMLEscapeString(cfg.Base), template.HTMLEscapeString(name))
 	})
-	server := &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}
-	go server.Serve(listener)
-	url := "http://" + listener.Addr().String() + "/?token=" + token
-	fmt.Println("설치 화면:", url)
-	residentOpen(url)
-	return <-done
+	return mux
 }
 func residentInstall(invite *Config) error {
 	base, e := os.UserConfigDir()
@@ -229,7 +245,8 @@ func residentInstall(invite *Config) error {
 		}
 	}
 	if cfg.Mode != "resident" {
-		resp, e := residentPost(cfg.Base+"/limb/resident/enroll", map[string]interface{}{"key": cfg.Key, "installation_id": cfg.InstallationID})
+		cfg.Alias = invite.Alias
+		resp, e := residentPost(cfg.Base+"/limb/resident/enroll", map[string]interface{}{"key": cfg.Key, "installation_id": cfg.InstallationID, "alias": cfg.Alias})
 		if e != nil {
 			return e
 		}
@@ -242,6 +259,7 @@ func residentInstall(invite *Config) error {
 		}
 		reg, _ := resp["registration"].(map[string]interface{})
 		cfg.Key = key
+		cfg.Alias, _ = resp["alias"].(string)
 		cfg.Generation, _ = reg["generation"].(string)
 		cfg.Mode = "resident"
 		cfg.ExpiresAt, _ = resp["expires_at"].(float64)
@@ -254,7 +272,10 @@ func residentInstall(invite *Config) error {
 		return e
 	}
 	dest := residentExecutable(root)
-	if src != dest {
+	// Reopening the USB installer for an installed PC launches its existing manager.
+	// Do not overwrite a running executable (ETXTBSY / Windows file lock).
+	_, existing := os.Stat(dest)
+	if src != dest && existing != nil {
 		if e = residentCopy(src, dest); e != nil {
 			return e
 		}

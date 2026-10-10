@@ -224,7 +224,7 @@ def test_bundle_uses_direct_tunnel_and_contains_executable(registry, monkeypatch
             hashlib.sha256(archive.read('indiebiz-helper-mac-amd64')).hexdigest())
 
 @pytest.mark.system
-def test_resident_binary_roundtrip_crash_and_ui(tmp_path, monkeypatch):
+def test_resident_binary_roundtrip_crash(tmp_path, monkeypatch):
     """Uses an isolated hub and built binary; never installs an OS autostart service."""
     import platform
     import time
@@ -232,7 +232,6 @@ def test_resident_binary_roundtrip_crash_and_ui(tmp_path, monkeypatch):
     import socket
     import subprocess
     import uvicorn
-    from playwright.sync_api import sync_playwright
     root = Path(__file__).resolve().parents[1]
     if platform.system() == 'Darwin':
         binary_name = 'indiebiz-helper-mac-arm64' if platform.machine() == 'arm64' else 'indiebiz-helper-mac-amd64'
@@ -308,21 +307,7 @@ def test_resident_binary_roundtrip_crash_and_ui(tmp_path, monkeypatch):
         assert not marker.exists(), 'child survived worker crash'
         proc = subprocess.Popen([str(binary)], cwd=worker, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         assert wait(crash['job_id'])['state'] == 'unknown'
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            for width in (390, 1280):
-                page = browser.new_page(viewport={'width': width, 'height': 900})
-                errors = []
-                page.on('pageerror', lambda e: errors.append(str(e)))
-                page.goto(url + '/remote-pcs/app')
-                page.wait_for_function("document.querySelector('#target').options.length===1")
-                assert page.locator('#device').inner_text().find('맥12-테스트') >= 0
-                assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), page.evaluate('[...document.querySelectorAll("*")].filter(e=>e.getBoundingClientRect().right>innerWidth).map(e=>[e.tagName,e.id,e.className])')
-                assert not errors, errors
-                page.screenshot(path=str(work / f'ui-{width}.png'), full_page=True)
-                page.close()
-            browser.close()
-        print(json.dumps({'shell_first_result_ms': latency, 'binary_roundtrip_bytes': len(payload), 'dedup': True, 'crash_children_reaped': True, 'restart_state': 'unknown', 'ui_widths': [390, 1280], 'work_dir': str(work)}, ensure_ascii=False))
+        print(json.dumps({'shell_first_result_ms': latency, 'binary_roundtrip_bytes': len(payload), 'dedup': True, 'crash_children_reaped': True, 'restart_state': 'unknown', 'work_dir': str(work)}, ensure_ascii=False))
     finally:
         if proc and proc.poll() is None:
             proc.terminate()
@@ -333,3 +318,71 @@ def test_resident_binary_roundtrip_crash_and_ui(tmp_path, monkeypatch):
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_reusable_usb_names_isolation_retry_and_revocation(registry):
+    inv = limb_keys.resident_installer()
+    assert limb_keys.resident_installer()['key'] == inv['key']
+    assert limb_keys.validate(inv['key']) is None
+    a = limb_keys.resident_enroll(inv['key'], '1' * 32, '맥12')
+    b = limb_keys.resident_enroll(inv['key'], '2' * 32, '작업PC')
+    assert a['key'] != b['key'] != inv['key']
+    assert limb_keys.resident_enroll(inv['key'], '1' * 32, 'retry')['key'] == a['key']
+    with pytest.raises(ValueError, match='이미 등록된'):
+        limb_keys.resident_enroll(inv['key'], '3' * 32, '맥12')
+    with pytest.raises(ValueError):
+        pcs.sync(inv['key'], '1' * 32)
+    with pytest.raises(ValueError):
+        pcs.sync(a['key'], '2' * 32)
+    pcs.remove(a['device_id'])
+    assert pcs.sync(a['key'], '1' * 32)['state'] == 'removal_pending'
+    assert pcs.sync(b['key'], '2' * 32)['state'] == 'active'
+    limb_keys.resident_update(a['device_id'], state='removed')
+    replacement = limb_keys.resident_enroll(inv['key'], '7' * 32, '맥12')
+    assert pcs.resolve('맥12')['device_id'] == replacement['device_id']
+    assert pcs.resolve(a['device_id'], active=False)['registration']['state'] == 'removed'
+    limb_keys.resident_installer_revoke()
+    with pytest.raises(ValueError, match='invalid_invitation'):
+        limb_keys.resident_enroll(inv['key'], '4' * 32, '새PC')
+    assert pcs.sync(b['key'], '2' * 32)['state'] == 'active'
+    assert limb_keys.resident_installer()['key'] != inv['key']
+
+
+@pytest.mark.parametrize('name', ['', ' ', 'x' * 81, 'pc\nname'])
+def test_usb_invalid_name_does_not_register(registry, name):
+    inv = limb_keys.resident_installer()
+    with pytest.raises(ValueError):
+        limb_keys.resident_enroll(inv['key'], '5' * 32, name)
+    assert not pcs.devices()
+
+
+def test_usb_folder_all_platforms_no_preassigned_pc_and_stable_key(registry, monkeypatch, tmp_path):
+    monkeypatch.setenv('INDIEBIZ_BASE_PATH', str(tmp_path))
+    monkeypatch.setattr(pcs, 'public_base', lambda: 'https://central.example')
+    dist = tmp_path / 'helper' / 'dist'
+    dist.mkdir(parents=True)
+    for src in pcs.USB_BINARIES:
+        (dist / src).write_bytes(src.encode())
+    assert not pcs.usb_status()['ready']
+    ready = pcs.prepare_usb()
+    root = Path(ready['folder'])
+    assert ready['ready'] and root.name == 'pc-helper'
+    cfg = json.loads((root / 'indiebiz-helper.json').read_text())
+    assert cfg['mode'] == 'enroll' and 'alias' not in cfg
+    assert len((root / 'SHA256SUMS').read_text().splitlines()) == len(pcs.USB_BINARIES)
+    for src, dest in pcs.USB_BINARIES.items():
+        assert (root / dest).read_bytes() == src.encode()
+        assert (root / dest).stat().st_mode & 0o111
+    assert not (root / 'indiebiz-helper.json').stat().st_mode & 0o077
+    pcs.prepare_usb()
+    assert json.loads((root / 'indiebiz-helper.json').read_text())['key'] == cfg['key']
+    app = FastAPI()
+    app.include_router(api_resident_pcs.router)
+    with TestClient(app) as client:
+        out = client.post('/limb/resident/enroll', json={'key': cfg['key'], 'installation_id': '6' * 32, 'alias': '맥12'})
+        assert out.status_code == 200 and out.json()['alias'] == '맥12'
+        listing = client.get('/remote-pcs')
+        assert listing.json()['items'][0]['alias'] == '맥12'
+        assert cfg['key'] not in listing.text and out.json()['key'] not in listing.text
+        assert client.get('/remote-pcs/app', follow_redirects=False).headers['location'] == '/launcher/app'
+        assert client.post('/remote-pcs/usb/revoke').json()['ready'] is False

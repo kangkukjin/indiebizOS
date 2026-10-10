@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: resident-pc-separate-install-app
+    retired: 2026-10-10
+    reason: 등록·해제는 조종실에 모으고 작업은 중앙 AI의 자연어 요청으로 실행한다.
+    instead: 공용 USB 폴더를 복사하고 대상 PC에서 이름을 정해 등록한다.
+    phrases: ['register는 상주 PC 등록 화면 URL을 돌려준다', '원격 PC 화면에서 이름·OS·기간을 정해 설치 ZIP을 받으세요']
   - id: browser-cookie-load-login-guarantee
     retired: 2026-10-09
     reason: 쿠키 적용과 현재 주소 리로드만으로 목적 화면 로그인 성공을 보장할 수 없다.

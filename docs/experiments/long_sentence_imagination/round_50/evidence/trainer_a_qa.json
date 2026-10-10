@@ -1,0 +1,609 @@
+{
+ "passed": 16,
+ "total": 16,
+ "checks": [
+  {
+   "check": "보고: 일마다 종결이 기대와 같음",
+   "ok": true,
+   "detail": {
+    "가": "성공",
+    "나": "성공",
+    "다": "성공",
+    "라": "시간 초과로 끊김",
+    "마": "성공",
+    "바": "실패",
+    "사": "맡기지 않음"
+   }
+  },
+  {
+   "check": "원장: 일마다 실행 1번(맡기지 않을 일은 0번)",
+   "ok": true,
+   "detail": {
+    "바": 1,
+    "마": 1,
+    "다": 1,
+    "라": 1,
+    "나": 1,
+    "가": 1
+   }
+  },
+  {
+   "check": "원장: 상태가 종결과 맞음",
+   "ok": true,
+   "detail": {
+    "바": [
+     "failed",
+     4,
+     null
+    ],
+    "마": [
+     "succeeded",
+     0,
+     null
+    ],
+    "다": [
+     "succeeded",
+     0,
+     null
+    ],
+    "라": [
+     "failed",
+     125,
+     true
+    ],
+    "나": [
+     "succeeded",
+     0,
+     null
+    ],
+    "가": [
+     "succeeded",
+     0,
+     null
+    ]
+   }
+  },
+  {
+   "check": "원장: 끊긴 일은 제한시간 근처에서 끝남",
+   "ok": true,
+   "detail": {
+    "라": 20.025549173355103
+   }
+  },
+  {
+   "check": "원장: 멈춘 일은 지시한 때 근처에서 끝남",
+   "ok": true,
+   "detail": {}
+  },
+  {
+   "check": "원장: 동시에 돈 일이 한도 2 를 넘지 않음",
+   "ok": true,
+   "detail": {
+    "peak": 2,
+    "timed": 6,
+    "tasks": 6
+   }
+  },
+  {
+   "check": "원장: 뒤 일은 앞 일이 끝난 뒤에 접수됨",
+   "ok": true,
+   "detail": [
+    [
+     "다",
+     "가",
+     0.6
+    ]
+   ]
+  },
+  {
+   "check": "보고: 시작·종료·소요·줄 대기가 원장 값과 같음(\"시각 없음\" 0)",
+   "ok": true,
+   "detail": {
+    "바": 3.0877578258514404,
+    "마": 2.0817859172821045,
+    "다": 10.126653909683228,
+    "라": 20.025549173355103,
+    "나": 6.150418996810913,
+    "가": 26.10696005821228
+   }
+  },
+  {
+   "check": "보고: 멈춘·끊긴 일의 남은 프로세스 확인 기록",
+   "ok": true,
+   "detail": {
+    "라": 0
+   }
+  },
+  {
+   "check": "보고: 서버 생존·내용 확인",
+   "ok": true,
+   "detail": {
+    "마": [
+     true,
+     true,
+     "R50 미리보기 R50=trainer_a-마"
+    ]
+   }
+  },
+  {
+   "check": "맥12: 끝난 뒤 표식 프로세스 0 (안전망이 치우기 전)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": "맥12: 작업 폴더 없음",
+   "ok": true,
+   "detail": "ls: /Users/kangkukjin/indiebiz-training/r50/trainer_a: No such file or directory\n"
+  },
+  {
+   "check": "회수: 성공한 일의 결과 파일(내용까지)",
+   "ok": true,
+   "detail": {
+    "sum.json": true,
+    "brief.md": true,
+    "total": 1301160
+   }
+  },
+  {
+   "check": "맥12 등록·연결 그대로",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "check": "원장: sudo·화면·재생·훈련 폴더 밖 0",
+   "ok": true,
+   "detail": [
+    "shell",
+    "transfer"
+   ]
+  },
+  {
+   "check": "결과 파일",
+   "ok": true,
+   "detail": null
+  }
+ ],
+ "ledger_jobs": [
+  {
+   "id": "6f5acc82df5d4d7f8d96a2e7aa193125",
+   "request_id": "r50-trainer_a-7-job-바",
+   "state": "failed",
+   "op": "shell",
+   "cmd": "sh jobs/bad.sh R50=trainer_a-바",
+   "created": 1791643741.200446,
+   "started_at": 1791643742.259118,
+   "ended_at": 1791643745.346876,
+   "seconds": 3.0877578258514404,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "error": "exit status 4",
+    "exit": 4,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "205f774bdbc34009aff96a5fc0bb2488",
+   "request_id": "r50-trainer_a-7-job-마",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "sh jobs/preview.sh R50=trainer_a-마 18651",
+   "created": 1791643737.1044989,
+   "started_at": 1791643738.186039,
+   "ended_at": 1791643740.267825,
+   "seconds": 2.0817859172821045,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "f14a3363c0b04feca67d3c40ec44b292",
+   "request_id": "r50-trainer_a-7-job-다",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "sh jobs/brief.sh R50=trainer_a-다",
+   "created": 1791643735.033899,
+   "started_at": 1791643735.674985,
+   "ended_at": 1791643745.8016388,
+   "seconds": 10.126653909683228,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "d005010d6b0c421da629498d5d56fe26",
+   "request_id": "r50-trainer_a-7-job-라",
+   "state": "failed",
+   "op": "shell",
+   "cmd": "sh jobs/hold.sh R50=trainer_a-라 ignore",
+   "created": 1791643715.680801,
+   "started_at": 1791643716.214464,
+   "ended_at": 1791643736.2400131,
+   "seconds": 20.025549173355103,
+   "result": {
+    "cancelled": false,
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "error": "exit status 125",
+    "exit": 125,
+    "log_truncated": false,
+    "timeout": true
+   }
+  },
+  {
+   "id": "5fb173e95dc24bca96b3372c8aad1c6b",
+   "request_id": "r50-trainer_a-7-job-나",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "sh jobs/sum.sh R50=trainer_a-나",
+   "created": 1791643707.269187,
+   "started_at": 1791643708.363422,
+   "ended_at": 1791643714.513841,
+   "seconds": 6.150418996810913,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "43af63b0f83849fb98c56f967d0267c8",
+   "request_id": "r50-trainer_a-7-job-가",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "sh jobs/sum.sh R50=trainer_a-가",
+   "created": 1791643707.2481,
+   "started_at": 1791643708.328686,
+   "ended_at": 1791643734.435646,
+   "seconds": 26.10696005821228,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  }
+ ],
+ "ledger_all": [
+  {
+   "id": "b90746f3655b4b179314aae92bd9be75",
+   "request_id": "r50-verify-ls-17916437870",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "ls -d \"/Users/kangkukjin/indiebiz-training/r50/trainer_a\" 2>&1; ls /Users/kangkukjin/indie",
+   "created": 1791643787.2991822,
+   "started_at": 1791643788.1024451,
+   "ended_at": 1791643788.165774,
+   "seconds": 0.06332898139953613,
+   "result": {
+    "cwd": "/tmp",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "535e604b112f45eab4fca168aa8b9ede",
+   "request_id": "r50-trainer_a-7-cleanup",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "rm -rf \"/Users/kangkukjin/indiebiz-training/r50/trainer_a\" && echo REMOVED",
+   "created": 1791643779.910429,
+   "started_at": 1791643780.974153,
+   "ended_at": 1791643781.044922,
+   "seconds": 0.07076907157897949,
+   "result": {
+    "cwd": "/tmp",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "a445a5b68f6c4a9d9365cb4d08f6039f",
+   "request_id": "r50-trainer_a-7-closed-마",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "curl -s -m 3 -o /dev/null http://127.0.0.1:18651/; echo $?",
+   "created": 1791643777.922985,
+   "started_at": 1791643779.005534,
+   "ended_at": 1791643779.073537,
+   "seconds": 0.06800317764282227,
+   "result": {
+    "cwd": "/tmp",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "9034873737924d54af9c4d81922582d2",
+   "request_id": "r50-trainer_a-7-ps-all-1",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "ps -axo pid,ppid,etime,command | grep 'R50[=]trainer_a-' | cut -c1-160; true",
+   "created": 1791643775.9729018,
+   "started_at": 1791643777.033901,
+   "ended_at": 1791643777.127188,
+   "seconds": 0.09328699111938477,
+   "result": {
+    "cwd": "/tmp",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "0bed3a44bc19494c8e51314e06d82f63",
+   "request_id": "r50-trainer_a-7-down",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "pkill -f 'R50[=]trainer_a-' ; sleep 1; true",
+   "created": 1791643773.942819,
+   "started_at": 1791643774.2182,
+   "ended_at": 1791643775.30336,
+   "seconds": 1.0851600170135498,
+   "result": {
+    "cwd": "/tmp",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "df2f1caad4ed47b39c7126d5e705967e",
+   "request_id": "r50-trainer_a-7-recv-다",
+   "state": "succeeded",
+   "op": "transfer",
+   "cmd": "",
+   "created": 1791643764.6860318,
+   "started_at": 1791643765.745722,
+   "ended_at": 1791643772.5838568,
+   "seconds": 6.838134765625,
+   "result": {
+    "created": 1791643764.684499,
+    "device": "guestpc-7a440e9daf61",
+    "direction": "from_pc",
+    "id": "bbf43fe9ed6649058ad01b6849f0daa0",
+    "name": "brief.md",
+    "offset": 111,
+    "sha256": "70e725035cbfa215f4a2799faddf0a6cbf111520af3e8c4b2151c06d05662936",
+    "size": 111,
+    "state": "committed"
+   }
+  },
+  {
+   "id": "33bbcda25be54fed88fb0f99b388af21",
+   "request_id": "r50-trainer_a-7-sha-다",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "shasum -a 256 'results/brief.md' | cut -d' ' -f1",
+   "created": 1791643763.411832,
+   "started_at": 1791643763.769027,
+   "ended_at": 1791643763.866466,
+   "seconds": 0.09743905067443848,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "47718663c3944730afdd4032a818b0a7",
+   "request_id": "r50-trainer_a-7-recv-가",
+   "state": "succeeded",
+   "op": "transfer",
+   "cmd": "",
+   "created": 1791643756.3123178,
+   "started_at": 1791643757.385955,
+   "ended_at": 1791643761.727704,
+   "seconds": 4.341748952865601,
+   "result": {
+    "created": 1791643756.310771,
+    "device": "guestpc-7a440e9daf61",
+    "direction": "from_pc",
+    "id": "9279bb53b30242aa8ef266a5dbbfeb1e",
+    "name": "sum.json",
+    "offset": 117,
+    "sha256": "e30da95f7ce235ace6c3aef7825f5fe1a119cd23566189f27fbcc5885fc6c145",
+    "size": 117,
+    "state": "committed"
+   }
+  },
+  {
+   "id": "56aca9087ee24512be2ecd02626a5d7d",
+   "request_id": "r50-trainer_a-7-sha-가",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "shasum -a 256 'results/sum.json' | cut -d' ' -f1",
+   "created": 1791643752.278183,
+   "started_at": 1791643753.3477702,
+   "ended_at": 1791643753.4420211,
+   "seconds": 0.09425091743469238,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "a8ccac4ac5024d16a038a63a86bae352",
+   "request_id": "r50-trainer_a-7-alive-마",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "ps -axo pid,ppid,etime,command | grep 'R50[=]trainer_a-마' | cut -c1-160; true",
+   "created": 1791643750.193791,
+   "started_at": 1791643751.299882,
+   "ended_at": 1791643751.408431,
+   "seconds": 0.10854911804199219,
+   "result": {
+    "cwd": "/tmp",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "378bfcc6f761475a98923db73ba83f95",
+   "request_id": "r50-trainer_a-7-curl-마",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "curl -s -m 5 http://127.0.0.1:18651/",
+   "created": 1791643748.112648,
+   "started_at": 1791643749.210351,
+   "ended_at": 1791643749.279967,
+   "seconds": 0.06961607933044434,
+   "result": {
+    "cwd": "/tmp",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "027c9b702a644e219ff851cc14886e21",
+   "request_id": "r50-trainer_a-7-ps-라",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "ps -axo pid,ppid,etime,command | grep 'R50[=]trainer_a-라' | cut -c1-160; true",
+   "created": 1791643746.4075289,
+   "started_at": 1791643747.203128,
+   "ended_at": 1791643747.297745,
+   "seconds": 0.09461688995361328,
+   "result": {
+    "cwd": "/tmp",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "6f5acc82df5d4d7f8d96a2e7aa193125",
+   "request_id": "r50-trainer_a-7-job-바",
+   "state": "failed",
+   "op": "shell",
+   "cmd": "sh jobs/bad.sh R50=trainer_a-바",
+   "created": 1791643741.200446,
+   "started_at": 1791643742.259118,
+   "ended_at": 1791643745.346876,
+   "seconds": 3.0877578258514404,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "error": "exit status 4",
+    "exit": 4,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "205f774bdbc34009aff96a5fc0bb2488",
+   "request_id": "r50-trainer_a-7-job-마",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "sh jobs/preview.sh R50=trainer_a-마 18651",
+   "created": 1791643737.1044989,
+   "started_at": 1791643738.186039,
+   "ended_at": 1791643740.267825,
+   "seconds": 2.0817859172821045,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "f14a3363c0b04feca67d3c40ec44b292",
+   "request_id": "r50-trainer_a-7-job-다",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "sh jobs/brief.sh R50=trainer_a-다",
+   "created": 1791643735.033899,
+   "started_at": 1791643735.674985,
+   "ended_at": 1791643745.8016388,
+   "seconds": 10.126653909683228,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "d005010d6b0c421da629498d5d56fe26",
+   "request_id": "r50-trainer_a-7-job-라",
+   "state": "failed",
+   "op": "shell",
+   "cmd": "sh jobs/hold.sh R50=trainer_a-라 ignore",
+   "created": 1791643715.680801,
+   "started_at": 1791643716.214464,
+   "ended_at": 1791643736.2400131,
+   "seconds": 20.025549173355103,
+   "result": {
+    "cancelled": false,
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "error": "exit status 125",
+    "exit": 125,
+    "log_truncated": false,
+    "timeout": true
+   }
+  },
+  {
+   "id": "5fb173e95dc24bca96b3372c8aad1c6b",
+   "request_id": "r50-trainer_a-7-job-나",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "sh jobs/sum.sh R50=trainer_a-나",
+   "created": 1791643707.269187,
+   "started_at": 1791643708.363422,
+   "ended_at": 1791643714.513841,
+   "seconds": 6.150418996810913,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "43af63b0f83849fb98c56f967d0267c8",
+   "request_id": "r50-trainer_a-7-job-가",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "sh jobs/sum.sh R50=trainer_a-가",
+   "created": 1791643707.2481,
+   "started_at": 1791643708.328686,
+   "ended_at": 1791643734.435646,
+   "seconds": 26.10696005821228,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "06d8eb23b8804dba8ac550f00e7a1192",
+   "request_id": "r50-trainer_a-7-unzip",
+   "state": "succeeded",
+   "op": "shell",
+   "cmd": "unzip -q -o jobs.zip && ls jobs | wc -l | tr -d ' '",
+   "created": 1791643705.857652,
+   "started_at": 1791643706.321431,
+   "ended_at": 1791643706.3895779,
+   "seconds": 0.06814694404602051,
+   "result": {
+    "cwd": "/Users/kangkukjin/indiebiz-training/r50/trainer_a",
+    "exit": 0,
+    "log_truncated": false
+   }
+  },
+  {
+   "id": "33c724f9366742138521628b113c1a89",
+   "request_id": "r50-trainer_a-7-send",
+   "state": "succeeded",
+   "op": "transfer",
+   "cmd": "",
+   "created": 1791643702.789066,
+   "started_at": 1791643703.523821,
+   "ended_at": 1791643704.678547,
+   "seconds": 1.1547257900238037,
+   "result": {
+    "path": "/Users/kangkukjin/indiebiz-training/r50/trainer_a/jobs.zip",
+    "sha256": "6e5455bbbc4cbcae6dc5283fb091ff6f5d03f786726265486e0de67700419ec9",
+    "size": 4388,
+    "state": "committed"
+   }
+  }
+ ],
+ "left_before_net": [],
+ "disk": "ls: /Users/kangkukjin/indiebiz-training/r50/trainer_a: No such file or directory\n"
+}

@@ -1,0 +1,137 @@
+{
+ "label": "trainer_b_queue_v0",
+ "elapsed": 91.66,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "완료 — 줄 세운 일이 모두 정해진 대로 끝남",
+  "outcomes": [
+   {
+    "id": "p1",
+    "outcome": "성공"
+   },
+   {
+    "id": "s1",
+    "outcome": "성공"
+   },
+   {
+    "id": "h1",
+    "outcome": "내가 멈춤"
+   },
+   {
+    "id": "b1",
+    "outcome": "성공"
+   },
+   {
+    "id": "w1",
+    "outcome": "시간 초과로 끊김"
+   },
+   {
+    "id": "n1",
+    "outcome": "성공"
+   },
+   {
+    "id": "x1",
+    "outcome": "실패"
+   },
+   {
+    "id": "n2",
+    "outcome": "맡기지 않음"
+   },
+   {
+    "id": "n3",
+    "outcome": "맡기지 않음"
+   }
+  ],
+  "loops": 17,
+  "max_running": 2,
+  "left_after_stop": [
+   {
+    "id": "h1",
+    "left": 0
+   },
+   {
+    "id": "w1",
+    "left": 0
+   }
+  ],
+  "servers": [
+   {
+    "id": "p1",
+    "alive": true,
+    "content": true
+   }
+  ],
+  "collected": [
+   true,
+   true
+  ],
+  "forced": {
+   "used": false,
+   "left": 0
+  },
+  "folder_absent": true
+ },
+ "usage": {
+  "steps": 43233,
+  "rows": 209,
+  "elapsed_ms": 90987
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 226,
+   "ms": 57969,
+   "calls": 58,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  },
+  {
+   "line": 16,
+   "ms": 25409,
+   "calls": 11,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  },
+  {
+   "line": 153,
+   "ms": 3465,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  },
+  {
+   "line": 197,
+   "ms": 1787,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  },
+  {
+   "line": 53,
+   "ms": 247,
+   "calls": 1,
+   "actions": [
+    "self:script"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  },
+  {
+   "line": 131,
+   "ms": 103,
+   "calls": 7,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  }
+ ],
+ "issues": null
+}

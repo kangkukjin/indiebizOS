@@ -1,0 +1,148 @@
+{
+  "episode": {
+    "id": 4576,
+    "total_ms": 66037,
+    "source": "training",
+    "run_id": "run_285a8c6d808bd63f8b1d"
+  },
+  "usage": {
+    "input": 1737567,
+    "output": 6369,
+    "cache_read": 1631119,
+    "cache_create": 100843
+  },
+  "roles": {
+    "oneshot:classify": {
+      "input": 3554,
+      "output": 2,
+      "cache_read": 3328,
+      "cache_create": 0
+    },
+    "oneshot:background": {
+      "input": 11379,
+      "output": 1785,
+      "cache_read": 6016,
+      "cache_create": 0
+    },
+    "execution": {
+      "input": 1682937,
+      "output": 3804,
+      "cache_read": 1610713,
+      "cache_create": 72212
+    },
+    "oneshot:evaluate": {
+      "input": 39697,
+      "output": 778,
+      "cache_read": 11062,
+      "cache_create": 28631
+    }
+  },
+  "events": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 8,
+    "supervision.recall.finished": 8,
+    "model.call_started": 7,
+    "model.input": 7,
+    "model.round": 11,
+    "model.usage": 7,
+    "model.call_finished": 7,
+    "knowledge_catalog.selected": 2,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "framing.inherited": 1,
+    "supervision.framing": 1,
+    "model.response_snapshot": 13,
+    "supervision.tool.started": 2,
+    "ibl.started": 2,
+    "ibl.checkpoint": 2,
+    "ibl.finished": 2,
+    "supervision.tool.finished": 2,
+    "cognition.evaluation": 1,
+    "supervision.evaluation.stage_started": 7,
+    "supervision.evaluation.stage_finished": 7,
+    "supervision.evaluation.started": 2,
+    "supervision.evaluation.finished": 2,
+    "supervision.decision": 2,
+    "validation.completed": 2,
+    "supervision.repair.admitted": 1,
+    "supervision.ownership.handoff": 2,
+    "supervision.repair.context": 1,
+    "supervision.response.operation": 2,
+    "supervision.response.delivered": 1,
+    "recall.used": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+  },
+  "tool_names": {
+    "execute_ibl": 2
+  },
+  "tool_failures": 0,
+  "recall_used": [
+    {
+      "blocks": [
+        {
+          "evidence": "executed",
+          "ibl_calls": 2,
+          "presented": [
+            "4139",
+            "1839"
+          ],
+          "recall_id": "894a2447f3454c06880bb4ae585be71e",
+          "source": "hippocampus",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "presented": [
+            "script:나레이션생성",
+            "script:폴더변화",
+            "script:에피소드통계"
+          ],
+          "quality_contribution": "not_inferred",
+          "recall_id": "894a2447f3454c06880bb4ae585be71e",
+          "source": "reusable_capabilities",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "opened": [],
+          "presented": [
+            "339",
+            "450",
+            "464"
+          ],
+          "recall_id": "894a2447f3454c06880bb4ae585be71e",
+          "source": "recalled_memory",
+          "used": []
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "basics.04.d43a776c5e28",
+            "basics.11.81960fefe87d"
+          ],
+          "recall_id": "894a2447f3454c06880bb4ae585be71e",
+          "source": "method_map",
+          "used": [
+            "basics.11.81960fefe87d"
+          ]
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "foundation.process_thread"
+          ],
+          "recall_id": "894a2447f3454c06880bb4ae585be71e",
+          "source": "world_memory",
+          "used": []
+        }
+      ],
+      "completed": true,
+      "phase": "turn"
+    }
+  ],
+  "compacted": 0
+}

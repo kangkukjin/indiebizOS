@@ -1,0 +1,265 @@
+{
+ "code": "#!ibl edition=2\n$a=[self:time]{}\nreturn $a",
+ "elapsed": 0.295,
+ "response": {
+  "success": true,
+  "value": "2026-10-10 23:39:38 KST+0900",
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "scalar",
+    "2026-10-10 23:39:38 KST+0900"
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "a16dce5c70fbc73d1970f15a9475bfc000c30f013fb73d3591a020726f819083",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "record:30:32",
+    "invocation_id": 1,
+    "kind": "record",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "call:19:32",
+    "invocation_id": 2,
+    "kind": "invoke",
+    "parents": [
+     1
+    ],
+    "action": "self:time",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "03c07cce167bebbea154bf3f040e25c91dbcfbcf862e90765e8273d2ccf073a5"
+   },
+   {
+    "id": 3,
+    "node_id": "call:19:32",
+    "invocation_id": 3,
+    "kind": "tool_evidence",
+    "parents": [
+     2
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 4,
+    "node_id": "call:19:32",
+    "invocation_id": 4,
+    "kind": "call",
+    "parents": [
+     1,
+     2,
+     3
+    ]
+   },
+   {
+    "id": 5,
+    "node_id": "bind:16:32",
+    "invocation_id": 5,
+    "kind": "bind",
+    "parents": [
+     4
+    ]
+   },
+   {
+    "id": 6,
+    "node_id": "ref:40:42",
+    "invocation_id": 6,
+    "kind": "ref",
+    "parents": [
+     4
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:42": {
+    "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+    "start": 15,
+    "end": 42,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:32": {
+    "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+    "start": 16,
+    "end": 32,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:32": {
+    "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+    "start": 19,
+    "end": 32,
+    "line": 2,
+    "column": 4
+   },
+   "record:30:32": {
+    "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+    "start": 30,
+    "end": 32,
+    "line": 2,
+    "column": 15
+   },
+   "return:33:42": {
+    "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+    "start": 33,
+    "end": 42,
+    "line": 3,
+    "column": 1
+   },
+   "ref:40:42": {
+    "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+    "start": 40,
+    "end": 42,
+    "line": 3,
+    "column": 8
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "03c07cce167bebbea154bf3f040e25c91dbcfbcf862e90765e8273d2ccf073a5",
+    "value": [
+     "scalar",
+     "2026-10-10 23:39:38 KST+0900"
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:time",
+    "reuse_key": "9b2baaf649c6c5b8713ce8084765b2a65b52ce2e78800cb467d29e91117b5663",
+    "reuse_parts": {
+     "action": "3b47e576e5c0cb8805ed05872f92324dcf6f363259d82d10d528f2052f4cb63a",
+     "args": "f438168828650fd403f8b5f8b7aec9dc2b540a238d345de89a13c0cfbb440f14",
+     "contract": "e6f37c577cd03728a47b348c1d38d9793ab7fa1d6a2c88d3f53a01f602b25b2b",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "a124a8ea8735868b34afc7891742eb4fcabd61557cecab0806cf9b659ea8a4d3"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 6,
+   "rows": 0,
+   "elapsed_ms": 280,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:32",
+     "steps": 1,
+     "location": {
+      "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+      "start": 16,
+      "end": 32,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:19:32",
+     "steps": 1,
+     "location": {
+      "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+      "start": 19,
+      "end": 32,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "record:30:32",
+     "steps": 1,
+     "location": {
+      "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+      "start": 30,
+      "end": 32,
+      "line": 2,
+      "column": 15
+     }
+    },
+    {
+     "node_id": "ref:40:42",
+     "steps": 1,
+     "location": {
+      "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+      "start": 40,
+      "end": 42,
+      "line": 3,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "return:33:42",
+     "steps": 1,
+     "location": {
+      "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+      "start": 33,
+      "end": 42,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "sequence:15:42",
+     "steps": 1,
+     "location": {
+      "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414",
+      "start": 15,
+      "end": 42,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 3,
+     "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414"
+    },
+    {
+     "line": 3,
+     "steps": 2,
+     "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 9,
+     "calls": 1,
+     "actions": [
+      "self:time"
+     ],
+     "source_hash": "341a6cadab0a2f960d9e9ee6780f534c130670006ddbe4ffd3eb1eec5f164414"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "8ce64d345f764513a50302d4ac2b2bae"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "8ce64d345f764513a50302d4ac2b2bae",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

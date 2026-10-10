@@ -1,0 +1,129 @@
+{
+ "label": "trainer_base_queue_v0_again",
+ "elapsed": 3.74,
+ "success": true,
+ "error": null,
+ "value": {
+  "verdict": "완료 — 줄 세운 일이 모두 정해진 대로 끝남",
+  "outcomes": [
+   {
+    "id": "가",
+    "outcome": "성공"
+   },
+   {
+    "id": "나",
+    "outcome": "내가 멈춤"
+   },
+   {
+    "id": "다",
+    "outcome": "성공"
+   },
+   {
+    "id": "라",
+    "outcome": "시간 초과로 끊김"
+   },
+   {
+    "id": "마",
+    "outcome": "성공"
+   },
+   {
+    "id": "바",
+    "outcome": "실패"
+   },
+   {
+    "id": "사",
+    "outcome": "맡기지 않음"
+   }
+  ],
+  "loops": 4,
+  "max_running": 2,
+  "left_after_stop": [
+   {
+    "id": "나",
+    "left": 0
+   },
+   {
+    "id": "라",
+    "left": 0
+   }
+  ],
+  "servers": [
+   {
+    "id": "마",
+    "alive": true,
+    "content": true
+   }
+  ],
+  "collected": [
+   true,
+   true
+  ],
+  "forced": {
+   "used": false,
+   "left": 0
+  },
+  "folder_absent": true
+ },
+ "usage": {
+  "steps": 15135,
+  "rows": 55,
+  "elapsed_ms": 3242
+ },
+ "tool_ms_by_line": [
+  {
+   "line": 197,
+   "ms": 1191,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  },
+  {
+   "line": 153,
+   "ms": 383,
+   "calls": 1,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  },
+  {
+   "line": 16,
+   "ms": 158,
+   "calls": 11,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  },
+  {
+   "line": 226,
+   "ms": 114,
+   "calls": 18,
+   "actions": [
+    "self:task"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  },
+  {
+   "line": 131,
+   "ms": 99,
+   "calls": 6,
+   "actions": [
+    "limbs:guestpc"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  },
+  {
+   "line": 177,
+   "ms": 74,
+   "calls": 5,
+   "actions": [
+    "self:limb"
+   ],
+   "source_hash": "a19ed4c60f6e69e6ee317e4b78f5c736a64322d3e964452516333b0837da94a7"
+  }
+ ],
+ "issues": null
+}

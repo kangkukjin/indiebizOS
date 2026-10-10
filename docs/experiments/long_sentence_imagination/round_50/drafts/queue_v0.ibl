@@ -1,0 +1,172 @@
+#!ibl edition=2
+# 50회차 원격 PC 조종 2 — 일 여러 개를 줄 세워 맡기고 다스리기 v0 — inputs: src(queue.json·jobs/), out
+# 흐름: 준비(이름 그대로) → jobs 묶어 보내고 풀기 → 줄 세우기 고리[도는 일 관측·때 되면 멈춤 → 빈 자리에 다음 일(앞 일이 성공했을 때만) → 숨 고르기]
+#   → 멈춘·끊긴 일의 남은 프로세스 확인 → 살아 있어야 하는 서버 확인 → 결과 가져오기 → 작업 기록 → 서버 내리기·남은 프로세스·폴더 정리 → result.json·report.md
+# 재부탁: 원격에 닿는 호출은 전부 일감에서 계산한 요청ID 아래. 같은 일감이면 옛 접수증·옛 결과가 돌아와 맥12 에서 다시 돌지 않는다.
+[def:초]() {
+  $t = [self:time]{}
+  $hms = split(split($t," ")[1],":")
+  return number($hms[0])*3600 + number($hms[1])*60 + number($hms[2])
+}
+[def:지남]($부터) {
+  $d = [fn:초]{} - $부터
+  return $d < 0 ? $d + 86400 : $d
+}
+[def:셸]($pc,$cmd,$cwd,$rid) {
+  $r = [limbs:guestpc]{op:"shell",limb:$pc,cmd:$cmd,cwd:$cwd,request_id:$rid,timeout:60}
+  return {rid:$rid, exit:get($r.result,"exit",null), output:strip(get($r.result,"output",""))}
+}
+[def:남은것]($pc,$표식,$rid) {
+  $p = [fn:셸]{pc:$pc, cmd:f"ps -axo pid,ppid,etime,command | grep '${replace($표식,'R50=','R50[=]')}' | cut -c1-160; true", cwd:"/tmp", rid:$rid}
+  $줄 = filter(split($p.output,"\n"), ($l)=>len(strip($l))>0)
+  return {count:len($줄), lines:$줄}
+}
+[def:판정]($j,$본) {
+  $r = get($본,"result",null)
+  $끊김 = false
+  [if:$r != null] { $끊김 = get($r,"timeout",false)==true }
+  [if:$본.status=="cancelled"] { return "내가 멈춤" }
+  [if:$끊김] { return "시간 초과로 끊김" }
+  [if:$본.status=="succeeded" and $본.command_ok==true] { return "성공" }
+  [if:$본.status=="unknown"] { return "결과 불명" }
+  return "실패"
+}
+
+$q = ([self:read]{path:f"${src}/queue.json"}).data
+$rd = $q.remote_dir
+$실행 = split($rd,"/")[len(split($rd,"/"))-1]
+$키 = f"r50-${실행}-${len($q.jobs)}"
+$표식 = $q.mark
+
+# 1) 준비·보내기·풀기
+$준비 = [fn:외부PC준비]{PC:$q.pc}
+[if:$준비.ok==false] {
+  $멈춤 = {verdict:"중단 — 원격 PC 가 일을 받을 수 없음", ready:{ok:false, status:$준비.status}}
+  $wm = [self:write]{path:f"${out}/result.json", content:json($멈춤)}
+  $wm2 = [self:write]{path:f"${out}/report.md", content:f"# 맥12 일거리\n- 판정: ${멈춤.verdict} (${준비.status})"}
+  return $멈춤
+}
+$pc = $준비.limb
+$한도 = get(get($준비.registration,"capabilities",{}),"max_parallel",1)
+$있던묶음 = []
+[try] { $있던묶음 = [self:list]{path:f"${out}/_stage",pattern:"jobs.zip"} } [catch] { $있던묶음 = [] }
+[if:len($있던묶음)==0] { $새묶음 = [self:script]{id:"압축",args:{op:"pack",paths:[f"${src}/jobs"],base:$src,output:f"${out}/_stage/jobs.zip"}} }
+$묶음지문 = ([self:list]{path:f"${out}/_stage",pattern:"jobs.zip",hash:true})[0].sha256
+$보냄 = [fn:외부PC파일보내기]{PC:$q.pc,중앙경로:f"${out}/_stage/jobs.zip",원격경로:f"${rd}/jobs.zip",요청ID:f"${키}-send",대기:60}
+assert $보냄.ok and get($보냄,"sha256","")==$묶음지문, "일 스크립트 묶음이 같은 내용으로 도착하지 않음", {status:$보냄.status, remote:get($보냄,"sha256",null), central:$묶음지문}
+$풀기 = [fn:셸]{pc:$pc, cmd:"unzip -q -o jobs.zip && ls jobs | wc -l | tr -d ' '", cwd:$rd, rid:f"${키}-unzip"}
+assert $풀기.exit==0, "원격에서 일 스크립트를 풀지 못함", {output:$풀기.output}
+
+# 2~4) 줄 세우기
+$일 = map($q.jobs, ($j)=>{id:$j.id, cmd:$j.cmd, after:get($j,"after",""), stop:get($j,"stop_after_s",0), limit:get($j,"limit_s",0), keep:get($j,"keep_alive",null), result:get($j,"result",""), env:get($j,"env",{}),
+  phase:"pending", outcome:"", t0:-1, stop_asked:false, stop_at:null, receipt:{}, seen:{}})
+$돌림 = 0
+$최대동시 = 0
+[repeat:until len(filter($일, ($j)=>$j.phase=="pending" or $j.phase=="running"))==0 or $돌림 >= 150] {
+  # (ㄱ) 도는 일 관측 — 시작이 확인되면 시계를 재고, 멈출 때가 되면 멈추고 실제 종료를 기다린다
+  $일 = $일 >> [table:each] {
+    [if:$it.phase != "running"] { return $it }
+    $본 = [fn:외부PC작업확인]{작업:$it.receipt,대기:0}
+    [if:$본.ok==false] { return $it }
+    [if:$본.settled or $본.status=="unknown"] { return {**$it, phase:"done", seen:$본, outcome:[fn:판정]{j:$it, 본:$본}} }
+    $t0 = $it.t0
+    [if:$t0 < 0 and $본.status=="running"] { $t0 = [fn:초]{} }
+    [if:$it.stop > 0 and $t0 >= 0] {
+      $지난 = [fn:지남]{부터:$t0}
+      [if:$지난 >= $it.stop] {
+        $멈춤 = [fn:외부PC작업중지확인]{작업:$it.receipt,대기:20}
+        [if:$멈춤.ok and ($멈춤.settled or $멈춤.status=="unknown")] { return {**$it, t0:$t0, phase:"done", seen:$멈춤, stop_asked:true, stop_at:$지난, outcome:[fn:판정]{j:$it, 본:$멈춤}} }
+        return {**$it, t0:$t0, stop_asked:true, stop_at:$지난}
+      }
+    }
+    return {**$it, t0:$t0}
+  }
+  # (ㄴ) 앞 일이 성공하지 못한 일은 맡기지 않는다
+  $일 = map($일, ($j)=>($j.phase=="pending" and $j.after != "" and len(filter($일, ($d)=>$d.id==$j.after and ($d.phase=="skipped" or ($d.phase=="done" and $d.outcome != "성공"))))>0) ? {**$j, phase:"skipped", outcome:"맡기지 않음"} : $j)
+  # (ㄷ) 빈 자리만큼 다음 일
+  $더 = true
+  [repeat:until not $더] {
+    $도는수 = len(filter($일, ($j)=>$j.phase=="running"))
+    $후보 = filter($일, ($j)=>$j.phase=="pending" and ($j.after=="" or len(filter($일, ($d)=>$d.id==$j.after and $d.phase=="done" and $d.outcome=="성공"))>0))
+    $더 = $도는수 < $한도 and len($후보) > 0
+    [if:$더] {
+      $j = $후보[0]
+      $환경 = $j.env
+      [if:$j.after != ""] { $환경 = {**$j.env, INPUT:f"${rd}/${filter($일, ($d)=>$d.id==$j.after)[0].result}"} }
+      $접수 = [fn:외부PC작업실행]{PC:$pc,명령:$j.cmd,작업폴더:$rd,요청ID:f"${키}-job-${j.id}",환경:$환경,실행제한:$j.limit > 0 ? $j.limit : 1800,대기:0}
+      $일 = map($일, ($x)=>$x.id==$j.id ? {**$x, phase:"running", receipt:$접수} : $x)
+    }
+  }
+  $도는일 = filter($일, ($j)=>$j.phase=="running")
+  [if:len($도는일) > $최대동시] { $최대동시 = len($도는일) }
+  # (ㄹ) 숨 고르기 — 도는 일 하나를 2초 지켜보는 것으로 쉰다
+  [if:len($도는일) > 0] { $쉼 = [fn:외부PC작업확인]{작업:$도는일[0].receipt,대기:2} }
+  $돌림 = $돌림 + 1
+}
+$안끝남 = map(filter($일, ($j)=>$j.phase=="pending" or $j.phase=="running"), ($j)=>$j.id)
+
+# 3·4) 멈춘 일·끊긴 일이 띄운 프로세스가 남았는지 — 맥12 의 ps 로
+$뒤확인 = filter($일, ($j)=>$j.outcome=="내가 멈춤" or $j.outcome=="시간 초과로 끊김") >> [table:each] {
+  $남 = [fn:남은것]{pc:$pc, 표식:f"${표식}-${it.id}", rid:f"${키}-ps-${it.id}"}
+  return {id:$it.id, outcome:$it.outcome, left:$남.count, lines:$남.lines}
+}
+
+# 5) 살아 있어야 하는 서버
+$서버 = filter($일, ($j)=>$j.keep != null) >> [table:each] {
+  [if:$it.outcome != "성공"] { return {id:$it.id, port:$it.keep.port, job_ok:false, alive:false, content_ok:false, body:"", procs:0} }
+  $c = [fn:셸]{pc:$pc, cmd:f"curl -s -m 5 http://127.0.0.1:${it.keep.port}/", cwd:"/tmp", rid:f"${키}-curl-${it.id}"}
+  $남 = [fn:남은것]{pc:$pc, 표식:f"${표식}-${it.id}", rid:f"${키}-alive-${it.id}"}
+  return {id:$it.id, port:$it.keep.port, job_ok:true, alive:$남.count > 0 and $c.exit==0, content_ok:$c.output==$it.keep.expect, body:$c.output, procs:$남.count}
+}
+
+# 6) 성공한 일의 결과 가져오기 + 작업 기록
+$가져옴 = filter($일, ($j)=>$j.outcome=="성공" and $j.result != "") >> [table:each] {
+  $이름 = split($it.result,"/")[len(split($it.result,"/"))-1]
+  $원격 = [fn:셸]{pc:$pc, cmd:f"shasum -a 256 '${it.result}' | cut -d' ' -f1", cwd:$rd, rid:f"${키}-sha-${it.id}"}
+  $g = [fn:외부PC파일가져오기]{PC:$q.pc,중앙경로:f"${out}/${이름}",원격경로:f"${rd}/${it.result}",요청ID:f"${키}-recv-${it.id}",대기:60}
+  return {id:$it.id, file:$이름, ok:$g.ok, sha256:get($g,"sha256",null), remote_sha256:$원격.output, match:$g.ok and get($g,"sha256","")==$원격.output}
+}
+$기록 = $일 >> [table:each] {
+  [if:$it.phase=="skipped" or len($it.receipt)==0] { return {id:$it.id, outcome:$it.outcome, request_id:null, job:null, state:null, exit:null, accepted:null, started:null, ended:null, seconds:null, waited:null, stop_at:null} }
+  $h = [limbs:guestpc]{op:"history",limb:$pc,job:$it.receipt.job_id}
+  $t = $h.tasks[0]
+  $s = get($t,"started_at",null)
+  $w = $s != null ? $s - $t.created : null
+  return {id:$it.id, outcome:$it.outcome, request_id:$t.request_id, job:$t.id, state:$t.state, exit:get($it.seen,"exit",null), accepted:$t.created, started:$s, ended:get($t,"ended_at",null), seconds:get($t,"seconds",null), waited:$w, stop_at:$it.stop_at}
+}
+
+# 7) 서버 내리기 → 이번 실행의 남은 프로세스 전부 확인·정리 → 폴더 삭제 → 연결 확인
+$내림 = [fn:셸]{pc:$pc, cmd:f"pkill -f '${replace($표식,'R50=','R50[=]')}-' ; sleep 1; true", cwd:"/tmp", rid:f"${키}-down"}
+$남1 = [fn:남은것]{pc:$pc, 표식:f"${표식}-", rid:f"${키}-ps-all-1"}
+$강제 = {used:false, left:$남1.count}
+[if:$남1.count > 0] {
+  $k9 = [fn:셸]{pc:$pc, cmd:f"pkill -9 -f '${replace($표식,'R50=','R50[=]')}-' ; sleep 1; true", cwd:"/tmp", rid:f"${키}-down-9"}
+  $남2 = [fn:남은것]{pc:$pc, 표식:f"${표식}-", rid:f"${키}-ps-all-2"}
+  $강제 = {used:true, left:$남2.count}
+}
+$닫힘 = $서버 >> [table:each] {
+  $c = [fn:셸]{pc:$pc, cmd:f"curl -s -m 3 -o /dev/null http://127.0.0.1:${it.port}/; echo $?", cwd:"/tmp", rid:f"${키}-closed-${it.id}"}
+  return {id:$it.id, port:$it.port, closed:$c.output != "0"}
+}
+$치움 = [fn:셸]{pc:$pc, cmd:f"rm -rf \"${rd}\" && echo REMOVED", cwd:"/tmp", rid:f"${키}-cleanup"}
+$부모 = join("/", split($rd,"/")[0:len(split($rd,"/"))-1])
+$남은폴더 = [limbs:guestpc]{op:"list",limb:$pc,path:$부모}
+$폴더없음 = len(filter($남은폴더.result.files, ($f)=>$f.path==$rd))==0
+$뒤 = [fn:외부PC준비]{PC:$q.pc,환경조회:false}
+
+# 8) 판정·기록
+$멈춤깨끗 = all(map($뒤확인, ($r)=>$r.left==0))
+$서버맞음 = all(map($서버, ($r)=>$r.job_ok and $r.alive and $r.content_ok)) and all(map($닫힘, ($r)=>$r.closed))
+$회수맞음 = all(map($가져옴, ($r)=>$r.match))
+$완료 = len($안끝남)==0 and $멈춤깨끗 and $서버맞음 and $회수맞음 and $강제.left==0 and $폴더없음 and $뒤.ok
+$판정 = $완료 ? "완료 — 줄 세운 일이 모두 정해진 대로 끝남" : "확인 필요 — 아래 항목"
+$요약 = map($일, ($j)=>{id:$j.id, outcome:$j.outcome})
+$result = {verdict:$판정, key:$키, target:{name:$q.pc, device:$pc, max_parallel:$한도}, loops:$돌림, max_running_seen:$최대동시, unfinished:$안끝남, jobs:$기록,
+  stopped_or_cut:$뒤확인, keep_alive:$서버, closed_after:$닫힘, collected:$가져옴, cleanup:{pkill_left:$남1.count, forced:$강제, folder_absent:$폴더없음, removed:$치움.output, still_connected:$뒤.ok}}
+$w1 = [self:write]{path:f"${out}/result.json", content:json($result)}
+$줄 = map($기록, ($r)=>f"| ${r.id} | ${r.outcome} | ${r.state == null ? '-' : r.state} | ${r.seconds == null ? '-' : format_number($r.seconds,'.1f')} | ${r.waited == null ? '-' : format_number($r.waited,'.1f')} |")
+$md = join("\n", ["# 맥12 일거리", f"- 판정: ${판정}", f"- 동시에 돈 일: 최대 ${최대동시} (한도 ${한도})", "", "| 일 | 어떻게 끝났나 | 원장 상태 | 걸린 초 | 줄에서 기다린 초 |", "| --- | --- | --- | --- | --- |"] + $줄 + ["",
+  f"- 멈춘·끊긴 일의 남은 프로세스: ${join(', ', map($뒤확인, ($r)=>f'${r.id} ${r.left}개'))}", f"- 살아 있어야 하는 서버: ${join(', ', map($서버, ($r)=>f'${r.id} 포트 ${r.port} 생존 ${r.alive} 내용 ${r.content_ok}'))}",
+  f"- 가져온 결과: ${join(', ', map($가져옴, ($r)=>f'${r.file} 지문 ${r.match}'))}", f"- 뒷정리: 내린 뒤 남은 프로세스 ${남1.count}개 · 강제 종료 ${강제.used} · 폴더 ${폴더없음 ? '없음' : '남음'} · 연결 ${뒤.ok}"])
+$w2 = [self:write]{path:f"${out}/report.md", content:$md}
+return {verdict:$판정, outcomes:$요약, loops:$돌림, max_running:$최대동시, left_after_stop:map($뒤확인, ($r)=>{id:$r.id, left:$r.left}), servers:map($서버, ($r)=>{id:$r.id, alive:$r.alive, content:$r.content_ok}), collected:map($가져옴, ($r)=>$r.match), forced:$강제, folder_absent:$폴더없음}

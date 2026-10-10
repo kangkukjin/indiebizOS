@@ -1,0 +1,192 @@
+{
+  "pc": "맥12",
+  "device_id": "guestpc-7a440e9daf61",
+  "remote_dir": "/Users/kangkukjin/indiebiz-training/r50/agent_a",
+  "mark": "R50=agent_a",
+  "readiness": {
+    "connected": true,
+    "state": "active",
+    "paused": false,
+    "max_parallel": 2,
+    "os": "macOS 10.15.8",
+    "tools_checked": [
+      "python3",
+      "curl",
+      "shasum",
+      "tar"
+    ]
+  },
+  "transfer": {
+    "bundle": "jobs.tar(tar)",
+    "sha256": "ee37b989334e1475b7de2c17ec4bf42b7ce715253cb122234d1f2f9d0b0765da",
+    "central_eq_committed_eq_remote_shasum": true
+  },
+  "concurrency": {
+    "limit": 2,
+    "observed_peak": 2,
+    "note": "헬퍼 작업 기록의 started/ended 구간 기준. 가+나, 가+라, 라+다, 마+바가 겹침. 점검 작업도 포함해 2를 넘지 않음"
+  },
+  "jobs": [
+    {
+      "id": "가",
+      "outcome": "성공",
+      "job_id": "662257c9172f4d91bc8d014091e9e119",
+      "request_id": "r50a-job-가-1",
+      "exit": 0,
+      "accepted_at": "2026-10-10T23:54:13.383+09:00",
+      "started_at": "2026-10-10T23:54:14.586+09:00",
+      "ended_at": "2026-10-10T23:54:40.647+09:00",
+      "wait_s": 1.204,
+      "run_s": 26.06,
+      "result": "results/sum.json",
+      "collected": {
+        "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_50회차/agent/a/out/sum.json",
+        "sha256": "e30da95f7ce235ace6c3aef7825f5fe1a119cd23566189f27fbcc5885fc6c145",
+        "remote_sha256_match": true
+      }
+    },
+    {
+      "id": "나",
+      "outcome": "성공",
+      "note": "stop_after_s=25 이전(실행 6.165초)에 스스로 정상 종료 — 멈춤 요청 보내지 않음, '내가 멈춤' 아님",
+      "job_id": "95efc9842bfa405294e5089d2e6e429c",
+      "request_id": "r50a-job-나-1",
+      "env": {
+        "SECONDS_TOTAL": "6",
+        "LINES": "6"
+      },
+      "exit": 0,
+      "accepted_at": "2026-10-10T23:54:13.394+09:00",
+      "started_at": "2026-10-10T23:54:14.614+09:00",
+      "ended_at": "2026-10-10T23:54:20.780+09:00",
+      "wait_s": 1.22,
+      "run_s": 6.165,
+      "stop_requested": false,
+      "remaining_processes": 0,
+      "remaining_checked_at": "2026-10-10T23:56:17+09:00"
+    },
+    {
+      "id": "다",
+      "outcome": "성공",
+      "after": "가",
+      "after_condition": "가 succeeded(23:54:40.647) 확인 뒤 접수",
+      "env": {
+        "INPUT": "/Users/kangkukjin/indiebiz-training/r50/agent_a/results/sum.json"
+      },
+      "job_id": "2be176c538054e5ba7f9493c34833c81",
+      "request_id": "r50a-job-다-1",
+      "exit": 0,
+      "accepted_at": "2026-10-10T23:54:45.915+09:00",
+      "started_at": "2026-10-10T23:54:46.605+09:00",
+      "ended_at": "2026-10-10T23:54:56.745+09:00",
+      "wait_s": 0.69,
+      "run_s": 10.14,
+      "result": "results/brief.md",
+      "collected": {
+        "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-10_50회차/agent/a/out/brief.md",
+        "sha256": "70e725035cbfa215f4a2799faddf0a6cbf111520af3e8c4b2151c06d05662936",
+        "remote_sha256_match": true
+      }
+    },
+    {
+      "id": "라",
+      "outcome": "시간 초과로 끊김",
+      "limit_s": 20,
+      "how": "헬퍼 timeout:20 — 시간 초과 시 작업 프로세스 그룹 전체에 SIGKILL(자식의 SIGTERM 무시와 무관)",
+      "job_id": "a7cf9f208e64482383b594f776495a7d",
+      "request_id": "r50a-job-라-1",
+      "exit": 125,
+      "helper_timeout_flag": true,
+      "accepted_at": "2026-10-10T23:54:29.400+09:00",
+      "started_at": "2026-10-10T23:54:29.751+09:00",
+      "ended_at": "2026-10-10T23:54:49.773+09:00",
+      "wait_s": 0.351,
+      "run_s": 20.022,
+      "remaining_processes": 0,
+      "remaining_process_group_members": 0,
+      "remaining_checked_at": "2026-10-10T23:54:59+09:00",
+      "recheck_at_cleanup": 0
+    },
+    {
+      "id": "마",
+      "outcome": "성공",
+      "job_id": "d74c123b06f64cbdadf9d0fc44015812",
+      "request_id": "r50a-job-마-1",
+      "exit": 0,
+      "accepted_at": "2026-10-10T23:55:08.812+09:00",
+      "started_at": "2026-10-10T23:55:09.107+09:00",
+      "ended_at": "2026-10-10T23:55:11.188+09:00",
+      "wait_s": 0.295,
+      "run_s": 2.081,
+      "server": {
+        "port": 18653,
+        "alive_after_job_end": true,
+        "checked_at": "2026-10-10T23:55:21+09:00",
+        "pid": 15162,
+        "listening": "127.0.0.1:18653",
+        "http_status": 200,
+        "body": "R50 미리보기 R50=agent_a-마",
+        "expect": "R50 미리보기 R50=agent_a-마",
+        "match": true,
+        "shut_down_at": "2026-10-10T23:55:59+09:00",
+        "shut_down_by": "표식 정확 일치 PID 15162에 SIGTERM",
+        "after_shutdown": {
+          "listening": 0,
+          "http_status": "000",
+          "marker_processes": 0
+        }
+      }
+    },
+    {
+      "id": "바",
+      "outcome": "실패",
+      "job_id": "6a478eb33ddd4f56b06dbacc6ed77726",
+      "request_id": "r50a-job-바-1",
+      "exit": 4,
+      "stderr": "입력 형식 오류: 열 '금액' 없음",
+      "accepted_at": "2026-10-10T23:55:08.824+09:00",
+      "started_at": "2026-10-10T23:55:09.448+09:00",
+      "ended_at": "2026-10-10T23:55:12.538+09:00",
+      "wait_s": 0.624,
+      "run_s": 3.089
+    },
+    {
+      "id": "사",
+      "outcome": "맡기지 않음",
+      "after": "바",
+      "reason": "앞 일 바가 실패(exit 4)",
+      "accepted_at": null,
+      "started_at": null,
+      "ended_at": null,
+      "wait_s": null,
+      "run_s": null,
+      "evidence": "맥12 작업 기록에 r50a-job-사 없음, started/next.pid 없음"
+    }
+  ],
+  "cleanup": {
+    "marker_processes": 0,
+    "per_job_counts": {
+      "가": 0,
+      "나": 0,
+      "다": 0,
+      "라": 0,
+      "마": 0,
+      "바": 0,
+      "사": 0
+    },
+    "port_18653_listening": 0,
+    "remote_dir": "absent",
+    "checked_at": "2026-10-10T23:56:17+09:00",
+    "connection_after": {
+      "connected": true,
+      "state": "active",
+      "paused": false
+    }
+  },
+  "duplicates": {
+    "each_job_request_id_once": true,
+    "resubmissions": 0
+  },
+  "time_source": "맥12 상주 헬퍼 작업 기록(history.tasks의 created·started_at·ended_at·seconds, 기기 epoch). wait_s=started_at−created, run_s=seconds",
+  "verdict": "달성 — 7개 일의 종료 사유·시각 기록, 끊긴 일(라) 잔여 0, 나는 25초 전 정상 종료로 성공 처리, 마 서버 생존·내용 일치 후 내림, 결과 2건 지문 일치 회수, 뒷정리(표식 0·remote_dir 없음·연결 유지) 확인"
+}

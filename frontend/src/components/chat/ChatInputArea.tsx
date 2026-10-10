@@ -11,6 +11,7 @@ interface ChatInputAreaProps {
   onCancel: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   isLoading: boolean;
+  allowSteering?: boolean;
   hasContent: boolean;  // input.trim() || hasAttachments
   // 파일 첨부 관련
   attachedImages: ImageAttachment[];
@@ -42,6 +43,7 @@ export function ChatInputArea({
   onCancel,
   onKeyDown,
   isLoading,
+  allowSteering = false,
   hasContent,
   attachedImages,
   attachedTextFiles,
@@ -267,9 +269,9 @@ export function ChatInputArea({
           placeholder={placeholder}
           className={`flex-1 px-4 py-3 ${styles.inputBg} rounded-xl border ${styles.inputBorder} ${styles.inputFocus} focus:outline-none resize-none min-h-[48px] max-h-[200px] ${styles.inputText} ${styles.inputPlaceholder}`}
           rows={2}
-          disabled={isLoading}
+          disabled={isLoading && !allowSteering}
         />
-        {isLoading ? (
+        {isLoading && (
           <button
             onClick={onCancel}
             className={`${styles.sendPadding} bg-red-500 rounded-xl hover:bg-red-600 transition-colors text-white`}
@@ -277,7 +279,8 @@ export function ChatInputArea({
           >
             <CancelIcon size={styles.iconSize} />
           </button>
-        ) : (
+        )}
+        {(!isLoading || (allowSteering && hasContent)) && (
           <button
             onClick={onSend}
             aria-label="메시지 전송"

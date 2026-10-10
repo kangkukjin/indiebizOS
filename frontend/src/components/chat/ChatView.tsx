@@ -7,7 +7,8 @@ import { checkRemoteSession, isRemotePhoneLayout } from '../../lib/remote-sessio
  */
 import { WEBSOCKET_ORIGIN } from '../../lib/backend-origin';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
+import type { ChatSession } from './ChatSession';
 import { Bot, Loader2, X, RefreshCw, History, RotateCw, BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -36,6 +37,7 @@ import {
 
 export type ChatTarget =
   | { type: 'agent'; projectId: string; agent: Agent }
+  | { type: 'session'; id: string; title: string }
   | { type: 'system_ai' }
   // 앱메이커 — 시스템 AI에 앱메이커 role을 씌운 앱모드 표면. 동작은 system_ai와 거의 동일하되
   // 대화 스레드 분리(thread='appmaker')·WS role 태그·타이틀만 다르다.
@@ -46,6 +48,9 @@ export type ChatLayout = 'fullpage' | 'dialog';
 export interface ChatViewProps {
   chatTarget: ChatTarget;
   layout?: ChatLayout;
+  session?: ChatSession;
+  headerActions?: ReactNode;
+  active?: boolean;
   // dialog 모드 전용
   show?: boolean;
   onClose?: () => void;
@@ -70,37 +75,46 @@ interface DialogPosition { x: number; y: number; }
 
 // ── 메인 컴포넌트 ───────────────────────────────────────
 
-export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose, initialMessage, initialMessageLabel }: ChatViewProps) {
+export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose, initialMessage, initialMessageLabel, session, headerActions, active = true }: ChatViewProps) {
   const isAgent = chatTarget.type === 'agent';
   const isAppMaker = chatTarget.type === 'appmaker';  // system_ai 분기(!isAgent)를 공유하되 스레드/타이틀만 분기
   const isDialog = layout === 'dialog';
   const variant = isDialog ? 'neutral' : 'warm';
 
   // chatTarget에서 안정적인 primitive key 추출 (useEffect/useCallback dependency용)
-  const targetKey = isAgent ? `agent-${chatTarget.projectId}-${chatTarget.agent.id}` : (isAppMaker ? 'appmaker' : 'system_ai');
+  const targetKey = chatTarget.type === 'session' ? chatTarget.id : isAgent ? `agent-${chatTarget.projectId}-${chatTarget.agent.id}` : (isAppMaker ? 'appmaker' : 'system_ai');
   const projectId = isAgent ? chatTarget.projectId : null;
   const agentId = isAgent ? chatTarget.agent.id : null;
   const agentName = isAgent ? chatTarget.agent.name : null;
 
   // ── 상태 ──
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [localMessages, setMessages] = useState<ChatMessage[]>([]);
+  const messages = session?.messages ?? localMessages;
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [localIsLoading, setIsLoading] = useState(false);
+  const isLoading = session?.loading ?? localIsLoading;
   const [ws, setWs] = useState<WebSocket | null>(null);
 
   // 스트리밍
-  const [streamingContent, setStreamingContent] = useState('');
+  const [localStreamingContent, setStreamingContent] = useState('');
+  const streamingContent = session?.streamingContent ?? localStreamingContent;
   const streamingContentRef = useRef('');
   const interimMessageIdsRef = useRef(new Set<string>());
-  const [toolHistory, setToolHistory] = useState<ToolActivity[]>([]);
-  const [thinkingText, setThinkingText] = useState('');
+  const [localToolHistory, setToolHistory] = useState<ToolActivity[]>([]);
+  const toolHistory = session?.toolHistory ?? localToolHistory;
+  const [localThinkingText, setThinkingText] = useState('');
+  const thinkingText = session?.thinkingText ?? localThinkingText;
   const [currentToolLabel, setCurrentToolLabel] = useState<string | null>(null);
-  const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [localTodos, setTodos] = useState<TodoItem[]>([]);
+  const todos = session?.todos ?? localTodos;
 
   // 질문/계획 모드
-  const [questions, setQuestions] = useState<QuestionItem[]>([]);
-  const [questionStatus, setQuestionStatus] = useState<'none' | 'pending' | 'answered'>('none');
-  const [planMode, setPlanMode] = useState<PlanModeState>({ active: false, phase: null });
+  const [localQuestions, setQuestions] = useState<QuestionItem[]>([]);
+  const questions = session?.questions ?? localQuestions;
+  const [localQuestionStatus, setQuestionStatus] = useState<'none' | 'pending' | 'answered'>('none');
+  const questionStatus = session ? (questions.length ? 'pending' : 'none') : localQuestionStatus;
+  const [localPlanMode, setPlanMode] = useState<PlanModeState>({ active: false, phase: null });
+  const planMode = session?.planMode ?? localPlanMode;
 
   // 마법책 (IBL 액션 사전) 모달
   const [grimoireOpen, setGrimoireOpen] = useState(false);
@@ -111,6 +125,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   const [showHistory, setShowHistory] = useState(false);
 
   // refs
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const toolHistoryRef = useRef<ToolActivity[]>([]);
@@ -173,21 +188,21 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
     setTodos([]);
   };
 
-  const agentLabel = agentName || (isAppMaker ? '앱메이커' : '시스템 AI');
+  const agentLabel = (chatTarget.type === 'session' ? chatTarget.title : agentName) || (isAppMaker ? '앱메이커' : '시스템 AI');
   const agentModel = isAgent ? chatTarget.agent.ai?.model : null;
 
   // provider 추적 — Claude Code일 때만 세션 재시작 버튼 노출.
   // 시스템 AI는 status API에서, 프로젝트 에이전트는 agent 객체에서 직접.
   const [systemAiProvider, setSystemAiProvider] = useState<string | null>(null);
   useEffect(() => {
-    if (!isAgent) {
+    if (!isAgent && !session) {
       api.getSystemAIStatus().then(s => setSystemAiProvider(s.provider)).catch(() => {});
     }
   }, [isAgent]);
   const currentProvider = isAgent
     ? chatTarget.agent.ai?.provider
     : systemAiProvider;
-  const showResetSessionButton = isCliProvider(currentProvider);
+  const showResetSessionButton = !session && isCliProvider(currentProvider);
 
   const handleResetSession = async () => {
     try {
@@ -472,7 +487,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   // WebSocket 연결 (마운트 시)
   useEffect(() => {
-    if (isDialog && !show) return;
+    if (session || (isDialog && !show)) return;
 
     const websocket = connectWebSocket();
 
@@ -532,7 +547,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   // 시스템 AI 대화 이력 로드 (마운트 시 1회)
   useEffect(() => {
-    if (isAgent) return; // 에이전트는 아래 별도 이력 로더가 처리
+    if (isAgent || session) return; // 에이전트는 아래 별도 이력 로더가 처리
 
     const loadSystemAIHistory = async () => {
       try {
@@ -591,7 +606,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   // TODO/질문/계획 모드 상태 폴링
   useEffect(() => {
-    if (isDialog && !show) return;
+    if (session || !active || (isDialog && !show)) return;
 
     const fetchStates = async () => {
       try {
@@ -613,7 +628,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
     fetchStates();
     const interval = setInterval(fetchStates, 2000);
     return () => clearInterval(interval);
-  }, [show, isDialog]);
+  }, [show, isDialog, isAgent, targetKey, active]);
 
   // 다이얼로그 input focus
   useEffect(() => {
@@ -622,10 +637,10 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
     }
   }, [show]);
 
-  // 스크롤 자동 이동
+  const followRef = useRef(true);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingContent]);
+    if (active && followRef.current) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streamingContent, active]);
 
   // 다이얼로그 크기 저장
   useEffect(() => {
@@ -719,7 +734,21 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   // ── 메시지 전송 ──
 
-  const sendMessage = () => {
+  const sendingRef = useRef(false);
+  const sendMessage = async () => {
+    if (session) {
+      if (!active || sendingRef.current || (!input.trim() && !fileAttachments.hasAttachments)) return;
+      sendingRef.current = true; followRef.current = true;
+      try {
+        const files = [...fileAttachments.attachedImages, ...fileAttachments.attachedTextFiles,
+          ...fileAttachments.attachedDocuments].map(item => item.file);
+        if (await session.send(input.trim(), files, selectedAction)) {
+          setInput(''); fileAttachments.clearAttachments(); setSelectedAction(null);
+          inputRef.current?.focus();
+        }
+      } finally { sendingRef.current = false; }
+      return;
+    }
     const hasContent = input.trim() || fileAttachments.hasAttachments;
     // (2026-08-15 조향) 실행 중에도 전송 허용 — 백엔드 WS 가 실행 중 도착한 메시지를
     // 새 턴이 아니라 조향(steer)으로 접수해 다음 도구 결과에 배달한다(시스템 AI·에이전트 공통).
@@ -802,6 +831,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   // ── 취소 ──
 
   const handleCancel = async () => {
+    if (session) { await session.cancel(); return; }
     // (2026-08-15) WS cancel 은 두 경로 공통 — 도는 턴의 도구 루프를 실제로 끊는
     // 유일한 신호(cancel_check). 이전엔 에이전트 경로가 HTTP cancel_all 만 불러
     // 백엔드 턴은 계속 돌고 UI 만 멈춘 척했다(4라운드 감사 실측).
@@ -846,6 +876,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         return `**${q?.header}**: ${Array.isArray(ans) ? ans.join(', ') : ans}`;
       })
       .join('\n');
+    if (session) { await session.send(`[질문 답변]\n${answerText}`, [], null); return; }
     try {
       await api.submitSystemAIQuestionAnswer?.(answers);
     } catch (err) {
@@ -859,6 +890,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   };
 
   const handleApprovePlan = async () => {
+    if (session) { await session.send('계획을 승인합니다. 진행해주세요.', [], null); return; }
     try {
       await api.approveSystemAIPlan?.();
     } catch (err) {
@@ -871,6 +903,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   const handleRejectPlan = async () => {
     const reason = prompt('수정이 필요한 이유를 입력하세요:');
     if (reason !== null) {
+      if (session) { await session.send(`계획 수정 요청: ${reason || '다시 검토해주세요.'}`, [], null); return; }
       try {
         await api.rejectSystemAIPlan?.(reason);
       } catch (err) {
@@ -930,6 +963,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           </div>
         </div>
         <div className={`flex items-center gap-2${isDialog ? '' : ' no-drag'}`}>
+          {headerActions}
           {/* 마법책 — IBL 액션 사전 */}
           <button
             onClick={() => setGrimoireOpen(true)}
@@ -945,7 +979,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
             </button>
           )}
           {/* 히스토리/초기화 (시스템 AI일 때) */}
-          {!isAgent && (
+          {!isAgent && !session && (
             <>
               <button onClick={() => setShowHistory(true)} className={`p-1.5 rounded-lg transition-colors ${isDialog ? 'hover:bg-gray-200' : 'hover:bg-[#DDD5C8]'}`} title="대화 히스토리">
                 <History size={16} className={isDialog ? 'text-gray-500' : 'text-[#6B5B4F]'} />
@@ -964,6 +998,8 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         </div>
       </div>
 
+      {session?.error && <p role="alert" className="px-4 py-2 text-sm text-red-600">{session.error}</p>}
+
       {/* TODO 패널 (로딩 아닐 때, 다이얼로그 모드) */}
       {!isLoading && isDialog && <TodoPanel todos={todos} variant="neutral" collapsible />}
 
@@ -980,7 +1016,15 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
 
       {/* 메시지 영역 */}
-      <div className={`flex-1 min-h-0 overflow-y-auto p-4 space-y-4 ${isDialog ? 'bg-gray-50 selectable-text dialog-messages-scroll' : ''}`}>
+      <div ref={messagesScrollRef} onScroll={e => { const el = e.currentTarget; followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }} className={`flex-1 min-h-0 overflow-y-auto p-4 space-y-4 ${isDialog ? 'bg-gray-50 selectable-text dialog-messages-scroll' : ''}`}>
+        {session?.hasOlder && <button onClick={async () => {
+          const el = messagesScrollRef.current;
+          const height = el?.scrollHeight || 0;
+          const top = el?.scrollTop || 0;
+          followRef.current = false;
+          await session.loadOlder();
+          requestAnimationFrame(() => { if (el) el.scrollTop = top + el.scrollHeight - height; });
+        }} className="block mx-auto text-sm text-[#9A6A30]">이전 대화 읽기</button>}
         {messages.length === 0 && !isLoading ? (
           <div className={`h-full flex items-center justify-center ${isDialog ? 'text-gray-400' : 'text-[#A09080]'}`}>
             <div className="text-center">
@@ -1074,6 +1118,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         onCancel={handleCancel}
         onKeyDown={handleKeyDown}
         isLoading={isLoading}
+        allowSteering={!session || session.canSteer}
         hasContent={!!input.trim() || fileAttachments.hasAttachments}
         attachedImages={fileAttachments.attachedImages}
         attachedTextFiles={fileAttachments.attachedTextFiles}
@@ -1098,7 +1143,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       />
 
       {/* 히스토리 (시스템 AI) — 창 안에 갇힌 판. 헤더(창 이동 손잡이)는 늘 드러나 있다. */}
-      {!isAgent && (
+      {!isAgent && !session && (
         <SystemAIChatHistoryDialog show={showHistory} onClose={() => setShowHistory(false)} />
       )}
 
@@ -1116,7 +1161,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
       {/* 카메라 */}
       <CameraPreview
-        isOpen={fileAttachments.isCameraOpen}
+        isOpen={active && fileAttachments.isCameraOpen}
         onClose={() => fileAttachments.setIsCameraOpen(false)}
         onCapture={fileAttachments.handleCameraCapture}
       />

@@ -174,5 +174,64 @@ def test_agent_cannot_read_another_thread_or_unscoped_library(world, monkeypatch
         assert service.notebook_operation({'op':'sources','project_ref':store.uid})['items'] == []
 
 
+
+def test_chat_tools_are_persistent_paired_and_thread_scoped(tmp_path, monkeypatch):
+    import research_threads as service
+    import runtime_work
+    import thread_context
+    from research_store import ResearchStore
+    store = ResearchStore(tmp_path, 'activities')
+    a, b = (store.create_thread(title)['id'] for title in ('교육', '경제'))
+    run, _ = store.begin_run(a, '검색', 'first')
+    events = [
+        {'type': 'tool_start', 'id': 'one', 'name': 'search', 'input': {'query': '교육'}},
+        {'type': 'tool_start', 'id': 'two', 'name': 'search', 'input': {'query': '교육2'}},
+        {'type': 'tool_result', 'id': 'two', 'name': 'search', 'result': '두 번째'},
+        {'type': 'tool_result', 'id': 'one', 'name': 'search', 'result': '첫 번째'},
+        {'type': 'cognition', 'decision': 'execute', 'score': .5, 'criteria': '확인'},
+        {'type': 'tool_start', 'id': 'q', 'name': 'ask_user_question', 'input': {'questions': [{'header': '범위', 'question': '어느 학년?', 'options': []}]}},
+        {'type': 'tool_result', 'id': 'q', 'name': 'ask_user_question', 'result': '[[QUESTION_PENDING]]'},
+        {'type': 'tool_start', 'id': 'p', 'name': 'exit_plan_mode', 'input': {}},
+        {'type': 'tool_result', 'id': 'p', 'name': 'exit_plan_mode', 'result': '[[PLAN_APPROVAL_REQUESTED]]승인 대기\n---\n교육 조사 계획'},
+        {'type': 'final', 'content': '완료'},
+    ]
+    monkeypatch.setattr(service, '_run_stream', lambda *args: iter(events))
+    monkeypatch.setattr(service, '_summarize', None)
+    snapshot = thread_context.snapshot()
+    try:
+        service._work(store, a, run, '검색', threading.Event(), runtime_work.reserve('research-chat'), snapshot)
+    finally:
+        thread_context.restore(snapshot)
+    reopened = ResearchStore(tmp_path, 'activities')
+    activity = service.chat_activity(reopened, a, run)
+    assert [t['result'] for t in activity['tool_activities'][:2]] == ['첫 번째', '두 번째']
+    assert activity['cognition']['decision'] == 'execute'
+    assert activity['questions'][0]['header'] == '범위'
+    assert activity['plan_mode']['plan_content'] == '교육 조사 계획'
+    assert service.chat_activity(reopened, b, run)['tool_activities'] == []
+
+
+def test_steering_reuses_active_agent_inbox_and_retry_does_not_duplicate(tmp_path):
+    import research_threads as service
+    import steer_inbox
+    from research_store import ResearchStore
+    store = ResearchStore(tmp_path, 'steer')
+    a, b = (store.create_thread(title)['id'] for title in ('교육', '경제'))
+    run, _ = store.begin_run(a, '검색', 'first')
+    actor = f'research:{store.uid}:{a}'
+    with steer_inbox.task_scope([actor], run):
+        result = service.steer(store, a, '범위를 좁혀줘', 'second', [])
+        assert result['steered']
+        assert service.steer(store, a, '범위를 좁혀줘', 'second', [])['steered']
+        assert service.steer(store, b, '다른 대화', 'third', []) is None
+        assert [m['content'] for m in store.messages(a)['items']].count('범위를 좁혀줘') == 1
+        with pytest.raises(ValueError):
+            service.steer(store, a, '다른 내용', 'second', [])
+    # 작업이 끝나도 같은 전송의 재시도는 새 턴을 만들지 않는다.
+    store.write_response(a, run, '완료', 'completed')
+    assert [m['content'] for m in store.messages(a)['items']] == ['검색', '범위를 좁혀줘', '완료']
+    assert service.steer(store, a, '범위를 좁혀줘', 'second', [])['steered']
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

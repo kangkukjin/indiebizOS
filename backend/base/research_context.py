@@ -58,6 +58,8 @@ def before(config, params):
         raise PermissionError('현재 연구의 project_ref를 지정하세요. 다른 자료실은 자동으로 섞지 않습니다')
     if config.get('research_local') and params.get('thread_ref') and params['thread_ref'] != context.get('thread_id'):
         raise PermissionError('현재 대화 밖의 자료에는 접근할 수 없습니다')
+    if config.get('group') == 'delegation' or config.get('func') == 'delegate':
+        raise PermissionError('연구 대화는 독립 실행합니다. 다른 에이전트에게 위임하지 않습니다')
     if context.get('mode') == 'library':
         if not config.get('research_local') or params.get('op') not in {'search', 'sources', 'read', 'versions', 'thread_messages', 'thread_search'}:
             raise PermissionError('저장 자료만 사용 모드입니다. 추가 조사를 허용하려면 대화 설정에서 변경하세요')

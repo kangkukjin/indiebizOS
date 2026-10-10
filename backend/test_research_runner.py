@@ -18,6 +18,8 @@ def test_topics_use_distinct_temporary_registry_and_real_cognitive_entry(tmp_pat
         key = thread_context.get_current_registry_key()
         assert AgentRunner.agent_registry[key] is runner
         assert kwargs['utterance_author'] == 'owner'
+        assert runner.config['id'] == thread_context.get_current_agent_id()
+        assert runner.ai.agent_id == runner.config['id']
         assert not history
         seen.append(key)
         yield {'type':'final','content':message}
@@ -155,6 +157,43 @@ def test_cli_library_mode_keeps_local_only_tools(provider_name, monkeypatch):
     else:
         assert command[command.index('--tools') + 1] == ''
         assert 'mcp__indiebizos__execute_ibl' in command[command.index('--allowed-tools') + 1]
+
+
+def test_research_reuses_forage_distillation_queue_with_topic_identity(tmp_path, monkeypatch):
+    import threading
+    import unified_distill
+    import distill_queue
+    queued = []
+    monkeypatch.setattr(unified_distill, 'snapshot', lambda runner, payload, ident, **kw: payload)
+    monkeypatch.setattr(distill_queue.DistillQueue, 'get', lambda: SimpleNamespace(
+        enqueue=lambda runner, payload, **kw: queued.append((payload, kw['ident']))))
+    monkeypatch.setattr(research_runner.ResearchRunner, '_init_ai', lambda runner: setattr(
+        runner, 'ai', SimpleNamespace(agent_id=None, _provider=None)))
+    def cognitive(runner, message, history, **kwargs):
+        # 일반 AgentRunner가 소유한 영속 증류 큐 입구를 그대로 호출한다.
+        runner._after_response_async(message, '자료를 탐색한 답변', write_deep=True)
+        yield {'type': 'final', 'content': '답변'}
+    monkeypatch.setattr(research_runner.ResearchRunner, 'cognitive_stream', cognitive)
+    monkeypatch.setattr(research_runner, '_search', None)
+    store = ResearchStore(tmp_path, 'memory-test')
+    try:
+        for title in ('교육', '경제'):
+            tid = store.create_thread(title)['id']
+            run, _ = store.begin_run(tid, title, title)
+            list(research_runner.stream(store, tid, run, title, threading.Event()))
+        assert len(queued) == 2
+        assert all(payload['write_forage'] and payload['write_experience'] for payload, ident in queued)
+        assert queued[0][1]['agent_id'] != queued[1][1]['agent_id']
+    finally:
+        thread_context.clear_all_context()
+
+
+def test_independent_research_cannot_delegate():
+    from research_context import before
+    with scope({'project_uid': 'test', 'thread_id': 'education'}):
+        with pytest.raises(PermissionError, match='독립 실행'):
+            before({'router': 'system', 'func': 'delegate'}, {'agent_id': 'another'})
+        before({'router': 'handler', 'tool': 'search'}, {'query': 'education'})
 
 
 if __name__ == '__main__':

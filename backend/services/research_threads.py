@@ -97,9 +97,11 @@ def _work(store, tid, run, message, cancel, lease, snapshot):
                     final = str(event['content'])
                 elif kind == 'error':
                     failure = str(event.get('content') or event.get('error') or '실행 실패')
-                elif kind in {'tool_start', 'cognition'}:
+                elif kind in {'tool_start', 'tool_result', 'cognition', 'thinking'}:
+                    from research_capture import sanitize
                     with store.connect(True) as db:
-                        store.event(db, kind, {'name': event.get('name', ''), 'content': str(event.get('content') or '')[:1000]}, tid, run)
+                        store.check_epoch(db)
+                        store.event(db, kind, sanitize(event), tid, run)
             text = final if final is not None else text
             if context.get('capture_failed'):
                 failure = '자료를 보존하지 못해 추가 조사를 멈췄습니다. 저장 공간과 권한을 확인하세요.'
@@ -195,6 +197,8 @@ def project_operation(params):
         labels = {'complete': '', 'completed': '', 'running': '답변 중', 'cancelled': '중단', 'interrupted': '재시작으로 중단', 'failed': '실패'}
         for item in out['items']:
             item['status_label'] = labels.get(item['status'], item['status'])
+            if item['role'] == 'assistant':
+                item.update(chat_activity(store, tid, item['run_id']))
             for attachment in item['attachments']:
                 attachment['path'] = store.material_path(attachment['blob'], attachment['mime'])
         return {**out, **thread, 'materials': materials, 'citations': [dict(c, version_ref=c['version_id']) for m in out['items'] for c in m['citations']], 'project_ref': store.uid,
@@ -209,6 +213,9 @@ def project_operation(params):
         return store.messages(tid, cursor or None, limit, params.get('query') or '')
     if op == 'thread_send':
         request = params.get('request_id') or identifier()
+        steered = steer(store, tid, str(params.get('message') or ''), request, params.get('attachments'))
+        if steered is not None:
+            return steered
         attachments = prepare_attachments(store, tid, params.get('attachments') or [], request)
         return start(store, tid, str(params.get('message') or ''), request, attachments)
     if op == 'thread_cancel':
@@ -278,3 +285,72 @@ def prepare_attachments(store, tid, attachments, request):
     if saved:
         schedule_index(store.path)
     return saved
+
+
+def chat_activity(store, tid, run):
+    """대화 재개 때도 공통 채팅 도구 패널을 복원한다. 원문 자료의 정본은 자료실이다."""
+    tools, out = [], {}
+    with store.connect() as db:
+        events = db.execute("SELECT kind,payload FROM research_events WHERE thread_id=? AND run_id=? "
+                            "AND kind IN ('tool_start','tool_result','cognition','thinking') ORDER BY sequence", (tid, run))
+        for row in events:
+            event = json.loads(row['payload'])
+            if row['kind'] == 'tool_start':
+                tools.append({'id': event.get('id'), 'name': event.get('name', ''),
+                              'input': event.get('input'), 'status': 'running'})
+            elif row['kind'] == 'tool_result':
+                target = next((t for t in reversed(tools) if event.get('id') and t['id'] == event['id']), None)
+                if target is None:
+                    target = next((t for t in reversed(tools) if t['name'] == event.get('name') and t['status'] == 'running'), None)
+                if target is not None:
+                    result = event.get('result', '')
+                    target.update(status='done', result=result if isinstance(result, str) else json.dumps(result, ensure_ascii=False),
+                                  isError=bool(event.get('is_error')))
+                if target is not None and not event.get('is_error'):
+                    inputs = target.get('input') if isinstance(target.get('input'), dict) else {}
+                    if target['name'] == 'ask_user_question' and inputs.get('questions'):
+                        out['questions'] = inputs['questions']
+                    elif target['name'] == 'todo_write':
+                        out['todos'] = inputs.get('todos', [])
+                    elif target['name'] == 'exit_plan_mode' and '[[PLAN_APPROVAL_REQUESTED]]' in str(result):
+                        out['plan_mode'] = {'active': True, 'phase': 'awaiting_approval',
+                                            'plan_content': str(result).split('---', 1)[-1].strip()}
+                if event.get('todos'):
+                    out['todos'] = event['todos']
+            elif row['kind'] == 'cognition' and event.get('decision'):
+                out['cognition'] = {k: event.get(k) for k in ('decision', 'score', 'action', 'criteria')}
+            elif row['kind'] == 'thinking':
+                out['thinking'] = event.get('content', '')
+    return {**out, 'tool_activities': tools}
+
+
+def steer(store, tid, message, request, attachments):
+    """일반 대화와 같은 steer_inbox를 사용한다. 수신 여부와 별개로 입력 기록을 보존한다."""
+    import steer_inbox
+    with store.connect(True) as db:
+        store.check_epoch(db)
+        previous = db.execute("SELECT payload FROM research_events WHERE thread_id=? AND kind='chat.steer'", (tid,)).fetchall()
+        for row in previous:
+            payload = json.loads(row['payload'])
+            if payload.get('request_id') == request:
+                if payload['message'] != message or attachments:
+                    raise ValueError('같은 요청 신원으로 다른 메시지를 보낼 수 없습니다')
+                return {'success': True, 'steered': True, 'items': []}
+        thread = store.thread(tid, db)
+        run = thread['active_run']
+        if not run:
+            return None
+        # 원래 전송의 재접수는 begin_run의 기존 멱등 경로가 처리한다.
+        if db.execute('SELECT 1 FROM tasks WHERE requester_channel=?', ('research:' + tid + ':' + request,)).fetchone():
+            return None
+        if attachments:
+            raise ValueError('작업 중에는 텍스트로 방향을 수정할 수 있습니다. 파일은 현재 응답 완료 후 보내세요')
+        if not message.strip() or len(message) > 2000:
+            raise ValueError('작업 중 추가 지시는 1~2000자로 입력하세요')
+        actor = f'research:{store.uid}:{tid}'
+        steer_inbox.post(actor, message, task_id=run, require_active=True)
+        source = db.execute("SELECT from_agent_id,to_agent_id FROM messages WHERE thread_id=? AND research_run=? AND research_role='user' LIMIT 1", (tid, run)).fetchone()
+        db.execute("INSERT INTO messages(from_agent_id,to_agent_id,content,contact_type,thread_id,research_run,research_role,research_status) "
+                   "VALUES (?,?,?,'research',?,?,'user','complete')", (*source, message, tid, run))
+        store.event(db, 'chat.steer', {'request_id': request, 'message': message}, tid, run)
+    return {'success': True, 'steered': True, 'items': [], 'message': '추가 지시를 접수했습니다. 다음 도구 완료 시 반영됩니다'}

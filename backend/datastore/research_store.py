@@ -230,10 +230,16 @@ class ResearchStore:
             for row in reversed(rows[:limit]):
                 item = dict(row)
                 item['attachments'] = json.loads(item.pop('research_attachments') or '[]')
+                # 실행 중 추가 지시는 assistant 초안보다 나중 ID로 저장된다.
+                # 최종 응답을 그 실행의 마지막 사용자 입력 뒤에 배치한다.
+                last_input = db.execute("SELECT MAX(id) FROM messages WHERE thread_id=? AND research_run=? AND research_role='user'",
+                                        (tid, row['run_id'])).fetchone()[0]
+                item['display_order'] = max(row['id'], (last_input or 0) + 0.5) if row['role'] == 'assistant' else row['id']
                 item['mine'] = row['role'] == 'user'
                 item['citations'] = [dict(r) for r in db.execute(
                     'SELECT * FROM research_citations WHERE message_id=?', (row['id'],))]
                 result.append(item)
+        result.sort(key=lambda item: item['display_order'])
         return {'items': result, 'next_cursor': str(rows[limit - 1]['id']) if len(rows) > limit else None,
                 'pages': [{'title': '이전 대화 읽기', 'thread_ref': tid, 'cursor': str(rows[limit - 1]['id'])}] if len(rows) > limit else []}
 

@@ -48,6 +48,7 @@ def stream(store, tid, run, message, cancel):
             '일반 셸 대신 보존 가능한 IBL 자료 획득 도구를 사용한다. '
             f'활성 자료실 project_ref={store.uid}, 대화 thread_ref={tid}. '
             'self:notebook에 project_ref와 thread_ref를 함께 지정하여 sources/search/read/versions로 이 대화의 저장 자료만 탐색한다. 다른 대화의 자료는 사용하지 않는다. '
+            '각 대화는 독립된 에이전트다. 다른 대화를 시작하거나 다른 에이전트에게 위임·협업하지 않는다. '
             '인용은 읽은 문단에 표시된 [자료:version_ref:위치]를 사용한다. '
             '자료의 주장, 자신의 해석, 미확인을 구분한다.\n')
     if thread['mode'] == 'library':
@@ -58,6 +59,8 @@ def stream(store, tid, run, message, cancel):
     cfg = {**agent, 'id': None, '_selected_agent': selected, '_project_id': store.path.name,
            '_project_path': str(store.path), '_research_role': role + context}
     runner = ResearchRunner(cfg, (configured or {}).get('common') or {})
+    # 생성자의 상주 등록은 피하되 프롬프트·기억·모델에는 동일한 독립 신원을 준다.
+    runner.config['id'] = actor
     with _registered_runner(runner):
         runner._init_ai()
         runner.ai.agent_id = actor

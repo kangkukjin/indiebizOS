@@ -100,6 +100,9 @@ def sync(key, installation_id, events=None, capabilities=None, wait=0):
     jobs = []
     if reg["state"] == "active" and not reg.get("paused"):
         jobs = phone_jobs.pull_blocking(rec["device_id"], min(20, max(0, wait)))
+        # Offer again what an earlier response carried but no device event confirmed
+        # (this request's events were recorded above, so a received job is excluded).
+        jobs += resident_store.undelivered(rec["device_id"], {j["id"] for j in jobs})
         # Recheck after long poll: a removal during wait cannot deliver new work.
         latest = limb_keys.resident_auth(key, installation_id, cleanup=True)["registration"]
         if latest["state"] != "active" or latest.get("paused"):

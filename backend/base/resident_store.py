@@ -116,6 +116,32 @@ def observe(rec, events):
     return acknowledged
 
 
+def undelivered(device, exclude=()):
+    """Jobs put into a sync response that the device never acknowledged.
+
+    A response can be written into a connection whose helper already died (its long
+    poll outlives it by up to the wait), so 'dispatched' is not receipt. Until any
+    device event for the job arrives the task stays 'queued' and every later sync
+    offers the job again. The helper keeps a permanent record per job id and ignores
+    an id it already holds, so a repeat can never run a command twice."""
+    out = []
+    with phone_jobs._db() as db:
+        schema(db)
+        rows = db.execute(
+            "SELECT j.id,j.code,j.created,j.agent FROM jobs j JOIN resident_tasks t ON t.id=j.id "
+            "WHERE t.device=? AND j.state='dispatched' AND t.state='queued' AND t.cancel_requested=0 "
+            "AND t.result IS NULL ORDER BY j.created,j.id", (device,)).fetchall()
+        for row in rows:
+            if row["id"] in exclude:
+                continue
+            _event(db, device, row["id"], "redelivered:" + row["id"], "redelivered", {"unconfirmed": True})
+            job = {"id": row["id"], "code": row["code"], "ts": row["created"]}
+            if row["agent"]:
+                job["agent_id"] = row["agent"]
+            out.append(job)
+    return out
+
+
 def cancel(jid, device=None):
     with phone_jobs._db() as db:
         schema(db)

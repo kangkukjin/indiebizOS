@@ -78,6 +78,10 @@ def test_idempotent_submit_event_reconnect_and_process_outcome(registry):
     sync = pcs.sync(rec['key'], 'a' * 32)
     assert len(sync['jobs']) == 1
     assert json.loads(sync['jobs'][0]['code'])['generation'] == rec['registration']['generation']
+    # A response is not receipt: until the device reports any event for the job it is offered again.
+    assert [j['id'] for j in pcs.sync(rec['key'], 'a' * 32)['jobs']] == [first['job_id']]
+    started = {'job_id': first['job_id'], 'event_id': 'started-1', 'kind': 'started', 'payload': {}}
+    assert pcs.sync(rec['key'], 'a' * 32, [started])['jobs'] == []
     assert pcs.sync(rec['key'], 'a' * 32)['jobs'] == []
     ev = event(first['job_id'], payload={'exit': 7, 'output': 'failed'})
     assert pcs.sync(rec['key'], 'a' * 32, [ev])['ack'] == ['result-1']
@@ -488,3 +492,22 @@ def test_history_omits_image_bytes_but_retains_recovery_and_evidence(registry):
         assert result['warning'] == 'unknown cause'
     assert resident_store.wait_result(job, 0) == payload
     assert resident_store.history(job=job, include_images=True)['tasks'][0]['result'] == payload
+
+
+def test_job_lost_in_a_dead_long_poll_is_offered_again_once_per_sync(registry):
+    """2026-10-11 맥12: 헬퍼가 죽은 직후 접수된 작업이 죽은 연결의 응답에 실려 영영 queued 로 남았다."""
+    rec = registry()
+    lost = pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'echo lost'}, 'lost')['job_id']
+    assert [j['id'] for j in pcs.sync(rec['key'], 'a' * 32)['jobs']] == [lost]  # 죽은 연결이 가져간 응답
+    later = pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'echo later'}, 'later')['job_id']
+    again = pcs.sync(rec['key'], 'a' * 32)['jobs']
+    assert sorted(j['id'] for j in again) == sorted([lost, later])
+    assert json.loads(next(j for j in again if j['id'] == lost)['code'])['cmd'] == 'echo lost'
+    kinds = [e['kind'] for e in resident_store.history(job=lost)['events']]
+    assert kinds.count('redelivered') == 1
+    assert resident_store.history(job=lost)['tasks'][0]['state'] == 'queued'
+    # 취소된 작업과 결과가 온 작업은 다시 내주지 않는다.
+    pcs.sync(rec['key'], 'a' * 32, [{'job_id': lost, 'event_id': 'r-lost', 'kind': 'result', 'payload': {'exit': 0}}])
+    resident_store.cancel(later, rec['device_id'])
+    assert pcs.sync(rec['key'], 'a' * 32)['jobs'] == []
+    assert [e['kind'] for e in resident_store.history(job=lost)['events']].count('redelivered') == 1

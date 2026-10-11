@@ -1,0 +1,14 @@
+..................                                                       [100%]
+============================= slowest 15 durations =============================
+0.35s call     backend/test_browser_embedded_dom.py::test_default_limit_and_hard_capture_limit_remain_incomplete
+0.29s call     backend/test_browser_embedded_dom.py::test_short_rendered_scope_is_complete_and_ibl_composable
+0.27s call     backend/test_browser_embedded_dom.py::test_explicit_pages_reassemble_without_partial_fault
+0.27s call     backend/test_browser_embedded_dom.py::test_form_text_preserved_inputs_hidden_and_editors_excluded
+0.27s call     backend/test_browser_embedded_dom.py::test_unicode_cursor_scope_and_stale_capture
+0.27s call     backend/test_browser_embedded_dom.py::test_inline_text_preserves_visible_words_and_blocks
+0.26s call     backend/test_browser_embedded_dom.py::test_default_page_limit_is_partial_but_explicit_selection_is_not
+0.26s call     backend/test_browser_embedded_dom.py::test_scope_includes_sibling_articles_and_link_omission_is_disclosed
+0.25s call     backend/test_browser_embedded_dom.py::test_cursor_keeps_text_links_title_and_capture_time_together
+
+(6 durations < 0.1s hidden.)
+18 passed in 2.84s

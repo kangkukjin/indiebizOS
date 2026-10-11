@@ -117,8 +117,12 @@ async function run() {
   await call({ op: 'navigate', url: `${origin}/long` });
   r = await call({ op: 'content', limit: 500 });
   check(r.truncated && r.next_offset === 500, 'bounded DOM extraction');
+  await bridge.tabs.target(owner).wc.executeJavaScript(
+    "history.replaceState({}, '', '/changed'); document.title='Changed'; document.querySelector('main').textContent='Changed text'");
   const next = await call({ op: 'content', cursor: r.cursor, offset: r.next_offset, limit: 500 });
   check(next.cursor === r.cursor && next.next_offset === 1000, 'stable content continuation');
+  check(next.captured_at === r.captured_at && next.title === r.title, 'cursor preserves capture provenance');
+  check(next.url === r.url && next.frame.url === r.frame.url && next.content !== 'Changed text', 'SPA keeps captured frame source');
   await call({ op: 'navigate', url: `${origin}/login` });
   snap = await call({ op: 'snapshot' });
   const replace = snap.elements.find(e => e.name === '교체').ref;
@@ -131,6 +135,7 @@ async function run() {
 import asyncio, importlib.util, json, os
 from types import SimpleNamespace
 from pathlib import Path
+from ibl_v2_adapters import decode_envelope
 root=Path.cwd()
 spec=importlib.util.spec_from_file_location('live_browser_handler', root/'data/packages/installed/tools/browser-action/handler.py')
 h=importlib.util.module_from_spec(spec); spec.loader.exec_module(h)
@@ -140,6 +145,8 @@ async def run():
     assert nav['success'], nav
     result=json.loads(await h.execute({'driver':'embedded','op':'content'},ctx))
     assert result['success'] and '합성 메일 본문 123' in result['content'], result
+    value, evidence=decode_envelope(result, {'protocol':'legacy-envelope','value_path':''})
+    assert value['source_complete'] and '합성 메일 본문 123' in value['content']
     await h.execute({'driver':'embedded','op':'close'},ctx)
     print('PYTHON_HANDLER_OK')
 asyncio.run(run())

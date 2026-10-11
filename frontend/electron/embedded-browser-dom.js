@@ -35,36 +35,79 @@ export function pageOperation(op, args = {}) {
       snapshot: elements.map(e => `[${e.ref}] ${e.role} ${e.name}${e.sensitive ? ' [protected]' : ''}`).join('\n') };
   }
   if (op === 'content') {
-    let text; let captureTruncated = false;
+    const integer = (value, fallback) => {
+      if (value == null) return fallback;
+      if (!Number.isInteger(value) || value < 0) fail('INVALID_CONTENT_RANGE');
+      return value;
+    };
+    const offset = integer(args.offset, 0);
+    const requested = integer(args.limit, 12000);
+    if (!requested) fail('INVALID_CONTENT_RANGE');
+    const limit = Math.min(20000, Math.max(500, requested));
+    const explicit = args.limit != null && requested === limit;
     let cursor = args.cursor;
-    if (cursor) {
-      const saved = state.texts.get(cursor);
-      if (!saved) fail('STALE_CURSOR');
-      ({ text, captureTruncated } = saved);
-    } else {
-      const root = args.ref ? resolve(args.ref) : document.querySelector('main,article,[role="main"]') || document.body;
+    let saved = cursor ? state.texts.get(cursor) : null;
+    if (cursor && !saved) fail('STALE_CURSOR');
+    if (!saved) {
+      // Scope is the rendered document, or the explicitly observed element.
+      // An article/form is structure, not proof that its siblings are irrelevant.
+      const root = args.ref ? resolve(args.ref) : document.body;
       if (!root) fail('CONTENT_NOT_READY');
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      const parts = [];
-      let node; let chars = 0;
+      const excluded = 'script,style,noscript,textarea,input,select,[contenteditable]:not([contenteditable="false"])';
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+      const parts = []; let units = 0; let captureTruncated = false; let previousBlock;
+      const append = value => {
+        const remaining = 500000 - units;
+        if (value.length > remaining) { captureTruncated = true; value = value.slice(0, remaining); }
+        parts.push(value); units += value.length;
+      };
+      let node;
       while ((node = walker.nextNode())) {
-        const el = node.parentElement;
-        if (!el || el.closest('script,style,noscript,textarea,input,select,[contenteditable],form') || !visible(el)) continue;
-        const value = node.textContent.trim();
-        if (value) { parts.push(value); chars += value.length + 1; }
-        if (chars > 500000) { captureTruncated = true; break; }
+        const el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+        if (!el || el.closest(excluded) || el.closest('[hidden],[aria-hidden="true"]')) continue;
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if (el.tagName === 'BR' && visible(el)) append('\n');
+          if (captureTruncated) break;
+          continue;
+        }
+        // Ranges also work for visible text inside display:contents containers.
+        const range = document.createRange(); range.selectNodeContents(node);
+        const style = getComputedStyle(el);
+        if (!range.getClientRects().length || ['hidden', 'collapse'].includes(style.visibility)) continue;
+        let block = el;
+        while (block !== root && block.parentElement &&
+               ['inline', 'contents', 'inline-block', 'inline-flex', 'inline-grid'].includes(getComputedStyle(block).display)) block = block.parentElement;
+        const value = /^(pre|break-spaces)/.test(style.whiteSpace) ? node.textContent : node.textContent.replace(/[\t\n\r\f ]+/g, ' ');
+        if (!value) continue;
+        if (previousBlock && previousBlock !== block) append('\n');
+        append(value); previousBlock = block;
+        if (captureTruncated) break;
       }
-      text = parts.join('\n');
+      let text = parts.join('').replace(/[ \t]*\n[ \t]*/g, '\n').trim();
+      // Never serialize half a surrogate pair at the hard extraction boundary.
+      if (captureTruncated && /[\uD800-\uDBFF]$/.test(text)) text = text.slice(0, -1);
+      const links = [...(root.matches('a[href]') ? [root] : []), ...root.querySelectorAll('a[href]')]
+        .filter(el => visible(el) && !el.closest(excluded));
+      saved = { ...base, points: Array.from(text), captureTruncated,
+        captured_at: new Date().toISOString(), links_total: links.length,
+        links: links.slice(0, 80).map(el => ({ text: name(el), url: url(el.href) })) };
       cursor = crypto.randomUUID();
-      state.texts.clear(); state.texts.set(cursor, { text, captureTruncated });
+      state.texts.clear(); state.texts.set(cursor, saved);
     }
-    const offset = Math.max(0, Number(args.offset) || 0);
-    const limit = Math.min(20000, Math.max(500, Number(args.limit) || 12000));
-    const next = offset + limit < text.length ? offset + limit : null;
-    return { ...base, content: text.slice(offset, offset + limit), cursor, next_offset: next,
-      truncated: next !== null || captureTruncated, capture_truncated: captureTruncated, source_complete: false, total_chars: text.length, scope: 'rendered_dom',
-      coverage_limits: ['unloaded_or_collapsed_content', 'images_and_canvas', 'other_frames', 'form_values'],
-      links: [...document.querySelectorAll('a[href]')].filter(visible).slice(0, 80).map(el => ({ text: name(el), url: url(el.href) })) };
+    const { points, captureTruncated, ...metadata } = saved;
+    const content = points.slice(offset, offset + limit).join('');
+    const next = offset + limit < points.length ? offset + limit : null;
+    const linksOmitted = saved.links_total - saved.links.length;
+    const truncations = [];
+    if (next !== null) truncations.push({ scope: explicit ? 'selection' : 'source',
+      reason: 'limit', limit, retained: Math.min(limit, Math.max(0, points.length - offset)), unit: 'characters' });
+    if (captureTruncated) truncations.push({ scope: 'source', reason: 'capture_limit', limit: 500000, retained: points.length });
+    if (linksOmitted) truncations.push({ scope: 'source', reason: 'links_limit', limit: 80, retained: saved.links.length, total: saved.links_total });
+    return { ...metadata, content, cursor, offset, next_offset: next,
+      truncated: truncations.length > 0, truncations, capture_truncated: captureTruncated,
+      source_complete: !truncations.some(t => t.scope === 'source'), total_chars: points.length,
+      scope: 'rendered_dom', links_omitted: linksOmitted,
+      coverage_limits: ['unloaded_or_collapsed_content', 'images_and_canvas', 'other_frames', 'form_values'] };
   }
   if (op === 'auth_probe') {
     const fields = [...document.querySelectorAll('input')].filter(visible);

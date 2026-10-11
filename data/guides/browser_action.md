@@ -339,9 +339,21 @@ submit_ref를 생략하면 채움만 한다. username_ref/password_ref는 자동
 resume의 ref는 호출자가 확인한 목적 화면 요소이며, 그 존재만을 인증 근거로 반환한다.
 실패한 로그인 제출을 반복하지 않는다. cancel은 대기를 해제하며 이미 한 로그인은 되돌리지 않는다.
 
-content는 렌더링된 텍스트와 링크, 출처·문서·프레임 신원을 반환한다. 긴 본문은 cursor와 next_offset을
-다음 content의 cursor/offset으로 보내 같은 추출 스냅샷을 이어 읽는다. limit 기본 12000자, 최대 20000자.
-이미지·캔버스·숨겨진/미로딩 항목·폼·다른 프레임은 별도 범위다. iframe list/switch 후 읽고 reset으로 돌아온다.
+내장 snapshot의 요소 목록은 `elements`이며 각 요소의 ref·role·name을 읽는다(`snapshot`은 표시용 문자열).
+content의 본문은 `content`이며 링크, 출처·문서·프레임 신원을 함께 반환한다. 기본 범위는 현재 프레임의
+렌더링된 body 전체다. form 안의 공개 글과 여러 article도 포함하지만 입력칸·편집 영역의 값은 제외한다.
+이미지·캔버스·숨겨진/미로딩 항목·다른 프레임은 `coverage_limits`에 명시된 별도 범위다.
+iframe list/switch 후 읽고 reset으로 돌아온다. 범위 한계 자체를 실행 실패와 혼동하지 않는다.
+
+긴 본문은 cursor와 next_offset을 다음 content의 cursor/offset으로 보내 같은 추출 스냅샷을 이어 읽는다.
+본문·링크·제목·수집 시각은 그 스냅샷에 고정된다. 새 추출이나 문서 이동 뒤 옛 커서는 STALE_CURSOR다.
+limit 기본 12000자, 허용 범위 500~20000자이며 offset은 0부터 센 유니코드 문자 위치다.
+상한 안에서 limit를 명시하면 그 구간 선택(`truncations.scope:"selection"`)으로 받아 IBL에서 이어 읽을 수 있다.
+next_offset이 null일 때 끝이다. 기본값 절단·범위 밖 limit의 보정·약50만자 수집 상한·링크80개 상한은
+`PARTIAL_SOURCE`로 드러나며 `$error.partial`에 확보한 본문과 커서를 보존한다. `capture_truncated`,
+`links_total/links_omitted`도 확인한다. 수집 상한에서 잃은 내용은 커서를 끝까지 읽어도 복원되지 않는다.
+`source_complete:true`는 선언된 DOM 범위/선택의 수집 완료이며 웹사이트 전체나 미로딩 목록 완료를 뜻하지 않는다.
+링크 URL의 쿼리는 제거되므로 쿼리로만 구분되는 다음 페이지는 snapshot에서 관측한 링크 ref를 클릭한다.
 메일 본문을 열면 읽음 상태가 바뀔 수 있으므로 상태 보존 요구가 있으면 열기 전에 확인한다.
 
 내장 드라이버는 macOS/Linux 소유자 작업용이다. Windows는 아직 연결 미지원이다. 기존 탭은 UI에서

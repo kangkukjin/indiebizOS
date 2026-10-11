@@ -1,0 +1,50 @@
+[
+  {
+    "stage": "original_replay",
+    "variant": "base",
+    "rows": 18,
+    "confirmed": 18,
+    "total": 188100,
+    "verified": true
+  },
+  {
+    "stage": "original_replay",
+    "variant": "flaky",
+    "rows": 18,
+    "confirmed": 17,
+    "total": 180400,
+    "verified": true
+  },
+  {
+    "stage": "final",
+    "variant": "base",
+    "rows": 18,
+    "confirmed": 18,
+    "total": 188100,
+    "verified": true
+  },
+  {
+    "stage": "final",
+    "variant": "flaky",
+    "rows": 18,
+    "confirmed": 17,
+    "total": 180400,
+    "verified": true
+  },
+  {
+    "stage": "final",
+    "variant": "inline",
+    "rows": 18,
+    "confirmed": 18,
+    "total": 188100,
+    "verified": true
+  },
+  {
+    "stage": "final",
+    "variant": "empty",
+    "rows": 0,
+    "confirmed": 0,
+    "total": 0,
+    "verified": true
+  }
+]

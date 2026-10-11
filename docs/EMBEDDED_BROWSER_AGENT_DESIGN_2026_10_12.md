@@ -191,7 +191,8 @@ OOPIF는 FRAME_UNAVAILABLE 등 명시 오류를 반환한다. 모든 접근성 �
 SSO용 새 창의 생성·소유 작업 연결은 구현했고, 실제 외부 SSO 제공자별 호환성은 미검증이다.
 
 기본 본문 추출은 렌더링된 텍스트와 링크이며 구조화된 표 전용 반환·이미지·시각 캡처는 후속 범위다.
-입력값·form·숨겨진 요소는 제외한다. 한번의 추출 상한은 약 50만 자이며 보관 스냅샷에서 구간을 이어 읽는다.
+입력값·편집 영역·숨겨진 요소는 제외하고 form 안의 공개 본문은 포함한다. 기본 추출 범위는 현재 프레임의
+body이며 ref를 주면 관측 요소로 좁힌다. 한번의 추출 상한은 약 50만 자이며 보관 스냅샷에서 구간을 이어 읽는다.
 URL의 쿼리·fragment는 인증 토큰 노출을 줄이기 위해 반환에서 제거한다. 쿼리로 구분되는 원문은
 탭·문서·프레임 신원과 관측 ref로 이어서 접근하며 정밀 공유 URL 보존은 별도 설계가 필요하다.
 
@@ -208,3 +209,8 @@ frontend/scripts/embedded-browser-live.mjs의 실제 Electron guest와 합성 TL
 신규 브라우저 경계 시험 8개 통과(종합에 포함), 실제 Electron 합성 검증 26개 확인과 Python 핸들러→Electron 인증 본문 연결 통과.
 frontend TypeScript 및 프로덕션 빌드, IBL --check, Android 번들 생성, backend 층 가드 통과.
 네이버 실계정·외부 SSO 제공자·Windows 연결·OOPIF 전수는 미검증이다.
+
+60회차 긴문장 훈련에서 내장 본문이 항상 PARTIAL_SOURCE가 되고 form 본문9건이 누락되는 결함을 확인했다.
+후속 수리는 선언한 구간과 실제 수집 손실을 구분하고 공개 본문·인라인 문맥·복수 article을 보존한다.
+커서의 본문·링크·제목·수집 시각을 함께 고정하며 실제 본문/링크 상한은 정직하게 드러낸다.
+전체 IBL·독립 AI의 최초 관측과 후속 Electron 검증 범위는 [60회차 보고서](experiments/long_sentence_imagination/round_60/report.md)에 기록한다.

@@ -1,0 +1,176 @@
+FFFFFFF                                                                  [100%]
+=================================== FAILURES ===================================
+___________ test_short_rendered_scope_is_complete_and_ibl_composable ___________
+backend/test_browser_embedded_dom.py:52: in test_short_rendered_scope_is_complete_and_ibl_composable
+    observe(operation_source, "<main>전체 공개 본문</main>", steps)
+backend/test_browser_embedded_dom.py:42: in observe
+    return asyncio.run(run())
+           ^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:39: in run
+    return await steps(page)
+           ^^^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:48: in steps
+    value, _ = decode_envelope({"success": True, **result}, ADAPTER)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ibl/ibl_v2_adapters.py:284: in decode_envelope
+    raise Fault("PARTIAL_SOURCE", _partial_message(raw, truncation), kind="partial", partial=value,
+E   common.expression_ir.Fault: 도구의 원천 결과가 불완전합니다.
+_________ test_form_text_preserved_inputs_hidden_and_editors_excluded __________
+backend/test_browser_embedded_dom.py:60: in test_form_text_preserved_inputs_hidden_and_editors_excluded
+    observe(operation_source, '<form><h1>공개 제목</h1><p>공개 설명</p>'
+backend/test_browser_embedded_dom.py:42: in observe
+    return asyncio.run(run())
+           ^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:39: in run
+    return await steps(page)
+           ^^^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:58: in steps
+    assert "공개 제목" in result["content"] and "공개 설명" in result["content"]
+E   AssertionError: assert ('공개 제목' in '')
+_____________ test_explicit_pages_reassemble_without_partial_fault _____________
+backend/test_browser_embedded_dom.py:81: in test_explicit_pages_reassemble_without_partial_fault
+    observe(operation_source, f"<main>{text}</main>", steps)
+backend/test_browser_embedded_dom.py:42: in observe
+    return asyncio.run(run())
+           ^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:39: in run
+    return await steps(page)
+           ^^^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:74: in steps
+    decode_envelope({"success": True, **part}, ADAPTER)
+backend/ibl/ibl_v2_adapters.py:284: in decode_envelope
+    raise Fault("PARTIAL_SOURCE", _partial_message(raw, truncation), kind="partial", partial=value,
+E   common.expression_ir.Fault: 도구의 원천 결과가 불완전합니다. 원천이 절단 사유를 밝히지 않았습니다. 범위 인자(offset·limit 등)가 있으면 나눠 읽으세요 — 인자는 describe 로 확인합니다.
+_________ test_default_limit_and_hard_capture_limit_remain_incomplete __________
+backend/test_browser_embedded_dom.py:95: in test_default_limit_and_hard_capture_limit_remain_incomplete
+    observe(operation_source, "<main>" + "가" * 510000 + "</main>", steps)
+backend/test_browser_embedded_dom.py:42: in observe
+    return asyncio.run(run())
+           ^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:39: in run
+    return await steps(page)
+           ^^^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:91: in steps
+    assert result["capture_truncated"] and result["total_chars"] <= 500000
+E   assert (True and 510000 <= 500000)
+_________ test_cursor_keeps_text_links_title_and_capture_time_together _________
+backend/test_browser_embedded_dom.py:109: in test_cursor_keeps_text_links_title_and_capture_time_together
+    observe(operation_source, "<title>Original</title><main>" + "a" * 1500 +
+backend/test_browser_embedded_dom.py:42: in observe
+    return asyncio.run(run())
+           ^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:39: in run
+    return await steps(page)
+           ^^^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:105: in steps
+    assert second["title"] == first["title"]
+E   AssertionError: assert 'Changed' == 'Original'
+E     
+E     - Original
+E     + Changed
+_____ test_scope_includes_sibling_articles_and_link_omission_is_disclosed ______
+backend/test_browser_embedded_dom.py:121: in test_scope_includes_sibling_articles_and_link_omission_is_disclosed
+    observe(operation_source, '<article>첫째 문서</article><article>둘째 문서</article>' +
+backend/test_browser_embedded_dom.py:42: in observe
+    return asyncio.run(run())
+           ^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:39: in run
+    return await steps(page)
+           ^^^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:116: in steps
+    assert "둘째 문서" in result["content"]
+E   AssertionError: assert '둘째 문서' in '첫째 문서'
+_____________ test_inline_text_preserves_visible_words_and_blocks ______________
+backend/test_browser_embedded_dom.py:131: in test_inline_text_preserves_visible_words_and_blocks
+    observe(operation_source, '<h1>연구 자료 <span>D02</span> 전체 제목</h1>'
+backend/test_browser_embedded_dom.py:42: in observe
+    return asyncio.run(run())
+           ^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:39: in run
+    return await steps(page)
+           ^^^^^^^^^^^^^^^^^
+backend/test_browser_embedded_dom.py:128: in steps
+    assert "금액: 2200원" in result["content"]
+E   AssertionError: assert '금액: 2200원' in '연구 자료\nD02\n전체 제목\n금액:\n2200\n원'
+============================= slowest 15 durations =============================
+0.35s call     backend/test_browser_embedded_dom.py::test_default_limit_and_hard_capture_limit_remain_incomplete
+0.30s call     backend/test_browser_embedded_dom.py::test_short_rendered_scope_is_complete_and_ibl_composable
+0.28s call     backend/test_browser_embedded_dom.py::test_inline_text_preserves_visible_words_and_blocks
+0.28s call     backend/test_browser_embedded_dom.py::test_scope_includes_sibling_articles_and_link_omission_is_disclosed
+0.27s call     backend/test_browser_embedded_dom.py::test_form_text_preserved_inputs_hidden_and_editors_excluded
+0.27s call     backend/test_browser_embedded_dom.py::test_explicit_pages_reassemble_without_partial_fault
+0.26s call     backend/test_browser_embedded_dom.py::test_cursor_keeps_text_links_title_and_capture_time_together
+
+(8 durations < 0.1s hidden.)
+=========================== short test summary info ============================
+FAILED backend/test_browser_embedded_dom.py::test_short_rendered_scope_is_complete_and_ibl_composable
+FAILED backend/test_browser_embedded_dom.py::test_form_text_preserved_inputs_hidden_and_editors_excluded
+FAILED backend/test_browser_embedded_dom.py::test_explicit_pages_reassemble_without_partial_fault
+FAILED backend/test_browser_embedded_dom.py::test_default_limit_and_hard_capture_limit_remain_incomplete
+FAILED backend/test_browser_embedded_dom.py::test_cursor_keeps_text_links_title_and_capture_time_together
+FAILED backend/test_browser_embedded_dom.py::test_scope_includes_sibling_articles_and_link_omission_is_disclosed
+FAILED backend/test_browser_embedded_dom.py::test_inline_text_preserves_visible_words_and_blocks
+7 failed in 2.35s

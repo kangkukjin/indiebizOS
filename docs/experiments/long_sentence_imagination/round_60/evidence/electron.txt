@@ -1,0 +1,32 @@
+[92098:1012/082343.955274:ERROR:net/cert/internal/trust_store_mac.cc:807] Error parsing certificate:
+ERROR: Failed parsing extensions
+
+PASS create actual guest tab
+PASS DOM snapshot refs
+PASS protect password inputs
+PASS opaque local account
+PASS fill and submit in main
+PASS idempotent submission
+PASS read authenticated page
+PASS remove token query
+PASS other task denied
+PASS no arbitrary credential reads
+PASS wait and dynamic DOM read
+PASS stale reference rejected
+PASS frame inventory
+PASS frame-scoped read
+PASS human takeover
+PASS close only releases task
+PASS reuse same authenticated partition
+PASS cross-origin credential form rejected
+PASS MFA handed to user
+PASS bounded DOM extraction
+PASS stable content continuation
+PASS cursor preserves capture provenance
+PASS SPA keeps captured frame source
+PASS DOM replacement invalidates ref
+PASS ref cannot alias new document
+PASS Python handler to Electron authenticated DOM
+PASS explicit tab close verified
+PASS new target after closed tab
+ACCEPTANCE_OK submissions=1

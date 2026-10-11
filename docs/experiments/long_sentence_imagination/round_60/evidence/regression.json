@@ -1,0 +1,20 @@
+{
+  "related": {
+    "passed": 71,
+    "exit": 0,
+    "elapsed_s": 70.73
+  },
+  "final_embedded_boundary": {
+    "passed": 18,
+    "exit": 0,
+    "elapsed_s": 2.84
+  },
+  "unique_tests": 72,
+  "electron_assertions": 28,
+  "tsc": "passed",
+  "ibl_build_check": "passed",
+  "android_build": "passed",
+  "backend_layers": "passed",
+  "backend_full": "not_run",
+  "activation": "next Electron full restart"
+}

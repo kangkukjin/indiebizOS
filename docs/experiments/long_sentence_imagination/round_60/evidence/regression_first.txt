@@ -1,0 +1,32 @@
+.......................................................................  [100%][live-store] 이 세션이 추적 파일을 바꿨다 — 시험이 실 저장소를 쓰거나, 라이브 몸이 그 사이 썼다. docs/REGRESSION_TESTING.md '시험의 실 저장소 쓰기': data/guides/browser_action.md, docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md
+
+=============================== warnings summary ===============================
+backend/test_browser_navigation.py::test_complete_two_portal_program[base]
+backend/test_browser_navigation.py::test_complete_two_portal_program[base]
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+backend/test_browser_navigation.py::test_complete_two_portal_program[base]
+backend/test_browser_navigation.py::test_complete_two_portal_program[base]
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+backend/test_browser_navigation.py::test_complete_two_portal_program[base]
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+11.24s call     backend/test_browser_events.py::test_complete_shop_program[b-False]
+10.97s call     backend/test_browser_events.py::test_complete_shop_program[b-True]
+10.67s call     backend/test_browser_interact.py::test_complete_order_console_program[flaky-True]
+10.67s call     backend/test_browser_interact.py::test_complete_order_console_program[flaky-False]
+10.60s call     backend/test_browser_interact.py::test_complete_order_console_program[base-False]
+10.06s call     backend/test_browser_interact.py::test_complete_order_console_program[b-False]
+9.40s call     backend/test_browser_events.py::test_complete_shop_program[flaky-False]
+9.38s call     backend/test_browser_session.py::test_complete_portal_program[False-True-False]
+9.08s call     backend/test_browser_events.py::test_complete_shop_program[flaky-True]
+8.95s call     backend/test_browser_events.py::test_complete_shop_program[base-False]
+8.58s call     backend/test_browser_events.py::test_complete_shop_program[base-True]
+7.34s call     backend/test_browser_session.py::test_complete_portal_program[False-False-False]
+6.89s call     backend/test_browser_session.py::test_complete_registration_program[True-True]
+5.37s call     backend/test_browser_navigation.py::test_frames_navigation_and_explicit_consent
+5.19s call     backend/test_browser_session.py::test_complete_registration_program[True-False]
+71 passed, 5 warnings in 196.54s (0:03:16)

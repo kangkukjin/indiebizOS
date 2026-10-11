@@ -1,0 +1,70 @@
+{
+  "base_v2": {
+    "elapsed": 2.1920111179351807,
+    "success": true,
+    "run_status": "completed",
+    "run_id": "19f10efea8654540b9654270a4f09670",
+    "value": {
+      "pages": 3,
+      "count": 18,
+      "confirmed": 0,
+      "total": 0,
+      "files": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/trainer/base/result.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/trainer/base/report.md"
+      ]
+    },
+    "steps": 2239
+  },
+  "base_v3": {
+    "elapsed": 2.0018961429595947,
+    "success": true,
+    "run_status": "completed",
+    "run_id": "9393e5cc38704a189d3004d283f5dae7",
+    "value": {
+      "pages": 3,
+      "count": 18,
+      "confirmed": 0,
+      "total": 0,
+      "files": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/trainer/base_v3/result.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/trainer/base_v3/report.md"
+      ]
+    },
+    "steps": 2618
+  },
+  "base_v4": {
+    "elapsed": 3.6594791412353516,
+    "success": true,
+    "run_status": "completed",
+    "run_id": "bfb23bd974564430b9f453f059e5ac0f",
+    "value": {
+      "pages": 3,
+      "count": 18,
+      "confirmed": 9,
+      "total": 89100,
+      "files": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/trainer/base_v4/result.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/trainer/base_v4/report.md"
+      ]
+    },
+    "steps": 6516
+  },
+  "flaky_v4": {
+    "elapsed": 2.127336025238037,
+    "success": true,
+    "run_status": "completed",
+    "run_id": "733e862a5ae6455c825c07fddb3a48d2",
+    "value": {
+      "pages": 3,
+      "count": 18,
+      "confirmed": 8,
+      "total": 81400,
+      "files": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/trainer/flaky_v4/result.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/trainer/flaky_v4/report.md"
+      ]
+    },
+    "steps": 6234
+  }
+}

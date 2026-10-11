@@ -1,0 +1,110 @@
+[
+  {
+    "request": "base_repaired_request_isolated_result.json",
+    "elapsed": 3.5389530658721924,
+    "value": {
+      "pages": 3,
+      "count": 18,
+      "confirmed": 18,
+      "total": 188100,
+      "files": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/repaired/base/result.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/repaired/base/report.md"
+      ]
+    },
+    "success": true,
+    "run_status": "completed",
+    "run_id": "ecd2bba3755a4771a0187a61d9a9f1e5",
+    "steps": 8719
+  },
+  {
+    "request": "empty_final_request_isolated_result.json",
+    "elapsed": 1.2194337844848633,
+    "value": {
+      "pages": 1,
+      "count": 0,
+      "confirmed": 0,
+      "total": 0,
+      "files": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/final/empty/result.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/final/empty/report.md"
+      ]
+    },
+    "success": true,
+    "run_status": "completed",
+    "run_id": "0bbb1fbaca3344a79db5b00fe29eb205",
+    "steps": 219
+  },
+  {
+    "request": "base_final_request_isolated_result.json",
+    "elapsed": 3.777250051498413,
+    "value": {
+      "pages": 3,
+      "count": 18,
+      "confirmed": 18,
+      "total": 188100,
+      "files": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/final/base/result.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/final/base/report.md"
+      ]
+    },
+    "success": true,
+    "run_status": "completed",
+    "run_id": "a19daaff212d48569d6650b3ce9f7b4a",
+    "steps": 10911
+  },
+  {
+    "request": "inline_final_request_isolated_result.json",
+    "elapsed": 4.1043970584869385,
+    "value": {
+      "pages": 3,
+      "count": 18,
+      "confirmed": 18,
+      "total": 188100,
+      "files": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/final/inline/result.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/final/inline/report.md"
+      ]
+    },
+    "success": true,
+    "run_status": "completed",
+    "run_id": "b6a4947d387948d3a9452d40151460bc",
+    "steps": 10911
+  },
+  {
+    "request": "flaky_repaired_request_isolated_result.json",
+    "elapsed": 3.595189094543457,
+    "value": {
+      "pages": 3,
+      "count": 18,
+      "confirmed": 17,
+      "total": 180400,
+      "files": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/repaired/flaky/result.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/repaired/flaky/report.md"
+      ]
+    },
+    "success": true,
+    "run_status": "completed",
+    "run_id": "34ad88a21a6440deb06c17c7734e05fc",
+    "steps": 8437
+  },
+  {
+    "request": "flaky_final_request_isolated_result.json",
+    "elapsed": 3.6956770420074463,
+    "value": {
+      "pages": 3,
+      "count": 18,
+      "confirmed": 17,
+      "total": 180400,
+      "files": [
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/final/flaky/result.json",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_60회차/final/flaky/report.md"
+      ]
+    },
+    "success": true,
+    "run_status": "completed",
+    "run_id": "80e435f5ccf24500a0a3d9506b6838d3",
+    "steps": 10522
+  }
+]

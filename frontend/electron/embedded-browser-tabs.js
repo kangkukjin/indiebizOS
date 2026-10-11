@@ -134,7 +134,8 @@ export class EmbeddedTabs {
     }
     const data = result.result?.value;
     if (!data) throw fault('PAGE_NOT_READY');
-    data.frame = { id: frame, url: frames.find(f => f.id === frame)?.url };
+    // Cursor reads describe the captured document, including after SPA navigation.
+    data.frame = { id: frame, url: data.url ?? frames.find(f => f.id === frame)?.url };
     if (['snapshot', 'auth_probe'].includes(op)) r.document = data.document_id;
     return data;
   }
@@ -212,7 +213,7 @@ export class EmbeddedTabs {
         } while (Date.now() < deadline);
         if (op === 'wait' && !data.matched) throw fault('WAIT_TIMEOUT');
       }
-      return { ...data, tab_id: r.id, captured_at: new Date().toISOString() };
+      return { ...data, tab_id: r.id, captured_at: data.captured_at || new Date().toISOString() };
     } finally { r.executing = false; if (!r.paused) r.state = r.authWaiting ? '로그인 확인 필요' : 'AI 작업 탭'; this.notice(); }
   }
 }

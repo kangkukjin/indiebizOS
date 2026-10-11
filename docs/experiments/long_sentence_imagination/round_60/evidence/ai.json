@@ -1,0 +1,97 @@
+[
+  {
+    "episode": 4615,
+    "variant": "base",
+    "source": "training",
+    "state": "succeeded",
+    "elapsed_ms": 269679,
+    "confirmed": 9,
+    "unknown": 9,
+    "sum": 89100,
+    "honest_partial_verified": true,
+    "full_task_achieved": false,
+    "usage": {
+      "input": 3881821,
+      "output": 25218,
+      "cache_read": 3546516,
+      "cache_create": 327144
+    },
+    "models": [
+      "deepseek-flash",
+      "opus"
+    ],
+    "tool_starts": 26,
+    "cost_summaries": [
+      {
+        "check_rejections": 5,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.000977,
+        "evaluation_model_s": 6.181,
+        "evaluation_prepare_s": 0.064392,
+        "evaluation_visual_s": 0.003922,
+        "evaluation_wait_s": 0.000668,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/0cba47200c084c189abb3adcbc4020ca/events.jsonl",
+        "execution_calls": 26,
+        "execution_failures": 3,
+        "execution_tool_s": 15.477999999999996,
+        "internal_tool_failures": 34,
+        "request_intent": "task",
+        "source_failures": 34,
+        "supervisor_cache_read": 58788,
+        "supervisor_calls": 1,
+        "supervisor_input": 120854,
+        "supervisor_model_s": 27.666,
+        "supervisor_output": 2491,
+        "supervisor_tool_failures": 0,
+        "supervisor_tools": 1,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 269.03
+      }
+    ]
+  },
+  {
+    "episode": 4616,
+    "variant": "flaky",
+    "source": "training",
+    "state": "succeeded",
+    "elapsed_ms": 161259,
+    "confirmed": 8,
+    "unknown": 10,
+    "sum": 81400,
+    "honest_partial_verified": true,
+    "full_task_achieved": false,
+    "usage": {
+      "input": 2428171,
+      "output": 14507,
+      "cache_read": 2273132,
+      "cache_create": 148180
+    },
+    "models": [
+      "deepseek-flash",
+      "opus"
+    ],
+    "tool_starts": 13,
+    "cost_summaries": [
+      {
+        "check_rejections": 4,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.001158,
+        "evaluation_model_s": 5.982,
+        "evaluation_prepare_s": 0.0473,
+        "evaluation_visual_s": 0.003251,
+        "evaluation_wait_s": 0.000771,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c4f57703d8c04fe09710f29251ac09e8/events.jsonl",
+        "execution_calls": 13,
+        "execution_failures": 3,
+        "execution_tool_s": 22.221999999999998,
+        "internal_tool_failures": 30,
+        "request_intent": "task",
+        "source_failures": 30,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 161.208
+      }
+    ]
+  }
+]

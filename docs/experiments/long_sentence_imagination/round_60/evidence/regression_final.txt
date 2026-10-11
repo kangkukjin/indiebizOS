@@ -1,0 +1,39 @@
+bringing up nodes...
+bringing up nodes...
+
+.......................................................................  [100%]
+=============================== warnings summary ===============================
+backend/test_browser_navigation.py::test_complete_two_portal_program[base]
+backend/test_browser_navigation.py::test_complete_two_portal_program[base]
+backend/test_browser_session.py::test_complete_registration_program[False-False]
+backend/test_browser_session.py::test_complete_registration_program[False-False]
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+backend/test_browser_navigation.py::test_complete_two_portal_program[base]
+backend/test_browser_navigation.py::test_complete_two_portal_program[base]
+backend/test_browser_session.py::test_complete_registration_program[False-False]
+backend/test_browser_session.py::test_complete_registration_program[False-False]
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+backend/test_browser_navigation.py::test_complete_two_portal_program[base]
+backend/test_browser_session.py::test_complete_registration_program[False-False]
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+12.41s call     backend/test_browser_interact.py::test_complete_order_console_program[base-False]
+11.49s call     backend/test_browser_events.py::test_complete_shop_program[b-False]
+11.05s call     backend/test_browser_events.py::test_complete_shop_program[b-True]
+10.75s call     backend/test_browser_interact.py::test_complete_order_console_program[flaky-True]
+10.73s call     backend/test_browser_interact.py::test_complete_order_console_program[flaky-False]
+10.25s call     backend/test_browser_events.py::test_complete_shop_program[base-False]
+10.13s call     backend/test_browser_interact.py::test_complete_order_console_program[b-False]
+9.93s call     backend/test_browser_session.py::test_complete_portal_program[False-True-False]
+9.92s call     backend/test_browser_session.py::test_complete_portal_program[False-False-False]
+9.48s call     backend/test_browser_events.py::test_complete_shop_program[flaky-False]
+9.17s call     backend/test_browser_events.py::test_complete_shop_program[flaky-True]
+8.64s call     backend/test_browser_events.py::test_complete_shop_program[base-True]
+6.84s call     backend/test_browser_session.py::test_complete_registration_program[True-True]
+5.39s call     backend/test_browser_navigation.py::test_frames_navigation_and_explicit_consent
+5.26s call     backend/test_browser_session.py::test_complete_registration_program[False-False]
+71 passed, 10 warnings in 70.73s (0:01:10)

@@ -1,0 +1,61 @@
+#!ibl edition=2
+# Inputs: base (observed portal URL), out (absolute output directory).
+[def:전체본문]($tab) {
+  $part=[limbs:browser]{driver:"embedded",op:"content",tab_id:$tab,limit:12000}
+  $text=$part.content
+  $offset=$part.next_offset
+  [repeat:while $offset != null] {
+    $part=[limbs:browser]{driver:"embedded",op:"content",tab_id:$tab,cursor:$part.cursor,offset:$offset,limit:12000}
+    $text=$text + $part.content
+    $offset=$part.next_offset
+  }
+  return {text:$text,url:$part.url,document_id:$part.document_id,tab_id:$tab}
+}
+[def:필드]($text,$prefix) {
+  $lines=filter(split($text,"\n"),($line)=>$line[:len($prefix)]==$prefix)
+  assert len($lines)==1,"필수 필드가 없거나 중복입니다",{prefix:$prefix}
+  return strip(replace($lines[0],$prefix,""))
+}
+[def:상세]($link,$tab) {
+  [try] {
+    $nav=[limbs:browser]{driver:"embedded",op:"navigate",tab_id:$tab,url:$link.href}
+    $body=[fn:전체본문]{tab:$tab}
+    $id=[fn:필드]{text:$body.text,prefix:"ID: "}
+    $state=[fn:필드]{text:$body.text,prefix:"상태: "}
+    $price=number([fn:필드]{text:$body.text,prefix:"금액: "})
+    $title=[fn:필드]{text:$body.text,prefix:"연구 자료 "}
+    assert contains($body.text,f"확인-${id}-끝"),"마지막 확인문 누락",{id:$id}
+    assert not contains($body.text,"PRIVATE_SENTINEL"),"비공개 값 누출",{id:$id}
+    return {id:$id,title:f"연구 자료 ${title}",price:$price,status:"확인",source_status:$state,marker:f"확인-${id}-끝",source:$body}
+  } [catch] {
+    return {id:split($link.href,"/")[-1],title:$link.name,price:null,status:"미확인",source_status:null,marker:null,error:$error.message,source:{url:$link.href}}
+  }
+}
+$first=[limbs:browser]{driver:"embedded",op:"navigate",url:$base}
+$tab=$first.tab_id
+$links=[]
+$more=true
+$pages=0
+[repeat:while $more and $pages < 10] {
+  $ready=[limbs:browser]{driver:"embedded",op:"wait",tab_id:$tab,text:"목록 준비 완료",timeout:5000}
+  $s=[limbs:browser]{driver:"embedded",op:"snapshot",tab_id:$tab}
+  $links=$links + filter($s.elements,($e)=>$e.role=="link" and contains($e.name,"연구 자료"))
+  $next=filter($s.elements,($e)=>$e.role=="link" and $e.name=="다음 페이지")
+  $pages=$pages+1
+  $more=len($next)>0
+  [if:$more] { $click=[limbs:browser]{driver:"embedded",op:"click",tab_id:$tab,ref:$next[0].ref} }
+}
+assert not $more,"목록 순회 상한",{pages:$pages}
+$rows=$links >> [table:each] { [fn:상세]{link:$it,tab:$tab} }
+$good=filter($rows,($r)=>$r.status=="확인")
+$total=sum(map($good,($r)=>$r.price))
+$result={pages:$pages,rows:$rows,total:$total,confirmed:len($good),unknown:len($rows)-len($good)}
+$json=json($result)
+$report=join("\n",["# 연구자료실 확인",f"${pages}페이지 · ${len(rows)}건 · 확인 ${len(good)}건 · 미확인 ${len(rows)-len(good)}건",f"확인한 금액 합계: ${total}원","미확인 자료의 금액은 합계에 포함하지 않음.","| ID | 전체 제목 | 금액 | 수집 상태 | 원문 상태 | 마지막 확인문 | 출처 |","|---|---|---|---|---|---|---|"]+map($rows,($r)=>f"| ${r.id} | ${r.title} | ${r.price == null ? '미확인' : json($r.price)} | ${r.status} | ${r.source_status == null ? '미확인' : r.source_status} | ${r.marker == null ? '미확인' : r.marker} | ${r.source.url} |"))
+$a=[self:write]{path:f"${out}/result.json",content:$json}
+$b=[self:write]{path:f"${out}/report.md",content:$report}
+$ar=[self:read]{path:$a.path,format:"text"}
+$br=[self:read]{path:$b.path,format:"text"}
+assert $ar.text==$json and $br.text==$report,"저장 재독 불일치"
+$closed=[limbs:browser]{driver:"embedded",op:"tab",mode:"close",tab_id:$tab}
+return {pages:$pages,count:len($rows),confirmed:len($good),total:$total,files:[$a.path,$b.path]}

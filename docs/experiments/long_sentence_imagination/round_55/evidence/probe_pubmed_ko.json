@@ -1,0 +1,11 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:paper]{op:\"search\",query:\"아세트아미노펜 간독성\",source:\"pubmed\",limit:3}; return $r",
+ "elapsed": 1.262,
+ "success": true,
+ "issues": null,
+ "value": {
+  "success": true,
+  "items": [],
+  "message": "No papers found for the given query."
+ }
+}

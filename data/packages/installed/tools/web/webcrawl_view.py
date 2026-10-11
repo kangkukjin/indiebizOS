@@ -81,7 +81,9 @@ def project(result, *, selector, include_images, image_offset, image_limit, pars
         nodes = [node for node in nodes if not any(id(parent) in chosen for parent in node.parents)]
         matched += len(nodes)
         for node in nodes:
-            _, text = parse_html(str(node), document["url"])
+            # An explicit selector is the caller's reading region; don't narrow it again.
+            _, text = (parse_html(str(node), document["url"], narrow=False) if selector
+                       else parse_html(str(node), document["url"]))
             rows = store.text_to_blocks("", text) if text else []
             for row in rows:
                 row.update(url=document["url"], paragraph_index=len(paragraphs) + 1)

@@ -1,0 +1,12 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://nedrug.mfds.go.kr/searchEasyDrug?itemName=타이레놀콜드-에스정\",op:\"links\"}; $h=filter($r.items,($x)=>contains($x.href,\"getItemDetail?itemSeq\") and not contains($x.href,\"itemSeq=20160540\")); return map($h[:8],($x)=>{t:$x.text,h:$x.href[36:]})",
+ "elapsed": 3.775,
+ "success": true,
+ "issues": null,
+ "value": [
+  {
+   "t": "타이레놀콜드-에스정",
+   "h": "02106954"
+  }
+ ]
+}

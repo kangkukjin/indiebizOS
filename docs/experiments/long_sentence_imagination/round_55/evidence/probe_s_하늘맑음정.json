@@ -1,0 +1,7 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://nedrug.mfds.go.kr/searchEasyDrug?itemName=하늘맑음정\",op:\"links\"}; $h=filter($r.items,($x)=>contains($x.href,\"getItemDetail?itemSeq\") and not contains($x.href,\"itemSeq=20160540\")); return map($h[:8],($x)=>{t:$x.text,h:$x.href[36:]})",
+ "elapsed": 0.555,
+ "success": true,
+ "issues": null,
+ "value": []
+}

@@ -1,0 +1,13 @@
+{
+ "code": "#!ibl edition=2\n$r=[self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_55회차/trainer/base/input/measurements.csv\"}; return {k:keys($r.data),text:$r.text[:120]}",
+ "elapsed": 0.532,
+ "success": true,
+ "issues": null,
+ "value": {
+  "k": [
+   "items",
+   "table"
+  ],
+  "text": "case_id,measured_at,kind,value,unit\r\nH04,2026-10-01 21:10,혈압,142/93,mmHg\r\nH01,2026-09-15 20:30,체온,100.0,℉\r\nH06,2026-09-1"
+ }
+}

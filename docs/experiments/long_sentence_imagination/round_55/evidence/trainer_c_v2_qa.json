@@ -1,0 +1,12 @@
+{
+ "who": "trainer",
+ "mode": "c",
+ "passed": 3,
+ "total": 3,
+ "results": {
+  "빈 접수: 메모를 지어내지 않음": true,
+  "빈 접수: index 빈 배열 또는 없음": true,
+  "빈 접수: 접수 없음 표시": true
+ },
+ "notes": []
+}

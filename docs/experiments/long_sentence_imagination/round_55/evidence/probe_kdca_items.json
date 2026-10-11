@@ -1,0 +1,48 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5303\",refresh:true}; return {n:len($r.items),len:len($r.text),keys:keys($r),last:$r.items[-3:]}",
+ "elapsed": 11.434,
+ "success": true,
+ "issues": null,
+ "value": {
+  "n": 14,
+  "len": 152,
+  "keys": [
+   "success",
+   "url",
+   "resolved_url",
+   "http_status",
+   "title",
+   "text",
+   "length",
+   "truncated",
+   "method",
+   "reason",
+   "note",
+   "items",
+   "source_ref",
+   "cache",
+   "content_selection",
+   "_display"
+  ],
+  "last": [
+   {
+    "type": "paragraph",
+    "text": "연령별",
+    "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5303",
+    "paragraph_index": 12
+   },
+   {
+    "type": "paragraph",
+    "text": "영유아 청소년 노인",
+    "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5303",
+    "paragraph_index": 13
+   },
+   {
+    "type": "paragraph",
+    "text": "ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅇ ㅈ ㅊ ㅋ ㅌ ㅍ ㅎ 기타",
+    "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5303",
+    "paragraph_index": 14
+   }
+  ]
+ }
+}

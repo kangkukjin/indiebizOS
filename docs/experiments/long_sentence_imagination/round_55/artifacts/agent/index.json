@@ -1,0 +1,476 @@
+[
+  {
+    "id": "H04",
+    "urgent": true,
+    "stats": {
+      "혈압": {
+        "n": 99,
+        "invalid": 1,
+        "mean_sys": 147.3,
+        "mean_dia": 91.9,
+        "recent7": 147.6,
+        "prior": 147.2,
+        "recent7_dia": 92.0,
+        "prior_dia": 91.9,
+        "over_days": 55,
+        "n_recent7": 10,
+        "n_prior": 89,
+        "over_days_inclusive": 56
+      }
+    },
+    "drugs": [
+      {
+        "name": "이지엔6애니연질캡슐",
+        "whose": "본인",
+        "status": "current",
+        "dose": "1회 1캡슐 하루 3번",
+        "found": true,
+        "item_seq": "200400463",
+        "ingredients": [
+          "이부프로펜"
+        ]
+      },
+      {
+        "name": "탁센연질캡슐",
+        "whose": "본인",
+        "status": "current",
+        "dose": "1회 1캡슐 하루 2번",
+        "found": true,
+        "item_seq": "200710782",
+        "ingredients": [
+          "나프록센"
+        ]
+      }
+    ],
+    "duplicate_ingredients": [],
+    "pmids": [
+      "36424024",
+      "23726390"
+    ],
+    "portal": {
+      "status": "quoted",
+      "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5337"
+    },
+    "file": "cases/H04.md",
+    "over_days_total": 55
+  },
+  {
+    "id": "H08",
+    "urgent": true,
+    "stats": {
+      "혈압": {
+        "n": 91,
+        "invalid": 3,
+        "mean_sys": 150.9,
+        "mean_dia": 94.8,
+        "recent7": 149.7,
+        "prior": 150.9,
+        "recent7_dia": 94.2,
+        "prior_dia": 94.8,
+        "over_days": 52,
+        "n_recent7": 6,
+        "n_prior": 85,
+        "over_days_inclusive": 52
+      }
+    },
+    "drugs": [
+      {
+        "name": "아스피린프로텍트정100밀리그람",
+        "whose": "본인",
+        "status": "current",
+        "dose": "하루 1정",
+        "found": true,
+        "item_seq": "200108429",
+        "ingredients": [
+          "아스피린"
+        ]
+      }
+    ],
+    "duplicate_ingredients": [],
+    "pmids": [
+      "27992865",
+      "12855835"
+    ],
+    "portal": {
+      "status": "quoted",
+      "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5495"
+    },
+    "file": "cases/H08.md",
+    "over_days_total": 52
+  },
+  {
+    "id": "H09",
+    "urgent": false,
+    "stats": {
+      "혈당": {
+        "n": 48,
+        "invalid": 4,
+        "mean": 134.6,
+        "recent7": 144.7,
+        "prior": 134.0,
+        "over_days": 40,
+        "n_recent7": 3,
+        "n_prior": 45,
+        "over_days_inclusive": 40
+      }
+    },
+    "drugs": [
+      {
+        "name": "지르텍정",
+        "whose": "본인",
+        "status": "current",
+        "dose": "하루 1정",
+        "found": true,
+        "item_seq": "200610765",
+        "ingredients": [
+          "세티리진염산염"
+        ]
+      },
+      {
+        "name": "아스피린프로텍트정100밀리그람",
+        "whose": "타인",
+        "status": "current",
+        "dose": null,
+        "found": true,
+        "item_seq": "200108429",
+        "ingredients": [
+          "아스피린"
+        ]
+      }
+    ],
+    "duplicate_ingredients": [],
+    "pmids": [
+      "40165126",
+      "39222689"
+    ],
+    "portal": {
+      "status": "quoted",
+      "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5304"
+    },
+    "file": "cases/H09.md",
+    "over_days_total": 40
+  },
+  {
+    "id": "H02",
+    "urgent": false,
+    "stats": {
+      "혈압": {
+        "n": 92,
+        "invalid": 5,
+        "mean_sys": 138.5,
+        "mean_dia": 85.1,
+        "recent7": 140.3,
+        "prior": 138.3,
+        "recent7_dia": 83.3,
+        "prior_dia": 85.2,
+        "over_days": 37,
+        "n_recent7": 7,
+        "n_prior": 85,
+        "over_days_inclusive": 40
+      }
+    },
+    "drugs": [
+      {
+        "name": "노바스크정5밀리그램",
+        "whose": "본인",
+        "status": "current",
+        "dose": "하루 1정",
+        "found": false,
+        "item_seq": null,
+        "ingredients": []
+      }
+    ],
+    "duplicate_ingredients": [],
+    "pmids": [
+      "36196468",
+      "27372530"
+    ],
+    "portal": {
+      "status": "quoted",
+      "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=6765"
+    },
+    "file": "cases/H02.md",
+    "over_days_total": 37
+  },
+  {
+    "id": "H01",
+    "urgent": false,
+    "stats": {
+      "체온": {
+        "n": 91,
+        "invalid": 3,
+        "mean": 37.6,
+        "recent7": 37.7,
+        "prior": 37.6,
+        "over_days": 16,
+        "n_recent7": 11,
+        "n_prior": 80,
+        "over_days_inclusive": 23
+      }
+    },
+    "drugs": [
+      {
+        "name": "타이레놀정500밀리그람",
+        "whose": "본인",
+        "status": "current",
+        "dose": "1회 2정 하루 3번",
+        "found": true,
+        "item_seq": "202106092",
+        "ingredients": [
+          "아세트아미노펜"
+        ]
+      },
+      {
+        "name": "타이레놀콜드-에스정",
+        "whose": "본인",
+        "status": "current",
+        "dose": "1회 2정 하루 3번",
+        "found": true,
+        "item_seq": "202106954",
+        "ingredients": [
+          "아세트아미노펜",
+          "슈도에페드린염산염",
+          "덱스트로메토르판브롬화수소산염",
+          "클로르페니라민말레산염"
+        ]
+      }
+    ],
+    "duplicate_ingredients": [
+      "아세트아미노펜"
+    ],
+    "pmids": [
+      "21500608"
+    ],
+    "portal": {
+      "status": "quoted",
+      "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5423"
+    },
+    "file": "cases/H01.md",
+    "over_days_total": 16
+  },
+  {
+    "id": "H03",
+    "urgent": false,
+    "stats": {
+      "혈당": {
+        "n": 40,
+        "invalid": 2,
+        "mean": 121.0,
+        "recent7": 120.4,
+        "prior": 121.0,
+        "over_days": 13,
+        "n_recent7": 6,
+        "n_prior": 34,
+        "over_days_inclusive": 13
+      }
+    },
+    "drugs": [
+      {
+        "name": "지르텍정",
+        "whose": "본인",
+        "status": "current",
+        "dose": "하루 1정",
+        "found": true,
+        "item_seq": "200610765",
+        "ingredients": [
+          "세티리진염산염"
+        ]
+      }
+    ],
+    "duplicate_ingredients": [],
+    "pmids": [
+      "32497744"
+    ],
+    "portal": {
+      "status": "quoted",
+      "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5304"
+    },
+    "file": "cases/H03.md",
+    "over_days_total": 13
+  },
+  {
+    "id": "H07",
+    "urgent": false,
+    "stats": {
+      "체온": {
+        "n": 102,
+        "invalid": 2,
+        "mean": 37.3,
+        "recent7": 37.3,
+        "prior": 37.4,
+        "over_days": 10,
+        "n_recent7": 14,
+        "n_prior": 88,
+        "over_days_inclusive": 11
+      }
+    },
+    "drugs": [
+      {
+        "name": "게보린정",
+        "whose": "본인",
+        "status": "current",
+        "dose": null,
+        "found": true,
+        "item_seq": "197900277",
+        "ingredients": [
+          "아세트아미노펜",
+          "카페인무수물",
+          "이소프로필안티피린"
+        ]
+      },
+      {
+        "name": "판콜에스내복액",
+        "whose": "본인",
+        "status": "current",
+        "dose": "1회 1병 하루 3번",
+        "found": true,
+        "item_seq": "198900672",
+        "ingredients": [
+          "아세트아미노펜",
+          "dl-메틸에페드린염산염",
+          "클로르페니라민말레산염",
+          "카페인무수물",
+          "구아이페네신"
+        ]
+      }
+    ],
+    "duplicate_ingredients": [
+      "아세트아미노펜",
+      "카페인무수물"
+    ],
+    "pmids": [
+      "32559803",
+      "33030880"
+    ],
+    "portal": {
+      "status": "quoted",
+      "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5698"
+    },
+    "file": "cases/H07.md",
+    "over_days_total": 10
+  },
+  {
+    "id": "H05",
+    "urgent": false,
+    "stats": {
+      "체온": {
+        "n": 95,
+        "invalid": 1,
+        "mean": 37.2,
+        "recent7": 37.2,
+        "prior": 37.2,
+        "over_days": 1,
+        "n_recent7": 7,
+        "n_prior": 88,
+        "over_days_inclusive": 1
+      }
+    },
+    "drugs": [
+      {
+        "name": "하늘맑음정",
+        "whose": "본인",
+        "status": "current",
+        "dose": "하루 2번 1정씩",
+        "found": false,
+        "item_seq": null,
+        "ingredients": []
+      },
+      {
+        "name": "판콜에스내복액",
+        "whose": "본인",
+        "status": "current",
+        "dose": "1회 1병 하루 3번",
+        "found": true,
+        "item_seq": "198900672",
+        "ingredients": [
+          "아세트아미노펜",
+          "dl-메틸에페드린염산염",
+          "클로르페니라민말레산염",
+          "카페인무수물",
+          "구아이페네신"
+        ]
+      }
+    ],
+    "duplicate_ingredients": [],
+    "pmids": [
+      "31478634",
+      "28837801"
+    ],
+    "portal": {
+      "status": "quoted",
+      "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5423"
+    },
+    "file": "cases/H05.md",
+    "over_days_total": 1
+  },
+  {
+    "id": "H06",
+    "urgent": false,
+    "stats": {
+      "체온": {
+        "n": 97,
+        "invalid": 2,
+        "mean": 36.9,
+        "recent7": 37.0,
+        "prior": 36.9,
+        "over_days": 0,
+        "n_recent7": 14,
+        "n_prior": 83,
+        "over_days_inclusive": 0
+      }
+    },
+    "drugs": [
+      {
+        "name": "게보린정",
+        "whose": "본인",
+        "status": "stopped",
+        "dose": "1회 1정",
+        "found": true,
+        "item_seq": "197900277",
+        "ingredients": [
+          "아세트아미노펜",
+          "카페인무수물",
+          "이소프로필안티피린"
+        ]
+      },
+      {
+        "name": "타이레놀정500밀리그람",
+        "whose": "본인",
+        "status": "current",
+        "dose": "아플 때 1회 1정",
+        "found": true,
+        "item_seq": "202106092",
+        "ingredients": [
+          "아세트아미노펜"
+        ]
+      }
+    ],
+    "duplicate_ingredients": [],
+    "pmids": [
+      "33974014",
+      "16362663"
+    ],
+    "portal": {
+      "status": "quoted",
+      "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5830"
+    },
+    "file": "cases/H06.md",
+    "over_days_total": 0
+  },
+  {
+    "id": "H10",
+    "urgent": false,
+    "stats": {},
+    "drugs": [],
+    "duplicate_ingredients": [],
+    "pmids": [
+      "24994048"
+    ],
+    "portal": {
+      "status": "quoted",
+      "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=6744"
+    },
+    "file": "cases/H10.md",
+    "over_days_total": 0
+  }
+]

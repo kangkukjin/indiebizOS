@@ -1,0 +1,57 @@
+{
+ "label": "trainer_c_main_v2",
+ "task_id": "r55-trainer-c-1791719836",
+ "reuse_request": null,
+ "budget_request": {
+  "steps": 2000000,
+  "rows": 50000
+ },
+ "elapsed": 0.67,
+ "success": true,
+ "status": null,
+ "issues": [],
+ "error": null,
+ "value": {
+  "cases": 0,
+  "files": 0,
+  "note": "접수 없음"
+ },
+ "usage": {
+  "steps": 74,
+  "rows": 0,
+  "elapsed_ms": 651,
+  "model": null,
+  "limits": {
+   "steps": 2000000,
+   "rows": 50000
+  }
+ },
+ "reuse": null,
+ "continuation": {
+  "reuse_args": {
+   "reuse": {
+    "run_id": "8c98a2ed0fec45468097fd00db964916"
+   }
+  },
+  "read_calls": 1,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "overlapping_write",
+    "write_call_id": "f93ce5186cad01e48f5b300a8435331930ecd2cd12a4e220fee6c913962f887e",
+    "action": "self:write",
+    "location": {
+     "source_hash": "c0b8f71cd8a8cd58bd121d9fcdc8707c89cc3b8e880aed4c809c4ba84975f24a",
+     "start": 7226,
+     "end": 7278,
+     "line": 119,
+     "column": 3
+    },
+    "excluded_calls": 1
+   }
+  ],
+  "read_exclusions_total": 1,
+  "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+ },
+ "warnings": null
+}

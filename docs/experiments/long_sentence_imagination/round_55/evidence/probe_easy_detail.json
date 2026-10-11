@@ -1,0 +1,15 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://nedrug.mfds.go.kr/pbp/CCBBB01/getItemDetail?itemSeq=202106092\",max_length:200000}; return {title:$r.title,n:len($r.items),len:len($r.text),heads:map(filter($r.items,($x)=>$x.type==\"heading\"),($x)=>$x.text),text:$r.text[:200]}",
+ "elapsed": 2.332,
+ "success": true,
+ "issues": null,
+ "value": {
+  "title": "식품의약품안전처 의약품통합정보시스템 의약품제품정보 상세보기-타이레놀정500밀리그람(아세트아미노펜)",
+  "n": 226,
+  "len": 7307,
+  "heads": [
+   "식품의약품안전처 의약품통합정보시스템 의약품제품정보 상세보기-타이레놀정500밀리그람(아세트아미노펜)"
+  ],
+  "text": "의약(외)품상세정보\n\n타이레놀정500밀리그람(아세트아미노펜)\n\n타이레놀정500밀리그람(아세트아미노펜)\n\n페이스북 공유 트위터 공유 카카오스토리 공유 인쇄\n\n기본정보\n\n의약품정보 - 성상, 모양, 업체명, 전문/일반, 허가일, 품목기준코드, 표준코드 , 기타식별표시\n\n제품명\n\n타이레놀정500밀리그람(아세트아미노펜)\n\n성상\n\n흰색의 장방형 필름코팅정제\n\n모양\n"
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "who": "trainer",
+ "mode": "a",
+ "passed": 13,
+ "total": 13,
+ "results": {
+  "1 메모·index·summary 전건": true,
+  "1 의료 자문 아님 표시": true,
+  "2 급한 순": true,
+  "2 urgent": true,
+  "3 측정 통계": true,
+  "4 약 목록·찾음·whose·status": true,
+  "4 성분·품목코드 = 따로 가져온 원천": true,
+  "4 못 찾은 약: 확인하지 못함 표시": true,
+  "5 겹치는 성분": true,
+  "6 주의 인용문 ⊂ 상세 원문": true,
+  "7 병원 갈 신호: 원문 인용 또는 정직한 미확인": true,
+  "7 참고: quoted 건수": 0,
+  "8 논문 실재 또는 못 찾음": true,
+  "8 참고: 논문 붙은 건수": 4,
+  "9 진단 단정·용량 변경 권고 낱말 없음": true
+ },
+ "notes": []
+}

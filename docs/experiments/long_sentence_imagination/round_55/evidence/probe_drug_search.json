@@ -1,0 +1,12 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://nedrug.mfds.go.kr/searchDrug?itemName=노바스크정5밀리그램\",max_length:200000}; $i=filter($r.items,($x)=>contains($x.text,\"총 \") or contains($x.text,\"노바스크\") or contains($x.text,\"암로디핀\")); return {n:len($r.items),hit:map($i[:14],($x)=>$x.text[:120])}",
+ "elapsed": 0.491,
+ "success": false,
+ "issues": [
+  {
+   "code": "READONLY",
+   "message": "읽기 전용 바인딩: $i"
+  }
+ ],
+ "value": null
+}

@@ -1,0 +1,19 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://ko.wikipedia.org/wiki/아세트아미노펜\",refresh:true}; return {n:len($r.items),len:len($r.text),sel:$r.content_selection}",
+ "elapsed": 1.146,
+ "success": true,
+ "issues": null,
+ "value": {
+  "n": 280,
+  "len": 11901,
+  "sel": [
+   {
+    "selector": "main, [role=\"main\"]",
+    "regions": 1,
+    "scope": "declared_content",
+    "note": "선택한 본문 영역입니다. HTML 전체는 source_ref에 보존됩니다.",
+    "url": "https://ko.wikipedia.org/wiki/%EC%95%84%EC%84%B8%ED%8A%B8%EC%95%84%EB%AF%B8%EB%85%B8%ED%8E%9C"
+   }
+  ]
+ }
+}

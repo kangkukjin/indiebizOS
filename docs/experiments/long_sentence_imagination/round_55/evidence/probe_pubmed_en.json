@@ -1,0 +1,52 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:paper]{op:\"search\",query:\"acetaminophen hepatotoxicity overdose\",source:\"pubmed\",limit:3}; return $r",
+ "elapsed": 2.241,
+ "success": true,
+ "issues": null,
+ "value": {
+  "success": true,
+  "message": "Title: Paracetamol (acetaminophen) overdose and hepatotoxicity: mechanism, treatment, prevention measures, and estimates of burden of disease.\nAuthors: Chidiac AS, Buckley NA, Noghrehchi F et al.\nJournal: Expert Opin Drug Metab Toxicol\nPublished: 2023 Jan-Jun\nPMID: 37436926\nPMC ID: PMC8837711 (Free full text available - use download_pubmed_pdf)\nURL: https://pubmed.ncbi.nlm.nih.gov/37436926/\n--------------------------------------\nTitle: Acetaminophen (APAP) hepatotoxicity-Isn't it time for APAP to go away?\nAuthors: Lee WM\nJournal: J Hepatol\nPublished: 2017 Dec\nPMID: 28734939\nURL: https://pubmed.ncbi.nlm.nih.gov/28734939/\n--------------------------------------\nTitle: Comparing N-acetylcysteine and 4-methylpyrazole as antidotes for acetaminophen overdose.\nAuthors: Akakpo JY, Ramachandran A, Curry SC et al.\nJournal: Arch Toxicol\nPublished: 2022 Feb\nPMID: 34978586\nURL: https://pubmed.ncbi.nlm.nih.gov/34978586/\n--------------------------------------",
+  "items": [
+   {
+    "title": "Paracetamol (acetaminophen) overdose and hepatotoxicity: mechanism, treatment, prevention measures, and estimates of burden of disease.",
+    "meta": "Chidiac AS, Buckley NA, Noghrehchi F et al. · Expert Opin Drug Metab Toxicol · 2023 Jan-Jun · PMC8837711",
+    "summary": "",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/37436926/",
+    "authors": "Chidiac AS, Buckley NA, Noghrehchi F, Cairns R",
+    "journal": "Expert Opin Drug Metab Toxicol",
+    "pubdate": "2023 Jan-Jun",
+    "year": 2023,
+    "pmid": "37436926",
+    "pmcid": "PMC8837711",
+    "doi": "10.1080/17425255.2023.2223959"
+   },
+   {
+    "title": "Acetaminophen (APAP) hepatotoxicity-Isn't it time for APAP to go away?",
+    "meta": "Lee WM · J Hepatol · 2017 Dec",
+    "summary": "",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/28734939/",
+    "authors": "Lee WM",
+    "journal": "J Hepatol",
+    "pubdate": "2017 Dec",
+    "year": 2017,
+    "pmid": "28734939",
+    "pmcid": null,
+    "doi": "10.1016/j.jhep.2017.07.005"
+   },
+   {
+    "title": "Comparing N-acetylcysteine and 4-methylpyrazole as antidotes for acetaminophen overdose.",
+    "meta": "Akakpo JY, Ramachandran A, Curry SC et al. · Arch Toxicol · 2022 Feb",
+    "summary": "",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34978586/",
+    "authors": "Akakpo JY, Ramachandran A, Curry SC, Rumack BH, Jaeschke H",
+    "journal": "Arch Toxicol",
+    "pubdate": "2022 Feb",
+    "year": 2022,
+    "pmid": "34978586",
+    "pmcid": null,
+    "doi": "10.1007/s00204-021-03211-z"
+   }
+  ],
+  "count": 3
+ }
+}

@@ -1,0 +1,11 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5303\",max_length:1500}; return {title:$r.title,n:len($r.items),text:$r.text}",
+ "elapsed": 13.3,
+ "success": true,
+ "issues": null,
+ "value": {
+  "title": "고혈압 환자의 운동요법 | 국가건강정보포털 | 질병관리청",
+  "n": 14,
+  "text": "주제별\n\n전체\n\n건강문제\n\n치료방법\n\n검사방법\n\n생활습관 관리\n\n신체계통별\n\n뇌신경 정신건강 눈 귀코목 구강 뼈근육 피부 내분비 호흡기 순환기 소화기 면역 비뇨기 생식기\n\n성별\n\n남 여\n\n연령별\n\n영유아 청소년 노인\n\nㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅇ ㅈ ㅊ ㅋ ㅌ ㅍ ㅎ 기타"
+ }
+}

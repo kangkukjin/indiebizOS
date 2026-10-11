@@ -1,6 +1,7 @@
 import os
 from common.currency import bounded_selection
 import time
+import threading
 import json
 import requests
 import feedparser
@@ -43,6 +44,23 @@ def _polite_get(url: str, params: Optional[dict] = None, timeout: int = 20, trie
                 pass
             time.sleep(max(0.0, min(wait, max_wait)))
     return last
+
+
+# NCBI E-utilities 는 열쇠 없이 초당 3회까지다. PubMed 검색 한 번이 세 번 부르므로(esearch·
+# esummary·elink) 검색 둘만 겹쳐도 429 가 났다(긴문장 55회차: 함께 부른 10건 중 7건 실패).
+# 프로세스 전체에서 호출 사이를 띄우고, 그래도 429/5xx 면 _polite_get 이 물러났다 다시 부른다.
+_EUTILS_INTERVAL = 0.34
+_EUTILS_LOCK = threading.Lock()
+_EUTILS_NEXT = [0.0]
+
+
+def _eutils_get(url: str, params=None, timeout: int = 15):
+    with _EUTILS_LOCK:
+        wait = _EUTILS_NEXT[0] - time.monotonic()
+        _EUTILS_NEXT[0] = max(_EUTILS_NEXT[0], time.monotonic()) + _EUTILS_INTERVAL
+    if wait > 0:
+        time.sleep(wait)
+    return _polite_get(url, params=params, timeout=timeout)
 
 
 def _arxiv_get(url: str, timeout: int = 20, tries: int = 3):
@@ -602,7 +620,7 @@ def _search_pubmed(tool_input: dict) -> str:
         search_params.update(datetype="pdat", mindate=f"{lo or 1800}/01/01", maxdate=f"{hi or 3000}/12/31")
 
     try:
-        search_response = requests.get(search_url, params=search_params, timeout=15)
+        search_response = _eutils_get(search_url, params=search_params, timeout=15)
         search_response.raise_for_status()
         search_data = search_response.json()
 
@@ -619,7 +637,7 @@ def _search_pubmed(tool_input: dict) -> str:
             "retmode": "json"
         }
 
-        fetch_response = requests.get(fetch_url, params=fetch_params, timeout=15)
+        fetch_response = _eutils_get(fetch_url, params=fetch_params, timeout=15)
         fetch_response.raise_for_status()
         fetch_data = fetch_response.json()
 
@@ -695,15 +713,12 @@ def _get_pmc_ids(pmid_list: list) -> dict:
         return {}
 
     link_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi"
-    link_params = {
-        "dbfrom": "pubmed",
-        "db": "pmc",
-        "id": ",".join(pmid_list),
-        "retmode": "json"
-    }
+    # id 를 쉼표로 묶으면 원천이 한 묶음(linkset 하나)으로 답해 어느 논문의 PMC 인지 사라진다 —
+    # 첫 PMID 에 남의 번호가 붙었다(55회차 L55-3). id 를 하나씩 보내 논문마다 linkset 을 받는다.
+    link_params = [("dbfrom", "pubmed"), ("db", "pmc"), ("retmode", "json")] + [("id", str(p)) for p in pmid_list]
 
     try:
-        response = requests.get(link_url, params=link_params, timeout=15)
+        response = _eutils_get(link_url, params=link_params, timeout=15)
         response.raise_for_status()
         data = response.json()
 
@@ -715,7 +730,8 @@ def _get_pmc_ids(pmid_list: list) -> dict:
             linksetdbs = linkset.get("linksetdbs", [])
 
             for linksetdb in linksetdbs:
-                if linksetdb.get("dbto") == "pmc":
+                # pubmed_pmc = 이 논문의 전문. pubmed_pmc_refs(이 논문을 인용한 글)는 제 번호가 아니다.
+                if linksetdb.get("dbto") == "pmc" and linksetdb.get("linkname", "pubmed_pmc") == "pubmed_pmc":
                     links = linksetdb.get("links", [])
                     if links:
                         pmc_ids[pmid] = f"PMC{links[0]}"

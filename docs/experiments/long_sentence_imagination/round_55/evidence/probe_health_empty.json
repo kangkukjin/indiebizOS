@@ -1,0 +1,20 @@
+{
+ "code": "#!ibl edition=2\n$r=[self:health]{op:\"query\",query_type:\"혈압\",person:\"훈련55-없는사람\",days:30}; return $r",
+ "elapsed": 0.377,
+ "success": true,
+ "issues": null,
+ "value": {
+  "success": true,
+  "text": "훈련55-없는사람의 최근 30일간 혈압 기록이 없습니다.",
+  "count": 0,
+  "table": {
+   "columns": [
+    "날짜"
+   ],
+   "rows": []
+  },
+  "blocks": [],
+  "points": [],
+  "message": "훈련55-없는사람의 최근 30일간 혈압 기록이 없습니다."
+ }
+}

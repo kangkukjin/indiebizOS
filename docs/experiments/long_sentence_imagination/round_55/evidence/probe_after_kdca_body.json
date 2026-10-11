@@ -1,0 +1,10 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5337\",selector:\"body\"}; return {n:len($r.items),len:len($r.text)}",
+ "elapsed": 0.504,
+ "success": true,
+ "issues": null,
+ "value": {
+  "n": 89,
+  "len": 1584
+ }
+}

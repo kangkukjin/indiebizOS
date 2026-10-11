@@ -1,0 +1,28 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:search]{query:\"국가건강정보포털 흉통 응급실\",source:\"naver\",limit:5}; return map($r.items,($x)=>{t:$x.title,u:$x.url})",
+ "elapsed": 0.783,
+ "success": true,
+ "issues": null,
+ "value": [
+  {
+   "t": "흉통 | 국가건강정보포털",
+   "u": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5337"
+  },
+  {
+   "t": "실신 | 국가건강정보포털",
+   "u": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5853"
+  },
+  {
+   "t": "협심증 | 국가건강정보포털",
+   "u": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=6566"
+  },
+  {
+   "t": "기흉 | 국가건강정보포털",
+   "u": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5493"
+  },
+  {
+   "t": "부정맥 | 국가건강정보포털",
+   "u": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=1102"
+  }
+ ]
+}

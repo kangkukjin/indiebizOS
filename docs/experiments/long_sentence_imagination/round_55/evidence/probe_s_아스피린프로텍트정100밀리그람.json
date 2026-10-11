@@ -1,0 +1,16 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://nedrug.mfds.go.kr/searchEasyDrug?itemName=아스피린프로텍트정100밀리그람\",op:\"links\"}; $h=filter($r.items,($x)=>contains($x.href,\"getItemDetail?itemSeq\") and not contains($x.href,\"itemSeq=20160540\")); return map($h[:8],($x)=>{t:$x.text,h:$x.href[36:]})",
+ "elapsed": 2.256,
+ "success": true,
+ "issues": null,
+ "value": [
+  {
+   "t": "아스피린프로텍트정100밀리그람",
+   "h": "00108429"
+  },
+  {
+   "t": "바이엘코리아(주)",
+   "h": "0161555"
+  }
+ ]
+}

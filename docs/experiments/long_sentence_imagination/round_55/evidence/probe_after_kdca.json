@@ -1,0 +1,28 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5337\",refresh:true,max_length:200000}; $h=filter($r.items,($x)=>contains($x.text,\"응급실\") or contains($x.text,\"119\")); return {n:len($r.items),len:len($r.text),reason:has($r,\"reason\") ? $r.reason : \"(칸 없음)\",sel:$r.content_selection,hits:len($h),head:map($h[:2],($x)=>$x.text[:200])}",
+ "elapsed": 1.416,
+ "success": true,
+ "issues": null,
+ "value": {
+  "n": 156,
+  "len": 7804,
+  "reason": "(칸 없음)",
+  "sel": [
+   {
+    "selector": "body",
+    "regions": 1,
+    "scope": "body_fallback",
+    "note": "본문 선언 영역에 글이 거의 없어(메뉴·검색 틀) 더 넓은 영역을 읽었습니다. HTML 전체는 source_ref에 보존됩니다.",
+    "skipped_thin": [
+     "article, [itemprop=\"articleBody\"]"
+    ],
+    "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5337"
+   }
+  ],
+  "hits": 2,
+  "head": [
+   "이런 흉통이 매우 갑작스럽게 생기고 통증의 정도가 쪼그려 앉아야 하고 식은땀이 날 정도로 심각하다면 바로 주위의 도움을 요청하고 119를 불러야 합니다. 심근경색증, 폐색전증, 대동맥박리와 같이 생명과 직결되는 질병일 수 있으므로 빨리 응급실로 가야 하고, 매우 서둘러서 원인을 밝히고 치료를 시작해야 합니다.",
+   "간혹 심각한 흉통이 있다가 사라지는 경우도 있는데 이런 경우에도 빨리 큰 병원 응급실을 가야 합니다. 대동맥박리의 경우 증상이 사라졌다가 다시 올 때는 사망에 이르게 할 정도로 심각한 문제이기 때문입니다. 흉통이 지속되는 경우 의사의 상담과 진찰이 꼭 필요하고, 일상적인 활동이 어려울 정도로 심각하게 느껴지는 흉통인 경우에는 단 몇 분 증상이 있더라도 빨리"
+  ]
+ }
+}

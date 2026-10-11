@@ -1,0 +1,14 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5303\",selector:\"body\",max_length:200000}; $h=filter($r.items,($x)=>contains($x.text,\"응급\") or contains($x.text,\"병원\")); return {n:len($r.items),len:len($r.text),reason:has($r,\"reason\") ? $r.reason : \"(칸 없음)\",hits:len($h),head:map($h[:5],($x)=>$x.text[:160]),mid:$r.text[1500:2100]}",
+ "elapsed": 0.784,
+ "success": true,
+ "issues": null,
+ "value": {
+  "n": 13,
+  "len": 152,
+  "reason": "(칸 없음)",
+  "hits": 0,
+  "head": [],
+  "mid": ""
+ }
+}

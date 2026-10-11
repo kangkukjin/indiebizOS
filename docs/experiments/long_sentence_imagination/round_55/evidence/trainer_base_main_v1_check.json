@@ -1,0 +1,25 @@
+{
+ "label": "trainer_base_main_v1_check",
+ "task_id": "r55-trainer-base-1791719365",
+ "reuse_request": null,
+ "budget_request": {
+  "steps": 2000000,
+  "rows": 50000
+ },
+ "elapsed": 0.77,
+ "success": null,
+ "status": "incomplete",
+ "issues": [],
+ "error": null,
+ "value": null,
+ "usage": {
+  "steps": null,
+  "rows": null,
+  "elapsed_ms": null,
+  "model": null,
+  "limits": null
+ },
+ "reuse": null,
+ "continuation": null,
+ "warnings": []
+}

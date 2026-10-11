@@ -152,13 +152,19 @@ def _diagnose(status: int, final_url: str, requested_url: str, text: str,
     return None
 
 
-def _parse_html(html: str, url: str) -> tuple[str, str]:
-    """HTML에서 제목과 본문 텍스트를 추출한다."""
+def _parse_html(html: str, url: str, *, narrow: bool = True) -> tuple[str, str]:
+    """HTML에서 제목과 본문 텍스트를 추출한다. narrow=False 는 호출자가 이미 고른 영역
+    (selector) — UI 잡음만 걷고 그 안의 선언 영역으로 다시 좁히지 않는다."""
     soup = BeautifulSoup(html, 'html.parser')
     title = soup.title.string.strip() if soup.title and soup.title.string else ""
 
     # Text and optional image reading use the same declared body regions.
-    container = load_sibling(__file__, "webcrawl_body").reading_container(soup)
+    body_regions = load_sibling(__file__, "webcrawl_body")
+    if narrow:
+        container = body_regions.reading_container(soup)
+    else:
+        body_regions.clean(soup)
+        container = soup
     block_tags = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote',
                   'pre', 'td', 'th', 'dt', 'dd', 'div', 'section', 'article',
                   'main', 'ul', 'ol', 'dl', 'table', 'tr', 'figure', 'figcaption',

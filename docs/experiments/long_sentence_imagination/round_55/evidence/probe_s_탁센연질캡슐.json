@@ -1,0 +1,16 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://nedrug.mfds.go.kr/searchEasyDrug?itemName=탁센연질캡슐\",op:\"links\"}; $h=filter($r.items,($x)=>contains($x.href,\"getItemDetail?itemSeq\") and not contains($x.href,\"itemSeq=20160540\")); return map($h[:8],($x)=>{t:$x.text,h:$x.href[36:]})",
+ "elapsed": 2.853,
+ "success": true,
+ "issues": null,
+ "value": [
+  {
+   "t": "탁센연질캡슐(나프록센)",
+   "h": "00710782"
+  },
+  {
+   "t": "(주)녹십자",
+   "h": "9910005"
+  }
+ ]
+}

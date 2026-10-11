@@ -1,0 +1,16 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://nedrug.mfds.go.kr/searchEasyDrug?itemName=지르텍정\",op:\"links\"}; $h=filter($r.items,($x)=>contains($x.href,\"getItemDetail?itemSeq\") and not contains($x.href,\"itemSeq=20160540\")); return map($h[:8],($x)=>{t:$x.text,h:$x.href[36:]})",
+ "elapsed": 3.415,
+ "success": true,
+ "issues": null,
+ "value": [
+  {
+   "t": "지르텍정(세티리진염산염)",
+   "h": "00610765"
+  },
+  {
+   "t": "한국유씨비제약(주)",
+   "h": "0161509"
+  }
+ ]
+}

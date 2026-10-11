@@ -1,0 +1,38 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:search]{query:\"site:health.kdca.go.kr 고혈압 응급 증상\",source:\"naver\",limit:5}; return $r.items",
+ "elapsed": 0.753,
+ "success": true,
+ "issues": null,
+ "value": [
+  {
+   "title": "고혈압 환자의 운동요법 | 국가건강정보포털",
+   "meta": "",
+   "summary": "• 고혈압은 수축기 혈압이 140 mmHg 이상이거나 이완기 혈압이 90 mmHg 이상일 때를 말하며, 성인의 약 30%가... 병원에서는 운동부하심전도 검사를 시행하면서 운동에 따른 증상이나 심박수의 변화를 볼 수 있어...",
+   "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5303"
+  },
+  {
+   "title": "질병관리청",
+   "meta": "",
+   "summary": "질병관리청 공식 홈페이지, 감염병·건강정보, 정책정보, 연구개발 및 간행물·통계 정보를 제공합니다.",
+   "url": "https://www.kdca.go.kr/"
+  },
+  {
+   "title": "비만 | 국가건강정보포털",
+   "meta": "",
+   "summary": "• 비만은 2형 당뇨병, 고혈압, 이상지질혈증, 암, 심뇌혈관 질환... 건강에 미치는 영향 · 비만은 당뇨병, 고혈압, 이상지질혈증... 3) 고혈압 비만 단계가 진행될수록 정상 체중인 사람에 비해 고혈압 발생...",
+   "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=6694"
+  },
+  {
+   "title": "| 국가건강정보포털 | 질병관리청",
+   "meta": "",
+   "summary": "포털 소개, 건강정보, 의료기관 찾기, 건강통계, 알림정보 등 제공.",
+   "url": "https://health.kdca.go.kr/"
+  },
+  {
+   "title": "국립보건연구원",
+   "meta": "",
+   "summary": "감염병, 만성병, 유전체 등 질병관리연구, 실험실 감시∙조사, 보건의료 관련 연구 인프라 및 정보 제공.",
+   "url": "https://nih.go.kr/"
+  }
+ ]
+}

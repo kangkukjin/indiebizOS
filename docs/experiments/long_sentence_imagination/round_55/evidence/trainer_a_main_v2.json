@@ -1,0 +1,194 @@
+{
+ "label": "trainer_a_main_v2",
+ "task_id": "r55-trainer-a-1791719744",
+ "reuse_request": null,
+ "budget_request": {
+  "steps": 2000000,
+  "rows": 50000
+ },
+ "elapsed": 74.54,
+ "success": true,
+ "status": null,
+ "issues": [],
+ "error": null,
+ "value": {
+  "cases": 4,
+  "meas": 242,
+  "valid": 142,
+  "invalid": 100,
+  "order": [
+   {
+    "id": "K02",
+    "urgent": true,
+    "over": 14,
+    "dup": [],
+    "symptom": "호흡곤란",
+    "portal": "unverified",
+    "pmids": [
+     "33965157"
+    ]
+   },
+   {
+    "id": "K04",
+    "urgent": false,
+    "over": 47,
+    "dup": [
+     "아세트아미노펜"
+    ],
+    "symptom": "발열",
+    "portal": "unverified",
+    "pmids": [
+     "32460369",
+     "23290291"
+    ]
+   },
+   {
+    "id": "K01",
+    "urgent": false,
+    "over": 0,
+    "dup": [],
+    "symptom": "재채기",
+    "portal": "unverified",
+    "pmids": [
+     "24269033"
+    ]
+   },
+   {
+    "id": "K03",
+    "urgent": false,
+    "over": 0,
+    "dup": [],
+    "symptom": "혈압",
+    "portal": "unverified",
+    "pmids": [
+     "41532177",
+     "36114104"
+    ]
+   }
+  ],
+  "drugs": [
+   {
+    "name": "지르텍정",
+    "found": true,
+    "seq": "200610765",
+    "ings": [
+     "세티리진염산염"
+    ],
+    "warn": 2,
+    "from": "사용상 주의사항"
+   },
+   {
+    "name": "달빛고요캡슐",
+    "found": false,
+    "seq": "",
+    "ings": [],
+    "warn": 0,
+    "from": ""
+   },
+   {
+    "name": "탁센연질캡슐",
+    "found": true,
+    "seq": "200710782",
+    "ings": [
+     "나프록센"
+    ],
+    "warn": 2,
+    "from": "사용 전에 반드시 알아야 할 내용"
+   },
+   {
+    "name": "어린이타이레놀현탁액",
+    "found": true,
+    "seq": "202200525",
+    "ings": [
+     "아세트아미노펜"
+    ],
+    "warn": 3,
+    "from": "사용 전에 반드시 알아야 할 내용"
+   },
+   {
+    "name": "판콜에스내복액",
+    "found": true,
+    "seq": "198900672",
+    "ings": [
+     "아세트아미노펜",
+     "dl-메틸에페드린염산염",
+     "클로르페니라민말레산염",
+     "카페인무수물",
+     "구아이페네신"
+    ],
+    "warn": 3,
+    "from": "사용 전에 반드시 알아야 할 내용"
+   }
+  ],
+  "written": 4,
+  "summary_reread": true
+ },
+ "usage": {
+  "steps": 114730,
+  "rows": 279,
+  "elapsed_ms": 74041,
+  "model": {
+   "requests": 1,
+   "measured_requests": 1,
+   "unmeasured_requests": 0,
+   "input": 6538,
+   "output": 2824,
+   "cache_read": 2990,
+   "cache_create": 3546,
+   "reasoning": 1087,
+   "calls": [
+    {
+     "call_id": "e25fa320b217484fba1880866d865a65",
+     "parent_call_id": null,
+     "role": "oneshot:execution",
+     "phase": "execution",
+     "provider": "ClaudeCode",
+     "model": "opus",
+     "round_index": 1,
+     "tier": "고급",
+     "source": "gear:최대|실행→고급",
+     "measured": true,
+     "elapsed_ms": 26722,
+     "input": 6538,
+     "output": 2824,
+     "cache_read": 2990,
+     "cache_create": 3546,
+     "reasoning": 1087
+    }
+   ]
+  },
+  "limits": {
+   "steps": 2000000,
+   "rows": 50000
+  }
+ },
+ "reuse": null,
+ "continuation": {
+  "reuse_args": {
+   "reuse": {
+    "run_id": "de99ec245d704c49b2f88dbb85ca0179"
+   }
+  },
+  "read_calls": 24,
+  "model_calls": 1,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "overlapping_write",
+    "write_call_id": "4c3dd57ad41479cf2b8db7dbdec5b7c4d269581b24faa96ef65c58fdde247eac",
+    "action": "self:mkdir",
+    "location": {
+     "source_hash": "c0b8f71cd8a8cd58bd121d9fcdc8707c89cc3b8e880aed4c809c4ba84975f24a",
+     "start": 14335,
+     "end": 14369,
+     "line": 241,
+     "column": 1
+    },
+    "excluded_calls": 9
+   }
+  ],
+  "read_exclusions_total": 1,
+  "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+ },
+ "warnings": null
+}

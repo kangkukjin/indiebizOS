@@ -1,0 +1,27 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5303\"}; return {method:$r.method,reason:$r.reason,note:$r.note,sel:$r.content_selection,status:$r.http_status,tr:$r.truncated,cache:$r.cache}",
+ "elapsed": 11.564,
+ "success": true,
+ "issues": null,
+ "value": {
+  "method": "curl_cffi",
+  "reason": "insufficient_content",
+  "note": "본문이 짧거나 완전하지 않을 수 있습니다 (JS 렌더링/iframe 폴백이 더 나은 결과를 얻지 못함).",
+  "sel": [
+   {
+    "selector": "article, [itemprop=\"articleBody\"]",
+    "regions": 1,
+    "scope": "declared_content",
+    "note": "선택한 본문 영역입니다. HTML 전체는 source_ref에 보존됩니다.",
+    "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5303"
+   }
+  ],
+  "status": 200,
+  "tr": false,
+  "cache": {
+   "hit": false,
+   "fetched_at": "2026-10-11T11:43:19.604326+00:00",
+   "reuse_until": "2026-10-11T11:58:19.604326+00:00"
+  }
+ }
+}

@@ -1,0 +1,302 @@
+{
+ "label": "trainer_base_main_v1",
+ "task_id": "r55-trainer-base-1791719370",
+ "reuse_request": null,
+ "budget_request": {
+  "steps": 2000000,
+  "rows": 50000
+ },
+ "elapsed": 130.28,
+ "success": true,
+ "status": null,
+ "issues": [],
+ "error": null,
+ "value": {
+  "cases": 10,
+  "meas": 778,
+  "valid": 755,
+  "invalid": 23,
+  "order": [
+   {
+    "id": "H04",
+    "urgent": true,
+    "over": 56,
+    "dup": [],
+    "symptom": "흉통",
+    "portal": "unverified",
+    "pmids": []
+   },
+   {
+    "id": "H08",
+    "urgent": true,
+    "over": 52,
+    "dup": [],
+    "symptom": "마비",
+    "portal": "unverified",
+    "pmids": []
+   },
+   {
+    "id": "H02",
+    "urgent": false,
+    "over": 40,
+    "dup": [],
+    "symptom": "고혈압",
+    "portal": "unverified",
+    "pmids": [
+     "30525279",
+     "17921832"
+    ]
+   },
+   {
+    "id": "H09",
+    "urgent": false,
+    "over": 40,
+    "dup": [],
+    "symptom": "고혈당",
+    "portal": "unverified",
+    "pmids": []
+   },
+   {
+    "id": "H01",
+    "urgent": false,
+    "over": 23,
+    "dup": [
+     "아세트아미노펜"
+    ],
+    "symptom": "발열",
+    "portal": "unverified",
+    "pmids": []
+   },
+   {
+    "id": "H03",
+    "urgent": false,
+    "over": 13,
+    "dup": [],
+    "symptom": "고혈당",
+    "portal": "unverified",
+    "pmids": []
+   },
+   {
+    "id": "H07",
+    "urgent": false,
+    "over": 11,
+    "dup": [
+     "아세트아미노펜",
+     "카페인무수물"
+    ],
+    "symptom": "감기",
+    "portal": "unverified",
+    "pmids": []
+   },
+   {
+    "id": "H05",
+    "urgent": false,
+    "over": 1,
+    "dup": [],
+    "symptom": "기침",
+    "portal": "unverified",
+    "pmids": [
+     "35060618",
+     "14726904"
+    ]
+   },
+   {
+    "id": "H06",
+    "urgent": false,
+    "over": 0,
+    "dup": [],
+    "symptom": "두통",
+    "portal": "unverified",
+    "pmids": []
+   },
+   {
+    "id": "H10",
+    "urgent": false,
+    "over": 0,
+    "dup": [],
+    "symptom": "관절통",
+    "portal": "unverified",
+    "pmids": [
+     "22146217"
+    ]
+   }
+  ],
+  "drugs": [
+   {
+    "name": "타이레놀정500밀리그람",
+    "found": true,
+    "seq": "202106092",
+    "ings": [
+     "아세트아미노펜"
+    ],
+    "warn": 3,
+    "from": "사용 전에 반드시 알아야 할 내용"
+   },
+   {
+    "name": "타이레놀콜드-에스정",
+    "found": true,
+    "seq": "202106954",
+    "ings": [
+     "아세트아미노펜",
+     "슈도에페드린염산염",
+     "덱스트로메토르판브롬화수소산염",
+     "클로르페니라민말레산염"
+    ],
+    "warn": 4,
+    "from": "사용 전에 반드시 알아야 할 내용"
+   },
+   {
+    "name": "노바스크정5밀리그램",
+    "found": false,
+    "seq": "",
+    "ings": [],
+    "warn": 0,
+    "from": ""
+   },
+   {
+    "name": "지르텍정",
+    "found": true,
+    "seq": "200610765",
+    "ings": [
+     "세티리진염산염"
+    ],
+    "warn": 2,
+    "from": "사용상 주의사항"
+   },
+   {
+    "name": "이지엔6애니연질캡슐",
+    "found": true,
+    "seq": "200400463",
+    "ings": [
+     "이부프로펜"
+    ],
+    "warn": 3,
+    "from": "사용 전에 반드시 알아야 할 내용"
+   },
+   {
+    "name": "탁센연질캡슐",
+    "found": true,
+    "seq": "200710782",
+    "ings": [
+     "나프록센"
+    ],
+    "warn": 2,
+    "from": "사용 전에 반드시 알아야 할 내용"
+   },
+   {
+    "name": "하늘맑음정",
+    "found": false,
+    "seq": "",
+    "ings": [],
+    "warn": 0,
+    "from": ""
+   },
+   {
+    "name": "판콜에스내복액",
+    "found": true,
+    "seq": "198900672",
+    "ings": [
+     "아세트아미노펜",
+     "dl-메틸에페드린염산염",
+     "클로르페니라민말레산염",
+     "카페인무수물",
+     "구아이페네신"
+    ],
+    "warn": 3,
+    "from": "사용 전에 반드시 알아야 할 내용"
+   },
+   {
+    "name": "게보린정",
+    "found": true,
+    "seq": "197900277",
+    "ings": [
+     "아세트아미노펜",
+     "카페인무수물",
+     "이소프로필안티피린"
+    ],
+    "warn": 2,
+    "from": "사용 전에 반드시 알아야 할 내용"
+   },
+   {
+    "name": "아스피린프로텍트정100밀리그람",
+    "found": true,
+    "seq": "200108429",
+    "ings": [
+     "아스피린"
+    ],
+    "warn": 5,
+    "from": "사용상 주의사항"
+   }
+  ],
+  "written": 10,
+  "summary_reread": true
+ },
+ "usage": {
+  "steps": 314345,
+  "rows": 868,
+  "elapsed_ms": 129249,
+  "model": {
+   "requests": 1,
+   "measured_requests": 1,
+   "unmeasured_requests": 0,
+   "input": 7821,
+   "output": 6660,
+   "cache_read": 544,
+   "cache_create": 7275,
+   "reasoning": 1935,
+   "calls": [
+    {
+     "call_id": "5ff4bdecee15488f8249dc5227ae0856",
+     "parent_call_id": null,
+     "role": "oneshot:execution",
+     "phase": "execution",
+     "provider": "ClaudeCode",
+     "model": "opus",
+     "round_index": 1,
+     "tier": "고급",
+     "source": "gear:최대|실행→고급",
+     "measured": true,
+     "elapsed_ms": 54478,
+     "input": 7821,
+     "output": 6660,
+     "cache_read": 544,
+     "cache_create": 7275,
+     "reasoning": 1935
+    }
+   ]
+  },
+  "limits": {
+   "steps": 2000000,
+   "rows": 50000
+  }
+ },
+ "reuse": null,
+ "continuation": {
+  "reuse_args": {
+   "reuse": {
+    "run_id": "1d88edc7a4644347ba8b60122c5b0aea"
+   }
+  },
+  "read_calls": 48,
+  "model_calls": 1,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "overlapping_write",
+    "write_call_id": "a171c2f453f22deae85b05885f6330ead5f280ad916707b46a86bb8573c5fb8f",
+    "action": "self:mkdir",
+    "location": {
+     "source_hash": "a880db9df2337df662ccaaf835323eadd13be7c87573475f47ec0e80161daa49",
+     "start": 14275,
+     "end": 14309,
+     "line": 241,
+     "column": 1
+    },
+    "excluded_calls": 20
+   }
+  ],
+  "read_exclusions_total": 1,
+  "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+ },
+ "warnings": null
+}

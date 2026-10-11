@@ -1,0 +1,11 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://www.health.kr/searchDrug/search_total_result.asp?search_word=타이레놀\",max_length:2000}; return {title:$r.title,n:len($r.items),text:$r.text}",
+ "elapsed": 10.802,
+ "success": true,
+ "issues": null,
+ "value": {
+  "title": "약학정보원",
+  "n": 98,
+  "text": "통합검색 : 타이레놀 (으)로 검색한 결과입니다.\n\n검색결과 리스트 ( 7개 )\n\n검색 결과가 없습니다.\n\n식별/포장\n\n제품명\n\n성분/함량\n\n효능\n\n회사명\n\n제형\n\n구분\n\n약가\n\n공급유무\n\n건강보험심사평가원의 \"의약품 분기별 공급내역 정보\" 자료를 기준으로 최근 1년 이내 공급의 유무를 뜻합니다. 자료의 수집과 게시일 간의 시차로 인해 실제 생산·수입 실적이 반영되지 못할 수 있습니다. 정확한 생산·수입 정보는 제약사에 문의하시기 바랍니다.\n\n어린이타이레놀산160mg\n\nAcetaminophen Granule 177.778mg\n\n효능 / 효과\n\n1. 주효능·효과\n\n감기로 인한 발열 및 동통(통증), 두통, 신경통, 근육통, 월경통, 염좌통(삔 통증)\n\n2. 다음 질환에도 사용할 수 있다.\n\n치통, 관절통, 류마티양 동통(통증)\n\n한국존슨앤드존슨판매\n\n산제\n\n일반\n\nO\n\n타이레놀정500mg\n\nAcetaminophen 500mg\n\n효능 / 효과\n\n1. 주효능·효과\n\n감기로 인한 발열 및 동통(통증), 두통, 신경통, 근육통, 월경통, 염좌통(삔 통증)\n\n2. 다음 질환에도 사용할 수 있다.\n\n치통, 관절통, 류마티양 동통(통증)\n\n한국존슨앤드존슨판매\n\n정제\n\n일반\n\nO\n\n타이레놀콜드에스정\n\nAcetaminophen 325mg 외 3\n\n성분 / 함량\n\nDextromethorphan Hydrobromide Hydrate 15mg\n\nPseudoephedrine Hydrochloride 30mg\n\nAcetaminophen 325mg\n\nChlorpheniramine Maleate 2mg\n\n효능 / 효과\n\n감기의 제증상(여러 증상)(콧물, 코막힘, 재채기, 인후(목구멍)통, 기침, 오한(춥고 떨리는 증상), 발열, 두통, 관절통, 근육통)의 완화\n\n한국존슨앤드존슨판매\n\n정제\n\n일반\n\nO\n\n타이레놀8시간이알서방정\n\nAcetaminophen 325mg 외 1\n\n성분 / 함량\n\n1정 중 - 속방층\n\nAcetaminophen 325mg\n\n1정 중 - 서방층\n\nAcetaminophen 325mg\n\n효능 / 효과\n\n해열 및 감기에 의한 동통(통증)과 두통, 치통, 근육통, 허리동통(통증), 생리통, 관절통의 완화\n\n한국존슨앤드존슨판매\n\n서방정\n\n일반\n\n70원/1정\n\nO\n\n어린이타이레놀현탁액\n\nAcetaminophen (Micronized) 3.2g/100mL\n\n효능 / 효과\n\n1. 주효능·효과\n\n감기로 인한 발열 및 동통(통증), 두통, 신경통, 근육통, 월경통, 염좌통(삔 통증)\n\n2. 다음 질환에도 사용할 수 있다.\n\n치통, 관절통, 류마티양 동통(통증)\n\n한국존슨앤드존슨판매\n\n현탁액\n\n일반\n\n28원/500(1)mL/병\n\nO\n\n우먼스타이레놀정\n\nAcetaminophen 500mg 외 1\n\n성분 / 함량\n\nAcetaminophen 500mg\n\nPamabrom 25mg\n\n효능 / 효과\n\n월경전 여러 증상의 완화 : 월경 전 긴장증, 부종(부기), 경련, 요통 및 두통\n\n한국존슨앤드존슨판매\n\n정제\n\n일반\n\nO\n\n타이레놀산500mg\n\nAcetaminophen Granule 555.556mg\n\n효능 / 효과\n\n1. 주효능·효과\n\n감기로 인한 발열 및 동통(통증), 두통, 신경통, 근육통, 월경통, 염좌통(삔 통증)\n\n2. 다음 질환에도 사용할 수 있다.\n\n치통, 관절통, 류마티양 동통(통증)\n\n한국존슨앤드존슨판매\n\n산제\n\n일반\n\nO\n\n검색결과 더보기"
+ }
+}

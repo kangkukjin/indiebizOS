@@ -1,0 +1,14 @@
+{
+ "code": "#!ibl edition=2\n$r=[self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_55회차/trainer/base/input/measurements.csv\"}; return {keys:keys($r),head:has($r,\"items\") ? $r.items[:2] : null}",
+ "elapsed": 0.557,
+ "success": true,
+ "issues": null,
+ "value": {
+  "keys": [
+   "text",
+   "blocks",
+   "data"
+  ],
+  "head": null
+ }
+}

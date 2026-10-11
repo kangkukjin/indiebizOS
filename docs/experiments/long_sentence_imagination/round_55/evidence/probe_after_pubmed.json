@@ -1,0 +1,116 @@
+{
+ "code": "#!ibl edition=2\n$q=[\"acetaminophen hepatotoxicity overdose\",\"hypertension morning surge\",\"cetirizine allergic rhinitis\",\"ibuprofen naproxen cardiovascular\",\"common cold cough adults\",\"tension headache caffeine\"]; $r=$q >> [table:each]{parallel:3} { [try]{ $s=[sense:paper]{op:\"search\",query:$it,source:\"pubmed\",limit:3}; return {q:$it,n:len($s.items),pm:map($s.items,($x)=>[$x.pmid,$x.pmcid])} } [catch]{ return {q:$it,n:-1,pm:[[$error.message[:80],null]]} } }; return $r",
+ "elapsed": 11.301,
+ "success": true,
+ "issues": null,
+ "value": [
+  {
+   "q": "acetaminophen hepatotoxicity overdose",
+   "n": 3,
+   "pm": [
+    [
+     "37436926",
+     null
+    ],
+    [
+     "28734939",
+     "PMC5696016"
+    ],
+    [
+     "34978586",
+     "PMC8837711"
+    ]
+   ]
+  },
+  {
+   "q": "hypertension morning surge",
+   "n": 3,
+   "pm": [
+    [
+     "36893831",
+     null
+    ],
+    [
+     "14871036",
+     null
+    ],
+    [
+     "25167741",
+     null
+    ]
+   ]
+  },
+  {
+   "q": "cetirizine allergic rhinitis",
+   "n": 3,
+   "pm": [
+    [
+     "38470381",
+     null
+    ],
+    [
+     "8353659",
+     null
+    ],
+    [
+     "35462555",
+     "PMC9036742"
+    ]
+   ]
+  },
+  {
+   "q": "ibuprofen naproxen cardiovascular",
+   "n": 3,
+   "pm": [
+    [
+     "21224324",
+     "PMC3019238"
+    ],
+    [
+     "27959716",
+     null
+    ],
+    [
+     "35234840",
+     null
+    ]
+   ]
+  },
+  {
+   "q": "common cold cough adults",
+   "n": 3,
+   "pm": [
+    [
+     "31478634",
+     null
+    ],
+    [
+     "31515408",
+     "PMC6942543"
+    ],
+    [
+     "22962927",
+     null
+    ]
+   ]
+  },
+  {
+   "q": "tension headache caffeine",
+   "n": 3,
+   "pm": [
+    [
+     "33974014",
+     null
+    ],
+    [
+     "22868544",
+     null
+    ],
+    [
+     "34449436",
+     null
+    ]
+   ]
+  }
+ ]
+}

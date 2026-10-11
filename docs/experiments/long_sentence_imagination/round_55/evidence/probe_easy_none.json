@@ -1,0 +1,30 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://nedrug.mfds.go.kr/searchEasyDrug?itemName=하늘맑음정\",max_length:3000}; $p=filter($r.items,($x)=>contains($x.text,\"총 \") or contains($x.text,\"없습니다\")); return {n:len($r.items),p:$p,keys:$r.items[0]}",
+ "elapsed": 1.667,
+ "success": true,
+ "issues": null,
+ "value": {
+  "n": 35,
+  "p": [
+   {
+    "type": "paragraph",
+    "text": "총 0 건",
+    "url": "https://nedrug.mfds.go.kr/searchEasyDrug?itemName=%ED%95%98%EB%8A%98%EB%A7%91%EC%9D%8C%EC%A0%95",
+    "paragraph_index": 25
+   },
+   {
+    "type": "paragraph",
+    "text": "조회 결과가 없습니다.",
+    "url": "https://nedrug.mfds.go.kr/searchEasyDrug?itemName=%ED%95%98%EB%8A%98%EB%A7%91%EC%9D%8C%EC%A0%95",
+    "paragraph_index": 35
+   }
+  ],
+  "keys": {
+   "type": "heading",
+   "level": 1,
+   "text": "의약품안전나라   >   의약품등 정보  >  의약품 및 화장품 품목정보  >  e약은요정보 검색",
+   "url": "https://nedrug.mfds.go.kr/searchEasyDrug?itemName=%ED%95%98%EB%8A%98%EB%A7%91%EC%9D%8C%EC%A0%95",
+   "paragraph_index": 1
+  }
+ }
+}

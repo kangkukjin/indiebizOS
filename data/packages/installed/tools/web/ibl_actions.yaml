@@ -80,7 +80,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-10-08", impl: "c3827f972b68c197"}  # 재감사: 브라우저 본문 선택·프레임 실패/캐시 수리. member_web 공개 IP·읽기 한도·쿠키/주인 경로 비사용 경계 불변.
+        path_audited: {at: "2026-10-11", impl: "0c16fdaa34fc30a6"}  # 재감사: 받은 HTML 의 본문 영역 고르기만 바뀜(얇은 선언 건너뜀·글 품은 form 유지·selector 재좁힘 제거, 긴문장 55회차). 요청 경로는 그대로 — member_web 공개 IP·읽기 한도·쿠키/주인 경로 비사용 경계 불변.
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -165,7 +165,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-10-08", impl: "c3827f972b68c197"}  # 재감사: 브라우저 본문 선택·프레임 실패/캐시 수리. member_web 공개 IP·읽기 한도·쿠키/주인 경로 비사용 경계 불변.
+        path_audited: {at: "2026-10-11", impl: "0c16fdaa34fc30a6"}  # 재감사: 받은 HTML 의 본문 영역 고르기만 바뀜(얇은 선언 건너뜀·글 품은 form 유지·selector 재좁힘 제거, 긴문장 55회차). 요청 경로는 그대로 — member_web 공개 IP·읽기 한도·쿠키/주인 경로 비사용 경계 불변.
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'

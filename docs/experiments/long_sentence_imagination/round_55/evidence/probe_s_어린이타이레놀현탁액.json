@@ -1,0 +1,10 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://nedrug.mfds.go.kr/searchEasyDrug?itemName=어린이타이레놀현탁액\",op:\"links\"}; $h=filter($r.items,($x)=>contains($x.href,\"getItemDetail?itemSeq\")); return map($h[:8],($x)=>$x.text)",
+ "elapsed": 2.237,
+ "success": true,
+ "issues": null,
+ "value": [
+  "어린이타이레놀현탁액(아세트아미노펜)",
+  "켄뷰코리아판매유한회사"
+ ]
+}

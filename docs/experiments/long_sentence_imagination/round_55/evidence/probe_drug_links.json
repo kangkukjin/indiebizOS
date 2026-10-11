@@ -1,0 +1,7 @@
+{
+ "code": "#!ibl edition=2\n$r=[sense:crawl]{url:\"https://nedrug.mfds.go.kr/searchDrug?itemName=노바스크정5밀리그램\",op:\"links\"}; $h=filter($r.items,($x)=>contains($x.href,\"getItemDetail?itemSeq\")); return map($h[:6],($x)=>{t:$x.text,h:$x.href})",
+ "elapsed": 2.909,
+ "success": true,
+ "issues": null,
+ "value": []
+}

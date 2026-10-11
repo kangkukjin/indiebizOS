@@ -5,12 +5,12 @@
  *   1) 자체 금고  — origin(host)별 {username, password} 를 OS 키체인(safeStorage)으로 암호화 저장.
  *   2) 크롬 임포트 — macOS 크롬의 Login Data(SQLite)를 읽어 키체인 키로 복호화 후 금고로 흡수.
  *
- * ★설계: 비밀번호 평문은 *절대 HTTP/백엔드로 나가지 않는다*. main↔renderer IPC 안에서만 흐른다.
+ * ★설계: 비밀번호 평문은 *절대 HTTP/백엔드로 나가지 않는다*. 저장은 UI→main, 채움은 main→검증된 로그인 프레임으로 흐른다.
  *   - 저장: safeStorage.encryptString (macOS Keychain 백엔드). 평문 파일 없음.
- *   - 채움: renderer 가 fill 시점에만 평문을 받아 <webview> DOM 에 주입(executeJavaScript).
+ *   - 채움: main이 검증한 웹 프레임에 직접 채움. renderer/에이전트로 비밀번호를 반환하지 않음.
  *   - 크롬 복호화: Node crypto(AES-128-CBC) + node:sqlite. 외부 의존성 0.
  *
- * 자동채움 UX 는 augmentation-over-autonomy — 채우기만 하고 자동 제출(로그인)은 절대 안 한다.
+ * 수동 자동채움은 제출하지 않는다. 작업의 명시적 auth login + submit_ref는 로그인까지 진행한다.
  */
 import { app, safeStorage } from 'electron';
 import fs from 'fs';
@@ -59,11 +59,17 @@ function hostOf(urlOrHost) {
   }
 }
 
+function sameOrigin(stored, requested) {
+  try { const a = new URL(stored); const b = new URL(requested);
+    return a.protocol === 'https:' && a.origin === b.origin;
+  } catch { return false; }
+}
+
 // 현재 host 에 저장된 계정 목록 (비밀번호 없이 username 만 — 메뉴 표시용)
 export function listForHost(urlOrHost) {
   const host = hostOf(urlOrHost);
   return loadVault()
-    .filter((e) => e.host === host)
+    .filter((e) => e.host === host && sameOrigin(e.origin, urlOrHost))
     .map((e) => ({ username: e.username }));
 }
 
@@ -71,7 +77,7 @@ export function listForHost(urlOrHost) {
 export function getCredential(urlOrHost, username) {
   const host = hostOf(urlOrHost);
   const match = loadVault().find(
-    (e) => e.host === host && (username == null || e.username === username)
+    (e) => e.host === host && sameOrigin(e.origin, urlOrHost) && (username == null || e.username === username)
   );
   if (!match) return null;
   return { username: match.username, password: decPw(match.enc) };

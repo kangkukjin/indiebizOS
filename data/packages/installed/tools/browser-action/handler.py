@@ -1,6 +1,6 @@
 """
 browser-action 패키지 핸들러
-Playwright + Chrome MCP 듀얼 드라이버 브라우저 자동화 도구
+내장 Electron + Playwright + Chrome MCP 드라이버 브라우저 자동화 도구
 
 Version: 6.0.0
 """
@@ -68,6 +68,7 @@ _CHROME_PROJECT_TOOLS = {"browser_navigate", "browser_screenshot", "browser_save
 
 # 도구 이름 → (모듈명, 함수명, project_path 필요 여부) — Playwright용
 _TOOL_ROUTING = {
+    "browser_auth": ("browser_embedded", "browser_auth", False),
     # 네비게이션
     "browser_navigate":         ("browser_navigate", "browser_navigate", True),
     "browser_navigate_back":    ("browser_navigate", "browser_navigate_back", False),
@@ -164,6 +165,7 @@ _OP_DISPATCHERS = {
     # op = 26개 동작. 단순 동작 → 내부 도구, 복합 동작 → 위 *_op 디스패처(2차 mode 분기).
     "browser_op": {
         "snapshot": "browser_snapshot",
+        "auth": "browser_auth",
         "navigate": "browser_navigate_op",
         "click": "browser_click_op",
         "type": "browser_type",
@@ -272,8 +274,8 @@ async def _execute(tool_input: dict, context):
             mod = _load("browser_chrome")
             func = getattr(mod, tool_name, None)
             if func is None:
-                # Chrome에 해당 함수가 없으면 Playwright로 폴백
-                driver = "playwright"
+                return json.dumps({"success": False, "error_code": "UNSUPPORTED_OPERATION",
+                                   "error": "Chrome에서 지원하지 않는 동작입니다. close 후 드라이버를 명시하세요."}, ensure_ascii=False)
             else:
                 needs_project = tool_name in _CHROME_PROJECT_TOOLS
                 result = await func(tool_input, proj_path) if needs_project else await func(tool_input)
@@ -302,7 +304,7 @@ async def _execute(tool_input: dict, context):
 
 def execute(tool_input: dict, context):
     """Capture trusted identity before dispatch moves from a worker to the async loop."""
-    from principal import cache_key
+    from principal import cache_key, is_owner
     from episode_logger import current_trajectory_identity
     from thread_context import get_invocation
     trace = current_trajectory_identity()
@@ -310,7 +312,16 @@ def execute(tool_input: dict, context):
            or (get_invocation() or {}).get("run_id") or "manual")
     identity = [cache_key(), context.project_path, getattr(context, "agent_id", None), run]
     owner = hashlib.sha256(json.dumps(identity).encode()).hexdigest()
-    return _owned_execute(dict(tool_input), context, owner)
+    return _route_execute(dict(tool_input), context, owner, is_owner())
+
+
+async def _route_execute(params, context, owner, owner_allowed):
+    driver, result = await load_singleton(__file__, "browser_embedded").route(
+        params, context.tool_name, owner, owner_allowed, _is_chrome_connected())
+    if result is not None:
+        return json.dumps(result, ensure_ascii=False)
+    params["driver"] = driver
+    return await _owned_execute(params, context, owner)
 
 
 async def _owned_execute(params, context, owner):

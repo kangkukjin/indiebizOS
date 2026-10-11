@@ -484,3 +484,6 @@ backend/static/rhwp-stage/
 
 # Resident PC uploads, artifacts and resumable binary chunks (private runtime data)
 data/resident_files/
+
+# Local Electron bridge connection metadata (never commit tokens).
+data/runtime/embedded-browser.json*

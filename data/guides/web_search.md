@@ -36,7 +36,7 @@ $후보 >> [table:union]{} >> [table:dedup]{by:"url"} >> [table:select]{fields:[
 ## 5. crawl이 막혔을 때 — reason을 읽고 행동하라
 `crawl`은 내부에서 자동 에스컬레이션한다(curl_cffi TLS 크롬 위장 → Chrome MCP → Playwright JS 렌더링 + iframe 전 프레임 수집). 실제로 실행한 단계와 건너뛴 이유는 실패 응답의 `stages`를 확인한다. 브라우저 연결·세션이 없거나 단계가 시간 초과되면 모두 실행됐다고 단정하지 않는다. 최종 실패 시 `reason`이 온다:
 - **`bot_blocked`**: 실행한 단계에서 봇 차단을 감지했다. 같은 조건의 반복 호출보다는 **같은 정보를 다루는 다른 소스**(검색 결과의 다른 후보, 뉴스, 공식 API 액션)로 우회하라.
-- **`login_required`**: 도구 한계가 아니라 세션 부재. 두 갈래 — ① 로그인 불필요한 다른 소스로 우회, ② 반복해서 필요한 사이트면 **사용자에게 1회 로그인을 요청**: `browser_navigate`를 `headless: false`로 열어 사용자가 로그인하면 세션이 자동 저장·복원되어(data/browser_cookies/_auto_state.json) 이후 crawl이 통과한다(네이버 카페 등).
+- **`login_required`**: 내장 브라우저 `driver:"embedded"`로 URL을 열고 snapshot/auth status로 확인한다. 저장된 계정은 auth login으로 채워 관측한 로그인 버튼을 제출한다. 추가 인증만 사용자에게 맡기고, 완료 뒤 같은 탭의 content로 읽는다. 내장 세션은 crawl에 복사하지 않는다. 브라우저가 없거나 인증을 완료할 수 없으면 다른 소스를 선택한다.
 - **`insufficient_content`** (success와 함께 올 수도): 짧은 본문은 정상일 수 있으니 내용으로 판단.
 - **`http_error`**: 서버가 HTTP 오류를 반환했다. URL·`stages`의 상태를 확인하고 유효한 원문으로 이동한다.
 - **`http_status_unverified`**: 브라우저의 HTTP 상태 확인이 불가능했다. 정상 200 응답으로 추측하지 않으며 다른 수집 경로를 시도한다.

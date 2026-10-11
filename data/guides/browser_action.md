@@ -1,31 +1,19 @@
 # Browser Action 사용 가이드
 
-브라우저 자동화 IBL 어휘. Playwright(헤드리스) 기본, Chrome MCP(실제 Chrome 원격 제어) 선택.
+브라우저 자동화 IBL 어휘. 연결된 내장 포식 브라우저 우선, Chrome MCP 또는 Playwright 선택.
 데스크톱 일반 앱 자동화는 `[limbs:screen]` (별도 가이드 참조).
 
-## 핵심 원리: Screenshot → 판단 → Action
+## 기본 흐름
 
-**모르는 사이트를 방문할 때는 반드시 시각적 피드백(screenshot)을 먼저 사용하라.**
-screenshot 없이 CSS 셀렉터나 ref를 추측하면 높은 확률로 실패한다.
+페이지를 열고 DOM 구조를 관측한 뒤 조작한다. 본문은 content, 버튼·입력칸은 snapshot의 ref로 읽는다.
+화면 캡처는 이미지·캔버스 등 시각 정보가 필요할 때만 지원 드라이버에서 사용한다.
 
-### 기본 흐름 (모르는 사이트)
+```ibl
+[limbs:browser]{op:"navigate",url:"https://example.com"}
+[limbs:browser]{op:"snapshot"}
+# 관측한 ref로 click/type한 뒤 snapshot/content로 결과를 확인한다.
+[limbs:browser]{op:"content"}
 ```
-[limbs:browser]{op: "navigate", url: "https://..."}
-[limbs:browser]{op: "screenshot"}                          → 화면 확인
-[limbs:browser]{op: "snapshot"}                    → ref 트리 확보
-[limbs:browser]{op: "click", ref: "e5"} 또는 [limbs:browser]{op: "type", ref: "e3", text: "..."}
-[limbs:browser]{op: "screenshot"}                          → 결과 검증
-```
-
-### 익숙한 사이트
-```
-[limbs:browser]{op: "navigate", url: "..."}
-[limbs:browser]{op: "snapshot"}                    → ref 확인
-[limbs:browser]{op: "click", ref: "e5"}
-[limbs:browser]{op: "snapshot"}
-```
-
-원칙: **확인하지 않은 것을 추측하지 마라.** 페이지 구조를 모르면 screenshot으로 먼저 확인.
 
 ### ref란?
 - `[limbs:browser]{op: "snapshot"}` 호출 시 각 요소에 `e1`, `e2`, `e3` ... 형태의 고유 ID가 부여됨
@@ -49,13 +37,14 @@ screenshot 없이 CSS 셀렉터나 ref를 추측하면 높은 확률로 실패�
 
 ---
 
-## 드라이버 선택 (Playwright vs Chrome MCP)
+## 드라이버 선택
 
 대부분의 액션은 `driver` 파라미터로 어떤 드라이버를 쓸지 결정한다.
 
 | 값 | 동작 |
 |---|---|
-| `"auto"` (기본) | Chrome MCP 연결되어 있으면 Chrome, 아니면 Playwright |
+| `"auto"` (기본) | 새 소유자 작업은 연결된 내장 브라우저 우선, 없으면 Chrome/Playwright. 이후 작업별 고정 |
+| `"embedded"` | 데스크톱 내장 포식 탭과 persist:forage 로그인 상태 사용 |
 | `"playwright"` | 항상 헤드리스 Playwright |
 | `"chrome"` | 실제 Chrome 브라우저 (사전에 `[limbs:browser]{op: "chrome", mode: "connect"}` 필요) |
 
@@ -332,14 +321,38 @@ Chrome MCP는 사용자의 실제 Chrome 브라우저를 WebSocket으로 원격 
 [limbs:browser]{op: "content"}                                 # 검색 결과 텍스트 추출
 ```
 
-### 로그인이 필요한 사이트 작업
+### 내장 브라우저와 로그인
+
+```ibl
+$열기 = [limbs:browser]{driver:"embedded",op:"navigate",url:"https://mail.naver.com"}
+[limbs:browser]{driver:"embedded",op:"snapshot",tab_id:$열기.tab_id}
+[limbs:browser]{driver:"embedded",op:"auth",mode:"status",tab_id:$열기.tab_id}
 ```
-[limbs:browser]{op: "navigate", url: "site.com/login"}
-[limbs:browser]{op: "cookies", mode: "load", name: "site"}               # 저장된 상태 복원 시도
-# (로그인 안되어있으면) 수동 로그인 진행
-[limbs:browser]{op: "cookies", mode: "save", name: "site"}               # 상태 저장
-# 이후 작업 수행
-```
+
+로그인돼 있으면 content로 읽는다. 필요하면 auth status가 돌려준 account_ref와 snapshot에서 관측한
+로그인 버튼 submit_ref를 auth mode:login에 전달한다. 단일 계정은 account_ref를 생략할 수 있다.
+submit_ref를 생략하면 채움만 한다. username_ref/password_ref는 자동 탐지가 모호할 때 명시한다.
+비밀번호를 type/text·대화·스크립트 인자로 보내지 않는다. 다단계 로그인은 새 화면에서 다시 snapshot한다.
+
+복수 계정 선택이나 추가 인증은 사용자에게 해당 탭에서 처리하도록 요청한다. 완료 뒤 auth mode:resume으로
+돌아와 목적 화면을 확인한다. 비밀번호 필드가 없다는 사실만으로 인증 성공을 보장하지 않아 상태가 unknown일 수 있다.
+resume의 ref는 호출자가 확인한 목적 화면 요소이며, 그 존재만을 인증 근거로 반환한다.
+실패한 로그인 제출을 반복하지 않는다. cancel은 대기를 해제하며 이미 한 로그인은 되돌리지 않는다.
+
+content는 렌더링된 텍스트와 링크, 출처·문서·프레임 신원을 반환한다. 긴 본문은 cursor와 next_offset을
+다음 content의 cursor/offset으로 보내 같은 추출 스냅샷을 이어 읽는다. limit 기본 12000자, 최대 20000자.
+이미지·캔버스·숨겨진/미로딩 항목·폼·다른 프레임은 별도 범위다. iframe list/switch 후 읽고 reset으로 돌아온다.
+메일 본문을 열면 읽음 상태가 바뀔 수 있으므로 상태 보존 요구가 있으면 열기 전에 확인한다.
+
+내장 드라이버는 macOS/Linux 소유자 작업용이다. Windows는 아직 연결 미지원이다. 기존 탭은 UI에서
+“이 탭을 AI에 맡기기”로 공유한 뒤 tab list의 tab_id로 지정한다. 자동 생성 탭은 해당 작업에 귀속된다.
+사람이 조작하거나 “AI 중지”를 누르면 USER_TAKEOVER이며 자동으로 탈취하지 않는다. 사용자가 재개를 요청한 뒤
+새 snapshot으로 확인한다(auth resume/cancel이 대기를 해제한다). close는 작업 연결만 해제하고 앱을 종료하지 않는다.
+
+현재 지원: navigate, tab, snapshot, content(text), click(single), type, press_key(관측 ref 필수), select,
+check, scroll, wait(text/ref/문서 완료), iframe, auth, close. 자유 evaluate·HTML·쿠키 내보내기·파일 전송·로그·
+화면 캡처는 미지원이며 다른 드라이버로 자동 이동하지 않는다. 드라이버를 바꾸려면 close 후 새로 시작한다. screenshot/evaluate/HTML이 필요한 절차는 첫 navigate부터 driver:playwright 또는 chrome을 명시한다. timeout 단위는 기존과 같은 밀리초이며 내장 요청은 최대 45초다.
+사용자/작업 사이의 계정 전환을 피하고 인증 대기 중 AUTH_SESSION_BUSY는 기존 인증부터 완료한다.
 
 ### 여러 사이트 동시 비교
 ```

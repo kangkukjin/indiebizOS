@@ -183,7 +183,13 @@ contextBridge.exposeInMainWorld('electron', {
 
   // === 포식 브라우저 비밀번호 금고 (크롬 비번 채우기) ===
   foragePwListHost: (url) => ipcRenderer.invoke('forage-pw-list-host', url),
-  foragePwGet: (url, username) => ipcRenderer.invoke('forage-pw-get', url, username),
+  foragePwFill: (contentsId, username) => ipcRenderer.invoke('forage-pw-fill', contentsId, username),
+  embeddedBrowserUI: (action, id, contentsId) => ipcRenderer.invoke('embedded-browser-ui', action, id, contentsId),
+  onEmbeddedBrowserChanged: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('embedded-browser-changed', listener);
+    return () => ipcRenderer.removeListener('embedded-browser-changed', listener);
+  },
   foragePwSave: (origin, username, password) =>
     ipcRenderer.invoke('forage-pw-save', origin, username, password),
   foragePwRemove: (origin, username) =>

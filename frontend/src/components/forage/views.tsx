@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { API, WebView } from './support';
 import type { Tab, PoolItem } from './support';
 import { useRetryingLoad } from '../../lib/use-retrying-load';
+import { embeddedAPI, EmbeddedTabControl } from './embedded';
 import { RemoteBrowserTab } from './RemoteBrowserTab';
 import { ui } from '../../i18n/ui';
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
@@ -40,7 +41,9 @@ function NativeBrowserTab({ tab, onUpdate, registerRef, onOpenTab }: BrowserTabP
         void el.executeJavaScript(xrayLocaleScript(BACKEND_ORIGIN, ui.getLocale())).catch((error: unknown) => console.warn('X-Ray locale sync failed', error));
       }
     };
-    const onReady = () => { ready = true; syncLocale(); };
+    const onReady = () => { ready = true; syncLocale();
+      void embeddedAPI().embeddedBrowserUI?.('bind', tab.id, el.getWebContentsId()).catch(() => {});
+    };
     el.addEventListener('dom-ready', onReady);
     const unsubscribeLocale = ui.subscribe(syncLocale);
     const sync = (e?: any) => {
@@ -75,8 +78,11 @@ function NativeBrowserTab({ tab, onUpdate, registerRef, onOpenTab }: BrowserTabP
   }, [tab.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
     <WebView ref={ref} src={initialUrl.current} partition="persist:forage" allowpopups="true"
       style={{ width: '100%', height: '100%', border: 'none' }} />
+    <EmbeddedTabControl id={tab.id} />
+    </div>
   );
 }
 

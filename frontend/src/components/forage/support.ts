@@ -116,32 +116,18 @@ export interface Tab {
 // 비밀번호 금고 IPC (Electron preload 노출). 웹(비-Electron)에선 undefined → 기능 자동 비활성.
 export type ForagePwApi = {
   foragePwListHost?: (url: string) => Promise<{ username: string }[]>;
-  foragePwGet?: (url: string, username: string | null) => Promise<{ username: string; password: string } | null>;
+  foragePwFill?: (contentsId: number, username: string | null) => Promise<{ filled?: boolean; success?: boolean }>;
   foragePwSave?: (origin: string, username: string, password: string) => Promise<true | { error: string }>;
   foragePwImportChrome?: () => Promise<{ imported: number; total: number } | { error: string }>;
 };
 export const pwApi = (): ForagePwApi => ((window as any).electron || {});
-export const hasPwVault = () => typeof (window as any).electron?.foragePwGet === 'function';
+export const hasPwVault = () => typeof (window as any).electron?.foragePwFill === 'function';
 
 // 현재 페이지에 비밀번호 입력칸이 있는지 + origin/host 반환 (없으면 null)
 export const DETECT_PW_JS = `(function(){var pw=document.querySelector('input[type="password"]');return pw?{host:location.host,origin:location.origin}:null;})()`;
 
 // 현재 채워진 로그인 값 읽기 (저장용). 비밀번호칸 직전의 text/email 칸을 아이디로 추정.
 export const READ_PW_JS = `(function(){var pw=document.querySelector('input[type="password"]');if(!pw||!pw.value)return null;var all=[].slice.call(document.querySelectorAll('input'));var i=all.indexOf(pw);var user=null;for(var j=i-1;j>=0;j--){var t=(all[j].type||'').toLowerCase();if(t==='text'||t==='email'||t===''){user=all[j];break;}}return{origin:location.origin,host:location.host,username:user?user.value:'',password:pw.value};})()`;
-
-// 아이디/비번을 DOM 에 주입. React 통제 입력도 먹도록 native setter + input/change 이벤트 발사.
-// 자동 제출은 하지 않는다 — 채우기까지만(augmentation-over-autonomy).
-export function fillPwJs(username: string, password: string): string {
-  return `(function(){
-    function setVal(el,val){var proto=el.tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype;var d=Object.getOwnPropertyDescriptor(proto,'value');if(d&&d.set)d.set.call(el,val);else el.value=val;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
-    var pw=document.querySelector('input[type="password"]');if(!pw)return false;
-    var all=[].slice.call(document.querySelectorAll('input'));var i=all.indexOf(pw);var user=null;
-    for(var j=i-1;j>=0;j--){var t=(all[j].type||'').toLowerCase();if(t==='text'||t==='email'||t===''){user=all[j];break;}}
-    if(!user){user=document.querySelector('input[type="email"],input[type="text"]');}
-    var U=${JSON.stringify(username)},P=${JSON.stringify(password)};
-    if(user&&U)setVal(user,U);setVal(pw,P);try{pw.focus();}catch(e){}return true;
-  })()`;
-}
 
 // 응답에서 목적지(클릭 가능한 링크)를 뽑고, [MAP:] 원문은 본문에서 걷어낸다.
 // 1) [MAP:{...}] 블록의 markers[].{name,meta,url}  2) 본문 인라인 링크는 마크다운 a 렌더러가 처리.

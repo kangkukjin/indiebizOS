@@ -16,6 +16,8 @@ import crypto from 'crypto';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import * as foragePw from './forage-passwords.js';
+import { installEmbeddedBrowser } from './embedded-browser-install.js';
+let embeddedBridge = null;
 
 import { setupContextMenu } from './bootstrap.js';
 import { installUILocale, nativeMenu, nativeText, nativeUI } from './ui-locale.js';
@@ -76,7 +78,7 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
       // 포식 브라우저(ForageBrowser) — 계기판 안에 진짜 크로미움을 박기 위한 <webview> 허용.
-      // 외골격형 공동 포식의 '도로'. DOM 접근(executeJavaScript)이 나중에 AI '곁눈'이 붙을 이음매다.
+      // 외골격형 공동 포식의 '도로'. AI는 등록한 guest의 격리 DOM 경로를 이용한다.
       webviewTag: true
     }
   });
@@ -106,8 +108,18 @@ function createWindow() {
   // 포식 브라우저 <webview> 안에서 target=_blank / window.open 으로 뜨려는 새 창을 막고,
   // 같은 webview 안에서 그 URL 로 이동시킨다 — 별도 OS 창 대신 인플레이스(브라우저 안에서 열림).
   // (Electron 39 는 렌더러 'new-window' 이벤트가 제거돼 메인에서 guest webContents 로 처리해야 한다.)
+  mainWindow.webContents.on('will-attach-webview', (_event, preferences) => {
+    delete preferences.preload; preferences.nodeIntegration = false;
+    preferences.contextIsolation = true; preferences.sandbox = true; preferences.webSecurity = true;
+  });
   mainWindow.webContents.on('did-attach-webview', (_e, guest) => {
+    if (guest.session === session.fromPartition('persist:forage')) embeddedBridge?.tabs.attach(guest);
     guest.setWindowOpenHandler(({ url }) => {
+      if (embeddedBridge?.tabs.byContents(guest.id)?.owner && /^https?:\/\//i.test(url)) {
+        return { action: 'allow', overrideBrowserWindowOptions: {
+          width: 950, height: 750, webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: 'persist:forage' },
+        } };
+      }
       if (url && /^https?:\/\//i.test(url)) guest.loadURL(url);
       return { action: 'deny' };
     });
@@ -392,13 +404,11 @@ function setupIPC() {
   });
 
   // ─── 포식 브라우저 비밀번호 금고 (safeStorage = OS 키체인) ───
-  // 평문 비밀번호는 여기(main)와 renderer 사이 IPC 안에서만 흐른다. HTTP/백엔드로 안 나간다.
+  // 저장은 UI 입력을 받으며 채움은 main이 웹 프레임에 직접 한다. 비밀번호 반환 IPC는 없다.
   ipcMain.handle('forage-pw-list-host', (_, url) => {
     try { return foragePw.listForHost(url); } catch { return []; }
   });
-  ipcMain.handle('forage-pw-get', (_, url, username) => {
-    try { return foragePw.getCredential(url, username ?? null); } catch { return null; }
-  });
+  // Credential filling is main-only: forage-pw-fill returns no password.
   ipcMain.handle('forage-pw-save', (_, origin, username, password) => {
     try { return foragePw.upsert(origin, username, password); }
     catch (e) { return { error: e.message }; }
@@ -676,7 +686,9 @@ if (!_gotSingleLock) {
 
 // 앱 준비
 app.whenReady().then(async () => {
+  if (!_gotSingleLock) return;
   console.log('[Electron] 앱 시작');
+  embeddedBridge = installEmbeddedBrowser(getBasePath(), () => mainWindow);
 
   // Windows 토스트 알림 발신자 식별 (electron-builder appId와 동일)
   if (process.platform === 'win32') {
@@ -701,6 +713,10 @@ app.whenReady().then(async () => {
         cb({});
         try {
           if (details.method !== 'POST' || !details.uploadData?.length) return;
+          const tab = embeddedBridge?.tabs.byContents(details.webContentsId);
+          if (tab?.owner || tab?.sensitive) return;
+          // Service-worker requests have no reliable tab ID; never capture their credentials.
+          if (details.webContentsId == null || details.webContentsId < 0) return;
           const raw = Buffer.concat(
             details.uploadData.map((d) => d.bytes).filter(Boolean)
           ).toString('utf8');

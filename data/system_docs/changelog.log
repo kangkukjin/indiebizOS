@@ -2552,3 +2552,5 @@
 2026-10-12 REPAIR: 긴문장59 공개창고관리 훈련·수리. 합성226파일·1000링크, 이동9·중단3후재개6·독립AI4611/4612 파일 전건 일치. 공개 목록/다운로드의 숨김 경로·등급 밖 별칭·등급 폴더 별칭을 warehouse_paths.public_file 단일 판정으로 차단(404), 주인 관리 유지. 상대 HTML href의 파일 존재/실제 공개 URL 검증을 교재·보고에서 구분하고 동명 판본·중복 원천 목록 보완. 신규17·관련128통과, backend not-system 종합10003통과·1건너뜀·실패0, 빌드/Android/층 관문 통과. 실제 인증/외부공개·system/frontend 미검증, 비용 절감 미입증. 상세 docs/experiments/long_sentence_imagination/round_59/report.md.
 
 2026-10-12 DESIGN: 내장 브라우저의 AI 이용과 로그인 설계. 기존 limbs:browser에 embedded 드라이버를 연결해 사이트 열기·로그인 상태 재사용·저장 계정 로그인·추가 인증 인계·DOM 수집을 통합. 로컬 연결과 작업 권한, 계정 공유 충돌, 탭 수명·재개, 비밀값 처리, 검증·성능 비교 기준 정의. 구현 전이며 실제 로그인·성능 미검증. 정본 docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md.
+
+2026-10-12 FEATURE: 내장 포식 브라우저 AI 연결. limbs:browser embedded 드라이버, 소유자 전용 로컬 소켓, 작업 탭 생성·DOM 읽기·조작·저장 계정 로그인·추가 인증 인계·사람의 중지 구현. 비밀번호 반환 IPC 제거, main에서 출처 검사 후 채움. 일반 crawl의 로그인 실패 안내와 교재를 내장 탭으로 연결. Electron 재시작 후 활성화. 검증: backend not-system 10011통과·1건너뜀, 관련 IBL/어휘 시스템72통과, 신규경계8개(종합 포함), 실제 Electron 합성26항목과 Python→Electron 인증본문 통과, TypeScript/프론트 빌드·IBL 정합·Android 번들·층 가드 통과. 네이버 실계정/외부 SSO/Windows 연결 미검증. 상세 docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md 구현 상태.

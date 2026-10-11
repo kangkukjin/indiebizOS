@@ -21,12 +21,13 @@ import { useFileAttachments } from './chat/useFileAttachments';
 // 지원층(상수·JS 조각·타입·파서)과 서브컴포넌트는 forage/ 로 분리 (2026-07-18 모듈화 — 1500줄 규칙).
 import {
   API, EXTRACT_JS, replaceJs, RESTORE_JS, parseCandidates,
-  pwApi, hasPwVault, DETECT_PW_JS, READ_PW_JS, fillPwJs, extractDestinations,
+  pwApi, hasPwVault, DETECT_PW_JS, READ_PW_JS, extractDestinations,
 } from './forage/support';
 import type { Destination, PoolItem, Hunt, Tab } from './forage/support';
 import {
   BrowserTabView, FavoritesPage, PoolRow, PoolCard, HistoryPage, BoardsPage, TabFav, NavBtn,
 } from './forage/views';
+import { useEmbeddedTabs, embeddedAPI } from './forage/embedded';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 
 /** 링크 URL에서 리트윗 파일명 후보 — 창고 파일(/f?path=…)이면 path 그대로, 아니면 경로 마지막 조각. */
@@ -442,12 +443,14 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
     })), []);
 
   // 새 탭으로 사이트 열기 — 즐겨찾기·검색결과·링크 클릭이 전부 여기로(각각 별개 탭이 쌓인다).
-  const openTab = (url: string) => {
-    const id = `t${++tabSeq.current}`;
+  const openTab = (url: string, requestedId?: string) => {
+    const id = requestedId || `t${++tabSeq.current}`;
     setTabs((prev) => [...prev, { id, kind: 'web', initialUrl: url, url, title: url, canBack: false, canFwd: false, loading: true, translated: false }]);
     setActiveId(id);
     setMode('browse');
   };
+
+  useEmbeddedTabs(openTab);
 
   // 외부에서 openUrl 신호가 오면(브라우저가 열린 상태) 그 URL을 새 탭으로 열고 신호를 소비한다.
   useEffect(() => {
@@ -572,8 +575,7 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
       const accts = (await pwApi().foragePwListHost?.(found.origin)) || [];
       setPwAccounts(accts);
       if (accts.length === 1) {
-        const cred = await pwApi().foragePwGet?.(found.origin, accts[0].username);
-        if (cred) await el.executeJavaScript(fillPwJs(cred.username, cred.password), true);
+        await pwApi().foragePwFill?.(el.getWebContentsId(), accts[0].username);
       }
     } catch { /* 페이지가 막 바뀌는 중일 수 있음 — 무시 */ }
   };
@@ -581,8 +583,8 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
   const fillCredential = async (username: string) => {
     const el = activeWebview();
     if (!el) return;
-    const cred = await pwApi().foragePwGet?.(addr, username);
-    if (cred) { await el.executeJavaScript(fillPwJs(cred.username, cred.password), true); flash('채웠어요'); }
+    const result = await pwApi().foragePwFill?.(el.getWebContentsId(), username);
+    if (result?.filled) flash('채웠어요');
     setPwMenuOpen(false);
   };
 
@@ -660,7 +662,11 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
   };
 
   // 주소창 입력 → 이동. 스킴 있으면 그대로, 도메인꼴이면 https:// 보정, 둘 다 아니면 포식 검색으로.
-  const navigateAddr = () => {
+  const takeControl = async () => {
+    if (activeId) await embeddedAPI().embeddedBrowserUI?.('pause', activeId).catch(() => {});
+  };
+  const navigateAddr = async () => {
+    await takeControl();
     const raw = (addrEdit ?? '').trim();
     setAddrEdit(null);
     if (!raw) return;
@@ -878,9 +884,9 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
               </>
             ) : (
             <>
-            <NavBtn onClick={() => activeWebview()?.goBack()} disabled={!canBack} label="‹" title="뒤로" />
-            <NavBtn onClick={() => activeWebview()?.goForward()} disabled={!canFwd} label="›" title="앞으로" />
-            <NavBtn onClick={() => activeWebview()?.reload()} label="⟳" title="새로고침" />
+            <NavBtn onClick={async () => { await takeControl(); activeWebview()?.goBack(); }} disabled={!canBack} label="‹" title="뒤로" />
+            <NavBtn onClick={async () => { await takeControl(); activeWebview()?.goForward(); }} disabled={!canFwd} label="›" title="앞으로" />
+            <NavBtn onClick={async () => { await takeControl(); activeWebview()?.reload(); }} label="⟳" title="새로고침" />
             {window.electron && <button
               onClick={toggleTranslation}
               disabled={translating}

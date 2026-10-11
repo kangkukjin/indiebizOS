@@ -818,16 +818,17 @@ _REASON_HINTS = {
     "http_error": "서버가 HTTP 오류를 반환했습니다.",
     "http_status_unverified": "브라우저에서 HTTP 상태를 확인하지 못했습니다.",
     "login_required": (
-        "로그인이 필요한 페이지입니다. browser_navigate를 headless:false로 열어 사람이 한 번 "
-        "로그인해 두면 세션이 자동 저장되어(data/browser_cookies/_auto_state.json) 이후 크롤이 "
-        "접근할 수 있습니다. 사용자에게 로그인을 요청하거나 로그인 불필요한 다른 소스를 시도하세요."
+        '로그인이 필요한 페이지입니다. limbs:browser의 driver:"embedded", op:"navigate"로 대상 URL을 '
+        '열고 snapshot/auth status로 확인하세요. 저장 계정은 auth login으로 채우고 관측한 submit_ref로 '
+        '제출합니다. 추가 인증만 사용자에게 맡기고 같은 탭의 content로 읽으세요. '
+        '내장 로그인 세션을 일반 크롤러에 복사하지 않습니다. 내장 브라우저가 없으면 다른 소스를 사용하세요.'
     ),
     # ★"모두 시도" 같은 말을 고정 문구에 박지 않는다 — 실제로 무엇이 돌았는지는
     # 호출마다 다르고, 하지 않은 일을 했다고 말하면 읽는 쪽이 다음 수를 잃는다.
     # 실제 단계 내역은 결과의 stages 가 나른다 (2026-08-22).
     "bot_blocked": (
         "봇 차단으로 본문을 가져오지 못했습니다. "
-        "같은 정보를 다루는 다른 소스를 시도하세요."
+        "내장 브라우저(driver:embedded)의 navigate→snapshot→content로 확인하거나 다른 소스를 시도하세요."
     ),
     "insufficient_content": "본문을 충분히 추출하지 못했습니다.",
 }

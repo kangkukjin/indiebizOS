@@ -44,6 +44,14 @@ async def tool_process():
     import subprocess, sys
     child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
     return {"pid": child.pid}
+@app.post("/daemon")
+async def tool_daemon(marker: str):
+    import subprocess, sys
+    # 도구는 추적기의 0.2초 관측 주기보다 오래 머문다(adb 클라이언트처럼) — 그래야 자손이 발견된다.
+    spawn = ("import subprocess, sys, time; subprocess.Popen([sys.executable, '-c', "
+             "'import time; time.sleep(60)', sys.argv[1]], start_new_session=True); time.sleep(0.7)")
+    tool = subprocess.Popen([sys.executable, "-c", spawn, marker])
+    return {"pid": tool.pid}
 @app.get("/health")
 async def health(): return {"status": "healthy", "live_turns": []}
 @app.post("/resident")
@@ -216,6 +224,47 @@ def test_real_worker_crash_reaps_orphan_tool_without_replay(runtime):
     assert state()["last_result"]["effect_unknown"]
     assert not list((control_dir(base) / "requests").glob("*.json"))
     assert not (base / "effects").exists()
+
+
+def test_declared_daemon_is_adopted_but_undeclared_leftover_still_blocks(runtime):
+    """adb 서버 부류(2026-10-11): 도구가 띄운 상주 데몬은 선언된 것만 drain 에서 빠진다."""
+    import psutil
+    base, port, _, state = runtime
+    initial = state()
+    adapter = ProcessAdapter(base, base, port)
+    # 실행 파일 이름은 OS 가 보고하는 argv[0] 기준(맥 프레임워크 빌드는 python3 가 아니라 Python).
+    name = Path(psutil.Process().cmdline()[0]).name
+    (base / "data/lifecycle_policy.yaml").write_text(
+        f"adopted_daemons:\n  - name: {name}\n    argv: [declared-daemon]\n")
+
+    def spawn(marker):
+        tool = http(port, f"/daemon?marker={marker}", payload={})["pid"]
+        proc = eventually(lambda: [p for p in psutil.process_iter(["cmdline"])
+                                   if p.pid != tool and (p.info["cmdline"] or [])[-1:] == [marker]])[0]
+        return tool, identity(proc.pid)
+
+    daemons = []
+    try:
+        tool, leftover = spawn("undeclared-leftover")
+        daemons.append(leftover)
+        eventually(lambda: not psutil.pid_exists(tool) or psutil.Process(tool).status() == psutil.STATUS_ZOMBIE)
+        time.sleep(0.6)
+        assert adapter.status(initial)["active_children"] == 1
+        signal_owned(leftover, force=True)
+        eventually(lambda: adapter.status(initial)["active_children"] == 0)
+
+        tool, daemon = spawn("declared-daemon")
+        daemons.append(daemon)
+        eventually(lambda: adapter.status(initial)["active_children"] == 0)
+        receipt = read_json(control_dir(base) / "processes" / f"{initial['generation']}-{tool}.json")
+        assert daemon in receipt["adopted"] and daemon not in receipt["members"]
+        request(base, "adopted-daemon-test", request_id="adopted", policy={"drain_timeout_s": 2, "force": False})
+        eventually(lambda: state().get("phase") == "ACTIVE" and state()["generation"] != initial["generation"])
+        assert read_json(control_dir(base) / "results/adopted.json")["outcome"] == "restarted"
+        assert alive(daemon)
+    finally:
+        for ident in daemons:
+            signal_owned(ident, force=True)
 
 
 def test_real_auth_and_pid_reuse(runtime):

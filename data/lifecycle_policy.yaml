@@ -50,3 +50,11 @@ envelope_preview:
 # 집행 = 일일 유지보수 번들(world_pulse_health.run_maintenance_bundle → spill.gc).
 webcrawl_cache:
   reuse_seconds: 900   # 명시 refresh=true는 이 기간 안에도 새 스냅샷을 수집
+
+# 입양 데몬 (2026-10-11) — 도구가 부수적으로 띄우고 스스로는 끝나지 않는 상주 프로세스. 도구 프로세스
+# 추적(restart_process.wait_tool_process)은 떨어져 나간 자손도 도구의 일로 세어 재기동 drain 을 붙드는데,
+# 여기 선언된 것만 그 계산에서 뺀다(영수증 adopted 에 기록, 재기동 때 죽이지도 않는다).
+# 일치 = 실행 파일 이름 + argv 의 연속 인자열. 넓게 잡지 말 것 — 선언 밖 자손은 계속 센다.
+adopted_daemons:
+  - name: adb
+    argv: [fork-server, server]   # adb 클라이언트가 처음 불릴 때 fork 하는 서버(`adb -L tcp:5037 fork-server server …`)

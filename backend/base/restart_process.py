@@ -171,26 +171,102 @@ class ProcessAdapter:
         return None, [identity(child.pid)]
 
 
+_daemon_cache = {}
+
+
+def adopted_daemons(base):
+    """lifecycle_policy.yaml 의 adopted_daemons 선언. 읽지 못하면 빈 목록 = 아무도 입양하지 않는다."""
+    path = Path(base) / "data" / "lifecycle_policy.yaml"
+    try:
+        stamp = path.stat().st_mtime_ns
+        if _daemon_cache.get("key") != (str(path), stamp):
+            import yaml
+            with path.open(encoding="utf-8") as f:
+                rows = (yaml.safe_load(f) or {}).get("adopted_daemons") or []
+            rules = [(str(r["name"]), [str(a) for a in r["argv"]]) for r in rows
+                     if isinstance(r, dict) and r.get("name") and r.get("argv")]
+            _daemon_cache.update(key=(str(path), stamp), rules=rules)
+        return _daemon_cache["rules"]
+    except Exception:
+        return []
+
+
+def _is_adopted(ident, rules):
+    """선언된 실행 파일 이름 + 연속 인자열과 일치할 때만. 관측 실패는 입양이 아니다."""
+    if not rules:
+        return False
+    try:
+        p = psutil.Process(ident["pid"])
+        if _birth_time(p) != ident["born"]:
+            return False
+        argv = p.cmdline()
+    except psutil.Error:
+        return False
+    if not argv:
+        return False
+    name, rest = Path(argv[0]).name, argv[1:]
+    if name.lower().endswith(".exe"):
+        name = name[:-4]
+    return any(name == want and any(rest[i:i + len(seq)] == seq for i in range(len(rest) - len(seq) + 1))
+               for want, seq in rules)
+
+
+def _tool_descendants(ident, rules, adopted):
+    """도구의 일을 하는 자손만 모은다. 입양 데몬과 그 아래는 데몬의 것이다."""
+    try:
+        p = psutil.Process(ident["pid"])
+        if _birth_time(p) != ident["born"]:
+            return []
+        stack = p.children()
+    except psutil.NoSuchProcess:
+        return []
+    found = []
+    while stack:
+        child = stack.pop()
+        try:
+            cid = {"pid": child.pid, "born": _birth_time(child)}
+            if _is_adopted(cid, rules):
+                adopted[(cid["pid"], cid["born"])] = cid
+                continue
+            found.append(cid)
+            stack.extend(child.children())
+        except psutil.NoSuchProcess:
+            continue  # 이미 끝난 자손은 UNKNOWN 실행이 아니다.
+    return found
+
+
 def tool_process_receipt(proc, base, generation):
     """워커 밖에도 자식의 출생 신원을 남긴다. 부모 사망 뒤 고아가 된 도구를 회수한다."""
     ident = identity(proc.pid)
     path = control_dir(base) / "processes" / f"{generation}-{proc.pid}.json"
     record = {"generation": generation, "members": [ident]}
     atomic_json(path, record)
-    return path, record
+    return path, record, adopted_daemons(base)
 
 
-def wait_tool_process(proc, path, record):
-    """표면/부모 도구가 끝나도 발견한 실제 자손이 살아 있으면 완료로 세지 않는다."""
+def wait_tool_process(proc, path, record, rules=()):
+    """표면/부모 도구가 끝나도 발견한 실제 자손이 살아 있으면 완료로 세지 않는다.
+
+    예외는 데이터로 선언된 입양 데몬뿐이다(adb 서버처럼 도구가 부수적으로 띄우고 영영
+    끝나지 않는 상주 프로세스). 영수증의 adopted 로 옮겨 적고 members(=drain 대기·정지
+    대상)에서 뺀다. 선언에 없는 자손은 떨어져 나가도 그대로 도구의 일로 센다.
+    """
+    root = (record["members"][0]["pid"], record["members"][0]["born"])
     known = {(p["pid"], p["born"]): p for p in record["members"]}
+    adopted = {}
     while True:
-        for ident in list(known.values()):
-            if alive(ident):
-                for child in tree(ident):
+        for key, ident in list(known.items()):
+            # fork 직후 exec 전에 잡힌 자손이 나중에 데몬이 되므로 매번 다시 본다.
+            if key != root and _is_adopted(ident, rules):
+                adopted[key] = known.pop(key)
+            elif alive(ident):
+                for child in _tool_descendants(ident, rules, adopted):
                     known[(child["pid"], child["born"])] = child
         members = list(known.values())
-        if members != record["members"]:
+        if members != record["members"] or list(adopted.values()) != record.get("adopted", []):
             record["members"] = members
+            if adopted:
+                record["adopted"] = list(adopted.values())
             atomic_json(path, record)
         proc.poll()
         if not any(alive(p) for p in members):

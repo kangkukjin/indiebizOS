@@ -89,5 +89,17 @@ def test_function_describe_uses_compiler_without_body(monkeypatch):
     assert '[def:' not in str(answer)
 
 
-if __name__ == '__main__':
-    raise SystemExit(pytest.main([__file__,'-q']))
+
+
+def test_parallel_parent_resource_and_explicit_child_conflict():
+    base = {'version': 1, 'params': {'path': 'Text'}, 'result': 'Text',
+            'effects': ['write_external'], 'adapter': {'protocol': 'legacy-envelope'}}
+    reg = {'t:fill': Adapter({**base, 'write_resources': {'file': {'param': 'path', 'parent': True}}}, lambda *_: ''),
+           't:write': Adapter({**base, 'write_resources': {'file': 'path'}}, lambda *_: '')}
+    plan = compile_program('[t:fill]{path:"/output/form.docx"} & [t:write]{path:"/output/form_filled (2).docx"}', reg)
+    assert 'PARALLEL_WRITE_CONFLICT' in {i['code'] for i in plan.issues}
+    assert not compile_program('[t:fill]{path:"/output/form.docx"} & [t:write]{path:"/elsewhere/file.txt"}', reg).issues
+
+
+if __name__ == "__main__":
+    raise SystemExit(pytest.main([__file__]))

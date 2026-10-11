@@ -36,6 +36,7 @@
     "base/model_call_context",
     "base/model_context",
     "base/model_resolver",
+    "base/output_publish",
     "base/phone_jobs",
     "base/principal",
     "base/python_environment_lock",
@@ -578,8 +579,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 503,
-    "engine": 477,
+    "total": 504,
+    "engine": 478,
     "blocklist": 26
   }
 }

@@ -18,7 +18,8 @@
       "params": [
         "source",
         "dest",
-        "src"
+        "src",
+        "if_exists"
       ]
     },
     "self:delete": {

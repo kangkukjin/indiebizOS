@@ -104,6 +104,8 @@ def read_document(params, command, exchange, workspace):
 
 
 def fill_document(params, command, exchange, workspace):
+    if params.get('if_exists', 'overwrite') != 'overwrite':
+        raise ValueError('회원 기기의 쓰기 프로토콜은 if_exists:overwrite만 지원합니다. 다른 정책은 실행하지 않습니다.')
     path, failure = _receive(params, exchange, workspace)
     if failure is not None:
         return failure

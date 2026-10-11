@@ -119,6 +119,35 @@ def test_term_detail_keeps_translation_distinct_from_definition(legal, monkeypat
     assert row["url"].endswith("trmSeqs=12789")
 
 
+def test_fallback_failure_preserves_unchecked_scope(legal, monkeypatch):
+    responses = iter([json.dumps({"PrecSearch": {"totalCnt": "0", "prec": []}}), '<html>broken</html>'])
+    monkeypatch.setattr(legal, 'api_call', lambda *a, **k: next(responses))
+    out = legal._search('fixture', 'prec', 'missing')
+    assert out['source_complete'] is False
+    assert out['checked_scopes'] == ['name']
+    assert out['search_scope'] == 'name'
+    assert out['errors'][0]['scope'] == 'body'
+    from ibl_v2_adapters import decode_envelope
+    from ibl_v2_ir import Fault
+    with pytest.raises(Fault) as failure:
+        decode_envelope(out, {'protocol': 'legacy-envelope', 'value_path': ''}, {})
+    assert failure.value.code == 'PARTIAL_SOURCE'
+
+
+def test_explicit_page_preserves_scope_and_pagination(legal, monkeypatch):
+    calls = []
+    def request(*a, **k):
+        calls.append(k['params'])
+        return json.dumps({'PrecSearch': {'totalCnt': '5', 'prec': [{'판례일련번호': '3', '사건명': 'case'}]}})
+    monkeypatch.setattr(legal, 'api_call', request)
+    out = legal._search('fixture', 'prec', 'query', page=2, limit=2, search_scope='body')
+    assert calls[0]['page'] == 2 and calls[0]['display'] == 2 and calls[0]['search'] == 2
+    assert out['next_page'] == 3 and out['has_more'] and out['source_complete']
+    assert out['selection'] == {'scope': 'page', 'page': 2, 'limit': 2}
+    assert not legal._search('fixture', 'prec', 'query', page=2)['success']
+    assert len(calls) == 1
+
+
 if __name__ == "__main__":
     import sys
 

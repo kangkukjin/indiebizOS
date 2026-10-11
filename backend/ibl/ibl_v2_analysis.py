@@ -525,6 +525,9 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
         # has/get are deliberately the dynamic/optional-field escape hatch.
         return BOOL if name == 'has' else UNKNOWN
     if name in ('number', 'abs', 'round'):
+        if name == 'number' and len(types) == 2:
+            # Invalid input is an ordinary fallback value only in this explicit form.
+            return join(NUMBER, types[1])
         if types:
             numeric_operand(compiler, nodes[0], types[0])
         if name == 'round':

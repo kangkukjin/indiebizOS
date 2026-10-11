@@ -63,8 +63,8 @@ def validate_contract(contract):
         raise ValueError("required는 params에 포함되어야 합니다.")
     for name in ('read_resources', 'write_resources'):
         resources = contract.get(name, {})
-        if not isinstance(resources, dict) or any(v not in contract["params"] for v in resources.values()):
-            raise ValueError(f"{name}는 자원 종류→선언 인자 이름입니다.")
+        from ibl_callable_contract import validate_resources
+        validate_resources(resources, contract["params"])
     adapter = contract.get("adapter", {})
     envelopes = adapter.get("input_envelopes", [])
     if (not isinstance(envelopes, list)

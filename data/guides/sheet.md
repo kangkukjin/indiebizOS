@@ -149,3 +149,11 @@ $p = [self:workspace]{op:"propose", resource:$w.resource, selector:{sheet:"매�
 
 정확한 인자는 describe로 확인하고 기존 파일 작업과 세션 작업의 결과를 구별해 조합한다.
 
+
+## 결과 파일이 이미 있을 때
+
+`range_write`·`calculate`의 `if_exists`는 `fail`(기본), `overwrite`, `rename`이다.
+원본과 별개 경로에 완성된 ZIP을 만든 뒤 원자적으로 게시하므로 작성 중 실패해도 기존 결과는 남는다.
+`rename`은 실제 반환 `path`를 다음 단계에 쓴다. `append`·`update`는 장부 자체의 행 변경이며
+이 옵션을 받지 않는다. 복사 후 append하는 재실행은 원본 템플릿을 `if_exists:"overwrite"`로
+다시 복사하거나 실행별 새 경로를 써서 누적을 피한다. 결과 파일을 먼저 삭제할 필요는 없다.

@@ -1,6 +1,7 @@
 node: sense
 actions:
   legal:
+    read_resources: {legal: [query, id, target, page, limit, search_scope]}
     aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
       id: [law_id, precedent_id]
     returns: items
@@ -9,7 +10,7 @@ actions:
       target=prec: '[sense:legal]{query: "임금", target: "prec"}'
     description: 대한민국 법률 통합 검색 (law.go.kr). query(검색)→items 의 id 를 {id, target} 에 넣어 상세. 국문·영문 법령 상세는 조마다 한 행(no·text). 이름에 없으면 본문에서 찾고 search_scope 가 알린다. 못 찾은 번호는 실패(NOT_FOUND). 자세히 read_guide(query="법률").
     group: legal
-    target_description: query(검색어) 또는 id(상세 — 검색 결과 items 의 id, 같은 target 과 함께). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(별표·서식 — 상세 없음, 행의 file_url). 검색 반환 = items[title·meta·url·date·id]+count·total(전체 건수, items 는 첫 쪽)·search_scope(name|body|name+body). 상세 반환 = items(국문·영문 법령은 조마다 no·title·text·date·chapter, 그 밖은 한 행)+원천 키(법령·Law·PrecService 등). 영문 law.enforce_date는 원천에 없으면 빈 값이며 공포일과 구별, addenda는 부칙. 용어는 dictionary_code·dictionary_name·공개 url로 사전 종류와 출처 보존(한영 대역어≠국문 정의).
+    target_description: query(검색어) 또는 id(상세 — 검색 결과 items 의 id, 같은 target 과 함께). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(별표·서식 — 상세 없음, 행의 file_url). 검색 인자 page(기본1), limit(1~100, 기본20), search_scope(auto|name|body). 반환 items[title·meta·url·date·id]+count·total·page·has_more·next_page·search_scope. 다음 쪽은 반환 search_scope를 유지한다. source_complete는 요청한 페이지의 원천 성공이며 전건 수집의 뜻이 아니다. 본문 재검색 실패는 부분 실패로 보존한다. 상세 반환 = items(국문·영문 법령은 조마다 no·title·text·date·chapter, 그 밖은 한 행)+원천 키(법령·Law·PrecService 등). 영문 law.enforce_date는 원천에 없으면 빈 값이며 공포일과 구별, addenda는 부칙. 용어는 dictionary_code·dictionary_name·공개 url로 사전 종류와 출처 보존(한영 대역어≠국문 정의).
     router: handler
     tool: legal_lookup
     implementation: 국가법령정보센터 API 통합 — query면 /lawSearch.do(이름 0건이면 본문 재검색), id면 /lawService.do(target별 조회 인자·못 찾음은 실패). 응답 링크는 공개 주소로 바꾸고 사용자 식별값(OC)을 지운다.
@@ -47,3 +48,13 @@ tool_json:
           type: string
           description: 대상 (law/prec/admrul/ordin/exp/detc/trty/eng_law/law_term/law_form)
           default: law
+        page:
+          type: integer
+          description: 검색 페이지(기본 1). 2쪽부터 search_scope를 명시한다.
+        limit:
+          type: integer
+          description: 한 페이지 결과 수(1~100, 기본 20)
+        search_scope:
+          type: string
+          enum: [auto, name, body]
+          description: auto는 첫 쪽에서 이름 0건일 때 본문 검색. 다음 페이지는 이전 응답의 name 또는 body를 유지한다.

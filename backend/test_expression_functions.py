@@ -190,6 +190,29 @@ def test_canonical_text_split_and_empty_replace_limits(limit):
     assert pure_call('split', ['  e\u0301  음악  ', None, limit]) == '  e\u0301  음악  '.split(None, limit)
 
 
+@pytest.mark.parametrize('value, expected', [('12.5', Decimal('12.5')), ('bad', None), ('', None), (None, None), (True, None), ({}, None), ('NaN', None)])
+def test_number_explicit_fallback_shared_frontends(value, expected):
+    assert pure_call('number', [value, None]) == expected
+    assert eval_expr(compile_expr('number(value, null)')[0], {'value': value}) == expected
+    plan = compile_program('return number($value, null)', {}, {'value': value})
+    assert not plan.issues, plan.issues
+    out = Runtime(plan, {'value': value}).run()
+    assert out['success'], out
+    assert unpack(out['value_wire']['data']) == expected
+
+
+def test_number_fallback_retains_strict_form_and_argument_errors():
+    with pytest.raises(Fault, match='number'):
+        pure_call('number', ['bad'])
+    for code in ['return number(1/0, null)', 'return number("bad", 1/0)']:
+        plan = compile_program(code, {})
+        assert plan.issues or not Runtime(plan).run()['success']
+    assert compile_program('return number("bad", null) + 1', {}).issues
+    plan = compile_program('return map(["1", "bad", "0"], ($x)=>number($x,null))', {})
+    assert Runtime(plan).run()['value'] == [1, None, 0]
+    assert pure_call('number', ['bad', {'invalid': True}]) == {'invalid': True}
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

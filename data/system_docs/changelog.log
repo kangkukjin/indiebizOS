@@ -2539,3 +2539,12 @@
   검증: 훈련자 기본 15/15·변형 13/13·15/15·3/3, 독립 AI ep4603 13/15(미달은 요청문 모호). 새 회귀 7건, 관련 69파일 1,421 passed. 실물 포털 152자→7,804자, PubMed 3병렬 전건 성공. 수리 뒤 기본 과제 15/15·포털 6건 원문 인용. backend 전수 미실행. 열림: 안전한 숫자 변환(L55-5)·처방약 원천(L55-7).
 
 2026-10-12 | 긴문장58 물품구매 | 기존 코드 읽기·조건 변경 재저장을 새 구현으로 세던 자작 관문 오탐 수리(실제 읽기·턴별 상한·추가줄 계수). 구매안 반복 필터·가격 필드 부재·보고서 전달 보완. 근거 docs/experiments/long_sentence_imagination/round_58/report.md.
+
+[2026-10-12] 긴문장 훈련 후속 수리 — 반복 처방을 공통 계약으로 이전
+  - 기존 순수식 number(value, fallback) 확장: 숫자 해석 실패만 명시 기본값으로. strict 1인자·인자 평가 오류·Decimal 의미 유지, 새 액션 없음.
+  - 법률 조회 page/limit/search_scope 및 has_more/next_page. 본문 재검색 실패는 source_complete:false로 보존해 0건 확정과 분리. HTML form은 길이 임계 없이 조작 요소만 걷고 본문 보존.
+  - output_publish 한 벌로 copy·media 저장·fill·OOXML 완성 후 게시. if_exists fail/overwrite/rename, 기존 기본값 유지. 폴더는 파일별 게시. 회원 원격 fill·RED 스테이징은 overwrite만 지원.
+  - 자원 선언의 복합 외부 키·파일 fallback/parent 지원, 컴파일·원장 공통 해소/충돌 판정. fill/copy의 실제 출력 범위를 포함하고 무관한 외부 조회 영수증 보존, 미상 범위는 보수적 무효화 유지.
+  - self:script describe에 데이터 선언의 path/id 최소 실행 예제 노출. 의약품허가조회 등록 스크립트로 식약처 Service08 연결, API 활용신청 카탈로그/가이드 연동.
+  - 검증: backend 전체 10144 passed / 13 skipped(225.85초), 빌드 --check·17종 구조/계약 가드 통과, Android 번들/설치필터 재생성. 실제 백엔드 number 변환 [12,null,0] 및 작성 예제/스크립트 발견 확인. 법률 API 13건을 2건씩 1·2쪽으로 분리 확인.
+  - 잔여: 의약품 공식 API는 현재 설정 키로 HTTP 403. 코드·빈 응답/실패 계약 검증 완료, 실제 조회는 해당 데이터셋 활용승인/인증 확인 필요. AI 전체 과제의 시간·토큰 절감은 이번 수리에서 미측정.

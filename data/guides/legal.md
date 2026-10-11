@@ -24,7 +24,8 @@ $s = [sense:legal]{query:"주택임대차보호법"}              # 검색 → $
 ### 검색 결과 읽는 법
 - **`id` = 상세 조회에 그대로 넣는 번호.** 검색 때 쓴 `target` 을 상세에도 준다. `url` 은 사람이 여는 공개 주소다(조회 번호로 쓰지 않는다).
 - **이름에서 먼저 찾고, 없으면 본문에서 찾는다.** 법령명·사건명에 맞는 것이 0건이면 본문 검색으로 한 번 더 찾고 `search_scope:"body"` 와 `note` 로 알린다. 이름에 맞는 것이 있으면 이름 결과만 온다(`"name"`). 둘 다 없으면 `items:[]`·`count:0`·`"name+body"`.
-- **`total` 이 `count` 보다 크면 첫 쪽(20건)만 온 것이다**(`note` 가 알린다). 검색어를 좁힌다.
+- 기본은 첫 쪽 20건이다. `page`(1 이상)·`limit`(1~100)으로 범위를 지정하며 `has_more`·`next_page`로 이어 간다. 두 번째 쪽부터는 첫 응답의 `search_scope`(`name` 또는 `body`)를 고정한다. `selection.scope:page`는 요청한 한 쪽이고 전체 수집 완료가 아니다. 원천이 전체 건수를 주지 않으면 `total_known:false`이며 `has_more`는 받은 건수로 보수적으로 추정한다.
+- **본문 재검색 실패는 0건 확정이 아니다.** `source_complete:false`·`errors`·`checked_scopes`를 보존하고 IBL은 `PARTIAL_SOURCE`로 알린다. 이름·본문 양쪽 응답이 모두 정상일 때만 `name+body` 0건이다.
 - 이름 검색은 부분 일치다 — "민법" 의 첫 결과는 난민법이다. 특정 법령은 `title` 이 정확히 같은 행을 고른다: `filter($s.items,($x)=>$x.title == "민법")`.
 - 용어 검색의 `dictionary_code`는 원천 사전구분코드다. `011403`은 한영사전이며 국문 정의가 아닐 수 있다. 상세의 `dictionary_name`·`dictionary_code`와 `summary`를 함께 확인한다. 같은 이름이라는 이유만으로 첫 항목을 정의로 단정하지 않는다.
 - 판례 사건명은 "임금"·"손해배상(기)"·"유류분반환" 같은 짧은 이름이다. 쟁점을 문장으로 넣으면 대개 본문 검색 결과가 온다.
@@ -66,6 +67,8 @@ $s = [sense:legal]{query:"주택임대차보호법"}              # 검색 → $
 | `query` | (둘 중 하나) | 검색어. 이름(법령명·사건명)에서 찾고 0건이면 본문에서 찾는다 |
 | `id` | (둘 중 하나) | 검색 결과 `items` 의 `id`. `law_id`/`precedent_id`도 호환 |
 | `target` | (기본 law) | 위 10종 |
+| `page` / `limit` | 기본 1 / 20 | 페이지·페이지당 건수(최대 100) |
+| `search_scope` | 기본 auto | auto(첫 쪽 이름→본문), name, body. page>1은 name/body 필수 |
 
 ---
 

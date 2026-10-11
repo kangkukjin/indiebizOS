@@ -298,5 +298,19 @@ def test_parallel_calls_keep_turn_context_and_independent_results(ibl):
     assert sorted(json.loads(p.read_text())['n'] for p in records) == [1, 2]
 
 
-if __name__ == '__main__':
-    raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_described_authoring_examples_execute_in_both_modes(tmp_path):
+    from model_result_view import describe_actions
+    answer = describe_actions(['self:script'], None, edition=2)['actions'][0]['definition']
+    examples = {e['mode']: e for e in answer['authoring_examples']}
+    work, source = create(tmp_path, examples['path']['python'])
+    out = file_script.execute(source, b'{"value":12}', work)
+    assert out['ok'] and out['value'] == {'value': 12}
+    source.write_text(examples['id']['python'])
+    proc = subprocess.run([sys.executable, str(source)], input='{"value":12}', text=True, capture_output=True, check=True)
+    assert json.loads(proc.stdout) == {'value': 12}
+
+
+if __name__ == "__main__":
+    raise SystemExit(pytest.main([__file__]))

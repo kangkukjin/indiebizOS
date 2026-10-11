@@ -127,3 +127,58 @@ def checked_values(contract, args):
     for key, value in values.items():
         guard(value, params[key], key)
     return effective, values
+
+
+def validate_resources(resources, params):
+    """Resource declarations: a path parameter, compound external key, or parent scope."""
+    if not isinstance(resources, dict):
+        raise ValueError('자원 선언은 자원 종류→인자 선언입니다.')
+    for realm, item in resources.items():
+        if isinstance(item, str):
+            names = [item]
+        elif isinstance(item, list) and realm != 'file' and item:
+            names = item
+        elif isinstance(item, dict) and realm == 'file' and set(item) <= {'param', 'fallback', 'parent'}:
+            names = [item.get('param')] + ([item['fallback']] if 'fallback' in item else [])
+            if 'parent' in item and type(item['parent']) is not bool:
+                raise ValueError('자원 parent는 Bool입니다.')
+        else:
+            raise ValueError('파일 자원은 인자 또는 {param,fallback,parent}, 외부 자원은 인자 또는 인자 목록입니다.')
+        if any(not isinstance(n, str) or n not in params for n in names):
+            raise ValueError('자원은 선언된 인자를 참조해야 합니다.')
+
+
+def resource_values(declaration, args, identity=None, *, allow_bare=True):
+    """Resolve declared values identically for compiler and journal; missing is unknown."""
+    import os
+    from ibl_v2_ir import digest
+    result = []
+    for realm, item in declaration.items():
+        if isinstance(item, list):
+            values = {k: args[k] for k in item if k in args}
+            if not values or any(v is UNRESOLVED for v in values.values()):
+                return None
+            result.append((realm, digest(values)))
+            continue
+        key = item if isinstance(item, str) else item['param']
+        value = args.get(key)
+        if value in (None, '') and isinstance(item, dict):
+            value = args.get(item.get('fallback'))
+        if not isinstance(value, str) or not value.strip():
+            return None
+        if realm == 'file' and '/' not in value and not allow_bare:
+            return None  # A bare output may be redirected by the output-path policy.
+        value = identity(realm, value) if identity else value
+        if not isinstance(value, str) or not value:
+            return None
+        if isinstance(item, dict) and item.get('parent'):
+            value = os.path.dirname(value) or '.'
+        result.append((realm, value))
+    return result
+
+
+def resource_conflicts(left, right):
+    """Named resource overlap shared by static and runtime checks (inodes add at runtime)."""
+    return {a for a in left for b in right if a[0] == b[0] and
+            (a[1] == b[1] or a[0] == 'file' and
+             (a[1].startswith(b[1].rstrip('/') + '/') or b[1].startswith(a[1].rstrip('/') + '/')))}

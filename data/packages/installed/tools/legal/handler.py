@@ -381,43 +381,59 @@ def _search_meta(raw_str: str) -> dict:
     return {}
 
 
-def _search(api_key: str, target: str, query: str) -> dict:
-    """검색(lawSearch.do) → 레코드 통화.
-
-    이름(법령명·사건명 등)에서 먼저 찾고, 0건이면 본문에서 한 번 더 찾는다 — 어느 쪽에서 찾았는지는
-    search_scope 가 말한다. 0건도 items:[] · count:0 이다. total 은 원천의 전체 건수(items 는 첫 쪽).
-    """
+def _search(api_key: str, target: str, query: str, *, page=1, limit=20, search_scope="auto") -> dict:
+    """One explicitly bounded page; fallback failure is never proof of absence."""
+    if type(page) is not int or page < 1 or type(limit) is not int or not 1 <= limit <= 100:
+        return {"success": False, "error": "page는 1 이상 정수, limit은 1~100 정수입니다."}
+    if search_scope not in ("auto", "name", "body") or (page > 1 and search_scope == "auto"):
+        return {"success": False, "error": "다음 페이지는 이전 응답의 search_scope(name 또는 body)를 지정하세요."}
     api_target = _API_TARGET.get(target, target)
-    out, scope = None, "name"
-    for scope, extra in (("name", {}), ("body", {"search": 2})):
-        raw = api_call("law", "/lawSearch.do",
-                       params={"OC": api_key, "target": api_target, "type": "JSON", "query": query, **extra},
-                       raw_response=True)
-        raw_str = raw if isinstance(raw, str) else str(raw)
+    scopes = ("name", "body") if search_scope == "auto" else (search_scope,)
+    out, checked = None, []
+    for scope in scopes:
+        params = {"OC": api_key, "target": api_target, "type": "JSON", "query": query}
+        if scope == "body":
+            params["search"] = 2
+        # Preserve the old request when defaults are used.
+        if page != 1:
+            params["page"] = page
+        if limit != 20:
+            params["display"] = limit
         try:
+            raw = api_call("law", "/lawSearch.do", params=params, raw_response=True)
+            raw_str = raw if isinstance(raw, str) else str(raw)
             records = _build_records(raw_str, target)
-        except Exception:
-            records = None
-        if records is None:
-            if out is not None:
-                break          # 본문 재검색이 실패하면 이름 검색의 0건 응답을 그대로 낸다
-            return {"success": False, "error_code": "SOURCE_ERROR",
-                    "error": f"법령정보 원천이 '{target}' 검색에 읽을 수 없는 응답을 주었습니다: {_redact(raw_str)[:200]}"}
+            if records is None:
+                raise ValueError("읽을 수 없는 원천 응답")
+        except Exception as exc:
+            error = {"scope": scope, "page": page, "message": _redact(str(exc))[:200]}
+            if out is None:
+                return {"success": False, "error_code": "SOURCE_ERROR", "error": error["message"],
+                        "source_complete": False, "items": [], "errors": [error]}
+            return {**out, "source_complete": False, "errors": [error], "checked_scopes": checked,
+                    "note": "이름 검색은 0건이나 본문 검색은 실패했습니다. 전체 부재를 확인하지 못했습니다."}
+        checked.append(scope)
         meta = _search_meta(raw_str)
+        total = meta.get("total")
+        has_more = page * limit < total if total is not None else len(records) == limit
         out = {"success": True, "message": _redact(raw_str), "items": records, "count": len(records),
-               "total": meta.get("total") if meta.get("total") is not None else len(records),
-               "search_scope": scope}
+               "total": total if total is not None else len(records), "total_known": total is not None,
+               "search_scope": scope, "checked_scopes": list(checked), "page": page, "limit": limit,
+               "has_more": has_more, "next_page": page + 1 if has_more else None,
+               "source_complete": True, "selection": {"scope": "page", "page": page, "limit": limit}}
         if records:
             break
-    if out["search_scope"] == "body" and out["items"]:
+    if out["search_scope"] == "body" and out["items"] and search_scope == "auto":
         out["note"] = "이름(법령명·사건명)에는 맞는 것이 없어 본문에서 찾은 결과입니다."
     elif not out["items"]:
-        out["search_scope"] = "name+body"
-        out["note"] = "이름과 본문 어디에도 맞는 것이 없습니다."
-    if out["total"] > out["count"]:
-        # 검색의 첫 쪽은 요청한 전체의 절단이 아니라 원천이 고른 상위 결과다 — 절단 표지(실행기가 불완전 원천으로
-        # 거절한다)를 세우지 않고, 전체 건수(total)와 안내로 "더 있다" 를 말한다.
-        out["note"] = (out.get("note", "") + f" 전체 {out['total']}건 중 첫 {out['count']}건입니다 — 검색어를 좁히세요.").strip()
+        if checked == ["name", "body"]:
+            out["search_scope"] = "name+body"
+            out["note"] = "이름과 본문 어디에도 맞는 것이 없습니다."
+        else:
+            out["note"] = "요청한 검색 범위의 이 페이지에는 결과가 없습니다."
+    if out["has_more"]:
+        extent = f"전체 {out['total']}건 중 {page}쪽 {out['count']}건입니다." if out['total_known'] else "다음 쪽이 있을 수 있습니다."
+        out["note"] = (out.get("note", "") + " " + extent + " 같은 query·target·limit·search_scope와 next_page로 이어 읽으세요.").strip()
     return out
 
 
@@ -605,10 +621,12 @@ def execute(tool_input: dict, context) -> str:
         if item_id:
             return _detail(api_key, target, item_id)
         if query:
-            return _search(api_key, target, query)
+            return _search(api_key, target, query, page=tool_input.get("page", 1),
+                           limit=tool_input.get("limit", 20), search_scope=tool_input.get("search_scope", "auto"))
         return json.dumps({"success": False, "error": "query 또는 id 중 하나가 필요합니다."}, ensure_ascii=False)
     if tool_name in ("search_legal_info", "search_laws", "search_precedents"):
-        return _search(api_key, target, query)
+        return _search(api_key, target, query, page=tool_input.get("page", 1),
+                           limit=tool_input.get("limit", 20), search_scope=tool_input.get("search_scope", "auto"))
     if tool_name in ("get_legal_detail", "get_law_detail", "get_precedent_detail"):
         return _detail(api_key, target, item_id)
     return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)

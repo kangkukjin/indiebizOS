@@ -291,24 +291,28 @@ def fill_op(tool_input: dict, project_path: str) -> str:
         out = out_raw if os.path.isabs(out_raw) else os.path.join(project_path, out_raw)
     else:
         out = str(tpl.with_name(f"{tpl.stem}_filled{tpl.suffix}"))
-    replaced = False
-    if data:
-        os.makedirs(os.path.dirname(os.path.abspath(out)) or ".", exist_ok=True)
-        # 같은 이름의 산출물이 이미 있으면 채우기는 그것을 바꾼다 — 응답이 그 사실을 말한다(L52-2).
-        replaced = os.path.exists(out) and os.path.abspath(out) != os.path.abspath(str(tpl))
-
     try:
-        if ext == "pdf":
-            res = _fill_pdf(tpl, data, out, flatten)
-        elif ext in ("docx", "doc"):
-            res = _fill_docx(tpl, data, out)
+        from output_publish import publish_file, collision_policy
+        policy = collision_policy(tool_input.get('if_exists'), 'overwrite')
+        def generate(destination):
+            if ext == "pdf":
+                result = _fill_pdf(tpl, data, str(destination), flatten)
+            elif ext in ("docx", "doc"):
+                result = _fill_docx(tpl, data, str(destination))
+            else:
+                raise ValueError(f"채우기를 지원하지 않는 형식입니다: .{ext} (지원: pdf, docx)")
+            if not result.get('success'):
+                raise ValueError(result.get('error') or '양식 채우기 실패')
+            return result
+        if data:
+            res, receipt = publish_file(out, generate, if_exists=policy)
+            if not receipt['replaced_existing']:
+                receipt.pop('replaced_existing')  # 기존 fill 응답은 실제 교체 때만 이 표지를 낸다.
+            res.update(receipt)
         else:
-            return json.dumps({"success": False,
-                               "error": f"채우기를 지원하지 않는 형식입니다: .{ext} (지원: pdf, docx)"}, ensure_ascii=False)
+            res = generate(out)
     except Exception as e:  # noqa: BLE001
         return json.dumps({"success": False, "error": f"양식 채우기 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
-    if replaced and res.get("success") and res.get("mode") != "fields":
-        res["replaced_existing"] = True
     return json.dumps(res, ensure_ascii=False)
 
 

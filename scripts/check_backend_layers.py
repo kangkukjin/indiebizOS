@@ -39,6 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
+        "output_publish",
         "research_context",
         "coding_process", "repair_process", "repair_runtime", "repair_test_results", "repair_live_probe",
         "execution_commit", "embedding_guard", "python_environment_lock", "tool_completion", "completion_lease", "history_excerpt", "distill_receipts", "trajectory_payload", "corpus_policy",

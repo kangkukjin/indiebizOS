@@ -101,7 +101,7 @@ return $결과
 `len`, `has`, `get`, `json`, `number`, `text`, `abs`, `round`, `min`, `max`, `sum`,
 `reduce(목록,초깃값,($누적,$행)=>식)`, `is_ok`, `unwrap`, `error_of`, `evidence`가 내장 함수다.
 람다 `=>` 뒤 줄바꿈을 허용한다. `number()`는 유한 숫자로 해석할 수 없으면
-입력 미리보기·기대 타입을 포함한 `NUMBER_REQUIRED`로 실패한다. null을 반환하지 않으며 try/catch로 처리한다.
+입력 미리보기·기대 타입을 포함한 `NUMBER_REQUIRED`로 실패한다. `number(value, fallback)`은 숫자 해석 실패만 명시한 fallback 값으로 돌려준다(예: `number("측정 실패", null)`). 두 인자는 보통 함수처럼 먼저 평가하므로 인자 계산 오류·예산 중단은 잡지 않는다. 반환 타입은 Number와 fallback 타입의 합이다. 숫자 의미는 value_semantics를 공유한다.
 `has($행,"필드")`가 참인 분기·filter 뒤에는 그 필드의 존재를 인정한다(타입·비null 보장은 아님).
 빈 목록 가지는 원소 타입을 지우지 않으며, 모델 schema의 새 열과 기존 입력 열을 함께 보존한다.
 

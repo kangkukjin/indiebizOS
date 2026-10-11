@@ -1344,6 +1344,14 @@ nodes:
         - 물가
         - 실업률
       legal:
+        read_resources:
+          legal:
+          - query
+          - id
+          - target
+          - page
+          - limit
+          - search_scope
         aliases:
           id:
           - law_id
@@ -1354,7 +1362,7 @@ nodes:
           target=prec: '[sense:legal]{query: "임금", target: "prec"}'
         description: 대한민국 법률 통합 검색 (law.go.kr). query(검색)→items 의 id 를 {id, target} 에 넣어 상세. 국문·영문 법령 상세는 조마다 한 행(no·text). 이름에 없으면 본문에서 찾고 search_scope 가 알린다. 못 찾은 번호는 실패(NOT_FOUND). 자세히 read_guide(query="법률").
         group: legal
-        target_description: query(검색어) 또는 id(상세 — 검색 결과 items 의 id, 같은 target 과 함께). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(별표·서식 — 상세 없음, 행의 file_url). 검색 반환 = items[title·meta·url·date·id]+count·total(전체 건수, items 는 첫 쪽)·search_scope(name|body|name+body). 상세 반환 = items(국문·영문 법령은 조마다 no·title·text·date·chapter, 그 밖은 한 행)+원천 키(법령·Law·PrecService 등). 영문 law.enforce_date는 원천에 없으면 빈 값이며 공포일과 구별, addenda는 부칙. 용어는 dictionary_code·dictionary_name·공개 url로 사전 종류와 출처 보존(한영 대역어≠국문 정의).
+        target_description: query(검색어) 또는 id(상세 — 검색 결과 items 의 id, 같은 target 과 함께). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(별표·서식 — 상세 없음, 행의 file_url). 검색 인자 page(기본1), limit(1~100, 기본20), search_scope(auto|name|body). 반환 items[title·meta·url·date·id]+count·total·page·has_more·next_page·search_scope. 다음 쪽은 반환 search_scope를 유지한다. source_complete는 요청한 페이지의 원천 성공이며 전건 수집의 뜻이 아니다. 본문 재검색 실패는 부분 실패로 보존한다. 상세 반환 = items(국문·영문 법령은 조마다 no·title·text·date·chapter, 그 밖은 한 행)+원천 키(법령·Law·PrecService 등). 영문 law.enforce_date는 원천에 없으면 빈 값이며 공포일과 구별, addenda는 부칙. 용어는 dictionary_code·dictionary_name·공개 url로 사전 종류와 출처 보존(한영 대역어≠국문 정의).
         router: handler
         tool: legal_lookup
         implementation: 국가법령정보센터 API 통합 — query면 /lawSearch.do(이름 0건이면 본문 재검색), id면 /lawService.do(target별 조회 인자·못 찾음은 실패). 응답 링크는 공개 주소로 바꾸고 사용자 식별값(OC)을 지운다.
@@ -2764,8 +2772,8 @@ nodes:
               - queries
         lands_on: hub
         path_audited:
-          at: '2026-10-11'
-          impl: 0c16fdaa34fc30a6
+          at: '2026-10-12'
+          impl: 6a2411bbdce3f02c
         aliases:
           limit:
           - count
@@ -2881,8 +2889,8 @@ nodes:
               items: List<Record>
         lands_on: hub
         path_audited:
-          at: '2026-10-11'
-          impl: 0c16fdaa34fc30a6
+          at: '2026-10-12'
+          impl: 6a2411bbdce3f02c
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -5962,7 +5970,7 @@ nodes:
             backend/common/expression_functions.py: 0d5ef11ac2b3aa49807b08b2a22b927d259f0721af562d186b25a4ce410e1887
             backend/common/expression_ir.py: a8f7cdaf84a48dee6a51faf021e151cd66b4c64d77737d11341d82204bd95b2f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
-            backend/common/expression_ops.py: 815d7f433f24f351e8827cec78f95743b3fb331986c5606695e76e18f34b9c04
+            backend/common/expression_ops.py: 277d298b7eee927b99b99ebea82d6a31e93c08194787ffb3f0ed249a770e799b
             backend/common/expression_parser.py: 29fffbbe2dd115d6ebf2f79cc572e586d64f0e7d303a38d85a9239beb4219684
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
             backend/base/runtime_utils.py: a2cc50cf1dcafb3f83d32c298787dbd3e5fb4ef4276ff0c8bbc77bf449cd1198
@@ -6212,12 +6220,17 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-10-12'
-          impl: 6857fe358432a646
+          impl: 0b8e34ecc33a99d5
         target_key: path
         aliases:
           offset:
           - start
       fill:
+        write_resources:
+          file:
+            param: output
+            fallback: path
+            parent: true
         lands_on: body
         limb_op:
           op: document_fill
@@ -6225,13 +6238,13 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-10-12'
-          impl: 6857fe358432a646
+          impl: 0b8e34ecc33a99d5
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
         description: 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면 채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기). 채운 뒤에도 값이 없어 남은 자리는 remaining 으로 알린다.
         group: file
-        target_description: 'path — 템플릿 문서(.pdf 폼 또는 {{자리표시자}} 든 .docx). data — 필드→값 매핑({이름: 값}); 생략하면 채울 수 있는 필드 목록 반환(introspection). output — 출력 경로(생략 시 원본 옆 _filled). flatten — PDF 전용, true면 폼을 정적 내용으로 구워 제출용(수정 불가, 기본 false). 스캔 이미지 PDF는 폼 필드가 없어 채울 수 없다(별도 OCR 대상). DOCX 는 본문·표·글상자와 머리글·바닥글의 자리까지 채우고 글자 모양(굵게 등)을 잇는다. 응답 — filled(채운 이름)·unmatched(틀에 없는 data 키)·remaining(값을 못 받아 남은 자리, DOCX 는 where 포함; 있으면 warning)·replaced_existing(같은 이름의 산출물을 바꿨을 때 true — 채우기는 기존 output 을 덮어쓴다).'
+        target_description: 'path — 템플릿 문서(.pdf 폼 또는 {{자리표시자}} 든 .docx). data — 필드→값 매핑({이름: 값}); 생략하면 채울 수 있는 필드 목록 반환(introspection). output — 출력 경로(생략 시 원본 옆 _filled). flatten — PDF 전용, true면 폼을 정적 내용으로 구워 제출용(수정 불가, 기본 false). 스캔 이미지 PDF는 폼 필드가 없어 채울 수 없다(별도 OCR 대상). DOCX 는 본문·표·글상자와 머리글·바닥글의 자리까지 채우고 글자 모양(굵게 등)을 잇는다. 응답 — filled(채운 이름)·unmatched(틀에 없는 data 키)·remaining(값을 못 받아 남은 자리, DOCX 는 where 포함; 있으면 warning)·replaced_existing(교체 여부). if_exists:overwrite(기본)·fail·rename(회원 원격은 overwrite만 지원). 완성 후 원자 게시하며 다음 단계는 반환 path를 쓴다.'
         aliases:
           output:
           - output_path
@@ -6302,7 +6315,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-10-12'
-          impl: 6857fe358432a646
+          impl: 0b8e34ecc33a99d5
         target_key: path
       list:
         callable_contract:
@@ -6606,10 +6619,13 @@ nodes:
         target_key: path
       copy:
         write_resources:
-          file: dest
+          file:
+            param: dest
+            parent: true
         params:
           dest: string
           src: string
+          if_exists: string
         shell_shadow:
           heads:
           - cp
@@ -6624,7 +6640,7 @@ nodes:
         pipe_in: true
         description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사. src 없이 파이프로 items를 받으면 그 파일들을 dest 폴더에 한꺼번에 저장(폰 사진 등).
         group: file
-        target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용) ★src를 생략하고 앞 액션 결과를 >> 로 넘기면 그 items의 파일 전부를 dest 폴더로 복사 — 몇 장을 고르는 일은 [table:take]/[table:filter]가 한다. items의 source가 usb면 USB 연결 폰에서 당겨 온다. 이름 충돌은 "(2)"로 피하고 덮어쓰지 않는다 — 그때 응답의 path 는 요청한 dest 와 다르고 renamed·warning 이 알린다(다음 단계는 응답의 path 를 쓰거나, 새로 만들 것이면 기존 파일을 먼저 [self:delete]). 앞 단계가 **0행**이면 고장이 아니라 빈손 성공(0개 저장) — 통화 자체가 없을 때만 거절한다.
+        target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용) ★src를 생략하고 앞 액션 결과를 >> 로 넘기면 그 items의 파일 전부를 dest 폴더로 복사 — 몇 장을 고르는 일은 [table:take]/[table:filter]가 한다. items의 source가 usb면 USB 연결 폰에서 당겨 온다. if_exists는 rename(기본, 이름 충돌은 "(2)"로 회피)·fail(기존 파일이면 거절)·overwrite(완성 후 원자 교체). 다음 단계는 반환 path를 쓴다. RED 수리 스테이징은 overwrite만 지원. 폴더는 파일별 게시이며 전체 트랜잭션은 아니다. 앞 단계가 **0행**이면 고장이 아니라 빈손 성공(0개 저장) — 통화 자체가 없을 때만 거절한다.
         router: handler
         tool: copy_path
         implementation: shutil.copy/copytree로 파일/폴더 복사. src 생략 시 _copy_piped_items — _prev_result의 items를 dest 폴더로(usb 항목은 file_index.usb_pull). 통화 되읽기=common.currency 정본, 통화 없음/0행/비-레코드 3갈래 분간(F20-3 계약)
@@ -7011,7 +7027,7 @@ nodes:
         exempt: 실존 xlsx 파일 경로 인자 필요(고정 fixture 부적합)
         description: 엑셀 파일 작업 — find/append/update·range/range_write/calculate. 활성 시트 세션(열기·스냅샷·제안·저장·버전)은 [self:workspace](2026-10-05 흡수).
         group: file
-        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★append/update는 openpyxl의 보존 한계가 있으며 .xlsm 매크로는 보존. range: range(A1:C10)·sheet → 셀별 값/수식·sha256. range_write: expected_sha256·range·values(같은 크기 2차원 배열)·format(number_format/bold)·output(새 경로), 비대상 ZIP 파트 보존. calculate: path(xlsx)·output(새 경로)·timeout(1~120초), LibreOffice/SOFFICE_PATH 필요, 원래 수식/비대상 파트에 셀 계산 캐시만 반영. 공유/배열/외부 수식·매크로 재계산은 거절, errors와 recalculated 확인. 열린 시트의 세션·스냅샷·제안·저장은 [self:workspace] 로. 닫힌 파일의 저장 캐시는 기존 range로 읽으며 활성 미저장 값과 구별한다.'
+        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★append/update는 openpyxl의 보존 한계가 있으며 .xlsm 매크로는 보존. range: range(A1:C10)·sheet → 셀별 값/수식·sha256. range_write: expected_sha256·range·values(같은 크기 2차원 배열)·format(number_format/bold)·output(결과 경로), 비대상 ZIP 파트 보존. range_write/calculate의 if_exists는 fail(기본)·overwrite·rename이며 완성 후 원자 게시하고 반환 path를 사용. calculate: path(xlsx)·output(결과 경로)·timeout(1~120초), LibreOffice/SOFFICE_PATH 필요, 원래 수식/비대상 파트에 셀 계산 캐시만 반영. 공유/배열/외부 수식·매크로 재계산은 거절, errors와 recalculated 확인. 열린 시트의 세션·스냅샷·제안·저장은 [self:workspace] 로. 닫힌 파일의 저장 캐시는 기존 range로 읽으며 활성 미저장 값과 구별한다.'
         router: handler
         tool: sheet_op
         params:
@@ -7019,8 +7035,29 @@ nodes:
           values: array
           format: object
           output: string
+          if_exists: string
           expected_sha256: string
           timeout: number
+        param_support:
+          axis: op
+          default: find
+          params:
+          - if_exists
+          values:
+            find: {}
+            append: {}
+            update: {}
+            range: {}
+            range_write:
+              if_exists:
+              - fail
+              - overwrite
+              - rename
+            calculate:
+              if_exists:
+              - fail
+              - overwrite
+              - rename
         implementation: sheet_ops.py — 헤더 기반 openpyxl 행 편집. sheet_range_ops.py — ZIP 파트 보존 범위/서식 편집 및 LibreOffice 계산 캐시 이식. 세션 op 11개는 2026-10-05 [self:workspace] 로 흡수.
         target_key: op
         runs_on: pc_only
@@ -7108,10 +7145,41 @@ nodes:
               text: Text
             effects:
             - read_external
+        authoring_examples:
+        - mode: path
+          contract: 임시 Python은 args 객체를 stdin으로 읽고 결과 파일에 JSON을 쓴다. stdout은 진단이다.
+          call: '[self:script]{path:"~turn/main.py",args:{value:12}}'
+          python: 'import json, os, sys
+
+            from pathlib import Path
+
+            args = json.load(sys.stdin)
+
+            result = {"value": args["value"]}
+
+            path = Path(os.environ["INDIEBIZ_SCRIPT_RESULT"])
+
+            temp = path.with_suffix(".tmp")
+
+            temp.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+
+            os.replace(temp, path)
+
+            '
+        - mode: id
+          contract: 등록 스크립트는 먼저 op:list로 callable_contract를 확인한다. registered-json/1이면 stdin 객체와 stdout JSON을 쓴다.
+          call: '[self:script]{id:"등록ID",args:{value:12}}'
+          python: 'import json, sys
+
+            args = json.load(sys.stdin)
+
+            print(json.dumps({"value": args["value"]}, ensure_ascii=False))
+
+            '
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-10-12'
-          impl: 6857fe358432a646
+          impl: 0b8e34ecc33a99d5
         pipe_in: true
         lands_on: body
         limb_op:

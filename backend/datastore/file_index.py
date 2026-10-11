@@ -606,13 +606,14 @@ def _adb_query(*, kind, q, start, end, has_gps, ext, path, limit, sort, facets,
             "scope": "usb:MediaStore", "items": items[:limit]}
 
 
-def save_media_files(items: Sequence[Dict[str, Any]], dest_dir: str) -> Dict[str, Any]:
+def save_media_files(items: Sequence[Dict[str, Any]], dest_dir: str, *, if_exists="rename") -> Dict[str, Any]:
     """items 의 파일들을 dest_dir 폴더로 복사 — 몸이 어디든 같은 한 가지 일.
 
     `source == "usb"` 면 파일이 폰에 있으므로 adb 로 당겨 오고, 아니면 로컬 복사.
     "고르는 일"은 호출자 몫(IBL 은 table 변환자로, UI 는 사용자 선택으로) — 여기선
     받은 것을 옮기기만 한다. 그래서 IBL `[self:copy]` 와 앱 저장 버튼이 같은 코드를 쓴다.
-    이름이 겹치면 "(2)" 를 붙인다 — 덮어쓰기는 사용자가 원한 적 없는 삭제다.
+    이름 충돌 기본은 rename("(2)"); if_exists로 fail·overwrite를 명시할 수 있다.
+    완성된 파일만 게시하며 작성 실패는 기존 결과를 보존한다.
     """
     import shutil
 
@@ -631,23 +632,20 @@ def save_media_files(items: Sequence[Dict[str, Any]], dest_dir: str) -> Dict[str
         if not isinstance(src, str) or not src or src.startswith(("http://", "https://")):
             continue
         target = os.path.join(dest_dir, os.path.basename(src))
-        if os.path.exists(target):
-            stem, ext = os.path.splitext(target)
-            target = next((f"{stem} ({n}){ext}" for n in range(2, 1000)
-                           if not os.path.exists(f"{stem} ({n}){ext}")), f"{stem} (new){ext}")
         try:
-            if it.get("source") == "usb":
-                ok, err = usb_pull(src, target)
-                if not ok:
-                    failed.append(f"{os.path.basename(src)}: {err}")
-                    continue
-            elif os.path.isfile(src):
-                shutil.copy2(src, target)
-            else:
-                failed.append(f"{os.path.basename(src)}: 원본이 없습니다")
-                continue
-            saved.append(os.path.basename(target))
-        except OSError as e:
+            from output_publish import publish_file
+            def write(temp):
+                if it.get("source") == "usb":
+                    ok, err = usb_pull(src, str(temp))
+                    if not ok:
+                        raise OSError(err)
+                elif os.path.isfile(src):
+                    shutil.copy2(src, temp)
+                else:
+                    raise OSError("원본이 없습니다")
+            _, receipt = publish_file(target, write, if_exists=if_exists)
+            saved.append(os.path.basename(receipt['path']))
+        except (OSError, ValueError) as e:
             failed.append(f"{os.path.basename(src)}: {e}")
 
     return {"success": bool(saved) or not failed, "dest": dest_dir,

@@ -382,3 +382,24 @@ AI동향발행:
   interpreter: python
   registered_at: '2026-08-22T03:03:55'
   timeout: 300
+
+의약품허가조회:
+  description: '식약처 의약품 제품 허가정보(전문·일반)를 조회. args: query(제품명) 또는 id(품목기준코드), page(기본1), limit(1~100). items에 id·title·manufacturer·classification·ingredients_text·url·raw, 다음 페이지와 원천 확인 상태를 반환. DATA_GO_KR_API_KEY와 해당 API 활용승인 필요. e약은요에 없는 처방약의 후보 확인용이며 조회 실패를 없음으로 바꾸지 않는다. 개인 건강 원장은 쓰지 않는다.'
+  file: drug_approval.py
+  interpreter: python
+  registered_at: '2026-10-12T00:00:00'
+  timeout: 60
+  callable_contract:
+    version: 1
+    params: {query: Text, id: Text, page: Number, limit: Number}
+    required: []
+    required_any: [[query, id]]
+    defaults: {page: 1, limit: 20}
+    integers: [page, limit]
+    minimum: {page: 1, limit: 1}
+    maximum: {limit: 100}
+    result: Record
+    effects: [read_external]
+    per_run: true
+    read_resources: {mfds: [query, id, page, limit]}
+    adapter: {protocol: registered-json/1}

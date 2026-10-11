@@ -173,9 +173,16 @@ def test_ai_result_rows_keep_input_fields_in_the_static_type():
 
 
 @pytest.mark.parametrize("action,param", [("self:mkdir", "path"), ("self:delete", "path"), ("self:copy", "dest")])
-def test_file_writers_declare_their_write_resource(action, param):
+def test_file_writers_declare_their_write_resource(action, param, tmp_path):
     from ibl_v2_adapters import load_registry
-    assert load_registry()[action].contract.get("write_resources") == {"file": param}
+    from ibl_run_journal import call_resources, resources_overlap
+    spec = load_registry()[action]
+    path = tmp_path.resolve() / 'result.txt'
+    actual = call_resources(spec, spec.contract, {param: str(path)}, 'write')
+    assert actual is not None
+    assert resources_overlap(actual, [['file', str(path), None]])
+    if action == 'self:copy':
+        assert resources_overlap(actual, [['file', str(path.with_name('result (2).txt')), None]])
 
 
 if __name__ == "__main__":

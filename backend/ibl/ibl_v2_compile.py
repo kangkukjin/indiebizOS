@@ -549,7 +549,8 @@ class Compiler:
                 self.returns = old_returns
                 types.append(result)
                 branch_writes, self.write_log = self.write_log, outer_writes | self.write_log
-                conflict.update(writes & branch_writes)
+                from ibl_callable_contract import resource_conflicts
+                conflict.update(resource_conflicts(writes, branch_writes))
                 writes.update(branch_writes)
             if conflict:
                 self.issue(node, "PARALLEL_WRITE_CONFLICT", f"병렬 가지가 같은 선언 자원에 씁니다: {sorted(conflict)}")
@@ -642,11 +643,13 @@ class Compiler:
             self.effects.update(contract["effects"])
             self.call_effects.setdefault(node.id, set()).update(contract["effects"])
             # 자원 정체 = 타입 검사가 아는 컴파일 시 값(리터럴·변수·기본값·특수화 인자·정적 보간). 같은 값이면 같은 자원이다.
-            for realm, param in spec.contract.get("write_resources", {}).items():
-                known = static_text(args.get(param))
-                if known is not None and self.reachable:
-                    identity = spec.resource_identity(realm, known) if spec.resource_identity else known
-                    self.write_log.add((realm, identity))
+            from ibl_callable_contract import resource_values, UNRESOLVED
+            resource_args = {k: static_text(t) if static_text(t) is not None else UNRESOLVED
+                             for k, t in args.items()}
+            resources = resource_values(contract.get("write_resources", {}), resource_args,
+                                        spec.resource_identity)
+            if self.reachable and resources:
+                self.write_log.update(resources)
             result_type = declared(contract["result"])
             from ibl_v2_adapters import observed_result
             # A dynamic shape selector is present, not absent. Keep its marker

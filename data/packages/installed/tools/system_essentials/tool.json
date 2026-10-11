@@ -420,6 +420,10 @@
           "src": {
             "type": "string",
             "description": "self:copy 파라미터"
+          },
+          "if_exists": {
+            "type": "string",
+            "description": "self:copy 파라미터"
           }
         },
         "required": [
@@ -684,6 +688,15 @@
           "output": {
             "type": "string",
             "description": "출력 파일 경로 (생략 시 원본 옆 _filled)"
+          },
+          "if_exists": {
+            "type": "string",
+            "enum": [
+              "fail",
+              "overwrite",
+              "rename"
+            ],
+            "description": "기존 출력 정책(기본 overwrite). 완성 후 파일별 원자 게시."
           },
           "flatten": {
             "type": "boolean",
@@ -1091,6 +1104,10 @@
             "description": "self:sheet 파라미터"
           },
           "output": {
+            "type": "string",
+            "description": "self:sheet 파라미터"
+          },
+          "if_exists": {
             "type": "string",
             "description": "self:sheet 파라미터"
           },

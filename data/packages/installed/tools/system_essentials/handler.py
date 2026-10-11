@@ -705,6 +705,8 @@ def _execute(tool_input: dict, context) -> str:
         op = tool_input.get("op") or _OP_DEFAULTS.get(tool_name)
         if tool_name == "script_op" and "input_as" in tool_input and op != "run":
             return json.dumps({"success": False, "error": "input_as는 run 전용입니다."}, ensure_ascii=False)
+        if tool_name == "sheet_op" and "if_exists" in tool_input and op not in ("range_write", "calculate"):
+            return json.dumps({"success": False, "error": "if_exists는 range_write/calculate의 결과 파일 정책입니다."}, ensure_ascii=False)
         fn = _OP_DISPATCHERS[tool_name].get(op)
         if fn is None:
             return json.dumps({"success": False,
@@ -1195,14 +1197,16 @@ def _execute(tool_input: dict, context) -> str:
 
             # RED 안전판 — 디렉토리 단위 RED 복사는 그랜트가 있어도 금지(파급 과대)
             if _repair_is_live_path(dst):
+                if tool_input.get("if_exists", "overwrite") != "overwrite":
+                    return "Error: RED 수리 스테이징은 if_exists:overwrite만 지원합니다. 복사를 실행하지 않았습니다."
                 if os.path.isdir(read_src):
                     return ("Error: RED 구역에는 디렉토리 단위 복사가 금지됩니다"
                             "(수리 그랜트가 있어도). 파일 단위로 나눠서 하세요.")
                 # 격리 스테이징 — 쓰기와 같은 층. 라이브 dst 는 apply 때 생긴다.
                 _staged_dst = _red_stage(dst, for_write=True)
                 if _staged_dst != dst:
-                    os.makedirs(os.path.dirname(os.path.abspath(_staged_dst)), exist_ok=True)
-                    shutil.copy2(read_src, _staged_dst)
+                    from output_publish import publish_file
+                    publish_file(_staged_dst, lambda p: shutil.copy2(read_src, p), if_exists="overwrite")
                     return json.dumps({
                         "success": True, "staged": True,
                         "path": os.path.abspath(_staged_dst),
@@ -1221,7 +1225,8 @@ def _execute(tool_input: dict, context) -> str:
                 if _red_err:
                     return _red_err
 
-            result = _load_sibling("copy_ops").transfer_path(read_src, dst)
+            result = _load_sibling("copy_ops").transfer_path(read_src, dst, if_exists=tool_input.get("if_exists", "rename"),
+                guard=lambda p: _validate_path_in_scope(p, project_path))
             _red_write_finalize(result["path"])
             _vocab_enforce(result["path"])
             return json.dumps(result, ensure_ascii=False)

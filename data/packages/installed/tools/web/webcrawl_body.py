@@ -7,7 +7,7 @@ BODY_SELECTORS = (
     'main, [role="main"]', 'article, [itemprop="articleBody"]',
     '.entry-content, .post-content, .article-body, .article-content, .ck-content, .se-main-container',
 )
-UI_SELECTORS = ('nav, footer, aside, script, style, noscript, iframe, form, button, svg, '
+UI_SELECTORS = ('nav, footer, aside, script, style, noscript, iframe, button, input, select, textarea, svg, '
                 '[role="navigation"], [role="banner"], [role="contentinfo"], '
                 '[hidden], [aria-hidden="true"]')
 NOISE = {'advert', 'advertisement', 'ads', 'sidebar', 'social-share',
@@ -59,14 +59,11 @@ def clean(soup):
     for node in matched:
         if node.name != 'form' and node.attrs is not None:
             node.decompose()
-    # Some sites wrap the whole page in one <form>; a form that still carries the
-    # page's prose once scripts and controls are gone is a wrapper, not a control.
-    for node in matched:
-        if node.name == 'form' and node.attrs is not None:
-            if _text_len([node]) >= THIN_PAGE_CHARS:
-                node.unwrap()
-            else:
-                node.decompose()
+    # A form is a container, not evidence that its prose is UI. Remove actual
+    # controls above and unwrap the container without a text-length cutoff.
+    for node in list(soup.find_all('form')):
+        if node.attrs is not None:
+            node.unwrap()
     for node in list(soup.find_all(True)):
         if node.attrs is None:
             continue

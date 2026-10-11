@@ -159,9 +159,6 @@ def test_content_change_with_preserved_metadata_forces_new_read_but_presentation
     assert changed['value'] == 4 and len(calls) == 1 and changed['reuse']['reused_calls'] == 0
 
 
-if __name__ == "__main__":
-    import pytest
-    raise SystemExit(pytest.main([__file__]))
 
 
 @pytest.mark.parametrize('during', [False, True])
@@ -183,3 +180,45 @@ def test_unknown_writer_exclusion_is_durable_and_located(tmp_path, during):
     assert not reusable_receipts(tmp_path, run_id)
     with Journal(tmp_path, 'test', {'run_id': run_id}) as journal:
         assert journal.reuse_summary() == summary
+
+
+def test_compound_resources_and_file_parent_scopes(tmp_path):
+    from ibl_run_journal import call_resources, resources_overlap
+    from ibl_v2_adapters import validate_contract
+    c = {'version': 1, 'params': {'query': 'Text', 'id': 'Text', 'page': 'Number'},
+         'required': [], 'result': 'Record', 'effects': ['read_external'],
+         'read_resources': {'law': ['query', 'id', 'page']},
+         'adapter': {'protocol': 'legacy-envelope'}}
+    validate_contract(c)
+    spec = Adapter(c, lambda *_: None)
+    a = call_resources(spec, c, {'query': '민법', 'page': 1}, 'read')
+    b = call_resources(spec, c, {'id': '민법', 'page': 1}, 'read')
+    assert a != b and a != call_resources(spec, c, {'query': '민법', 'page': 2}, 'read')
+    assert call_resources(spec, c, {}, 'read') is None
+    files = {'write_resources': {'file': {'param': 'output', 'fallback': 'path', 'parent': True}}}
+    writes = call_resources(spec, files, {'path': str(tmp_path / 'form.docx')}, 'write')
+    assert resources_overlap([['file', str(tmp_path / 'form_filled (2).docx'), None]], writes)
+    assert not resources_overlap(a, writes)
+    assert call_resources(spec, files, {'path': 'form.docx'}, 'write') is None
+    with pytest.raises(ValueError):
+        validate_contract({**c, 'read_resources': {'law': ['unknown']}})
+
+
+def test_known_file_write_preserves_external_read_receipt(tmp_path):
+    from ibl_run_journal import call_resources, reusable_receipts
+    c = {'read_resources': {'law': ['query', 'page']}}
+    spec = Adapter({}, lambda *_: None)
+    reads = call_resources(spec, c, {'query': '민법', 'page': 1}, 'read')
+    writes = call_resources(spec, {'write_resources': {'file': {'param': 'output', 'parent': True}}},
+                            {'output': str(tmp_path / 'report.docx')}, 'write')
+    with Journal(tmp_path / 'runs', 'test') as journal:
+        journal.begin('read', 'r', reusable=True, state_change=False, resources=reads)
+        journal.finish('read', {'value': 'law', 'reuse_key': 'r'})
+        journal.begin('write', 'w', resources=writes)
+        journal.finish('write', {'value': 'saved'})
+        run_id = journal.run_id
+    assert len(reusable_receipts(tmp_path / 'runs', run_id)) == 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(pytest.main([__file__]))

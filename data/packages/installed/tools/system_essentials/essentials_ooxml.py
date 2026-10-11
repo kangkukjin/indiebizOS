@@ -54,8 +54,10 @@ def output_path(params, source, suffix):
     dest = resolve(params, 'output') if params.get('output') else source.with_name(source.stem + suffix + source.suffix)
     if dest == source or dest.suffix.lower() != source.suffix.lower():  # vj-ok: 출력 파일 형식 확장자 프로토콜
         raise ValueError('output은 원본과 다른 같은 확장자의 파일이어야 합니다.')
-    if dest.exists():
-        raise ValueError('output 파일이 이미 있습니다. 새 출력 경로를 지정하세요.')
+    from output_publish import collision_policy
+    policy = collision_policy(params.get("if_exists"), "fail")
+    if dest.exists() and policy == "fail":
+        raise ValueError('output 파일이 이미 있습니다. 새 경로 또는 if_exists:overwrite/rename을 지정하세요.')
     guard = params.get('_path_guard')
     if not callable(guard):
         raise ValueError('쓰기 범위 검증기를 사용할 수 없습니다.')
@@ -65,13 +67,12 @@ def output_path(params, source, suffix):
     return dest
 
 
-def save(source, digest, dest, parts, infos, comment):
+def save(source, digest, dest, parts, infos, comment, *, if_exists="fail", guard=None):
     if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
         raise ValueError('원본이 실행 중 변경되었습니다. 다시 조회하세요.')
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    fd, temp = tempfile.mkstemp(prefix='.office-', suffix=dest.suffix, dir=dest.parent)
-    try:
-        with os.fdopen(fd, 'wb') as stream:
+    from output_publish import publish_file
+    def write(temp):
+        with temp.open('wb') as stream:
             with zipfile.ZipFile(stream, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
                 archive.comment = comment
                 for info in infos:
@@ -81,11 +82,7 @@ def save(source, digest, dest, parts, infos, comment):
                 for name, data in parts.items():
                     if name not in old:
                         archive.writestr(name, data)
-            stream.flush()
-            os.fsync(stream.fileno())
-        # 경합 중 같은 이름의 출력을 덮어쓰지 않는다. 링크 생성이 원자 게시 경계다.
-        os.link(temp, dest)
-    finally:
-        if os.path.exists(temp):
-            os.unlink(temp)
-    return str(dest)
+        if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
+            raise ValueError('원본이 실행 중 변경되었습니다. 다시 조회하세요.')
+    _, receipt = publish_file(dest, write, if_exists=if_exists, guard=guard)
+    return receipt['path']

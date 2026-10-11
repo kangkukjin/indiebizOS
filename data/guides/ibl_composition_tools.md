@@ -268,3 +268,13 @@ legacy-envelope 액션의 구판 전용 설명에는 소스의 `target_descripti
 `source_complete:false`인 프로그램은 기준선을 확정하지 않는다(`not_committed`).
 `failed`는 저장 중 실패이며 일부 쓰기가 남을 수 있다. committed 수는 확정한 action 묶음 수이며 실패 묶음의 부분 효과는 알 수 없다. `partial`은 일부 묶음만 확정된 상태다. 전체 롤백을 뜻하지 않는다. `peek`은 저장하지 않는다.
 스트림 정리는 자동으로 하지 않으며, 기존 DB를 별도 관리할 때는 백업과 정확한 키를 확인한다.
+
+## 재실행과 결과 파일 충돌
+
+`self:copy`는 `if_exists:"rename"`(기본)·`"fail"`·`"overwrite"`를 받는다.
+`self:fill`의 기본은 `overwrite`, `self:sheet`의 `range_write/calculate` 기본은 `fail`이다.
+정책은 명시할 수 있고, 생성·복사가 성공한 파일만 게시한다. 폴더 복사는 파일별 확정이며
+전체 원자 트랜잭션은 아니다. `rename`이면 응답의 실제 `path`(복수 파일은 items)를 이어 쓴다.
+RED 수리 스테이징·회원 원격 fill은 overwrite만 지원하며 다른 정책을 실행 전에 거절한다.
+템플릿 복사 뒤 행을 추가하는 프로그램을 다시 실행할 때는 overwrite를 명시해 초기화하거나
+새 출력 경로를 사용한다. 복사 결과의 이름이 바뀌었는데 요청했던 옛 경로에 append하지 않는다.

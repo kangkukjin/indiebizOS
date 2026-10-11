@@ -23,6 +23,23 @@
             "type": "string",
             "description": "대상 (law/prec/admrul/ordin/exp/detc/trty/eng_law/law_term/law_form)",
             "default": "law"
+          },
+          "page": {
+            "type": "integer",
+            "description": "검색 페이지(기본 1). 2쪽부터 search_scope를 명시한다."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "한 페이지 결과 수(1~100, 기본 20)"
+          },
+          "search_scope": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "name",
+              "body"
+            ],
+            "description": "auto는 첫 쪽에서 이름 0건일 때 본문 검색. 다음 페이지는 이전 응답의 name 또는 body를 유지한다."
           }
         }
       }

@@ -46,6 +46,8 @@ DATASETS: List[Dict[str, str]] = [
      "label": "국토교통부_단독/다가구 전월세 실거래가 자료", "id": "15126472"},
 
     # ── 그 밖의 포털 데이터셋 (DATA_GO_KR_API_KEY) ──
+    {"path": "/1471000/DrugPrdtPrmsnInfoService08", "env_var": "DATA_GO_KR_API_KEY",
+     "label": "식품의약품안전처_의약품 제품 허가정보", "id": "15095677"},
     {"path": "/B553077/api/open/sdsc2", "env_var": "DATA_GO_KR_API_KEY",
      "label": "소상공인시장진흥공단_상가(상권)정보_API", "id": "15012005"},
     {"path": "/B552735/kisedKstartupService01", "env_var": "DATA_GO_KR_API_KEY",

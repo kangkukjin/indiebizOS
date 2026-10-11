@@ -874,15 +874,15 @@
   "self:copy": {
    "fields": {
     "description": "cfaf2b3708d3",
-    "target_description": "82318aa62138",
+    "target_description": "63fb51972cfb",
     "implementation": "d59ac86f53d8",
     "returns": "9a5e13f69efc",
     "target_key": "073171f7f5e1",
-    "params": "c5b46f727cdd",
+    "params": "8e8a8529a68d",
     "router": "ebbb1532efbc",
     "tool": "70891ae1834d"
    },
-   "reviewed": "2026-10-11",
+   "reviewed": "2026-10-12",
    "examples": 16
   },
   "self:deck": {
@@ -976,7 +976,7 @@
   "self:fill": {
    "fields": {
     "description": "579cfcf3d880",
-    "target_description": "e7bec1478bed",
+    "target_description": "cdb48e8c27c5",
     "implementation": "d07100050b19",
     "returns": "3c22349f8d0b",
     "target_key": "d070c7ecb482",
@@ -985,7 +985,7 @@
     "router": "ebbb1532efbc",
     "tool": "8862333b30c9"
    },
-   "reviewed": "2026-10-11",
+   "reviewed": "2026-10-12",
    "examples": 12
   },
   "self:finance": {
@@ -1489,11 +1489,11 @@
   "self:sheet": {
    "fields": {
     "description": "5047a16708bc",
-    "target_description": "cfc2d1e5f961",
+    "target_description": "95225ac5fd8a",
     "implementation": "0c39e1aaaa13",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "e5097edccafe",
+    "params": "0c6832009ca1",
     "aliases": "a2dcca50acfc",
     "ops": "1b8b2d7053e4",
     "side_effect": "b5bea41b6c62",
@@ -1501,7 +1501,7 @@
     "router": "ebbb1532efbc",
     "tool": "9571883cd1de"
    },
-   "reviewed": "2026-10-05",
+   "reviewed": "2026-10-12",
    "examples": 26
   },
   "self:slide": {
@@ -1965,7 +1965,7 @@
   "sense:legal": {
    "fields": {
     "description": "583d66deca94",
-    "target_description": "1dd26fefc3d2",
+    "target_description": "0470025c3f24",
     "implementation": "33499f9a5ff0",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
@@ -1973,7 +1973,7 @@
     "router": "ebbb1532efbc",
     "tool": "18a5977bd4af"
    },
-   "reviewed": "2026-10-11",
+   "reviewed": "2026-10-12",
    "examples": 23
   },
   "sense:listen": {

@@ -258,7 +258,9 @@ def op_range_write(params):
         parts['xl/styles.xml'] = office.encoded(styles)
     if values is not None:
         _invalidate(parts)
-    office.save(path, digest, dest, parts, infos, comment)
+    dest = Path(office.save(path, digest, dest, parts, infos, comment,
+                           if_exists=params.get("if_exists", "fail"),
+                           guard=lambda p: params["_path_guard"](p, params.get("_project_path") or ".")))
     return {'success': True, 'path': str(dest), 'source_path': str(path), 'sheet': sn,
             'range': params['range'], 'cells_affected': (c2-c1+1)*(r2-r1+1),
             'recalculated': False, 'note': '원본 보존. 값 변경 시 수식 캐시를 비웠습니다. calculate로 재계산하세요.'}
@@ -355,7 +357,9 @@ def op_calculate(params):
             dirty = True
         if dirty:
             parts[part] = office.encoded(root)
-    office.save(path, digest, dest, parts, infos, comment)
+    dest = Path(office.save(path, digest, dest, parts, infos, comment,
+                           if_exists=params.get("if_exists", "fail"),
+                           guard=lambda p: params["_path_guard"](p, params.get("_project_path") or ".")))
     return {'success': not errors, 'path': str(dest), 'source_path': str(path), 'recalculated': True,
             'engine': 'LibreOffice', 'formula_count': len(formulas), 'errors': errors,
             'items': [{'sheet': sn, 'cell': addr, 'value': value} for (sn, addr), (_, value) in cached.items()],

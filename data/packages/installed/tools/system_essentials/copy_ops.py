@@ -78,7 +78,7 @@ def copy_piped_items(tool_input: dict, dest: str, project_path: str, path_guard)
         return scope_err
 
     import file_index
-    res = file_index.save_media_files(items, dst_dir)
+    res = file_index.save_media_files(items, dst_dir, if_exists=tool_input.get("if_exists", "rename"))
     saved, failed = res.get("saved") or [], res.get("failed") or []
     if res.get("error"):
         return f"Error: {res['error']}"
@@ -101,8 +101,8 @@ def check_overlap(src, dest):
         raise ValueError("원본과 대상 경로가 같거나 서로 포함합니다. 별도 경로를 사용하세요.")
 
 
-def transfer_path(src, dest, *, move=False):
-    """Merge directories; reserve new file names exclusively, never erase a destination.
+def transfer_path(src, dest, *, move=False, if_exists="rename", guard=None):
+    """Merge directories; publish completed files under the requested collision policy.
 
     A partial copy failure leaves the original and every existing backup intact.
     A move removes each source only after its destination has been fully copied.
@@ -115,28 +115,19 @@ def transfer_path(src, dest, *, move=False):
         raise FileNotFoundError(2, "원본이 존재하지 않습니다", str(source))
     saved, renamed = [], []
 
+    from output_publish import collision_policy, publish_file
+    policy = collision_policy(if_exists, 'rename')
+    replaced = []
+
     def copy_file(a, b):
-        b.parent.mkdir(parents=True, exist_ok=True)
         requested = b
-        index = 1
-        while True:
-            try:
-                # 'xb' also refuses dangling symlinks and closes the name race.
-                out = b.open("xb")
-                break
-            except FileExistsError:
-                index += 1
-                b = requested.with_name(f"{requested.stem} ({index}){requested.suffix}")
-        try:
-            with out, a.open("rb") as inp:
-                shutil.copyfileobj(inp, out)
-            shutil.copystat(a, b)
-        except BaseException:
-            b.unlink(missing_ok=True)  # only our exclusively-created partial file
-            raise
-        saved.append(str(b.absolute()))
-        if b != requested:
+        _, receipt = publish_file(b, lambda temp: shutil.copy2(a, temp), if_exists=policy, guard=guard)
+        b = Path(receipt['path'])
+        saved.append(str(b))
+        if receipt['renamed']:
             renamed.append({"requested": str(requested), "path": str(b)})
+        if receipt['replaced_existing']:
+            replaced.append(str(b))
         if move:
             a.unlink()
         return b
@@ -167,7 +158,7 @@ def transfer_path(src, dest, *, move=False):
     else:
         target = copy_file(source, target / source.name if target.is_dir() else target)
     result = {"success": True, "path": str(target.absolute()), "items": [{"path": p} for p in saved],
-              "count": len(saved), "renamed": renamed,
+              "count": len(saved), "renamed": renamed, "if_exists": policy, "replaced": replaced,
               "message": f"{'이동' if move else '복사'} 완료: {target} ({len(saved)}개 파일)"}
     if renamed:
         # 요청한 이름이 아닌 곳에 썼다 — success 한 줄 뒤에 숨기지 않는다(52회차 L52-2:
@@ -177,6 +168,6 @@ def transfer_path(src, dest, *, move=False):
         result["warning"] = (f"대상이 이미 있어 덮어쓰지 않고 다른 이름으로 저장했습니다: "
                              f"{os.path.basename(first['requested'])} → {os.path.basename(first['path'])}{more}. "
                              "요청한 경로의 기존 파일은 그대로입니다 — 다음 단계는 응답의 path 를 쓰거나, "
-                             "새로 만들려던 것이면 기존 파일을 먼저 지우세요.")
+                             "기존 파일을 교체하려면 if_exists:overwrite를 지정하세요.")
         result["message"] += f" — 이름 충돌 {len(renamed)}건은 다른 이름으로 저장(renamed 참조)"
     return result

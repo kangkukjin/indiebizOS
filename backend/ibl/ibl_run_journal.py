@@ -96,18 +96,12 @@ def call_resources(spec, contract, args, mode):
     declaration = contract.get(mode + '_resources')
     if not declaration:
         return None
+    from ibl_callable_contract import resource_values
+    resolved = resource_values(declaration, args, spec.resource_identity, allow_bare=mode != 'write')
+    if resolved is None:
+        return None
     resources = []
-    for realm, param in declaration.items():
-        value = args.get(param)
-        if not isinstance(value, str) or not value.strip():
-            return None
-        # Bare output names can be redirected by the output-path policy.
-        # Until the adapter declares that resolution, retain the broad barrier.
-        if mode == 'write' and realm == 'file' and '/' not in value:
-            return None
-        identity = spec.resource_identity(realm, value) if spec.resource_identity else value
-        if not isinstance(identity, str) or not identity:
-            return None
+    for realm, identity in resolved:
         inode = None
         if realm == 'file':
             import member_runtime
@@ -157,14 +151,14 @@ def resources_overlap(reads, writes):
         return False
     if reads is None or writes is None:
         return True
+    from ibl_callable_contract import resource_conflicts
+    if resource_conflicts([(r, p) for r, p, _ in reads], [(r, p) for r, p, _ in writes]):
+        return True
     for realm, path, inode in reads:
         for other_realm, other_path, other_inode in writes:
             if realm != other_realm:
                 continue
-            if path == other_path or inode is not None and inode == other_inode:
-                return True
-            if realm == 'file' and (path.startswith(other_path.rstrip('/') + '/')
-                                    or other_path.startswith(path.rstrip('/') + '/')):
+            if inode is not None and inode == other_inode:
                 return True
     return False
 

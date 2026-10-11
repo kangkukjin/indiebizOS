@@ -58,6 +58,11 @@ ForeignRef는 공통 타입/wire이고 공급자가 실행 소유권을 검사�
 읽기·쓰기 범위를 알면 `read_resources`·`write_resources: {file: 인자}`로 선언한다.
 명시 `callable_contract`는 그 안에, 기존 봉투에서 계약을 유도하는 액션은 액션 루트에 둔다.
 별칭은 액션 `aliases` 한 곳에 선언하며 자원 판정 전 정규 인자로 해소된다.
+파일의 대체 출력 이름까지 포함해야 하면 `{file: {param: output, fallback: path, parent: true}}`로
+출력 인자(없으면 원본)의 부모 디렉터리를 보수적으로 선언한다. 외부 조회의 복합 키는
+`{legal: [query, id, target, page, limit, search_scope]}`처럼 선언 인자 목록을 쓴다.
+인자 이름과 값 함께 해시하므로 같은 텍스트의 query와 id, 서로 다른 페이지를 구분한다.
+컴파일러와 실행 원장이 같은 선언 해소 함수를 쓰며, 선언 값 미상은 재사용 가능으로 추정하지 않는다.
 예: `table:chart`의 `write_resources: {file: output_path}`. 확장자 없는 출력 경로도
 PNG/HTML 형식으로 그 경로 자체에 저장하므로 실제 쓰기 범위와 선언이 일치한다.
 경로 생략·bare 파일명 등 실제 해소를 보장하지 못하는 경우는 보수적으로 전체 충돌을 유지한다.

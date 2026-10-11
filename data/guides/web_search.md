@@ -80,7 +80,7 @@ $원문 >> [fn:본문에서찾기]{패턴:"Example|domain",문맥:1,개수:5}
 ## 본문과 이미지 공지를 함께 읽기
 
 이미지로 된 공지·포스터는 `[sense:crawl]{url:"https://example.com/notice",include_images:true}`로
-본문과 최대 4장의 이미지 픽셀을 한 호출에 받는다. main/article와 일반 편집기의 명시 본문 영역을 우선하고, 없으면 body를 사용한다. 명시 영역에 글이 거의 없고(메뉴·검색 틀) 문서의 글이 그보다 훨씬 많으면 그 선언을 건너뛰어 더 넓은 영역을 읽고 `content_selection[].skipped_thin`으로 알린다. 페이지 전체를 감싼 form은 조작부로 걷지 않는다. `selector`로 고른 영역은 그 안에서 다시 좁히지 않는다. content_selection은 자동 본문 선택 범위를 알린다. 메뉴가
+본문과 최대 4장의 이미지 픽셀을 한 호출에 받는다. main/article와 일반 편집기의 명시 본문 영역을 우선하고, 없으면 body를 사용한다. 명시 영역에 글이 거의 없고(메뉴·검색 틀) 문서의 글이 그보다 훨씬 많으면 그 선언을 건너뛰어 더 넓은 영역을 읽고 `content_selection[].skipped_thin`으로 알린다. form은 글자 수와 관계없이 껍데기만 벗긴다. input·button·select·textarea 등 실제 조작 요소를 제거하고 짧은 안내문·기사 본문은 보존한다. `selector`로 고른 영역은 그 안에서 다시 좁히지 않는다. content_selection은 자동 본문 선택 범위를 알린다. 메뉴가
 섞이거나 특정 영역만 필요하면 `selector:"#notice"`처럼 실제 HTML의 CSS 선택자를 지정한다.
 선택자를 추측해 실패하면 링크/구조를 확인한다. 원문은 source_ref에 보존되므로 생략된
 문단을 찾으려고 다시 네트워크 조회하지 않는다. 일반 텍스트에서는 같은 호출 뒤

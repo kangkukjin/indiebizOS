@@ -12,7 +12,7 @@ from common.expression_ir import Fault, Node, ResultValue, Unit, projection
 
 # (minimum, maximum) argument counts; shared by compiler and evaluator.
 BUILTINS = {"len": (1, 1), "has": (2, 2), "get": (2, 3), "json": (1, 1),
-            "number": (1, 1), "text": (1, 1), "abs": (1, 1), "round": (1, 2),
+            "number": (1, 2), "text": (1, 1), "abs": (1, 1), "round": (1, 2),
             "min": (1, 1000), "max": (1, 1000), "sum": (1, 1),
             "is_ok": (1, 1), "unwrap": (1, 1), "error_of": (1, 1),
             "evidence": (1, 1), "reduce": (3, 3)}
@@ -95,7 +95,7 @@ def number(value):
     except ValueError as exc:
         preview = repr(value)[:240]
         raise Fault("NUMBER_REQUIRED", f"number(): 유한 숫자로 해석할 수 없습니다: {preview}. "
-                    "해석 실패는 null이 아니라 오류입니다. [try]/[catch]로 처리하세요.",
+                    "해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.",
                     details={"operation": "number", "input_preview": preview,
                              "input_type": type(value).__name__, "expected": "finite number"}) from exc
 
@@ -190,7 +190,12 @@ def pure_call(name, args, *, tick=lambda: None, callback=None):
         except ValueError as error:
             raise Fault(getattr(error, "code", "NON_JSON_RESULT"), str(error)) from error
     if name == "number":
-        return number(first)
+        try:
+            return number(first)
+        except Fault as error:
+            if len(args) == 2 and error.code == "NUMBER_REQUIRED":
+                return args[1]
+            raise
     if name == "text":
         return scalar_text(first)
     if name == "abs":

@@ -18,6 +18,10 @@ IBL 파서·값·오류 객체에 의존하지 않는다. IBL 어댑터와 재�
 - 실행: 등록 `id` 또는 **현재 턴의 `~turn/*.py` 경로** 중 하나를 참조한다. 임시 실행은 등록 원장을
   바꾸지 않는다. Python은 현재 몸의 인터프리터로 argv 실행하며 셸을 거치지 않는다.
 
+모델의 `describe:["self:script"]` 응답에는 `authoring_examples`가 포함된다. 경로 실행은
+stdin 객체→결과 파일, `registered-json/1` 등록 실행은 stdin 객체→stdout JSON의
+최소 동작 예제가 각각 나온다. 등록 ID는 먼저 `op:list`에서 해당 계약을 확인한다.
+
 ## 미등록 Python 파일을 조합하기
 
 다음 프로그램의 `inputs`에 `본문`(Python Text)과 `자료`(Record)를 넣는다.

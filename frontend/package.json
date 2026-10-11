@@ -92,7 +92,9 @@
       {
         "from": "../helper/dist",
         "to": "helper/dist",
-        "filter": ["indiebiz-helper-*"]
+        "filter": [
+          "indiebiz-helper-*"
+        ]
       },
       {
         "from": "i18n/remote.json",

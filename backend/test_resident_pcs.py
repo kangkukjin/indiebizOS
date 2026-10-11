@@ -513,28 +513,34 @@ def test_job_lost_in_a_dead_long_poll_is_offered_again_once_per_sync(registry):
     assert [e['kind'] for e in resident_store.history(job=lost)['events']].count('redelivered') == 1
 
 
-def test_helper_update_is_one_owner_action_and_never_an_agent_command(registry, monkeypatch, tmp_path):
+@pytest.mark.parametrize("os_name,build,go_version", [
+    ("darwin", "mac-amd64-legacy", "go1.22.12"),
+    ("windows", "win-resident.exe", "go1.26.1"),
+])
+def test_helper_update_is_one_owner_action_and_never_an_agent_command(
+        registry, monkeypatch, tmp_path, os_name, build, go_version):
     rec = registry()
     dist = tmp_path / 'helper' / 'dist'
     dist.mkdir(parents=True)
     (dist / 'indiebiz-helper-mac-amd64').write_bytes(b'regular build')
-    (dist / 'indiebiz-helper-mac-amd64-legacy').write_bytes(b'legacy build')
+    (dist / ('indiebiz-helper-' + build)).write_bytes(b'legacy build')
     import runtime_utils
     monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
     legacy = hashlib.sha256(b'legacy build').hexdigest()
 
     def report(**caps):
-        pcs.sync(rec['key'], 'a' * 32, capabilities={'os': 'darwin', 'arch': 'amd64', **caps})
+        pcs.sync(rec['key'], 'a' * 32, capabilities={'os': os_name, 'arch': 'amd64', **caps})
         return [d for d in pcs.devices() if d['device_id'] == rec['device_id']][0]['helper']
 
     assert report()['state'] == 'unknown'  # 옛 헬퍼는 자기 판을 보고하지 않는다
-    assert report(helper_sha256='0' * 64, go='go1.22.12')['state'] == 'manual'
+    assert report(helper_sha256='0' * 64, go=go_version)['state'] == 'manual'
     with pytest.raises(ValueError, match='helper_update_unavailable'):
         pcs.update_helper(rec['device_id'])
-    status = report(helper_sha256='0' * 64, go='go1.22.12', self_update=True)
+    status = report(helper_sha256='0' * 64, go=go_version, self_update=True)
     assert status == {'state': 'available', 'current': '0' * 64, 'latest': legacy, 'rolled_back': False}
-    assert report(helper_sha256='0' * 64, go='go1.26.1', self_update=True)['latest'] == hashlib.sha256(b'regular build').hexdigest()
-    report(helper_sha256='0' * 64, go='go1.22.12', self_update=True)
+    if os_name == 'darwin':
+        assert report(helper_sha256='0' * 64, go='go1.26.1', self_update=True)['latest'] == hashlib.sha256(b'regular build').hexdigest()
+    report(helper_sha256='0' * 64, go=go_version, self_update=True)
     with pytest.raises(ValueError, match='unsupported_resident_operation'):
         pcs.submit(rec['device_id'], {'op': 'update', 'transfer_id': 'x', 'sha256': legacy}, 'agent')
     started = pcs.update_helper(rec['device_id'])
@@ -550,13 +556,13 @@ def test_helper_update_is_one_owner_action_and_never_an_agent_command(registry, 
     pcs.sync(rec['key'], 'a' * 32, [{'job_id': started['job_id'], 'event_id': 'u1', 'kind': 'result',
                                       'payload': {'updated': True, 'restarting': True}}])
     # 작업은 끝났지만 새 헬퍼가 아직 보고하기 전: 다시 누를 수 있는 상태로 보이지 않는다.
-    assert report(helper_sha256='0' * 64, go='go1.22.12', self_update=True)['state'] == 'updating'
+    assert report(helper_sha256='0' * 64, go=go_version, self_update=True)['state'] == 'updating'
     assert pcs.update_helper(rec['device_id'])['job_id'] == started['job_id']
-    assert report(helper_sha256=legacy, go='go1.22.12', self_update=True)['state'] == 'current'
+    assert report(helper_sha256=legacy, go=go_version, self_update=True)['state'] == 'current'
     assert pcs.update_helper(rec['device_id'])['state'] == 'current'
     # 되돌려진 교체는 같은 판을 다시 권하되 실패했음을 알린다.
-    (dist / 'indiebiz-helper-mac-amd64-legacy').write_bytes(b'legacy build 2')
+    (dist / ('indiebiz-helper-' + build)).write_bytes(b'legacy build 2')
     newer = hashlib.sha256(b'legacy build 2').hexdigest()
-    status = report(helper_sha256=legacy, go='go1.22.12', self_update=True,
+    status = report(helper_sha256=legacy, go=go_version, self_update=True,
                     helper_update={'outcome': 'rolled_back', 'to': newer})
     assert status['state'] == 'available' and status['rolled_back'] is True

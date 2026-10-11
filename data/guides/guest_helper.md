@@ -10,13 +10,13 @@
 | 계약 | 상주 PC (새 기본 경로) | 휴대 USB (기존 issue 경로) |
 | --- | --- | --- |
 | 준비 | `self:limb register` → 공용 폴더를 USB에 복사 → 대상 PC에서 이름을 정해 등록 | `self:limb issue` → 이름별 발급 폴더를 USB에 복사 → 실행 |
-| 수명 | 사용자 로그인 시 자동 시작, 비정상 종료 시 OS 서비스 관리자가 재기동(macOS launchd·Linux systemd; Windows는 로그인 때만). 등록 후 USB 제거 가능 | 대상 PC에서 직접 실행한 헬퍼의 수명 |
+| 수명 | 사용자 로그인 시 자동 시작, 비정상 종료 시 OS 서비스 관리자가 재기동(macOS launchd·Linux systemd; Windows는 로그인 때만 — 헬퍼 교체 때는 감시자가 새 판을 띄움). 등록 후 USB 제거 가능 | 대상 PC에서 직접 실행한 헬퍼의 수명 |
 | 명령 환경 | 작업마다 cwd·env 분리. 절대 cwd·venv 실행파일 경로·env 명시 | 직전 cwd·환경변수 유지. 함수·별칭은 유지하지 않음. reset으로 초기화 |
 | 화면·입력 | `mode:"interactive"` 필수 | 기존 screen·입력 호출 |
 | 중복 방지 | 같은 `request_id` + 같은 명령은 기존 접수증. 내용이 다르면 충돌 | 접수증으로 관측. 같은 명령 재전송 금지 |
 | 작업 후 | 연결 유지. 작업 마무리와 제거는 별개 | 필요할 때 `detach`로 프로세스 종료 |
 | 제거 | 명시적인 `self:limb remove`. `removal_pending`과 `removed` 구분 | `revoke`로 키 폐기 |
-| 헬퍼 교체 | 조종실 손발(USB)의 `헬퍼 교체` — 중앙 `helper/dist`와 다를 때만 보인다. 헬퍼가 받아 검증·교체·재기동하고 5분 안에 다시 연결하지 못하면 이전 판으로 되돌린다. AI 작업(`limbs:guestpc`)으로는 요청할 수 없다 | 해당 없음 |
+| 헬퍼 교체 | Windows·macOS·Linux 모두 중앙 조종실 손발(USB)의 `헬퍼 교체` — 중앙 `helper/dist`와 다를 때만 보인다. 헬퍼가 받아 검증·교체·재기동하고 5분 안에 다시 연결하지 못하면 이전 판으로 되돌린다. AI 작업(`limbs:guestpc`)으로는 요청할 수 없다 | 해당 없음 |
 
 `self:limb list`의 각 행에 `registration`이 있으면 상주형, null이면 휴대형이다.
 상주형 `registration.state/paused`, 공통 `connected/expired/revoked`를 확인한다.

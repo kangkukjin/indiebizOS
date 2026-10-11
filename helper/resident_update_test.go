@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -142,10 +143,108 @@ func TestWatcherRestoresOldExecutableWhenNobodyConfirms(t *testing.T) {
 	}
 }
 
+// Where nothing restarts an exited helper (Windows) the watcher starts the new
+// one, but only after the old one let go of the control port.
+func TestWatcherStartsNewHelperAfterOldOneExits(t *testing.T) {
+	root, exe, staged, want := updateFixture(t)
+	if e := os.WriteFile(filepath.Join(root, "indiebiz-helper.json"), []byte(`{"mode":"resident","installation_id":"abc"}`), 0600); e != nil {
+		t.Fatal(e)
+	}
+	oldStarts, oldRunning := residentWatchStarts, residentOldHelperRunning
+	defer func() { residentWatchStarts, residentOldHelperRunning = oldStarts, oldRunning }()
+	residentWatchStarts = true
+	polls := 0
+	residentOldHelperRunning = func(*Config) bool { polls++; return polls < 3 }
+	if _, e := residentApplyUpdate(root, staged, want, time.Now(), func(string, string) error { return nil }); e != nil {
+		t.Fatal(e)
+	}
+	starts := 0
+	if e := residentUpdateWatch(root, time.Millisecond, func(*Config) error {
+		if polls < 3 {
+			t.Fatal("started while the old helper still held the port")
+		}
+		starts++
+		residentConfirmUpdate(root, want) // the new helper reached the hub
+		return nil
+	}); e != nil {
+		t.Fatal(e)
+	}
+	if starts != 1 || read(t, exe) != "new helper" {
+		t.Fatalf("starts=%d exe=%q", starts, read(t, exe))
+	}
+}
+
+func TestWatcherStartsOldHelperAgainAfterRollback(t *testing.T) {
+	root, exe, staged, want := updateFixture(t)
+	if e := os.WriteFile(filepath.Join(root, "indiebiz-helper.json"), []byte(`{"mode":"resident","installation_id":"abc"}`), 0600); e != nil {
+		t.Fatal(e)
+	}
+	oldStarts, oldRunning, oldWindow := residentWatchStarts, residentOldHelperRunning, residentUpdateWindow
+	defer func() {
+		residentWatchStarts, residentOldHelperRunning, residentUpdateWindow = oldStarts, oldRunning, oldWindow
+	}()
+	residentWatchStarts = true
+	running := false
+	residentOldHelperRunning = func(*Config) bool { return running }
+	residentUpdateWindow = 30 * time.Millisecond
+	if _, e := residentApplyUpdate(root, staged, want, time.Now(), func(string, string) error { return nil }); e != nil {
+		t.Fatal(e)
+	}
+	var started []string
+	if e := residentUpdateWatch(root, 5*time.Millisecond, func(*Config) error {
+		started = append(started, read(t, exe))
+		running = true
+		return nil
+	}); e != nil {
+		t.Fatal(e)
+	}
+	if len(started) != 2 || started[0] != "new helper" || started[1] != "old helper" {
+		t.Fatalf("starts: %v", started)
+	}
+	if st, e := residentLoadUpdate(root); e != nil || st.Outcome != "rolled_back" {
+		t.Fatalf("rollback not recorded: %+v %v", st, e)
+	}
+}
+
 func TestSelfUpdateRefusedOutsideServiceManager(t *testing.T) {
 	r := &residentRuntime{cfg: &Config{InstallationID: "x", DataDir: t.TempDir()}}
 	res := r.selfUpdate(nil, Command{}, "t", "s")
 	if res["error"] != "self_update_unsupported" {
 		t.Fatal(res)
+	}
+}
+
+// Both a failed scheduler request and an accepted request with no process must
+// be retried: neither proves that the new executable has started.
+func TestWatcherRetriesUntilNewHelperActuallyStarts(t *testing.T) {
+	root, _, staged, want := updateFixture(t)
+	if e := residentSave(filepath.Join(root, "indiebiz-helper.json"), &Config{InstallationID: "abc"}); e != nil {
+		t.Fatal(e)
+	}
+	oldStarts, oldRunning := residentWatchStarts, residentOldHelperRunning
+	defer func() { residentWatchStarts, residentOldHelperRunning = oldStarts, oldRunning }()
+	residentWatchStarts = true
+	residentOldHelperRunning = func(*Config) bool { return false }
+	if _, e := residentApplyUpdate(root, staged, want, time.Now(), func(string, string) error { return nil }); e != nil {
+		t.Fatal(e)
+	}
+	starts := 0
+	if e := residentUpdateWatch(root, time.Millisecond, func(*Config) error {
+		starts++
+		if starts == 1 {
+			return fmt.Errorf("scheduler busy")
+		}
+		if starts == 3 {
+			residentConfirmUpdate(root, want)
+		}
+		if starts > 3 {
+			t.Fatal("confirmation ignored")
+		}
+		return nil
+	}); e != nil {
+		t.Fatal(e)
+	}
+	if starts != 3 {
+		t.Fatalf("starts=%d", starts)
 	}
 }

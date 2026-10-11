@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,12 +18,11 @@ import (
 // Self-update of an installed helper, driven by one hub job.
 //
 // The helper downloads the new executable, puts it in place and exits; the
-// service manager starts the new one. Whether the new one is good is decided by
+// service manager (or the Windows watcher) starts the new one. Its health is checked by
 // a process that survives both: a watcher run from a copy of the old executable.
 // The new helper confirms by deleting update.json after its first good sync; if
 // that does not happen in time the watcher restores the old executable and asks
-// the service manager to restart. If the watcher itself dies, the service manager
-// still keeps whatever executable is in place alive.
+// the service manager to restart. Windows uses its existing login task to launch it.
 
 type residentUpdateState struct {
 	From     string  `json:"from"`
@@ -64,9 +64,44 @@ func residentSelfDigest() string {
 	return selfDigestValue
 }
 
-// Only an instance the service manager restarts can replace itself by exiting.
+// residentWatchStarts: on Windows the logon task does not restart an exited
+// helper, so the update watcher starts the new one itself once the old one let go
+// of the control port (a var so tests can exercise that path on any OS).
+var residentWatchStarts = runtime.GOOS == "windows"
+
+// Only an instance something restarts can replace itself by exiting: the service
+// manager on macOS/Linux; on Windows the watcher, through the installation's task.
 func residentCanSelfUpdate(cfg *Config) bool {
-	return runtime.GOOS != "windows" && residentServiceStarted(cfg)
+	if runtime.GOOS != "windows" {
+		return residentServiceStarted(cfg)
+	}
+	exe, e := os.Executable()
+	self, e1 := os.Stat(exe)
+	installed, e2 := os.Stat(residentExecutable(cfg.DataDir))
+	if e != nil || e1 != nil || e2 != nil || !os.SameFile(self, installed) {
+		return false
+	}
+	query := exec.Command("schtasks", "/Query", "/TN", residentServiceName(cfg))
+	configureResidentDetached(query)
+	return query.Run() == nil
+}
+
+// residentPlaceExecutable renames src over dest. Windows will not replace a
+// running executable but lets it be renamed, so there it is moved aside first.
+func residentPlaceExecutable(src, dest string) error {
+	if runtime.GOOS != "windows" {
+		return os.Rename(src, dest)
+	}
+	aside := dest + ".replaced"
+	_ = os.Remove(aside) // still running from an earlier update: left for next time
+	if e := os.Rename(dest, aside); e != nil && !os.IsNotExist(e) {
+		return e
+	}
+	if e := os.Rename(src, dest); e != nil {
+		_ = os.Rename(aside, dest)
+		return e
+	}
+	return nil
 }
 
 func residentValidDigest(s string) bool {
@@ -107,7 +142,7 @@ func residentApplyUpdate(root, staged, want string, now time.Time, watch func(ba
 		return "", e
 	}
 	if e = watch(backup, root); e == nil {
-		e = os.Rename(staged, exe)
+		e = residentPlaceExecutable(staged, exe)
 	}
 	if e != nil {
 		_ = os.Remove(residentUpdatePath(root)) // the watcher exits when the record is gone
@@ -131,15 +166,24 @@ func residentConfirmUpdate(root, self string) {
 
 func residentServiceRestart(cfg *Config) error {
 	name := residentServiceName(cfg)
-	if runtime.GOOS == "darwin" {
+	switch runtime.GOOS {
+	case "darwin":
 		return exec.Command("launchctl", "kickstart", "-k", "gui/"+strconv.Itoa(os.Getuid())+"/"+name).Run()
+	case "windows":
+		run := exec.Command("schtasks", "/Run", "/TN", name)
+		configureResidentDetached(run)
+		return run.Run()
 	}
 	return exec.Command("systemctl", "--user", "restart", name).Run()
 }
 
 // residentUpdateWatch runs from the backup executable. It returns when the new
 // helper confirmed, or after restoring the old executable.
+//
+// Where nothing restarts an exited helper (residentWatchStarts) the watcher first
+// waits for the old helper to release the control port, then starts the new one.
 func residentUpdateWatch(root string, poll time.Duration, restart func(*Config) error) error {
+	var cfg *Config
 	for {
 		st, e := residentLoadUpdate(root)
 		if os.IsNotExist(e) {
@@ -151,36 +195,65 @@ func residentUpdateWatch(root string, poll time.Duration, restart func(*Config) 
 		if st.Outcome != "" {
 			return nil
 		}
+		if cfg == nil {
+			b, e := os.ReadFile(filepath.Join(root, "indiebiz-helper.json"))
+			if e != nil {
+				return e
+			}
+			cfg = &Config{}
+			if e = json.Unmarshal(b, cfg); e != nil {
+				return e
+			}
+		}
 		if float64(time.Now().UnixNano())/1e9 < st.Deadline {
+			if residentWatchStarts && !residentOldHelperRunning(cfg) {
+				// A released port does not mean the scheduler has retired the old
+				// task yet. Retry until a helper actually owns the port or time runs out.
+				_ = restart(cfg)
+			}
 			time.Sleep(poll)
 			continue
 		}
 		exe := residentExecutable(root)
+		var unconfirmed []int
+		if residentWatchStarts { // nothing else will stop the build that never confirmed
+			unconfirmed = residentExecutablePIDs(exe)
+		}
 		if e = residentCopy(st.Backup, exe+".restore"); e != nil {
 			return e
 		}
-		if e = os.Rename(exe+".restore", exe); e != nil {
+		if e = residentPlaceExecutable(exe+".restore", exe); e != nil {
 			return e
 		}
 		st.Outcome = "rolled_back"
 		if e = residentSave(residentUpdatePath(root), st); e != nil {
 			return e
 		}
-		b, e := os.ReadFile(filepath.Join(root, "indiebiz-helper.json"))
-		if e != nil {
-			return e
+		for _, pid := range unconfirmed {
+			residentKillPID(pid)
 		}
-		var cfg Config
-		if e = json.Unmarshal(b, &cfg); e != nil {
-			return e
+		if residentWatchStarts {
+			for attempt := 0; attempt < 30 && residentOldHelperRunning(cfg); attempt++ {
+				time.Sleep(poll)
+			}
 		}
-		return restart(&cfg)
+		return restart(cfg)
 	}
+}
+
+// residentOldHelperRunning: a helper of this installation still holds its control port.
+var residentOldHelperRunning = func(cfg *Config) bool {
+	c, e := net.DialTimeout("tcp", residentControlAddress(cfg.InstallationID), time.Second)
+	if e != nil {
+		return false
+	}
+	_ = c.Close()
+	return true
 }
 
 func (r *residentRuntime) selfUpdate(ctx context.Context, c Command, tid, want string) map[string]interface{} {
 	if !residentCanSelfUpdate(r.cfg) {
-		return errResult("self_update_unsupported", "서비스 관리자가 재기동하는 설치(macOS launchd·Linux systemd)에서만 스스로 교체합니다")
+		return errResult("self_update_unsupported", "설치된 헬퍼(macOS launchd·Linux systemd·Windows 로그인 예약 작업)만 스스로 교체합니다")
 	}
 	if !residentValidDigest(want) {
 		return errResult("invalid_sha256", "")

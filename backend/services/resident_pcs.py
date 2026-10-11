@@ -45,7 +45,8 @@ def helper_binary(capabilities):
     one would not start there, so the build line is kept, never inferred from the OS."""
     caps = capabilities or {}
     name = {("darwin", "arm64"): "mac-arm64", ("darwin", "amd64"): "mac-amd64",
-            ("linux", "amd64"): "linux"}.get((caps.get("os"), caps.get("arch")))
+            ("linux", "amd64"): "linux",
+            ("windows", "amd64"): "win-resident.exe"}.get((caps.get("os"), caps.get("arch")))
     if not name:
         return None
     if name == "mac-amd64" and str(caps.get("go") or "").startswith("go1.22"):

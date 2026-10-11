@@ -1,0 +1,76 @@
+#!ibl edition=2
+[def:목록]($root) {
+  $r=[self:file_find]{path:$root,pattern:"**/*",hash:true,limit:1000}
+  assert not $r.truncated, "파일 목록 절단"
+  return filter($r.items,($r)=>not $r.is_dir)
+}
+[def:결정]($row,$index,$initial) {
+  $src=$row.source
+  $dest=text($row.desired_level)+"/"+$row.relative
+  $before=get($initial,$src,null)
+  $current=get($index,$src,null)
+  $target=get($index,$dest,null)
+  [if:$current==null] {
+    [if:$src!=$dest and $before!=null and $target!=null] {
+      [if:$before.sha256==$target.sha256] {return {**$row,dest:$dest,status:"이미 완료",reason:"목표 위치의 원본 지문 일치"}}
+    }
+    return {**$row,dest:$dest,status:"실패",reason:"원본 부재 또는 복구 지문 불일치"}
+  }
+  [if:not $row.managed] {return {**$row,dest:$src,status:"보존",reason:"수동 배치"}}
+  [if:$row.version==null] {return {**$row,dest:$src,status:"보류",reason:"버전 미상"}}
+  [if:$dest==$src] {return {**$row,dest:$src,status:"유지",reason:"목표 등급 일치"}}
+  [if:$target!=null] {return {**$row,dest:$src,status:"보류",reason:"목표 경로 충돌"}}
+  return {**$row,dest:$dest,status:"이동",reason:"확인된 버전의 목표 등급 적용"}
+}
+$root=$base+"/warehouse"
+$out=$base+"/result"
+$policy=[self:read]{path:$base+"/policy.json"}
+$files=[fn:목록]{root:$root}
+$current=from_entries(map($files,($r)=>[replace($r.path,$root+"/","",1),$r]))
+$prior=[self:file_find]{path:$out,pattern:"inventory.json",limit:10}
+[if:len($prior.items)==0] { [self:write]{path:$out+"/inventory.json",content:json($files)} }
+$initial_doc=[self:read]{path:$out+"/inventory.json"}
+$initial=from_entries(map($initial_doc.data.items,($r)=>[replace($r.path,$root+"/","",1),$r]))
+assert len($initial)==len($policy.data.items), "전건 정책 대조 실패"
+$decisions=$policy.data.items >> [table:each] { [fn:결정]{row:$it,index:$current,initial:$initial} }
+[self:write]{path:$out+"/plan.json",content:json($decisions)}
+$pending=filter($decisions,($r)=>$r.status=="이동")
+$receipts=$pending >> [table:each] {
+  assert $stop_after==0 or $i<$stop_after, "시험 중단: 완료한 이동 기록을 보존함"
+  $moved=[self:move]{src:$root+"/"+$it.source,dest:$root+"/"+$it.dest}
+  $receipt={source:$it.source,dest:$it.dest,response:$moved}
+  [self:write]{path:$out+"/receipts/"+replace($it.source,"/","_")+".json",content:json($receipt)}
+  return $receipt
+}
+$after=[fn:목록]{root:$root}
+$annotated=$after >> [table:each] {
+  $source=replace($it.path,$root+"/","",1)
+  $parts=split($source,"/",1)
+  $doc=[self:read]{path:$it.path,format:"text"}
+  $hrefs=map(split($doc.text,"href=\"")[1:],($p)=>split($p,"\"")[0])
+  $external=contains($it.name,".url") ? map(split($doc.text,"URL=")[1:],($p)=>strip($p)) : []
+  return {source:$source,relative:$parts[1],level:number($parts[0]),sha256:$it.sha256,hrefs:$hrefs,external:$external}
+}
+$duplicate_groups=$annotated >> [table:groupby]{by:"sha256",agg:{count:["count"],sources:["list","source"]}}
+$duplicates=filter($duplicate_groups.items,($r)=>$r.count>1)
+$views=[0,1,2,3,4] >> [table:each] {
+  $level=$it
+  $visible=filter($annotated,($r)=>$r.level<=$level) >> [table:sort]{by:"level",order:"desc"} >> [table:dedup]{by:"relative"}
+  $paths=map($visible.items,($r)=>$r.relative)
+  $links=$visible.items >> [table:each]{mode:"flat_map"} {
+    $doc=$it
+    return map($doc.hrefs,($target)=>{source:$doc.source,target:"자료/"+$target,ok:contains($paths,"자료/"+$target)})
+  }
+  return {level:$level,files:$visible.items,links:$links,broken:filter($links,($r)=>not $r.ok)}
+}
+$result={decisions:$decisions,receipts:$receipts,files:$annotated,duplicates:$duplicates,views:$views,source_links:sum(map($annotated,($r)=>len($r.hrefs)+len($r.external)))}
+$rows=map($decisions,($r)=>f"| ${$r.source} | ${$r.status} | ${$r.dest} | ${$r.reason} |")
+$view_rows=map($views,($r)=>f"| ${$r.level} | ${len($r.files)} | ${len($r.links)} | ${len($r.broken)} |")
+$report="# 공개창고 관리 결과\n\n시험 사본만 변경했습니다. HTTP 접근 검증은 별도입니다.\n\n파일 "+text(len($annotated))+"개, 원천 링크 "+text($result.source_links)+"개. 중복 그룹 "+text(len($duplicates))+"개. 외부 URL은 접속하지 않았습니다.\n\n## 등급별 목록과 링크\n\n| 등급 | 파일 | 내부 링크 | 끊김 |\n|---|---:|---:|---:|\n"+join("\n",$view_rows)+"\n\n## 전파일 결정\n\n| 원래 경로 | 결과 | 목표 경로 | 근거 |\n|---|---|---|---|\n"+join("\n",$rows)+"\n"
+[self:write]{path:$out+"/result.json",content:json($result)}
+[self:write]{path:$out+"/report.md",content:$report}
+$stored=[self:read]{path:$out+"/result.json"}
+$readback=[self:read]{path:$out+"/report.md"}
+assert $stored.data==$result,"결과 재독 불일치"
+assert $readback.text==$report,"보고서 재독 불일치"
+return {files:len($annotated),moves:len($receipts),already:len(filter($decisions,($r)=>$r.status=="이미 완료")),held:len(filter($decisions,($r)=>$r.status=="보류")),source_links:$result.source_links,views:map($views,($r)=>{level:$r.level,files:len($r.files),broken:len($r.broken)})}

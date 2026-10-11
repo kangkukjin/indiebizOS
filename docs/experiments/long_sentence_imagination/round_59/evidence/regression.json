@@ -1,0 +1,30 @@
+{
+  "initial_new_regression": {
+    "failed": 7,
+    "passed": 7
+  },
+  "extra_level_alias_before": {
+    "failed": 1,
+    "passed": 1
+  },
+  "final_new_regression": {
+    "passed": 17
+  },
+  "related": {
+    "passed": 128,
+    "seconds": 24.99
+  },
+  "full": {
+    "passed": 10003,
+    "skipped": 1,
+    "failed": 0,
+    "seconds": 131.6,
+    "markers": "not system"
+  },
+  "guards": [
+    "build_ibl_nodes.py --check",
+    "build_body_bundle.py android",
+    "check_backend_layers.py"
+  ],
+  "seed_files_unchanged": 226
+}

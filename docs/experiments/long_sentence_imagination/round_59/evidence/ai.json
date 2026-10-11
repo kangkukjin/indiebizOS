@@ -1,0 +1,24 @@
+[
+  {
+    "episode": 4611,
+    "total_ms": 182779,
+    "model_usage": {
+      "input": 1221225,
+      "output": 18904,
+      "cache_read": 1058762,
+      "cache_create": 160391
+    },
+    "usage_events": 5
+  },
+  {
+    "episode": 4612,
+    "total_ms": 124391,
+    "model_usage": {
+      "input": 1351675,
+      "output": 12328,
+      "cache_read": 1267567,
+      "cache_create": 71185
+    },
+    "usage_events": 8
+  }
+]

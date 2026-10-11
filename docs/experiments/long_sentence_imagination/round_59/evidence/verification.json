@@ -1,0 +1,588 @@
+[
+  {
+    "name": "trainer",
+    "files": 226,
+    "bytes_exact": true,
+    "missing": [],
+    "extra": [],
+    "schema": [
+      "decisions",
+      "receipts",
+      "files",
+      "duplicates",
+      "views",
+      "source_links"
+    ],
+    "decisions": {
+      "보존": 66,
+      "유지": 145,
+      "이미 완료": 9,
+      "보류": 6
+    },
+    "source_links": 1000,
+    "views": [
+      {
+        "level": 0,
+        "visible": 56,
+        "files_exact": true,
+        "links": 150,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 1,
+        "visible": 92,
+        "files_exact": true,
+        "links": 325,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 2,
+        "visible": 137,
+        "files_exact": true,
+        "links": 540,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 3,
+        "visible": 173,
+        "files_exact": true,
+        "links": 715,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 4,
+        "visible": 209,
+        "files_exact": true,
+        "links": 890,
+        "broken": 1,
+        "link_counts_exact": true
+      }
+    ]
+  },
+  {
+    "name": "variant",
+    "files": 226,
+    "bytes_exact": true,
+    "missing": [],
+    "extra": [],
+    "schema": [
+      "decisions",
+      "receipts",
+      "files",
+      "duplicates",
+      "views",
+      "source_links"
+    ],
+    "decisions": {
+      "보존": 66,
+      "유지": 145,
+      "이미 완료": 3,
+      "이동": 6,
+      "보류": 6
+    },
+    "source_links": 1000,
+    "views": [
+      {
+        "level": 0,
+        "visible": 56,
+        "files_exact": true,
+        "links": 150,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 1,
+        "visible": 92,
+        "files_exact": true,
+        "links": 325,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 2,
+        "visible": 137,
+        "files_exact": true,
+        "links": 540,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 3,
+        "visible": 173,
+        "files_exact": true,
+        "links": 715,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 4,
+        "visible": 209,
+        "files_exact": true,
+        "links": 890,
+        "broken": 1,
+        "link_counts_exact": true
+      }
+    ]
+  },
+  {
+    "name": "ai",
+    "files": 226,
+    "bytes_exact": true,
+    "missing": [],
+    "extra": [],
+    "schema": [
+      "generated_at",
+      "summary",
+      "rules_applied",
+      "decisions",
+      "changes",
+      "held",
+      "unknown_version",
+      "duplicates",
+      "same_relative_different_content",
+      "policy_only",
+      "file_only",
+      "visitor_lists",
+      "link_check",
+      "link_count_vs_policy_expected",
+      "external_urls_not_contacted",
+      "progress_file",
+      "move_ledger",
+      "plan_file"
+    ],
+    "decisions": {
+      "preserve": 66,
+      "keep_at_target": 145,
+      "move": 9,
+      "hold_conflict": 1,
+      "hold_unknown_version": 5
+    },
+    "source_links": null,
+    "summary": {
+      "files_initial": 226,
+      "files_final": 226,
+      "decisions": {
+        "preserve": 66,
+        "keep_at_target": 145,
+        "move": 9,
+        "hold_conflict": 1,
+        "hold_unknown_version": 5
+      },
+      "moved": 9,
+      "held": 6,
+      "duplicate_groups_final": 1,
+      "same_name_diff_content_final": 5,
+      "unknown_version": 5,
+      "broken_links_by_level": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 1
+      },
+      "external_urls": 25
+    },
+    "views": [
+      {
+        "level": 0,
+        "visible": 56,
+        "files_exact": true,
+        "links": 150,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 1,
+        "visible": 92,
+        "files_exact": true,
+        "links": 325,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 2,
+        "visible": 137,
+        "files_exact": true,
+        "links": 540,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 3,
+        "visible": 173,
+        "files_exact": true,
+        "links": 715,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 4,
+        "visible": 209,
+        "files_exact": true,
+        "links": 890,
+        "broken": 1,
+        "link_counts_exact": true
+      }
+    ]
+  },
+  {
+    "name": "ai_variant",
+    "files": 226,
+    "bytes_exact": true,
+    "missing": [],
+    "extra": [],
+    "schema": [
+      "generated_at",
+      "summary",
+      "rules_applied",
+      "decisions",
+      "changes",
+      "held",
+      "unknown_version",
+      "duplicates",
+      "same_relative_different_content",
+      "interrupted_receipts_check",
+      "policy_only",
+      "file_only",
+      "visitor_lists",
+      "link_check",
+      "link_count_vs_policy_expected",
+      "external_urls_not_contacted",
+      "progress_file",
+      "move_ledger",
+      "plan_file"
+    ],
+    "decisions": {
+      "preserve": 66,
+      "keep_at_target": 145,
+      "move": 9,
+      "hold_conflict": 1,
+      "hold_unknown_version": 5
+    },
+    "source_links": null,
+    "summary": {
+      "files_initial": 226,
+      "files_final": 226,
+      "decisions": {
+        "preserve": 66,
+        "keep_at_target": 145,
+        "move": 9,
+        "hold_conflict": 1,
+        "hold_unknown_version": 5
+      },
+      "moved": 9,
+      "held": 6,
+      "duplicate_groups_final": 1,
+      "same_name_diff_content_final": 5,
+      "unknown_version": 5,
+      "broken_links_by_level": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 1
+      },
+      "external_urls": 25
+    },
+    "views": [
+      {
+        "level": 0,
+        "visible": 56,
+        "files_exact": true,
+        "links": 150,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 1,
+        "visible": 92,
+        "files_exact": true,
+        "links": 325,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 2,
+        "visible": 137,
+        "files_exact": true,
+        "links": 540,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 3,
+        "visible": 173,
+        "files_exact": true,
+        "links": 715,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 4,
+        "visible": 209,
+        "files_exact": true,
+        "links": 890,
+        "broken": 1,
+        "link_counts_exact": true
+      }
+    ]
+  },
+  {
+    "name": "after",
+    "files": 226,
+    "bytes_exact": true,
+    "missing": [],
+    "extra": [],
+    "schema": [
+      "decisions",
+      "receipts",
+      "files",
+      "duplicates",
+      "same_name",
+      "views",
+      "source_links"
+    ],
+    "decisions": {
+      "보존": 66,
+      "유지": 145,
+      "이동": 9,
+      "보류": 6
+    },
+    "source_links": 1000,
+    "views": [
+      {
+        "level": 0,
+        "visible": 56,
+        "files_exact": true,
+        "links": 150,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 1,
+        "visible": 92,
+        "files_exact": true,
+        "links": 325,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 2,
+        "visible": 137,
+        "files_exact": true,
+        "links": 540,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 3,
+        "visible": 173,
+        "files_exact": true,
+        "links": 715,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 4,
+        "visible": 209,
+        "files_exact": true,
+        "links": 890,
+        "broken": 1,
+        "link_counts_exact": true
+      }
+    ]
+  },
+  {
+    "name": "replay",
+    "files": 226,
+    "bytes_exact": true,
+    "missing": [],
+    "extra": [],
+    "schema": [
+      "decisions",
+      "receipts",
+      "files",
+      "duplicates",
+      "views",
+      "source_links"
+    ],
+    "decisions": {
+      "보존": 66,
+      "유지": 145,
+      "이동": 9,
+      "보류": 6
+    },
+    "source_links": 1000,
+    "views": [
+      {
+        "level": 0,
+        "visible": 56,
+        "files_exact": true,
+        "links": 150,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 1,
+        "visible": 92,
+        "files_exact": true,
+        "links": 325,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 2,
+        "visible": 137,
+        "files_exact": true,
+        "links": 540,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 3,
+        "visible": 173,
+        "files_exact": true,
+        "links": 715,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 4,
+        "visible": 209,
+        "files_exact": true,
+        "links": 890,
+        "broken": 1,
+        "link_counts_exact": true
+      }
+    ]
+  },
+  {
+    "name": "empty",
+    "files": 0,
+    "bytes_exact": true,
+    "missing": [],
+    "extra": [],
+    "schema": [
+      "decisions",
+      "receipts",
+      "files",
+      "duplicates",
+      "same_name",
+      "views",
+      "source_links"
+    ],
+    "decisions": {},
+    "source_links": 0,
+    "views": [
+      {
+        "level": 0,
+        "visible": 0,
+        "files_exact": true,
+        "links": 0,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 1,
+        "visible": 0,
+        "files_exact": true,
+        "links": 0,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 2,
+        "visible": 0,
+        "files_exact": true,
+        "links": 0,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 3,
+        "visible": 0,
+        "files_exact": true,
+        "links": 0,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 4,
+        "visible": 0,
+        "files_exact": true,
+        "links": 0,
+        "broken": 0,
+        "link_counts_exact": true
+      }
+    ]
+  },
+  {
+    "name": "new_conflict",
+    "files": 227,
+    "bytes_exact": true,
+    "missing": [],
+    "extra": [],
+    "schema": [
+      "decisions",
+      "receipts",
+      "files",
+      "duplicates",
+      "same_name",
+      "views",
+      "source_links"
+    ],
+    "decisions": {
+      "보존": 67,
+      "유지": 145,
+      "이동": 8,
+      "보류": 7
+    },
+    "source_links": 1000,
+    "views": [
+      {
+        "level": 0,
+        "visible": 57,
+        "files_exact": true,
+        "links": 155,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 1,
+        "visible": 93,
+        "files_exact": true,
+        "links": 330,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 2,
+        "visible": 137,
+        "files_exact": true,
+        "links": 535,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 3,
+        "visible": 173,
+        "files_exact": true,
+        "links": 710,
+        "broken": 0,
+        "link_counts_exact": true
+      },
+      {
+        "level": 4,
+        "visible": 209,
+        "files_exact": true,
+        "links": 885,
+        "broken": 1,
+        "link_counts_exact": true
+      }
+    ]
+  }
+]

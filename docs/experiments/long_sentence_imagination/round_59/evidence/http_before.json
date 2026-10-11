@@ -1,0 +1,59 @@
+{
+  "scope": "production list/file routes; auth/secret/materialization stubbed; no real network",
+  "levels": [
+    {
+      "level": 0,
+      "manifest": 56,
+      "byte_failures": [],
+      "level4_status": 404
+    },
+    {
+      "level": 1,
+      "manifest": 92,
+      "byte_failures": [],
+      "level4_status": 404
+    },
+    {
+      "level": 2,
+      "manifest": 137,
+      "byte_failures": [],
+      "level4_status": 404
+    },
+    {
+      "level": 3,
+      "manifest": 173,
+      "byte_failures": [],
+      "level4_status": 404
+    },
+    {
+      "level": 4,
+      "manifest": 209,
+      "byte_failures": [],
+      "level4_status": 200
+    }
+  ],
+  "boundaries": [
+    {
+      "path": ".internal/private.txt",
+      "listed": true,
+      "status": 200,
+      "bytes": 24
+    },
+    {
+      "path": ".secret.txt",
+      "listed": false,
+      "status": 200,
+      "bytes": 17
+    },
+    {
+      "path": "upper-alias.html",
+      "listed": true,
+      "status": 400,
+      "bytes": 21
+    }
+  ],
+  "relative_href": {
+    "resolved": "/공통 0.html",
+    "status": 404
+  }
+}

@@ -1,0 +1,331 @@
+{
+  "check_v0": {
+    "wall_seconds": 0.368,
+    "success": null,
+    "status": "invalid",
+    "error": null,
+    "value": null,
+    "usage": {
+      "steps": null,
+      "rows": null,
+      "elapsed_ms": null
+    },
+    "issues": [
+      {
+        "code": "UNKNOWN_ARGUMENT",
+        "message": "알 수 없는 인자: order. 사용 가능한 인자: by, descending, items"
+      },
+      {
+        "code": "TYPE",
+        "message": "Text가 필요하지만 List<Text>입니다."
+      }
+    ]
+  },
+  "check_v1": {
+    "wall_seconds": 0.369,
+    "success": null,
+    "status": "incomplete",
+    "error": null,
+    "value": null,
+    "usage": {
+      "steps": null,
+      "rows": null,
+      "elapsed_ms": null
+    },
+    "issues": []
+  },
+  "main_v1": {
+    "wall_seconds": 4.637,
+    "success": false,
+    "status": "interrupted",
+    "error": "groupby: 알 수 없는 집계 op 'list' (가능: avg/count/max/min/sum)",
+    "value": null,
+    "usage": {
+      "steps": 53892,
+      "rows": 461,
+      "elapsed_ms": 4413
+    }
+  },
+  "main_v2": {
+    "wall_seconds": 5.559,
+    "success": true,
+    "status": "completed",
+    "error": null,
+    "value": {
+      "files": 226,
+      "moves": 0,
+      "already": 9,
+      "held": 6,
+      "source_links": 1000,
+      "views": [
+        {
+          "level": 0,
+          "files": 56,
+          "broken": 0
+        },
+        {
+          "level": 1,
+          "files": 92,
+          "broken": 0
+        },
+        {
+          "level": 2,
+          "files": 137,
+          "broken": 0
+        },
+        {
+          "level": 3,
+          "files": 173,
+          "broken": 0
+        },
+        {
+          "level": 4,
+          "files": 209,
+          "broken": 1
+        }
+      ]
+    },
+    "usage": {
+      "steps": 120380,
+      "rows": 1124,
+      "elapsed_ms": 5070
+    }
+  },
+  "variant_stop": {
+    "wall_seconds": 1.329,
+    "success": false,
+    "status": "interrupted",
+    "error": "시험 중단: 완료한 이동 기록을 보존함",
+    "value": null,
+    "usage": {
+      "steps": 25076,
+      "rows": 230,
+      "elapsed_ms": 886
+    }
+  },
+  "variant_resume": {
+    "wall_seconds": 5.677,
+    "success": true,
+    "status": "completed",
+    "error": null,
+    "value": {
+      "files": 226,
+      "moves": 6,
+      "already": 3,
+      "held": 6,
+      "source_links": 1000,
+      "views": [
+        {
+          "level": 0,
+          "files": 56,
+          "broken": 0
+        },
+        {
+          "level": 1,
+          "files": 92,
+          "broken": 0
+        },
+        {
+          "level": 2,
+          "files": 137,
+          "broken": 0
+        },
+        {
+          "level": 3,
+          "files": 173,
+          "broken": 0
+        },
+        {
+          "level": 4,
+          "files": 209,
+          "broken": 1
+        }
+      ]
+    },
+    "usage": {
+      "steps": 120662,
+      "rows": 1130,
+      "elapsed_ms": 5147
+    }
+  },
+  "after_v3": {
+    "wall_seconds": 15.893,
+    "success": true,
+    "status": "completed",
+    "error": null,
+    "value": {
+      "files": 226,
+      "moves": 9,
+      "already": 0,
+      "held": 6,
+      "source_links": 1000,
+      "views": [
+        {
+          "level": 0,
+          "files": 56,
+          "broken": 0
+        },
+        {
+          "level": 1,
+          "files": 92,
+          "broken": 0
+        },
+        {
+          "level": 2,
+          "files": 137,
+          "broken": 0
+        },
+        {
+          "level": 3,
+          "files": 173,
+          "broken": 0
+        },
+        {
+          "level": 4,
+          "files": 209,
+          "broken": 1
+        }
+      ]
+    },
+    "usage": {
+      "steps": 134322,
+      "rows": 1139,
+      "elapsed_ms": 15225
+    }
+  },
+  "replay": {
+    "wall_seconds": 38.19,
+    "success": true,
+    "status": "completed",
+    "error": null,
+    "value": {
+      "files": 226,
+      "moves": 9,
+      "already": 0,
+      "held": 6,
+      "source_links": 1000,
+      "views": [
+        {
+          "level": 0,
+          "files": 56,
+          "broken": 0
+        },
+        {
+          "level": 1,
+          "files": 92,
+          "broken": 0
+        },
+        {
+          "level": 2,
+          "files": 137,
+          "broken": 0
+        },
+        {
+          "level": 3,
+          "files": 173,
+          "broken": 0
+        },
+        {
+          "level": 4,
+          "files": 209,
+          "broken": 1
+        }
+      ]
+    },
+    "usage": {
+      "steps": 120813,
+      "rows": 1133,
+      "elapsed_ms": 36869
+    }
+  },
+  "empty": {
+    "wall_seconds": 7.646,
+    "success": true,
+    "status": "completed",
+    "error": null,
+    "value": {
+      "files": 0,
+      "moves": 0,
+      "already": 0,
+      "held": 0,
+      "source_links": 0,
+      "views": [
+        {
+          "level": 0,
+          "files": 0,
+          "broken": 0
+        },
+        {
+          "level": 1,
+          "files": 0,
+          "broken": 0
+        },
+        {
+          "level": 2,
+          "files": 0,
+          "broken": 0
+        },
+        {
+          "level": 3,
+          "files": 0,
+          "broken": 0
+        },
+        {
+          "level": 4,
+          "files": 0,
+          "broken": 0
+        }
+      ]
+    },
+    "usage": {
+      "steps": 778,
+      "rows": 5,
+      "elapsed_ms": 7552
+    }
+  },
+  "new_conflict": {
+    "wall_seconds": 37.572,
+    "success": true,
+    "status": "completed",
+    "error": null,
+    "value": {
+      "files": 227,
+      "moves": 8,
+      "already": 0,
+      "held": 7,
+      "source_links": 1000,
+      "views": [
+        {
+          "level": 0,
+          "files": 57,
+          "broken": 0
+        },
+        {
+          "level": 1,
+          "files": 93,
+          "broken": 0
+        },
+        {
+          "level": 2,
+          "files": 137,
+          "broken": 0
+        },
+        {
+          "level": 3,
+          "files": 173,
+          "broken": 0
+        },
+        {
+          "level": 4,
+          "files": 209,
+          "broken": 1
+        }
+      ]
+    },
+    "usage": {
+      "steps": 135670,
+      "rows": 1143,
+      "elapsed_ms": 35647
+    }
+  }
+}

@@ -24,6 +24,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 
 from portal_base import _ROOT, _check_secret, _core
 from runtime_utils import WAREHOUSE_DIRNAME
+from warehouse_paths import public_file, safe_rel
 
 router = APIRouter()
 
@@ -197,11 +198,12 @@ def _walk_accessible(level: int, base: str = "") -> tuple:
         d = _warehouse_dir(lv)
         try:
             for p in d.rglob("*"):
-                if not p.is_file() or p.name.startswith("."):
-                    continue
                 rel = str(p.relative_to(d))
+                public = public_file(d, rel)
+                if public is None:
+                    continue
                 if rel not in seen:
-                    st = p.stat()
+                    st = public.stat()
                     entry = {"name": rel, "bytes": st.st_size,
                              "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds"),
                              "url": f"{base}/f?path={quote(rel)}"}
@@ -558,10 +560,11 @@ def node_manifest(request: Request, x_showcase_secret: str = Header(default=""))
 # 를 안 흘림). 공개파일(/s/)과 달리 주소를 알아도 레벨이 안 되면 열리지 않는다.
 
 def _safe_rel(base: Path, rel: str) -> Path:
-    p = (base / rel.lstrip("/")).resolve()
-    if not str(p).startswith(str(base.resolve()) + os.sep) and p != base.resolve():
-        raise HTTPException(status_code=400, detail="bad path")
-    return p
+    """Owner management adapter; public serving uses the stricter public_file."""
+    try:
+        return safe_rel(base, rel)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="bad path") from exc
 
 
 _WH_MEDIA_CACHE = _ROOT / "data" / "warehouse_media_web"   # 동영상 트랜스코드 캐시
@@ -652,8 +655,8 @@ def node_file(request: Request, path: str = "", download: int = 0,  # 동기 def
     _viewer, level = _viewer_level(core, request)
     _ensure_warehouses()
     for lv in sorted((l for l in _WAREHOUSE_LEVELS if l <= level), reverse=True):
-        f = _safe_rel(_warehouse_dir(lv), path)
-        if f.is_file():
+        f = public_file(_warehouse_dir(lv), path)
+        if f is not None:
             # 공개면 = EXIF 제거(열람이든 다운로드든)
             return _serve_warehouse_file(f, strip_exif=True, download=bool(download))
     raise HTTPException(status_code=404, detail="no such file")

@@ -271,6 +271,12 @@ legacy-envelope 액션의 구판 전용 설명에는 소스의 `target_descripti
 
 ## 재실행과 결과 파일 충돌
 
+공유창고 HTML의 링크는 디스크상의 상대 경로와 실제 공개 URL을 구분해 검사한다.
+`/f?path=자료/본문.html`에서 `href="다음.html"`은 `/다음.html`로 해석된다.
+파일 존재 검사만 했으면 "파일 위치 기준 확인·HTTP 미검증"으로 보고한다. 생성할 공유판은
+manifest의 실제 URL이나 `/f?path=<URL 인코딩한 창고 상대경로>`를 사용한다. 원문 그대로
+서빙하는 창고에 자동 링크 변환을 기대하지 않으며, 보존 대상 원본은 임의로 수정하지 않는다.
+
 `self:copy`는 `if_exists:"rename"`(기본)·`"fail"`·`"overwrite"`를 받는다.
 `self:fill`의 기본은 `overwrite`, `self:sheet`의 `range_write/calculate` 기본은 `fail`이다.
 정책은 명시할 수 있고, 생성·복사가 성공한 파일만 게시한다. 폴더 복사는 파일별 확정이며

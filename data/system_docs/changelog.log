@@ -2548,3 +2548,5 @@
   - self:script describe에 데이터 선언의 path/id 최소 실행 예제 노출. 의약품허가조회 등록 스크립트로 식약처 Service08 연결, API 활용신청 카탈로그/가이드 연동.
   - 검증: backend 전체 10144 passed / 13 skipped(225.85초), 빌드 --check·17종 구조/계약 가드 통과, Android 번들/설치필터 재생성. 실제 백엔드 number 변환 [12,null,0] 및 작성 예제/스크립트 발견 확인. 법률 API 13건을 2건씩 1·2쪽으로 분리 확인.
   - 잔여: 의약품 공식 API는 현재 설정 키로 HTTP 403. 코드·빈 응답/실패 계약 검증 완료, 실제 조회는 해당 데이터셋 활용승인/인증 확인 필요. AI 전체 과제의 시간·토큰 절감은 이번 수리에서 미측정.
+
+2026-10-12 REPAIR: 긴문장59 공개창고관리 훈련·수리. 합성226파일·1000링크, 이동9·중단3후재개6·독립AI4611/4612 파일 전건 일치. 공개 목록/다운로드의 숨김 경로·등급 밖 별칭·등급 폴더 별칭을 warehouse_paths.public_file 단일 판정으로 차단(404), 주인 관리 유지. 상대 HTML href의 파일 존재/실제 공개 URL 검증을 교재·보고에서 구분하고 동명 판본·중복 원천 목록 보완. 신규17·관련128통과, backend not-system 종합10003통과·1건너뜀·실패0, 빌드/Android/층 관문 통과. 실제 인증/외부공개·system/frontend 미검증, 비용 절감 미입증. 상세 docs/experiments/long_sentence_imagination/round_59/report.md.

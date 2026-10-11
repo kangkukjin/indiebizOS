@@ -48,6 +48,30 @@ def safe_rel(base: Path, rel: str) -> Path:
     return p
 
 
+def public_file(base: Path, rel: str) -> Path | None:
+    """Return an existing publishable file within one level, or no public match.
+
+    Both the requested path and its resolved target must have no hidden component.
+    Same-level public symlinks are supported; links outside the level never expose
+    names, sizes, or contents. A level directory cannot alias a different root.
+    Management operations still use ``safe_rel``.
+    """
+    relative = Path(str(rel or "").lstrip("/"))
+    if any(part.startswith(".") for part in relative.parts):
+        return None
+    try:
+        if base.is_symlink():
+            return None
+        resolved = safe_rel(base, str(relative))
+        resolved_relative = resolved.relative_to(base.resolve())
+        if any(part.startswith(".") for part in resolved_relative.parts):
+            return None
+        return resolved if resolved.is_file() else None
+    except (OSError, RuntimeError, ValueError):
+        # Missing/dangling/looping/out-of-level paths are indistinguishable publicly.
+        return None
+
+
 def parse_urlfile(p: Path) -> tuple:
     """.url(InternetShortcut) 파일에서 (대상, 출처 창고). 실패면 ("", "")."""
     target, warehouse = "", ""

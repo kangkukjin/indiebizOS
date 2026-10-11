@@ -16,7 +16,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -101,7 +100,7 @@ func xmlText(s string) string {
 	return b.String()
 }
 func residentAutostart(cfg *Config, exe string, remove bool) error {
-	name := "indiebiz-resident-" + cfg.InstallationID
+	name := residentServiceName(cfg)
 	switch runtime.GOOS {
 	case "darwin":
 		home, e := os.UserHomeDir()
@@ -119,8 +118,8 @@ func residentAutostart(cfg *Config, exe string, remove bool) error {
 		if e = os.MkdirAll(filepath.Dir(path), 0700); e != nil {
 			return e
 		}
-		body := `<?xml version="1.0"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>` + name + `</string><key>ProgramArguments</key><array><string>` + xmlText(exe) + `</string></array><key>RunAtLoad</key><true/><key>ProcessType</key><string>Background</string></dict></plist>`
-		return os.WriteFile(path, []byte(body), 0600)
+		_, e = residentWriteIfChanged(path, []byte(residentLaunchAgentBody(name, cfg.InstallationID, exe)))
+		return e
 	case "windows":
 		args := []string{"/Create", "/F", "/IT", "/SC", "ONLOGON", "/TN", name, "/TR", `"` + exe + `"`}
 		if remove {
@@ -149,8 +148,8 @@ func residentAutostart(cfg *Config, exe string, remove bool) error {
 		if e = os.MkdirAll(filepath.Dir(path), 0700); e != nil {
 			return e
 		}
-		body := "[Unit]\nDescription=IndieBiz registered PC\n[Service]\nExecStart=" + strconv.Quote(exe) + "\n[Install]\nWantedBy=default.target\n"
-		if e = os.WriteFile(path, []byte(body), 0600); e != nil {
+		changed, e := residentWriteIfChanged(path, []byte(residentSystemdUnitBody(cfg.InstallationID, exe)))
+		if e != nil || !changed {
 			return e
 		}
 		if b, e := exec.Command("systemctl", "--user", "daemon-reload").CombinedOutput(); e != nil {

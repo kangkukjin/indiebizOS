@@ -65,7 +65,17 @@ func startResident(cfg *Config) error {
 		return residentRemove(cfg)
 	}
 	portValue, _ := strconv.ParseUint(cfg.InstallationID[:4], 16, 32)
-	listener, e := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(30000+int(portValue)%20000))
+	address := "127.0.0.1:" + strconv.Itoa(30000+int(portValue)%20000)
+	listener, e := net.Listen("tcp", address)
+	// The service manager starts its instance while a helper handing itself over
+	// still holds the port; wait for that exit instead of failing into a restart loop.
+	for attempt := 0; e != nil && residentServiceStarted(cfg) && attempt < 20; attempt++ {
+		time.Sleep(time.Second)
+		listener, e = net.Listen("tcp", address)
+	}
+	if e != nil && residentServiceStarted(cfg) {
+		return nil // another instance keeps running; a clean exit is not restarted
+	}
 	if e != nil {
 		b, _ := os.ReadFile(filepath.Join(cfg.DataDir, "control.json"))
 		var old map[string]string
@@ -76,6 +86,9 @@ func startResident(cfg *Config) error {
 		return fmt.Errorf("resident already running or control port unavailable: %w", e)
 	}
 	defer listener.Close()
+	if residentServiceMaintain(cfg) {
+		return nil
+	}
 	r := &residentRuntime{cfg: cfg, active: map[string]context.CancelFunc{}}
 	if b, e := os.ReadFile(filepath.Join(cfg.DataDir, "paused.json")); e == nil {
 		_ = json.Unmarshal(b, &r.localPaused)

@@ -2095,8 +2095,8 @@
   "sense:realty": {
    "fields": {
     "description": "a9073339c3b5",
-    "target_description": "277081503e14",
-    "implementation": "a8433f754fca",
+    "target_description": "546da096beec",
+    "implementation": "79317e8390e7",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
     "params": "2eb3fb1d6336",
@@ -2106,7 +2106,7 @@
     "router": "ebbb1532efbc",
     "tool": "f02e45b2db1c"
    },
-   "reviewed": "2026-09-29",
+   "reviewed": "2026-10-11",
    "examples": 97
   },
   "sense:researcher": {

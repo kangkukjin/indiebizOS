@@ -74,7 +74,11 @@ def read_result(directory):
     """Decode stored output without running anything; null is a real value."""
     path = Path(directory) / 'result.json'
     if not path.exists():
-        raise ScriptError('RESULT_MISSING', '종료했지만 결과 파일을 쓰지 않았습니다. stdout은 진단이며 값으로 해석하지 않습니다.')
+        raise ScriptError('RESULT_MISSING',
+                          '종료했지만 결과 파일을 쓰지 않았습니다. '
+                          'Python에서 os.environ["INDIEBIZ_SCRIPT_RESULT"] 경로에 JSON 값을 쓰세요. '
+                          'stdout은 진단이며 값으로 해석하지 않습니다. '
+                          '이미 생성한 파일·외부 효과는 취소되지 않았으므로 확인 없이 전체 작업을 재실행하지 마세요.')
     if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_RESULT_BYTES:
         raise ScriptError('RESULT_INVALID', '결과는 32MiB 이하의 일반 JSON 파일이어야 합니다.')
     try:

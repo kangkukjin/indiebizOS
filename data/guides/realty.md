@@ -32,6 +32,7 @@
 ```
 - `region`(동·지명·건물명) 또는 `lat`/`lng`. `type`=villa/oneroom/officetel. `deal`=trade/rent + `lease`=전세|월세(좁힘).
 - `deposit_max`·`rent_max`(만원), `radius`(m, 기본 3000), `limit`(1~50, 기본 30). 네이버의 최대 60을 직방에 적용하지 않는다.
+- `area_m2`는 전용면적만(없으면 null), 공급/계약면적은 별도 칸이다. 반경 전체의 격자를 조회하고 상세 ID를 중복 제거한다. 일부 실패의 `PARTIAL_SOURCE`는 `$error.partial`에서 성공 매물과 오류를 함께 보존한다(상세: real_estate.md).
 - 반환 records `{title, meta, summary, url, image}` — url=직방 매물 페이지, image=썸네일.
 - **아파트·단독/다가구는 직방 약함** → `source:"naver"` 또는 real_estate.md §5·§6(당근·현지 부동산).
 

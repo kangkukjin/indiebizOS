@@ -67,7 +67,13 @@
 각 매물: `{title, meta, summary, url, image, itemId, salesType, deposit, rent, area_m2, floor, address, lat, lng, distance_m}`
 - `meta` = `전세 1억 5,000만 · 78㎡ · 2/4층 · 쓰리룸 · 평택시 동삭동 664-19 · 중심에서 2380m`
 - `url` = `https://www.zigbang.com/home/villa/items/49460021` (클릭 시 직방 매물 페이지)
-- `image` = 썸네일. 원자료도 `items[]`의 같은 행에 있다. `deposit`·`rent`는 **만원**, `area_m2`는 ㎡. `map_data`는 지도 마커다. 예: `>> [table:filter]{where:"deposit >= 20000"}`. 네이버의 `price`(원)를 직방에 그대로 쓰지 않는다.
+- `image` = 썸네일. 원자료도 `items[]`의 같은 행에 있다. `deposit`·`rent`는 **만원**, `area_m2`는 **전용면적 ㎡만**이며 없으면 null이다. 공급·계약면적은 `supply_area_m2`·`contract_area_m2`로 따로 보존하고 전용면적 조건을 대신 판정하지 않는다. `map_data`는 지도 마커다. 예: `>> [table:filter]{where:"deposit >= 20000"}`. 네이버의 `price`(원)를 직방에 그대로 쓰지 않는다.
+
+### 검색 범위·일부 실패
+
+직방은 요청 반경과 겹치는 geohash5 격자를 조회한 뒤 거리로 거른다. 동 이름은 검색 중심이며 행정동 경계 필터가 아니다. `search_scope`에 격자·후보 수·상세 확인 수를 남긴다. 격자 64개를 넘는 반경은 줄여 달라는 오류를 반환한다. 같은 매물 ID의 상세는 한 번만 조회하며 가격 후필터를 통과한 결과가 `limit`에 차면 멈춘다.
+
+목록·상세 일부 실패는 `source_complete:false`·`errors`와 성공한 `items`를 함께 반환한다. IBL은 `PARTIAL_SOURCE`로 알리므로 `[catch]`에서 `$error.partial`의 성공 결과와 오류를 함께 보존한다. 빈 표본을 지역 전체의 매물 없음으로 단정하지 않는다. `truncations.scope:selection`은 요청 상한으로 고른 표본이다.
 
 ### ⚠️ source=zigbang가 약한 것
 - **아파트** — 직방은 단지 단위라 이 경로는 거부됨. 아파트 매물은 `source:"naver"`(§4), 시세는 source=molit.
@@ -99,11 +105,12 @@
 ### 반환 (items 통화)
 - `meta` = `전세 2억 9,000 · 109/84㎡(공급/전용) · 8/22층 · 남향 · 확인 20260711 · ○○공인중개사 · 동일매물 5건`
 - `url` = `https://m.land.naver.com/article/info/{매물번호}` (클릭 시 네이버 매물 페이지)
+- 월세 후필터를 적용한 뒤 `limit`을 채우되 최대 3페이지까지 확인한다. 다음 페이지가 남았는데 3페이지로도 채우지 못하면 `source_complete:false`·`truncations`로 표시한다. 후속 페이지가 실패해도 앞 페이지의 `items`와 실패 이유를 보존한다. IBL에서는 `$error.partial`로 회수한다.
 - 같은 집을 여러 중개사가 올린 것은 **동일매물 자동 묶음**(sameAddressGroup). `map_data`에 지도 마커.
 
 ### ⚠️ 특성·함정
 - **호가다** — 부르는 값. 체결가는 `source:"molit"`와 갭 비교(§7).
-- 단지명 검색은 **전국에서 이름 매칭** — 동명 단지가 다른 도시에 있으면 엉뚱한 단지가 나올 수 있으니 결과의 `조회지역` 확인. 애매하면 "동 이름"으로 조회.
+- 지역 검색은 주소 성분이 맞는 유일 후보만 선택하며 불일치·동명이면 오류와 후보를 반환한다. 단지명도 결과의 `조회지역`을 확인한다.
 - 사진(image)은 대표사진이 있는 매물만. 직방만큼 사진이 풍부하진 않음.
 - 비공식 내부 API(부록 C) — 봇 탐지(TLS 지문)를 curl_cffi로 우회하므로 **curl_cffi 의존**. 엔드포인트 변경 시 깨질 수 있음.
 

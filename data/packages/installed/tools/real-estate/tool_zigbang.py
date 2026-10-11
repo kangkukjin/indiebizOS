@@ -5,7 +5,7 @@
 
 비공식 내부 API(apis.zigbang.com). 키 불필요. 한국 IP에서 차단 약함.
 흐름: 지명→좌표(/v2/search, Nominatim 폴백) → geohash5 → 리스트(마커 id) →
-거리 선필터 → 상세(/v3/items/{id}) 병렬조회 → items 통화.
+반경의 격자들을 조회 → ID 중복 제거·거리 선필터 → 상세 병렬조회 → items 통화.
 
 리스트 개편(2026-08-10 실측): 옛 `/v2/items/{cat}` 이 404 로 은퇴 →
 `/house/property/v1/items/{villas|onerooms|officetels}` (경로가 복수형).
@@ -19,6 +19,8 @@ import math
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+
+from common.value_semantics import numeric_value
 
 _UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/124 Safari/537.36")
@@ -149,11 +151,51 @@ def _price_str(sales_type, price):
 
 
 def _fetch_detail(item_id):
+    j = _http_json(f"{_API}/v3/items/{item_id}", timeout=12)
+    return j.get("item") if isinstance(j, dict) else None
+
+
+def _radius_cells(lat, lng, radius):
+    """Cover the spherical radius bounding box with geohash5 cells, including seams."""
+    angle = radius / 6371000.0
+    delta_lat = math.degrees(angle)
+    south, north = max(-90, lat - delta_lat), min(90, lat + delta_lat)
+    if south <= -90 or north >= 90:
+        delta_lng = 180
+    else:
+        delta_lng = math.degrees(math.asin(min(1, math.sin(angle) / math.cos(math.radians(lat)))))
+    step = 180 / 4096  # geohash5: 12 latitude bits, 13 longitude bits
+    y0, y1 = max(0, math.floor((south + 90) / step)), min(4095, math.floor((north + 90) / step))
+    x0, x1 = math.floor((lng - delta_lng + 180) / step), math.floor((lng + delta_lng + 180) / step)
+    if (y1 - y0 + 1) * (x1 - x0 + 1) > 64:
+        raise ValueError("검색 반경이 64개 지도 격자를 넘습니다. radius를 줄여 주세요.")
+    return list(dict.fromkeys(_geohash(-90 + (y + .5) * step,
+                                      -180 + ((x % 8192) + .5) * step)
+                              for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)))
+
+
+def _listing_cell(gh, cat, sales_types, deposit_min):
+    qs = {"geohash": gh, "salesPriceMin": 0, "depositMin": deposit_min or 0, "rentMin": 0}
+    params = urllib.parse.urlencode(qs)
+    for i, st in enumerate(sales_types):
+        params += f"&salesTypes[{i}]={urllib.parse.quote(st)}"
     try:
-        j = _http_json(f"{_API}/v3/items/{item_id}", timeout=12)
-        return j.get("item") if isinstance(j, dict) else None
-    except Exception:
-        return None
+        listing = _http_json(f"{_API}/house/property/v1/items/{_CAT_PLURAL[cat]}?{params}", timeout=12)
+        if not isinstance(listing, dict) or not isinstance(listing.get("items"), list):
+            raise ValueError("매물 목록 items가 없습니다.")
+        return listing["items"], None
+    except Exception as exc:
+        return [], {"stage": "list", "geohash": gh, "error": str(exc)}
+
+
+def _detail_result(iid):
+    try:
+        item = _fetch_detail(iid)
+        if not isinstance(item, dict) or str(item.get("itemId")) != str(iid):
+            raise ValueError("요청한 매물의 상세 응답이 없습니다.")
+        return item, None
+    except Exception as exc:
+        return None, {"stage": "detail", "item_id": iid, "error": str(exc)}
 
 
 def _detail_to_row(item, cat, center, dist_m):
@@ -162,7 +204,7 @@ def _detail_to_row(item, cat, center, dist_m):
     iid = item.get("itemId")
     sales_type = item.get("salesType") or ""
     area = item.get("area") or {}
-    m2 = area.get("전용면적M2") or area.get("계약면적M2") or area.get("공급면적M2")
+    m2 = numeric_value(area.get("전용면적M2"))
     floor = item.get("floor") or {}
     fl, allfl = floor.get("floor"), floor.get("allFloors")
     addr = item.get("jibunAddress") or item.get("addressOrigin", {}).get("local3") or ""
@@ -194,6 +236,8 @@ def _detail_to_row(item, cat, center, dist_m):
         "deposit": (item.get("price") or {}).get("deposit"),
         "rent": (item.get("price") or {}).get("rent"),
         "area_m2": m2,
+        "supply_area_m2": numeric_value(area.get("공급면적M2")),
+        "contract_area_m2": numeric_value(area.get("계약면적M2")),
         "floor": fl,
         # R7 칸 규약 — meta·summary 에 접힌 나머지 값의 구조 칸
         "total_floors": int(allfl) if str(allfl).isdigit() else allfl,  # 건물 전체 층수(meta 의 "층/전체층")
@@ -239,9 +283,8 @@ def get_zigbang_listings(tool_input: dict):
         if not geo:
             return {"success": False, "error": f"'{region}' 위치를 찾지 못했습니다. 더 구체적인 동·지역명으로 시도하세요."}
         lat, lng, matched = geo["lat"], geo["lng"], geo["matched"]
-    try:
-        lat, lng = float(lat), float(lng)
-    except (TypeError, ValueError):
+    lat, lng = numeric_value(lat), numeric_value(lng)
+    if lat is None or lng is None or not (-90 <= lat <= 90 and -180 <= lng <= 180):
         return {"success": False, "error": "lat/lng 좌표가 올바르지 않습니다."}
 
     rtype = (tool_input.get("type") or _CAT_DEFAULT).strip().lower()
@@ -251,73 +294,55 @@ def get_zigbang_listings(tool_input: dict):
                 "error": "source=zigbang는 빌라(villa)·원룸(oneroom)·오피스텔(officetel)만 지원합니다. "
                          "아파트 시세는 source=molit(실거래가) 또는 가이드(real_estate.md)의 네이버부동산 경로를 쓰세요."}
     sales_types = _sales_types(tool_input.get("deal"), tool_input.get("lease"))
+    radius = numeric_value(tool_input.get("radius", 3000))
+    if radius is None or radius <= 0 or radius > 20000000:
+        return {"success": False, "error": "radius는 유한한 양수 거리(m)여야 합니다."}
     try:
-        radius = int(tool_input.get("radius") or 3000)
-    except (TypeError, ValueError):
-        radius = 3000
+        cells = _radius_cells(lat, lng, radius)
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
 
-    # 리스트 호출 (geohash5 박스 — 약 4.9km). salesTypes 서버 필터.
-    # 2026-08-10: /v2/items/{cat} 404 은퇴 → /house/property/v1/items/{복수형}. 평문 geohash 통과.
-    gh = _geohash(lat, lng, 5)
-    qs = {"geohash": gh, "salesPriceMin": 0,
-          "depositMin": tool_input.get("deposit_min") or 0, "rentMin": 0}
-    params = urllib.parse.urlencode(qs)
-    for i, st in enumerate(sales_types):
-        params += f"&salesTypes[{i}]={urllib.parse.quote(st)}"
-    try:
-        listing = _http_json(f"{_API}/house/property/v1/items/{_CAT_PLURAL[cat]}?{params}", timeout=12)
-    except Exception as e:
-        return {"success": False, "error": f"직방 리스트 조회 실패: {e}"}
-    markers = listing.get("items") or []
-    if not markers:
-        return {"success": True, "source": "zigbang", "count": 0, "items": [],
-                "message": f"'{matched or region}' 반경에 직방 {cat} {'/'.join(sales_types)} 매물이 없습니다.",
-                "조회지역": matched or region}
-
-    # 거리 선필터 + 정렬 → 가까운 limit개만 상세 조회(상세 호출 비용 절약)
-    scored = []
-    for m in markers:
-        mlat, mlng = m.get("lat"), m.get("lng")
-        if mlat is None or mlng is None:
-            continue
-        d = _haversine_m(lat, lng, float(mlat), float(mlng))
-        if d <= radius:
-            scored.append((d, m.get("id") or m.get("itemId")))  # 새 리스트=id, 옛=itemId
-    scored.sort(key=lambda x: x[0])
-    near = scored[:limit]
-    if not near:
-        return {"success": True, "source": "zigbang", "count": 0, "items": [],
-                "message": f"'{matched or region}' 반경 {radius}m 내 직방 {cat} 매물이 없습니다(반경을 넓혀보세요).",
-                "조회지역": matched or region}
-
-    # 상세 병렬 조회
-    dist_by_id = {iid: d for d, iid in near}
+    # One cell does not cover the requested circle. Fetch its bounding cells once.
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        listings = list(ex.map(lambda gh: _listing_cell(
+            gh, cat, sales_types, tool_input.get("deposit_min")), cells))
+    errors = [error for _, error in listings if error]
+    distances = {}
+    for markers, _ in listings:
+        for marker in markers:
+            iid = marker.get("id") or marker.get("itemId")
+            mlat, mlng = numeric_value(marker.get("lat")), numeric_value(marker.get("lng"))
+            if iid is None or mlat is None or mlng is None or not (-90 <= mlat <= 90 and -180 <= mlng <= 180):
+                errors.append({"stage": "marker", "item_id": iid, "error": "매물 ID 또는 좌표가 올바르지 않습니다."})
+                continue
+            distance = _haversine_m(lat, lng, mlat, mlng)
+            if distance <= radius:
+                key = str(iid)
+                if key not in distances or distance < distances[key][0]:
+                    distances[key] = (distance, iid)
+    scored = sorted(distances.values(), key=lambda pair: pair[0])
+    dep_max = numeric_value(tool_input.get("deposit_max"))
+    rent_max = numeric_value(tool_input.get("rent_max"))
+    rows, checked = [], 0
+    # Limit applies to accepted results. Stop once filled; never repeat an ID.
     with ThreadPoolExecutor(max_workers=8) as ex:
-        details = list(ex.map(_fetch_detail, [iid for _, iid in near]))
-
-    # 가격 후필터(deposit_max/rent_max) + 행 구성
-    dep_max = tool_input.get("deposit_max")
-    rent_max = tool_input.get("rent_max")
-    rows = []
-    for item in details:
-        row = _detail_to_row(item, cat, (lat, lng), dist_by_id.get(item.get("itemId")) if item else None)
-        if not row:
-            continue
-        if row["salesType"] not in sales_types:
-            continue
-        if dep_max is not None and row.get("deposit") is not None:
-            try:
-                if float(row["deposit"]) > float(dep_max):
+        while checked < len(scored) and len(rows) < limit:
+            batch = scored[checked:checked + min(8, limit - len(rows))]
+            details = list(ex.map(_detail_result, [iid for _, iid in batch]))
+            checked += len(batch)
+            for (distance, iid), (item, error) in zip(batch, details):
+                if error:
+                    errors.append(error)
                     continue
-            except (TypeError, ValueError):
-                pass
-        if rent_max is not None and row.get("rent"):
-            try:
-                if float(row["rent"]) > float(rent_max):
+                row = _detail_to_row(item, cat, (lat, lng), distance)
+                if row["salesType"] not in sales_types:
                     continue
-            except (TypeError, ValueError):
-                pass
-        rows.append(row)
+                deposit, rent = numeric_value(row.get("deposit")), numeric_value(row.get("rent"))
+                if dep_max is not None and deposit is not None and deposit > dep_max:
+                    continue
+                if rent_max is not None and rent is not None and rent > rent_max:
+                    continue
+                rows.append(row)
     rows.sort(key=lambda r: (r["distance_m"] if r["distance_m"] is not None else 1e9))
 
     # 상세에서 읽은 숫자·식별자도 통화에 보존한다. 화면용 필드만 고르면
@@ -346,9 +371,13 @@ def get_zigbang_listings(tool_input: dict):
             row["price"] = row["deposit_won"]
     lease_label = "/".join(sales_types)
     message = f"직방 '{matched or region}' 반경 {radius}m · {cat} {lease_label} — {len(rows)}건 (상세는 items)"
-    return {
+    out = {
         "success": True,
         "source": "zigbang",
+        "source_complete": not errors,
+        "errors": errors,
+        "search_scope": {"radius_m": radius, "geohashes": cells,
+                         "candidate_count": len(scored), "details_checked": checked},
         "조회지역": matched or region,
         "center": {"lat": lat, "lng": lng},
         "count": len(rows),
@@ -358,3 +387,10 @@ def get_zigbang_listings(tool_input: dict):
                      "markers": [{"lat": r["lat"], "lng": r["lng"], "name": r["title"],
                                   "meta": r["meta"], "url": r["url"]} for r in rows if r["lat"]]},
     }
+    if errors:
+        out["warning"] = f"직방 검색 일부 실패 {len(errors)}건. 성공한 매물은 items에 보존했습니다."
+        out["message"] += " · 일부 조회 실패(매물 없음으로 해석하지 마세요)"
+    if checked < len(scored):
+        out["truncations"] = [{"scope": "selection", "reason": "limit", "limit": limit,
+                               "remaining_candidates": len(scored) - checked}]
+    return out

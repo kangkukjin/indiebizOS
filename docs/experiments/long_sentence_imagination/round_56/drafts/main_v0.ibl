@@ -1,0 +1,47 @@
+#!ibl edition=2
+[def:수집]($요청) {
+  [try] {
+    $응답 = [sense:realty]{source:$요청.source,region:$요청.region,type:"villa",deal:"rent",lease:"전세",deposit_max:20000,limit:10}
+    return {source:$요청.source,region:$요청.region,ok:true,response:$응답}
+  } [catch] { return {source:$요청.source,region:$요청.region,ok:false,error:$error} }
+}
+[def:정규화]($검색) {
+  [if:not $검색.ok] { return [] }
+  $검색.response.items >> [table:each] {
+    $보증금 = $검색.source == "zigbang" ? get($it,"deposit",null) : get($it,"deposit_won",null)
+    $면적 = get($it,"area_m2",null)
+    $링크 = get($it,"url","")
+    return {source:$검색.source,region:$검색.region,url:$링크,title:get($it,"title",""),deposit_man:$보증금 == null ? null : $검색.source == "naver" ? $보증금 / 10000 : $보증금,area_m2:$면적,raw:$it,key:$검색.source + ":" + ($링크 == "" ? $검색.region + ":" + text($i) : $링크)}
+  }
+}
+[def:판정]($행,$상한) {
+  $미확인 = $행.deposit_man == null or $행.area_m2 == null or $행.url == ""
+  return {**$행,status:$미확인 ? "미확인" : $행.deposit_man <= $상한 and $행.area_m2 >= 50 ? "조건충족" : "조건제외"}
+}
+[if:$snapshot == ""] {
+  $요청 = [{source:"naver",region:"평택 비전동"},{source:"zigbang",region:"평택 비전동"},{source:"naver",region:"평택 동삭동"},{source:"zigbang",region:"평택 동삭동"}]
+  $검색들 = $요청 >> [table:each]{parallel:4} { [fn:수집]{요청:$it} }
+} [else] {
+  $저장 = [self:read]{path:$snapshot}
+  $검색들 = $저장.data.items
+}
+[self:write]{path:$out + "/raw.json",content:json($검색들)}
+$행들 = $검색들 >> [table:each]{mode:"flat_map"} { [fn:정규화]{검색:$it} }
+$키들 = unique(map($행들,($r)=>$r.key))
+$통합 = $키들 >> [table:each] {
+  $키 = $it
+  $같은 = filter($행들,($r)=>$r.key == $키)
+  $행 = {**$같은[0],search_regions:unique(map($같은,($r)=>$r.region))}
+  [fn:판정]{행:$행,상한:$cap}
+}
+$실패 = filter($검색들,($r)=>not $r.ok)
+$결과 = {cap_man:$cap,area_min_m2:50,rows:$통합,failures:$실패,search_count:len($검색들),sample_only:true}
+[self:write]{path:$out + "/comparison.json",content:json($결과)}
+$줄들 = map($통합,($r)=>"| " + $r.status + " | " + $r.source + " | " + join(", ",$r.search_regions) + " | " + text($r.deposit_man) + " | " + text($r.area_m2) + " | " + $r.url + " |")
+$본문 = "# 전세 빌라 표본 비교\n\n검색별 최대 10건의 현재 광고 표본입니다. 광고와 실제 계약 가능 여부는 다를 수 있습니다. 결과 0건은 지역 전체 매물 없음이 아닙니다.\n\n보증금 상한(만원): " + text($cap) + ", 전용면적 하한: 50㎡\n\n| 판정 | 출처 | 검색지역 | 보증금(만원) | 면적(㎡) | 링크 |\n|---|---|---|---:|---:|---|\n" + join("\n",$줄들) + "\n\n실패 검색: " + json($실패)
+[self:write]{path:$out + "/report.md",content:$본문}
+$재독 = [self:read]{path:$out + "/comparison.json"}
+$보고서 = [self:read]{path:$out + "/report.md"}
+assert $재독.data == $결과, "비교 JSON 재독 불일치"
+assert $보고서.text == $본문, "보고서 재독 불일치"
+return {searches:len($검색들),failed:len($실패),rows:len($통합),qualified:len(filter($통합,($r)=>$r.status == "조건충족")),unknown:len(filter($통합,($r)=>$r.status == "미확인")),out:$out}

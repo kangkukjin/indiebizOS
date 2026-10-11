@@ -321,45 +321,52 @@ def get_naver_listings(tool_input: dict):
         path = "/api/articles"
         params["cortarNo"] = loc["cortarNo"]
 
-    rows, page = [], 1
-    try:
-        while len(rows) < limit and page <= 3:
+    rent_max = _float_or_none(tool_input.get("rent_max"))
+    rows, page, errors = [], 1, []
+    more = False
+    while len(rows) < limit and page <= 3:
+        try:
             d = _api_get(path, {**params, "page": page})
-            arts = d.get("articleList") or []
-            rows.extend(_article_to_item(a) for a in arts)
-            if not d.get("isMoreData") or not arts:
+            arts = d.get("articleList")
+            if not isinstance(arts, list):
+                raise ValueError("매물 목록 articleList가 없습니다.")
+            more = bool(d.get("isMoreData"))
+            for article in arts:
+                row = _article_to_item(article)
+                if (rent_max is not None and row["_trade"] == "월세"
+                        and row["_rent_man"] is not None and row["_rent_man"] > rent_max):
+                    continue
+                rows.append(row)
+            if not more or not arts:
                 break
             page += 1
-    except Exception as e:
-        if hasattr(e, "failure"):   # common.api_client.RateLimitedError — 요청 한도는 원천 장애와 가른다(77회차 F77-2)
-            return e.failure()
-        return {"success": False, "error": f"네이버부동산 매물 조회 실패: {e}"}
-
-    # 월세 rent_max 후필터 (rentPrc는 서버필터 파라미터가 없어 클라이언트 필터)
-    rent_max = tool_input.get("rent_max")
-    if rent_max is not None:
-        try:
-            _rmax = float(rent_max)
-            rows = [r for r in rows
-                    if r["_trade"] != "월세" or r["_rent_man"] is None or r["_rent_man"] <= _rmax]
-        except (TypeError, ValueError):
-            pass
+        except Exception as exc:
+            # Preserve previous pages even when a later source request fails.
+            if not rows and hasattr(exc, "failure"):
+                return exc.failure()
+            errors.append({"stage": "page", "page": page, "error": str(exc)})
+            break
+    selected = len(rows) > limit or (len(rows) >= limit and more)
+    page_limited = page > 3 and more and len(rows) < limit
     rows = rows[:limit]
-
     items_out = [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows]
-    if not rows:
-        return {"success": True, "source": "naver", "count": 0, "items": [],
-                "message": f"네이버부동산 '{loc['matched']}' {rtype} {trade_label} 매물이 없습니다.",
-                "조회지역": loc["matched"]}
     message = f"네이버부동산 '{loc['matched']}' · {rtype} {trade_label} — {len(rows)}건 (동일매물 묶음, 상세는 items)"
     out = {
         "success": True,
         "source": "naver",
+        "source_complete": not errors and not page_limited,
+        "errors": errors,
         "조회지역": loc["matched"],
         "count": len(rows),
         "message": message,
         "items": items_out,
     }
+    if page_limited:
+        out["truncations"] = [{"scope": "source", "reason": "page_limit", "limit": 3}]
+    elif selected:
+        out["truncations"] = [{"scope": "selection", "reason": "limit", "limit": limit}]
+    if errors or page_limited:
+        out["warning"] = "일부 페이지 실패 또는 조회 상한으로 원천이 불완전합니다. 성공한 매물은 items에 보존했습니다."
     if loc.get("lat") and loc.get("lng"):
         out["center"] = {"lat": loc["lat"], "lng": loc["lng"]}
         out["map_data"] = {"center": out["center"],

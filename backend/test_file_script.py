@@ -60,6 +60,9 @@ def test_missing_invalid_and_failure_do_not_fall_back(tmp_path, tail, code):
     out = file_script.execute(source, b'{}', work)
     assert not out['ok'] and out['error']['code'] == code
     assert len(list((work.parent / 'executions').iterdir())) == 1
+    if code == 'RESULT_MISSING':
+        assert 'INDIEBIZ_SCRIPT_RESULT' in out['error']['message']
+        assert '재실행하지' in out['error']['message']
 
 
 def test_null_and_partial_value(tmp_path):

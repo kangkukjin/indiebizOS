@@ -1,0 +1,25 @@
+{
+  "full_backend": [
+    {
+      "tests": "10088",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "13",
+      "time": "228.400"
+    }
+  ],
+  "command": ".venv/bin/python -m pytest backend/ -n auto --dist loadfile",
+  "targeted_passed": 38,
+  "single_runner_passed": 4,
+  "build_check": "passed",
+  "android_manifest_check": "passed",
+  "backend_layers": "passed",
+  "first_sandbox_run": {
+    "passed": 9923,
+    "failed": 98,
+    "errors": 47,
+    "skipped": 16,
+    "interrupted": true,
+    "reason": "local sockets, browser launch and nested sandbox-exec denied; new test entrypoints then repaired"
+  }
+}

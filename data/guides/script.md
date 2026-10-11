@@ -44,6 +44,15 @@ tmp.replace(path)
 ```
 
 `args`는 JSON 객체 하나다. 결과 파일에는 JSON 값 하나를 쓴다. `null`도 값이다.
+`args`는 JSON 객체이며 Python은 `json.load(sys.stdin)`으로 읽는다. 위치 인자 목록·`sys.argv[1]` 계약이 아니다. 파일 저장만 하는 프로그램도 아래처럼 반환 JSON을 써야 한다.
+
+```python
+from pathlib import Path
+import json, os
+Path(os.environ["INDIEBIZ_SCRIPT_RESULT"]).write_text(
+    json.dumps({"saved": True}), encoding="utf-8")
+```
+
 **종료 코드 0 + 결과 파일 없음은 `RESULT_MISSING`**, 잘못된 JSON은 `RESULT_INVALID`다.
 stdout으로 되돌아가 값을 찾지 않는다. 종료 코드 비0·시간 초과는 실패이며 결과를 이미 썼다면
 부분 값으로 보존한다. 오류 원문은 stderr 파일, 표시되는 꼬리는 비밀값 마스킹을 거친다.

@@ -1,0 +1,189 @@
+{
+  "base": {
+    "success": true,
+    "value": {
+      "searches": 4,
+      "failed": 0,
+      "rows": 3,
+      "qualified": 2,
+      "unknown": 0,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_36회차/trainer/base"
+    },
+    "elapsed_ms": 1056,
+    "source_complete": true,
+    "calls": {
+      "sense:realty": 4,
+      "self:write": 3,
+      "self:read": 2
+    },
+    "verified": true,
+    "run_id": "29fef7bbdb5b4be1a774993e24df4679",
+    "plan_hash": "40ab6359428aa5c674a8016d505cf708838d2a52f7b3ccf2b41deb84e082b4f6"
+  },
+  "variant": {
+    "success": true,
+    "value": {
+      "searches": 4,
+      "failed": 0,
+      "rows": 3,
+      "qualified": 2,
+      "unknown": 0,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_36회차/trainer/variant"
+    },
+    "elapsed_ms": 452,
+    "source_complete": true,
+    "calls": {
+      "self:read": 3,
+      "self:write": 3
+    },
+    "verified": true,
+    "run_id": "40c7ae2b948c4f27b9d61220eb7ab178",
+    "plan_hash": "40ab6359428aa5c674a8016d505cf708838d2a52f7b3ccf2b41deb84e082b4f6"
+  },
+  "repaired": {
+    "success": true,
+    "value": {
+      "searches": 4,
+      "failed": 0,
+      "rows": 6,
+      "qualified": 4,
+      "unknown": 0,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_56회차/trainer/repaired"
+    },
+    "elapsed_ms": 1358,
+    "source_complete": true,
+    "calls": {
+      "sense:realty": 4,
+      "self:write": 3,
+      "self:read": 2
+    },
+    "verified": true,
+    "run_id": "3e6d2302feb1439a900d7c04c4f69741",
+    "plan_hash": "6d290c6ad86708fe9b461222601654944b0c5298b5f7efebdcbec9b7d39c3366"
+  },
+  "repaired_variant": {
+    "success": true,
+    "value": {
+      "searches": 4,
+      "failed": 0,
+      "rows": 6,
+      "qualified": 3,
+      "unknown": 0,
+      "out": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_56회차/trainer/repaired_variant"
+    },
+    "elapsed_ms": 500,
+    "source_complete": true,
+    "calls": {
+      "self:read": 3,
+      "self:write": 3
+    },
+    "verified": true,
+    "run_id": "ce653eafae5d4f3a8f4120979a1658bc",
+    "plan_hash": "43709aae4498f5bd3ae82bb4de474dccb98b0547fbc05bd483585c64d9b9f50d"
+  },
+  "4604": {
+    "usage": {
+      "input": 1557937,
+      "output": 12810,
+      "cache_read": 1280761,
+      "cache_create": 271318
+    },
+    "tools": 10,
+    "events": {
+      "request.received": 1,
+      "cognition.supervisor_selected": 1,
+      "supervision.turn.opened": 1,
+      "supervision.recall.started": 8,
+      "supervision.recall.finished": 8,
+      "model.call_started": 7,
+      "model.input": 7,
+      "model.round": 20,
+      "model.usage": 7,
+      "model.call_finished": 7,
+      "knowledge_catalog.selected": 2,
+      "recall.presented": 1,
+      "cognition.route": 1,
+      "framing.inherit_declined": 1,
+      "supervision.model.started": 2,
+      "model.response_snapshot": 32,
+      "supervision.tool.supervisor": 2,
+      "supervision.tool.error": 1,
+      "supervision.model.finished": 2,
+      "supervision.framing": 1,
+      "supervision.tool.started": 10,
+      "ibl.started": 10,
+      "ibl.finished": 10,
+      "supervision.tool.finished": 10,
+      "ibl.checkpoint": 7,
+      "side_effect.write": 2,
+      "supervision.progress": 2,
+      "ibl.function_feedback": 1,
+      "capability.judged": 1,
+      "cognition.evaluation": 1,
+      "supervision.evaluation.stage_started": 4,
+      "supervision.decision": 2,
+      "supervision.evaluation.stage_finished": 4,
+      "supervision.evaluation.started": 1,
+      "supervision.evaluation.finished": 1,
+      "validation.completed": 1,
+      "supervision.response.delivered": 1,
+      "recall.used": 1,
+      "supervision.cost.summary": 1,
+      "supervision.turn.closed": 1,
+      "run.ended": 1
+    }
+  },
+  "4605": {
+    "usage": {
+      "input": 365140,
+      "output": 6173,
+      "cache_read": 310355,
+      "cache_create": 50965
+    },
+    "tools": 1,
+    "events": {
+      "request.received": 1,
+      "cognition.supervisor_selected": 1,
+      "supervision.turn.opened": 1,
+      "supervision.recall.started": 8,
+      "supervision.recall.finished": 8,
+      "model.call_started": 5,
+      "model.input": 5,
+      "model.round": 6,
+      "model.usage": 5,
+      "model.call_finished": 5,
+      "knowledge_catalog.selected": 2,
+      "recall.presented": 1,
+      "cognition.route": 1,
+      "framing.inherited": 1,
+      "supervision.framing": 1,
+      "model.response_snapshot": 6,
+      "supervision.tool.started": 1,
+      "ibl.started": 1,
+      "ibl.checkpoint": 1,
+      "side_effect.write": 1,
+      "ibl.finished": 1,
+      "supervision.tool.finished": 1,
+      "cognition.evaluation": 1,
+      "supervision.evaluation.stage_started": 4,
+      "supervision.evaluation.stage_finished": 4,
+      "supervision.evaluation.started": 1,
+      "supervision.evaluation.finished": 1,
+      "supervision.decision": 1,
+      "validation.completed": 1,
+      "supervision.response.delivered": 1,
+      "recall.used": 1,
+      "supervision.cost.summary": 1,
+      "supervision.turn.closed": 1,
+      "run.ended": 1
+    }
+  },
+  "ai_verified": true,
+  "ai_variant_verified": true,
+  "preserved_raw_sha256": {
+    "trainer/repaired/raw.json": "1de3942fa09e0036341446f394a7dc896cf1ef9ba89bdf41d2182f54b94b85fa",
+    "trainer/repaired_variant/raw.json": "1de3942fa09e0036341446f394a7dc896cf1ef9ba89bdf41d2182f54b94b85fa",
+    "trainer/variant/raw.json": "437a871d07c20660602a4ff496ee280d44e1403333bbb22656baff6a08811abe",
+    "trainer/base/raw.json": "437a871d07c20660602a4ff496ee280d44e1403333bbb22656baff6a08811abe"
+  }
+}

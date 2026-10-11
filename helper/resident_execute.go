@@ -220,8 +220,13 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		if strings.HasPrefix(source, "-") {
 			return errResult("invalid_media_source", "")
 		}
+		home, _ := os.UserHomeDir()
+		mpv, missing := residentSelectMediaPlayer(source, extra.Mode, runtime.GOOS, os.Getenv("PATH"), mediaPlayerCandidates(runtime.GOOS, "", home))
+		if missing != nil {
+			return missing
+		}
 		var cmd *exec.Cmd
-		if mpv, e := exec.LookPath("mpv"); e == nil {
+		if mpv != "" {
 			args := []string{"--no-config", "--no-terminal"}
 			if extra.Mode != "interactive" {
 				args = append(args, "--no-video")
@@ -231,14 +236,13 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 			}
 			args = append(args, "--", source)
 			cmd = exec.CommandContext(ctx, mpv, args...)
-		} else if runtime.GOOS == "darwin" && extra.Mode != "interactive" && !strings.Contains(source, "://") {
-			cmd = exec.CommandContext(ctx, "/usr/bin/afplay", residentAfplayArgs(source, c.Volume)...)
 		} else {
-			return errResult("needs_media_player", "mpv 설치 및 로그인한 사용자의 오디오 세션이 필요합니다")
+			cmd = exec.CommandContext(ctx, "/usr/bin/afplay", residentAfplayArgs(source, c.Volume)...)
 		}
 		result := r.process(ctx, j.ID, cmd)
 		result["media_source"] = source
 		result["player"] = filepath.Base(cmd.Path)
+		result["player_path"] = cmd.Path
 		if c.Volume != nil {
 			result["volume"] = *c.Volume
 		}

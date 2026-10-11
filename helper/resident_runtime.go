@@ -53,9 +53,9 @@ func (r *residentRuntime) record(v residentRecord) error {
 }
 func (r *residentRuntime) capabilities() map[string]interface{} {
 	hostname, _ := os.Hostname()
-	_, mpv := exec.LookPath("mpv")
+	mpv, _ := findMediaPlayer()
 	_, afplay := exec.LookPath("afplay")
-	return map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv == nil || afplay == nil, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "screen_observation": true, "screen_cancel": true, "media_volume": true, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
+	return map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv != "" || afplay == nil, "media_player": mpv, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "screen_observation": true, "screen_cancel": true, "media_volume": true, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
 }
 func startResident(cfg *Config) error {
 	if len(cfg.InstallationID) != 32 || cfg.Generation == "" || cfg.DataDir == "" {

@@ -170,7 +170,7 @@ WOL 경로는 먼저 한 번 설정한다. relay는 **대상 LAN에 켜진 PC의
 
 재생 관용구의 소스는 **원격 파일** 또는 HTTP(S) 주소다. 중앙 파일이면 먼저 파일보내기를
 완료하고 그 원격 경로를 넘긴다. `모드:"interactive"`는 영상·사진, 기본 background는 오디오다.
-mpv가 필요하며 Mac의 로컬 오디오는 afplay도 쓴다. `음량`은 생략하면 재생기 기본값, 지정하면 0~100이며 0도 전달한다. afplay에는 0~1로 환산한다. 재개 시 음량도 동일해야 한다. 로그인한 사용자의 오디오/화면 권한이 필요하다.
+mpv가 필요하며 Mac의 로컬 오디오는 afplay도 쓴다. 상주 헬퍼는 로그인 셸 PATH를 받지 못하므로 PATH 다음에 OS별 설치 위치(Homebrew·`/Applications`·`~/Applications/**/mpv.app` 앱 번들, Windows scoop·winget·choco)를 실행 가능 여부로 확인한다. 결과의 `player_path`가 실제 실행 파일이고, 못 찾으면 `needs_media_player`의 `searched`에 확인한 위치가 남는다. 새 바이너리를 설치한 PC부터 적용된다. `음량`은 생략하면 재생기 기본값, 지정하면 0~100이며 0도 전달한다. afplay에는 0~1로 환산한다. 재개 시 음량도 동일해야 한다. 로그인한 사용자의 오디오/화면 권한이 필요하다.
 작업 `running`은 실행 시작이며 실제 소리·화면의 증명이 아니다(`playback_verified:false`).
 플레이어 부재는 결과의 `needs_media_player`로 확인한다. 상태 확인은 반환값을 작업확인에
 넘기거나 재생 관용구의 `작업`으로 전달한다. 중지는 그 접수증을 사용한다.

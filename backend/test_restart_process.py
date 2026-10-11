@@ -45,12 +45,12 @@ async def tool_process():
     child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
     return {"pid": child.pid}
 @app.post("/daemon")
-async def tool_daemon(marker: str):
+async def tool_daemon(marker: str, linger: float = 0.7):
     import subprocess, sys
-    # 도구는 추적기의 0.2초 관측 주기보다 오래 머문다(adb 클라이언트처럼) — 그래야 자손이 발견된다.
+    # linger=0 이면 도구가 추적기의 0.2초 관측 주기보다 먼저 끝난다(자손은 트리에서 사라진다).
     spawn = ("import subprocess, sys, time; subprocess.Popen([sys.executable, '-c', "
-             "'import time; time.sleep(60)', sys.argv[1]], start_new_session=True); time.sleep(0.7)")
-    tool = subprocess.Popen([sys.executable, "-c", spawn, marker])
+             "'import time; time.sleep(60)', sys.argv[1]], start_new_session=True); time.sleep(float(sys.argv[2]))")
+    tool = subprocess.Popen([sys.executable, "-c", spawn, marker, str(linger)])
     return {"pid": tool.pid}
 @app.get("/health")
 async def health(): return {"status": "healthy", "live_turns": []}
@@ -237,10 +237,10 @@ def test_declared_daemon_is_adopted_but_undeclared_leftover_still_blocks(runtime
     (base / "data/lifecycle_policy.yaml").write_text(
         f"adopted_daemons:\n  - name: {name}\n    argv: [declared-daemon]\n")
 
-    def spawn(marker):
-        tool = http(port, f"/daemon?marker={marker}", payload={})["pid"]
+    def spawn(marker, linger=0.7):
+        tool = http(port, f"/daemon?marker={marker}&linger={linger}", payload={})["pid"]
         proc = eventually(lambda: [p for p in psutil.process_iter(["cmdline"])
-                                   if p.pid != tool and (p.info["cmdline"] or [])[-1:] == [marker]])[0]
+                                   if p.pid != tool and marker in (p.info["cmdline"] or [])[3:4]])[0]
         return tool, identity(proc.pid)
 
     daemons = []
@@ -253,7 +253,19 @@ def test_declared_daemon_is_adopted_but_undeclared_leftover_still_blocks(runtime
         signal_owned(leftover, force=True)
         eventually(lambda: adapter.status(initial)["active_children"] == 0)
 
-        tool, daemon = spawn("declared-daemon")
+        # 도구가 관측 주기 안에 끝나도 떨어져 나간 자손은 환경 표식으로 찾아 센다.
+        tool, stray = spawn("fast-exit-leftover", linger=0)
+        daemons.append(stray)
+        eventually(lambda: not psutil.pid_exists(tool) or psutil.Process(tool).status() == psutil.STATUS_ZOMBIE)
+        time.sleep(0.6)
+        assert adapter.status(initial)["active_children"] == 1
+        receipt = read_json(control_dir(base) / "processes" / f"{initial['generation']}-{tool}.json")
+        assert stray in receipt["members"]
+        signal_owned(stray, force=True)
+        eventually(lambda: adapter.status(initial)["active_children"] == 0)
+
+        # 같은 빠른 종료에서도 선언된 데몬은 입양된다.
+        tool, daemon = spawn("declared-daemon", linger=0)
         daemons.append(daemon)
         eventually(lambda: adapter.status(initial)["active_children"] == 0)
         receipt = read_json(control_dir(base) / "processes" / f"{initial['generation']}-{tool}.json")

@@ -438,6 +438,8 @@ finalizer로 보호한다. [상주 수명 분리와 검증](../../docs/RUNTIME_S
 `data/lifecycle_policy.yaml` 의 `adopted_daemons`(실행 파일 이름 + 연속 인자열)에 선언된 상주 데몬뿐이다 —
 adb 서버처럼 도구가 부수적으로 띄우고 끝나지 않는 프로세스는 영수증(`processes/*.json`)의 `adopted` 로
 옮겨 적혀 drain 대기와 재기동 정지 대상에서 빠진다(2026-10-11, 선언 밖 자손은 그대로 센다).
+도구 프로세스 환경에는 `INDIEBIZ_TOOL_PROCESS` 표식이 실린다 — 부모가 관측 주기(0.2초) 안에 자식을 띄우고 끝나
+트리에서 사라진 자손을 구성원 사망 때마다 이 표식으로 다시 찾는다(환경을 지운 자손은 찾지 못한다).
 macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시계 보정의 영향을 받는
 `psutil.Process.create_time()` 표시값으로 사망을 판정하면 살아 있는 워커가 종료 대상에서
 누락될 수 있다. [2026-09-12 장애와 재현](../../docs/RESTART_CLOCK_IDENTITY_2026_09_12.md).

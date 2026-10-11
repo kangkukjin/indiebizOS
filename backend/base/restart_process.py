@@ -235,26 +235,66 @@ def _tool_descendants(ident, rules, adopted):
     return found
 
 
-def tool_process_receipt(proc, base, generation):
+TOOL_MARK = "INDIEBIZ_TOOL_PROCESS"
+
+
+def marked_env(env, mark):
+    """도구 프로세스 환경에 표식을 심는다. 자손은 부모가 죽어 떨어져 나가도 이를 물려받는다."""
+    import os
+    return dict(os.environ if env is None else env, **{TOOL_MARK: mark})
+
+
+def _marked_strays(mark, since, rules, adopted, skip):
+    """표식을 물려받은 살아 있는 프로세스. 부모가 관측 주기 안에 끝나 트리에서 사라진 자손을 찾는다.
+
+    환경을 지웠거나 읽을 수 없는(다른 사용자) 프로세스는 찾지 못한다 — 그 한계는 남는다.
+    """
+    found = []
+    for proc in psutil.process_iter():
+        try:
+            cid = {"pid": proc.pid, "born": _birth_time(proc)}
+            key = (cid["pid"], cid["born"])
+            if key in skip or key in adopted or cid["born"] < since:
+                continue
+            if proc.status() == psutil.STATUS_ZOMBIE or proc.environ().get(TOOL_MARK) != mark:
+                continue
+            if _is_adopted(cid, rules):
+                adopted[key] = cid
+                continue
+            # 입양 데몬 아래는 데몬의 것이다(표식은 물려받았어도).
+            if any(_is_adopted({"pid": a.pid, "born": _birth_time(a)}, rules) for a in proc.parents()):
+                continue
+            found.append(cid)
+        except psutil.Error:
+            continue
+    return found
+
+
+def tool_process_receipt(proc, base, generation, mark=None):
     """워커 밖에도 자식의 출생 신원을 남긴다. 부모 사망 뒤 고아가 된 도구를 회수한다."""
     ident = identity(proc.pid)
     path = control_dir(base) / "processes" / f"{generation}-{proc.pid}.json"
     record = {"generation": generation, "members": [ident]}
     atomic_json(path, record)
-    return path, record, adopted_daemons(base)
+    return path, record, adopted_daemons(base), mark
 
 
-def wait_tool_process(proc, path, record, rules=()):
+def wait_tool_process(proc, path, record, rules=(), mark=None):
     """표면/부모 도구가 끝나도 발견한 실제 자손이 살아 있으면 완료로 세지 않는다.
 
     예외는 데이터로 선언된 입양 데몬뿐이다(adb 서버처럼 도구가 부수적으로 띄우고 영영
     끝나지 않는 상주 프로세스). 영수증의 adopted 로 옮겨 적고 members(=drain 대기·정지
     대상)에서 뺀다. 선언에 없는 자손은 떨어져 나가도 그대로 도구의 일로 센다.
+
+    트리 열람은 부모가 살아 있을 때만 자손을 본다. 부모가 관측 주기(0.2초) 안에 자식을 띄우고
+    끝나면 자식은 트리에서 사라지므로, 구성원이 죽을 때마다 환경 표식(mark)으로 다시 찾는다.
     """
     root = (record["members"][0]["pid"], record["members"][0]["born"])
     known = {(p["pid"], p["born"]): p for p in record["members"]}
     adopted = {}
+    dead = set()
     while True:
+        died = False
         for key, ident in list(known.items()):
             # fork 직후 exec 전에 잡힌 자손이 나중에 데몬이 되므로 매번 다시 본다.
             if key != root and _is_adopted(ident, rules):
@@ -262,6 +302,12 @@ def wait_tool_process(proc, path, record, rules=()):
             elif alive(ident):
                 for child in _tool_descendants(ident, rules, adopted):
                     known[(child["pid"], child["born"])] = child
+            elif key not in dead:
+                dead.add(key)
+                died = True
+        if died and mark:
+            for child in _marked_strays(mark, root[1], rules, adopted, known):
+                known[(child["pid"], child["born"])] = child
         members = list(known.values())
         if members != record["members"] or list(adopted.values()) != record.get("adopted", []):
             record["members"] = members

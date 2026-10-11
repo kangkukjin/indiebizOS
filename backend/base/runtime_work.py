@@ -295,6 +295,16 @@ def install_worker_tracking():
             return original_popen(proc, *a, **kw)
         lease = reserve("process") if parent else None
         owner = lease.registry if lease else _registry
+        import os
+        mark = None
+        if os.environ.get("INDIEBIZ_BASE_PATH"):
+            # 자손이 물려받는 표식 — 부모가 먼저 끝나 트리에서 사라진 자식을 추적기가 다시 찾는다.
+            from restart_process import marked_env
+            mark = secrets.token_hex(16)
+            if len(a) > 10:  # Popen(args, …, env) 를 위치 인자로 준 호출
+                a = a[:10] + (marked_env(a[10], mark),) + a[11:]
+            else:
+                kw["env"] = marked_env(kw.get("env"), mark)
         try:
             original_popen(proc, *a, **kw)
         except BaseException:
@@ -305,11 +315,10 @@ def install_worker_tracking():
             with owner.lock:
                 owner.entries[lease.key]["pid"] = proc.pid
         receipt = None
-        import os
-        if os.environ.get("INDIEBIZ_BASE_PATH"):
+        if mark:
             try:
                 from restart_process import tool_process_receipt
-                receipt = tool_process_receipt(proc, os.environ["INDIEBIZ_BASE_PATH"], owner.generation)
+                receipt = tool_process_receipt(proc, os.environ["INDIEBIZ_BASE_PATH"], owner.generation, mark)
             except Exception as exc:
                 # 등록 직후 아주 짧게 끝난 자식은 이미 완료. 살아 있는데 신원이 없으면 UNKNOWN.
                 if proc.poll() is None:

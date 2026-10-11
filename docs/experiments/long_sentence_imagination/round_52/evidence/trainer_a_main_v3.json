@@ -1,0 +1,198 @@
+{
+ "elapsed": 18.51,
+ "task_id": "r52-trainer-a-1791685937",
+ "inputs": {
+  "src": "trainer/a/input",
+  "out": "trainer/a/out"
+ },
+ "success": true,
+ "status": null,
+ "issues": [],
+ "error": null,
+ "value": {
+  "db_sum": {
+   "rows": 11,
+   "due": 1731000,
+   "paid": 1455000,
+   "unpaid": 90000,
+   "unknown": 2
+  },
+  "xl_sum": {
+   "rows": 11,
+   "due": 1731000,
+   "paid": 1455000,
+   "unpaid": 90000,
+   "unknown": 2
+  },
+  "sum_match": true,
+  "ledger_rows": 11,
+  "certificates": 4,
+  "notices": 2,
+  "unknown": 2,
+  "over": 2,
+  "cancelled": 0,
+  "cert_left": 0,
+  "docx_draw": {
+   "tried": true,
+   "ok": false
+  },
+  "flagged": 0,
+  "seen": [
+   {
+    "no": "HB-N-2026-09-0010",
+    "name": "박지안",
+    "png": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/a/out/shots/HB-N-2026-09-0010_p1.png",
+    "seen": {
+     "answer": "네, '박지안' 세 글자 모두 Name 칸에 온전히 보입니다.\n\n- 보이는 글자: **박지안**\n- 문제 없음: 잘리거나 넘치거나 깨진 글자(□ 같은 대체 문자) 없이 오른쪽 값 열에 다른 값들과 줄을 맞춰 정상으로 표시됩니다.\n\n질문 범위 밖이지만, 바로 아래 Course 칸 '실크스크린　포스터'는 두 단어 사이가 보통 띄어쓰기보다 넓게 벌어져 보입니다. 전각 공백이 들어갔을 가능성이 있습니다.",
+     "success": true,
+     "message": "네, '박지안' 세 글자 모두 Name 칸에 온전히 보입니다.\n\n- 보이는 글자: **박지안**\n- 문제 없음: 잘리거나 넘치거나 깨진 글자(□ 같은 대체 문자) 없이 오른쪽 값 열에 다른 값들과 줄을 맞춰 정상으로 표시됩니다.\n\n질문 범위 밖이지만, 바로 아래 Course 칸 '실크스크린　포스터'는 두 단어 사이가 보통 띄어쓰기보다 넓게 벌어져 보입니다. 전각 공백이 들어갔을 가능성이 있습니다."
+    }
+   }
+  ],
+  "problems": [
+   "수료증(DOCX)은 그려 보지 못함 — 그리기가 DOCX 를 받지 않는다. 본문 글자 재독과 남은 자리 조회로만 확인했고, 바닥글·글자 넘침은 미확인"
+  ]
+ },
+ "plan_hash": "12a68b072bf455d23743f528c0f60b9bb2b8c1650f2ba818e85208a56543ee16",
+ "task_ref": "3b5a0b8acc68403793be6ee24088f3b4",
+ "usage": {
+  "steps": 4157,
+  "rows": 18,
+  "elapsed_ms": 18448,
+  "model": {
+   "requests": 1,
+   "input": 14439,
+   "output": 331,
+   "cache_read": 8906,
+   "cache_create": 5529
+  },
+  "tool_ms_by_line": [
+   {
+    "line": 101,
+    "ms": 14454,
+    "calls": 1,
+    "actions": [
+     "engines:image_read"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 77,
+    "ms": 1454,
+    "calls": 1,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 73,
+    "ms": 1102,
+    "calls": 1,
+    "actions": [
+     "self:sheet"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 38,
+    "ms": 403,
+    "calls": 1,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 20,
+    "ms": 91,
+    "calls": 4,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 22,
+    "ms": 76,
+    "calls": 4,
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 31,
+    "ms": 76,
+    "calls": 2,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 13,
+    "ms": 75,
+    "calls": 4,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 81,
+    "ms": 49,
+    "calls": 1,
+    "actions": [
+     "self:mkdir"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 80,
+    "ms": 35,
+    "calls": 1,
+    "actions": [
+     "self:mkdir"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   }
+  ]
+ },
+ "reuse": {
+  "read_calls": 0,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:delete",
+    "excluded_calls": 3
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "overlapping_write",
+    "action": "self:write",
+    "excluded_calls": 1
+   }
+  ]
+ }
+}

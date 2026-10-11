@@ -1,0 +1,1441 @@
+{
+ "code": "#!ibl edition=2\n$a=[engines:render]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1.pdf\",output_path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1\"}\n$c=[self:read]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx\"}\nreturn {a:$a,c:$c}",
+ "elapsed": 0.668,
+ "response": {
+  "success": true,
+  "value": {
+   "a": {
+    "success": true,
+    "items": [
+     {
+      "op": "pdf",
+      "label": "p1",
+      "page": 1,
+      "width": 1190,
+      "height": 1684,
+      "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1_p1.png",
+      "prescreen": ""
+     }
+    ],
+    "total": 1,
+    "prescreen_flagged": 0,
+    "message": "렌더 완료: 1장 → outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe",
+    "total_pages": 1,
+    "truncated": false
+   },
+   "c": {
+    "text": "수 료 증\n\n발급번호: HB-2026-09-0001\n\n성명: 김서연\n\n강좌: 도자기 물레 입문\n\n기간: 2026.09  /  출석: 7회 중 8회 과정 (출석률 87.5%)\n\n[표 시작]\n지도 강사 | 한가람\n발급일 | 2026-10-11\n[표 끝]\n\n위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다.\n\n한빛공방 대표  {{대표}}",
+    "blocks": [
+     {
+      "type": "heading",
+      "level": 1,
+      "text": "수 료 증"
+     },
+     {
+      "type": "paragraph",
+      "text": "발급번호: HB-2026-09-0001"
+     },
+     {
+      "type": "paragraph",
+      "text": "성명: 김서연"
+     },
+     {
+      "type": "paragraph",
+      "text": "강좌: 도자기 물레 입문"
+     },
+     {
+      "type": "paragraph",
+      "text": "기간: 2026.09  /  출석: 7회 중 8회 과정 (출석률 87.5%)"
+     },
+     {
+      "type": "table",
+      "columns": [
+       "지도 강사",
+       "한가람"
+      ],
+      "rows": [
+       [
+        "발급일",
+        "2026-10-11"
+       ]
+      ]
+     },
+     {
+      "type": "paragraph",
+      "text": "위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다."
+     },
+     {
+      "type": "paragraph",
+      "text": "한빛공방 대표  {{대표}}"
+     }
+    ],
+    "data": {
+     "metadata": {
+      "filename": "c1.docx",
+      "total_paragraphs": 7,
+      "total_tables": 1,
+      "total_images": 0,
+      "total_blocks": 8,
+      "offset": 0,
+      "returned_blocks": 8,
+      "truncated": false
+     }
+    }
+   }
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "a",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "items",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "op",
+              [
+               "scalar",
+               "pdf"
+              ]
+             ],
+             [
+              "label",
+              [
+               "scalar",
+               "p1"
+              ]
+             ],
+             [
+              "page",
+              [
+               "scalar",
+               1
+              ]
+             ],
+             [
+              "width",
+              [
+               "scalar",
+               1190
+              ]
+             ],
+             [
+              "height",
+              [
+               "scalar",
+               1684
+              ]
+             ],
+             [
+              "path",
+              [
+               "scalar",
+               "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1_p1.png"
+              ]
+             ],
+             [
+              "prescreen",
+              [
+               "scalar",
+               ""
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "total",
+         [
+          "scalar",
+          1
+         ]
+        ],
+        [
+         "prescreen_flagged",
+         [
+          "scalar",
+          0
+         ]
+        ],
+        [
+         "message",
+         [
+          "scalar",
+          "렌더 완료: 1장 → outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe"
+         ]
+        ],
+        [
+         "total_pages",
+         [
+          "scalar",
+          1
+         ]
+        ],
+        [
+         "truncated",
+         [
+          "scalar",
+          false
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "c",
+      [
+       "record",
+       [
+        [
+         "text",
+         [
+          "scalar",
+          "수 료 증\n\n발급번호: HB-2026-09-0001\n\n성명: 김서연\n\n강좌: 도자기 물레 입문\n\n기간: 2026.09  /  출석: 7회 중 8회 과정 (출석률 87.5%)\n\n[표 시작]\n지도 강사 | 한가람\n발급일 | 2026-10-11\n[표 끝]\n\n위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다.\n\n한빛공방 대표  {{대표}}"
+         ]
+        ],
+        [
+         "blocks",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "type",
+              [
+               "scalar",
+               "heading"
+              ]
+             ],
+             [
+              "level",
+              [
+               "scalar",
+               1
+              ]
+             ],
+             [
+              "text",
+              [
+               "scalar",
+               "수 료 증"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "type",
+              [
+               "scalar",
+               "paragraph"
+              ]
+             ],
+             [
+              "text",
+              [
+               "scalar",
+               "발급번호: HB-2026-09-0001"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "type",
+              [
+               "scalar",
+               "paragraph"
+              ]
+             ],
+             [
+              "text",
+              [
+               "scalar",
+               "성명: 김서연"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "type",
+              [
+               "scalar",
+               "paragraph"
+              ]
+             ],
+             [
+              "text",
+              [
+               "scalar",
+               "강좌: 도자기 물레 입문"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "type",
+              [
+               "scalar",
+               "paragraph"
+              ]
+             ],
+             [
+              "text",
+              [
+               "scalar",
+               "기간: 2026.09  /  출석: 7회 중 8회 과정 (출석률 87.5%)"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "type",
+              [
+               "scalar",
+               "table"
+              ]
+             ],
+             [
+              "columns",
+              [
+               "list",
+               [
+                [
+                 "scalar",
+                 "지도 강사"
+                ],
+                [
+                 "scalar",
+                 "한가람"
+                ]
+               ]
+              ]
+             ],
+             [
+              "rows",
+              [
+               "list",
+               [
+                [
+                 "list",
+                 [
+                  [
+                   "scalar",
+                   "발급일"
+                  ],
+                  [
+                   "scalar",
+                   "2026-10-11"
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "type",
+              [
+               "scalar",
+               "paragraph"
+              ]
+             ],
+             [
+              "text",
+              [
+               "scalar",
+               "위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다."
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "type",
+              [
+               "scalar",
+               "paragraph"
+              ]
+             ],
+             [
+              "text",
+              [
+               "scalar",
+               "한빛공방 대표  {{대표}}"
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "data",
+         [
+          "record",
+          [
+           [
+            "metadata",
+            [
+             "record",
+             [
+              [
+               "filename",
+               [
+                "scalar",
+                "c1.docx"
+               ]
+              ],
+              [
+               "total_paragraphs",
+               [
+                "scalar",
+                7
+               ]
+              ],
+              [
+               "total_tables",
+               [
+                "scalar",
+                1
+               ]
+              ],
+              [
+               "total_images",
+               [
+                "scalar",
+                0
+               ]
+              ],
+              [
+               "total_blocks",
+               [
+                "scalar",
+                8
+               ]
+              ],
+              [
+               "offset",
+               [
+                "scalar",
+                0
+               ]
+              ],
+              [
+               "returned_blocks",
+               [
+                "scalar",
+                8
+               ]
+              ],
+              [
+               "truncated",
+               [
+                "scalar",
+                false
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "d45e22e8af71edfb4696138095c7418e65649ae374d60958b66a6bad4723851d",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:41:158",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:171:284",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "record:35:285",
+    "invocation_id": 3,
+    "kind": "record",
+    "parents": [
+     1,
+     2
+    ]
+   },
+   {
+    "id": 4,
+    "node_id": "call:19:285",
+    "invocation_id": 4,
+    "kind": "invoke",
+    "parents": [
+     3
+    ],
+    "action": "engines:render",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "649f935ad71fa2b7f45adf042a49f6c9f2ee3beea9dd58c52e026d1ca151c4af",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1.pdf",
+     "output_path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1"
+    }
+   },
+   {
+    "id": 5,
+    "node_id": "call:19:285",
+    "invocation_id": 5,
+    "kind": "tool_evidence",
+    "parents": [
+     4
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 6,
+    "node_id": "call:19:285",
+    "invocation_id": 6,
+    "kind": "call",
+    "parents": [
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "id": 7,
+    "node_id": "bind:16:285",
+    "invocation_id": 7,
+    "kind": "bind",
+    "parents": [
+     6
+    ]
+   },
+   {
+    "id": 8,
+    "node_id": "literal:306:424",
+    "invocation_id": 8,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 9,
+    "node_id": "record:300:425",
+    "invocation_id": 9,
+    "kind": "record",
+    "parents": [
+     8
+    ]
+   },
+   {
+    "id": 10,
+    "node_id": "call:289:425",
+    "invocation_id": 10,
+    "kind": "invoke",
+    "parents": [
+     9
+    ],
+    "action": "self:read",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "ea65d9a726d1dba3f863c1199c01a8614f117740e4f1490a7c210c8637f1210b",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx"
+    }
+   },
+   {
+    "id": 11,
+    "node_id": "call:289:425",
+    "invocation_id": 11,
+    "kind": "tool_evidence",
+    "parents": [
+     10
+    ],
+    "markers": {},
+    "attachments": {},
+    "source_snapshot": [
+     [
+      "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx",
+      1791685522122226675,
+      37733,
+      "f2ac4f561fbaadeced065becfb23bfc2f13f776e0233d031f53d6b6fc78490c7"
+     ]
+    ]
+   },
+   {
+    "id": 12,
+    "node_id": "call:289:425",
+    "invocation_id": 12,
+    "kind": "call",
+    "parents": [
+     9,
+     10,
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "bind:286:425",
+    "invocation_id": 13,
+    "kind": "bind",
+    "parents": [
+     12
+    ]
+   },
+   {
+    "id": 14,
+    "node_id": "ref:436:438",
+    "invocation_id": 14,
+    "kind": "ref",
+    "parents": [
+     6
+    ]
+   },
+   {
+    "id": 15,
+    "node_id": "ref:441:443",
+    "invocation_id": 15,
+    "kind": "ref",
+    "parents": [
+     12
+    ]
+   },
+   {
+    "id": 16,
+    "node_id": "record:433:444",
+    "invocation_id": 16,
+    "kind": "record",
+    "parents": [
+     14,
+     15
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:444": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 15,
+    "end": 444,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:285": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 16,
+    "end": 285,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:285": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 19,
+    "end": 285,
+    "line": 2,
+    "column": 4
+   },
+   "record:35:285": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 35,
+    "end": 285,
+    "line": 2,
+    "column": 20
+   },
+   "literal:41:158": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 41,
+    "end": 158,
+    "line": 2,
+    "column": 26
+   },
+   "literal:171:284": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 171,
+    "end": 284,
+    "line": 2,
+    "column": 156
+   },
+   "bind:286:425": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 286,
+    "end": 425,
+    "line": 3,
+    "column": 1
+   },
+   "call:289:425": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 289,
+    "end": 425,
+    "line": 3,
+    "column": 4
+   },
+   "record:300:425": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 300,
+    "end": 425,
+    "line": 3,
+    "column": 15
+   },
+   "literal:306:424": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 306,
+    "end": 424,
+    "line": 3,
+    "column": 21
+   },
+   "return:426:444": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 426,
+    "end": 444,
+    "line": 4,
+    "column": 1
+   },
+   "record:433:444": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 433,
+    "end": 444,
+    "line": 4,
+    "column": 8
+   },
+   "ref:436:438": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 436,
+    "end": 438,
+    "line": 4,
+    "column": 11
+   },
+   "ref:441:443": {
+    "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+    "start": 441,
+    "end": 443,
+    "line": 4,
+    "column": 16
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "649f935ad71fa2b7f45adf042a49f6c9f2ee3beea9dd58c52e026d1ca151c4af",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "op",
+            [
+             "scalar",
+             "pdf"
+            ]
+           ],
+           [
+            "label",
+            [
+             "scalar",
+             "p1"
+            ]
+           ],
+           [
+            "page",
+            [
+             "scalar",
+             1
+            ]
+           ],
+           [
+            "width",
+            [
+             "scalar",
+             1190
+            ]
+           ],
+           [
+            "height",
+            [
+             "scalar",
+             1684
+            ]
+           ],
+           [
+            "path",
+            [
+             "scalar",
+             "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1_p1.png"
+            ]
+           ],
+           [
+            "prescreen",
+            [
+             "scalar",
+             ""
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "total",
+       [
+        "scalar",
+        1
+       ]
+      ],
+      [
+       "prescreen_flagged",
+       [
+        "scalar",
+        0
+       ]
+      ],
+      [
+       "message",
+       [
+        "scalar",
+        "렌더 완료: 1장 → outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe"
+       ]
+      ],
+      [
+       "total_pages",
+       [
+        "scalar",
+        1
+       ]
+      ],
+      [
+       "truncated",
+       [
+        "scalar",
+        false
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "engines:render",
+    "reuse_key": "10bbcb775f4e5f5ca7dcd0a4e1fced0ed6eef0863555b262ad08910483473a75",
+    "reuse_parts": {
+     "action": "43e389fc2ab68ed20444bc80443281d84da858a3e22f991fb2431747ec663a88",
+     "args": "559f7da333ea60389de1f1f36465cc20825e47265f7522992376bfe10c01e681",
+     "contract": "5cf9b2c0f55e44b60dac1c7a232f9a23cde2442843947619056528cd8326da64",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "ea65d9a726d1dba3f863c1199c01a8614f117740e4f1490a7c210c8637f1210b",
+    "value": [
+     "record",
+     [
+      [
+       "text",
+       [
+        "scalar",
+        "수 료 증\n\n발급번호: HB-2026-09-0001\n\n성명: 김서연\n\n강좌: 도자기 물레 입문\n\n기간: 2026.09  /  출석: 7회 중 8회 과정 (출석률 87.5%)\n\n[표 시작]\n지도 강사 | 한가람\n발급일 | 2026-10-11\n[표 끝]\n\n위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다.\n\n한빛공방 대표  {{대표}}"
+       ]
+      ],
+      [
+       "blocks",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "heading"
+            ]
+           ],
+           [
+            "level",
+            [
+             "scalar",
+             1
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "수 료 증"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "발급번호: HB-2026-09-0001"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "성명: 김서연"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "강좌: 도자기 물레 입문"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "기간: 2026.09  /  출석: 7회 중 8회 과정 (출석률 87.5%)"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "table"
+            ]
+           ],
+           [
+            "columns",
+            [
+             "list",
+             [
+              [
+               "scalar",
+               "지도 강사"
+              ],
+              [
+               "scalar",
+               "한가람"
+              ]
+             ]
+            ]
+           ],
+           [
+            "rows",
+            [
+             "list",
+             [
+              [
+               "list",
+               [
+                [
+                 "scalar",
+                 "발급일"
+                ],
+                [
+                 "scalar",
+                 "2026-10-11"
+                ]
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다."
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "한빛공방 대표  {{대표}}"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "data",
+       [
+        "record",
+        [
+         [
+          "metadata",
+          [
+           "record",
+           [
+            [
+             "filename",
+             [
+              "scalar",
+              "c1.docx"
+             ]
+            ],
+            [
+             "total_paragraphs",
+             [
+              "scalar",
+              7
+             ]
+            ],
+            [
+             "total_tables",
+             [
+              "scalar",
+              1
+             ]
+            ],
+            [
+             "total_images",
+             [
+              "scalar",
+              0
+             ]
+            ],
+            [
+             "total_blocks",
+             [
+              "scalar",
+              8
+             ]
+            ],
+            [
+             "offset",
+             [
+              "scalar",
+              0
+             ]
+            ],
+            [
+             "returned_blocks",
+             [
+              "scalar",
+              8
+             ]
+            ],
+            [
+             "truncated",
+             [
+              "scalar",
+              false
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {},
+     "source_snapshot": [
+      [
+       "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx",
+       1791685522122226675,
+       37733,
+       "f2ac4f561fbaadeced065becfb23bfc2f13f776e0233d031f53d6b6fc78490c7"
+      ]
+     ]
+    },
+    "action": "self:read",
+    "reuse_key": "9be8ab44ac6b3f6757d420ba45737fd4c466198d336cc0aef56eab9d70a48c1c",
+    "reuse_parts": {
+     "action": "f406b71a167877ab00f5c879bdce9e2548f372ef2d2866dcc258222bfe3f2790",
+     "args": "c0c3b6aa7ddbf3c56811a6afa897601353b65c48234035748399ba7f4911ea3f",
+     "contract": "5cb5123ba3aaf20cc05c6e1d47a76d3e3bc7b2c8ab6be1be9648c5f1268fec43",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    },
+    "resource_state": [
+     [
+      "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx",
+      1791685522122226675,
+      37733,
+      "f2ac4f561fbaadeced065becfb23bfc2f13f776e0233d031f53d6b6fc78490c7"
+     ]
+    ],
+    "reuse_disabled": false
+   }
+  ],
+  "usage": {
+   "steps": 14,
+   "rows": 0,
+   "elapsed_ms": 648,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:16:285",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 16,
+      "end": 285,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:286:425",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 286,
+      "end": 425,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:19:285",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 19,
+      "end": 285,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:289:425",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 289,
+      "end": 425,
+      "line": 3,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "literal:171:284",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 171,
+      "end": 284,
+      "line": 2,
+      "column": 156
+     }
+    },
+    {
+     "node_id": "literal:306:424",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 306,
+      "end": 424,
+      "line": 3,
+      "column": 21
+     }
+    },
+    {
+     "node_id": "literal:41:158",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 41,
+      "end": 158,
+      "line": 2,
+      "column": 26
+     }
+    },
+    {
+     "node_id": "record:300:425",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 300,
+      "end": 425,
+      "line": 3,
+      "column": 15
+     }
+    },
+    {
+     "node_id": "record:35:285",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 35,
+      "end": 285,
+      "line": 2,
+      "column": 20
+     }
+    },
+    {
+     "node_id": "record:433:444",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 433,
+      "end": 444,
+      "line": 4,
+      "column": 8
+     }
+    },
+    {
+     "node_id": "ref:436:438",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 436,
+      "end": 438,
+      "line": 4,
+      "column": 11
+     }
+    },
+    {
+     "node_id": "ref:441:443",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 441,
+      "end": 443,
+      "line": 4,
+      "column": 16
+     }
+    },
+    {
+     "node_id": "return:426:444",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 426,
+      "end": 444,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "sequence:15:444",
+     "steps": 1,
+     "location": {
+      "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0",
+      "start": 15,
+      "end": 444,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 5,
+     "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0"
+    },
+    {
+     "line": 3,
+     "steps": 4,
+     "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0"
+    },
+    {
+     "line": 4,
+     "steps": 4,
+     "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 42,
+     "calls": 1,
+     "actions": [
+      "engines:render"
+     ],
+     "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0"
+    },
+    {
+     "line": 3,
+     "ms": 17,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "ea81799f6d8ab68f5c48a099e15964e8bbb49085250220925cbdc34fb26eb9c0"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "3e0cccc4caab4b7d9a70697d339167d1"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "3e0cccc4caab4b7d9a70697d339167d1"
+    }
+   },
+   "read_calls": 1,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "3e0cccc4caab4b7d9a70697d339167d1",
+   "owner": "projects/수동모드"
+  }
+ }
+}

@@ -1,0 +1,4138 @@
+{
+ "code": "#!ibl edition=2\n$a=[self:fill]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/certificate_template.docx\",output:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx\",data:{발급번호:\"HB-1\",이름:\"가\",없는칸:\"x\"}}\n$left=[self:fill]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx\"}\n$ins=[self:document]{op:\"inspect\",path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx\"}\n$rd=[self:read]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx\"}\n$c1=[self:copy]{src:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/ledger_template.xlsx\",dest:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx\"}\n$c2=[self:copy]{src:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/ledger_template.xlsx\",dest:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx\"}\n$f2=[self:fill]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/certificate_template.docx\",output:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx\",data:{이름:\"나\"}}\n$w1=[self:write]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/w.txt\",content:\"1\"}\n$w2=[self:write]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/w.txt\",content:\"2\"}\nreturn {fill:$a,left:map($left.items,($x)=>$x.name),inspect_texts:map($ins.items,($x)=>$x.text),read_has_footer:contains($rd.text,\"진위\"),copy1:{path:$c1.path,renamed:$c1.renamed},copy2:{path:$c2.path,renamed:$c2.renamed,success:$c2.success,message:$c2.message},fill_again:$f2,w2:$w2}",
+ "elapsed": 0.6,
+ "response": {
+  "success": true,
+  "value": {
+   "fill": {
+    "success": true,
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx",
+    "format": "docx",
+    "filled": [
+     "발급번호",
+     "이름"
+    ],
+    "unmatched": [
+     "없는칸"
+    ]
+   },
+   "left": [
+    "강사",
+    "강좌",
+    "기간",
+    "대표",
+    "발급일",
+    "출석",
+    "출석률",
+    "회차"
+   ],
+   "inspect_texts": [
+    "수 료 증",
+    "발급번호: HB-1",
+    "성명: 가",
+    "강좌: {{강좌}}",
+    "기간: {{기간}}  /  출석: {{출석}}회 중 {{회차}}회 과정 (출석률 {{출석률}}%)",
+    "지도 강사",
+    "{{강사}}",
+    "발급일",
+    "{{발급일}}",
+    "위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다.",
+    "한빛공방 대표  {{대표}}",
+    "한빛공방 · 이 증서의 진위는 발급번호 {{발급번호}} 로 확인합니다."
+   ],
+   "read_has_footer": false,
+   "copy1": {
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx",
+    "renamed": []
+   },
+   "copy2": {
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup (2).xlsx",
+    "renamed": [
+     {
+      "requested": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx",
+      "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup (2).xlsx"
+     }
+    ],
+    "success": true,
+    "message": "복사 완료: outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup (2).xlsx (1개 파일)"
+   },
+   "fill_again": {
+    "success": true,
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx",
+    "format": "docx",
+    "filled": [
+     "이름"
+    ],
+    "unmatched": []
+   },
+   "w2": {
+    "success": true,
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/w.txt",
+    "size": 1,
+    "chars": 1
+   }
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "fill",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+         ]
+        ],
+        [
+         "format",
+         [
+          "scalar",
+          "docx"
+         ]
+        ],
+        [
+         "filled",
+         [
+          "list",
+          [
+           [
+            "scalar",
+            "발급번호"
+           ],
+           [
+            "scalar",
+            "이름"
+           ]
+          ]
+         ]
+        ],
+        [
+         "unmatched",
+         [
+          "list",
+          [
+           [
+            "scalar",
+            "없는칸"
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "left",
+      [
+       "list",
+       [
+        [
+         "scalar",
+         "강사"
+        ],
+        [
+         "scalar",
+         "강좌"
+        ],
+        [
+         "scalar",
+         "기간"
+        ],
+        [
+         "scalar",
+         "대표"
+        ],
+        [
+         "scalar",
+         "발급일"
+        ],
+        [
+         "scalar",
+         "출석"
+        ],
+        [
+         "scalar",
+         "출석률"
+        ],
+        [
+         "scalar",
+         "회차"
+        ]
+       ]
+      ]
+     ],
+     [
+      "inspect_texts",
+      [
+       "list",
+       [
+        [
+         "scalar",
+         "수 료 증"
+        ],
+        [
+         "scalar",
+         "발급번호: HB-1"
+        ],
+        [
+         "scalar",
+         "성명: 가"
+        ],
+        [
+         "scalar",
+         "강좌: {{강좌}}"
+        ],
+        [
+         "scalar",
+         "기간: {{기간}}  /  출석: {{출석}}회 중 {{회차}}회 과정 (출석률 {{출석률}}%)"
+        ],
+        [
+         "scalar",
+         "지도 강사"
+        ],
+        [
+         "scalar",
+         "{{강사}}"
+        ],
+        [
+         "scalar",
+         "발급일"
+        ],
+        [
+         "scalar",
+         "{{발급일}}"
+        ],
+        [
+         "scalar",
+         "위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다."
+        ],
+        [
+         "scalar",
+         "한빛공방 대표  {{대표}}"
+        ],
+        [
+         "scalar",
+         "한빛공방 · 이 증서의 진위는 발급번호 {{발급번호}} 로 확인합니다."
+        ]
+       ]
+      ]
+     ],
+     [
+      "read_has_footer",
+      [
+       "scalar",
+       false
+      ]
+     ],
+     [
+      "copy1",
+      [
+       "record",
+       [
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx"
+         ]
+        ],
+        [
+         "renamed",
+         [
+          "list",
+          []
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "copy2",
+      [
+       "record",
+       [
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup (2).xlsx"
+         ]
+        ],
+        [
+         "renamed",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "requested",
+              [
+               "scalar",
+               "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx"
+              ]
+             ],
+             [
+              "path",
+              [
+               "scalar",
+               "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup (2).xlsx"
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "message",
+         [
+          "scalar",
+          "복사 완료: outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup (2).xlsx (1개 파일)"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "fill_again",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+         ]
+        ],
+        [
+         "format",
+         [
+          "scalar",
+          "docx"
+         ]
+        ],
+        [
+         "filled",
+         [
+          "list",
+          [
+           [
+            "scalar",
+            "이름"
+           ]
+          ]
+         ]
+        ],
+        [
+         "unmatched",
+         [
+          "list",
+          []
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "w2",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/w.txt"
+         ]
+        ],
+        [
+         "size",
+         [
+          "scalar",
+          1
+         ]
+        ],
+        [
+         "chars",
+         [
+          "scalar",
+          1
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "83aabf8bf6b419991d4a3c26cd16956adf1ff3cee270196868ede73595a00fe4",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:36:172",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:180:298",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "literal:310:316",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "literal:320:323",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:328:331",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "record:304:332",
+    "invocation_id": 6,
+    "kind": "record",
+    "parents": [
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "id": 7,
+    "node_id": "record:30:333",
+    "invocation_id": 7,
+    "kind": "record",
+    "parents": [
+     1,
+     2,
+     6
+    ]
+   },
+   {
+    "id": 8,
+    "node_id": "call:19:333",
+    "invocation_id": 8,
+    "kind": "invoke",
+    "parents": [
+     7
+    ],
+    "action": "self:fill",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "424aecc7a0d0b07975b623b0a465659afb17e16f651b326ec52b8db2e41ff6d9",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/certificate_template.docx",
+     "output": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+    }
+   },
+   {
+    "id": 9,
+    "node_id": "call:19:333",
+    "invocation_id": 9,
+    "kind": "tool_evidence",
+    "parents": [
+     8
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 10,
+    "node_id": "call:19:333",
+    "invocation_id": 10,
+    "kind": "call",
+    "parents": [
+     7,
+     8,
+     9
+    ]
+   },
+   {
+    "id": 11,
+    "node_id": "bind:16:333",
+    "invocation_id": 11,
+    "kind": "bind",
+    "parents": [
+     10
+    ]
+   },
+   {
+    "id": 12,
+    "node_id": "literal:357:475",
+    "invocation_id": 12,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 13,
+    "node_id": "record:351:476",
+    "invocation_id": 13,
+    "kind": "record",
+    "parents": [
+     12
+    ]
+   },
+   {
+    "id": 14,
+    "node_id": "call:340:476",
+    "invocation_id": 14,
+    "kind": "invoke",
+    "parents": [
+     13
+    ],
+    "action": "self:fill",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "e1aee2b79e86d8c684beb974e66d2e19f8640390a3e1c707dd941f920e643309",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+    }
+   },
+   {
+    "id": 15,
+    "node_id": "call:340:476",
+    "invocation_id": 15,
+    "kind": "tool_evidence",
+    "parents": [
+     14
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 16,
+    "node_id": "call:340:476",
+    "invocation_id": 16,
+    "kind": "call",
+    "parents": [
+     13,
+     14,
+     15
+    ]
+   },
+   {
+    "id": 17,
+    "node_id": "bind:334:476",
+    "invocation_id": 17,
+    "kind": "bind",
+    "parents": [
+     16
+    ]
+   },
+   {
+    "id": 18,
+    "node_id": "literal:501:510",
+    "invocation_id": 18,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 19,
+    "node_id": "literal:516:634",
+    "invocation_id": 19,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 20,
+    "node_id": "record:497:635",
+    "invocation_id": 20,
+    "kind": "record",
+    "parents": [
+     18,
+     19
+    ]
+   },
+   {
+    "id": 21,
+    "node_id": "call:482:635",
+    "invocation_id": 21,
+    "kind": "invoke",
+    "parents": [
+     20
+    ],
+    "action": "self:document",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "d8dc4be6db76924237c262fafd35744b7156cfd2c628a23fb6e2d705feab3aa3",
+    "targets": {
+     "op": "inspect",
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+    }
+   },
+   {
+    "id": 22,
+    "node_id": "call:482:635",
+    "invocation_id": 22,
+    "kind": "tool_evidence",
+    "parents": [
+     21
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 23,
+    "node_id": "call:482:635",
+    "invocation_id": 23,
+    "kind": "call",
+    "parents": [
+     20,
+     21,
+     22
+    ]
+   },
+   {
+    "id": 24,
+    "node_id": "bind:477:635",
+    "invocation_id": 24,
+    "kind": "bind",
+    "parents": [
+     23
+    ]
+   },
+   {
+    "id": 25,
+    "node_id": "literal:657:775",
+    "invocation_id": 25,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 26,
+    "node_id": "record:651:776",
+    "invocation_id": 26,
+    "kind": "record",
+    "parents": [
+     25
+    ]
+   },
+   {
+    "id": 27,
+    "node_id": "call:640:776",
+    "invocation_id": 27,
+    "kind": "invoke",
+    "parents": [
+     26
+    ],
+    "action": "self:read",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "935f2c718cd79d89d7b1373f98679eaad706d3872f8d8447892cae2ecedd367b",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+    }
+   },
+   {
+    "id": 28,
+    "node_id": "call:640:776",
+    "invocation_id": 28,
+    "kind": "tool_evidence",
+    "parents": [
+     27
+    ],
+    "markers": {},
+    "attachments": {},
+    "source_snapshot": [
+     [
+      "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx",
+      1791685979156857596,
+      37727,
+      "c194936107ecd34e3528b7cf3457f797e51996f80d59b221f40d63b88b7f5321"
+     ]
+    ]
+   },
+   {
+    "id": 29,
+    "node_id": "call:640:776",
+    "invocation_id": 29,
+    "kind": "call",
+    "parents": [
+     26,
+     27,
+     28
+    ]
+   },
+   {
+    "id": 30,
+    "node_id": "bind:636:776",
+    "invocation_id": 30,
+    "kind": "bind",
+    "parents": [
+     29
+    ]
+   },
+   {
+    "id": 31,
+    "node_id": "literal:797:928",
+    "invocation_id": 31,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 32,
+    "node_id": "literal:934:1053",
+    "invocation_id": 32,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 33,
+    "node_id": "record:792:1054",
+    "invocation_id": 33,
+    "kind": "record",
+    "parents": [
+     31,
+     32
+    ]
+   },
+   {
+    "id": 34,
+    "node_id": "call:781:1054",
+    "invocation_id": 34,
+    "kind": "invoke",
+    "parents": [
+     33
+    ],
+    "action": "self:copy",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "6053b433a903cb9e6e15e4183c7b9538d0369d2e9afa22822bb81440e89b7123",
+    "targets": {
+     "src": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/ledger_template.xlsx",
+     "dest": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx"
+    }
+   },
+   {
+    "id": 35,
+    "node_id": "call:781:1054",
+    "invocation_id": 35,
+    "kind": "tool_evidence",
+    "parents": [
+     34
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 36,
+    "node_id": "call:781:1054",
+    "invocation_id": 36,
+    "kind": "call",
+    "parents": [
+     33,
+     34,
+     35
+    ]
+   },
+   {
+    "id": 37,
+    "node_id": "bind:777:1054",
+    "invocation_id": 37,
+    "kind": "bind",
+    "parents": [
+     36
+    ]
+   },
+   {
+    "id": 38,
+    "node_id": "literal:1075:1206",
+    "invocation_id": 38,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 39,
+    "node_id": "literal:1212:1331",
+    "invocation_id": 39,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 40,
+    "node_id": "record:1070:1332",
+    "invocation_id": 40,
+    "kind": "record",
+    "parents": [
+     38,
+     39
+    ]
+   },
+   {
+    "id": 41,
+    "node_id": "call:1059:1332",
+    "invocation_id": 41,
+    "kind": "invoke",
+    "parents": [
+     40
+    ],
+    "action": "self:copy",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "6053b433a903cb9e6e15e4183c7b9538d0369d2e9afa22822bb81440e89b7123",
+    "targets": {
+     "src": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/ledger_template.xlsx",
+     "dest": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx"
+    }
+   },
+   {
+    "id": 42,
+    "node_id": "call:1059:1332",
+    "invocation_id": 42,
+    "kind": "tool_evidence",
+    "parents": [
+     41
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 43,
+    "node_id": "call:1059:1332",
+    "invocation_id": 43,
+    "kind": "call",
+    "parents": [
+     40,
+     41,
+     42
+    ]
+   },
+   {
+    "id": 44,
+    "node_id": "bind:1055:1332",
+    "invocation_id": 44,
+    "kind": "bind",
+    "parents": [
+     43
+    ]
+   },
+   {
+    "id": 45,
+    "node_id": "literal:1354:1490",
+    "invocation_id": 45,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 46,
+    "node_id": "literal:1498:1616",
+    "invocation_id": 46,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 47,
+    "node_id": "literal:1626:1629",
+    "invocation_id": 47,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 48,
+    "node_id": "record:1622:1630",
+    "invocation_id": 48,
+    "kind": "record",
+    "parents": [
+     47
+    ]
+   },
+   {
+    "id": 49,
+    "node_id": "record:1348:1631",
+    "invocation_id": 49,
+    "kind": "record",
+    "parents": [
+     45,
+     46,
+     48
+    ]
+   },
+   {
+    "id": 50,
+    "node_id": "call:1337:1631",
+    "invocation_id": 50,
+    "kind": "invoke",
+    "parents": [
+     49
+    ],
+    "action": "self:fill",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "9850c6824ac9eb009abeb92a318442fd8dccad6ea8ac4ade9b7a099b8ac5ad5e",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/certificate_template.docx",
+     "output": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+    }
+   },
+   {
+    "id": 51,
+    "node_id": "call:1337:1631",
+    "invocation_id": 51,
+    "kind": "tool_evidence",
+    "parents": [
+     50
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 52,
+    "node_id": "call:1337:1631",
+    "invocation_id": 52,
+    "kind": "call",
+    "parents": [
+     49,
+     50,
+     51
+    ]
+   },
+   {
+    "id": 53,
+    "node_id": "bind:1333:1631",
+    "invocation_id": 53,
+    "kind": "bind",
+    "parents": [
+     52
+    ]
+   },
+   {
+    "id": 54,
+    "node_id": "literal:1654:1770",
+    "invocation_id": 54,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 55,
+    "node_id": "literal:1779:1782",
+    "invocation_id": 55,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 56,
+    "node_id": "record:1648:1783",
+    "invocation_id": 56,
+    "kind": "record",
+    "parents": [
+     54,
+     55
+    ]
+   },
+   {
+    "id": 57,
+    "node_id": "call:1636:1783",
+    "invocation_id": 57,
+    "kind": "invoke",
+    "parents": [
+     56
+    ],
+    "action": "self:write",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "2de5544c412e45e6c303e6e0fb6398f1278df1efdf4dcad0f46652b3824dcb82",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/w.txt",
+     "content": "1"
+    }
+   },
+   {
+    "id": 58,
+    "node_id": "call:1636:1783",
+    "invocation_id": 58,
+    "kind": "tool_evidence",
+    "parents": [
+     57
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 59,
+    "node_id": "call:1636:1783",
+    "invocation_id": 59,
+    "kind": "call",
+    "parents": [
+     56,
+     57,
+     58
+    ]
+   },
+   {
+    "id": 60,
+    "node_id": "bind:1632:1783",
+    "invocation_id": 60,
+    "kind": "bind",
+    "parents": [
+     59
+    ]
+   },
+   {
+    "id": 61,
+    "node_id": "literal:1806:1922",
+    "invocation_id": 61,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 62,
+    "node_id": "literal:1931:1934",
+    "invocation_id": 62,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 63,
+    "node_id": "record:1800:1935",
+    "invocation_id": 63,
+    "kind": "record",
+    "parents": [
+     61,
+     62
+    ]
+   },
+   {
+    "id": 64,
+    "node_id": "call:1788:1935",
+    "invocation_id": 64,
+    "kind": "invoke",
+    "parents": [
+     63
+    ],
+    "action": "self:write",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "3ba35c691e0069f02f199e0427ad51871eb6edcf66bf9f43bd0f01a20c5ec704",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/w.txt",
+     "content": "2"
+    }
+   },
+   {
+    "id": 65,
+    "node_id": "call:1788:1935",
+    "invocation_id": 65,
+    "kind": "tool_evidence",
+    "parents": [
+     64
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 66,
+    "node_id": "call:1788:1935",
+    "invocation_id": 66,
+    "kind": "call",
+    "parents": [
+     63,
+     64,
+     65
+    ]
+   },
+   {
+    "id": 67,
+    "node_id": "bind:1784:1935",
+    "invocation_id": 67,
+    "kind": "bind",
+    "parents": [
+     66
+    ]
+   },
+   {
+    "id": 68,
+    "node_id": "ref:1949:1951",
+    "invocation_id": 68,
+    "kind": "ref",
+    "parents": [
+     10
+    ]
+   },
+   {
+    "id": 69,
+    "node_id": "ref:1961:1966",
+    "invocation_id": 69,
+    "kind": "ref",
+    "parents": [
+     16
+    ]
+   },
+   {
+    "id": 70,
+    "node_id": "field:1961:1972",
+    "invocation_id": 70,
+    "kind": "field",
+    "parents": [
+     69
+    ]
+   },
+   {
+    "id": 71,
+    "node_id": "lambda:1973:1986",
+    "invocation_id": 71,
+    "kind": "lambda",
+    "parents": []
+   },
+   {
+    "id": 72,
+    "node_id": "builtin:1957:1960",
+    "invocation_id": 72,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 73,
+    "node_id": "ref:1979:1981",
+    "invocation_id": 73,
+    "kind": "ref",
+    "parents": [
+     70,
+     71
+    ],
+    "evaluations": 8
+   },
+   {
+    "id": 74,
+    "node_id": "field:1979:1986",
+    "invocation_id": 74,
+    "kind": "field",
+    "parents": [
+     73
+    ],
+    "evaluations": 8
+   },
+   {
+    "id": 75,
+    "node_id": "pure_call:1957:1987",
+    "invocation_id": 75,
+    "kind": "pure_call",
+    "parents": [
+     70,
+     71,
+     72,
+     74
+    ]
+   },
+   {
+    "id": 76,
+    "node_id": "ref:2006:2010",
+    "invocation_id": 76,
+    "kind": "ref",
+    "parents": [
+     23
+    ]
+   },
+   {
+    "id": 77,
+    "node_id": "field:2006:2016",
+    "invocation_id": 77,
+    "kind": "field",
+    "parents": [
+     76
+    ]
+   },
+   {
+    "id": 78,
+    "node_id": "lambda:2017:2030",
+    "invocation_id": 78,
+    "kind": "lambda",
+    "parents": []
+   },
+   {
+    "id": 79,
+    "node_id": "builtin:2002:2005",
+    "invocation_id": 79,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 80,
+    "node_id": "ref:2023:2025",
+    "invocation_id": 80,
+    "kind": "ref",
+    "parents": [
+     77,
+     78
+    ],
+    "evaluations": 12
+   },
+   {
+    "id": 81,
+    "node_id": "field:2023:2030",
+    "invocation_id": 81,
+    "kind": "field",
+    "parents": [
+     80
+    ],
+    "evaluations": 12
+   },
+   {
+    "id": 82,
+    "node_id": "pure_call:2002:2031",
+    "invocation_id": 82,
+    "kind": "pure_call",
+    "parents": [
+     77,
+     78,
+     79,
+     81
+    ]
+   },
+   {
+    "id": 83,
+    "node_id": "ref:2057:2060",
+    "invocation_id": 83,
+    "kind": "ref",
+    "parents": [
+     29
+    ]
+   },
+   {
+    "id": 84,
+    "node_id": "field:2057:2065",
+    "invocation_id": 84,
+    "kind": "field",
+    "parents": [
+     83
+    ]
+   },
+   {
+    "id": 85,
+    "node_id": "literal:2066:2070",
+    "invocation_id": 85,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 86,
+    "node_id": "builtin:2048:2056",
+    "invocation_id": 86,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 87,
+    "node_id": "pure_call:2048:2071",
+    "invocation_id": 87,
+    "kind": "pure_call",
+    "parents": [
+     84,
+     85,
+     86
+    ]
+   },
+   {
+    "id": 88,
+    "node_id": "ref:2084:2087",
+    "invocation_id": 88,
+    "kind": "ref",
+    "parents": [
+     36
+    ]
+   },
+   {
+    "id": 89,
+    "node_id": "field:2084:2092",
+    "invocation_id": 89,
+    "kind": "field",
+    "parents": [
+     88
+    ]
+   },
+   {
+    "id": 90,
+    "node_id": "ref:2101:2104",
+    "invocation_id": 90,
+    "kind": "ref",
+    "parents": [
+     36
+    ]
+   },
+   {
+    "id": 91,
+    "node_id": "field:2101:2112",
+    "invocation_id": 91,
+    "kind": "field",
+    "parents": [
+     90
+    ]
+   },
+   {
+    "id": 92,
+    "node_id": "record:2078:2113",
+    "invocation_id": 92,
+    "kind": "record",
+    "parents": [
+     89,
+     91
+    ]
+   },
+   {
+    "id": 93,
+    "node_id": "ref:2126:2129",
+    "invocation_id": 93,
+    "kind": "ref",
+    "parents": [
+     43
+    ]
+   },
+   {
+    "id": 94,
+    "node_id": "field:2126:2134",
+    "invocation_id": 94,
+    "kind": "field",
+    "parents": [
+     93
+    ]
+   },
+   {
+    "id": 95,
+    "node_id": "ref:2143:2146",
+    "invocation_id": 95,
+    "kind": "ref",
+    "parents": [
+     43
+    ]
+   },
+   {
+    "id": 96,
+    "node_id": "field:2143:2154",
+    "invocation_id": 96,
+    "kind": "field",
+    "parents": [
+     95
+    ]
+   },
+   {
+    "id": 97,
+    "node_id": "ref:2163:2166",
+    "invocation_id": 97,
+    "kind": "ref",
+    "parents": [
+     43
+    ]
+   },
+   {
+    "id": 98,
+    "node_id": "field:2163:2174",
+    "invocation_id": 98,
+    "kind": "field",
+    "parents": [
+     97
+    ]
+   },
+   {
+    "id": 99,
+    "node_id": "ref:2183:2186",
+    "invocation_id": 99,
+    "kind": "ref",
+    "parents": [
+     43
+    ]
+   },
+   {
+    "id": 100,
+    "node_id": "field:2183:2194",
+    "invocation_id": 100,
+    "kind": "field",
+    "parents": [
+     99
+    ]
+   },
+   {
+    "id": 101,
+    "node_id": "record:2120:2195",
+    "invocation_id": 101,
+    "kind": "record",
+    "parents": [
+     94,
+     96,
+     98,
+     100
+    ]
+   },
+   {
+    "id": 102,
+    "node_id": "ref:2207:2210",
+    "invocation_id": 102,
+    "kind": "ref",
+    "parents": [
+     52
+    ]
+   },
+   {
+    "id": 103,
+    "node_id": "ref:2214:2217",
+    "invocation_id": 103,
+    "kind": "ref",
+    "parents": [
+     66
+    ]
+   },
+   {
+    "id": 104,
+    "node_id": "record:1943:2218",
+    "invocation_id": 104,
+    "kind": "record",
+    "parents": [
+     68,
+     75,
+     82,
+     87,
+     92,
+     101,
+     102,
+     103
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:2218": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 15,
+    "end": 2218,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:333": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 16,
+    "end": 333,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:333": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 19,
+    "end": 333,
+    "line": 2,
+    "column": 4
+   },
+   "record:30:333": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 30,
+    "end": 333,
+    "line": 2,
+    "column": 15
+   },
+   "literal:36:172": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 36,
+    "end": 172,
+    "line": 2,
+    "column": 21
+   },
+   "literal:180:298": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 180,
+    "end": 298,
+    "line": 2,
+    "column": 165
+   },
+   "record:304:332": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 304,
+    "end": 332,
+    "line": 2,
+    "column": 289
+   },
+   "literal:310:316": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 310,
+    "end": 316,
+    "line": 2,
+    "column": 295
+   },
+   "literal:320:323": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 320,
+    "end": 323,
+    "line": 2,
+    "column": 305
+   },
+   "literal:328:331": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 328,
+    "end": 331,
+    "line": 2,
+    "column": 313
+   },
+   "bind:334:476": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 334,
+    "end": 476,
+    "line": 3,
+    "column": 1
+   },
+   "call:340:476": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 340,
+    "end": 476,
+    "line": 3,
+    "column": 7
+   },
+   "record:351:476": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 351,
+    "end": 476,
+    "line": 3,
+    "column": 18
+   },
+   "literal:357:475": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 357,
+    "end": 475,
+    "line": 3,
+    "column": 24
+   },
+   "bind:477:635": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 477,
+    "end": 635,
+    "line": 4,
+    "column": 1
+   },
+   "call:482:635": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 482,
+    "end": 635,
+    "line": 4,
+    "column": 6
+   },
+   "record:497:635": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 497,
+    "end": 635,
+    "line": 4,
+    "column": 21
+   },
+   "literal:501:510": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 501,
+    "end": 510,
+    "line": 4,
+    "column": 25
+   },
+   "literal:516:634": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 516,
+    "end": 634,
+    "line": 4,
+    "column": 40
+   },
+   "bind:636:776": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 636,
+    "end": 776,
+    "line": 5,
+    "column": 1
+   },
+   "call:640:776": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 640,
+    "end": 776,
+    "line": 5,
+    "column": 5
+   },
+   "record:651:776": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 651,
+    "end": 776,
+    "line": 5,
+    "column": 16
+   },
+   "literal:657:775": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 657,
+    "end": 775,
+    "line": 5,
+    "column": 22
+   },
+   "bind:777:1054": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 777,
+    "end": 1054,
+    "line": 6,
+    "column": 1
+   },
+   "call:781:1054": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 781,
+    "end": 1054,
+    "line": 6,
+    "column": 5
+   },
+   "record:792:1054": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 792,
+    "end": 1054,
+    "line": 6,
+    "column": 16
+   },
+   "literal:797:928": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 797,
+    "end": 928,
+    "line": 6,
+    "column": 21
+   },
+   "literal:934:1053": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 934,
+    "end": 1053,
+    "line": 6,
+    "column": 158
+   },
+   "bind:1055:1332": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1055,
+    "end": 1332,
+    "line": 7,
+    "column": 1
+   },
+   "call:1059:1332": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1059,
+    "end": 1332,
+    "line": 7,
+    "column": 5
+   },
+   "record:1070:1332": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1070,
+    "end": 1332,
+    "line": 7,
+    "column": 16
+   },
+   "literal:1075:1206": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1075,
+    "end": 1206,
+    "line": 7,
+    "column": 21
+   },
+   "literal:1212:1331": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1212,
+    "end": 1331,
+    "line": 7,
+    "column": 158
+   },
+   "bind:1333:1631": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1333,
+    "end": 1631,
+    "line": 8,
+    "column": 1
+   },
+   "call:1337:1631": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1337,
+    "end": 1631,
+    "line": 8,
+    "column": 5
+   },
+   "record:1348:1631": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1348,
+    "end": 1631,
+    "line": 8,
+    "column": 16
+   },
+   "literal:1354:1490": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1354,
+    "end": 1490,
+    "line": 8,
+    "column": 22
+   },
+   "literal:1498:1616": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1498,
+    "end": 1616,
+    "line": 8,
+    "column": 166
+   },
+   "record:1622:1630": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1622,
+    "end": 1630,
+    "line": 8,
+    "column": 290
+   },
+   "literal:1626:1629": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1626,
+    "end": 1629,
+    "line": 8,
+    "column": 294
+   },
+   "bind:1632:1783": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1632,
+    "end": 1783,
+    "line": 9,
+    "column": 1
+   },
+   "call:1636:1783": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1636,
+    "end": 1783,
+    "line": 9,
+    "column": 5
+   },
+   "record:1648:1783": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1648,
+    "end": 1783,
+    "line": 9,
+    "column": 17
+   },
+   "literal:1654:1770": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1654,
+    "end": 1770,
+    "line": 9,
+    "column": 23
+   },
+   "literal:1779:1782": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1779,
+    "end": 1782,
+    "line": 9,
+    "column": 148
+   },
+   "bind:1784:1935": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1784,
+    "end": 1935,
+    "line": 10,
+    "column": 1
+   },
+   "call:1788:1935": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1788,
+    "end": 1935,
+    "line": 10,
+    "column": 5
+   },
+   "record:1800:1935": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1800,
+    "end": 1935,
+    "line": 10,
+    "column": 17
+   },
+   "literal:1806:1922": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1806,
+    "end": 1922,
+    "line": 10,
+    "column": 23
+   },
+   "literal:1931:1934": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1931,
+    "end": 1934,
+    "line": 10,
+    "column": 148
+   },
+   "return:1936:2218": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1936,
+    "end": 2218,
+    "line": 11,
+    "column": 1
+   },
+   "record:1943:2218": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1943,
+    "end": 2218,
+    "line": 11,
+    "column": 8
+   },
+   "ref:1949:1951": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1949,
+    "end": 1951,
+    "line": 11,
+    "column": 14
+   },
+   "pure_call:1957:1987": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1957,
+    "end": 1987,
+    "line": 11,
+    "column": 22
+   },
+   "field:1961:1972": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1961,
+    "end": 1972,
+    "line": 11,
+    "column": 26
+   },
+   "ref:1961:1966": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1961,
+    "end": 1966,
+    "line": 11,
+    "column": 26
+   },
+   "lambda:1973:1986": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1973,
+    "end": 1986,
+    "line": 11,
+    "column": 38
+   },
+   "builtin:1957:1960": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1957,
+    "end": 1960,
+    "line": 11,
+    "column": 22
+   },
+   "field:1979:1986": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1979,
+    "end": 1986,
+    "line": 11,
+    "column": 44
+   },
+   "ref:1979:1981": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 1979,
+    "end": 1981,
+    "line": 11,
+    "column": 44
+   },
+   "pure_call:2002:2031": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2002,
+    "end": 2031,
+    "line": 11,
+    "column": 67
+   },
+   "field:2006:2016": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2006,
+    "end": 2016,
+    "line": 11,
+    "column": 71
+   },
+   "ref:2006:2010": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2006,
+    "end": 2010,
+    "line": 11,
+    "column": 71
+   },
+   "lambda:2017:2030": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2017,
+    "end": 2030,
+    "line": 11,
+    "column": 82
+   },
+   "builtin:2002:2005": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2002,
+    "end": 2005,
+    "line": 11,
+    "column": 67
+   },
+   "field:2023:2030": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2023,
+    "end": 2030,
+    "line": 11,
+    "column": 88
+   },
+   "ref:2023:2025": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2023,
+    "end": 2025,
+    "line": 11,
+    "column": 88
+   },
+   "pure_call:2048:2071": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2048,
+    "end": 2071,
+    "line": 11,
+    "column": 113
+   },
+   "field:2057:2065": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2057,
+    "end": 2065,
+    "line": 11,
+    "column": 122
+   },
+   "ref:2057:2060": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2057,
+    "end": 2060,
+    "line": 11,
+    "column": 122
+   },
+   "literal:2066:2070": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2066,
+    "end": 2070,
+    "line": 11,
+    "column": 131
+   },
+   "builtin:2048:2056": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2048,
+    "end": 2056,
+    "line": 11,
+    "column": 113
+   },
+   "record:2078:2113": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2078,
+    "end": 2113,
+    "line": 11,
+    "column": 143
+   },
+   "field:2084:2092": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2084,
+    "end": 2092,
+    "line": 11,
+    "column": 149
+   },
+   "ref:2084:2087": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2084,
+    "end": 2087,
+    "line": 11,
+    "column": 149
+   },
+   "field:2101:2112": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2101,
+    "end": 2112,
+    "line": 11,
+    "column": 166
+   },
+   "ref:2101:2104": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2101,
+    "end": 2104,
+    "line": 11,
+    "column": 166
+   },
+   "record:2120:2195": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2120,
+    "end": 2195,
+    "line": 11,
+    "column": 185
+   },
+   "field:2126:2134": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2126,
+    "end": 2134,
+    "line": 11,
+    "column": 191
+   },
+   "ref:2126:2129": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2126,
+    "end": 2129,
+    "line": 11,
+    "column": 191
+   },
+   "field:2143:2154": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2143,
+    "end": 2154,
+    "line": 11,
+    "column": 208
+   },
+   "ref:2143:2146": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2143,
+    "end": 2146,
+    "line": 11,
+    "column": 208
+   },
+   "field:2163:2174": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2163,
+    "end": 2174,
+    "line": 11,
+    "column": 228
+   },
+   "ref:2163:2166": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2163,
+    "end": 2166,
+    "line": 11,
+    "column": 228
+   },
+   "field:2183:2194": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2183,
+    "end": 2194,
+    "line": 11,
+    "column": 248
+   },
+   "ref:2183:2186": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2183,
+    "end": 2186,
+    "line": 11,
+    "column": 248
+   },
+   "ref:2207:2210": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2207,
+    "end": 2210,
+    "line": 11,
+    "column": 272
+   },
+   "ref:2214:2217": {
+    "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+    "start": 2214,
+    "end": 2217,
+    "line": 11,
+    "column": 279
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "424aecc7a0d0b07975b623b0a465659afb17e16f651b326ec52b8db2e41ff6d9",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+       ]
+      ],
+      [
+       "format",
+       [
+        "scalar",
+        "docx"
+       ]
+      ],
+      [
+       "filled",
+       [
+        "list",
+        [
+         [
+          "scalar",
+          "발급번호"
+         ],
+         [
+          "scalar",
+          "이름"
+         ]
+        ]
+       ]
+      ],
+      [
+       "unmatched",
+       [
+        "list",
+        [
+         [
+          "scalar",
+          "없는칸"
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:fill",
+    "reuse_key": "7f0e66eec1de2223440dee15c7852b06dbc9d89646e83fb1fb8d67a3720636cf",
+    "reuse_parts": {
+     "action": "d03870f1075c5a9ac2f97026f1d519272d18c829f4375485016f969be9559523",
+     "args": "364ee8e83fa86441f1af827d7fa505172cdcd8f409ba9af3b69787cc69254a59",
+     "contract": "359efa8a3947cdd15e763c85e6ecdbad1bea2994158f1bda18c7840a7ae46b45",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "e1aee2b79e86d8c684beb974e66d2e19f8640390a3e1c707dd941f920e643309",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "mode",
+       [
+        "scalar",
+        "fields"
+       ]
+      ],
+      [
+       "format",
+       [
+        "scalar",
+        "docx"
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "name",
+            [
+             "scalar",
+             "강사"
+            ]
+           ],
+           [
+            "type",
+            [
+             "scalar",
+             "text"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "name",
+            [
+             "scalar",
+             "강좌"
+            ]
+           ],
+           [
+            "type",
+            [
+             "scalar",
+             "text"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "name",
+            [
+             "scalar",
+             "기간"
+            ]
+           ],
+           [
+            "type",
+            [
+             "scalar",
+             "text"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "name",
+            [
+             "scalar",
+             "대표"
+            ]
+           ],
+           [
+            "type",
+            [
+             "scalar",
+             "text"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "name",
+            [
+             "scalar",
+             "발급일"
+            ]
+           ],
+           [
+            "type",
+            [
+             "scalar",
+             "text"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "name",
+            [
+             "scalar",
+             "출석"
+            ]
+           ],
+           [
+            "type",
+            [
+             "scalar",
+             "text"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "name",
+            [
+             "scalar",
+             "출석률"
+            ]
+           ],
+           [
+            "type",
+            [
+             "scalar",
+             "text"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "name",
+            [
+             "scalar",
+             "회차"
+            ]
+           ],
+           [
+            "type",
+            [
+             "scalar",
+             "text"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "count",
+       [
+        "scalar",
+        8
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:fill",
+    "reuse_key": "bc0ec16d2ded47b61ef7f7e4cf1c4c91fcedd9a5b0bc2bd76e2584ee36a2ba80",
+    "reuse_parts": {
+     "action": "d03870f1075c5a9ac2f97026f1d519272d18c829f4375485016f969be9559523",
+     "args": "16e5bfb8a453b4b6873f8c6b0da8053ad2fe6cca2cd918be3e95e6c1651f4c91",
+     "contract": "359efa8a3947cdd15e763c85e6ecdbad1bea2994158f1bda18c7840a7ae46b45",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "d8dc4be6db76924237c262fafd35744b7156cfd2c628a23fb6e2d705feab3aa3",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+       ]
+      ],
+      [
+       "sha256",
+       [
+        "scalar",
+        "c194936107ecd34e3528b7cf3457f797e51996f80d59b221f40d63b88b7f5321"
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p0"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "수 료 증"
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p1"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "발급번호: HB-1"
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p2"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "성명: 가"
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p3"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "강좌: {{강좌}}"
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p4"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "기간: {{기간}}  /  출석: {{출석}}회 중 {{회차}}회 과정 (출석률 {{출석률}}%)"
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p5"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "지도 강사"
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p6"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "{{강사}}"
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p7"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "발급일"
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p8"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "{{발급일}}"
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p9"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다."
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/document.xml#p10"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/document.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "한빛공방 대표  {{대표}}"
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "block_id",
+            [
+             "scalar",
+             "word/footer1.xml#p0"
+            ]
+           ],
+           [
+            "part",
+            [
+             "scalar",
+             "word/footer1.xml"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "한빛공방 · 이 증서의 진위는 발급번호 {{발급번호}} 로 확인합니다."
+            ]
+           ],
+           [
+            "in_table",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "editable",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "total",
+       [
+        "scalar",
+        12
+       ]
+      ],
+      [
+       "truncated",
+       [
+        "scalar",
+        false
+       ]
+      ],
+      [
+       "offset",
+       [
+        "scalar",
+        0
+       ]
+      ],
+      [
+       "note",
+       [
+        "scalar",
+        "editable=false는 필드·링크·기존 변경/주석·복합 요소가 있어 선택 교체를 지원하지 않는 문단입니다."
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:document",
+    "reuse_key": "fff1444b4dada2dcdb9ca0ae51e865f458c32a13450629c7667ed6c01ba2891f",
+    "reuse_parts": {
+     "action": "a14d4a2a12c65553843132a8316e4f7f7bf4fc180c090511e5ead58c6784b3d1",
+     "args": "60fb2bae4da29cf92cb9c20e14e3328b19fdbf4f578e1be185a13e50618b0f0d",
+     "contract": "bee7dd81438353a4da39269cfdc291679701874d0f524a70bca4cee52ba34c23",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "935f2c718cd79d89d7b1373f98679eaad706d3872f8d8447892cae2ecedd367b",
+    "value": [
+     "record",
+     [
+      [
+       "text",
+       [
+        "scalar",
+        "수 료 증\n\n발급번호: HB-1\n\n성명: 가\n\n강좌: {{강좌}}\n\n기간: {{기간}}  /  출석: {{출석}}회 중 {{회차}}회 과정 (출석률 {{출석률}}%)\n\n[표 시작]\n지도 강사 | {{강사}}\n발급일 | {{발급일}}\n[표 끝]\n\n위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다.\n\n한빛공방 대표  {{대표}}"
+       ]
+      ],
+      [
+       "blocks",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "heading"
+            ]
+           ],
+           [
+            "level",
+            [
+             "scalar",
+             1
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "수 료 증"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "발급번호: HB-1"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "성명: 가"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "강좌: {{강좌}}"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "기간: {{기간}}  /  출석: {{출석}}회 중 {{회차}}회 과정 (출석률 {{출석률}}%)"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "table"
+            ]
+           ],
+           [
+            "columns",
+            [
+             "list",
+             [
+              [
+               "scalar",
+               "지도 강사"
+              ],
+              [
+               "scalar",
+               "{{강사}}"
+              ]
+             ]
+            ]
+           ],
+           [
+            "rows",
+            [
+             "list",
+             [
+              [
+               "list",
+               [
+                [
+                 "scalar",
+                 "발급일"
+                ],
+                [
+                 "scalar",
+                 "{{발급일}}"
+                ]
+               ]
+              ]
+             ]
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "위 사람은 한빛공방의 위 강좌를 성실히 마쳤기에 이 증서를 드립니다."
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "type",
+            [
+             "scalar",
+             "paragraph"
+            ]
+           ],
+           [
+            "text",
+            [
+             "scalar",
+             "한빛공방 대표  {{대표}}"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "data",
+       [
+        "record",
+        [
+         [
+          "metadata",
+          [
+           "record",
+           [
+            [
+             "filename",
+             [
+              "scalar",
+              "r1.docx"
+             ]
+            ],
+            [
+             "total_paragraphs",
+             [
+              "scalar",
+              7
+             ]
+            ],
+            [
+             "total_tables",
+             [
+              "scalar",
+              1
+             ]
+            ],
+            [
+             "total_images",
+             [
+              "scalar",
+              0
+             ]
+            ],
+            [
+             "total_blocks",
+             [
+              "scalar",
+              8
+             ]
+            ],
+            [
+             "offset",
+             [
+              "scalar",
+              0
+             ]
+            ],
+            [
+             "returned_blocks",
+             [
+              "scalar",
+              8
+             ]
+            ],
+            [
+             "truncated",
+             [
+              "scalar",
+              false
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {},
+     "source_snapshot": [
+      [
+       "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx",
+       1791685979156857596,
+       37727,
+       "c194936107ecd34e3528b7cf3457f797e51996f80d59b221f40d63b88b7f5321"
+      ]
+     ]
+    },
+    "action": "self:read",
+    "reuse_key": "de68f43e6c4ce30a40fb2ca55fa416c559b7078ddb3d9d67c89eb39f28d978b7",
+    "reuse_parts": {
+     "action": "f406b71a167877ab00f5c879bdce9e2548f372ef2d2866dcc258222bfe3f2790",
+     "args": "16e5bfb8a453b4b6873f8c6b0da8053ad2fe6cca2cd918be3e95e6c1651f4c91",
+     "contract": "5cb5123ba3aaf20cc05c6e1d47a76d3e3bc7b2c8ab6be1be9648c5f1268fec43",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    },
+    "resource_state": [
+     [
+      "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx",
+      1791685979156857596,
+      37727,
+      "c194936107ecd34e3528b7cf3457f797e51996f80d59b221f40d63b88b7f5321"
+     ]
+    ],
+    "reuse_disabled": false
+   },
+   {
+    "request_hash": "6053b433a903cb9e6e15e4183c7b9538d0369d2e9afa22822bb81440e89b7123",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx"
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "path",
+            [
+             "scalar",
+             "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "count",
+       [
+        "scalar",
+        1
+       ]
+      ],
+      [
+       "renamed",
+       [
+        "list",
+        []
+       ]
+      ],
+      [
+       "message",
+       [
+        "scalar",
+        "복사 완료: outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx (1개 파일)"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:copy",
+    "reuse_key": "752d7b6a8f6b92c5e7168a01b0c1b6c38de3fe6af73fdb4048f4e49bb200823b",
+    "reuse_parts": {
+     "action": "8696a57f5fc5cc91f01dfec6fd69c3abe7151d873dad60288d427cb153db3d92",
+     "args": "662faf40d88c130b7263b108da8b2ab52a6926c97325b4fda2acf613cf78ff7b",
+     "contract": "eb425579266e30586a92ad8331d74b52d96d0a413b70c200ec5e7e56544a0edc",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "6053b433a903cb9e6e15e4183c7b9538d0369d2e9afa22822bb81440e89b7123",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup (2).xlsx"
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "path",
+            [
+             "scalar",
+             "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup (2).xlsx"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "count",
+       [
+        "scalar",
+        1
+       ]
+      ],
+      [
+       "renamed",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "requested",
+            [
+             "scalar",
+             "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup.xlsx"
+            ]
+           ],
+           [
+            "path",
+            [
+             "scalar",
+             "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup (2).xlsx"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "message",
+       [
+        "scalar",
+        "복사 완료: outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/dup (2).xlsx (1개 파일)"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:copy",
+    "reuse_key": "752d7b6a8f6b92c5e7168a01b0c1b6c38de3fe6af73fdb4048f4e49bb200823b",
+    "reuse_parts": {
+     "action": "8696a57f5fc5cc91f01dfec6fd69c3abe7151d873dad60288d427cb153db3d92",
+     "args": "662faf40d88c130b7263b108da8b2ab52a6926c97325b4fda2acf613cf78ff7b",
+     "contract": "eb425579266e30586a92ad8331d74b52d96d0a413b70c200ec5e7e56544a0edc",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "9850c6824ac9eb009abeb92a318442fd8dccad6ea8ac4ade9b7a099b8ac5ad5e",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/r1.docx"
+       ]
+      ],
+      [
+       "format",
+       [
+        "scalar",
+        "docx"
+       ]
+      ],
+      [
+       "filled",
+       [
+        "list",
+        [
+         [
+          "scalar",
+          "이름"
+         ]
+        ]
+       ]
+      ],
+      [
+       "unmatched",
+       [
+        "list",
+        []
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:fill",
+    "reuse_key": "ad8a4279dc02a293e714f216d67b3852a2f3102e7aaa0658a04fa6c1e45f80fb",
+    "reuse_parts": {
+     "action": "d03870f1075c5a9ac2f97026f1d519272d18c829f4375485016f969be9559523",
+     "args": "85e828b84c9653d32cd980fd4ca352cb0ed46e34f43eab9b0a7c6c42766eab86",
+     "contract": "359efa8a3947cdd15e763c85e6ecdbad1bea2994158f1bda18c7840a7ae46b45",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "2de5544c412e45e6c303e6e0fb6398f1278df1efdf4dcad0f46652b3824dcb82",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/w.txt"
+       ]
+      ],
+      [
+       "size",
+       [
+        "scalar",
+        1
+       ]
+      ],
+      [
+       "chars",
+       [
+        "scalar",
+        1
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:write",
+    "reuse_key": "ba7d239ff3f9d01a379a35a64052d175cc9d90cd8a43530008e4d2f0e48d95d5",
+    "reuse_parts": {
+     "action": "9c874689539f255691f77be58681c012850763d3c7c9466d8002331262480d72",
+     "args": "26d839bcba32dcc344d46cd295ae14b3ed076f60121628a7a9a01449d2c21a51",
+     "contract": "896486408c9dc303dc0a9a5484593ba5c9176b9a779ffd6285296a7b66b413b0",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "3ba35c691e0069f02f199e0427ad51871eb6edcf66bf9f43bd0f01a20c5ec704",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/w.txt"
+       ]
+      ],
+      [
+       "size",
+       [
+        "scalar",
+        1
+       ]
+      ],
+      [
+       "chars",
+       [
+        "scalar",
+        1
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:write",
+    "reuse_key": "f7a6c99fbd5da1b3b4e6e3fc7d01b82167acf42b12b1fa22e90c6595c3b7eaad",
+    "reuse_parts": {
+     "action": "9c874689539f255691f77be58681c012850763d3c7c9466d8002331262480d72",
+     "args": "67ade4bb371c261a31f5d5ef0675f3942e6f37cde257cd5a24ef98d3cb99f605",
+     "contract": "896486408c9dc303dc0a9a5484593ba5c9176b9a779ffd6285296a7b66b413b0",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 147,
+   "rows": 0,
+   "elapsed_ms": 575,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "pure_call:2002:2031",
+     "steps": 14,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 2002,
+      "end": 2031,
+      "line": 11,
+      "column": 67
+     }
+    },
+    {
+     "node_id": "field:2023:2030",
+     "steps": 12,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 2023,
+      "end": 2030,
+      "line": 11,
+      "column": 88
+     }
+    },
+    {
+     "node_id": "ref:2023:2025",
+     "steps": 12,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 2023,
+      "end": 2025,
+      "line": 11,
+      "column": 88
+     }
+    },
+    {
+     "node_id": "pure_call:1957:1987",
+     "steps": 10,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 1957,
+      "end": 1987,
+      "line": 11,
+      "column": 22
+     }
+    },
+    {
+     "node_id": "field:1979:1986",
+     "steps": 8,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 1979,
+      "end": 1986,
+      "line": 11,
+      "column": 44
+     }
+    },
+    {
+     "node_id": "ref:1979:1981",
+     "steps": 8,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 1979,
+      "end": 1981,
+      "line": 11,
+      "column": 44
+     }
+    },
+    {
+     "node_id": "pure_call:2048:2071",
+     "steps": 2,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 2048,
+      "end": 2071,
+      "line": 11,
+      "column": 113
+     }
+    },
+    {
+     "node_id": "bind:1055:1332",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 1055,
+      "end": 1332,
+      "line": 7,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1333:1631",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 1333,
+      "end": 1631,
+      "line": 8,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1632:1783",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 1632,
+      "end": 1783,
+      "line": 9,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:16:333",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 16,
+      "end": 333,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1784:1935",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 1784,
+      "end": 1935,
+      "line": 10,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:334:476",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 334,
+      "end": 476,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:477:635",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 477,
+      "end": 635,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:636:776",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 636,
+      "end": 776,
+      "line": 5,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:777:1054",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 777,
+      "end": 1054,
+      "line": 6,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "builtin:1957:1960",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 1957,
+      "end": 1960,
+      "line": 11,
+      "column": 22
+     }
+    },
+    {
+     "node_id": "builtin:2002:2005",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 2002,
+      "end": 2005,
+      "line": 11,
+      "column": 67
+     }
+    },
+    {
+     "node_id": "builtin:2048:2056",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 2048,
+      "end": 2056,
+      "line": 11,
+      "column": 113
+     }
+    },
+    {
+     "node_id": "call:1059:1332",
+     "steps": 1,
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 1059,
+      "end": 1332,
+      "line": 7,
+      "column": 5
+     }
+    }
+   ],
+   "steps_other": 68,
+   "steps_by_line": [
+    {
+     "line": 11,
+     "steps": 97,
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 2,
+     "steps": 9,
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 8,
+     "steps": 7,
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 4,
+     "steps": 5,
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 6,
+     "steps": 5,
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 7,
+     "steps": 5,
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 9,
+     "steps": 5,
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 10,
+     "steps": 5,
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 3,
+     "steps": 4,
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 5,
+     "steps": 4,
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 23,
+     "calls": 1,
+     "actions": [
+      "self:fill"
+     ],
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 8,
+     "ms": 22,
+     "calls": 1,
+     "actions": [
+      "self:fill"
+     ],
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 7,
+     "ms": 20,
+     "calls": 1,
+     "actions": [
+      "self:copy"
+     ],
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 5,
+     "ms": 19,
+     "calls": 1,
+     "actions": [
+      "self:read"
+     ],
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 3,
+     "ms": 17,
+     "calls": 1,
+     "actions": [
+      "self:fill"
+     ],
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 4,
+     "ms": 16,
+     "calls": 1,
+     "actions": [
+      "self:document"
+     ],
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 9,
+     "ms": 16,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 10,
+     "ms": 15,
+     "calls": 1,
+     "actions": [
+      "self:write"
+     ],
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    },
+    {
+     "line": 6,
+     "ms": 14,
+     "calls": 1,
+     "actions": [
+      "self:copy"
+     ],
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369"
+    }
+   ]
+  },
+  "precheck_warnings": [
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: path. 관측 필드: message",
+    "source_span": {
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+     "start": 2084,
+     "end": 2092,
+     "line": 11,
+     "column": 149
+    },
+    "call_path": [],
+    "facts": {
+     "field": "path",
+     "observed": [
+      "message"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+     "start": 2084,
+     "end": 2092,
+     "line": 11,
+     "column": 149,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 11,
+     "end_column": 157,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: renamed. 관측 필드: message",
+    "source_span": {
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+     "start": 2101,
+     "end": 2112,
+     "line": 11,
+     "column": 166
+    },
+    "call_path": [],
+    "facts": {
+     "field": "renamed",
+     "observed": [
+      "message"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+     "start": 2101,
+     "end": 2112,
+     "line": 11,
+     "column": 166,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 11,
+     "end_column": 177,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: path. 관측 필드: message",
+    "source_span": {
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+     "start": 2126,
+     "end": 2134,
+     "line": 11,
+     "column": 191
+    },
+    "call_path": [],
+    "facts": {
+     "field": "path",
+     "observed": [
+      "message"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+     "start": 2126,
+     "end": 2134,
+     "line": 11,
+     "column": 191,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 11,
+     "end_column": 199,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: renamed. 관측 필드: message",
+    "source_span": {
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+     "start": 2143,
+     "end": 2154,
+     "line": 11,
+     "column": 208
+    },
+    "call_path": [],
+    "facts": {
+     "field": "renamed",
+     "observed": [
+      "message"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+     "start": 2143,
+     "end": 2154,
+     "line": 11,
+     "column": 208,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 11,
+     "end_column": 219,
+     "offset_encoding": "unicode-codepoints"
+    }
+   },
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: success. 관측 필드: message",
+    "source_span": {
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+     "start": 2163,
+     "end": 2174,
+     "line": 11,
+     "column": 228
+    },
+    "call_path": [],
+    "facts": {
+     "field": "success",
+     "observed": [
+      "message"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+     "start": 2163,
+     "end": 2174,
+     "line": 11,
+     "column": 228,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 11,
+     "end_column": 239,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "resume": {
+   "run_id": "4c20aac22e46485f894f456247a25f75"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "read_exclusions": [
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "311032988a297f86a9aae5d09b14b923817c6ff41f38ec7e13983a9b713bf702",
+     "action": "self:copy",
+     "location": {
+      "source_hash": "e5b69876aa9439a093e87fe7d7d23e360dd4c907742858c62aed11a2ea8b1369",
+      "start": 781,
+      "end": 1054,
+      "line": 6,
+      "column": 5
+     },
+     "excluded_calls": 2
+    }
+   ],
+   "read_exclusions_total": 1,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "4c20aac22e46485f894f456247a25f75",
+   "owner": "projects/수동모드"
+  }
+ }
+}

@@ -1,0 +1,52 @@
+{
+ "elapsed": 0.55,
+ "task_id": "r52-trainer-base-1791685726",
+ "inputs": {
+  "src": "trainer/base/input",
+  "out": "trainer/base/out"
+ },
+ "success": null,
+ "status": "invalid",
+ "issues": [
+  {
+   "code": "PURE_EXPRESSION",
+   "message": "이 자리에는 순수 식만 쓸 수 있습니다. 호출·조합은 앞 문장에 두세요.",
+   "hint": "조건·조건 값(?:)·and/or·람다 본문·기본값에는 효과 있는 호출을 넣지 않습니다(효과 없는 [fn:이름]은 가능). 호출 결과를 먼저 $이름=[...]으로 받고 그 변수를 쓰세요. 연산·내장 함수 인자·보간에서는 호출을 그대로 쓸 수 있습니다.",
+   "line": 79
+  },
+  {
+   "code": "TYPE",
+   "message": "Text가 필요하지만 List<Text>입니다.",
+   "hint": "join(Text, List<Text>)의 인자 순서를 확인하세요. 1번째는 Text입니다. join(구분자, 문자열목록) 순서입니다. 예: join(\", \", [\"가\", \"나\"]).",
+   "line": 125
+  },
+  {
+   "code": "TYPE",
+   "message": "List<Text>가 필요하지만 Text입니다.",
+   "hint": "join(Text, List<Text>)의 인자 순서를 확인하세요. 2번째는 List<Text>입니다. join(구분자, 문자열목록) 순서입니다. 예: join(\", \", [\"가\", \"나\"]).",
+   "line": 125
+  }
+ ],
+ "error": null,
+ "value": null,
+ "plan_hash": "ea066c8a6c8c3db07bd82ed36854ccea940194727fded83789bddaab94187e1e",
+ "task_ref": null,
+ "usage": {
+  "steps": null,
+  "rows": null,
+  "elapsed_ms": null,
+  "model": {
+   "requests": null,
+   "input": null,
+   "output": null,
+   "cache_read": null,
+   "cache_create": null
+  },
+  "tool_ms_by_line": null
+ },
+ "reuse": {
+  "read_calls": null,
+  "state_change_possible": null,
+  "read_exclusions": []
+ }
+}

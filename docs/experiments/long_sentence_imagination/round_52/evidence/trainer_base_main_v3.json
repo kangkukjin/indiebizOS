@@ -1,0 +1,268 @@
+{
+ "elapsed": 18.7,
+ "task_id": "r52-trainer-base-1791685918",
+ "inputs": {
+  "src": "trainer/base/input",
+  "out": "trainer/base/out"
+ },
+ "success": true,
+ "status": null,
+ "issues": [],
+ "error": null,
+ "value": {
+  "db_sum": {
+   "rows": 106,
+   "due": 16551000,
+   "paid": 13898000,
+   "unpaid": 1546000,
+   "unknown": 7
+  },
+  "xl_sum": {
+   "rows": 106,
+   "due": 16551000,
+   "paid": 13898000,
+   "unpaid": 1546000,
+   "unknown": 7
+  },
+  "sum_match": true,
+  "ledger_rows": 106,
+  "certificates": 25,
+  "notices": 21,
+  "unknown": 7,
+  "over": 6,
+  "cancelled": 7,
+  "cert_left": 0,
+  "docx_draw": {
+   "tried": true,
+   "ok": false
+  },
+  "flagged": 0,
+  "seen": [
+   {
+    "no": "HB-N-2026-09-0025",
+    "name": "제갈 O'Neil & 아들 <공방>",
+    "png": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/out/shots/HB-N-2026-09-0025_p1.png",
+    "seen": {
+     "answer": "**잘리거나 넘치거나 깨진 글자는 없지만, 띄어쓰기 간격이 원문과 다르게 보입니다.**\n\n이미지에 보이는 그대로 옮기면 다음과 같습니다.\n\n> 제갈　O'Neil & 아들　< 공방>\n\n- **모든 글자가 보임:** 제·갈, O'Neil, &, 아·들, <, 공·방, > 가 다 있고 빠진 글자는 없습니다.\n- **잘림·넘침 없음:** 이름이 오른쪽 여백 안에 한 줄로 다 들어가고, 줄이 넘어가거나 칸 밖으로 나간 곳도 없습니다.\n- **깨짐 없음:** 두부(□)나 물음표 같은 대체 문자 없이 한글과 기호가 정상 글꼴로 나옵니다.\n\n**문제 (한 문장):** \"제갈\" 뒤와 \"아들\" 뒤가 보통 띄어쓰기보다 눈에 띄게 넓고, \"<\"와 \"공방\" 사이에는 원문에 없는 공백이 생겨 \"<공방>\"이 \"< 공방>\"으로 보입니다.\n\n아래 Course 칸 \"금속　반지　세공\"에서도 한글 단어 사이가 똑같이 넓게 벌어집니다. 그래서 이름 값만의 문제가 아니라, 한글과 그 바로 옆 공백·기호의 폭을 렌더러가 잘못 계산하는 문제로 보입니다. 다만 이건 이미지만 보고 추정한 것입니다.",
+     "success": true,
+     "message": "**잘리거나 넘치거나 깨진 글자는 없지만, 띄어쓰기 간격이 원문과 다르게 보입니다.**\n\n이미지에 보이는 그대로 옮기면 다음과 같습니다.\n\n> 제갈　O'Neil & 아들　< 공방>\n\n- **모든 글자가 보임:** 제·갈, O'Neil, &, 아·들, <, 공·방, > 가 다 있고 빠진 글자는 없습니다.\n- **잘림·넘침 없음:** 이름이 오른쪽 여백 안에 한 줄로 다 들어가고, 줄이 넘어가거나 칸 밖으로 나간 곳도 없습니다.\n- **깨짐 없음:** 두부(□)나 물음표 같은 대체 문자 없이 한글과 기호가 정상 글꼴로 나옵니다.\n\n**문제 (한 문장):** \"제갈\" 뒤와 \"아들\" 뒤가 보통 띄어쓰기보다 눈에 띄게 넓고, \"<\"와 \"공방\" 사이에는 원문에 없는 공백이 생겨 \"<공방>\"이 \"< 공방>\"으로 보입니다.\n\n아래 Course 칸 \"금속　반지　세공\"에서도 한글 단어 사이가 똑같이 넓게 벌어집니다. 그래서 이름 값만의 문제가 아니라, 한글과 그 바로 옆 공백·기호의 폭을 렌더러가 잘못 계산하는 문제로 보입니다. 다만 이건 이미지만 보고 추정한 것입니다."
+    }
+   }
+  ],
+  "problems": [
+   "수료증(DOCX)은 그려 보지 못함 — 그리기가 DOCX 를 받지 않는다. 본문 글자 재독과 남은 자리 조회로만 확인했고, 바닥글·글자 넘침은 미확인"
+  ]
+ },
+ "plan_hash": "12a68b072bf455d23743f528c0f60b9bb2b8c1650f2ba818e85208a56543ee16",
+ "task_ref": "d57cc1c00738447c9e02e9ab934b553c",
+ "usage": {
+  "steps": 30247,
+  "rows": 153,
+  "elapsed_ms": 18569,
+  "model": {
+   "requests": 1,
+   "input": 14472,
+   "output": 805,
+   "cache_read": 8922,
+   "cache_create": 5546
+  },
+  "tool_ms_by_line": [
+   {
+    "line": 101,
+    "ms": 11787,
+    "calls": 1,
+    "actions": [
+     "engines:image_read"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 77,
+    "ms": 1560,
+    "calls": 1,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 73,
+    "ms": 994,
+    "calls": 1,
+    "actions": [
+     "self:sheet"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 31,
+    "ms": 797,
+    "calls": 21,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 20,
+    "ms": 771,
+    "calls": 25,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 22,
+    "ms": 640,
+    "calls": 25,
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 13,
+    "ms": 552,
+    "calls": 25,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 30,
+    "ms": 377,
+    "calls": 21,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 38,
+    "ms": 328,
+    "calls": 1,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 43,
+    "ms": 31,
+    "calls": 2,
+    "actions": [
+     "self:delete"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   }
+  ]
+ },
+ "reuse": {
+  "read_calls": 0,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:delete",
+    "excluded_calls": 3
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   }
+  ]
+ }
+}

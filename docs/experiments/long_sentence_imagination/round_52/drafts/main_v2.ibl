@@ -1,0 +1,135 @@
+#!ibl edition=2
+# 52회차 v2(실행 수정 1: 최상위 [try] 안의 return 이 프로그램 전체를 끝냄 → 함수로 감쌈) / v1(검사 거절 2건 수정: ?: 안의 try → 문장으로, join 인자 순서) — 수강 DB → 정산 장부(수식·재계산·대조) → 수료증(DOCX 틀)·납부 안내서(PDF 폼) → 그려서 확인 → manifest·report
+# inputs: src(자료 폴더), out(출력 폴더, 비어 있음)
+
+# ---- 부품 ----
+# 재계산 결과(items: sheet·cell·value)에서 한 칸의 값
+[def:칸값]($cells,$sheet,$cell) {
+  $hit = filter($cells,($c)=>$c.sheet == $sheet and $c.cell == $cell)
+  return len($hit) == 0 ? null : $hit[0].value
+}
+# 채운 문서에 아직 남은 자리표시자 이름 목록(틀 조회를 산출물에 다시 건다)
+[def:남은자리]($path) {
+  $f = [self:fill]{path:$path}
+  return map($f.items,($x)=>$x.name)
+}
+# 수료증 한 장: 채우기 → 남은 자리 조회 → 본문 재독
+[def:수료증]($r,$job,$tpl,$dir) {
+  $no = f"HB-${job.month}-${r.no4}"
+  $p = f"${dir}/${no}.docx"
+  $f = [self:fill]{path:$tpl,output:$p,data:{발급번호:$no,이름:$r.name,강좌:$r.course,기간:$job.period,출석:$r.attended,회차:$r.sessions,출석률:$r.rate,강사:$r.teacher,발급일:$job.issue_date,대표:$job.director}}
+  $left = [fn:남은자리]{path:$p}
+  $doc = [self:read]{path:$p}
+  return {kind:"certificate",enroll_id:$r.enroll_id,student_id:$r.student_id,name:$r.name,no:$no,file:$p,filled:$f.filled,unmatched:$f.unmatched,left:$left,
+    text_has_name:contains($doc.text,$r.name),text_has_course:contains($doc.text,$r.course),text_has_brace:contains($doc.text,"{{")}
+}
+# 안내서 한 장: 채우기 → 그리기
+[def:안내서]($r,$job,$form,$dir,$shots) {
+  $no = f"HB-N-${job.month}-${r.no4}"
+  $p = f"${dir}/${no}.pdf"
+  $f = [self:fill]{path:$form,output:$p,data:{notice_no:$no,name:$r.name,course:$r.course,due:$r.due,paid:$r.paid,unpaid:$r.due - $r.paid,deadline:$job.pay_by,half_paid:$r.paid > 0}}
+  $png = [engines:render]{path:$p,output_path:f"${shots}/${no}"}
+  return {kind:"notice",enroll_id:$r.enroll_id,student_id:$r.student_id,name:$r.name,no:$no,file:$p,filled:$f.filled,unmatched:$f.unmatched,half_paid:$r.paid > 0,
+    png:$png.items[0].path,prescreen:$png.items[0].prescreen,name_len:len($r.name)}
+}
+
+# DOCX 한 장을 그려 본다 — 실패도 값으로
+[def:그려보기]($path,$stem) {
+  [try]{ $d = [engines:render]{path:$path,output_path:$stem}; return {tried:true,ok:true,png:$d.items[0].path} }[catch]{ return {tried:true,ok:false} }
+}
+
+# ---- (1) 읽기 ----
+$jobdoc = [self:read]{path:f"${src}/job.json"}
+$job = $jobdoc.data
+$db = f"${src}/academy.db"
+$sql = "select e.id as enroll_id, printf('%04d',e.id) as no4, s.id as student_id, s.name as name, c.title as course, c.teacher as teacher, c.fee as fee, s.discount_pct as discount_pct, c.fee*(100-s.discount_pct)/100 as due, e.paid as paid, e.attended as attended, c.sessions as sessions, round(e.attended*100.0/c.sessions,1) as rate, e.status as status, e.note as note from enrollments e join students s on s.id=e.student_id join courses c on c.id=e.course_id where e.month=? order by e.id"
+$got = [sense:sqlite]{path:$db,query:$sql,params:[$job.month],limit:2000}
+$cnt = [sense:sqlite]{path:$db,query:"select count(*) as n from enrollments where month=?",params:[$job.month]}
+$all = $got.items
+[if:len($all) != $cnt.items[0].n] { return {error:"DB 행 수 불일치(잘림 의심)",read:len($all),expected:$cnt.items[0].n} }
+$cancelled = filter($all,($r)=>$r.status == "cancelled")
+$rows = filter($all,($r)=>$r.status != "cancelled")
+$known = filter($rows,($r)=>$r.paid != null)
+$unknown = filter($rows,($r)=>$r.paid == null)
+$over = filter($known,($r)=>$r.paid > $r.due)
+$db_sum = {rows:len($rows),due:sum(map($rows,($r)=>$r.due)),paid:sum(map($known,($r)=>$r.paid)),unpaid:sum(map($known,($r)=>$r.due - $r.paid)),unknown:len($unknown)}
+
+# ---- (2) 장부: 틀 복사 → 행 추가(수식) → 재계산 → 요약 대조 ----
+$raw = f"${out}/ledger_raw.xlsx"
+$ledger = f"${out}/ledger.xlsx"
+[self:copy]{src:f"${src}/ledger_template.xlsx",dest:$raw}
+$numbered = reduce($rows,[],($acc,$r)=>$acc + [{**$r,x:len($acc) + 2}])
+$lrows = map($numbered,($r)=>{접수번호:$r.enroll_id,수강생ID:$r.student_id,이름:$r.name,강좌:$r.course,수강료:$r.fee,할인율:$r.discount_pct,
+  청구액:f"=INT(E${r.x}*(100-F${r.x})/100)",납부액:$r.paid,미납액:f"=IF(H${r.x}=\"\",\"미확인\",G${r.x}-H${r.x})",출석:$r.attended,회차:$r.sessions,출석률:f"=ROUND(J${r.x}*100/K${r.x},1)"})
+$app = [self:sheet]{op:"append",path:$raw,sheet:"정산",items:$lrows}
+$calc = [self:sheet]{op:"calculate",path:$raw,output:$ledger,timeout:120}
+$xl_sum = {rows:[fn:칸값]{cells:$calc.items,sheet:"요약",cell:"B2"},due:[fn:칸값]{cells:$calc.items,sheet:"요약",cell:"B3"},paid:[fn:칸값]{cells:$calc.items,sheet:"요약",cell:"B4"},
+  unpaid:[fn:칸값]{cells:$calc.items,sheet:"요약",cell:"B5"},unknown:[fn:칸값]{cells:$calc.items,sheet:"요약",cell:"B6"}}
+$sum_match = $xl_sum.rows == $db_sum.rows and $xl_sum.due == $db_sum.due and $xl_sum.paid == $db_sum.paid and $xl_sum.unpaid == $db_sum.unpaid and $xl_sum.unknown == $db_sum.unknown
+$ledger_png = [engines:render]{path:$ledger,output_path:f"${out}/shots/ledger",max_pages:2}
+
+# ---- (3) 수료증 ----
+[self:mkdir]{path:f"${out}/certificates"}
+[self:mkdir]{path:f"${out}/notices"}
+[self:mkdir]{path:f"${out}/shots"}
+$cert_rows = filter($known,($r)=>$r.paid >= $r.due and $r.rate >= $job.attendance_pct_min)
+$certs = $cert_rows >> [table:each] { [fn:수료증]{r:$it,job:$job,tpl:f"${src}/certificate_template.docx",dir:f"${out}/certificates"} }
+
+# ---- (4) 안내서 ----
+$notice_rows = filter($known,($r)=>$r.paid < $r.due)
+$notices = $notice_rows >> [table:each] { [fn:안내서]{r:$it,job:$job,form:f"${src}/notice_form.pdf",dir:f"${out}/notices",shots:f"${out}/shots"} }
+
+# ---- (5) 그려서 확인 ----
+# DOCX 는 그릴 길을 못 찾았다 — 한 장 시도하고 결과를 그대로 적는다
+$docx_try = [fn:그려보기]{path:$certs[0].file,stem:f"${out}/shots/cert_try"}
+$docx_draw = $docx_try
+$cert_left = filter($certs,($c)=>len($c.left) > 0 or $c.text_has_brace or not $c.text_has_name or not $c.text_has_course)
+$bad_fill = filter($certs + $notices,($d)=>len($d.unmatched) > 0)
+$flagged = filter($notices,($n)=>$n.prescreen != "")
+# 눈으로 볼 후보: 이름이 가장 긴 안내서와 글자가 특이한 안내서
+$long = sorted($notices,($n)=>0 - $n.name_len)
+$odd = filter($notices,($n)=>contains($n.name,"<") or contains($n.name,"&") or contains($n.name,"'"))
+$look = (len($long) == 0 ? [] : [$long[0]]) + (len($odd) == 0 ? [] : [$odd[0]])
+$seen = $look >> [table:each] { $v = [engines:image_read]{image_path:$it.png,question:f"이 납부 안내서의 Name 칸에 '${it.name}' 가 잘리거나 넘치거나 깨지지 않고 전부 보이는가? 보이는 글자를 그대로 옮기고, 문제가 있으면 무엇인지 한 문장으로."}; return {no:$it.no,name:$it.name,png:$it.png,seen:$v} }
+
+# ---- (6) manifest·report ----
+$manifest = map($certs + $notices,($d)=>{kind:$d.kind,enroll_id:$d.enroll_id,student_id:$d.student_id,name:$d.name,no:$d.no,file:$d.file})
+[self:write]{path:f"${out}/manifest.json",content:json($manifest)}
+$problems = (len($cert_left) == 0 ? [] : [f"수료증 ${len($cert_left)}건에 안 채워진 자리가 남음: ${json(map($cert_left,($c)=>{no:$c.no,left:$c.left,brace_in_text:$c.text_has_brace}))}"]) +
+  ($docx_draw.tried and not $docx_draw.ok ? ["수료증(DOCX)은 그려 보지 못함 — 그리기가 DOCX 를 받지 않는다. 본문 글자 재독과 남은 자리 조회로만 확인했고, 바닥글·글자 넘침은 미확인"] : []) +
+  (len($bad_fill) == 0 ? [] : [f"채우기에서 틀에 없는 값 ${len($bad_fill)}건"]) +
+  (len($flagged) == 0 ? [] : [f"안내서 그림 기계 관측에 걸린 것 ${len($flagged)}건: ${json(map($flagged,($n)=>{no:$n.no,prescreen:$n.prescreen}))}"])
+$report = f"""# ${job.month} 정산·서류 발행 보고
+
+## 합계 대조 (DB 계산 ↔ 장부 재계산)
+| 항목 | DB | 장부 |
+| --- | --- | --- |
+| 행 수 | ${db_sum.rows} | ${xl_sum.rows} |
+| 청구액 | ${db_sum.due} | ${xl_sum.due} |
+| 납부액(확인된 것) | ${db_sum.paid} | ${xl_sum.paid} |
+| 미납액(확인된 것) | ${db_sum.unpaid} | ${xl_sum.unpaid} |
+| 납부 미확인 건수 | ${db_sum.unknown} | ${xl_sum.unknown} |
+
+일치: ${sum_match}. 재계산 수식 ${calc.formula_count}개, 오류 ${len($calc.errors)}개.
+
+## 발행
+- 수료증 ${len($certs)}건 (기준: 완납 + 출석률 ${job.attendance_pct_min}% 이상) → certificates/
+- 납부 안내서 ${len($notices)}건 → notices/ (일부 납부 체크 ${len(filter($notices,($n)=>$n.half_paid))}건)
+
+## 따로 볼 것
+- 납부 미확인 ${len($unknown)}건(0원으로 치지 않음): ${json(map($unknown,($r)=>{접수:$r.enroll_id,이름:$r.name,메모:$r.note}))}
+- 더 낸 건 ${len($over)}건: ${json(map($over,($r)=>{접수:$r.enroll_id,이름:$r.name,더낸금액:$r.paid - $r.due}))}
+- 취소 ${len($cancelled)}건(장부·서류에서 제외): ${json(map($cancelled,($r)=>$r.enroll_id))}
+
+## 그려서 확인
+- 안내서 ${len($notices)}건 전부 PNG 로 그림(shots/), 기계 관측에 걸린 것 ${len($flagged)}건.
+- 눈으로 본 것: ${json($seen)}
+- 장부 그림: ${json(map($ledger_png.items,($p)=>$p.path))}
+- 수료증 그리기: ${json($docx_draw)}
+
+## 문제
+${len($problems) == 0 ? "없음" : join("\n",$problems)}
+"""
+[self:write]{path:f"${out}/report.md",content:$report}
+return {db_sum:$db_sum,xl_sum:$xl_sum,sum_match:$sum_match,ledger_rows:$app.appended,certificates:len($certs),notices:len($notices),unknown:len($unknown),over:len($over),cancelled:len($cancelled),
+  cert_left:len($cert_left),docx_draw:$docx_draw,flagged:len($flagged),seen:$seen,problems:$problems}

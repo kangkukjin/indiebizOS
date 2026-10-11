@@ -1,0 +1,94 @@
+{
+ "elapsed": 1.3,
+ "task_id": "r52-trainer-b-1791685854",
+ "inputs": {
+  "src": "trainer/b/input",
+  "out": "trainer/b/out"
+ },
+ "success": false,
+ "status": null,
+ "issues": [],
+ "error": "sheet_op 오류: output 파일이 이미 있습니다. 새 출력 경로를 지정하세요.",
+ "value": null,
+ "plan_hash": "866b9217cfd922396f318e29b21a5ea5d3557529740a8983de34b68c50abc53b",
+ "task_ref": "664ef2f728694b64b79009a717c62158",
+ "usage": {
+  "steps": 11339,
+  "rows": 106,
+  "elapsed_ms": 1234,
+  "model": {
+   "requests": null,
+   "input": null,
+   "output": null,
+   "cache_read": null,
+   "cache_create": null
+  },
+  "tool_ms_by_line": [
+   {
+    "line": 42,
+    "ms": 83,
+    "calls": 1,
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "1d4786a9ace6ef287d3edb6aa3bd76f7819506cb63581c5729159d094ad978e5"
+   },
+   {
+    "line": 64,
+    "ms": 41,
+    "calls": 1,
+    "actions": [
+     "self:sheet"
+    ],
+    "source_hash": "1d4786a9ace6ef287d3edb6aa3bd76f7819506cb63581c5729159d094ad978e5"
+   },
+   {
+    "line": 46,
+    "ms": 27,
+    "calls": 1,
+    "actions": [
+     "sense:sqlite"
+    ],
+    "source_hash": "1d4786a9ace6ef287d3edb6aa3bd76f7819506cb63581c5729159d094ad978e5"
+   },
+   {
+    "line": 65,
+    "ms": 26,
+    "calls": 1,
+    "actions": [
+     "self:sheet"
+    ],
+    "source_hash": "1d4786a9ace6ef287d3edb6aa3bd76f7819506cb63581c5729159d094ad978e5"
+   },
+   {
+    "line": 60,
+    "ms": 23,
+    "calls": 1,
+    "actions": [
+     "self:copy"
+    ],
+    "source_hash": "1d4786a9ace6ef287d3edb6aa3bd76f7819506cb63581c5729159d094ad978e5"
+   },
+   {
+    "line": 47,
+    "ms": 20,
+    "calls": 1,
+    "actions": [
+     "sense:sqlite"
+    ],
+    "source_hash": "1d4786a9ace6ef287d3edb6aa3bd76f7819506cb63581c5729159d094ad978e5"
+   }
+  ]
+ },
+ "reuse": {
+  "read_calls": 0,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:copy",
+    "excluded_calls": 3
+   }
+  ]
+ }
+}

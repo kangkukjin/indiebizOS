@@ -1,0 +1,5868 @@
+{
+ "code": "#!ibl edition=2\n$a=[self:fill]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/certificate_template.docx\",output:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx\",data:{이름:\"김서연\",강좌:\"도자기 물레 입문\",발급번호:\"HB-2026-09-0001\",기간:\"2026.09\",출석:7,회차:8,출석률:87.5,강사:\"한가람\",발급일:\"2026-10-11\"}}\n$b=[self:fill]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/notice_form.pdf\",output:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1.pdf\",data:{notice_no:\"HB-N-0001\",name:\"김서연\",course:\"도자기 물레 입문\",due:180000,paid:90000,unpaid:90000,deadline:\"2026-10-25\",half_paid:true}}\n$c=[self:copy]{src:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/ledger_template.xlsx\",dest:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx\"}\n$d=[self:sheet]{op:\"append\",path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx\",sheet:\"정산\",items:[{접수번호:1,수강생ID:\"S001\",이름:\"김서연\",강좌:\"도자기\",수강료:180000,할인율:10,청구액:\"=INT(E2*(100-F2)/100)\",납부액:90000,미납액:\"=IF(H2=\\\"\\\",\\\"미확인\\\",G2-H2)\",출석:7,회차:8,출석률:\"=ROUND(J2*100/K2,1)\"},{접수번호:2,수강생ID:\"S002\",이름:\"이\",강좌:\"목공\",수강료:240000,할인율:0,청구액:\"=INT(E3*(100-F3)/100)\",납부액:null,미납액:\"=IF(H3=\\\"\\\",\\\"미확인\\\",G3-H3)\",출석:0,회차:8,출석률:\"=ROUND(J3*100/K3,1)\"}]}\n$e=[self:sheet]{op:\"calculate\",path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx\",output:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx\"}\n$f=[self:sheet]{op:\"range\",path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx\",sheet:\"요약\",range:\"A1:B6\"}\n$g=[self:sheet]{op:\"range\",path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx\",sheet:\"정산\",range:\"G2:L3\"}\nreturn {a:$a,b:$b,c:$c,d:$d,e:$e,f:$f,g:$g}",
+ "elapsed": 2.045,
+ "response": {
+  "success": true,
+  "value": {
+   "a": {
+    "success": true,
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx",
+    "format": "docx",
+    "filled": [
+     "강사",
+     "강좌",
+     "기간",
+     "발급번호",
+     "발급일",
+     "이름",
+     "출석",
+     "출석률",
+     "회차"
+    ],
+    "unmatched": []
+   },
+   "b": {
+    "success": true,
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1.pdf",
+    "format": "pdf",
+    "filled": [
+     "notice_no",
+     "name",
+     "course",
+     "due",
+     "paid",
+     "unpaid",
+     "deadline",
+     "half_paid"
+    ],
+    "unmatched": [],
+    "flattened": false
+   },
+   "c": {
+    "success": true,
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx",
+    "items": [
+     {
+      "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+     }
+    ],
+    "count": 1,
+    "renamed": [],
+    "message": "복사 완료: outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx (1개 파일)"
+   },
+   "d": {
+    "success": true,
+    "sheet": "정산",
+    "appended": 2,
+    "rows": "2~3",
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+   },
+   "e": {
+    "success": true,
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx",
+    "source_path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx",
+    "recalculated": true,
+    "engine": "LibreOffice",
+    "formula_count": 11,
+    "errors": [],
+    "items": [
+     {
+      "sheet": "정산",
+      "cell": "G2",
+      "value": 162000
+     },
+     {
+      "sheet": "정산",
+      "cell": "I2",
+      "value": 72000
+     },
+     {
+      "sheet": "정산",
+      "cell": "L2",
+      "value": 87.5
+     },
+     {
+      "sheet": "정산",
+      "cell": "G3",
+      "value": 240000
+     },
+     {
+      "sheet": "정산",
+      "cell": "I3",
+      "value": "미확인"
+     },
+     {
+      "sheet": "정산",
+      "cell": "L3",
+      "value": 0
+     },
+     {
+      "sheet": "요약",
+      "cell": "B2",
+      "value": 2
+     },
+     {
+      "sheet": "요약",
+      "cell": "B3",
+      "value": 402000
+     },
+     {
+      "sheet": "요약",
+      "cell": "B4",
+      "value": 90000
+     },
+     {
+      "sheet": "요약",
+      "cell": "B5",
+      "value": 72000
+     },
+     {
+      "sheet": "요약",
+      "cell": "B6",
+      "value": 1
+     }
+    ],
+    "note": "셀 계산 캐시만 갱신했습니다. 도형·차트 파트와 수식 원문은 보존하며 차트 캐시는 갱신하지 않습니다."
+   },
+   "f": {
+    "success": true,
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx",
+    "sha256": "442dceaae2f9679770dea22b49db81f45705376d8704476ba7eca97a1cd4aad9",
+    "sheet": "요약",
+    "items": [
+     {
+      "cell": "A1",
+      "value": "항목",
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "B1",
+      "value": "값",
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "A2",
+      "value": "행 수",
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "B2",
+      "value": 2,
+      "formula": "=COUNTA(정산!A2:A2000)",
+      "formula_type": "normal",
+      "style_id": "0"
+     },
+     {
+      "cell": "A3",
+      "value": "청구액 합계",
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "B3",
+      "value": 402000,
+      "formula": "=SUM(정산!G2:G2000)",
+      "formula_type": "normal",
+      "style_id": "0"
+     },
+     {
+      "cell": "A4",
+      "value": "납부액 합계",
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "B4",
+      "value": 90000,
+      "formula": "=SUM(정산!H2:H2000)",
+      "formula_type": "normal",
+      "style_id": "0"
+     },
+     {
+      "cell": "A5",
+      "value": "미납액 합계",
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "B5",
+      "value": 72000,
+      "formula": "=SUM(정산!I2:I2000)",
+      "formula_type": "normal",
+      "style_id": "0"
+     },
+     {
+      "cell": "A6",
+      "value": "납부 미확인 건수",
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "B6",
+      "value": 1,
+      "formula": "=COUNTBLANK(정산!H2:H2000)-COUNTBLANK(정산!A2:A2000)",
+      "formula_type": "normal",
+      "style_id": "0"
+     }
+    ],
+    "note": "value는 저장된 계산 캐시입니다. 최신 계산은 calculate로 확인하세요."
+   },
+   "g": {
+    "success": true,
+    "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx",
+    "sha256": "442dceaae2f9679770dea22b49db81f45705376d8704476ba7eca97a1cd4aad9",
+    "sheet": "정산",
+    "items": [
+     {
+      "cell": "G2",
+      "value": 162000,
+      "formula": "=INT(E2*(100-F2)/100)",
+      "formula_type": "normal",
+      "style_id": "0"
+     },
+     {
+      "cell": "H2",
+      "value": 90000,
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "I2",
+      "value": 72000,
+      "formula": "=IF(H2=\"\",\"미확인\",G2-H2)",
+      "formula_type": "normal",
+      "style_id": "0"
+     },
+     {
+      "cell": "J2",
+      "value": 7,
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "K2",
+      "value": 8,
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "L2",
+      "value": 87.5,
+      "formula": "=ROUND(J2*100/K2,1)",
+      "formula_type": "normal",
+      "style_id": "0"
+     },
+     {
+      "cell": "G3",
+      "value": 240000,
+      "formula": "=INT(E3*(100-F3)/100)",
+      "formula_type": "normal",
+      "style_id": "0"
+     },
+     {
+      "cell": "H3",
+      "value": null,
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "I3",
+      "value": "미확인",
+      "formula": "=IF(H3=\"\",\"미확인\",G3-H3)",
+      "formula_type": "normal",
+      "style_id": "0"
+     },
+     {
+      "cell": "J3",
+      "value": 0,
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "K3",
+      "value": 8,
+      "formula": null,
+      "formula_type": null,
+      "style_id": "0"
+     },
+     {
+      "cell": "L3",
+      "value": 0,
+      "formula": "=ROUND(J3*100/K3,1)",
+      "formula_type": "normal",
+      "style_id": "0"
+     }
+    ],
+    "note": "value는 저장된 계산 캐시입니다. 최신 계산은 calculate로 확인하세요."
+   }
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "a",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx"
+         ]
+        ],
+        [
+         "format",
+         [
+          "scalar",
+          "docx"
+         ]
+        ],
+        [
+         "filled",
+         [
+          "list",
+          [
+           [
+            "scalar",
+            "강사"
+           ],
+           [
+            "scalar",
+            "강좌"
+           ],
+           [
+            "scalar",
+            "기간"
+           ],
+           [
+            "scalar",
+            "발급번호"
+           ],
+           [
+            "scalar",
+            "발급일"
+           ],
+           [
+            "scalar",
+            "이름"
+           ],
+           [
+            "scalar",
+            "출석"
+           ],
+           [
+            "scalar",
+            "출석률"
+           ],
+           [
+            "scalar",
+            "회차"
+           ]
+          ]
+         ]
+        ],
+        [
+         "unmatched",
+         [
+          "list",
+          []
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "b",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1.pdf"
+         ]
+        ],
+        [
+         "format",
+         [
+          "scalar",
+          "pdf"
+         ]
+        ],
+        [
+         "filled",
+         [
+          "list",
+          [
+           [
+            "scalar",
+            "notice_no"
+           ],
+           [
+            "scalar",
+            "name"
+           ],
+           [
+            "scalar",
+            "course"
+           ],
+           [
+            "scalar",
+            "due"
+           ],
+           [
+            "scalar",
+            "paid"
+           ],
+           [
+            "scalar",
+            "unpaid"
+           ],
+           [
+            "scalar",
+            "deadline"
+           ],
+           [
+            "scalar",
+            "half_paid"
+           ]
+          ]
+         ]
+        ],
+        [
+         "unmatched",
+         [
+          "list",
+          []
+         ]
+        ],
+        [
+         "flattened",
+         [
+          "scalar",
+          false
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "c",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+         ]
+        ],
+        [
+         "items",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "path",
+              [
+               "scalar",
+               "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "count",
+         [
+          "scalar",
+          1
+         ]
+        ],
+        [
+         "renamed",
+         [
+          "list",
+          []
+         ]
+        ],
+        [
+         "message",
+         [
+          "scalar",
+          "복사 완료: outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx (1개 파일)"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "d",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "sheet",
+         [
+          "scalar",
+          "정산"
+         ]
+        ],
+        [
+         "appended",
+         [
+          "scalar",
+          2
+         ]
+        ],
+        [
+         "rows",
+         [
+          "scalar",
+          "2~3"
+         ]
+        ],
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "e",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx"
+         ]
+        ],
+        [
+         "source_path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+         ]
+        ],
+        [
+         "recalculated",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "engine",
+         [
+          "scalar",
+          "LibreOffice"
+         ]
+        ],
+        [
+         "formula_count",
+         [
+          "scalar",
+          11
+         ]
+        ],
+        [
+         "errors",
+         [
+          "list",
+          []
+         ]
+        ],
+        [
+         "items",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "정산"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "G2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               162000
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "정산"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "I2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               72000
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "정산"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "L2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               87.5
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "정산"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "G3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               240000
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "정산"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "I3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               "미확인"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "정산"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "L3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               0
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "요약"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "B2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               2
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "요약"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "B3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               402000
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "요약"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "B4"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               90000
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "요약"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "B5"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               72000
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "sheet",
+              [
+               "scalar",
+               "요약"
+              ]
+             ],
+             [
+              "cell",
+              [
+               "scalar",
+               "B6"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               1
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "note",
+         [
+          "scalar",
+          "셀 계산 캐시만 갱신했습니다. 도형·차트 파트와 수식 원문은 보존하며 차트 캐시는 갱신하지 않습니다."
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "f",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx"
+         ]
+        ],
+        [
+         "sha256",
+         [
+          "scalar",
+          "442dceaae2f9679770dea22b49db81f45705376d8704476ba7eca97a1cd4aad9"
+         ]
+        ],
+        [
+         "sheet",
+         [
+          "scalar",
+          "요약"
+         ]
+        ],
+        [
+         "items",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "A1"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               "항목"
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "B1"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               "값"
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "A2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               "행 수"
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "B2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               2
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=COUNTA(정산!A2:A2000)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "A3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               "청구액 합계"
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "B3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               402000
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=SUM(정산!G2:G2000)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "A4"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               "납부액 합계"
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "B4"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               90000
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=SUM(정산!H2:H2000)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "A5"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               "미납액 합계"
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "B5"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               72000
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=SUM(정산!I2:I2000)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "A6"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               "납부 미확인 건수"
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "B6"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               1
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=COUNTBLANK(정산!H2:H2000)-COUNTBLANK(정산!A2:A2000)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "note",
+         [
+          "scalar",
+          "value는 저장된 계산 캐시입니다. 최신 계산은 calculate로 확인하세요."
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "g",
+      [
+       "record",
+       [
+        [
+         "success",
+         [
+          "scalar",
+          true
+         ]
+        ],
+        [
+         "path",
+         [
+          "scalar",
+          "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx"
+         ]
+        ],
+        [
+         "sha256",
+         [
+          "scalar",
+          "442dceaae2f9679770dea22b49db81f45705376d8704476ba7eca97a1cd4aad9"
+         ]
+        ],
+        [
+         "sheet",
+         [
+          "scalar",
+          "정산"
+         ]
+        ],
+        [
+         "items",
+         [
+          "list",
+          [
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "G2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               162000
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=INT(E2*(100-F2)/100)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "H2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               90000
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "I2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               72000
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=IF(H2=\"\",\"미확인\",G2-H2)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "J2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               7
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "K2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               8
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "L2"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               87.5
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=ROUND(J2*100/K2,1)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "G3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               240000
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=INT(E3*(100-F3)/100)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "H3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "I3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               "미확인"
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=IF(H3=\"\",\"미확인\",G3-H3)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "J3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               0
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "K3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               8
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               null
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ],
+           [
+            "record",
+            [
+             [
+              "cell",
+              [
+               "scalar",
+               "L3"
+              ]
+             ],
+             [
+              "value",
+              [
+               "scalar",
+               0
+              ]
+             ],
+             [
+              "formula",
+              [
+               "scalar",
+               "=ROUND(J3*100/K3,1)"
+              ]
+             ],
+             [
+              "formula_type",
+              [
+               "scalar",
+               "normal"
+              ]
+             ],
+             [
+              "style_id",
+              [
+               "scalar",
+               "0"
+              ]
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "note",
+         [
+          "scalar",
+          "value는 저장된 계산 캐시입니다. 최신 계산은 calculate로 확인하세요."
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "3af3e52633e691def551ac6ce1920606aac3468decd637940430b8cd7cb235fa",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:36:172",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:180:298",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "literal:308:313",
+    "invocation_id": 3,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 4,
+    "node_id": "literal:317:328",
+    "invocation_id": 4,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 5,
+    "node_id": "literal:334:351",
+    "invocation_id": 5,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "literal:355:364",
+    "invocation_id": 6,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 7,
+    "node_id": "literal:368:369",
+    "invocation_id": 7,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 8,
+    "node_id": "literal:373:374",
+    "invocation_id": 8,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 9,
+    "node_id": "literal:379:383",
+    "invocation_id": 9,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 10,
+    "node_id": "literal:387:392",
+    "invocation_id": 10,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 11,
+    "node_id": "literal:397:409",
+    "invocation_id": 11,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 12,
+    "node_id": "record:304:410",
+    "invocation_id": 12,
+    "kind": "record",
+    "parents": [
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11
+    ]
+   },
+   {
+    "id": 13,
+    "node_id": "record:30:411",
+    "invocation_id": 13,
+    "kind": "record",
+    "parents": [
+     1,
+     2,
+     12
+    ]
+   },
+   {
+    "id": 14,
+    "node_id": "call:19:411",
+    "invocation_id": 14,
+    "kind": "invoke",
+    "parents": [
+     13
+    ],
+    "action": "self:fill",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "54bca5d4ea2f90be8e89d500eff9915584227bb1710d61a81bea78e8c30efb6c",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/certificate_template.docx",
+     "output": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx"
+    }
+   },
+   {
+    "id": 15,
+    "node_id": "call:19:411",
+    "invocation_id": 15,
+    "kind": "tool_evidence",
+    "parents": [
+     14
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 16,
+    "node_id": "call:19:411",
+    "invocation_id": 16,
+    "kind": "call",
+    "parents": [
+     13,
+     14,
+     15
+    ]
+   },
+   {
+    "id": 17,
+    "node_id": "bind:16:411",
+    "invocation_id": 17,
+    "kind": "bind",
+    "parents": [
+     16
+    ]
+   },
+   {
+    "id": 18,
+    "node_id": "literal:432:558",
+    "invocation_id": 18,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 19,
+    "node_id": "literal:566:683",
+    "invocation_id": 19,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 20,
+    "node_id": "literal:700:711",
+    "invocation_id": 20,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 21,
+    "node_id": "literal:717:722",
+    "invocation_id": 21,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 22,
+    "node_id": "literal:730:741",
+    "invocation_id": 22,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 23,
+    "node_id": "literal:746:752",
+    "invocation_id": 23,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 24,
+    "node_id": "literal:758:763",
+    "invocation_id": 24,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 25,
+    "node_id": "literal:771:776",
+    "invocation_id": 25,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 26,
+    "node_id": "literal:786:798",
+    "invocation_id": 26,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 27,
+    "node_id": "literal:809:813",
+    "invocation_id": 27,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 28,
+    "node_id": "record:689:814",
+    "invocation_id": 28,
+    "kind": "record",
+    "parents": [
+     20,
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27
+    ]
+   },
+   {
+    "id": 29,
+    "node_id": "record:426:815",
+    "invocation_id": 29,
+    "kind": "record",
+    "parents": [
+     18,
+     19,
+     28
+    ]
+   },
+   {
+    "id": 30,
+    "node_id": "call:415:815",
+    "invocation_id": 30,
+    "kind": "invoke",
+    "parents": [
+     29
+    ],
+    "action": "self:fill",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "e1fc2a66be18ad922220d7978967f6e82839c74e9a1a57bc5959fe5b1728ec8a",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/notice_form.pdf",
+     "output": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1.pdf"
+    }
+   },
+   {
+    "id": 31,
+    "node_id": "call:415:815",
+    "invocation_id": 31,
+    "kind": "tool_evidence",
+    "parents": [
+     30
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 32,
+    "node_id": "call:415:815",
+    "invocation_id": 32,
+    "kind": "call",
+    "parents": [
+     29,
+     30,
+     31
+    ]
+   },
+   {
+    "id": 33,
+    "node_id": "bind:412:815",
+    "invocation_id": 33,
+    "kind": "bind",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 34,
+    "node_id": "literal:835:966",
+    "invocation_id": 34,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 35,
+    "node_id": "literal:972:1090",
+    "invocation_id": 35,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 36,
+    "node_id": "record:830:1091",
+    "invocation_id": 36,
+    "kind": "record",
+    "parents": [
+     34,
+     35
+    ]
+   },
+   {
+    "id": 37,
+    "node_id": "call:819:1091",
+    "invocation_id": 37,
+    "kind": "invoke",
+    "parents": [
+     36
+    ],
+    "action": "self:copy",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "ccb5b440667324dce59d91d55c6f9b1e00aa3d96784ba865eb1d420820af4acf",
+    "targets": {
+     "src": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/input/ledger_template.xlsx",
+     "dest": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+    }
+   },
+   {
+    "id": 38,
+    "node_id": "call:819:1091",
+    "invocation_id": 38,
+    "kind": "tool_evidence",
+    "parents": [
+     37
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 39,
+    "node_id": "call:819:1091",
+    "invocation_id": 39,
+    "kind": "call",
+    "parents": [
+     36,
+     37,
+     38
+    ]
+   },
+   {
+    "id": 40,
+    "node_id": "bind:816:1091",
+    "invocation_id": 40,
+    "kind": "bind",
+    "parents": [
+     39
+    ]
+   },
+   {
+    "id": 41,
+    "node_id": "literal:1111:1119",
+    "invocation_id": 41,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 42,
+    "node_id": "literal:1125:1243",
+    "invocation_id": 42,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 43,
+    "node_id": "literal:1250:1254",
+    "invocation_id": 43,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 44,
+    "node_id": "literal:1268:1269",
+    "invocation_id": 44,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 45,
+    "node_id": "literal:1276:1282",
+    "invocation_id": 45,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 46,
+    "node_id": "literal:1286:1291",
+    "invocation_id": 46,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 47,
+    "node_id": "literal:1295:1300",
+    "invocation_id": 47,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 48,
+    "node_id": "literal:1305:1311",
+    "invocation_id": 48,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 49,
+    "node_id": "literal:1316:1318",
+    "invocation_id": 49,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 50,
+    "node_id": "literal:1323:1346",
+    "invocation_id": 50,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 51,
+    "node_id": "literal:1351:1356",
+    "invocation_id": 51,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 52,
+    "node_id": "literal:1361:1389",
+    "invocation_id": 52,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 53,
+    "node_id": "literal:1393:1394",
+    "invocation_id": 53,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 54,
+    "node_id": "literal:1398:1399",
+    "invocation_id": 54,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 55,
+    "node_id": "literal:1404:1425",
+    "invocation_id": 55,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 56,
+    "node_id": "record:1262:1426",
+    "invocation_id": 56,
+    "kind": "record",
+    "parents": [
+     44,
+     45,
+     46,
+     47,
+     48,
+     49,
+     50,
+     51,
+     52,
+     53,
+     54,
+     55
+    ]
+   },
+   {
+    "id": 57,
+    "node_id": "literal:1433:1434",
+    "invocation_id": 57,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 58,
+    "node_id": "literal:1441:1447",
+    "invocation_id": 58,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 59,
+    "node_id": "literal:1451:1454",
+    "invocation_id": 59,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 60,
+    "node_id": "literal:1458:1462",
+    "invocation_id": 60,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 61,
+    "node_id": "literal:1467:1473",
+    "invocation_id": 61,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 62,
+    "node_id": "literal:1478:1479",
+    "invocation_id": 62,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 63,
+    "node_id": "literal:1484:1507",
+    "invocation_id": 63,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 64,
+    "node_id": "literal:1512:1516",
+    "invocation_id": 64,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 65,
+    "node_id": "literal:1521:1549",
+    "invocation_id": 65,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 66,
+    "node_id": "literal:1553:1554",
+    "invocation_id": 66,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 67,
+    "node_id": "literal:1558:1559",
+    "invocation_id": 67,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 68,
+    "node_id": "literal:1564:1585",
+    "invocation_id": 68,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 69,
+    "node_id": "record:1427:1586",
+    "invocation_id": 69,
+    "kind": "record",
+    "parents": [
+     57,
+     58,
+     59,
+     60,
+     61,
+     62,
+     63,
+     64,
+     65,
+     66,
+     67,
+     68
+    ]
+   },
+   {
+    "id": 70,
+    "node_id": "list:1261:1587",
+    "invocation_id": 70,
+    "kind": "list",
+    "parents": [
+     56,
+     69
+    ]
+   },
+   {
+    "id": 71,
+    "node_id": "record:1107:1588",
+    "invocation_id": 71,
+    "kind": "record",
+    "parents": [
+     41,
+     42,
+     43,
+     70
+    ]
+   },
+   {
+    "id": 72,
+    "node_id": "call:1095:1588",
+    "invocation_id": 72,
+    "kind": "invoke",
+    "parents": [
+     71
+    ],
+    "action": "self:sheet",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "400ca7ca85da849096a3a35a50041168004b88ebd5fa5db880d60b0cea87ca0d",
+    "targets": {
+     "op": "append",
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx",
+     "sheet": "정산"
+    }
+   },
+   {
+    "id": 73,
+    "node_id": "call:1095:1588",
+    "invocation_id": 73,
+    "kind": "tool_evidence",
+    "parents": [
+     72
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 74,
+    "node_id": "call:1095:1588",
+    "invocation_id": 74,
+    "kind": "call",
+    "parents": [
+     71,
+     72,
+     73
+    ]
+   },
+   {
+    "id": 75,
+    "node_id": "bind:1092:1588",
+    "invocation_id": 75,
+    "kind": "bind",
+    "parents": [
+     74
+    ]
+   },
+   {
+    "id": 76,
+    "node_id": "literal:1608:1619",
+    "invocation_id": 76,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 77,
+    "node_id": "literal:1625:1743",
+    "invocation_id": 77,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 78,
+    "node_id": "literal:1751:1870",
+    "invocation_id": 78,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 79,
+    "node_id": "record:1604:1871",
+    "invocation_id": 79,
+    "kind": "record",
+    "parents": [
+     76,
+     77,
+     78
+    ]
+   },
+   {
+    "id": 80,
+    "node_id": "call:1592:1871",
+    "invocation_id": 80,
+    "kind": "invoke",
+    "parents": [
+     79
+    ],
+    "action": "self:sheet",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "a3d8b26472c35228e6c2d9492f7bbaef12decf194d93275281e2a179ab777b70",
+    "targets": {
+     "op": "calculate",
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx",
+     "output": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx"
+    }
+   },
+   {
+    "id": 81,
+    "node_id": "call:1592:1871",
+    "invocation_id": 81,
+    "kind": "tool_evidence",
+    "parents": [
+     80
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 82,
+    "node_id": "call:1592:1871",
+    "invocation_id": 82,
+    "kind": "call",
+    "parents": [
+     79,
+     80,
+     81
+    ]
+   },
+   {
+    "id": 83,
+    "node_id": "bind:1589:1871",
+    "invocation_id": 83,
+    "kind": "bind",
+    "parents": [
+     82
+    ]
+   },
+   {
+    "id": 84,
+    "node_id": "literal:1891:1898",
+    "invocation_id": 84,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 85,
+    "node_id": "literal:1904:2023",
+    "invocation_id": 85,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 86,
+    "node_id": "literal:2030:2034",
+    "invocation_id": 86,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 87,
+    "node_id": "literal:2041:2048",
+    "invocation_id": 87,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 88,
+    "node_id": "record:1887:2049",
+    "invocation_id": 88,
+    "kind": "record",
+    "parents": [
+     84,
+     85,
+     86,
+     87
+    ]
+   },
+   {
+    "id": 89,
+    "node_id": "call:1875:2049",
+    "invocation_id": 89,
+    "kind": "invoke",
+    "parents": [
+     88
+    ],
+    "action": "self:sheet",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "bb8c5afda6e6664430cecb948302f03dd7c77de114e6c9a82c2da4cf1da0c0dc",
+    "targets": {
+     "op": "range",
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx",
+     "sheet": "요약",
+     "range": "A1:B6"
+    }
+   },
+   {
+    "id": 90,
+    "node_id": "call:1875:2049",
+    "invocation_id": 90,
+    "kind": "tool_evidence",
+    "parents": [
+     89
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 91,
+    "node_id": "call:1875:2049",
+    "invocation_id": 91,
+    "kind": "call",
+    "parents": [
+     88,
+     89,
+     90
+    ]
+   },
+   {
+    "id": 92,
+    "node_id": "bind:1872:2049",
+    "invocation_id": 92,
+    "kind": "bind",
+    "parents": [
+     91
+    ]
+   },
+   {
+    "id": 93,
+    "node_id": "literal:2069:2076",
+    "invocation_id": 93,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 94,
+    "node_id": "literal:2082:2201",
+    "invocation_id": 94,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 95,
+    "node_id": "literal:2208:2212",
+    "invocation_id": 95,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 96,
+    "node_id": "literal:2219:2226",
+    "invocation_id": 96,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 97,
+    "node_id": "record:2065:2227",
+    "invocation_id": 97,
+    "kind": "record",
+    "parents": [
+     93,
+     94,
+     95,
+     96
+    ]
+   },
+   {
+    "id": 98,
+    "node_id": "call:2053:2227",
+    "invocation_id": 98,
+    "kind": "invoke",
+    "parents": [
+     97
+    ],
+    "action": "self:sheet",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "f0b7586ff99e9494adf5b9808513d1a46ae186bea1ba5b7afcfc707c3cd68711",
+    "targets": {
+     "op": "range",
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx",
+     "sheet": "정산",
+     "range": "G2:L3"
+    }
+   },
+   {
+    "id": 99,
+    "node_id": "call:2053:2227",
+    "invocation_id": 99,
+    "kind": "tool_evidence",
+    "parents": [
+     98
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 100,
+    "node_id": "call:2053:2227",
+    "invocation_id": 100,
+    "kind": "call",
+    "parents": [
+     97,
+     98,
+     99
+    ]
+   },
+   {
+    "id": 101,
+    "node_id": "bind:2050:2227",
+    "invocation_id": 101,
+    "kind": "bind",
+    "parents": [
+     100
+    ]
+   },
+   {
+    "id": 102,
+    "node_id": "ref:2238:2240",
+    "invocation_id": 102,
+    "kind": "ref",
+    "parents": [
+     16
+    ]
+   },
+   {
+    "id": 103,
+    "node_id": "ref:2243:2245",
+    "invocation_id": 103,
+    "kind": "ref",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 104,
+    "node_id": "ref:2248:2250",
+    "invocation_id": 104,
+    "kind": "ref",
+    "parents": [
+     39
+    ]
+   },
+   {
+    "id": 105,
+    "node_id": "ref:2253:2255",
+    "invocation_id": 105,
+    "kind": "ref",
+    "parents": [
+     74
+    ]
+   },
+   {
+    "id": 106,
+    "node_id": "ref:2258:2260",
+    "invocation_id": 106,
+    "kind": "ref",
+    "parents": [
+     82
+    ]
+   },
+   {
+    "id": 107,
+    "node_id": "ref:2263:2265",
+    "invocation_id": 107,
+    "kind": "ref",
+    "parents": [
+     91
+    ]
+   },
+   {
+    "id": 108,
+    "node_id": "ref:2268:2270",
+    "invocation_id": 108,
+    "kind": "ref",
+    "parents": [
+     100
+    ]
+   },
+   {
+    "id": 109,
+    "node_id": "record:2235:2271",
+    "invocation_id": 109,
+    "kind": "record",
+    "parents": [
+     102,
+     103,
+     104,
+     105,
+     106,
+     107,
+     108
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:2271": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 15,
+    "end": 2271,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:411": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 16,
+    "end": 411,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:411": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 19,
+    "end": 411,
+    "line": 2,
+    "column": 4
+   },
+   "record:30:411": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 30,
+    "end": 411,
+    "line": 2,
+    "column": 15
+   },
+   "literal:36:172": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 36,
+    "end": 172,
+    "line": 2,
+    "column": 21
+   },
+   "literal:180:298": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 180,
+    "end": 298,
+    "line": 2,
+    "column": 165
+   },
+   "record:304:410": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 304,
+    "end": 410,
+    "line": 2,
+    "column": 289
+   },
+   "literal:308:313": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 308,
+    "end": 313,
+    "line": 2,
+    "column": 293
+   },
+   "literal:317:328": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 317,
+    "end": 328,
+    "line": 2,
+    "column": 302
+   },
+   "literal:334:351": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 334,
+    "end": 351,
+    "line": 2,
+    "column": 319
+   },
+   "literal:355:364": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 355,
+    "end": 364,
+    "line": 2,
+    "column": 340
+   },
+   "literal:368:369": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 368,
+    "end": 369,
+    "line": 2,
+    "column": 353
+   },
+   "literal:373:374": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 373,
+    "end": 374,
+    "line": 2,
+    "column": 358
+   },
+   "literal:379:383": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 379,
+    "end": 383,
+    "line": 2,
+    "column": 364
+   },
+   "literal:387:392": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 387,
+    "end": 392,
+    "line": 2,
+    "column": 372
+   },
+   "literal:397:409": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 397,
+    "end": 409,
+    "line": 2,
+    "column": 382
+   },
+   "bind:412:815": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 412,
+    "end": 815,
+    "line": 3,
+    "column": 1
+   },
+   "call:415:815": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 415,
+    "end": 815,
+    "line": 3,
+    "column": 4
+   },
+   "record:426:815": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 426,
+    "end": 815,
+    "line": 3,
+    "column": 15
+   },
+   "literal:432:558": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 432,
+    "end": 558,
+    "line": 3,
+    "column": 21
+   },
+   "literal:566:683": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 566,
+    "end": 683,
+    "line": 3,
+    "column": 155
+   },
+   "record:689:814": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 689,
+    "end": 814,
+    "line": 3,
+    "column": 278
+   },
+   "literal:700:711": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 700,
+    "end": 711,
+    "line": 3,
+    "column": 289
+   },
+   "literal:717:722": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 717,
+    "end": 722,
+    "line": 3,
+    "column": 306
+   },
+   "literal:730:741": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 730,
+    "end": 741,
+    "line": 3,
+    "column": 319
+   },
+   "literal:746:752": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 746,
+    "end": 752,
+    "line": 3,
+    "column": 335
+   },
+   "literal:758:763": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 758,
+    "end": 763,
+    "line": 3,
+    "column": 347
+   },
+   "literal:771:776": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 771,
+    "end": 776,
+    "line": 3,
+    "column": 360
+   },
+   "literal:786:798": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 786,
+    "end": 798,
+    "line": 3,
+    "column": 375
+   },
+   "literal:809:813": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 809,
+    "end": 813,
+    "line": 3,
+    "column": 398
+   },
+   "bind:816:1091": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 816,
+    "end": 1091,
+    "line": 4,
+    "column": 1
+   },
+   "call:819:1091": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 819,
+    "end": 1091,
+    "line": 4,
+    "column": 4
+   },
+   "record:830:1091": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 830,
+    "end": 1091,
+    "line": 4,
+    "column": 15
+   },
+   "literal:835:966": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 835,
+    "end": 966,
+    "line": 4,
+    "column": 20
+   },
+   "literal:972:1090": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 972,
+    "end": 1090,
+    "line": 4,
+    "column": 157
+   },
+   "bind:1092:1588": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1092,
+    "end": 1588,
+    "line": 5,
+    "column": 1
+   },
+   "call:1095:1588": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1095,
+    "end": 1588,
+    "line": 5,
+    "column": 4
+   },
+   "record:1107:1588": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1107,
+    "end": 1588,
+    "line": 5,
+    "column": 16
+   },
+   "literal:1111:1119": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1111,
+    "end": 1119,
+    "line": 5,
+    "column": 20
+   },
+   "literal:1125:1243": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1125,
+    "end": 1243,
+    "line": 5,
+    "column": 34
+   },
+   "literal:1250:1254": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1250,
+    "end": 1254,
+    "line": 5,
+    "column": 159
+   },
+   "list:1261:1587": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1261,
+    "end": 1587,
+    "line": 5,
+    "column": 170
+   },
+   "record:1262:1426": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1262,
+    "end": 1426,
+    "line": 5,
+    "column": 171
+   },
+   "literal:1268:1269": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1268,
+    "end": 1269,
+    "line": 5,
+    "column": 177
+   },
+   "literal:1276:1282": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1276,
+    "end": 1282,
+    "line": 5,
+    "column": 185
+   },
+   "literal:1286:1291": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1286,
+    "end": 1291,
+    "line": 5,
+    "column": 195
+   },
+   "literal:1295:1300": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1295,
+    "end": 1300,
+    "line": 5,
+    "column": 204
+   },
+   "literal:1305:1311": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1305,
+    "end": 1311,
+    "line": 5,
+    "column": 214
+   },
+   "literal:1316:1318": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1316,
+    "end": 1318,
+    "line": 5,
+    "column": 225
+   },
+   "literal:1323:1346": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1323,
+    "end": 1346,
+    "line": 5,
+    "column": 232
+   },
+   "literal:1351:1356": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1351,
+    "end": 1356,
+    "line": 5,
+    "column": 260
+   },
+   "literal:1361:1389": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1361,
+    "end": 1389,
+    "line": 5,
+    "column": 270
+   },
+   "literal:1393:1394": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1393,
+    "end": 1394,
+    "line": 5,
+    "column": 302
+   },
+   "literal:1398:1399": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1398,
+    "end": 1399,
+    "line": 5,
+    "column": 307
+   },
+   "literal:1404:1425": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1404,
+    "end": 1425,
+    "line": 5,
+    "column": 313
+   },
+   "record:1427:1586": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1427,
+    "end": 1586,
+    "line": 5,
+    "column": 336
+   },
+   "literal:1433:1434": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1433,
+    "end": 1434,
+    "line": 5,
+    "column": 342
+   },
+   "literal:1441:1447": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1441,
+    "end": 1447,
+    "line": 5,
+    "column": 350
+   },
+   "literal:1451:1454": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1451,
+    "end": 1454,
+    "line": 5,
+    "column": 360
+   },
+   "literal:1458:1462": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1458,
+    "end": 1462,
+    "line": 5,
+    "column": 367
+   },
+   "literal:1467:1473": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1467,
+    "end": 1473,
+    "line": 5,
+    "column": 376
+   },
+   "literal:1478:1479": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1478,
+    "end": 1479,
+    "line": 5,
+    "column": 387
+   },
+   "literal:1484:1507": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1484,
+    "end": 1507,
+    "line": 5,
+    "column": 393
+   },
+   "literal:1512:1516": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1512,
+    "end": 1516,
+    "line": 5,
+    "column": 421
+   },
+   "literal:1521:1549": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1521,
+    "end": 1549,
+    "line": 5,
+    "column": 430
+   },
+   "literal:1553:1554": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1553,
+    "end": 1554,
+    "line": 5,
+    "column": 462
+   },
+   "literal:1558:1559": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1558,
+    "end": 1559,
+    "line": 5,
+    "column": 467
+   },
+   "literal:1564:1585": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1564,
+    "end": 1585,
+    "line": 5,
+    "column": 473
+   },
+   "bind:1589:1871": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1589,
+    "end": 1871,
+    "line": 6,
+    "column": 1
+   },
+   "call:1592:1871": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1592,
+    "end": 1871,
+    "line": 6,
+    "column": 4
+   },
+   "record:1604:1871": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1604,
+    "end": 1871,
+    "line": 6,
+    "column": 16
+   },
+   "literal:1608:1619": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1608,
+    "end": 1619,
+    "line": 6,
+    "column": 20
+   },
+   "literal:1625:1743": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1625,
+    "end": 1743,
+    "line": 6,
+    "column": 37
+   },
+   "literal:1751:1870": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1751,
+    "end": 1870,
+    "line": 6,
+    "column": 163
+   },
+   "bind:1872:2049": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1872,
+    "end": 2049,
+    "line": 7,
+    "column": 1
+   },
+   "call:1875:2049": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1875,
+    "end": 2049,
+    "line": 7,
+    "column": 4
+   },
+   "record:1887:2049": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1887,
+    "end": 2049,
+    "line": 7,
+    "column": 16
+   },
+   "literal:1891:1898": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1891,
+    "end": 1898,
+    "line": 7,
+    "column": 20
+   },
+   "literal:1904:2023": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 1904,
+    "end": 2023,
+    "line": 7,
+    "column": 33
+   },
+   "literal:2030:2034": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2030,
+    "end": 2034,
+    "line": 7,
+    "column": 159
+   },
+   "literal:2041:2048": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2041,
+    "end": 2048,
+    "line": 7,
+    "column": 170
+   },
+   "bind:2050:2227": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2050,
+    "end": 2227,
+    "line": 8,
+    "column": 1
+   },
+   "call:2053:2227": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2053,
+    "end": 2227,
+    "line": 8,
+    "column": 4
+   },
+   "record:2065:2227": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2065,
+    "end": 2227,
+    "line": 8,
+    "column": 16
+   },
+   "literal:2069:2076": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2069,
+    "end": 2076,
+    "line": 8,
+    "column": 20
+   },
+   "literal:2082:2201": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2082,
+    "end": 2201,
+    "line": 8,
+    "column": 33
+   },
+   "literal:2208:2212": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2208,
+    "end": 2212,
+    "line": 8,
+    "column": 159
+   },
+   "literal:2219:2226": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2219,
+    "end": 2226,
+    "line": 8,
+    "column": 170
+   },
+   "return:2228:2271": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2228,
+    "end": 2271,
+    "line": 9,
+    "column": 1
+   },
+   "record:2235:2271": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2235,
+    "end": 2271,
+    "line": 9,
+    "column": 8
+   },
+   "ref:2238:2240": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2238,
+    "end": 2240,
+    "line": 9,
+    "column": 11
+   },
+   "ref:2243:2245": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2243,
+    "end": 2245,
+    "line": 9,
+    "column": 16
+   },
+   "ref:2248:2250": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2248,
+    "end": 2250,
+    "line": 9,
+    "column": 21
+   },
+   "ref:2253:2255": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2253,
+    "end": 2255,
+    "line": 9,
+    "column": 26
+   },
+   "ref:2258:2260": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2258,
+    "end": 2260,
+    "line": 9,
+    "column": 31
+   },
+   "ref:2263:2265": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2263,
+    "end": 2265,
+    "line": 9,
+    "column": 36
+   },
+   "ref:2268:2270": {
+    "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+    "start": 2268,
+    "end": 2270,
+    "line": 9,
+    "column": 41
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "54bca5d4ea2f90be8e89d500eff9915584227bb1710d61a81bea78e8c30efb6c",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx"
+       ]
+      ],
+      [
+       "format",
+       [
+        "scalar",
+        "docx"
+       ]
+      ],
+      [
+       "filled",
+       [
+        "list",
+        [
+         [
+          "scalar",
+          "강사"
+         ],
+         [
+          "scalar",
+          "강좌"
+         ],
+         [
+          "scalar",
+          "기간"
+         ],
+         [
+          "scalar",
+          "발급번호"
+         ],
+         [
+          "scalar",
+          "발급일"
+         ],
+         [
+          "scalar",
+          "이름"
+         ],
+         [
+          "scalar",
+          "출석"
+         ],
+         [
+          "scalar",
+          "출석률"
+         ],
+         [
+          "scalar",
+          "회차"
+         ]
+        ]
+       ]
+      ],
+      [
+       "unmatched",
+       [
+        "list",
+        []
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:fill",
+    "reuse_key": "89760f52510742872f482f411be67a1355fe661052993bbb0cf4b1f89d5e090e",
+    "reuse_parts": {
+     "action": "d03870f1075c5a9ac2f97026f1d519272d18c829f4375485016f969be9559523",
+     "args": "758e38a10cbfbcefcb04e23d167c54e6b2a61b2b82fdbb5ef5957e234a9d82c3",
+     "contract": "359efa8a3947cdd15e763c85e6ecdbad1bea2994158f1bda18c7840a7ae46b45",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "e1fc2a66be18ad922220d7978967f6e82839c74e9a1a57bc5959fe5b1728ec8a",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/n1.pdf"
+       ]
+      ],
+      [
+       "format",
+       [
+        "scalar",
+        "pdf"
+       ]
+      ],
+      [
+       "filled",
+       [
+        "list",
+        [
+         [
+          "scalar",
+          "notice_no"
+         ],
+         [
+          "scalar",
+          "name"
+         ],
+         [
+          "scalar",
+          "course"
+         ],
+         [
+          "scalar",
+          "due"
+         ],
+         [
+          "scalar",
+          "paid"
+         ],
+         [
+          "scalar",
+          "unpaid"
+         ],
+         [
+          "scalar",
+          "deadline"
+         ],
+         [
+          "scalar",
+          "half_paid"
+         ]
+        ]
+       ]
+      ],
+      [
+       "unmatched",
+       [
+        "list",
+        []
+       ]
+      ],
+      [
+       "flattened",
+       [
+        "scalar",
+        false
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:fill",
+    "reuse_key": "1eca9e6b5497824119aaf227ac7e7c955f82031df0bf921b92101de77848e79d",
+    "reuse_parts": {
+     "action": "d03870f1075c5a9ac2f97026f1d519272d18c829f4375485016f969be9559523",
+     "args": "6ac99f9ae131148b06ad53013fcfdb0313e540c2663663c2d636ce44e46318e6",
+     "contract": "359efa8a3947cdd15e763c85e6ecdbad1bea2994158f1bda18c7840a7ae46b45",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "ccb5b440667324dce59d91d55c6f9b1e00aa3d96784ba865eb1d420820af4acf",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "path",
+            [
+             "scalar",
+             "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "count",
+       [
+        "scalar",
+        1
+       ]
+      ],
+      [
+       "renamed",
+       [
+        "list",
+        []
+       ]
+      ],
+      [
+       "message",
+       [
+        "scalar",
+        "복사 완료: outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx (1개 파일)"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:copy",
+    "reuse_key": "4b7ea9dbce2720f8abe21396aebc6071e33274719d7a9321be09301da4b15faf",
+    "reuse_parts": {
+     "action": "8696a57f5fc5cc91f01dfec6fd69c3abe7151d873dad60288d427cb153db3d92",
+     "args": "5e6e0be77247c3efaacd66e9f171551107517daa00e72afbcdd29e48bad9b50d",
+     "contract": "eb425579266e30586a92ad8331d74b52d96d0a413b70c200ec5e7e56544a0edc",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "400ca7ca85da849096a3a35a50041168004b88ebd5fa5db880d60b0cea87ca0d",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "sheet",
+       [
+        "scalar",
+        "정산"
+       ]
+      ],
+      [
+       "appended",
+       [
+        "scalar",
+        2
+       ]
+      ],
+      [
+       "rows",
+       [
+        "scalar",
+        "2~3"
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:sheet",
+    "reuse_key": "896ac23362336ad976856083acd0b22bb80e1e9a1e854ba0228a73953d003061",
+    "reuse_parts": {
+     "action": "f5f1187c797e09ba65893c5b437d2dbbb6ee6baadc52960f9aa11a676b3b2c6a",
+     "args": "b554ff66cc1c1dd50c47811bc2c39aecd6f1f8cf909411dbcfadd4443e47dd57",
+     "contract": "7801887d3b3be0e44cf199db5d8177ccd522a30c0c4179d2f831596be64fa5f0",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "a3d8b26472c35228e6c2d9492f7bbaef12decf194d93275281e2a179ab777b70",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx"
+       ]
+      ],
+      [
+       "source_path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1.xlsx"
+       ]
+      ],
+      [
+       "recalculated",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "engine",
+       [
+        "scalar",
+        "LibreOffice"
+       ]
+      ],
+      [
+       "formula_count",
+       [
+        "scalar",
+        11
+       ]
+      ],
+      [
+       "errors",
+       [
+        "list",
+        []
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "정산"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "G2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             162000
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "정산"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "I2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             72000
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "정산"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "L2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             87.5
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "정산"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "G3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             240000
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "정산"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "I3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             "미확인"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "정산"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "L3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             0
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "요약"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "B2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             2
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "요약"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "B3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             402000
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "요약"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "B4"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             90000
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "요약"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "B5"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             72000
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "sheet",
+            [
+             "scalar",
+             "요약"
+            ]
+           ],
+           [
+            "cell",
+            [
+             "scalar",
+             "B6"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             1
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "note",
+       [
+        "scalar",
+        "셀 계산 캐시만 갱신했습니다. 도형·차트 파트와 수식 원문은 보존하며 차트 캐시는 갱신하지 않습니다."
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:sheet",
+    "reuse_key": "7683dd627d73cb7e74c513f1ddb9d9e5936614dba097ff8836c946e5cb979276",
+    "reuse_parts": {
+     "action": "f5f1187c797e09ba65893c5b437d2dbbb6ee6baadc52960f9aa11a676b3b2c6a",
+     "args": "cc64f19d4ee425e2ba0a1f2b0fe692688e23df151b3e73e86364471fd45e6514",
+     "contract": "7801887d3b3be0e44cf199db5d8177ccd522a30c0c4179d2f831596be64fa5f0",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "bb8c5afda6e6664430cecb948302f03dd7c77de114e6c9a82c2da4cf1da0c0dc",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx"
+       ]
+      ],
+      [
+       "sha256",
+       [
+        "scalar",
+        "442dceaae2f9679770dea22b49db81f45705376d8704476ba7eca97a1cd4aad9"
+       ]
+      ],
+      [
+       "sheet",
+       [
+        "scalar",
+        "요약"
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "A1"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             "항목"
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "B1"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             "값"
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "A2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             "행 수"
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "B2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             2
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=COUNTA(정산!A2:A2000)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "A3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             "청구액 합계"
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "B3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             402000
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=SUM(정산!G2:G2000)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "A4"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             "납부액 합계"
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "B4"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             90000
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=SUM(정산!H2:H2000)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "A5"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             "미납액 합계"
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "B5"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             72000
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=SUM(정산!I2:I2000)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "A6"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             "납부 미확인 건수"
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "B6"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             1
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=COUNTBLANK(정산!H2:H2000)-COUNTBLANK(정산!A2:A2000)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "note",
+       [
+        "scalar",
+        "value는 저장된 계산 캐시입니다. 최신 계산은 calculate로 확인하세요."
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:sheet",
+    "reuse_key": "3148f0183f1303ee9d85d95bc92d4625375bc93ef70579144b3a717def50c621",
+    "reuse_parts": {
+     "action": "f5f1187c797e09ba65893c5b437d2dbbb6ee6baadc52960f9aa11a676b3b2c6a",
+     "args": "4eee9e098112067bcabed2794b65cace4e61d322f1c94a8d2daf655ac5a05af9",
+     "contract": "5f098cbbff05aa8d7394f4b6943dce212ab14865383e1c84477479d92ac9098a",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "f0b7586ff99e9494adf5b9808513d1a46ae186bea1ba5b7afcfc707c3cd68711",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/l1c.xlsx"
+       ]
+      ],
+      [
+       "sha256",
+       [
+        "scalar",
+        "442dceaae2f9679770dea22b49db81f45705376d8704476ba7eca97a1cd4aad9"
+       ]
+      ],
+      [
+       "sheet",
+       [
+        "scalar",
+        "정산"
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "G2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             162000
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=INT(E2*(100-F2)/100)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "H2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             90000
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "I2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             72000
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=IF(H2=\"\",\"미확인\",G2-H2)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "J2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             7
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "K2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             8
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "L2"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             87.5
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=ROUND(J2*100/K2,1)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "G3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             240000
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=INT(E3*(100-F3)/100)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "H3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "I3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             "미확인"
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=IF(H3=\"\",\"미확인\",G3-H3)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "J3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             0
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "K3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             8
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "cell",
+            [
+             "scalar",
+             "L3"
+            ]
+           ],
+           [
+            "value",
+            [
+             "scalar",
+             0
+            ]
+           ],
+           [
+            "formula",
+            [
+             "scalar",
+             "=ROUND(J3*100/K3,1)"
+            ]
+           ],
+           [
+            "formula_type",
+            [
+             "scalar",
+             "normal"
+            ]
+           ],
+           [
+            "style_id",
+            [
+             "scalar",
+             "0"
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "note",
+       [
+        "scalar",
+        "value는 저장된 계산 캐시입니다. 최신 계산은 calculate로 확인하세요."
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:sheet",
+    "reuse_key": "ec95cf735e4646069abdc16253df4026bcf49a18127b7f917ab263b307be0c23",
+    "reuse_parts": {
+     "action": "f5f1187c797e09ba65893c5b437d2dbbb6ee6baadc52960f9aa11a676b3b2c6a",
+     "args": "006dc444d987e67d18368a3f98719228cc54cbe7b278bc1fe1515cbea084be52",
+     "contract": "5f098cbbff05aa8d7394f4b6943dce212ab14865383e1c84477479d92ac9098a",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 97,
+   "rows": 0,
+   "elapsed_ms": 2019,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "bind:1092:1588",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1092,
+      "end": 1588,
+      "line": 5,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1589:1871",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1589,
+      "end": 1871,
+      "line": 6,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:16:411",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 16,
+      "end": 411,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:1872:2049",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1872,
+      "end": 2049,
+      "line": 7,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:2050:2227",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 2050,
+      "end": 2227,
+      "line": 8,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:412:815",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 412,
+      "end": 815,
+      "line": 3,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "bind:816:1091",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 816,
+      "end": 1091,
+      "line": 4,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "call:1095:1588",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1095,
+      "end": 1588,
+      "line": 5,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:1592:1871",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1592,
+      "end": 1871,
+      "line": 6,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:1875:2049",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1875,
+      "end": 2049,
+      "line": 7,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:19:411",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 19,
+      "end": 411,
+      "line": 2,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:2053:2227",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 2053,
+      "end": 2227,
+      "line": 8,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:415:815",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 415,
+      "end": 815,
+      "line": 3,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "call:819:1091",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 819,
+      "end": 1091,
+      "line": 4,
+      "column": 4
+     }
+    },
+    {
+     "node_id": "list:1261:1587",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1261,
+      "end": 1587,
+      "line": 5,
+      "column": 170
+     }
+    },
+    {
+     "node_id": "literal:1111:1119",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1111,
+      "end": 1119,
+      "line": 5,
+      "column": 20
+     }
+    },
+    {
+     "node_id": "literal:1125:1243",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1125,
+      "end": 1243,
+      "line": 5,
+      "column": 34
+     }
+    },
+    {
+     "node_id": "literal:1250:1254",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1250,
+      "end": 1254,
+      "line": 5,
+      "column": 159
+     }
+    },
+    {
+     "node_id": "literal:1268:1269",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1268,
+      "end": 1269,
+      "line": 5,
+      "column": 177
+     }
+    },
+    {
+     "node_id": "literal:1276:1282",
+     "steps": 1,
+     "location": {
+      "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54",
+      "start": 1276,
+      "end": 1282,
+      "line": 5,
+      "column": 185
+     }
+    }
+   ],
+   "steps_other": 77,
+   "steps_by_line": [
+    {
+     "line": 5,
+     "steps": 33,
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 2,
+     "steps": 15,
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 3,
+     "steps": 14,
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 9,
+     "steps": 9,
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 7,
+     "steps": 7,
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 8,
+     "steps": 7,
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 6,
+     "steps": 6,
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 4,
+     "steps": 5,
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 6,
+     "ms": 1524,
+     "calls": 1,
+     "actions": [
+      "self:sheet"
+     ],
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 5,
+     "ms": 53,
+     "calls": 1,
+     "actions": [
+      "self:sheet"
+     ],
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 7,
+     "ms": 49,
+     "calls": 1,
+     "actions": [
+      "self:sheet"
+     ],
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 8,
+     "ms": 40,
+     "calls": 1,
+     "actions": [
+      "self:sheet"
+     ],
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 2,
+     "ms": 21,
+     "calls": 1,
+     "actions": [
+      "self:fill"
+     ],
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 4,
+     "ms": 19,
+     "calls": 1,
+     "actions": [
+      "self:copy"
+     ],
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    },
+    {
+     "line": 3,
+     "ms": 17,
+     "calls": 1,
+     "actions": [
+      "self:fill"
+     ],
+     "source_hash": "2ad9a25ea6319fa72d84f38fbbad2d4848b4fd2e7343790dc528d5e87351cd54"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "fd1dc47099404ecfaf1d11ebc3b5bcce"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "reuse_args": {
+    "reuse": {
+     "run_id": "fd1dc47099404ecfaf1d11ebc3b5bcce"
+    }
+   },
+   "read_calls": 2,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "fd1dc47099404ecfaf1d11ebc3b5bcce",
+   "owner": "projects/수동모드"
+  }
+ }
+}

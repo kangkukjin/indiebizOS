@@ -1,0 +1,113 @@
+{
+ "who": "agent",
+ "mode": "base",
+ "passed": 19,
+ "total": 21,
+ "checks": [
+  {
+   "check": "ledger.xlsx 있음",
+   "ok": true,
+   "detail": "['ledger.xlsx']"
+  },
+  {
+   "check": "정산 행 수",
+   "ok": true,
+   "detail": "106 vs 106"
+  },
+  {
+   "check": "청구·미납·출석률이 수식",
+   "ok": true,
+   "detail": "106/106"
+  },
+  {
+   "check": "접수번호 집합",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "행별 재계산 값(청구·납부 빈칸·미납·출석률)",
+   "ok": false,
+   "detail": "[3, 5, 6, 7, 9, 11, 12, 14]"
+  },
+  {
+   "check": "미확인 건의 미납액이 숫자가 아님",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "요약 재계산 = oracle",
+   "ok": true,
+   "detail": "[106, 16551000, 13898000, 1546000, 7] vs [106, 16551000, 13898000, 1546000, 7]"
+  },
+  {
+   "check": "수료증 수",
+   "ok": true,
+   "detail": "25 vs 25"
+  },
+  {
+   "check": "수료증 대상 집합",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "수료증 본문·표에 남은 {{ 없음",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "수료증 머리글·바닥글에 남은 {{ 없음",
+   "ok": true,
+   "detail": "0건 []"
+  },
+  {
+   "check": "수료증 내용(이름·강좌·강사·출석)이 그 접수 건",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "안내서 수",
+   "ok": true,
+   "detail": "21 vs 21"
+  },
+  {
+   "check": "안내서 대상 집합",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "안내서 칸 값",
+   "ok": false,
+   "detail": "[('NT-2026-09-0007.pdf', {'notice_no': 'NT-2026-09-0007', 'name': '오소율', 'course': '금속 반지 세공', 'due': '210,000', 'paid': '105,000', 'unpaid': '105,000', 'deadline': '2026-10-25', 'half_paid': 'Yes'}), ('NT-2026-09-0012.pdf', {'notice_no': 'NT-2026-09-0012', 'name': '강소율', 'course': '금속 반지 세공', 'due': '168,000', 'paid': '158,000', 'unpaid': '10,000', 'deadline': '2026-10-25', 'half_paid': 'Yes'})]"
+  },
+  {
+   "check": "일부 납부 체크",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "manifest 행 수",
+   "ok": true,
+   "detail": "46"
+  },
+  {
+   "check": "report: 합계 3종",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "report: 미확인·더 낸·취소 건수",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "그린 증거(PNG) 있음",
+   "ok": true,
+   "detail": "46"
+  },
+  {
+   "check": "남은 문제를 사실대로(바닥글 미채움이 실재하면 보고서가 말함)",
+   "ok": true,
+   "detail": "실재=False 보고서 언급=False"
+  }
+ ]
+}

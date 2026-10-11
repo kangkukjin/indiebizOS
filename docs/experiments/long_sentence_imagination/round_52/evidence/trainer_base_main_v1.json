@@ -1,0 +1,228 @@
+{
+ "elapsed": 8.53,
+ "task_id": "r52-trainer-base-1791685736",
+ "inputs": {
+  "src": "trainer/base/input",
+  "out": "trainer/base/out"
+ },
+ "success": true,
+ "status": null,
+ "issues": [],
+ "error": null,
+ "value": {
+  "tried": true,
+  "ok": false
+ },
+ "plan_hash": "6afc70ca7e92110480a55dbd9313f788884ecb76282af2f6e87366a23f77838e",
+ "task_ref": "b4a53fc7ae144f6c9bd32d0af861dca0",
+ "usage": {
+  "steps": 27506,
+  "rows": 152,
+  "elapsed_ms": 8404,
+  "model": {
+   "requests": null,
+   "input": null,
+   "output": null,
+   "cache_read": null,
+   "cache_create": null
+  },
+  "tool_ms_by_line": [
+   {
+    "line": 64,
+    "ms": 1764,
+    "calls": 1,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "da1bbd119fb3d812013f6c5c8a7a192c8633be38acbbd134b1199ef541673f4b"
+   },
+   {
+    "line": 60,
+    "ms": 1487,
+    "calls": 1,
+    "actions": [
+     "self:sheet"
+    ],
+    "source_hash": "da1bbd119fb3d812013f6c5c8a7a192c8633be38acbbd134b1199ef541673f4b"
+   },
+   {
+    "line": 31,
+    "ms": 901,
+    "calls": 21,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "da1bbd119fb3d812013f6c5c8a7a192c8633be38acbbd134b1199ef541673f4b"
+   },
+   {
+    "line": 20,
+    "ms": 807,
+    "calls": 25,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "da1bbd119fb3d812013f6c5c8a7a192c8633be38acbbd134b1199ef541673f4b"
+   },
+   {
+    "line": 79,
+    "ms": 704,
+    "calls": 1,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "da1bbd119fb3d812013f6c5c8a7a192c8633be38acbbd134b1199ef541673f4b"
+   },
+   {
+    "line": 13,
+    "ms": 659,
+    "calls": 25,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "da1bbd119fb3d812013f6c5c8a7a192c8633be38acbbd134b1199ef541673f4b"
+   },
+   {
+    "line": 22,
+    "ms": 594,
+    "calls": 25,
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "da1bbd119fb3d812013f6c5c8a7a192c8633be38acbbd134b1199ef541673f4b"
+   },
+   {
+    "line": 30,
+    "ms": 454,
+    "calls": 21,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "da1bbd119fb3d812013f6c5c8a7a192c8633be38acbbd134b1199ef541673f4b"
+   },
+   {
+    "line": 59,
+    "ms": 114,
+    "calls": 1,
+    "actions": [
+     "self:sheet"
+    ],
+    "source_hash": "da1bbd119fb3d812013f6c5c8a7a192c8633be38acbbd134b1199ef541673f4b"
+   },
+   {
+    "line": 68,
+    "ms": 102,
+    "calls": 1,
+    "actions": [
+     "self:mkdir"
+    ],
+    "source_hash": "da1bbd119fb3d812013f6c5c8a7a192c8633be38acbbd134b1199ef541673f4b"
+   }
+  ]
+ },
+ "reuse": {
+  "read_calls": 0,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:copy",
+    "excluded_calls": 3
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   }
+  ]
+ }
+}

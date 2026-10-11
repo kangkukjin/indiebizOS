@@ -1,0 +1,301 @@
+{
+ "code": "#!ibl edition=2\n[engines:render]{path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx\",output_path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1\"}",
+ "elapsed": 1.054,
+ "response": {
+  "success": false,
+  "error": "HTML 렌더 실패: Page.goto: Download is starting\nCall log:\n  - navigating to \"file://outputs/long_sentence_imagination/2026-10-11_52%ED%9A%8C%EC%B0%A8/trainer/base/probe/c1.docx\", waiting until \"load\"\n",
+  "diagnostic": {
+   "code": "TOOL",
+   "kind": "runtime",
+   "message": "HTML 렌더 실패: Page.goto: Download is starting\nCall log:\n  - navigating to \"file://outputs/long_sentence_imagination/2026-10-11_52%ED%9A%8C%EC%B0%A8/trainer/base/probe/c1.docx\", waiting until \"load\"\n",
+   "frames": [],
+   "has_partial": false,
+   "partial": null,
+   "evidence": [
+    7
+   ],
+   "details": {},
+   "source_span": {
+    "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+    "start": 16,
+    "end": 283,
+    "line": 2,
+    "column": 1
+   }
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "27b09f128cb0fccbe83a3e3c5fb8c786551821ed0a560dff2934da7b08ce13e9",
+  "source_complete": false,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:38:156",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:169:282",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "record:32:283",
+    "invocation_id": 3,
+    "kind": "record",
+    "parents": [
+     1,
+     2
+    ]
+   },
+   {
+    "id": 4,
+    "node_id": "call:16:283",
+    "invocation_id": 4,
+    "kind": "invoke",
+    "parents": [
+     3
+    ],
+    "action": "engines:render",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "b8eefdb60190a6ba59d95b2040e839547601678a8e09729cc72cc56b147813ad",
+    "targets": {
+     "path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx",
+     "output_path": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1"
+    }
+   },
+   {
+    "id": 5,
+    "node_id": "call:16:283",
+    "invocation_id": 5,
+    "kind": "tool_failure",
+    "parents": [
+     4
+    ],
+    "action": "engines:render",
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": true
+   },
+   {
+    "id": 6,
+    "node_id": "call:16:283",
+    "invocation_id": 6,
+    "kind": "failure",
+    "parents": [
+     3,
+     4,
+     5
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   },
+   {
+    "id": 7,
+    "node_id": "sequence:15:283",
+    "invocation_id": 7,
+    "kind": "failure",
+    "parents": [
+     6
+    ],
+    "code": "TOOL",
+    "failure_kind": "runtime",
+    "incomplete": false
+   }
+  ],
+  "source_map": {
+   "sequence:15:283": {
+    "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+    "start": 15,
+    "end": 283,
+    "line": 1,
+    "column": 16
+   },
+   "call:16:283": {
+    "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+    "start": 16,
+    "end": 283,
+    "line": 2,
+    "column": 1
+   },
+   "record:32:283": {
+    "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+    "start": 32,
+    "end": 283,
+    "line": 2,
+    "column": 17
+   },
+   "literal:38:156": {
+    "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+    "start": 38,
+    "end": 156,
+    "line": 2,
+    "column": 23
+   },
+   "literal:169:282": {
+    "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+    "start": 169,
+    "end": 282,
+    "line": 2,
+    "column": 154
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "b8eefdb60190a6ba59d95b2040e839547601678a8e09729cc72cc56b147813ad",
+    "action": "engines:render",
+    "reuse_key": "ca1f9b4268d29c260da7506a99b18213c15bc7eabad133749994874e4c0f590b",
+    "error": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "HTML 렌더 실패: Page.goto: Download is starting\nCall log:\n  - navigating to \"file://outputs/long_sentence_imagination/2026-10-11_52%ED%9A%8C%EC%B0%A8/trainer/base/probe/c1.docx\", waiting until \"load\"\n",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      5
+     ],
+     "details": {}
+    },
+    "partial": [
+     "unit"
+    ],
+    "arguments": [
+     "record",
+     [
+      [
+       "path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1.docx"
+       ]
+      ],
+      [
+       "output_path",
+       [
+        "scalar",
+        "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/c1"
+       ]
+      ]
+     ]
+    ],
+    "argument_evidence": [
+     3
+    ],
+    "argument_incomplete": false
+   }
+  ],
+  "usage": {
+   "steps": 5,
+   "rows": 0,
+   "elapsed_ms": 1035,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "call:16:283",
+     "steps": 1,
+     "location": {
+      "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+      "start": 16,
+      "end": 283,
+      "line": 2,
+      "column": 1
+     }
+    },
+    {
+     "node_id": "literal:169:282",
+     "steps": 1,
+     "location": {
+      "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+      "start": 169,
+      "end": 282,
+      "line": 2,
+      "column": 154
+     }
+    },
+    {
+     "node_id": "literal:38:156",
+     "steps": 1,
+     "location": {
+      "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+      "start": 38,
+      "end": 156,
+      "line": 2,
+      "column": 23
+     }
+    },
+    {
+     "node_id": "record:32:283",
+     "steps": 1,
+     "location": {
+      "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+      "start": 32,
+      "end": 283,
+      "line": 2,
+      "column": 17
+     }
+    },
+    {
+     "node_id": "sequence:15:283",
+     "steps": 1,
+     "location": {
+      "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe",
+      "start": 15,
+      "end": 283,
+      "line": 1,
+      "column": 16
+     }
+    }
+   ],
+   "steps_other": 0,
+   "steps_by_line": [
+    {
+     "line": 2,
+     "steps": 4,
+     "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe"
+    },
+    {
+     "line": 1,
+     "steps": 1,
+     "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 2,
+     "ms": 736,
+     "calls": 1,
+     "actions": [
+      "engines:render"
+     ],
+     "source_hash": "ab78c0c58046db32990505f5e23c729c0de358c821c17f68bed393d0a4ac4ffe"
+    }
+   ]
+  },
+  "resume": {
+   "run_id": "c771745ba64e43f38d5bd2faad1de1a9"
+  },
+  "resumed": false,
+  "run_status": "interrupted",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "c771745ba64e43f38d5bd2faad1de1a9",
+   "owner": "projects/수동모드"
+  }
+ }
+}

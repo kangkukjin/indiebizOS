@@ -1,0 +1,106 @@
+{
+ "code": "#!ibl edition=2\n[table:document]{markdown:\"x\",format:\"pdf\",output_path:\"outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/probe/x.pdf\"}",
+ "elapsed": 0.293,
+ "response": {
+  "edition": 2,
+  "mode": "check",
+  "executed": false,
+  "ok": false,
+  "status": "invalid",
+  "issues": [
+   {
+    "code": "UNKNOWN_ARGUMENT",
+    "message": "알 수 없는 인자: output_path. 사용 가능한 인자: as, blocks, caption_field, criteria, filename, format, group_by, items, markdown, meta, op, project_id, scope, src_field, target, theme, title",
+    "source_span": {
+     "source_hash": "ea010d95f70c332d98cc6ef246f552762f85a67884d8dfddf919f3160292b145",
+     "start": 16,
+     "end": 188,
+     "line": 2,
+     "column": 1
+    },
+    "call_path": [],
+    "location": {
+     "source_hash": "ea010d95f70c332d98cc6ef246f552762f85a67884d8dfddf919f3160292b145",
+     "start": 16,
+     "end": 188,
+     "line": 2,
+     "column": 1,
+     "source": "<program>",
+     "uri": "ibl://program",
+     "end_line": 2,
+     "end_column": 173,
+     "offset_encoding": "unicode-codepoints"
+    },
+    "rule": "UNKNOWN_ARGUMENT",
+    "severity": "error",
+    "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."
+   }
+  ],
+  "guards": [],
+  "guards_total": 1,
+  "guards_inner": 0,
+  "guards_omitted": 1,
+  "result_type": "Record",
+  "effects": [
+   "write_external"
+  ],
+  "functions": {},
+  "plan_hash": "17f3f97f9262a8966adae603c674ac4daa806e9ff96e238fcee2f048231da57f",
+  "dependencies": {
+   "source": "ea010d95f70c332d98cc6ef246f552762f85a67884d8dfddf919f3160292b145",
+   "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+   "calls": {},
+   "input_types": {},
+   "source_map": [
+    {
+     "name": "<program>",
+     "start": 0,
+     "end": 188
+    }
+   ],
+   "contracts": "6794a8d49705cf1744c7b1920e778699c747a709f7408df215bbefee176db71a",
+   "edition": "54ca5ff74b6384aa240d37c9129f589c10a5437b66cceb2d2b3420d19d578792",
+   "semantics": "e5e2f2e0ee3394f50b375f422850618284a8ce7cb900bf6b294c95d6bf8e1755",
+   "expressions": "8b1374449bdb861758d2d12b149fae44ebb72cfde1919d26ea2d1cdeae740050",
+   "core": "bb1fc71dba5edc3fd11a981b059a2a1d80209692523c7f68e12cee0b84f67b9a"
+  },
+  "source_hash": "ea010d95f70c332d98cc6ef246f552762f85a67884d8dfddf919f3160292b145",
+  "capabilities": [
+   "ibl-edition/2",
+   "ibl-value/1"
+  ],
+  "preflight": {
+   "status": "analyzed",
+   "declared_ai_visits_upper_bound": 0,
+   "unknowns": [],
+   "warnings": [],
+   "warnings_omitted": 0,
+   "note": "선언된 호출의 정적 안내입니다. 승인 안내의 방문 상한은 실제 승인 횟수가 아닙니다. 경고 부재도 승인 불필요의 보증이 아니며, 도구 내부 호출·토큰·실행 시간·업무 품질은 보증하지 않습니다.",
+   "actions": [
+    "table:document"
+   ]
+  },
+  "warnings": [],
+  "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+  "execution_note": "검사만 수행했습니다. 도구 실행·파일 생성은 하지 않았습니다.",
+  "next_action": "진단 위치를 수정한 뒤 다시 검사하세요.",
+  "runtime_checks": {
+   "total": 1,
+   "informative": 1
+  },
+  "guards_ref": {
+   "id": "340b0f4966b60a6a9ad6e8df53aa6c9a7e10efd87f0c8ac4c21b70e5195d43f3",
+   "chars": 726,
+   "read_args": {
+    "id": "340b0f4966b60a6a9ad6e8df53aa6c9a7e10efd87f0c8ac4c21b70e5195d43f3",
+    "path": [
+     "guards"
+    ],
+    "offset": 0,
+    "limit": 60000
+   }
+  },
+  "success": false,
+  "error": "실행 전 검사에서 거절했습니다: 알 수 없는 인자: output_path. 사용 가능한 인자: as, blocks, caption_field, criteria, filename, format, group_by, items, markdown, meta, op, project_id, scope, src_field, target, theme, title (UNKNOWN_ARGUMENT)"
+ }
+}

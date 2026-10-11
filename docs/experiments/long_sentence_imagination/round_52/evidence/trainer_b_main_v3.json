@@ -1,0 +1,268 @@
+{
+ "elapsed": 19.26,
+ "task_id": "r52-trainer-b-1791685881",
+ "inputs": {
+  "src": "trainer/b/input",
+  "out": "trainer/b/out"
+ },
+ "success": true,
+ "status": null,
+ "issues": [],
+ "error": null,
+ "value": {
+  "db_sum": {
+   "rows": 106,
+   "due": 16551000,
+   "paid": 13898000,
+   "unpaid": 1546000,
+   "unknown": 7
+  },
+  "xl_sum": {
+   "rows": 106,
+   "due": 16551000,
+   "paid": 13898000,
+   "unpaid": 1546000,
+   "unknown": 7
+  },
+  "sum_match": true,
+  "ledger_rows": 106,
+  "certificates": 41,
+  "notices": 21,
+  "unknown": 7,
+  "over": 6,
+  "cancelled": 7,
+  "cert_left": 0,
+  "docx_draw": {
+   "tried": true,
+   "ok": false
+  },
+  "flagged": 0,
+  "seen": [
+   {
+    "no": "HB-N-2026-09-0025",
+    "name": "제갈 O'Neil & 아들 <공방>",
+    "png": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/b/out/shots/HB-N-2026-09-0025_p1.png",
+    "seen": {
+     "answer": "**네, 모든 글자가 잘리거나 넘치거나 깨지지 않고 보입니다.** 다만 띄어쓰기가 원문과 다릅니다.\n\n**보이는 그대로 옮기면:** `제갈   O'Neil & 아들   < 공방>`\n\n- 제갈, O, ', N, e, i, l, &, 아들, <, 공방, > 가 모두 빠짐없이 보입니다.\n- 네모 상자(□) 같은 깨진 글자나 HTML 이스케이프(`&amp;`, `&lt;` 등)는 없습니다.\n- 글자가 오른쪽 칸 밖으로 넘치거나 잘린 곳도 없습니다.\n\n**문제:** 한글 앞뒤 공백이 지나치게 넓게 찍히고, 원문에 없는 공백이 `<`와 `공방` 사이에 끼어 `<공방>`이 `< 공방>`으로 보입니다. Course 칸의 `금속   반지   세공`도 간격이 똑같이 넓어서, 한글 글꼴 대체(폴백)나 자간 처리 문제로 보입니다. 이미지만으로 원인을 단정할 수는 없습니다.",
+     "success": true,
+     "message": "**네, 모든 글자가 잘리거나 넘치거나 깨지지 않고 보입니다.** 다만 띄어쓰기가 원문과 다릅니다.\n\n**보이는 그대로 옮기면:** `제갈   O'Neil & 아들   < 공방>`\n\n- 제갈, O, ', N, e, i, l, &, 아들, <, 공방, > 가 모두 빠짐없이 보입니다.\n- 네모 상자(□) 같은 깨진 글자나 HTML 이스케이프(`&amp;`, `&lt;` 등)는 없습니다.\n- 글자가 오른쪽 칸 밖으로 넘치거나 잘린 곳도 없습니다.\n\n**문제:** 한글 앞뒤 공백이 지나치게 넓게 찍히고, 원문에 없는 공백이 `<`와 `공방` 사이에 끼어 `<공방>`이 `< 공방>`으로 보입니다. Course 칸의 `금속   반지   세공`도 간격이 똑같이 넓어서, 한글 글꼴 대체(폴백)나 자간 처리 문제로 보입니다. 이미지만으로 원인을 단정할 수는 없습니다."
+    }
+   }
+  ],
+  "problems": [
+   "수료증(DOCX)은 그려 보지 못함 — 그리기가 DOCX 를 받지 않는다. 본문 글자 재독과 남은 자리 조회로만 확인했고, 바닥글·글자 넘침은 미확인"
+  ]
+ },
+ "plan_hash": "12a68b072bf455d23743f528c0f60b9bb2b8c1650f2ba818e85208a56543ee16",
+ "task_ref": "95527552768347d489bfd35a740fa938",
+ "usage": {
+  "steps": 32549,
+  "rows": 169,
+  "elapsed_ms": 19116,
+  "model": {
+   "requests": 1,
+   "input": 14438,
+   "output": 695,
+   "cache_read": 8905,
+   "cache_create": 5529
+  },
+  "tool_ms_by_line": [
+   {
+    "line": 101,
+    "ms": 11242,
+    "calls": 1,
+    "actions": [
+     "engines:image_read"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 77,
+    "ms": 1550,
+    "calls": 1,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 20,
+    "ms": 1295,
+    "calls": 41,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 73,
+    "ms": 983,
+    "calls": 1,
+    "actions": [
+     "self:sheet"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 13,
+    "ms": 903,
+    "calls": 41,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 22,
+    "ms": 898,
+    "calls": 41,
+    "actions": [
+     "self:read"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 31,
+    "ms": 811,
+    "calls": 21,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 30,
+    "ms": 379,
+    "calls": 21,
+    "actions": [
+     "self:fill"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 38,
+    "ms": 269,
+    "calls": 1,
+    "actions": [
+     "engines:render"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   },
+   {
+    "line": 72,
+    "ms": 35,
+    "calls": 1,
+    "actions": [
+     "self:sheet"
+    ],
+    "source_hash": "caa5cc808331b52a6ade958061350f3bc7740050b70a6f7f693f655736fa63e3"
+   }
+  ]
+ },
+ "reuse": {
+  "read_calls": 0,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:delete",
+    "excluded_calls": 3
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   },
+   {
+    "reason": "unknown_write_resources",
+    "action": "self:fill",
+    "excluded_calls": 1
+   }
+  ]
+ }
+}

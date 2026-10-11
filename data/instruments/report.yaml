@@ -31,7 +31,7 @@ modes:
           - {value: "~workspace/outputs/housing_reports",   label: 부동산 발굴 보고서}
           - {value: "~workspace/outputs/ai_tips_reports",   label: 유튜브 AI 팁 보고서}
     # 최신 1건 = 찾기 >> 제목 내림차순 >> 1건; 없으면 빈 blocks 로 끝(empty 문구). [self:read] 는 Document{text,blocks,data}
-    action: '$l = [self:file_find]{pattern: "*report_*.md", path: $folder}@hub >> [table:sort]{by: "title", descending: true} >> [table:take]{n: 1}; [if: len($l) == 0] { return {blocks: [], items: []} } [self:read]{path: $l[0].url}@hub'
+    action: '$f = [self:file_find]{pattern: "*report_*.md", path: $folder}@hub; $l = $f.items >> [table:sort]{by: "title", descending: true} >> [table:take]{n: 1}; [if: len($l) == 0] { return {blocks: [], items: []} } [self:read]{path: $l[0].url}@hub'
     view:
       - type: blocks
         from: blocks
@@ -43,7 +43,7 @@ modes:
     buttons:
       - label: 📤 폰에 저장·공유
         phone_only: true
-        action: '$l = [self:file_find]{pattern: "*report_*.md", path: $folder}@hub >> [table:sort]{by: "title", descending: true} >> [table:take]{n: 1}; $d = [self:read]{path: $l[0].url}@hub; [limbs:phone]{op: "share", content: $d.text, filename: "report.md", mime: "text/markdown"}'
+        action: '$f = [self:file_find]{pattern: "*report_*.md", path: $folder}@hub; $l = $f.items >> [table:sort]{by: "title", descending: true} >> [table:take]{n: 1}; $d = [self:read]{path: $l[0].url}@hub; [limbs:phone]{op: "share", content: $d.text, filename: "report.md", mime: "text/markdown"}'
 
   # ── 목록: 선택 타입의 전체 보고서(최신순), 클릭하면 본문 ──
   - name: 목록
@@ -58,7 +58,7 @@ modes:
           - {value: "~workspace/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
           - {value: "~workspace/outputs/housing_reports",   label: 부동산 발굴 보고서}
           - {value: "~workspace/outputs/ai_tips_reports",   label: 유튜브 AI 팁 보고서}
-    action: '{items: [self:file_find]{pattern: "*report_*.md", path: $folder}@hub >> [table:sort]{by: "title", descending: true}}'
+    action: '$f = [self:file_find]{pattern: "*report_*.md", path: $folder}@hub; {items: $f.items >> [table:sort]{by: "title", descending: true}}'
     view:
       - type: card_list
         from: items

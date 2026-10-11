@@ -2,7 +2,11 @@ module indiebiz-helper
 
 go 1.22
 
-require github.com/gorilla/websocket v1.5.3
+require (
+ github.com/gorilla/websocket v1.5.3
+ github.com/creack/pty v1.1.24
+ github.com/UserExistsError/conpty v0.1.4
+)
 
 require modernc.org/sqlite v1.34.5
 

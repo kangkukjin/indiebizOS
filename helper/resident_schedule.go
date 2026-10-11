@@ -23,6 +23,13 @@ func residentObservation(j Job) bool {
 		(c.Op == "shell" && c.Mode == "observe" && c.Timeout >= 1 && c.Timeout <= 10)
 }
 
+func residentTerminalJob(j Job) bool {
+	var c struct {
+		Op string `json:"op"`
+	}
+	return json.Unmarshal([]byte(j.Code), &c) == nil && c.Op == "terminal"
+}
+
 func (r *residentRuntime) schedule() error {
 	// The random job ID is not submission order. Persist receipt order so it
 	// survives reconnect/restart, including a fallback for old queued records.
@@ -57,7 +64,8 @@ func (r *residentRuntime) schedule() error {
 			break
 		}
 		observation := residentObservation(v.Job)
-		if (observation && r.observing >= 1) || (!observation && len(r.active)-r.observing >= 2) {
+		terminal := residentTerminalJob(v.Job)
+		if (observation && r.observing >= 1) || (terminal && r.terminals >= 2) || (!observation && !terminal && len(r.active)-r.observing-r.terminals >= 2) {
 			r.mu.Unlock()
 			continue // A full work lane must not hide checks later in the queue.
 		}
@@ -75,9 +83,12 @@ func (r *residentRuntime) schedule() error {
 		if observation {
 			r.observing++
 		}
+		if terminal {
+			r.terminals++
+		}
 		r.wg.Add(1)
 		r.mu.Unlock()
-		go func(v residentRecord, observation bool) {
+		go func(v residentRecord, observation, terminal bool) {
 			defer r.wg.Done()
 			defer cancel()
 			result := r.execute(ctx, v.Job)
@@ -91,8 +102,11 @@ func (r *residentRuntime) schedule() error {
 			if observation {
 				r.observing--
 			}
+			if terminal {
+				r.terminals--
+			}
 			r.mu.Unlock()
-		}(v, observation)
+		}(v, observation, terminal)
 	}
 	return nil
 }

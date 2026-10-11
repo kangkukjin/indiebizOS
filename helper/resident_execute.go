@@ -151,6 +151,8 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		c.Path = filepath.Join(dir, c.Path)
 	}
 	switch c.Op {
+	case "terminal":
+		return r.terminal(ctx, j)
 	case "shell":
 		var cmd *exec.Cmd
 		if runtime.GOOS == "windows" {

@@ -115,7 +115,7 @@ LAYERS = {
     },
     "services": {
         "research_library", "research_capture", "research_threads", "research_view",
-        "resident_pcs",
+        "resident_pcs", "resident_terminal",
         "launcher_ops", "chat_room_ops", "warehouse_ops", "warehouse_admin", "channel_settings_ops", "media_ops",   # ⑩ 몸의 명사 생애주기(2026-10-05)
         "spreadsheet_grid", "spreadsheet_templates", "spreadsheet_conversion_types", "spreadsheet_formats", "spreadsheet_changes", "spreadsheet_imports", "spreadsheet_workspace", "spreadsheet_files", "document_hwp", "document_pdf", "document_formats", "document_pages", "document_imports", "document_office_ai", "document_creation", "document_office", "resource_links", "office_resources", "office_sessions", "document_workspace", "coding_git", "coding_projects", "workspace_sessions",
         "record_dispatch", "record_adapters",

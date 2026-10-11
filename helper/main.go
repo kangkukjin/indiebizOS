@@ -117,6 +117,9 @@ const (
 var client = &http.Client{Timeout: 90 * time.Second}
 
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == "--resident-terminal" {
+		os.Exit(residentTerminalMain(os.Args[2]))
+	}
 	if len(os.Args) == 3 && os.Args[1] == "--resident-process" {
 		os.Exit(residentProcessMain(os.Args[2]))
 	}

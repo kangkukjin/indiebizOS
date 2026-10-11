@@ -108,12 +108,14 @@ def update_helper(target):
     return {**receipt, "state": "updating", "sha256": status["latest"]}
 
 
-def submit(target, command, request_id=None, *, allow_update=False):
+def submit(target, command, request_id=None, *, allow_update=False, allow_terminal=False):
     rec = resolve(target)
     allowed = {"shell", "read", "write", "list", "info", "screen", "click", "move", "type",
                "key", "scroll", "drag", "transfer", "media", "wake"}
     if allow_update:  # only update_helper(); never reachable from an agent's command
         allowed = allowed | {"update"}
+    if allow_terminal:
+        allowed = allowed | {"terminal"}
     op = command.get("op", "shell")
     if op not in allowed:
         raise ValueError("unsupported_resident_operation")

@@ -1,12 +1,13 @@
-/** PC registration belongs to the cockpit; tasks are requested through the central AI. */
+/** Registered PCs: owner workbench and the shared AI execution infrastructure. */
 import { useCallback, useEffect, useState } from 'react';
 import { Usb, Loader2, Check, Trash2, ChevronDown, ChevronRight, Copy, FolderOpen, RefreshCw, ArrowUpCircle } from 'lucide-react';
 import { api } from '../../lib/api';
+import { RemotePCWorkbench } from '../remote-pc/RemotePCWorkbench';
 
 type Registration = {
   state: 'active' | 'removal_pending' | 'removed';
   paused?: boolean;
-  capabilities?: { os?: string; hostname?: string };
+  capabilities?: { os?: string; hostname?: string; terminal?: boolean };
 };
 type Helper = { state: 'unknown' | 'current' | 'manual' | 'available' | 'updating'; rolled_back?: boolean };
 type PC = { alias: string; device_id: string; connected: boolean; revoked?: boolean; registration: Registration; helper?: Helper };
@@ -14,6 +15,7 @@ type USB = { folder: string; ready: boolean };
 type PCList = { items: PC[]; usb: USB };
 
 export function LimbSwitch() {
+  const [workbench, setWorkbench] = useState<PC | null>(null);
   const [open, setOpen] = useState(false);
   const [pcs, setPCs] = useState<PC[]>([]);
   const [usb, setUSB] = useState<USB | null>(null);
@@ -81,6 +83,7 @@ export function LimbSwitch() {
 
   return (
     <div className="rounded-lg border border-stone-200 bg-white/60 text-[12px]">
+      {workbench && <RemotePCWorkbench key={workbench.device_id} device={workbench.device_id} alias={workbench.alias} terminal={!!workbench.registration.capabilities?.terminal} onClose={() => setWorkbench(null)} />}
       <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 px-3 py-2 text-stone-600 hover:text-stone-800">
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         <Usb size={14} /><span className="font-medium">손발 (USB)</span>
@@ -132,13 +135,14 @@ export function LimbSwitch() {
                 className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-600 hover:text-emerald-700 disabled:opacity-50">
                 {busy === pc.device_id || pc.helper.state === 'updating' ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpCircle size={12} />}헬퍼 교체
               </button>}
+            <button onClick={() => setWorkbench(pc)} disabled={!pc.connected || pc.registration.state !== 'active' || pc.registration.paused} className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">작업창</button>
             <button onClick={() => void remove(pc)} disabled={busy !== null || pc.registration.state !== 'active'}
               title="등록 해제 및 원격 헬퍼 제거" className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-500 hover:text-red-600 disabled:opacity-50">
               {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}해제
             </button>
           </li>)}
         </ul>
-        <p className="mt-3 text-[11px] leading-relaxed text-stone-500">작업은 중앙 AI에게 “맥12에 음악 틀어줘”, “맥12에서 파일 가져와”처럼 부탁하세요. 해제하면 헬퍼와 자동 시작 설정이 제거되며 작업 파일은 남습니다.</p>
+        <p className="mt-3 text-[11px] leading-relaxed text-stone-500">작업창에서 터미널·파일·작업 로그를 직접 사용하거나 중앙 AI에게 작업을 부탁하세요. 해제하면 헬퍼와 자동 시작 설정이 제거되며 작업 파일은 남습니다.</p>
         <details className="mt-2 text-[11px] text-stone-400">
           <summary className="cursor-pointer">USB를 분실했을 때</summary>
           <p className="my-1">USB 등록 키를 폐기하면 그 USB로 새 PC를 등록할 수 없습니다. 이미 등록된 PC는 계속 연결됩니다. 새 USB는 폴더를 다시 준비해 복사하세요.</p>

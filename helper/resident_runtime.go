@@ -35,6 +35,7 @@ type residentRuntime struct {
 	mu          sync.Mutex
 	active      map[string]context.CancelFunc
 	observing   int
+	terminals   int
 	stopping    bool
 	localPaused bool
 	updating    bool      // a self-update is replacing the executable; start no new job
@@ -58,6 +59,7 @@ func (r *residentRuntime) capabilities() map[string]interface{} {
 	mpv, _ := findMediaPlayer()
 	_, afplay := exec.LookPath("afplay")
 	caps := map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv != "" || afplay == nil, "media_player": mpv, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "screen_observation": true, "screen_cancel": true, "media_volume": true, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
+	caps["terminal"] = terminalAvailable()
 	caps["helper_sha256"], caps["go"], caps["self_update"] = residentSelfDigest(), runtime.Version(), residentCanSelfUpdate(r.cfg)
 	if st, e := residentLoadUpdate(r.cfg.DataDir); e == nil && st.Outcome != "" {
 		caps["helper_update"] = map[string]interface{}{"outcome": st.Outcome, "to": st.To, "started": st.Started}

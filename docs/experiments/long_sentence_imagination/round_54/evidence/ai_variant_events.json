@@ -1,0 +1,902 @@
+[
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 2432,
+      "call_id": "dc888e2a3a0248fcbd15429f1e6bab72",
+      "event": "usage",
+      "input": 3170,
+      "latency_ms": 812,
+      "model": "deepseek-flash",
+      "output": 2,
+      "parent_call_id": null,
+      "phase": "classify",
+      "provider": "OpenAI",
+      "role": "oneshot:classify",
+      "round_index": 1,
+      "source": "gear:최대|분류→경량",
+      "tier": "경량"
+    }
+  },
+  {
+    "kind": "recall.presented",
+    "data": {
+      "blocks": [
+        {
+          "chars": 1431,
+          "ids": [
+            "4831",
+            "4775"
+          ],
+          "meta": {
+            "refs": 2,
+            "top_code": ""
+          },
+          "ms": 342.6,
+          "source": "hippocampus",
+          "status": "ok",
+          "tag": "execution_memory"
+        },
+        {
+          "chars": 2575,
+          "ids": [
+            "script:나레이션생성",
+            "script:팁행source중첩",
+            "script:판정관용구"
+          ],
+          "ms": 13.4,
+          "source": "reusable_capabilities",
+          "status": "ok",
+          "tag": "reusable_capabilities"
+        },
+        {
+          "chars": 883,
+          "ids": [],
+          "meta": {
+            "branches": 10
+          },
+          "ms": 13.1,
+          "source": "memory_map",
+          "status": "ok",
+          "tag": "memory_map"
+        },
+        {
+          "chars": 741,
+          "ids": [
+            "339",
+            "480",
+            "453"
+          ],
+          "meta": {
+            "branches": [
+              "indiebizOS/운영·수리",
+              "보고서",
+              "보고서/AI 동향",
+              "보고서/부동산 발굴"
+            ],
+            "outside_beats_inside": false
+          },
+          "ms": 53.5,
+          "source": "recalled_memory",
+          "status": "ok",
+          "tag": "recalled_memory"
+        },
+        {
+          "chars": 2262,
+          "ids": [],
+          "meta": {
+            "branches": 43
+          },
+          "ms": 60.3,
+          "source": "guide_map",
+          "status": "ok",
+          "tag": "guide_map"
+        },
+        {
+          "chars": 237,
+          "ids": [
+            "맥12"
+          ],
+          "ms": 1.9,
+          "source": "connected_limbs",
+          "status": "ok",
+          "tag": "connected_limbs"
+        },
+        {
+          "chars": 509,
+          "ids": [],
+          "ms": 253.7,
+          "source": "pending_repair",
+          "status": "ok",
+          "tag": "repair_outcome"
+        },
+        {
+          "chars": 1218,
+          "ids": [],
+          "ms": 2.3,
+          "source": "decision_ledger",
+          "status": "ok",
+          "tag": "decision_ledger"
+        },
+        {
+          "chars": 2926,
+          "ids": [],
+          "ms": 0.0,
+          "source": "pursuit",
+          "status": "ok",
+          "tag": "pursuit"
+        },
+        {
+          "chars": 182,
+          "ids": [
+            "basics.14.4a02004ab78c",
+            "basics.14.80aab8a91c17",
+            "basics.07.3e29c7e3f21b",
+            "basics.01.45ec909f3017"
+          ],
+          "ms": 65.9,
+          "source": "method_map",
+          "status": "selected",
+          "tag": "method_map"
+        },
+        {
+          "chars": 613,
+          "ids": [
+            "atlas.law.contract_review",
+            "atlas.data.data_normalization"
+          ],
+          "meta": {
+            "picked": 2
+          },
+          "ms": 86.7,
+          "source": "world_memory",
+          "status": "ok",
+          "tag": "world_map"
+        }
+      ],
+      "channel": "pipeline",
+      "recall_id": "7cff98161ef44dff82009296b8d686fb",
+      "reflex": {
+        "code": "",
+        "score": 0.622
+      },
+      "request_type": "THINK"
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 256,
+      "call_id": "521fc410907a44b19222e210742995d6",
+      "event": "usage",
+      "input": 1815,
+      "latency_ms": 610,
+      "model": "deepseek-flash",
+      "output": 3,
+      "parent_call_id": null,
+      "phase": "classify",
+      "provider": "OpenAI",
+      "role": "oneshot:classify",
+      "round_index": 1,
+      "source": "gear:최대|분류→경량",
+      "tier": "경량"
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 0,
+      "cache_read": 896,
+      "call_id": "1c321b2f3f654961a92043df611551e1",
+      "event": "usage",
+      "input": 3861,
+      "latency_ms": 6219,
+      "model": "deepseek-flash",
+      "output": 1724,
+      "parent_call_id": null,
+      "phase": "background",
+      "provider": "OpenAI",
+      "role": "oneshot:background",
+      "round_index": 1,
+      "source": "gear:최대|분류→경량",
+      "tier": "경량"
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "id": "03a29c69a03247c297a87f1ae3aa175d",
+      "input": {
+        "chars": 434,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$d = [self:read]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_54회차/ai/variant/input.json\\\"}\\n$c = $d.data.cases\\n$pairs = $c >> [table:each]{ return {law:$it.law, no:$it.no, ev:$it.event_date} } >> [table:dedup]{by:[\\\"law\\\",\\\"no\\\",\\\"ev\\\"]}\\nreturn {as_of:$d.data.as_of, n:len($c), keys:keys($d.data), sup:get($d.data,\\\"supplements\\\"), pairs:$pairs, c0:$c[0]}\"}",
+        "id": "2b101b18bea84bf4d573178b848b40c703d96f05a5a339e036e6f1d7ddfb2ea9",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 19,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717139.18176
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "check_rejected": false,
+      "elapsed_s": 0.325,
+      "evidence": {
+        "chars": 5073,
+        "excerpt": "{\"success\": true, \"value\": {\"as_of\": \"2026-10-11\", \"n\": 30, \"keys\": [\"as_of\", \"cases\", \"supplements\"], \"sup\": [{\"key\": \"english\", \"target\": \"eng_law\", \"query\": \"주택임대차보호법\"}, {\"key\": \"term\", \"target\": \"law_term\", \"query\": \"대항력\"}], \"pairs\": {\"items\": [{\"law\": \"주택임대차보호법\", \"no\": \"제88888조\", \"ev\": \"2010-01-01\"}, {\"law\": \"가상임대차자동승소법\", \"no\": \"제1조\", \"ev\": \"2010-01-01\"}, {\"law\": \"민법\", \"no\": \"제99999조\", \"ev\": \"2010-01-01\"}, {\"law\": \"민법\", \"no\": \"제623조\", \"ev\": \"2010-01-01\"}, {\"law\": \"상가건물 임대차보호법\", \"no\": \"제10조의4\", \"ev\": \"2010-01-01\"}, {\"law\": \"상가건물 임대차보호법\", \"no\": \"제10조\", \"ev\": \"2010-01-01\"}, {\"law\": \"주택임대차보호법\", \"no\": \"제7조\", \"ev\": \"2010-01-01\"}, {\"law\": \"주택임대차보호법\", \"no\": \"제6조의3\", \"ev\": \"2010-01-01\"}, {\"law\": \"주택임대차보호법\", \"no\": \"제3조의3\", \"ev\": \"2010-01-01\"}, {\"law\": \"주택임대차보호법\", \"no\": \"제3조\", \"ev\": \"2010-01-01\"}], \"count\": 10, \"success\": true}, \"c0\": {\"id\": \"L030\", \"law\": \"주택임대차보호법\", \"no\": \"제88888조\", \"event_date\": \"2010-01-01\", \"required_documents\": [\"계약서\", \"차임 내역\", \"통지 증거\"], \"documents\": [], \"statement\": \"",
+        "id": "7ca4d37772ab4d572ccf76d15b90b6c08be82641d8acd51282be7666340a28c6",
+        "integrity": "verified"
+      },
+      "id": "03a29c69a03247c297a87f1ae3aa175d",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 20,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717139.5059562
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "id": "f7bb2e0f2a00487ab9ede5bf09e2e2b2",
+      "input": {
+        "chars": 2197,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$out = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_54회차/ai/variant/out/_sources/\\\"\\n$names = [{law:\\\"주택임대차보호법\\\",f:\\\"housing\\\"},{law:\\\"상가건물 임대차보호법\\\",f:\\\"commercial\\\"},{law:\\\"민법\\\",f:\\\"civil\\\"},{law:\\\"가상임대차자동승소법\\\",f:\\\"virtual\\\"}]\\n$res = $names >> [table:each]{parallel:4}{\\n  $s = [sense:legal]{query:$it.law}\\n  $ex = filter($s.items, ($x)=> $x.title == $it.law)\\n  [self:write]{path:f\\\"${$out}search_${$it.f}.json\\\", content:json({law:$it.law, search_scope:get($s,\\\"search_scope\\\"), count:get($s,\\\"count\\\"), total:get($s,\\\"total\\\"), items:$s.items, exact:$ex})}\\n  [if: len($ex) == 1]{\\n    $d = [sense:legal]{id:$ex[0].id}\\n    [self:write]{path:f\\\"${$out}law_${$it.f}.json\\\", content:json({law:$d.law, items:$d.items})}\\n    return {law:$it.law, found:true, id:$ex[0].id, n:len($d.items), enforce:$d.law.enforce_date}\\n  }\\n  return {law:$it.law, found:false, n_exact:len($ex), scope:get($s,\\\"search_scope\\\"), count:get($s,\\\"cou",
+        "id": "23f06cc7098c5e92794a76cd0371bb1c1e9b2e51ced92dd1d0ead80d50d41a26",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 21,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717151.277436
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "check_rejected": false,
+      "elapsed_s": 6.64,
+      "evidence": {
+        "chars": 5114,
+        "excerpt": "{\"success\": true, \"value\": {\"laws\": [{\"law\": \"주택임대차보호법\", \"found\": true, \"id\": \"001248\", \"n\": 42, \"enforce\": \"2026-01-02\"}, {\"law\": \"상가건물 임대차보호법\", \"found\": true, \"id\": \"009276\", \"n\": 33, \"enforce\": \"2026-05-12\"}, {\"law\": \"민법\", \"found\": true, \"id\": \"001706\", \"n\": 1193, \"enforce\": \"2026-03-17\"}, {\"law\": \"가상임대차자동승소법\", \"found\": false, \"n_exact\": 0, \"scope\": \"name+body\", \"count\": 0}], \"eng\": [{\"title\": \"HOUSING LEASE PROTECTION ACT\", \"meta\": \"법률 · 법무부,국토교통부 · 20251001 · 20260102\", \"summary\": \"\", \"url\": \"https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=276291&viewCls=engLsInfoR\", \"date\": \"2026-01-02\", \"id\": \"001248\"}, {\"title\": \"ENFORCEMENT DECREE OF THE HOUSING LEASE PROTECTION ACT\", \"meta\": \"대통령령 · 법무부,국토교통부 · 20251230 · 20260102\", \"summary\": \"\", \"url\": \"https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=280995&viewCls=engLsInfoR\", \"date\": \"2026-01-02\", \"id\": \"004950\"}], \"term\": [{\"title\": \"대항력\", \"meta\": \"\", \"summary\": \"\", \"url\": \"\", \"id\": \"12789\"}, {\"title\": \"대항력이 인정되는 법인\", \"meta\": \"\", \"summary\": \"\", ",
+        "id": "83367c73a3f4042b7867f1e4fe0e0fe11d80d15414c6cb303ad384c5d597b8ca",
+        "integrity": "verified"
+      },
+      "id": "f7bb2e0f2a00487ab9ede5bf09e2e2b2",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 22,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717157.916917
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "id": "f26d3467cd8d4096b820c1daa38fb93a",
+      "input": {
+        "chars": 2762,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$a1 = \\\"BASE = sys.argv[1]\\\"\\n$b1 = \\\"BASE = '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_54회차/ai/variant'\\\"\\n$a2 = \\\"not_found = {'가상임대차자동승소법': {'scope': 'name+body', 'count': 0}}\\\"\\n$b2 = \\\"\\\"\\\"not_found = {}\\nsearch = {}\\nfor f in sorted(os.listdir(SRC)):\\n    if f.startswith('search_') and f not in ('search_eng_law.json', 'search_law_term.json'):\\n        s = ld(f); key = f[len('search_'):-5]\\n        if len(s['exact']) == 1:\\n            search[s['law']] = {'id': s['exact'][0]['id'], 'url': s['exact'][0]['url'], 'file': 'law_' + key + '.json', 'scope': s['search_scope'], 'count': s['count']}\\n        else:\\n            not_found[s['law']] = {'scope': s['search_scope'], 'count': s['count']}\\\"\\\"\\\"\\n$a3 = \\\"cases = []\\\"\\n$b3 = \\\"\\\"\\\"import re\\ndef stmt_check(c):\\n    m = re.search(r'고객은\\\\s*(.+?)\\\\s+(제\\\\d+조(?:의\\\\d+)?)', c.get('statement', ''))\\n    if not m:\\n        return {'status': '진술에서 인용 추출 불가', 'statement_law':",
+        "id": "4974fdae576eb277baea9e65afaec689dc30a7927d2e1a2c0d472e4f5f6c51b6",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 23,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717188.409164
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "check_rejected": false,
+      "elapsed_s": 0.318,
+      "evidence": {
+        "chars": 4678,
+        "excerpt": "{\"success\": false, \"error\": \"[자작 관문] 이 턴에 새 구현 코드 212줄(1개 파일)을 썼는데 세상의 도구를 한 번도 확인하지 않았다. 이 일을 업으로 하는 사람이 쓰는 도구가 이미 있다면 지금이 갈림길이다 — 표준 라이브러리로 다시 짠 것은 대개 장난감이 된다.\\n다음 한 걸음(둘 중 하나면 관문이 걷힌다):\\n  [self:read]{path: \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/world_tools.md\\\"}   # 이 일을 잘하는 도구가 표에 있나\\n  [self:install_lib]{package: \\\"<후보>\\\", check: true}  # 부작용 0 — 여러 개 물어도 된다\\n확인하고도 마땅한 도구가 없거나 이미 쓰고 있으면 그대로 이어서 써라 — 관문은 답이 아니라 확인을 요구한다. 방금 쓰려던 내용은 저장되지 않았으니 확인 뒤 같은 쓰기를 다시 보내라.\", \"diagnostic\": {\"code\": \"TOOL\", \"kind\": \"runtime\", \"message\": \"[자작 관문] 이 턴에 새 구현 코드 212줄(1개 파일)을 썼는데 세상의 도구를 한 번도 확인하지 않았다. 이 일을 업으로 하는 사람이 쓰는 도구가 이미 있다면 지금이 갈림길이다 — 표준 라이브러리로 다시 짠 것은 대개 장난감이 된다.\\n다음 한 걸음(둘 중 하나면 관문이 걷힌다):\\n  [self:read]{path: \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/world_tools.md\\\"}   # 이 일을 잘하는 도구가 표에 있나\\n  [self:install_lib]{package: \\\"<후보>\\\", check: true}  # 부작용 0 — 여러 개 물어도 된다\\n확인하고도 마땅한 도구가 없거나 이미 쓰고 있으면 그대로 이어서 써라 — 관문은 답이 아니라 확인을 요구한다. 방금 쓰려던 내용은 저장되지 않았으니 확인 뒤 같은 쓰기를 다",
+        "id": "8ae4269ba0b6d76c1170be34ee8120b813bbfc672f6bd72758892cda84cb857e",
+        "integrity": "verified"
+      },
+      "id": "f26d3467cd8d4096b820c1daa38fb93a",
+      "internal_tool_failures": 1,
+      "is_error": true,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 24,
+      "source_failures": 1,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717188.726223
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "id": "5565ba3347d04117a693b5ac57fcc143",
+      "input": {
+        "chars": 390,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$w0 = [self:read]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/world_tools.md\\\"}\\n$w = [self:write]{path:\\\"~turn/build_report_variant.py\\\", content:$입력.content}\\nreturn [try]{ [self:script]{path:$w.path, args:{}} }[catch]{ {ran:\\\"exit-check-files\\\"} }\", \"inputs\": {\"입력\": {\"$ref\": \"eff91a51fbcc8ac8be0fb87b7f3eacac3bb9a7d837bb180603a3cdc734ee2db9\"}}}",
+        "id": "1d2ffb481f1ba7f16221a1d1656edcbd16326c0fd83cfdb6e15b1c79e9524072",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 25,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717193.379925
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "check_rejected": false,
+      "elapsed_s": 0.662,
+      "evidence": {
+        "chars": 2852,
+        "excerpt": "{\"success\": true, \"value\": {\"ran\": \"exit-check-files\"}, \"value_wire\": {\"protocol\": \"ibl-value/1\", \"data\": [\"record\", [[\"ran\", [\"scalar\", \"exit-check-files\"]]]]}, \"edition\": 2, \"executed\": true, \"plan_hash\": \"2dcb1075acb1762cd8402bf3767742adf5a63b2514b63e51b35d6c2a505b6bad\", \"source_complete\": false, \"usage\": {\"steps\": 26, \"rows\": 0, \"elapsed_ms\": 642}, \"resume\": {\"run_id\": \"71d8c115d0de4deeb20ea0468a4d820c\"}, \"resumed\": false, \"run_status\": \"completed\", \"continuation\": {\"read_calls\": 0, \"state_change_possible\": true, \"read_exclusions\": [{\"reason\": \"unknown_write_resources\", \"write_call_id\": \"4a4dcaa94b23a416833ae29d65a9223ad11745d3f4eadc21b3857a1ed7d569ea\", \"action\": \"self:script\", \"location\": {\"source_hash\": \"d94db14dacb8d45a9941e73d3f71986b003bbb59d056fced43d8aeb8d2163098\", \"start\": 200, \"end\": 236, \"line\": 4, \"column\": 15}, \"excluded_calls\": 1}], \"read_exclusions_total\": 1, \"hint\": \"프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 ",
+        "id": "7768337953b594882542ed64c4512d587eb981d125589d09c705dbd4cb194e74",
+        "integrity": "verified"
+      },
+      "id": "5565ba3347d04117a693b5ac57fcc143",
+      "internal_tool_failures": 1,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 26,
+      "source_failures": 1,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717194.0411599
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "id": "7dc192259f194eaca471e37516e4ee22",
+      "input": {
+        "chars": 271,
+        "excerpt": "{\"command\": \"cd /Users/kangkukjin/Desktop/AI/indiebizOS && f=$(find data outputs -name build_report_variant.py -newer outputs/long_sentence_imagination/2026-10-11_54회차/ai/variant/input.json 2>/dev/null | head -1); echo \\\"$f\\\"; .venv/bin/python3 -I \\\"$f\\\" 2>&1 | tail -8\"}",
+        "id": "68864b097148a609e32e7614875397ebf15f92b90fc4233a54ed435f07cb713b",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "Bash",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 27,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717197.084518
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "check_rejected": false,
+      "elapsed_s": 0.078,
+      "evidence": {
+        "chars": 649,
+        "excerpt": "PreToolUse:Bash hook error: [\"/Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3\" \"/Users/kangkukjin/Desktop/AI/indiebizOS/backend/base/shell_shadow_gate.py\" \"/Users/kangkukjin/Desktop/AI/indiebizOS\"]: 셸 그림자 거절 — `find data outputs -name build_report_variant.py -newer …` 은(는) [self:file_find] 로 표현되는 일입니다. IBL 로:\n  [self:file_find]{pattern: \"build_report_variant.py\", path: \"data\"} & [self:file_find]{pattern: \"build_report_variant.py\", path: \"outputs\"} — execute_ibl 로 실행한다. 다른 param: pattern, hash, limit, query, min_size_mb, root_path. 셸은 IBL 낱말이 없는 일(git·pytest·빌드·등록 스크립트 실행·프로세스 조회)에만. 결과가 잘리면 셸로 갈아타지 말고 같은 낱말의 limit·범위 param 으로 좁혀라.\n",
+        "id": "8526ead2b46f7492360bf1287928cc7602fbaa1c6beaefc5bbb30dde2d453760",
+        "integrity": "verified"
+      },
+      "id": "7dc192259f194eaca471e37516e4ee22",
+      "internal_tool_failures": 0,
+      "is_error": true,
+      "kind": "tool.finished",
+      "name": "Bash",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 28,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717197.161838
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "id": "743d3f6da1d84475a0be3437cfa3c352",
+      "input": {
+        "chars": 205,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$r = [try]{ [self:script]{path:\\\"~turn/build_report_variant.py\\\", args:{}} }[catch]{ error_of($r) }\\nreturn [self:file_find]{pattern:\\\"build_report_variant.py\\\", path:\\\"data\\\"}\"}",
+        "id": "82b6cdb5ac0df22527e674d18295221d619cb967896c7a88cee506b5817db8c1",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 29,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717198.970927
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "check_rejected": true,
+      "elapsed_s": 0.443,
+      "evidence": {
+        "chars": 3741,
+        "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"UNBOUND\", \"message\": \"정의되지 않은 값: $r\", \"source_span\": {\"source_hash\": \"ccfab127a4ade00d70254ff25fc24e4ad4ee2b20c75d71783bff7254f07e68b4\", \"start\": 108, \"end\": 110, \"line\": 2, \"column\": 93}, \"call_path\": [], \"location\": {\"source_hash\": \"ccfab127a4ade00d70254ff25fc24e4ad4ee2b20c75d71783bff7254f07e68b4\", \"start\": 108, \"end\": 110, \"line\": 2, \"column\": 93, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 2, \"end_column\": 95, \"offset_encoding\": \"unicode-codepoints\"}, \"rule\": \"UNBOUND\", \"severity\": \"error\", \"hint\": \"이 위치 전에 값을 정의하거나 함수의 명시 인자로 전달하세요.\"}], \"guards\": [], \"guards_total\": 3, \"guards_inner\": 0, \"guards_omitted\": 3, \"result_type\": \"{items: List<Record⟨관측: title·meta·summary·url·name·size·mtime·mtime_ns·path·dir·is_dir⟩>}\", \"effects\": [\"read_external\", \"unknown\"], \"functions\": {}, \"plan_hash\": \"713cb87a4c44d0a12448d0667207f7d4351a27c8191882a172a2860c62717ae1\", \"dependenc",
+        "id": "9a2f32f227ea7ad1c3e7652e154d8ec6592137635d3836e70a6afd5aa15078f0",
+        "integrity": "verified"
+      },
+      "id": "743d3f6da1d84475a0be3437cfa3c352",
+      "internal_tool_failures": 0,
+      "is_error": true,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 30,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717199.413285
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "id": "166a155b34184cd780e56d491bed112b",
+      "input": {
+        "chars": 98,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\nreturn [self:script]{path:\\\"~turn/build_report_variant.py\\\", args:{}}\"}",
+        "id": "b4dd0d9f366a5ce7e3c737ba61d3487f8fdcb0359039a55238412ad81828a533",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 31,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717200.9460402
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "check_rejected": false,
+      "elapsed_s": 0.598,
+      "evidence": {
+        "chars": 4435,
+        "excerpt": "{\"success\": false, \"error\": \"Script 종료 코드 1. stderr 원문을 확인하세요.\", \"diagnostic\": {\"code\": \"SCRIPT_EXIT\", \"kind\": \"runtime\", \"message\": \"Script 종료 코드 1. stderr 원문을 확인하세요.\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [8], \"details\": {\"execution_id\": \"8f46f662a980438cbfdee67feff91fa1\", \"record\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/transient/32679150e2381b9facbb16e32aad85dda5669a1081cb857d30e61fb223185d63/executions/8f46f662a980438cbfdee67feff91fa1\", \"protocol\": \"file-script/1\", \"exit_code\": 1, \"expires_at\": 1792322001.4563022, \"source_hashes\": {\"build_report_variant.py\": \"d15b8f18a0e4f733c54067231383004e3a702d4844cad7ee92525dc9ee700453\"}, \"stdin_hash\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\", \"stdout\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/transient/32679150e2381b9facbb16e32aad85dda5669a1081cb857d30e61fb223185d63/executions/8f46f662a980438cbfdee67feff91fa1/stdout.log\", \"stderr\": \"/Users/kangkukjin/Des",
+        "id": "52b387cedc8e4bf12693bd0afd22c5325e968bb5cc5346d07a284d7efb004cce",
+        "integrity": "verified"
+      },
+      "id": "166a155b34184cd780e56d491bed112b",
+      "internal_tool_failures": 1,
+      "is_error": true,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 32,
+      "source_failures": 1,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717201.543273
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "id": "af0310981c6f4c7aa4915cff9086a15a",
+      "input": {
+        "chars": 213,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$a = [self:grep]{pattern:\\\"re.search|M.append\\\\\\\\('## 진술|M.append\\\\\\\\(f'접수 필드|\\\\\\\\|---\\\\\\\\|---\\\\\\\\|---\\\\\\\\|'\\\\\\\\)\\\", path:\\\"~turn/build_report_variant.py\\\", context:1}\\nreturn $a.items\"}",
+        "id": "0666673c78a8799eba20f2d62070b28127e638bd97dc07ea1efe6108cec22cbb",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 34,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717205.5125408
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "check_rejected": false,
+      "elapsed_s": 0.307,
+      "evidence": {
+        "chars": 4410,
+        "excerpt": "{\"success\": true, \"value\": [{\"파일\": \"script_runs/transient/32679150e2381b9facbb16e32aad85dda5669a1081cb857d30e61fb223185d63/work/build_report_variant.py\", \"줄번호\": 63, \"내용\": \"    m = re.search(r'고객은\\\\s*(.+?)\\\\s+(제\\\\d+조(?:의\\\\d+)?)', c.get('statement', ''))\", \"문맥\": \"62  def stmt_check(c):\\n63>     m = re.search(r'고객은\\\\s*(.+?)\\\\s+(제\\\\d+조(?:의\\\\d+)?)', c.get('statement', ''))\\n64      if not m:\"}, {\"파일\": \"script_runs/transient/32679150e2381b9facbb16e32aad85dda5669a1081cb857d30e61fb223185d63/work/build_report_variant.py\", \"줄번호\": 167, \"내용\": \"M.append('| 고객 기재 법령 | 결과 | 현행 시행일 | 인용 조 (현행 원문 존재) | 접수 | 링크 |\\\\n|---|---|---|---|---|---|')\", \"문맥\": \"166  M.append('## 법령별 대조 (같은 법은 한 번 조회해 공유)\\\\n')\\n167> M.append('| 고객 기재 법령 | 결과 | 현행 시행일 | 인용 조 (현행 원문 존재) | 접수 | 링크 |\\\\n|---|---|---|---|---|---|')\\n168  for s in sources:\"}, {\"파일\": \"script_runs/transient/32679150e2381b9facbb16e32aad85dda5669a1081cb857d30e61fb223185d63/work/build_report_variant.py\", \"줄번호\": 178, \"내용\": \"    M.append('| ID | 법령 | 조 | 인용 상태 ",
+        "id": "3ff2ca2b2ecee0a88e5724b7265bced5219d89a0cb152265fe102dd7b0092da4",
+        "integrity": "verified"
+      },
+      "id": "af0310981c6f4c7aa4915cff9086a15a",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 35,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717205.819191
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "id": "b528aaf3305d45808e25f8c0f003ed6a",
+      "input": {
+        "chars": 416,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n[self:edit]{path:\\\"~turn/build_report_variant.py\\\", start_line:186, end_line:192, new_string:$fix}\\nreturn [self:script]{path:\\\"~turn/build_report_variant.py\\\", args:{}}\", \"inputs\": {\"fix\": \"M.append('## 진술·접수 필드 인용 불일치\\\\n')\\nM.append(f'접수 필드(law·no)를 대조 기준으로 썼다. 진술 속 인용이 다른 건 {len(mm)}건 — 어느 쪽이 고객 의도인지 상담사 확인 필요.\\\\n')\\nif mm:\\n    M.append('| ID | 접수 필드 | 진술 속 인용 |\\\\n|---|---|---|')\"}}",
+        "id": "576811e52d5f6d65187d1aa91fbaab9908dca7a62e905f3c951da104025ede26",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 37,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717210.7056901
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "check_rejected": false,
+      "elapsed_s": 0.678,
+      "evidence": {
+        "chars": 4703,
+        "excerpt": "{\"success\": false, \"error\": \"종료했지만 결과 파일을 쓰지 않았습니다. stdout은 진단이며 값으로 해석하지 않습니다.\", \"diagnostic\": {\"code\": \"RESULT_MISSING\", \"kind\": \"runtime\", \"message\": \"종료했지만 결과 파일을 쓰지 않았습니다. stdout은 진단이며 값으로 해석하지 않습니다.\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [16], \"details\": {\"execution_id\": \"e94a85508d544e44a7a81202e01e977c\", \"record\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/transient/32679150e2381b9facbb16e32aad85dda5669a1081cb857d30e61fb223185d63/executions/e94a85508d544e44a7a81202e01e977c\", \"protocol\": \"file-script/1\", \"exit_code\": 0, \"expires_at\": 1792322011.298026, \"source_hashes\": {\"build_report_variant.py\": \"e05c323fd8ba4ed92b2eecf30cdcb0eb2f6b54b109812e4fbb12dda7287f9099\"}, \"stdin_hash\": \"44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\", \"stdout\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/data/script_runs/transient/32679150e2381b9facbb16e32aad85dda5669a1081cb857d30e61fb223185d63/executions/e94a85508d544e44a7a81202e01e977c/stdout.l",
+        "id": "a42384edef6e975a8058eeeb8123c1c5b594722b6a69a40fb205ec56feefb930",
+        "integrity": "verified"
+      },
+      "id": "b528aaf3305d45808e25f8c0f003ed6a",
+      "internal_tool_failures": 1,
+      "is_error": true,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 38,
+      "source_failures": 1,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717211.383187
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 26826,
+      "cache_read": 6142,
+      "call_id": "51455d7b86524404af8bcec502631154",
+      "event": "usage",
+      "input": 32970,
+      "latency_ms": 12656,
+      "model": "opus",
+      "output": 901,
+      "parent_call_id": null,
+      "phase": "review",
+      "provider": "ClaudeCode",
+      "reasoning": 230,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "kind": "supervision.tool.started",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "id": "c584f5c86e964da29c7b6b0496fbae88",
+      "input": {
+        "chars": 1493,
+        "excerpt": "{\"code\": \"#!ibl edition=2\\n$o = \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_54회차/ai/variant/out/\\\"\\n$r = [self:read]{path:f\\\"${$o}report.json\\\"}\\n$m = [self:read]{path:f\\\"${$o}report.md\\\"}\\n$in = [self:read]{path:\\\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_54회차/ai/variant/input.json\\\"}\\n$c = $r.data.cases\\n$req = [\\\"id\\\",\\\"law\\\",\\\"no\\\",\\\"citation_status\\\",\\\"article_text\\\",\\\"article_date\\\",\\\"law_date\\\",\\\"url\\\",\\\"missing_documents\\\",\\\"historical_review\\\"]\\n$ids_out = $c >> [table:each]{return $it.id}\\n$ids_in = $in.data.cases >> [table:each]{return $it.id}\\n$per = $c >> [table:each]{return {id:$it.id, law:$it.law, no:$it.no, st:$it.citation_status, tl:len($it.article_text), miss:$it.missing_documents, hist:$it.historical_review.status, stmt:$it.statement_citation_check.status, sno:$it.statement_citation_check.statement_no}}\\nreturn {n:len($c), order_ok:$ids_out == $ids_in, bad:len(filter($c, ($x)=> len(",
+        "id": "88fc1be606c7515dc07b130a587b7d1e88fc3228c0663af7aba64046fe4f707d",
+        "integrity": "verified"
+      },
+      "kind": "tool.started",
+      "name": "execute_ibl",
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 41,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717217.9641979
+    }
+  },
+  {
+    "kind": "supervision.tool.finished",
+    "data": {
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "check_rejected": false,
+      "elapsed_s": 0.429,
+      "evidence": {
+        "chars": 8632,
+        "excerpt": "{\"success\": true, \"value\": {\"n\": 30, \"order_ok\": true, \"bad\": 0, \"conf_empty\": 0, \"unc_text\": 0, \"summary\": {\"as_of\": \"2026-10-11\", \"total_cases\": 30, \"citation_status\": {\"미확인: 조 없음(현행 원문에 해당 조 번호 없음)\": 4, \"미확인: 법령 없음(정확히 같은 이름의 법령 없음)\": 3, \"확인\": 23}, \"cases_with_missing_documents\": 30, \"missing_document_counts\": {\"계약서\": 30, \"차임 내역\": 30, \"통지 증거\": 30}, \"historical_review\": {\"과거 판본 확인 필요\": 27, \"확인 필요\": 3}, \"priority_tier_counts\": {\"미확인 인용\": 7, \"자료 누락(인용 확인됨)\": 23, \"나머지\": 0}, \"unique_laws\": 4, \"law_detail_lookups\": 3}, \"src\": [{\"l\": \"주택임대차보호법\", \"s\": \"법령 확인\", \"raw\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_54회차/ai/variant/out/_sources/law_housing.json\"}, {\"l\": \"가상임대차자동승소법\", \"s\": \"법령 없음(국가법령정보 검색 0건)\", \"raw\": null}, {\"l\": \"민법\", \"s\": \"법령 확인\", \"raw\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-11_54회차/ai/variant/out/_sources/law_civil.json\"}, {\"l\": \"상가건물 임대차보호법\", \"s\": \"법령 확인\", \"raw\": \"/Users/kangkukjin/Desktop",
+        "id": "08f0c2c1fe1532a73a801831cf0d22f8c02cd47d780de10e6237ea2adb747c55",
+        "integrity": "verified"
+      },
+      "id": "c584f5c86e964da29c7b6b0496fbae88",
+      "internal_tool_failures": 0,
+      "is_error": false,
+      "kind": "tool.finished",
+      "name": "execute_ibl",
+      "observation": "",
+      "operation_failures": 0,
+      "operation_outcomes": [],
+      "parent_call_id": null,
+      "phase": "execute",
+      "role": "execution",
+      "seq": 42,
+      "source_failures": 0,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717218.392791
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 58548,
+      "cache_read": 1897679,
+      "call_id": "d01cb1629eb343eba748e07b61d21791",
+      "event": "usage",
+      "input": 1956249,
+      "latency_ms": 95786,
+      "model": "opus",
+      "output": 9084,
+      "parent_call_id": null,
+      "phase": "execute",
+      "provider": "ClaudeCode",
+      "reasoning": 2570,
+      "role": "execution",
+      "round_index": 11,
+      "source": "gear:최대|실행→고급",
+      "tier": "고급"
+    }
+  },
+  {
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 231178,
+      "cache_read": 5531,
+      "call_id": "737e4c89035848efa9908eef106667a3",
+      "event": "usage",
+      "input": 236711,
+      "latency_ms": 6388,
+      "model": "opus",
+      "output": 404,
+      "parent_call_id": null,
+      "phase": "evaluate",
+      "provider": "ClaudeCode",
+      "reasoning": 395,
+      "role": "oneshot:evaluate",
+      "round_index": 1,
+      "source": "gear:최대|평가→고급",
+      "tier": "고급"
+    }
+  },
+  {
+    "kind": "recall.used",
+    "data": {
+      "blocks": [
+        {
+          "evidence": "executed",
+          "ibl_calls": 9,
+          "presented": [
+            "4831",
+            "4775"
+          ],
+          "recall_id": "7cff98161ef44dff82009296b8d686fb",
+          "source": "hippocampus",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "presented": [
+            "script:나레이션생성",
+            "script:팁행source중첩",
+            "script:판정관용구"
+          ],
+          "quality_contribution": "not_inferred",
+          "recall_id": "7cff98161ef44dff82009296b8d686fb",
+          "source": "reusable_capabilities",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "opened": [],
+          "presented": [
+            "339",
+            "480",
+            "453"
+          ],
+          "recall_id": "7cff98161ef44dff82009296b8d686fb",
+          "source": "recalled_memory",
+          "used": []
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "basics.14.4a02004ab78c",
+            "basics.14.80aab8a91c17",
+            "basics.07.3e29c7e3f21b",
+            "basics.01.45ec909f3017"
+          ],
+          "recall_id": "7cff98161ef44dff82009296b8d686fb",
+          "source": "method_map",
+          "used": [
+            "basics.14.4a02004ab78c",
+            "basics.14.80aab8a91c17",
+            "basics.07.3e29c7e3f21b"
+          ]
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "atlas.law.contract_review",
+            "atlas.data.data_normalization"
+          ],
+          "recall_id": "7cff98161ef44dff82009296b8d686fb",
+          "source": "world_memory",
+          "used": []
+        }
+      ],
+      "completed": true,
+      "phase": "turn"
+    }
+  },
+  {
+    "kind": "supervision.cost.summary",
+    "data": {
+      "cost": {
+        "check_rejections": 1,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.000804,
+        "evaluation_model_s": 6.923,
+        "evaluation_prepare_s": 0.19075,
+        "evaluation_visual_s": 0.001945,
+        "evaluation_wait_s": 0.000866,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84/events.jsonl",
+        "execution_calls": 10,
+        "execution_failures": 5,
+        "execution_tool_s": 10.478000000000002,
+        "internal_tool_failures": 4,
+        "request_intent": "task",
+        "source_failures": 4,
+        "supervisor_cache_read": 6142,
+        "supervisor_calls": 1,
+        "supervisor_input": 32970,
+        "supervisor_model_s": 13.598,
+        "supervisor_output": 901,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 112.506
+      },
+      "kind": "cost.summary",
+      "phase": "final",
+      "role": "harness",
+      "seq": 55,
+      "store": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/c9ba7cebcff240a78bfb29db188ece84",
+      "task_id": "task_sysai_89113426",
+      "time": 1791717238.8813581
+    }
+  }
+]

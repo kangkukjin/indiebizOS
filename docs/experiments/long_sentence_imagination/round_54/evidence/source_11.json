@@ -1,0 +1,562 @@
+{
+  "success": true,
+  "target": "eng_law",
+  "id": "001248",
+  "Law": {
+    "BylSection": "",
+    "ArSection": {
+      "Ar": [
+        {
+          "arCts": "ADDENDA <Act No. 3379, Mar. 5, 1981>(1) (Enforcement Date) This Act shall enter into force on the date of its promulgation.(2) (Transitional Measures) This Act shall be applicable to any lease concluded or renewed after this Act enters into force; provided, the provisions of Article 3 shall be applicable even to a lease in existence at the time this Act enters into force, but ineffective to a third party who has acquired a real right in relation to the relevant house before this Act enters into force.",
+          "arAncYd": "19810305",
+          "arAncNo": "03379",
+          "No": "1"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 3682, Dec. 30, 1983>(1) (Enforcement Date) This Act shall enter into force on January 1, 1984.(2) (Principle of Transitional Measures) Except as otherwise provided for in this Act, the provisions of this Act shall also be applicable to any matters which have taken place before this Act enters into force; provided, it shall not affect the effect created pursuant to the former provisions.(3) (Transitional Measures concerning Request for Increase of Rent, etc.) The amended provisions of the proviso to Article 7 shall not be applicable, if an increase of the rent is requested before this Act enters into force.(4) (Transitional Measures concerning Protection of Small Deposit) The amended provisions of Article 8 shall not be applicable to any person who has acquired the security rights in the leased house, before this Act enters into force.",
+          "arAncYd": "19831230",
+          "arAncNo": "03682",
+          "No": "2"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 4188, Dec. 30, 1989>(1) (Enforcement Date) This Act shall enter into force on the date of its promulgation.(2) (Transitional Measures concerning Existing and Continuing Lease) Except as otherwise provided for in this Act, this Act shall be applicable to existing and continuing leases at the time this Act enters into force.(3) (Transitional Measures concerning Persons having Security Rights) Any person who has acquired any security right in a leased house before this Act enters into force shall be subject to the former provisions.(4) (Transitional Measures concerning Term of Lease) The term of lease which is existing and continuing at the time this Act enters into force shall be subject to the former provisions.(5) (Transitional Measures concerning Small Deposit) Any case falling under the definition of small deposit as provided in the former Article 8 at the time when this Act enters into force, shall be subject to the former provisions.",
+          "arAncYd": "19891230",
+          "arAncNo": "04188",
+          "No": "3"
+        },
+        {
+          "arCts": "ADDENDUM <Act No. 5454, Dec. 13, 1997>This Act shall enter into force on January 1, 1998. (Proviso Omitted.)",
+          "arAncYd": "19971213",
+          "arAncNo": "05454",
+          "No": "4"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 5641, Jan. 21, 1999>(1) (Enforcement Date) This Act shall enter into force on March 1, 1999.(2) (Transitional Measures concerning Existing Lease) Except as otherwise expressly prescribed in this Act, this Act shall apply to the lease existing at the time this Act enters into force.(3) (Transitional Measures concerning Leasehold Registration) The amended provisions of Article 3-4 shall not apply to leasehold registration completed before this Act enters into force.",
+          "arAncYd": "19990121",
+          "arAncNo": "05641",
+          "No": "5"
+        },
+        {
+          "arCts": "ADDENDUM <Act No. 6541, Dec. 29, 2001>This Act shall enter into force six months after the date of its promulgation.",
+          "arAncYd": "20011229",
+          "arAncNo": "06541",
+          "No": "6"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 6627, Jan. 26, 2002>Article 1 (Enforcement date)This Act shall enter into force on July 1, 2002.Articles 2 through 7 Omitted.",
+          "arAncYd": "20020126",
+          "arAncNo": "06627",
+          "No": "7"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 7358, Jan. 27, 2005>Article 1 (Enforcement date)This Act shall enter into force six months after the date of its promulgation.Article 2 Omitted.Article 3 Omitted.Article 4 Omitted.",
+          "arAncYd": "20050127",
+          "arAncNo": "07358",
+          "No": "8"
+        },
+        {
+          "arCts": "ADDENDUM <Act No. 8583, Aug. 3, 2007>This Act shall enter into force three months after the date of its promulgation.",
+          "arAncYd": "20070803",
+          "arAncNo": "08583",
+          "No": "9"
+        },
+        {
+          "arCts": "ADDENDUM <Act No. 8923, Mar. 21, 2008>This Act shall enter into force on the date of its promulgation.",
+          "arAncYd": "20080321",
+          "arAncNo": "08923",
+          "No": "10"
+        },
+        {
+          "arCts": "ADDENDUM <Act No. 9653, May 8, 2009>This Act shall enter into force three months after the date of its promulgation.",
+          "arAncYd": "20090508",
+          "arAncNo": "09653",
+          "No": "11"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 10303, May 17, 2010>Article 1 (Enforcement date)This Act shall enter into force six months after the date of its promulgation. (Proviso omitted.)Articles 2 through 8 Omitted.Article 9 Omitted.Article 10 Omitted.",
+          "arAncYd": "20100517",
+          "arAncNo": "10303",
+          "No": "12"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 10580, Apr. 12, 2011>Article 1 (Enforcement date)This Act shall enter into force six months after the date of its promulgation. (Proviso omitted.)Articles 2 through 5 Omitted.",
+          "arAncYd": "20110412",
+          "arAncNo": "10580",
+          "No": "13"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 11690, Mar. 23, 2013>Article 1 (Enforcement date)(1) This Act shall enter into force on the date of its promulgation.(2) Omitted.Articles 2 through 5 Omitted.Article 6 Omitted.Article 7 Omitted.",
+          "arAncYd": "20130323",
+          "arAncNo": "11690",
+          "No": "14"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 12043, Aug. 13, 2013>Article 1 (Enforcement date)This Act shall enter into force on January 1, 2014; provided, the amended provisions of Articles 3-2(4), and (6) through (9), 3-3(1) and (9), and 10-2 shall enter into force on the date of its promulgation.Article 2 (General applicability)This Act shall begin to apply from the first lease entered into or renewed after this Act enters into force.Article 3 (Applicability to and transitional measures concerning opposing power of small or medium enterprises)(1) The amended provisions of Article 3(3) shall apply to a lease existing at the time this Act enters into force, the lessee of which is a corporation (limited to a corporation constituting a small or medium enterprise defined in Article 2 of the Framework Act on Small and Medium Enterprises), however, it shall not be valid against any third party who has acquired the real right before this Act enters into force.(2) Notwithstanding paragraph (1), the term of a lease existing at the time this Act enters into force shall be governed by the former provisions.Article 4 (Applicability to preferential repayment rights of financial institutions, etc.)The amended provisions of Articles 3-2(4), and (6) through (9), and 3-3(1) and (9) shall also apply to a lease existing at the time the same amended provisions enter into force, however, they shall apply beginning where a claim for repayment of deposit is taken over after this Act enters into force.Article 5 (Applicability to restriction on computation rate in cases of conversion into monthly rents)The amended Article 7-2 shall also apply to the lease that exists as at the time this Act enters into force, while it shall begin to apply from the first case where a deposit is fully or partially converted into a monthly rent after this Act enters into force.",
+          "arAncYd": "20130813",
+          "arAncNo": "12043",
+          "No": "15"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 12989, Jan. 6, 2015>Article 1 (Enforcement date)This Act shall enter into force on July 1, 2015.Articles 2 through 4 Omitted.Article 5 Omitted.Article 6 Omitted.",
+          "arAncYd": "20150106",
+          "arAncNo": "12989",
+          "No": "16"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 14175, May 29, 2016>Article 1 (Enforcement date)This Act shall enter into force six months after the date of its promulgation; provided, the amended Articles 14 through 29, and 31 (limited to the part concerning the housing lease dispute conciliation committee) shall enter into force one year after the date of its promulgation.Article 2 (Applicability to rate of conversion into monthly rents)The amended Article 7-2 shall also apply to the lease that exists as at the time this Act enters into force, while it shall begin to apply from the first case where a deposit is fully or partially converted into a monthly rent after this Act enters into force.",
+          "arAncYd": "20160529",
+          "arAncNo": "14175",
+          "No": "17"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 14242, May 29, 2016>Article 1 (Enforcement date)This Act shall enter into force on December 1, 2016. (Proviso Omitted.)Articles 2 through 20 Omitted.Article 21 Omitted.Article 22 Omitted.",
+          "arAncYd": "20160529",
+          "arAncNo": "14242",
+          "No": "18"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 15791, Oct. 16, 2018>Article 1 (Enforcement date)This Act shall enter into force on the date of its promulgation. (Proviso Omitted.)Articles 2 through 4 Omitted.Article 5 Omitted.",
+          "arAncYd": "20181016",
+          "arAncNo": "15791",
+          "No": "19"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 16912, Feb. 4, 2020>Article 1 (Enforcement date)This Act shall enter into force six months after the date of its promulgation.Articles 2 through 4 Omitted.",
+          "arAncYd": "20200204",
+          "arAncNo": "16912",
+          "No": "20"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 17363, Jun. 9, 2020>Article 1 (Enforcement date)This Act shall enter into force six months after the date of its promulgation.Article 2 (Applicability to renewal of contract)The amended provisions of Article 6(1) shall begin to apply to leases concluded or renewed on or after the date this Act enters into force.Article 3 (Applicability to conciliation process)The amended provisions of Articles 21(3)5, 22(1) and (2), and 26(2) shall begin to apply to applications for conciliation filed with a housing lease dispute conciliation committee on or after the date this Act enters into force.",
+          "arAncYd": "20200609",
+          "arAncNo": "17363",
+          "No": "21"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 17470, Jul. 31, 2020>Article 1 (Enforcement date)This Act shall enter into force on the date of its promulgation; provided, the amended provisions of Articles 8-2(2) and (4), 14(1), 16(1) and (2), 21(1), and 30 shall enter into force three months after the date of its promulgation.Article 2 (Applicability to request for renewal of contract)(1) The amended provisions of Articles 6-3 and 7 shall also apply to leases existing as at the time this Act enters into force.(2) Notwithstanding paragraph (1), the provisions of paragraph (1) shall not apply where a lessor refuses the renewal of a contract and enters into a lease contract with a third party before this Act enters into force.",
+          "arAncYd": "20200731",
+          "arAncNo": "17470",
+          "No": "22"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 19356, Apr. 18, 2023>Article 1 (Enforcement date)This Act shall enter into force 3 months after the date of its promulgation; provided, the amended provisions of Article 3-7 shall enter into force on the date of its promulgation. <Amended on Jul. 11, 2023>Article 2 (Applicability to leasehold registration orders)The amended provisions of the former part, with the exception of the subparagraphs, of the main clause of Article 3-3(3) shall also apply to leasehold registration orders, which were issued before this Act enters into force and have not been served on lessors as at the time this Act enters into force.Article 3 (Applicability to lessor’s duty to present information)The amended provisions of Article 3-7 shall begin to apply where a lease agreement is made and entered into after the date the same amended provisions enter into force.",
+          "arAncYd": "20230418",
+          "arAncNo": "19356",
+          "No": "23"
+        },
+        {
+          "arCts": "ADDENDUM <Act No. 19520, Jul. 11, 2023>This Act shall enter into force on the date of its promulgation.",
+          "arAncYd": "20230711",
+          "arAncNo": "19520",
+          "No": "24"
+        },
+        {
+          "arCts": "ADDENDA <Act No. 21065, Oct. 1, 2025>Article 1 (Enforcement date)This Act shall enter into force on the date of its promulgation; provided, among the statutes amended under Article 7 of the Addenda, the parts amending statutes which were promulgated before the enforcement of this Act but the enforcement date of which has not arrived shall enter into force on the enforcement date of the relevant statutes, respectively, and the amended provisions in the following subparagraphs shall enter into force on the date prescribed in the relevant subparagraphs:1. The amended provisions of the following items shall enter into force on January 2, 2026; provided, among the statutes amended under Article 7 of the Addenda (limited to the parts related to the amended provisions of items a and b), the parts amending statutes which were promulgated before the enforcement date under the main clause but the enforcement date pursuant to the main clause has not arrived shall enter into force on the enforcement date of the relevant statutes, respectively:a. The amended provisions of Articles 19(4), 23, 29(1)1, and 30;b. The amended provisions of Articles 12(2), 19(3), and 22, and the proviso of Article 29(2) (limited to the parts regarding the Minister of Finance and Economy and the Ministry of Finance and Economy);c. Statutes amended under Article 7 of the Addenda (limited to the parts related to the amended provisions of items a and b).2. Omitted.Articles 2 through 6 Omitted.Article 7 Omitted.Article 8 Omitted.",
+          "arAncYd": "20251001",
+          "arAncNo": "21065",
+          "No": "25"
+        }
+      ]
+    },
+    "JoSection": {
+      "Jo": [
+        {
+          "joNo": "0001",
+          "joYn": "Y",
+          "joCts": "Article 1 (Purpose) The purpose of this Act is to secure stability in the residential life of national citizens, by providing for special cases to the Civil Act, with respect to the lease of buildings for residence.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Purpose",
+          "chapNo": "00000000000000000000",
+          "No": "1",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0002",
+          "joYn": "Y",
+          "joCts": "Article 2 (Scope of application) This Act shall apply to lease of the whole or part of buildings for residence (hereinafter referred to as \"house\"). This provision shall also apply in cases where a part of a leased house is used for any purpose other than residence.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Scope of application",
+          "chapNo": "00000000000000000000",
+          "No": "2",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0003",
+          "joYn": "Y",
+          "joCts": "Article 3 (Opposing power) (1) Even though it is not registered, if the lessee is provided with a house and completes resident registration, the lease shall take effect against any third party from the following day thereof. In such cases, the resident registration shall be deemed made at the time of the moving-in report.(2) Paragraph (1) shall apply mutatis mutandis where a corporation which provides rental housing to low-income non homeowners to stabilize their residential life on a deposit basis with funding from the Housing and Urban Fund, has leased a house, and then a resident, who is selected by the head of a local government or the corporation, is provided with such house and completes resident registration. In such cases, corporations for which opposing power is recognized shall be prescribed by Presidential Decree. <Amended on Jan. 6, 2015>(3) Paragraph (1) shall apply mutatis mutandis where a corporation classified a small or medium enterprise defined in Article 2 of the Framework Act on Small and Medium Enterprises, has leased a house for residential purpose of its employees, and provides such house to an employee selected by the corporation, who in turn completes resident registration. When such employee is replaced before the termination of the lease, the lease shall take effect against a third party on the day immediately following the date the new employee selected by the corporation completes resident registration after being provided with such house. <Added on Aug. 13, 2013>(4) The transferee (including any person who has succeeded to the right to lease) of a leased house shall be deemed to have succeeded to the status of the lessor. <Amended on Aug. 13, 2013>(5) Articles 575(1) and (3), and 578 of the Civil Act shall apply mutatis mutandis where a house that constitutes the object of a lease under this Act, becomes the object of a sale or public auction. <Amended on Aug. 13, 2013>(6) Article 536 of the Civil Act stipulating a right of defense to simultaneous performance shall apply mutatis mutandis to cases provided for in paragraph (5). <Amended on Aug. 13, 2013>[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Opposing power",
+          "chapNo": "00000000000000000000",
+          "No": "3",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0003",
+          "joYn": "Y",
+          "joCts": "Article 3-2 (Recovery of deposits) (1) Where the lessee (including corporations referred to in Article 3(2) and (3); hereinafter the same shall apply) files an application for auction of the leased house based on the final and conclusive judgment on the lawsuit demanding the repayment of deposit or execution title corresponding thereto, the fulfillment or provision of opposite obligations shall not be the requirements for the commencement of enforcement, notwithstanding Article 41 of the Civil Execution Act concerning the requirements for the commencement of enforcement. <Amended on Aug. 13, 2013>(2) Any lessee who has met the requirements for opposing power prescribed in Article 3(1), (2), or (3), and obtained the fixed date on the lease contract document (referring to lease contract documents between a corporation and a lessor in cases falling under Article 3(2) and (3)), shall be entitled to receive the repayment of the deposit from the converted price of the leased house (including the site thereof), in preference to any junior creditors and other creditors, at the time of an auction conducted under the Civil Execution Act and a public sale under the National Tax Collection Act. <Amended on Aug. 13, 2013>(3) No lessee shall be permitted to receive the deposit under paragraph (2) without delivering the leased house to the transferee thereof.(4) Any interested person who has an objection to the order in the preferential repayment and the deposit as provided for in paragraph (2) or (7) may file an objection with the court of auction or the agency which has ordered the disposition for arrears. <Amended on Aug. 13, 2013>(5) Articles 152 through 161 of the Civil Execution Act shall apply mutatis mutandis where an objection is filed with the court of auction under paragraph (4).(6) If the interested person establishes that he or she has instituted a lawsuit against the lessee or financial institution, etc. that succeeded the preferential repayment right pursuant to paragraph (7) within seven days after filing an objection, the agency which has ordered the disposition for arrears shall, upon receipt of the objection filed under paragraph (4), withhold the repayment of the deposit to the lessee or financial institutions, etc. that succeeded the preferential repayment right pursuant to paragraph (7) to the extent that the objection is filed, until the lawsuit is closed, and distribute the balance. In such cases, the withheld deposit shall be distributed in accordance with the result of the lawsuit. <Amended on Aug. 13, 2013>(7) Where any of the following financial institutions, etc. acquires by contract the claim for repayment of deposit of a lessee who has acquired the preferential repayment right pursuant to paragraph (2), Article 3-3(5), or 3-4(1), it shall succeed the preferential repayment right within the limits of the amount it has acquired: <Added on Aug. 13, 2013; Jan. 6, 2015; May 29, 2016>1. A bank established under the Banking Act;2. The Industrial Bank of Korea established under the Industrial Bank of Korea Act;3. The Korea Development Bank established under the Korea Development Bank Act;4. The NongHyup Bank established under the Agricultural Cooperatives Act;5. The SuHyup Bank established under the Fisheries Cooperatives Act;6. A postal service agency established under the Postal Savings and Insurance Act;7. The Korea Housing Finance Corporation established under the Korea Housing Finance Corporation Act;8. An insurance company that holds a license for surety insurance referred to in Article 4(1)2d of the Insurance Business Act as the type of insurance business;9. The Korea Housing and Urban Guarantee Corporation established under the Housing and Urban Fund Act;10. Any other institution prescribed by Presidential Decree, which is equivalent to those referred to in subparagraphs 1 through 9.(8) No financial institutions, etc., which have succeeded the preferential repayment right pursuant to paragraph (7) (hereinafter referred to as \"financial institutions, etc.\"), shall exercise the preferential repayment right in any of the following circumstances: <Added on Aug. 13, 2013>1. Where the lessee has lost the requirements for opposing power prescribed in Article 3 (1), (2), or (3);2. Where the lease registration prescribed in Article 3-3(5) is canceled;3. Where the registration of lease prescribed in Article 621 of the Civil Act is canceled.(9) No financial institutions, etc. shall terminate any lease on behalf, or in subrogation of, the lessee to exercise the preferential repayment right. <Added on Aug. 13, 2013>[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Recovery of deposits",
+          "chapNo": "00000000000000000000",
+          "No": "4",
+          "joBrNo": "02"
+        },
+        {
+          "joNo": "0003",
+          "joYn": "Y",
+          "joCts": "Article 3-3 (Leasehold registration orders) (1) If no deposit is refunded after the termination of a lease, the lessee may file an application for a leasehold registration order with the district court, the branch of the district court, or the Si/Gun court having jurisdiction over the location of the leased house. <Amended on Aug. 13, 2013>(2) The following matters shall be stated in the application form for a leasehold registration order, and the reasons for filing the application, and the facts constituting the grounds for the lease registration shall be clearly explained: <Amended on Aug. 13, 2013>1. Purport of and reasons for the application;2. The house which is an object of the lease (where the object of the lease is a part of the house, the drawing plot shall be attached thereto);3. The facts constituting the grounds for the lease registration (the fact that the lessee has obtained the opposing power provided for in Article 3(1), (2) or (3), or the preferential repayment right provided for in Article 3-2(2));4. Other matters prescribed by the Supreme Court Regulations.(3) Articles 280(1), 281, 283, 285, and 286, Article 288(1) and the main clause of paragraph (2) of that Article, 289, part concerning Article 288(1) of Article 290(2), Articles 291, 292(3) and 293 of the Civil Execution Act shall apply mutatis mutandis to the following matters. In such cases, \"provisional seizure\" shall be construed as \"registration of leasehold, \"creditor\" as \"lessee\", and \"debtor\" as \"lessor\", respectively: <Amended on Apr. 18, 2023>1. A trial on the application for a leasehold registration order;2. An application for an objection by a lessor against a ruling on a leasehold registration order and a trial thereof;3. An application for cancellation of a leasehold registration order and a trial thereof;4. The execution of a leasehold registration order.(4) The lessee may appeal against a ruling to reject an application for the leasehold registration order.(5) Where the lessee completes the registration of leasehold following the execution of the leasehold registration order, he or she shall obtain the opposing power provided for in Article 3(1), (2), or (3) and the preferential repayment right provided for in Article 3-2(2); provided, where the lessee has already obtained the opposing power or the preferential repayment right before the registration of leasehold, the opposing power or the preferential repayment right shall be maintained as it is, and even if he has lost the requirements for opposing power provided for in Article 3(1), (2), or (3) after the registration of leasehold, the opposing power or the preferential repayment right which he has already obtained shall not be lost. <Amended on Aug. 13, 2013>(6) The lessee who has leased a house, for which the leasehold registration is completed following the execution of the leasehold registration order (where the object of the lease is limited to a part of the house, it shall be limited to the relevant part) thereafter, shall not have the right to receive the preferential repayment under Article 8.(7) Matters necessary for executing leasehold registration orders, such as entrustment of leasehold registration, and the writing of the leasehold registration by registration officers shall be determined by the Supreme Court Regulations. <Amended on Apr. 12, 2011>(8) The lessee may request the lessor to reimburse expenses incurred in filing an application for the leasehold registration order under paragraph (1), and completing the lease registration.(9) Financial institutions, etc. may file an application for the leasehold registration order under paragraph (1) in subrogation of the lessee. In such cases, \"lessee\" referred to in paragraphs (3), (4), and (8) shall be construed as \"financial institutions, etc.\" <Added on Aug. 13, 2013>[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Leasehold registration orders",
+          "chapNo": "00000000000000000000",
+          "No": "5",
+          "joBrNo": "03"
+        },
+        {
+          "joNo": "0003",
+          "joYn": "Y",
+          "joCts": "Article 3-4 (Validity of house lease registration pursuant to Civil Act) (1) The provisions of Article 3-3(5) and (6) shall apply mutatis mutandis to the validity of the house lease registration pursuant to Article 621 of the Civil Act.(2) In cases where the lessee files an application for the lease registration with the opposing power or the preferential repayment right and the lessor’s cooperation as referred to in Article 621(1) of the Civil Act, he or she shall state the matters falling under the following subparagraphs other than the matters falling under subparagraphs 1 through 6 of Article 74 of the Registration of Real Estate Act in the written application, and the documents capable of verifying them (including a drawing plot of the relevant in cases where the objective of lease is limited to a part of house) shall be attached thereto: <Amended on Apr. 12, 2011; Feb. 4, 2020>1. The completion date of resident registration;2. The occupation date of the leased house;3. The date obtaining the fixed date on the lease contract document.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Validity of house lease registration pursuant to Civil Act",
+          "chapNo": "00000000000000000000",
+          "No": "6",
+          "joBrNo": "04"
+        },
+        {
+          "joNo": "0003",
+          "joYn": "Y",
+          "joCts": "Article 3-5 (Extinction of lease by auction) In cases where an auction has been held on the leased house as referred to in the Civil Execution Act, the right of lease shall become extinct by a knock-down of the leased house; provided, this shall not apply to the right of lease possessing the opposing power for which the entire amount of deposit is not repaid.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Extinction of lease by auction",
+          "chapNo": "00000000000000000000",
+          "No": "7",
+          "joBrNo": "05"
+        },
+        {
+          "joNo": "0003",
+          "joYn": "Y",
+          "joCts": "Article 3-6 (Grant of fixed date and provision of lease information) (1) A fixed date referred to in Article 3-2(2) shall be granted at the Eup/Myeon office, Dong community service center, or local office of the Si (excluding the Special Metropolitan City, Metropolitan Cities, and a Metropolitan Autonomous City, but including a Special Self-Governing Province)/Gun/Gu (referring to an autonomous Gu) where the relevant house is located, the district court or branch court thereof, or by a notary public registered under the Notary Public Act (hereafter referred to as \"fixed-date granting agency\" in this Article).(2) A fixed-date granting agency shall prepare a fixed date register wherein the location of the relevant house, grant date of the fixed date, the rent, deposit, etc. are stated. In such cases, it may use a computerized information system.(3) Any person who has an interest in the lease of a house may request information, such as the grant date of the fixed date, rent, and deposit of the relevant house from the fixed-date granting agency. In such cases, such fixed-date granting agency in receipt of the request shall not reject such request without just grounds.(4) A person who intends to enter into a lease contract may request the information referred to in paragraph (3) from a fixed-date granting agency with the consent of the lessor.(5) A person who intends to be granted a fixed date or provided with information under paragraph (1), (3) or (4) shall pay a fee.(6) Matters to be entered in the fixed date register, scope of persons who have an interest in the lease of a house, scope of information that can be requested from fixed-date granting agencies, and the fee therefor, and other matters necessary for the affairs related to the grant of a fixed date, provision of information, etc. shall be prescribed by Presidential Decree or the Supreme Court Regulations.[This Article Added on Aug. 13, 2013]",
+          "joTtl": "Grant of fixed date and provision of lease information",
+          "chapNo": "00000000000000000000",
+          "No": "8",
+          "joBrNo": "06"
+        },
+        {
+          "joNo": "0003",
+          "joYn": "Y",
+          "joCts": "Article 3-7 (Lessor’s duty to disclose information) When entering into a lease agreement, the lessor shall disclose the following matters to the lessee:1. Information, such as the date when a fixed date is assigned to the relevant house, rent, and deposit under Article 3-6(3); provided, the lessor's consent prior to the conclusion of the lease contract under Article 3-6(4) may be used in lieu of such information disclosure;2. Tax payment certificates referred to in Article 108 of the National Tax Collection Act and tax payment certificates referred to in Article 5(2) of the Local Tax Collection Act; provided, the lessor's consent to the inspection of unpaid national taxes and amount in arrears under Article 109(1) of the National Tax Collection Act and the inspection of unpaid local taxes under Article 6(1) of the Local Tax Collection Act prior to the conclusion of the lease contract may be used in lieu of such certificates.[This Article Added on Apr. 18, 2023]",
+          "joTtl": "Lessor’s duty to disclose information",
+          "chapNo": "00000000000000000000",
+          "No": "9",
+          "joBrNo": "07"
+        },
+        {
+          "joNo": "0004",
+          "joYn": "Y",
+          "joCts": "Article 4 (Term of lease) (1) With respect to a lease whose term is not fixed or is fixed for less than two years, the term of such lease shall be deemed to be two years; provided, the lessee may claim that the term fixed for less than two years shall be valid.(2) Even though the period for lease has expired, the relations of lease shall be deemed to continue until a deposit is repaid to a lessee.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Term of lease",
+          "chapNo": "00000000000000000000",
+          "No": "10",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0005",
+          "joYn": "Y",
+          "joCts": "Article 5 Deleted. <Dec. 30, 1989>",
+          "joTtl": "null",
+          "chapNo": "00000000000000000000",
+          "No": "11",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0006",
+          "joYn": "Y",
+          "joCts": "Article 6 (Renewal of contract) (1) If the lessor fails to notify the lessee of a refusal of the renewal, or to give notification to the lessee to the effect that he or she would not renew the contract without any change in the condition, six months to two months before the term of the lease expires, the lease shall be deemed to have been renewed under the same conditions as the former one at the time the term expires. The same shall apply to cases where the lessee has not notified by two months before the term of the lease expires. <Amended on Jun. 9, 2020>(2) In cases of paragraph (1), the term of the lease shall be deemed to be two years. <Amended on May 8, 2009>(3) With respect to a lessee who has failed to pay the rent by up to two installments thereof, or who seriously violates obligations under the lease contract, the provisions of paragraph (1) shall not be applicable.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Renewal of contract",
+          "chapNo": "00000000000000000000",
+          "No": "12",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0006",
+          "joYn": "Y",
+          "joCts": "Article 6-2 (Termination of contracts in cases of implied renewal) (1) In cases where a contract has been renewed pursuant to Article 6(1), notwithstanding paragraph (2) of the same Article, the lessee may notify at any time the lessor of termination of the contract. <Amended on May 8, 2009>(2) The termination referred to in paragraph (1) shall enter into force upon the lapse of three months from the date when the lessor has received the notification.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Termination of contracts in cases of implied renewal",
+          "chapNo": "00000000000000000000",
+          "No": "13",
+          "joBrNo": "02"
+        },
+        {
+          "joNo": "0006",
+          "joYn": "Y",
+          "joCts": "Article 6-3 (Request for renewal of contract) (1) Notwithstanding Article 6, where a lessee requests the renewal of a contract within the period prescribed in the former part of Article 6(1), a lessor shall not refuse the request without good reason; provided, the same shall not apply to any of the following cases:1. Where the lessee has been in arrears with a rent equivalent to an amount of two months' rent;2. Where the lessee has entered into a lease by fraud or other improper means;3. Where the lessor has provided the lessee with substantial compensation by mutual consent;4. Where the lessee has subleased all or part of the intended house without the consent of the lessor;5. Where the lessee has caused damage to all or part of the leased house by intention or gross negligence;6. Where the purpose of the lease is not fulfilled because all or part of the leased house has been destroyed;7. Where the occupancy of the intended house needs to be recovered in order for the lessor to demolish or reconstruct all or part of such house on any of the following grounds:a. Where, at the time of entering into the lease contract, the lessor notifies the lessee of a plan for demolition or reconstruction specifically including the time and required period of the relevant construction and complies with the plan;b. Where a safety accident is likely to occur as the building is old, damaged, partially destroyed;c. Where demolition or reconstruction is conducted pursuant to other statutes or regulations;8. Where the lessor (including his or her lineal ascendants and lineal descendants) intends to actually reside in the intended house;9. Where the lessee has seriously failed to fulfill the obligations as a lessor or has significant reasons making it difficult to continue the lease.(2) A lessee may exercise the right to request the renewal of a contract under paragraph (1) only once. In such cases, the term of a renewed lease shall be deemed two years.(3) A renewed lease shall be deemed entered into under the same conditions as those of the former lease; provided, a rent and deposit may be increased or decreased within the extent under Article 7.(4) Article 6-2 shall apply mutatis mutandis to the termination of a lease to be renewed pursuant to paragraph (1).(5) Where a lessor leases the intended house to a third party without good reason before the expiry of the term which would have been renewed if the request for renewal had not been refused, despite of the refusal of renewal on the ground prescribed in paragraph (1)8, he or she shall compensate for the loss suffered by the lessee due to such refusal.(6) The amount of compensation for loss referred to in paragraph (5) shall be the greater of the following amounts, unless an agreement is reached between the parties concerned on the scheduled amount of compensation at the time of refusal:1. An amount equivalent to three months' monthly rent paid at the time of the refusal of renewal (where a deposit other than the rent exists, including an amount obtained by converting the deposit into a monthly rent based on the lower of the rates referred to in the subparagraphs of Article 7-2; hereinafter referred to as \"converted monthly rent\");2. An amount equivalent to two years' amount of the difference between the converted monthly rent that the lessor obtains by leasing the house to a third party and the converted monthly rent at the time of the refusal of renewal;3. The amount of loss suffered by the lessee due to the refusal of renewal on the ground under paragraph (1)8.[This Article Added on Jul. 31, 2020]",
+          "joTtl": "Request for renewal of contract",
+          "chapNo": "00000000000000000000",
+          "No": "14",
+          "joBrNo": "03"
+        },
+        {
+          "joNo": "0007",
+          "joYn": "Y",
+          "joCts": "Article 7 (Requests for increase or decrease of rents) (1) If the stipulated rent or deposit becomes unreasonable due to increase or decrease of taxes, public dues, and other charges on the leased house, or a change in economic circumstances, the party concerned may request any increase or decrease thereof prospectively. In such cases, no request for an increase shall be made within one year after a lease contract is concluded or the rent or deposit agreed upon is increased. <Amended on Jul. 31, 2020>(2) An increase requested under paragraph (1) shall not exceed 1/20 of the agreed rent or deposit; provided, the upper limit of an increase to be requested may be prescribed otherwise by municipal ordinance of the Special Metropolitan City, a Metropolitan City, a Special Self-Governing City, a Do, or a Special Self-Governing Province within the scope referred to in the main clause in consideration of the circumstances of the housing lease market for each region within its jurisdiction. <Added on Jul. 31, 2020>[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Requests for increase or decrease of rents",
+          "chapNo": "00000000000000000000",
+          "No": "15",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0007",
+          "joYn": "Y",
+          "joCts": "Article 7-2 (Limits on computation rates in cases of conversion into monthly rents) When the deposit is fully or partially converted into a monthly rent, it shall not exceed the limit of the monthly rent calculated by multiplying the relevant converted amount by either of the following rates, whichever is the lower: <Amended on May 17, 2010; Aug. 13, 2013; May 29, 2016>1. The rate set by Presidential Decree, considering the loan interest rates applied by banks under the Banking Act, and the economic conditions of the relevant region;2. The rate calculated by aggregating the interest rate set by Presidential Decree and the standard interest rate publicly announced by the Bank of Korea.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Limits on computation rates in cases of conversion into monthly rents",
+          "chapNo": "00000000000000000000",
+          "No": "16",
+          "joBrNo": "02"
+        },
+        {
+          "joNo": "0008",
+          "joYn": "Y",
+          "joCts": "Article 8 (Protection of specified amount of deposit) (1) The lessee shall be entitled to receive a repayment of a specified amount of the deposit in preference to other persons holding the security rights in the leased house. In such cases, the lessee shall satisfy requirements provided for in Article 3(1) before an application for auction of the house is registered.(2) The provisions of Article 3-2(4) through (6) shall apply mutatis mutandis to cases falling under paragraph (1).(3) The extent and standard of a specified amount of the deposit, and a lessee who is entitled to receive a preferential repayment under paragraph (1), shall be prescribed by Presidential Decree through deliberation by the Housing Lease Committee under Article 8-2; provided, the extent and criteria of a specified amount of the deposit shall not exceed a half of the price of a house (including the price of a site). <Amended on May 8, 2009>[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Protection of specified amount of deposit",
+          "chapNo": "00000000000000000000",
+          "No": "17",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0008",
+          "joYn": "Y",
+          "joCts": "Article 8-2 (Housing Lease Committee) (1) A Housing Lease Committee (hereinafter referred to as the \"Committee\") shall be established within the Ministry of Justice to deliberate on lessees entitled to receive a preferential repayment, and the extent and criteria of a specified amount of the deposit pursuant to Article 8.(2) The Committee shall be comprised of at least 9, but not exceeding 15 members, including one chairperson., in consideration of gender. <Amended on Jul. 31, 2020>(3) The Vice Minister of Justice shall be the chairperson of the Committee.(4) The members of the Committee shall be commissioned or appointed by the chairperson from among the following persons; at least 1 member shall be commissioned or appointed respectively from among the persons falling under subparagraphs 1 through 5, and at least 1/2 of the members shall be commissioned from among persons falling under subparagraph 1, 2 or 6: <Amended on Mar. 23, 2013; Jul. 31, 2020; Oct. 1, 2025>1. Persons who majored in law, economics, real estate, etc. and have expert knowledge related to housing lease, and has at least five years of experience in an accredited research institution as an assistant professor or higher, or in a position equivalent thereto;2. Persons with at least five years of experience in the relevant fields as a lawyer, certified public appraiser, certified public accountant, tax accountant, or licensed real estate agent, and have abundant experience in affairs related to housing lease;3. Members of the Senior Executive Service in charge of affairs related to commodity prices in the Ministry of Economy and Finance;4. Public officials belonging to the Senior Executive Service, and in charge of affairs related to housing lease in the Ministry of Justice (including public officials in special service equivalent thereto);5. Public officials belonging to the Senior Executive Service, and in charge of affairs related to housing projects or residential welfare in the Minister of Land, Infrastructure and Transport;6. Any other person prescribed by Presidential Decree, from among those having extensive knowledge about, and experience in, housing leases.(5) Other matters necessary for formation and operation of the Committee shall be prescribed by Presidential Decree.[This Article Added on May 8, 2009]",
+          "joTtl": "Housing Lease Committee",
+          "chapNo": "00000000000000000000",
+          "No": "18",
+          "joBrNo": "02"
+        },
+        {
+          "joNo": "0009",
+          "joYn": "Y",
+          "joCts": "Article 9 (Succession to right of lease of house) (1) If a lessee dies without a successor, any person who has a de facto marital relationship and has lived together with the lessee as a member of the family in his or her house, shall succeed to the rights and obligations of the lessee.(2) When a lessee is dead, if the successor has not been living together with the lessee as a member of the family in his or her house at the time of his or her death, any person having the de facto marital relationship with the lessee, and the relatives within the second degree of relationship therewith, who have lived together with him or her in his or her house, shall jointly succeed to the rights and obligations of the lessee.(3) In cases provided for in paragraphs (1) and (2), this shall not apply in cases where a person to succeed under paragraphs (1) and (2) gives a dissenting opinion of the succession to the rights and obligations of a lessee to a lessor within one month after the lessee died.(4) In cases provided for in paragraphs (1) and (2), any claim and obligation created by the relation of lease shall be reverted to a person who has succeeded to the rights and obligations of the lessee.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Succession to right of lease of house",
+          "chapNo": "00000000000000000000",
+          "No": "19",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0010",
+          "joYn": "Y",
+          "joCts": "Article 10 (Mandatory provisions) Any agreement contrary to this Act and unfavorable to the lessee shall be ineffective.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Mandatory provisions",
+          "chapNo": "00000000000000000000",
+          "No": "20",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0010",
+          "joYn": "Y",
+          "joCts": "Article 10-2 (Claims for return of excess rents) Where a lessee has paid the rent or deposit in excess of the rate of increase provided for in Article 7, or the computation rate for conversion into monthly rents provided for in Article 7-2, he or she may claim the return of the amount corresponding to the amount of the excess rent or deposit.[This Article Added on Aug. 13, 2013]",
+          "joTtl": "Claims for return of excess rents",
+          "chapNo": "00000000000000000000",
+          "No": "21",
+          "joBrNo": "02"
+        },
+        {
+          "joNo": "0011",
+          "joYn": "Y",
+          "joCts": "Article 11 (Lease for temporary use) If it is obvious that the lease is for a temporary use, this Act shall not be applicable.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Lease for temporary use",
+          "chapNo": "00000000000000000000",
+          "No": "22",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0012",
+          "joYn": "Y",
+          "joCts": "Article 12 (Application mutatis mutandis to unregistered lease of house on deposit basis) This Act shall apply mutatis mutandis to a contract for lease of an unregistered house on a deposit basis. In such cases, \"security money for lease on a deposit basis\" shall be construed as \"deposit for lease\".[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Application mutatis mutandis to unregistered lease of house on deposit basis",
+          "chapNo": "00000000000000000000",
+          "No": "23",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0013",
+          "joYn": "Y",
+          "joCts": "Article 13 (Application mutatis mutandis of the Trial of Small Claims Act) `Articles 6, 7, 10 and 11-2 of the Trial of Small Claims Act shall apply mutatis mutandis to the lawsuit filed by the lessee against the lessor to demand the repayment of deposit.[This Article Wholly Amended on Mar. 21, 2008]",
+          "joTtl": "Application mutatis mutandis of the Trial of Small Claims Act",
+          "chapNo": "00000000000000000000",
+          "No": "24",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0014",
+          "joYn": "Y",
+          "joCts": "Article 14 (Housing lease dispute conciliation committees) (1) To deliberate on and mediate disputes arising in relation to housing leases subject to this Act, a housing lease dispute conciliation committee (hereinafter referred to as \"conciliation committee\") shall be established in each branch of the Korea Legal Aid Corporation established under Article 8 of the Legal Aid Act (hereinafter referred to as the \"Corporation\"), each branch office or business office of the Korea Land and Housing Corporation established under the Korea Land and Housing Corporation Act (hereinafter referred to as \"LH\"), and each branch office or business office of the Korea Appraisal Board established under the Korea Appraisal Board Act (hereinafter referred to as the \"Appraisal Board\"), as prescribed by Presidential Decree. The Special Metropolitan City, a Metropolitan City, a Special Self-Governing City, a Do or a Special Self-Governing Province (hereinafter referred to as \"City/Do\") may establish a conciliation committee, taking the actual conditions of the relevant local government into consideration. <Amended on Jul. 31, 2020>(2) Conciliation committees shall deliberate on and mediate the following matters:1. Disputes over increasing or reducing rents or deposits;2. Disputes over the lease period;3. Disputes over the return of deposits or of possession leased houses;4. Disputes over the duty to maintain and repair leased houses;5. Other disputes prescribed by Presidential Decree in relation to housing leases.(3) In order to manage the administrative affairs of a conciliation committee, a secretariat shall be established under the conciliation committee; the organizational structure and human resources of the secretariat and other necessary matters shall be prescribed by Presidential Decree.(4) No person in charge of the affairs of a conciliation committee at the secretariat shall concurrently engage in the affairs relating to any other position except for the affairs of the secretariat of the commercial building lease dispute conciliation committee under Article 20 of the Commercial Building Lease Protection Act. <Amended on Oct. 16, 2018>[This Article Added on May 29, 2016]",
+          "joTtl": "Housing lease dispute conciliation committees",
+          "chapNo": "00000000000000000000",
+          "No": "25",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0015",
+          "joYn": "Y",
+          "joCts": "Article 15 (Budgetary support) The State may provide budgetary support necessary for the establishment and operation of conciliation committees.[This Article Added on May 29, 2016]",
+          "joTtl": "Budgetary support",
+          "chapNo": "00000000000000000000",
+          "No": "26",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0016",
+          "joYn": "Y",
+          "joCts": "Article 16 (Composition and operation of mediation committee) (1) Each conciliation committee shall be comprised of between 5 and 30 members, including 1 chairperson, in consideration of gender. <Amended on Jul. 31, 2020>(2) Members of a conciliation committee shall be appointed or commissioned by the president of the Corporation, the CEO of LH, the chairperson of the Appraisal Board, or the head of a local government in which a conciliation committee is established, respectively, depending on an institution having such conciliation committee. <Amended on Jul. 31, 2020>(3) Members of a conciliation committee shall be the following persons, having extensive knowledge about, and experience in, housing leases. In such cases, at least one person referred to in each of subparagraphs 1 through 4 shall be commissioned, and at least 2/5 of the members shall be those referred to in subparagraph 2:1. A person who has majored in law, economics, or real estate, or worked at a university or college, or an accredited research institute as at least an associate professor or equivalent;2. A person with at least six-years’ experience as a judge, public prosecutor or attorney-at-law;3. A person with at least six-years’ experience in the affairs related to housing lease as a certified public appraiser, certified public accountant, certified judicial scrivener, or licensed real estate agent;4. A person with at least six-year’ experience in counseling on disputes over housing leases at a social welfare foundation established under the Social Welfare Services Act or any other non-profit corporation;5. An at least Grade IV public official, in charge of the affairs related to housing leases at a local government;6. Any other person prescribed by Presidential Decree, from among those having extensive knowledge about, and experience in, housing leases.(4) The chairperson of a conciliation committee shall be elected by members from among members referred to in paragraph (3)2.(5) The chairperson of a conciliation committee shall represent the conciliation committee and exercise general supervision over its affairs.(6) When the chairperson of a conciliation committee is unable to perform his or her duties due to any extenuating circumstances, a member pre-nominated by the chairperson shall act on behalf of the chairperson.(7) The term of office of a member of a conciliation committee shall be three years, and may be renewed consecutively; and a member appointed to fill a vacancy occurring before the expiration of the term for which his predecessor was appointed, shall serve for the remainder of such term.(8) The resolution by a conciliation committee shall require the attendance of a majority of all incumbent members, including the chairperson of the conciliation committee or at least one member referred to in paragraph (3)2, and the affirmative vote of a majority of those present.(9) The establishment, composition, and operation of conciliation committees, and other necessary matters, shall be prescribed by Presidential Decree.[This Article Added on May 29, 2016]",
+          "joTtl": "Composition and operation of mediation committee",
+          "chapNo": "00000000000000000000",
+          "No": "27",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0017",
+          "joYn": "Y",
+          "joCts": "Article 17 (Composition and operation of conciliation divisions) (1) To efficiently settle disputes, a conciliation committee may establish a conciliation division comprised of three conciliators.(2) A conciliation division shall have at least one person falling under Article 16(3)2, and the chairperson of a conciliation committee shall appoint the head of the conciliation division from among the members of the conciliation division.(3) The conciliation division shall deliberate on and mediate the following matters:1. Disputes over the amount below the amount prescribed by Presidential Decree, among the disputes over housing leases provided for in Article 14(2);2. Disputes entrusted by a conciliation committee to the conciliation division, specifying the case.(4) The resolution by a conciliation division shall require the attendance of a majority of all incumbent members, including the head of the conciliation division and the affirmative vote of a majority of those present.(5) Resolutions passed by a conciliation division under paragraph (4) shall be deemed passed by a conciliation committee.(6) The establishment, composition, and operation of conciliation divisions, and other necessary matters, shall be prescribed by Presidential Decree.[This Article Added on May 29, 2016]",
+          "joTtl": "Composition and operation of conciliation divisions",
+          "chapNo": "00000000000000000000",
+          "No": "28",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0018",
+          "joYn": "Y",
+          "joCts": "Article 18 (Grounds for disqualification as conciliators) None of the persons referred to in the subparagraphs of Article 33 of the State Public Officials Act, can be a conciliator.[This Article Added on May 29, 2016]",
+          "joTtl": "Grounds for disqualification as conciliators",
+          "chapNo": "00000000000000000000",
+          "No": "29",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0019",
+          "joYn": "Y",
+          "joCts": "Article 19 (Guarantee of status of conciliators) (1) A conciliator shall perform his or her duties independently, and shall not be bound by any instruction with respect to the examination of and judgment on disputes over housing leases.(2) No conciliator shall be removed or dismissed from office against his or her will unless he or she falls under any of the following cases:1. Where he or she falls under Article 18;2. Where he or she becomes unable to perform his or her duties due to a physical or mental disorder.[This Article Added on May 29, 2016]",
+          "joTtl": "Guarantee of status of conciliators",
+          "chapNo": "00000000000000000000",
+          "No": "30",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0020",
+          "joYn": "Y",
+          "joCts": "Article 20 (Exclusion of conciliators) (1) A conciliator shall be excluded from performing his or her duties, if:1. The conciliator or his or her current or former spouse becomes a party to a dispute;2. The conciliator is a current or former relative of a party to a dispute;3. The conciliator has made a statement, provided appraisal services or legal advice, with respect to a dispute;4. The conciliator is or was involved in a dispute as an agent of a party to the dispute.(2) Where any ground for exclusion arises with respect to a conciliator in charge of a case, the conciliation committee shall, ex officio or upon request of a party, make a decision to exclude the conciliator.(3) If any ground arises making it impracticable to expect the impartial performance of duties of a conciliator in charge of a case, a party to the case may file a request to challenge the conciliator, with the conciliation committee.(4) A determination on a request for challenge shall be made by a conciliation committee, and neither the relevant conciliator nor the parties shall file any objection to such determination.(5) Where a request for challenge is filed under paragraph (3), a conciliation committee shall suspend conciliation until the determination is made on the request.(6) If paragraph (1) or (3) applies to a conciliator, the conciliator may abstain from the performance of his or her duties with respect to the relevant dispute, without permission from the conciliation committee.[This Article Added on May 29, 2016]",
+          "joTtl": "Exclusion of conciliators",
+          "chapNo": "00000000000000000000",
+          "No": "31",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0021",
+          "joYn": "Y",
+          "joCts": "Article 21 (Applications for conciliation) (1) A party to a dispute over a housing lease provided for in any subparagraph of Article 14(2), may file an application for conciliation of the dispute with the conciliation committee having jurisdiction over the region in which the relevant house is located. <Amended on Jul. 31, 2020>(2) The conciliation committee shall inform an applicant who files an application for conciliation, of matters prescribed by Presidential Decree concerning dispute conciliation, such as the process and effect of the conciliation.(3) In any of the following cases, the chairperson of a conciliation committee shall reject an application. In such cases, he or she shall give notice of the grounds for rejection to the applicant: <Amended on Jun. 9, 2020>1. Where a lawsuit concerning the subject matter of the dispute has been filed with the court, or where a lawsuit has been filed after an application for conciliation was submitted;2. Where an application for conciliation has been submitted under the Judicial Conciliation of Civil Disputes Act with respect to the subject matter of the dispute, or where an application for conciliation has been submitted under the same Act after an application for conciliation was submitted;3. Where an application for conciliation has been submitted to a conciliation committee under this Act with respect to the subject matter of dispute, or where the conciliation has been completed after an application for conciliation was submitted;4. Where it is evident that an application for conciliation, itself, is unrelated to a dispute over a housing lease;5. Where the respondent gives notice of his or her intention not to participate in the conciliation process;6. Where the applicant fails to respond to an inquiry without due cause or fails to comply with the request for attendance on two or more occasions.[This Article Added on May 29, 2016]",
+          "joTtl": "Applications for conciliation",
+          "chapNo": "00000000000000000000",
+          "No": "32",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0022",
+          "joYn": "Y",
+          "joCts": "Article 22 (Conciliation process) (1) Upon receipt of an application for conciliation from an applicant, the chairperson of a conciliation committee shall commence conciliation process without delay. <Amended on Jun. 9, 2020>(2) Upon receipt of an application for conciliation under paragraph (1), the chairperson of a conciliation committee shall serve the respondent with the application for conciliation. Article 21(2) shall apply mutatis mutandis in such cases. <Amended on Jun. 9, 2020>(3) Matters necessary for the conciliation process, such as service of documents related to conciliation, shall be prescribed by Presidential Decree.[This Article Added on May 29, 2016]",
+          "joTtl": "Conciliation process",
+          "chapNo": "00000000000000000000",
+          "No": "33",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0023",
+          "joYn": "Y",
+          "joCts": "Article 23 (Processing period) (1) A conciliation committee shall complete mediating a dispute within 60 days of receipt of an application for conciliation; provided, such period may be extended by up to 30 days, subject to resolution by the conciliation committee, in unavoidable circumstances.(2) Where a conciliation committee grants an extension under the proviso to paragraph (1), it shall notify the parties of the grounds for the extension and other related matters.[This Article Added on May 29, 2016]",
+          "joTtl": "Processing period",
+          "chapNo": "00000000000000000000",
+          "No": "34",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0024",
+          "joYn": "Y",
+          "joCts": "Article 24 (Inspections) (1) Where deemed necessary for conciliation, a conciliation committee may request an applicant, a respondent, an interested party to the dispute, or a witness, to appear and make a statement or to submit materials, articles, etc. necessary for the conciliation.(2) Where deemed necessary for conciliation, a conciliation committee may authorize a conciliator or a staff member of the secretariat to inspect the subject matter of the conciliation and related materials, or to gather materials. In such cases, the conciliator or staff member of the secretariat shall carry identification verifying his or her authority and present it to the relevant persons.(3) To use as a reference for the relevant conciliation affairs, the chairperson of a conciliation committee may request materials for the calculation of reasonable rents, such as data on the fixed dates and rates of conversion of deposits into monthly rents in neighboring areas, from the Special Metropolitan City Mayor, a Metropolitan City Mayor, a Special Self-Governing City Mayor, a Do Governor, or Special Self-Governing Province Governor (hereinafter referred to as \"Mayor/Do Governor\"). In such cases, a Mayor/Do Governor shall comply with the request of the chairperson of the conciliation committee unless good cause exists.[This Article Added on May 29, 2016]",
+          "joTtl": "Inspections",
+          "chapNo": "00000000000000000000",
+          "No": "35",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0025",
+          "joYn": "Y",
+          "joCts": "Article 25 (Decision without conciliation) (1) Where a dispute is deemed improper for conciliation, considering the nature of the dispute, or a party is deemed to have filed an application for conciliation for an unfair purpose, a conciliation committee may choose not to conduct conciliation.(2) When a conciliation committee decides not to conduct conciliation under paragraph (1), it shall give notice of the decision to the parties to the dispute.[This Article Added on May 29, 2016]",
+          "joTtl": "Decision without conciliation",
+          "chapNo": "00000000000000000000",
+          "No": "36",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0026",
+          "joYn": "Y",
+          "joCts": "Article 26 (Completion of conciliation) (1) Upon preparing a proposal for conciliation, a conciliation committee shall give notice of such proposal to each party without delay.(2) Where a party in receipt of notice of the proposal for conciliation given under paragraph (1), fails to express its intention in writing to accept it within 14 days of receipt of the notice, the party shall be deemed to have rejected the conciliation. <Amended on Jun. 9, 2020>(3) Where each party accepts a proposal for conciliation under paragraph (2), agreement shall be deemed reached as stated in the proposal for conciliation.(4) Where agreement is reached under paragraph (3), the chairperson of the conciliation committee shall prepare a deed of conciliation with the same content of the proposal for conciliation. Where agreement is reached between parties to a dispute to the effect that such parties accept compulsory execution regarding the payment of money, payment in kind or the transfer of real estate, the chairperson of the conciliation committee shall state the same in a deed of conciliation.[This Article Added on May 29, 2016]",
+          "joTtl": "Completion of conciliation",
+          "chapNo": "00000000000000000000",
+          "No": "37",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0027",
+          "joYn": "Y",
+          "joCts": "Article 27 (Grant of executive power) Notwithstanding Article 56 of the Civil Execution Act, the authenticated copy of a deed of conciliation in which the acceptance of compulsory execution is stated under the latter part of Article 26(4), shall have the same effect as an executory exemplification; provided, Article 44(2) of the same Act shall not apply to any allegation of demurrer against the claims.[This Article Added on May 29, 2016]",
+          "joTtl": "Grant of executive power",
+          "chapNo": "00000000000000000000",
+          "No": "38",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0028",
+          "joYn": "Y",
+          "joCts": "Article 28 (Duty to maintain confidentiality) No current or former conciliator or staff member of the secretariat shall divulge any confidential information he or she becomes aware of in the course of performing his or her duties, or use such information for any purpose other than for performing his or her duties, except as otherwise expressly provided for in any other Act.[This Article Added on May 29, 2016]",
+          "joTtl": "Duty to maintain confidentiality",
+          "chapNo": "00000000000000000000",
+          "No": "39",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0029",
+          "joYn": "Y",
+          "joCts": "Article 29 (Application mutatis mutandis of other statutes) Except as provided in this Act, the Judicial Conciliation of Civil Disputes Act shall apply mutatis mutandis to the operation of conciliation committees and the conciliation process.[This Article Added on May 29, 2016]",
+          "joTtl": "Application mutatis mutandis of other statutes",
+          "chapNo": "00000000000000000000",
+          "No": "40",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0030",
+          "joYn": "Y",
+          "joCts": "Article 30 (Use of standard housing lease contract) In executing a housing lease contract in writing, the parties to such contract shall preferentially use a standard housing lease contract determined by the Minister of Justice after consultation with the Minister of Land, Infrastructure and Transport; provided, the same shall not apply where the parties agree to use any other contract form. <Amended on Jul. 31, 2020>[This Article Added on May 29, 2016]",
+          "joTtl": "Use of standard housing lease contract",
+          "chapNo": "00000000000000000000",
+          "No": "41",
+          "joBrNo": "00"
+        },
+        {
+          "joNo": "0031",
+          "joYn": "Y",
+          "joCts": "Article 31 (Legal fiction as public official for purposes of applying penalty provisions) Members of the Housing Lease Committee and members of each housing lease dispute conciliations committee, who are not public officials, shall be deemed public officials for the purposes of applying Articles 127 and 129 through 132 of the Criminal Act.[This Article Added on May 29, 2016]",
+          "joTtl": "Legal fiction as public official for purposes of applying penalty provisions",
+          "chapNo": "00000000000000000000",
+          "No": "42",
+          "joBrNo": "00"
+        }
+      ]
+    },
+    "InfSection": {
+      "lsNmEng": "HOUSING LEASE PROTECTION ACT",
+      "ancYd": "20251001",
+      "ancNo": "21065",
+      "lsId": "001248",
+      "lsHwpFl": ""
+    }
+  },
+  "items": [
+    {
+      "title": "",
+      "meta": "",
+      "summary": "",
+      "url": "",
+      "id": "001248",
+      "BylSection": ""
+    }
+  ],
+  "count": 1
+}

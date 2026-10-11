@@ -1,0 +1,25 @@
+{
+  "who": "ai",
+  "mode": "base",
+  "count": 120,
+  "passed": 7,
+  "total": 8,
+  "errors": {
+    "6_priority": [
+      {
+        "strict_order": false,
+        "same_members": false
+      }
+    ]
+  },
+  "supplements": [
+    {
+      "key": "english",
+      "status": "확보"
+    },
+    {
+      "key": "term",
+      "status": "부분 확보 — 한영 대역어만, 국문 정의 미확보"
+    }
+  ]
+}

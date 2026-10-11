@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "legal_lookup",
-      "description": "대한민국 법률 정보 통합 조회 (국가법령정보센터 law.go.kr). query를 주면 검색(items 마다 상세 조회용 id), id를 주면 상세(법령은 조마다 한 행). target으로 종류 지정(law/prec/admrul/ordin/exp/detc/trty/eng_law/law_term/law_form).",
+      "description": "대한민국 법률 정보 통합 조회 (국가법령정보센터 law.go.kr). query를 주면 검색(items 마다 상세 조회용 id), id를 주면 상세(국문·영문 법령은 조마다 한 행; 영문 시행일 부재는 빈 값). 용어는 사전 종류(dictionary_code·dictionary_name)와 공개 링크를 확인한다. target으로 종류 지정(law/prec/admrul/ordin/exp/detc/trty/eng_law/law_term/law_form).",
       "input_schema": {
         "type": "object",
         "properties": {

@@ -1964,8 +1964,8 @@
   },
   "sense:legal": {
    "fields": {
-    "description": "1e2c3da22287",
-    "target_description": "be509aa8c093",
+    "description": "583d66deca94",
+    "target_description": "1dd26fefc3d2",
     "implementation": "33499f9a5ff0",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",

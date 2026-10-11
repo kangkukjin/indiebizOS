@@ -1,0 +1,18 @@
+{
+  "who": "trainer",
+  "mode": "base",
+  "count": 120,
+  "passed": 8,
+  "total": 8,
+  "errors": {},
+  "supplements": [
+    {
+      "key": "english",
+      "status": "retrieved"
+    },
+    {
+      "key": "term",
+      "status": "translation_only"
+    }
+  ]
+}

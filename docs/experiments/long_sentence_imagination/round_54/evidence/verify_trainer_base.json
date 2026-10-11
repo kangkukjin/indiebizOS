@@ -1,0 +1,22 @@
+{
+  "who": "trainer",
+  "mode": "base",
+  "count": 120,
+  "passed": 7,
+  "total": 8,
+  "errors": {
+    "7_supplements": [
+      "term"
+    ]
+  },
+  "supplements": [
+    {
+      "key": "english",
+      "status": "missing_body"
+    },
+    {
+      "key": "term",
+      "status": "retrieved"
+    }
+  ]
+}

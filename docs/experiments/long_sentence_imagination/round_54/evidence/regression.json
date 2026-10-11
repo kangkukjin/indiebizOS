@@ -1,0 +1,23 @@
+{
+  "sandbox": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "23",
+    "skipped": "1",
+    "tests": "1625",
+    "time": "69.022",
+    "timestamp": "2026-10-11T20:16:54.280781+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "normal": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "1",
+    "tests": "1625",
+    "time": "84.901",
+    "timestamp": "2026-10-11T20:26:18.892888+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "selection": "변경 39 파일, backend 모듈 0개 → 전이 시험 파일 81/641 (13%)"
+}

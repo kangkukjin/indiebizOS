@@ -1,0 +1,162 @@
+{
+  "episode": {
+    "id": 4600,
+    "total_ms": 112556,
+    "source": "training",
+    "run_id": "run_265ddb026380d6fbc894"
+  },
+  "usage": {
+    "input": 2234776,
+    "output": 12118,
+    "cache_read": 1912936,
+    "cache_create": 316552
+  },
+  "roles": {
+    "oneshot:classify": {
+      "input": 4985,
+      "output": 5,
+      "cache_read": 2688,
+      "cache_create": 0
+    },
+    "oneshot:background": {
+      "input": 3861,
+      "output": 1724,
+      "cache_read": 896,
+      "cache_create": 0
+    },
+    "consciousness": {
+      "input": 32970,
+      "output": 901,
+      "cache_read": 6142,
+      "cache_create": 26826
+    },
+    "execution": {
+      "input": 1956249,
+      "output": 9084,
+      "cache_read": 1897679,
+      "cache_create": 58548
+    },
+    "oneshot:evaluate": {
+      "input": 236711,
+      "output": 404,
+      "cache_read": 5531,
+      "cache_create": 231178
+    }
+  },
+  "events": {
+    "request.received": 1,
+    "cognition.supervisor_selected": 1,
+    "supervision.turn.opened": 1,
+    "supervision.recall.started": 8,
+    "supervision.recall.finished": 8,
+    "model.call_started": 6,
+    "model.input": 6,
+    "model.round": 16,
+    "model.usage": 6,
+    "model.call_finished": 6,
+    "knowledge_catalog.selected": 2,
+    "recall.presented": 1,
+    "cognition.route": 1,
+    "framing.inherited": 1,
+    "supervision.framing": 1,
+    "model.response_snapshot": 29,
+    "supervision.tool.started": 10,
+    "ibl.started": 9,
+    "ibl.checkpoint": 8,
+    "ibl.finished": 9,
+    "supervision.tool.finished": 10,
+    "side_effect.write": 14,
+    "context.input_ref_resolved": 2,
+    "seam": 2,
+    "supervision.model.started": 1,
+    "supervision.review.trigger_retired": 1,
+    "supervision.model.finished": 1,
+    "supervision.decision": 2,
+    "cognition.evaluation": 1,
+    "supervision.evaluation.stage_started": 4,
+    "supervision.evaluation.stage_finished": 4,
+    "supervision.evaluation.started": 1,
+    "supervision.evaluation.finished": 1,
+    "validation.completed": 1,
+    "supervision.response.delivered": 1,
+    "recall.used": 1,
+    "supervision.cost.summary": 1,
+    "supervision.turn.closed": 1,
+    "run.ended": 1
+  },
+  "tool_names": {
+    "execute_ibl": 9,
+    "Bash": 1
+  },
+  "tool_failures": 0,
+  "recall_used": [
+    {
+      "blocks": [
+        {
+          "evidence": "executed",
+          "ibl_calls": 9,
+          "presented": [
+            "4831",
+            "4775"
+          ],
+          "recall_id": "7cff98161ef44dff82009296b8d686fb",
+          "source": "hippocampus",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "presented": [
+            "script:나레이션생성",
+            "script:팁행source중첩",
+            "script:판정관용구"
+          ],
+          "quality_contribution": "not_inferred",
+          "recall_id": "7cff98161ef44dff82009296b8d686fb",
+          "source": "reusable_capabilities",
+          "used": []
+        },
+        {
+          "evidence": "none",
+          "opened": [],
+          "presented": [
+            "339",
+            "480",
+            "453"
+          ],
+          "recall_id": "7cff98161ef44dff82009296b8d686fb",
+          "source": "recalled_memory",
+          "used": []
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "basics.14.4a02004ab78c",
+            "basics.14.80aab8a91c17",
+            "basics.07.3e29c7e3f21b",
+            "basics.01.45ec909f3017"
+          ],
+          "recall_id": "7cff98161ef44dff82009296b8d686fb",
+          "source": "method_map",
+          "used": [
+            "basics.14.4a02004ab78c",
+            "basics.14.80aab8a91c17",
+            "basics.07.3e29c7e3f21b"
+          ]
+        },
+        {
+          "evidence": "mentioned",
+          "presented": [
+            "atlas.law.contract_review",
+            "atlas.data.data_normalization"
+          ],
+          "recall_id": "7cff98161ef44dff82009296b8d686fb",
+          "source": "world_memory",
+          "used": []
+        }
+      ],
+      "completed": true,
+      "phase": "turn"
+    }
+  ],
+  "compacted": 0
+}

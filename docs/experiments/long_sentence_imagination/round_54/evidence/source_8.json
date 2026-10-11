@@ -1,0 +1,25 @@
+{
+  "success": true,
+  "message": "{\"LawSearch\": {\n    \"law\": [\n        {\n            \"현행연혁코드\": \"현행\",\n            \"id\": \"1\",\n            \"법령ID\": \"001248\",\n            \"법령일련번호\": \"276291\",\n            \"자법타법여부\": \"\",\n            \"법령상세링크\": \"/DRF/lawService.do?OC=&target=elaw&MST=276291&type=HTML&mobileYn=\",\n            \"시행일자\": \"20260102\",\n            \"법령명한글\": \"<strong class=\\\"tbl_tx_type\\\"><strong class=\\\"tbl_tx_type\\\">주택<\\/strong><strong class=\\\"tbl_tx_type\\\">임대차<\\/strong><strong class=\\\"tbl_tx_type\\\">보호법<\\/strong><\\/strong>\",\n            \"법령구분명\": \"법률\",\n            \"소관부처명\": \"법무부,국토교통부\",\n            \"공포번호\": \"21065\",\n            \"제개정구분명\": \"타법개정\",\n            \"공포일자\": \"20251001\",\n            \"법령명영문\": \"HOUSING LEASE PROTECTION ACT\"\n        },\n        {\n            \"현행연혁코드\": \"연혁\",\n            \"id\": \"2\",\n            \"법령ID\": \"004950\",\n            \"법령일련번호\": \"280995\",\n            \"자법타법여부\": \"\",\n            \"법령상세링크\": \"/DRF/lawService.do?OC=&target=elaw&MST=280995&type=HTML&mobileYn=\",\n            \"시행일자\": \"20260102\",\n            \"법령명한글\": \"<strong class=\\\"tbl_tx_type\\\"><strong class=\\\"tbl_tx_type\\\">주택<\\/strong><strong class=\\\"tbl_tx_type\\\">임대차<\\/strong><strong class=\\\"tbl_tx_type\\\">보호법<\\/strong><\\/strong> 시행령\",\n            \"법령구분명\": \"대통령령\",\n            \"소관부처명\": \"법무부,국토교통부\",\n            \"공포번호\": \"35947\",\n            \"제개정구분명\": \"타법개정\",\n            \"공포일자\": \"20251230\",\n            \"법령명영문\": \"ENFORCEMENT DECREE OF THE HOUSING LEASE PROTECTION ACT\"\n        }\n    ],\n    \"키워드\": \"주택임대차보호법\",\n    \"page\": \"1\",\n    \"target\": \"elaw\",\n    \"totalCnt\": \"2\",\n    \"section\": \"lawNm\"\n}}",
+  "items": [
+    {
+      "title": "HOUSING LEASE PROTECTION ACT",
+      "meta": "법률 · 법무부,국토교통부 · 20251001 · 20260102",
+      "summary": "",
+      "url": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=276291&viewCls=engLsInfoR",
+      "date": "2026-01-02",
+      "id": "001248"
+    },
+    {
+      "title": "ENFORCEMENT DECREE OF THE HOUSING LEASE PROTECTION ACT",
+      "meta": "대통령령 · 법무부,국토교통부 · 20251230 · 20260102",
+      "summary": "",
+      "url": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=280995&viewCls=engLsInfoR",
+      "date": "2026-01-02",
+      "id": "004950"
+    }
+  ],
+  "count": 2,
+  "total": 2,
+  "search_scope": "name"
+}

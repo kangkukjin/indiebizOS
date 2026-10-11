@@ -1,0 +1,22 @@
+{
+  "base": {
+    "text_matches_official": true,
+    "english_chars": 46037,
+    "status": "retrieved"
+  },
+  "variant": {
+    "text_matches_official": true,
+    "english_chars": 46037,
+    "status": "retrieved"
+  },
+  "new": {
+    "text_matches_official": true,
+    "english_chars": 46037,
+    "status": "retrieved"
+  },
+  "empty": {
+    "text_matches_official": true,
+    "english_chars": 46037,
+    "status": "retrieved"
+  }
+}

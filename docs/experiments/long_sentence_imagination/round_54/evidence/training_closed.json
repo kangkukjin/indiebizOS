@@ -1,0 +1,21 @@
+{
+  "time": 1791717255.7538922,
+  "head": "476a21ba44bd6b7ca74a7a37eedd9883883c17f7",
+  "ai": {
+    "base": {
+      "state": "succeeded",
+      "status": "completed",
+      "task_id": "task_sysai_211860e2"
+    },
+    "variant": {
+      "state": "succeeded",
+      "status": "completed",
+      "task_id": "task_sysai_89113426"
+    }
+  },
+  "trainer_runs": [
+    "78734f7b71aa410fa0b8c0ba00391d17",
+    "93e41f13fabe4162a54aed53ac7213a5"
+  ],
+  "status": "all_terminal"
+}

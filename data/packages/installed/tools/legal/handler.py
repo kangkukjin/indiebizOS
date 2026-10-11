@@ -57,7 +57,7 @@ _TARGET_FIELDS = {
         "id_key": "법령일련번호",
         "link_keys": ["법령상세링크"],
     },
-    # 영문법령 (구조는 law 계열과 동일/유사)
+    # 영문법령 검색. 상세는 Law.{InfSection,JoSection,ArSection}으로 별도 정규화한다.
     "eng_law": {
         "title_keys": ["법령명영문", "법령명한글", "법령명"],
         "meta_keys": ["법령구분명", "소관부처명", "공포일자", "시행일자"],
@@ -118,9 +118,9 @@ _TARGET_FIELDS = {
     # 법률용어
     "law_term": {
         "title_keys": ["법령용어명", "법령용어명_한글", "용어명", "법령용어명_한자"],
-        "meta_keys": ["출처"],
+        "meta_keys": ["법령용어코드명", "출처"],
         "id_key": "법령용어ID",
-        "link_keys": ["법령용어상세링크"],
+        "link_keys": ["법령용어상세검색", "법령용어상세링크"],
     },
     # 법률서식
     "law_form": {
@@ -241,6 +241,10 @@ def _redact(s: str) -> str:
 def _public_url(row: dict, fields: dict, target: str) -> str:
     """사람이 여는 공개 주소. 모르는 대상은 원천 링크에서 식별값만 지운 것."""
     d = _DETAIL.get(target) or {}
+    if target == "law_term":
+        term_id = _pick(row, ["법령용어ID", "법령용어일련번호"])
+        if term_id:
+            return f"{_LINK_BASE}/LSW/lsTrmInfoR.do?trmSeqs={term_id}"
     seq = row.get(d.get("seq_key")) if d.get("seq_key") else None
     if d.get("page") and seq not in (None, "", "null"):
         return _LINK_BASE + d["page"].format(seq=seq)
@@ -277,6 +281,11 @@ def _row_to_record(row: dict, fields: dict, target: str) -> dict:
     item_id = _pick(row, [(_DETAIL.get(target) or {}).get("id_key") or fields.get("id_key") or ""])
     if item_id:
         rec["id"] = item_id
+    if target == "law_term":
+        rec["dictionary_code"] = _pick(row, ["사전구분코드", "법령용어코드"])
+        rec["dictionary_name"] = _pick(row, ["법령용어코드명"])
+        if not rec.get("id"):
+            rec["id"] = _pick(row, ["법령용어일련번호"])
     for name, key in (fields.get("extra") or {}).items():
         v = _pick(row, [key])
         if v:
@@ -466,10 +475,52 @@ def _not_found_text(data) -> str:
     return ""
 
 
+def _english_law_detail(law: dict, item_id: str) -> dict:
+    """영문 원천의 조·부칙과 날짜의 의미를 보존한다. 공포일을 시행일로 추정하지 않는다."""
+    info = law.get("InfSection")
+    info = info if isinstance(info, dict) else {}
+    law_id = str(info.get("lsId") or item_id)
+    name = _clean(info.get("lsNmEng") or "")
+    url = f"{_LINK_BASE}/LSW/lsInfoP.do?lsId={law_id}&viewCls=engLsInfoR"
+    section = law.get("JoSection")
+    units = _coerce_list(section.get("Jo")) if isinstance(section, dict) else []
+    items, chapter = [], ""
+    for article in units:
+        if not isinstance(article, dict):
+            continue
+        body = _clean("\n".join(_lines(article.get("joCts"))))
+        if article.get("joYn") != "Y":
+            chapter = body or chapter
+            continue
+        number = str(article.get("joNo") or "").lstrip("0") or "0"
+        branch = str(article.get("joBrNo") or "").lstrip("0")
+        no = f"제{number}조" + (f"의{branch}" if branch else "")
+        title = _clean(article.get("joTtl") or "")
+        items.append({"no": no, "title": f"Article {number}" + (f"-{branch}" if branch else "")
+                      + (f" ({title})" if title else ""), "article_title": title,
+                      "text": body, "summary": "", "meta": name, "url": url,
+                      "date": _norm_date(article.get("joEnfYd")), "chapter": chapter})
+    addenda = law.get("ArSection")
+    addenda = _coerce_list(addenda.get("Ar")) if isinstance(addenda, dict) else []
+    result = {"items": items, "count": len(items),
+              "law": {"name": name, "id": law_id, "url": url, "language": "en",
+                      "promulgation_date": _norm_date(info.get("ancYd")),
+                      "enforce_date": _norm_date(info.get("efYd"))},
+              "addenda": [{"text": _clean("\n".join(_lines(a.get("arCts")))),
+                           "promulgation_date": _norm_date(a.get("arAncYd")),
+                           "promulgation_no": str(a.get("arAncNo") or "")}
+                          for a in addenda if isinstance(a, dict)]}
+    if not items or any(not item["text"] for item in items):
+        result.update(success=False, error_code="SOURCE_ERROR",
+                      error="영문 법령 원천의 조문 본문이 비어 있습니다. 원천 Law와 조회 번호를 확인하세요.")
+    return result
+
+
 def _detail(api_key: str, target: str, item_id) -> dict:
     """상세(lawService.do) → 원천 키는 그대로 두고 items 를 더한다.
 
-    법령: items = 조마다 한 행(no·title·text·date·chapter) + law{name,id,mst,enforce_date,…}.
+    국문·영문 법령: items = 조마다 한 행(no·title·text·date·chapter) + law 메타데이터.
+    영문 원천에 시행일이 없으면 빈 값이다. addenda는 부칙 원문·공포일이고 시행일이 아니다.
     그 밖: items = 한 행(title·meta·summary·date·id + 원천 필드 글).
     못 찾으면 실패(NOT_FOUND)다 — 원천의 "일치하는 …없습니다" 를 성공으로 넘기지 않는다.
     """
@@ -502,6 +553,12 @@ def _detail(api_key: str, target: str, item_id) -> dict:
                 "error": f"{target} 번호 '{item_id}' 로 찾지 못했습니다 — 원천 응답: {reason} {hint}",
                 "id": str(item_id), "target": target}
     out = {"success": True, "target": target, "id": str(item_id), **data}
+    if target == "eng_law":
+        law = data.get("Law")
+        if not isinstance(law, dict):
+            return {**out, "success": False, "error_code": "SOURCE_ERROR",
+                    "error": "영문 법령 원천에 Law 본문 구조가 없습니다.", "items": [], "count": 0}
+        return {**out, **_english_law_detail(law, str(item_id))}
     service = next((v for v in data.values() if isinstance(v, dict)), {})
     # 기본정보가 한 겹 안에 있는 대상(행정규칙·자치법규·조약 등)은 그 칸들을 같은 높이로 올려 읽는다
     service = {**{k: v for sub_key, sub in service.items() if isinstance(sub, dict) and "기본정보" in str(sub_key)

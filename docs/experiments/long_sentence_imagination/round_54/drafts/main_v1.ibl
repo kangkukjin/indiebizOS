@@ -1,0 +1,46 @@
+#!ibl edition=2
+[def:법령확보]($이름) {
+  [try] {
+    $s = [sense:legal]{query:$이름}
+    $exact = filter($s.items,($r)=>$r.title == $이름)
+    [if:len($exact)==0] { return {name:$이름,status:"unverified_law",items:[],date:"",url:"",reason:"정확한 법령명 없음"} }
+    $d = [sense:legal]{id:$exact[0].id}
+    return {name:$이름,status:"verified",items:$d.items,date:$d.law.enforce_date,url:$d.law.url,reason:""}
+  } [catch] { return {name:$이름,status:"source_error",items:[],date:"",url:"",reason:$error.message} }
+}
+[def:보충확보]($요청) {
+  [try] {
+    $s = [sense:legal]{query:$요청.query,target:$요청.target}
+    [if:len($s.items)==0] { return {key:$요청.key,status:"not_found",text:"",url:"",reason:"검색 0건"} }
+    $d = [sense:legal]{id:$s.items[0].id,target:$요청.target}
+    $texts = $d.items >> [table:each] { return get($it,"text",get($it,"summary","")) }
+    $text = join("\n",$texts)
+    return {key:$요청.key,status:len(strip($text))>0 ? "retrieved" : "missing_body",text:$text,url:$s.items[0].url,reason:"번역의 현행성/용어의 적용은 별도 확인"}
+  } [catch] { return {key:$요청.key,status:"source_error",text:"",url:"",reason:$error.message} }
+}
+[def:건별대조]($건,$원천) {
+  $법 = filter($원천,($s)=>$s.name==$건.law)[0]
+  $조 = filter($법.items,($r)=>get($r,"no","")==$건.no)
+  $상태 = $법.status != "verified" ? "unverified_law" : (len($조)==0 ? "unverified_article" : "verified")
+  $본문 = len($조)>0 ? get($조[0],"text","") : ""
+  $조일 = len($조)>0 ? get($조[0],"date","") : ""
+  $누락 = filter($건.required_documents,($doc)=>not ($doc in $건.documents))
+  $과거 = $법.date=="" or replace($건.event_date,"-","") < replace($법.date,"-","")
+  return {id:$건.id,law:$건.law,no:$건.no,citation_status:$상태,article_text:$본문,article_date:$조일,law_date:$법.date,url:$법.url,missing_documents:$누락,historical_review:$과거}
+}
+$입력 = [self:read]{path:$input}
+$자료 = $입력.data
+$법이름 = unique($자료.cases >> [table:each] { return $it.law })
+$원천 = $법이름 >> [table:each]{parallel:3} { [fn:법령확보]{이름:$it} }
+$보충 = $자료.supplements >> [table:each]{parallel:2} { [fn:보충확보]{요청:$it} }
+$결과 = $자료.cases >> [table:each] { [fn:건별대조]{건:$it,원천:$원천} }
+$우선 = filter($결과,($r)=>$r.citation_status!="verified" or len($r.missing_documents)>0)
+$우선ID = $우선 >> [table:each]{return $it.id}
+$보고 = {cases:$결과,sources:$원천,supplements:$보충,priority_ids:$우선ID}
+$저장 = [self:write]{path:f"${out}/report.json",content:json($보고)}
+$줄 = $결과 >> [table:each] { return f"- ${it.id}: ${it.law} ${it.no} / ${it.citation_status} / 누락 ${join(', ',$it.missing_documents)} / 과거 판본 확인 ${it.historical_review}" }
+$보충줄 = $보충 >> [table:each] { return f"- ${it.key}: ${it.status} ${it.url}" }
+$본문 = "# 합성 임대차 법률상담 준비철\n\n법률판단 전 사실·당시 적용법을 확인할 자료입니다.\n\n" + f"접수 ${len($결과)}건, 우선 확인 ${len($우선)}건.\n\n" + join("\n",$줄) + "\n\n## 우선 확인\n" + join(", ",$우선ID) + "\n\n## 보충자료\n" + join("\n",$보충줄)
+$문서 = [self:write]{path:f"${out}/report.md",content:$본문}
+$재독 = [self:read]{path:f"${out}/report.json"}
+return {count:len($재독.data.cases),priority_count:len($우선),supplements:$보충,report:$저장,markdown:$문서}

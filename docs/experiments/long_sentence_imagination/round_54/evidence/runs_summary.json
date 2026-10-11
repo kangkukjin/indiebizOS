@@ -1,0 +1,82 @@
+[
+  {
+    "label": "base_main_v1_run",
+    "elapsed": 5.64429497718811,
+    "success": false,
+    "run_id": "23cfb6f5bb594856860a43c2fb1ec6d7",
+    "status": "interrupted",
+    "source_hash": "5ab8bf238c86363a547915696a9fa375ef5f12fbec24765d819e5e58e07e71ca",
+    "steps": 100001,
+    "error_code": "BUDGET"
+  },
+  {
+    "label": "base_main_v2_run",
+    "elapsed": 4.66079306602478,
+    "success": true,
+    "run_id": "78734f7b71aa410fa0b8c0ba00391d17",
+    "status": "completed",
+    "source_hash": "c01f53c37641ac9aac8307c309ab1069d92ee0a13b23c5670d3ba507e452884d",
+    "steps": 30388,
+    "error_code": null
+  },
+  {
+    "label": "base_main_v2_run_repaired",
+    "elapsed": 4.079194068908691,
+    "success": true,
+    "run_id": "dc447ee9d8694f7ea048b8125f1ea10e",
+    "status": "completed",
+    "source_hash": "c01f53c37641ac9aac8307c309ab1069d92ee0a13b23c5670d3ba507e452884d",
+    "steps": 31044,
+    "error_code": null
+  },
+  {
+    "label": "base_main_v3_run",
+    "elapsed": 3.609490156173706,
+    "success": true,
+    "run_id": "025a5b8e42fb4d59a7a62d5e64b52f94",
+    "status": "completed",
+    "source_hash": "a6a8f1d9b5133b7a05c73936766396e80a6cde303f33820f5d07389b78e335b7",
+    "steps": 31108,
+    "error_code": null
+  },
+  {
+    "label": "empty_main_v3_run",
+    "elapsed": 1.0796139240264893,
+    "success": true,
+    "run_id": "577b6c22b6374ab4bb47f956e468a981",
+    "status": "completed",
+    "source_hash": "a6a8f1d9b5133b7a05c73936766396e80a6cde303f33820f5d07389b78e335b7",
+    "steps": 1047,
+    "error_code": null
+  },
+  {
+    "label": "new_main_v3_run",
+    "elapsed": 3.3808059692382812,
+    "success": true,
+    "run_id": "b0a6603b701341178c2d3a562b387a54",
+    "status": "completed",
+    "source_hash": "a6a8f1d9b5133b7a05c73936766396e80a6cde303f33820f5d07389b78e335b7",
+    "steps": 1575,
+    "error_code": null
+  },
+  {
+    "label": "variant_main_v2_run",
+    "elapsed": 6.743710994720459,
+    "success": true,
+    "run_id": "93e41f13fabe4162a54aed53ac7213a5",
+    "status": "completed",
+    "source_hash": "c01f53c37641ac9aac8307c309ab1069d92ee0a13b23c5670d3ba507e452884d",
+    "steps": 8134,
+    "error_code": null
+  },
+  {
+    "label": "variant_main_v3_run",
+    "elapsed": 3.4199910163879395,
+    "success": true,
+    "run_id": "ef7106e983da43368dd708811257db31",
+    "status": "completed",
+    "source_hash": "a6a8f1d9b5133b7a05c73936766396e80a6cde303f33820f5d07389b78e335b7",
+    "steps": 8854,
+    "error_code": null
+  }
+]

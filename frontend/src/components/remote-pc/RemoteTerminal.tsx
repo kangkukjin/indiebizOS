@@ -3,9 +3,10 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { api } from '../../lib/api';
+import { WEBSOCKET_ORIGIN } from '../../lib/backend-origin';
 import { bytesFrom64, message, newId, post } from './client';
 
-type Poll = { state: string; reason: string; data: string; cursor: number; gap: boolean };
+type Poll = { state: string; reason: string; data: string; cursor: number; gap: boolean; route?: string };
 export function RemoteTerminal({ device, supported }: { device: string; supported: boolean }) {
   const host = useRef<HTMLDivElement>(null);
   const [generation, setGeneration] = useState(0);
@@ -16,31 +17,34 @@ export function RemoteTerminal({ device, supported }: { device: string; supporte
     const term = new Terminal({ cursorBlink: true, fontSize: 14, fontFamily: 'Menlo, Consolas, monospace', scrollback: 5000, theme: { background: '#10151d', foreground: '#d9e2ef' } });
     const fit = new FitAddon(); term.loadAddon(fit); term.open(host.current); fit.fit();
     const id = newId(), endpoint = `/remote-pcs/terminals/${id}`;
-    let disposed = false, ready = false, closed = false, cursor = 0, sequence = 0;
-    let pending = 0, chain = Promise.resolve();
+    let disposed = false, ready = false, closed = false, sequence = 0;
+    let socket: WebSocket | undefined;
+    let lastMessage = Date.now();
     const close = () => api.request(endpoint, { method: 'DELETE', keepalive: true }).catch(() => {});
     const fail = (error: unknown) => {
       if (disposed || closed) return;
-      closed = true; ready = false; setEnded(true); setStatus(message(error)); void close();
+      closed = true; ready = false; socket?.close(); setEnded(true); setStatus(message(error)); void close();
+    };
+    const sendMessage = (value: object) => {
+      if (!ready || closed || socket?.readyState !== WebSocket.OPEN) return;
+      if (socket.bufferedAmount > 65536) { fail(new Error('입력이 너무 많아 연결을 닫았습니다.')); return; }
+      socket.send(JSON.stringify(value));
     };
     const send = (data: string) => {
       if (!ready || closed) return;
-      if (pending + data.length > 65536) { fail(new Error('입력이 너무 많아 연결을 닫았습니다.')); return; }
-      pending += data.length;
-      // Serialize keystrokes. Never retry an ambiguous request (it may have run).
-      chain = chain.then(async () => {
-        for (let i = 0; i < data.length; i += 4096) {
-          if (disposed || closed) return;
-          await post(endpoint, { type: 'input', data: data.slice(i, i + 4096), sequence: ++sequence });
-        }
-        pending -= data.length;
-      }).catch(fail);
+      // One ordered socket; keystrokes never wait for an HTTP round trip or replay.
+      for (let i = 0; i < data.length;) {
+        let end = Math.min(i + 4096, data.length);
+        if (end < data.length && /[\uD800-\uDBFF]/.test(data[end - 1])) end--;
+        sendMessage({ type: 'input', data: data.slice(i, end), sequence: ++sequence });
+        i = end;
+      }
     };
     const onData = term.onData(send);
     const observer = new ResizeObserver(() => {
       if (!host.current?.clientWidth || !host.current.clientHeight) return;
       fit.fit();
-      if (ready && !closed) void post(endpoint, { type: 'resize', cols: term.cols, rows: term.rows }).catch(fail);
+      sendMessage({ type: 'resize', cols: term.cols, rows: term.rows });
     });
     observer.observe(host.current);
     setEnded(false); setStatus('원격 셸 연결 중…');
@@ -48,24 +52,34 @@ export function RemoteTerminal({ device, supported }: { device: string; supporte
       try {
         await post('/remote-pcs/terminals', { target: device, id, cols: term.cols, rows: term.rows });
         if (disposed) { await close(); return; }
-        while (!disposed && !closed) {
-          const state = await api.request<Poll>(`${endpoint}?cursor=${cursor}`);
-          if (disposed) break;
-          if (state.gap) term.writeln('\r\n[출력 버퍼를 초과한 구간이 있습니다.]');
-          if (state.data) term.write(bytesFrom64(state.data));
-          cursor = state.cursor;
-          if (state.state === 'closed' && !state.data) {
-            closed = true; ready = false; setStatus(`세션 종료 · ${state.reason}`); setEnded(true); break;
-          }
-          if (state.state === 'running' && !ready) { ready = true; setStatus('연결됨'); term.focus(); }
-          await new Promise(resolve => setTimeout(resolve, state.data ? 30 : 120));
-        }
+        socket = new WebSocket(`${WEBSOCKET_ORIGIN}${endpoint}/stream`);
+        socket.onmessage = event => {
+          if (disposed || closed) return;
+          try {
+            lastMessage = Date.now();
+            const state: Poll = JSON.parse(event.data);
+            if (state.gap) term.writeln('\r\n[출력 버퍼를 초과한 구간이 있습니다.]');
+            if (state.data) term.write(bytesFrom64(state.data));
+            if (state.state === 'closed' && !state.data) {
+              closed = true; ready = false; setStatus(`세션 종료 · ${state.reason}`); setEnded(true); socket?.close(); return;
+            }
+            if (state.state === 'running') {
+              if (!ready) { ready = true; term.focus(); }
+              setStatus(state.route === 'lan' ? '연결됨 · 내부망 직결' : '연결됨 · 외부 터널');
+            }
+          } catch (e) { fail(e); }
+        };
+        socket.onerror = () => fail(new Error('터미널 연결 오류 · 새 터미널을 연결하세요.'));
+        socket.onclose = () => fail(new Error('터미널 연결이 종료되었습니다.'));
       } catch (e) { fail(e); }
     })();
+    const watchdog = window.setInterval(() => {
+      if (Date.now() - lastMessage > 30000) fail(new Error('터미널 응답이 끊겼습니다.'));
+    }, 5000);
     const onUnload = () => { void close(); };
     window.addEventListener('pagehide', onUnload);
     return () => {
-      disposed = true; ready = false; void close();
+      disposed = true; ready = false; socket?.close(); window.clearInterval(watchdog); void close();
       window.removeEventListener('pagehide', onUnload);
       observer.disconnect(); onData.dispose(); term.dispose();
     };

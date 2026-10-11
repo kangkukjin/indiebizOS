@@ -383,6 +383,7 @@
     "services/research_view",
     "services/resident_pcs",
     "services/resident_terminal",
+    "services/resident_terminal_lan",
     "services/resource_links",
     "services/scheduler",
     "services/spreadsheet_changes",
@@ -577,8 +578,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 502,
-    "engine": 476,
+    "total": 503,
+    "engine": 477,
     "blocklist": 26
   }
 }

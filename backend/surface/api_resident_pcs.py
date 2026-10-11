@@ -231,8 +231,9 @@ async def resident_socket(socket: WebSocket):
 @router.post('/remote-pcs/terminals')
 def terminal_create(req: dict):
     import resident_terminal as terminal
+    import resident_terminal_lan as lan
     return checked(terminal.create, req.get('target'), req.get('id'),
-                   req.get('cols', 100), req.get('rows', 30))
+                   req.get('cols', 100), req.get('rows', 30), lan.offer(terminal_socket))
 
 
 @router.get('/remote-pcs/terminals/{sid}')
@@ -263,11 +264,14 @@ async def terminal_socket(socket: WebSocket, sid: str):
     await socket.accept()
     attached = False
     tasks = []
+    wake = None
     try:
         auth = await asyncio.wait_for(socket.receive_json(), 10)
         rec = await asyncio.to_thread(limb_keys.resident_auth, auth.get('key'), auth.get('installation_id'))
-        await asyncio.to_thread(terminal.attach, sid, rec['device_id'])
+        await asyncio.to_thread(terminal.attach, sid, rec['device_id'],
+                                'lan' if socket.scope.get('terminal_lan') else 'relay')
         attached = True
+        wake = terminal.watch(sid, 'input', asyncio.get_running_loop())
         await socket.send_json({'type': 'ready'})
 
         async def receive():
@@ -275,11 +279,12 @@ async def terminal_socket(socket: WebSocket, sid: str):
                 data = await socket.receive_bytes()
                 if len(data) > 65536:
                     raise ValueError('terminal_frame_too_large')
-                terminal.output(sid, data)
+                await asyncio.to_thread(terminal.output, sid, data)
 
         async def send():
             last_check = 0
             while True:
+                wake.clear()
                 if time.monotonic() - last_check >= 1:
                     await asyncio.to_thread(limb_keys.resident_auth, auth.get('key'), auth.get('installation_id'))
                     await socket.send_json({'type': 'heartbeat'})
@@ -289,7 +294,10 @@ async def terminal_socket(socket: WebSocket, sid: str):
                     await socket.send_json(message)
                     if message['type'] == 'close':
                         return
-                await asyncio.sleep(0.05)
+                try:
+                    await asyncio.wait_for(wake.wait(), 1)
+                except asyncio.TimeoutError:
+                    pass
 
         tasks = [asyncio.create_task(receive()), asyncio.create_task(send())]
         done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
@@ -303,7 +311,68 @@ async def terminal_socket(socket: WebSocket, sid: str):
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
         if attached:
+            terminal.unwatch(sid, 'input')
             await asyncio.to_thread(terminal.detached, sid)
+        try:
+            await socket.close()
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+
+
+@router.websocket('/remote-pcs/terminals/{sid}/stream')
+async def terminal_owner_socket(socket: WebSocket, sid: str):
+    """Owner authentication is explicit: HTTP middleware does not guard sockets."""
+    import asyncio
+    import resident_terminal as terminal
+    from api_websocket import _authorize_websocket
+    from fastapi import WebSocketDisconnect
+
+    if not await _authorize_websocket(socket):
+        return
+    await socket.accept()
+    tasks, wake = [], None
+    try:
+        wake = terminal.watch(sid, 'output', asyncio.get_running_loop())
+
+        async def receive():
+            while True:
+                data = await socket.receive_json()
+                if not await _authorize_websocket(socket):
+                    return
+                await asyncio.to_thread(terminal.input_message, sid, data)
+
+        async def send():
+            cursor = 0
+            while True:
+                wake.clear()
+                if not await _authorize_websocket(socket):
+                    return
+                state = await asyncio.to_thread(terminal.poll, sid, cursor)
+                await socket.send_json(state)
+                cursor = state['cursor']
+                if state['state'] == 'closed' and not state['data']:
+                    return
+                if state['data']:
+                    continue
+                try:
+                    await asyncio.wait_for(wake.wait(), 1)
+                except asyncio.TimeoutError:
+                    pass
+
+        tasks = [asyncio.create_task(receive()), asyncio.create_task(send())]
+        done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        for task in done:
+            task.result()
+    except (WebSocketDisconnect, ValueError, TypeError, KeyError, RuntimeError):
+        pass
+    finally:
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        if wake is not None:
+            terminal.unwatch(sid, 'output')
+            await asyncio.to_thread(terminal.close, sid)
         try:
             await socket.close()
         except (WebSocketDisconnect, RuntimeError):

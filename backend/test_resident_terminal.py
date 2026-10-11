@@ -23,6 +23,8 @@ def setup(tmp_path, monkeypatch):
     monkeypatch.setenv('INDIEBIZ_RUNTIME_STATE_DIR', str(tmp_path))
     monkeypatch.setattr(device_registry, 'register', lambda *a, **k: None)
     monkeypatch.setattr(terminal, '_sessions', {})
+    import resident_terminal_lan
+    monkeypatch.setattr(resident_terminal_lan, 'offer', lambda handler: {})
 
     def make(name='terminal-pc'):
         rec = limb_keys.resident_enroll(limb_keys.resident_invite(name)['key'], uuid.uuid4().hex)
@@ -112,6 +114,39 @@ def test_revocation_and_input_validation(setup):
     assert terminal.poll(sid, 0)['state'] == 'closed'
 
 
+def test_owner_stream_auth_push_order_and_disconnect(setup):
+    rec = setup()
+    sid = uuid.uuid4().hex
+    terminal.create(rec['device_id'], sid)
+    terminal.attach(sid, rec['device_id'], 'lan')
+    app = FastAPI()
+    app.include_router(api_resident_pcs.router)
+    from starlette.websockets import WebSocketDisconnect
+    with TestClient(app, base_url='http://localhost') as client:
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect('/remote-pcs/terminals/' + sid + '/stream',
+                                          headers={'x-forwarded-for': '1.2.3.4'}):
+                pass
+        with client.websocket_connect('/remote-pcs/terminals/' + sid + '/stream', headers={'host': 'localhost'}) as ws:
+            assert ws.receive_json()['route'] == 'lan'
+            start = time.monotonic()
+            terminal.output(sid, b'instant')
+            assert base64.b64decode(ws.receive_json()['data']) == b'instant'
+            assert time.monotonic() - start < .5  # cannot wait for the 1s heartbeat
+            for seq in range(1, 51):
+                ws.send_json({'type': 'input', 'data': 'x', 'sequence': seq})
+            until = time.monotonic() + 2
+            while terminal._sessions[sid].sequence < 50 and time.monotonic() < until:
+                time.sleep(.01)
+            assert terminal._sessions[sid].sequence == 50
+            assert terminal.take(sid) == [{'type': 'input', 'data': 'x'}] * 50
+            ws.close()
+            until = time.monotonic() + 2
+            while terminal.poll(sid, 0)['state'] != 'closed' and time.monotonic() < until:
+                time.sleep(.01)
+        assert terminal.poll(sid, 0)['state'] == 'closed'
+
+
 @pytest.mark.system
 def test_native_terminal_while_ai_busy_and_helper_crash(setup, tmp_path):
     import json
@@ -143,6 +178,9 @@ def test_native_terminal_while_ai_busy_and_helper_crash(setup, tmp_path):
            'installation_id': rec['registration']['installation_id'],
            'generation': rec['registration']['generation'], 'data_dir': str(worker)}
     (worker / 'indiebiz-helper.json').write_text(json.dumps(cfg))
+    import resident_terminal_lan
+    lan_server, lan_port, pin = resident_terminal_lan._start(api_resident_pcs.terminal_socket)
+    lan_offer = {"urls": [f"https://127.0.0.1:{lan_port}"], "sha256": pin}
     proc = None
     sid = uuid.uuid4().hex
     cursor = 0
@@ -181,8 +219,9 @@ def test_native_terminal_while_ai_busy_and_helper_crash(setup, tmp_path):
         wait_for(lambda: (resident_pcs.resolve(rec['device_id'])['registration'].get('capabilities') or {}).get('helper_sha256'))
         jobs = [resident_pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'sleep 30'}) for _ in range(2)]
         wait_for(lambda: all(resident_store.history(job=j['job_id'])['tasks'][0]['state'] == 'running' for j in jobs))
-        receipt = terminal.create(rec['device_id'], sid, 90, 25)
+        receipt = terminal.create(rec['device_id'], sid, 90, 25, lan=lan_offer)
         wait_for(lambda: terminal.poll(sid, 0)['state'] == 'running')
+        assert terminal.poll(sid, 0)['route'] == 'lan'
         send("stty -echo; printf '\\122\\105\\101\\104\\131'; export IB_TERMINAL_VALUE=preserved\r")
         expect('READY')
         send('printf "%s" "$IB_TERMINAL_VALUE"\r')
@@ -214,6 +253,7 @@ def test_native_terminal_while_ai_busy_and_helper_crash(setup, tmp_path):
         if proc and proc.poll() is None:
             proc.terminate()
             proc.wait(timeout=5)
+        lan_server.should_exit = True
         server.should_exit = True
         thread.join(timeout=30)
         assert not thread.is_alive()

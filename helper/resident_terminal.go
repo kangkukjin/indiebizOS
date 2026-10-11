@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -22,10 +20,11 @@ type terminalProcess interface {
 	Wait() int
 }
 type terminalSpec struct {
-	Config Config `json:"config"`
-	ID     string `json:"terminal_id"`
-	Cols   int    `json:"cols"`
-	Rows   int    `json:"rows"`
+	Config Config      `json:"config"`
+	ID     string      `json:"terminal_id"`
+	Cols   int         `json:"cols"`
+	Rows   int         `json:"rows"`
+	LAN    terminalLAN `json:"lan"`
 }
 
 // The bridge runs in a separate process. A worker crash closes its stdin lease;
@@ -88,24 +87,7 @@ func residentTerminalMain(path string) int {
 }
 
 func terminalBridge(ctx context.Context, spec terminalSpec) error {
-	u, err := url.Parse(spec.Config.Base)
-	if err != nil {
-		return err
-	}
-	if u.Scheme != "https" && !(u.Scheme == "http" && (u.Hostname() == "127.0.0.1" || u.Hostname() == "localhost")) {
-		return fmt.Errorf("HTTPS required")
-	}
-	if u.Scheme == "https" {
-		u.Scheme = "wss"
-	} else {
-		u.Scheme = "ws"
-	}
-	u.Path = strings.TrimRight(u.Path, "/") + "/limb/resident/terminal/" + spec.ID
-	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second}
-	conn, response, err := dialer.DialContext(ctx, u.String(), nil)
-	if response != nil && response.Body != nil {
-		response.Body.Close()
-	}
+	conn, err := dialTerminal(ctx, spec)
 	if err != nil {
 		return err
 	}

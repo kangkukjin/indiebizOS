@@ -95,12 +95,22 @@ def test_remote_pc_workbench(tmp_path):
                         result = {'data': base64.b64encode(payload).decode(), 'offset': len(payload)}
                 route.fulfill(status=200, content_type='application/json', body=json.dumps(result), headers={'Access-Control-Allow-Origin': '*'})
 
+            def stream(ws):
+                ws.send(json.dumps({'state': 'running', 'reason': '', 'gap': False,
+                                    'route': 'lan', 'data': base64.b64encode('remote-mac ~ % 한글 출력\r\n'.encode()).decode(), 'cursor': 0}))
+                def received(raw):
+                    data = json.loads(raw)
+                    if data['type'] == 'input':
+                        inputs.append(data)
+                ws.on_message(received)
+
+            page.route_web_socket('**/remote-pcs/terminals/*/stream', stream)
             page.route('**/remote-pcs**', api)
             page.goto(url)
             page.get_by_role('button', name='손발 (USB)').click()
             page.get_by_role('button', name='작업창', exact=True).click()
             dialog = page.get_by_role('dialog', name='원격 PC 작업창')
-            expect(dialog.get_by_role('status')).to_have_text('연결됨')
+            expect(dialog.get_by_role('status')).to_have_text('연결됨 · 내부망 직결')
             page.locator('.xterm-helper-textarea').focus()
             page.keyboard.type('pwd')
             page.keyboard.press('Enter')

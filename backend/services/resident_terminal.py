@@ -4,6 +4,7 @@ The durable resident job owns execution; this bounded in-memory bridge owns only
 live keystrokes/output. A hub restart ends the session, never recreates its shell.
 """
 import base64
+import asyncio
 import re
 import threading
 import time
@@ -33,6 +34,8 @@ class Session:
     input_bytes: int = 0
     sequence: int = 0
     attached: bool = False
+    route: str = 'relay'
+    waiters: dict = field(default_factory=dict)
 
 
 def dimensions(cols, rows):
@@ -42,7 +45,7 @@ def dimensions(cols, rows):
     return cols, rows
 
 
-def create(target, sid, cols=100, rows=30):
+def create(target, sid, cols=100, rows=30, lan=None):
     dimensions(cols, rows)
     if not isinstance(sid, str) or not re.fullmatch(r'[0-9a-f]{32}', sid):
         raise ValueError('invalid_terminal_id')
@@ -70,7 +73,7 @@ def create(target, sid, cols=100, rows=30):
         _sessions[sid] = s
         try:
             receipt = resident_pcs.submit(s.device, {'op': 'terminal', 'terminal_id': sid,
-                'cols': cols, 'rows': rows, 'timeout': 86400}, 'terminal-' + sid,
+                'cols': cols, 'rows': rows, 'lan': lan or {}, 'timeout': 86400}, 'terminal-' + sid,
                 allow_terminal=True)
             s.job = receipt['job_id']
         except Exception:
@@ -91,6 +94,8 @@ def _close(s, reason):
         s.state, s.reason = 'closed', reason
         s.messages.clear()
         s.input_bytes = 0
+        _notify(s, 'input')
+        _notify(s, 'output')
         if s.job:
             resident_store.cancel(s.job, s.device)
 
@@ -121,7 +126,7 @@ def poll(sid, cursor):
                     _close(s, tasks[0]['state'])
         start = max(cursor, s.offset)
         data = bytes(s.output[start - s.offset:start - s.offset + 65536])
-        return {'state': s.state, 'reason': s.reason, 'data': base64.b64encode(data).decode(),
+        return {'state': s.state, 'reason': s.reason, 'route': s.route, 'data': base64.b64encode(data).decode(),
                 'cursor': start + len(data), 'gap': cursor < s.offset}
 
 
@@ -152,10 +157,11 @@ def input_message(sid, message):
             s.messages.append({'type': 'resize', 'cols': cols, 'rows': rows})
         else:
             raise ValueError('invalid_terminal_message')
+        _notify(s, 'input')
         return {'accepted': True}
 
 
-def attach(sid, device):
+def attach(sid, device, route='relay'):
     with _lock:
         s = _get(sid)
         if s.device != device or s.attached or s.state != 'starting':
@@ -164,6 +170,8 @@ def attach(sid, device):
             _close(s, 'window_disconnected')
             raise ValueError('terminal_lease_expired')
         s.attached, s.state = True, 'running'
+        s.route = route
+        _notify(s, 'output')
 
 
 def output(sid, data):
@@ -176,6 +184,7 @@ def output(sid, data):
         if overflow:
             del s.output[:overflow]
             s.offset += overflow
+        _notify(s, 'output')
 
 
 def take(sid):
@@ -194,3 +203,27 @@ def take(sid):
 def detached(sid):
     with _lock:
         _close(_get(sid), 'terminal_disconnected')
+
+
+def _notify(s, kind):
+    waiter = s.waiters.get(kind)
+    if waiter:
+        loop, event = waiter
+        if not loop.is_closed():
+            loop.call_soon_threadsafe(event.set)
+
+
+def watch(sid, kind, loop):
+    """One helper and one owner, potentially on different event loops (LAN TLS)."""
+    with _lock:
+        s = _get(sid)
+        if kind in s.waiters:
+            raise ValueError('terminal_already_watched')
+        event = asyncio.Event()
+        s.waiters[kind] = (loop, event)
+        return event
+
+
+def unwatch(sid, kind):
+    with _lock:
+        _get(sid).waiters.pop(kind, None)

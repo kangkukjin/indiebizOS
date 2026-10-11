@@ -88,7 +88,9 @@ def execute(tool_input: dict, context) -> str:
             # 화면검수 워크플로우($path)가 문장 무수정으로 pdf/svg/장부를 받는다.
             # path 없음(html/svg 문자열·파이프 통화)은 현행 기본 html 유지, 명시 op 항상 우선.
             ext = os.path.splitext(str(tool_input.get("path") or ""))[1].lower()
-            op = {".pdf": "pdf", ".svg": "svg", ".xlsx": "xlsx", ".xlsm": "xlsx"}.get(ext, "html")
+            op = {".pdf": "pdf", ".svg": "svg", ".xlsx": "xlsx", ".xlsm": "xlsx",
+                  # 워드류 문서는 인쇄 모양이 시각 형태 — pdf 길이 PDF 화까지 맡는다(52회차 L52-3).
+                  **{e: "pdf" for e in _ra.OFFICE_DOC_EXTS}}.get(ext, "html")
         fn = _OP_DISPATCHERS["render_artifact"].get(op)
         if fn is None:
             return json.dumps({"success": False,

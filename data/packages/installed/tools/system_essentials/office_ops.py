@@ -27,6 +27,38 @@ def _truthy(v) -> bool:
     return str(v).strip().lower() in ("true", "yes", "on", "1", "y", "checked", "x", "v", "✓", "예", "네")
 
 
+_CJK_ORDERINGS = ("Korea1", "Japan1", "GB1", "CNS1")
+
+
+def _declare_latin_widths(doc, first_xref: int = 1) -> int:
+    """채우면서 생긴 비내장 CJK 대체 글꼴에 ASCII 구간(CID 1~94)의 반각 폭을 적는다.
+
+    한글 등이 든 칸 값은 내장되지 않은 CID 글꼴(예: /Batang)로 외형이 만들어지는데,
+    폭 선언(/W·/DW)이 없어 그 글꼴로 찍히는 빈칸·기호까지 전각(1000)으로 벌어진다
+    (52회차 L52-4: "도자기   물레   입문", "< 공방>"). 네 Adobe CJK 글리프 집합 모두
+    CID 1~94 가 ASCII 비례폭 구간이므로 반각 500 을 선언한다 — 보는 프로그램이 달라도
+    같은 간격으로 그려진다(MuPDF·PDFKit 실측). 폭이 이미 적힌 글꼴·내장 글꼴은 건드리지 않는다."""
+    changed = 0
+    for xref in range(max(1, first_xref), doc.xref_length()):
+        try:
+            if doc.xref_get_key(xref, "Subtype")[1] not in ("/CIDFontType0", "/CIDFontType2"):
+                continue
+            if doc.xref_get_key(xref, "W")[0] != "null" or doc.xref_get_key(xref, "DW")[0] != "null":
+                continue
+            if doc.xref_get_key(xref, "CIDSystemInfo/Ordering")[1].strip("()") not in _CJK_ORDERINGS:
+                continue
+            descriptor = doc.xref_get_key(xref, "FontDescriptor")
+            if descriptor[0] == "xref":
+                fd = int(descriptor[1].split()[0])
+                if any(doc.xref_get_key(fd, k)[0] != "null" for k in ("FontFile", "FontFile2", "FontFile3")):
+                    continue
+            doc.xref_set_key(xref, "W", "[1 94 500]")
+            changed += 1
+        except Exception:
+            continue  # 글꼴 객체가 아닌 xref — 폭 선언은 덤이라 채우기를 막지 않는다
+    return changed
+
+
 def _fill_pdf(path: Path, data: dict, output: str, flatten: bool) -> dict:
     """PDF 폼 채우기 — PyMuPDF widget. data 없으면 필드 목록 반환(introspection)."""
     import fitz  # PyMuPDF
@@ -51,11 +83,16 @@ def _fill_pdf(path: Path, data: dict, output: str, flatten: bool) -> dict:
                     "items": fields, "count": len(fields), "path": str(path)}
 
         # --- fill ---
-        filled, seen = [], set()
+        filled, seen, remaining = [], set(), []
+        first_new_xref = doc.xref_length()
         for page in doc:
             for w in (page.widgets() or []):
                 name = w.field_name
                 if name not in data:
+                    # 값을 받지 못했고 지금도 빈 글자·선택 칸 — 응답에 남은 자리로 알린다(L52-1 과 같은 계약).
+                    if (w.field_type_string in ("Text", "ComboBox", "ListBox")
+                            and not str(w.field_value or "").strip() and name not in remaining):
+                        remaining.append(name)
                     continue
                 val = data[name]
                 t = w.field_type_string
@@ -67,6 +104,7 @@ def _fill_pdf(path: Path, data: dict, output: str, flatten: bool) -> dict:
                 filled.append(name)
                 seen.add(name)
         unmatched = [k for k in data if k not in seen]
+        _declare_latin_widths(doc, first_new_xref)
         if flatten and hasattr(doc, "bake"):
             doc.bake()  # 폼 필드를 정적 내용으로 구움 → 제출용(수정 불가)
         # PyMuPDF는 열려 있는 원본에 직접 덮어쓸 수 없다 — output==template(제자리 채우기)이면
@@ -77,10 +115,12 @@ def _fill_pdf(path: Path, data: dict, output: str, flatten: bool) -> dict:
             doc.close()
             os.replace(tmp, output)
             return {"success": True, "path": os.path.abspath(output), "format": "pdf",
-                    "filled": filled, "unmatched": unmatched, "flattened": bool(flatten)}
+                    "filled": filled, "unmatched": unmatched, "remaining": remaining,
+                    "flattened": bool(flatten)}
         doc.save(output, garbage=3, deflate=True)
         return {"success": True, "path": os.path.abspath(output), "format": "pdf",
-                "filled": filled, "unmatched": unmatched, "flattened": bool(flatten)}
+                "filled": filled, "unmatched": unmatched, "remaining": remaining,
+                    "flattened": bool(flatten)}
     finally:
         if not getattr(doc, "is_closed", False):
             doc.close()
@@ -88,7 +128,7 @@ def _fill_pdf(path: Path, data: dict, output: str, flatten: bool) -> dict:
 
 def _set_para_text(paragraph, text: str) -> None:
     """문단 텍스트를 통째로 교체 — 첫 run 에 넣고 나머지 run 은 비운다.
-    ({{자리표시자}}가 여러 run 에 쪼개져도 문단 단위로 안전하게 치환)"""
+    (run 으로 자리를 찾지 못하는 문단의 대비책 — 하이퍼링크 안의 자리표시자 등)"""
     runs = paragraph.runs
     if runs:
         runs[0].text = text
@@ -98,47 +138,129 @@ def _set_para_text(paragraph, text: str) -> None:
         paragraph.add_run(text)
 
 
+_PLACEHOLDER = re.compile(r"\{\{\s*([^{}]+?)\s*\}\}")
+
+
+def _docx_paragraphs(doc):
+    """(자리, 문단) 을 문서 전체에서 낸다 — 본문·표(중첩)·글상자, 그리고 구역마다의
+    머리글·바닥글(첫 쪽·짝수 쪽 변형 포함). 52회차 L52-1: 바닥글의 자리표시자는
+    채우기도 조회도 보지 않아 "다 채웠다"는 응답 뒤에 그대로 남았다.
+    앞 구역에 이어진(linked) 머리글·바닥글은 건드리지 않는다 — 읽기만으로 빈 정의가 생긴다."""
+    from docx.oxml.ns import qn
+    from docx.text.paragraph import Paragraph
+    def walk(where, container, element):
+        for el in element.iter(qn("w:p")):
+            yield where, Paragraph(el, container)
+
+    yield from walk("body", doc, doc.element.body)
+    seen_parts = set()
+    for section in doc.sections:
+        for where, names in (("header", ("header", "first_page_header", "even_page_header")),
+                             ("footer", ("footer", "first_page_footer", "even_page_footer"))):
+            for name in names:
+                part = getattr(section, name, None)
+                if part is None or part.is_linked_to_previous:
+                    continue
+                partname = str(part.part.partname)   # 여러 구역이 같은 머리글 파트를 가리킬 수 있다
+                if partname in seen_parts:
+                    continue
+                seen_parts.add(partname)
+                yield from walk(where, part, part._element)
+
+
+def _replace_placeholders(paragraph, data: dict) -> list:
+    """문단 안의 {{자리}} 를 값으로 바꾸고 바꾼 이름을 돌려준다.
+
+    자리표시자가 걸친 run 만 고친다 — 값은 이름이 시작하는 run 에 넣어 그 글자 모양
+    (굵게 등)을 잇고, 문단의 다른 run 은 그대로 둔다. (전에는 문단 전체를 첫 run 에
+    몰아넣어 문단 안의 굵은 글씨·글꼴이 모두 사라졌다.)"""
+    whole = paragraph.text
+    wanted = [m.group(1).strip() for m in _PLACEHOLDER.finditer(whole) if m.group(1).strip() in data]
+    if not wanted:
+        return []
+    runs = paragraph.runs
+    texts = [r.text for r in runs]
+    joined = "".join(texts)
+    matches = [m for m in _PLACEHOLDER.finditer(joined) if m.group(1).strip() in data]
+    if len(matches) != len(wanted):
+        # run 밖(하이퍼링크 등)에 자리표시자가 있다 — 문단 단위 치환으로 물러난다.
+        _set_para_text(paragraph, _PLACEHOLDER.sub(
+            lambda m: str(data.get(m.group(1).strip(), m.group(0))), whole))
+        return wanted
+    starts, pos = [], 0
+    for t in texts:
+        starts.append(pos)
+        pos += len(t)
+
+    original = list(texts)
+
+    def run_at(offset):
+        for i in range(len(texts) - 1, -1, -1):
+            if starts[i] <= offset and original[i]:
+                return i
+        return 0
+
+    for m in reversed(matches):
+        value = str(data[m.group(1).strip()])
+        first, last, home = run_at(m.start()), run_at(m.end() - 1), run_at(m.start(1))
+        head = texts[first][:m.start() - starts[first]]
+        # 뒤에서부터 바꾸므로 각 run 의 앞부분은 아직 원문 그대로다 — 왼쪽 기준으로 자른다.
+        tail = texts[last][m.end() - starts[last]:]
+        for i in range(first, last + 1):
+            texts[i] = ""
+        if first == last:
+            texts[first] = head + value + tail
+        else:
+            texts[first], texts[last] = head, tail
+            if home == first:
+                texts[first] = head + value
+            elif home == last:
+                texts[last] = value + tail
+            else:
+                texts[home] = value
+    for run, before, after in zip(runs, original, texts):
+        if before != after:
+            run.text = after
+    return wanted
+
+
 def _fill_docx(path: Path, data: dict, output: str) -> dict:
     """DOCX {{자리표시자}} 치환. data 없으면 자리표시자 이름 목록 반환."""
     from docx import Document as DocxDocument
     doc = DocxDocument(str(path))
-    ph = re.compile(r"\{\{\s*([^{}]+?)\s*\}\}")
 
-    def _paras(document):
-        for p in document.paragraphs:
-            yield p
-        for tbl in document.tables:
-            for row in tbl.rows:
-                for cell in row.cells:
-                    for p in cell.paragraphs:
-                        yield p
+    def _placeholders():
+        found = {}
+        for where, p in _docx_paragraphs(doc):
+            for m in _PLACEHOLDER.finditer(p.text):
+                spots = found.setdefault(m.group(1).strip(), [])
+                if where not in spots:
+                    spots.append(where)
+        return found
 
     # --- introspection ---
     if not data:
-        keys = set()
-        for p in _paras(doc):
-            for m in ph.finditer(p.text):
-                keys.add(m.group(1).strip())
+        found = _placeholders()
         return {"success": True, "mode": "fields", "format": "docx",
-                "items": [{"name": k, "type": "text"} for k in sorted(keys)],
-                "count": len(keys), "path": str(path)}
+                "items": [{"name": k, "type": "text", "where": found[k]} for k in sorted(found)],
+                "count": len(found), "path": str(path)}
 
     # --- fill ---
     filled = set()
-    for p in _paras(doc):
+    for _where, p in _docx_paragraphs(doc):
         if "{{" not in p.text:
             continue
-        original = p.text
-        used = [k.strip() for k in ph.findall(original) if k.strip() in data]
-        if not used:
-            continue
-        new = ph.sub(lambda m: str(data.get(m.group(1).strip(), m.group(0))), original)
-        _set_para_text(p, new)
-        filled.update(used)
+        filled.update(_replace_placeholders(p, data))
     unmatched = [k for k in data if k not in filled]
+    left = _placeholders()
     doc.save(output)
-    return {"success": True, "path": os.path.abspath(output), "format": "docx",
-            "filled": sorted(filled), "unmatched": unmatched}
+    res = {"success": True, "path": os.path.abspath(output), "format": "docx",
+           "filled": sorted(filled), "unmatched": unmatched,
+           "remaining": [{"name": k, "where": left[k]} for k in sorted(left)]}
+    if left:
+        res["warning"] = ("값을 받지 못해 그대로 남은 자리가 있습니다: " + ", ".join(sorted(left))
+                          + " — data 에 값을 주거나, 남겨도 되는 자리인지 확인하세요.")
+    return res
 
 
 def fill_op(tool_input: dict, project_path: str) -> str:
@@ -169,8 +291,11 @@ def fill_op(tool_input: dict, project_path: str) -> str:
         out = out_raw if os.path.isabs(out_raw) else os.path.join(project_path, out_raw)
     else:
         out = str(tpl.with_name(f"{tpl.stem}_filled{tpl.suffix}"))
+    replaced = False
     if data:
         os.makedirs(os.path.dirname(os.path.abspath(out)) or ".", exist_ok=True)
+        # 같은 이름의 산출물이 이미 있으면 채우기는 그것을 바꾼다 — 응답이 그 사실을 말한다(L52-2).
+        replaced = os.path.exists(out) and os.path.abspath(out) != os.path.abspath(str(tpl))
 
     try:
         if ext == "pdf":
@@ -182,6 +307,8 @@ def fill_op(tool_input: dict, project_path: str) -> str:
                                "error": f"채우기를 지원하지 않는 형식입니다: .{ext} (지원: pdf, docx)"}, ensure_ascii=False)
     except Exception as e:  # noqa: BLE001
         return json.dumps({"success": False, "error": f"양식 채우기 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
+    if replaced and res.get("success") and res.get("mode") != "fields":
+        res["replaced_existing"] = True
     return json.dumps(res, ensure_ascii=False)
 
 
@@ -520,6 +647,13 @@ def read_docx(tool_input: dict, project_path: str) -> str:
             res["blocks"] = blocks
         if images_info:
             res["images"] = images_info
+        # 머리글·바닥글은 본문 text·blocks 에 섞지 않고 따로 싣는다(쪽 번호류 잡음 방지) — 있을 때만.
+        margins = []
+        for where, p in _docx_paragraphs(doc):
+            if where != "body" and p.text.strip():
+                margins.append({"where": where, "text": p.text})
+        if margins:
+            res["header_footer"] = margins
 
         return json.dumps(res, ensure_ascii=False)
 

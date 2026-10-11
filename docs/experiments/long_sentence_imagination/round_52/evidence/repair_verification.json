@@ -1,0 +1,94 @@
+{
+ "trainer_base_main_v3_repaired": {
+  "elapsed": 26.51,
+  "success": true,
+  "error": null,
+  "value": {
+   "sum_match": true,
+   "ledger_rows": 106,
+   "certificates": 25,
+   "notices": 21,
+   "cert_left": 0,
+   "docx_draw": {
+    "tried": true,
+    "ok": true,
+    "png": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/base/out/shots/cert_try_p1.png"
+   },
+   "flagged": 0,
+   "problems": []
+  },
+  "execution_notes": []
+ },
+ "trainer_b_main_v2_repaired": {
+  "elapsed": 1.27,
+  "success": false,
+  "error": "sheet_op 오류: output 파일이 이미 있습니다. 새 출력 경로를 지정하세요.",
+  "value": {
+   "sum_match": null,
+   "ledger_rows": null,
+   "certificates": null,
+   "notices": null,
+   "cert_left": null,
+   "docx_draw": null,
+   "flagged": null,
+   "problems": null
+  },
+  "execution_notes": [
+   "대상이 이미 있어 덮어쓰지 않고 다른 이름으로 저장했습니다: ledger_raw.xlsx → ledger_raw (2).xlsx. 요청한 경로의 기존 파일은 그대로입니다 — 다음 단계는 응답의 path 를 쓰거나, 새로 만들려던 것이면 기존 파일을 먼저 지우세요."
+  ]
+ },
+ "trainer_b_main_v4": {
+  "elapsed": 84.59,
+  "success": true,
+  "error": null,
+  "value": {
+   "sum_match": true,
+   "ledger_rows": 106,
+   "certificates": 41,
+   "notices": 21,
+   "cert_left": 0,
+   "docx_draw": {
+    "tried": true,
+    "ok": true,
+    "png": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/b/out/shots/cert_try_p1.png"
+   },
+   "flagged": 0,
+   "problems": []
+  },
+  "execution_notes": []
+ },
+ "trainer_a_main_v4": {
+  "elapsed": 16.61,
+  "success": true,
+  "error": null,
+  "value": {
+   "sum_match": true,
+   "ledger_rows": 11,
+   "certificates": 4,
+   "notices": 2,
+   "cert_left": 0,
+   "docx_draw": {
+    "tried": true,
+    "ok": true,
+    "png": "outputs/long_sentence_imagination/2026-10-11_52회차/trainer/a/out/shots/cert_try_p1.png"
+   },
+   "flagged": 0,
+   "problems": []
+  },
+  "execution_notes": []
+ },
+ "qa_after": {
+  "base": {
+   "passed": 21,
+   "total": 21
+  },
+  "a": {
+   "passed": 21,
+   "total": 21
+  },
+  "b": {
+   "passed": 21,
+   "total": 21
+  }
+ }
+}

@@ -1,7 +1,7 @@
 {
  "who": "trainer",
  "mode": "b",
- "passed": 20,
+ "passed": 21,
  "total": 21,
  "checks": [
   {
@@ -56,8 +56,8 @@
   },
   {
    "check": "수료증 머리글·바닥글에 남은 {{ 없음",
-   "ok": false,
-   "detail": "41건 ['HB-2026-09-0003.docx', 'HB-2026-09-0005.docx', 'HB-2026-09-0006.docx']"
+   "ok": true,
+   "detail": "0건 []"
   },
   {
    "check": "수료증 내용(이름·강좌·강사·출석)이 그 접수 건",
@@ -102,12 +102,12 @@
   {
    "check": "그린 증거(PNG) 있음",
    "ok": true,
-   "detail": "28"
+   "detail": "70"
   },
   {
    "check": "남은 문제를 사실대로(바닥글 미채움이 실재하면 보고서가 말함)",
    "ok": true,
-   "detail": "실재=True 보고서 언급=True"
+   "detail": "실재=False 보고서 언급=False"
   }
  ]
 }

@@ -166,6 +166,17 @@ def transfer_path(src, dest, *, move=False):
         copy_dir(source, target)
     else:
         target = copy_file(source, target / source.name if target.is_dir() else target)
-    return {"success": True, "path": str(target.absolute()), "items": [{"path": p} for p in saved],
-            "count": len(saved), "renamed": renamed,
-            "message": f"{'이동' if move else '복사'} 완료: {target} ({len(saved)}개 파일)"}
+    result = {"success": True, "path": str(target.absolute()), "items": [{"path": p} for p in saved],
+              "count": len(saved), "renamed": renamed,
+              "message": f"{'이동' if move else '복사'} 완료: {target} ({len(saved)}개 파일)"}
+    if renamed:
+        # 요청한 이름이 아닌 곳에 썼다 — success 한 줄 뒤에 숨기지 않는다(52회차 L52-2:
+        # 다시 돌린 프로그램이 자기가 정한 dest 를 계속 써 옛 파일에 행을 또 붙였다).
+        first = renamed[0]
+        more = f" 외 {len(renamed) - 1}건" if len(renamed) > 1 else ""
+        result["warning"] = (f"대상이 이미 있어 덮어쓰지 않고 다른 이름으로 저장했습니다: "
+                             f"{os.path.basename(first['requested'])} → {os.path.basename(first['path'])}{more}. "
+                             "요청한 경로의 기존 파일은 그대로입니다 — 다음 단계는 응답의 path 를 쓰거나, "
+                             "새로 만들려던 것이면 기존 파일을 먼저 지우세요.")
+        result["message"] += f" — 이름 충돌 {len(renamed)}건은 다른 이름으로 저장(renamed 참조)"
+    return result

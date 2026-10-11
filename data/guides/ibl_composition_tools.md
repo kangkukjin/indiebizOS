@@ -198,6 +198,23 @@ grep과 search/crawl의 결과는 Record이므로 목록 조합에는 `.items`, 
 
 명시 `inputs`의 이름을 인자로 묶으면 성공 프로그램이 함수 후보가 된다. 개인 값은 복사하지 않고 기존 증류 판단 후 등록하며, 새 입력 검증은 실제 호출에서 쌓는다.
 
+### 서류를 만들고 다시 돌릴 때 — 채우기·그리기·이미 있는 파일
+
+`[self:fill]`은 채운 뒤에도 값이 없어 남은 자리를 `remaining`(+`warning`)으로 알린다. `filled`만 보고 다 채웠다고
+판정하지 않는다. DOCX는 본문·표·글상자와 머리글·바닥글의 자리를 함께 채운다. `[self:read]`의 DOCX 결과는
+머리글·바닥글 글자를 `header_footer`에 따로 싣는다.
+만든 서류는 `[engines:render]{path}`로 그려 본다. PDF·엑셀 장부와 워드류 문서(docx 등, PDF로 바꾼 뒤 `pdf_path` 동봉)가
+쪽별 PNG로 나온다. 장부는 열이 많으면 쪽이 갈리므로 `total_pages`·`truncated`를 읽는다.
+
+같은 폴더에서 프로그램을 다시 돌리면 낱말마다 이미 있는 대상을 다르게 다룬다.
+
+| 낱말 | 대상이 이미 있을 때 | 프로그램이 할 일 |
+| --- | --- | --- |
+| `self:copy`·`self:move` | 덮어쓰지 않고 `이름 (2)`로 저장, `path`가 요청과 다르고 `renamed`·`warning` | 응답의 `path`를 쓰거나, 새로 만들 것이면 먼저 `[self:delete]` |
+| `self:sheet` append | 기존 행 뒤에 더 붙는다 | 틀에서 새로 복사한 파일에 붙인다 |
+| `self:sheet` calculate·range_write, `self:document` edit | `output`이 있으면 거절 | 새 경로를 주거나 먼저 지운다 |
+| `self:fill`·`self:write` | 덮어쓴다(`fill`은 `replaced_existing:true`) | 바꿔도 되는 산출물에만 |
+
 ## 후보·본문 미리보기와 전체 값
 
 작은 결과는 그대로, 큰 결과는 예산 내 짧은 필드·여러 행을 표시한다. 여러 문자열이 함께

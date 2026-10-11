@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-10", impl: "9d1ca18df200c493"}  # Pages open 인자 재감사: workspace는 _owner 관문 유지. 회원 read/fill/write/script 경로·임시 파일 격리 불변.
+        path_audited: {at: "2026-10-11", impl: "34d8cd99c49a88d4"}  # 52회차 수리 재감사: office_ops(채우기 대상 문단·남은 자리·PDF 글꼴 폭·read 의 header_footer)와 copy_ops(이름 충돌 경고)는 응답 내용만 바꾼다 — 경로 해소·쓰기 범위·회원 임시 파일 격리 불변(replaced_existing 은 이미 해소된 output 의 존재만 본다).
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -150,7 +150,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-10", impl: "9d1ca18df200c493"}  # Pages open 인자 재감사: workspace는 _owner 관문 유지. 회원 read/fill/write/script 경로·임시 파일 격리 불변.
+        path_audited: {at: "2026-10-11", impl: "34d8cd99c49a88d4"}  # 52회차 수리 재감사: office_ops(채우기 대상 문단·남은 자리·PDF 글꼴 폭·read 의 header_footer)와 copy_ops(이름 충돌 경고)는 응답 내용만 바꾼다 — 경로 해소·쓰기 범위·회원 임시 파일 격리 불변(replaced_existing 은 이미 해소된 output 의 존재만 본다).
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -158,15 +158,15 @@ nodes:
         side_effect: true
         # 템플릿 경로 인자에 의존 — self:read 선례.
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
-        description: 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면 채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기).
+        description: 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면 채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기). 채운 뒤에도 값이 없어 남은 자리는 remaining 으로 알린다.
         group: file
-        target_description: 'path — 템플릿 문서(.pdf 폼 또는 {{자리표시자}} 든 .docx). data — 필드→값 매핑({이름: 값}); 생략하면 채울 수 있는 필드 목록 반환(introspection). output — 출력 경로(생략 시 원본 옆 _filled). flatten — PDF 전용, true면 폼을 정적 내용으로 구워 제출용(수정 불가, 기본 false). 스캔 이미지 PDF는 폼 필드가 없어 채울 수 없다(별도 OCR 대상).'
+        target_description: 'path — 템플릿 문서(.pdf 폼 또는 {{자리표시자}} 든 .docx). data — 필드→값 매핑({이름: 값}); 생략하면 채울 수 있는 필드 목록 반환(introspection). output — 출력 경로(생략 시 원본 옆 _filled). flatten — PDF 전용, true면 폼을 정적 내용으로 구워 제출용(수정 불가, 기본 false). 스캔 이미지 PDF는 폼 필드가 없어 채울 수 없다(별도 OCR 대상). DOCX 는 본문·표·글상자와 머리글·바닥글의 자리까지 채우고 글자 모양(굵게 등)을 잇는다. 응답 — filled(채운 이름)·unmatched(틀에 없는 data 키)·remaining(값을 못 받아 남은 자리, DOCX 는 where 포함; 있으면 warning)·replaced_existing(같은 이름의 산출물을 바꿨을 때 true — 채우기는 기존 output 을 덮어쓴다).'
         aliases:
           # output_path — 형제 emitter 관습어 수용 (2026-08-29 구현-읽기 감사 상환).
           output: [output_path]
         router: handler
         tool: fill_op
-        implementation: handler.py가 확장자로 분기 — PDF는 PyMuPDF widget 값 설정(+flatten=bake), DOCX는 {{자리표시자}} 치환. data 없으면 필드 열거.
+        implementation: handler.py가 확장자로 분기 — PDF는 PyMuPDF widget 값 설정(+flatten=bake, 채우며 생긴 비내장 CJK 대체 글꼴에 ASCII 반각 폭 선언), DOCX는 {{자리표시자}}를 걸친 run 단위로 치환(본문·표·글상자·머리글·바닥글). data 없으면 필드 열거.
         target_key: path
         keywords:
         - 양식
@@ -228,7 +228,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-10", impl: "9d1ca18df200c493"}  # Pages open 인자 재감사: workspace는 _owner 관문 유지. 회원 read/fill/write/script 경로·임시 파일 격리 불변.
+        path_audited: {at: "2026-10-11", impl: "34d8cd99c49a88d4"}  # 52회차 수리 재감사: office_ops(채우기 대상 문단·남은 자리·PDF 글꼴 폭·read 의 header_footer)와 copy_ops(이름 충돌 경고)는 응답 내용만 바꾼다 — 경로 해소·쓰기 범위·회원 임시 파일 격리 불변(replaced_existing 은 이미 해소된 output 의 존재만 본다).
         target_key: path
       list:
         callable_contract:
@@ -486,7 +486,7 @@ nodes:
         pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사. src 없이 파이프로 items를 받으면 그 파일들을 dest 폴더에 한꺼번에 저장(폰 사진 등).
         group: file
-        target_description: 'src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용) ★src를 생략하고 앞 액션 결과를 >> 로 넘기면 그 items의 파일 전부를 dest 폴더로 복사 — 몇 장을 고르는 일은 [table:take]/[table:filter]가 한다. items의 source가 usb면 USB 연결 폰에서 당겨 온다. 이름 충돌은 "(2)"로 피하고 덮어쓰지 않는다. 앞 단계가 **0행**이면 고장이 아니라 빈손 성공(0개 저장) — 통화 자체가 없을 때만 거절한다.'
+        target_description: 'src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용) ★src를 생략하고 앞 액션 결과를 >> 로 넘기면 그 items의 파일 전부를 dest 폴더로 복사 — 몇 장을 고르는 일은 [table:take]/[table:filter]가 한다. items의 source가 usb면 USB 연결 폰에서 당겨 온다. 이름 충돌은 "(2)"로 피하고 덮어쓰지 않는다 — 그때 응답의 path 는 요청한 dest 와 다르고 renamed·warning 이 알린다(다음 단계는 응답의 path 를 쓰거나, 새로 만들 것이면 기존 파일을 먼저 [self:delete]). 앞 단계가 **0행**이면 고장이 아니라 빈손 성공(0개 저장) — 통화 자체가 없을 때만 거절한다.'
         router: handler
         tool: copy_path
         implementation: shutil.copy/copytree로 파일/폴더 복사. src 생략 시 _copy_piped_items — _prev_result의 items를 dest 폴더로(usb 항목은 file_index.usb_pull). 통화 되읽기=common.currency 정본, 통화 없음/0행/비-레코드 3갈래 분간(F20-3 계약)
@@ -928,7 +928,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-10", impl: "9d1ca18df200c493"}  # Pages open 인자 재감사: workspace는 _owner 관문 유지. 회원 read/fill/write/script 경로·임시 파일 격리 불변.
+        path_audited: {at: "2026-10-11", impl: "34d8cd99c49a88d4"}  # 52회차 수리 재감사: office_ops(채우기 대상 문단·남은 자리·PDF 글꼴 폭·read 의 header_footer)와 copy_ops(이름 충돌 경고)는 응답 내용만 바꾼다 — 경로 해소·쓰기 범위·회원 임시 파일 격리 불변(replaced_existing 은 이미 해소된 output 의 존재만 본다).
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -1656,7 +1656,8 @@ tool_json:
 
       주의사항:
 
-      - 단일 복사에서 대상 경로에 이미 파일/폴더가 있으면 덮어씁니다 (파이프 저장은 "(2)" 를 붙여 보존)
+      - 대상 경로에 이미 파일이 있으면 덮어쓰지 않고 "(2)" 를 붙인 새 이름으로 저장합니다. 응답의 path 가
+      요청한 destination 과 달라지고 renamed·warning 으로 알립니다
 
       - 매우 큰 폴더 복사는 시간이 걸릴 수 있습니다'
     input_schema:
@@ -1699,7 +1700,7 @@ tool_json:
 
       - 원본이 삭제됩니다 (이동이므로)
 
-      - 대상 경로에 이미 파일이 있으면 덮어씁니다'
+      - 대상 경로에 이미 파일이 있으면 덮어쓰지 않고 "(2)" 를 붙인 새 이름으로 옮깁니다(응답 path·renamed·warning)'
     input_schema:
       type: object
       properties:

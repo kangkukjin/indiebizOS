@@ -6209,8 +6209,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-10-10'
-          impl: 9d1ca18df200c493
+          at: '2026-10-11'
+          impl: 34d8cd99c49a88d4
         target_key: path
         aliases:
           offset:
@@ -6222,20 +6222,20 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-10-10'
-          impl: 9d1ca18df200c493
+          at: '2026-10-11'
+          impl: 34d8cd99c49a88d4
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
-        description: 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면 채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기).
+        description: 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면 채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기). 채운 뒤에도 값이 없어 남은 자리는 remaining 으로 알린다.
         group: file
-        target_description: 'path — 템플릿 문서(.pdf 폼 또는 {{자리표시자}} 든 .docx). data — 필드→값 매핑({이름: 값}); 생략하면 채울 수 있는 필드 목록 반환(introspection). output — 출력 경로(생략 시 원본 옆 _filled). flatten — PDF 전용, true면 폼을 정적 내용으로 구워 제출용(수정 불가, 기본 false). 스캔 이미지 PDF는 폼 필드가 없어 채울 수 없다(별도 OCR 대상).'
+        target_description: 'path — 템플릿 문서(.pdf 폼 또는 {{자리표시자}} 든 .docx). data — 필드→값 매핑({이름: 값}); 생략하면 채울 수 있는 필드 목록 반환(introspection). output — 출력 경로(생략 시 원본 옆 _filled). flatten — PDF 전용, true면 폼을 정적 내용으로 구워 제출용(수정 불가, 기본 false). 스캔 이미지 PDF는 폼 필드가 없어 채울 수 없다(별도 OCR 대상). DOCX 는 본문·표·글상자와 머리글·바닥글의 자리까지 채우고 글자 모양(굵게 등)을 잇는다. 응답 — filled(채운 이름)·unmatched(틀에 없는 data 키)·remaining(값을 못 받아 남은 자리, DOCX 는 where 포함; 있으면 warning)·replaced_existing(같은 이름의 산출물을 바꿨을 때 true — 채우기는 기존 output 을 덮어쓴다).'
         aliases:
           output:
           - output_path
         router: handler
         tool: fill_op
-        implementation: handler.py가 확장자로 분기 — PDF는 PyMuPDF widget 값 설정(+flatten=bake), DOCX는 {{자리표시자}} 치환. data 없으면 필드 열거.
+        implementation: handler.py가 확장자로 분기 — PDF는 PyMuPDF widget 값 설정(+flatten=bake, 채우며 생긴 비내장 CJK 대체 글꼴에 ASCII 반각 폭 선언), DOCX는 {{자리표시자}}를 걸친 run 단위로 치환(본문·표·글상자·머리글·바닥글). data 없으면 필드 열거.
         target_key: path
         keywords:
         - 양식
@@ -6299,8 +6299,8 @@ nodes:
           content: $content
         member_transform: member_documents:write
         path_audited:
-          at: '2026-10-10'
-          impl: 9d1ca18df200c493
+          at: '2026-10-11'
+          impl: 34d8cd99c49a88d4
         target_key: path
       list:
         callable_contract:
@@ -6620,7 +6620,7 @@ nodes:
         pipe_in: true
         description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사. src 없이 파이프로 items를 받으면 그 파일들을 dest 폴더에 한꺼번에 저장(폰 사진 등).
         group: file
-        target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용) ★src를 생략하고 앞 액션 결과를 >> 로 넘기면 그 items의 파일 전부를 dest 폴더로 복사 — 몇 장을 고르는 일은 [table:take]/[table:filter]가 한다. items의 source가 usb면 USB 연결 폰에서 당겨 온다. 이름 충돌은 "(2)"로 피하고 덮어쓰지 않는다. 앞 단계가 **0행**이면 고장이 아니라 빈손 성공(0개 저장) — 통화 자체가 없을 때만 거절한다.
+        target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용) ★src를 생략하고 앞 액션 결과를 >> 로 넘기면 그 items의 파일 전부를 dest 폴더로 복사 — 몇 장을 고르는 일은 [table:take]/[table:filter]가 한다. items의 source가 usb면 USB 연결 폰에서 당겨 온다. 이름 충돌은 "(2)"로 피하고 덮어쓰지 않는다 — 그때 응답의 path 는 요청한 dest 와 다르고 renamed·warning 이 알린다(다음 단계는 응답의 path 를 쓰거나, 새로 만들 것이면 기존 파일을 먼저 [self:delete]). 앞 단계가 **0행**이면 고장이 아니라 빈손 성공(0개 저장) — 통화 자체가 없을 때만 거절한다.
         router: handler
         tool: copy_path
         implementation: shutil.copy/copytree로 파일/폴더 복사. src 생략 시 _copy_piped_items — _prev_result의 items를 dest 폴더로(usb 항목은 file_index.usb_pull). 통화 되읽기=common.currency 정본, 통화 없음/0행/비-레코드 3갈래 분간(F20-3 계약)
@@ -7102,8 +7102,8 @@ nodes:
             - read_external
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-10-10'
-          impl: 9d1ca18df200c493
+          at: '2026-10-11'
+          impl: 34d8cd99c49a88d4
         pipe_in: true
         lands_on: body
         limb_op:
@@ -10063,8 +10063,8 @@ nodes:
         exempt: 실행마다 PNG 파일 생성(부작용) — 정기 합성 실행 부적합. Playwright 엔진 건강은 scripts/ci_playwright_smoke.py, xlsx 재계산 관문은 backend/test_render_xlsx_contract.py 가 담당.
         runs_on: pc_only
         scope: project
-        description: 자기 산출물 지각 — 시각 형식(HTML/PDF/SVG/XLSX 장부)을 PNG 스크린샷으로 결정론 투영 (op 분기, 생략 시 path 확장자로 추론). 반환 `$r.items >> [table:each]` 로 장별 critic 심사. 판단 없음 — 심사는 image_read{op:"critic"}. 슬라이드는 self:slide.
-        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수, 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(경로 stem, 폴더 보존·기본 프로젝트 outputs). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·깨진 이미지·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: $it.prescreen 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
+        description: 자기 산출물 지각 — 시각 형식(HTML/PDF/SVG/XLSX 장부/워드류 문서)을 PNG 스크린샷으로 결정론 투영 (op 분기, 생략 시 path 확장자로 추론). 반환 `$r.items >> [table:each]` 로 장별 critic 심사. 판단 없음 — 심사는 image_read{op:"critic"}. 슬라이드는 self:slide.
+        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm, 문서 .docx/.doc/.odt/.rtf/.pptx/.ppt/.odp 는 pdf)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수(PDF, 또는 워드류 문서 — LibreOffice 로 PDF 화한 뒤 같은 길, 결과에 pdf_path·converted_from 동봉), 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(경로 stem, 폴더 보존·기본 프로젝트 outputs). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·깨진 이미지·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: $it.prescreen 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
         group: media_produce
         router: handler
         tool: render_artifact
@@ -10074,7 +10074,7 @@ nodes:
           default: html
           values:
             html: HTML 파일/문자열/직전 통화 → 뷰포트별 PNG 1행 (V21-1 파이프 싱크 승계)
-            pdf: PDF 파일 → 페이지별 PNG 1행 (PyMuPDF, max_pages 상한 정직 보고)
+            pdf: PDF·워드류 문서(docx 등은 PDF 화 뒤) → 페이지별 PNG 1행 (max_pages 상한 정직 보고)
             svg: SVG 파일/문자열 → PNG 1행 (svg 요소 경계 캡처)
             xlsx: XLSX/XLSM 장부 → LibreOffice 재계산 → 페이지별 PNG 1행 (재계산 pdf_path 동봉)
         achievement_criteria: items 각 행의 path 가 실재하는 PNG 절대 경로이고 행 수가 요청(뷰포트 수·페이지 수)과 일치. pdf 상한 초과 시 truncated·total_pages 정직 보고. xlsx — PNG·pdf_path 의 수식 셀 값이 캐시가 아닌 재계산 값(관문 test_render_xlsx_contract)이고 원본 파일 불변, soffice 부재 시 설치 명령을 담은 정직 실패.

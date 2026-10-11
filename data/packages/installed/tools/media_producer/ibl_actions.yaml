@@ -99,8 +99,8 @@ nodes:
         exempt: 실행마다 PNG 파일 생성(부작용) — 정기 합성 실행 부적합. Playwright 엔진 건강은 scripts/ci_playwright_smoke.py, xlsx 재계산 관문은 backend/test_render_xlsx_contract.py 가 담당.
         runs_on: pc_only
         scope: project
-        description: 자기 산출물 지각 — 시각 형식(HTML/PDF/SVG/XLSX 장부)을 PNG 스크린샷으로 결정론 투영 (op 분기, 생략 시 path 확장자로 추론). 반환 `$r.items >> [table:each]` 로 장별 critic 심사. 판단 없음 — 심사는 image_read{op:"critic"}. 슬라이드는 self:slide.
-        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수, 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(경로 stem, 폴더 보존·기본 프로젝트 outputs). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·깨진 이미지·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: $it.prescreen 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
+        description: 자기 산출물 지각 — 시각 형식(HTML/PDF/SVG/XLSX 장부/워드류 문서)을 PNG 스크린샷으로 결정론 투영 (op 분기, 생략 시 path 확장자로 추론). 반환 `$r.items >> [table:each]` 로 장별 critic 심사. 판단 없음 — 심사는 image_read{op:"critic"}. 슬라이드는 self:slide.
+        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm, 문서 .docx/.doc/.odt/.rtf/.pptx/.ppt/.odp 는 pdf)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수(PDF, 또는 워드류 문서 — LibreOffice 로 PDF 화한 뒤 같은 길, 결과에 pdf_path·converted_from 동봉), 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(경로 stem, 폴더 보존·기본 프로젝트 outputs). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·깨진 이미지·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: $it.prescreen 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
         group: media_produce
         router: handler
         tool: render_artifact
@@ -110,7 +110,7 @@ nodes:
           default: html
           values:
             html: HTML 파일/문자열/직전 통화 → 뷰포트별 PNG 1행 (V21-1 파이프 싱크 승계)
-            pdf: PDF 파일 → 페이지별 PNG 1행 (PyMuPDF, max_pages 상한 정직 보고)
+            pdf: PDF·워드류 문서(docx 등은 PDF 화 뒤) → 페이지별 PNG 1행 (max_pages 상한 정직 보고)
             svg: SVG 파일/문자열 → PNG 1행 (svg 요소 경계 캡처)
             xlsx: XLSX/XLSM 장부 → LibreOffice 재계산 → 페이지별 PNG 1행 (재계산 pdf_path 동봉)
         achievement_criteria: items 각 행의 path 가 실재하는 PNG 절대 경로이고 행 수가 요청(뷰포트 수·페이지 수)과 일치. pdf 상한 초과 시 truncated·total_pages 정직 보고. xlsx — PNG·pdf_path 의 수식 셀 값이 캐시가 아닌 재계산 값(관문 test_render_xlsx_contract)이고 원본 파일 불변, soffice 부재 시 설치 명령을 담은 정직 실패.

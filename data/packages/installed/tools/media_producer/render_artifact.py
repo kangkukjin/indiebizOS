@@ -314,11 +314,20 @@ def render_op_html(tool_input, output_base="."):
             browser.close()
         return _finish(rows, output_base)
     except Exception as e:
+        if "Download is starting" in str(e):
+            # 브라우저가 그리지 않고 내려받으려 한 파일 — html 로 투영할 수 없는 형식이다(52회차 L52-3).
+            ext = os.path.splitext(str(tool_input.get("path") or ""))[1] or "(확장자 없음)"
+            return _err(f"이 형식은 html 로 그릴 수 없습니다: {ext} — 그릴 수 있는 것은 "
+                        "HTML · PDF · SVG · 엑셀 장부(xlsx/xlsm) · 문서(" + "/".join(
+                            e.lstrip(".") for e in OFFICE_DOC_EXTS) + ")입니다.")
         return _err(f"HTML 렌더 실패: {e}")
 
 
 def render_op_pdf(tool_input, output_base="."):
-    """PDF 파일(path)→ 페이지별 PNG 1행 (PyMuPDF — 고유 페이지 크기 × scale, 뷰포트 비적용)."""
+    """PDF 파일(path)→ 페이지별 PNG 1행 (PyMuPDF — 고유 페이지 크기 × scale, 뷰포트 비적용).
+
+    워드류 문서(OFFICE_DOC_EXTS)는 인쇄 모양이 곧 시각 형태다 — LibreOffice 로 PDF 화한 뒤
+    같은 길로 그린다(결과에 pdf_path·converted_from 동봉). 장부(xlsx)는 재계산이 붙는 op:xlsx."""
     try:
         import fitz  # PyMuPDF
     except ImportError:
@@ -326,10 +335,32 @@ def render_op_pdf(tool_input, output_base="."):
 
     src_path = _src_path(tool_input)
     if not src_path:
-        return _err("path(PDF 파일 절대 경로)가 필요합니다.")
+        return _err("path(PDF 또는 문서 파일 경로)가 필요합니다.")
     src_path = os.path.abspath(src_path)
     if not os.path.exists(src_path):
         return _err(f"파일이 없습니다: {src_path}")
+    if os.path.splitext(src_path)[1].lower() in OFFICE_DOC_EXTS:
+        try:
+            timeout = int(tool_input.get("timeout", 120) or 120)
+        except (TypeError, ValueError):
+            timeout = 120
+        pdf_path, error = _office_to_pdf(src_path, output_base, _out_stem(tool_input, src_path), timeout, "문서")
+        if error:
+            return error
+        sub = dict(tool_input)
+        sub["path"] = pdf_path
+        sub.setdefault("output_path", _out_stem(tool_input, src_path))
+        out = render_op_pdf(sub, output_base)
+        try:
+            result = json.loads(out)
+        except Exception:
+            return out
+        if not result.get("items"):
+            return out
+        result["pdf_path"] = pdf_path
+        result["converted_from"] = src_path
+        result["message"] += f" (문서를 PDF 로 바꿔 그림: {pdf_path})"
+        return json.dumps(result, ensure_ascii=False)
 
     scale = float(tool_input.get("scale", 2.0))  # 2.0 ≈ 144dpi
     max_pages = int(tool_input.get("max_pages", 20))
@@ -438,38 +469,23 @@ def _link_fallback_fonts(profile_dir):
                 pass
 
 
-def render_op_xlsx(tool_input, output_base="."):
-    """XLSX/XLSM 장부 → LibreOffice 재계산 → PDF → 페이지별 PNG (render_op_pdf 위임).
+# 인쇄 모양이 곧 시각 형태인 문서 형식 — op 생략 시 pdf 길로 추론(문서 → PDF → 쪽별 PNG).
+OFFICE_DOC_EXTS = (".docx", ".doc", ".odt", ".rtf", ".pptx", ".ppt", ".odp")
 
-    결과 extra 에 pdf_path(절대 경로) 동봉 — [self:read]{path: pdf_path} 로 계산된
-    숫자를 텍스트로 읽는 조합이 열린다(2층 텍스트 통로, 새 param 없이).
-    """
+
+def _office_to_pdf(src_path, output_base, stem, timeout, label):
+    """LibreOffice 헤드리스로 src 를 PDF 로 — (pdf_path, None) 또는 (None, 오류 문자열).
+
+    실행마다 임시 프로파일(사용자 프로파일 오염 0 · 동시 실행 레이스 0)에 재계산 설정과
+    한글 대체 글꼴을 심는다. 원본은 불변이고 산출 PDF 는 output_base/<stem>.pdf 에 남는다."""
     import shutil
     import subprocess
 
-    src_path = _src_path(tool_input)
-    if not src_path:
-        return _err("path(xlsx/xlsm 파일 경로)가 필요합니다.")
-    src_path = os.path.abspath(src_path)
-    if not os.path.exists(src_path):
-        return _err(f"파일이 없습니다: {src_path}")
-    if os.path.splitext(src_path)[1].lower() not in (".xlsx", ".xlsm"):
-        return _err(f"xlsx/xlsm 만 지원합니다: {os.path.basename(src_path)} — "
-                    "PDF 는 op:pdf, HTML 은 op:html, CSV·표 데이터는 시각 형태가 내재하지 않아 이 낱말 밖.")
-
     soffice = _find_soffice()
     if not soffice:
-        return _err(f"LibreOffice(soffice)가 없습니다 — op:xlsx 는 장부 재계산·투영에 "
-                    f"LibreOffice 헤드리스가 필요합니다. 설치: {_install_hint()}")
-
-    try:
-        timeout = int(tool_input.get("timeout", 120) or 120)
-    except (TypeError, ValueError):
-        timeout = 120
-
-    stem = _out_stem(tool_input, src_path)
+        return None, _err(f"LibreOffice(soffice)가 없습니다 — {label} 투영에 "
+                          f"LibreOffice 헤드리스가 필요합니다. 설치: {_install_hint()}")
     os.makedirs(output_base, exist_ok=True)
-    # 실행마다 임시 프로파일 — 사용자 프로파일 오염 0 · 동시 실행 레이스 0.
     work = os.path.join(output_base, f"_lo_{uuid.uuid4().hex[:8]}")
     profile = os.path.join(work, "profile")
     conv_out = os.path.join(work, "out")
@@ -489,15 +505,43 @@ def render_op_xlsx(tool_input, output_base="."):
         if not os.path.exists(produced):
             # soffice 는 변환 실패에도 returncode 0 을 내기도 한다 — 판정은 산출 파일 실재로.
             tail = ((r.stderr or "") + (r.stdout or "")).strip()[-300:]
-            return _err(f"xlsx→PDF 변환 실패 (soffice returncode={r.returncode}): {tail or '출력 없음'}")
+            return None, _err(f"{label}→PDF 변환 실패 (soffice returncode={r.returncode}): {tail or '출력 없음'}")
         pdf_path = os.path.abspath(os.path.join(output_base, f"{stem}.pdf"))
         shutil.move(produced, pdf_path)
+        return pdf_path, None
     except subprocess.TimeoutExpired:
-        return _err(f"xlsx→PDF 변환 타임아웃({timeout}s) — timeout 파라미터로 늘리거나 장부 크기 확인.")
+        return None, _err(f"{label}→PDF 변환 타임아웃({timeout}s) — timeout 파라미터로 늘리거나 파일 크기 확인.")
     except Exception as e:
-        return _err(f"xlsx 렌더 실패: {e}")
+        return None, _err(f"{label} 렌더 실패: {e}")
     finally:
         shutil.rmtree(work, ignore_errors=True)
+
+
+def render_op_xlsx(tool_input, output_base="."):
+    """XLSX/XLSM 장부 → LibreOffice 재계산 → PDF → 페이지별 PNG (render_op_pdf 위임).
+
+    결과 extra 에 pdf_path(절대 경로) 동봉 — [self:read]{path: pdf_path} 로 계산된
+    숫자를 텍스트로 읽는 조합이 열린다(2층 텍스트 통로, 새 param 없이).
+    """
+    src_path = _src_path(tool_input)
+    if not src_path:
+        return _err("path(xlsx/xlsm 파일 경로)가 필요합니다.")
+    src_path = os.path.abspath(src_path)
+    if not os.path.exists(src_path):
+        return _err(f"파일이 없습니다: {src_path}")
+    if os.path.splitext(src_path)[1].lower() not in (".xlsx", ".xlsm"):
+        return _err(f"xlsx/xlsm 만 지원합니다: {os.path.basename(src_path)} — "
+                    "PDF 는 op:pdf, HTML 은 op:html, CSV·표 데이터는 시각 형태가 내재하지 않아 이 낱말 밖.")
+
+    try:
+        timeout = int(tool_input.get("timeout", 120) or 120)
+    except (TypeError, ValueError):
+        timeout = 120
+
+    stem = _out_stem(tool_input, src_path)
+    pdf_path, error = _office_to_pdf(src_path, output_base, stem, timeout, "xlsx")
+    if error:
+        return error
 
     # 픽셀화는 pdf 경로 재사용 — scale·max_pages·pages·truncated 정직 보고 전부 승계.
     sub = dict(tool_input)

@@ -1,0 +1,88 @@
+{
+ "who": "trainer",
+ "mode": "a",
+ "score": "13/13",
+ "checks": [
+  {
+   "check": "파일: 메모 전건·index 행수·summary",
+   "ok": true,
+   "detail": "memos 5/5, index 5"
+  },
+  {
+   "check": "메모마다 법률 자문 아님 표시",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "기대 조문 원문 인용(공식 원문 줄과 일치) 3/3",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "법령명+조 번호 쌍이 공식 원문에 실재(없는 쌍 0)",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "A01 기한 2026-12-14(58일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "A02 주장한 법 「소상공인 임대료 동결법」 없음 표시",
+   "ok": true,
+   "detail": "mentions 1"
+  },
+  {
+   "check": "A03 빈 접수지 표시",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "A04 기한 2026-10-17(0일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "A05 기한 2026-10-09(-8일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "판례: 건마다 사건번호 또는 못 찾음",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "붙인 판례 1건이 원천에 실재(재조회)",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "summary 급한 순",
+   "ok": true,
+   "detail": "want ['A05', 'A04', 'A01'] got ['A05', 'A04', 'A01']"
+  },
+  {
+   "check": "summary 확인하지 못한 것 절",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "notes": {
+  "quoted_articles": {
+   "A01": [
+    "제28조"
+   ],
+   "A04": [
+    "제17조"
+   ],
+   "A05": [
+    "제1019조"
+   ]
+  },
+  "prec_attached": [
+   "A01"
+  ]
+ }
+}

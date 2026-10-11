@@ -1,0 +1,10 @@
+{
+ "code": "#!ibl edition=2\n$a = [sense:legal]{id:\"276291\"}\n$L = $a.Law\nreturn {n:len(json($L)), head:json($L)[:700]}",
+ "elapsed": 0.465,
+ "success": true,
+ "issues": null,
+ "value": {
+  "n": 33,
+  "head": "\"일치하는 법령이 없습니다.  법령명을 확인하여 주십시오.\""
+ }
+}

@@ -1,0 +1,32 @@
+{
+ "label": "trainer_base_main_v0_check",
+ "task_id": "r53-trainer-base-1791710773",
+ "reuse_request": null,
+ "budget_request": {
+  "steps": 2000000,
+  "rows": 50000
+ },
+ "elapsed": 0.28,
+ "success": false,
+ "status": "invalid",
+ "issues": [
+  {
+   "code": "SYNTAX",
+   "message": "보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.",
+   "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+   "line": 178
+  }
+ ],
+ "error": "보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.",
+ "value": null,
+ "usage": {
+  "steps": null,
+  "rows": null,
+  "elapsed_ms": null,
+  "model": null,
+  "limits": null
+ },
+ "reuse": null,
+ "continuation": null,
+ "warnings": null
+}

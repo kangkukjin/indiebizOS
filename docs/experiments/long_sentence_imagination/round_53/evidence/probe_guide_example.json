@@ -1,0 +1,37 @@
+{
+ "code": "#!ibl edition=2\n$a = [sense:legal]{query:\"전세 사기 임차인 보호\", target:\"prec\"}\n$b = [sense:legal]{query:\"전세 사기\"}\n$c = [sense:legal]{query:\"임금채권 소멸시효\", target:\"prec\"}\n$d = [sense:legal]{query:\"없는법이름특별법\"}\nreturn {a:{keys:keys($a),msg:$a.message[:160]},b:{keys:keys($b),msg:$b.message[:200]},c:{keys:keys($c)},d:{keys:keys($d),msg:$d.message}}",
+ "elapsed": 1.579,
+ "success": true,
+ "issues": null,
+ "value": {
+  "a": {
+   "keys": [
+    "success",
+    "message"
+   ],
+   "msg": "{\"PrecSearch\": {\n    \"키워드\": \"전세 사기 임차인 보호\",\n    \"page\": \"1\",\n    \"target\": \"prec\",\n    \"totalCnt\": \"0\",\n    \"section\": \"evtNm\"\n}}"
+  },
+  "b": {
+   "keys": [
+    "success",
+    "message",
+    "items",
+    "count"
+   ],
+   "msg": "{\"LawSearch\": {\n    \"law\": [\n        {\n            \"현행연혁코드\": \"현행\",\n            \"법령일련번호\": \"290655\",\n            \"자법타법여부\": \"\",\n            \"법령상세링크\": \"/DRF/lawService.do?OC=(가림)&target=law&MST=290655&"
+  },
+  "c": {
+   "keys": [
+    "success",
+    "message"
+   ]
+  },
+  "d": {
+   "keys": [
+    "success",
+    "message"
+   ],
+   "msg": "{\"LawSearch\": {\n    \"resultMsg\": \"success\",\n    \"키워드\": \"없는법이름특별법\",\n    \"page\": \"1\",\n    \"resultCode\": \"00\",\n    \"target\": \"law\",\n    \"totalCnt\": \"0\",\n    \"section\": \"lawNm\",\n    \"numOfRows\": \"0\"\n}}"
+  }
+ }
+}

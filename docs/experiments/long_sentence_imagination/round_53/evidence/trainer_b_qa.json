@@ -1,0 +1,148 @@
+{
+ "who": "trainer",
+ "mode": "b",
+ "score": "16/19",
+ "checks": [
+  {
+   "check": "파일: 메모 전건·index 행수·summary",
+   "ok": true,
+   "detail": "memos 11/11, index 11"
+  },
+  {
+   "check": "메모마다 법률 자문 아님 표시",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "기대 조문 원문 인용(공식 원문 줄과 일치) 11/11",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "법령명+조 번호 쌍이 공식 원문에 실재(없는 쌍 0)",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "C01 기한 2026-12-14(51일)",
+   "ok": false,
+   "detail": "date False days False past True"
+  },
+  {
+   "check": "C02 기한 2026-11-03(10일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "C03 기한 2026-11-30(37일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "C04 기한 2026-10-19(-5일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "C05 기한 2026-11-20(27일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "C06 기한 2026-10-25(1일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "C07 기한 2026-09-30(-24일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "C08 기한 2026-10-15(-9일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "C09 기한 2026-12-01(38일)",
+   "ok": true,
+   "detail": "date True days True past True"
+  },
+  {
+   "check": "C10 날짜 확인 필요(기한 지어내지 않음)",
+   "ok": false,
+   "detail": ""
+  },
+  {
+   "check": "C11 주장한 법 「임차인보호특별법」 없음 표시",
+   "ok": true,
+   "detail": "mentions 1"
+  },
+  {
+   "check": "판례: 건마다 사건번호 또는 못 찾음",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "붙인 판례 5건이 원천에 실재(재조회)",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "summary 급한 순",
+   "ok": false,
+   "detail": "want ['C07', 'C08', 'C04', 'C06', 'C02', 'C05', 'C03', 'C09', 'C01'] got ['C07', 'C08', 'C04', 'C06', 'C02', 'C05', 'C01', 'C03', 'C09']"
+  },
+  {
+   "check": "summary 확인하지 못한 것 절",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "notes": {
+  "quoted_articles": {
+   "C01": [
+    "제49조"
+   ],
+   "C02": [
+    "제28조"
+   ],
+   "C03": [
+    "제6조의3",
+    "제6조"
+   ],
+   "C04": [
+    "제17조"
+   ],
+   "C05": [
+    "제1019조"
+   ],
+   "C06": [
+    "제766조"
+   ],
+   "C07": [
+    "제162조"
+   ],
+   "C08": [
+    "제8조"
+   ],
+   "C09": [
+    "제1117조"
+   ],
+   "C10": [
+    "제3조의3",
+    "제3조"
+   ],
+   "C11": [
+    "제7조"
+   ]
+  },
+  "prec_attached": [
+   "C01",
+   "C02",
+   "C03",
+   "C09",
+   "C10"
+  ]
+ }
+}

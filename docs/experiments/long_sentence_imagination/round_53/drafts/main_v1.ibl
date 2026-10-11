@@ -1,0 +1,282 @@
+#!ibl edition=2
+# 53회차 v1(검사 거절 수정: f-문자열 보간 안의 따옴표를 변수·함수로 뺌) / v0 — 법률상담 준비철: 접수지 → 쟁점(모델) → 현행 조문 원문(국가법령정보) → 기간 추출(모델)·확인·날짜 계산(코드) → 판례 → 건별 메모·급한 순 요약
+# inputs: src(자료 폴더: job.json, intake/*.md), out(출력 폴더)
+
+# ---- 부품: 값 ----
+# 하나뿐이면 레코드로, 여럿이면 목록으로 오는 자리를 목록으로 맞춘다
+[def:목록으로]($v) {
+  [try]{ $k = keys($v); return [$v] }[catch]{ return $v }
+}
+# 조문 단위 하나의 번호 표기: 제6조의3
+[def:조번호]($j) {
+  $n = text(get($j,"조문번호"))
+  $b = has($j,"조문가지번호") ? text(get($j,"조문가지번호")) : ""
+  $tail = $b == "" ? "" : f"의${b}"
+  return f"제${n}조${tail}"
+}
+# 조문 단위 하나를 글로 편다(조문내용 + 항 + 호)
+[def:조문글]($j) {
+  $head = get($j,"조문내용")
+  [try] {
+    $hang = has($j,"항") ? [fn:목록으로]{v:get($j,"항")} : []
+    $lines = reduce($hang,[$head],($acc,$h)=>$acc +
+      (has($h,"항내용") ? [get($h,"항내용")] : []) +
+      (has($h,"호") ? map([fn:목록으로]{v:get($h,"호")},($o)=>get($o,"호내용")) : []))
+    return join("\n",$lines)
+  } [catch] { return $head }
+}
+# 날짜에 달 수를 더한다(말일 넘으면 그 달 말일)
+[def:달더하기]($d,$n) {
+  $t = number($d[:4]) * 12 + (number($d[5:7]) - 1) + $n
+  $ny = $t // 12
+  $nm = $t % 12 + 1
+  $mm = $nm < 10 ? f"0${nm}" : text($nm)
+  $last = number(month_end(f"${ny}-${mm}-01")[8:10])
+  $day = number($d[8:10])
+  $nd = $day > $last ? $last : $day
+  $dd = $nd < 10 ? f"0${nd}" : text($nd)
+  return f"${ny}-${mm}-${dd}"
+}
+[def:기한계산]($base,$n,$unit,$dir) {
+  $k = $dir == "before" ? 0 - $n : $n
+  [if:$unit == "일"] { return date_add($base,$k) }
+  [if:$unit == "개월"] { return [fn:달더하기]{d:$base,n:$k} }
+  return [fn:달더하기]{d:$base,n:$k * 12}
+}
+
+# ---- 부품: 원천 ----
+# 접수지 한 장 — 못 읽거나 비어 있으면 빈 글
+[def:접수지읽기]($f) {
+  [try]{ $d = [self:read]{path:$f.path,format:"text"}; return {id:replace($f.name,".md",""),text:$d.text,read_ok:true,reason:""} }
+  [catch]{ return {id:replace($f.name,".md",""),text:"",read_ok:false,reason:$error.message} }
+}
+# 법령 이름으로 현행 법령 전문을 가져온다. 검색 결과 items 에는 상세 조회용 번호가 없어 message(원문 JSON 글)에서 법령ID 를 잘라낸다
+[def:법령찾기]($name) {
+  [try] {
+    $s = [sense:legal]{query:$name}
+    $cand = $s.items ?? []
+    $key = replace("\"법령명한글\": \"@\"","@",$name)
+    $hit = filter(split($s.message,"\"법령일련번호\""),($c)=>contains($c,$key))
+    [if:len($hit) == 0] { return {name:$name,found:false,reason:"그 이름과 정확히 같은 현행 법령이 검색 결과에 없음",law_id:"",enforce:"",candidates:map($cand,($x)=>$x.title),units:[]} }
+    $id = split(split($hit[0],"\"법령ID\": \"")[1],"\"")[0]
+    $d = [sense:legal]{id:$id}
+    $law = get($d,"법령")
+    $units = filter(get(get($law,"조문"),"조문단위"),($j)=>get($j,"조문여부") == "조문")
+    return {name:$name,found:true,reason:"",law_id:$id,enforce:text(get(get($law,"기본정보"),"시행일자")),candidates:[],units:$units}
+  } [catch] { return {name:$name,found:false,reason:f"조회 실패: ${error.message}",law_id:"",enforce:"",candidates:[],units:[]} }
+}
+# 한 법령 안에서 "제6조의3" 표기의 조문을 찾아 글로
+[def:조문찾기]($law,$no) {
+  $p = split(replace(replace(strip($no),"제",""),"조",""),"의")
+  $num = $p[0]
+  $br = len($p) > 1 ? $p[1] : ""
+  $hit = filter($law.units,($j)=>text(get($j,"조문번호")) == $num and (has($j,"조문가지번호") ? text(get($j,"조문가지번호")) : "") == $br)
+  [if:len($hit) == 0] { return {no:strip($no),found:false,text:""} }
+  return {no:[fn:조번호]{j:$hit[0]},found:true,text:[fn:조문글]{j:$hit[0]}}
+}
+# 사건명 낱말로 대법원 판례를 찾아, 참조조문에 그 법 이름이 있는 첫 건을 고른다
+[def:판례찾기]($word,$law_name) {
+  [try] {
+    $s = [sense:legal]{query:$word,target:"prec"}
+    $items = $s.items ?? []
+    $sup = filter($items,($x)=>contains($x.meta,"대법원"))[:4]
+    $det = $sup >> [table:each] {
+      $pid = split(split($it.url,"&ID=")[1],"&")[0]
+      $d = [sense:legal]{id:$pid,target:"prec"}
+      $p = get($d,"PrecService")
+      return {pid:$pid,case_no:has($p,"사건번호") ? get($p,"사건번호") : "",date:has($p,"선고일자") ? get($p,"선고일자") : "",court:has($p,"법원명") ? get($p,"법원명") : "",
+        name:has($p,"사건명") ? get($p,"사건명") : "",holding:has($p,"판시사항") ? get($p,"판시사항") : "",refs:has($p,"참조조문") ? get($p,"참조조문") : ""}
+    }
+    $rel = filter($det,($p)=>contains($p.refs,$law_name) and len($p.holding) > 0)
+    $none = {pid:"",case_no:"",date:"",court:"",name:"",holding:"",refs:""}
+    return {word:$word,searched:len($items),checked:len($det),found:len($rel) > 0,prec:len($rel) > 0 ? $rel[0] : $none,error:""}
+  } [catch] { return {word:$word,searched:0,checked:0,found:false,prec:{pid:"",case_no:"",date:"",court:"",name:"",holding:"",refs:""},error:$error.message} }
+}
+
+# ---- (1) 접수지 읽기 ----
+$jobdoc = [self:read]{path:f"${src}/job.json"}
+$job = $jobdoc.data
+$files = [self:list]{path:f"${src}/intake",pattern:"*.md"}
+$intake = sorted($files,"name") >> [table:each] { [fn:접수지읽기]{f:$it} }
+$blank = filter($intake,($r)=>len(strip($r.text)) == 0)
+$filled = filter($intake,($r)=>len(strip($r.text)) > 0)
+[if:len($filled) == 0] { return {error:"읽을 접수지가 없음",files:len($files),blank:map($blank,($r)=>$r.id)} }
+
+# ---- (2) 쟁점 정리(모델 1회) — 모델이 낸 법 이름·조 번호는 제안일 뿐이고 아래에서 원문으로 확인한다 ----
+$ask1 = """각 행은 마을 법률상담 창구의 접수지(text)다. 행마다 다음 칸을 채워라.
+- issue: 무엇이 문제인지 두세 문장. 법령 이름·조 번호·기간 숫자는 쓰지 말 것.
+- law_name: 이 건의 권리나 기한의 근거가 되는 대한민국 현행 법률의 정식 명칭 하나(약칭 금지, 예: 전자상거래 등에서의 소비자보호에 관한 법률). 신청인이 적은 법 이름이 아니라 실제로 있는 법으로.
+- articles: 그 법에서 이 건의 핵심 조문 번호를 쉼표로 최대 3개, 제6조의3 같은 표기. 지켜야 할 기한·기간을 정한 조문을 맨 앞에. 그 조문이 기간을 다른 조에 맡기면 그 조도 넣는다.
+- has_deadline: 시효·신청기간·철회기간처럼 '언제까지'를 따져야 하는 건이면 true. 따져야 하는데 접수지에 날짜가 없어도 true.
+- base_date: 그 기간을 세기 시작하는 기준일을 접수지에서 찾아 YYYY-MM-DD 로. 접수지에 그 날짜가 없으면 null. '작년' 같은 표현은 접수일 기준으로 환산.
+- base_event: 그 기준일이 무슨 날인지 짧게(접수지에 없으면 어떤 날짜를 물어야 하는지).
+- claimed_law: 신청인이 접수지에 직접 적은 법 이름이 있으면 글자 그대로, 없으면 null.
+- prec_word: 대법원 판례 사건명에 흔히 쓰이는 낱말 하나(예: 임금, 해고무효확인, 대여금, 유류분반환, 임대차보증금, 손해배상(자)).
+- questions: 상담 때 신청인에게 물어볼 것 2~4개를 ' / ' 로 이어서. 법령 이름·조 번호는 쓰지 말 것.
+- documents: 가져오라고 할 서류를 ' / ' 로 이어서."""
+$a1 = $filled >> [table:ai]{instruction:$ask1,schema:"issue(문자열), law_name(문자열), articles(문자열), has_deadline(불리언), base_date(문자열), base_event(문자열), claimed_law(문자열), prec_word(문자열), questions(문자열), documents(문자열)",input_fields:["id","text"],preserve_rows:true}
+# 모델이 낸 칸만 골라 접수지와 순서로 다시 묶는다(preserve_rows 라 순서가 같다). 빈 칸(null)은 빈 글·false 로 맞춘다
+$rows = $a1.items >> [table:each] { return {id:$filled[$i].id,text:$filled[$i].text,issue:$it.issue == null ? "" : $it.issue,law_name:$it.law_name == null ? "" : strip($it.law_name),articles:$it.articles == null ? "" : $it.articles,
+  has_deadline:$it.has_deadline == true,base_date:$it.base_date == null ? "" : strip($it.base_date),base_event:$it.base_event == null ? "" : $it.base_event,claimed_law:$it.claimed_law == null ? "" : strip($it.claimed_law),
+  prec_word:$it.prec_word == null ? "" : strip($it.prec_word),questions:$it.questions == null ? "" : $it.questions,documents:$it.documents == null ? "" : $it.documents} }
+
+# ---- (3) 법령 원문 가져오기(이름마다 한 번) ----
+$names = unique(filter(map($rows,($r)=>$r.law_name) + map($rows,($r)=>$r.claimed_law),($n)=>len($n) > 0))
+$laws = $names >> [table:each]{parallel:3} { [fn:법령찾기]{name:$it} }
+
+# ---- (4) 건마다: 조문 확인 → 판례 ----
+[def:건확인]($r,$laws) {
+  $mine = filter($laws,($l)=>$l.name == $r.law_name and len($r.law_name) > 0)
+  $ok = len($mine) > 0 and $mine[0].found
+  $asked = filter(split($r.articles,","),($a)=>len(strip($a)) > 0)
+  $looked = $ok ? map($asked,($a)=>[fn:조문찾기]{law:$mine[0],no:$a}) : []
+  $claimed = filter($laws,($l)=>$l.name == $r.claimed_law and len($r.claimed_law) > 0)
+  return {**$r,law_found:$ok,law_reason:len($mine) > 0 ? $mine[0].reason : "",enforce:len($mine) > 0 ? $mine[0].enforce : "",
+    cites:filter($looked,($c)=>$c.found),missing:map(filter($looked,($c)=>not $c.found),($c)=>$c.no),
+    claimed_found:len($claimed) > 0 and $claimed[0].found,claimed_candidates:len($claimed) > 0 ? $claimed[0].candidates : []}
+}
+$checked = $rows >> [table:each] { [fn:건확인]{r:$it,laws:$laws} }
+$precs = $checked >> [table:each]{parallel:3} { [fn:판례찾기]{word:$it.prec_word,law_name:$it.law_found ? $it.law_name : "@@없음@@"} }
+
+# ---- (5) 기간 추출(모델 1회) — 조문 원문에서만, 옮긴 구절이 원문에 있고 그 안에 숫자가 있을 때만 쓴다 ----
+$ask2 = """각 행의 article_text 는 법령 조문 원문이고 text 는 상담 접수지다. 이 신청인이 지켜야 하는 기한을 정한 기간을 article_text 에서만 찾아라(기억으로 채우지 말 것).
+- n: 기간의 숫자. unit: 년 · 개월 · 일 중 하나('3월'처럼 적힌 달 수는 개월).
+- direction: 기준일(base_date)에서 그 기간이 지난 날이 마감이면 after, 기준일(예: 계약이 끝나는 날)보다 그 기간 앞선 날이 마감이면 before. '몇 개월 전부터 몇 개월 전까지'처럼 범위면 마감(늦은 쪽)을 고른다.
+- phrase: 그 숫자가 들어 있는 구절을 article_text 에서 글자 하나 바꾸지 말고 15~50자 옮겨라.
+조문에서 찾지 못하면 네 칸 모두 null."""
+[def:기간추출]($need,$ask) {
+  [if:len($need) == 0] { return [] }
+  $in2 = map($need,($c)=>{id:$c.id,text:$c.text,base_date:$c.base_date,base_event:$c.base_event,article_text:join("\n\n",map($c.cites,($x)=>$x.text))})
+  $a2 = $in2 >> [table:ai]{instruction:$ask,schema:"n(숫자), unit(문자열), direction(문자열), phrase(문자열)",preserve_rows:true}
+  return $a2.items >> [table:each] { return {id:$in2[$i].id,article_text:$in2[$i].article_text,n:$it.n == null ? -1 : round($it.n),unit:$it.unit == null ? "" : strip($it.unit),direction:$it.direction == "before" ? "before" : "after",phrase:$it.phrase == null ? "" : strip($it.phrase)} }
+}
+$need = filter($checked,($c)=>$c.has_deadline and len($c.base_date) > 0 and len($c.cites) > 0)
+$a2rows = [fn:기간추출]{need:$need,ask:$ask2}
+
+# ---- (6) 건마다 조립: 기한·남은 날 ----
+[def:건조립]($c,$prec,$periods,$consult) {
+  $pp = filter($periods,($p)=>$p.id == $c.id)
+  $why = not $c.has_deadline ? "no_deadline" : len($c.base_date) == 0 ? "need_date" : not $c.law_found ? "law_unverified" : len($c.cites) == 0 ? "article_unverified" : "period_unverified"
+  [if:len($pp) == 0] { return {**$c,period_n:-1,period_unit:"",period_phrase:"",deadline:"",days_left:0,status:$why,prec:$prec} }
+  $p = $pp[0]
+  $ok = $p.n > 0 and len($p.phrase) > 0 and ($p.unit == "년" or $p.unit == "개월" or $p.unit == "일") and contains($p.article_text,$p.phrase) and contains($p.phrase,text($p.n))
+  [if:not $ok] { return {**$c,period_n:$p.n,period_unit:$p.unit,period_phrase:$p.phrase,deadline:"",days_left:0,status:"period_unverified",prec:$prec} }
+  $deadline = [fn:기한계산]{base:$c.base_date,n:$p.n,unit:$p.unit,dir:$p.direction}
+  return {**$c,period_n:$p.n,period_unit:$p.unit,period_phrase:$p.phrase,deadline:$deadline,days_left:date_diff($deadline,$consult),status:"deadline",prec:$prec}
+}
+$cases = $checked >> [table:each] { [fn:건조립]{c:$it,prec:$precs[$i],periods:$a2rows,consult:$job.consult_date} }
+
+# ---- (7) 메모·요약·index ----
+[def:기한글]($c) {
+  [if:$c.status == "deadline"] {
+    $gone = 0 - $c.days_left
+    $how = $c.days_left < 0 ? f"상담일 기준 ${gone}일 지남" : f"상담일 기준 ${c.days_left}일 남음"
+    return f"${c.deadline} 까지 — ${how}. 기준일 ${c.base_date}(${c.base_event}), 기간 ${c.period_n}${c.period_unit}(조문 구절: '${c.period_phrase}')"
+  }
+  [if:$c.status == "need_date"] { return f"날짜 확인 필요 — 접수지에 기준일이 없음(물어볼 날짜: ${c.base_event})" }
+  [if:$c.status == "no_deadline"] { return "기한을 따지는 건으로 보지 않음(모델 판단 — 상담 때 다시 확인)" }
+  [if:$c.status == "law_unverified"] { return "확인하지 못함 — 근거 법령을 국가법령정보에서 찾지 못해 기한을 계산하지 않음" }
+  [if:$c.status == "article_unverified"] { return "확인하지 못함 — 제안된 조문이 그 법령 원문에 없어 기한을 계산하지 않음" }
+  return "확인하지 못함 — 가져온 조문 원문에서 기간을 확인하지 못해 기한을 계산하지 않음"
+}
+[def:인용글]($law,$x) {
+  $body = replace($x.text,"\n","\n> ")
+  return f"**${law} ${x.no}**\n\n> ${body}"
+}
+[def:판례글]($pr) {
+  [if:$pr.found] {
+    $h = strip(replace($pr.prec.holding,"<br/>","\n"))
+    $refs = strip(replace($pr.prec.refs,"<br/>"," "))
+    return f"${pr.prec.court} ${pr.prec.case_no} (${pr.prec.date} 선고) — ${pr.prec.name}\n\n판시사항: ${h}\n\n참조조문: ${refs}"
+  }
+  $err = len($pr.error) == 0 ? "" : f" (오류: ${pr.error})"
+  return f"못 찾음 — 사건명 '${pr.word}' 로 ${pr.searched}건이 검색됐고 대법원 ${pr.checked}건을 열어 봤으나 참조조문에 이 법이 있는 판례가 없었음${err}"
+}
+[def:메모글]($c,$job) {
+  $law = $c.law_found ? $c.law_name : ""
+  $lawline = $c.law_found ? f"${law} (시행 ${c.enforce})" : f"확인하지 못함 — 제안된 법령 이름 '${c.law_name}' 을 국가법령정보에서 찾지 못함. ${c.law_reason}"
+  $quotes = len($c.cites) == 0 ? "(원문으로 확인한 조문 없음)" : join("\n\n",map($c.cites,($x)=>[fn:인용글]{law:$law,x:$x}))
+  $missjoin = join(", ",$c.missing)
+  $miss = len($c.missing) == 0 ? "" : f"\n\n제안됐으나 원문에 없어 싣지 않은 조문 표기: ${missjoin}"
+  $candjoin = join(", ",$c.claimed_candidates)
+  $claim = len($c.claimed_law) == 0 ? "" : $c.claimed_found ? f"\n\n신청인이 적은 법 이름 「${c.claimed_law}」: 현행 법령으로 있음." : f"\n\n신청인이 적은 법 이름 「${c.claimed_law}」: 국가법령정보에 그 이름의 현행 법령이 없음(검색에 나온 이름: ${candjoin}). 그 이름의 조문은 인용하지 않는다."
+  $prec = [fn:판례글]{pr:$c.prec}
+  $due = [fn:기한글]{c:$c}
+  return f"""# 상담 메모 ${c.id}
+
+> ${job.note}. ${job.office} · 상담일 ${job.consult_date}. 조문은 국가법령정보에서 가져온 원문이고, 쟁점·질문·서류 칸은 모델이 접수지를 읽고 쓴 것이다.
+
+## 쟁점
+${c.issue}
+
+## 근거 법령
+${lawline}
+
+${quotes}${miss}${claim}
+
+## 기한
+${due}
+
+## 판례
+${prec}
+
+## 상담 때 물어볼 것
+${c.questions}
+
+## 가져오라고 할 서류
+${c.documents}
+"""
+}
+[def:표줄]($c) {
+  $gone = 0 - $c.days_left
+  $left = $c.status != "deadline" ? "-" : $c.days_left < 0 ? f"${gone}일 지남" : f"${c.days_left}일 남음"
+  $dl = len($c.deadline) == 0 ? "-" : $c.deadline
+  $law = $c.law_found ? $c.law_name : "확인 못 함"
+  $arts = join("·",map($c.cites,($x)=>$x.no))
+  $pc = $c.prec.found ? $c.prec.prec.case_no : "못 찾음"
+  $due = [fn:기한글]{c:$c}
+  return f"| ${c.id} | ${left} | ${dl} | ${law} ${arts} | ${pc} | ${due} |"
+}
+[def:미확인줄]($c) {
+  $due = [fn:기한글]{c:$c}
+  return f"${c.id}(${due})"
+}
+[self:mkdir]{path:f"${out}/cases"}
+$written = $cases >> [table:each] { $w = [self:write]{path:f"${out}/cases/${it.id}.md",content:[fn:메모글]{c:$it,job:$job}}; return {id:$it.id,file:f"${out}/cases/${it.id}.md"} }
+$blankw = $blank >> [table:each] { $w = [self:write]{path:f"${out}/cases/${it.id}.md",content:f"# 상담 메모 ${it.id}\n\n> ${job.note}.\n\n접수지를 읽었으나 내용이 없다(읽기 ${it.read_ok}). 쟁점·법령·기한을 적지 않는다 — 신청인에게 다시 받을 것.\n"}; return {id:$it.id,file:f"${out}/cases/${it.id}.md"} }
+
+$dated = sorted(filter($cases,($c)=>$c.status == "deadline"),"days_left")
+$others = filter($cases,($c)=>$c.status != "deadline")
+$ordered = $dated + $others
+$index = map($ordered,($c)=>{id:$c.id,status:$c.status,law:$c.law_found ? $c.law_name : null,articles:map($c.cites,($x)=>$x.no),base_date:len($c.base_date) == 0 ? null : $c.base_date,deadline:$c.status == "deadline" ? $c.deadline : null,days_left:$c.status == "deadline" ? $c.days_left : null,
+  claimed_law:len($c.claimed_law) == 0 ? null : $c.claimed_law,claimed_found:len($c.claimed_law) == 0 ? null : $c.claimed_found,prec_case_no:$c.prec.found ? $c.prec.prec.case_no : null,prec_id:$c.prec.found ? $c.prec.prec.pid : null,file:f"cases/${c.id}.md"}) +
+  map($blank,($b)=>{id:$b.id,status:"empty",law:null,articles:[],base_date:null,deadline:null,days_left:null,claimed_law:null,claimed_found:null,prec_case_no:null,prec_id:null,file:f"cases/${b.id}.md"})
+[self:write]{path:f"${out}/index.json",content:json($index)}
+$unverified = filter($cases,($c)=>$c.status != "deadline" and $c.status != "no_deadline")
+$tbl = join("\n",map($ordered,($c)=>[fn:표줄]{c:$c}))
+$u1 = len($unverified) == 0 ? "없음" : join(" / ",map($unverified,($c)=>[fn:미확인줄]{c:$c}))
+$u2 = json(map(filter($cases,($c)=>len($c.missing) > 0),($c)=>{id:$c.id,missing:$c.missing}))
+$u3 = json(map(filter($laws,($l)=>not $l.found),($l)=>{name:$l.name,reason:$l.reason}))
+$u4 = json(map(filter($cases,($c)=>not $c.prec.found),($c)=>$c.id))
+$u5 = json(map($blank,($b)=>$b.id))
+$summary = f"""# ${job.office} — ${job.consult_date} 상담 준비 요약
+
+> ${job.note}. 접수 ${len($intake)}건(내용 없는 접수지 ${len($blank)}건).
+
+## 급한 순
+| 접수 | 남은 날 | 기한 | 근거(원문 확인) | 판례 | 기한 설명 |
+| --- | --- | --- | --- | --- | --- |
+${tbl}
+
+## 확인하지 못한 것
+- 기한을 계산하지 못한 건: ${u1}
+- 원문에 없어 뺀 조문 표기: ${u2}
+- 찾지 못한 법령 이름: ${u3}
+- 판례를 못 붙인 건: ${u4}
+- 내용 없는 접수지: ${u5}
+- 기한은 접수지에 적힌 날짜를 기준일로 조문의 기간을 달력으로 더한 값이다. 시효 중단·기산일 다툼·초일 산입 여부는 반영하지 않았다.
+"""
+[self:write]{path:f"${out}/summary.md",content:$summary}
+$back = [self:read]{path:f"${out}/summary.md",format:"text"}
+return {cases:len($cases),blank:len($blank),laws:map($laws,($l)=>{name:$l.name,found:$l.found,units:len($l.units)}),order:map($ordered,($c)=>{id:$c.id,status:$c.status,deadline:$c.deadline,days_left:$c.days_left,law:$c.law_name,asked:$c.articles,cites:map($c.cites,($x)=>$x.no),missing:$c.missing,base:$c.base_date,phrase:$c.period_phrase,prec:$c.prec.found,prec_word:$c.prec_word}),
+  model_calls:len($need) > 0 ? 2 : 1,written:len($written) + len($blankw),summary_reread:contains($back.text,"급한 순")}

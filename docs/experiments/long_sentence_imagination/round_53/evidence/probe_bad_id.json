@@ -1,0 +1,16 @@
+{
+ "code": "#!ibl edition=2\n$a = [sense:legal]{id:\"99999999\", target:\"prec\"}\n$b = [sense:legal]{id:\"276291\"}\nreturn {a:$a,b:$b}",
+ "elapsed": 0.919,
+ "success": true,
+ "issues": null,
+ "value": {
+  "a": {
+   "success": true,
+   "Law": "일치하는 판례가 없습니다.  판례명을 확인하여 주십시오."
+  },
+  "b": {
+   "success": true,
+   "Law": "일치하는 법령이 없습니다.  법령명을 확인하여 주십시오."
+  }
+ }
+}

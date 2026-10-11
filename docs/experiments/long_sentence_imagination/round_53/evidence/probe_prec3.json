@@ -1,0 +1,33 @@
+{
+ "code": "#!ibl edition=2\n$a = [sense:legal]{query:\"임금\", target:\"prec\"}\nreturn {keys:keys($a), n:len($a.items ?? []), first:($a.items ?? [])[:2], count:$a.count ?? null, tail:$a.message[-400:]}",
+ "elapsed": 0.999,
+ "success": true,
+ "issues": null,
+ "value": {
+  "keys": [
+   "success",
+   "message",
+   "items",
+   "count"
+  ],
+  "n": 20,
+  "first": [
+   {
+    "title": "일시적2주택자의 비과세요건을 시행령으로 규정한 것은 포괄위임금지에 위배되지 아니함",
+    "meta": "서울행정법원-2025-구단-54109 · 2026.07.10",
+    "summary": "",
+    "url": "https://www.law.go.kr/DRF/lawService.do?OC=(가림)&target=prec&ID=622735&type=HTML&mobileYn=",
+    "date": "2026-07-10"
+   },
+   {
+    "title": "임금",
+    "meta": "대법원 · 2025다215010 · 2026.06.25 · 판결 · 선고",
+    "summary": "",
+    "url": "https://www.law.go.kr/DRF/lawService.do?OC=(가림)&target=prec&ID=622983&type=HTML&mobileYn=",
+    "date": "2026-06-25"
+   }
+  ],
+  "count": 20,
+  "tail": "            \"선고\": \"\",\n            \"선고일자\": \"2025.09.11\",\n            \"판례일련번호\": \"614103\",\n            \"판결유형\": \"\",\n            \"법원종류코드\": \"\",\n            \"법원명\": \"\",\n            \"판례상세링크\": \"/DRF/lawService.do?OC=(가림)&target=prec&ID=614103&type=HTML&mobileYn=\",\n            \"사건명\": \"처분근거 법률조항(종부세령§4의2)이 포괄위임금지원칙, 평등원칙 등에 반하여 무효라고 볼 수 없음\"\n        }\n    ],\n    \"totalCnt\": \"1382\",\n    \"section\": \"evtNm\"\n}}"
+ }
+}

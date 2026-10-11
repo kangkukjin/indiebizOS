@@ -1,0 +1,10 @@
+{
+ "code": "#!ibl edition=2\n$a = [sense:legal]{query:\"임차인 계약갱신요구 실거주\", target:\"prec\"}\nreturn $a",
+ "elapsed": 0.481,
+ "success": true,
+ "issues": null,
+ "value": {
+  "success": true,
+  "message": "{\"PrecSearch\": {\n    \"키워드\": \"임차인 계약갱신요구 실거주\",\n    \"page\": \"1\",\n    \"target\": \"prec\",\n    \"totalCnt\": \"0\",\n    \"section\": \"evtNm\"\n}}"
+ }
+}

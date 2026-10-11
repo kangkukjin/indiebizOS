@@ -1,0 +1,40 @@
+{
+ "label": "trainer_b_default_budget",
+ "task_id": "r53-trainer-b-defaultbudget",
+ "reuse_request": {
+  "run_id": "a5e29daf551245dc8368cdde2aea80c3"
+ },
+ "budget_request": null,
+ "elapsed": 3.68,
+ "success": false,
+ "status": null,
+ "issues": [],
+ "error": "공유 실행 예산을 초과했습니다: steps 100001/100000. usage.steps_by_line에서 비싼 줄을 확인하고 요청 budget:{steps:...,rows:...}로 한도를 조정하세요(최대 steps 10000000·rows 100000). 전건 검증 뒤 쓰는 과제는 검증·쓰기 순서를 유지하세요. 독립적으로 완료할 수 있는 작업만 여러 실행으로 나누고, 전건 처리를 take로 조용히 잘라내지 마세요.",
+ "value": null,
+ "usage": {
+  "steps": 100001,
+  "rows": 80,
+  "elapsed_ms": 3310,
+  "model": null,
+  "limits": {
+   "steps": 100000,
+   "rows": 10000
+  }
+ },
+ "reuse": {
+  "_truncated": 6348,
+  "head": "{\"run_id\": \"a5e29daf551245dc8368cdde2aea80c3\", \"reused_calls\": 1, \"candidates\": 3, \"skipped\": [{\"action\": \"self:read\", \"location\": {\"source_hash\": \"b546b7b24b27532df5fe83463624d1ec1354c603709f3e96428f27865f6373f5\", \"start\": 4309, \"end\": 4345, \"line\": 97, \"column\": 11}, \"reason\": \"no_matching_receipt\", \"candidates\": [{\"receipt\": \"f4686357d709b4ed3d6946638329c0bfc2d371e9c4b1fb6dfe34f4f93aaa12eb\", \"changed\": [\"args\"]}], \"candidates_total\": 1}, {\"action\": \"self:list\", \"location\": {\"source_hash\": \"b546b7b24b27532df5fe83463624d1ec1354c603709f3e96428f27865f6373f5\", \"start\": 4375, \"end\": 4424, \"line\": 99, \"column\": 10}, \"reason\": \"no_matching_receipt\", \"candidates\": [], \"candidates_total\": 0}, {\"action\": \"self:read\", \"location\": {\"source_hash\": \"b546b7b24b27532df5fe83463624d1ec1354c603709f3e96428f27865f6373f5\", \"start\": 1583, \"end\": 1622, \"line\": 50, \"column\": 15}, \"reason\": \"no_matching_receipt\", \"candidates\": [{\"receipt\": \"f4686357d709b4ed3d6946638329c0bfc2d371e9c4b1fb6dfe34f4f93aaa12eb\", \"changed\": [\"args\"]}], \"candidates_total\": 1}, {\"action\": \"self:read\", \"location\": {\"source_hash\": \"b546b7b24b27532df5fe83463624d1ec1354c603709f3e96428f27865f6373f5\", \"start\": 1583, \"end\": 1622, \"line\": 50, \"column\": 15}, \"reason\": \"no_matching_receipt\", \"candidates\": [{\"receipt\": \"f4686357d709b4ed3d6946638329c0bfc2d371e9c4b1fb6dfe34f4f93aaa12eb\", \"changed\": [\"args\"]}], \"candidates_total\": 1}, {\"action\": \"self:read\", \"location\": {\"source_hash\": \"b546b7b24b27532df5fe83463624d1ec1354c603709f3e96428f27865f6373f5\", \"start\": 1583, \"end\": 1622, \"line\": 50, \"column\": 15}, \"reason\": \"no_matching_receipt\", \"candidates\": [{\"receipt\": \"f4686357d709b4ed3d6946638329c0bfc2d371e9c4b1fb6dfe34f4f93aaa12eb\", \"changed\": [\"args\"]}], \"candidates_total\": 1}, {\"action\": \"self:read\", \"location\": {\"source_hash\": \"b546b7b24b27532df5fe83463624d1ec1354c603709f3e96428f27865f6373f5\", \"start\": 1583, \"end\": 1622, \"line\": 50, \"column\": 15}, \"reason\": \"no_matching_receipt\", \"candidates\": [{\"receipt\": \"f4686357d709b4ed3d6946638329c0bfc2d371e9c4b1fb6dfe34f4f93aaa12eb\", \"changed\": [\"args\"]}], \"candidates_total\": 1}, {\"action\": \"self:read\", \"location\": {\"source_hash\": \"b546b7b24b27532df5fe83463624d1ec1354c603709f3e96428f27865f6373f5\", \"start\": 1583, \"end\": 1622, \"line\": 50, \"column\": 15}, \"reason\": \"no_matching_receipt\", \"candidates\": [{\"receipt\": \"f4686357d709b4ed3d6946638329c0bfc2d371e9c4b1fb6dfe34f4f93aaa12eb\", \"changed\": [\"args\"]}], \"candidates_total\": 1}, {\"action\": \"self:read\", \"location\": {\"source_hash\": \"b5"
+ },
+ "continuation": {
+  "reuse_args": {
+   "reuse": {
+    "run_id": "62c314b050da455b971356eece29ec97"
+   }
+  },
+  "read_calls": 24,
+  "model_calls": 1,
+  "state_change_possible": false,
+  "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+ },
+ "warnings": null
+}

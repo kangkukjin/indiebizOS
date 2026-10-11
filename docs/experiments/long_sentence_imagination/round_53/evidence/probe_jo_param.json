@@ -1,0 +1,12 @@
+{
+ "code": "#!ibl edition=2\n$a = [sense:legal]{id:\"001706\", jo:\"016200\"}\nreturn keys($a)",
+ "elapsed": 0.285,
+ "success": false,
+ "issues": [
+  {
+   "code": "UNKNOWN_ARGUMENT",
+   "message": "알 수 없는 인자: jo. 비슷한 인자: op. 사용 가능한 인자: criteria, id, op, project_id, query, scope, target"
+  }
+ ],
+ "value": null
+}

@@ -1,0 +1,334 @@
+{
+ "label": "trainer_b_main_v2_fresh",
+ "task_id": "r53-trainer-b-1791711210",
+ "reuse_request": null,
+ "budget_request": {
+  "steps": 2000000,
+  "rows": 50000
+ },
+ "elapsed": 95.17,
+ "success": true,
+ "status": null,
+ "issues": [],
+ "error": null,
+ "value": {
+  "cases": 11,
+  "blank": 0,
+  "laws": [
+   {
+    "name": "근로기준법",
+    "found": true,
+    "units": 133
+   },
+   {
+    "name": "주택임대차보호법",
+    "found": true,
+    "units": 42
+   },
+   {
+    "name": "전자상거래 등에서의 소비자보호에 관한 법률",
+    "found": true,
+    "units": 58
+   },
+   {
+    "name": "민법",
+    "found": true,
+    "units": 1193
+   },
+   {
+    "name": "방문판매 등에 관한 법률",
+    "found": true,
+    "units": 74
+   },
+   {
+    "name": "임차인보호특별법",
+    "found": false,
+    "units": 0
+   }
+  ],
+  "order": [
+   {
+    "id": "C07",
+    "status": "deadline",
+    "deadline": "2026-09-30",
+    "days_left": -24,
+    "law": "민법",
+    "asked": "제162조, 제166조, 제168조",
+    "cites": [
+     "제162조",
+     "제166조",
+     "제168조"
+    ],
+    "missing": [],
+    "base": "2016-09-30",
+    "phrase": "채권은 10년간 행사하지 아니하면 소멸시효가 완성한다",
+    "prec": false,
+    "prec_word": "대여금"
+   },
+   {
+    "id": "C08",
+    "status": "deadline",
+    "deadline": "2026-10-15",
+    "days_left": -9,
+    "law": "방문판매 등에 관한 법률",
+    "asked": "제8조, 제9조",
+    "cites": [
+     "제8조",
+     "제9조"
+    ],
+    "missing": [],
+    "base": "2026-10-01",
+    "phrase": "제7조제2항에 따른 계약서를 받은 날부터 14일",
+    "prec": false,
+    "prec_word": "위약금"
+   },
+   {
+    "id": "C04",
+    "status": "deadline",
+    "deadline": "2026-10-19",
+    "days_left": -5,
+    "law": "전자상거래 등에서의 소비자보호에 관한 법률",
+    "asked": "제17조, 제18조, 제35조",
+    "cites": [
+     "제17조",
+     "제18조",
+     "제35조"
+    ],
+    "missing": [],
+    "base": "2026-10-12",
+    "phrase": "재화등을 공급받거나 재화등의 공급이 시작된 날부터 7일",
+    "prec": false,
+    "prec_word": "물품대금"
+   },
+   {
+    "id": "C06",
+    "status": "deadline",
+    "deadline": "2026-10-25",
+    "days_left": 1,
+    "law": "민법",
+    "asked": "제766조, 제750조",
+    "cites": [
+     "제766조",
+     "제750조"
+    ],
+    "missing": [],
+    "base": "2023-10-25",
+    "phrase": "그 손해 및 가해자를 안 날로부터 3년간 이를 행사하지 아니하면",
+    "prec": false,
+    "prec_word": "손해배상(자)"
+   },
+   {
+    "id": "C02",
+    "status": "deadline",
+    "deadline": "2026-11-03",
+    "days_left": 10,
+    "law": "근로기준법",
+    "asked": "제28조, 제27조, 제23조",
+    "cites": [
+     "제28조",
+     "제27조",
+     "제23조"
+    ],
+    "missing": [],
+    "base": "2026-08-03",
+    "phrase": "부당해고등이 있었던 날부터 3개월 이내에 하여야 한다",
+    "prec": true,
+    "prec_word": "해고무효확인"
+   },
+   {
+    "id": "C05",
+    "status": "deadline",
+    "deadline": "2026-11-20",
+    "days_left": 27,
+    "law": "민법",
+    "asked": "제1019조, 제1041조, 제1030조",
+    "cites": [
+     "제1019조",
+     "제1041조",
+     "제1030조"
+    ],
+    "missing": [],
+    "base": "2026-08-20",
+    "phrase": "상속개시있음을 안 날로부터 3월내에 단순승인이나 한정승인 또는 포기를",
+    "prec": false,
+    "prec_word": "상속포기"
+   },
+   {
+    "id": "C01",
+    "status": "deadline",
+    "deadline": "2026-11-30",
+    "days_left": 37,
+    "law": "근로기준법",
+    "asked": "제49조, 제36조",
+    "cites": [
+     "제49조",
+     "제36조"
+    ],
+    "missing": [],
+    "base": "2023-11-30",
+    "phrase": "임금채권은 3년간 행사하지 아니하면 시효로 소멸한다",
+    "prec": true,
+    "prec_word": "임금"
+   },
+   {
+    "id": "C03",
+    "status": "deadline",
+    "deadline": "2026-11-30",
+    "days_left": 37,
+    "law": "주택임대차보호법",
+    "asked": "제6조의3, 제6조",
+    "cites": [
+     "제6조의3",
+     "제6조"
+    ],
+    "missing": [],
+    "base": "2027-01-31",
+    "phrase": "임차인이 임대차기간이 끝나기 2개월 전까지 통지하지 아니한 경우",
+    "prec": true,
+    "prec_word": "임대차보증금"
+   },
+   {
+    "id": "C09",
+    "status": "deadline",
+    "deadline": "2026-12-01",
+    "days_left": 38,
+    "law": "민법",
+    "asked": "제1117조, 제1112조, 제1115조",
+    "cites": [
+     "제1117조",
+     "제1112조",
+     "제1115조"
+    ],
+    "missing": [],
+    "base": "2025-12-01",
+    "phrase": "반환하여야 할 증여 또는 유증을 한 사실을 안 때로부터 1년내에 하지 아니하면",
+    "prec": true,
+    "prec_word": "유류분반환"
+   },
+   {
+    "id": "C10",
+    "status": "no_deadline",
+    "deadline": "",
+    "days_left": 0,
+    "law": "주택임대차보호법",
+    "asked": "제3조의3, 제3조, 제3조의2",
+    "cites": [
+     "제3조의3",
+     "제3조",
+     "제3조의2"
+    ],
+    "missing": [],
+    "base": "",
+    "phrase": "",
+    "prec": true,
+    "prec_word": "임대차보증금"
+   },
+   {
+    "id": "C11",
+    "status": "no_deadline",
+    "deadline": "",
+    "days_left": 0,
+    "law": "주택임대차보호법",
+    "asked": "제7조, 제7조의2",
+    "cites": [
+     "제7조",
+     "제7조의2"
+    ],
+    "missing": [],
+    "base": "",
+    "phrase": "",
+    "prec": false,
+    "prec_word": "차임"
+   }
+  ],
+  "model_calls": 2,
+  "written": 11,
+  "summary_reread": true
+ },
+ "usage": {
+  "steps": 215577,
+  "rows": 210,
+  "elapsed_ms": 94898,
+  "model": {
+   "requests": 2,
+   "measured_requests": 2,
+   "unmeasured_requests": 0,
+   "input": 27249,
+   "output": 8735,
+   "cache_read": 11168,
+   "cache_create": 16077,
+   "reasoning": 3574,
+   "calls": [
+    {
+     "call_id": "c87e0ee566f74fcb9494bb62831068f1",
+     "parent_call_id": null,
+     "role": "oneshot:execution",
+     "phase": "execution",
+     "provider": "ClaudeCode",
+     "model": "opus",
+     "round_index": 1,
+     "tier": "고급",
+     "source": "gear:최대|실행→고급",
+     "measured": true,
+     "elapsed_ms": 69722,
+     "input": 8408,
+     "output": 7054,
+     "cache_read": 8406,
+     "cache_create": 0,
+     "reasoning": 2482
+    },
+    {
+     "call_id": "10fb726a05bb410f8885ed0ea22391ca",
+     "parent_call_id": null,
+     "role": "oneshot:execution",
+     "phase": "execution",
+     "provider": "ClaudeCode",
+     "model": "opus",
+     "round_index": 1,
+     "tier": "고급",
+     "source": "gear:최대|실행→고급",
+     "measured": true,
+     "elapsed_ms": 15107,
+     "input": 18841,
+     "output": 1681,
+     "cache_read": 2762,
+     "cache_create": 16077,
+     "reasoning": 1092
+    }
+   ]
+  },
+  "limits": {
+   "steps": 2000000,
+   "rows": 50000
+  }
+ },
+ "reuse": null,
+ "continuation": {
+  "reuse_args": {
+   "reuse": {
+    "run_id": "fc2300253bcf46e092edf52d34c3efd2"
+   }
+  },
+  "read_calls": 13,
+  "model_calls": 2,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "overlapping_write",
+    "write_call_id": "22888ae4af92393888abe018ce00edd4c115944db47b95d15e8b15ad3f673f26",
+    "action": "self:write",
+    "location": {
+     "source_hash": "e3398c0902a76e320245d7a8aa134d0d0aba47ef0bd3c6bbab467178ab5e35f5",
+     "start": 13123,
+     "end": 13202,
+     "line": 244,
+     "column": 42
+    },
+    "excluded_calls": 60
+   }
+  ],
+  "read_exclusions_total": 1,
+  "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+ },
+ "warnings": null
+}

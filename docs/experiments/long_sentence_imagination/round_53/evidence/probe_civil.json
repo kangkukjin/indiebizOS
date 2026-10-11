@@ -1,0 +1,44 @@
+{
+ "code": "#!ibl edition=2\n$s = [sense:legal]{query:\"민법\"}\nreturn map($s.items,($x)=>{t:$x.title,u:$x.url[-60:]})",
+ "elapsed": 0.983,
+ "success": true,
+ "issues": null,
+ "value": [
+  {
+   "t": "난민법",
+   "u": "kjin&target=law&MST=188376&type=HTML&mobileYn=&efYd=20161220"
+  },
+  {
+   "t": "난민법 시행령",
+   "u": "kjin&target=law&MST=273705&type=HTML&mobileYn=&efYd=20250919"
+  },
+  {
+   "t": "난민법 시행규칙",
+   "u": "kjin&target=law&MST=266929&type=HTML&mobileYn=&efYd=20241203"
+  },
+  {
+   "t": "민법",
+   "u": "kjin&target=law&MST=284415&type=HTML&mobileYn=&efYd=20260317"
+  },
+  {
+   "t": "민법법인 및 특수법인 등기규칙",
+   "u": "kjin&target=law&MST=266851&type=HTML&mobileYn=&efYd=20250131"
+  },
+  {
+   "t": "민법제312조의2단서의시행에관한규정",
+   "u": "ukjin&target=law&MST=20194&type=HTML&mobileYn=&efYd=19840901"
+  },
+  {
+   "t": "북한이탈주민의 보호 및 정착지원에 관한 법률",
+   "u": "kjin&target=law&MST=283937&type=HTML&mobileYn=&efYd=20260911"
+  },
+  {
+   "t": "북한이탈주민의 보호 및 정착지원에 관한 법률 시행령",
+   "u": "kjin&target=law&MST=288389&type=HTML&mobileYn=&efYd=20260731"
+  },
+  {
+   "t": "북한이탈주민의 보호 및 정착지원에 관한 법률 시행규칙",
+   "u": "kjin&target=law&MST=280245&type=HTML&mobileYn=&efYd=20251205"
+  }
+ ]
+}

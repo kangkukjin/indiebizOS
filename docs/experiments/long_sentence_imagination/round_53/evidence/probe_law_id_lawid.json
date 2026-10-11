@@ -1,0 +1,14 @@
+{
+ "code": "#!ibl edition=2\n$a = [sense:legal]{id:\"001248\"}\nreturn {keys:keys($a), msg_len:len($a.message ?? \"\"), head:($a.message ?? \"\")[:300]}",
+ "elapsed": 3.154,
+ "success": true,
+ "issues": null,
+ "value": {
+  "keys": [
+   "success",
+   "법령"
+  ],
+  "msg_len": 0,
+  "head": ""
+ }
+}

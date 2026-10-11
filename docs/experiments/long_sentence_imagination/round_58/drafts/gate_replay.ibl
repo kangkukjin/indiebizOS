@@ -1,0 +1,12 @@
+#!ibl edition=2
+$s=[self:read]{path:$source+"/build.py",format:"text"}
+$t=replace($s.text,"BUDGET=1500000;MAXDAYS=7","BUDGET=1000000;MAXDAYS=3")
+$v=[self:read]{path:$source+"/verify.py",format:"text"}
+$vt=replace($v.text,"q['days']<=7","q['days']<=3")
+[self:write]{path:$out+"/build.py",content:$t}
+[self:write]{path:$out+"/verify.py",content:$vt}
+$a=[self:read]{path:$out+"/build.py",format:"text"}
+$b=[self:read]{path:$out+"/verify.py",format:"text"}
+assert $a.text==$t, "계산 코드 재독"
+assert $b.text==$vt, "검사 코드 재독"
+return {copied:true}

@@ -1,0 +1,40 @@
+#!ibl edition=2
+[def:견적계산]($r,$limit) {
+  $reason = $r.price == null ? "가격 미상" : $r.pack <= 0 ? "포장 오류" : $r.days > $limit ? "납기 초과" : ""
+  [if:$reason != ""] { return {**$r,eligible:false,reason:$reason} }
+  $packs = ($r.needed + ($r.pack - $r.needed % $r.pack) % $r.pack) / $r.pack
+  $quantity = $packs * $r.pack
+  [if:$quantity > $r.stock] { return {**$r,eligible:false,reason:"재고 부족"} }
+  $goods = round($packs * $r.price * ($r.tax_included ? 1 : 1.1),0)
+  return {**$r,eligible:true,reason:"",packs:$packs,quantity:$quantity,surplus:$quantity-$r.needed,goods:$goods}
+}
+$docs = [self:read]{path:$input + "/requirements.json"} & [self:read]{path:$input + "/quotes.json"} & [self:read]{path:$input + "/vendors.json"}
+$needs=$docs[0].data.items
+$quotes=$docs[1].data.items
+$vendors=$docs[2].data.items
+$joined = [table:join]{left:$needs,right:$quotes,on:"sku",how:"inner"}
+$evaluated=$joined >> [table:each] { [fn:견적계산]{r:$it,limit:$limit} }
+$ranked=$evaluated >> [table:filter]{where:($r)=>$r.eligible} >> [table:sort]{by:["goods","days","quote_id"]} >> [table:dedup]{by:"sku"}
+$index=from_entries(map($ranked.items,($r)=>[$r.sku,$r]))
+$selected=$needs >> [table:each] {
+  [if:has($index,$it.sku)] { return {**get($index,$it.sku),status:"선택"} }
+  [else] { return {**$it,status:"후보 없음"} }
+}
+$chosen=$selected >> [table:filter]{where:($r)=>$r.status == "선택"}
+$sums=$chosen >> [table:groupby]{by:"vendor",agg:{goods:["sum","goods"],lines:["count"]}}
+$orders=[table:join]{left:$sums,right:$vendors,on:"vendor",how:"left"} >> [table:each] {
+  $shipping=$it.goods >= $it.threshold ? 0 : $it.shipping
+  return {**$it,shipping:$shipping,total:$shipping==null ? null : $it.goods+$shipping}
+}
+$unknown=filter($orders,($r)=>$r.shipping==null)
+$known=sum(map($orders,($r)=>$r.goods+($r.shipping==null ? 0 : $r.shipping)))
+$total=len($unknown)>0 ? null : $known
+$result={selected:$selected,evaluated:$evaluated,orders:$orders,known:$known,total:$total,unknown_vendors:map($unknown,($r)=>$r.vendor),budget:$budget,within_budget:$total==null ? null : $total <= $budget}
+$report="# 구매안\n\n품목별 상품가 우선 정책이며 배송비 포함 전역 최적화가 아닙니다.\n\n"+json($result)
+[self:write]{path:$out+"/result.json",content:json($result)}
+[self:write]{path:$out+"/report.md",content:$report}
+$saved=[self:read]{path:$out+"/result.json"}
+$readback=[self:read]{path:$out+"/report.md"}
+assert $saved.data == $result, "JSON 재독 불일치"
+assert $readback.text == $report, "보고서 재독 불일치"
+return {count:len($selected),known:$known,total:$total,unknown_vendors:$result.unknown_vendors,within_budget:$result.within_budget}

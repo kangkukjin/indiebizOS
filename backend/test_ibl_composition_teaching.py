@@ -29,7 +29,7 @@ def current(monkeypatch, tmp_path):
     (tmp_path / 'outputs').mkdir()
     real_leaf = ibl_engine.execute_ibl
     def leaf(ti, *args, **kwargs):
-        if (ti['_node'], ti['action']) in {('table', 'join'), ('table', 'groupby'),
+        if (ti['_node'], ti['action']) in {('table', 'join'), ('table', 'groupby'), ('table', 'dedup'),
                                          ('self', 'time'), ('self', 'list'), ('self', 'read')}:
             return real_leaf(ti, *args, **kwargs)
         assert (ti['_node'], ti['action']) == ('sense', 'crawl')
@@ -103,6 +103,18 @@ def test_join_time_guide_preserves_unmatched_rows(current):
 
 def test_unary_group_guide_preserves_aggregate(current):
     assert current(EXAMPLES['unary_group'])['value'] == [{'분류': '식비', '합계': 50}]
+
+
+@pytest.mark.parametrize('empty', [False, True])
+def test_group_best_preserves_missing_targets(current, empty):
+    code = EXAMPLES['group_best']
+    if empty:
+        code = re.sub(r'(?m)^\$후보=.*$', '$후보=[]', code)
+    out = current(code)
+    assert out['success'] and out['source_complete'], out
+    assert [row['group'] for row in out['value']] == ['a', 'b', 'c']
+    assert [row['choice']['id'] if row['choice'] else None for row in out['value']] == (
+        [None, None, None] if empty else ['y', 'z', None])
 
 
 def test_loop_accumulation_guide_uses_the_current_iteration_index(current):
@@ -189,7 +201,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition', 'document_completion', 'value_revision', 'pure_list_transform'}
+    assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition', 'document_completion', 'value_revision', 'pure_list_transform', 'group_best'}
     assert sum(len(re.findall(r'```ibl\n', guide.read_text())) for guide in GUIDES) == len(EXAMPLES)
     assert {'join_time', 'unary_group', 'document_completion'} == set(
         re.findall(r'<!-- example:(\w+) -->', TOOLS_GUIDE.read_text()))

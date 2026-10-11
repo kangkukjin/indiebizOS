@@ -1,0 +1,152 @@
+{
+  "audit": [
+    {
+      "label": "main_v3",
+      "matched": true,
+      "known": 339898,
+      "total": 339898,
+      "items": 240
+    },
+    {
+      "label": "variant_v3",
+      "matched": true,
+      "known": 732234,
+      "total": 732234,
+      "items": 240
+    },
+    {
+      "label": "edge_v3",
+      "matched": true,
+      "known": 282,
+      "total": null,
+      "items": 3
+    },
+    {
+      "label": "empty_v3",
+      "matched": true,
+      "known": 0,
+      "total": 0,
+      "items": 0
+    },
+    {
+      "label": "missing_v3",
+      "matched": true,
+      "known": 3784,
+      "total": null,
+      "items": 3
+    },
+    {
+      "label": "new_v3",
+      "matched": true,
+      "known": 220,
+      "total": 220,
+      "items": 2
+    },
+    {
+      "label": "original_after",
+      "matched": true,
+      "known": 339898,
+      "total": 339898,
+      "items": 240
+    }
+  ],
+  "reports": [
+    {
+      "label": "main_v3",
+      "report_rows_match": true,
+      "bytes": 31698
+    },
+    {
+      "label": "variant_v3",
+      "report_rows_match": true,
+      "bytes": 48521
+    },
+    {
+      "label": "edge_v3",
+      "report_rows_match": true,
+      "bytes": 1513
+    },
+    {
+      "label": "missing_v3",
+      "report_rows_match": true,
+      "bytes": 1589
+    },
+    {
+      "label": "new_v3",
+      "report_rows_match": true,
+      "bytes": 1161
+    },
+    {
+      "label": "empty_v3",
+      "report_rows_match": true,
+      "bytes": 978
+    }
+  ],
+  "input_unchanged": true,
+  "runs": {
+    "main_v3": {
+      "run_id": "b2f9cb1105f4473bb991fccb3fa9b4b8",
+      "success": true,
+      "run_status": "completed",
+      "seconds": 2.9890191555023193,
+      "steps": 119927,
+      "reused_calls": 0
+    },
+    "variant_v3": {
+      "run_id": "53d8d3f11aed4cf8bbe1e25912fe7f46",
+      "success": true,
+      "run_status": "completed",
+      "seconds": 2.02449893951416,
+      "steps": 100825,
+      "reused_calls": 3
+    },
+    "edge_v3": {
+      "run_id": "bd26e76f86954ed5bcfe3a77811d705b",
+      "success": true,
+      "run_status": "completed",
+      "seconds": 1.6315748691558838,
+      "steps": 1714,
+      "reused_calls": 0
+    },
+    "empty_v3": {
+      "run_id": "27f556628e1c4b3580feeb6049baee96",
+      "success": true,
+      "run_status": "completed",
+      "seconds": 1.8469319343566895,
+      "steps": 300,
+      "reused_calls": 0
+    },
+    "missing_v3": {
+      "run_id": "55b8b39055654f1e953a3a64459760a5",
+      "success": true,
+      "run_status": "completed",
+      "seconds": 1.9753642082214355,
+      "steps": 1748,
+      "reused_calls": 0
+    },
+    "new_v3": {
+      "run_id": "dbf897b4d90f4b52b19e5767e52becc1",
+      "success": true,
+      "run_status": "completed",
+      "seconds": 1.8226919174194336,
+      "steps": 848,
+      "reused_calls": 0
+    },
+    "original_after": {
+      "run_id": "4594cd96fa734a31b98023add3e83c1e",
+      "success": true,
+      "run_status": "completed",
+      "seconds": 47.66017985343933,
+      "steps": 1539662,
+      "reused_calls": 0
+    },
+    "gate_replay_after": {
+      "run_id": "fd8dd08cf70849f39f620cf7268bac2c",
+      "success": true,
+      "run_status": "completed",
+      "seconds": 0.8842301368713379,
+      "steps": 70,
+      "reused_calls": 0
+    }
+  }
+}

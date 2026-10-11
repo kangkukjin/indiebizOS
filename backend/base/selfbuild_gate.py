@@ -12,7 +12,8 @@ Blender 대신 브라우저 상자를 300줄 짜고 "최선"이라 보고).
 
 세 조건이 **모두** 참일 때만 선다:
   ① 새 구현 코드가 이 턴 누적 THRESHOLD_LINES 줄을 넘었다 (파일별 최대치의 합 —
-     같은 파일을 고쳐 다시 쓰는 반복은 두 번 세지 않는다)
+     같은 파일을 고쳐 다시 쓰는 반복은 두 번 세지 않는다). 같은 턴에서 실제 읽은
+     코드의 일치 줄은 재사용분으로 빼고, 추가·변경한 줄만 센다
   ② 이 턴에 세상을 확인한 적이 없다 (`[self:install_lib]` · 지도 읽기 · read_guide)
   ③ 쓴 코드가 지도에 있는 도구를 하나도 쓰고 있지 않다 (이미 세상 어깨 위면 통과)
 그리고 몸의 코드(RED·등록 스크립트·패키지)는 애초에 세지 않는다 — 지도는 세상의 능력이지
@@ -31,6 +32,7 @@ import os
 import re
 import threading
 import time
+from collections import Counter
 from typing import Dict, List, Optional, Set
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -44,6 +46,8 @@ THRESHOLD_LINES = 150
 MIN_COUNTED_LINES = 12
 #: 지도 이름 대조용으로 들고 있는 코드 본문 상한(메모리 경계).
 _MAX_KEPT_CODE = 60_000
+# 같은 턴에서 실제 읽은 코드만 재사용 근거로 삼는다. 전체 디스크 탐색은 하지 않는다.
+_MAX_READ_SOURCES = 8
 #: 원장 수명 — 턴이 닫히면 reset() 이 걷지만, 못 걷힌 것은 이 시간 뒤 스스로 삭는다.
 _TTL_SECONDS = 3600
 
@@ -88,6 +92,7 @@ class _TurnLedger:
         self.consulted: Optional[str] = None   # 확인한 출처(있으면 관문 걷힘)
         self.fired = 0
         self.opened_at = time.time()
+        self.read_sources: Dict[str, str] = {}
 
     @property
     def total_lines(self) -> int:
@@ -200,6 +205,36 @@ def state(agent_id: str) -> Dict[str, object]:
 
 
 # ---------------------------------------------------------------- 판정
+def note_code_read(agent_id: str, path: str, content: str) -> None:
+    """파일 읽기가 실제 반환한 코드의 한정 사본. 모델의 출처 주장은 받지 않는다."""
+    if (not isinstance(content, str) or not path
+            or os.path.splitext(path)[1].lower() not in _CODE_EXT):
+        return
+    e = _entry(agent_id)
+    if e is None:
+        return
+    key = os.path.abspath(path)
+    with _lock:
+        e.read_sources.pop(key, None)
+        e.read_sources[key] = content[:_MAX_KEPT_CODE]
+        while (len(e.read_sources) > _MAX_READ_SOURCES
+               or sum(map(len, e.read_sources.values())) > _MAX_KEPT_CODE):
+            e.read_sources.pop(next(iter(e.read_sources)))
+
+
+def _new_lines(content: str, sources: list[str]) -> int:
+    """읽은 한 원본과 같은 줄은 복사분이다. 반복 줄은 원본의 출현 수만큼만 제외한다.
+
+    여러 파일의 부분을 임의로 합쳐 할인하지 않고 가장 많이 재사용한 한 원본만
+    비교한다. 순서 변경도 재사용이며, 바뀐 줄·추가한 줄은 새 구현으로 센다.
+    줄별 빈도 대조는 본문 길이에 선형이라 유사도 탐색의 제곱 비용이 없다.
+    """
+    lines = Counter(content.split("\n"))
+    reused = max((sum((lines & Counter(source.split("\n"))).values())
+                  for source in sources), default=0)
+    return sum(lines.values()) - reused
+
+
 def is_body_path(path: str, root: str) -> bool:
     """몸의 코드인가 — RED·등록 스크립트·패키지·격리 사본은 지도의 관할이 아니다."""
     try:
@@ -232,6 +267,11 @@ def note_code_write(agent_id: str, path: str, content: str,
     e = _entry(agent_id)
     if e is None:
         return None                                # 신원 없는 호출(시험·배치)은 세지 않는다
+    with _lock:
+        sources = list(e.read_sources.values())
+    lines = _new_lines(content, sources)
+    if lines < MIN_COUNTED_LINES:
+        return None
     key = os.path.abspath(path)
     if lines > e.lines_by_path.get(key, 0):        # 같은 파일 재작성은 최대치만 — 다듬기는 자작이 아니다
         e.lines_by_path[key] = lines

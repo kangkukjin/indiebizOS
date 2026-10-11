@@ -1,0 +1,54 @@
+#!ibl edition=2
+[def:견적계산]($r,$limit) {
+  $reason = get($r,"price",null) == null ? "가격 미상" : $r.pack <= 0 ? "포장 오류" : $r.days > $limit ? "납기 초과" : ""
+  [if:$reason != ""] { return {**$r,eligible:false,reason:$reason} }
+  $packs = ($r.needed + ($r.pack - $r.needed % $r.pack) % $r.pack) / $r.pack
+  $quantity = $packs * $r.pack
+  [if:$quantity > $r.stock] { return {**$r,eligible:false,reason:"재고 부족"} }
+  $goods = round($packs * $r.price * ($r.tax_included ? 1 : 1.1),0)
+  return {**$r,eligible:true,reason:"",packs:$packs,quantity:$quantity,surplus:$quantity-$r.needed,goods:$goods}
+}
+$docs = [self:read]{path:$input + "/requirements.json"} & [self:read]{path:$input + "/quotes.json"} & [self:read]{path:$input + "/vendors.json"}
+$needs=$docs[0].data.items
+$quotes=$docs[1].data.items
+$vendors=$docs[2].data.items
+$joined = [table:join]{left:$needs,right:$quotes,on:"sku",how:"inner"}
+$evaluated=$joined >> [table:each] { [fn:견적계산]{r:$it,limit:$limit} }
+$ranked=$evaluated >> [table:filter]{where:($r)=>$r.eligible} >> [table:sort]{by:["goods","days","quote_id"]} >> [table:dedup]{by:"sku"}
+$index=from_entries(map($ranked.items,($r)=>[$r.sku,$r]))
+$selected=$needs >> [table:each] {
+  [if:has($index,$it.sku)] { return {**get($index,$it.sku),status:"선택"} }
+  [else] { return {**$it,status:"후보 없음"} }
+}
+$chosen=$selected >> [table:filter]{where:($r)=>$r.status == "선택"}
+$sums=$chosen >> [table:groupby]{by:"vendor",agg:{goods:["sum","goods"],lines:["count"]}}
+$orders=[table:join]{left:$sums,right:$vendors,on:"vendor",how:"left"} >> [table:each] {
+  $shipping=$it.goods >= $it.threshold ? 0 : $it.shipping
+  return {**$it,shipping:$shipping,total:$shipping==null ? null : $it.goods+$shipping}
+}
+$unknown=filter($orders,($r)=>$r.shipping==null)
+$known=sum(map($orders,($r)=>$r.goods+($r.shipping==null ? 0 : $r.shipping)))
+$total=len($unknown)>0 ? null : $known
+$result={selected:$selected,evaluated:$evaluated,orders:$orders,known:$known,total:$total,unknown_vendors:map($unknown,($r)=>$r.vendor),budget:$budget,within_budget:$total==null ? null : $total <= $budget}
+$missing=filter($selected,($r)=>$r.status == "후보 없음")
+$rows=$selected >> [table:each] {
+  [if:$it.status=="후보 없음"] { return f"| ${$it.sku} | ${$it.needed} | 후보 없음 | — | — | — | — |" }
+  [else] { return f"| ${$it.sku} | ${$it.needed} | ${$it.quote_id} | ${$it.vendor} | ${$it.quantity} | ${$it.surplus} | ${$it.goods} |" }
+}
+$vendor_rows=$orders >> [table:each] {
+  $fee=$it.shipping==null ? "미상 — 확인 필요" : text($it.shipping)
+  $amount=$it.total==null ? "미확정" : text($it.total)
+  return f"| ${$it.vendor} | ${$it.lines} | ${$it.goods} | ${$it.threshold} | ${$fee} | ${$amount} |"
+}
+$excluded=filter($evaluated,($r)=>not $r.eligible)
+$reason_rows=map($excluded,($r)=>f"| ${$r.sku} | ${$r.quote_id} | ${$r.reason} |")
+$total_label=$total==null ? "미확정" : text($total)
+$budget_label=$total==null ? "미확정" : $total <= $budget ? "예산 이내" : "예산 초과"
+$report=f"# 구매안\n\n품목별 상품금액 → 납기 일수 → 견적 ID 오름차순으로 선택했습니다. 배송비 포함 전역 최적화가 아닙니다.\n\n전체 ${len($needs)}종, 선택 ${len($chosen)}종, 후보 없음 ${len($missing)}종. 후보 없는 품목은 이 총액으로 구매할 수 없습니다.\n납기 ${$limit}일 이내 / 예산 ${$budget}원 / ${$budget_label}. 알려진 금액 ${$known}원, 총액 ${$total_label}. 확인할 배송비: ${json($result.unknown_vendors)}.\n\n## 판매처별 합계\n\n| 판매처 | 품목 수 | 상품금액 | 무료배송 기준 | 배송비 | 합계 |\n|---|---:|---:|---:|---|---|\n"+join("\n",$vendor_rows)+"\n\n## 품목별 선택\n\n| 품목 | 필요 | 선택 견적 | 판매처 | 구매 | 남음 | 상품금액 |\n|---|---:|---|---|---:|---:|---:|\n"+join("\n",$rows)+"\n\n## 제외 견적과 우선 사유\n\n가격 미상 → 포장 오류 → 납기 초과 → 재고 부족 순서의 첫 사유입니다. 통과했으나 선택되지 않은 견적과 모든 원자료·계산값은 result.json의 evaluated에 보존했습니다.\n\n| 품목 | 견적 | 제외 사유 |\n|---|---|---|\n"+join("\n",$reason_rows)+"\n"
+[self:write]{path:$out+"/result.json",content:json($result)}
+[self:write]{path:$out+"/report.md",content:$report}
+$saved=[self:read]{path:$out+"/result.json"}
+$readback=[self:read]{path:$out+"/report.md"}
+assert $saved.data == $result, "JSON 재독 불일치"
+assert $readback.text == $report, "보고서 재독 불일치"
+return {count:len($selected),known:$known,total:$total,unknown_vendors:$result.unknown_vendors,within_budget:$result.within_budget}

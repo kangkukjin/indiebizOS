@@ -1,0 +1,142 @@
+{
+  "baseline_revision": "bb30efec",
+  "runs": {
+    "main_v0": {
+      "wall_seconds": 47.84260702133179,
+      "success": true,
+      "error": null,
+      "run_id": "71713a7b4b84477fba2d9d0621be5d54",
+      "run_status": "completed",
+      "steps": 1539662,
+      "engine_ms": 47369
+    },
+    "variant_v0": {
+      "wall_seconds": 42.75955390930176,
+      "success": true,
+      "error": null,
+      "run_id": "cc6e327b16244b83a5f542f370cea44f",
+      "run_status": "completed",
+      "steps": 1517122,
+      "engine_ms": 42211
+    },
+    "edge_v0": {
+      "wall_seconds": 19.585214138031006,
+      "success": true,
+      "error": null,
+      "run_id": "454021d72eb5445ab9b23304b1ca941c",
+      "run_status": "completed",
+      "steps": 1547,
+      "engine_ms": 19456
+    },
+    "empty_v0": {
+      "wall_seconds": 19.500364780426025,
+      "success": true,
+      "error": null,
+      "run_id": "3416c6ea3b5749bea33d28b0de3b7fca",
+      "run_status": "completed",
+      "steps": 185,
+      "engine_ms": 19454
+    },
+    "main_v1": {
+      "wall_seconds": 2.5893502235412598,
+      "success": true,
+      "error": null,
+      "run_id": "e7a4a0f8a00f40bf91f29a8249aff617",
+      "run_status": "completed",
+      "steps": 97910,
+      "engine_ms": 1876
+    },
+    "missing_v1": {
+      "wall_seconds": 0.7742059230804443,
+      "success": false,
+      "error": "필드가 없습니다: price",
+      "run_id": "4f91970808464a108ce08875dd0ae140",
+      "run_status": "interrupted",
+      "steps": 712,
+      "engine_ms": 676
+    },
+    "main_v2": {
+      "wall_seconds": 2.4548580646514893,
+      "success": true,
+      "error": null,
+      "run_id": "cea522bd3bf24aceb4458c3dd90262f9",
+      "run_status": "completed",
+      "steps": 119943,
+      "engine_ms": 2043
+    }
+  },
+  "ai": {
+    "4607": {
+      "episode": 4607,
+      "total_ms": 250499,
+      "usage": {
+        "input": 1597880,
+        "output": 20230,
+        "cache_read": 1300404,
+        "cache_create": 295233
+      },
+      "tool_calls": 11,
+      "failures": [
+        {
+          "name": "execute_ibl",
+          "check_rejected": false,
+          "excerpt": "{\"success\": false, \"error\": \"[자작 관문] 이 턴에 새 구현 코드 176줄(2개 파일)을 썼는데 세상의 도구를 한 번도 확인하지 않았다. 이 일을 업으로 하는 사람이 쓰는 도구가 이미 있다면 지금이 갈림길이다 — 표준 라이브러리로 다시 짠 것은 대개 장난감이 된다.\\n다음 한 걸음(둘 중 하나면 관문이 걷힌다):\\n  [self:read]{path: \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/world_tools.md\\\"}   # 이 일을 잘하는 도구가 표에 있나\\n  [self:install_lib]{package: \\\"<후보>\\\", check: true}  # 부작용 0 — 여러 개 물어도 된다\\n확인하고도 마땅한 도구가 없거나 이미 쓰고 있으면 그대로 이어서 써라 — 관문은 답이 아니라 확인을 요구한다. 방금 쓰려던 내용은 저장되지 않았으니 확인 뒤 같은 쓰기를 다시 보내라.\", \"diagnostic\": {\"code\": \"TOOL\", \"kind\": \"runtime\", \"message\": \"[자작 관문] 이 턴에 새 구현 코드 176줄(2개 파일)을 썼는데 세상의 도구를 한 번도 확인하지 않았다. 이 일을 업으로 하는 사람이 쓰는 도구가 이미 있다면 지금이 갈림길이다 — 표준 라이브러리로 다시 짠 것은 대개 장난감이 된다.\\n다음 한 걸음(둘 중 하나면 관문이 걷힌다):\\n  [self:read]{path: \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/world_tools.md\\\"}   # 이 일을 잘하는 도구가 표에 있나\\n  [self:install_lib]{package: \\\"<후보>\\\", check: true}  # 부작용 0 — 여러 개 물어도 된다\\n확인하고도 마땅한 도구가 없거나 이미 쓰고 있으면 그대로 이어서 써라 — 관문은 답이 아니라 확인을 요구한다. 방금 쓰려던 내용은 저장되지 않았으니 확인 뒤 같은 쓰기를 다"
+        },
+        {
+          "name": "execute_ibl",
+          "check_rejected": true,
+          "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"MISSING_FIELD\", \"message\": \"선언된 필드가 없습니다: v. 선택 필드는 has/get을 쓰세요.\", \"source_span\": {\"source_hash\": \"1a5b0f294e6409fd708dc8681b6607e16106320f696c7a9170b4bf49a72296fb\", \"start\": 154, \"end\": 158, \"line\": 2, \"column\": 52}, \"call_path\": [], \"location\": {\"source_hash\": \"1a5b0f294e6409fd708dc8681b6607e16106320f696c7a9170b4bf49a72296fb\", \"start\": 154, \"end\": 158, \"line\": 2, \"column\": 52, \"source\": \"<program>\", \"uri\": \"ibl://program\", \"end_line\": 2, \"end_column\": 56, \"offset_encoding\": \"unicode-codepoints\"}, \"rule\": \"MISSING_FIELD\", \"severity\": \"error\", \"hint\": \"입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요.\"}], \"guards\": [], \"guards_total\": 1, \"guards_inner\": 0, \"guards_omitted\": 1, \"result_type\": \"{message: Text}\", \"effects\": [\"write_external\"], \"functions\": {}, \"plan_hash\": \"dbaad74c7550395193441a124e0cabc08b5f07d9b3d2a91517a262988a1c9759\", \"dependencies\": {\"source\": \"1a5b0f294e6409fd708dc8681"
+        }
+      ]
+    },
+    "4608": {
+      "episode": 4608,
+      "total_ms": 55411,
+      "usage": {
+        "input": 862751,
+        "output": 5701,
+        "cache_read": 713873,
+        "cache_create": 144141
+      },
+      "tool_calls": 4,
+      "failures": [
+        {
+          "name": "execute_ibl",
+          "check_rejected": false,
+          "excerpt": "{\"success\": false, \"error\": \"[자작 관문] 이 턴에 새 구현 코드 181줄(2개 파일)을 썼는데 세상의 도구를 한 번도 확인하지 않았다. 이 일을 업으로 하는 사람이 쓰는 도구가 이미 있다면 지금이 갈림길이다 — 표준 라이브러리로 다시 짠 것은 대개 장난감이 된다.\\n다음 한 걸음(둘 중 하나면 관문이 걷힌다):\\n  [self:read]{path: \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/world_tools.md\\\"}   # 이 일을 잘하는 도구가 표에 있나\\n  [self:install_lib]{package: \\\"<후보>\\\", check: true}  # 부작용 0 — 여러 개 물어도 된다\\n확인하고도 마땅한 도구가 없거나 이미 쓰고 있으면 그대로 이어서 써라 — 관문은 답이 아니라 확인을 요구한다. 방금 쓰려던 내용은 저장되지 않았으니 확인 뒤 같은 쓰기를 다시 보내라.\", \"diagnostic\": {\"code\": \"TOOL\", \"kind\": \"runtime\", \"message\": \"[자작 관문] 이 턴에 새 구현 코드 181줄(2개 파일)을 썼는데 세상의 도구를 한 번도 확인하지 않았다. 이 일을 업으로 하는 사람이 쓰는 도구가 이미 있다면 지금이 갈림길이다 — 표준 라이브러리로 다시 짠 것은 대개 장난감이 된다.\\n다음 한 걸음(둘 중 하나면 관문이 걷힌다):\\n  [self:read]{path: \\\"/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/world_tools.md\\\"}   # 이 일을 잘하는 도구가 표에 있나\\n  [self:install_lib]{package: \\\"<후보>\\\", check: true}  # 부작용 0 — 여러 개 물어도 된다\\n확인하고도 마땅한 도구가 없거나 이미 쓰고 있으면 그대로 이어서 써라 — 관문은 답이 아니라 확인을 요구한다. 방금 쓰려던 내용은 저장되지 않았으니 확인 뒤 같은 쓰기를 다"
+        }
+      ]
+    }
+  },
+  "gate_pair": {
+    "before": {
+      "refused": [
+        false,
+        true
+      ],
+      "state": {
+        "lines": 181,
+        "files": 2,
+        "consulted": null,
+        "fired": 1
+      }
+    },
+    "after": {
+      "refused": [
+        false,
+        false
+      ],
+      "state": {
+        "lines": 0,
+        "files": 0,
+        "consulted": null,
+        "fired": 0
+      }
+    }
+  },
+  "input_sha256": {
+    "vendors.json": "4b19fc3b56a4a5532d898a04930f3520677c01457c98fcb9aebf498e330e7ed5",
+    "requirements.json": "1c0647b573f272040d6053af1991c0691035ef5c798dbfceb80d765078154829",
+    "quotes.json": "0b170b8214eb1c7e7c9d4660910141949bb7ab2bfe8d1baf1d46b86860c9bd5e"
+  }
+}

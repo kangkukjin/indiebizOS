@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-10-11", impl: "34d8cd99c49a88d4"}  # 52회차 수리 재감사: office_ops(채우기 대상 문단·남은 자리·PDF 글꼴 폭·read 의 header_footer)와 copy_ops(이름 충돌 경고)는 응답 내용만 바꾼다 — 경로 해소·쓰기 범위·회원 임시 파일 격리 불변(replaced_existing 은 이미 해소된 output 의 존재만 본다).
+        path_audited: {at: "2026-10-12", impl: "6857fe358432a646"}  # 58회차 재감사: 읽기가 이미 허용·해소된 코드 본문만 턴 메모리에 한정 보관한다. 추가 파일 접근·디스크 쓰기·경로 해소·회원 임시 파일 격리 변경 없음.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -150,7 +150,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-10-11", impl: "34d8cd99c49a88d4"}  # 52회차 수리 재감사: office_ops(채우기 대상 문단·남은 자리·PDF 글꼴 폭·read 의 header_footer)와 copy_ops(이름 충돌 경고)는 응답 내용만 바꾼다 — 경로 해소·쓰기 범위·회원 임시 파일 격리 불변(replaced_existing 은 이미 해소된 output 의 존재만 본다).
+        path_audited: {at: "2026-10-12", impl: "6857fe358432a646"}  # 58회차 재감사: 읽기가 이미 허용·해소된 코드 본문만 턴 메모리에 한정 보관한다. 추가 파일 접근·디스크 쓰기·경로 해소·회원 임시 파일 격리 변경 없음.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -228,7 +228,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-10-11", impl: "34d8cd99c49a88d4"}  # 52회차 수리 재감사: office_ops(채우기 대상 문단·남은 자리·PDF 글꼴 폭·read 의 header_footer)와 copy_ops(이름 충돌 경고)는 응답 내용만 바꾼다 — 경로 해소·쓰기 범위·회원 임시 파일 격리 불변(replaced_existing 은 이미 해소된 output 의 존재만 본다).
+        path_audited: {at: "2026-10-12", impl: "6857fe358432a646"}  # 58회차 재감사: 읽기가 이미 허용·해소된 코드 본문만 턴 메모리에 한정 보관한다. 추가 파일 접근·디스크 쓰기·경로 해소·회원 임시 파일 격리 변경 없음.
         target_key: path
       list:
         callable_contract:
@@ -931,7 +931,7 @@ nodes:
               text: Text
             effects: [read_external]
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-10-11", impl: "34d8cd99c49a88d4"}  # 52회차 수리 재감사: office_ops(채우기 대상 문단·남은 자리·PDF 글꼴 폭·read 의 header_footer)와 copy_ops(이름 충돌 경고)는 응답 내용만 바꾼다 — 경로 해소·쓰기 범위·회원 임시 파일 격리 불변(replaced_existing 은 이미 해소된 output 의 존재만 본다).
+        path_audited: {at: "2026-10-12", impl: "6857fe358432a646"}  # 58회차 재감사: 읽기가 이미 허용·해소된 코드 본문만 턴 메모리에 한정 보관한다. 추가 파일 접근·디스크 쓰기·경로 해소·회원 임시 파일 격리 변경 없음.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

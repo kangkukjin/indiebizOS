@@ -1,0 +1,80 @@
+{
+  "verified": true,
+  "runs": [
+    {
+      "episode_id": 4595,
+      "events": 288,
+      "usage": {
+        "input": 1717164,
+        "output": 10658,
+        "cache_read": 1471787,
+        "cache_create": 234497,
+        "reasoning": 1777
+      },
+      "failures": 4,
+      "candidates": 1,
+      "evidence_links": 34
+    },
+    {
+      "episode_id": 4596,
+      "events": 79,
+      "usage": {
+        "input": 292951,
+        "output": 866,
+        "cache_read": 271157,
+        "cache_create": 21554,
+        "reasoning": 239
+      },
+      "failures": 0,
+      "candidates": 0,
+      "evidence_links": 3
+    },
+    {
+      "episode_id": 4597,
+      "events": 280,
+      "usage": {
+        "input": 1643561,
+        "output": 14934,
+        "cache_read": 1444658,
+        "cache_create": 179971,
+        "reasoning": 3103
+      },
+      "failures": 3,
+      "candidates": 2,
+      "evidence_links": 37
+    }
+  ],
+  "independent_ai": {
+    "episode_id": 4606,
+    "total_ms": 490470,
+    "usage": {
+      "input": 5288053,
+      "output": 41379,
+      "cache_read": 4901866,
+      "cache_create": 380193,
+      "reasoning": 5500
+    },
+    "models": [
+      "ClaudeCode/opus",
+      "DeepSeekProvider/deepseek-flash",
+      "OpenAI/deepseek-flash"
+    ]
+  },
+  "discovery": [
+    {
+      "episode_id": 4595,
+      "before_handle_checks": 65,
+      "after_handle_checks": 1
+    },
+    {
+      "episode_id": 4596,
+      "before_handle_checks": 22,
+      "after_handle_checks": 1
+    },
+    {
+      "episode_id": 4597,
+      "before_handle_checks": 60,
+      "after_handle_checks": 1
+    }
+  ]
+}

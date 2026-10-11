@@ -54,13 +54,25 @@ def read_trace_store_links(path, episode_ids):
         return result("store_links", status="missing", reason="episode_identity_missing")
     def read():
         with readonly(path) as conn:
-            rows = bounded_rows(conn, "SELECT run_id,event_seq,data FROM trajectory_event WHERE episode_id IN ("
-                                + ",".join("?" for _ in episode_ids)
-                                + ") AND kind LIKE 'supervision.%' ORDER BY rowid", episode_ids, limit=2000)
+            # Discover handles, not every mirrored event. A single long-running
+            # store must not exhaust the metadata budget with repeated references.
+            # SQLite's single MIN aggregate retains the first row's provenance.
+            rows = bounded_rows(conn,
+                "WITH candidates AS (SELECT rowid AS position,run_id,event_seq,"
+                "CASE WHEN json_valid(data) THEN CASE WHEN json_type(data)='object' "
+                "THEN data END END AS data FROM trajectory_event WHERE episode_id IN ("
+                + ",".join("?" for _ in episode_ids)
+                + ") AND kind LIKE 'supervision.%') "
+                "SELECT MIN(position),run_id,event_seq,data FROM candidates "
+                "WHERE data IS NULL OR json_extract(data,'$.store') IS NOT NULL "
+                "GROUP BY json_extract(data,'$.store') ORDER BY MIN(position)",
+                episode_ids, limit=2000)
             links, bad = [], False
             for row in rows:
                 try:
                     data = json.loads(row['data'])
+                    if data.get('store') and not isinstance(data['store'], str):
+                        raise ValueError
                     if data.get('store'):
                         links.append({'store': data['store'], 'seq': data.get('seq'),
                                       'record': f"pulse:{row['run_id']}:{row['event_seq']}"})

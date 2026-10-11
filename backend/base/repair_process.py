@@ -29,6 +29,11 @@ def prepare(command, workspace, *, env=None, runtime=None, readonly=False):
                  INDIEBIZ_BASE_PATH=str(root), INDIEBIZ_MODEL_CONFIG_ROOT=str(model_root),
                  INDIEBIZ_REPAIR_CHILD="1", PYTHONDONTWRITEBYTECODE="1",
                  XDG_CACHE_HOME=str(runtime / "cache"), ELECTRON_DISABLE_SANDBOX="1")
+    # Go on macOS ignores XDG_CACHE_HOME for its default build cache. Host
+    # overrides can also point outside the sandbox; all toolchain writes belong
+    # to this command's writable runtime, including readonly verification.
+    clean.update(GOCACHE=str(runtime / "cache/go-build"),
+                 GOMODCACHE=str(runtime / "cache/go-mod"), GOTMPDIR=str(runtime))
     # 로그인 자료는 읽고 CLI가 쓰는 세션/캐시는 작업별 런타임에 둔다.
     codex = Path(source.get("CODEX_HOME") or Path.home() / ".codex")
     claude = Path(source.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")

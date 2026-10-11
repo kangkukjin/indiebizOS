@@ -1,0 +1,30 @@
+#!ibl edition=2
+[def:수집]($id,$크기) {
+  $page = [self:body]{op:"trajectory",view:"trace",episode_id:$id,limit:$크기}
+  $events = $page.items
+  $evidence = $page.links.evidence
+  $pages = 1
+  [repeat:while get($page,"next_cursor",null) != null and $i < 200] {
+    $page = [self:body]{op:"trajectory",view:"trace",episode_id:$id,limit:$크기,cursor:$page.next_cursor}
+    $events = $events + $page.items
+    $evidence = $evidence + $page.links.evidence
+    $pages = $pages + 1
+  }
+  assert get($page,"next_cursor",null) == null, "페이지 상한 초과", {episode_id:$id}
+  $counts = $events >> [table:groupby]{by:"kind",agg:{count:["count"]}}
+  $ids = map($events,($e)=>$e.source_record_id)
+  assert len(unique($ids)) == len($ids), "중복 사건", {episode_id:$id}
+  return {episode_id:$id,pages:$pages,event_count:len($events),events:$events,counts:$counts.items,usage:$page.usage,state:$page.state,diagnostics:$page.diagnostics,sources:$page.sources,partial:$page.partial,links:$page.links,evidence:$evidence}
+}
+$rows = $ids >> [table:each]{parallel:3} { [fn:수집]{id:$it,크기:$size} }
+$lines = $rows >> [table:each] {
+  return f"실행 ${$it.episode_id}: 사건 ${$it.event_count}개 / ${$it.pages}페이지. 런타임 관측 ${$it.state.assessment}, 목표 평가 ${json($it.state.goal_evaluations)}, 부분성 ${$it.partial}.\n관측 사용량: ${json($it.usage)}\n진단: ${json($it.diagnostics)}\n종류별 사건: ${json($it.counts)}\n제안: 누락 원장의 복구 가능성을 확인한 뒤 실패·재시도 원문을 우선 점검. 종료·시간만으로 성공이나 낭비를 단정하지 않음."
+}
+$report = "# 시스템 자기개선 — 실행 근거 감사\n\n" + join("\n\n",$lines)
+[self:write]{path:$out + "/result.json",content:json($rows)}
+[self:write]{path:$out + "/report.md",content:$report}
+$check = [self:read]{path:$out + "/result.json"}
+$text = [self:read]{path:$out + "/report.md"}
+assert $check.data.items == $rows, "JSON 재독 불일치"
+assert $text.text == $report, "보고서 재독 불일치"
+return map($rows,($r)=>{episode_id:$r.episode_id,pages:$r.pages,event_count:$r.event_count,usage:$r.usage,assessment:$r.state.assessment,partial:$r.partial})

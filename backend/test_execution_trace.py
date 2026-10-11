@@ -335,5 +335,55 @@ def test_pending_publication_summary_never_exposes_or_delivers_bytes(trace):
     assert source_files(root) == before
 
 
+def test_write_observation_rows_do_not_depend_on_page_size(trace):
+    """A trace consumer can count source records without inspecting hidden page folds."""
+    svc, _ = trace
+    small = [e for p in pages(svc, episode_id=1, limit=1) for e in p['events']]
+    large = [e for p in pages(svc, episode_id=1, limit=100) for e in p['events']]
+    assert {e['source_record_id'] for e in small} == {e['source_record_id'] for e in large}
+    writes = [e for e in large if e['source'] == 'writes']
+    assert len(writes) == 2  # identical lines are distinct observations
+    assert all(e['links'][0]['relation'] == 'observation_of' for e in writes)
+
+
+def test_large_trace_discovers_one_store_without_event_count_cutoff(trace):
+    svc, root = trace
+    store, _ = add_store(svc, root)
+    with sqlite3.connect(root / 'data/world_pulse.db') as c:
+        c.executemany('INSERT INTO trajectory_event VALUES(?,?,?,?,?,?,?,?,?)', [
+            (trajectory_run_id('shared-task'), seq, 1, 'shared-task', '', '',
+             'supervision.tool.finished', json.dumps({'store': str(store.directory), 'seq': seq}), 'usage')
+            for seq in range(101, 2201)])
+    page = svc.query(ACCESS, episode_id=1, limit=100)
+    links_source = next(s for s in page['sources'] if s['source'] == 'store_links')
+    assert links_source['status'] == 'ok', links_source
+    assert any(e['source'] == 'supervision' for e in page['events'])
+
+
+def test_store_discovery_deduplicates_handles_preserving_first_reference(trace):
+    from episode_trace_reader import read_trace_store_links
+    svc, root = trace
+    store, _ = add_store(svc, root)
+    with sqlite3.connect(root / 'data/world_pulse.db') as c:
+        c.execute('INSERT INTO trajectory_event VALUES(?,?,?,?,?,?,?,?,?)',
+                  (trajectory_run_id('shared-task'), 101, 1, 'shared-task', '', '',
+                   'supervision.tool.finished', json.dumps({'store': str(store.directory), 'seq': 2}), 'usage'))
+    links = read_trace_store_links(root / 'data/world_pulse.db', [1])
+    assert links['status'] == 'ok'
+    assert len(links['rows']) == 1
+    assert links['rows'][0]['seq'] == 1
+    assert links['rows'][0]['record'].endswith(':9')
+
+
+def test_store_discovery_error_remains_visible_on_final_page(trace):
+    svc, root = trace
+    with sqlite3.connect(root / 'data/world_pulse.db') as c:
+        c.execute('INSERT INTO trajectory_event VALUES(?,?,?,?,?,?,?,?,?)',
+                  (trajectory_run_id('shared-task'), 101, 1, 'shared-task', '', '',
+                   'supervision.tool.finished', '{"broken":', 'usage'))
+    last = pages(svc, episode_id=1, limit=1)[-1]
+    assert 'store_links:malformed_store_link' in last['diagnostics']
+
+
 if __name__ == "__main__":
-    raise SystemExit(pytest.main([__file__, "-q"]))
+    raise SystemExit(pytest.main([__file__]))

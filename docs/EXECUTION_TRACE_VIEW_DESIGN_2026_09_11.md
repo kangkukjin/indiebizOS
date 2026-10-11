@@ -160,7 +160,7 @@ trajectory와 write JSONL의 명시적 run/event_seq가 같으면 한 사건의 
 - HMAC 커서는 질의/접근 범위/원장별 상한·위치를 묶는다. 유효기간 15분, 서비스 프로세스가 바뀌면 만료한다. 작업 상태/과제 version 변경, 원장 회전·삭제·보존 범위 변경은 새 스냅샷을 요구한다. 커서 없는 재조회가 새 사건을 본다. 모든 DB가 동시에 관측됐다는 원자성은 주장하지 않는다.
 - 개요에는 원문/도구 excerpt를 복제하지 않는다. 증거·episode log·task result·pursuit input/response는 서버 발행 참조의 별도 페이지다. 일반 원문 1M자/증거 4MiB 상한, 응답 페이지 12000자. 증거 내용 주소와 응답의 승인·현재 manifest 지문을 확인하며 coverage/patch/adopt/publish는 실행하지 않는다.
 - 직접 task/run 질의는 등록 project+owner 범위를 요구한다. 과제 episode FK가 없으면 scoped task 상태만 보여주며 전역 run을 추정 조인하지 않는다. messages에 task FK가 없는 현재 스키마는 `missing/no_task_foreign_key`로 드러낸다.
-- 같은 페이지의 trajectory/write 명시 연결은 observations로 묶고 두 원본 ID를 남긴다. 페이지를 넘는 대응은 observation_of 참조로 남긴다. 작업대 반복 seq는 파일 위치별로 보존하고 ambiguous로 표시한다. 여러 실제 usage는 모두 합산하며 `complete=false`는 best-effort 기록만으로 전체 청구의 완전성을 증명할 수 없다는 뜻이다. `recorded_events_complete`는 기록된 청구 사건의 페이지 읽기 완료만 뜻한다.
+- trajectory/write 명시 연결은 페이지 위치와 무관하게 원천 행과 observation_of 참조를 남긴다. 화면이 누적 행을 표시할 때 묶는다(2026-10-12: 페이지 크기별 집계 차이 수리). 작업대 반복 seq는 파일 위치별로 보존하고 ambiguous로 표시한다. 여러 실제 usage는 모두 합산하며 `complete=false`는 best-effort 기록만으로 전체 청구의 완전성을 증명할 수 없다는 뜻이다. `recorded_events_complete`는 기록된 청구 사건의 페이지 읽기 완료만 뜻한다.
 - L1 합성 회귀 **14개 통과**: 비용 정답/반복 쓰기/같은 task 다른 프로젝트/같은 자아 다른 task/잠금·빈 결과·부재·손상/회전·삭제/증거 접근·해시·검수/CAS/늦은 완료·상태 충돌/페이지 중 삽입/원본 무변경/본문 변경 커서 만료/예산 진행. 기존 trajectory/write/pursuit/task binding/concurrency/delivery 시험 **65개 통과**. 층 검사 통과, Android 번들 재생성 완료.
 - 실사용 최근 episode 읽기 표본: **42ms**, 명시 자아 범위 해소 성공, 104개 개요 사건, 다음 커서 있음. 원래 4KB에서 잘린 작업대 trajectory 데이터는 `malformed_store_link`로 표시됐고 실제 원장을 손대지 않았다. 전체 backend 회귀는 L2 완료 후 결과를 아래에 기록한다.
 
@@ -222,3 +222,8 @@ execution_trace의 문서 링크. 소비자: system_essentials/body_ops와 기�
 실제 4168 원장에서 첫 페이지의 참조로 로그 20,205자와 응답 5,470자의 원문 위치·읽기를
 확인했다. 실제 에이전트의 새 분석 턴에서 시간·전체 토큰이 얼마나 줄었는지는 미측정이며,
 17라운드를 특정 횟수로 줄였다는 효과 수치로 환산하지 않는다. 검사 결과는 changelog에 남긴다.
+
+
+## 2026-10-12 자기개선 감사 후속
+
+작업대 발견은 개별 사건 수가 아니라 경로별 첫 명시 참조를 조회한다. 동일 작업대가 2,000개 이상의 사건에서 반복돼도 상세 근거 연결을 잃지 않는다. 원 사건·반복 관측·첫 참조의 seq/record는 보존하며 발견 오류는 마지막 페이지 진단에도 남는다. [긴문장 57회차](experiments/long_sentence_imagination/round_57/report.md).

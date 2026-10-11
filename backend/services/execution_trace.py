@@ -159,6 +159,8 @@ class ExecutionTrace:
             if not previous:
                 store_links = read_trace_store_links(self.resolver.pulse, ident["episode_ids"])
                 sources.append({k: v for k, v in store_links.items() if k != "rows"})
+                if store_links["status"] not in {"ok", "empty"}:
+                    diagnostics.append("store_links:" + str(store_links.get("reason") or store_links["status"]))
                 for link in store_links["rows"]:
                     try:
                         relative = Path(link["store"]).relative_to(self.resolver.supervision)
@@ -223,12 +225,9 @@ class ExecutionTrace:
                     record = f"{name}:{fingerprint(water['file'])[:16]}:{row['_offset']}:{row['_hash']}"
                     target = f"pulse:{row.get('run')}:{row.get('event_seq')}"
                     links = [{"relation": "observation_of", "source_record_id": target, "relationship": "explicit"}] if row.get("run") and row.get("event_seq") else []
-                    observation = event("writes", record, "side_effect." + str(row.get("event", "write")), row, row.get("ts"), links)
-                    target_row = next((e for e in events[:-1] if e["source_record_id"] == target
-                                       and e["source"] == "trajectory" and e["kind"] == "side_effect.write"), None)
-                    if target_row is not None:
-                        target_row.setdefault("observations", []).append(observation)
-                        events.pop()
+                    # Keep source rows stable across page sizes. Presentation consumers
+                    # may group the explicit link after accumulating pages.
+                    event("writes", record, "side_effect." + str(row.get("event", "write")), row, row.get("ts"), links)
             diagnostics.append("writes_partial:gate_only_heartbeat_compressed_retention_limited")
 
             if resolved["db"]:

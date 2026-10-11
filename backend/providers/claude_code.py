@@ -353,6 +353,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
     # 사라지고 MCP 두 도구가 init 부터 eager 로 뜬다(왕복 1회 절감 + 왕복당 컨텍스트 45K→20K 토큰).
     # 환경변수(ENABLE_TOOL_SEARCH)는 쓰지 않는다 — 플래그 하나가 더 좁고 이식성 있다.
     EAGER_BUILTIN_TOOLS = [t for t in EAGER_TOOLS if not t.startswith("mcp__")]
+    REPAIR_COMMAND_TOOL = "mcp__indiebizos__run_command"
 
     # 명시적으로 차단할 도구 — 우회 로드되더라도 호출 거부됨.
     # AskUserQuestion: indiebizOS UI 미연결, 응답 채널 없음 → IBL [user:ask] 사용.
@@ -433,7 +434,8 @@ class ClaudeCodeProvider(CliSubprocessProvider):
     def tool_policy_fingerprint(cls) -> str:
         """도구 집합·정책의 지문 — EAGER/DISALLOWED 목록 + TOOL_POLICY 본문의 md5 앞 8자."""
         blob = ("|".join(cls.EAGER_TOOLS) + "||" + "|".join(cls.DISALLOWED_TOOLS) + "||" + cls.TOOL_POLICY
-                + "||hook:" + cls.SHADOW_HOOK_MATCHER)
+                + "||hook:" + cls.SHADOW_HOOK_MATCHER
+                + "||repair-owner-only:" + cls.REPAIR_COMMAND_TOOL)
         return hashlib.md5(blob.encode("utf-8")).hexdigest()[:8]
 
     def _get_session_key(self) -> str:
@@ -487,11 +489,12 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         research_library = library_only()
         from repair_context import active as repair_active
         repair_mode = bool(repair_active())
-        if repair_mode and not tools_mode:
+        repair_executor = repair_mode and not (supervisor_role or response_repair or context_update or research_library)
+        if repair_executor and not tools_mode:
             cmd += ["--strict-mcp-config"]
             cmd += ["--tools", "", "--allowed-tools", ",".join(
                     [t for t in self.EAGER_TOOLS if t.startswith("mcp__indiebizos__")]
-                    + ["mcp__indiebizos__run_command"]),
+                    + [self.REPAIR_COMMAND_TOOL]),
                     "--disallowed-tools", ",".join(self.EAGER_BUILTIN_TOOLS)]
         elif (context_update or research_library) and not response_repair:
             names = [t for t in self.EAGER_TOOLS if t.startswith("mcp__indiebizos__")]
@@ -522,6 +525,15 @@ class ClaudeCodeProvider(CliSubprocessProvider):
                 # 셸 그림자 관문 — Bash·Write·Edit 호출 전에 어휘 파생표로 판정(shadow_hook_settings 참조)
                 "--settings", json.dumps(self.shadow_hook_settings(), ensure_ascii=False),
             ]
+
+        # allowed-tools is permission, not an MCP schema allowlist. Explicitly
+        # hide this server tool wherever /repair/command would reject the role.
+        if not repair_executor or tools_mode:
+            if "--disallowed-tools" in cmd:
+                index = cmd.index("--disallowed-tools") + 1
+                cmd[index] += "," + self.REPAIR_COMMAND_TOOL
+            else:
+                cmd += ["--disallowed-tools", self.REPAIR_COMMAND_TOOL]
 
         # stream-json 출력은 verbose 필수
         if stream:

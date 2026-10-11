@@ -10,6 +10,48 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+
+def build_frontend_fixture(tmp_path, monkeypatch):
+    """Run the registered build with a private output directory for this browser."""
+    import hashlib
+    import importlib.util
+    from runtime_utils import get_base_path
+
+    frontend = ROOT / "frontend"
+    installed = Path(get_base_path()) / "frontend/node_modules"
+    assert installed.is_dir(), "프론트엔드 의존성을 먼저 설치해야 합니다"
+    dependencies = frontend / "node_modules"
+    dependencies.mkdir(exist_ok=True)
+    if dependencies.resolve() != installed.resolve():
+        for package in installed.iterdir():
+            target = dependencies / package.name
+            if not target.exists():
+                target.symlink_to(package, target_is_directory=package.is_dir())
+    spec = importlib.util.spec_from_file_location("browser_web_check", ROOT / "data/scripts/webapp_work.py")
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    dist = tmp_path / "frontend-dist"
+    original = runner.configuration
+
+    def configuration(project):
+        config = original(project)
+        for check in config["checks"]:
+            if check["name"] == "build":
+                # npm forwards this to the final vite build; the original tsc
+                # check still runs. Parallel tests never empty each other's dist.
+                check["argv"] += ["--", "--outDir", str(dist)]
+        config["fingerprint"] = hashlib.sha256(
+            (config["fingerprint"] + str(dist)).encode()).hexdigest()
+        return config
+
+    monkeypatch.setattr(runner, "configuration", configuration)
+    plan = runner.plan(frontend, ["build"])
+    built = runner.run_check(frontend, "build", 240, plan["fingerprint"])
+    assert built["ok"], built.get("output_tail", str(built))
+    assert (dist / "index.html").is_file() and (dist / "assets").is_dir()
+    return dist
+
+
 def mount_document_app(app, workspace, ask=None):
     import yaml
     manifest = yaml.safe_load((ROOT / "data/instruments/document.yaml").read_text(encoding="utf-8"))

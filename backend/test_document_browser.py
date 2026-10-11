@@ -23,25 +23,8 @@ def test_browser_source_workflow(tmp_path, monkeypatch):
     from fastapi.responses import HTMLResponse
     from fastapi.staticfiles import StaticFiles
     from playwright.sync_api import sync_playwright, expect
-    from runtime_utils import get_base_path
-
-    frontend = ROOT / "frontend"
-    dependencies = frontend / "node_modules"
-    installed = Path(get_base_path()) / "frontend/node_modules"
-    assert installed.is_dir(), "프론트엔드 의존성을 먼저 설치해야 합니다"
-    dependencies.mkdir(exist_ok=True)
-    if dependencies.resolve() != installed.resolve():
-        for package in installed.iterdir():
-            target = dependencies / package.name
-            if not target.exists():
-                target.symlink_to(package, target_is_directory=package.is_dir())
-    # Use the same registered build runner, after preparing the isolated deps.
-    spec = importlib.util.spec_from_file_location("document_web_check", ROOT / "data/scripts/webapp_work.py")
-    runner = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(runner)
-    plan = runner.plan(frontend, ["build"])
-    built = runner.run_check(frontend, "build", 180, plan["fingerprint"])
-    assert built["ok"], built.get("output_tail", str(built))
+    from test_document_app_support import build_frontend_fixture
+    dist = build_frontend_fixture(tmp_path, monkeypatch)
 
     workspace = DocumentWorkspace(tmp_path / "workspace")
     monkeypatch.setattr(api_documents, "service", lambda: workspace)
@@ -64,14 +47,14 @@ def test_browser_source_workflow(tmp_path, monkeypatch):
     @app.get("/health")
     def health():
         return {"status": "ok"}
-    html = (frontend / "dist/index.html").read_text()
+    html = (dist / "index.html").read_text()
     html = html.replace("<html", '<html data-indiebiz-surface="remote"', 1)
 
     @app.get("/")
     def index():
         return HTMLResponse(html)
 
-    app.mount("/assets", StaticFiles(directory=frontend / "dist/assets"))
+    app.mount("/assets", StaticFiles(directory=dist / "assets"))
     sock = socket.socket()
     sock.bind(("127.0.0.1", 0))
     port = sock.getsockname()[1]

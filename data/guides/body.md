@@ -54,7 +54,9 @@ DB 파일·스키마를 찾을 필요 없이 같은 `trajectory`에서 목록과
 
 - `episodes`는 최근 **시작 순서**의 종료된 실사용 목록이다. 진행 중인 현재 분석 턴과 시험 기록을 제외한다. `episode_id`, 요청 미리보기, 에이전트, 시간·라운드·평가값과 `trace_args`를 반환한다. 종료는 성공을 뜻하지 않는다. 목록의 에이전트 이름을 프로젝트 이름으로 추정하지 않는다.
 - `events`(기본)는 기존 hash/ref 사건 목록이다. 식별자 없이 호출하면 최근 종료된 실행을 고르고, 진행 중 실행은 `episode_id`·`run_id`·`task_id` 중 하나로 지정한다.
+- `trace`의 `items`는 원장별 관측 행이다. 같은 사건의 여러 관측은 `observation_of`·`supervision_observation`으로 연결되며 페이지 크기에 따라 행을 접지 않는다. 반복된 실제 관측을 내용이 같다는 이유로 제거하지 않는다.
 - `trace`는 기존 실행 통합 조회를 연결한다. `items`는 사건이고, `identity`·`state`·`usage`·`sources`·`diagnostics`·`links`를 함께 반환한다. `next_cursor`가 있으면 **같은 episode_id**와 `cursor`로 계속 읽는다. `usage`는 페이지까지의 누계이므로 페이지별 값을 합산하지 않는다. 원장 누락·부분성은 그대로 보존한다.
+- 전건 감사는 한 IBL 반복문에서 같은 `episode_id`와 `next_cursor`를 이어 읽는다. 사건이 없는 페이지도 다음 커서가 있으면 계속 읽는다. `items`와 `links.evidence`는 페이지별로 누적하고, `usage`와 `state.goal_evaluations`는 마지막 누계를 사용한다. `state.assessment`는 실행 상태의 관측 판정이며 목표 달성 평가는 `goal_evaluations`에 있다. 상세 원문은 실패 원인을 확인하는 데 필요한 문서만 읽는다.
 - `links.documents`의 `episode … log`는 실행 로그, `supervision response`·`pursuit response`나 `links.evidence`의 `response`는 기록된 응답이다. `task result`는 저장된 작업 결과이며 짧은 발췌일 수 있다. 없는 응답을 주변 대화나 시각으로 추정하지 않는다. 사건의 `source_ref`와 문서의 `source_ref`는 용도가 다르다.
 
 읽을 문서의 `source_ref`를 받아 다음처럼 호출한다(아래 참조는 실제 반환값으로 교체).

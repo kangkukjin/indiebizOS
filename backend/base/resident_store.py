@@ -142,6 +142,28 @@ def undelivered(device, exclude=()):
     return out
 
 
+def pending(device, op, settle=0):
+    """Id of an unfinished task of this operation on the device, or None.
+
+    With settle, a task whose result says the helper is restarting still counts for
+    that many seconds: the job is over but its effect (the new helper reporting in)
+    is not visible yet."""
+    with phone_jobs._db() as db:
+        schema(db)
+        for row in db.execute("SELECT id,summary FROM resident_tasks WHERE device=? AND result IS NULL "
+                              "AND state IN ('queued','running') ORDER BY created DESC", (device,)):
+            if json.loads(row["summary"]).get("op") == op:
+                return row["id"]
+        if settle:
+            row = db.execute("SELECT e.job,e.payload,t.summary FROM resident_events e JOIN resident_tasks t ON t.id=e.job "
+                             "WHERE e.device=? AND e.kind='result' AND e.received>? ORDER BY e.cursor DESC",
+                             (device, time.time() - settle)).fetchall()
+            for r in row:
+                if json.loads(r["summary"]).get("op") == op and json.loads(r["payload"]).get("restarting"):
+                    return r["job"]
+    return None
+
+
 def cancel(jid, device=None):
     with phone_jobs._db() as db:
         schema(db)

@@ -37,6 +37,8 @@ type residentRuntime struct {
 	observing   int
 	stopping    bool
 	localPaused bool
+	updating    bool      // a self-update is replacing the executable; start no new job
+	restartAt   time.Time // set once the new executable is in place
 	wg          sync.WaitGroup
 }
 
@@ -55,7 +57,12 @@ func (r *residentRuntime) capabilities() map[string]interface{} {
 	hostname, _ := os.Hostname()
 	mpv, _ := findMediaPlayer()
 	_, afplay := exec.LookPath("afplay")
-	return map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv != "" || afplay == nil, "media_player": mpv, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "screen_observation": true, "screen_cancel": true, "media_volume": true, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
+	caps := map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv != "" || afplay == nil, "media_player": mpv, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "screen_observation": true, "screen_cancel": true, "media_volume": true, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
+	caps["helper_sha256"], caps["go"], caps["self_update"] = residentSelfDigest(), runtime.Version(), residentCanSelfUpdate(r.cfg)
+	if st, e := residentLoadUpdate(r.cfg.DataDir); e == nil && st.Outcome != "" {
+		caps["helper_update"] = map[string]interface{}{"outcome": st.Outcome, "to": st.To, "started": st.Started}
+	}
+	return caps
 }
 func startResident(cfg *Config) error {
 	if len(cfg.InstallationID) != 32 || cfg.Generation == "" || cfg.DataDir == "" {
@@ -119,6 +126,7 @@ func startResident(cfg *Config) error {
 	transport := &residentTransport{base: cfg.Base}
 	defer transport.close()
 	backoff := time.Second
+	confirmed := false
 	for {
 		if cfg.ExpiresAt > 0 && float64(time.Now().Unix()) >= cfg.ExpiresAt {
 			r.stop()
@@ -126,6 +134,9 @@ func startResident(cfg *Config) error {
 		}
 		paths, _ := filepath.Glob(filepath.Join(cfg.DataDir, "spool", "events", "*.json"))
 		sort.Strings(paths)
+		if r.restartDue(len(paths)) {
+			return fmt.Errorf("restarting into the updated helper")
+		}
 		if len(paths) > 64 {
 			paths = paths[:64]
 		}
@@ -166,6 +177,10 @@ func startResident(cfg *Config) error {
 			continue
 		}
 		backoff = time.Second
+		if !confirmed && resp["generation"] == cfg.Generation {
+			residentConfirmUpdate(cfg.DataDir, residentSelfDigest())
+			confirmed = true
+		}
 		acks, _ := resp["ack"].([]interface{})
 		acked := map[string]bool{}
 		for _, a := range acks {

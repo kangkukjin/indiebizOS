@@ -32,7 +32,7 @@ func residentLaunchAgentBody(name, id, exe string) string {
 
 func residentSystemdUnitBody(id, exe string) string {
 	return "[Unit]\nDescription=IndieBiz registered PC\n[Service]\nExecStart=" + strconv.Quote(exe) +
-		"\nRestart=on-failure\nRestartSec=10\nEnvironment=" + residentServiceEnv + "=" + id + "\n[Install]\nWantedBy=default.target\n"
+		"\nRestart=on-failure\nRestartSec=10\nKillMode=process\nEnvironment=" + residentServiceEnv + "=" + id + "\n[Install]\nWantedBy=default.target\n"
 }
 
 // residentWriteIfChanged reports whether the file was (re)written.

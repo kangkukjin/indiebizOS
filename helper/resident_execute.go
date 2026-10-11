@@ -110,6 +110,7 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		Mode       string            `json:"mode"`
 		Env        map[string]string `json:"env"`
 		TransferID string            `json:"transfer_id"`
+		SHA256     string            `json:"sha256"`
 		MAC        string            `json:"mac"`
 		Broadcast  string            `json:"broadcast"`
 	}
@@ -177,6 +178,8 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		return info
 	case "transfer":
 		return r.transfer(ctx, c, extra.TransferID)
+	case "update":
+		return r.selfUpdate(ctx, c, extra.TransferID, extra.SHA256)
 	case "wake":
 		mac, e := net.ParseMAC(extra.MAC)
 		if e != nil && len(extra.MAC) == 12 {

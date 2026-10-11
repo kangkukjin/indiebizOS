@@ -100,6 +100,11 @@ def state(req: dict):
     return checked(limb_keys.resident_update, rec['device_id'], paused=bool(req.get('paused')))
 
 
+@router.post('/remote-pcs/helper-update')
+def helper_update(req: dict):
+    return checked(pcs.update_helper, req.get('target'))
+
+
 @router.post('/remote-pcs/wake')
 def wake(req: dict):
     if req.get('mac'):

@@ -16,6 +16,7 @@
 | 중복 방지 | 같은 `request_id` + 같은 명령은 기존 접수증. 내용이 다르면 충돌 | 접수증으로 관측. 같은 명령 재전송 금지 |
 | 작업 후 | 연결 유지. 작업 마무리와 제거는 별개 | 필요할 때 `detach`로 프로세스 종료 |
 | 제거 | 명시적인 `self:limb remove`. `removal_pending`과 `removed` 구분 | `revoke`로 키 폐기 |
+| 헬퍼 교체 | 조종실 손발(USB)의 `헬퍼 교체` — 중앙 `helper/dist`와 다를 때만 보인다. 헬퍼가 받아 검증·교체·재기동하고 5분 안에 다시 연결하지 못하면 이전 판으로 되돌린다. AI 작업(`limbs:guestpc`)으로는 요청할 수 없다 | 해당 없음 |
 
 `self:limb list`의 각 행에 `registration`이 있으면 상주형, null이면 휴대형이다.
 상주형 `registration.state/paused`, 공통 `connected/expired/revoked`를 확인한다.

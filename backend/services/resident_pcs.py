@@ -30,14 +30,90 @@ def resolve(target, active=True):
 
 def devices():
     now = time.time()
-    return [{**r, "connected": r["registration"]["state"] != "removed" and now - (r["registration"].get("last_seen") or 0) < 90}
+    return [{**r, "connected": r["registration"]["state"] != "removed" and now - (r["registration"].get("last_seen") or 0) < 90,
+             "helper": helper_status(r)}
             for r in limb_keys.list_keys() if r.get("registration")]
 
 
-def submit(target, command, request_id=None):
+_DIGESTS = {}
+
+
+def helper_binary(capabilities):
+    """The helper/dist executable matching what this PC runs now, or None.
+
+    A Mac helper built by Go 1.22 is the legacy build (macOS 10.15~11); the regular
+    one would not start there, so the build line is kept, never inferred from the OS."""
+    caps = capabilities or {}
+    name = {("darwin", "arm64"): "mac-arm64", ("darwin", "amd64"): "mac-amd64",
+            ("linux", "amd64"): "linux"}.get((caps.get("os"), caps.get("arch")))
+    if not name:
+        return None
+    if name == "mac-amd64" and str(caps.get("go") or "").startswith("go1.22"):
+        name = "mac-amd64-legacy"
+    from runtime_utils import get_base_path
+    path = Path(get_base_path()) / "helper" / "dist" / ("indiebiz-helper-" + name)
+    return path if path.is_file() else None
+
+
+def _digest(path):
+    stat = path.stat()
+    key = (str(path), stat.st_mtime_ns, stat.st_size)
+    if key not in _DIGESTS:
+        _DIGESTS.clear()
+        _DIGESTS[key] = _file_sha256(path)
+    return _DIGESTS[key]
+
+
+def helper_status(rec):
+    """Whether the PC runs the helper this hub would install, for the cockpit."""
+    reg = rec["registration"]
+    caps = reg.get("capabilities") or {}
+    current = caps.get("helper_sha256")
+    path = helper_binary(caps) if current else None
+    latest = _digest(path) if path else None
+    failed = (caps.get("helper_update") or {}).get("to") == latest and latest is not None
+    if reg["state"] != "active" or not current or not latest:
+        state = "unknown"
+    elif current == latest:
+        state = "current"
+    elif not caps.get("self_update"):
+        state = "manual"
+    elif resident_store.pending(rec["device_id"], "update", settle=0 if failed else 120):
+        state = "updating"  # a reported rollback of this very build ends the wait at once
+    else:
+        state = "available"
+    return {"state": state, "current": current, "latest": latest, "rolled_back": bool(failed and state != "current")}
+
+
+def update_helper(target):
+    """One cockpit action: hand the PC the hub's current helper and let it replace itself."""
+    rec = resolve(target)
+    status = helper_status(rec)
+    if status["state"] == "current":
+        return {"success": True, "state": "current", "sha256": status["latest"]}
+    if status["state"] == "updating":
+        return {"success": True, "state": "updating", "job_id": resident_store.pending(rec["device_id"], "update", settle=120)}
+    if status["state"] != "available":
+        raise ValueError("helper_update_unavailable: 이 PC의 헬퍼는 스스로 교체하지 못합니다"
+                         if status["state"] == "manual" else "helper_update_unavailable: 헬퍼 판을 알 수 없습니다")
+    source = helper_binary(rec["registration"]["capabilities"])
+    row = transfer_create(rec["device_id"], "to_pc", source.name, source.stat().st_size, status["latest"])
+    offset = 0
+    with source.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            offset = transfer_write(row["id"], offset, chunk)["offset"]
+    transfer_commit(row["id"])
+    receipt = submit(rec["device_id"], {"op": "update", "transfer_id": row["id"], "sha256": status["latest"],
+                                        "timeout": 900}, uuid.uuid4().hex, allow_update=True)
+    return {**receipt, "state": "updating", "sha256": status["latest"]}
+
+
+def submit(target, command, request_id=None, *, allow_update=False):
     rec = resolve(target)
     allowed = {"shell", "read", "write", "list", "info", "screen", "click", "move", "type",
                "key", "scroll", "drag", "transfer", "media", "wake"}
+    if allow_update:  # only update_helper(); never reachable from an agent's command
+        allowed = allowed | {"update"}
     op = command.get("op", "shell")
     if op not in allowed:
         raise ValueError("unsupported_resident_operation")

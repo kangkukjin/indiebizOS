@@ -333,7 +333,7 @@ func residentCleanup(root string) error {
 	// Cleanup-only mode is restartable at login until logs and removal reach the hub.
 	revoked := false
 
-	for _, name := range []string{filepath.Base(residentExecutable(root)), "control.json", "paused.json"} {
+	for _, name := range []string{filepath.Base(residentExecutable(root)), filepath.Base(residentExecutable(root)) + ".previous", "update.json", "control.json", "paused.json"} {
 		for attempt := 0; attempt < 30; attempt++ {
 			e = os.Remove(filepath.Join(root, name))
 			if e == nil || os.IsNotExist(e) {

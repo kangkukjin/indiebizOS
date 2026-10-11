@@ -120,6 +120,13 @@ func main() {
 	if len(os.Args) == 3 && os.Args[1] == "--resident-process" {
 		os.Exit(residentProcessMain(os.Args[2]))
 	}
+	if len(os.Args) == 3 && os.Args[1] == "--resident-update-watch" {
+		if e := residentUpdateWatch(os.Args[2], 2*time.Second, residentServiceRestart); e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 3 && os.Args[1] == "--resident-cleanup" {
 		if e := residentCleanup(os.Args[2]); e != nil {
 			fmt.Fprintln(os.Stderr, e)

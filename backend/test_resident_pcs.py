@@ -511,3 +511,52 @@ def test_job_lost_in_a_dead_long_poll_is_offered_again_once_per_sync(registry):
     resident_store.cancel(later, rec['device_id'])
     assert pcs.sync(rec['key'], 'a' * 32)['jobs'] == []
     assert [e['kind'] for e in resident_store.history(job=lost)['events']].count('redelivered') == 1
+
+
+def test_helper_update_is_one_owner_action_and_never_an_agent_command(registry, monkeypatch, tmp_path):
+    rec = registry()
+    dist = tmp_path / 'helper' / 'dist'
+    dist.mkdir(parents=True)
+    (dist / 'indiebiz-helper-mac-amd64').write_bytes(b'regular build')
+    (dist / 'indiebiz-helper-mac-amd64-legacy').write_bytes(b'legacy build')
+    import runtime_utils
+    monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
+    legacy = hashlib.sha256(b'legacy build').hexdigest()
+
+    def report(**caps):
+        pcs.sync(rec['key'], 'a' * 32, capabilities={'os': 'darwin', 'arch': 'amd64', **caps})
+        return [d for d in pcs.devices() if d['device_id'] == rec['device_id']][0]['helper']
+
+    assert report()['state'] == 'unknown'  # 옛 헬퍼는 자기 판을 보고하지 않는다
+    assert report(helper_sha256='0' * 64, go='go1.22.12')['state'] == 'manual'
+    with pytest.raises(ValueError, match='helper_update_unavailable'):
+        pcs.update_helper(rec['device_id'])
+    status = report(helper_sha256='0' * 64, go='go1.22.12', self_update=True)
+    assert status == {'state': 'available', 'current': '0' * 64, 'latest': legacy, 'rolled_back': False}
+    assert report(helper_sha256='0' * 64, go='go1.26.1', self_update=True)['latest'] == hashlib.sha256(b'regular build').hexdigest()
+    report(helper_sha256='0' * 64, go='go1.22.12', self_update=True)
+    with pytest.raises(ValueError, match='unsupported_resident_operation'):
+        pcs.submit(rec['device_id'], {'op': 'update', 'transfer_id': 'x', 'sha256': legacy}, 'agent')
+    started = pcs.update_helper(rec['device_id'])
+    assert started['state'] == 'updating' and started['sha256'] == legacy
+    job = json.loads(pcs.sync(rec['key'], 'a' * 32)['jobs'][0]['code'])
+    assert job['op'] == 'update' and job['sha256'] == legacy
+    staged = pcs.transfer_info(job['transfer_id'])
+    assert staged['state'] == 'committed' and staged['sha256'] == legacy and staged['direction'] == 'to_pc'
+    assert pcs.transfer_path(job['transfer_id']).read_bytes() == b'legacy build'
+    # 두 번 눌러도 교체는 하나다.
+    assert pcs.update_helper(rec['device_id'])['job_id'] == started['job_id']
+    assert [d for d in pcs.devices() if d['device_id'] == rec['device_id']][0]['helper']['state'] == 'updating'
+    pcs.sync(rec['key'], 'a' * 32, [{'job_id': started['job_id'], 'event_id': 'u1', 'kind': 'result',
+                                      'payload': {'updated': True, 'restarting': True}}])
+    # 작업은 끝났지만 새 헬퍼가 아직 보고하기 전: 다시 누를 수 있는 상태로 보이지 않는다.
+    assert report(helper_sha256='0' * 64, go='go1.22.12', self_update=True)['state'] == 'updating'
+    assert pcs.update_helper(rec['device_id'])['job_id'] == started['job_id']
+    assert report(helper_sha256=legacy, go='go1.22.12', self_update=True)['state'] == 'current'
+    assert pcs.update_helper(rec['device_id'])['state'] == 'current'
+    # 되돌려진 교체는 같은 판을 다시 권하되 실패했음을 알린다.
+    (dist / 'indiebiz-helper-mac-amd64-legacy').write_bytes(b'legacy build 2')
+    newer = hashlib.sha256(b'legacy build 2').hexdigest()
+    status = report(helper_sha256=legacy, go='go1.22.12', self_update=True,
+                    helper_update={'outcome': 'rolled_back', 'to': newer})
+    assert status['state'] == 'available' and status['rolled_back'] is True

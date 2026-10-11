@@ -52,7 +52,7 @@ func (r *residentRuntime) schedule() error {
 	sort.SliceStable(queued, func(i, j int) bool { return queued[i].QueuedAt < queued[j].QueuedAt })
 	for _, v := range queued {
 		r.mu.Lock()
-		if r.stopping || r.localPaused {
+		if r.stopping || r.localPaused || r.updating {
 			r.mu.Unlock()
 			break
 		}

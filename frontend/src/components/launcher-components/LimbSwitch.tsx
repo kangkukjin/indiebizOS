@@ -1,6 +1,6 @@
 /** PC registration belongs to the cockpit; tasks are requested through the central AI. */
 import { useCallback, useEffect, useState } from 'react';
-import { Usb, Loader2, Check, Trash2, ChevronDown, ChevronRight, Copy, FolderOpen, RefreshCw } from 'lucide-react';
+import { Usb, Loader2, Check, Trash2, ChevronDown, ChevronRight, Copy, FolderOpen, RefreshCw, ArrowUpCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 
 type Registration = {
@@ -8,7 +8,8 @@ type Registration = {
   paused?: boolean;
   capabilities?: { os?: string; hostname?: string };
 };
-type PC = { alias: string; device_id: string; connected: boolean; revoked?: boolean; registration: Registration };
+type Helper = { state: 'unknown' | 'current' | 'manual' | 'available' | 'updating'; rolled_back?: boolean };
+type PC = { alias: string; device_id: string; connected: boolean; revoked?: boolean; registration: Registration; helper?: Helper };
 type USB = { folder: string; ready: boolean };
 type PCList = { items: PC[]; usb: USB };
 
@@ -54,6 +55,14 @@ export function LimbSwitch() {
     } catch (e) { setErr(e instanceof Error ? e.message : '등록 해제 실패'); }
     finally { setBusy(null); }
   };
+  const updateHelper = async (pc: PC) => {
+    setBusy(pc.device_id); setErr(null);
+    try {
+      await api.request('/remote-pcs/helper-update', { method: 'POST', body: JSON.stringify({ target: pc.device_id }) });
+      await load();
+    } catch (e) { setErr(e instanceof Error ? e.message : '헬퍼 교체 요청 실패'); }
+    finally { setBusy(null); }
+  };
   const revokeUSB = async () => {
     setBusy('usb'); setErr(null);
     try { setUSB(await api.request<USB>('/remote-pcs/usb/revoke', { method: 'POST' })); }
@@ -64,6 +73,11 @@ export function LimbSwitch() {
   const status = (pc: PC) => pc.registration.state === 'removal_pending'
     ? '해제 요청됨 · PC가 연결되면 헬퍼 제거'
     : pc.registration.paused ? '작업 중지됨' : pc.connected ? '연결됨' : '오프라인';
+  const helperNote = (pc: PC) => pc.registration.state !== 'active' ? ''
+    : pc.helper?.state === 'updating' ? ' · 헬퍼 교체 중'
+    : pc.helper?.state === 'current' ? ' · 헬퍼 최신'
+    : pc.helper?.state === 'manual' ? ' · 새 헬퍼 있음(이 PC는 직접 교체)'
+    : pc.helper?.state === 'available' ? (pc.helper.rolled_back ? ' · 지난 교체가 되돌려짐' : ' · 새 헬퍼 있음') : '';
 
   return (
     <div className="rounded-lg border border-stone-200 bg-white/60 text-[12px]">
@@ -110,8 +124,14 @@ export function LimbSwitch() {
             <span className={`h-2 w-2 shrink-0 rounded-full ${pc.connected && pc.registration.state === 'active' ? 'bg-emerald-500' : 'bg-stone-300'}`} />
             <div className="min-w-0 flex-1">
               <div className="break-all font-medium text-stone-700">{pc.alias}</div>
-              <div className="text-[10px] text-stone-400">{status(pc)}{pc.registration.capabilities?.os ? ` · ${pc.registration.capabilities.os}` : ''}</div>
+              <div className="text-[10px] text-stone-400">{status(pc)}{pc.registration.capabilities?.os ? ` · ${pc.registration.capabilities.os}` : ''}{helperNote(pc)}</div>
             </div>
+            {pc.registration.state === 'active' && (pc.helper?.state === 'available' || pc.helper?.state === 'updating') &&
+              <button onClick={() => void updateHelper(pc)} disabled={busy !== null || !pc.connected || pc.helper.state === 'updating'}
+                title="중앙의 최신 헬퍼로 교체합니다. 다시 연결되지 않으면 이전 헬퍼로 되돌립니다."
+                className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-600 hover:text-emerald-700 disabled:opacity-50">
+                {busy === pc.device_id || pc.helper.state === 'updating' ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpCircle size={12} />}헬퍼 교체
+              </button>}
             <button onClick={() => void remove(pc)} disabled={busy !== null || pc.registration.state !== 'active'}
               title="등록 해제 및 원격 헬퍼 제거" className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-500 hover:text-red-600 disabled:opacity-50">
               {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}해제

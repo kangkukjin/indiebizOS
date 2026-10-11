@@ -1,0 +1,61 @@
+{
+ "code": "#!ibl edition=2\n$s = [sense:legal]{query:\"민법\"}\n$hit = filter($s.items,($x)=>$x.title == \"민법\")\n$d = [sense:legal]{id:$hit[0].id}\n$pick = [table:join]{left:[{no:\"제162조\"},{no:\"제766조\"}],right:$d.items,on:\"no\"}\n$bad = [sense:legal]{id:\"99999999\"} ?? {caught:true}\n$zero = [sense:legal]{query:\"없는법이름특별법\"}\n$p = [sense:legal]{query:\"임금채권 소멸시효 기산점\",target:\"prec\"}\nreturn {row:$hit[0],law:$d.law,articles:len($d.items),picked:map($pick.items,($a)=>[$a.no,$a.chapter,$a.text[:40]]),bad:$bad,zero:{count:$zero.count,scope:$zero.search_scope},prec:{scope:$p.search_scope,total:$p.total,count:$p.count,note:$p.note,first:$p.items[0]}}",
+ "elapsed": 3.242,
+ "success": true,
+ "issues": null,
+ "value": {
+  "row": {
+   "title": "민법",
+   "meta": "법률 · 법무부 · 20260317 · 20260317 · 일부개정",
+   "summary": "",
+   "url": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=284415",
+   "date": "2026-03-17",
+   "id": "001706"
+  },
+  "law": {
+   "name": "민법",
+   "id": "001706",
+   "enforce_date": "2026-03-17",
+   "promulgation_date": "2026-03-17",
+   "revision": "일부개정",
+   "kind": "법률",
+   "url": "https://www.law.go.kr/LSW/lsInfoP.do?lsId=001706"
+  },
+  "articles": 1193,
+  "picked": [
+   [
+    "제162조",
+    "제7장 소멸시효",
+    "제162조(채권, 재산권의 소멸시효)\n①채권은 10년간 행사하지 아니하면"
+   ],
+   [
+    "제766조",
+    "제5장 불법행위",
+    "제766조(손해배상청구권의 소멸시효)\n①불법행위로 인한 손해배상의 청구권"
+   ]
+  ],
+  "bad": {
+   "caught": true
+  },
+  "zero": {
+   "count": 0,
+   "scope": "name+body"
+  },
+  "prec": {
+   "scope": "body",
+   "total": 39,
+   "count": 20,
+   "note": "이름(법령명·사건명)에는 맞는 것이 없어 본문에서 찾은 결과입니다. 전체 39건 중 첫 20건입니다 — 검색어를 좁히세요.",
+   "first": {
+    "title": "임금등",
+    "meta": "서울고등법원 · 2024나2013287 · 2025.12.12 · 판결 : 확정 · 선고",
+    "summary": "",
+    "url": "https://www.law.go.kr/LSW/precInfoP.do?precSeq=616255",
+    "date": "2025-12-12",
+    "id": "616255",
+    "case_no": "2024나2013287",
+    "court": "서울고등법원"
+   }
+  }
+ }
+}

@@ -296,6 +296,7 @@
     "self:finance@query_type=수입": "[self:finance]{op: \"query\", query_type: \"수입\", days: 90}",
     "self:finance@query_type=지출": "[self:finance]{op: \"query\", query_type: \"지출\", days: 90}",
     "self:list@hash=true": "[self:list]{path:\"~workspace/data/ibl_nodes_src\",pattern:\"table.yaml\",hash:true}",
+    "sense:legal@target=prec": "[sense:legal]{query: \"임금\", target: \"prec\"}",
     "sense:paper@source=arxiv": "[sense:paper]{op: \"search\", query: \"attention\", source: \"arxiv\", limit: 3}",
     "sense:paper@source=nanet": "[sense:paper]{op: \"search\", query: \"인공지능\", source: \"nanet\", limit: 3}",
     "sense:paper@source=pubmed": "[sense:paper]{op: \"search\", query: \"sleep\", source: \"pubmed\", limit: 3}",

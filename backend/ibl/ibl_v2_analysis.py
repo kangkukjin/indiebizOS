@@ -379,13 +379,23 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
         if columns or isinstance(projection, list) and projection:
             # Explicit scalar labels share the runtime schema guard. Extraction
             # can still return null; prose and overwritten input types stay Unknown.
-            known = dict(source.item.fields) if source.kind == 'List' and source.item.kind == 'Record' else {}
-            keys = list(projection) if isinstance(projection, list) and projection else list(dict.fromkeys([*known, *(columns or [])]))
+            # 입력 행의 칸은 결과 행에 그대로 남는다(실행 계약). 입력 행 모양이 하나의 닫힌 Record 로
+            # 확정될 때만 결과 행을 닫는다 — 모양이 갈리거나(여러 반환 경로) 모르는 입력이면 열어 둔다.
+            # 행을 받지 않는 추출(글에서 행을 만드는 self:struct)은 schema 칸이 전부라 닫는다.
+            # 닫아 버리면 실행에서는 있는 입력 칸(id 등)을 읽는 식이 MISSING_FIELD 로 거절된다(긴문장 53회차 L53-6).
+            lists = list(alternatives(source))
+            row_shapes = [shape for variant in lists if variant.kind == 'List' and variant.item is not None
+                          for shape in alternatives(variant.item)]
+            known = {key: None for shape in row_shapes if shape.kind == 'Record' for key, _ in shape.fields}
+            exact_input = (all(variant.kind == 'List' for variant in lists) and len(row_shapes) == 1
+                           and row_shapes[0].kind == 'Record' and not row_shapes[0].open)
+            projected_keys = isinstance(projection, list) and bool(projection)
+            keys = list(projection) if projected_keys else list(dict.fromkeys([*known, *(columns or [])]))
             if all(isinstance(k, str) for k in keys):
                 from ibl_v2_types import NULL, declared
                 row = Type('Record', fields=tuple(
                     (k, join(declared(scalar_types[k]), NULL) if k in scalar_types else UNKNOWN)
-                    for k in keys), open=False)
+                    for k in keys), open=flow.get('accepts') == 'items' and not (projected_keys or exact_input))
                 return Type('Record', fields=tuple({**dict(result.fields), 'items': Type('List', item=row)}.items()), open=True)
     if source.kind != 'List' or flow.get('accepts') != 'items':
         return result

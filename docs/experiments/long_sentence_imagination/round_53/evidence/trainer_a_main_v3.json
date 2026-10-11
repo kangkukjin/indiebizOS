@@ -1,0 +1,203 @@
+{
+ "label": "trainer_a_main_v3",
+ "task_id": "r53-trainer-a-1791714844",
+ "reuse_request": null,
+ "budget_request": null,
+ "elapsed": 41.46,
+ "success": true,
+ "status": null,
+ "issues": [],
+ "error": null,
+ "value": {
+  "cases": 4,
+  "blank": 1,
+  "laws": [
+   {
+    "name": "근로기준법",
+    "found": true,
+    "units": 133
+   },
+   {
+    "name": "상가건물 임대차보호법",
+    "found": true,
+    "units": 33
+   },
+   {
+    "name": "전자상거래 등에서의 소비자보호에 관한 법률",
+    "found": true,
+    "units": 58
+   },
+   {
+    "name": "민법",
+    "found": true,
+    "units": 1193
+   },
+   {
+    "name": "소상공인 임대료 동결법",
+    "found": false,
+    "units": 0
+   }
+  ],
+  "order": [
+   {
+    "id": "A05",
+    "status": "deadline",
+    "deadline": "2026-10-09",
+    "days_left": -8,
+    "law": "민법",
+    "asked": "제1019조, 제1041조, 제1042조",
+    "cites": [
+     "제1019조",
+     "제1041조",
+     "제1042조"
+    ],
+    "missing": [],
+    "base": "2026-07-09",
+    "phrase": "상속개시있음을 안 날로부터 3월내에 단순승인이나 한정승인 또는 포기를",
+    "prec": false,
+    "prec_word": "상속포기 고려기간 특별한정승인"
+   },
+   {
+    "id": "A04",
+    "status": "deadline",
+    "deadline": "2026-10-17",
+    "days_left": 0,
+    "law": "전자상거래 등에서의 소비자보호에 관한 법률",
+    "asked": "제17조, 제18조",
+    "cites": [
+     "제17조",
+     "제18조"
+    ],
+    "missing": [],
+    "base": "2026-10-10",
+    "phrase": "재화등을 공급받거나 재화등의 공급이 시작된 날부터 7일",
+    "prec": false,
+    "prec_word": "청약철회 통신판매 반품비용"
+   },
+   {
+    "id": "A01",
+    "status": "deadline",
+    "deadline": "2026-12-14",
+    "days_left": 58,
+    "law": "근로기준법",
+    "asked": "제28조, 제23조, 제27조",
+    "cites": [
+     "제28조",
+     "제23조",
+     "제27조"
+    ],
+    "missing": [],
+    "base": "2026-09-14",
+    "phrase": "구제신청은 부당해고등이 있었던 날부터 3개월 이내에 하여야 한다",
+    "prec": false,
+    "prec_word": "부당해고 서면통지 해고사유"
+   },
+   {
+    "id": "A02",
+    "status": "need_date",
+    "deadline": "",
+    "days_left": 0,
+    "law": "상가건물 임대차보호법",
+    "asked": "제11조, 제2조",
+    "cites": [
+     "제11조",
+     "제2조"
+    ],
+    "missing": [],
+    "base": "",
+    "phrase": "",
+    "prec": false,
+    "prec_word": "차임증액 청구 증액한도"
+   }
+  ],
+  "model_calls": 2,
+  "written": 5,
+  "summary_reread": true
+ },
+ "usage": {
+  "steps": 6236,
+  "rows": 34,
+  "elapsed_ms": 41222,
+  "model": {
+   "requests": 2,
+   "measured_requests": 2,
+   "unmeasured_requests": 0,
+   "input": 18087,
+   "output": 3494,
+   "cache_read": 5747,
+   "cache_create": 12336,
+   "reasoning": 1539,
+   "calls": [
+    {
+     "call_id": "9a7a573a6ffb4e02bc59daf6ab3d666a",
+     "parent_call_id": null,
+     "role": "oneshot:execution",
+     "phase": "execution",
+     "provider": "ClaudeCode",
+     "model": "opus",
+     "round_index": 1,
+     "tier": "고급",
+     "source": "gear:최대|실행→고급",
+     "measured": true,
+     "elapsed_ms": 28107,
+     "input": 6885,
+     "output": 2786,
+     "cache_read": 2985,
+     "cache_create": 3898,
+     "reasoning": 1050
+    },
+    {
+     "call_id": "50823eafa8df4b269ddc03ac1f167834",
+     "parent_call_id": null,
+     "role": "oneshot:execution",
+     "phase": "execution",
+     "provider": "ClaudeCode",
+     "model": "opus",
+     "round_index": 1,
+     "tier": "고급",
+     "source": "gear:최대|실행→고급",
+     "measured": true,
+     "elapsed_ms": 7613,
+     "input": 11202,
+     "output": 708,
+     "cache_read": 2762,
+     "cache_create": 8438,
+     "reasoning": 489
+    }
+   ]
+  },
+  "limits": {
+   "steps": 100000,
+   "rows": 10000
+  }
+ },
+ "reuse": null,
+ "continuation": {
+  "reuse_args": {
+   "reuse": {
+    "run_id": "f90aa4614ef4482694ca5f68777b0fb3"
+   }
+  },
+  "read_calls": 7,
+  "model_calls": 2,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "overlapping_write",
+    "write_call_id": "9c247f772afa4889472eac4963a18790ef29bf4b6af8947d3f74f363a9bcc358",
+    "action": "self:mkdir",
+    "location": {
+     "source_hash": "c7fb6cc3d6ff5ef6344685db7fb15c599dcb94fe06efad97ae50e20c4f0fab80",
+     "start": 11957,
+     "end": 11991,
+     "line": 212,
+     "column": 1
+    },
+    "excluded_calls": 14
+   }
+  ],
+  "read_exclusions_total": 1,
+  "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+ },
+ "warnings": null
+}

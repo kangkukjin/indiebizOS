@@ -471,6 +471,7 @@ nodes:
         implementation: Python 문자열 치환으로 파일 부분 편집
         target_key: path
       copy:
+        write_resources: {file: dest}   # 쓰는 곳은 dest(이름이 겹쳐 "(2)" 로 가도 같은 폴더 안). src 는 읽기
         # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
         #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
         #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -514,6 +515,7 @@ nodes:
         implementation: shutil.move로 파일/폴더 이동/이름변경
         target_key: source
       delete:
+        write_resources: {file: path}   # 쓰기 자원 선언(긴문장 52·53회차 관측: 미선언 쓰기 하나가 읽기 재사용 전체를 끈다)
         shell_shadow:
           heads: [rm, rmdir]
           argmap:
@@ -529,6 +531,7 @@ nodes:
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
       mkdir:
+        write_resources: {file: path}   # 쓰기 자원 선언 — 없으면 "자원 미상" 이라 프로그램의 앞선 읽기 전부가 재사용에서 빠진다(긴문장 53회차)
         lands_on: body
         limb_op: {op: mkdir, path: $path}
         shell_shadow:

@@ -15,7 +15,9 @@ for p in sorted((OUT / 'runs').glob('trainer_*.json')):
             'reuse': cut(r.get('reuse'), 2500), 'continuation': cut(r.get('continuation'), 2500), 'warnings': cut(r.get('warnings'), 1500)}
     (HERE / 'evidence' / (p.stem + '.json')).write_text(scrub(json.dumps(keep, ensure_ascii=False, indent=1)))
 for p in sorted((HERE / 'evidence').glob('probe_*.json')):
-    d = json.loads(p.read_text()); r = d.get('response') or {}
+    d = json.loads(p.read_text())
+    if 'response' not in d: continue      # 이미 줄인 것 — 다시 줄이면 값이 사라진다
+    r = d.get('response') or {}
     slim = {'code': d.get('code'), 'elapsed': d.get('elapsed'), 'success': r.get('success'), 'issues': r.get('issues') and [{k: i.get(k) for k in ('code', 'message')} for i in r['issues']], 'value': cut(r.get('value'), 3000)}
     p.write_text(scrub(json.dumps(slim, ensure_ascii=False, indent=1)))
 for p in sorted((HERE / 'evidence').glob('ai_*')):

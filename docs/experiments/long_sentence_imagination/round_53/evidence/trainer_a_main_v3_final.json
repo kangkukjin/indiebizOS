@@ -1,0 +1,210 @@
+{
+ "label": "trainer_a_main_v3_final",
+ "task_id": "r53-trainer-a-1791715970",
+ "reuse_request": {
+  "run_id": "f90aa4614ef4482694ca5f68777b0fb3"
+ },
+ "budget_request": null,
+ "elapsed": 51.83,
+ "success": true,
+ "status": null,
+ "issues": [],
+ "error": null,
+ "value": {
+  "cases": 4,
+  "blank": 1,
+  "laws": [
+   {
+    "name": "근로기준법",
+    "found": true,
+    "units": 133
+   },
+   {
+    "name": "상가건물 임대차보호법",
+    "found": true,
+    "units": 33
+   },
+   {
+    "name": "전자상거래 등에서의 소비자보호에 관한 법률",
+    "found": true,
+    "units": 58
+   },
+   {
+    "name": "민법",
+    "found": true,
+    "units": 1193
+   },
+   {
+    "name": "소상공인 임대료 동결법",
+    "found": false,
+    "units": 0
+   }
+  ],
+  "order": [
+   {
+    "id": "A05",
+    "status": "deadline",
+    "deadline": "2026-10-09",
+    "days_left": -8,
+    "law": "민법",
+    "asked": "제1019조, 제1041조, 제1042조",
+    "cites": [
+     "제1019조",
+     "제1041조",
+     "제1042조"
+    ],
+    "missing": [],
+    "base": "2026-07-09",
+    "phrase": "상속개시있음을 안 날로부터 3월내에 단순승인이나 한정승인 또는 포기를 할 수 있다",
+    "prec": true,
+    "prec_word": "상속포기 고려기간 특별한정승인"
+   },
+   {
+    "id": "A04",
+    "status": "deadline",
+    "deadline": "2026-10-17",
+    "days_left": 0,
+    "law": "전자상거래 등에서의 소비자보호에 관한 법률",
+    "asked": "제17조, 제13조, 제18조",
+    "cites": [
+     "제17조",
+     "제13조",
+     "제18조"
+    ],
+    "missing": [],
+    "base": "2026-10-10",
+    "phrase": "재화등을 공급받거나 재화등의 공급이 시작된 날부터 7일",
+    "prec": false,
+    "prec_word": "청약철회 통신판매 반환비용"
+   },
+   {
+    "id": "A01",
+    "status": "deadline",
+    "deadline": "2026-12-14",
+    "days_left": 58,
+    "law": "근로기준법",
+    "asked": "제28조, 제27조, 제23조",
+    "cites": [
+     "제28조",
+     "제27조",
+     "제23조"
+    ],
+    "missing": [],
+    "base": "2026-09-14",
+    "phrase": "구제신청은 부당해고등이 있었던 날부터 3개월 이내에 하여야 한다",
+    "prec": true,
+    "prec_word": "부당해고 서면통지 구제신청"
+   },
+   {
+    "id": "A02",
+    "status": "need_date",
+    "deadline": "",
+    "days_left": 0,
+    "law": "상가건물 임대차보호법",
+    "asked": "제11조, 제10조, 제2조",
+    "cites": [
+     "제11조",
+     "제10조",
+     "제2조"
+    ],
+    "missing": [],
+    "base": "",
+    "phrase": "",
+    "prec": false,
+    "prec_word": "차임증액청구 증액상한 환산보증금"
+   }
+  ],
+  "model_calls": 2,
+  "written": 5,
+  "summary_reread": true
+ },
+ "usage": {
+  "steps": 7336,
+  "rows": 42,
+  "elapsed_ms": 51600,
+  "model": {
+   "requests": 2,
+   "measured_requests": 2,
+   "unmeasured_requests": 0,
+   "input": 21253,
+   "output": 4185,
+   "cache_read": 5747,
+   "cache_create": 15502,
+   "reasoning": 2147,
+   "calls": [
+    {
+     "call_id": "3f732c26430b4c57b4272e06934474af",
+     "parent_call_id": null,
+     "role": "oneshot:execution",
+     "phase": "execution",
+     "provider": "ClaudeCode",
+     "model": "opus",
+     "round_index": 1,
+     "tier": "고급",
+     "source": "gear:최대|실행→고급",
+     "measured": true,
+     "elapsed_ms": 36266,
+     "input": 7454,
+     "output": 3500,
+     "cache_read": 2985,
+     "cache_create": 4467,
+     "reasoning": 1674
+    },
+    {
+     "call_id": "56bed6aff1534cf59d9aef9dc498e911",
+     "parent_call_id": null,
+     "role": "oneshot:execution",
+     "phase": "execution",
+     "provider": "ClaudeCode",
+     "model": "opus",
+     "round_index": 1,
+     "tier": "고급",
+     "source": "gear:최대|실행→고급",
+     "measured": true,
+     "elapsed_ms": 7115,
+     "input": 13799,
+     "output": 685,
+     "cache_read": 2762,
+     "cache_create": 11035,
+     "reasoning": 473
+    }
+   ]
+  },
+  "limits": {
+   "steps": 100000,
+   "rows": 10000
+  }
+ },
+ "reuse": {
+  "_truncated": 8752,
+  "head": "{\"run_id\": \"f90aa4614ef4482694ca5f68777b0fb3\", \"reused_calls\": 0, \"candidates\": 9, \"skipped\": [{\"action\": \"self:read\", \"location\": {\"source_hash\": \"c7fb6cc3d6ff5ef6344685db7fb15c599dcb94fe06efad97ae50e20c4f0fab80\", \"start\": 2836, \"end\": 2872, \"line\": 58, \"column\": 11}, \"reason\": \"no_matching_receipt\", \"candidates\": [{\"receipt\": \"e15ceedce100d93ff66f9aa7e3665965104ba58181344764e3ae43c2230f30a3\", \"changed\": [\"semantics\"]}, {\"receipt\": \"3ea4993b04ff3068cc22976061a1b770496c7699295d3b6b6d3d24d6c91ac9a3\", \"changed\": [\"args\", \"semantics\"]}, {\"receipt\": \"5f1d3a3ceb9cd27368c1d5ba25c3837ae9de2dff32290ef06df3cd3525c708a9\", \"changed\": [\"args\", \"semantics\"]}, {\"receipt\": \"a51cf839188cdaded71ef3c5edae6f7bddadd61f4d029956fb384f0dd22bf4a4\", \"changed\": [\"args\", \"semantics\"]}, {\"receipt\": \"1d5bb3952e273f490eb70b17b6fe07bec6aff289536365acdbbfef79a2a30bad\", \"changed\": [\"args\", \"semantics\"]}], \"candidates_total\": 7}, {\"action\": \"self:list\", \"location\": {\"source_hash\": \"c7fb6cc3d6ff5ef6344685db7fb15c599dcb94fe06efad97ae50e20c4f0fab80\", \"start\": 2902, \"end\": 2951, \"line\": 60, \"column\": 10}, \"reason\": \"no_matching_receipt\", \"candidates\": [], \"candidates_total\": 0}, {\"action\": \"self:read\", \"location\": {\"source_hash\": \"c7fb6cc3d6ff5ef6344685db7fb15c599dcb94fe06efad97ae50e20c4f0fab80\", \"start\": 985, \"end\": 1024, \"line\": 28, \"column\": 15}, \"reason\": \"no_matching_receipt\", \"candidates\": [{\"receipt\": \"e15ceedce100d93ff66f9aa7e3665965104ba58181344764e3ae43c2230f30a3\", \"changed\": [\"args\", \"semantics\"]}, {\"receipt\": \"3ea4993b04ff3068cc22976061a1b770496c7699295d3b6b6d3d24d6c91ac9a3\", \"changed\": [\"semantics\"]}, {\"receipt\": \"5f1d3a3ceb9cd27368c1d5ba25c3837ae9de2dff32290ef06df3cd3525c708a9\", \"changed\": [\"args\", \"semantics\"]}, {\"receipt\": \"a51cf839188cdaded71ef3c5edae6f7bddadd61f4d029956fb384f0dd22bf4a4\", \"changed\": [\"args\", \"semantics\"]}, {\"receipt\": \"1d5bb3952e273f490eb70b17b6fe07bec6aff289536365acdbbfef79a2a30bad\", \"changed\": [\"args\", \"semantics\"]}], \"candidates_total\": 7}, {\"action\": \"self:read\", \"location\": {\"source_hash\": \"c7fb6cc3d6ff5ef6344685db7fb15c599dcb94fe06efad97ae50e20c4f0fab80\", \"start\": 985, \"end\": 1024, \"line\": 28, \"column\": 15}, \"reason\": \"no_matching_receipt\", \"candidates\": [{\"receipt\": \"e15ceedce100d93ff66f9aa7e3665965104ba58181344764e3ae43c2230f30a3\", \"changed\": [\"args\", \"semantics\"]}, {\"receipt\": \"3ea4993b04ff3068cc22976061a1b770496c7699295d3b6b6d3d24d6c91ac9a3\", \"changed\": [\"args\", \"semantics\"]}, {\"receipt\": \"5f1d3a3ceb9cd27368c1d5ba25c3837ae9de2dff32290ef06df3cd3525c70"
+ },
+ "continuation": {
+  "reuse_args": {
+   "reuse": {
+    "run_id": "cba9acd1e06e4eedb9406c124d528c15"
+   }
+  },
+  "read_calls": 7,
+  "model_calls": 2,
+  "state_change_possible": true,
+  "read_exclusions": [
+   {
+    "reason": "overlapping_write",
+    "write_call_id": "9c247f772afa4889472eac4963a18790ef29bf4b6af8947d3f74f363a9bcc358",
+    "action": "self:mkdir",
+    "location": {
+     "source_hash": "c7fb6cc3d6ff5ef6344685db7fb15c599dcb94fe06efad97ae50e20c4f0fab80",
+     "start": 11957,
+     "end": 11991,
+     "line": 212,
+     "column": 1
+    },
+    "excluded_calls": 22
+   }
+  ],
+  "read_exclusions_total": 1,
+  "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+ },
+ "warnings": null
+}

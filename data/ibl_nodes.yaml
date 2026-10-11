@@ -1350,12 +1350,14 @@ nodes:
           - precedent_id
         returns: items
         fixture: '[sense:legal]{query: "개인정보"}'
-        description: 대한민국 법률 통합 검색 (law.go.kr). query/id 분기, target 10종(법령/판례/규칙 등). 자세히 read_guide(query="법률").
+        shape_variants:
+          target=prec: '[sense:legal]{query: "임금", target: "prec"}'
+        description: 대한민국 법률 통합 검색 (law.go.kr). query(검색)→items 의 id 를 {id, target} 에 넣어 상세. 법령 상세는 조마다 한 행(no·text). 이름에 없으면 본문에서 찾고 search_scope 가 알린다. 못 찾은 번호는 실패(NOT_FOUND). 자세히 read_guide(query="법률").
         group: legal
-        target_description: query(검색어) 또는 id(상세). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(법률서식).
+        target_description: query(검색어) 또는 id(상세 — 검색 결과 items 의 id, 같은 target 과 함께). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(별표·서식 — 상세 없음, 행의 file_url). 검색 반환 = items[title·meta·url·date·id]+count·total(전체 건수, items 는 첫 쪽)·search_scope(name|body|name+body). 상세 반환 = items(법령은 조마다 no·title·text·date·chapter, 그 밖은 한 행)+원천 키(법령·PrecService 등).
         router: handler
         tool: legal_lookup
-        implementation: 국가법령정보센터 API 통합 — query면 /lawSearch.do, id면 /lawService.do. target 파라미터로 10종 영역 분기.
+        implementation: 국가법령정보센터 API 통합 — query면 /lawSearch.do(이름 0건이면 본문 재검색), id면 /lawService.do(target별 조회 인자·못 찾음은 실패). 응답 링크는 공개 주소로 바꾸고 사용자 식별값(OC)을 지운다.
         target_key: query
         keywords:
         - 법률
@@ -6603,6 +6605,8 @@ nodes:
         implementation: Python 문자열 치환으로 파일 부분 편집
         target_key: path
       copy:
+        write_resources:
+          file: dest
         params:
           dest: string
           src: string
@@ -6653,6 +6657,8 @@ nodes:
         implementation: shutil.move로 파일/폴더 이동/이름변경
         target_key: source
       delete:
+        write_resources:
+          file: path
         shell_shadow:
           heads:
           - rm
@@ -6671,6 +6677,8 @@ nodes:
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
       mkdir:
+        write_resources:
+          file: path
         lands_on: body
         limb_op:
           op: mkdir

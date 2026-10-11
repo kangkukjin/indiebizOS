@@ -1964,16 +1964,16 @@
   },
   "sense:legal": {
    "fields": {
-    "description": "30801ac35c0a",
-    "target_description": "0cb184ebcbcb",
-    "implementation": "4a25acbb0e96",
+    "description": "1e2c3da22287",
+    "target_description": "be509aa8c093",
+    "implementation": "33499f9a5ff0",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
     "aliases": "abb479403560",
     "router": "ebbb1532efbc",
     "tool": "18a5977bd4af"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-10-11",
    "examples": 23
   },
   "sense:listen": {

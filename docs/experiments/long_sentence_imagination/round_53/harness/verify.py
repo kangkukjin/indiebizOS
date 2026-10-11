@@ -102,6 +102,8 @@ def main():
             v = ibl(f'$d = [sense:legal]{{id:"{r["prec_id"]}",target:"prec"}}\nreturn get(get($d,"PrecService"),"사건번호")')
             if squash(str(v)) != squash(str(r.get('prec_case_no'))): bad.append([r['id'], r.get('prec_case_no'), v])
         add(f'붙인 판례 {len(rows)}건이 원천에 실재(재조회)', not bad, str(bad))
+    elif not notes['prec_attached']:
+        add('붙인 판례가 원천에 실재(재조회)', True, '붙인 판례 0건 — 재조회할 것이 없음')
     else:
         add('붙인 판례가 원천에 실재(재조회)', False, 'index 에 판례 식별값이 없어 재조회하지 못함 — 미검증'); checks[-1]['unverified'] = True
     dl = sorted([(  (dt.date.fromisoformat(e['deadline']) - consult).days, cid) for cid, e in exp['cases'].items() if e['kind'] == 'deadline'])

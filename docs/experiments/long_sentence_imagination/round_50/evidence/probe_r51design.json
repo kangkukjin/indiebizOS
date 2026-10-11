@@ -1,0 +1,8021 @@
+{
+ "code": "#!ibl edition=2\n$p=[fn:외부PC준비]{PC:\"맥12\",환경조회:false}\n[if:$p.ok==false] { return {ok:false,status:$p.status,detail:$p,now:[self:time]{}} }\n$s=[limbs:guestpc]{op:\"shell\",limb:$p.limb,cmd:\"date \\\"+%F %T\\\"; echo CLAM=$(ioreg -r -k AppleClamshellState -d 4 | grep AppleClamshellState | head -1 | awk \\\"{print \\\\$NF}\\\"); pmset -g batt | tail -1 | cut -c1-90; system_profiler SPDisplaysDataType | grep -E \\\"Resolution|Display Type|Online|Mirror|Main Display\\\" | sed \\\"s/^ *//\\\"; pmset -g | grep -E \\\" sleep|displaysleep|womp|lidwake|hibernatemode\\\"; pmset -g assertions | grep -E \\\"PreventUserIdleSystemSleep|PreventSystemSleep|UserIsActive\\\" | head -4; uptime; pmset -g therm | grep -i -E \\\"limit|speed\\\" | head -3; ioreg -c IOHIDSystem | grep HIDIdleTime | head -1 | awk \\\"{print \\\\$NF/1000000000}\\\"; pmset -g log | grep -E \\\" (Sleep|Wake|DarkWake) \\\" | grep -v Acks | tail -3 | cut -c1-110\",cwd:\"/tmp\",timeout:40,request_id:\"r51-design-state-2\"}\nreturn {ok:true,out:$s.result.output}",
+ "elapsed": 3.998,
+ "response": {
+  "success": true,
+  "value": {
+   "ok": true,
+   "out": "2026-10-11 00:46:28\nCLAM=Yes\n -InternalBattery-0 (id=9764963)\t100%; charged; 0:00 remaining present: true\nResolution: 1920 x 1080 (1080p FHD - Full High Definition)\nMain Display: Yes\nMirror: Off\nOnline: Yes\n womp                 1\n sleep                0\n hibernatemode        3\n displaysleep         10\n lidwake              1\n   UserIsActive                   0\n   PreventSystemSleep             0\n   PreventUserIdleSystemSleep     0\n 0:46  up 83 days,  4:01, 1 user, load averages: 0.69 0.61 0.58\n\tCPU_Scheduler_Limit \t= 100\n\tCPU_Speed_Limit \t= 100\n11894.9\n2026-10-10 21:34:57 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Char\n2026-10-10 21:34:58 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14490 wakeAt=2026-\n2026-10-10 21:36:33 +0900 Wake                \tWake from Safe Sleep [CDNVA] : due to RTC/UserActivity Assertio\n"
+  },
+  "value_wire": {
+   "protocol": "ibl-value/1",
+   "data": [
+    "record",
+    [
+     [
+      "ok",
+      [
+       "scalar",
+       true
+      ]
+     ],
+     [
+      "out",
+      [
+       "scalar",
+       "2026-10-11 00:46:28\nCLAM=Yes\n -InternalBattery-0 (id=9764963)\t100%; charged; 0:00 remaining present: true\nResolution: 1920 x 1080 (1080p FHD - Full High Definition)\nMain Display: Yes\nMirror: Off\nOnline: Yes\n womp                 1\n sleep                0\n hibernatemode        3\n displaysleep         10\n lidwake              1\n   UserIsActive                   0\n   PreventSystemSleep             0\n   PreventUserIdleSystemSleep     0\n 0:46  up 83 days,  4:01, 1 user, load averages: 0.69 0.61 0.58\n\tCPU_Scheduler_Limit \t= 100\n\tCPU_Speed_Limit \t= 100\n11894.9\n2026-10-10 21:34:57 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Char\n2026-10-10 21:34:58 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14490 wakeAt=2026-\n2026-10-10 21:36:33 +0900 Wake                \tWake from Safe Sleep [CDNVA] : due to RTC/UserActivity Assertio\n"
+      ]
+     ]
+    ]
+   ]
+  },
+  "edition": 2,
+  "executed": true,
+  "plan_hash": "385ea58c70e18bd49e69c8b83d9a815462dd0cc26fe36e18d1292db5e350fcfa",
+  "source_complete": true,
+  "evidence": [
+   {
+    "id": 1,
+    "node_id": "literal:34:39",
+    "invocation_id": 1,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 2,
+    "node_id": "literal:45:50",
+    "invocation_id": 2,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 3,
+    "node_id": "record:30:51",
+    "invocation_id": 3,
+    "kind": "record",
+    "parents": [
+     1,
+     2
+    ]
+   },
+   {
+    "id": 4,
+    "node_id": "ref:1036:1039",
+    "invocation_id": 4,
+    "kind": "ref",
+    "parents": [
+     3
+    ]
+   },
+   {
+    "id": 5,
+    "node_id": "builtin:1032:1035",
+    "invocation_id": 5,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 6,
+    "node_id": "pure_call:1032:1040",
+    "invocation_id": 6,
+    "kind": "pure_call",
+    "parents": [
+     4,
+     5
+    ]
+   },
+   {
+    "id": 7,
+    "node_id": "literal:1042:1043",
+    "invocation_id": 7,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 8,
+    "node_id": "binary:1032:1043",
+    "invocation_id": 8,
+    "kind": "binary",
+    "parents": [
+     6,
+     7
+    ]
+   },
+   {
+    "id": 9,
+    "node_id": "if:1028:1124",
+    "invocation_id": 9,
+    "kind": "if",
+    "parents": [
+     8
+    ]
+   },
+   {
+    "id": 10,
+    "node_id": "literal:1148:1154",
+    "invocation_id": 10,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 11,
+    "node_id": "record:1144:1155",
+    "invocation_id": 11,
+    "kind": "record",
+    "parents": [
+     10
+    ]
+   },
+   {
+    "id": 12,
+    "node_id": "call:1133:1155",
+    "invocation_id": 12,
+    "kind": "invoke",
+    "parents": [
+     11
+    ],
+    "action": "self:limb",
+    "effects": [
+     "read_external"
+    ],
+    "request_hash": "ba2e6f1cc06f8b394a330a5abb952bb09ec70ea477293a4db39b7070192232d2",
+    "targets": {
+     "op": "list"
+    }
+   },
+   {
+    "id": 13,
+    "node_id": "call:1133:1155",
+    "invocation_id": 13,
+    "kind": "tool_evidence",
+    "parents": [
+     12
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 14,
+    "node_id": "call:1133:1155",
+    "invocation_id": 14,
+    "kind": "call",
+    "parents": [
+     11,
+     12,
+     13
+    ]
+   },
+   {
+    "id": 15,
+    "node_id": "bind:1127:1155",
+    "invocation_id": 15,
+    "kind": "bind",
+    "parents": [
+     14
+    ]
+   },
+   {
+    "id": 16,
+    "node_id": "ref:1164:1167",
+    "invocation_id": 16,
+    "kind": "ref",
+    "parents": [
+     14
+    ]
+   },
+   {
+    "id": 17,
+    "node_id": "field:1164:1173",
+    "invocation_id": 17,
+    "kind": "field",
+    "parents": [
+     16
+    ]
+   },
+   {
+    "id": 18,
+    "node_id": "lambda:1198:1221",
+    "invocation_id": 18,
+    "kind": "lambda",
+    "parents": [
+     3
+    ]
+   },
+   {
+    "id": 19,
+    "node_id": "record:1191:1222",
+    "invocation_id": 19,
+    "kind": "record",
+    "parents": [
+     18
+    ]
+   },
+   {
+    "id": 20,
+    "node_id": "call:1177:1222",
+    "invocation_id": 20,
+    "kind": "invoke",
+    "parents": [
+     17,
+     19
+    ],
+    "action": "table:filter",
+    "effects": [
+     "pure"
+    ],
+    "request_hash": "18baf39a962eef9f43600ab21d69ca293d11910359925064449e152cb94eb1ff"
+   },
+   {
+    "id": 21,
+    "node_id": "ref:1204:1206",
+    "invocation_id": 21,
+    "kind": "ref",
+    "parents": [],
+    "evaluations": 15
+   },
+   {
+    "id": 22,
+    "node_id": "field:1204:1216",
+    "invocation_id": 22,
+    "kind": "field",
+    "parents": [
+     21
+    ],
+    "evaluations": 15
+   },
+   {
+    "id": 23,
+    "node_id": "ref:1218:1221",
+    "invocation_id": 23,
+    "kind": "ref",
+    "parents": [
+     3
+    ],
+    "evaluations": 15
+   },
+   {
+    "id": 24,
+    "node_id": "binary:1204:1221",
+    "invocation_id": 24,
+    "kind": "binary",
+    "parents": [
+     22,
+     23
+    ],
+    "evaluations": 15
+   },
+   {
+    "id": 25,
+    "node_id": "call:1177:1222",
+    "invocation_id": 25,
+    "kind": "call",
+    "parents": [
+     19,
+     20,
+     24
+    ]
+   },
+   {
+    "id": 26,
+    "node_id": "pipe:1164:1222",
+    "invocation_id": 26,
+    "kind": "pipe",
+    "parents": [
+     17,
+     25
+    ]
+   },
+   {
+    "id": 27,
+    "node_id": "bind:1158:1222",
+    "invocation_id": 27,
+    "kind": "bind",
+    "parents": [
+     26
+    ]
+   },
+   {
+    "id": 28,
+    "node_id": "ref:1233:1236",
+    "invocation_id": 28,
+    "kind": "ref",
+    "parents": [
+     26
+    ]
+   },
+   {
+    "id": 29,
+    "node_id": "builtin:1229:1232",
+    "invocation_id": 29,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 30,
+    "node_id": "pure_call:1229:1237",
+    "invocation_id": 30,
+    "kind": "pure_call",
+    "parents": [
+     28,
+     29
+    ]
+   },
+   {
+    "id": 31,
+    "node_id": "literal:1239:1240",
+    "invocation_id": 31,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 32,
+    "node_id": "binary:1229:1240",
+    "invocation_id": 32,
+    "kind": "binary",
+    "parents": [
+     30,
+     31
+    ]
+   },
+   {
+    "id": 33,
+    "node_id": "ref:1254:1257",
+    "invocation_id": 33,
+    "kind": "ref",
+    "parents": [
+     14,
+     32
+    ]
+   },
+   {
+    "id": 34,
+    "node_id": "field:1254:1263",
+    "invocation_id": 34,
+    "kind": "field",
+    "parents": [
+     32,
+     33
+    ]
+   },
+   {
+    "id": 35,
+    "node_id": "lambda:1288:1469",
+    "invocation_id": 35,
+    "kind": "lambda",
+    "parents": [
+     3,
+     32
+    ]
+   },
+   {
+    "id": 36,
+    "node_id": "record:1281:1470",
+    "invocation_id": 36,
+    "kind": "record",
+    "parents": [
+     32,
+     35
+    ]
+   },
+   {
+    "id": 37,
+    "node_id": "call:1267:1470",
+    "invocation_id": 37,
+    "kind": "invoke",
+    "parents": [
+     34,
+     36
+    ],
+    "action": "table:filter",
+    "effects": [
+     "pure"
+    ],
+    "request_hash": "749ff595bff39cb4f8f8a0f22ff6c6eff83b50d5b119c934a4cfd7e673ccbd42"
+   },
+   {
+    "id": 38,
+    "node_id": "ref:1294:1296",
+    "invocation_id": 38,
+    "kind": "ref",
+    "parents": [
+     32
+    ],
+    "evaluations": 15
+   },
+   {
+    "id": 39,
+    "node_id": "field:1294:1302",
+    "invocation_id": 39,
+    "kind": "field",
+    "parents": [
+     32,
+     38
+    ],
+    "evaluations": 15
+   },
+   {
+    "id": 40,
+    "node_id": "ref:1304:1307",
+    "invocation_id": 40,
+    "kind": "ref",
+    "parents": [
+     3,
+     32
+    ],
+    "evaluations": 15
+   },
+   {
+    "id": 41,
+    "node_id": "binary:1294:1307",
+    "invocation_id": 41,
+    "kind": "binary",
+    "parents": [
+     32,
+     39,
+     40
+    ],
+    "evaluations": 15
+   },
+   {
+    "id": 42,
+    "node_id": "binary:1294:1342",
+    "invocation_id": 42,
+    "kind": "binary",
+    "parents": [
+     32,
+     41
+    ],
+    "evaluations": 13
+   },
+   {
+    "id": 43,
+    "node_id": "binary:1294:1377",
+    "invocation_id": 43,
+    "kind": "binary",
+    "parents": [
+     32,
+     42
+    ],
+    "evaluations": 13
+   },
+   {
+    "id": 44,
+    "node_id": "binary:1294:1469",
+    "invocation_id": 44,
+    "kind": "binary",
+    "parents": [
+     32,
+     43
+    ],
+    "evaluations": 13
+   },
+   {
+    "id": 45,
+    "node_id": "ref:1316:1318",
+    "invocation_id": 45,
+    "kind": "ref",
+    "parents": [
+     32
+    ],
+    "evaluations": 2
+   },
+   {
+    "id": 46,
+    "node_id": "literal:1319:1328",
+    "invocation_id": 46,
+    "kind": "literal",
+    "parents": [
+     32
+    ],
+    "evaluations": 2
+   },
+   {
+    "id": 47,
+    "node_id": "literal:1329:1334",
+    "invocation_id": 47,
+    "kind": "literal",
+    "parents": [
+     32
+    ],
+    "evaluations": 2
+   },
+   {
+    "id": 48,
+    "node_id": "builtin:1312:1315",
+    "invocation_id": 48,
+    "kind": "builtin",
+    "parents": [
+     32
+    ],
+    "evaluations": 2
+   },
+   {
+    "id": 49,
+    "node_id": "pure_call:1312:1335",
+    "invocation_id": 49,
+    "kind": "pure_call",
+    "parents": [
+     32,
+     45,
+     46,
+     47,
+     48
+    ],
+    "evaluations": 2
+   },
+   {
+    "id": 50,
+    "node_id": "literal:1337:1342",
+    "invocation_id": 50,
+    "kind": "literal",
+    "parents": [
+     32
+    ],
+    "evaluations": 2
+   },
+   {
+    "id": 51,
+    "node_id": "binary:1312:1342",
+    "invocation_id": 51,
+    "kind": "binary",
+    "parents": [
+     32,
+     49,
+     50
+    ],
+    "evaluations": 2
+   },
+   {
+    "id": 52,
+    "node_id": "binary:1294:1342",
+    "invocation_id": 52,
+    "kind": "binary",
+    "parents": [
+     32,
+     41,
+     51
+    ],
+    "evaluations": 2
+   },
+   {
+    "id": 53,
+    "node_id": "binary:1294:1377",
+    "invocation_id": 53,
+    "kind": "binary",
+    "parents": [
+     32,
+     52
+    ]
+   },
+   {
+    "id": 54,
+    "node_id": "binary:1294:1469",
+    "invocation_id": 54,
+    "kind": "binary",
+    "parents": [
+     32,
+     53
+    ]
+   },
+   {
+    "id": 55,
+    "node_id": "ref:1351:1353",
+    "invocation_id": 55,
+    "kind": "ref",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 56,
+    "node_id": "literal:1354:1363",
+    "invocation_id": 56,
+    "kind": "literal",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 57,
+    "node_id": "literal:1364:1369",
+    "invocation_id": 57,
+    "kind": "literal",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 58,
+    "node_id": "builtin:1347:1350",
+    "invocation_id": 58,
+    "kind": "builtin",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 59,
+    "node_id": "pure_call:1347:1370",
+    "invocation_id": 59,
+    "kind": "pure_call",
+    "parents": [
+     32,
+     55,
+     56,
+     57,
+     58
+    ]
+   },
+   {
+    "id": 60,
+    "node_id": "literal:1372:1377",
+    "invocation_id": 60,
+    "kind": "literal",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 61,
+    "node_id": "binary:1347:1377",
+    "invocation_id": 61,
+    "kind": "binary",
+    "parents": [
+     32,
+     59,
+     60
+    ]
+   },
+   {
+    "id": 62,
+    "node_id": "binary:1294:1377",
+    "invocation_id": 62,
+    "kind": "binary",
+    "parents": [
+     32,
+     52,
+     61
+    ]
+   },
+   {
+    "id": 63,
+    "node_id": "ref:1387:1389",
+    "invocation_id": 63,
+    "kind": "ref",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 64,
+    "node_id": "literal:1390:1404",
+    "invocation_id": 64,
+    "kind": "literal",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 65,
+    "node_id": "literal:1405:1409",
+    "invocation_id": 65,
+    "kind": "literal",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 66,
+    "node_id": "builtin:1383:1386",
+    "invocation_id": 66,
+    "kind": "builtin",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 67,
+    "node_id": "pure_call:1383:1410",
+    "invocation_id": 67,
+    "kind": "pure_call",
+    "parents": [
+     32,
+     63,
+     64,
+     65,
+     66
+    ]
+   },
+   {
+    "id": 68,
+    "node_id": "literal:1412:1416",
+    "invocation_id": 68,
+    "kind": "literal",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 69,
+    "node_id": "binary:1383:1416",
+    "invocation_id": 69,
+    "kind": "binary",
+    "parents": [
+     32,
+     67,
+     68
+    ]
+   },
+   {
+    "id": 70,
+    "node_id": "ref:1424:1426",
+    "invocation_id": 70,
+    "kind": "ref",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 71,
+    "node_id": "field:1424:1439",
+    "invocation_id": 71,
+    "kind": "field",
+    "parents": [
+     32,
+     70
+    ]
+   },
+   {
+    "id": 72,
+    "node_id": "literal:1440:1447",
+    "invocation_id": 72,
+    "kind": "literal",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 73,
+    "node_id": "literal:1448:1456",
+    "invocation_id": 73,
+    "kind": "literal",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 74,
+    "node_id": "builtin:1420:1423",
+    "invocation_id": 74,
+    "kind": "builtin",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 75,
+    "node_id": "pure_call:1420:1457",
+    "invocation_id": 75,
+    "kind": "pure_call",
+    "parents": [
+     32,
+     71,
+     72,
+     73,
+     74
+    ]
+   },
+   {
+    "id": 76,
+    "node_id": "literal:1459:1468",
+    "invocation_id": 76,
+    "kind": "literal",
+    "parents": [
+     32
+    ]
+   },
+   {
+    "id": 77,
+    "node_id": "binary:1420:1468",
+    "invocation_id": 77,
+    "kind": "binary",
+    "parents": [
+     32,
+     75,
+     76
+    ]
+   },
+   {
+    "id": 78,
+    "node_id": "binary:1383:1468",
+    "invocation_id": 78,
+    "kind": "binary",
+    "parents": [
+     32,
+     69,
+     77
+    ]
+   },
+   {
+    "id": 79,
+    "node_id": "binary:1294:1469",
+    "invocation_id": 79,
+    "kind": "binary",
+    "parents": [
+     32,
+     62,
+     78
+    ]
+   },
+   {
+    "id": 80,
+    "node_id": "call:1267:1470",
+    "invocation_id": 80,
+    "kind": "call",
+    "parents": [
+     32,
+     36,
+     37,
+     44,
+     54,
+     79
+    ]
+   },
+   {
+    "id": 81,
+    "node_id": "pipe:1254:1470",
+    "invocation_id": 81,
+    "kind": "pipe",
+    "parents": [
+     32,
+     34,
+     80
+    ]
+   },
+   {
+    "id": 82,
+    "node_id": "bind:1248:1470",
+    "invocation_id": 82,
+    "kind": "bind",
+    "parents": [
+     32,
+     81
+    ]
+   },
+   {
+    "id": 83,
+    "node_id": "sequence:1243:1471",
+    "invocation_id": 83,
+    "kind": "sequence",
+    "parents": [
+     32,
+     82
+    ]
+   },
+   {
+    "id": 84,
+    "node_id": "if:1225:1474",
+    "invocation_id": 84,
+    "kind": "if",
+    "parents": [
+     32,
+     83
+    ]
+   },
+   {
+    "id": 85,
+    "node_id": "ref:1485:1488",
+    "invocation_id": 85,
+    "kind": "ref",
+    "parents": [
+     81
+    ]
+   },
+   {
+    "id": 86,
+    "node_id": "builtin:1481:1484",
+    "invocation_id": 86,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 87,
+    "node_id": "pure_call:1481:1489",
+    "invocation_id": 87,
+    "kind": "pure_call",
+    "parents": [
+     85,
+     86
+    ]
+   },
+   {
+    "id": 88,
+    "node_id": "literal:1491:1492",
+    "invocation_id": 88,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 89,
+    "node_id": "binary:1481:1492",
+    "invocation_id": 89,
+    "kind": "binary",
+    "parents": [
+     87,
+     88
+    ]
+   },
+   {
+    "id": 90,
+    "node_id": "if:1477:1575",
+    "invocation_id": 90,
+    "kind": "if",
+    "parents": [
+     89
+    ]
+   },
+   {
+    "id": 91,
+    "node_id": "ref:1584:1587",
+    "invocation_id": 91,
+    "kind": "ref",
+    "parents": [
+     81
+    ]
+   },
+   {
+    "id": 92,
+    "node_id": "literal:1588:1589",
+    "invocation_id": 92,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 93,
+    "node_id": "index:1584:1590",
+    "invocation_id": 93,
+    "kind": "index",
+    "parents": [
+     91,
+     92
+    ]
+   },
+   {
+    "id": 94,
+    "node_id": "bind:1578:1590",
+    "invocation_id": 94,
+    "kind": "bind",
+    "parents": [
+     93
+    ]
+   },
+   {
+    "id": 95,
+    "node_id": "ref:1603:1606",
+    "invocation_id": 95,
+    "kind": "ref",
+    "parents": [
+     93
+    ]
+   },
+   {
+    "id": 96,
+    "node_id": "literal:1607:1621",
+    "invocation_id": 96,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 97,
+    "node_id": "record:1622:1624",
+    "invocation_id": 97,
+    "kind": "record",
+    "parents": []
+   },
+   {
+    "id": 98,
+    "node_id": "builtin:1599:1602",
+    "invocation_id": 98,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 99,
+    "node_id": "pure_call:1599:1625",
+    "invocation_id": 99,
+    "kind": "pure_call",
+    "parents": [
+     95,
+     96,
+     97,
+     98
+    ]
+   },
+   {
+    "id": 100,
+    "node_id": "bind:1593:1625",
+    "invocation_id": 100,
+    "kind": "bind",
+    "parents": [
+     99
+    ]
+   },
+   {
+    "id": 101,
+    "node_id": "ref:1632:1635",
+    "invocation_id": 101,
+    "kind": "ref",
+    "parents": [
+     99
+    ]
+   },
+   {
+    "id": 102,
+    "node_id": "literal:1637:1641",
+    "invocation_id": 102,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 103,
+    "node_id": "binary:1632:1641",
+    "invocation_id": 103,
+    "kind": "binary",
+    "parents": [
+     101,
+     102
+    ]
+   },
+   {
+    "id": 104,
+    "node_id": "if:1628:1655",
+    "invocation_id": 104,
+    "kind": "if",
+    "parents": [
+     103
+    ]
+   },
+   {
+    "id": 105,
+    "node_id": "literal:1664:1674",
+    "invocation_id": 105,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 106,
+    "node_id": "bind:1658:1674",
+    "invocation_id": 106,
+    "kind": "bind",
+    "parents": [
+     105
+    ]
+   },
+   {
+    "id": 107,
+    "node_id": "ref:1685:1688",
+    "invocation_id": 107,
+    "kind": "ref",
+    "parents": [
+     99
+    ]
+   },
+   {
+    "id": 108,
+    "node_id": "builtin:1681:1684",
+    "invocation_id": 108,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 109,
+    "node_id": "pure_call:1681:1689",
+    "invocation_id": 109,
+    "kind": "pure_call",
+    "parents": [
+     107,
+     108
+    ]
+   },
+   {
+    "id": 110,
+    "node_id": "literal:1690:1691",
+    "invocation_id": 110,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 111,
+    "node_id": "binary:1681:1691",
+    "invocation_id": 111,
+    "kind": "binary",
+    "parents": [
+     109,
+     110
+    ]
+   },
+   {
+    "id": 112,
+    "node_id": "literal:1701:1711",
+    "invocation_id": 112,
+    "kind": "literal",
+    "parents": [
+     111
+    ]
+   },
+   {
+    "id": 113,
+    "node_id": "bind:1695:1711",
+    "invocation_id": 113,
+    "kind": "bind",
+    "parents": [
+     111,
+     112
+    ]
+   },
+   {
+    "id": 114,
+    "node_id": "sequence:1695:1711",
+    "invocation_id": 114,
+    "kind": "sequence",
+    "parents": [
+     111,
+     113
+    ]
+   },
+   {
+    "id": 115,
+    "node_id": "if:1677:1713",
+    "invocation_id": 115,
+    "kind": "if",
+    "parents": [
+     111,
+     114
+    ]
+   },
+   {
+    "id": 116,
+    "node_id": "ref:1728:1731",
+    "invocation_id": 116,
+    "kind": "ref",
+    "parents": [
+     93
+    ]
+   },
+   {
+    "id": 117,
+    "node_id": "field:1728:1741",
+    "invocation_id": 117,
+    "kind": "field",
+    "parents": [
+     116
+    ]
+   },
+   {
+    "id": 118,
+    "node_id": "ref:1752:1755",
+    "invocation_id": 118,
+    "kind": "ref",
+    "parents": [
+     93
+    ]
+   },
+   {
+    "id": 119,
+    "node_id": "field:1752:1761",
+    "invocation_id": 119,
+    "kind": "field",
+    "parents": [
+     118
+    ]
+   },
+   {
+    "id": 120,
+    "node_id": "ref:1774:1777",
+    "invocation_id": 120,
+    "kind": "ref",
+    "parents": [
+     112
+    ]
+   },
+   {
+    "id": 121,
+    "node_id": "ref:1791:1794",
+    "invocation_id": 121,
+    "kind": "ref",
+    "parents": [
+     99
+    ]
+   },
+   {
+    "id": 122,
+    "node_id": "ref:1803:1806",
+    "invocation_id": 122,
+    "kind": "ref",
+    "parents": [
+     93
+    ]
+   },
+   {
+    "id": 123,
+    "node_id": "literal:1807:1812",
+    "invocation_id": 123,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 124,
+    "node_id": "record:1813:1815",
+    "invocation_id": 124,
+    "kind": "record",
+    "parents": []
+   },
+   {
+    "id": 125,
+    "node_id": "builtin:1799:1802",
+    "invocation_id": 125,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 126,
+    "node_id": "pure_call:1799:1816",
+    "invocation_id": 126,
+    "kind": "pure_call",
+    "parents": [
+     122,
+     123,
+     124,
+     125
+    ]
+   },
+   {
+    "id": 127,
+    "node_id": "record:1722:1817",
+    "invocation_id": 127,
+    "kind": "record",
+    "parents": [
+     117,
+     119,
+     120,
+     121,
+     126
+    ]
+   },
+   {
+    "id": 128,
+    "node_id": "bind:1716:1817",
+    "invocation_id": 128,
+    "kind": "bind",
+    "parents": [
+     127
+    ]
+   },
+   {
+    "id": 129,
+    "node_id": "ref:1828:1831",
+    "invocation_id": 129,
+    "kind": "ref",
+    "parents": [
+     93
+    ]
+   },
+   {
+    "id": 130,
+    "node_id": "literal:1832:1841",
+    "invocation_id": 130,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 131,
+    "node_id": "literal:1842:1847",
+    "invocation_id": 131,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 132,
+    "node_id": "builtin:1824:1827",
+    "invocation_id": 132,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 133,
+    "node_id": "pure_call:1824:1848",
+    "invocation_id": 133,
+    "kind": "pure_call",
+    "parents": [
+     129,
+     130,
+     131,
+     132
+    ]
+   },
+   {
+    "id": 134,
+    "node_id": "ref:1856:1859",
+    "invocation_id": 134,
+    "kind": "ref",
+    "parents": [
+     93
+    ]
+   },
+   {
+    "id": 135,
+    "node_id": "literal:1860:1869",
+    "invocation_id": 135,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 136,
+    "node_id": "literal:1870:1875",
+    "invocation_id": 136,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 137,
+    "node_id": "builtin:1852:1855",
+    "invocation_id": 137,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 138,
+    "node_id": "pure_call:1852:1876",
+    "invocation_id": 138,
+    "kind": "pure_call",
+    "parents": [
+     134,
+     135,
+     136,
+     137
+    ]
+   },
+   {
+    "id": 139,
+    "node_id": "binary:1824:1876",
+    "invocation_id": 139,
+    "kind": "binary",
+    "parents": [
+     133,
+     138
+    ]
+   },
+   {
+    "id": 140,
+    "node_id": "ref:1884:1887",
+    "invocation_id": 140,
+    "kind": "ref",
+    "parents": [
+     99
+    ]
+   },
+   {
+    "id": 141,
+    "node_id": "literal:1888:1895",
+    "invocation_id": 141,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 142,
+    "node_id": "literal:1896:1904",
+    "invocation_id": 142,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 143,
+    "node_id": "builtin:1880:1883",
+    "invocation_id": 143,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 144,
+    "node_id": "pure_call:1880:1905",
+    "invocation_id": 144,
+    "kind": "pure_call",
+    "parents": [
+     140,
+     141,
+     142,
+     143
+    ]
+   },
+   {
+    "id": 145,
+    "node_id": "literal:1907:1915",
+    "invocation_id": 145,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 146,
+    "node_id": "binary:1880:1915",
+    "invocation_id": 146,
+    "kind": "binary",
+    "parents": [
+     144,
+     145
+    ]
+   },
+   {
+    "id": 147,
+    "node_id": "binary:1824:1915",
+    "invocation_id": 147,
+    "kind": "binary",
+    "parents": [
+     139,
+     146
+    ]
+   },
+   {
+    "id": 148,
+    "node_id": "if:1820:1996",
+    "invocation_id": 148,
+    "kind": "if",
+    "parents": [
+     147
+    ]
+   },
+   {
+    "id": 149,
+    "node_id": "ref:2007:2010",
+    "invocation_id": 149,
+    "kind": "ref",
+    "parents": [
+     99
+    ]
+   },
+   {
+    "id": 150,
+    "node_id": "literal:2011:2019",
+    "invocation_id": 150,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 151,
+    "node_id": "literal:2020:2025",
+    "invocation_id": 151,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 152,
+    "node_id": "builtin:2003:2006",
+    "invocation_id": 152,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 153,
+    "node_id": "pure_call:2003:2026",
+    "invocation_id": 153,
+    "kind": "pure_call",
+    "parents": [
+     149,
+     150,
+     151,
+     152
+    ]
+   },
+   {
+    "id": 154,
+    "node_id": "if:1999:2102",
+    "invocation_id": 154,
+    "kind": "if",
+    "parents": [
+     153
+    ]
+   },
+   {
+    "id": 155,
+    "node_id": "ref:2113:2116",
+    "invocation_id": 155,
+    "kind": "ref",
+    "parents": [
+     93
+    ]
+   },
+   {
+    "id": 156,
+    "node_id": "literal:2117:2128",
+    "invocation_id": 156,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 157,
+    "node_id": "literal:2129:2134",
+    "invocation_id": 157,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 158,
+    "node_id": "builtin:2109:2112",
+    "invocation_id": 158,
+    "kind": "builtin",
+    "parents": []
+   },
+   {
+    "id": 159,
+    "node_id": "pure_call:2109:2135",
+    "invocation_id": 159,
+    "kind": "pure_call",
+    "parents": [
+     155,
+     156,
+     157,
+     158
+    ]
+   },
+   {
+    "id": 160,
+    "node_id": "literal:2137:2142",
+    "invocation_id": 160,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 161,
+    "node_id": "binary:2109:2142",
+    "invocation_id": 161,
+    "kind": "binary",
+    "parents": [
+     159,
+     160
+    ]
+   },
+   {
+    "id": 162,
+    "node_id": "if:2105:2247",
+    "invocation_id": 162,
+    "kind": "if",
+    "parents": [
+     161
+    ]
+   },
+   {
+    "id": 163,
+    "node_id": "ref:2254:2259",
+    "invocation_id": 163,
+    "kind": "ref",
+    "parents": [
+     3
+    ]
+   },
+   {
+    "id": 164,
+    "node_id": "literal:2261:2266",
+    "invocation_id": 164,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 165,
+    "node_id": "binary:2254:2266",
+    "invocation_id": 165,
+    "kind": "binary",
+    "parents": [
+     163,
+     164
+    ]
+   },
+   {
+    "id": 166,
+    "node_id": "ref:2280:2283",
+    "invocation_id": 166,
+    "kind": "ref",
+    "parents": [
+     127,
+     165
+    ]
+   },
+   {
+    "id": 167,
+    "node_id": "literal:2287:2291",
+    "invocation_id": 167,
+    "kind": "literal",
+    "parents": [
+     165
+    ]
+   },
+   {
+    "id": 168,
+    "node_id": "literal:2299:2310",
+    "invocation_id": 168,
+    "kind": "literal",
+    "parents": [
+     165
+    ]
+   },
+   {
+    "id": 169,
+    "node_id": "record:2277:2311",
+    "invocation_id": 169,
+    "kind": "record",
+    "parents": [
+     165,
+     166,
+     167,
+     168
+    ]
+   },
+   {
+    "id": 170,
+    "node_id": "call:19:51",
+    "invocation_id": 170,
+    "kind": "function_result",
+    "parents": [
+     3,
+     9,
+     15,
+     27,
+     84,
+     90,
+     94,
+     100,
+     104,
+     106,
+     115,
+     128,
+     148,
+     154,
+     162,
+     165,
+     169
+    ],
+    "name": "외부PC준비",
+    "definition_start": 995,
+    "success": true,
+    "returns_kind": "record",
+    "returns_keys": [
+     "limb",
+     "limb_name",
+     "helper_mode",
+     "registration",
+     "env",
+     "ok",
+     "status"
+    ]
+   },
+   {
+    "id": 171,
+    "node_id": "call:19:51",
+    "invocation_id": 171,
+    "kind": "call",
+    "parents": [
+     3,
+     9,
+     15,
+     27,
+     84,
+     90,
+     94,
+     100,
+     104,
+     106,
+     115,
+     128,
+     148,
+     154,
+     162,
+     165,
+     169,
+     170
+    ]
+   },
+   {
+    "id": 172,
+    "node_id": "bind:16:51",
+    "invocation_id": 172,
+    "kind": "bind",
+    "parents": [
+     171
+    ]
+   },
+   {
+    "id": 173,
+    "node_id": "ref:56:58",
+    "invocation_id": 173,
+    "kind": "ref",
+    "parents": [
+     171
+    ]
+   },
+   {
+    "id": 174,
+    "node_id": "field:56:61",
+    "invocation_id": 174,
+    "kind": "field",
+    "parents": [
+     173
+    ]
+   },
+   {
+    "id": 175,
+    "node_id": "literal:63:68",
+    "invocation_id": 175,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 176,
+    "node_id": "binary:56:68",
+    "invocation_id": 176,
+    "kind": "binary",
+    "parents": [
+     174,
+     175
+    ]
+   },
+   {
+    "id": 177,
+    "node_id": "if:52:136",
+    "invocation_id": 177,
+    "kind": "if",
+    "parents": [
+     176
+    ]
+   },
+   {
+    "id": 178,
+    "node_id": "literal:159:166",
+    "invocation_id": 178,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 179,
+    "node_id": "ref:172:174",
+    "invocation_id": 179,
+    "kind": "ref",
+    "parents": [
+     171
+    ]
+   },
+   {
+    "id": 180,
+    "node_id": "field:172:179",
+    "invocation_id": 180,
+    "kind": "field",
+    "parents": [
+     179
+    ]
+   },
+   {
+    "id": 181,
+    "node_id": "literal:184:885",
+    "invocation_id": 181,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 182,
+    "node_id": "literal:890:896",
+    "invocation_id": 182,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 183,
+    "node_id": "literal:905:907",
+    "invocation_id": 183,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 184,
+    "node_id": "literal:919:939",
+    "invocation_id": 184,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 185,
+    "node_id": "record:155:940",
+    "invocation_id": 185,
+    "kind": "record",
+    "parents": [
+     178,
+     180,
+     181,
+     182,
+     183,
+     184
+    ]
+   },
+   {
+    "id": 186,
+    "node_id": "call:140:940",
+    "invocation_id": 186,
+    "kind": "invoke",
+    "parents": [
+     185
+    ],
+    "action": "limbs:guestpc",
+    "effects": [
+     "write_external"
+    ],
+    "request_hash": "047b1484a77d54403fe7748db61282b65f0747d84d43131e1542946a305aa951",
+    "targets": {
+     "op": "shell",
+     "limb": "guestpc-7a440e9daf61",
+     "cwd": "/tmp",
+     "request_id": "r51-design-state-2"
+    }
+   },
+   {
+    "id": 187,
+    "node_id": "call:140:940",
+    "invocation_id": 187,
+    "kind": "tool_evidence",
+    "parents": [
+     186
+    ],
+    "markers": {},
+    "attachments": {}
+   },
+   {
+    "id": 188,
+    "node_id": "call:140:940",
+    "invocation_id": 188,
+    "kind": "call",
+    "parents": [
+     185,
+     186,
+     187
+    ]
+   },
+   {
+    "id": 189,
+    "node_id": "bind:137:940",
+    "invocation_id": 189,
+    "kind": "bind",
+    "parents": [
+     188
+    ]
+   },
+   {
+    "id": 190,
+    "node_id": "literal:952:956",
+    "invocation_id": 190,
+    "kind": "literal",
+    "parents": []
+   },
+   {
+    "id": 191,
+    "node_id": "ref:961:963",
+    "invocation_id": 191,
+    "kind": "ref",
+    "parents": [
+     188
+    ]
+   },
+   {
+    "id": 192,
+    "node_id": "field:961:970",
+    "invocation_id": 192,
+    "kind": "field",
+    "parents": [
+     191
+    ]
+   },
+   {
+    "id": 193,
+    "node_id": "field:961:977",
+    "invocation_id": 193,
+    "kind": "field",
+    "parents": [
+     192
+    ]
+   },
+   {
+    "id": 194,
+    "node_id": "record:948:978",
+    "invocation_id": 194,
+    "kind": "record",
+    "parents": [
+     190,
+     193
+    ]
+   }
+  ],
+  "source_map": {
+   "sequence:15:978": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 15,
+    "end": 978,
+    "line": 1,
+    "column": 16
+   },
+   "bind:16:51": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 16,
+    "end": 51,
+    "line": 2,
+    "column": 1
+   },
+   "call:19:51": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 19,
+    "end": 51,
+    "line": 2,
+    "column": 4
+   },
+   "record:30:51": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 30,
+    "end": 51,
+    "line": 2,
+    "column": 15
+   },
+   "literal:34:39": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 34,
+    "end": 39,
+    "line": 2,
+    "column": 19
+   },
+   "literal:45:50": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 45,
+    "end": 50,
+    "line": 2,
+    "column": 30
+   },
+   "sequence:1025:2529": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1025,
+    "end": 2529,
+    "line": 7,
+    "column": 31
+   },
+   "if:1028:1124": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1028,
+    "end": 1124,
+    "line": 8,
+    "column": 3
+   },
+   "binary:1032:1043": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1032,
+    "end": 1043,
+    "line": 8,
+    "column": 7
+   },
+   "pure_call:1032:1040": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1032,
+    "end": 1040,
+    "line": 8,
+    "column": 7
+   },
+   "ref:1036:1039": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1036,
+    "end": 1039,
+    "line": 8,
+    "column": 11
+   },
+   "builtin:1032:1035": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1032,
+    "end": 1035,
+    "line": 8,
+    "column": 7
+   },
+   "literal:1042:1043": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1042,
+    "end": 1043,
+    "line": 8,
+    "column": 17
+   },
+   "bind:1127:1155": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1127,
+    "end": 1155,
+    "line": 9,
+    "column": 3
+   },
+   "call:1133:1155": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1133,
+    "end": 1155,
+    "line": 9,
+    "column": 9
+   },
+   "record:1144:1155": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1144,
+    "end": 1155,
+    "line": 9,
+    "column": 20
+   },
+   "literal:1148:1154": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1148,
+    "end": 1154,
+    "line": 9,
+    "column": 24
+   },
+   "bind:1158:1222": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1158,
+    "end": 1222,
+    "line": 10,
+    "column": 3
+   },
+   "pipe:1164:1222": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1164,
+    "end": 1222,
+    "line": 10,
+    "column": 9
+   },
+   "field:1164:1173": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1164,
+    "end": 1173,
+    "line": 10,
+    "column": 9
+   },
+   "ref:1164:1167": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1164,
+    "end": 1167,
+    "line": 10,
+    "column": 9
+   },
+   "call:1177:1222": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1177,
+    "end": 1222,
+    "line": 10,
+    "column": 22
+   },
+   "record:1191:1222": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1191,
+    "end": 1222,
+    "line": 10,
+    "column": 36
+   },
+   "lambda:1198:1221": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1198,
+    "end": 1221,
+    "line": 10,
+    "column": 43
+   },
+   "binary:1204:1221": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1204,
+    "end": 1221,
+    "line": 10,
+    "column": 49
+   },
+   "field:1204:1216": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1204,
+    "end": 1216,
+    "line": 10,
+    "column": 49
+   },
+   "ref:1204:1206": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1204,
+    "end": 1206,
+    "line": 10,
+    "column": 49
+   },
+   "ref:1218:1221": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1218,
+    "end": 1221,
+    "line": 10,
+    "column": 63
+   },
+   "if:1225:1474": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1225,
+    "end": 1474,
+    "line": 11,
+    "column": 3
+   },
+   "binary:1229:1240": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1229,
+    "end": 1240,
+    "line": 11,
+    "column": 7
+   },
+   "pure_call:1229:1237": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1229,
+    "end": 1237,
+    "line": 11,
+    "column": 7
+   },
+   "ref:1233:1236": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1233,
+    "end": 1236,
+    "line": 11,
+    "column": 11
+   },
+   "builtin:1229:1232": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1229,
+    "end": 1232,
+    "line": 11,
+    "column": 7
+   },
+   "literal:1239:1240": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1239,
+    "end": 1240,
+    "line": 11,
+    "column": 17
+   },
+   "sequence:1243:1471": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1243,
+    "end": 1471,
+    "line": 11,
+    "column": 21
+   },
+   "bind:1248:1470": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1248,
+    "end": 1470,
+    "line": 12,
+    "column": 5
+   },
+   "pipe:1254:1470": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1254,
+    "end": 1470,
+    "line": 12,
+    "column": 11
+   },
+   "field:1254:1263": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1254,
+    "end": 1263,
+    "line": 12,
+    "column": 11
+   },
+   "ref:1254:1257": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1254,
+    "end": 1257,
+    "line": 12,
+    "column": 11
+   },
+   "call:1267:1470": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1267,
+    "end": 1470,
+    "line": 12,
+    "column": 24
+   },
+   "record:1281:1470": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1281,
+    "end": 1470,
+    "line": 12,
+    "column": 38
+   },
+   "lambda:1288:1469": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1288,
+    "end": 1469,
+    "line": 12,
+    "column": 45
+   },
+   "binary:1294:1469": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1294,
+    "end": 1469,
+    "line": 12,
+    "column": 51
+   },
+   "binary:1294:1377": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1294,
+    "end": 1377,
+    "line": 12,
+    "column": 51
+   },
+   "binary:1294:1342": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1294,
+    "end": 1342,
+    "line": 12,
+    "column": 51
+   },
+   "binary:1294:1307": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1294,
+    "end": 1307,
+    "line": 12,
+    "column": 51
+   },
+   "field:1294:1302": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1294,
+    "end": 1302,
+    "line": 12,
+    "column": 51
+   },
+   "ref:1294:1296": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1294,
+    "end": 1296,
+    "line": 12,
+    "column": 51
+   },
+   "ref:1304:1307": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1304,
+    "end": 1307,
+    "line": 12,
+    "column": 61
+   },
+   "binary:1312:1342": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1312,
+    "end": 1342,
+    "line": 12,
+    "column": 69
+   },
+   "pure_call:1312:1335": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1312,
+    "end": 1335,
+    "line": 12,
+    "column": 69
+   },
+   "ref:1316:1318": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1316,
+    "end": 1318,
+    "line": 12,
+    "column": 73
+   },
+   "literal:1319:1328": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1319,
+    "end": 1328,
+    "line": 12,
+    "column": 76
+   },
+   "literal:1329:1334": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1329,
+    "end": 1334,
+    "line": 12,
+    "column": 86
+   },
+   "builtin:1312:1315": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1312,
+    "end": 1315,
+    "line": 12,
+    "column": 69
+   },
+   "literal:1337:1342": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1337,
+    "end": 1342,
+    "line": 12,
+    "column": 94
+   },
+   "binary:1347:1377": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1347,
+    "end": 1377,
+    "line": 12,
+    "column": 104
+   },
+   "pure_call:1347:1370": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1347,
+    "end": 1370,
+    "line": 12,
+    "column": 104
+   },
+   "ref:1351:1353": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1351,
+    "end": 1353,
+    "line": 12,
+    "column": 108
+   },
+   "literal:1354:1363": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1354,
+    "end": 1363,
+    "line": 12,
+    "column": 111
+   },
+   "literal:1364:1369": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1364,
+    "end": 1369,
+    "line": 12,
+    "column": 121
+   },
+   "builtin:1347:1350": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1347,
+    "end": 1350,
+    "line": 12,
+    "column": 104
+   },
+   "literal:1372:1377": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1372,
+    "end": 1377,
+    "line": 12,
+    "column": 129
+   },
+   "binary:1383:1468": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1383,
+    "end": 1468,
+    "line": 12,
+    "column": 140
+   },
+   "binary:1383:1416": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1383,
+    "end": 1416,
+    "line": 12,
+    "column": 140
+   },
+   "pure_call:1383:1410": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1383,
+    "end": 1410,
+    "line": 12,
+    "column": 140
+   },
+   "ref:1387:1389": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1387,
+    "end": 1389,
+    "line": 12,
+    "column": 144
+   },
+   "literal:1390:1404": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1390,
+    "end": 1404,
+    "line": 12,
+    "column": 147
+   },
+   "literal:1405:1409": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1405,
+    "end": 1409,
+    "line": 12,
+    "column": 162
+   },
+   "builtin:1383:1386": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1383,
+    "end": 1386,
+    "line": 12,
+    "column": 140
+   },
+   "literal:1412:1416": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1412,
+    "end": 1416,
+    "line": 12,
+    "column": 169
+   },
+   "binary:1420:1468": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1420,
+    "end": 1468,
+    "line": 12,
+    "column": 177
+   },
+   "pure_call:1420:1457": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1420,
+    "end": 1457,
+    "line": 12,
+    "column": 177
+   },
+   "field:1424:1439": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1424,
+    "end": 1439,
+    "line": 12,
+    "column": 181
+   },
+   "ref:1424:1426": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1424,
+    "end": 1426,
+    "line": 12,
+    "column": 181
+   },
+   "literal:1440:1447": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1440,
+    "end": 1447,
+    "line": 12,
+    "column": 197
+   },
+   "literal:1448:1456": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1448,
+    "end": 1456,
+    "line": 12,
+    "column": 205
+   },
+   "builtin:1420:1423": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1420,
+    "end": 1423,
+    "line": 12,
+    "column": 177
+   },
+   "literal:1459:1468": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1459,
+    "end": 1468,
+    "line": 12,
+    "column": 216
+   },
+   "if:1477:1575": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1477,
+    "end": 1575,
+    "line": 14,
+    "column": 3
+   },
+   "binary:1481:1492": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1481,
+    "end": 1492,
+    "line": 14,
+    "column": 7
+   },
+   "pure_call:1481:1489": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1481,
+    "end": 1489,
+    "line": 14,
+    "column": 7
+   },
+   "ref:1485:1488": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1485,
+    "end": 1488,
+    "line": 14,
+    "column": 11
+   },
+   "builtin:1481:1484": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1481,
+    "end": 1484,
+    "line": 14,
+    "column": 7
+   },
+   "literal:1491:1492": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1491,
+    "end": 1492,
+    "line": 14,
+    "column": 17
+   },
+   "bind:1578:1590": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1578,
+    "end": 1590,
+    "line": 15,
+    "column": 3
+   },
+   "index:1584:1590": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1584,
+    "end": 1590,
+    "line": 15,
+    "column": 9
+   },
+   "ref:1584:1587": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1584,
+    "end": 1587,
+    "line": 15,
+    "column": 9
+   },
+   "literal:1588:1589": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1588,
+    "end": 1589,
+    "line": 15,
+    "column": 13
+   },
+   "bind:1593:1625": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1593,
+    "end": 1625,
+    "line": 16,
+    "column": 3
+   },
+   "pure_call:1599:1625": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1599,
+    "end": 1625,
+    "line": 16,
+    "column": 9
+   },
+   "ref:1603:1606": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1603,
+    "end": 1606,
+    "line": 16,
+    "column": 13
+   },
+   "literal:1607:1621": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1607,
+    "end": 1621,
+    "line": 16,
+    "column": 17
+   },
+   "record:1622:1624": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1622,
+    "end": 1624,
+    "line": 16,
+    "column": 32
+   },
+   "builtin:1599:1602": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1599,
+    "end": 1602,
+    "line": 16,
+    "column": 9
+   },
+   "if:1628:1655": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1628,
+    "end": 1655,
+    "line": 17,
+    "column": 3
+   },
+   "binary:1632:1641": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1632,
+    "end": 1641,
+    "line": 17,
+    "column": 7
+   },
+   "ref:1632:1635": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1632,
+    "end": 1635,
+    "line": 17,
+    "column": 7
+   },
+   "literal:1637:1641": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1637,
+    "end": 1641,
+    "line": 17,
+    "column": 12
+   },
+   "bind:1658:1674": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1658,
+    "end": 1674,
+    "line": 18,
+    "column": 3
+   },
+   "literal:1664:1674": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1664,
+    "end": 1674,
+    "line": 18,
+    "column": 9
+   },
+   "if:1677:1713": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1677,
+    "end": 1713,
+    "line": 19,
+    "column": 3
+   },
+   "binary:1681:1691": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1681,
+    "end": 1691,
+    "line": 19,
+    "column": 7
+   },
+   "pure_call:1681:1689": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1681,
+    "end": 1689,
+    "line": 19,
+    "column": 7
+   },
+   "ref:1685:1688": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1685,
+    "end": 1688,
+    "line": 19,
+    "column": 11
+   },
+   "builtin:1681:1684": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1681,
+    "end": 1684,
+    "line": 19,
+    "column": 7
+   },
+   "literal:1690:1691": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1690,
+    "end": 1691,
+    "line": 19,
+    "column": 16
+   },
+   "sequence:1695:1711": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1695,
+    "end": 1711,
+    "line": 19,
+    "column": 21
+   },
+   "bind:1695:1711": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1695,
+    "end": 1711,
+    "line": 19,
+    "column": 21
+   },
+   "literal:1701:1711": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1701,
+    "end": 1711,
+    "line": 19,
+    "column": 27
+   },
+   "bind:1716:1817": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1716,
+    "end": 1817,
+    "line": 20,
+    "column": 3
+   },
+   "record:1722:1817": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1722,
+    "end": 1817,
+    "line": 20,
+    "column": 9
+   },
+   "field:1728:1741": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1728,
+    "end": 1741,
+    "line": 20,
+    "column": 15
+   },
+   "ref:1728:1731": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1728,
+    "end": 1731,
+    "line": 20,
+    "column": 15
+   },
+   "field:1752:1761": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1752,
+    "end": 1761,
+    "line": 20,
+    "column": 39
+   },
+   "ref:1752:1755": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1752,
+    "end": 1755,
+    "line": 20,
+    "column": 39
+   },
+   "ref:1774:1777": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1774,
+    "end": 1777,
+    "line": 20,
+    "column": 61
+   },
+   "ref:1791:1794": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1791,
+    "end": 1794,
+    "line": 20,
+    "column": 78
+   },
+   "pure_call:1799:1816": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1799,
+    "end": 1816,
+    "line": 20,
+    "column": 86
+   },
+   "ref:1803:1806": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1803,
+    "end": 1806,
+    "line": 20,
+    "column": 90
+   },
+   "literal:1807:1812": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1807,
+    "end": 1812,
+    "line": 20,
+    "column": 94
+   },
+   "record:1813:1815": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1813,
+    "end": 1815,
+    "line": 20,
+    "column": 100
+   },
+   "builtin:1799:1802": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1799,
+    "end": 1802,
+    "line": 20,
+    "column": 86
+   },
+   "if:1820:1996": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1820,
+    "end": 1996,
+    "line": 21,
+    "column": 3
+   },
+   "binary:1824:1915": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1824,
+    "end": 1915,
+    "line": 21,
+    "column": 7
+   },
+   "binary:1824:1876": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1824,
+    "end": 1876,
+    "line": 21,
+    "column": 7
+   },
+   "pure_call:1824:1848": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1824,
+    "end": 1848,
+    "line": 21,
+    "column": 7
+   },
+   "ref:1828:1831": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1828,
+    "end": 1831,
+    "line": 21,
+    "column": 11
+   },
+   "literal:1832:1841": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1832,
+    "end": 1841,
+    "line": 21,
+    "column": 15
+   },
+   "literal:1842:1847": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1842,
+    "end": 1847,
+    "line": 21,
+    "column": 25
+   },
+   "builtin:1824:1827": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1824,
+    "end": 1827,
+    "line": 21,
+    "column": 7
+   },
+   "pure_call:1852:1876": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1852,
+    "end": 1876,
+    "line": 21,
+    "column": 35
+   },
+   "ref:1856:1859": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1856,
+    "end": 1859,
+    "line": 21,
+    "column": 39
+   },
+   "literal:1860:1869": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1860,
+    "end": 1869,
+    "line": 21,
+    "column": 43
+   },
+   "literal:1870:1875": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1870,
+    "end": 1875,
+    "line": 21,
+    "column": 53
+   },
+   "builtin:1852:1855": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1852,
+    "end": 1855,
+    "line": 21,
+    "column": 35
+   },
+   "binary:1880:1915": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1880,
+    "end": 1915,
+    "line": 21,
+    "column": 63
+   },
+   "pure_call:1880:1905": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1880,
+    "end": 1905,
+    "line": 21,
+    "column": 63
+   },
+   "ref:1884:1887": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1884,
+    "end": 1887,
+    "line": 21,
+    "column": 67
+   },
+   "literal:1888:1895": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1888,
+    "end": 1895,
+    "line": 21,
+    "column": 71
+   },
+   "literal:1896:1904": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1896,
+    "end": 1904,
+    "line": 21,
+    "column": 79
+   },
+   "builtin:1880:1883": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1880,
+    "end": 1883,
+    "line": 21,
+    "column": 63
+   },
+   "literal:1907:1915": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1907,
+    "end": 1915,
+    "line": 21,
+    "column": 90
+   },
+   "if:1999:2102": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 1999,
+    "end": 2102,
+    "line": 24,
+    "column": 3
+   },
+   "pure_call:2003:2026": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2003,
+    "end": 2026,
+    "line": 24,
+    "column": 7
+   },
+   "ref:2007:2010": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2007,
+    "end": 2010,
+    "line": 24,
+    "column": 11
+   },
+   "literal:2011:2019": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2011,
+    "end": 2019,
+    "line": 24,
+    "column": 15
+   },
+   "literal:2020:2025": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2020,
+    "end": 2025,
+    "line": 24,
+    "column": 24
+   },
+   "builtin:2003:2006": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2003,
+    "end": 2006,
+    "line": 24,
+    "column": 7
+   },
+   "if:2105:2247": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2105,
+    "end": 2247,
+    "line": 25,
+    "column": 3
+   },
+   "binary:2109:2142": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2109,
+    "end": 2142,
+    "line": 25,
+    "column": 7
+   },
+   "pure_call:2109:2135": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2109,
+    "end": 2135,
+    "line": 25,
+    "column": 7
+   },
+   "ref:2113:2116": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2113,
+    "end": 2116,
+    "line": 25,
+    "column": 11
+   },
+   "literal:2117:2128": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2117,
+    "end": 2128,
+    "line": 25,
+    "column": 15
+   },
+   "literal:2129:2134": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2129,
+    "end": 2134,
+    "line": 25,
+    "column": 27
+   },
+   "builtin:2109:2112": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2109,
+    "end": 2112,
+    "line": 25,
+    "column": 7
+   },
+   "literal:2137:2142": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2137,
+    "end": 2142,
+    "line": 25,
+    "column": 35
+   },
+   "if:2250:2313": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2250,
+    "end": 2313,
+    "line": 28,
+    "column": 3
+   },
+   "binary:2254:2266": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2254,
+    "end": 2266,
+    "line": 28,
+    "column": 7
+   },
+   "ref:2254:2259": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2254,
+    "end": 2259,
+    "line": 28,
+    "column": 7
+   },
+   "literal:2261:2266": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2261,
+    "end": 2266,
+    "line": 28,
+    "column": 14
+   },
+   "sequence:2270:2311": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2270,
+    "end": 2311,
+    "line": 28,
+    "column": 23
+   },
+   "return:2270:2311": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2270,
+    "end": 2311,
+    "line": 28,
+    "column": 23
+   },
+   "record:2277:2311": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2277,
+    "end": 2311,
+    "line": 28,
+    "column": 30
+   },
+   "ref:2280:2283": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2280,
+    "end": 2283,
+    "line": 28,
+    "column": 33
+   },
+   "literal:2287:2291": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2287,
+    "end": 2291,
+    "line": 28,
+    "column": 40
+   },
+   "literal:2299:2310": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 2299,
+    "end": 2310,
+    "line": 28,
+    "column": 52
+   },
+   "if:52:136": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 52,
+    "end": 136,
+    "line": 3,
+    "column": 1
+   },
+   "binary:56:68": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 56,
+    "end": 68,
+    "line": 3,
+    "column": 5
+   },
+   "field:56:61": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 56,
+    "end": 61,
+    "line": 3,
+    "column": 5
+   },
+   "ref:56:58": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 56,
+    "end": 58,
+    "line": 3,
+    "column": 5
+   },
+   "literal:63:68": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 63,
+    "end": 68,
+    "line": 3,
+    "column": 12
+   },
+   "bind:137:940": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 137,
+    "end": 940,
+    "line": 4,
+    "column": 1
+   },
+   "call:140:940": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 140,
+    "end": 940,
+    "line": 4,
+    "column": 4
+   },
+   "record:155:940": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 155,
+    "end": 940,
+    "line": 4,
+    "column": 19
+   },
+   "literal:159:166": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 159,
+    "end": 166,
+    "line": 4,
+    "column": 23
+   },
+   "field:172:179": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 172,
+    "end": 179,
+    "line": 4,
+    "column": 36
+   },
+   "ref:172:174": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 172,
+    "end": 174,
+    "line": 4,
+    "column": 36
+   },
+   "literal:184:885": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 184,
+    "end": 885,
+    "line": 4,
+    "column": 48
+   },
+   "literal:890:896": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 890,
+    "end": 896,
+    "line": 4,
+    "column": 754
+   },
+   "literal:905:907": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 905,
+    "end": 907,
+    "line": 4,
+    "column": 769
+   },
+   "literal:919:939": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 919,
+    "end": 939,
+    "line": 4,
+    "column": 783
+   },
+   "return:941:978": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 941,
+    "end": 978,
+    "line": 5,
+    "column": 1
+   },
+   "record:948:978": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 948,
+    "end": 978,
+    "line": 5,
+    "column": 8
+   },
+   "literal:952:956": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 952,
+    "end": 956,
+    "line": 5,
+    "column": 12
+   },
+   "field:961:977": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 961,
+    "end": 977,
+    "line": 5,
+    "column": 21
+   },
+   "field:961:970": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 961,
+    "end": 970,
+    "line": 5,
+    "column": 21
+   },
+   "ref:961:963": {
+    "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+    "start": 961,
+    "end": 963,
+    "line": 5,
+    "column": 21
+   }
+  },
+  "recordings": [
+   {
+    "request_hash": "ba2e6f1cc06f8b394a330a5abb952bb09ec70ea477293a4db39b7070192232d2",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "op",
+       [
+        "scalar",
+        "list"
+       ]
+      ],
+      [
+       "limbs",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-3b30e8afd4b4"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_5…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784757104.313617
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-6c0531639d37"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_f…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784757174.819988
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784770583.623198
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "테스트2"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-041a4c6b0eef"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_n…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784770614.839193
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             1784857014.839193
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784770624.752759
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-3d6fe5ada44a"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_c…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784770694.4533608
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "기본값테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0a2fa003ec3e"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_4…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771318.349937
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "p0"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0cf0e5150587"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_8…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771417.022827
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784833930.804278
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "DESKTOP-VQJGB71 (windows/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/limb_issue/p0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "삭제테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0d9656caa47a"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb__…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771675.2505112
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "공유테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-d8bf0f27fd31"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_W…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771688.0330691
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "공유테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0c0f14d3b9bf"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_u…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771688.080322
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "측정손발"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-6d9de21d26d6"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_G…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784809831.27546
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784836399.364608
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "측정 (linux/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "눈검증"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-a00367aed41e"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_r…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1785750111.5628622
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1785751657.036959
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "정밀검증"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-a38aabe001d8"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_6…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1785753100.715452
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1785753775.989258
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "os_version",
+               [
+                "scalar",
+                "macOS 26.5.2"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "Mac-mini.local"
+               ]
+              ],
+              [
+               "user",
+               [
+                "scalar",
+                "kangkukjin"
+               ]
+              ],
+              [
+               "admin",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "gui",
+               [
+                "record",
+                [
+                 [
+                  "input",
+                  [
+                   "scalar",
+                   "osascript(System Events) — 손쉬운 사용 권한 필요"
+                  ]
+                 ],
+                 [
+                  "resolution",
+                  [
+                   "scalar",
+                   "1920x1080"
+                  ]
+                 ],
+                 [
+                  "screen",
+                  [
+                   "scalar",
+                   "screencapture"
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "김희정 테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-cf04e5ce8f67"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_V…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1789396740.301779
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             36
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "맥12"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-9b01f0848912"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_F…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1791530401.911241
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1791560224.8509052
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "kang-old-MacBook-Air.local (darwin/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "os_version",
+               [
+                "scalar",
+                "macOS 10.15.8"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "kang-old-MacBook-Air.local"
+               ]
+              ],
+              [
+               "user",
+               [
+                "scalar",
+                "kangkukjin"
+               ]
+              ],
+              [
+               "admin",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "gui",
+               [
+                "record",
+                [
+                 [
+                  "input",
+                  [
+                   "scalar",
+                   "osascript(System Events) — 손쉬운 사용 권한 필요"
+                  ]
+                 ],
+                 [
+                  "resolution",
+                  [
+                   "scalar",
+                   "1920x1080"
+                  ]
+                 ],
+                 [
+                  "screen",
+                  [
+                   "scalar",
+                   "screencapture"
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "맥12"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_4…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1791614149.852257
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "kang-old-MacBook-Air.local"
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "record",
+             [
+              [
+               "installation_id",
+               [
+                "scalar",
+                "45e1e7d030124b7afd1cab2078ce887d"
+               ]
+              ],
+              [
+               "generation",
+               [
+                "scalar",
+                "6f4ef43f3dccc3f4670e45ca20253d14"
+               ]
+              ],
+              [
+               "kind",
+               [
+                "scalar",
+                "pc"
+               ]
+              ],
+              [
+               "adapter",
+               [
+                "scalar",
+                "resident-v1"
+               ]
+              ],
+              [
+               "state",
+               [
+                "scalar",
+                "active"
+               ]
+              ],
+              [
+               "paused",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "wake",
+               [
+                "record",
+                [
+                 [
+                  "mac",
+                  [
+                   "scalar",
+                   "00886539637c"
+                  ]
+                 ],
+                 [
+                  "broadcast",
+                  [
+                   "scalar",
+                   "192.168.0.255"
+                  ]
+                 ],
+                 [
+                  "relay",
+                  [
+                   "scalar",
+                   "central"
+                  ]
+                 ],
+                 [
+                  "tested",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ]
+                ]
+               ]
+              ],
+              [
+               "last_seen",
+               [
+                "scalar",
+                1791647183.807967
+               ]
+              ],
+              [
+               "capabilities",
+               [
+                "record",
+                [
+                 [
+                  "adapter",
+                  [
+                   "scalar",
+                   "resident-v1"
+                  ]
+                 ],
+                 [
+                  "arch",
+                  [
+                   "scalar",
+                   "amd64"
+                  ]
+                 ],
+                 [
+                  "cpu_hard_limit",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ],
+                 [
+                  "generation",
+                  [
+                   "scalar",
+                   "6f4ef43f3dccc3f4670e45ca20253d14"
+                  ]
+                 ],
+                 [
+                  "hostname",
+                  [
+                   "scalar",
+                   "kang-old-MacBook-Air.local"
+                  ]
+                 ],
+                 [
+                  "interactive",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "kind",
+                  [
+                   "scalar",
+                   "pc"
+                  ]
+                 ],
+                 [
+                  "max_parallel",
+                  [
+                   "scalar",
+                   2
+                  ]
+                 ],
+                 [
+                  "media",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "memory_hard_limit",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ],
+                 [
+                  "observation_parallel",
+                  [
+                   "scalar",
+                   1
+                  ]
+                 ],
+                 [
+                  "observation_shell_timeout",
+                  [
+                   "scalar",
+                   10
+                  ]
+                 ],
+                 [
+                  "os",
+                  [
+                   "scalar",
+                   "darwin"
+                  ]
+                 ],
+                 [
+                  "service_scope",
+                  [
+                   "scalar",
+                   "user_login"
+                  ]
+                 ],
+                 [
+                  "shell",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "transfer",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "wake_relay",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "items",
+       [
+        "list",
+        [
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-3b30e8afd4b4"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_5…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784757104.313617
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-6c0531639d37"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_f…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784757174.819988
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784770583.623198
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "테스트2"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-041a4c6b0eef"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_n…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784770614.839193
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             1784857014.839193
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784770624.752759
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "휴대용"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-3d6fe5ada44a"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_c…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784770694.4533608
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "기본값테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0a2fa003ec3e"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_4…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771318.349937
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "p0"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0cf0e5150587"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_8…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771417.022827
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784833930.804278
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "DESKTOP-VQJGB71 (windows/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/limb_issue/p0"
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "삭제테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0d9656caa47a"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb__…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771675.2505112
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "공유테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-d8bf0f27fd31"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_W…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771688.0330691
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "공유테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-0c0f14d3b9bf"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_u…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784771688.080322
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "측정손발"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-6d9de21d26d6"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_G…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1784809831.27546
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1784836399.364608
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "측정 (linux/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "눈검증"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-a00367aed41e"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_r…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1785750111.5628622
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1785751657.036959
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "정밀검증"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-a38aabe001d8"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_6…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1785753100.715452
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1785753775.989258
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "Mac-mini.local (darwin/arm64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "os_version",
+               [
+                "scalar",
+                "macOS 26.5.2"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "Mac-mini.local"
+               ]
+              ],
+              [
+               "user",
+               [
+                "scalar",
+                "kangkukjin"
+               ]
+              ],
+              [
+               "admin",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "gui",
+               [
+                "record",
+                [
+                 [
+                  "input",
+                  [
+                   "scalar",
+                   "osascript(System Events) — 손쉬운 사용 권한 필요"
+                  ]
+                 ],
+                 [
+                  "resolution",
+                  [
+                   "scalar",
+                   "1920x1080"
+                  ]
+                 ],
+                 [
+                  "screen",
+                  [
+                   "scalar",
+                   "screencapture"
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "김희정 테스트"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-cf04e5ce8f67"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_V…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1789396740.301779
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             36
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "맥12"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-9b01f0848912"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_F…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1791530401.911241
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             1791560224.8509052
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             "kang-old-MacBook-Air.local (darwin/amd64)"
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "os_version",
+               [
+                "scalar",
+                "macOS 10.15.8"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "kang-old-MacBook-Air.local"
+               ]
+              ],
+              [
+               "user",
+               [
+                "scalar",
+                "kangkukjin"
+               ]
+              ],
+              [
+               "admin",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "gui",
+               [
+                "record",
+                [
+                 [
+                  "input",
+                  [
+                   "scalar",
+                   "osascript(System Events) — 손쉬운 사용 권한 필요"
+                  ]
+                 ],
+                 [
+                  "resolution",
+                  [
+                   "scalar",
+                   "1920x1080"
+                  ]
+                 ],
+                 [
+                  "screen",
+                  [
+                   "scalar",
+                   "screencapture"
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "payload_dir",
+            [
+             "scalar",
+             null
+            ]
+           ]
+          ]
+         ],
+         [
+          "record",
+          [
+           [
+            "alias",
+            [
+             "scalar",
+             "맥12"
+            ]
+           ],
+           [
+            "device_id",
+            [
+             "scalar",
+             "guestpc-7a440e9daf61"
+            ]
+           ],
+           [
+            "key_hint",
+            [
+             "scalar",
+             "limb_4…"
+            ]
+           ],
+           [
+            "created_at",
+            [
+             "scalar",
+             1791614149.852257
+            ]
+           ],
+           [
+            "expires_at",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "revoked",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "expired",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "approved",
+            [
+             "scalar",
+             true
+            ]
+           ],
+           [
+            "last_used",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "last_host",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "env",
+            [
+             "record",
+             [
+              [
+               "os",
+               [
+                "scalar",
+                "darwin"
+               ]
+              ],
+              [
+               "hostname",
+               [
+                "scalar",
+                "kang-old-MacBook-Air.local"
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "neighbor_id",
+            [
+             "scalar",
+             null
+            ]
+           ],
+           [
+            "registration",
+            [
+             "record",
+             [
+              [
+               "installation_id",
+               [
+                "scalar",
+                "45e1e7d030124b7afd1cab2078ce887d"
+               ]
+              ],
+              [
+               "generation",
+               [
+                "scalar",
+                "6f4ef43f3dccc3f4670e45ca20253d14"
+               ]
+              ],
+              [
+               "kind",
+               [
+                "scalar",
+                "pc"
+               ]
+              ],
+              [
+               "adapter",
+               [
+                "scalar",
+                "resident-v1"
+               ]
+              ],
+              [
+               "state",
+               [
+                "scalar",
+                "active"
+               ]
+              ],
+              [
+               "paused",
+               [
+                "scalar",
+                false
+               ]
+              ],
+              [
+               "wake",
+               [
+                "record",
+                [
+                 [
+                  "mac",
+                  [
+                   "scalar",
+                   "00886539637c"
+                  ]
+                 ],
+                 [
+                  "broadcast",
+                  [
+                   "scalar",
+                   "192.168.0.255"
+                  ]
+                 ],
+                 [
+                  "relay",
+                  [
+                   "scalar",
+                   "central"
+                  ]
+                 ],
+                 [
+                  "tested",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ]
+                ]
+               ]
+              ],
+              [
+               "last_seen",
+               [
+                "scalar",
+                1791647183.807967
+               ]
+              ],
+              [
+               "capabilities",
+               [
+                "record",
+                [
+                 [
+                  "adapter",
+                  [
+                   "scalar",
+                   "resident-v1"
+                  ]
+                 ],
+                 [
+                  "arch",
+                  [
+                   "scalar",
+                   "amd64"
+                  ]
+                 ],
+                 [
+                  "cpu_hard_limit",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ],
+                 [
+                  "generation",
+                  [
+                   "scalar",
+                   "6f4ef43f3dccc3f4670e45ca20253d14"
+                  ]
+                 ],
+                 [
+                  "hostname",
+                  [
+                   "scalar",
+                   "kang-old-MacBook-Air.local"
+                  ]
+                 ],
+                 [
+                  "interactive",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "kind",
+                  [
+                   "scalar",
+                   "pc"
+                  ]
+                 ],
+                 [
+                  "max_parallel",
+                  [
+                   "scalar",
+                   2
+                  ]
+                 ],
+                 [
+                  "media",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "memory_hard_limit",
+                  [
+                   "scalar",
+                   false
+                  ]
+                 ],
+                 [
+                  "observation_parallel",
+                  [
+                   "scalar",
+                   1
+                  ]
+                 ],
+                 [
+                  "observation_shell_timeout",
+                  [
+                   "scalar",
+                   10
+                  ]
+                 ],
+                 [
+                  "os",
+                  [
+                   "scalar",
+                   "darwin"
+                  ]
+                 ],
+                 [
+                  "service_scope",
+                  [
+                   "scalar",
+                   "user_login"
+                  ]
+                 ],
+                 [
+                  "shell",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "transfer",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ],
+                 [
+                  "wake_relay",
+                  [
+                   "scalar",
+                   true
+                  ]
+                 ]
+                ]
+               ]
+              ]
+             ]
+            ]
+           ],
+           [
+            "invitation",
+            [
+             "scalar",
+             false
+            ]
+           ],
+           [
+            "connected",
+            [
+             "scalar",
+             true
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      [
+       "connected_count",
+       [
+        "scalar",
+        1
+       ]
+      ],
+      [
+       "helper_dist_dir",
+       [
+        "scalar",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/helper/dist"
+       ]
+      ],
+      [
+       "issue_parent_dir",
+       [
+        "scalar",
+        "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/limb_issue"
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "self:limb",
+    "reuse_key": "23c36d454f34469b6dc982bb71b980ef71a96eb8c059cb2e404db66507bbe270",
+    "reuse_parts": {
+     "action": "a94d5bea634c208eaf25cce333fecfd448a00d93b5383a406fcfc56ec4483532",
+     "args": "a9380e8c7a9bba9c7e59aa14d1a4364f597ccca66201a77e2b23b5f41fdfa1d9",
+     "contract": "9e8b586db900496a8675f9fac6c8a695c958fb6a4a6c0106368995d949fd84bd",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   },
+   {
+    "request_hash": "047b1484a77d54403fe7748db61282b65f0747d84d43131e1542946a305aa951",
+    "value": [
+     "record",
+     [
+      [
+       "success",
+       [
+        "scalar",
+        true
+       ]
+      ],
+      [
+       "limb",
+       [
+        "scalar",
+        "guestpc-7a440e9daf61"
+       ]
+      ],
+      [
+       "limb_name",
+       [
+        "scalar",
+        "맥12"
+       ]
+      ],
+      [
+       "result",
+       [
+        "record",
+        [
+         [
+          "cwd",
+          [
+           "scalar",
+           "/tmp"
+          ]
+         ],
+         [
+          "exit",
+          [
+           "scalar",
+           0
+          ]
+         ],
+         [
+          "log_truncated",
+          [
+           "scalar",
+           false
+          ]
+         ],
+         [
+          "output",
+          [
+           "scalar",
+           "2026-10-11 00:46:28\nCLAM=Yes\n -InternalBattery-0 (id=9764963)\t100%; charged; 0:00 remaining present: true\nResolution: 1920 x 1080 (1080p FHD - Full High Definition)\nMain Display: Yes\nMirror: Off\nOnline: Yes\n womp                 1\n sleep                0\n hibernatemode        3\n displaysleep         10\n lidwake              1\n   UserIsActive                   0\n   PreventSystemSleep             0\n   PreventUserIdleSystemSleep     0\n 0:46  up 83 days,  4:01, 1 user, load averages: 0.69 0.61 0.58\n\tCPU_Scheduler_Limit \t= 100\n\tCPU_Speed_Limit \t= 100\n11894.9\n2026-10-10 21:34:57 +0900 Sleep               \tEntering Sleep state due to 'Maintenance Sleep': Using AC (Char\n2026-10-10 21:34:58 +0900 Wake Requests       \t[process=dasd request=SleepService deltaSecs=14490 wakeAt=2026-\n2026-10-10 21:36:33 +0900 Wake                \tWake from Safe Sleep [CDNVA] : due to RTC/UserActivity Assertio\n"
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "evidence": {
+     "markers": {},
+     "attachments": {}
+    },
+    "action": "limbs:guestpc",
+    "reuse_key": "b30127124b419f745d5c21722cc37ba9faafe79b9c5f58ce9aca4ec61257872d",
+    "reuse_parts": {
+     "action": "144e9d16e74b651c52c9f2545ff6b7e33d8c95f69aa944825470e8b55e5afabf",
+     "args": "7a9bea1f65776d807535a73acd202584fa113f0ef3a43849b0e6020eba8e77e6",
+     "contract": "6732500f456841aa4f900a75f92b17b402a3988aa51cd05a294745956e2e9c15",
+     "model_identity": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "dependency": "0345265996020ee7868295199168872aa8cc1425ae53b6d75e6219b3d12dff4c",
+     "semantics": "ba9468e77fe74fc3126fe97306277a28416425d53000dc580aaa491308cc28ab"
+    }
+   }
+  ],
+  "usage": {
+   "steps": 370,
+   "rows": 0,
+   "elapsed_ms": 3969,
+   "limits": {
+    "steps": 100000,
+    "rows": 10000
+   },
+   "steps_by_span": [
+    {
+     "node_id": "binary:1204:1221",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1204,
+      "end": 1221,
+      "line": 10,
+      "column": 49
+     }
+    },
+    {
+     "node_id": "binary:1294:1307",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1294,
+      "end": 1307,
+      "line": 12,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "binary:1294:1342",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1294,
+      "end": 1342,
+      "line": 12,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "binary:1294:1377",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1294,
+      "end": 1377,
+      "line": 12,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "binary:1294:1469",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1294,
+      "end": 1469,
+      "line": 12,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "field:1204:1216",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1204,
+      "end": 1216,
+      "line": 10,
+      "column": 49
+     }
+    },
+    {
+     "node_id": "field:1294:1302",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1294,
+      "end": 1302,
+      "line": 12,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "ref:1204:1206",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1204,
+      "end": 1206,
+      "line": 10,
+      "column": 49
+     }
+    },
+    {
+     "node_id": "ref:1218:1221",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1218,
+      "end": 1221,
+      "line": 10,
+      "column": 63
+     }
+    },
+    {
+     "node_id": "ref:1294:1296",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1294,
+      "end": 1296,
+      "line": 12,
+      "column": 51
+     }
+    },
+    {
+     "node_id": "ref:1304:1307",
+     "steps": 15,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1304,
+      "end": 1307,
+      "line": 12,
+      "column": 61
+     }
+    },
+    {
+     "node_id": "record:2277:2311",
+     "steps": 6,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 2277,
+      "end": 2311,
+      "line": 28,
+      "column": 30
+     }
+    },
+    {
+     "node_id": "pure_call:1312:1335",
+     "steps": 4,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1312,
+      "end": 1335,
+      "line": 12,
+      "column": 69
+     }
+    },
+    {
+     "node_id": "binary:1312:1342",
+     "steps": 2,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1312,
+      "end": 1342,
+      "line": 12,
+      "column": 69
+     }
+    },
+    {
+     "node_id": "builtin:1312:1315",
+     "steps": 2,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1312,
+      "end": 1315,
+      "line": 12,
+      "column": 69
+     }
+    },
+    {
+     "node_id": "literal:1319:1328",
+     "steps": 2,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1319,
+      "end": 1328,
+      "line": 12,
+      "column": 76
+     }
+    },
+    {
+     "node_id": "literal:1329:1334",
+     "steps": 2,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1329,
+      "end": 1334,
+      "line": 12,
+      "column": 86
+     }
+    },
+    {
+     "node_id": "literal:1337:1342",
+     "steps": 2,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1337,
+      "end": 1342,
+      "line": 12,
+      "column": 94
+     }
+    },
+    {
+     "node_id": "pure_call:1032:1040",
+     "steps": 2,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1032,
+      "end": 1040,
+      "line": 8,
+      "column": 7
+     }
+    },
+    {
+     "node_id": "pure_call:1229:1237",
+     "steps": 2,
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 1229,
+      "end": 1237,
+      "line": 11,
+      "column": 7
+     }
+    }
+   ],
+   "steps_other": 181,
+   "steps_by_line": [
+    {
+     "line": 12,
+     "steps": 154,
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 10,
+     "steps": 67,
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 21,
+     "steps": 23,
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 28,
+     "steps": 15,
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 20,
+     "steps": 14,
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 4,
+     "steps": 10,
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 19,
+     "steps": 10,
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 25,
+     "steps": 9,
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 11,
+     "steps": 8,
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 8,
+     "steps": 7,
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    }
+   ],
+   "tool_ms_by_line": [
+    {
+     "line": 4,
+     "ms": 3618,
+     "calls": 1,
+     "actions": [
+      "limbs:guestpc"
+     ],
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 9,
+     "ms": 23,
+     "calls": 1,
+     "actions": [
+      "self:limb"
+     ],
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 12,
+     "ms": 4,
+     "calls": 1,
+     "actions": [
+      "table:filter"
+     ],
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    },
+    {
+     "line": 10,
+     "ms": 3,
+     "calls": 1,
+     "actions": [
+      "table:filter"
+     ],
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b"
+    }
+   ]
+  },
+  "capability_usage": [
+   {
+    "id": "fn:외부PC준비",
+    "success": true,
+    "source_hash": "45a5739e701278152243e602eae2965ceb0aac1c7f1db1f3ef7d0409ec1c681a"
+   }
+  ],
+  "precheck_warnings": [
+   {
+    "code": "UNOBSERVED_FIELD",
+    "rule": "UNOBSERVED_FIELD",
+    "severity": "warning",
+    "message": "관측된 반환 필드에 없는 이름입니다: registration. 관측 필드: alias, device_id, key_hint, created_at, expires_at, revoked, expired, approved, last_used, last_host, env, neighbor_id, connected",
+    "source_span": {
+     "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+     "start": 1424,
+     "end": 1439,
+     "line": 12,
+     "column": 181
+    },
+    "call_path": [
+     {
+      "function": "외부PC준비",
+      "call": {
+       "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+       "start": 19,
+       "end": 51,
+       "line": 2,
+       "column": 4
+      },
+      "definition": {
+       "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+       "start": 995,
+       "end": 2530,
+       "line": 7,
+       "column": 1
+      }
+     }
+    ],
+    "facts": {
+     "field": "registration",
+     "observed": [
+      "alias",
+      "device_id",
+      "key_hint",
+      "created_at",
+      "expires_at",
+      "revoked",
+      "expired",
+      "approved",
+      "last_used",
+      "last_host",
+      "env",
+      "neighbor_id",
+      "connected"
+     ]
+    },
+    "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+    "location": {
+     "source_hash": "45a5739e701278152243e602eae2965ceb0aac1c7f1db1f3ef7d0409ec1c681a",
+     "start": 445,
+     "end": 460,
+     "line": 7,
+     "column": 181,
+     "source": "외부PC준비",
+     "uri": "ibl://function/%EC%99%B8%EB%B6%80PC%EC%A4%80%EB%B9%84",
+     "end_line": 7,
+     "end_column": 196,
+     "offset_encoding": "unicode-codepoints"
+    }
+   }
+  ],
+  "resume": {
+   "run_id": "0875ad2ed3eb48fd93857ea156ac469c"
+  },
+  "resumed": false,
+  "run_status": "completed",
+  "continuation": {
+   "read_calls": 0,
+   "state_change_possible": true,
+   "read_exclusions": [
+    {
+     "reason": "unknown_write_resources",
+     "write_call_id": "c33277663cb1441d278d8a350f932488dad1e05733c7d0e9719664ae147f1935",
+     "action": "limbs:guestpc",
+     "location": {
+      "source_hash": "d8fea7d8e82e7917e086afbc0349292f71cbafd8eed8ac3cab771a53b370fc0b",
+      "start": 140,
+      "end": 940,
+      "line": 4,
+      "column": 4
+     },
+     "excluded_calls": 1
+    }
+   ],
+   "read_exclusions_total": 1,
+   "hint": "프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+  },
+  "task_ref": {
+   "kind": "ibl_run",
+   "task_id": "0875ad2ed3eb48fd93857ea156ac469c",
+   "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/수동모드"
+  }
+ }
+}

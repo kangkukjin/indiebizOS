@@ -491,6 +491,7 @@ def prepare_usb():
             'Intel Mac(macOS 10.15~11): mac-amd64-legacy / Linux x64: linux\n'
             '맥·리눅스에서 실행 권한이 사라지면 chmod +x indiebiz-helper-* 로 복원하세요.\n'
             '등록 후 USB를 빼도 됩니다. 사용자 로그인 시 자동 시작합니다.\n'
+            '이미 등록된 PC에서 다시 실행하면 헬퍼만 이 USB의 판으로 바꿉니다(등록·이름 유지).\n'
             '중앙 조종실의 손발 (USB)에서 목록을 확인하거나 해제할 수 있습니다.\n'
             '음악 재생·파일 가져오기 등은 중앙 AI에게 PC 이름으로 부탁하세요.\n'
             'USB 분실 시 조종실에서 USB 등록 키를 폐기하세요. 이미 등록된 PC 연결은 유지됩니다.\n', encoding='utf-8')

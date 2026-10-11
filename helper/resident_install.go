@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -180,7 +181,13 @@ func residentSetup(cfg *Config) error {
 	return <-done
 }
 
-func residentSetupHandler(cfg *Config, install func(*Config) error, done chan error, token string) http.Handler {
+var residentSetupMessages = map[string]string{
+	"enrolled": "등록했습니다. USB를 분리해도 됩니다. 중앙 조종실의 손발 (USB)에서 확인·해제하고, AI에게 PC 이름으로 작업을 부탁하세요.",
+	"updated":  "이미 등록된 PC입니다. 헬퍼를 이 USB의 판으로 바꾸고 다시 시작했습니다. 등록과 PC 이름은 그대로입니다. USB를 분리해도 됩니다.",
+	"running":  "이미 등록된 PC이고 헬퍼도 이 USB와 같은 판입니다. 바꾼 것이 없습니다.",
+}
+
+func residentSetupHandler(cfg *Config, install func(*Config) (string, error), done chan error, token string) http.Handler {
 	mux := http.NewServeMux()
 	var installing sync.Mutex
 	name := cfg.Alias
@@ -203,12 +210,12 @@ func residentSetupHandler(cfg *Config, install func(*Config) error, done chan er
 			}
 			candidate := *cfg
 			candidate.Alias = alias
-			e := install(&candidate)
+			outcome, e := install(&candidate)
 			if e != nil {
 				http.Error(w, e.Error(), 500)
 				return
 			}
-			fmt.Fprint(w, "등록했습니다. USB를 분리해도 됩니다. 중앙 조종실의 손발 (USB)에서 확인·해제하고, AI에게 PC 이름으로 작업을 부탁하세요.")
+			fmt.Fprint(w, residentSetupMessages[outcome])
 			select {
 			case done <- nil:
 			default:
@@ -219,42 +226,98 @@ func residentSetupHandler(cfg *Config, install func(*Config) error, done chan er
 	})
 	return mux
 }
-func residentInstall(invite *Config) error {
+
+// residentControlAddress is the loopback port of one installation's manager page;
+// holding it is also what makes a helper the only one running.
+func residentControlAddress(installationID string) string {
+	portValue, _ := strconv.ParseUint(installationID[:4], 16, 32)
+	return "127.0.0.1:" + strconv.Itoa(30000+int(portValue)%20000)
+}
+
+// residentPutExecutable replaces an installed executable that may be running. The
+// running file is moved aside — every OS lets an open executable be renamed, while
+// Windows refuses to overwrite it — and a failure puts it back.
+func residentPutExecutable(src, dest string) error {
+	previous := dest + ".previous"
+	_ = os.Remove(previous)
+	if e := os.Rename(dest, previous); e != nil {
+		return e
+	}
+	e := residentCopy(src, dest+".new")
+	if e == nil {
+		e = os.Rename(dest+".new", dest)
+	}
+	if e != nil {
+		_ = os.Remove(dest + ".new")
+		_ = os.Rename(previous, dest)
+	}
+	return e
+}
+
+// residentReplaceInstalled is the by-hand update: someone at the PC ran a newer
+// helper from the USB folder. The installed helper cannot be asked to step aside
+// (it may be any older build), so its processes are found by executable and ended.
+func residentReplaceInstalled(cfg *Config, src, dest string) error {
+	pids := residentExecutablePIDs(dest) // before the rename changes what they report
+	if e := residentPutExecutable(src, dest); e != nil {
+		return e
+	}
+	_ = os.Remove(residentUpdatePath(cfg.DataDir)) // a pending self-update must not roll this one back
+	for _, pid := range pids {
+		residentKillPID(pid)
+	}
+	address := residentControlAddress(cfg.InstallationID)
+	for attempt := 0; attempt < 30; attempt++ {
+		c, e := net.DialTimeout("tcp", address, time.Second)
+		if e != nil {
+			break
+		}
+		_ = c.Close()
+		time.Sleep(500 * time.Millisecond)
+	}
+	return nil
+}
+
+// residentInstall reports what it did: "enrolled", "updated" (an installed helper
+// was replaced by this build) or "running" (already installed, same build).
+func residentInstall(invite *Config) (string, error) {
 	base, e := os.UserConfigDir()
 	if e != nil {
-		return e
+		return "", e
 	}
 	sum := sha256.Sum256([]byte(invite.Key))
 	root := filepath.Join(base, "IndieBiz", "resident-"+hex.EncodeToString(sum[:8]))
 	if e = os.MkdirAll(root, 0700); e != nil {
-		return e
+		return "", e
 	}
 	path := filepath.Join(root, "indiebiz-helper.json")
 	cfg := *invite
 	if b, e := os.ReadFile(path); e == nil {
 		if e = json.Unmarshal(b, &cfg); e != nil {
-			return e
+			return "", e
 		}
 	}
 	if cfg.InstallationID == "" {
 		cfg.InstallationID = residentID()
 		cfg.DataDir = root
 		if e = residentSave(path, cfg); e != nil {
-			return e
+			return "", e
 		}
 	}
+	outcome := "running"
 	if cfg.Mode != "resident" {
+		outcome = "enrolled"
 		cfg.Alias = invite.Alias
 		resp, e := residentPost(cfg.Base+"/limb/resident/enroll", map[string]interface{}{"key": cfg.Key, "installation_id": cfg.InstallationID, "alias": cfg.Alias})
 		if e != nil {
-			return e
+			return "", e
 		}
 		if err, ok := resp["detail"]; ok {
-			return fmt.Errorf("enrollment: %v", err)
+			return "", fmt.Errorf("enrollment: %v", err)
 		}
 		key, ok := resp["key"].(string)
 		if !ok {
-			return fmt.Errorf("invalid enrollment response")
+			return "", fmt.Errorf("invalid enrollment response")
 		}
 		reg, _ := resp["registration"].(map[string]interface{})
 		cfg.Key = key
@@ -263,29 +326,42 @@ func residentInstall(invite *Config) error {
 		cfg.Mode = "resident"
 		cfg.ExpiresAt, _ = resp["expires_at"].(float64)
 		if e = residentSave(path, cfg); e != nil {
-			return e
+			return "", e
 		}
 	}
 	src, e := os.Executable()
 	if e != nil {
-		return e
+		return "", e
 	}
 	dest := residentExecutable(root)
-	// Reopening the USB installer for an installed PC launches its existing manager.
-	// Do not overwrite a running executable (ETXTBSY / Windows file lock).
+	// Running the USB helper on an installed PC replaces an installed helper of
+	// another build; with the same build it only opens the existing manager.
 	_, existing := os.Stat(dest)
 	if src != dest && existing != nil {
 		if e = residentCopy(src, dest); e != nil {
-			return e
+			return "", e
+		}
+	} else if src != dest {
+		mine, _, e1 := fileDigest(src)
+		installed, _, e2 := fileDigest(dest)
+		if e1 == nil && e2 == nil && mine != installed {
+			if e = residentReplaceInstalled(&cfg, src, dest); e != nil {
+				return "", e
+			}
+			outcome = "updated"
 		}
 	}
 	if e = residentAutostart(&cfg, dest, false); e != nil {
-		return e
+		return "", e
+	}
+	// A service manager that owns this installation starts the new executable itself.
+	if outcome == "updated" && runtime.GOOS != "windows" && residentServiceRestart(&cfg) == nil {
+		return outcome, nil
 	}
 	cmd := exec.Command(dest)
 	cmd.Dir = root
 	configureResidentDetached(cmd)
-	return cmd.Start()
+	return outcome, cmd.Start()
 }
 
 // A separate cleanup process survives the worker and deletes only owned program files.

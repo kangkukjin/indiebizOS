@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -74,8 +73,7 @@ func startResident(cfg *Config) error {
 	if _, e := os.Stat(filepath.Join(cfg.DataDir, "removing.json")); e == nil {
 		return residentRemove(cfg)
 	}
-	portValue, _ := strconv.ParseUint(cfg.InstallationID[:4], 16, 32)
-	address := "127.0.0.1:" + strconv.Itoa(30000+int(portValue)%20000)
+	address := residentControlAddress(cfg.InstallationID)
 	listener, e := net.Listen("tcp", address)
 	// The service manager starts its instance while a helper handing itself over
 	// still holds the port; wait for that exit instead of failing into a restart loop.

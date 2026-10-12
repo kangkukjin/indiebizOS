@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Usb, Loader2, Check, Trash2, ChevronDown, ChevronRight, Copy, FolderOpen, RefreshCw, ArrowUpCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 import { RemotePCWorkbench } from '../remote-pc/RemotePCWorkbench';
+import { RemoteDesktop } from '../remote-pc/RemoteDesktop';
 
 type Registration = {
   state: 'active' | 'removal_pending' | 'removed';
@@ -16,6 +17,7 @@ type PCList = { items: PC[]; usb: USB };
 
 export function LimbSwitch() {
   const [workbench, setWorkbench] = useState<PC | null>(null);
+  const [desktop, setDesktop] = useState<PC | null>(null);
   const [open, setOpen] = useState(false);
   const [pcs, setPCs] = useState<PC[]>([]);
   const [usb, setUSB] = useState<USB | null>(null);
@@ -84,6 +86,7 @@ export function LimbSwitch() {
   return (
     <div className="rounded-lg border border-stone-200 bg-white/60 text-[12px]">
       {workbench && <RemotePCWorkbench key={workbench.device_id} device={workbench.device_id} alias={workbench.alias} terminal={!!workbench.registration.capabilities?.terminal} onClose={() => setWorkbench(null)} />}
+      {desktop && <RemoteDesktop key={desktop.device_id} device={desktop.device_id} alias={desktop.alias} onClose={() => setDesktop(null)} />}
       <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 px-3 py-2 text-stone-600 hover:text-stone-800">
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         <Usb size={14} /><span className="font-medium">손발 (USB)</span>
@@ -136,6 +139,7 @@ export function LimbSwitch() {
                 {busy === pc.device_id || pc.helper.state === 'updating' ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpCircle size={12} />}헬퍼 교체
               </button>}
             <button onClick={() => setWorkbench(pc)} disabled={!pc.connected || pc.registration.state !== 'active' || pc.registration.paused} className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">작업창</button>
+            {pc.registration.capabilities?.os === 'darwin' && <button onClick={() => setDesktop(pc)} disabled={pc.registration.state !== 'active'} className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">화면 공유</button>}
             <button onClick={() => void remove(pc)} disabled={busy !== null || pc.registration.state !== 'active'}
               title="등록 해제 및 원격 헬퍼 제거" className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-500 hover:text-red-600 disabled:opacity-50">
               {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}해제

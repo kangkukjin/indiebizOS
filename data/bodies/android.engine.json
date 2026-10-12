@@ -382,6 +382,7 @@
     "services/research_library",
     "services/research_threads",
     "services/research_view",
+    "services/resident_desktop",
     "services/resident_pcs",
     "services/resident_terminal",
     "services/resident_terminal_lan",
@@ -579,8 +580,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 504,
-    "engine": 478,
+    "total": 505,
+    "engine": 479,
     "blocklist": 26
   }
 }

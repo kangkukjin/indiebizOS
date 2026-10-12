@@ -34,6 +34,7 @@ import {
 } from './windows.js';
 import { setTray, bumpBadge } from './badge.js';
 import { installDevServerRecovery } from './window-recovery.js';
+import { installRemoteDesktop } from './remote-desktop.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -809,6 +810,7 @@ app.whenReady().then(async () => {
     ]));
   });
   installUILocale();
+  installRemoteDesktop({ app, ipcMain, shell });
   // IPC 설정
   setupIPC();
 

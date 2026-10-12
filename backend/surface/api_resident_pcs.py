@@ -105,6 +105,18 @@ def helper_update(req: dict):
     return checked(pcs.update_helper, req.get('target'))
 
 
+@router.get('/remote-pcs/desktop/{device}')
+def desktop_get(device: str):
+    import resident_desktop
+    return checked(resident_desktop.get, device)
+
+
+@router.put('/remote-pcs/desktop/{device}')
+def desktop_save(device: str, req: dict):
+    import resident_desktop
+    return checked(resident_desktop.save, device, req)
+
+
 @router.post('/remote-pcs/wake')
 def wake(req: dict):
     if req.get('mac'):

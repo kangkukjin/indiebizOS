@@ -339,6 +339,41 @@ assert는 작성한 조건을 실제 결과에 대해 검사하며 조건 자체
 메시지와 상세 값은 실패 때만 평가한다. 큰 본문은 삼중 따옴표로 쓰되,
 이미 있는 본문은 파일/결과 참조로 연결하고 다시 생성하지 않는다.
 
+## 문자열 동등성과 레코드 조회 키를 구별하기
+
+문자열 `==`와 `unique`는 NFC/NFD를 같은 값으로 보지만, 레코드의
+`get/has/[]`·`from_entries`·`**`는 **원문 키**를 보존하고 그대로 조회한다.
+`"부산" == "부산"`이어도 `get({부산:1},"부산",0)`은 0이다.
+`==`·`unique`는 대소문자·공백·숫자 표기도 관측 동등성으로 합칠 수 있다.
+`groupby`의 그룹 키, `join/dedup`의 관계 키는 각 액션 계약을 확인한다.
+업무 이름을 그대로 레코드 색인으로 쓰면 집계는 맞아도 근거 목록이 갈라질 수 있다.
+
+업무에서 NFC/NFD만 합쳐야 한다면 원문별 별칭을 공통 번호로 연결하고,
+양쪽 자료의 집계·조인·근거 색인에 같은 번호를 사용한다. 표시 이름과 파일 path는 원문을 남긴다.
+아래 지역 함수는 같은 실행 안의 대응표다. 빈 입력은 빈 대응표이며,
+대소문자·공백·문자열 숫자 코드는 서로 다르다. 번호는 입력 순서에 따르므로 실행 사이의 영속 ID로 쓰지 않는다.
+
+<!-- example:record_key_aliases -->
+```ibl
+#!ibl edition=2
+[def:같은표기]($a,$b) { return len($a)==len($b) and contains($a,$b,true) }
+[def:키색인]($names) {
+  $spellings=keys(reduce($names,{},($acc,$name)=>{**$acc,**from_entries([[$name,true]])}))
+  $names=reduce($spellings,[],($acc,$name)=>any(map($acc,($key)=>[fn:같은표기]{a:$key,b:$name})) ? $acc : $acc+[$name])
+  $indexed=enumerate($names)
+  return {names:$names,aliases:from_entries(map($spellings,($name)=>[$name,filter($indexed,($pair)=>[fn:같은표기]{a:$pair[1],b:$name})[0][0]]))}
+}
+$색인=[fn:키색인]{names:["부산","부산","A","a"]}
+return {names:$색인.names,aliases:$색인.aliases}
+```
+
+`같은표기`는 NFC 길이와 대소문자를 구별하는 부분 일치를 함께 검사하여 NFC/NFD만 합친다.
+두 부산 표기는 번호 0, A와 a는 각각 1과 2다. 입력 전체에서 한 번 대응표를 만들고
+행 처리에서는 `get($색인.aliases,$원문)`으로 조회한다. 등록하지 않은 원문을 0으로 대체하지 않는다.
+복합 번호를 레코드 키로 쓸 때는 `json([$sku_key,$warehouse_key])`처럼 경계를 보존한다.
+이 예제의 대응표 작성은 고유 표기×고유 이름을 비교하므로 고유 이름이 많은 자료는
+실행 예산·시간을 확인한다. 각 행마다 전체 전표를 다시 검색하는 방법으로 바꾸지 않는다.
+
 ## 그룹마다 가장 좋은 후보 하나를 고르기
 
 각 대상의 `each` 안에서 후보 전체를 다시 `filter`하면 대상 수×후보 수만큼 훑는다.

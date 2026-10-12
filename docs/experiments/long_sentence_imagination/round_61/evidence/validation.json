@@ -1,0 +1,18 @@
+{
+  "pytest": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "145",
+    "time": "26.530",
+    "timestamp": "2026-10-12T19:51:34.710072+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "command": ".venv/bin/python3 -m pytest backend/test_app_view_engine.py backend/test_doc_drift.py backend/test_episode4064_repairs.py backend/test_ibl_composition_teaching.py backend/test_expression_functions.py",
+  "selector": "변경 4 파일, backend 모듈 0개 → 전이 시험 파일 4/655 (1%)",
+  "additional": "backend/test_expression_functions.py (원문 키 보존 계약)",
+  "build_ibl_nodes_check": "passed",
+  "android_bundle": "passed; generated files unchanged",
+  "backend_full_suite": "not run; no runtime implementation change"
+}

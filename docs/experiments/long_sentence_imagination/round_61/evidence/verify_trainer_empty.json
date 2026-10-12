@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": "summary + 0 rows × 8 fields + evidence IDs + report cells + exceptions",
+  "failure_count": 0,
+  "failures": [],
+  "expected_summary": {
+    "raw": 0,
+    "unique": 0,
+    "excluded": 0,
+    "matched": 0,
+    "different": 0,
+    "unknown": 0
+  }
+}

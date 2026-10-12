@@ -1,0 +1,12 @@
+{
+  "confirmed_at": "2026-10-12T19:47:05+09:00",
+  "health": "healthy",
+  "live_turns": [],
+  "observation": "known",
+  "tasks": {
+    "task_sysai_dc3d9c2f": "succeeded",
+    "task_sysai_10c1bf5d": "succeeded"
+  },
+  "pre_repair_revision": "bd47750d",
+  "repair_scope": "IBL task program, composition teaching, specification clarification, regression examples; no runtime semantics changed"
+}

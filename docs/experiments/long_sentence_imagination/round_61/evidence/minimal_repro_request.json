@@ -1,0 +1,1 @@
+{"code": "#!ibl edition=2\n$a=from_entries([[$nfc,[\"a\"]]])\n$b={**$a,**from_entries([[$nfd,get($a,$nfd,[])+[\"b\"]]])}\nreturn {equal:$nfc==$nfd,lookup:get($a,$nfd,[]),merged:$b,keys:keys($b),final:get($b,$nfc,[])}", "origin": "training", "project_id": "수동모드", "inputs": {"nfc": "부산", "nfd": "부산"}}

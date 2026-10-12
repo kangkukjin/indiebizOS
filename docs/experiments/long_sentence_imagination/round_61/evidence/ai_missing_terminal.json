@@ -1,0 +1,27 @@
+{
+  "request": null,
+  "endpoint": "/system-ai/tasks/task_sysai_10c1bf5d",
+  "started": 1791801978.0194309,
+  "ended": 1791801978.0412521,
+  "response": {
+    "task_ref": {
+      "kind": "delegation",
+      "owner": "system",
+      "task_id": "task_sysai_10c1bf5d"
+    },
+    "parent_task_ref": null,
+    "run_id": "run_d60a2a91cf5e384d3cda",
+    "parent_run_id": null,
+    "state": "succeeded",
+    "status": "completed",
+    "delegated_to": "system_ai",
+    "requester_channel": "gui",
+    "created_at": "2026-10-12 10:44:41",
+    "completed_at": "2026-10-12 10:45:22",
+    "pending_children": 0,
+    "children": [],
+    "result": "새 입력 사본으로 다시 대조했습니다. manifest에 적힌 네 전표 파일 중 **events_2.json이 없었습니다**. 파싱 실패가 아니라 파일 자체가 폴더에 없습니다. 이 규칙에 따라 240개 품목·창고 행은 모두 **예상재고·차이를 null, 상태를 미확인**으로 두었습니다. 확인된 순증감은 읽은 세 파일만으로 계산했습니다.\n\n**읽은 3개 파일 기준 집계**\n- 원본 행수는 **2,214**, 고유 전표수는 **2,171**, 최신판 선택으로 제외된 행수는 **43**입니다. 2,214 = 2,171 + 43으로 합이 맞습니다.\n- 상태별 건수는 일치 0, 차이 0, 미확인 **240**이고, stock.json의 240행은 순서까지 그대로 남겼습니다.\n- **수량 미상 전표:** E0055(P002·서울|A), E0277(P011·부산), E0499(P020·부산) 세 건입니다. 지난번에 있던 E0166은 빠진 events_2.json에 들어 있던 전표라 이번 목록에는 없습니다.\n- **미등록 조합:** `미등록`·서울|A의 U2(출고 2) 한 건입니다. 지난번 U1(부산 입고 3)도 빠진 파일에 있었습니다.\n- 행마다 그 행 계산에 쓴 최신 전표 id 목록을 근거로 붙였습니다. 다만 빠진 파일의 전표가 없으므로, 확인된 순증감은 모두 **부분값**입니다.\n\n**자료 특이사항 (보고서에 처리 규칙과 함께 적음)**\n- 전표 창고명 97행이 NFD 표기여서 NFC로 정규화해 같은 창고로 묶었습니다. stock.json 창고명은 모두 NFC였습니다.\n- 같은 version인데 내용이 다른 전표는 없었습니다. 유형 값도 입고·출고·반품 세 가지뿐이라 표기 변형이 없었습니다.\n- 같은 최신판이 반복된 id는 20개이고, 각각 한 건으로 계산했습니다.\n\n**재독 확인:** 저장한 두 파일을 다시 읽어 행수 합, stock 행 보존, 상태별 건수와 합계, 보고서 표 행수와 칸 수, null·미확인 규칙이 모두 맞는지 대조했고 전부 통과했습니다. 입력 파일은 실행 전후 해시가 같아 바뀌지 않았습니다. 계산 스크립트는 지난번 것을 새 out/_build/에 복사해 그대로 썼습니다.\n\n파일:\n- `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_61회차/agent/missing/out/result.json`\n- `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_61회차/agent/missing/out/report.md`",
+    "error": null,
+    "status_url": "/system-ai/tasks/task_sysai_10c1bf5d"
+  }
+}

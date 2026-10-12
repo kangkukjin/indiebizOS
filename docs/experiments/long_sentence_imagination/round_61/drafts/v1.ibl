@@ -1,0 +1,41 @@
+#!ibl edition=2
+[def:전표읽기]($path,$name) {
+  [try] { $doc=[self:read]{path:$path}; return {name:$name,ok:true,rows:$doc.data.items,error:""} }
+  [catch] { return {name:$name,ok:false,rows:[],error:$error.message} }
+}
+[def:대조]($row,$refs,$complete) {
+  $missing=get($row,"missing",0)
+  $known=get($row,"known",0)
+  $unknown=$missing>0 or not $complete
+  $expected=$unknown ? null : $row.opening+$known
+  $diff=$expected==null ? null : $row.counted-$expected
+  return {**$row,known:$known,missing:$missing,expected:$expected,difference:$diff,status:$unknown ? "미확인" : $diff==0 ? "일치" : "차이",ids:get(get($refs,$row.sku,{}),$row.warehouse,[])}
+}
+$docs=[self:read]{path:$input+"/manifest.json"} & [self:read]{path:$input+"/stock.json"}
+$manifest=$docs[0].data
+$stock=$docs[1].data.items
+$sources=$manifest.files >> [table:each]{parallel:4} { [fn:전표읽기]{path:$input+"/"+$it,name:$it} }
+$failed=filter($sources,($r)=>not $r.ok)
+$all=$sources >> [table:each]{mode:"flat_map"} { return $it.rows }
+$ordered=$all >> [table:sort]{by:"version",descending:true}
+$latest=($ordered >> [table:dedup]{by:"id"}).items
+$refs=reduce($latest,{},($acc,$r)=>{**$acc,**from_entries([[$r.sku,{**get($acc,$r.sku,{}),**from_entries([[$r.warehouse,get(get($acc,$r.sku,{}),$r.warehouse,[])+[$r.id]]])}]])})
+$movements=$latest >> [table:each] {
+  return {**$it,known:$it.qty==null ? 0 : $it.qty*($it.kind=="출고" ? -1 : 1),missing:$it.qty==null ? 1 : 0}
+}
+$totals=$movements >> [table:groupby]{by:["sku","warehouse"],agg:{known:["sum","known"],missing:["sum","missing"],events:["count"]}}
+$joined=[table:join]{left:$stock,right:$totals,on:["sku","warehouse"],how:"left",defaults:{known:0,missing:0,events:0}}
+$rows=$joined >> [table:each] { [fn:대조]{row:$it,refs:$refs,complete:len($failed)==0} }
+$unregistered=([table:join]{left:$totals,right:$stock,on:["sku","warehouse"],how:"anti"}).items
+$unknown=filter($latest,($r)=>$r.qty==null)
+$summary={raw:len($all),unique:len($latest),excluded:len($all)-len($latest),matched:len(filter($rows,($r)=>$r.status=="일치")),different:len(filter($rows,($r)=>$r.status=="차이")),unknown:len(filter($rows,($r)=>$r.status=="미확인"))}
+$result={summary:$summary,rows:$rows,unregistered:$unregistered,unknown_events:$unknown,failed_sources:$failed,source_complete:len($failed)==0}
+$lines=map($rows,($r)=>f"| ${$r.sku} | ${$r.warehouse} | ${$r.opening} | ${$r.known} | ${$r.counted} | ${$r.expected==null ? '미확인' : text($r.expected)} | ${$r.difference==null ? '미확인' : text($r.difference)} | ${$r.status} |")
+$report="# 재고 대조\n\n원본/고유/제외 및 상태별 건수: "+json($summary)+"\n\n| 품목 | 창고 | 기초 | 확인 순증감 | 실사 | 예상 | 차이 | 상태 |\n|---|---|---:|---:|---:|---:|---:|---|\n"+join("\n",$lines)+"\n\n## 수량 미상 전표\n"+json($unknown)+"\n\n## 미등록 조합\n"+json($unregistered)+"\n\n## 누락 파일\n"+json($failed)+"\n\n행별 근거 전표 ID는 result.json의 rows[].ids에 보존했습니다.\n"
+[self:write]{path:$out+"/result.json",content:json($result)}
+[self:write]{path:$out+"/report.md",content:$report}
+$saved=[self:read]{path:$out+"/result.json"}
+$readback=[self:read]{path:$out+"/report.md"}
+assert $saved.data==$result,"JSON 재독 불일치"
+assert $readback.text==$report,"보고서 재독 불일치"
+return $summary

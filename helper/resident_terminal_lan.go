@@ -22,7 +22,15 @@ type terminalLAN struct {
 	SHA256 string   `json:"sha256"`
 }
 
-func terminalURL(base, id string) (string, error) {
+func terminalURL(base, id string) (string, error) { return streamURL(base, id, "terminal") }
+
+func streamURL(base, id, channel string) (string, error) {
+	if channel == "" {
+		channel = "terminal"
+	}
+	if channel != "terminal" && channel != "screen" {
+		return "", fmt.Errorf("invalid stream channel")
+	}
 	u, err := url.Parse(base)
 	if err != nil {
 		return "", err
@@ -31,7 +39,7 @@ func terminalURL(base, id string) (string, error) {
 		return "", fmt.Errorf("HTTPS required")
 	}
 	u.Scheme = strings.Replace(u.Scheme, "http", "ws", 1)
-	u.Path = strings.TrimRight(u.Path, "/") + "/limb/resident/terminal/" + id
+	u.Path = strings.TrimRight(u.Path, "/") + "/limb/resident/" + channel + "/" + id
 	return u.String(), nil
 }
 
@@ -39,7 +47,7 @@ func dialTerminal(ctx context.Context, spec terminalSpec) (*websocket.Conn, erro
 	if conn := dialTerminalLAN(ctx, spec); conn != nil {
 		return conn, nil
 	}
-	address, err := terminalURL(spec.Config.Base, spec.ID)
+	address, err := streamURL(spec.Config.Base, spec.ID, spec.Channel)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +91,7 @@ func dialTerminalLAN(ctx context.Context, spec terminalSpec) *websocket.Conn {
 		if u.Scheme != "https" || ip == nil || ip.To4() == nil || !(ip.IsPrivate() || ip.IsLoopback()) || u.User != nil || u.RawQuery != "" || u.Path != "" || u.Fragment != "" {
 			continue
 		}
-		address, e := terminalURL(base, spec.ID)
+		address, e := streamURL(base, spec.ID, spec.Channel)
 		if e != nil {
 			continue
 		}

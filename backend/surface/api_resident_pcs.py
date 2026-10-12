@@ -13,7 +13,10 @@ import limb_keys
 import resident_pcs as pcs
 import resident_store
 
+from api_resident_screen import router as screen_router
+
 router = APIRouter()
+router.include_router(screen_router)
 
 
 class DeviceMessage(BaseModel):

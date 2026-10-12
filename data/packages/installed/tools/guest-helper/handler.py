@@ -397,6 +397,10 @@ def _op_shell(tool_input: dict) -> dict:
     if not cmd.strip():
         return {"success": False, "error": "shell 엔 cmd 가 필요합니다."}
     envelope["cmd"] = cmd
+    if "elevate" in tool_input:
+        if type(tool_input["elevate"]) is not bool:
+            return {"success": False, "error": "elevate는 true/false여야 합니다."}
+        envelope["elevate"] = tool_input["elevate"]
     if tool_input.get("cwd"):
         envelope["cwd"] = tool_input["cwd"]
     if tool_input.get("stdin"):
@@ -416,6 +420,8 @@ def _op_shell(tool_input: dict) -> dict:
     to = tool_input.get("timeout")
     import limb_keys
     resident = bool((limb_keys.get_by_device(device_id) or {}).get("registration"))
+    if envelope.get("elevate") and not resident:
+        return {"success": False, "error": "관리자 인증은 상주 헬퍼에서 지원합니다."}
     if to is None and resident and tool_input.get("request_id"):
         import resident_pcs
         import resident_store

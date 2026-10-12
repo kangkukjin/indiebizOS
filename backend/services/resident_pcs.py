@@ -109,12 +109,14 @@ def update_helper(target):
     return {**receipt, "state": "updating", "sha256": status["latest"]}
 
 
-def submit(target, command, request_id=None, *, allow_update=False, allow_terminal=False):
+def submit(target, command, request_id=None, *, allow_update=False, allow_terminal=False, allow_desktop=False):
     rec = resolve(target)
     allowed = {"shell", "read", "write", "list", "info", "screen", "click", "move", "type",
                "key", "scroll", "drag", "transfer", "media", "wake"}
     if allow_update:  # only update_helper(); never reachable from an agent's command
         allowed = allowed | {"update"}
+    if allow_desktop:
+        allowed = allowed | {"desktop"}
     if allow_terminal:
         allowed = allowed | {"terminal"}
     op = command.get("op", "shell")
@@ -127,6 +129,14 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
     if command.get("mode") == "observe":
         if op != "shell" or isinstance(command.get("timeout"), bool) or not 1 <= command.get("timeout", 1800) <= 10:
             raise ValueError("mode:observe requires shell with explicit timeout:1..10; use it for short checks")
+    if "elevate" in command:
+        if type(command["elevate"]) is not bool or op != "shell":
+            raise ValueError("elevate requires shell and a boolean")
+        if command["elevate"]:
+            if command.get("mode") == "observe":
+                raise ValueError("관리자 인증 작업은 mode:observe를 사용할 수 없습니다.")
+            if not (rec["registration"].get("capabilities") or {}).get("elevation"):
+                raise ValueError("관리자 인증을 지원하는 새 헬퍼로 교체하세요.")
     volume = command.get("volume")
     if op == "media" and volume is not None and (
             isinstance(volume, bool) or not isinstance(volume, (int, float))

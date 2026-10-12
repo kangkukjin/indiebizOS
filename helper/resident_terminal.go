@@ -20,11 +20,12 @@ type terminalProcess interface {
 	Wait() int
 }
 type terminalSpec struct {
-	Config Config      `json:"config"`
-	ID     string      `json:"terminal_id"`
-	Cols   int         `json:"cols"`
-	Rows   int         `json:"rows"`
-	LAN    terminalLAN `json:"lan"`
+	Channel string      `json:"-"`
+	Config  Config      `json:"config"`
+	ID      string      `json:"terminal_id"`
+	Cols    int         `json:"cols"`
+	Rows    int         `json:"rows"`
+	LAN     terminalLAN `json:"lan"`
 }
 
 // The bridge runs in a separate process. A worker crash closes its stdin lease;

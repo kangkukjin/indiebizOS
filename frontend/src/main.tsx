@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { ScreenShare } from './components/remote-pc/ScreenShare'
 import { IS_WEB_SURFACE } from './lib/backend-origin'
 import { RemoteSession } from './components/RemoteSession'
 
@@ -25,8 +26,11 @@ if (bridge?.dialogPing && bridge?.dialogAlert && bridge?.dialogConfirm) {
   }).catch(() => { /* 메인이 다이얼로그 채널을 모름 — 내장 alert/confirm 그대로 */ });
 }
 
+const screenDevice = window.location.hash.match(/^#\/remote-screen\/(guestpc-[a-f0-9]+)$/)?.[1];
+const content = screenDevice ? <ScreenShare device={screenDevice} /> : <App />;
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {IS_WEB_SURFACE ? <RemoteSession><App /></RemoteSession> : <App />}
+    {IS_WEB_SURFACE ? <RemoteSession>{content}</RemoteSession> : content}
   </StrictMode>,
 )

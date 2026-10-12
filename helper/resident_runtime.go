@@ -58,6 +58,8 @@ func (r *residentRuntime) capabilities() map[string]interface{} {
 	mpv, _ := findMediaPlayer()
 	_, afplay := exec.LookPath("afplay")
 	caps := map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv != "" || afplay == nil, "media_player": mpv, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "screen_observation": true, "screen_cancel": true, "media_volume": true, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
+	caps["desktop_stream"] = 1
+	caps["elevation"] = true
 	caps["terminal"] = terminalAvailable()
 	caps["terminal_lan"] = true
 	caps["helper_sha256"], caps["go"], caps["self_update"] = residentSelfDigest(), runtime.Version(), residentCanSelfUpdate(r.cfg)
@@ -294,6 +296,14 @@ func (r *residentRuntime) localControl(listener net.Listener) {
 		w.Header().Set("Cache-Control", "no-store")
 		if req.Method == "POST" {
 			action := req.FormValue("action")
+			if action == "screen" {
+				if err := prepareScreen(r.cfg.DataDir); err != nil {
+					http.Error(w, "화면 공유 권한 설정을 완료하지 못했습니다.", 500)
+					return
+				}
+				fmt.Fprint(w, "OS에서 요청한 화면·입력 접근 권한을 허용한 뒤 중앙에서 화면 공유를 여세요.")
+				return
+			}
 			if action == "remove" {
 				go func() {
 					r.stop()
@@ -314,7 +324,7 @@ func (r *residentRuntime) localControl(listener net.Listener) {
 			r.mu.Unlock()
 
 		}
-		fmt.Fprint(w, `<!doctype html><meta charset="utf-8"><title>IndieBiz PC 관리</title><h1>상주 헬퍼 실행 중</h1><p>중앙 기록에 모든 작업이 저장됩니다. 제거해도 작업 폴더는 보존합니다.</p><form method="post"><button name="action" value="pause">새 작업 중지</button><button name="action" value="resume">재개</button><button name="action" value="remove">이 PC 등록 해제 및 제거</button></form>`)
+		fmt.Fprint(w, `<!doctype html><meta charset="utf-8"><title>IndieBiz PC 관리</title><h1>상주 헬퍼 실행 중</h1><p>중앙 기록에 AI 작업 내역이 저장됩니다. 화면 공유 영상과 키 입력은 저장하지 않습니다. 제거해도 작업 폴더는 보존합니다.</p><form method="post"><button name="action" value="screen">화면 공유 권한 설정</button><button name="action" value="pause">새 작업 중지</button><button name="action" value="resume">재개</button><button name="action" value="remove">이 PC 등록 해제 및 제거</button></form>`+residentPermissionHelp())
 	})
 	go (&http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second}).Serve(listener)
 }

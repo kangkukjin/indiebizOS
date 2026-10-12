@@ -182,9 +182,18 @@ func residentSetup(cfg *Config) error {
 }
 
 var residentSetupMessages = map[string]string{
-	"enrolled": "등록했습니다. USB를 분리해도 됩니다. 중앙 조종실의 손발 (USB)에서 확인·해제하고, AI에게 PC 이름으로 작업을 부탁하세요.",
-	"updated":  "이미 등록된 PC입니다. 헬퍼를 이 USB의 판으로 바꾸고 다시 시작했습니다. 등록과 PC 이름은 그대로입니다. USB를 분리해도 됩니다.",
+	"enrolled": "등록했습니다. 화면 공유는 원격 PC의 접근 권한을 허용한 뒤 사용할 수 있습니다. USB를 분리해도 됩니다. 중앙 조종실의 손발 (USB)에서 확인·해제하고, AI에게 PC 이름으로 작업을 부탁하세요.",
+	"updated":  "화면 공유 권한을 허용했다면 바로 사용할 수 있습니다. 이미 등록된 PC입니다. 헬퍼를 이 USB의 판으로 바꾸고 다시 시작했습니다. 등록과 PC 이름은 그대로입니다. USB를 분리해도 됩니다.",
 	"running":  "이미 등록된 PC이고 헬퍼도 이 USB와 같은 판입니다. 바꾼 것이 없습니다.",
+}
+
+// Only the PC's local installer/manager teaches OS permissions, not the cockpit.
+func residentPermissionHelp() string {
+	if runtime.GOOS != "darwin" {
+		return ""
+	}
+	exe, _ := os.Executable()
+	return `<p>Mac: 화면 기록·손쉬운 사용에서 IndieBiz Screen을 허용하세요. 모든 폴더와 외장 드라이브를 쓰려면 설치된 indiebiz-helper에 <a href="x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles">전체 디스크 접근 권한</a>도 허용하세요. 권한 변경 후 다시 연결하면 됩니다.</p><p>` + template.HTMLEscapeString(filepath.Dir(exe)) + `</p>`
 }
 
 func residentSetupHandler(cfg *Config, install func(*Config) (string, error), done chan error, token string) http.Handler {
@@ -215,14 +224,14 @@ func residentSetupHandler(cfg *Config, install func(*Config) (string, error), do
 				http.Error(w, e.Error(), 500)
 				return
 			}
-			fmt.Fprint(w, residentSetupMessages[outcome])
+			fmt.Fprint(w, residentSetupMessages[outcome]+residentPermissionHelp())
 			select {
 			case done <- nil:
 			default:
 			}
 			return
 		}
-		fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IndieBiz PC 등록</title><style>body{font:16px system-ui;max-width:560px;margin:8vh auto;padding:24px;line-height:1.7;background:#faf9f6;color:#302e29}input,button{font:inherit;padding:10px;margin:8px 0;box-sizing:border-box;width:100%%}button{background:#302e29;color:white;border:0;border-radius:6px}input{border:1px solid #ccc;border-radius:6px}</style><h1>이 PC 등록</h1><p>중앙 주소: %s</p><p>현재 사용자 권한으로 작업하며 로그인 시 자동 시작합니다. 중앙 조종실의 손발 (USB)에서 해제하면 헬퍼가 제거됩니다. 작업 파일은 보존합니다.</p><form method="post"><label>중앙 AI에게 부를 PC 이름<input name="alias" value="%s" maxlength="80" required placeholder="예: 맥12"></label><button>등록하고 시작</button></form>`, template.HTMLEscapeString(cfg.Base), template.HTMLEscapeString(name))
+		fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IndieBiz PC 등록</title><style>body{font:16px system-ui;max-width:560px;margin:8vh auto;padding:24px;line-height:1.7;background:#faf9f6;color:#302e29}input,button{font:inherit;padding:10px;margin:8px 0;box-sizing:border-box;width:100%%}button{background:#302e29;color:white;border:0;border-radius:6px}input{border:1px solid #ccc;border-radius:6px}</style><h1>이 PC 등록</h1><p>중앙 주소: %s</p><p>AI 작업과 화면 공유를 준비하고 로그인 시 자동 시작합니다. 요청되는 화면·입력 접근 권한을 허용하세요. 관리자 작업은 필요할 때 이 PC에서 인증합니다. 중앙 조종실의 손발 (USB)에서 해제하면 헬퍼가 제거됩니다. 작업 파일은 보존합니다.</p><form method="post"><label>중앙 AI에게 부를 PC 이름<input name="alias" value="%s" maxlength="80" required placeholder="예: 맥12"></label><button>등록하고 시작</button></form>`, template.HTMLEscapeString(cfg.Base), template.HTMLEscapeString(name))
 	})
 	return mux
 }
@@ -351,6 +360,12 @@ func residentInstall(invite *Config) (string, error) {
 			outcome = "updated"
 		}
 	}
+	// Permissions belong to the installed executable, not the USB copy.
+	if outcome != "running" {
+		permission := exec.Command(dest, "--screen-permissions", root)
+		configureResidentDetached(permission)
+		_ = permission.Run() // AI commands remain available if a user declines screen access.
+	}
 	if e = residentAutostart(&cfg, dest, false); e != nil {
 		return "", e
 	}
@@ -409,7 +424,7 @@ func residentCleanup(root string) error {
 	// Cleanup-only mode is restartable at login until logs and removal reach the hub.
 	revoked := false
 
-	for _, name := range []string{filepath.Base(residentExecutable(root)), filepath.Base(residentExecutable(root)) + ".previous", "update.json", "control.json", "paused.json"} {
+	for _, name := range []string{filepath.Base(residentExecutable(root)), filepath.Base(residentExecutable(root)) + ".previous", "update.json", "control.json", "paused.json", "screen-worker.py", "screen-portal-token"} {
 		for attempt := 0; attempt < 30; attempt++ {
 			e = os.Remove(filepath.Join(root, name))
 			if e == nil || os.IsNotExist(e) {
@@ -490,6 +505,7 @@ func residentCleanup(root string) error {
 		}
 		time.Sleep(30 * time.Second)
 	}
+	_ = os.RemoveAll(filepath.Join(root, "IndieBiz Screen.app"))
 	_ = os.Remove(filepath.Join(root, "removing.json"))
 	exe, _ := os.Executable()
 	return residentDeleteSelf(exe)

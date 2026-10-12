@@ -8,6 +8,7 @@ nodes:
         params:
           mode: string
           env: object
+          elevate: boolean
           request_id: string
           action: string
           local_path: string
@@ -23,7 +24,7 @@ nodes:
           job: [job_id]      # shell 응답 필드명 그대로 되넣는 관습어
         returns: effect   # effector — 셸/파일을 남의 PC 에서 실행(부작용). effect 는 자가점검이 자동 실행하지 않는다.
         description: USB·상주 PC 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 + 화면 보기 실행 (op 분기) — 허브에서 명령을 내려보낸다. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
-        target_description: '상세 절차·등록 관용구는 guest_helper.md. limb에 대상 이름/device_id를 명시한다. self:limb list의 registration이 있으면 상주형이다. shell(cmd,cwd,timeout,shell,stdin): Windows cmd 또는 powershell, mac/Linux sh. 상주형은 매 작업의 cwd·env가 분리되므로 절대 cwd·명시 env·venv 실행 경로를 쓴다. 휴대형만 cwd·환경변수를 이어 쓰며 reset:true로 초기화한다(함수·별칭 유지 안 됨). 긴 명령은 background:true로 접수증(task_ref)을 받고 self:task wait/status로 관측한다. 상주형 request_id는 동일 명령의 중복 접수를 막고 동기 결과도 반복 회수한다. 상주 shell 기본 timeout은 동기·배경 모두 1800초다. 새 헬퍼는 info/list/read/screen을 별도 확인 자리 1개에서 실행한다. 짧은 확인 셸은 mode:observe와 timeout:1..10을 명시하며 일반 작업 2개와 독립이다(읽기 전용 보안 보장은 아님). 대기 종료·결과 불명은 재전송 사유가 아니다. info는 OS·권한·셸·도구·GUI 환경, list(path)는 폴더 목록, read(path)는 텍스트 200KB 상한(offset·limit 없음, 큰 파일은 transfer receive→collect), write(path,content)는 파일 쓰기. transfer(action:send|receive|collect,local_path,path,request_id,transfer_id)는 상주 바이너리 전송; receive 완료 뒤 collect로 중앙 저장. 같은 요청ID는 실패도 그대로 회수한다. 전송 실패 종료 확인 후 새 요청ID와 기존 transfer_id로 재개한다. 진행 중·결과 미확인에는 새 요청ID를 만들지 않는다. 다른 내용의 기존 파일은 덮어쓰지 않는다. media(volume:0..100 선택, path 또는 url,mode:background 오디오/interactive 영상·사진,timeout)는 상주 재생 접수; 실제 재생 증명은 별도. cancel(job)은 취소 요청이며 실제 종료는 self:task로 확인한다. wake는 저장된 경로로 신호 전송; mac/broadcast/relay를 주면 경로만 설정. relay는 대상 LAN의 켜진 PC 또는 같은 LAN의 central이다. 신호 전송은 준비 완료가 아니다. history(limb,job,cursor)는 상주 작업·이벤트 페이지이며 실패 원문을 보존한다. history는 이미지 b64를 생략하고 image_task_ref로 원본 조회를 안내한다. history.tasks와 작업 관측은 성공·실패·취소 모두 started_at·ended_at·seconds·outcome을 제공한다. outcome:timeout은 명령 제한시간 종료이며 timed_out은 조회 대기 종료다. 출력 파이프가 열린 채 명령이 정상 종료하면 exit:0과 output_incomplete·warning을 반환한다. 백그라운드 자식은 입출력을 파일과 /dev/null로 돌리고 재접수 전에 생존을 확인한다. 상주형 progress는 최근 5건 미리보기이며 전문은 history cursor로 조회한다. 셸 결과는 output이다. 휴대형 progress.tail 및 stdout/stderr와 구분한다. result(job)은 휴대형 호환 1회 회수이므로 반복 관측은 self:task. screen(max_width,format,display)과 click/move/type/key/scroll/drag는 상주형에서 mode:interactive 필수. 동기 screen 대기 종료는 촬영 취소를 요청하며 task_ref로 종료를 확인한다. 단색 캡처는 image_observation:uniform과 warning을 반환하며 원인은 단정하지 않는다. 좌표는 직전 screen 이미지에서 관측한 좌표이며 헬퍼가 배율을 환산한다. 입력은 기본 재캡처(shot:false로 끄기,settle_ms 기본 700); type은 현재 포커스. screen→입력→결과 확인하며 셸로 되는 일은 셸을 쓴다. detach는 휴대형 프로세스 종료만 허용한다. 상주형 작업 후에는 연결을 유지하고 일시 중지는 self:limb pause, 명시적인 등록 해제·제거는 self:limb remove다.'
+        target_description: '상세 절차·등록 관용구는 guest_helper.md. limb에 대상 이름/device_id를 명시한다. self:limb list의 registration이 있으면 상주형이다. shell(cmd,cwd,timeout,shell,stdin): Windows cmd 또는 powershell, mac/Linux sh. 상주 shell의 elevate:true는 그 PC의 OS 관리자 인증창을 거쳐 이번 명령만 관리자 권한으로 실행한다. 비밀번호를 cmd·stdin·env에 넣지 않는다. 상주형은 매 작업의 cwd·env가 분리되므로 절대 cwd·명시 env·venv 실행 경로를 쓴다. 휴대형만 cwd·환경변수를 이어 쓰며 reset:true로 초기화한다(함수·별칭 유지 안 됨). 긴 명령은 background:true로 접수증(task_ref)을 받고 self:task wait/status로 관측한다. 상주형 request_id는 동일 명령의 중복 접수를 막고 동기 결과도 반복 회수한다. 상주 shell 기본 timeout은 동기·배경 모두 1800초다. 새 헬퍼는 info/list/read/screen을 별도 확인 자리 1개에서 실행한다. 짧은 확인 셸은 mode:observe와 timeout:1..10을 명시하며 일반 작업 2개와 독립이다(읽기 전용 보안 보장은 아님). 대기 종료·결과 불명은 재전송 사유가 아니다. info는 OS·권한·셸·도구·GUI 환경, list(path)는 폴더 목록, read(path)는 텍스트 200KB 상한(offset·limit 없음, 큰 파일은 transfer receive→collect), write(path,content)는 파일 쓰기. transfer(action:send|receive|collect,local_path,path,request_id,transfer_id)는 상주 바이너리 전송; receive 완료 뒤 collect로 중앙 저장. 같은 요청ID는 실패도 그대로 회수한다. 전송 실패 종료 확인 후 새 요청ID와 기존 transfer_id로 재개한다. 진행 중·결과 미확인에는 새 요청ID를 만들지 않는다. 다른 내용의 기존 파일은 덮어쓰지 않는다. media(volume:0..100 선택, path 또는 url,mode:background 오디오/interactive 영상·사진,timeout)는 상주 재생 접수; 실제 재생 증명은 별도. cancel(job)은 취소 요청이며 실제 종료는 self:task로 확인한다. wake는 저장된 경로로 신호 전송; mac/broadcast/relay를 주면 경로만 설정. relay는 대상 LAN의 켜진 PC 또는 같은 LAN의 central이다. 신호 전송은 준비 완료가 아니다. history(limb,job,cursor)는 상주 작업·이벤트 페이지이며 실패 원문을 보존한다. history는 이미지 b64를 생략하고 image_task_ref로 원본 조회를 안내한다. history.tasks와 작업 관측은 성공·실패·취소 모두 started_at·ended_at·seconds·outcome을 제공한다. outcome:timeout은 명령 제한시간 종료이며 timed_out은 조회 대기 종료다. 출력 파이프가 열린 채 명령이 정상 종료하면 exit:0과 output_incomplete·warning을 반환한다. 백그라운드 자식은 입출력을 파일과 /dev/null로 돌리고 재접수 전에 생존을 확인한다. 상주형 progress는 최근 5건 미리보기이며 전문은 history cursor로 조회한다. 셸 결과는 output이다. 휴대형 progress.tail 및 stdout/stderr와 구분한다. result(job)은 휴대형 호환 1회 회수이므로 반복 관측은 self:task. screen(max_width,format,display)과 click/move/type/key/scroll/drag는 상주형에서 mode:interactive 필수. 동기 screen 대기 종료는 촬영 취소를 요청하며 task_ref로 종료를 확인한다. 단색 캡처는 image_observation:uniform과 warning을 반환하며 원인은 단정하지 않는다. 좌표는 직전 screen 이미지에서 관측한 좌표이며 헬퍼가 배율을 환산한다. 입력은 기본 재캡처(shot:false로 끄기,settle_ms 기본 700); type은 현재 포커스. screen→입력→결과 확인하며 셸로 되는 일은 셸을 쓴다. detach는 휴대형 프로세스 종료만 허용한다. 상주형 작업 후에는 연결을 유지하고 일시 중지는 self:limb pause, 명시적인 등록 해제·제거는 self:limb remove다.'
         group: device
         target_key: op
         router: handler
@@ -169,7 +170,10 @@ tool_json:
           description: 윈도우 셸 선택 cmd/powershell (op=shell, 기본 cmd — mac·linux 는 항상 sh)
         stdin:
           type: string
-          description: 명령의 표준입력 (op=shell — 비밀번호·y/n 프롬프트를 기다리는 명령에 미리 물림)
+          description: 명령의 표준입력 (op=shell — 비밀이 아닌 입력만. 관리자 인증은 elevate:true로 OS 인증창 사용)
+        elevate:
+          type: boolean
+          description: 상주 shell 전용. 원격 PC의 OS 인증창에서 승인한 이번 명령만 관리자 권한으로 실행. 비밀번호 전달·저장 금지.
         reset:
           type: boolean
           description: 휴대형 실행 전 세션(기억한 디렉토리·환경) 초기화 (op=shell — venv 벗기·환경 꼬였을 때)

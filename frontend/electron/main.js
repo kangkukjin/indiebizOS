@@ -810,7 +810,7 @@ app.whenReady().then(async () => {
     ]));
   });
   installUILocale();
-  installRemoteDesktop({ app, ipcMain, shell });
+  installRemoteDesktop({ app, ipcMain, BrowserWindow });
   // IPC 설정
   setupIPC();
 

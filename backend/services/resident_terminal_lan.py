@@ -19,6 +19,7 @@ _server = None
 _port = 0
 _fingerprint = ''
 _retry_at = 0
+_handlers = {}
 
 
 def addresses():
@@ -31,7 +32,8 @@ def addresses():
                    and any(ipaddress.ip_address(a.address) in n for n in nets)})[:8]
 
 
-def _start(handler):
+def _start(handler, channel="terminal"):
+    _handlers[channel] = handler
     import uvicorn
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
@@ -43,7 +45,11 @@ def _start(handler):
 
     async def endpoint(ws):
         ws.scope['terminal_lan'] = True
-        await handler(ws, ws.path_params['sid'])
+        selected = _handlers.get(ws.path_params.get('channel', 'terminal'))
+        if selected is None:
+            await ws.close(code=1008)
+            return
+        await selected(ws, ws.path_params['sid'])
 
     key = ec.generate_private_key(ec.SECP256R1())
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'IndieBiz terminal')])
@@ -53,7 +59,7 @@ def _start(handler):
             .not_valid_before(now - datetime.timedelta(minutes=1))
             .not_valid_after(now + datetime.timedelta(days=30)).sign(key, hashes.SHA256()))
     fingerprint = hashlib.sha256(cert.public_bytes(serialization.Encoding.DER)).hexdigest()
-    app = Starlette(routes=[WebSocketRoute('/limb/resident/terminal/{sid}', endpoint)])
+    app = Starlette(routes=[WebSocketRoute('/limb/resident/{channel}/{sid}', endpoint)])
     # Uvicorn loads the private key into its SSLContext before the temp files vanish.
     with tempfile.TemporaryDirectory(prefix='indiebiz-terminal-tls-') as root:
         cert_path, key_path = Path(root) / 'cert.pem', Path(root) / 'key.pem'
@@ -63,7 +69,7 @@ def _start(handler):
         cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
         config = uvicorn.Config(app, log_level='error', access_log=False, lifespan='off',
                                 ssl_certfile=str(cert_path), ssl_keyfile=str(key_path),
-                                ws_max_size=65536, ws_max_queue=16)
+                                ws_max_size=4 * 1024 * 1024, ws_max_queue=16)
         config.load()
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -84,15 +90,18 @@ def _start(handler):
         raise
 
 
-def offer(handler):
+def offer(handler, channel='terminal'):
     global _server, _port, _fingerprint, _retry_at
+    if channel not in {'terminal', 'screen'}:
+        raise ValueError('invalid_stream_channel')
     with _lock:
+        _handlers[channel] = handler
         try:
             hosts = addresses()
             if not hosts or time.monotonic() < _retry_at:
                 return {}
             if _server is None or _server.should_exit:
-                _server, _port, _fingerprint = _start(handler)
+                _server, _port, _fingerprint = _start(handler, channel)
             return {'urls': [f'https://{host}:{_port}' for host in hosts],
                     'sha256': _fingerprint}
         except Exception as exc:

@@ -6,7 +6,7 @@ import { api } from '../../lib/api';
 type Registration = {
   state: 'active' | 'removal_pending' | 'removed';
   paused?: boolean;
-  capabilities?: { os?: string; hostname?: string };
+  capabilities?: { os?: string; hostname?: string; desktop_stream?: number };
 };
 type Helper = { state: 'unknown' | 'current' | 'manual' | 'available' | 'updating'; rolled_back?: boolean };
 type PC = { alias: string; device_id: string; connected: boolean; revoked?: boolean; registration: Registration; helper?: Helper };
@@ -50,14 +50,14 @@ export function LimbSwitch() {
   };
   const openDesktop = async (pc: PC) => {
     if (!window.electron?.openRemoteDesktop) {
-      setErr('화면 공유는 Mac의 IndieBiz OS 앱에서 사용할 수 있습니다. 앱에서 열리지 않으면 앱을 다시 실행하세요.');
+      window.open(`${window.location.pathname}#/remote-screen/${encodeURIComponent(pc.device_id)}`, '_blank', 'noopener');
       return;
     }
     setDesktopOpening(pc.device_id); setErr(null);
     try {
       await window.electron.openRemoteDesktop(pc.device_id, 'auto');
-    } catch {
-      setErr(`${pc.alias} 화면 공유를 열지 못했습니다. 잠시 후 다시 시도하세요.`);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : `${pc.alias} 화면 공유를 열지 못했습니다.`);
     } finally { setDesktopOpening(null); }
   };
   const remove = async (pc: PC) => {
@@ -145,7 +145,7 @@ export function LimbSwitch() {
                 className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-600 hover:text-emerald-700 disabled:opacity-50">
                 {busy === pc.device_id || pc.helper.state === 'updating' ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpCircle size={12} />}헬퍼 교체
               </button>}
-            {pc.registration.capabilities?.os === 'darwin' && <button onClick={() => void openDesktop(pc)} disabled={pc.registration.state !== 'active' || desktopOpening !== null} className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">{desktopOpening === pc.device_id ? '연결 중…' : '화면 공유'}</button>}
+            {['darwin', 'windows', 'linux'].includes(pc.registration.capabilities?.os || '') && <button onClick={() => void openDesktop(pc)} disabled={pc.registration.state !== 'active' || desktopOpening !== null} className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">{desktopOpening === pc.device_id ? '연결 중…' : '화면 공유'}</button>}
             <button onClick={() => void remove(pc)} disabled={busy !== null || pc.registration.state !== 'active'}
               title="등록 해제 및 원격 헬퍼 제거" className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-500 hover:text-red-600 disabled:opacity-50">
               {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}해제

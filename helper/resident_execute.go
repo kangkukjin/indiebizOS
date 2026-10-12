@@ -105,6 +105,7 @@ func (w *residentLog) Write(b []byte) (int, error) {
 func (r *residentRuntime) execute(parent context.Context, j Job) map[string]interface{} {
 	var c Command
 	var extra struct {
+		Elevate    bool              `json:"elevate"`
 		Resident   bool              `json:"resident"`
 		Generation string            `json:"generation"`
 		Mode       string            `json:"mode"`
@@ -151,6 +152,8 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		c.Path = filepath.Join(dir, c.Path)
 	}
 	switch c.Op {
+	case "desktop":
+		return r.desktop(ctx, j)
 	case "terminal":
 		return r.terminal(ctx, j)
 	case "shell":
@@ -173,6 +176,9 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 			cmd.Env = append(cmd.Env, k+"="+v)
 		}
 		cmd.Stdin = strings.NewReader(c.Stdin)
+		if extra.Elevate {
+			return r.elevated(ctx, j.ID, cmd)
+		}
 		return r.process(ctx, j.ID, cmd)
 	case "info":
 		info := doInfo()

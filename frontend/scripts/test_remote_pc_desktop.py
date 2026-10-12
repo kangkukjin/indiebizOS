@@ -21,7 +21,7 @@ def test_remote_pc_desktop(tmp_path):
     url = f'http://127.0.0.1:{server.server_port}/'
     requests = []
     device = {'alias': '사무실 Mac', 'device_id': 'test-pc', 'connected': True,
-              'registration': {'state': 'active', 'capabilities': {'os': 'darwin', 'terminal': True}}}
+              'registration': {'state': 'active', 'capabilities': {'os': 'darwin', 'desktop_stream': 1}}}
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True)
@@ -49,7 +49,7 @@ def test_remote_pc_desktop(tmp_path):
             assert all(path == '/remote-pcs' for path in requests)
             page.evaluate('window.desktopFailure = true')
             page.get_by_role('button', name='화면 공유', exact=True).click()
-            expect(page.get_by_role('alert')).to_contain_text('화면 공유를 열지 못했습니다')
+            expect(page.get_by_role('alert')).to_contain_text('unavailable')
             page.evaluate('window.desktopFailure = false')
             page.get_by_role('button', name='화면 공유', exact=True).click()
             page.wait_for_function('window.desktopCalls.length === 3')

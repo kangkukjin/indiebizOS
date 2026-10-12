@@ -4,6 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p dist
+# Embed signed native capture/input workers for both Mac architectures.
+bash desktop_native/build_mac.sh
 python3 ../scripts/build_member_shell.py
 
 echo "▶ windows/amd64"

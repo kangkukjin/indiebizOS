@@ -269,6 +269,15 @@ def test_guide_and_all_seed_examples_compile(pc):
         assert not plan.issues, plan.issues
 
 
+
+def test_admin_idiom_forwards_explicit_elevation(pc):
+    import limb_keys
+    limb_keys.resident_update(pc.rec['device_id'], capabilities={'elevation': True})
+    result = pc('[fn:외부PC작업실행]{PC:"시험PC",명령:"whoami",작업폴더:"/tmp",관리자:true,요청ID:"admin-1"}')
+    assert result['status'] == 'accepted'
+    assert pc.history()[0]['summary']['elevate'] is True
+    assert pc.handler._op_shell({'limb': '시험PC', 'cmd': 'id', 'elevate': 'true'})['success'] is False
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
 

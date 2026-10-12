@@ -27,7 +27,7 @@ func residentTerminalJob(j Job) bool {
 	var c struct {
 		Op string `json:"op"`
 	}
-	return json.Unmarshal([]byte(j.Code), &c) == nil && c.Op == "terminal"
+	return json.Unmarshal([]byte(j.Code), &c) == nil && (c.Op == "terminal" || c.Op == "desktop")
 }
 
 func (r *residentRuntime) schedule() error {

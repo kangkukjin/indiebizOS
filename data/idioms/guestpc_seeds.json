@@ -40,12 +40,12 @@
     "category": "composition"
   },
   {
-    "intent": "외부 PC의 명시한 폴더에서 셸 명령을 접수한다. 상주 PC는 요청ID로 중복 접수를 막고 환경을 명시한다. ok는 접수이며 observation.command_ok가 명령 성공이다.",
+    "intent": "외부 PC의 명시한 폴더에서 셸 명령을 접수한다. 상주 PC는 요청ID로 중복 접수를 막고 환경을 명시한다. ok는 접수이며 observation.command_ok가 명령 성공이다. 관리자:true는 원격 PC의 OS 인증으로 이번 명령만 관리자 실행한다.",
     "nodes": "self,limbs,table",
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
     "topic": "외부 PC 헬퍼",
-    "ibl_code": "#!ibl edition=2\n[def:외부PC작업실행]($PC,$명령,$작업폴더,$셸=\"\",$실행제한=1800,$대기=0,$입력=\"\",$환경초기화=false,$요청ID=\"\",$환경={},$모드=\"background\") {\n  [if:len($PC)==0 or len($명령)==0 or len($작업폴더)==0 or $실행제한<1 or $실행제한>86400 or $대기<0 or $대기>240] {\n    return {ok:false,status:\"invalid_input\",reason:\"PC·명령·작업폴더, 1~86400초 실행제한, 0~240초 대기가 필요합니다\"}\n  }\n  [if:$모드==\"observe\" and $실행제한>10] { return {ok:false,status:\"invalid_input\",reason:\"확인용 observe 모드는 실행제한 1~10초가 필요합니다\"} }\n  $접수 = [limbs:guestpc]{op:\"shell\",limb:$PC,cmd:$명령,cwd:$작업폴더,shell:$셸,\n    timeout:$실행제한,background:true,stdin:$입력,reset:$환경초기화,request_id:$요청ID,env:$환경,mode:$모드}\n  $작업 = {**$접수,limb_name:get($접수,\"limb_name\",$PC),op:\"shell\"}\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:$대기}\n  return {**$작업,ok:true,status:\"accepted\",cwd:$작업폴더,observation:$확인}\n}",
+    "ibl_code": "#!ibl edition=2\n[def:외부PC작업실행]($PC,$명령,$작업폴더,$셸=\"\",$실행제한=1800,$대기=0,$입력=\"\",$환경초기화=false,$요청ID=\"\",$환경={},$모드=\"background\",$관리자=false) {\n  [if:len($PC)==0 or len($명령)==0 or len($작업폴더)==0 or $실행제한<1 or $실행제한>86400 or $대기<0 or $대기>240] {\n    return {ok:false,status:\"invalid_input\",reason:\"PC·명령·작업폴더, 1~86400초 실행제한, 0~240초 대기가 필요합니다\"}\n  }\n  [if:$모드==\"observe\" and $실행제한>10] { return {ok:false,status:\"invalid_input\",reason:\"확인용 observe 모드는 실행제한 1~10초가 필요합니다\"} }\n  $접수 = [limbs:guestpc]{op:\"shell\",limb:$PC,cmd:$명령,cwd:$작업폴더,shell:$셸,\n    timeout:$실행제한,background:true,stdin:$입력,reset:$환경초기화,request_id:$요청ID,env:$환경,mode:$모드,elevate:$관리자}\n  $작업 = {**$접수,limb_name:get($접수,\"limb_name\",$PC),op:\"shell\"}\n  $확인 = [fn:외부PC작업확인]{작업:$작업,대기:$대기}\n  return {**$작업,ok:true,status:\"accepted\",cwd:$작업폴더,observation:$확인}\n}",
     "alias": "외부PC작업실행",
     "category": "phrase",
     "returns": "Record"
@@ -178,5 +178,14 @@
     "topic": "외부 PC 헬퍼",
     "ibl_code": "#!ibl edition=2\n[fn:외부PC재생]{PC:\"사무실PC\",소스:\"/remote/song.mp3\",요청ID:\"음악재생-예시-1\"}",
     "category": "composition"
+  },
+  {
+    "intent": "상주 원격 PC에서 관리자 인증이 필요한 명령을 실행한다. 비밀번호를 전달하지 않고 원격 PC의 OS 인증창에서 승인한다.",
+    "ibl_code": "#!ibl edition=2\nreturn [limbs:guestpc]{op:\"shell\",limb:\"사무실PC\",cmd:\"whoami\",elevate:true,background:true}",
+    "nodes": "limbs",
+    "source": "manual_seed",
+    "category": "single",
+    "topic": "외부 PC 헬퍼",
+    "tags": "guestpc,관리자,인증"
   }
 ]

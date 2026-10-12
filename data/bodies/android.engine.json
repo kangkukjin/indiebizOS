@@ -384,6 +384,7 @@
     "services/research_view",
     "services/resident_desktop",
     "services/resident_pcs",
+    "services/resident_screen",
     "services/resident_terminal",
     "services/resident_terminal_lan",
     "services/resource_links",
@@ -440,6 +441,7 @@
     "surface/api_repair_continuation",
     "surface/api_report",
     "surface/api_resident_pcs",
+    "surface/api_resident_screen",
     "surface/api_scheduler",
     "surface/api_spreadsheets",
     "surface/api_supervision",
@@ -580,8 +582,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 505,
-    "engine": 479,
+    "total": 507,
+    "engine": 481,
     "blocklist": 26
   }
 }

@@ -117,6 +117,15 @@ const (
 var client = &http.Client{Timeout: 90 * time.Second}
 
 func main() {
+	if len(os.Args) == 4 && os.Args[1] == "--resident-elevated" {
+		os.Exit(residentElevatedMain(os.Args[2], os.Args[3]))
+	}
+	if len(os.Args) == 3 && os.Args[1] == "--screen-permissions" {
+		os.Exit(screenPermissionMain(os.Args[2]))
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--screen-worker" {
+		os.Exit(nativeScreenWorkerMain())
+	}
 	if len(os.Args) == 3 && os.Args[1] == "--resident-terminal" {
 		os.Exit(residentTerminalMain(os.Args[2]))
 	}

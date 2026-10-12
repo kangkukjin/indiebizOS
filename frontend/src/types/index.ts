@@ -227,7 +227,7 @@ export interface ItemDroppedData {
 export interface ElectronAPI {
   getApiPort: () => Promise<number>;
   openExternal: (url: string) => Promise<void>;
-  openRemoteDesktop?: (device: string, route: 'auto' | 'tunnel') => Promise<{ route: 'direct' | 'tunnel' }>;
+  openRemoteDesktop?: (device: string, route: 'auto' | 'tunnel') => Promise<{ route: 'direct' | 'tunnel' | 'helper' }>;
   // 메시지 등의 URL 을 런처의 인앱 브라우저(포식 브라우저) 탭으로 열기
   openInLauncherBrowser?: (url: string) => Promise<void>;
   onOpenForageUrl?: (callback: (url: string) => void) => void;

@@ -139,6 +139,47 @@ def test_loop_accumulation_guide_uses_the_current_iteration_index(current):
     assert current(EXAMPLES['loop_accumulate'])['value'] == ['기초', '실습', '심화']
 
 
+@pytest.mark.parametrize('left,right,expected', [
+    ({'id': 'A', 'tokens': 3}, {'tokens': 3, 'id': 'A'}, True),
+    ({'id': 'A'}, {'id': 'a'}, False),
+    ({'id': '01'}, {'id': '1'}, False),
+    ({'id': ' A'}, {'id': 'A'}, False),
+    ({'id': 'é'}, {'id': 'e\u0301'}, False),
+    ({'tokens': 3}, {'tokens': '3'}, False),
+    ({'tokens': 1}, {'tokens': True}, False),
+    ({'value': None}, {}, False),
+    ({'A': 1}, {'a': 1}, False),
+    ({}, {}, True),
+])
+def test_flat_record_identity_ignores_order_but_preserves_source_values(
+        current, left, right, expected):
+    code = EXAMPLES['flat_record_identity'].replace(
+        'a:{id:"A",tokens:3},b:{tokens:3,id:"A"}',
+        'a:' + json.dumps(left, ensure_ascii=False)
+        + ',b:' + json.dumps(right, ensure_ascii=False))
+    result = current(code)
+    assert result['success'] and result['source_complete'], result
+    assert result['value'] is expected
+
+
+@pytest.mark.parametrize('rows', [
+    [],
+    [{'id': 'A', 'n': 1}, {'id': 'a', 'n': 2}, {'id': 'A', 'n': 3}],
+    [{'id': key, 'n': i} for i, key in enumerate(['01', '1', '', 'é', 'e\u0301', '01'])],
+])
+def test_exact_key_groups_keep_all_rows_and_raw_ids(current, rows):
+    code = EXAMPLES['exact_key_groups'].replace(
+        '[{id:"A",n:1},{id:"a",n:2},{id:"A",n:3}]',
+        json.dumps(rows, ensure_ascii=False))
+    result = current(code)
+    assert result['success'] and result['source_complete'], result
+    expected = {}
+    for row in rows:
+        expected.setdefault(row['id'], []).append(row)
+    assert result['value'] == expected
+    assert list(result['value']) == list(expected)
+
+
 def test_empty_and_failure_are_distinct(current):
     assert current(EXAMPLES['empty'])['value'] == [{'status': '대상 없음'}]
     present = EXAMPLES['empty'].replace('$후보 = []', '$후보 = [{id:"a"}]')
@@ -219,7 +260,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition', 'document_completion', 'value_revision', 'pure_list_transform', 'group_best', 'record_key_aliases'}
+    assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition', 'document_completion', 'value_revision', 'pure_list_transform', 'group_best', 'record_key_aliases', 'flat_record_identity', 'exact_key_groups'}
     assert sum(len(re.findall(r'```ibl\n', guide.read_text())) for guide in GUIDES) == len(EXAMPLES)
     assert {'join_time', 'unary_group', 'document_completion'} == set(
         re.findall(r'<!-- example:(\w+) -->', TOOLS_GUIDE.read_text()))

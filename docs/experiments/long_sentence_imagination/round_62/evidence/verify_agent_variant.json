@@ -1,0 +1,13 @@
+{
+  "checks": 480,
+  "runs": 24,
+  "conditions": 72,
+  "expected_outcomes": {
+    "부분 달성": 4,
+    "미달": 6,
+    "달성": 14
+  },
+  "errors": [],
+  "passed": true,
+  "input_root": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_62회차/agent/input"
+}

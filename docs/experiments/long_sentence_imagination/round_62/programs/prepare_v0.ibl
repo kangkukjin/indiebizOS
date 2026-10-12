@@ -1,0 +1,14 @@
+#!ibl edition=2
+[def:원문읽기]($r,$root) {
+  $d=[self:read]{path:f"${root}/${r.path}"}
+  return {id:$r.id,path:$r.path,sha256:$r.sha256,text:$d.text}
+}
+$m=[self:read]{path:f"${input}/history/index.json"}
+$원문=$m.data.sources >> [table:each]{ [fn:원문읽기]{r:$it,root:$input} }
+$분석=$원문 >> [table:ai]{preserve_rows:true,input_fields:["id","text"],schema:"observed(문자열), repaired(문자열), unverified(문자열), proposal(문자열)",instruction:"각 회차의 실제 관측, 수리했다고 명시한 사실, 미검증 경계를 분리해서 짧은 한국어 문장으로 추가하라. 현재 환경에서도 수리됐다고 추정하지 말 것. proposal은 이 기록에서 다음 훈련이 확인할 공통 능력. 원문에 없는 수치·성공·문제 생성 금지. 각 필드 1~2문장. 입력 각 행을 보존."}
+$후보=[{name:"완료 판정과 근거 보존",selected:true,sources:[$분석.items[3],$분석.items[7]],criterion:"검사·실행·과제 달성을 분리하고 모든 요구에 증거 연결"},{name:"불완전 원천의 전달",selected:false,sources:[$분석.items[0],$분석.items[6]],criterion:"읽기 실패·잘림을 정상 빈값으로 바꾸지 않고 후속 결과에 보존"},{name:"변경 영향과 재사용",selected:false,sources:[$분석.items[2],$분석.items[4]],criterion:"바뀐 원천에 의존하는 결과만 갱신하고 재조회·계산 범위 관측"}]
+$계약=[self:read]{path:f"${input}/contract.txt"}
+$본문="# 실행 전 고정한 훈련 과제\n\n합성 실행 기록의 검사·실행·달성을 분리하고 24실행·72조건·비용을 전건 대조한다. 기본 수행 뒤 누락 증거 추가와 동일 경로 내용 변경을 반영한다. 다음 훈련은 제안까지만 한다.\n\n## 근거와 후보\n" + json($후보) + "\n\n## 완료 조건\n" + $계약.text
+$저장=[self:write]{path:f"${out}/task.md",content:$본문}
+$확인=[self:read]{path:$저장.path}
+return {task:$저장.path,readback:$확인.text==$본문,candidates:$후보,history_count:len($원문)}

@@ -1,0 +1,21 @@
+{
+  "checks": 432,
+  "runs": 24,
+  "conditions": 72,
+  "expected_outcomes": {
+    "부분 달성": 4,
+    "미달": 6,
+    "달성": 14
+  },
+  "errors": [
+    "SYN-R00.execution: '충돌' != 'succeeded'",
+    "SYN-R00.observed_input: 14256 != 14356",
+    "SYN-R00.observed_output: 5616 != 5626",
+    "SYN-R00.conflict_event_ids: ['SYN-R00-E000'] != []",
+    "SYN-R00.total_input: None != 14356",
+    "SYN-R00.total_output: None != 5626",
+    "SYN-R00 report cells mismatch: ['passed', '충돌', '부분 달성', '미상', '미상', '14256/5616'] != ['passed', 'succeeded', '부분 달성', '14356', '5626', '14356/5626']"
+  ],
+  "passed": false,
+  "input_root": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-10-12_62회차/trainer_order/input"
+}

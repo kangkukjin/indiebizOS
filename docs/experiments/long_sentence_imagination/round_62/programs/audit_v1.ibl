@@ -1,0 +1,74 @@
+#!ibl edition=2
+[def:정확히같은평면기록]($a,$b) {
+  return len(keys($a))==len(keys($b)) and reduce(keys($a),true,($same,$key)=>$same and has($b,$key) and has(from_entries([[json($a[$key]),true]]),json($b[$key])))
+}
+[def:원문키로묶기]($rows,$field) {
+  $index={}
+  [repeat:len($rows)] {
+    $row=$rows[$i];$key=$row[$field]
+    $index={**$index,**from_entries([[$key,get($index,$key,[])+[$row]]])}
+  }
+  return $index
+}
+[def:읽기]($path) {
+  [try] { $d=[self:read]{path:$path}; return {available:true,path:$path,data:$d.data} }
+  [catch] { return {available:false,path:$path,data:null,error:$error} }
+}
+[def:비용]($events) {
+  $행=$events >> [table:filter]{where:($r)=>$r.kind=="billable"}
+  $그룹=[fn:원문키로묶기]{rows:$행,field:"event_id"}
+  $개별=entries($그룹) >> [table:each] {
+    $id=$it[0];$같음=$it[1]
+    $대표=$같음[0]
+    $충돌=not reduce($같음,true,($same,$row)=>$same and [fn:정확히같은평면기록]{a:$대표,b:$row})
+    return {id:$id,conflict:$충돌,input:$충돌?null:$대표.input,output:$충돌?null:$대표.output}
+  }
+  $정상=$개별 >> [table:filter]{where:($r)=>not $r.conflict}
+  $충돌=$개별 >> [table:filter]{where:($r)=>$r.conflict} >> [table:each]{return $it.id}
+  $누락입=len($정상 >> [table:filter]{where:($r)=>$r.input==null})
+  $누락출=len($정상 >> [table:filter]{where:($r)=>$r.output==null})
+  $입력합=reduce($정상,0,($s,$r)=>$s+($r.input==null?0:$r.input))
+  $출력합=reduce($정상,0,($s,$r)=>$s+($r.output==null?0:$r.output))
+  return {observed_input:$입력합,observed_output:$출력합,missing_input:$누락입,missing_output:$누락출,conflict_event_ids:$충돌,total_input:len($충돌)>0 or $누락입>0?null:$입력합,total_output:len($충돌)>0 or $누락출>0?null:$출력합}
+}
+[def:조건판정]($req,$a,$c) {
+  $id=$req.id
+  $ar=$a.available?$a.data.revision:null
+  $cr=$c.available?$c.data.revision:null
+  $값=$a.available?get($a.data.values,$id):null
+  $검수=$c.available?get($c.data.checks,$id):null
+  $현재=$a.available and $c.available and $ar==$cr
+  $모순=$현재 and $값!=null and $검수!=null and $값!=$검수
+  $state=$모순?"미검증":($값==false?"미충족":($값==true and $현재 and $검수==true?"충족":"미검증"))
+  return {id:$id,state:$state,artifact_revision:$ar,evidence_revision:$cr,source:[$a.path,$c.path]}
+}
+[def:실행판정]($id,$메타,$요구,$이벤트,$root) {
+  $대표=$메타[0]
+  $충돌=not reduce($메타,true,($same,$row)=>$same and [fn:정확히같은평면기록]{a:$대표,b:$row})
+  $자료=[fn:읽기]{path:f"${root}/synthetic/artifacts/${id}.json"} & [fn:읽기]{path:f"${root}/synthetic/checks/${id}.json"}
+  $조건=$요구 >> [table:each]{[fn:조건판정]{req:$it,a:$자료[0],c:$자료[1]}}
+  $충족=len($조건 >> [table:filter]{where:($r)=>$r.state=="충족"})
+  $미충족=len($조건 >> [table:filter]{where:($r)=>$r.state=="미충족"})
+  $상태=len($요구)>0 and $충족==len($요구)?"달성":($충족>0?"부분 달성":($미충족>0?"미달":"미검증"))
+  $비용=[fn:비용]{events:$이벤트}
+  return {run_id:$id,validation:$메타[0].validation,execution:$충돌?"충돌":$메타[0].execution,outcome:$상태,conditions:$조건,**$비용}
+}
+[def:표시]($x) {return $x==null?"미상":text($x)}
+$m=[self:read]{path:f"${input}/manifest.json"}
+$r=[self:read]{path:f"${input}/${m.data.runs}"}
+$q=[self:read]{path:f"${input}/${m.data.requirements}"}
+$묶음=$m.data.events >> [table:each]{ $d=[self:read]{path:f"${input}/${it}"}; return $d.data.items }
+$이벤트=reduce($묶음,[],($s,$r)=>$s+$r)
+$실행그룹=[fn:원문키로묶기]{rows:$r.data.items,field:"run_id"}
+$요구그룹=[fn:원문키로묶기]{rows:$q.data.items,field:"run_id"}
+$이벤트그룹=[fn:원문키로묶기]{rows:$이벤트,field:"run_id"}
+$판정=keys($실행그룹) >> [table:each]{[fn:실행판정]{id:$it,메타:$실행그룹[$it],요구:get($요구그룹,$it,[]),이벤트:get($이벤트그룹,$it,[]),root:$input}}
+$집계=$판정 >> [table:groupby]{by:"outcome"}
+$결과={case:$case,runs:$판정,counts:$집계.items,raw_events:len($이벤트),unique_runs:len($판정)}
+$줄=$판정 >> [table:each]{return f"|${it.run_id}|${it.validation}|${it.execution}|${it.outcome}|${[fn:표시]{x:$it.total_input}}|${[fn:표시]{x:$it.total_output}}|${it.observed_input}/${it.observed_output}|${json($it.conflict_event_ids)}|"}
+$계획=[self:read]{path:f"${out}/task.md"}
+$보고="# 훈련 기록 판정\n\n합성 자료의 판정이며 실제 시스템의 성적이 아니다.\n\n|실행|검사|실행 상태|달성|총 입력|총 출력|관측 입력/출력|충돌 이벤트|\n|---|---|---|---|---|---|---|---|\n"+join("\n",$줄)+"\n\n상태 집계: "+json($집계.items)+"\n\n## 과거 기록과 후보\n"+$계획.text+"\n\n## 다음 훈련\n서로 다른 판본의 증거가 섞이는 경우를 시험한다. 이번 실행의 누락·충돌은 합성 조건이며 시스템 결함을 뜻하지 않는다. 다음 과제는 시작하지 않는다.\n\n## 비용과 변경\n표의 미상은 0이 아니다. 프로그램은 파일을 조회하고 판정을 다시 계산한다. 읽기 영수증 재사용 여부는 실행 로그로 별도 확인한다. 이번 프로그램 내부 모델 호출은 없으며 작성자 비용은 미측정이다.\n"
+$s=[self:write]{path:f"${out}/verdicts_${case}.json",content:json($결과)}
+$t=[self:write]{path:f"${out}/report_${case}.md",content:$보고}
+$x=[self:read]{path:$s.path};$y=[self:read]{path:$t.path}
+return {path:$s.path,report:$t.path,readback:$x.text==json($결과) and $y.text==$보고,counts:$집계.items,runs:len($판정),events:len($이벤트)}

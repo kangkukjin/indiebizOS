@@ -374,6 +374,45 @@ return {names:$색인.names,aliases:$색인.aliases}
 이 예제의 대응표 작성은 고유 표기×고유 이름을 비교하므로 고유 이름이 많은 자료는
 실행 예산·시간을 확인한다. 각 행마다 전체 전표를 다시 검색하는 방법으로 바꾸지 않는다.
 
+## 평면 기록의 내용 동일성과 정확한 ID로 묶기
+
+같은 실행·과금 ID의 중복과 충돌을 가를 때 먼저 업무의 동일성 기준을 정한다.
+`json(레코드)`의 문자열만 비교하면 필드 순서가 다른 같은 기록도 충돌이 된다.
+반대로 `unique`·관계 키의 동등성은 원문 대소문자·숫자 표기를 합칠 수 있으므로
+정확한 ID나 원문 내용의 동일성을 대신하지 않는다.
+
+아래 비교는 **값이 문자열·숫자·불리언·null인 평면 레코드**용이다. 필드 순서는 무시하고,
+필드 이름·문자열 원문·타입·부재와 null은 구분한다. JSON 스칼라 표현을 레코드 키로 조회하므로
+문자열 동등 비교의 정규화를 적용하지 않는다. 중첩 객체의 일반 정규화 함수로 쓰지 않는다.
+
+<!-- example:flat_record_identity -->
+```ibl
+#!ibl edition=2
+[def:평면기록같음]($a,$b) {
+  return len(keys($a))==len(keys($b)) and reduce(keys($a),true,($same,$key)=>$same and has($b,$key) and has(from_entries([[json($a[$key]),true]]),json($b[$key])))
+}
+return [fn:평면기록같음]{a:{id:"A",tokens:3},b:{tokens:3,id:"A"}}
+```
+
+정확한 문자열 ID로 반복 조회할 때는 레코드의 원문 키 계약으로 한 번 묶는다.
+아래 예제는 `A`와 `a`를 분리하고, 같은 ID의 행은 버리지 않고 입력 순서대로 모두 보존한다.
+필요한 집계·충돌 판정을 각 묶음에서 수행하면 항목마다 전체 목록을 다시 필터하지 않아도 된다.
+레코드는 불변이므로 누적도 복사 비용이 있다. 큰 입력에서 단계·시간을 측정하며 무조건 빠르다고 단정하지 않는다.
+
+<!-- example:exact_key_groups -->
+```ibl
+#!ibl edition=2
+[def:원문ID로묶기]($rows) {
+  $index={}
+  [repeat:len($rows)] {
+    $row=$rows[$i];$key=$row.id
+    $index={**$index,**from_entries([[$key,get($index,$key,[])+[$row]]])}
+  }
+  return $index
+}
+return [fn:원문ID로묶기]{rows:[{id:"A",n:1},{id:"a",n:2},{id:"A",n:3}]}
+```
+
 ## 그룹마다 가장 좋은 후보 하나를 고르기
 
 각 대상의 `each` 안에서 후보 전체를 다시 `filter`하면 대상 수×후보 수만큼 훑는다.

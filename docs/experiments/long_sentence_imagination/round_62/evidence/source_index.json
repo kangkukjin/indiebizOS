@@ -1,0 +1,52 @@
+{
+  "sources": [
+    {
+      "id": 54,
+      "path": "history/round_54.md",
+      "original": "docs/experiments/long_sentence_imagination/round_54/report.md",
+      "sha256": "099736883646399768d8cb696075e33c8590a34fe6043d519ad62e3364dbedca"
+    },
+    {
+      "id": 55,
+      "path": "history/round_55.md",
+      "original": "docs/experiments/long_sentence_imagination/round_55/report.md",
+      "sha256": "c49dca13ab13e3672576d37b25e699b134deb7d61c1e081120a02285b89304c5"
+    },
+    {
+      "id": 56,
+      "path": "history/round_56.md",
+      "original": "docs/experiments/long_sentence_imagination/round_56/report.md",
+      "sha256": "43b25cf47d2fac5d76b0b0be15c081ba5e77f03102cdb619d43468bfbfb2c339"
+    },
+    {
+      "id": 57,
+      "path": "history/round_57.md",
+      "original": "docs/experiments/long_sentence_imagination/round_57/report.md",
+      "sha256": "c05083019c482a276cefcde443b2d4cc26493e0f4bd4fa0d9bab38b7b7d4e3db"
+    },
+    {
+      "id": 58,
+      "path": "history/round_58.md",
+      "original": "docs/experiments/long_sentence_imagination/round_58/report.md",
+      "sha256": "7fdb40583af5eb839cec572fead7cb10ac748a2841309ec4d2aa269251d8c1bc"
+    },
+    {
+      "id": 59,
+      "path": "history/round_59.md",
+      "original": "docs/experiments/long_sentence_imagination/round_59/report.md",
+      "sha256": "f695000226dacfa59515b3e2a5f7c7015d6f6ca6541e9d434c80d808a9a8ab20"
+    },
+    {
+      "id": 60,
+      "path": "history/round_60.md",
+      "original": "docs/experiments/long_sentence_imagination/round_60/report.md",
+      "sha256": "dae3c3182909692999bc43ddd11aaaeb688abde86a209fe42a7a84574f747ac1"
+    },
+    {
+      "id": 61,
+      "path": "history/round_61.md",
+      "original": "docs/experiments/long_sentence_imagination/round_61/report.md",
+      "sha256": "4c8455f7a7c362a094d8f7af31fcedad04bfa1c0e0c55b863b2b7bee03f2b14a"
+    }
+  ]
+}

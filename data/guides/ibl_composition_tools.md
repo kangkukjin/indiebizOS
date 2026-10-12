@@ -148,6 +148,12 @@ HTTP 422로 실행 전에 거절하며, 응답 `detail`의 위치가 잘못된 �
 
 ### AI 추출값의 결측과 타입
 
+`table:ai`는 입력 열을 보존한다. `input_fields`는 **모델에 보낼 열**이며 반환에서 원문을
+제거하는 옵션이 아니다. 요약을 후속 보고서에 넣을 때는 `fields` 또는 실행 뒤 `table:select`로
+ID·출처 경로·판본/해시·요약·미확인점만 남긴다. 원문은 파일·결과 참조로 보존하고 다시 복사하지 않는다.
+표시 필드만 줄이는 수정은 같은 모델 입력·설정이면 기존 성공 모델 결과를 `reuse`로 이어 쓸 수 있다.
+실제 모델 재호출 여부는 실행 기록에서 확인한다.
+
 `table:ai`와 `self:struct`의 `schema:"amount(숫자), label(문자열), active(불리언)"`는
 각 필드를 `Number|Null`, `Text|Null`, `Bool|Null`로 검사한다. 괄호 안의 정확한 타입명
 `Number/number`, `Text/text/string`, `Bool/bool/boolean`도 같고 `또는 null`·`|Null`을 덧붙일 수 있다.

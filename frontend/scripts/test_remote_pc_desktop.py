@@ -1,0 +1,66 @@
+"""Built React screen sharing: one click, automatic route, and retry after failure."""
+import functools
+import json
+import threading
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import urlsplit
+
+from playwright.sync_api import expect, sync_playwright
+from launcher_browser import prepare_launcher
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_remote_pc_desktop(tmp_path):
+    handler = functools.partial(SimpleHTTPRequestHandler, directory=str(ROOT / 'dist'))
+    server = ThreadingHTTPServer(('127.0.0.1', 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f'http://127.0.0.1:{server.server_port}/'
+    requests = []
+    device = {'alias': '사무실 Mac', 'device_id': 'test-pc', 'connected': True,
+              'registration': {'state': 'active', 'capabilities': {'os': 'darwin', 'terminal': True}}}
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            page = browser.new_page(viewport={'width': 1360, 'height': 900}, accept_downloads=True)
+            errors = prepare_launcher(page, url)
+            for pattern in ('**/ibl/**', '**/model-gear', '**/world-pulse/**'):
+                page.route(pattern, lambda route: route.fulfill(status=503, content_type='application/json', body='{}'))
+            page.add_init_script("localStorage.setItem('indiebiz_launcher_mode','manual');localStorage.setItem('indiebiz_ui_locale','ko');")
+            page.add_init_script("window.desktopCalls=[];window.electron={openRemoteDesktop:async(device,route)=>{window.desktopCalls.push({device,route});if(window.desktopFailure)throw new Error('unavailable');return {route:route==='auto'?'direct':'tunnel'};}};")
+
+            def api(route):
+                path = urlsplit(route.request.url).path
+                requests.append(path)
+                result = {'items': [device], 'usb': {'ready': True, 'folder': '/work/pc-helper'}} if path == '/remote-pcs' else {}
+                route.fulfill(status=200, content_type='application/json', body=json.dumps(result), headers={'Access-Control-Allow-Origin': '*'})
+
+            page.route('**/remote-pcs**', api)
+            page.goto(url)
+            page.get_by_role('button', name='손발 (USB)').click()
+            page.get_by_role('button', name='화면 공유', exact=True).click()
+            page.wait_for_function('window.desktopCalls.length === 1')
+            assert page.evaluate('window.desktopCalls') == [{'device': 'test-pc', 'route': 'auto'}]
+            expect(page.get_by_role('dialog', name='화면 공유', exact=True)).to_have_count(0)
+            expect(page.get_by_role('button', name='외부 터널로 연결')).to_have_count(0)
+            assert all(path == '/remote-pcs' for path in requests)
+            page.evaluate('window.desktopFailure = true')
+            page.get_by_role('button', name='화면 공유', exact=True).click()
+            expect(page.get_by_role('alert')).to_contain_text('화면 공유를 열지 못했습니다')
+            page.evaluate('window.desktopFailure = false')
+            page.get_by_role('button', name='화면 공유', exact=True).click()
+            page.wait_for_function('window.desktopCalls.length === 3')
+            expect(page.get_by_role('alert')).to_have_count(0)
+            expect(page.get_by_role('button', name='화면 공유', exact=True)).to_be_enabled()
+            expect(page.get_by_role('button', name='작업창', exact=True)).to_have_count(0)
+            expect(page.get_by_role('dialog', name='원격 PC 작업창')).to_have_count(0)
+            page.screenshot(path=str(tmp_path / 'remote-desktop.png'))
+            assert not errors, errors
+            browser.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)

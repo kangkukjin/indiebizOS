@@ -26,7 +26,7 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 조종실 **손발 (USB) → 등록된 Mac → 화면 공유**는 macOS 화면 공유 앱으로
 버튼 한 번으로 대상 Mac을 직접 조작한다. 주소 설정창이나 경로 선택은 띄우지 않는다.
 연결 중에는 버튼에 진행 상태만 표시하고, 실패하면 목록에 짧은 오류를 표시한다.
-터미널·파일 작업창과 독립적이며 헬퍼가 오프라인이거나
+헬퍼가 오프라인이거나
 일시 중지되어도 접속 주소를 열 수 있다. 대상 Mac의 **시스템 설정/환경설정 → 공유 →
 화면 공유**가 켜져 있어야 하며 로그인은 대상 Mac 계정으로 한다.
 
@@ -52,7 +52,7 @@ Electron 변경은 앱을 완전히 종료하고 다시 열어야 활성화된�
 
 구현: `services/resident_desktop.py`, `frontend/electron/remote-desktop.js`,
 `frontend/src/components/launcher-components/LimbSwitch.tsx`. 회귀: `test_resident_desktop.py`,
-`remote-desktop.test.mjs`, `frontend/scripts/test_remote_pc_workbench.py`.
+`remote-desktop.test.mjs`, `frontend/scripts/test_remote_pc_desktop.py`.
 
 **홈 화면 설치(2026-07-21)**: 둘 다 웹 앱 매니페스트를 실어서 "홈 화면에 추가"하면 각자 아이콘·이름을 가진
 앱이 된다(런처 / **IBFind**). 스토어도 서명도 플랫폼별 빌드도 없다. 서비스워커는 **아무것도 캐시하지 않는다** —

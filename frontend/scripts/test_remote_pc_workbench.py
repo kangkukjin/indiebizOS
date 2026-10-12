@@ -25,7 +25,6 @@ def test_remote_pc_workbench(tmp_path):
     thread.start()
     url = f'http://127.0.0.1:{server.server_port}/'
     sessions, inputs, jobs, transfers, cancels = {}, [], {}, {}, []
-    desktop = {'direct_host': 'mac.local', 'tunnel_host': '', 'port': 5900}
     payload = b'hello binary\x00\xff'
     device = {'alias': '사무실 Mac', 'device_id': 'test-pc', 'connected': True,
               'registration': {'state': 'active', 'capabilities': {'os': 'darwin', 'terminal': True}}}
@@ -39,7 +38,7 @@ def test_remote_pc_workbench(tmp_path):
             for pattern in ('**/ibl/**', '**/model-gear', '**/world-pulse/**'):
                 page.route(pattern, lambda route: route.fulfill(status=503, content_type='application/json', body='{}'))
             page.add_init_script("localStorage.setItem('indiebiz_launcher_mode','manual');localStorage.setItem('indiebiz_ui_locale','ko');")
-            page.add_init_script("window.desktopCalls=[];window.electron={openRemoteDesktop:async(device,route)=>{window.desktopCalls.push({device,route});return {route:route==='auto'?'direct':'tunnel'};}};")
+            page.add_init_script("window.desktopCalls=[];window.electron={openRemoteDesktop:async(device,route)=>{window.desktopCalls.push({device,route});if(window.desktopFailure)throw new Error('unavailable');return {route:route==='auto'?'direct':'tunnel'};}};")
 
             def api(route):
                 parsed = urlsplit(route.request.url)
@@ -48,10 +47,6 @@ def test_remote_pc_workbench(tmp_path):
                 result = {}
                 if path == '/remote-pcs':
                     result = {'items': [device], 'usb': {'ready': True, 'folder': '/work/pc-helper'}}
-                elif path == '/remote-pcs/desktop/test-pc':
-                    if method == 'PUT':
-                        desktop.update(data)
-                    result = desktop
                 elif path == '/remote-pcs/terminals':
                     sessions[data['id']] = {'closed': False}
                     result = {'id': data['id'], 'job_id': 'terminal', 'state': 'starting'}
@@ -115,21 +110,19 @@ def test_remote_pc_workbench(tmp_path):
             page.goto(url)
             page.get_by_role('button', name='손발 (USB)').click()
             page.get_by_role('button', name='화면 공유', exact=True).click()
-            share = page.get_by_role('dialog', name='화면 공유', exact=True)
-            expect(share.get_by_label('내부망 주소')).to_have_value('mac.local')
-            share.get_by_label('Cloudflare 호스트 이름').fill('remote.example.com')
-            share.get_by_role('button', name='화면 공유 열기', exact=True).click()
-            expect(share.get_by_role('status')).to_contain_text('내부망')
-            assert desktop['tunnel_host'] == 'remote.example.com'
-            share.get_by_role('button', name='외부 터널로 연결').click()
-            expect(share.get_by_role('status')).to_contain_text('Cloudflare')
-            assert page.evaluate('window.desktopCalls') == [{'device': 'test-pc', 'route': 'auto'}, {'device': 'test-pc', 'route': 'tunnel'}]
+            page.wait_for_function('window.desktopCalls.length === 1')
+            assert page.evaluate('window.desktopCalls') == [{'device': 'test-pc', 'route': 'auto'}]
+            expect(page.get_by_role('dialog', name='화면 공유', exact=True)).to_have_count(0)
+            expect(page.get_by_role('button', name='외부 터널로 연결')).to_have_count(0)
             assert not sessions, 'Desktop sharing must not start a helper terminal'
-            page.screenshot(path=str(tmp_path / 'remote-desktop.png'))
-            share.get_by_role('button', name='화면 공유 설정 닫기').click()
+            page.evaluate('window.desktopFailure = true')
             page.get_by_role('button', name='화면 공유', exact=True).click()
-            expect(share.get_by_label('Cloudflare 호스트 이름')).to_have_value('remote.example.com')
-            share.get_by_role('button', name='화면 공유 설정 닫기').click()
+            expect(page.get_by_role('alert')).to_contain_text('화면 공유를 열지 못했습니다')
+            page.evaluate('window.desktopFailure = false')
+            page.get_by_role('button', name='화면 공유', exact=True).click()
+            page.wait_for_function('window.desktopCalls.length === 3')
+            expect(page.get_by_role('alert')).to_have_count(0)
+            expect(page.get_by_role('button', name='화면 공유', exact=True)).to_be_enabled()
             page.get_by_role('button', name='작업창', exact=True).click()
             dialog = page.get_by_role('dialog', name='원격 PC 작업창')
             expect(dialog.get_by_role('status')).to_have_text('연결됨 · 내부망 직결')

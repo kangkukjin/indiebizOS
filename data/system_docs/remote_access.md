@@ -24,13 +24,15 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 ### 등록 Mac의 화면 공유
 
 조종실 **손발 (USB) → 등록된 Mac → 화면 공유**는 macOS 화면 공유 앱으로
-대상 Mac을 직접 조작한다. 터미널·파일 작업창과 독립적이며 헬퍼가 오프라인이거나
+버튼 한 번으로 대상 Mac을 직접 조작한다. 주소 설정창이나 경로 선택은 띄우지 않는다.
+연결 중에는 버튼에 진행 상태만 표시하고, 실패하면 목록에 짧은 오류를 표시한다.
+터미널·파일 작업창과 독립적이며 헬퍼가 오프라인이거나
 일시 중지되어도 접속 주소를 열 수 있다. 대상 Mac의 **시스템 설정/환경설정 → 공유 →
 화면 공유**가 켜져 있어야 하며 로그인은 대상 Mac 계정으로 한다.
 
-내부망 호스트/IP·VNC 포트와 선택적인 Cloudflare 공개 호스트를 PC별로 저장한다.
+PC별로 미리 저장한 내부망 호스트/IP·VNC 포트와 선택적인 Cloudflare 공개 호스트를 사용한다.
 내부망 VNC 인사말이 확인되면 바로 연결하고, 실패하면 Cloudflare TCP 터널로 연결한다.
-**외부 터널로 연결**은 내부망 탐색을 건너뛴다. 터널은 미리 대상 PC의 VNC 포트로
+연결 경로는 자동 선택하며 사용자에게 묻지 않는다. 터널은 미리 대상 PC의 VNC 포트로
 구성되어 있어야 한다. 접속하는 Mac의 `cloudflared access tcp`가 loopback에만
 수신하고, 화면 공유 앱은 그 포트로 연결한다. 같은 터널은 재사용하며 IndieBiz 앱 종료 시
 그 앱이 시작한 클라이언트 프록시를 정리한다. 서버 터널의 설치·DNS·접근 정책 생성은
@@ -44,12 +46,12 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 주소는 `data/remote_desktops.json`에 저장되며 계정·비밀번호·토큰을 받지 않는다.
 소유자 API `/remote-pcs/desktop/{device}`의 GET/PUT으로 관리하고 등록 해제된 PC는
 거절한다. 네이티브 연결 IPC는 로컬 앱 주 프레임에서만 호출할 수 있다. 지원 범위는
-**접속하는 쪽이 Mac 데스크톱 앱**인 경우이며, 웹 브라우저에서는 주소 저장만 지원한다.
+**접속하는 쪽이 Mac 데스크톱 앱**인 경우이며, 웹 브라우저에서는 Mac 앱 이용을 안내한다.
 Electron 변경은 앱을 완전히 종료하고 다시 열어야 활성화된다. Cloudflare의 브라우저 VNC는
 별도 Access 구성이 필요한 다른 연결 방식이다. 본 기능이 자동으로 제공하지 않는다.
 
 구현: `services/resident_desktop.py`, `frontend/electron/remote-desktop.js`,
-`frontend/src/components/remote-pc/RemoteDesktop.tsx`. 회귀: `test_resident_desktop.py`,
+`frontend/src/components/launcher-components/LimbSwitch.tsx`. 회귀: `test_resident_desktop.py`,
 `remote-desktop.test.mjs`, `frontend/scripts/test_remote_pc_workbench.py`.
 
 **홈 화면 설치(2026-07-21)**: 둘 다 웹 앱 매니페스트를 실어서 "홈 화면에 추가"하면 각자 아이콘·이름을 가진

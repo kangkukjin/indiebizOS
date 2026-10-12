@@ -182,6 +182,7 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
         "previous_framing": ch.current.get("task_framing", ""),
         "previous_assumptions": ch.current.get("assumptions") or [],
         "previous_criteria": ch.current.get("achievement_criteria", ""),
+        "previous_request_intent": ch.current.get("request_intent", "task"),
         "broken_assumption": (broken or "").strip()[:2000],
         "evidence": (evidence or "").strip()[:4000],
         "progress": (progress or "").strip()[:4000],
@@ -241,6 +242,8 @@ def render_for_executor(env: dict) -> str:
     out = env["output"]
     lines = ["[재규정] 의식이 깨진 전제를 반영해 문제를 다시 규정했다. 지금부터는 아래 규정을 따른다 — "
              "처음부터 다시 시작하지 말고, 이미 확보한 사실은 그대로 쓴다."]
+    if env.get("scope_revision") == "task":
+        lines.append("하네스가 사실 통보 전용 제한을 해제했다. 새 규정에 명시된 사용자 요청을 이어서 수행한다.")
     if out.get("needs_clarification") and (out.get("clarification_question") or "").strip():
         lines.append("★멈춤: 이 문제는 사용자 확인 없이는 진행할 수 없다. 더 실행하지 말고, 지금까지 확인한 "
                      "사실을 짧게 정리한 뒤 다음 질문으로 응답을 마무리하라:\n" + out["clarification_question"].strip())

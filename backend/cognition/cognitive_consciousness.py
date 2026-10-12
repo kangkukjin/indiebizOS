@@ -341,7 +341,7 @@ class CognitiveConsciousnessMixin:
         return None
 
     def _decide_request_type(self, message: str, hippocampus_score: float,
-                             top_code: str) -> tuple:
+                             top_code: str, history=None, images=None) -> tuple:
         """요청 판정 단일 진입점 — 명시 태그(무조건) → Reflex(해마 고확신) → 무의식 분류.
 
         4개 호출처(시스템AI×2·프로젝트 에이전트·채널)가 같은 결정을 쓰도록 중앙화.
@@ -389,7 +389,12 @@ class CognitiveConsciousnessMixin:
                 return "SESSION_RESET", None
             print("[무의식] 분류: EXECUTE (의식 OFF — THINK 경로 차단)")
             return "EXECUTE", None
-        request_type = self._classify_request(message)
+        from turn_scope import classification_message
+        request_type = self._classify_request(classification_message(message, history, images))
+        if request_type == "CONTEXT_UPDATE" and images:
+            # 첨부 내용을 보지 못한 글자 분류로 판독까지 금지할 수 없다.
+            request_type = "EXECUTE"
+            print("[무의식] 사실 통보 제한 제외: 현재 이미지 첨부의 판독 필요")
         print(f"[무의식] 분류: {request_type}")
         return request_type, None
 
@@ -401,7 +406,7 @@ class CognitiveConsciousnessMixin:
         호출 측에서 단계 0(associative_recall 의 반사 신호 recall.reflex)으로 미리 분기한다.
 
         execution_memory는 받지만 분류 입력에 합치지 않는다.
-        unconscious_prompt.md 규칙: "현재 메시지만으로 판단한다."
+        호출자가 전달한 현재 메시지·짧은 직전 대화·첨부 유무만 판단한다.
         연상기억을 합치면 짧은 명령도 입력이 부풀어 모델이 단순 EXECUTE 판단을 못함.
         (인터페이스 호환을 위해 파라미터는 유지)
 

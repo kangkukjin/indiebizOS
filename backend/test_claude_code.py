@@ -6,6 +6,16 @@ from providers.claude_code import ClaudeCodeProvider
 COMMAND = 'mcp__indiebizos__run_command'
 
 
+@pytest.mark.parametrize('no_tools', [False, True])
+def test_image_instruction_matches_execution_and_oneshot_tools(no_tools):
+    provider = ClaudeCodeProvider(api_key='', model='test', system_prompt='test')
+    provider.no_tools = no_tools
+    prompt = provider._image_prompt_prefix(['/tmp/photo.jpg'])
+    assert '/tmp/photo.jpg' in prompt
+    assert ('Read 도구' in prompt) == no_tools
+    assert ('[engines:image_read]' in prompt) != no_tools
+
+
 @pytest.mark.parametrize('repair', [False, True])
 @pytest.mark.parametrize('mode', ['supervisor', 'response', 'context', 'library', 'normal'])
 def test_repair_command_is_not_exposed_to_other_roles(monkeypatch, repair, mode):

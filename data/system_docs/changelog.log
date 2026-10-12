@@ -2556,3 +2556,5 @@
 2026-10-12 FEATURE: 내장 포식 브라우저 AI 연결. limbs:browser embedded 드라이버, 소유자 전용 로컬 소켓, 작업 탭 생성·DOM 읽기·조작·저장 계정 로그인·추가 인증 인계·사람의 중지 구현. 비밀번호 반환 IPC 제거, main에서 출처 검사 후 채움. 일반 crawl의 로그인 실패 안내와 교재를 내장 탭으로 연결. Electron 재시작 후 활성화. 검증: backend not-system 10011통과·1건너뜀, 관련 IBL/어휘 시스템72통과, 신규경계8개(종합 포함), 실제 Electron 합성26항목과 Python→Electron 인증본문 통과, TypeScript/프론트 빌드·IBL 정합·Android 번들·층 가드 통과. 네이버 실계정/외부 SSO/Windows 연결 미검증. 상세 docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md 구현 상태.
 
 2026-10-12 REPAIR: 긴문장60 브라우저 사용 훈련·수리. 내장 본문의 항상 불완전 표지/폼 글 삭제/인라인 분절/첫 article 범위 오판을 수집기에서 수리하고 커서 본문·링크·제목·시각 고정, 본문/링크 실제 상한·생략 신고. 정상 선택은 IBL 조합 가능, 입력값·숨김·실제 원천 실패 유지. 기본18/변형17건·188100/180400 전건 일치, 새 인라인·빈목록 통과. 고유 관련72개·실제 Electron28확인/IBL 연결·TypeScript·빌드/Android 확인. 앱 완전 종료·재실행 때 활성화. backend 전수/실계정/전체 비용 절감 미검증. docs/experiments/long_sentence_imagination/round_60/report.md.
+
+2026-10-12 | 원격 사진·기록 요청의 사실 통보 오분류 수리: 분류에 최근 대화 2건·첨부 개수를 전달하고 이미지 첨부의 CONTEXT_UPDATE 제한을 제외. 의식의 명시적 request_intent 정정은 실행 관문·CLI 상태에 반영하고 scope.revised로 기록. Claude 이미지 지침을 실행 IBL/원샷 Read 정책에 맞춤. 전체 backend 회귀 10,194 통과·13 건너뜀, 실제 분류 4건·저장된 첨부 판독 확인.

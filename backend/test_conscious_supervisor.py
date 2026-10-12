@@ -57,6 +57,62 @@ def manager_tool(controller, payload):
         return json.loads(controller.tool(payload))
 
 
+@pytest.mark.parametrize("code", [
+    'return [engines:image_read]{op:"read",path:"/tmp/attachment.jpg",question:"숫자"}',
+    'return [self:health]{op:"save",category:"혈압",systolic:117,diastolic:72}',
+])
+def test_reframe_corrects_context_scope_at_execution_boundary(supervisor, monkeypatch, code):
+    provider = SimpleNamespace(context_update_only=False)
+    supervisor.runner.ai._provider = provider
+    supervisor.request_intent = "context_update"
+    supervisor.configure(None)
+    assert provider.context_update_only
+    payload = {"code": code}
+    assert json.loads(supervisor.run_tool("execute_ibl", payload, lambda: pytest.fail("blocked")))["not_executed"]
+    revisions = []
+
+    def revise(*args, **kwargs):
+        revisions.append(kwargs["revision"])
+        return {"task_framing": "제공된 자료를 읽고 요청한 기록만 저장한다",
+                "request_intent": "task", "request_intent_reason": "사용자가 기록을 명시적으로 요청했다",
+                "needs_repair": True}
+
+    supervisor.runner._run_consciousness = revise
+    result = json.loads(supervisor.reframe({"broken_assumption": "기록 요청을 통보로 분류",
+                                           "evidence": "첨부 판독·저장이 실행 전에 거절됨"}))
+    assert result["revised"] and "하네스가 사실 통보 전용 제한을 해제" in result["content"]
+    assert revisions[0]["previous_request_intent"] == "context_update"
+    assert supervisor.request_intent == "task" and not provider.context_update_only
+    assert not supervisor.repair_granted and not supervisor.framing["needs_repair"]
+    assert supervisor.run_tool("execute_ibl", payload, lambda: "completed") == "completed"
+    supervisor.close()
+    assert not provider.context_update_only
+
+
+@pytest.mark.parametrize("fields", [
+    {}, {"request_intent": "task"},
+    {"request_intent": "task", "request_intent_reason": " "},
+    {"request_intent": "context_update", "request_intent_reason": "단순 통보"},
+    {"request_intent": "task", "request_intent_reason": "x", "_salvaged": True},
+    {"request_intent": "task", "request_intent_reason": "x", "needs_clarification": True},
+])
+def test_reframe_does_not_relax_notification_scope_without_valid_decision(supervisor, fields):
+    provider = SimpleNamespace(context_update_only=False)
+    supervisor.runner.ai._provider = provider
+    supervisor.request_intent = "context_update"
+    supervisor.configure(None)
+    supervisor.configure(None)  # 원래 provider 상태를 덮어쓰지 않는다.
+    supervisor.runner._run_consciousness = lambda *a, **kw: {"task_framing": "새 조사 금지", **fields}
+    result = json.loads(supervisor.reframe({"broken_assumption": "검색 필요", "evidence": "주장"}))
+    assert result["revised"]
+    assert supervisor.request_intent == "context_update" and provider.context_update_only
+    reply = supervisor.run_tool("execute_ibl", {"code": '[sense:weather]{city:"서울"}'},
+                                lambda: pytest.fail("unrequested query"))
+    assert json.loads(reply)["not_executed"]
+    supervisor.close()
+    assert not provider.context_update_only
+
+
 def test_approval_delivers_exact_bytes_without_executor_call(supervisor, monkeypatch):
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c))
     original = "  시작\n\n```py\nx = 1\n```\n\n끝  \n"

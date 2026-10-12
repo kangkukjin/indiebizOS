@@ -272,7 +272,8 @@ class Supervisor:
         self.phase = "execute"
         self.executor_paused = False
         provider = getattr(self.runner.ai, "_provider", None)
-        if provider and self.request_intent == "context_update":
+        if (provider and self.request_intent == "context_update"
+                and not getattr(self, "_scope_provider_state", None)):
             self._scope_provider_state = (provider, getattr(provider, "context_update_only", False))
             provider.context_update_only = True
         self.context = __import__("thread_context").snapshot()
@@ -314,8 +315,9 @@ class Supervisor:
             restore(self.context)
             if not payload.get("broken_assumption") or not payload.get("evidence"):
                 raise ValueError("broken_assumption과 evidence가 필요합니다")
+            current_framing = {**(self.framing or {}), "request_intent": self.request_intent}
             ch = TurnChannel(self.owner, self.runner, self.message, self.history, "",
-                             self.framing or {}, self.repair_granted, self.owner)
+                             current_framing, self.repair_granted, self.owner)
             ch.pursuit = self.pursuit
             env = _revise(ch, "executor", payload["broken_assumption"], payload["evidence"],
                           payload.get("progress", ""), payload.get("kind", "other"))
@@ -324,6 +326,8 @@ class Supervisor:
                 self.framing = ch.current
                 if policy is not None:
                     self.framing["_repair_policy"] = policy
+                if self._revise_request_intent(ch.current):
+                    env["scope_revision"] = "task"
             self.log("premise.challenged", role="execution", input=self.store.evidence(payload), result=self.store.evidence(env))
             return render_for_executor(env)
         except Exception as exc:
@@ -331,6 +335,22 @@ class Supervisor:
         finally:
             restore(previous)
             self.phase = "execute"
+
+    def _revise_request_intent(self, framing):
+        """의식의 명시적 오분류 정정만 적용한다. 실행자 주장·산문은 권한이 아니다."""
+        reason = framing.get("request_intent_reason")
+        if (self.request_intent != "context_update" or framing.get("request_intent") != "task"
+                or not isinstance(reason, str) or not reason.strip()
+                or framing.get("_salvaged") or framing.get("needs_clarification")):
+            return
+        self.request_intent = "task"
+        state = getattr(self, "_scope_provider_state", None)
+        if state:
+            provider, previous = state
+            provider.context_update_only = previous
+        self.log("scope.revised", role="consciousness", previous="context_update",
+                 request_intent="task", reason=reason.strip())
+        return True
 
     def state(self, *, delta=False, offset=None, mark=True):
         now = time.monotonic()

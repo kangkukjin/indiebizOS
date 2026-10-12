@@ -308,9 +308,15 @@ class ClaudeCodeProvider(CliSubprocessProvider):
 
     def _image_prompt_prefix(self, image_paths: List[str]) -> str:
         img_lines = "\n".join(f"첨부 이미지 경로: {p}" for p in image_paths)
+        instruction = (
+            "위 이미지 파일을 Read 도구로 읽어 시각 내용을 확인할 수 있다"
+            if getattr(self, "no_tools", False) or getattr(self, "agent_role", "") == "consciousness"
+            else "위 첨부 이미지는 execute_ibl의 [engines:image_read]{op:\"read\", path:이미지경로, "
+                 "question:판독할내용}으로 확인한다"
+        )
         return (
             f"{img_lines}\n"
-            f"(위 이미지 파일을 Read 도구로 읽어 시각 내용을 확인할 수 있다)\n\n"
+            f"({instruction})\n\n"
         )
 
     # ================= 도구 정책 =================

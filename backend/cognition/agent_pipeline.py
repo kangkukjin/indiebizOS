@@ -418,7 +418,8 @@ class CognitivePipelineMixin:
             request_type, reflex_hint = "EXECUTE", None
             print(f"[무의식] 분류: EXECUTE (force_role={force_role} — 분류기 건너뜀)")
         else:
-            request_type, reflex_hint = self._decide_request_type(message, hippo_score, top_code)
+            request_type, reflex_hint = self._decide_request_type(
+                message, hippo_score, top_code, history, images)
         from repair_continuation import current as current_repair_continuation
         if current_repair_continuation() and not force_role:
             # 사용자 출처는 영속 인계의 소비자가 복원한다. 분류기가 이미 승인된

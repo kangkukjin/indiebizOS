@@ -4,6 +4,8 @@ import json
 import boot_paths  # noqa: F401
 import pytest
 
+import ibl_v2_entry
+from ibl_edition import source_edition
 import model_result_view as view
 import system_tools_ibl as tools
 from supervision_store import TurnStore
@@ -65,6 +67,48 @@ def test_old_code_only_handle_still_works_and_revised_code_uses_saved_inputs(sto
     checked = run({"edition": 2, "check": True, "code": "return $x + 1", "inputs": {"x": 7}}, tmp_path)
     changed = run({**checked["execute_args"], "code_edits": [{"old": "+ 1", "new": "+ 2"}]}, tmp_path)
     assert changed["success"] and changed["value"] == 9
+
+
+@pytest.mark.parametrize("source,requested,expected", [
+    ("[fn:値]{}", None, 1),
+    ("[fn:値]{}", 1, 1),
+    ("[fn:値]{}", 2, 2),
+    ("#!ibl edition=1\n[fn:値]{}", None, 1),
+    ("#!ibl edition=2\n[fn:値]{}", None, 2),
+])
+def test_describe_matches_execution_edition(
+        tmp_path, monkeypatch, source, requested, expected):
+    described, executed = [], []
+
+    def describe(actions, allowed, *, edition, program):
+        described.append(edition)
+        return {"actions": [{"action": "fn:値", "definition": {"edition": edition}}]}
+
+    def execute(req, *args, **kwargs):
+        executed.append(source_edition(req["code"], req.get("edition")))
+        return {"success": True, "edition": executed[-1], "value": "once"}
+
+    monkeypatch.setattr(view, "describe_actions", describe)
+    monkeypatch.setattr(ibl_v2_entry, "handle_request", execute)
+    request = {"code": source, "describe": ["fn:値"]}
+    if requested is not None:
+        request["edition"] = requested
+    result = json.loads(tools._execute_ibl_unified_impl(request, str(tmp_path)))
+    assert described == executed == [expected], (described, executed, result)
+    assert result["success"] is True
+
+
+def test_description_only_keeps_current_authoring_edition(tmp_path, monkeypatch):
+    seen = []
+
+    def describe(actions, allowed, *, edition, program):
+        seen.append(edition)
+        return {"actions": [], "executed": False}
+
+    monkeypatch.setattr(view, "describe_actions", describe)
+    result = json.loads(tools._execute_ibl_unified_impl(
+        {"code": "", "describe": ["fn:値"]}, str(tmp_path)))
+    assert seen == [2] and result["executed"] is False
 
 
 if __name__ == "__main__":

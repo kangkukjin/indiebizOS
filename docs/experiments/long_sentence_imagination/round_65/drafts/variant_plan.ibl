@@ -1,0 +1,15 @@
+#!ibl edition=2
+[def:실행]($pc,$rd,$cmd,$id) {
+  $t=[fn:외부PC작업실행]{PC:$pc,명령:$cmd,작업폴더:$rd,셸:"powershell",요청ID:$id,환경:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"},실행제한:120,대기:0}
+  $r=[fn:외부PC작업확인]{작업:$t,대기:20}
+  $n=1
+  [repeat:until $r.settled or $n>=5] {$r=[fn:외부PC작업확인]{작업:$t,대기:20};$n=$n+1}
+  assert $r.settled,"작업 미종료: 영수증으로 회수",$t
+  return $r
+}
+[def:앱]($pc,$rd,$arg,$id) {
+  return [fn:실행]{pc:$pc,rd:$rd,cmd:f"& '${rd}/.venv/Scripts/python.exe' sample_app.py ${arg}; exit $LASTEXITCODE",id:$id}
+}
+$h=[fn:앱]{pc:$pc,rd:$rd,arg:"hash",id:f"${tag}-variant-plan"}
+assert $h.command_ok==true,"계획 상태 조회 실패",$h
+return {hash:strip($h.result.output),receipt:$h}

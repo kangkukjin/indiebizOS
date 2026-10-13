@@ -667,7 +667,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                 from ibl_edition import authoring_request, source_edition
                 described_edition = source_edition(
                     tool_input.get("code") or tool_input.get("pipeline") or "",
-                    authoring_request(tool_input).get("edition"))
+                    (tool_input if has_code else authoring_request(tool_input)).get("edition"))
                 value = describe_actions(tool_input["describe"], allowed, edition=described_edition,
                                          program=tool_input.get("code") or tool_input.get("pipeline"))
             else:

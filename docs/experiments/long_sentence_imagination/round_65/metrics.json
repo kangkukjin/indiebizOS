@@ -1,0 +1,83 @@
+[
+  {
+    "episode": 4719,
+    "total_ms": 487993,
+    "rounds": 18,
+    "usage": {
+      "input": 3182959,
+      "output": 33904,
+      "cache_read": 2941706,
+      "cache_create": 233384,
+      "reasoning": 5407
+    },
+    "call_ids": [
+      "914255faccb844f08eadd7db3a91586b",
+      "ccaf3feeeb1243baae4911c0c27190bf",
+      "15a1eb225c0c450bad5a4395530c3045",
+      "39a4e5b52f9047538dedee1432163318",
+      "2e6aed52e42541729c96949245176811",
+      "da23754bfeda4aa0beb86b3729a5ac3b"
+    ],
+    "tools": {
+      "execute_ibl": 15,
+      "Bash": 1
+    },
+    "postprocess": {
+      "status": "not_observed"
+    }
+  },
+  {
+    "episode": 4721,
+    "total_ms": 178881,
+    "rounds": 9,
+    "usage": {
+      "input": 1343421,
+      "output": 14114,
+      "cache_read": 1181643,
+      "cache_create": 154126,
+      "reasoning": 2205
+    },
+    "call_ids": [
+      "e37d46a4a31c4d0080fed34ae66a2328",
+      "441552d0186846dea13f8d11d4684733",
+      "0ac330ea1dd14fafbc1cdd3bba49d221",
+      "a3fa86a86b2b4b0d98027785d03833bc",
+      "4a5ebb238f144753b1ef6795dacc9708",
+      "7788e938a607401f83884b0b0cba2b9a"
+    ],
+    "tools": {
+      "execute_ibl": 7
+    },
+    "postprocess": {
+      "status": "not_observed"
+    }
+  },
+  {
+    "episode": 4723,
+    "total_ms": 516577,
+    "rounds": 20,
+    "usage": {
+      "input": 3676146,
+      "output": 37403,
+      "cache_read": 3414511,
+      "cache_create": 252617,
+      "reasoning": 6239
+    },
+    "call_ids": [
+      "b7400fd890264d1e8b1d94b716e3031f",
+      "4a51f1f90cc746cd8fb83c6d7a8cfa5c",
+      "8f13c7f0ef334592883bef7634bc6050",
+      "b703a1ce122c4450ad223dcd0401e9a3",
+      "e78cfbc267444fd6861799d281049c7b",
+      "2619835c48c44c7383e903e9919ac412",
+      "61f54bbf85d849039e9ad3355ff02240"
+    ],
+    "tools": {
+      "execute_ibl": 16,
+      "Bash": 2
+    },
+    "postprocess": {
+      "status": "not_observed"
+    }
+  }
+]

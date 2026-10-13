@@ -1,0 +1,42 @@
+#!ibl edition=2
+[def:실행]($pc,$rd,$cmd,$id) {
+  $t=[fn:외부PC작업실행]{PC:$pc,명령:$cmd,작업폴더:$rd,셸:"powershell",요청ID:$id,환경:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"},실행제한:120,대기:0}
+  $r=[fn:외부PC작업확인]{작업:$t,대기:20}
+  $n=1
+  [repeat:until $r.settled or $n>=5] {$r=[fn:외부PC작업확인]{작업:$t,대기:20};$n=$n+1}
+  assert $r.settled,"작업 미종료: 영수증으로 회수",$t
+  return $r
+}
+[def:앱]($pc,$rd,$arg,$id) {
+  return [fn:실행]{pc:$pc,rd:$rd,cmd:f"& '${rd}/.venv/Scripts/python.exe' sample_app.py ${arg}; exit $LASTEXITCODE",id:$id}
+}
+$ready=[fn:외부PC준비]{PC:$pc,작업폴더:$rd}
+assert $ready.ok and $ready.limb==$pc,"대상 불일치",$ready
+$env=[fn:실행]{pc:$pc,rd:$rd,cmd:f"if (Test-Path '${rd}/.venv/Scripts/python.exe') { exit 0 }; & '${python}' -m venv '${rd}/.venv'; exit $LASTEXITCODE",id:f"${tag}-venv"}
+assert $env.command_ok==true,"환경 구성 실패",$env
+$before=[fn:앱]{pc:$pc,rd:$rd,arg:"snapshot",id:f"${tag}-before"}
+$hash=[fn:앱]{pc:$pc,rd:$rd,arg:"hash",id:f"${tag}-hash"}
+assert $hash.command_ok==true,"설정 읽기 실패",$hash
+$oldhash=strip($hash.result.output)
+$patch=[fn:앱]{pc:$pc,rd:$rd,arg:f"patch --expected ${oldhash} --factor 2 --output out-a",id:f"${tag}-patch"}
+assert $patch.command_ok==true,"설정 적용 실패",$patch
+$p1=[fn:앱]{pc:$pc,rd:$rd,arg:f"port --port ${port}",id:f"${tag}-port1"}
+$chosen=$port
+[if:$p1.command_ok!=true] {
+  $chosen=$port+1
+  $p2=[fn:앱]{pc:$pc,rd:$rd,arg:f"port --port ${chosen}",id:f"${tag}-port2"}
+  assert $p2.command_ok==true,"대체 포트 사용 불가",$p2
+}
+$process=[fn:앱]{pc:$pc,rd:$rd,arg:"process",id:f"${tag}-process"}
+$empty=[fn:앱]{pc:$pc,rd:$rd,arg:"process --empty",id:f"${tag}-empty"}
+$start=[fn:앱]{pc:$pc,rd:$rd,arg:f"start --port ${chosen} --nonce trainer-base --ttl 180",id:f"${tag}-start"}
+assert $start.command_ok==true,"시험 서비스 시작 실패",$start
+$health=[fn:앱]{pc:$pc,rd:$rd,arg:"health --nonce trainer-base",id:f"${tag}-health"}
+$stop=[fn:앱]{pc:$pc,rd:$rd,arg:"stop --nonce trainer-base",id:f"${tag}-stop"}
+$verify=[fn:실행]{pc:$pc,rd:$rd,cmd:$verify_cmd,id:f"${tag}-verify"}
+$after=[fn:앱]{pc:$pc,rd:$rd,arg:"snapshot",id:f"${tag}-after"}
+$result={before:$before,environment:$env,original_hash:$oldhash,patch:$patch,occupied:$p1,chosen_port:$chosen,process:$process,empty:$empty,start:$start,health:$health,stop:$stop,verify:$verify,after:$after}
+$save=[self:write]{path:f"${out}/base.json",content:json($result)}
+$report=[self:write]{path:f"${out}/report.md",content:f"# tv1 기본 설정\n대상 ${pc}, 작업폴더 ${rd}\n배수 2, 출력 out-a, 서비스 포트 ${chosen}.\n환경·설정·문자·기존 자료는 base.json의 단계 영수증과 verify/after로 확인.\n서비스 검사 ${json($health.command_ok)}, 종료 ${json($stop.command_ok)}, 파일 검증 ${json($verify.command_ok)}.\n원본 ${oldhash}는 원격 data/_backups/2026-10-14_tv1_setup에 보존.\n전체 IndieBiz 설치·모델·GUI는 미검증. 변형에서 원본의 사본 복원 확인 예정.\n"}
+assert $process.command_ok==true and $empty.command_ok==true and $health.command_ok==true and $stop.command_ok==true and $verify.command_ok==true,"완료 조건 미충족",$result
+return $result

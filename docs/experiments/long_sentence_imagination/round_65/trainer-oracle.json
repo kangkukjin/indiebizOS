@@ -1,0 +1,6 @@
+{
+  "cwd": "C:/Users/kyungho/indiebiz-training/tv1-setup/65/trainer/자료 작업",
+  "exit": 0,
+  "log_truncated": false,
+  "output": "{\"verified\": true, \"variant\": true, \"counts\": {\"patch\": 2, \"conflict\": 1, \"process\": 3, \"service_start\": 3, \"service_stop\": 2}, \"settings\": {\"factor\": 3, \"output\": \"out-b\", \"user_note\": \"사용자가 새로 쓴 메모 東京 🌱\", \"unknown_setting\": {\"keep\": true}}, \"results\": [\"out-a\", \"out-b\"]}\r\n"
+}

@@ -12,7 +12,11 @@ import (
 )
 
 func configureResidentDetached(c *exec.Cmd) {
-	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if c.SysProcAttr == nil {
+		c.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	c.SysProcAttr.HideWindow = true
+	c.SysProcAttr.CreationFlags |= 0x08000000
 }
 func configureResidentProcess(c *exec.Cmd) { configureMemberProcess(c); configureResidentDetached(c) }
 

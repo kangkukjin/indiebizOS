@@ -222,7 +222,7 @@ func shellFor(kind, script string) (string, []string) {
 		// 한국어 윈도우 cmd 는 CP949 로 출력해 JSON(UTF-8) 통화에서 한글이 U+FFFD 로
 		// 뭉개진다 — 이 인스턴스만 UTF-8 코드페이지로 전환(best-effort).
 		// /v:on = 지연 확장(!CD!) — 이게 없으면 cd 이후의 위치를 못 읽는다.
-		return "cmd", []string{"/v:on", "/c", "chcp 65001>nul & " + script}
+		return "cmd", []string{"/s", "/v:on", "/c", "chcp 65001>nul & " + script}
 	}
 }
 
@@ -318,6 +318,7 @@ func doShell(c Command) map[string]interface{} {
 
 	bin, args := shellFor(c.Shell, wrapScript(c.Shell, c.Cmd, startDir, getSessionEnv()))
 	cmd := exec.CommandContext(ctx, bin, args...)
+	configureShellCommand(cmd)
 	if c.ctx != nil {
 		configureMemberProcess(cmd)
 	}

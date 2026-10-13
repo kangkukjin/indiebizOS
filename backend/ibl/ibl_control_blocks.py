@@ -272,6 +272,20 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
         except Exception:
             row = None
         if not row:
+            # The legacy lookup deliberately excludes edition 2. A missing old
+            # definition must not become a claim that the callable does not exist.
+            try:
+                from ibl_v2_store import library
+                current = library()
+            except Exception:
+                current = {}
+            if name in current or name in getattr(current, "conflicts", {}):
+                return {"success": False, "executed": False, "fn": name,
+                        "error_code": "FN_EDITION_REQUIRED", "required_edition": 2,
+                        "error": (f"[fn:{name}]은 판본 2 저장 정의에 있습니다. 이 요청은 판본 1로 해석되어 "
+                                  "실행하지 않았습니다. HTTP 요청에 edition:2를 지정하거나 원문 첫 줄에 "
+                                  "#!ibl edition=2를 붙여 같은 코드와 인자를 검사·실행하세요. "
+                                  "기존 판본 1 저장 프로그램은 자동 변환하지 않습니다.")}
             try:
                 from ibl_usage_db import IBLUsageDB
                 names = IBLUsageDB().phrase_aliases(10)

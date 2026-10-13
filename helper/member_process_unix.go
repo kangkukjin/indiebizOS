@@ -14,3 +14,5 @@ func configureMemberProcess(cmd *exec.Cmd) {
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.WaitDelay = 2 * time.Second
 }
+
+func configureShellCommand(cmd *exec.Cmd) {}

@@ -1,0 +1,22 @@
+{
+  "not_system": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "1",
+    "tests": "10264",
+    "time": "136.148",
+    "timestamp": "2026-10-14T02:11:55.125609+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "system": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "13",
+    "tests": "171",
+    "time": "155.154",
+    "timestamp": "2026-10-14T02:14:38.860093+09:00",
+    "hostname": "Mac-mini.local"
+  }
+}

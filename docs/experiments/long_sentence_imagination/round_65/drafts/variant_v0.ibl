@@ -1,0 +1,38 @@
+#!ibl edition=2
+[def:실행]($pc,$rd,$cmd,$id) {
+  $t=[fn:외부PC작업실행]{PC:$pc,명령:$cmd,작업폴더:$rd,셸:"powershell",요청ID:$id,환경:{PYTHONUTF8:"1",PYTHONIOENCODING:"utf-8"},실행제한:120,대기:0}
+  $r=[fn:외부PC작업확인]{작업:$t,대기:20}
+  $n=1
+  [repeat:until $r.settled or $n>=5] {$r=[fn:외부PC작업확인]{작업:$t,대기:20};$n=$n+1}
+  assert $r.settled,"작업 미종료: 영수증으로 회수",$t
+  return $r
+}
+[def:앱]($pc,$rd,$arg,$id) {
+  return [fn:실행]{pc:$pc,rd:$rd,cmd:f"& '${rd}/.venv/Scripts/python.exe' sample_app.py ${arg}; exit $LASTEXITCODE",id:$id}
+}
+$stale=[fn:앱]{pc:$pc,rd:$rd,arg:f"patch --expected ${planned_hash} --factor 3 --output out-b",id:f"${tag}-variant-stale"}
+assert $stale.command_ok==false,"중간 변경을 덮어씀",$stale
+$now=[fn:앱]{pc:$pc,rd:$rd,arg:"hash",id:f"${tag}-variant-fresh"}
+assert $now.command_ok==true,"최신 설정 조회 실패",$now
+$fresh=strip($now.result.output)
+assert $fresh!=$planned_hash,"변경 주입 미발동",$now
+$patch=[fn:앱]{pc:$pc,rd:$rd,arg:f"patch --expected ${fresh} --factor 3 --output out-b",id:f"${tag}-variant-patch"}
+assert $patch.command_ok==true,"재관측 뒤 적용 실패",$patch
+$process=[fn:앱]{pc:$pc,rd:$rd,arg:"process",id:f"${tag}-variant-process"}
+$start=[fn:앱]{pc:$pc,rd:$rd,arg:f"start --port ${port} --nonce trainer-variant --ttl 180",id:f"${tag}-variant-start"}
+assert $start.command_ok==true,"변형 서비스 시작 실패",$start
+$health=[fn:앱]{pc:$pc,rd:$rd,arg:"health --nonce trainer-variant",id:f"${tag}-variant-health"}
+$stop=[fn:앱]{pc:$pc,rd:$rd,arg:"stop --nonce trainer-variant",id:f"${tag}-variant-stop"}
+$restore=[fn:앱]{pc:$pc,rd:$rd,arg:f"restore --expected ${original_hash}",id:f"${tag}-restore"}
+$snapshot=[fn:앱]{pc:$pc,rd:$rd,arg:"snapshot",id:f"${tag}-variant-after"}
+$result={planned_hash:$planned_hash,conflict:$stale,fresh_hash:$fresh,patch:$patch,process:$process,start:$start,health:$health,stop:$stop,restore:$restore,snapshot:$snapshot}
+$save=[self:write]{path:f"${out}/variant.json",content:json($result)}
+$report=[self:write]{path:f"${out}/variant-report.md",content:f"# tv1 조건 변경
+배수 3·출력 out-b로 변경. 계획 지문 ${planned_hash}은 충돌로 거절. 새 지문 ${fresh}으로 다시 적용.
+환경 재설치 없음. 기존 out-a·사용자 메모 보존은 variant.json snapshot 및 별도 oracle로 확인.
+서비스 검사 ${json($health.command_ok)}, 종료 ${json($stop.command_ok)}, 원본 사본 복원 ${json($restore.command_ok)}.
+기본 base.json과 현재 variant.json에 작업 참조·원격 경로·출력이 보존됨. 미종료는 동일 참조로 회수.
+운영 PC 설정·IndieBiz 전체 기동은 미검증.
+"}
+assert $patch.command_ok==true and $process.command_ok==true and $health.command_ok==true and $stop.command_ok==true and $restore.command_ok==true,"변형 미완료",$result
+return $result

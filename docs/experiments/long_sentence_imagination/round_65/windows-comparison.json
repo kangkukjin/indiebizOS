@@ -1,0 +1,57 @@
+[
+  {
+    "id": "424c09ae82354b5e9b8310bd3efa253d",
+    "device": "guestpc-70e163471313",
+    "generation": "f74b412c29e07da219e879d58c0e2d46",
+    "request_id": "r65-quoted-baseline-test-v1",
+    "summary": {
+      "op": "shell",
+      "cmd": "New-Item -ItemType Directory -Force 'C:/Users/kyungho/indiebiz-training/tv1-setup/65/operator/temp' | Out-Null; & 'C:/Users/kyungho/AppData/Local/Programs/Python/Python312/python.exe' -m zipfile -e 'quoted-baseline.zip' 'baseline'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & './baseline/quoted.test.exe' '-test.run=^TestWindows(QuotedCommandLine|CommandLineConfiguration)' '-test.v'; exit $LASTEXITCODE",
+      "cwd": "C:/Users/kyungho/indiebiz-training/tv1-setup/65/operator",
+      "shell": "powershell",
+      "timeout": 120,
+      "mode": "background"
+    },
+    "created": 1791910607.8636851,
+    "state": "failed",
+    "result": {
+      "cwd": "C:/Users/kyungho/indiebiz-training/tv1-setup/65/operator",
+      "error": "exit status 1",
+      "exit": 1,
+      "log_truncated": false,
+      "output": "=== RUN   TestWindowsQuotedCommandLinePreservesArgumentsAndExit\n=== RUN   TestWindowsQuotedCommandLinePreservesArgumentsAndExit/resident\n    shell_windows_test.go:67: exit=1 err=exit status 1 output='\\\"C:\\Users\\kyungho\\indiebiz-training\\tv1-setup\\65\\operator\\temp\\TestWindowsQuotedCommandLinePreservesArgumentsAndExit1966541427\\001\\�ѱ� tools\\quoted echo.exe\\\"'��(��) ���� �Ǵ� �ܺ� ����, ������ �� �ִ� ���α׷�, �Ǵ�\r\n        ��ġ ������ �ƴմϴ�.\r\n=== RUN   TestWindowsQuotedCommandLinePreservesArgumentsAndExit/portable\n    shell_windows_test.go:67: exit=1 err=exit status 1 output='\\\"C:\\Users\\kyungho\\indiebiz-training\\tv1-setup\\65\\operator\\temp\\TestWindowsQuotedCommandLinePreservesArgumentsAndExit1966541427\\001\\�ѱ� tools\\quoted echo.exe\\\"'��(��) ���� �Ǵ� �ܺ� ����, ������ �� �ִ� ���α׷�, �Ǵ�\r\n        ��ġ ������ �ƴմϴ�.\r\n--- FAIL: TestWindowsQuotedCommandLinePreservesArgumentsAndExit (5.11s)\n    --- FAIL: TestWindowsQuotedCommandLinePreservesArgumentsAndExit/resident (1.00s)\n    --- FAIL: TestWindowsQuotedCommandLinePreservesArgumentsAndExit/portable (0.78s)\n=== RUN   TestWindowsCommandLineConfigurationPreservesProcessFlags\n    shell_windows_test.go:90: &{true  134217728 0 <nil> <nil> false [] 0}\n--- FAIL: TestWindowsCommandLineConfigurationPreservesProcessFlags (0.05s)\nFAIL\n"
+    },
+    "cancel_requested": 0,
+    "started_at": 1791910608.5924609,
+    "ended_at": 1791910617.5577219,
+    "seconds": 8.965260982513428,
+    "outcome": "failed"
+  },
+  {
+    "id": "80cf53ecdfdb43aebb7bd22aa7096a71",
+    "device": "guestpc-70e163471313",
+    "generation": "f74b412c29e07da219e879d58c0e2d46",
+    "request_id": "r65-quoted-candidate-test-v1",
+    "summary": {
+      "op": "shell",
+      "cmd": "New-Item -ItemType Directory -Force 'C:/Users/kyungho/indiebiz-training/tv1-setup/65/operator/temp' | Out-Null; & 'C:/Users/kyungho/AppData/Local/Programs/Python/Python312/python.exe' -m zipfile -e 'quoted-candidate.zip' 'candidate'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & './candidate/quoted.test.exe' '-test.run=^TestWindows(QuotedCommandLine|CommandLineConfiguration)' '-test.v'; exit $LASTEXITCODE",
+      "cwd": "C:/Users/kyungho/indiebiz-training/tv1-setup/65/operator",
+      "shell": "powershell",
+      "timeout": 120,
+      "mode": "background"
+    },
+    "created": 1791910606.700175,
+    "state": "succeeded",
+    "result": {
+      "cwd": "C:/Users/kyungho/indiebiz-training/tv1-setup/65/operator",
+      "exit": 0,
+      "log_truncated": false,
+      "output": "=== RUN   TestWindowsQuotedCommandLinePreservesArgumentsAndExit\n=== RUN   TestWindowsQuotedCommandLinePreservesArgumentsAndExit/resident\n=== RUN   TestWindowsQuotedCommandLinePreservesArgumentsAndExit/portable\n--- PASS: TestWindowsQuotedCommandLinePreservesArgumentsAndExit (7.15s)\n    --- PASS: TestWindowsQuotedCommandLinePreservesArgumentsAndExit/resident (5.34s)\n    --- PASS: TestWindowsQuotedCommandLinePreservesArgumentsAndExit/portable (1.63s)\n=== RUN   TestWindowsCommandLineConfigurationPreservesProcessFlags\n--- PASS: TestWindowsCommandLineConfigurationPreservesProcessFlags (0.08s)\nPASS\n"
+    },
+    "cancel_requested": 0,
+    "started_at": 1791910606.8266013,
+    "ended_at": 1791910617.5557194,
+    "seconds": 10.72911810874939,
+    "outcome": "succeeded"
+  }
+]

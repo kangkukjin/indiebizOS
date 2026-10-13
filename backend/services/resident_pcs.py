@@ -153,7 +153,8 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
     return task_receipts.receipt("guestpc", jid, state=task_receipts.QUEUED,
                                  limb=rec["device_id"], limb_name=rec["alias"],
                                  helper_mode="resident", op=op, job_id=jid,
-                                 request_id=request_id)
+                                 request_id=request_id, cwd=command.get("cwd"),
+                                 shell=command.get("shell"))
 
 
 def remove(target):

@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: guestpc-synchronous-reply-success
+    retired: 2026-10-13
+    reason: 동기 원격 명령의 비정상 종료를 회신 도착만으로 성공 반환하던 계약을 수정했다.
+    instead: 동기 실행은 종료 코드·오류·취소·시간제한을 반영하고 실패 원문과 task_ref를 보존한다. 대기 종료는 접수증으로 이어 관측한다.
+    phrases: ["동기 guestpc는 회신이 오면 항상 success:true"]
   - id: resident-detach-uninstall
     retired: 2026-10-10
     reason: 일상 작업 마무리의 detach가 상주 헬퍼를 제거하고도 detached:false를 반환했다.

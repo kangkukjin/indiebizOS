@@ -1,5 +1,5 @@
 #!ibl edition=2
-[def:외부PC준비]($PC,$환경조회=true) {
+[def:외부PC준비]($PC,$환경조회=true,$작업폴더="",$환경={}) {
   [if:len($PC)==0] { return {ok:false,status:"invalid_input",reason:"PC 이름 또는 device_id가 필요합니다"} }
   $목록 = [self:limb]{op:"list"}
   $대상 = $목록.items >> [table:filter]{where:($행)=>$행.device_id==$PC}
@@ -12,7 +12,7 @@
   [if:$등록==null] { $등록 = {} }
   $모드 = "portable"
   [if:len($등록)>0] { $모드 = "resident" }
-  $기본 = {limb:$손발.device_id,limb_name:$손발.alias,helper_mode:$모드,registration:$등록,env:get($손발,"env",{})}
+  $기본 = {limb:$손발.device_id,limb_name:$손발.alias,helper_mode:$모드,registration:$등록,workspace:{cwd:$작업폴더,env:$환경},env:get($손발,"env",{})}
   [if:get($손발,"revoked",false) or get($손발,"expired",false) or get($등록,"state","active")!="active"] {
     return {**$기본,ok:false,status:"unavailable",reason:"폐기 또는 제거된 PC입니다"}
   }

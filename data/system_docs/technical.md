@@ -172,6 +172,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `GET /limb/poll` - 셸 봉투 롱폴(아웃바운드 — 게스트 PC 방화벽 무설정)
 - `POST /limb/result` - 실행 결과 회신
 - 발급·폐기는 `[self:limb]{op: issue/list/revoke}`, 하달은 `[limbs:guestpc]{op}`. 큐는 폰 푸시 큐(`phone_jobs`) 재사용.
+- 원격 장기 작업은 준비 결과의 device_id·workspace와 접수증을 이어 쓴다. 동기 실행도 실제 실패와 대기 종료를 구분한다. 대상 PC의 `scripts/remote_steps.py`는 argv 단계·검증·실패 원문·재개를 보존하고 `remote_install.py`는 IndieBiz 업데이트 계획을 만든다. [설계·검증 범위](../../docs/REMOTE_EXECUTION_CONTINUITY_2026_10_13.md), [사용법](../guides/guest_helper.md#대상-고정과-단계-실행).
 
 ### 공개 표면 서빙 (브라우저 → Cloudflare Worker → 터널 → 허브)
 공유 `X-Showcase-Secret` + `is_public_remote_path` 화이트리스트.

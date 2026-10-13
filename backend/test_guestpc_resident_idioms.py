@@ -89,6 +89,44 @@ def test_run_uses_real_resident_receipt_and_idempotency(pc):
     assert checked['command_ok'] and checked['result']['output'] == 'ok'
 
 
+def test_resume_receipt_does_not_submit_and_can_recover_target(pc):
+    job = shell(pc)
+    before = len(pc.calls)
+    resumed = pc('[fn:외부PC작업실행]{PC:"시험PC",명령:"echo ok",작업폴더:"/tmp",요청ID:"shell-1",작업:$job}', job=job)
+    assert resumed['task_ref'] == job['task_ref']
+    assert not any(a == 'limbs:guestpc' for a, _ in pc.calls[before:])
+    out = pc('[fn:외부PC작업확인]{작업:{task_ref:$ref}}', ref=job['task_ref'])
+    assert out['limb'] == pc.rec['device_id'] and out['status'] == 'queued'
+    wrong = pc('[fn:외부PC작업확인]{작업:{task_ref:$ref,limb:"wrong"}}', ref=job['task_ref'])
+    assert wrong['status'] == 'target_mismatch'
+
+
+def test_prepared_target_is_pinned_and_mismatch_never_submits(pc):
+    prepared = pc('[fn:외부PC준비]{PC:"시험PC",환경조회:false,작업폴더:"/tmp",환경:{AUDIT:"pinned"}}')
+    out = pc('[fn:외부PC작업실행]{PC:"시험PC",명령:"echo ok",준비:$prep}', prep=prepared)
+    assert out['invocation']['pc'] == pc.rec['device_id']
+    call = next(p for a, p in pc.calls if a == 'limbs:guestpc' and p['op'] == 'shell')
+    assert call['cwd'] == '/tmp' and call['env'] == {'AUDIT': 'pinned'}
+    count = len(pc.history())
+    wrong = pc('[fn:외부PC작업실행]{PC:"다른PC",명령:"echo ok",작업폴더:"/tmp",준비:$prep}', prep=prepared)
+    assert wrong['status'] == 'target_mismatch' and len(pc.history()) == count
+    wrong = pc('[fn:외부PC작업실행]{PC:"시험PC",명령:"changed",준비:$prep,작업:$job}', prep=prepared, job=out)
+    assert wrong['status'] == 'resume_mismatch' and len(pc.history()) == count
+
+
+@pytest.mark.parametrize('payload', [
+    {'exit': 7, 'output': 'compiler failed'},
+    {'exit': 0, 'timeout': True, 'output': 'partial'},
+    {'error': 'permission denied'},
+])
+def test_synchronous_failure_keeps_result_and_task_ref(pc, monkeypatch, payload):
+    import resident_store
+    monkeypatch.setattr(resident_store, 'wait_result', lambda *a, **k: payload)
+    out = pc.handler._op_shell({'limb': pc.rec['device_id'], 'cmd': 'false'})
+    assert not out['success'] and out['details']['execution_result'] == payload
+    assert out['task_ref']['task_id'] == out['job_id']
+
+
 @pytest.mark.parametrize('payload,state,settled,ok', [
     ({'exit': 7, 'error': 'exit status 7', 'output': 'reason'}, 'failed', True, False),
     ({'exit': -1, 'cancelled': True}, 'cancelled', True, False),
@@ -416,7 +454,11 @@ def test_screen_timeout_cancels_undelivered_capture_only(pc, monkeypatch):
     out = pc.handler._send_wait({}, pc.rec['device_id'], '시험PC',
                                 'shell', {'op': 'shell', 'cmd': 'echo done'}, 0)
     assert 'cancel_requested' not in out
+    assert out['success'] and out['accepted'] and out['timed_out']
+    assert out['state'] == 'queued' and out['task_ref']['task_id'] == out['job_id']
     assert resident_store.history(job=out['job_id'])['tasks'][0]['state'] == 'queued'
+    info = pc.handler._send_wait({}, pc.rec['device_id'], '시험PC', 'info', {'op': 'info'}, 0)
+    assert not info['success'] and info['accepted']  # incomplete probe must not become ready
 
 
 def test_visual_warning_survives_handler(pc, monkeypatch):

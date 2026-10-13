@@ -308,7 +308,22 @@ def _job_result(tool_input: dict) -> dict:
         status = task_status({"kind": "guestpc", "task_id": job_id})
         return {**status, "op": "result", "job_id": job_id,
                 "pending": status["state"] in {"queued", "running"}}
-    return {"success": True, "op": "result", "job_id": job_id, "result": result}
+    return _execution_response(result, op="result", job_id=job_id)
+
+
+def _execution_response(result, **metadata):
+    """회신 수신과 원격 명령 성공을 구분하고 실패 원문·재관측 참조를 보존한다."""
+    import task_receipts
+    failed = bool(result.get("error") or result.get("timeout") or result.get("cancelled")
+                  or result.get("unknown") or result.get("exit", 0) != 0)
+    out = {**metadata, "success": not failed, "result": result}
+    if metadata.get("job_id"):
+        out["task_ref"] = task_receipts.ref(TASK_KIND, metadata["job_id"])
+    if failed:
+        out["error"] = result.get("error") or "원격 작업 실패 또는 결과 미확인"
+        out["details"] = {"execution_result": result, **metadata,
+                          "task_ref": out.get("task_ref")}
+    return out
 
 
 def _guestpc_begin(tool_input: dict):
@@ -371,8 +386,15 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
         # ★실패 단정 금지: 명령은 그 PC 에서 계속 실행 중일 수 있다(오프라인과 구별 불가).
         #   같은 명령 재전송은 이중 실행 위험 — job_id 로 결과를 회수하는 게 정도(正道).
         import task_receipts
-        return {"success": False, "queued": True, "accepted": True, "job_id": job_id,
-                "task_ref": task_receipts.ref(TASK_KIND, job_id), "state": task_receipts.RUNNING,
+        observation = task_status(task_receipts.ref(TASK_KIND, job_id))
+        pending = observation["state"] in task_receipts.LIVE
+        return {**observation, "success": (op == "shell" and pending)
+                                         or observation["state"] == task_receipts.SUCCEEDED,
+                "queued": observation["state"] == task_receipts.QUEUED,
+                "accepted": True, "job_id": job_id, "limb": device_id, "limb_name": alias,
+                "helper_mode": "resident" if resident else "portable", "op": op,
+                "timed_out": pending,
+                "task_observation": observation,
                 "message": (f"손발 '{alias}' 의 응답을 {wait:.0f}초 안에 못 받았습니다 — 명령이 오래 걸리는 "
                             f"중이거나(설치·빌드 등) 손발이 오프라인입니다. ★같은 명령을 다시 보내지 말고 "
                             f'[self:task]{{op: "wait", ref: {{kind: "guestpc", task_id: "{job_id}"}}}} 로 결과를 확인하세요. '
@@ -380,12 +402,12 @@ def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
                             f'오래 걸릴 명령은 처음부터 background: true 로 보내는 게 좋습니다.')}
     if op == "screen" or op in _INPUT_OPS:
         return _finish_visual(result, device_id, alias, op)
+    out = _execution_response(result, limb=device_id, limb_name=alias, job_id=job_id,
+                              helper_mode="resident" if resident else "portable", op=op)
     if op == "read" and result.get("truncated"):
-        return {"success": True, "limb": device_id, "limb_name": alias, "result": result,
-                "warning": '원격 read 크기 제한입니다. 상주 PC는 transfer action:"receive" 후 '
-                           'collect로 파일을 가져오세요. read에는 offset·limit 인자가 없습니다.'}
-    # limb_name 을 항상 실어 어느 PC 에서 돌았는지 결과에 명시(오배송 사후 인지).
-    return {"success": True, "limb": device_id, "limb_name": alias, "result": result}
+        out["warning"] = ('원격 read 크기 제한입니다. 상주 PC는 transfer action:"receive" 후 '
+                          'collect로 파일을 가져오세요. read에는 offset·limit 인자가 없습니다.')
+    return out
 
 
 def _op_shell(tool_input: dict) -> dict:
@@ -875,6 +897,9 @@ def task_status(ref: dict) -> dict:
                 item["preview_truncated"] = len(payload) > 2000
             events.append(item)
         view = T.view(ref, state, result=task["result"], progress=events,
+                      limb=task["device"], helper_mode="resident",
+                      op=task["summary"].get("op"), request_id=task["request_id"],
+                      cwd=task["summary"].get("cwd"), shell=task["summary"].get("shell"),
                       progress_scope="recent_5_events", history_cursor=history["cursor"],
                       history_args={"op": "history", "limb": task["device"], "job": jid, "cursor": 0},
                       started_at=task["started_at"], ended_at=task["ended_at"], seconds=task["seconds"],

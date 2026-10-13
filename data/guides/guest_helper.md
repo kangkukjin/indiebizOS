@@ -5,6 +5,11 @@
 연결하므로 대상 공유기의 포트를 열지 않는다. **먼저 대상 이름과 상주/휴대 모드를 확인한다.**
 현재 문맥에 이 가이드 전문과 환경 조회 결과가 있으면 매 명령마다 다시 읽거나 조회하지 않는다.
 
+설치·업데이트·빌드처럼 긴 작업은 아래 **대상 고정과 단계 실행**을 먼저 적용한다.
+원격 파일 검색·읽기는 같은 `limb`의 `shell/read/list`를 쓴다. `self:file_find`는 허브를
+검색하므로 원격 파일 조회에 쓰지 않는다. macOS/Linux 셸은 `/bin/sh`이며 `<(...)` 같은
+셸 확장을 가정하지 않는다. 각 단계의 종료 코드를 보존하려면 argv 계획을 사용한다.
+
 ## 1. 모드 선택과 설치
 
 | 계약 | 상주 PC (새 기본 경로) | 휴대 USB (기존 issue 경로) |
@@ -46,8 +51,8 @@
 
 | 함수 | 인자 | 완료와 재개 |
 | --- | --- | --- |
-| `외부PC준비` | `PC`, `환경조회:true` | 대상·모드·등록·연결 상태. 기본은 info 환경 조회; false는 목록만. `ready`도 특정 도구 설치를 보장하지 않음 |
-| `외부PC작업실행` | `PC,명령,작업폴더`, `요청ID:""`, `환경:{}`, `셸:""`, `실행제한:1800`, `대기:0`, `입력:""`, `환경초기화:false` | 한 번 접수하고 `task_ref`와 `observation` 반환. `ok:true`는 접수. 상주형은 요청ID를 명시 |
+| `외부PC준비` | `PC`, `환경조회:true`, `작업폴더:""`, `환경:{}` | 대상·모드·등록·연결·OS 정보와 명시한 workspace를 보존. `ready`도 특정 도구 설치를 보장하지 않음 |
+| `외부PC작업실행` | `PC,명령`, `작업폴더:""`, `준비:{}`, `작업:{}`, `요청ID:""`, `환경:{}`, `셸:""`, `실행제한:1800`, `대기:0`, `입력:""`, `환경초기화:false` | 준비의 device_id·workspace 사용. 명시 폴더·환경으로 덮어쓸 수 있다. 작업을 주면 재접수 없이 관측. `ok:true`는 접수이며 상주형은 요청ID 필수 권장 |
 | `외부PC작업확인` | `작업`, `대기:0` | 같은 작업의 상태·결과·종료 코드. `command_ok:true`가 작업 성공. 모든 접수증 메타데이터 보존 |
 | `외부PC작업마무리` | `PC,작업들`, `산출물:[]`, `해제:false` | 전달한 작업만 재확인. 미종료·불명은 보류. 해제는 휴대형에만 허용 |
 | `외부PC파일보내기` | `PC,중앙경로,원격경로,요청ID`, `대기:0`, `작업:{}` | 상주형. 원격 저장 완료 후 `verified:true,path,sha256`. 미완료면 반환값을 작업으로 재개 |
@@ -98,6 +103,71 @@ return [fn:외부PC작업실행]{PC:$준비.limb,명령:"echo HELPER_OK",작업�
 - 상주형 진행은 `progress`의 최근 5건 미리보기, 최종 셸 출력은 `result.output`이다.
   휴대형 진행은 `progress.tail`, 출력은 기존 `stdout/stderr`다. 긴 로그는 아래 history로 읽는다.
 - exit 0은 업무의 정확성을 보장하지 않는다. 파일 내용·검사 명령·화면으로 목적 달성을 확인한다.
+
+### 대상 고정과 단계 실행
+
+`외부PC준비`의 `작업폴더`와 `환경`은 사용자가 선택한 실행 환경이며 `env`의 OS 관측과
+구분된다. 준비 결과는 `workspace`를 통해 다음 명령으로 전달된다. 다른 PC 이름과 조합하면
+`target_mismatch`로 거절한다. 로컬 파일 도구의 대상을 몰래 바꾸는 전역 설정은 없다.
+
+```ibl
+#!ibl edition=2
+$준비 = [fn:외부PC준비]{PC:"사무실PC",작업폴더:"/work/indiebizOS",환경:{PATH:"/opt/node/bin:/usr/bin:/bin"}}
+[if:$준비.ok==false] { return $준비 }
+return [fn:외부PC작업실행]{PC:$준비.limb,준비:$준비,명령:"python3 scripts/remote_steps.py /work/update-plan.json",요청ID:"update-plan-1",실행제한:86400}
+```
+
+실제 확인한 PC·경로·실행파일을 사용한다. 다음 호출에서 접수증 전체를 `작업`으로 전달하면
+명령을 다시 제출하지 않는다. 명령·대상·폴더·제한·요청ID가 바뀌면 `resume_mismatch`다.
+재관측에서 `환경`·`입력`을 바꿔도 기존 작업에는 전달되지 않는다. 바꾼 환경으로 실행할 때는
+기존 작업의 종료를 확인하고 별도 실행을 요청한다. 상주 작업은 task_ref만 남았어도
+`외부PC작업확인`이 중앙 원장에서 대상·작업 종류를 복원한다. 명시 대상이 다르면 거절한다.
+
+**단계 실행기** `scripts/remote_steps.py`는 원격 PC에서 실행하는 표준 라이브러리 CLI다.
+원격 배관·로그인·에이전트를 새로 만들지 않는다. 같은 CLI를 현지 AI도 사용할 수 있다.
+계획은 `version:1, run_id, cwd(절대경로), env, steps`이며 각 단계는
+`id, argv(문자열 배열), timeout, cwd(선택), verify(선택 argv)`다. 설치 명령 뒤의
+`echo`나 `tail` 성공으로 원래 실패를 덮지 않는다. 셸 문자열을 argv로 포장하면 그 셸
+내부의 실패까지 판별하지는 못하므로 설치·검사를 각각 별도 단계로 쓴다.
+
+```json
+{"version":1,"run_id":"build-1","cwd":"/work/project","steps":[
+  {"id":"install","argv":["/opt/node/bin/npm","ci"],"timeout":1800},
+  {"id":"build","argv":["/opt/node/bin/npm","run","build"],"timeout":1800}
+]}
+```
+
+- 한 저장소에는 단계 실행기 하나만 동작한다. 결과·시도별 로그는 대상 PC의
+  `data/runtime/remote_steps/<run_id>/`에 있고 `--status`로 현재 단계·로그 경로를 읽는다.
+- 같은 계획을 다시 실행하면 완료 단계를 반복하지 않는다. verify가 있으면 결과를 다시
+  검사한다. 실패 단계는 원인을 확인한 뒤 `--retry 단계ID`로 명시 재시도한다.
+  명령 성공 뒤 검증만 실패했으면 검증만 재시도한다.
+- 계획·PC·루트가 바뀌면 같은 run_id를 재사용할 수 없다. 프로세스 종료 기록이 없으면
+  `interrupted/blocked`로 남기며 `--retry`도 자동 재실행하지 않는다. 프로세스·파일·서비스를
+  확인한 후 남은 일을 새 계획으로 작성한다. 상태 파일을 지워 재시도하지 않는다.
+- 실행기 시간제한은 단계별 제한이다. guestpc의 전체 실행제한도 별도로 넉넉히 둔다.
+  로그·계획에는 비밀을 넣지 않는다. 각 단계의 성공은 선언한 명령·검증에 한정된다.
+
+**IndieBiz 업데이트 조리법** `scripts/remote_install.py`는 이미 존재하는 소스 저장소와
+Git·지원 Python·Node/npm을 사용한다. 없는 런타임은 OS·아키텍처를 확인하고 먼저 설치한다.
+스크립트가 없는 구판 PC에는 이 두 스크립트를 원격 전송한 뒤 사용한다(backend/boot_paths.py가
+있는 저장소의 scripts/ 위치). 현재 돌고 있는 설치와 중복 실행하지 않는다.
+
+```sh
+/absolute/python3 scripts/remote_install.py plan --root /work/indiebizOS --npm /opt/node/bin/npm --run-id update-1 --output /work/update-plan.json
+/absolute/python3 scripts/remote_steps.py /work/update-plan.json
+/absolute/python3 scripts/remote_steps.py /work/update-plan.json --status
+```
+
+조리법은 추적 변경·분기 이탈을 거절하고 fetch→fast-forward, 충돌하는 비추적/무시 파일 보존,
+Git 추적 위치가 유일한 중복 패키지의 잔재 보존, venv·core/tools/ml·브라우저·npm·native rebuild·빌드,
+import coverage·pip check·HEAD 일치를 확인한다. 백업은 `data/_backups/YYYY-MM-DD_이름/`다.
+추적 변경을 버리거나 강제 reset/clean하지 않고, 기존 venv·API 키도 교체하지 않는다.
+완료 후 앱을 실제로 시작하고 필요한 기능을 확인하는 것은 별도 검증이며 이 조리법은
+실행 중인 앱을 자동 재기동하지 않는다. 최초 설치의 인증 설정·훈련용 선택 의존성은 포함하지 않는다.
+
+현지 AI에 위임할 수 있으면 같은 목표·절대 저장소 경로·계획·검증 조건을 전달하고, 허브는
+그 결과와 로그를 확인한다. 이미 연결된 위임 채널을 사용하며 새 에이전트 설치·인증은 가정하지 않는다.
 
 <!-- example:guestpc_finish -->
 ```ibl

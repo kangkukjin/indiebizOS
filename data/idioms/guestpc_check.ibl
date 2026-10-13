@@ -1,7 +1,7 @@
 #!ibl edition=2
 [def:외부PC작업확인]($작업,$대기=0) {
   $참조 = get($작업,"task_ref",{})
-  [if:get($참조,"kind","")!="guestpc" or len(get($참조,"task_id",""))==0 or len(get($작업,"limb",""))==0 or $대기<0 or $대기>240] {
+  [if:get($참조,"kind","")!="guestpc" or len(get($참조,"task_id",""))==0 or (has($작업,"limb") and len(get($작업,"limb",""))==0) or $대기<0 or $대기>240] {
     return {ok:false,status:"invalid_input",task:$작업,reason:"guestpc 접수증과 0~240초 대기가 필요합니다",settled:false,command_ok:null}
   }
   $관측 = {}
@@ -13,6 +13,11 @@
       return {**$작업,ok:false,status:"observation_failed",settled:false,command_ok:null,reason:$error.message}
     }
   }
+  $대상 = get($관측,"limb",get($작업,"limb",""))
+  [if:len(get($작업,"limb",""))>0 and get($작업,"limb","")!=$대상] {
+    return {ok:false,status:"target_mismatch",settled:false,command_ok:null,task_ref:$참조}
+  }
+  $작업 = {**$작업,limb:$대상,helper_mode:get($관측,"helper_mode",get($작업,"helper_mode","")),op:get($관측,"op",get($작업,"op","shell"))}
   $상태 = $관측.state
   $결과 = get($관측,"result",null)
   [if:$결과==null] { $결과 = get($관측,"execution_result",null) }

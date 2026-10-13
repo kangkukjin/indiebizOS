@@ -120,7 +120,23 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
     if allow_terminal:
         allowed = allowed | {"terminal"}
     op = command.get("op", "shell")
-    if op not in allowed:
+    # IndieBiz OS 손발(폰, adapter=indiebiz-v1, 2026-10-13): 셸 없는 몸 — ibl·info 만. 신고한 ops 가 있으면
+    # 그 안으로 더 좁힌다. 헬퍼 PC 에 ibl 을 보내면 거절(IBL 엔진이 없다). 조용히 대체 실행하지 않는다.
+    adapter = rec["registration"].get("adapter") or "resident-v1"
+    if adapter == "indiebiz-v1":
+        body_ops = {"ibl", "info"}
+        declared = (rec["registration"].get("capabilities") or {}).get("ops")
+        if isinstance(declared, list):
+            body_ops &= {str(x) for x in declared}
+        if op not in body_ops:
+            raise ValueError("unsupported_on_this_body")
+        if op == "ibl":
+            code = command.get("ibl")
+            if not isinstance(code, str) or not code.strip():
+                raise ValueError("ibl_code_required")
+            if len(code.encode("utf-8")) > 64 * 1024:
+                raise ValueError("ibl_code_too_large")
+    elif op not in allowed:
         raise ValueError("unsupported_resident_operation")
     if op in {"screen", "click", "move", "type", "key", "scroll", "drag"} and command.get("mode") != "interactive":
         raise ValueError("needs_interactive")

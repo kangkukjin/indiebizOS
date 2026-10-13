@@ -458,6 +458,38 @@ def _op_shell(tool_input: dict) -> dict:
     return _send_wait(tool_input, device_id, alias, "shell", envelope, wait)
 
 
+def _op_ibl(tool_input: dict) -> dict:
+    """op=ibl — IndieBiz OS 손발(폰 등)에 IBL 을 하달해 **그 몸의 사전**으로 돌린다 (2026-10-13).
+
+    헬퍼(Go) 손발은 IBL 엔진이 없으므로 adapter=indiebiz-v1 등록에만 허용한다(허브 submit 도 같은
+    관문). 결과는 IBL 통화 그대로 result 에 — 실패 봉투(success:false)는 실패로 투영한다.
+    설계: docs/INDIEBIZ_BODY_AS_LIMB_DESIGN_2026_10_13.md"""
+    device_id, alias, err = _guestpc_begin(tool_input)
+    if err:
+        return err
+    code = (tool_input.get("code") or "").strip()
+    if not code:
+        return {"success": False, "error": "ibl 엔 code(그 몸에서 실행할 IBL)가 필요합니다."}
+    import limb_keys
+    reg = (limb_keys.get_by_device(device_id) or {}).get("registration") or {}
+    if reg.get("adapter") != "indiebiz-v1":
+        return {"success": False,
+                "error": f"'{alias}' 은(는) IndieBiz OS 손발이 아닙니다(헬퍼 PC) — IBL 대신 shell 을 쓰세요."}
+    to = tool_input.get("timeout")
+    try:
+        to = int(to) if to else 300
+    except (TypeError, ValueError):
+        to = 300
+    envelope = {"op": "ibl", "ibl": code, "timeout": to}
+    wait = min(float(to) + 25.0, _SYNC_WAIT_CAP)
+    out = _send_wait(tool_input, device_id, alias, "ibl", envelope, wait)
+    inner = out.get("result") if isinstance(out, dict) else None
+    if out.get("success") and isinstance(inner, dict) and inner.get("success") is False:
+        out = {**out, "success": False,
+               "error": inner.get("error") or inner.get("message") or "그 몸이 IBL 실행을 거절했습니다"}
+    return out
+
+
 def _op_read(tool_input: dict) -> dict:
     device_id, alias, err = _guestpc_begin(tool_input)
     if err:
@@ -827,6 +859,7 @@ def _resident_registration(tool_input):
 _OP_DISPATCHERS = {
     "guestpc_op": {
         "shell": _op_shell,
+        "ibl": _op_ibl,      # IndieBiz OS 손발(adapter=indiebiz-v1)에 IBL 하달 — 2026-10-13
         "read": _op_read,
         "write": _op_write,
         "list": _op_list,

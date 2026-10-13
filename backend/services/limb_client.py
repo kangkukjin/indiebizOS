@@ -1,0 +1,448 @@
+"""limb_client.py — 이 몸이 중앙 PC(허브)의 손발(limb)이 되는 클라이언트 (2026-10-13).
+
+설계 정본: docs/INDIEBIZ_BODY_AS_LIMB_DESIGN_2026_10_13.md
+
+역할
+- 허브가 상주 PC 헬퍼에 쓰는 계약(resident-v1: enroll → `/limb/resident/sync` 롱폴 → 사건 회신)을
+  Go 헬퍼 대신 IndieBiz OS 백엔드 안에서 맡는다. 봉투는 셸이 아니라 **IBL**(`{op:"ibl", ibl:"[...]"}`)이고
+  이 몸의 `/ibl/execute` 로 돌린다 — 하드웨어 차이는 이 몸의 사전(runs_on·몸별 프로브)이 푼다.
+- 허브 쪽 어휘 = `[limbs:guestpc]{op:"ibl", limb:"<이름>", code:"[...]"}`. 접수증·history·취소·전송은
+  상주 PC 와 같은 원장(resident_store)을 쓴다.
+
+보안 (사용자 확정 2026-10-13 — "하드웨어적으로 중앙 PC 와 연결해 설치했을 때만 종속")
+- **폰 전용.** PC 는 헬퍼 설치로만 손발이 된다 — 이 모듈은 몸 감지(detect_body)가 폰일 때만 기동한다.
+- 자격은 설치 때 USB 로 심긴 **실행 키 하나**(secrets/limb_client.json). 폰에는 초대 키·등록 키가 없고
+  다른 허브를 입력할 화면도 없다 — 심긴 허브 하나에만 아웃바운드로 붙는다. 등록 자격은 허브에서
+  `provision_phone_limb.py` 가 허브 비밀번호를 확인한 뒤 1회용 초대로 만든다.
+- 인바운드 명령 통로 없음(폰 /ibl/execute 는 localhost). 허브가 remove/revoke 하면 자격을 지우고 멈춘다.
+- `shell` 봉투는 실행하지 않는다(ibl·info 만). 허브도 adapter=indiebiz-v1 에는 그 둘만 하달한다
+  (resident_pcs.submit). 미지원 op 는 정직하게 `unsupported_on_this_body` 로 돌려준다.
+
+내구성 (헬퍼 resident_runtime 과 같은 규칙)
+- 사건(started/result)은 로컬 spool 에 먼저 적고 다음 sync 에 실어 ack 를 받으면 지운다.
+- 작업 기록(jobs/<id>.json)이 running 인 채 프로세스가 죽었으면 재시작 때 `unknown` 결과로 닫는다 —
+  부작용을 두 번 내지 않는다.
+"""
+import json
+import os
+import threading
+import time
+from pathlib import Path
+from typing import Callable, Dict, List, Optional
+
+ADAPTER = "indiebiz-v1"
+SUPPORTED_OPS = ("ibl", "info")
+CONFIG_NAME = "limb_client.json"
+EVENT_BATCH = 64
+# 허브가 사건 묶음을 통째로 거절하는 코드 — 이런 사건은 재전송해도 영원히 거절되므로 옆으로 치운다.
+_DEAD_EVENT_CODES = {"job_not_owned", "invalid_event_id", "invalid_event_kind",
+                     "event_too_large", "event_id_conflict", "too_many_events"}
+
+_client: Optional["LimbClient"] = None
+_client_lock = threading.Lock()
+
+
+def _body_profile() -> str:
+    """이 몸이 무엇인가 — capability 감지 본체(runtime_utils.detect_body)에 묻는다. 손발 모드는 폰만."""
+    try:
+        from runtime_utils import detect_body
+        return str((detect_body() or {}).get("profile") or "")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+class LimbError(Exception):
+    def __init__(self, code: str, status: int = 0):
+        super().__init__(code)
+        self.code = code
+        self.status = status
+
+
+def config_path() -> Path:
+    """설치 때 심긴 실행 자격. 폰 = filesDir/secrets/limb_client.json (keys.json 과 같은 자리,
+    BaseBundle 재추출에 안 지워지는 app-private sibling)."""
+    ud = os.environ.get("INDIEBIZ_USERDATA")
+    if ud:
+        return Path(ud).parent / "secrets" / CONFIG_NAME
+    base = os.environ.get("INDIEBIZ_BASE_PATH") or "."
+    return Path(base) / "data" / CONFIG_NAME
+
+
+def spool_dir() -> Path:
+    ud = os.environ.get("INDIEBIZ_USERDATA")
+    base = Path(ud) if ud else Path(os.environ.get("INDIEBIZ_BASE_PATH") or ".") / "data"
+    return base / "limb_spool"
+
+
+def load_config() -> Optional[Dict]:
+    p = config_path()
+    try:
+        cfg = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(cfg, dict) or not all(cfg.get(k) for k in ("hub", "key", "installation_id")):
+        return None
+    return cfg
+
+
+def _json_size(obj) -> int:
+    return len(json.dumps(obj, ensure_ascii=False).encode("utf-8"))
+
+
+class LimbClient:
+    def __init__(self, cfg: Dict, port: int, *, post: Callable = None, execute: Callable = None,
+                 card: Callable = None, log: Callable = print):
+        self.cfg = dict(cfg)
+        self.port = int(port)
+        self._post = post or self._http_post
+        self._execute = execute or self._execute_local
+        self._card = card or self._card_local
+        self.log = log
+        self.generation = cfg.get("generation")
+        self.stopped = threading.Event()
+        self.stop_reason: Optional[str] = None
+        self._lock = threading.Lock()
+        self._queue: List[Dict] = []          # 접수 순서(큐 순서 = 허브 응답 순서)
+        self._running: Optional[str] = None
+        self._cancelled = set()
+        self._worker: Optional[threading.Thread] = None
+        self._card_cache = (0.0, None)
+        self.spool = spool_dir()
+        (self.spool / "events").mkdir(parents=True, exist_ok=True)
+        (self.spool / "events_dead").mkdir(parents=True, exist_ok=True)
+        (self.spool / "jobs").mkdir(parents=True, exist_ok=True)
+
+    # ── 전송 ────────────────────────────────────────────────────────────────────
+    def _http_post(self, path: str, payload: Dict, timeout: float) -> Dict:
+        import requests
+        url = f"{self.cfg['hub'].rstrip('/')}/limb/resident/{path}"
+        r = requests.post(url, json=payload, timeout=(10, timeout))
+        try:
+            body = r.json()
+        except ValueError:
+            body = {}
+        if r.status_code != 200:
+            raise LimbError(str((body or {}).get("detail") or f"http_{r.status_code}"), r.status_code)
+        return body if isinstance(body, dict) else {}
+
+    def _auth(self) -> Dict:
+        return {"key": self.cfg["key"], "installation_id": self.cfg["installation_id"]}
+
+    # ── 실행 ────────────────────────────────────────────────────────────────────
+    def _execute_local(self, code: str, agent_id: str, timeout: float) -> Dict:
+        """이 몸의 /ibl/execute 로 — localhost 는 인증 통과, 실행 경로 단일(폰 push job 과 동일)."""
+        import requests
+        try:
+            r = requests.post(f"http://127.0.0.1:{self.port}/ibl/execute",
+                              json={"code": code, "agent_id": agent_id or "limb"},
+                              timeout=(5, float(timeout) + 30))
+        except Exception as e:  # noqa: BLE001 — 실행 실패는 결과로 돌려준다(루프는 산다)
+            return {"success": False, "error": f"로컬 IBL 실행 실패: {e.__class__.__name__}: {e}"}
+        try:
+            obj = r.json()
+        except ValueError:
+            obj = {"result": (r.text or "")[:2000]}
+        if not isinstance(obj, dict):
+            obj = {"result": obj}
+        if r.status_code != 200:
+            obj.setdefault("success", False)
+            obj.setdefault("error", f"HTTP {r.status_code}")
+        return obj
+
+    def _card_local(self) -> Dict:
+        import requests
+        try:
+            r = requests.get(f"http://127.0.0.1:{self.port}/nodes/card", timeout=5)
+            card = r.json() if r.status_code == 200 else {}
+        except Exception:  # noqa: BLE001
+            card = {}
+        return card if isinstance(card, dict) else {}
+
+    def capabilities(self) -> Dict:
+        """connect/sync 마다 신고 — 허브는 adapter 로 봉투 종류(ibl·info)를 고른다. 16KB 상한."""
+        now = time.time()
+        ts, card = self._card_cache
+        if card is None or now - ts > 600:
+            card = self._card() or {}
+            self._card_cache = (now, card)
+        import platform
+        caps = {"adapter": ADAPTER, "body": _body_profile() or "unknown",
+                "ops": list(SUPPORTED_OPS), "ibl": True, "shell": False,
+                "python": platform.python_version(), "alias": self.cfg.get("alias")}
+        if card:
+            caps["card"] = card
+            while _json_size(caps) > 12 * 1024 and caps.get("card"):
+                # 명함이 크면 긴 목록부터 덜어낸다(요약 필드는 남김)
+                big = max(caps["card"], key=lambda k: _json_size(caps["card"][k]))
+                caps["card"].pop(big)
+        return caps
+
+    def info(self) -> Dict:
+        return {"body": _body_profile() or "unknown", "adapter": ADAPTER,
+                "alias": self.cfg.get("alias"), "device_id": self.cfg.get("device_id"),
+                "ops": list(SUPPORTED_OPS), "capabilities": self.capabilities()}
+
+    # ── spool: 사건·작업 기록 ───────────────────────────────────────────────────
+    def _event(self, job_id: str, kind: str, payload: Dict) -> None:
+        eid = f"{kind}:{job_id}"
+        rec = {"event_id": eid, "job_id": job_id, "kind": kind, "payload": payload,
+               "occurred_at": time.time()}
+        if kind == "result" and _json_size(payload) > 1536 * 1024:
+            # 허브 상한 2MB — 긴 본문은 미리보기로 줄이고 사실은 남긴다
+            text = json.dumps(payload, ensure_ascii=False)
+            rec["payload"] = {"success": bool(payload.get("success", True)), "truncated": True,
+                              "bytes": len(text.encode("utf-8")), "preview": text[:200000]}
+        path = self.spool / "events" / f"{time.time_ns():020d}-{eid.replace(':', '_')}.json"
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(rec, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, path)
+
+    def _pending_events(self):
+        out = []
+        for p in sorted((self.spool / "events").glob("*.json")):
+            try:
+                out.append((p, json.loads(p.read_text(encoding="utf-8"))))
+            except (OSError, ValueError):
+                continue
+            if len(out) >= EVENT_BATCH:
+                break
+        return out
+
+    def _ack(self, events, ids) -> None:
+        ids = set(ids or [])
+        for p, rec in events:
+            if rec.get("event_id") in ids:
+                try:
+                    p.unlink()
+                except OSError:
+                    pass
+
+    def _bury(self, events, why: str) -> None:
+        for p, _ in events:
+            try:
+                os.replace(p, self.spool / "events_dead" / p.name)
+            except OSError:
+                pass
+        self.log(f"[limb] 허브가 사건 묶음을 거절({why}) — {len(events)}건 보류함")
+
+    def _record_path(self, jid: str) -> Path:
+        return self.spool / "jobs" / f"{jid}.json"
+
+    def _record(self, jid: str, **fields) -> Dict:
+        p = self._record_path(jid)
+        try:
+            rec = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            rec = {}
+        rec.update(fields)
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(rec, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, p)
+        return rec
+
+    def _recover(self) -> None:
+        """재시작: 실행 중이던 작업은 unknown 으로 닫고(재실행 금지), 접수만 된 작업은 다시 줄 세운다."""
+        for p in sorted((self.spool / "jobs").glob("*.json")):
+            try:
+                rec = json.loads(p.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if rec.get("state") == "running":
+                result = {"unknown": True, "error": "limb_restarted_during_execution"}
+                self._event(rec["job"]["id"], "result", result)
+                self._record(rec["job"]["id"], state="done", result=result)
+            elif rec.get("state") == "queued":
+                with self._lock:
+                    self._queue.append(rec["job"])
+            elif rec.get("state") == "done" and time.time() - float(rec.get("queued_at_s") or 0) > 7 * 86400:
+                try:
+                    p.unlink()
+                except OSError:
+                    pass
+
+    # ── 수명 ────────────────────────────────────────────────────────────────────
+    def _wipe(self, reason: str) -> None:
+        """허브가 이 자격을 더 인정하지 않는다 — 자격을 지우고 멈춘다(자가 제거)."""
+        self.stop_reason = reason
+        try:
+            config_path().unlink()
+        except OSError:
+            pass
+        with self._lock:
+            self._queue.clear()
+        self.stopped.set()
+        self.log(f"[limb] 손발 모드 종료: {reason}")
+
+    def _removed(self, state: str) -> None:
+        if state == "removal_pending":
+            try:
+                self._post("removed", self._auth(), 20)
+            except Exception as e:  # noqa: BLE001
+                self.log(f"[limb] 제거 확인 전송 실패(자격은 지움): {e}")
+        self._wipe("허브에서 등록 해제됨")
+
+    # ── 작업 ────────────────────────────────────────────────────────────────────
+    def _accept(self, job: Dict) -> None:
+        jid = str(job.get("id") or "")
+        if not jid or self._record_path(jid).exists():
+            return  # 미확인 재제안(undelivered) — 이미 기록됐으면 무시
+        self._record(jid, job=job, state="queued", queued_at=time.time_ns(), queued_at_s=time.time())
+        with self._lock:
+            self._queue.append(job)
+
+    def _cancel(self, jid: str) -> None:
+        with self._lock:
+            idx = next((i for i, j in enumerate(self._queue) if j.get("id") == jid), None)
+            if idx is not None:
+                self._queue.pop(idx)
+            elif self._running == jid or self._record_path(jid).exists() is False:
+                return  # 실행 중은 중단 못 함(IBL 동기) / 모르는 작업
+            else:
+                return
+        result = {"cancelled": True}
+        self._event(jid, "result", result)
+        self._record(jid, state="done", result=result)
+
+    def _dispatch(self, job: Dict) -> Dict:
+        try:
+            env = json.loads(job.get("code") or "{}")
+        except ValueError:
+            env = {}
+        if not isinstance(env, dict):
+            env = {}
+        op = env.get("op") or "shell"
+        if op == "ibl":
+            code = env.get("ibl") or env.get("code") or ""
+            if not isinstance(code, str) or not code.strip():
+                return {"success": False, "error": "ibl_code_required"}
+            try:
+                timeout = float(env.get("timeout") or 1800)
+            except (TypeError, ValueError):
+                timeout = 1800.0
+            agent_id = env.get("agent_id") or job.get("agent_id") or "limb"
+            return self._execute(code, agent_id, timeout)
+        if op == "info":
+            return {"success": True, **self.info()}
+        return {"success": False, "error": "unsupported_on_this_body", "op": op,
+                "supported": list(SUPPORTED_OPS)}
+
+    def _run_job(self, job: Dict) -> None:
+        jid = str(job.get("id"))
+        with self._lock:
+            self._running = jid
+        self._record(jid, state="running")
+        self._event(jid, "started", {})
+        try:
+            result = self._dispatch(job)
+        except Exception as e:  # noqa: BLE001 — 작업 하나의 예외가 루프를 죽이면 안 된다
+            result = {"success": False, "error": f"limb_execute_exception: {e.__class__.__name__}: {e}"}
+        if not isinstance(result, dict):
+            result = {"result": result}
+        self._event(jid, "result", result)
+        self._record(jid, state="done", result=result)
+        with self._lock:
+            self._running = None
+
+    def _drain(self) -> None:
+        while not self.stopped.is_set():
+            with self._lock:
+                if not self._queue:
+                    return
+                job = self._queue.pop(0)
+            self._run_job(job)
+
+    def _schedule(self, inline: bool = False) -> None:
+        with self._lock:
+            if not self._queue:
+                return
+            if inline:
+                pass
+            elif self._worker and self._worker.is_alive():
+                return
+            else:
+                self._worker = threading.Thread(target=self._drain, name="limb-worker", daemon=True)
+                self._worker.start()
+                return
+        self._drain()
+
+    def _busy(self) -> bool:
+        with self._lock:
+            return bool(self._queue) or self._running is not None
+
+    # ── sync 한 바퀴 ────────────────────────────────────────────────────────────
+    def step(self, *, inline: bool = False, wait: Optional[float] = None) -> Optional[Dict]:
+        """허브와 한 번 동기화: 쌓인 사건 올리고, 작업·취소 받아 줄 세우고(또는 inline 실행)."""
+        events = self._pending_events()
+        if wait is None:
+            wait = 0 if (self._busy() or events) else 20
+        payload = {**self._auth(), "events": [e for _, e in events],
+                   "capabilities": self.capabilities(), "wait": wait}
+        try:
+            resp = self._post("sync", payload, float(wait) + 15)
+        except LimbError as e:
+            if e.code == "invalid_registration":
+                self._wipe("허브가 이 자격을 더 모릅니다(폐기·해제·재설치)")
+                return None
+            if e.code in _DEAD_EVENT_CODES and events:
+                self._bury(events, e.code)
+                return None
+            raise
+        self._ack(events, resp.get("ack"))
+        state = resp.get("state")
+        if state in ("removed", "removal_pending"):
+            self._removed(state)
+            return resp
+        gen = resp.get("generation")
+        if gen and gen != self.generation:
+            self.generation = gen
+        for jid in resp.get("cancel") or []:
+            self._cancel(str(jid))
+        if not resp.get("paused"):
+            for job in resp.get("jobs") or []:
+                self._accept(job)
+        self._schedule(inline=inline)
+        return resp
+
+    def run(self) -> None:
+        self._recover()
+        backoff = 1.0
+        self.log(f"[limb] 손발 모드 — 허브 {self.cfg['hub']} 에 '{self.cfg.get('alias')}' 로 대기")
+        while not self.stopped.is_set():
+            try:
+                self.step()
+                backoff = 1.0
+            except Exception as e:  # noqa: BLE001 — 네트워크 단절은 일상, 지수 백오프
+                self.log(f"[limb] sync 실패(재시도 {backoff:.0f}s): {e.__class__.__name__}: {str(e)[:160]}")
+                self.stopped.wait(backoff)
+                backoff = min(backoff * 2, 60.0)
+                continue
+            # 롱폴이 바로 돌아온 경우(작업 있음·사건 있음) 틈 없이 다음 바퀴 — 바쁠 땐 짧게 쉰다
+            if self._busy():
+                self.stopped.wait(0.3)
+
+    def stop(self) -> None:
+        self.stopped.set()
+
+
+def start(port: int, *, log: Callable = print) -> bool:
+    """몸 부팅 때 1회 — 폰이고 설치 자격이 있을 때만 손발 루프를 띄운다. PC 는 절대 아니다."""
+    global _client
+    if _body_profile() != "phone":
+        return False
+    cfg = load_config()
+    if not cfg:
+        return False
+    with _client_lock:
+        if _client is not None and not _client.stopped.is_set():
+            return True
+        _client = LimbClient(cfg, port, log=log)
+        threading.Thread(target=_client.run, name="limb-client", daemon=True).start()
+    return True
+
+
+def status() -> Dict:
+    c = _client
+    if c is None:
+        return {"active": False, "configured": load_config() is not None}
+    return {"active": not c.stopped.is_set(), "alias": c.cfg.get("alias"), "hub": c.cfg.get("hub"),
+            "device_id": c.cfg.get("device_id"), "stop_reason": c.stop_reason}

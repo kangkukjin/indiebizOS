@@ -53,11 +53,26 @@ def _now() -> float:
     return time.time()
 
 
+_cache_mtime = None
+
+
+def _file_mtime(p: Path):
+    try:
+        return p.stat().st_mtime_ns
+    except OSError:
+        return None
+
+
 def _load() -> Dict:
-    global _cache
-    if _cache is not None:
-        return _cache
+    """원장 로드 — 파일 mtime 이 바뀌었으면 캐시를 버린다(2026-10-13).
+
+    provision_phone_limb.py 처럼 *다른 프로세스*가 원장에 자격을 쓰면 라이브 허브가 그걸 바로 봐야
+    한다(안 그러면 폰이 enroll 직후 sync 할 때 invalid_registration). 매 호출 stat 1회 — 싸다."""
+    global _cache, _cache_mtime
     p = _store_path()
+    m = _file_mtime(p)
+    if _cache is not None and m == _cache_mtime:
+        return _cache
     data = {"keys": {}}
     try:
         if p.exists():
@@ -68,6 +83,7 @@ def _load() -> Dict:
     except Exception:
         data = {"keys": {}}
     _cache = data
+    _cache_mtime = m
     return _cache
 
 
@@ -83,6 +99,8 @@ def _save() -> None:
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, p)
+        global _cache_mtime
+        _cache_mtime = _file_mtime(p)
         # 쓰기 관문 원장 — 손발 자격 발급·폐기는 보안 사건(관측, 실패 무해)
         try:
             from write_ledger import log_write
@@ -303,8 +321,14 @@ def resident_installer_revoke():
         _save()
 
 
-def resident_enroll(invitation, installation_id, alias=None):
+def resident_enroll(invitation, installation_id, alias=None, kind="pc", adapter="resident-v1"):
+    """초대를 이 설치(installation_id)에 묶어 실행 자격으로 바꾼다.
+
+    kind/adapter (2026-10-13): 헬퍼 PC = ("pc", "resident-v1") / IndieBiz OS 폰 손발 = ("phone", "indiebiz-v1").
+    adapter 는 허브가 하달 봉투 종류를 고르는 축(resident_pcs.submit) — 폰엔 ibl·info 만."""
     import re
+    if adapter not in ("resident-v1", "indiebiz-v1") or kind not in ("pc", "phone"):
+        raise ValueError("invalid_adapter")
     if not re.fullmatch(r"[a-f0-9]{32}", installation_id):
         raise ValueError("invalid_installation_id")
     with _lock:
@@ -336,7 +360,7 @@ def resident_enroll(invitation, installation_id, alias=None):
         bound = data["keys"][issued["key"]]
         bound["approved"] = True
         bound["registration"] = {"installation_id": installation_id, "generation": secrets.token_hex(16),
-                                 "kind": "pc", "adapter": "resident-v1", "state": "active",
+                                 "kind": kind, "adapter": adapter, "state": "active",
                                  "paused": False, "wake": None}
         if rec.get("installer"):
             rec["installations"][installation_id] = issued["key"]

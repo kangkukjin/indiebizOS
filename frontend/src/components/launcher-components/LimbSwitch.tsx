@@ -5,6 +5,8 @@ import { api } from '../../lib/api';
 
 type Registration = {
   state: 'active' | 'removal_pending' | 'removed';
+  kind?: 'pc' | 'phone';          // phone = IndieBiz OS 를 설치하며 등록한 폰(헬퍼 없음, 봉투=IBL) — 2026-10-13
+  adapter?: string;
   paused?: boolean;
   capabilities?: { os?: string; hostname?: string; desktop_stream?: number };
 };
@@ -83,8 +85,9 @@ export function LimbSwitch() {
     finally { setBusy(null); }
   };
   const active = pcs.filter((pc) => !pc.revoked && pc.registration.state !== 'removed');
+  const isPhone = (pc: PC) => pc.registration.kind === 'phone';
   const status = (pc: PC) => pc.registration.state === 'removal_pending'
-    ? '해제 요청됨 · PC가 연결되면 헬퍼 제거'
+    ? (isPhone(pc) ? '해제 요청됨 · 폰이 연결되면 자격 삭제' : '해제 요청됨 · PC가 연결되면 헬퍼 제거')
     : pc.registration.paused ? '작업 중지됨' : pc.connected ? '연결됨' : '오프라인';
   const helperNote = (pc: PC) => pc.registration.state !== 'active' ? ''
     : pc.helper?.state === 'updating' ? ' · 헬퍼 교체 중'
@@ -137,7 +140,7 @@ export function LimbSwitch() {
             <span className={`h-2 w-2 shrink-0 rounded-full ${pc.connected && pc.registration.state === 'active' ? 'bg-emerald-500' : 'bg-stone-300'}`} />
             <div className="min-w-0 flex-1">
               <div className="break-all font-medium text-stone-700">{pc.alias}</div>
-              <div className="text-[10px] text-stone-400">{status(pc)}{pc.registration.capabilities?.os ? ` · ${pc.registration.capabilities.os}` : ''}{helperNote(pc)}</div>
+              <div className="text-[10px] text-stone-400">{status(pc)}{isPhone(pc) ? ' · 폰 (IndieBiz OS)' : ''}{pc.registration.capabilities?.os ? ` · ${pc.registration.capabilities.os}` : ''}{helperNote(pc)}</div>
             </div>
             {pc.registration.state === 'active' && (pc.helper?.state === 'available' || pc.helper?.state === 'updating') &&
               <button onClick={() => void updateHelper(pc)} disabled={busy !== null || !pc.connected || pc.helper.state === 'updating'}
@@ -147,12 +150,12 @@ export function LimbSwitch() {
               </button>}
             {['darwin', 'windows', 'linux'].includes(pc.registration.capabilities?.os || '') && <button onClick={() => void openDesktop(pc)} disabled={pc.registration.state !== 'active' || desktopOpening !== null} className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">{desktopOpening === pc.device_id ? '연결 중…' : '화면 공유'}</button>}
             <button onClick={() => void remove(pc)} disabled={busy !== null || pc.registration.state !== 'active'}
-              title="등록 해제 및 원격 헬퍼 제거" className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-500 hover:text-red-600 disabled:opacity-50">
+              title={isPhone(pc) ? "등록 해제 — 폰은 설치만 된 상태로 돌아갑니다" : "등록 해제 및 원격 헬퍼 제거"} className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-500 hover:text-red-600 disabled:opacity-50">
               {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}해제
             </button>
           </li>)}
         </ul>
-        <p className="mt-3 text-[11px] leading-relaxed text-stone-500">해제하면 헬퍼와 자동 시작 설정이 제거되며 작업 파일은 남습니다.</p>
+        <p className="mt-3 text-[11px] leading-relaxed text-stone-500">해제하면 헬퍼와 자동 시작 설정이 제거되며 작업 파일은 남습니다. 폰은 자격만 지워져 설치만 된 상태로 돌아갑니다.</p>
         <details className="mt-2 text-[11px] text-stone-400">
           <summary className="cursor-pointer">USB를 분실했을 때</summary>
           <p className="my-1">USB 등록 키를 폐기하면 그 USB로 새 PC를 등록할 수 없습니다. 이미 등록된 PC는 계속 연결됩니다. 새 USB는 폴더를 다시 준비해 복사하세요.</p>

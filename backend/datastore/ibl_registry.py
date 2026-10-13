@@ -292,6 +292,16 @@ def self_can_run(node: str, action: str, cfg: dict) -> bool:
 
 
 _ACT_RE = re.compile(r"\[([a-z_]+):([a-z_0-9]+)\]")
+_STR_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
+
+
+def _outside_strings(code: str) -> str:
+    """문자열 리터럴 안은 데이터다 — 소유 판정은 그 밖의 낱말만 본다 (2026-10-13).
+
+    `[limbs:guestpc]{op:"ibl", code:"[limbs:phone]{op:'vibrate'}"}` 처럼 **남의 몸에 보내는 IBL** 은
+    이 몸이 실행하는 어휘가 아니다(손발이 자기 사전으로 돈다). 셸 명령·자연어 부탁·스크립트 본문도
+    같은 부류다. 문자열을 공백으로 비워 위치·길이를 보존한다(오프셋을 쓰는 호출자 대비)."""
+    return _STR_RE.sub(lambda m: " " * len(m.group(0)), code or "")
 
 
 def foreign_actions(code: str) -> List[str]:
@@ -304,7 +314,7 @@ def foreign_actions(code: str) -> List[str]:
     """
     nodes = load_nodes_installed().get("nodes") or {}
     bad: List[str] = []
-    for node, action in _ACT_RE.findall(code or ""):
+    for node, action in _ACT_RE.findall(_outside_strings(code)):
         if node in CONTROL_NODES:
             continue                        # 함수 호출(언어 개정 2026-09-05) — 어휘가 아니다
         cfg = (nodes.get(node, {}).get("actions") or {}).get(action)
@@ -338,7 +348,7 @@ def code_is_owned(code: str) -> bool:
     _merge_api_registry_actions(nodes)
     from runtime_utils import detect_body
     profile = detect_body().get("profile")
-    for node, action in _ACT_RE.findall(code or ""):
+    for node, action in _ACT_RE.findall(_outside_strings(code)):
         if node in CONTROL_NODES:
             continue
         cfg = nodes.get(node, {}).get("actions", {}).get(action)

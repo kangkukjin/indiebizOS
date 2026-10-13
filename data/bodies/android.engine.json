@@ -366,6 +366,7 @@
     "services/indienet_social",
     "services/ingest_engine",
     "services/launcher_ops",
+    "services/limb_client",
     "services/media_ops",
     "services/model_settings_view",
     "services/multi_chat_manager",
@@ -584,8 +585,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 509,
-    "engine": 483,
+    "total": 510,
+    "engine": 484,
     "blocklist": 26
   }
 }

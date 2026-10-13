@@ -9,11 +9,23 @@
 #        ./phone-companion/scripts/setup_phone.sh --build  (무조건 재빌드)
 set -euo pipefail
 
+# 인자: --build(무조건 재빌드) · --limb <이름>(이 폰을 중앙 PC 의 손발로 등록 — USB 설치 때 1회,
+#       허브 비밀번호를 묻는다. 설계 docs/INDIEBIZ_BODY_AS_LIMB_DESIGN_2026_10_13.md)
+BUILD=0; LIMB=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --build) BUILD=1 ;;
+    --limb) LIMB="${2:-}"; shift ;;
+    *) echo "알 수 없는 인자: $1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
 PKG="com.indiebiz.phoneagent"
 LISTENER="$PKG/$PKG.NotificationCaptureService"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PROJ="$(cd "$HERE/.." && pwd)"        # phone-companion/
-APK="$PROJ/app/build/outputs/apk/debug/app-debug.apk"
+# 폰이 여러 대 꽂혀 있으면 ANDROID_SERIAL=<serial> 로 고른다(adb 표준 변수).
 
 say() { printf "\n\033[1m▶ %s\033[0m\n" "$*"; }
 
@@ -24,10 +36,18 @@ if ! adb get-state >/dev/null 2>&1; then
 fi
 adb devices | sed -n '2p'
 
+# 0b) ABI 로 flavor 선택 — Chaquopy 16 의 Python 3.12 는 64비트만 지원해 32비트 전용 기기
+#     (Galaxy J7 2017 등)는 Python 3.11 의 arm32 flavor 로만 설치된다(app/build.gradle productFlavors).
+ABILIST="$(adb shell getprop ro.product.cpu.abilist | tr -d '\r')"
+if [[ "$ABILIST" == *arm64-v8a* ]]; then FLAVOR=arm64; else FLAVOR=arm32; fi
+APK="$PROJ/app/build/outputs/apk/$FLAVOR/debug/app-$FLAVOR-debug.apk"
+echo "ABI=$ABILIST → flavor=$FLAVOR"
+
 # 1) APK (없거나 --build 면 빌드)
-if [[ "${1:-}" == "--build" || ! -f "$APK" ]]; then
-  say "APK 빌드 (./gradlew assembleDebug)"
-  ( cd "$PROJ" && ./gradlew :app:assembleDebug --console=plain | tail -2 )
+if [[ "$BUILD" == 1 || ! -f "$APK" ]]; then
+  TASK=":app:assemble$(tr '[:lower:]' '[:upper:]' <<< "${FLAVOR:0:1}")${FLAVOR:1}Debug"
+  say "APK 빌드 (./gradlew $TASK)"
+  ( cd "$PROJ" && ./gradlew "$TASK" --console=plain | tail -2 )
 fi
 say "APK 설치"
 adb install -r "$APK" | tail -1
@@ -50,6 +70,12 @@ adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS 2>/dev/null \
 # 3) API 키 주입 (.env 부분집합 → app-private)
 say "API 키 주입"
 python3 "$HERE/provision_phone_keys.py" || echo "⚠ 키 주입 건너뜀(.env 확인)"
+
+# 3b) 손발 등록 (--limb 이름) — 하드웨어(USB) 연결된 폰에만, 허브 비밀번호 확인 뒤 1회용 초대로.
+if [[ -n "$LIMB" ]]; then
+  say "손발 등록: $LIMB"
+  python3 "$HERE/provision_phone_limb.py" --alias "$LIMB" ${INDIEBIZ_LIMB_HUB:+--hub "$INDIEBIZ_LIMB_HUB"}
+fi
 
 # 4) 안내 (백엔드는 앱 포그라운드 진입 시 자동 기동 — 별도 버튼 없음)
 say "완료"

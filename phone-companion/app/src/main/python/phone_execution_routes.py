@@ -36,6 +36,9 @@ def install(app, get_scratch, _save_audio_to_phone):
         # 빌림은 호출하는 주체가 액션 주체(설계결정 §6.4): 맥→폰 위임(forward_to_phone)이 호출자
         # 신원을 실어 보내면 그걸로 기록하고, 폰 자체 표면 호출(미동봉)이면 폰-자아("phone")로 떨어진다.
         agent_id = body.get("agent_id") or "phone"
+        # 요청 표면('web' = 폰 WebView 런처) — 소리·저장이 어디서 나야 하는지의 판정 축(PC api_ibl 과 동일).
+        # 2026-10-13: 손발 하달(limb_client)·폰 두뇌 호출은 surface 없음 → host(폰 스피커), WebView 는 client.
+        surface = body.get("surface") or None
 
         # 무거운 import(system_tools→api_engine 등)는 첫 호출 시 지연 — 트리 + env 준비 후라 안전.
         from system_tools import _execute_ibl_unified
@@ -45,7 +48,16 @@ def install(app, get_scratch, _save_audio_to_phone):
             for key in ("edition", "inputs", "check", "resume", "files", "files_from"):
                 if key in body:
                     request[key] = body[key]
-            return _execute_ibl_unified(request, get_scratch(), agent_id=agent_id)
+            try:
+                from thread_context import set_current_surface, get_current_surface
+            except Exception:
+                return _execute_ibl_unified(request, get_scratch(), agent_id=agent_id)
+            prev = get_current_surface()
+            set_current_surface(surface)
+            try:
+                return _execute_ibl_unified(request, get_scratch(), agent_id=agent_id)
+            finally:
+                set_current_surface(prev)   # to_thread 풀 스레드 재사용 — 반드시 복원
 
         # 엔진은 동기(내부에 자체 이벤트 루프 관리). 서버 asyncio 루프 블록 방지 위해 스레드로.
         result = await asyncio.to_thread(_run)

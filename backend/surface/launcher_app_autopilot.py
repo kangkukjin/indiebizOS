@@ -4,6 +4,7 @@
 
 LAUNCHER_AUTOPILOT_JS = """/* ================= 자율주행 (드릴다운) ================= */
 let apAgents=[]; let apAgProject=null;
+let apThreads=[]; let apThreadProject=null;
 /* 첨부 사진 (전송 대기) — {b64, media_type, dataUrl}. 시스템 AI·프로젝트 에이전트 공통. */
 let apImages=[];
 async function apLoad(){
@@ -40,8 +41,8 @@ function apBrowseRoot(){
   h+='<h3>프로젝트 '+apProjects.length+'</h3>';
   h+='<button class="ap-newbtn" onclick="apProjectCreate()">＋ 프로젝트 만들기</button>';
   h+=apProjects.map(p=>
-    '<div class="ap-card" onclick="apBrowseProject(\\''+esc(p.id)+'\\')"><span class="ic">'+(p.icon||'📁')+'</span>'+
-    '<span class="tx"><span class="nm">'+esc(p.name)+'</span><span class="ds">에이전트 선택</span></span>'+
+    '<div class="ap-card" onclick="apBrowseProject(\\''+esc(p.id)+'\\')"><span class="ic">'+(p.icon||(p.project_kind==='research'?'📚':'📁'))+'</span>'+
+    '<span class="tx"><span class="nm">'+esc(p.name)+'</span><span class="ds">'+(p.project_kind==='research'?'주제별 대화':'에이전트 선택')+'</span></span>'+
     '<span class="chev">›</span>'+
     '<button class="btn2 danger" onclick="event.stopPropagation();apProjectDelete(\\''+esc(p.id)+'\\',\\''+esc(p.name)+'\\')">🗑</button></div>'
   ).join('');
@@ -65,6 +66,7 @@ async function apProjectDelete(id,name){
 /* ①-b 프로젝트 드릴 → 에이전트 전체 목록 (옛 ags[0] 자동선택 버그 제거) */
 async function apBrowseProject(pid){
   const p=apProjects.find(x=>x.id===pid); if(!p) return;
+  if(p.project_kind==='research'){ apBrowseResearch(p); return; }
   try{
     const r=await jfetch('/projects/'+encodeURIComponent(pid)+'/agents');
     if(!r.ok){ alert('에이전트 로드 실패'); return; }
@@ -81,6 +83,57 @@ async function apBrowseProject(pid){
         '<button class="btn2 danger" onclick="event.stopPropagation();apAgentDelete(\\''+esc(pid)+'\\',\\''+esc(a.id)+'\\',\\''+esc(a.name)+'\\')">🗑</button></div>'
       ).join('');
   }catch(e){ alert('에이전트 로드 실패'); }
+}
+/* ①-b' 연구 프로젝트 → 주제(대화) 목록. 연구 프로젝트는 에이전트가 아니라 주제별 대화를
+   단위로 하므로 데스크톱 ResearchProjectView 와 같은 [self:project] 대화 연산을 쓴다. */
+async function apResearch(uid,op,params){
+  const inputs=Object.assign({project_ref:uid,op:op},params||{});
+  const fields=Object.keys(inputs).map(k=>k+': $'+k).join(', ');
+  const d=await ibl({code:'[self:project]{'+fields+'}',edition:2,inputs:inputs,declared_inputs:Object.keys(inputs)});
+  if(!d||d.success===false||d.error) throw new Error(String((d&&(d.error||d.message))||'요청 실패'));
+  return d;
+}
+async function apBrowseResearch(p){
+  const uid=p.project_uid||p.id;
+  apShowBrowse();
+  document.getElementById('ap-bhead').style.display='flex';
+  document.getElementById('apBrowseTitle').textContent=p.name;
+  const box=document.getElementById('apBrowse');
+  box.innerHTML='<p class="muted" style="padding:24px;text-align:center">주제를 불러오는 중…</p>';
+  try{
+    const groups=[];
+    for(const archived of [false,true]){
+      let cursor=null; const items=[];
+      do{ const d=await apResearch(uid,'thread_list',Object.assign({limit:100,archived:archived},cursor?{cursor:cursor}:{}));
+        items.push(...(d.items||[])); cursor=d.next_cursor||null; }while(cursor);
+      groups.push(items);
+    }
+    apThreads=groups[0].concat(groups[1]); apThreadProject=p;
+    box.innerHTML='<h3>주제 '+apThreads.length+'</h3>'+
+      '<button class="ap-newbtn" onclick="apThreadCreate()">＋ 새 주제</button>'+
+      (apThreads.length?apThreads.map((t,i)=>apCard('💬',t.title,(t.updated_label||'')+(t.archived?' · 보관됨':''),'apPickThread('+i+')',true)).join('')
+        :'<p class="muted" style="padding:24px;text-align:center">새 주제를 만들어 시작하세요.</p>');
+  }catch(e){
+    box.innerHTML='<p role="alert">주제를 불러오지 못했습니다: '+esc(e.message)+'</p><button class="btn2" onclick="apBrowseProject(\\''+esc(p.id)+'\\')">다시 시도</button>';
+  }
+}
+async function apThreadCreate(){
+  const p=apThreadProject; if(!p) return;
+  const title=(prompt('새 주제 이름:')||'').trim(); if(!title) return;
+  try{ await apResearch(p.project_uid||p.id,'thread_create',{title:title}); apBrowseResearch(p); }
+  catch(e){ alert('생성 실패: '+e.message); }
+}
+function apPickThread(i){
+  const t=apThreads[i], p=apThreadProject; if(!t||!p) return;
+  apChat={ type:'research', projectId:p.project_uid||p.id, threadRef:t.id, projectRowId:p.id, agentId:null, agentName:null };
+  apOpenChat('📚 '+p.name+' · '+t.title, t.mode_label||'주제별 연구 대화');
+  document.getElementById('apAttach').style.display='none';  // 연구 첨부는 자료실 업로드 경로가 따로다
+}
+/* 연구 대화 기록 — 실행 중이면 진행 중 답(running)도 함께 온다. */
+async function apResearchMsgs(){
+  const d=await apResearch(apChat.projectId,'thread_messages',{thread_ref:apChat.threadRef,limit:40});
+  return {items:(d.items||[]).map(m=>({id:m.id,role:m.role==='user'?'user':'assistant',status:m.status,
+    content:(m.content||'')+(m.status_label&&m.status!=='running'?'\\n\\n*('+m.status_label+')*':'')})), active:!!d.active_run};
 }
 /* 에이전트 생성/삭제 — POST/DELETE /projects/{id}/agents 는 catch-all 로 맥 (패리티) */
 async function apAgentCreate(pid){
@@ -284,6 +337,8 @@ async function apLoadHistory(){
       if(!r.ok) return;
       const msgs=((await r.json()).messages||[]).slice().reverse();  // DESC → 시간순
       convs=msgs.map(m=>({role:(m.is_agent===true)?'assistant':'user', content:m.content||'', images:m.images||null}));
+    }else if(apChat.type==='research'){
+      convs=(await apResearchMsgs()).items;
     }else return;
     if(!convs.length) return;  // 이력 없으면 안내문 유지
     const c=document.getElementById('apMsgs'); c.innerHTML='';
@@ -292,7 +347,10 @@ async function apLoadHistory(){
     c.appendChild(sep); c.scrollTop=c.scrollHeight;
   }catch(e){}
 }
-function apExitChat(){ apBrowseRoot(); }
+function apExitChat(){
+  if(apChat&&apChat.type==='research'){ const p=apProjects.find(x=>x.id===apChat.projectRowId); if(p){ apBrowseResearch(p); return; } }
+  apBrowseRoot();
+}
 async function apRunSwitch(id,btn){
   btn.disabled=true; btn.textContent='실행 중...';
   try{ const r=await jfetch('/switches/'+encodeURIComponent(id)+'/execute',{method:'POST'}); alert(r.ok?'스위치를 실행했습니다':'실행 실패'); }
@@ -358,6 +416,23 @@ async function apPollAssistant(baselineId,bub,statusUrl){
   }
   return {content:'⏳ 아직 처리 중입니다. 잠시 후 대화를 다시 열어 확인해 주세요.', images:null};
 }
+/* 연구 대화 전송 — 접수 뒤 대화 기록을 폴링해 실행이 끝나면 마지막 답을 보여 준다(최대 ~10분). */
+async function apResearchSend(message,bub){
+  const before=apMaxId((await apResearchMsgs()).items);
+  const request_id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+Math.random();
+  await apResearch(apChat.projectId,'thread_send',{thread_ref:apChat.threadRef,message:message,request_id:request_id});
+  const dots=['조사 중…','조사 중… ·','조사 중… · ·','조사 중… · · ·'];
+  const deadline=Date.now()+10*60*1000;
+  for(let i=0;Date.now()<deadline;i++){
+    await apSleep(i<6?1500:3000);
+    let v; try{ v=await apResearchMsgs(); }catch(e){ continue; }
+    const fresh=v.items.filter(m=>m.role==='assistant'&&m.id>before);
+    const last=fresh[fresh.length-1];
+    if(!v.active&&last){ bub.innerHTML=mdChat(last.content); const mc=document.getElementById('apMsgs'); mc.scrollTop=mc.scrollHeight; return; }
+    bub.textContent=(last&&last.content)?last.content:dots[i%dots.length];
+  }
+  bub.textContent='⏳ 아직 조사 중입니다. 잠시 후 이 주제를 다시 열어 확인해 주세요.';
+}
 async function apSend(){
   const inp=document.getElementById('apInput'); const msg=inp.value.trim();
   if(!msg&&!apImages.length) return;
@@ -365,6 +440,7 @@ async function apSend(){
   apAddMsg('user',msg||'(사진)',sendImgs.map(im=>({src:im.dataUrl}))); inp.value='';
   const btn=document.getElementById('apSend'); btn.disabled=true;
   apAddMsg('assistant','…'); const last=document.getElementById('apMsgs').lastChild.querySelector('.bub');
+  if(apChat.type==='research'){ try{ await apResearchSend(msg,last); }catch(e){ last.textContent='오류: '+e.message; } finally{ btn.disabled=false; } return; }
   try{
     // 시스템 AI·에이전트 공통: 영상 생성처럼 수 분짜리 작업이 Cloudflare 터널 100초 타임아웃(524)에
     // 걸려 "실패"로 보이던 문제 해결 — 백그라운드로 보내고(즉시 반환) 대화 DB를 폴링해 답을 받는다.

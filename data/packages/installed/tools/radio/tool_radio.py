@@ -149,6 +149,38 @@ EBS_URLS = {
 # ─── 재생 상태 관리 ───
 
 _player_lock = Lock()
+
+
+def _phone_bridge():
+    """폰 네이티브 재생기(Kotlin PhoneActions MediaPlayer) — 폰 프로파일에서만 존재. 없으면 None."""
+    if os.environ.get("INDIEBIZ_PROFILE") != "phone":
+        return None
+    try:
+        from java import jclass  # Chaquopy
+        return jclass("com.indiebiz.phoneagent.PhoneActions")
+    except Exception:
+        return None
+
+
+def _phone_play(stream_url, station_name, station_id, volume):
+    """폰 host 출력(2026-10-13 손발 폰): 화면 없는 상주 폰 스피커로. 중앙 PC 가 [limbs:guestpc]{op:ibl}
+    로 하달한 [limbs:radio]{op:play} 가 여기로 온다(WebView 표면은 client 로 분기되므로 안 온다)."""
+    global _current_station, _play_start_time
+    PA = _phone_bridge()
+    if PA is None:
+        return json.dumps({"success": False, "error": "폰 네이티브 재생기 브리지를 찾지 못했습니다."}, ensure_ascii=False)
+    try:
+        raw = json.loads(str(PA.playStream(stream_url, int(volume))))
+    except Exception as e:
+        return json.dumps({"success": False, "error": f"폰 재생기 호출 실패: {e}"}, ensure_ascii=False)
+    if raw.get("error"):
+        return json.dumps({"success": False, "error": raw["error"]}, ensure_ascii=False)
+    with _player_lock:
+        _current_station = {"station_id": station_id, "name": station_name,
+                            "stream_url": stream_url, "volume": int(volume)}
+        _play_start_time = time.time()
+    return json.dumps({"success": True, "message": f"{station_name} 재생을 시작합니다(이 폰 스피커).",
+                       "station": station_name, "volume": int(volume), "output": "phone"}, ensure_ascii=False)
 _player_process = None
 _current_station = None
 _play_start_time = None
@@ -403,7 +435,9 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None, mode=None
             web_surface = is_web_surface()
         except Exception:
             web_surface = False
-        mode = "client" if (web_surface or os.environ.get("INDIEBIZ_PROFILE") == "phone") else "host"
+        # 2026-10-13: 폰도 같은 축 — WebView 는 surface:'web'(client), 손발 하달·폰 두뇌 호출은 host.
+        #   (phone_execution_routes 가 surface 를 전달하게 됐다. 옛 "폰이면 무조건 client" 폴백 제거.)
+        mode = "client" if web_surface else "host"
 
     if mode == "client":
         return json.dumps({
@@ -414,6 +448,10 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None, mode=None
             "volume": volume,
             "message": f"{station_name} 재생",
         }, ensure_ascii=False)
+
+    # 폰 host: 네이티브 MediaPlayer (ffplay 없음)
+    if os.environ.get("INDIEBIZ_PROFILE") == "phone":
+        return _phone_play(stream_url, station_name, station_id, volume)
 
     # PC: ffplay 로 재생 (없으면 윈도우는 자동 공급 시도)
     ffplay_path = _find_ffplay()
@@ -495,9 +533,29 @@ def stop_radio():
     """재생 중지"""
     global _player_process, _current_station, _play_start_time
 
-    # 폰: 클라이언트(WebView)가 재생 중 → 클라이언트에 중지 지시
+    # 폰: 네이티브 재생(host)이 있으면 끄고, WebView 표면에서 눌렀으면 그쪽 재생도 멈추게 표식.
     if os.environ.get("INDIEBIZ_PROFILE") == "phone":
-        return json.dumps({"success": True, "stop_in_client": True, "message": "재생 중지"}, ensure_ascii=False)
+        PA = _phone_bridge()
+        stopped = False
+        if PA is not None:
+            try:
+                stopped = bool(json.loads(str(PA.stopStream())).get("stopped"))
+            except Exception:
+                stopped = False
+        with _player_lock:
+            name = (_current_station or {}).get("name")
+            _current_station = None
+            _play_start_time = None
+        payload = {"success": True, "message": (f"{name or '라디오'} 재생을 중지했습니다." if stopped
+                                                 else "재생 중인 라디오가 없습니다.")}
+        try:
+            from thread_context import is_web_surface
+            if is_web_surface():
+                payload["stop_in_client"] = True
+                payload["message"] = "재생 중지"
+        except Exception:
+            pass
+        return json.dumps(payload, ensure_ascii=False)
 
     with _player_lock:
         station_name = _current_station.get("name") if _current_station else None
@@ -529,6 +587,20 @@ def stop_radio():
 def radio_status():
     """재생 상태 확인"""
     global _player_process, _current_station, _play_start_time
+
+    PA = _phone_bridge()
+    if PA is not None:
+        try:
+            st = json.loads(str(PA.streamStatus()))
+        except Exception as e:
+            return json.dumps({"success": False, "error": f"폰 재생 상태 조회 실패: {e}"}, ensure_ascii=False)
+        if not st.get("playing"):
+            return json.dumps({"success": True, "playing": False, "message": "재생 중인 라디오가 없습니다."}, ensure_ascii=False)
+        with _player_lock:
+            cur = dict(_current_station or {})
+        return json.dumps({"success": True, "playing": True, "station": cur.get("name", "알 수 없음"),
+                           "station_id": cur.get("station_id"), "volume": st.get("volume", cur.get("volume", 70)),
+                           "elapsed_seconds": int(st.get("elapsed_seconds") or 0), "output": "phone"}, ensure_ascii=False)
 
     with _player_lock:
         if not _player_process or _player_process.poll() is not None:
@@ -581,6 +653,19 @@ def set_radio_volume(volume):
     except (TypeError, ValueError):
         volume = 70
     volume = max(0, min(100, volume))
+
+    PA = _phone_bridge()
+    if PA is not None:
+        try:
+            r = json.loads(str(PA.setStreamVolume(int(volume))))
+        except Exception as e:
+            return json.dumps({"success": False, "error": f"폰 볼륨 조절 실패: {e}"}, ensure_ascii=False)
+        if r.get("error"):
+            return json.dumps({"success": False, "error": r["error"]}, ensure_ascii=False)
+        with _player_lock:
+            if _current_station:
+                _current_station["volume"] = volume
+        return json.dumps({"success": True, "volume": volume, "message": f"볼륨 {volume}"}, ensure_ascii=False)
 
     with _player_lock:
         if not _player_process or _player_process.poll() is not None:

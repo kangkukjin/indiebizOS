@@ -357,6 +357,26 @@ Go 1.22와 `go.legacy.mod`를 쓰는 `mac-amd64-legacy`를 사용한다. 일반 
 바이너리는 OS 경고가 나타날 수 있다. 손발 실행 자격은 이웃 등급 자동 부여와 별개다.
 
 
+## IndieBiz OS 손발 — 설치 때 등록한 폰에 IBL 하달 (2026-10-13)
+
+PC 는 헬퍼로만 손발이 된다. **IndieBiz OS 를 USB 로 설치하면서 중앙 PC 에 등록한 폰**은 헬퍼 없이
+손발이 된다(`setup_phone.sh --limb 삼성1`, 허브 비밀번호 확인). 그 폰에는 셸이 없고 IBL 엔진이 있으므로
+봉투가 셸이 아니라 IBL 이다. 폰은 자기 사전(`runs_on` 이 phone 인 어휘 — `[limbs:phone]`·`[sense:listen]`·
+`[sense:see]`·`[sense:here]`·`[limbs:radio]` 등)으로 돌리고 통화(items)를 그대로 돌려준다.
+
+- 하달: `[limbs:guestpc]{op:"ibl", limb:"삼성1", code:"[limbs:phone]{op:'vibrate'}"}` — `code` 안의
+  문자열은 작은따옴표로 쓰면 바깥 큰따옴표와 안 부딪힌다. 결과는 `$r.result`(IBL 통화). 그 몸이
+  거절하면(`success:false`) 이 호출도 실패로 투영된다 — `[if:$r.ok==false]{return}` 로 좁힌 뒤 읽는다.
+- 긴 일(녹음 수십 초 이상)은 `background:true` → 접수증(`task_ref`) → `[self:task]{op:"wait"}` 또는
+  `외부PC작업확인`. 폰의 IBL 은 동기라 실행 중 취소는 안 되고, 전달 전 취소만 된다.
+- 헬퍼 PC 에 `op:ibl` 을 보내면 거절("IndieBiz OS 손발이 아닙니다"), 폰에 `shell`·`read` 를 보내면
+  허브가 `unsupported_on_this_body` 로 거절한다 — 조용히 대체 실행하지 않는다.
+- 소리: `[limbs:radio]{op:'play', station_id:'…'}` 를 하달하면 **그 폰 스피커**에서 난다(host 출력, 화면 꺼져도
+  유지). 방송국 id 는 허브에서 `[sense:radio]{op:"korean"}` 으로 먼저 찾는다. 정지는 `op:'stop'`.
+- 파일(녹음·사진)은 폰에 남는다 — 경로만 돌아오므로 `transfer action:"collect"` 로 가져온다(후속 구현).
+- 등록 해제: `[self:limb]{op:"remove", target:"삼성1"}` → 폰이 다음 sync 에서 자격을 스스로 지운다.
+  폐기: `op:"revoke"`. 목록·연결 상태: `op:"list"`(adapter 가 indiebiz-v1 이면 폰 손발).
+
 ## 49회차 수리: 재관측과 재시도
 
 - 이름 조회는 폐기·만료·제거된 같은 별칭을 제외한다. device_id 명시는 그 등록 자체를

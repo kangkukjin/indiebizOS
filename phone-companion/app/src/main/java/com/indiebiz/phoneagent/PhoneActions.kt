@@ -20,7 +20,11 @@ import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.location.Geocoder
+import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.ImageReader
+import android.media.MediaPlayer
+import android.net.wifi.WifiManager
 import android.media.MediaRecorder
 import android.media.ThumbnailUtils
 import android.os.Build
@@ -657,5 +661,108 @@ object PhoneActions {
         } catch (e: Throwable) {
             ByteArray(0)
         }
+    }
+
+    // ── 스트림 재생기 ([limbs:radio] 폰 네이티브 host 출력, 2026-10-13 손발 폰) ─────────────
+    // 화면 없는 상주 폰에서 라디오·스트림을 스피커로 낸다. WebView(client) 재생과 별개.
+    // 화면이 꺼져도 끊기지 않게 부분 WakeLock(MediaPlayer.setWakeMode) + WifiLock 을 쥔다.
+    @Volatile private var player: MediaPlayer? = null
+    @Volatile private var playerUrl: String? = null
+    @Volatile private var playerStartedAt: Long = 0L
+    @Volatile private var playerVolume: Int = 70
+    @Volatile private var wifiLock: WifiManager.WifiLock? = null
+    private val playerLock = Any()
+
+    /** 스트림 재생 시작 — 기존 재생은 끊는다. 반환 JSON: {playing, url, volume} 또는 {error}. */
+    @JvmStatic
+    fun playStream(url: String, volume: Int): String {
+        val ctx = appContext ?: return errJson("context 미초기화")
+        if (url.isBlank()) return errJson("stream url 없음")
+        val vol = volume.coerceIn(0, 100)
+        synchronized(playerLock) {
+            stopStreamLocked()
+            val mp = MediaPlayer()
+            var err: String? = null
+            val latch = CountDownLatch(1)
+            return try {
+                mp.setAudioAttributes(AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
+                mp.setWakeMode(ctx, android.os.PowerManager.PARTIAL_WAKE_LOCK)
+                mp.setOnPreparedListener { p ->
+                    try { p.start() } catch (t: Throwable) { err = "start 실패: ${t.message}" }
+                    latch.countDown()
+                }
+                mp.setOnErrorListener { _, what, extra -> err = "MediaPlayer 오류 $what/$extra"; latch.countDown(); true }
+                mp.setDataSource(url)
+                mp.prepareAsync()
+                if (!latch.await(25, TimeUnit.SECONDS)) err = "스트림 준비 시간 초과(25초)"
+                if (err != null) {
+                    try { mp.release() } catch (_: Throwable) {}
+                    errJson(err!!)
+                } else {
+                    applyVolumeLocked(ctx, mp, vol)
+                    try {
+                        val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                        wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "indiebiz_stream").apply { acquire() }
+                    } catch (_: Throwable) {}
+                    player = mp; playerUrl = url; playerStartedAt = System.currentTimeMillis(); playerVolume = vol
+                    JSONObject().put("playing", true).put("url", url).put("volume", vol).toString()
+                }
+            } catch (t: Throwable) {
+                try { mp.release() } catch (_: Throwable) {}
+                errJson("재생 실패: ${t.message}")
+            }
+        }
+    }
+
+    private fun applyVolumeLocked(ctx: Context, mp: MediaPlayer, vol: Int) {
+        // 기기 미디어 볼륨을 퍼센트로 맞춘다(무인 폰은 볼륨이 0 일 수 있다) + 플레이어 상대 볼륨 1.0.
+        try {
+            val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(max * vol / 100f), 0)
+        } catch (_: Throwable) {}
+        try { mp.setVolume(1f, 1f) } catch (_: Throwable) {}
+    }
+
+    private fun stopStreamLocked(): Boolean {
+        val mp = player ?: return false
+        try { if (mp.isPlaying) mp.stop() } catch (_: Throwable) {}
+        try { mp.release() } catch (_: Throwable) {}
+        player = null; playerUrl = null; playerStartedAt = 0L
+        try { wifiLock?.let { if (it.isHeld) it.release() } } catch (_: Throwable) {}
+        wifiLock = null
+        return true
+    }
+
+    /** 재생 중지. 반환 JSON: {stopped: true|false}. */
+    @JvmStatic
+    fun stopStream(): String = synchronized(playerLock) {
+        JSONObject().put("stopped", stopStreamLocked()).toString()
+    }
+
+    /** 재생 상태. 반환 JSON: {playing, url, volume, elapsed_seconds}. */
+    @JvmStatic
+    fun streamStatus(): String = synchronized(playerLock) {
+        val mp = player
+        val playing = try { mp?.isPlaying == true } catch (_: Throwable) { false }
+        val o = JSONObject().put("playing", playing)
+        if (playing) {
+            o.put("url", playerUrl).put("volume", playerVolume)
+                .put("elapsed_seconds", (System.currentTimeMillis() - playerStartedAt) / 1000)
+        }
+        o.toString()
+    }
+
+    /** 볼륨(0~100) — 재생 중이 아니면 {error}. */
+    @JvmStatic
+    fun setStreamVolume(volume: Int): String = synchronized(playerLock) {
+        val ctx = appContext ?: return errJson("context 미초기화")
+        val mp = player ?: return errJson("재생 중인 스트림이 없습니다")
+        val vol = volume.coerceIn(0, 100)
+        applyVolumeLocked(ctx, mp, vol)
+        playerVolume = vol
+        JSONObject().put("volume", vol).put("playing", true).toString()
     }
 }

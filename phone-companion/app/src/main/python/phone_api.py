@@ -1426,6 +1426,15 @@ def serve(port=8765, base_path=None):
         _start_hub_registration(int(port))
     except Exception as e:
         print(f"[phone_api] 허브 등록 기동 스킵: {e}")
+    # 손발 모드(2026-10-13): 설치 때 USB 로 심긴 자격(secrets/limb_client.json)이 있으면 이 폰은
+    # 중앙 PC 의 손발 — 허브 하나에만 아웃바운드 sync 로 붙어 IBL 봉투를 받아 자기 사전으로 돈다.
+    # 자격이 없으면 아무것도 안 한다(등록 표면 없음 = 남이 이 폰을 자기 허브에 못 붙인다).
+    try:
+        import limb_client
+        if limb_client.start(int(port), log=print):
+            print("[phone_api] 손발 모드 기동 — 허브 명령 대기(limb_client)")
+    except Exception as e:
+        print(f"[phone_api] 손발 모드 기동 스킵: {e}")
     # 재무: 결제 알림 포획 → 폰 원장 수거 → PC 원장과 머지(포획소가 /finance/sync/run 을 부른다).
     try:
         import phone_finance_sync

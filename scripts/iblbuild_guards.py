@@ -31,6 +31,9 @@ PROFILE_BRANCH_ALLOWLIST = {
                                       # 폰=창·WS 없어 헤드리스 폰-로컬 execute_pipeline. "무엇을 실행"(어휘)이
                                       # 아니라 "어떤 몸 메커니즘으로 실행"(바인딩)이라 이음매 아래.
     "data/packages/installed/tools/radio/tool_radio.py",     # 핸들러(이음매 아래)
+    "data/packages/installed/tools/youtube/youtube_phone.py", # Java MediaPlayer/WebView 바인딩(이음매 아래)
+    "backend/test_youtube_phone.py",  # 위 네이티브 바인딩의 폰 환경·PC 프로세스 미호출 회귀
+    "backend/test_tool_radio.py",     # 같은 네이티브 재생기의 라디오/음악 소유권 회귀 환경
     "data/packages/installed/tools/android/handler.py",      # 핸들러(이음매 아래)
 }
 # 스캔 대상 루트(이음매 위/아래 모두) — allowlist 밖에서 분기가 나타나면 적발.

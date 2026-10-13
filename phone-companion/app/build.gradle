@@ -27,6 +27,8 @@ android {
                 install "filelock"
                 install "requests"
                 install "httpx"
+                install "websocket-client"
+                install "bech32"
                 install "beautifulsoup4"
                 install "feedparser"
                 // 투자(주식·원자재) 시세는 tool_yfinance 가 Yahoo chart/search API 를 requests 로
@@ -34,6 +36,11 @@ android {
                 // 베이스라인 측정 유지
                 install "numpy"
                 install "Pillow"
+                // Pure Python extraction + EJS; JS runs in the phone's isolated
+                // WebView and audio in MediaPlayer. No PC/ffplay dependency.
+                install "yt-dlp==2026.08.19"
+                install "yt-dlp-ejs==0.8.0"
+                install "mutagen"
             }
         }
     }

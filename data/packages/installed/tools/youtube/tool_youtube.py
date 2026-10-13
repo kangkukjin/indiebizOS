@@ -39,6 +39,7 @@ OUTPUTS_DIR = os.path.join(INDIEBIZ_DATA_DIR, "outputs")
 from common.pkg_utils import load_sibling
 
 _tx = load_sibling(__file__, "tool_transcript")
+_phone = load_sibling(__file__, "youtube_phone")
 markdown_to_html = _tx.markdown_to_html
 download_youtube_music = _tx.download_youtube_music
 format_timestamp = _tx.format_timestamp
@@ -82,10 +83,11 @@ _player_lock = threading.Lock()  # 큐/상태 동시접근 보호
 def _get_audio_url(video_id):
     """yt-dlp로 video_id에서 오디오 스트림 URL 추출"""
     import yt_dlp
+    _phone.prepare()
     url = f"https://www.youtube.com/watch?v={video_id}"
     with yt_dlp.YoutubeDL({
         'quiet': True, 'no_warnings': True,
-        'format': 'bestaudio/best',
+        'format': 'bestaudio[ext=m4a]/bestaudio/best' if _phone.is_phone() else 'bestaudio/best',
     }) as ydl:
         info = ydl.extract_info(url, download=False)
         return info.get('url', '')
@@ -99,6 +101,12 @@ def _start_ffplay(audio_url, seek=0):
     위치 추정용으로 시작 벽시계·오프셋을 함께 기록한다.
     """
     global _player_process, _player_audio_url, _player_started_at, _player_seek_offset
+    if _phone.is_phone():
+        _player_process = _phone.Playback(audio_url, seek=seek)
+        _player_audio_url = audio_url
+        _player_seek_offset = float(seek or 0)
+        _player_started_at = time.time()
+        return
     ffplay_path = find_binary("ffplay")
     if not ffplay_path:
         raise FileNotFoundError(install_hint("ffplay"))
@@ -129,6 +137,13 @@ def _queue_monitor():
         with _player_lock:
             # 프로세스가 바뀌었으면 (skip 등) 이 스레드는 종료
             if _player_process is not proc:
+                break
+            if _phone.is_phone() and (getattr(proc, 'replaced', False) or getattr(proc, 'returncode', 0)):
+                # Native playback was replaced (e.g. radio) or failed. Do not
+                # let an old monitor start another track over the new owner.
+                _player_process = None
+                _player_video_id = None
+                _player_title = None
                 break
             if not _player_queue:
                 _player_process = None
@@ -182,7 +197,8 @@ def _close_player():
                     pass
         # 표식 단 ffplay 를 모두 종료 — 이전 백엔드가 띄운 고아(전역 추적 밖)까지 확실히 정지.
         # (이게 없으면 _player_process=None 인 고아가 살아있어 "stop 이 거짓 성공"을 반환한다.)
-        kill_processes_by_marker(YOUTUBE_MARKER)
+        if not _phone.is_phone():
+            kill_processes_by_marker(YOUTUBE_MARKER)
         _player_process = None
         _player_video_id = None
         _player_title = None
@@ -367,6 +383,7 @@ def search_youtube(query: str, count: int = 5) -> dict:
     """
     try:
         import yt_dlp
+        _phone.prepare()
     except ImportError:
         return {
             'success': False,
@@ -499,6 +516,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
     """
     try:
         import yt_dlp
+        _phone.prepare()
     except ImportError:
         return {
             'success': False,
@@ -519,6 +537,13 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
 
     # URL인지 검색어인지 판단
     is_url = bool(re.match(r'https?://', query)) or 'youtu' in query
+
+    if _phone.is_phone() and mode == 'video' and is_url:
+        video_id = extract_video_id(query)
+        if not video_id:
+            return {'success': False, 'error': '유튜브 영상 URL이 필요합니다.'}
+        _close_player()
+        return _open_phone_video(video_id)
 
     if is_url:
         video_url = query
@@ -656,6 +681,9 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
     if mode == "video":
         # video 모드: 기본 브라우저로 열기 (큰 화면)
         watch_url = f"https://www.youtube.com/watch?v={video_id}"
+        if _phone.is_phone():
+            return {**_open_phone_video(video_id, title), 'video_id': video_id,
+                    'title': title, 'channel': channel, 'mode': mode, **clamp_info}
         if not open_url(watch_url):  # 전 OS 기본 브라우저 (맥 전용 'open' 대체)
             return {'success': False, 'error': '브라우저 열기 실패'}
         _player_video_id = video_id
@@ -726,14 +754,25 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
     return result
 
 
+def _open_phone_video(video_id, title=''):
+    global _player_video_id, _player_title, _player_mode
+    result = _phone.open_video(f'https://www.youtube.com/watch?v={video_id}')
+    if result.get('success'):
+        _player_video_id, _player_title, _player_mode = video_id, title, 'video'
+    return result
+
+
 def stop_youtube() -> dict:
     """현재 재생 중인 유튜브 중지 (큐도 모두 초기화)"""
     with _player_lock:
         vid = _player_video_id
         remaining = len(_player_queue)
+        if _phone.is_phone() and vid and _player_mode == 'video':
+            return {'success': False, 'control': 'external',
+                    'error': '폰의 유튜브 앱/브라우저에서 연 영상입니다. 해당 앱에서 정지해야 합니다.'}
     # 전역이 비어 있어도(이전 백엔드가 띄운 고아) 표식 단 ffplay 가 살아있으면 정리한다.
     # → 옛 코드처럼 "재생 중인 항목이 없습니다"라는 거짓 성공을 내지 않는다.
-    orphan = is_process_running_by_marker(YOUTUBE_MARKER)
+    orphan = not _phone.is_phone() and is_process_running_by_marker(YOUTUBE_MARKER)
     if vid or _player_process or orphan:
         _close_player()  # _player_process + 표식 고아 모두 종료
         msg = '재생을 중지했습니다.'
@@ -759,6 +798,8 @@ def add_to_queue(query: str, count: int = 3) -> dict:
         dict: {success, video_id, title, queue_position, queue_length, message}
     """
     with _player_lock:
+        if _phone.is_phone() and _player_video_id and _player_mode == 'video':
+            return {'success': False, 'error': '외부 영상 앱의 대기열은 제어하지 않습니다. 오디오 play로 시작하세요.'}
         if not _player_video_id and not _player_process:
             return {
                 'success': False,
@@ -839,6 +880,8 @@ def skip_youtube() -> dict:
     global _player_process, _player_video_id, _player_title
 
     with _player_lock:
+        if _phone.is_phone() and _player_video_id and _player_mode == 'video':
+            return {'success': False, 'error': '외부 영상 앱의 건너뛰기는 해당 앱에서 실행하세요.'}
         if not _player_video_id and not _player_process and not _player_queue:
             return {'success': True, 'message': '재생 중인 항목이 없습니다.'}
         skipped_id = _player_video_id
@@ -986,6 +1029,8 @@ def get_queue() -> dict:
     return {
         'success': True,
         'now_playing': now_playing,
+        **({'playing': None, 'control': 'external'}
+           if _phone.is_phone() and _player_mode == 'video' and vid else {}),
         'queue': queue_list,
         'queue_length': len(queue_list),
         'message': f'현재 재생 중: {vid or "없음"}, 대기열: {len(queue_list)}곡',

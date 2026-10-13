@@ -670,6 +670,8 @@ object PhoneActions {
     @Volatile private var playerUrl: String? = null
     @Volatile private var playerStartedAt: Long = 0L
     @Volatile private var playerVolume: Int = 70
+    @Volatile private var playerId: String? = null
+    @Volatile private var playerError: String? = null
     @Volatile private var wifiLock: WifiManager.WifiLock? = null
     private val playerLock = Any()
 
@@ -693,7 +695,24 @@ object PhoneActions {
                     try { p.start() } catch (t: Throwable) { err = "start 실패: ${t.message}" }
                     latch.countDown()
                 }
-                mp.setOnErrorListener { _, what, extra -> err = "MediaPlayer 오류 $what/$extra"; latch.countDown(); true }
+                mp.setOnErrorListener { _, what, extra ->
+                    err = "MediaPlayer 오류 $what/$extra"
+                    if (player === mp) playerError = err
+                    latch.countDown()
+                    true
+                }
+                mp.setOnCompletionListener { finished ->
+                    synchronized(playerLock) {
+                        if (player === finished) {
+                            // Keep the id so the queue can distinguish completion
+                            // from replacement, but release finite-track resources.
+                            try { wifiLock?.let { if (it.isHeld) it.release() } } catch (_: Throwable) {}
+                            wifiLock = null
+                            player = null
+                            try { finished.release() } catch (_: Throwable) {}
+                        }
+                    }
+                }
                 mp.setDataSource(url)
                 mp.prepareAsync()
                 if (!latch.await(25, TimeUnit.SECONDS)) err = "스트림 준비 시간 초과(25초)"
@@ -707,7 +726,10 @@ object PhoneActions {
                         wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "indiebiz_stream").apply { acquire() }
                     } catch (_: Throwable) {}
                     player = mp; playerUrl = url; playerStartedAt = System.currentTimeMillis(); playerVolume = vol
-                    JSONObject().put("playing", true).put("url", url).put("volume", vol).toString()
+                    playerId = java.util.UUID.randomUUID().toString()
+                    playerError = null
+                    JSONObject().put("playing", true).put("url", url).put("volume", vol)
+                        .put("playback_id", playerId).toString()
                 }
             } catch (t: Throwable) {
                 try { mp.release() } catch (_: Throwable) {}
@@ -730,7 +752,7 @@ object PhoneActions {
         val mp = player ?: return false
         try { if (mp.isPlaying) mp.stop() } catch (_: Throwable) {}
         try { mp.release() } catch (_: Throwable) {}
-        player = null; playerUrl = null; playerStartedAt = 0L
+        player = null; playerUrl = null; playerStartedAt = 0L; playerId = null; playerError = null
         try { wifiLock?.let { if (it.isHeld) it.release() } } catch (_: Throwable) {}
         wifiLock = null
         return true
@@ -747,10 +769,12 @@ object PhoneActions {
     fun streamStatus(): String = synchronized(playerLock) {
         val mp = player
         val playing = try { mp?.isPlaying == true } catch (_: Throwable) { false }
-        val o = JSONObject().put("playing", playing)
+        val o = JSONObject().put("playing", playing).put("playback_id", playerId)
+        playerError?.let { o.put("error", it) }
         if (playing) {
             o.put("url", playerUrl).put("volume", playerVolume)
                 .put("elapsed_seconds", (System.currentTimeMillis() - playerStartedAt) / 1000)
+            try { o.put("position_seconds", mp!!.currentPosition / 1000.0) } catch (_: Throwable) {}
         }
         o.toString()
     }
@@ -764,5 +788,41 @@ object PhoneActions {
         applyVolumeLocked(ctx, mp, vol)
         playerVolume = vol
         JSONObject().put("volume", vol).put("playing", true).toString()
+    }
+
+    /** An old queue must never stop a newer radio/music playback. */
+    @JvmStatic
+    fun stopStreamIf(id: String): String = synchronized(playerLock) {
+        JSONObject().put("stopped", id == playerId && stopStreamLocked()).toString()
+    }
+
+    @JvmStatic
+    fun setStreamVolumeIf(id: String, volume: Int): String = synchronized(playerLock) {
+        if (id != playerId) return errJson("재생 대상이 바뀌었습니다")
+        setStreamVolume(volume)
+    }
+
+    @JvmStatic
+    fun seekStream(id: String, seconds: Double): String = synchronized(playerLock) {
+        val mp = player ?: return errJson("재생 중인 스트림이 없습니다")
+        if (id != playerId) return errJson("재생 대상이 바뀌었습니다")
+        if (!seconds.isFinite() || seconds < 0) return errJson("잘못된 재생 위치")
+        try {
+            mp.seekTo((seconds * 1000).toLong(), MediaPlayer.SEEK_CLOSEST)
+            JSONObject().put("position", seconds).toString()
+        } catch (e: Exception) { errJson("위치 이동 실패: ${e.message}") }
+    }
+
+    @JvmStatic
+    fun openMediaUrl(url: String): String {
+        val ctx = appContext ?: return errJson("context 미초기화")
+        val uri = android.net.Uri.parse(url)
+        if (uri.scheme != "https" || uri.host !in listOf("www.youtube.com", "m.youtube.com", "youtu.be")) {
+            return errJson("유튜브 HTTPS 주소가 필요합니다")
+        }
+        return try {
+            ctx.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            JSONObject().put("opened", true).toString()
+        } catch (e: Exception) { errJson("폰 영상 열기 실패: ${e.message}") }
     }
 }

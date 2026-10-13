@@ -1,5 +1,34 @@
 # 유튜브 릴레이 ([limbs:music]{op: "relay"}) 가이드
 
+## 폰 단독 재생
+
+폰의 `sense:search_youtube`와 `limbs:music`는 폰에서 직접 실행한다. 검색·스트림
+해석은 폰의 yt-dlp, JavaScript 계산은 네트워크·파일·앱 브리지가 없는 별도 WebView,
+오디오 출력은 Android MediaPlayer다. PC 연결·허브 프록시가 필요하지 않다.
+
+```ibl
+[sense:search_youtube]{query: "재즈", limit: 3}
+[limbs:music]{op: "play", query: "재즈", limit: 1}
+[limbs:music]{op: "queue"}
+[limbs:music]{op: "stop"}
+[limbs:music]{op: "play", query: "https://www.youtube.com/watch?v=jNQXAC9IVRw", mode: "video"}
+```
+
+오디오는 기존 대기열·다음 곡·위치 이동을 사용한다. 라디오 등 다른 재생이 시작되면
+이전 음악 대기열이 새 재생을 정지하거나 덮어쓰지 않는다. 영상은 폰의 유튜브 앱 또는
+브라우저에 연다. `opened:true, playing:null, control:"external"`은 열기 결과이며
+영상 재생 확인이 아니다. 외부 영상 앱의 정지·건너뛰기는 해당 앱에서 한다.
+
+`self:music`는 폰이 접근 가능한 음악 폴더를 등록·스캔하고 폰의 `/music/stream`으로
+재생한다. 시스템 공유 음악 폴더 접근은 Android 파일 권한에 따른다. PC의 라이브러리를
+자동으로 가져오지 않는다. 폰의 MP3 변환(download)·PC 릴레이(relay)는 지원하지 않으며
+명시적 실패를 반환한다. 아래 릴레이 설명은 PC에서 실행하는 별도 선택이다.
+
+새 APK가 필요하다. Python 3.11(32비트)·3.12(64비트)에 yt-dlp 2026.08.19와
+yt-dlp-ejs 0.8.0을 함께 고정한다. 이 결합의 사설 EJS 연동 API는 의존성 업데이트 때
+회귀 확인이 필요하다. 오래된 Android WebView·로그인/지역 제한·제공자 변경의 실패는
+성공으로 바꾸지 않는다. 실기기 설치·재생 검증 여부는 해당 변경의 커밋에 기록한다.
+
 ## 무엇인가
 원격런처·폰 표면이 **유튜브에 직접 접속하지 않고** 유튜브 영상·음악을 보는 길.
 맥이 yt-dlp 로 스트림 URL 을 해소하고, ffmpeg 이 그 URL 에서 받으면서(`-c copy`

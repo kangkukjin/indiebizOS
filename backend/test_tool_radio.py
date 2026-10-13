@@ -15,6 +15,28 @@ from ibl_v2_runtime import Runtime
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_phone_radio_cannot_control_or_report_replacement_music(monkeypatch):
+    import json
+    from types import SimpleNamespace
+    from common.pkg_utils import load_sibling
+    radio = load_sibling(str(ROOT / 'data/packages/installed/tools/radio/handler.py'), 'tool_radio')
+    monkeypatch.setenv('INDIEBIZ_PROFILE', 'phone')
+    monkeypatch.setattr(radio, '_current_station', {'name': 'Radio', 'playback_id': 'old-radio'})
+    calls = []
+    def stop(pid):
+        calls.append(pid)
+        return json.dumps({'stopped': False})
+    native = SimpleNamespace(
+        streamStatus=lambda: json.dumps({'playing': True, 'playback_id': 'new-music'}),
+        stopStreamIf=stop,
+        setStreamVolumeIf=lambda pid, vol: json.dumps({'error': '재생 대상이 바뀌었습니다'}))
+    monkeypatch.setattr(radio, '_phone_bridge', lambda: native)
+    assert not json.loads(radio.radio_status())['playing']
+    assert not json.loads(radio.set_radio_volume(20))['success']
+    assert json.loads(radio.stop_radio())['success']
+    assert calls == ['old-radio']
+
+
 @pytest.mark.parametrize("row,expected", [
     ({"station_id": None, "stream_url": "https://example.test/live"},
      {"op": "play", "stream_url": "https://example.test/live"}),

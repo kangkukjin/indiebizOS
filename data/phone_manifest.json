@@ -21,6 +21,7 @@
     "location-services",
     "media_producer",
     "memory",
+    "music-player",
     "pc-manager",
     "photo-manager",
     "radio",
@@ -30,7 +31,8 @@
     "study",
     "system_essentials",
     "web",
-    "world-statistics"
+    "world-statistics",
+    "youtube"
   ],
   "runnable_actions": [
     "engines:image_gemini",
@@ -39,6 +41,7 @@
     "limbs:cctv",
     "limbs:cloudflare_api",
     "limbs:launch",
+    "limbs:music",
     "limbs:phone",
     "limbs:radio",
     "limbs:radio_favorite",
@@ -80,6 +83,7 @@
     "self:memory",
     "self:mkdir",
     "self:move",
+    "self:music",
     "self:notify_user",
     "self:output",
     "self:package",
@@ -130,6 +134,7 @@
     "sense:reverse_geocode",
     "sense:search",
     "sense:search_shopping",
+    "sense:search_youtube",
     "sense:see",
     "sense:self_check",
     "sense:sqlite",

@@ -1969,7 +1969,7 @@ nodes:
         lands_on: hub
         path_audited:
           at: '2026-10-13'
-          impl: 50363c11789c7903
+          impl: 50382887f7f2956e
         params:
           name: string
           query: string
@@ -3093,7 +3093,7 @@ nodes:
           - count
         returns: items
         fixture: '[sense:search_youtube]{query: "jazz"}'
-        runs_on: pc_only
+        runs_on: anywhere
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함). queries(배열/쉼표 문자열)로 여러 검색어 배치 팬아웃 — 검색어마다 query 태그, video_id 중복 제거, sections
         group: media
         keywords:
@@ -5281,7 +5281,7 @@ nodes:
         returns: items
         side_effect: true
         fixture: '[self:music]{op: "sources"}'
-        runs_on: pc_only
+        runs_on: anywhere
         description: '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리한다. 보는 축은 폴더(폴더 구조=사용자의 의미 단위)와 검색·플레이리스트. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
         target_description: 'op 별 입력: library(q 검색어, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / folders(folder 절대경로 — 생략하면 최상위. 결과 items=바로 아래 폴더[맨 앞은 ⬆️ 상위 행], tracks=그 폴더 아래 전체 곡[상한 500]) / track(path) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/year(정수 또는 null)/year_raw(원 태그)/genre(원 태그)/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프(연대·장르 filter, groupby+chart 분포)·media_player 직결.'
         target_key: op
@@ -7780,7 +7780,7 @@ nodes:
         member_transform: radio_member:control
         path_audited:
           at: '2026-10-13'
-          impl: 50363c11789c7903
+          impl: 50382887f7f2956e
         returns: effect
         description: 인터넷 라디오 재생 제어 (op 분기). play/stop/status/volume. 방송국 검색은 [sense:radio].
         target_description: play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. mode 옵션으로 출력지 지정 — client(보고 있는 기기에서) / host(이 PC 스피커에서). 생략하면 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC). stop — 파라미터 없음. status — 파라미터 없음, 재생 중 채널·경과 시간. volume — volume(0~100). ★status·volume 은 재생 중일 때만 의미가 있다(라디오 전용).
@@ -7913,8 +7913,8 @@ nodes:
           - seconds
           - time
         returns: effect
-        runs_on: pc_only
-        description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드·맥 경유 릴레이 (op 분기). play/add/skip/seek/queue/stop/download/relay. 내 파일 라이브러리는 [self:music].
+        runs_on: anywhere
+        description: 유튜브 음악 재생·큐 관리·중간 점프 (play/add/skip/seek/queue/stop). 폰은 자체 검색·네이티브 오디오 재생으로 PC 연결 불필요. mode:video는 폰 유튜브 앱/브라우저 열기(재생 확인·정지 제어는 외부 앱). MP3 다운로드(download)·릴레이(relay)는 PC 전용. 내 파일 라이브러리는 [self:music].
         group: media
         target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue/stop — 파라미터 없음. skip은 다음 곡 재생 실패 시 success=false·failed_video_id를 반환하며 아직 시도하지 않은 대기열을 보존한다. 다시 skip하면 남은 다음 곡을 시도한다.
         target_key: op
@@ -7940,7 +7940,7 @@ nodes:
             stop: 재생 중지
             download: MP3 다운로드 (url + output_path 옵션)
             relay: 맥 경유 릴레이 스트림 목록 (query 검색어/URL + media audio|video — 원격 표면 재생용, 유튜브 직접 접속 없음)
-        implementation: yt-dlp + ffplay 음악 재생·큐·중간점프(-ss 재시작)·다운로드·릴레이(api_ytrelay 서빙) op 분기
+        implementation: yt-dlp 검색·해석과 공통 큐. PC=ffplay, 폰=EJS를 격리 WebView에서 계산하고 MediaPlayer로 오디오 재생. video는 해당 몸의 앱/브라우저 열기. 다운로드·릴레이는 PC 전용.
         guides:
         - youtube_relay.md
         keywords:

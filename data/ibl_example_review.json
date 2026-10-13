@@ -372,18 +372,18 @@
   },
   "limbs:music": {
    "fields": {
-    "description": "2f2d57dcd42d",
+    "description": "948b2be8cc23",
     "target_description": "9dc35b1d75ff",
-    "implementation": "0038a5e7ed9c",
+    "implementation": "3f44084fc51d",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
     "aliases": "8f573b2b8df9",
     "ops": "42553e8353e7",
-    "runs_on": "54d3f8d78a8b",
+    "runs_on": "519dd933e8a2",
     "router": "ebbb1532efbc",
     "tool": "668d4277c727"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-10-13",
    "examples": 101
   },
   "limbs:open_window": {
@@ -1282,11 +1282,11 @@
     "aliases": "0036cea7f6c0",
     "ops": "6cb8d5b98869",
     "side_effect": "b5bea41b6c62",
-    "runs_on": "54d3f8d78a8b",
+    "runs_on": "519dd933e8a2",
     "router": "ebbb1532efbc",
     "tool": "cc2d384798b3"
    },
-   "reviewed": "2026-09-29",
+   "reviewed": "2026-10-13",
    "examples": 26
   },
   "self:notebook": {
@@ -2188,12 +2188,12 @@
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
     "aliases": "6447534e114b",
-    "runs_on": "54d3f8d78a8b",
+    "runs_on": "519dd933e8a2",
     "router": "ebbb1532efbc",
     "tool": "5433e2fa2160"
    },
-   "reviewed": "2026-09-24",
-   "examples": 19
+   "reviewed": "2026-10-13",
+   "examples": 20
   },
   "sense:see": {
    "fields": {

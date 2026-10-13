@@ -69,7 +69,7 @@ nodes:
           limit: [count]
         returns: items
         fixture: '[sense:search_youtube]{query: "jazz"}'
-        runs_on: pc_only
+        runs_on: anywhere
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함). queries(배열/쉼표 문자열)로 여러 검색어 배치 팬아웃 — 검색어마다 query 태그, video_id 중복 제거, sections
         group: media
         keywords:
@@ -143,8 +143,8 @@ nodes:
           output_path: [output, filename, path, file, name]
           position: [seconds, time]
         returns: effect
-        runs_on: pc_only
-        description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드·맥 경유 릴레이 (op 분기). play/add/skip/seek/queue/stop/download/relay. 내 파일 라이브러리는 [self:music].
+        runs_on: anywhere
+        description: 유튜브 음악 재생·큐 관리·중간 점프 (play/add/skip/seek/queue/stop). 폰은 자체 검색·네이티브 오디오 재생으로 PC 연결 불필요. mode:video는 폰 유튜브 앱/브라우저 열기(재생 확인·정지 제어는 외부 앱). MP3 다운로드(download)·릴레이(relay)는 PC 전용. 내 파일 라이브러리는 [self:music].
         group: media
         target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue/stop — 파라미터 없음. skip은 다음 곡 재생 실패 시 success=false·failed_video_id를 반환하며 아직 시도하지 않은 대기열을 보존한다. 다시 skip하면 남은 다음 곡을 시도한다.
         target_key: op
@@ -170,7 +170,7 @@ nodes:
             stop: 재생 중지
             download: MP3 다운로드 (url + output_path 옵션)
             relay: 맥 경유 릴레이 스트림 목록 (query 검색어/URL + media audio|video — 원격 표면 재생용, 유튜브 직접 접속 없음)
-        implementation: yt-dlp + ffplay 음악 재생·큐·중간점프(-ss 재시작)·다운로드·릴레이(api_ytrelay 서빙) op 분기
+        implementation: yt-dlp 검색·해석과 공통 큐. PC=ffplay, 폰=EJS를 격리 WebView에서 계산하고 MediaPlayer로 오디오 재생. video는 해당 몸의 앱/브라우저 열기. 다운로드·릴레이는 PC 전용.
         guides:
         - youtube_relay.md
         keywords:

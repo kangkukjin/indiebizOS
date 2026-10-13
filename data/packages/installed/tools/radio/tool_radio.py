@@ -177,7 +177,8 @@ def _phone_play(stream_url, station_name, station_id, volume):
         return json.dumps({"success": False, "error": raw["error"]}, ensure_ascii=False)
     with _player_lock:
         _current_station = {"station_id": station_id, "name": station_name,
-                            "stream_url": stream_url, "volume": int(volume)}
+                            "stream_url": stream_url, "volume": int(volume),
+                            "playback_id": raw.get("playback_id")}
         _play_start_time = time.time()
     return json.dumps({"success": True, "message": f"{station_name} 재생을 시작합니다(이 폰 스피커).",
                        "station": station_name, "volume": int(volume), "output": "phone"}, ensure_ascii=False)
@@ -537,11 +538,13 @@ def stop_radio():
     if os.environ.get("INDIEBIZ_PROFILE") == "phone":
         PA = _phone_bridge()
         stopped = False
-        if PA is not None:
+        with _player_lock:
+            playback_id = (_current_station or {}).get("playback_id")
+        if PA is not None and playback_id:
             try:
-                stopped = bool(json.loads(str(PA.stopStream())).get("stopped"))
-            except Exception:
-                stopped = False
+                stopped = bool(json.loads(str(PA.stopStreamIf(playback_id))).get("stopped"))
+            except Exception as e:
+                return json.dumps({"success": False, "error": f"폰 라디오 정지 실패: {e}"}, ensure_ascii=False)
         with _player_lock:
             name = (_current_station or {}).get("name")
             _current_station = None
@@ -594,10 +597,14 @@ def radio_status():
             st = json.loads(str(PA.streamStatus()))
         except Exception as e:
             return json.dumps({"success": False, "error": f"폰 재생 상태 조회 실패: {e}"}, ensure_ascii=False)
-        if not st.get("playing"):
-            return json.dumps({"success": True, "playing": False, "message": "재생 중인 라디오가 없습니다."}, ensure_ascii=False)
         with _player_lock:
             cur = dict(_current_station or {})
+        if not cur.get("playback_id") or st.get("playback_id") != cur["playback_id"]:
+            return json.dumps({"success": True, "playing": False, "message": "재생 중인 라디오가 없습니다."}, ensure_ascii=False)
+        if st.get("error"):
+            return json.dumps({"success": False, "error": st["error"]}, ensure_ascii=False)
+        if not st.get("playing"):
+            return json.dumps({"success": True, "playing": False, "message": "재생 중인 라디오가 없습니다."}, ensure_ascii=False)
         return json.dumps({"success": True, "playing": True, "station": cur.get("name", "알 수 없음"),
                            "station_id": cur.get("station_id"), "volume": st.get("volume", cur.get("volume", 70)),
                            "elapsed_seconds": int(st.get("elapsed_seconds") or 0), "output": "phone"}, ensure_ascii=False)
@@ -656,8 +663,12 @@ def set_radio_volume(volume):
 
     PA = _phone_bridge()
     if PA is not None:
+        with _player_lock:
+            playback_id = (_current_station or {}).get("playback_id")
+        if not playback_id:
+            return json.dumps({"success": False, "error": "재생 중인 라디오가 없습니다."}, ensure_ascii=False)
         try:
-            r = json.loads(str(PA.setStreamVolume(int(volume))))
+            r = json.loads(str(PA.setStreamVolumeIf(playback_id, int(volume))))
         except Exception as e:
             return json.dumps({"success": False, "error": f"폰 볼륨 조절 실패: {e}"}, ensure_ascii=False)
         if r.get("error"):

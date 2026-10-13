@@ -7,6 +7,11 @@ from fastapi.responses import JSONResponse
 
 
 def install(app, get_scratch, _save_audio_to_phone):
+    # Local library streams use the phone filesystem and the same source-path
+    # checks/authentication as the desktop router. No hub proxy.
+    from api_music import router as music_router
+    app.include_router(music_router)
+
     @app.get("/ibl/capabilities")
     async def ibl_capabilities():
         from ibl_v2_entry import capabilities

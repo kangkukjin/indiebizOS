@@ -62,6 +62,8 @@ PHONE_VERIFIED_PACKAGES = {
     "investment",
     "culture",
     "radio",
+    "youtube",       # 폰: yt-dlp/EJS(WebView) + MediaPlayer. 실기 재생은 APK 배포 후 확인.
+    "music-player",  # Python 태그·파일 라이브러리 + 같은 몸 /music/stream.
     "web",
     "real-estate",
     "android",   # M3: [sense:phone] 폰 로컬 알림. limbs:android(android_op)은 pc_only 태그로 제외.

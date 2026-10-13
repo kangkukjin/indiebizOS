@@ -294,6 +294,11 @@ def execute(tool_input: dict, context):
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name
     tool_youtube = load_tool_youtube()
+    if tool_youtube._phone.is_phone():
+        tool_youtube._phone.prepare()
+        if tool_name == "music_op" and tool_input.get("op") in ("download", "relay"):
+            return {"success": False,
+                    "error": "폰 단독 실행은 play/add/skip/seek/queue/stop을 지원합니다. MP3 변환·PC 릴레이는 지원하지 않습니다."}
 
     if tool_name in _OP_DISPATCHERS:
         op = (tool_input.pop('op', '') or '').strip() or _OP_DEFAULTS.get(tool_name, '')

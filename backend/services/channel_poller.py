@@ -654,6 +654,23 @@ class ChannelPoller:
             if rumor_ca and started and rumor_ca < started - 120:
                 return
 
+            # 통화 제어 메시지(docs/MEDIA_COMMUNICATION_DESIGN §5·§8): 태그 또는 모양으로 식별해 미디어 세션으로만
+            # 보낸다 — 채팅 이력·트리거·시스템 AI·자동응답 어느 경로에도 넣지 않는다. 신선도 창은 media_policy 가 정한다.
+            try:
+                import media_signaling as _msig
+                _rtags = (out.get('rumor') or {}).get('tags') or []
+                if _msig.is_call_frame_tags(_rtags) or _msig.is_call_frame_content(content):
+                    import media_sessions as _ms
+                    try:
+                        _why = _ms.receive_remote(json.loads(content), source='nostr', sender_hex=out.get('sender', ''))
+                    except ValueError:
+                        _why = 'invalid_json'
+                    if _why:
+                        self._log(f"Nostr 통화 제어 프레임 거절: {_why}")
+                    return
+            except Exception as _exc:  # noqa: BLE001 — 미디어 모듈 장애가 DM 수신을 막으면 안 된다
+                self._log(f"Nostr 통화 제어 분기 실패: {_exc.__class__.__name__}")
+
             sender_npub = _hex_to_npub(out.get('sender', ''))
             rumor_id = (out.get('rumor') or {}).get('id') or event_id  # dms.db 와 dedupe 정합
             ts = rumor_ca or int(time.time())

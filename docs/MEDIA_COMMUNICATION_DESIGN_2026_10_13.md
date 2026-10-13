@@ -2,7 +2,8 @@
 
 작성일: 2026-10-13
 
-상태: 설계안. 이 문서의 미디어 세션 API와 구성 요소는 구현 예정이며, 기존 기능과 구분합니다.
+상태: 구현 1차 반영(2026-10-13, §14 참조). 세션 API·공통 수명·시그널링·확장관계 어댑터·브라우저 엔진·폰·헬퍼 엔진은 코드와 시험으로 닫혔고,
+실기기·외부망·TURN 운영·장시간 인수(§12)는 **미달**이다. 그 전까지 이 기능을 '완료'로 보고하지 않는다.
 
 IndieBiz OS의 미디어 통신을 확장관계와 독립된 기능으로 만듭니다. 서로 다른 사용자는 자신의 PC나 스마트폰에서 음성·영상 통화를 할 수 있습니다. 확장관계에서는 중앙 PC가 같은 기능을 실행하여 주변 하드웨어를 카메라·마이크·스피커·화면으로 사용합니다.
 
@@ -326,3 +327,34 @@ Android ABI별 WebRTC 조달·업데이트 방식, 헬퍼 미디어 모듈, 공�
 완료 보고에는 배포 대상·버전, 기능별 종단 결과, 장치·네트워크별 품질 수치, 장시간 결과, 기존 기능 회귀, 실제 운영 설정과 정본 커밋을 포함합니다. 알려진 제한과 미달 항목은 명시하며, 필수 기준이 남아 있으면 전체 완료로 보고하지 않습니다. 별도 기능의 경계는 1절의 명시된 제외 범위만 따릅니다.
 
 이 문서 업데이트는 설계 변경입니다. 실행 코드·어휘·각인 규칙은 변경하지 않았으며, 미디어 기능 구현이나 위 인수 기준 통과를 의미하지 않습니다.
+
+## 14. 구현 보고 (2026-10-13 1차, 정직 기록)
+
+와이어 계약은 `docs/MEDIA_SESSION_CONTRACT.md` 가 정본이다(이 설계의 §3·§4·§6 을 코드가 따르는 모양). 가이드 `data/guides/media_session.md`.
+
+### 닫힌 것(코드 + 시험으로 확인)
+
+| 영역 | 산출물 | 확인 방법 |
+| --- | --- | --- |
+| 공통 수명 | `backend/services/session_lease.py` + `data/session_lease_policy.yaml`. `resident_screen`·`resident_terminal` 의 중복 임대 논리를 교체 | test_resident_screen·test_resident_terminal 회귀 통과, 모듈 상수 0 |
+| 세션 관리자 | `backend/services/media_sessions.py` — 허가 2종(`accepted_call`/`extension_grant`), grant HMAC, request_id 멱등, 판본, 초대/임대/복구 만료 sweep, 관계 중지·해제·폐기 훅 | test_media_sessions(11)·test_media_two_hubs(4): 확장 카메라 세션 전 수명, 폰 봉투, 재생 전달 Range·토큰, 통화 초대(+offer)/수락(+answer)/거절/차단/만료, 위조 발신자·서명 거절 |
+| 시그널링 | `backend/services/media_signaling.py` — 프레임 HMAC·세대/순번 질서·선도착 candidate 버퍼·Nostr DM 전송(태그 `indiebiz-call`)·릴레이 방/클라이언트·TURN Allocate 탐침·정책 데이터(`data/media_policy.yaml`) | 같은 시험 + 릴레이 방 중계 시험 |
+| 채팅 분리 | `channel_poller._handle_nostr_giftwrap` 이 통화 제어 프레임을 채팅·트리거·시스템 AI·자동응답 앞에서 갈라내고, `indienet_social.fetch_dms_nip17` 받은편지함에서도 제외 | 코드 경로 + `is_call_frame_*` 시험 |
+| API | `backend/surface/api_media.py` — REST 8종, WS 3종(브라우저·장치·릴레이), 콘텐츠 Range, `/media/health` 진단 | 공개 라우트 관문·층 관문 통과 |
+| 확장관계 어댑터 | `resident_pcs.submit(allow_media)` 로만 `media_session`(헬퍼)·`media`(폰) 봉투 — 에이전트 명령으로 불가. pause/remove → 세션 종료 | 시험 |
+| 폰 | `phone-companion/app/.../media/` Kotlin 엔진(webrtc-sdk 144.7559.15, armeabi-v7a·arm64 포함, BSD-3), FGS 유형(camera·microphone·mediaPlayback), CCTV 대기 모드 화면, `limb_client` op:media(다리 있을 때만 신고) | arm32·arm64 APK 컴파일 통과, test_limb_client(11) |
+| 헬퍼 | `helper/media_session_*.go` + `resident_media_session.go` — pion v4.2.23 answerer, ffmpeg 캡처(RTP→pion)·ffplay 수신·mpv IPC 재생, 레거시(Go 1.22) 빌드는 `-tags legacy` 스텁 | `go test -race ./...` 통과(pion 루프백·실제 ffmpeg testsrc·가짜 허브 WS 전 수명), build.sh 6 타깃 |
+| AI 호출 | 새 낱말 0. `[self:script]{op:"run", id:"미디어세션", args:{...}}` (`data/scripts/미디어세션.py`) | 등록·실행 확인(옛 허브는 `http_404` 정직 실패) |
+| 브라우저 엔진·통화 창 | `frontend/src/lib/media/*`, `frontend/src/components/media/*`, `frontend/electron/media-call.js`, 손발 패널 버튼·연락처 통화 버튼·수신 배너 | §14 하단 '프런트 확인' 참조 |
+
+설계 보충(구현 중 결정): 통화 keepalive 는 Nostr 로 보내지 않는다 — 브라우저가 DTLS 인증 DataChannel 로 상대 생존을 확인하고 `{peer_alive:true}` 를 자기 허브에 보고할 때만 임대 갱신. 초대에 발신 offer, 수락에 수신 answer 를 동봉해(`bundle_wait_s`) Nostr 왕복을 2회로 줄인다. 허브→장치 keepalive 는 장치 WS 로 sweeper 가 보낸다. 확장 경로 프레임은 mac 없이(등록 자격+grant+TLS/LAN 핀).
+
+### 미달(실측 없음 — §12 전체 인수 기준 기준)
+
+- **실기기 전부**: J7(Android 9·32비트)·64비트 폰의 설치·라이브러리 로딩·카메라 인코딩·PC 수신·음성 왕복, while-in-use·Doze·절전·재부팅·강제 중지, 수신 알림(잠금·백그라운드). 작성 시점 adb 연결 기기 0대.
+- **헬퍼 PC 실물**: 이 맥에는 카메라가 없어 실제 캡처·스피커 출력은 미검증(루프백·testsrc 만). Windows dshow·Linux v4l2 경로는 컴파일만.
+- **외부망·TURN**: TURN 주소·운영 주체·배포 위치 미정(`data/media_policy.yaml` 의 TURN 항목 비어 있음, `.env` MEDIA_TURN_SECRET 없음). `/media/health` 가 `turn_unconfigured` 로 신고한다. NAT·휴대망·UDP 차단·망 변경 복구는 미검증.
+- **품질 수치**: 첫 출력 시간·종단 지연·A/V 동기·연결 성공률 100회·장시간(1h/8h) 전부 미측정.
+- **Nostr 시그널링 품질 평가**(§8): 실제 릴레이 지연으로 초대→첫 출력 p95 를 재지 않았다. `signaling.route: auto` 는 공개 주소가 있으면 릴레이, 없으면 Nostr(비-trickle)이다.
+- 다자 통화·녹화·가상 장치·중앙의 A↔B 지휘는 §1 대로 범위 밖.
+

@@ -109,12 +109,15 @@ def update_helper(target):
     return {**receipt, "state": "updating", "sha256": status["latest"]}
 
 
-def submit(target, command, request_id=None, *, allow_update=False, allow_terminal=False, allow_desktop=False):
+def submit(target, command, request_id=None, *, allow_update=False, allow_terminal=False, allow_desktop=False,
+           allow_media=False):
     rec = resolve(target)
     allowed = {"shell", "read", "write", "list", "info", "screen", "click", "move", "type",
                "key", "scroll", "drag", "transfer", "media", "wake"}
     if allow_update:  # only update_helper(); never reachable from an agent's command
         allowed = allowed | {"update"}
+    if allow_media:  # only media_sessions(); 세션 grant 를 품은 봉투 — 에이전트 명령으로는 닿지 않는다
+        allowed = allowed | {"media_session"}
     if allow_desktop:
         allowed = allowed | {"desktop"}
     if allow_terminal:
@@ -124,7 +127,7 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
     # 그 안으로 더 좁힌다. 헬퍼 PC 에 ibl 을 보내면 거절(IBL 엔진이 없다). 조용히 대체 실행하지 않는다.
     adapter = rec["registration"].get("adapter") or "resident-v1"
     if adapter == "indiebiz-v1":
-        body_ops = {"ibl", "info"}
+        body_ops = {"ibl", "info"} | ({"media"} if allow_media else set())
         declared = (rec["registration"].get("capabilities") or {}).get("ops")
         if isinstance(declared, list):
             body_ops &= {str(x) for x in declared}
@@ -173,11 +176,21 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
                                  shell=command.get("shell"))
 
 
+def media_sessions_end(device_id, reason):
+    """확장관계 중지·해제·폐기 → 그 장치의 미디어 세션 종료(설계 §6 5항). 지연 import = 같은 층 순환 회피."""
+    try:
+        import media_sessions
+        return media_sessions.end_for_device(device_id, reason)
+    except Exception:  # noqa: BLE001 — 미디어 모듈이 없어도 해제는 진행
+        return 0
+
+
 def remove(target):
     rec = resolve(target, active=False)
     if rec["registration"]["state"] == "removed":
         return rec["registration"]
     out = limb_keys.resident_update(rec["device_id"], state="removal_pending")
+    media_sessions_end(rec["device_id"], "relation_revoked")
     with phone_jobs._db() as db:
         resident_store.schema(db)
         pending = [row[0] for row in db.execute("SELECT id FROM resident_tasks WHERE device=? AND result IS NULL", (rec["device_id"],))]

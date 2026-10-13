@@ -225,6 +225,25 @@ Nostr 키는 IndieNet identity와 연동 가능:
   **셸 봉투 JSON**(손발=IBL 엔진 없는 얇은 몸).
 - 헬퍼 콘솔은 실행 봉투를 생중계하고, 허브는 작업 시작 시 원 요청을 `note` 봉투로 한 번 하달한다(무슨 일로 움직이는지 보이게).
 
+### 미디어 통신 — 통화와 확장관계의 카메라·마이크·스피커 (2026-10-13)
+
+설계 `docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md`, 와이어 계약 `docs/MEDIA_SESSION_CONTRACT.md`, 가이드 `guides/media_session.md`.
+
+- **두 허가, 한 엔진.** 일반 통화는 상대의 **수락**(`accepted_call`), 확장관계는 **등록 자격**(`extension_grant`, limb_keys 등록 세대)이
+  허가 근거다. 허가 뒤에는 같은 세션 관리자(`media_sessions`)·같은 임대(`session_lease`, 프로필 media)·같은 시그널 질서(`media_signaling`)를
+  쓴다. 통화 자격으로 명령·파일·등록은 불가능하고, 통화 화면·네트워크 초대로 확장관계를 만들 수 없다.
+- **제어와 바이트의 분리.** 초대·수락·SDP·ICE·음소거·종료·재생 위치는 작은 제어 프레임(HMAC 서명·세대·순번·만료)이고, 영상·음성은
+  WebRTC(DTLS-SRTP)로 장치 사이를 직접 또는 TURN 으로 흐른다. 프레임은 IBL 결과·작업 큐·채팅·AI 대화에 들어가지 않는다.
+- **전송 경로.** 브라우저 엔진↔허브 `WS /media/sessions/{id}/ws` · 확장 장치(헬퍼·폰)↔허브 `WS /limb/resident/media/{id}`(등록 자격+세션 grant,
+  시작 봉투 `op:media_session`/폰 `op:media`) · 상대 허브↔이 허브 NIP-17 DM(rumor 태그 `indiebiz-call`, 채널 폴러가 채팅·자동응답 앞에서 갈라낸다)
+  또는 이 허브 공개 주소의 릴레이 방 `WS /media/relay/{room}`.
+- **콘텐츠 전달.** `purpose:playback` 은 세션 소유 참조 `GET /media/content/{ref}?token=`(Range, 세션 종료 시 무효)로 대상이 디코딩한다.
+  대상이 재생을 보고한 뒤에만 원본을 멈춘다.
+- **세계의 명사는 데이터.** TURN·릴레이 주소·품질 프로필은 `data/media_policy.yaml`, 임대 수치는 `data/session_lease_policy.yaml`,
+  TURN 비밀은 `.env`(`MEDIA_TURN_SECRET`). 이력은 `data/media/state.db`(토큰·SDP·원본 없음). 진단 `GET /media/health`.
+- **AI 는 의도만.** 새 낱말 없이 `[self:script]{op:"run", id:"미디어세션", args:{op:"create", kind:"extension", purpose:"camera", target:"삼성1"}}`.
+  화면(통화 창·장치 패널 버튼)은 조종실·연락처가 연다.
+
 ---
 
 ## 핵심 컴포넌트

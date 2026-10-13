@@ -61,6 +61,7 @@ ANONYMOUS_ALLOW = {
     ("GET",  "/m/app"):                         "회원 로그인 셸 — 정적 HTML만 반환하며 데이터 API는 회원 열쇠 인증 필요",
     ("GET",  "/m/records/app"):                 "공동 업무 로그인 셸 — 정적 HTML과 CSRF nonce만 반환하며 데이터 API는 회원 열쇠 인증 필요",
     ("GET",  "/ping"):                           "생존 핑 — 민감정보 없음, 다른 몸이 무인증으로 연결상태 확인",
+    ("GET",  "/media/content/{ref}"):            "미디어 콘텐츠 전달 — 세션 소유 참조 + grant 토큰 자체 인증(media_sessions.content_file), 세션 종료 시 무효",
     ("GET",  "/launcher/app"):                   "런처 셸 — 로그인 화면 자체(로그인 전에 받아야 함)",
     ("GET",  "/launcher/ui/{path:path}"):        "정적 앱 번들 — serve_asset이 번들 내부 JS·CSS·이미지·폰트만 허용(설정·소스맵·경로 탈출 차단), 데이터 API는 세션 필요",
     ("GET",  "/launcher/lite"):                  "구형 기기 경량 런처 셸 — /launcher/app 과 같은 부류(셸은 정적, 데이터 API 는 세션 게이트 뒤)",

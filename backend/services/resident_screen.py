@@ -1,4 +1,8 @@
-"""Ephemeral screen sessions. No images, keystrokes or credentials enter job history."""
+"""Ephemeral screen sessions. No images, keystrokes or credentials enter job history.
+
+임대·멱등 종료는 session_lease(프로필 "screen", 수치는 data/session_lease_policy.yaml)가 맡는다 — 2026-10-13
+미디어 세션과 같은 수명 논리를 쓰고 모듈 상수를 두지 않는다.
+"""
 import math
 import re
 import threading
@@ -8,10 +12,10 @@ from dataclasses import dataclass, field
 
 import resident_pcs
 import resident_store
+import session_lease
 
 _lock = threading.RLock()
 _sessions = {}
-LEASE = 20
 MAX_FRAME = 4 * 1024 * 1024
 
 
@@ -22,7 +26,7 @@ class Session:
     job: str = ''
     state: str = 'starting'
     reason: str = ''
-    seen: float = field(default_factory=time.monotonic)
+    lease: session_lease.Lease = field(default_factory=lambda: session_lease.Lease('screen'))
     frame: bytes = b''
     serial: int = 0
     inputs: deque = field(default_factory=deque)
@@ -41,13 +45,11 @@ def create(target, sid, lan=None):
     if time.time() - (rec['registration'].get('last_seen') or 0) > 90:
         raise ValueError('원격 PC가 오프라인입니다.')
     with _lock:
-        for key, old in list(_sessions.items()):
-            if time.monotonic() - old.seen > LEASE:
-                _close(old, '화면 공유 연결이 종료됐습니다.')
-                del _sessions[key]
+        session_lease.sweep(_sessions, lambda old: _close(old, '화면 공유 연결이 종료됐습니다.'), profile_name='screen')
         if sid in _sessions:
             raise ValueError('screen_id_conflict')
-        if len(_sessions) >= 32 or any(s.device == rec['device_id'] and s.state != 'closed' for s in _sessions.values()):
+        live = [s for s in _sessions.values() if s.state != 'closed']
+        if len(live) >= 32 or any(s.device == rec['device_id'] for s in live):
             raise ValueError('이 PC에 열린 화면 공유 창을 먼저 닫으세요.')
         s = Session(sid, rec['device_id'])
         _sessions[sid] = s
@@ -95,7 +97,7 @@ def attach(sid, device=None):
     with _lock:
         s = _get(sid)
         resident_pcs.resolve(s.device)
-        if s.state == 'closed' or time.monotonic() - s.seen > LEASE:
+        if s.state == 'closed' or s.lease.expired():
             raise ValueError('screen_session_expired')
         if device is None:
             if s.owner:
@@ -108,7 +110,7 @@ def attach(sid, device=None):
 
 
 def _close(s, reason):
-    if s.state != 'closed':
+    if s.lease.close(reason):
         s.state, s.reason = 'closed', reason
         s.frame = b''
         s.inputs.clear()
@@ -129,10 +131,10 @@ def status(sid, touch=False):
     with _lock:
         s = _get(sid)
         resident_pcs.resolve(s.device)
-        if time.monotonic() - s.seen > LEASE:
+        if s.lease.expired():
             _close(s, '화면 공유 연결이 끊겼습니다.')
         if touch:
-            s.seen = time.monotonic()
+            s.lease.renew()
         if s.state == 'starting':
             tasks = resident_store.history(job=s.job)['tasks']
             if tasks and tasks[0]['state'] in {'failed', 'cancelled', 'unknown', 'expired', 'succeeded'}:
@@ -214,7 +216,7 @@ def input_message(sid, value):
 def take(sid):
     with _lock:
         s = _get(sid)
-        if time.monotonic() - s.seen > LEASE or s.state == 'closed':
+        if s.lease.expired() or s.state == 'closed':
             return [{'type': 'close'}]
         messages = list(s.inputs)
         s.inputs.clear()

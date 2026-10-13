@@ -69,7 +69,7 @@ LAYERS = {
         "red_grant", "red_report", "red_watchdog", "restart_red", "schema_migrations", "service_status", "store_waste_audit", "switch_manager", "system_ai_memory",
         "system_docs", "supervision_store", "verification_cache", "supervision_delivery",
         "warehouse_catalog", "warehouse_directory", "warehouse_items",
-        "websocket_manager", "xray_stream",
+        "websocket_manager", "xray_stream", "media_store",
     },
     "ibl": {
         "reusable_catalog",
@@ -118,6 +118,7 @@ LAYERS = {
         "research_library", "research_capture", "research_threads", "research_view",
         "resident_pcs", "resident_terminal", "resident_terminal_lan", "resident_desktop", "resident_screen",
         "limb_client",   # 이 몸이 허브의 손발이 되는 클라이언트(폰 전용, 2026-10-13)
+        "session_lease", "media_sessions", "media_signaling",   # 미디어 통신(2026-10-13, docs/MEDIA_COMMUNICATION_DESIGN)
         "launcher_ops", "chat_room_ops", "warehouse_ops", "warehouse_admin", "channel_settings_ops", "media_ops",   # ⑩ 몸의 명사 생애주기(2026-10-05)
         "spreadsheet_grid", "spreadsheet_templates", "spreadsheet_conversion_types", "spreadsheet_formats", "spreadsheet_changes", "spreadsheet_imports", "spreadsheet_workspace", "spreadsheet_files", "document_hwp", "document_pdf", "document_formats", "document_pages", "document_imports", "document_office_ai", "document_creation", "document_office", "resource_links", "office_resources", "office_sessions", "document_workspace", "coding_git", "coding_projects", "workspace_sessions",
         "record_dispatch", "record_adapters",

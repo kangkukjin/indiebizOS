@@ -1,0 +1,26 @@
+# 세션 임대 정책 — 세계의 명사는 데이터 (docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md §4 '수명과 복구')
+#
+# 화면 공유·원격 터미널·미디어 세션이 같은 임대 논리(backend/services/session_lease.py)를 쓴다.
+# 프로필은 여기서만 고친다 — 모듈마다 별도 상수를 두지 않는다. 시간은 전부 초, 단조 시계로 잰다.
+#
+#   lease_s      마지막 유효 확인 뒤 이 시간이 지나면 양쪽이 독립적으로 세션을 닫는다
+#   keepalive_s  살아 있는 쪽이 보내는 생존 확인 주기(클라이언트에도 그대로 내려간다)
+#   reconnect_s  연결 단절 뒤 자동 복구(ICE 재협상·TURN 전환)에 허용하는 시간 — lease_s 와 둘 중 먼저 끝나는 쪽이 닫는다
+#   invite_s     초대(벨)가 응답 없이 열려 있을 수 있는 시간
+#   closed_keep_s 닫힌 세션 기록을 메모리에 남겨 늦은 메시지를 '종료됨'으로 답하는 시간
+
+profiles:
+  screen:
+    lease_s: 20
+    keepalive_s: 5
+    closed_keep_s: 120
+  terminal:
+    lease_s: 30
+    keepalive_s: 5
+    closed_keep_s: 120
+  media:
+    lease_s: 20
+    keepalive_s: 5
+    reconnect_s: 30
+    invite_s: 45
+    closed_keep_s: 300

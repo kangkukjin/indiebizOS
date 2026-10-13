@@ -56,6 +56,8 @@ DECLARATIONS: List[tuple] = [
     ("data/system_ai_prompts/**",   "시스템 AI 프롬프트 저술물",                 "source"),
     ("data/api_registry.yaml",      "API 레지스트리(api_engine)",                "source"),
     ("data/lifecycle_policy.yaml",  "구성요소 생명주기 정책(component_lifecycle)", "source"),
+    ("data/session_lease_policy.yaml", "세션 임대 정책(session_lease — 화면·터미널·미디어)", "source"),
+    ("data/media_policy.yaml",      "미디어 통신 정책(media_signaling — ICE/TURN·릴레이·품질)", "source"),
     ("data/lifecycle_flags.json",   "생명주기 전이 깃발(component_lifecycle)",     "derived"),
     ("data/guide_downscale_flags.json", "가이드 하향 정규화 깃발(guide_downscale)", "derived"),
     ("data/*_role.txt",             "역할 저술물(appmaker·forage·system_ai)",    "source"),
@@ -137,6 +139,7 @@ DECLARATIONS: List[tuple] = [
 
     ("data/restart_control/**", "단일 현역 재기동 제어자(상태·요청·결과·커널 잠금)", "state"),
     ("data/coding/**", "코딩 앱 상태(과제·사건 DB·과제별 작업 공간·실행 런타임)", "state"),
+    ("data/media/**", "미디어 세션 최소 이력(media_store — 토큰·SDP 없음)", "state"),
 
     # 런타임 상태 파일 (현재값의 진실 소스)
     ("data/model_gear.json",        "모델 기어(model_resolver)",                 "state"),

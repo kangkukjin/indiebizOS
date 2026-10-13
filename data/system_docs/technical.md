@@ -172,6 +172,15 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `GET /limb/poll` - 셸 봉투 롱폴(아웃바운드 — 게스트 PC 방화벽 무설정)
 - `POST /limb/result` - 실행 결과 회신
 - 발급·폐기는 `[self:limb]{op: issue/list/revoke}`, 하달은 `[limbs:guestpc]{op}`. 큐는 폰 푸시 큐(`phone_jobs`) 재사용.
+
+### 미디어 세션 (/media) — api_media.py (2026-10-13, docs/MEDIA_SESSION_CONTRACT.md)
+- `GET /media/capabilities?target=` - 허브(통화·TURN·릴레이 준비) 또는 장치(camera/microphone/speaker/playback 지원·온라인·바쁨)
+- `POST /media/sessions` - 생성(kind call|extension, purpose, target, tracks, delivery, request_id 멱등, content) → `{success, session}` / `{success:false, error:{code,message}}`
+- `GET /media/sessions` · `GET /media/sessions/{id}` · `GET /media/history` - 활성 목록·상태·이력(토큰·SDP 없음)
+- `POST /media/sessions/{id}/accept|reject|end|update|signal` - 수락(첫 수락만)·거절(block 가능)·종료(멱등)·판본 갱신·시그널 프레임
+- `GET /media/ice-config` · `GET /media/health` - TURN 단기 자격·시그널링/TURN 탐침 진단
+- `WS /media/sessions/{id}/ws` - 브라우저 엔진(런처 세션 인증) · `WS /limb/resident/media/{id}` - 확장 장치(등록 자격+grant) · `WS /media/relay/{room}?token=` - 릴레이 방(중계만)
+- `GET /media/content/{ref}?token=` - 콘텐츠 전달(Range, 세션 grant 토큰, 세션 종료 시 무효; is_public_remote_path 등록)
 - 원격 장기 작업은 준비 결과의 device_id·workspace와 접수증을 이어 쓴다. 동기 실행도 실제 실패와 대기 종료를 구분한다. 대상 PC의 `scripts/remote_steps.py`는 argv 단계·검증·실패 원문·재개를 보존하고 `remote_install.py`는 IndieBiz 업데이트 계획을 만든다. [설계·검증 범위](../../docs/REMOTE_EXECUTION_CONTINUITY_2026_10_13.md), [사용법](../guides/guest_helper.md#대상-고정과-단계-실행).
 
 ### 공개 표면 서빙 (브라우저 → Cloudflare Worker → 터널 → 허브)
@@ -363,7 +372,7 @@ execute_ibl(code='$s=[sense:host]{op:"status"}; [if:$s.cpu_percent>80] { [self:n
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(80) → `datastore`(79) → `ibl`(88) → `cognition`(87) → `services`(78) → `surface`(88). `.py` 총 576개(test 제외).
+  `base`(80) → `datastore`(80) → `ibl`(88) → `cognition`(87) → `services`(81) → `surface`(89). `.py` 총 581개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(31) · `backend/providers/`(14, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
@@ -374,7 +383,7 @@ execute_ibl(code='$s=[sense:host]{op:"status"}; [if:$s.cpu_percent>80] { [self:n
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처
 - `data/private_nouns.txt`: **개인 명사 관문 목록**(gitignore, 로컬 전용) — `scripts/check_private_nouns.py`(pre-commit, 모든 스테이지 파일)가 가족·개인 이름·목소리 키가 몸(코드·어휘·가이드·문서)에 박히는 것을 막는다. 한 줄=정규식, `allow: <glob>`=면제(저자 서명·연구 기록). 이름 자체가 저장소에 들어오지 않는 구조(2026-09-02)
 - `data/instruments/`: standalone 앱 매니페스트 (어휘 없는 계기 — report·newspaper)
-- `data/guides/`: 가이드 95개 (guide_db 등록 91). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
+- `data/guides/`: 가이드 96개 (guide_db 등록 92). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
 <!-- IBL_STATS:END -->
 - `projects/`: 사용자 프로젝트 데이터 (24개 — 시스템 프로젝트 수동모드·앱모드 포함)
 - `data/_backups/YYYY-MM-DD_<이름>/`: **일회성 백업의 유일한 주소**(2026-08-14 규약). 작업 폴더·`data/` 루트에 `*_backup*` 사본 금지. **git 추적 대상이 아니다** — 규약 정본 `README.md` 하나만 `!` 예외

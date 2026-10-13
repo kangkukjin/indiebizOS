@@ -13,9 +13,10 @@ from dataclasses import dataclass, field
 
 import resident_pcs
 import resident_store
+import session_lease
 
 OUTPUT_LIMIT = 1024 * 1024
-LEASE_SECONDS = 30
+# 임대·멱등 종료 = session_lease(프로필 "terminal", 수치는 data/session_lease_policy.yaml) — 2026-10-13
 _lock = threading.RLock()
 _sessions = {}
 
@@ -27,7 +28,7 @@ class Session:
     job: str = ''
     state: str = 'starting'
     reason: str = ''
-    seen: float = field(default_factory=time.monotonic)
+    lease: session_lease.Lease = field(default_factory=lambda: session_lease.Lease('terminal'))
     output: bytearray = field(default_factory=bytearray)
     offset: int = 0
     messages: deque = field(default_factory=deque)
@@ -56,11 +57,7 @@ def create(target, sid, cols=100, rows=30, lan=None):
     if time.time() - (rec['registration'].get('last_seen') or 0) > 90:
         raise ValueError('PC가 오프라인입니다.')
     with _lock:
-        for key, old in list(_sessions.items()):
-            if time.monotonic() - old.seen > LEASE_SECONDS:
-                _close(old, 'window_disconnected')
-            if old.state == 'closed' and time.monotonic() - old.seen > 120:
-                del _sessions[key]
+        session_lease.sweep(_sessions, lambda old: _close(old, 'window_disconnected'), profile_name='terminal')
         if sid in _sessions:
             s = _sessions[sid]
             if s.device != rec['device_id']:
@@ -90,7 +87,7 @@ def _get(sid):
 
 
 def _close(s, reason):
-    if s.state != 'closed':
+    if s.lease.close(reason):
         s.state, s.reason = 'closed', reason
         s.messages.clear()
         s.input_bytes = 0
@@ -112,9 +109,9 @@ def poll(sid, cursor):
         s = _get(sid)
         if type(cursor) is not int or cursor < 0 or cursor > s.offset + len(s.output):
             raise ValueError('invalid_terminal_cursor')
-        if time.monotonic() - s.seen > LEASE_SECONDS:
+        if s.lease.expired():
             _close(s, 'window_disconnected')
-        s.seen = time.monotonic()
+        s.lease.renew()
         if s.state != 'closed':
             try:
                 resident_pcs.resolve(s.device)
@@ -134,7 +131,7 @@ def input_message(sid, message):
     with _lock:
         s = _get(sid)
         resident_pcs.resolve(s.device)
-        if s.state != 'running' or time.monotonic() - s.seen > LEASE_SECONDS:
+        if s.state != 'running' or s.lease.expired():
             raise ValueError('terminal_not_connected')
         kind = message.get('type')
         if kind == 'input':
@@ -166,7 +163,7 @@ def attach(sid, device, route='relay'):
         s = _get(sid)
         if s.device != device or s.attached or s.state != 'starting':
             raise ValueError('terminal_not_owned_or_already_attached')
-        if time.monotonic() - s.seen > LEASE_SECONDS:
+        if s.lease.expired():
             _close(s, 'window_disconnected')
             raise ValueError('terminal_lease_expired')
         s.attached, s.state = True, 'running'
@@ -190,7 +187,7 @@ def output(sid, data):
 def take(sid):
     with _lock:
         s = _get(sid)
-        if time.monotonic() - s.seen > LEASE_SECONDS:
+        if s.lease.expired():
             _close(s, 'window_disconnected')
         if s.state == 'closed':
             return [{'type': 'close'}]

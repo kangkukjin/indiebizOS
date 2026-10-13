@@ -194,6 +194,7 @@
     "datastore/install_approvals",
     "datastore/knowledge_catalog",
     "datastore/knowledge_graph",
+    "datastore/media_store",
     "datastore/multi_chat_db",
     "datastore/node_registry",
     "datastore/notebook_store",
@@ -368,6 +369,8 @@
     "services/launcher_ops",
     "services/limb_client",
     "services/media_ops",
+    "services/media_sessions",
+    "services/media_signaling",
     "services/model_settings_view",
     "services/multi_chat_manager",
     "services/nas_music",
@@ -392,6 +395,7 @@
     "services/resident_terminal_lan",
     "services/resource_links",
     "services/scheduler",
+    "services/session_lease",
     "services/spreadsheet_changes",
     "services/spreadsheet_conversion_types",
     "services/spreadsheet_files",
@@ -423,6 +427,7 @@
     "surface/api_ibl",
     "surface/api_launcher_web",
     "surface/api_limb",
+    "surface/api_media",
     "surface/api_member",
     "surface/api_models",
     "surface/api_multi_chat",
@@ -585,8 +590,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 510,
-    "engine": 484,
+    "total": 515,
+    "engine": 489,
     "blocklist": 26
   }
 }

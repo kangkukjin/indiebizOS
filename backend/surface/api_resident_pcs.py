@@ -100,7 +100,10 @@ def state(req: dict):
     if req.get('remove'):
         return checked(pcs.remove, req.get('target'))
     rec = checked(pcs.resolve, req.get('target'), active=False)
-    return checked(limb_keys.resident_update, rec['device_id'], paused=bool(req.get('paused')))
+    out = checked(limb_keys.resident_update, rec['device_id'], paused=bool(req.get('paused')))
+    if req.get('paused'):
+        pcs.media_sessions_end(rec['device_id'], 'relation_paused')
+    return out
 
 
 @router.post('/remote-pcs/helper-update')

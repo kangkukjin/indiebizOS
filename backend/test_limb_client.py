@@ -146,5 +146,131 @@ def test_pc_profile_never_becomes_a_limb(tmp_path, monkeypatch):
     assert limb_client.start(8765) is False
 
 
+# ── 미디어 봉투(docs/MEDIA_SESSION_CONTRACT.md §6) → Kotlin MediaBridge 다리 ──────────────────────
+
+def _media_session(**over):
+    s = {'session_id': 'ab' * 16, 'purpose': 'camera',
+         'grant': {'session_id': 'ab' * 16, 'role': 'device', 'device': 'd1', 'tracks': ['v0'],
+                   'expires_at': 1e12, 'token': 'tok'},
+         'tracks': [{'id': 'v0', 'kind': 'video', 'source': 'camera', 'from': 'device', 'to': 'hub', 'state': 'requested'}],
+         'ice_servers': [{'urls': ['stun:stun.example:3478']}],
+         'lease': {'lease_s': 20, 'keepalive_s': 5, 'reconnect_s': 30},
+         'stream': {'url': 'wss://hub.example/limb/resident/media/' + 'ab' * 16}, 'timeout': 600}
+    s.update(over)
+    return s
+
+
+class _FakeBridge:
+    """Kotlin MediaBridge 의 가짜 — 호출 기록 + 정해진 답(JSON 문자열)."""
+    def __init__(self, start_reply=None):
+        self.calls = []
+        self.start_reply = start_reply or {'accepted': True, 'session_id': 'ab' * 16}
+
+    def start(self, envelope_json):
+        self.calls.append(('start', json.loads(envelope_json)))
+        return json.dumps(self.start_reply)
+
+    def stop(self, sid, reason):
+        self.calls.append(('stop', sid, reason))
+        return json.dumps({'stopped': True, 'session_id': sid})
+
+    def status(self):
+        self.calls.append(('status',))
+        return json.dumps({'session_id': None, 'state': 'idle'})
+
+    def capabilities(self):
+        return json.dumps({'media_session': {'camera': True, 'microphone': True, 'speaker': True,
+                                             'playback': True, 'screen': False},
+                           'abi': 'armeabi-v7a', 'sdk': 28, 'permissions': {'camera': True, 'record_audio': False}})
+
+
+def _bare_client(monkeypatch, bridge):
+    monkeypatch.setattr(limb_client, '_bridge_factory', (lambda: bridge) if bridge is not None else None)
+    cfg = {'hub': 'http://hub', 'key': 'k' * 32, 'installation_id': 'i' * 32, 'alias': '삼성1', 'device_id': 'd1'}
+    return limb_client.LimbClient(cfg, 8765, post=lambda *a: {}, execute=lambda *a: {'success': True},
+                                  card=lambda: {'identity': {'body': 'phone'}})
+
+
+def _media_job(action='start', session=None, **extra):
+    env = {'op': 'media', 'action': action, **extra}
+    if session is not None:
+        env['session'] = session
+    return {'id': 'm1', 'code': json.dumps(env)}
+
+
+def test_media_op_is_unsupported_on_a_body_without_the_bridge(tmp_path, monkeypatch):
+    monkeypatch.setenv('INDIEBIZ_USERDATA', str(tmp_path))
+    monkeypatch.setattr(limb_client, '_body_profile', lambda: 'mac')     # PC: jclass 자체가 없다
+    c = _bare_client(monkeypatch, None)
+    assert 'media' not in limb_client.supported_ops()
+    out = c._dispatch(_media_job(session=_media_session()))
+    assert out['success'] is False and out['error'] == 'unsupported_on_this_body'
+    assert 'media' not in out['supported'] and 'media_session' not in c.capabilities()
+    # 폰 프로파일이어도 다리 import 가 실패하면(구형 APK) 같은 정직한 거절
+    monkeypatch.setattr(limb_client, '_body_profile', lambda: 'phone')
+    assert c._dispatch(_media_job(action='status'))['error'] == 'unsupported_on_this_body'
+
+
+def test_media_envelope_validation_rejects_before_touching_the_bridge(phone_env, monkeypatch):
+    bridge = _FakeBridge()
+    c = _bare_client(monkeypatch, bridge)
+    bad = [
+        (None, 'session_required'),
+        (_media_session(session_id='x'), 'session_id_required'),
+        (_media_session(grant={'role': 'device'}), 'grant_required'),
+        (_media_session(purpose='teleport'), 'purpose_unknown'),
+        (_media_session(stream={'url': 'https://hub.example/x'}), 'stream_url_required'),
+        (_media_session(tracks=[]), 'tracks_required'),
+    ]
+    for session, why in bad:
+        out = c._dispatch(_media_job(session=session))
+        assert out == {'success': False, 'error': 'invalid_media_envelope', 'detail': why}, why
+    assert bridge.calls == []                       # 결함 봉투는 다리에 닿지 않는다
+    assert c._dispatch(_media_job(action='rewind'))['error'] == 'unsupported_media_action'
+
+
+def test_media_start_passes_auth_and_returns_acceptance_only(phone_env, monkeypatch):
+    bridge = _FakeBridge()
+    c = _bare_client(monkeypatch, bridge)
+    assert 'media' in limb_client.supported_ops()
+    out = c._dispatch(_media_job(session=_media_session()))
+    assert out['success'] is True and out['accepted'] is True and out['session_id'] == 'ab' * 16
+    kind, payload = bridge.calls[0]
+    assert kind == 'start'
+    assert payload['auth'] == {'key': 'k' * 32, 'installation_id': 'i' * 32}   # WS 첫 프레임 재료
+    assert payload['grant']['token'] == 'tok' and payload['stream']['url'].startswith('wss://')
+    # 계약 §6 원형(op: media_session, 칸이 최상위)도 같은 길
+    env = {'op': 'media_session', **_media_session(purpose='microphone', tracks=[
+        {'id': 'a0', 'kind': 'audio', 'source': 'mic', 'from': 'device', 'to': 'hub', 'state': 'requested'}])}
+    out2 = c._dispatch({'id': 'm2', 'code': json.dumps(env)})
+    assert out2['success'] is True and bridge.calls[-1][1]['purpose'] == 'microphone'
+    assert 'op' not in bridge.calls[-1][1]
+    # stop / status 는 세션 id·사유를 그대로 넘긴다
+    assert c._dispatch(_media_job(action='stop', session={'session_id': 'ab' * 16}, reason='user'))['stopped'] is True
+    assert bridge.calls[-1] == ('stop', 'ab' * 16, 'user')
+    assert c._dispatch(_media_job(action='status'))['state'] == 'idle'
+    # 능력 신고에 media_session 이 든다(허브는 이걸로 폰의 트랙·권한을 안다)
+    caps = c.capabilities()
+    assert 'media' in caps['ops'] and caps['media_session']['camera'] is True
+    assert caps['media_session']['permissions'] == {'camera': True, 'record_audio': False}
+    assert caps['media_session']['sdk'] == 28
+
+
+def test_media_bridge_failure_codes_project_to_failed_result(phone_env, monkeypatch):
+    bridge = _FakeBridge(start_reply={'error': 'device_busy', 'message': '다른 세션', 'active_session': 'cd' * 16})
+    c = _bare_client(monkeypatch, bridge)
+    out = c._dispatch(_media_job(session=_media_session()))
+    assert out['success'] is False and out['error'] == 'device_busy' and out['active_session'] == 'cd' * 16
+    bridge.start_reply = {'error': 'needs_local_action', 'needs_local_action': {
+        'code': 'camera_unavailable', 'message': '폰에서 카메라 대기 모드를 시작해 주세요'}}
+    out = c._dispatch(_media_job(session=_media_session()))
+    assert out['error'] == 'needs_local_action' and out['needs_local_action']['code'] == 'camera_unavailable'
+    # 다리가 JSON 아닌 것을 돌려주거나 예외를 던져도 루프는 산다
+    bridge.start = lambda j: 'not json'
+    assert c._dispatch(_media_job(session=_media_session()))['error'] == 'media_bridge_bad_reply'
+    bridge.start = lambda j: (_ for _ in ()).throw(RuntimeError('jni down'))
+    assert c._dispatch(_media_job(session=_media_session()))['error'].startswith('media_bridge_exception')
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

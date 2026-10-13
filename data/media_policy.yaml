@@ -1,0 +1,44 @@
+# 미디어 통신 정책 — 세계의 명사는 데이터 (docs/MEDIA_COMMUNICATION_DESIGN_2026_10_13.md §8, §12)
+#
+# 릴레이·TURN 주소, 운영 주체, 품질 상한은 여기서만 고친다. 엔진 코드에 주소를 고정하지 않는다.
+# 비밀(TURN 공유 비밀)은 .env 의 환경변수 이름만 적는다 — 값은 이 파일에 쓰지 않는다.
+
+signaling:
+  # auto  = 일반 통화의 초대·수락·종료는 Nostr(NIP-17) 로, 이후 SDP·ICE 는 이 허브의 공개 주소에 relay 가
+  #         있으면 relay(trickle), 없으면 Nostr(비-trickle: gathering 완료 후 완전한 SDP 한 번).
+  # nostr = 전부 Nostr.   relay = relay 필수(공개 주소 없으면 signaling_unavailable).
+  route: auto
+  # 이 허브의 relay 공개 주소. 비우면 face_config 의 public_base(cloudflared 터널)를 쓴다.
+  relay_base: ""
+  # 초대에 동봉할 발신자 offer 를 기다리는 최대 시간(초) — 그 안에 브라우저가 offer 를 주면 DM 한 번을 아낀다.
+  bundle_wait_s: 1.5
+  # Nostr 로 받은 통화 제어 메시지의 신선도 창(초). 이보다 오래된 초대는 버린다(백필 방지).
+  freshness_s: 90
+
+ice_servers:
+  - urls: ["stun:stun.l.google.com:19302"]
+  # TURN 은 완료 범위의 필수 기반(§8). 아래 항목을 실제 운영 주소로 채우고 .env 에 MEDIA_TURN_SECRET 를 둔다.
+  # credential_mode: ephemeral = coturn `use-auth-secret`(REST) 방식 — username "<만료>:<세션>", credential HMAC-SHA1.
+  # 주소가 비어 있으면 TURN 없이 동작하되 /media/health 가 "turn_unconfigured" 로 신고한다.
+  - urls: []            # 예: ["turn:turn.example.com:3478?transport=udp", "turn:turn.example.com:3478?transport=tcp", "turns:turn.example.com:5349?transport=tcp"]
+    credential_mode: ephemeral
+    secret_env: MEDIA_TURN_SECRET
+    ttl_s: 600
+
+# 장치 종류별 송신 품질 상한(엔진이 setParameters / 캡처 해상도에 쓴다). 실측 뒤 조정.
+quality_profiles:
+  default:   {width: 1280, height: 720, fps: 24, max_bitrate_kbps: 1500, audio_kbps: 32}
+  phone32:   {width: 640,  height: 480, fps: 15, max_bitrate_kbps: 600,  audio_kbps: 24}   # Android 9·armeabi-v7a (J7)
+  phone64:   {width: 1280, height: 720, fps: 24, max_bitrate_kbps: 1200, audio_kbps: 32}
+  helper:    {width: 1280, height: 720, fps: 20, max_bitrate_kbps: 1200, audio_kbps: 32}
+  music:     {audio_kbps: 96, echo_cancellation: false, noise_suppression: false, auto_gain: false}
+
+# 수신 알림 — 벨은 실제 표시된 것만 벨이다(릴레이 도착 ≠ 벨).
+ringing:
+  os_notification: true
+  sound: true
+
+limits:
+  max_active_sessions: 8          # 허브가 동시에 여는 세션 상한
+  max_frame_bytes: 65536          # 시그널 프레임 한 개 상한
+  content_max_bytes: 4294967296   # 콘텐츠 전달 파일 상한(4GB)

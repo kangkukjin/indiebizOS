@@ -17,6 +17,10 @@
 - 인바운드 명령 통로 없음(폰 /ibl/execute 는 localhost). 허브가 remove/revoke 하면 자격을 지우고 멈춘다.
 - `shell` 봉투는 실행하지 않는다(ibl·info 만). 허브도 adapter=indiebiz-v1 에는 그 둘만 하달한다
   (resident_pcs.submit). 미지원 op 는 정직하게 `unsupported_on_this_body` 로 돌려준다.
+- `media` 봉투(docs/MEDIA_SESSION_CONTRACT.md §6, 2026-10-13): Kotlin MediaBridge 가 import 될 때만
+  지원 op 에 든다(지연 판정 — PC 시험에서도 이 모듈을 쓴다). start 는 서비스 **접수**까지만 기다리고
+  (워커 스레드를 붙들지 않음) 협상·상태·품질은 폰이 시그널링 WS 로 허브에 직접 보고한다.
+  영상·음성 프레임은 Python/JSON 다리를 지나지 않는다.
 
 내구성 (헬퍼 resident_runtime 과 같은 규칙)
 - 사건(started/result)은 로컬 spool 에 먼저 적고 다음 sync 에 실어 ack 를 받으면 지운다.
@@ -32,6 +36,10 @@ from typing import Callable, Dict, List, Optional
 
 ADAPTER = "indiebiz-v1"
 SUPPORTED_OPS = ("ibl", "info")
+MEDIA_OPS = ("media", "media_session")       # 전송 계약 op — IBL 어휘가 아니다
+MEDIA_BRIDGE_CLASS = "com.indiebiz.phoneagent.media.MediaBridge"
+_MEDIA_PURPOSES = {"voice_call", "video_call", "camera", "microphone", "speaker", "playback"}
+_bridge_factory: Optional[Callable] = None    # 시험 주입점(가짜 다리) — 없으면 Chaquopy jclass
 CONFIG_NAME = "limb_client.json"
 EVENT_BATCH = 64
 # 허브가 사건 묶음을 통째로 거절하는 코드 — 이런 사건은 재전송해도 영원히 거절되므로 옆으로 치운다.
@@ -49,6 +57,65 @@ def _body_profile() -> str:
         return str((detect_body() or {}).get("profile") or "")
     except Exception:  # noqa: BLE001
         return ""
+
+
+def _media_bridge():
+    """Kotlin MediaBridge — 폰 프로파일에서 Chaquopy 로만 존재. 없으면 None(= media 미지원 몸)."""
+    if _bridge_factory is not None:
+        try:
+            return _bridge_factory()
+        except Exception:  # noqa: BLE001
+            return None
+    if _body_profile() != "phone":
+        return None
+    try:
+        from java import jclass  # Chaquopy
+        return jclass(MEDIA_BRIDGE_CLASS)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def supported_ops() -> List[str]:
+    """지원 op — `media` 는 다리가 import 될 때만(지연 판정)."""
+    ops = list(SUPPORTED_OPS)
+    if _media_bridge() is not None:
+        ops.append("media")
+    return ops
+
+
+def validate_media_session(session) -> Optional[str]:
+    """계약 §6 봉투의 필수 칸 검사 — 결함이면 사유. (상세 검증은 Kotlin MediaEnvelope.parse 가 한 번 더.)"""
+    if not isinstance(session, dict):
+        return "session_required"
+    sid = session.get("session_id")
+    if not isinstance(sid, str) or len(sid) < 8:
+        return "session_id_required"
+    grant = session.get("grant")
+    if not isinstance(grant, dict) or not grant.get("token"):
+        return "grant_required"
+    if session.get("purpose") not in _MEDIA_PURPOSES:
+        return "purpose_unknown"
+    stream = session.get("stream")
+    url = stream.get("url") if isinstance(stream, dict) else None
+    if not isinstance(url, str) or not url.startswith(("ws://", "wss://")):
+        return "stream_url_required"
+    tracks = session.get("tracks")
+    if not isinstance(tracks, list) or not (tracks or isinstance(session.get("content"), dict)):
+        return "tracks_required"
+    return None
+
+
+def _media_result(raw) -> Dict:
+    """MediaBridge 의 JSON 문자열 → 작업 결과 봉투. {"error": <계약 코드>} 는 success:false 로."""
+    try:
+        obj = json.loads(str(raw))
+    except (TypeError, ValueError):
+        return {"success": False, "error": "media_bridge_bad_reply", "raw": str(raw)[:500]}
+    if not isinstance(obj, dict):
+        return {"success": False, "error": "media_bridge_bad_reply", "raw": obj}
+    if obj.get("error"):
+        return {"success": False, **obj}
+    return {"success": True, **obj}
 
 
 class LimbError(Exception):
@@ -167,8 +234,17 @@ class LimbClient:
             self._card_cache = (now, card)
         import platform
         caps = {"adapter": ADAPTER, "body": _body_profile() or "unknown",
-                "ops": list(SUPPORTED_OPS), "ibl": True, "shell": False,
+                "ops": supported_ops(), "ibl": True, "shell": False,
                 "python": platform.python_version(), "alias": self.cfg.get("alias")}
+        bridge = _media_bridge()
+        if bridge is not None:
+            try:
+                mc = json.loads(str(bridge.capabilities()))
+            except (TypeError, ValueError):
+                mc = None
+            if isinstance(mc, dict) and isinstance(mc.get("media_session"), dict):
+                caps["media_session"] = {**mc["media_session"],
+                                         **{k: mc.get(k) for k in ("abi", "sdk", "permissions", "engine") if k in mc}}
         if card:
             caps["card"] = card
             while _json_size(caps) > 12 * 1024 and caps.get("card"):
@@ -180,7 +256,7 @@ class LimbClient:
     def info(self) -> Dict:
         return {"body": _body_profile() or "unknown", "adapter": ADAPTER,
                 "alias": self.cfg.get("alias"), "device_id": self.cfg.get("device_id"),
-                "ops": list(SUPPORTED_OPS), "capabilities": self.capabilities()}
+                "ops": supported_ops(), "capabilities": self.capabilities()}
 
     # ── spool: 사건·작업 기록 ───────────────────────────────────────────────────
     def _event(self, job_id: str, kind: str, payload: Dict) -> None:
@@ -323,8 +399,40 @@ class LimbClient:
             return self._execute(code, agent_id, timeout)
         if op == "info":
             return {"success": True, **self.info()}
+        if op in MEDIA_OPS:
+            return self._media_op(env)
         return {"success": False, "error": "unsupported_on_this_body", "op": op,
-                "supported": list(SUPPORTED_OPS)}
+                "supported": supported_ops()}
+
+    def _media_op(self, env: Dict) -> Dict:
+        """허브 미디어 봉투 → Kotlin MediaBridge. 두 모양을 받는다:
+        {op:"media", action:start|stop|status, session:{§6 칸}} / {op:"media_session", ...§6 칸 자체}.
+        start 는 서비스 접수(≤3초)까지만 — 그 뒤는 폰이 시그널링 WS 로 보고하므로 작업 결과를 붙들지 않는다."""
+        bridge = _media_bridge()
+        if bridge is None:
+            return {"success": False, "error": "unsupported_on_this_body", "op": env.get("op"),
+                    "supported": supported_ops()}
+        action = str(env.get("action") or "start")
+        if env.get("op") == "media_session":
+            session = {k: v for k, v in env.items() if k not in ("op", "action", "reason")}
+        else:
+            session = env.get("session")
+        try:
+            if action == "status":
+                return _media_result(bridge.status())
+            if action == "stop":
+                sid = (session.get("session_id") if isinstance(session, dict) else None) or env.get("session_id") or ""
+                return _media_result(bridge.stop(str(sid), str(env.get("reason") or "hub_stop")))
+            if action != "start":
+                return {"success": False, "error": "unsupported_media_action", "action": action}
+            why = validate_media_session(session)
+            if why:
+                return {"success": False, "error": "invalid_media_envelope", "detail": why}
+            payload = dict(session)
+            payload["auth"] = self._auth()          # WS 첫 프레임 {key, installation_id, grant} 재료
+            return _media_result(bridge.start(json.dumps(payload, ensure_ascii=False)))
+        except Exception as e:  # noqa: BLE001 — 다리 예외는 결과로(루프는 산다)
+            return {"success": False, "error": f"media_bridge_exception: {e.__class__.__name__}: {e}"}
 
     def _run_job(self, job: Dict) -> None:
         jid = str(job.get("id"))

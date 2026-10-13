@@ -22,6 +22,15 @@ _DM_PUBLISH_ATTEMPTS = 3
 _DM_PUBLISH_BACKOFF = (1.0, 3.0)
 
 
+
+def _is_call_control(content, tags=None) -> bool:
+    """통화 제어 프레임(docs/MEDIA_SESSION_CONTRACT §5 nostr) 판정 — 태그가 유실된 경로는 모양으로."""
+    try:
+        import media_signaling
+        return media_signaling.is_call_frame_tags(tags) or media_signaling.is_call_frame_content(content)
+    except Exception:  # noqa: BLE001
+        return False
+
 class IndieNetSocialMixin:
     """indienet.py 에서 verbatim 이동 — IndieNet 에 믹스인 합성(self 속성 공유)."""
 
@@ -461,6 +470,8 @@ class IndieNetSocialMixin:
                     ca = out.get("created_at") or event.get("created_at") or 0
                     if since and ca < since:
                         return None
+                    if _is_call_control(out.get("content")):
+                        return None   # 통화 제어 프레임은 받은편지함이 아니다(media_sessions 전용)
                     return {"id": event.get("id"), "from": out.get("sender"),
                             "content": out.get("content"), "created_at": ca, "tags": []}
 
@@ -485,6 +496,8 @@ class IndieNetSocialMixin:
                 ca = out.get("created_at") or event.get("created_at") or 0
                 if since and ca < since:
                     return None
+                if _is_call_control(out.get("content"), (out.get("rumor") or {}).get("tags")):
+                    return None   # 통화 제어 프레임은 받은편지함이 아니다(media_sessions 전용)
                 return {
                     "id": (out.get("rumor") or {}).get("id") or event.get("id"),
                     "from": out["sender"],

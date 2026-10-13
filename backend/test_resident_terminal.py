@@ -95,7 +95,7 @@ def test_capability_gate_no_agent_terminal_and_limits(setup):
     with pytest.raises(ValueError, match='backpressure'):
         terminal.input_message(sid, {'type': 'input', 'data': 'a', 'sequence': 5})
     assert len(terminal.take(sid)) == 4
-    terminal._sessions[sid].seen -= terminal.LEASE_SECONDS + 1
+    terminal._sessions[sid].lease.rewind(terminal._sessions[sid].lease.lease_s + 1)
     assert terminal.take(sid) == [{'type': 'close'}]
     assert terminal.poll(sid, 0)['state'] == 'closed'
 

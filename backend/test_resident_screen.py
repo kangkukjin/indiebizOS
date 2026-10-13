@@ -85,7 +85,7 @@ def test_expiry_capability_and_one_owner(setup):
     screen.attach(sid)
     with pytest.raises(ValueError, match='already_attached'):
         screen.attach(sid)
-    screen._sessions[sid].seen -= screen.LEASE + 1
+    screen._sessions[sid].lease.rewind(screen._sessions[sid].lease.lease_s + 1)
     assert screen.status(sid)['state'] == 'closed'
     assert screen.take(sid) == [{'type': 'close'}]
     screen.create(rec['device_id'], uuid.uuid4().hex)

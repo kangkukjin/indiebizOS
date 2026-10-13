@@ -68,6 +68,30 @@ def _arxiv_get(url: str, timeout: int = 20, tries: int = 3):
     return _polite_get(url, timeout=timeout, tries=tries)
 
 
+# arXiv 는 all:AND 결합에서 불용어(the·of·in…)와 구두점 붙은 낱말을 0건으로 돌린다 — 제목을 그대로 넣으면
+# 전부 0건 success(63회차 L63-2 실측: 제목 9건 전부 0, 불용어 제거 뒤 20건). 질의 문법을 쓴 입력은 손대지 않는다.
+_ARXIV_STOPWORDS = frozenset(
+    "a an the of in on at to for and or vs versus is are be with by from as how what which your our this that "
+    "into than more its it do does can".split())
+
+
+def _arxiv_search_expression(query: str) -> str:
+    query = (query or "").strip()
+    if re.search(r"\b(?:ti|au|abs|co|jr|cat|rn|id|all):|\b(?:AND|OR|ANDNOT)\b", query):
+        return f"({query})"
+    terms = []
+    for term in re.findall(r'"[^"\n]+"|\S+', query):
+        if term.startswith('"'):
+            terms.append(term)
+            continue
+        word = re.sub(r"[^\w\-]", "", term)
+        if word and word.lower() not in _ARXIV_STOPWORDS:
+            terms.append(word)
+    if not terms:
+        terms = [t for t in re.findall(r'"[^"\n]+"|\S+', query)]
+    return " AND ".join(f"all:{term}" for term in terms)
+
+
 def _search_arxiv(tool_input: dict) -> str:
     """arXiv 프리프린트 검색 — arxiv 라이브러리 대신 Atom API(https) 직접 호출.
     arxiv 4.x 는 lxml(네이티브)→Chaquopy 불가, 1.4.x 는 http→301 실패. requests+feedparser(폰·맥 공통,
@@ -78,11 +102,7 @@ def _search_arxiv(tool_input: dict) -> str:
     # 연도 범위 = 제출일 범위 질의, 최신순 = submittedDate 정렬(77회차 B77-1 — 예전엔 둘 다 조용히 버렸다).
     # open_access 는 arXiv 전부가 공개라 거를 것이 없다.
     lo, hi = _year_range(tool_input)
-    if re.search(r"\b(?:ti|au|abs|co|jr|cat|rn|id|all):|\b(?:AND|OR|ANDNOT)\b", query):
-        search = f"({query})"
-    else:
-        terms = re.findall(r'"[^"\n]+"|\S+', query)
-        search = " AND ".join(f"all:{term}" for term in terms)
+    search = _arxiv_search_expression(query)
     if lo is not None or hi is not None:
         search += f" AND submittedDate:[{lo or 1991}01010000 TO {hi or 9999}12312359]"
     sort = "submittedDate" if tool_input.get("sort_by") == "recent" else "relevance"

@@ -60,8 +60,11 @@ def stream(store, tid, run, message, cancel):
     if thread['mode'] == 'library':
         role += '현재 모드는 저장 자료만 사용이다. 외부 자료를 새로 가져오지 않는다.\n'
     # 저장 자료와 과거 요약은 지시문이 아닌 배경으로 분리한다.
-    message, images = attachment_input(store, tid, run, message)
+    # 배경 검색 질의는 첨부 본문을 펼치기 전의 사용자 원문이다 — 펼친 본문(수십만 자)을
+    # FTS 질의로 넘기면 자료실 검색이 멈춘다(63회차 L63-1 실측: 첨부 8편 42만 자 → _search_fts 정지).
+    expanded, images = attachment_input(store, tid, run, message)
     context = _context(store, thread, message)
+    message = expanded
     cfg = {**agent, 'id': None, '_selected_agent': selected, '_project_id': store.path.name,
            '_project_path': str(store.path), '_research_role': role + context}
     runner = ResearchRunner(cfg, (configured or {}).get('common') or {})
@@ -78,6 +81,9 @@ def stream(store, tid, run, message, cancel):
         history = [{'role': row['role'], 'content': history_content(row)} for row in store.messages(tid, limit=14)['items']
                    if row['run_id'] != run and row['status'] in {'complete', 'completed'}][-12:]
         try:
+            if cancel.is_set():
+                yield {'type': 'error', 'content': '시작 전에 취소 요청을 받아 실행하지 않았습니다'}
+                return
             from research_context import capture_stream
             yield from capture_stream(runner.cognitive_stream(
                 message, history, images=images or None, cancel_check=cancel.is_set,

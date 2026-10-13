@@ -813,11 +813,26 @@ def _search_semantic(notebook_id: int, query: str, top_k: int, source_ids=None) 
         conn.close()
 
 
+_FTS_MAX_TERMS = 48          # OR 결합 항 상한 — 수천 항 MATCH 는 FTS5 가 사실상 멈춘다(63회차 L63-1: 6만 자 질의 정지)
+_QUERY_MAX_CHARS = 4000      # 검색 질의 글자 상한 — 검색어는 질문이지 본문이 아니다
+
+
+def _fts_terms(query: str) -> List[str]:
+    """FTS 질의 항: 구두점 제거·2자 이상·중복 제거·상한."""
+    safe = re.sub(r"[^\w\s가-힣]", " ", query or "")
+    seen: List[str] = []
+    for t in safe.split():
+        if len(t) >= 2 and t not in seen:
+            seen.append(t)
+            if len(seen) >= _FTS_MAX_TERMS:
+                break
+    return seen
+
+
 def _search_fts(notebook_id: int, query: str, top_k: int, source_ids=None) -> List[Tuple[int, float]]:
     conn = _connect()
     try:
-        safe = re.sub(r"[^\w\s가-힣]", " ", query)
-        tokens = [t for t in safe.split() if len(t) >= 2]
+        tokens = _fts_terms(query)
         if not tokens:
             return []
         fts_query = " OR ".join(tokens)
@@ -864,6 +879,9 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
     query = (query or "").strip()
     if not query:
         return {"success": False, "error": "q(질문/검색어)가 필요합니다.", "results": []}
+    query_truncated = len(query) > _QUERY_MAX_CHARS
+    if query_truncated:
+        query = query[:_QUERY_MAX_CHARS]
 
     _src = str(source).strip() if source not in (None, "") else ""
     filters = {'source_ids': list(source_ids)} if source_ids is not None else {}
@@ -882,7 +900,8 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
     fts = _search_fts(nb["id"], query, over, **filters)
     if not sem and not fts:
         return {"success": True, "notebook": nb["name"], "results": [],
-                "search_type": "hybrid" if semantic_available() else "fts5"}
+                "search_type": "hybrid" if semantic_available() else "fts5",
+                "query_truncated": query_truncated}
     if not sem:
         scored, stype = list(fts), "fts5"
     elif not fts:
@@ -912,7 +931,8 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
         if len(results) >= top_k:
             break
     return {"success": True, "notebook": nb["name"], "note": nb.get("note", ""),
-            "results": results, "search_type": stype, "source_filter": _src or None}
+            "results": results, "search_type": stype, "source_filter": _src or None,
+            "query_truncated": query_truncated}
 
 
 # ── ③ 접수증 어댑터(kind=notebook_source) — notebook/ibl_actions.yaml task_kinds 가 가리킨다 ──

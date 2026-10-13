@@ -1,0 +1,176 @@
+[
+ {
+  "label": "record_check",
+  "mode": "check",
+  "status": "invalid",
+  "success": null,
+  "executed": false,
+  "error": "",
+  "issues": [
+   [
+    "TYPE",
+    22
+   ],
+   [
+    "PURE_EXPRESSION",
+    81
+   ],
+   [
+    "PURE_EXPRESSION",
+    86
+   ]
+  ],
+  "usage": {
+   "steps": null,
+   "rows": null,
+   "elapsed_ms": null
+  },
+  "model": {
+   "requests": null,
+   "input": null,
+   "output": null,
+   "cache_read": null,
+   "cache_create": null
+  },
+  "run_id": null,
+  "response_bytes": 17782
+ },
+ {
+  "label": "record_check2",
+  "mode": "check",
+  "status": "incomplete",
+  "success": null,
+  "executed": false,
+  "error": "",
+  "issues": [],
+  "usage": {
+   "steps": null,
+   "rows": null,
+   "elapsed_ms": null
+  },
+  "model": {
+   "requests": null,
+   "input": null,
+   "output": null,
+   "cache_read": null,
+   "cache_create": null
+  },
+  "run_id": null,
+  "response_bytes": 15718
+ },
+ {
+  "label": "record_check3",
+  "mode": "check",
+  "status": "incomplete",
+  "success": null,
+  "executed": false,
+  "error": "",
+  "issues": [],
+  "usage": {
+   "steps": null,
+   "rows": null,
+   "elapsed_ms": null
+  },
+  "model": {
+   "requests": null,
+   "input": null,
+   "output": null,
+   "cache_read": null,
+   "cache_create": null
+  },
+  "run_id": null,
+  "response_bytes": 17008
+ },
+ {
+  "label": "record_base",
+  "mode": null,
+  "status": null,
+  "success": false,
+  "executed": true,
+  "error": "입력이 너무 큽니다 — 입력 투영·분할을 점검하세요. 일부 처리 의도라면 [table:take]/[table:filter]로 범위를 정하세요. 자동 축소하지 않습니다.",
+  "issues": [],
+  "usage": {
+   "steps": 513,
+   "rows": 8,
+   "elapsed_ms": 5213
+  },
+  "model": {
+   "requests": null,
+   "input": null,
+   "output": null,
+   "cache_read": null,
+   "cache_create": null
+  },
+  "run_id": "a0f37faf596349099e2e2c7d1a2a1c0d",
+  "response_bytes": 65601
+ },
+ {
+  "label": "record_base_v3",
+  "mode": null,
+  "status": null,
+  "success": true,
+  "executed": true,
+  "error": "",
+  "issues": [],
+  "usage": {
+   "steps": 37008,
+   "rows": 85,
+   "elapsed_ms": 61361
+  },
+  "model": {
+   "requests": 2,
+   "input": 22662,
+   "output": 7095,
+   "cache_read": 1088,
+   "cache_create": 21570
+  },
+  "run_id": "3d9c1613cb85404db6d48683cb4126ec",
+  "response_bytes": 442758
+ },
+ {
+  "label": "resume_base",
+  "mode": null,
+  "status": null,
+  "success": true,
+  "executed": true,
+  "error": "",
+  "issues": [],
+  "usage": {
+   "steps": 1228,
+   "rows": 16,
+   "elapsed_ms": 522
+  },
+  "model": {
+   "requests": null,
+   "input": null,
+   "output": null,
+   "cache_read": null,
+   "cache_create": null
+  },
+  "run_id": "e41b570d89134f0294540702d0dadf51",
+  "response_bytes": 114702
+ },
+ {
+  "label": "change_variant",
+  "mode": null,
+  "status": null,
+  "success": true,
+  "executed": true,
+  "error": "",
+  "issues": [],
+  "usage": {
+   "steps": 16516,
+   "rows": 24,
+   "elapsed_ms": 23660
+  },
+  "model": {
+   "requests": 1,
+   "input": 11274,
+   "output": 2248,
+   "cache_read": 544,
+   "cache_create": 10728
+  },
+  "run_id": "d6113214cf4141dca4666820ef87f110",
+  "response_bytes": 233740
+ }
+]

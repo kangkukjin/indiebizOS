@@ -270,6 +270,8 @@ def notebook_operation(params):
             raise ValueError('top_k는 1~40이어야 합니다')
         return lib.search(params.get('query') or '', top_k)
     if op == 'versions':
+        if not params.get('source_ref'):
+            raise ValueError('versions 에는 source_ref 가 필요합니다 — sources 로 먼저 자료를 고르세요')
         return lib.versions(params.get('source_ref'))
     if op == 'read':
         return lib.read(params.get('version_ref'), int(params.get('cursor') or 0), revision=params.get('extraction_revision'))

@@ -2051,6 +2051,44 @@
       ],
       "file": "body_lifecycle.md",
       "topic": "시스템"
+    },
+    {
+      "id": "research_project",
+      "name": "연구 프로젝트·주제 대화",
+      "description": "연구 프로젝트(project_kind research)의 주제 대화·자료실·thread_send/thread_messages/notebook 공개 IBL 경로와 task_ref 회수.",
+      "keywords": [
+        "연구 프로젝트",
+        "주제 대화",
+        "자료실",
+        "thread_send",
+        "thread_messages",
+        "research_project",
+        "notebook",
+        "project_ref",
+        "thread_ref"
+      ],
+      "file": "research_project.md",
+      "topic": "보고서"
+    },
+    {
+      "id": "research_questions",
+      "name": "연구 질문 이어가기",
+      "description": "연구 대화의 질문 기록 — thread_update questions 변경목록, 잠정 답변·지지/반박 인용(version_ref·locator·quote)·남은 확인, answered/withdrawn/out_of_scope 종결과 재개, 판본 이력.",
+      "keywords": [
+        "연구 질문",
+        "질문 기록",
+        "잠정 답변",
+        "반박",
+        "근거 인용",
+        "questions",
+        "thread_update",
+        "expected_revision",
+        "종결",
+        "재개",
+        "research_questions"
+      ],
+      "file": "research_questions.md",
+      "topic": "보고서"
     }
   ]
 }

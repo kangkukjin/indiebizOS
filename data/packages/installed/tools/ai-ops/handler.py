@@ -540,7 +540,7 @@ def _transform(tool_input: dict) -> str:
                     "note": "입력 0행 — AI 호출 생략(비용 0)."})
     payload = indexed_payload(visible)
     if len(payload) > _ITEMS_CAP:
-        return _fail("입력이 너무 큽니다 — 입력 투영·분할을 점검하세요. 일부 처리 의도라면 "
+        return _fail(f"입력이 너무 큽니다({len(payload):,}자 > {_ITEMS_CAP:,}) — 입력 투영·분할을 점검하세요. 일부 처리 의도라면 "
                      "[table:take]/[table:filter]로 범위를 정하세요. 자동 축소하지 않습니다.",
                      error_type="input_size", input_chars=len(payload),
                      input_bytes=len(payload.encode("utf-8")), limit_chars=_ITEMS_CAP)

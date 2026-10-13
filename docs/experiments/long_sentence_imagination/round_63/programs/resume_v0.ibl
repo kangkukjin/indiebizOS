@@ -1,0 +1,30 @@
+#!ibl edition=2
+[def:읽기]($project,$thread,$qid) {
+  $q=[self:project]{op:"thread_messages",project_ref:$project,thread_ref:$thread,questions_only:true,question_id:$qid}
+  $h=[self:project]{op:"thread_messages",project_ref:$project,thread_ref:$thread,questions_only:true,question_id:$qid,question_history:true}
+  return {**$q.items[0],history:len($h.items)}
+}
+[def:탐침]($name,$project,$thread,$changes) {
+  [try] { $r=[self:project]{op:"thread_update",project_ref:$project,thread_ref:$thread,questions:$changes}; return {name:$name,rejected:false,message:"성공"} }
+  [catch] { return {name:$name,rejected:true,message:$error.message} }
+}
+$목록=[self:project]{op:"thread_messages",project_ref:$project,thread_ref:$thread,questions_only:true}
+$전체=$목록.items >> [table:each]{ [fn:읽기]{project:$project,thread:$thread,qid:$it.question_id} }
+$판정=$전체 >> [table:each]{
+  $열림=$it.status=="open"
+  $근거있음=len($it.provisional_answer)>0 and len($it.supporting)>0
+  $남은확인=len($it.gaps)>0
+  $반박=len($it.contradicting)>0
+  $가능=$열림 and $근거있음 and not $남은확인 and not $반박
+  $사유=not $열림?"이미 종결됨":(not $근거있음?"잠정 답변 또는 지지 근거 없음":($남은확인?"남은 확인 "+text(len($it.gaps))+"건":($반박?"반박 "+text(len($it.contradicting))+"건을 기록만으로 설명할 수 없음":"종결 가능")))
+  $시도=$가능?[fn:탐침]{name:"종결",project:$project,thread:$thread,changes:[{question_id:$it.question_id,expected_revision:$it.revision,resolution:{disposition:"answered",rationale:"기록만으로 판정: 지지 근거 "+text(len($it.supporting))+"건, 남은 확인 0건, 반박 0건"}}]}:{name:"종결",rejected:false,message:"시도 안 함"}
+  return {question_id:$it.question_id,text:$it.text,revision_before:$it.revision,status_before:$it.status,history:$it.history,supporting:len($it.supporting),contradicting:len($it.contradicting),gaps:$it.gaps,closable:$가능,reason:$사유,attempted:$가능,rejected:$시도.rejected,message:$시도.message}
+}
+$후=$목록.items >> [table:each]{ [fn:읽기]{project:$project,thread:$thread,qid:$it.question_id} }
+$결과={project_ref:$project,thread_ref:$thread,inputs_received:["project_ref","thread_ref"],questions:$판정,after:map($후,($q)=>{question_id:$q.question_id,revision:$q.revision,status:$q.status,history:$q.history})}
+$표=$판정 >> [table:each]{ return f"|${it.question_id}|${it.revision_before}|${it.status_before}|${it.supporting}|${it.contradicting}|${len($it.gaps)}|${it.reason}|${it.attempted?($it.rejected?\"거부: \"+$it.message:\"종결됨\"):\"-\"}|" }
+$본문="# 재개 판정 (기억 없는 호출)\n\n받은 입력은 project_ref·thread_ref 뿐이며 질문·근거·이력은 기록에서 회수했다.\n\n|question_id|판본|상태|지지|반박|남은 확인|판정 사유|종결|\n|---|---|---|---|---|---|---|---|\n"+join("\n",$표)+"\n"
+$w1=[self:write]{path:f"${out}/resume.json",content:json($결과)}
+$w2=[self:write]{path:f"${out}/resume.md",content:$본문}
+$r1=[self:read]{path:$w1.path};$r2=[self:read]{path:$w2.path}
+return {resume:$w1.path,report:$w2.path,readback:$r1.text==json($결과) and $r2.text==$본문,questions:$판정,after:$결과.after}

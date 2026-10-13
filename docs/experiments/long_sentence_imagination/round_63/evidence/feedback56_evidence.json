@@ -1,0 +1,112 @@
+[
+ {
+  "case": "base",
+  "task": {
+   "kind": "delegation",
+   "owner": "system",
+   "task_id": "task_sysai_a348e83f"
+  },
+  "state": "succeeded",
+  "run_id": "run_74e5e8281c01be147ab3",
+  "episode": [
+   4668,
+   "2026-10-13T13:06:50.173907",
+   "2026-10-13T13:09:43.272045",
+   173097,
+   "training"
+  ],
+  "totals": {
+   "input": 1210455,
+   "output": 16360,
+   "cache_read": 1003311,
+   "cache_create": 204442
+  },
+  "model_calls": 5,
+  "tools": {
+   "execute_ibl": 8
+  },
+  "errors": [
+   {
+    "name": "execute_ibl",
+    "excerpt": "{\"edition\": 2, \"ok\": false, \"success\": false, \"executed\": false, \"status\": \"invalid\", \"error\": \"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.\", \"diagnostic\": {\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는"
+   },
+   {
+    "name": "execute_ibl",
+    "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"TYPE\", \"message\": \"Text가 필요하지만 List<Text>입니다.\", \"source_span\": {\"source_hash\": \"70fe7932a5af5e31e3489d5836d749f6b88fa9cec09e62af8ebbd23dc9a2514b\", \"start\": 946, \"end\": 951, \"line\": 16, \"column\":"
+   }
+  ],
+  "cost": {
+   "check_rejections": 2,
+   "evaluation_calls": 1,
+   "evaluation_checkpoint_s": 0.000878,
+   "evaluation_model_s": 8.078,
+   "evaluation_prepare_s": 0.042352,
+   "evaluation_visual_s": 0.002636,
+   "evaluation_wait_s": 0.000857,
+   "execution_calls": 8,
+   "execution_failures": 1,
+   "execution_tool_s": 5.303999999999999,
+   "internal_tool_failures": 0,
+   "request_intent": "task",
+   "source_failures": 0,
+   "supervisor_cache_read": 90315,
+   "supervisor_calls": 1,
+   "supervisor_input": 125988,
+   "supervisor_model_s": 44.022,
+   "supervisor_output": 3751,
+   "supervisor_tool_failures": 0,
+   "supervisor_tools": 1,
+   "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+   "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+   "wall_s": 171.167
+  },
+  "result_missing": false
+ },
+ {
+  "case": "variant",
+  "task": {
+   "kind": "delegation",
+   "owner": "system",
+   "task_id": "task_sysai_c5d40358"
+  },
+  "state": "succeeded",
+  "run_id": "run_11d8183b3636eec6f80a",
+  "episode": [
+   4669,
+   "2026-10-13T13:10:25.991845",
+   "2026-10-13T13:11:29.180643",
+   63188,
+   "training"
+  ],
+  "totals": {
+   "input": 561724,
+   "output": 7112,
+   "cache_read": 493722,
+   "cache_create": 63079
+  },
+  "model_calls": 5,
+  "tools": {
+   "execute_ibl": 2
+  },
+  "errors": [],
+  "cost": {
+   "check_rejections": 0,
+   "evaluation_calls": 1,
+   "evaluation_checkpoint_s": 0.001075,
+   "evaluation_model_s": 6.12,
+   "evaluation_prepare_s": 0.025028,
+   "evaluation_visual_s": 0.001408,
+   "evaluation_wait_s": 0.000899,
+   "execution_calls": 2,
+   "execution_failures": 0,
+   "execution_tool_s": 1.216,
+   "internal_tool_failures": 0,
+   "request_intent": "task",
+   "source_failures": 0,
+   "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+   "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+   "wall_s": 63.152
+  },
+  "result_missing": false
+ }
+]

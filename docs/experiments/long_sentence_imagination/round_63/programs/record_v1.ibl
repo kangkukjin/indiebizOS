@@ -1,0 +1,96 @@
+#!ibl edition=2
+[def:보존]($p,$project,$thread) {
+  [try] {
+    $a=[self:notebook]{op:"add",project_ref:$project,thread_ref:$thread,path:$p.path}
+    $v=$a.items[0]
+    $r=[self:notebook]{op:"read",project_ref:$project,thread_ref:$thread,version_ref:$v.version_ref}
+    return {id:$p.id,title:$p.title,ok:true,version_ref:$v.version_ref,extraction_revision:$r.extraction_revision,text:$r.text,total_chars:$r.total_chars,truncated:$r.next_cursor!=null,error:null}
+  }
+  [catch] { return {id:$p.id,title:$p.title,ok:false,version_ref:null,extraction_revision:null,text:"",total_chars:0,truncated:false,error:$error.message} }
+}
+[def:근거]($paper,$cell) {
+  $parts=split($cell,"||")
+  $loc=len($parts)==2?strip($parts[0]):""
+  $quote=len($parts)==2?strip($parts[1]):""
+  $exact=len($parts)==2 and len($quote)>0 and contains($paper.text,$quote)
+  return {paper:$paper.id,version_ref:$paper.version_ref,extraction_revision:$paper.extraction_revision,locator:$loc,quote:$quote,exact:$exact,empty:len($parts)<2 or len($quote)==0}
+}
+[def:깨끗]($refs) {
+  return map($refs,($r)=>{version_ref:$r.version_ref,extraction_revision:$r.extraction_revision,locator:$r.locator,quote:$r.quote})
+}
+[def:모으기]($papers,$cells,$field) {
+  $all=$papers >> [table:each]{ [fn:근거]{paper:$it,cell:get(get($cells,$it.id,{}),$field,"")} }
+  $exact=$all >> [table:filter]{where:($r)=>$r.exact}
+  $miss=$all >> [table:filter]{where:($r)=>not $r.empty and not $r.exact}
+  return {refs:[fn:깨끗]{refs:$exact},mismatched:$miss}
+}
+[def:탐침]($name,$project,$thread,$changes) {
+  [try] { $r=[self:project]{op:"thread_update",project_ref:$project,thread_ref:$thread,questions:$changes}; return {name:$name,rejected:false,message:"성공",items:$r.items} }
+  [catch] { return {name:$name,rejected:true,message:$error.message,items:[]} }
+}
+[def:읽기]($project,$thread,$qid) {
+  $q=[self:project]{op:"thread_messages",project_ref:$project,thread_ref:$thread,questions_only:true,question_id:$qid}
+  return $q.items[0]
+}
+$papers2=$papers >> [table:each]{ [fn:보존]{p:$it,project:$project,thread:$thread} }
+$saved=$papers2 >> [table:filter]{where:($r)=>$r.ok}
+$failed=$papers2 >> [table:filter]{where:($r)=>not $r.ok}
+$질문=[
+  {key:"q1",text:"어떤 조건에서 긴 문맥 언어모델이 RAG 를 이기는가?",scope:"이번 자료실의 공개 논문 8편"},
+  {key:"q2",text:"긴 문맥과 검색을 섞는 방식이 비용 대비 더 나은가?",scope:"이번 자료실의 공개 논문 8편"},
+  {key:"q3",text:"평가 벤치마크의 선택이 긴 문맥 대 RAG 의 결론을 바꾸는가?",scope:"이번 자료실의 공개 논문 8편"}
+]
+$추출=$saved >> [table:select]{columns:["id","version_ref","text"]} >> [table:ai]{preserve_rows:true,input_fields:["id","text"],schema:"q1_support(문자열), q1_contra(문자열), q2_support(문자열), q2_contra(문자열), q3_support(문자열), q3_contra(문자열)",instruction:"text 는 논문 원문이며 문단마다 [자료:판본:위치] 표식이 앞에 있다. 세 질문 q1=어떤 조건에서 긴 문맥 언어모델이 RAG 를 이기는가, q2=긴 문맥과 검색을 섞는 방식이 비용 대비 더 나은가, q3=평가 벤치마크의 선택이 결론을 바꾸는가 에 대해, 이 논문에서 각 질문을 지지하는 문장 하나와 반박하는 문장 하나를 고른다. 값 형식은 '위치||인용' 이며 위치는 그 문장 앞 표식의 세 번째 칸(예: p.1), 인용은 원문에서 60~240자를 글자 그대로 연속 복사한다(줄바꿈 하이픈 '- ' 과 띄어쓰기까지 원문 그대로, 요약·수정 금지). 해당 문장이 없으면 빈 문자열. 입력 각 행을 보존."}
+$cells=from_entries(map($추출.items,($r)=>[$r.id,$r]))
+$q1s=[fn:모으기]{papers:$saved,cells:$cells,field:"q1_support"}
+$q1c=[fn:모으기]{papers:$saved,cells:$cells,field:"q1_contra"}
+$q2s=[fn:모으기]{papers:$saved,cells:$cells,field:"q2_support"}
+$q2c=[fn:모으기]{papers:$saved,cells:$cells,field:"q2_contra"}
+$q3s=[fn:모으기]{papers:$saved,cells:$cells,field:"q3_support"}
+$q3c=[fn:모으기]{papers:$saved,cells:$cells,field:"q3_contra"}
+$근거표=[{key:"q1",s:$q1s,c:$q1c},{key:"q2",s:$q2s,c:$q2c},{key:"q3",s:$q3s,c:$q3c}]
+$판단입력=$근거표 >> [table:each]{
+  $q=$질문[$i]
+  return {key:$it.key,question:$q.text,supporting:join("\n",map($it.s.refs,($r)=>$r.quote)),contradicting:join("\n",map($it.c.refs,($r)=>$r.quote))}
+}
+$판단=$판단입력 >> [table:ai]{preserve_rows:true,input_fields:["key","question","supporting","contradicting"],schema:"answer(문자열), gaps(문자열), next(문자열), closable(문자열), objection(문자열)",instruction:"question 에 대해 supporting(지지 인용)·contradicting(반박 인용)만 근거로 잠정 답변 answer 를 2~4문장 한국어로 쓴다. gaps 는 아직 확인하지 못한 것(세미콜론 구분, 없으면 빈 문자열), next 는 다음에 볼 것(세미콜론 구분). closable 은 지지 인용이 있고 남은 확인(gaps)이 정말 없고 반박 인용이 모두 설명 가능할 때만 'yes', 아니면 'no'. objection 은 반박 인용이 결론을 뒤집지 못하는 이유 한 문장(반박이 없으면 빈 문자열). 인용에 없는 사실을 만들지 말 것. 입력 각 행을 보존."}
+$판단맵=from_entries(map($판단.items,($r)=>[$r.key,$r]))
+$세미=($s)=>filter(map(split($s,";"),($x)=>strip($x)),($x)=>len($x)>0)
+$생성=$근거표 >> [table:each]{
+  $q=$질문[$i];$j=$판단맵[$it.key]
+  return {expected_revision:0,text:$q.text,scope:$q.scope,provisional_answer:$j.answer,supporting:$it.s.refs,contradicting:$it.c.refs,gaps:$세미($j.gaps),next_probes:$세미($j.next)}
+}
+$저장=[self:project]{op:"thread_update",project_ref:$project,thread_ref:$thread,questions:$생성}
+$ids=map($저장.items,($r)=>$r.question_id)
+$재독=$ids >> [table:each]{ [fn:읽기]{project:$project,thread:$thread,qid:$it} }
+$대조=$재독 >> [table:each]{
+  $g=$생성[$i]
+  return {key:$근거표[$i].key,question_id:$it.question_id,revision:$it.revision,status:$it.status,text_same:$it.text==$g.text,answer_same:$it.provisional_answer==$g.provisional_answer,supporting:len($it.supporting),supporting_sent:len($g.supporting),contradicting:len($it.contradicting),contradicting_sent:len($g.contradicting),gaps:len($it.gaps),mismatched_quotes:len($근거표[$i].s.mismatched)+len($근거표[$i].c.mismatched)}
+}
+$q1=$재독[0];$p1=$saved[0]
+$탐침=[
+  [fn:탐침]{name:"원문에 없는 인용",project:$project,thread:$thread,changes:[{question_id:$q1.question_id,expected_revision:$q1.revision,supporting:[fn:깨끗]{refs:$q1.supporting}+[{version_ref:$p1.version_ref,extraction_revision:$p1.extraction_revision,locator:"p.1",quote:"이 문장은 원문에 없다 zzqx"}]}]},
+  [fn:탐침]{name:"같은 인용을 지지·반박에 동시에",project:$project,thread:$thread,changes:[{question_id:$q1.question_id,expected_revision:$q1.revision,contradicting:[fn:깨끗]{refs:$q1.contradicting}+[fn:깨끗]{refs:$q1.supporting[0:1]}}]},
+  [fn:탐침]{name:"다른 대화 자료의 version_ref",project:$project,thread:$thread,changes:[{question_id:$q1.question_id,expected_revision:$q1.revision,supporting:[fn:깨끗]{refs:$q1.supporting}+[{version_ref:$decoy,extraction_revision:1,locator:"p.1",quote:"Abstract"}]}]},
+  [fn:탐침]{name:"잘못된 extraction_revision",project:$project,thread:$thread,changes:[{question_id:$q1.question_id,expected_revision:$q1.revision,supporting:[fn:깨끗]{refs:$q1.supporting}+[{version_ref:$p1.version_ref,extraction_revision:2,locator:$q1.supporting[0].locator,quote:$q1.supporting[0].quote}]}]},
+  [fn:탐침]{name:"gaps 남긴 answered",project:$project,thread:$thread,changes:[{question_id:$q1.question_id,expected_revision:$q1.revision,gaps:["일부러 남긴 확인"],resolution:{disposition:"answered",rationale:"탐침"}}]},
+  [fn:탐침]{name:"반박 있는데 objections 없는 answered",project:$project,thread:$thread,changes:[{question_id:$q1.question_id,expected_revision:$q1.revision,gaps:[],resolution:{disposition:"answered",rationale:"탐침"}}]},
+  [fn:탐침]{name:"옛 expected_revision",project:$project,thread:$thread,changes:[{question_id:$q1.question_id,expected_revision:0,next_probes:["탐침"]}]}
+]
+$중복=[fn:탐침]{name:"같은 문장·범위 질문 재생성",project:$project,thread:$thread,changes:[{expected_revision:0,text:$질문[0].text,scope:$질문[0].scope}]}
+$중복후=len($중복.items)>0?[fn:탐침]{name:"중복 질문 철회",project:$project,thread:$thread,changes:[{question_id:$중복.items[0].question_id,expected_revision:$중복.items[0].revision,resolution:{disposition:"withdrawn",rationale:"탐침으로 만든 중복 질문"}}]}:null
+$종결=$재독 >> [table:each]{
+  $j=$판단맵[$근거표[$i].key]
+  $가능=$j.closable=="yes" and len($it.gaps)==0 and len($it.supporting)>0
+  $obj=map($it.contradicting,($r)=>{evidence_id:$r.evidence_id,rationale:$j.objection})
+  $r=$가능?[fn:탐침]{name:f"종결 ${$근거표[$i].key}",project:$project,thread:$thread,changes:[{question_id:$it.question_id,expected_revision:$it.revision,resolution:{disposition:"answered",rationale:$j.answer,objections:$obj}}]}:{name:f"종결 ${$근거표[$i].key}",rejected:false,message:"종결 시도 안 함(남은 확인 또는 반박 미설명)",items:[]}
+  return {key:$근거표[$i].key,attempted:$가능,rejected:$r.rejected,message:$r.message}
+}
+$최종=$ids >> [table:each]{ [fn:읽기]{project:$project,thread:$thread,qid:$it} }
+$표=$최종 >> [table:each]{ return f"|${$근거표[$i].key}|${it.question_id}|${it.revision}|${it.status}|${len($it.supporting)}|${len($it.contradicting)}|${len($it.gaps)}|" }
+$결과={project_ref:$project,thread_ref:$thread,papers:map($papers2,($p)=>{id:$p.id,title:$p.title,ok:$p.ok,version_ref:$p.version_ref,extraction_revision:$p.extraction_revision,total_chars:$p.total_chars,truncated:$p.truncated,error:$p.error}),saved:len($saved),failed:len($failed),questions:$대조,probes:$탐침+[$중복,$중복후],closure:$종결,final:map($최종,($q)=>{question_id:$q.question_id,revision:$q.revision,status:$q.status,supporting:len($q.supporting),contradicting:len($q.contradicting),gaps:$q.gaps,next_probes:$q.next_probes}),mismatched:map($근거표,($r)=>{key:$r.key,support:$r.s.mismatched,contra:$r.c.mismatched})}
+$본문="# 질문 기록 (기본)\n\n보존 "+text(len($saved))+"/"+text(len($papers2))+"편, 잘린 읽기 "+text(len($saved >> [table:filter]{where:($r)=>$r.truncated}))+"편.\n\n|질문|question_id|판본|상태|지지|반박|남은 확인|\n|---|---|---|---|---|---|---|\n"+join("\n",$표)+"\n\n## 탐침\n"+join("\n",map($탐침+[$중복,$중복후],($p)=>$p==null?"":f"- ${$p.name}: ${$p.rejected?'거부':'수용'} — ${$p.message}"))+"\n\n코드가 보장한 것은 인용 원문 일치·보존 판본·판본 사슬·종결 조건이다. 인용이 주장을 지지하는지는 프로그램 안 모델의 판단이며 논문의 진위는 판정하지 않았다.\n"
+$w1=[self:write]{path:f"${out}/record.json",content:json($결과)}
+$w2=[self:write]{path:f"${out}/record.md",content:$본문}
+$r1=[self:read]{path:$w1.path};$r2=[self:read]{path:$w2.path}
+return {record:$w1.path,report:$w2.path,readback:$r1.text==json($결과) and $r2.text==$본문,saved:len($saved),failed:len($failed),questions:$대조,probes:map($탐침+[$중복,$중복후],($p)=>$p==null?null:{name:$p.name,rejected:$p.rejected,message:$p.message}),closure:$종결}

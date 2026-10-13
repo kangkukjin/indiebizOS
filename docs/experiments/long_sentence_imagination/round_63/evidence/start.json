@@ -1,0 +1,11 @@
+{
+ "round": 63,
+ "started_at": "2026-10-13T13:06:32",
+ "head": "a9fd00ce",
+ "dirty_files_other_session": 24,
+ "last_episode_id_before": 4667,
+ "backend_generation": "5f1e74dd8223d85eee57c8bf50fb9d5e",
+ "phase": "ACTIVE",
+ "budget_minutes": 60,
+ "design": "docs/LONG_SENTENCE_ROUND63_DESIGN_2026_10_13.md"
+}

@@ -103,6 +103,7 @@ class ResearchQuestions:
                 item = {k: q[k] for k in ('question_id', 'revision', 'text', 'scope', 'status')}
                 item.update(provisional_answer=q['provisional_answer'][:600],
                             gaps=q['gaps'][:3], next_probes=q['next_probes'][:3],
+                            gaps_total=len(q['gaps']), next_probes_total=len(q['next_probes']),
                             supporting_count=len(q['supporting']), contradicting_count=len(q['contradicting']),
                             detail_required=True)
                 size = len(canonical(item))

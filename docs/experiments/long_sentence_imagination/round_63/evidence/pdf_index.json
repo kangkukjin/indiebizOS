@@ -1,0 +1,74 @@
+[
+ {
+  "file": "Can_Long_Context_Language_Models_Subsume_Retrieval__RAG__SQL__and_More_.pdf",
+  "sha256": "9e23e39c91daee42c8f9c36fbd3e665a6f59becaeff15860e44c7aca6cb22d0c",
+  "bytes": 2722529,
+  "paragraphs": 29,
+  "chars": 95001,
+  "error": ""
+ },
+ {
+  "file": "In_Defense_of_RAG_in_the_Era_of_Long_Context_Language_Models.pdf",
+  "sha256": "69db5675292a0661dce2ddc22d2bedae4481c4fe06eb4dc565bd5ff8583183f4",
+  "bytes": 447231,
+  "paragraphs": 5,
+  "chars": 17810,
+  "error": ""
+ },
+ {
+  "file": "LongRAG__Enhancing_Retrieval_Augmented_Generation_with_Long_context_LLMs.pdf",
+  "sha256": "ede5b695e5e9cb13dc96919a1bd0d66238875b796fc51f3f466796b67d51bd3a",
+  "bytes": 2322560,
+  "paragraphs": 19,
+  "chars": 60197,
+  "error": ""
+ },
+ {
+  "file": "Long_Context_LLMs_Meet_RAG__Overcoming_Challenges_for_Long_Inputs_in_RAG.pdf",
+  "sha256": "693af1edc4b4e82b76629fcfeed21833959d38974e1b8b32514951a7c43f4b61",
+  "bytes": 1681409,
+  "paragraphs": 34,
+  "chars": 97329,
+  "error": ""
+ },
+ {
+  "file": "Long_Context_RAG_Performance_of_Large_Language_Models.pdf",
+  "sha256": "36b31e6b19e93e456900d778415042af7cc0aec162270780b031749a744a85c0",
+  "bytes": 1843195,
+  "paragraphs": 20,
+  "chars": 49197,
+  "error": ""
+ },
+ {
+  "file": "Long_Context_vs__RAG_for_LLMs__An_Evaluation_and_Revisits.pdf",
+  "sha256": "bfdfa35e87b3beae7fff8439a49c0038b4169832f69e8693ad874274842538e8",
+  "bytes": 1530512,
+  "paragraphs": 18,
+  "chars": 81034,
+  "error": ""
+ },
+ {
+  "file": "Lost_in_the_Middle__How_Language_Models_Use_Long_Contexts.pdf",
+  "sha256": "653b29619eae2ae4b361d7bdcdc06db4bedcb1b0eabe31814036beca8c1af0b1",
+  "bytes": 747542,
+  "paragraphs": 18,
+  "chars": 65378,
+  "error": ""
+ },
+ {
+  "file": "RULER__What_s_the_Real_Context_Size_of_Your_Long_Context_Language_Models_.pdf",
+  "sha256": "8a4bc6ca28d84570eec7f42652400c2121f4c8bc361701634e596772e396fc22",
+  "bytes": 682955,
+  "paragraphs": 27,
+  "chars": 84737,
+  "error": ""
+ },
+ {
+  "file": "Same_Task__More_Tokens__the_Impact_of_Input_Length_on_the_Reasoning_Performance_of_Large_Language_Models.pdf",
+  "sha256": "97fa04374b4cb7d07f1028136f1cd48c7607fd9988b12190d9bbed41950c3776",
+  "bytes": 3430170,
+  "paragraphs": 15,
+  "chars": 50371,
+  "error": ""
+ }
+]

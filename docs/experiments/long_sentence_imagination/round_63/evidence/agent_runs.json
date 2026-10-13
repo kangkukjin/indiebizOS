@@ -1,0 +1,372 @@
+[
+ {
+  "case": "feedback56_base",
+  "task_id": "task_sysai_a348e83f",
+  "state": "succeeded",
+  "pending_children": 0,
+  "run_id": "run_74e5e8281c01be147ab3",
+  "episode": [
+   4668,
+   "2026-10-13T13:06:50.173907",
+   "2026-10-13T13:09:43.272045",
+   173097,
+   "training"
+  ],
+  "model_calls": 5,
+  "totals": {
+   "input": 1210455,
+   "output": 16360,
+   "cache_read": 1003311,
+   "cache_create": 204442
+  },
+  "tools": {
+   "execute_ibl": 8
+  },
+  "tool_ids": 8,
+  "failed_tools": [
+   {
+    "name": "execute_ibl",
+    "check_rejected": true,
+    "excerpt": "{\"edition\": 2, \"ok\": false, \"success\": false, \"executed\": false, \"status\": \"invalid\", \"error\": \"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.\", \"diagnostic\": {\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"보간의 닫는 }가 없거나 안쪽 따옴표가 바깥 문자열을 닫았습니다. }를 확인하고 안쪽에는 다른 따옴표 또는 바깥에 삼중 따옴표를 사용하세요.\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [], \"details\""
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": true,
+    "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"TYPE\", \"message\": \"Text가 필요하지만 List<Text>입니다.\", \"source_span\": {\"source_hash\": \"70fe7932a5af5e31e3489d5836d749f6b88fa9cec09e62af8ebbd23dc9a2514b\", \"start\": 946, \"end\": 951, \"line\": 16, \"column\": 32}, \"call_path\": [{\"function\": \"정규화\", \"call\": {\"source_hash\": \"70fe7932a5af5e31e3489d5836d749f6b88"
+   }
+  ],
+  "cost": {
+   "check_rejections": 2,
+   "evaluation_calls": 1,
+   "evaluation_checkpoint_s": 0.000878,
+   "evaluation_model_s": 8.078,
+   "evaluation_prepare_s": 0.042352,
+   "evaluation_visual_s": 0.002636,
+   "evaluation_wait_s": 0.000857,
+   "execution_calls": 8,
+   "execution_failures": 1,
+   "execution_tool_s": 5.303999999999999,
+   "internal_tool_failures": 0,
+   "request_intent": "task",
+   "source_failures": 0,
+   "supervisor_cache_read": 90315,
+   "supervisor_calls": 1,
+   "supervisor_input": 125988,
+   "supervisor_model_s": 44.022,
+   "supervisor_output": 3751,
+   "supervisor_tool_failures": 0,
+   "supervisor_tools": 1,
+   "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+   "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+   "wall_s": 171.167
+  }
+ },
+ {
+  "case": "feedback56_variant",
+  "task_id": "task_sysai_c5d40358",
+  "state": "succeeded",
+  "pending_children": 0,
+  "run_id": "run_11d8183b3636eec6f80a",
+  "episode": [
+   4669,
+   "2026-10-13T13:10:25.991845",
+   "2026-10-13T13:11:29.180643",
+   63188,
+   "training"
+  ],
+  "model_calls": 5,
+  "totals": {
+   "input": 561724,
+   "output": 7112,
+   "cache_read": 493722,
+   "cache_create": 63079
+  },
+  "tools": {
+   "execute_ibl": 2
+  },
+  "tool_ids": 2,
+  "failed_tools": [],
+  "cost": {
+   "check_rejections": 0,
+   "evaluation_calls": 1,
+   "evaluation_checkpoint_s": 0.001075,
+   "evaluation_model_s": 6.12,
+   "evaluation_prepare_s": 0.025028,
+   "evaluation_visual_s": 0.001408,
+   "evaluation_wait_s": 0.000899,
+   "execution_calls": 2,
+   "execution_failures": 0,
+   "execution_tool_s": 1.216,
+   "internal_tool_failures": 0,
+   "request_intent": "task",
+   "source_failures": 0,
+   "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+   "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+   "wall_s": 63.152
+  }
+ },
+ {
+  "case": "agent_base",
+  "task_id": "task_sysai_2f131a10",
+  "state": "succeeded",
+  "pending_children": 0,
+  "run_id": "run_09b851154b1055af725f",
+  "episode": [
+   4670,
+   "2026-10-13T13:18:21.876840",
+   "2026-10-13T13:57:48.009627",
+   2366132,
+   "training"
+  ],
+  "model_calls": 8,
+  "totals": {
+   "input": 7141655,
+   "output": 43028,
+   "cache_read": 6749572,
+   "cache_create": 383344
+  },
+  "tools": {
+   "execute_ibl": 35
+  },
+  "tool_ids": 35,
+  "failed_tools": [
+   {
+    "name": "execute_ibl",
+    "check_rejected": true,
+    "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"UNKNOWN_ARGUMENT\", \"message\": \"알 수 없는 인자: task_ref. 비슷한 인자: task_id, ref. 사용 가능한 인자: kind, op, owner, ref, suspend, task_id, timeout\", \"source_span\": {\"source_hash\": \"b0dc2995489da2f8b8a562edbe3f605b6fc3e85b02e615fe8d0f78c23cd81476\", \"start\": 0, \"end\": 154, \"line\": 1, \"column\": 1}, \"call_path\""
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": true,
+    "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"NUMBER_REQUIRED\", \"message\": \"number(): 유한 숫자로 해석할 수 없습니다: '/'. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.\", \"source_span\": {\"source_hash\": \"bd75bbfdd8d379dc04c4353bdbbe14a204adb91caa9eddcf967316a418645263\", \"start\": 1538, \"end\": 1541, \"line\": 28, \"column\": 51}, \"call_"
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": true,
+    "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"NUMBER_REQUIRED\", \"message\": \"number(): 유한 숫자로 해석할 수 없습니다: '종결('. 해석 실패는 오류입니다. number(value, null)로 실패값을 명시하거나 [try]/[catch]로 처리하세요.\", \"source_span\": {\"source_hash\": \"bdd8fd86c8ebc4cfc3fd3bd74a6347924ed2a4f7787713e084dbc0d992b0ef7a\", \"start\": 229, \"end\": 234, \"line\": 6, \"column\": 31}, \"call_p"
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": true,
+    "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"TYPE\", \"message\": \"Bool | Number | Text가 필요하지만 Null | Text입니다.\", \"source_span\": {\"source_hash\": \"334acc31933cfca769b7719d26b0f2264b27de014f32db170bee291e3c9f9e01\", \"start\": 241, \"end\": 255, \"line\": 6, \"column\": 43}, \"call_path\": [{\"function\": \"행\", \"call\": {\"source_hash\": \"334acc31933cfca769b77"
+   }
+  ],
+  "cost": {
+   "check_rejections": 4,
+   "evaluation_calls": 1,
+   "evaluation_checkpoint_s": 0.001057,
+   "evaluation_model_s": 11.015,
+   "evaluation_prepare_s": 0.336588,
+   "evaluation_visual_s": 0.006729,
+   "evaluation_wait_s": 0.000822,
+   "execution_calls": 35,
+   "execution_failures": 3,
+   "execution_tool_s": 500.59600000000006,
+   "internal_tool_failures": 0,
+   "request_intent": "task",
+   "source_failures": 0,
+   "supervisor_cache_read": 125495,
+   "supervisor_calls": 3,
+   "supervisor_input": 214594,
+   "supervisor_model_s": 72.709,
+   "supervisor_output": 4978,
+   "supervisor_tool_failures": 1,
+   "supervisor_tools": 2,
+   "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+   "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+   "wall_s": 931.149
+  }
+ },
+ {
+  "case": "agent_resume",
+  "task_id": "task_sysai_8c844763",
+  "state": "succeeded",
+  "pending_children": 0,
+  "run_id": "run_5b140e05e2e93d6fd3f4",
+  "episode": [
+   4673,
+   "2026-10-13T13:35:11.119092",
+   "2026-10-13T13:36:12.661136",
+   61541,
+   "training"
+  ],
+  "model_calls": 5,
+  "totals": {
+   "input": 1001227,
+   "output": 6413,
+   "cache_read": 932369,
+   "cache_create": 61817
+  },
+  "tools": {
+   "execute_ibl": 2
+  },
+  "tool_ids": 2,
+  "failed_tools": [],
+  "cost": {
+   "check_rejections": 0,
+   "evaluation_calls": 1,
+   "evaluation_checkpoint_s": 0.000884,
+   "evaluation_model_s": 7.214,
+   "evaluation_prepare_s": 0.012071,
+   "evaluation_visual_s": 0.001134,
+   "evaluation_wait_s": 0.001042,
+   "execution_calls": 2,
+   "execution_failures": 0,
+   "execution_tool_s": 0.941,
+   "internal_tool_failures": 0,
+   "request_intent": "task",
+   "source_failures": 0,
+   "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+   "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+   "wall_s": 61.501
+  }
+ },
+ {
+  "case": "agent_change",
+  "task_id": "task_sysai_91304768",
+  "state": "succeeded",
+  "pending_children": 0,
+  "run_id": "run_4859c6382670919ae5c4",
+  "episode": [
+   4674,
+   "2026-10-13T13:36:34.023711",
+   "2026-10-13T13:44:15.707836",
+   461678,
+   "training"
+  ],
+  "model_calls": 8,
+  "totals": {
+   "input": 4308902,
+   "output": 17126,
+   "cache_read": 4160777,
+   "cache_create": 138667
+  },
+  "tools": {
+   "execute_ibl": 9
+  },
+  "tool_ids": 9,
+  "failed_tools": [
+   {
+    "name": "execute_ibl",
+    "check_rejected": false,
+    "excerpt": "{\"success\": false, \"error\": \"도구의 원천 결과가 불완전합니다. 절단 사유 `일치 줄 본문 절단`.\", \"diagnostic\": {\"code\": \"PARTIAL_SOURCE\", \"kind\": \"partial\", \"message\": \"도구의 원천 결과가 불완전합니다. 절단 사유 `일치 줄 본문 절단`.\", \"frames\": [], \"has_partial\": true, \"partial\": {\"success\": true, \"text\": \"backend_runtime.log:268737:   \\\"task_framing\\\": \\\"문제: 기존 연구 프로젝트 d3bbe55090f54d52b435184e068b4148의 대화 9bf7c088a4504112ac35b677995cb3dd에서 할 일이다. "
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": false,
+    "excerpt": "{\"success\": false, \"error\": \"도구의 원천 결과가 불완전합니다. 절단 사유 `일치 줄 본문 절단`.\", \"diagnostic\": {\"code\": \"PARTIAL_SOURCE\", \"kind\": \"partial\", \"message\": \"도구의 원천 결과가 불완전합니다. 절단 사유 `일치 줄 본문 절단`.\", \"frames\": [], \"has_partial\": true, \"partial\": {\"success\": true, \"text\": \"backend_runtime.log:268882: [ClaudeCode/시스템 AI] tool_result {\\\"success\\\":true,\\\"value\\\":{\\\"success\\\":true,\\\"accepted\\\":true,\\\"task_ref\\\":{\\\"kind"
+   }
+  ],
+  "cost": {
+   "check_rejections": 0,
+   "decision.stale": 1,
+   "evaluation_calls": 1,
+   "evaluation_checkpoint_s": 0.00095,
+   "evaluation_model_s": 4.434,
+   "evaluation_prepare_s": 0.027549,
+   "evaluation_visual_s": 0.002161,
+   "evaluation_wait_s": 0.000929,
+   "execution_calls": 9,
+   "execution_failures": 2,
+   "execution_tool_s": 304.13899999999995,
+   "internal_tool_failures": 3,
+   "request_intent": "task",
+   "source_failures": 3,
+   "supervisor_cache_read": 35575,
+   "supervisor_calls": 2,
+   "supervisor_input": 78465,
+   "supervisor_model_s": 54.054,
+   "supervisor_output": 4796,
+   "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+   "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+   "wall_s": 461.628
+  }
+ },
+ {
+  "case": "agent_change_post_repair",
+  "task_id": "task_sysai_3e04a38e",
+  "state": "succeeded",
+  "pending_children": 0,
+  "run_id": "run_2ea1abdf1f5cc56221a1",
+  "episode": [
+   4677,
+   "2026-10-13T14:24:57.343062",
+   "2026-10-13T14:30:15.662147",
+   318318,
+   "training"
+  ],
+  "model_calls": 7,
+  "totals": {
+   "input": 4296980,
+   "output": 31085,
+   "cache_read": 3967083,
+   "cache_create": 321706
+  },
+  "tools": {
+   "execute_ibl": 23
+  },
+  "tool_ids": 23,
+  "failed_tools": [
+   {
+    "name": "execute_ibl",
+    "check_rejected": false,
+    "excerpt": "{\"success\": false, \"error\": \"versions 에는 source_ref 가 필요합니다 — sources 로 먼저 자료를 고르세요\", \"diagnostic\": {\"code\": \"TOOL\", \"kind\": \"runtime\", \"message\": \"versions 에는 source_ref 가 필요합니다 — sources 로 먼저 자료를 고르세요\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [31], \"details\": {}, \"source_span\": {\"source_hash\": \"3ad4ae84deecec20f354e2b55d2f4d6d377aacea978bcf7655d9eeb91ce63511\", \"start\": 2"
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": true,
+    "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"TYPE\", \"message\": \"Text가 필요하지만 List<Unknown>입니다.\", \"source_span\": {\"source_hash\": \"8e0521f4423aeb59287cd5e7523fe26dc1fe230578e6d946d565e3b5a5f547e9\", \"start\": 412, \"end\": 437, \"line\": 6, \"column\": 12}, \"call_path\": [], \"expected\": \"Text\", \"actual\": \"List<Unknown>\", \"hint\": \"join(Text, List<Tex"
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": true,
+    "excerpt": "{\"edition\": 2, \"ok\": false, \"success\": false, \"executed\": false, \"status\": \"invalid\", \"error\": \"문장 사이에는 줄바꿈 또는 ;이 필요합니다.\", \"diagnostic\": {\"code\": \"SYNTAX\", \"kind\": \"compile\", \"message\": \"문장 사이에는 줄바꿈 또는 ;이 필요합니다.\", \"frames\": [], \"has_partial\": false, \"partial\": null, \"evidence\": [], \"details\": {}, \"source_span\": {\"source_hash\": \"2f483ee71b61fd7cbda0bfdf2dc1ec65dd9dac6b7038f22ed0283dc65591d0c2\", \"st"
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": false,
+    "excerpt": "{\"success\": false, \"error\": \"공유 실행 예산을 초과했습니다: steps 100001/100000. usage.steps_by_line에서 비싼 줄을 확인하고 요청 budget:{steps:...,rows:...}로 한도를 조정하세요(최대 steps 10000000·rows 100000). 전건 검증 뒤 쓰는 과제는 검증·쓰기 순서를 유지하세요. 독립적으로 완료할 수 있는 작업만 여러 실행으로 나누고, 전건 처리를 take로 조용히 잘라내지 마세요.\", \"diagnostic\": {\"code\": \"BUDGET\", \"kind\": \"budget\", \"message\": \"공유 실행 예산을 초과했습니다: steps 100001/100000. usage.steps_by_line에서 비싼 줄을 확인"
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": true,
+    "excerpt": "{\"edition\": 2, \"mode\": \"check\", \"executed\": false, \"ok\": false, \"status\": \"invalid\", \"issues\": [{\"code\": \"TYPE\", \"message\": \"Text가 필요하지만 List<Unknown>입니다.\", \"source_span\": {\"source_hash\": \"9e235b7bb30f09a052ec1f6d79839b1f87961dcb6217261e06f2d176abb1469f\", \"start\": 2307, \"end\": 2312, \"line\": 31, \"column\": 111}, \"call_path\": [{\"function\": \"Q2변경\", \"call\": {\"source_hash\": \"9e235b7bb30f09a052ec1f6d7983"
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": false,
+    "excerpt": "{\"success\": false, \"error\": \"has/get은 Record와 Text 키를 받습니다.\", \"diagnostic\": {\"code\": \"RECORD_REQUIRED\", \"kind\": \"runtime\", \"message\": \"has/get은 Record와 Text 키를 받습니다.\", \"frames\": [{\"function\": \"요약\", \"call\": {\"source_hash\": \"c5c03cc5a0e3471d29ff5dfd78ac763e1bdf3350b2734bee091ddc4bf52dfd2c\", \"start\": 4937, \"end\": 4951, \"line\": 68, \"column\": 136}, \"definition\": {\"source_hash\": \"c5c03cc5a0e3471d29ff5df"
+   },
+   {
+    "name": "execute_ibl",
+    "check_rejected": false,
+    "excerpt": "{\"success\": false, \"executed\": false, \"error\": \"read_result는 code·pipeline과 함께 사용할 수 없습니다\"}"
+   }
+  ],
+  "cost": {
+   "check_rejections": 3,
+   "evaluation_calls": 1,
+   "evaluation_checkpoint_s": 0.000867,
+   "evaluation_model_s": 5.213,
+   "evaluation_prepare_s": 0.076411,
+   "evaluation_visual_s": 0.004575,
+   "evaluation_wait_s": 0.000867,
+   "execution_calls": 23,
+   "execution_failures": 6,
+   "execution_tool_s": 13.249,
+   "internal_tool_failures": 1,
+   "request_intent": "task",
+   "source_failures": 1,
+   "supervisor_cache_read": 93253,
+   "supervisor_calls": 2,
+   "supervisor_input": 161559,
+   "supervisor_model_s": 55.254000000000005,
+   "supervisor_output": 5185,
+   "supervisor_tool_failures": 0,
+   "supervisor_tools": 1,
+   "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+   "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+   "wall_s": 317.615
+  }
+ }
+]
